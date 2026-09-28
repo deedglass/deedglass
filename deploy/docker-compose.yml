@@ -1,0 +1,57 @@
+# Local demo stack (spec 20_ §14.1): postgres:18.6 + executor + verifier.
+# Today only PostgreSQL runs. The executor and verifier services stay commented out until
+# `txv executor serve` and `txv verifier run` exist (G1/G2); the full `docker compose up` demo is a
+# G3 criterion (plan §3.10). Local, throwaway use only: the password below is a local default.
+#
+#   docker compose -f deploy/docker-compose.yml up -d postgres
+#   (schema: `txv install` once it exists; until then `make integration TXV_IT_MODE=docker`
+#    runs its own throwaway container and applies sql/001-004)
+name: txv
+
+services:
+  postgres:
+    image: postgres:18.6
+    # wal_level=logical needs a restart to change, so it is set at start.
+    # max_slot_wal_keep_size must be finite: a stalled verifier must never fill the disk (spec §4.1).
+    command: ["postgres", "-c", "wal_level=logical", "-c", "max_slot_wal_keep_size=2GB"]
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${TXV_PG_PASSWORD:-txv-local-only}
+      POSTGRES_DB: txv
+    ports:
+      - "127.0.0.1:55432:5432"
+    volumes:
+      - txv-pgdata:/var/lib/postgresql   # the 18.x image keeps PGDATA under /var/lib/postgresql/18/
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d txv"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+
+  # executor:                                   # TODO(G3): image built from cmd/txv
+  #   image: txv:dev
+  #   command: ["txv", "executor", "serve", "--listen", ":8080"]
+  #   environment:
+  #     TXV_DATABASE_URL: postgres://txv_executor@postgres:5432/txv   # password from a secret file
+  #   ports:
+  #     - "127.0.0.1:8080:8080"
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+
+  # verifier:                                   # TODO(G3): separate process and credentials
+  #   image: txv:dev
+  #   command: ["txv", "verifier", "run"]
+  #   environment:
+  #     TXV_DATABASE_URL: postgres://txv_verifier@postgres:5432/txv   # REPLICATION role
+  #   volumes:
+  #     - txv-verifier:/var/lib/txv            # SQLite store, statement key (0600)
+  #   ports:
+  #     - "127.0.0.1:8081:8081"                # GET /v1/status/{intent_hash}
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+
+volumes:
+  txv-pgdata:
+  # txv-verifier:

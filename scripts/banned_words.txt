@@ -1,0 +1,43 @@
+# Banned words and phrases (plan 00_ §1.4; spec 20_ §1.3). Canonical list for scripts/banned_words.sh.
+# One phrase per line. Matched case-insensitively as whole words or phrases (a hyphen or space is a
+# boundary; letters, digits and underscore are not), so "asynchronous" does not match "synchronous".
+# Lines starting with "@until-public " apply until the repo is public (set TXV_REPO_PUBLIC=1 then).
+# Context-dependent bans ("prove/proof" as a guarantee, "compliance" as positioning, "receipt" for
+# our statement) are matched strictly; explanatory uses go in .banned-words-allow with a reason.
+trustless
+irrefutable
+unbreakable
+tamper-proof
+tamperproof
+mathematically proves
+cryptographic proof of execution
+proof of execution
+proves the transaction happened
+proves
+guaranteed
+SCITT-compliant
+SCITT compliant
+RFC 9942 receipt
+receipt
+receipts
+EU AI Act compliant
+Article 12 infrastructure
+Article 12 solution
+compliance
+prevents all tampering
+no hidden side effects
+liability transfer
+verify any agent action
+intent verification
+synchronous
+patented
+certified
+certification
+certificate
+attests
+attestation
+we testify
+# Internal codename: never in anything external-facing (plan NAME NOTICE, §3.12 rule 5).
+alloy
+@until-public open source
+@until-public open-source

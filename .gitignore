@@ -1,0 +1,17 @@
+# build output
+/bin/
+/txv
+*.test
+*.out
+coverage.*
+# local throwaway clusters and logs (scripts/integration_local.sh)
+/.tmp/
+# editor / OS
+.DS_Store
+.idea/
+.vscode/
+# never commit keys or secrets
+*.key
+*.pem
+.env
+.env.*
