@@ -10,7 +10,7 @@ import (
 
 	"github.com/gowebpki/jcs"
 
-	"github.com/testamur/testamur/internal/intent"
+	"github.com/deedglass/deedglass/internal/intent"
 )
 
 func read(t *testing.T, path string) []byte {
@@ -68,8 +68,8 @@ func TestManifestHashes(t *testing.T) {
 	if err := json.Unmarshal(raw, &m); err != nil {
 		t.Fatal(err)
 	}
-	if m.V != "txv.bundle/1" || m.Op != "TRANSFER" || m.OpV != 1 || m.EntryFn != "txv.execute_transfer_v1(bytea,bytea)" ||
-		m.Marker.Prefix != "txv/v1" || m.Marker.Count != 1 {
+	if m.V != "deedglass.bundle/1" || m.Op != "TRANSFER" || m.OpV != 1 || m.EntryFn != "deedglass.execute_transfer_v1(bytea,bytea)" ||
+		m.Marker.Prefix != "deedglass" || m.Marker.Count != 1 {
 		t.Errorf("manifest identity fields drifted: %+v", m)
 	}
 

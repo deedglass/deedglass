@@ -18,7 +18,7 @@ const golden = `{"args":{"amount":"1000000","currency":"USD","from":"alice","to"
 	`"bundle":"sha256:4f00000000000000000000000000000000000000000000000000000000000001",` +
 	`"exp":1759050300000,"iat":1759050000000,"iss":"ops-approver",` +
 	`"kid":"3fa9c1d2e3f405162738495a6b7c8d9e","nonce":"b7e2a1c3d4e5f60718293a4b5c6d7e8f",` +
-	`"op":"TRANSFER","op_v":1,"v":"txv.intent/1"}`
+	`"op":"TRANSFER","op_v":1,"v":"deedglass.intent/1"}`
 
 // u returns a JSON backslash-u escape for hex digits h. The escape is built at
 // run time so the source never contains it literally (some editors and tools
@@ -194,7 +194,7 @@ func TestParseSchemaRejects(t *testing.T) {
 		{"account injection", func(m map[string]any) { args(m)["to"] = "bob'; DROP TABLE x;--" }, CodeBadValue},
 		{"op_v 2", func(m map[string]any) { m["op_v"] = 2 }, CodeBadValue},
 		{"op_v as string", func(m map[string]any) { m["op_v"] = "1" }, CodeWrongType},
-		{"wrong v", func(m map[string]any) { m["v"] = "txv.intent/2" }, CodeBadValue},
+		{"wrong v", func(m map[string]any) { m["v"] = "deedglass.intent/2" }, CodeBadValue},
 		{"wrong op", func(m map[string]any) { m["op"] = "WITHDRAW" }, CodeBadValue},
 		{"kid uppercase", func(m map[string]any) { m["kid"] = "3FA9C1D2E3F405162738495A6B7C8D9E" }, CodeBadValue},
 		{"nonce short", func(m map[string]any) { m["nonce"] = "b7e2" }, CodeBadValue},
@@ -232,7 +232,7 @@ func TestParseRejectsNonCanonical(t *testing.T) {
 		`"bundle":"sha256:4f00000000000000000000000000000000000000000000000000000000000001",` +
 		`"exp":1759050300000,"iat":1759050000000,"iss":"ops-approver",` +
 		`"kid":"3fa9c1d2e3f405162738495a6b7c8d9e","nonce":"b7e2a1c3d4e5f60718293a4b5c6d7e8f",` +
-		`"op":"TRANSFER","op_v":1,"v":"txv.intent/1"}`
+		`"op":"TRANSFER","op_v":1,"v":"deedglass.intent/1"}`
 	escaped := strings.Replace(golden, `"alice"`, `"`+u("0061")+`lice"`, 1)
 	trailingNL := golden + "\n"
 	for name, in := range map[string]string{

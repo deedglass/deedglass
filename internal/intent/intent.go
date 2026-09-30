@@ -9,9 +9,9 @@ import (
 	"github.com/gowebpki/jcs"
 )
 
-// Fixed values of the txv.intent/1 format (spec §5).
+// Fixed values of the deedglass.intent/1 format (spec §5).
 const (
-	Type         = "txv.intent/1"
+	Type         = "deedglass.intent/1"
 	OpTransfer   = "TRANSFER"
 	OpVersion    = 1
 	MaxBytes     = 4096   // same bound as the controlled function (spec §4.4 step 1)
@@ -49,7 +49,7 @@ var (
 	RequiredArgsKeys = []string{"amount", "currency", "from", "to"}
 )
 
-// Intent is a parsed txv.intent/1 TRANSFER intent.
+// Intent is a parsed deedglass.intent/1 TRANSFER intent.
 type Intent struct {
 	V      string
 	Iss    string
@@ -76,7 +76,7 @@ type Args struct {
 // Parse checks b in the order spec §5 requires and returns the intent:
 //  1. size <= MaxBytes;
 //  2. the strict profile (ParseStrict);
-//  3. the closed txv.intent/1 schema (no unknown or missing keys, types, patterns);
+//  3. the closed deedglass.intent/1 schema (no unknown or missing keys, types, patterns);
 //  4. canonical form: b must equal JCS(b) byte for byte.
 //
 // Parse does not verify the signature or any registry, policy or clock rule.

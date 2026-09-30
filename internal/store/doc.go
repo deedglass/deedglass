@@ -1,8 +1,27 @@
-// Package store is the verifier's local state in SQLite (modernc.org/sqlite,
-// pure Go; spec §3.2, §8.3): the decoder checkpoint, the statement and
-// evidence index keyed by (system_identifier, timeline_id, commit_lsn) so
-// re-decoded transactions after a slot rewind are skipped, the global nonce
-// memory used for REPLAY across timelines, the row-continuity map used by the
-// CONTINUITY_BREAK check, and the heartbeat secret. Writes follow the
-// crash-safe order: statement and evidence, then checkpoint, then slot advance.
+// Package store owns the control-plane Postgres: the pgx pool, the embedded forward-only
+// migrations, org-scoped transactions under row-level security, and the repositories every other
+// package uses (contract §4, ADR-019).
+//
+// Invariants:
+//   - Org-scoped queries run inside OrgTx, which sets the transaction-local deedglass.org_id that
+//     RLS keys on. There is no other way to read an org's rows.
+//   - Cross-org access happens only through SystemTx with a named reason, or through the narrow
+//     SECURITY DEFINER functions (preauth_*, claim_*, maint_*, sync_*); a test lists every call site.
+//   - The runtime role deedglass_app is NOBYPASSRLS, owns nothing, and cannot UPDATE or DELETE
+//     history (deeds, action_events, admin_events, policy_versions).
+//   - Migrations are embedded, forward-only, checksummed, named internal/store/migrations/NNNN_name.sql,
+//     and an applied file is never edited.
+//   - SQL is schema-qualified with a pinned search_path; no SQL is built from user input.
+//
+// Planned API (finalized by S02):
+//
+//	func Open(ctx context.Context, cfg *config.Config) (*DB, error)
+//	func (db *DB) Migrate(ctx context.Context) (Report, error)        // deedglass migrate up
+//	func (db *DB) OrgTx(ctx context.Context, org ids.OrgID, fn func(Tx) error) error
+//	func (db *DB) SystemTx(ctx context.Context, reason string, fn func(Tx) error) error
+//
+// V0 note: the V0 verifier kept its checkpoint, statement index and nonce memory in SQLite. The
+// Deedglass control plane is Postgres; the decoder's checkpoint moves to decoder_slots (S20).
+//
+// Filled by: S02 (later sessions add repositories)
 package store

@@ -1,7 +1,7 @@
-# Banned words and phrases (plan 00_ §1.4; spec 20_ §1.3). Canonical list for scripts/banned_words.sh.
+# Banned words and phrases (DEEDGLASS_BRAND.md §3; CLAUDE.md rule 7). Canonical list for scripts/banned_words.sh.
 # One phrase per line. Matched case-insensitively as whole words or phrases (a hyphen or space is a
 # boundary; letters, digits and underscore are not), so "asynchronous" does not match "synchronous".
-# Lines starting with "@until-public " apply until the repo is public (set TXV_REPO_PUBLIC=1 then).
+# Lines starting with "@until-public " apply until the repo is public (set DEEDGLASS_REPO_PUBLIC=1 then).
 # Context-dependent bans ("prove/proof" as a guarantee, "compliance" as positioning, "receipt" for
 # our statement) are matched strictly; explanatory uses go in .banned-words-allow with a reason.
 trustless
@@ -37,7 +37,17 @@ certificate
 attests
 attestation
 we testify
-# Internal codename: never in anything external-facing (plan NAME NOTICE, §3.12 rule 5).
+# The old internal codename: never anywhere (CLAUDE.md rule 5).
 alloy
 @until-public open source
 @until-public open-source
+# Brand style words (DEEDGLASS_BRAND.md §3): hype we never write.
+revolutionary
+world-class
+cutting-edge
+seamless
+seamlessly
+next-gen
+military-grade
+bank-grade
+unhackable

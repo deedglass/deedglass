@@ -1,0 +1,44 @@
+# deedglass.example.yaml: every setting Deedglass reads, with its default. Copy it to
+# deedglass.yaml and keep only what you change. The environment wins over this file; see
+# docs/CONFIG.md for precedence.
+#
+# Rules for deedglass.yaml:
+#   - Keys are the DEEDGLASS_* names without the prefix, in lowercase.
+#   - No anchors, aliases or merge keys; one document; at most 64 KiB.
+#   - Secrets don't belong here. Prod refuses them; set them in the environment instead.
+#     (vault_key, api_key_pepper, resend_api_key, anthropic_api_key, api_key, and a
+#     database_url that contains a password.)
+
+# dev or prod. Prod ignores .env and .deedglass/dev-secrets.json and refuses unsafe settings.
+# env: dev
+
+# The control-plane Postgres URL. Prod needs sslmode=require or verify-full to a remote host.
+# A URL without a password may live here; one with a password goes in the environment.
+# database_url: postgres://deedglass_app@127.0.0.1:55432/deedglass?sslmode=disable
+
+# Where the API, the Gate and the Console listen.
+# listen: 127.0.0.1:8080
+
+# The URL people and agents use to reach this server. Prod needs https.
+# base_url: http://127.0.0.1:8080
+
+# The seal key file (deedglass keys gen creates one).
+# seal_key_file: .deedglass/seal.key
+
+# debug, info, warn or error.
+# log_level: info
+
+# invite or closed.
+# signup: invite
+
+# Proxies whose X-Forwarded-For is believed, as CIDRs.
+# trusted_proxies: [10.0.0.0/8]
+
+# Dev only: let connectors reach private networks. Prod refuses it.
+# allow_private_networks: false
+
+# Alert when a Postgres replication slot holds more WAL than this many MB.
+# slot_lag_alert_mb: 512
+
+# Client commands (CLI, mcp, SDKs): the server to talk to.
+# server: https://api.deedglass.com

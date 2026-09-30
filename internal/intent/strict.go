@@ -15,10 +15,10 @@ import (
 const MaxSafeInteger int64 = 1<<53 - 1
 
 // maxDepth bounds nesting so hostile input cannot exhaust the stack.
-// txv.intent/1 needs depth 2.
+// deedglass.intent/1 needs depth 2.
 const maxDepth = 16
 
-// ParseStrict parses one JSON value under the txv strict profile and returns
+// ParseStrict parses one JSON value under the deedglass strict profile and returns
 // it as Go values: map[string]any, []any, string, int64, bool or nil.
 //
 // Compared with RFC 8259 it additionally rejects: invalid UTF-8, duplicate

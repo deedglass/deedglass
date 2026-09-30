@@ -1,0 +1,4 @@
+exit 0
+--- stdout
+{"object":"version","version":"0.1.0-dev","commit":"5495f7e","modified":true,"api_versions":["2026-10-01"],"go":"go1.27.1","os":"darwin","arch":"arm64"}
+--- stderr

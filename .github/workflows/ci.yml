@@ -36,9 +36,13 @@ jobs:
         run: go vet ./...
       - name: go test
         run: go test -race -count=1 ./...
+      - name: no-cgo build of the binary
+        run: CGO_ENABLED=0 go build -o /dev/null ./cmd/deedglass
       - name: test vectors unchanged
         working-directory: testdata
         run: sha256sum --quiet -c SHA256SUMS
+      - name: rename guard (retired identifiers, ADR-012)
+        run: scripts/rename_guard.sh
       - name: banned words (files and commit messages)
         run: scripts/banned_words.sh --commits HEAD
 
@@ -50,7 +54,7 @@ jobs:
         image: postgres:18.6
         command: postgres -c wal_level=logical -c max_slot_wal_keep_size=2GB
         env:
-          POSTGRES_PASSWORD: txv-ci-throwaway
+          POSTGRES_PASSWORD: deedglass-ci-throwaway
         options: >-
           --health-cmd "pg_isready -U postgres"
           --health-interval 2s
@@ -60,7 +64,7 @@ jobs:
       - uses: actions/checkout@v5
       - name: apply sql/001-004 and run the smoke checks
         env:
-          TXV_IT_THROWAWAY: "1"
+          DEEDGLASS_IT_THROWAWAY: "1"
           PSQL: docker exec -i ${{ job.services.postgres.id }} psql
           PGUSER: postgres
         run: scripts/integration.sh

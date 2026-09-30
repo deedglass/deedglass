@@ -1,0 +1,50 @@
+exit 0
+--- stdout
+deedglass · the execution and accountability layer for AI agents
+
+Usage  deedglass <command> [flags]
+
+Setup
+  init                Set up Deedglass in this directory          soon
+  doctor              Check config, database and keys             soon
+  serve               Run the API, the Gate and the Console       soon
+  migrate             Apply or check database migrations          soon   up · status · verify
+  config print        Show the effective config, secrets hidden
+  version             Show the client and server versions
+  keys                Manage seal keys                            soon   gen · rotate · list
+  vault               Check or rotate the credential vault        soon   status · rotate
+  completion          Print shell completion                      soon   zsh · bash · fish
+Agents
+  agent               Register and control agents                 soon   create · list · show · suspend · resume · stop · start
+  agent keys          Manage an agent's API keys                  soon   create · list · roll · revoke
+  agent intent        Manage an agent's signed-intent keys        soon   keygen · add · list · remove · mode
+  org                 Create orgs and keys; stop or start all     soon   create · login-link · keys · stop-all · start-all
+Policies
+  policy              Write, test and activate policies           soon   lint · fmt · test · push · activate · evaluate · replay · diff
+Actions
+  act                 Send a test action through the Gate         soon
+  actions             Inspect actions                             soon   list · show · cancel
+  approve · deny      Decide a pending approval                   soon
+  approvals           List pending approvals                      soon   list · show
+  undo                Preview or run an undo                      soon   preview · run
+  webhooks            Send events to your endpoints               soon   create · list · test · delete
+Deeds
+  verify              Check deeds offline                         soon
+  deeds               Browse and export deeds                     soon   list · show · export
+  ledger              Check or prune the Ledger                   soon   check · prune
+Connectors
+  connector           Connect tools                               soon   create · list · show · test · types · credentials
+  connector postgres  Prepare a Postgres database                 soon   init · check
+  connector gmail     Authorize the Gmail connector               soon   authorize
+  decoder             Inspect Postgres change readers             soon   status · drop
+  slack manifest      Print the Slack app manifest                soon
+MCP
+  mcp                 Put the Gate in front of MCP servers        soon   wrap · serve · snippet
+Insights
+  insights            Usage, shadow results and anomalies         soon   stats · shadow · anomalies · detect · settings · suggestions · digest
+Dev
+  dev                 Local helpers                               soon   seed · fake-action · simulate · agent-script · mail-preview · sign-intent · stripe-fixtures
+
+Global flags  --json · --server <url> · --api-key <key> · --org <id> · --no-color · -v
+Run deedglass help <command> for details · https://docs.deedglass.com
+--- stderr

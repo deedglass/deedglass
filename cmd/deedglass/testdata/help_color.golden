@@ -1,0 +1,50 @@
+exit 0
+--- stdout
+[1mdeedglass[0m · the execution and accountability layer for AI agents
+
+[1mUsage[0m  deedglass <command> [flags]
+
+[1mSetup[0m
+  init                Set up Deedglass in this directory          [2msoon[0m
+  doctor              Check config, database and keys             [2msoon[0m
+  serve               Run the API, the Gate and the Console       [2msoon[0m
+  migrate             Apply or check database migrations          [2msoon[0m   [2mup · status · verify[0m
+  config print        Show the effective config, secrets hidden
+  version             Show the client and server versions
+  keys                Manage seal keys                            [2msoon[0m   [2mgen · rotate · list[0m
+  vault               Check or rotate the credential vault        [2msoon[0m   [2mstatus · rotate[0m
+  completion          Print shell completion                      [2msoon[0m   [2mzsh · bash · fish[0m
+[1mAgents[0m
+  agent               Register and control agents                 [2msoon[0m   [2mcreate · list · show · suspend · resume · stop · start[0m
+  agent keys          Manage an agent's API keys                  [2msoon[0m   [2mcreate · list · roll · revoke[0m
+  agent intent        Manage an agent's signed-intent keys        [2msoon[0m   [2mkeygen · add · list · remove · mode[0m
+  org                 Create orgs and keys; stop or start all     [2msoon[0m   [2mcreate · login-link · keys · stop-all · start-all[0m
+[1mPolicies[0m
+  policy              Write, test and activate policies           [2msoon[0m   [2mlint · fmt · test · push · activate · evaluate · replay · diff[0m
+[1mActions[0m
+  act                 Send a test action through the Gate         [2msoon[0m
+  actions             Inspect actions                             [2msoon[0m   [2mlist · show · cancel[0m
+  approve · deny      Decide a pending approval                   [2msoon[0m
+  approvals           List pending approvals                      [2msoon[0m   [2mlist · show[0m
+  undo                Preview or run an undo                      [2msoon[0m   [2mpreview · run[0m
+  webhooks            Send events to your endpoints               [2msoon[0m   [2mcreate · list · test · delete[0m
+[1mDeeds[0m
+  verify              Check deeds offline                         [2msoon[0m
+  deeds               Browse and export deeds                     [2msoon[0m   [2mlist · show · export[0m
+  ledger              Check or prune the Ledger                   [2msoon[0m   [2mcheck · prune[0m
+[1mConnectors[0m
+  connector           Connect tools                               [2msoon[0m   [2mcreate · list · show · test · types · credentials[0m
+  connector postgres  Prepare a Postgres database                 [2msoon[0m   [2minit · check[0m
+  connector gmail     Authorize the Gmail connector               [2msoon[0m   [2mauthorize[0m
+  decoder             Inspect Postgres change readers             [2msoon[0m   [2mstatus · drop[0m
+  slack manifest      Print the Slack app manifest                [2msoon[0m
+[1mMCP[0m
+  mcp                 Put the Gate in front of MCP servers        [2msoon[0m   [2mwrap · serve · snippet[0m
+[1mInsights[0m
+  insights            Usage, shadow results and anomalies         [2msoon[0m   [2mstats · shadow · anomalies · detect · settings · suggestions · digest[0m
+[1mDev[0m
+  dev                 Local helpers                               [2msoon[0m   [2mseed · fake-action · simulate · agent-script · mail-preview · sign-intent · stripe-fixtures[0m
+
+[1mGlobal flags[0m  --json · --server <url> · --api-key <key> · --org <id> · --no-color · -v
+Run deedglass help <command> for details · https://docs.deedglass.com
+--- stderr

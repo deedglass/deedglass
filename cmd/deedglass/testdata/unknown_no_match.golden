@@ -1,0 +1,5 @@
+exit 2
+--- stdout
+--- stderr
+✕ Unknown command "frobnicate".
+  Run deedglass help to see every command.

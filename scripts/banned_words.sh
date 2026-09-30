@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Banned-words check (plan §1.4, §3.12 rule 7). Scans tracked and untracked-but-not-ignored text files
+# Banned-words check (DEEDGLASS_BRAND.md §3, CLAUDE.md rule 7). Scans tracked and untracked-but-not-ignored text files
 # (docs, code strings, comments, SQL, JSON, workflows) and, with --commits, commit messages.
 # Phrases come from scripts/banned_words.txt. A hit fails unless .banned-words-allow lists it as
 #   <path>::<phrase, lowercase>::<reason>
@@ -7,7 +7,7 @@
 # Commit messages have no allowlist.
 #
 # Usage: scripts/banned_words.sh [--commits <git rev-range, e.g. HEAD or origin/main..HEAD>]
-# Env:   TXV_REPO_PUBLIC=1 drops the @until-public phrases (after the repo is made public).
+# Env:   DEEDGLASS_REPO_PUBLIC=1 drops the @until-public phrases (after the repo is made public).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -29,7 +29,7 @@ trap 'rm -rf "$tmp"' EXIT
 # 1. Phrases.
 grep -v -e '^[[:space:]]*#' -e '^[[:space:]]*$' "$LIST" | while IFS= read -r line; do
   case "$line" in
-    "@until-public "*) [ "${TXV_REPO_PUBLIC:-0}" = "1" ] || printf '%s\n' "${line#@until-public }" ;;
+    "@until-public "*) [ "${DEEDGLASS_REPO_PUBLIC:-0}" = "1" ] || printf '%s\n' "${line#@until-public }" ;;
     *) printf '%s\n' "$line" ;;
   esac
 done > "$tmp/patterns"
@@ -109,7 +109,7 @@ if [ -n "$COMMITS" ]; then
 fi
 
 if [ "$fail" -ne 0 ] || [ "$bad_allow" -ne 0 ]; then
-  echo "banned-words: FAIL (see plan §1.4; reword, or add an explanatory entry to $ALLOW with a reason)" >&2
+  echo "banned-words: FAIL (see CLAUDE.md rule 7; reword, or add an explanatory entry to $ALLOW with a reason)" >&2
   exit 1
 fi
 echo "banned-words: OK ($nfiles files, $ncommits commit messages, $allowed allowed hits)"

@@ -12,7 +12,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/testamur/testamur/internal/intent"
+	"github.com/deedglass/deedglass/internal/intent"
 )
 
 // expectedDigest pins id|expected|expected_detail|priority for every case.
@@ -78,7 +78,7 @@ func wantIDs() []string {
 
 func TestAttackMeta(t *testing.T) {
 	m := load(t)
-	if m.Format != "txv.attack_meta/1" {
+	if m.Format != "deedglass.attack_meta/1" {
 		t.Fatalf("format %q", m.Format)
 	}
 	reasonRe := regexp.MustCompile(`^[A-Z][A-Z0-9_]+$`)

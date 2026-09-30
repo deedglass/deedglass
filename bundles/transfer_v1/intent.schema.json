@@ -1,13 +1,13 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "urn:txv:schema:intent:1",
-  "title": "txv.intent/1 TRANSFER v1",
+  "$id": "urn:deedglass:schema:intent:1",
+  "title": "deedglass.intent/1 TRANSFER v1",
   "$comment": "Closed schema for the signed intent (spec 20_ section 5). The signed bytes must also be the exact RFC 8785 (JCS) form, contain only integers with magnitude <= 2^53-1, no duplicate keys and no lone surrogates; those rules are enforced by internal/intent before this schema applies. Cross-field rules not expressible here: exp > iat and exp - iat <= 300000.",
   "type": "object",
   "additionalProperties": false,
   "required": ["args", "aud", "bundle", "exp", "iat", "iss", "kid", "nonce", "op", "op_v", "v"],
   "properties": {
-    "v": { "const": "txv.intent/1" },
+    "v": { "const": "deedglass.intent/1" },
     "iss": { "type": "string", "pattern": "^[a-z0-9._-]{1,64}$", "description": "Principal id" },
     "kid": { "type": "string", "pattern": "^[0-9a-f]{32}$", "description": "Lowercase hex of the first 16 bytes of SHA-256(raw 32-byte public key)" },
     "aud": { "type": "string", "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", "description": "Target deployment_id (UUID generated at install); prevents cross-database replay" },

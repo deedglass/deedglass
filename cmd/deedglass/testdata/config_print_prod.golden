@@ -1,0 +1,7 @@
+exit 1
+--- stdout
+--- stderr
+✕ 3 problems in the prod config
+  DEEDGLASS_BASE_URL        must use https in prod (got http://127.0.0.1:8080). Set it to this server's public https URL.
+  DEEDGLASS_VAULT_KEY       isn't set. Generate one with `openssl rand -base64 32` and set it in the environment.
+  DEEDGLASS_API_KEY_PEPPER  isn't set. Generate one the same way, and keep it stable: changing it invalidates every API key.

@@ -1,17 +1,17 @@
 {
-  "v": "txv.bundle/1",
+  "v": "deedglass.bundle/1",
   "op": "TRANSFER",
   "op_v": 1,
-  "intent_schema_sha256": "7d0ffe80607c8e7978d9ae2c9806d90fe58c5260febd8d981d5ce3bb818eba8d",
-  "entry_fn": "txv.execute_transfer_v1(bytea,bytea)",
-  "fn_src_sha256": "36402869bc0e6b5ac98f28f2099601b551c31a730ba8fb44a7262f1056a11dfc",
-  "schema_sha256": "7401b86f6b2e4e1d1541fa1af02c1da3277932a2dad55f9ebf78a635e0275ab1",
+  "intent_schema_sha256": "9007497c43a3f6acdc63ed47e0af52c10362b59d9694e531dc5cb77fa654248a",
+  "entry_fn": "deedglass.execute_transfer_v1(bytea,bytea)",
+  "fn_src_sha256": "76f90a1fea1802a58e19518cd614e92df4b841f1d139e31c4144c4988025a5c7",
+  "schema_sha256": "d6bcb9c676b3c41227fc54fdab53dea309b88dd34ddcce3999c8378c4b2772d9",
   "write_set": [
     { "rel": "bank.accounts", "ops": ["UPDATE"], "rows": 2, "cols_changed": ["balance", "version"] },
     { "rel": "bank.journal", "ops": ["INSERT"], "rows": 2 },
-    { "rel": "txv.ledger", "ops": ["INSERT"], "rows": 1 }
+    { "rel": "deedglass.ledger", "ops": ["INSERT"], "rows": 1 }
   ],
-  "marker": { "prefix": "txv/v1", "count": 1 },
+  "marker": { "prefix": "deedglass", "count": 1 },
   "rule": { "id": "transfer_v1", "version": 1 },
   "constraints": { "max_amount": "100000000", "currencies": ["USD", "INR"] }
 }

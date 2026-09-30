@@ -1,0 +1,4 @@
+exit 1
+--- stdout
+--- stderr
+{"error":{"code":"config_invalid","doc_url":"https://docs.deedglass.com/errors/config_invalid","message":"3 problems in the prod config. Fix each one; see docs/CONFIG.md.","problems":[{"key":"DEEDGLASS_BASE_URL","message":"must use https in prod (got http://127.0.0.1:8080).","next":"Set it to this server's public https URL."},{"key":"DEEDGLASS_VAULT_KEY","message":"isn't set.","next":"Generate one with `openssl rand -base64 32` and set it in the environment."},{"key":"DEEDGLASS_API_KEY_PEPPER","message":"isn't set.","next":"Generate one the same way, and keep it stable: changing it invalidates every API key."}],"type":"invalid_request_error"}}

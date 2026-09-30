@@ -1,0 +1,23 @@
+exit 0
+--- stdout
+deedglass config · env dev
+
+DEEDGLASS_ENV                     dev                                                          default
+DEEDGLASS_DATABASE_URL            postgres://deedglass_app:••••••••@127.0.0.1:55432/deedglass  env
+DEEDGLASS_LISTEN                  127.0.0.1:8080                                               default
+DEEDGLASS_BASE_URL                http://127.0.0.1:8080                                        default
+DEEDGLASS_SEAL_KEY_FILE           —                                                            not set
+DEEDGLASS_VAULT_KEY               ••••••••                                                     .deedglass/dev-secrets.json
+DEEDGLASS_API_KEY_PEPPER          ••••••••                                                     .deedglass/dev-secrets.json
+DEEDGLASS_LOG_LEVEL               debug                                                        env
+DEEDGLASS_SIGNUP                  invite                                                       default
+DEEDGLASS_RESEND_API_KEY          —                                                            not set
+DEEDGLASS_ANTHROPIC_API_KEY       —                                                            not set
+DEEDGLASS_TRUSTED_PROXIES         —                                                            not set
+DEEDGLASS_ALLOW_PRIVATE_NETWORKS  false                                                        default
+DEEDGLASS_SLOT_LAG_ALERT_MB       512                                                          default
+DEEDGLASS_API_KEY                 —                                                            not set
+DEEDGLASS_SERVER                  —                                                            not set
+
+✓ Valid for dev · 2 local secrets generated in .deedglass/ (never used in prod)
+--- stderr

@@ -1,6 +1,6 @@
 # build output
 /bin/
-/txv
+/deedglass
 *.test
 *.out
 coverage.*
@@ -10,7 +10,8 @@ coverage.*
 .DS_Store
 .idea/
 .vscode/
-# never commit keys or secrets
+# never commit keys or secrets (.deedglass/ holds dev secrets and local keys; mode 0700)
+.deedglass/
 *.key
 *.pem
 .env

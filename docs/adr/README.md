@@ -1,21 +1,32 @@
 # Architecture decision records
 
-ADRs are written and approved in the private ops repository at `~/txv/ops/adr/` (numbered ADR-000 upward; plan §2.3, §3.10). This directory points there while the product repo is private.
+The canonical ADRs are written and approved in the private ops repository at `~/txv/ops/adr/`. While this product repo is private, this directory holds only a mirror of the index below; accepted, publishable ADRs are copied here before the repo goes public.
 
-| ADR | Topic | Source |
-|---|---|---|
-| ADR-001 | Language (Go) | spec 20_ §0 #1, §3.1 |
-| ADR-002 | CDC mechanism (pgoutput, SQL peek then advance; safeParse; pinned session settings; frame-position classification) | spec 20_ §8; plan §3.0 #3, #5, #9 |
-| ADR-003 | Marker and authenticity (marker last, same-transaction ledger row; marker_lsn is evidence only) | spec 20_ §7; plan §3.0 #1, #8 |
-| ADR-004 | Signature location (outside PostgreSQL, twice) | spec 20_ §0 #4 |
-| ADR-005 | Intent format (JCS, Ed25519, strict pre-parser before JCS) | spec 20_ §5; plan §3.0 #6 |
-| ADR-006 | Operation Bundle authority | spec 20_ §6 |
-| ADR-007 | Observation boundary | spec 20_ §9 |
-| ADR-008 | Statement format (COSE_Sign1, alg -8) | spec 20_ §11; plan §3.0 #4 |
-| ADR-009 | Payee allowlist (pending founder approval; adds attack case G01b) | plan §3.9 |
-| ADR-010 | Demo MCP tool | plan §3.9 |
-| ADR-011 | Site hero copy | plan §1.3, §3.9 |
+Process: Claude Code drafts, the founder approves. Status moves `Proposed` → `Accepted (date)`, or `Superseded by ADR-NNN (date)`. Any deviation from the architecture contract, any new dependency, and any change to an expected outcome in `attack/attack_meta.json` needs an approved ADR.
 
-Any deviation from the spec, any new dependency, and any change to an expected outcome in `attack/attack_meta.json` needs an ADR the founder approves.
+ADR-000 to ADR-008 were written for the V0 verifier and keep their original text; ADR-012 renamed the permanent identifiers they mention. ADR-009 to ADR-011 were withdrawn when V0 was parked (DL-012) and never written; their numbers are not reused.
 
-TODO(G4): copy the accepted, publishable ADRs into this directory before the repo goes public.
+| ADR | Title | Status (2026-10-01) | Summary |
+|---|---|---|---|
+| 000 | Why we proceed despite the recorded dissents | Accepted; write-up pending review | Proceed with a narrowed V0 under pre-committed tripwires T1–T6 |
+| 001 | Language: Go, one static binary | Proposed | Go with the spike-verified pins (pgx v5.11.0, pglogrepl pseudo-version, jcs v1.0.2, go-cose v1.3.0); binary renamed by ADR-012 |
+| 002 | CDC: pgoutput proto 1 via SQL peek-then-advance | Proposed | `safeParse` wrapper, pinned session settings, frame-position classification, `marker_lsn` as evidence only |
+| 003 | Marker emitted last; authenticated only by the same-transaction ledger row | Proposed | One ledger row and one marker per transaction; the entry guard is "first write" |
+| 004 | Signature verified outside Postgres, twice | Proposed | Before commit (prevention) and after commit (detection); the database does every non-crypto check |
+| 005 | Intent: closed-schema JCS + Ed25519, amounts as strings | Proposed | Strict integer pre-parser before JCS; small-order key rejection (A13) |
+| 006 | Operation Bundle authority | Proposed | Vendor authors, admin activates, principal signs the hash; exact expected-delta equality |
+| 007 | Observation boundary | Proposed | Explicit publication before the slot, hashed boundary manifest, bracketing snapshots, gap taxonomy |
+| 008 | Statement format: COSE_Sign1, alg −8 | Proposed | Signed statement shape; −8 because go-cose 1.3.0 lacks −19; hash-chained; offline check |
+| 009 | Payee allowlist | Withdrawn (V0 parked, DL-012), never written | — |
+| 010 | Demo MCP tool | Withdrawn (V0 parked, DL-012), never written | — |
+| 011 | Site hero copy | Withdrawn (V0 parked, DL-012), never written | — |
+| 012 | Rename every permanent identifier to `deedglass` | Accepted (2026-10-01) | Module, binary, schema, roles, env prefix and type strings renamed; bundle re-hashed; attack digest unchanged; `scripts/rename_guard.sh` in `make ci` |
+| 013 | Go package layout follows the contract | Accepted (2026-10-01) | `doc.go` per package with invariants; `intent`, `keys`, `bundle` kept; `buildinfo` and `archtest` added; `internal/canon` decided in S04 |
+| 014 | Ids are prefixed, lowercase ULIDs | Accepted (2026-10-01) | `^<prefix>_[0-7][0-9a-hjkmnp-tv-z]{25}$`; monotonic, `crypto/rand`, strict parsing; additive prefixes; no dependency |
+| 015 | One typed config; `deedglass.yaml` via go.yaml.in/yaml/v3 | Accepted (2026-10-01) | Pin v3.0.5 (MIT + Apache-2.0); secrets redact themselves; no YAML anchors, aliases or merge keys; 64 KiB cap |
+| 016 | CLI on the standard `flag` package plus a command registry | Accepted (2026-10-01) | No CLI framework; exit codes 0/1/2/3; colour only on a TTY and without `NO_COLOR`; `--json` everywhere |
+| 017 | Policies: YAML outside, CEL inside | Accepted (2026-10-01) | Pin `cel.dev/cel-go` v0.32.0 (Apache-2.0); one declared environment; cost limits; enters `go.mod` in S10 |
+| 018 | MCP: official Go SDK for clients and tests, own front | Accepted (2026-10-01) | Pin go-sdk v1.8.0; serve the 2026-07-28 and 2025 protocol revisions; enters `go.mod` in S14 |
+| 019 | Embedded, forward-only, checksummed SQL migrations | Accepted (2026-10-01) | `internal/store/migrations/NNNN_name.sql`; small runner in S02; no dependency |
+| 020 | Console: static Astro 7 + Tailwind 4, embedded in the binary | Accepted (2026-10-01) | Vanilla TypeScript islands; brand tokens shared with the site |
+| 021 | Attack-suite outcomes move to VERIFIED / MISMATCH / UNVERIFIABLE | Accepted (2026-10-01) | Not applied yet; the attack digest stays until S18 applies it |

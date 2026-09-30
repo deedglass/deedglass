@@ -22,7 +22,7 @@ const (
 	CodeNonCanonical  Code = "NON_CANONICAL"
 )
 
-// Schema failures for txv.intent/1. The verifier reports these as
+// Schema failures for deedglass.intent/1. The verifier reports these as
 // INTENT_SCHEMA (spec §10.3 check 4).
 const (
 	CodeUnknownKey Code = "UNKNOWN_KEY"

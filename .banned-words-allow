@@ -1,37 +1,43 @@
 # .banned-words-allow: hits of scripts/banned_words.txt that are allowed, one per line:
 #   <path>::<phrase, lowercase>::<reason>
-# Only exact quoted prior-art titles and explanatory negations, each with a reason (plan §1.4,
-# §3.12 rule 7). An entry covers that phrase anywhere in that file, so keep such files small.
+# Only exact quoted prior-art titles and explanatory negations, each with a reason (CLAUDE.md
+# rule 7). An entry covers that phrase anywhere in that file, so keep such files small.
 
 # CLAUDE.md restates the banned list and the codename rule so the builder can follow them.
-CLAUDE.md::alloy::explanatory negation: CLAUDE.md lists what must never be written (plan §1.4)
-CLAUDE.md::article 12 infrastructure::explanatory negation: CLAUDE.md lists what must never be written (plan §1.4)
-CLAUDE.md::attestation::explanatory negation: CLAUDE.md lists what must never be written (plan §1.4)
-CLAUDE.md::attests::explanatory negation: CLAUDE.md lists what must never be written (plan §1.4)
-CLAUDE.md::certificate::explanatory negation: CLAUDE.md lists what must never be written (plan §1.4)
-CLAUDE.md::certification::explanatory negation: CLAUDE.md lists what must never be written (plan §1.4)
-CLAUDE.md::certified::explanatory negation: CLAUDE.md lists what must never be written (plan §1.4)
-CLAUDE.md::compliance::explanatory negation: CLAUDE.md lists what must never be written (plan §1.4)
-CLAUDE.md::cryptographic proof of execution::explanatory negation: CLAUDE.md lists what must never be written (plan §1.4)
-CLAUDE.md::eu ai act compliant::explanatory negation: CLAUDE.md lists what must never be written (plan §1.4)
-CLAUDE.md::guaranteed::explanatory negation: CLAUDE.md lists what must never be written (plan §1.4)
-CLAUDE.md::intent verification::explanatory negation: CLAUDE.md lists what must never be written (plan §1.4)
-CLAUDE.md::irrefutable::explanatory negation: CLAUDE.md lists what must never be written (plan §1.4)
-CLAUDE.md::liability transfer::explanatory negation: CLAUDE.md lists what must never be written (plan §1.4)
-CLAUDE.md::mathematically proves::explanatory negation: CLAUDE.md lists what must never be written (plan §1.4)
-CLAUDE.md::no hidden side effects::explanatory negation: CLAUDE.md lists what must never be written (plan §1.4)
-CLAUDE.md::open source::explanatory negation: CLAUDE.md lists what must never be written (plan §1.4)
-CLAUDE.md::patented::explanatory negation: CLAUDE.md lists what must never be written (plan §1.4)
-CLAUDE.md::prevents all tampering::explanatory negation: CLAUDE.md lists what must never be written (plan §1.4)
-CLAUDE.md::proof of execution::explanatory negation: CLAUDE.md lists what must never be written (plan §1.4)
-CLAUDE.md::proves::explanatory negation: CLAUDE.md lists what must never be written (plan §1.4)
-CLAUDE.md::proves the transaction happened::explanatory negation: CLAUDE.md lists what must never be written (plan §1.4)
-CLAUDE.md::receipt::explanatory negation: CLAUDE.md lists what must never be written (plan §1.4)
-CLAUDE.md::rfc 9942 receipt::explanatory negation: CLAUDE.md lists what must never be written (plan §1.4)
-CLAUDE.md::scitt-compliant::explanatory negation: CLAUDE.md lists what must never be written (plan §1.4)
-CLAUDE.md::synchronous::explanatory negation: CLAUDE.md lists what must never be written (plan §1.4)
-CLAUDE.md::tamper-proof::explanatory negation: CLAUDE.md lists what must never be written (plan §1.4)
-CLAUDE.md::trustless::explanatory negation: CLAUDE.md lists what must never be written (plan §1.4)
-CLAUDE.md::unbreakable::explanatory negation: CLAUDE.md lists what must never be written (plan §1.4)
-CLAUDE.md::verify any agent action::explanatory negation: CLAUDE.md lists what must never be written (plan §1.4)
-CLAUDE.md::we testify::explanatory negation: CLAUDE.md lists what must never be written (plan §1.4)
+CLAUDE.md::alloy::explanatory negation: CLAUDE.md lists what must never be written (rule 7)
+CLAUDE.md::article 12 infrastructure::explanatory negation: CLAUDE.md lists what must never be written (rule 7)
+CLAUDE.md::attestation::explanatory negation: CLAUDE.md lists what must never be written (rule 7)
+CLAUDE.md::attests::explanatory negation: CLAUDE.md lists what must never be written (rule 7)
+CLAUDE.md::certificate::explanatory negation: CLAUDE.md lists what must never be written (rule 7)
+CLAUDE.md::certification::explanatory negation: CLAUDE.md lists what must never be written (rule 7)
+CLAUDE.md::certified::explanatory negation: CLAUDE.md lists what must never be written (rule 7)
+CLAUDE.md::compliance::explanatory negation: CLAUDE.md lists what must never be written (rule 7)
+CLAUDE.md::eu ai act compliant::explanatory negation: CLAUDE.md lists what must never be written (rule 7)
+CLAUDE.md::guaranteed::explanatory negation: CLAUDE.md lists what must never be written (rule 7)
+CLAUDE.md::intent verification::explanatory negation: CLAUDE.md lists what must never be written (rule 7)
+CLAUDE.md::irrefutable::explanatory negation: CLAUDE.md lists what must never be written (rule 7)
+CLAUDE.md::liability transfer::explanatory negation: CLAUDE.md lists what must never be written (rule 7)
+CLAUDE.md::mathematically proves::explanatory negation: CLAUDE.md lists what must never be written (rule 7)
+CLAUDE.md::no hidden side effects::explanatory negation: CLAUDE.md lists what must never be written (rule 7)
+CLAUDE.md::open source::explanatory negation: CLAUDE.md lists what must never be written (rule 7)
+CLAUDE.md::patented::explanatory negation: CLAUDE.md lists what must never be written (rule 7)
+CLAUDE.md::prevents all tampering::explanatory negation: CLAUDE.md lists what must never be written (rule 7)
+CLAUDE.md::proof of execution::explanatory negation: CLAUDE.md lists what must never be written (rule 7)
+CLAUDE.md::proves::explanatory negation: CLAUDE.md lists what must never be written (rule 7)
+CLAUDE.md::proves the transaction happened::explanatory negation: CLAUDE.md lists what must never be written (rule 7)
+CLAUDE.md::receipt::explanatory negation: CLAUDE.md lists what must never be written (rule 7)
+CLAUDE.md::rfc 9942 receipt::explanatory negation: CLAUDE.md lists what must never be written (rule 7)
+CLAUDE.md::scitt-compliant::explanatory negation: CLAUDE.md lists what must never be written (rule 7)
+CLAUDE.md::synchronous::explanatory negation: CLAUDE.md lists what must never be written (rule 7)
+CLAUDE.md::tamper-proof::explanatory negation: CLAUDE.md lists what must never be written (rule 7)
+CLAUDE.md::trustless::explanatory negation: CLAUDE.md lists what must never be written (rule 7)
+CLAUDE.md::unbreakable::explanatory negation: CLAUDE.md lists what must never be written (rule 7)
+CLAUDE.md::we testify::explanatory negation: CLAUDE.md lists what must never be written (rule 7)
+CLAUDE.md::revolutionary::explanatory negation: CLAUDE.md lists the brand style words that must never be written
+CLAUDE.md::world-class::explanatory negation: CLAUDE.md lists the brand style words that must never be written
+CLAUDE.md::cutting-edge::explanatory negation: CLAUDE.md lists the brand style words that must never be written
+CLAUDE.md::seamless::explanatory negation: CLAUDE.md lists the brand style words that must never be written
+CLAUDE.md::next-gen::explanatory negation: CLAUDE.md lists the brand style words that must never be written
+CLAUDE.md::military-grade::explanatory negation: CLAUDE.md lists the brand style words that must never be written
+CLAUDE.md::bank-grade::explanatory negation: CLAUDE.md lists the brand style words that must never be written
+CLAUDE.md::unhackable::explanatory negation: CLAUDE.md lists the brand style words that must never be written

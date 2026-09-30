@@ -1,0 +1,5 @@
+exit 2
+--- stdout
+--- stderr
+deedglass verify isn't in this build yet.
+Run deedglass help to see what this build can do.

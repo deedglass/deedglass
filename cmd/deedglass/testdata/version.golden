@@ -1,0 +1,4 @@
+exit 0
+--- stdout
+deedglass 0.1.0-dev · commit 5495f7e (modified) · api 2026-10-01 · go1.27.1 · darwin/arm64
+--- stderr

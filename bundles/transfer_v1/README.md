@@ -2,7 +2,7 @@
 
 `manifest.json` is the vendor-authored bundle for `TRANSFER` v1 (spec 20_ §6). Its identity is
 `bundle_hash = "sha256:" + hex(SHA-256(JCS(manifest.json)))`; the principal signs that hash inside
-every intent, the customer admin activates it in `txv.bundles`, and the verifier compiles in the
+every intent, the customer admin activates it in `deedglass.bundles`, and the verifier compiles in the
 rule for it. `go test ./internal/bundle -run TestManifestHashes -v` prints the current value.
 
 | Field | Computed from | Checked by |

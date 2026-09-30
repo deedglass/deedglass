@@ -1,0 +1,21 @@
+# .rename-allow: retired identifiers that are allowed, one per line:
+#   <path>::<token, lowercase>::<reason>
+# Only places that must name the old identifier to refuse it, test it or document the rename
+# (ADR-012). An entry covers that token anywhere in that file, so keep such files small.
+
+# The rename map itself.
+docs/NAMING.md::txv::the rename map lists every retired identifier and its successor (ADR-012)
+docs/NAMING.md::testamur::the rename map lists the retired working name (ADR-012)
+docs/NAMING.md::deltamark::the rename map lists the retired fallback name (ADR-012)
+CLAUDE.md::txv::rule 5 names the retired token so builders keep it out (ADR-012)
+CLAUDE.md::testamur::rule 5 names the retired module name so builders keep it out (ADR-012)
+
+# Config refuses any TXV_* variable with a rename hint (S01 §3.5).
+internal/config/keys.go::txv::maps V0 tooling names (TXV_PG, TXV_PG_PASSWORD) to their new names
+internal/config/config.go::txv::refuses TXV_* variables with a rename hint
+internal/config/sources.go::txv::keeps TXV_* lines from .env so they can be refused
+internal/config/doc.go::txv::documents that TXV_* variables are refused
+internal/config/config_test.go::txv::tests that TXV_* variables are refused
+docs/CONFIG.md::txv::documents that TXV_* variables are refused
+cmd/deedglass/main_test.go::txv::golden case for the TXV_* refusal
+cmd/deedglass/testdata/config_print_txv.golden::txv::golden output of the TXV_* refusal

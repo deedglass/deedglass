@@ -1,0 +1,4 @@
+exit 1
+--- stdout
+--- stderr
+✕ TXV_DATABASE_URL is from the old name. Rename it to DEEDGLASS_DATABASE_URL.

@@ -1,75 +1,56 @@
-# Testamur
+# Deedglass
 
-> **Working name.** Testamur is not final until the founder's name gate passes (fallback: Deltamark).
-> Code and database identifiers use the brand-neutral token `txv` (binary `txv`, schema `txv`,
-> roles `txv_*`, message prefix `txv/v1`, type strings `txv.intent/1`) and never change.
+Deedglass is the execution and accountability layer for AI agents. It authorizes every action, runs
+it under control, checks the result against the system of record, and seals a deed.
 
-**Status: pre-release, private.** Nothing in this repository is published. It becomes public only
-after release gate G4 and the founder's approval.
+**Status: private, pre-release.** Nothing in this repository is published yet.
 
-## What it is
+## What works today
 
-Effect verification for agent writes to PostgreSQL. Gateways and identity layers decide what an AI
-agent may do before it acts; this checks what it actually wrote, by comparing the row changes decoded
-from the database's own logical-replication stream with the changes a signed, typed authorization
-should have caused. The scoped claim:
+This is the foundation. Most of the product is still ahead, and `deedglass help` says exactly what
+this build can and can't do.
 
-> For each committed PostgreSQL transaction that carries a txv ledger entry, the verifier checks
-> whether the row changes decoded from the database's own logical-replication stream, within the
-> declared observation boundary, exactly equal the changes that the pinned Operation Bundle computes
-> from the signed intent and the decoded before-images. It then issues a signed **VALID**,
-> **INVALID** or **INCONCLUSIVE** statement. It also raises a signed alert for any change to a
-> protected table that no valid intent accounts for. This holds under explicit assumptions: an
-> honest PostgreSQL server, its superusers and the owners of verified objects; an honest verifier
-> host and verifier key; and an uncompromised intent-signing key. It does not cover reads, effects
-> outside the boundary or outside the WAL, or whether the authorized intent itself was a good idea.
-
-In one line: signed intent in; independently computed expected delta versus decoded observed delta
-out; a signed three-valued verdict.
-
-## Quickstart
-
-TODO(G3): `docker compose -f deploy/docker-compose.yml up` will run PostgreSQL 18.6, the executor
-and the verifier, and `demo.sh` will run the demo cases (A01, B01, C01, A03, D05, D06). Today:
-
-```sh
-make ci            # gofmt, go mod tidy check, go vet, go test -race, test-vector checksums, banned words
-make integration   # throwaway PostgreSQL (Homebrew, else Docker): apply sql/001-004 and run the smoke checks
-make build && bin/txv version
-```
-
-## Layout
-
-| Path | What |
+| Works | Where |
 |---|---|
-| `cmd/txv` | the single CLI (subcommands per spec 20_ §3.3; only `version` works today) |
-| `internal/intent` | txv.intent/1: strict pre-parser, schema, canonical (JCS) check |
-| `internal/keys` | kid derivation; small-order and non-canonical key rejection |
-| `internal/{bundle,pgsql,decoder,boundary,verify,statement,store,executor}` | package docs only so far |
-| `sql/` | `001_roles`, `002_schema`, `003_transfer_v1` (the controlled function), `004_publication` |
-| `bundles/transfer_v1` | Operation Bundle manifest and intent JSON Schema |
-| `attack/attack_meta.json` | every attack case with its expected outcome, written before implementation |
-| `testdata/` | RFC 8785, RFC 8032 and Wycheproof vectors with `SHA256SUMS` |
-| `deploy/docker-compose.yml` | local PostgreSQL 18.6 (executor and verifier to follow) |
-| `docs/` | specification documents (stubs until G4); `docs/adr/` points to the ADRs |
-| `CLAUDE.md` | builder rules |
+| `deedglass help`, `help <command>`, `help --json` | `cmd/deedglass`: every contract command is listed; unbuilt ones say so |
+| `deedglass version [--json]` | `internal/buildinfo`: version, commit, supported API versions |
+| `deedglass config print [--json]` | `internal/config`: the effective config with every secret hidden |
+| Prefixed ids (`agt_01j9…`) | `internal/ids`: strict, monotonic, sortable |
+| Strict JSON and JCS, Ed25519 key checks | `internal/intent`, `internal/keys` (kept from V0) |
+| The V0 Postgres transfer demo | `sql/001–004`, `bundles/transfer_v1`, checked by `make integration` |
+| The V0 attack-case list, outcomes pinned | `attack/attack_meta.json` |
 
-## Renaming the module
+What it doesn't do yet: serve an API, run the Gate, seal deeds, verify deeds, or connect to any
+tool. `docs/REPO_MAP.md` shows which session builds each part.
 
-The module path `github.com/testamur/testamur` is provisional. If the name gate picks another
-brand (for Deltamark the plan names `github.com/deltamark-dev/deltamark`, because the GitHub user
-`deltamark` is taken):
+## Build and test
+
+Go 1.27.1. PostgreSQL 16, 17 or 18 (Homebrew or Docker) for the integration run.
 
 ```sh
-go mod edit -module github.com/<org>/<name>
-grep -rl 'github.com/testamur/testamur' --include='*.go' . \
-  | xargs sed -i '' 's#github.com/testamur/testamur#github.com/<org>/<name>#g'   # GNU sed: -i without ''
-go mod tidy && go vet ./... && go test ./...
+make build && bin/deedglass help    # the CLI
+bin/deedglass config print          # dev generates local secrets in .deedglass/ (never used in prod)
+make ci                             # gofmt, tidy, vet, race tests, test vectors, rename guard, banned words, no-cgo build
+make integration                    # throwaway PostgreSQL 18: sql/001-004 and the smoke checks
+make matrix                         # the same on 16, 17 and 18
+make help                           # every target
 ```
 
-Then replace `Testamur` / `testamur` in `README.md`, `CLAUDE.md` and `docs/`. Nothing else carries
-the brand: the binary, schema, roles, message prefix and type strings all use `txv`.
+## Docs
+
+| Doc | What |
+|---|---|
+| `docs/ARCHITECTURE.md` | how the parts fit, the action lifecycle, what each part doesn't do |
+| `docs/REPO_MAP.md` | every directory and package, its status and owner session |
+| `docs/NAMING.md` | the product vocabulary and the rename from the V0 names |
+| `docs/CLI.md` | the `deedglass` CLI: principles, flags, exit codes, JSON mode |
+| `docs/CONFIG.md` | every setting, precedence, dev and prod |
+| `docs/IDS.md` | id format, prefixes, ordering |
+| `docs/LIMITATIONS.md` | what Deedglass doesn't do |
+| `docs/adr/README.md` | architecture decision records |
+| `docs/v0/` | V0 references kept for the L2 design |
+| `CLAUDE.md` | builder rules |
 
 ## License
 
-Apache-2.0 (see `LICENSE`). The repository stays private until release gate G4.
+Apache-2.0 (see `LICENSE`). The repository stays private until the founder decides otherwise.
