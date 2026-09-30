@@ -1,31 +1,104 @@
-# Local development stack: PostgreSQL 18.6 only, for now.
-# `deedglass serve` (the API, the Gate and the Console) joins this file in S03. Local, throwaway use
-# only: the password below is a local default.
+# Local development stack (make dev): PostgreSQL 18.6, a one-shot `deedglass migrate up`, and
+# `deedglass serve`. Local use only: dev mode, plain HTTP, sslmode=disable, ports bound to 127.0.0.1.
+# docs/DEV_LOOP.md explains the loop; docs/SELF_HOSTING.md covers running the image for real.
 #
-#   docker compose -f deploy/docker-compose.yml up -d postgres
-#   (until S02's `deedglass migrate` exists, `make integration DEEDGLASS_IT_MODE=docker` runs its
-#    own throwaway container and applies sql/001-004)
+# scripts/dev.sh drives this file and creates .env (mode 0600, git-ignored) on first run:
+#
+#   docker compose -f deploy/docker-compose.yml --env-file .env up -d --build --wait
+#
+# Every secret comes from .env through ${VAR:?}; there is no default password and no env_file, so each
+# container sees only the settings listed here. DEEDGLASS_DEV_* names are tooling names the binary ignores.
 name: deedglass
+
+# One image for both Deedglass services, built from the root Dockerfile.
+x-deedglass-image: &deedglass-image
+  image: deedglass:dev
+  build:
+    context: ..
+    dockerfile: Dockerfile
+    args:
+      VERSION: 0.1.0-dev
+
+# The container hardening every Deedglass service gets.
+x-deedglass-hardening: &deedglass-hardening
+  read_only: true
+  tmpfs:
+    - /tmp
+  cap_drop:
+    - ALL
+  security_opt:
+    - no-new-privileges:true
+  user: "65532:65532"
 
 services:
   postgres:
-    image: postgres:18.6
+    # postgres:18.6, pinned by the digest of its multi-arch index (ADR-024).
+    image: postgres:18.6@sha256:5a5a84b19854a9ffaa54082c166ff4ec27473a361e496e5ea167f298f2da9722
     # wal_level=logical needs a restart to change, so it is set at start.
     # max_slot_wal_keep_size must be finite: a stalled Witness must never fill the disk.
     command: ["postgres", "-c", "wal_level=logical", "-c", "max_slot_wal_keep_size=2GB"]
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: ${DEEDGLASS_DEV_PG_PASSWORD:-deedglass-local-only}
-      POSTGRES_DB: deedglass
+      POSTGRES_PASSWORD: ${DEEDGLASS_DEV_PG_ADMIN_PASSWORD:?run make dev}
+      # Read by init/10-deedglass.sh on the first start of an empty volume only.
+      DEEDGLASS_DEV_PG_MIGRATOR_PASSWORD: ${DEEDGLASS_DEV_PG_MIGRATOR_PASSWORD:?run make dev}
+      DEEDGLASS_DEV_PG_APP_PASSWORD: ${DEEDGLASS_DEV_PG_APP_PASSWORD:?run make dev}
     ports:
       - "127.0.0.1:55432:5432"
     volumes:
-      - deedglass-pgdata:/var/lib/postgresql   # the 18.x image keeps PGDATA under /var/lib/postgresql/18/
+      - deedglass-pgdata:/var/lib/postgresql # the 18.x image keeps PGDATA under /var/lib/postgresql/18/
+      - ./postgres/control-plane-roles.sql:/deedglass/control-plane-roles.sql:ro
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d deedglass"]
+      # Over TCP, so the temporary server the entrypoint runs during init (socket only) never counts.
+      test: ["CMD", "pg_isready", "-h", "127.0.0.1", "-U", "postgres", "-d", "deedglass"]
       interval: 2s
       timeout: 5s
       retries: 30
+      start_period: 5s
+
+  migrate:
+    <<: [*deedglass-image, *deedglass-hardening]
+    command: ["migrate", "up"]
+    environment:
+      DEEDGLASS_ENV: dev
+      DEEDGLASS_MIGRATE_DATABASE_URL: postgres://deedglass_migrator:${DEEDGLASS_DEV_PG_MIGRATOR_PASSWORD:?run make dev}@postgres:5432/deedglass?sslmode=disable
+      # Set here too: without them, dev config would try to create .deedglass/ for local secrets,
+      # and the root filesystem is read-only.
+      DEEDGLASS_VAULT_KEY: ${DEEDGLASS_VAULT_KEY:?run make dev}
+      DEEDGLASS_API_KEY_PEPPER: ${DEEDGLASS_API_KEY_PEPPER:?run make dev}
+      DEEDGLASS_LOG_LEVEL: ${DEEDGLASS_LOG_LEVEL:-info}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  deedglass:
+    <<: [*deedglass-image, *deedglass-hardening]
+    command: ["serve"]
+    environment:
+      DEEDGLASS_ENV: dev
+      DEEDGLASS_DATABASE_URL: postgres://deedglass_app:${DEEDGLASS_DEV_PG_APP_PASSWORD:?run make dev}@postgres:5432/deedglass?sslmode=disable
+      DEEDGLASS_LISTEN: 0.0.0.0:8080
+      DEEDGLASS_BASE_URL: http://127.0.0.1:8080
+      DEEDGLASS_VAULT_KEY: ${DEEDGLASS_VAULT_KEY:?run make dev}
+      DEEDGLASS_API_KEY_PEPPER: ${DEEDGLASS_API_KEY_PEPPER:?run make dev}
+      DEEDGLASS_LOG_LEVEL: ${DEEDGLASS_LOG_LEVEL:-info}
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    ports:
+      - "127.0.0.1:8080:8080"
+    healthcheck:
+      # Distroless has no shell or curl; the binary checks GET /v1/version with a 2 s timeout.
+      test: ["CMD", "/deedglass", "version", "--server", "http://127.0.0.1:8080"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 5s
+    # The first SIGTERM drains, then shutdown takes up to 20 s; give it that before SIGKILL.
+    stop_grace_period: 25s
+    restart: unless-stopped
 
 volumes:
   deedglass-pgdata:

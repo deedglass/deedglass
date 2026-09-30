@@ -1,0 +1,119 @@
+# Contract §9 as data (internal/httpx/contract_routes.go). Regenerate: go test ./internal/httpx -run Routes -update
+# status   method  pattern                                                auth            access           owner  note
+mounted    GET     /v1/health                                             public          -                S03
+mounted    GET     /v1/version                                            public          -                S03
+mounted    GET     /api/openapi.yaml                                      public          -                S03
+planned    GET     /.well-known/deedglass/keys.json                       public          -                S04    CORS *
+planned    POST    /v1/auth/login                                         public          -                S07
+planned    POST    /v1/auth/preview                                       public          -                S07
+planned    POST    /v1/auth/callback                                      public          -                S07
+planned    POST    /v1/auth/logout                                        session         viewer           S07
+planned    POST    /v1/auth/switch-org                                    session         viewer           S07
+planned    GET     /v1/me                                                 session         viewer           S07
+planned    PATCH   /v1/me                                                 session         viewer           S07
+planned    GET     /v1/org                                                session         viewer           S07
+planned    PATCH   /v1/org                                                session         admin            S07
+planned    GET     /v1/org/members                                        session         viewer           S07
+planned    POST    /v1/org/members                                        session         admin            S07
+planned    PATCH   /v1/org/members/{id}                                   session         admin            S07
+planned    DELETE  /v1/org/members/{id}                                   session         admin            S07
+planned    GET     /login                                                 public          -                S07    page
+planned    GET     /auth/confirm                                          public          -                S07    page
+planned    GET     /v1/agents                                             session_or_key  viewer           S08
+planned    POST    /v1/agents                                             session_or_key  admin            S08
+planned    GET     /v1/agents/{id}                                        session_or_key  viewer           S08
+planned    PATCH   /v1/agents/{id}                                        session_or_key  admin            S08
+planned    POST    /v1/agents/{id}/suspend                                session_or_key  admin            S08
+planned    POST    /v1/agents/{id}/resume                                 session_or_key  admin            S08
+planned    POST    /v1/agents/{id}/stop                                   session_or_key  admin            S08
+planned    POST    /v1/agents/{id}/start                                  session_or_key  admin            S08
+planned    POST    /v1/org/stop-all                                       session_or_key  admin            S08
+planned    POST    /v1/org/start-all                                      session         owner            S08
+planned    GET     /v1/agents/{id}/keys                                   session_or_key  viewer           S08
+planned    POST    /v1/agents/{id}/keys                                   session_or_key  admin            S08    Sensitive
+planned    POST    /v1/keys/{id}/roll                                     session_or_key  admin            S08    Sensitive
+planned    POST    /v1/keys/{id}/revoke                                   session_or_key  admin            S08
+planned    GET     /v1/whoami                                             agent_key       -                S08
+planned    GET     /v1/org/keys                                           session         admin            S08
+planned    POST    /v1/org/keys                                           session         admin            S08    Sensitive; admin keys can't mint admin keys
+planned    GET     /v1/agents/{id}/intent-keys                            session_or_key  viewer           S09
+planned    POST    /v1/agents/{id}/intent-keys                            session_or_key  admin            S09
+planned    DELETE  /v1/agents/{id}/intent-keys/{kid}                      session_or_key  admin            S09
+planned    POST    /v1/intents/verify                                     agent_key       -                S09
+planned    GET     /.well-known/oauth-protected-resource                  public          -                S09    CORS *
+planned    GET     /.well-known/oauth-protected-resource/mcp/{connector}  public          -                S09    CORS *
+planned    GET     /.well-known/oauth-protected-resource/mcp/native       public          -                S09    CORS *
+planned    GET     /v1/policies                                           session_or_key  admin            S12
+planned    POST    /v1/policies                                           session_or_key  admin            S12
+planned    GET     /v1/policies/active                                    session_or_key  admin            S12
+planned    GET     /v1/policies/{id}                                      session_or_key  admin            S12
+planned    GET     /v1/policies/{id}/versions                             session_or_key  admin            S12
+planned    POST    /v1/policies/{id}/versions                             session_or_key  admin            S12
+planned    GET     /v1/policies/{id}/versions/{v}                         session_or_key  admin            S12
+planned    POST    /v1/policies/{id}/versions/{v}/activate                session_or_key  admin            S12
+planned    POST    /v1/policies/{id}/versions/{v}/deactivate              session_or_key  admin            S12
+planned    POST    /v1/policies/lint                                      session_or_key  admin            S12
+planned    POST    /v1/policies/evaluate                                  session_or_key  admin            S12
+planned    POST    /v1/policies/test                                      session_or_key  admin            S12
+planned    POST    /v1/policies/{id}/versions/{v}/replay                  session_or_key  admin            S27
+planned    POST    /v1/actions                                            agent_key       actions:execute  S13    IdemNever: the Gate owns its idempotency
+planned    GET     /v1/actions                                            session_or_key  actions:read     S13
+planned    GET     /v1/actions/{id}                                       session_or_key  actions:read     S13
+planned    POST    /v1/actions/{id}/cancel                                session_or_key  admin            S13
+planned    POST    /v1/actions/{id}/result                                agent_key       actions:execute  S13    proxy mode
+planned    POST    /v1/tools/resolve                                      agent_key       actions:execute  S14
+planned    GET     /v1/tools                                              agent_key       actions:execute  S15
+planned    POST    /v1/actions/{id}/undo/preview                          session_or_key  actions:undo     S23
+planned    POST    /v1/actions/{id}/undo                                  session_or_key  actions:undo     S23
+planned    GET     /v1/approvals                                          session_or_key  viewer           S22    agent keys see their own actions only
+planned    GET     /v1/approvals/{id}                                     session_or_key  viewer           S22
+planned    POST    /v1/approvals/{id}/approve                             session         admin            S22    only a person countersigns
+planned    POST    /v1/approvals/{id}/deny                                session         admin            S22    only a person countersigns
+planned    POST    /v1/approval-links/preview                             public          -                S22    one-time token in the body
+planned    POST    /v1/approval-links/decide                              public          -                S22    one-time token in the body
+planned    POST    /v1/approval-links/status                              public          -                S22    one-time token in the body
+planned    GET     /approve                                               public          -                S22    page
+planned    GET     /v1/webhooks                                           session_or_key  admin            S22
+planned    POST    /v1/webhooks                                           session_or_key  admin            S22    Sensitive
+planned    GET     /v1/webhooks/{id}                                      session_or_key  admin            S22
+planned    DELETE  /v1/webhooks/{id}                                      session_or_key  admin            S22
+planned    POST    /v1/webhooks/{id}/test                                 session_or_key  admin            S22
+planned    GET     /v1/webhooks/{id}/deliveries                           session_or_key  admin            S22
+planned    GET     /v1/deeds                                              session_or_key  deeds:read       S06
+planned    GET     /v1/deeds/{id}                                         session_or_key  deeds:read       S06
+planned    GET     /v1/deeds/export                                       session_or_key  deeds:read       S06
+planned    GET     /v1/ledger/check                                       session_or_key  deeds:read       S06
+planned    GET     /v1/connectors                                         session_or_key  admin            S16
+planned    POST    /v1/connectors                                         session_or_key  admin            S16
+planned    GET     /v1/connectors/{id}                                    session_or_key  admin            S16
+planned    PATCH   /v1/connectors/{id}                                    session_or_key  admin            S16
+planned    DELETE  /v1/connectors/{id}                                    session_or_key  admin            S16
+planned    PUT     /v1/connectors/{id}/credentials                        session_or_key  admin            S16
+planned    DELETE  /v1/connectors/{id}/credentials                        session_or_key  admin            S16
+planned    POST    /v1/connectors/{id}/test                               session_or_key  admin            S16
+planned    GET     /v1/connector-types                                    session_or_key  admin            S16
+planned    GET     /v1/connector-types/{type}                             session_or_key  admin            S30
+planned    GET     /v1/connectors/{id}/decoder                            session_or_key  admin            S20
+planned    DELETE  /v1/connectors/{id}/decoder                            session_or_key  admin            S20
+planned    GET     /v1/events                                             session_or_key  viewer           S24    SSE
+planned    GET     /app/                                                  session         viewer           S24    Console pages
+planned    GET     /v1/overview                                           session_or_key  viewer           S25
+planned    GET     /v1/insights/stats                                     session_or_key  viewer           S27
+planned    GET     /v1/insights/anomalies                                 session_or_key  viewer           S27
+planned    GET     /v1/insights/anomalies/{id}                            session_or_key  viewer           S27
+planned    POST    /v1/insights/anomalies/{id}/acknowledge                session_or_key  admin            S27
+planned    POST    /v1/insights/anomalies/{id}/resolve                    session_or_key  admin            S27
+planned    GET     /v1/insights/shadow                                    session_or_key  viewer           S27
+planned    GET     /v1/insights/settings                                  session_or_key  viewer           S27
+planned    PATCH   /v1/insights/settings                                  session_or_key  admin            S27
+planned    GET     /v1/replays                                            session_or_key  admin            S27
+planned    GET     /v1/replays/{id}                                       session_or_key  admin            S27
+planned    POST    /v1/replays/{id}/cancel                                session_or_key  admin            S27
+planned    GET     /v1/suggestions                                        session_or_key  viewer           S28
+planned    GET     /v1/suggestions/{id}                                   session_or_key  viewer           S28
+planned    POST    /v1/suggestions/{id}/accept                            session_or_key  admin            S28
+planned    POST    /v1/suggestions/{id}/reject                            session_or_key  admin            S28
+planned    POST    /v1/suggestions/generate                               session_or_key  admin            S28
+planned    POST    /mcp/{connector}                                       agent_key       actions:execute  S15
+planned    POST    /mcp/native                                            agent_key       actions:execute  S15
+planned    POST    /v1/slack/interact                                     public          -                S29    Slack signature; form body

@@ -106,6 +106,18 @@ func TestLayering(t *testing.T) {
 		}
 	}
 
+	// httpx defines interfaces (IdemStore, HealthSource, authenticators) and store implements them;
+	// cmd/deedglass wires them. Neither imports the other (S03).
+	for rel, bad := range map[string]string{"internal/httpx": module + "/internal/store", "internal/store": module + "/internal/httpx"} {
+		if p, ok := get(rel); ok {
+			for _, d := range p.Deps {
+				if d == bad || strings.HasPrefix(d, bad+"/") {
+					t.Errorf("%s must not depend on %s", rel, d)
+				}
+			}
+		}
+	}
+
 	// Nothing in internal/ imports cmd/.
 	for path, p := range all {
 		if !strings.HasPrefix(path, module+"/internal/") {

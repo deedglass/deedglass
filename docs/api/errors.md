@@ -1,0 +1,691 @@
+# Errors
+
+Every error Deedglass returns has the same body. Only the status line and a few headers change.
+
+```json
+{
+  "error": {
+    "type": "invalid_request_error",
+    "code": "validation_failed",
+    "message": "`limit` must be between 1 and 100.",
+    "param": "limit",
+    "request_id": "req_01j9zr3m5k8q2w7x4t6v0b1c9d",
+    "doc_url": "https://docs.deedglass.com/errors/validation_failed"
+  }
+}
+```
+
+- `type` is one of the six types below. Branch on it for broad handling.
+- `code` is one of the 33 codes on this page. Branch on it for exact handling. Codes are never
+  renamed; new codes are added.
+- `message` is one or more sentences for a person, with a next step. Don't parse it: it can get
+  more exact over time.
+- `param` names the field, query parameter or header the error is about. It is always present,
+  and `null` when no single field is at fault.
+- `request_id` is the same `req_…` id as the `Deedglass-Request-Id` response header. Quote it to
+  support.
+- `doc_url` points to this page's section for the code.
+
+The body is JSON (`Content-Type: application/json; charset=utf-8`). It never contains your
+request body, header values, SQL, stack traces, file paths or internal host names. The details
+behind a 5xx go to the server log under the request id.
+
+| Type | Status | Meaning |
+|---|---|---|
+| `invalid_request_error` | 400, 404, 405, 409, 413, 415, 422 | The request itself needs to change. |
+| `authentication_error` | 401 | Deedglass couldn't tell who is calling. |
+| `permission_error` | 403 | Deedglass knows who is calling, and the caller may not do this now. |
+| `policy_error` | 403 | A policy in your org blocked the action or asked for approval. |
+| `rate_limit_error` | 429 | Too many requests, or a budget is used up. `Retry-After` says when to retry. |
+| `api_error` | 500, 502, 503, 504 | Something failed on the Deedglass side or at a connector. |
+
+Some codes come from sessions that are still being built. Each section says which part of
+Deedglass sends the code. The conventions around errors (request ids, versions, idempotent
+retries) are in [API conventions](../API.md).
+
+Each example below shows the inner `error` object without `request_id` and `doc_url`, which every
+error carries. S33 publishes each section at `https://docs.deedglass.com/errors/<code>`.
+
+## invalid_api_key
+
+**401 · authentication_error**
+
+**When it happens.** The `Authorization` header holds a Bearer token that isn't a valid Deedglass
+API key: a typo, a truncated copy, or a key from another installation. The key check arrives in
+S08. Today the pipeline already sends this code when an endpoint that takes API keys gets an
+`Authorization` header with a scheme other than `Bearer`; that message reads "The Authorization
+header must be Bearer followed by an API key (dg_live_… or dg_test_…)." The response carries
+`WWW-Authenticate: Bearer realm="deedglass"`.
+
+**What to do.** Copy the key again from where you stored it, and send it as
+`Authorization: Bearer dg_live_…`. If you no longer have it, create a new key in Console › Agents.
+Deedglass shows a key's secret once, at creation.
+
+```json
+{
+  "type": "authentication_error",
+  "code": "invalid_api_key",
+  "message": "The API key isn't valid. Check for a typo, or create a new key in Console › Agents.",
+  "param": null
+}
+```
+
+## api_key_revoked
+
+**401 · authentication_error**
+
+**When it happens.** The key was valid once, and someone in your org revoked it (S08).
+
+**What to do.** Create a new key in Console › Agents and replace the old one wherever the agent
+reads it. A revoked key never works again.
+
+```json
+{
+  "type": "authentication_error",
+  "code": "api_key_revoked",
+  "message": "The API key has been revoked. Create a new key in Console › Agents.",
+  "param": null
+}
+```
+
+## api_key_expired
+
+**401 · authentication_error**
+
+**When it happens.** The key reached its expiry time (S08).
+
+**What to do.** Roll the key in Console › Agents › Keys, then give the agent the new secret.
+
+```json
+{
+  "type": "authentication_error",
+  "code": "api_key_expired",
+  "message": "The API key expired. Roll it in Console › Agents › Keys.",
+  "param": null
+}
+```
+
+## agent_suspended
+
+**403 · permission_error**
+
+**When it happens.** The key is valid, and its agent is suspended (S08). A suspended agent can be
+resumed.
+
+**What to do.** Resume the agent in Console › Agents, then retry. If you didn't expect the
+suspension, check the agent's history in the Ledger first.
+
+```json
+{
+  "type": "permission_error",
+  "code": "agent_suspended",
+  "message": "This agent is suspended. Resume it in Console › Agents to continue.",
+  "param": null
+}
+```
+
+## agent_stopped
+
+**403 · permission_error**
+
+**When it happens.** Someone used Stop on this agent (S08).
+
+**What to do.** Find out why it was stopped. An admin can start it again in Console › Agents.
+
+```json
+{
+  "type": "permission_error",
+  "code": "agent_stopped",
+  "message": "This agent was stopped. An admin can start it again in Console › Agents.",
+  "param": null
+}
+```
+
+## org_stopped
+
+**403 · permission_error**
+
+**When it happens.** Someone used Stop all agents for the org (S08). Every agent key in the org
+gets this answer until an owner starts them again.
+
+**What to do.** Ask an owner of the org. They can start the agents in Console › Settings.
+
+```json
+{
+  "type": "permission_error",
+  "code": "org_stopped",
+  "message": "All agents in this org are stopped. An owner can start them in Console › Settings.",
+  "param": null
+}
+```
+
+## insufficient_scope
+
+**403 · permission_error**
+
+**When it happens.** The API key is valid but lacks a scope the endpoint lists. The pipeline checks
+every scope the route declares, and names the first one missing. Scopes are `actions:execute`,
+`actions:read`, `deeds:read`, `admin` and `actions:undo` (S08 defines them).
+
+**What to do.** Create a key with the scope named in the message, or use a key that already has
+it.
+
+```json
+{
+  "type": "permission_error",
+  "code": "insufficient_scope",
+  "message": "This key doesn't have the scope this endpoint needs. Create a key with the actions:execute scope.",
+  "param": null
+}
+```
+
+## policy_denied
+
+**403 · policy_error**
+
+**When it happens.** A policy in your org denied the action (S11, S13). The message names the rule
+and gives its reason. On `POST /v1/actions` the envelope also carries the sealed `action`.
+
+**What to do.** Read the reason. Change the request so the rule allows it, or ask an admin to
+change the policy. Sending the same request again gets the same answer.
+
+```json
+{
+  "type": "policy_error",
+  "code": "policy_denied",
+  "message": "Blocked by policy \"block-destructive-sql\": DROP is never allowed for agents.",
+  "param": null
+}
+```
+
+## approval_required
+
+**403 · policy_error**
+
+**When it happens.** A policy says a person must approve this action, and the endpoint can't wait
+for the decision (S22). `POST /v1/actions` doesn't use this code: it answers 202 with
+`status: pending_approval`.
+
+**What to do.** Ask someone to approve it in Console › Approvals. The action runs once they do.
+
+```json
+{
+  "type": "policy_error",
+  "code": "approval_required",
+  "message": "This action needs approval. It runs once someone approves it in Console › Approvals.",
+  "param": null
+}
+```
+
+## approval_expired
+
+**403 · policy_error**
+
+**When it happens.** An action waited for approval, and the approval window closed with no
+decision (S22).
+
+**What to do.** Send the action again to ask for a new approval. Use a new Idempotency-Key for it.
+
+```json
+{
+  "type": "policy_error",
+  "code": "approval_expired",
+  "message": "No one decided before the approval window closed. Send the action again to ask for a new approval.",
+  "param": null
+}
+```
+
+## budget_exceeded
+
+**429 · rate_limit_error**
+
+**When it happens.** The agent used its budget for the current period (S11, S13). The response
+carries `Retry-After` in seconds, and the message says when the period resets.
+
+**What to do.** Wait until the time in the message, or ask an admin to raise the budget.
+
+```json
+{
+  "type": "rate_limit_error",
+  "code": "budget_exceeded",
+  "message": "This agent has used its budget for the period. It resets at 2026-10-02T00:00:00.000Z, or an admin can raise it.",
+  "param": null
+}
+```
+
+## intent_required
+
+**403 · permission_error**
+
+**When it happens.** The agent is set to sign its requests, and this request has no
+`Deedglass-Intent` header (S09). It is 403, never 401: the key is valid, and a 401 would start an
+OAuth flow in some MCP clients.
+
+**What to do.** Sign the intent with the agent's intent key and send it in `Deedglass-Intent`.
+
+```json
+{
+  "type": "permission_error",
+  "code": "intent_required",
+  "message": "This agent must sign its requests. Send a Deedglass-Intent header.",
+  "param": null
+}
+```
+
+## intent_invalid
+
+**403 · permission_error**
+
+**When it happens.** The signed intent doesn't match the request (S09): a different tool or
+arguments, a signature that doesn't verify, or a timestamp more than 60 s off.
+
+**What to do.** Sign the exact tool and arguments you send, with a current timestamp, and send the
+request again.
+
+```json
+{
+  "type": "permission_error",
+  "code": "intent_invalid",
+  "message": "The signed intent doesn't match this request. Sign the exact tool and arguments you send.",
+  "param": null
+}
+```
+
+## intent_replay
+
+**403 · permission_error**
+
+**When it happens.** The signed intent's nonce was already used (S09).
+
+**What to do.** Sign a new intent with a fresh nonce, then send the request again.
+
+```json
+{
+  "type": "permission_error",
+  "code": "intent_replay",
+  "message": "This signed intent was already used. Sign a new one with a fresh nonce.",
+  "param": null
+}
+```
+
+## tool_unknown
+
+**404 · invalid_request_error**
+
+**When it happens.** No connector in your org provides the tool the request names (S14, S15).
+
+**What to do.** Check the tool name (`GET /v1/tools` lists them), or add a connector in
+Console › Connectors.
+
+```json
+{
+  "type": "invalid_request_error",
+  "code": "tool_unknown",
+  "message": "No connector provides \"stripe.refunds.create\". Check the name, or add a connector in Console › Connectors.",
+  "param": null
+}
+```
+
+## connector_unavailable
+
+**503 · api_error**
+
+**When it happens.** The Gate couldn't reach the connector's system (S13, S16). The tool call
+didn't run.
+
+**What to do.** Check the connector in Console › Connectors, then retry. A 503 is never stored for
+idempotent replay, so a retry with the same Idempotency-Key runs again.
+
+```json
+{
+  "type": "api_error",
+  "code": "connector_unavailable",
+  "message": "The connector isn't reachable right now. Check Console › Connectors, then retry.",
+  "param": null
+}
+```
+
+## upstream_error
+
+**502 · api_error**
+
+**When it happens.** The connector's system answered the tool call with an error (S13, S14).
+
+**What to do.** Open the action in Console › Actions to read the details, fix the cause, then send
+a new request with a new Idempotency-Key. A retry with the same key returns this 502 again.
+
+```json
+{
+  "type": "api_error",
+  "code": "upstream_error",
+  "message": "The tool returned an error. The details are on the action in Console › Actions.",
+  "param": null
+}
+```
+
+## timeout
+
+**504 · api_error**
+
+**When it happens.** The request ran past its endpoint's timeout (30 s unless the endpoint says
+otherwise; 5 s for the system endpoints), and the handler stopped before it wrote a response. The
+work may have partly run.
+
+**What to do.** Fetch the object the request was about to see its state (for an action,
+`GET /v1/actions/{id}`). If the work didn't happen, send the request again with a new
+Idempotency-Key. A 504 on a POST with a key is stored like any other completed response: a retry
+with the same key replays this 504 for 24 h and doesn't run the work again.
+
+```json
+{
+  "type": "api_error",
+  "code": "timeout",
+  "message": "The request timed out after 30 s. It may have partly run, so fetch the object to see its state before you send it again.",
+  "param": null
+}
+```
+
+## rate_limited
+
+**429 · rate_limit_error**
+
+**When it happens.** You sent too many requests in a short time. The response carries
+`Retry-After` in whole seconds, at least 1.
+
+**What to do.** Wait the number of seconds in `Retry-After`, then retry. A 429 is never stored for
+idempotent replay, so the same Idempotency-Key is safe to reuse.
+
+```json
+{
+  "type": "rate_limit_error",
+  "code": "rate_limited",
+  "message": "Too many requests. Retry after 5 s.",
+  "param": null
+}
+```
+
+## idempotency_conflict
+
+**422 · invalid_request_error**
+
+**When it happens.** The Idempotency-Key was already used in the last 24 h, by the same principal,
+with a different request: another method, route, path or body. Bodies are compared byte for
+byte, so the same JSON with different spacing or member order counts as different. `param` is
+`Idempotency-Key`.
+
+**What to do.** Use a new key for a new request. To retry the original request, send exactly the
+same bytes.
+
+```json
+{
+  "type": "invalid_request_error",
+  "code": "idempotency_conflict",
+  "message": "This Idempotency-Key was already used with a different request. Use a new key for a new request.",
+  "param": "Idempotency-Key"
+}
+```
+
+## validation_failed
+
+**400 · invalid_request_error**
+
+**When it happens.** A field, query parameter or header has a value the endpoint can't accept.
+`param` names it, using dots for nested JSON members (`items.0.amount`). The pipeline sends it
+for:
+
+- an unknown JSON member ("`amout` isn't a known field. Check the spelling, or the API version.")
+- a JSON value of the wrong type ("`limit` has the wrong type: it must be a whole number.")
+- a `limit` outside 1–100, or a `cursor` this API didn't issue
+
+**What to do.** Fix the field the message names, then retry.
+
+```json
+{
+  "type": "invalid_request_error",
+  "code": "validation_failed",
+  "message": "`limit` must be between 1 and 100.",
+  "param": "limit"
+}
+```
+
+## not_found
+
+**404 · invalid_request_error**
+
+**When it happens.** Either no endpoint matches the method and path, or the object id doesn't
+exist in your org. An id that belongs to another org gets the same answer. Paths are exact: a
+trailing slash, `//` or `..` never matches. For a path within two edits of a fixed endpoint
+path, the message suggests it.
+
+**What to do.** Check the path or the id. For an id, check that you're using a key or session from
+the right org.
+
+```json
+{
+  "type": "invalid_request_error",
+  "code": "not_found",
+  "message": "There's no endpoint at GET /v1/helth. Did you mean /v1/health?",
+  "param": null
+}
+```
+
+For an object: "There's no agent with id agt_01j9zr3m5k8q2w7x4t6v0b1c9d."
+
+## conflict
+
+**409 · invalid_request_error**
+
+**When it happens.** The request conflicts with the object's current state: for example, it
+changes something another request changed first.
+
+**What to do.** Fetch the latest version of the object, then retry the change against it.
+
+```json
+{
+  "type": "invalid_request_error",
+  "code": "conflict",
+  "message": "That conflicts with the current state. Fetch the latest version, then retry.",
+  "param": null
+}
+```
+
+## internal_error
+
+**500 · api_error**
+
+**When it happens.** Something failed inside Deedglass: an unexpected error or a panic. The
+details are logged under the request id and never sent to you.
+
+**What to do.** Retry with the same Idempotency-Key. If the 500 was stored for replay you get the
+same 500 back, and the work didn't run twice. If it happens again, share the request id with
+support.
+
+```json
+{
+  "type": "api_error",
+  "code": "internal_error",
+  "message": "Something went wrong on our side. It's logged under this request id. Retry, and share the id if it happens again.",
+  "param": null
+}
+```
+
+## authentication_required
+
+**401 · authentication_error**
+
+**When it happens.** The endpoint isn't public, and the request carries no credentials it accepts.
+Until S07 (Console sessions) and S08 (API keys) are in place, every non-public endpoint answers
+this. Endpoints that take API keys add `WWW-Authenticate: Bearer realm="deedglass"`.
+
+**What to do.** Send `Authorization: Bearer dg_live_…`, or call the endpoint from a signed-in
+Console session.
+
+```json
+{
+  "type": "authentication_error",
+  "code": "authentication_required",
+  "message": "This endpoint needs an API key (Authorization: Bearer dg_live_…) or a Console session.",
+  "param": null
+}
+```
+
+## method_not_allowed
+
+**405 · invalid_request_error**
+
+**When it happens.** The path exists, but not for this method. The `Allow` header lists the
+methods that work. `HEAD` works wherever `GET` does.
+
+**What to do.** Use one of the methods in `Allow`.
+
+```json
+{
+  "type": "invalid_request_error",
+  "code": "method_not_allowed",
+  "message": "DELETE isn't supported on /v1/health. Use GET or HEAD.",
+  "param": null
+}
+```
+
+## request_too_large
+
+**413 · invalid_request_error**
+
+**When it happens.** The body is larger than the endpoint's limit (1 MiB unless the endpoint says
+otherwise), or the endpoint takes no body and the request sent one. For the second case the
+message reads "This endpoint doesn't take a request body. Send the request without one."
+
+**What to do.** Send a smaller body, or none. For large data, split it across requests.
+
+```json
+{
+  "type": "invalid_request_error",
+  "code": "request_too_large",
+  "message": "The request body is larger than 1 MiB. Send a smaller body.",
+  "param": null
+}
+```
+
+## unsupported_media_type
+
+**415 · invalid_request_error**
+
+**When it happens.** A POST, PUT or PATCH sent a body without `Content-Type: application/json`.
+The only parameter accepted is `charset=utf-8`.
+
+**What to do.** Send `Content-Type: application/json`, or `application/json; charset=utf-8`.
+
+```json
+{
+  "type": "invalid_request_error",
+  "code": "unsupported_media_type",
+  "message": "Send the body as JSON, with Content-Type: application/json.",
+  "param": null
+}
+```
+
+## invalid_json
+
+**400 · invalid_request_error**
+
+**When it happens.** The body isn't strict JSON: a syntax error, a duplicate member name, invalid
+UTF-8, or data after the value. The message gives the line and column (in bytes) of the first
+problem. An empty body gets "The body is empty. Send a JSON object, and retry."
+
+**What to do.** Fix the JSON at the position given, then retry. Send each member once.
+
+```json
+{
+  "type": "invalid_request_error",
+  "code": "invalid_json",
+  "message": "The body isn't valid JSON (line 1, column 6). Fix it and retry.",
+  "param": null
+}
+```
+
+## api_version_invalid
+
+**400 · invalid_request_error**
+
+**When it happens.** `Deedglass-Version` isn't a date in `YYYY-MM-DD` form, isn't a version this
+server knows, or was sent more than once. `param` is `Deedglass-Version`. See
+[Versions](versions.md).
+
+**What to do.** Send `Deedglass-Version: 2026-10-01` once, or leave the header out to use your
+org's pinned version.
+
+```json
+{
+  "type": "invalid_request_error",
+  "code": "api_version_invalid",
+  "message": "Deedglass-Version isn't a known version. Use 2026-10-01, or leave it out to use your org's pinned version.",
+  "param": "Deedglass-Version"
+}
+```
+
+## idempotency_key_invalid
+
+**400 · invalid_request_error**
+
+**When it happens.** `Idempotency-Key` is empty, longer than 255 characters, holds characters
+outside printable ASCII, or was sent more than once. On an endpoint that requires a key, a request
+without one gets this code with "This endpoint needs an Idempotency-Key header. Send a new unique
+value, such as a UUID, with each new request." `param` is `Idempotency-Key`.
+
+**What to do.** Send one key of 1–255 printable ASCII characters. A UUID works.
+
+```json
+{
+  "type": "invalid_request_error",
+  "code": "idempotency_key_invalid",
+  "message": "Idempotency-Key must be 1–255 printable ASCII characters.",
+  "param": "Idempotency-Key"
+}
+```
+
+## idempotency_key_in_use
+
+**409 · invalid_request_error**
+
+**When it happens.** An earlier request with the same Idempotency-Key is still running. The
+response carries `Retry-After: 1`. Nothing is stored for it.
+
+**What to do.** Wait a second and retry with the same key. You get the first request's response
+once it finishes.
+
+```json
+{
+  "type": "invalid_request_error",
+  "code": "idempotency_key_in_use",
+  "message": "A request with this Idempotency-Key is still running. Retry in a moment.",
+  "param": null
+}
+```
+
+## service_unavailable
+
+**503 · api_error**
+
+**When it happens.** The server is starting or shutting down and can't take the request. A 503 is
+never stored for idempotent replay.
+
+**What to do.** Retry in a few seconds with the same Idempotency-Key. Another instance, or this one
+after it restarts, will take it.
+
+```json
+{
+  "type": "api_error",
+  "code": "service_unavailable",
+  "message": "Deedglass is starting or shutting down. Retry in a few seconds.",
+  "param": null
+}
+```
+
+## What this doesn't do
+
+- Errors don't carry localized messages. The copy is English, and the `code` is the stable part.
+- Errors don't echo your request. Find what you sent in your own logs, and match it by
+  `request_id`.
+- A message isn't a contract. It can get more exact between releases; branch on `type` and `code`.
+- Deedglass doesn't send a different error for an object in another org. It is `not_found`, the
+  same as an id that never existed.

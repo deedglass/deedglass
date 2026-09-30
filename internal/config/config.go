@@ -42,6 +42,7 @@ type Config struct {
 	DatabaseURL          Secret // printed with only the password hidden
 	MigrateDatabaseURL   Secret // the migrator role's URL (S02); only deedglass migrate reads it
 	Listen               string
+	MetricsListen        string // "" = no metrics listener (S03)
 	BaseURL              *url.URL
 	SealKeyFile          string
 	VaultKey             Secret // base64 of exactly 32 bytes
@@ -339,7 +340,7 @@ func (l *loader) parse(c *Config, k Key) {
 			return
 		}
 		c.MigrateDatabaseURL = NewSecret(v)
-	case "DEEDGLASS_LISTEN":
+	case "DEEDGLASS_LISTEN", "DEEDGLASS_METRICS_LISTEN":
 		host, port, err := net.SplitHostPort(v)
 		p, perr := strconv.Atoi(port)
 		if err != nil || perr != nil || p < 0 || p > 65535 {
@@ -347,7 +348,11 @@ func (l *loader) parse(c *Config, k Key) {
 			return
 		}
 		_ = host
-		c.Listen = v
+		if k.Name == "DEEDGLASS_LISTEN" {
+			c.Listen = v
+		} else {
+			c.MetricsListen = v
+		}
 	case "DEEDGLASS_BASE_URL", "DEEDGLASS_SERVER":
 		u, msg := checkHTTPURL(v)
 		if msg != "" {

@@ -7,7 +7,7 @@ exit 0
 [1mSetup[0m
   init                Set up Deedglass in this directory          [2msoon[0m
   doctor              Check config, database and keys             [2msoon[0m
-  serve               Run the API, the Gate and the Console       [2msoon[0m
+  serve               Run the API, the Gate and the Console
   migrate             Apply or check database migrations          [2m    [0m   [2mup · status · verify[0m
   config print        Show the effective config, secrets hidden
   version             Show the client and server versions

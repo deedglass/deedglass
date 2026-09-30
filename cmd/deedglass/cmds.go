@@ -6,7 +6,11 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
+	"net/http"
+	"net/url"
 	"strings"
+	"time"
 
 	"github.com/deedglass/deedglass/cmd/deedglass/internal/ui"
 	"github.com/deedglass/deedglass/internal/buildinfo"
@@ -28,7 +32,7 @@ func versionFlags(fs *flag.FlagSet) {
 	fs.BoolVar(&versionFlagValues.check, "check", false, "check GitHub releases for a newer version (S35)")
 }
 
-func runVersion(_ context.Context, e *Env, args []string) error {
+func runVersion(ctx context.Context, e *Env, args []string) error {
 	if len(args) > 0 {
 		return usageErr(fmt.Errorf("deedglass version takes no arguments (got %q)", args[0]), "Run deedglass help version.")
 	}
@@ -38,20 +42,79 @@ func runVersion(_ context.Context, e *Env, args []string) error {
 			Next: "Run deedglass help to see what this build can do."}
 	}
 	in := buildInfo()
+	if e.Globals.Server != "" {
+		return versionWithServer(ctx, e, in, e.Globals.Server)
+	}
 	if e.Globals.JSON {
 		enc := json.NewEncoder(e.Stdout)
 		enc.SetEscapeHTML(false)
 		return enc.Encode(in)
 	}
+	fmt.Fprintln(e.Stdout, clientLine(in))
+	return nil
+}
+
+func clientLine(in buildinfo.Info) string {
 	commit := in.Commit
 	if in.Modified {
 		commit += " (modified)"
 	}
-	fmt.Fprintf(e.Stdout, "deedglass %s %s commit %s %s api %s %s %s %s %s/%s\n",
+	return fmt.Sprintf("deedglass %s %s commit %s %s api %s %s %s %s %s/%s",
 		in.Version, ui.Sep, commit, ui.Sep, strings.Join(in.APIVersions, ", "), ui.Sep, in.Go, ui.Sep, in.OS, in.Arch)
-	if e.Globals.Server != "" {
-		fmt.Fprintln(e.Stdout, e.Style.Dim("server  not checked "+ui.Sep+" this build has no API client yet (S03 adds GET /v1/version)"))
+}
+
+// versionTimeout bounds `version --server`; the image healthcheck relies on it.
+const versionTimeout = 2 * time.Second
+
+// serverVersion is GET /v1/version as the client reads it.
+type serverVersion struct {
+	Object            string   `json:"object"`
+	Version           string   `json:"version"`
+	Commit            string   `json:"commit"`
+	BuiltAt           *string  `json:"built_at"`
+	Go                string   `json:"go"`
+	APIVersions       []string `json:"api_versions"`
+	DefaultAPIVersion string   `json:"default_api_version"`
+}
+
+// versionWithServer prints the client and the server side by side. Exit 0 when the server
+// answers, 1 when it doesn't (the container healthcheck uses this: distroless has no curl).
+func versionWithServer(ctx context.Context, e *Env, in buildinfo.Info, server string) error {
+	u, err := url.Parse(strings.TrimSuffix(server, "/"))
+	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" || u.User != nil {
+		return usageErr(fmt.Errorf("--server must be an http or https URL (got %q)", server), "For example --server http://127.0.0.1:8080.")
 	}
+	unreachable := func(reason string) error {
+		return &ExitError{Code: ExitFailure, ErrCode: "server_unreachable",
+			Err:  fmt.Errorf("Can't reach the server at %s: %s", u.Redacted(), reason),
+			Next: "Check the URL, and that deedglass serve is running (make dev)."}
+	}
+	rctx, cancel := context.WithTimeout(ctx, versionTimeout)
+	defer cancel()
+	req, _ := http.NewRequestWithContext(rctx, http.MethodGet, u.String()+"/v1/version", nil)
+	req.Header.Set("User-Agent", "deedglass/"+in.Version)
+	client := &http.Client{Timeout: versionTimeout, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
+	res, err := client.Do(req)
+	if err != nil {
+		if errors.Is(err, context.DeadlineExceeded) || errors.Is(rctx.Err(), context.DeadlineExceeded) {
+			return unreachable("no answer within 2 s")
+		}
+		return unreachable(lastPart(err))
+	}
+	defer res.Body.Close()
+	body, _ := io.ReadAll(io.LimitReader(res.Body, 64<<10))
+	var sv serverVersion
+	if res.StatusCode != http.StatusOK || json.Unmarshal(body, &sv) != nil || sv.Object != "version" {
+		return unreachable(fmt.Sprintf("it answered %d, not like a Deedglass server", res.StatusCode))
+	}
+	if e.Globals.JSON {
+		enc := json.NewEncoder(e.Stdout)
+		enc.SetEscapeHTML(false)
+		return enc.Encode(map[string]any{"object": "version", "client": in, "server": sv, "server_url": u.String()})
+	}
+	fmt.Fprintln(e.Stdout, "client  "+clientLine(in))
+	fmt.Fprintf(e.Stdout, "server  deedglass %s %s commit %s %s api %s %s %s %s %s\n",
+		sv.Version, ui.Sep, sv.Commit, ui.Sep, strings.Join(sv.APIVersions, ", "), ui.Sep, sv.Go, ui.Sep, u.String())
 	return nil
 }
 

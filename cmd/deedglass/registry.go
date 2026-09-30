@@ -57,7 +57,8 @@ var commands = []*Command{
 	// Setup.
 	{Path: p("init"), Group: Setup, Summary: "Set up Deedglass in this directory", Owner: "S32"},
 	{Path: p("doctor"), Group: Setup, Summary: "Check config, database and keys", Owner: "S32"},
-	{Path: p("serve"), Group: Setup, Summary: "Run the API, the Gate and the Console", Owner: "S03"},
+	{Path: p("serve"), Group: Setup, Summary: "Run the API, the Gate and the Console",
+		Usage: "[--migrate]", Flags: serveFlags, Run: runServe},
 	{Path: p("migrate", "up"), Group: Setup, Summary: "Apply database migrations",
 		Usage: "[--database-url <url>] [--dry-run] [--json]", Flags: migrateFlags(true), Run: runMigrateUp},
 	{Path: p("migrate", "status"), Group: Setup, Summary: "Show applied and pending migrations",

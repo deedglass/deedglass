@@ -40,6 +40,9 @@
 # Dev only: let connectors reach private networks. Prod refuses it.
 # allow_private_networks: false
 
+# A separate listener for Prometheus metrics at /metrics. Off when unset; keep it on localhost.
+# metrics_listen: 127.0.0.1:9464
+
 # Alert when a Postgres replication slot holds more WAL than this many MB.
 # slot_lag_alert_mb: 512
 

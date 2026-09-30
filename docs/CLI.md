@@ -83,7 +83,7 @@ builds it. Hidden commands work but aren't in `deedglass help`.
 |---|---|---|---|
 | `deedglass init` | Setup | Set up Deedglass in this directory | soon (S32) |
 | `deedglass doctor` | Setup | Check config, database and keys | soon (S32) |
-| `deedglass serve` | Setup | Run the API, the Gate and the Console | soon (S03) |
+| `deedglass serve [--migrate]` | Setup | Run the API, the Gate and the Console | built |
 | `deedglass migrate up [--database-url <url>] [--dry-run] [--json]` | Setup | Apply database migrations | built |
 | `deedglass migrate status [--database-url <url>] [--json]` | Setup | Show applied and pending migrations | built |
 | `deedglass migrate verify [--database-url <url>] [--json]` | Setup | Check applied migrations against this build | built |

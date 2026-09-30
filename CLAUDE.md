@@ -31,6 +31,10 @@ make fuzz           # 30 s fuzz of the intent parser and the id parser
 make rename-guard   # retired identifiers (rule 5)
 make banned-words   # the banned list over files and every commit message
 make bench | make cover
+make dev            # Docker: Postgres 18.6 + migrate + serve on 127.0.0.1:8080 (creates .env); dev-down, dev-reset, dev-logs
+make run            # serve --migrate from source against the compose Postgres (127.0.0.1:55432)
+make docker         # the deedglass:dev image (distroless, 65532); make bench-http: S03 HTTP budget
+scripts/ci-local.sh # the CI jobs locally (docker-smoke and govulncheck skip when Docker or network is missing)
 ```
 
 - Go 1.27.1 at `/opt/homebrew/bin/go`. PostgreSQL 16, 17 and 18 are installed at
@@ -148,7 +152,14 @@ and "open source" until the repo is public. Style bans: "revolutionary", "world-
   matrix, deed chain, domains = `ids.Registry()`, `set_config(…, true)` grep, `SystemTx` call
   sites; `internal/gate`: 225-pair trigger test; migrate runner refusals. Integration tag,
   PG 16/17/18.
-- `internal/archtest`: import layering (pure `deed`, `policy`, `sqlguard`, `witness`).
+- `internal/archtest`: import layering (pure `deed`, `policy`, `sqlguard`, `witness`; `httpx` and
+  `store` never import each other).
+- `internal/httpx`: `Mount` panics on a route with no auth, a POST with no idempotency rule, or a
+  route missing from `contract_routes.go` (contract §9 as data; `testdata/routes.golden`); the
+  33-code error catalog (copy rules, banned words, `docs/api/errors.md` headings); the middleware and
+  idempotency tables; log canaries; `CheckSpec`/`CheckRequired` keep `api/openapi.yaml` equal to the
+  mounted routes (also run on everything `serve` mounts in `cmd/deedglass`). A new route goes into
+  `serveRoutes`, `contract_routes.go` (if new) and `api/openapi.yaml` in the same change.
 - `cmd/deedglass`: goldens for help, version, config print and errors, with exit codes.
 - `internal/intent`, `internal/keys`, `internal/bundle`: strict JSON and JCS vectors, key checks,
   manifest hashes bound to the SQL and schema files.

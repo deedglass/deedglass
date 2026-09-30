@@ -1,6 +1,11 @@
 # CI on push to main and on pull requests (plan §9.1: while the repo is private, GitHub Free has about
-# 2,000 Actions minutes a month, so push/PR runs lint + unit + one PG 18.6 integration job only; the
-# 16.15/17.11/18.6 matrix is in pg-matrix.yml, on demand and nightly).
+# 2,000 Actions minutes a month, so push/PR runs these four jobs only: lint + unit, one PG 18.6
+# integration job, the Docker smoke test and govulncheck; the 16.15/17.11/18.6 matrix is in
+# pg-matrix.yml, on demand and nightly).
+#
+# Supply chain (ADR-024): every action is pinned to a full commit SHA with its release tag in a comment;
+# every image is pinned by the digest of its multi-arch index. Nothing is pushed or published here
+# (publishing is S35). scripts/ci-local.sh runs the same commands on your machine.
 name: ci
 
 on:
@@ -20,10 +25,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           fetch-depth: 0 # banned-words also checks every commit message
-      - uses: actions/setup-go@v6
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: go.mod
       - name: gofmt
@@ -51,7 +57,7 @@ jobs:
     timeout-minutes: 10
     services:
       postgres:
-        image: postgres:18.6
+        image: postgres:18.6@sha256:5a5a84b19854a9ffaa54082c166ff4ec27473a361e496e5ea167f298f2da9722
         command: postgres -c wal_level=logical -c max_slot_wal_keep_size=2GB
         env:
           POSTGRES_PASSWORD: deedglass-ci-throwaway
@@ -63,14 +69,105 @@ jobs:
           --health-timeout 5s
           --health-retries 30
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-go@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: go.mod
-      - name: sql/001-004 smoke, control-plane migrations and Go integration suites
+      - name: sql/001-004 smoke, control-plane roles and migrations, and Go integration suites
         env:
           DEEDGLASS_IT_THROWAWAY: "1"
           PSQL: docker exec -i ${{ job.services.postgres.id }} psql
           PGUSER: postgres
           DEEDGLASS_IT_ADMIN_URL: postgres://postgres:deedglass-ci-throwaway@127.0.0.1:5432/postgres?sslmode=disable
         run: scripts/integration.sh
+
+  # The image as make dev runs it: built with buildx (GitHub Actions cache), loaded into the local
+  # Docker only, then started through deploy/docker-compose.yml (Postgres with the init scripts, the
+  # one-shot migrate, then serve). No push.
+  docker-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - name: every action pinned to a commit SHA, every image to a digest (ADR-024)
+        run: |
+          bad="$( {
+            grep -nE '^[[:space:]]*(-[[:space:]]*)?uses:' .github/workflows/*.yml | grep -vE 'uses: [^ ]+@[0-9a-f]{40} # v[0-9]+[.][0-9]+[.][0-9]+$'
+            grep -nE '^[[:space:]]*image:' .github/workflows/*.yml deploy/docker-compose.yml | grep -vE '@sha256:[0-9a-f]{64}' | grep -vE 'image: (deedglass:dev|\$\{\{ matrix[.]image \}\})$'
+            grep -nE '^FROM ' Dockerfile | grep -vE '@sha256:[0-9a-f]{64}'
+          } || true )"
+          if [ -n "$bad" ]; then echo "unpinned:"; echo "$bad"; exit 1; fi
+          echo "pins: ok"
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - name: build deedglass:dev (loaded locally, not pushed)
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          load: true
+          push: false
+          tags: deedglass:dev
+          build-args: |
+            VERSION=0.1.0-dev
+            COMMIT=${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: image runs as 65532:65532 and is under 30 MB
+        run: |
+          user="$(docker image inspect deedglass:dev -f '{{.Config.User}}')"
+          size="$(docker image inspect deedglass:dev -f '{{.Size}}')"
+          echo "user=$user size=$size bytes"
+          [ "$user" = "65532:65532" ] || { echo "FAIL: .Config.User is '$user', want 65532:65532"; exit 1; }
+          [ "$size" -lt 30000000 ] || { echo "FAIL: image is $size bytes, want < 30000000"; exit 1; }
+      - name: .env with fresh throwaway secrets
+        run: scripts/dev.sh env
+      - name: start Postgres (init scripts), migrate, then serve
+        run: |
+          docker compose -f deploy/docker-compose.yml --env-file .env up -d --no-build
+          docker compose -f deploy/docker-compose.yml --env-file .env ps -a
+      - name: GET /v1/health reports "status":"ok" within 30 s
+        run: |
+          for i in $(seq 1 30); do
+            body="$(curl -sS -m 2 http://127.0.0.1:8080/v1/health || true)"
+            if [ "$(printf '%s' "$body" | jq -r '.status' 2>/dev/null)" = "ok" ]; then
+              printf '%s\n' "$body" | jq .
+              applied="$(printf '%s' "$body" | jq -r '.checks.migrations.applied')"
+              echo "healthy after ${i} s, migrations applied: $applied"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "FAIL: /v1/health did not report ok within 30 s; last body: $body"
+          exit 1
+      - name: migrate exited 0; the server is read-only and answers its own healthcheck
+        run: |
+          c="docker compose -f deploy/docker-compose.yml --env-file .env"
+          mig="$($c ps -a -q migrate)"
+          code="$(docker inspect -f '{{.State.ExitCode}}' "$mig")"
+          [ "$code" = "0" ] || { echo "FAIL: migrate exited $code"; exit 1; }
+          srv="$($c ps -q deedglass)"
+          docker inspect -f 'user={{.Config.User}} read_only={{.HostConfig.ReadonlyRootfs}} cap_drop={{.HostConfig.CapDrop}}' "$srv"
+          [ "$(docker inspect -f '{{.HostConfig.ReadonlyRootfs}}' "$srv")" = "true" ] || { echo "FAIL: root filesystem is writable"; exit 1; }
+          $c exec -T deedglass /deedglass version --server http://127.0.0.1:8080
+      - name: logs on failure
+        if: failure()
+        run: docker compose -f deploy/docker-compose.yml --env-file .env logs --no-color
+      - name: remove the stack
+        if: always()
+        run: docker compose -f deploy/docker-compose.yml --env-file .env down -v || true
+
+  govulncheck:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+      - name: govulncheck (a CI tool, not a go.mod dependency)
+        run: go run golang.org/x/vuln/cmd/govulncheck@v1.8.0 ./...

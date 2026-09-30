@@ -69,6 +69,8 @@ var Keys = []Key{
 		Commands: "serve", Doc: "Comma-separated CIDRs whose X-Forwarded-For is believed.", Owner: "S01"},
 	{Name: "DEEDGLASS_ALLOW_PRIVATE_NETWORKS", Kind: KindBool, Default: "false", DevOnly: true,
 		Commands: "serve", Doc: "Dev only: lets connectors reach private networks. Refused in prod.", Owner: "S01"},
+	{Name: "DEEDGLASS_METRICS_LISTEN", Kind: KindListen,
+		Commands: "serve", Doc: "Address for a separate listener serving Prometheus metrics at /metrics (host:port). Off when unset; bind it to localhost or a private network.", Owner: "S03"},
 	{Name: "DEEDGLASS_SLOT_LAG_ALERT_MB", Kind: KindInt, Default: "512",
 		Commands: "serve", Doc: "Alert when a Postgres replication slot holds more WAL than this (1-1048576 MB).", Owner: "S01"},
 

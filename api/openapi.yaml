@@ -1,0 +1,338 @@
+openapi: 3.1.1
+info:
+  title: Deedglass API
+  version: "2026-10-01"
+  summary: The execution and accountability layer for AI agents.
+  description: >-
+    Deedglass sits between your AI agents and the tools they use, deciding what each agent may do,
+    running it under control, and recording what actually happened as a signed deed.
+
+
+    Every response carries `Deedglass-Request-Id` and the resolved `Deedglass-Version`. Errors use
+    one envelope with a `doc_url` for every code. This document is written by hand; tests in
+    `internal/httpx` fail when it and the mounted routes drift apart.
+  license:
+    name: Apache-2.0
+    identifier: Apache-2.0
+servers:
+  - url: http://127.0.0.1:8080
+    description: A local server (make dev)
+  - url: https://api.deedglass.com
+    description: The cloud beta
+tags:
+  - name: System
+    description: Health, version and this document.
+paths:
+  /v1/health:
+    get:
+      operationId: getHealth
+      summary: Check the server and its database
+      description: >-
+        Public. The checks are cached for 1 s, so frequent probes don't load the database. The body
+        shows statuses only; details go to the server log. Returns 503 when the database is
+        unreachable or the server is draining.
+      tags: [System]
+      security: []
+      x-deedglass-auth: public
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+      responses:
+        "200":
+          description: The server can serve requests (`status` is `ok` or `degraded`).
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+            Deedglass-Version:
+              $ref: "#/components/headers/DeedglassVersion"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Health"
+        "503":
+          description: The database is unreachable (`down`) or the server is shutting down (`draining`).
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+            Deedglass-Version:
+              $ref: "#/components/headers/DeedglassVersion"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Health"
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/version:
+    get:
+      operationId: getVersion
+      summary: Show the server's version and API versions
+      tags: [System]
+      security: []
+      x-deedglass-auth: public
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+      responses:
+        "200":
+          description: This server's build and the API versions it serves.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+            Deedglass-Version:
+              $ref: "#/components/headers/DeedglassVersion"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Version"
+        default:
+          $ref: "#/components/responses/Error"
+  /api/openapi.yaml:
+    get:
+      operationId: getOpenAPISpec
+      summary: Download this document
+      tags: [System]
+      security: []
+      x-deedglass-auth: public
+      x-deedglass-since: "2026-10-01"
+      responses:
+        "200":
+          description: This OpenAPI document, exactly as embedded in the server.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+          content:
+            application/yaml:
+              schema:
+                type: string
+        default:
+          $ref: "#/components/responses/Error"
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: dg_live_…
+      description: An agent or org admin API key (`dg_live_…` or `dg_test_…`). Create one in Console › Agents.
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: __Host-deedglass_session
+      description: >-
+        A Console session. Requests that change state also send the `Deedglass-CSRF` header,
+        matching the `__Host-deedglass_csrf` cookie.
+  parameters:
+    DeedglassVersion:
+      name: Deedglass-Version
+      in: header
+      required: false
+      description: >-
+        The API version (YYYY-MM-DD). Leave it out to use your org's pinned version (public routes
+        use the latest). An unknown version is 400 `api_version_invalid`.
+      schema:
+        type: string
+        pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+        examples: ["2026-10-01"]
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: false
+      description: >-
+        1–255 printable ASCII characters. A retry with the same key and body returns the stored
+        response with `Deedglass-Idempotent-Replayed: true` for 24 hours.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 255
+  headers:
+    DeedglassRequestId:
+      description: This request's id. Quote it to support; it matches `error.request_id`.
+      schema:
+        type: string
+        pattern: "^req_[0-7][0-9a-hjkmnp-tv-z]{25}$"
+    DeedglassVersion:
+      description: The API version this response follows.
+      schema:
+        type: string
+    DeedglassIdempotentReplayed:
+      description: Present, and `true`, when the response is a stored one replayed for an Idempotency-Key.
+      schema:
+        type: string
+        enum: ["true"]
+  responses:
+    Error:
+      description: An error. Every error has this envelope; `doc_url` explains the code.
+      headers:
+        Deedglass-Request-Id:
+          $ref: "#/components/headers/DeedglassRequestId"
+        Deedglass-Version:
+          $ref: "#/components/headers/DeedglassVersion"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+  schemas:
+    ErrorEnvelope:
+      type: object
+      additionalProperties: false
+      required: [error]
+      properties:
+        error:
+          type: object
+          additionalProperties: false
+          required: [type, code, message, param, request_id, doc_url]
+          properties:
+            type:
+              type: string
+              enum:
+                - invalid_request_error
+                - authentication_error
+                - permission_error
+                - policy_error
+                - rate_limit_error
+                - api_error
+            code:
+              type: string
+              enum:
+                - invalid_api_key
+                - api_key_revoked
+                - api_key_expired
+                - agent_suspended
+                - agent_stopped
+                - org_stopped
+                - insufficient_scope
+                - policy_denied
+                - approval_required
+                - approval_expired
+                - budget_exceeded
+                - intent_required
+                - intent_invalid
+                - intent_replay
+                - tool_unknown
+                - connector_unavailable
+                - upstream_error
+                - timeout
+                - rate_limited
+                - idempotency_conflict
+                - validation_failed
+                - not_found
+                - conflict
+                - internal_error
+                - authentication_required
+                - method_not_allowed
+                - request_too_large
+                - unsupported_media_type
+                - invalid_json
+                - api_version_invalid
+                - idempotency_key_invalid
+                - idempotency_key_in_use
+                - service_unavailable
+            message:
+              type: string
+              description: One or more calm sentences with the next step.
+            param:
+              type: [string, "null"]
+              description: The request field, query parameter or header the error is about.
+            request_id:
+              type: string
+              pattern: "^req_[0-7][0-9a-hjkmnp-tv-z]{25}$"
+            doc_url:
+              type: string
+              format: uri
+      examples:
+        - error:
+            type: invalid_request_error
+            code: not_found
+            message: There's no endpoint at GET /v1/helth. Did you mean /v1/health?
+            param: null
+            request_id: req_01j9zr3m5k8q2w7x4t6v0b1c9d
+            doc_url: https://docs.deedglass.com/errors/not_found
+    Check:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [ok, down, pending, mismatch, unknown, not_configured]
+    Health:
+      type: object
+      required: [object, status, version, api_version, checks, time]
+      properties:
+        object:
+          type: string
+          const: health
+        status:
+          type: string
+          enum: [ok, degraded, down, draining]
+        version:
+          type: string
+        api_version:
+          type: string
+        checks:
+          type: object
+          required: [database, migrations, seal_key, decoder]
+          properties:
+            database:
+              allOf:
+                - $ref: "#/components/schemas/Check"
+              properties:
+                latency_ms:
+                  type: [integer, "null"]
+                  minimum: 0
+            migrations:
+              allOf:
+                - $ref: "#/components/schemas/Check"
+              properties:
+                applied:
+                  type: [integer, "null"]
+                  minimum: 0
+                expected:
+                  type: [integer, "null"]
+                  minimum: 0
+            seal_key:
+              $ref: "#/components/schemas/Check"
+            decoder:
+              $ref: "#/components/schemas/Check"
+        time:
+          type: string
+          format: date-time
+      examples:
+        - object: health
+          status: ok
+          version: 0.1.0-dev
+          api_version: "2026-10-01"
+          checks:
+            database: {status: ok, latency_ms: 1}
+            migrations: {status: ok, applied: 9, expected: 9}
+            seal_key: {status: not_configured}
+            decoder: {status: not_configured}
+          time: "2026-10-01T09:30:00.000Z"
+    Version:
+      type: object
+      required: [object, version, commit, built_at, go, api_versions, default_api_version]
+      properties:
+        object:
+          type: string
+          const: version
+        version:
+          type: string
+        commit:
+          type: string
+        built_at:
+          type: [string, "null"]
+          format: date-time
+        go:
+          type: string
+        api_versions:
+          type: array
+          items:
+            type: string
+        default_api_version:
+          type: string
+      examples:
+        - object: version
+          version: 0.1.0-dev
+          commit: 5495f7e
+          built_at: "2026-10-01T10:00:00Z"
+          go: go1.27.1
+          api_versions: ["2026-10-01"]
+          default_api_version: "2026-10-01"

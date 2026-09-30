@@ -9,7 +9,8 @@ BI       := github.com/deedglass/deedglass/internal/buildinfo
 LDFLAGS  := -s -w -X $(BI).Version=$(VERSION) -X $(BI).Commit=$(COMMIT) -X $(BI).Modified=$(MODIFIED) -X $(BI).Date=$(DATE)
 
 .PHONY: all help ci build test test-short vet fmt fmt-check tidy-check testdata-check rename-guard banned-words nocgo \
-	integration matrix fuzz bench bench-store cover clean
+	integration matrix fuzz bench bench-store cover clean \
+	dev dev-down dev-reset dev-logs run docker bench-http
 
 all: ci
 
@@ -73,3 +74,28 @@ cover: ## coverage of the packages with targets (ids 95%, config 90%, cmd/deedgl
 
 clean: ## remove build output and throwaway clusters
 	rm -rf bin .tmp
+
+dev: ## local stack in Docker: Postgres 18.6, migrations and the server on 127.0.0.1:8080 (creates .env on first run)
+	@scripts/dev.sh up
+
+dev-down: ## stop the local stack; the database volume is kept
+	@scripts/dev.sh down
+
+dev-reset: ## delete the local stack and its database volume (asks you to type reset)
+	@scripts/dev.sh reset
+
+dev-logs: ## follow the local stack's logs
+	@scripts/dev.sh logs
+
+run: ## the server from source against the compose Postgres, applying pending migrations first
+	@scripts/dev.sh db
+	$(GO) run ./cmd/deedglass serve --migrate
+
+docker: ## build the deedglass:dev image from the root Dockerfile
+	docker build --build-arg VERSION=$(VERSION) --build-arg COMMIT=$(COMMIT) --build-arg DATE=$(DATE) -t deedglass:dev .
+
+bench-http: ## S03 HTTP budget: pipeline, 404, cached health (50,000 runs) and the 50×2,000 load test; raw go test -json in bench/results/
+	@out="$(CURDIR)/bench/results/$$(date +%F)-$$(go env GOOS)-$$(go env GOARCH)-http.json"; \
+	{ $(GO) test -json -run '^$$' -bench 'PipelineVersion|PipelineNotFound|HealthCached' -benchmem -benchtime 50000x ./internal/httpx; \
+	  $(GO) test -json -run '^$$' -bench 'PipelineLoad' -benchtime 1x ./internal/httpx; } > "$$out" && \
+	grep -o '"Output":"Benchmark[^"]*' "$$out" | sed 's/"Output":"//; s/\\t/  /g; s/\\n//'; echo "raw: $$out"

@@ -1,0 +1,18 @@
+# Build context for the root Dockerfile. Secrets never enter a layer: local settings, dev secrets and
+# key files stay out. Only .env.example (no real values) is allowed through.
+.git
+.github
+.env*
+!.env.example
+.deedglass/
+*.key
+*.pem
+bin/
+.tmp/
+bench/results/
+coverage.*
+*.out
+*.test
+.DS_Store
+.idea/
+.vscode/

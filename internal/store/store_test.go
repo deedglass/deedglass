@@ -51,6 +51,7 @@ var systemTxCallSites = []string{
 	"internal/store/repo.go: SystemTx(ctx, ReasonOrgCreate",                   // CreateOrg
 	"internal/store/storetest/seed.go: SystemTx(ctx, store.ReasonMaintenance", // test harness (integration tag only)
 	"cmd/deedglass/devseed.go: SystemTx(ctx, store.ReasonMaintenance",         // dev seed: find the demo org by slug (dev only)
+	"internal/store/idempotency.go: SystemTx(ctx, ReasonMaintenance",          // PruneIdempotencyKeys (S03)
 }
 
 func TestSystemTxCallSites(t *testing.T) {

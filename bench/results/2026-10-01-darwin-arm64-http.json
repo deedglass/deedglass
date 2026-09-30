@@ -1,0 +1,32 @@
+{"Time":"2026-10-01T03:57:17.05368+05:30","Action":"start","Package":"github.com/deedglass/deedglass/internal/httpx"}
+{"Time":"2026-10-01T03:57:17.315885+05:30","Action":"output","Package":"github.com/deedglass/deedglass/internal/httpx","Output":"goos: darwin\n"}
+{"Time":"2026-10-01T03:57:17.316452+05:30","Action":"output","Package":"github.com/deedglass/deedglass/internal/httpx","Output":"goarch: arm64\n"}
+{"Time":"2026-10-01T03:57:17.316461+05:30","Action":"output","Package":"github.com/deedglass/deedglass/internal/httpx","Output":"pkg: github.com/deedglass/deedglass/internal/httpx\n"}
+{"Time":"2026-10-01T03:57:17.316475+05:30","Action":"output","Package":"github.com/deedglass/deedglass/internal/httpx","Output":"cpu: Apple M1\n"}
+{"Time":"2026-10-01T03:57:17.316483+05:30","Action":"run","Package":"github.com/deedglass/deedglass/internal/httpx","Test":"BenchmarkPipelineVersion"}
+{"Time":"2026-10-01T03:57:17.316489+05:30","Action":"output","Package":"github.com/deedglass/deedglass/internal/httpx","Test":"BenchmarkPipelineVersion","Output":"=== RUN   BenchmarkPipelineVersion\n","OutputType":"frame"}
+{"Time":"2026-10-01T03:57:17.316499+05:30","Action":"output","Package":"github.com/deedglass/deedglass/internal/httpx","Test":"BenchmarkPipelineVersion","Output":"BenchmarkPipelineVersion\n"}
+{"Time":"2026-10-01T03:57:17.518602+05:30","Action":"output","Package":"github.com/deedglass/deedglass/internal/httpx","Test":"BenchmarkPipelineVersion","Output":"BenchmarkPipelineVersion-8    \t   50000\t      4023 ns/op\t         3.333 p50-µs\t         9.625 p99-µs\t    1811 B/op\t      22 allocs/op\n"}
+{"Time":"2026-10-01T03:57:17.518685+05:30","Action":"run","Package":"github.com/deedglass/deedglass/internal/httpx","Test":"BenchmarkPipelineNotFound"}
+{"Time":"2026-10-01T03:57:17.518693+05:30","Action":"output","Package":"github.com/deedglass/deedglass/internal/httpx","Test":"BenchmarkPipelineNotFound","Output":"=== RUN   BenchmarkPipelineNotFound\n","OutputType":"frame"}
+{"Time":"2026-10-01T03:57:17.518719+05:30","Action":"output","Package":"github.com/deedglass/deedglass/internal/httpx","Test":"BenchmarkPipelineNotFound","Output":"BenchmarkPipelineNotFound\n"}
+{"Time":"2026-10-01T03:57:17.836881+05:30","Action":"output","Package":"github.com/deedglass/deedglass/internal/httpx","Test":"BenchmarkPipelineNotFound","Output":"BenchmarkPipelineNotFound-8   \t   50000\t      6358 ns/op\t    3064 B/op\t      59 allocs/op\n"}
+{"Time":"2026-10-01T03:57:17.83694+05:30","Action":"run","Package":"github.com/deedglass/deedglass/internal/httpx","Test":"BenchmarkHealthCached"}
+{"Time":"2026-10-01T03:57:17.836948+05:30","Action":"output","Package":"github.com/deedglass/deedglass/internal/httpx","Test":"BenchmarkHealthCached","Output":"=== RUN   BenchmarkHealthCached\n","OutputType":"frame"}
+{"Time":"2026-10-01T03:57:17.836955+05:30","Action":"output","Package":"github.com/deedglass/deedglass/internal/httpx","Test":"BenchmarkHealthCached","Output":"BenchmarkHealthCached\n"}
+{"Time":"2026-10-01T03:57:18.102194+05:30","Action":"output","Package":"github.com/deedglass/deedglass/internal/httpx","Test":"BenchmarkHealthCached","Output":"BenchmarkHealthCached-8       \t   50000\t      5282 ns/op\t         4.958 p50-µs\t         8.458 p99-µs\t    2678 B/op\t      28 allocs/op\n"}
+{"Time":"2026-10-01T03:57:18.102257+05:30","Action":"output","Package":"github.com/deedglass/deedglass/internal/httpx","Output":"PASS\n","OutputType":"frame"}
+{"Time":"2026-10-01T03:57:18.103103+05:30","Action":"output","Package":"github.com/deedglass/deedglass/internal/httpx","Output":"ok  \tgithub.com/deedglass/deedglass/internal/httpx\t1.049s\n"}
+{"Time":"2026-10-01T03:57:18.103131+05:30","Action":"pass","Package":"github.com/deedglass/deedglass/internal/httpx","Elapsed":1.049}
+{"Time":"2026-10-01T03:57:18.394879+05:30","Action":"start","Package":"github.com/deedglass/deedglass/internal/httpx"}
+{"Time":"2026-10-01T03:57:18.639227+05:30","Action":"output","Package":"github.com/deedglass/deedglass/internal/httpx","Output":"goos: darwin\n"}
+{"Time":"2026-10-01T03:57:18.639449+05:30","Action":"output","Package":"github.com/deedglass/deedglass/internal/httpx","Output":"goarch: arm64\n"}
+{"Time":"2026-10-01T03:57:18.639521+05:30","Action":"output","Package":"github.com/deedglass/deedglass/internal/httpx","Output":"pkg: github.com/deedglass/deedglass/internal/httpx\n"}
+{"Time":"2026-10-01T03:57:18.639547+05:30","Action":"output","Package":"github.com/deedglass/deedglass/internal/httpx","Output":"cpu: Apple M1\n"}
+{"Time":"2026-10-01T03:57:18.639566+05:30","Action":"run","Package":"github.com/deedglass/deedglass/internal/httpx","Test":"BenchmarkPipelineLoad"}
+{"Time":"2026-10-01T03:57:18.639578+05:30","Action":"output","Package":"github.com/deedglass/deedglass/internal/httpx","Test":"BenchmarkPipelineLoad","Output":"=== RUN   BenchmarkPipelineLoad\n","OutputType":"frame"}
+{"Time":"2026-10-01T03:57:18.639594+05:30","Action":"output","Package":"github.com/deedglass/deedglass/internal/httpx","Test":"BenchmarkPipelineLoad","Output":"BenchmarkPipelineLoad\n"}
+{"Time":"2026-10-01T03:57:19.794199+05:30","Action":"output","Package":"github.com/deedglass/deedglass/internal/httpx","Test":"BenchmarkPipelineLoad","Output":"BenchmarkPipelineLoad-8   \t       1\t1153163917 ns/op\t         0 errors\t       414.3 p50-µs\t      2106 p99-µs\t     87132 req/s\n"}
+{"Time":"2026-10-01T03:57:19.794279+05:30","Action":"output","Package":"github.com/deedglass/deedglass/internal/httpx","Output":"PASS\n","OutputType":"frame"}
+{"Time":"2026-10-01T03:57:19.795278+05:30","Action":"output","Package":"github.com/deedglass/deedglass/internal/httpx","Output":"ok  \tgithub.com/deedglass/deedglass/internal/httpx\t1.400s\n"}
+{"Time":"2026-10-01T03:57:19.795304+05:30","Action":"pass","Package":"github.com/deedglass/deedglass/internal/httpx","Elapsed":1.4}
