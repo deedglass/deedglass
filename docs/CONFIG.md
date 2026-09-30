@@ -26,6 +26,7 @@ The first source that sets a key wins:
 |---|---|---|---|---|---|---|
 | `DEEDGLASS_ENV` | `env` | `dev` | no | all | dev or prod. Prod ignores .env and dev secrets and refuses unsafe settings. | S01 |
 | `DEEDGLASS_DATABASE_URL` | `database_url` | — | yes | serve, migrate, org, dev | The control-plane Postgres URL for the runtime role. Printed with only the password hidden. Prod needs sslmode=require or verify-full unless the host is loopback or a Unix socket. | S01 |
+| `DEEDGLASS_MIGRATE_DATABASE_URL` | `migrate_database_url` | — | yes | migrate | The control-plane Postgres URL for the migrator role (deedglass_migrator), used only by deedglass migrate. Dev falls back to DEEDGLASS_DATABASE_URL; prod requires it or --database-url. | S02 |
 | `DEEDGLASS_LISTEN` | `listen` | `127.0.0.1:8080` | no | serve | Address the API, the Gate and the Console listen on (host:port). | S01 |
 | `DEEDGLASS_BASE_URL` | `base_url` | `http://127.0.0.1:8080` | no | serve, org login-link | The URL people and agents use to reach this server. Prod needs https. | S01 |
 | `DEEDGLASS_SEAL_KEY_FILE` | `seal_key_file` | — | no | serve, keys | Path to the seal key file used to seal deeds. | S01 |

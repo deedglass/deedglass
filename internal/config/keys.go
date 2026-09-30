@@ -45,6 +45,8 @@ var Keys = []Key{
 		Commands: "all", Doc: "dev or prod. Prod ignores .env and dev secrets and refuses unsafe settings.", Owner: "S01"},
 	{Name: "DEEDGLASS_DATABASE_URL", Kind: KindPostgresURL, Secret: true,
 		Commands: "serve, migrate, org, dev", Doc: "The control-plane Postgres URL for the runtime role. Printed with only the password hidden. Prod needs sslmode=require or verify-full unless the host is loopback or a Unix socket.", Owner: "S01"},
+	{Name: "DEEDGLASS_MIGRATE_DATABASE_URL", Kind: KindPostgresURL, Secret: true,
+		Commands: "migrate", Doc: "The control-plane Postgres URL for the migrator role (deedglass_migrator), used only by deedglass migrate. Dev falls back to DEEDGLASS_DATABASE_URL; prod requires it or --database-url.", Owner: "S02"},
 	{Name: "DEEDGLASS_LISTEN", Kind: KindListen, Default: "127.0.0.1:8080",
 		Commands: "serve", Doc: "Address the API, the Gate and the Console listen on (host:port).", Owner: "S01"},
 	{Name: "DEEDGLASS_BASE_URL", Kind: KindURL, Default: "http://127.0.0.1:8080",

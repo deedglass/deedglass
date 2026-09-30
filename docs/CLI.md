@@ -84,9 +84,9 @@ builds it. Hidden commands work but aren't in `deedglass help`.
 | `deedglass init` | Setup | Set up Deedglass in this directory | soon (S32) |
 | `deedglass doctor` | Setup | Check config, database and keys | soon (S32) |
 | `deedglass serve` | Setup | Run the API, the Gate and the Console | soon (S03) |
-| `deedglass migrate up` | Setup | Apply database migrations | soon (S02) |
-| `deedglass migrate status` | Setup | Show applied and pending migrations | soon (S02) |
-| `deedglass migrate verify` | Setup | Check applied migrations against this build | soon (S02) |
+| `deedglass migrate up [--database-url <url>] [--dry-run] [--json]` | Setup | Apply database migrations | built |
+| `deedglass migrate status [--database-url <url>] [--json]` | Setup | Show applied and pending migrations | built |
+| `deedglass migrate verify [--database-url <url>] [--json]` | Setup | Check applied migrations against this build | built |
 | `deedglass config print [--json]` | Setup | Show the effective config, secrets hidden | built |
 | `deedglass version [--json] [--check]` | Setup | Show the client and server versions | built |
 | `deedglass keys gen` | Setup | Generate a seal key | soon (S04) |
@@ -176,7 +176,7 @@ builds it. Hidden commands work but aren't in `deedglass help`.
 | `deedglass insights suggestions reject` | Insights | Reject a suggestion | soon (S28) |
 | `deedglass insights suggestions generate` | Insights | Generate suggestions now | soon (S28) |
 | `deedglass insights digest` | Insights | Preview the weekly digest | soon (S28) |
-| `deedglass dev seed` | Dev | Load demo data into a dev database | soon (S02) |
+| `deedglass dev seed [--json]` | Dev | Load demo data into a dev database | built |
 | `deedglass dev fake-action` | Dev | Send realistic actions for demos | soon (S06) |
 | `deedglass dev simulate` | Dev | Simulate agent traffic | soon (S27) |
 | `deedglass dev agent-script` | Dev | Run a scripted agent | soon (S37) |

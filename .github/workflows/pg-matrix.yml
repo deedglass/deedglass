@@ -25,6 +25,8 @@ jobs:
         command: postgres -c wal_level=logical -c max_slot_wal_keep_size=2GB
         env:
           POSTGRES_PASSWORD: deedglass-ci-throwaway
+        ports:
+          - 127.0.0.1:5432:5432
         options: >-
           --health-cmd "pg_isready -U postgres"
           --health-interval 2s
@@ -32,9 +34,13 @@ jobs:
           --health-retries 30
     steps:
       - uses: actions/checkout@v5
-      - name: apply sql/001-004 and run the smoke checks on PostgreSQL ${{ matrix.pg }}
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+      - name: sql/001-004 smoke, control-plane migrations and Go integration suites on PostgreSQL ${{ matrix.pg }}
         env:
           DEEDGLASS_IT_THROWAWAY: "1"
           PSQL: docker exec -i ${{ job.services.postgres.id }} psql
           PGUSER: postgres
+          DEEDGLASS_IT_ADMIN_URL: postgres://postgres:deedglass-ci-throwaway@127.0.0.1:5432/postgres?sslmode=disable
         run: scripts/integration.sh

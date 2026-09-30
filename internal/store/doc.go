@@ -13,15 +13,21 @@
 //     and an applied file is never edited.
 //   - SQL is schema-qualified with a pinned search_path; no SQL is built from user input.
 //
-// Planned API (finalized by S02):
+// API (S02):
 //
-//	func Open(ctx context.Context, cfg *config.Config) (*DB, error)
-//	func (db *DB) Migrate(ctx context.Context) (Report, error)        // deedglass migrate up
-//	func (db *DB) OrgTx(ctx context.Context, org ids.OrgID, fn func(Tx) error) error
-//	func (db *DB) SystemTx(ctx context.Context, reason string, fn func(Tx) error) error
+//	func Open(ctx context.Context, url config.Secret, o Options) (*DB, error)
+//	func (db *DB) OrgTx(ctx context.Context, org ids.OrgID, fn TxFunc) error      // RLS scoped to org
+//	func (db *DB) OrgReadTx(ctx context.Context, org ids.OrgID, fn TxFunc) error  // the same, READ ONLY
+//	func (db *DB) SystemTx(ctx context.Context, r SystemReason, fn TxFunc) error  // org_create, maintenance, health
+//	func (db *DB) CheckRuntimeRole(ctx context.Context) (RoleReport, error)
+//	func (db *DB) CreateOrg(ctx context.Context, in NewOrg) (Org, User, Membership, error)
+//	GetOrg, GetOrgBySlug, UpsertUserByEmail, GetUser, CreateAgent, GetAgent, GetAgentByName, ListAgents
+//
+// Migrations: internal/store/migrate (the runner) and internal/store/migrations (the files).
+// The schema, and what the database enforces: docs/DATA_MODEL.md.
 //
 // V0 note: the V0 verifier kept its checkpoint, statement index and nonce memory in SQLite. The
 // Deedglass control plane is Postgres; the decoder's checkpoint moves to decoder_slots (S20).
 //
-// Filled by: S02 (later sessions add repositories)
+// Filled by: S02 (S07 and later add repositories and SECURITY DEFINER functions)
 package store

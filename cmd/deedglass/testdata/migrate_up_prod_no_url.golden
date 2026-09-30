@@ -1,0 +1,4 @@
+exit 1
+--- stdout
+--- stderr
+✕ DEEDGLASS_MIGRATE_DATABASE_URL isn't set. Set it to the migrator role's URL, or pass --database-url.

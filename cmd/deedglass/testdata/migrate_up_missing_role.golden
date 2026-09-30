@@ -1,0 +1,5 @@
+exit 1
+--- stdout
+--- stderr
+✕ Role deedglass_app doesn't exist yet.
+  Create the roles first: psql -f deploy/postgres/control-plane-roles.sql (see docs/DATABASE_SETUP.md).

@@ -55,7 +55,8 @@ EOF
     }
     trap cleanup EXIT
     "$BIN/pg_ctl" -D "$DATA" -l "$LOG" -w start >/dev/null
-    PSQL="$BIN/psql -h localhost -p $PORT" PGUSER=postgres "$ROOT/scripts/integration.sh"
+    PSQL="$BIN/psql -h localhost -p $PORT" PGUSER=postgres \
+      DEEDGLASS_IT_ADMIN_URL="postgres://postgres@localhost:$PORT/postgres?sslmode=disable" "$ROOT/scripts/integration.sh"
     ;;
   docker)
     command -v docker >/dev/null || { echo "docker not found" >&2; exit 2; }
@@ -70,7 +71,8 @@ EOF
       docker exec "$NAME" pg_isready -U postgres -q && break
       sleep 1
     done
-    PSQL="docker exec -i $NAME psql" PGUSER=postgres "$ROOT/scripts/integration.sh"
+    PSQL="docker exec -i $NAME psql" PGUSER=postgres \
+      DEEDGLASS_IT_ADMIN_URL="postgres://postgres:deedglass-it-throwaway@127.0.0.1:$PORT/postgres?sslmode=disable" "$ROOT/scripts/integration.sh"
     ;;
   *) echo "unknown DEEDGLASS_IT_MODE=$MODE" >&2; exit 2 ;;
 esac

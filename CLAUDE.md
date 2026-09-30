@@ -23,7 +23,9 @@ make help           # every target
 make ci             # fmt-check, tidy-check, vet, test (-race), testdata-check, rename-guard, banned-words, nocgo
 make build          # bin/deedglass with version ldflags; bin/deedglass help
 make test           # go test -race -count=1 ./...     (make test-short: no -race, short mode)
-make integration    # throwaway PG (DEEDGLASS_IT_PG=18|17|16, DEEDGLASS_IT_MODE=brew|docker): sql/001-004 + smoke
+make integration    # throwaway PG (DEEDGLASS_IT_PG=18|17|16, DEEDGLASS_IT_MODE=brew|docker): sql/ smoke,
+                    # control-plane roles + deedglass migrate + go test -tags integration
+make bench-store    # S02 store budget; raw output in bench/results/
 make matrix         # integration on 16, 17 and 18
 make fuzz           # 30 s fuzz of the intent parser and the id parser
 make rename-guard   # retired identifiers (rule 5)
@@ -56,10 +58,11 @@ make bench | make cover
    message prefix). `txv` and `testamur` are retired; `scripts/rename_guard.sh` enforces this. The
    old codename stays banned.
 6. Pinned dependencies only, each with an ADR (name, version, licence, why, alternatives):
-   `github.com/gowebpki/jcs` v1.0.2 (ADR-005); `go.yaml.in/yaml/v3` v3.0.5 (ADR-015). Planned, and
-   added only by the session that uses them: `cel.dev/cel-go` v0.32.0 (S10, ADR-017), the MCP Go
-   SDK v1.8.0 (S14, ADR-018), `github.com/jackc/pgx/v5` and `pglogrepl` at the spike-verified pins
-   (S02, S20), `github.com/veraison/go-cose` v1.3.0 (S05, ADR-008). No cgo in the main binary.
+   `github.com/gowebpki/jcs` v1.0.2 (ADR-005); `go.yaml.in/yaml/v3` v3.0.5 (ADR-015);
+   `github.com/jackc/pgx/v5` v5.11.0 (ADR-001, in go.mod since S02). Planned, and added only by the
+   session that uses them: `cel.dev/cel-go` v0.32.0 (S10, ADR-017), the MCP Go SDK v1.8.0 (S14,
+   ADR-018), `pglogrepl` at the spike-verified pin (S20), `github.com/veraison/go-cose` v1.3.0
+   (S05, ADR-008). No cgo in the main binary.
    `go.sum` is committed and CI runs `go mod verify`.
 7. CI matches the banned words (below) in files, strings and commit messages as whole words or
    phrases, case-insensitive, and fails on any hit not in `.banned-words-allow`
@@ -140,6 +143,11 @@ and "open source" until the repo is public. Style bans: "revolutionary", "world-
   overflow tests, pattern-vs-parser agreement, `FuzzParse`.
 - `internal/config`: the key table, every prod refusal, `.deedglass/` safety, secret canaries across
   fmt, JSON, slog and panics, and the `docs/CONFIG.md` drift test.
+- `internal/store`: catalog shape (32 tables, RLS on every org table, `system_scope` list pinned,
+  composite FKs, grants), RLS matrix on all 27 org tables, pooled-connection leak, privilege
+  matrix, deed chain, domains = `ids.Registry()`, `set_config(…, true)` grep, `SystemTx` call
+  sites; `internal/gate`: 225-pair trigger test; migrate runner refusals. Integration tag,
+  PG 16/17/18.
 - `internal/archtest`: import layering (pure `deed`, `policy`, `sqlguard`, `witness`).
 - `cmd/deedglass`: goldens for help, version, config print and errors, with exit codes.
 - `internal/intent`, `internal/keys`, `internal/bundle`: strict JSON and JCS vectors, key checks,

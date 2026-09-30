@@ -1,0 +1,4 @@
+exit 2
+--- stdout
+--- stderr
+{"error":{"code":"database_unreachable","doc_url":"https://docs.deedglass.com/errors/database_unreachable","message":"Can't connect to 127.0.0.1:55432 as deedglass_migrator: connection refused. Check that Postgres is running and that the URL, user and password are right.","type":"invalid_request_error"}}

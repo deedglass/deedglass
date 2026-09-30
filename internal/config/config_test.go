@@ -140,6 +140,8 @@ func TestLoad(t *testing.T) {
 			problems: []string{"DEEDGLASS_DATABASE_URL has sslmode=disable, and prod needs require or verify-full"}},
 		{name: "prod no sslmode to a remote host", env: prodEnv(map[string]string{"DEEDGLASS_DATABASE_URL": "postgres://a@db.example.com/x"}),
 			problems: []string{"has no sslmode"}},
+		{name: "prod migrate URL needs sslmode too", env: prodEnv(map[string]string{"DEEDGLASS_MIGRATE_DATABASE_URL": "postgres://m:p@db.example.com/x?sslmode=disable"}),
+			problems: []string{"DEEDGLASS_MIGRATE_DATABASE_URL has sslmode=disable, and prod needs require or verify-full"}},
 		{name: "prod sslmode=disable to 127.0.0.1 is fine", env: prodEnv(map[string]string{"DEEDGLASS_DATABASE_URL": "postgres://a:b@127.0.0.1:5432/x?sslmode=disable"})},
 		{name: "prod over a Unix socket is fine", env: prodEnv(map[string]string{"DEEDGLASS_DATABASE_URL": "postgres:///x?host=/var/run/postgresql"})},
 		{name: "a typo warns in dev", env: map[string]string{"DEEDGLASS_DATABSE_URL": "x"},
@@ -288,6 +290,52 @@ func TestRequire(t *testing.T) {
 	}
 	if empty.Source("nope") != SourceNotSet {
 		t.Error("unknown key source")
+	}
+}
+
+func TestMigrateURL(t *testing.T) {
+	const app = "postgres://deedglass_app:pw@127.0.0.1:5432/deedglass"
+	const mig = "postgres://deedglass_migrator:pw@127.0.0.1:5432/deedglass"
+	cases := []struct {
+		name     string
+		env      Env
+		db, m    string
+		flag     string
+		want     string
+		fallback bool
+		err      string
+	}{
+		{name: "flag wins", env: Prod, db: app, m: mig, flag: "postgres://x:y@127.0.0.1/z", want: "postgres://x:y@127.0.0.1/z"},
+		{name: "bad flag", env: Dev, flag: "mysql://x", err: "--database-url"},
+		{name: "migrate url", env: Prod, db: app, m: mig, want: mig},
+		{name: "dev falls back", env: Dev, db: app, want: app, fallback: true},
+		{name: "prod never falls back", env: Prod, db: app, err: "DEEDGLASS_MIGRATE_DATABASE_URL isn't set. Set it to the migrator role's URL, or pass --database-url."},
+		{name: "dev with nothing", env: Dev, err: "DEEDGLASS_MIGRATE_DATABASE_URL isn't set. Set it (or DEEDGLASS_DATABASE_URL in dev)"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			c := &Config{Env: tc.env}
+			if tc.db != "" {
+				c.DatabaseURL = NewSecret(tc.db)
+			}
+			if tc.m != "" {
+				c.MigrateDatabaseURL = NewSecret(tc.m)
+			}
+			var f Secret
+			if tc.flag != "" {
+				f = NewSecret(tc.flag)
+			}
+			got, fb, err := c.MigrateURL(f)
+			if tc.err != "" {
+				if err == nil || !strings.Contains(err.Error(), tc.err) {
+					t.Fatalf("err = %v, want %q", err, tc.err)
+				}
+				return
+			}
+			if err != nil || got.Reveal() != tc.want || fb != tc.fallback {
+				t.Fatalf("got %q %v %v", got.Reveal(), fb, err)
+			}
+		})
 	}
 }
 

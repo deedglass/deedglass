@@ -1,0 +1,5 @@
+exit 1
+--- stdout
+--- stderr
+✕ This database has deedglass.ledger, so it's a watched customer database.
+  Deedglass keeps its own state in a separate database. Point DEEDGLASS_MIGRATE_DATABASE_URL at that one.

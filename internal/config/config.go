@@ -40,6 +40,7 @@ const (
 type Config struct {
 	Env                  Env
 	DatabaseURL          Secret // printed with only the password hidden
+	MigrateDatabaseURL   Secret // the migrator role's URL (S02); only deedglass migrate reads it
 	Listen               string
 	BaseURL              *url.URL
 	SealKeyFile          string
@@ -332,6 +333,12 @@ func (l *loader) parse(c *Config, k Key) {
 			return
 		}
 		c.DatabaseURL = NewSecret(v)
+	case "DEEDGLASS_MIGRATE_DATABASE_URL":
+		if msg := checkPostgresURL(v); msg != "" {
+			bad(msg, "Use the form postgres://deedglass_migrator:password@host:5432/deedglass?sslmode=require.")
+			return
+		}
+		c.MigrateDatabaseURL = NewSecret(v)
 	case "DEEDGLASS_LISTEN":
 		host, port, err := net.SplitHostPort(v)
 		p, perr := strconv.Atoi(port)
@@ -449,9 +456,14 @@ func (l *loader) prodChecks(c *Config) {
 	if c.AllowPrivateNetworks {
 		l.problem("DEEDGLASS_ALLOW_PRIVATE_NETWORKS", "is dev only.", "Remove it. In prod, list reachable networks explicitly (S16).")
 	}
-	if v := c.DatabaseURL.Reveal(); v != "" {
-		if msg := prodSSL(v); msg != "" {
-			l.problem("DEEDGLASS_DATABASE_URL", msg, "Add sslmode=verify-full (or require) to the URL.")
+	for _, k := range []struct {
+		name string
+		s    Secret
+	}{{"DEEDGLASS_DATABASE_URL", c.DatabaseURL}, {"DEEDGLASS_MIGRATE_DATABASE_URL", c.MigrateDatabaseURL}} {
+		if v := k.s.Reveal(); v != "" {
+			if msg := prodSSL(v); msg != "" {
+				l.problem(k.name, msg, "Add sslmode=verify-full (or require) to the URL.")
+			}
 		}
 	}
 }
@@ -478,6 +490,30 @@ func (c *Config) Require(n Need) error {
 		return nil
 	}
 	return &Problems{Env: c.Env, List: ps}
+}
+
+// MigrateURL picks the URL deedglass migrate connects with: the --database-url flag, then
+// DEEDGLASS_MIGRATE_DATABASE_URL, then (dev only) DEEDGLASS_DATABASE_URL. fallback reports the dev
+// fallback, so the caller can print its notice. Prod never falls back to the runtime role's URL.
+func (c *Config) MigrateURL(flag Secret) (url Secret, fallback bool, err error) {
+	if flag.IsSet() {
+		if msg := checkPostgresURL(flag.Reveal()); msg != "" {
+			return Secret{}, false, &Problems{Env: c.Env, List: []Problem{{"--database-url", msg,
+				"Use the form postgres://deedglass_migrator:password@host:5432/deedglass."}}}
+		}
+		return flag, false, nil
+	}
+	if c.MigrateDatabaseURL.IsSet() {
+		return c.MigrateDatabaseURL, false, nil
+	}
+	if c.Env == Dev && c.DatabaseURL.IsSet() {
+		return c.DatabaseURL, true, nil
+	}
+	next := "Set it to the migrator role's URL, or pass --database-url."
+	if c.Env == Dev {
+		next = "Set it (or DEEDGLASS_DATABASE_URL in dev) to the control-plane Postgres URL, or pass --database-url."
+	}
+	return Secret{}, false, &Problems{Env: c.Env, List: []Problem{{"DEEDGLASS_MIGRATE_DATABASE_URL", "isn't set.", next}}}
 }
 
 // Source returns where a key's value came from.

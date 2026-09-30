@@ -1,0 +1,4 @@
+exit 0
+--- stdout
+✓ Schema is current at 0009 · dry run, nothing to apply
+--- stderr

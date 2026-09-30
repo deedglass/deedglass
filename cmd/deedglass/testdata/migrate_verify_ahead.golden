@@ -1,0 +1,5 @@
+exit 1
+--- stdout
+--- stderr
+✕ The database is at migration 0012, and this build knows up to 0009.
+  Run a deedglass build that has these migrations, or check that the URL points at the right database.

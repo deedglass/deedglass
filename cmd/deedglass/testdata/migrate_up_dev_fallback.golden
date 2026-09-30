@@ -1,0 +1,6 @@
+exit 0
+--- stdout
+✓ Schema is current at 0009
+--- stderr
+○ Using DEEDGLASS_DATABASE_URL for migrations (dev only).
+○ Migrating as a superuser. Dev allows it; prod refuses. Run migrations as deedglass_migrator.

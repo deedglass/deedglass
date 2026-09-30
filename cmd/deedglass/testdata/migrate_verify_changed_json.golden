@@ -1,0 +1,4 @@
+exit 1
+--- stdout
+--- stderr
+{"error":{"applied_checksum":"sha256:3f9a00000000000000000000000000000000000000000000000000000000c21e","binary_checksum":"sha256:77c11a8c3456bfb93d18a78205819d37d75fad159a9adfdf1677beb5ffcf10f6","code":"migration_changed","doc_url":"https://docs.deedglass.com/errors/migration_changed","message":"0003 policy changed after it was applied. An applied migration must never change. Restore the original file, and put the change in a new migration.","type":"invalid_request_error","version":3}}

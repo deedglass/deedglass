@@ -30,3 +30,4 @@ ADR-000 to ADR-008 were written for the V0 verifier and keep their original text
 | 019 | Embedded, forward-only, checksummed SQL migrations | Accepted (2026-10-01) | `internal/store/migrations/NNNN_name.sql`; small runner in S02; no dependency |
 | 020 | Console: static Astro 7 + Tailwind 4, embedded in the binary | Accepted (2026-10-01) | Vanilla TypeScript islands; brand tokens shared with the site |
 | 021 | Attack-suite outcomes move to VERIFIED / MISMATCH / UNVERIFIABLE | Accepted (2026-10-01) | Not applied yet; the attack digest stays until S18 applies it |
+| 022 | Control-plane isolation: RLS, two roles, five global tables | Accepted (2026-10-01) | Migrator owns, app runs under RLS with no rights on history; cross-org reads through SECURITY DEFINER functions; S02 |

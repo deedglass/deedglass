@@ -54,9 +54,10 @@ type Env struct {
 type ExitError struct {
 	Code    int
 	Err     error
-	ErrCode string // snake_case, as in the API error envelope
-	Next    string // the next step, printed on its own line
-	Plain   bool   // print without the ✕ symbol (calm, not an error)
+	ErrCode string   // snake_case, as in the API error envelope
+	Next    string   // the next step, printed on its own line
+	Detail  []string // text mode only: indented lines between the message and the next step
+	Plain   bool     // print without the ✕ symbol (calm, not an error)
 	Extra   map[string]any
 	printed bool
 }
@@ -344,6 +345,9 @@ func report(e *Env, err error) int {
 		return x.Code
 	}
 	fmt.Fprintln(e.Stderr, e.Style.FailLine(msg))
+	for _, d := range x.Detail {
+		fmt.Fprintln(e.Stderr, "  "+d)
+	}
 	if x.Next != "" {
 		fmt.Fprintln(e.Stderr, "  "+x.Next)
 	}

@@ -1,0 +1,7 @@
+exit 1
+--- stdout
+--- stderr
+✕ 0003 policy changed after it was applied.
+  applied  sha256:3f9a…c21e
+  binary   sha256:77c1…10f6
+  An applied migration must never change. Restore the original file, and put the change in a new migration.

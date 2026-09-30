@@ -16,6 +16,9 @@
 # A URL without a password may live here; one with a password goes in the environment.
 # database_url: postgres://deedglass_app@127.0.0.1:55432/deedglass?sslmode=disable
 
+# The migrator role's URL, used only by `deedglass migrate` (dev falls back to database_url).
+# migrate_database_url: postgres://deedglass_migrator@127.0.0.1:55432/deedglass?sslmode=disable
+
 # Where the API, the Gate and the Console listen.
 # listen: 127.0.0.1:8080
 

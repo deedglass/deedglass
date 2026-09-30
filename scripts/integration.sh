@@ -1,7 +1,11 @@
 #!/usr/bin/env bash
-# Integration smoke run: apply sql/001-004 to a FRESH database on a THROWAWAY cluster, then run
-# scripts/integration_smoke.sql (one real transfer, a few refusals, and decode checks through both
-# pgoutput and test_decoding). This is not the attack suite; attack/ holds that (from Tue 09-29).
+# Integration run on a THROWAWAY cluster.
+#  1. Customer side (V0 demo): apply sql/001-004 to a FRESH database, then scripts/integration_smoke.sql
+#     (one real transfer, a few refusals, and decode checks through both pgoutput and test_decoding).
+#  2. Control plane (S02), when DEEDGLASS_IT_ADMIN_URL is set: deploy/postgres/control-plane-roles.sql,
+#     a live `deedglass migrate up` (twice) and `verify`, the acceptance checks in psql, then the Go
+#     integration suites (go test -tags integration).
+# This is not the attack suite; attack/ holds that.
 #
 # It drops and recreates database $DEEDGLASS_IT_DB and the cluster-wide roles deedglass_owner, deedglass_agent,
 # deedglass_witness and deedglass_it_app, so it refuses to run unless DEEDGLASS_IT_THROWAWAY=1 (plan §3.12 rule 10:
@@ -13,6 +17,8 @@
 #   PGUSER               installer role, a superuser on the throwaway cluster (default: postgres)
 #   PGHOST/PGPORT/PGPASSWORD  honoured by psql when it connects over TCP
 #   DEEDGLASS_IT_DB            database name (default: deedglass_it)
+#   DEEDGLASS_IT_ADMIN_URL     postgres:// URL of the same cluster as the superuser, reachable from this host;
+#                              enables step 2 (make integration sets it; CI maps the service port)
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -51,3 +57,46 @@ q -d "$DB" -v fn_src_sha256="$FN_SRC_SHA256" < "$ROOT/scripts/integration_smoke.
 echo "== cleanup"
 q -d "$DB" -Atc "select pg_drop_replication_slot(slot_name) from pg_replication_slots where database = '$DB'" >/dev/null
 echo "PASS: integration smoke"
+
+if [ -z "${DEEDGLASS_IT_ADMIN_URL:-}" ]; then
+  echo "SKIP: control plane (set DEEDGLASS_IT_ADMIN_URL to run the S02 checks and the Go integration suites)"
+  exit 0
+fi
+IT_PW=deedglass-it-throwaway
+# Same host and port as the admin URL, as the migrator, on database deedglass.
+MIG_URL="$(printf '%s' "$DEEDGLASS_IT_ADMIN_URL" | sed -E "s#^postgres(ql)?://[^@]*@([^/?]+).*#postgres://deedglass_migrator:${IT_PW}@\2/deedglass?sslmode=disable#")"
+app() { "${PSQL_CMD[@]}" -X -q -v ON_ERROR_STOP=1 -U deedglass_app -d deedglass "$@"; }
+
+echo "== control plane: reset, then deploy/postgres/control-plane-roles.sql"
+for d in $(q -d postgres -Atc "select datname from pg_database where datname = 'deedglass' or datname like 'deedglass\_it\_%'"); do
+  q -d postgres -c "DROP DATABASE $d WITH (FORCE)"
+done
+q -d postgres -c "SET client_min_messages = warning" -c "DROP ROLE IF EXISTS deedglass_app, deedglass_migrator"
+q -d postgres -v migrator_password="$IT_PW" -v app_password="$IT_PW" < "$ROOT/deploy/postgres/control-plane-roles.sql"
+
+echo "== control plane: deedglass migrate (live)"
+DG=("go" "run" "$ROOT/cmd/deedglass")
+cd "$ROOT"
+out="$(DEEDGLASS_ENV=dev "${DG[@]}" migrate up --database-url "$MIG_URL" --no-color)"; echo "$out"
+grep -q "Schema at 0009 · 9 applied" <<<"$out" || { echo "FAIL: first migrate up" >&2; exit 1; }
+out="$(DEEDGLASS_ENV=dev "${DG[@]}" migrate up --database-url "$MIG_URL" --no-color)"; echo "$out"
+grep -q "Schema is current" <<<"$out" || { echo "FAIL: second migrate up" >&2; exit 1; }
+DEEDGLASS_ENV=dev "${DG[@]}" migrate verify --database-url "$MIG_URL" --no-color
+
+echo "== control plane: acceptance checks"
+denied="$(app -c "UPDATE deedglass.deeds SET seal = 'x'" 2>&1 || true)"
+echo "$denied"
+grep -q "permission denied for table deeds" <<<"$denied" || { echo "FAIL: deedglass_app could UPDATE deeds" >&2; exit 1; }
+norls="$(q -d deedglass -Atc "SELECT string_agg(relname, ',' ORDER BY relname) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace WHERE nspname = 'deedglass' AND relkind = 'r' AND NOT relrowsecurity")"
+echo "tables without RLS: $norls"
+[ "$norls" = "schema_migrations,seal_keys" ] || { echo "FAIL: tables without RLS: $norls" >&2; exit 1; }
+
+echo "== control plane: Go integration suites"
+go test -tags integration -count=1 ./internal/store/... ./internal/gate/... ./cmd/deedglass/
+if [ -n "${DEEDGLASS_IT_BENCH_OUT:-}" ]; then
+  echo "== store budget (S02 §3.9) -> $DEEDGLASS_IT_BENCH_OUT"
+  DEEDGLASS_IT_BENCH=1 go test -tags integration -count=1 -json -run 'TestPerfBudget|TestExplainShowsInitPlan' ./internal/store/ > "$DEEDGLASS_IT_BENCH_OUT"
+  sed -n 's/.*PERF \({.*}\)\\n".*/\1/p' "$DEEDGLASS_IT_BENCH_OUT" | sed 's/\\"/"/g'
+  grep -q '"Action":"pass","Package":"github.com/deedglass/deedglass/internal/store","Test":"TestPerfBudget"' "$DEEDGLASS_IT_BENCH_OUT" || { echo "FAIL: store budget" >&2; exit 1; }
+fi
+echo "PASS: control plane"

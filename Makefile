@@ -9,7 +9,7 @@ BI       := github.com/deedglass/deedglass/internal/buildinfo
 LDFLAGS  := -s -w -X $(BI).Version=$(VERSION) -X $(BI).Commit=$(COMMIT) -X $(BI).Modified=$(MODIFIED) -X $(BI).Date=$(DATE)
 
 .PHONY: all help ci build test test-short vet fmt fmt-check tidy-check testdata-check rename-guard banned-words nocgo \
-	integration matrix fuzz bench cover clean
+	integration matrix fuzz bench bench-store cover clean
 
 all: ci
 
@@ -51,7 +51,7 @@ banned-words: ## (ci) banned words in files and commit messages
 nocgo: ## (ci) the binary builds without cgo
 	CGO_ENABLED=0 $(GO) build -o /dev/null ./cmd/deedglass
 
-integration: ## throwaway PG cluster (Homebrew, else Docker) + sql/ + smoke; DEEDGLASS_IT_PG=18|17|16 DEEDGLASS_IT_MODE=brew|docker
+integration: ## throwaway PG cluster (Homebrew, else Docker): sql/ smoke, control-plane migrations, Go integration suites; DEEDGLASS_IT_PG=18|17|16 DEEDGLASS_IT_MODE=brew|docker
 	scripts/integration_local.sh
 
 matrix: ## integration on 16, 17 and 18
@@ -63,6 +63,10 @@ fuzz: ## 30 s fuzz of the strict intent parser and the id parser
 
 bench: ## benchmarks for ids and config
 	$(GO) test -run '^$$' -bench . -benchmem -cpu 1,8 ./internal/ids ./internal/config
+
+bench-store: ## S02 store budget (OrgTx, insert, list) on a throwaway PG 18; raw go test -json in bench/results/
+	DEEDGLASS_IT_BENCH=1 DEEDGLASS_IT_BENCH_OUT="$(CURDIR)/bench/results/$$(date +%F)-$$(go env GOOS)-$$(go env GOARCH)-store.json" \
+		scripts/integration_local.sh
 
 cover: ## coverage of the packages with targets (ids 95%, config 90%, cmd/deedglass 80%)
 	$(GO) test -count=1 -cover ./internal/ids ./internal/config ./cmd/deedglass

@@ -4,6 +4,7 @@ exit 0
 
 DEEDGLASS_ENV                     dev                                                          [2mdefault[0m
 DEEDGLASS_DATABASE_URL            postgres://deedglass_app:••••••••@127.0.0.1:55432/deedglass  [2menv[0m
+DEEDGLASS_MIGRATE_DATABASE_URL    —                                                            [2mnot set[0m
 DEEDGLASS_LISTEN                  127.0.0.1:8080                                               [2mdefault[0m
 DEEDGLASS_BASE_URL                http://127.0.0.1:8080                                        [2mdefault[0m
 DEEDGLASS_SEAL_KEY_FILE           —                                                            [2mnot set[0m

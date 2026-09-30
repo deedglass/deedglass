@@ -1,0 +1,5 @@
+exit 2
+--- stdout
+--- stderr
+✕ Can't connect to 127.0.0.1:55432 as deedglass_migrator: connection refused.
+  Check that Postgres is running and that the URL, user and password are right.

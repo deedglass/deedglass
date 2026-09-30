@@ -4,6 +4,7 @@ deedglass config · env dev
 
 DEEDGLASS_ENV                     dev                                                          default
 DEEDGLASS_DATABASE_URL            postgres://deedglass_app:••••••••@127.0.0.1:55432/deedglass  env
+DEEDGLASS_MIGRATE_DATABASE_URL    —                                                            not set
 DEEDGLASS_LISTEN                  127.0.0.1:8080                                               default
 DEEDGLASS_BASE_URL                http://127.0.0.1:8080                                        default
 DEEDGLASS_SEAL_KEY_FILE           —                                                            not set
