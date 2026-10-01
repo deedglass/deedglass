@@ -47,6 +47,19 @@ func NotifyPolicy(ctx context.Context, tx pgx.Tx, org string) error {
 	return err
 }
 
+// JobsChannel is the NOTIFY channel that wakes the Gate's workers (contract §8, S13). The payload
+// is the org id: a worker claims through claim_witness_jobs, never from the payload.
+const JobsChannel = "deedglass_jobs"
+
+// NotifyJobs sends org on deedglass_jobs inside tx: delivered only if the job's transaction commits.
+func NotifyJobs(ctx context.Context, tx pgx.Tx, org string) error {
+	if len(org) > MaxNotifyPayload || tx == nil {
+		return errors.New("store: a jobs notification needs a transaction and an org id")
+	}
+	_, err := tx.Exec(ctx, `SELECT pg_catalog.pg_notify('deedglass_jobs', $1)`, org)
+	return err
+}
+
 // ChannelListener runs extra NOTIFY channels on an instance's one dedicated LISTEN connection
 // (S08's identity listener, generalized in S12). onMsg gets each payload; onReset runs after every
 // (re)connect, because anything cached may have missed a notification while it was away.

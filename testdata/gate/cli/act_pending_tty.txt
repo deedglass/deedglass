@@ -1,0 +1,7 @@
+exit 2
+--- stdout
+[35m◐[0m pending approval · fake.write
+  Waiting for approval under policy "writes-need-approval": Writes wait for a human. Expires HH:MM TZ.
+  approval apr_…
+  Next: approve it in Console › Approvals, then run: deedglass actions show act_… --wait
+--- stderr

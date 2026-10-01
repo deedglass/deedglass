@@ -345,9 +345,11 @@ func (s *Server) authenticate(rt Route, r *http.Request, ri *reqInfo) error {
 	return nil
 }
 
-// keyAllowed is §3.5 steps 6–9 for an authenticated key.
+// keyAllowed is §3.5 steps 6–9 for an authenticated key. A RecordStopped route (POST /v1/actions)
+// lets an agent key of a stopped or suspended agent, or of a stopped org, through to the handler,
+// which records the refusal as a sealed deed (S13); admin keys still get the stop checks.
 func keyAllowed(rt Route, p Principal) error {
-	if !rt.SkipStopChecks {
+	if !rt.SkipStopChecks && !(rt.RecordStopped && p.Kind == KindAgentKey) {
 		switch {
 		// During Stop all, admin keys keep read-only access (GET, HEAD) so incident response can
 		// look around; anything that changes state is refused like every agent call (DL-022).

@@ -1,6 +1,7 @@
 package ledger
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -25,13 +26,23 @@ const (
 	checkTimeout  = CheckBudget + 15*time.Second
 )
 
+// Waiter blocks a GET /v1/actions/{id}?wait= until the action settles, changes, or wait passes
+// (S13's gate.Pipeline.Wait). ownAgent is the agent an agent key is limited to ("" for people and
+// admin keys); it returns ErrNotFound for an action the caller can't see, and an *httpx.Error to
+// end the wait early (a Stop).
+type Waiter func(ctx context.Context, org ids.OrgID, id, ownAgent string, wait time.Duration) error
+
 // Routes are the six Ledger routes (contract §9): GET /v1/actions, /v1/actions/{id}, /v1/deeds,
 // /v1/deeds/{id}, /v1/deeds/export and /v1/ledger/check. Every one is SessionOrKey, viewer and
 // up. Agent keys need actions:read or deeds:read and see only their own agent's rows; the export
 // and the chain check cover the whole org, so they take a Console session or an org admin key
 // (S08).
-func Routes(l *Ledger) []httpx.Route {
-	h := handlers{l}
+func Routes(l *Ledger) []httpx.Route { return RoutesWith(l, nil) }
+
+// RoutesWith is Routes with the Gate's waiter on GET /v1/actions/{id} (S13). With a nil waiter,
+// ?wait= is accepted and answers at once.
+func RoutesWith(l *Ledger, wait Waiter) []httpx.Route {
+	h := handlers{l: l, wait: wait}
 	return []httpx.Route{
 		{Method: "GET", Pattern: "/v1/actions", OperationID: "listActions", Auth: httpx.SessionOrKey, MinRole: httpx.RoleViewer,
 			Scopes: []string{ScopeActionsRead}, Handler: h.listActions},
@@ -48,7 +59,36 @@ func Routes(l *Ledger) []httpx.Route {
 	}
 }
 
-type handlers struct{ l *Ledger }
+type handlers struct {
+	l    *Ledger
+	wait Waiter
+}
+
+// parseWait reads GET /v1/actions/{id}'s query: wait (0 to 25 seconds) and expand[] (request,
+// result, events: accepted for compatibility; the detail always carries them). Anything else is
+// refused, as before S13.
+func parseWait(r *http.Request) (time.Duration, error) {
+	var wait time.Duration
+	for k, vs := range r.URL.Query() {
+		switch k {
+		case "wait":
+			n, err := strconv.ParseFloat(vs[len(vs)-1], 64)
+			if err != nil || n < 0 || n > PollWait || len(vs) > 1 {
+				return 0, httpx.ErrValidation("wait", "wait must be a number of seconds from 0 to 25, sent once.")
+			}
+			wait = time.Duration(n * float64(time.Second))
+		case "expand[]", "expand":
+			for _, v := range vs {
+				if v != "request" && v != "result" && v != "events" {
+					return 0, httpx.ErrValidation(k, "expand[] takes request, result or events.")
+				}
+			}
+		default:
+			return 0, httpx.ErrValidation(k, "This endpoint takes only wait and expand[].")
+		}
+	}
+	return wait, nil
+}
 
 // org is the principal's org; every Ledger read is scoped to it.
 func org(r *http.Request) (ids.OrgID, error) {
@@ -120,10 +160,22 @@ func (h handlers) getAction(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	if len(r.URL.Query()) > 0 {
-		return httpx.ErrValidation(firstKey(r), "This endpoint takes no query parameters.")
-	}
 	id := r.PathValue("id")
+	wait, err := parseWait(r)
+	if err != nil {
+		return err
+	}
+	if wait > 0 && h.wait != nil {
+		// S13: long-poll until the action settles (or changes, when it is already waiting for a
+		// person), the wait ends, or the agent is stopped. Ownership is checked first, so a wait
+		// never reveals another agent's action.
+		if err := h.wait(r.Context(), o, id, ownAgent(r), wait); err != nil {
+			if errors.Is(err, ErrNotFound) {
+				return notFoundAction(id)
+			}
+			return err
+		}
+	}
 	d, err := h.l.GetAction(r.Context(), o, id)
 	if errors.Is(err, ErrNotFound) || err == nil && ownAgent(r) != "" && d.Agent.ID != ownAgent(r) {
 		return notFoundAction(id)

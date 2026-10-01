@@ -1,0 +1,10 @@
+{
+  "tool": "fake.echo",
+  "args": {
+    "amount": 12.5
+  },
+  "mode": "gateway",
+  "tool_digest": null,
+  "request_digest": "sha256:d4dd97dae756cdde613960ad4a91753af87c0f5326372d7256caeb5138936909",
+  "fingerprint": "sha256:f31530c424408cbc7e9e630860e42af003aa7cb6dd47664e5b19bbb232df4ec2"
+}

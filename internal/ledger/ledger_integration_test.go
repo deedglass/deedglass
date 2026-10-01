@@ -930,3 +930,76 @@ func TestPruneThenVerify(t *testing.T) {
 		t.Fatalf("concurrent prune: %v", err)
 	}
 }
+
+// TestAdvance (S13): several edges as one statement write one event per edge with gapless seqs,
+// every state's timestamp, and the merged patch; a skipped edge is refused here and, when it gets
+// past the Go check, by the database guard (DG004); a wrong from is a conflict.
+func TestAdvance(t *testing.T) {
+	en := newEnv(t)
+	id := newAction(t, en)
+	deadline := time.Now().Add(time.Minute).UTC().Truncate(time.Microsecond)
+	dec := "allow"
+	err := en.e.DB.OrgTx(ctx, en.org, func(ctx context.Context, tx pgx.Tx) error {
+		return en.led.Advance(ctx, tx, id, gate.Received,
+			ledger.Step{To: gate.Authenticated},
+			ledger.Step{To: gate.Evaluated, Patch: &ledger.Patch{Decision: &dec}},
+			ledger.Step{To: gate.Executing, Patch: &ledger.Patch{ExecutingDeadline: &deadline}})
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var state, decision string
+	var dl time.Time
+	var seqs []int
+	var nulls int
+	_ = en.e.DB.OrgReadTx(ctx, en.org, func(ctx context.Context, tx pgx.Tx) error {
+		if err := tx.QueryRow(ctx, `SELECT state, decision, executing_deadline,
+		    (authenticated_at IS NULL)::int + (evaluated_at IS NULL)::int + (executing_at IS NULL)::int + (hops IS NOT NULL)::int
+		    FROM deedglass.actions WHERE id = $1`, id).Scan(&state, &decision, &dl, &nulls); err != nil {
+			return err
+		}
+		rows, _ := tx.Query(ctx, `SELECT seq FROM deedglass.action_events WHERE action_id = $1 ORDER BY seq`, id)
+		seqs, _ = pgx.CollectRows(rows, pgx.RowTo[int])
+		return nil
+	})
+	if state != "executing" || decision != "allow" || !dl.Equal(deadline) || nulls != 0 || len(seqs) != 4 || seqs[3] != 4 {
+		t.Fatalf("%s %s %v nulls=%d seqs=%v", state, decision, dl, nulls, seqs)
+	}
+	for _, c := range []struct {
+		from  gate.State
+		steps []ledger.Step
+		want  error
+	}{
+		{gate.Executing, []ledger.Step{{To: gate.Witnessing}, {To: gate.Verified}}, ledger.ErrIllegalTransition},
+		{gate.Executing, []ledger.Step{{To: gate.Executed}, {To: gate.Sealed}}, ledger.ErrIllegalTransition},
+		{gate.Received, []ledger.Step{{To: gate.Authenticated}, {To: gate.Evaluated}}, ledger.ErrStateConflict},
+		{gate.Executing, []ledger.Step{{To: gate.Executed, Patch: &ledger.Patch{Decision: &dec}}, {To: gate.Witnessing}}, ledger.ErrIllegalTransition},
+	} {
+		err := en.e.DB.OrgTx(ctx, en.org, func(ctx context.Context, tx pgx.Tx) error {
+			return en.led.Advance(ctx, tx, id, c.from, c.steps...)
+		})
+		if !errors.Is(err, c.want) {
+			t.Errorf("%s %v: %v, want %v", c.from, c.steps, err, c.want)
+		}
+	}
+	// The database guard checks every hop on its own.
+	_, err = en.e.App(t).Exec(ctx, `SELECT 1`) // a plain app connection works
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = en.e.DB.OrgTx(ctx, en.org, func(ctx context.Context, tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, `UPDATE deedglass.actions SET state = 'witnessing', hops = ARRAY['verified'], witnessing_at = now(), verified_at = now() WHERE id = $1`, id)
+		return err
+	})
+	if store.SQLState(err) != store.CodeIllegalTransition {
+		t.Fatalf("a skipped hop: %v, want DG004", err)
+	}
+	err = en.e.DB.OrgTx(ctx, en.org, func(ctx context.Context, tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, `UPDATE deedglass.actions SET state = 'witnessing', hops = ARRAY['executed'], executed_at = now(), witnessing_at = now(),
+		    execution_status = 'succeeded' WHERE id = $1`, id)
+		return err
+	})
+	if err != nil {
+		t.Fatalf("a legal hop list: %v", err)
+	}
+}

@@ -87,7 +87,12 @@ type Route struct {
 	// SkipStopChecks lets a stopped or suspended agent (or a stopped org) through, so it can learn
 	// why it is refused: GET /v1/whoami only (S08 §3.5).
 	SkipStopChecks bool
-	Idempotency    Idem
+	// RecordStopped lets a stopped or suspended agent's key (or any key of a stopped org) through
+	// to the handler with its status on the principal, so the refusal is recorded and sealed as a
+	// deed instead of turned away at the door: POST /v1/actions only (S13). The handler must
+	// refuse it with the stop code.
+	RecordStopped bool
+	Idempotency   Idem
 	// Sensitive: the response carries a shown-once secret. It is stored for replay with the Redact
 	// fields set to null, so the secret never reaches the database.
 	Sensitive bool
@@ -145,6 +150,9 @@ func (rt Route) normalize(catalog map[string]ContractRoute) Route {
 	}
 	if rt.Auth == Public && rt.Idempotency == IdemRequired {
 		fail("a Public route has no principal to scope Idempotency-Key to")
+	}
+	if rt.RecordStopped && (rt.Auth != AgentKey || rt.Method != http.MethodPost) {
+		fail("RecordStopped is for POST routes that only agent keys call (POST /v1/actions)")
 	}
 	if rt.Sensitive && rt.Idempotency == IdemNever {
 		fail("a Sensitive route is stored for replay, so it can't be IdemNever")

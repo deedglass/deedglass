@@ -1,6 +1,10 @@
-package gate
+package lifecycle
 
-import "testing"
+import (
+	"errors"
+	"strings"
+	"testing"
+)
 
 func TestStateTable(t *testing.T) {
 	if n := len(States()); n != 15 {
@@ -131,5 +135,76 @@ func TestSealable(t *testing.T) {
 	}
 	if State("nope").Sealable() {
 		t.Error("an unknown state is sealable")
+	}
+}
+
+func TestSettled(t *testing.T) {
+	for _, s := range States() {
+		if want := s == Sealed || s == PendingApproval; s.Settled() != want {
+			t.Errorf("%s.Settled() = %v", s, s.Settled())
+		}
+	}
+}
+
+// TestRandomWalks: 10,000 seeded walks from received always end at sealed, or stop where a person
+// (pending_approval) or a tool (executing) decides the next step; every step is an edge.
+func TestRandomWalks(t *testing.T) {
+	seed := uint64(13)
+	next := func(n int) int {
+		seed ^= seed << 13
+		seed ^= seed >> 7
+		seed ^= seed << 17
+		return int(seed % uint64(n))
+	}
+	ends := map[State]int{}
+	for range 10000 {
+		s := Initial
+		for steps := 0; !s.Terminal(); steps++ {
+			if steps > 20 {
+				t.Fatal("a walk didn't end")
+			}
+			if (s == PendingApproval || s == Executing) && next(4) == 0 {
+				break // waiting on a person or a tool
+			}
+			n := s.Next()
+			to := n[next(len(n))]
+			if err := Check(s, to); err != nil {
+				t.Fatal(err)
+			}
+			s = to
+		}
+		ends[s]++
+	}
+	for s := range ends {
+		if s != Sealed && s != PendingApproval && s != Executing {
+			t.Fatalf("a walk ended at %s", s)
+		}
+	}
+	if ends[Sealed] == 0 {
+		t.Fatal("no walk reached sealed")
+	}
+}
+
+func TestCheckAndPanic(t *testing.T) {
+	if err := Check(Executing, Unverifiable); !errors.Is(err, ErrIllegalTransition) || !strings.Contains(err.Error(), "executing → unverifiable") {
+		t.Fatal(err)
+	}
+	prev := PanicOnIllegal(true)
+	defer PanicOnIllegal(prev)
+	defer func() {
+		if recover() == nil {
+			t.Fatal("no panic in test mode")
+		}
+	}()
+	_ = Check(Sealed, Received)
+}
+
+func TestRenderings(t *testing.T) {
+	m := Mermaid()
+	if !strings.HasPrefix(m, "stateDiagram-v2\n    [*] --> received\n") || strings.Count(m, " --> ") != 24 {
+		t.Fatalf("%s", m)
+	}
+	if l := EdgeList(); len(l) != 22 || l[0] != "authenticated → evaluated" {
+		t.Fatalf("%v", l)
 	}
 }

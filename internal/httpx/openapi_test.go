@@ -101,6 +101,12 @@ func elsewhere() []Route {
 		adm("POST", "/v1/policies/{id}/versions/{v}/deactivate", "deactivatePolicyVersion", RoleAdmin),
 		tool("/v1/policies/lint", "lintPolicy"), tool("/v1/policies/evaluate", "evaluatePolicy"), tool("/v1/policies/test", "testPolicy"),
 	)
+	// S13: the Gate (internal/gate).
+	out = append(out,
+		Route{Method: "POST", Pattern: "/v1/actions", OperationID: "createAction", Auth: AgentKey, Scopes: []string{ScopeActionsExecute}, Idempotency: IdemNever, Handler: stub},
+		Route{Method: "POST", Pattern: "/v1/actions/{id}/cancel", OperationID: "cancelAction", Auth: SessionOrKey, MinRole: RoleAdmin, Scopes: []string{ScopeActionsExecute}, Idempotency: IdemOptional, Handler: stub},
+		Route{Method: "POST", Pattern: "/v1/actions/{id}/result", OperationID: "reportActionResult", Auth: AgentKey, Scopes: []string{ScopeActionsExecute}, Idempotency: IdemOptional, Handler: stub},
+	)
 	return out
 }
 

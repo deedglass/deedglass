@@ -95,6 +95,36 @@ creates it with 32 random bytes for each, so `deedglass config print` works with
 - `trusted_proxies` may be a list; every other value is a single scalar.
 - A world-readable file gets a warning.
 
+### Sections (file-only settings)
+
+Everything else tunable lives in sections of `deedglass.yaml`, never in new environment variables
+(contract §11). A section is a mapping; a nested mapping makes a dotted path. Unknown settings are
+errors with a did-you-mean, and every value has a range. S13 added the `gate` section:
+
+```yaml
+gate:
+  wait_timeout: 10s          # POST /v1/actions waits this long for a gateway action (at most 25s)
+  execute_timeout: 30s       # a connector call; past it the outcome is unknown
+  edge_result_timeout: 10m   # proxy mode: how long the edge has to report
+  max_args_bytes: 262144
+  max_result_bytes: 262144
+  worker:
+    concurrency: 4
+    max_attempts: 8
+```
+
+<!-- settings:begin (generated from internal/config/settings.go; go test ./internal/config -run TestSettingsDocs -update) -->
+| Setting | Default | Range | What it does | Added |
+|---|---|---|---|---|
+| `gate.wait_timeout` | `10s` | 0s to 25s | How long POST /v1/actions waits for a gateway action to finish before it answers 202 processing (at most 25s). | S13 |
+| `gate.execute_timeout` | `30s` | 100ms to 10m0s | How long the Gate lets a connector call run. Past it, the outcome is unknown and the deed says UNVERIFIABLE. | S13 |
+| `gate.edge_result_timeout` | `10m` | 1s to 24h0m0s | Proxy mode: how long the edge has to report a result before the action is sealed UNVERIFIABLE (edge_lost). | S13 |
+| `gate.max_args_bytes` | `262144` | 1024 to 262144 | The largest args object POST /v1/actions accepts, in bytes (at most 256 KiB, the policy input limit). | S13 |
+| `gate.max_result_bytes` | `262144` | 1024 to 1048576 | The largest tool result stored on the action, in bytes. Larger results are digested, and only the digest is kept. | S13 |
+| `gate.worker.concurrency` | `4` | 1 to 64 | Witness jobs one instance runs at once. | S13 |
+| `gate.worker.max_attempts` | `8` | 1 to 100 | Attempts per witness job before the action is sealed UNVERIFIABLE (witness_gave_up). | S13 |
+<!-- settings:end -->
+
 ## Examples
 
 ```sh

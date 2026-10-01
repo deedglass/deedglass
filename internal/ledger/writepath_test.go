@@ -13,9 +13,9 @@ import (
 // One write path (S06 §7, "must never happen"): outside tests, only internal/ledger writes
 // action_events and admin_events, only internal/ledger and the Sealer's ChainStore
 // (internal/store/deeds.go, called through ledger) insert deeds, and only ledger.Publish notifies
-// deedglass_events. The identity channel (S08) and the policy channel (S12) have their own doors,
-// store.NotifyIdentity and store.NotifyPolicy, in internal/store/notify.go, which may name no other
-// channel.
+// deedglass_events. The identity channel (S08), the policy channel (S12) and the jobs channel (S13)
+// have their own doors, store.NotifyIdentity, store.NotifyPolicy and store.NotifyJobs, in
+// internal/store/notify.go, which may name no other channel.
 func TestOneWritePath(t *testing.T) {
 	root := filepath.Join("..", "..")
 	writes := regexp.MustCompile(`(?i)(INSERT\s+INTO|UPDATE|DELETE\s+FROM)\s+deedglass\.(action_events|admin_events|deeds)\b`)
@@ -52,8 +52,8 @@ func TestOneWritePath(t *testing.T) {
 		}
 		if rel == "internal/store/notify.go" {
 			for _, m := range channel.FindAllSubmatch(b, -1) {
-				if string(m[1]) != "deedglass_identity" && string(m[1]) != "deedglass_policy" {
-					t.Errorf("%s notifies %s; it is the door for deedglass_identity and deedglass_policy only", rel, m[1])
+				if string(m[1]) != "deedglass_identity" && string(m[1]) != "deedglass_policy" && string(m[1]) != "deedglass_jobs" {
+					t.Errorf("%s notifies %s; it is the door for deedglass_identity, deedglass_policy and deedglass_jobs only", rel, m[1])
 				}
 			}
 		}

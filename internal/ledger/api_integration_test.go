@@ -65,7 +65,7 @@ func TestHTTPRoutes(t *testing.T) {
 	r, b = get("/v1/actions/" + res.IDs[0])
 	required("ActionDetail", b)
 	var d ledger.ActionDetail
-	if err := json.Unmarshal(b, &d); err != nil || len(d.Events.Data) < 4 || d.Approval == nil {
+	if err := json.Unmarshal(b, &d); err != nil || len(d.Events.Data) < 4 || d.Status == "" {
 		t.Fatalf("%d %s", r.StatusCode, b)
 	}
 	// Another org's action and deed: 404, the same as an id that doesn't exist.

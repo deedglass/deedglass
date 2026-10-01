@@ -14,7 +14,7 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/deedglass/deedglass/internal/gate"
+	gate "github.com/deedglass/deedglass/internal/gate/lifecycle"
 	"github.com/deedglass/deedglass/internal/ids"
 )
 

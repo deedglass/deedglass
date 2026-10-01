@@ -11,6 +11,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	gate "github.com/deedglass/deedglass/internal/gate/lifecycle"
 	"github.com/deedglass/deedglass/internal/httpx"
 	"github.com/deedglass/deedglass/internal/ids"
 )
@@ -60,20 +61,118 @@ type ActionPolicy struct {
 	RuleID    *string `json:"rule_id"`
 }
 
-// ActionExecution is what happened when the tool ran; null when it never ran.
+// ActionExecution is what happened when the tool ran; null when it never ran. Result is set only
+// on the Gate's own responses (POST /v1/actions and the proxy result), never on lists.
 type ActionExecution struct {
-	Status     *string `json:"status"`
-	StartedAt  *Time   `json:"started_at"`
-	FinishedAt *Time   `json:"finished_at"`
-	LatencyMS  *int64  `json:"latency_ms"`
-	ErrorCode  *string `json:"error_code"`
+	Status       *string         `json:"status"`
+	StartedAt    *Time           `json:"started_at"`
+	FinishedAt   *Time           `json:"finished_at"`
+	LatencyMS    *int64          `json:"latency_ms"`
+	ErrorCode    *string         `json:"error_code"`
+	ErrorMessage *string         `json:"error_message"`
+	Result       json.RawMessage `json:"result,omitzero"`
 }
 
-// ActionWitness is the Witness's verdict; null until a witness ran.
+// ActionWitness is the Witness's verdict; null until a witness ran. Reasons are short codes
+// (outcome_unknown, timeout, edge_lost, …); they are set on the Gate's own responses and on GET
+// /v1/actions/{id}, and left out of lists.
 type ActionWitness struct {
-	Level   string  `json:"level"`
-	Verdict string  `json:"verdict"`
-	Method  *string `json:"method"`
+	Level   string    `json:"level"`
+	Verdict string    `json:"verdict"`
+	Method  *string   `json:"method"`
+	Reasons *[]string `json:"reasons,omitzero"`
+}
+
+// ActionDecision is the policy decision as an agent reads it (S13): S11's Decision, its source and
+// its message verbatim, the policy version that made it, and the shadow decision next to it.
+type ActionDecision struct {
+	Outcome       string          `json:"outcome"`
+	Code          *string         `json:"code"`
+	Source        *string         `json:"source"`
+	RuleID        *string         `json:"rule_id"`
+	Reason        *string         `json:"reason"`
+	Message       *string         `json:"message"`
+	Policy        *string         `json:"policy"`
+	PolicyVersion *string         `json:"policy_version"`
+	Shadow        *ShadowDecision `json:"shadow"`
+}
+
+// ShadowDecision is what the shadow policy would have decided (recorded, never enforced).
+type ShadowDecision struct {
+	Outcome       string  `json:"outcome"`
+	RuleID        *string `json:"rule_id"`
+	PolicyVersion *string `json:"policy_version"`
+}
+
+// ActionApproval is the approval an action waits for, or waited for.
+type ActionApproval struct {
+	ID        string `json:"id"`
+	Status    string `json:"status"` // pending | approved | denied | expired | cancelled
+	ExpiresAt Time   `json:"expires_at"`
+}
+
+// NextAction tells the caller what happens next: wait for a person (await_approval) or run the
+// tool at the edge and report the result (execute_at_edge, proxy mode). Null otherwise.
+type NextAction struct {
+	Type      string  `json:"type"`
+	Approval  *string `json:"approval,omitempty"`
+	ExpiresAt *Time   `json:"expires_at,omitempty"`
+	PollURL   *string `json:"poll_url,omitempty"`
+	ReportURL *string `json:"report_url,omitempty"`
+	Deadline  *Time   `json:"deadline,omitempty"`
+}
+
+// Action statuses (S13): the one field an agent needs. state is the exact lifecycle state.
+const (
+	StatusProcessing      = "processing"
+	StatusAuthorized      = "authorized"
+	StatusPendingApproval = "pending_approval"
+	StatusDenied          = "denied"
+	StatusExecuted        = "executed"
+	StatusFailed          = "failed"
+	StatusExpired         = "expired"
+	StatusCancelled       = "cancelled"
+)
+
+// Statuses lists the status enum in documentation order.
+var Statuses = []string{StatusProcessing, StatusAuthorized, StatusPendingApproval, StatusDenied, StatusExecuted,
+	StatusFailed, StatusExpired, StatusCancelled}
+
+// StatusOf maps a state (and, for sealed actions, the path that led there) to the status. A sealed
+// action keeps the status of the state it was sealed from.
+func StatusOf(state, mode string, wasDenied, wasExpired, wasCancelled, wasFailed bool) string {
+	switch gate.State(state) {
+	case gate.PendingApproval:
+		return StatusPendingApproval
+	case gate.Executing:
+		if mode == "proxy" {
+			return StatusAuthorized
+		}
+		return StatusProcessing
+	case gate.Denied:
+		return StatusDenied
+	case gate.Expired:
+		return StatusExpired
+	case gate.Cancelled:
+		return StatusCancelled
+	case gate.Failed:
+		return StatusFailed
+	case gate.Verified, gate.Mismatch, gate.Unverifiable:
+		return StatusExecuted
+	case gate.Sealed:
+		switch {
+		case wasDenied:
+			return StatusDenied
+		case wasExpired:
+			return StatusExpired
+		case wasCancelled:
+			return StatusCancelled
+		case wasFailed:
+			return StatusFailed
+		}
+		return StatusExecuted
+	}
+	return StatusProcessing // received, authenticated, evaluated, executed, witnessing
 }
 
 // Money is integer minor units plus a lowercase ISO 4217 currency.
@@ -82,20 +181,25 @@ type Money struct {
 	Currency string `json:"currency"`
 }
 
-// Action is the action object (GET /v1/actions). Its sections mirror the deed's, so the Console
-// reads one shape everywhere.
+// Action is the action object (GET /v1/actions, and the Gate's responses since S13). Its sections
+// mirror the deed's, so the Console reads one shape everywhere. S13 added livemode, status,
+// decision, approval and next_action.
 type Action struct {
 	Object          string           `json:"object"` // "action"
 	ID              string           `json:"id"`
 	CreatedAt       Time             `json:"created_at"`
+	Livemode        bool             `json:"livemode"`
 	Agent           AgentRef         `json:"agent"`
 	Tool            string           `json:"tool"`
 	Connector       *string          `json:"connector"`
 	Mode            string           `json:"mode"`
 	State           string           `json:"state"`
+	Status          string           `json:"status"`
 	OnBehalfOf      *string          `json:"on_behalf_of"`
 	Session         *string          `json:"session"`
+	Decision        *ActionDecision  `json:"decision"`
 	Policy          ActionPolicy     `json:"policy"`
+	Approval        *ActionApproval  `json:"approval"`
 	Execution       *ActionExecution `json:"execution"`
 	Witness         *ActionWitness   `json:"witness"`
 	Cost            *Money           `json:"cost"`
@@ -103,6 +207,7 @@ type Action struct {
 	ResultDigest    *string          `json:"result_digest"`
 	PayloadPrunedAt *Time            `json:"payload_pruned_at"`
 	Deed            *string          `json:"deed"`
+	NextAction      *NextAction      `json:"next_action"`
 }
 
 // DetailWitness is the witness section of one action, with the stored diff.
@@ -110,6 +215,7 @@ type DetailWitness struct {
 	Level   string          `json:"level"`
 	Verdict string          `json:"verdict"`
 	Method  *string         `json:"method"`
+	Reasons []string        `json:"reasons"`
 	Detail  json.RawMessage `json:"detail"` // null after pruning
 }
 
@@ -138,14 +244,18 @@ type ActionDetail struct {
 	Object          string             `json:"object"`
 	ID              string             `json:"id"`
 	CreatedAt       Time               `json:"created_at"`
+	Livemode        bool               `json:"livemode"`
 	Agent           AgentRef           `json:"agent"`
 	Tool            string             `json:"tool"`
 	Connector       *string            `json:"connector"`
 	Mode            string             `json:"mode"`
 	State           string             `json:"state"`
+	Status          string             `json:"status"`
 	OnBehalfOf      *string            `json:"on_behalf_of"`
 	Session         *string            `json:"session"`
+	Decision        *ActionDecision    `json:"decision"`
 	Policy          ActionPolicy       `json:"policy"`
+	Approval        *ActionApproval    `json:"approval"`
 	Execution       *ActionExecution   `json:"execution"`
 	Witness         *DetailWitness     `json:"witness"`
 	Cost            *Money             `json:"cost"`
@@ -153,48 +263,79 @@ type ActionDetail struct {
 	ResultDigest    *string            `json:"result_digest"`
 	PayloadPrunedAt *Time              `json:"payload_pruned_at"`
 	Deed            *string            `json:"deed"`
+	NextAction      *NextAction        `json:"next_action"`
 	Request         json.RawMessage    `json:"request"`
 	Result          json.RawMessage    `json:"result"`
 	Events          *List[ActionEvent] `json:"events"`
 	Deeds           []DeedRef          `json:"deeds"`
-	Approval        json.RawMessage    `json:"approval"` // null until S22
 }
 
 const actionCols = `a.id, a.created_at, a.agent_id, g.name, a.tool, a.connector_id, a.mode, a.state, a.on_behalf_of,
-  a.session_ref, pv.policy_id, a.policy_version_id, a.decision, a.decision_rule_id, a.execution_status, a.executing_at,
-  COALESCE(a.executed_at, a.failed_at), a.latency_ms, a.error_code, a.witness_level, a.witness_verdict, a.witness_method,
-  a.cost_amount, a.cost_currency, a.request_digest, a.result_digest, a.payload_pruned_at, a.deed_id`
+  a.session_ref, COALESCE(a.policy_id, pv.policy_id), a.policy_version_id, a.decision, a.decision_rule_id, a.execution_status,
+  COALESCE(a.started_at, a.executing_at), COALESCE(a.finished_at, a.executed_at, a.failed_at), a.latency_ms, a.error_code,
+  a.witness_level, a.witness_verdict, a.witness_method,
+  a.cost_amount, a.cost_currency, a.request_digest, a.result_digest, a.payload_pruned_at, a.deed_id,
+  a.livemode, a.decision_code, a.decision_source, a.decision_reason, a.decision_message, a.policy_mode,
+  a.shadow_decision, a.shadow_rule_id, a.shadow_version_id, a.approval_id, ap.status, ap.expires_at,
+  a.executing_deadline, a.error_message,
+  a.denied_at IS NOT NULL, a.expired_at IS NOT NULL, a.cancelled_at IS NOT NULL, a.failed_at IS NOT NULL`
 
 const actionFrom = ` FROM deedglass.actions AS a
 JOIN deedglass.agents AS g ON g.org_id = a.org_id AND g.id = a.agent_id
-LEFT JOIN deedglass.policy_versions AS pv ON pv.org_id = a.org_id AND pv.id = a.policy_version_id`
+LEFT JOIN deedglass.policy_versions AS pv ON pv.org_id = a.org_id AND pv.id = a.policy_version_id
+LEFT JOIN deedglass.approvals AS ap ON ap.org_id = a.org_id AND ap.id = a.approval_id`
 
 func scanAction(row pgx.Row, extra ...any) (Action, time.Time, error) {
 	var (
-		a                          Action
-		created                    time.Time
-		started, finished, pruned  *time.Time
-		latency                    *int64
-		execStatus, errCode        *string
-		wLevel, wVerdict, wMethod  *string
-		costAmount                 *int64
-		costCurrency               *string
-		polID, pvID, decision, rID *string
+		a                                      Action
+		created                                time.Time
+		started, finished, pruned              *time.Time
+		latency                                *int64
+		execStatus, errCode, errMsg            *string
+		wLevel, wVerdict, wMethod              *string
+		costAmount                             *int64
+		costCurrency                           *string
+		polID, pvID, decision, rID             *string
+		dCode, dSource, dReason, dMsg, polMode *string
+		sDecision, sRule, sVersion             *string
+		apID, apStatus                         *string
+		apExpires, deadline                    *time.Time
+		wasDenied, wasExpired, wasCancelled    bool
+		wasFailed                              bool
 	)
 	dest := []any{&a.ID, &created, &a.Agent.ID, &a.Agent.Name, &a.Tool, &a.Connector, &a.Mode, &a.State, &a.OnBehalfOf,
 		&a.Session, &polID, &pvID, &decision, &rID, &execStatus, &started, &finished, &latency, &errCode,
-		&wLevel, &wVerdict, &wMethod, &costAmount, &costCurrency, &a.RequestDigest, &a.ResultDigest, &pruned, &a.Deed}
+		&wLevel, &wVerdict, &wMethod, &costAmount, &costCurrency, &a.RequestDigest, &a.ResultDigest, &pruned, &a.Deed,
+		&a.Livemode, &dCode, &dSource, &dReason, &dMsg, &polMode, &sDecision, &sRule, &sVersion, &apID, &apStatus, &apExpires,
+		&deadline, &errMsg, &wasDenied, &wasExpired, &wasCancelled, &wasFailed}
 	if err := row.Scan(append(dest, extra...)...); err != nil {
 		return a, created, err
 	}
 	a.Object, a.CreatedAt = "action", Time(created)
-	a.Policy = ActionPolicy{ID: polID, VersionID: pvID, Mode: "enforce", Decision: decision, RuleID: rID}
+	mode := "enforce"
+	if polMode != nil {
+		mode = *polMode
+	}
+	a.Policy = ActionPolicy{ID: polID, VersionID: pvID, Mode: mode, Decision: decision, RuleID: rID}
+	a.Status = StatusOf(a.State, a.Mode, wasDenied, wasExpired, wasCancelled, wasFailed)
+	if decision != nil {
+		a.Decision = &ActionDecision{Outcome: *decision, Code: dCode, Source: dSource, RuleID: rID, Reason: dReason,
+			Message: dMsg, Policy: polID, PolicyVersion: pvID}
+		if sDecision != nil {
+			a.Decision.Shadow = &ShadowDecision{Outcome: *sDecision, RuleID: sRule, PolicyVersion: sVersion}
+		}
+	}
+	if apID != nil && apStatus != nil && apExpires != nil {
+		a.Approval = &ActionApproval{ID: *apID, Status: *apStatus, ExpiresAt: Time(*apExpires)}
+	}
+	a.NextAction = nextAction(&a, deadline)
 	if started != nil {
 		if latency == nil && finished != nil {
 			ms := finished.Sub(*started).Milliseconds()
 			latency = &ms
 		}
-		a.Execution = &ActionExecution{Status: execStatus, StartedAt: tptr(started), FinishedAt: tptr(finished), LatencyMS: latency, ErrorCode: errCode}
+		a.Execution = &ActionExecution{Status: execStatus, StartedAt: tptr(started), FinishedAt: tptr(finished), LatencyMS: latency,
+			ErrorCode: errCode, ErrorMessage: errMsg}
 	}
 	if wLevel != nil && wVerdict != nil {
 		a.Witness = &ActionWitness{Level: *wLevel, Verdict: *wVerdict, Method: wMethod}
@@ -204,6 +345,24 @@ func scanAction(row pgx.Row, extra ...any) (Action, time.Time, error) {
 	}
 	a.PayloadPrunedAt = tptr(pruned)
 	return a, created, nil
+}
+
+// PollWait is the longest wait GET /v1/actions/{id}?wait= accepts, in seconds.
+const PollWait = 25
+
+// nextAction is what the caller does next: wait for a person, or run the tool at the edge.
+func nextAction(a *Action, deadline *time.Time) *NextAction {
+	switch {
+	case a.State == string(gate.PendingApproval) && a.Approval != nil:
+		poll := fmt.Sprintf("/v1/actions/%s?wait=%d", a.ID, PollWait)
+		exp := a.Approval.ExpiresAt
+		id := a.Approval.ID
+		return &NextAction{Type: "await_approval", Approval: &id, ExpiresAt: &exp, PollURL: &poll}
+	case a.State == string(gate.Executing) && a.Mode == "proxy":
+		report := "/v1/actions/" + a.ID + "/result"
+		return &NextAction{Type: "execute_at_edge", ReportURL: &report, Deadline: tptr(deadline)}
+	}
+	return nil
 }
 
 // where builds the WHERE clause of an action query from fixed fragments; only values are bound.
@@ -402,15 +561,62 @@ func (l *Ledger) GetAction(ctx context.Context, org ids.OrgID, id string) (*Acti
 	return d, err
 }
 
+// ReadAction reads one action object inside tx (an org transaction for org), with its stored
+// result as execution.result and its witness reasons: the Gate's own responses (S13). ErrNotFound
+// when the id isn't an action of this org.
+func ReadAction(ctx context.Context, tx pgx.Tx, org ids.OrgID, id string) (*Action, error) {
+	var res, detail []byte
+	a, _, err := scanAction(tx.QueryRow(ctx, `SELECT `+actionCols+`, a.result, a.witness_detail`+actionFrom+
+		` WHERE a.org_id = $1 AND a.id = $2`, org, id), &res, &detail)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, fmt.Errorf("%w: action %s", ErrNotFound, id)
+	}
+	if err != nil {
+		return nil, err
+	}
+	if a.Execution != nil && res != nil {
+		a.Execution.Result = res
+	}
+	if a.Witness != nil {
+		r := WitnessReasons(detail)
+		a.Witness.Reasons = &r
+	}
+	return &a, nil
+}
+
+// ReadActionView is ReadAction in its own read transaction.
+func (l *Ledger) ReadActionView(ctx context.Context, org ids.OrgID, id string) (*Action, error) {
+	var a *Action
+	err := l.readTx(ctx, org, func(ctx context.Context, tx pgx.Tx) error {
+		var err error
+		a, err = ReadAction(ctx, tx, org, id)
+		return err
+	})
+	return a, err
+}
+
 func detailOf(a Action, req, res, detail []byte) *ActionDetail {
-	d := &ActionDetail{Object: a.Object, ID: a.ID, CreatedAt: a.CreatedAt, Agent: a.Agent, Tool: a.Tool, Connector: a.Connector,
-		Mode: a.Mode, State: a.State, OnBehalfOf: a.OnBehalfOf, Session: a.Session, Policy: a.Policy, Execution: a.Execution,
+	d := &ActionDetail{Object: a.Object, ID: a.ID, CreatedAt: a.CreatedAt, Livemode: a.Livemode, Agent: a.Agent, Tool: a.Tool,
+		Connector: a.Connector, Mode: a.Mode, State: a.State, Status: a.Status, OnBehalfOf: a.OnBehalfOf, Session: a.Session,
+		Decision: a.Decision, Policy: a.Policy, Approval: a.Approval, Execution: a.Execution,
 		Cost: a.Cost, RequestDigest: a.RequestDigest, ResultDigest: a.ResultDigest, PayloadPrunedAt: a.PayloadPrunedAt,
-		Deed: a.Deed, Request: rawOrNull(req), Result: rawOrNull(res), Approval: json.RawMessage("null")}
+		Deed: a.Deed, NextAction: a.NextAction, Request: rawOrNull(req), Result: rawOrNull(res)}
 	if w := a.Witness; w != nil {
-		d.Witness = &DetailWitness{Level: w.Level, Verdict: w.Verdict, Method: w.Method, Detail: rawOrNull(detail)}
+		d.Witness = &DetailWitness{Level: w.Level, Verdict: w.Verdict, Method: w.Method, Reasons: WitnessReasons(detail), Detail: rawOrNull(detail)}
 	}
 	return d
+}
+
+// WitnessReasons reads the reason codes the Gate stores in witness_detail ({"reasons": […]}). It
+// returns an empty list (never nil) when there are none, or when the detail is another shape.
+func WitnessReasons(detail []byte) []string {
+	var w struct {
+		Reasons []string `json:"reasons"`
+	}
+	if len(detail) > 0 && json.Unmarshal(detail, &w) == nil && w.Reasons != nil {
+		return w.Reasons
+	}
+	return []string{}
 }
 
 func rawOrNull(b []byte) json.RawMessage {

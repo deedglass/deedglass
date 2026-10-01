@@ -11,7 +11,7 @@ LDFLAGS  := -s -w -X $(BI).Version=$(VERSION) -X $(BI).Commit=$(COMMIT) -X $(BI)
 .PHONY: all help ci build test test-short vet fmt fmt-check tidy-check testdata-check rename-guard banned-words nocgo \
 	integration matrix fuzz bench bench-store bench-deed cover clean \
 	dev dev-down dev-reset dev-logs run docker bench-http bench-verify \
-	web-verify-install web-verify-test web-verify-build web-verify-serve gencopy genmark bench-mark bench-ledger bench-stop bench-intents policy-test \
+	web-verify-install web-verify-test web-verify-build web-verify-serve gencopy genmark bench-mark bench-ledger bench-stop bench-intents bench-gate policy-test \
 	fuzz-policy fuzz-policy-short bench-policy bench-eval
 
 all: ci
@@ -126,6 +126,12 @@ bench-stop: ## S08: Stop propagation across two instances (p50/p99) and the API-
 	DEEDGLASS_IT_BENCH_OUT="$$d-keyauth.json" DEEDGLASS_IT_BENCH_RUN='TestKeyAuthBudget' DEEDGLASS_IT_BENCH_PKG=./internal/identity/ \
 	scripts/integration_local.sh >/dev/null; st=$$?; \
 	cat "$$d-stop.json"; grep -o 'PERF {[^}]*}[^\\]*' "$$d-keyauth.json" | sed 's/\\"/"/g'; echo "raw: $$d-stop.json $$d-keyauth.json"; exit $$st
+
+bench-gate: ## S13: Gate overhead (allow, no witness, fake.echo, concurrency 8, 1 org, 50 rules) on a throwaway PG 18: p50 < 5 ms, p99 < 25 ms; raw go test -json in bench/results/
+	@out="$(CURDIR)/bench/results/$$(date +%F)-$$(go env GOOS)-$$(go env GOARCH)-gate.json"; \
+	DEEDGLASS_IT_PKGS=./internal/gate/ DEEDGLASS_IT_GOFLAGS="-run TestAllowSealsL0Verified" \
+	DEEDGLASS_IT_BENCH_OUT="$$out" DEEDGLASS_IT_BENCH_RUN='TestGateBudget' DEEDGLASS_IT_BENCH_PKG=./internal/gate/ scripts/integration_local.sh >/dev/null; st=$$?; \
+	grep -o 'PERF {[^}]*}' "$$out" | sed 's/\\"/"/g'; echo "raw: $$out"; exit $$st
 
 bench-intents: ## S09: signed-intent checks without the database (p99, 4 KiB args) and with the nonce insert on a throwaway PG 18; JSON in bench/results/
 	@d="$(CURDIR)/bench/results/$$(date +%F)-$$(go env GOOS)-$$(go env GOARCH)"; \

@@ -27,6 +27,9 @@ type Options struct {
 	MaxConns int32        // default: pgxpool's default (max(4, NumCPU))
 	MinConns int32        // default 0
 	Logger   *slog.Logger // default slog.Default()
+	// Tracer observes every query (profiling and tests only; S13's overhead budget used it). It
+	// sees SQL text and arguments, so it must never log arguments.
+	Tracer pgx.QueryTracer
 }
 
 // Session settings sent in the startup packet of every pooled connection. Transaction-local
@@ -66,6 +69,9 @@ func Open(ctx context.Context, url config.Secret, o Options) (*DB, error) {
 		pc.MaxConns = o.MaxConns
 	}
 	pc.MinConns = o.MinConns
+	if o.Tracer != nil {
+		pc.ConnConfig.Tracer = o.Tracer
+	}
 	pool, err := pgxpool.NewWithConfig(ctx, pc)
 	if err != nil {
 		return nil, fmt.Errorf("store: %w", err)

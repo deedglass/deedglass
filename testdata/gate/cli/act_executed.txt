@@ -1,0 +1,7 @@
+exit 0
+--- stdout
+✓ executed · fake.echo · N ms
+  action   act_…
+  witness  L0 · VERIFIED · the tool reported success
+  deed     deed_… · seq N · sealed
+--- stderr

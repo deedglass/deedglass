@@ -2,7 +2,7 @@
 
 Deedglass keeps its own state in one Postgres database, the **control plane**, in schema `deedglass`. This page is the map: what each table holds, what the database itself enforces, and what it doesn't. The schema is created by the migrations in `internal/store/migrations/` (see `docs/MIGRATIONS.md`); roles and setup are in `docs/DATABASE_SETUP.md`.
 
-Contract §4 is the source. Version 0009, PostgreSQL 16, 17 and 18.
+Contract §4 is the source. Migrations 0001 to 0016, PostgreSQL 16, 17 and 18.
 
 ## The core
 
@@ -48,7 +48,7 @@ erDiagram
 | `credentials` | A connector's credentials, envelope-encrypted. Field names and a short hint are the only clear text. | S16 |
 | `actions` | One tool call through the Gate, with its state, decision, result digest and witness verdict. | S13 |
 | `action_events` | Every state change of every action. **Append-only.** | S13 |
-| `approvals` | A request for a human decision on one action. | S22 |
+| `approvals` | A request for a human decision on one action. | S13 (a stub: pending, then decided or expired), S22 |
 | `approval_tokens` | One-time approve or deny links, hashed. | S22 |
 | `idempotency_keys` | Stored responses for `Idempotency-Key`, kept 24 hours. | S03 |
 | `seal_keys` | The instance's public seal keys. | S04 |
@@ -104,7 +104,7 @@ Lookups that happen before the org is known (a session cookie, a login token, an
 |---|---|---|
 | `preauth_*` | Find the one row a credential points to, before the org is known | S07 to S09, S22 |
 | `claim_*` | Claim due jobs across orgs, with `FOR UPDATE SKIP LOCKED` | S13, S20, S22 |
-| `maint_*` | Pruning and other maintenance | S06, S09 |
+| `maint_*` | Pruning and other maintenance | S06, S09, S13 |
 
 Each one is owned by `deedglass_migrator`, pins `search_path = pg_catalog, pg_temp`, returns the minimum columns, and is granted only to `deedglass_app`. `SystemTx` stays for org creation, health checks and tests.
 
@@ -299,6 +299,55 @@ S02's `0003_policy.sql` created the three policy tables; 0015 builds on them:
 `intent_nonces` rows hold the agent, the nonce, the `intent_hash` and the intent's `exp`, never the
 intent or its arguments. Consuming a nonce is one `INSERT … ON CONFLICT (agent_id, nonce) DO
 NOTHING` in an org-scoped transaction: of any number of concurrent uses, exactly one inserts.
+
+## Gate additions (0016, S13)
+
+`0016_gate.sql` adds what the Gate needs beyond 0005, 0007 and 0010. Every new column is on
+`deedglass.actions`. `context`, `connector`, `tool_digest`, `request_fingerprint` and `livemode`
+are fixed when the action is created; the rest are written by one transition each (the `Patch` of
+`ledger.Transition`), and the runtime role's column-level `UPDATE` grant names exactly those.
+
+| Column | What | Why |
+|---|---|---|
+| `context` | JSON object, at most 4 KiB: the client's name and version, the transport, and in proxy mode the edge's `connector_type` | who sent the action, as the client says; never part of a digest |
+| `connector` | the slug before the first dot of the tool name (`^[a-z][a-z0-9-]{1,31}$`) | the connector the tool names, before S16's `connectors` rows exist |
+| `tool_digest` | `digest` | the tool definition's digest, sent by MCP edges (S14); part of `request_digest` |
+| `request_fingerprint` | `digest`, NOT NULL | `request_digest` plus the on-behalf-of and session values: what an `Idempotency-Key` compares |
+| `livemode` | boolean, default `false` | the key was `dg_live_` (true) or `dg_test_` (false); recorded, not enforced |
+| `executing_deadline` | timestamptz | when an `executing` action counts as lost: `gate.execute_timeout` plus a short grace in gateway mode, so crash recovery never races a live call; `gate.edge_result_timeout` in proxy mode |
+| `policy_input`, `policy_input_digest` | JSON object (S11's `Input`, canonical, raw facts only) and its digest | so S27 can replay the decision exactly |
+| `decision_code`, `decision_source`, `decision_message`, `decision_detail` | the decision's code, its source (`stop`, `budget`, `rule`, `default`, `builtin`), the agent's sentence (at most 2,000 characters) and its details (at most 16 KiB) | the `decision` object of the API |
+| `policy_id`, `policy_version_hash`, `policy_mode` | the policy, its `version_hash`, `enforce` or `shadow` | the decision is pinned to the version that made it |
+| `shadow_detail` | JSON object, at most 16 KiB | the shadow decision, recorded and never enforced |
+| `reservations` | JSON array, at most 16 KiB | S11's budget reservations, released when the action ends without reaching the upstream |
+| `error_message` | at most 1,024 characters, redacted | `execution.error_message` |
+| `started_at`, `finished_at` | timestamptz; `finished_at >= started_at` (`actions_exec_times`) | the tool's own times (the edge's, in proxy mode) |
+
+`actions_policy_fk` ties `(org_id, policy_id)` to `policies`. Rows written before the Gate (and S06's
+dev fake actions and test seeds) got `request_fingerprint = request_digest` when the migration ran,
+and the `actions_fingerprint_default` trigger (BEFORE INSERT, `SECURITY INVOKER`,
+`search_path = pg_catalog, pg_temp`) keeps doing that for any insert without a fingerprint: the
+fingerprint of a request with no on-behalf-of and no session. `idempotency_key` became writable for
+the runtime role, so a key can be released after 24 hours or taken over by a request that finds
+its window closed.
+
+| Index | On | Why |
+|---|---|---|
+| `actions_unsealed_idx` | `(state, executing_deadline) WHERE state <> 'sealed'` | crash recovery: `executing` past its deadline |
+| `actions_idem_release` | `(created_at) WHERE idempotency_key IS NOT NULL` | releasing keys older than 24 hours |
+
+`actions_idem` (the unique `(org_id, agent_id, idempotency_key)`, 0005) is what makes a key name one
+action per agent; `actions_open` (0005) serves the idle-unsealed scan.
+
+The three cross-org functions follow the `claim_*` and `maint_*` rule above: `SECURITY DEFINER`,
+`search_path = pg_catalog, pg_temp`, `EXECUTE` for `deedglass_app` only, and they return ids, not
+rows. Every change they lead to runs afterwards in an org transaction with row-level security on.
+
+| Function | Returns | Used by |
+|---|---|---|
+| `claim_witness_jobs(p_worker, p_limit, p_lease)` | `(id, org_id, action_id, kind, attempts)` for at most `p_limit` (1 to 100) due jobs, leased to `p_worker` until `now() + p_lease` with `attempts` incremented, taken `FOR UPDATE SKIP LOCKED` so two workers never hold the same job | the worker, every 2 s (±20%) and on `deedglass_jobs` |
+| `claim_stale_actions(p_limit)` | `(org_id, action_id, state)` for at most `p_limit` (1 to 1,000) actions of each kind: `executing` past `executing_deadline`, a final pre-seal state idle for 30 s, and `pending_approval` past its approval's `expires_at`; locked `SKIP LOCKED` for the call only | the sweepers, every 5 s; each change is a compare-and-set on `state`, so two instances that get the same id race safely |
+| `maint_release_action_keys(p_limit)` | how many keys it cleared: `idempotency_key = NULL` on at most `p_limit` (1 to 10,000) actions created more than 24 hours ago | the idempotency-release sweeper, 1,000 per pass; the action and its deed are untouched |
 
 ## Personal data
 

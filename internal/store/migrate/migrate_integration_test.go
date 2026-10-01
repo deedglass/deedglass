@@ -28,15 +28,15 @@ func TestUpFreshThenCurrent(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(res.Applied) != 15 || started != 15 || len(applied) != 15 || res.Current != 15 || len(res.Warnings) != 0 {
+	if len(res.Applied) != 16 || started != 16 || len(applied) != 16 || res.Current != 16 || len(res.Warnings) != 0 {
 		t.Fatalf("first up: %+v", res)
 	}
 	res, err = migrate.Up(ctx, c, e.Migrations, migrate.UpOptions{Env: config.Dev})
-	if err != nil || len(res.Applied) != 0 || res.Current != 15 {
+	if err != nil || len(res.Applied) != 0 || res.Current != 16 {
 		t.Fatalf("second up: %+v %v", res, err)
 	}
 	rows, err := migrate.Status(ctx, c, e.Migrations)
-	if err != nil || len(rows) != 15 {
+	if err != nil || len(rows) != 16 {
 		t.Fatal(err)
 	}
 	for _, r := range rows {
@@ -55,7 +55,7 @@ func TestUpFreshThenCurrent(t *testing.T) {
 	// The app role can read the table, not write it.
 	app := e.App(t)
 	var n int
-	if err := app.QueryRow(ctx, `SELECT count(*) FROM deedglass.schema_migrations`).Scan(&n); err != nil || n != 15 {
+	if err := app.QueryRow(ctx, `SELECT count(*) FROM deedglass.schema_migrations`).Scan(&n); err != nil || n != 16 {
 		t.Errorf("app reads schema_migrations: %d %v", n, err)
 	}
 }
@@ -64,7 +64,7 @@ func TestStatusOnEmptyDatabase(t *testing.T) {
 	e := storetest.New(t, storetest.Options{NoMigrate: true})
 	c := e.Migrator(t)
 	rows, err := migrate.Status(ctx, c, e.Migrations)
-	if err != nil || len(rows) != 15 {
+	if err != nil || len(rows) != 16 {
 		t.Fatal(err)
 	}
 	for _, r := range rows {
@@ -76,7 +76,7 @@ func TestStatusOnEmptyDatabase(t *testing.T) {
 		t.Errorf("verify with nothing applied: %v", err)
 	}
 	res, err := migrate.Up(ctx, c, e.Migrations, migrate.UpOptions{Env: config.Dev, DryRun: true})
-	if err != nil || len(res.Pending) != 15 || len(res.Applied) != 0 || res.Current != 0 {
+	if err != nil || len(res.Pending) != 16 || len(res.Applied) != 0 || res.Current != 0 {
 		t.Fatalf("dry run: %+v %v", res, err)
 	}
 	var exists bool
@@ -115,7 +115,7 @@ func TestDatabaseAhead(t *testing.T) {
 	}
 	_, err := migrate.Up(ctx, c, e.Migrations, migrate.UpOptions{Env: config.Dev})
 	var ae *migrate.AheadError
-	if !errors.Is(err, migrate.ErrDatabaseAhead) || !errors.As(err, &ae) || ae.Version != 99 || ae.Known != 15 {
+	if !errors.Is(err, migrate.ErrDatabaseAhead) || !errors.As(err, &ae) || ae.Version != 99 || ae.Known != 16 {
 		t.Fatalf("up: %v", err)
 	}
 	rows, _ := migrate.Status(ctx, c, e.Migrations)
@@ -139,11 +139,11 @@ func TestConcurrentUp(t *testing.T) {
 		}()
 	}
 	wg.Wait()
-	if errs[0] != nil || errs[1] != nil || applied[0]+applied[1] != 15 {
+	if errs[0] != nil || errs[1] != nil || applied[0]+applied[1] != 16 {
 		t.Fatalf("errs %v applied %v", errs, applied)
 	}
 	var n int
-	if err := e.Migrator(t).QueryRow(ctx, `SELECT count(*) FROM deedglass.schema_migrations`).Scan(&n); err != nil || n != 15 {
+	if err := e.Migrator(t).QueryRow(ctx, `SELECT count(*) FROM deedglass.schema_migrations`).Scan(&n); err != nil || n != 16 {
 		t.Fatalf("%d rows", n)
 	}
 }

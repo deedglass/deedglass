@@ -16,5 +16,6 @@ VERSION  NAME                STATE    APPLIED               CHECKSUM
 0013     identity_agents     pending  —                     sha256:b19c…ca13
 0014     identity_intents    pending  —                     sha256:9577…e712
 0015     policy_versions_v2  pending  —                     sha256:82ad…43b4
-✓ 8 applied · 7 pending. Run deedglass migrate up to apply them.
+0016     gate                pending  —                     sha256:27ef…38e4
+✓ 8 applied · 8 pending. Run deedglass migrate up to apply them.
 --- stderr

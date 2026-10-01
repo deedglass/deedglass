@@ -83,35 +83,61 @@ func (u *Usage) Snapshot(ctx context.Context, in policy.SnapshotRequest) (policy
 	}
 	vals := make([]int64, len(ks))
 	err = u.db.OrgReadTx(ctx, org, func(ctx context.Context, tx pgx.Tx) error {
-		rows, err := tx.Query(ctx, snapshotSQL, org, scopes, counters, windows, starts)
-		if err != nil {
-			return err
-		}
-		defer rows.Close()
-		n := 0
-		for rows.Next() {
-			var i, v int64
-			if err := rows.Scan(&i, &v); err != nil {
-				return err
-			}
-			if i < 1 || int(i) > len(vals) {
-				return fmt.Errorf("policystore: snapshot row %d out of range", i)
-			}
-			vals[i-1] = v
-			n++
-		}
-		if err := rows.Err(); err != nil {
-			return err
-		}
-		if n != len(ks) {
-			return fmt.Errorf("policystore: snapshot read %d of %d counters", n, len(ks))
-		}
-		return nil
+		return readSnapshot(ctx, tx, org, scopes, counters, windows, starts, vals, len(ks))
 	})
 	if err != nil {
 		return policy.UsageSnapshot{}, err
 	}
 	return policy.FillSnapshot(ks, cur, vals), nil
+}
+
+// SnapshotTx is Snapshot inside the caller's org transaction (the Gate's admission, S13).
+func (u *Usage) SnapshotTx(ctx context.Context, tx pgx.Tx, in policy.SnapshotRequest) (policy.UsageSnapshot, error) {
+	org, err := parseOrg(in.Org)
+	if err != nil {
+		return policy.UsageSnapshot{}, err
+	}
+	ks, cur, err := policy.SnapshotKeys(in)
+	if err != nil {
+		return policy.UsageSnapshot{}, err
+	}
+	scopes, counters, windows := make([]string, len(ks)), make([]string, len(ks)), make([]string, len(ks))
+	starts := make([]time.Time, len(ks))
+	for i, k := range ks {
+		scopes[i], counters[i], windows[i], starts[i] = k.Scope, k.Counter, k.Window, k.WindowStart.UTC()
+	}
+	vals := make([]int64, len(ks))
+	if err := readSnapshot(ctx, tx, org, scopes, counters, windows, starts, vals, len(ks)); err != nil {
+		return policy.UsageSnapshot{}, err
+	}
+	return policy.FillSnapshot(ks, cur, vals), nil
+}
+
+func readSnapshot(ctx context.Context, tx pgx.Tx, org ids.OrgID, scopes, counters, windows []string, starts []time.Time, vals []int64, want int) error {
+	rows, err := tx.Query(ctx, snapshotSQL, org, scopes, counters, windows, starts)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	n := 0
+	for rows.Next() {
+		var i, v int64
+		if err := rows.Scan(&i, &v); err != nil {
+			return err
+		}
+		if i < 1 || int(i) > len(vals) {
+			return fmt.Errorf("policystore: snapshot row %d out of range", i)
+		}
+		vals[i-1] = v
+		n++
+	}
+	if err := rows.Err(); err != nil {
+		return err
+	}
+	if n != want {
+		return fmt.Errorf("policystore: snapshot read %d of %d counters", n, want)
+	}
+	return nil
 }
 
 // Reserve implements policy.UsageStore: every row in one batch, in one transaction, all or nothing.
@@ -143,6 +169,69 @@ func (u *Usage) Reserve(ctx context.Context, org string, rs []policy.Reservation
 	return u.db.OrgTx(ctx, o, func(ctx context.Context, tx pgx.Tx) error {
 		return upsert(ctx, tx, o, rs)
 	})
+}
+
+// ReserveTx is Reserve inside the caller's org transaction (the Gate's admission, S13): the
+// reservation commits or rolls back with the action. On *policy.ExceededError the caller must roll
+// tx back to a savepoint taken before the call (the batch may have applied other rows).
+func (u *Usage) ReserveTx(ctx context.Context, tx pgx.Tx, org string, rs []policy.Reservation) error {
+	o, err := parseOrg(org)
+	if err != nil {
+		return err
+	}
+	for _, r := range rs {
+		if err := policy.CheckReservation(r); err != nil {
+			return err
+		}
+	}
+	if len(rs) == 0 {
+		return nil
+	}
+	for _, r := range rs {
+		if r.Limit > 0 && r.Amount > r.Limit {
+			var used int64
+			if err := tx.QueryRow(ctx, valueSQL, o, r.Scope, r.Counter, r.Window, r.WindowStart.UTC()).Scan(&used); err != nil {
+				return err
+			}
+			return &policy.ExceededError{BudgetID: r.Budget, Used: used, Limit: r.Limit, ResetsAt: r.ResetsAt}
+		}
+	}
+	return upsert(ctx, tx, o, rs)
+}
+
+// ReleaseTx is Release inside the caller's org transaction: the transition that ends an action
+// without executing releases its reservations once, atomically with the transition (S13).
+func (u *Usage) ReleaseTx(ctx context.Context, tx pgx.Tx, org string, rs []policy.Reservation) error {
+	o, err := parseOrg(org)
+	if err != nil {
+		return err
+	}
+	for _, r := range rs {
+		if err := policy.CheckReservation(r); err != nil {
+			return err
+		}
+	}
+	if len(rs) == 0 {
+		return nil
+	}
+	b := &pgx.Batch{}
+	for _, r := range rs {
+		b.Queue(releaseSQL, o, r.Scope, r.Counter, r.Window, r.WindowStart.UTC(), r.Amount)
+	}
+	return tx.SendBatch(ctx, b).Close()
+}
+
+// RecordCostTx is RecordCost inside the caller's org transaction (the Gate's completion, S13).
+func (u *Usage) RecordCostTx(ctx context.Context, tx pgx.Tx, org string, targets []policy.CostTarget, cost policy.Money) error {
+	o, err := parseOrg(org)
+	if err != nil {
+		return err
+	}
+	rs, err := policy.CostReservations(targets, cost)
+	if err != nil || len(rs) == 0 {
+		return err
+	}
+	return upsert(ctx, tx, o, rs)
 }
 
 // upsert sends rs as one batch. It returns *policy.ExceededError for the first conditional row that

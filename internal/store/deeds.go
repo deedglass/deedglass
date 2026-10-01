@@ -21,25 +21,59 @@ import (
 //	})
 //
 // On deed.ErrChainConflict the caller retries once in a new transaction.
-func DeedTx(tx pgx.Tx) deed.ChainStore { return deedTx{tx} }
+func DeedTx(tx pgx.Tx) deed.ChainStore { return &deedTx{tx: tx} }
 
-type deedTx struct{ tx pgx.Tx }
+type deedTx struct {
+	tx      pgx.Tx
+	pending string // an org whose chain lock LockChain asked for and the next round trip takes
+}
 
-// LockChain takes the org's transaction-scoped advisory lock; COMMIT or ROLLBACK releases it.
-func (d deedTx) LockChain(ctx context.Context, org string) error {
-	_, err := d.tx.Exec(ctx, `SELECT pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended('deedglass/deed-chain/' || $1::text, 0))`, org)
+const lockChainSQL = `SELECT pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended('deedglass/deed-chain/' || $1::text, 0))`
+
+// LockChain takes the org's transaction-scoped advisory lock; COMMIT or ROLLBACK releases it. The
+// lock statement rides at the front of ReadState's batch (S13: one round trip less while the lock
+// is held); Postgres runs a batch in order, so the head is still read under the lock. Anything
+// else that runs first takes the lock on its own.
+func (d *deedTx) LockChain(_ context.Context, org string) error {
+	d.pending = org
+	return nil
+}
+
+func (d *deedTx) lockNow(ctx context.Context) error {
+	if d.pending == "" {
+		return nil
+	}
+	_, err := d.tx.Exec(ctx, lockChainSQL, d.pending)
+	d.pending = ""
 	return err
 }
 
-// ReadState sends the head, clock and key reads as one batch (one round trip).
-func (d deedTx) ReadState(ctx context.Context, org, sealKeyID string) (deed.ChainState, error) {
+// ReadState sends the chain lock (when pending), the head, clock and key reads as one batch (one
+// round trip).
+func (d *deedTx) ReadState(ctx context.Context, org, sealKeyID string) (deed.ChainState, error) {
 	var st deed.ChainState
 	b := &pgx.Batch{}
+	locked := false
+	if d.pending != "" {
+		if d.pending != org {
+			if err := d.lockNow(ctx); err != nil {
+				return st, err
+			}
+		} else {
+			b.Queue(lockChainSQL, d.pending)
+			d.pending, locked = "", true
+		}
+	}
 	b.Queue(`SELECT seq, body_hash, issued_at FROM deedglass.deeds WHERE org_id = $1 ORDER BY seq DESC LIMIT 1`, org)
 	b.Queue(`SELECT pg_catalog.clock_timestamp()`)
 	b.Queue(`SELECT status, activated_at, retired_at, revoked_at FROM deedglass.seal_keys WHERE id = $1`, sealKeyID)
 	br := d.tx.SendBatch(ctx, b)
 	defer br.Close()
+	if locked {
+		if _, err := br.Exec(); err != nil {
+			return st, err
+		}
+	}
 	err := br.QueryRow().Scan(&st.Head.Seq, &st.Head.BodyHash, &st.Head.IssuedAt)
 	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 		return st, err
@@ -60,7 +94,10 @@ func (d deedTx) ReadState(ctx context.Context, org, sealKeyID string) (deed.Chai
 
 // Insert writes the deeds row. Unique violations (seq, prev_hash) and the chain trigger's
 // DG002/DG003 mean the head moved underneath the Sealer: deed.ErrChainConflict.
-func (d deedTx) Insert(ctx context.Context, s deed.Stored) error {
+func (d *deedTx) Insert(ctx context.Context, s deed.Stored) error {
+	if err := d.lockNow(ctx); err != nil {
+		return err
+	}
 	b := &s.Envelope.Body
 	var actionID *string
 	if b.Action != nil {

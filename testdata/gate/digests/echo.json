@@ -1,0 +1,10 @@
+{
+  "tool": "fake.echo",
+  "args": {
+    "message": "hello"
+  },
+  "mode": "gateway",
+  "tool_digest": null,
+  "request_digest": "sha256:c2cb9a8c51c029f97049fed02f985cc49cee22836423d2c9a8e1b74e333a3c4c",
+  "fingerprint": "sha256:df84a865b51a4f0525906765cd574233a9703a14013c576ef1a40c61adb6d588"
+}

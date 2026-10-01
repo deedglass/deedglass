@@ -61,6 +61,9 @@ type Config struct {
 	APIKey Secret
 	Server *url.URL
 
+	// File-only settings (deedglass.yaml sections; settings.go).
+	Gate GateSettings
+
 	raw        map[string]string // resolved raw values, for printing
 	sources    map[string]Source
 	devSecrets devSecretsState
@@ -193,6 +196,7 @@ func (l *loader) load() (*Config, []Warning, error) {
 	for _, k := range Keys {
 		l.parse(c, k)
 	}
+	l.parseSettings(c)
 	l.prodChecks(c)
 	if c.ResendAPIKey.IsSet() && c.MailFrom == "" {
 		if _, set := l.raw["DEEDGLASS_MAIL_FROM"]; !set {

@@ -54,9 +54,10 @@ func (l *Ledger) RetentionDays(ctx context.Context, org ids.OrgID) (int, error) 
 
 // payloadBytes is what a pruned action gives up, as Postgres stores it.
 const payloadBytes = `COALESCE(pg_catalog.pg_column_size(request), 0) + COALESCE(pg_catalog.pg_column_size(result), 0)
-  + COALESCE(pg_catalog.pg_column_size(witness_detail), 0)`
+  + COALESCE(pg_catalog.pg_column_size(witness_detail), 0) + COALESCE(pg_catalog.pg_column_size(policy_input), 0)`
 
-// Prune removes the payloads (request, result, witness_detail) of org's sealed actions created
+// Prune removes the payloads (request, result, witness_detail, and since S13 policy_input, which
+// holds the arguments) of org's sealed actions created
 // before cutoff, and seals one ledger.pruned admin deed with the counts and range. It never
 // touches deeds, events, admin events, approvals, digests, ids or any action that is not sealed,
 // so every deed still verifies. One prune per org runs at a time (a session advisory lock); it
@@ -91,7 +92,7 @@ func (l *Ledger) Prune(ctx context.Context, org ids.OrgID, cutoff time.Time, o P
 				    WHERE org_id = $1 AND state = 'sealed' AND created_at < $2 AND payload_pruned_at IS NULL
 				    ORDER BY created_at, id LIMIT $3 FOR UPDATE SKIP LOCKED),
 				  u AS (
-				    UPDATE deedglass.actions AS a SET request = NULL, result = NULL, witness_detail = NULL,
+				    UPDATE deedglass.actions AS a SET request = NULL, result = NULL, witness_detail = NULL, policy_input = NULL,
 				      payload_pruned_at = pg_catalog.clock_timestamp()
 				    FROM b WHERE a.org_id = $1 AND a.id = b.id
 				    RETURNING a.id, b.created_at, b.bytes)

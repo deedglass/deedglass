@@ -46,6 +46,9 @@ go test ./cmd/deedglass -run TestPolicyEvaluateGoldens -update  # regenerate the
 go test ./internal/policy -run TestLintGolden -update   # regenerate the lint goldens, hashes.json and costs.json (review the diff)
 go test ./cmd/deedglass -run TestPolicyGoldens -update  # regenerate the policy lint/fmt CLI goldens
 make policy-test    # S12: deedglass policy test --dir examples/policies --require-coverage --voice (in ci)
+make bench-gate     # S13: Gate overhead (allow, fake.echo, concurrency 8, 1 org, 50 rules): p50 < 5 ms, p99 < 25 ms; JSON in bench/results/
+go test ./internal/gate -run TestDigests -update   # re-pin testdata/gate/digests (request_digest and fingerprint; review the diff)
+go test -tags integration ./cmd/deedglass -run TestGateLive -update   # the act CLI goldens in testdata/gate/cli (throwaway cluster)
 go test ./examples/policies -update   # re-pin the starters' version_hash in examples/policies/hashes.json (review the diff)
 go test ./cmd/deedglass -run 'TestPolicyTestGoldens|TestPolicyServerGoldens' -update  # the policy test/push/activate CLI goldens
 DEEDGLASS_IT_PKGS=./internal/identity/ make integration   # one suite (DEEDGLASS_IT_GOFLAGS="-v -run X" adds flags)
@@ -305,6 +308,26 @@ and "open source" until the repo is public. Style bans: "revolutionary", "world-
   `TestHotSwapTwoInstances` (20 of 20 under 2 s), `TestListenerKilled`, `TestTamperFailsClosed`.
   `internal/ledger`: `TestOneWritePath` allows `store.NotifyPolicy` as the one door for
   `deedglass_policy`.
+- `internal/gate` (S13): the edge table is `internal/gate/lifecycle` (gate aliases it; 225 pairs, 10,000
+  seeded walks, `Settled`, the test-time panic on an illegal edge, `docs/GATE.md`'s diagram equal to
+  the table); `ledger.Transition`'s `Patch` writes only its edge's columns and `ledger.Advance` writes a
+  run of edges as one UPDATE whose `hops` the database guard checks hop by hop (`TestAdvance`,
+  `TestPatchSetsAgree`); the normalization table, `FuzzNormalize`, pinned digests
+  (`testdata/gate/digests`); the classification table (failed only when certainly not applied, every
+  doubt unknown, a panic unknown); the copy (no dashes, no exclamation marks, banned words); the route
+  × role matrix (only `POST /v1/actions` records stopped agents: `RecordStopped`, pinned in
+  `cmd/deedglass`); integration on PG 16/17/18: every path of S13 §6 (allow, deny with no connector
+  call, Stop, suspend, org stop, budget with `Retry-After`, approval approved / stopped / cancelled /
+  expired with the reservation released, tool error, timeout and panic as UNVERIFIABLE, proxy round
+  trip, edge lost, late and double reports, the Postgres edge's SQL facts, idempotency incl. 5
+  in-flight duplicates → one call, intents in every mode incl. MCP + required, shadow recorded, the
+  five events in order, no pooled connection held while a tool runs, crash between Tx A and Tx B and
+  between the outcome and the seal), the worker with a deferring witness (retry, then
+  `witness_gave_up`), two instances sweeping 200 stale actions (each sealed once, chain intact),
+  `TestLoad1000`, and `cmd/deedglass`'s `TestGateLive` (S13 §9 on a real server; CLI goldens in
+  `testdata/gate/cli`). `TestPreAuthNamesStayInStore` also keeps `claim_*` and
+  `maint_release_action_keys` inside `internal/store`; `TestOneWritePath` allows `store.NotifyJobs`
+  as the door for `deedglass_jobs`.
 - `cmd/deedglass verify` (S05): 80 golden cases in `testdata/verify/<case>/{args,stdout,stderr,exit}`
   (`go test ./cmd/deedglass -run TestVerifyGolden -update`), every vector's code and exit, `--keys`
   URL rules (same-host redirects, 1 MiB, timeout, loopback-only http), key-set merge conflicts, no

@@ -4,6 +4,7 @@ exit 0
   "object": "action",
   "id": "act_ID",
   "created_at": "TIME",
+  "livemode": false,
   "agent": {
     "id": "agt_ID",
     "name": "support-bot"
@@ -12,8 +13,20 @@ exit 0
   "connector": null,
   "mode": "gateway",
   "state": "sealed",
+  "status": "executed",
   "on_behalf_of": "u_5780",
   "session": "chat_84",
+  "decision": {
+    "outcome": "allow",
+    "code": null,
+    "source": null,
+    "rule_id": "allow-order-updates",
+    "reason": null,
+    "message": null,
+    "policy": null,
+    "policy_version": null,
+    "shadow": null
+  },
   "policy": {
     "id": null,
     "version_id": null,
@@ -21,17 +34,20 @@ exit 0
     "decision": "allow",
     "rule_id": "allow-order-updates"
   },
+  "approval": null,
   "execution": {
     "status": "succeeded",
     "started_at": "TIME",
     "finished_at": "TIME",
     "latency_ms": 55,
-    "error_code": null
+    "error_code": null,
+    "error_message": null
   },
   "witness": {
     "level": "L2",
     "verdict": "MISMATCH",
     "method": "postgres.pgoutput",
+    "reasons": [],
     "detail": {
       "table": "public.orders",
       "expected_rows": 1,
@@ -43,6 +59,7 @@ exit 0
   "result_digest": "sha256:HASH",
   "payload_pruned_at": null,
   "deed": "deed_ID",
+  "next_action": null,
   "request": {
     "sql": "UPDATE public.orders SET status = $1 WHERE id = $2",
     "params": [
@@ -153,7 +170,6 @@ exit 0
       "seq": 28,
       "issued_at": "TIME"
     }
-  ],
-  "approval": null
+  ]
 }
 --- stderr

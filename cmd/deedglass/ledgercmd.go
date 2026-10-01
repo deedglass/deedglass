@@ -334,17 +334,37 @@ func relTime(now, t time.Time) string {
 
 // --- actions show ---
 
+// actionsShowWait is actions show --wait: wait until the action is sealed or waiting for a person
+// (and, when it already waits for a person, for its next change), at most 25 s (S13).
+var actionsShowWait bool
+
+func actionsShowFlags(fs *flag.FlagSet) {
+	actionsShowWait = false
+	fs.BoolVar(&actionsShowWait, "wait", false, "wait (up to 25 s) until the action is sealed or waits for a person")
+}
+
+// showWaitPoll is how often actions show --wait re-reads the action (a DB-direct command has no
+// LISTEN connection).
+var showWaitPoll = 250 * time.Millisecond
+
 func runActionsShow(ctx context.Context, e *Env, args []string) error {
-	if len(args) != 1 {
+	pos, err := mixedArgs("deedglass actions show", actionsShowFlags, args)
+	if err != nil {
+		return err
+	}
+	if len(pos) != 1 {
 		return usageErr(errors.New("deedglass actions show needs one action id"), "deedglass actions show act_…  (deedglass actions list shows ids with --json)")
 	}
-	id := strings.ToLower(strings.TrimSpace(args[0]))
+	id := strings.ToLower(strings.TrimSpace(pos[0]))
 	s, err := openLedger(ctx, e, false)
 	if err != nil {
 		return err
 	}
 	defer s.Close()
 	d, err := s.led.GetAction(ctx, s.org.ID, id)
+	if err == nil && actionsShowWait {
+		d, err = waitAction(ctx, s, id, d)
+	}
 	if errors.Is(err, ledger.ErrNotFound) {
 		return failNext(e, ExitFailure, "not_found", fmt.Sprintf("No action %s in %s.", clean(id), s.org.Slug), "deedglass actions list")
 	}
@@ -409,6 +429,26 @@ func runActionsShow(ctx context.Context, e *Env, args []string) error {
 	return nil
 }
 
+// waitAction re-reads an action until it settles or changes (see actionsShowWait).
+func waitAction(ctx context.Context, s *ledgerSession, id string, d *ledger.ActionDetail) (*ledger.ActionDetail, error) {
+	start := d.State
+	settled := func(st string) bool { return st == "sealed" || st == "pending_approval" && start != "pending_approval" }
+	deadline := time.Now().Add(ledger.PollWait * time.Second)
+	for !settled(d.State) && (start != "pending_approval" || d.State == start) && time.Now().Before(deadline) {
+		select {
+		case <-ctx.Done():
+			return d, nil
+		case <-time.After(showWaitPoll):
+		}
+		next, err := s.led.GetAction(ctx, s.org.ID, id)
+		if err != nil {
+			return d, err
+		}
+		d = next
+	}
+	return d, nil
+}
+
 func executionLine(d *ledger.ActionDetail) string {
 	x := d.Execution
 	if x == nil {
@@ -451,6 +491,33 @@ func detailSentence(verdict string, raw json.RawMessage) string {
 		return "No evidence arrived before the time limit."
 	}
 	return ""
+}
+
+// exportToStdout writes the export to stdout (--out -), so it can be piped into deedglass verify -.
+// The summary goes to stderr; with --json there is none.
+func exportToStdout(ctx context.Context, e *Env, s *ledgerSession, r ledger.Range, format string) error {
+	x := &exportTarget{e: &Env{Stdout: e.Stderr, Globals: e.Globals, Style: e.Style}, w: e.Stdout}
+	var count int64
+	var err error
+	if format == "jsonl" {
+		_, _, count, err = s.led.ExportJSONL(ctx, s.org.ID, r, x)
+	} else {
+		var m *archive.Manifest
+		if m, err = s.led.Export(ctx, s.org.ID, r, x); err == nil {
+			count = m.Range.Count
+		}
+	}
+	var empty *ledger.EmptyRangeError
+	if errors.As(err, &empty) {
+		return &ExitError{Code: ExitFailure, ErrCode: "not_found", Err: errors.New("No deeds in this range"), Next: "Widen --since, or leave it out."}
+	}
+	if err != nil {
+		return ledgerErr(e, err)
+	}
+	if !e.Globals.JSON {
+		fmt.Fprintln(e.Stderr, e.Style.OKLine(fmt.Sprintf("%s %s %s to stdout", deedsWord(count), ui.Sep, sizeWords(x.n))))
+	}
+	return nil
 }
 
 // --- deeds list | show ---
@@ -596,6 +663,7 @@ func runDeedsShow(ctx context.Context, e *Env, args []string) error {
 type exportOpts struct {
 	out, format string
 	from, to    int64
+	since       time.Duration
 }
 
 var exportValues exportOpts
@@ -607,6 +675,7 @@ func deedsExportFlags(fs *flag.FlagSet) {
 	fs.StringVar(&o.format, "format", "tar.gz", "tar.gz (a sealed bundle) or jsonl (deeds only)")
 	fs.Int64Var(&o.from, "from-seq", 0, "first seq")
 	fs.Int64Var(&o.to, "to-seq", 0, "last seq")
+	fs.DurationVar(&o.since, "since", 0, "only deeds issued in the last 1h, 30m, … (S13)")
 }
 
 // exportTarget counts what Export writes and prints the progress line once the range is known.
@@ -644,6 +713,12 @@ func runDeedsExport(ctx context.Context, e *Env, args []string) error {
 	if o.to > 0 {
 		v.Set("to_seq", strconv.FormatInt(o.to, 10))
 	}
+	if o.since < 0 {
+		return usageErr(errors.New("--since must be a positive duration"), "For example --since 1h.")
+	}
+	if o.since > 0 {
+		v.Set("issued_at[gte]", time.Now().Add(-o.since).UTC().Format(time.RFC3339Nano))
+	}
 	r, err := ledger.ParseRangeQuery(v)
 	if err != nil {
 		return ledgerErr(e, err)
@@ -653,6 +728,9 @@ func runDeedsExport(ctx context.Context, e *Env, args []string) error {
 		return err
 	}
 	defer s.Close()
+	if o.out == "-" {
+		return exportToStdout(ctx, e, s, r, o.format)
+	}
 
 	// Write to a temporary file next to the target and rename it at the end, so a failed export
 	// never leaves a half-written file under the final name.

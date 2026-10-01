@@ -67,6 +67,21 @@ string.
 
 The health endpoint shows statuses only. The error text behind them is in these lines.
 
+**The Gate** (S13) logs with the org, agent and action ids, never arguments or results:
+
+| Message | Level | Fields | When |
+|---|---|---|---|
+| `gate: policy evaluation hit the time limit; the action was denied (policy_unavailable)` | warn | `org_id`, `agent_id`, `mode`, `errors`, `elapsed_ms` | The 50 ms time limit stopped an enforced evaluation (DL-025). Counted in `deedglass_policy_eval_time_limit_total{mode="enforce"}`. |
+| `gate: shadow policy evaluation hit the time limit (recorded, never enforced)` | warn | `org_id`, `agent_id`, `mode`, `errors`, `elapsed_ms` | The same, for the shadow policy (`mode="shadow"`). |
+| `gate: recording an execution failed; the sweeper will finish it` | error | `org_id`, `agent_id`, `action_id`, `err` | The tool answered, but its outcome couldn't be written. The crash-recovery sweeper finishes the action. |
+| `gate: the outcome is recorded, but its deed couldn't be sealed; the sweeper retries` | error | `org_id`, `agent_id`, `action_id`, `err` | A seal failed (a retired seal key, say). The outcome is kept; the unsealed sweeper seals it once the cause is fixed. |
+| `gate: the edge's result is recorded, but its deed couldn't be sealed; the sweeper retries` | error | `org_id`, `action_id`, `err` | The same, for a proxy-mode result. |
+| `gate: an action couldn't be sealed; its outcome is recorded and the sweeper retries` | error | `org_id`, `action_id`, `err` | The same, from `Resume`. |
+| `gate: claiming stale actions failed` | warn | `err` | A sweeper pass couldn't read its work; the next pass tries again. |
+| `gate: a sweeper couldn't finish an action` | warn | `sweeper`, `org_id`, `action_id`, `err` | Counted as `result="error"`. |
+| `gate: claiming witness jobs failed` | warn | `err` | The worker couldn't lease jobs; it polls again. |
+| `gate: a witness job failed` | warn | `org_id`, `action_id`, `err` | The error is redacted and cut short. |
+
 ## Redaction
 
 Every logger the server builds is wrapped in a redacting handler (`NewRedactingHandler`). It runs
@@ -115,6 +130,12 @@ authentication, which is why it stays off the API port.
 | `deedglass_policy_reloads_total` | counter | none | Policy loads into this instance's registry: cold, on a `deedglass_policy` notification, or on the 30 s safety poll (S12). |
 | `deedglass_policy_load_failures_total` | counter | none | Policy loads that failed their checks (compile, `version_hash`, `source_hash`, the activation deed's seal or data). The org's actions are then refused with `policy_unavailable`. Alert on any increase. |
 | `deedglass_policy_active_orgs` | gauge | none | Orgs whose policies this instance holds (idle orgs leave after 10 minutes). |
+| `deedglass_gate_actions_total` | counter | `mode`, `status` | Actions the Gate answered (S13). `mode` is `gateway` or `proxy`; `status` is the action's `status` when the Gate answered (`executed`, `failed`, `denied`, `pending_approval`, `processing`, `authorized`, …). |
+| `deedglass_gate_overhead_seconds` | histogram | none | The time the Gate adds to an action, without the tool's own run time: normalizing, the policy, the database writes and the seal. |
+| `deedglass_worker_jobs_total` | counter | `kind`, `result` | Witness jobs the worker finished. `result` is `done`, `retry` (backed off, `min(2^attempts s, 5 min)` ±20%) or `error`. No jobs are created until S19: the L0 witness answers inline. |
+| `deedglass_worker_queue_depth` | gauge | none | Witness jobs this instance holds now. |
+| `deedglass_gate_sweeps_total` | counter | `sweeper`, `result` | Actions the sweepers handled, every 5 s. `sweeper` is `crash_recovery`, `unsealed`, `approval_expiry` or `idempotency_release`; `result` is `done`, `skipped` (the pass left the action unsealed, for example still waiting) or `error`. For `idempotency_release`, `done` counts released keys. |
+| `deedglass_policy_eval_time_limit_total` | counter | `mode` | Evaluations the 50 ms time limit stopped (DL-025), `enforce` or `shadow`. The limit fails closed, so each `enforce` trip is a refused action (`policy_unavailable`); a `shadow` trip is recorded and never enforced. Each trip is also logged at warn level. Alert on any increase. |
 
 **Labels are bounded.** `route` is the route pattern (`/v1/actions/{id}`), never a raw path, and
 `unmatched` for every request no route matched. `method` is `GET`, `HEAD`, `POST`, `PUT`,
@@ -124,6 +145,12 @@ as a string.
 **Histogram buckets**, in seconds, plus `+Inf`:
 
 `0.001`, `0.0025`, `0.005`, `0.01`, `0.025`, `0.05`, `0.1`, `0.25`, `0.5`, `1`, `2.5`, `5`
+
+`deedglass_gate_overhead_seconds` has its own: `0.001`, `0.002`, `0.005`, `0.01`, `0.025`,
+`0.05`, `0.1`.
+
+The Gate's labels are bounded too: `mode`, `status`, `kind`, `result` and `sweeper` take only the
+values above, never an id.
 
 A sample:
 

@@ -22,8 +22,8 @@ Agents
 Policies
   policy              Write, test and activate policies           soon   lint · fmt · test · push · activate · evaluate · replay · diff
 Actions
-  act                 Send a test action through the Gate         soon
-  actions             Inspect actions                             soon   list · show · cancel
+  act                 Send a test action through the Gate
+  actions             Inspect actions                                    list · show · cancel
   approve · deny      Decide a pending approval                   soon
   approvals           List pending approvals                      soon   list · show
   undo                Preview or run an undo                      soon   preview · run

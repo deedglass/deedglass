@@ -99,8 +99,8 @@ What Deedglass does not do, stated plainly. **Owner: S37**, which finalizes this
 - **No authorization server in v1.** MCP clients authenticate with pre-issued API keys as bearer
   tokens; the protected-resource metadata omits `authorization_servers` on purpose, so clients that
   can only do OAuth can't connect yet ([MCP_AUTHORIZATION.md](MCP_AUTHORIZATION.md)).
-- **The Gate doesn't enforce intent modes until S13.** In S09 the checks answer only
-  `POST /v1/intents/verify`; setting a mode changes nothing about what an agent can do yet.
+- **Intent modes are enforced from S13.** In S09 the checks answered only
+  `POST /v1/intents/verify`; since S13 the Gate checks the header on every `POST /v1/actions`.
 - **Two closed schemas share one tag.** The V0 transfer demo intent (`op: TRANSFER`) and the agent
   intent both use `deedglass.intent/1`, with different field sets that don't overlap. No document
   satisfies both, but the version string alone doesn't tell them apart.
@@ -173,8 +173,9 @@ What policies can't do ([POLICY_LANGUAGE.md](POLICY_LANGUAGE.md) section 12):
   future build that normalized differently would see every stored version as changed and refuse
   them (fail closed). The normalizer can't change within `deedglass.policy/v1`; `hashes.json` and
   S10's lint goldens pin it.
-- **Shadow decides nothing yet.** The registry loads the shadow version and `EvaluatePair` decides
-  with it, but nothing records or shows shadow results until S13 (the Gate) and S27 (Insights).
+- **Shadow decides nothing.** The registry loads the shadow version and `EvaluatePair` decides
+  with it; since S13 the Gate records that decision on each action (`decision.shadow`), but
+  nothing compares or reports shadow results until S27 (Insights).
 - **A shadow version that fails its checks is dropped, not enforced against.** It is logged and
   counted; only an enforced version that fails makes the org refuse every action.
 - **The dry run reads usage as zero** unless the request gives it; it never reserves. Real counters
@@ -186,6 +187,42 @@ What policies can't do ([POLICY_LANGUAGE.md](POLICY_LANGUAGE.md) section 12):
 - **Rate limits on lint, evaluate and test are per instance** (60 a minute per person or key, in
   memory), like S07's limiter.
 - **`policy diff` and `policy replay` aren't built** (S27). The Console editor is S26.
+
+## Gate limits (S13)
+
+What the Gate doesn't do ([GATE.md](GATE.md)):
+
+- **A proxy-mode result is the edge's word.** In proxy mode the edge runs the tool and reports the
+  result; the deed says `edge_reported` and records what the edge said. Deedglass can't tell a
+  truthful edge from one that lies. S21's L2 witness checks Postgres on its own.
+- **L0 means the tool reported success.** It is the tool's own answer (method `reported`), not an
+  independent check. Until S19 every verdict is L0.
+- **Timeouts and crashes become UNVERIFIABLE: it may have run.** When a tool doesn't answer within
+  `gate.execute_timeout`, the edge never reports, or the server stops while a tool runs, the action
+  is sealed with `execution.status: unknown` and the verdict UNVERIFIABLE. The deed says plainly
+  that the tool may have run; check the target system by hand.
+- **No retries.** The Gate never calls a tool a second time. A timeout is an unknown outcome, not
+  a reason to try again, and a retry with the same Idempotency-Key replays the first answer.
+- **It doesn't undo a tool that ran.** Stop and cancel refuse what hasn't run; S23 adds undo where
+  a connector supports it.
+- **`dg_test_` keys aren't blocked.** The action records `livemode` (and so does its context), but
+  connectors have no test or live mode in v1, so a test key can reach a live system. Enforcement
+  waits for connector modes (v0.2).
+- **The fake connector is for development only.** `fake.echo`, `fake.write`, `fake.fail` and
+  `fake.slow` exist only when `DEEDGLASS_ENV=dev` (and in tests). Real connectors arrive in S16 and
+  later.
+- **A gateway action keeps running when its HTTP request ends.** The tool call is detached from
+  the request: a client that stops waiting, or a `wait` that ends, gets 202 `processing`, and the
+  action is still recorded and sealed. Closing the connection doesn't cancel the tool.
+- **20 open waits per agent, counted per instance.** Each agent may hold 20 open
+  `GET /v1/actions/{id}?wait=` requests on one server; the 21st is 429 `rate_limited`. Behind N
+  instances an agent can hold up to N times as many.
+- **The Idempotency-Key comparison leaves out the signed intent.** The fingerprint is the request
+  digest plus `Deedglass-On-Behalf-Of` and `Deedglass-Session`, so a retry signed again still
+  replays, and a replay doesn't check the new intent. The original action's intent was checked
+  when it was admitted.
+- **An Idempotency-Key lasts 24 hours.** After that the key is free again, and the same request
+  with the same key creates a new action.
 
 ## What this page does not do
 

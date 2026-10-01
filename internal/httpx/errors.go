@@ -114,7 +114,7 @@ var catalog = []CatalogEntry{
 	{CodeIntentInvalid, 403, TypePermission, "The signed intent doesn't match this request. Sign the exact tool and arguments you send.", "", "contract"},
 	{CodeIntentReplay, 403, TypePermission, "This signed intent was already used. Sign a new one with a fresh nonce.", "", "contract"},
 	{CodeToolUnknown, 404, TypeInvalidRequest, "No connector provides this tool. Check the name, or add a connector in Console › Connectors.",
-		`No connector provides "{tool}". Check the name, or add a connector in Console › Connectors.`, "contract"},
+		`No tool named "{tool}". Tools look like "connector.tool", for example "fake.echo".`, "contract"},
 	{CodeConnectorUnavailable, 503, TypeAPI, "The connector isn't reachable right now. Check Console › Connectors, then retry.", "", "contract"},
 	{CodeUpstreamError, 502, TypeAPI, "The tool returned an error. The details are on the action in Console › Actions.", "", "contract"},
 	{CodeTimeout, 504, TypeAPI, "The request timed out. It may have partly run, so fetch the object to see its state before you send it again.",
@@ -189,7 +189,10 @@ type Error struct {
 	// Diagnostics is the additive envelope field of policy_invalid (S12): the compiler's
 	// diagnostics, each with its line, code and hint.
 	Diagnostics any
-	cause       error
+	// Action is the additive envelope field of POST /v1/actions refusals (S13): the recorded,
+	// sealed action, rendered as "action".
+	Action any
+	cause  error
 }
 
 func (e *Error) Error() string {
@@ -229,6 +232,9 @@ func WithHeader(k, v string) Opt {
 		e.Header.Add(k, v)
 	}
 }
+
+// WithAction attaches the recorded action to a refusal of POST /v1/actions (rendered as "action").
+func WithAction(v any) Opt { return func(e *Error) { e.Action = v } }
 
 // WithDiagnostics attaches policy_invalid's diagnostics (rendered as "diagnostics").
 func WithDiagnostics(v any) Opt { return func(e *Error) { e.Diagnostics = v } }
@@ -444,6 +450,7 @@ func clip(s string, n int) string {
 // codes; every other reason is intent_invalid.
 var IntentCopy = map[string]string{
 	"required":                 `Agent "{agent}" requires a signed intent for every call. Send a Deedglass-Intent header; see docs.deedglass.com/intents.`,
+	"required_mcp":             `Agent "{agent}" requires a signed intent for every call, and MCP clients can't sign intents yet. Call it through the SDK or the REST API, or an admin can set its intent mode to optional in Console › Agents.`,
 	"syntax":                   "The Deedglass-Intent header must be two base64url parts joined by a dot: the intent, then its signature.",
 	"too_large":                "The signed intent is larger than 2,048 bytes. Keep only the fields listed at docs.deedglass.com/intents.",
 	"strict":                   "The signed intent isn't strict JSON: {detail}. Use the SDK signer, or follow the profile at docs.deedglass.com/intents.",
@@ -474,7 +481,7 @@ var IntentCopy = map[string]string{
 // IntentParam is the error's param for each reason that has a fixed one; the schema reasons,
 // unsigned_obo and the OBO mismatches name their field at the call site.
 var IntentParam = map[string]string{
-	"required": "Deedglass-Intent", "syntax": "Deedglass-Intent", "too_large": "Deedglass-Intent", "strict": "Deedglass-Intent",
+	"required": "Deedglass-Intent", "required_mcp": "Deedglass-Intent", "syntax": "Deedglass-Intent", "too_large": "Deedglass-Intent", "strict": "Deedglass-Intent",
 	"not_canonical": "Deedglass-Intent", "version": "v", "org_mismatch": "org", "agent_mismatch": "agent", "unknown_kid": "kid",
 	"bad_signature": "kid", "expired": "exp", "not_yet_valid": "iat", "ttl": "exp", "tool_mismatch": "tool",
 	"args_mismatch": "args_digest", "big_int": "args", "args_not_canonicalizable": "args",
@@ -488,7 +495,7 @@ var IntentParam = map[string]string{
 func ErrIntent(reason, param string, kv ...string) *Error {
 	code := CodeIntentInvalid
 	switch reason {
-	case "required":
+	case "required", "required_mcp":
 		code = CodeIntentRequired
 	case "replay", "replay_unknown":
 		code = CodeIntentReplay

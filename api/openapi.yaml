@@ -40,6 +40,10 @@ tags:
     description: >-
       The searchable history of every action an agent took and every state change, and the deed
       chain check (docs/LEDGER.md).
+  - name: Gate
+    description: >-
+      Sending actions through the Gate, cancelling one that waits for approval, and reporting the
+      result of a proxy-mode action (docs/GATE.md).
   - name: Deeds
     description: >-
       Signed records of what agents did, and the public seal keys that check them offline
@@ -234,6 +238,388 @@ paths:
                 $ref: "#/components/schemas/ActionList"
         default:
           $ref: "#/components/responses/Error"
+    post:
+      operationId: createAction
+      summary: Send an action through the Gate
+      description: >-
+        Every tool call an agent makes passes through here (docs/GATE.md). The Gate checks the
+        signed intent (when the agent's intent mode asks for one), reads the agent's Stop state,
+        asks the active policy, and then refuses the action, waits for a person, runs the tool
+        (gateway mode) or authorizes the edge to run it (proxy mode). Every action it records ends
+        as a sealed deed. `status` is the one field an agent needs: `executed` (200: the tool ran
+        and the action is sealed, whatever the verdict), `failed` (200: the tool certainly didn't
+        apply the call), `authorized` (200, proxy mode: run the tool at the edge now, then report
+        it to `next_action.report_url`), `processing` (202: still running when `wait` ended; poll
+        `GET /v1/actions/{id}?wait=25`) and `pending_approval` (202: waiting for a person;
+        `next_action.poll_url` waits for the decision). A refusal is an error envelope that carries
+        the sealed action in `error.action`: `policy_denied` and `policy_unavailable` (403
+        `policy_error`), `agent_stopped`, `agent_suspended` and `org_stopped` (403
+        `permission_error`), `budget_exceeded` (429 `rate_limit_error`, with `Retry-After`) and
+        `tool_unknown` (404). The message is the decision's own sentence, verbatim. Malformed
+        requests (400 `validation_failed`) and identity failures (`intent_required`,
+        `intent_invalid`, `intent_replay`) are not recorded. A gateway action keeps running when
+        the HTTP request ends: it is recorded and sealed either way. **The Gate owns idempotency
+        on this route**, not S03's middleware: a key names one action per agent for 24 hours, the
+        same key with the same request answers with the original action (and
+        `Deedglass-Idempotent-Replayed: true`), a duplicate that arrives while the original runs
+        waits for it, and the same key with a different request is 422 `idempotency_conflict`. An
+        agent key with `actions:execute`; a stopped or suspended agent's attempt is recorded and
+        sealed, then refused.
+      tags: [Gate]
+      security: [{bearerAuth: []}]
+      x-deedglass-auth: agent_key
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+        - name: Idempotency-Key
+          in: header
+          required: false
+          description: >-
+            Recommended (the SDKs always send one). 1 to 255 printable ASCII characters. It names
+            one action of this agent for 24 hours. The comparison is the request digest plus
+            `Deedglass-On-Behalf-Of` and `Deedglass-Session`; a signed intent isn't part of it, so
+            a retry signed again still replays.
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 255
+        - $ref: "#/components/parameters/DeedglassIntent"
+        - $ref: "#/components/parameters/DeedglassOnBehalfOf"
+        - $ref: "#/components/parameters/DeedglassSession"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ActionRequest"
+            examples:
+              gateway:
+                summary: Deedglass runs the tool
+                value:
+                  tool: fake.echo
+                  args: {message: hello}
+                  mode: gateway
+                  wait: 10
+                  context: {client: {name: deedglass-cli, version: 0.1.0}, transport: rest}
+              proxy:
+                summary: The edge runs the tool and reports back
+                value:
+                  tool: filesystem.write_file
+                  args: {path: /tmp/deedglass-demo/allowed/notes.txt, content: hello}
+                  mode: proxy
+                  connector_type: mcp
+                  tool_digest: sha256:7c675408077d30b6ef05421be9370eb9c75c661f7cd6966c1b73454db1cc8018
+                  context: {client: {name: deedglass-mcp, version: 0.1.0}, transport: mcp_stdio}
+      responses:
+        "200":
+          description: >-
+            `executed` or `failed` (sealed), or `authorized` (proxy mode). `execution.result` holds
+            the tool's result on this response only.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+            Deedglass-Version:
+              $ref: "#/components/headers/DeedglassVersion"
+            Deedglass-Idempotent-Replayed:
+              $ref: "#/components/headers/DeedglassIdempotentReplayed"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Action"
+              examples:
+                executed:
+                  summary: Gateway mode, executed and sealed
+                  value:
+                    object: action
+                    id: act_01k6w3p8r2t4v6x8z0b2d4f6h8
+                    created_at: "2026-10-05T04:12:09.114Z"
+                    livemode: false
+                    agent: {id: agt_01k633rrmh3bcz2p39gg4vp46q, name: support-bot}
+                    tool: fake.echo
+                    connector: null
+                    mode: gateway
+                    state: sealed
+                    status: executed
+                    on_behalf_of: null
+                    session: null
+                    decision:
+                      outcome: allow
+                      code: null
+                      source: rule
+                      rule_id: allow-fake
+                      reason: Fake tools are safe to run.
+                      message: null
+                      policy: pol_01k6r2m8q0s2v4x6z8b0d2f4h6
+                      policy_version: pv_01k6r2m9a1c3e5g7j9m1q3s5v7
+                      shadow: null
+                    policy: {id: pol_01k6r2m8q0s2v4x6z8b0d2f4h6, version_id: pv_01k6r2m9a1c3e5g7j9m1q3s5v7, mode: enforce, decision: allow, rule_id: allow-fake}
+                    approval: null
+                    execution:
+                      status: succeeded
+                      started_at: "2026-10-05T04:12:09.116Z"
+                      finished_at: "2026-10-05T04:12:09.117Z"
+                      latency_ms: 1
+                      error_code: null
+                      error_message: null
+                      result: {echo: {message: hello}}
+                    witness: {level: L0, verdict: VERIFIED, method: reported, reasons: []}
+                    cost: {amount: 0, currency: usd}
+                    request_digest: sha256:c2cb9a8c51c029f97049fed02f985cc49cee22836423d2c9a8e1b74e333a3c4c
+                    result_digest: sha256:fca08626754877b4929151a6f5a278d4189da0bdff4e71b4f523d6f97bb8f0d0
+                    payload_pruned_at: null
+                    deed: deed_01k6w3p9a1c3e5g7j9m1q3s5v7
+                    next_action: null
+                authorized:
+                  summary: Proxy mode, the edge may run the tool now
+                  value:
+                    object: action
+                    id: act_01k6w5b3d5f7h9k1n3q5s7w9y1
+                    created_at: "2026-10-05T04:20:10.902Z"
+                    livemode: false
+                    agent: {id: agt_01k633rrmh3bcz2p39gg4vp46q, name: support-bot}
+                    tool: filesystem.write_file
+                    connector: null
+                    mode: proxy
+                    state: executing
+                    status: authorized
+                    on_behalf_of: null
+                    session: null
+                    decision: {outcome: allow, code: null, source: rule, rule_id: allow-demo-dir, reason: Writes inside the demo folder are fine., message: null, policy: pol_01k6r2m8q0s2v4x6z8b0d2f4h6, policy_version: pv_01k6r2m9a1c3e5g7j9m1q3s5v7, shadow: null}
+                    policy: {id: pol_01k6r2m8q0s2v4x6z8b0d2f4h6, version_id: pv_01k6r2m9a1c3e5g7j9m1q3s5v7, mode: enforce, decision: allow, rule_id: allow-demo-dir}
+                    approval: null
+                    execution: null
+                    witness: null
+                    cost: null
+                    request_digest: sha256:30f3b488ca53be83e50a9adf9c649ec4d2c1ec5087de8ebfc473bc1b834c01de
+                    result_digest: null
+                    payload_pruned_at: null
+                    deed: null
+                    next_action:
+                      type: execute_at_edge
+                      report_url: /v1/actions/act_01k6w5b3d5f7h9k1n3q5s7w9y1/result
+                      deadline: "2026-10-05T04:30:10.903Z"
+        "202":
+          description: >-
+            `processing` (still executing or witnessing when `wait` ended) or `pending_approval`
+            (waiting for a person). Poll `GET /v1/actions/{id}?wait=25`.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+            Deedglass-Version:
+              $ref: "#/components/headers/DeedglassVersion"
+            Deedglass-Idempotent-Replayed:
+              $ref: "#/components/headers/DeedglassIdempotentReplayed"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Action"
+              example:
+                object: action
+                id: act_01k6w6c4e6g8j0m2p4r6t8w0y2
+                created_at: "2026-10-05T04:25:31.208Z"
+                livemode: false
+                agent: {id: agt_01k633rrmh3bcz2p39gg4vp46q, name: support-bot}
+                tool: fake.write
+                connector: null
+                mode: gateway
+                state: pending_approval
+                status: pending_approval
+                on_behalf_of: u_4821
+                session: null
+                decision: {outcome: require_approval, code: approval_required, source: rule, rule_id: writes-need-approval, reason: Writes wait for a human., message: "Waiting for approval under policy \"writes-need-approval\": Writes wait for a human.", policy: pol_01k6r2m8q0s2v4x6z8b0d2f4h6, policy_version: pv_01k6r2m9a1c3e5g7j9m1q3s5v7, shadow: null}
+                policy: {id: pol_01k6r2m8q0s2v4x6z8b0d2f4h6, version_id: pv_01k6r2m9a1c3e5g7j9m1q3s5v7, mode: enforce, decision: require_approval, rule_id: writes-need-approval}
+                approval: {id: apr_01k6w6c5f7h9k1n3q5s7v9x1z3, status: pending, expires_at: "2026-10-05T04:40:31.210Z"}
+                execution: null
+                witness: null
+                cost: null
+                request_digest: sha256:f7ee87ae04b701c55919513f07a30d1c1d738b0373f17df44ed99607f3580749
+                result_digest: null
+                payload_pruned_at: null
+                deed: null
+                next_action:
+                  type: await_approval
+                  approval: apr_01k6w6c5f7h9k1n3q5s7v9x1z3
+                  expires_at: "2026-10-05T04:40:31.210Z"
+                  poll_url: /v1/actions/act_01k6w6c4e6g8j0m2p4r6t8w0y2?wait=25
+        "400":
+          description: >-
+            `validation_failed`: a malformed request, not recorded. `param` names the field (`tool`,
+            `args`, `mode`, `wait`, `connector_type`, `tool_digest`, `context.transport`,
+            `context.client`).
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+              example:
+                error:
+                  type: invalid_request_error
+                  code: validation_failed
+                  message: args is 312 KiB; the limit is 256 KiB. Send a reference to the data instead of the data itself.
+                  param: args
+                  request_id: req_01k6w4a3d5f7h9k1n3q5s7v9x1
+                  doc_url: https://docs.deedglass.com/errors/validation_failed
+        "401":
+          description: The API key is missing, not valid, revoked or expired. Nothing is recorded.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "403":
+          description: >-
+            Refused. `policy_denied` and `policy_unavailable` (`policy_error`), and
+            `agent_stopped`, `agent_suspended` and `org_stopped` (`permission_error`) are recorded
+            and sealed, and carry the action in `error.action`. `intent_required`,
+            `intent_invalid` and `intent_replay` (`permission_error`) and `insufficient_scope` are
+            identity failures: nothing is recorded and there is no `error.action`.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+              examples:
+                policy_denied:
+                  summary: A rule denied it; the refusal is sealed
+                  value:
+                    error:
+                      type: policy_error
+                      code: policy_denied
+                      message: "Blocked by policy \"no-bulk-writes\": writes over 100 rows need a person, not an agent."
+                      param: null
+                      request_id: req_01k6w4a3d5f7h9k1n3q5s7v9x1
+                      doc_url: https://docs.deedglass.com/errors/policy_denied
+                      action:
+                        object: action
+                        id: act_01k6w4a2c4e6g8j0m2p4r6t8v0
+                        created_at: "2026-10-05T04:14:52.630Z"
+                        livemode: false
+                        agent: {id: agt_01k633rrmh3bcz2p39gg4vp46q, name: support-bot}
+                        tool: fake.write
+                        connector: null
+                        mode: gateway
+                        state: sealed
+                        status: denied
+                        on_behalf_of: null
+                        session: null
+                        decision: {outcome: deny, code: policy_denied, source: rule, rule_id: no-bulk-writes, reason: "writes over 100 rows need a person, not an agent.", message: "Blocked by policy \"no-bulk-writes\": writes over 100 rows need a person, not an agent.", policy: pol_01k6r2m8q0s2v4x6z8b0d2f4h6, policy_version: pv_01k6r2m9a1c3e5g7j9m1q3s5v7, shadow: null}
+                        policy: {id: pol_01k6r2m8q0s2v4x6z8b0d2f4h6, version_id: pv_01k6r2m9a1c3e5g7j9m1q3s5v7, mode: enforce, decision: deny, rule_id: no-bulk-writes}
+                        approval: null
+                        execution: null
+                        witness: null
+                        cost: null
+                        request_digest: sha256:be1b8c0dafafa9da4de5a1acf33834b5d7306ea41eec46ea1f8befb7985332dc
+                        result_digest: null
+                        payload_pruned_at: null
+                        deed: deed_01k6w4a4e6g8j0m2p4r6t8w0y2
+                        next_action: null
+                agent_stopped:
+                  summary: The agent is stopped; its attempt is sealed
+                  value:
+                    error:
+                      type: permission_error
+                      code: agent_stopped
+                      message: Agent "support-bot" is stopped. Deedglass refuses its calls until an admin starts it in Console › Agents.
+                      param: null
+                      request_id: req_01k6w4a3d5f7h9k1n3q5s7v9x1
+                      doc_url: https://docs.deedglass.com/errors/agent_stopped
+                      action: {object: action, id: act_01k6w4a2c4e6g8j0m2p4r6t8v0, state: sealed, status: denied, deed: deed_01k6w4a4e6g8j0m2p4r6t8w0y2}
+                intent_required:
+                  summary: An MCP call for an agent that must sign; nothing is recorded
+                  value:
+                    error:
+                      type: permission_error
+                      code: intent_required
+                      message: Agent "support-bot" requires a signed intent for every call, and MCP clients can't sign intents yet. Call it through the SDK or the REST API, or an admin can set its intent mode to optional in Console › Agents.
+                      param: Deedglass-Intent
+                      request_id: req_01k6w4a3d5f7h9k1n3q5s7v9x1
+                      doc_url: https://docs.deedglass.com/errors/intent_required
+        "404":
+          description: >-
+            `tool_unknown`: no connector serves the tool (gateway mode), or the name isn't a tool
+            name (a look-alike, say). The attempt is recorded and sealed (`decision.source:
+            builtin`), and `error.action` carries it.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+              example:
+                error:
+                  type: invalid_request_error
+                  code: tool_unknown
+                  message: No tool named "fake.ecko". Tools look like "connector.tool", for example "fake.echo".
+                  param: null
+                  request_id: req_01k6w4a3d5f7h9k1n3q5s7v9x1
+                  doc_url: https://docs.deedglass.com/errors/tool_unknown
+                  action: {object: action, id: act_01k6w4a2c4e6g8j0m2p4r6t8v0, tool: fake.ecko, state: sealed, status: denied, deed: deed_01k6w4a4e6g8j0m2p4r6t8w0y2}
+        "409":
+          description: >-
+            `idempotency_key_in_use`, rarely: two requests with the same key raced, and the other
+            one's action can't be read yet. Retry in a moment with the same key.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "422":
+          description: >-
+            `idempotency_conflict`: this agent used the Idempotency-Key in the last 24 hours with a
+            different request (another tool, other arguments, another on-behalf-of or session).
+            Also `validation_failed` for a malformed `Deedglass-On-Behalf-Of` or
+            `Deedglass-Session` header.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+              example:
+                error:
+                  type: invalid_request_error
+                  code: idempotency_conflict
+                  message: This Idempotency-Key was used with a different request in the last 24 hours. Use a new key for a new request.
+                  param: Idempotency-Key
+                  request_id: req_01k6w4a3d5f7h9k1n3q5s7v9x1
+                  doc_url: https://docs.deedglass.com/errors/idempotency_conflict
+        "429":
+          description: >-
+            `budget_exceeded`: a budget refused it. The refusal is recorded and sealed, and
+            `error.action` carries it. `Retry-After` says when the budget's window resets.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+            Retry-After:
+              description: Seconds until the budget's window resets, at least 1.
+              schema:
+                type: integer
+                minimum: 1
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+              example:
+                error:
+                  type: rate_limit_error
+                  code: budget_exceeded
+                  message: "Budget \"agent-rate\" reached: 60 of 60 calls this minute. Try again in 14 s."
+                  param: null
+                  request_id: req_01k6w4a3d5f7h9k1n3q5s7v9x1
+                  doc_url: https://docs.deedglass.com/errors/budget_exceeded
+                  action: {object: action, id: act_01k6w4a2c4e6g8j0m2p4r6t8v0, state: sealed, status: denied, deed: deed_01k6w4a4e6g8j0m2p4r6t8w0y2}
+        default:
+          $ref: "#/components/responses/Error"
   /v1/actions/{id}:
     get:
       operationId: getAction
@@ -242,7 +628,13 @@ paths:
         The action plus its payloads (`request`, `result`, `witness.detail`; `null` once retention
         removed them, see `payload_pruned_at`), up to 200 events in order, and the deeds about it
         (the action deed and any amendments). An id from another org is 404 `not_found`, exactly
-        like an id that doesn't exist. Requires `actions:read`.
+        like an id that doesn't exist. Requires `actions:read`. With `?wait=` (0 to 25 seconds)
+        it long-polls: it answers when the action is settled (sealed, or waiting for a person),
+        when its state changes, or when the wait ends. An action already `pending_approval` when
+        the wait starts waits for its next change, which is how `next_action.poll_url` waits for a
+        person's decision. For an agent key a Stop ends the wait at once with the stop error, and
+        each agent may hold 20 open waits per instance (the 21st is 429 `rate_limited`, with
+        `Retry-After: 1`).
       tags: [Ledger]
       security: [{bearerAuth: []}, {sessionCookie: []}]
       x-deedglass-auth: session_or_key
@@ -250,6 +642,19 @@ paths:
       parameters:
         - $ref: "#/components/parameters/DeedglassVersion"
         - {name: id, in: path, required: true, description: The action id (`act_…`)., schema: {type: string}}
+        - {name: wait, in: query, required: false, description: 'Seconds to long-poll, 0 to 25, sent once. `0` (the default) answers at once.', schema: {type: number, minimum: 0, maximum: 25}}
+        - name: "expand[]"
+          in: query
+          required: false
+          description: >-
+            `request`, `result` or `events`, repeatable. Accepted for the SDKs; this response
+            always carries all three. Any other value, or any other query parameter, is 400
+            `validation_failed`.
+          schema:
+            type: array
+            items: {type: string, enum: [request, result, events]}
+          style: form
+          explode: true
       responses:
         "200":
           description: The action.
@@ -262,6 +667,155 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ActionDetail"
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/actions/{id}/cancel:
+    post:
+      operationId: cancelAction
+      summary: Cancel an action waiting for approval
+      description: >-
+        Only from `pending_approval`: the action goes `cancelled`, then sealed, its approval is
+        cancelled and its budget reservation goes back. From any other state the answer is 409
+        `conflict`: "This action is already executing, so it can't be cancelled." while it runs,
+        and "This action has already finished, so there is nothing to cancel." once it ended. The
+        agent's own key (with `actions:execute`), an admin+ Console session (with the
+        `Deedglass-CSRF` header) or an org admin key. Another agent's action is 404 `not_found`,
+        exactly like an id that doesn't exist.
+      tags: [Gate]
+      security: [{bearerAuth: []}, {sessionCookie: []}]
+      x-deedglass-auth: session_or_key
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+        - $ref: "#/components/parameters/CSRFWithSession"
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - {name: id, in: path, required: true, description: The action id (`act_…`)., schema: {type: string}}
+      responses:
+        "200":
+          description: "The action, `status: cancelled`, sealed."
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+            Deedglass-Version:
+              $ref: "#/components/headers/DeedglassVersion"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Action"
+        "404":
+          description: '`not_found`: no such action in this org, or (for an agent key) another agent''s.'
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "409":
+          description: '`conflict`: the action isn''t waiting for approval.'
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+              example:
+                error:
+                  type: invalid_request_error
+                  code: conflict
+                  message: This action is already executing, so it can't be cancelled.
+                  param: null
+                  request_id: req_01k6w4a3d5f7h9k1n3q5s7v9x1
+                  doc_url: https://docs.deedglass.com/errors/conflict
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/actions/{id}/result:
+    post:
+      operationId: reportActionResult
+      summary: Report the result of a proxy-mode action
+      description: >-
+        Proxy mode only: after `POST /v1/actions` answered `status: authorized`, the edge runs the
+        tool and reports what it returned here, once, before `next_action.deadline`
+        (`gate.edge_result_timeout`, 10 minutes by default). Deedglass records the result as the
+        edge's word (witness method `edge_reported`, level L0), then seals. Send `result`, or
+        `result_digest` alone for a result too large to send; when both are sent the digest must
+        match (sha256 of the result's RFC 8785 form), else 400 `validation_failed`. Errors: 404
+        `not_found` (also for another agent's action, so ids can't be probed); 409 `conflict` for a
+        gateway action, an action not yet authorized, a second report ("A result was already
+        reported for this action."), or a report after the deadline ("This action was already
+        sealed as UNVERIFIABLE because its result arrived after the deadline."). The same agent's
+        key, with `actions:execute`.
+      tags: [Gate]
+      security: [{bearerAuth: []}]
+      x-deedglass-auth: agent_key
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - {name: id, in: path, required: true, description: The action id (`act_…`)., schema: {type: string}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EdgeResult"
+            example:
+              status: succeeded
+              started_at: "2026-10-05T04:20:11.020Z"
+              finished_at: "2026-10-05T04:20:11.061Z"
+              result: {content: [{type: text, text: Wrote 5 bytes to /tmp/deedglass-demo/allowed/notes.txt}], isError: false}
+              error_code: null
+              error_message: null
+      responses:
+        "200":
+          description: The action, witnessed and sealed.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+            Deedglass-Version:
+              $ref: "#/components/headers/DeedglassVersion"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Action"
+        "400":
+          description: >-
+            `validation_failed`: `status`, the times, `error_code`, a result over
+            `gate.max_result_bytes`, or a `result_digest` that doesn't match `result`.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "404":
+          description: '`not_found`: no such action in this org, or another agent''s.'
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "409":
+          description: '`conflict`: not a proxy action, not authorized yet, already reported, or past its deadline.'
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+              example:
+                error:
+                  type: invalid_request_error
+                  code: conflict
+                  message: This action was already sealed as UNVERIFIABLE because its result arrived after the deadline.
+                  param: null
+                  request_id: req_01k6w4a3d5f7h9k1n3q5s7v9x1
+                  doc_url: https://docs.deedglass.com/errors/conflict
         default:
           $ref: "#/components/responses/Error"
   /v1/deeds:
@@ -3760,6 +4314,12 @@ components:
               description: On `policy_invalid` only. Each problem with its line, code and hint.
               items:
                 $ref: "#/components/schemas/PolicyDiagnostic"
+            action:
+              $ref: "#/components/schemas/Action"
+              description: >-
+                On refusals of `POST /v1/actions` only (`policy_denied`, `policy_unavailable`,
+                `budget_exceeded`, `agent_stopped`, `agent_suspended`, `org_stopped`,
+                `tool_unknown`): the recorded, sealed action. Additive (S13).
       examples:
         - error:
             type: invalid_request_error
@@ -4057,12 +4617,17 @@ components:
       format: date-time
     Action:
       type: object
-      required: [object, id, created_at, agent, tool, connector, mode, state, on_behalf_of, session, policy, execution, witness, cost, request_digest, result_digest, payload_pruned_at, deed]
-      description: One agent action. Its sections mirror the deed's.
+      required: [object, id, created_at, agent, tool, connector, mode, state, on_behalf_of, session, policy, execution, witness, cost, request_digest, result_digest, payload_pruned_at, deed, livemode, status, decision, approval, next_action]
+      description: >-
+        One agent action. Its sections mirror the deed's. `status` is the one field an agent
+        needs; `state` is the exact lifecycle state (docs/GATE.md). The Gate's own responses
+        (`POST /v1/actions` and its result report) add `execution.result` and `witness.reasons`;
+        lists leave both out.
       properties:
         object: {type: string, const: action}
         id: {type: string, pattern: "^act_[0-7][0-9a-hjkmnp-tv-z]{25}$"}
         created_at: {type: string, format: date-time}
+        livemode: {type: boolean, description: '`true` for a `dg_live_` key, `false` for a `dg_test_` key. Recorded, not enforced: connectors have no test mode in v1.'}
         agent:
           type: object
           required: [id, name]
@@ -4075,8 +4640,20 @@ components:
         state:
           type: string
           enum: [received, authenticated, evaluated, denied, pending_approval, executing, executed, failed, witnessing, verified, mismatch, unverifiable, sealed, expired, cancelled]
+        status:
+          type: string
+          enum: [processing, authorized, pending_approval, denied, executed, failed, expired, cancelled]
+          description: >-
+            `executed`: the tool ran and the action is sealed, whatever the verdict. `failed`: the
+            tool certainly didn't apply the call. `authorized`: proxy mode, run the tool at the
+            edge now. `processing`: still executing or witnessing. `pending_approval`: waiting for
+            a person. `denied`: a policy, a budget or Stop refused it, and nothing ran. `expired`
+            and `cancelled`: it waited for approval and never ran. A sealed action keeps the
+            status of the state it was sealed from.
         on_behalf_of: {type: [string, "null"]}
         session: {type: [string, "null"]}
+        decision:
+          $ref: "#/components/schemas/ActionDecision"
         policy:
           type: object
           required: [id, version_id, mode, decision, rule_id]
@@ -4086,6 +4663,8 @@ components:
             mode: {type: string, enum: [enforce, shadow]}
             decision: {type: [string, "null"], enum: [allow, deny, require_approval, null]}
             rule_id: {type: [string, "null"]}
+        approval:
+          $ref: "#/components/schemas/ActionApproval"
         execution:
           type: [object, "null"]
           required: [status, started_at, finished_at, latency_ms, error_code]
@@ -4095,13 +4674,25 @@ components:
             finished_at: {$ref: "#/components/schemas/NullableTime"}
             latency_ms: {type: [integer, "null"], minimum: 0}
             error_code: {type: [string, "null"]}
+            error_message: {type: [string, "null"], maxLength: 1024, description: 'A short, redacted message from the tool or the Gate (at most 1 KiB).'}
+            result:
+              description: >-
+                The tool's result. Only on the Gate's own responses (`POST /v1/actions` and
+                `POST /v1/actions/{id}/result`); never on lists. `GET /v1/actions/{id}` has it as
+                the top-level `result`.
         witness:
           type: [object, "null"]
           required: [level, verdict, method]
           properties:
             level: {type: string, enum: [L0, L1, L2]}
             verdict: {type: string, enum: [VERIFIED, MISMATCH, UNVERIFIABLE]}
-            method: {type: [string, "null"]}
+            method: {type: [string, "null"], description: '`reported` (L0: the tool reported success), `edge_reported` (L0, proxy mode: the edge reported success), or a later witness''s method.'}
+            reasons:
+              type: array
+              items: {type: string}
+              description: >-
+                Short codes (`outcome_unknown`, `timeout`, `edge_lost`, `witness_gave_up`, …), never
+                payloads. On the Gate's own responses and `GET /v1/actions/{id}`; left out of lists.
         cost:
           type: [object, "null"]
           required: [amount, currency]
@@ -4112,25 +4703,164 @@ components:
         result_digest: {type: [string, "null"]}
         payload_pruned_at: {$ref: "#/components/schemas/NullableTime"}
         deed: {type: [string, "null"]}
+        next_action:
+          $ref: "#/components/schemas/NextAction"
       examples:
         - object: action
           id: act_01j9zt3a5c7e9g1j3m5p7r9t1v
           created_at: "2026-10-02T10:14:03.401Z"
+          livemode: true
           agent: {id: agt_01j9z9b1d3f5h7k9m1p3r5t7v9, name: support-bot}
           tool: postgres.execute
           connector: null
           mode: gateway
           state: sealed
+          status: executed
           on_behalf_of: u_4821
           session: chat_77
+          decision: {outcome: allow, code: null, source: rule, rule_id: allow-order-updates, reason: Order updates are allowed., message: null, policy: null, policy_version: null, shadow: null}
           policy: {id: null, version_id: null, mode: enforce, decision: allow, rule_id: allow-order-updates}
-          execution: {status: succeeded, started_at: "2026-10-02T10:14:03.455Z", finished_at: "2026-10-02T10:14:03.496Z", latency_ms: 41, error_code: null}
+          approval: null
+          execution: {status: succeeded, started_at: "2026-10-02T10:14:03.455Z", finished_at: "2026-10-02T10:14:03.496Z", latency_ms: 41, error_code: null, error_message: null}
           witness: {level: L2, verdict: MISMATCH, method: postgres.pgoutput}
           cost: null
           request_digest: sha256:9c1e5b7d0a2f4c6e8b0d2f4a6c8e0b2d4f6a8c0e2b4d6f8a0c2e4b6d8f0a2c4e
           result_digest: null
           payload_pruned_at: null
           deed: deed_01j9zt3q5s7v9w1y3a5c7e9g1j
+          next_action: null
+    ActionDecision:
+      type: [object, "null"]
+      required: [outcome, code, source, rule_id, reason, message, policy, policy_version, shadow]
+      description: >-
+        The policy decision as an agent reads it: S11's decision, its source, its message verbatim,
+        the policy version that made it (pinned: a later activation doesn't change it), and the
+        shadow decision next to it. `null` until the action is evaluated.
+      properties:
+        outcome: {type: string, enum: [allow, deny, require_approval]}
+        code: {type: [string, "null"], description: 'The refusal code (`policy_denied`, `budget_exceeded`, `agent_stopped`, `tool_unknown`, …), `approval_required`, or null for an allow.'}
+        source: {type: [string, "null"], enum: [stop, budget, rule, default, builtin, null], description: '`builtin` is the Gate''s own decision, such as `tool_unknown`.'}
+        rule_id: {type: [string, "null"]}
+        reason: {type: [string, "null"]}
+        message: {type: [string, "null"], description: The sentence the agent sees, verbatim. Null for an allow.}
+        policy: {type: [string, "null"], description: The policy id (`pol_…`).}
+        policy_version: {type: [string, "null"], description: The policy version id (`pv_…`).}
+        shadow:
+          type: [object, "null"]
+          description: What the shadow policy would have decided. Recorded, never enforced.
+          required: [outcome, rule_id, policy_version]
+          properties:
+            outcome: {type: string, enum: [allow, deny, require_approval]}
+            rule_id: {type: [string, "null"]}
+            policy_version: {type: [string, "null"]}
+    ActionApproval:
+      type: [object, "null"]
+      required: [id, status, expires_at]
+      description: The approval the action waits for, or waited for. `null` when no rule asked for one.
+      properties:
+        id: {type: string, description: The approval id (`apr_…`).}
+        status: {type: string, enum: [pending, approved, denied, expired, cancelled]}
+        expires_at: {type: string, format: date-time}
+    NextAction:
+      type: [object, "null"]
+      required: [type]
+      description: >-
+        What the caller does next. `await_approval`: wait for a person (`poll_url` long-polls the
+        action). `execute_at_edge`: proxy mode, run the tool at the edge and report the result to
+        `report_url` before `deadline`. `null` otherwise.
+      properties:
+        type: {type: string, enum: [await_approval, execute_at_edge]}
+        approval: {type: string, description: '`await_approval` only: the approval id.'}
+        expires_at: {type: string, format: date-time, description: '`await_approval` only.'}
+        poll_url: {type: string, description: '`await_approval` only: `/v1/actions/{id}?wait=25`.'}
+        report_url: {type: string, description: '`execute_at_edge` only: `/v1/actions/{id}/result`.'}
+        deadline: {type: string, format: date-time, description: '`execute_at_edge` only: after it, the action is sealed UNVERIFIABLE (`edge_lost`).'}
+    ActionRequest:
+      type: object
+      additionalProperties: false
+      required: [tool, args]
+      description: The body of `POST /v1/actions`.
+      properties:
+        tool:
+          type: string
+          minLength: 1
+          maxLength: 200
+          description: >-
+            `<connector>.<tool>`, split at the first dot. The connector is `^[a-z][a-z0-9-]{1,31}$`.
+            The tool part is `^[a-z][a-z0-9_]{0,63}$` for native connectors, and the MCP charset
+            `^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$` in proxy mode. Empty, over 200 bytes or not UTF-8
+            is 400 `validation_failed`; any other name that isn't a tool, or that no connector
+            serves in gateway mode, is recorded, sealed and refused with 404 `tool_unknown`.
+        args:
+          type: object
+          description: >-
+            The tool's arguments, a JSON object (`{}` for none): at most `gate.max_args_bytes`
+            (256 KiB), nested at most 32 levels, and no integer beyond ±9007199254740991, which RFC 8785
+            would round (send it as a string). Floats are fine.
+        mode:
+          type: string
+          enum: [gateway, proxy]
+          default: gateway
+          description: '`gateway`: Deedglass runs the tool through a connector. `proxy`: the edge runs it and reports the result.'
+        wait:
+          type: number
+          minimum: 0
+          maximum: 25
+          description: >-
+            Seconds to wait for a gateway action to finish before answering 202 `processing`. The
+            default is `gate.wait_timeout` (10 s). `0` answers at once.
+        context:
+          type: object
+          additionalProperties: false
+          description: Who sent the action, as the client says. Never part of any digest; at most 4 KiB.
+          properties:
+            client:
+              type: object
+              additionalProperties: false
+              properties:
+                name: {type: string, maxLength: 64}
+                version: {type: string, maxLength: 64}
+            transport:
+              type: string
+              pattern: "^[a-z][a-z0-9_]{0,31}$"
+              description: '`rest`, `sdk`, `mcp_stdio` or `mcp_http`. A call through `mcp_stdio` or `mcp_http` for an agent whose intent mode is `required` is refused with `intent_required`.'
+        connector_type:
+          type: string
+          description: >-
+            Proxy mode only: the edge's connector type (default `mcp`). `postgres` turns on the SQL
+            facts for a string `args.sql`. In gateway mode it is 400 `validation_failed`.
+          enum: [postgres, rest, mcp, mcp_http, sdk, github, slack, stripe, gmail, notion, fake]
+        tool_digest:
+          type: string
+          pattern: "^sha256:[0-9a-f]{64}$"
+          description: The digest of the tool's definition, sent by MCP edges. Part of `request_digest`.
+    EdgeResult:
+      type: object
+      additionalProperties: false
+      required: [status, started_at, finished_at]
+      description: >-
+        The body of `POST /v1/actions/{id}/result`: what the tool returned at the edge. Send
+        `result`, or `result_digest` alone; both must agree when both are sent.
+      properties:
+        status:
+          type: string
+          enum: [succeeded, failed, unknown]
+          description: '`failed` means the tool certainly didn''t apply the call; `unknown` means the edge can''t tell.'
+        started_at: {type: string, format: date-time}
+        finished_at: {type: string, format: date-time, description: Not before `started_at`.}
+        result:
+          description: The tool's result, any JSON, at most `gate.max_result_bytes` (256 KiB).
+        result_digest:
+          type: string
+          pattern: "^sha256:[0-9a-f]{64}$"
+          description: sha256 of the result's RFC 8785 form. Required when `result` is left out.
+        error_code:
+          type: [string, "null"]
+          pattern: "^[a-z][a-z0-9_]{0,63}$"
+          description: A short snake_case code, such as `tool_error`.
+        error_message:
+          type: [string, "null"]
+          description: A short message. It is redacted and cut to 1 KiB before it is stored.
     ActionList:
       type: object
       required: [object, data, has_more, next_cursor]
@@ -4164,8 +4894,12 @@ components:
       properties:
         witness:
           type: [object, "null"]
-          required: [level, verdict, method, detail]
+          required: [level, verdict, method, reasons, detail]
           properties:
+            reasons:
+              type: array
+              items: {type: string}
+              description: Short codes such as `outcome_unknown`, `timeout` or `edge_lost`; an empty list when there are none.
             detail:
               description: The stored expected-vs-observed diff, or null after pruning.
         request:
@@ -4195,8 +4929,7 @@ components:
               seq: {type: integer, minimum: 1}
               issued_at: {type: string, format: date-time}
         approval:
-          type: "null"
-          description: The approval (S22); null until approvals ship.
+          $ref: "#/components/schemas/ActionApproval"
     DeedList:
       type: object
       required: [object, data, has_more, next_cursor]

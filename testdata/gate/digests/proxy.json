@@ -1,0 +1,10 @@
+{
+  "tool": "scratch.readTextFile",
+  "args": {
+    "path": "/tmp/x"
+  },
+  "mode": "proxy",
+  "tool_digest": "sha256:abababababababababababababababababababababababababababababababab",
+  "request_digest": "sha256:441f0e5fb84188a1151b5e15c62870df43ca8ca6165f75e0ef81a26dc7560443",
+  "fingerprint": "sha256:c63852bb6aa60f5be3a3fb7c6bcd9f9341bad159b30dc8b3c5eaf3ab10cfd786"
+}

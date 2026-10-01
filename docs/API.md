@@ -78,9 +78,11 @@ Every error has the same body:
 ```
 
 `type` is one of six: `invalid_request_error`, `authentication_error`, `permission_error`,
-`policy_error`, `rate_limit_error` and `api_error`. `code` is one of 33 codes; branch on it, not
+`policy_error`, `rate_limit_error` and `api_error`. `code` is one of 41 codes; branch on it, not
 on `message`. `param` is always present, and `null` when no single field is at fault. Every code
-has a section in [Errors](api/errors.md), which is where `doc_url` points.
+has a section in [Errors](api/errors.md), which is where `doc_url` points. Two codes add a field:
+`policy_invalid` carries `diagnostics`, and a refusal of `POST /v1/actions` carries the sealed
+`action` ([Actions and the Gate](#actions-and-the-gate-s13)).
 
 Unknown paths and wrong methods get the same envelope: 404 `not_found` (with a suggestion when a
 path is two edits or fewer from a fixed endpoint path) and 405 `method_not_allowed` (with an `Allow`
@@ -199,7 +201,7 @@ the filters it was issued with ([LEDGER.md](LEDGER.md) §3).
 | Route | Scope | Returns |
 |---|---|---|
 | `GET /v1/actions` | `actions:read` | a list of `action` objects, newest first, with filters |
-| `GET /v1/actions/{id}` | `actions:read` | the action with `request`, `result`, `witness.detail`, `events`, `deeds`, `approval` |
+| `GET /v1/actions/{id}` | `actions:read` | the action with `request`, `result`, `witness.detail`, `events`, `deeds`, `approval`; `?wait=` long-polls (S13) |
 | `GET /v1/deeds` | `deeds:read` | a list of deed envelopes by seq |
 | `GET /v1/deeds/{id}` | `deeds:read` | the stored canonical bytes; `ETag` = `body_hash`; `Accept: application/cose` for COSE_Sign1 |
 | `GET /v1/deeds/export` | `deeds:read` | a streamed export bundle (`application/gzip`) |
@@ -219,6 +221,224 @@ curl -s -b cookies.txt 'http://127.0.0.1:8080/v1/actions?verdict=FAILED'
   "message": "verdict must be VERIFIED, MISMATCH or UNVERIFIABLE. You sent \"FAILED\".",
   "param": "verdict", "request_id": "req_01j9zv…", "doc_url": "https://docs.deedglass.com/errors/validation_failed" } }
 ```
+
+## Actions and the Gate (S13)
+
+Every tool call an agent makes goes through `POST /v1/actions`, and every action the Gate records
+ends as a sealed deed. How the Gate works inside is in [GATE.md](GATE.md); this section is the API.
+
+| Route | Who | Returns |
+|---|---|---|
+| `POST /v1/actions` | an agent key with `actions:execute` | the `action`; a refusal is an error envelope with the sealed `action` in it |
+| `GET /v1/actions/{id}?wait=0..25` | `actions:read` (the agent's own actions), or a Console session | the action, after a long poll |
+| `POST /v1/actions/{id}/cancel` | the agent's own key, an admin+ Console session or an org admin key | the action, `cancelled` and sealed; only from `pending_approval` |
+| `POST /v1/actions/{id}/result` | the same agent's key | the action, witnessed and sealed; proxy mode only, once |
+
+### The action object
+
+The Gate answers with the same `action` object as the Ledger, so an agent, the CLI and the Console
+read one shape. The fields an agent needs first:
+
+| Field | What it says |
+|---|---|
+| `status` | What happened, in one word (the table below). Branch on it. |
+| `state` | The exact lifecycle state ([GATE.md](GATE.md), the state machine). |
+| `livemode` | `true` for a `dg_live_` key, `false` for a `dg_test_` key. Recorded, not enforced. |
+| `decision` | The policy's answer: `outcome`, `code`, `source` (`rule`, `default`, `budget`, `stop` or `builtin`), `rule_id`, `reason`, the `message` the agent sees (verbatim), the `policy` and `policy_version` that decided, and the `shadow` decision when a shadow policy is active. |
+| `approval` | The approval it waits for, or waited for: `id`, `status`, `expires_at`. `null` when no rule asked for one. |
+| `execution` | `status` (`succeeded`, `failed` or `unknown`), the times, `error_code`, `error_message`, and, on the Gate's own responses only, `result`. |
+| `witness` | `level`, `verdict`, `method` and `reasons`. In v1 the level is L0 and the method is `reported` (the tool reported success) or `edge_reported` (the edge did, in proxy mode). L0 is not an independent check. |
+| `next_action` | What to do next: `await_approval` (with `poll_url`) or `execute_at_edge` (with `report_url` and `deadline`). `null` otherwise. |
+| `deed` | The deed's id once the action is sealed. |
+
+### The status field
+
+A client that only checks for 2xx never mistakes "not run" for "done": every refusal is 4xx.
+
+| `status` | HTTP on `POST /v1/actions` | Meaning |
+|---|---|---|
+| `executed` | 200 | The tool ran and the action is sealed, whatever the verdict. |
+| `processing` | 202 | Still executing or witnessing when `wait` ended. Poll `GET /v1/actions/{id}?wait=25`. |
+| `authorized` | 200 | Proxy mode: run the tool at the edge now, then report the result. |
+| `pending_approval` | 202 | Waiting for a person. `next_action.poll_url` waits for the decision. |
+| `denied` | 403 or 429, with `error.action` | A policy, a budget or Stop refused it. Nothing ran. The refusal is sealed. |
+| `failed` | 200 | The tool certainly didn't apply the call (it refused it, or it was never sent). |
+| `expired` | (later) | No one decided before the approval expired. |
+| `cancelled` | (later) | Cancelled while it waited for approval. |
+
+The refusal codes: `policy_denied` and `policy_unavailable` (403 `policy_error`), `budget_exceeded`
+(429 `rate_limit_error`, with `Retry-After`), `agent_stopped`, `agent_suspended` and `org_stopped`
+(403 `permission_error`), and `tool_unknown` (404). A malformed request is 400
+`validation_failed`, and an identity failure (`intent_required`, `intent_invalid`,
+`intent_replay`) is 403: neither creates an action. Every code is in [Errors](api/errors.md).
+
+### An allowed action
+
+```sh
+curl -s -X POST http://127.0.0.1:8080/v1/actions \
+  -H "Authorization: Bearer $DEEDGLASS_API_KEY" \
+  -H 'Idempotency-Key: 7d1e0b8c-44a2-4c1e-9a53-5b0c6d2e8f4a' \
+  -H 'Content-Type: application/json' \
+  -d '{"tool":"fake.echo","args":{"message":"hello"},"wait":10}'
+```
+```json
+{
+  "object": "action",
+  "id": "act_01k6w3p8r2t4v6x8z0b2d4f6h8",
+  "livemode": false,
+  "tool": "fake.echo",
+  "mode": "gateway",
+  "state": "sealed",
+  "status": "executed",
+  "decision": { "outcome": "allow", "code": null, "source": "rule", "rule_id": "allow-fake", "message": null, "…": "…" },
+  "approval": null,
+  "execution": { "status": "succeeded", "latency_ms": 1, "error_code": null, "result": { "echo": { "message": "hello" } }, "…": "…" },
+  "witness": { "level": "L0", "verdict": "VERIFIED", "method": "reported", "reasons": [] },
+  "request_digest": "sha256:c2cb9a8c51c029f97049fed02f985cc49cee22836423d2c9a8e1b74e333a3c4c",
+  "deed": "deed_01k6w3p9a1c3e5g7j9m1q3s5v7",
+  "next_action": null,
+  "…": "…"
+}
+```
+
+`wait` (0 to 25 seconds, default `gate.wait_timeout`, 10 s) is how long the request waits for the
+tool. If the tool is still running when it ends, the answer is 202 `processing`; the action keeps
+running, and it is recorded and sealed whether or not you are still waiting.
+
+### A denied action
+
+```sh
+curl -s -X POST http://127.0.0.1:8080/v1/actions \
+  -H "Authorization: Bearer $DEEDGLASS_API_KEY" \
+  -H 'Content-Type: application/json' \
+  -d '{"tool":"fake.write","args":{"rows":301,"table":"orders"}}'
+```
+```json
+{
+  "error": {
+    "type": "policy_error",
+    "code": "policy_denied",
+    "message": "Blocked by policy \"no-bulk-writes\": writes over 100 rows need a person, not an agent.",
+    "param": null,
+    "request_id": "req_01k6w4a3d5f7h9k1n3q5s7v9x1",
+    "doc_url": "https://docs.deedglass.com/errors/policy_denied",
+    "action": {
+      "object": "action",
+      "id": "act_01k6w4a2c4e6g8j0m2p4r6t8v0",
+      "state": "sealed",
+      "status": "denied",
+      "decision": { "outcome": "deny", "code": "policy_denied", "source": "rule", "rule_id": "no-bulk-writes", "…": "…" },
+      "deed": "deed_01k6w4a4e6g8j0m2p4r6t8w0y2",
+      "…": "…"
+    }
+  }
+}
+```
+
+The message is the decision's own sentence, verbatim. `error.action` is the refusal as the Ledger
+recorded it, so the agent can name the deed.
+
+### Proxy mode: authorize, then report
+
+In proxy mode the edge (S14's MCP wrapper, or your own code) runs the tool and Deedglass records
+what it reports. First ask:
+
+```sh
+curl -s -X POST http://127.0.0.1:8080/v1/actions \
+  -H "Authorization: Bearer $DEEDGLASS_API_KEY" \
+  -H 'Idempotency-Key: 2f7d1e0b-8c44-4a2c-9a53-5b0c6d2e8f4a' \
+  -H 'Content-Type: application/json' \
+  -d '{"tool":"filesystem.write_file","mode":"proxy","connector_type":"mcp",
+       "args":{"path":"/tmp/deedglass-demo/allowed/notes.txt","content":"hello"}}'
+```
+```json
+{
+  "object": "action",
+  "id": "act_01k6w5b3d5f7h9k1n3q5s7w9y1",
+  "mode": "proxy",
+  "state": "executing",
+  "status": "authorized",
+  "next_action": {
+    "type": "execute_at_edge",
+    "report_url": "/v1/actions/act_01k6w5b3d5f7h9k1n3q5s7w9y1/result",
+    "deadline": "2026-10-05T04:30:10.903Z"
+  },
+  "…": "…"
+}
+```
+
+Then run the tool, and report what it returned, once, before the deadline
+(`gate.edge_result_timeout`, 10 minutes by default):
+
+```sh
+curl -s -X POST http://127.0.0.1:8080/v1/actions/act_01k6w5b3d5f7h9k1n3q5s7w9y1/result \
+  -H "Authorization: Bearer $DEEDGLASS_API_KEY" \
+  -H 'Content-Type: application/json' \
+  -d '{"status":"succeeded","started_at":"2026-10-05T04:20:11.020Z","finished_at":"2026-10-05T04:20:11.061Z",
+       "result":{"content":[{"type":"text","text":"Wrote 5 bytes to /tmp/deedglass-demo/allowed/notes.txt"}],"isError":false}}'
+```
+
+The answer is the sealed action with `witness.method: "edge_reported"`: the deed records what the
+edge said, not an independent check. Send `result_digest` instead of `result` when the result is
+too large to send. A second report, or one after the deadline, is 409 `conflict`; an action whose
+edge never reported is sealed UNVERIFIABLE with the reason `edge_lost`.
+
+### Idempotent replay
+
+`POST /v1/actions` owns its idempotency ([GATE.md](GATE.md), Idempotency). Send the same request
+with the same key again, and you get the original action back; the tool ran once.
+
+```sh
+curl -si -X POST http://127.0.0.1:8080/v1/actions \
+  -H "Authorization: Bearer $DEEDGLASS_API_KEY" \
+  -H 'Idempotency-Key: 7d1e0b8c-44a2-4c1e-9a53-5b0c6d2e8f4a' \
+  -H 'Content-Type: application/json' \
+  -d '{"tool":"fake.echo","args":{"message":"hello"},"wait":10}'
+```
+```
+HTTP/1.1 200 OK
+Deedglass-Idempotent-Replayed: true
+…
+```
+
+- The key names one action of this agent for 24 hours. Another agent's key is independent.
+- The comparison is the request digest (the tool, the arguments in their RFC 8785 form, the mode
+  and the tool digest) plus `Deedglass-On-Behalf-Of` and `Deedglass-Session`. Spacing and member
+  order don't matter; a new signed intent doesn't either.
+- A duplicate that arrives while the original is still running waits for it (up to its own
+  `wait`) and answers with the same action.
+- The same key with a different request is 422 `idempotency_conflict`.
+- A replayed refusal answers with the same status and message; a budget's `Retry-After` counts
+  down to the same reset.
+
+### Long polls
+
+`GET /v1/actions/{id}?wait=25` answers when the action is settled (sealed, or waiting for a
+person), when its state changes, or after 25 seconds, whichever comes first. An action already
+`pending_approval` when the wait starts waits for its next change, so `next_action.poll_url` is
+how a client waits for a person's decision.
+
+```sh
+curl -s "http://127.0.0.1:8080/v1/actions/act_01k6w6c4e6g8j0m2p4r6t8w0y2?wait=25" \
+  -H "Authorization: Bearer $DEEDGLASS_API_KEY"
+```
+
+- `wait` is 0 to 25 seconds, sent once; `0` answers at once. `expand[]=request`, `result` or
+  `events` is accepted; the answer always carries all three.
+- For an agent key, a Stop ends the wait at once with `agent_stopped` (or `org_stopped`).
+- Each agent may hold 20 open waits; the 21st is 429 `rate_limited` with `Retry-After: 1`. The
+  count is kept per server instance.
+- If the wait ends while nothing changed, the answer is the action as it stands. Poll again.
+
+To cancel an action that is still waiting for a person:
+
+```sh
+curl -s -X POST http://127.0.0.1:8080/v1/actions/act_01k6w6c4e6g8j0m2p4r6t8w0y2/cancel \
+  -H "Authorization: Bearer $DEEDGLASS_API_KEY"
+```
+
+It answers with the action, `cancelled` and sealed. Once the action is executing, the answer is 409
+`conflict`: "This action is already executing, so it can't be cancelled."
 
 ## The policy routes (S12)
 
@@ -312,11 +532,11 @@ request's id ([Idempotent requests](#idempotent-requests)). Quote it to support;
 |---|---|
 | `Deedglass-Request-Id` | Every response. |
 | `Deedglass-Version` | Every response, errors included. |
-| `Deedglass-Idempotent-Replayed` | `true` on a replayed response. |
+| `Deedglass-Idempotent-Replayed` | `true` on a replayed response, `POST /v1/actions` included. |
 | `Content-Type` | `application/json; charset=utf-8` for JSON; `application/yaml` for the OpenAPI document. |
 | `Content-Length` | Every response the pipeline writes. |
 | `Allow` | 405 answers. |
-| `Retry-After` | 429 answers, and 409 `idempotency_key_in_use` (`1`). |
+| `Retry-After` | 429 answers (for `budget_exceeded`, the seconds until the budget resets), and 409 `idempotency_key_in_use` (`1`). |
 | `WWW-Authenticate` | 401 answers from endpoints that take API keys. |
 | `Cache-Control` | `no-store`, unless the endpoint sets its own (`public, max-age=300` for the OpenAPI document). |
 | Security headers | Every response; see below. |

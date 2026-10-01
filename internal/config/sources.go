@@ -151,9 +151,14 @@ func (l *loader) readYAML() {
 		l.problem(name, "must be a mapping of settings (key: value).", "See deedglass.example.yaml.")
 		return
 	}
+	secs := sections()
 	for i := 0; i+1 < len(root.Content); i += 2 {
 		k, v := root.Content[i], root.Content[i+1]
 		key := k.Value
+		if secs[key] {
+			l.readSection(name, key, v)
+			continue
+		}
 		if _, known := keyByName[envPrefix+strings.ToUpper(key)]; !known || key != strings.ToLower(key) {
 			next := "See deedglass.example.yaml for every key."
 			if s := suggest(key, yamlNames()); s != "" {

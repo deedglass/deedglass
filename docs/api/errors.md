@@ -25,6 +25,11 @@ Every error Deedglass returns has the same body. Only the status line and a few 
 - `request_id` is the same `req_…` id as the `Deedglass-Request-Id` response header. Quote it to
   support.
 - `doc_url` points to this page's section for the code.
+- `action` appears only when `POST /v1/actions` refuses an action it recorded (S13): the sealed
+  action, in the same shape as `GET /v1/actions` returns. The codes that carry it are
+  `policy_denied`, `policy_unavailable`, `budget_exceeded`, `agent_stopped`, `agent_suspended`,
+  `org_stopped` and `tool_unknown`. Like `diagnostics` on `policy_invalid`, it is an additive
+  field: clients that don't know it can ignore it.
 
 The body is JSON (`Content-Type: application/json; charset=utf-8`). It never contains your
 request body, header values, SQL, stack traces, file paths or internal host names. The details
@@ -124,6 +129,12 @@ have it, create a key in Console › Agents.
 `GET /v1/whoami` still answers and shows `"status": "suspended"`. The message never says why or
 by whom.
 
+**On `POST /v1/actions`** (S13) the attempt is still recorded: the action goes
+`evaluated → denied → sealed` with the stop decision (`decision.source: stop`), and the envelope
+carries the sealed action in `error.action`. The Ledger shows what a stopped agent tried to do. An
+action that waits for approval is checked again when someone approves it: if the agent or org is
+stopped by then, it ends `denied` the same way and never runs.
+
 **What to do.** An admin can resume the agent in Console › Agents, or with
 `deedglass agent resume <name>`. If you didn't expect the suspension, check the agent's
 `agent.suspended` deed first.
@@ -145,6 +156,12 @@ by whom.
 ([STOP.md](../STOP.md)). It takes precedence over `agent_suspended`. `GET /v1/whoami` still
 answers and shows `"status": "stopped"`. The message never includes the stop reason or who
 stopped the agent: the caller is the agent, and the reason may be sensitive.
+
+**On `POST /v1/actions`** (S13) the attempt is still recorded: the action goes
+`evaluated → denied → sealed` with the stop decision (`decision.source: stop`), and the envelope
+carries the sealed action in `error.action`. The Ledger shows what a stopped agent tried to do. An
+action that waits for approval is checked again when someone approves it: if the agent or org is
+stopped by then, it ends `denied` the same way and never runs.
 
 **What to do.** Find out why it was stopped: the reason is in the `agent.stopped` deed and in
 Console › Agents. An admin can start it again, with a reason, in Console › Agents or with
@@ -169,6 +186,12 @@ and `agent_suspended`. Org admin keys keep read-only access (`GET`) so incident 
 around; an admin-key request that changes state (`POST`, `PUT`, `PATCH`, `DELETE`) gets this code
 with the message "…so admin keys can only read until an owner starts them again…". `GET
 /v1/whoami` still answers and shows `"stopped": true`. Console sessions aren't affected.
+
+**On `POST /v1/actions`** (S13) the attempt is still recorded: the action goes
+`evaluated → denied → sealed` with the stop decision (`decision.source: stop`), and the envelope
+carries the sealed action in `error.action`. The Ledger shows what a stopped agent tried to do. An
+action that waits for approval is checked again when someone approves it: if the agent or org is
+stopped by then, it ends `denied` the same way and never runs.
 
 **What to do.** Ask an owner of the org. They can start the agents in Console › Settings; the
 server operator can run `deedglass org start-all --reason "…"`. Agents that were stopped one by one
@@ -215,7 +238,9 @@ Create one with deedglass org keys create on the server."
 **403 · policy_error**
 
 **When it happens.** A policy in your org denied the action (S11, S13). The message names the rule
-and gives its reason. On `POST /v1/actions` the envelope also carries the sealed `action`.
+and gives its reason; it is the decision's own sentence, verbatim. On `POST /v1/actions` the
+refusal is recorded and sealed before the answer, and the envelope carries the sealed action in
+`error.action` (`status: denied`, its `deed`, and the `decision` with the rule id). Nothing ran.
 
 **What to do.** Read the reason. Change the request so the rule allows it, or ask an admin to
 change the policy. Sending the same request again gets the same answer.
@@ -271,16 +296,23 @@ decision (S22).
 **429 · rate_limit_error**
 
 **When it happens.** The agent used its budget for the current period (S11, S13). The response
-carries `Retry-After` in seconds, and the message says when the period resets.
+carries `Retry-After` in seconds, and the message says when the period resets. On
+`POST /v1/actions` the message is the budget decision's own sentence, verbatim, and the refusal is
+recorded and sealed: the envelope carries the sealed action in `error.action`. A budget another
+request reserved first becomes a recorded `budget_exceeded` too. A replay of the same
+Idempotency-Key answers with the same refusal, and its `Retry-After` counts down to the same reset.
 
-**What to do.** Wait until the time in the message, or ask an admin to raise the budget.
+**What to do.** Wait until the time in the message, or ask an admin to raise the budget. A 429 is
+not a reason to retry at once: the next attempt is refused and recorded the same way until the
+window resets.
 
 ```json
 {
   "type": "rate_limit_error",
   "code": "budget_exceeded",
-  "message": "This agent has used its budget for the period. It resets at 2026-10-02T00:00:00.000Z, or an admin can raise it.",
-  "param": null
+  "message": "Budget \"agent-rate\" reached: 60 of 60 calls this minute. Try again in 14 s.",
+  "param": null,
+  "action": { "object": "action", "id": "act_01k6w4a2c4e6g8j0m2p4r6t8v0", "state": "sealed", "status": "denied", "deed": "deed_01k6w4a4e6g8j0m2p4r6t8w0y2", "…": "…" }
 }
 ```
 
@@ -297,6 +329,11 @@ agent can act only through the SDKs or the REST API. The full rules are in
 | Reason | Param | Message |
 |---|---|---|
 | `required` | `Deedglass-Intent` | `Agent "{agent}" requires a signed intent for every call. Send a Deedglass-Intent header; see docs.deedglass.com/intents.` |
+| `required_mcp` | `Deedglass-Intent` | `Agent "{agent}" requires a signed intent for every call, and MCP clients can't sign intents yet. Call it through the SDK or the REST API, or an admin can set its intent mode to optional in Console › Agents.` |
+
+`required_mcp` is the Gate's answer (S13) to a call that arrives through an MCP surface
+(`context.transport` is `mcp_stdio` or `mcp_http`) for an agent in `required` mode. Like every
+identity failure it creates no action: nothing is recorded.
 
 **What to do.** Sign each call with the agent's intent key (`pkg/deedglass` `IntentSigner`, or
 `deedglass dev sign-intent` to try it) and send the result in `Deedglass-Intent`. If the agent
@@ -395,17 +432,29 @@ replay attempt and check what sits between the agent and Deedglass.
 
 **404 · invalid_request_error**
 
-**When it happens.** No connector in your org provides the tool the request names (S14, S15).
+**When it happens.** `POST /v1/actions` names a tool no connector serves in gateway mode, or a name
+that isn't a tool name at all, such as a look-alike with a Cyrillic letter (S13). Tool names are
+`<connector>.<tool>`, split at the first dot. The attempt is recorded: the action goes
+`evaluated → denied → sealed` with the Gate's own decision (`decision.source: builtin`,
+`decision.code: tool_unknown`), and the envelope carries the sealed action in `error.action`.
+Probing is evidence too. A tool string that is empty, longer than 200 bytes or not UTF-8 is a
+malformed request instead (400 `validation_failed`, not recorded).
 
-**What to do.** Check the tool name (`GET /v1/tools` lists them), or add a connector in
-Console › Connectors.
+| Template | Param |
+|---|---|
+| `No tool named "{tool}". Tools look like "connector.tool", for example "fake.echo".` | `null` |
+
+**What to do.** Check the spelling of the tool, and that its connector is set up in
+Console › Connectors. Send the action again with the right name; the refused attempt stays in the
+Ledger.
 
 ```json
 {
   "type": "invalid_request_error",
   "code": "tool_unknown",
-  "message": "No connector provides \"stripe.refunds.create\". Check the name, or add a connector in Console › Connectors.",
-  "param": null
+  "message": "No tool named \"fake.ecko\". Tools look like \"connector.tool\", for example \"fake.echo\".",
+  "param": null,
+  "action": { "object": "action", "id": "act_01k6w4a2c4e6g8j0m2p4r6t8v0", "tool": "fake.ecko", "state": "sealed", "status": "denied", "…": "…" }
 }
 ```
 
@@ -473,7 +522,7 @@ with the same key replays this 504 for 24 h and doesn't run the work again.
 **429 · rate_limit_error**
 
 **When it happens.** You sent too many requests in a short time. The response carries
-`Retry-After` in whole seconds, at least 1. Two limits send it:
+`Retry-After` in whole seconds, at least 1. Three limits send it:
 
 - **Sign-in limits** (S07, [IDENTITY.md](../IDENTITY.md)): "Too many requests. Retry after 5 s."
 - **The failed-auth limiter for API keys** (S08), step 2 of the bearer check, before the key is
@@ -483,7 +532,11 @@ with the same key replays this 504 for 24 h and doesn't run the work again.
   don't. The message: "Too many requests with invalid API keys from this address. Try again in 4
   seconds."
 
-Both limits live in each server process, so behind N instances a client gets up to N times the
+- **Open long polls** (S13): each agent may hold 20 open `GET /v1/actions/{id}?wait=` requests
+  at once; the 21st gets `Retry-After: 1` and "This agent already has 20 open waits. Close one, or
+  poll without wait."
+
+These limits live in each server process, so behind N instances a client gets up to N times the
 budget.
 
 **What to do.** Wait the number of seconds in `Retry-After`, then retry. A 429 is never stored for
@@ -508,8 +561,16 @@ with a different request: another method, route, path or body. Bodies are compar
 byte, so the same JSON with different spacing or member order counts as different. `param` is
 `Idempotency-Key`.
 
+**On `POST /v1/actions`** the Gate compares keys itself (S13). A key names one action of one agent
+for 24 hours, and the comparison is the request digest (the tool, the arguments in their RFC 8785
+form, the mode and the tool digest) plus the `Deedglass-On-Behalf-Of` and `Deedglass-Session`
+headers. Spacing and member order don't matter there; another tool, other arguments, another
+on-behalf-of or another session do. A signed intent isn't compared, so a retry signed again still
+replays. The message: "This Idempotency-Key was used with a different request in the last 24
+hours. Use a new key for a new request."
+
 **What to do.** Use a new key for a new request. To retry the original request, send exactly the
-same bytes.
+same bytes (on `POST /v1/actions`, the same tool, arguments and headers).
 
 ```json
 {
@@ -544,6 +605,26 @@ be 1 to 256 characters: letters, digits and . _ ~ : @ / + = -. Use an opaque use
 (for `Deedglass-Session`: "… Use an opaque conversation or run id."), or "Send
 Deedglass-On-Behalf-Of once. It names one person or session per call." It is checked on every
 request an API key authenticates ([IDENTITY.md](../IDENTITY.md), On-behalf-of).
+
+**The Gate's checks** (S13). `POST /v1/actions` refuses a malformed request before anything is
+recorded:
+
+| Param | Message |
+|---|---|
+| `args` | `args is 312 KiB; the limit is 256 KiB. Send a reference to the data instead of the data itself.` |
+| `args` | `args is nested more than 32 levels deep. Flatten it, or send a reference to the data.` |
+| `args` | `args contains an integer larger than 9007199254740991, which JSON can't carry exactly. Send it as a string.` |
+| `args` | `args must be a JSON object. Send the tool's arguments as an object, {} when it takes none.` |
+| `tool` | `tool is empty. Name a tool as "connector.tool", for example "fake.echo".` |
+| `mode` | `mode must be gateway or proxy (got "{mode}"). Leave it out for gateway, where Deedglass runs the tool.` |
+| `wait` | `wait must be a number of seconds from 0 to 25.` |
+| `connector_type` | `connector_type is for proxy mode, where the edge runs the tool. In gateway mode Deedglass knows the connector; leave connector_type out.` |
+
+`POST /v1/actions/{id}/result` checks the edge's report the same way: `status` ("status must be
+succeeded, failed or unknown."), the times, `error_code`, and `result_digest`, which must match
+`result` ("result_digest doesn't match result. Send the digest of the exact result (sha256 of its
+RFC 8785 form), or leave it out."). `GET /v1/actions/{id}` takes only `wait` (0 to 25 seconds,
+sent once) and `expand[]`.
 
 **What to do.** Fix the field the message names, then retry.
 
@@ -584,9 +665,21 @@ For an object: "There's no agent with id agt_01j9zr3m5k8q2w7x4t6v0b1c9d."
 **409 · invalid_request_error**
 
 **When it happens.** The request conflicts with the object's current state: for example, it
-changes something another request changed first.
+changes something another request changed first. The Gate (S13) sends it for an action in the
+wrong state:
 
-**What to do.** Fetch the latest version of the object, then retry the change against it.
+| Route | Message |
+|---|---|
+| `POST /v1/actions/{id}/cancel`, while it runs | `This action is already executing, so it can't be cancelled.` |
+| `POST /v1/actions/{id}/cancel`, once it ended | `This action has already finished, so there is nothing to cancel.` |
+| `POST /v1/actions/{id}/result`, a second time | `A result was already reported for this action.` |
+| `POST /v1/actions/{id}/result`, after the deadline | `This action was already sealed as UNVERIFIABLE because its result arrived after the deadline.` |
+| `POST /v1/actions/{id}/result`, a gateway action | `This action runs in gateway mode, so Deedglass reported its result itself. Only proxy-mode actions take a result.` |
+| `POST /v1/actions/{id}/result`, not yet authorized | `This action hasn't been authorized to run yet, so it has no result to report. Wait for its approval: GET /v1/actions/{id}?wait=25.` |
+
+**What to do.** Fetch the latest version of the object, then retry the change against it. For an
+action, `GET /v1/actions/{id}` shows its `status`; a late result stays with the edge (S21's
+amendment deeds can attach it later).
 
 ```json
 {
@@ -761,6 +854,10 @@ value, such as a UUID, with each new request." `param` is `Idempotency-Key`.
 **When it happens.** An earlier request with the same Idempotency-Key is still running. The
 response carries `Retry-After: 1`. Nothing is stored for it.
 
+On `POST /v1/actions` the Gate waits for the original instead (up to the request's `wait`) and
+answers with the same action. It sends this code only in a rare race: two requests with the same
+key were admitted at the same moment, and the other one's action can't be read yet.
+
 **What to do.** Wait a second and retry with the same key. You get the first request's response
 once it finishes.
 
@@ -916,7 +1013,11 @@ only owner, or the only owner leaving.
 
 **When it happens.** Deedglass could not evaluate the policy for this action: no policy was loaded,
 the evaluator failed, or evaluation ran past its time limit (50 ms by default). The action did not
-run. It is always a deny, so a broken or slow policy never lets an action through (S11).
+run. It is always a deny, so a broken or slow policy never lets an action through (S11). On
+`POST /v1/actions` the refusal is recorded and sealed, and the envelope carries the sealed action
+in `error.action`. Every trip of the time limit also counts in
+`deedglass_policy_eval_time_limit_total` and is logged at warn level with the org and agent
+([OBSERVABILITY.md](../OBSERVABILITY.md)).
 
 **What to do.** An admin checks the active policy in Console › Policies. The action's trace names
 the rule that was being evaluated when the time ran out. Send the action again once the policy is

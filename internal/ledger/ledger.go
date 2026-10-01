@@ -7,6 +7,7 @@ import (
 
 	"github.com/deedglass/deedglass/internal/deed"
 	"github.com/deedglass/deedglass/internal/deed/archive"
+	"github.com/deedglass/deedglass/internal/gate/lifecycle"
 	"github.com/deedglass/deedglass/internal/store"
 )
 
@@ -15,11 +16,13 @@ const DefaultRetentionDays = 90
 
 // Errors the write and read paths return. HTTP handlers and the CLI map them to their own copy.
 var (
-	// ErrIllegalTransition: gate.CanTransition(from, to) is false. Nothing was written.
-	ErrIllegalTransition = errors.New("ledger: illegal transition")
+	// ErrIllegalTransition: gate.CanTransition(from, to) is false. Nothing was written. It is
+	// lifecycle.ErrIllegalTransition (gate.ErrIllegalTransition), so errors.Is works across packages.
+	ErrIllegalTransition = lifecycle.ErrIllegalTransition
 	// ErrStateConflict: the action is not in the expected state (another transaction moved it, or
 	// it doesn't exist in this org). Nothing was written.
-	ErrStateConflict = errors.New("ledger: the action is not in the expected state")
+	// It is lifecycle.ErrStateConflict (gate.ErrStateConflict).
+	ErrStateConflict = lifecycle.ErrStateConflict
 	// ErrNotSealable: SealAction was called for an action that is not in a final state.
 	ErrNotSealable = errors.New("ledger: the action is not in a final state")
 	// ErrNotFound: no such object in this org (an id from another org is not found too).

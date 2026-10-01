@@ -186,10 +186,10 @@ builds it. Hidden commands work but aren't in `deedglass help`.
 | `deedglass policy evaluate --policy <file> | --server [--policy <name> --version <n>] --tool <name> [--sql …] [--args <json>] [--input <file>] [--agent …] [--label k=v] [--user …] [--time …] [--tz …] [--usage k=v] [--explain] [--json]` | Policies | Evaluate one action against a policy | built |
 | `deedglass policy replay` | Policies | Replay past actions against a version | soon (S27) |
 | `deedglass policy diff` | Policies | Compare two policy versions | soon (S27) |
-| `deedglass act` | Actions | Send a test action through the Gate | soon (S13) |
+| `deedglass act <tool> [--args '{"k":"v"}'] [--mode gateway|proxy] [--wait 60s] [--idempotency-key K] [--json]` | Actions | Send a test action through the Gate | built |
 | `deedglass actions list [--agent agt_…] [--tool stripe.*] [--state …] [--decision …] [--verdict MISMATCH] [--level L2] [--since 1h] [--q text] [--limit 25] [--cursor …] [--json]` | Actions | List actions | built |
-| `deedglass actions show <act_…> [--json]` | Actions | Show one action and its events | built |
-| `deedglass actions cancel` | Actions | Cancel a pending action | soon (S13) |
+| `deedglass actions show <act_…> [--wait] [--json]` | Actions | Show one action and its events | built |
+| `deedglass actions cancel <act_…> [--json]` | Actions | Cancel a pending action | built |
 | `deedglass approve` | Actions | Approve a pending action | soon (S22) |
 | `deedglass deny` | Actions | Deny a pending action | soon (S22) |
 | `deedglass approvals list` | Actions | List approvals | soon (S22) |
@@ -203,7 +203,7 @@ builds it. Hidden commands work but aren't in `deedglass help`.
 | `deedglass verify <path|->... [--keys <file|url>] [--pin sha256:…] [--anchor <seq>:sha256:…] [--strict] [--all] [-q]` | Deeds | Check deeds offline | built |
 | `deedglass deeds list [--from-seq n] [--to-seq n] [--kind action,admin,amendment] [--action act_…] [--order asc|desc] [--limit 25] [--json]` | Deeds | List deeds | built |
 | `deedglass deeds show <deed_…|seq> [--json]` | Deeds | Show one deed | built |
-| `deedglass deeds export [--out <file>] [--format tar.gz|jsonl] [--from-seq n] [--to-seq n] [--json]` | Deeds | Export deeds as a bundle | built |
+| `deedglass deeds export [--out <file>|-] [--format tar.gz|jsonl] [--from-seq n] [--to-seq n] [--since 1h] [--json]` | Deeds | Export deeds as a bundle | built |
 | `deedglass ledger check [--from-seq n] [--to-seq n] [--json]` | Deeds | Check the deed chain | built |
 | `deedglass ledger prune [--older-than 90d] [--dry-run] [--yes] [--json]` | Deeds | Remove old payloads; deeds stay | built |
 | `deedglass connector create` | Connectors | Add a connector | soon (S16) |
@@ -341,10 +341,10 @@ Full reference: [LEDGER.md](LEDGER.md), [RETENTION.md](RETENTION.md).
 | Command | Does | Exit |
 |---|---|---|
 | `actions list [--agent] [--tool stripe.*] [--state] [--decision] [--verdict] [--level] [--on-behalf-of] [--since 1h] [--q text] [--limit 25] [--cursor]` | newest first; the footer says `5 of 1,204` and prints the next page's command | 0; 2 for a bad filter |
-| `actions show <act_…>` | the decision, execution, witness (with the diff sentence), deeds and the event path | 0; 1 when not found |
+| `actions show <act_…> [--wait]` | the decision, execution, witness (with the diff sentence), deeds and the event path; `--wait` (S13) re-reads it until it is sealed or waiting for a person (an action already waiting waits for its next change), at most 25 s | 0; 1 when not found |
 | `deeds list [--from-seq] [--to-seq] [--kind] [--action] [--order asc|desc]` | deeds by seq | 0 |
 | `deeds show <deed_…|seq>` | a summary; `--json` prints the stored bytes verbatim | 0; 1 when not found |
-| `deeds export [--out <file>] [--format tar.gz|jsonl] [--from-seq] [--to-seq]` | a sealed export bundle (or `.jsonl`), written to a temporary file and renamed at the end | 0; 1 for an empty range (nothing is written) |
+| `deeds export [--out <file>|-] [--format tar.gz|jsonl] [--from-seq] [--to-seq] [--since 1h]` | a sealed export bundle (or `.jsonl`), written to a temporary file and renamed at the end; `--out -` writes to stdout for `deedglass verify -`, with the summary on stderr; `--since` keeps the deeds issued in that window (S13) | 0; 1 for an empty range (nothing is written) |
 | `ledger check [--from-seq] [--to-seq]` | the chain check, with the head to keep elsewhere | 0 intact; 1 broken; 2 incomplete |
 | `ledger prune [--older-than 90d] [--dry-run] [--yes]` | removes payloads of old sealed actions and seals a `ledger.pruned` deed | 0; 1 not confirmed or another prune running; 2 without `--yes` off a terminal |
 | `dev fake-action [--n 20] [--seed 42] [--kinds …] [--agents 3] [--batch 1] [--pace 0s] [--org-slug demo] [--quiet]` | realistic actions through the real deed path (below) | 0; 1 outside `DEEDGLASS_ENV=dev` |
@@ -385,6 +385,52 @@ real.
   transactions and seals them in order, 500 per transaction (bulk seeding).
 - Nothing calls a real tool. `executing_at` is set back by the simulated latency so deeds show a
   realistic `latency_ms`; every other time is the database clock.
+
+## The Gate: `act` and `actions cancel` (S13)
+
+Both talk to the server's API (`--server`, `DEEDGLASS_SERVER`, `DEEDGLASS_BASE_URL`, then
+`http://127.0.0.1:8080`) with an **agent's** API key (`--api-key` or `DEEDGLASS_API_KEY`; create one
+with `deedglass agent keys create <agent>`). `act` is a dev helper: it sends one action through the
+Gate exactly as an SDK would, follows it until it is sealed (or `--wait` passes), and prints it.
+Full reference: [GATE.md](GATE.md).
+
+| Command | Does | Exit |
+|---|---|---|
+| `act <tool> [--args '{…}'] [--mode gateway|proxy] [--wait 60s] [--idempotency-key K]` | `POST /v1/actions`, then `GET /v1/actions/{id}?wait=` while it is still processing | 0 executed (VERIFIED or UNVERIFIABLE) or authorized (proxy); 1 denied, failed, MISMATCH, expired or cancelled; 2 pending approval or still processing; 3 no key |
+| `actions cancel <act_…>` | `POST /v1/actions/{id}/cancel`: a pending action becomes cancelled and is sealed | 0; 1 when it can't be cancelled (already executing, or done) |
+
+```
+$ deedglass act fake.echo --args '{"message":"hello"}'
+✓ executed · fake.echo · 4 ms
+  action   act_01j9zq3m8x2k7w4c5v6b7n8p9r
+  witness  L0 · VERIFIED · the tool reported success
+  deed     deed_01j9zq3m… · seq 128 · sealed
+
+$ deedglass act fake.write --args '{"rows":301,"table":"orders"}'
+✕ denied · fake.write
+  Blocked by policy "no-bulk-writes": writes over 100 rows need a person, not an agent.
+  action   act_01j9zq4…
+  deed     deed_01j9zq4… · seq 129 · sealed
+  Next: change the rule in Console › Policies, or ask an admin to run it by hand.
+
+$ deedglass act fake.write --args '{"rows":1,"table":"approvals"}'
+◐ pending approval · fake.write
+  Waiting for approval under policy "writes-need-approval": Writes wait for a human. Expires 10:12 IST.
+  approval apr_01j9zq5…
+  Next: approve it in Console › Approvals, then run: deedglass actions show act_01j9zq5… --wait
+
+$ deedglass act fake.slow --args '{"_fake":{"latency_ms":45000}}'
+○ executed · fake.slow · 30.0 s
+  UNVERIFIABLE · The tool did not answer within 30.0 s. It may have run.
+  deed     deed_01j9zq6… · seq 131 · sealed
+  Next: check the target system by hand, or raise gate.execute_timeout.
+```
+
+L0 always says its method in words ("the tool reported success"), so it never reads like an
+independent check. `--json` prints the action object (for a refusal, the sealed action from
+`error.action`) with the same exit codes. The output is pinned in `testdata/gate/cli/` (TTY colour
+and plain), regenerated with `go test -tags integration ./cmd/deedglass -run TestGateLive -update`
+on a throwaway cluster.
 
 ## People: `org create`, `org login-link`, `dev mail-preview`
 

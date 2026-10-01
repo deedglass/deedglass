@@ -43,6 +43,9 @@ type Error struct {
 	RequestID  string `json:"request_id"`
 	DocURL     string `json:"doc_url"`
 	RetryAfter string `json:"-"` // the Retry-After header, if any
+	// Action is the recorded, sealed action on a POST /v1/actions refusal (S13): a policy deny, a
+	// budget, a Stop or an unknown tool. Nil on every other error.
+	Action json.RawMessage `json:"action,omitempty"`
 }
 
 func (e *Error) Error() string {

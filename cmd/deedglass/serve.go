@@ -22,8 +22,11 @@ import (
 	"github.com/deedglass/deedglass/cmd/deedglass/internal/ui"
 	"github.com/deedglass/deedglass/internal/buildinfo"
 	"github.com/deedglass/deedglass/internal/config"
+	"github.com/deedglass/deedglass/internal/connector"
+	"github.com/deedglass/deedglass/internal/connector/fake"
 	"github.com/deedglass/deedglass/internal/deed"
 	"github.com/deedglass/deedglass/internal/deed/archive"
+	"github.com/deedglass/deedglass/internal/gate"
 	"github.com/deedglass/deedglass/internal/httpx"
 	"github.com/deedglass/deedglass/internal/identity"
 	"github.com/deedglass/deedglass/internal/ledger"
@@ -202,17 +205,37 @@ func runServe(ctx context.Context, e *Env, args []string) error {
 	pol.subscribe(rctx)
 	go func() { defer close(regDone); _ = pol.reg.Run(rctx) }()
 	defer func() { stopReg(); <-regDone }()
+	// 5c. The Gate (S13): the pipeline, its wait broker and its worker, which also ride the
+	// listener (deedglass_events wakes long polls; deedglass_jobs wakes the worker).
+	gp, err := newGate(cfg, db, led, pol, keys, log)
+	if err != nil {
+		return err
+	}
+	worker := gp.NewWorker(instanceName())
+	keys.Listener().Listen(ledger.Channel, gp.Broker().OnEvent, gp.Broker().Reset)
+	keys.Listener().Listen(store.JobsChannel, worker.Wake, func() { worker.Wake("") })
 	kctx, stopKeys := context.WithCancel(context.WithoutCancel(ctx))
 	keysDone := make(chan struct{})
 	go func() { defer close(keysDone); keys.Run(kctx) }()
 	defer func() { stopKeys(); <-keysDone }()
+	wctx, stopWorker := context.WithCancel(context.WithoutCancel(ctx))
+	workerDone := make(chan struct{})
+	go func() { defer close(workerDone); _ = worker.Run(wctx) }()
+	defer func() {
+		stopWorker()
+		<-workerDone
+		cctx, cancel := context.WithTimeout(context.Background(), gate.DefaultDrain)
+		defer cancel()
+		_ = gp.Close(cctx)
+	}()
 
 	api := httpx.New(httpx.Options{
 		Logger: log, Prod: prod, BaseURL: cfg.BaseURL, TrustedProxies: cfg.TrustedProxies,
 		Idempotency: idemStore{db}, Sessions: people, Keys: keys,
 	})
 	api.Metrics().Collect(policyMetrics(pol.reg))
-	api.Mount(serveRoutes(api, db, ms, sk, led, people, keys, pol)...)
+	api.Metrics().Collect(gp.Metrics().Collect)
+	api.Mount(serveRoutes(api, db, ms, sk, led, people, keys, pol, gp)...)
 	ln, err := net.Listen("tcp", cfg.Listen)
 	if err != nil {
 		return &ExitError{Code: ExitFailure, ErrCode: "listen_failed", Err: fmt.Errorf("Can't listen on %s: %s", cfg.Listen, lastPart(err)),
@@ -289,7 +312,7 @@ type serveKey struct {
 // run httpx.CheckSpec on this list, so api/openapi.yaml must document each one. db and sk are nil
 // in route-table tests.
 func serveRoutes(api *httpx.Server, db *store.DB, ms []migrate.Migration, sk *serveKey, led *ledger.Ledger, people *identity.Service,
-	keys *identity.KeyAuth, pol *policies) []httpx.Route {
+	keys *identity.KeyAuth, pol *policies, gp *gate.Pipeline) []httpx.Route {
 	deps := httpx.SystemDeps{Spec: apiSpec()}
 	if pol == nil {
 		pol = &policies{svc: policy.NewService(nil)}
@@ -311,7 +334,14 @@ func serveRoutes(api *httpx.Server, db *store.DB, ms []migrate.Migration, sk *se
 	if led == nil {
 		led = ledger.New(db, nil, nil, ledger.WithIssuer(issuer))
 	}
-	routes = append(routes, ledger.Routes(led)...)
+	// S06's Ledger routes; GET /v1/actions/{id} takes the Gate's long poll (S13).
+	var wait ledger.Waiter
+	if gp != nil {
+		wait = gp.Wait
+	}
+	routes = append(routes, ledger.RoutesWith(led, wait)...)
+	// S13: the Gate.
+	routes = append(routes, gate.Routes(gp)...)
 	if people == nil {
 		people = routeListingIdentity(issuer)
 	}
@@ -355,6 +385,33 @@ func policyMetrics(reg *policy.Registry) httpx.Collector {
 		fmt.Fprintf(w, "# HELP deedglass_policy_load_failures_total Policy loads that failed their checks (the org then refuses every action).\n# TYPE deedglass_policy_load_failures_total counter\ndeedglass_policy_load_failures_total %d\n", st.LoadFailures)
 		fmt.Fprintf(w, "# HELP deedglass_policy_active_orgs Orgs whose policies this instance holds.\n# TYPE deedglass_policy_active_orgs gauge\ndeedglass_policy_active_orgs %d\n", st.ActiveOrgs)
 	}
+}
+
+// newGate is the action pipeline (S13): the fake connector in dev only (S16 reserves the name
+// outside dev), S12's registry, S11's usage store, S09's intent checker and S08's Stop guard.
+func newGate(cfg *config.Config, db *store.DB, led *ledger.Ledger, pol *policies, keys *identity.KeyAuth, log *slog.Logger) (*gate.Pipeline, error) {
+	reg := connector.NewRegistry()
+	if cfg.Env == config.Dev {
+		reg.Register(fake.New())
+	}
+	g := cfg.Gate
+	return gate.New(gate.Options{DB: db, Ledger: led, Policies: pol.reg, Usage: policystore.NewUsage(db),
+		Intents: identity.NewIntents(db, keys, nil), Guard: keys, Resolver: reg, Logger: log,
+		Config: gate.Config{WaitTimeout: g.WaitTimeout, ExecuteTimeout: g.ExecuteTimeout, EdgeResultTimeout: g.EdgeResultTimeout,
+			MaxArgsBytes: g.MaxArgsBytes, MaxResultBytes: g.MaxResultBytes, WorkerConcurrency: g.WorkerConcurrency,
+			WorkerMaxAttempts: g.WorkerMaxAttempts}})
+}
+
+// instanceName names this process in witness_jobs.locked_by: the host name and the pid.
+func instanceName() string {
+	h, err := os.Hostname()
+	if err != nil || h == "" {
+		h = "deedglass"
+	}
+	if len(h) > 64 {
+		h = h[:64]
+	}
+	return fmt.Sprintf("%s-%d", h, os.Getpid())
 }
 
 // newKeyAuth is the API-key authenticator and Stop guard (S08). serve runs its listener.

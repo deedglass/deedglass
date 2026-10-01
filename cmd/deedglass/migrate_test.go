@@ -220,7 +220,7 @@ func TestMigrateJSONShapes(t *testing.T) {
 		} `json:"applied"`
 		Target Target `json:"target"`
 	}
-	if err := json.Unmarshal([]byte(r.stdout), &up); err != nil || up.Object != "migration_run" || up.Current != 15 || len(up.Applied) != 8 ||
+	if err := json.Unmarshal([]byte(r.stdout), &up); err != nil || up.Object != "migration_run" || up.Current != 16 || len(up.Applied) != 9 ||
 		up.Applied[0].Version != 8 || !strings.HasPrefix(up.Applied[0].Checksum, "sha256:") || up.Target.User != "deedglass_migrator" {
 		t.Fatalf("%v %s", err, r.stdout)
 	}

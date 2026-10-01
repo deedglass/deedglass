@@ -1,0 +1,19 @@
+{
+  "tool": "fake.write",
+  "args": {
+    "table": "orders",
+    "rows": 3,
+    "meta": {
+      "b": 1,
+      "a": [
+        1,
+        2.5,
+        "x"
+      ]
+    }
+  },
+  "mode": "gateway",
+  "tool_digest": null,
+  "request_digest": "sha256:563d09ec775c05afb9c90139b2979117c7b014ab4d29c2ab7d5c46b36e42e30b",
+  "fingerprint": "sha256:b7e7a1986f65c6dbf28f0e9dd0795e9bc8bda6e82f8d3c8f7dbb9b8285b68931"
+}

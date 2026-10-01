@@ -1,0 +1,7 @@
+exit 0
+--- stdout
+○ executed · fake.slow · N ms
+  UNVERIFIABLE · The tool did not answer within N ms. It may have run.
+  deed     deed_… · seq N · sealed
+  Next: check the target system by hand, or raise gate.execute_timeout.
+--- stderr

@@ -58,3 +58,22 @@
 # no_banner: false
 # theme: auto   # auto, light or dark
 # no_anim: false
+
+# The Gate (docs/GATE.md). These settings live only in this file, never in the environment;
+# docs/CONFIG.md has the ranges. Uncomment the section line and the lines you change.
+# gate:
+#   # How long POST /v1/actions waits for a gateway action before it answers 202 processing (at most 25s).
+#   wait_timeout: 10s
+#   # How long a connector call may run. Past it, the outcome is unknown and the deed says UNVERIFIABLE.
+#   execute_timeout: 30s
+#   # Proxy mode: how long the edge has to report a result before the action is sealed UNVERIFIABLE.
+#   edge_result_timeout: 10m
+#   # The largest args object POST /v1/actions accepts, in bytes (at most 262144, 256 KiB).
+#   max_args_bytes: 262144
+#   # The largest tool result stored on the action, in bytes. Larger results keep only their digest.
+#   max_result_bytes: 262144
+#   worker:
+#     # Witness jobs one instance runs at once.
+#     concurrency: 4
+#     # Attempts per witness job before the action is sealed UNVERIFIABLE (witness_gave_up).
+#     max_attempts: 8

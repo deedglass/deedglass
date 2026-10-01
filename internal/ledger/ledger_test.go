@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/deedglass/deedglass/internal/gate"
+	gate "github.com/deedglass/deedglass/internal/gate/lifecycle"
 	"github.com/deedglass/deedglass/internal/ids"
 )
 
@@ -315,3 +315,79 @@ func TestTransitionRefusesSealedAndIllegalEdges(t *testing.T) {
 }
 
 func mustOrg() ids.OrgID { return ids.MustParse[ids.OrgKind]("org_01j9z8m2k4p6r8t0v2x4z6b8d0") }
+
+// TestPatchSetsAgree: the written-out SET list of Transition is patchSetFrom(8), so Advance and
+// Transition write the same columns with the same types.
+func TestPatchSetsAgree(t *testing.T) {
+	norm := func(s string) string { return strings.Join(strings.Fields(strings.ReplaceAll(s, ",", ", ")), " ") }
+	if norm(patchSet) != norm(patchSetFrom(8)) {
+		t.Fatalf("patchSet drifted:\n%s\n%s", norm(patchSet), norm(patchSetFrom(8)))
+	}
+	if n := len((&Patch{}).args()); n != len(patchColumns) {
+		t.Fatalf("args %d, columns %d", n, len(patchColumns))
+	}
+}
+
+func TestPatchRules(t *testing.T) {
+	d, s := "allow", "succeeded"
+	if err := (&Patch{Decision: &d}).allowed(gate.Executed); !errors.Is(err, ErrIllegalTransition) {
+		t.Fatalf("a decision written on executed: %v", err)
+	}
+	if err := (&Patch{ExecutionStatus: &s}).allowed(gate.Executed); err != nil {
+		t.Fatal(err)
+	}
+	p := Patch{Decision: &d}
+	if err := p.merge(&Patch{ExecutionStatus: &s}); err != nil || *p.Decision != "allow" || *p.ExecutionStatus != "succeeded" {
+		t.Fatalf("%v %+v", err, p)
+	}
+	if err := p.merge(&Patch{Decision: &d}); !errors.Is(err, ErrIllegalTransition) {
+		t.Fatalf("two steps wrote one column: %v", err)
+	}
+	if err := p.merge(nil); err != nil {
+		t.Fatal(err)
+	}
+	var q Patch
+	q.fromArgs(p.args())
+	if *q.Decision != "allow" || *q.ExecutionStatus != "succeeded" || q.Result != nil {
+		t.Fatalf("%+v", q)
+	}
+}
+
+func TestStatusOf(t *testing.T) {
+	cases := []struct {
+		state, mode                   string
+		denied, expired, cancel, fail bool
+		want                          string
+	}{
+		{"received", "gateway", false, false, false, false, StatusProcessing},
+		{"executing", "gateway", false, false, false, false, StatusProcessing},
+		{"executing", "proxy", false, false, false, false, StatusAuthorized},
+		{"pending_approval", "gateway", false, false, false, false, StatusPendingApproval},
+		{"denied", "gateway", true, false, false, false, StatusDenied},
+		{"expired", "gateway", false, true, false, false, StatusExpired},
+		{"cancelled", "gateway", false, false, true, false, StatusCancelled},
+		{"failed", "gateway", false, false, false, true, StatusFailed},
+		{"verified", "gateway", false, false, false, false, StatusExecuted},
+		{"unverifiable", "proxy", false, false, false, false, StatusExecuted},
+		{"witnessing", "gateway", false, false, false, false, StatusProcessing},
+		{"sealed", "gateway", true, false, false, false, StatusDenied},
+		{"sealed", "gateway", false, true, false, false, StatusExpired},
+		{"sealed", "gateway", false, false, true, false, StatusCancelled},
+		{"sealed", "gateway", false, false, false, true, StatusFailed},
+		{"sealed", "proxy", false, false, false, false, StatusExecuted},
+	}
+	for _, c := range cases {
+		if got := StatusOf(c.state, c.mode, c.denied, c.expired, c.cancel, c.fail); got != c.want {
+			t.Errorf("%s/%s: %s, want %s", c.state, c.mode, got, c.want)
+		}
+	}
+	if len(Statuses) != 8 {
+		t.Fatal(Statuses)
+	}
+	if r := WitnessReasons([]byte(`{"reasons":["timeout"]}`)); len(r) != 1 || r[0] != "timeout" {
+		t.Fatal(r)
+	}
+	if r := WitnessReasons(nil); r == nil || len(r) != 0 {
+		t.Fatal("nil detail")
+	}
+}

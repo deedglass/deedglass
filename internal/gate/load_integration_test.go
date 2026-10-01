@@ -1,0 +1,407 @@
+//go:build integration
+
+package gate
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"log/slog"
+	"math/rand/v2"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"sort"
+	"strings"
+	"sync"
+	"sync/atomic"
+	"testing"
+	"time"
+
+	"github.com/jackc/pgx/v5"
+
+	"github.com/deedglass/deedglass/internal/config"
+	"github.com/deedglass/deedglass/internal/connector"
+	"github.com/deedglass/deedglass/internal/deed"
+	"github.com/deedglass/deedglass/internal/httpx"
+	"github.com/deedglass/deedglass/internal/identity"
+	"github.com/deedglass/deedglass/internal/ids"
+	"github.com/deedglass/deedglass/internal/ledger"
+	"github.com/deedglass/deedglass/internal/store"
+	"github.com/deedglass/deedglass/internal/store/policystore"
+)
+
+// --- the worker and a deferring witness (S19's seam) ---
+
+type deferringWitness struct {
+	fails atomic.Int32 // Deferred fails this many times first
+	calls atomic.Int32
+}
+
+func (d *deferringWitness) Inline(context.Context, Subject, Execution) (WitnessOutcome, bool) {
+	return WitnessOutcome{}, true
+}
+
+func (d *deferringWitness) Deferred(context.Context, Subject) (WitnessOutcome, error) {
+	d.calls.Add(1)
+	if d.fails.Add(-1) >= 0 {
+		return WitnessOutcome{}, errors.New("the system of record is unreachable")
+	}
+	return WitnessOutcome{Level: "L1", Verdict: VerdictVerified, Method: "readback.fake", Reasons: []string{}}, nil
+}
+
+func TestWorkerDeferredWitness(t *testing.T) {
+	w := newWorld(t, worldOpts{cfg: Config{WorkerMaxAttempts: 2}})
+	dw := &deferringWitness{}
+	w.p.o.Witness = dw
+	a := w.must(0, req("fake.echo", `{}`))
+	if a.State != "witnessing" || a.Status != "processing" {
+		t.Fatalf("%s", mustJSON(a))
+	}
+	wk := w.p.NewWorker("test")
+	wk.PollEvery, wk.SweepEvery, wk.Drain = 20*time.Millisecond, time.Hour, time.Second
+	w.keys.Listener().Listen(store.JobsChannel, wk.Wake, func() { wk.Wake("") })
+	ctx, cancel := context.WithCancel(bg)
+	done := make(chan struct{})
+	go func() { defer close(done); _ = wk.Run(ctx) }()
+	if err := w.p.Wait(bg, w.org, a.ID, "", 10*time.Second); err != nil {
+		t.Fatal(err)
+	}
+	v, _ := w.p.Get(bg, w.pr(0), a.ID, 0)
+	if v.State != "sealed" || v.Witness.Level != "L1" || v.Witness.Verdict != "VERIFIED" {
+		t.Fatalf("%s", mustJSON(v))
+	}
+	// A witness that keeps failing: retried with backoff, then sealed UNVERIFIABLE (witness_gave_up).
+	dw.fails.Store(100)
+	b := w.must(1, req("fake.echo", `{}`))
+	deadline := time.Now().Add(15 * time.Second)
+	for {
+		// Pull the retry forward instead of waiting out the backoff.
+		w.admin(`UPDATE deedglass.witness_jobs SET run_after = now() WHERE action_id = $1`, b.ID)
+		v, _ = w.p.Get(bg, w.pr(1), b.ID, 0)
+		if v.State == "sealed" || time.Now().After(deadline) {
+			break
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+	if v.State != "sealed" || v.Witness.Verdict != "UNVERIFIABLE" || (*v.Witness.Reasons)[0] != ReasonWitnessGaveUp {
+		t.Fatalf("%s", mustJSON(v))
+	}
+	cancel()
+	<-done
+	var b2 strings.Builder
+	w.p.Metrics().Collect(&b2)
+	if !strings.Contains(b2.String(), `deedglass_worker_jobs_total{kind="witness",result="done"}`) ||
+		!strings.Contains(b2.String(), `deedglass_worker_jobs_total{kind="witness",result="retry"}`) {
+		t.Fatalf("%s", b2.String())
+	}
+}
+
+// --- HTTP, through the real handlers and the httpx pipeline ---
+
+// agentKey stores a real test API key for agent i (the authenticator's pepper is 32 nines).
+func (w *world) agentKey(i int) string {
+	w.t.Helper()
+	full, pk, err := identity.NewAPIKey(identity.ModeTest)
+	if err != nil {
+		w.t.Fatal(err)
+	}
+	h := identity.HashSecret(bytesOf(9, 32), pk.Secret)
+	err = w.e.DB.OrgTx(bg, w.org, func(ctx context.Context, tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, `INSERT INTO deedglass.api_keys (id, org_id, agent_id, mode, prefix, secret_hash, scopes, created_by)
+		    VALUES ($1, $2, $3, 'test', $4, $5, $6, 'operator')`, ids.New[ids.APIKeyKind](), w.org, w.agents[i].ID, pk.Prefix, h[:],
+			httpx.DefaultAgentScopes)
+		return err
+	})
+	if err != nil {
+		w.t.Fatal(err)
+	}
+	return full
+}
+
+func bytesOf(b byte, n int) []byte { return []byte(strings.Repeat(string(rune(b)), n)) }
+
+func TestHTTPHandlers(t *testing.T) {
+	w := newWorld(t, worldOpts{})
+	key := w.agentKey(0)
+	srv := httpx.New(httpx.Options{Logger: slog.New(slog.DiscardHandler), Keys: w.keys})
+	srv.Mount(Routes(w.p)...)
+	srv.Mount(ledger.RoutesWith(w.led, w.p.Wait)...)
+	ts := httptest.NewServer(srv)
+	defer ts.Close()
+	do := func(method, path, body string, hdr ...string) (int, http.Header, string) {
+		t.Helper()
+		var rd io.Reader
+		if body != "" {
+			rd = strings.NewReader(body)
+		}
+		r, _ := http.NewRequest(method, ts.URL+path, rd)
+		r.Header.Set("Authorization", "Bearer "+key)
+		if body != "" {
+			r.Header.Set("Content-Type", "application/json")
+		}
+		for i := 0; i+1 < len(hdr); i += 2 {
+			r.Header.Add(hdr[i], hdr[i+1])
+		}
+		res, err := http.DefaultClient.Do(r)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer res.Body.Close()
+		b, _ := io.ReadAll(res.Body)
+		return res.StatusCode, res.Header, string(b)
+	}
+	c, h, b := do("POST", "/v1/actions", `{"tool":"fake.echo","args":{"message":"hello"},"wait":5,"context":{"client":{"name":"t","version":"1"},"transport":"rest"}}`,
+		"Idempotency-Key", "k1", "Deedglass-On-Behalf-Of", "u_1")
+	if c != 200 || !strings.Contains(b, `"on_behalf_of": "u_1"`) || !strings.Contains(b, `"reasons": []`) {
+		t.Fatalf("%d %s", c, b)
+	}
+	c2, h2, b2 := do("POST", "/v1/actions", `{"tool":"fake.echo","args":{"message":"hello"},"wait":5,"context":{"client":{"name":"t","version":"1"},"transport":"rest"}}`,
+		"Idempotency-Key", "k1", "Deedglass-On-Behalf-Of", "u_1")
+	if c2 != 200 || b2 != b || h2.Get("Deedglass-Idempotent-Replayed") != "true" || h.Get("Deedglass-Idempotent-Replayed") != "" {
+		t.Fatalf("%d %s", c2, b2)
+	}
+	for _, x := range []struct {
+		body, code, param string
+		status            int
+		hdr               []string
+	}{
+		{`{"args":{}}`, "validation_failed", "tool", 400, nil},
+		{`{"tool":"fake.echo","args":{},"wait":30}`, "validation_failed", "wait", 400, nil},
+		{`{"tool":"fake.echo","args":{},"nope":1}`, "validation_failed", "nope", 400, nil},
+		{`{"tool":"fake.echo","args":{}}`, "idempotency_key_invalid", "Idempotency-Key", 400, []string{"Idempotency-Key", "tab\there"}},
+		{`{"tool":"fake.echo","args":{}}`, "intent_invalid", "Deedglass-Intent", 403, []string{"Deedglass-Intent", "a.b", "Deedglass-Intent", "c.d"}},
+		{`{"tool":"nope.echo","args":{}}`, "tool_unknown", "", 404, nil},
+		{`{"tool":"fake.write","args":{"rows":301}}`, "policy_denied", "", 403, nil},
+	} {
+		c, _, b := do("POST", "/v1/actions", x.body, x.hdr...)
+		if c != x.status || !strings.Contains(b, `"code": "`+x.code+`"`) || x.param != "" && !strings.Contains(b, `"param": "`+x.param+`"`) {
+			t.Errorf("%s: %d %s", x.body, c, b)
+		}
+		if x.status == 403 && x.code == "policy_denied" && !strings.Contains(b, `"action": {`) {
+			t.Errorf("no error.action: %s", b)
+		}
+	}
+	// Pending → GET ?wait on it → cancel over HTTP.
+	_, _, pb := do("POST", "/v1/actions", `{"tool":"fake.write","args":{"rows":1,"table":"approvals"}}`)
+	var pa struct{ ID string }
+	_ = json.Unmarshal([]byte(pb), &pa)
+	start := time.Now()
+	if c, _, b := do("GET", "/v1/actions/"+pa.ID+"?wait=0.3&expand[]=result", ""); c != 200 || !strings.Contains(b, `"status": "pending_approval"`) || time.Since(start) < 250*time.Millisecond {
+		t.Fatalf("a pending wait returned at once: %d %s", c, b)
+	}
+	if c, _, b := do("GET", "/v1/actions/"+pa.ID+"?expand[]=nope", ""); c != 400 {
+		t.Fatalf("%d %s", c, b)
+	}
+	if c, _, b := do("POST", "/v1/actions/"+pa.ID+"/cancel", ""); c != 200 || !strings.Contains(b, `"status": "cancelled"`) {
+		t.Fatalf("%d %s", c, b)
+	}
+	// Proxy over HTTP, a bad result body, then a good one.
+	_, _, xb := do("POST", "/v1/actions", `{"tool":"scratch.write","args":{},"mode":"proxy"}`)
+	var xa struct{ ID string }
+	_ = json.Unmarshal([]byte(xb), &xa)
+	if c, _, b := do("POST", "/v1/actions/"+xa.ID+"/result", `{"status":"done"}`); c != 400 {
+		t.Fatalf("%d %s", c, b)
+	}
+	now := time.Now().UTC().Format(time.RFC3339Nano)
+	if c, _, b := do("POST", "/v1/actions/"+xa.ID+"/result", `{"status":"unknown","started_at":"`+now+`","finished_at":"`+now+`","error_code":"edge_crashed","error_message":"The edge restarted."}`); c != 200 ||
+		!strings.Contains(b, `"verdict": "UNVERIFIABLE"`) {
+		t.Fatalf("%d %s", c, b)
+	}
+	if c, _, _ := do("POST", "/v1/actions/act_01j9zq3m8x2k7w4c5v6b7n8p9r/result", `{"status":"succeeded","started_at":"`+now+`","finished_at":"`+now+`","result_digest":"sha256:`+strings.Repeat("0", 64)+`"}`); c != 404 {
+		t.Fatalf("%d", c)
+	}
+}
+
+// --- two instances race the sweepers ---
+
+// TestTwoInstancesSweep: 200 actions stuck in executing past their deadline; two pipelines on two
+// pools sweep at the same time. Each action is sealed exactly once and the chain stays intact.
+func TestTwoInstancesSweep(t *testing.T) {
+	w := newWorld(t, worldOpts{maxConns: 20})
+	db2, err := store.Open(bg, config.NewSecret(w.e.AppURL), store.Options{MaxConns: 20})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db2.Close()
+	led2 := ledger.New(db2, deed.NewSealer(w.signer), w.signer, ledger.WithDev(true), ledger.WithLogger(slog.New(slog.DiscardHandler)))
+	p2, err := New(Options{DB: db2, Ledger: led2, Policies: w.reg, Usage: policystore.NewUsage(db2), Resolver: connector.NewRegistry(w.fake)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	const n = 200
+	var mu sync.Mutex
+	var acts []string
+	var wg sync.WaitGroup
+	sem := make(chan struct{}, 20)
+	for i := range n {
+		wg.Go(func() {
+			sem <- struct{}{}
+			defer func() { <-sem }()
+			r := proxyReq("scratch.write", fmt.Sprintf(`{"i":%d}`, i))
+			a, err := w.submit(i%3, r)
+			if err != nil {
+				t.Error(err)
+				return
+			}
+			mu.Lock()
+			acts = append(acts, a.ID)
+			mu.Unlock()
+		})
+	}
+	wg.Wait()
+	w.admin(`UPDATE deedglass.actions SET executing_deadline = now() - interval '1 second' WHERE state = 'executing'`)
+	var r1, r2 SweepResult
+	var sw sync.WaitGroup
+	for range 3 { // a few passes each: one claim takes at most 100 of each kind
+		sw.Go(func() { x := w.p.Sweep(bg); r1.CrashRecovered += x.CrashRecovered; r1.Errors += x.Errors })
+		sw.Go(func() { x := p2.Sweep(bg); r2.CrashRecovered += x.CrashRecovered; r2.Errors += x.Errors })
+		sw.Wait()
+	}
+	if r1.Errors+r2.Errors != 0 || r1.CrashRecovered+r2.CrashRecovered != n {
+		t.Fatalf("instance 1 %+v, instance 2 %+v", r1, r2)
+	}
+	var sealed, deeds int
+	_ = w.e.DB.OrgReadTx(bg, w.org, func(ctx context.Context, tx pgx.Tx) error {
+		if err := tx.QueryRow(ctx, `SELECT count(*) FROM deedglass.actions WHERE state = 'sealed' AND mode = 'proxy'`).Scan(&sealed); err != nil {
+			return err
+		}
+		return tx.QueryRow(ctx, `SELECT count(*) FROM deedglass.deeds WHERE kind = 'action' AND action_id = ANY($1)`, acts).Scan(&deeds)
+	})
+	if sealed != n || deeds != n {
+		t.Fatalf("%d sealed, %d deeds, want %d", sealed, deeds, n)
+	}
+	checkChain(t, w)
+	t.Logf("instance 1 recovered %d, instance 2 %d", r1.CrashRecovered, r2.CrashRecovered)
+}
+
+func checkChain(t *testing.T, w *world) {
+	t.Helper()
+	rep, err := w.led.CheckChain(bg, w.org, ledger.Range{}, ledger.CheckOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rep.Status != "intact" {
+		t.Fatalf("chain: %+v", rep)
+	}
+}
+
+// --- load ---
+
+// TestLoad1000: 1,000 actions from 10 agents, 50 at a time, fake.echo and fake.write with 10%
+// denials. Every action is sealed with one deed, every event path is a path of the state machine,
+// the chain is intact, the calls counters equal the non-denied actions, and spend equals the
+// fake.write costs.
+func TestLoad1000(t *testing.T) {
+	w := newWorld(t, worldOpts{agents: 10, maxConns: 60})
+	const n, conc = 1000, 50
+	rng := rand.New(rand.NewPCG(13, 13))
+	type job struct {
+		agent int
+		r     ActionRequest
+		deny  bool
+		cost  int64
+	}
+	jobs := make([]job, n)
+	for i := range jobs {
+		j := job{agent: i % 10}
+		switch {
+		case i%10 == 0:
+			j.r, j.deny = req("fake.write", `{"rows":500,"table":"orders"}`), true
+		case rng.IntN(2) == 0:
+			rows := int64(rng.IntN(50) + 1)
+			j.r, j.cost = req("fake.write", fmt.Sprintf(`{"rows":%d,"table":"orders"}`, rows)), rows
+		default:
+			j.r = req("fake.echo", fmt.Sprintf(`{"n":%d}`, i))
+		}
+		jobs[i] = j
+	}
+	var (
+		wg        sync.WaitGroup
+		sem       = make(chan struct{}, conc)
+		denied    atomic.Int64
+		spend     atomic.Int64
+		mu        sync.Mutex
+		ids       []string
+		latencies []time.Duration
+	)
+	start := time.Now()
+	for _, j := range jobs {
+		wg.Go(func() {
+			sem <- struct{}{}
+			defer func() { <-sem }()
+			t0 := time.Now()
+			a, err := w.submit(j.agent, j.r)
+			d := time.Since(t0)
+			if j.deny {
+				if httpx.AsError(err) == nil || a == nil || a.State != "sealed" {
+					t.Errorf("deny: %v", err)
+					return
+				}
+				denied.Add(1)
+			} else if err != nil || a.State != "sealed" || a.Status != "executed" {
+				t.Errorf("%v %v", err, a)
+				return
+			}
+			spend.Add(j.cost)
+			mu.Lock()
+			ids = append(ids, a.ID)
+			latencies = append(latencies, d)
+			mu.Unlock()
+		})
+	}
+	wg.Wait()
+	elapsed := time.Since(start)
+	if len(ids) != n || denied.Load() != n/10 {
+		t.Fatalf("%d actions, %d denied", len(ids), denied.Load())
+	}
+	var deeds, calls, spent int64
+	var bad []string
+	_ = w.e.DB.OrgReadTx(bg, w.org, func(ctx context.Context, tx pgx.Tx) error {
+		if err := tx.QueryRow(ctx, `SELECT count(*) FROM deedglass.deeds WHERE kind = 'action'`).Scan(&deeds); err != nil {
+			return err
+		}
+		if err := tx.QueryRow(ctx, `SELECT COALESCE(sum(value), 0) FROM deedglass.usage_counters WHERE counter = 'calls' AND window_kind = 'day'`).Scan(&calls); err != nil {
+			return err
+		}
+		if err := tx.QueryRow(ctx, `SELECT COALESCE(sum(value), 0) FROM deedglass.usage_counters WHERE counter = 'spend:usd' AND window_kind = 'day'`).Scan(&spent); err != nil {
+			return err
+		}
+		rows, err := tx.Query(ctx, `SELECT action_id, array_agg(COALESCE(from_state, '') || '>' || to_state ORDER BY seq) FROM deedglass.action_events GROUP BY action_id`)
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var id string
+			var evs []string
+			if err := rows.Scan(&id, &evs); err != nil {
+				return err
+			}
+			var pairs [][2]string
+			for _, e := range evs {
+				f, to, _ := strings.Cut(e, ">")
+				pairs = append(pairs, [2]string{f, to})
+			}
+			if err := path(pairs); err != nil || pairs[len(pairs)-1][1] != "sealed" {
+				bad = append(bad, id)
+			}
+		}
+		return rows.Err()
+	})
+	if deeds != n || calls != n-n/10 || spent != spend.Load() || len(bad) != 0 {
+		t.Fatalf("deeds %d, calls %d (want %d), spend %d (want %d), bad paths %v", deeds, calls, n-n/10, spent, spend.Load(), bad)
+	}
+	checkChain(t, w)
+	sort.Slice(latencies, func(i, j int) bool { return latencies[i] < latencies[j] })
+	t.Logf("1,000 actions in %s (%.0f/s) · p50 %s · p99 %s at concurrency %d (race detector: %v)",
+		elapsed.Round(time.Millisecond), float64(n)/elapsed.Seconds(), latencies[n/2], latencies[n*99/100], conc, raceEnabled)
+	if f := os.Getenv("DEEDGLASS_IT_LOAD_OUT"); f != "" {
+		_ = os.WriteFile(f, fmt.Appendf(nil, `{"actions":%d,"concurrency":%d,"seconds":%.3f,"p50_ms":%.3f,"p99_ms":%.3f,"race":%v}`+"\n",
+			n, conc, elapsed.Seconds(), ms(latencies[n/2]), ms(latencies[n*99/100]), raceEnabled), 0o644)
+	}
+}
+
+func ms(d time.Duration) float64 { return float64(d) / float64(time.Millisecond) }

@@ -16,5 +16,6 @@ VERSION  NAME                STATE    APPLIED               CHECKSUM
 0013     identity_agents     [35mpending[0m  —                     sha256:b19c…ca13
 0014     identity_intents    [35mpending[0m  —                     sha256:9577…e712
 0015     policy_versions_v2  [35mpending[0m  —                     sha256:82ad…43b4
-[31m✕[0m 8 applied · 6 pending · 1 doesn't match this build. Run deedglass migrate verify for details.
+0016     gate                [35mpending[0m  —                     sha256:27ef…38e4
+[31m✕[0m 8 applied · 7 pending · 1 doesn't match this build. Run deedglass migrate verify for details.
 --- stderr

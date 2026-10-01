@@ -1,0 +1,10 @@
+{
+  "tool": "fake.echo",
+  "args": {},
+  "mode": "gateway",
+  "tool_digest": null,
+  "on_behalf_of": "u_4821",
+  "session": "chat_77",
+  "request_digest": "sha256:8fbc7b6d86c0f8d6aa5a3aa241bab9bb3f1261318bf0b7c89e0d5ef1fce62745",
+  "fingerprint": "sha256:9eb23d173d4f97514c7af80579dc44601acc4527f4b7eeff279a8f78fad63dbb"
+}

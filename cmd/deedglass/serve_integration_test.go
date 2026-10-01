@@ -55,8 +55,12 @@ func startServe(t *testing.T, env map[string]string, args ...string) *served {
 	serveListening = func(a net.Addr) { s.addr <- a }
 	t.Cleanup(func() { serveSignals, serveListening = savedSig, savedListen })
 	dir := t.TempDir()
+	fs := fstest.MapFS{}
+	if y := env["DEEDGLASS_IT_YAML"]; y != "" { // a deedglass.yaml for this server (S13: gate settings)
+		fs["deedglass.yaml"] = &fstest.MapFile{Data: []byte(y), Mode: 0o600}
+	}
 	e := &Env{Stdout: s.out, Stderr: s.err, Getenv: func(k string) string { return env[k] },
-		LoadOptions: func() config.LoadOptions { return config.LoadOptions{Env: env, FS: fstest.MapFS{}, Dir: dir} }}
+		LoadOptions: func() config.LoadOptions { return config.LoadOptions{Env: env, FS: fs, Dir: dir} }}
 	go func() { s.code <- run(context.Background(), e, append([]string{"serve"}, args...)) }()
 	return s
 }
@@ -98,7 +102,7 @@ func TestServeRefusesSuperuserInProd(t *testing.T) {
 func TestServeRefusesPendingMigrationsInProd(t *testing.T) {
 	e := storetest.New(t, storetest.Options{NoMigrate: true})
 	s := startServe(t, prodEnv(e.AppURL))
-	if code := s.wait(t); code != 1 || !strings.Contains(s.err.String(), "Refusing to start: 15 migrations are pending.") ||
+	if code := s.wait(t); code != 1 || !strings.Contains(s.err.String(), "Refusing to start: 16 migrations are pending.") ||
 		!strings.Contains(s.err.String(), "Run deedglass migrate up first.") {
 		t.Fatalf("exit %d\n%s%s", code, s.out, s.err)
 	}
@@ -133,7 +137,7 @@ func TestServeLive(t *testing.T) {
 	case <-time.After(30 * time.Second):
 		t.Fatal("serve never listened")
 	}
-	t.Logf("startup (with 15 migrations) took %v", time.Since(start))
+	t.Logf("startup (with 16 migrations) took %v", time.Since(start))
 
 	get := func(p string) (int, http.Header, string) {
 		res, err := http.Get(base + p)
@@ -145,7 +149,7 @@ func TestServeLive(t *testing.T) {
 		return res.StatusCode, res.Header, string(b)
 	}
 	code, h, body := get("/v1/health")
-	if code != 200 || !strings.Contains(body, `"status": "ok"`) || !strings.Contains(body, `"applied": 15`) ||
+	if code != 200 || !strings.Contains(body, `"status": "ok"`) || !strings.Contains(body, `"applied": 16`) ||
 		!strings.HasPrefix(h.Get("Deedglass-Request-Id"), "req_") || h.Get("Deedglass-Version") != "2026-10-01" {
 		t.Fatalf("health %d %v\n%s", code, h, body)
 	}
@@ -178,7 +182,7 @@ func TestServeLive(t *testing.T) {
 		t.Fatalf("exit %d\n%s%s", c, s.out, s.err)
 	}
 	out := s.out.String()
-	for _, want := range []string{"api 2026-10-01 · env dev", "✓ Migrations · 15 applied", "✓ Database · postgres ", "schema at 0015 · role deedglass_app",
+	for _, want := range []string{"api 2026-10-01 · env dev", "✓ Migrations · 16 applied", "✓ Database · postgres ", "schema at 0016 · role deedglass_app",
 		"○ No seal key set. Created .deedglass/keys/sk_", "for this dev instance.", "✓ Seal key · sk_", "· sha256:", "✓ Listening on http://127.0.0.1:", "✓ Stopped cleanly in ", "· 0 requests cut off"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("stdout lacks %q", want)

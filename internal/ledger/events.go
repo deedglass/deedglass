@@ -9,7 +9,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/deedglass/deedglass/internal/deed"
-	"github.com/deedglass/deedglass/internal/gate"
+	gate "github.com/deedglass/deedglass/internal/gate/lifecycle"
 	"github.com/deedglass/deedglass/internal/ids"
 )
 
