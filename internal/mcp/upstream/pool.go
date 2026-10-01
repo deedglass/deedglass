@@ -1,0 +1,528 @@
+// Package upstream is the MCP gateway's client side (S15): one official-SDK client session per
+// configured remote MCP server (mcp.upstreams in deedglass.yaml), era-negotiating (server/discover
+// first, initialize as the fallback). The Pool is the Gate's executor for those connectors
+// (gateway mode), a cached tool list for the front, and an optional passthrough for resources and
+// prompts. S16 moves upstreams into connector rows of type mcp_http with credentials in the vault;
+// Config stays the shape the loader fills.
+package upstream
+
+import (
+	"context"
+	"crypto/tls"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"log/slog"
+	"net"
+	"net/http"
+	"net/url"
+	"sort"
+	"strings"
+	"sync"
+	"syscall"
+	"time"
+
+	sdkjsonrpc "github.com/modelcontextprotocol/go-sdk/jsonrpc"
+	"github.com/modelcontextprotocol/go-sdk/mcp"
+
+	"github.com/deedglass/deedglass/internal/connector"
+	"github.com/deedglass/deedglass/internal/gate"
+	"github.com/deedglass/deedglass/internal/identity"
+	"github.com/deedglass/deedglass/internal/ids"
+)
+
+// ConnectorType is the type an upstream MCP connector carries in policy facts and deeds.
+const ConnectorType = "mcp_http"
+
+// MaxResponse caps an upstream response body (4 MiB); a larger answer is an unknown outcome.
+const MaxResponse = 4 << 20
+
+// maxPages bounds one tools/list walk.
+const maxPages = 20
+
+// Config is one upstream (mcp.upstreams.<slug>).
+type Config struct {
+	Slug           string
+	URL            *url.URL
+	HeadersFromEnv map[string]string // header → env var name; read once at start, never logged or returned
+	Timeout        time.Duration     // per HTTP request to the upstream
+	ToolsTTL       time.Duration     // tools/list cache
+}
+
+// Options configure a Pool.
+type Options struct {
+	Upstreams    []Config
+	AllowPrivate bool // DEEDGLASS_ALLOW_PRIVATE_NETWORKS (dev): http:// and private addresses
+	Version      string
+	Getenv       func(string) string // nil: os.Getenv is not used; the caller resolves (tests pass a map)
+	Log          *slog.Logger
+	Clock        func() time.Time
+}
+
+// Pool holds the upstreams.
+type Pool struct {
+	log   *slog.Logger
+	now   func() time.Time
+	ups   map[string]*up
+	stash stash
+}
+
+type up struct {
+	cfg     Config
+	client  *mcp.Client
+	httpc   *http.Client
+	mu      sync.Mutex // guards session and the cache
+	session *mcp.ClientSession
+	tools   []*mcp.Tool
+	fresh   time.Time // the cache is good until then
+	down    bool      // the last connect or list failed
+}
+
+// ErrDown is returned when an upstream can't be reached (front.ErrUpstreamDown wraps it).
+var ErrDown = errors.New("upstream: the MCP server can't be reached")
+
+// New returns a Pool. Configs are validated by internal/config; New checks only what it needs.
+func New(o Options) (*Pool, error) {
+	p := &Pool{log: o.Log, now: o.Clock, ups: map[string]*up{}}
+	if p.log == nil {
+		p.log = slog.New(slog.DiscardHandler)
+	}
+	if p.now == nil {
+		p.now = time.Now
+	}
+	for _, c := range o.Upstreams {
+		if c.URL == nil || c.Slug == "" {
+			return nil, fmt.Errorf("upstream: %q needs a URL", c.Slug)
+		}
+		if c.URL.Scheme != "https" && !(c.URL.Scheme == "http" && o.AllowPrivate) {
+			return nil, fmt.Errorf("upstream %s: only https URLs are allowed (http needs DEEDGLASS_ALLOW_PRIVATE_NETWORKS=1 in dev)", c.Slug)
+		}
+		if c.Timeout <= 0 {
+			c.Timeout = 30 * time.Second
+		}
+		if c.ToolsTTL <= 0 {
+			c.ToolsTTL = 30 * time.Second
+		}
+		hdr := http.Header{}
+		for h, env := range c.HeadersFromEnv {
+			v := ""
+			if o.Getenv != nil {
+				v = o.Getenv(env)
+			}
+			if v == "" {
+				return nil, fmt.Errorf("upstream %s: header %s reads %s, which is empty", c.Slug, h, env)
+			}
+			hdr.Set(h, v)
+		}
+		u := &up{cfg: c, httpc: newHTTPClient(c.Timeout, hdr, o.AllowPrivate, o.Version)}
+		u.client = mcp.NewClient(&mcp.Implementation{Name: "deedglass-gate", Title: "Deedglass Gate", Version: o.Version}, nil)
+		p.ups[c.Slug] = u
+	}
+	return p, nil
+}
+
+// Slugs lists the upstreams, sorted.
+func (p *Pool) Slugs() []string {
+	out := make([]string, 0, len(p.ups))
+	for s := range p.ups {
+		out = append(out, s)
+	}
+	sort.Strings(out)
+	return out
+}
+
+// Has reports whether slug is an upstream.
+func (p *Pool) Has(slug string) bool { _, ok := p.ups[slug]; return ok }
+
+// Close ends every session.
+func (p *Pool) Close() error {
+	for _, u := range p.ups {
+		u.mu.Lock()
+		if u.session != nil {
+			_ = u.session.Close()
+			u.session = nil
+		}
+		u.mu.Unlock()
+	}
+	return nil
+}
+
+// sessionLocked connects when there is no session. u.mu is held.
+func (u *up) sessionLocked(ctx context.Context) (*mcp.ClientSession, error) {
+	if u.session != nil {
+		return u.session, nil
+	}
+	t := &mcp.StreamableClientTransport{Endpoint: u.cfg.URL.String(), HTTPClient: u.httpc, MaxRetries: -1, DisableStandaloneSSE: true}
+	cctx, cancel := context.WithTimeout(ctx, u.cfg.Timeout)
+	defer cancel()
+	s, err := u.client.Connect(cctx, t, nil)
+	if err != nil {
+		u.down = true
+		return nil, fmt.Errorf("%w: %v", ErrDown, err)
+	}
+	u.session, u.down = s, false
+	return s, nil
+}
+
+func (u *up) dropLocked() {
+	if u.session != nil {
+		_ = u.session.Close()
+		u.session = nil
+	}
+}
+
+// ListTools returns the upstream's tools, from the cache when fresh (min of tools_ttl and the
+// upstream's ttlMs). A lost legacy session is reconnected once and the list retried; tools/call is
+// never retried.
+func (p *Pool) ListTools(ctx context.Context, slug string) ([]*mcp.Tool, error) {
+	u := p.ups[slug]
+	if u == nil {
+		return nil, connector.ErrToolUnknown
+	}
+	u.mu.Lock()
+	defer u.mu.Unlock()
+	if u.tools != nil && p.now().Before(u.fresh) {
+		return u.tools, nil
+	}
+	tools, ttl, err := u.listLocked(ctx)
+	if err != nil && !errors.Is(err, ErrDown) {
+		u.dropLocked()
+		tools, ttl, err = u.listLocked(ctx)
+	}
+	if err != nil {
+		u.dropLocked()
+		u.down = true
+		return nil, fmt.Errorf("%w: %v", ErrDown, err)
+	}
+	u.tools, u.fresh = tools, p.now().Add(ttl)
+	return tools, nil
+}
+
+func (u *up) listLocked(ctx context.Context) ([]*mcp.Tool, time.Duration, error) {
+	s, err := u.sessionLocked(ctx)
+	if err != nil {
+		return nil, 0, err
+	}
+	ttl := u.cfg.ToolsTTL
+	var all []*mcp.Tool
+	cursor := ""
+	for page := 0; page < maxPages; page++ {
+		lctx, cancel := context.WithTimeout(ctx, u.cfg.Timeout)
+		res, err := s.ListTools(lctx, &mcp.ListToolsParams{Cursor: cursor})
+		cancel()
+		if err != nil {
+			return nil, 0, err
+		}
+		if res.TTLMs > 0 && time.Duration(res.TTLMs)*time.Millisecond < ttl {
+			ttl = time.Duration(res.TTLMs) * time.Millisecond
+		}
+		all = append(all, res.Tools...)
+		if res.NextCursor == "" {
+			break
+		}
+		cursor = res.NextCursor
+	}
+	return all, ttl, nil
+}
+
+// cachedTool returns the cached definition of one tool, if the cache has it.
+func (p *Pool) cachedTool(slug, name string) *mcp.Tool {
+	u := p.ups[slug]
+	if u == nil {
+		return nil
+	}
+	u.mu.Lock()
+	defer u.mu.Unlock()
+	for _, t := range u.tools {
+		if t.Name == name {
+			return t
+		}
+	}
+	return nil
+}
+
+// --- gate.Executor / gate.Resolver ---
+
+// Resolve implements the Gate's Resolver for upstream tools: any tool name of a configured slug
+// resolves (the upstream decides whether it exists), so a call made while the upstream is down is
+// still recorded, and fails as connector_unavailable.
+func (p *Pool) Resolve(_ context.Context, _ ids.OrgID, qualified string) (gate.Executor, connector.ToolSpec, string, error) {
+	slug, name, ok := strings.Cut(qualified, ".")
+	if !ok || !p.Has(slug) || name == "" {
+		return nil, connector.ToolSpec{}, "", connector.ErrToolUnknown
+	}
+	spec := connector.ToolSpec{Name: name, SideEffect: connector.SideEffectUnknown}
+	if t := p.cachedTool(slug, name); t != nil {
+		spec.Description = t.Description
+		if b, err := json.Marshal(t.InputSchema); err == nil {
+			spec.InputSchema = b
+		}
+	}
+	return executor{p: p, slug: slug}, spec, ConnectorType, nil
+}
+
+type executor struct {
+	p    *Pool
+	slug string
+}
+
+// Execute implements gate.Executor (connector.Executor).
+func (x executor) Execute(ctx context.Context, call connector.Call) (connector.Result, error) {
+	return x.p.Execute(ctx, x.slug, call)
+}
+
+// Execute runs one tools/call on the upstream (S15 §3.4's classification):
+//   - the context ended before anything was sent → failed, client_cancelled (nothing ran)
+//   - no session, or the connection was refused → failed, connector_unavailable (nothing ran)
+//   - the context's deadline → unknown, timeout
+//   - a JSON-RPC error → failed, upstream_error (the server refused the call)
+//   - isError: true → failed, tool_error
+//   - a response over 4 MiB → unknown, too_large
+//   - anything else in doubt → unknown
+//
+// It never retries: the call may have applied.
+func (p *Pool) Execute(ctx context.Context, slug string, call connector.Call) (connector.Result, error) {
+	u := p.ups[slug]
+	if u == nil {
+		return connector.Result{}, &connector.Error{Kind: connector.KindConfig, Code: "connector_unavailable",
+			AgentMessage: gate.MCPUpstreamDownText(slug)}
+	}
+	if ctx.Err() != nil {
+		return connector.Result{}, &connector.Error{Kind: connector.KindCancelled, Code: gate.ReasonClientCancelled,
+			AgentMessage: "The MCP client went away before the call was sent. Nothing was run.", Err: context.Cause(ctx)}
+	}
+	u.mu.Lock()
+	s, err := u.sessionLocked(ctx)
+	u.mu.Unlock()
+	if err != nil {
+		return connector.Result{}, unavailable(slug, err)
+	}
+	res, err := s.CallTool(ctx, &mcp.CallToolParams{Name: call.Tool.Name, Arguments: json.RawMessage(call.Args)})
+	if err != nil {
+		return p.callError(ctx, u, slug, call, err)
+	}
+	raw, merr := json.Marshal(res)
+	if merr != nil {
+		return connector.Result{}, &connector.Error{Kind: connector.KindUpstream, Code: "invalid_result",
+			AgentMessage: "The MCP server's answer couldn't be read. It may have run.", Err: merr}
+	}
+	if len(raw) > MaxResponse {
+		return connector.Result{}, &connector.Error{Kind: connector.KindUpstream, Code: "too_large", AgentMessage: gate.MCPTooLarge}
+	}
+	p.stash.put(call.ActionID.String(), raw, nil, p.now())
+	if res.IsError {
+		return connector.Result{Output: raw}, &connector.Error{Kind: connector.KindToolError, Code: "tool_error",
+			AgentMessage: "The tool reported an error."}
+	}
+	return connector.Result{Output: raw}, nil
+}
+
+func unavailable(slug string, err error) error {
+	return &connector.Error{Kind: connector.KindConfig, Code: "connector_unavailable", AgentMessage: gate.MCPUpstreamDownText(slug), Err: err}
+}
+
+// callError classifies a failed tools/call.
+func (p *Pool) callError(ctx context.Context, u *up, slug string, call connector.Call, err error) (connector.Result, error) {
+	var we *mcpWireError
+	switch {
+	case refused(err):
+		u.mu.Lock()
+		u.dropLocked()
+		u.mu.Unlock()
+		return connector.Result{}, unavailable(slug, err)
+	case ctx.Err() != nil && errors.Is(ctx.Err(), context.DeadlineExceeded):
+		return connector.Result{}, &connector.Error{Kind: connector.KindTimeout, Code: "timeout",
+			AgentMessage: "The MCP server didn't answer in time. It may have run.", Err: err}
+	case ctx.Err() != nil:
+		return connector.Result{}, &connector.Error{Kind: connector.KindUpstream, Code: gate.ReasonClientCancelled,
+			AgentMessage: "The call was cancelled while it ran. It may have run.", Err: err}
+	case errors.As(err, &we):
+		raw, _ := json.Marshal(struct {
+			Code    int64           `json:"code"`
+			Message string          `json:"message"`
+			Data    json.RawMessage `json:"data,omitempty"`
+		}{we.Code, we.Message, we.Data})
+		p.stash.put(call.ActionID.String(), nil, raw, p.now())
+		return connector.Result{}, &connector.Error{Kind: connector.KindToolError, Code: "upstream_error",
+			AgentMessage: "The MCP server refused the call.", Err: err}
+	case errors.Is(err, errTooLarge) || strings.Contains(err.Error(), errTooLarge.Error()):
+		return connector.Result{}, &connector.Error{Kind: connector.KindUpstream, Code: "too_large", AgentMessage: gate.MCPTooLarge, Err: err}
+	}
+	// Lost mid-call: the session may be broken; the next call reconnects.
+	u.mu.Lock()
+	u.dropLocked()
+	u.mu.Unlock()
+	return connector.Result{}, &connector.Error{Kind: connector.KindUpstream, Code: "upstream_error",
+		AgentMessage: "The MCP server's answer was lost. It may have run.", Err: err}
+}
+
+type mcpWireError = sdkjsonrpc.Error
+
+// refused: the connection was refused or never dialed, so the request never reached the server.
+func refused(err error) bool {
+	var op *net.OpError
+	if errors.Is(err, syscall.ECONNREFUSED) || errors.As(err, &op) && op.Op == "dial" {
+		return true
+	}
+	m := err.Error()
+	return strings.Contains(m, "connect: connection refused") || strings.Contains(m, "dial tcp")
+}
+
+// Take implements front.Results: the raw result or JSON-RPC error of an action this process ran.
+func (p *Pool) Take(actionID string) (json.RawMessage, json.RawMessage, bool) {
+	return p.stash.take(actionID, p.now())
+}
+
+// --- the HTTP client ---
+
+var errRedirect = errors.New("upstream: redirects are not followed")
+var errTooLarge = errors.New("upstream: response larger than 4 MiB")
+
+func newHTTPClient(timeout time.Duration, hdr http.Header, allowPrivate bool, version string) *http.Client {
+	d := &net.Dialer{Timeout: 10 * time.Second, KeepAlive: 30 * time.Second, Control: dialGuard(allowPrivate)}
+	tr := &http.Transport{
+		Proxy:                 nil, // never from the environment
+		DialContext:           d.DialContext,
+		TLSClientConfig:       &tls.Config{MinVersion: tls.VersionTLS12},
+		ForceAttemptHTTP2:     true,
+		MaxIdleConnsPerHost:   16,
+		IdleConnTimeout:       90 * time.Second,
+		TLSHandshakeTimeout:   10 * time.Second,
+		ResponseHeaderTimeout: timeout,
+	}
+	return &http.Client{
+		Transport:     &roundTripper{next: tr, hdr: hdr, ua: "deedglass/" + version},
+		CheckRedirect: func(*http.Request, []*http.Request) error { return errRedirect },
+	}
+}
+
+// roundTripper strips every inbound credential (identity.StripInboundCredentials: nothing a
+// client sent to Deedglass ever travels upstream), then sets the operator's configured headers
+// and the User-Agent, and caps the response body.
+type roundTripper struct {
+	next http.RoundTripper
+	hdr  http.Header
+	ua   string
+}
+
+func (t *roundTripper) RoundTrip(r *http.Request) (*http.Response, error) {
+	r = r.Clone(r.Context())
+	identity.StripInboundCredentials(r.Header)
+	for k, vs := range t.hdr {
+		r.Header[k] = append([]string(nil), vs...)
+	}
+	r.Header.Set("User-Agent", t.ua)
+	res, err := t.next.RoundTrip(r)
+	if err != nil {
+		return nil, err
+	}
+	res.Body = &capped{rc: res.Body, left: MaxResponse}
+	return res, nil
+}
+
+type capped struct {
+	rc   io.ReadCloser
+	left int64
+}
+
+func (c *capped) Read(b []byte) (int, error) {
+	if c.left <= 0 {
+		var one [1]byte
+		if n, _ := c.rc.Read(one[:]); n > 0 {
+			return 0, errTooLarge
+		}
+		return 0, io.EOF
+	}
+	if int64(len(b)) > c.left {
+		b = b[:c.left]
+	}
+	n, err := c.rc.Read(b)
+	c.left -= int64(n)
+	return n, err
+}
+
+func (c *capped) Close() error { return c.rc.Close() }
+
+// dialGuard refuses loopback, private (RFC 1918, ULA), link-local (incl. metadata), CGNAT,
+// unspecified and multicast addresses unless allowPrivate (dev). S16 replaces it with the full
+// egress guard.
+func dialGuard(allowPrivate bool) func(network, address string, c syscall.RawConn) error {
+	return func(_, address string, _ syscall.RawConn) error {
+		if allowPrivate {
+			return nil
+		}
+		host, _, err := net.SplitHostPort(address)
+		if err != nil {
+			return err
+		}
+		ip := net.ParseIP(host)
+		if ip == nil || Blocked(ip) {
+			return fmt.Errorf("upstream: %s is a private or reserved address; Deedglass doesn't connect to it outside dev", host)
+		}
+		return nil
+	}
+}
+
+var cgnat = &net.IPNet{IP: net.IPv4(100, 64, 0, 0), Mask: net.CIDRMask(10, 32)}
+
+// Blocked reports whether ip is an address the gateway refuses outside dev.
+func Blocked(ip net.IP) bool {
+	return ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() ||
+		ip.IsUnspecified() || ip.IsMulticast() || ip.IsInterfaceLocalMulticast() || cgnat.Contains(ip)
+}
+
+// --- the result stash ---
+
+// stash keeps each action's raw upstream answer for a minute, for the front (front.Results).
+type stash struct {
+	mu sync.Mutex
+	m  map[string]stashed
+}
+
+type stashed struct {
+	result, rpcErr json.RawMessage
+	at             time.Time
+}
+
+const stashTTL = time.Minute
+
+func (s *stash) put(id string, result, rpcErr json.RawMessage, now time.Time) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.m == nil {
+		s.m = map[string]stashed{}
+	}
+	for k, v := range s.m { // bounded: entries live a minute
+		if now.Sub(v.at) > stashTTL {
+			delete(s.m, k)
+		}
+	}
+	s.m[id] = stashed{result: result, rpcErr: rpcErr, at: now}
+}
+
+func (s *stash) take(id string, now time.Time) (json.RawMessage, json.RawMessage, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	v, ok := s.m[id]
+	if !ok || now.Sub(v.at) > stashTTL {
+		return nil, nil, false
+	}
+	delete(s.m, id)
+	return v.result, v.rpcErr, true
+}
+
+// Resolver routes the Gate's Resolve: an upstream slug to the pool, anything else to the native
+// registry.
+type Resolver struct {
+	Native gate.Resolver
+	Pool   *Pool
+}
+
+// Resolve implements gate.Resolver.
+func (r Resolver) Resolve(ctx context.Context, org ids.OrgID, qualified string) (gate.Executor, connector.ToolSpec, string, error) {
+	if slug, _, _ := strings.Cut(qualified, "."); r.Pool != nil && r.Pool.Has(slug) {
+		return r.Pool.Resolve(ctx, org, qualified)
+	}
+	return r.Native.Resolve(ctx, org, qualified)
+}

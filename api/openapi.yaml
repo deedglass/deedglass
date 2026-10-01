@@ -818,6 +818,55 @@ paths:
                   doc_url: https://docs.deedglass.com/errors/conflict
         default:
           $ref: "#/components/responses/Error"
+  /v1/tools:
+    get:
+      operationId: listTools
+      summary: The native tools this agent may see
+      description: >-
+        The tools of the Gate's native connectors (the ones `/mcp/native` serves), named
+        `<connector>.<tool>`, for SDKs and `deedglass mcp serve`. Tools the active policy always
+        denies to this agent are left out; `include_hidden=true` lists them too, with `visibility:
+        hidden` (the same answer `POST /v1/tools/resolve` gives, so nothing secret). Every call is
+        still decided by `POST /v1/actions`. An agent key with `actions:execute`.
+      tags: [Gate]
+      security: [{bearerAuth: []}]
+      x-deedglass-auth: agent_key
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+        - name: include_hidden
+          in: query
+          required: false
+          description: Also list the tools the policy always denies, with `visibility` hidden.
+          schema: {type: boolean, default: false}
+      responses:
+        "200":
+          description: The tools, sorted by name. Not paginated (`has_more` is false).
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+            Deedglass-Version:
+              $ref: "#/components/headers/DeedglassVersion"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ToolList"
+              example:
+                object: list
+                data:
+                  - object: tool
+                    name: fake.echo
+                    connector: fake
+                    title: Echo
+                    description: Returns its arguments.
+                    input_schema: {type: object, properties: {message: {type: string}}, additionalProperties: false}
+                    side_effect: read
+                    visibility: visible
+                has_more: false
+                next_cursor: null
+                policy_version: pv_01k6w4a3d5f7h9k1n3q5s7v9x1
+        default:
+          $ref: "#/components/responses/Error"
   /v1/tools/resolve:
     post:
       operationId: resolveTools
@@ -2835,10 +2884,10 @@ paths:
         - name: connector
           in: path
           required: true
-          description: A connector id (`con_…`).
+          description: The upstream's connector name (`mcp.upstreams.<name>`), or a connector id (`con_…`) from S16.
           schema:
             type: string
-            pattern: "^con_[0-7][0-9a-hjkmnp-tv-z]{25}$"
+            pattern: "^([a-z][a-z0-9-]{1,31}|con_[0-7][0-9a-hjkmnp-tv-z]{25})$"
       responses:
         "200":
           description: The metadata document.
@@ -2907,19 +2956,29 @@ paths:
   /mcp/{connector}:
     post:
       operationId: mcpConnector
-      summary: Send an MCP message to a connector's MCP endpoint
+      summary: Send an MCP message to an upstream MCP server through the Gate
       description: >-
-        The MCP Streamable HTTP endpoint (MCP 2026-07-28). Until the gateway ships (S15) it answers
-        404 with a JSON-RPC error: `{"jsonrpc":"2.0","id":<the request id or null>,"error":{"code":-32601,"message":"The
-        MCP gateway isn't enabled on this server."}}`. Without a key the answer is 401 with
-        `WWW-Authenticate: Bearer realm="deedglass",
+        The MCP Streamable HTTP gateway (S15) for one upstream MCP server configured under
+        `mcp.upstreams.<connector>` in deedglass.yaml. Deedglass runs every allowed `tools/call`
+        itself (gateway mode) and holds the upstream's credentials. A POST-only JSON-RPC endpoint,
+        sessionless and dual-era: 2026-07-28 requests carry `_meta`
+        `io.modelcontextprotocol/protocolVersion` and the `MCP-Protocol-Version`, `Mcp-Method` and
+        (for `tools/call`, `resources/read`, `prompts/get`) `Mcp-Name` headers, and any
+        `Mcp-Param-*` a tool's `x-mcp-header` declares; a missing or different header is 400 with
+        JSON-RPC `-32020`, an unsupported version 400 with `-32022` and `data.supported`. Legacy
+        clients (2025-11-25, 2025-06-18, 2025-03-26) open with `initialize`; no `Mcp-Session-Id` is
+        minted, and one sent is ignored. Notifications get 202 with no body. An unknown method is
+        404 (modern) or 200 (legacy) with `-32601`. Responses are `application/json` with
+        `Cache-Control: no-store`; an `Accept` without `application/json` is 406. Errors before the
+        message is read are JSON-RPC errors without an id whose `data` names the Deedglass error
+        `code`, `doc_url` and `request_id`: 401 with `WWW-Authenticate: Bearer realm="deedglass",
         resource_metadata="<base>/.well-known/oauth-protected-resource/mcp/<connector>",
-        scope="actions:execute"`; a bad key adds `error="invalid_token"` and `error_description`. A
-        key without `actions:execute` (an org admin key) gets 403 with `error="insufficient_scope"`,
-        `scope` and `resource_metadata`; a stopped or suspended agent gets 403 without a Bearer
-        error. A browser `Origin` other than the server's own gets 403 with a JSON-RPC error without
-        an id (DNS-rebinding protection). GET and DELETE get 405 with `Allow: POST`.
-        `Idempotency-Key` is ignored. An agent key with `actions:execute`.
+        scope="actions:execute"`, 413 over 4 MiB, 415 for another `Content-Type`, 429 beyond 32
+        requests in flight per agent. A browser `Origin` other than the server's own or one in
+        `mcp.allowed_origins` gets 403. A stopped or suspended agent's `tools/call` is recorded and
+        sealed, and answered as an `isError` tool result. GET and DELETE get 405 with `Allow:
+        POST`. `Idempotency-Key` is ignored. An agent key with `actions:execute`. JSON-RPC is not
+        modelled here; see docs/MCP.md.
       tags: [MCP]
       security: [{bearerAuth: []}]
       x-deedglass-auth: agent_key
@@ -2929,36 +2988,33 @@ paths:
         - name: connector
           in: path
           required: true
-          description: A connector id (`con_…`).
+          description: The upstream's connector name (`mcp.upstreams.<name>`), or a connector id (`con_…`) from S16.
           schema:
             type: string
-            pattern: "^con_[0-7][0-9a-hjkmnp-tv-z]{25}$"
+            pattern: "^([a-z][a-z0-9-]{1,31}|con_[0-7][0-9a-hjkmnp-tv-z]{25})$"
       requestBody:
         $ref: "#/components/requestBodies/MCPMessage"
       responses:
         "403":
           $ref: "#/components/responses/MCPOriginRefused"
-        "404":
-          $ref: "#/components/responses/MCPNotEnabled"
+        "200":
+          $ref: "#/components/responses/MCPResponse"
+        "202":
+          description: A notification was accepted. No body.
+        "400":
+          $ref: "#/components/responses/MCPRequestRefused"
         default:
           $ref: "#/components/responses/Error"
   /mcp/native:
     post:
       operationId: mcpNative
-      summary: Send an MCP message to the native MCP endpoint
+      summary: Send an MCP message to the Gate's native tools
       description: >-
-        The MCP Streamable HTTP endpoint (MCP 2026-07-28) for the Gate's native tools. Until the
-        gateway ships (S15) it answers 404 with a JSON-RPC error:
-        `{"jsonrpc":"2.0","id":<the request id or null>,"error":{"code":-32601,"message":"The
-        MCP gateway isn't enabled on this server."}}`. Without a key the answer is 401 with
-        `WWW-Authenticate: Bearer realm="deedglass",
-        resource_metadata="<base>/.well-known/oauth-protected-resource/mcp/native",
-        scope="actions:execute"`; a bad key adds `error="invalid_token"` and `error_description`. A
-        key without `actions:execute` (an org admin key) gets 403 with `error="insufficient_scope"`,
-        `scope` and `resource_metadata`; a stopped or suspended agent gets 403 without a Bearer
-        error. A browser `Origin` other than the server's own gets 403 with a JSON-RPC error without
-        an id (DNS-rebinding protection). GET and DELETE get 405 with `Allow: POST`.
-        `Idempotency-Key` is ignored. An agent key with `actions:execute`.
+        Deedglass as an MCP server (S15): the org's native connectors' tools, named
+        `<connector>.<tool>` (`fake.echo` in dev; `postgres.*` and others as connectors arrive),
+        filtered per agent by the active policy, plus `deedglass.check_approval`. The same
+        sessionless, dual-era protocol rules as `/mcp/{connector}`; `deedglass mcp serve` bridges
+        stdio clients to it. An agent key with `actions:execute`.
       tags: [MCP]
       security: [{bearerAuth: []}]
       x-deedglass-auth: agent_key
@@ -2970,8 +3026,12 @@ paths:
       responses:
         "403":
           $ref: "#/components/responses/MCPOriginRefused"
-        "404":
-          $ref: "#/components/responses/MCPNotEnabled"
+        "200":
+          $ref: "#/components/responses/MCPResponse"
+        "202":
+          description: A notification was accepted. No body.
+        "400":
+          $ref: "#/components/responses/MCPRequestRefused"
         default:
           $ref: "#/components/responses/Error"
   /login:
@@ -3249,8 +3309,28 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/JSONRPCError"
-    MCPNotEnabled:
-      description: The MCP gateway isn't enabled on this server (until S15).
+    MCPResponse:
+      description: One JSON-RPC response (a result, or an error such as -32601 for a legacy unknown method).
+      headers:
+        Deedglass-Request-Id:
+          $ref: "#/components/headers/DeedglassRequestId"
+      content:
+        application/json:
+          schema:
+            type: object
+          example:
+            jsonrpc: "2.0"
+            id: 3
+            result:
+              resultType: complete
+              content: [{type: text, text: "Echo: hello"}]
+              isError: false
+              _meta: {com.deedglass/action: act_01k6w4a3d5f7h9k1n3q5s7v9x1, com.deedglass/deed: deed_01k6w4a3d5f7h9k1n3q5s7v9x2}
+    MCPRequestRefused:
+      description: >-
+        A header that doesn't match the body (-32020 HeaderMismatch), an unsupported protocol
+        version (-32022 with data.supported and data.requested), a batch or a response (-32600), or
+        JSON that can't be parsed (-32700).
       headers:
         Deedglass-Request-Id:
           $ref: "#/components/headers/DeedglassRequestId"
@@ -3260,8 +3340,8 @@ components:
             $ref: "#/components/schemas/JSONRPCError"
           example:
             jsonrpc: "2.0"
-            id: 1
-            error: {code: -32601, message: The MCP gateway isn't enabled on this server.}
+            id: 3
+            error: {code: -32020, message: 'Header mismatch: Mcp-Name is "echo" but the body names "delete_all". Send the same tool name in both.'}
   requestBodies:
     MCPMessage:
       required: true
@@ -4965,6 +5045,30 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/ToolVisibility"
+        has_more: {type: boolean}
+        next_cursor: {type: [string, "null"]}
+        policy_version: {type: [string, "null"], description: 'The enforced policy version (`pv_…`); null when no policy is active.'}
+    Tool:
+      type: object
+      required: [object, name, connector, title, description, input_schema, side_effect, visibility]
+      properties:
+        object: {type: string, const: tool}
+        name: {type: string, description: '`<connector>.<tool>`, as policies match it and /mcp/native lists it.'}
+        connector: {type: string}
+        title: {type: string}
+        description: {type: string}
+        input_schema: {type: object, description: The tool's JSON Schema for its arguments.}
+        side_effect: {type: string, enum: [read, write, destructive, unknown], description: What the connector declares the tool does.}
+        visibility: {type: string, enum: [visible, hidden]}
+    ToolList:
+      type: object
+      required: [object, data, has_more, next_cursor, policy_version]
+      properties:
+        object: {type: string, const: list}
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Tool"
         has_more: {type: boolean}
         next_cursor: {type: [string, "null"]}
         policy_version: {type: [string, "null"], description: 'The enforced policy version (`pv_…`); null when no policy is active.'}

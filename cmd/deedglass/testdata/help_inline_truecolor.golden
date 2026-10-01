@@ -39,7 +39,7 @@ exit 0
   decoder             Inspect Postgres change readers             [2msoon[0m   [2mstatus · drop[0m
   slack manifest      Print the Slack app manifest                [2msoon[0m
 [1mMCP[0m
-  mcp                 Put the Gate in front of MCP servers        [2msoon[0m   [2mwrap · serve · snippet[0m
+  mcp                 Put the Gate in front of MCP servers        [2m    [0m   [2mwrap · serve · snippet[0m
 [1mInsights[0m
   insights            Usage, shadow results and anomalies         [2msoon[0m   [2mstats · shadow · anomalies · detect · settings · suggestions · digest[0m
 [1mDev[0m

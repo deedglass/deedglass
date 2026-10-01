@@ -1,0 +1,18 @@
+# deedglass.yaml for the Acme demo stack (examples/demo/compose.yaml mounts it as
+# /etc/deedglass/deedglass.yaml). Local demos only.
+gate:
+  # A tool call through the gateway may run this long before it is UNVERIFIABLE (timeout).
+  execute_timeout: 30s
+mcp:
+  # No browser origin may call /mcp/* (the default; listed here so the setting is visible).
+  allowed_origins: []
+  # Only tools are governed and forwarded; resources and prompts are not passed through.
+  passthrough: []
+  upstreams:
+    # @modelcontextprotocol/server-everything in Streamable HTTP mode (compose profile http). It
+    # needs no credentials; a real upstream would name its header here:
+    #   headers_from_env: {Authorization: EVERYTHING_MCP_AUTH}
+    everything:
+      url: http://everything:3001/mcp
+      timeout: 30s
+      tools_ttl: 30s

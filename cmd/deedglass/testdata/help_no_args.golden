@@ -39,7 +39,7 @@ Connectors
   decoder             Inspect Postgres change readers             soon   status · drop
   slack manifest      Print the Slack app manifest                soon
 MCP
-  mcp                 Put the Gate in front of MCP servers        soon   wrap · serve · snippet
+  mcp                 Put the Gate in front of MCP servers               wrap · serve · snippet
 Insights
   insights            Usage, shadow results and anomalies         soon   stats · shadow · anomalies · detect · settings · suggestions · digest
 Dev

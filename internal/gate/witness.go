@@ -24,6 +24,9 @@ const (
 	ReasonOutcomeUnknown = "outcome_unknown" // a lost response, a panic, an untyped error, a crash
 	ReasonEdgeLost       = "edge_lost"       // proxy: the edge never reported within gate.edge_result_timeout
 	ReasonWitnessGaveUp  = "witness_gave_up" // a deferred witness failed max_attempts times
+	// ReasonClientCancelled: the MCP client went away (or its agent was stopped) while the upstream
+	// call ran, so Deedglass cancelled it and can't know whether it applied (S15).
+	ReasonClientCancelled = "client_cancelled"
 )
 
 // L0 is S13's witness: the verdict is what the tool (or the edge) reported, and only a clean

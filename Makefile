@@ -12,7 +12,8 @@ LDFLAGS  := -s -w -X $(BI).Version=$(VERSION) -X $(BI).Commit=$(COMMIT) -X $(BI)
 	integration matrix fuzz bench bench-store bench-deed cover clean \
 	dev dev-down dev-reset dev-logs run docker bench-http bench-verify \
 	web-verify-install web-verify-test web-verify-build web-verify-serve gencopy genmark bench-mark bench-ledger bench-stop bench-intents bench-gate policy-test \
-	fuzz-policy fuzz-policy-short bench-policy bench-eval mcp-it bench-mcp
+	fuzz-policy fuzz-policy-short bench-policy bench-eval mcp-it bench-mcp \
+	demo-up demo-down demo-reset demo-status demo-snippet demo-psql demo-follow demo-verify demo-smoke bench-gateway
 
 all: ci
 
@@ -219,3 +220,37 @@ web-verify-build: $(WEB_VERIFY)/node_modules/.package-lock.json ## compile the p
 
 web-verify-serve: web-verify-build ## the verify page on http://127.0.0.1:5178 (no dependency server)
 	node $(WEB_VERIFY)/scripts/serve.mjs
+
+# --- the Acme demo stack (S15; examples/demo/README.md) ---
+
+demo-up: ## S15: the Acme demo stack (orders DB, Deedglass, policy, agents); HTTP=1 adds the everything upstream; DEMO_PORT=8091 if 8080 is taken
+	@examples/demo/scripts/demo.sh up
+
+demo-down: ## stop the demo stack (data kept)
+	@examples/demo/scripts/demo.sh down
+
+demo-reset: ## reload the orders database and /tmp/deedglass-demo for a new take; HARD=1 also wipes the Ledger
+	@examples/demo/scripts/demo.sh reset
+
+demo-status: ## one ✓ or ✕ line per part of the demo stack
+	@examples/demo/scripts/demo.sh status
+
+demo-snippet: ## MCP client config for the demo: CLIENT=claude-desktop|claude-code|cursor|vscode|windsurf [KEYS=1 fills the agent key]
+	@examples/demo/scripts/demo.sh snippet
+
+demo-psql: ## psql on the Acme orders database as acme_owner
+	@examples/demo/scripts/demo.sh psql
+
+demo-follow: ## the demo terminal: deedglass actions list --follow --connector orders
+	@examples/demo/scripts/demo.sh follow
+
+demo-verify: ## export the demo's recent deeds (SINCE=10m) and verify the chain
+	@examples/demo/scripts/demo.sh verify
+
+demo-smoke: ## TestDemoScript against the running demo stack (make demo-up first)
+	DEEDGLASS_DEMO=1 $(GO) test -tags demo -count=1 -v -run TestDemoScript ./examples/demo/
+
+bench-gateway: ## S15: /mcp/native fake.echo and the gateway's added latency with an in-process upstream, on a throwaway PG 18; JSON in bench/results/
+	@out="$(CURDIR)/bench/results/$$(date +%F)-$$(go env GOOS)-$$(go env GOARCH)-gateway.json"; log="$(CURDIR)/.tmp/bench-gateway.log"; mkdir -p "$(CURDIR)/.tmp"; \
+	DEEDGLASS_IT_BENCH=1 DEEDGLASS_GATEWAY_BENCH_OUT="$$out" DEEDGLASS_IT_PKGS=./cmd/deedglass/ DEEDGLASS_IT_GOFLAGS="-run TestGatewayBudget -v" \
+	scripts/integration_local.sh > "$$log" 2>&1; st=$$?; grep -E 'PERF|over budget|--- (PASS|FAIL)' "$$log"; echo "raw: $$out"; exit $$st

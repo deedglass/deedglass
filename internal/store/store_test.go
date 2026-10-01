@@ -57,6 +57,7 @@ var systemTxCallSites = []string{
 	"cmd/deedglass/fakeaction.go: SystemTx(ctx, store.ReasonMaintenance",         // dev fake-action: find the demo org by slug (dev only, S06)
 	"internal/identity/org.go: SystemTx(ctx, store.ReasonOrgCreate",              // deedglass org create: org, owner, org.created deed, hooks (S07)
 	"internal/store/policystore/usage.go: SystemTx(ctx, store.ReasonMaintenance", // Usage.Prune: drops old usage_counters windows across orgs (S11)
+	"cmd/deedglass/devseed_demo.go: SystemTx(ctx, store.ReasonMaintenance",       // dev seed --demo: find the acme-demo org by slug (dev only, S15)
 }
 
 func TestSystemTxCallSites(t *testing.T) {

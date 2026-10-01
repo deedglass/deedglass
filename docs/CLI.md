@@ -187,7 +187,7 @@ builds it. Hidden commands work but aren't in `deedglass help`.
 | `deedglass policy replay` | Policies | Replay past actions against a version | soon (S27) |
 | `deedglass policy diff` | Policies | Compare two policy versions | soon (S27) |
 | `deedglass act <tool> [--args '{"k":"v"}'] [--mode gateway|proxy] [--wait 60s] [--idempotency-key K] [--json]` | Actions | Send a test action through the Gate | built |
-| `deedglass actions list [--agent agt_…] [--tool stripe.*] [--state …] [--decision …] [--verdict MISMATCH] [--level L2] [--since 1h] [--q text] [--limit 25] [--cursor …] [--json]` | Actions | List actions | built |
+| `deedglass actions list [--agent agt_…] [--tool stripe.*] [--state …] [--decision …] [--verdict MISMATCH] [--level L2] [--since 1h] [--q text] [--limit 25] [--cursor …] [--json] [--follow] [--connector orders]` | Actions | List actions | built |
 | `deedglass actions show <act_…> [--wait] [--json]` | Actions | Show one action and its events | built |
 | `deedglass actions cancel <act_…> [--json]` | Actions | Cancel a pending action | built |
 | `deedglass approve` | Actions | Approve a pending action | soon (S22) |
@@ -220,8 +220,8 @@ builds it. Hidden commands work but aren't in `deedglass help`.
 | `deedglass decoder drop` | Connectors | Remove a replication slot | soon (S20) |
 | `deedglass slack manifest` | Connectors | Print the Slack app manifest | soon (S29) |
 | `deedglass mcp wrap --connector <name> [--connector-type mcp] [--hide-denied=false] [--call-timeout 2m] [--result-mode full|digest] [--log-file <path>] -- <command> [args…]` | MCP | Run an MCP server behind the Gate | built |
-| `deedglass mcp serve` | MCP | Serve the Gate's native MCP tools | soon (S15) |
-| `deedglass mcp snippet --client <claude-desktop|claude-code|cursor|windsurf|vscode> --connector <name> [--connector-type postgres] [--api-key-from-env] -- <command> [args…]` | MCP | Print client config for an MCP client | built |
+| `deedglass mcp serve [--connector native|<name>]` | MCP | Serve the Gate's native MCP tools | built |
+| `deedglass mcp snippet --client <claude-desktop|claude-code|cursor|windsurf|vscode> --connector <name> [--connector-type postgres] [--api-key-from-env] -- <command> [args…]  ·  --transport http --client <…> [--connector native|<name>]` | MCP | Print client config for an MCP client | built |
 | `deedglass insights stats` | Insights | Show usage per agent and tool | soon (S27) |
 | `deedglass insights shadow` | Insights | Show shadow-policy results | soon (S27) |
 | `deedglass insights anomalies` | Insights | List anomalies | soon (S27) |
@@ -233,7 +233,7 @@ builds it. Hidden commands work but aren't in `deedglass help`.
 | `deedglass insights suggestions reject` | Insights | Reject a suggestion | soon (S28) |
 | `deedglass insights suggestions generate` | Insights | Generate suggestions now | soon (S28) |
 | `deedglass insights digest` | Insights | Preview the weekly digest | soon (S28) |
-| `deedglass dev seed [--json]` | Dev | Load demo data into a dev database | built |
+| `deedglass dev seed [--demo [--keys-file <path>]] [--json]` | Dev | Load demo data into a dev database | built |
 | `deedglass dev fake-action [--n 20] [--seed 42] [--kinds allow,deny,…] [--agents 3] [--batch 1] [--pace 0s] [--org-slug demo] [--quiet] [--json]` | Dev | Seal realistic fake actions (dev only) | built |
 | `deedglass dev simulate` | Dev | Simulate agent traffic | soon (S27) |
 | `deedglass dev agent-script` | Dev | Run a scripted agent | soon (S37) |
@@ -452,6 +452,46 @@ $ DEEDGLASS_ENV=prod deedglass mcp wrap --connector scratch --fail-open -- npx -
 prints the client's config with absolute paths and `PATH` ([MCP_CLIENTS.md](MCP_CLIENTS.md));
 `--connector-type` is copied into the wrap command, and `--api-key-from-env` puts
 `DEEDGLASS_API_KEY` in place of the placeholder. `deedglass help mcp wrap` lists every flag.
+
+### `mcp serve`, `mcp snippet --transport http` (S15)
+
+`deedglass mcp serve [--connector native|<name>]` bridges a stdio MCP client (Claude Desktop) to the
+Gate's HTTP endpoints: every line from stdin is one POST to `/mcp/native` (or `/mcp/<name>`) with
+the agent's key (`DEEDGLASS_API_KEY`) and the MCP headers; every answer is one line on stdout. It
+runs no tools and holds no credentials but the key; stdin EOF exits 0. With the server down, a tool
+call answers `Deedglass could not be reached at http://127.0.0.1:8080, so this was not run. Start
+it with "deedglass serve", then try again.`
+
+`deedglass mcp snippet --transport http --client <client> [--connector native|<name>]` prints config
+for the HTTP endpoints instead of a wrapped server: `claude mcp add --transport http …` for Claude
+Code, `url` + `headers` for Cursor, `type: http` with a password prompt for VS Code, `serverUrl`
+for Windsurf, and the `mcp serve` bridge for Claude Desktop ([MCP_CLIENTS.md](MCP_CLIENTS.md)).
+
+### `actions list --follow` (S15)
+
+`deedglass actions list --follow [--connector orders] [--agent agt_…]` prints one line per action
+created after it started, when it waits for a person and when it is sealed. It polls the Ledger
+once a second in direct database mode (S24 moves it to the event stream); Ctrl-C exits 0.
+
+```text
+$ deedglass actions list --follow --connector orders
+Following actions · org acme-demo · connector orders · Ctrl-C to stop
+10:14:03  ✓ orders.execute_sql   allowed   41 ms    L0 · VERIFIED        act_01j9zw3k…
+10:14:21  ✕ orders.execute_sql   denied    block-destructive-sql         deed_01j9zw4m…
+10:14:37  ✕ orders.execute_sql   denied    no-deletes-on-orders          deed_01j9zw5p…
+10:14:52  ◐ orders.execute_sql   waiting   orders-writes-need-approval   apr_01j9zw6q…
+```
+
+`--connector X` is `--tool 'X.*'`; it doesn't take `--json` or `--cursor`.
+(`testdata/cli/actions-follow.txt` pins the format.)
+
+### `dev seed --demo` (S15)
+
+`deedglass dev seed --demo [--keys-file examples/demo/.demo-keys]` loads the Acme demo org
+(`acme-demo`, owner `founder@example.test`), agents `claude-desktop`, `claude-code` and `cursor`
+with one `dg_test_` key each (shown once: written to the keys file, mode 0600), and the
+`acme-demo` policy enforced with its activation deed. Running it again changes nothing; an agent
+missing from the keys file gets a new key. `make demo-up` runs it ([examples/demo](../examples/demo/README.md)).
 
 ## People: `org create`, `org login-link`, `dev mail-preview`
 

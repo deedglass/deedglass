@@ -1,0 +1,152 @@
+package upstream
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"strings"
+
+	"github.com/deedglass/deedglass/internal/identity"
+	"github.com/deedglass/deedglass/internal/mcp/front"
+	mcpjson "github.com/deedglass/deedglass/internal/mcp/jsonrpc"
+	"github.com/deedglass/deedglass/internal/policy"
+)
+
+// Source is one upstream's tools for its front: the upstream's names, filtered for the caller.
+type Source struct {
+	p    *Pool
+	slug string
+	vis  front.Visibility
+}
+
+// Source returns slug's ToolSource. vis marks the tools the active policy always denies.
+func (p *Pool) Source(slug string, vis front.Visibility) *Source {
+	return &Source{p: p, slug: slug, vis: vis}
+}
+
+var _ front.ToolSource = (*Source)(nil)
+
+// Label implements front.ToolSource.
+func (s *Source) Label() string { return s.slug }
+
+// tools converts the upstream's list: names outside the MCP charset, the reserved deedglass.
+// prefix and tools with invalid x-mcp-header annotations are left out (a conforming client would
+// drop the last ones too).
+func (s *Source) tools(ctx context.Context) ([]front.Tool, error) {
+	ts, err := s.p.ListTools(ctx, s.slug)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %v", front.ErrUpstreamDown, err)
+	}
+	out := make([]front.Tool, 0, len(ts))
+	for _, t := range ts {
+		if t == nil || !front.ReMCPName.MatchString(t.Name) || strings.HasPrefix(t.Name, "deedglass.") {
+			continue
+		}
+		def, err := json.Marshal(t)
+		if err != nil {
+			continue
+		}
+		schema, _ := json.Marshal(t.InputSchema)
+		if _, ok := front.ParamHeaders(schema); !ok {
+			s.p.log.Warn("mcp: an upstream tool has an invalid x-mcp-header annotation; it is left out", "upstream", s.slug, "tool", t.Name)
+			continue
+		}
+		out = append(out, front.Tool{Name: t.Name, Gate: s.slug + "." + t.Name, Def: mcpjson.Value(json.RawMessage(def)),
+			Schema: schema, Digest: front.DefDigest(def)})
+	}
+	front.SortTools(out)
+	return out, nil
+}
+
+// List implements front.ToolSource.
+func (s *Source) List(ctx context.Context, pr identity.Principal) ([]front.Tool, error) {
+	tools, err := s.tools(ctx)
+	if err != nil {
+		return nil, err
+	}
+	facts := make([]policy.ToolFacts, len(tools))
+	for i, t := range tools {
+		facts[i] = policy.ToolFacts{Name: t.Gate, Connector: s.slug, ConnectorType: ConnectorType, SideEffect: "unknown"}
+	}
+	if err := front.MarkHidden(ctx, s.vis, pr, tools, facts); err != nil {
+		s.p.log.Warn("mcp: could not ask the Gate which tools to hide; showing every tool (calls are still decided)", "upstream", s.slug, "err", err.Error())
+	}
+	return tools, nil
+}
+
+// Lookup implements front.ToolSource. When the upstream can't list, the tool is still returned
+// (without a digest), so the call reaches the Gate, is recorded, and fails as
+// connector_unavailable instead of disappearing.
+func (s *Source) Lookup(ctx context.Context, _ identity.Principal, name string) (front.Tool, bool, error) {
+	if !front.ReMCPName.MatchString(name) {
+		return front.Tool{}, false, nil
+	}
+	tools, err := s.tools(ctx)
+	if errors.Is(err, front.ErrUpstreamDown) {
+		return front.Tool{Name: name, Gate: s.slug + "." + name}, true, nil
+	}
+	if err != nil {
+		return front.Tool{}, false, err
+	}
+	for _, t := range tools {
+		if t.Name == name {
+			return t, true, nil
+		}
+	}
+	return front.Tool{}, false, nil
+}
+
+// --- passthrough (mcp.passthrough) ---
+
+// Forward implements front.Passthrough for one upstream: resources/*, prompts/* and
+// completion/complete, through the SDK's typed calls. Logged by the front, never sealed.
+func (s *Source) Forward(ctx context.Context, method string, params json.RawMessage) (json.RawMessage, *mcpjson.ErrorObject, error) {
+	u := s.p.ups[s.slug]
+	if u == nil {
+		return nil, nil, front.ErrUpstreamDown
+	}
+	u.mu.Lock()
+	sess, err := u.sessionLocked(ctx)
+	u.mu.Unlock()
+	if err != nil {
+		return nil, nil, fmt.Errorf("%w: %v", front.ErrUpstreamDown, err)
+	}
+	if len(params) == 0 {
+		params = json.RawMessage(`{}`)
+	}
+	var res any
+	switch method {
+	case "resources/list":
+		res, err = call(ctx, params, sess.ListResources)
+	case "resources/templates/list":
+		res, err = call(ctx, params, sess.ListResourceTemplates)
+	case "resources/read":
+		res, err = call(ctx, params, sess.ReadResource)
+	case "prompts/list":
+		res, err = call(ctx, params, sess.ListPrompts)
+	case "prompts/get":
+		res, err = call(ctx, params, sess.GetPrompt)
+	case "completion/complete":
+		res, err = call(ctx, params, sess.Complete)
+	default:
+		return nil, &mcpjson.ErrorObject{Code: mcpjson.CodeMethodNotFound, Message: "Method not found."}, nil
+	}
+	var we *mcpWireError
+	if errors.As(err, &we) {
+		return nil, &mcpjson.ErrorObject{Code: int(we.Code), Message: we.Message}, nil
+	}
+	if err != nil {
+		return nil, nil, err
+	}
+	b, err := json.Marshal(res)
+	return b, nil, err
+}
+
+func call[P any, R any](ctx context.Context, raw json.RawMessage, f func(context.Context, *P) (R, error)) (any, error) {
+	var p P
+	if err := json.Unmarshal(raw, &p); err != nil {
+		return nil, &mcpWireError{Code: int64(mcpjson.CodeInvalidParams), Message: "The params couldn't be read: " + err.Error()}
+	}
+	return f(ctx, &p)
+}

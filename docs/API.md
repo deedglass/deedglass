@@ -476,6 +476,32 @@ wrapper's pinned definition digest (optional). A malformed connector, name or di
 500 tools, is 400 `validation_failed`. When policies can't be loaded, every tool is `visible` (the
 calls are still refused).
 
+## Native tools and the MCP endpoints (S15)
+
+`GET /v1/tools` (an agent key with `actions:execute`) lists the Gate's native tools (the ones
+`/mcp/native` serves), named `<connector>.<tool>`, minus the ones the active policy always denies
+to this agent; `?include_hidden=true` adds those with `visibility: hidden`.
+
+```sh
+curl -s http://127.0.0.1:8080/v1/tools -H "Authorization: Bearer $DEEDGLASS_API_KEY"
+```
+
+```json
+{ "object": "list",
+  "data": [
+    { "object": "tool", "name": "fake.echo", "connector": "fake", "title": "Echo",
+      "description": "Returns its arguments.",
+      "input_schema": { "type": "object", "properties": { "message": { "type": "string", "maxLength": 65536 } } },
+      "side_effect": "read", "visibility": "visible" } ],
+  "has_more": false, "next_cursor": null, "policy_version": "pv_01k6w4a3d5f7h9k1n3q5s7v9x1" }
+```
+
+`POST /mcp/{connector}` and `POST /mcp/native` are MCP Streamable HTTP endpoints: one JSON-RPC
+message per POST, POST only (GET and DELETE answer 405), sessionless, both MCP eras. They are
+documented in [MCP.md](MCP.md); `api/openapi.yaml` describes them without modelling JSON-RPC.
+Their refusals before the message is read (401, 403, 413, 415, 429) are JSON-RPC errors whose
+`data` carries the usual `code`, `doc_url` and `request_id`.
+
 ## The policy routes (S12)
 
 | Route | Role | Returns |

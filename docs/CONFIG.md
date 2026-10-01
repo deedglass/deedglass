@@ -125,6 +125,20 @@ gate:
 | `gate.worker.max_attempts` | `8` | 1 to 100 | Attempts per witness job before the action is sealed UNVERIFIABLE (witness_gave_up). | S13 |
 <!-- settings:end -->
 
+### The `mcp` section (S15)
+
+The MCP gateway's settings ([MCP.md](MCP.md)). Unlike `gate`, `upstreams` maps names you choose to
+their settings, so it is validated on its own; an unknown key is a problem like any other.
+
+| Setting | Default | What it does |
+|---|---|---|
+| `mcp.allowed_origins` | `[]` | Browser origins (scheme and host) allowed to call `/mcp/*`, besides the server's own. Every other `Origin` gets 403. |
+| `mcp.passthrough` | `[]` | Method families forwarded to an upstream and logged, never sealed: `resources`, `prompts`, `completion`. |
+| `mcp.upstreams.<name>.url` | required | The upstream's Streamable HTTP endpoint. https; http only in dev with `allow_private_networks`; never credentials in the URL. `<name>` is 2 to 32 lowercase letters, digits or hyphens, not `deedglass`, `mcp`, `native` or `fake`. |
+| `mcp.upstreams.<name>.headers_from_env` | `{}` | Header name → environment variable name. Values are read once at start, never logged, returned or sealed. Names can't start with `DEEDGLASS_`. |
+| `mcp.upstreams.<name>.timeout` | `30s` | Each HTTP request to the upstream (100ms to 10m). |
+| `mcp.upstreams.<name>.tools_ttl` | `30s` | How long its `tools/list` is cached (100ms to 10m; a shorter upstream `ttlMs` wins). |
+
 ## Examples
 
 ```sh

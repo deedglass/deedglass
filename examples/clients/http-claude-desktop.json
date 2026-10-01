@@ -1,0 +1,17 @@
+{
+  "mcpServers": {
+    "deedglass": {
+      "args": [
+        "mcp",
+        "serve",
+        "--connector",
+        "native"
+      ],
+      "command": "/Users/you/txv/product/bin/deedglass",
+      "env": {
+        "DEEDGLASS_API_KEY": "dg_test_REPLACE_ME",
+        "DEEDGLASS_SERVER": "http://127.0.0.1:8080"
+      }
+    }
+  }
+}

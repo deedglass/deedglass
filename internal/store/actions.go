@@ -185,3 +185,14 @@ func DecideApproval(ctx context.Context, tx pgx.Tx, org ids.OrgID, id string, st
 	}
 	return nil
 }
+
+// ActionByApproval returns the id and agent of the action an approval belongs to (S15: the MCP
+// gateway's deedglass.check_approval is sessionless, so it finds the action from the approval).
+func ActionByApproval(ctx context.Context, tx pgx.Tx, org ids.OrgID, approval string) (action, agent string, err error) {
+	err = tx.QueryRow(ctx, `SELECT a.id, a.agent_id FROM deedglass.actions AS a
+	    WHERE a.org_id = $1 AND a.approval_id = $2::text LIMIT 1`, org, approval).Scan(&action, &agent)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", "", ErrNotFound
+	}
+	return action, agent, err
+}

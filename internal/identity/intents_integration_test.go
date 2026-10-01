@@ -485,7 +485,7 @@ func TestMCPReadiness(t *testing.T) {
 	}
 	// Origin.
 	r = w.call(t, ia.key, "POST", con, rpc, "Origin", "https://evil.example")
-	if r.status != 403 || flat(r) != `{"jsonrpc":"2.0","error":{"code":-32600,"message":"Deedglass refuses browser requests from this origin, to protect MCP endpoints from DNS rebinding. Call the Gate from your MCP client, not from a web page."}}` {
+	if r.status != 403 || flat(r) != `{"jsonrpc":"2.0","error":{"code":-32600,"message":"This origin is not allowed to call Deedglass MCP endpoints. Add it to mcp.allowed_origins if it should be."}}` {
 		t.Fatalf("%d %s", r.status, r.body)
 	}
 	expect(t, w.call(t, "", "POST", con, rpc, "Origin", w.base.String()), 401, "authentication_required")

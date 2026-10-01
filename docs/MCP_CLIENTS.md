@@ -1,4 +1,4 @@
-# MCP clients: config for `deedglass mcp wrap`
+# MCP clients: config for `deedglass mcp wrap` and the HTTP endpoints
 
 `deedglass mcp snippet` prints a ready config for each client below. It resolves `deedglass` and
 the server's command to absolute paths and sets `PATH` in `env`, because GUI apps on macOS start
@@ -97,6 +97,26 @@ claude mcp add --env DEEDGLASS_API_KEY=dg_test_REPLACE_ME --env DEEDGLASS_SERVER
   (https://docs.devin.ai/desktop/cascade/mcp), which documents the same `mcpServers` shape at
   `~/.config/devin/mcp_config.json` for the legacy Cascade agent. Check the path your version uses;
   the JSON is the same.
+
+## Over HTTP: `/mcp/native` and the gateway (S15)
+
+`deedglass mcp snippet --transport http --client <client> --connector native|<upstream>` prints
+config that reaches the Gate's HTTP endpoints instead of wrapping a server. The key is a
+placeholder unless `--api-key-from-env` is given; VS Code never gets one in the file (it prompts).
+Formats checked on 2026-10-02 against each client's documentation:
+
+| Client | Shape | Source |
+|---|---|---|
+| Claude Code | `claude mcp add --transport http --header "Authorization: Bearer …" deedglass http://127.0.0.1:8080/mcp/native` | https://code.claude.com/docs/en/mcp |
+| Cursor | `mcpServers.deedglass` with `url` and `headers` (headers accept `${env:NAME}`) | https://cursor.com/docs/context/mcp |
+| VS Code | `servers.deedglass` with `"type": "http"`, `url`, `headers` using `${input:deedglass-api-key}`, and an `inputs` entry with `"password": true` | https://code.visualstudio.com/docs/agents/reference/mcp-configuration |
+| Windsurf | `mcpServers.deedglass` with `serverUrl` and `headers` (the docs now live at Devin Desktop, `~/.config/devin/mcp_config.json`) | https://docs.devin.ai/desktop/cascade/mcp |
+| Claude Desktop | the stdio bridge: `command` = `deedglass`, `args` = `mcp serve --connector native`, `env` with the key and server | https://support.claude.com/en/articles/11175166-get-started-with-custom-connectors-using-remote-mcp |
+
+**Why Claude Desktop gets the bridge.** Its custom connectors connect to a remote MCP server "from
+Anthropic's cloud infrastructure", so a server on your `127.0.0.1` isn't reachable that way; local
+servers belong in `claude_desktop_config.json`, which runs them on your machine. The bridge is that
+local server. The generated copies are `examples/clients/http-*`.
 
 ## Every client
 

@@ -53,7 +53,13 @@ go test ./examples/policies -update   # re-pin the starters' version_hash in exa
 go test ./cmd/deedglass -run 'TestPolicyTestGoldens|TestPolicyServerGoldens' -update  # the policy test/push/activate CLI goldens
 make mcp-it         # S14: the real @modelcontextprotocol/server-filesystem (npx) behind deedglass mcp wrap, on a throwaway PG 18
 make bench-mcp      # S14 §3.10: wrapper relay, tools/call and tools/list overhead, peak RSS; JSON in bench/results/
-go generate ./internal/mcp/snippet   # regenerate examples/clients and testdata/mcp/snippets (then update SHA256SUMS)
+go generate ./internal/mcp/snippet   # regenerate examples/clients, examples/demo/clients and testdata/mcp/snippets (then update SHA256SUMS)
+DEEDGLASS_IT_PKGS=./cmd/deedglass/ DEEDGLASS_IT_GOFLAGS="-v -run TestMCPGatewayLive" make integration   # S15: the HTTP gateway, /mcp/native and mcp serve on a real server
+make bench-gateway  # S15: /mcp/native fake.echo and the gateway's added latency; JSON in bench/results/
+make demo-up        # S15: the Acme demo stack (examples/demo; HTTP=1 adds the everything upstream, DEMO_PORT=8091 if 8080 is taken)
+make demo-status | demo-snippet CLIENT=… | demo-follow | demo-verify | demo-psql | demo-reset [HARD=1] | demo-down
+make demo-smoke     # TestDemoScript: SCRIPT.md through the real wrapper and postgres-mcp, against the running stack
+go test ./cmd/deedglass -run TestFollowGolden -update-follow   # testdata/cli/actions-follow.txt (then update SHA256SUMS)
 go test ./internal/mcp/present -update   # the MCP result goldens in testdata/mcp/present (then update SHA256SUMS)
 go test ./internal/mcp/wrap -run TestStderrGolden -update   # testdata/mcp/stderr/session.txt (then update SHA256SUMS)
 DEEDGLASS_IT_PKGS=./internal/identity/ make integration   # one suite (DEEDGLASS_IT_GOFLAGS="-v -run X" adds flags)
@@ -103,8 +109,8 @@ scripts/ci-local.sh # the CI jobs locally (docker-smoke and govulncheck skip whe
    ADR-027, accepted): `typescript` 7.0.2, `vitest` 5.0.3, `vite` 8.3.1, `@types/node` 24.19.0; no runtime dependency.
    `cel.dev/cel-go` v0.32.0 (ADR-017, in go.mod since S10; brings protobuf, antlr4-go, cel.dev/expr,
    genproto and x/exp; the binary-size budget is ADR-032, accepted under DL-024: < 30 MB). The MCP Go SDK
-   `github.com/modelcontextprotocol/go-sdk` v1.8.0 (ADR-018, in go.mod since S14, **tests only**: the
-   binary doesn't link it). Planned, and added only by the session that uses it: `pglogrepl` at the
+   `github.com/modelcontextprotocol/go-sdk` v1.8.0 (ADR-018, in go.mod since S14; since S15 the
+   binary links it for the gateway's upstream client, ADR-037 Proposed; stripped binary 27.1 MB, budget 30 MB). Planned, and added only by the session that uses it: `pglogrepl` at the
    spike-verified pin (S20). No cgo in the main binary.
    `go.sum` is committed and CI runs `go mod verify`.
 7. CI matches the banned words (below) in files, strings and commit messages as whole words or
@@ -346,6 +352,18 @@ and "open source" until the repo is public. Style bans: "revolutionary", "world-
   `AlwaysDenies`); `examples/policies`: `TestDemoVisibility`. `cmd/deedglass`: `TestMCPSnippet`,
   `TestMCPWrapRefusals`, and (integration) `TestMCPWrapLive`, `TestMCPWrapNodeLive` (`make mcp-it`),
   `TestMCPBudget` (`make bench-mcp`).
+- `internal/mcp` (S15): `httpgw`'s `TestConformance` (S15 §6's HTTP table: headers, eras, 405s,
+  Origin, 401 with `resource_metadata`, 413, 415, 406, batches, unknown connector, stopped agents),
+  `TestInFlightLimit`, `TestHeaderCodec`, `FuzzHeaderDecode`; `front`'s method, pagination, outcome,
+  check_approval and passthrough tables, `TestParamHeaders`, `FuzzFrontEnvelope`; `upstream`'s pool
+  in both eras (SDK upstreams, `mcptest.HTTPUpstream`), the dial guard, credential isolation;
+  `bridge`'s down server, headers, SSE and cancellation. `cmd/deedglass`: `TestMCPGatewayLive`
+  (integration: SDK clients in both eras × stateless and stateful SDK upstreams, deny without a call,
+  approval resume runs once, Stop, timeout, client disconnect, upstream down, no inbound credential
+  upstream and no upstream credential in logs or actions, `/mcp/native`, `GET /v1/tools`, the
+  `mcp serve` bridge), `TestGatewayBudget` (`make bench-gateway`), `TestFollowGolden`;
+  `TestKeyRoutesDeclareScopes` pins `RecordStopped` to `POST /v1/actions` and the two MCP routes.
+  `examples/demo`: `TestDemoScript` (`make demo-smoke`), the 42 `acme-demo` cases in `make policy-test`.
 - `cmd/deedglass verify` (S05): 80 golden cases in `testdata/verify/<case>/{args,stdout,stderr,exit}`
   (`go test ./cmd/deedglass -run TestVerifyGolden -update`), every vector's code and exit, `--keys`
   URL rules (same-host redirects, 1 MiB, timeout, loopback-only http), key-set merge conflicts, no

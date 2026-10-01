@@ -1,0 +1,19 @@
+{
+  "inputs": [
+    {
+      "description": "Deedglass agent API key (dg_test_… or dg_live_…)",
+      "id": "deedglass-api-key",
+      "password": true,
+      "type": "promptString"
+    }
+  ],
+  "servers": {
+    "deedglass": {
+      "headers": {
+        "Authorization": "Bearer ${input:deedglass-api-key}"
+      },
+      "type": "http",
+      "url": "http://127.0.0.1:8080/mcp/native"
+    }
+  }
+}

@@ -23,6 +23,7 @@ var classify = map[connector.Kind]ExecStatus{
 	connector.KindInvalidRequest: ExecFailed,
 	connector.KindConfig:         ExecFailed,
 	connector.KindToolError:      ExecFailed,
+	connector.KindCancelled:      ExecFailed,
 	connector.KindUpstream:       ExecUnknown,
 	connector.KindTimeout:        ExecUnknown,
 }
@@ -84,9 +85,19 @@ func (p *Pipeline) execute(ctx context.Context, ex Executor, call connector.Call
 			}
 		}
 	}
+	// A call cancelled with its request (ActionRequest.CancelOn, S15): one that may have reached the
+	// upstream is unknown with the reason client_cancelled; one that never left stays failed.
+	if err != nil && errors.Is(context.Cause(ctx), ErrRequestGone) && (e.Status != ExecFailed || e.Sent) {
+		e.Status, e.ErrorCode, e.Reason, e.Sent = ExecUnknown, ReasonClientCancelled, ReasonClientCancelled, true
+		e.ErrorMsg = "The MCP client went away while the tool ran, so Deedglass cancelled it. It may have run."
+	}
 	e.ErrorMsg = clipMessage(e.ErrorMsg)
 	return e
 }
+
+// ErrRequestGone is the cancellation cause of an execution whose request ended first
+// (ActionRequest.CancelOn): the client disconnected, or its agent was stopped.
+var ErrRequestGone = errors.New("gate: the request that started this call ended")
 
 func safeExecute(ctx context.Context, ex Executor, call connector.Call) (res connector.Result, err error) {
 	defer func() {

@@ -1,0 +1,140 @@
+# The Acme demo stack (S15): Deedglass's own database, the Acme Store orders database, Deedglass
+# itself, and (profile http) an upstream MCP server for the gateway. Local demos only: every port is
+# bound to 127.0.0.1, every secret comes from examples/demo/.env (written by make demo-up, 0600,
+# git-ignored), and DEEDGLASS_ALLOW_PRIVATE_NETWORKS=1 exists only here so the gateway can reach
+# the everything container. Images are pinned by digest (examples/demo/README.md lists them).
+#
+#   make demo-up [HTTP=1] [DEMO_PORT=8091]   ·   make demo-status   ·   make demo-down
+#
+# The Postgres MCP server and the filesystem server are not services: MCP clients start them over
+# stdio through deedglass mcp wrap (make demo-snippet).
+name: deedglass-demo
+
+x-deedglass-image: &deedglass-image
+  image: deedglass:dev
+  build:
+    context: ../..
+    dockerfile: Dockerfile
+    args:
+      VERSION: 0.1.0-dev
+
+x-deedglass-hardening: &deedglass-hardening
+  read_only: true
+  tmpfs:
+    - /tmp
+  cap_drop:
+    - ALL
+  security_opt:
+    - no-new-privileges:true
+  user: "65532:65532"
+
+services:
+  ledger-db:
+    # Deedglass's own control-plane database: the actions, the Ledger and the deeds.
+    image: postgres:18.6@sha256:5a5a84b19854a9ffaa54082c166ff4ec27473a361e496e5ea167f298f2da9722
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${DEEDGLASS_DEV_PG_ADMIN_PASSWORD:?run make demo-up}
+      DEEDGLASS_DEV_PG_MIGRATOR_PASSWORD: ${DEEDGLASS_DEV_PG_MIGRATOR_PASSWORD:?run make demo-up}
+      DEEDGLASS_DEV_PG_APP_PASSWORD: ${DEEDGLASS_DEV_PG_APP_PASSWORD:?run make demo-up}
+    ports:
+      - "127.0.0.1:55433:5432"
+    volumes:
+      - ledger-data:/var/lib/postgresql
+      - ../../deploy/postgres/control-plane-roles.sql:/deedglass/control-plane-roles.sql:ro
+      - ../../deploy/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD", "pg_isready", "-h", "127.0.0.1", "-U", "postgres", "-d", "deedglass"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+      start_period: 5s
+
+  orders-db:
+    # "Acme Store": the customer's system of record. wal_level=logical and a finite slot limit so
+    # S20 and S21 can witness it later.
+    image: postgres:18.6@sha256:5a5a84b19854a9ffaa54082c166ff4ec27473a361e496e5ea167f298f2da9722
+    command: ["postgres", "-c", "wal_level=logical", "-c", "max_slot_wal_keep_size=1GB"]
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${ORDERS_DB_PASSWORD:?run make demo-up}
+      POSTGRES_DB: acme
+      ACME_OWNER_PASSWORD: ${ACME_OWNER_PASSWORD:?run make demo-up}
+    ports:
+      - "127.0.0.1:55434:5432"
+    volumes:
+      - orders-data:/var/lib/postgresql
+      - ./sql:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD", "pg_isready", "-h", "127.0.0.1", "-U", "postgres", "-d", "acme"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+      start_period: 5s
+
+  migrate:
+    <<: [*deedglass-image, *deedglass-hardening]
+    command: ["migrate", "up"]
+    working_dir: /etc/deedglass
+    environment:
+      DEEDGLASS_ENV: dev
+      DEEDGLASS_MIGRATE_DATABASE_URL: postgres://deedglass_migrator:${DEEDGLASS_DEV_PG_MIGRATOR_PASSWORD:?run make demo-up}@ledger-db:5432/deedglass?sslmode=disable
+      DEEDGLASS_VAULT_KEY: ${DEEDGLASS_VAULT_KEY:?run make demo-up}
+      DEEDGLASS_API_KEY_PEPPER: ${DEEDGLASS_API_KEY_PEPPER:?run make demo-up}
+    depends_on:
+      ledger-db:
+        condition: service_healthy
+    restart: "no"
+
+  deedglass:
+    <<: [*deedglass-image, *deedglass-hardening]
+    command: ["serve"]
+    working_dir: /etc/deedglass
+    environment:
+      DEEDGLASS_ENV: dev
+      DEEDGLASS_DATABASE_URL: postgres://deedglass_app:${DEEDGLASS_DEV_PG_APP_PASSWORD:?run make demo-up}@ledger-db:5432/deedglass?sslmode=disable
+      DEEDGLASS_LISTEN: 0.0.0.0:8080
+      DEEDGLASS_BASE_URL: http://127.0.0.1:${DEMO_PORT:-8080}
+      DEEDGLASS_SEAL_KEY_FILE: /etc/deedglass/keys/${DEMO_SEAL_KEY:?run make demo-up}
+      DEEDGLASS_VAULT_KEY: ${DEEDGLASS_VAULT_KEY:?run make demo-up}
+      DEEDGLASS_API_KEY_PEPPER: ${DEEDGLASS_API_KEY_PEPPER:?run make demo-up}
+      DEEDGLASS_ALLOW_PRIVATE_NETWORKS: "1"
+      DEEDGLASS_LOG_LEVEL: info
+    volumes:
+      - ./deedglass.demo.yaml:/etc/deedglass/deedglass.yaml:ro
+      - ./.demo/keys:/etc/deedglass/keys:ro
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    ports:
+      - "127.0.0.1:${DEMO_PORT:-8080}:8080"
+    healthcheck:
+      test: ["CMD", "/deedglass", "version", "--server", "http://127.0.0.1:8080"]
+      interval: 3s
+      timeout: 5s
+      retries: 20
+      start_period: 5s
+    stop_grace_period: 25s
+    restart: unless-stopped
+
+  everything:
+    # The HTTP upstream for the gateway demo (/mcp/everything): the MCP reference server in
+    # Streamable HTTP mode. npx downloads the pinned version on first start.
+    profiles: ["http"]
+    image: node:24-alpine@sha256:ebfe2f90462722a7a4de65e91990e97fe0d401c70e0e762c5b53302f905ec1c1
+    command: ["npx", "-y", "@modelcontextprotocol/server-everything@2026.8.31", "streamableHttp"]
+    environment:
+      PORT: "3001"
+      npm_config_update_notifier: "false"
+    ports:
+      - "127.0.0.1:3001:3001"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null --header 'Content-Type: application/json' --post-data '{}' http://127.0.0.1:3001/mcp 2>&1 | grep -qv refused"]
+      interval: 3s
+      timeout: 5s
+      retries: 40
+      start_period: 10s
+
+volumes:
+  ledger-data:
+  orders-data:

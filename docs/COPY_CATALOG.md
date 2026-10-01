@@ -169,6 +169,28 @@ MCP eras, in `testdata/mcp/present/`.
 | Server keeps crashing | `The MCP server stopped 5 times in a minute, so Deedglass stopped restarting it. Nothing was run. Check the server's log, then restart your MCP client.` |
 | Instructions line | `Tool calls on this server pass through Deedglass. Some may be blocked by policy or wait for a person to approve them; the result will say so. Use deedglass.check_approval to continue after an approval.` |
 
+## MCP HTTP endpoints (S15)
+
+Source of truth: `internal/gate/present.go` (the S15 block) and `internal/identity/mcp.go`
+(`MCPOriginMessage`, `MCPNeedKeyMessage`); `httpgw`'s conformance test pins each one.
+
+| Situation | Copy |
+|---|---|
+| 401 (no key) | `Deedglass needs an agent API key. Send it as "Authorization: Bearer dg_…".` |
+| 403 Origin | `This origin is not allowed to call Deedglass MCP endpoints. Add it to mcp.allowed_origins if it should be.` |
+| `-32022` | `Deedglass supports MCP 2026-07-28, 2025-11-25, 2025-06-18 and 2025-03-26. Retry with one of those.` |
+| `-32020` | `Header mismatch: Mcp-Name is "echo" but the body names "delete_all". Send the same tool name in both.` (and the missing and undecodable forms) |
+| Unknown connector | `No MCP connector named "evrything". Check the URL; configured connectors are listed in Console › Connectors.` |
+| Upstream down (tool result) | `The "everything" MCP server did not answer, so nothing was run. Deedglass will keep trying; check that it is running.` |
+| Still running | `Still running. Deedglass will record the outcome (act_…).` |
+| Too many in flight (429) | `This agent already has 32 MCP requests in flight. Wait for one to finish, then try again.` |
+| 406 | `Deedglass answers MCP requests as application/json. Send Accept: application/json, text/event-stream.` |
+| Batch or response body | `Send one JSON-RPC request or notification per POST. Batches and responses are not accepted.` |
+| Unknown approval | `No approval apr_… for this agent. Use the approval_id from the Waiting for approval message.` |
+| Unknown method | `Deedglass doesn't serve "tasks/list" on this endpoint. Tools are available through tools/list and tools/call.` |
+| Client cancelled (error message on the action) | `The MCP client went away while the tool ran, so Deedglass cancelled it. It may have run.` |
+| `deedglass mcp serve`, server down | the S14 `could not be reached` sentence |
+
 ## What this page doesn't do
 
 It doesn't hold every error: the full catalog, with when each code happens, is

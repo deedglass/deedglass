@@ -155,6 +155,10 @@ func (l *loader) readYAML() {
 	for i := 0; i+1 < len(root.Content); i += 2 {
 		k, v := root.Content[i], root.Content[i+1]
 		key := k.Value
+		if key == "mcp" {
+			l.readMCP(name, v)
+			continue
+		}
 		if secs[key] {
 			l.readSection(name, key, v)
 			continue

@@ -508,6 +508,10 @@ func (s *Server) render(w http.ResponseWriter, r *http.Request, rt Route, err er
 	default:
 		e = s.internal(r, err)
 	}
+	if er, ok := rt.Guard.(ErrorRenderer); ok {
+		er.RenderError(w, r, e, rid)
+		return
+	}
 	writeError(w, rid, e)
 }
 

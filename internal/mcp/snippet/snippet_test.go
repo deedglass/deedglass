@@ -64,6 +64,77 @@ func TestGoldens(t *testing.T) {
 	}
 }
 
+// DemoHTTP is the HTTP snippet the docs show: the native tools at /mcp/native.
+func DemoHTTP(client string) HTTPOptions {
+	return HTTPOptions{Client: client, Connector: "native", Server: "http://127.0.0.1:8080", Deedglass: "/Users/you/txv/product/bin/deedglass"}
+}
+
+// TestHTTPGoldens pins the HTTP snippets (S15) next to the stdio ones.
+func TestHTTPGoldens(t *testing.T) {
+	for _, c := range Clients {
+		got, err := BuildHTTP(DemoHTTP(c))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if c != "claude-code" {
+			var v any
+			if err := json.Unmarshal(got, &v); err != nil {
+				t.Fatalf("%s: %v", c, err)
+			}
+		}
+		if c == "vscode" && strings.Contains(string(got), PlaceholderKey) {
+			t.Fatal("the VS Code snippet must prompt for the key, never hold it")
+		}
+		for _, dir := range []string{filepath.Join("..", "..", "..", "testdata", "mcp", "snippets"), filepath.Join("..", "..", "..", "examples", "clients")} {
+			p := filepath.Join(dir, HTTPFilename(c))
+			if *update {
+				if err := os.WriteFile(p, got, 0o644); err != nil {
+					t.Fatal(err)
+				}
+				continue
+			}
+			want, err := os.ReadFile(p)
+			if err != nil || string(want) != string(got) {
+				t.Errorf("%s differs (go generate ./internal/mcp/snippet):\n%s", p, got)
+			}
+		}
+	}
+	o := DemoHTTP("cursor")
+	o.Connector, o.APIKey = "everything", "dg_test_real"
+	b, _ := BuildHTTP(o)
+	if !strings.Contains(string(b), `"everything": {`) || !strings.Contains(string(b), "http://127.0.0.1:8080/mcp/everything") || !strings.Contains(string(b), "Bearer dg_test_real") {
+		t.Fatal(string(b))
+	}
+	if _, err := BuildHTTP(HTTPOptions{Client: "claude-desktop", Server: "http://x"}); err == nil {
+		t.Fatal("claude-desktop without the deedglass path")
+	}
+}
+
+// TestDemoGoldens pins examples/demo/clients (placeholder key and password; S15).
+func TestDemoGoldens(t *testing.T) {
+	for _, c := range Clients {
+		got, err := BuildDemo(DemoOptions{Client: c, Deedglass: "/Users/you/txv/product/bin/deedglass", Docker: "/usr/local/bin/docker",
+			Npx: "/opt/homebrew/bin/npx", Server: "http://127.0.0.1:8080", PATH: "/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !strings.Contains(string(got), PlaceholderKey) || !strings.Contains(string(got), "ACME_OWNER_PASSWORD") || !strings.Contains(string(got), "orders-direct") {
+			t.Fatalf("%s", got)
+		}
+		p := filepath.Join("..", "..", "..", "examples", "demo", "clients", Filename(c))
+		if *update {
+			_ = os.MkdirAll(filepath.Dir(p), 0o755)
+			if err := os.WriteFile(p, got, 0o644); err != nil {
+				t.Fatal(err)
+			}
+			continue
+		}
+		if want, err := os.ReadFile(p); err != nil || string(want) != string(got) {
+			t.Errorf("%s differs (go generate ./internal/mcp/snippet)", p)
+		}
+	}
+}
+
 func TestBuild(t *testing.T) {
 	o := Demo("cursor")
 	o.WrapFlags = []string{"--connector-type", "postgres"}

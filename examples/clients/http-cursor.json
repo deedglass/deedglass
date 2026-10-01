@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "deedglass": {
+      "headers": {
+        "Authorization": "Bearer dg_test_REPLACE_ME"
+      },
+      "url": "http://127.0.0.1:8080/mcp/native"
+    }
+  }
+}

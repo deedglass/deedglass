@@ -111,6 +111,10 @@ func elsewhere() []Route {
 	out = append(out,
 		Route{Method: "POST", Pattern: "/v1/tools/resolve", OperationID: "resolveTools", Auth: AgentKey, Scopes: []string{ScopeActionsExecute}, Idempotency: IdemNever, Handler: stub},
 	)
+	// S15: the native tool catalog (cmd/deedglass serve_mcp.go).
+	out = append(out,
+		Route{Method: "GET", Pattern: "/v1/tools", OperationID: "listTools", Auth: AgentKey, Scopes: []string{ScopeActionsExecute}, Handler: stub},
+	)
 	return out
 }
 

@@ -68,6 +68,9 @@ const (
 	KindUpstream       Kind = "upstream"
 	KindTimeout        Kind = "timeout"
 	KindToolError      Kind = "tool_error"
+	// KindCancelled: the caller went away (or the agent was stopped) before the call was sent, so
+	// nothing reached the upstream (S15).
+	KindCancelled Kind = "cancelled"
 )
 
 // Error is a typed connector failure. AgentMessage is safe to show the agent and already redacted;

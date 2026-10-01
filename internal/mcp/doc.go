@@ -11,7 +11,17 @@
 //   - wrap: the stdio relay, upstream supervision, the tool catalog with pinning, the tools/call
 //     flow and deedglass.check_approval.
 //   - snippet: client config for Claude Desktop, Claude Code, Cursor, VS Code and Windsurf.
-//   - mcptest: a fake stdio MCP server for tests.
+//   - mcptest: a fake stdio MCP server for tests, and an SDK Streamable HTTP upstream (S15).
+//
+// Subpackages (S15):
+//   - front: the sessionless dual-era MCP server core (initialize, server/discover, tools/list
+//     filtered per agent, tools/call through the Gate in gateway mode, check_approval,
+//     passthrough), the native tool source and the x-mcp-header rules.
+//   - httpgw: POST /mcp/{connector} and /mcp/native: Accept, one message, era and header
+//     validation, the base64 sentinel, 32 requests in flight per agent, Stop watch.
+//   - upstream: the official SDK client per upstream (mcp.upstreams), the gateway executor and
+//     resolver, outcome classification, the outbound HTTP client.
+//   - bridge: deedglass mcp serve, stdio ⇄ HTTP.
 //
 // Invariants:
 //   - A governed tools/call never reaches the server without an authorized answer from the Gate

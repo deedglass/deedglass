@@ -175,6 +175,9 @@ type plan struct {
 	reservations []policy.Reservation
 	actor        string
 	requestID    string
+	// link, when set, is the request's context: the tool call (and only the call, never the
+	// recording) is cancelled with ErrRequestGone when it ends (ActionRequest.CancelOn).
+	link context.Context
 }
 
 // admission is the outcome of Tx A.
@@ -273,6 +276,9 @@ func (p *Pipeline) Submit(ctx context.Context, pr principal, req ActionRequest) 
 	done := make(chan *ledger.Action, 1)
 	var toolTime time.Duration
 	p.inflight.Add(1)
+	if req.CancelOn != nil {
+		adm.plan.link = req.CancelOn
+	}
 	go func() {
 		defer p.inflight.Done()
 		v, d := p.run(context.WithoutCancel(ctx), adm.plan)
@@ -710,7 +716,14 @@ func (p *Pipeline) run(ctx context.Context, pl *plan) (*ledger.Action, time.Dura
 	// The tool gets the whole gate.execute_timeout from the moment it starts; the stored
 	// executing_deadline adds sweepGrace on top, so crash recovery never races a live call.
 	pl.call.Deadline = p.now().Add(p.cfg.ExecuteTimeout)
-	e := p.execute(ctx, pl.exec, pl.call)
+	ectx := ctx
+	if pl.link != nil {
+		var cancel context.CancelCauseFunc
+		ectx, cancel = context.WithCancelCause(ctx)
+		stop := context.AfterFunc(pl.link, func() { cancel(ErrRequestGone) })
+		defer func() { stop(); cancel(nil) }()
+	}
+	e := p.execute(ectx, pl.exec, pl.call)
 	tool := e.FinishedAt.Sub(e.StartedAt)
 	v, err := p.complete(ctx, pl.subject, e, pl.costTargets, pl.reservations, pl.actor, pl.requestID)
 	if err != nil {

@@ -1,4 +1,13 @@
-# acme-demo · the Deedglass demo policy (S14: the scratch folder; S15 adds the orders rules)
+# acme-demo · the Deedglass demo policy (S14: the scratch folder; S15: the orders database and
+# the everything upstream)
+#
+# The orders database (crystaldba/postgres-mcp behind deedglass mcp wrap --connector orders
+# --connector-type postgres, so S11's SQL classifier reads args.sql): reads run, writes wait for a
+# person, destructive SQL never runs. Rule order matters: DROP hits block-destructive-sql first, so
+# the message on camera is exactly the brand's example sentence.
+#
+# The everything upstream (the MCP gateway, /mcp/everything): its harmless demo tools run;
+# get-env and the rest fall to the default deny and are hidden.
 #
 # The fake connector runs freely. The scratch folder (the MCP filesystem server behind
 # deedglass mcp wrap --connector scratch) can be read anywhere it serves, and written only inside
@@ -11,13 +20,59 @@
 # outside the directories it was started with; this policy doesn't see where a symlink points.
 deedglass: policy/v1
 name: acme-demo
-description: The demo rules. Fake tools run, scratch reads run, scratch writes run only inside /tmp/deedglass-demo/allowed.
+description: Acme Store demo. Reads run, writes wait for a person, destructive SQL never runs.
 
 defaults:
   decision: deny
   reason: No rule allows this action. Add a rule in Console › Policies to allow it.
 
+budgets:
+  - id: agent-rate
+    per: agent
+    window: minute
+    max_calls: 30
+
 rules:
+  - id: block-destructive-sql
+    match: { tool: orders.execute_sql }
+    when: sql.kind == "drop"
+    decision: deny
+    reason: DROP is never allowed for agents.
+  - id: block-schema-changes
+    match: { tool: orders.execute_sql }
+    when: sql.category in ["ddl", "privilege", "server_code", "unknown"] || sql.multi || sql.ambiguous
+    decision: deny
+    reason: Schema changes, privileges, server code and multi-statement SQL are never allowed for agents.
+  - id: block-unscoped-writes
+    match: { tool: orders.execute_sql }
+    when: sql.unbounded_write
+    decision: deny
+    reason: UPDATE and DELETE need a WHERE clause.
+  - id: no-deletes-on-orders
+    match: { tool: orders.execute_sql }
+    when: sql.kind == "delete" || "delete" in sql.write_kinds
+    decision: deny
+    reason: Agents never delete orders. Set the status to 'cancelled' instead.
+  - id: orders-writes-need-approval
+    match: { tool: orders.execute_sql }
+    when: sql.writes
+    decision: require_approval
+    reason: Writes to the orders database need a person to countersign.
+    approval: { approvers: [role:admin], required: 1, expires_in: 30m }
+  - id: allow-order-reads
+    match: { tool: orders.execute_sql }
+    when: sql.category == "read" && !sql.writes
+    decision: allow
+  - id: allow-schema-browsing
+    match: { tool: [orders.list_schemas, orders.list_objects, orders.get_object_details] }
+    decision: allow
+  - id: allow-plain-explain
+    match: { tool: orders.explain_query }
+    when: sql.category == "read" && !sql.writes && !sql.explain_analyze && !(has(args.analyze) && args.analyze == true)
+    decision: allow
+  - id: allow-everything-demo-tools
+    match: { tool: [everything.echo, everything.get-sum, everything.get-tiny-image, everything.get-annotated-message, everything.get-structured-content] }
+    decision: allow
   - id: allow-fake
     match: { tool: ["fake.*"] }
     decision: allow

@@ -99,7 +99,8 @@ func Normalize(req ActionRequest, maxArgs int) (*Normalized, error) {
 	if n.Mode != ModeGateway && n.Mode != ModeProxy {
 		return nil, httpx.ErrValidation("mode", msgMode(string(req.Mode)))
 	}
-	if err := n.checkTool(); err != nil {
+	mcpNames := n.Mode == ModeProxy || req.Context != nil && isMCP(req.Context.Transport)
+	if err := n.checkTool(mcpNames); err != nil {
 		return nil, err
 	}
 	// Arguments: a JSON object, at most maxArgs bytes and 32 levels, integers within ±(2^53−1).
@@ -154,7 +155,10 @@ func Normalize(req ActionRequest, maxArgs int) (*Normalized, error) {
 // checkTool applies the tool grammar. ASCII mistakes ("Fake.echo", "fake", ".echo") are 400s with
 // the grammar; a non-ASCII name is recorded as tool_unknown, because a look-alike ("fаke.echo"
 // with a Cyrillic а) is an attempt worth a deed.
-func (n *Normalized) checkTool() error {
+//
+// mcpNames applies the MCP tool-name charset after the connector: proxy mode (S14), and gateway
+// calls that arrive over an MCP transport, whose upstream servers name tools in camelCase (S15).
+func (n *Normalized) checkTool(mcpNames bool) error {
 	t := n.Tool
 	switch {
 	case t == "":
@@ -178,7 +182,7 @@ func (n *Normalized) checkTool() error {
 		return httpx.ErrValidation("tool", msgToolGrammar(t))
 	}
 	re := reNativeTool
-	if n.Mode == ModeProxy {
+	if mcpNames {
 		re = reMCPTool
 	}
 	if !re.MatchString(name) {

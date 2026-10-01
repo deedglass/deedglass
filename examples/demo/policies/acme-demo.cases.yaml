@@ -5,6 +5,89 @@ defaults:
   agent: { name: claude-desktop }
   time: 2026-10-05T10:00:00Z
 cases:
+  # The orders database (proxy mode through deedglass mcp wrap --connector-type postgres)
+  - name: the five newest orders run
+    input: { tool: { name: orders.execute_sql, connector_type: postgres }, sql: "SELECT id, status, total_cents FROM public.orders ORDER BY created_at DESC LIMIT 5" }
+    expect: { decision: allow, rule: allow-order-reads }
+  - name: a count of cancelled orders runs
+    input: { tool: { name: orders.execute_sql, connector_type: postgres }, sql: "SELECT count(*) FROM public.orders WHERE status = 'cancelled'" }
+    expect: { decision: allow, rule: allow-order-reads }
+  - name: DROP never runs, with the brand's sentence
+    input: { tool: { name: orders.execute_sql, connector_type: postgres }, sql: "DROP TABLE refunds" }
+    expect:
+      decision: deny
+      rule: block-destructive-sql
+      message: 'Blocked by policy "block-destructive-sql": DROP is never allowed for agents.'
+  - name: a DROP hidden behind a comment never runs
+    input: { tool: { name: orders.execute_sql, connector_type: postgres }, sql: "/* cleanup */ drop table public.refunds" }
+    expect: { decision: deny, rule: block-destructive-sql }
+  - name: a DROP smuggled after a read is refused as multi-statement
+    input: { tool: { name: orders.execute_sql, connector_type: postgres }, sql: "SELECT 1; DROP TABLE refunds" }
+    expect: { decision: deny, rule: block-schema-changes }
+  - name: a read smuggling an update is refused as multi-statement
+    input: { tool: { name: orders.execute_sql, connector_type: postgres }, sql: "SELECT 1; UPDATE public.orders SET status = 'shipped' WHERE id = 42" }
+    expect: { decision: deny, rule: block-schema-changes }
+  - name: ALTER is a schema change
+    input: { tool: { name: orders.execute_sql, connector_type: postgres }, sql: "ALTER TABLE public.orders ADD COLUMN note text" }
+    expect: { decision: deny, rule: block-schema-changes }
+  - name: GRANT is a privilege change
+    input: { tool: { name: orders.execute_sql, connector_type: postgres }, sql: "GRANT ALL ON public.orders TO PUBLIC" }
+    expect: { decision: deny, rule: block-schema-changes }
+  - name: a DO block is server code
+    input: { tool: { name: orders.execute_sql, connector_type: postgres }, sql: "DO $$ BEGIN PERFORM 1; END $$" }
+    expect: { decision: deny, rule: block-schema-changes }
+  - name: UPDATE without WHERE never runs
+    input: { tool: { name: orders.execute_sql, connector_type: postgres }, sql: "UPDATE public.orders SET status = 'shipped'" }
+    expect: { decision: deny, rule: block-unscoped-writes, reason_contains: WHERE }
+  - name: DELETE without WHERE never runs
+    input: { tool: { name: orders.execute_sql, connector_type: postgres }, sql: "DELETE FROM public.orders" }
+    expect: { decision: deny, rule: block-unscoped-writes }
+  - name: deleting the cancelled orders never runs
+    input: { tool: { name: orders.execute_sql, connector_type: postgres }, sql: "DELETE FROM orders WHERE status = 'cancelled'" }
+    expect:
+      decision: deny
+      rule: no-deletes-on-orders
+      message: "Blocked by policy \"no-deletes-on-orders\": Agents never delete orders. Set the status to 'cancelled' instead."
+  - name: a delete inside a CTE is still a delete
+    input: { tool: { name: orders.execute_sql, connector_type: postgres }, sql: "WITH d AS (DELETE FROM public.refunds WHERE id = 1 RETURNING id) SELECT count(*) FROM d" }
+    expect: { decision: deny, rule: no-deletes-on-orders }
+  - name: marking order 42 as shipped waits for a person
+    input: { tool: { name: orders.execute_sql, connector_type: postgres }, sql: "UPDATE orders SET status = 'shipped' WHERE id = 42" }
+    expect: { decision: require_approval, rule: orders-writes-need-approval, approval: { required: 1, approvers: [role:admin], expires_in: 30m } }
+  - name: an INSERT waits for a person
+    input: { tool: { name: orders.execute_sql, connector_type: postgres }, sql: "INSERT INTO public.refunds (order_id, amount_cents, reason) VALUES (42, 500, 'demo')" }
+    expect: { decision: require_approval, rule: orders-writes-need-approval }
+  - name: listing schemas runs
+    input: { tool: { name: orders.list_schemas, connector_type: postgres }, args: {} }
+    expect: { decision: allow, rule: allow-schema-browsing }
+  - name: listing objects runs
+    input: { tool: { name: orders.list_objects, connector_type: postgres }, args: { schema_name: public } }
+    expect: { decision: allow, rule: allow-schema-browsing }
+  - name: object details run
+    input: { tool: { name: orders.get_object_details, connector_type: postgres }, args: { schema_name: public, object_name: orders } }
+    expect: { decision: allow, rule: allow-schema-browsing }
+  - name: a plain EXPLAIN runs
+    input: { tool: { name: orders.explain_query, connector_type: postgres }, sql: "SELECT * FROM public.orders WHERE id = 42" }
+    expect: { decision: allow, rule: allow-plain-explain }
+  - name: EXPLAIN with analyze true runs the statement, so it is denied
+    input: { tool: { name: orders.explain_query, connector_type: postgres }, sql: "SELECT * FROM public.orders WHERE id = 42", args: { analyze: true } }
+    expect: { decision: deny }
+  - name: EXPLAIN ANALYZE of a DELETE in the SQL text is denied
+    input: { tool: { name: orders.explain_query, connector_type: postgres }, sql: "EXPLAIN ANALYZE DELETE FROM public.orders WHERE id = 42" }
+    expect: { decision: deny }
+  - name: other orders tools fall to the default deny
+    input: { tool: { name: orders.analyze_db_health, connector_type: postgres }, args: {} }
+    expect: { decision: deny, code: policy_denied }
+  - name: the 31st call in a minute is over the agent budget
+    input: { tool: { name: orders.execute_sql, connector_type: postgres }, sql: "SELECT 1", usage: { calls_minute: 30 } }
+    expect: { decision: deny, code: budget_exceeded }
+  # The everything upstream (the MCP gateway)
+  - name: everything echo runs
+    input: { tool: { name: everything.echo, connector_type: mcp_http }, args: { message: hello } }
+    expect: { decision: allow, rule: allow-everything-demo-tools }
+  - name: everything get-env is denied by default (it would show the server's environment)
+    input: { tool: { name: everything.get-env, connector_type: mcp_http }, args: {} }
+    expect: { decision: deny }
   # The fake connector
   - name: a fake echo runs
     input: { tool: fake.echo, args: { message: hello } }

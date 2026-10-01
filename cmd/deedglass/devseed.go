@@ -27,6 +27,9 @@ func runDevSeed(ctx context.Context, e *Env, args []string) error {
 	if len(args) > 0 {
 		return usageErr(fmt.Errorf("deedglass dev seed takes no arguments (got %q)", args[0]), "Run deedglass help dev seed.")
 	}
+	if devSeedValues.demo {
+		return runDevSeedDemo(ctx, e)
+	}
 	cfg, warnings, err := config.Load(e.LoadOptions())
 	var ps *config.Problems
 	if errors.As(err, &ps) {

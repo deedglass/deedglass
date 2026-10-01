@@ -227,3 +227,21 @@ func (p *Pipeline) Get(ctx context.Context, pr principal, id string, wait time.D
 	}
 	return &Action{Action: *v}, nil
 }
+
+// ByApproval returns the action an approval paused, for its own agent only (S15's sessionless
+// deedglass.check_approval): another agent's approval is not found.
+func (p *Pipeline) ByApproval(ctx context.Context, pr principal, approval string, wait time.Duration) (*Action, error) {
+	var id, agent string
+	err := p.o.DB.OrgTx(ctx, pr.OrgID, func(ctx context.Context, tx pgx.Tx) error {
+		var err error
+		id, agent, err = store.ActionByApproval(ctx, tx, pr.OrgID, approval)
+		return err
+	})
+	if errors.Is(err, store.ErrNotFound) || err == nil && pr.Kind == httpx.KindAgentKey && agent != pr.AgentID.String() {
+		return nil, notFound(approval)
+	}
+	if err != nil {
+		return nil, err
+	}
+	return p.Get(ctx, pr, id, wait)
+}

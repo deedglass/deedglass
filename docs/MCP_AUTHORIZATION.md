@@ -126,7 +126,7 @@ the scope it needs, so a client can discover both from one failed request.
 refused before anything else runs, with 403 and a JSON-RPC error without an `id`:
 
 ```json
-{"jsonrpc":"2.0","error":{"code":-32600,"message":"Deedglass refuses browser requests from this origin, to protect MCP endpoints from DNS rebinding. Call the Gate from your MCP client, not from a web page."}}
+{"jsonrpc":"2.0","error":{"code":-32600,"message":"This origin is not allowed to call Deedglass MCP endpoints. Add it to mcp.allowed_origins if it should be."}}
 ```
 
 This is the Streamable HTTP transport's protection against DNS rebinding: a web page can't use a

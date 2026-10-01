@@ -153,7 +153,7 @@ var commands = []*Command{
 	{Path: p("act"), Group: Actions, Summary: "Send a test action through the Gate",
 		Usage: `<tool> [--args '{"k":"v"}'] [--mode gateway|proxy] [--wait 60s] [--idempotency-key K] [--json]`, Run: runAct, RawArgs: true},
 	{Path: p("actions", "list"), Group: Actions, Summary: "List actions",
-		Usage: "[--agent agt_…] [--tool stripe.*] [--state …] [--decision …] [--verdict MISMATCH] [--level L2] [--since 1h] [--q text] [--limit 25] [--cursor …] [--json]",
+		Usage: "[--agent agt_…] [--tool stripe.*] [--state …] [--decision …] [--verdict MISMATCH] [--level L2] [--since 1h] [--q text] [--limit 25] [--cursor …] [--json] [--follow] [--connector orders]",
 		Flags: actionsListFlags, Needs: config.NeedDatabase, Run: runActionsList},
 	{Path: p("actions", "show"), Group: Actions, Summary: "Show one action and its events",
 		Usage: "<act_…> [--wait] [--json]", Needs: config.NeedDatabase, Run: runActionsShow, RawArgs: true},
@@ -206,9 +206,10 @@ var commands = []*Command{
 	{Path: p("mcp", "wrap"), Group: MCP, Summary: "Run an MCP server behind the Gate",
 		Usage: "--connector <name> [--connector-type mcp] [--hide-denied=false] [--call-timeout 2m] [--result-mode full|digest] [--log-file <path>] -- <command> [args…]",
 		Run:   runMCPWrap, RawArgs: true, Detail: mcpWrapHelp},
-	{Path: p("mcp", "serve"), Group: MCP, Summary: "Serve the Gate's native MCP tools", Owner: "S15"},
+	{Path: p("mcp", "serve"), Group: MCP, Summary: "Serve the Gate's native MCP tools", Usage: "[--connector native|<name>]",
+		Flags: mcpServeFlags, Run: runMCPServe, Detail: mcpServeHelp},
 	{Path: p("mcp", "snippet"), Group: MCP, Summary: "Print client config for an MCP client",
-		Usage: "--client <claude-desktop|claude-code|cursor|windsurf|vscode> --connector <name> [--connector-type postgres] [--api-key-from-env] -- <command> [args…]",
+		Usage: "--client <claude-desktop|claude-code|cursor|windsurf|vscode> --connector <name> [--connector-type postgres] [--api-key-from-env] -- <command> [args…]  ·  --transport http --client <…> [--connector native|<name>]",
 		Run:   runMCPSnippet, RawArgs: true, Detail: mcpSnippetHelp},
 
 	// Insights.
@@ -225,7 +226,8 @@ var commands = []*Command{
 	{Path: p("insights", "digest"), Group: Insights, Summary: "Preview the weekly digest", Owner: "S28"},
 
 	// Dev.
-	{Path: p("dev", "seed"), Group: Dev, Summary: "Load demo data into a dev database", Usage: "[--json]", Run: runDevSeed},
+	{Path: p("dev", "seed"), Group: Dev, Summary: "Load demo data into a dev database", Usage: "[--demo [--keys-file <path>]] [--json]",
+		Flags: devSeedFlags, Run: runDevSeed},
 	{Path: p("dev", "fake-action"), Group: Dev, Summary: "Seal realistic fake actions (dev only)",
 		Usage: "[--n 20] [--seed 42] [--kinds allow,deny,…] [--agents 3] [--batch 1] [--pace 0s] [--org-slug demo] [--quiet] [--json]",
 		Flags: fakeActionFlags, Needs: config.NeedDatabase, Run: runFakeAction},

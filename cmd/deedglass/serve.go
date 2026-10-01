@@ -23,7 +23,6 @@ import (
 	"github.com/deedglass/deedglass/internal/buildinfo"
 	"github.com/deedglass/deedglass/internal/config"
 	"github.com/deedglass/deedglass/internal/connector"
-	"github.com/deedglass/deedglass/internal/connector/fake"
 	"github.com/deedglass/deedglass/internal/deed"
 	"github.com/deedglass/deedglass/internal/deed/archive"
 	"github.com/deedglass/deedglass/internal/gate"
@@ -31,6 +30,7 @@ import (
 	"github.com/deedglass/deedglass/internal/identity"
 	"github.com/deedglass/deedglass/internal/ledger"
 	"github.com/deedglass/deedglass/internal/mailer"
+	"github.com/deedglass/deedglass/internal/mcp/upstream"
 	"github.com/deedglass/deedglass/internal/policy"
 	"github.com/deedglass/deedglass/internal/policyapi"
 	"github.com/deedglass/deedglass/internal/store"
@@ -61,6 +61,9 @@ var (
 	serveExit = os.Exit
 	// serveListening is called once the API listener is open (tests read the address).
 	serveListening = func(net.Addr) {}
+	// serveGate receives the Gate once it is built (tests decide approvals in process: S22 brings
+	// the routes).
+	serveGate = func(*gate.Pipeline) {}
 )
 
 // Server timings (S03 §3.8).
@@ -207,10 +210,19 @@ func runServe(ctx context.Context, e *Env, args []string) error {
 	defer func() { stopReg(); <-regDone }()
 	// 5c. The Gate (S13): the pipeline, its wait broker and its worker, which also ride the
 	// listener (deedglass_events wakes long polls; deedglass_jobs wakes the worker).
-	gp, err := newGate(cfg, db, led, pol, keys, log)
+	natives := nativeConnectors(cfg)
+	pool, err := newPool(cfg, e.Getenv, log)
+	if err != nil {
+		return &ExitError{Code: ExitFailure, ErrCode: "mcp_upstream_invalid", Err: err,
+			Next: "Fix mcp.upstreams in deedglass.yaml (docs/MCP.md, \"Put the Gate in front of a remote MCP server\")."}
+	}
+	defer pool.Close()
+	gp, err := newGate(cfg, db, led, pol, keys, log, natives, pool)
 	if err != nil {
 		return err
 	}
+	mw := newMCP(cfg, gp, natives, pool, keys, log)
+	serveGate(gp)
 	worker := gp.NewWorker(instanceName())
 	keys.Listener().Listen(ledger.Channel, gp.Broker().OnEvent, gp.Broker().Reset)
 	keys.Listener().Listen(store.JobsChannel, worker.Wake, func() { worker.Wake("") })
@@ -235,7 +247,7 @@ func runServe(ctx context.Context, e *Env, args []string) error {
 	})
 	api.Metrics().Collect(policyMetrics(pol.reg))
 	api.Metrics().Collect(gp.Metrics().Collect)
-	api.Mount(serveRoutes(api, db, ms, sk, led, people, keys, pol, gp)...)
+	api.Mount(serveRoutes(api, db, ms, sk, led, people, keys, pol, gp, mw)...)
 	ln, err := net.Listen("tcp", cfg.Listen)
 	if err != nil {
 		return &ExitError{Code: ExitFailure, ErrCode: "listen_failed", Err: fmt.Errorf("Can't listen on %s: %s", cfg.Listen, lastPart(err)),
@@ -312,7 +324,7 @@ type serveKey struct {
 // run httpx.CheckSpec on this list, so api/openapi.yaml must document each one. db and sk are nil
 // in route-table tests.
 func serveRoutes(api *httpx.Server, db *store.DB, ms []migrate.Migration, sk *serveKey, led *ledger.Ledger, people *identity.Service,
-	keys *identity.KeyAuth, pol *policies, gp *gate.Pipeline) []httpx.Route {
+	keys *identity.KeyAuth, pol *policies, gp *gate.Pipeline, mw *mcpWiring) []httpx.Route {
 	deps := httpx.SystemDeps{Spec: apiSpec()}
 	if pol == nil {
 		pol = &policies{svc: policy.NewService(nil)}
@@ -355,7 +367,9 @@ func serveRoutes(api *httpx.Server, db *store.DB, ms []migrate.Migration, sk *se
 	if err != nil {
 		panic(err) // DEEDGLASS_BASE_URL was validated by config
 	}
-	routes = append(routes, identity.NewMCPAuth(base).MCPRoutes()...)
+	// S15: the MCP gateway (S09's stubs when it isn't wired) and GET /v1/tools.
+	routes = append(routes, mcpRoutes(identity.NewMCPAuth(base), mw)...)
+	routes = append(routes, toolsRoutes(mw)...)
 	// S12: policies, versions, activation deeds, lint, the dry run and the test runner.
 	return append(routes, policyapi.Routes(pol.svc, policyapi.Options{})...)
 }
@@ -391,14 +405,12 @@ func policyMetrics(reg *policy.Registry) httpx.Collector {
 
 // newGate is the action pipeline (S13): the fake connector in dev only (S16 reserves the name
 // outside dev), S12's registry, S11's usage store, S09's intent checker and S08's Stop guard.
-func newGate(cfg *config.Config, db *store.DB, led *ledger.Ledger, pol *policies, keys *identity.KeyAuth, log *slog.Logger) (*gate.Pipeline, error) {
-	reg := connector.NewRegistry()
-	if cfg.Env == config.Dev {
-		reg.Register(fake.New())
-	}
+func newGate(cfg *config.Config, db *store.DB, led *ledger.Ledger, pol *policies, keys *identity.KeyAuth, log *slog.Logger,
+	natives []connector.Connector, pool *upstream.Pool) (*gate.Pipeline, error) {
+	reg := connector.NewRegistry(natives...)
 	g := cfg.Gate
 	return gate.New(gate.Options{DB: db, Ledger: led, Policies: pol.reg, Usage: policystore.NewUsage(db),
-		Intents: identity.NewIntents(db, keys, nil), Guard: keys, Resolver: reg, Logger: log,
+		Intents: identity.NewIntents(db, keys, nil), Guard: keys, Resolver: upstream.Resolver{Native: reg, Pool: pool}, Logger: log,
 		Config: gate.Config{WaitTimeout: g.WaitTimeout, ExecuteTimeout: g.ExecuteTimeout, EdgeResultTimeout: g.EdgeResultTimeout,
 			MaxArgsBytes: g.MaxArgsBytes, MaxResultBytes: g.MaxResultBytes, WorkerConcurrency: g.WorkerConcurrency,
 			WorkerMaxAttempts: g.WorkerMaxAttempts}})

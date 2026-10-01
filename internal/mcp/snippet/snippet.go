@@ -3,7 +3,7 @@
 // because GUI apps on macOS start with a minimal PATH (npx and node are otherwise not found).
 package snippet
 
-//go:generate go test . -run TestGoldens -update
+//go:generate go test . -run TestGoldens|TestHTTPGoldens|TestDemoGoldens -update
 
 import (
 	"bytes"

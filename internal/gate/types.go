@@ -68,6 +68,10 @@ type ActionRequest struct {
 	Session        string          // header Deedglass-Session
 	Intent         string          // header Deedglass-Intent
 	RequestID      string          // req_…, for the event rows
+	// CancelOn (gateway, S15's MCP gateway): cancel the tool call (never its recording) when this
+	// context ends: the client disconnected, or a Stop cancelled it (identity.Guard.Watch). Nil:
+	// the execution is detached and finishes on its own.
+	CancelOn context.Context
 }
 
 // EdgeResult is the body of POST /v1/actions/{id}/result (proxy mode).

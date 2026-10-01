@@ -373,3 +373,65 @@ func pad2(n int) string {
 	}
 	return strconv.Itoa(n)
 }
+
+// --- S15: the Streamable HTTP gateway and /mcp/native ---
+
+// MCP HTTP sentences (S15 §5). One sentence plus a next step each.
+const (
+	MCPNeedKey            = `Deedglass needs an agent API key. Send it as "Authorization: Bearer dg_…".`
+	MCPOriginRefused      = "This origin is not allowed to call Deedglass MCP endpoints. Add it to mcp.allowed_origins if it should be."
+	MCPUnsupportedVersion = "Deedglass supports MCP 2026-07-28, 2025-11-25, 2025-06-18 and 2025-03-26. Retry with one of those."
+	MCPNotAcceptable      = "Deedglass answers MCP requests as application/json. Send Accept: application/json, text/event-stream."
+	MCPOneMessage         = "Send one JSON-RPC request or notification per POST. Batches and responses are not accepted."
+	MCPTooManyInFlight    = "This agent already has 32 MCP requests in flight. Wait for one to finish, then try again."
+	MCPServerError        = "Deedglass could not handle this request, so nothing was run. Try again in a moment."
+)
+
+// MCPHeaderMismatchText is the -32020 sentence when a mirrored header and the body disagree.
+func MCPHeaderMismatchText(header, headerValue, field, bodyValue string) string {
+	return fmt.Sprintf("Header mismatch: %s is %q but the body names %q. Send the same %s in both.",
+		header, clip(headerValue, 80), clip(bodyValue, 80), field)
+}
+
+// MCPHeaderMissingText is the -32020 sentence for a required header that wasn't sent.
+func MCPHeaderMissingText(header, bodyValue string) string {
+	if bodyValue == "" {
+		return fmt.Sprintf("Header mismatch: %s is missing. Send it with every request, as MCP 2026-07-28 requires.", header)
+	}
+	return fmt.Sprintf("Header mismatch: %s is missing, but the body names %q. Send it with the same value.", header, clip(bodyValue, 80))
+}
+
+// MCPHeaderInvalidText is the -32020 sentence for a header value that can't be read.
+func MCPHeaderInvalidText(header string) string {
+	return fmt.Sprintf("Header mismatch: %s isn't a valid value. Encode values outside plain ASCII as =?base64?…?=.", header)
+}
+
+// MCPUnknownConnectorText answers /mcp/{connector} for a name no upstream is configured under.
+func MCPUnknownConnectorText(name string) string {
+	return fmt.Sprintf("No MCP connector named %q. Check the URL; configured connectors are listed in Console › Connectors.", clip(name, 64))
+}
+
+// MCPUpstreamDownText is the tool result when the upstream MCP server can't be reached.
+func MCPUpstreamDownText(slug string) string {
+	return fmt.Sprintf("The %q MCP server did not answer, so nothing was run. Deedglass will keep trying; check that it is running.", clip(slug, 64))
+}
+
+// MCPStillRunningText answers a gateway call that is still running when the HTTP answer is due.
+func MCPStillRunningText(actionID string) string {
+	return "Still running. Deedglass will record the outcome (" + actionID + ")."
+}
+
+// MCPApprovalUnknownText answers deedglass.check_approval for an approval this agent doesn't have.
+func MCPApprovalUnknownText(approvalID string) string {
+	return "No approval " + approvalID + " for this agent. Use the approval_id from the Waiting for approval message."
+}
+
+// MCPToolFailedText frames a gateway call the tool refused, without its upstream text.
+func MCPToolFailedText(tool, actionID string) string {
+	return fmt.Sprintf("%s failed before it applied anything. Deedglass recorded it (%s).", clip(tool, 160), actionID)
+}
+
+// MCPMethodNotFoundText is -32601 for a method the Gate doesn't serve or pass through.
+func MCPMethodNotFoundText(method string) string {
+	return fmt.Sprintf("Deedglass doesn't serve %q on this endpoint. Tools are available through tools/list and tools/call.", clip(method, 64))
+}

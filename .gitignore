@@ -20,3 +20,7 @@ coverage.*
 # the browser verifier's dev tools and build output (web/verify)
 web/verify/node_modules/
 web/verify/dist/
+# the Acme demo stack's local state (make demo-up): agent keys, the seal key, logs
+examples/demo/.demo-keys
+examples/demo/.demo-keys.tmp
+examples/demo/.demo/

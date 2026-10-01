@@ -96,6 +96,28 @@ func (p *Pipeline) ResolveTools(ctx context.Context, pr principal, req ResolveRe
 			return nil, httpx.ErrValidation("tools", msgResolveDigest)
 		}
 	}
+	facts := make([]policy.ToolFacts, len(req.Tools))
+	for i, t := range req.Tools {
+		facts[i] = policy.ToolFacts{Name: req.Connector + "." + t.Name, Connector: req.Connector, ConnectorType: ctype, SideEffect: "unknown"}
+	}
+	out, err := p.Visibility(ctx, pr, facts)
+	if err != nil {
+		return nil, err
+	}
+	for i := range out.Data {
+		out.Data[i].Name = req.Tools[i].Name
+	}
+	return out, nil
+}
+
+// Visibility answers, for each tool, whether the active policy always denies it to this agent
+// (S14's resolve, S15's /mcp/* tools/list and GET /v1/tools). Name and Tool are both the
+// qualified name; callers that list wire names set Name. An unavailable policy leaves every tool
+// visible: calls are refused at POST /v1/actions anyway, and the cause is transient.
+func (p *Pipeline) Visibility(ctx context.Context, pr principal, tools []policy.ToolFacts) (*ToolVisibilityList, error) {
+	if pr.Kind != httpx.KindAgentKey || pr.AgentID.IsZero() || pr.OrgID.IsZero() {
+		return nil, httpx.ErrInsufficientScope(httpx.ScopeActionsExecute)
+	}
 	var subj store.GateSubject
 	if err := p.o.DB.OrgTx(ctx, pr.OrgID, func(ctx context.Context, tx pgx.Tx) error {
 		var err error
@@ -115,20 +137,16 @@ func (p *Pipeline) ResolveTools(ctx context.Context, pr principal, req ResolveRe
 	if err != nil {
 		return nil, err
 	}
-	out := &ToolVisibilityList{Object: "list", Data: make([]ToolVisibility, 0, len(req.Tools))}
+	out := &ToolVisibilityList{Object: "list", Data: make([]ToolVisibility, 0, len(tools))}
 	enforce := act.Enforce
 	if enforce != nil && !enforce.Builtin && enforce.VersionID != "" {
 		v := enforce.VersionID
 		out.PolicyVersion = &v
 	}
-	for _, t := range req.Tools {
-		q := req.Connector + "." + t.Name
-		tv := ToolVisibility{Object: "tool_visibility", Name: t.Name, Tool: q, Visibility: VisibilityVisible}
-		// An unavailable policy refuses every call at POST /v1/actions; the list stays as it is,
-		// because the cause is transient and the refusal names it.
+	for _, f := range tools {
+		tv := ToolVisibility{Object: "tool_visibility", Name: f.Name, Tool: f.Name, Visibility: VisibilityVisible}
 		if enforce != nil && enforce.Unavailable == nil {
-			denied, rule, reason := policy.AlwaysDeniesWhy(enforce.Compiled, policy.ToolFacts{Name: q, Connector: req.Connector,
-				ConnectorType: ctype, SideEffect: "unknown"}, agent)
+			denied, rule, reason := policy.AlwaysDeniesWhy(enforce.Compiled, f, agent)
 			if rule != "" {
 				tv.RuleID = &rule
 			}

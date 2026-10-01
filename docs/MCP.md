@@ -1,10 +1,19 @@
 # MCP: put the Gate in front of an MCP server
 
 Deedglass governs tool calls that MCP clients (Claude Desktop, Claude Code, Cursor, VS Code,
-Windsurf and any other MCP client) make to MCP servers. This page covers the stdio wrapper,
-`deedglass mcp wrap` (S14). The Streamable HTTP gateway at `/mcp/{connector}` and `deedglass mcp
-serve` arrive in S15. Per-client config is in [MCP_CLIENTS.md](MCP_CLIENTS.md); authorization is in
-[MCP_AUTHORIZATION.md](MCP_AUTHORIZATION.md).
+Windsurf and any other MCP client) make to MCP servers. There are three ways in. Per-client config
+is in [MCP_CLIENTS.md](MCP_CLIENTS.md); authorization is in
+[MCP_AUTHORIZATION.md](MCP_AUTHORIZATION.md); the Acme demo that uses all three is in
+`examples/demo/`.
+
+| | Wrap (S14) | Gateway (S15) | Native (S15) |
+|---|---|---|---|
+| Transport to Deedglass | stdio (the wrapper runs beside the client) | Streamable HTTP | Streamable HTTP, or stdio through `deedglass mcp serve` |
+| Who runs the tool | the server the wrapper starts, after the Gate says yes | **Deedglass**, through its MCP client | **Deedglass**, through its connector |
+| Execution mode in the deed | `proxy` | `gateway` | `gateway` |
+| Where the server's credentials live | the client's config (the child's environment) | Deedglass (`mcp.upstreams`; the vault from S16) | Deedglass (the vault from S16) |
+| Endpoint | none (a CLI command) | `POST /mcp/{connector}` | `POST /mcp/native` |
+| Tool names the model sees | the server's names | the server's names | `connector.tool`, for example `fake.echo` |
 
 ## Wrap a stdio server
 
@@ -204,6 +213,12 @@ On an Apple M1 against a local Gate and Postgres 18 (`bench/results/2026-10-01-d
 p99 4.9 ms (the Gate's decision, recording and the result report); `tools/list` added p50 0.5 ms;
 the wrapper's peak RSS with 100 concurrent 64 KiB calls 49 MiB.
 
+The HTTP endpoints, against a local Gate and Postgres 18 with an in-process upstream
+(`bench/results/2026-10-02-darwin-arm64-gateway.json`, `make bench-gateway`): `/mcp/native`
+`fake.echo` end to end p50 5.9 ms, p99 7.2 ms; the gateway's added latency over calling the
+upstream directly p50 5.4 ms, p99 6.5 ms; header validation and envelope parsing of a 2 KiB body
+29 µs.
+
 ## What it doesn't do
 
 - **It doesn't govern resources, prompts, completion or legacy sampling and elicitation yet.**
@@ -220,3 +235,147 @@ the wrapper's peak RSS with 100 concurrent 64 KiB calls 49 MiB.
 - **No signed intents from MCP clients in v1** ([INTENTS.md](INTENTS.md)); an agent in
   `required` intent mode can't act through the wrapper.
 - **Approval resumes only in the same wrapper process** until S22.
+
+## Put the Gate in front of a remote MCP server
+
+The gateway is Deedglass as an MCP endpoint in front of another MCP server that speaks Streamable
+HTTP. The agent talks only to Deedglass, with its Deedglass key; Deedglass holds the upstream's
+credentials and runs every allowed `tools/call` itself (gateway mode), so the deed records what
+Deedglass ran, not what an edge reported.
+
+```text
+ MCP client ── POST /mcp/everything ──► httpx (Origin, key, 4 MiB, JSON) ──► gateway (headers, era)
+                                                                               │
+                                       ┌───────────────────────────────────────┘
+                                       ▼
+                    Gate (decide · record) ── allowed ──► upstream pool ── tools/call ──► MCP server
+                                       ▲                                   (SDK client, era negotiated)
+                    result + _meta ◄───┴── executed → L0 → sealed
+```
+
+Configure the upstream in `deedglass.yaml`. Its secrets stay in the environment:
+
+```yaml
+mcp:
+  upstreams:
+    everything:
+      url: https://mcp.example.com/mcp      # http only with DEEDGLASS_ALLOW_PRIVATE_NETWORKS=1 (dev)
+      headers_from_env: {Authorization: EVERYTHING_MCP_AUTH}
+      timeout: 30s                           # per HTTP request to the upstream
+      tools_ttl: 30s                         # how long its tools/list is cached
+```
+
+The variable names in `headers_from_env` can't start with `DEEDGLASS_` (that prefix is
+Deedglass's own); the values are read once at start and never logged, returned or sealed. Then
+point the client at `http://127.0.0.1:8080/mcp/everything` with the agent's key
+(`deedglass mcp snippet --transport http --client cursor --connector everything`).
+
+What the gateway does with each message:
+
+- **`tools/list`**: the upstream's tools (cached for the shorter of `tools_ttl` and the
+  upstream's `ttlMs`), minus the ones the active policy always denies to this agent, plus
+  `deedglass.check_approval`. Modern answers carry `ttlMs: 30000` and `cacheScope: "private"`,
+  because the list is filtered per caller. 100 tools per page with an opaque cursor.
+- **`tools/call`**: one action, `mode: gateway`, decided by the Gate. Allowed calls run on the
+  upstream and the answer is the upstream's result with `_meta` `com.deedglass/action` and
+  `com.deedglass/deed`. A denial, a pending approval or a Stop is an `isError` tool result that
+  says so and that nothing ran. The call waits up to `gate.execute_timeout` plus 2 s for the
+  outcome; past that it answers "Still running" with the action id.
+- **How an upstream call ends:** the connection refused → `failed`, `connector_unavailable`
+  (nothing ran); the upstream's JSON-RPC error → `failed`, `upstream_error`; `isError: true` →
+  `failed`, `tool_error`; no answer within `gate.execute_timeout` → `unknown`, sealed
+  UNVERIFIABLE (`timeout`); the client disconnects mid-call → the upstream request is cancelled
+  and the action is UNVERIFIABLE (`client_cancelled`); an answer over 4 MiB → `unknown`. A
+  `tools/call` is never retried, because it may have applied; only `tools/list` is retried once
+  after a lost session.
+- **`deedglass.check_approval`** finds the action from the approval id (no session needed) and,
+  once a person approved it, returns the result of the run the Gate made when it resumed the
+  action. Another agent's approval is not found.
+- **Resources, prompts and completion** answer `-32601` unless `mcp.passthrough` lists their
+  family (`resources`, `prompts`, `completion`); then they are forwarded and logged, not sealed.
+- **Inbound credentials never travel upstream.** `Authorization`, `Proxy-Authorization`,
+  `Cookie` and every `Deedglass-*` header are stripped before the operator's configured headers
+  are added (`identity.StripInboundCredentials`; a test checks the upstream sees none of them).
+- **Outbound safety until S16:** TLS 1.2 or later, no redirects, no proxy from the environment, a
+  4 MiB response cap, `User-Agent: deedglass/<version>`, and a dial-time refusal of loopback,
+  private, link-local (including cloud metadata), CGNAT and multicast addresses unless
+  `DEEDGLASS_ALLOW_PRIVATE_NETWORKS=1` (dev). S16 replaces this with the full egress guard and
+  moves upstreams into connector rows of type `mcp_http` with credentials in the vault.
+
+## Use Deedglass as an MCP server
+
+`POST /mcp/native` serves the Gate's own connectors as MCP tools, named `<connector>.<tool>`:
+`fake.echo` in dev today, `postgres.*`, `rest.*` and the others as S16 to S30 add connectors. The
+list is filtered per agent like the gateway's; `GET /v1/tools` returns the same tools as JSON for
+SDKs (`?include_hidden=true` adds the hidden ones with `visibility: hidden`).
+
+Stdio-only clients use the bridge:
+
+```text
+ Claude Desktop ──stdio──► deedglass mcp serve --connector native ──HTTP POST──► deedglass serve /mcp/native
+```
+
+`deedglass mcp serve` reads one JSON-RPC line at a time and POSTs it with the agent's key and the
+headers a conforming HTTP client sends (`MCP-Protocol-Version`, `Mcp-Method`, `Mcp-Name` for
+modern requests; the negotiated version for legacy ones). It holds no credentials but the key,
+runs no tools, keeps up to 32 requests in flight, turns `notifications/cancelled` into closing the
+matching request, and exits 0 when stdin ends. When the server can't be reached, a tool call gets
+the calm "could not be reached" result and nothing runs. `--connector <name>` bridges to an
+upstream behind the gateway instead.
+
+## MCP versions
+
+The two HTTP endpoints are **sessionless and dual-era** (ADR-037), checked against the
+specification pages on 2026-10-01:
+[Streamable HTTP](https://modelcontextprotocol.io/specification/2026-07-28/basic/transports/streamable-http),
+[Versioning](https://modelcontextprotocol.io/specification/2026-07-28/basic/versioning) and the
+[2025-11-25 transports](https://modelcontextprotocol.io/specification/2025-11-25/basic/transports).
+
+| | 2026-07-28 (modern) | 2025-11-25, 2025-06-18, 2025-03-26 (legacy) |
+|---|---|---|
+| How a client starts | any request, with `_meta` `io.modelcontextprotocol/protocolVersion`; `server/discover` is optional | `initialize`; the requested version is echoed when served, else 2025-11-25 |
+| Sessions | none | none minted; an `Mcp-Session-Id` sent is ignored (sessions were optional for servers) |
+| Required headers | `MCP-Protocol-Version` equal to `_meta`, `Mcp-Method`, and `Mcp-Name` for `tools/call`, `resources/read`, `prompts/get` | `MCP-Protocol-Version` after `initialize` (none means 2025-03-26); any `Mcp-Method` or `Mcp-Name` sent must still match |
+| A missing or different header | 400, JSON-RPC `-32020` (HeaderMismatch) | 400, `-32020` |
+| `Mcp-Param-*` from `x-mcp-header` | checked: a present argument needs its header with an equal value (integers compared as numbers), and a header needs its argument | checked when sent |
+| Values outside plain ASCII | `=?base64?…?=`, decoded before comparing; invalid base64 is `-32020` | same |
+| Unsupported version | 400, `-32022`, `data.supported` (all four) and `data.requested` | 400, `-32022` |
+| Unknown method | 404, `-32601` | 200, `-32601` |
+| Notifications | 202, no body | 202, no body |
+| GET, DELETE | 405 with `Allow: POST` | 405 (a server may refuse the GET stream) |
+| Responses | `application/json`, `Cache-Control: no-store` | same |
+
+## Security
+
+- **Origin:** a browser `Origin` that isn't the server's own or listed in `mcp.allowed_origins`
+  is refused with 403 before anything else (DNS-rebinding protection); no CORS headers are sent.
+  The default listen address stays `127.0.0.1`.
+- **Keys:** every request needs an agent key with `actions:execute`; a missing or bad key is 401
+  with `WWW-Authenticate: Bearer … resource_metadata="<base>/.well-known/oauth-protected-resource/mcp/<connector>"`.
+  Errors before the message is read are JSON-RPC errors whose `data` names the Deedglass error
+  code, its `doc_url` and the request id.
+- **Header smuggling:** a header that routes one way and a body that runs another is refused in
+  both eras (`-32020`).
+- **Limits:** 4 MiB per request, 32 requests in flight per agent (the 33rd gets 429 and a
+  JSON-RPC error), S11 budgets on top.
+- **Stop:** a stopped or suspended agent's `tools/call` is recorded and sealed like any other
+  refusal, and a Stop cancels a call that is already running (`identity.Guard.Watch`).
+
+## What the gateway and native endpoints don't do
+
+- **No streaming yet.** Answers are `application/json`; progress notifications from an upstream
+  are not forwarded (the bridge already reads `text/event-stream`).
+- **Resources and prompts are not governed.** With `mcp.passthrough` they are forwarded and
+  logged, never decided or sealed.
+- **No OAuth with upstreams yet.** An upstream that needs OAuth can't be fronted until the token
+  exchange S09 designed lands; static headers from the environment only.
+- **Claude Desktop's remote connectors can't reach `127.0.0.1`.** They are reached from
+  Anthropic's cloud, so Claude Desktop uses `deedglass mcp serve` (stdio) instead
+  ([MCP_CLIENTS.md](MCP_CLIENTS.md)).
+- **`Mcp-Param-*` through the bridge:** `deedglass mcp serve` doesn't read tool schemas, so it
+  doesn't send `x-mcp-header` headers; a modern client calling such a tool through the bridge is
+  refused with `-32020`. No native tool uses `x-mcp-header` today.
+- **An approved call's result is shown in full only by the instance that ran it**, within a
+  minute; afterwards `deedglass.check_approval` returns the stored result (up to
+  `gate.max_result_bytes`), or says the call ran.
+- **Upstream results are the upstream's word** (L0, method `reported`) until the Witness.

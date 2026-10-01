@@ -63,6 +63,7 @@ type Config struct {
 
 	// File-only settings (deedglass.yaml sections; settings.go).
 	Gate GateSettings
+	MCP  MCPSettings // mcp.* (S15)
 
 	raw        map[string]string // resolved raw values, for printing
 	sources    map[string]Source
@@ -167,6 +168,7 @@ type loader struct {
 	src      map[string]Source
 	problems []Problem
 	warnings []Warning
+	mcp      *MCPSettings
 }
 
 func (l *loader) problem(key, msg, next string) {
@@ -197,6 +199,14 @@ func (l *loader) load() (*Config, []Warning, error) {
 		l.parse(c, k)
 	}
 	l.parseSettings(c)
+	if l.mcp != nil {
+		c.MCP = *l.mcp
+		for _, u := range c.MCP.Upstreams {
+			if u.URL.Scheme == "http" && l.env == Prod {
+				l.problem("mcp.upstreams."+u.Slug+".url", "must use https in prod.", "Serve the MCP server over TLS, or run Deedglass in dev.")
+			}
+		}
+	}
 	l.prodChecks(c)
 	if c.ResendAPIKey.IsSet() && c.MailFrom == "" {
 		if _, set := l.raw["DEEDGLASS_MAIL_FROM"]; !set {

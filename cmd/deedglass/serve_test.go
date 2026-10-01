@@ -14,23 +14,24 @@ import (
 	"time"
 
 	"github.com/deedglass/deedglass/internal/httpx"
+	"github.com/deedglass/deedglass/internal/mcp/httpgw"
 )
 
 // Every route serve mounts is documented in api/openapi.yaml (checks 1–6), from the real list.
 func TestServeRoutesMatchOpenAPI(t *testing.T) {
 	api := httpx.New(httpx.Options{Logger: slog.New(slog.DiscardHandler)})
-	api.Mount(serveRoutes(api, nil, nil, nil, nil, nil, nil, nil, nil)...)
+	api.Mount(serveRoutes(api, nil, nil, nil, nil, nil, nil, nil, nil, nil)...)
 	for _, err := range httpx.CheckSpec(apiSpec(), api.Routes()) {
 		t.Error(err)
 	}
-	if len(api.Routes()) != 69 {
-		t.Fatalf("serve mounts %d routes, want 69 (S03 + keys.json in S04 + the six Ledger routes in S06 + 17 in S07 + 17 in S08 + 9 in S09 + 12 in S12 + 3 in S13 + 1 in S14)", len(api.Routes()))
+	if len(api.Routes()) != 70 {
+		t.Fatalf("serve mounts %d routes, want 70 (S03 + keys.json in S04 + the six Ledger routes in S06 + 17 in S07 + 17 in S08 + 9 in S09 + 12 in S12 + 3 in S13 + 1 in S14 + 1 in S15)", len(api.Routes()))
 	}
 }
 
 func TestVersionAgainstServer(t *testing.T) {
 	api := httpx.New(httpx.Options{Logger: slog.New(slog.DiscardHandler)})
-	api.Mount(serveRoutes(api, nil, nil, nil, nil, nil, nil, nil, nil)...)
+	api.Mount(serveRoutes(api, nil, nil, nil, nil, nil, nil, nil, nil, nil)...)
 	ts := httptest.NewServer(api)
 	defer ts.Close()
 
@@ -65,7 +66,7 @@ func TestVersionAgainstServer(t *testing.T) {
 func TestServeUntilStopped(t *testing.T) {
 	log := slog.New(slog.DiscardHandler)
 	api := httpx.New(httpx.Options{Logger: log})
-	api.Mount(serveRoutes(api, nil, nil, nil, nil, nil, nil, nil, nil)...)
+	api.Mount(serveRoutes(api, nil, nil, nil, nil, nil, nil, nil, nil, nil)...)
 	entered, release := make(chan struct{}), make(chan struct{})
 	api.Mount(httpx.Route{Method: "GET", Pattern: "/v1/_test/slow", OperationID: "slow", Auth: httpx.Public, Extension: "test",
 		Handler: func(w http.ResponseWriter, r *http.Request) error {
@@ -134,7 +135,7 @@ func TestServeUntilStopped(t *testing.T) {
 func TestSecondSignalExits(t *testing.T) {
 	log := slog.New(slog.DiscardHandler)
 	api := httpx.New(httpx.Options{Logger: log})
-	api.Mount(serveRoutes(api, nil, nil, nil, nil, nil, nil, nil, nil)...)
+	api.Mount(serveRoutes(api, nil, nil, nil, nil, nil, nil, nil, nil, nil)...)
 	ln, _ := net.Listen("tcp", "127.0.0.1:0")
 	exited := make(chan int, 1)
 	saved := serveExit
@@ -164,11 +165,12 @@ func TestPGVersion(t *testing.T) {
 
 // Every route an API key can call declares the scopes it needs (S08 §3.4), so no key route is
 // open to any key by omission. GET /v1/whoami is the one exception: any key, stop checks skipped.
-// POST /v1/actions is the one route that lets a stopped agent's key through, to record and seal
-// the refused attempt (S13).
+// POST /v1/actions (S13) and the two MCP gateway endpoints (S15) are the routes that let a stopped
+// agent's key through, to record and seal the refused attempt; the gateway routes then send every
+// tools/call through the Gate, which refuses it.
 func TestKeyRoutesDeclareScopes(t *testing.T) {
 	api := httpx.New(httpx.Options{Logger: slog.New(slog.DiscardHandler)})
-	api.Mount(serveRoutes(api, nil, nil, nil, nil, nil, nil, nil, nil)...)
+	api.Mount(serveRoutes(api, nil, nil, nil, nil, nil, nil, nil, nil, &mcpWiring{gw: &httpgw.Gateway{}, timeout: time.Minute})...)
 	keyRoutes := 0
 	for _, r := range api.Routes() {
 		if r.Auth != httpx.AgentKey && r.Auth != httpx.SessionOrKey {
@@ -188,9 +190,10 @@ func TestKeyRoutesDeclareScopes(t *testing.T) {
 		case r.SkipStopChecks:
 			t.Errorf("%s skips the stop checks; only whoami may", r.Key())
 		}
-		// S13: only POST /v1/actions records a stopped agent's attempt (and refuses it itself).
-		if r.RecordStopped != (r.Key() == "POST /v1/actions") {
-			t.Errorf("%s: RecordStopped is %v; only POST /v1/actions records stopped agents", r.Key(), r.RecordStopped)
+		// S13, S15: only POST /v1/actions and the MCP gateway record a stopped agent's attempt.
+		records := r.Key() == "POST /v1/actions" || r.Key() == "POST /mcp/{connector}" || r.Key() == "POST /mcp/native"
+		if r.RecordStopped != records {
+			t.Errorf("%s: RecordStopped is %v; only POST /v1/actions and the MCP gateway record stopped agents", r.Key(), r.RecordStopped)
 		}
 	}
 	if keyRoutes < 20 {

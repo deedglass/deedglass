@@ -164,9 +164,10 @@ func writeAPIJSON(e *Env, v any) error {
 // --- actions list ---
 
 type actionsListOpts struct {
-	agent, tool, state, decision, verdict, level, obo, q, cursor string
-	since                                                        time.Duration
-	limit                                                        int
+	agent, tool, state, decision, verdict, level, obo, q, cursor, connector string
+	since                                                                   time.Duration
+	limit                                                                   int
+	follow                                                                  bool
 }
 
 var actionsListValues actionsListOpts
@@ -185,6 +186,8 @@ func actionsListFlags(fs *flag.FlagSet) {
 	fs.DurationVar(&o.since, "since", 0, "only actions newer than this (1h, 30m)")
 	fs.IntVar(&o.limit, "limit", 25, "page size, 1 to 100")
 	fs.StringVar(&o.cursor, "cursor", "", "next_cursor from the previous page")
+	fs.BoolVar(&o.follow, "follow", false, "keep printing actions as they are decided and sealed (Ctrl-C to stop)")
+	fs.StringVar(&o.connector, "connector", "", "only this connector's tools (<connector>.*)")
 }
 
 func (o actionsListOpts) values(now time.Time) url.Values {
@@ -196,6 +199,9 @@ func (o actionsListOpts) values(now time.Time) url.Values {
 	}
 	set("agent", o.agent)
 	set("tool", o.tool)
+	if o.connector != "" && o.tool == "" {
+		v.Set("tool", o.connector+".*")
+	}
 	set("state", o.state)
 	set("decision", o.decision)
 	set("verdict", o.verdict)
@@ -219,11 +225,20 @@ func runActionsList(ctx context.Context, e *Env, args []string) error {
 	if err != nil {
 		return ledgerErr(e, err)
 	}
+	if o := actionsListValues; o.follow && (e.Globals.JSON || o.cursor != "") {
+		return usageErr(errors.New("--follow prints lines as they happen; it doesn't take --json or --cursor"), "Run deedglass actions list --follow --connector orders.")
+	}
+	if o := actionsListValues; o.connector != "" && o.tool != "" {
+		return usageErr(errors.New("use --connector or --tool, not both"), "For example: deedglass actions list --connector orders.")
+	}
 	s, err := openLedger(ctx, e, false)
 	if err != nil {
 		return err
 	}
 	defer s.Close()
+	if actionsListValues.follow {
+		return runActionsFollow(ctx, e, s)
+	}
 	list, err := s.led.ListActions(ctx, s.org.ID, f, p)
 	if err != nil {
 		return ledgerErr(e, err)

@@ -135,6 +135,13 @@ type RouteGuard interface {
 	Challenge(r *http.Request, value string) string
 }
 
+// ErrorRenderer is an optional RouteGuard extension: it writes the route's error responses itself
+// (S15: MCP endpoints answer with JSON-RPC error bodies). The status and the error's headers are
+// the renderer's to write; the challenge rewrite has already been applied.
+type ErrorRenderer interface {
+	RenderError(w http.ResponseWriter, r *http.Request, e *Error, requestID string)
+}
+
 // SetRequestValue stores v under key for the rest of the request (the context already carries the
 // per-request record, so no new context is needed). It is a no-op outside a request.
 func SetRequestValue(ctx context.Context, key, v any) {

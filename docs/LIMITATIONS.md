@@ -109,6 +109,37 @@ What Deedglass does not do, stated plainly. **Owner: S37**, which finalizes this
 - **No signed intents from MCP clients.** An agent in `required` intent mode can't act through
   the wrapper (S09).
 
+## The MCP gateway, /mcp/native and mcp serve (S15)
+
+- **Upstreams are configured in `deedglass.yaml` until S16.** There is no API or Console to add
+  one, and their credentials are static headers from the environment; S16 moves them into
+  connector rows (type `mcp_http`) with credentials in the vault.
+- **The outbound guard is basic until S16:** private and loopback addresses are refused at dial
+  time outside dev, redirects are never followed, TLS 1.2 or later; S16 brings the full egress
+  guard (one door, DNS pinning, allow-lists).
+- **No SSE streaming of progress** from upstream servers; answers are single JSON objects.
+- **Resources and prompts are not governed** (`mcp.passthrough` forwards and logs them).
+- **No OAuth token exchange with upstreams**; an upstream that only accepts OAuth can't be fronted.
+- **Upstream results are the upstream's word** (L0 `reported`) until the Witness.
+- **A Claude Desktop remote connector can't reach a local Deedglass**; it uses `deedglass mcp serve`.
+- **The bridge doesn't send `Mcp-Param-*` headers**, so a modern client calling an upstream tool
+  that declares `x-mcp-header` through `deedglass mcp serve --connector <name>` is refused
+  (`-32020`). No native tool declares one today.
+- **`deedglass.check_approval` scans the org's actions** for the approval id (no index on
+  `actions.approval_id` yet); fine at demo scale, revisited with S22's approval routes.
+- **The upstream pool's sessions are per instance and in memory**; a legacy upstream that loses its
+  session gets one reconnect for `tools/list`, never for `tools/call`.
+
+## The Acme demo stack (S15)
+
+- **The demo's MCP entries use the database owner's credentials on purpose** (`acme_owner`), so the
+  only difference between `orders` and `orders-direct` on screen is Deedglass in the path. Agents
+  should never get owner credentials; S17's native Postgres connector uses a least-privilege role
+  with its password in the vault.
+- **Demo secrets are local-only**: `examples/demo/.env` and `.demo-keys` are random, 0600 and
+  git-ignored, and every port binds to `127.0.0.1`. The stack is for local demos, never a server.
+- **`orders-direct` bypasses Deedglass**: it exists for the contrast shot only.
+
 ## Signed intents, on-behalf-of and MCP limits (S09)
 
 - **MCP clients can't sign intents in v1.** An agent in `required` mode can act only through the

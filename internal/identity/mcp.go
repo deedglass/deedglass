@@ -6,7 +6,9 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strings"
+	"time"
 
 	"github.com/deedglass/deedglass/internal/httpx"
 	"github.com/deedglass/deedglass/internal/ids"
@@ -23,8 +25,14 @@ import (
 const (
 	MetadataPath     = "/.well-known/oauth-protected-resource"
 	MCPDocsURL       = "https://docs.deedglass.com/mcp/authorization"
-	mcpOriginMessage = "Deedglass refuses browser requests from this origin, to protect MCP endpoints from DNS rebinding. Call the Gate from your MCP client, not from a web page."
+	mcpOriginMessage = MCPOriginMessage
 	mcpStubMessage   = "The MCP gateway isn't enabled on this server."
+)
+
+// MCP endpoint sentences (S15 §5), here because httpx renders them before the gateway runs.
+const (
+	MCPOriginMessage  = "This origin is not allowed to call Deedglass MCP endpoints. Add it to mcp.allowed_origins if it should be."
+	MCPNeedKeyMessage = `Deedglass needs an agent API key. Send it as "Authorization: Bearer dg_…".`
 )
 
 // ProtectedResource is an RFC 9728 protected-resource metadata document. AuthorizationServers is
@@ -70,11 +78,24 @@ type MCPAuth struct {
 	base     *url.URL
 	resource string // CanonicalResource(base)
 	origin   string
+	allowed  map[string]bool // mcp.allowed_origins, canonical
 }
 
 // NewMCPAuth returns the middleware for the server at base (DEEDGLASS_BASE_URL).
 func NewMCPAuth(base *url.URL) *MCPAuth {
 	return &MCPAuth{base: base, resource: CanonicalResource(base), origin: canonicalOrigin(base)}
+}
+
+// WithAllowedOrigins adds browser origins allowed on /mcp/* (mcp.allowed_origins, S15) to the
+// base URL's own origin. Each must be an origin: scheme and host, no path.
+func (m *MCPAuth) WithAllowedOrigins(origins []string) *MCPAuth {
+	m.allowed = map[string]bool{}
+	for _, o := range origins {
+		if u, err := url.Parse(o); err == nil && u.Scheme != "" && u.Host != "" {
+			m.allowed[canonicalOrigin(u)] = true
+		}
+	}
+	return m
 }
 
 var _ httpx.RouteGuard = (*MCPAuth)(nil)
@@ -88,7 +109,8 @@ func (m *MCPAuth) Admit(w http.ResponseWriter, r *http.Request) bool {
 		return true
 	}
 	if len(o) == 1 {
-		if u, err := url.Parse(o[0]); err == nil && u.Scheme != "" && u.Host != "" && u.Path == "" && canonicalOrigin(u) == m.origin {
+		if u, err := url.Parse(o[0]); err == nil && u.Scheme != "" && u.Host != "" && u.Path == "" &&
+			(canonicalOrigin(u) == m.origin || m.allowed[canonicalOrigin(u)]) {
 			return true
 		}
 	}
@@ -122,10 +144,18 @@ func (m *MCPAuth) MetadataURL(endpoint string) string {
 	return origin + MetadataPath + basePath + endpoint
 }
 
-// validMCPPath reports whether p is /mcp/native or /mcp/<connector id>.
+// validMCPPath reports whether p is /mcp/native, /mcp/<connector id> or /mcp/<connector slug>.
 func validMCPPath(p string) bool {
 	rest, ok := strings.CutPrefix(p, "/mcp/")
-	return ok && (rest == "native" || ids.Check(ids.Connector, rest) == nil)
+	return ok && (rest == "native" || validConnectorRef(rest))
+}
+
+// reSlug is the connector-slug grammar (S16's naming rules): S15's upstreams are addressed by
+// slug (/mcp/everything) until S16 gives them connector rows.
+var reSlug = regexp.MustCompile(`^[a-z][a-z0-9-]{1,31}$`)
+
+func validConnectorRef(s string) bool {
+	return ids.Check(ids.Connector, s) == nil || reSlug.MatchString(s)
 }
 
 // MCPRoutes are the protected-resource metadata documents and the /mcp/* endpoints, which answer
@@ -139,7 +169,7 @@ func (m *MCPAuth) MCPRoutes() []httpx.Route {
 		{Method: "GET", Pattern: MetadataPath + "/mcp/{connector}", OperationID: "getMCPResourceMetadata", Auth: httpx.Public,
 			Handler: m.metadata(func(r *http.Request) (string, bool) {
 				c := r.PathValue("connector")
-				return "/mcp/" + c, ids.Check(ids.Connector, c) == nil
+				return "/mcp/" + c, validConnectorRef(c)
 			})},
 		{Method: "POST", Pattern: "/mcp/{connector}", OperationID: "mcpConnector", Auth: httpx.AgentKey, Scopes: []string{httpx.ScopeActionsExecute},
 			Idempotency: httpx.IdemNever, MaxBody: 4 << 20, Guard: m, Handler: mcpStub},
@@ -155,7 +185,7 @@ func (m *MCPAuth) metadata(path func(*http.Request) (string, bool)) httpx.Handle
 	return func(w http.ResponseWriter, r *http.Request) error {
 		p, ok := path(r)
 		if !ok {
-			return httpx.E(httpx.CodeNotFound, httpx.Msg("There's no MCP endpoint with that id. Connector ids look like con_01k67c04kxevyex3pjyqe0t45d."))
+			return httpx.E(httpx.CodeNotFound, httpx.Msg("There's no MCP endpoint with that name. Use a connector name like everything, or an id like con_01k67c04kxevyex3pjyqe0t45d."))
 		}
 		doc := ProtectedResource{Resource: m.resource, ResourceName: "Deedglass", BearerMethodsSupported: []string{"header"},
 			ScopesSupported: []string{httpx.ScopeActionsExecute, httpx.ScopeActionsRead, httpx.ScopeDeedsRead}, ResourceDocumentation: MCPDocsURL}
@@ -236,4 +266,71 @@ func StripInboundCredentials(h http.Header) {
 			delete(h, k)
 		}
 	}
+}
+
+// MCPGateway is the gateway that S15 mounts on POST /mcp/{connector} and POST /mcp/native.
+type MCPGateway struct {
+	Connector httpx.HandlerFunc // POST /mcp/{connector}
+	Native    httpx.HandlerFunc // POST /mcp/native
+	Timeout   time.Duration     // per request: gate.execute_timeout plus headroom
+}
+
+// GatewayRoutes are MCPRoutes with S15's gateway mounted: the same metadata documents, and the two
+// endpoints behind this guard, whose errors are written as JSON-RPC (an MCP client reads every
+// answer of its endpoint as JSON-RPC). A stopped or suspended agent's key reaches the gateway
+// (RecordStopped), so its tool calls are recorded and sealed like POST /v1/actions.
+func (m *MCPAuth) GatewayRoutes(g MCPGateway) []httpx.Route {
+	rs := m.MCPRoutes()
+	guard := mcpGatewayGuard{m}
+	for i := range rs {
+		switch rs[i].Pattern {
+		case "/mcp/{connector}":
+			rs[i].Handler, rs[i].Guard, rs[i].RecordStopped, rs[i].Timeout = g.Connector, guard, true, g.Timeout
+		case "/mcp/native":
+			rs[i].Handler, rs[i].Guard, rs[i].RecordStopped, rs[i].Timeout = g.Native, guard, true, g.Timeout
+		}
+	}
+	return rs
+}
+
+// mcpGatewayGuard is MCPAuth plus JSON-RPC error bodies (httpx.ErrorRenderer).
+type mcpGatewayGuard struct{ *MCPAuth }
+
+// RenderError implements httpx.ErrorRenderer: the status and headers stay (401 with its
+// WWW-Authenticate challenge, 413, 415, …), and the body is a JSON-RPC error without an id whose
+// data names the Deedglass error code, its doc_url and the request id.
+func (g mcpGatewayGuard) RenderError(w http.ResponseWriter, r *http.Request, e *httpx.Error, requestID string) {
+	h := w.Header()
+	for k, vs := range e.Header {
+		for _, v := range vs {
+			h.Add(k, v)
+		}
+	}
+	if e.Status == http.StatusUnauthorized && h.Get("WWW-Authenticate") == "" {
+		h.Set("WWW-Authenticate", g.Challenge(r, `Bearer realm="deedglass"`))
+	}
+	msg := e.Message
+	if e.Code == httpx.CodeAuthenticationRequired {
+		msg = MCPNeedKeyMessage
+	}
+	code := -32600
+	if e.Status >= 500 {
+		code = -32603
+	}
+	type data struct {
+		Type      string `json:"type"`
+		Code      string `json:"code"`
+		DocURL    string `json:"doc_url"`
+		RequestID string `json:"request_id"`
+	}
+	type rpcErr struct {
+		Code    int    `json:"code"`
+		Message string `json:"message"`
+		Data    data   `json:"data"`
+	}
+	h.Set("Cache-Control", "no-store")
+	_ = httpx.WriteJSON(w, e.Status, struct {
+		JSONRPC string `json:"jsonrpc"`
+		Error   rpcErr `json:"error"`
+	}{"2.0", rpcErr{code, msg, data{string(e.Type), string(e.Code), httpx.DocURLPrefix + string(e.Code), requestID}}})
 }
