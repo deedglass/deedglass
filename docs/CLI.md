@@ -166,11 +166,11 @@ builds it. Hidden commands work but aren't in `deedglass help`.
 | `deedglass agent keys list <name|agt_…> [--json]` | Agents | List an agent's API keys | built |
 | `deedglass agent keys roll <key_…> [--overlap 24h] [--json]` | Agents | Replace an API key, with an overlap | built |
 | `deedglass agent keys revoke <key_…> [--reason …] [--json]` | Agents | Revoke an API key | built |
-| `deedglass agent intent keygen` | Agents | Generate a signed-intent key pair | soon (S09) |
-| `deedglass agent intent add` | Agents | Register an intent public key | soon (S09) |
-| `deedglass agent intent list` | Agents | List an agent's intent keys | soon (S09) |
-| `deedglass agent intent remove` | Agents | Remove an intent key | soon (S09) |
-| `deedglass agent intent mode` | Agents | Require, allow or ignore signed intents | soon (S09) |
+| `deedglass agent intent keygen <name> [--dir .deedglass/intent] [--force] [--json]` | Agents | Generate a signed-intent key pair | built |
+| `deedglass agent intent add <name|agt_…> --public-key ed25519:… [--json]` | Agents | Register an intent public key | built |
+| `deedglass agent intent list <name|agt_…> [--json]` | Agents | List an agent's intent keys | built |
+| `deedglass agent intent remove <name|agt_…> <kid> [--json]` | Agents | Remove an intent key | built |
+| `deedglass agent intent mode <name|agt_…> off|optional|required [--json]` | Agents | Require, allow or ignore signed intents | built |
 | `deedglass org create --name "Acme" --owner-email priya@acme.com [--slug acme] [--print-link] [--admin-key] [--json]` | Agents | Create an org and its owner | built |
 | `deedglass org login-link --email sam@acme.com [--org acme] [--json]` | Agents | Print a one-time sign-in link | built |
 | `deedglass org keys create [--org acme] [--name ci] [--mode live|test] [--json]` | Agents | Create an org admin key | built |
@@ -238,7 +238,7 @@ builds it. Hidden commands work but aren't in `deedglass help`.
 | `deedglass dev simulate` | Dev | Simulate agent traffic | soon (S27) |
 | `deedglass dev agent-script` | Dev | Run a scripted agent | soon (S37) |
 | `deedglass dev mail-preview login|invite [--out /tmp/login.html] [--json]` | Dev | Preview emails in the browser | built |
-| `deedglass dev sign-intent` | Dev | Sign an intent with a local key | soon (S09) |
+| `deedglass dev sign-intent --key <pem> --tool stripe.refund --args '{…}' [--org org_… --agent agt_…] [--obo …] [--session …] [--ttl 60s] [--explain] [--json]` | Dev | Sign an intent with a local key | built |
 | `deedglass dev stripe-fixtures` | Dev | Create Stripe test-mode fixtures | soon (S30) |
 | `deedglass dev id <prefix>` | Dev | Print a fresh id for a prefix | built, hidden |
 <!-- commands:end -->
@@ -421,6 +421,83 @@ $ deedglass org login-link --email sam@acme.com
   HTML and a `.txt` next to it.
 - `--json` prints the objects (the link included for `login-link`, and for `org create` when printed).
 
+## Signed intents: `agent intent` and `dev sign-intent`
+
+The spec is [INTENTS.md](INTENTS.md). `keygen` and `dev sign-intent` run locally, on the machine
+that runs the agent: the private key never leaves it. `add`, `list`, `remove` and `mode` call the
+API with an org admin key (`--api-key` or `DEEDGLASS_API_KEY`, and `--server`), like the other
+`agent` commands. Every command takes `--json`.
+
+| Command | Flags | Does | Exit |
+|---|---|---|---|
+| `agent intent keygen <name>` | `--dir .deedglass/intent` (created 0700), `--force` (replace an existing file) | writes `<dir>/<name>.pem` (PKCS#8 PEM, mode 0600, never through a symlink) and prints the public key and kid | 0; 1 when the file exists or can't be written |
+| `agent intent add <name\|agt_…>` | `--public-key ed25519:…` (required) | registers the key; seals `agent.intent_key_added` | 0; 1 when the server refuses (422 unsafe key, 409 a third or duplicate key); 2 without `--public-key` |
+| `agent intent list <name\|agt_…>` | | the agent's mode and keys: kid, public key, when added and by whom | 0 |
+| `agent intent remove <name\|agt_…> <kid>` | | removes the key; seals `agent.intent_key_removed` | 0; 1 for an unknown kid, or the last key of a `required` agent |
+| `agent intent mode <name\|agt_…> off\|optional\|required` | | changes the mode; seals `agent.intent_mode_changed` (nothing when unchanged) | 0; 1 for `required` with no keys; 2 for an unknown mode |
+| `dev sign-intent` | `--key <pem>`, `--tool`, `--args` (required); `--org`, `--agent`; `--obo`, `--session`; `--ttl 60s` (at most 5m); `--explain`; `--now <RFC 3339>` and `--nonce <32 hex>` (tests and vectors only) | signs one intent and prints the `Deedglass-Intent` header | 0; 1 when the key can't be read or the arguments can't be signed; 2 for a usage error |
+
+```
+$ deedglass agent intent keygen support-bot
+✓ Intent key created · support-bot · kid 21fe31dfa154a261626bf854046fd227
+  Private key  .deedglass/intent/support-bot.pem (mode 0600). Keep it with the agent; it never goes to Deedglass.
+  Public key   ed25519:11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo
+  Next: deedglass agent intent add support-bot --public-key ed25519:11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo
+
+$ deedglass agent intent add support-bot --public-key ed25519:11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo
+✓ Intent key registered · support-bot · kid 21fe…d227 · deed_01k6… sealed
+  support-bot doesn't check signed intents yet. Check them when sent, or require them:
+  deedglass agent intent mode support-bot optional|required
+
+$ deedglass agent intent mode support-bot required
+✓ support-bot now requires a signed intent on every call · deed_01k6… sealed
+  Calls without a valid Deedglass-Intent header are refused with intent_required.
+  MCP clients can't sign intents yet, so support-bot can act only through the SDKs or the REST API.
+
+$ deedglass agent intent list support-bot
+support-bot · intent mode required
+KID                                PUBLIC KEY                                            ADDED    BY
+21fe31dfa154a261626bf854046fd227   ed25519:11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo   2h ago   usr_01k6c9kb2zcjsyn7b8g2k1vqvp
+
+$ deedglass agent intent add support-bot --public-key ed25519:AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+✕ That public key is a small-order point, so a single signature would verify for every message. Generate a fresh key with deedglass agent intent keygen support-bot.      (exit 1)
+```
+
+`add` says what happens next for the agent's current mode: in `off` (above), that the agent
+doesn't check signed intents yet; in `optional`, that intents stay optional until you require them
+(`deedglass agent intent mode support-bot required`); in `required`, that calls signed with the new
+key are accepted now. `remove` ends with `Every Deedglass instance refuses intents signed with it
+within 2 seconds.`
+
+**`dev sign-intent`.** Without `--explain` it prints only the header, so `H=$(…)` works.
+`--explain` prints every value in full, one per line:
+
+```
+$ deedglass dev sign-intent --key testdata/intents/keys/test1.pem \
+    --org org_01k6h7kp6msmzrhdzwtcr3jnkp --agent agt_01k633rrmh3bcz2p39gg4vp46q \
+    --tool stripe.refund --args '{"charge":"ch_3QxZ8f2L","amount":1200}' --obo usr_ext_4821 --session conv_9f2c \
+    --now 2026-10-03T09:30:00Z --nonce 05c18be68a24c056cd6c7c8910dc0729 --explain
+args          {"amount":1200,"charge":"ch_3QxZ8f2L"}
+args_digest   sha256:f7411a7cf4706333c9ba80c85aab7d8b92363ad3077a288dadc26bef42d89d36
+intent        {"agent":"agt_01k633rrmh3bcz2p39gg4vp46q","args_digest":"sha256:f741…","exp":1791019860000,…,"v":"deedglass.intent/1"}   393 bytes
+intent_hash   sha256:87c73e450a53f0269e33f7adb8430a6f89714606f9aae38bc732536fef7e3089
+signed bytes  "deedglass/intent/v1\n" + intent_hash
+kid           21fe31dfa154a261626bf854046fd227
+header        eyJhZ2VudCI6ImFndF8wMWs2MzNycm1oM2JjejJwMzlnZzR2cDQ2cSIs…ifQ.TQAgBevx6iwlDM2Z7px4mrRiCjdbrAX3GCacB_gMAQbvPagJqCsJUWYz7xS7VuQqyV2rOK71uyRHvym2nqjJCA
+✓ Valid for 60 s · nonce 05c1…0729 · works once
+```
+
+(The `intent` and `header` lines are shortened here; the command prints them whole. This is the
+cross-check vector: the header ends in `.TQAgBevx…nqjJCA`.)
+
+- **The org and agent** come from `--org` and `--agent`. Without them, `dev sign-intent` calls
+  `whoami` when an API key is set (`--api-key` or `DEEDGLASS_API_KEY`) and that key is the agent's
+  own; an org admin key is refused, because intents are signed for one agent. With neither, it
+  exits 2: `deedglass dev sign-intent needs --org and --agent, or the agent's API key.`
+- **`--now` and `--nonce`** fix the time and the nonce, for tests and the golden vectors. Never use
+  `--nonce` for real calls: a nonce works once.
+- **`--json`** prints `{"object":"signed_intent","header","intent_hash","intent","args_digest","nonce","kid","expires_at"}`.
+
 ## What it doesn't do (yet)
 
 - The Ledger commands use the database directly; `--server`/`--api-key` (API mode) come with S09.
@@ -430,6 +507,8 @@ $ deedglass org login-link --email sam@acme.com
   `COLORFGBG` or `DEEDGLASS_THEME=light`. No image-protocol (iTerm2, Kitty) rendering yet.
 
 - No shell completion until S32 (`deedglass completion zsh|bash|fish`).
+- Intent keys live in PEM files. `keygen` and `dev sign-intent` don't use an OS keychain, a KMS or
+  an HSM; protect `.deedglass/intent/` like any other secret on the agent's machine.
 - `keys revoke` isn't built (planned; `docs/SEAL_KEYS.md`).
 - `deedglass verify` does not re-run the Witness, fetch keys anywhere you did not name, or cache
   them (a key cache with `--offline` is planned). Bundles in the browser verifier are not built yet.

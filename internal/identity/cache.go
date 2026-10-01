@@ -27,12 +27,18 @@ type KeyEntry struct {
 	RevokedAt  time.Time // zero: not revoked
 }
 
-// AgentEntry is an agent's identity and status.
+// AgentEntry is an agent's identity and status, and its signed-intent settings (S09). The guard's
+// own reads don't load the intent settings: IntentLoaded says whether IntentMode and IntentKeys are
+// real, and the intent checker never reads an entry without them (an empty mode is not "off").
 type AgentEntry struct {
 	ID     ids.AgentID
 	OrgID  ids.OrgID
 	Name   string
 	Status AgentStatus
+
+	IntentLoaded bool
+	IntentMode   IntentMode
+	IntentKeys   []IntentKey
 }
 
 // OrgEntry is an org's name, pinned API version and stop overlay.

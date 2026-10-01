@@ -183,7 +183,7 @@ func actionsListFlags(fs *flag.FlagSet) {
 	fs.StringVar(&o.obo, "on-behalf-of", "", "an on-behalf-of reference")
 	fs.StringVar(&o.q, "q", "", "text in the tool name or error code")
 	fs.DurationVar(&o.since, "since", 0, "only actions newer than this (1h, 30m)")
-	fs.IntVar(&o.limit, "limit", 25, "page size, 1–100")
+	fs.IntVar(&o.limit, "limit", 25, "page size, 1 to 100")
 	fs.StringVar(&o.cursor, "cursor", "", "next_cursor from the previous page")
 }
 
@@ -472,7 +472,7 @@ func deedsListFlags(fs *flag.FlagSet) {
 	fs.StringVar(&o.kind, "kind", "", "comma list: action, admin, amendment")
 	fs.StringVar(&o.action, "action", "", "an action id: its deed and amendments")
 	fs.StringVar(&o.order, "order", "", "asc (default) or desc")
-	fs.IntVar(&o.limit, "limit", 25, "page size, 1–100")
+	fs.IntVar(&o.limit, "limit", 25, "page size, 1 to 100")
 	fs.StringVar(&o.cursor, "cursor", "", "next_cursor from the previous page")
 }
 

@@ -1,0 +1,16 @@
+{
+  "name": "i15-unknown-kid",
+  "description": "Signed with the TEST 2 key, which isn't registered.",
+  "header": "eyJhZ2VudCI6ImFndF8wMWs2MzNycm1oM2JjejJwMzlnZzR2cDQ2cSIsImFyZ3NfZGlnZXN0Ijoic2hhMjU2OmY3NDExYTdjZjQ3MDYzMzNjOWJhODBjODVhYWI3ZDhiOTIzNjNhZDMwNzdhMjg4ZGFkYzI2YmVmNDJkODlkMzYiLCJleHAiOjE3OTEwMTk4NjAwMDAsImlhdCI6MTc5MTAxOTgwMDAwMCwia2lkIjoiMzlmNzEzZDBhNjQ0MjUzZjA0NTI5NDIxYjlmNTFiOWIiLCJub25jZSI6IjA1YzE4YmU2OGEyNGMwNTZjZDZjN2M4OTEwZGMwMDIzIiwib3JnIjoib3JnXzAxazZoN2twNm1zbXpyaGR6d3RjcjNqbmtwIiwidG9vbCI6InN0cmlwZS5yZWZ1bmQiLCJ2IjoiZGVlZGdsYXNzLmludGVudC8xIn0.LOERcOcrOSJT2KcPkhFGRMUTPNsnjch18vYtHjVBmMC3ziiWk1caLYKlydF9UJP1dBMIFtO9DFOP6n680SldBw",
+  "tool": "stripe.refund",
+  "args": "{\"charge\":\"ch_3QxZ8f2L\",\"amount\":1200}",
+  "now": "2026-10-03T09:30:10Z",
+  "sends": 1,
+  "expected": {
+    "ok": false,
+    "status": 403,
+    "code": "intent_invalid",
+    "reason": "unknown_kid",
+    "param": "kid"
+  }
+}

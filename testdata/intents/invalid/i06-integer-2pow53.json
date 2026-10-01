@@ -1,0 +1,16 @@
+{
+  "name": "i06-integer-2pow53",
+  "description": "iat is 2^53, above the largest exact integer.",
+  "header": "eyJhZ2VudCI6ImFndF8wMWs2MzNycm1oM2JjejJwMzlnZzR2cDQ2cSIsImFyZ3NfZGlnZXN0Ijoic2hhMjU2OmY3NDExYTdjZjQ3MDYzMzNjOWJhODBjODVhYWI3ZDhiOTIzNjNhZDMwNzdhMjg4ZGFkYzI2YmVmNDJkODlkMzYiLCJleHAiOjkwMDcxOTkyNTQ4MDA5OTIsImlhdCI6OTAwNzE5OTI1NDc0MDk5Miwia2lkIjoiMjFmZTMxZGZhMTU0YTI2MTYyNmJmODU0MDQ2ZmQyMjciLCJub25jZSI6IjA1YzE4YmU2OGEyNGMwNTZjZDZjN2M4OTEwZGMwMDFhIiwib3JnIjoib3JnXzAxazZoN2twNm1zbXpyaGR6d3RjcjNqbmtwIiwidG9vbCI6InN0cmlwZS5yZWZ1bmQiLCJ2IjoiZGVlZGdsYXNzLmludGVudC8xIn0.Qa54k0cm7ZzqfvND7yU4e2fvqxO4xSsvZr8Na5ZlXsMPLWR_iN3neyBagHEWN158kIeKywSEartB9fKyB6G_Cw",
+  "tool": "stripe.refund",
+  "args": "{\"charge\":\"ch_3QxZ8f2L\",\"amount\":1200}",
+  "now": "2026-10-03T09:30:10Z",
+  "sends": 1,
+  "expected": {
+    "ok": false,
+    "status": 403,
+    "code": "intent_invalid",
+    "reason": "strict",
+    "param": "Deedglass-Intent"
+  }
+}

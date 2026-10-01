@@ -85,7 +85,7 @@ func fingerprint(method, pattern, path string, body []byte) string {
 	return "sha256:" + hex.EncodeToString(h.Sum(nil))
 }
 
-// ValidIdempotencyKey reports whether k is 1–255 printable ASCII characters.
+// ValidIdempotencyKey reports whether k is 1 to 255 printable ASCII characters.
 func ValidIdempotencyKey(k string) bool { return len(k) >= 1 && len(k) <= 255 && printable(k) }
 
 // idempotent decides whether the idempotency stage applies to this request.

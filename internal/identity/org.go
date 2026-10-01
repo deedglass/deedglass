@@ -105,7 +105,7 @@ func CreateOrg(ctx context.Context, db *store.DB, led *ledger.Ledger, name, slug
 		slug = SlugFor(name)
 	}
 	if !ValidSlug(slug) {
-		return out, errors.New("the slug must be 1–40 lower-case letters, digits and hyphens, starting and ending with a letter or digit")
+		return out, errors.New("the slug must be 1 to 40 lower-case letters, digits and hyphens, starting and ending with a letter or digit")
 	}
 	err = db.SystemTx(ctx, store.ReasonOrgCreate, func(ctx context.Context, tx pgx.Tx) error {
 		u, err := store.UpsertUserByEmail(ctx, tx, email, "")

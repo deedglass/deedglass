@@ -17,7 +17,7 @@ Setup
 Agents
   agent               Register and control agents                        create · list · show · suspend · resume · stop · start
   agent keys          Manage an agent's API keys                         create · list · roll · revoke
-  agent intent        Manage an agent's signed-intent keys        soon   keygen · add · list · remove · mode
+  agent intent        Manage an agent's signed-intent keys               keygen · add · list · remove · mode
   org                 Create orgs and keys; stop or start all            create · login-link · keys · stop-all · start-all
 Policies
   policy              Write, test and activate policies           soon   lint · fmt · test · push · activate · evaluate · replay · diff

@@ -74,7 +74,7 @@ it is sealed as an amendment deed.
 | `level` | `L0`, `L1`, `L2` | `L2` |
 | `on_behalf_of` | the exact reference the agent sent | `u_4821` |
 | `created_at[gte]`, `created_at[lt]` | RFC 3339 | `2026-10-02T00:00:00Z` |
-| `q` | 2–64 characters to find in the tool name or the error code | `refund` |
+| `q` | 2 to 64 characters to find in the tool name or the error code | `refund` |
 | `limit` | 1–100, default 25 | `100` |
 | `cursor` | `next_cursor` from the previous page | |
 

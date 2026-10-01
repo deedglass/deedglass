@@ -1,0 +1,7 @@
+exit 0
+--- stdout
+✓ Intent key created · support-bot · kid 21fe31dfa154a261626bf854046fd227
+  Private key  $TMP/intent/support-bot.pem (mode 0600). Keep it with the agent; it never goes to Deedglass.
+  Public key   ed25519:11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo
+  Next: deedglass agent intent add support-bot --public-key ed25519:11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo
+--- stderr

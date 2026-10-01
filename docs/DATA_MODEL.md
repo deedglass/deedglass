@@ -232,6 +232,7 @@ grants: agent names have no `UPDATE` grant, so they can't change, and admin keys
 |---|---|
 | `id`, `org_id`, `agent_id`, `mode`, `secret_hash`, `scopes`, `expires_at`, `revoked_at` | the key |
 | `agent_name`, `agent_status` | its agent (null for an org admin key) |
+| `agent_intent_mode`, `agent_intent_keys` | its agent's signed-intent settings (added by 0014, S09) |
 | `org_name`, `org_status`, `org_stopped_at`, `org_api_version` | its org |
 
 The caller compares `sha256(pepper ‖ secret)` with `secret_hash` in constant time. The hash is
@@ -256,6 +257,23 @@ secrets, names or reasons:
 `ping` every 500 ms to check that its own listener is alive. `store.NotifyIdentity` is the one door
 to the channel.
 
+## Signed intents additions (0014, S09)
+
+0002 already had `agents.intent_mode` (`off`, `optional`, `required`, default `off`),
+`agents.intent_keys` (a JSON array of at most 2) and `deedglass.intent_nonces` (primary key
+`(agent_id, nonce)`, RLS on `org_id`, the `expires_at` index) with S09's names.
+`0014_identity_intents.sql` adds only the real gaps:
+
+| Object | What | Why |
+|---|---|---|
+| `deedglass.intent_keys_valid(jsonb)` and `agents_intent_keys_shape` | a `CHECK` that `intent_keys` is an array of at most 2 objects, each with exactly `kid` (`^[0-9a-f]{32}$`), `public_key` (`^ed25519:[A-Za-z0-9_-]{43}$`), `created_at` and `created_by` as strings, and no kid twice | a row edited outside the API can't hold a malformed key. The curve checks (small order, canonical encoding) stay in Go, which parses every stored key again on read |
+| `deedglass.maint_prune_intent_nonces(p_limit)` | `SECURITY DEFINER`, `search_path = pg_catalog, pg_temp`, `EXECUTE` for `deedglass_app` only; deletes up to `p_limit` (at most 100,000) nonces whose `expires_at` is more than 2 minutes in the past, oldest first, and returns how many | `serve` runs it every minute in batches of 10,000. An intent is accepted until `exp + 60 s`, so a pruned nonce's intent is always refused as expired first ([INTENTS.md](INTENTS.md) §9) |
+| `deedglass.preauth_api_key(p_prefix)` | dropped and created again in the same transaction, returning everything it did plus `agent_intent_mode` and `agent_intent_keys` | the principal cache carries the agent's mode and keys, so the intent check costs no extra round trip |
+
+`intent_nonces` rows hold the agent, the nonce, the `intent_hash` and the intent's `exp`, never the
+intent or its arguments. Consuming a nonce is one `INSERT … ON CONFLICT (agent_id, nonce) DO
+NOTHING` in an org-scoped transaction: of any number of concurrent uses, exactly one inserts.
+
 ## Personal data
 
 Sessions and sign-in tokens keep the client IP address and User-Agent (at most 512 characters) for
@@ -263,4 +281,4 @@ security review. `maint_prune_identity` deletes sign-in tokens 7 days after they
 30 days after they expire or are revoked; `serve` runs it every 10 minutes, 5,000 rows at a time.
 
 Email addresses live only in `users` and `waitlist`. Tokens and API keys are stored as hashes
-(an API key as its public prefix plus `sha256(pepper ‖ secret)`). Payloads are prunable. Event payloads (SSE and webhooks) carry ids, never emails.
+(an API key as its public prefix plus `sha256(pepper ‖ secret)`). Payloads are prunable. On-behalf-of references (`Deedglass-On-Behalf-Of`, `Deedglass-Session`, S09) are stored and, from S13, sealed exactly as the agent sends them; the docs ask for opaque ids, never names or emails, because Deedglass can't tell the difference. Event payloads (SSE and webhooks) carry ids, never emails.

@@ -21,6 +21,7 @@ const (
 	CodeLoneSurrogate  Code = "LONE_SURROGATE"
 	CodeNegativeNumber Code = "NEGATIVE_NUMBER" // ParseStrictNonNegative only (deed bodies)
 	CodeNonCanonical   Code = "NON_CANONICAL"
+	CodeNumberRange    Code = "NUMBER_OUT_OF_RANGE" // ParseStrictArgs only: beyond the double range
 )
 
 // Schema failures for deedglass.intent/1. The verifier reports these as

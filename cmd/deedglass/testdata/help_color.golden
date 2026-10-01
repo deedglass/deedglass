@@ -17,7 +17,7 @@ exit 0
 [1mAgents[0m
   agent               Register and control agents                 [2m    [0m   [2mcreate · list · show · suspend · resume · stop · start[0m
   agent keys          Manage an agent's API keys                  [2m    [0m   [2mcreate · list · roll · revoke[0m
-  agent intent        Manage an agent's signed-intent keys        [2msoon[0m   [2mkeygen · add · list · remove · mode[0m
+  agent intent        Manage an agent's signed-intent keys        [2m    [0m   [2mkeygen · add · list · remove · mode[0m
   org                 Create orgs and keys; stop or start all     [2m    [0m   [2mcreate · login-link · keys · stop-all · start-all[0m
 [1mPolicies[0m
   policy              Write, test and activate policies           [2msoon[0m   [2mlint · fmt · test · push · activate · evaluate · replay · diff[0m

@@ -2,6 +2,8 @@ package intent
 
 import (
 	"fmt"
+	"math"
+	"strconv"
 	"strings"
 	"unicode/utf16"
 	"unicode/utf8"
@@ -26,14 +28,23 @@ const maxDepth = 16
 // exponent, integers whose magnitude exceeds 2^53-1, lone UTF-16 surrogates
 // in \u escapes, nesting deeper than maxDepth, and trailing data.
 // It does not check canonical form; see CheckCanonical.
-func ParseStrict(b []byte) (any, error) { return parseStrict(b, false) }
+func ParseStrict(b []byte) (any, error) { return parseStrict(b, profile{maxDepth: maxDepth}) }
 
 // ParseStrictNonNegative is ParseStrict with one more rule, for deed bodies (contract §7): every
 // number must be in 0..2^53-1, so negative integers and "-0" are refused as well
 // (CodeNegativeNumber). Signed intents keep ParseStrict.
-func ParseStrictNonNegative(b []byte) (any, error) { return parseStrict(b, true) }
+func ParseStrictNonNegative(b []byte) (any, error) {
+	return parseStrict(b, profile{nonNeg: true, maxDepth: maxDepth})
+}
 
-func parseStrict(b []byte, nonNeg bool) (any, error) {
+// profile selects the strict rules a parse applies.
+type profile struct {
+	nonNeg   bool // refuse a leading minus sign (deed bodies)
+	floats   bool // accept fractions and exponents (tool arguments, S09)
+	maxDepth int
+}
+
+func parseStrict(b []byte, pr profile) (any, error) {
 	if !utf8.Valid(b) {
 		off := 0
 		for off < len(b) {
@@ -45,7 +56,7 @@ func parseStrict(b []byte, nonNeg bool) (any, error) {
 		}
 		return nil, errAt(CodeInvalidUTF8, "", off, "input is not valid UTF-8")
 	}
-	p := &parser{b: b, nonNeg: nonNeg}
+	p := &parser{b: b, profile: pr}
 	p.ws()
 	v, err := p.value("", 0)
 	if err != nil {
@@ -59,9 +70,9 @@ func parseStrict(b []byte, nonNeg bool) (any, error) {
 }
 
 type parser struct {
-	b      []byte
-	i      int
-	nonNeg bool // refuse a leading minus sign (deed bodies)
+	b []byte
+	i int
+	profile
 }
 
 func (p *parser) ws() {
@@ -108,7 +119,7 @@ func (p *parser) literal(path, lit string) error {
 }
 
 func (p *parser) object(path string, depth int) (any, error) {
-	if depth > maxDepth {
+	if depth > p.maxDepth {
 		return nil, errAt(CodeTooDeep, path, p.i, "nesting too deep")
 	}
 	p.i++ // '{'
@@ -160,7 +171,7 @@ func (p *parser) object(path string, depth int) (any, error) {
 }
 
 func (p *parser) array(path string, depth int) (any, error) {
-	if depth > maxDepth {
+	if depth > p.maxDepth {
 		return nil, errAt(CodeTooDeep, path, p.i, "nesting too deep")
 	}
 	p.i++ // '['
@@ -197,6 +208,18 @@ func (p *parser) array(path string, depth int) (any, error) {
 // decoded text.
 func (p *parser) str(path string) (any, error) {
 	start := p.i
+	// Fast path: no escapes and no control characters, so the text is the bytes between the
+	// quotes (the input is valid UTF-8, checked up front).
+	for j := start + 1; j < len(p.b); j++ {
+		c := p.b[j]
+		if c == '"' {
+			p.i = j + 1
+			return string(p.b[start+1 : j]), nil
+		}
+		if c == '\\' || c < 0x20 {
+			break
+		}
+	}
 	p.i++ // opening quote
 	var sb strings.Builder
 	for {
@@ -329,6 +352,9 @@ func (p *parser) number(path string) (any, error) {
 	if p.i < len(p.b) {
 		switch p.b[p.i] {
 		case '.', 'e', 'E':
+			if p.floats {
+				return p.fraction(path, start)
+			}
 			return nil, errAt(CodeNonInteger, path, start, "only integers are allowed (no fraction or exponent)")
 		}
 	}
@@ -354,4 +380,36 @@ func joinPath(path, key string) string {
 		return key
 	}
 	return path + "." + key
+}
+
+// fraction finishes a number with a fraction or exponent (the args profile only). The integer part
+// is already consumed; it returns the value as a float64, refusing values outside the IEEE-754
+// double range, which RFC 8785 can't serialize.
+func (p *parser) fraction(path string, start int) (any, error) {
+	if p.b[p.i] == '.' {
+		p.i++
+		if p.i >= len(p.b) || p.b[p.i] < '0' || p.b[p.i] > '9' {
+			return nil, errAt(CodeSyntax, path, start, "invalid number")
+		}
+		for p.i < len(p.b) && p.b[p.i] >= '0' && p.b[p.i] <= '9' {
+			p.i++
+		}
+	}
+	if p.i < len(p.b) && (p.b[p.i] == 'e' || p.b[p.i] == 'E') {
+		p.i++
+		if p.i < len(p.b) && (p.b[p.i] == '+' || p.b[p.i] == '-') {
+			p.i++
+		}
+		if p.i >= len(p.b) || p.b[p.i] < '0' || p.b[p.i] > '9' {
+			return nil, errAt(CodeSyntax, path, start, "invalid number")
+		}
+		for p.i < len(p.b) && p.b[p.i] >= '0' && p.b[p.i] <= '9' {
+			p.i++
+		}
+	}
+	f, err := strconv.ParseFloat(string(p.b[start:p.i]), 64)
+	if err != nil || math.IsInf(f, 0) || math.IsNaN(f) {
+		return nil, errAt(CodeNumberRange, path, start, "number is outside the IEEE-754 double range")
+	}
+	return f, nil
 }

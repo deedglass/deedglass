@@ -36,6 +36,8 @@ make bench-verify   # S05 budget: verify 100,000 deeds (.jsonl and bundle) and o
 make bench-ledger   # S06 budget at 100,000 actions: lists, get, chain check, export memory, seal overhead, EXPLAIN plans
 make bench-identity # S07 budget: session middleware, login handler, invite with its deed
 make bench-stop     # S08: Stop propagation across two instances (p50/p99) and the API-key budget; JSON in bench/results/
+make bench-intents  # S09: signed-intent checks without the DB (4 KiB args) and with the nonce insert; JSON in bench/results/
+go test ./internal/identity -run TestIntentVectors -update-intents   # regenerate testdata/intents/ (then update SHA256SUMS)
 DEEDGLASS_IT_PKGS=./internal/identity/ make integration   # one suite (DEEDGLASS_IT_GOFLAGS="-v -run X" adds flags)
 scripts/dev-pg.sh up  # a Docker-free dev Postgres on 127.0.0.1:55432 (writes .tmp/dev-pg.env); down | reset
 scripts/demo/tamper-clip.sh  # S06's recording: 1,000 real deeds, export, verify ✓, flip one digit, verify ✕
@@ -231,6 +233,18 @@ and "open source" until the repo is public. Style bans: "revolutionary", "world-
   `testdata/agent/` (`go test ./cmd/deedglass -run TestAgentCommandGoldens -update`).
   `internal/ledger`: `TestOneWritePath` allows `store.NotifyIdentity` as the one door for
   `deedglass_identity`.
+- `internal/intent` + `internal/identity` + `pkg/deedglass` (S09): one wire-format implementation
+  (`internal/intent/agent.go`) shared by the checker and the signer; `TestIntentVectors` runs all 34
+  vectors in `testdata/intents/` (generated, pinned in `SHA256SUMS`, never edited by hand) through
+  both, and `TestCrossCheckVector` pins the brief's v01 literally; the args float table, refusals and
+  digest invariance; `FuzzArgsDigest`, `FuzzIntentHeader`; a 1,000-case sign/check property; the
+  intent copy (every refusal 403, never 401). Integration: the demo round trip, every mode cell, key
+  rules (small-order and non-canonical 422, third key and duplicate kid 409, required without keys
+  409, last key while required 409), 100 concurrent uses → exactly 1, the prune invariant, nonce RLS,
+  a new key reaching a warm cache, OBO grammar and binding, and the MCP challenges, Origin, stub and
+  405s against the real key pipeline. `httpx.RouteGuard` (`identity.MCPAuth`) and
+  `httpx.KeyRequestHook` (OBO) are the two pipeline hooks; `StripInboundCredentials` is required
+  before anything is forwarded upstream (S15).
 - `cmd/deedglass verify` (S05): 80 golden cases in `testdata/verify/<case>/{args,stdout,stderr,exit}`
   (`go test ./cmd/deedglass -run TestVerifyGolden -update`), every vector's code and exit, `--keys`
   URL rules (same-host redirects, 1 MiB, timeout, loopback-only http), key-set merge conflicts, no

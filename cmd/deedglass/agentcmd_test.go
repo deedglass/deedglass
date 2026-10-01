@@ -21,7 +21,7 @@ func fakeAPI(t *testing.T) *httptest.Server {
 		}
 		return `{"object":"agent","id":"` + id + `","name":"` + name + `","description":"","labels":` + labels +
 			`,"budgets":{"calls_per_minute":60},"status":"` + status + `","status_reason":null,"status_changed_at":null,"status_changed_by":null,` +
-			`"owner":null,"active_keys":` + itoa(keys) + `,"last_used_at":` + u + `,"created_at":"2026-10-03T10:02:11.000Z","updated_at":"2026-10-03T10:02:11.000Z"`
+			`"owner":null,"active_keys":` + itoa(keys) + `,"intent_mode":"off","last_used_at":` + u + `,"created_at":"2026-10-03T10:02:11.000Z","updated_at":"2026-10-03T10:02:11.000Z"`
 	}
 	sb := agent("support-bot", "agt_01k633rrmh3bcz2p39gg4vp46q", "active", `{"env":"prod","team":"support"}`, 2, ago(2*time.Minute))
 	ra := agent("refund-agent", "agt_01k633s0x9h4m2z7c1v8b3n5q6", "stopped", `{"env":"prod"}`, 1, ago(time.Hour+time.Minute))

@@ -1,0 +1,9 @@
+{"Time":"2026-10-01T17:49:50.755746+05:30","Action":"start","Package":"github.com/deedglass/deedglass/internal/identity"}
+{"Time":"2026-10-01T17:49:51.000131+05:30","Action":"run","Package":"github.com/deedglass/deedglass/internal/identity","Test":"TestIntentBudget"}
+{"Time":"2026-10-01T17:49:51.000271+05:30","Action":"output","Package":"github.com/deedglass/deedglass/internal/identity","Test":"TestIntentBudget","Output":"=== RUN   TestIntentBudget\n","OutputType":"frame"}
+{"Time":"2026-10-01T17:49:52.530261+05:30","Action":"output","Package":"github.com/deedglass/deedglass/internal/identity","Test":"TestIntentBudget","Output":"    intents_integration_test.go:573: PERF {\"name\":\"intent check with the nonce insert (Postgres)\",\"n\":2000,\"p50_us\":255.0,\"p99_us\":836.0}\n"}
+{"Time":"2026-10-01T17:49:52.56127+05:30","Action":"output","Package":"github.com/deedglass/deedglass/internal/identity","Test":"TestIntentBudget","Output":"--- PASS: TestIntentBudget (1.56s)\n","OutputType":"frame"}
+{"Time":"2026-10-01T17:49:52.561298+05:30","Action":"pass","Package":"github.com/deedglass/deedglass/internal/identity","Test":"TestIntentBudget","Elapsed":1.56}
+{"Time":"2026-10-01T17:49:52.56144+05:30","Action":"output","Package":"github.com/deedglass/deedglass/internal/identity","Output":"PASS\n","OutputType":"frame"}
+{"Time":"2026-10-01T17:49:52.562722+05:30","Action":"output","Package":"github.com/deedglass/deedglass/internal/identity","Output":"ok  \tgithub.com/deedglass/deedglass/internal/identity\t1.807s\n"}
+{"Time":"2026-10-01T17:49:52.562798+05:30","Action":"pass","Package":"github.com/deedglass/deedglass/internal/identity","Elapsed":1.807}

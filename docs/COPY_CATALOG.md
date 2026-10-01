@@ -80,6 +80,75 @@ Stop uses red only on the button, the chip and the banner rule, never as a fill 
 The CLI's own strings live in `cmd/deedglass/agentcmd.go`; `cmd/deedglass/testdata/agent/*.golden`
 pins them. Examples are in [AGENTS.md](AGENTS.md) and [STOP.md](STOP.md).
 
+## Agents › Security (S09; S25 builds it)
+
+### Console
+
+| Surface | Copy |
+|---|---|
+| Section title | `Signed intents` |
+| Explainer | `When an agent signs its intents, Deedglass checks that each call is exactly what the agent's runtime asked for, and refuses replays. A leaked API key alone can't act for this agent.` |
+| Mode control | segmented `Off` · `Optional` · `Required` · helper under Required: `Calls without a valid signature are refused. MCP clients can't sign yet.` |
+| Keys, empty | `No intent keys yet. Generate one on the machine that runs the agent: deedglass agent intent keygen support-bot` |
+| Key row | `kid 21fe…d227 · added 2h ago by Priya Raman` · `Remove` |
+| Deed detail | `Intent · signed · sha256:87c7…3089` or `Intent · not signed` (a neutral chip, never red: an unsigned call in `off` or `optional` mode is normal) |
+
+Kids and hashes show their first and last four hex characters in the Console; the full value is
+one click away (copy button), never truncated in exports or JSON.
+
+### API errors, as rendered
+
+The signed-intent refusals (`intent_required`, `intent_invalid`, `intent_replay`) and the
+on-behalf-of `validation_failed` messages are listed with their reasons and params in
+[INTENTS.md](INTENTS.md) §6 and [api/errors.md](api/errors.md). The source is `IntentCopy` and
+`ErrOBOInvalid` in `internal/httpx/errors.go`. Intent-key registration adds:
+
+| Code | Status | Message |
+|---|---|---|
+| `validation_failed` (small-order key) | 422 | `That public key is a small-order point, so a single signature would verify for every message. Generate a fresh key with deedglass agent intent keygen {support-bot}.` |
+| `validation_failed` (non-canonical key) | 422 | `That public key isn't a canonical Ed25519 encoding, so two different strings would name the same key. Generate a fresh key with deedglass agent intent keygen {support-bot}.` |
+| `validation_failed` (off the curve) | 422 | `That public key isn't a point on the Ed25519 curve. Generate a fresh key with deedglass agent intent keygen {support-bot}.` |
+| `validation_failed` (format) | 422 | `The public key must be "ed25519:" followed by 43 base64url characters (32 bytes), like ed25519:11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo. Generate a fresh key with deedglass agent intent keygen {support-bot}.` |
+| `validation_failed` (no key sent) | 400 | `Send the public key as "ed25519:" followed by 43 base64url characters. deedglass agent intent keygen prints it.` |
+| `conflict` (third key) | 409 | `{support-bot} already has two intent keys. Remove one first; two lets you rotate without downtime.` |
+| `conflict` (same key twice) | 409 | `{support-bot} already has the intent key {21fe…d227}. Keys are identified by their kid, so the same key can't be added twice.` |
+| `conflict` (required with no keys) | 409 | `{support-bot} has no intent keys yet, so requiring signed intents would refuse every call. Register a key first: deedglass agent intent add {support-bot}.` |
+| `conflict` (removing the last key while required) | 409 | `{support-bot} requires signed intents, so removing its last key would refuse every call. Add the new key first, or set intent_mode to optional.` |
+| `not_found` (unknown kid) | 404 | `{support-bot} has no intent key {kid}. List its keys: GET /v1/agents/{agt_…}/intent-keys.` |
+| `validation_failed` (mode) | 400 | `intent_mode must be off, optional or required.` |
+| `validation_failed` (verify, no header) | 422 | `Send a Deedglass-Intent header to check.` |
+| `validation_failed` (verify, tool) | 400 | `tool must be the connector.tool name the Gate uses, like stripe.refund.` |
+| `validation_failed` (verify, args) | 400 | `Send args: the exact JSON arguments the intent was signed over ({} for none).` |
+
+### CLI
+
+The strings live in `cmd/deedglass/intentcmd.go`. Hashes and kids show in the brand short form
+(`21fe…d227`) except in `--json` and the `--explain` detail lines, which print them in full.
+
+| Command | Copy |
+|---|---|
+| `agent intent keygen` | `✓ Intent key created · {support-bot} · kid {kid}` · `Private key  {.deedglass/intent/support-bot.pem} (mode 0600). Keep it with the agent; it never goes to Deedglass.` · `Public key   {ed25519:…}` · `Next: deedglass agent intent add {support-bot} --public-key {ed25519:…}` |
+| `agent intent keygen`, file exists | `✕ {path} already exists.` · `Keep using it, or pass --force to replace it (register the new key before you remove the old one).` |
+| `agent intent add` | `✓ Intent key registered · {support-bot} · kid {21fe…d227} · {deed_…} sealed` |
+| `agent intent add`, mode off | `{support-bot} doesn't check signed intents yet. Check them when sent, or require them:` · `deedglass agent intent mode {support-bot} optional\|required` |
+| `agent intent add`, mode optional | `Signed intents stay optional for {support-bot} until you require them:` · `deedglass agent intent mode {support-bot} required` |
+| `agent intent add`, mode required | `{support-bot} already requires signed intents; calls signed with this key are accepted now.` |
+| `agent intent add`, no key | `✕ deedglass agent intent add needs --public-key.` · `Generate a key with deedglass agent intent keygen {support-bot}, then pass the public key it prints.` |
+| `agent intent list` | `{support-bot} · intent mode {optional}`, then `KID  PUBLIC KEY  ADDED  BY` |
+| `agent intent list`, empty | `No intent keys yet. Generate one on the machine that runs the agent: deedglass agent intent keygen {support-bot}` |
+| `agent intent remove` | `✓ Intent key removed · {support-bot} · kid {21fe…d227} · {deed_…} sealed` · `Every Deedglass instance refuses intents signed with it within 2 seconds.` |
+| `agent intent mode … required` | `✓ {support-bot} now requires a signed intent on every call · {deed_…} sealed` · `Calls without a valid Deedglass-Intent header are refused with intent_required.` · `MCP clients can't sign intents yet, so {support-bot} can act only through the SDKs or the REST API.` |
+| `agent intent mode … optional` | `✓ {support-bot} now checks signed intents when they are sent · {deed_…} sealed` · `Calls without a Deedglass-Intent header are still accepted; an invalid one is refused.` |
+| `agent intent mode … off` | `✓ {support-bot} no longer checks signed intents · {deed_…} sealed` · `Deedglass-Intent headers from {support-bot} are ignored, and its deeds record intent_signed false.` |
+| `agent intent mode`, unchanged | the same first line, ending `· no change, no new deed` |
+| `agent intent mode`, bad mode | `✕ "{maybe}" isn't a mode.` · `Use off, optional or required.` |
+| `dev sign-intent --explain`, last line | `✓ Valid for {60 s} · nonce {05c1…0729} · works once` |
+| `dev sign-intent`, no org or agent | `✕ deedglass dev sign-intent needs --org and --agent, or the agent's API key.` · `Pass --org org_… --agent agt_…, or set DEEDGLASS_API_KEY to the agent's key so whoami can name them.` |
+| `dev sign-intent`, admin key | `✕ this API key is an org admin key, and intents are signed for one agent.` · `Pass --agent agt_…, or use the agent's own key.` |
+| `dev sign-intent`, `--ttl` | `✕ --ttl must be more than 0 and at most 5m.` · `Sign one intent per call; the default is 60s.` |
+| `dev sign-intent`, `--obo` | `✕ --obo must be 1 to 256 characters: letters, digits and . _ ~ : @ / + = -.` · `Use an opaque user id such as usr_ext_4821, not a name or email.` |
+| `dev sign-intent`, key unreadable | `✕ Can't read {x.pem}: {no such file or directory}.` · `Generate a key with deedglass agent intent keygen <agent>.` |
+
 ## What this page doesn't do
 
 It doesn't hold every error: the full catalog, with when each code happens, is

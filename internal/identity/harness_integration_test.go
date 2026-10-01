@@ -108,16 +108,18 @@ func (b *inbox) count(addr string) int {
 
 // world is a fresh database, a seal key, a Ledger, the identity service and an HTTP server.
 type world struct {
-	e     *storetest.Env
-	led   *ledger.Ledger
-	svc   *identity.Service
-	keys  *identity.KeyAuth // S08: API keys and the Stop guard, with its listener running
-	srv   *httpx.Server
-	ts    *httptest.Server
-	clock *clock
-	mail  *inbox
-	logs  *bytes.Buffer
-	logMu sync.Mutex
+	e       *storetest.Env
+	led     *ledger.Ledger
+	svc     *identity.Service
+	keys    *identity.KeyAuth // S08: API keys and the Stop guard, with its listener running
+	intents *identity.Intents // S09: the signed-intent checker, on the world's clock
+	base    *url.URL
+	srv     *httpx.Server
+	ts      *httptest.Server
+	clock   *clock
+	mail    *inbox
+	logs    *bytes.Buffer
+	logMu   sync.Mutex
 }
 
 type syncWriter struct {
@@ -175,6 +177,9 @@ func newWorld(t testing.TB, mods ...func(*identity.Options)) *world {
 	w.srv.Mount(w.svc.Routes()...)
 	w.srv.Mount(w.svc.AgentRoutes()...)
 	w.srv.Mount(ledger.Routes(w.led)...)
+	w.intents, w.base = identity.NewIntents(e.DB, w.keys, w.clock.Now), base
+	w.srv.Mount(w.svc.IntentRoutes(w.intents)...)
+	w.srv.Mount(identity.NewMCPAuth(base).MCPRoutes()...)
 	w.ts = &httptest.Server{Listener: ln, Config: &http.Server{Handler: w.srv}}
 	w.ts.Start()
 	t.Cleanup(w.ts.Close)

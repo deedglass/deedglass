@@ -73,6 +73,18 @@ func elsewhere() []Route {
 		Route{Method: "GET", Pattern: "/v1/whoami", OperationID: "whoami", Auth: AgentKey, SkipStopChecks: true, Handler: stub},
 		ses("GET", "/v1/org/keys", "listAdminKeys", RoleAdmin, 0), ses("POST", "/v1/org/keys", "createAdminKey", RoleAdmin, IdemOptional),
 	)
+	// S09: intent keys, the conformance check and MCP authorization readiness.
+	key := func(p, id string) Route {
+		return Route{Method: "POST", Pattern: p, OperationID: id, Auth: AgentKey, Scopes: []string{ScopeActionsExecute}, Idempotency: IdemNever, Handler: stub}
+	}
+	out = append(out,
+		adm("GET", "/v1/agents/{id}/intent-keys", "listIntentKeys", RoleViewer), adm("POST", "/v1/agents/{id}/intent-keys", "addIntentKey", RoleAdmin),
+		adm("DELETE", "/v1/agents/{id}/intent-keys/{kid}", "removeIntentKey", RoleAdmin), key("/v1/intents/verify", "verifyIntent"),
+		pub("GET", "/.well-known/oauth-protected-resource", "getProtectedResourceMetadata"),
+		pub("GET", "/.well-known/oauth-protected-resource/mcp/native", "getNativeMCPResourceMetadata"),
+		pub("GET", "/.well-known/oauth-protected-resource/mcp/{connector}", "getMCPResourceMetadata"),
+		key("/mcp/{connector}", "mcpConnector"), key("/mcp/native", "mcpNative"),
+	)
 	return out
 }
 

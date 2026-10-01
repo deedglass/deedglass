@@ -31,12 +31,16 @@ const (
 	AdminAPIKeyRolled   = "api_key.rolled"  // → the new key; data: from, to, overlap_s
 	AdminAPIKeyRevoked  = "api_key.revoked" // → key
 
+	// S09: signed intents. Same actors as S08.
+	AdminAgentIntentKeyAdded   = "agent.intent_key_added"    // → agt; data: kid
+	AdminAgentIntentKeyRemoved = "agent.intent_key_removed"  // → agt; data: kid
+	AdminAgentIntentMode       = "agent.intent_mode_changed" // → agt; data: from, to
+
 	// S07: security events, recorded in admin_events without a deed (AppendAdminEvent).
 	AdminUserSignedIn  = "user.signed_in"
 	AdminUserSignedOut = "user.signed_out"
 
 	// Planned, each added by its session with the exact spelling below:
-	//   S09  agent.intent_key_added agent.intent_key_removed agent.intent_mode_changed
 	//   S12  policy.activated policy.deactivated
 	//   S16  connector.credentials_updated
 	//   S20  decoder.slot_created decoder.slot_dropped
@@ -53,6 +57,7 @@ var AdminActions = []string{
 	AdminMemberRemoved, AdminLoginLinkIssued,
 	AdminAgentCreated, AdminAgentUpdated, AdminAgentSuspended, AdminAgentResumed, AdminAgentStopped, AdminAgentStarted,
 	AdminOrgStoppedAll, AdminOrgStartedAll, AdminAPIKeyCreated, AdminAPIKeyRolled, AdminAPIKeyRevoked,
+	AdminAgentIntentKeyAdded, AdminAgentIntentKeyRemoved, AdminAgentIntentMode,
 }
 
 // AdminEventActions are admin events recorded without a deed (AppendAdminEvent): security events

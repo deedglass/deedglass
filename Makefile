@@ -11,7 +11,7 @@ LDFLAGS  := -s -w -X $(BI).Version=$(VERSION) -X $(BI).Commit=$(COMMIT) -X $(BI)
 .PHONY: all help ci build test test-short vet fmt fmt-check tidy-check testdata-check rename-guard banned-words nocgo \
 	integration matrix fuzz bench bench-store bench-deed cover clean \
 	dev dev-down dev-reset dev-logs run docker bench-http bench-verify \
-	web-verify-install web-verify-test web-verify-build web-verify-serve gencopy genmark bench-mark bench-ledger bench-stop
+	web-verify-install web-verify-test web-verify-build web-verify-serve gencopy genmark bench-mark bench-ledger bench-stop bench-intents
 
 all: ci
 
@@ -71,6 +71,8 @@ fuzz: ## 30 s each: the strict intent parser, the id parser, and the deed envelo
 	$(GO) test ./internal/identity -run '^$$' -fuzz '^FuzzParseAPIKey$$' -fuzztime 30s
 	$(GO) test ./internal/deed -run '^$$' -fuzz '^FuzzCanonical$$' -fuzztime 30s
 	$(GO) test ./internal/deed/archive -run '^$$' -fuzz '^FuzzArchiveOpen$$' -fuzztime 30s
+	$(GO) test ./internal/intent -run '^$$' -fuzz '^FuzzArgsDigest$$' -fuzztime 30s
+	$(GO) test ./internal/identity -run '^$$' -fuzz '^FuzzIntentHeader$$' -fuzztime 30s
 
 bench: ## benchmarks for ids and config
 	$(GO) test -run '^$$' -bench . -benchmem -cpu 1,8 ./internal/ids ./internal/config
@@ -93,6 +95,14 @@ bench-stop: ## S08: Stop propagation across two instances (p50/p99) and the API-
 	DEEDGLASS_IT_BENCH_OUT="$$d-keyauth.json" DEEDGLASS_IT_BENCH_RUN='TestKeyAuthBudget' DEEDGLASS_IT_BENCH_PKG=./internal/identity/ \
 	scripts/integration_local.sh >/dev/null; st=$$?; \
 	cat "$$d-stop.json"; grep -o 'PERF {[^}]*}[^\\]*' "$$d-keyauth.json" | sed 's/\\"/"/g'; echo "raw: $$d-stop.json $$d-keyauth.json"; exit $$st
+
+bench-intents: ## S09: signed-intent checks without the database (p99, 4 KiB args) and with the nonce insert on a throwaway PG 18; JSON in bench/results/
+	@d="$(CURDIR)/bench/results/$$(date +%F)-$$(go env GOOS)-$$(go env GOARCH)"; \
+	DEEDGLASS_IT_BENCH=1 $(GO) test -json -count=1 -run '^TestIntentCheckBudget$$' -bench '^BenchmarkIntentCheck$$' -benchmem ./internal/identity > "$$d-intents.json"; st=$$?; \
+	DEEDGLASS_IT_PKGS=./internal/identity/ DEEDGLASS_IT_GOFLAGS="-run TestIntentRoundTrip" \
+	DEEDGLASS_IT_BENCH_OUT="$$d-intents-pg.json" DEEDGLASS_IT_BENCH_RUN='TestIntentBudget' DEEDGLASS_IT_BENCH_PKG=./internal/identity/ scripts/integration_local.sh >/dev/null || st=1; \
+	grep -ho 'PERF {[^}]*}[^\\]*\|"Output":"BenchmarkIntentCheck[^"]*' "$$d-intents.json" "$$d-intents-pg.json" | sed 's/"Output":"//; s/\\t/  /g; s/\\n//; s/\\"/"/g'; \
+	echo "raw: $$d-intents.json $$d-intents-pg.json"; exit $$st
 
 bench-identity: ## S07 budget: session middleware, the login handler and an invite with its deed, on a throwaway PG 18; raw go test -json in bench/results/
 	@out="$(CURDIR)/bench/results/$$(date +%F)-$$(go env GOOS)-$$(go env GOARCH)-identity.json"; \

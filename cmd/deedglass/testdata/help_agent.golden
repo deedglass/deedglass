@@ -15,11 +15,11 @@ Usage  deedglass agent <command> [flags]
   keys list      List an agent's API keys
   keys roll      Replace an API key, with an overlap
   keys revoke    Revoke an API key
-  intent keygen  Generate a signed-intent key pair         soon · S09
-  intent add     Register an intent public key             soon · S09
-  intent list    List an agent's intent keys               soon · S09
-  intent remove  Remove an intent key                      soon · S09
-  intent mode    Require, allow or ignore signed intents   soon · S09
+  intent keygen  Generate a signed-intent key pair
+  intent add     Register an intent public key
+  intent list    List an agent's intent keys
+  intent remove  Remove an intent key
+  intent mode    Require, allow or ignore signed intents
 
 soon: listed in the contract, not in this build yet; the session that builds it is shown.
 --- stderr

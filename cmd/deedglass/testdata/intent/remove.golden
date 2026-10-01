@@ -1,0 +1,5 @@
+exit 0
+--- stdout
+✓ Intent key removed · support-bot · kid 21fe…d227 · deed_01k6vrddq2atgb2023qvhhct3n sealed
+  Every Deedglass instance refuses intents signed with it within 2 seconds.
+--- stderr

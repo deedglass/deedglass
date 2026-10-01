@@ -78,6 +78,7 @@ type Agent struct {
 	StatusChangedBy *string           `json:"status_changed_by"`
 	Owner           *string           `json:"owner"`
 	ActiveKeys      int               `json:"active_keys"`
+	IntentMode      IntentMode        `json:"intent_mode"` // S09: off | optional | required
 	LastUsedAt      *httpx.Time       `json:"last_used_at"`
 	CreatedAt       httpx.Time        `json:"created_at"`
 	UpdatedAt       httpx.Time        `json:"updated_at"`
@@ -206,7 +207,7 @@ func clipText(s string, n int) string {
 // --- reads ---
 
 const agentCols = `a.id, a.name, COALESCE(a.description, ''), a.labels, a.budgets, a.status, a.status_reason,
-  a.status_changed_at, a.status_changed_by, a.owner_user_id, a.created_at, a.updated_at,
+  a.status_changed_at, a.status_changed_by, a.owner_user_id, a.created_at, a.updated_at, a.intent_mode,
   (SELECT pg_catalog.count(*) FROM deedglass.api_keys AS k WHERE k.org_id = a.org_id AND k.agent_id = a.id
      AND k.revoked_at IS NULL AND (k.expires_at IS NULL OR k.expires_at > pg_catalog.now()))::integer,
   (SELECT pg_catalog.max(k.last_used_at) FROM deedglass.api_keys AS k WHERE k.org_id = a.org_id AND k.agent_id = a.id)`
@@ -220,7 +221,7 @@ func scanAgent(row pgx.Row) (Agent, error) {
 		created, updated    time.Time
 	)
 	if err := row.Scan(&a.ID, &a.Name, &a.Description, &labels, &budgets, &a.Status, &a.StatusReason,
-		&changedAt, &a.StatusChangedBy, &owner, &created, &updated, &a.ActiveKeys, &lastUsed); err != nil {
+		&changedAt, &a.StatusChangedBy, &owner, &created, &updated, &a.IntentMode, &a.ActiveKeys, &lastUsed); err != nil {
 		return Agent{}, err
 	}
 	a.Object = "agent"
@@ -433,7 +434,8 @@ type PatchAgentInput struct {
 	Description *string            `json:"description"`
 	Labels      *map[string]string `json:"labels"`
 	Budgets     *Budgets           `json:"budgets"`
-	Owner       *string            `json:"owner"` // "" clears it
+	Owner       *string            `json:"owner"`       // "" clears it
+	IntentMode  *IntentMode        `json:"intent_mode"` // S09: sealed as its own deed, agent.intent_mode_changed
 }
 
 // ErrNameImmutable is the 422 for a rename.
@@ -508,9 +510,16 @@ func (s *Service) PatchAgent(ctx context.Context, a Actor, org ids.OrgID, id str
 				next.Owner, changed = o, append(changed, "owner")
 			}
 		}
+		var modeDeed *string
+		if in.IntentMode != nil {
+			if modeDeed, err = s.setIntentMode(ctx, tx, a, org, id, name, cur.IntentMode, *in.IntentMode); err != nil {
+				return err
+			}
+		}
 		if len(changed) == 0 {
-			res = AgentResult{Agent: cur}
-			return nil
+			ag, err := getAgent(ctx, tx, org, id)
+			res = AgentResult{Agent: ag, Deed: modeDeed}
+			return err
 		}
 		labels, _ := json.Marshal(next.Labels)
 		budgets, _ := json.Marshal(next.Budgets)

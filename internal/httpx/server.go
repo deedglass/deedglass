@@ -197,6 +197,9 @@ func (s *Server) routeHandler(rt Route) http.Handler {
 		_ = http.NewResponseController(w).SetWriteDeadline(s.o.Now().Add(rt.Timeout + 5*time.Second))
 		r = r.WithContext(ctx)
 
+		if rt.Guard != nil && !rt.Guard.Admit(w, r) {
+			return
+		}
 		if err := s.prepare(rt, w, r, ri); err != nil {
 			s.render(w, r, rt, err)
 			return
@@ -333,6 +336,11 @@ func (s *Server) authenticate(rt Route, r *http.Request, ri *reqInfo) error {
 	ri.orgID = p.OrgID.String()
 	if !p.AgentID.IsZero() {
 		ri.agentID = p.AgentID.String()
+	}
+	if p.IsKey() {
+		if h, ok := s.o.Keys.(KeyRequestHook); ok {
+			return h.AfterKey(r, p)
+		}
 	}
 	return nil
 }
@@ -474,6 +482,11 @@ func (s *Server) render(w http.ResponseWriter, r *http.Request, rt Route, err er
 		return
 	}
 	e := AsError(err)
+	if e != nil && rt.Guard != nil {
+		if v := e.Header.Get("WWW-Authenticate"); v != "" {
+			e.Header.Set("WWW-Authenticate", rt.Guard.Challenge(r, v))
+		}
+	}
 	switch {
 	case e != nil:
 		if e.cause != nil {

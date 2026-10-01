@@ -1,0 +1,16 @@
+{
+  "name": "i09-unknown-field",
+  "description": "An unknown field \"amount\".",
+  "header": "eyJhZ2VudCI6ImFndF8wMWs2MzNycm1oM2JjejJwMzlnZzR2cDQ2cSIsImFtb3VudCI6MTIwMCwiYXJnc19kaWdlc3QiOiJzaGEyNTY6Zjc0MTFhN2NmNDcwNjMzM2M5YmE4MGM4NWFhYjdkOGI5MjM2M2FkMzA3N2EyODhkYWRjMjZiZWY0MmQ4OWQzNiIsImV4cCI6MTc5MTAxOTg2MDAwMCwiaWF0IjoxNzkxMDE5ODAwMDAwLCJraWQiOiIyMWZlMzFkZmExNTRhMjYxNjI2YmY4NTQwNDZmZDIyNyIsIm5vbmNlIjoiMDVjMThiZTY4YTI0YzA1NmNkNmM3Yzg5MTBkYzAwMWQiLCJvcmciOiJvcmdfMDFrNmg3a3A2bXNtenJoZHp3dGNyM2pua3AiLCJ0b29sIjoic3RyaXBlLnJlZnVuZCIsInYiOiJkZWVkZ2xhc3MuaW50ZW50LzEifQ.p4n6625CqByYIGpS9_cpsZlCRP2bJIrfnthVdl7rSdPuVAKE9_PGGnar5u9nyupgLOriofQEEEsN5AQqi0IEDw",
+  "tool": "stripe.refund",
+  "args": "{\"charge\":\"ch_3QxZ8f2L\",\"amount\":1200}",
+  "now": "2026-10-03T09:30:10Z",
+  "sends": 1,
+  "expected": {
+    "ok": false,
+    "status": 403,
+    "code": "intent_invalid",
+    "reason": "schema",
+    "param": "amount"
+  }
+}

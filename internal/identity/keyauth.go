@@ -228,6 +228,13 @@ func entriesFrom(r store.PreAuthKey) (KeyEntry, AgentEntry, OrgEntry, error) {
 		}
 		ke.AgentID = *r.AgentID
 		ag = AgentEntry{ID: *r.AgentID, OrgID: r.OrgID, Name: *r.AgentName, Status: AgentStatus(*r.AgentStatus)}
+		if r.IntentMode != nil {
+			keys, err := parseIntentKeys(r.IntentKeys)
+			if err != nil {
+				return KeyEntry{}, AgentEntry{}, OrgEntry{}, err
+			}
+			ag.IntentLoaded, ag.IntentMode, ag.IntentKeys = true, IntentMode(*r.IntentMode), keys
+		}
 	}
 	return ke, ag, org, nil
 }

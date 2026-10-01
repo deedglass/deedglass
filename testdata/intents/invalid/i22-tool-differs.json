@@ -1,0 +1,16 @@
+{
+  "name": "i22-tool-differs",
+  "description": "Signed for stripe.refund; the call is stripe.create_charge.",
+  "header": "eyJhZ2VudCI6ImFndF8wMWs2MzNycm1oM2JjejJwMzlnZzR2cDQ2cSIsImFyZ3NfZGlnZXN0Ijoic2hhMjU2OmY3NDExYTdjZjQ3MDYzMzNjOWJhODBjODVhYWI3ZDhiOTIzNjNhZDMwNzdhMjg4ZGFkYzI2YmVmNDJkODlkMzYiLCJleHAiOjE3OTEwMTk4NjAwMDAsImlhdCI6MTc5MTAxOTgwMDAwMCwia2lkIjoiMjFmZTMxZGZhMTU0YTI2MTYyNmJmODU0MDQ2ZmQyMjciLCJub25jZSI6IjA1YzE4YmU2OGEyNGMwNTZjZDZjN2M4OTEwZGMwMDAyIiwib3JnIjoib3JnXzAxazZoN2twNm1zbXpyaGR6d3RjcjNqbmtwIiwidG9vbCI6InN0cmlwZS5yZWZ1bmQiLCJ2IjoiZGVlZGdsYXNzLmludGVudC8xIn0.s2t30ypiilT-Z7vkecGyhP84Xz2KV8QNe6wM5nheikcewzkpq3W_6poX-k1AKD4lSPr-rc-Gm3Z8EDZJ0VnWAw",
+  "tool": "stripe.create_charge",
+  "args": "{\"charge\":\"ch_3QxZ8f2L\",\"amount\":1200}",
+  "now": "2026-10-03T09:30:10Z",
+  "sends": 1,
+  "expected": {
+    "ok": false,
+    "status": 403,
+    "code": "intent_invalid",
+    "reason": "tool_mismatch",
+    "param": "tool"
+  }
+}

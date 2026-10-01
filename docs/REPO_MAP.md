@@ -4,7 +4,7 @@ Every directory and package in `~/txv/product`, what state it is in, and which s
 
 **Status words:** **built** (code and tests) · **kept from V0** (tested V0 code that stays) · **stub** (a `doc.go` with the responsibility, invariants, a planned-API sketch and the owner session; no code yet) · **planned** (does not exist yet; the named session creates it).
 
-Last checked: S08, 2026-10-01 (S01 wrote it). Each session that changes the layout updates this page.
+Last checked: S09, 2026-10-01 (S01 wrote it). Each session that changes the layout updates this page.
 
 ## Go packages (`internal/…` unless noted)
 
@@ -15,10 +15,10 @@ Last checked: S08, 2026-10-01 (S01 wrote it). Each session that changes the layo
 | `buildinfo` | built | S01 | Version, commit, supported API versions |
 | `cli/mark` | built | S05X | The terminal mark: the Split Orb banner, the inline `◖│◗` mark and the Sealed moment; `go generate` builds its pixel grid |
 | `archtest` | built, test-only | S01 | The import-layering test |
-| `intent` | kept from V0, tested | S01 (kept) | Strict JSON parser, JCS, the V0 `TRANSFER` intent |
+| `intent` | kept from V0, tested; extended (S09) | S01 (kept), S09 | Strict JSON parser, JCS, the V0 `TRANSFER` intent. S09: `agent.go`, the one implementation of `deedglass.intent/1` (the header codec, the closed schema, the args profile `ParseStrictArgs`, `ArgsDigest`, the reasons), shared by the checker and the public signer (`docs/INTENTS.md`) |
 | `keys` | kept from V0, tested | S01 (kept) | Ed25519 key checks (small-order refusal, `KID`) |
 | `bundle` | kept from V0, tested | S01 (kept); absorbed in S17 | The V0 Operation Bundle manifest test |
-| `store` | built (S02–S08) | S02+ | pgx pool, migrations, org-scoped transactions (RLS), repositories; `DeedTx` (the Postgres `deed.ChainStore`) and seal-key rows (S04); S08: `notify.go` (`NotifyIdentity`, the one door to `deedglass_identity`, and the listener's dedicated connection settings), `preauth_api_key` in `PreAuth`, and `migrations/0013_identity_agents.sql` (`docs/DATA_MODEL.md`) |
+| `store` | built (S02–S08) | S02+ | pgx pool, migrations, org-scoped transactions (RLS), repositories; `DeedTx` (the Postgres `deed.ChainStore`) and seal-key rows (S04); S08: `notify.go` (`NotifyIdentity`, the one door to `deedglass_identity`, and the listener's dedicated connection settings), `preauth_api_key` in `PreAuth`, and `migrations/0013_identity_agents.sql` (`docs/DATA_MODEL.md`); S09: `migrations/0014_identity_intents.sql` (the intent-key shape check, nonce pruning, `preauth_api_key` with the intent settings) |
 | `store/policystore` | planned | S11–S12 | Postgres adapters for `policy` |
 | `httpx` | built (S03–S04) | S03 | Server, middleware, route table, error envelope, versioning; `keys.json` (S04) |
 | `deed` | built (S04–S05) | S04–S05 | Deed body and closed schema, builders, JCS, seal, Sealer, chain, verify, key sets and key files, COSE (`docs/DEED_SPEC.md`); S05: the streaming `Verifier` (`stream.go`), the `verification_report` (`report.go`), the message catalog and manifest seals |
@@ -28,7 +28,7 @@ Last checked: S08, 2026-10-01 (S01 wrote it). Each session that changes the layo
 | `deed/deedtest/cmd/genchain` | built, bench helper (S05) | S05 | Writes a test chain (and bundle) of n deeds for benchmarks |
 | `ledger` | built (S06) | S06 | The one write path for actions, action events, admin events and deeds (`Transition`, `SealAction`, `SealAmendment`, `RecordAdmin`, `Publish`); queries with cursors; the chain check; exports; retention; the six Ledger routes (`docs/LEDGER.md`) |
 | `ledger/fake` | built, dev tool (S06) | S06 | `deedglass dev fake-action`: deterministic plans from a seed, run through the real write path |
-| `identity` | people built (S07); agents, keys and Stop built (S08); intents S09 | S07–S09 | Sign-in (link and code), sessions and cookies, CSRF, roles, orgs, members, invites, the last-owner rule, admin deeds; the `/login`, `/auth/confirm` and `/app/` pages (`docs/IDENTITY.md`). S08: `agents.go` (agents, the state machine, Stop all), `agents_api.go` (the routes and `whoami`), `apikey.go` (the key format, parser, generator, hash), `keys.go` (create, list, roll, revoke, admin keys), `keyauth.go` (bearer authentication, the failed-auth limiter, batched `last_used_at`), `cache.go` (the principal cache and epoch guard), `listener.go` (`LISTEN deedglass_identity`, self-ping, bypass), `guard.go` (`CheckActive`, `Watch`), `notify.go` (payloads) (`docs/AGENTS.md`, `docs/STOP.md`) |
+| `identity` | people built (S07); agents, keys and Stop built (S08); signed intents, on-behalf-of and MCP readiness built (S09) | S07–S09 | Sign-in (link and code), sessions and cookies, CSRF, roles, orgs, members, invites, the last-owner rule, admin deeds; the `/login`, `/auth/confirm` and `/app/` pages (`docs/IDENTITY.md`). S08: `agents.go` (agents, the state machine, Stop all), `agents_api.go` (the routes and `whoami`), `apikey.go` (the key format, parser, generator, hash), `keys.go` (create, list, roll, revoke, admin keys), `keyauth.go` (bearer authentication, the failed-auth limiter, batched `last_used_at`), `cache.go` (the principal cache and epoch guard), `listener.go` (`LISTEN deedglass_identity`, self-ping, bypass), `guard.go` (`CheckActive`, `Watch`), `notify.go` (payloads) (`docs/AGENTS.md`, `docs/STOP.md`). S09: `intent.go` (the checks in order, the modes, `IntentChecker` with `Check` and `CheckTx`, the nonce ledger), `intentkeys.go` (intent-key routes, `intent_mode`, `POST /v1/intents/verify`), `obo.go` (`ParseOBO`, `OBOFrom`), `mcp.go` (protected-resource metadata, `MCPAuth`, the `/mcp/*` stubs, `StripInboundCredentials`) (`docs/INTENTS.md`, `docs/MCP_AUTHORIZATION.md`) |
 | `mailer` | built (S07) | S07 | `Mailer` (log in dev, Resend, none), the bounded send queue, login and invite templates with goldens (`docs/EMAIL.md`) |
 | `policy` | stub | S10–S12 | YAML → CEL compiler, evaluator, budgets, activation, replay input |
 | `sqlguard` | stub | S11 | Pure-Go SQL tokenizer and classifier |
@@ -51,8 +51,8 @@ Last checked: S08, 2026-10-01 (S01 wrote it). Each session that changes the layo
 | `learn` | stub | S27–S28 | Replay, stats, anomalies, suggestions (the Insights engine) |
 | `console` | stub | S24–S26 | The embedded Console (`web/` build output) and SSE stream |
 | `lint` | planned | S16, S34 | Static guards G1–G5 (S16) and G6–G10 (S34) |
-| `cmd/deedglass` | built in part | all | The CLI. S01 builds `help`, `help <command>`, `version` and `config print`; every other command says it isn't built yet (`docs/CLI.md`). S08: `agentcmd.go` (`agent`, `agent keys`, `org stop-all`, and the operator commands `org start-all` and `org keys`), goldens in `testdata/agent/` |
-| `pkg/deedglass` | built in part (S08) | S08, S09, S31 | A small public Go client. S08: `client.go` (`Client{BaseURL, APIKey, HTTP}`, `Do`, a typed `*Error`, `Deedglass-Version`, an automatic `Idempotency-Key` on POSTs), used by the CLI; S09 adds intents, S31 verify helpers |
+| `cmd/deedglass` | built in part | all | The CLI. S01 builds `help`, `help <command>`, `version` and `config print`; every other command says it isn't built yet (`docs/CLI.md`). S08: `agentcmd.go` (`agent`, `agent keys`, `org stop-all`, and the operator commands `org start-all` and `org keys`), goldens in `testdata/agent/`. S09: `intentcmd.go` (`agent intent keygen\|add\|list\|remove\|mode`, `dev sign-intent`) |
+| `pkg/deedglass` | built in part (S08, S09) | S08, S09, S31 | A small public Go client. S08: `client.go` (`Client{BaseURL, APIKey, HTTP}`, `Do`, a typed `*Error`, `Deedglass-Version`, an automatic `Idempotency-Key` on POSTs), used by the CLI. S09: `intent.go` (`GenerateIntentKey`, `LoadIntentSigner`, `IntentSigner.Sign`, `ArgsDigest`, `Client.VerifyIntent`), the reference signer the SDKs port; S31 verify helpers |
 
 **V0 packages removed in S01** (doc-only, no code): `statement` moved into `deed/doc.go`; `verify` and `boundary` into `witness/doc.go`; `executor` and `pgsql` into `connector/postgres/doc.go`. `decoder` and `store` stayed and were rewritten.
 
@@ -69,7 +69,7 @@ Last checked: S08, 2026-10-01 (S01 wrote it). Each session that changes the layo
 | `internal/` | yes | see above | | Go packages |
 | `scripts/` | yes | built | S01 | `banned_words.sh`, `rename_guard.sh`, integration scripts; `dev-pg.sh` (a Docker-free dev Postgres, S06); `demo/flip-byte.sh` and `demo/tamper-clip.sh` (S06's recording) |
 | `sql/` | yes | kept from V0 | S02, S17 | V0 customer-side SQL `001`–`004`. S02 moves control-plane migrations to `internal/store/migrations` |
-| `testdata/` | yes | kept from V0; `deeds/` built (S04) | S04 | Offline vectors: JCS (RFC 8785), Ed25519 (RFC 8032, Wycheproof), Deed v1 (`deeds/`, generated), with `SHA256SUMS` |
+| `testdata/` | yes | kept from V0; `deeds/` built (S04); `intents/` built (S09) | S04, S09 | Offline vectors: JCS (RFC 8785), Ed25519 (RFC 8032, Wycheproof), Deed v1 (`deeds/`, generated), signed intents (`intents/`: 8 valid and 26 invalid, generated, with the public RFC 8032 test keys and a README for SDK authors), with `SHA256SUMS` |
 | `.github/workflows/` | yes | kept from V0 | S03 | `ci.yml` and `pg-matrix.yml` (Postgres 16, 17, 18) |
 | `api/openapi.yaml` | no | planned | S03 | The OpenAPI document, served at `GET /api/openapi.yaml`; each API session extends it |
 | `web/` | partly | S05 built `web/verify` | S05, S24 | `web/verify`: the browser verifier (TypeScript, zero runtime dependencies, ADR-027). S24 builds the Console |

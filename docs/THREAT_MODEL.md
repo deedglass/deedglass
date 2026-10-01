@@ -33,6 +33,29 @@ Who Deedglass trusts for what, and what happens when each of them is compromised
 | An instance keeps sealing after a rotation | It refuses a key that retires within 30 s; a restart with a retired key is refused. |
 | `keys.json` served partially during an outage | 503 `service_unavailable`, never a partial list. |
 
+## Signed intents, on-behalf-of and MCP (S09)
+
+Detail: [INTENTS.md](INTENTS.md) §13, [IDENTITY.md](IDENTITY.md) (threat notes) and
+[MCP_AUTHORIZATION.md](MCP_AUTHORIZATION.md).
+
+| Threat | What Deedglass does |
+|---|---|
+| An agent's API key leaks (`.env`, CI logs, an MCP config) | For an agent in `required` mode, every call without a valid signed intent is refused (`intent_required`). Otherwise the holder acts as the agent until the key is revoked. |
+| A proxy or middlebox changes an argument | `args_digest` covers the exact arguments: `args_mismatch`. |
+| A captured request is replayed | The nonce's primary key: `intent_replay`. Nonces are pruned only after the intent can no longer be accepted (`expired` first). |
+| Algorithm confusion | No `alg` field; Ed25519 only; the signed input is domain-separated (`deedglass/intent/v1\n`). |
+| Weak or malicious intent keys | Small-order, non-canonical and off-curve keys are refused at registration (422), and stored keys are parsed again on every read. |
+| JSON ambiguity (duplicates, big integers, non-canonical bytes) | The strict parser runs before JCS; the intent's bytes must equal their JCS form: `intent_invalid`. |
+| Clock abuse | 60 seconds of skew; a lifetime of at most 5 minutes. |
+| On-behalf-of spoofing | A signed `on_behalf_of` is bound to the agent's key and a differing header is refused; an unsigned one is recorded as the agent's claim. v2 verifies people against the org's identity provider. |
+| Header smuggling | One value per OBO header, a strict grammar (422), and Go refuses CR and LF. |
+| A client's token passed to an upstream MCP server | `StripInboundCredentials`, which S15 must call on every forwarded request. |
+| DNS rebinding against `/mcp/*` | A browser `Origin` other than the base URL's is refused with 403. |
+| Enumerating connectors through the metadata | The same document for every well-formed id, with no database read. |
+| An intent error starts an OAuth flow in a client | Intent errors are 403 `permission_error`, never 401. |
+| **The agent's runtime is compromised** | **Not defended by intents:** the attacker holds both keys. Policies, budgets, approvals and Stop still apply. |
+| A prompt-injected agent signs a harmful, well-formed action | Not an intent problem: the signature records what was meant. Policy decides (S10 to S12). |
+
 ## What this page does not do
 
 It is not a security review or a penetration-test report, and it makes no claim until S34 writes one with its evidence. The V0 trust model lives in `~/txv/ops/plan/20_ARCHITECTURE_SPEC_V0.md` §2.2.

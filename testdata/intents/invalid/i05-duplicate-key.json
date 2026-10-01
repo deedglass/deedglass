@@ -1,0 +1,16 @@
+{
+  "name": "i05-duplicate-key",
+  "description": "\"agent\" appears twice.",
+  "header": "eyJhZ2VudCI6ImFndF8wMWs2MzNycm1oM2JjejJwMzlnZzR2cDQ2cSIsImFnZW50IjoiYWd0XzAxazYzM3JybWgzYmN6MnAzOWdnNHZwNDZxIiwiYXJnc19kaWdlc3QiOiJzaGEyNTY6Zjc0MTFhN2NmNDcwNjMzM2M5YmE4MGM4NWFhYjdkOGI5MjM2M2FkMzA3N2EyODhkYWRjMjZiZWY0MmQ4OWQzNiIsImV4cCI6MTc5MTAxOTg2MDAwMCwiaWF0IjoxNzkxMDE5ODAwMDAwLCJraWQiOiIyMWZlMzFkZmExNTRhMjYxNjI2YmY4NTQwNDZmZDIyNyIsIm5vbmNlIjoiMDVjMThiZTY4YTI0YzA1NmNkNmM3Yzg5MTBkYzAwMTkiLCJvcmciOiJvcmdfMDFrNmg3a3A2bXNtenJoZHp3dGNyM2pua3AiLCJ0b29sIjoic3RyaXBlLnJlZnVuZCIsInYiOiJkZWVkZ2xhc3MuaW50ZW50LzEifQ.Ij_RmBu0vAfjVMxejP0qduTJDO7Ciuir_5Nsk-b-lLxIYUEB3LUv5NnCU6oUQCwOeCzjU9jlgscNxKI9Q7JfDA",
+  "tool": "stripe.refund",
+  "args": "{\"charge\":\"ch_3QxZ8f2L\",\"amount\":1200}",
+  "now": "2026-10-03T09:30:10Z",
+  "sends": 1,
+  "expected": {
+    "ok": false,
+    "status": 403,
+    "code": "intent_invalid",
+    "reason": "strict",
+    "param": "Deedglass-Intent"
+  }
+}

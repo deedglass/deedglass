@@ -1,0 +1,6 @@
+exit 0
+--- stdout
+✓ Intent key registered · support-bot · kid 21fe…d227 · deed_01k6vrddq2atgb2023qvhhct3m sealed
+  support-bot doesn't check signed intents yet. Check them when sent, or require them:
+  deedglass agent intent mode support-bot optional|required
+--- stderr

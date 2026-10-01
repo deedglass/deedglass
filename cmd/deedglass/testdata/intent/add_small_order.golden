@@ -1,0 +1,4 @@
+exit 1
+--- stdout
+--- stderr
+✕ That public key is a small-order point, so a single signature would verify for every message. Generate a fresh key with deedglass agent intent keygen support-bot.

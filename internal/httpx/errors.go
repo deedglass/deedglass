@@ -134,7 +134,7 @@ var catalog = []CatalogEntry{
 	{CodeInvalidJSON, 400, TypeInvalidRequest, "The body isn't valid JSON. Fix it and retry.",
 		"The body isn't valid JSON (line {l}, column {c}). Fix it and retry.", "S03"},
 	{CodeAPIVersionInvalid, 400, TypeInvalidRequest, "Deedglass-Version isn't a known version. Use " + buildinfo.LatestAPIVersion + ", or leave it out to use your org's pinned version.", "", "S03"},
-	{CodeIdempotencyKeyInvalid, 400, TypeInvalidRequest, "Idempotency-Key must be 1–255 printable ASCII characters.", "", "S03"},
+	{CodeIdempotencyKeyInvalid, 400, TypeInvalidRequest, "Idempotency-Key must be 1 to 255 printable ASCII characters.", "", "S03"},
 	{CodeIdempotencyKeyInUse, 409, TypeInvalidRequest, "A request with this Idempotency-Key is still running. Retry in a moment.", "", "S03"},
 	{CodeServiceUnavailable, 503, TypeAPI, "Deedglass is starting or shutting down. Retry in a few seconds.", "", "S03"},
 
@@ -419,4 +419,110 @@ func clip(s string, n int) string {
 		b.WriteString("…")
 	}
 	return b.String()
+}
+
+// --- signed intents (S09 §5.2) ---
+
+// IntentCopy is the message for each signed-intent refusal, keyed by reason (docs/INTENTS.md §6).
+// {placeholders} are filled by ErrIntent; a placeholder with no value renders empty, so every
+// template must read well with its values present. intent_required and intent_replay are their own
+// codes; every other reason is intent_invalid.
+var IntentCopy = map[string]string{
+	"required":                 `Agent "{agent}" requires a signed intent for every call. Send a Deedglass-Intent header; see docs.deedglass.com/intents.`,
+	"syntax":                   "The Deedglass-Intent header must be two base64url parts joined by a dot: the intent, then its signature.",
+	"too_large":                "The signed intent is larger than 2,048 bytes. Keep only the fields listed at docs.deedglass.com/intents.",
+	"strict":                   "The signed intent isn't strict JSON: {detail}. Use the SDK signer, or follow the profile at docs.deedglass.com/intents.",
+	"not_canonical":            "The signed intent isn't canonical JSON (RFC 8785): keys must be sorted and there must be no whitespace. Use the SDK signer, or canonicalize before signing.",
+	"schema_unknown":           `The signed intent has an unknown field "{field}". Put arguments in the call, and their digest in args_digest.`,
+	"schema_missing":           `The signed intent is missing the field "{field}". Sign every required field listed at docs.deedglass.com/intents.`,
+	"schema":                   "The signed intent's {field} isn't valid: it must be {want}. See the field table at docs.deedglass.com/intents.",
+	"version":                  `The signed intent's version is "{got}", and Deedglass reads deedglass.intent/1. Sign with deedglass.intent/1.`,
+	"org_mismatch":             "The signed intent names {intent_org}, but this API key belongs to {org}. Sign with the agent's own org id.",
+	"agent_mismatch":           "The signed intent names {intent_agent}, but this API key belongs to {agent} ({agent_id}). Sign with the agent's own identity.",
+	"unknown_kid":              "The signed intent uses key {kid}, which isn't registered for {agent}. Register it with deedglass agent intent add {agent}, or in Console › Agents › Security.",
+	"bad_signature":            `The signature doesn't verify with key {kid}. Sign the bytes "deedglass/intent/v1\n" + intent_hash with the matching private key.`,
+	"expired":                  "The signed intent expired at {time} UTC, {ago} ago. Sign a fresh intent for each call; an intent lasts at most 5 minutes.",
+	"not_yet_valid":            "The signed intent was issued {ahead} in the future. Check the agent's clock; Deedglass allows 60 seconds of skew.",
+	"ttl":                      "The signed intent is valid for {ms} ms, and it must be more than 0 and at most 300000 (5 minutes). Sign it again with exp after iat, at most 5 minutes later.",
+	"tool_mismatch":            "The signed intent is for {intent_tool}, but this call is for {tool}. Sign one intent per call.",
+	"args_mismatch":            "The signed intent's args_digest doesn't match the arguments sent. Sign the exact arguments you send, canonicalized with RFC 8785.",
+	"big_int":                  "The arguments contain an integer larger than 9007199254740991, which JSON can't carry exactly. Send it as a string.",
+	"args_not_canonicalizable": "The arguments can't be canonicalized with RFC 8785: {detail}. Send JSON with unique keys, at most 32 levels deep and at most 256 KiB.",
+	"obo_mismatch":             "Deedglass-On-Behalf-Of says {header}, but the signed intent says {intent}. When you sign an intent, send the same value in both, or only in the intent.",
+	"session_mismatch":         "Deedglass-Session says {header}, but the signed intent says {intent}. When you sign an intent, send the same value in both, or only in the intent.",
+	"unsigned_obo":             "{name} was sent, but the signed intent doesn't include {field}. Sign it too, or leave the header out.",
+	"unsigned_session":         "{name} was sent, but the signed intent doesn't include {field}. Sign it too, or leave the header out.",
+	"replay":                   "This signed intent was already used at {time} UTC. Sign a new intent, with a fresh nonce, for every call.",
+	"replay_unknown":           "This signed intent was already used. Sign a new intent, with a fresh nonce, for every call.",
+}
+
+// IntentParam is the error's param for each reason that has a fixed one; the schema reasons,
+// unsigned_obo and the OBO mismatches name their field at the call site.
+var IntentParam = map[string]string{
+	"required": "Deedglass-Intent", "syntax": "Deedglass-Intent", "too_large": "Deedglass-Intent", "strict": "Deedglass-Intent",
+	"not_canonical": "Deedglass-Intent", "version": "v", "org_mismatch": "org", "agent_mismatch": "agent", "unknown_kid": "kid",
+	"bad_signature": "kid", "expired": "exp", "not_yet_valid": "iat", "ttl": "exp", "tool_mismatch": "tool",
+	"args_mismatch": "args_digest", "big_int": "args", "args_not_canonicalizable": "args",
+	"obo_mismatch": "Deedglass-On-Behalf-Of", "session_mismatch": "Deedglass-Session",
+	"unsigned_obo": "Deedglass-On-Behalf-Of", "unsigned_session": "Deedglass-Session", "replay": "nonce", "replay_unknown": "nonce",
+}
+
+// ErrIntent builds the 403 for a signed-intent refusal. kv are placeholder name/value pairs; param
+// overrides IntentParam when not empty. All three intent codes are 403 permission_error, never 401,
+// so OAuth-capable MCP clients don't start an authorization flow (contract §8).
+func ErrIntent(reason, param string, kv ...string) *Error {
+	code := CodeIntentInvalid
+	switch reason {
+	case "required":
+		code = CodeIntentRequired
+	case "replay", "replay_unknown":
+		code = CodeIntentReplay
+	}
+	tpl, ok := IntentCopy[reason]
+	if !ok {
+		tpl = byCode[code].Message
+	}
+	pairs := make([]string, 0, len(kv))
+	for i := 0; i+1 < len(kv); i += 2 {
+		pairs = append(pairs, "{"+kv[i]+"}", clipMsg(kv[i+1], 120))
+	}
+	msg := strings.NewReplacer(pairs...).Replace(tpl)
+	if param == "" {
+		param = IntentParam[reason]
+	}
+	return E(code, Msg(msg), Param(param))
+}
+
+// clipMsg shortens a value placed in a message, keeping printable text (unlike clip, it keeps
+// non-ASCII letters such as an org name's).
+func clipMsg(s string, n int) string {
+	var b strings.Builder
+	count := 0
+	for _, r := range s {
+		if count >= n {
+			b.WriteString("…")
+			break
+		}
+		if r < 0x20 || r == 0x7f {
+			r = '?'
+		}
+		b.WriteRune(r)
+		count++
+	}
+	return b.String()
+}
+
+// ErrOBOInvalid is the 422 for a malformed Deedglass-On-Behalf-Of or Deedglass-Session header, or
+// one sent twice.
+func ErrOBOInvalid(header string, twice bool) *Error {
+	msg := header + " must be 1 to 256 characters: letters, digits and . _ ~ : @ / + = -. Use an opaque user id, not a name."
+	if header == "Deedglass-Session" {
+		msg = header + " must be 1 to 256 characters: letters, digits and . _ ~ : @ / + = -. Use an opaque conversation or run id."
+	}
+	if twice {
+		msg = "Send " + header + " once. It names one person or session per call."
+	}
+	e := ErrValidation(header, msg)
+	e.Status = http.StatusUnprocessableEntity
+	return e
 }

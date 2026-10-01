@@ -1,0 +1,16 @@
+{
+  "name": "i14-other-agent",
+  "description": "The intent names another agent.",
+  "header": "eyJhZ2VudCI6ImFndF8wMWs2MzNycm1oM2JjejJwMzlnZzR2cDRhMSIsImFyZ3NfZGlnZXN0Ijoic2hhMjU2OmY3NDExYTdjZjQ3MDYzMzNjOWJhODBjODVhYWI3ZDhiOTIzNjNhZDMwNzdhMjg4ZGFkYzI2YmVmNDJkODlkMzYiLCJleHAiOjE3OTEwMTk4NjAwMDAsImlhdCI6MTc5MTAxOTgwMDAwMCwia2lkIjoiMjFmZTMxZGZhMTU0YTI2MTYyNmJmODU0MDQ2ZmQyMjciLCJub25jZSI6IjA1YzE4YmU2OGEyNGMwNTZjZDZjN2M4OTEwZGMwMDIyIiwib3JnIjoib3JnXzAxazZoN2twNm1zbXpyaGR6d3RjcjNqbmtwIiwidG9vbCI6InN0cmlwZS5yZWZ1bmQiLCJ2IjoiZGVlZGdsYXNzLmludGVudC8xIn0.a5g87zEfLv7zVh36hWsI4WnSZUQtACekG2XQfFdyja6o6_0fz7eQ1Ccn--JkvAttNgVq45rZBT7OngtfbFrFCg",
+  "tool": "stripe.refund",
+  "args": "{\"charge\":\"ch_3QxZ8f2L\",\"amount\":1200}",
+  "now": "2026-10-03T09:30:10Z",
+  "sends": 1,
+  "expected": {
+    "ok": false,
+    "status": 403,
+    "code": "intent_invalid",
+    "reason": "agent_mismatch",
+    "param": "agent"
+  }
+}

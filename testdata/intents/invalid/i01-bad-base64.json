@@ -1,0 +1,16 @@
+{
+  "name": "i01-bad-base64",
+  "description": "The intent part isn't base64url.",
+  "header": "!!!!.gBHSxOtr1rXWYTNk-Y-YXQkwo0jOOeAABp8VA58r3WHSJ6oviy29mXkdH3_-M_wvDx7u_wSGLjJYZhonzem4AA",
+  "tool": "stripe.refund",
+  "args": "{\"charge\":\"ch_3QxZ8f2L\",\"amount\":1200}",
+  "now": "2026-10-03T09:30:10Z",
+  "sends": 1,
+  "expected": {
+    "ok": false,
+    "status": 403,
+    "code": "intent_invalid",
+    "reason": "syntax",
+    "param": "Deedglass-Intent"
+  }
+}

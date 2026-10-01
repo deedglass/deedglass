@@ -288,18 +288,27 @@ carries `Retry-After` in seconds, and the message says when the period resets.
 
 **403 · permission_error**
 
-**When it happens.** The agent is set to sign its requests, and this request has no
-`Deedglass-Intent` header (S09). It is 403, never 401: the key is valid, and a 401 would start an
-OAuth flow in some MCP clients.
+**When it happens.** The agent's intent mode is `required`, and the call has no `Deedglass-Intent`
+header (S09; the Gate enforces it from S13). It is 403, never 401: the API key is valid, and a 401
+would start an OAuth flow in some MCP clients. MCP clients can't sign intents in v1, so a `required`
+agent can act only through the SDKs or the REST API. The full rules are in
+[INTENTS.md](../INTENTS.md).
 
-**What to do.** Sign the intent with the agent's intent key and send it in `Deedglass-Intent`.
+| Reason | Param | Message |
+|---|---|---|
+| `required` | `Deedglass-Intent` | `Agent "{agent}" requires a signed intent for every call. Send a Deedglass-Intent header; see docs.deedglass.com/intents.` |
+
+**What to do.** Sign each call with the agent's intent key (`pkg/deedglass` `IntentSigner`, or
+`deedglass dev sign-intent` to try it) and send the result in `Deedglass-Intent`. If the agent
+can't sign (an MCP client, for example), an admin can set its mode to `optional` with
+`deedglass agent intent mode <agent> optional`.
 
 ```json
 {
   "type": "permission_error",
   "code": "intent_required",
-  "message": "This agent must sign its requests. Send a Deedglass-Intent header.",
-  "param": null
+  "message": "Agent \"support-bot\" requires a signed intent for every call. Send a Deedglass-Intent header; see docs.deedglass.com/intents.",
+  "param": "Deedglass-Intent"
 }
 ```
 
@@ -307,18 +316,51 @@ OAuth flow in some MCP clients.
 
 **403 · permission_error**
 
-**When it happens.** The signed intent doesn't match the request (S09): a different tool or
-arguments, a signature that doesn't verify, or a timestamp more than 60 s off.
+**When it happens.** The agent's mode is `optional` or `required`, a `Deedglass-Intent` header was
+sent, and one of checks 1 to 12 failed (S09; [INTENTS.md](../INTENTS.md) §6 has the order). The
+logged reason says which. `POST /v1/intents/verify` checks the header in every mode, `off`
+included. It is 403, never 401.
 
-**What to do.** Sign the exact tool and arguments you send, with a current timestamp, and send the
-request again.
+| Reason | Param | Message |
+|---|---|---|
+| `syntax` | `Deedglass-Intent` | `The Deedglass-Intent header must be two base64url parts joined by a dot: the intent, then its signature.` |
+| `too_large` | `Deedglass-Intent` | `The signed intent is larger than 2,048 bytes. Keep only the fields listed at docs.deedglass.com/intents.` |
+| `strict` | `Deedglass-Intent` | `The signed intent isn't strict JSON: {detail}. Use the SDK signer, or follow the profile at docs.deedglass.com/intents.` |
+| `not_canonical` | `Deedglass-Intent` | `The signed intent isn't canonical JSON (RFC 8785): keys must be sorted and there must be no whitespace. Use the SDK signer, or canonicalize before signing.` |
+| `schema` (unknown field) | the field | `The signed intent has an unknown field "{field}". Put arguments in the call, and their digest in args_digest.` |
+| `schema` (missing field) | the field | `The signed intent is missing the field "{field}". Sign every required field listed at docs.deedglass.com/intents.` |
+| `schema` (wrong type or pattern) | the field | `The signed intent's {field} isn't valid: it must be {want}. See the field table at docs.deedglass.com/intents.` |
+| `version` | `v` | `The signed intent's version is "{got}", and Deedglass reads deedglass.intent/1. Sign with deedglass.intent/1.` |
+| `org_mismatch` | `org` | `The signed intent names {intent_org}, but this API key belongs to {org}. Sign with the agent's own org id.` |
+| `agent_mismatch` | `agent` | `The signed intent names {intent_agent}, but this API key belongs to {agent} ({agent_id}). Sign with the agent's own identity.` |
+| `unknown_kid` | `kid` | `The signed intent uses key {kid}, which isn't registered for {agent}. Register it with deedglass agent intent add {agent}, or in Console › Agents › Security.` |
+| `bad_signature` | `kid` | `The signature doesn't verify with key {kid}. Sign the bytes "deedglass/intent/v1\n" + intent_hash with the matching private key.` |
+| `not_yet_valid` | `iat` | `The signed intent was issued {ahead} in the future. Check the agent's clock; Deedglass allows 60 seconds of skew.` |
+| `expired` | `exp` | `The signed intent expired at {time} UTC, {ago} ago. Sign a fresh intent for each call; an intent lasts at most 5 minutes.` |
+| `ttl` | `exp` | `The signed intent is valid for {ms} ms, and it must be more than 0 and at most 300000 (5 minutes). Sign it again with exp after iat, at most 5 minutes later.` |
+| `tool_mismatch` | `tool` | `The signed intent is for {intent_tool}, but this call is for {tool}. Sign one intent per call.` |
+| `big_int` | `args` | `The arguments contain an integer larger than 9007199254740991, which JSON can't carry exactly. Send it as a string.` |
+| `args_not_canonicalizable` | `args` | `The arguments can't be canonicalized with RFC 8785: {detail}. Send JSON with unique keys, at most 32 levels deep and at most 256 KiB.` |
+| `args_mismatch` | `args_digest` | `The signed intent's args_digest doesn't match the arguments sent. Sign the exact arguments you send, canonicalized with RFC 8785.` |
+| `unsigned_obo` | `Deedglass-On-Behalf-Of` or `Deedglass-Session` | `{name} was sent, but the signed intent doesn't include {field}. Sign it too, or leave the header out.` |
+| `obo_mismatch` | `Deedglass-On-Behalf-Of` | `Deedglass-On-Behalf-Of says {header}, but the signed intent says {intent}. When you sign an intent, send the same value in both, or only in the intent.` |
+| `session_mismatch` | `Deedglass-Session` | `Deedglass-Session says {header}, but the signed intent says {intent}. When you sign an intent, send the same value in both, or only in the intent.` |
+
+`{placeholders}` are filled at the call site. [INTENTS.md](../INTENTS.md) §6 lists every `{detail}`
+and `{want}`. A message never quotes the header itself.
+
+**What to do.** Read the message: it names the field and the fix. Most refusals come from signing
+something other than what you send. Use the SDK signer, sign the exact tool and arguments of this
+call, sign a fresh intent for every call with a clock within 60 seconds of the server's, and put
+`on_behalf_of` and `session` in the intent rather than only in headers. To check a signer without
+acting, send its header to `POST /v1/intents/verify`.
 
 ```json
 {
   "type": "permission_error",
   "code": "intent_invalid",
-  "message": "The signed intent doesn't match this request. Sign the exact tool and arguments you send.",
-  "param": null
+  "message": "The signed intent's args_digest doesn't match the arguments sent. Sign the exact arguments you send, canonicalized with RFC 8785.",
+  "param": "args_digest"
 }
 ```
 
@@ -326,16 +368,26 @@ request again.
 
 **403 · permission_error**
 
-**When it happens.** The signed intent's nonce was already used (S09).
+**When it happens.** The signed intent passed every other check, but its nonce was already used by
+this agent (S09, check 13). Each intent works once: of any number of concurrent sends of one
+header, exactly one succeeds. An intent old enough for its nonce to be pruned is refused as
+`intent_invalid` with reason `expired` instead.
 
-**What to do.** Sign a new intent with a fresh nonce, then send the request again.
+| Reason | Param | Message |
+|---|---|---|
+| `replay` | `nonce` | `This signed intent was already used at {time} UTC. Sign a new intent, with a fresh nonce, for every call.` |
+| `replay` (the first use was pruned meanwhile) | `nonce` | `This signed intent was already used. Sign a new intent, with a fresh nonce, for every call.` |
+
+**What to do.** Sign a new intent, with 128 fresh random bits as its nonce, for every call,
+retries included. If you didn't send the request twice, something on the path did: treat it as a
+replay attempt and check what sits between the agent and Deedglass.
 
 ```json
 {
   "type": "permission_error",
   "code": "intent_replay",
-  "message": "This signed intent was already used. Sign a new one with a fresh nonce.",
-  "param": null
+  "message": "This signed intent was already used at 09:30:02 UTC. Sign a new intent, with a fresh nonce, for every call.",
+  "param": "nonce"
 }
 ```
 
@@ -484,6 +536,14 @@ for:
 `422 validation_failed` with `param: "name"`: "Agent names can't change, because policies match on
 them. To rename, create a new agent with the new name and move its keys." Names are immutable
 because policies match on them ([AGENTS.md](../AGENTS.md)).
+
+**The on-behalf-of headers are 422, with this code.** A `Deedglass-On-Behalf-Of` or
+`Deedglass-Session` header that doesn't match `^[A-Za-z0-9._~:@/+=-]{1,256}$`, or is sent twice,
+answers `422 validation_failed` with `param` set to the header name: "Deedglass-On-Behalf-Of must
+be 1 to 256 characters: letters, digits and . _ ~ : @ / + = -. Use an opaque user id, not a name."
+(for `Deedglass-Session`: "… Use an opaque conversation or run id."), or "Send
+Deedglass-On-Behalf-Of once. It names one person or session per call." It is checked on every
+request an API key authenticates ([IDENTITY.md](../IDENTITY.md), On-behalf-of).
 
 **What to do.** Fix the field the message names, then retry.
 
@@ -683,13 +743,13 @@ outside printable ASCII, or was sent more than once. On an endpoint that require
 without one gets this code with "This endpoint needs an Idempotency-Key header. Send a new unique
 value, such as a UUID, with each new request." `param` is `Idempotency-Key`.
 
-**What to do.** Send one key of 1–255 printable ASCII characters. A UUID works.
+**What to do.** Send one key of 1 to 255 printable ASCII characters. A UUID works.
 
 ```json
 {
   "type": "invalid_request_error",
   "code": "idempotency_key_invalid",
-  "message": "Idempotency-Key must be 1–255 printable ASCII characters.",
+  "message": "Idempotency-Key must be 1 to 255 printable ASCII characters.",
   "param": "Idempotency-Key"
 }
 ```

@@ -1,0 +1,6 @@
+exit 0
+--- stdout
+support-bot · intent mode off
+KID                                PUBLIC KEY                                            ADDED    BY
+21fe31dfa154a261626bf854046fd227   ed25519:11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo   2h ago   usr_01k6h7mzq3r5t8v2w4x6y8z0ab
+--- stderr

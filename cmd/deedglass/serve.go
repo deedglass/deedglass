@@ -199,7 +199,7 @@ func runServe(ctx context.Context, e *Env, args []string) error {
 		Logger: log, Prod: prod, BaseURL: cfg.BaseURL, TrustedProxies: cfg.TrustedProxies,
 		Idempotency: idemStore{db}, Sessions: people, Keys: keys,
 	})
-	api.Mount(serveRoutes(api, db, ms, sk, led, people)...)
+	api.Mount(serveRoutes(api, db, ms, sk, led, people, keys)...)
 	ln, err := net.Listen("tcp", cfg.Listen)
 	if err != nil {
 		return &ExitError{Code: ExitFailure, ErrCode: "listen_failed", Err: fmt.Errorf("Can't listen on %s: %s", cfg.Listen, lastPart(err)),
@@ -230,6 +230,7 @@ func runServe(ctx context.Context, e *Env, args []string) error {
 	pctx, stopPrune := context.WithCancel(context.WithoutCancel(ctx))
 	defer stopPrune()
 	go pruneLoop(pctx, db, log)
+	go nonceLoop(pctx, db, log)
 
 	drain := time.Duration(0)
 	if prod {
@@ -274,7 +275,8 @@ type serveKey struct {
 // serveRoutes is everything `serve` mounts. Later sessions add their routes here; the cmd tests
 // run httpx.CheckSpec on this list, so api/openapi.yaml must document each one. db and sk are nil
 // in route-table tests.
-func serveRoutes(api *httpx.Server, db *store.DB, ms []migrate.Migration, sk *serveKey, led *ledger.Ledger, people *identity.Service) []httpx.Route {
+func serveRoutes(api *httpx.Server, db *store.DB, ms []migrate.Migration, sk *serveKey, led *ledger.Ledger, people *identity.Service,
+	keys *identity.KeyAuth) []httpx.Route {
 	deps := httpx.SystemDeps{Spec: apiSpec()}
 	issuer := "http://127.0.0.1:8080"
 	if db != nil {
@@ -296,7 +298,14 @@ func serveRoutes(api *httpx.Server, db *store.DB, ms []migrate.Migration, sk *se
 		people = routeListingIdentity(issuer)
 	}
 	routes = append(routes, people.Routes()...)
-	return append(routes, people.AgentRoutes()...)
+	routes = append(routes, people.AgentRoutes()...)
+	// S09: intent keys, the conformance check, and MCP authorization readiness.
+	routes = append(routes, people.IntentRoutes(identity.NewIntents(db, keys, nil))...)
+	base, err := url.Parse(issuer)
+	if err != nil {
+		panic(err) // DEEDGLASS_BASE_URL was validated by config
+	}
+	return append(routes, identity.NewMCPAuth(base).MCPRoutes()...)
 }
 
 // newKeyAuth is the API-key authenticator and Stop guard (S08). serve runs its listener.
@@ -435,6 +444,41 @@ func pruneOnce(ctx context.Context, db *store.DB, log *slog.Logger) {
 		log.Info("pruned sign-in tokens and sessions", "deleted", n)
 	}
 }
+
+// nonceLoop prunes signed-intent nonces every minute, in batches of 10,000 (S09 §3.7), until a
+// batch comes back short.
+func nonceLoop(ctx context.Context, db *store.DB, log *slog.Logger) {
+	t := time.NewTicker(nonceEvery)
+	defer t.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-t.C:
+			for range 10 {
+				n, err := db.PreAuth().PruneIntentNonces(ctx, noncePruneBatch)
+				if err != nil {
+					if ctx.Err() == nil {
+						log.Warn("pruning intent nonces failed", "error", err.Error())
+					}
+					break
+				}
+				if n > 0 {
+					log.Debug("pruned intent nonces", "deleted", n)
+				}
+				if n < noncePruneBatch {
+					break
+				}
+			}
+		}
+	}
+}
+
+// Nonce pruning (S09 §3.7).
+const (
+	nonceEvery      = time.Minute
+	noncePruneBatch = 10_000
+)
 
 // serveMigrate applies pending migrations in dev (serve --migrate), as the migrator role.
 func serveMigrate(ctx context.Context, e *Env, cfg *config.Config) error {

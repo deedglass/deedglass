@@ -100,7 +100,7 @@ curl -s -X POST https://api.deedglass.com/v1/agents \
   -d @agent.json
 ```
 
-**The key.** 1–255 printable ASCII characters, sent once; a UUID works. Anything else is 400
+**The key.** 1 to 255 printable ASCII characters, sent once; a UUID works. Anything else is 400
 `idempotency_key_invalid`. Each endpoint says whether a key is optional or required; a required
 key that is missing gets the same code. Only POST requests use keys; other methods ignore the
 header.
@@ -266,7 +266,7 @@ request's id ([Idempotent requests](#idempotent-requests)). Quote it to support;
 | `Cookie` | `__Host-deedglass_session` and `__Host-deedglass_csrf`, from the Console (S07). |
 | `Deedglass-CSRF` | The CSRF token for Console sessions (S07). |
 | `Deedglass-Version` | The API version, `YYYY-MM-DD`. Send it once. |
-| `Idempotency-Key` | Safe retries for POST, 1–255 printable ASCII characters. |
+| `Idempotency-Key` | Safe retries for POST, 1 to 255 printable ASCII characters. |
 | `Content-Type` | `application/json`, optionally with `; charset=utf-8`, on any request with a body. |
 | `X-Request-Id` | Your own request id, logged as `client_request_id`. |
 | `Deedglass-Intent` | A signed intent from the agent (S09). |
@@ -315,7 +315,7 @@ Responses use 2-space indentation and end with a newline.
 | Request time | 30 s by default; 5 s for health, version and the OpenAPI document. Past it, 504 `timeout`. |
 | Request headers | 64 KiB. |
 | `limit` on lists | 1–100, default 20. |
-| `Idempotency-Key` | 1–255 printable ASCII characters. |
+| `Idempotency-Key` | 1 to 255 printable ASCII characters. |
 | `X-Request-Id` | 64 printable ASCII characters (longer values are ignored). |
 
 ## Security headers

@@ -304,6 +304,25 @@ $ deedglass agent list          # with a revoked admin key
 Only the status word is coloured (red for `stopped`), and only on a terminal; `NO_COLOR` is
 respected. Every command takes `--json`. The full list is in [CLI.md](CLI.md).
 
+## Signed intents
+
+An API key says which agent is calling; it is a bearer secret. A signed intent adds a narrower
+signal: the agent's runtime signs each call (the tool, a digest of the exact arguments, a one-time
+nonce and a short window) with an Ed25519 key that never leaves it. Each agent has an intent mode
+(`off` by default, `optional` or `required`, set with `PATCH /v1/agents/{id} {"intent_mode": …}`)
+and at most two intent keys. Agents also say whom they serve with `Deedglass-On-Behalf-Of` and
+`Deedglass-Session`.
+
+```
+deedglass agent intent keygen support-bot      # on the agent's machine
+deedglass agent intent add support-bot --public-key ed25519:…
+deedglass agent intent mode support-bot required
+```
+
+The spec, the checks in order and what intents don't do: [INTENTS.md](INTENTS.md). On-behalf-of and
+the header table: [IDENTITY.md](IDENTITY.md). The commands: [CLI.md](CLI.md). MCP clients
+authenticate with API keys as bearer tokens ([MCP_AUTHORIZATION.md](MCP_AUTHORIZATION.md)).
+
 ## 8. What this doesn't do
 
 - **No renames.** Create a new agent instead.
@@ -315,5 +334,6 @@ respected. Every command takes `--json`. The full list is in [CLI.md](CLI.md).
   it is rolled or revoked.
 - **The failed-auth limiter is per instance,** as above.
 - **`last_used_at` is approximate,** to within a minute.
-- **Agents don't sign their requests yet.** Signed intents arrive in S09; until then, holding the key
-  is enough.
+- **An API key alone is enough for an agent in intent mode `off` (the default).** Set the agent to
+  `required` to make every call carry a signed intent ([INTENTS.md](INTENTS.md)); the Gate enforces
+  the mode from S13.

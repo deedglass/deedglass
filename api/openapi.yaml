@@ -44,6 +44,10 @@ tags:
     description: >-
       Signed records of what agents did, and the public seal keys that check them offline
       (docs/DEED_SPEC.md).
+  - name: Intents
+    description: "Signed intents: the conformance check SDK authors run against Deedglass."
+  - name: MCP
+    description: "MCP authorization readiness: OAuth protected-resource metadata (RFC 9728) and the /mcp endpoints."
 paths:
   /v1/health:
     get:
@@ -207,7 +211,7 @@ paths:
         - {name: on_behalf_of, in: query, required: false, description: The exact on-behalf-of reference., schema: {type: string, maxLength: 256}}
         - {name: "created_at[gte]", in: query, required: false, description: RFC 3339; inclusive., schema: {type: string, format: date-time}}
         - {name: "created_at[lt]", in: query, required: false, description: RFC 3339; exclusive., schema: {type: string, format: date-time}}
-        - {name: q, in: query, required: false, description: Text to find in the tool name or the error code (2–64 characters)., schema: {type: string, minLength: 2, maxLength: 64}}
+        - {name: q, in: query, required: false, description: Text to find in the tool name or the error code (2 to 64 characters)., schema: {type: string, minLength: 2, maxLength: 64}}
         - $ref: "#/components/parameters/Limit"
         - $ref: "#/components/parameters/Cursor"
       responses:
@@ -932,13 +936,15 @@ paths:
           $ref: "#/components/responses/Error"
     patch:
       operationId: updateAgent
-      summary: Change an agent's description, labels, budgets or owner
+      summary: Change an agent's description, labels, budgets, owner or intent mode
       description: >-
         Send only what changes. `labels` and `budgets` replace the whole map; `owner: ""` clears the
         owner. Names are immutable, so sending `name` is 422 `validation_failed`: to rename, create
         a new agent and move its keys. Seals `agent.updated` unless nothing changed (then `deed` is
-        null). An admin+ Console session (with the `Deedglass-CSRF` header) or an org admin key;
-        agent keys get 403 `insufficient_scope`.
+        null). Changing `intent_mode` seals its own deed, `agent.intent_mode_changed` with `from`
+        and `to`; setting it to `required` while the agent has no intent keys is 409 `conflict`
+        (add a key first). An admin+ Console session (with the `Deedglass-CSRF` header) or an org
+        admin key; agent keys get 403 `insufficient_scope`.
       tags: [Agents]
       security: [{bearerAuth: []}, {sessionCookie: []}]
       x-deedglass-auth: session_or_key
@@ -961,6 +967,12 @@ paths:
                 budgets:
                   $ref: "#/components/schemas/Budgets"
                 owner: {type: string, description: An active member's id (`usr_…`), or "" to clear it.}
+                intent_mode:
+                  type: string
+                  enum: ["off", optional, required]
+                  description: >-
+                    Signed intents (S09): off (headers ignored), optional (checked when sent) or
+                    required (every call needs one).
             example: {labels: {env: prod, team: support, tier: "1"}}
       responses:
         "200":
@@ -1075,6 +1087,7 @@ paths:
                 last_used_at: "2026-10-03T14:01:58.512Z"
                 created_at: "2026-10-03T10:02:11.000Z"
                 updated_at: "2026-10-03T14:02:09.000Z"
+                intent_mode: "off"
                 deed: deed_01k6vrddq2atgb2023qvhhct3g
         default:
           $ref: "#/components/responses/Error"
@@ -1184,6 +1197,111 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/APIKeyResult"
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/agents/{id}/intent-keys:
+    get:
+      operationId: listIntentKeys
+      summary: List an agent's intent keys
+      description: >-
+        The Ed25519 public keys the agent signs intents with (at most two). A Console session
+        (viewer and up) or an org admin key; agent keys get 403 `insufficient_scope`.
+      tags: [Agents]
+      security: [{bearerAuth: []}, {sessionCookie: []}]
+      x-deedglass-auth: session_or_key
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+        - $ref: "#/components/parameters/AgentId"
+      responses:
+        "200":
+          description: The intent keys, in one page.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IntentKeyList"
+        default:
+          $ref: "#/components/responses/Error"
+    post:
+      operationId: addIntentKey
+      summary: Register an intent key for an agent
+      description: >-
+        201. Registers an Ed25519 public key the agent signs intents with. The key must pass the
+        registration rules: 32 bytes, canonical encoding, on the curve and not of small order;
+        otherwise the answer is 422 `validation_failed` with `param` set to `public_key`. A key
+        whose `kid` is already registered, or a third key, is 409 `conflict`: an agent has at most
+        two intent keys; two lets you rotate without downtime. Seals `agent.intent_key_added`. An
+        admin+ Console session (with the `Deedglass-CSRF` header) or an org admin key; agent keys
+        get 403 `insufficient_scope`.
+      tags: [Agents]
+      security: [{bearerAuth: []}, {sessionCookie: []}]
+      x-deedglass-auth: session_or_key
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+        - $ref: "#/components/parameters/CSRFWithSession"
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/AgentId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [public_key]
+              properties:
+                public_key:
+                  type: string
+                  pattern: "^ed25519:[A-Za-z0-9_-]{43}$"
+                  description: '`ed25519:` and the 32-byte public key in base64url without padding.'
+            example: {public_key: "ed25519:11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo"}
+      responses:
+        "201":
+          description: The intent key, with the deed.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+            Deedglass-Idempotent-Replayed:
+              $ref: "#/components/headers/DeedglassIdempotentReplayed"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IntentKey"
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/agents/{id}/intent-keys/{kid}:
+    delete:
+      operationId: removeIntentKey
+      summary: Remove an intent key
+      description: >-
+        Intents signed with the key are refused from now on. Removing the last key while the
+        agent's `intent_mode` is `required` is 409 `conflict` (change the mode first); a `kid` the
+        agent doesn't have is 404 `not_found`. Seals `agent.intent_key_removed`. An admin+ Console
+        session (with the `Deedglass-CSRF` header) or an org admin key; agent keys get 403
+        `insufficient_scope`.
+      tags: [Agents]
+      security: [{bearerAuth: []}, {sessionCookie: []}]
+      x-deedglass-auth: session_or_key
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+        - $ref: "#/components/parameters/CSRFWithSession"
+        - $ref: "#/components/parameters/AgentId"
+        - $ref: "#/components/parameters/IntentKid"
+      responses:
+        "200":
+          description: The key is removed, with the deed.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IntentKeyDeleted"
         default:
           $ref: "#/components/responses/Error"
   /v1/keys/{id}/roll:
@@ -1428,6 +1546,283 @@ paths:
                 $ref: "#/components/schemas/Whoami"
         default:
           $ref: "#/components/responses/Error"
+  /v1/intents/verify:
+    post:
+      operationId: verifyIntent
+      summary: Check a signed intent without acting
+      description: >-
+        A conformance check for SDK authors. It checks the `Deedglass-Intent` header in every intent
+        mode (`off` included) exactly as the Gate will, consumes the nonce, and never acts: no tool
+        is called. Without the header the answer is 422 `validation_failed` ("Send a
+        Deedglass-Intent header to check."), except for an agent in `required` mode, which gets 403
+        `intent_required`. Refusals are 403 `permission_error` with code `intent_invalid` (`param`
+        names the field), `intent_replay` or `intent_required`; never 401. `Idempotency-Key` is
+        ignored. An agent key with `actions:execute`.
+      tags: [Intents]
+      security: [{bearerAuth: []}]
+      x-deedglass-auth: agent_key
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+        - $ref: "#/components/parameters/DeedglassIntent"
+        - $ref: "#/components/parameters/DeedglassOnBehalfOf"
+        - $ref: "#/components/parameters/DeedglassSession"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [tool, args]
+              properties:
+                tool:
+                  type: string
+                  pattern: '^[a-z][a-z0-9-]{1,31}\.[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$'
+                  description: The tool the intent names, as `<connector>.<tool>`.
+                args:
+                  description: The arguments, any JSON value (use {} for none; at most 256 KiB).
+            example: {tool: stripe.refund, args: {charge: ch_3QxZ8f2L, amount: 1200}}
+      responses:
+        "200":
+          description: The intent passed every check, and its nonce is consumed.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IntentCheck"
+        "403":
+          description: >-
+            The intent was refused: `intent_invalid` (`param` names the field), `intent_replay` or
+            `intent_required`.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+              examples:
+                intent_replay:
+                  summary: The nonce was already used
+                  value:
+                    error:
+                      type: permission_error
+                      code: intent_replay
+                      message: This signed intent was already used at 09:30:02 UTC. Sign a new intent, with a fresh nonce, for every call.
+                      param: nonce
+                      request_id: req_01j9zr3m5k8q2w7x4t6v0b1c9d
+                      doc_url: https://docs.deedglass.com/errors/intent_replay
+                intent_invalid:
+                  summary: The arguments differ from the signed ones
+                  value:
+                    error:
+                      type: permission_error
+                      code: intent_invalid
+                      message: The signed intent's args_digest doesn't match the arguments sent. Sign the exact arguments you send, canonicalized with RFC 8785.
+                      param: args_digest
+                      request_id: req_01j9zr3m5k8q2w7x4t6v0b1c9d
+                      doc_url: https://docs.deedglass.com/errors/intent_invalid
+        default:
+          $ref: "#/components/responses/Error"
+  /.well-known/oauth-protected-resource:
+    get:
+      operationId: getProtectedResourceMetadata
+      summary: Show the protected-resource metadata for the API
+      description: >-
+        Public and not versioned. The RFC 9728 protected-resource metadata for the server as a
+        whole. `authorization_servers` is absent on purpose: Deedglass v1 takes pre-issued API keys
+        as bearer tokens and has no authorization server to list; v2 adds the org's issuer.
+        Readable cross-origin and cached for an hour. It never reads the database.
+      tags: [MCP]
+      security: []
+      x-deedglass-auth: public
+      x-deedglass-since: "2026-10-01"
+      responses:
+        "200":
+          description: The metadata document.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+            Cache-Control:
+              schema:
+                type: string
+                const: public, max-age=3600
+            Access-Control-Allow-Origin:
+              schema:
+                type: string
+                const: "*"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProtectedResourceMetadata"
+              example:
+                resource: https://api.deedglass.com
+                resource_name: Deedglass
+                bearer_methods_supported: [header]
+                scopes_supported: ["actions:execute", "actions:read", "deeds:read"]
+                resource_documentation: https://docs.deedglass.com/mcp/authorization
+        default:
+          $ref: "#/components/responses/Error"
+  /.well-known/oauth-protected-resource/mcp/{connector}:
+    get:
+      operationId: getMCPResourceMetadata
+      summary: Show the protected-resource metadata for a connector's MCP endpoint
+      description: >-
+        Public and not versioned. The RFC 9728 metadata for `/mcp/{connector}`, at the
+        path-inserted URL that the endpoint's bearer challenges name in `resource_metadata`. The
+        document is the same for every well-formed connector id and never reads the database; a
+        malformed id is 404 `not_found`. `authorization_servers` is absent on purpose, as in the
+        root document. Readable cross-origin and cached for an hour.
+      tags: [MCP]
+      security: []
+      x-deedglass-auth: public
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - name: connector
+          in: path
+          required: true
+          description: A connector id (`con_…`).
+          schema:
+            type: string
+            pattern: "^con_[0-7][0-9a-hjkmnp-tv-z]{25}$"
+      responses:
+        "200":
+          description: The metadata document.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+            Cache-Control:
+              schema:
+                type: string
+                const: public, max-age=3600
+            Access-Control-Allow-Origin:
+              schema:
+                type: string
+                const: "*"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProtectedResourceMetadata"
+              example:
+                resource: https://api.deedglass.com/mcp/con_01k67c04kxevyex3pjyqe0t45d
+                resource_name: Deedglass Gate
+                bearer_methods_supported: [header]
+                scopes_supported: ["actions:execute"]
+                resource_documentation: https://docs.deedglass.com/mcp/authorization
+        default:
+          $ref: "#/components/responses/Error"
+  /.well-known/oauth-protected-resource/mcp/native:
+    get:
+      operationId: getNativeMCPResourceMetadata
+      summary: Show the protected-resource metadata for the native MCP endpoint
+      description: >-
+        Public and not versioned. The RFC 9728 metadata for `/mcp/native`, at the path-inserted URL
+        that the endpoint's bearer challenges name in `resource_metadata`. It never reads the
+        database. `authorization_servers` is absent on purpose, as in the root document. Readable
+        cross-origin and cached for an hour.
+      tags: [MCP]
+      security: []
+      x-deedglass-auth: public
+      x-deedglass-since: "2026-10-01"
+      responses:
+        "200":
+          description: The metadata document.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+            Cache-Control:
+              schema:
+                type: string
+                const: public, max-age=3600
+            Access-Control-Allow-Origin:
+              schema:
+                type: string
+                const: "*"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProtectedResourceMetadata"
+              example:
+                resource: https://api.deedglass.com/mcp/native
+                resource_name: Deedglass Gate
+                bearer_methods_supported: [header]
+                scopes_supported: ["actions:execute"]
+                resource_documentation: https://docs.deedglass.com/mcp/authorization
+        default:
+          $ref: "#/components/responses/Error"
+  /mcp/{connector}:
+    post:
+      operationId: mcpConnector
+      summary: Send an MCP message to a connector's MCP endpoint
+      description: >-
+        The MCP Streamable HTTP endpoint (MCP 2026-07-28). Until the gateway ships (S15) it answers
+        404 with a JSON-RPC error: `{"jsonrpc":"2.0","id":<the request id or null>,"error":{"code":-32601,"message":"The
+        MCP gateway isn't enabled on this server."}}`. Without a key the answer is 401 with
+        `WWW-Authenticate: Bearer realm="deedglass",
+        resource_metadata="<base>/.well-known/oauth-protected-resource/mcp/<connector>",
+        scope="actions:execute"`; a bad key adds `error="invalid_token"` and `error_description`. A
+        key without `actions:execute` (an org admin key) gets 403 with `error="insufficient_scope"`,
+        `scope` and `resource_metadata`; a stopped or suspended agent gets 403 without a Bearer
+        error. A browser `Origin` other than the server's own gets 403 with a JSON-RPC error without
+        an id (DNS-rebinding protection). GET and DELETE get 405 with `Allow: POST`.
+        `Idempotency-Key` is ignored. An agent key with `actions:execute`.
+      tags: [MCP]
+      security: [{bearerAuth: []}]
+      x-deedglass-auth: agent_key
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+        - name: connector
+          in: path
+          required: true
+          description: A connector id (`con_…`).
+          schema:
+            type: string
+            pattern: "^con_[0-7][0-9a-hjkmnp-tv-z]{25}$"
+      requestBody:
+        $ref: "#/components/requestBodies/MCPMessage"
+      responses:
+        "403":
+          $ref: "#/components/responses/MCPOriginRefused"
+        "404":
+          $ref: "#/components/responses/MCPNotEnabled"
+        default:
+          $ref: "#/components/responses/Error"
+  /mcp/native:
+    post:
+      operationId: mcpNative
+      summary: Send an MCP message to the native MCP endpoint
+      description: >-
+        The MCP Streamable HTTP endpoint (MCP 2026-07-28) for the Gate's native tools. Until the
+        gateway ships (S15) it answers 404 with a JSON-RPC error:
+        `{"jsonrpc":"2.0","id":<the request id or null>,"error":{"code":-32601,"message":"The
+        MCP gateway isn't enabled on this server."}}`. Without a key the answer is 401 with
+        `WWW-Authenticate: Bearer realm="deedglass",
+        resource_metadata="<base>/.well-known/oauth-protected-resource/mcp/native",
+        scope="actions:execute"`; a bad key adds `error="invalid_token"` and `error_description`. A
+        key without `actions:execute` (an org admin key) gets 403 with `error="insufficient_scope"`,
+        `scope` and `resource_metadata`; a stopped or suspended agent gets 403 without a Bearer
+        error. A browser `Origin` other than the server's own gets 403 with a JSON-RPC error without
+        an id (DNS-rebinding protection). GET and DELETE get 405 with `Allow: POST`.
+        `Idempotency-Key` is ignored. An agent key with `actions:execute`.
+      tags: [MCP]
+      security: [{bearerAuth: []}]
+      x-deedglass-auth: agent_key
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+      requestBody:
+        $ref: "#/components/requestBodies/MCPMessage"
+      responses:
+        "403":
+          $ref: "#/components/responses/MCPOriginRefused"
+        "404":
+          $ref: "#/components/responses/MCPNotEnabled"
+        default:
+          $ref: "#/components/responses/Error"
   /login:
     get:
       operationId: loginPage
@@ -1540,7 +1935,7 @@ components:
       in: header
       required: false
       description: >-
-        1–255 printable ASCII characters. A retry with the same key and body returns the stored
+        1 to 255 printable ASCII characters. A retry with the same key and body returns the stored
         response with `Deedglass-Idempotent-Replayed: true` for 24 hours.
       schema:
         type: string
@@ -1610,6 +2005,46 @@ components:
       description: The API key id (`key_…`).
       schema:
         type: string
+    IntentKid:
+      name: kid
+      in: path
+      required: true
+      description: The intent key's id, 32 lowercase hex characters.
+      schema:
+        type: string
+        pattern: "^[0-9a-f]{32}$"
+    DeedglassIntent:
+      name: Deedglass-Intent
+      in: header
+      required: false
+      description: >-
+        A signed intent: base64url of the intent's JCS bytes, `.`, and base64url of the 64-byte
+        Ed25519 signature. The intent follows the schema `deedglass.intent/1`; the signature input
+        is `"deedglass/intent/v1\n"` followed by the `intent_hash`. Clocks may differ by up to 60 s
+        either way, and an intent lives at most 5 minutes. See docs/INTENTS.md.
+      schema:
+        type: string
+        maxLength: 4096
+    DeedglassOnBehalfOf:
+      name: Deedglass-On-Behalf-Of
+      in: header
+      required: false
+      description: >-
+        The end user the agent acts for, in your own ids. At most once; a malformed or repeated
+        header is 422 `validation_failed`.
+      schema:
+        type: string
+        pattern: "^[A-Za-z0-9._~:@/+=-]{1,256}$"
+    DeedglassSession:
+      name: Deedglass-Session
+      in: header
+      required: false
+      description: >-
+        The conversation or session the call belongs to, in your own ids. At most once; a malformed
+        or repeated header is 422 `validation_failed`.
+      schema:
+        type: string
+        pattern: "^[A-Za-z0-9._~:@/+=-]{1,256}$"
   headers:
     DeedglassRequestId:
       description: This request's id. Quote it to support; it matches `error.request_id`.
@@ -1637,7 +2072,40 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/ErrorEnvelope"
+    MCPOriginRefused:
+      description: >-
+        A browser `Origin` other than the server's own: a JSON-RPC error without an id
+        (DNS-rebinding protection). A key without `actions:execute`, or a stopped or suspended
+        agent, also gets 403, with the error envelope.
+      headers:
+        Deedglass-Request-Id:
+          $ref: "#/components/headers/DeedglassRequestId"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/JSONRPCError"
+    MCPNotEnabled:
+      description: The MCP gateway isn't enabled on this server (until S15).
+      headers:
+        Deedglass-Request-Id:
+          $ref: "#/components/headers/DeedglassRequestId"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/JSONRPCError"
+          example:
+            jsonrpc: "2.0"
+            id: 1
+            error: {code: -32601, message: The MCP gateway isn't enabled on this server.}
   requestBodies:
+    MCPMessage:
+      required: true
+      description: A JSON-RPC 2.0 message.
+      content:
+        application/json:
+          schema:
+            type: object
+          example: {jsonrpc: "2.0", id: 1, method: tools/list}
     OptionalReason:
       required: false
       description: An optional reason. It goes into the deed and the Console; an agent never sees it.
@@ -1845,7 +2313,7 @@ components:
           spend_per_day: {amount: 5000, currency: usd}
     Agent:
       type: object
-      required: [object, id, name, description, labels, budgets, status, status_reason, status_changed_at, status_changed_by, owner, active_keys, last_used_at, created_at, updated_at]
+      required: [object, id, name, description, labels, budgets, status, status_reason, status_changed_at, status_changed_by, owner, active_keys, last_used_at, created_at, updated_at, intent_mode]
       properties:
         object: {type: string, const: agent}
         id: {type: string, pattern: "^agt_[0-7][0-9a-hjkmnp-tv-z]{25}$"}
@@ -1864,6 +2332,12 @@ components:
         last_used_at: {type: [string, "null"], format: date-time}
         created_at: {type: string, format: date-time}
         updated_at: {type: string, format: date-time}
+        intent_mode:
+          type: string
+          enum: ["off", optional, required]
+          description: >-
+            Signed intents (S09): off (headers ignored), optional (checked when sent) or required
+            (every call needs one).
       examples:
         - object: agent
           id: agt_01k633rrmh3bcz2p39gg4vp46q
@@ -1880,6 +2354,7 @@ components:
           last_used_at: null
           created_at: "2026-10-03T10:02:11.000Z"
           updated_at: "2026-10-03T10:02:11.000Z"
+          intent_mode: "off"
     AgentResult:
       allOf:
         - $ref: "#/components/schemas/Agent"
@@ -1903,6 +2378,7 @@ components:
           last_used_at: null
           created_at: "2026-10-03T10:02:11.000Z"
           updated_at: "2026-10-03T10:02:11.000Z"
+          intent_mode: "off"
           deed: deed_01k6vrddq2atgb2023qvhhct3g
     AgentList:
       type: object
@@ -2064,6 +2540,122 @@ components:
           agent: {id: agt_01k633rrmh3bcz2p39gg4vp46q, name: support-bot, status: active, labels: {env: prod, team: support}}
           key: {id: key_01k6jt6tgx72gjr876976xak5e, prefix: dg_live_0IDw6L5O, mode: live, scopes: ["actions:execute", "actions:read", "deeds:read"], expires_at: null}
           budgets: {calls_per_minute: 60, calls_per_day: 5000, spend_per_day: {amount: 5000, currency: usd}}
+    IntentKey:
+      type: object
+      required: [object, kid, agent, public_key, created_at, created_by]
+      description: An Ed25519 public key an agent signs intents with. An agent has at most two.
+      properties:
+        object: {type: string, const: intent_key}
+        kid: {type: string, pattern: "^[0-9a-f]{32}$", description: The key's id, 32 lowercase hex characters.}
+        agent: {type: string, description: The agent (`agt_…`).}
+        public_key: {type: string, pattern: "^ed25519:[A-Za-z0-9_-]{43}$"}
+        created_at: {type: string, format: date-time}
+        created_by: {type: string, description: '`usr_…`, `key_…` or `operator`.'}
+        deed: {type: string, description: The admin deed this change sealed (on create only).}
+      examples:
+        - object: intent_key
+          kid: 21fe31dfa154a261626bf854046fd227
+          agent: agt_01k633rrmh3bcz2p39gg4vp46q
+          public_key: ed25519:11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo
+          created_at: "2026-10-03T09:20:11.000Z"
+          created_by: usr_01k6c9kb2zcjsyn7b8g2k1vqvp
+          deed: deed_01k6vrddq2atgb2023qvhhct3g
+    IntentKeyList:
+      type: object
+      required: [object, data, has_more, next_cursor]
+      properties:
+        object: {type: string, const: list}
+        data:
+          type: array
+          maxItems: 2
+          items:
+            $ref: "#/components/schemas/IntentKey"
+        has_more: {type: boolean}
+        next_cursor: {type: [string, "null"]}
+    IntentKeyDeleted:
+      type: object
+      required: [object, kid, agent, deleted, deed]
+      properties:
+        object: {type: string, const: intent_key}
+        kid: {type: string, pattern: "^[0-9a-f]{32}$"}
+        agent: {type: string}
+        deleted: {type: boolean, const: true}
+        deed: {type: string, description: The admin deed this change sealed.}
+      examples:
+        - object: intent_key
+          kid: 21fe31dfa154a261626bf854046fd227
+          agent: agt_01k633rrmh3bcz2p39gg4vp46q
+          deleted: true
+          deed: deed_01k6vrddq2atgb2023qvhhct3g
+    IntentCheck:
+      type: object
+      required: [object, signed, intent_hash, kid, agent, tool, args_digest, on_behalf_of, session, expires_at, nonce_consumed, intent_mode]
+      description: >-
+        What the Gate would see for this call. `signed` is false when no intent was sent (possible
+        in `off` and `optional` mode); the intent fields are then null.
+      properties:
+        object: {type: string, const: intent_check}
+        signed: {type: boolean}
+        intent_hash: {type: [string, "null"], pattern: "^sha256:[0-9a-f]{64}$"}
+        kid: {type: [string, "null"], pattern: "^[0-9a-f]{32}$"}
+        agent: {type: string}
+        tool: {type: string}
+        args_digest: {type: string, pattern: "^sha256:[0-9a-f]{64}$", description: The SHA-256 of the arguments' JCS bytes (RFC 8785).}
+        on_behalf_of: {type: [string, "null"]}
+        session: {type: [string, "null"]}
+        expires_at: {type: [string, "null"], format: date-time}
+        nonce_consumed: {type: boolean}
+        intent_mode: {type: string, enum: ["off", optional, required]}
+      examples:
+        - object: intent_check
+          signed: true
+          intent_hash: sha256:87c73e450a53f0269e33f7adb8430a6f89714606f9aae38bc732536fef7e3089
+          kid: 21fe31dfa154a261626bf854046fd227
+          agent: agt_01k633rrmh3bcz2p39gg4vp46q
+          tool: stripe.refund
+          args_digest: sha256:f7411a7cf4706333c9ba80c85aab7d8b92363ad3077a288dadc26bef42d89d36
+          on_behalf_of: usr_ext_4821
+          session: conv_9f2c
+          expires_at: "2026-10-03T09:31:00.000Z"
+          nonce_consumed: true
+          intent_mode: optional
+    ProtectedResourceMetadata:
+      type: object
+      additionalProperties: false
+      required: [resource, resource_name, bearer_methods_supported, scopes_supported, resource_documentation]
+      description: >-
+        RFC 9728 protected-resource metadata. `authorization_servers` is absent on purpose in v1:
+        Deedglass v1 takes pre-issued API keys as bearer tokens and has no authorization server to
+        list; v2 adds the org's issuer.
+      properties:
+        resource: {type: string, description: The resource identifier (the API's base URL, or an MCP endpoint's URL).}
+        resource_name: {type: string}
+        bearer_methods_supported:
+          type: array
+          items: {type: string}
+        scopes_supported:
+          type: array
+          items: {type: string}
+        resource_documentation: {type: string, format: uri}
+      examples:
+        - resource: https://api.deedglass.com
+          resource_name: Deedglass
+          bearer_methods_supported: [header]
+          scopes_supported: ["actions:execute", "actions:read", "deeds:read"]
+          resource_documentation: https://docs.deedglass.com/mcp/authorization
+    JSONRPCError:
+      type: object
+      required: [jsonrpc, error]
+      description: A JSON-RPC 2.0 error response.
+      properties:
+        jsonrpc: {type: string, const: "2.0"}
+        id: {type: [string, number, "null"]}
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code: {type: integer}
+            message: {type: string}
     ErrorEnvelope:
       type: object
       additionalProperties: false

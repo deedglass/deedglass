@@ -1,0 +1,36 @@
+{
+  "name": "v01-refund-obo",
+  "description": "The S09 §3.2 cross-check vector: a refund on behalf of usr_ext_4821 in session conv_9f2c. Deedglass-On-Behalf-Of is sent too, with the same value (allowed).",
+  "header": "eyJhZ2VudCI6ImFndF8wMWs2MzNycm1oM2JjejJwMzlnZzR2cDQ2cSIsImFyZ3NfZGlnZXN0Ijoic2hhMjU2OmY3NDExYTdjZjQ3MDYzMzNjOWJhODBjODVhYWI3ZDhiOTIzNjNhZDMwNzdhMjg4ZGFkYzI2YmVmNDJkODlkMzYiLCJleHAiOjE3OTEwMTk4NjAwMDAsImlhdCI6MTc5MTAxOTgwMDAwMCwia2lkIjoiMjFmZTMxZGZhMTU0YTI2MTYyNmJmODU0MDQ2ZmQyMjciLCJub25jZSI6IjA1YzE4YmU2OGEyNGMwNTZjZDZjN2M4OTEwZGMwNzI5Iiwib25fYmVoYWxmX29mIjoidXNyX2V4dF80ODIxIiwib3JnIjoib3JnXzAxazZoN2twNm1zbXpyaGR6d3RjcjNqbmtwIiwic2Vzc2lvbiI6ImNvbnZfOWYyYyIsInRvb2wiOiJzdHJpcGUucmVmdW5kIiwidiI6ImRlZWRnbGFzcy5pbnRlbnQvMSJ9.TQAgBevx6iwlDM2Z7px4mrRiCjdbrAX3GCacB_gMAQbvPagJqCsJUWYz7xS7VuQqyV2rOK71uyRHvym2nqjJCA",
+  "tool": "stripe.refund",
+  "args": "{\"charge\":\"ch_3QxZ8f2L\",\"amount\":1200}",
+  "headers": {
+    "Deedglass-On-Behalf-Of": "usr_ext_4821",
+    "Deedglass-Session": "conv_9f2c"
+  },
+  "now": "2026-10-03T09:30:10Z",
+  "sends": 1,
+  "sign": {
+    "key": "test1",
+    "org": "org_01k6h7kp6msmzrhdzwtcr3jnkp",
+    "agent": "agt_01k633rrmh3bcz2p39gg4vp46q",
+    "tool": "stripe.refund",
+    "args": "{\"charge\":\"ch_3QxZ8f2L\",\"amount\":1200}",
+    "on_behalf_of": "usr_ext_4821",
+    "session": "conv_9f2c",
+    "now": "2026-10-03T09:30:00Z",
+    "ttl_ms": 60000,
+    "nonce": "05c18be68a24c056cd6c7c8910dc0729"
+  },
+  "expected": {
+    "ok": true,
+    "intent_hash": "sha256:87c73e450a53f0269e33f7adb8430a6f89714606f9aae38bc732536fef7e3089",
+    "args_digest": "sha256:f7411a7cf4706333c9ba80c85aab7d8b92363ad3077a288dadc26bef42d89d36",
+    "args_canonical": "{\"amount\":1200,\"charge\":\"ch_3QxZ8f2L\"}",
+    "kid": "21fe31dfa154a261626bf854046fd227",
+    "on_behalf_of": "usr_ext_4821",
+    "session": "conv_9f2c",
+    "expires_at": "2026-10-03T09:31:00.000Z",
+    "intent_bytes": 393
+  }
+}

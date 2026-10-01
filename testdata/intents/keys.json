@@ -1,0 +1,27 @@
+{
+  "comment": "RFC 8032 §7.1 TEST 1 and TEST 2 keys. They are public: test only, never use them for anything else. The agent below has intent_mode optional and exactly one registered key, test1.",
+  "org": "org_01k6h7kp6msmzrhdzwtcr3jnkp",
+  "agent": "agt_01k633rrmh3bcz2p39gg4vp46q",
+  "agent_name": "support-bot",
+  "intent_mode": "optional",
+  "registered": [
+    {
+      "kid": "21fe31dfa154a261626bf854046fd227",
+      "public_key": "ed25519:11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo"
+    }
+  ],
+  "keys": {
+    "test1": {
+      "kid": "21fe31dfa154a261626bf854046fd227",
+      "pem": "keys/test1.pem",
+      "public_key": "ed25519:11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo",
+      "seed_hex": "9d61b19deffd5a60ba844af492ec2cc44449c5697b326919703bac031cae7f60"
+    },
+    "test2": {
+      "kid": "39f713d0a644253f04529421b9f51b9b",
+      "pem": "keys/test2.pem",
+      "public_key": "ed25519:PUAXw-hDiVqStwqnTRt-vJyYLM8uxJaMwM1V8Sr0Zgw",
+      "seed_hex": "4ccd089b28ff96da9db6c346ec114e0f5b8a319f35aba624da8cf6ed4fb8a6fb"
+    }
+  }
+}

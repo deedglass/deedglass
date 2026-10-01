@@ -98,7 +98,10 @@ type Route struct {
 	// Extension marks a route that isn't in the contract catalog, with the ADR that adds it
 	// ("ADR-0NN"), or "test" for test-only routes.
 	Extension string
-	Handler   HandlerFunc
+	// Guard, when set, admits the request before any other stage and shapes its auth challenges
+	// (S09: identity.MCPAuth on /mcp/*).
+	Guard   RouteGuard
+	Handler HandlerFunc
 }
 
 // Key is "METHOD pattern", the mux pattern and the golden-file key.

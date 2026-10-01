@@ -1,0 +1,28 @@
+{
+  "name": "v02-minimal",
+  "description": "No on_behalf_of or session.",
+  "header": "eyJhZ2VudCI6ImFndF8wMWs2MzNycm1oM2JjejJwMzlnZzR2cDQ2cSIsImFyZ3NfZGlnZXN0Ijoic2hhMjU2OmY3NDExYTdjZjQ3MDYzMzNjOWJhODBjODVhYWI3ZDhiOTIzNjNhZDMwNzdhMjg4ZGFkYzI2YmVmNDJkODlkMzYiLCJleHAiOjE3OTEwMTk4NjAwMDAsImlhdCI6MTc5MTAxOTgwMDAwMCwia2lkIjoiMjFmZTMxZGZhMTU0YTI2MTYyNmJmODU0MDQ2ZmQyMjciLCJub25jZSI6IjA1YzE4YmU2OGEyNGMwNTZjZDZjN2M4OTEwZGMwMDAyIiwib3JnIjoib3JnXzAxazZoN2twNm1zbXpyaGR6d3RjcjNqbmtwIiwidG9vbCI6InN0cmlwZS5yZWZ1bmQiLCJ2IjoiZGVlZGdsYXNzLmludGVudC8xIn0.s2t30ypiilT-Z7vkecGyhP84Xz2KV8QNe6wM5nheikcewzkpq3W_6poX-k1AKD4lSPr-rc-Gm3Z8EDZJ0VnWAw",
+  "tool": "stripe.refund",
+  "args": "{\"charge\":\"ch_3QxZ8f2L\",\"amount\":1200}",
+  "now": "2026-10-03T09:30:10Z",
+  "sends": 1,
+  "sign": {
+    "key": "test1",
+    "org": "org_01k6h7kp6msmzrhdzwtcr3jnkp",
+    "agent": "agt_01k633rrmh3bcz2p39gg4vp46q",
+    "tool": "stripe.refund",
+    "args": "{\"charge\":\"ch_3QxZ8f2L\",\"amount\":1200}",
+    "now": "2026-10-03T09:30:00Z",
+    "ttl_ms": 60000,
+    "nonce": "05c18be68a24c056cd6c7c8910dc0002"
+  },
+  "expected": {
+    "ok": true,
+    "intent_hash": "sha256:fdcce0f2057b7b42f8765eeb1907220644d20557649232d4be7000ec463e141e",
+    "args_digest": "sha256:f7411a7cf4706333c9ba80c85aab7d8b92363ad3077a288dadc26bef42d89d36",
+    "args_canonical": "{\"amount\":1200,\"charge\":\"ch_3QxZ8f2L\"}",
+    "kid": "21fe31dfa154a261626bf854046fd227",
+    "expires_at": "2026-10-03T09:31:00.000Z",
+    "intent_bytes": 341
+  }
+}

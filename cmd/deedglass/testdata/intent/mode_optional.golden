@@ -1,0 +1,5 @@
+exit 0
+--- stdout
+✓ support-bot now checks signed intents when they are sent · deed_01k6vrddq2atgb2023qvhhct3q sealed
+  Calls without a Deedglass-Intent header are still accepted; an invalid one is refused.
+--- stderr

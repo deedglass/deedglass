@@ -78,7 +78,7 @@ The V0 binary listed these commands. None of them was built. Each has a successo
 | `sign` | `deedglass dev sign-intent` (S09), and signed intents in the `Deedglass-Intent` header |
 | `submit` | `deedglass act` and `POST /v1/actions` (S13) |
 | `executor serve` | `deedglass serve`, which runs the Gate (S03, S13) |
-| `verifier run` | the Witness, inside `deedglass serve` (S19–S21) |
+| `verifier run` | the Witness, inside `deedglass serve` (S19 to S21) |
 | `statement verify` | `deedglass verify` (S05) |
 | `evidence export`, `evidence verify`, `evidence report` | `deedglass deeds export` (S05, S06) and `deedglass verify` |
 | `install` | `deedglass connector postgres init` (S17) |

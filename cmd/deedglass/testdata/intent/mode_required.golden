@@ -1,0 +1,6 @@
+exit 0
+--- stdout
+✓ support-bot now requires a signed intent on every call · deed_01k6vrddq2atgb2023qvhhct3p sealed
+  Calls without a valid Deedglass-Intent header are refused with intent_required.
+  MCP clients can't sign intents yet, so support-bot can act only through the SDKs or the REST API.
+--- stderr

@@ -40,7 +40,7 @@ func fakeActionFlags(fs *flag.FlagSet) {
 	fs.IntVar(&o.n, "n", 20, "how many actions")
 	fs.Uint64Var(&o.seed, "seed", 42, "the same seed gives the same tools, arguments, latencies and verdicts")
 	fs.StringVar(&o.kinds, "kinds", "", "comma list: allow, deny, mismatch, unverifiable, failed, pending, amend")
-	fs.IntVar(&o.agents, "agents", 3, "how many demo agents (1–8)")
+	fs.IntVar(&o.agents, "agents", 3, "how many demo agents (1 to 8)")
 	fs.IntVar(&o.batch, "batch", 1, "actions per transaction (500 for bulk seeding)")
 	fs.DurationVar(&o.pace, "pace", 0, "pause between actions for live demos (200ms)")
 	fs.BoolVar(&o.quiet, "quiet", false, "print only the final line")

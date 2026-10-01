@@ -1,0 +1,5 @@
+exit 2
+--- stdout
+--- stderr
+✕ "Support Bot" isn't an agent name or id.
+  Agent names use lowercase letters, digits and hyphens, like support-bot.

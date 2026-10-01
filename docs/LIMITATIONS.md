@@ -86,6 +86,28 @@ What Deedglass does not do, stated plainly. **Owner: S37**, which finalizes this
 - **Key lists show at most 100 keys per agent** (and 100 org admin keys), newest first, revoked ones
   included. There is no pagination yet.
 
+## Signed intents, on-behalf-of and MCP limits (S09)
+
+- **MCP clients can't sign intents in v1.** An agent in `required` mode can act only through the
+  SDKs or the REST API ([INTENTS.md](INTENTS.md)).
+- **A compromised runtime holds both keys.** Whoever controls the process that signs holds the API
+  key and the intent key, and acts as the agent. Intents can't help there; policies, approvals and
+  Stop still apply.
+- **Unsigned on-behalf-of is a claim.** `Deedglass-On-Behalf-Of` and `Deedglass-Session` are
+  recorded as the agent sends them. A signed `on_behalf_of` is bound to the agent's key, but
+  Deedglass can't know the person is real until v2 checks tokens from your identity provider.
+- **No authorization server in v1.** MCP clients authenticate with pre-issued API keys as bearer
+  tokens; the protected-resource metadata omits `authorization_servers` on purpose, so clients that
+  can only do OAuth can't connect yet ([MCP_AUTHORIZATION.md](MCP_AUTHORIZATION.md)).
+- **The Gate doesn't enforce intent modes until S13.** In S09 the checks answer only
+  `POST /v1/intents/verify`; setting a mode changes nothing about what an agent can do yet.
+- **Two closed schemas share one tag.** The V0 transfer demo intent (`op: TRANSFER`) and the agent
+  intent both use `deedglass.intent/1`, with different field sets that don't overlap. No document
+  satisfies both, but the version string alone doesn't tell them apart.
+- **A valid intent works once for whoever holds it,** within its window (at most 5 minutes plus
+  60 seconds of skew). The nonce stops the second use, not the first.
+- **Intent keys don't expire.** A registered key works until it is removed.
+
 ## What this page does not do
 
 It does not list bugs or missing features on the schedule. It lists limits of the design that stay true after they ship.

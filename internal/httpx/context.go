@@ -120,6 +120,44 @@ type SessionAuthenticator interface {
 	AuthenticateSession(ctx context.Context, r *http.Request) (Principal, error)
 }
 
+// KeyRequestHook is implemented by a KeyAuthenticator that also reads request headers once a key
+// has passed every check (S09: Deedglass-On-Behalf-Of and Deedglass-Session). An error refuses the
+// request. It runs for every route that authenticated with an API key.
+type KeyRequestHook interface {
+	AfterKey(r *http.Request, p Principal) error
+}
+
+// RouteGuard wraps the standard pipeline for a family of routes (S09: the MCP endpoints). Admit
+// runs before every other route stage; false means it wrote the response itself. Challenge rewrites
+// the WWW-Authenticate value of the route's error responses (adding resource_metadata and scope).
+type RouteGuard interface {
+	Admit(w http.ResponseWriter, r *http.Request) bool
+	Challenge(r *http.Request, value string) string
+}
+
+// SetRequestValue stores v under key for the rest of the request (the context already carries the
+// per-request record, so no new context is needed). It is a no-op outside a request.
+func SetRequestValue(ctx context.Context, key, v any) {
+	i := info(ctx)
+	if i == nil {
+		return
+	}
+	if i.values == nil {
+		i.values = map[any]any{}
+	}
+	i.values[key] = v
+}
+
+// RequestValue returns what SetRequestValue stored under key.
+func RequestValue(ctx context.Context, key any) (any, bool) {
+	i := info(ctx)
+	if i == nil || i.values == nil {
+		return nil, false
+	}
+	v, ok := i.values[key]
+	return v, ok
+}
+
 // reqInfo is the mutable per-request record the access log reads at the end. Later stages fill
 // org, agent and action ids through Annotate.
 type reqInfo struct {
@@ -133,6 +171,7 @@ type reqInfo struct {
 	agentID         string
 	actionID        string
 	replayed        bool
+	values          map[any]any // SetRequestValue (S09: on-behalf-of)
 }
 
 type ctxKey struct{}

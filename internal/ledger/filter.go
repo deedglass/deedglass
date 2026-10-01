@@ -119,7 +119,7 @@ func ParseActionQuery(v url.Values) (ActionFilter, Page, error) {
 		return f, Page{}, err
 	}
 	if f.OnBehalfOf != "" && !reRef.MatchString(f.OnBehalfOf) {
-		return f, Page{}, paramErr("on_behalf_of", "on_behalf_of must be 1–256 characters of A–Z a–z 0–9 . _ ~ : @ / + = -.")
+		return f, Page{}, paramErr("on_behalf_of", "on_behalf_of must be 1 to 256 characters: letters, digits and . _ ~ : @ / + = -.")
 	}
 	if f.CreatedGTE, err = timeParam(v, "created_at[gte]"); err != nil {
 		return f, Page{}, err
@@ -135,7 +135,7 @@ func ParseActionQuery(v url.Values) (ActionFilter, Page, error) {
 	}
 	if f.Q != "" {
 		if n := utf8.RuneCountInString(f.Q); n < 2 || n > 64 || !utf8.ValidString(f.Q) {
-			return f, Page{}, paramErr("q", "q must be 2–64 characters.")
+			return f, Page{}, paramErr("q", "q must be 2 to 64 characters.")
 		}
 	}
 	p, err := parsePage(v)

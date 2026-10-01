@@ -159,6 +159,18 @@ func (p PreAuth) PruneIdentity(ctx context.Context, limit int) (int64, error) {
 	return n, err
 }
 
+// PruneIntentNonces deletes up to limit signed-intent nonces whose intent expired more than two
+// minutes ago (deedglass.maint_prune_intent_nonces, S09), and returns how many it removed. An
+// intent is accepted until exp + 60 s, so a pruned nonce's intent is always refused as expired.
+func (p PreAuth) PruneIntentNonces(ctx context.Context, limit int) (int64, error) {
+	if limit <= 0 {
+		return 0, errors.New("store: prune limit must be positive")
+	}
+	var n int64
+	err := p.db.pool.QueryRow(ctx, `SELECT deedglass.maint_prune_intent_nonces($1)`, limit).Scan(&n)
+	return n, err
+}
+
 // ScopeSystemTxToOrg sets the org of a SystemTx(org_create) transaction once the org row exists,
 // so the org's first admin deed can be sealed in the same transaction (RLS on deeds and
 // admin_events checks the org). It refuses outside a system transaction.
@@ -193,15 +205,19 @@ type PreAuthKey struct {
 	OrgStatus    string // "active" | "disabled"
 	OrgStoppedAt *time.Time
 	OrgVersion   string // orgs.api_version
+	// The agent's signed-intent settings (S09): "off" | "optional" | "required", and the
+	// agents.intent_keys JSON array. Empty for an org admin key.
+	IntentMode *string
+	IntentKeys []byte
 }
 
 // APIKey returns the key whose public prefix is prefix (deedglass.preauth_api_key), or ErrNotFound.
 func (p PreAuth) APIKey(ctx context.Context, prefix string) (PreAuthKey, error) {
 	var k PreAuthKey
 	err := p.db.pool.QueryRow(ctx, `SELECT id, org_id, agent_id, mode, secret_hash, scopes, expires_at, revoked_at,
-	    agent_name, agent_status, org_name, org_status, org_stopped_at, org_api_version
+	    agent_name, agent_status, org_name, org_status, org_stopped_at, org_api_version, agent_intent_mode, agent_intent_keys
 	    FROM deedglass.preauth_api_key($1)`, prefix).
 		Scan(&k.ID, &k.OrgID, &k.AgentID, &k.Mode, &k.SecretHash, &k.Scopes, &k.ExpiresAt, &k.RevokedAt,
-			&k.AgentName, &k.AgentStatus, &k.OrgName, &k.OrgStatus, &k.OrgStoppedAt, &k.OrgVersion)
+			&k.AgentName, &k.AgentStatus, &k.OrgName, &k.OrgStatus, &k.OrgStoppedAt, &k.OrgVersion, &k.IntentMode, &k.IntentKeys)
 	return k, notFound(err)
 }

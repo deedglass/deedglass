@@ -24,7 +24,7 @@ const IdemTTL = 24 * time.Hour
 type IdemKey struct {
 	OrgID     ids.OrgID
 	Principal string // key_…, usr_… or agt_…
-	Key       string // 1–255 printable ASCII characters
+	Key       string // 1 to 255 printable ASCII characters
 	Method    string
 	Route     string // the route pattern
 }

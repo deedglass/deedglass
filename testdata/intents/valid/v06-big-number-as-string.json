@@ -1,0 +1,28 @@
+{
+  "name": "v06-big-number-as-string",
+  "description": "An integer above 2^53−1 sent as a string, as the docs recommend.",
+  "header": "eyJhZ2VudCI6ImFndF8wMWs2MzNycm1oM2JjejJwMzlnZzR2cDQ2cSIsImFyZ3NfZGlnZXN0Ijoic2hhMjU2OmY2OGRjZGM2NTJlMWQ5YmU3M2I2M2Y3ZmM5YzdjZjY4Y2FjYTFlZDNiZThmODQ0ODNhOWVmZWY1NjA1MWRjY2QiLCJleHAiOjE3OTEwMTk4NjAwMDAsImlhdCI6MTc5MTAxOTgwMDAwMCwia2lkIjoiMjFmZTMxZGZhMTU0YTI2MTYyNmJmODU0MDQ2ZmQyMjciLCJub25jZSI6IjA1YzE4YmU2OGEyNGMwNTZjZDZjN2M4OTEwZGMwMDA2Iiwib3JnIjoib3JnXzAxazZoN2twNm1zbXpyaGR6d3RjcjNqbmtwIiwidG9vbCI6InN0cmlwZS5yZWZ1bmQiLCJ2IjoiZGVlZGdsYXNzLmludGVudC8xIn0.A9t_Kjo5WitMSpLFZuYcNtpyQuTOSxl67lCGEdhxNkKmtRBDudFjkPImS1bdvo2pn0Jj47Me6Rp9IX1J1G3BDw",
+  "tool": "stripe.refund",
+  "args": "{\"amount\":\"12345678901234567890\",\"currency\":\"usd\"}",
+  "now": "2026-10-03T09:30:01Z",
+  "sends": 1,
+  "sign": {
+    "key": "test1",
+    "org": "org_01k6h7kp6msmzrhdzwtcr3jnkp",
+    "agent": "agt_01k633rrmh3bcz2p39gg4vp46q",
+    "tool": "stripe.refund",
+    "args": "{\"amount\":\"12345678901234567890\",\"currency\":\"usd\"}",
+    "now": "2026-10-03T09:30:00Z",
+    "ttl_ms": 60000,
+    "nonce": "05c18be68a24c056cd6c7c8910dc0006"
+  },
+  "expected": {
+    "ok": true,
+    "intent_hash": "sha256:9a67cf8c96f0118721efa87c6c952e765500310e19287c96623bd8a34d7cc4f3",
+    "args_digest": "sha256:f68dcdc652e1d9be73b63f7fc9c7cf68caca1ed3be8f84483a9efef56051dccd",
+    "args_canonical": "{\"amount\":\"12345678901234567890\",\"currency\":\"usd\"}",
+    "kid": "21fe31dfa154a261626bf854046fd227",
+    "expires_at": "2026-10-03T09:31:00.000Z",
+    "intent_bytes": 341
+  }
+}
