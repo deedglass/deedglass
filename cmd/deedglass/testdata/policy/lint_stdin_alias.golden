@@ -1,0 +1,11 @@
+exit 1
+--- stdout
+✕ stdin:2:4 · yaml_alias
+  Anchors and aliases (& and *) are not allowed in policies.
+
+    2 │ a: &a [1]
+      │    ^^
+  hint: Repeat the value, so each rule reads on its own.
+
+✕ 1 error · stdin was not accepted
+--- stderr

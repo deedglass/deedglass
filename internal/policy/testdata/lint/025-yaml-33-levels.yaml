@@ -1,0 +1,6 @@
+deedglass: policy/v1
+name: too-deep
+defaults:
+  decision: deny
+  reason: No rule allows this action.
+description: [[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[deep]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]

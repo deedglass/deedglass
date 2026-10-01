@@ -1,0 +1,26 @@
+{
+  "object": "policy_lint_result",
+  "file": "049-decision-block.yaml",
+  "valid": false,
+  "name": "decision-block",
+  "version_hash": null,
+  "rules": 1,
+  "budgets": 0,
+  "errors": [
+    {
+      "severity": "error",
+      "code": "invalid_decision",
+      "message": "`block` is not a decision.",
+      "hint": "Did you mean `deny`? Decisions are allow, deny and require_approval.",
+      "file": "049-decision-block.yaml",
+      "line": 10,
+      "column": 15,
+      "end_line": 10,
+      "end_column": 20,
+      "rule_id": "deny-drop",
+      "path": "rules[0].decision",
+      "doc_url": "https://docs.deedglass.com/policies/errors/invalid_decision"
+    }
+  ],
+  "warnings": []
+}

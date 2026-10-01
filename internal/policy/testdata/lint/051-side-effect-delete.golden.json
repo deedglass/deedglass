@@ -1,0 +1,26 @@
+{
+  "object": "policy_lint_result",
+  "file": "051-side-effect-delete.yaml",
+  "valid": false,
+  "name": "side-effect-delete",
+  "version_hash": null,
+  "rules": 1,
+  "budgets": 0,
+  "errors": [
+    {
+      "severity": "error",
+      "code": "invalid_side_effect",
+      "message": "`delete` is not a side effect.",
+      "hint": "Use read, write, destructive or unknown.",
+      "file": "051-side-effect-delete.yaml",
+      "line": 8,
+      "column": 27,
+      "end_line": 8,
+      "end_column": 33,
+      "rule_id": "deny-deletes",
+      "path": "rules[0].match.side_effect",
+      "doc_url": "https://docs.deedglass.com/policies/errors/invalid_side_effect"
+    }
+  ],
+  "warnings": []
+}

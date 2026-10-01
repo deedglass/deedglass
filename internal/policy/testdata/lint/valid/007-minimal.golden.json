@@ -1,0 +1,11 @@
+{
+  "object": "policy_lint_result",
+  "file": "007-minimal.yaml",
+  "valid": true,
+  "name": "ab",
+  "version_hash": "sha256:4d4ef23bce94763f456157960b3640e5df886c3e0cdcd4f6b0e2951715b380e0",
+  "rules": 0,
+  "budgets": 0,
+  "errors": [],
+  "warnings": []
+}

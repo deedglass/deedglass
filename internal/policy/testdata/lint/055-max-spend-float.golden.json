@@ -1,0 +1,26 @@
+{
+  "object": "policy_lint_result",
+  "file": "055-max-spend-float.yaml",
+  "valid": false,
+  "name": "max-spend-float",
+  "version_hash": null,
+  "rules": 0,
+  "budgets": 1,
+  "errors": [
+    {
+      "severity": "error",
+      "code": "money_float",
+      "message": "`max_spend: 50.00` is a YAML number.",
+      "hint": "Write money as a string, like \"50.00 usd\", so no precision is lost.",
+      "file": "055-max-spend-float.yaml",
+      "line": 10,
+      "column": 16,
+      "end_line": 10,
+      "end_column": 21,
+      "rule_id": "refunds-per-day",
+      "path": "budgets[0].max_spend",
+      "doc_url": "https://docs.deedglass.com/policies/errors/money_float"
+    }
+  ],
+  "warnings": []
+}

@@ -1,0 +1,13 @@
+deedglass: policy/v1
+name: unknown-key-approval
+defaults:
+  decision: deny
+  reason: No rule allows this action. Add a rule in Console › Policies to allow it.
+rules:
+  - id: payouts-need-approval
+    match: { tool: stripe.create_payout }
+    decision: require_approval
+    reason: Payouts wait for a person. An admin can approve in Console › Approvals.
+    approval:
+      approvers: [role:admin]
+      timeout: 2h

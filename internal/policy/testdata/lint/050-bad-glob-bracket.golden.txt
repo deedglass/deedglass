@@ -1,0 +1,8 @@
+✕ 050-bad-glob-bracket.yaml:8:20 · invalid_glob
+  postgres.[x] is not a valid pattern.
+
+    8 │     match: { tool: "postgres.[x]", side_effect: read }
+      │                    ^^^^^^^^^^^^^^
+  hint: Patterns use * and ? only, with letters, digits and _ . : -.
+
+✕ 1 error · 050-bad-glob-bracket.yaml was not accepted

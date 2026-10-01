@@ -1,0 +1,10 @@
+deedglass: policy/v1
+name: cel-cost-bomb
+defaults:
+  decision: deny
+  reason: No rule allows this action. Add a rule in Console › Policies to allow it.
+rules:
+  - id: distinct-line-items
+    match: { tool: shop.create_order }
+    when: "args.items.all(a, args.items.all(b, a == b || string(a) != string(b)))"
+    decision: allow

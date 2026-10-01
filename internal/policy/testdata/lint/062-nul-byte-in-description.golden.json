@@ -1,0 +1,24 @@
+{
+  "object": "policy_lint_result",
+  "file": "062-nul-byte-in-description.yaml",
+  "valid": false,
+  "name": null,
+  "version_hash": null,
+  "rules": 0,
+  "budgets": 0,
+  "errors": [
+    {
+      "severity": "error",
+      "code": "control_character",
+      "message": "Line 3 contains a control character (U+0000).",
+      "hint": "Remove it. It can make text display differently from what it says.",
+      "file": "062-nul-byte-in-description.yaml",
+      "line": 3,
+      "column": 30,
+      "end_line": 3,
+      "end_column": 31,
+      "doc_url": "https://docs.deedglass.com/policies/errors/control_character"
+    }
+  ],
+  "warnings": []
+}

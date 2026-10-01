@@ -1,0 +1,9 @@
+✕ 024-yaml-duplicate-key.yaml:11:5 · yaml_duplicate_key
+  Key "decision" appears twice in this mapping (first on line 9).
+
+   10 │     when: args.amount <= minor("50.00 usd")
+   11 │     decision: deny
+      │     ^^^^^^^^
+  hint: Keep one of them; YAML would silently use only one.
+
+✕ 1 error · 024-yaml-duplicate-key.yaml was not accepted

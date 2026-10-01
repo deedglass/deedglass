@@ -1,0 +1,5 @@
+✕ 026-yaml-file-too-large.yaml · file_too_large
+  This policy is 257 KiB; the limit is 256 KiB.
+  hint: Split it into smaller policies, or replace repeated rules with globs.
+
+✕ 1 error · 026-yaml-file-too-large.yaml was not accepted

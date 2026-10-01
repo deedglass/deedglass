@@ -1,0 +1,26 @@
+{
+  "object": "policy_lint_result",
+  "file": "076-cel-minor-fifty.yaml",
+  "valid": false,
+  "name": "cel-minor-fifty",
+  "version_hash": null,
+  "rules": 1,
+  "budgets": 0,
+  "errors": [
+    {
+      "severity": "error",
+      "code": "invalid_money",
+      "message": "`fifty` is not an amount of money.",
+      "hint": "Write money as a string with a currency, like \"50.00 usd\".",
+      "file": "076-cel-minor-fifty.yaml",
+      "line": 9,
+      "column": 33,
+      "end_line": 9,
+      "end_column": 40,
+      "rule_id": "small-refunds",
+      "path": "rules[0].when",
+      "doc_url": "https://docs.deedglass.com/policies/errors/invalid_money"
+    }
+  ],
+  "warnings": []
+}

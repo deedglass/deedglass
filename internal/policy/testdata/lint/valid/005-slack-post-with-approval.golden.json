@@ -1,0 +1,11 @@
+{
+  "object": "policy_lint_result",
+  "file": "005-slack-post-with-approval.yaml",
+  "valid": true,
+  "name": "slack-post-with-approval",
+  "version_hash": "sha256:5f7525d3815a89f45770659d8c4b4c55db5d58a8a173ad2a28ec5f92c3ad96f2",
+  "rules": 3,
+  "budgets": 0,
+  "errors": [],
+  "warnings": []
+}

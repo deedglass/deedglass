@@ -1,0 +1,9 @@
+✕ 031-unknown-key-top.yaml:6:1 · unknown_key
+  Unknown key "owner" at the top level.
+
+    5 │   reason: No rule allows this action. Add a rule in Console › Policies to allow it.
+    6 │ owner: payments-team
+      │ ^^^^^
+  hint: Valid keys: deedglass, name, description, defaults, budgets and rules.
+
+✕ 1 error · 031-unknown-key-top.yaml was not accepted

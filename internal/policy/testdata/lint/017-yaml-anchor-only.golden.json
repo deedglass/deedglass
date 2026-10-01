@@ -1,0 +1,24 @@
+{
+  "object": "policy_lint_result",
+  "file": "017-yaml-anchor-only.yaml",
+  "valid": false,
+  "name": null,
+  "version_hash": null,
+  "rules": 0,
+  "budgets": 0,
+  "errors": [
+    {
+      "severity": "error",
+      "code": "yaml_alias",
+      "message": "Anchors and aliases (& and *) are not allowed in policies.",
+      "hint": "Repeat the value, so each rule reads on its own.",
+      "file": "017-yaml-anchor-only.yaml",
+      "line": 5,
+      "column": 11,
+      "end_line": 5,
+      "end_column": 19,
+      "doc_url": "https://docs.deedglass.com/policies/errors/yaml_alias"
+    }
+  ],
+  "warnings": []
+}

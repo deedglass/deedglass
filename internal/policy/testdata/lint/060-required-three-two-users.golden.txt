@@ -1,0 +1,8 @@
+✕ 060-required-three-two-users.yaml:13:17 · approvals_unsatisfiable
+  This rule needs 3 approvals but names only 2 people.
+
+   13 │       required: 3
+      │                 ^
+  hint: Lower required, or add people or a role to approvers.
+
+✕ 1 error · 060-required-three-two-users.yaml was not accepted

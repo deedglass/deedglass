@@ -1,0 +1,8 @@
+deedglass: policy/v1
+name: description-as-list
+description:
+  - Reads run freely.
+  - Writes wait for a person.
+defaults:
+  decision: deny
+  reason: No rule allows this action. Add a rule in Console › Policies to allow it.

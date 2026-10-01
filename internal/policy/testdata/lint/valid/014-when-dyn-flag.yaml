@@ -1,0 +1,10 @@
+deedglass: policy/v1
+name: when-dyn-flag
+defaults:
+  decision: deny
+  reason: No rule allows this action. Add a rule in Console › Policies to allow it.
+rules:
+  - id: dry-runs-are-fine
+    match: { tool: "billing.*" }
+    when: args.flag
+    decision: allow

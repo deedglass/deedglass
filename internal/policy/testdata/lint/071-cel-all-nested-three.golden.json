@@ -1,0 +1,26 @@
+{
+  "object": "policy_lint_result",
+  "file": "071-cel-all-nested-three.yaml",
+  "valid": false,
+  "name": "cel-all-nested-three",
+  "version_hash": null,
+  "rules": 1,
+  "budgets": 0,
+  "errors": [
+    {
+      "severity": "error",
+      "code": "cel_nesting",
+      "message": "Comprehensions are nested 3 deep; the limit is 2.",
+      "hint": "Flatten the condition, or split it into two rules.",
+      "file": "071-cel-all-nested-three.yaml",
+      "line": 9,
+      "column": 52,
+      "end_line": 9,
+      "end_column": 55,
+      "rule_id": "no-gift-items",
+      "path": "rules[0].when",
+      "doc_url": "https://docs.deedglass.com/policies/errors/cel_nesting"
+    }
+  ],
+  "warnings": []
+}

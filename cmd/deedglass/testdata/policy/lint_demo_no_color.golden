@@ -1,0 +1,33 @@
+exit 1
+--- stdout
+✕ testdata/policy/refunds.yaml:9:5 · unknown_key
+  Unknown key "desicion" in rule "cap-refunds".
+
+    8 │   - id: cap-refunds
+    9 │     desicion: deny
+      │     ^^^^^^^^
+  hint: Did you mean "decision"?
+
+✕ testdata/policy/refunds.yaml:14:26 · cel_type
+  args.amount <= "5000" compares a number with a string.
+
+   14 │     when: args.amount <= "5000"
+      │                          ^^^^^^
+  hint: Compare numbers with numbers: args.amount <= 5000 (minor units, so 5000 is $50.00).
+
+✕ testdata/policy/refunds.yaml:21:11 · yaml_tag
+  !sql.multi is read by YAML as a tag, not as CEL.
+
+   21 │     when: !sql.multi
+      │           ^^^^^^^^^^
+  hint: Quote the expression: when: '!sql.multi'
+
+○ testdata/policy/refunds.yaml:29:5 · rule_unreachable
+  Rule "allow-small" can never match: rule "allow-all-stripe" (line 23) matches everything it does and has no when.
+
+   29 │   - id: allow-small
+      │     ^^^^^^^^^^^^^^^
+  hint: Move rule "allow-small" above rule "allow-all-stripe", or narrow rule "allow-all-stripe".
+
+✕ 3 errors · ○ 1 warning · testdata/policy/refunds.yaml was not accepted
+--- stderr

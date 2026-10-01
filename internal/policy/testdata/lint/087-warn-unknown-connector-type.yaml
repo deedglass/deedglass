@@ -1,0 +1,9 @@
+deedglass: policy/v1
+name: warn-unknown-connector-type
+defaults:
+  decision: deny
+  reason: No rule allows this action. Add a rule in Console › Policies to allow it.
+rules:
+  - id: allow-reads
+    match: { connector_type: postgress, side_effect: read }
+    decision: allow

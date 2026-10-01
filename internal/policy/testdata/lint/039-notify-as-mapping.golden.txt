@@ -1,0 +1,8 @@
+✕ 039-notify-as-mapping.yaml:11:13 · wrong_type
+  notify must be a value or a list of values; found a mapping.
+
+   11 │     notify: { slack: "#payments-alerts" }
+      │             ^
+  hint: Write a channel or a list of them, like notify: [slack, email]
+
+✕ 1 error · 039-notify-as-mapping.yaml was not accepted

@@ -1,0 +1,26 @@
+{
+  "object": "policy_lint_result",
+  "file": "072-cel-cost-bomb.yaml",
+  "valid": false,
+  "name": "cel-cost-bomb",
+  "version_hash": null,
+  "rules": 1,
+  "budgets": 0,
+  "errors": [
+    {
+      "severity": "error",
+      "code": "cel_cost",
+      "message": "This condition could cost up to 27,819,776,003 units per call; the limit is 100,000.",
+      "hint": "Iterate a smaller list (sql.tables has at most 64 entries), avoid a loop inside a loop over args, or split the rule.",
+      "file": "072-cel-cost-bomb.yaml",
+      "line": 9,
+      "column": 11,
+      "end_line": 9,
+      "end_column": 83,
+      "rule_id": "distinct-line-items",
+      "path": "rules[0].when",
+      "doc_url": "https://docs.deedglass.com/policies/errors/cel_cost"
+    }
+  ],
+  "warnings": []
+}

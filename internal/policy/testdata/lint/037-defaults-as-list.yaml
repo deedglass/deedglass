@@ -1,0 +1,5 @@
+deedglass: policy/v1
+name: defaults-as-list
+defaults:
+  - decision: deny
+  - reason: No rule allows this action. Add a rule in Console › Policies to allow it.

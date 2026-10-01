@@ -1,0 +1,8 @@
+○ 081-warn-unreachable-prefix.yaml:11:5 · rule_unreachable
+  Rule "allow-status-posts" can never match: rule "posts-need-approval" (line 7) matches everything it does and has no when.
+
+   11 │   - id: allow-status-posts
+      │     ^^^^^^^^^^^^^^^^^^^^^^
+  hint: Move rule "allow-status-posts" above rule "posts-need-approval", or narrow rule "posts-need-approval".
+
+✓ warn-unreachable-prefix · 2 rules · 0 budgets · sha256:1977…2153 · ○ 1 warning

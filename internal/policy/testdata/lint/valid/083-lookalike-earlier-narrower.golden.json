@@ -1,0 +1,11 @@
+{
+  "object": "policy_lint_result",
+  "file": "083-lookalike-earlier-narrower.yaml",
+  "valid": true,
+  "name": "lookalike-earlier-narrower",
+  "version_hash": "sha256:9451a45bb2aab75ca8969bef90c472cbb31f80a2afdf3e2a6d23b13b3f5b4e30",
+  "rules": 2,
+  "budgets": 0,
+  "errors": [],
+  "warnings": []
+}

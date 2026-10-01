@@ -1,0 +1,8 @@
+✕ 043-uppercase-rule-id.yaml:7:9 · invalid_id
+  Rule id "Block-Drop" is not a slug.
+
+    7 │   - id: Block-Drop
+      │         ^^^^^^^^^^
+  hint: Use lowercase letters, digits and dashes, starting with a letter, like block-drop.
+
+✕ 1 error · 043-uppercase-rule-id.yaml was not accepted

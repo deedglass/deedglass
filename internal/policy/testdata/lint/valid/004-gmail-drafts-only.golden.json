@@ -1,0 +1,11 @@
+{
+  "object": "policy_lint_result",
+  "file": "004-gmail-drafts-only.yaml",
+  "valid": true,
+  "name": "gmail-drafts-only",
+  "version_hash": "sha256:61598c14f520bb8add8392cc110e6f8addd5afcdb3ae5572ad4585a61ceb4360",
+  "rules": 3,
+  "budgets": 0,
+  "errors": [],
+  "warnings": []
+}

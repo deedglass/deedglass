@@ -1,0 +1,8 @@
+○ 080-warn-unreachable-identical.yaml:11:5 · rule_unreachable
+  Rule "merges-need-approval" can never match: rule "deny-merges" (line 7) matches everything it does and has no when.
+
+   11 │   - id: merges-need-approval
+      │     ^^^^^^^^^^^^^^^^^^^^^^^^
+  hint: Move rule "merges-need-approval" above rule "deny-merges", or narrow rule "deny-merges".
+
+✓ warn-unreachable-identical · 2 rules · 0 budgets · sha256:b3ce…913a · ○ 1 warning

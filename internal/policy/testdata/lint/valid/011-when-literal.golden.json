@@ -1,0 +1,11 @@
+{
+  "object": "policy_lint_result",
+  "file": "011-when-literal.yaml",
+  "valid": true,
+  "name": "when-literal",
+  "version_hash": "sha256:10931ad0382c33e1654fab7fee48dd03a4cbec4cf9b1c9c19e612fdd875e15ec",
+  "rules": 1,
+  "budgets": 0,
+  "errors": [],
+  "warnings": []
+}

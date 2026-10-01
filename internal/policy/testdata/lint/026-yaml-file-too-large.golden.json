@@ -1,0 +1,22 @@
+{
+  "object": "policy_lint_result",
+  "file": "026-yaml-file-too-large.yaml",
+  "valid": false,
+  "name": null,
+  "version_hash": null,
+  "rules": 0,
+  "budgets": 0,
+  "errors": [
+    {
+      "severity": "error",
+      "code": "file_too_large",
+      "message": "This policy is 257 KiB; the limit is 256 KiB.",
+      "hint": "Split it into smaller policies, or replace repeated rules with globs.",
+      "file": "026-yaml-file-too-large.yaml",
+      "line": 0,
+      "column": 0,
+      "doc_url": "https://docs.deedglass.com/policies/errors/file_too_large"
+    }
+  ],
+  "warnings": []
+}

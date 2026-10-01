@@ -1,0 +1,26 @@
+{
+  "object": "policy_lint_result",
+  "file": "065-cel-single-equals.yaml",
+  "valid": false,
+  "name": "cel-single-equals",
+  "version_hash": null,
+  "rules": 1,
+  "budgets": 0,
+  "errors": [
+    {
+      "severity": "error",
+      "code": "cel_syntax",
+      "message": "Syntax error in `when`: unexpected token '='.",
+      "hint": "Compare with `==`.",
+      "file": "065-cel-single-equals.yaml",
+      "line": 9,
+      "column": 47,
+      "end_line": 9,
+      "end_column": 48,
+      "rule_id": "usd-refunds",
+      "path": "rules[0].when",
+      "doc_url": "https://docs.deedglass.com/policies/errors/cel_syntax"
+    }
+  ],
+  "warnings": []
+}

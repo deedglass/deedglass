@@ -1,0 +1,24 @@
+{
+  "object": "policy_lint_result",
+  "file": "035-missing-decision.yaml",
+  "valid": false,
+  "name": "missing-decision",
+  "version_hash": null,
+  "rules": 1,
+  "budgets": 0,
+  "errors": [
+    {
+      "severity": "error",
+      "code": "missing_key",
+      "message": "Rule \"small-refunds\" has no `decision`.",
+      "hint": "Add `decision: allow`, `deny` or `require_approval`.",
+      "file": "035-missing-decision.yaml",
+      "line": 7,
+      "column": 5,
+      "rule_id": "small-refunds",
+      "path": "rules[0].decision",
+      "doc_url": "https://docs.deedglass.com/policies/errors/missing_key"
+    }
+  ],
+  "warnings": []
+}

@@ -1,0 +1,8 @@
+✕ 028-no-marker.yaml:1:1 · missing_marker
+  This file has no deedglass: policy/v1 marker.
+
+    1 │ name: no-marker
+      │ ^
+  hint: Add deedglass: policy/v1 as the first line.
+
+✕ 1 error · 028-no-marker.yaml was not accepted

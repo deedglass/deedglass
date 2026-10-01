@@ -1,0 +1,8 @@
+✕ 037-defaults-as-list.yaml:3:1 · wrong_type
+  defaults must be a mapping with decision and reason; found a list.
+
+    3 │ defaults:
+      │ ^^^^^^^^
+  hint: Write defaults: as a mapping with decision: and reason: on their own lines.
+
+✕ 1 error · 037-defaults-as-list.yaml was not accepted

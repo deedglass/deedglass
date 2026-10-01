@@ -1,0 +1,10 @@
+deedglass: policy/v1
+name: cel-undeclared-requst
+defaults:
+  decision: deny
+  reason: No rule allows this action. Add a rule in Console › Policies to allow it.
+rules:
+  - id: proxy-refunds
+    match: { tool: stripe.create_refund }
+    when: "tool.connector_type == \"stripe\" && requst.mode == \"proxy\""
+    decision: allow

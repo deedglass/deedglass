@@ -1,0 +1,8 @@
+✕ 046-id-shared-budget-rule.yaml:12:9 · duplicate_id
+  Id "refunds" is already used by the budget on line 7.
+
+   12 │   - id: refunds
+      │         ^^^^^^^
+  hint: Budgets and rules share one set of ids; rename one of them.
+
+✕ 1 error · 046-id-shared-budget-rule.yaml was not accepted

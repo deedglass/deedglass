@@ -1,0 +1,26 @@
+{
+  "object": "policy_lint_result",
+  "file": "085-warn-approval-on-deny.yaml",
+  "valid": true,
+  "name": "warn-approval-on-deny",
+  "version_hash": "sha256:c78b526c67bfbb5a6f9c284854390e7fd7f1b2bbc01ddc24eb765457abf65b23",
+  "rules": 1,
+  "budgets": 0,
+  "errors": [],
+  "warnings": [
+    {
+      "severity": "warning",
+      "code": "ignored_field",
+      "message": "`approval` is ignored because the decision is deny.",
+      "hint": "Remove it, or change the decision to require_approval.",
+      "file": "085-warn-approval-on-deny.yaml",
+      "line": 11,
+      "column": 5,
+      "end_line": 11,
+      "end_column": 13,
+      "rule_id": "deny-payouts",
+      "path": "rules[0].approval",
+      "doc_url": "https://docs.deedglass.com/policies/errors/ignored_field"
+    }
+  ]
+}

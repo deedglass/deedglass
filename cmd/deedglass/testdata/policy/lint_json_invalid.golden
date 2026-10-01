@@ -1,0 +1,70 @@
+exit 1
+--- stdout
+{
+  "object": "policy_lint_result",
+  "file": "testdata/policy/refunds.yaml",
+  "valid": false,
+  "name": "refunds",
+  "version_hash": null,
+  "rules": 5,
+  "budgets": 0,
+  "errors": [
+    {
+      "severity": "error",
+      "code": "unknown_key",
+      "message": "Unknown key \"desicion\" in rule \"cap-refunds\".",
+      "hint": "Did you mean \"decision\"?",
+      "file": "testdata/policy/refunds.yaml",
+      "line": 9,
+      "column": 5,
+      "end_line": 9,
+      "end_column": 13,
+      "rule_id": "cap-refunds",
+      "path": "rules[0].desicion",
+      "doc_url": "https://docs.deedglass.com/policies/errors/unknown_key"
+    },
+    {
+      "severity": "error",
+      "code": "cel_type",
+      "message": "`args.amount <= \"5000\"` compares a number with a string.",
+      "hint": "Compare numbers with numbers: `args.amount <= 5000` (minor units, so 5000 is $50.00).",
+      "file": "testdata/policy/refunds.yaml",
+      "line": 14,
+      "column": 26,
+      "end_line": 14,
+      "end_column": 32,
+      "rule_id": "small-refunds",
+      "path": "rules[1].when",
+      "doc_url": "https://docs.deedglass.com/policies/errors/cel_type"
+    },
+    {
+      "severity": "error",
+      "code": "yaml_tag",
+      "message": "`!sql.multi` is read by YAML as a tag, not as CEL.",
+      "hint": "Quote the expression: `when: '!sql.multi'`.",
+      "file": "testdata/policy/refunds.yaml",
+      "line": 21,
+      "column": 11,
+      "end_line": 21,
+      "end_column": 21,
+      "doc_url": "https://docs.deedglass.com/policies/errors/yaml_tag"
+    }
+  ],
+  "warnings": [
+    {
+      "severity": "warning",
+      "code": "rule_unreachable",
+      "message": "Rule \"allow-small\" can never match: rule \"allow-all-stripe\" (line 23) matches everything it does and has no `when`.",
+      "hint": "Move rule \"allow-small\" above rule \"allow-all-stripe\", or narrow rule \"allow-all-stripe\".",
+      "file": "testdata/policy/refunds.yaml",
+      "line": 29,
+      "column": 5,
+      "end_line": 29,
+      "end_column": 20,
+      "rule_id": "allow-small",
+      "path": "rules[4]",
+      "doc_url": "https://docs.deedglass.com/policies/errors/rule_unreachable"
+    }
+  ]
+}
+--- stderr

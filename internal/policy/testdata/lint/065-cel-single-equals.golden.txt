@@ -1,0 +1,8 @@
+✕ 065-cel-single-equals.yaml:9:47 · cel_syntax
+  Syntax error in when: unexpected token '='.
+
+    9 │     when: has(args.currency) && args.currency = "usd"
+      │                                               ^
+  hint: Compare with ==
+
+✕ 1 error · 065-cel-single-equals.yaml was not accepted

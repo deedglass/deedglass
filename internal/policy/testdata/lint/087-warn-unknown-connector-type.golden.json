@@ -1,0 +1,26 @@
+{
+  "object": "policy_lint_result",
+  "file": "087-warn-unknown-connector-type.yaml",
+  "valid": true,
+  "name": "warn-unknown-connector-type",
+  "version_hash": "sha256:3cffcb38270cd6418d6f37454279022fde697a658a5a028537c890741e3ac5ad",
+  "rules": 1,
+  "budgets": 0,
+  "errors": [],
+  "warnings": [
+    {
+      "severity": "warning",
+      "code": "unknown_connector_type",
+      "message": "`postgress` is not a known connector type.",
+      "hint": "Did you mean `postgres`?",
+      "file": "087-warn-unknown-connector-type.yaml",
+      "line": 8,
+      "column": 30,
+      "end_line": 8,
+      "end_column": 39,
+      "rule_id": "allow-reads",
+      "path": "rules[0].match.connector_type",
+      "doc_url": "https://docs.deedglass.com/policies/errors/unknown_connector_type"
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+✕ 078-cel-measure-returns-bool.yaml:11:14 · cel_not_int
+  measure must be a whole number of minor units; this expression returns true or false.
+
+   11 │     measure: args.amount > 0
+      │              ^^^^^^^^^^^^^^^
+  hint: Return an int, like args.amount, or guard it: has(args.amount) ? args.amount : 0
+
+✕ 1 error · 078-cel-measure-returns-bool.yaml was not accepted

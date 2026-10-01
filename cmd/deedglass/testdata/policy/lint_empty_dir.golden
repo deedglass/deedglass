@@ -1,0 +1,5 @@
+exit 2
+--- stdout
+--- stderr
+✕ testdata/intent has no .yaml or .yml policy files.
+  Point deedglass policy lint at a policy file or a directory of them.

@@ -1,0 +1,8 @@
+✕ 059-required-six.yaml:11:52 · out_of_range
+  required: 6 is out of range.
+
+   11 │     approval: { approvers: [role:admin], required: 6 }
+      │                                                    ^
+  hint: Use a number from 1 to 5.
+
+✕ 1 error · 059-required-six.yaml was not accepted

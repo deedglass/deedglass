@@ -1,0 +1,11 @@
+deedglass: policy/v1
+name: notify-as-mapping
+defaults:
+  decision: deny
+  reason: No rule allows this action. Add a rule in Console › Policies to allow it.
+rules:
+  - id: deny-sending
+    match: { tool: gmail.send_message }
+    decision: deny
+    reason: Agents write drafts only. Open the draft in Gmail to send it.
+    notify: { slack: "#payments-alerts" }

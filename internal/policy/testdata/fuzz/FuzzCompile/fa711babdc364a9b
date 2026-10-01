@@ -1,0 +1,2 @@
+go test fuzz v1
+[]byte("deedglass: policy/v1\nname: cel-single-equals\ndefaults:\n  decision: deny\n  reason: No rule allows this action. Add a rule in Console › Policies to allow it.\nrules:\n  - id: usd-refunds\n    match: { tool: stripe.create_refund }#000000000000000000000000000000000000000000000000000000\n    decision: allow ")

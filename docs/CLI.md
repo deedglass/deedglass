@@ -178,8 +178,8 @@ builds it. Hidden commands work but aren't in `deedglass help`.
 | `deedglass org keys revoke <key_…> [--org acme] [--reason …] [--json]` | Agents | Revoke an org admin key | built |
 | `deedglass org stop-all [--reason …] [--yes] [--json]` | Agents | Stop every agent in the org | built |
 | `deedglass org start-all [--org acme] --reason "why it's safe now" [--json]` | Agents | Start every agent not stopped one by one | built |
-| `deedglass policy lint` | Policies | Check a policy file | soon (S10) |
-| `deedglass policy fmt` | Policies | Format a policy file | soon (S10) |
+| `deedglass policy lint <file|dir|->... [--format text|json|github] [--voice] [--json]` | Policies | Check a policy file | built |
+| `deedglass policy fmt [-w] [--check] <file|dir|->... [--json]` | Policies | Format a policy file | built |
 | `deedglass policy test` | Policies | Run a policy's test cases | soon (S12) |
 | `deedglass policy push` | Policies | Upload a new policy version | soon (S12) |
 | `deedglass policy activate` | Policies | Activate a policy version | soon (S12) |
@@ -498,6 +498,99 @@ cross-check vector: the header ends in `.TQAgBevx…nqjJCA`.)
   `--nonce` for real calls: a nonce works once.
 - **`--json`** prints `{"object":"signed_intent","header","intent_hash","intent","args_digest","nonce","kid","expires_at"}`.
 
+## Policies: `policy lint` and `policy fmt`
+
+The policy language is specified in [POLICY_LANGUAGE.md](POLICY_LANGUAGE.md), and every diagnostic
+code has a section in [POLICY_ERRORS.md](POLICY_ERRORS.md). Both commands work offline: no config,
+database or server.
+
+### `deedglass policy lint <file|dir|->... [--format text|json|github] [--voice] [--json]`
+
+Compiles each policy and reports every problem in one pass, with the file, line and column, the
+source line with carets, and a hint.
+
+- **Inputs.** Files; directories, searched recursively for `*.yaml` and `*.yml` (test files named
+  `*.cases.yaml` are skipped); and `-` for stdin (shown as `stdin`).
+- **`--format text`** (the default). One file gives the full report; several files, or a
+  directory, give one line per file and a summary.
+- **`--format json`**, or `--json`: one `policy_lint_result` object per file (an array for several):
+  `{object, file, valid, name, version_hash, rules, budgets, errors[], warnings[]}`. S12's
+  `POST /v1/policies/lint` returns the same object.
+- **`--format github`**: one GitHub Actions workflow command per diagnostic,
+  `::error file=…,line=…,col=…::<code>: <message> <hint>` (warnings use `::warning`).
+- **`--voice`** adds the `reason_style` warning: reasons should start with a capital, end with a
+  period, have no exclamation mark and use none of the banned words. It is off by default, because
+  your reasons use your own domain words.
+- **Exit codes:** 0 when every file is valid (warnings allowed), 1 when any file has errors, 2 for a
+  usage error or a file that can't be read.
+
+```
+$ deedglass policy lint policies/postgres-safe.yaml
+✓ postgres-safe · 4 rules · 2 budgets · sha256:c666…2c9b
+
+$ deedglass policy lint refunds.yaml
+✕ refunds.yaml:9:5 · unknown_key
+  Unknown key "desicion" in rule "cap-refunds".
+
+    8 │   - id: cap-refunds
+    9 │     desicion: deny
+      │     ^^^^^^^^
+  hint: Did you mean "decision"?
+
+✕ refunds.yaml:14:26 · cel_type
+  args.amount <= "5000" compares a number with a string.
+
+   14 │     when: args.amount <= "5000"
+      │                          ^^^^^^
+  hint: Compare numbers with numbers: args.amount <= 5000 (minor units, so 5000 is $50.00).
+
+✕ refunds.yaml:21:11 · yaml_tag
+  !sql.multi is read by YAML as a tag, not as CEL.
+
+   21 │     when: !sql.multi
+      │           ^^^^^^^^^^
+  hint: Quote the expression: when: '!sql.multi'
+
+○ refunds.yaml:29:5 · rule_unreachable
+  Rule "allow-small" can never match: rule "allow-all-stripe" (line 23) matches everything it does and has no when.
+
+   29 │   - id: allow-small
+      │     ^^^^^^^^^^^^^^^
+  hint: Move rule "allow-small" above rule "allow-all-stripe", or narrow rule "allow-all-stripe".
+
+✕ 3 errors · ○ 1 warning · refunds.yaml was not accepted
+
+$ deedglass policy lint policies/
+✓ policies/postgres-safe.yaml · 4 rules · 2 budgets
+✕ policies/refunds.yaml · 3 errors · 1 warning
+✕ 1 of 2 files has errors · run deedglass policy lint policies/refunds.yaml for details
+```
+
+The demo file is `cmd/deedglass/testdata/policy/refunds.yaml`; its exact output is pinned in
+`cmd/deedglass/testdata/policy/lint_demo.golden`.
+
+### `deedglass policy fmt [-w] [--check] <file|dir|->... [--json]`
+
+Rewrites a valid policy into one layout and keeps every comment: canonical key order, two-space
+indentation, flow style for `match`, `approval` and short lists when they fit in 100 columns,
+lowercase currencies, and a folded block for a `when` over 80 characters
+([POLICY_LANGUAGE.md](POLICY_LANGUAGE.md) section 11). The result always has the same
+`version_hash` as the input; `fmt` checks that before it writes.
+
+- With one file and no flag, it prints the formatted policy. Several files need `-w` or `--check`.
+- **`-w`** writes each file that changes, in place (through a temporary file; the mode is kept).
+- **`--check`** writes nothing and lists the files that would change.
+- A file with errors is never formatted: `fmt` doesn't change meaning, and it can't check a file
+  that doesn't compile. Run `policy lint` on it.
+- **Exit codes:** 0 when everything is (or now is) formatted, 1 when `--check` finds a file to
+  change or a file has errors, 2 for a usage error.
+
+```
+$ deedglass policy fmt --check policies/
+○ policies/refunds.yaml would change · run deedglass policy fmt -w policies/refunds.yaml
+✕ 1 of 2 files needs formatting
+```
+
 ## What it doesn't do (yet)
 
 - The Ledger commands use the database directly; `--server`/`--api-key` (API mode) come with S09.
@@ -507,6 +600,9 @@ cross-check vector: the header ends in `.TQAgBevx…nqjJCA`.)
   `COLORFGBG` or `DEEDGLASS_THEME=light`. No image-protocol (iTerm2, Kitty) rendering yet.
 
 - No shell completion until S32 (`deedglass completion zsh|bash|fish`).
+- `policy lint` and `policy fmt` check and format files; storing, testing, activating and
+  evaluating policies come with S11 and S12. There is no language server; the Console editor (S26)
+  shows the same diagnostics inline.
 - Intent keys live in PEM files. `keygen` and `dev sign-intent` don't use an OS keychain, a KMS or
   an HSM; protect `.deedglass/intent/` like any other secret on the agent's machine.
 - `keys revoke` isn't built (planned; `docs/SEAL_KEYS.md`).

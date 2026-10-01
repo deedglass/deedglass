@@ -1,0 +1,24 @@
+{
+  "object": "policy_lint_result",
+  "file": "019-yaml-binary-tag.yaml",
+  "valid": false,
+  "name": "binary-tag",
+  "version_hash": null,
+  "rules": 0,
+  "budgets": 0,
+  "errors": [
+    {
+      "severity": "error",
+      "code": "yaml_tag",
+      "message": "`!!binary` is a YAML tag, and policies don't use tags.",
+      "hint": "Remove the tag; policies use plain YAML values.",
+      "file": "019-yaml-binary-tag.yaml",
+      "line": 3,
+      "column": 14,
+      "end_line": 3,
+      "end_column": 39,
+      "doc_url": "https://docs.deedglass.com/policies/errors/yaml_tag"
+    }
+  ],
+  "warnings": []
+}

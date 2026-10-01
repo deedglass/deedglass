@@ -1,0 +1,10 @@
+deedglass: policy/v1
+name: reason-281-chars
+defaults:
+  decision: deny
+  reason: No rule allows this action. Add a rule in Console › Policies to allow it.
+rules:
+  - id: large-refunds-need-approval
+    match: { tool: stripe.create_refund }
+    decision: require_approval
+    reason: Refunds above the daily limit wait for a person on the payments team, who checks the order, the customer history and the reason the agent gave before approving the refund in Console › Approvals. Add the order number and a short note to the request, so the reviewer can decide fast.

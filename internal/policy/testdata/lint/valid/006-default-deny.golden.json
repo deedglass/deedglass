@@ -1,0 +1,11 @@
+{
+  "object": "policy_lint_result",
+  "file": "006-default-deny.yaml",
+  "valid": true,
+  "name": "default-deny",
+  "version_hash": "sha256:e9e170cb4831ab4459cd8b0bd977ee1a083990be8cf22de2c7352a00949c5c6e",
+  "rules": 0,
+  "budgets": 0,
+  "errors": [],
+  "warnings": []
+}

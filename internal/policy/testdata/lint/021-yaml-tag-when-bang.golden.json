@@ -1,0 +1,24 @@
+{
+  "object": "policy_lint_result",
+  "file": "021-yaml-tag-when-bang.yaml",
+  "valid": false,
+  "name": "tag-when-bang",
+  "version_hash": null,
+  "rules": 1,
+  "budgets": 0,
+  "errors": [
+    {
+      "severity": "error",
+      "code": "yaml_tag",
+      "message": "`!sql.multi` is read by YAML as a tag, not as CEL.",
+      "hint": "Quote the expression: `when: '!sql.multi'`.",
+      "file": "021-yaml-tag-when-bang.yaml",
+      "line": 9,
+      "column": 11,
+      "end_line": 9,
+      "end_column": 21,
+      "doc_url": "https://docs.deedglass.com/policies/errors/yaml_tag"
+    }
+  ],
+  "warnings": []
+}

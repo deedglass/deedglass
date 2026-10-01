@@ -1,0 +1,8 @@
+○ 087-warn-unknown-connector-type.yaml:8:30 · unknown_connector_type
+  postgress is not a known connector type.
+
+    8 │     match: { connector_type: postgress, side_effect: read }
+      │                              ^^^^^^^^^
+  hint: Did you mean postgres?
+
+✓ warn-unknown-connector-type · 1 rule · 0 budgets · sha256:3cff…c5ad · ○ 1 warning

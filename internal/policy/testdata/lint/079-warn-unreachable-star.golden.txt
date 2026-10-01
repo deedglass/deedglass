@@ -1,0 +1,8 @@
+○ 079-warn-unreachable-star.yaml:11:5 · rule_unreachable
+  Rule "allow-refund-reads" can never match: rule "everything-needs-approval" (line 7) matches everything it does and has no when.
+
+   11 │   - id: allow-refund-reads
+      │     ^^^^^^^^^^^^^^^^^^^^^^
+  hint: Move rule "allow-refund-reads" above rule "everything-needs-approval", or narrow rule "everything-needs-approval".
+
+✓ warn-unreachable-star · 2 rules · 0 budgets · sha256:704d…d823 · ○ 1 warning

@@ -1,0 +1,26 @@
+{
+  "object": "policy_lint_result",
+  "file": "050-bad-glob-bracket.yaml",
+  "valid": false,
+  "name": "bad-glob-bracket",
+  "version_hash": null,
+  "rules": 1,
+  "budgets": 0,
+  "errors": [
+    {
+      "severity": "error",
+      "code": "invalid_glob",
+      "message": "`postgres.[x]` is not a valid pattern.",
+      "hint": "Patterns use `*` and `?` only, with letters, digits and _ . : -.",
+      "file": "050-bad-glob-bracket.yaml",
+      "line": 8,
+      "column": 20,
+      "end_line": 8,
+      "end_column": 34,
+      "rule_id": "allow-reads",
+      "path": "rules[0].match.tool",
+      "doc_url": "https://docs.deedglass.com/policies/errors/invalid_glob"
+    }
+  ],
+  "warnings": []
+}

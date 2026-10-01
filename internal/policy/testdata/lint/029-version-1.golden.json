@@ -1,0 +1,25 @@
+{
+  "object": "policy_lint_result",
+  "file": "029-version-1.yaml",
+  "valid": false,
+  "name": "version-one",
+  "version_hash": null,
+  "rules": 0,
+  "budgets": 0,
+  "errors": [
+    {
+      "severity": "error",
+      "code": "unknown_key",
+      "message": "Unknown key \"version\" at the top level.",
+      "hint": "Use `deedglass: policy/v1` as the first key. `version` is the number the API gives each saved version.",
+      "file": "029-version-1.yaml",
+      "line": 1,
+      "column": 1,
+      "end_line": 1,
+      "end_column": 8,
+      "path": "version",
+      "doc_url": "https://docs.deedglass.com/policies/errors/unknown_key"
+    }
+  ],
+  "warnings": []
+}

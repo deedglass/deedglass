@@ -1,0 +1,8 @@
+✕ 062-nul-byte-in-description.yaml:3:30 · control_character
+  Line 3 contains a control character (U+0000).
+
+    3 │ description: Refunds for Acme� support.
+      │                              ^
+  hint: Remove it. It can make text display differently from what it says.
+
+✕ 1 error · 062-nul-byte-in-description.yaml was not accepted

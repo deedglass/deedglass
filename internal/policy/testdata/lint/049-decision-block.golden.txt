@@ -1,0 +1,8 @@
+✕ 049-decision-block.yaml:10:15 · invalid_decision
+  block is not a decision.
+
+   10 │     decision: block
+      │               ^^^^^
+  hint: Did you mean deny? Decisions are allow, deny and require_approval.
+
+✕ 1 error · 049-decision-block.yaml was not accepted

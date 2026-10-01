@@ -1,0 +1,26 @@
+{
+  "object": "policy_lint_result",
+  "file": "060-required-three-two-users.yaml",
+  "valid": false,
+  "name": "required-three-two-users",
+  "version_hash": null,
+  "rules": 1,
+  "budgets": 0,
+  "errors": [
+    {
+      "severity": "error",
+      "code": "approvals_unsatisfiable",
+      "message": "This rule needs 3 approvals but names only 2 people.",
+      "hint": "Lower `required`, or add people or a role to `approvers`.",
+      "file": "060-required-three-two-users.yaml",
+      "line": 13,
+      "column": 17,
+      "end_line": 13,
+      "end_column": 18,
+      "rule_id": "payouts-need-approval",
+      "path": "rules[0].approval",
+      "doc_url": "https://docs.deedglass.com/policies/errors/approvals_unsatisfiable"
+    }
+  ],
+  "warnings": []
+}

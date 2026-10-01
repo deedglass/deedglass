@@ -1,0 +1,24 @@
+{
+  "object": "policy_lint_result",
+  "file": "018-yaml-merge-key.yaml",
+  "valid": false,
+  "name": null,
+  "version_hash": null,
+  "rules": 0,
+  "budgets": 0,
+  "errors": [
+    {
+      "severity": "error",
+      "code": "yaml_merge_key",
+      "message": "Merge keys (<<) are not allowed in policies.",
+      "hint": "Repeat the keys, so each rule reads on its own.",
+      "file": "018-yaml-merge-key.yaml",
+      "line": 9,
+      "column": 5,
+      "end_line": 9,
+      "end_column": 7,
+      "doc_url": "https://docs.deedglass.com/policies/errors/yaml_merge_key"
+    }
+  ],
+  "warnings": []
+}

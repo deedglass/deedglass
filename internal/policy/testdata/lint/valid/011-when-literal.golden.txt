@@ -1,0 +1,1 @@
+✓ when-literal · 1 rule · 0 budgets · sha256:1093…15ec

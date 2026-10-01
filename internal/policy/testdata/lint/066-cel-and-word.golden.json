@@ -1,0 +1,26 @@
+{
+  "object": "policy_lint_result",
+  "file": "066-cel-and-word.yaml",
+  "valid": false,
+  "name": "cel-and-word",
+  "version_hash": null,
+  "rules": 1,
+  "budgets": 0,
+  "errors": [
+    {
+      "severity": "error",
+      "code": "cel_syntax",
+      "message": "Syntax error in `when`: `and` is not an operator in CEL.",
+      "hint": "Write `&&` instead of `and`.",
+      "file": "066-cel-and-word.yaml",
+      "line": 9,
+      "column": 22,
+      "end_line": 9,
+      "end_column": 25,
+      "rule_id": "deny-multi-writes",
+      "path": "rules[0].when",
+      "doc_url": "https://docs.deedglass.com/policies/errors/cel_syntax"
+    }
+  ],
+  "warnings": []
+}

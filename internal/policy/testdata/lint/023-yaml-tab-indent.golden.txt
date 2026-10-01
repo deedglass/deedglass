@@ -1,0 +1,15 @@
+✕ 023-yaml-tab-indent.yaml:4:1 · yaml_tab_indent
+  Line 4 is indented with a tab.
+
+    4 │  decision: deny
+      │ ^
+  hint: Use spaces; YAML does not allow tabs for indentation.
+
+✕ 023-yaml-tab-indent.yaml:5:1 · yaml_tab_indent
+  Line 5 is indented with a tab.
+
+    5 │  reason: No rule allows this action.
+      │ ^
+  hint: Use spaces; YAML does not allow tabs for indentation.
+
+✕ 2 errors · 023-yaml-tab-indent.yaml was not accepted

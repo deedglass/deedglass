@@ -1,0 +1,11 @@
+deedglass: policy/v1
+name: cel-and-word
+defaults:
+  decision: deny
+  reason: No rule allows this action. Add a rule in Console › Policies to allow it.
+rules:
+  - id: deny-multi-writes
+    match: { tool: "postgres.*" }
+    when: 'sql.multi and sql.writes'
+    decision: deny
+    reason: Several writes in one call never run. Send each statement on its own.

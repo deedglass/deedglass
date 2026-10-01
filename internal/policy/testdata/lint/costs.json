@@ -1,0 +1,44 @@
+{
+  "valid/001-postgres-safe.yaml": {
+    "allow-listed-tables": 1031,
+    "allow-reads": 6,
+    "deny-ambiguous-sql": 7,
+    "deny-copy-program": 2,
+    "deny-ddl": 19,
+    "deny-do-blocks": 1026,
+    "deny-multi-statement": 2,
+    "deny-unbounded-writes": 2,
+    "writes-need-approval": 2
+  },
+  "valid/002-stripe-refunds.yaml": {
+    "refund-spend-per-day": 2,
+    "small-refunds": 15
+  },
+  "valid/003-github-read-mostly.yaml": {
+    "pr-to-main-needs-approval": 3,
+    "push-to-main-needs-approval": 3
+  },
+  "valid/008-every-field.yaml": {
+    "block-destructive-sql": 14,
+    "large-refunds-need-approval": 13,
+    "refunds-per-hour": 4
+  },
+  "valid/010-when-folded-strip.yaml": {
+    "business-hours-refunds": 38
+  },
+  "valid/011-when-literal.yaml": {
+    "support-notes-only": 19
+  },
+  "valid/013-crlf.yaml": {
+    "small-refunds": 15
+  },
+  "valid/014-when-dyn-flag.yaml": {
+    "dry-runs-are-fine": 2
+  },
+  "valid/015-measure-dyn-ternary.yaml": {
+    "payouts-per-day": 111
+  },
+  "valid/082-lookalike-earlier-has-when.yaml": {
+    "large-refunds-need-approval": 15
+  }
+}

@@ -1,0 +1,9 @@
+deedglass: policy/v1
+name: unknown-key-rule
+defaults:
+  decision: deny
+  reason: No rule allows this action. Add a rule in Console › Policies to allow it.
+rules:
+  - id: small-refunds
+    tool: stripe.create_refund
+    decision: allow

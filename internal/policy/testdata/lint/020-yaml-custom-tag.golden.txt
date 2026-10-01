@@ -1,0 +1,8 @@
+✕ 020-yaml-custom-tag.yaml:3:14 · yaml_tag
+  !custom is a YAML tag, and policies don't use tags.
+
+    3 │ description: !custom Acme refunds
+      │              ^^^^^^^^^^^^^^^^^^^^
+  hint: Quote the value if the ! is part of it: '!custom Acme refunds'
+
+✕ 1 error · 020-yaml-custom-tag.yaml was not accepted

@@ -1,0 +1,8 @@
+✕ 090-too-many-values.yaml:9:13 · too_many_values
+  tool lists 33 values; the limit is 32.
+
+    9 │       tool: [svc1.read, svc2.read, svc3.read, svc4.read, svc5.read, svc6.read, svc7.read, svc8.read, svc9.read, svc10.re…
+      │             ^
+  hint: Use a glob, or split the rule.
+
+✕ 1 error · 090-too-many-values.yaml was not accepted

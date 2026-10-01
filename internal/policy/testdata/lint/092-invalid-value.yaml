@@ -1,0 +1,9 @@
+deedglass: policy/v1
+name: invalid-value
+defaults:
+  decision: deny
+  reason: No rule allows this action. Add a rule in Console › Policies to allow it.
+budgets:
+  - id: weekly-calls
+    window: week
+    max_calls: 1000

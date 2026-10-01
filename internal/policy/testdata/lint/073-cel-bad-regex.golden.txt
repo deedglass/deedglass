@@ -1,0 +1,8 @@
+✕ 073-cel-bad-regex.yaml:10:24 · cel_regex
+  The pattern in matches() is not valid RE2: missing closing ).
+
+   10 │       user.sub.matches("^acme-(ops|support")
+      │                        ^^^^^^^^^^^^^^^^^^^^
+  hint: Fix the pattern; RE2 has no backreferences or lookarounds.
+
+✕ 1 error · 073-cel-bad-regex.yaml was not accepted

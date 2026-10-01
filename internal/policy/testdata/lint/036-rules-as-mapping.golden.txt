@@ -1,0 +1,8 @@
+✕ 036-rules-as-mapping.yaml:6:1 · wrong_type
+  rules must be a list; found a mapping.
+
+    6 │ rules:
+      │ ^^^^^
+  hint: Write each rule as a list item that starts with - id:
+
+✕ 1 error · 036-rules-as-mapping.yaml was not accepted

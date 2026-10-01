@@ -1,0 +1,13 @@
+deedglass: policy/v1
+name: required-three-two-users
+defaults:
+  decision: deny
+  reason: No rule allows this action. Add a rule in Console › Policies to allow it.
+rules:
+  - id: payouts-need-approval
+    match: { tool: stripe.create_payout }
+    decision: require_approval
+    reason: Payouts wait for three people. An admin can approve in Console › Approvals.
+    approval:
+      approvers: ["user:priya@acme.com", "user:maya@acme.com"]
+      required: 3

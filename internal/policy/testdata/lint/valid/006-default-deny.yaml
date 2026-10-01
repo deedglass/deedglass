@@ -1,0 +1,9 @@
+# Start here: nothing runs until a rule allows it.
+deedglass: policy/v1
+name: default-deny
+description: Nothing runs until a rule allows it.
+defaults:
+  decision: deny
+  reason: No rule allows this action. Add a rule in Console › Policies to allow it.
+  notify: [email]
+rules: []

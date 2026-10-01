@@ -1,0 +1,26 @@
+{
+  "object": "policy_lint_result",
+  "file": "067-cel-undeclared-requst.yaml",
+  "valid": false,
+  "name": "cel-undeclared-requst",
+  "version_hash": null,
+  "rules": 1,
+  "budgets": 0,
+  "errors": [
+    {
+      "severity": "error",
+      "code": "cel_undeclared",
+      "message": "Unknown name \"requst\".",
+      "hint": "Did you mean \"request\"? Available: tool, args, request, sql, agent, user, session, org, time, usage and anomaly.",
+      "file": "067-cel-undeclared-requst.yaml",
+      "line": 9,
+      "column": 49,
+      "end_line": 9,
+      "end_column": 55,
+      "rule_id": "proxy-refunds",
+      "path": "rules[0].when",
+      "doc_url": "https://docs.deedglass.com/policies/errors/cel_undeclared"
+    }
+  ],
+  "warnings": []
+}

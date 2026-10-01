@@ -1,0 +1,8 @@
+✕ 066-cel-and-word.yaml:9:22 · cel_syntax
+  Syntax error in when: and is not an operator in CEL.
+
+    9 │     when: 'sql.multi and sql.writes'
+      │                      ^^^
+  hint: Write && instead of and.
+
+✕ 1 error · 066-cel-and-word.yaml was not accepted

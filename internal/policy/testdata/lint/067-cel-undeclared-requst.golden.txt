@@ -1,0 +1,8 @@
+✕ 067-cel-undeclared-requst.yaml:9:49 · cel_undeclared
+  Unknown name "requst".
+
+    9 │     when: "tool.connector_type == \"stripe\" && requst.mode == \"proxy\""
+      │                                                 ^^^^^^
+  hint: Did you mean "request"? Available: tool, args, request, sql, agent, user, session, org, time, usage and anomaly.
+
+✕ 1 error · 067-cel-undeclared-requst.yaml was not accepted

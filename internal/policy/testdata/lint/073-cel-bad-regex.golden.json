@@ -1,0 +1,26 @@
+{
+  "object": "policy_lint_result",
+  "file": "073-cel-bad-regex.yaml",
+  "valid": false,
+  "name": "cel-bad-regex",
+  "version_hash": null,
+  "rules": 1,
+  "budgets": 0,
+  "errors": [
+    {
+      "severity": "error",
+      "code": "cel_regex",
+      "message": "The pattern in `matches()` is not valid RE2: missing closing ).",
+      "hint": "Fix the pattern; RE2 has no backreferences or lookarounds.",
+      "file": "073-cel-bad-regex.yaml",
+      "line": 10,
+      "column": 24,
+      "end_line": 10,
+      "end_column": 44,
+      "rule_id": "support-users",
+      "path": "rules[0].when",
+      "doc_url": "https://docs.deedglass.com/policies/errors/cel_regex"
+    }
+  ],
+  "warnings": []
+}

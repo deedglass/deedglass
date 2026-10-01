@@ -1,0 +1,56 @@
+deedglass: policy/v1
+name: every-field
+description: "Uses every field of policy/v1.\tTabs are allowed in descriptions."
+defaults:
+  decision: deny
+  reason: No rule allows this action. Add a rule in Console › Policies to allow it.
+  verify: L1
+  approval:
+    approvers: [role:owner, role:admin]
+    required: 2
+    expires_in: 1d
+  notify: [email, webhook]
+budgets:
+  - id: agent-rate
+    description: Each support agent makes at most 60 calls a minute.
+    match:
+      tool: ["*"]
+      connector_type: [stripe, postgres, mcp_http]
+      side_effect: [read, write, destructive, unknown]
+      agent: ["support-*", agt_01jx7m2k9p4q6r8s0t3v5w7y9z]
+      labels: { env: prod, team: support }
+    per: agent
+    window: minute
+    max_calls: 60
+  - id: refunds-per-hour
+    match: { tool: stripe.create_refund }
+    per: org
+    window: hour
+    max_spend: "1000.00 USD"
+    measure: 'has(args.amount) ? args.amount : 0'
+rules:
+  - id: block-destructive-sql
+    description: DROP and TRUNCATE never run through agents.
+    match:
+      tool: "postgres.*"
+      connector_type: postgres
+      side_effect: [write, destructive]
+      agent: ["support-*"]
+      labels: { env: prod }
+    when: sql.kind in ["drop", "truncate"]
+    decision: deny
+    reason: DROP and TRUNCATE are never allowed for agents.
+    notify: [slack, email]
+  - id: large-refunds-need-approval
+    description: Refunds above $50.00 need two people.
+    match: { tool: stripe.create_refund, agent: agt_01jx7m2k9p4q6r8s0t3v5w7y9z }
+    when: args.amount > minor("50.00 usd")
+    decision: require_approval
+    reason: Refunds over $50.00 wait for two people. An admin can approve in Console › Approvals.
+    approval: { approvers: [role:admin, "user:priya@acme.com"], required: 2, expires_in: 2h }
+    notify: [webhook]
+    verify: L2
+  - id: small-refunds
+    match: { tool: stripe.create_refund }
+    decision: allow
+    verify: L1

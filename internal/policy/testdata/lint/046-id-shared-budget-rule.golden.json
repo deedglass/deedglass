@@ -1,0 +1,25 @@
+{
+  "object": "policy_lint_result",
+  "file": "046-id-shared-budget-rule.yaml",
+  "valid": false,
+  "name": "id-shared-budget-rule",
+  "version_hash": null,
+  "rules": 1,
+  "budgets": 1,
+  "errors": [
+    {
+      "severity": "error",
+      "code": "duplicate_id",
+      "message": "Id \"refunds\" is already used by the budget on line 7.",
+      "hint": "Budgets and rules share one set of ids; rename one of them.",
+      "file": "046-id-shared-budget-rule.yaml",
+      "line": 12,
+      "column": 9,
+      "end_line": 12,
+      "end_column": 16,
+      "path": "rules[0].id",
+      "doc_url": "https://docs.deedglass.com/policies/errors/duplicate_id"
+    }
+  ],
+  "warnings": []
+}

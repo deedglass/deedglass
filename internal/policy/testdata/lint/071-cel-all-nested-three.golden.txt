@@ -1,0 +1,8 @@
+✕ 071-cel-all-nested-three.yaml:9:52 · cel_nesting
+  Comprehensions are nested 3 deep; the limit is 2.
+
+    9 │     when: args.orders.all(o, o.items.all(i, i.tags.all(t, t != "gift")))
+      │                                                    ^^^
+  hint: Flatten the condition, or split it into two rules.
+
+✕ 1 error · 071-cel-all-nested-three.yaml was not accepted

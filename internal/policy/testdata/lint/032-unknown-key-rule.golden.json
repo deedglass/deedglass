@@ -1,0 +1,26 @@
+{
+  "object": "policy_lint_result",
+  "file": "032-unknown-key-rule.yaml",
+  "valid": false,
+  "name": "unknown-key-rule",
+  "version_hash": null,
+  "rules": 1,
+  "budgets": 0,
+  "errors": [
+    {
+      "severity": "error",
+      "code": "unknown_key",
+      "message": "Unknown key \"tool\" in rule \"small-refunds\".",
+      "hint": "`tool` belongs inside `match:`.",
+      "file": "032-unknown-key-rule.yaml",
+      "line": 8,
+      "column": 5,
+      "end_line": 8,
+      "end_column": 9,
+      "rule_id": "small-refunds",
+      "path": "rules[0].tool",
+      "doc_url": "https://docs.deedglass.com/policies/errors/unknown_key"
+    }
+  ],
+  "warnings": []
+}

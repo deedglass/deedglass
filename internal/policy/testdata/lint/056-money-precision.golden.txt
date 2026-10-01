@@ -1,0 +1,8 @@
+✕ 056-money-precision.yaml:10:16 · money_precision
+  50.005 usd has more decimals than usd allows (2).
+
+   10 │     max_spend: "50.005 usd"
+      │                ^^^^^^^^^^^^
+  hint: Round it to 2 decimals, like "50.01 usd".
+
+✕ 1 error · 056-money-precision.yaml was not accepted

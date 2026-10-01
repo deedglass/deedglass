@@ -1,18 +1,26 @@
-// Package policy compiles policies written in YAML into CEL programs, evaluates actions against
-// them, tracks usage and budgets, and provides replay inputs (contract §6, ADR-017).
+// Package policy compiles policies written in YAML into CEL programs (S10), and will evaluate
+// actions against them (S11) and back stored versions (S12). Contract §6, ADR-017, and the spec in
+// docs/POLICY_LANGUAGE.md.
 //
 // Invariants:
-//   - Deterministic and side-effect free: the same input and policy version give the same decision.
-//   - Evaluation order: Stop, then budgets and rates, then rules (first match wins), then the default.
-//   - Decisions are allow, deny or require_approval; a shadow decision is recorded alongside.
-//   - Unknown tools are denied. A policy that doesn't compile never activates.
-//   - CEL runs in one declared environment with cost limits.
+//   - Compile is deterministic and never panics: the same bytes give the same diagnostics and the
+//     same version_hash; an internal failure becomes internal_compiler_error and nothing is accepted.
+//   - version_hash = "sha256:" + hex(sha256(JCS(normalized))): formatting, comments and key order
+//     never move it; any change in meaning does.
+//   - Hostile input is refused before it costs anything: 256 KiB, no anchors, aliases, merge keys or
+//     non-core tags, 50,000 nodes, depth 32, CEL parser and nesting limits, an estimated cost cap,
+//     constant regex and glob patterns.
+//   - Evaluation order (S11): Stop, then budgets, then rules (first match wins), then the default;
+//     an evaluation error never widens access.
+//   - One CEL environment per language version, with pinned extension versions; facts.go declares
+//     every field a condition can read.
 //   - Pure: no net/http, no database/sql, no store or httpx imports (internal/archtest).
 //
-// Planned API (finalized by S10–S12):
+// API:
 //
-//	func Compile(src []byte) (*Policy, []Diagnostic, error)            // deedglass policy lint
-//	func (p *Policy) Evaluate(in Input, usage Usage) Decision
+//	func Compile(src []byte, opts Options) (*Compiled, []Diagnostic) // deedglass policy lint
+//	func Lint(src []byte, opts Options) *LintResult                  // the policy_lint_result object
+//	func Format(src []byte) ([]byte, error)                           // deedglass policy fmt
 //
-// Filled by: S10 (compiler), S11 (evaluator, usage), S12 (activation, versions)
+// Filled by: S10 (language, compiler, lint, fmt), S11 (evaluator, usage), S12 (versions, activation).
 package policy

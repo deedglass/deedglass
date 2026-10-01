@@ -1,0 +1,8 @@
+✕ 018-yaml-merge-key.yaml:9:5 · yaml_merge_key
+  Merge keys (<<) are not allowed in policies.
+
+    9 │     <<: { decision: allow, verify: L1 }
+      │     ^^
+  hint: Repeat the keys, so each rule reads on its own.
+
+✕ 1 error · 018-yaml-merge-key.yaml was not accepted

@@ -1,0 +1,26 @@
+{
+  "object": "policy_lint_result",
+  "file": "053-expires-in-0m.yaml",
+  "valid": false,
+  "name": "expires-in-0m",
+  "version_hash": null,
+  "rules": 1,
+  "budgets": 0,
+  "errors": [
+    {
+      "severity": "error",
+      "code": "invalid_duration",
+      "message": "`expires_in: 0m` is shorter than 1m.",
+      "hint": "Use a number and one unit: 30m, 2h or 1d (from 1m to 7d).",
+      "file": "053-expires-in-0m.yaml",
+      "line": 11,
+      "column": 54,
+      "end_line": 11,
+      "end_column": 56,
+      "rule_id": "payouts-need-approval",
+      "path": "rules[0].approval.expires_in",
+      "doc_url": "https://docs.deedglass.com/policies/errors/invalid_duration"
+    }
+  ],
+  "warnings": []
+}

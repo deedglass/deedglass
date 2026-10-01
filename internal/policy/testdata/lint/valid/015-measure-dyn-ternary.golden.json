@@ -1,0 +1,11 @@
+{
+  "object": "policy_lint_result",
+  "file": "015-measure-dyn-ternary.yaml",
+  "valid": true,
+  "name": "measure-dyn-ternary",
+  "version_hash": "sha256:1c2c2dc67bb4209cd252b93a128c5f9c3da851ae38442aa9ec0aa592f4e88360",
+  "rules": 1,
+  "budgets": 1,
+  "errors": [],
+  "warnings": []
+}

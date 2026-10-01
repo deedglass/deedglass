@@ -1,0 +1,8 @@
+✕ 072-cel-cost-bomb.yaml:9:11 · cel_cost
+  This condition could cost up to 27,819,776,003 units per call; the limit is 100,000.
+
+    9 │     when: "args.items.all(a, args.items.all(b, a == b || string(a) != string(b)))"
+      │           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  hint: Iterate a smaller list (sql.tables has at most 64 entries), avoid a loop inside a loop over args, or split the rule.
+
+✕ 1 error · 072-cel-cost-bomb.yaml was not accepted

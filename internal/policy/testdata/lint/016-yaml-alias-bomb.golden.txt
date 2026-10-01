@@ -1,0 +1,8 @@
+✕ 016-yaml-alias-bomb.yaml:5:6 · yaml_alias
+  Anchors and aliases (& and *) are not allowed in policies.
+
+    5 │   a: &a ["Refunds wait for a person.", "Refunds wait for a person.", "Refunds wait for a person.", "Refunds wait for a p…
+      │      ^^
+  hint: Repeat the value, so each rule reads on its own.
+
+✕ 1 error · 016-yaml-alias-bomb.yaml was not accepted

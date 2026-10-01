@@ -1,0 +1,26 @@
+{
+  "object": "policy_lint_result",
+  "file": "090-too-many-values.yaml",
+  "valid": false,
+  "name": "too-many-values",
+  "version_hash": null,
+  "rules": 1,
+  "budgets": 0,
+  "errors": [
+    {
+      "severity": "error",
+      "code": "too_many_values",
+      "message": "`tool` lists 33 values; the limit is 32.",
+      "hint": "Use a glob, or split the rule.",
+      "file": "090-too-many-values.yaml",
+      "line": 9,
+      "column": 13,
+      "end_line": 9,
+      "end_column": 14,
+      "rule_id": "many-tools",
+      "path": "rules[0].match.tool",
+      "doc_url": "https://docs.deedglass.com/policies/errors/too_many_values"
+    }
+  ],
+  "warnings": []
+}

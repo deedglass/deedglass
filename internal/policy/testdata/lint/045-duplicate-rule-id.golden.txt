@@ -1,0 +1,8 @@
+✕ 045-duplicate-rule-id.yaml:11:9 · duplicate_id
+  Rule id "refunds" is used twice (first on line 7).
+
+   11 │   - id: refunds
+      │         ^^^^^^^
+  hint: Give each rule its own id.
+
+✕ 1 error · 045-duplicate-rule-id.yaml was not accepted

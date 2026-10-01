@@ -1,0 +1,9 @@
+✕ 034-unknown-key-approval.yaml:13:7 · unknown_key
+  Unknown key "timeout" in the approval of rule "payouts-need-approval".
+
+   12 │       approvers: [role:admin]
+   13 │       timeout: 2h
+      │       ^^^^^^^
+  hint: Valid keys: approvers, required and expires_in.
+
+✕ 1 error · 034-unknown-key-approval.yaml was not accepted

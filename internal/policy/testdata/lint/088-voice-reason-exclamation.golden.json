@@ -1,0 +1,24 @@
+{
+  "object": "policy_lint_result",
+  "file": "088-voice-reason-exclamation.yaml",
+  "valid": true,
+  "name": "voice-reason-exclamation",
+  "version_hash": "sha256:c382e97fab1cbaf667e26b2992846d651ddec940ec24b6a25b3c07fde9a75ed2",
+  "rules": 1,
+  "budgets": 0,
+  "errors": [],
+  "warnings": [
+    {
+      "severity": "warning",
+      "code": "reason_style",
+      "message": "This reason has an exclamation mark.",
+      "hint": "Say it calmly, without an exclamation mark.",
+      "file": "088-voice-reason-exclamation.yaml",
+      "line": 11,
+      "column": 13,
+      "rule_id": "deny-drop",
+      "path": "rules[0].reason",
+      "doc_url": "https://docs.deedglass.com/policies/errors/reason_style"
+    }
+  ]
+}

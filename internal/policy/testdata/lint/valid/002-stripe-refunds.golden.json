@@ -1,0 +1,11 @@
+{
+  "object": "policy_lint_result",
+  "file": "002-stripe-refunds.yaml",
+  "valid": true,
+  "name": "stripe-refunds",
+  "version_hash": "sha256:627298ec1b375aa820a2f57c45c925b67155f58faff9cfbe4e9efe0841f4921b",
+  "rules": 4,
+  "budgets": 1,
+  "errors": [],
+  "warnings": []
+}

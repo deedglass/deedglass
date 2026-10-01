@@ -1,0 +1,8 @@
+○ 085-warn-approval-on-deny.yaml:11:5 · ignored_field
+  approval is ignored because the decision is deny.
+
+   11 │     approval: { approvers: [role:admin], required: 1 }
+      │     ^^^^^^^^
+  hint: Remove it, or change the decision to require_approval.
+
+✓ warn-approval-on-deny · 1 rule · 0 budgets · sha256:c78b…5b23 · ○ 1 warning

@@ -1,0 +1,3 @@
+deedglass: policy/v1
+name: ab
+defaults: { decision: deny, reason: Nothing runs yet. }

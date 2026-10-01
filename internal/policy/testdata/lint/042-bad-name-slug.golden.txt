@@ -1,0 +1,8 @@
+✕ 042-bad-name-slug.yaml:2:7 · invalid_name
+  Policy name "Payments_Policy" is not a slug.
+
+    2 │ name: Payments_Policy
+      │       ^^^^^^^^^^^^^^^
+  hint: Use lowercase letters, digits and dashes, starting with a letter, like payments-policy.
+
+✕ 1 error · 042-bad-name-slug.yaml was not accepted

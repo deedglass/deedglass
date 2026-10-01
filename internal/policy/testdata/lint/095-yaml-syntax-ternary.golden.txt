@@ -1,0 +1,8 @@
+✕ 095-yaml-syntax-ternary.yaml:8:49 · yaml_syntax
+  The YAML could not be read: mapping values are not allowed.
+
+    8 │     when: has(args.amount) ? args.amount < 5000 : false
+      │                                                 ^
+  hint: Quote the expression or write it as a block (when: >-), because YAML reads a colon followed by a space as a new key.
+
+✕ 1 error · 095-yaml-syntax-ternary.yaml was not accepted

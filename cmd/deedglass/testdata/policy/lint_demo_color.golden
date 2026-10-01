@@ -1,0 +1,33 @@
+exit 1
+--- stdout
+[31m✕[0m testdata/policy/refunds.yaml:9:5 · unknown_key
+  Unknown key "desicion" in rule "cap-refunds".
+
+  [2m  8[0m [2m│[0m   - id: cap-refunds
+  [2m  9[0m [2m│[0m     desicion: deny
+      [2m│[0m     [31m^^^^^^^^[0m
+  [2mhint:[0m Did you mean "decision"?
+
+[31m✕[0m testdata/policy/refunds.yaml:14:26 · cel_type
+  args.amount <= "5000" compares a number with a string.
+
+  [2m 14[0m [2m│[0m     when: args.amount <= "5000"
+      [2m│[0m                          [31m^^^^^^[0m
+  [2mhint:[0m Compare numbers with numbers: args.amount <= 5000 (minor units, so 5000 is $50.00).
+
+[31m✕[0m testdata/policy/refunds.yaml:21:11 · yaml_tag
+  !sql.multi is read by YAML as a tag, not as CEL.
+
+  [2m 21[0m [2m│[0m     when: !sql.multi
+      [2m│[0m           [31m^^^^^^^^^^[0m
+  [2mhint:[0m Quote the expression: when: '!sql.multi'
+
+[33m○[0m testdata/policy/refunds.yaml:29:5 · rule_unreachable
+  Rule "allow-small" can never match: rule "allow-all-stripe" (line 23) matches everything it does and has no when.
+
+  [2m 29[0m [2m│[0m   - id: allow-small
+      [2m│[0m     [33m^^^^^^^^^^^^^^^[0m
+  [2mhint:[0m Move rule "allow-small" above rule "allow-all-stripe", or narrow rule "allow-all-stripe".
+
+[31m✕[0m 3 errors · [33m○[0m 1 warning · testdata/policy/refunds.yaml was not accepted
+--- stderr

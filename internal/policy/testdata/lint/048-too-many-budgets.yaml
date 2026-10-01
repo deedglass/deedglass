@@ -1,0 +1,210 @@
+deedglass: policy/v1
+name: too-many-budgets
+defaults:
+  decision: deny
+  reason: No rule allows this action. Add a rule in Console › Policies to allow it.
+budgets:
+  - id: calls-tool-01
+    match: { tool: acme.tool_01 }
+    window: minute
+    max_calls: 10
+  - id: calls-tool-02
+    match: { tool: acme.tool_02 }
+    window: minute
+    max_calls: 10
+  - id: calls-tool-03
+    match: { tool: acme.tool_03 }
+    window: minute
+    max_calls: 10
+  - id: calls-tool-04
+    match: { tool: acme.tool_04 }
+    window: minute
+    max_calls: 10
+  - id: calls-tool-05
+    match: { tool: acme.tool_05 }
+    window: minute
+    max_calls: 10
+  - id: calls-tool-06
+    match: { tool: acme.tool_06 }
+    window: minute
+    max_calls: 10
+  - id: calls-tool-07
+    match: { tool: acme.tool_07 }
+    window: minute
+    max_calls: 10
+  - id: calls-tool-08
+    match: { tool: acme.tool_08 }
+    window: minute
+    max_calls: 10
+  - id: calls-tool-09
+    match: { tool: acme.tool_09 }
+    window: minute
+    max_calls: 10
+  - id: calls-tool-10
+    match: { tool: acme.tool_10 }
+    window: minute
+    max_calls: 10
+  - id: calls-tool-11
+    match: { tool: acme.tool_11 }
+    window: minute
+    max_calls: 10
+  - id: calls-tool-12
+    match: { tool: acme.tool_12 }
+    window: minute
+    max_calls: 10
+  - id: calls-tool-13
+    match: { tool: acme.tool_13 }
+    window: minute
+    max_calls: 10
+  - id: calls-tool-14
+    match: { tool: acme.tool_14 }
+    window: minute
+    max_calls: 10
+  - id: calls-tool-15
+    match: { tool: acme.tool_15 }
+    window: minute
+    max_calls: 10
+  - id: calls-tool-16
+    match: { tool: acme.tool_16 }
+    window: minute
+    max_calls: 10
+  - id: calls-tool-17
+    match: { tool: acme.tool_17 }
+    window: minute
+    max_calls: 10
+  - id: calls-tool-18
+    match: { tool: acme.tool_18 }
+    window: minute
+    max_calls: 10
+  - id: calls-tool-19
+    match: { tool: acme.tool_19 }
+    window: minute
+    max_calls: 10
+  - id: calls-tool-20
+    match: { tool: acme.tool_20 }
+    window: minute
+    max_calls: 10
+  - id: calls-tool-21
+    match: { tool: acme.tool_21 }
+    window: minute
+    max_calls: 10
+  - id: calls-tool-22
+    match: { tool: acme.tool_22 }
+    window: minute
+    max_calls: 10
+  - id: calls-tool-23
+    match: { tool: acme.tool_23 }
+    window: minute
+    max_calls: 10
+  - id: calls-tool-24
+    match: { tool: acme.tool_24 }
+    window: minute
+    max_calls: 10
+  - id: calls-tool-25
+    match: { tool: acme.tool_25 }
+    window: minute
+    max_calls: 10
+  - id: calls-tool-26
+    match: { tool: acme.tool_26 }
+    window: minute
+    max_calls: 10
+  - id: calls-tool-27
+    match: { tool: acme.tool_27 }
+    window: minute
+    max_calls: 10
+  - id: calls-tool-28
+    match: { tool: acme.tool_28 }
+    window: minute
+    max_calls: 10
+  - id: calls-tool-29
+    match: { tool: acme.tool_29 }
+    window: minute
+    max_calls: 10
+  - id: calls-tool-30
+    match: { tool: acme.tool_30 }
+    window: minute
+    max_calls: 10
+  - id: calls-tool-31
+    match: { tool: acme.tool_31 }
+    window: minute
+    max_calls: 10
+  - id: calls-tool-32
+    match: { tool: acme.tool_32 }
+    window: minute
+    max_calls: 10
+  - id: calls-tool-33
+    match: { tool: acme.tool_33 }
+    window: minute
+    max_calls: 10
+  - id: calls-tool-34
+    match: { tool: acme.tool_34 }
+    window: minute
+    max_calls: 10
+  - id: calls-tool-35
+    match: { tool: acme.tool_35 }
+    window: minute
+    max_calls: 10
+  - id: calls-tool-36
+    match: { tool: acme.tool_36 }
+    window: minute
+    max_calls: 10
+  - id: calls-tool-37
+    match: { tool: acme.tool_37 }
+    window: minute
+    max_calls: 10
+  - id: calls-tool-38
+    match: { tool: acme.tool_38 }
+    window: minute
+    max_calls: 10
+  - id: calls-tool-39
+    match: { tool: acme.tool_39 }
+    window: minute
+    max_calls: 10
+  - id: calls-tool-40
+    match: { tool: acme.tool_40 }
+    window: minute
+    max_calls: 10
+  - id: calls-tool-41
+    match: { tool: acme.tool_41 }
+    window: minute
+    max_calls: 10
+  - id: calls-tool-42
+    match: { tool: acme.tool_42 }
+    window: minute
+    max_calls: 10
+  - id: calls-tool-43
+    match: { tool: acme.tool_43 }
+    window: minute
+    max_calls: 10
+  - id: calls-tool-44
+    match: { tool: acme.tool_44 }
+    window: minute
+    max_calls: 10
+  - id: calls-tool-45
+    match: { tool: acme.tool_45 }
+    window: minute
+    max_calls: 10
+  - id: calls-tool-46
+    match: { tool: acme.tool_46 }
+    window: minute
+    max_calls: 10
+  - id: calls-tool-47
+    match: { tool: acme.tool_47 }
+    window: minute
+    max_calls: 10
+  - id: calls-tool-48
+    match: { tool: acme.tool_48 }
+    window: minute
+    max_calls: 10
+  - id: calls-tool-49
+    match: { tool: acme.tool_49 }
+    window: minute
+    max_calls: 10
+  - id: calls-tool-50
+    match: { tool: acme.tool_50 }
+    window: minute
+    max_calls: 10
+  - id: calls-tool-51
+    match: { tool: acme.tool_51 }
+    window: minute
+    max_calls: 10

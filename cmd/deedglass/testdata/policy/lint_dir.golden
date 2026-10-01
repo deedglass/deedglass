@@ -1,0 +1,6 @@
+exit 1
+--- stdout
+✓ testdata/policy/policies/postgres-safe.yaml · 4 rules · 2 budgets
+✕ testdata/policy/policies/refunds.yaml · 3 errors · 1 warning
+✕ 1 of 2 files has errors · run deedglass policy lint testdata/policy/policies/refunds.yaml for details
+--- stderr

@@ -1,0 +1,8 @@
+✕ 091-value-too-long.yaml:6:14 · value_too_long
+  The description is 1,011 characters; the limit is 1,000.
+
+    6 │ description: Acme support refunds. Acme support refunds. Acme support refunds. Acme support refunds. Acme support refund…
+      │              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  hint: Shorten it.
+
+✕ 1 error · 091-value-too-long.yaml was not accepted

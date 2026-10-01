@@ -1,0 +1,8 @@
+✕ 041-description-as-list.yaml:3:1 · wrong_type
+  description must be text; found a list.
+
+    3 │ description:
+      │ ^^^^^^^^^^^
+  hint: Write one line of text, or a block with description: >-
+
+✕ 1 error · 041-description-as-list.yaml was not accepted

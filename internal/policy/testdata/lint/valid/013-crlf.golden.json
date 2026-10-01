@@ -1,0 +1,11 @@
+{
+  "object": "policy_lint_result",
+  "file": "013-crlf.yaml",
+  "valid": true,
+  "name": "crlf-line-endings",
+  "version_hash": "sha256:9b84bc58c581548950ce54352d43c1d24065c2f1493b2909026b6adeaf2c2eca",
+  "rules": 1,
+  "budgets": 0,
+  "errors": [],
+  "warnings": []
+}

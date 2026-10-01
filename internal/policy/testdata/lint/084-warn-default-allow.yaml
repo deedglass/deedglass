@@ -1,0 +1,11 @@
+deedglass: policy/v1
+name: warn-default-allow
+description: A trial policy that lets everything through except schema changes.
+defaults:
+  decision: allow
+rules:
+  - id: deny-ddl
+    match: { connector_type: postgres }
+    when: sql.category == "ddl"
+    decision: deny
+    reason: Schema changes never run through agents. Use a migration instead.

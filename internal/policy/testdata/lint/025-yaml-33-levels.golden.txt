@@ -1,0 +1,8 @@
+✕ 025-yaml-33-levels.yaml:6:45 · yaml_too_complex
+  This policy nests more than 32 levels deep.
+
+    6 │ description: [[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[deep]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]
+      │                                             ^
+  hint: Flatten the structure; a policy needs only a few levels.
+
+✕ 1 error · 025-yaml-33-levels.yaml was not accepted

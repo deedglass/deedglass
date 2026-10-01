@@ -1,0 +1,25 @@
+{
+  "object": "policy_lint_result",
+  "file": "031-unknown-key-top.yaml",
+  "valid": false,
+  "name": "unknown-key-top",
+  "version_hash": null,
+  "rules": 0,
+  "budgets": 0,
+  "errors": [
+    {
+      "severity": "error",
+      "code": "unknown_key",
+      "message": "Unknown key \"owner\" at the top level.",
+      "hint": "Valid keys: deedglass, name, description, defaults, budgets and rules.",
+      "file": "031-unknown-key-top.yaml",
+      "line": 6,
+      "column": 1,
+      "end_line": 6,
+      "end_column": 6,
+      "path": "owner",
+      "doc_url": "https://docs.deedglass.com/policies/errors/unknown_key"
+    }
+  ],
+  "warnings": []
+}

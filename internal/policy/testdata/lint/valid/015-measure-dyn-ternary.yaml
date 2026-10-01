@@ -1,0 +1,16 @@
+deedglass: policy/v1
+name: measure-dyn-ternary
+defaults:
+  decision: deny
+  reason: No rule allows this action. Add a rule in Console › Policies to allow it.
+budgets:
+  - id: payouts-per-day
+    match: { tool: stripe.create_payout }
+    per: org
+    window: day
+    max_spend: "2000.00 usd"
+    measure: 'has(args.amount) && type(args.amount) == int ? args.amount : 0'
+rules:
+  - id: allow-payouts
+    match: { tool: stripe.create_payout }
+    decision: allow

@@ -1,0 +1,25 @@
+{
+  "object": "policy_lint_result",
+  "file": "091-value-too-long.yaml",
+  "valid": false,
+  "name": "value-too-long",
+  "version_hash": null,
+  "rules": 0,
+  "budgets": 0,
+  "errors": [
+    {
+      "severity": "error",
+      "code": "value_too_long",
+      "message": "The description is 1,011 characters; the limit is 1,000.",
+      "hint": "Shorten it.",
+      "file": "091-value-too-long.yaml",
+      "line": 6,
+      "column": 14,
+      "end_line": 6,
+      "end_column": 1025,
+      "path": "description",
+      "doc_url": "https://docs.deedglass.com/policies/errors/value_too_long"
+    }
+  ],
+  "warnings": []
+}

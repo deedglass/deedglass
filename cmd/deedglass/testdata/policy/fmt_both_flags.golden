@@ -1,0 +1,5 @@
+exit 2
+--- stdout
+--- stderr
+✕ use either -w or --check, not both.
+  --check only reports; -w writes the files.

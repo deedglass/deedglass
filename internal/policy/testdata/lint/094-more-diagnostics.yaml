@@ -1,0 +1,171 @@
+deedglass: policy/v1
+name: more-diagnostics
+defaults:
+  decision: deny
+  reason: No rule allows this action. Add a rule in Console › Policies to allow it.
+rules:
+  - id: rule-1
+    decision: block
+    reason: Blocked.
+  - id: rule-2
+    decision: block
+    reason: Blocked.
+  - id: rule-3
+    decision: block
+    reason: Blocked.
+  - id: rule-4
+    decision: block
+    reason: Blocked.
+  - id: rule-5
+    decision: block
+    reason: Blocked.
+  - id: rule-6
+    decision: block
+    reason: Blocked.
+  - id: rule-7
+    decision: block
+    reason: Blocked.
+  - id: rule-8
+    decision: block
+    reason: Blocked.
+  - id: rule-9
+    decision: block
+    reason: Blocked.
+  - id: rule-10
+    decision: block
+    reason: Blocked.
+  - id: rule-11
+    decision: block
+    reason: Blocked.
+  - id: rule-12
+    decision: block
+    reason: Blocked.
+  - id: rule-13
+    decision: block
+    reason: Blocked.
+  - id: rule-14
+    decision: block
+    reason: Blocked.
+  - id: rule-15
+    decision: block
+    reason: Blocked.
+  - id: rule-16
+    decision: block
+    reason: Blocked.
+  - id: rule-17
+    decision: block
+    reason: Blocked.
+  - id: rule-18
+    decision: block
+    reason: Blocked.
+  - id: rule-19
+    decision: block
+    reason: Blocked.
+  - id: rule-20
+    decision: block
+    reason: Blocked.
+  - id: rule-21
+    decision: block
+    reason: Blocked.
+  - id: rule-22
+    decision: block
+    reason: Blocked.
+  - id: rule-23
+    decision: block
+    reason: Blocked.
+  - id: rule-24
+    decision: block
+    reason: Blocked.
+  - id: rule-25
+    decision: block
+    reason: Blocked.
+  - id: rule-26
+    decision: block
+    reason: Blocked.
+  - id: rule-27
+    decision: block
+    reason: Blocked.
+  - id: rule-28
+    decision: block
+    reason: Blocked.
+  - id: rule-29
+    decision: block
+    reason: Blocked.
+  - id: rule-30
+    decision: block
+    reason: Blocked.
+  - id: rule-31
+    decision: block
+    reason: Blocked.
+  - id: rule-32
+    decision: block
+    reason: Blocked.
+  - id: rule-33
+    decision: block
+    reason: Blocked.
+  - id: rule-34
+    decision: block
+    reason: Blocked.
+  - id: rule-35
+    decision: block
+    reason: Blocked.
+  - id: rule-36
+    decision: block
+    reason: Blocked.
+  - id: rule-37
+    decision: block
+    reason: Blocked.
+  - id: rule-38
+    decision: block
+    reason: Blocked.
+  - id: rule-39
+    decision: block
+    reason: Blocked.
+  - id: rule-40
+    decision: block
+    reason: Blocked.
+  - id: rule-41
+    decision: block
+    reason: Blocked.
+  - id: rule-42
+    decision: block
+    reason: Blocked.
+  - id: rule-43
+    decision: block
+    reason: Blocked.
+  - id: rule-44
+    decision: block
+    reason: Blocked.
+  - id: rule-45
+    decision: block
+    reason: Blocked.
+  - id: rule-46
+    decision: block
+    reason: Blocked.
+  - id: rule-47
+    decision: block
+    reason: Blocked.
+  - id: rule-48
+    decision: block
+    reason: Blocked.
+  - id: rule-49
+    decision: block
+    reason: Blocked.
+  - id: rule-50
+    decision: block
+    reason: Blocked.
+  - id: rule-51
+    decision: block
+    reason: Blocked.
+  - id: rule-52
+    decision: block
+    reason: Blocked.
+  - id: rule-53
+    decision: block
+    reason: Blocked.
+  - id: rule-54
+    decision: block
+    reason: Blocked.
+  - id: rule-55
+    decision: block
+    reason: Blocked.

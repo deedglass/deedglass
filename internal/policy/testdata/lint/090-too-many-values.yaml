@@ -1,0 +1,10 @@
+deedglass: policy/v1
+name: too-many-values
+defaults:
+  decision: deny
+  reason: No rule allows this action. Add a rule in Console › Policies to allow it.
+rules:
+  - id: many-tools
+    match:
+      tool: [svc1.read, svc2.read, svc3.read, svc4.read, svc5.read, svc6.read, svc7.read, svc8.read, svc9.read, svc10.read, svc11.read, svc12.read, svc13.read, svc14.read, svc15.read, svc16.read, svc17.read, svc18.read, svc19.read, svc20.read, svc21.read, svc22.read, svc23.read, svc24.read, svc25.read, svc26.read, svc27.read, svc28.read, svc29.read, svc30.read, svc31.read, svc32.read, svc33.read]
+    decision: allow

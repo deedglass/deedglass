@@ -1,0 +1,26 @@
+{
+  "object": "policy_lint_result",
+  "file": "058-role-viewer.yaml",
+  "valid": false,
+  "name": "role-viewer",
+  "version_hash": null,
+  "rules": 1,
+  "budgets": 0,
+  "errors": [
+    {
+      "severity": "error",
+      "code": "invalid_approvers",
+      "message": "`role:viewer` cannot approve.",
+      "hint": "Use role:admin, role:owner or user:<email>.",
+      "file": "058-role-viewer.yaml",
+      "line": 12,
+      "column": 31,
+      "end_line": 12,
+      "end_column": 42,
+      "rule_id": "payouts-need-approval",
+      "path": "rules[0].approval.approvers",
+      "doc_url": "https://docs.deedglass.com/policies/errors/invalid_approvers"
+    }
+  ],
+  "warnings": []
+}

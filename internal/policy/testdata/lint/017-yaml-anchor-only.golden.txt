@@ -1,0 +1,8 @@
+✕ 017-yaml-anchor-only.yaml:5:11 · yaml_alias
+  Anchors and aliases (& and *) are not allowed in policies.
+
+    5 │   reason: &no-rule No rule allows this action. Add a rule in Console › Policies to allow it.
+      │           ^^^^^^^^
+  hint: Repeat the value, so each rule reads on its own.
+
+✕ 1 error · 017-yaml-anchor-only.yaml was not accepted

@@ -1,0 +1,11 @@
+{
+  "object": "policy_lint_result",
+  "file": "003-github-read-mostly.yaml",
+  "valid": true,
+  "name": "github-read-mostly",
+  "version_hash": "sha256:ab33c058aa17cfd282c47787b3a6ce14f2b330ebc68c2ee6387c15e891f04b6b",
+  "rules": 6,
+  "budgets": 0,
+  "errors": [],
+  "warnings": []
+}

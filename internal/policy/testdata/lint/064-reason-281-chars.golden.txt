@@ -1,0 +1,8 @@
+○ 064-reason-281-chars.yaml:10:13 · reason_too_long
+  This reason is 281 characters. Agents and approvers see at most 280.
+
+   10 │     reason: Refunds above the daily limit wait for a person on the payments team, who checks the order, the customer his…
+      │             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  hint: Shorten it to one sentence; the rest is cut off.
+
+✓ reason-281-chars · 1 rule · 0 budgets · sha256:7d18…077d · ○ 1 warning

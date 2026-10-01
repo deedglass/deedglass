@@ -1,0 +1,26 @@
+{
+  "object": "policy_lint_result",
+  "file": "092-invalid-value.yaml",
+  "valid": false,
+  "name": "invalid-value",
+  "version_hash": null,
+  "rules": 0,
+  "budgets": 1,
+  "errors": [
+    {
+      "severity": "error",
+      "code": "invalid_value",
+      "message": "`week` is not a budget window.",
+      "hint": "Use minute, hour or day.",
+      "file": "092-invalid-value.yaml",
+      "line": 8,
+      "column": 13,
+      "end_line": 8,
+      "end_column": 17,
+      "rule_id": "weekly-calls",
+      "path": "budgets[0].window",
+      "doc_url": "https://docs.deedglass.com/policies/errors/invalid_value"
+    }
+  ],
+  "warnings": []
+}

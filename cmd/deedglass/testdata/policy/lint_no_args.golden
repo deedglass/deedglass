@@ -1,0 +1,5 @@
+exit 2
+--- stdout
+--- stderr
+✕ deedglass policy lint needs a file, a directory, or - for stdin.
+  For example: deedglass policy lint policies/refunds.yaml

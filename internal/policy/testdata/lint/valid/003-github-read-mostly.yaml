@@ -1,0 +1,33 @@
+deedglass: policy/v1
+name: github-read-mostly
+description: Agents read code and work on issues. Pushes and pull requests to main wait for a person.
+defaults:
+  decision: deny
+  reason: No rule allows this action. Add a rule in Console › Policies to allow it.
+rules:
+  - id: deny-merge-and-delete
+    match: { tool: ["github.merge_pull_request", "github.delete_*"] }
+    decision: deny
+    reason: Agents never merge pull requests or delete anything on GitHub. A maintainer can do it in GitHub.
+    notify: [slack]
+  - id: push-to-main-needs-approval
+    match: { tool: ["github.push_files", "github.create_or_update_file"] }
+    when: args.branch == "main"
+    decision: require_approval
+    reason: Pushes to main wait for a maintainer. An admin can approve in Console › Approvals.
+  - id: pr-to-main-needs-approval
+    match: { tool: github.create_pull_request }
+    when: args.base == "main"
+    decision: require_approval
+    reason: Pull requests into main wait for a maintainer. An admin can approve in Console › Approvals.
+  - id: allow-reads
+    match: { connector_type: github, side_effect: read }
+    decision: allow
+  - id: allow-issues-and-comments
+    match:
+      tool: [github.create_issue, github.update_issue, github.add_issue_comment]
+    decision: allow
+  - id: allow-other-branches
+    match: { tool: ["github.push_files", "github.create_or_update_file", "github.create_branch", "github.create_pull_request"] }
+    decision: allow
+    verify: L1

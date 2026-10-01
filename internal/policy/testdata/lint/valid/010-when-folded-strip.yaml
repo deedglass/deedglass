@@ -1,0 +1,13 @@
+deedglass: policy/v1
+name: when-folded-strip
+defaults:
+  decision: deny
+  reason: No rule allows this action. Add a rule in Console › Policies to allow it.
+rules:
+  - id: business-hours-refunds
+    match: { tool: stripe.create_refund }
+    when: >-
+      time.weekday in ["mon", "tue", "wed", "thu", "fri"] &&
+      time.hour >= 9 && time.hour < 18 &&
+      has(args.amount) && args.amount <= minor("25.00 usd")
+    decision: allow

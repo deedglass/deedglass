@@ -1,0 +1,8 @@
+✕ 022-yaml-two-documents.yaml:6:1 · yaml_multi_document
+  This file holds more than one YAML document.
+
+    6 │ ---
+      │ ^^^
+  hint: Keep one policy per file, and remove the --- line.
+
+✕ 1 error · 022-yaml-two-documents.yaml was not accepted

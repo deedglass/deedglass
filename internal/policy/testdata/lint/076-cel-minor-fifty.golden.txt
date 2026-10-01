@@ -1,0 +1,8 @@
+✕ 076-cel-minor-fifty.yaml:9:33 · invalid_money
+  fifty is not an amount of money.
+
+    9 │     when: 'args.amount <= minor("fifty")'
+      │                                 ^^^^^^^
+  hint: Write money as a string with a currency, like "50.00 usd".
+
+✕ 1 error · 076-cel-minor-fifty.yaml was not accepted

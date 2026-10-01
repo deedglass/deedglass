@@ -1,0 +1,22 @@
+exit 0
+--- stdout
+deedglass: policy/v1
+name: messy
+
+defaults:
+  decision: deny
+  reason: "No rule allows this action."
+
+budgets:
+  - id: refunds-per-day
+    per: org
+    window: day
+    max_spend: "500.00 usd"
+    measure: args.amount
+
+rules:
+  - id: reads
+    match: {connector_type: postgres, side_effect: read}
+    when: '!sql.writes'
+    decision: allow
+--- stderr

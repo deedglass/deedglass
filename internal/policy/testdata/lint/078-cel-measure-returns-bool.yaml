@@ -1,0 +1,11 @@
+deedglass: policy/v1
+name: cel-measure-returns-bool
+defaults:
+  decision: deny
+  reason: No rule allows this action. Add a rule in Console › Policies to allow it.
+budgets:
+  - id: refunds-per-day
+    match: { tool: stripe.create_refund }
+    window: day
+    max_spend: "500.00 usd"
+    measure: args.amount > 0

@@ -1,0 +1,4 @@
+exit 1
+--- stdout
+✕ testdata/policy/refunds.yaml has errors, so it was not formatted · run deedglass policy lint testdata/policy/refunds.yaml
+--- stderr

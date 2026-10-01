@@ -1,0 +1,8 @@
+✕ 044-non-ascii-rule-id.yaml:7:9 · invalid_id
+  Rule id "remboursements-café" is not a slug.
+
+    7 │   - id: remboursements-café
+      │         ^^^^^^^^^^^^^^^^^^^
+  hint: Use ASCII lowercase letters, digits and dashes, starting with a letter, like remboursements-cafe.
+
+✕ 1 error · 044-non-ascii-rule-id.yaml was not accepted

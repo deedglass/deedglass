@@ -1,0 +1,8 @@
+✕ 019-yaml-binary-tag.yaml:3:14 · yaml_tag
+  !!binary is a YAML tag, and policies don't use tags.
+
+    3 │ description: !!binary QWNtZSByZWZ1bmRz
+      │              ^^^^^^^^^^^^^^^^^^^^^^^^^
+  hint: Remove the tag; policies use plain YAML values.
+
+✕ 1 error · 019-yaml-binary-tag.yaml was not accepted

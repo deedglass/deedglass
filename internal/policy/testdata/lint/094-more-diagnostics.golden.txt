@@ -1,0 +1,355 @@
+✕ 094-more-diagnostics.yaml:8:15 · invalid_decision
+  block is not a decision.
+
+    8 │     decision: block
+      │               ^^^^^
+  hint: Did you mean deny? Decisions are allow, deny and require_approval.
+
+✕ 094-more-diagnostics.yaml:11:15 · invalid_decision
+  block is not a decision.
+
+   11 │     decision: block
+      │               ^^^^^
+  hint: Did you mean deny? Decisions are allow, deny and require_approval.
+
+✕ 094-more-diagnostics.yaml:14:15 · invalid_decision
+  block is not a decision.
+
+   14 │     decision: block
+      │               ^^^^^
+  hint: Did you mean deny? Decisions are allow, deny and require_approval.
+
+✕ 094-more-diagnostics.yaml:17:15 · invalid_decision
+  block is not a decision.
+
+   17 │     decision: block
+      │               ^^^^^
+  hint: Did you mean deny? Decisions are allow, deny and require_approval.
+
+✕ 094-more-diagnostics.yaml:20:15 · invalid_decision
+  block is not a decision.
+
+   20 │     decision: block
+      │               ^^^^^
+  hint: Did you mean deny? Decisions are allow, deny and require_approval.
+
+✕ 094-more-diagnostics.yaml:23:15 · invalid_decision
+  block is not a decision.
+
+   23 │     decision: block
+      │               ^^^^^
+  hint: Did you mean deny? Decisions are allow, deny and require_approval.
+
+✕ 094-more-diagnostics.yaml:26:15 · invalid_decision
+  block is not a decision.
+
+   26 │     decision: block
+      │               ^^^^^
+  hint: Did you mean deny? Decisions are allow, deny and require_approval.
+
+✕ 094-more-diagnostics.yaml:29:15 · invalid_decision
+  block is not a decision.
+
+   29 │     decision: block
+      │               ^^^^^
+  hint: Did you mean deny? Decisions are allow, deny and require_approval.
+
+✕ 094-more-diagnostics.yaml:32:15 · invalid_decision
+  block is not a decision.
+
+   32 │     decision: block
+      │               ^^^^^
+  hint: Did you mean deny? Decisions are allow, deny and require_approval.
+
+✕ 094-more-diagnostics.yaml:35:15 · invalid_decision
+  block is not a decision.
+
+   35 │     decision: block
+      │               ^^^^^
+  hint: Did you mean deny? Decisions are allow, deny and require_approval.
+
+✕ 094-more-diagnostics.yaml:38:15 · invalid_decision
+  block is not a decision.
+
+   38 │     decision: block
+      │               ^^^^^
+  hint: Did you mean deny? Decisions are allow, deny and require_approval.
+
+✕ 094-more-diagnostics.yaml:41:15 · invalid_decision
+  block is not a decision.
+
+   41 │     decision: block
+      │               ^^^^^
+  hint: Did you mean deny? Decisions are allow, deny and require_approval.
+
+✕ 094-more-diagnostics.yaml:44:15 · invalid_decision
+  block is not a decision.
+
+   44 │     decision: block
+      │               ^^^^^
+  hint: Did you mean deny? Decisions are allow, deny and require_approval.
+
+✕ 094-more-diagnostics.yaml:47:15 · invalid_decision
+  block is not a decision.
+
+   47 │     decision: block
+      │               ^^^^^
+  hint: Did you mean deny? Decisions are allow, deny and require_approval.
+
+✕ 094-more-diagnostics.yaml:50:15 · invalid_decision
+  block is not a decision.
+
+   50 │     decision: block
+      │               ^^^^^
+  hint: Did you mean deny? Decisions are allow, deny and require_approval.
+
+✕ 094-more-diagnostics.yaml:53:15 · invalid_decision
+  block is not a decision.
+
+   53 │     decision: block
+      │               ^^^^^
+  hint: Did you mean deny? Decisions are allow, deny and require_approval.
+
+✕ 094-more-diagnostics.yaml:56:15 · invalid_decision
+  block is not a decision.
+
+   56 │     decision: block
+      │               ^^^^^
+  hint: Did you mean deny? Decisions are allow, deny and require_approval.
+
+✕ 094-more-diagnostics.yaml:59:15 · invalid_decision
+  block is not a decision.
+
+   59 │     decision: block
+      │               ^^^^^
+  hint: Did you mean deny? Decisions are allow, deny and require_approval.
+
+✕ 094-more-diagnostics.yaml:62:15 · invalid_decision
+  block is not a decision.
+
+   62 │     decision: block
+      │               ^^^^^
+  hint: Did you mean deny? Decisions are allow, deny and require_approval.
+
+✕ 094-more-diagnostics.yaml:65:15 · invalid_decision
+  block is not a decision.
+
+   65 │     decision: block
+      │               ^^^^^
+  hint: Did you mean deny? Decisions are allow, deny and require_approval.
+
+✕ 094-more-diagnostics.yaml:68:15 · invalid_decision
+  block is not a decision.
+
+   68 │     decision: block
+      │               ^^^^^
+  hint: Did you mean deny? Decisions are allow, deny and require_approval.
+
+✕ 094-more-diagnostics.yaml:71:15 · invalid_decision
+  block is not a decision.
+
+   71 │     decision: block
+      │               ^^^^^
+  hint: Did you mean deny? Decisions are allow, deny and require_approval.
+
+✕ 094-more-diagnostics.yaml:74:15 · invalid_decision
+  block is not a decision.
+
+   74 │     decision: block
+      │               ^^^^^
+  hint: Did you mean deny? Decisions are allow, deny and require_approval.
+
+✕ 094-more-diagnostics.yaml:77:15 · invalid_decision
+  block is not a decision.
+
+   77 │     decision: block
+      │               ^^^^^
+  hint: Did you mean deny? Decisions are allow, deny and require_approval.
+
+✕ 094-more-diagnostics.yaml:80:15 · invalid_decision
+  block is not a decision.
+
+   80 │     decision: block
+      │               ^^^^^
+  hint: Did you mean deny? Decisions are allow, deny and require_approval.
+
+✕ 094-more-diagnostics.yaml:83:15 · invalid_decision
+  block is not a decision.
+
+   83 │     decision: block
+      │               ^^^^^
+  hint: Did you mean deny? Decisions are allow, deny and require_approval.
+
+✕ 094-more-diagnostics.yaml:86:15 · invalid_decision
+  block is not a decision.
+
+   86 │     decision: block
+      │               ^^^^^
+  hint: Did you mean deny? Decisions are allow, deny and require_approval.
+
+✕ 094-more-diagnostics.yaml:89:15 · invalid_decision
+  block is not a decision.
+
+   89 │     decision: block
+      │               ^^^^^
+  hint: Did you mean deny? Decisions are allow, deny and require_approval.
+
+✕ 094-more-diagnostics.yaml:92:15 · invalid_decision
+  block is not a decision.
+
+   92 │     decision: block
+      │               ^^^^^
+  hint: Did you mean deny? Decisions are allow, deny and require_approval.
+
+✕ 094-more-diagnostics.yaml:95:15 · invalid_decision
+  block is not a decision.
+
+   95 │     decision: block
+      │               ^^^^^
+  hint: Did you mean deny? Decisions are allow, deny and require_approval.
+
+✕ 094-more-diagnostics.yaml:98:15 · invalid_decision
+  block is not a decision.
+
+   98 │     decision: block
+      │               ^^^^^
+  hint: Did you mean deny? Decisions are allow, deny and require_approval.
+
+✕ 094-more-diagnostics.yaml:101:15 · invalid_decision
+  block is not a decision.
+
+  101 │     decision: block
+      │               ^^^^^
+  hint: Did you mean deny? Decisions are allow, deny and require_approval.
+
+✕ 094-more-diagnostics.yaml:104:15 · invalid_decision
+  block is not a decision.
+
+  104 │     decision: block
+      │               ^^^^^
+  hint: Did you mean deny? Decisions are allow, deny and require_approval.
+
+✕ 094-more-diagnostics.yaml:107:15 · invalid_decision
+  block is not a decision.
+
+  107 │     decision: block
+      │               ^^^^^
+  hint: Did you mean deny? Decisions are allow, deny and require_approval.
+
+✕ 094-more-diagnostics.yaml:110:15 · invalid_decision
+  block is not a decision.
+
+  110 │     decision: block
+      │               ^^^^^
+  hint: Did you mean deny? Decisions are allow, deny and require_approval.
+
+✕ 094-more-diagnostics.yaml:113:15 · invalid_decision
+  block is not a decision.
+
+  113 │     decision: block
+      │               ^^^^^
+  hint: Did you mean deny? Decisions are allow, deny and require_approval.
+
+✕ 094-more-diagnostics.yaml:116:15 · invalid_decision
+  block is not a decision.
+
+  116 │     decision: block
+      │               ^^^^^
+  hint: Did you mean deny? Decisions are allow, deny and require_approval.
+
+✕ 094-more-diagnostics.yaml:119:15 · invalid_decision
+  block is not a decision.
+
+  119 │     decision: block
+      │               ^^^^^
+  hint: Did you mean deny? Decisions are allow, deny and require_approval.
+
+✕ 094-more-diagnostics.yaml:122:15 · invalid_decision
+  block is not a decision.
+
+  122 │     decision: block
+      │               ^^^^^
+  hint: Did you mean deny? Decisions are allow, deny and require_approval.
+
+✕ 094-more-diagnostics.yaml:125:15 · invalid_decision
+  block is not a decision.
+
+  125 │     decision: block
+      │               ^^^^^
+  hint: Did you mean deny? Decisions are allow, deny and require_approval.
+
+✕ 094-more-diagnostics.yaml:128:15 · invalid_decision
+  block is not a decision.
+
+  128 │     decision: block
+      │               ^^^^^
+  hint: Did you mean deny? Decisions are allow, deny and require_approval.
+
+✕ 094-more-diagnostics.yaml:131:15 · invalid_decision
+  block is not a decision.
+
+  131 │     decision: block
+      │               ^^^^^
+  hint: Did you mean deny? Decisions are allow, deny and require_approval.
+
+✕ 094-more-diagnostics.yaml:134:15 · invalid_decision
+  block is not a decision.
+
+  134 │     decision: block
+      │               ^^^^^
+  hint: Did you mean deny? Decisions are allow, deny and require_approval.
+
+✕ 094-more-diagnostics.yaml:137:15 · invalid_decision
+  block is not a decision.
+
+  137 │     decision: block
+      │               ^^^^^
+  hint: Did you mean deny? Decisions are allow, deny and require_approval.
+
+✕ 094-more-diagnostics.yaml:140:15 · invalid_decision
+  block is not a decision.
+
+  140 │     decision: block
+      │               ^^^^^
+  hint: Did you mean deny? Decisions are allow, deny and require_approval.
+
+✕ 094-more-diagnostics.yaml:143:15 · invalid_decision
+  block is not a decision.
+
+  143 │     decision: block
+      │               ^^^^^
+  hint: Did you mean deny? Decisions are allow, deny and require_approval.
+
+✕ 094-more-diagnostics.yaml:146:15 · invalid_decision
+  block is not a decision.
+
+  146 │     decision: block
+      │               ^^^^^
+  hint: Did you mean deny? Decisions are allow, deny and require_approval.
+
+✕ 094-more-diagnostics.yaml:149:15 · invalid_decision
+  block is not a decision.
+
+  149 │     decision: block
+      │               ^^^^^
+  hint: Did you mean deny? Decisions are allow, deny and require_approval.
+
+✕ 094-more-diagnostics.yaml:152:15 · invalid_decision
+  block is not a decision.
+
+  152 │     decision: block
+      │               ^^^^^
+  hint: Did you mean deny? Decisions are allow, deny and require_approval.
+
+✕ 094-more-diagnostics.yaml:155:15 · invalid_decision
+  block is not a decision.
+
+  155 │     decision: block
+      │               ^^^^^
+  hint: Did you mean deny? Decisions are allow, deny and require_approval.
+
+✕ 094-more-diagnostics.yaml · more_diagnostics
+  And 5 more (5 errors, 0 warnings).
+  hint: Fix the ones above and run lint again.
+
+✕ 51 errors · 094-more-diagnostics.yaml was not accepted

@@ -1,0 +1,12 @@
+rules:
+    -   decision: allow
+        id: reads
+        match:
+            side_effect: read
+            connector_type: postgres
+        when: "!sql.writes"
+defaults: {reason: "No rule allows this action.", decision: deny}
+name: messy
+deedglass: policy/v1
+budgets:
+    - {window: day, max_spend: "500.00 USD", measure: args.amount, id: refunds-per-day, per: org}

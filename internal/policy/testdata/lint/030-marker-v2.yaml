@@ -1,0 +1,5 @@
+deedglass: policy/v2
+name: marker-v2
+defaults:
+  decision: deny
+  reason: No rule allows this action. Add a rule in Console › Policies to allow it.

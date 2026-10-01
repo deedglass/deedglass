@@ -1,0 +1,4 @@
+exit 0
+--- stdout
+✓ postgres-safe · 4 rules · 2 budgets · sha256:c666…2c9b
+--- stderr

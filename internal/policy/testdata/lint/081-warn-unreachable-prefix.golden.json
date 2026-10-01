@@ -1,0 +1,26 @@
+{
+  "object": "policy_lint_result",
+  "file": "081-warn-unreachable-prefix.yaml",
+  "valid": true,
+  "name": "warn-unreachable-prefix",
+  "version_hash": "sha256:19779aa2d33f4d5f8bd797fc76b4ce7e3f1f20fb7d43de71a6642ef795f72153",
+  "rules": 2,
+  "budgets": 0,
+  "errors": [],
+  "warnings": [
+    {
+      "severity": "warning",
+      "code": "rule_unreachable",
+      "message": "Rule \"allow-status-posts\" can never match: rule \"posts-need-approval\" (line 7) matches everything it does and has no `when`.",
+      "hint": "Move rule \"allow-status-posts\" above rule \"posts-need-approval\", or narrow rule \"posts-need-approval\".",
+      "file": "081-warn-unreachable-prefix.yaml",
+      "line": 11,
+      "column": 5,
+      "end_line": 11,
+      "end_column": 27,
+      "rule_id": "allow-status-posts",
+      "path": "rules[1]",
+      "doc_url": "https://docs.deedglass.com/policies/errors/rule_unreachable"
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+✕ 092-invalid-value.yaml:8:13 · invalid_value
+  week is not a budget window.
+
+    8 │     window: week
+      │             ^^^^
+  hint: Use minute, hour or day.
+
+✕ 1 error · 092-invalid-value.yaml was not accepted

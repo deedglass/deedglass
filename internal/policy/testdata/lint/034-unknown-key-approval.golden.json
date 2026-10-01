@@ -1,0 +1,26 @@
+{
+  "object": "policy_lint_result",
+  "file": "034-unknown-key-approval.yaml",
+  "valid": false,
+  "name": "unknown-key-approval",
+  "version_hash": null,
+  "rules": 1,
+  "budgets": 0,
+  "errors": [
+    {
+      "severity": "error",
+      "code": "unknown_key",
+      "message": "Unknown key \"timeout\" in the approval of rule \"payouts-need-approval\".",
+      "hint": "Valid keys: approvers, required and expires_in.",
+      "file": "034-unknown-key-approval.yaml",
+      "line": 13,
+      "column": 7,
+      "end_line": 13,
+      "end_column": 14,
+      "rule_id": "payouts-need-approval",
+      "path": "rules[0].approval.timeout",
+      "doc_url": "https://docs.deedglass.com/policies/errors/unknown_key"
+    }
+  ],
+  "warnings": []
+}

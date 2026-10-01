@@ -1,0 +1,11 @@
+deedglass: policy/v1
+name: required-six
+defaults:
+  decision: deny
+  reason: No rule allows this action. Add a rule in Console › Policies to allow it.
+rules:
+  - id: payouts-need-approval
+    match: { tool: stripe.create_payout }
+    decision: require_approval
+    reason: Payouts wait for six people. An admin can approve in Console › Approvals.
+    approval: { approvers: [role:admin], required: 6 }

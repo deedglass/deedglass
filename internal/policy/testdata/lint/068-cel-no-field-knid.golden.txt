@@ -1,0 +1,8 @@
+✕ 068-cel-no-field-knid.yaml:11:13 · cel_no_field
+  sql has no field "knid".
+
+   11 │         sql.knid in ["drop", "truncate"]
+      │             ^^^^
+  hint: Did you mean "kind"?
+
+✕ 1 error · 068-cel-no-field-knid.yaml was not accepted

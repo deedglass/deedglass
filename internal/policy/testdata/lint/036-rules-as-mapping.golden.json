@@ -1,0 +1,25 @@
+{
+  "object": "policy_lint_result",
+  "file": "036-rules-as-mapping.yaml",
+  "valid": false,
+  "name": "rules-as-mapping",
+  "version_hash": null,
+  "rules": 0,
+  "budgets": 0,
+  "errors": [
+    {
+      "severity": "error",
+      "code": "wrong_type",
+      "message": "`rules` must be a list; found a mapping.",
+      "hint": "Write each rule as a list item that starts with `- id:`.",
+      "file": "036-rules-as-mapping.yaml",
+      "line": 6,
+      "column": 1,
+      "end_line": 6,
+      "end_column": 6,
+      "path": "rules",
+      "doc_url": "https://docs.deedglass.com/policies/errors/wrong_type"
+    }
+  ],
+  "warnings": []
+}

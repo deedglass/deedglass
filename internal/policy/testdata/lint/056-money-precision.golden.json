@@ -1,0 +1,26 @@
+{
+  "object": "policy_lint_result",
+  "file": "056-money-precision.yaml",
+  "valid": false,
+  "name": "money-precision",
+  "version_hash": null,
+  "rules": 0,
+  "budgets": 1,
+  "errors": [
+    {
+      "severity": "error",
+      "code": "money_precision",
+      "message": "`50.005 usd` has more decimals than usd allows (2).",
+      "hint": "Round it to 2 decimals, like \"50.01 usd\".",
+      "file": "056-money-precision.yaml",
+      "line": 10,
+      "column": 16,
+      "end_line": 10,
+      "end_column": 28,
+      "rule_id": "refunds-per-day",
+      "path": "budgets[0].max_spend",
+      "doc_url": "https://docs.deedglass.com/policies/errors/money_precision"
+    }
+  ],
+  "warnings": []
+}

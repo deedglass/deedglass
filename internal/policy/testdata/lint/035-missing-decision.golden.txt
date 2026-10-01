@@ -1,0 +1,8 @@
+✕ 035-missing-decision.yaml:7:5 · missing_key
+  Rule "small-refunds" has no decision.
+
+    7 │   - id: small-refunds
+      │     ^
+  hint: Add decision: allow, deny or require_approval.
+
+✕ 1 error · 035-missing-decision.yaml was not accepted

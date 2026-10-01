@@ -1,0 +1,5 @@
+deedglass: policy/v1
+name: anchor-only
+defaults:
+  decision: deny
+  reason: &no-rule No rule allows this action. Add a rule in Console › Policies to allow it.

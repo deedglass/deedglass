@@ -1,0 +1,8 @@
+✕ 075-cel-glob-not-constant.yaml:11:23 · cel_constant_required
+  glob() needs a constant pattern.
+
+   11 │       glob(tool.name, args.pattern)
+      │                       ^^^^^^^^^^^^
+  hint: Patterns come from the policy, never from an agent's arguments: write it in quotes, like glob(tool.name, "stripe.*")
+
+✕ 1 error · 075-cel-glob-not-constant.yaml was not accepted

@@ -23,7 +23,7 @@ This is the Deedglass product repo: Go module `github.com/deedglass/deedglass`, 
 
 ```sh
 make help           # every target
-make ci             # fmt-check, tidy-check, vet, test (-race), testdata-check, rename-guard, banned-words, nocgo, web-verify-test
+make ci             # fmt-check, tidy-check, vet, test (-race), fuzz-policy-short, testdata-check, rename-guard, banned-words, nocgo, web-verify-test
 make build          # bin/deedglass with version ldflags; bin/deedglass help
 make test           # go test -race -count=1 ./...     (make test-short: no -race, short mode)
 make integration    # throwaway PG (DEEDGLASS_IT_PG=18|17|16, DEEDGLASS_IT_MODE=brew|docker): sql/ smoke,
@@ -38,6 +38,10 @@ make bench-identity # S07 budget: session middleware, login handler, invite with
 make bench-stop     # S08: Stop propagation across two instances (p50/p99) and the API-key budget; JSON in bench/results/
 make bench-intents  # S09: signed-intent checks without the DB (4 KiB args) and with the nonce insert; JSON in bench/results/
 go test ./internal/identity -run TestIntentVectors -update-intents   # regenerate testdata/intents/ (then update SHA256SUMS)
+make fuzz-policy    # S10: FuzzCompile and FuzzYAMLReader, 60 s each (fuzz-policy-short: 10 s each, in ci)
+make bench-policy   # S10: compile 50 and 500 rules (< 20 ms, < 250 ms); JSON in bench/results/
+go test ./internal/policy -run TestLintGolden -update   # regenerate the lint goldens, hashes.json and costs.json (review the diff)
+go test ./cmd/deedglass -run TestPolicyGoldens -update  # regenerate the policy lint/fmt CLI goldens
 DEEDGLASS_IT_PKGS=./internal/identity/ make integration   # one suite (DEEDGLASS_IT_GOFLAGS="-v -run X" adds flags)
 scripts/dev-pg.sh up  # a Docker-free dev Postgres on 127.0.0.1:55432 (writes .tmp/dev-pg.env); down | reset
 scripts/demo/tamper-clip.sh  # S06's recording: 1,000 real deeds, export, verify ✓, flip one digit, verify ✕
@@ -82,9 +86,11 @@ scripts/ci-local.sh # the CI jobs locally (docker-smoke and govulncheck skip whe
    `github.com/gowebpki/jcs` v1.0.2 (ADR-005); `go.yaml.in/yaml/v3` v3.0.5 (ADR-015);
    `github.com/jackc/pgx/v5` v5.11.0 (ADR-001, in go.mod since S02); `github.com/veraison/go-cose`
    v1.3.0 with `fxamacker/cbor/v2` v2.9.4 (ADR-026, in go.mod since S04). npm, dev only (`web/verify`,
-   ADR-027, accepted): `typescript` 7.0.2, `vitest` 5.0.3, `vite` 8.3.1, `@types/node` 24.19.0; no runtime dependency. Planned, and added only by
-   the session that uses them: `cel.dev/cel-go` v0.32.0 (S10, ADR-017), the MCP Go SDK v1.8.0 (S14,
-   ADR-018), `pglogrepl` at the spike-verified pin (S20). No cgo in the main binary.
+   ADR-027, accepted): `typescript` 7.0.2, `vitest` 5.0.3, `vite` 8.3.1, `@types/node` 24.19.0; no runtime dependency.
+   `cel.dev/cel-go` v0.32.0 (ADR-017, in go.mod since S10; brings protobuf, antlr4-go, cel.dev/expr,
+   genproto and x/exp; the binary-size budget is ADR-032, Proposed). Planned, and added only by
+   the session that uses them: the MCP Go SDK v1.8.0 (S14, ADR-018), `pglogrepl` at the
+   spike-verified pin (S20). No cgo in the main binary.
    `go.sum` is committed and CI runs `go mod verify`.
 7. CI matches the banned words (below) in files, strings and commit messages as whole words or
    phrases, case-insensitive, and fails on any hit not in `.banned-words-allow`
@@ -245,6 +251,19 @@ and "open source" until the repo is public. Style bans: "revolutionary", "world-
   405s against the real key pipeline. `httpx.RouteGuard` (`identity.MCPAuth`) and
   `httpx.KeyRequestHook` (OBO) are the two pipeline hooks; `StripInboundCredentials` is required
   before anything is forwarded upstream (S15).
+- `internal/policy` (S10): `TestLintGolden` over 95 fixtures in `testdata/lint/` (text and JSON
+  goldens; `valid/` pins every `version_hash` in `hashes.json` and every rule's estimated cost in
+  `costs.json`, so a normalizer or cost-model change shows as a diff); `TestHashStability` (same
+  hash for re-indenting, key order, flow/block, comments, quoting, CRLF, BOM; different for rule
+  order, reason, numbers, verify); `TestDeterminism` (100 goroutines); `TestFmtProperties`
+  (idempotent and hash-preserving over every valid fixture and 500 generated policies);
+  `TestDeclaredFields` (the CEL-visible facts S11 fills); `TestSourceMap` (CEL positions in every
+  YAML style); `TestCompileCases`; `TestErrorDocs` and `TestErrorDocExamples` (every code has a
+  `docs/POLICY_ERRORS.md` section and every printed example matches the compiler);
+  `TestBannedWordsCopy` (`internal/policy/bannedwords.txt` equals `scripts/banned_words.txt`);
+  `TestAgentIDPattern` (policy doesn't import `internal/ids`, which pulls in `database/sql/driver`);
+  `FuzzCompile` (no panic, bounded time, deterministic, fmt idempotent) and `FuzzYAMLReader`.
+  `cmd/deedglass`: `TestPolicyGoldens` (`testdata/policy/`, the §5 demo layout), `TestPolicyFmtWrite`.
 - `cmd/deedglass verify` (S05): 80 golden cases in `testdata/verify/<case>/{args,stdout,stderr,exit}`
   (`go test ./cmd/deedglass -run TestVerifyGolden -update`), every vector's code and exit, `--keys`
   URL rules (same-host redirects, 1 MiB, timeout, loopback-only http), key-set merge conflicts, no

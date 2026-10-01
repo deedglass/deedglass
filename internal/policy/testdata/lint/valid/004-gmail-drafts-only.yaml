@@ -1,0 +1,17 @@
+deedglass: policy/v1
+name: gmail-drafts-only
+description: Agents read mail and write drafts. A person sends every message.
+defaults:
+  decision: deny
+  reason: No rule allows this action. Add a rule in Console › Policies to allow it.
+rules:
+  - id: deny-sending
+    match: { tool: ["gmail.send_message", "gmail.send_draft"] }
+    decision: deny
+    reason: Agents write drafts only. Open the draft in Gmail to send it.
+  - id: allow-reads
+    match: { connector_type: gmail, side_effect: read }
+    decision: allow
+  - id: allow-drafts
+    match: { tool: ["gmail.create_draft", "gmail.update_draft"] }
+    decision: allow

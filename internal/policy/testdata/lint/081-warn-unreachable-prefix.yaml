@@ -1,0 +1,13 @@
+deedglass: policy/v1
+name: warn-unreachable-prefix
+defaults:
+  decision: deny
+  reason: No rule allows this action. Add a rule in Console › Policies to allow it.
+rules:
+  - id: posts-need-approval
+    match: { tool: "slack.post_*" }
+    decision: require_approval
+    reason: Posts wait for a person before they appear in Slack. Approve them in Console › Approvals.
+  - id: allow-status-posts
+    match: { tool: slack.post_message }
+    decision: allow

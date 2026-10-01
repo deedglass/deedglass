@@ -1,0 +1,1509 @@
+deedglass: policy/v1
+name: too-many-rules
+defaults:
+  decision: deny
+  reason: No rule allows this action. Add a rule in Console › Policies to allow it.
+rules:
+  - id: allow-tool-001
+    match: { tool: acme.tool_001 }
+    decision: allow
+  - id: allow-tool-002
+    match: { tool: acme.tool_002 }
+    decision: allow
+  - id: allow-tool-003
+    match: { tool: acme.tool_003 }
+    decision: allow
+  - id: allow-tool-004
+    match: { tool: acme.tool_004 }
+    decision: allow
+  - id: allow-tool-005
+    match: { tool: acme.tool_005 }
+    decision: allow
+  - id: allow-tool-006
+    match: { tool: acme.tool_006 }
+    decision: allow
+  - id: allow-tool-007
+    match: { tool: acme.tool_007 }
+    decision: allow
+  - id: allow-tool-008
+    match: { tool: acme.tool_008 }
+    decision: allow
+  - id: allow-tool-009
+    match: { tool: acme.tool_009 }
+    decision: allow
+  - id: allow-tool-010
+    match: { tool: acme.tool_010 }
+    decision: allow
+  - id: allow-tool-011
+    match: { tool: acme.tool_011 }
+    decision: allow
+  - id: allow-tool-012
+    match: { tool: acme.tool_012 }
+    decision: allow
+  - id: allow-tool-013
+    match: { tool: acme.tool_013 }
+    decision: allow
+  - id: allow-tool-014
+    match: { tool: acme.tool_014 }
+    decision: allow
+  - id: allow-tool-015
+    match: { tool: acme.tool_015 }
+    decision: allow
+  - id: allow-tool-016
+    match: { tool: acme.tool_016 }
+    decision: allow
+  - id: allow-tool-017
+    match: { tool: acme.tool_017 }
+    decision: allow
+  - id: allow-tool-018
+    match: { tool: acme.tool_018 }
+    decision: allow
+  - id: allow-tool-019
+    match: { tool: acme.tool_019 }
+    decision: allow
+  - id: allow-tool-020
+    match: { tool: acme.tool_020 }
+    decision: allow
+  - id: allow-tool-021
+    match: { tool: acme.tool_021 }
+    decision: allow
+  - id: allow-tool-022
+    match: { tool: acme.tool_022 }
+    decision: allow
+  - id: allow-tool-023
+    match: { tool: acme.tool_023 }
+    decision: allow
+  - id: allow-tool-024
+    match: { tool: acme.tool_024 }
+    decision: allow
+  - id: allow-tool-025
+    match: { tool: acme.tool_025 }
+    decision: allow
+  - id: allow-tool-026
+    match: { tool: acme.tool_026 }
+    decision: allow
+  - id: allow-tool-027
+    match: { tool: acme.tool_027 }
+    decision: allow
+  - id: allow-tool-028
+    match: { tool: acme.tool_028 }
+    decision: allow
+  - id: allow-tool-029
+    match: { tool: acme.tool_029 }
+    decision: allow
+  - id: allow-tool-030
+    match: { tool: acme.tool_030 }
+    decision: allow
+  - id: allow-tool-031
+    match: { tool: acme.tool_031 }
+    decision: allow
+  - id: allow-tool-032
+    match: { tool: acme.tool_032 }
+    decision: allow
+  - id: allow-tool-033
+    match: { tool: acme.tool_033 }
+    decision: allow
+  - id: allow-tool-034
+    match: { tool: acme.tool_034 }
+    decision: allow
+  - id: allow-tool-035
+    match: { tool: acme.tool_035 }
+    decision: allow
+  - id: allow-tool-036
+    match: { tool: acme.tool_036 }
+    decision: allow
+  - id: allow-tool-037
+    match: { tool: acme.tool_037 }
+    decision: allow
+  - id: allow-tool-038
+    match: { tool: acme.tool_038 }
+    decision: allow
+  - id: allow-tool-039
+    match: { tool: acme.tool_039 }
+    decision: allow
+  - id: allow-tool-040
+    match: { tool: acme.tool_040 }
+    decision: allow
+  - id: allow-tool-041
+    match: { tool: acme.tool_041 }
+    decision: allow
+  - id: allow-tool-042
+    match: { tool: acme.tool_042 }
+    decision: allow
+  - id: allow-tool-043
+    match: { tool: acme.tool_043 }
+    decision: allow
+  - id: allow-tool-044
+    match: { tool: acme.tool_044 }
+    decision: allow
+  - id: allow-tool-045
+    match: { tool: acme.tool_045 }
+    decision: allow
+  - id: allow-tool-046
+    match: { tool: acme.tool_046 }
+    decision: allow
+  - id: allow-tool-047
+    match: { tool: acme.tool_047 }
+    decision: allow
+  - id: allow-tool-048
+    match: { tool: acme.tool_048 }
+    decision: allow
+  - id: allow-tool-049
+    match: { tool: acme.tool_049 }
+    decision: allow
+  - id: allow-tool-050
+    match: { tool: acme.tool_050 }
+    decision: allow
+  - id: allow-tool-051
+    match: { tool: acme.tool_051 }
+    decision: allow
+  - id: allow-tool-052
+    match: { tool: acme.tool_052 }
+    decision: allow
+  - id: allow-tool-053
+    match: { tool: acme.tool_053 }
+    decision: allow
+  - id: allow-tool-054
+    match: { tool: acme.tool_054 }
+    decision: allow
+  - id: allow-tool-055
+    match: { tool: acme.tool_055 }
+    decision: allow
+  - id: allow-tool-056
+    match: { tool: acme.tool_056 }
+    decision: allow
+  - id: allow-tool-057
+    match: { tool: acme.tool_057 }
+    decision: allow
+  - id: allow-tool-058
+    match: { tool: acme.tool_058 }
+    decision: allow
+  - id: allow-tool-059
+    match: { tool: acme.tool_059 }
+    decision: allow
+  - id: allow-tool-060
+    match: { tool: acme.tool_060 }
+    decision: allow
+  - id: allow-tool-061
+    match: { tool: acme.tool_061 }
+    decision: allow
+  - id: allow-tool-062
+    match: { tool: acme.tool_062 }
+    decision: allow
+  - id: allow-tool-063
+    match: { tool: acme.tool_063 }
+    decision: allow
+  - id: allow-tool-064
+    match: { tool: acme.tool_064 }
+    decision: allow
+  - id: allow-tool-065
+    match: { tool: acme.tool_065 }
+    decision: allow
+  - id: allow-tool-066
+    match: { tool: acme.tool_066 }
+    decision: allow
+  - id: allow-tool-067
+    match: { tool: acme.tool_067 }
+    decision: allow
+  - id: allow-tool-068
+    match: { tool: acme.tool_068 }
+    decision: allow
+  - id: allow-tool-069
+    match: { tool: acme.tool_069 }
+    decision: allow
+  - id: allow-tool-070
+    match: { tool: acme.tool_070 }
+    decision: allow
+  - id: allow-tool-071
+    match: { tool: acme.tool_071 }
+    decision: allow
+  - id: allow-tool-072
+    match: { tool: acme.tool_072 }
+    decision: allow
+  - id: allow-tool-073
+    match: { tool: acme.tool_073 }
+    decision: allow
+  - id: allow-tool-074
+    match: { tool: acme.tool_074 }
+    decision: allow
+  - id: allow-tool-075
+    match: { tool: acme.tool_075 }
+    decision: allow
+  - id: allow-tool-076
+    match: { tool: acme.tool_076 }
+    decision: allow
+  - id: allow-tool-077
+    match: { tool: acme.tool_077 }
+    decision: allow
+  - id: allow-tool-078
+    match: { tool: acme.tool_078 }
+    decision: allow
+  - id: allow-tool-079
+    match: { tool: acme.tool_079 }
+    decision: allow
+  - id: allow-tool-080
+    match: { tool: acme.tool_080 }
+    decision: allow
+  - id: allow-tool-081
+    match: { tool: acme.tool_081 }
+    decision: allow
+  - id: allow-tool-082
+    match: { tool: acme.tool_082 }
+    decision: allow
+  - id: allow-tool-083
+    match: { tool: acme.tool_083 }
+    decision: allow
+  - id: allow-tool-084
+    match: { tool: acme.tool_084 }
+    decision: allow
+  - id: allow-tool-085
+    match: { tool: acme.tool_085 }
+    decision: allow
+  - id: allow-tool-086
+    match: { tool: acme.tool_086 }
+    decision: allow
+  - id: allow-tool-087
+    match: { tool: acme.tool_087 }
+    decision: allow
+  - id: allow-tool-088
+    match: { tool: acme.tool_088 }
+    decision: allow
+  - id: allow-tool-089
+    match: { tool: acme.tool_089 }
+    decision: allow
+  - id: allow-tool-090
+    match: { tool: acme.tool_090 }
+    decision: allow
+  - id: allow-tool-091
+    match: { tool: acme.tool_091 }
+    decision: allow
+  - id: allow-tool-092
+    match: { tool: acme.tool_092 }
+    decision: allow
+  - id: allow-tool-093
+    match: { tool: acme.tool_093 }
+    decision: allow
+  - id: allow-tool-094
+    match: { tool: acme.tool_094 }
+    decision: allow
+  - id: allow-tool-095
+    match: { tool: acme.tool_095 }
+    decision: allow
+  - id: allow-tool-096
+    match: { tool: acme.tool_096 }
+    decision: allow
+  - id: allow-tool-097
+    match: { tool: acme.tool_097 }
+    decision: allow
+  - id: allow-tool-098
+    match: { tool: acme.tool_098 }
+    decision: allow
+  - id: allow-tool-099
+    match: { tool: acme.tool_099 }
+    decision: allow
+  - id: allow-tool-100
+    match: { tool: acme.tool_100 }
+    decision: allow
+  - id: allow-tool-101
+    match: { tool: acme.tool_101 }
+    decision: allow
+  - id: allow-tool-102
+    match: { tool: acme.tool_102 }
+    decision: allow
+  - id: allow-tool-103
+    match: { tool: acme.tool_103 }
+    decision: allow
+  - id: allow-tool-104
+    match: { tool: acme.tool_104 }
+    decision: allow
+  - id: allow-tool-105
+    match: { tool: acme.tool_105 }
+    decision: allow
+  - id: allow-tool-106
+    match: { tool: acme.tool_106 }
+    decision: allow
+  - id: allow-tool-107
+    match: { tool: acme.tool_107 }
+    decision: allow
+  - id: allow-tool-108
+    match: { tool: acme.tool_108 }
+    decision: allow
+  - id: allow-tool-109
+    match: { tool: acme.tool_109 }
+    decision: allow
+  - id: allow-tool-110
+    match: { tool: acme.tool_110 }
+    decision: allow
+  - id: allow-tool-111
+    match: { tool: acme.tool_111 }
+    decision: allow
+  - id: allow-tool-112
+    match: { tool: acme.tool_112 }
+    decision: allow
+  - id: allow-tool-113
+    match: { tool: acme.tool_113 }
+    decision: allow
+  - id: allow-tool-114
+    match: { tool: acme.tool_114 }
+    decision: allow
+  - id: allow-tool-115
+    match: { tool: acme.tool_115 }
+    decision: allow
+  - id: allow-tool-116
+    match: { tool: acme.tool_116 }
+    decision: allow
+  - id: allow-tool-117
+    match: { tool: acme.tool_117 }
+    decision: allow
+  - id: allow-tool-118
+    match: { tool: acme.tool_118 }
+    decision: allow
+  - id: allow-tool-119
+    match: { tool: acme.tool_119 }
+    decision: allow
+  - id: allow-tool-120
+    match: { tool: acme.tool_120 }
+    decision: allow
+  - id: allow-tool-121
+    match: { tool: acme.tool_121 }
+    decision: allow
+  - id: allow-tool-122
+    match: { tool: acme.tool_122 }
+    decision: allow
+  - id: allow-tool-123
+    match: { tool: acme.tool_123 }
+    decision: allow
+  - id: allow-tool-124
+    match: { tool: acme.tool_124 }
+    decision: allow
+  - id: allow-tool-125
+    match: { tool: acme.tool_125 }
+    decision: allow
+  - id: allow-tool-126
+    match: { tool: acme.tool_126 }
+    decision: allow
+  - id: allow-tool-127
+    match: { tool: acme.tool_127 }
+    decision: allow
+  - id: allow-tool-128
+    match: { tool: acme.tool_128 }
+    decision: allow
+  - id: allow-tool-129
+    match: { tool: acme.tool_129 }
+    decision: allow
+  - id: allow-tool-130
+    match: { tool: acme.tool_130 }
+    decision: allow
+  - id: allow-tool-131
+    match: { tool: acme.tool_131 }
+    decision: allow
+  - id: allow-tool-132
+    match: { tool: acme.tool_132 }
+    decision: allow
+  - id: allow-tool-133
+    match: { tool: acme.tool_133 }
+    decision: allow
+  - id: allow-tool-134
+    match: { tool: acme.tool_134 }
+    decision: allow
+  - id: allow-tool-135
+    match: { tool: acme.tool_135 }
+    decision: allow
+  - id: allow-tool-136
+    match: { tool: acme.tool_136 }
+    decision: allow
+  - id: allow-tool-137
+    match: { tool: acme.tool_137 }
+    decision: allow
+  - id: allow-tool-138
+    match: { tool: acme.tool_138 }
+    decision: allow
+  - id: allow-tool-139
+    match: { tool: acme.tool_139 }
+    decision: allow
+  - id: allow-tool-140
+    match: { tool: acme.tool_140 }
+    decision: allow
+  - id: allow-tool-141
+    match: { tool: acme.tool_141 }
+    decision: allow
+  - id: allow-tool-142
+    match: { tool: acme.tool_142 }
+    decision: allow
+  - id: allow-tool-143
+    match: { tool: acme.tool_143 }
+    decision: allow
+  - id: allow-tool-144
+    match: { tool: acme.tool_144 }
+    decision: allow
+  - id: allow-tool-145
+    match: { tool: acme.tool_145 }
+    decision: allow
+  - id: allow-tool-146
+    match: { tool: acme.tool_146 }
+    decision: allow
+  - id: allow-tool-147
+    match: { tool: acme.tool_147 }
+    decision: allow
+  - id: allow-tool-148
+    match: { tool: acme.tool_148 }
+    decision: allow
+  - id: allow-tool-149
+    match: { tool: acme.tool_149 }
+    decision: allow
+  - id: allow-tool-150
+    match: { tool: acme.tool_150 }
+    decision: allow
+  - id: allow-tool-151
+    match: { tool: acme.tool_151 }
+    decision: allow
+  - id: allow-tool-152
+    match: { tool: acme.tool_152 }
+    decision: allow
+  - id: allow-tool-153
+    match: { tool: acme.tool_153 }
+    decision: allow
+  - id: allow-tool-154
+    match: { tool: acme.tool_154 }
+    decision: allow
+  - id: allow-tool-155
+    match: { tool: acme.tool_155 }
+    decision: allow
+  - id: allow-tool-156
+    match: { tool: acme.tool_156 }
+    decision: allow
+  - id: allow-tool-157
+    match: { tool: acme.tool_157 }
+    decision: allow
+  - id: allow-tool-158
+    match: { tool: acme.tool_158 }
+    decision: allow
+  - id: allow-tool-159
+    match: { tool: acme.tool_159 }
+    decision: allow
+  - id: allow-tool-160
+    match: { tool: acme.tool_160 }
+    decision: allow
+  - id: allow-tool-161
+    match: { tool: acme.tool_161 }
+    decision: allow
+  - id: allow-tool-162
+    match: { tool: acme.tool_162 }
+    decision: allow
+  - id: allow-tool-163
+    match: { tool: acme.tool_163 }
+    decision: allow
+  - id: allow-tool-164
+    match: { tool: acme.tool_164 }
+    decision: allow
+  - id: allow-tool-165
+    match: { tool: acme.tool_165 }
+    decision: allow
+  - id: allow-tool-166
+    match: { tool: acme.tool_166 }
+    decision: allow
+  - id: allow-tool-167
+    match: { tool: acme.tool_167 }
+    decision: allow
+  - id: allow-tool-168
+    match: { tool: acme.tool_168 }
+    decision: allow
+  - id: allow-tool-169
+    match: { tool: acme.tool_169 }
+    decision: allow
+  - id: allow-tool-170
+    match: { tool: acme.tool_170 }
+    decision: allow
+  - id: allow-tool-171
+    match: { tool: acme.tool_171 }
+    decision: allow
+  - id: allow-tool-172
+    match: { tool: acme.tool_172 }
+    decision: allow
+  - id: allow-tool-173
+    match: { tool: acme.tool_173 }
+    decision: allow
+  - id: allow-tool-174
+    match: { tool: acme.tool_174 }
+    decision: allow
+  - id: allow-tool-175
+    match: { tool: acme.tool_175 }
+    decision: allow
+  - id: allow-tool-176
+    match: { tool: acme.tool_176 }
+    decision: allow
+  - id: allow-tool-177
+    match: { tool: acme.tool_177 }
+    decision: allow
+  - id: allow-tool-178
+    match: { tool: acme.tool_178 }
+    decision: allow
+  - id: allow-tool-179
+    match: { tool: acme.tool_179 }
+    decision: allow
+  - id: allow-tool-180
+    match: { tool: acme.tool_180 }
+    decision: allow
+  - id: allow-tool-181
+    match: { tool: acme.tool_181 }
+    decision: allow
+  - id: allow-tool-182
+    match: { tool: acme.tool_182 }
+    decision: allow
+  - id: allow-tool-183
+    match: { tool: acme.tool_183 }
+    decision: allow
+  - id: allow-tool-184
+    match: { tool: acme.tool_184 }
+    decision: allow
+  - id: allow-tool-185
+    match: { tool: acme.tool_185 }
+    decision: allow
+  - id: allow-tool-186
+    match: { tool: acme.tool_186 }
+    decision: allow
+  - id: allow-tool-187
+    match: { tool: acme.tool_187 }
+    decision: allow
+  - id: allow-tool-188
+    match: { tool: acme.tool_188 }
+    decision: allow
+  - id: allow-tool-189
+    match: { tool: acme.tool_189 }
+    decision: allow
+  - id: allow-tool-190
+    match: { tool: acme.tool_190 }
+    decision: allow
+  - id: allow-tool-191
+    match: { tool: acme.tool_191 }
+    decision: allow
+  - id: allow-tool-192
+    match: { tool: acme.tool_192 }
+    decision: allow
+  - id: allow-tool-193
+    match: { tool: acme.tool_193 }
+    decision: allow
+  - id: allow-tool-194
+    match: { tool: acme.tool_194 }
+    decision: allow
+  - id: allow-tool-195
+    match: { tool: acme.tool_195 }
+    decision: allow
+  - id: allow-tool-196
+    match: { tool: acme.tool_196 }
+    decision: allow
+  - id: allow-tool-197
+    match: { tool: acme.tool_197 }
+    decision: allow
+  - id: allow-tool-198
+    match: { tool: acme.tool_198 }
+    decision: allow
+  - id: allow-tool-199
+    match: { tool: acme.tool_199 }
+    decision: allow
+  - id: allow-tool-200
+    match: { tool: acme.tool_200 }
+    decision: allow
+  - id: allow-tool-201
+    match: { tool: acme.tool_201 }
+    decision: allow
+  - id: allow-tool-202
+    match: { tool: acme.tool_202 }
+    decision: allow
+  - id: allow-tool-203
+    match: { tool: acme.tool_203 }
+    decision: allow
+  - id: allow-tool-204
+    match: { tool: acme.tool_204 }
+    decision: allow
+  - id: allow-tool-205
+    match: { tool: acme.tool_205 }
+    decision: allow
+  - id: allow-tool-206
+    match: { tool: acme.tool_206 }
+    decision: allow
+  - id: allow-tool-207
+    match: { tool: acme.tool_207 }
+    decision: allow
+  - id: allow-tool-208
+    match: { tool: acme.tool_208 }
+    decision: allow
+  - id: allow-tool-209
+    match: { tool: acme.tool_209 }
+    decision: allow
+  - id: allow-tool-210
+    match: { tool: acme.tool_210 }
+    decision: allow
+  - id: allow-tool-211
+    match: { tool: acme.tool_211 }
+    decision: allow
+  - id: allow-tool-212
+    match: { tool: acme.tool_212 }
+    decision: allow
+  - id: allow-tool-213
+    match: { tool: acme.tool_213 }
+    decision: allow
+  - id: allow-tool-214
+    match: { tool: acme.tool_214 }
+    decision: allow
+  - id: allow-tool-215
+    match: { tool: acme.tool_215 }
+    decision: allow
+  - id: allow-tool-216
+    match: { tool: acme.tool_216 }
+    decision: allow
+  - id: allow-tool-217
+    match: { tool: acme.tool_217 }
+    decision: allow
+  - id: allow-tool-218
+    match: { tool: acme.tool_218 }
+    decision: allow
+  - id: allow-tool-219
+    match: { tool: acme.tool_219 }
+    decision: allow
+  - id: allow-tool-220
+    match: { tool: acme.tool_220 }
+    decision: allow
+  - id: allow-tool-221
+    match: { tool: acme.tool_221 }
+    decision: allow
+  - id: allow-tool-222
+    match: { tool: acme.tool_222 }
+    decision: allow
+  - id: allow-tool-223
+    match: { tool: acme.tool_223 }
+    decision: allow
+  - id: allow-tool-224
+    match: { tool: acme.tool_224 }
+    decision: allow
+  - id: allow-tool-225
+    match: { tool: acme.tool_225 }
+    decision: allow
+  - id: allow-tool-226
+    match: { tool: acme.tool_226 }
+    decision: allow
+  - id: allow-tool-227
+    match: { tool: acme.tool_227 }
+    decision: allow
+  - id: allow-tool-228
+    match: { tool: acme.tool_228 }
+    decision: allow
+  - id: allow-tool-229
+    match: { tool: acme.tool_229 }
+    decision: allow
+  - id: allow-tool-230
+    match: { tool: acme.tool_230 }
+    decision: allow
+  - id: allow-tool-231
+    match: { tool: acme.tool_231 }
+    decision: allow
+  - id: allow-tool-232
+    match: { tool: acme.tool_232 }
+    decision: allow
+  - id: allow-tool-233
+    match: { tool: acme.tool_233 }
+    decision: allow
+  - id: allow-tool-234
+    match: { tool: acme.tool_234 }
+    decision: allow
+  - id: allow-tool-235
+    match: { tool: acme.tool_235 }
+    decision: allow
+  - id: allow-tool-236
+    match: { tool: acme.tool_236 }
+    decision: allow
+  - id: allow-tool-237
+    match: { tool: acme.tool_237 }
+    decision: allow
+  - id: allow-tool-238
+    match: { tool: acme.tool_238 }
+    decision: allow
+  - id: allow-tool-239
+    match: { tool: acme.tool_239 }
+    decision: allow
+  - id: allow-tool-240
+    match: { tool: acme.tool_240 }
+    decision: allow
+  - id: allow-tool-241
+    match: { tool: acme.tool_241 }
+    decision: allow
+  - id: allow-tool-242
+    match: { tool: acme.tool_242 }
+    decision: allow
+  - id: allow-tool-243
+    match: { tool: acme.tool_243 }
+    decision: allow
+  - id: allow-tool-244
+    match: { tool: acme.tool_244 }
+    decision: allow
+  - id: allow-tool-245
+    match: { tool: acme.tool_245 }
+    decision: allow
+  - id: allow-tool-246
+    match: { tool: acme.tool_246 }
+    decision: allow
+  - id: allow-tool-247
+    match: { tool: acme.tool_247 }
+    decision: allow
+  - id: allow-tool-248
+    match: { tool: acme.tool_248 }
+    decision: allow
+  - id: allow-tool-249
+    match: { tool: acme.tool_249 }
+    decision: allow
+  - id: allow-tool-250
+    match: { tool: acme.tool_250 }
+    decision: allow
+  - id: allow-tool-251
+    match: { tool: acme.tool_251 }
+    decision: allow
+  - id: allow-tool-252
+    match: { tool: acme.tool_252 }
+    decision: allow
+  - id: allow-tool-253
+    match: { tool: acme.tool_253 }
+    decision: allow
+  - id: allow-tool-254
+    match: { tool: acme.tool_254 }
+    decision: allow
+  - id: allow-tool-255
+    match: { tool: acme.tool_255 }
+    decision: allow
+  - id: allow-tool-256
+    match: { tool: acme.tool_256 }
+    decision: allow
+  - id: allow-tool-257
+    match: { tool: acme.tool_257 }
+    decision: allow
+  - id: allow-tool-258
+    match: { tool: acme.tool_258 }
+    decision: allow
+  - id: allow-tool-259
+    match: { tool: acme.tool_259 }
+    decision: allow
+  - id: allow-tool-260
+    match: { tool: acme.tool_260 }
+    decision: allow
+  - id: allow-tool-261
+    match: { tool: acme.tool_261 }
+    decision: allow
+  - id: allow-tool-262
+    match: { tool: acme.tool_262 }
+    decision: allow
+  - id: allow-tool-263
+    match: { tool: acme.tool_263 }
+    decision: allow
+  - id: allow-tool-264
+    match: { tool: acme.tool_264 }
+    decision: allow
+  - id: allow-tool-265
+    match: { tool: acme.tool_265 }
+    decision: allow
+  - id: allow-tool-266
+    match: { tool: acme.tool_266 }
+    decision: allow
+  - id: allow-tool-267
+    match: { tool: acme.tool_267 }
+    decision: allow
+  - id: allow-tool-268
+    match: { tool: acme.tool_268 }
+    decision: allow
+  - id: allow-tool-269
+    match: { tool: acme.tool_269 }
+    decision: allow
+  - id: allow-tool-270
+    match: { tool: acme.tool_270 }
+    decision: allow
+  - id: allow-tool-271
+    match: { tool: acme.tool_271 }
+    decision: allow
+  - id: allow-tool-272
+    match: { tool: acme.tool_272 }
+    decision: allow
+  - id: allow-tool-273
+    match: { tool: acme.tool_273 }
+    decision: allow
+  - id: allow-tool-274
+    match: { tool: acme.tool_274 }
+    decision: allow
+  - id: allow-tool-275
+    match: { tool: acme.tool_275 }
+    decision: allow
+  - id: allow-tool-276
+    match: { tool: acme.tool_276 }
+    decision: allow
+  - id: allow-tool-277
+    match: { tool: acme.tool_277 }
+    decision: allow
+  - id: allow-tool-278
+    match: { tool: acme.tool_278 }
+    decision: allow
+  - id: allow-tool-279
+    match: { tool: acme.tool_279 }
+    decision: allow
+  - id: allow-tool-280
+    match: { tool: acme.tool_280 }
+    decision: allow
+  - id: allow-tool-281
+    match: { tool: acme.tool_281 }
+    decision: allow
+  - id: allow-tool-282
+    match: { tool: acme.tool_282 }
+    decision: allow
+  - id: allow-tool-283
+    match: { tool: acme.tool_283 }
+    decision: allow
+  - id: allow-tool-284
+    match: { tool: acme.tool_284 }
+    decision: allow
+  - id: allow-tool-285
+    match: { tool: acme.tool_285 }
+    decision: allow
+  - id: allow-tool-286
+    match: { tool: acme.tool_286 }
+    decision: allow
+  - id: allow-tool-287
+    match: { tool: acme.tool_287 }
+    decision: allow
+  - id: allow-tool-288
+    match: { tool: acme.tool_288 }
+    decision: allow
+  - id: allow-tool-289
+    match: { tool: acme.tool_289 }
+    decision: allow
+  - id: allow-tool-290
+    match: { tool: acme.tool_290 }
+    decision: allow
+  - id: allow-tool-291
+    match: { tool: acme.tool_291 }
+    decision: allow
+  - id: allow-tool-292
+    match: { tool: acme.tool_292 }
+    decision: allow
+  - id: allow-tool-293
+    match: { tool: acme.tool_293 }
+    decision: allow
+  - id: allow-tool-294
+    match: { tool: acme.tool_294 }
+    decision: allow
+  - id: allow-tool-295
+    match: { tool: acme.tool_295 }
+    decision: allow
+  - id: allow-tool-296
+    match: { tool: acme.tool_296 }
+    decision: allow
+  - id: allow-tool-297
+    match: { tool: acme.tool_297 }
+    decision: allow
+  - id: allow-tool-298
+    match: { tool: acme.tool_298 }
+    decision: allow
+  - id: allow-tool-299
+    match: { tool: acme.tool_299 }
+    decision: allow
+  - id: allow-tool-300
+    match: { tool: acme.tool_300 }
+    decision: allow
+  - id: allow-tool-301
+    match: { tool: acme.tool_301 }
+    decision: allow
+  - id: allow-tool-302
+    match: { tool: acme.tool_302 }
+    decision: allow
+  - id: allow-tool-303
+    match: { tool: acme.tool_303 }
+    decision: allow
+  - id: allow-tool-304
+    match: { tool: acme.tool_304 }
+    decision: allow
+  - id: allow-tool-305
+    match: { tool: acme.tool_305 }
+    decision: allow
+  - id: allow-tool-306
+    match: { tool: acme.tool_306 }
+    decision: allow
+  - id: allow-tool-307
+    match: { tool: acme.tool_307 }
+    decision: allow
+  - id: allow-tool-308
+    match: { tool: acme.tool_308 }
+    decision: allow
+  - id: allow-tool-309
+    match: { tool: acme.tool_309 }
+    decision: allow
+  - id: allow-tool-310
+    match: { tool: acme.tool_310 }
+    decision: allow
+  - id: allow-tool-311
+    match: { tool: acme.tool_311 }
+    decision: allow
+  - id: allow-tool-312
+    match: { tool: acme.tool_312 }
+    decision: allow
+  - id: allow-tool-313
+    match: { tool: acme.tool_313 }
+    decision: allow
+  - id: allow-tool-314
+    match: { tool: acme.tool_314 }
+    decision: allow
+  - id: allow-tool-315
+    match: { tool: acme.tool_315 }
+    decision: allow
+  - id: allow-tool-316
+    match: { tool: acme.tool_316 }
+    decision: allow
+  - id: allow-tool-317
+    match: { tool: acme.tool_317 }
+    decision: allow
+  - id: allow-tool-318
+    match: { tool: acme.tool_318 }
+    decision: allow
+  - id: allow-tool-319
+    match: { tool: acme.tool_319 }
+    decision: allow
+  - id: allow-tool-320
+    match: { tool: acme.tool_320 }
+    decision: allow
+  - id: allow-tool-321
+    match: { tool: acme.tool_321 }
+    decision: allow
+  - id: allow-tool-322
+    match: { tool: acme.tool_322 }
+    decision: allow
+  - id: allow-tool-323
+    match: { tool: acme.tool_323 }
+    decision: allow
+  - id: allow-tool-324
+    match: { tool: acme.tool_324 }
+    decision: allow
+  - id: allow-tool-325
+    match: { tool: acme.tool_325 }
+    decision: allow
+  - id: allow-tool-326
+    match: { tool: acme.tool_326 }
+    decision: allow
+  - id: allow-tool-327
+    match: { tool: acme.tool_327 }
+    decision: allow
+  - id: allow-tool-328
+    match: { tool: acme.tool_328 }
+    decision: allow
+  - id: allow-tool-329
+    match: { tool: acme.tool_329 }
+    decision: allow
+  - id: allow-tool-330
+    match: { tool: acme.tool_330 }
+    decision: allow
+  - id: allow-tool-331
+    match: { tool: acme.tool_331 }
+    decision: allow
+  - id: allow-tool-332
+    match: { tool: acme.tool_332 }
+    decision: allow
+  - id: allow-tool-333
+    match: { tool: acme.tool_333 }
+    decision: allow
+  - id: allow-tool-334
+    match: { tool: acme.tool_334 }
+    decision: allow
+  - id: allow-tool-335
+    match: { tool: acme.tool_335 }
+    decision: allow
+  - id: allow-tool-336
+    match: { tool: acme.tool_336 }
+    decision: allow
+  - id: allow-tool-337
+    match: { tool: acme.tool_337 }
+    decision: allow
+  - id: allow-tool-338
+    match: { tool: acme.tool_338 }
+    decision: allow
+  - id: allow-tool-339
+    match: { tool: acme.tool_339 }
+    decision: allow
+  - id: allow-tool-340
+    match: { tool: acme.tool_340 }
+    decision: allow
+  - id: allow-tool-341
+    match: { tool: acme.tool_341 }
+    decision: allow
+  - id: allow-tool-342
+    match: { tool: acme.tool_342 }
+    decision: allow
+  - id: allow-tool-343
+    match: { tool: acme.tool_343 }
+    decision: allow
+  - id: allow-tool-344
+    match: { tool: acme.tool_344 }
+    decision: allow
+  - id: allow-tool-345
+    match: { tool: acme.tool_345 }
+    decision: allow
+  - id: allow-tool-346
+    match: { tool: acme.tool_346 }
+    decision: allow
+  - id: allow-tool-347
+    match: { tool: acme.tool_347 }
+    decision: allow
+  - id: allow-tool-348
+    match: { tool: acme.tool_348 }
+    decision: allow
+  - id: allow-tool-349
+    match: { tool: acme.tool_349 }
+    decision: allow
+  - id: allow-tool-350
+    match: { tool: acme.tool_350 }
+    decision: allow
+  - id: allow-tool-351
+    match: { tool: acme.tool_351 }
+    decision: allow
+  - id: allow-tool-352
+    match: { tool: acme.tool_352 }
+    decision: allow
+  - id: allow-tool-353
+    match: { tool: acme.tool_353 }
+    decision: allow
+  - id: allow-tool-354
+    match: { tool: acme.tool_354 }
+    decision: allow
+  - id: allow-tool-355
+    match: { tool: acme.tool_355 }
+    decision: allow
+  - id: allow-tool-356
+    match: { tool: acme.tool_356 }
+    decision: allow
+  - id: allow-tool-357
+    match: { tool: acme.tool_357 }
+    decision: allow
+  - id: allow-tool-358
+    match: { tool: acme.tool_358 }
+    decision: allow
+  - id: allow-tool-359
+    match: { tool: acme.tool_359 }
+    decision: allow
+  - id: allow-tool-360
+    match: { tool: acme.tool_360 }
+    decision: allow
+  - id: allow-tool-361
+    match: { tool: acme.tool_361 }
+    decision: allow
+  - id: allow-tool-362
+    match: { tool: acme.tool_362 }
+    decision: allow
+  - id: allow-tool-363
+    match: { tool: acme.tool_363 }
+    decision: allow
+  - id: allow-tool-364
+    match: { tool: acme.tool_364 }
+    decision: allow
+  - id: allow-tool-365
+    match: { tool: acme.tool_365 }
+    decision: allow
+  - id: allow-tool-366
+    match: { tool: acme.tool_366 }
+    decision: allow
+  - id: allow-tool-367
+    match: { tool: acme.tool_367 }
+    decision: allow
+  - id: allow-tool-368
+    match: { tool: acme.tool_368 }
+    decision: allow
+  - id: allow-tool-369
+    match: { tool: acme.tool_369 }
+    decision: allow
+  - id: allow-tool-370
+    match: { tool: acme.tool_370 }
+    decision: allow
+  - id: allow-tool-371
+    match: { tool: acme.tool_371 }
+    decision: allow
+  - id: allow-tool-372
+    match: { tool: acme.tool_372 }
+    decision: allow
+  - id: allow-tool-373
+    match: { tool: acme.tool_373 }
+    decision: allow
+  - id: allow-tool-374
+    match: { tool: acme.tool_374 }
+    decision: allow
+  - id: allow-tool-375
+    match: { tool: acme.tool_375 }
+    decision: allow
+  - id: allow-tool-376
+    match: { tool: acme.tool_376 }
+    decision: allow
+  - id: allow-tool-377
+    match: { tool: acme.tool_377 }
+    decision: allow
+  - id: allow-tool-378
+    match: { tool: acme.tool_378 }
+    decision: allow
+  - id: allow-tool-379
+    match: { tool: acme.tool_379 }
+    decision: allow
+  - id: allow-tool-380
+    match: { tool: acme.tool_380 }
+    decision: allow
+  - id: allow-tool-381
+    match: { tool: acme.tool_381 }
+    decision: allow
+  - id: allow-tool-382
+    match: { tool: acme.tool_382 }
+    decision: allow
+  - id: allow-tool-383
+    match: { tool: acme.tool_383 }
+    decision: allow
+  - id: allow-tool-384
+    match: { tool: acme.tool_384 }
+    decision: allow
+  - id: allow-tool-385
+    match: { tool: acme.tool_385 }
+    decision: allow
+  - id: allow-tool-386
+    match: { tool: acme.tool_386 }
+    decision: allow
+  - id: allow-tool-387
+    match: { tool: acme.tool_387 }
+    decision: allow
+  - id: allow-tool-388
+    match: { tool: acme.tool_388 }
+    decision: allow
+  - id: allow-tool-389
+    match: { tool: acme.tool_389 }
+    decision: allow
+  - id: allow-tool-390
+    match: { tool: acme.tool_390 }
+    decision: allow
+  - id: allow-tool-391
+    match: { tool: acme.tool_391 }
+    decision: allow
+  - id: allow-tool-392
+    match: { tool: acme.tool_392 }
+    decision: allow
+  - id: allow-tool-393
+    match: { tool: acme.tool_393 }
+    decision: allow
+  - id: allow-tool-394
+    match: { tool: acme.tool_394 }
+    decision: allow
+  - id: allow-tool-395
+    match: { tool: acme.tool_395 }
+    decision: allow
+  - id: allow-tool-396
+    match: { tool: acme.tool_396 }
+    decision: allow
+  - id: allow-tool-397
+    match: { tool: acme.tool_397 }
+    decision: allow
+  - id: allow-tool-398
+    match: { tool: acme.tool_398 }
+    decision: allow
+  - id: allow-tool-399
+    match: { tool: acme.tool_399 }
+    decision: allow
+  - id: allow-tool-400
+    match: { tool: acme.tool_400 }
+    decision: allow
+  - id: allow-tool-401
+    match: { tool: acme.tool_401 }
+    decision: allow
+  - id: allow-tool-402
+    match: { tool: acme.tool_402 }
+    decision: allow
+  - id: allow-tool-403
+    match: { tool: acme.tool_403 }
+    decision: allow
+  - id: allow-tool-404
+    match: { tool: acme.tool_404 }
+    decision: allow
+  - id: allow-tool-405
+    match: { tool: acme.tool_405 }
+    decision: allow
+  - id: allow-tool-406
+    match: { tool: acme.tool_406 }
+    decision: allow
+  - id: allow-tool-407
+    match: { tool: acme.tool_407 }
+    decision: allow
+  - id: allow-tool-408
+    match: { tool: acme.tool_408 }
+    decision: allow
+  - id: allow-tool-409
+    match: { tool: acme.tool_409 }
+    decision: allow
+  - id: allow-tool-410
+    match: { tool: acme.tool_410 }
+    decision: allow
+  - id: allow-tool-411
+    match: { tool: acme.tool_411 }
+    decision: allow
+  - id: allow-tool-412
+    match: { tool: acme.tool_412 }
+    decision: allow
+  - id: allow-tool-413
+    match: { tool: acme.tool_413 }
+    decision: allow
+  - id: allow-tool-414
+    match: { tool: acme.tool_414 }
+    decision: allow
+  - id: allow-tool-415
+    match: { tool: acme.tool_415 }
+    decision: allow
+  - id: allow-tool-416
+    match: { tool: acme.tool_416 }
+    decision: allow
+  - id: allow-tool-417
+    match: { tool: acme.tool_417 }
+    decision: allow
+  - id: allow-tool-418
+    match: { tool: acme.tool_418 }
+    decision: allow
+  - id: allow-tool-419
+    match: { tool: acme.tool_419 }
+    decision: allow
+  - id: allow-tool-420
+    match: { tool: acme.tool_420 }
+    decision: allow
+  - id: allow-tool-421
+    match: { tool: acme.tool_421 }
+    decision: allow
+  - id: allow-tool-422
+    match: { tool: acme.tool_422 }
+    decision: allow
+  - id: allow-tool-423
+    match: { tool: acme.tool_423 }
+    decision: allow
+  - id: allow-tool-424
+    match: { tool: acme.tool_424 }
+    decision: allow
+  - id: allow-tool-425
+    match: { tool: acme.tool_425 }
+    decision: allow
+  - id: allow-tool-426
+    match: { tool: acme.tool_426 }
+    decision: allow
+  - id: allow-tool-427
+    match: { tool: acme.tool_427 }
+    decision: allow
+  - id: allow-tool-428
+    match: { tool: acme.tool_428 }
+    decision: allow
+  - id: allow-tool-429
+    match: { tool: acme.tool_429 }
+    decision: allow
+  - id: allow-tool-430
+    match: { tool: acme.tool_430 }
+    decision: allow
+  - id: allow-tool-431
+    match: { tool: acme.tool_431 }
+    decision: allow
+  - id: allow-tool-432
+    match: { tool: acme.tool_432 }
+    decision: allow
+  - id: allow-tool-433
+    match: { tool: acme.tool_433 }
+    decision: allow
+  - id: allow-tool-434
+    match: { tool: acme.tool_434 }
+    decision: allow
+  - id: allow-tool-435
+    match: { tool: acme.tool_435 }
+    decision: allow
+  - id: allow-tool-436
+    match: { tool: acme.tool_436 }
+    decision: allow
+  - id: allow-tool-437
+    match: { tool: acme.tool_437 }
+    decision: allow
+  - id: allow-tool-438
+    match: { tool: acme.tool_438 }
+    decision: allow
+  - id: allow-tool-439
+    match: { tool: acme.tool_439 }
+    decision: allow
+  - id: allow-tool-440
+    match: { tool: acme.tool_440 }
+    decision: allow
+  - id: allow-tool-441
+    match: { tool: acme.tool_441 }
+    decision: allow
+  - id: allow-tool-442
+    match: { tool: acme.tool_442 }
+    decision: allow
+  - id: allow-tool-443
+    match: { tool: acme.tool_443 }
+    decision: allow
+  - id: allow-tool-444
+    match: { tool: acme.tool_444 }
+    decision: allow
+  - id: allow-tool-445
+    match: { tool: acme.tool_445 }
+    decision: allow
+  - id: allow-tool-446
+    match: { tool: acme.tool_446 }
+    decision: allow
+  - id: allow-tool-447
+    match: { tool: acme.tool_447 }
+    decision: allow
+  - id: allow-tool-448
+    match: { tool: acme.tool_448 }
+    decision: allow
+  - id: allow-tool-449
+    match: { tool: acme.tool_449 }
+    decision: allow
+  - id: allow-tool-450
+    match: { tool: acme.tool_450 }
+    decision: allow
+  - id: allow-tool-451
+    match: { tool: acme.tool_451 }
+    decision: allow
+  - id: allow-tool-452
+    match: { tool: acme.tool_452 }
+    decision: allow
+  - id: allow-tool-453
+    match: { tool: acme.tool_453 }
+    decision: allow
+  - id: allow-tool-454
+    match: { tool: acme.tool_454 }
+    decision: allow
+  - id: allow-tool-455
+    match: { tool: acme.tool_455 }
+    decision: allow
+  - id: allow-tool-456
+    match: { tool: acme.tool_456 }
+    decision: allow
+  - id: allow-tool-457
+    match: { tool: acme.tool_457 }
+    decision: allow
+  - id: allow-tool-458
+    match: { tool: acme.tool_458 }
+    decision: allow
+  - id: allow-tool-459
+    match: { tool: acme.tool_459 }
+    decision: allow
+  - id: allow-tool-460
+    match: { tool: acme.tool_460 }
+    decision: allow
+  - id: allow-tool-461
+    match: { tool: acme.tool_461 }
+    decision: allow
+  - id: allow-tool-462
+    match: { tool: acme.tool_462 }
+    decision: allow
+  - id: allow-tool-463
+    match: { tool: acme.tool_463 }
+    decision: allow
+  - id: allow-tool-464
+    match: { tool: acme.tool_464 }
+    decision: allow
+  - id: allow-tool-465
+    match: { tool: acme.tool_465 }
+    decision: allow
+  - id: allow-tool-466
+    match: { tool: acme.tool_466 }
+    decision: allow
+  - id: allow-tool-467
+    match: { tool: acme.tool_467 }
+    decision: allow
+  - id: allow-tool-468
+    match: { tool: acme.tool_468 }
+    decision: allow
+  - id: allow-tool-469
+    match: { tool: acme.tool_469 }
+    decision: allow
+  - id: allow-tool-470
+    match: { tool: acme.tool_470 }
+    decision: allow
+  - id: allow-tool-471
+    match: { tool: acme.tool_471 }
+    decision: allow
+  - id: allow-tool-472
+    match: { tool: acme.tool_472 }
+    decision: allow
+  - id: allow-tool-473
+    match: { tool: acme.tool_473 }
+    decision: allow
+  - id: allow-tool-474
+    match: { tool: acme.tool_474 }
+    decision: allow
+  - id: allow-tool-475
+    match: { tool: acme.tool_475 }
+    decision: allow
+  - id: allow-tool-476
+    match: { tool: acme.tool_476 }
+    decision: allow
+  - id: allow-tool-477
+    match: { tool: acme.tool_477 }
+    decision: allow
+  - id: allow-tool-478
+    match: { tool: acme.tool_478 }
+    decision: allow
+  - id: allow-tool-479
+    match: { tool: acme.tool_479 }
+    decision: allow
+  - id: allow-tool-480
+    match: { tool: acme.tool_480 }
+    decision: allow
+  - id: allow-tool-481
+    match: { tool: acme.tool_481 }
+    decision: allow
+  - id: allow-tool-482
+    match: { tool: acme.tool_482 }
+    decision: allow
+  - id: allow-tool-483
+    match: { tool: acme.tool_483 }
+    decision: allow
+  - id: allow-tool-484
+    match: { tool: acme.tool_484 }
+    decision: allow
+  - id: allow-tool-485
+    match: { tool: acme.tool_485 }
+    decision: allow
+  - id: allow-tool-486
+    match: { tool: acme.tool_486 }
+    decision: allow
+  - id: allow-tool-487
+    match: { tool: acme.tool_487 }
+    decision: allow
+  - id: allow-tool-488
+    match: { tool: acme.tool_488 }
+    decision: allow
+  - id: allow-tool-489
+    match: { tool: acme.tool_489 }
+    decision: allow
+  - id: allow-tool-490
+    match: { tool: acme.tool_490 }
+    decision: allow
+  - id: allow-tool-491
+    match: { tool: acme.tool_491 }
+    decision: allow
+  - id: allow-tool-492
+    match: { tool: acme.tool_492 }
+    decision: allow
+  - id: allow-tool-493
+    match: { tool: acme.tool_493 }
+    decision: allow
+  - id: allow-tool-494
+    match: { tool: acme.tool_494 }
+    decision: allow
+  - id: allow-tool-495
+    match: { tool: acme.tool_495 }
+    decision: allow
+  - id: allow-tool-496
+    match: { tool: acme.tool_496 }
+    decision: allow
+  - id: allow-tool-497
+    match: { tool: acme.tool_497 }
+    decision: allow
+  - id: allow-tool-498
+    match: { tool: acme.tool_498 }
+    decision: allow
+  - id: allow-tool-499
+    match: { tool: acme.tool_499 }
+    decision: allow
+  - id: allow-tool-500
+    match: { tool: acme.tool_500 }
+    decision: allow
+  - id: allow-tool-501
+    match: { tool: acme.tool_501 }
+    decision: allow

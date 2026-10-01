@@ -1,0 +1,8 @@
+✕ 061-bidi-in-reason.yaml:11:13 · control_character
+  The reason contains a bidirectional control character (U+202E).
+
+   11 │     reason: DROP never runs �slennahc lla� through agents.
+      │             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  hint: Remove it. It can make text display differently from what it says.
+
+✕ 1 error · 061-bidi-in-reason.yaml was not accepted

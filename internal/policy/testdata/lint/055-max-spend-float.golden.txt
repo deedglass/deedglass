@@ -1,0 +1,8 @@
+✕ 055-max-spend-float.yaml:10:16 · money_float
+  max_spend: 50.00 is a YAML number.
+
+   10 │     max_spend: 50.00
+      │                ^^^^^
+  hint: Write money as a string, like "50.00 usd", so no precision is lost.
+
+✕ 1 error · 055-max-spend-float.yaml was not accepted

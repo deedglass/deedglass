@@ -1,0 +1,11 @@
+{
+  "object": "policy_lint_result",
+  "file": "001-postgres-safe.yaml",
+  "valid": true,
+  "name": "postgres-safe",
+  "version_hash": "sha256:31299e0719c2222675333c0ef35bbe65020bd677f453d7cdb387dc1283bb6b79",
+  "rules": 9,
+  "budgets": 0,
+  "errors": [],
+  "warnings": []
+}

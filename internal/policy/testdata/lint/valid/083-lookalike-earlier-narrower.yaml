@@ -1,0 +1,13 @@
+deedglass: policy/v1
+name: lookalike-earlier-narrower
+defaults:
+  decision: deny
+  reason: No rule allows this action. Add a rule in Console › Policies to allow it.
+rules:
+  - id: creates-need-approval
+    match: { tool: "stripe.create_*" }
+    decision: require_approval
+    reason: Creating anything in Stripe waits for a person. An admin can approve in Console › Approvals.
+  - id: allow-stripe
+    match: { tool: "stripe.*" }
+    decision: allow

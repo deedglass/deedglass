@@ -1,0 +1,8 @@
+✕ 074-cel-regex-from-args.yaml:9:30 · cel_regex
+  The pattern in matches() must be a constant string.
+
+    9 │     when: 'tool.name.matches(args.pattern)'
+      │                              ^^^^^^^^^^^^
+  hint: Patterns come from the policy, never from an agent's arguments: write the pattern in quotes.
+
+✕ 1 error · 074-cel-regex-from-args.yaml was not accepted

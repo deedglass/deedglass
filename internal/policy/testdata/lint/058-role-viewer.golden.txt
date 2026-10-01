@@ -1,0 +1,8 @@
+✕ 058-role-viewer.yaml:12:31 · invalid_approvers
+  role:viewer cannot approve.
+
+   12 │       approvers: [role:admin, role:viewer]
+      │                               ^^^^^^^^^^^
+  hint: Use role:admin, role:owner or user:<email>.
+
+✕ 1 error · 058-role-viewer.yaml was not accepted

@@ -1,0 +1,8 @@
+○ 088-voice-reason-exclamation.yaml:11:13 · reason_style
+  This reason has an exclamation mark.
+
+   11 │     reason: blocked!
+      │             ^
+  hint: Say it calmly, without an exclamation mark.
+
+✓ voice-reason-exclamation · 1 rule · 0 budgets · sha256:c382…5ed2 · ○ 1 warning

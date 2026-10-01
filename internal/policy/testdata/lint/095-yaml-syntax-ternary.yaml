@@ -1,0 +1,9 @@
+deedglass: policy/v1
+name: yaml-syntax-ternary
+defaults:
+  decision: deny
+  reason: No rule allows this action. Add a rule in Console › Policies to allow it.
+rules:
+  - id: ternary
+    when: has(args.amount) ? args.amount < 5000 : false
+    decision: allow

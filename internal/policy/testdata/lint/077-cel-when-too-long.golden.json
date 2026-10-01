@@ -1,0 +1,26 @@
+{
+  "object": "policy_lint_result",
+  "file": "077-cel-when-too-long.yaml",
+  "valid": false,
+  "name": "cel-when-too-long",
+  "version_hash": null,
+  "rules": 1,
+  "budgets": 0,
+  "errors": [
+    {
+      "severity": "error",
+      "code": "cel_too_long",
+      "message": "This `when` is 4,097 characters; the limit is 4,096.",
+      "hint": "Split the rule, or move a list into `match`.",
+      "file": "077-cel-when-too-long.yaml",
+      "line": 9,
+      "column": 11,
+      "end_line": 9,
+      "end_column": 4110,
+      "rule_id": "long-condition",
+      "path": "rules[0].when",
+      "doc_url": "https://docs.deedglass.com/policies/errors/cel_too_long"
+    }
+  ],
+  "warnings": []
+}

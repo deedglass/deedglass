@@ -1,0 +1,6 @@
+deedglass: policy/v1
+name: custom-tag
+description: !custom Acme refunds
+defaults:
+  decision: deny
+  reason: No rule allows this action. Add a rule in Console › Policies to allow it.

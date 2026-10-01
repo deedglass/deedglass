@@ -1,0 +1,19 @@
+{
+  "valid/001-postgres-safe.yaml": "sha256:31299e0719c2222675333c0ef35bbe65020bd677f453d7cdb387dc1283bb6b79",
+  "valid/002-stripe-refunds.yaml": "sha256:627298ec1b375aa820a2f57c45c925b67155f58faff9cfbe4e9efe0841f4921b",
+  "valid/003-github-read-mostly.yaml": "sha256:ab33c058aa17cfd282c47787b3a6ce14f2b330ebc68c2ee6387c15e891f04b6b",
+  "valid/004-gmail-drafts-only.yaml": "sha256:61598c14f520bb8add8392cc110e6f8addd5afcdb3ae5572ad4585a61ceb4360",
+  "valid/005-slack-post-with-approval.yaml": "sha256:5f7525d3815a89f45770659d8c4b4c55db5d58a8a173ad2a28ec5f92c3ad96f2",
+  "valid/006-default-deny.yaml": "sha256:e9e170cb4831ab4459cd8b0bd977ee1a083990be8cf22de2c7352a00949c5c6e",
+  "valid/007-minimal.yaml": "sha256:4d4ef23bce94763f456157960b3640e5df886c3e0cdcd4f6b0e2951715b380e0",
+  "valid/008-every-field.yaml": "sha256:bfdf0d3c36cd1b4647001077d2dd9cb386b5cd448a0a125468ba6da8e571735d",
+  "valid/009-five-hundred-rules.yaml": "sha256:0a1052aea4b187603059385160a51e2a47220aa3a3ef2cd24addc059b6c996ec",
+  "valid/010-when-folded-strip.yaml": "sha256:1a2ec1a715cc30d03e280a2cc85d9319213434d7d480f8774012e5560feebd1b",
+  "valid/011-when-literal.yaml": "sha256:10931ad0382c33e1654fab7fee48dd03a4cbec4cf9b1c9c19e612fdd875e15ec",
+  "valid/012-utf8-bom.yaml": "sha256:272081876fcc90ac18a12c91e1490536073d3ad2bea65fa176008c4e5921f2df",
+  "valid/013-crlf.yaml": "sha256:9b84bc58c581548950ce54352d43c1d24065c2f1493b2909026b6adeaf2c2eca",
+  "valid/014-when-dyn-flag.yaml": "sha256:aeffb582da4533f122e4ed487ea95dd6c75deeb9715a455becef55109e978e89",
+  "valid/015-measure-dyn-ternary.yaml": "sha256:1c2c2dc67bb4209cd252b93a128c5f9c3da851ae38442aa9ec0aa592f4e88360",
+  "valid/082-lookalike-earlier-has-when.yaml": "sha256:c0ff97ebc7049d3188e957916fe2a6c5c9d55874943dba125fa23784bee4d623",
+  "valid/083-lookalike-earlier-narrower.yaml": "sha256:9451a45bb2aab75ca8969bef90c472cbb31f80a2afdf3e2a6d23b13b3f5b4e30"
+}

@@ -1,0 +1,9 @@
+deedglass: policy/v1
+name: missing-decision
+defaults:
+  decision: deny
+  reason: No rule allows this action. Add a rule in Console › Policies to allow it.
+rules:
+  - id: small-refunds
+    match: { tool: stripe.create_refund }
+    when: args.amount <= minor("50.00 usd")

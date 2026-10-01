@@ -1,0 +1,8 @@
+✕ 051-side-effect-delete.yaml:8:27 · invalid_side_effect
+  delete is not a side effect.
+
+    8 │     match: { side_effect: delete }
+      │                           ^^^^^^
+  hint: Use read, write, destructive or unknown.
+
+✕ 1 error · 051-side-effect-delete.yaml was not accepted

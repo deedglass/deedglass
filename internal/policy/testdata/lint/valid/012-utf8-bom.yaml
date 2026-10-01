@@ -1,0 +1,10 @@
+﻿deedglass: policy/v1
+name: utf8-bom
+description: Saved by an editor that writes a byte-order mark.
+defaults:
+  decision: deny
+  reason: No rule allows this action. Add a rule in Console › Policies to allow it.
+rules:
+  - id: allow-notion-reads
+    match: { connector_type: notion, side_effect: read }
+    decision: allow

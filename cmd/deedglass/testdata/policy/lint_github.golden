@@ -1,0 +1,7 @@
+exit 1
+--- stdout
+::error file=testdata/policy/refunds.yaml,line=9,col=5::unknown_key: Unknown key "desicion" in rule "cap-refunds". Did you mean "decision"?
+::error file=testdata/policy/refunds.yaml,line=14,col=26::cel_type: args.amount <= "5000" compares a number with a string. Compare numbers with numbers: args.amount <= 5000 (minor units, so 5000 is $50.00).
+::error file=testdata/policy/refunds.yaml,line=21,col=11::yaml_tag: !sql.multi is read by YAML as a tag, not as CEL. Quote the expression: when: '!sql.multi'
+::warning file=testdata/policy/refunds.yaml,line=29,col=5::rule_unreachable: Rule "allow-small" can never match: rule "allow-all-stripe" (line 23) matches everything it does and has no when. Move rule "allow-small" above rule "allow-all-stripe", or narrow rule "allow-all-stripe".
+--- stderr

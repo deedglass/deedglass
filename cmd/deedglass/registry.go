@@ -130,8 +130,10 @@ var commands = []*Command{
 		Usage: `[--org acme] --reason "why it's safe now" [--json]`, Flags: reasonFlags, Run: runOrgStartAll, RawArgs: true},
 
 	// Policies.
-	{Path: p("policy", "lint"), Group: Policies, Summary: "Check a policy file", Owner: "S10"},
-	{Path: p("policy", "fmt"), Group: Policies, Summary: "Format a policy file", Owner: "S10"},
+	{Path: p("policy", "lint"), Group: Policies, Summary: "Check a policy file",
+		Usage: "<file|dir|->... [--format text|json|github] [--voice] [--json]", Run: runPolicyLint, RawArgs: true},
+	{Path: p("policy", "fmt"), Group: Policies, Summary: "Format a policy file",
+		Usage: "[-w] [--check] <file|dir|->... [--json]", Run: runPolicyFmt, RawArgs: true},
 	{Path: p("policy", "test"), Group: Policies, Summary: "Run a policy's test cases", Owner: "S12"},
 	{Path: p("policy", "push"), Group: Policies, Summary: "Upload a new policy version", Owner: "S12"},
 	{Path: p("policy", "activate"), Group: Policies, Summary: "Activate a policy version", Owner: "S12"},

@@ -1,0 +1,11 @@
+deedglass: policy/v1
+name: warn-approval-on-deny
+defaults:
+  decision: deny
+  reason: No rule allows this action. Add a rule in Console › Policies to allow it.
+rules:
+  - id: deny-payouts
+    match: { tool: stripe.create_payout }
+    decision: deny
+    reason: Agents never create payouts. A finance admin can do it in Stripe.
+    approval: { approvers: [role:admin], required: 1 }

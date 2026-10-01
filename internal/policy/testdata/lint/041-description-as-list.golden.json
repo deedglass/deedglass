@@ -1,0 +1,25 @@
+{
+  "object": "policy_lint_result",
+  "file": "041-description-as-list.yaml",
+  "valid": false,
+  "name": "description-as-list",
+  "version_hash": null,
+  "rules": 0,
+  "budgets": 0,
+  "errors": [
+    {
+      "severity": "error",
+      "code": "wrong_type",
+      "message": "`description` must be text; found a list.",
+      "hint": "Write one line of text, or a block with `description: >-`.",
+      "file": "041-description-as-list.yaml",
+      "line": 3,
+      "column": 1,
+      "end_line": 3,
+      "end_column": 12,
+      "path": "description",
+      "doc_url": "https://docs.deedglass.com/policies/errors/wrong_type"
+    }
+  ],
+  "warnings": []
+}

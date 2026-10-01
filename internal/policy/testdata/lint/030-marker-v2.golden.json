@@ -1,0 +1,25 @@
+{
+  "object": "policy_lint_result",
+  "file": "030-marker-v2.yaml",
+  "valid": false,
+  "name": "marker-v2",
+  "version_hash": null,
+  "rules": 0,
+  "budgets": 0,
+  "errors": [
+    {
+      "severity": "error",
+      "code": "unsupported_format",
+      "message": "`deedglass: policy/v2` is not supported by this version of Deedglass, which reads policy/v1.",
+      "hint": "Write `deedglass: policy/v1`, or upgrade Deedglass.",
+      "file": "030-marker-v2.yaml",
+      "line": 1,
+      "column": 12,
+      "end_line": 1,
+      "end_column": 21,
+      "path": "deedglass",
+      "doc_url": "https://docs.deedglass.com/policies/errors/unsupported_format"
+    }
+  ],
+  "warnings": []
+}

@@ -1,0 +1,14 @@
+deedglass: policy/v1
+name: id-shared-budget-rule
+defaults:
+  decision: deny
+  reason: No rule allows this action. Add a rule in Console › Policies to allow it.
+budgets:
+  - id: refunds
+    match: { tool: stripe.create_refund }
+    window: day
+    max_calls: 100
+rules:
+  - id: refunds
+    match: { tool: stripe.create_refund }
+    decision: allow

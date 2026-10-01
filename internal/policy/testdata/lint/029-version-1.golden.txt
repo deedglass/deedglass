@@ -1,0 +1,8 @@
+✕ 029-version-1.yaml:1:1 · unknown_key
+  Unknown key "version" at the top level.
+
+    1 │ version: 1
+      │ ^^^^^^^
+  hint: Use deedglass: policy/v1 as the first key. version is the number the API gives each saved version.
+
+✕ 1 error · 029-version-1.yaml was not accepted

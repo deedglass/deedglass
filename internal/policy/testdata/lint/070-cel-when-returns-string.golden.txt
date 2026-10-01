@@ -1,0 +1,8 @@
+✕ 070-cel-when-returns-string.yaml:9:11 · cel_not_bool
+  when must be true or false; this expression returns a string.
+
+    9 │     when: tool.name
+      │           ^^^^^^^^^
+  hint: Compare it with something, like args.status == "open"
+
+✕ 1 error · 070-cel-when-returns-string.yaml was not accepted

@@ -1,0 +1,24 @@
+{
+  "object": "policy_lint_result",
+  "file": "022-yaml-two-documents.yaml",
+  "valid": false,
+  "name": null,
+  "version_hash": null,
+  "rules": 0,
+  "budgets": 0,
+  "errors": [
+    {
+      "severity": "error",
+      "code": "yaml_multi_document",
+      "message": "This file holds more than one YAML document.",
+      "hint": "Keep one policy per file, and remove the `---` line.",
+      "file": "022-yaml-two-documents.yaml",
+      "line": 6,
+      "column": 1,
+      "end_line": 6,
+      "end_column": 4,
+      "doc_url": "https://docs.deedglass.com/policies/errors/yaml_multi_document"
+    }
+  ],
+  "warnings": []
+}

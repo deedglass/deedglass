@@ -1,0 +1,24 @@
+{
+  "object": "policy_lint_result",
+  "file": "095-yaml-syntax-ternary.yaml",
+  "valid": false,
+  "name": null,
+  "version_hash": null,
+  "rules": 0,
+  "budgets": 0,
+  "errors": [
+    {
+      "severity": "error",
+      "code": "yaml_syntax",
+      "message": "The YAML could not be read: mapping values are not allowed.",
+      "hint": "Quote the expression or write it as a block (`when: >-`), because YAML reads a colon followed by a space as a new key.",
+      "file": "095-yaml-syntax-ternary.yaml",
+      "line": 8,
+      "column": 49,
+      "end_line": 8,
+      "end_column": 50,
+      "doc_url": "https://docs.deedglass.com/policies/errors/yaml_syntax"
+    }
+  ],
+  "warnings": []
+}

@@ -1,0 +1,14 @@
+deedglass: policy/v1
+name: duplicate-rule-id
+defaults:
+  decision: deny
+  reason: No rule allows this action. Add a rule in Console › Policies to allow it.
+rules:
+  - id: refunds
+    match: { tool: stripe.create_refund }
+    when: args.amount <= minor("50.00 usd")
+    decision: allow
+  - id: refunds
+    match: { tool: stripe.create_refund }
+    decision: require_approval
+    reason: Refunds over $50.00 wait for a person. An admin can approve in Console › Approvals.

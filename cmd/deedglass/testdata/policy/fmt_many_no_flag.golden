@@ -1,0 +1,5 @@
+exit 2
+--- stdout
+--- stderr
+✕ formatting several files needs -w or --check.
+  Run deedglass policy fmt -w testdata/policy/messy.yaml to write them, or --check to list the ones that would change.

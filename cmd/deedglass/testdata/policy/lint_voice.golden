@@ -1,0 +1,11 @@
+exit 0
+--- stdout
+○ stdin:5:11 · reason_style
+  This reason has an exclamation mark.
+
+    5 │   reason: blocked!
+      │           ^
+  hint: Say it calmly, without an exclamation mark.
+
+✓ voice · 0 rules · 0 budgets · sha256:c886…24d9 · ○ 1 warning
+--- stderr

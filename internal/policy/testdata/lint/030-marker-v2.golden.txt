@@ -1,0 +1,8 @@
+✕ 030-marker-v2.yaml:1:12 · unsupported_format
+  deedglass: policy/v2 is not supported by this version of Deedglass, which reads policy/v1.
+
+    1 │ deedglass: policy/v2
+      │            ^^^^^^^^^
+  hint: Write deedglass: policy/v1, or upgrade Deedglass.
+
+✕ 1 error · 030-marker-v2.yaml was not accepted

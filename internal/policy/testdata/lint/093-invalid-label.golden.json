@@ -1,0 +1,26 @@
+{
+  "object": "policy_lint_result",
+  "file": "093-invalid-label.yaml",
+  "valid": false,
+  "name": "invalid-label",
+  "version_hash": null,
+  "rules": 1,
+  "budgets": 0,
+  "errors": [
+    {
+      "severity": "error",
+      "code": "invalid_label",
+      "message": "`Env` is not a label key.",
+      "hint": "Label keys use lowercase letters, digits and . _ / -, up to 63 characters, like env or team.",
+      "file": "093-invalid-label.yaml",
+      "line": 9,
+      "column": 17,
+      "end_line": 9,
+      "end_column": 20,
+      "rule_id": "prod-only",
+      "path": "rules[0].match.labels.Env",
+      "doc_url": "https://docs.deedglass.com/policies/errors/invalid_label"
+    }
+  ],
+  "warnings": []
+}

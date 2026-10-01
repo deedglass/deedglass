@@ -1,0 +1,25 @@
+{
+  "object": "policy_lint_result",
+  "file": "063-nul-escape-in-description.yaml",
+  "valid": false,
+  "name": "nul-escape",
+  "version_hash": null,
+  "rules": 0,
+  "budgets": 0,
+  "errors": [
+    {
+      "severity": "error",
+      "code": "control_character",
+      "message": "The description contains a control character (U+0000).",
+      "hint": "Remove it. It can make text display differently from what it says.",
+      "file": "063-nul-escape-in-description.yaml",
+      "line": 3,
+      "column": 14,
+      "end_line": 3,
+      "end_column": 43,
+      "path": "description",
+      "doc_url": "https://docs.deedglass.com/policies/errors/control_character"
+    }
+  ],
+  "warnings": []
+}

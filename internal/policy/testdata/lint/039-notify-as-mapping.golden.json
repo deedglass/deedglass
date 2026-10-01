@@ -1,0 +1,26 @@
+{
+  "object": "policy_lint_result",
+  "file": "039-notify-as-mapping.yaml",
+  "valid": false,
+  "name": "notify-as-mapping",
+  "version_hash": null,
+  "rules": 1,
+  "budgets": 0,
+  "errors": [
+    {
+      "severity": "error",
+      "code": "wrong_type",
+      "message": "`notify` must be a value or a list of values; found a mapping.",
+      "hint": "Write a channel or a list of them, like `notify: [slack, email]`.",
+      "file": "039-notify-as-mapping.yaml",
+      "line": 11,
+      "column": 13,
+      "end_line": 11,
+      "end_column": 14,
+      "rule_id": "deny-sending",
+      "path": "rules[0].notify",
+      "doc_url": "https://docs.deedglass.com/policies/errors/wrong_type"
+    }
+  ],
+  "warnings": []
+}

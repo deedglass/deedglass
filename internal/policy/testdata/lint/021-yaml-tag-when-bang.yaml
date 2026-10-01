@@ -1,0 +1,10 @@
+deedglass: policy/v1
+name: tag-when-bang
+defaults:
+  decision: deny
+  reason: No rule allows this action. Add a rule in Console › Policies to allow it.
+rules:
+  - id: single-statements
+    match: { connector_type: postgres }
+    when: !sql.multi
+    decision: allow

@@ -1,0 +1,31 @@
+deedglass: policy/v1
+name: refunds
+description: Refunds for the Acme support agents.
+defaults:
+  decision: deny
+  reason: No rule allows this action. Add a rule in Console › Policies to allow it.
+rules:
+  - id: cap-refunds
+    desicion: deny
+    match: { tool: stripe.create_refund }
+    when: args.amount > minor("500.00 usd")
+    reason: Refunds over $500.00 never run through agents.
+  - id: small-refunds
+    when: args.amount <= "5000"
+    match: { tool: stripe.create_refund }
+    decision: allow
+  - id: single-statements
+    description: Agents send one statement at a time.
+    match: { tool: "postgres.*" }
+    decision: allow
+    when: !sql.multi
+
+  - id: allow-all-stripe
+    description: Everything else on Stripe runs.
+    match: { tool: "stripe.*" }
+    decision: allow
+    verify: L1
+
+  - id: allow-small
+    match: { tool: stripe.create_refund }
+    decision: allow

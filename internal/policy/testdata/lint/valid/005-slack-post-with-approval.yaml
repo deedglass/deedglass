@@ -1,0 +1,23 @@
+deedglass: policy/v1
+name: slack-post-with-approval
+description: Agents read channels freely. Every post waits for a person.
+defaults:
+  decision: deny
+  reason: No rule allows this action. Add a rule in Console › Policies to allow it.
+rules:
+  - id: allow-reads
+    match: { connector_type: slack, side_effect: read }
+    decision: allow
+  - id: deny-channel-changes
+    match: { tool: ["slack.archive_channel", "slack.rename_channel", "slack.kick_user"] }
+    decision: deny
+    reason: Agents never change channels or members. A workspace admin can do it in Slack.
+  - id: posts-need-approval
+    match: { tool: ["slack.post_message", "slack.reply_in_thread"] }
+    decision: require_approval
+    reason: Posts wait for a person before they appear in Slack. Approve them in Console › Approvals.
+    approval:
+      approvers: [role:admin, "user:maya@acme.com"]
+      required: 1
+      expires_in: 1h
+    notify: [slack]

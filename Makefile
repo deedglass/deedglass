@@ -11,14 +11,15 @@ LDFLAGS  := -s -w -X $(BI).Version=$(VERSION) -X $(BI).Commit=$(COMMIT) -X $(BI)
 .PHONY: all help ci build test test-short vet fmt fmt-check tidy-check testdata-check rename-guard banned-words nocgo \
 	integration matrix fuzz bench bench-store bench-deed cover clean \
 	dev dev-down dev-reset dev-logs run docker bench-http bench-verify \
-	web-verify-install web-verify-test web-verify-build web-verify-serve gencopy genmark bench-mark bench-ledger bench-stop bench-intents
+	web-verify-install web-verify-test web-verify-build web-verify-serve gencopy genmark bench-mark bench-ledger bench-stop bench-intents \
+	fuzz-policy fuzz-policy-short bench-policy
 
 all: ci
 
 help: ## list the targets
 	@grep -E '^[a-z][a-z-]*:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-15s %s\n", $$1, $$2}'
 
-ci: fmt-check tidy-check vet test testdata-check rename-guard banned-words nocgo web-verify-test ## everything the lint-unit and web-verify CI jobs run
+ci: fmt-check tidy-check vet test fuzz-policy-short testdata-check rename-guard banned-words nocgo web-verify-test ## everything the lint-unit and web-verify CI jobs run
 
 build: ## build bin/deedglass with version ldflags
 	$(GO) build -trimpath -ldflags '$(LDFLAGS)' -o bin/deedglass ./cmd/deedglass
@@ -72,6 +73,8 @@ fuzz: ## 30 s each: the strict intent parser, the id parser, and the deed envelo
 	$(GO) test ./internal/deed -run '^$$' -fuzz '^FuzzCanonical$$' -fuzztime 30s
 	$(GO) test ./internal/deed/archive -run '^$$' -fuzz '^FuzzArchiveOpen$$' -fuzztime 30s
 	$(GO) test ./internal/intent -run '^$$' -fuzz '^FuzzArgsDigest$$' -fuzztime 30s
+	$(GO) test ./internal/policy -run '^$$' -fuzz '^FuzzCompile$$' -fuzztime 30s
+	$(GO) test ./internal/policy -run '^$$' -fuzz '^FuzzYAMLReader$$' -fuzztime 30s
 	$(GO) test ./internal/identity -run '^$$' -fuzz '^FuzzIntentHeader$$' -fuzztime 30s
 
 bench: ## benchmarks for ids and config
@@ -81,8 +84,21 @@ bench-store: ## S02 store budget (OrgTx, insert, list) on a throwaway PG 18; raw
 	DEEDGLASS_IT_BENCH=1 DEEDGLASS_IT_BENCH_OUT="$(CURDIR)/bench/results/$$(date +%F)-$$(go env GOOS)-$$(go env GOARCH)-store.json" \
 		scripts/integration_local.sh
 
-cover: ## coverage of the packages with targets (ids 95%, config 90%, deed 90%, deed/archive 85%, cmd/deedglass 80%)
-	$(GO) test -count=1 -cover ./internal/ids ./internal/config ./internal/deed ./internal/deed/archive ./cmd/deedglass
+cover: ## coverage of the packages with targets (ids 95%, config 90%, deed 90%, deed/archive 85%, policy 85%, cmd/deedglass 80%)
+	$(GO) test -count=1 -cover ./internal/ids ./internal/config ./internal/deed ./internal/deed/archive ./internal/policy ./cmd/deedglass
+
+fuzz-policy: ## S10: the policy compiler and the safe YAML reader, 60 s each
+	$(GO) test ./internal/policy -run '^$$' -fuzz '^FuzzCompile$$' -fuzztime 60s
+	$(GO) test ./internal/policy -run '^$$' -fuzz '^FuzzYAMLReader$$' -fuzztime 60s
+
+fuzz-policy-short: ## (ci) the same two policy fuzz targets, 10 s each
+	$(GO) test ./internal/policy -run '^$$' -fuzz '^FuzzCompile$$' -fuzztime 10s
+	$(GO) test ./internal/policy -run '^$$' -fuzz '^FuzzYAMLReader$$' -fuzztime 10s
+
+bench-policy: ## S10 budget: compile a 50-rule (< 20 ms) and a 500-rule (< 250 ms) policy; raw go test -json in bench/results/
+	@out="$(CURDIR)/bench/results/$$(date +%F)-$$(go env GOOS)-$$(go env GOARCH)-policy.json"; \
+	$(GO) test -json -count=3 -run '^$$' -bench '^BenchmarkCompile(50|500)$$' -benchmem -benchtime 3s ./internal/policy > "$$out"; st=$$?; \
+	grep -ho '"Output":"BenchmarkCompile[^"]*' "$$out" | sed 's/"Output":"//; s/\\t/  /g; s/\\n//'; echo "raw: $$out"; exit $$st
 
 bench-ledger: ## S06 Ledger budget at 100,000 actions (lists, get, chain check, export memory, seal overhead, EXPLAIN plans) on a throwaway PG 18; raw go test -json in bench/results/
 	@out="$(CURDIR)/bench/results/$$(date +%F)-$$(go env GOOS)-$$(go env GOARCH)-ledger.json"; \

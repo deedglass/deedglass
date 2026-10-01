@@ -1,0 +1,8 @@
+✕ 048-too-many-budgets.yaml:6:1 · too_many_budgets
+  This policy has 51 budgets; the limit is 50.
+
+    6 │ budgets:
+      │ ^^^^^^^
+  hint: Combine budgets with match globs, or split the policy.
+
+✕ 1 error · 048-too-many-budgets.yaml was not accepted

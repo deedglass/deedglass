@@ -1,0 +1,13 @@
+deedglass: policy/v1
+name: crlf-line-endings
+description: Saved on Windows with CRLF line endings.
+defaults:
+  decision: deny
+  reason: No rule allows this action. Add a rule in Console › Policies to allow it.
+rules:
+  - id: small-refunds
+    match: { tool: stripe.create_refund }
+    when: >-
+      has(args.amount) &&
+      args.amount <= minor("20.00 usd")
+    decision: allow

@@ -1,0 +1,9 @@
+✕ 093-invalid-label.yaml:9:17 · invalid_label
+  Env is not a label key.
+
+    8 │     match:
+    9 │       labels: { Env: prod }
+      │                 ^^^
+  hint: Label keys use lowercase letters, digits and . _ / -, up to 63 characters, like env or team.
+
+✕ 1 error · 093-invalid-label.yaml was not accepted

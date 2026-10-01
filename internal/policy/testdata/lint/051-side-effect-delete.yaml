@@ -1,0 +1,10 @@
+deedglass: policy/v1
+name: side-effect-delete
+defaults:
+  decision: deny
+  reason: No rule allows this action. Add a rule in Console › Policies to allow it.
+rules:
+  - id: deny-deletes
+    match: { side_effect: delete }
+    decision: deny
+    reason: Agents never delete records. A person can do it in the tool itself.

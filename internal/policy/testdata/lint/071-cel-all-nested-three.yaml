@@ -1,0 +1,10 @@
+deedglass: policy/v1
+name: cel-all-nested-three
+defaults:
+  decision: deny
+  reason: No rule allows this action. Add a rule in Console › Policies to allow it.
+rules:
+  - id: no-gift-items
+    match: { tool: shop.create_order }
+    when: args.orders.all(o, o.items.all(i, i.tags.all(t, t != "gift")))
+    decision: allow

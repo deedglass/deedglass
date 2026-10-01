@@ -1,0 +1,8 @@
+✕ 069-cel-string-vs-int.yaml:11:22 · cel_type
+  args.amount <= "5000" compares a number with a string.
+
+   11 │       args.amount <= "5000"
+      │                      ^^^^^^
+  hint: Compare numbers with numbers: args.amount <= 5000 (minor units, so 5000 is $50.00).
+
+✕ 1 error · 069-cel-string-vs-int.yaml was not accepted

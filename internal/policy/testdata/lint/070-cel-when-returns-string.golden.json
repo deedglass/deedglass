@@ -1,0 +1,26 @@
+{
+  "object": "policy_lint_result",
+  "file": "070-cel-when-returns-string.yaml",
+  "valid": false,
+  "name": "cel-when-returns-string",
+  "version_hash": null,
+  "rules": 1,
+  "budgets": 0,
+  "errors": [
+    {
+      "severity": "error",
+      "code": "cel_not_bool",
+      "message": "`when` must be true or false; this expression returns a string.",
+      "hint": "Compare it with something, like `args.status == \"open\"`.",
+      "file": "070-cel-when-returns-string.yaml",
+      "line": 9,
+      "column": 11,
+      "end_line": 9,
+      "end_column": 20,
+      "rule_id": "stripe-tools",
+      "path": "rules[0].when",
+      "doc_url": "https://docs.deedglass.com/policies/errors/cel_not_bool"
+    }
+  ],
+  "warnings": []
+}

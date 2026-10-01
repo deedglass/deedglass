@@ -1,0 +1,11 @@
+{
+  "object": "policy_lint_result",
+  "file": "082-lookalike-earlier-has-when.yaml",
+  "valid": true,
+  "name": "lookalike-earlier-has-when",
+  "version_hash": "sha256:c0ff97ebc7049d3188e957916fe2a6c5c9d55874943dba125fa23784bee4d623",
+  "rules": 2,
+  "budgets": 0,
+  "errors": [],
+  "warnings": []
+}

@@ -1,0 +1,8 @@
+✕ 053-expires-in-0m.yaml:11:54 · invalid_duration
+  expires_in: 0m is shorter than 1m.
+
+   11 │     approval: { approvers: [role:admin], expires_in: 0m }
+      │                                                      ^^
+  hint: Use a number and one unit: 30m, 2h or 1d (from 1m to 7d).
+
+✕ 1 error · 053-expires-in-0m.yaml was not accepted

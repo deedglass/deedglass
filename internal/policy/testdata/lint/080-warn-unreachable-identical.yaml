@@ -1,0 +1,14 @@
+deedglass: policy/v1
+name: warn-unreachable-identical
+defaults:
+  decision: deny
+  reason: No rule allows this action. Add a rule in Console › Policies to allow it.
+rules:
+  - id: deny-merges
+    match: { tool: github.merge_pull_request }
+    decision: deny
+    reason: Agents never merge pull requests. A maintainer can merge it in GitHub.
+  - id: merges-need-approval
+    match: { tool: github.merge_pull_request }
+    decision: require_approval
+    reason: Merges wait for a maintainer. An admin can approve in Console › Approvals.

@@ -1,0 +1,11 @@
+deedglass: policy/v1
+name: decision-block
+defaults:
+  decision: deny
+  reason: No rule allows this action. Add a rule in Console › Policies to allow it.
+rules:
+  - id: deny-drop
+    match: { connector_type: postgres }
+    when: sql.kind == "drop"
+    decision: block
+    reason: DROP never runs through agents.

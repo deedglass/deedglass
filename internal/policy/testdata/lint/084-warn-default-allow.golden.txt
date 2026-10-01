@@ -1,0 +1,8 @@
+○ 084-warn-default-allow.yaml:5:13 · default_allow
+  defaults.decision: allow lets every unmatched action run.
+
+    5 │   decision: allow
+      │             ^^^^^
+  hint: Deedglass recommends deny. Enforcing this policy will need an explicit acknowledgement.
+
+✓ warn-default-allow · 1 rule · 0 budgets · sha256:fd99…7806 · ○ 1 warning

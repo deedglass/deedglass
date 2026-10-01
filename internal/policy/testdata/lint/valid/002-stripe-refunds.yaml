@@ -1,0 +1,32 @@
+deedglass: policy/v1
+name: stripe-refunds
+description: Small refunds run on their own. Larger refunds and cancellations wait for a person.
+defaults:
+  decision: deny
+  reason: No rule allows this action. Add a rule in Console › Policies to allow it.
+budgets:
+  - id: refund-spend-per-day
+    description: Agents refund at most $500.00 a day across Acme.
+    match: { tool: stripe.create_refund }
+    per: org
+    window: day
+    max_spend: "500.00 usd"
+    measure: args.amount
+rules:
+  - id: allow-stripe-reads
+    match: { tool: ["stripe.list_*", "stripe.retrieve_*"] }
+    decision: allow
+  - id: small-refunds
+    match: { tool: stripe.create_refund }
+    when: has(args.amount) && args.amount <= minor("50.00 usd")
+    decision: allow
+  - id: large-refunds-need-approval
+    match: { tool: stripe.create_refund }
+    decision: require_approval
+    reason: Refunds over $50.00 wait for a person. An admin can approve in Console › Approvals.
+    approval: { approvers: [role:admin], required: 1, expires_in: 4h }
+  - id: cancellations-need-approval
+    match: { tool: stripe.cancel_subscription }
+    decision: require_approval
+    reason: Cancelling a subscription waits for a person. An admin can approve in Console › Approvals.
+    notify: [email]

@@ -1,0 +1,26 @@
+{
+  "object": "policy_lint_result",
+  "file": "079-warn-unreachable-star.yaml",
+  "valid": true,
+  "name": "warn-unreachable-star",
+  "version_hash": "sha256:704d4ff0e4414f6615645c3c64cd73d8bdd641c1d556a464c9a50bbee383d823",
+  "rules": 2,
+  "budgets": 0,
+  "errors": [],
+  "warnings": [
+    {
+      "severity": "warning",
+      "code": "rule_unreachable",
+      "message": "Rule \"allow-refund-reads\" can never match: rule \"everything-needs-approval\" (line 7) matches everything it does and has no `when`.",
+      "hint": "Move rule \"allow-refund-reads\" above rule \"everything-needs-approval\", or narrow rule \"everything-needs-approval\".",
+      "file": "079-warn-unreachable-star.yaml",
+      "line": 11,
+      "column": 5,
+      "end_line": 11,
+      "end_column": 27,
+      "rule_id": "allow-refund-reads",
+      "path": "rules[1]",
+      "doc_url": "https://docs.deedglass.com/policies/errors/rule_unreachable"
+    }
+  ]
+}

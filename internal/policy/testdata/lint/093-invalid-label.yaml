@@ -1,0 +1,10 @@
+deedglass: policy/v1
+name: invalid-label
+defaults:
+  decision: deny
+  reason: No rule allows this action. Add a rule in Console › Policies to allow it.
+rules:
+  - id: prod-only
+    match:
+      labels: { Env: prod }
+    decision: allow

@@ -1,0 +1,13 @@
+deedglass: policy/v1
+name: cel-no-field-knid
+defaults:
+  decision: deny
+  reason: No rule allows this action. Add a rule in Console › Policies to allow it.
+rules:
+  - id: deny-drop
+    match: { tool: "postgres.*" }
+    when: |
+      sql.present &&
+        sql.knid in ["drop", "truncate"]
+    decision: deny
+    reason: DROP and TRUNCATE never run through agents.

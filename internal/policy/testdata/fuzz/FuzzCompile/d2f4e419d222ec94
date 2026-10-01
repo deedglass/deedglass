@@ -1,0 +1,2 @@
+go test fuzz v1
+[]byte("deedglass: policy/v1\nname: a0\ndefaults:\n  decision: deny\n  reason: 0\nrules:\n  - id: a00\n    match: {connector_type}\n    decision: allow")

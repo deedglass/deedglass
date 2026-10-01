@@ -1,0 +1,26 @@
+{
+  "object": "policy_lint_result",
+  "file": "074-cel-regex-from-args.yaml",
+  "valid": false,
+  "name": "cel-regex-from-args",
+  "version_hash": null,
+  "rules": 1,
+  "budgets": 0,
+  "errors": [
+    {
+      "severity": "error",
+      "code": "cel_regex",
+      "message": "The pattern in `matches()` must be a constant string.",
+      "hint": "Patterns come from the policy, never from an agent's arguments: write the pattern in quotes.",
+      "file": "074-cel-regex-from-args.yaml",
+      "line": 9,
+      "column": 30,
+      "end_line": 9,
+      "end_column": 42,
+      "rule_id": "matching-tools",
+      "path": "rules[0].when",
+      "doc_url": "https://docs.deedglass.com/policies/errors/cel_regex"
+    }
+  ],
+  "warnings": []
+}

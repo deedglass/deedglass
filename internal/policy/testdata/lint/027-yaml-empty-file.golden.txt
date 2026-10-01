@@ -1,0 +1,5 @@
+✕ 027-yaml-empty-file.yaml · missing_marker
+  This file is empty.
+  hint: Start the file with deedglass: policy/v1, then add name and defaults.
+
+✕ 1 error · 027-yaml-empty-file.yaml was not accepted

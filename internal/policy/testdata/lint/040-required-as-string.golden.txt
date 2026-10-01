@@ -1,0 +1,8 @@
+✕ 040-required-as-string.yaml:11:52 · wrong_type
+  required must be a whole number; found a string.
+
+   11 │     approval: { approvers: [role:admin], required: "2" }
+      │                                                    ^^^
+  hint: Write a whole number without quotes, like required: 2
+
+✕ 1 error · 040-required-as-string.yaml was not accepted

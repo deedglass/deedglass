@@ -1,0 +1,10 @@
+deedglass: policy/v1
+name: cel-single-equals
+defaults:
+  decision: deny
+  reason: No rule allows this action. Add a rule in Console › Policies to allow it.
+rules:
+  - id: usd-refunds
+    match: { tool: stripe.create_refund }
+    when: has(args.currency) && args.currency = "usd"
+    decision: allow

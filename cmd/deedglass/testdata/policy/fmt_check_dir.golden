@@ -1,0 +1,6 @@
+exit 1
+--- stdout
+○ testdata/policy/policies/postgres-safe.yaml would change · run deedglass policy fmt -w testdata/policy/policies/postgres-safe.yaml
+✕ testdata/policy/policies/refunds.yaml has errors, so it was not formatted · run deedglass policy lint testdata/policy/policies/refunds.yaml
+✕ 1 of 2 files needs formatting
+--- stderr

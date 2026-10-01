@@ -1,0 +1,26 @@
+{
+  "object": "policy_lint_result",
+  "file": "038-match-as-string.yaml",
+  "valid": false,
+  "name": "match-as-string",
+  "version_hash": null,
+  "rules": 1,
+  "budgets": 0,
+  "errors": [
+    {
+      "severity": "error",
+      "code": "wrong_type",
+      "message": "`match` must be a mapping, like `{ tool: \"stripe.*\" }`; found a string.",
+      "hint": "Write it as a mapping, like `match: { tool: \"stripe.*\" }`.",
+      "file": "038-match-as-string.yaml",
+      "line": 8,
+      "column": 12,
+      "end_line": 8,
+      "end_column": 32,
+      "rule_id": "small-refunds",
+      "path": "rules[0].match",
+      "doc_url": "https://docs.deedglass.com/policies/errors/wrong_type"
+    }
+  ],
+  "warnings": []
+}

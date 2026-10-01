@@ -1,0 +1,11 @@
+{
+  "object": "policy_lint_result",
+  "file": "009-five-hundred-rules.yaml",
+  "valid": true,
+  "name": "five-hundred-rules",
+  "version_hash": "sha256:0a1052aea4b187603059385160a51e2a47220aa3a3ef2cd24addc059b6c996ec",
+  "rules": 500,
+  "budgets": 0,
+  "errors": [],
+  "warnings": []
+}

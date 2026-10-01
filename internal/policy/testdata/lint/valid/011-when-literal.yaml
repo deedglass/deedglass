@@ -1,0 +1,13 @@
+deedglass: policy/v1
+name: when-literal
+defaults:
+  decision: deny
+  reason: No rule allows this action. Add a rule in Console › Policies to allow it.
+rules:
+  - id: support-notes-only
+    match: { connector_type: postgres }
+    when: |
+      sql.kind == "insert" &&
+        sql.tables == ["public.support_notes"] &&
+        !sql.has_returning
+    decision: allow

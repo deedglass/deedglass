@@ -1,0 +1,8 @@
+✕ 089-conflicting-keys.yaml:10:16 · conflicting_keys
+  Budget "refunds-per-day" sets both max_calls and max_spend.
+
+   10 │     max_spend: "500.00 usd"
+      │                ^^^^^^^^^^^^
+  hint: Keep one; use two budgets to limit both.
+
+✕ 1 error · 089-conflicting-keys.yaml was not accepted

@@ -1,0 +1,26 @@
+{
+  "object": "policy_lint_result",
+  "file": "075-cel-glob-not-constant.yaml",
+  "valid": false,
+  "name": "cel-glob-not-constant",
+  "version_hash": null,
+  "rules": 1,
+  "budgets": 0,
+  "errors": [
+    {
+      "severity": "error",
+      "code": "cel_constant_required",
+      "message": "`glob()` needs a constant pattern.",
+      "hint": "Patterns come from the policy, never from an agent's arguments: write it in quotes, like `glob(tool.name, \"stripe.*\")`.",
+      "file": "075-cel-glob-not-constant.yaml",
+      "line": 11,
+      "column": 23,
+      "end_line": 11,
+      "end_column": 35,
+      "rule_id": "matching-tools",
+      "path": "rules[0].when",
+      "doc_url": "https://docs.deedglass.com/policies/errors/cel_constant_required"
+    }
+  ],
+  "warnings": []
+}

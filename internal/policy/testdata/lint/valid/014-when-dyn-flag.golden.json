@@ -1,0 +1,11 @@
+{
+  "object": "policy_lint_result",
+  "file": "014-when-dyn-flag.yaml",
+  "valid": true,
+  "name": "when-dyn-flag",
+  "version_hash": "sha256:aeffb582da4533f122e4ed487ea95dd6c75deeb9715a455becef55109e978e89",
+  "rules": 1,
+  "budgets": 0,
+  "errors": [],
+  "warnings": []
+}

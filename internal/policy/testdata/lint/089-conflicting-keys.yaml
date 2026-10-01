@@ -1,0 +1,10 @@
+deedglass: policy/v1
+name: conflicting-keys
+defaults:
+  decision: deny
+  reason: No rule allows this action. Add a rule in Console › Policies to allow it.
+budgets:
+  - id: refunds-per-day
+    window: day
+    max_calls: 100
+    max_spend: "500.00 usd"

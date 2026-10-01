@@ -1,0 +1,17 @@
+exit 0
+--- stdout
+deedglass policy · Write, test and activate policies
+
+Usage  deedglass policy <command> [flags]
+
+  lint      Check a policy file
+  fmt       Format a policy file
+  test      Run a policy's test cases               soon · S12
+  push      Upload a new policy version             soon · S12
+  activate  Activate a policy version               soon · S12
+  evaluate  Evaluate one action against a policy    soon · S11
+  replay    Replay past actions against a version   soon · S27
+  diff      Compare two policy versions             soon · S12
+
+soon: listed in the contract, not in this build yet; the session that builds it is shown.
+--- stderr

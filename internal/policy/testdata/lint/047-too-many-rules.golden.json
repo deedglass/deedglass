@@ -1,0 +1,25 @@
+{
+  "object": "policy_lint_result",
+  "file": "047-too-many-rules.yaml",
+  "valid": false,
+  "name": "too-many-rules",
+  "version_hash": null,
+  "rules": 501,
+  "budgets": 0,
+  "errors": [
+    {
+      "severity": "error",
+      "code": "too_many_rules",
+      "message": "This policy has 501 rules; the limit is 500.",
+      "hint": "Combine rules with `match` globs and lists, or split the policy.",
+      "file": "047-too-many-rules.yaml",
+      "line": 6,
+      "column": 1,
+      "end_line": 6,
+      "end_column": 6,
+      "path": "rules",
+      "doc_url": "https://docs.deedglass.com/policies/errors/too_many_rules"
+    }
+  ],
+  "warnings": []
+}

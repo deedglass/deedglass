@@ -1,0 +1,8 @@
+✕ 057-unknown-currency.yaml:10:16 · unknown_currency
+  xyz is not an active ISO 4217 currency.
+
+   10 │     max_spend: "50 xyz"
+      │                ^^^^^^^^
+  hint: Use a three-letter code, like usd, eur or inr.
+
+✕ 1 error · 057-unknown-currency.yaml was not accepted

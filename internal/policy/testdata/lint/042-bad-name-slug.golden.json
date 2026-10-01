@@ -1,0 +1,25 @@
+{
+  "object": "policy_lint_result",
+  "file": "042-bad-name-slug.yaml",
+  "valid": false,
+  "name": null,
+  "version_hash": null,
+  "rules": 0,
+  "budgets": 0,
+  "errors": [
+    {
+      "severity": "error",
+      "code": "invalid_name",
+      "message": "Policy name \"Payments_Policy\" is not a slug.",
+      "hint": "Use lowercase letters, digits and dashes, starting with a letter, like `payments-policy`.",
+      "file": "042-bad-name-slug.yaml",
+      "line": 2,
+      "column": 7,
+      "end_line": 2,
+      "end_column": 22,
+      "path": "name",
+      "doc_url": "https://docs.deedglass.com/policies/errors/invalid_name"
+    }
+  ],
+  "warnings": []
+}

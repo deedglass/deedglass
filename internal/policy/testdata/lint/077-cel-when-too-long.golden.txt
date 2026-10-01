@@ -1,0 +1,8 @@
+✕ 077-cel-when-too-long.yaml:9:11 · cel_too_long
+  This when is 4,097 characters; the limit is 4,096.
+
+    9 │     when: 'args.note != "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx…
+      │           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  hint: Split the rule, or move a list into match.
+
+✕ 1 error · 077-cel-when-too-long.yaml was not accepted

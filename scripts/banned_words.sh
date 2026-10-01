@@ -50,9 +50,10 @@ if [ -f "$ALLOW" ]; then
   done < "$ALLOW"
 fi
 
-# 3. Files: everything git would track, minus third-party text and the list itself.
+# 3. Files: everything git would track, minus third-party text and the list itself (and its
+#    byte-for-byte copy embedded by the policy compiler, internal/policy/bannedwords.txt).
 git ls-files -co --exclude-standard \
-  | grep -v -E '^(LICENSE|go\.sum|scripts/banned_words\.txt|\.banned-words-allow|testdata/(jcs|rfc|wycheproof)/|testdata/SHA256SUMS)' \
+  | grep -v -E '^(LICENSE|go\.sum|scripts/banned_words\.txt|internal/policy/bannedwords\.txt|\.banned-words-allow|testdata/(jcs|rfc|wycheproof)/|testdata/SHA256SUMS)' \
   | while IFS= read -r f; do [ -f "$f" ] && printf '%s\n' "$f"; done > "$tmp/files"
 nfiles="$(wc -l < "$tmp/files" | tr -d ' ')"
 

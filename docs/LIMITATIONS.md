@@ -108,6 +108,30 @@ What Deedglass does not do, stated plainly. **Owner: S37**, which finalizes this
   60 seconds of skew). The nonce stops the second use, not the first.
 - **Intent keys don't expire.** A registered key works until it is removed.
 
+## Policy limits (S10)
+
+What policies can't do ([POLICY_LANGUAGE.md](POLICY_LANGUAGE.md) section 12):
+- **No loops and no functions of your own.** CEL has bounded comprehensions (`all`, `exists`,
+  `map`, `filter`), nested at most two deep, and in practice a loop inside a loop over `args` is
+  over the cost limit.
+- **No network lookups, files or clocks.** Everything a rule can read is declared; the time is an
+  input recorded with the action.
+- **No state beyond `usage`.** A rule can't remember the previous action; budgets and the usage
+  counters are the only memory.
+- **No composition across files in v1.** One enforce policy is active per org; there is no
+  `include:`.
+- **CEL doesn't understand SQL.** The `sql` facts come from S11's classifier, which is conservative
+  and is not a full Postgres parser. When it isn't sure it says `ambiguous`.
+- **The cost estimate is an estimate.** It uses fixed size hints; the runtime cost limit is the
+  backstop for larger real values.
+- **`rule_unreachable` is conservative.** It only warns when coverage is certain from the `match`
+  fields of a rule without `when`; it never reasons about conditions, so some dead rules go
+  unflagged.
+- **`secret_in_policy` knows eight prefixes.** Other secrets pasted into a policy are not detected.
+- **`fmt` moves some comments.** Comments stay in the file, but a comment inside a `match` or
+  `approval` keeps that mapping in block style, and a comment between keys moves with the key that
+  follows it.
+
 ## What this page does not do
 
 It does not list bugs or missing features on the schedule. It lists limits of the design that stay true after they ship.

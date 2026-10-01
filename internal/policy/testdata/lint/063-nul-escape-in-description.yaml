@@ -1,0 +1,6 @@
+deedglass: policy/v1
+name: nul-escape
+description: "Refunds for Acme\0 support."
+defaults:
+  decision: deny
+  reason: No rule allows this action. Add a rule in Console › Policies to allow it.

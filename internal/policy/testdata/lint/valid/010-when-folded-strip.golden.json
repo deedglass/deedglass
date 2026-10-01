@@ -1,0 +1,11 @@
+{
+  "object": "policy_lint_result",
+  "file": "010-when-folded-strip.yaml",
+  "valid": true,
+  "name": "when-folded-strip",
+  "version_hash": "sha256:1a2ec1a715cc30d03e280a2cc85d9319213434d7d480f8774012e5560feebd1b",
+  "rules": 1,
+  "budgets": 0,
+  "errors": [],
+  "warnings": []
+}

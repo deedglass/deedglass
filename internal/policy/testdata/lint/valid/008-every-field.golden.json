@@ -1,0 +1,11 @@
+{
+  "object": "policy_lint_result",
+  "file": "008-every-field.yaml",
+  "valid": true,
+  "name": "every-field",
+  "version_hash": "sha256:bfdf0d3c36cd1b4647001077d2dd9cb386b5cd448a0a125468ba6da8e571735d",
+  "rules": 3,
+  "budgets": 2,
+  "errors": [],
+  "warnings": []
+}

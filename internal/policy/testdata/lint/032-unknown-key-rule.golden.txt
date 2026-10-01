@@ -1,0 +1,9 @@
+✕ 032-unknown-key-rule.yaml:8:5 · unknown_key
+  Unknown key "tool" in rule "small-refunds".
+
+    7 │   - id: small-refunds
+    8 │     tool: stripe.create_refund
+      │     ^^^^
+  hint: tool belongs inside match:.
+
+✕ 1 error · 032-unknown-key-rule.yaml was not accepted

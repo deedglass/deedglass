@@ -1,0 +1,37 @@
+# Postgres for the Acme support agents: reads run, writes wait, schema changes never run.
+deedglass: policy/v1
+name: postgres-safe
+description: Reads run freely. Writes wait for a human. Schema changes never run.
+defaults:
+  decision: deny
+  reason: No rule allows this action. Add a rule in Console › Policies to allow it.
+budgets:
+  - id: agent-rate
+    window: minute
+    max_calls: 60
+  - id: writes-per-day
+    match: { tool: "postgres.*", side_effect: [write] }
+    per: org
+    window: day
+    max_calls: 500
+rules:
+  - id: block-unsafe-sql
+    match: { connector_type: postgres }
+    when: sql.ambiguous || sql.multi || sql.copy_program || sql.category in ["ddl", "privilege", "server_code"]
+    decision: deny
+    reason: Deedglass only runs one plain statement at a time, and never schema changes.
+  - id: block-unbounded-writes
+    match: { connector_type: postgres }
+    when: sql.unbounded_write
+    decision: deny
+    reason: UPDATE and DELETE need a real WHERE clause. Add one and try again.
+  - id: reads
+    match: { connector_type: postgres, side_effect: read }
+    when: '!sql.writes'
+    decision: allow
+  - id: writes-wait
+    match: { connector_type: postgres, side_effect: [write, destructive] }
+    decision: require_approval
+    reason: Writes wait for a human. An admin can approve in Console › Approvals.
+    approval: { approvers: [role:admin], expires_in: 2h }
+    verify: L2

@@ -1,0 +1,14 @@
+exit 0
+--- stdout
+{
+  "object": "policy_lint_result",
+  "file": "testdata/policy/policies/postgres-safe.yaml",
+  "valid": true,
+  "name": "postgres-safe",
+  "version_hash": "sha256:c66646a7c6682a427ff58f39542afd79fe7ff30f1b87361c300e43c0c9192c9b",
+  "rules": 4,
+  "budgets": 2,
+  "errors": [],
+  "warnings": []
+}
+--- stderr

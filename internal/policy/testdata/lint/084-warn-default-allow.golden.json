@@ -1,0 +1,25 @@
+{
+  "object": "policy_lint_result",
+  "file": "084-warn-default-allow.yaml",
+  "valid": true,
+  "name": "warn-default-allow",
+  "version_hash": "sha256:fd994d076e1fc4b28c03625ce5aa64b028df89b7ec554b74e92f392a5a6a7806",
+  "rules": 1,
+  "budgets": 0,
+  "errors": [],
+  "warnings": [
+    {
+      "severity": "warning",
+      "code": "default_allow",
+      "message": "`defaults.decision: allow` lets every unmatched action run.",
+      "hint": "Deedglass recommends deny. Enforcing this policy will need an explicit acknowledgement.",
+      "file": "084-warn-default-allow.yaml",
+      "line": 5,
+      "column": 13,
+      "end_line": 5,
+      "end_column": 18,
+      "path": "defaults.decision",
+      "doc_url": "https://docs.deedglass.com/policies/errors/default_allow"
+    }
+  ]
+}

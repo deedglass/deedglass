@@ -1,0 +1,61 @@
+# Acme support database: reads run, writes wait for a person, schema changes never run.
+deedglass: policy/v1
+name: postgres-safe
+description: Reads run freely. Writes wait for a person unless the table is on the allow list. Schema changes never run.
+defaults:
+  decision: deny
+  reason: No rule allows this action. Add a rule in Console › Policies to allow it.
+  approval:
+    approvers: [role:admin]
+    required: 1
+    expires_in: 30m
+rules:
+  - id: deny-ambiguous-sql
+    match: { connector_type: postgres }
+    when: sql.present && (sql.ambiguous || !sql.tables_complete)
+    decision: deny
+    reason: Deedglass could not read this SQL with certainty, so it does not run. Split it into simple statements.
+  - id: deny-multi-statement
+    match: { connector_type: postgres }
+    when: sql.multi
+    decision: deny
+    reason: Agents run one SQL statement at a time. Send each statement on its own.
+  - id: deny-ddl
+    match: { connector_type: postgres }
+    when: sql.category == "ddl" || sql.kind in ["drop", "truncate", "alter", "create"]
+    decision: deny
+    reason: Schema changes never run through agents. Use a migration instead.
+    notify: [slack]
+  - id: deny-copy-program
+    match: { connector_type: postgres }
+    when: sql.copy_program
+    decision: deny
+    reason: COPY with PROGRAM runs commands on the database server, so it never runs.
+  - id: deny-do-blocks
+    match: { connector_type: postgres }
+    when: '"do" in sql.kinds'
+    decision: deny
+    reason: DO blocks run server code, so they never run through agents.
+  - id: deny-unbounded-writes
+    match: { connector_type: postgres }
+    when: sql.unbounded_write
+    decision: deny
+    reason: UPDATE and DELETE without a WHERE clause never run. Add a WHERE clause that names the rows.
+  - id: allow-reads
+    match: { connector_type: postgres, side_effect: read }
+    when: '!sql.writes && sql.category == "read"'
+    decision: allow
+  - id: allow-listed-tables
+    description: Support agents may edit notes and tags directly.
+    match: { connector_type: postgres }
+    when: >-
+      sql.writes && sql.tables_complete &&
+      sql.tables.all(t, t in ["public.support_notes", "public.ticket_tags"])
+    decision: allow
+    verify: L1
+  - id: writes-need-approval
+    match: { connector_type: postgres }
+    when: sql.writes
+    decision: require_approval
+    reason: Writes to this table wait for a person. An admin can approve in Console › Approvals.
+    approval: { expires_in: 2h }

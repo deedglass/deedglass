@@ -1,0 +1,8 @@
+✕ 038-match-as-string.yaml:8:12 · wrong_type
+  match must be a mapping, like { tool: "stripe.*" }; found a string.
+
+    8 │     match: stripe.create_refund
+      │            ^^^^^^^^^^^^^^^^^^^^
+  hint: Write it as a mapping, like match: { tool: "stripe.*" }
+
+✕ 1 error · 038-match-as-string.yaml was not accepted

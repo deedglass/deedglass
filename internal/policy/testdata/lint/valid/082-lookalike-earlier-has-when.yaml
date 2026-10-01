@@ -1,0 +1,14 @@
+deedglass: policy/v1
+name: lookalike-earlier-has-when
+defaults:
+  decision: deny
+  reason: No rule allows this action. Add a rule in Console › Policies to allow it.
+rules:
+  - id: large-refunds-need-approval
+    match: { tool: "stripe.*" }
+    when: has(args.amount) && args.amount > minor("1000.00 usd")
+    decision: require_approval
+    reason: Amounts over $1,000.00 wait for a person. An admin can approve in Console › Approvals.
+  - id: allow-refunds
+    match: { tool: stripe.create_refund }
+    decision: allow

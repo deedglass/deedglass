@@ -1,0 +1,8 @@
+✕ 021-yaml-tag-when-bang.yaml:9:11 · yaml_tag
+  !sql.multi is read by YAML as a tag, not as CEL.
+
+    9 │     when: !sql.multi
+      │           ^^^^^^^^^^
+  hint: Quote the expression: when: '!sql.multi'
+
+✕ 1 error · 021-yaml-tag-when-bang.yaml was not accepted

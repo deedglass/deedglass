@@ -1,0 +1,10 @@
+deedglass: policy/v1
+name: cel-minor-fifty
+defaults:
+  decision: deny
+  reason: No rule allows this action. Add a rule in Console › Policies to allow it.
+rules:
+  - id: small-refunds
+    match: { tool: stripe.create_refund }
+    when: 'args.amount <= minor("fifty")'
+    decision: allow

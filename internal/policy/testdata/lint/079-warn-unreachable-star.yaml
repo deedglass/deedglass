@@ -1,0 +1,13 @@
+deedglass: policy/v1
+name: warn-unreachable-star
+defaults:
+  decision: deny
+  reason: No rule allows this action. Add a rule in Console › Policies to allow it.
+rules:
+  - id: everything-needs-approval
+    match: { tool: "*" }
+    decision: require_approval
+    reason: Every action waits for a person while Acme tests this agent. Approve it in Console › Approvals.
+  - id: allow-refund-reads
+    match: { tool: stripe.retrieve_refund }
+    decision: allow

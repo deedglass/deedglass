@@ -1,0 +1,10 @@
+deedglass: policy/v1
+name: cel-regex-from-args
+defaults:
+  decision: deny
+  reason: No rule allows this action. Add a rule in Console › Policies to allow it.
+rules:
+  - id: matching-tools
+    match: { tool: "*" }
+    when: 'tool.name.matches(args.pattern)'
+    decision: allow

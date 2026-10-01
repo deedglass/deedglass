@@ -1,0 +1,25 @@
+{
+  "object": "policy_lint_result",
+  "file": "043-uppercase-rule-id.yaml",
+  "valid": false,
+  "name": "uppercase-rule-id",
+  "version_hash": null,
+  "rules": 1,
+  "budgets": 0,
+  "errors": [
+    {
+      "severity": "error",
+      "code": "invalid_id",
+      "message": "Rule id \"Block-Drop\" is not a slug.",
+      "hint": "Use lowercase letters, digits and dashes, starting with a letter, like `block-drop`.",
+      "file": "043-uppercase-rule-id.yaml",
+      "line": 7,
+      "column": 9,
+      "end_line": 7,
+      "end_column": 19,
+      "path": "rules[0].id",
+      "doc_url": "https://docs.deedglass.com/policies/errors/invalid_id"
+    }
+  ],
+  "warnings": []
+}

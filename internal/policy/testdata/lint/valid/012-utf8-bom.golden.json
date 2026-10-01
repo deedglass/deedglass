@@ -1,0 +1,11 @@
+{
+  "object": "policy_lint_result",
+  "file": "012-utf8-bom.yaml",
+  "valid": true,
+  "name": "utf8-bom",
+  "version_hash": "sha256:272081876fcc90ac18a12c91e1490536073d3ad2bea65fa176008c4e5921f2df",
+  "rules": 1,
+  "budgets": 0,
+  "errors": [],
+  "warnings": []
+}

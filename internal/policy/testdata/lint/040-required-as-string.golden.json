@@ -1,0 +1,26 @@
+{
+  "object": "policy_lint_result",
+  "file": "040-required-as-string.yaml",
+  "valid": false,
+  "name": "required-as-string",
+  "version_hash": null,
+  "rules": 1,
+  "budgets": 0,
+  "errors": [
+    {
+      "severity": "error",
+      "code": "wrong_type",
+      "message": "`required` must be a whole number; found a string.",
+      "hint": "Write a whole number without quotes, like `required: 2`.",
+      "file": "040-required-as-string.yaml",
+      "line": 11,
+      "column": 52,
+      "end_line": 11,
+      "end_column": 55,
+      "rule_id": "payouts-need-approval",
+      "path": "rules[0].approval.required",
+      "doc_url": "https://docs.deedglass.com/policies/errors/wrong_type"
+    }
+  ],
+  "warnings": []
+}

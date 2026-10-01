@@ -1,0 +1,9 @@
+✕ 033-unknown-key-match.yaml:8:14 · unknown_key
+  Unknown key "tools" in the match of rule "small-refunds".
+
+    7 │   - id: small-refunds
+    8 │     match: { tools: [stripe.create_refund] }
+      │              ^^^^^
+  hint: Did you mean "tool"?
+
+✕ 1 error · 033-unknown-key-match.yaml was not accepted

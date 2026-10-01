@@ -1,0 +1,8 @@
+✕ 047-too-many-rules.yaml:6:1 · too_many_rules
+  This policy has 501 rules; the limit is 500.
+
+    6 │ rules:
+      │ ^^^^^
+  hint: Combine rules with match globs and lists, or split the policy.
+
+✕ 1 error · 047-too-many-rules.yaml was not accepted
