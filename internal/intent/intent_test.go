@@ -410,3 +410,22 @@ func FuzzParse(f *testing.F) {
 		}
 	})
 }
+
+func TestParseStrictNonNegative(t *testing.T) {
+	for _, in := range []string{`-0`, `-1`, `{"a":[1,-0]}`, `{"amount":-9007199254740991}`} {
+		if _, err := ParseStrictNonNegative([]byte(in)); CodeOf(err) != CodeNegativeNumber {
+			t.Errorf("%s: got %v, want %s", in, err, CodeNegativeNumber)
+		}
+		if _, err := ParseStrict([]byte(in)); err != nil {
+			t.Errorf("ParseStrict(%s) = %v; the intent profile still accepts negatives", in, err)
+		}
+	}
+	for _, in := range []string{`0`, `9007199254740991`, `{"a":"-1"}`} {
+		if _, err := ParseStrictNonNegative([]byte(in)); err != nil {
+			t.Errorf("%s: %v", in, err)
+		}
+	}
+	if _, err := ParseStrictNonNegative([]byte(`9007199254740992`)); CodeOf(err) != CodeIntegerRange {
+		t.Errorf("2^53: got %v", err)
+	}
+}

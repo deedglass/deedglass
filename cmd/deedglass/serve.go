@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -154,14 +155,19 @@ func runServe(ctx context.Context, e *Env, args []string) error {
 	}
 	fmt.Fprintln(e.Stdout, s.OKLine(fmt.Sprintf("Database %s postgres %s %s schema at %04d %s role %s",
 		ui.Sep, pgVersion(role.ServerVersionNum), ui.Sep, st.Applied, ui.Sep, role.User)))
-	fmt.Fprintln(e.Stdout, s.UnknownLine("Seal key "+ui.Sep+" not configured"))
+	// 4b. The seal key: load, check and register it, or refuse to start (S04 §3.7).
+	signer, err := loadSealKey(ctx, e, cfg, db, log)
+	if err != nil {
+		return err
+	}
+	sk := &serveKey{issuer: strings.TrimSuffix(cfg.BaseURL.String(), "/"), id: signer.KeyID()}
 
 	// 5. Mount and listen.
 	api := httpx.New(httpx.Options{
 		Logger: log, Prod: prod, BaseURL: cfg.BaseURL, TrustedProxies: cfg.TrustedProxies,
 		Idempotency: idemStore{db},
 	})
-	api.Mount(serveRoutes(api, db, ms)...)
+	api.Mount(serveRoutes(api, db, ms, sk)...)
 	ln, err := net.Listen("tcp", cfg.Listen)
 	if err != nil {
 		return &ExitError{Code: ExitFailure, ErrCode: "listen_failed", Err: fmt.Errorf("Can't listen on %s: %s", cfg.Listen, lastPart(err)),
@@ -227,14 +233,29 @@ func newHTTPServer(h http.Handler, log *slog.Logger) *http.Server {
 	}
 }
 
+// serveKey is the loaded seal key as the routes need it.
+type serveKey struct {
+	issuer string // DEEDGLASS_BASE_URL, keys.json's issuer
+	id     string
+}
+
 // serveRoutes is everything `serve` mounts. Later sessions add their routes here; the cmd tests
-// run httpx.CheckSpec on this list, so api/openapi.yaml must document each one.
-func serveRoutes(api *httpx.Server, db *store.DB, ms []migrate.Migration) []httpx.Route {
-	var hs httpx.HealthSource
+// run httpx.CheckSpec on this list, so api/openapi.yaml must document each one. db and sk are nil
+// in route-table tests.
+func serveRoutes(api *httpx.Server, db *store.DB, ms []migrate.Migration, sk *serveKey) []httpx.Route {
+	deps := httpx.SystemDeps{Spec: apiSpec()}
+	issuer := "http://127.0.0.1:8080"
 	if db != nil {
-		hs = healthSource{db: db, ms: ms}
+		deps.Health = healthSource{db: db, ms: ms}
 	}
-	return api.SystemRoutes(httpx.SystemDeps{Health: hs, Spec: apiSpec()})
+	if sk != nil {
+		issuer = sk.issuer
+		if db != nil {
+			deps.SealKey = sealKeyCheck(db, sk.id)
+		}
+	}
+	routes := api.SystemRoutes(deps)
+	return append(routes, api.WellKnownRoutes(keySetSource(db, issuer), nil)...)
 }
 
 func apiSpec() []byte { return api.Spec }

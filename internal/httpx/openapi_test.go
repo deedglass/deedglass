@@ -11,6 +11,7 @@ import (
 func systemServer() *Server {
 	s := New(Options{Logger: NewLogger(io.Discard, true, nil)})
 	s.Mount(s.SystemRoutes(SystemDeps{Spec: api.Spec, Health: &fakeHealth{state: MigrationState{Applied: 9, Expected: 9}}})...)
+	s.Mount(s.WellKnownRoutes(testKeySet, nil)...)
 	return s
 }
 
@@ -29,7 +30,7 @@ func TestOpenAPI(t *testing.T) {
 func TestOpenAPIRequired(t *testing.T) {
 	h := &harness{log: &logBuf{}}
 	h.srv = systemServer()
-	for path, schema := range map[string]string{"/v1/health": "Health", "/v1/version": "Version", "/v1/nope": "ErrorEnvelope"} {
+	for path, schema := range map[string]string{"/v1/health": "Health", "/v1/version": "Version", "/v1/nope": "ErrorEnvelope", "/.well-known/deedglass/keys.json": "SealKeySet"} {
 		r := h.do(t, "GET", path, "")
 		for _, err := range CheckRequired(api.Spec, schema, r.body) {
 			t.Errorf("%s: %v", path, err)

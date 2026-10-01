@@ -1,0 +1,5 @@
+exit 1
+--- stdout
+--- stderr
+✕ Seal key file DIR/open.json can be read by other users (mode 0644).
+  next  chmod 600 DIR/open.json

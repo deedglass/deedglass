@@ -26,7 +26,14 @@ const maxDepth = 16
 // exponent, integers whose magnitude exceeds 2^53-1, lone UTF-16 surrogates
 // in \u escapes, nesting deeper than maxDepth, and trailing data.
 // It does not check canonical form; see CheckCanonical.
-func ParseStrict(b []byte) (any, error) {
+func ParseStrict(b []byte) (any, error) { return parseStrict(b, false) }
+
+// ParseStrictNonNegative is ParseStrict with one more rule, for deed bodies (contract §7): every
+// number must be in 0..2^53-1, so negative integers and "-0" are refused as well
+// (CodeNegativeNumber). Signed intents keep ParseStrict.
+func ParseStrictNonNegative(b []byte) (any, error) { return parseStrict(b, true) }
+
+func parseStrict(b []byte, nonNeg bool) (any, error) {
 	if !utf8.Valid(b) {
 		off := 0
 		for off < len(b) {
@@ -38,7 +45,7 @@ func ParseStrict(b []byte) (any, error) {
 		}
 		return nil, errAt(CodeInvalidUTF8, "", off, "input is not valid UTF-8")
 	}
-	p := &parser{b: b}
+	p := &parser{b: b, nonNeg: nonNeg}
 	p.ws()
 	v, err := p.value("", 0)
 	if err != nil {
@@ -52,8 +59,9 @@ func ParseStrict(b []byte) (any, error) {
 }
 
 type parser struct {
-	b []byte
-	i int
+	b      []byte
+	i      int
+	nonNeg bool // refuse a leading minus sign (deed bodies)
 }
 
 func (p *parser) ws() {
@@ -298,6 +306,9 @@ func (p *parser) number(path string) (any, error) {
 	start := p.i
 	neg := false
 	if p.b[p.i] == '-' {
+		if p.nonNeg {
+			return nil, errAt(CodeNegativeNumber, path, start, "negative numbers and -0 are not allowed")
+		}
 		neg = true
 		p.i++
 	}

@@ -1,0 +1,7 @@
+exit 0
+--- stdout
+✓ Seal key created · sk_01m3xxf0n96kjy9wga01e6btwv
+  file        .deedglass/keys/sk_01m3xxf0n96kjy9wga01e6btwv.json (0600)
+  thumbprint  sha256:3097…315f
+  next        export DEEDGLASS_SEAL_KEY_FILE=.deedglass/keys/sk_01m3xxf0n96kjy9wga01e6btwv.json
+--- stderr

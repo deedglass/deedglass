@@ -26,8 +26,9 @@ make test           # go test -race -count=1 ./...     (make test-short: no -rac
 make integration    # throwaway PG (DEEDGLASS_IT_PG=18|17|16, DEEDGLASS_IT_MODE=brew|docker): sql/ smoke,
                     # control-plane roles + deedglass migrate + go test -tags integration
 make bench-store    # S02 store budget; raw output in bench/results/
+make bench-deed     # S04 seal/verify budget and the Postgres Sealer p50/p99; raw output in bench/results/
 make matrix         # integration on 16, 17 and 18
-make fuzz           # 30 s fuzz of the intent parser and the id parser
+make fuzz           # 30 s each: intent and id parsers, deed envelope, verifier and key-set parsers
 make rename-guard   # retired identifiers (rule 5)
 make banned-words   # the banned list over files and every commit message
 make bench | make cover
@@ -63,10 +64,10 @@ scripts/ci-local.sh # the CI jobs locally (docker-smoke and govulncheck skip whe
    old codename stays banned.
 6. Pinned dependencies only, each with an ADR (name, version, licence, why, alternatives):
    `github.com/gowebpki/jcs` v1.0.2 (ADR-005); `go.yaml.in/yaml/v3` v3.0.5 (ADR-015);
-   `github.com/jackc/pgx/v5` v5.11.0 (ADR-001, in go.mod since S02). Planned, and added only by the
-   session that uses them: `cel.dev/cel-go` v0.32.0 (S10, ADR-017), the MCP Go SDK v1.8.0 (S14,
-   ADR-018), `pglogrepl` at the spike-verified pin (S20), `github.com/veraison/go-cose` v1.3.0
-   (S05, ADR-008). No cgo in the main binary.
+   `github.com/jackc/pgx/v5` v5.11.0 (ADR-001, in go.mod since S02); `github.com/veraison/go-cose`
+   v1.3.0 with `fxamacker/cbor/v2` v2.5.0 (ADR-026, in go.mod since S04). Planned, and added only by
+   the session that uses them: `cel.dev/cel-go` v0.32.0 (S10, ADR-017), the MCP Go SDK v1.8.0 (S14,
+   ADR-018), `pglogrepl` at the spike-verified pin (S20). No cgo in the main binary.
    `go.sum` is committed and CI runs `go mod verify`.
 7. CI matches the banned words (below) in files, strings and commit messages as whole words or
    phrases, case-insensitive, and fails on any hit not in `.banned-words-allow`
@@ -163,6 +164,14 @@ and "open source" until the repo is public. Style bans: "revolutionary", "world-
 - `cmd/deedglass`: goldens for help, version, config print and errors, with exit codes.
 - `internal/intent`, `internal/keys`, `internal/bundle`: strict JSON and JCS vectors, key checks,
   manifest hashes bound to the SQL and schema files.
+- `internal/deed` (S04): the §6.1 verify table (every code), first-failure order, chain checks,
+  kind × presence, a 2,000-iteration round-trip property, the closed-schema privacy test, A13 over
+  12 encodings, key-file modes, the Sealer under 50-way concurrency (in memory and on Postgres),
+  rollback, forced conflict, key rotation; `FuzzParseEnvelope`, `FuzzVerifyEnvelope`,
+  `FuzzParseKeySet`. `testdata/deeds/` is generated (`go test ./internal/deed -run TestGoldenVectors
+  -update`) and pinned in `SHA256SUMS`; never edit a vector by hand. `deed` must not import
+  `internal/ids` (it pulls in `database/sql/driver`); `IDPattern` is tested equal to `ids.Pattern`.
+- `attack/`: A13, F01 and F02 are implemented at the library level (S05 adds the CLI-level F01–F04).
 - `attack/`: all 66 case ids present, outcome enum, demo set, digest pin.
 - `scripts/integration_smoke.sql`: live prosrc hash, roles, grants, RLS, replica identity, one real
   transfer, refusals with exact SQLSTATEs, decode checks through pgoutput and test_decoding.

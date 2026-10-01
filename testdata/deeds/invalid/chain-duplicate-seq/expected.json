@@ -1,0 +1,8 @@
+{
+  "valid": false,
+  "code": "chain_seq_out_of_order",
+  "seq": 2,
+  "field": null,
+  "strict_code": null,
+  "exit": 1
+}

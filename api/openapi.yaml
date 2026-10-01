@@ -22,6 +22,10 @@ servers:
 tags:
   - name: System
     description: Health, version and this document.
+  - name: Deeds
+    description: >-
+      Signed records of what agents did, and the public seal keys that check them offline
+      (docs/DEED_SPEC.md).
 paths:
   /v1/health:
     get:
@@ -102,6 +106,60 @@ paths:
               $ref: "#/components/headers/DeedglassRequestId"
           content:
             application/yaml:
+              schema:
+                type: string
+        default:
+          $ref: "#/components/responses/Error"
+  /.well-known/deedglass/keys.json:
+    get:
+      operationId: getSealKeys
+      summary: List the public seal keys
+      description: >-
+        Public and not versioned. Every seal key this deployment ever registered, oldest first, so
+        any deed it sealed can be checked offline with `deedglass verify`. Retired keys stay listed;
+        a deed is valid under a key when `activated_at ≤ issued_at < retired_at` and the key is not
+        revoked. Readable cross-origin (`Access-Control-Allow-Origin: *`). Cached for 60 s on the
+        server and 300 s by clients; send `If-None-Match` with the `ETag` to get 304. The server
+        never returns a partial list: when it can't read the keys it answers 503
+        `service_unavailable`.
+      tags: [Deeds]
+      security: []
+      x-deedglass-auth: public
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - name: If-None-Match
+          in: header
+          required: false
+          description: The `ETag` of a copy you hold.
+          schema:
+            type: string
+      responses:
+        "200":
+          description: The seal key set.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+            ETag:
+              description: '`"sha256:<hex>"` of the body.'
+              schema:
+                type: string
+            Cache-Control:
+              schema:
+                type: string
+                const: public, max-age=300
+            Access-Control-Allow-Origin:
+              schema:
+                type: string
+                const: "*"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SealKeySet"
+        "304":
+          description: The copy named in `If-None-Match` is current.
+          headers:
+            ETag:
+              description: '`"sha256:<hex>"` of the body.'
               schema:
                 type: string
         default:
@@ -252,7 +310,10 @@ components:
       properties:
         status:
           type: string
-          enum: [ok, down, pending, mismatch, unknown, not_configured]
+          enum: [ok, degraded, down, pending, mismatch, unknown, not_configured]
+          description: >-
+            For `seal_key`, `degraded` means the key retires within its rotation overlap (restart
+            with the new key) and `down` means it is retired, revoked or unreadable.
     Health:
       type: object
       required: [object, status, version, api_version, checks, time]
@@ -306,6 +367,220 @@ components:
             seal_key: {status: not_configured}
             decoder: {status: not_configured}
           time: "2026-10-01T09:30:00.000Z"
+    Digest:
+      type: string
+      pattern: "^sha256:[0-9a-f]{64}$"
+      description: '"sha256:" + lowercase hex of SHA-256.'
+    DeedTime:
+      type: string
+      pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}[.][0-9]{3}Z$"
+      description: RFC 3339, UTC, exactly three fractional digits.
+    SealKey:
+      type: object
+      additionalProperties: false
+      required: [object, id, alg, public_key, thumbprint, status, activated_at, retired_at, revoked_at, jwk]
+      properties:
+        object:
+          type: string
+          const: seal_key
+        id:
+          type: string
+          pattern: "^sk_[0-7][0-9a-hjkmnp-tv-z]{25}$"
+        alg:
+          type: string
+          const: Ed25519
+        public_key:
+          type: string
+          description: The raw 32-byte Ed25519 public key, base64url without padding.
+        thumbprint:
+          $ref: "#/components/schemas/Digest"
+        status:
+          type: string
+          enum: [active, retired, revoked]
+        activated_at:
+          $ref: "#/components/schemas/DeedTime"
+        retired_at:
+          type: [string, "null"]
+          description: Deeds issued at or after this time are not valid under the key.
+        revoked_at:
+          type: [string, "null"]
+          description: When set, every deed this key sealed fails verification.
+        jwk:
+          type: object
+          additionalProperties: false
+          required: [kty, crv, x, kid, use]
+          description: The same key as an RFC 8037 JWK, without `alg`.
+          properties:
+            kty: {type: string, const: OKP}
+            crv: {type: string, const: Ed25519}
+            x: {type: string}
+            kid: {type: string}
+            use: {type: string, const: sig}
+    SealKeySet:
+      type: object
+      additionalProperties: false
+      required: [object, issuer, updated_at, keys]
+      properties:
+        object:
+          type: string
+          const: seal_key_set
+        issuer:
+          type: string
+          format: uri
+          description: This deployment's base URL.
+        updated_at:
+          $ref: "#/components/schemas/DeedTime"
+        keys:
+          type: array
+          items:
+            $ref: "#/components/schemas/SealKey"
+      examples:
+        - object: seal_key_set
+          issuer: http://127.0.0.1:8080
+          updated_at: "2026-10-02T09:17:14.000Z"
+          keys:
+            - object: seal_key
+              id: sk_01j9zr8k2m4p6r8t0v2x4z6b8d
+              alg: Ed25519
+              public_key: pEzUz7QOOPD171uzsw5ASsNYKkd5Uq4K9zc4PQUk2e8
+              thumbprint: sha256:f6b1d24a4efdc39230905e0c217093f4d1d5e301ac52c9e763a773e864d93f33
+              status: active
+              activated_at: "2026-10-02T09:17:14.000Z"
+              retired_at: null
+              revoked_at: null
+              jwk: {kty: OKP, crv: Ed25519, x: pEzUz7QOOPD171uzsw5ASsNYKkd5Uq4K9zc4PQUk2e8, kid: sk_01j9zr8k2m4p6r8t0v2x4z6b8d, use: sig}
+    Deed:
+      type: object
+      additionalProperties: false
+      required: [object, id, body, body_hash, seal, seal_key_id]
+      description: >-
+        A sealed deed (docs/DEED_SPEC.md). The stored and exported form is the RFC 8785 canonical
+        JSON of this object. `seal` is Ed25519 over the bytes "deedglass/deed/v1\n" + `body_hash`.
+      properties:
+        object:
+          type: string
+          const: deed
+        id:
+          type: string
+          pattern: "^deed_[0-7][0-9a-hjkmnp-tv-z]{25}$"
+          description: Equal to `body.deed_id` (not signed; verifiers check it).
+        body:
+          $ref: "#/components/schemas/DeedBody"
+        body_hash:
+          $ref: "#/components/schemas/Digest"
+        seal:
+          type: string
+          pattern: "^ed25519:[A-Za-z0-9_-]{86}$"
+        seal_key_id:
+          type: string
+          pattern: "^sk_[0-7][0-9a-hjkmnp-tv-z]{25}$"
+    DeedBody:
+      type: object
+      additionalProperties: false
+      description: >-
+        Deed v1. Every key is always present; which sections are null depends on `kind`
+        (docs/DEED_SPEC.md §5). Digests only, never payloads.
+      required: [v, kind, deed_id, org, seq, prev_hash, issued_at, agent, on_behalf_of, session, action, policy, approval, execution, witness, cost, admin, amends, seal_key_id]
+      properties:
+        v: {type: integer, const: 1}
+        kind: {type: string, enum: [action, admin, amendment]}
+        deed_id: {type: string, pattern: "^deed_[0-7][0-9a-hjkmnp-tv-z]{25}$"}
+        org: {type: string, pattern: "^org_[0-7][0-9a-hjkmnp-tv-z]{25}$"}
+        seq: {type: integer, minimum: 1, maximum: 9007199254740991}
+        prev_hash: {$ref: "#/components/schemas/Digest"}
+        issued_at: {$ref: "#/components/schemas/DeedTime"}
+        agent:
+          type: [object, "null"]
+          additionalProperties: false
+          required: [id, name]
+          properties:
+            id: {type: string}
+            name: {type: string, maxLength: 64}
+        on_behalf_of: {type: [string, "null"], maxLength: 256}
+        session: {type: [string, "null"], maxLength: 256}
+        action:
+          type: [object, "null"]
+          additionalProperties: false
+          required: [id, tool, connector, mode, request_digest, intent_hash, intent_signed]
+          properties:
+            id: {type: string}
+            tool: {type: string}
+            connector: {type: [string, "null"]}
+            mode: {type: string, enum: [gateway, proxy]}
+            request_digest: {$ref: "#/components/schemas/Digest"}
+            intent_hash: {type: [string, "null"]}
+            intent_signed: {type: boolean}
+        policy:
+          type: [object, "null"]
+          additionalProperties: false
+          required: [id, version_id, version_hash, mode, decision, rule_id]
+          properties:
+            id: {type: [string, "null"]}
+            version_id: {type: [string, "null"]}
+            version_hash: {type: [string, "null"]}
+            mode: {type: string, enum: [enforce, shadow]}
+            decision: {type: string, enum: [allow, deny, require_approval]}
+            rule_id: {type: [string, "null"]}
+        approval:
+          type: [object, "null"]
+          additionalProperties: false
+          required: [id, outcome, decided_by, decided_at, deed]
+          properties:
+            id: {type: string}
+            outcome: {type: string, enum: [approved, denied, expired, cancelled]}
+            decided_by: {type: array, items: {type: string}}
+            decided_at: {type: [string, "null"]}
+            deed: {type: [string, "null"]}
+        execution:
+          type: [object, "null"]
+          additionalProperties: false
+          required: [status, started_at, finished_at, latency_ms, result_digest, error_code]
+          properties:
+            status: {type: string, enum: [succeeded, failed, unknown]}
+            started_at: {$ref: "#/components/schemas/DeedTime"}
+            finished_at: {$ref: "#/components/schemas/DeedTime"}
+            latency_ms: {type: integer, minimum: 0}
+            result_digest: {type: [string, "null"]}
+            error_code: {type: [string, "null"]}
+        witness:
+          type: [object, "null"]
+          additionalProperties: false
+          required: [level, verdict, method, detail_digest]
+          properties:
+            level: {type: string, enum: [L0, L1, L2]}
+            verdict: {type: string, enum: [VERIFIED, MISMATCH, UNVERIFIABLE]}
+            method: {type: string}
+            detail_digest: {type: [string, "null"]}
+        cost:
+          type: [object, "null"]
+          additionalProperties: false
+          required: [amount, currency]
+          properties:
+            amount: {type: integer, minimum: 0}
+            currency: {type: string, pattern: "^[a-z]{3}$"}
+        admin:
+          type: [object, "null"]
+          additionalProperties: false
+          required: [event, action, actor, target, reason, data_digest]
+          properties:
+            event: {type: string}
+            action: {type: string}
+            actor:
+              type: object
+              required: [type, id]
+              properties:
+                type: {type: string}
+                id: {type: string}
+            target:
+              type: [object, "null"]
+              required: [type, id]
+              properties:
+                type: {type: string}
+                id: {type: string}
+            reason: {type: [string, "null"], maxLength: 280}
+            data_digest: {type: [string, "null"]}
+        amends: {type: [string, "null"]}
+        seal_key_id: {type: string}
     Version:
       type: object
       required: [object, version, commit, built_at, go, api_versions, default_api_version]

@@ -16,7 +16,7 @@ ADR-000 to ADR-008 were written for the V0 verifier and keep their original text
 | 005 | Intent: closed-schema JCS + Ed25519, amounts as strings | Proposed | Strict integer pre-parser before JCS; small-order key rejection (A13) |
 | 006 | Operation Bundle authority | Proposed | Vendor authors, admin activates, principal signs the hash; exact expected-delta equality |
 | 007 | Observation boundary | Proposed | Explicit publication before the slot, hashed boundary manifest, bracketing snapshots, gap taxonomy |
-| 008 | Statement format: COSE_Sign1, alg −8 | Proposed | Signed statement shape; −8 because go-cose 1.3.0 lacks −19; hash-chained; offline check |
+| 008 | Statement format: COSE_Sign1, alg −8 | Superseded in part by ADR-025 (2026-10-01) | Signed statement shape; −8 because go-cose 1.3.0 lacks −19; hash-chained; offline check |
 | 009 | Payee allowlist | Withdrawn (V0 parked, DL-012), never written | — |
 | 010 | Demo MCP tool | Withdrawn (V0 parked, DL-012), never written | — |
 | 011 | Site hero copy | Withdrawn (V0 parked, DL-012), never written | — |
@@ -33,3 +33,5 @@ ADR-000 to ADR-008 were written for the V0 verifier and keep their original text
 | 022 | Control-plane isolation: RLS, two roles, five global tables | Accepted (2026-10-01) | Migrator owns, app runs under RLS with no rights on history; cross-org reads through SECURITY DEFINER functions; S02 |
 | 023 | HTTP stack: stdlib router, json/v2 strict, hand-written OpenAPI 3.1.1, error catalog, dated versions | Accepted (2026-10-01) | Every route declares its auth and idempotency rule, checked against contract §9 at mount; 33 error codes; the spec is tested against the routes; S03 |
 | 024 | Container and CI supply chain: distroless, digest-pinned images, SHA-pinned actions, govulncheck | Accepted (2026-10-01) | Distroless non-root image with a read-only root; every image pinned by digest and every CI action by commit SHA, checked in CI; nothing published from CI; S03 |
+| 025 | Deed format v1: native JCS + Ed25519 envelope, hash-chained per org | Accepted (2026-10-01) | Unsigned envelope `id`; `prev_hash` = previous `body_hash`; deployment-wide seal keys; COSE optional |
+| 026 | Pin go-cose v1.3.0 for the optional COSE deed encoding | Accepted (2026-10-01) | MPL-2.0 (go-cose) and MIT (fxamacker/cbor v2.9.4); alg −8 until a tagged release has −19 |

@@ -1,0 +1,8 @@
+{
+  "valid": false,
+  "code": "schema_invalid",
+  "seq": 1,
+  "field": "body.note",
+  "strict_code": null,
+  "exit": 1
+}

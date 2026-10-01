@@ -1,0 +1,4 @@
+exit 0
+--- stdout
+{"created_at":"2026-10-02T09:17:14.000Z","file":".deedglass/keys/sk_01m3xxf0n96kjy9wga01e6btwv.json","id":"sk_01m3xxf0n96kjy9wga01e6btwv","mode":"0600","object":"seal_key_file","public_key":"IVL40Zt5HSRFMkLhXy6rbLfP-ntqXtMAl5YOBpiB2xI","thumbprint":"sha256:3097e2dee2cb4a34b53840cdb705aed71067c36f68db0e0f559c3f3fa043315f"}
+--- stderr

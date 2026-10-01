@@ -25,6 +25,15 @@ What Deedglass does not do, stated plainly. **Owner: S37**, which finalizes this
 - **Direct Postgres only for session settings.** Session settings travel in the connection's startup packet; a transaction-mode pooler may drop them.
 - **The control plane and a watched database are separate databases.** Deedglass refuses to put its own schema into a database it watches.
 
+## Deed limits (S04)
+
+- **Removing the newest deeds isn't visible in the chain alone.** A chain cut at seq 800 looks complete. Keep the head of each export you receive; S05's sealed manifest records it.
+- **The seal key holder can write any deed.** Including any `issued_at`. A deed shows what this Deedglass deployment recorded, signed by that deployment, not by an independent party. Revoking a key makes every deed it sealed fail.
+- **One signer per deed.** A deed is not countersigned by a transparency service or a second party in v1.
+- **Small payloads can be guessed from their digests.** A digest of a yes/no answer or a short amount can be found by trying values.
+- **New seal keys reach `keys.json` within 60 seconds,** not at once, and clients may cache it for 300 seconds.
+- **No `keys revoke` command yet.** Revocation is a manual database change until it ships (`docs/SEAL_KEYS.md`).
+
 ## What this page does not do
 
 It does not list bugs or missing features on the schedule. It lists limits of the design that stay true after they ship.

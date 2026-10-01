@@ -1,0 +1,4 @@
+exit 1
+--- stdout
+--- stderr
+✕ DEEDGLASS_DATABASE_URL isn't set. Set it to the control-plane Postgres URL, for example in .env for dev.

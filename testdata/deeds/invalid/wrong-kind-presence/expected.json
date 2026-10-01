@@ -1,0 +1,8 @@
+{
+  "valid": false,
+  "code": "schema_invalid",
+  "seq": 3,
+  "field": "body.policy",
+  "strict_code": null,
+  "exit": 1
+}

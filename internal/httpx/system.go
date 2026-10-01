@@ -51,7 +51,7 @@ type HealthBody struct {
 type HealthChecks struct {
 	Database   DatabaseCheck  `json:"database"`
 	Migrations MigrationCheck `json:"migrations"`
-	SealKey    SimpleCheck    `json:"seal_key"` // S04 makes it required
+	SealKey    SimpleCheck    `json:"seal_key"` // required since S04 (SystemDeps.SealKey)
 	Decoder    SimpleCheck    `json:"decoder"`  // S20 makes it required
 }
 
@@ -84,24 +84,31 @@ type VersionBody struct {
 	DefaultAPIVersion string   `json:"default_api_version"`
 }
 
+// SealKeyCheck reports the seal key this server seals with: StatusOK, StatusDegraded (it retires
+// soon: restart with the new key), StatusDown (retired, revoked or unreadable), or
+// StatusNotConfigured.
+type SealKeyCheck func(ctx context.Context) string
+
 // SystemDeps are what the system routes need.
 type SystemDeps struct {
-	Health HealthSource // nil: the database check reports not_configured
-	Spec   []byte       // api/openapi.yaml, embedded (api.Spec)
-	Now    func() time.Time
+	Health  HealthSource // nil: the database check reports not_configured
+	SealKey SealKeyCheck // nil: the seal key check reports not_configured
+	Spec    []byte       // api/openapi.yaml, embedded (api.Spec)
+	Now     func() time.Time
 }
 
 // healthCacheFor is how long one set of checks answers every probe.
 const healthCacheFor = time.Second
 
 type health struct {
-	src  HealthSource
-	now  func() time.Time
-	mu   sync.Mutex
-	cur  HealthBody
-	at   time.Time
-	wait chan struct{}
-	s    *Server
+	src     HealthSource
+	sealKey SealKeyCheck
+	now     func() time.Time
+	mu      sync.Mutex
+	cur     HealthBody
+	at      time.Time
+	wait    chan struct{}
+	s       *Server
 }
 
 // SystemRoutes returns GET /v1/health, GET /v1/version and GET /api/openapi.yaml.
@@ -109,7 +116,7 @@ func (s *Server) SystemRoutes(d SystemDeps) []Route {
 	if d.Now == nil {
 		d.Now = time.Now
 	}
-	h := &health{src: d.Health, now: d.Now, s: s}
+	h := &health{src: d.Health, sealKey: d.SealKey, now: d.Now, s: s}
 	return []Route{
 		{Method: "GET", Pattern: "/v1/health", OperationID: "getHealth", Auth: Public, Timeout: 5 * time.Second, Since: "2026-10-01", Handler: h.serve},
 		{Method: "GET", Pattern: "/v1/version", OperationID: "getVersion", Auth: Public, Timeout: 5 * time.Second, Since: "2026-10-01", Handler: serveVersion},
@@ -244,6 +251,12 @@ func (h *health) compute(ctx context.Context) HealthBody {
 		b.Status = StatusDegraded
 		b.Checks.Migrations.Status = StatusUnknown
 		return b
+	}
+	if h.sealKey != nil {
+		b.Checks.SealKey.Status = h.sealKey(ctx)
+		if b.Checks.SealKey.Status != StatusOK {
+			b.Status = StatusDegraded
+		}
 	}
 	applied, expected := st.Applied, st.Expected
 	b.Checks.Migrations = MigrationCheck{Status: StatusOK, Applied: &applied, Expected: &expected}

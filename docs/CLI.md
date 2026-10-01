@@ -89,9 +89,9 @@ builds it. Hidden commands work but aren't in `deedglass help`.
 | `deedglass migrate verify [--database-url <url>] [--json]` | Setup | Check applied migrations against this build | built |
 | `deedglass config print [--json]` | Setup | Show the effective config, secrets hidden | built |
 | `deedglass version [--json] [--check]` | Setup | Show the client and server versions | built |
-| `deedglass keys gen` | Setup | Generate a seal key | soon (S04) |
-| `deedglass keys rotate` | Setup | Rotate the active seal key | soon (S04) |
-| `deedglass keys list` | Setup | List seal keys | soon (S04) |
+| `deedglass keys gen [--dir <dir>] [--json]` | Setup | Generate a seal key | built |
+| `deedglass keys rotate [--overlap 5m] [--dir <dir>] [--json]` | Setup | Rotate the active seal key | built |
+| `deedglass keys list [--server <url>] [--json]` | Setup | List seal keys | built |
 | `deedglass vault status` | Setup | Show the credential vault's keys | soon (S16) |
 | `deedglass vault rotate` | Setup | Re-encrypt credentials with a new key | soon (S16) |
 | `deedglass help [<command>] [--json]` | Setup | Show help for deedglass or one command | built, hidden |
@@ -186,8 +186,23 @@ builds it. Hidden commands work but aren't in `deedglass help`.
 | `deedglass dev id <prefix>` | Dev | Print a fresh id for a prefix | built, hidden |
 <!-- commands:end -->
 
+## Seal keys
+
+`deedglass keys gen | rotate | list` manage the keys deeds are sealed with (`docs/SEAL_KEYS.md`).
+
+| Command | Needs | Output | Exit |
+|---|---|---|---|
+| `keys gen [--dir <dir>]` | nothing (offline) | the key id, the file (0600), its thumbprint, and the `export DEEDGLASS_SEAL_KEY_FILE=…` line | 0; 1 when the file can't be written |
+| `keys rotate [--overlap 5m] [--dir <dir>]` | `DEEDGLASS_DATABASE_URL` | the new active key, when each old key retires, and what to restart | 0; 1 when the database refuses (the new file is removed); 2 for an overlap outside 1s–168h |
+| `keys list` | `DEEDGLASS_DATABASE_URL` | every key, newest first, with status, activation, retirement and thumbprint | 0; 1 when the database is unreachable |
+| `keys list --server <url>` | nothing | the server's public `keys.json`, checked like a verifier does | 0; 1 when unreachable or a key is unsafe |
+
+`--json` prints the `seal_key_set` (list), a `seal_key_rotation` (rotate) or a `seal_key_file`
+summary without the seed (gen). Thumbprints show as `sha256:3f9a…c21e` for people and in full in
+JSON.
+
 ## What it doesn't do (yet)
 
 - No shell completion until S32 (`deedglass completion zsh|bash|fish`).
-- `version --server` doesn't contact the server until S03 adds `GET /v1/version`.
-- No command talks to a server or a database in this build.
+- `keys revoke` isn't built (planned; `docs/SEAL_KEYS.md`).
+- `deedglass verify` arrives in S05.

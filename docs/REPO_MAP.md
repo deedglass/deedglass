@@ -4,7 +4,7 @@ Every directory and package in `~/txv/product`, what state it is in, and which s
 
 **Status words:** **built** (code and tests) · **kept from V0** (tested V0 code that stays) · **stub** (a `doc.go` with the responsibility, invariants, a planned-API sketch and the owner session; no code yet) · **planned** (does not exist yet; the named session creates it).
 
-Last checked: S01, 2026-10-01. Each session that changes the layout updates this page.
+Last checked: S04, 2026-10-01 (S01 wrote it). Each session that changes the layout updates this page.
 
 ## Go packages (`internal/…` unless noted)
 
@@ -17,10 +17,11 @@ Last checked: S01, 2026-10-01. Each session that changes the layout updates this
 | `intent` | kept from V0, tested | S01 (kept) | Strict JSON parser, JCS, the V0 `TRANSFER` intent |
 | `keys` | kept from V0, tested | S01 (kept) | Ed25519 key checks (small-order refusal, `KID`) |
 | `bundle` | kept from V0, tested | S01 (kept); absorbed in S17 | The V0 Operation Bundle manifest test |
-| `store` | stub | S02+ | pgx pool, migrations, org-scoped transactions (RLS), repositories |
+| `store` | built (S02–S04) | S02+ | pgx pool, migrations, org-scoped transactions (RLS), repositories; `DeedTx` (the Postgres `deed.ChainStore`) and seal-key rows (S04) |
 | `store/policystore` | planned | S11–S12 | Postgres adapters for `policy` |
-| `httpx` | stub | S03 | Server, middleware, route table, error envelope, versioning |
-| `deed` | stub | S04–S05 | Deed body, JCS, seal, chain, verify, optional COSE encoding |
+| `httpx` | built (S03–S04) | S03 | Server, middleware, route table, error envelope, versioning; `keys.json` (S04) |
+| `deed` | built (S04) | S04–S05 | Deed body and closed schema, builders, JCS, seal, Sealer, chain, verify, key sets and key files, COSE (`docs/DEED_SPEC.md`) |
+| `deed/deedtest` | built, test helper (S04) | S04 | Fixed test-vector keys, deterministic ids, in-memory `ChainStore`, chain generator, tamper helpers |
 | `deed/archive` | planned | S05 | Export bundle v1 writer and reader |
 | `ledger` | stub | S06 | Action events, queries, chain check, export, retention |
 | `identity` | stub | S07–S09 | Orgs, users, sessions, agents, API keys, signed intents |
@@ -64,7 +65,7 @@ Last checked: S01, 2026-10-01. Each session that changes the layout updates this
 | `internal/` | yes | see above | | Go packages |
 | `scripts/` | yes | built | S01 | `banned_words.sh`, `rename_guard.sh`, integration scripts |
 | `sql/` | yes | kept from V0 | S02, S17 | V0 customer-side SQL `001`–`004`. S02 moves control-plane migrations to `internal/store/migrations` |
-| `testdata/` | yes | kept from V0 | | Offline vectors: JCS (RFC 8785), Ed25519 (RFC 8032, Wycheproof), with `SHA256SUMS` |
+| `testdata/` | yes | kept from V0; `deeds/` built (S04) | S04 | Offline vectors: JCS (RFC 8785), Ed25519 (RFC 8032, Wycheproof), Deed v1 (`deeds/`, generated), with `SHA256SUMS` |
 | `.github/workflows/` | yes | kept from V0 | S03 | `ci.yml` and `pg-matrix.yml` (Postgres 16, 17, 18) |
 | `api/openapi.yaml` | no | planned | S03 | The OpenAPI document, served at `GET /api/openapi.yaml`; each API session extends it |
 | `web/` | no | planned | S05, S24 | Console source. S05 starts `web/verify`; S24 builds the Console |

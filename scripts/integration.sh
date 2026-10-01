@@ -95,8 +95,10 @@ echo "== control plane: Go integration suites"
 go test -tags integration -count=1 ./internal/store/... ./internal/gate/... ./cmd/deedglass/
 if [ -n "${DEEDGLASS_IT_BENCH_OUT:-}" ]; then
   echo "== store budget (S02 §3.9) -> $DEEDGLASS_IT_BENCH_OUT"
-  DEEDGLASS_IT_BENCH=1 go test -tags integration -count=1 -json -run 'TestPerfBudget|TestExplainShowsInitPlan' ./internal/store/ > "$DEEDGLASS_IT_BENCH_OUT"
+  run="${DEEDGLASS_IT_BENCH_RUN:-TestPerfBudget|TestExplainShowsInitPlan}"
+  DEEDGLASS_IT_BENCH=1 go test -tags integration -count=1 -json -run "$run" ./internal/store/ > "$DEEDGLASS_IT_BENCH_OUT"
   sed -n 's/.*PERF \({.*}\)\\n".*/\1/p' "$DEEDGLASS_IT_BENCH_OUT" | sed 's/\\"/"/g'
-  grep -q '"Action":"pass","Package":"github.com/deedglass/deedglass/internal/store","Test":"TestPerfBudget"' "$DEEDGLASS_IT_BENCH_OUT" || { echo "FAIL: store budget" >&2; exit 1; }
+  first="${run%%|*}"
+  grep -q '"Action":"pass","Package":"github.com/deedglass/deedglass/internal/store","Test":"'"$first"'"' "$DEEDGLASS_IT_BENCH_OUT" || { echo "FAIL: budget $first" >&2; exit 1; }
 fi
 echo "PASS: control plane"

@@ -11,7 +11,7 @@ Setup
   migrate             Apply or check database migrations                 up · status · verify
   config print        Show the effective config, secrets hidden
   version             Show the client and server versions
-  keys                Manage seal keys                            soon   gen · rotate · list
+  keys                Manage seal keys                                   gen · rotate · list
   vault               Check or rotate the credential vault        soon   status · rotate
   completion          Print shell completion                      soon   zsh · bash · fish
 Agents

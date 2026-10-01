@@ -1,0 +1,5 @@
+exit 1
+--- stdout
+--- stderr
+✕ This is a published test key. It must never seal real deeds.
+  next  deedglass keys gen

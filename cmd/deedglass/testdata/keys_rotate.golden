@@ -1,0 +1,8 @@
+exit 0
+--- stdout
+◐ Rotating the seal key · overlap 5m
+✓ New seal key sk_01m3xxf0n96kjy9wga01e6btwv is active
+✓ sk_01m3xxf0m2b2bf0pn7ssc7whbb retires at 09:22:14 UTC (in 5m)
+  next  Point DEEDGLASS_SEAL_KEY_FILE at .deedglass/keys/sk_01m3xxf0n96kjy9wga01e6btwv.json
+        and restart every instance before 09:22 UTC. Deeds sealed with either key keep verifying.
+--- stderr

@@ -1,0 +1,5 @@
+exit 1
+--- stdout
+--- stderr
+✕ No seal key. DEEDGLASS_SEAL_KEY_FILE is not set.
+  next  deedglass keys gen (in dev, deedglass serve creates one for you).

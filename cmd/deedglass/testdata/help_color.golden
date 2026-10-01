@@ -11,7 +11,7 @@ exit 0
   migrate             Apply or check database migrations          [2m    [0m   [2mup · status · verify[0m
   config print        Show the effective config, secrets hidden
   version             Show the client and server versions
-  keys                Manage seal keys                            [2msoon[0m   [2mgen · rotate · list[0m
+  keys                Manage seal keys                            [2m    [0m   [2mgen · rotate · list[0m
   vault               Check or rotate the credential vault        [2msoon[0m   [2mstatus · rotate[0m
   completion          Print shell completion                      [2msoon[0m   [2mzsh · bash · fish[0m
 [1mAgents[0m

@@ -1,0 +1,8 @@
+{
+  "valid": false,
+  "code": "chain_time_regression",
+  "seq": 5,
+  "field": null,
+  "strict_code": null,
+  "exit": 1
+}

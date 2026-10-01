@@ -1,0 +1,5 @@
+exit 1
+--- stdout
+--- stderr
+✕ Seal key sk_01m3xxf0nkfvpa6cba9p2zp6kz is not a safe Ed25519 key (small-order point). It was not registered.
+  next  deedglass keys gen

@@ -1,0 +1,90 @@
+{
+  "chains/genesis-20.jsonl": {
+    "valid": true,
+    "code": null,
+    "seq": null,
+    "field": null,
+    "strict_code": null,
+    "exit": 0
+  },
+  "cose/01-action-verified-l2.cose": {
+    "valid": true,
+    "code": null,
+    "seq": null,
+    "field": null,
+    "strict_code": null,
+    "exit": 0
+  },
+  "lenient/key-order.json": {
+    "valid": true,
+    "code": null,
+    "seq": null,
+    "field": null,
+    "strict_code": "non_canonical",
+    "exit": 0
+  },
+  "lenient/whitespace.json": {
+    "valid": true,
+    "code": null,
+    "seq": null,
+    "field": null,
+    "strict_code": "non_canonical",
+    "exit": 0
+  },
+  "valid/01-action-verified-l2.json": {
+    "valid": true,
+    "code": null,
+    "seq": null,
+    "field": null,
+    "strict_code": null,
+    "exit": 0
+  },
+  "valid/02-action-denied.json": {
+    "valid": true,
+    "code": null,
+    "seq": null,
+    "field": null,
+    "strict_code": null,
+    "exit": 0
+  },
+  "valid/03-admin-agent-stopped.json": {
+    "valid": true,
+    "code": null,
+    "seq": null,
+    "field": null,
+    "strict_code": null,
+    "exit": 0
+  },
+  "valid/04-amendment-mismatch.json": {
+    "valid": true,
+    "code": null,
+    "seq": null,
+    "field": null,
+    "strict_code": null,
+    "exit": 0
+  },
+  "valid/05-action-approved-then-executed.json": {
+    "valid": true,
+    "code": null,
+    "seq": null,
+    "field": null,
+    "strict_code": null,
+    "exit": 0
+  },
+  "valid/06-unicode-agent-name.json": {
+    "valid": true,
+    "code": null,
+    "seq": null,
+    "field": null,
+    "strict_code": null,
+    "exit": 0
+  },
+  "valid/chain-01-06.jsonl": {
+    "valid": true,
+    "code": null,
+    "seq": null,
+    "field": null,
+    "strict_code": null,
+    "exit": 0
+  }
+}

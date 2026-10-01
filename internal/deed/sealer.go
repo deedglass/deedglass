@@ -1,0 +1,138 @@
+package deed
+
+import (
+	"context"
+	"fmt"
+	"time"
+)
+
+// ChainStore is the Sealer's view of one org-scoped transaction. internal/store implements it
+// over pgx (store.DeedTx); deedtest has an in-memory one. Every method runs inside the caller's
+// transaction, so the deed lands, or doesn't, with the state change it records.
+type ChainStore interface {
+	// LockChain blocks until this transaction owns the org's chain (pg_advisory_xact_lock). The
+	// lock ends with the transaction.
+	LockChain(ctx context.Context, org string) error
+	// ReadState returns the chain head, the database clock and the seal key's row in one round
+	// trip. Head.Seq is 0 for an empty chain.
+	ReadState(ctx context.Context, org, sealKeyID string) (ChainState, error)
+	// Insert writes the deeds row. A unique or chain-trigger violation returns an error that
+	// wraps ErrChainConflict.
+	Insert(ctx context.Context, d Stored) error
+}
+
+// ChainState is what the Sealer reads after taking the lock.
+type ChainState struct {
+	Head Head
+	Now  time.Time // clock_timestamp()
+	Key  KeyStatus
+}
+
+// KeyStatus is a seal key's row.
+type KeyStatus struct {
+	Found       bool
+	Status      string // active | retired | revoked
+	ActivatedAt time.Time
+	RetiredAt   *time.Time
+	RevokedAt   *time.Time
+}
+
+// Stored is one sealed deed as the store writes it.
+type Stored struct {
+	Envelope    *Envelope
+	BodyJCS     []byte    // the bytes hashed into body_hash
+	EnvelopeJCS []byte    // JCS(envelope), stored and served verbatim
+	IssuedAt    time.Time // = body.issued_at
+}
+
+// RetireMargin: the Sealer refuses a key that retires within this long after issued_at, so an
+// instance that missed a rotation errors instead of sealing right at the edge of the window.
+const RetireMargin = 30 * time.Second
+
+// Sealer seals drafts into an org's chain.
+type Sealer struct {
+	signer Signer
+	newID  func(issued time.Time) string
+}
+
+// NewSealer returns a Sealer that seals with s.
+func NewSealer(s Signer, opts ...SealerOption) *Sealer {
+	r := &Sealer{signer: s, newID: NewDeedID}
+	for _, o := range opts {
+		o(r)
+	}
+	return r
+}
+
+// SealerOption tunes a Sealer.
+type SealerOption func(*Sealer)
+
+// WithDeedIDs replaces the deed id source (deterministic ids for test vectors).
+func WithDeedIDs(next func() string) SealerOption {
+	return func(s *Sealer) { s.newID = func(time.Time) string { return next() } }
+}
+
+// KeyID is the seal key this Sealer uses.
+func (s *Sealer) KeyID() string { return s.signer.KeyID() }
+
+// Seal takes the org's chain lock, reads the head, the database clock and the key's status, fills
+// deed_id, seq, prev_hash, issued_at and seal_key_id, seals, and inserts the deed, all inside
+// the caller's transaction (DEED_SPEC.md §8, S04 §3.6). It returns ErrSealKeyRetired,
+// ErrSealKeyNotActive or ErrChainConflict (wrapped) for the caller to act on; it never panics.
+func (s *Sealer) Seal(ctx context.Context, cs ChainStore, d Draft) (*Envelope, error) {
+	b := d.Body
+	if err := b.validate(true); err != nil {
+		return nil, fmt.Errorf("%w: %w", ErrDraft, err)
+	}
+	if err := cs.LockChain(ctx, b.Org); err != nil {
+		return nil, fmt.Errorf("deed: chain lock: %w", err)
+	}
+	st, err := cs.ReadState(ctx, b.Org, s.signer.KeyID())
+	if err != nil {
+		return nil, fmt.Errorf("deed: chain state: %w", err)
+	}
+	// issued_at comes from the database clock under the lock and never goes backwards along seq,
+	// even if the clock steps back.
+	issued := st.Now.UTC().Truncate(time.Millisecond)
+	if h := st.Head; h.Seq > 0 && issued.Before(h.IssuedAt) {
+		issued = h.IssuedAt.UTC().Truncate(time.Millisecond)
+	}
+	if err := checkKey(st.Key, issued); err != nil {
+		return nil, err
+	}
+	b.DeedID = s.newID(issued)
+	b.Seq = st.Head.Seq + 1
+	b.PrevHash = Genesis(b.Org)
+	if st.Head.Seq > 0 {
+		b.PrevHash = st.Head.BodyHash
+	}
+	b.IssuedAt = FormatTime(issued)
+	b.SealKeyID = s.signer.KeyID()
+	r, err := sealBody(s.signer, b)
+	if err != nil {
+		return nil, err
+	}
+	if err := cs.Insert(ctx, Stored{Envelope: r.env, BodyJCS: r.bodyJCS, EnvelopeJCS: r.envJCS, IssuedAt: issued}); err != nil {
+		return nil, err
+	}
+	return r.env, nil
+}
+
+// checkKey applies the Sealer's key rule at issued: registered and activated, not revoked, and
+// not retiring within RetireMargin. A key marked retired still seals inside its overlap window,
+// so instances that haven't restarted yet keep working until then.
+func checkKey(k KeyStatus, issued time.Time) error {
+	switch {
+	case !k.Found:
+		return fmt.Errorf("%w: it is not registered", ErrSealKeyNotActive)
+	case k.Status == KeyRevoked || k.RevokedAt != nil:
+		return fmt.Errorf("%w: it was revoked", ErrSealKeyRetired)
+	case issued.Before(k.ActivatedAt):
+		return fmt.Errorf("%w: it activates at %s", ErrSealKeyNotActive, FormatTime(k.ActivatedAt))
+	case k.RetiredAt != nil && k.RetiredAt.Sub(issued) < RetireMargin:
+		return fmt.Errorf("%w: it retires at %s", ErrSealKeyRetired, FormatTime(*k.RetiredAt))
+	case k.Status != KeyActive && k.Status != KeyRetired:
+		return fmt.Errorf("%w: status %q", ErrSealKeyRetired, k.Status)
+	}
+	return nil
+}

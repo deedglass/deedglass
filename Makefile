@@ -9,7 +9,7 @@ BI       := github.com/deedglass/deedglass/internal/buildinfo
 LDFLAGS  := -s -w -X $(BI).Version=$(VERSION) -X $(BI).Commit=$(COMMIT) -X $(BI).Modified=$(MODIFIED) -X $(BI).Date=$(DATE)
 
 .PHONY: all help ci build test test-short vet fmt fmt-check tidy-check testdata-check rename-guard banned-words nocgo \
-	integration matrix fuzz bench bench-store cover clean \
+	integration matrix fuzz bench bench-store bench-deed cover clean \
 	dev dev-down dev-reset dev-logs run docker bench-http
 
 all: ci
@@ -58,9 +58,12 @@ integration: ## throwaway PG cluster (Homebrew, else Docker): sql/ smoke, contro
 matrix: ## integration on 16, 17 and 18
 	@for v in 16 17 18; do echo "=== PostgreSQL $$v"; DEEDGLASS_IT_PG=$$v scripts/integration_local.sh || exit 1; done
 
-fuzz: ## 30 s fuzz of the strict intent parser and the id parser
+fuzz: ## 30 s each: the strict intent parser, the id parser, and the deed envelope, verifier and key-set parsers
 	$(GO) test ./internal/intent -run '^$$' -fuzz FuzzParse -fuzztime 30s
 	$(GO) test ./internal/ids -run '^$$' -fuzz FuzzParse -fuzztime 30s
+	$(GO) test ./internal/deed -run '^$$' -fuzz '^FuzzParseEnvelope$$' -fuzztime 30s
+	$(GO) test ./internal/deed -run '^$$' -fuzz '^FuzzVerifyEnvelope$$' -fuzztime 30s
+	$(GO) test ./internal/deed -run '^$$' -fuzz '^FuzzParseKeySet$$' -fuzztime 30s
 
 bench: ## benchmarks for ids and config
 	$(GO) test -run '^$$' -bench . -benchmem -cpu 1,8 ./internal/ids ./internal/config
@@ -69,8 +72,15 @@ bench-store: ## S02 store budget (OrgTx, insert, list) on a throwaway PG 18; raw
 	DEEDGLASS_IT_BENCH=1 DEEDGLASS_IT_BENCH_OUT="$(CURDIR)/bench/results/$$(date +%F)-$$(go env GOOS)-$$(go env GOARCH)-store.json" \
 		scripts/integration_local.sh
 
-cover: ## coverage of the packages with targets (ids 95%, config 90%, cmd/deedglass 80%)
-	$(GO) test -count=1 -cover ./internal/ids ./internal/config ./cmd/deedglass
+cover: ## coverage of the packages with targets (ids 95%, config 90%, deed 90%, cmd/deedglass 80%)
+	$(GO) test -count=1 -cover ./internal/ids ./internal/config ./internal/deed ./cmd/deedglass
+
+bench-deed: ## S04 deed budget: SealBody, VerifyEnvelope (1 core) and the Postgres Sealer p50/p99 on a throwaway PG 18; raw go test -json in bench/results/
+	@out="$(CURDIR)/bench/results/$$(date +%F)-$$(go env GOOS)-$$(go env GOARCH)-deed.json"; \
+	$(GO) test -json -run '^$$' -bench 'SealBody|VerifyEnvelope|SealerMemStore|ChainCheck' -benchmem -cpu 1 -count 5 ./internal/deed > "$$out" && \
+	DEEDGLASS_IT_BENCH=1 DEEDGLASS_IT_BENCH_OUT="$$out.pg" DEEDGLASS_IT_BENCH_RUN='TestSealerBudget' scripts/integration_local.sh >/dev/null && \
+	cat "$$out.pg" >> "$$out" && rm -f "$$out.pg" && \
+	grep -o '"Output":"Benchmark[^"]*\|PERF {[^}]*}' "$$out" | sed 's/"Output":"//; s/\\t/  /g; s/\\n//; s/\\"/"/g'; echo "raw: $$out"
 
 clean: ## remove build output and throwaway clusters
 	rm -rf bin .tmp

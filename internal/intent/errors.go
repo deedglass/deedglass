@@ -11,15 +11,16 @@ type Code string
 // Strict-profile and canonical-form failures. The verifier reports these as
 // NON_CANONICAL_INTENT (spec §10.3 check 4).
 const (
-	CodeTooLarge      Code = "TOO_LARGE"
-	CodeInvalidUTF8   Code = "INVALID_UTF8"
-	CodeSyntax        Code = "SYNTAX"
-	CodeTooDeep       Code = "TOO_DEEP"
-	CodeDuplicateKey  Code = "DUPLICATE_KEY"
-	CodeNonInteger    Code = "NON_INTEGER_NUMBER"
-	CodeIntegerRange  Code = "INTEGER_OUT_OF_RANGE"
-	CodeLoneSurrogate Code = "LONE_SURROGATE"
-	CodeNonCanonical  Code = "NON_CANONICAL"
+	CodeTooLarge       Code = "TOO_LARGE"
+	CodeInvalidUTF8    Code = "INVALID_UTF8"
+	CodeSyntax         Code = "SYNTAX"
+	CodeTooDeep        Code = "TOO_DEEP"
+	CodeDuplicateKey   Code = "DUPLICATE_KEY"
+	CodeNonInteger     Code = "NON_INTEGER_NUMBER"
+	CodeIntegerRange   Code = "INTEGER_OUT_OF_RANGE"
+	CodeLoneSurrogate  Code = "LONE_SURROGATE"
+	CodeNegativeNumber Code = "NEGATIVE_NUMBER" // ParseStrictNonNegative only (deed bodies)
+	CodeNonCanonical   Code = "NON_CANONICAL"
 )
 
 // Schema failures for deedglass.intent/1. The verifier reports these as

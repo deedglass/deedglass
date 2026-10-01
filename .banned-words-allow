@@ -41,3 +41,4 @@ CLAUDE.md::next-gen::explanatory negation: CLAUDE.md lists the brand style words
 CLAUDE.md::military-grade::explanatory negation: CLAUDE.md lists the brand style words that must never be written
 CLAUDE.md::bank-grade::explanatory negation: CLAUDE.md lists the brand style words that must never be written
 CLAUDE.md::unhackable::explanatory negation: CLAUDE.md lists the brand style words that must never be written
+docs/DEED_SPEC.md::receipts::quoted prior-art title: RFC 9942 "CBOR Object Signing and Encryption (COSE) Receipts", named to say Deedglass does not produce it

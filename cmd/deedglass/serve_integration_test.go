@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 	"sync"
@@ -20,6 +21,8 @@ import (
 	"time"
 
 	"github.com/deedglass/deedglass/internal/config"
+	"github.com/deedglass/deedglass/internal/deed"
+	"github.com/deedglass/deedglass/internal/deed/deedtest"
 	"github.com/deedglass/deedglass/internal/httpx"
 	"github.com/deedglass/deedglass/internal/ids"
 	"github.com/deedglass/deedglass/internal/store"
@@ -153,13 +156,30 @@ func TestServeLive(t *testing.T) {
 	if code, _, body = get("/api/openapi.yaml"); code != 200 || !strings.HasPrefix(body, "openapi: 3.1.1\n") {
 		t.Fatalf("spec %d", code)
 	}
+	if !strings.Contains(get3(get("/v1/health")), `"seal_key": {
+      "status": "ok"`) {
+		t.Fatal("health does not report the seal key")
+	}
+	code, h, body = get("/.well-known/deedglass/keys.json")
+	ks, err := deed.ParseKeySet([]byte(body))
+	if code != 200 || err != nil || len(ks.Keys) != 1 || ks.Keys[0].Status != deed.KeyActive || h.Get("Access-Control-Allow-Origin") != "*" ||
+		h.Get("Cache-Control") != "public, max-age=300" || h.Get("ETag") == "" {
+		t.Fatalf("keys.json %d %v %v\n%s", code, err, h, body)
+	}
+	req, _ := http.NewRequest("GET", base+"/.well-known/deedglass/keys.json", nil)
+	req.Header.Set("If-None-Match", h.Get("ETag"))
+	res, err := http.DefaultClient.Do(req)
+	if err != nil || res.StatusCode != 304 {
+		t.Fatalf("If-None-Match: %v %v", err, res)
+	}
+	res.Body.Close()
 	s.sigs <- syscall.SIGTERM
 	if c := s.wait(t); c != 0 {
 		t.Fatalf("exit %d\n%s%s", c, s.out, s.err)
 	}
 	out := s.out.String()
 	for _, want := range []string{"api 2026-10-01 · env dev", "✓ Migrations · 9 applied", "✓ Database · postgres ", "schema at 0009 · role deedglass_app",
-		"○ Seal key · not configured", "✓ Listening on http://127.0.0.1:", "✓ Stopped cleanly in ", "· 0 requests cut off"} {
+		"○ No seal key set. Created .deedglass/keys/sk_", "for this dev instance.", "✓ Seal key · sk_", "· sha256:", "✓ Listening on http://127.0.0.1:", "✓ Stopped cleanly in ", "· 0 requests cut off"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("stdout lacks %q", want)
 		}
@@ -167,6 +187,133 @@ func TestServeLive(t *testing.T) {
 	t.Logf("\n%s", out)
 	if strings.Contains(out+s.err.String(), storetest.Password) {
 		t.Fatal("a password reached the output")
+	}
+}
+
+func get3(_ int, _ http.Header, body string) string { return body }
+
+// newKeyFile writes a fresh 0600 seal key file into dir.
+func newKeyFile(t *testing.T, dir string, seedByte byte) (string, *deed.FileSigner) {
+	t.Helper()
+	kf, s, err := deed.NewKeyFile(ids.New[ids.SealKeyKind]().String(), bytes.Repeat([]byte{seedByte}, 32), time.Now())
+	if err != nil {
+		t.Fatal(err)
+	}
+	p, err := deed.WriteKeyFile(dir, kf)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return p, s
+}
+
+// listenOrExit waits until serve listens (then stops it) or exits; it returns the exit code.
+func listenOrExit(t *testing.T, s *served) int {
+	t.Helper()
+	select {
+	case <-s.addr:
+		s.sigs <- syscall.SIGTERM
+		return s.wait(t)
+	case c := <-s.code:
+		return c
+	case <-time.After(30 * time.Second):
+		t.Fatal("serve neither listened nor exited")
+		return -1
+	}
+}
+
+// S04 §6.3: serve refuses a retired key, a mismatched file, a 0644 file and a test key in prod,
+// with exit 1 and the §5 message.
+func TestServeSealKeyRefusalsLive(t *testing.T) {
+	e := storetest.New(t, storetest.Options{})
+	dir := t.TempDir()
+	devEnv := func(keyFile string) map[string]string {
+		return map[string]string{"DEEDGLASS_DATABASE_URL": e.AppURL, "DEEDGLASS_LISTEN": "127.0.0.1:0", "DEEDGLASS_LOG_LEVEL": "warn", "DEEDGLASS_SEAL_KEY_FILE": keyFile}
+	}
+	// A good key starts, and registers itself.
+	path, signer := newKeyFile(t, dir, 1)
+	s := startServe(t, devEnv(path))
+	if c := listenOrExit(t, s); c != 0 {
+		t.Fatalf("good key: exit %d\n%s%s", c, s.out, s.err)
+	}
+	if row, err := e.DB.SealKey(context.Background(), signer.KeyID()); err != nil || row.Status != deed.KeyActive {
+		t.Fatalf("not registered: %v %+v", err, row)
+	}
+
+	// Rotated away: the old file is refused.
+	_, next := newKeyFile(t, t.TempDir(), 2)
+	if _, _, err := e.DB.RotateSealKey(context.Background(), next.KeyID(), next.PublicKey(), time.Minute); err != nil {
+		t.Fatal(err)
+	}
+	cases := []struct {
+		name string
+		env  map[string]string
+		want string
+	}{
+		{"retired", devEnv(path), "Seal key " + signer.KeyID() + " was replaced and retires at "},
+		{"mismatched file", devEnv(func() string {
+			kf, _, _ := deed.NewKeyFile(next.KeyID(), bytes.Repeat([]byte{3}, 32), time.Now()) // next's id, another seed
+			p, err := deed.WriteKeyFile(t.TempDir(), kf)
+			if err != nil {
+				t.Fatal(err)
+			}
+			return p
+		}()), "Seal key " + next.KeyID() + " in the file does not match the registered public key."},
+		{"0644 file", devEnv(func() string {
+			p, _ := newKeyFile(t, t.TempDir(), 4)
+			_ = os.Chmod(p, 0o644)
+			return p
+		}()), "can be read by other users (mode 0644)."},
+		{"test key in prod", func() map[string]string {
+			env := prodEnv(e.AppURL)
+			a := deedtest.TestKey("a")
+			kf, _, _ := deed.NewKeyFile(a.ID, a.Seed, time.Now())
+			p, err := deed.WriteKeyFile(t.TempDir(), kf)
+			if err != nil {
+				t.Fatal(err)
+			}
+			env["DEEDGLASS_SEAL_KEY_FILE"] = p
+			return env
+		}(), "✕ This is a published test key. It must never seal real deeds."},
+		{"no key in prod", prodEnv(e.AppURL), "✕ No seal key. DEEDGLASS_SEAL_KEY_FILE is not set."},
+	}
+	for _, c := range cases {
+		s := startServe(t, c.env)
+		if code := listenOrExit(t, s); code != 1 || !strings.Contains(s.err.String(), c.want) || !strings.Contains(s.err.String(), "  next  ") {
+			t.Errorf("%s: exit %d\nstdout:\n%s\nstderr:\n%s", c.name, code, s.out, s.err)
+			continue
+		}
+		t.Logf("%s:\n%s", c.name, s.err)
+	}
+}
+
+// keys rotate and keys list against a real database.
+func TestKeysRotateAndListLive(t *testing.T) {
+	e := storetest.New(t, storetest.Options{})
+	dir := t.TempDir()
+	_, first := newKeyFile(t, filepath.Join(dir, ".deedglass/keys"), 7)
+	if _, _, err := e.DB.RegisterSealKey(context.Background(), first.KeyID(), first.PublicKey()); err != nil {
+		t.Fatal(err)
+	}
+	env := map[string]string{"DEEDGLASS_DATABASE_URL": e.AppURL, "NO_COLOR": "1"}
+	runIn := func(args ...string) (int, string, string) {
+		var out, errb bytes.Buffer
+		ev := &Env{Stdout: &out, Stderr: &errb, Getenv: func(k string) string { return env[k] },
+			LoadOptions: func() config.LoadOptions { return config.LoadOptions{Env: env, FS: fstest.MapFS{}, Dir: dir} }}
+		return run(context.Background(), ev, args), out.String(), errb.String()
+	}
+	code, out, errs := runIn("keys", "rotate", "--overlap", "1m")
+	if code != 0 || !strings.Contains(out, first.KeyID()+" retires at ") || !strings.Contains(out, "(in 1m)") {
+		t.Fatalf("rotate: %d\n%s%s", code, out, errs)
+	}
+	t.Logf("\n%s", out)
+	code, out, errs = runIn("keys", "list")
+	if code != 0 || !strings.Contains(out, "2 seal keys · 1 active") || !strings.Contains(out, "✓ active") || !strings.Contains(out, "retired ") {
+		t.Fatalf("list: %d\n%s%s", code, out, errs)
+	}
+	t.Logf("\n%s", out)
+	keys, _ := filepath.Glob(filepath.Join(dir, ".deedglass/keys/sk_*.json"))
+	if len(keys) != 2 {
+		t.Fatalf("key files %v", keys)
 	}
 }
 
