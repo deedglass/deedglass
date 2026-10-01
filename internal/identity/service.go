@@ -73,6 +73,10 @@ type Service struct {
 	loginIP    *httpx.Limiter
 	loginEmail *httpx.Limiter
 	failIP     *httpx.Limiter
+
+	// failNotify, when set (tests), fails deedglass_identity notifications: the change must roll
+	// back with no deed and no admin event.
+	failNotify func() error
 }
 
 // New checks the options and returns a Service.

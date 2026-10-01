@@ -1,0 +1,62 @@
+{
+  "date": "2026-10-01",
+  "goarch": "arm64",
+  "goos": "darwin",
+  "host": "Arjuns-MacBook.local",
+  "instances": 2,
+  "note": "Two Deedglass instances (separate caches and listeners) on one throwaway Postgres. stop, revoke, stop_all, killed_listener and silent_stall: time from the change's 200 on instance A to the first refusal on instance B, polled every 2 ms. stop_from_request: from sending the stop to that refusal. silent_stall_bypass_on: from the stall starting to B bypassing its cache.",
+  "object": "stop_propagation",
+  "postgres": "18.6 (Homebrew)",
+  "results": [
+    {
+      "name": "stop",
+      "n": 50,
+      "p50_ms": 0.136,
+      "p99_ms": 0.61,
+      "max_ms": 0.61
+    },
+    {
+      "name": "revoke",
+      "n": 50,
+      "p50_ms": 0.13,
+      "p99_ms": 0.432,
+      "max_ms": 0.432
+    },
+    {
+      "name": "stop_all",
+      "n": 50,
+      "p50_ms": 0.123,
+      "p99_ms": 0.334,
+      "max_ms": 0.334
+    },
+    {
+      "name": "stop_from_request",
+      "n": 50,
+      "p50_ms": 1.089,
+      "p99_ms": 4.012,
+      "max_ms": 4.012
+    },
+    {
+      "name": "killed_listener",
+      "n": 1,
+      "p50_ms": 0.22,
+      "p99_ms": 0.22,
+      "max_ms": 0.22
+    },
+    {
+      "name": "silent_stall",
+      "n": 1,
+      "p50_ms": 1592.453,
+      "p99_ms": 1592.453,
+      "max_ms": 1592.453
+    },
+    {
+      "name": "silent_stall_bypass_on",
+      "n": 1,
+      "p50_ms": 1594.546,
+      "p99_ms": 1594.546,
+      "max_ms": 1594.546
+    }
+  ],
+  "runs": 50
+}

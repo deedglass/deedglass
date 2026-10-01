@@ -24,6 +24,14 @@ tags:
     description: >-
       Signing in with an emailed link or code (no passwords), sessions, your org and its members
       (docs/IDENTITY.md).
+  - name: Agents
+    description: >-
+      Agents, their API keys, Stop and Stop all (docs/AGENTS.md). Control-plane routes accept a
+      Console session (by role) or an org admin key (`admin` scope). Agent keys get 403
+      `insufficient_scope` on all of them: no agent key changes any agent, including its own. A 401
+      carries `WWW-Authenticate: Bearer realm="deedglass", error="invalid_token",
+      error_description="…"`; a 403 `insufficient_scope` carries `WWW-Authenticate: Bearer
+      realm="deedglass", error="insufficient_scope", scope="…"`. Every change seals an admin deed.
   - name: Pages
     description: The server-rendered sign-in pages.
   - name: System
@@ -813,6 +821,613 @@ paths:
                 $ref: "#/components/schemas/Membership"
         default:
           $ref: "#/components/responses/Error"
+  /v1/agents:
+    get:
+      operationId: listAgents
+      summary: List agents
+      description: >-
+        Oldest first. Filters combine with AND. Unknown parameters are refused. A Console session
+        (viewer and up) or an org admin key (`admin` scope); agent keys get 403
+        `insufficient_scope`.
+      tags: [Agents]
+      security: [{bearerAuth: []}, {sessionCookie: []}]
+      x-deedglass-auth: session_or_key
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+        - {name: status, in: query, required: false, schema: {type: string, enum: [active, suspended, stopped]}}
+        - {name: label, in: query, required: false, description: 'One label as `key:value`, like `env:prod`.', schema: {type: string}}
+        - {name: name, in: query, required: false, description: The exact agent name (the CLI resolves names this way)., schema: {type: string, pattern: "^[a-z0-9][a-z0-9-]{1,62}$"}}
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+      responses:
+        "200":
+          description: A page of agents.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AgentList"
+        default:
+          $ref: "#/components/responses/Error"
+    post:
+      operationId: createAgent
+      summary: Create an agent
+      description: >-
+        Seals `agent.created`. The name (`^[a-z0-9][a-z0-9-]{1,62}$`, unique in the org) can't
+        change later, because policies match on it; `console`, `system` and `deedglass` are
+        reserved. At most 32 labels. Budgets are in minor units (cents for usd). `owner` defaults
+        to the signed-in person. A taken name is 409 `conflict`. An admin+ Console session (with the
+        `Deedglass-CSRF` header) or an org admin key; agent keys get 403 `insufficient_scope`.
+      tags: [Agents]
+      security: [{bearerAuth: []}, {sessionCookie: []}]
+      x-deedglass-auth: session_or_key
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+        - $ref: "#/components/parameters/CSRFWithSession"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [name]
+              properties:
+                name: {type: string, pattern: "^[a-z0-9][a-z0-9-]{1,62}$", description: Immutable. Not console, system or deedglass.}
+                description: {type: string, maxLength: 500}
+                labels:
+                  $ref: "#/components/schemas/Labels"
+                budgets:
+                  $ref: "#/components/schemas/Budgets"
+                owner: {type: string, description: An active member's id (`usr_…`).}
+            example:
+              name: support-bot
+              description: Answers refund tickets in Zendesk
+              labels: {env: prod, team: support}
+              budgets: {calls_per_minute: 60, calls_per_day: 5000, spend_per_day: {amount: 5000, currency: usd}}
+      responses:
+        "201":
+          description: The agent, with the deed that sealed `agent.created`.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+            Deedglass-Idempotent-Replayed:
+              $ref: "#/components/headers/DeedglassIdempotentReplayed"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AgentResult"
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/agents/{id}:
+    get:
+      operationId: getAgent
+      summary: Get an agent
+      description: >-
+        An id from another org is 404 `not_found`, like an id that doesn't exist. A Console session
+        (viewer and up) or an org admin key; agent keys get 403 `insufficient_scope`.
+      tags: [Agents]
+      security: [{bearerAuth: []}, {sessionCookie: []}]
+      x-deedglass-auth: session_or_key
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+        - $ref: "#/components/parameters/AgentId"
+      responses:
+        "200":
+          description: The agent.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Agent"
+        default:
+          $ref: "#/components/responses/Error"
+    patch:
+      operationId: updateAgent
+      summary: Change an agent's description, labels, budgets or owner
+      description: >-
+        Send only what changes. `labels` and `budgets` replace the whole map; `owner: ""` clears the
+        owner. Names are immutable, so sending `name` is 422 `validation_failed`: to rename, create
+        a new agent and move its keys. Seals `agent.updated` unless nothing changed (then `deed` is
+        null). An admin+ Console session (with the `Deedglass-CSRF` header) or an org admin key;
+        agent keys get 403 `insufficient_scope`.
+      tags: [Agents]
+      security: [{bearerAuth: []}, {sessionCookie: []}]
+      x-deedglass-auth: session_or_key
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+        - $ref: "#/components/parameters/CSRFWithSession"
+        - $ref: "#/components/parameters/AgentId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                description: {type: string, maxLength: 500}
+                labels:
+                  $ref: "#/components/schemas/Labels"
+                budgets:
+                  $ref: "#/components/schemas/Budgets"
+                owner: {type: string, description: An active member's id (`usr_…`), or "" to clear it.}
+            example: {labels: {env: prod, team: support, tier: "1"}}
+      responses:
+        "200":
+          description: The agent, with the deed (null when nothing changed).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AgentResult"
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/agents/{id}/suspend:
+    post:
+      operationId: suspendAgent
+      summary: Suspend an agent
+      description: >-
+        A planned pause. New calls are refused with 403 `agent_suspended`; resume undoes it. Seals
+        `agent.suspended`. Idempotent: suspending a suspended agent returns 200 unchanged with
+        `deed: null`. Suspending a stopped agent is 409 `conflict`. An admin+ Console session (with
+        the `Deedglass-CSRF` header) or an org admin key; agent keys get 403 `insufficient_scope`.
+      tags: [Agents]
+      security: [{bearerAuth: []}, {sessionCookie: []}]
+      x-deedglass-auth: session_or_key
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+        - $ref: "#/components/parameters/CSRFWithSession"
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/AgentId"
+      requestBody:
+        $ref: "#/components/requestBodies/OptionalReason"
+      responses:
+        "200":
+          description: The agent, with the deed (null when it was already suspended).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AgentResult"
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/agents/{id}/resume:
+    post:
+      operationId: resumeAgent
+      summary: Resume a suspended agent
+      description: >-
+        Seals `agent.resumed`. Idempotent: resuming an active agent returns 200 unchanged with
+        `deed: null`. Resuming a stopped agent is 409 `conflict` (start it instead). An admin+
+        Console session (with the `Deedglass-CSRF` header) or an org admin key; agent keys get 403
+        `insufficient_scope`.
+      tags: [Agents]
+      security: [{bearerAuth: []}, {sessionCookie: []}]
+      x-deedglass-auth: session_or_key
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+        - $ref: "#/components/parameters/CSRFWithSession"
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/AgentId"
+      requestBody:
+        $ref: "#/components/requestBodies/OptionalReason"
+      responses:
+        "200":
+          description: The agent, with the deed (null when it was already active).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AgentResult"
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/agents/{id}/stop:
+    post:
+      operationId: stopAgent
+      summary: Stop an agent
+      description: >-
+        The emergency brake. Seals `agent.stopped`; every Deedglass instance refuses the agent's
+        calls within 2 seconds, with 403 `agent_stopped`. Actions already running at a tool finish:
+        Stop can't un-run them. The reason is optional and never shown to the agent. Idempotent:
+        stopping a stopped agent returns 200 unchanged with `deed: null`. If the stop can't be
+        recorded the answer is 500 `internal_error` and nothing changed; the API never says stopped
+        unless it is. An admin+ Console session (with the `Deedglass-CSRF` header) or an org admin
+        key; agent keys get 403 `insufficient_scope`.
+      tags: [Agents]
+      security: [{bearerAuth: []}, {sessionCookie: []}]
+      x-deedglass-auth: session_or_key
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+        - $ref: "#/components/parameters/CSRFWithSession"
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/AgentId"
+      requestBody:
+        $ref: "#/components/requestBodies/OptionalReason"
+      responses:
+        "200":
+          description: The agent, now stopped, with the deed (null when it was already stopped).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AgentResult"
+              example:
+                object: agent
+                id: agt_01k633rrmh3bcz2p39gg4vp46q
+                name: support-bot
+                description: Answers refund tickets in Zendesk
+                labels: {env: prod, team: support}
+                budgets: {calls_per_minute: 60, calls_per_day: 5000, spend_per_day: {amount: 5000, currency: usd}}
+                status: stopped
+                status_reason: Refund loop in staging
+                status_changed_at: "2026-10-03T14:02:09.000Z"
+                status_changed_by: usr_01k6c9kb2zcjsyn7b8g2k1vqvp
+                owner: usr_01k6c9kb2zcjsyn7b8g2k1vqvp
+                active_keys: 1
+                last_used_at: "2026-10-03T14:01:58.512Z"
+                created_at: "2026-10-03T10:02:11.000Z"
+                updated_at: "2026-10-03T14:02:09.000Z"
+                deed: deed_01k6vrddq2atgb2023qvhhct3g
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/agents/{id}/start:
+    post:
+      operationId: startAgent
+      summary: Start a stopped agent
+      description: >-
+        Seals `agent.started`. The reason is required (3 to 280 characters, saying why it's safe now)
+        and goes into the deed. Idempotent: starting an active agent returns 200 unchanged with
+        `deed: null`. Starting a suspended agent is 409 `conflict` (resume it instead). While the
+        org is stopped (Stop all), the agent stays refused with `org_stopped`. An admin+ Console
+        session (with the `Deedglass-CSRF` header) or an org admin key; agent keys get 403
+        `insufficient_scope`, so no agent can start itself.
+      tags: [Agents]
+      security: [{bearerAuth: []}, {sessionCookie: []}]
+      x-deedglass-auth: session_or_key
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+        - $ref: "#/components/parameters/CSRFWithSession"
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/AgentId"
+      requestBody:
+        $ref: "#/components/requestBodies/RequiredReason"
+      responses:
+        "200":
+          description: The agent, with the deed (null when it was already active).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AgentResult"
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/agents/{id}/keys:
+    get:
+      operationId: listAgentKeys
+      summary: List an agent's API keys
+      description: >-
+        The agent's keys, newest first, revoked and expired ones included (at most 100). The secret
+        is never shown. A Console session (viewer and up) or an org admin key; agent keys get 403
+        `insufficient_scope`.
+      tags: [Agents]
+      security: [{bearerAuth: []}, {sessionCookie: []}]
+      x-deedglass-auth: session_or_key
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+        - $ref: "#/components/parameters/AgentId"
+      responses:
+        "200":
+          description: The keys, in one page.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/APIKeyList"
+        default:
+          $ref: "#/components/responses/Error"
+    post:
+      operationId: createAgentKey
+      summary: Create an API key for an agent
+      description: >-
+        201. The `secret` is shown once, in this response; Deedglass stores only its hash. Replaying
+        the same `Idempotency-Key` returns the same key with `"secret": null` and
+        `Deedglass-Idempotent-Replayed: true`; if the first response was lost, roll or revoke that
+        key. Scopes default to `actions:execute`, `actions:read` and `deeds:read`; agent keys can't
+        hold `admin`. An agent has at most 10 active keys; the 11th is 409 `conflict`. Seals
+        `api_key.created`. An admin+ Console session (with the `Deedglass-CSRF` header) or an org
+        admin key; agent keys get 403 `insufficient_scope`.
+      tags: [Agents]
+      security: [{bearerAuth: []}, {sessionCookie: []}]
+      x-deedglass-auth: session_or_key
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+        - $ref: "#/components/parameters/CSRFWithSession"
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/AgentId"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                name: {type: string, maxLength: 64, description: A label for people, without line breaks.}
+                mode: {type: string, enum: [live, test], default: live}
+                scopes:
+                  type: array
+                  uniqueItems: true
+                  items: {type: string, enum: ["actions:execute", "actions:read", "deeds:read", "actions:undo"]}
+                  default: ["actions:execute", "actions:read", "deeds:read"]
+            example: {name: prod runner, mode: live}
+      responses:
+        "201":
+          description: The key, with its secret (null in a replay).
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+            Deedglass-Idempotent-Replayed:
+              $ref: "#/components/headers/DeedglassIdempotentReplayed"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/APIKeyResult"
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/keys/{id}/roll:
+    post:
+      operationId: rollKey
+      summary: Roll an API key
+      description: >-
+        201. Creates a new key with the same agent, name, mode and scopes; its `secret` is shown
+        once, and `previous` says when the old key stops working (`expires_in` seconds from now,
+        0–604800, default 86400). Rolling a revoked or expired key is 409 `conflict`. Admin keys
+        can't roll admin keys (403 `insufficient_role`), because that creates one. Replaying the
+        same `Idempotency-Key` returns `"secret": null`. Seals `api_key.rolled`. An admin+ Console
+        session (with the `Deedglass-CSRF` header) or an org admin key; agent keys get 403
+        `insufficient_scope`.
+      tags: [Agents]
+      security: [{bearerAuth: []}, {sessionCookie: []}]
+      x-deedglass-auth: session_or_key
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+        - $ref: "#/components/parameters/CSRFWithSession"
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/KeyId"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                expires_in: {type: integer, minimum: 0, maximum: 604800, default: 86400, description: Seconds the old key keeps working.}
+            example: {expires_in: 86400}
+      responses:
+        "201":
+          description: The new key, with its secret and the old key's expiry.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+            Deedglass-Idempotent-Replayed:
+              $ref: "#/components/headers/DeedglassIdempotentReplayed"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/APIKeyResult"
+              example:
+                object: api_key
+                id: key_01k6jt6tgx72gjr876976xak5e
+                agent: agt_01k633rrmh3bcz2p39gg4vp46q
+                name: prod runner
+                mode: live
+                prefix: dg_live_0IDw6L5O
+                scopes: ["actions:execute", "actions:read", "deeds:read"]
+                secret: dg_live_0IDw6L5O_9hxevwY7nqdKIZZi5A2xlI2O2qn8znik
+                expires_at: null
+                last_used_at: null
+                revoked_at: null
+                rolled_from: key_01k6jz12ptrvg2zn5vts5xc1ay
+                created_at: "2026-10-03T10:03:40.000Z"
+                deed: deed_01k6vrddq2atgb2023qvhhct3g
+                previous: {id: key_01k6jz12ptrvg2zn5vts5xc1ay, expires_at: "2026-10-04T10:03:40.000Z"}
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/keys/{id}/revoke:
+    post:
+      operationId: revokeKey
+      summary: Revoke an API key
+      description: >-
+        The key stops working at once (401 `api_key_revoked`). Seals `api_key.revoked`. Idempotent:
+        revoking a revoked key returns 200 with `deed: null`. An admin+ Console session (with the
+        `Deedglass-CSRF` header) or an org admin key; agent keys get 403 `insufficient_scope`.
+      tags: [Agents]
+      security: [{bearerAuth: []}, {sessionCookie: []}]
+      x-deedglass-auth: session_or_key
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+        - $ref: "#/components/parameters/CSRFWithSession"
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/KeyId"
+      requestBody:
+        $ref: "#/components/requestBodies/OptionalReason"
+      responses:
+        "200":
+          description: The key, now revoked, with the deed (null when it was already revoked).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/APIKeyResult"
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/org/stop-all:
+    post:
+      operationId: stopAllAgents
+      summary: Stop every agent in the org
+      description: >-
+        Turns on the org's Stop all: every agent's calls are refused with 403 `org_stopped`,
+        whatever its own status, on every instance within 2 seconds. Seals `org.stopped_all`. The reason
+        is optional. Idempotent: repeating it returns 200 unchanged with `deed: null`. If it can't be
+        recorded the answer is 500 `internal_error` and nothing changed. An admin+ Console session
+        (with the `Deedglass-CSRF` header) or an org admin key; agent keys get 403
+        `insufficient_scope`.
+      tags: [Agents]
+      security: [{bearerAuth: []}, {sessionCookie: []}]
+      x-deedglass-auth: session_or_key
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+        - $ref: "#/components/parameters/CSRFWithSession"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        $ref: "#/components/requestBodies/OptionalReason"
+      responses:
+        "200":
+          description: The org's Stop all state, with the deed (null when it was already on).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrgStop"
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/org/start-all:
+    post:
+      operationId: startAllAgents
+      summary: Turn off Stop all
+      description: >-
+        Owners only, in the Console: admin keys can't release the brake. The reason is required
+        (3 to 280 characters) and goes into the deed. Agents stopped one by one stay stopped. Seals
+        `org.started_all`. Idempotent: when Stop all is off, returns 200 unchanged with `deed: null`.
+        Needs the `Deedglass-CSRF` header.
+      tags: [Agents]
+      security: [{sessionCookie: []}]
+      x-deedglass-auth: session
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+        - $ref: "#/components/parameters/CSRF"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        $ref: "#/components/requestBodies/RequiredReason"
+      responses:
+        "200":
+          description: The org's Stop all state, now off, with the deed (null when it was already off).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrgStop"
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/org/keys:
+    get:
+      operationId: listAdminKeys
+      summary: List the org's admin keys
+      description: Newest first, revoked ones included (at most 100). The secret is never shown. Admins and owners, in the Console only.
+      tags: [Agents]
+      security: [{sessionCookie: []}]
+      x-deedglass-auth: session
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+      responses:
+        "200":
+          description: The admin keys, in one page.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/APIKeyList"
+        default:
+          $ref: "#/components/responses/Error"
+    post:
+      operationId: createAdminKey
+      summary: Create an org admin key
+      description: >-
+        201. An admin key acts as the admin role (never owner) on the control plane: it can't call
+        start-all, change roles or create admin keys, so admin keys can't keep access alive on their
+        own. Its scopes are exactly `[admin]`. Admins and owners, in the Console only (or `deedglass
+        org keys create` on the server). The `secret` is shown once; a replay returns `"secret":
+        null`. Seals `api_key.created`. Needs the `Deedglass-CSRF` header.
+      tags: [Agents]
+      security: [{sessionCookie: []}]
+      x-deedglass-auth: session
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+        - $ref: "#/components/parameters/CSRF"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                name: {type: string, maxLength: 64}
+                mode: {type: string, enum: [live, test], default: live}
+                scopes:
+                  type: array
+                  description: Leave it out; admin keys always have exactly `[admin]`.
+                  minItems: 1
+                  maxItems: 1
+                  items: {type: string, const: admin}
+            example: {name: terraform}
+      responses:
+        "201":
+          description: The admin key, with its secret (null in a replay).
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+            Deedglass-Idempotent-Replayed:
+              $ref: "#/components/headers/DeedglassIdempotentReplayed"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/APIKeyResult"
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/whoami:
+    get:
+      operationId: whoami
+      summary: Which key, agent and org this is
+      description: >-
+        Any API key. It skips the stop checks, so a stopped or suspended agent (or one in a stopped
+        org) can learn its status here. It never includes a stop reason or who stopped the agent.
+        For an org admin key, `agent` and `budgets` are null. An invalid, revoked or expired key is
+        401 with `WWW-Authenticate: Bearer realm="deedglass", error="invalid_token"`.
+      tags: [Agents]
+      security: [{bearerAuth: []}]
+      x-deedglass-auth: agent_key
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+      responses:
+        "200":
+          description: The key's identity and statuses.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Whoami"
+        default:
+          $ref: "#/components/responses/Error"
   /login:
     get:
       operationId: loginPage
@@ -891,8 +1506,16 @@ components:
     bearerAuth:
       type: http
       scheme: bearer
-      bearerFormat: dg_live_…
-      description: An agent or org admin API key (`dg_live_…` or `dg_test_…`). Create one in Console › Agents.
+      bearerFormat: dg_<mode>_<prefix>_<secret>
+      description: >-
+        An API key: `dg_live_` or `dg_test_`, an 8-character prefix, `_`, and a 32-character secret,
+        all base62 (49 characters, like `dg_live_jJbEEMWk_o0Erxxf1kgtP2QjiJ79vzW31AjZqIch8`). Agent
+        keys hold `actions:execute`, `actions:read` and `deeds:read` (the default) and may add
+        `actions:undo`; org admin keys hold exactly `admin`. Create agent keys in Console › Agents
+        and admin keys in Console › Settings. A 401 carries `WWW-Authenticate: Bearer
+        realm="deedglass", error="invalid_token", error_description="…"`; a missing scope is 403
+        `insufficient_scope` with `WWW-Authenticate: Bearer realm="deedglass",
+        error="insufficient_scope", scope="…"`.
     sessionCookie:
       type: apiKey
       in: cookie
@@ -964,6 +1587,29 @@ components:
         session request that changes state needs it; without it the answer is 403 `csrf_failed`.
       schema:
         type: string
+    CSRFWithSession:
+      name: Deedglass-CSRF
+      in: header
+      required: false
+      description: >-
+        Needed when the request uses a Console session (it changes state); without it the answer is
+        403 `csrf_failed`. Not sent with an API key.
+      schema:
+        type: string
+    AgentId:
+      name: id
+      in: path
+      required: true
+      description: The agent id (`agt_…`).
+      schema:
+        type: string
+    KeyId:
+      name: id
+      in: path
+      required: true
+      description: The API key id (`key_…`).
+      schema:
+        type: string
   headers:
     DeedglassRequestId:
       description: This request's id. Quote it to support; it matches `error.request_id`.
@@ -991,6 +1637,30 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/ErrorEnvelope"
+  requestBodies:
+    OptionalReason:
+      required: false
+      description: An optional reason. It goes into the deed and the Console; an agent never sees it.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            properties:
+              reason: {type: string, maxLength: 280, description: One line, at most 280 characters.}
+          example: {reason: Refund loop in staging}
+    RequiredReason:
+      required: true
+      description: Why it's safe now. It goes into the deed.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            required: [reason]
+            properties:
+              reason: {type: string, minLength: 3, maxLength: 280, description: One line, 3 to 280 characters.}
+          example: {reason: "Root cause fixed: refund threshold was 100x"}
   schemas:
     LoginRequest:
       type: object
@@ -1142,6 +1812,258 @@ components:
             $ref: "#/components/schemas/Membership"
         has_more: {type: boolean}
         next_cursor: {type: [string, "null"]}
+    Labels:
+      type: object
+      maxProperties: 32
+      description: >-
+        At most 32. Keys match `^[a-z0-9][a-z0-9._/-]{0,62}$`; values are up to 128 printable
+        characters. Policies match on labels, so every change seals a deed.
+      propertyNames:
+        pattern: "^[a-z0-9][a-z0-9._/-]{0,62}$"
+      additionalProperties:
+        type: string
+        maxLength: 128
+    Budgets:
+      type: object
+      additionalProperties: false
+      description: >-
+        An agent's limits; a limit left out means none. Money is in minor units (cents for usd,
+        paise for inr). Deedglass stores and checks them now; the Gate enforces them when it ships.
+      properties:
+        calls_per_minute: {type: integer, minimum: 1, maximum: 1000000}
+        calls_per_day: {type: integer, minimum: 1, maximum: 100000000}
+        spend_per_day:
+          type: object
+          additionalProperties: false
+          required: [amount, currency]
+          properties:
+            amount: {type: integer, minimum: 0, maximum: 9007199254740991, description: Minor units.}
+            currency: {type: string, pattern: "^[a-z]{3}$", description: Lowercase ISO 4217, like usd or inr.}
+      examples:
+        - calls_per_minute: 60
+          calls_per_day: 5000
+          spend_per_day: {amount: 5000, currency: usd}
+    Agent:
+      type: object
+      required: [object, id, name, description, labels, budgets, status, status_reason, status_changed_at, status_changed_by, owner, active_keys, last_used_at, created_at, updated_at]
+      properties:
+        object: {type: string, const: agent}
+        id: {type: string, pattern: "^agt_[0-7][0-9a-hjkmnp-tv-z]{25}$"}
+        name: {type: string, pattern: "^[a-z0-9][a-z0-9-]{1,62}$", description: Unique in the org and immutable.}
+        description: {type: string, maxLength: 500}
+        labels:
+          $ref: "#/components/schemas/Labels"
+        budgets:
+          $ref: "#/components/schemas/Budgets"
+        status: {type: string, enum: [active, suspended, stopped]}
+        status_reason: {type: [string, "null"], maxLength: 280}
+        status_changed_at: {type: [string, "null"], format: date-time}
+        status_changed_by: {type: [string, "null"], description: '`usr_…`, `key_…` or `operator`.'}
+        owner: {type: [string, "null"], description: The person responsible (`usr_…`).}
+        active_keys: {type: integer, minimum: 0, maximum: 10}
+        last_used_at: {type: [string, "null"], format: date-time}
+        created_at: {type: string, format: date-time}
+        updated_at: {type: string, format: date-time}
+      examples:
+        - object: agent
+          id: agt_01k633rrmh3bcz2p39gg4vp46q
+          name: support-bot
+          description: Answers refund tickets in Zendesk
+          labels: {env: prod, team: support}
+          budgets: {calls_per_minute: 60, calls_per_day: 5000, spend_per_day: {amount: 5000, currency: usd}}
+          status: active
+          status_reason: null
+          status_changed_at: null
+          status_changed_by: null
+          owner: usr_01k6c9kb2zcjsyn7b8g2k1vqvp
+          active_keys: 0
+          last_used_at: null
+          created_at: "2026-10-03T10:02:11.000Z"
+          updated_at: "2026-10-03T10:02:11.000Z"
+    AgentResult:
+      allOf:
+        - $ref: "#/components/schemas/Agent"
+        - type: object
+          required: [deed]
+          properties:
+            deed: {type: [string, "null"], description: The admin deed this change sealed; null when nothing changed.}
+      examples:
+        - object: agent
+          id: agt_01k633rrmh3bcz2p39gg4vp46q
+          name: support-bot
+          description: Answers refund tickets in Zendesk
+          labels: {env: prod, team: support}
+          budgets: {calls_per_minute: 60, calls_per_day: 5000, spend_per_day: {amount: 5000, currency: usd}}
+          status: active
+          status_reason: null
+          status_changed_at: null
+          status_changed_by: null
+          owner: usr_01k6c9kb2zcjsyn7b8g2k1vqvp
+          active_keys: 0
+          last_used_at: null
+          created_at: "2026-10-03T10:02:11.000Z"
+          updated_at: "2026-10-03T10:02:11.000Z"
+          deed: deed_01k6vrddq2atgb2023qvhhct3g
+    AgentList:
+      type: object
+      required: [object, data, has_more, next_cursor]
+      properties:
+        object: {type: string, const: list}
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Agent"
+        has_more: {type: boolean}
+        next_cursor: {type: [string, "null"]}
+    OrgStop:
+      type: object
+      required: [object, org, stopped, stopped_at, stopped_by, reason, agents_affected, deed]
+      description: The org's Stop all. While `stopped` is true, every agent in the org is refused with `org_stopped`.
+      properties:
+        object: {type: string, const: org_stop}
+        org: {type: string, pattern: "^org_[0-7][0-9a-hjkmnp-tv-z]{25}$"}
+        stopped: {type: boolean}
+        stopped_at: {type: [string, "null"], format: date-time}
+        stopped_by: {type: [string, "null"], description: '`usr_…`, `key_…` or `operator`.'}
+        reason: {type: [string, "null"], maxLength: 280}
+        agents_affected: {type: integer, minimum: 0}
+        deed: {type: [string, "null"], description: The admin deed this change sealed; null when nothing changed.}
+      examples:
+        - object: org_stop
+          org: org_01k6h7kp6msmzrhdzwtcr3jnkp
+          stopped: true
+          stopped_at: "2026-10-03T14:05:00.000Z"
+          stopped_by: usr_01k6c9kb2zcjsyn7b8g2k1vqvp
+          reason: Investigating unexpected refunds
+          agents_affected: 7
+          deed: deed_01k6vrddq2atgb2023qvhhct3g
+    APIKey:
+      type: object
+      required: [object, id, agent, name, mode, prefix, scopes, expires_at, last_used_at, revoked_at, rolled_from, created_at]
+      description: >-
+        An agent key or an org admin key. The full key is `dg_<mode>_<prefix 8>_<secret 32>`, 49
+        characters; it is shown once, as `secret`, when the key is created or rolled.
+      properties:
+        object: {type: string, const: api_key}
+        id: {type: string, pattern: "^key_[0-7][0-9a-hjkmnp-tv-z]{25}$"}
+        agent: {type: [string, "null"], description: The agent (`agt_…`); null for an org admin key.}
+        name: {type: string, maxLength: 64}
+        mode: {type: string, enum: [live, test]}
+        prefix: {type: string, pattern: "^dg_(live|test)_[0-9A-Za-z]{8}$", description: 'How the key is displayed: `dg_live_jJbEEMWk_••••`.'}
+        scopes:
+          type: array
+          items: {type: string, enum: ["actions:execute", "actions:read", "deeds:read", "actions:undo", admin]}
+        expires_at: {type: [string, "null"], format: date-time, description: Set when the key was rolled.}
+        last_used_at: {type: [string, "null"], format: date-time}
+        revoked_at: {type: [string, "null"], format: date-time}
+        rolled_from: {type: [string, "null"], description: The key this one replaced (`key_…`).}
+        created_at: {type: string, format: date-time}
+      examples:
+        - object: api_key
+          id: key_01k6jz12ptrvg2zn5vts5xc1ay
+          agent: agt_01k633rrmh3bcz2p39gg4vp46q
+          name: prod runner
+          mode: live
+          prefix: dg_live_jJbEEMWk
+          scopes: ["actions:execute", "actions:read", "deeds:read"]
+          expires_at: null
+          last_used_at: "2026-10-03T14:01:58.512Z"
+          revoked_at: null
+          rolled_from: null
+          created_at: "2026-10-03T10:03:40.000Z"
+    APIKeyResult:
+      allOf:
+        - $ref: "#/components/schemas/APIKey"
+        - type: object
+          required: [deed]
+          properties:
+            secret:
+              type: [string, "null"]
+              pattern: "^dg_(live|test)_[0-9A-Za-z]{8}_[0-9A-Za-z]{32}$"
+              description: >-
+                The full key, on create and roll only, shown once. Null in an Idempotency-Key replay:
+                Deedglass never stores it.
+            deed: {type: [string, "null"], description: The admin deed this change sealed; null when nothing changed.}
+            previous:
+              type: object
+              description: On roll only. The old key and when it stops working.
+              required: [id, expires_at]
+              properties:
+                id: {type: string}
+                expires_at: {type: [string, "null"], format: date-time}
+      examples:
+        - object: api_key
+          id: key_01k6jz12ptrvg2zn5vts5xc1ay
+          agent: agt_01k633rrmh3bcz2p39gg4vp46q
+          name: prod runner
+          mode: live
+          prefix: dg_live_jJbEEMWk
+          scopes: ["actions:execute", "actions:read", "deeds:read"]
+          secret: dg_live_jJbEEMWk_o0Erxxf1kgtP2QjiJ79vzW31AjZqIch8
+          expires_at: null
+          last_used_at: null
+          revoked_at: null
+          rolled_from: null
+          created_at: "2026-10-03T10:03:40.000Z"
+          deed: deed_01k6vrddq2atgb2023qvhhct3g
+    APIKeyList:
+      type: object
+      required: [object, data, has_more, next_cursor]
+      properties:
+        object: {type: string, const: list}
+        data:
+          type: array
+          maxItems: 100
+          items:
+            $ref: "#/components/schemas/APIKey"
+        has_more: {type: boolean}
+        next_cursor: {type: [string, "null"]}
+    Whoami:
+      type: object
+      required: [object, org, agent, key, budgets]
+      description: Never includes a stop reason or who stopped the agent.
+      properties:
+        object: {type: string, const: whoami}
+        org:
+          type: object
+          required: [id, name, slug, stopped]
+          properties:
+            id: {type: string}
+            name: {type: string}
+            slug: {type: string}
+            stopped: {type: boolean, description: True while Stop all is on.}
+        agent:
+          type: [object, "null"]
+          description: Null for an org admin key.
+          required: [id, name, status, labels]
+          properties:
+            id: {type: string}
+            name: {type: string}
+            status: {type: string, enum: [active, suspended, stopped]}
+            labels:
+              $ref: "#/components/schemas/Labels"
+        key:
+          type: object
+          required: [id, prefix, mode, scopes, expires_at]
+          properties:
+            id: {type: string}
+            prefix: {type: string}
+            mode: {type: string, enum: [live, test]}
+            scopes:
+              type: array
+              items: {type: string}
+            expires_at: {type: [string, "null"], format: date-time}
+        budgets:
+          description: Null for an org admin key.
+          anyOf:
+            - $ref: "#/components/schemas/Budgets"
+            - type: "null"
+      examples:
+        - object: whoami
+          org: {id: org_01k6h7kp6msmzrhdzwtcr3jnkp, name: Acme, slug: acme, stopped: false}
+          agent: {id: agt_01k633rrmh3bcz2p39gg4vp46q, name: support-bot, status: active, labels: {env: prod, team: support}}
+          key: {id: key_01k6jt6tgx72gjr876976xak5e, prefix: dg_live_0IDw6L5O, mode: live, scopes: ["actions:execute", "actions:read", "deeds:read"], expires_at: null}
+          budgets: {calls_per_minute: 60, calls_per_day: 5000, spend_per_day: {amount: 5000, currency: usd}}
     ErrorEnvelope:
       type: object
       additionalProperties: false

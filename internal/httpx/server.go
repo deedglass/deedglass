@@ -262,6 +262,12 @@ func checkContentType(ct, want string) error {
 
 // authenticate applies route.Auth. A route whose authenticator isn't configured answers 401
 // authentication_required: fail closed.
+//
+// API keys follow S08 §3.5, first failure wins: a bearer is present (1); the key authenticator
+// applies the failed-auth limiter (2), the strict parse, the prefix lookup, the mode and the
+// constant-time hash (3, one message for all of them), then revoked (4) and expired (5). The
+// pipeline then refuses a stopped org (6), a stopped agent (7) and a suspended agent (8), unless the
+// route sets SkipStopChecks, and finally checks the route's scopes (9).
 func (s *Server) authenticate(rt Route, r *http.Request, ri *reqInfo) error {
 	if rt.Auth == Public {
 		return nil
@@ -280,10 +286,9 @@ func (s *Server) authenticate(rt Route, r *http.Request, ri *reqInfo) error {
 		err error
 	)
 	switch {
-	case keyOK && (hasBearer || badScheme):
+	case keyOK && (hasBearer || badScheme), rt.Auth == Session && hasBearer && s.o.Keys != nil:
 		if badScheme {
-			return E(CodeInvalidAPIKey, Msg("The Authorization header must be Bearer followed by an API key (dg_live_… or dg_test_…)."),
-				WithHeader("WWW-Authenticate", `Bearer realm="deedglass"`))
+			return withChallenge(E(CodeInvalidAPIKey, Msg("The Authorization header must be Bearer followed by an API key (dg_live_… or dg_test_…).")))
 		}
 		if s.o.Keys == nil {
 			return required()
@@ -291,10 +296,18 @@ func (s *Server) authenticate(rt Route, r *http.Request, ri *reqInfo) error {
 		p, err = s.o.Keys.AuthenticateKey(r.Context(), bearer)
 		if err != nil {
 			if e := AsError(err); e != nil && e.Status == http.StatusUnauthorized {
-				if e.Header.Get("WWW-Authenticate") == "" {
-					WithHeader("WWW-Authenticate", `Bearer realm="deedglass", error="invalid_token"`)(e)
-				}
+				return withChallenge(e)
 			}
+			return err
+		}
+		if !p.IsKey() || p.OrgID.IsZero() {
+			return s.internal(r, errors.New("httpx: the key authenticator returned a principal that isn't a key"))
+		}
+		if !keyOK {
+			// A route only a signed-in person may call (Start all; minting admin keys).
+			return ErrKeyOnSessionRoute(p, rt.MinRole, rt.Purpose)
+		}
+		if err := keyAllowed(rt, p); err != nil {
 			return err
 		}
 	case sessOK:
@@ -305,24 +318,16 @@ func (s *Server) authenticate(rt Route, r *http.Request, ri *reqInfo) error {
 		if err != nil {
 			return err
 		}
+		if p.Kind != KindUser {
+			return s.internal(r, errors.New("httpx: the session authenticator returned a principal that isn't a person"))
+		}
+		// Roles: people are checked against MinRole on every request, with the live membership the
+		// session authenticator just read (S07).
+		if rt.MinRole != "" && !p.Role.AtLeast(rt.MinRole) {
+			return ErrInsufficientRole(p.OrgName, p.Role, rt.MinRole, rt.Purpose)
+		}
 	default:
 		return required()
-	}
-	if p.OrgID.IsZero() && p.Kind == "" {
-		return s.internal(r, errors.New("httpx: an authenticator returned an empty principal"))
-	}
-	// Roles: people are checked against MinRole on every request, with the live membership the
-	// session authenticator just read (S07). S08 applies the same check to admin keys.
-	if p.Kind == "user" && rt.MinRole != "" && !p.Role.AtLeast(rt.MinRole) {
-		return ErrInsufficientRole(p.OrgName, p.Role, rt.MinRole, rt.Purpose)
-	}
-	// Scopes: a key must hold every scope the route lists. S08 sharpens this for admin keys.
-	if p.Kind != "user" && p.Kind != "" {
-		for _, sc := range rt.Scopes {
-			if !contains(p.Scopes, sc) {
-				return ErrInsufficientScope(sc)
-			}
-		}
 	}
 	ri.principal = &p
 	ri.orgID = p.OrgID.String()
@@ -330,6 +335,78 @@ func (s *Server) authenticate(rt Route, r *http.Request, ri *reqInfo) error {
 		ri.agentID = p.AgentID.String()
 	}
 	return nil
+}
+
+// keyAllowed is §3.5 steps 6–9 for an authenticated key.
+func keyAllowed(rt Route, p Principal) error {
+	if !rt.SkipStopChecks {
+		switch {
+		// During Stop all, admin keys keep read-only access (GET, HEAD) so incident response can
+		// look around; anything that changes state is refused like every agent call (DL-022).
+		case p.OrgStopped && p.Kind == KindAdminKey && !readOnly(rt.Method):
+			return ErrOrgStoppedAdminWrite(p.OrgName)
+		case p.OrgStopped && p.Kind != KindAdminKey:
+			return ErrOrgStopped(p.OrgName)
+		case p.Kind == KindAgentKey && p.AgentStatus == "stopped":
+			return ErrAgentStopped(p.AgentName)
+		case p.Kind == KindAgentKey && p.AgentStatus == "suspended":
+			return ErrAgentSuspended(p.AgentName)
+		case p.Kind == KindAgentKey && p.AgentStatus != "active":
+			return ErrAgentStopped(p.AgentName) // an unknown status fails closed
+		}
+	}
+	if p.Kind == KindAdminKey {
+		// Admin keys act as the admin role, never as owner (S08 §3.4).
+		switch {
+		case rt.MinRole == RoleOwner:
+			return ErrKeyOnSessionRoute(p, RoleOwner, rt.Purpose)
+		case len(rt.Scopes) == 0, contains(rt.Scopes, ScopeAdmin):
+			return nil
+		case rt.Auth == SessionOrKey && rt.MinRole.Rank() > 0 && rt.MinRole.Rank() <= RoleAdmin.Rank():
+			return nil // a route an admin may use in the Console (reading deeds, the Ledger)
+		}
+		return ErrInsufficientScope(rt.Scopes[0])
+	}
+	for _, sc := range rt.Scopes {
+		if !contains(p.Scopes, sc) {
+			if sc == ScopeAdmin {
+				return ErrAgentKeyForAdmin()
+			}
+			return ErrInsufficientScope(sc)
+		}
+	}
+	return nil
+}
+
+// readOnly reports whether a method can't change state.
+func readOnly(method string) bool { return method == http.MethodGet || method == http.MethodHead }
+
+// withChallenge adds RFC 6750's challenge to a 401 about a bearer key:
+// Bearer realm="deedglass", error="invalid_token", error_description="<message>".
+func withChallenge(e *Error) *Error {
+	if e.Header.Get("WWW-Authenticate") == "" {
+		WithHeader("WWW-Authenticate", `Bearer realm="deedglass", error="invalid_token", error_description="`+challengeText(e.Message)+`"`)(e)
+	}
+	return e
+}
+
+// challengeText makes a message safe for a quoted-string in WWW-Authenticate (RFC 6750 §3:
+// %x20-21 / %x23-5B / %x5D-7E): › becomes >, quotes and backslashes become ', the rest is dropped.
+func challengeText(m string) string {
+	var b strings.Builder
+	for _, r := range m {
+		switch {
+		case r == '›':
+			b.WriteByte('>')
+		case r == '"' || r == '\\':
+			b.WriteByte('\'')
+		case r == '…':
+			b.WriteString("...")
+		case r >= 0x20 && r <= 0x7e:
+			b.WriteRune(r)
+		}
+	}
+	return b.String()
 }
 
 // bearerToken reads "Authorization: Bearer <token>". badScheme is true for any other scheme.

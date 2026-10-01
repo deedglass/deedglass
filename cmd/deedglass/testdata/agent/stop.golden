@@ -1,0 +1,6 @@
+exit 0
+--- stdout
+✓ Stopped support-bot · deed_01k6vrddq2atgb2023qvhhct3h sealed
+  Every call from support-bot is refused on every Deedglass instance within 2 seconds.
+  Start it again with: deedglass agent start support-bot --reason "…"
+--- stderr

@@ -176,3 +176,32 @@ func ScopeSystemTxToOrg(ctx context.Context, tx pgx.Tx, org ids.OrgID) error {
 	_, err := tx.Exec(ctx, "SELECT pg_catalog.set_config('deedglass.org_id', $1, true)", org.String())
 	return err
 }
+
+// PreAuthKey is the API key behind a bearer token's prefix, with its agent and org (S08).
+type PreAuthKey struct {
+	ID           ids.APIKeyID
+	OrgID        ids.OrgID
+	AgentID      *ids.AgentID // nil for an org admin key
+	Mode         string       // "live" | "test"
+	SecretHash   []byte       // sha256(pepper ‖ secret); compared in constant time, never logged
+	Scopes       []string
+	ExpiresAt    *time.Time
+	RevokedAt    *time.Time
+	AgentName    *string
+	AgentStatus  *string // "active" | "suspended" | "stopped"
+	OrgName      string
+	OrgStatus    string // "active" | "disabled"
+	OrgStoppedAt *time.Time
+	OrgVersion   string // orgs.api_version
+}
+
+// APIKey returns the key whose public prefix is prefix (deedglass.preauth_api_key), or ErrNotFound.
+func (p PreAuth) APIKey(ctx context.Context, prefix string) (PreAuthKey, error) {
+	var k PreAuthKey
+	err := p.db.pool.QueryRow(ctx, `SELECT id, org_id, agent_id, mode, secret_hash, scopes, expires_at, revoked_at,
+	    agent_name, agent_status, org_name, org_status, org_stopped_at, org_api_version
+	    FROM deedglass.preauth_api_key($1)`, prefix).
+		Scan(&k.ID, &k.OrgID, &k.AgentID, &k.Mode, &k.SecretHash, &k.Scopes, &k.ExpiresAt, &k.RevokedAt,
+			&k.AgentName, &k.AgentStatus, &k.OrgName, &k.OrgStatus, &k.OrgStoppedAt, &k.OrgVersion)
+	return k, notFound(err)
+}

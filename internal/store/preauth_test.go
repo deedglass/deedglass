@@ -11,7 +11,7 @@ import (
 // other package goes through store.PreAuth, OrgTx or SystemTx. The test also checks it still finds
 // them, so it can't pass by matching nothing.
 func TestPreAuthNamesStayInStore(t *testing.T) {
-	re := regexp.MustCompile(`\b(preauth_(session|login_token|user_by_email|code_token)|maint_prune_identity)\b|set_config\('deedglass\.org_id'`)
+	re := regexp.MustCompile(`\b(preauth_(session|login_token|user_by_email|code_token|api_key)|maint_prune_identity)\b|set_config\('deedglass\.org_id'`)
 	found := 0
 	for p, src := range goFiles(t, false) {
 		if !re.MatchString(src) {

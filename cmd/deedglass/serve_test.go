@@ -23,8 +23,8 @@ func TestServeRoutesMatchOpenAPI(t *testing.T) {
 	for _, err := range httpx.CheckSpec(apiSpec(), api.Routes()) {
 		t.Error(err)
 	}
-	if len(api.Routes()) != 27 {
-		t.Fatalf("serve mounts %d routes, want 27 (S03 + keys.json in S04 + the six Ledger routes in S06 + 17 in S07)", len(api.Routes()))
+	if len(api.Routes()) != 44 {
+		t.Fatalf("serve mounts %d routes, want 44 (S03 + keys.json in S04 + the six Ledger routes in S06 + 17 in S07 + 17 in S08)", len(api.Routes()))
 	}
 }
 
@@ -159,5 +159,35 @@ func TestPGVersion(t *testing.T) {
 		if got := pgVersion(n); got != want {
 			t.Errorf("%d: %s", n, got)
 		}
+	}
+}
+
+// Every route an API key can call declares the scopes it needs (S08 §3.4), so no key route is
+// open to any key by omission. GET /v1/whoami is the one exception: any key, stop checks skipped.
+func TestKeyRoutesDeclareScopes(t *testing.T) {
+	api := httpx.New(httpx.Options{Logger: slog.New(slog.DiscardHandler)})
+	api.Mount(serveRoutes(api, nil, nil, nil, nil, nil)...)
+	keyRoutes := 0
+	for _, r := range api.Routes() {
+		if r.Auth != httpx.AgentKey && r.Auth != httpx.SessionOrKey {
+			if r.SkipStopChecks {
+				t.Errorf("%s skips the stop checks but takes no key", r.Key())
+			}
+			continue
+		}
+		keyRoutes++
+		switch {
+		case r.Key() == "GET /v1/whoami":
+			if !r.SkipStopChecks || len(r.Scopes) != 0 {
+				t.Errorf("whoami must take any key and skip the stop checks")
+			}
+		case len(r.Scopes) == 0:
+			t.Errorf("%s accepts API keys but declares no Scopes", r.Key())
+		case r.SkipStopChecks:
+			t.Errorf("%s skips the stop checks; only whoami may", r.Key())
+		}
+	}
+	if keyRoutes < 20 {
+		t.Fatalf("only %d key routes: the check isn't seeing the route table", keyRoutes)
 	}
 }

@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+	"time"
 )
 
 var update = flag.Bool("update", false, "rewrite golden files")
@@ -157,13 +158,20 @@ func TestEnvelopeGolden(t *testing.T) {
 
 func TestMessagesFilledAtCallSites(t *testing.T) {
 	cases := map[string]*Error{
-		"The request body is larger than 1 MiB. Send a smaller body.":                                  errTooLarge(1 << 20),
-		"The request body is larger than 64 KiB. Send a smaller body.":                                 errTooLarge(64 << 10),
-		"The request body is larger than 1000 bytes. Send a smaller body.":                             errTooLarge(1000),
-		"Too many requests. Retry after 3 s.":                                                          ErrRateLimited(3),
-		"POST isn't supported on /x. Use GET, HEAD or PUT.":                                            errMethodNotAllowed("POST", "/x", []string{"GET", "HEAD", "PUT"}),
-		"There's no endpoint at GET /a?b. Check the path in the API reference.":                        errEndpointNotFound("GET", "/a\x00b", ""),
-		"This key doesn't have the scope this endpoint needs. Create a key with the deeds:read scope.": ErrInsufficientScope("deeds:read"),
+		"The request body is larger than 1 MiB. Send a smaller body.":                                                                                                      errTooLarge(1 << 20),
+		"The request body is larger than 64 KiB. Send a smaller body.":                                                                                                     errTooLarge(64 << 10),
+		"The request body is larger than 1000 bytes. Send a smaller body.":                                                                                                 errTooLarge(1000),
+		"Too many requests. Retry after 3 s.":                                                                                                                              ErrRateLimited(3),
+		"POST isn't supported on /x. Use GET, HEAD or PUT.":                                                                                                                errMethodNotAllowed("POST", "/x", []string{"GET", "HEAD", "PUT"}),
+		"There's no endpoint at GET /a?b. Check the path in the API reference.":                                                                                            errEndpointNotFound("GET", "/a\x00b", ""),
+		"This key doesn't have the deeds:read scope. Create a key with deeds:read in Console › Agents.":                                                                    ErrInsufficientScope("deeds:read"),
+		`Agent "support-bot" is stopped. Deedglass refuses its calls until an admin starts it in Console › Agents.`:                                                        ErrAgentStopped("support-bot"),
+		`Agent "support-bot" is suspended. An admin can resume it in Console › Agents.`:                                                                                    ErrAgentSuspended("support-bot"),
+		"All agents in Acme are stopped. An owner can start them again in Console › Settings.":                                                                             ErrOrgStopped("Acme"),
+		"All agents in Acme are stopped, so admin keys can only read until an owner starts them again in Console › Settings. To change agents now, use a Console session.": ErrOrgStoppedAdminWrite("Acme"),
+		"The API key expired at 2026-10-04 10:03 UTC after it was rolled. Use the new key, or create one in Console › Agents.": ErrAPIKeyExpired(
+			time.Date(2026, 10, 4, 10, 3, 40, 0, time.UTC)),
+		"Too many requests with invalid API keys from this address. Try again in 4 seconds.": ErrKeyRateLimited(4),
 	}
 	for want, e := range cases {
 		if e.Message != want {

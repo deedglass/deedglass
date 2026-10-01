@@ -13,10 +13,10 @@ import (
 	"github.com/deedglass/deedglass/internal/ids"
 )
 
-// Scopes the Ledger routes need (contract §8; S08 confirms them).
+// Scopes the Ledger routes need (contract §8; S08 confirmed them).
 const (
-	ScopeActionsRead = "actions:read"
-	ScopeDeedsRead   = "deeds:read"
+	ScopeActionsRead = httpx.ScopeActionsRead
+	ScopeDeedsRead   = httpx.ScopeDeedsRead
 )
 
 // Route timeouts beyond httpx's 30 s default.
@@ -27,7 +27,9 @@ const (
 
 // Routes are the six Ledger routes (contract §9): GET /v1/actions, /v1/actions/{id}, /v1/deeds,
 // /v1/deeds/{id}, /v1/deeds/export and /v1/ledger/check. Every one is SessionOrKey, viewer and
-// up, scoped actions:read or deeds:read.
+// up. Agent keys need actions:read or deeds:read and see only their own agent's rows; the export
+// and the chain check cover the whole org, so they take a Console session or an org admin key
+// (S08).
 func Routes(l *Ledger) []httpx.Route {
 	h := handlers{l}
 	return []httpx.Route{
@@ -40,9 +42,9 @@ func Routes(l *Ledger) []httpx.Route {
 		{Method: "GET", Pattern: "/v1/deeds/{id}", OperationID: "getDeed", Auth: httpx.SessionOrKey, MinRole: httpx.RoleViewer,
 			Scopes: []string{ScopeDeedsRead}, Handler: h.getDeed},
 		{Method: "GET", Pattern: "/v1/deeds/export", OperationID: "exportDeeds", Auth: httpx.SessionOrKey, MinRole: httpx.RoleViewer,
-			Scopes: []string{ScopeDeedsRead}, Timeout: exportTimeout, Handler: h.exportDeeds},
+			Scopes: []string{httpx.ScopeAdmin}, Timeout: exportTimeout, Handler: h.exportDeeds},
 		{Method: "GET", Pattern: "/v1/ledger/check", OperationID: "checkLedger", Auth: httpx.SessionOrKey, MinRole: httpx.RoleViewer,
-			Scopes: []string{ScopeDeedsRead}, Timeout: checkTimeout, Handler: h.checkLedger},
+			Scopes: []string{httpx.ScopeAdmin}, Timeout: checkTimeout, Handler: h.checkLedger},
 	}
 }
 
@@ -56,6 +58,14 @@ func org(r *http.Request) (ids.OrgID, error) {
 	}
 	httpx.Annotate(r.Context(), p.OrgID.String(), "", "")
 	return p.OrgID, nil
+}
+
+// ownAgent is the agent an agent key is limited to, or "" for people and admin keys.
+func ownAgent(r *http.Request) string {
+	if p, ok := httpx.PrincipalFrom(r.Context()); ok && p.Kind == httpx.KindAgentKey {
+		return p.AgentID.String()
+	}
+	return ""
 }
 
 // apiError maps Ledger errors onto the envelope; anything else stays an internal error.
@@ -92,6 +102,12 @@ func (h handlers) listActions(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return apiError(err)
 	}
+	if own := ownAgent(r); own != "" {
+		if f.Agent != "" && f.Agent != own {
+			return httpx.ErrValidation("agent", "An agent key reads only its own agent's actions. Leave agent out, or pass "+own+".")
+		}
+		f.Agent = own
+	}
 	list, err := h.l.ListActions(r.Context(), o, f, p)
 	if err != nil {
 		return apiError(err)
@@ -109,7 +125,7 @@ func (h handlers) getAction(w http.ResponseWriter, r *http.Request) error {
 	}
 	id := r.PathValue("id")
 	d, err := h.l.GetAction(r.Context(), o, id)
-	if errors.Is(err, ErrNotFound) {
+	if errors.Is(err, ErrNotFound) || err == nil && ownAgent(r) != "" && d.Agent.ID != ownAgent(r) {
 		return notFoundAction(id)
 	}
 	if err != nil {
@@ -128,6 +144,7 @@ func (h handlers) listDeeds(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return apiError(err)
 	}
+	f.OwnAgent = ownAgent(r)
 	list, err := h.l.ListDeeds(r.Context(), o, f, p)
 	if err != nil {
 		return apiError(err)
@@ -151,7 +168,7 @@ func (h handlers) getDeed(w http.ResponseWriter, r *http.Request) error {
 		return notFoundDeed(id) // by id only; seqs are for the CLI
 	}
 	d, err := h.l.GetDeed(r.Context(), o, id)
-	if errors.Is(err, ErrNotFound) {
+	if errors.Is(err, ErrNotFound) || err == nil && ownAgent(r) != "" && (d.Agent != ownAgent(r) || d.Kind == "admin") {
 		return notFoundDeed(id)
 	}
 	if err != nil {

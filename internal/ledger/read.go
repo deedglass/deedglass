@@ -446,6 +446,10 @@ func (l *Ledger) ListDeeds(ctx context.Context, org ids.OrgID, f DeedFilter, p P
 	if f.Action != "" {
 		add("action_id = $?", f.Action)
 	}
+	if f.OwnAgent != "" {
+		conds = append(conds, "kind IN ('action', 'amendment')")
+		add("body->'agent'->>'id' = $?", f.OwnAgent)
+	}
 	if c != nil {
 		after, err := strconv.ParseInt(c.K, 10, 64)
 		if err != nil || after < 1 {
@@ -500,6 +504,7 @@ func (l *Ledger) ListDeeds(ctx context.Context, org ids.OrgID, f DeedFilter, p P
 
 // StoredDeed is one deed as stored: the exact JCS(envelope) bytes, served verbatim.
 type StoredDeed struct {
+	Agent    string // body.agent.id, or "" (admin deeds about no agent)
 	ID       string
 	Seq      int64
 	Kind     string
@@ -518,8 +523,9 @@ func (l *Ledger) GetDeed(ctx context.Context, org ids.OrgID, ref string) (*Store
 	}
 	var d StoredDeed
 	err := l.readTx(ctx, org, func(ctx context.Context, tx pgx.Tx) error {
-		err := tx.QueryRow(ctx, `SELECT id, seq, kind, body_hash, issued_at, envelope FROM deedglass.deeds WHERE org_id = $1 AND `+col+` = $2`, org, val).
-			Scan(&d.ID, &d.Seq, &d.Kind, &d.BodyHash, &d.IssuedAt, &d.Envelope)
+		err := tx.QueryRow(ctx, `SELECT id, seq, kind, body_hash, issued_at, envelope, COALESCE(body->'agent'->>'id', '')
+		    FROM deedglass.deeds WHERE org_id = $1 AND `+col+` = $2`, org, val).
+			Scan(&d.ID, &d.Seq, &d.Kind, &d.BodyHash, &d.IssuedAt, &d.Envelope, &d.Agent)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return fmt.Errorf("%w: deed %s", ErrNotFound, ref)
 		}

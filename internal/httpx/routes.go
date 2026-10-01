@@ -79,9 +79,12 @@ type Route struct {
 	MinRole         Role // people (sessions): viewer|admin|owner, checked live on every request (S07)
 	// Purpose says what the route does, for insufficient_role ("inviting people needs Admin").
 	// Default "this request".
-	Purpose     string
-	Scopes      []string // API key scopes; a key must hold every one (S08 defines the set)
-	Idempotency Idem
+	Purpose string
+	Scopes  []string // API key scopes; a key must hold every one (S08 defines the set)
+	// SkipStopChecks lets a stopped or suspended agent (or a stopped org) through, so it can learn
+	// why it is refused: GET /v1/whoami only (S08 §3.5).
+	SkipStopChecks bool
+	Idempotency    Idem
 	// Sensitive: the response carries a shown-once secret. It is stored for replay with the Redact
 	// fields set to null, so the secret never reaches the database.
 	Sensitive bool

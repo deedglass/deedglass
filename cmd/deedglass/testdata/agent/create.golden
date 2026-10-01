@@ -1,0 +1,6 @@
+exit 0
+--- stdout
+✓ Agent created · support-bot · agt_01k633rrmh3bcz2p39gg4vp46q
+✓ Deed sealed · agent.created · deed_01k6vrddq2atgb2023qvhhct3g
+  Next: create its key with `deedglass agent keys create support-bot`.
+--- stderr

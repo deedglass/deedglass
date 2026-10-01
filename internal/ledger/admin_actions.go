@@ -17,13 +17,25 @@ const (
 	AdminMemberRemoved     = "member.removed"      // usr → mem
 	AdminLoginLinkIssued   = "login_link.issued"   // operator → usr
 
+	// S08: agents, API keys and Stop. Actors: {user, usr_…}, {api_key, key_…} for org admin keys,
+	// or {system, operator} for database-direct CLI commands.
+	AdminAgentCreated   = "agent.created"   // → agt; data: name, labels, budgets
+	AdminAgentUpdated   = "agent.updated"   // → agt; data: the changed fields and new labels/budgets
+	AdminAgentSuspended = "agent.suspended" // → agt
+	AdminAgentResumed   = "agent.resumed"   // → agt
+	AdminAgentStopped   = "agent.stopped"   // → agt
+	AdminAgentStarted   = "agent.started"   // → agt; the reason is required
+	AdminOrgStoppedAll  = "org.stopped_all" // → org; data: agents_affected
+	AdminOrgStartedAll  = "org.started_all" // → org; the reason is required
+	AdminAPIKeyCreated  = "api_key.created" // → key; data: key, mode, scopes
+	AdminAPIKeyRolled   = "api_key.rolled"  // → the new key; data: from, to, overlap_s
+	AdminAPIKeyRevoked  = "api_key.revoked" // → key
+
 	// S07: security events, recorded in admin_events without a deed (AppendAdminEvent).
 	AdminUserSignedIn  = "user.signed_in"
 	AdminUserSignedOut = "user.signed_out"
 
 	// Planned, each added by its session with the exact spelling below:
-	//   S08  agent.created agent.updated agent.suspended agent.resumed agent.stopped agent.started
-	//        org.stopped_all org.started_all api_key.created api_key.rolled api_key.revoked
 	//   S09  agent.intent_key_added agent.intent_key_removed agent.intent_mode_changed
 	//   S12  policy.activated policy.deactivated
 	//   S16  connector.credentials_updated
@@ -39,6 +51,8 @@ var AdminActions = []string{
 	AdminLedgerPruned,
 	AdminOrgCreated, AdminOrgUpdated, AdminMemberInvited, AdminMemberJoined, AdminMemberRoleChanged,
 	AdminMemberRemoved, AdminLoginLinkIssued,
+	AdminAgentCreated, AdminAgentUpdated, AdminAgentSuspended, AdminAgentResumed, AdminAgentStopped, AdminAgentStarted,
+	AdminOrgStoppedAll, AdminOrgStartedAll, AdminAPIKeyCreated, AdminAPIKeyRolled, AdminAPIKeyRevoked,
 }
 
 // AdminEventActions are admin events recorded without a deed (AppendAdminEvent): security events

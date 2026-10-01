@@ -31,15 +31,15 @@ func TestMigrateAndSeedLive(t *testing.T) {
 		}
 	}
 	r := cli(t, env, false, "migrate", "up", "--dry-run")
-	expect(r, 0, "schema at 0000 · 12 pending", "Nothing was applied")
+	expect(r, 0, "schema at 0000 · 13 pending", "Nothing was applied")
 	r = cli(t, env, false, "migrate", "up")
-	expect(r, 0, "as deedglass_migrator · 12 pending", "✓ 0001 foundation", "✓ Schema at 0012 · 12 applied in")
+	expect(r, 0, "as deedglass_migrator · 13 pending", "✓ 0001 foundation", "✓ Schema at 0013 · 13 applied in")
 	t.Logf("\n%s", r.stdout)
-	expect(cli(t, env, false, "migrate", "up"), 0, "✓ Schema is current at 0012")
+	expect(cli(t, env, false, "migrate", "up"), 0, "✓ Schema is current at 0013")
 	r = cli(t, env, false, "migrate", "status")
-	expect(r, 0, "0012     preauth          applied", "✓ 12 applied · schema is current.")
+	expect(r, 0, "0013     identity_agents  applied", "✓ 13 applied · schema is current.")
 	t.Logf("\n%s", r.stdout)
-	expect(cli(t, env, false, "migrate", "verify"), 0, "✓ 12 applied migrations match this build · 0 pending")
+	expect(cli(t, env, false, "migrate", "verify"), 0, "✓ 13 applied migrations match this build · 0 pending")
 
 	r = cli(t, env, false, "dev", "seed")
 	expect(r, 0, "✓ Seeded 1 org, 1 owner, 2 agents", "agent  support-bot", "agent  billing-agent")

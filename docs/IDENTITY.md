@@ -1,7 +1,8 @@
 # Identity: people, sign-in, sessions and roles
 
 This page covers the human half of identity: the people who invite teammates, stop agents, change
-policies and countersign risky actions. Agents and API keys (S08) and signed intents (S09) extend it.
+policies and countersign risky actions. Agents and API keys (S08, [Agents and keys](#agents-and-keys))
+and signed intents (S09) extend it.
 
 ## 1. People, orgs and memberships
 
@@ -192,6 +193,20 @@ the owner unless you pass `--print-link`.
 The client IP is the one S03's trusted-proxy rules resolve (`DEEDGLASS_TRUSTED_PROXIES`). The IP,
 email and failure limits live in each server process: behind N instances a client can get up to N
 times the budget. The per-user token cap is counted in the database and holds across instances.
+
+## Agents and keys
+
+Agents are the other half of identity (S08). Each has an immutable name, labels, budgets, an
+owner and its own API keys (`dg_live_…` / `dg_test_…`, shown once, rolled with an overlap, revoked
+at once). Org admin keys let scripts manage agents; they act as Admin, never as Owner.
+
+- [AGENTS.md](AGENTS.md): agents, the key format, scopes, rolling, revoking, `whoami`, admin keys,
+  the order of the bearer checks and the failed-auth limiter.
+- [STOP.md](STOP.md): suspend and stop, Stop all and who can start agents again, how a stop reaches
+  every instance within 2 seconds, and what it doesn't do.
+
+People and keys meet in one place: a Console session is checked against the role table above; an
+API key is checked against its scopes, and an org admin key counts as Admin.
 
 ## 8. What it doesn't do
 

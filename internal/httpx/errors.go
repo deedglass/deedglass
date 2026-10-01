@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/deedglass/deedglass/internal/buildinfo"
 )
@@ -87,14 +88,18 @@ type CatalogEntry struct {
 }
 
 var catalog = []CatalogEntry{
-	{CodeInvalidAPIKey, 401, TypeAuthentication, "The API key isn't valid. Check for a typo, or create a new key in Console › Agents.", "", "contract"},
+	{CodeInvalidAPIKey, 401, TypeAuthentication, "The API key isn't valid. Check that you copied all of it (it starts with dg_live_ or dg_test_), or create a new one in Console › Agents.", "", "contract"},
 	{CodeAPIKeyRevoked, 401, TypeAuthentication, "The API key has been revoked. Create a new key in Console › Agents.", "", "contract"},
-	{CodeAPIKeyExpired, 401, TypeAuthentication, "The API key expired. Roll it in Console › Agents › Keys.", "", "contract"},
-	{CodeAgentSuspended, 403, TypePermission, "This agent is suspended. Resume it in Console › Agents to continue.", "", "contract"},
-	{CodeAgentStopped, 403, TypePermission, "This agent was stopped. An admin can start it again in Console › Agents.", "", "contract"},
-	{CodeOrgStopped, 403, TypePermission, "All agents in this org are stopped. An owner can start them in Console › Settings.", "", "contract"},
-	{CodeInsufficientScope, 403, TypePermission, "This key doesn't have the scope this endpoint needs. Create a key with the scope the API reference lists for it.",
-		"This key doesn't have the scope this endpoint needs. Create a key with the {scope} scope.", "contract"},
+	{CodeAPIKeyExpired, 401, TypeAuthentication, "The API key expired after it was rolled. Use the new key, or create one in Console › Agents.",
+		"The API key expired at {time} UTC after it was rolled. Use the new key, or create one in Console › Agents.", "contract"},
+	{CodeAgentSuspended, 403, TypePermission, "This agent is suspended. An admin can resume it in Console › Agents.",
+		`Agent "{name}" is suspended. An admin can resume it in Console › Agents.`, "contract"},
+	{CodeAgentStopped, 403, TypePermission, "This agent is stopped. Deedglass refuses its calls until an admin starts it in Console › Agents.",
+		`Agent "{name}" is stopped. Deedglass refuses its calls until an admin starts it in Console › Agents.`, "contract"},
+	{CodeOrgStopped, 403, TypePermission, "All agents in this org are stopped. An owner can start them again in Console › Settings.",
+		"All agents in {org} are stopped. An owner can start them again in Console › Settings.", "contract"},
+	{CodeInsufficientScope, 403, TypePermission, "This key doesn't have the scope this endpoint needs. Create a key with that scope in Console › Agents.",
+		"This key doesn't have the {scope} scope. Create a key with {scope} in Console › Agents.", "contract"},
 	{CodePolicyDenied, 403, TypePolicy, "Blocked by policy. The action in Console › Actions names the rule and the reason.",
 		`Blocked by policy "{rule}": {reason}.`, "contract"},
 	{CodeApprovalRequired, 403, TypePolicy, "This action needs approval. It runs once someone approves it in Console › Approvals.", "", "contract"},
@@ -284,9 +289,83 @@ func ErrValidation(param, message string) *Error {
 	return E(CodeValidationFailed, Param(param), Msg(message))
 }
 
-// ErrInsufficientScope names the scope the endpoint needs.
+// ErrInsufficientScope names the scope the endpoint needs, with the challenge RFC 6750 §3.1
+// describes.
 func ErrInsufficientScope(scope string) *Error {
-	return E(CodeInsufficientScope, Msgf("This key doesn't have the scope this endpoint needs. Create a key with the %s scope.", scope))
+	return E(CodeInsufficientScope, Msgf("This key doesn't have the %s scope. Create a key with %s in Console › Agents.", scope, scope),
+		WithHeader("WWW-Authenticate", `Bearer realm="deedglass", error="insufficient_scope", scope="`+scope+`"`))
+}
+
+// ErrAgentKeyForAdmin is insufficient_scope for an agent key on a control-plane route: no agent key
+// changes any agent, including its own (S08 §3.4).
+func ErrAgentKeyForAdmin() *Error {
+	e := ErrInsufficientScope(ScopeAdmin)
+	e.Message = "This is an agent key, and managing agents needs an admin key. Create one with deedglass org keys create on the server."
+	return e
+}
+
+// ErrAPIKeyExpired names when the rolled key stopped working.
+func ErrAPIKeyExpired(at time.Time) *Error {
+	return E(CodeAPIKeyExpired, Msgf("The API key expired at %s UTC after it was rolled. Use the new key, or create one in Console › Agents.",
+		at.UTC().Format("2006-01-02 15:04")))
+}
+
+// ErrAgentSuspended, ErrAgentStopped and ErrOrgStopped are §3.5 steps 6–8. They never include the
+// reason or who stopped the agent: the caller is the agent, and the reason may be sensitive.
+func ErrAgentSuspended(name string) *Error {
+	return E(CodeAgentSuspended, Msgf("Agent %q is suspended. An admin can resume it in Console › Agents.", clip(name, 64)))
+}
+
+// ErrAgentStopped is 403 agent_stopped.
+func ErrAgentStopped(name string) *Error {
+	return E(CodeAgentStopped, Msgf("Agent %q is stopped. Deedglass refuses its calls until an admin starts it in Console › Agents.", clip(name, 64)))
+}
+
+// ErrOrgStopped is 403 org_stopped.
+func ErrOrgStopped(org string) *Error {
+	if org == "" {
+		org = "this org"
+	}
+	return E(CodeOrgStopped, Msgf("All agents in %s are stopped. An owner can start them again in Console › Settings.", clip(org, 100)))
+}
+
+// ErrOrgStoppedAdminWrite is 403 org_stopped for an org admin key that tries to change something
+// during Stop all. Admin keys keep read-only access then, so incident response can look around.
+func ErrOrgStoppedAdminWrite(org string) *Error {
+	if org == "" {
+		org = "this org"
+	}
+	return E(CodeOrgStopped, Msgf("All agents in %s are stopped, so admin keys can only read until an owner starts them again in Console › Settings. To change agents now, use a Console session.", clip(org, 100)))
+}
+
+// ErrKeyRateLimited is 429 for too many failed API-key attempts from one address or on one prefix.
+func ErrKeyRateLimited(retryAfterSeconds int) *Error {
+	n := max(retryAfterSeconds, 1)
+	return E(CodeRateLimited, Msgf("Too many requests with invalid API keys from this address. Try again in %d seconds.", n),
+		WithHeader("Retry-After", strconv.Itoa(n)))
+}
+
+// ErrKeyOnSessionRoute is 403 insufficient_role for an API key on a route only a signed-in person may
+// call: Start all (owners), and minting admin keys (admin keys can't mint admin keys).
+func ErrKeyOnSessionRoute(p Principal, need Role, what string) *Error {
+	if what == "" {
+		what = "this request"
+	}
+	if p.Kind == KindAdminKey {
+		return E(CodeInsufficientRole, Msgf("This is an admin key, which acts as Admin, and %s needs %s signed in to the Console. Sign in to the Console, or run the operator command on the server.",
+			what, roleArticle(need)))
+	}
+	return E(CodeInsufficientRole, Msgf("API keys can't be used for %s; it needs %s signed in to the Console. Sign in to the Console to do this.", what, roleArticle(need)))
+}
+
+func roleArticle(r Role) string {
+	switch r {
+	case RoleOwner:
+		return "an owner"
+	case RoleAdmin:
+		return "an admin"
+	}
+	return "a member"
 }
 
 // ErrInsufficientRole is 403 insufficient_role: "Your role in Acme is Viewer, and inviting people

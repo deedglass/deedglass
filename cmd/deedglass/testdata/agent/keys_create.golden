@@ -1,0 +1,9 @@
+exit 0
+--- stdout
+✓ Key created · support-bot · live · key_01k6jz12ptrvg2zn5vts5xc1ay
+
+  dg_live_jJbEEMWk_o0Erxxf1kgtP2QjiJ79vzW31AjZqIch8
+
+  This is the only time Deedglass shows this key. Store it in your secret manager now.
+  Scopes · actions:execute · actions:read · deeds:read
+--- stderr

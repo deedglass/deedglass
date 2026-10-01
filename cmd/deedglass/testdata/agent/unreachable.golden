@@ -1,0 +1,5 @@
+exit 1
+--- stdout
+--- stderr
+✕ Can't reach the Deedglass server at http://127.0.0.1:1.
+  Check --server or DEEDGLASS_SERVER, and that deedglass serve is running.

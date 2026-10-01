@@ -91,7 +91,7 @@ func TestMiddlewareTable(t *testing.T) {
 		{name: "version ok", method: "GET", path: "/v1/version", opts: []reqOpt{hdr("Deedglass-Version", "2026-10-01")}, status: 200, header: [2]string{"Deedglass-Version", "2026-10-01"}},
 		{name: "no key", method: "GET", path: "/v1/_test/scoped", status: 401, code: CodeAuthenticationRequired, header: [2]string{"WWW-Authenticate", `Bearer realm="deedglass"`}},
 		{name: "bad scheme", method: "GET", path: "/v1/_test/scoped", opts: []reqOpt{hdr("Authorization", "Basic Zm9vOmJhcg==")}, status: 401, code: CodeInvalidAPIKey},
-		{name: "bad key", method: "GET", path: "/v1/_test/scoped", opts: []reqOpt{bearer("dg_test_nope")}, status: 401, code: CodeInvalidAPIKey, header: [2]string{"WWW-Authenticate", `Bearer realm="deedglass", error="invalid_token"`}},
+		{name: "bad key", method: "GET", path: "/v1/_test/scoped", opts: []reqOpt{bearer("dg_test_nope")}, status: 401, code: CodeInvalidAPIKey, header: [2]string{"WWW-Authenticate", `Bearer realm="deedglass", error="invalid_token", error_description="The API key isn't valid. Check that you copied all of it (it starts with dg_live_ or dg_test_), or create a new one in Console > Agents."`}},
 		{name: "revoked key", method: "GET", path: "/v1/_test/scoped", opts: []reqOpt{bearer(oldKey)}, status: 401, code: CodeAPIKeyRevoked},
 		{name: "missing scope", method: "GET", path: "/v1/_test/scoped", opts: []reqOpt{bearer(otherKey)}, status: 403, code: CodeInsufficientScope, msgContain: "deeds:read"},
 		{name: "scoped ok", method: "GET", path: "/v1/_test/scoped", opts: []reqOpt{bearer(goodKey)}, status: 200},

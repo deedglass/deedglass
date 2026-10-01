@@ -1,0 +1,6 @@
+exit 0
+--- stdout
+NAME           STATUS    KEYS   LABELS                  LAST USED
+support-bot    active    2      env=prod team=support   2m ago
+refund-agent   [31mstopped[0m   1      env=prod                1h ago
+--- stderr

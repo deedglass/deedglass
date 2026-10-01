@@ -61,7 +61,39 @@ type Principal struct {
 	OrgName    string // for messages ("Your role in Acme is Viewer, …"); people only (S07)
 	// MembershipID is the person's membership in OrgID (S07).
 	MembershipID ids.MembershipID
+
+	// Keys (S08). The key authenticator fills these; the pipeline refuses a stopped org, a stopped
+	// agent or a suspended agent (§3.5 steps 6–8) unless the route sets SkipStopChecks.
+	AgentName   string // the agent's name, for messages ("Agent \"support-bot\" is stopped.")
+	AgentStatus string // "active" | "suspended" | "stopped"; "" for people and admin keys
+	OrgStopped  bool   // the org's Stop all overlay is on
 }
+
+// Principal kinds.
+const (
+	KindUser     = "user"
+	KindAgentKey = "agent_key"
+	KindAdminKey = "admin_key"
+)
+
+// API key scopes (contract §8). Agent keys default to the first three; admin is for org admin keys
+// only, which act as the admin role and never as owner.
+const (
+	ScopeActionsExecute = "actions:execute"
+	ScopeActionsRead    = "actions:read"
+	ScopeDeedsRead      = "deeds:read"
+	ScopeActionsUndo    = "actions:undo" // S23
+	ScopeAdmin          = "admin"
+)
+
+// AgentScopes are the scopes an agent key may hold; DefaultAgentScopes are what a new key gets.
+var (
+	AgentScopes        = []string{ScopeActionsExecute, ScopeActionsRead, ScopeDeedsRead, ScopeActionsUndo}
+	DefaultAgentScopes = []string{ScopeActionsExecute, ScopeActionsRead, ScopeDeedsRead}
+)
+
+// IsKey reports whether the principal is an API key (agent or admin).
+func (p Principal) IsKey() bool { return p.Kind == KindAgentKey || p.Kind == KindAdminKey }
 
 // Ref is the principal as idempotency scopes it: the agent for agent keys (so rolling a key keeps
 // its stored responses), the key for org admin keys, the user for people.

@@ -15,6 +15,9 @@ This is the Deedglass product repo: Go module `github.com/deedglass/deedglass`, 
    specifies is superseded). `~/txv/ops/spikes/` holds proven logical-decoding code on PG
    16.15/17.11/18.6: port it, don't redo it.
 6. ADRs: `~/txv/ops/adr/` (index mirrored in `docs/adr/README.md`).
+7. `DESIGN.md` (repo root): the design tokens and components agents read for every human-facing
+   surface, a copy of `~/txv/ops/brand/DESIGN.md` (DESIGN.md format). Build from its tokens; never
+   hard-code a value. The design-skill loop is `~/txv/ops/plan/prompts-v7/00_DESIGN_SKILLS.md`.
 
 ## Commands
 
@@ -32,6 +35,7 @@ make fuzz           # 30 s each: intent and id parsers, deed envelope, verifier,
 make bench-verify   # S05 budget: verify 100,000 deeds (.jsonl and bundle) and one deed cold; raw JSON in bench/results/
 make bench-ledger   # S06 budget at 100,000 actions: lists, get, chain check, export memory, seal overhead, EXPLAIN plans
 make bench-identity # S07 budget: session middleware, login handler, invite with its deed
+make bench-stop     # S08: Stop propagation across two instances (p50/p99) and the API-key budget; JSON in bench/results/
 DEEDGLASS_IT_PKGS=./internal/identity/ make integration   # one suite (DEEDGLASS_IT_GOFLAGS="-v -run X" adds flags)
 scripts/dev-pg.sh up  # a Docker-free dev Postgres on 127.0.0.1:55432 (writes .tmp/dev-pg.env); down | reset
 scripts/demo/tamper-clip.sh  # S06's recording: 1,000 real deeds, export, verify ✓, flip one digit, verify ✕
@@ -212,6 +216,21 @@ and "open source" until the repo is public. Style bans: "revolutionary", "world-
   `internal/httpx`: a Session or SessionOrKey route without `MinRole` can't mount; every 401 carries
   `WWW-Authenticate`. `internal/mailer`: goldens (`-run TestGoldens -update`), Resend retry table,
   log capture. The S06 dev principal is gone.
+- `internal/identity` (S08): key parse table + `FuzzParseAPIKey`, 10,000 unique keys and a chi-square
+  on the characters, no `math/rand` and no plain hash comparison (grep tests), the cache's epoch and
+  bypass rules (also under 200 concurrent invalidations), the listener's handler, the failed-auth
+  limiter's doubling; integration: every edge of the agent state machine, the §3.5 precedence table
+  and challenges, agent keys never manage (insufficient_scope), admin keys never act as owner, the
+  10-key limit, rolling (old key until the overlap ends, then api_key_expired), the Stop all overlay,
+  a failed NOTIFY changes nothing, a replayed key create hides the secret, batched last_used, the
+  limiter, RLS, all 11 S08 admin actions sealed with the chain intact, no key in logs; two instances
+  (`TestStopPropagation`: stop, revoke, stop-all, a killed listener and a silent stall, each under
+  2 s), `TestEpochGuard` (the forced interleaving), `TestWatch`. `internal/httpx`: `TestKeyAllowed`
+  (steps 6–9, admin keys act as admin). `cmd/deedglass`: `TestKeyRoutesDeclareScopes` (every key
+  route declares Scopes; only whoami skips the stop checks), the agent CLI goldens in
+  `testdata/agent/` (`go test ./cmd/deedglass -run TestAgentCommandGoldens -update`).
+  `internal/ledger`: `TestOneWritePath` allows `store.NotifyIdentity` as the one door for
+  `deedglass_identity`.
 - `cmd/deedglass verify` (S05): 80 golden cases in `testdata/verify/<case>/{args,stdout,stderr,exit}`
   (`go test ./cmd/deedglass -run TestVerifyGolden -update`), every vector's code and exit, `--keys`
   URL rules (same-host redirects, 1 MiB, timeout, loopback-only http), key-set merge conflicts, no

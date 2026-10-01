@@ -50,22 +50,26 @@ error carries. S33 publishes each section at `https://docs.deedglass.com/errors/
 
 **401 · authentication_error**
 
-**When it happens.** The `Authorization` header holds a Bearer token that isn't a valid Deedglass
-API key: a typo, a truncated copy, or a key from another installation. The key check arrives in
-S08. Today the pipeline already sends this code when an endpoint that takes API keys gets an
-`Authorization` header with a scheme other than `Bearer`; that message reads "The Authorization
-header must be Bearer followed by an API key (dg_live_… or dg_test_…)." The response carries
-`WWW-Authenticate: Bearer realm="deedglass"`.
+**When it happens.** Step 3 of the bearer check ([AGENTS.md](../AGENTS.md) §5): the token isn't a
+Deedglass API key, its prefix is unknown, its mode doesn't match, or the secret is wrong. Every
+one of those gets the same message, so the answer doesn't tell a guesser which part was wrong. A
+key whose org isn't active gets it too. An `Authorization` header with a scheme other than
+`Bearer` gets this code with the message "The Authorization header must be Bearer followed by an
+API key (dg_live_… or dg_test_…)." Each failure counts toward the failed-auth limiter
+([rate_limited](#rate_limited)).
 
-**What to do.** Copy the key again from where you stored it, and send it as
-`Authorization: Bearer dg_live_…`. If you no longer have it, create a new key in Console › Agents.
-Deedglass shows a key's secret once, at creation.
+The response carries
+`WWW-Authenticate: Bearer realm="deedglass", error="invalid_token", error_description="<the message>"`.
+
+**What to do.** Copy the key again from where you stored it: all 49 characters, starting with
+`dg_live_` or `dg_test_`. Send it as `Authorization: Bearer dg_live_…`. If you no longer have it,
+create a new key in Console › Agents. Deedglass shows a key's secret once, at creation.
 
 ```json
 {
   "type": "authentication_error",
   "code": "invalid_api_key",
-  "message": "The API key isn't valid. Check for a typo, or create a new key in Console › Agents.",
+  "message": "The API key isn't valid. Check that you copied all of it (it starts with dg_live_ or dg_test_), or create a new one in Console › Agents.",
   "param": null
 }
 ```
@@ -74,7 +78,10 @@ Deedglass shows a key's secret once, at creation.
 
 **401 · authentication_error**
 
-**When it happens.** The key was valid once, and someone in your org revoked it (S08).
+**When it happens.** Step 4: the key passed the hash check, and someone in your org revoked it.
+Every Deedglass instance refuses a revoked key within 2 seconds. Only someone holding the real
+secret ever sees this code, and it doesn't count toward the failed-auth limiter. The response
+carries the `WWW-Authenticate` challenge with `error="invalid_token"`.
 
 **What to do.** Create a new key in Console › Agents and replace the old one wherever the agent
 reads it. A revoked key never works again.
@@ -92,15 +99,19 @@ reads it. A revoked key never works again.
 
 **401 · authentication_error**
 
-**When it happens.** The key reached its expiry time (S08).
+**When it happens.** Step 5: the key passed the hash check, and it was rolled, and its overlap
+window has ended. Only rolled keys expire. The message names the time in UTC. Like a revoked key,
+it doesn't count toward the failed-auth limiter, and the response carries the
+`WWW-Authenticate` challenge with `error="invalid_token"`.
 
-**What to do.** Roll the key in Console › Agents › Keys, then give the agent the new secret.
+**What to do.** Use the key that replaced it (the roll response returned it once). If you don't
+have it, create a key in Console › Agents.
 
 ```json
 {
   "type": "authentication_error",
   "code": "api_key_expired",
-  "message": "The API key expired. Roll it in Console › Agents › Keys.",
+  "message": "The API key expired at 2026-10-04 10:03 UTC after it was rolled. Use the new key, or create one in Console › Agents.",
   "param": null
 }
 ```
@@ -109,17 +120,19 @@ reads it. A revoked key never works again.
 
 **403 · permission_error**
 
-**When it happens.** The key is valid, and its agent is suspended (S08). A suspended agent can be
-resumed.
+**When it happens.** Step 8: the key is valid, and its agent is suspended, a planned pause.
+`GET /v1/whoami` still answers and shows `"status": "suspended"`. The message never says why or
+by whom.
 
-**What to do.** Resume the agent in Console › Agents, then retry. If you didn't expect the
-suspension, check the agent's history in the Ledger first.
+**What to do.** An admin can resume the agent in Console › Agents, or with
+`deedglass agent resume <name>`. If you didn't expect the suspension, check the agent's
+`agent.suspended` deed first.
 
 ```json
 {
   "type": "permission_error",
   "code": "agent_suspended",
-  "message": "This agent is suspended. Resume it in Console › Agents to continue.",
+  "message": "Agent \"support-bot\" is suspended. An admin can resume it in Console › Agents.",
   "param": null
 }
 ```
@@ -128,15 +141,20 @@ suspension, check the agent's history in the Ledger first.
 
 **403 · permission_error**
 
-**When it happens.** Someone used Stop on this agent (S08).
+**When it happens.** Step 7: the key is valid, and someone used Stop on its agent
+([STOP.md](../STOP.md)). It takes precedence over `agent_suspended`. `GET /v1/whoami` still
+answers and shows `"status": "stopped"`. The message never includes the stop reason or who
+stopped the agent: the caller is the agent, and the reason may be sensitive.
 
-**What to do.** Find out why it was stopped. An admin can start it again in Console › Agents.
+**What to do.** Find out why it was stopped: the reason is in the `agent.stopped` deed and in
+Console › Agents. An admin can start it again, with a reason, in Console › Agents or with
+`deedglass agent start <name> --reason "…"`.
 
 ```json
 {
   "type": "permission_error",
   "code": "agent_stopped",
-  "message": "This agent was stopped. An admin can start it again in Console › Agents.",
+  "message": "Agent \"support-bot\" is stopped. Deedglass refuses its calls until an admin starts it in Console › Agents.",
   "param": null
 }
 ```
@@ -145,16 +163,22 @@ suspension, check the agent's history in the Ledger first.
 
 **403 · permission_error**
 
-**When it happens.** Someone used Stop all agents for the org (S08). Every agent key in the org
-gets this answer until an owner starts them again.
+**When it happens.** Step 6: someone used Stop all agents for the org. Every agent key in the org
+gets this answer until an owner starts the agents again. It takes precedence over `agent_stopped`
+and `agent_suspended`. Org admin keys keep read-only access (`GET`) so incident response can look
+around; an admin-key request that changes state (`POST`, `PUT`, `PATCH`, `DELETE`) gets this code
+with the message "…so admin keys can only read until an owner starts them again…". `GET
+/v1/whoami` still answers and shows `"stopped": true`. Console sessions aren't affected.
 
-**What to do.** Ask an owner of the org. They can start the agents in Console › Settings.
+**What to do.** Ask an owner of the org. They can start the agents in Console › Settings; the
+server operator can run `deedglass org start-all --reason "…"`. Agents that were stopped one by one
+stay stopped.
 
 ```json
 {
   "type": "permission_error",
   "code": "org_stopped",
-  "message": "All agents in this org are stopped. An owner can start them in Console › Settings.",
+  "message": "All agents in Acme are stopped. An owner can start them again in Console › Settings.",
   "param": null
 }
 ```
@@ -163,21 +187,28 @@ gets this answer until an owner starts them again.
 
 **403 · permission_error**
 
-**When it happens.** The API key is valid but lacks a scope the endpoint lists. The pipeline checks
-every scope the route declares, and names the first one missing. Scopes are `actions:execute`,
-`actions:read`, `deeds:read`, `admin` and `actions:undo` (S08 defines them).
+**When it happens.** Step 9: the API key is valid and active, but lacks a scope the endpoint
+lists. The pipeline checks every scope the route declares and names the first one missing. Scopes
+are `actions:execute`, `actions:read`, `deeds:read`, `actions:undo` and `admin`
+([AGENTS.md](../AGENTS.md) §2). An agent key on any route that manages agents or keys gets this
+code with its own message, because no agent key changes any agent, including its own. The
+response carries
+`WWW-Authenticate: Bearer realm="deedglass", error="insufficient_scope", scope="<scope>"`.
 
 **What to do.** Create a key with the scope named in the message, or use a key that already has
-it.
+it. To manage agents, use an org admin key or the Console.
 
 ```json
 {
   "type": "permission_error",
   "code": "insufficient_scope",
-  "message": "This key doesn't have the scope this endpoint needs. Create a key with the actions:execute scope.",
+  "message": "This key doesn't have the deeds:read scope. Create a key with deeds:read in Console › Agents.",
   "param": null
 }
 ```
+
+An agent key on a management route: "This is an agent key, and managing agents needs an admin key.
+Create one with deedglass org keys create on the server."
 
 ## policy_denied
 
@@ -390,16 +421,28 @@ with the same key replays this 504 for 24 h and doesn't run the work again.
 **429 · rate_limit_error**
 
 **When it happens.** You sent too many requests in a short time. The response carries
-`Retry-After` in whole seconds, at least 1.
+`Retry-After` in whole seconds, at least 1. Two limits send it:
+
+- **Sign-in limits** (S07, [IDENTITY.md](../IDENTITY.md)): "Too many requests. Retry after 5 s."
+- **The failed-auth limiter for API keys** (S08), step 2 of the bearer check, before the key is
+  parsed: more than 10 invalid keys a minute from one address (then a penalty of 1 s that doubles
+  with each further failure, up to 15 minutes, and resets after 10 clean minutes), or on one key
+  prefix. Only `invalid_api_key` failures count; revoked and expired keys and successful checks
+  don't. The message: "Too many requests with invalid API keys from this address. Try again in 4
+  seconds."
+
+Both limits live in each server process, so behind N instances a client gets up to N times the
+budget.
 
 **What to do.** Wait the number of seconds in `Retry-After`, then retry. A 429 is never stored for
-idempotent replay, so the same Idempotency-Key is safe to reuse.
+idempotent replay, so the same Idempotency-Key is safe to reuse. For the key limiter, fix the key
+first: retrying a bad key only lengthens the penalty.
 
 ```json
 {
   "type": "rate_limit_error",
   "code": "rate_limited",
-  "message": "Too many requests. Retry after 5 s.",
+  "message": "Too many requests with invalid API keys from this address. Try again in 4 seconds.",
   "param": null
 }
 ```
@@ -436,6 +479,11 @@ for:
 - an unknown JSON member ("`amout` isn't a known field. Check the spelling, or the API version.")
 - a JSON value of the wrong type ("`limit` has the wrong type: it must be a whole number.")
 - a `limit` outside 1–100, or a `cursor` this API didn't issue
+
+**Renaming an agent is 422, with this code.** Sending `name` in `PATCH /v1/agents/{id}` answers
+`422 validation_failed` with `param: "name"`: "Agent names can't change, because policies match on
+them. To rename, create a new agent with the new name and move its keys." Names are immutable
+because policies match on them ([AGENTS.md](../AGENTS.md)).
 
 **What to do.** Fix the field the message names, then retry.
 
@@ -514,8 +562,10 @@ support.
 **401 · authentication_error**
 
 **When it happens.** The endpoint isn't public, and the request carries no credentials it accepts:
-no session cookie, a cookie for a session that doesn't exist, or (until S08) an API key. Every 401
-carries `WWW-Authenticate: Bearer realm="deedglass"`. For a Console route the message names the
+no session cookie, a cookie for a session that doesn't exist, or no `Authorization` header on a
+route that takes API keys (step 1 of the bearer check, [AGENTS.md](../AGENTS.md) §5). An API key on
+a route only a signed-in person may call is `insufficient_role` instead. Every 401 carries
+`WWW-Authenticate: Bearer realm="deedglass"`. For a Console route the message names the
 sign-in page: "You're not signed in. Sign in at https://app.deedglass.com/login."
 
 **What to do.** Send `Authorization: Bearer dg_live_…`, or call the endpoint from a signed-in

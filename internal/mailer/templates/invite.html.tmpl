@@ -1,5 +1,5 @@
-{{template "head" .}}<h1 style="margin:0 0 16px 0;font-size:22px;line-height:30px;font-weight:600;letter-spacing:-0.02em;color:#0D0F14;">{{.Inviter}} invited you to join {{.OrgName}} as {{.Role}}.</h1>
+{{template "head" .}}<h1 class="dg-text" style="text-wrap:balance;margin:0 0 16px 0;font-size:22px;line-height:30px;font-weight:600;letter-spacing:-0.02em;color:#0D0F14;">{{.Inviter}} invited you to join {{.OrgName}} as {{.Role}}</h1>
 <p style="margin:0 0 24px 0;">Deedglass is where {{.OrgName}} sees what its AI agents actually did: every action, the policy that allowed it, and a signed deed.</p>
-{{template "button" button .Link "Accept invite"}}<p style="margin:0 0 8px 0;font-size:13px;line-height:20px;color:#6B7080;">This invite works once and expires on {{.ExpiresOn}}.</p>
-<p style="margin:0;font-size:13px;line-height:20px;color:#6B7080;">If you weren't expecting this, you can ignore it.</p>
+{{template "button" button .Link "Accept invite"}}<p class="dg-muted" style="margin:0 0 8px 0;font-size:13px;line-height:20px;color:#6B7080;">This invite works once and expires on <span style="white-space:nowrap;">{{.ExpiresOn}}</span>.</p>
+<p class="dg-muted" style="margin:0;font-size:13px;line-height:20px;color:#6B7080;">If you weren't expecting this, you can ignore it.</p>
 {{template "foot" .}}

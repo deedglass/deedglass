@@ -26,7 +26,7 @@ import (
 
 type orgCreateOpts struct {
 	name, ownerEmail, slug string
-	printLink              bool
+	printLink, adminKey    bool
 }
 
 var orgCreateValues orgCreateOpts
@@ -38,6 +38,7 @@ func orgCreateFlags(fs *flag.FlagSet) {
 	fs.StringVar(&o.ownerEmail, "owner-email", "", "the first owner's email address (required)")
 	fs.StringVar(&o.slug, "slug", "", "the org's short name in URLs (default: from the name)")
 	fs.BoolVar(&o.printLink, "print-link", false, "prod: print the owner's sign-in link instead of emailing it")
+	fs.BoolVar(&o.adminKey, "admin-key", false, "also create an org admin key and print it once (S08)")
 }
 
 type loginLinkOpts struct{ email string }
@@ -93,7 +94,7 @@ func runOrgCreate(ctx context.Context, e *Env, args []string) error {
 		return usageErr(errors.New("--name and --owner-email are required"), `deedglass org create --name "Acme" --owner-email priya@acme.com`)
 	}
 	if _, err := identity.CheckOrgName(o.name); err != nil {
-		return failNext(e, ExitUsage, "validation_failed", "The org name must be 1–100 characters, without line breaks.", `deedglass org create --name "Acme" …`)
+		return failNext(e, ExitUsage, "validation_failed", "The org name must be 1 to 100 characters, without line breaks.", `deedglass org create --name "Acme" …`)
 	}
 	email, err := identity.NormalizeEmail(o.ownerEmail)
 	if err != nil {
@@ -101,7 +102,7 @@ func runOrgCreate(ctx context.Context, e *Env, args []string) error {
 	}
 	if o.slug != "" && !identity.ValidSlug(o.slug) {
 		return failNext(e, ExitUsage, "validation_failed", fmt.Sprintf("%q isn't a usable slug.", o.slug),
-			"Use 1–40 lower-case letters, digits and hyphens, starting and ending with a letter or digit.")
+			"Use 1 to 40 lower-case letters, digits and hyphens, starting and ending with a letter or digit.")
 	}
 	if o.slug == "" && identity.SlugFor(o.name) == "" {
 		return failNext(e, ExitUsage, "validation_failed", "The name has no letters or digits to make a slug from.", "Pass --slug acme.")
@@ -146,6 +147,15 @@ func runOrgCreate(ctx context.Context, e *Env, args []string) error {
 			mode = "email_failed"
 		}
 	}
+	var adminKey *identity.KeyResult
+	if o.adminKey {
+		k, err := people.CreateAdminKey(ctx, identity.Operator, c.Org.ID, identity.CreateKeyInput{Name: "operator"})
+		if err != nil {
+			return failNext(e, ExitFailure, "key_failed", "The org was created, but its admin key wasn't: "+lastPart(err)+".",
+				fmt.Sprintf("deedglass org keys create --org %s", c.Org.Slug))
+		}
+		adminKey = &k
+	}
 	if e.Globals.JSON {
 		out := map[string]any{"object": "org_created", "org": map[string]any{"object": "org", "id": c.Org.ID.String(), "name": c.Org.Name,
 			"slug": c.Org.Slug, "timezone": c.Org.Timezone, "status": c.Org.Status},
@@ -154,6 +164,9 @@ func runOrgCreate(ctx context.Context, e *Env, args []string) error {
 		if mode == "print" {
 			out["link"] = link.Link
 			out["link_expires_at"] = link.ExpiresAt.UTC().Format(time.RFC3339)
+		}
+		if adminKey != nil {
+			out["admin_key"] = adminKey
 		}
 		return writeJSON(e, out)
 	}
@@ -172,6 +185,10 @@ func runOrgCreate(ctx context.Context, e *Env, args []string) error {
 		fmt.Fprintf(e.Stdout, "  The sign-in email couldn't be sent. Print a link instead: deedglass org login-link --email %s\n\n", email)
 	default:
 		fmt.Fprintf(e.Stdout, "  Email isn't set up here (DEEDGLASS_RESEND_API_KEY). Print a link: deedglass org login-link --email %s\n\n", email)
+	}
+	if adminKey != nil {
+		printAdminKey(e, c.Org.Name, *adminKey)
+		fmt.Fprintln(e.Stdout)
 	}
 	fmt.Fprintln(e.Stdout, "  Next: open the link, then register your first agent with `deedglass agent create`.")
 	return nil

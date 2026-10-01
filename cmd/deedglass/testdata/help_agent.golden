@@ -4,17 +4,17 @@ deedglass agent · Register and control agents
 
 Usage  deedglass agent <command> [flags]
 
-  create         Register an agent                         soon · S08
-  list           List agents                               soon · S08
-  show           Show one agent                            soon · S08
-  suspend        Suspend an agent                          soon · S08
-  resume         Resume a suspended agent                  soon · S08
-  stop           Stop an agent now                         soon · S08
-  start          Start a stopped agent                     soon · S08
-  keys create    Create an API key for an agent            soon · S08
-  keys list      List an agent's API keys                  soon · S08
-  keys roll      Replace an API key, with an overlap       soon · S08
-  keys revoke    Revoke an API key                         soon · S08
+  create         Register an agent
+  list           List agents
+  show           Show one agent
+  suspend        Suspend an agent
+  resume         Resume a suspended agent
+  stop           Stop an agent now
+  start          Start a stopped agent
+  keys create    Create an API key for an agent
+  keys list      List an agent's API keys
+  keys roll      Replace an API key, with an overlap
+  keys revoke    Revoke an API key
   intent keygen  Generate a signed-intent key pair         soon · S09
   intent add     Register an intent public key             soon · S09
   intent list    List an agent's intent keys               soon · S09

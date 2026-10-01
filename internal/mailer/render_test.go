@@ -93,12 +93,12 @@ func TestCopy(t *testing.T) {
 		{"login subject", login.Subject, []string{"Sign in to Deedglass"}},
 		{"login preheader", login.Preheader, []string{"Your sign-in link for Acme. It works once and expires in 15 minutes."}},
 		{"login html", login.HTML, []string{
-			">deedglass</p>",
+			">deedglass</td>",
 			"Sign in to Acme</h1>",
 			"Use the button to sign in as priya@acme.com. The link works once and expires in 15 minutes.",
 			">Sign in to Deedglass</a>",
 			"Or enter this code on the sign-in page:",
-			">482 913</p>",
+			">482 913</span>",
 			"Requested from Chrome on macOS at 09:14 UTC.",
 			"If you didn't ask to sign in, you can ignore this email. Nothing happens until someone uses the link or the code.",
 			footer + `<a href="https://deedglass.com"`,
@@ -116,10 +116,10 @@ func TestCopy(t *testing.T) {
 		{"invite subject", invite.Subject, []string{"Priya Raman invited you to Acme on Deedglass"}},
 		{"invite preheader", invite.Preheader, []string{"Join Acme as a Viewer. The invite expires in 7 days."}},
 		{"invite html", invite.HTML, []string{
-			"Priya Raman invited you to join Acme as a Viewer.",
+			"Priya Raman invited you to join Acme as a Viewer</h1>",
 			"Deedglass is where Acme sees what its AI agents actually did: every action, the policy that allowed it, and a signed deed.",
 			">Accept invite</a>",
-			"This invite works once and expires on 10 October 2026.",
+			`This invite works once and expires on <span style="white-space:nowrap;">10 October 2026</span>.`,
 			"If you weren't expecting this, you can ignore it.",
 			footer,
 		}},
@@ -147,14 +147,28 @@ func TestEmailSafety(t *testing.T) {
 	login, _ := RenderLogin(fixtureLogin())
 	invite, _ := RenderInvite(fixtureInvite())
 	for name, r := range map[string]Rendered{"login": login, "invite": invite} {
-		for _, bad := range []string{"<img", "<script", "<style", "<link", "src=", "url(", "@import", "background-image"} {
+		for _, bad := range []string{"<img", "<script", "<link", "src=", "url(", "@import", "background-image"} {
 			if strings.Contains(strings.ToLower(r.HTML), bad) {
 				t.Errorf("%s html contains %q", name, bad)
 			}
 		}
+		// One <style> block in the head, holding only the dark-mode and narrow-screen media
+		// queries (S08 Design QA). The inline styles are the light default, so a client that
+		// strips <style> still renders the whole email.
+		if n := strings.Count(r.HTML, "<style>"); n != 1 {
+			t.Errorf("%s html has %d <style> blocks, want 1", name, n)
+		}
+		if st := between(r.HTML, "<style>", "</style>"); strings.Count(st, "@media") != 2 || !strings.Contains(st, "prefers-color-scheme: dark") ||
+			strings.Index(r.HTML, "</style>") > strings.Index(r.HTML, "</head>") {
+			t.Errorf("%s html: the style block must be in the head and hold only the two media queries", name)
+		}
+		if len(r.HTML) > 102<<10 {
+			t.Errorf("%s html is %d bytes; Gmail clips above 102 KB", name, len(r.HTML))
+		}
 		for _, need := range []string{
-			`<meta name="color-scheme" content="light">`,
-			`<meta name="supported-color-schemes" content="light">`,
+			`<meta name="color-scheme" content="light dark">`,
+			`<meta name="supported-color-schemes" content="light dark">`,
+			`bgcolor="#4F8CFF" style="width:15px;height:32px`, `width:2px;height:32px`, // the 32 px flat mark, no image
 			`max-width:600px`, `background-color:#F7F7F4`, `border:1px solid #E4E5EA;border-radius:14px;padding:40px`,
 			`font-size:20px;line-height:24px;font-weight:600;letter-spacing:-0.045em;color:#0D0F14`,
 			`bgcolor="#2F5BEA"`, `border-radius:10px`, `height:44px`, `color:#FFFFFF`,
@@ -166,6 +180,7 @@ func TestEmailSafety(t *testing.T) {
 			}
 		}
 		html := strings.Replace(r.HTML, "<!DOCTYPE", "", 1)
+		html = strings.Replace(html, between(html, "<style>", "</style>"), "", 1) // !important is CSS, not copy
 		for part, s := range map[string]string{"subject": r.Subject, "preheader": r.Preheader, "html": html, "text": r.Text} {
 			if strings.Contains(s, "!") {
 				t.Errorf("%s %s has an exclamation mark", name, part)
@@ -177,7 +192,7 @@ func TestEmailSafety(t *testing.T) {
 			}
 		}
 	}
-	if !strings.Contains(login.HTML, `font-family:'Geist Mono',ui-monospace,Menlo,monospace;font-size:22px;line-height:30px;letter-spacing:0.12em`) {
+	if !strings.Contains(login.HTML, `font-family:'Geist Mono',ui-monospace,Menlo,monospace;font-size:22px;line-height:30px;letter-spacing:0.12em;font-variant-numeric:tabular-nums`) {
 		t.Error("login html: the code is not in the mono style")
 	}
 }
@@ -234,7 +249,7 @@ func TestInviteWithoutName(t *testing.T) {
 		t.Errorf("subject %q", r.Subject)
 	}
 	for _, body := range []string{r.HTML, r.Text} {
-		if !strings.Contains(body, "priya@acme.com invited you to join Acme as a Viewer.") {
+		if !strings.Contains(body, "priya@acme.com invited you to join Acme as a Viewer") {
 			t.Errorf("body does not use the inviter's email:\n%s", body)
 		}
 	}
@@ -374,4 +389,13 @@ func TestMessages(t *testing.T) {
 	if im.Kind != "invite" || im.To != "sam@acme.com" || im.Subject != "Priya Raman invited you to Acme on Deedglass" {
 		t.Errorf("invite message %+v", im)
 	}
+}
+
+func between(s, a, b string) string {
+	i := strings.Index(s, a)
+	j := strings.Index(s, b)
+	if i < 0 || j < i {
+		return ""
+	}
+	return s[i+len(a) : j]
 }

@@ -1,0 +1,4 @@
+exit 1
+--- stdout
+--- stderr
+✕ This is an agent key, and managing agents needs an admin key. Create one with deedglass org keys create on the server.

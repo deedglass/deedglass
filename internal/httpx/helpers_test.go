@@ -41,10 +41,10 @@ type fakeKeys struct{}
 func (fakeKeys) AuthenticateKey(_ context.Context, bearer string) (Principal, error) {
 	switch bearer {
 	case goodKey:
-		return Principal{Kind: "agent_key", OrgID: testOrg, AgentID: testAgent, KeyID: testKey,
+		return Principal{Kind: "agent_key", OrgID: testOrg, AgentID: testAgent, KeyID: testKey, AgentName: "support-bot", AgentStatus: "active",
 			Scopes: []string{"actions:execute", "actions:read", "deeds:read"}, APIVersion: "2026-10-01"}, nil
 	case otherKey:
-		return Principal{Kind: "agent_key", OrgID: testOrg, AgentID: testAgent2, KeyID: testKey2,
+		return Principal{Kind: "agent_key", OrgID: testOrg, AgentID: testAgent2, KeyID: testKey2, AgentName: "refund-agent", AgentStatus: "active",
 			Scopes: []string{"actions:read"}, APIVersion: "2026-10-01"}, nil
 	case oldKey:
 		return Principal{}, E(CodeAPIKeyRevoked)

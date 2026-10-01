@@ -33,7 +33,7 @@ planned    GET     /v1/agents/{id}/keys                                   sessio
 planned    POST    /v1/agents/{id}/keys                                   session_or_key  admin            S08    Sensitive
 planned    POST    /v1/keys/{id}/roll                                     session_or_key  admin            S08    Sensitive
 planned    POST    /v1/keys/{id}/revoke                                   session_or_key  admin            S08
-planned    GET     /v1/whoami                                             agent_key       -                S08
+planned    GET     /v1/whoami                                             agent_key       -                S08    any key; skips the stop checks
 planned    GET     /v1/org/keys                                           session         admin            S08
 planned    POST    /v1/org/keys                                           session         admin            S08    Sensitive; admin keys can't mint admin keys
 planned    GET     /v1/agents/{id}/intent-keys                            session_or_key  viewer           S09
@@ -57,8 +57,8 @@ planned    POST    /v1/policies/evaluate                                  sessio
 planned    POST    /v1/policies/test                                      session_or_key  admin            S12
 planned    POST    /v1/policies/{id}/versions/{v}/replay                  session_or_key  admin            S27
 planned    POST    /v1/actions                                            agent_key       actions:execute  S13    IdemNever: the Gate owns its idempotency
-planned    GET     /v1/actions                                            session_or_key  actions:read     S06
-planned    GET     /v1/actions/{id}                                       session_or_key  actions:read     S06
+planned    GET     /v1/actions                                            session_or_key  actions:read     S06    agent keys: own agent only (S08)
+planned    GET     /v1/actions/{id}                                       session_or_key  actions:read     S06    agent keys: own agent only (S08)
 planned    POST    /v1/actions/{id}/cancel                                session_or_key  admin            S13
 planned    POST    /v1/actions/{id}/result                                agent_key       actions:execute  S13    proxy mode
 planned    POST    /v1/tools/resolve                                      agent_key       actions:execute  S14
@@ -79,10 +79,10 @@ planned    GET     /v1/webhooks/{id}                                      sessio
 planned    DELETE  /v1/webhooks/{id}                                      session_or_key  admin            S22
 planned    POST    /v1/webhooks/{id}/test                                 session_or_key  admin            S22
 planned    GET     /v1/webhooks/{id}/deliveries                           session_or_key  admin            S22
-planned    GET     /v1/deeds                                              session_or_key  deeds:read       S06
-planned    GET     /v1/deeds/{id}                                         session_or_key  deeds:read       S06
-planned    GET     /v1/deeds/export                                       session_or_key  deeds:read       S06
-planned    GET     /v1/ledger/check                                       session_or_key  deeds:read       S06
+planned    GET     /v1/deeds                                              session_or_key  deeds:read       S06    agent keys: own agent only (S08)
+planned    GET     /v1/deeds/{id}                                         session_or_key  deeds:read       S06    agent keys: own agent only (S08)
+planned    GET     /v1/deeds/export                                       session_or_key  viewer           S06    keys: admin (S08)
+planned    GET     /v1/ledger/check                                       session_or_key  viewer           S06    keys: admin (S08)
 planned    GET     /v1/connectors                                         session_or_key  admin            S16
 planned    POST    /v1/connectors                                         session_or_key  admin            S16
 planned    GET     /v1/connectors/{id}                                    session_or_key  admin            S16

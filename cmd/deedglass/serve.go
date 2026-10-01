@@ -186,9 +186,18 @@ func runServe(ctx context.Context, e *Env, args []string) error {
 	}
 
 	// 6. Mount and listen.
+	keys, err := newKeyAuth(cfg, db, log)
+	if err != nil {
+		return err
+	}
+	kctx, stopKeys := context.WithCancel(context.WithoutCancel(ctx))
+	keysDone := make(chan struct{})
+	go func() { defer close(keysDone); keys.Run(kctx) }()
+	defer func() { stopKeys(); <-keysDone }()
+
 	api := httpx.New(httpx.Options{
 		Logger: log, Prod: prod, BaseURL: cfg.BaseURL, TrustedProxies: cfg.TrustedProxies,
-		Idempotency: idemStore{db}, Sessions: people,
+		Idempotency: idemStore{db}, Sessions: people, Keys: keys,
 	})
 	api.Mount(serveRoutes(api, db, ms, sk, led, people)...)
 	ln, err := net.Listen("tcp", cfg.Listen)
@@ -286,7 +295,17 @@ func serveRoutes(api *httpx.Server, db *store.DB, ms []migrate.Migration, sk *se
 	if people == nil {
 		people = routeListingIdentity(issuer)
 	}
-	return append(routes, people.Routes()...)
+	routes = append(routes, people.Routes()...)
+	return append(routes, people.AgentRoutes()...)
+}
+
+// newKeyAuth is the API-key authenticator and Stop guard (S08). serve runs its listener.
+func newKeyAuth(cfg *config.Config, db *store.DB, log *slog.Logger) (*identity.KeyAuth, error) {
+	pepper, err := cfg.Pepper()
+	if err != nil {
+		return nil, err
+	}
+	return identity.NewKeyAuth(identity.KeyAuthOptions{DB: db, Pepper: pepper, Logger: log})
 }
 
 // routeListingIdentity is an identity.Service with no database, for route-table tests.

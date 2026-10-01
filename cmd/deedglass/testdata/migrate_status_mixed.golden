@@ -13,5 +13,6 @@ VERSION  NAME             STATE    APPLIED               CHECKSUM
 0010     ledger           pending  —                     sha256:c1fb…6ee7
 0011     identity_humans  pending  —                     sha256:34f9…8f1c
 0012     preauth          pending  —                     sha256:126a…f07c
-✓ 8 applied · 4 pending. Run deedglass migrate up to apply them.
+0013     identity_agents  pending  —                     sha256:b19c…ca13
+✓ 8 applied · 5 pending. Run deedglass migrate up to apply them.
 --- stderr

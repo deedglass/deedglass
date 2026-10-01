@@ -11,7 +11,7 @@ LDFLAGS  := -s -w -X $(BI).Version=$(VERSION) -X $(BI).Commit=$(COMMIT) -X $(BI)
 .PHONY: all help ci build test test-short vet fmt fmt-check tidy-check testdata-check rename-guard banned-words nocgo \
 	integration matrix fuzz bench bench-store bench-deed cover clean \
 	dev dev-down dev-reset dev-logs run docker bench-http bench-verify \
-	web-verify-install web-verify-test web-verify-build web-verify-serve gencopy genmark bench-mark bench-ledger
+	web-verify-install web-verify-test web-verify-build web-verify-serve gencopy genmark bench-mark bench-ledger bench-stop
 
 all: ci
 
@@ -68,6 +68,7 @@ fuzz: ## 30 s each: the strict intent parser, the id parser, and the deed envelo
 	$(GO) test ./internal/deed -run '^$$' -fuzz '^FuzzVerifyStream$$' -fuzztime 30s
 	$(GO) test ./internal/identity -run '^$$' -fuzz '^FuzzHashToken$$' -fuzztime 30s
 	$(GO) test ./internal/identity -run '^$$' -fuzz '^FuzzEmailNormalize$$' -fuzztime 30s
+	$(GO) test ./internal/identity -run '^$$' -fuzz '^FuzzParseAPIKey$$' -fuzztime 30s
 	$(GO) test ./internal/deed -run '^$$' -fuzz '^FuzzCanonical$$' -fuzztime 30s
 	$(GO) test ./internal/deed/archive -run '^$$' -fuzz '^FuzzArchiveOpen$$' -fuzztime 30s
 
@@ -85,6 +86,13 @@ bench-ledger: ## S06 Ledger budget at 100,000 actions (lists, get, chain check, 
 	@out="$(CURDIR)/bench/results/$$(date +%F)-$$(go env GOOS)-$$(go env GOARCH)-ledger.json"; \
 	DEEDGLASS_IT_BENCH_OUT="$$out" DEEDGLASS_IT_BENCH_RUN='TestLedgerBudget' DEEDGLASS_IT_BENCH_PKG=./internal/ledger/ scripts/integration_local.sh >/dev/null; st=$$?; \
 	grep -o 'PERF {[^}]*}[^\\]*' "$$out" | sed 's/\\"/"/g'; echo "raw: $$out"; exit $$st
+
+bench-stop: ## S08: Stop propagation across two instances (p50/p99) and the API-key budget, on a throwaway PG 18; JSON in bench/results/
+	@d="$(CURDIR)/bench/results/$$(date +%F)-$$(go env GOOS)-$$(go env GOARCH)"; \
+	DEEDGLASS_IT_PKGS=./internal/identity/ DEEDGLASS_IT_GOFLAGS="-run TestStopPropagation" DEEDGLASS_IT_PROPAGATION_OUT="$$d-stop.json" \
+	DEEDGLASS_IT_BENCH_OUT="$$d-keyauth.json" DEEDGLASS_IT_BENCH_RUN='TestKeyAuthBudget' DEEDGLASS_IT_BENCH_PKG=./internal/identity/ \
+	scripts/integration_local.sh >/dev/null; st=$$?; \
+	cat "$$d-stop.json"; grep -o 'PERF {[^}]*}[^\\]*' "$$d-keyauth.json" | sed 's/\\"/"/g'; echo "raw: $$d-stop.json $$d-keyauth.json"; exit $$st
 
 bench-identity: ## S07 budget: session middleware, the login handler and an invite with its deed, on a throwaway PG 18; raw go test -json in bench/results/
 	@out="$(CURDIR)/bench/results/$$(date +%F)-$$(go env GOOS)-$$(go env GOARCH)-identity.json"; \

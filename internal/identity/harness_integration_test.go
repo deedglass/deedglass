@@ -111,6 +111,7 @@ type world struct {
 	e     *storetest.Env
 	led   *ledger.Ledger
 	svc   *identity.Service
+	keys  *identity.KeyAuth // S08: API keys and the Stop guard, with its listener running
 	srv   *httpx.Server
 	ts    *httptest.Server
 	clock *clock
@@ -161,10 +162,18 @@ func newWorld(t testing.TB, mods ...func(*identity.Options)) *world {
 	if w.svc, err = identity.New(o); err != nil {
 		t.Fatal(err)
 	}
+	if w.keys, err = identity.NewKeyAuth(identity.KeyAuthOptions{DB: e.DB, Pepper: o.Pepper, Logger: log, Now: w.clock.Now}); err != nil {
+		t.Fatal(err)
+	}
+	kctx, stopKeys := context.WithCancel(ctx)
+	keysDone := make(chan struct{})
+	go func() { defer close(keysDone); w.keys.Run(kctx) }()
+	t.Cleanup(func() { stopKeys(); <-keysDone })
 	// The loopback peer is a trusted proxy, so tests can vary the client address with X-Forwarded-For.
-	w.srv = httpx.New(httpx.Options{Logger: slog.New(httpx.NewRedactingHandler(log.Handler())), Sessions: w.svc, BaseURL: base,
+	w.srv = httpx.New(httpx.Options{Logger: slog.New(httpx.NewRedactingHandler(log.Handler())), Sessions: w.svc, Keys: w.keys, BaseURL: base,
 		TrustedProxies: []netip.Prefix{netip.MustParsePrefix("127.0.0.1/32")}})
 	w.srv.Mount(w.svc.Routes()...)
+	w.srv.Mount(w.svc.AgentRoutes()...)
 	w.srv.Mount(ledger.Routes(w.led)...)
 	w.ts = &httptest.Server{Listener: ln, Config: &http.Server{Handler: w.srv}}
 	w.ts.Start()

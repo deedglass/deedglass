@@ -73,6 +73,18 @@ The templates are `internal/mailer/templates/{login,invite}.{html,txt}.tmpl` (wi
 `layout.html.tmpl`). Their goldens are in `internal/mailer/testdata/`; regenerate them with
 `go test ./internal/mailer -run TestGoldens -update` after checking the change.
 
+**Design rules** (brand §13.5, S08 Design QA; `TestEmailSafety` checks them):
+- A 600 px table frame on `paper-50`, one card, one primary button, and a plain-text part.
+- The mark is the flat Split Orb at 32 px, drawn with three table cells, so no image is needed to
+  read or act on the email. The left half is solid aurora blue (`#4F8CFF`); email clients don't
+  render gradients reliably.
+- Every colour is an inline style (the light theme). One `<style>` block in the head holds only two
+  media queries: dark mode (`prefers-color-scheme: dark`, `ink-950`/`ink-900`/`snow-text`) and a
+  narrow-screen padding. A client that strips `<style>` still shows the full light email. The
+  button keeps `#2F5BEA` with white text in both themes (5.5:1).
+- Under 102 KB (Gmail clips above that); today about 4.5 KB.
+- Screenshots at 600 and 360 px, light and dark: `ops/plan/prompts-v7/reports/screens/S08/email-*`.
+
 ## What it doesn't do
 
 - **No SMTP mailer yet.** Self-hosters without Resend issue links with `deedglass org login-link`.

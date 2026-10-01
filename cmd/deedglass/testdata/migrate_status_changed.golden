@@ -13,5 +13,6 @@ VERSION  NAME             STATE    APPLIED               CHECKSUM
 0010     ledger           [35mpending[0m  —                     sha256:c1fb…6ee7
 0011     identity_humans  [35mpending[0m  —                     sha256:34f9…8f1c
 0012     preauth          [35mpending[0m  —                     sha256:126a…f07c
-[31m✕[0m 8 applied · 3 pending · 1 doesn't match this build. Run deedglass migrate verify for details.
+0013     identity_agents  [35mpending[0m  —                     sha256:b19c…ca13
+[31m✕[0m 8 applied · 4 pending · 1 doesn't match this build. Run deedglass migrate verify for details.
 --- stderr

@@ -72,7 +72,7 @@ func CheckOrgName(name string) (string, error) {
 	name = strings.TrimSpace(name)
 	n := utf8.RuneCountInString(name)
 	if n == 0 || n > maxOrgName || strings.ContainsFunc(name, func(r rune) bool { return r < 0x20 || r == 0x7f }) {
-		return "", errors.New("the org name must be 1–100 characters, without line breaks")
+		return "", errors.New("the org name must be 1 to 100 characters, without line breaks")
 	}
 	return name, nil
 }
@@ -283,7 +283,7 @@ func (s *Service) UpdateOrg(ctx context.Context, p *Principal, in OrgPatch) (Org
 	if in.Name != nil {
 		n, err := CheckOrgName(*in.Name)
 		if err != nil {
-			return Org{}, nil, httpx.ErrValidation("name", "`name` must be 1–100 characters, without line breaks.")
+			return Org{}, nil, httpx.ErrValidation("name", "`name` must be 1 to 100 characters, without line breaks.")
 		}
 		in.Name = &n
 		fields = append(fields, "name")

@@ -501,12 +501,12 @@ func (l *Ledger) RecordAdmin(ctx context.Context, tx pgx.Tx, e AdminEvent) (*dee
 	switch actorType {
 	case "system":
 		actorID = nil
-	case "user", "agent":
+	case "user", "agent", "api_key":
 		if actorID == nil {
 			return nil, fmt.Errorf("ledger: a %s actor needs an id", actorType)
 		}
 	default:
-		return nil, fmt.Errorf("ledger: admin actor type %q is not user, agent or system", actorType)
+		return nil, fmt.Errorf("ledger: admin actor type %q is not user, agent, api_key or system", actorType)
 	}
 	data := []byte("{}")
 	if e.Data != nil {

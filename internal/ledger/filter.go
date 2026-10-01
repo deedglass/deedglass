@@ -319,6 +319,9 @@ type DeedFilter struct {
 	Kinds   []string // action, admin, amendment
 	Action  string   // act_…: the action's deed and its amendments
 	Desc    bool     // order=desc (the Console); auditors read forward
+	// OwnAgent (never from the query) limits the list to one agent's action and amendment deeds:
+	// an agent key reads only its own agent's rows (S08).
+	OwnAgent string
 }
 
 // ParseDeedQuery validates GET /v1/deeds's query.

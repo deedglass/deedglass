@@ -1,0 +1,7 @@
+exit 0
+--- stdout
+Stop all 1 agent in Acme? Every agent call will be refused within 2 seconds,
+and only an owner can start them again.
+Type acme to confirm: ✓ All agents stopped · Acme · 1 agent · deed_01k6vrddq2atgb2023qvhhct3k sealed
+  To start them again: an owner in Console › Settings, or `deedglass org start-all` on the server.
+--- stderr

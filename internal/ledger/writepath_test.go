@@ -13,13 +13,15 @@ import (
 // One write path (S06 §7, "must never happen"): outside tests, only internal/ledger writes
 // action_events and admin_events, only internal/ledger and the Sealer's ChainStore
 // (internal/store/deeds.go, called through ledger) insert deeds, and only ledger.Publish notifies
-// deedglass_events.
+// deedglass_events. The identity channel (S08) has its own one door, store.NotifyIdentity, which
+// may name no other channel.
 func TestOneWritePath(t *testing.T) {
 	root := filepath.Join("..", "..")
 	writes := regexp.MustCompile(`(?i)(INSERT\s+INTO|UPDATE|DELETE\s+FROM)\s+deedglass\.(action_events|admin_events|deeds)\b`)
 	notify := regexp.MustCompile(`pg_notify\(`)
 	allowedWrites := []string{"internal/ledger/write.go", "internal/store/deeds.go"}
-	allowedNotify := []string{"internal/ledger/events.go"}
+	allowedNotify := []string{"internal/ledger/events.go", "internal/store/notify.go"}
+	channel := regexp.MustCompile(`pg_notify\('([a-z_]+)'`)
 	seen := map[string]bool{}
 	err := filepath.WalkDir(root, func(p string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -45,7 +47,14 @@ func TestOneWritePath(t *testing.T) {
 			t.Errorf("%s writes a Ledger table; only internal/ledger may (S06)", rel)
 		}
 		if notify.Match(b) && !slices.Contains(allowedNotify, rel) {
-			t.Errorf("%s calls pg_notify; use ledger.Publish", rel)
+			t.Errorf("%s calls pg_notify; use ledger.Publish (or store.NotifyIdentity for deedglass_identity)", rel)
+		}
+		if rel == "internal/store/notify.go" {
+			for _, m := range channel.FindAllSubmatch(b, -1) {
+				if string(m[1]) != "deedglass_identity" {
+					t.Errorf("%s notifies %s; it is the door for deedglass_identity only", rel, m[1])
+				}
+			}
 		}
 		return nil
 	})

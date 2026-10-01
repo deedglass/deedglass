@@ -24,6 +24,19 @@ func DecodeJSON(r *http.Request, v any) error {
 	return decodeBytes(b, v)
 }
 
+// DecodeJSONOptional is DecodeJSON for routes whose body may be left out entirely (POST …/stop
+// with no reason): an empty body leaves v unchanged.
+func DecodeJSONOptional(r *http.Request, v any) error {
+	b, err := readBody(r)
+	if err != nil {
+		return err
+	}
+	if len(bytes.TrimSpace(b)) == 0 {
+		return nil
+	}
+	return decodeBytes(b, v)
+}
+
 func readBody(r *http.Request) ([]byte, error) {
 	if r.Body == nil {
 		return nil, nil

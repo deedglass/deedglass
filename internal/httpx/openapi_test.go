@@ -54,6 +54,25 @@ func elsewhere() []Route {
 		pub("GET", "/login", "loginPage"), pub("GET", "/auth/confirm", "confirmPage"), ses("GET", "/app/", "consolePage", RoleViewer, 0),
 		Route{Method: "GET", Pattern: "/auth/assets/{file}", OperationID: "authAsset", Auth: Public, Extension: "ADR-028", Handler: stub},
 	)
+	// S08: agents, keys and Stop.
+	adm := func(m, p, id string, role Role) Route {
+		r := Route{Method: m, Pattern: p, OperationID: id, Auth: SessionOrKey, MinRole: role, Scopes: []string{ScopeAdmin}, Handler: stub}
+		if m == "POST" {
+			r.Idempotency = IdemOptional
+		}
+		return r
+	}
+	out = append(out,
+		adm("GET", "/v1/agents", "listAgents", RoleViewer), adm("POST", "/v1/agents", "createAgent", RoleAdmin),
+		adm("GET", "/v1/agents/{id}", "getAgent", RoleViewer), adm("PATCH", "/v1/agents/{id}", "updateAgent", RoleAdmin),
+		adm("POST", "/v1/agents/{id}/suspend", "suspendAgent", RoleAdmin), adm("POST", "/v1/agents/{id}/resume", "resumeAgent", RoleAdmin),
+		adm("POST", "/v1/agents/{id}/stop", "stopAgent", RoleAdmin), adm("POST", "/v1/agents/{id}/start", "startAgent", RoleAdmin),
+		adm("POST", "/v1/org/stop-all", "stopAllAgents", RoleAdmin), ses("POST", "/v1/org/start-all", "startAllAgents", RoleOwner, IdemOptional),
+		adm("GET", "/v1/agents/{id}/keys", "listAgentKeys", RoleViewer), adm("POST", "/v1/agents/{id}/keys", "createAgentKey", RoleAdmin),
+		adm("POST", "/v1/keys/{id}/roll", "rollKey", RoleAdmin), adm("POST", "/v1/keys/{id}/revoke", "revokeKey", RoleAdmin),
+		Route{Method: "GET", Pattern: "/v1/whoami", OperationID: "whoami", Auth: AgentKey, SkipStopChecks: true, Handler: stub},
+		ses("GET", "/v1/org/keys", "listAdminKeys", RoleAdmin, 0), ses("POST", "/v1/org/keys", "createAdminKey", RoleAdmin, IdemOptional),
+	)
 	return out
 }
 
@@ -109,7 +128,7 @@ func TestOpenAPIChecksCatchDrift(t *testing.T) {
 			t.Errorf("drift not caught: %q\nerrors:\n%s", want, all)
 		}
 	}
-	extra := append(routes, Route{Method: "GET", Pattern: "/v1/whoami", OperationID: "getWhoami", Auth: AgentKey, Since: "2026-10-01"})
+	extra := append(routes, Route{Method: "GET", Pattern: "/v1/not-documented", OperationID: "notDocumented", Auth: AgentKey, Since: "2026-10-01"})
 	if errs := CheckSpec(api.Spec, extra); len(errs) != 1 || !strings.Contains(errs[0].Error(), "mounted but not in api/openapi.yaml") {
 		t.Errorf("an undocumented route: %v", errs)
 	}

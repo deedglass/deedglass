@@ -9,7 +9,7 @@ What Deedglass does not do, stated plainly. **Owner: S37**, which finalizes this
 - **L2 sees only the WAL.** Effects outside it (pg_net, foreign data wrappers, NOTIFY), unlogged and temp tables, sequences and other databases are not witnessed. DDL can be blocked by policy beforehand, but it is not witnessed or undone.
 - **L1 is the target's own view.** "Stripe says the refund exists" is not "the refund was a good idea".
 - **Seal keys are per deployment.** One set of seal keys signs every org's deeds. Per-org seal keys are v2.
-- **No test or live mode for connectors.** `dg_test_` and `dg_live_` API keys are recorded on each action (`livemode`) but not enforced yet.
+- **No test or live mode for connectors.** `dg_test_` and `dg_live_` API keys are recorded on each action (`livemode`) but not enforced yet (S08 section below).
 - **COSE is an encoding, not a transparency log.** The optional COSE_Sign1 output is a signed statement from your Deedglass instance. It is not an RFC 9942 transparency-log entry, and deeds are not anchored in any external log in v1.
 - **Deeds hold digests, not payloads.** A deed shows that a request with a given digest was handled. You need the original request to match it.
 - **Unknown stays unknown.** When Deedglass cannot tell whether a tool ran, the verdict is UNVERIFIABLE.
@@ -66,6 +66,25 @@ What Deedglass does not do, stated plainly. **Owner: S37**, which finalizes this
   usable until it expires (15 minutes).
 - **Unknown addresses and wrong codes take similar, not identical, time** (a dummy hash is computed
   when there is nothing to compare; the number of database reads differs).
+
+## Agents, keys and Stop limits (S08)
+
+- **Test keys aren't enforced against connectors.** A `dg_test_` key carries `livemode: false` and
+  is recorded on each action from S13, but connectors have no test mode in v1, so a test key can
+  reach a live system. Enforcement waits for connector modes (v0.2).
+- **The failed-auth limiter lives in each server process.** Behind N instances, a client gets up to
+  N times the per-address and per-prefix budgets.
+- **While an org is stopped, its admin keys can only read** (`GET`). Every request from them that
+  changes state gets `org_stopped`. Changing agents during a Stop all needs a Console session or the
+  operator CLI.
+- **Stop can't un-run an action already executing at a tool.** It refuses new calls and, from S13
+  and S22, queued and approved work; a call a tool already received happens.
+- **The 2-second Stop bound assumes every instance can reach Postgres.** If Postgres is down, no
+  agent can act at all: Deedglass fails closed.
+- **Agent keys' deed reads filter on `body->'agent'->>'id'` without an index.** Fine at v1 volumes;
+  in a large org, an agent key listing its deeds reads more rows than it returns.
+- **Key lists show at most 100 keys per agent** (and 100 org admin keys), newest first, revoked ones
+  included. There is no pagination yet.
 
 ## What this page does not do
 

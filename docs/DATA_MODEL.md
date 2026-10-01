@@ -212,10 +212,55 @@ Go caller; `TestPreAuthNamesStayInStore` fails if the names appear anywhere else
 
 Writes (using a token, opening a session) always follow in a normal org-scoped transaction.
 
+## Agents and keys additions (0013, S08)
+
+0002 already had `agents`, `api_keys` and the `orgs` stop columns with S08's names, `CHECK`s and
+grants: agent names have no `UPDATE` grant, so they can't change, and admin keys carry exactly
+`{admin}`. `0013_identity_agents.sql` adds only the real gaps:
+
+| Object | What | Why |
+|---|---|---|
+| `api_keys_agent_live` | `(org_id, agent_id) WHERE revoked_at IS NULL` | an agent's active keys: the 10-key limit and the key list |
+| `admin_events.actor_type` | gains `api_key` (now `user`, `agent`, `api_key`, `system`) | an org admin key is the actor of what it changes |
+| `deedglass.preauth_api_key(p_prefix)` | see below | the one lookup that happens before the org is known |
+
+`preauth_api_key` follows 0012's pattern: `SECURITY DEFINER`, `search_path = pg_catalog, pg_temp`,
+`EXECUTE` for `deedglass_app` only, and `store.PreAuth` is its only Go caller. It takes the
+8-character public prefix, never the secret, and returns in one round trip:
+
+| Returns | From |
+|---|---|
+| `id`, `org_id`, `agent_id`, `mode`, `secret_hash`, `scopes`, `expires_at`, `revoked_at` | the key |
+| `agent_name`, `agent_status` | its agent (null for an org admin key) |
+| `org_name`, `org_status`, `org_stopped_at`, `org_api_version` | its org |
+
+The caller compares `sha256(pepper ‖ secret)` with `secret_hash` in constant time. The hash is
+never logged or returned to a client.
+
+### The `deedglass_identity` channel
+
+Every change to who may act sends a `NOTIFY` on `deedglass_identity` inside its own transaction,
+so Postgres delivers it only if the change commits, and a failed `NOTIFY` rolls the change back
+([STOP.md](STOP.md)). Payloads are JSON, at most 200 bytes, and carry ids and states only, never
+secrets, names or reasons:
+
+```json
+{"v":1,"t":"agent","org":"org_…","id":"agt_…","s":"stopped"}
+{"v":1,"t":"key","org":"org_…","id":"key_…","p":"jJbEEMWk","s":"revoked"}
+{"v":1,"t":"org","org":"org_…","id":"org_…","s":"stopped"}
+{"v":1,"t":"ping","from":"<instance>","n":42}
+```
+
+`t` is `agent`, `key`, `org`, `member` or `ping`. `p` is a key's public prefix (the cache's key);
+`s` is the new state (`active`, `suspended`, `stopped`, `rolled`, `revoked`). Each instance sends a
+`ping` every 500 ms to check that its own listener is alive. `store.NotifyIdentity` is the one door
+to the channel.
+
 ## Personal data
 
 Sessions and sign-in tokens keep the client IP address and User-Agent (at most 512 characters) for
 security review. `maint_prune_identity` deletes sign-in tokens 7 days after they expire and sessions
 30 days after they expire or are revoked; `serve` runs it every 10 minutes, 5,000 rows at a time.
 
-Email addresses live only in `users` and `waitlist`. Tokens and API keys are stored as hashes. Payloads are prunable. Event payloads (SSE and webhooks) carry ids, never emails.
+Email addresses live only in `users` and `waitlist`. Tokens and API keys are stored as hashes
+(an API key as its public prefix plus `sha256(pepper ‖ secret)`). Payloads are prunable. Event payloads (SSE and webhooks) carry ids, never emails.

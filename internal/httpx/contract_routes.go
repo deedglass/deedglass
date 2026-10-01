@@ -67,7 +67,7 @@ var contractRoutes = []ContractRoute{
 	cr("POST", "/v1/agents/{id}/keys", SessionOrKey, "admin", "S08", "Sensitive"),
 	cr("POST", "/v1/keys/{id}/roll", SessionOrKey, "admin", "S08", "Sensitive"),
 	cr("POST", "/v1/keys/{id}/revoke", SessionOrKey, "admin", "S08"),
-	cr("GET", "/v1/whoami", AgentKey, "", "S08"),
+	cr("GET", "/v1/whoami", AgentKey, "", "S08", "any key; skips the stop checks"),
 	cr("GET", "/v1/org/keys", Session, "admin", "S08"),
 	cr("POST", "/v1/org/keys", Session, "admin", "S08", "Sensitive; admin keys can't mint admin keys"),
 
@@ -97,8 +97,8 @@ var contractRoutes = []ContractRoute{
 
 	// S13/S14: actions.
 	cr("POST", "/v1/actions", AgentKey, "actions:execute", "S13", "IdemNever: the Gate owns its idempotency"),
-	cr("GET", "/v1/actions", SessionOrKey, "actions:read", "S06"),
-	cr("GET", "/v1/actions/{id}", SessionOrKey, "actions:read", "S06"),
+	cr("GET", "/v1/actions", SessionOrKey, "actions:read", "S06", "agent keys: own agent only (S08)"),
+	cr("GET", "/v1/actions/{id}", SessionOrKey, "actions:read", "S06", "agent keys: own agent only (S08)"),
 	cr("POST", "/v1/actions/{id}/cancel", SessionOrKey, "admin", "S13"),
 	cr("POST", "/v1/actions/{id}/result", AgentKey, "actions:execute", "S13", "proxy mode"),
 	cr("POST", "/v1/tools/resolve", AgentKey, "actions:execute", "S14"),
@@ -125,10 +125,10 @@ var contractRoutes = []ContractRoute{
 	cr("GET", "/v1/webhooks/{id}/deliveries", SessionOrKey, "admin", "S22"),
 
 	// S06: deeds and the Ledger.
-	cr("GET", "/v1/deeds", SessionOrKey, "deeds:read", "S06"),
-	cr("GET", "/v1/deeds/{id}", SessionOrKey, "deeds:read", "S06"),
-	cr("GET", "/v1/deeds/export", SessionOrKey, "deeds:read", "S06"),
-	cr("GET", "/v1/ledger/check", SessionOrKey, "deeds:read", "S06"),
+	cr("GET", "/v1/deeds", SessionOrKey, "deeds:read", "S06", "agent keys: own agent only (S08)"),
+	cr("GET", "/v1/deeds/{id}", SessionOrKey, "deeds:read", "S06", "agent keys: own agent only (S08)"),
+	cr("GET", "/v1/deeds/export", SessionOrKey, "viewer", "S06", "keys: admin (S08)"),
+	cr("GET", "/v1/ledger/check", SessionOrKey, "viewer", "S06", "keys: admin (S08)"),
 
 	// S16/S17/S20/S30: connectors.
 	cr("GET", "/v1/connectors", SessionOrKey, "admin", "S16"),

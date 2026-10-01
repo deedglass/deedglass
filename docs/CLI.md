@@ -155,29 +155,29 @@ builds it. Hidden commands work but aren't in `deedglass help`.
 | `deedglass completion zsh` | Setup | Print zsh completion | soon (S32) |
 | `deedglass completion bash` | Setup | Print bash completion | soon (S32) |
 | `deedglass completion fish` | Setup | Print fish completion | soon (S32) |
-| `deedglass agent create` | Agents | Register an agent | soon (S08) |
-| `deedglass agent list` | Agents | List agents | soon (S08) |
-| `deedglass agent show` | Agents | Show one agent | soon (S08) |
-| `deedglass agent suspend` | Agents | Suspend an agent | soon (S08) |
-| `deedglass agent resume` | Agents | Resume a suspended agent | soon (S08) |
-| `deedglass agent stop` | Agents | Stop an agent now | soon (S08) |
-| `deedglass agent start` | Agents | Start a stopped agent | soon (S08) |
-| `deedglass agent keys create` | Agents | Create an API key for an agent | soon (S08) |
-| `deedglass agent keys list` | Agents | List an agent's API keys | soon (S08) |
-| `deedglass agent keys roll` | Agents | Replace an API key, with an overlap | soon (S08) |
-| `deedglass agent keys revoke` | Agents | Revoke an API key | soon (S08) |
+| `deedglass agent create <name> [--description …] [--label env=prod]... [--calls-per-minute n] [--calls-per-day n] [--spend-per-day minor --currency usd] [--owner usr_…] [--json]` | Agents | Register an agent | built |
+| `deedglass agent list [--status active|suspended|stopped] [--label env:prod] [--json]` | Agents | List agents | built |
+| `deedglass agent show <name|agt_…> [--json]` | Agents | Show one agent | built |
+| `deedglass agent suspend <name|agt_…> [--reason …] [--json]` | Agents | Suspend an agent | built |
+| `deedglass agent resume <name|agt_…> [--reason …] [--json]` | Agents | Resume a suspended agent | built |
+| `deedglass agent stop <name|agt_…> [--reason …] [--json]` | Agents | Stop an agent now | built |
+| `deedglass agent start <name|agt_…> --reason "why it's safe now" [--json]` | Agents | Start a stopped agent | built |
+| `deedglass agent keys create <name|agt_…> [--name "prod runner"] [--mode live|test] [--scope …]... [--json]` | Agents | Create an API key for an agent | built |
+| `deedglass agent keys list <name|agt_…> [--json]` | Agents | List an agent's API keys | built |
+| `deedglass agent keys roll <key_…> [--overlap 24h] [--json]` | Agents | Replace an API key, with an overlap | built |
+| `deedglass agent keys revoke <key_…> [--reason …] [--json]` | Agents | Revoke an API key | built |
 | `deedglass agent intent keygen` | Agents | Generate a signed-intent key pair | soon (S09) |
 | `deedglass agent intent add` | Agents | Register an intent public key | soon (S09) |
 | `deedglass agent intent list` | Agents | List an agent's intent keys | soon (S09) |
 | `deedglass agent intent remove` | Agents | Remove an intent key | soon (S09) |
 | `deedglass agent intent mode` | Agents | Require, allow or ignore signed intents | soon (S09) |
-| `deedglass org create --name "Acme" --owner-email priya@acme.com [--slug acme] [--print-link] [--json]` | Agents | Create an org and its owner | built |
+| `deedglass org create --name "Acme" --owner-email priya@acme.com [--slug acme] [--print-link] [--admin-key] [--json]` | Agents | Create an org and its owner | built |
 | `deedglass org login-link --email sam@acme.com [--org acme] [--json]` | Agents | Print a one-time sign-in link | built |
-| `deedglass org keys create` | Agents | Create an org admin key | soon (S08) |
-| `deedglass org keys list` | Agents | List org admin keys | soon (S08) |
-| `deedglass org keys revoke` | Agents | Revoke an org admin key | soon (S08) |
-| `deedglass org stop-all` | Agents | Stop every agent in the org | soon (S08) |
-| `deedglass org start-all` | Agents | Start every stopped agent | soon (S08) |
+| `deedglass org keys create [--org acme] [--name ci] [--mode live|test] [--json]` | Agents | Create an org admin key | built |
+| `deedglass org keys list [--org acme] [--json]` | Agents | List org admin keys | built |
+| `deedglass org keys revoke <key_…> [--org acme] [--reason …] [--json]` | Agents | Revoke an org admin key | built |
+| `deedglass org stop-all [--reason …] [--yes] [--json]` | Agents | Stop every agent in the org | built |
+| `deedglass org start-all [--org acme] --reason "why it's safe now" [--json]` | Agents | Start every agent not stopped one by one | built |
 | `deedglass policy lint` | Policies | Check a policy file | soon (S10) |
 | `deedglass policy fmt` | Policies | Format a policy file | soon (S10) |
 | `deedglass policy test` | Policies | Run a policy's test cases | soon (S12) |

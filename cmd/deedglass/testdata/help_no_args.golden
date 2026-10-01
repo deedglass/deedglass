@@ -15,10 +15,10 @@ Setup
   vault               Check or rotate the credential vault        soon   status · rotate
   completion          Print shell completion                      soon   zsh · bash · fish
 Agents
-  agent               Register and control agents                 soon   create · list · show · suspend · resume · stop · start
-  agent keys          Manage an agent's API keys                  soon   create · list · roll · revoke
+  agent               Register and control agents                        create · list · show · suspend · resume · stop · start
+  agent keys          Manage an agent's API keys                         create · list · roll · revoke
   agent intent        Manage an agent's signed-intent keys        soon   keygen · add · list · remove · mode
-  org                 Create orgs and keys; stop or start all     soon   create · login-link · keys · stop-all · start-all
+  org                 Create orgs and keys; stop or start all            create · login-link · keys · stop-all · start-all
 Policies
   policy              Write, test and activate policies           soon   lint · fmt · test · push · activate · evaluate · replay · diff
 Actions

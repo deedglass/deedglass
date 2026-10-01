@@ -1,0 +1,7 @@
+exit 0
+--- stdout
+✓ Key rolled · support-bot · key_01k6jt6tgx72gjr876976xak5e
+  dg_live_0IDw6L5O_9hxevwY7nqdKIZZi5A2xlI2O2qn8znik
+  The old key dg_live_jJbEEMWk keeps working until 2099-10-04 10:03 UTC. Deploy the new one before then.
+  This is the only time Deedglass shows the new key. Store it in your secret manager now.
+--- stderr
