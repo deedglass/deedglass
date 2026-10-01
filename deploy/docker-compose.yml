@@ -89,6 +89,11 @@ services:
         condition: service_completed_successfully
     ports:
       - "127.0.0.1:8080:8080"
+    volumes:
+      # The working directory's .deedglass/ (the image creates it, owner 65532, mode 0700). The root
+      # filesystem is read-only, so the dev seal key lives in this volume and survives restarts;
+      # make dev-reset deletes it together with the database.
+      - deedglass-state:/home/nonroot/.deedglass
     healthcheck:
       # Distroless has no shell or curl; the binary checks GET /v1/version with a 2 s timeout.
       test: ["CMD", "/deedglass", "version", "--server", "http://127.0.0.1:8080"]
@@ -102,3 +107,4 @@ services:
 
 volumes:
   deedglass-pgdata:
+  deedglass-state:

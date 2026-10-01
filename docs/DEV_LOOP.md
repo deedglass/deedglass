@@ -81,6 +81,8 @@ Two things read `.env`:
 
 The Postgres passwords take effect when the volume is first created. If you change them, or lose `.env`, run `make dev-reset` so the database is created again with the new ones.
 
+The server container's root filesystem is read-only. Its dev seal key lives in a second named volume, `deedglass-state`, mounted at the container's `.deedglass/`, so the same key seals deeds across restarts. `make dev-reset` deletes it together with the database.
+
 ## Ports
 
 | Port | What | When |

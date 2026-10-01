@@ -19,9 +19,14 @@ RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache
       -X github.com/deedglass/deedglass/internal/buildinfo.Version=${VERSION} \
       -X github.com/deedglass/deedglass/internal/buildinfo.Commit=${COMMIT} \
       -X github.com/deedglass/deedglass/internal/buildinfo.Date=${DATE}" -o /out/deedglass ./cmd/deedglass
+# An empty .deedglass/ (mode 0700) for the server's working directory. The compose file mounts a named
+# volume here so a dev server on a read-only root filesystem can create and keep its dev seal key; a
+# new volume copies this directory's owner and mode. Nothing secret is in it at build time.
+RUN mkdir -p /out/home/.deedglass && chmod 0700 /out/home/.deedglass
 
 FROM gcr.io/distroless/static-debian13:nonroot@sha256:e2e927ec666bae08560abb3c55d0659eceabb657f56b6782ab500a9fc7f555e3
 COPY --from=build /out/deedglass /deedglass
+COPY --from=build --chown=65532:65532 /out/home/ /home/nonroot/
 USER 65532:65532
 ENV DEEDGLASS_LISTEN=0.0.0.0:8080
 EXPOSE 8080
