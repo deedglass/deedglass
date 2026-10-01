@@ -1,0 +1,5 @@
+verify
+../../testdata/deeds/chains/genesis-20.jsonl
+--keys
+../../testdata/deeds/keys/test-keys.json
+--json

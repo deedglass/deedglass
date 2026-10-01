@@ -1,0 +1,4 @@
+verify
+../../testdata/deeds/invalid/chain-time-regression/deeds.jsonl
+--keys
+../../testdata/deeds/keys/test-keys.json

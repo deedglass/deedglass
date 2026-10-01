@@ -1,0 +1,4 @@
+verify
+../../testdata/deeds/valid/05-action-approved-then-executed.json
+--keys
+../../testdata/deeds/keys/test-keys.json

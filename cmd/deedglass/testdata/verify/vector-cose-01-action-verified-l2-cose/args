@@ -1,0 +1,4 @@
+verify
+../../testdata/deeds/cose/01-action-verified-l2.cose
+--keys
+../../testdata/deeds/keys/test-keys.json

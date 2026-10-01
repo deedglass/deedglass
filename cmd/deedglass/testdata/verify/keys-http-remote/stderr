@@ -1,0 +1,2 @@
+✕ --keys http://example.com/keys.json uses http to a host that is not this machine.
+  next       Use https. Plain http is allowed only for localhost, 127.0.0.1 and [::1].

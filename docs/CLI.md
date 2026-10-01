@@ -51,11 +51,13 @@ With `--json`, a command writes one JSON object to stdout, with an `object` fiel
 Errors go to stderr in the API's error shape:
 
 ```json
-{"error":{"type":"invalid_request_error","code":"not_built","message":"deedglass verify isn't in this build yet. Run deedglass help to see what this build can do.","doc_url":"https://docs.deedglass.com/errors/not_built"}}
+{"error":{"type":"invalid_request_error","code":"not_built","message":"deedglass deeds export isn't in this build yet. Run deedglass help to see what this build can do.","doc_url":"https://docs.deedglass.com/errors/not_built"}}
 ```
 
 CLI error codes so far: `unknown_command`, `usage_error`, `not_built`, `config_invalid` (with a
-`problems` list), and `failed`.
+`problems` list), and `failed`; `deedglass verify` adds `input_unreadable`, `input_too_large`,
+`keys_unreadable`, `keys_invalid`, `keys_unreachable` and `keys_conflict`. Its own answer is not an
+error: `--json` prints the `verification_report` on stdout whatever the result.
 
 ## Examples
 
@@ -64,8 +66,11 @@ $ deedglass polcy lint
 ✕ Unknown command "polcy". Did you mean "policy"?
   Run deedglass help to see every command.
 
-$ deedglass verify deeds.jsonl
-deedglass verify isn't in this build yet.
+$ deedglass verify deeds.jsonl --keys https://api.deedglass.com/.well-known/deedglass/keys.json
+✓ 1,204 deeds · chain intact · 2 seal keys · 2026-10-01 → 2026-10-02
+
+$ deedglass deeds export
+deedglass deeds export isn't in this build yet.
 Run deedglass help to see what this build can do.
 
 $ deedglass executor serve
@@ -143,7 +148,7 @@ builds it. Hidden commands work but aren't in `deedglass help`.
 | `deedglass webhooks list` | Actions | List webhook endpoints | soon (S22) |
 | `deedglass webhooks test` | Actions | Send a test event | soon (S22) |
 | `deedglass webhooks delete` | Actions | Remove a webhook endpoint | soon (S22) |
-| `deedglass verify` | Deeds | Check deeds offline | soon (S05) |
+| `deedglass verify <path|->... [--keys <file|url>] [--pin sha256:…] [--anchor <seq>:sha256:…] [--strict] [--all] [-q]` | Deeds | Check deeds offline | built |
 | `deedglass deeds list` | Deeds | List deeds | soon (S06) |
 | `deedglass deeds show` | Deeds | Show one deed | soon (S06) |
 | `deedglass deeds export` | Deeds | Export deeds as a bundle | soon (S06) |
@@ -201,8 +206,81 @@ builds it. Hidden commands work but aren't in `deedglass help`.
 summary without the seed (gen). Thumbprints show as `sha256:3f9a…c21e` for people and in full in
 JSON.
 
+## Verify
+
+`deedglass verify` checks deeds offline (S05; the auditor's guide is `docs/VERIFYING_DEEDS.md`). No
+database, no account, no telemetry; the network only for a `--keys` URL.
+
+```
+deedglass verify <path|->... [flags]
+```
+
+| Input | Detected by | Handling |
+|---|---|---|
+| `-` | the argument | stdin: a bundle by its gzip magic bytes, else one deed or JSONL |
+| `bundle.tar.gz` | gzip magic bytes, not the name | export bundle v1 (`docs/BUNDLE_FORMAT.md`), streamed, nothing written to disk |
+| `deeds.jsonl` | the `.jsonl` name, or several lines of compact deeds | one envelope per line, checked as one chain; a blank line is `malformed` |
+| `deed.json` | one top-level value | one deed, checked on its own (its seal, and the genesis link at seq 1); pretty-printed is fine |
+| a directory | `stat` | every `*.json` / `*.jsonl` in it (no recursion, no symlinks, at most 100,000 files), sorted by org and seq, one chain per org |
+| `deed.cose` | the `.cose` name and CBOR tag 18 | the optional COSE_Sign1 encoding, checked on its own |
+
+Several `.jsonl` or bundle inputs are one chain, in the order given: the second must start where
+the first ended. Loose `.json` deeds are checked one by one, and the headline says
+`chain not checked`.
+
+| Flag | What it does |
+|---|---|
+| `--keys <file\|https URL>` | The seal key set (repeatable; merged by key id, and the same id with different content refuses everything). Keys you choose are **pinned**. |
+| `--pin sha256:…` | Accept only keys with this thumbprint (repeatable); works on any key set, the bundle's included. |
+| `--org <org_…>` | The org every deed must belong to (the global flag). |
+| `--anchor <seq>:sha256:…` | The `body_hash` of the deed just before the first one given (a partial export). |
+| `--strict` | Require canonical bytes (`non_canonical`) and pinned keys (exit 2 without them). |
+| `--all` | List every failure (at most 100) instead of stopping at the first. |
+| `--max-bytes <n>` | The largest `deeds.jsonl` a bundle may hold (default 8 GiB). |
+| `-q`, `--quiet` | Print nothing; the exit code is the answer. |
+| `--json`, `-v`, `--no-color` | The global flags: the full report, details, no colour. |
+
+Keys, highest trust first: `--keys` (pinned), `--pin` (pinned), the bundle's own `keys.json` (not
+pinned: integrity, not authenticity, and the output says so), none (`keys_missing`, exit 2).
+
+| Situation | Headline | Exit |
+|---|---|---|
+| Every check passes, keys pinned | `✓ … chain intact …` | 0 |
+| Every check passes, bundle keys only | `✓ …` then `○ Seal keys came from the bundle itself …` | 0 (2 with `--strict`) |
+| Any deed, chain or bundle failure | `✕ …` with the deed, the reason and the next step | 1 |
+| A deed names a key that is not in the given key set | `✕ … not in the key set.` (`seal_key_unknown`) | 1 |
+| No key set at all | `○ Cannot check deed 1: no seal keys were given.` | 2 |
+| A newer deed format | `○ Deed 1 uses deed format v2. …` | 2 |
+| A `--keys` URL unreachable, too large or redirected elsewhere | `○ Could not fetch seal keys from <host> (…)` | 2 |
+| A usage error or an unreadable file | `✕ …` and what to do | 2 |
+
+Every string that came from a deed or a file is shown safely on a terminal: control characters,
+`ESC` and bidi overrides print as `\u001b`-style escapes, so a deed cannot recolour a line or fake a
+`✓`. `--json` keeps the exact strings.
+
+`--json` prints a `verification_report`:
+
+| Field | Meaning |
+|---|---|
+| `result` | `valid`, `invalid` or `cannot_determine` |
+| `deeds`, `intact` | deeds read (stops at the first failure without `--all`), deeds that passed every check |
+| `org`, `first_seq`, `last_seq`, `from`, `to` | what the intact deeds cover |
+| `chain` | `{status: intact\|broken\|not_checked, anchor: {kind: genesis\|deed\|none, seq, body_hash}}` |
+| `seal_keys` | each key used: `{id, thumbprint, deeds, first_seq, last_seq, source}` |
+| `keys_pinned` | whether the keys came from you (`--keys`, `--pin`) |
+| `kinds`, `verdicts_recorded` | counts by deed kind, and by the Witness verdict written in each deed (`verify` does not re-run the Witness) |
+| `bundle` | `{manifest: ok\|mismatch, manifest_seal: ok\|missing\|invalid, sealed_by, files, input}` or null |
+| `failures` | `{code, seq, deed, input, line, field, expected, computed, message, next}`; `expected`/`computed` are the hashes for `body_hash_mismatch` |
+| `warnings` | `{code, message, next}`: `keys_not_pinned`, `manifest_unsealed`, `test_keys` |
+| `duration_ms`, `verifier` | how long it took, and which build checked |
+
+Performance (S05 §3.9; `make bench-verify`, raw numbers in `bench/results/`): 100,000 deeds in
+2.4 s wall with 71 MB peak RSS as `.jsonl`, 2.4 s as a bundle, one deed in under 10 ms, on an Apple
+M1 (8 cores), 2026-10-01.
+
 ## What it doesn't do (yet)
 
 - No shell completion until S32 (`deedglass completion zsh|bash|fish`).
 - `keys revoke` isn't built (planned; `docs/SEAL_KEYS.md`).
-- `deedglass verify` arrives in S05.
+- `deedglass verify` does not re-run the Witness, fetch keys anywhere you did not name, or cache
+  them (a key cache with `--offline` is planned). Bundles in the browser verifier are not built yet.

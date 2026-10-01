@@ -1,0 +1,5 @@
+verify
+$TMP/part1.tar.gz
+$TMP/part2-gap.tar.gz
+--keys
+../../testdata/deeds/keys/test-keys.json

@@ -1,0 +1,2 @@
+✕ --pin must be a thumbprint, sha256:<64 hex> (got "abc").
+  Thumbprints are listed in keys.json and by deedglass keys list.

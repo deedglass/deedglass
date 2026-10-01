@@ -1,0 +1,60 @@
+{
+  "object": "verification_report",
+  "result": "invalid",
+  "deeds": 3,
+  "intact": 2,
+  "org": "org_01m3xxf0m2ekmm72j2vvks65q5",
+  "first_seq": 1,
+  "last_seq": 2,
+  "from": "2026-10-02T09:00:00.000Z",
+  "to": "2026-10-02T09:00:01.000Z",
+  "chain": {
+    "status": "broken",
+    "anchor": {
+      "kind": "genesis",
+      "seq": 0,
+      "body_hash": "sha256:936f436c12d714c554d0478e6130ef04918e4cb3c2aaa891335d9e60bd7d9fc5"
+    }
+  },
+  "seal_keys": [
+    {
+      "id": "sk_01m3xxf0m1crvjtd24mgqnmgah",
+      "thumbprint": "sha256:f6b1d24a4efdc39230905e0c217093f4d1d5e301ac52c9e763a773e864d93f33",
+      "deeds": 2,
+      "first_seq": 1,
+      "last_seq": 2,
+      "source": "../../testdata/deeds/keys/test-keys.json"
+    }
+  ],
+  "keys_pinned": true,
+  "kinds": {
+    "action": 2
+  },
+  "verdicts_recorded": {
+    "VERIFIED": 2
+  },
+  "bundle": null,
+  "failures": [
+    {
+      "code": "chain_seq_gap",
+      "seq": 4,
+      "deed": "deed_01m3xxn3y4y13btzzgqzzqfn4m",
+      "input": "../../testdata/deeds/invalid/chain-seq-gap/deeds.jsonl",
+      "line": 3,
+      "field": null,
+      "expected": null,
+      "computed": null,
+      "message": "Deed 3 is missing. The chain jumps from 2 to 4.",
+      "next": "A deed was removed or the export is incomplete. Ask the issuer for seq 2–4."
+    }
+  ],
+  "warnings": [
+    {
+      "code": "test_keys",
+      "message": "These deeds were sealed by Deedglass's published test keys. They mean nothing outside tests.",
+      "next": "Verify deeds from a real issuer against its published keys."
+    }
+  ],
+  "duration_ms": 0,
+  "verifier": "deedglass 0.1.0-dev (5495f7e)"
+}

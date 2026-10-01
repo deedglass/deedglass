@@ -1,0 +1,4 @@
+verify
+../../testdata/deeds/valid/03-admin-agent-stopped.json
+--keys
+../../testdata/deeds/keys/test-keys.json

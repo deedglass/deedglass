@@ -1,0 +1,11 @@
+✕ 2 breaks · 18 of 20 deeds intact
+✕ Deed 5 was changed after it was sealed.
+  deed       deed_01m3xxn3y5eszr2v7a2xtage01 (line 5)
+  sealed     body_hash sha256:70d1…f53d
+  computed   sha256:014b…877c
+  next       Get a fresh export from the issuer and compare deed 5.
+✕ Deed 15 was changed after it was sealed.
+  deed       deed_01m3xxn3yfak2123xqgvt5fbbt (line 15)
+  sealed     body_hash sha256:9cec…f554
+  computed   sha256:92b4…c546
+  next       Get a fresh export from the issuer and compare deed 15.

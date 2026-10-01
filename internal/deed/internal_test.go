@@ -120,7 +120,7 @@ func TestMessagesCoverEveryCode(t *testing.T) {
 			t.Fatalf("%s listed twice", c)
 		}
 		seen[c] = true
-		for _, e := range []*VerifyError{{Code: c}, {Code: c, Seq: 812, Prev: 811, Want: 812, Key: "sk_x", Field: "body.seq", Version: 2, Org: "org_a", WantOrg: "org_b", IssuedAt: "2026-10-02T09:00:00.000Z", Detail: "d"}} {
+		for _, e := range []*VerifyError{{Code: c}, {Code: c, Seq: 812, Prev: 811, Want: 812, Key: "sk_x", Field: "body.seq", Version: 2, Org: "org_a", WantOrg: "org_b", IssuedAt: "2026-10-02T09:00:00.000Z", Detail: "Detail"}} {
 			s, next := Message(e)
 			if s == "" || next == "" || strings.Contains(s+next, "!") || strings.Contains(s, "{") {
 				t.Errorf("%s: %q / %q", c, s, next)
@@ -133,7 +133,7 @@ func TestMessagesCoverEveryCode(t *testing.T) {
 			}
 		}
 	}
-	if len(seen) != 18 {
+	if len(seen) != 21 {
 		t.Fatalf("%d codes", len(seen))
 	}
 	s, _ := Message(&VerifyError{Code: "nope"})
@@ -169,5 +169,46 @@ func TestIDPatternMatchesIDs(t *testing.T) {
 		if !parsed.Time().Equal(at.Truncate(time.Millisecond)) {
 			t.Fatalf("time %v", parsed.Time())
 		}
+	}
+}
+
+func TestMessageTemplates(t *testing.T) {
+	vars := MessageVars(&VerifyError{Code: CodeMalformed})
+	for key, m := range Messages {
+		for _, s := range []string{m.Sentence, m.Next} {
+			for rest := s; ; {
+				i := strings.IndexByte(rest, '{')
+				if i < 0 {
+					break
+				}
+				j := strings.IndexByte(rest[i:], '}')
+				if _, ok := vars[rest[i+1:i+j]]; !ok {
+					t.Errorf("%s: unknown placeholder %s", key, rest[i:i+j+1])
+				}
+				rest = rest[i+j+1:]
+			}
+		}
+	}
+	for _, c := range Codes {
+		if _, ok := Messages[string(c)]; !ok {
+			t.Errorf("%s has no template", c)
+		}
+	}
+	s, next := Message(&VerifyError{Code: CodeChainSeqGap, Seq: 500, Want: 1})
+	if s != "The deeds start at deed 500, not deed 1." || !strings.Contains(next, "--anchor 499:") {
+		t.Errorf("gap at start: %q / %q", s, next)
+	}
+	s, next = Message(&VerifyError{Code: CodeChainSeqGap, Seq: 814, Prev: 812, Want: 813})
+	if s != "Deed 813 is missing. The chain jumps from 812 to 814." || next != "A deed was removed or the export is incomplete. Ask the issuer for seq 812–814." {
+		t.Errorf("gap: %q / %q", s, next)
+	}
+	if s, _ := Message(&VerifyError{Code: CodeKeysMissing, Seq: 1}); s != "Cannot check deed 1: no seal keys were given." {
+		t.Errorf("keys_missing: %q", s)
+	}
+	if s, _ := Message(&VerifyError{Code: CodeBundleInvalid}); s != "This file is not a valid deed bundle. Nothing was extracted." {
+		t.Errorf("bundle_invalid: %q", s)
+	}
+	if got := RenderMessage("{a} {b} {", map[string]string{"a": "x"}); got != "x {b} {" {
+		t.Errorf("render: %q", got)
 	}
 }

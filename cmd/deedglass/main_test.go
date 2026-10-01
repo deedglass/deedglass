@@ -29,6 +29,12 @@ type result struct {
 // cli runs the CLI in-process with an injected environment.
 func cli(t *testing.T, env map[string]string, tty bool, args ...string) result {
 	t.Helper()
+	return cliIn(t, nil, env, tty, args...)
+}
+
+// cliIn is cli with stdin.
+func cliIn(t *testing.T, stdin []byte, env map[string]string, tty bool, args ...string) result {
+	t.Helper()
 	saved := buildInfo
 	buildInfo = func() buildinfo.Info {
 		return buildinfo.Info{Object: "version", Version: "0.1.0-dev", Commit: "5495f7e", Modified: true,
@@ -46,7 +52,7 @@ func cli(t *testing.T, env map[string]string, tty bool, args ...string) result {
 	dir := t.TempDir()
 	var out, errb bytes.Buffer
 	e := &Env{
-		Stdout: &out, Stderr: &errb, IsTTY: tty,
+		Stdin: bytes.NewReader(stdin), Stdout: &out, Stderr: &errb, IsTTY: tty,
 		Getenv:      func(k string) string { return env[k] },
 		LoadOptions: func() config.LoadOptions { return config.LoadOptions{Env: env, FS: fstest.MapFS{}, Dir: dir} },
 	}
@@ -102,8 +108,8 @@ func TestGoldens(t *testing.T) {
 		{"config_print_txv", map[string]string{"TXV_DATABASE_URL": "x"}, false, []string{"config", "print"}, 1},
 		{"unknown_command", nil, false, []string{"polcy", "lint"}, 2},
 		{"unknown_no_match", nil, false, []string{"frobnicate"}, 2},
-		{"unbuilt_command", nil, false, []string{"verify", "deeds.jsonl"}, 2},
-		{"json_error", nil, false, []string{"verify", "--json"}, 2},
+		{"unbuilt_command", nil, false, []string{"deeds", "export", "--org", "org_x"}, 2},
+		{"json_error", nil, false, []string{"deeds", "export", "--json"}, 2},
 		{"json_config_error", prod, false, []string{"--json", "config", "print"}, 1},
 		{"global_flag_after_subcommand", nil, false, []string{"version", "--no-color", "--json"}, 0},
 	}
@@ -150,7 +156,7 @@ func TestExitCodes(t *testing.T) {
 		{[]string{"config", "print", "extra"}, 2, "takes no arguments", ""},
 		{[]string{"--bogus"}, 2, "flag --bogus needs a command before it", ""},
 		{[]string{"-h"}, 0, "", "deedglass · the execution and accountability layer"},
-		{[]string{"verify", "--", "-h"}, 2, "isn't in this build yet", ""},
+		{[]string{"verify", "--", "-h"}, 2, "Can't read -h: no such file", ""},
 		{[]string{"dev", "id", "agt"}, 0, "", "agt_"},
 		{[]string{"dev", "id", "AGT_"}, 0, "", "agt_"},
 		{[]string{"--json", "dev", "id", "deed"}, 0, "", `"id":"deed_`},

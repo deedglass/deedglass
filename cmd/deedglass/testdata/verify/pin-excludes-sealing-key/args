@@ -1,0 +1,6 @@
+verify
+../../testdata/deeds/chains/genesis-20.jsonl
+--keys
+../../testdata/deeds/keys/test-keys.json
+--pin
+sha256:3d3876ffac00eac374b0e6e5735718edfcc7637ace18ef40a3ccc492cf98bf60

@@ -10,14 +10,15 @@ LDFLAGS  := -s -w -X $(BI).Version=$(VERSION) -X $(BI).Commit=$(COMMIT) -X $(BI)
 
 .PHONY: all help ci build test test-short vet fmt fmt-check tidy-check testdata-check rename-guard banned-words nocgo \
 	integration matrix fuzz bench bench-store bench-deed cover clean \
-	dev dev-down dev-reset dev-logs run docker bench-http
+	dev dev-down dev-reset dev-logs run docker bench-http bench-verify \
+	web-verify-install web-verify-test web-verify-build web-verify-serve gencopy
 
 all: ci
 
 help: ## list the targets
 	@grep -E '^[a-z][a-z-]*:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-15s %s\n", $$1, $$2}'
 
-ci: fmt-check tidy-check vet test testdata-check rename-guard banned-words nocgo ## everything the lint-unit CI job runs
+ci: fmt-check tidy-check vet test testdata-check rename-guard banned-words nocgo web-verify-test ## everything the lint-unit and web-verify CI jobs run
 
 build: ## build bin/deedglass with version ldflags
 	$(GO) build -trimpath -ldflags '$(LDFLAGS)' -o bin/deedglass ./cmd/deedglass
@@ -64,6 +65,8 @@ fuzz: ## 30 s each: the strict intent parser, the id parser, and the deed envelo
 	$(GO) test ./internal/deed -run '^$$' -fuzz '^FuzzParseEnvelope$$' -fuzztime 30s
 	$(GO) test ./internal/deed -run '^$$' -fuzz '^FuzzVerifyEnvelope$$' -fuzztime 30s
 	$(GO) test ./internal/deed -run '^$$' -fuzz '^FuzzParseKeySet$$' -fuzztime 30s
+	$(GO) test ./internal/deed -run '^$$' -fuzz '^FuzzVerifyStream$$' -fuzztime 30s
+	$(GO) test ./internal/deed/archive -run '^$$' -fuzz '^FuzzArchiveOpen$$' -fuzztime 30s
 
 bench: ## benchmarks for ids and config
 	$(GO) test -run '^$$' -bench . -benchmem -cpu 1,8 ./internal/ids ./internal/config
@@ -72,8 +75,8 @@ bench-store: ## S02 store budget (OrgTx, insert, list) on a throwaway PG 18; raw
 	DEEDGLASS_IT_BENCH=1 DEEDGLASS_IT_BENCH_OUT="$(CURDIR)/bench/results/$$(date +%F)-$$(go env GOOS)-$$(go env GOARCH)-store.json" \
 		scripts/integration_local.sh
 
-cover: ## coverage of the packages with targets (ids 95%, config 90%, deed 90%, cmd/deedglass 80%)
-	$(GO) test -count=1 -cover ./internal/ids ./internal/config ./internal/deed ./cmd/deedglass
+cover: ## coverage of the packages with targets (ids 95%, config 90%, deed 90%, deed/archive 85%, cmd/deedglass 80%)
+	$(GO) test -count=1 -cover ./internal/ids ./internal/config ./internal/deed ./internal/deed/archive ./cmd/deedglass
 
 bench-deed: ## S04 deed budget: SealBody, VerifyEnvelope (1 core) and the Postgres Sealer p50/p99 on a throwaway PG 18; raw go test -json in bench/results/
 	@out="$(CURDIR)/bench/results/$$(date +%F)-$$(go env GOOS)-$$(go env GOARCH)-deed.json"; \
@@ -109,3 +112,27 @@ bench-http: ## S03 HTTP budget: pipeline, 404, cached health (50,000 runs) and t
 	{ $(GO) test -json -run '^$$' -bench 'PipelineVersion|PipelineNotFound|HealthCached' -benchmem -benchtime 50000x ./internal/httpx; \
 	  $(GO) test -json -run '^$$' -bench 'PipelineLoad' -benchtime 1x ./internal/httpx; } > "$$out" && \
 	grep -o '"Output":"Benchmark[^"]*' "$$out" | sed 's/"Output":"//; s/\\t/  /g; s/\\n//'; echo "raw: $$out"
+
+bench-verify: ## S05 budget: deedglass verify on 100,000 deeds (.jsonl and bundle) and one deed cold; raw JSON in bench/results/
+	bench/verify_100k.sh
+
+gencopy: ## regenerate the verification copy, key lists and sample for the browser verifier from Go
+	$(GO) run ./internal/deed/cmd/gencopy
+
+# The browser verifier (web/verify): TypeScript and Vitest are dev-only tools (ADR-027); no runtime dependencies.
+WEB_VERIFY := web/verify
+
+web-verify-install: ## npm ci for web/verify (exact pins from package-lock.json, no install scripts)
+	cd $(WEB_VERIFY) && npm ci --ignore-scripts --no-audit --no-fund
+
+$(WEB_VERIFY)/node_modules/.package-lock.json: $(WEB_VERIFY)/package-lock.json
+	cd $(WEB_VERIFY) && npm ci --ignore-scripts --no-audit --no-fund
+
+web-verify-test: $(WEB_VERIFY)/node_modules/.package-lock.json ## (ci) typecheck and the Vitest suites (vectors, parity 500/500, strict, JCS, keys, page safety)
+	cd $(WEB_VERIFY) && npx tsc -p . --noEmit && npx vitest run
+
+web-verify-build: $(WEB_VERIFY)/node_modules/.package-lock.json ## compile the page's modules into web/verify/dist
+	cd $(WEB_VERIFY) && rm -rf dist && npx tsc -p tsconfig.build.json
+
+web-verify-serve: web-verify-build ## the verify page on http://127.0.0.1:5178 (no dependency server)
+	node $(WEB_VERIFY)/scripts/serve.mjs

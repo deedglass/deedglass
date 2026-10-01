@@ -1,0 +1,41 @@
+{
+  "object": "verification_report",
+  "result": "invalid",
+  "deeds": 1,
+  "intact": 0,
+  "org": null,
+  "first_seq": null,
+  "last_seq": null,
+  "from": null,
+  "to": null,
+  "chain": {
+    "status": "not_checked",
+    "anchor": {
+      "kind": "none",
+      "seq": null,
+      "body_hash": null
+    }
+  },
+  "seal_keys": [],
+  "keys_pinned": true,
+  "kinds": {},
+  "verdicts_recorded": {},
+  "bundle": null,
+  "failures": [
+    {
+      "code": "schema_invalid",
+      "seq": 1,
+      "deed": "deed_01m3xxj291vb6nxg25pympae2g",
+      "input": "$TMP/ansi-key.json",
+      "line": 1,
+      "field": "body.\u001b[32m✓ fake",
+      "expected": null,
+      "computed": null,
+      "message": "Deed 1 has an invalid field: body.\u001b[32m✓ fake.",
+      "next": "Export it again from the issuer."
+    }
+  ],
+  "warnings": [],
+  "duration_ms": 0,
+  "verifier": "deedglass 0.1.0-dev (5495f7e)"
+}

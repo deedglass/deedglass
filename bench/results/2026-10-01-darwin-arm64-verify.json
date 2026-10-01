@@ -1,0 +1,17 @@
+{
+  "object": "benchmark",
+  "suite": "S05 deedglass verify",
+  "date": "2026-10-01T07:13:31Z",
+  "commit": "8659c09-modified",
+  "go": "go1.27.1",
+  "machine": "Apple M1, 8 cores, 8 GiB",
+  "os": "Darwin 27.0.0",
+  "load_average_before": "4.35 2.78 2.78",
+  "input": {"deeds": 100000, "jsonl_bytes": 156172152, "bundle_bytes": 20418664, "seal_keys": 2},
+  "budget": {"verify_100k_jsonl_wall_s": 5, "verify_100k_bundle_wall_s": 6, "peak_rss_bytes": 268435456, "verify_one_deed_cold_wall_s": 0.06},
+  "results": [
+    {"name":"verify_100k_jsonl","args":".tmp/deeds-100k.jsonl --keys testdata/deeds/keys/test-keys.json","runs_wall_s":[2.95,2.32,2.39],"median_wall_s":2.39,"peak_rss_bytes":70746112,"user_s":[16.57,16.43,16.54],"sys_s":[0.65,0.58,0.58],"exit":[0,0,0]},
+    {"name":"verify_100k_bundle","args":".tmp/deeds-100k.tar.gz --keys testdata/deeds/keys/test-keys.json","runs_wall_s":[2.39,2.36,2.34],"median_wall_s":2.36,"peak_rss_bytes":62799872,"user_s":[16.86,16.78,16.79],"sys_s":[0.53,0.53,0.54],"exit":[0,0,0]},
+    {"name":"verify_one_deed_cold","args":"testdata/deeds/valid/01-action-verified-l2.json --keys testdata/deeds/keys/test-keys.json","runs_wall_s":[0.00,0.00,0.00],"median_wall_s":0.00,"peak_rss_bytes":15941632,"user_s":[0.00,0.00,0.00],"sys_s":[0.00,0.00,0.00],"exit":[0,0,0]}
+  ]
+}

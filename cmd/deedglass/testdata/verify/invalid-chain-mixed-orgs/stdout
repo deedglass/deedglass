@@ -1,0 +1,4 @@
+✕ Deed 2 belongs to org_01m3xxf0m3d2ws6mbge3b9kv0n, not org_01m3xxf0m2ekmm72j2vvks65q5.
+  deed       deed_01m3xxr5k291y44031n8rxkgn0 (line 2)
+  before it  1 deed intact · stopped at the first break
+  next       Verify each org's deeds separately. Add --all to list every break.

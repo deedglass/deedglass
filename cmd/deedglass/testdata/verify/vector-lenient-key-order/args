@@ -1,0 +1,4 @@
+verify
+../../testdata/deeds/lenient/key-order.json
+--keys
+../../testdata/deeds/keys/test-keys.json

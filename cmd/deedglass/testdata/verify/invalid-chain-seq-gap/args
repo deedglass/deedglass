@@ -1,0 +1,4 @@
+verify
+../../testdata/deeds/invalid/chain-seq-gap/deeds.jsonl
+--keys
+../../testdata/deeds/keys/test-keys.json

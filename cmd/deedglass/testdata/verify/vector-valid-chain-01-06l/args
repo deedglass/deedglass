@@ -1,0 +1,4 @@
+verify
+../../testdata/deeds/valid/chain-01-06.jsonl
+--keys
+../../testdata/deeds/keys/test-keys.json

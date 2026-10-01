@@ -1,0 +1,4 @@
+verify
+../../testdata/deeds/valid/06-unicode-agent-name.json
+--keys
+../../testdata/deeds/keys/test-keys.json

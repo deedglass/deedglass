@@ -1,0 +1,5 @@
+verify
+$TMP/ok.tar.gz
+--keys
+../../testdata/deeds/keys/test-keys.json
+-v

@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src https: http://localhost:* http://127.0.0.1:*; base-uri 'none'; form-action 'none'"
+    />
+    <meta name="referrer" content="no-referrer" />
+    <meta name="color-scheme" content="dark light" />
+    <meta name="description" content="Check a Deedglass deed in your browser: canonical JSON, SHA-256 and the Ed25519 seal, checked on your machine. Nothing is uploaded." />
+    <title>Verify a deed · Deedglass</title>
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="src/ui/styles.css" />
+    <script type="module" src="dist/ui/main.js"></script>
+  </head>
+  <body>
+    <div class="page">
+      <header class="top">
+        <span class="wordmark">deedglass</span>
+        <span class="top-note">Verify</span>
+      </header>
+
+      <main>
+        <h1>Check a deed yourself.</h1>
+        <p class="lede">Paste a deed or drop deeds.jsonl. Everything runs in this page. Nothing is uploaded.</p>
+
+        <section class="card" aria-label="Deeds and keys">
+          <div class="field drop" id="drop">
+            <div class="label-row">
+              <label for="deeds">Deeds</label>
+              <span class="hint"
+                ><span class="chip unverifiable" id="sample-chip" hidden>Sample · test key</span>
+                <button type="button" class="link" id="choose-file">Choose a file</button></span
+              >
+            </div>
+            <textarea id="deeds" spellcheck="false" autocomplete="off" autocapitalize="off" placeholder='{"body":{…},"body_hash":"sha256:…","id":"deed_…","object":"deed","seal":"ed25519:…","seal_key_id":"sk_…"}'></textarea>
+            <input type="file" id="file" class="visually-hidden" tabindex="-1" aria-hidden="true" accept=".json,.jsonl,application/json" />
+            <div class="file-line" id="file-line" hidden></div>
+          </div>
+
+          <div class="field">
+            <div class="label-row">
+              <label for="keys">Seal keys</label>
+              <span class="hint">keys.json, pasted or fetched</span>
+            </div>
+            <textarea id="keys" class="keys" spellcheck="false" autocomplete="off" autocapitalize="off" placeholder='{"object":"seal_key_set","issuer":"…","keys":[…]}'></textarea>
+            <div class="url-row">
+              <label class="visually-hidden" for="keys-url">Seal keys URL</label>
+              <input type="url" id="keys-url" inputmode="url" spellcheck="false" autocomplete="off" placeholder="https://api.deedglass.com/.well-known/deedglass/keys.json" />
+              <button type="button" id="fetch-keys">Fetch keys</button>
+            </div>
+            <p class="notice" id="url-notice" aria-live="polite"></p>
+          </div>
+
+          <div class="actions">
+            <button type="button" class="primary" id="verify">Verify</button>
+            <button type="button" id="use-sample">Use sample</button>
+            <span class="kbd"><kbd id="mod-key">⌘</kbd> <kbd>Enter</kbd></span>
+          </div>
+        </section>
+
+        <section class="card result state-idle" id="result" aria-label="Result">
+          <div class="mark" id="mark"></div>
+          <div aria-live="polite" aria-atomic="true">
+            <p class="headline" id="headline"></p>
+            <p class="next" id="next"></p>
+          </div>
+          <div>
+            <progress id="progress" max="1" value="0" hidden>Checking</progress>
+            <div id="note" hidden></div>
+          </div>
+          <dl class="rows" id="rows" hidden></dl>
+          <div class="result-actions">
+            <button type="button" id="copy" hidden>Copy report JSON</button>
+            <span class="status" id="status" role="status"></span>
+          </div>
+        </section>
+      </main>
+
+      <footer>The CLI is the reference verifier: <code>deedglass verify</code></footer>
+    </div>
+  </body>
+</html>

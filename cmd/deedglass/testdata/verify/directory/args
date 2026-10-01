@@ -1,0 +1,4 @@
+verify
+$TMP/loose
+--keys
+../../testdata/deeds/keys/test-keys.json

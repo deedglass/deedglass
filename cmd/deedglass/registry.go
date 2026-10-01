@@ -38,6 +38,7 @@ type Command struct {
 	Run     func(ctx context.Context, e *Env, args []string) error // nil while unbuilt
 	Owner   string                                                 // "S04" while unbuilt; "" once built
 	Hidden  bool                                                   // left out of help
+	RawArgs bool                                                   // Run parses its own flags (they may follow paths)
 }
 
 // Built reports whether the command runs in this build.
@@ -135,7 +136,9 @@ var commands = []*Command{
 	{Path: p("webhooks", "delete"), Group: Actions, Summary: "Remove a webhook endpoint", Owner: "S22"},
 
 	// Deeds.
-	{Path: p("verify"), Group: Deeds, Summary: "Check deeds offline", Owner: "S05"},
+	{Path: p("verify"), Group: Deeds, Summary: "Check deeds offline",
+		Usage: "<path|->... [--keys <file|url>] [--pin sha256:…] [--anchor <seq>:sha256:…] [--strict] [--all] [-q]",
+		Flags: verifyFlags, Run: runVerify, RawArgs: true},
 	{Path: p("deeds", "list"), Group: Deeds, Summary: "List deeds", Owner: "S06"},
 	{Path: p("deeds", "show"), Group: Deeds, Summary: "Show one deed", Owner: "S06"},
 	{Path: p("deeds", "export"), Group: Deeds, Summary: "Export deeds as a bundle", Owner: "S06"},

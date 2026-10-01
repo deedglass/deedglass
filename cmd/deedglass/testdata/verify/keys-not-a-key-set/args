@@ -1,0 +1,4 @@
+verify
+../../testdata/deeds/chains/genesis-20.jsonl
+--keys
+../../testdata/deeds/valid/01-action-verified-l2.json

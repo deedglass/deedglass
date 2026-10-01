@@ -34,6 +34,14 @@ What Deedglass does not do, stated plainly. **Owner: S37**, which finalizes this
 - **New seal keys reach `keys.json` within 60 seconds,** not at once, and clients may cache it for 300 seconds.
 - **No `keys revoke` command yet.** Revocation is a manual database change until it ships (`docs/SEAL_KEYS.md`).
 
+## Verifier limits (S05)
+
+- **A bare `.jsonl` can lose its newest deeds unnoticed.** Only a sealed bundle manifest, or a head you kept from an earlier export, shows that deeds were cut from the end. `deedglass verify` warns when a bundle's manifest is not sealed.
+- **Keys inside a bundle show integrity, not authenticity.** Whoever made the bundle chose those keys. Pin the issuer's published keys (`--keys`, `--pin`) to know who sealed the deeds; `--strict` refuses to call an unpinned check valid.
+- **`verify` checks seals and the chain, not the truth of a verdict.** A `VERIFIED` written in a deed is what the Witness recorded then; `verify` does not re-run it.
+- **Browsers verify Ed25519 with their own engines.** The page checks key safety and `s < L` itself first and agrees with Go on every published vector and the 500-case parity corpus, but a browser engine could still differ on an input nobody has tried. The CLI is the reference verifier. Browsers without WebCrypto Ed25519 (before Safari 17, Firefox 129, Chrome 137) get "use the CLI", never a verdict.
+- **The browser verifier reads `.json` and `.jsonl`, not bundles, in v1.**
+
 ## What this page does not do
 
 It does not list bugs or missing features on the schedule. It lists limits of the design that stay true after they ship.

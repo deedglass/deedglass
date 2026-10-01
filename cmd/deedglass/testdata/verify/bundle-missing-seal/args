@@ -1,0 +1,4 @@
+verify
+$TMP/unsealed.tar.gz
+--keys
+../../testdata/deeds/keys/test-keys.json

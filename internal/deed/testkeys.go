@@ -1,6 +1,9 @@
 package deed
 
-import "crypto/ed25519"
+import (
+	"crypto/ed25519"
+	"slices"
+)
 
 // The published test-vector keys (testdata/deeds/keys/test-keys.json). Their seeds are
 // SHA-256("deedglass/test-vector-key/<name>"), so anyone can rebuild them, and so they must never
@@ -19,4 +22,22 @@ const TestKeySeedLabel = "deedglass/test-vector-key/"
 func IsTestKey(pub ed25519.PublicKey) bool {
 	_, ok := testKeyThumbprints[Thumbprint(pub)]
 	return ok
+}
+
+// IsTestThumbprint reports whether a "sha256:…" thumbprint names a published test-vector key.
+// Verifiers warn when a deed was sealed by one (DEED_SPEC.md §15).
+func IsTestThumbprint(tp string) bool {
+	_, ok := testKeyThumbprints[tp]
+	return ok
+}
+
+// TestKeyThumbprints lists the published test-vector key thumbprints, sorted (gencopy writes them
+// into the browser verifier).
+func TestKeyThumbprints() []string {
+	out := make([]string, 0, len(testKeyThumbprints))
+	for tp := range testKeyThumbprints {
+		out = append(out, tp)
+	}
+	slices.Sort(out)
+	return out
 }

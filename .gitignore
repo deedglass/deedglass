@@ -17,3 +17,6 @@ coverage.*
 .env
 .env.*
 !.env.example
+# the browser verifier's dev tools and build output (web/verify)
+web/verify/node_modules/
+web/verify/dist/

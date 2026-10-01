@@ -29,7 +29,7 @@ exit 0
   undo                Preview or run an undo                      [2msoon[0m   [2mpreview · run[0m
   webhooks            Send events to your endpoints               [2msoon[0m   [2mcreate · list · test · delete[0m
 [1mDeeds[0m
-  verify              Check deeds offline                         [2msoon[0m
+  verify              Check deeds offline
   deeds               Browse and export deeds                     [2msoon[0m   [2mlist · show · export[0m
   ledger              Check or prune the Ledger                   [2msoon[0m   [2mcheck · prune[0m
 [1mConnectors[0m

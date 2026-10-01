@@ -20,9 +20,11 @@ Last checked: S04, 2026-10-01 (S01 wrote it). Each session that changes the layo
 | `store` | built (S02–S04) | S02+ | pgx pool, migrations, org-scoped transactions (RLS), repositories; `DeedTx` (the Postgres `deed.ChainStore`) and seal-key rows (S04) |
 | `store/policystore` | planned | S11–S12 | Postgres adapters for `policy` |
 | `httpx` | built (S03–S04) | S03 | Server, middleware, route table, error envelope, versioning; `keys.json` (S04) |
-| `deed` | built (S04) | S04–S05 | Deed body and closed schema, builders, JCS, seal, Sealer, chain, verify, key sets and key files, COSE (`docs/DEED_SPEC.md`) |
+| `deed` | built (S04–S05) | S04–S05 | Deed body and closed schema, builders, JCS, seal, Sealer, chain, verify, key sets and key files, COSE (`docs/DEED_SPEC.md`); S05: the streaming `Verifier` (`stream.go`), the `verification_report` (`report.go`), the message catalog and manifest seals |
 | `deed/deedtest` | built, test helper (S04) | S04 | Fixed test-vector keys, deterministic ids, in-memory `ChainStore`, chain generator, tamper helpers |
-| `deed/archive` | planned | S05 | Export bundle v1 writer and reader |
+| `deed/archive` | built (S05) | S05 | Export bundle v1: deterministic writer, streaming reader with strict limits (`docs/BUNDLE_FORMAT.md`) |
+| `deed/cmd/gencopy` | built, generator (S05) | S05 | Writes `testdata/deeds/messages.json` and `web/verify/src/*.gen.ts` from Go |
+| `deed/deedtest/cmd/genchain` | built, bench helper (S05) | S05 | Writes a test chain (and bundle) of n deeds for benchmarks |
 | `ledger` | stub | S06 | Action events, queries, chain check, export, retention |
 | `identity` | stub | S07–S09 | Orgs, users, sessions, agents, API keys, signed intents |
 | `mailer` | stub | S07 | Mail interface: log (dev) and Resend |
@@ -68,7 +70,7 @@ Last checked: S04, 2026-10-01 (S01 wrote it). Each session that changes the layo
 | `testdata/` | yes | kept from V0; `deeds/` built (S04) | S04 | Offline vectors: JCS (RFC 8785), Ed25519 (RFC 8032, Wycheproof), Deed v1 (`deeds/`, generated), with `SHA256SUMS` |
 | `.github/workflows/` | yes | kept from V0 | S03 | `ci.yml` and `pg-matrix.yml` (Postgres 16, 17, 18) |
 | `api/openapi.yaml` | no | planned | S03 | The OpenAPI document, served at `GET /api/openapi.yaml`; each API session extends it |
-| `web/` | no | planned | S05, S24 | Console source. S05 starts `web/verify`; S24 builds the Console |
+| `web/` | partly | S05 built `web/verify` | S05, S24 | `web/verify`: the browser verifier (TypeScript, zero runtime dependencies, ADR-027). S24 builds the Console |
 | `examples/` | no | planned | S12, S32, S37 | S12 adds `examples/policies/`; S32 and S37 add the quickstart examples |
 | `sdk/typescript`, `sdk/python` | no | planned | S31 | The `@deedglass/sdk` and `deedglass` client libraries |
 | `docs-site/` | no | planned | S33 | The docs site for `docs.deedglass.com` |

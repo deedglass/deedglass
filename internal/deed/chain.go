@@ -135,3 +135,17 @@ func (c *ChainChecker) Summary() ChainSummary {
 	sort.Strings(s.SealKeys)
 	return s
 }
+
+// Continue makes r the previous deed without checking it, so a verifier that lists every failure
+// (verify --all) checks the next deed against r instead of reporting the same break again. r may
+// be a deed that failed its own checks; its declared body_hash is what the next deed links to.
+// Continue never adds r to the summary.
+func (c *ChainChecker) Continue(r *Result) { c.prev = r }
+
+// Restart forgets the previous deed, so the next deed is accepted as a new starting point (after an
+// unreadable line, verify --all keeps checking links from the next readable deed). The caller has
+// already reported the break.
+func (c *ChainChecker) Restart(next *Result) {
+	c.prev = nil
+	c.opt.Anchor = &Head{Seq: next.Seq - 1, BodyHash: next.Envelope.Body.PrevHash}
+}

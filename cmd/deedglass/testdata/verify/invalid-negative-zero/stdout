@@ -1,0 +1,2 @@
+✕ The deed is not valid strict JSON (negative numbers and -0 are not allowed at body.cost.amount).
+  next       Export it again from the issuer; do not edit deeds by hand.

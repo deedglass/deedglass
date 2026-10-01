@@ -1,0 +1,41 @@
+{
+  "object": "verification_report",
+  "result": "cannot_determine",
+  "deeds": 1,
+  "intact": 0,
+  "org": null,
+  "first_seq": null,
+  "last_seq": null,
+  "from": null,
+  "to": null,
+  "chain": {
+    "status": "not_checked",
+    "anchor": {
+      "kind": "genesis",
+      "seq": 0,
+      "body_hash": null
+    }
+  },
+  "seal_keys": [],
+  "keys_pinned": false,
+  "kinds": {},
+  "verdicts_recorded": {},
+  "bundle": null,
+  "failures": [
+    {
+      "code": "keys_missing",
+      "seq": 1,
+      "deed": "deed_01m3xxn3y1fb64s94xhgnkpem3",
+      "input": "../../testdata/deeds/chains/genesis-20.jsonl",
+      "line": 1,
+      "field": null,
+      "expected": null,
+      "computed": null,
+      "message": "Cannot check deed 1: no seal keys were given.",
+      "next": "Add --keys <file or https URL>. Issuers publish them at /.well-known/deedglass/keys.json"
+    }
+  ],
+  "warnings": [],
+  "duration_ms": 0,
+  "verifier": "deedglass 0.1.0-dev (5495f7e)"
+}

@@ -1,0 +1,6 @@
+verify
+$TMP/two-breaks.jsonl
+--keys
+../../testdata/deeds/keys/test-keys.json
+--all
+--json

@@ -400,16 +400,22 @@ exactly these):
 | `seal_key_revoked` | Deed {seq} was sealed by revoked key {key}. | Ask the issuer which deeds they re-sealed after the revocation. |
 | `seal_invalid` | Deed {seq}'s seal does not match its contents. | Treat this deed as altered. |
 | `non_canonical` | Deed {seq} is not in canonical form (--strict). | Re-export it; canonical bytes come straight from the Ledger. |
+| `keys_missing` | Cannot check deed {seq}: no seal keys were given. | Add --keys <file or https URL>. Issuers publish them at /.well-known/deedglass/keys.json |
+| `bundle_invalid` | {detail} Nothing was extracted. | Do not use this file. Ask the issuer for a new export. |
+| `bundle_seal_invalid` | The bundle manifest's seal does not match the manifest. | Treat this bundle as altered. Ask the issuer for a new export. |
 | `chain_genesis_mismatch` | Deed 1 does not start this org's chain. | Check the org id; the export may belong to another org. |
-| `chain_seq_gap` | Deed {want} is missing. The chain jumps from {prev} to {seq}. | A deed was removed or the export is incomplete. Ask for seq {prev}–{seq}. |
+| `chain_seq_gap` | Deed {want} is missing. The chain jumps from {prev} to {seq}. (Without an anchor, a first deed after seq 1: "The deeds start at deed {seq}, not deed 1.") | A deed was removed or the export is incomplete. Ask the issuer for seq {prev}–{seq}. |
 | `chain_seq_out_of_order` | Deed {seq} appears out of order (after {prev}). | Sort by seq, or export again. |
 | `chain_prev_hash_mismatch` | Deed {seq} does not link to deed {prev}. | A deed before it was changed or replaced. Get a fresh export. |
 | `chain_org_mismatch` | Deed {seq} belongs to {org}, not {want_org}. | Verify each org's deeds separately. |
 | `chain_time_regression` | Deed {seq} was sealed before deed {prev}. | Treat the chain as altered from deed {seq}. |
 
-When `seq` is unknown (an unreadable deed), "Deed {seq}" reads "The deed". `deedglass verify`
-exits 0 when everything verifies, 1 on any failure, and 2 when it cannot decide
-(`seal_key_unknown`, `unsupported_version`).
+When `seq` is unknown (an unreadable deed), "Deed {seq}" reads "The deed". `keys_missing`,
+`bundle_invalid` and `bundle_seal_invalid` were added in S05; the templates are written once in
+`internal/deed/messages.go` and generated into `testdata/deeds/messages.json` and the browser
+verifier. `deedglass verify` exits 0 when everything verifies, 1 on any failure (including a deed
+whose key is not in the key set it was given, `seal_key_unknown`), and 2 when it cannot decide
+(`keys_missing`: no key set at all; `unsupported_version`).
 
 ## 12. COSE_Sign1 encoding
 

@@ -1,0 +1,6 @@
+✕ Deed 12 was changed after it was sealed.
+  deed       deed_01m3xxn3ycysc7de9hg4zyw9kw (line 12)
+  sealed     body_hash sha256:1a2a…4340
+  computed   sha256:6e3b…d317
+  before it  11 deeds intact · stopped at the first break
+  next       Get a fresh export from the issuer and compare deed 12. Add --all to list every break.

@@ -1,0 +1,4 @@
+verify
+../../testdata/deeds/invalid/revoked-key/deed.json
+--keys
+../../testdata/deeds/keys/test-keys.json

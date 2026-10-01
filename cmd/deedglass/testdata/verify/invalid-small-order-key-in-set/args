@@ -1,0 +1,4 @@
+verify
+../../testdata/deeds/invalid/small-order-key-in-set/deed.json
+--keys
+../../testdata/deeds/invalid/small-order-key-in-set/keys.json

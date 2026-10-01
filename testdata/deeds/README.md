@@ -23,7 +23,7 @@ in prod. A deed sealed by one of them means nothing outside these tests.
 `expected.json` fields: `valid`; `code` (a DEED_SPEC.md §11 code, the first failure); `seq` (the
 deed it names, or null when the deed is unreadable); `field` (for `schema_invalid`); `strict_code`
 (what `--strict` adds); `exit` (the `deedglass verify` exit code: 0 valid, 1 invalid, 2 cannot
-determine, such as an unknown key or a newer format).
+determine, such as a newer format; a deed whose key is not in the given key set exits 1).
 
 A verifier in another language passes when it returns the same `code`, `seq` and `field` for
 every vector.

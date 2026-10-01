@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "web-verify",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["web/verify/scripts/serve.mjs"],
+      "port": 5178,
+      "url": "http://127.0.0.1:5178"
+    }
+  ]
+}

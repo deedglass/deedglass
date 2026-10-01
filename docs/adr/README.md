@@ -35,3 +35,4 @@ ADR-000 to ADR-008 were written for the V0 verifier and keep their original text
 | 024 | Container and CI supply chain: distroless, digest-pinned images, SHA-pinned actions, govulncheck | Accepted (2026-10-01) | Distroless non-root image with a read-only root; every image pinned by digest and every CI action by commit SHA, checked in CI; nothing published from CI; S03 |
 | 025 | Deed format v1: native JCS + Ed25519 envelope, hash-chained per org | Accepted (2026-10-01) | Unsigned envelope `id`; `prev_hash` = previous `body_hash`; deployment-wide seal keys; COSE optional |
 | 026 | Pin go-cose v1.3.0 for the optional COSE deed encoding | Accepted (2026-10-01) | MPL-2.0 (go-cose) and MIT (fxamacker/cbor v2.9.4); alg −8 until a tagged release has −19 |
+| 027 | TypeScript and Vitest as dev-only tools for the browser verifier | Accepted (2026-10-01) | TypeScript 7.0.2, Vitest 5.0.3 (Apache-2.0, MIT); no runtime dependencies; exact pins and a committed lock file |

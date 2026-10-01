@@ -1,0 +1,6 @@
+verify
+../../testdata/deeds/chains/genesis-20.jsonl
+--keys
+../../testdata/deeds/keys/test-keys.json
+--org
+org_01m3xxf0m4zb10tf1ggne90aej

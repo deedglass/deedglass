@@ -1,0 +1,4 @@
+verify
+../../testdata/deeds/valid/04-amendment-mismatch.json
+--keys
+../../testdata/deeds/keys/test-keys.json

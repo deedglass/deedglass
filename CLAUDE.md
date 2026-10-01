@@ -20,7 +20,7 @@ This is the Deedglass product repo: Go module `github.com/deedglass/deedglass`, 
 
 ```sh
 make help           # every target
-make ci             # fmt-check, tidy-check, vet, test (-race), testdata-check, rename-guard, banned-words, nocgo
+make ci             # fmt-check, tidy-check, vet, test (-race), testdata-check, rename-guard, banned-words, nocgo, web-verify-test
 make build          # bin/deedglass with version ldflags; bin/deedglass help
 make test           # go test -race -count=1 ./...     (make test-short: no -race, short mode)
 make integration    # throwaway PG (DEEDGLASS_IT_PG=18|17|16, DEEDGLASS_IT_MODE=brew|docker): sql/ smoke,
@@ -28,7 +28,11 @@ make integration    # throwaway PG (DEEDGLASS_IT_PG=18|17|16, DEEDGLASS_IT_MODE=
 make bench-store    # S02 store budget; raw output in bench/results/
 make bench-deed     # S04 seal/verify budget and the Postgres Sealer p50/p99; raw output in bench/results/
 make matrix         # integration on 16, 17 and 18
-make fuzz           # 30 s each: intent and id parsers, deed envelope, verifier and key-set parsers
+make fuzz           # 30 s each: intent and id parsers, deed envelope, verifier, key-set parsers, verify stream, bundle reader
+make bench-verify   # S05 budget: verify 100,000 deeds (.jsonl and bundle) and one deed cold; raw JSON in bench/results/
+make gencopy        # regenerate testdata/deeds/messages.json and web/verify/src/*.gen.ts from Go
+make web-verify-test  # (in ci) the browser verifier: npm ci once, tsc --noEmit, vitest (vectors, parity 500/500)
+make web-verify-serve # build and serve the verify page on http://127.0.0.1:5178
 make rename-guard   # retired identifiers (rule 5)
 make banned-words   # the banned list over files and every commit message
 make bench | make cover
@@ -38,12 +42,13 @@ make docker         # the deedglass:dev image (distroless, 65532); make bench-ht
 scripts/ci-local.sh # the CI jobs locally (docker-smoke and govulncheck skip when Docker or network is missing)
 ```
 
-- Go 1.27.1 at `/opt/homebrew/bin/go`. PostgreSQL 16, 17 and 18 are installed at
+- Go 1.27.1 at `/opt/homebrew/bin/go`. Node 24 (`/opt/homebrew/bin/node`) for `web/verify` only; its dev
+  tools are exact pins in `web/verify/package-lock.json` (ADR-027), installed with `npm ci --ignore-scripts`. PostgreSQL 16, 17 and 18 are installed at
   `/opt/homebrew/opt/postgresql@{16,17,18}/bin` (keg-only; never `brew services`). Docker images
   `postgres:16.15`, `17.11` and `18.6` work too (`DEEDGLASS_IT_MODE=docker`).
 - Integration scripts refuse to run unless `DEEDGLASS_IT_THROWAWAY=1` (set by `make integration`).
 - CI: `.github/workflows/ci.yml` (push to main and PRs: lint, unit, rename guard, banned words,
-  no-cgo build, PG 18.6 integration); `pg-matrix.yml` (16.15/17.11/18.6) runs on demand and nightly.
+  no-cgo build, PG 18.6 integration, the `web-verify` Vitest job on Node 24); `pg-matrix.yml` (16.15/17.11/18.6) runs on demand and nightly.
 
 ## Rules
 
@@ -65,7 +70,8 @@ scripts/ci-local.sh # the CI jobs locally (docker-smoke and govulncheck skip whe
 6. Pinned dependencies only, each with an ADR (name, version, licence, why, alternatives):
    `github.com/gowebpki/jcs` v1.0.2 (ADR-005); `go.yaml.in/yaml/v3` v3.0.5 (ADR-015);
    `github.com/jackc/pgx/v5` v5.11.0 (ADR-001, in go.mod since S02); `github.com/veraison/go-cose`
-   v1.3.0 with `fxamacker/cbor/v2` v2.5.0 (ADR-026, in go.mod since S04). Planned, and added only by
+   v1.3.0 with `fxamacker/cbor/v2` v2.9.4 (ADR-026, in go.mod since S04). npm, dev only (`web/verify`,
+   ADR-027, accepted): `typescript` 7.0.2, `vitest` 5.0.3, `vite` 8.3.1, `@types/node` 24.19.0; no runtime dependency. Planned, and added only by
    the session that uses them: `cel.dev/cel-go` v0.32.0 (S10, ADR-017), the MCP Go SDK v1.8.0 (S14,
    ADR-018), `pglogrepl` at the spike-verified pin (S20). No cgo in the main binary.
    `go.sum` is committed and CI runs `go mod verify`.
@@ -171,7 +177,22 @@ and "open source" until the repo is public. Style bans: "revolutionary", "world-
   `FuzzParseKeySet`. `testdata/deeds/` is generated (`go test ./internal/deed -run TestGoldenVectors
   -update`) and pinned in `SHA256SUMS`; never edit a vector by hand. `deed` must not import
   `internal/ids` (it pulls in `database/sql/driver`); `IDPattern` is tested equal to `ids.Pattern`.
-- `attack/`: A13, F01 and F02 are implemented at the library level (S05 adds the CLI-level F01–F04).
+- `attack/`: A13, F01 and F02 at the library level (S04); F01–F04 at CLI level on the real binary (S05).
+- `internal/deed` (S05): `VerifyStream` (valid, first failure, `--all` in seq order, bounded at 100,
+  cancellation with no goroutine leak, blank and 64 KiB lines, anchors, per-org directories),
+  `FuzzVerifyStream`; the message templates (every placeholder known, every code covered);
+  `testdata/deeds/messages.json` and `parity/corpus-500.*` are generated with the vectors.
+  `docs/VERIFYING_DEEDS.md`'s code table and `docs/BUNDLE_FORMAT.md`'s worked example are generated
+  (`-run 'TestVerifyingDocs|TestBundleFormatDoc' -update`).
+- `internal/deed/archive` (S05): round trip, byte-identical writes (golden SHA-256), every reader rule,
+  gzip bomb, seals, `FuzzArchiveOpen`; the reader never writes to disk.
+- `internal/deed/cmd/gencopy`: the generated TypeScript and JSON are never stale.
+- `cmd/deedglass verify` (S05): 80 golden cases in `testdata/verify/<case>/{args,stdout,stderr,exit}`
+  (`go test ./cmd/deedglass -run TestVerifyGolden -update`), every vector's code and exit, `--keys`
+  URL rules (same-host redirects, 1 MiB, timeout, loopback-only http), key-set merge conflicts, no
+  network without a `--keys` URL, terminal sanitizing.
+- `web/verify` (S05): vectors, parity 500/500, strict, JCS, keys (A13, RFC 8032, Wycheproof), page
+  safety (CSP, no HTML from strings, no storage, one fetch).
 - `attack/`: all 66 case ids present, outcome enum, demo set, digest pin.
 - `scripts/integration_smoke.sql`: live prosrc hash, roles, grants, RLS, replica identity, one real
   transfer, refusals with exact SQLSTATEs, decode checks through pgoutput and test_decoding.

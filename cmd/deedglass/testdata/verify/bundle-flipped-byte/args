@@ -1,0 +1,4 @@
+verify
+$TMP/flipped.tar.gz
+--keys
+../../testdata/deeds/keys/test-keys.json

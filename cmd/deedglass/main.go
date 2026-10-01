@@ -42,6 +42,7 @@ type Globals struct {
 
 // Env is everything a command touches, injected so tests run without process state.
 type Env struct {
+	Stdin          io.Reader // nil means os.Stdin
 	Stdout, Stderr io.Writer
 	Getenv         func(string) string
 	IsTTY          bool
@@ -60,6 +61,14 @@ type ExitError struct {
 	Plain   bool     // print without the ✕ symbol (calm, not an error)
 	Extra   map[string]any
 	printed bool
+}
+
+// stdin returns the input stream (deedglass verify -).
+func (e *Env) stdin() io.Reader {
+	if e.Stdin == nil {
+		return os.Stdin
+	}
+	return e.Stdin
 }
 
 func (e *ExitError) Error() string { return e.Err.Error() }
@@ -160,6 +169,9 @@ func dispatch(ctx context.Context, e *Env, args []string) error {
 	}
 	if !cmd.Built() {
 		return notBuilt(cmd)
+	}
+	if cmd.RawArgs {
+		return cmd.Run(ctx, e, cmdArgs)
 	}
 	fs := flag.NewFlagSet("deedglass "+strings.Join(cmd.Path, " "), flag.ContinueOnError)
 	fs.SetOutput(io.Discard)

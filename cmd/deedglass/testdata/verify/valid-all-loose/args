@@ -1,0 +1,9 @@
+verify
+../../testdata/deeds/valid/01-action-verified-l2.json
+../../testdata/deeds/valid/02-action-denied.json
+../../testdata/deeds/valid/03-admin-agent-stopped.json
+../../testdata/deeds/valid/04-amendment-mismatch.json
+../../testdata/deeds/valid/05-action-approved-then-executed.json
+../../testdata/deeds/valid/06-unicode-agent-name.json
+--keys
+../../testdata/deeds/keys/test-keys.json

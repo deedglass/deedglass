@@ -143,6 +143,8 @@ func vectorFiles(t testing.TB) map[string][]byte {
 		files[dir+"expected.json"] = pretty(t, iv.exp)
 	}
 	files["worked-example.txt"] = workedExample(t, valid.Deeds[0], valid.Lines[0])
+	files["messages.json"] = deed.MessageCatalogJSON()
+	files["parity/corpus-500.jsonl"], files["parity/corpus-500.expected.json"] = parityFiles(t)
 	files["README.md"] = []byte(vectorsReadme)
 	return files
 }
@@ -164,9 +166,11 @@ func expect(code deed.Code, seq int64, field string) Expected {
 	if field != "" {
 		e.Field = &field
 	}
-	if code == deed.CodeSealKeyUnknown || code == deed.CodeUnsupportedVersion {
+	if code == deed.CodeUnsupportedVersion {
 		e.Exit = 2 // cannot determine (contract §10 exit codes)
 	}
+	// seal_key_unknown is 1 since S05 (§3.3): a deed naming a key outside the key set the verifier
+	// was given fails; only "no key set at all" (keys_missing) cannot be determined.
 	return e
 }
 
@@ -479,7 +483,7 @@ in prod. A deed sealed by one of them means nothing outside these tests.
 ` + "`expected.json`" + ` fields: ` + "`valid`" + `; ` + "`code`" + ` (a DEED_SPEC.md §11 code, the first failure); ` + "`seq`" + ` (the
 deed it names, or null when the deed is unreadable); ` + "`field`" + ` (for ` + "`schema_invalid`" + `); ` + "`strict_code`" + `
 (what ` + "`--strict`" + ` adds); ` + "`exit`" + ` (the ` + "`deedglass verify`" + ` exit code: 0 valid, 1 invalid, 2 cannot
-determine, such as an unknown key or a newer format).
+determine, such as a newer format; a deed whose key is not in the given key set exits 1).
 
 A verifier in another language passes when it returns the same ` + "`code`" + `, ` + "`seq`" + ` and ` + "`field`" + ` for
 every vector.

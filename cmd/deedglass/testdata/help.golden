@@ -29,7 +29,7 @@ Actions
   undo                Preview or run an undo                      soon   preview · run
   webhooks            Send events to your endpoints               soon   create · list · test · delete
 Deeds
-  verify              Check deeds offline                         soon
+  verify              Check deeds offline
   deeds               Browse and export deeds                     soon   list · show · export
   ledger              Check or prune the Ledger                   soon   check · prune
 Connectors

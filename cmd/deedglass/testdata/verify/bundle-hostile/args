@@ -1,0 +1,4 @@
+verify
+$TMP/hostile.tar.gz
+--keys
+../../testdata/deeds/keys/test-keys.json

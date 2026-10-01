@@ -1,0 +1,4 @@
+verify
+$TMP/nope.jsonl
+--keys
+../../testdata/deeds/keys/test-keys.json

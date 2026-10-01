@@ -1,0 +1,4 @@
+verify
+../../testdata/deeds/chains/genesis-20.jsonl
+--pin
+abc

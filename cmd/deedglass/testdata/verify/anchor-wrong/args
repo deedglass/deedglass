@@ -1,0 +1,6 @@
+verify
+$TMP/tail.jsonl
+--keys
+../../testdata/deeds/keys/test-keys.json
+--anchor
+10:sha256:936f436c12d714c554d0478e6130ef04918e4cb3c2aaa891335d9e60bd7d9fc5

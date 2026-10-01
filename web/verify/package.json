@@ -1,0 +1,23 @@
+{
+  "name": "@deedglass/verify",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Check a deed in the browser, with the same answer as deedglass verify.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc -p . --noEmit",
+    "build": "tsc -p tsconfig.build.json",
+    "serve": "node scripts/serve.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "24.19.0",
+    "typescript": "7.0.2",
+    "vite": "8.3.1",
+    "vitest": "5.0.3"
+  }
+}

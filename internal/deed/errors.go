@@ -24,6 +24,11 @@ const (
 	CodeSealInvalid        Code = "seal_invalid"  // the Ed25519 signature does not verify
 	CodeNonCanonical       Code = "non_canonical" // Strict: the bytes are not JCS(envelope)
 
+	// Added by S05 (deedglass verify and export bundles).
+	CodeKeysMissing       Code = "keys_missing"        // no key set was given, so no seal can be checked
+	CodeBundleInvalid     Code = "bundle_invalid"      // an export bundle breaks a reader rule (BUNDLE_FORMAT.md)
+	CodeBundleSealInvalid Code = "bundle_seal_invalid" // manifest.seal.json does not verify
+
 	CodeChainGenesisMismatch  Code = "chain_genesis_mismatch"
 	CodeChainSeqGap           Code = "chain_seq_gap"
 	CodeChainSeqOutOfOrder    Code = "chain_seq_out_of_order"
@@ -36,7 +41,7 @@ const (
 var Codes = []Code{
 	CodeMalformed, CodeUnsupportedVersion, CodeSchemaInvalid, CodeIDMismatch, CodeBodyHashMismatch,
 	CodeSealKeyMismatch, CodeSealKeyUnknown, CodeSealKeyRejected, CodeSealKeyNotValidAt, CodeSealKeyRevoked,
-	CodeSealInvalid, CodeNonCanonical,
+	CodeSealInvalid, CodeNonCanonical, CodeKeysMissing, CodeBundleInvalid, CodeBundleSealInvalid,
 	CodeChainGenesisMismatch, CodeChainSeqGap, CodeChainSeqOutOfOrder, CodeChainPrevHashMismatch,
 	CodeChainOrgMismatch, CodeChainTimeRegression,
 }
@@ -101,6 +106,9 @@ var (
 	ErrSealKeyRevoked        = &VerifyError{Code: CodeSealKeyRevoked}
 	ErrSealInvalid           = &VerifyError{Code: CodeSealInvalid}
 	ErrNonCanonical          = &VerifyError{Code: CodeNonCanonical}
+	ErrKeysMissing           = &VerifyError{Code: CodeKeysMissing}
+	ErrBundleInvalid         = &VerifyError{Code: CodeBundleInvalid}
+	ErrBundleSealInvalid     = &VerifyError{Code: CodeBundleSealInvalid}
 	ErrChainGenesisMismatch  = &VerifyError{Code: CodeChainGenesisMismatch}
 	ErrChainSeqGap           = &VerifyError{Code: CodeChainSeqGap}
 	ErrChainSeqOutOfOrder    = &VerifyError{Code: CodeChainSeqOutOfOrder}

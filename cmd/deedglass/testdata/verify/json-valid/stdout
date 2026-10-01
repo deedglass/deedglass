@@ -1,0 +1,57 @@
+{
+  "object": "verification_report",
+  "result": "valid",
+  "deeds": 20,
+  "intact": 20,
+  "org": "org_01m3xxf0m2ekmm72j2vvks65q5",
+  "first_seq": 1,
+  "last_seq": 20,
+  "from": "2026-10-02T09:00:00.000Z",
+  "to": "2026-10-02T09:00:19.000Z",
+  "chain": {
+    "status": "intact",
+    "anchor": {
+      "kind": "genesis",
+      "seq": 0,
+      "body_hash": "sha256:936f436c12d714c554d0478e6130ef04918e4cb3c2aaa891335d9e60bd7d9fc5"
+    }
+  },
+  "seal_keys": [
+    {
+      "id": "sk_01m3xxf0m1crvjtd24mgqnmgah",
+      "thumbprint": "sha256:f6b1d24a4efdc39230905e0c217093f4d1d5e301ac52c9e763a773e864d93f33",
+      "deeds": 10,
+      "first_seq": 1,
+      "last_seq": 10,
+      "source": "../../testdata/deeds/keys/test-keys.json"
+    },
+    {
+      "id": "sk_01m3xxf0m2b2bf0pn7ssc7whbb",
+      "thumbprint": "sha256:3d3876ffac00eac374b0e6e5735718edfcc7637ace18ef40a3ccc492cf98bf60",
+      "deeds": 10,
+      "first_seq": 11,
+      "last_seq": 20,
+      "source": "../../testdata/deeds/keys/test-keys.json"
+    }
+  ],
+  "keys_pinned": true,
+  "kinds": {
+    "action": 18,
+    "admin": 2
+  },
+  "verdicts_recorded": {
+    "VERIFIED": 14,
+    "none": 6
+  },
+  "bundle": null,
+  "failures": [],
+  "warnings": [
+    {
+      "code": "test_keys",
+      "message": "These deeds were sealed by Deedglass's published test keys. They mean nothing outside tests.",
+      "next": "Verify deeds from a real issuer against its published keys."
+    }
+  ],
+  "duration_ms": 0,
+  "verifier": "deedglass 0.1.0-dev (5495f7e)"
+}

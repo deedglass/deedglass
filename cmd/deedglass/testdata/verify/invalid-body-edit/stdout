@@ -1,0 +1,5 @@
+✕ Deed 1 was changed after it was sealed.
+  deed       deed_01m3xxj291vb6nxg25pympae2g (line 1)
+  sealed     body_hash sha256:63c2…e4d9
+  computed   sha256:ccd2…2d62
+  next       Get a fresh export from the issuer and compare deed 1.

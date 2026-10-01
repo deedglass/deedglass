@@ -1,0 +1,2 @@
+✕ --anchor must be <seq>:sha256:<64 hex> (got "x").
+  Use the seq and body_hash of the deed just before the first one you are checking.

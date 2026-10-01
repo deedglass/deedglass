@@ -1,0 +1,4 @@
+verify
+../../testdata/deeds/invalid/envelope-body-key-differ/deed.json
+--keys
+../../testdata/deeds/keys/test-keys.json

@@ -1,0 +1,4 @@
+verify
+../../testdata/deeds/invalid/seal-bit-flip/deed.json
+--keys
+../../testdata/deeds/keys/test-keys.json

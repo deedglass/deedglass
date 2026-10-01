@@ -1,0 +1,11 @@
+✓ 20 deeds · chain intact · 2 seal keys · 2026-10-02 → 2026-10-02
+  org        org_01m3xxf0m2ekmm72j2vvks65q5
+  seq        1 → 20 (from genesis)
+  kinds      18 action · 2 admin
+  recorded   14 VERIFIED · 6 no witness
+  seal keys  sk_01m3xxf0m1crvjtd24mgqnmgah (1 → 10) · sk_01m3xxf0m2b2bf0pn7ssc7whbb (11 → 20)
+  keys from  ../../testdata/deeds/keys/test-keys.json (pinned)
+  took       0.00 s
+✓ Bundle manifest matches · sealed by sk_01m3xxf0…
+○ These deeds were sealed by Deedglass's published test keys. They mean nothing outside tests.
+  next       Verify deeds from a real issuer against its published keys.

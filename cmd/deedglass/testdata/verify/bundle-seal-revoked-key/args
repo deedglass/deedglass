@@ -1,0 +1,4 @@
+verify
+$TMP/bad-seal.tar.gz
+--keys
+../../testdata/deeds/keys/test-keys.json

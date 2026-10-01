@@ -1,0 +1,4 @@
+verify
+$TMP/ansi-name.json
+--keys
+../../testdata/deeds/keys/test-keys.json
