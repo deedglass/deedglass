@@ -1,0 +1,1 @@
+UPDATE orders SET total = (SELECT max(total) FROM orders) WHERE id = 1

@@ -1,0 +1,1 @@
+UPDATE public.orders SET status = 'shipped' WHERE id = 42

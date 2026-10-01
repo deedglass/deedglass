@@ -72,7 +72,7 @@ const ordersTools = `"tools": [
   {"name": "update_status", "description": "Set an order's status.", "method": "PATCH", "path": "/v1/orders/{id}", "idempotency_header": "Idempotency-Key",
    "args": {"id": {"in": "path", "type": "string", "pattern": "^[0-9]{1,12}$", "required": true},
             "status": {"in": "body", "type": "string", "enum": ["pending", "shipped", "cancelled"], "required": true}},
-   "readback": {"tool": "get", "args": {"id": "{{args.id}}"}}, "postcondition": "observation.body.status == request.status"},
+   "readback": {"tool": "get", "args": {"id": "{{args.id}}"}, "expect": {"body.status": "{{args.status}}"}}, "postcondition": "observation.body.status == args.status"},
   {"name": "patch_plain", "method": "PATCH", "path": "/v1/orders/{id}", "args": {"id": {"in": "path", "type": "string"}}},
   {"name": "search", "method": "GET", "path": "/v1/orders", "args": {"q": {"in": "query", "type": "string"}, "src": {"in": "header", "header": "X-Source", "type": "string"},
    "card": {"in": "query", "type": "string", "sensitive": true}}}

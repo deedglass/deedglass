@@ -13,6 +13,7 @@ import (
 	"github.com/deedglass/deedglass/internal/ids"
 	"github.com/deedglass/deedglass/internal/ledger"
 	"github.com/deedglass/deedglass/internal/store"
+	"github.com/deedglass/deedglass/internal/witness"
 )
 
 // Worker runs inside deedglass serve (S13 §3.8): it claims witness jobs across orgs through
@@ -163,25 +164,45 @@ func backoff(attempts int) time.Duration {
 	return jitter(d)
 }
 
-// handle runs one witness job: the deferred witness, then the verdict and the seal in one org
-// transaction. A failure retries with backoff; at max_attempts the action is sealed UNVERIFIABLE
-// (witness_gave_up).
+// handle runs one witness job (S19: kind l1_readback, and S13's kind witness): the read-back with
+// no transaction open, then the verdict, the deed and the job's end in one org transaction (B2).
+// A job that can't run (the connector can't be resolved, the database fails) retries with backoff;
+// at max_attempts the Witness decides without L1, with witness_gave_up listed as an L1 gap.
 func (w *Worker) handle(ctx context.Context, j store.ClaimedJob) {
 	p := w.p
-	var sub Subject
+	var (
+		ga  *store.GateAction
+		job store.JobRow
+	)
 	err := p.o.DB.OrgReadTx(ctx, j.OrgID, func(ctx context.Context, tx pgx.Tx) error {
-		ga, err := store.GetGateAction(ctx, tx, j.OrgID, j.ActionID, false)
-		if err != nil {
+		var err error
+		if ga, err = store.GetGateAction(ctx, tx, j.OrgID, j.ActionID, false); err != nil {
 			return err
 		}
-		sub = subjectOf(ga)
-		return nil
+		job, err = store.PeekJob(ctx, tx, j.OrgID, j.ID)
+		return err
 	})
+	if errors.Is(err, store.ErrNotFound) {
+		p.m.job(j.Kind, "done") // another worker, or B2, finished it
+		return
+	}
 	if err != nil {
 		p.m.job(j.Kind, "error")
 		return
 	}
-	out, werr := p.o.Witness.Deferred(ctx, sub)
+	var (
+		out  witness.Outcome
+		werr error
+		wc   witnessCase
+	)
+	if State(ga.State) == Witnessing {
+		wc, werr = p.jobCase(ctx, ga, job.Payload)
+		if werr == nil {
+			rctx, cancel := witness.WithBudget(ctx, p.wcfg.ReadbackTimeout)
+			out, _, werr = p.observe(rctx, wc, true)
+			cancel()
+		}
+	}
 	err = p.o.Ledger.OrgTxRetry(ctx, j.OrgID, func(ctx context.Context, tx pgx.Tx) error {
 		job, err := store.GetJob(ctx, tx, j.OrgID, j.ID)
 		if errors.Is(err, store.ErrNotFound) {
@@ -190,15 +211,23 @@ func (w *Worker) handle(ctx context.Context, j store.ClaimedJob) {
 		if err != nil {
 			return err
 		}
+		cur, err := store.GetGateAction(ctx, tx, j.OrgID, j.ActionID, true)
+		if err != nil {
+			return err
+		}
+		if State(cur.State) != Witnessing {
+			return store.CompleteJob(ctx, tx, j.OrgID, j.ID) // already decided (B2 won the race)
+		}
 		if werr != nil && job.Attempts < job.MaxAttempts {
 			return store.RetryJob(ctx, tx, j.OrgID, j.ID, p.now().Add(backoff(job.Attempts)), redact(werr))
 		}
 		if werr != nil {
-			method := MethodReported
-			if sub.Mode == ModeProxy {
-				method = MethodEdgeReported
+			if wc.sub.ActionID == "" {
+				wc = p.storedCase(cur)
 			}
-			out = gaveUp(method)
+			if out, err = p.decide(wc, witness.GaveUp(witness.L1, job.Attempts, redact(werr))); err != nil {
+				return err
+			}
 		}
 		if err := p.recordVerdict(ctx, tx, j.ActionID, out, "system", ""); err != nil && !errors.Is(err, ledger.ErrStateConflict) {
 			return err

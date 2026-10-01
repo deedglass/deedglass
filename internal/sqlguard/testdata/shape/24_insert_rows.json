@@ -1,0 +1,34 @@
+{
+  "simple": true,
+  "kind": "insert",
+  "table": "public.orders",
+  "insert_cols": [
+    "id",
+    "status"
+  ],
+  "insert_rows": [
+    [
+      {
+        "kind": "integer",
+        "text": "1"
+      },
+      {
+        "kind": "string",
+        "text": "a"
+      }
+    ],
+    [
+      {
+        "kind": "integer",
+        "text": "2"
+      },
+      {
+        "kind": "string",
+        "text": "b"
+      }
+    ]
+  ],
+  "returning": [
+    "*"
+  ]
+}

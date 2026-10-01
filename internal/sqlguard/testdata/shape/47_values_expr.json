@@ -1,0 +1,6 @@
+{
+  "simple": false,
+  "why": "values_expr",
+  "kind": "insert",
+  "table": "public.orders"
+}

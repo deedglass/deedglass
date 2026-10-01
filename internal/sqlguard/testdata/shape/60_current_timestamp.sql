@@ -1,0 +1,1 @@
+UPDATE orders SET at = current_timestamp WHERE id = 1

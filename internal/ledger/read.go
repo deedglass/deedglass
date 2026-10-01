@@ -16,6 +16,7 @@ import (
 	gate "github.com/deedglass/deedglass/internal/gate/lifecycle"
 	"github.com/deedglass/deedglass/internal/httpx"
 	"github.com/deedglass/deedglass/internal/ids"
+	"github.com/deedglass/deedglass/internal/witness"
 )
 
 // List is every list result: {"object":"list","data":[…],"has_more":…,"next_cursor":…}.
@@ -75,14 +76,80 @@ type ActionExecution struct {
 	Result       json.RawMessage `json:"result,omitzero"`
 }
 
-// ActionWitness is the Witness's verdict; null until a witness ran. Reasons are short codes
-// (outcome_unknown, timeout, edge_lost, …); they are set on the Gate's own responses and on GET
-// /v1/actions/{id}, and left out of lists.
+// ActionWitness is the witness object (S19 §3.9); null until a witness ran. Lists carry the
+// claim (level, verdict, method, required_level, detail_digest); the Gate's own responses and GET
+// /v1/actions/{id} add the summary, the reasons that kept it from VERIFIED or contradicted it
+// (violations and gaps), and witnessed_at. ?expand[]=witness.detail adds the full witness_detail
+// v1, with passes and notes.
 type ActionWitness struct {
-	Level   string    `json:"level"`
-	Verdict string    `json:"verdict"`
-	Method  *string   `json:"method"`
-	Reasons *[]string `json:"reasons,omitzero"`
+	Object        string            `json:"object"` // "witness"
+	Level         string            `json:"level"`
+	Verdict       string            `json:"verdict"`
+	Method        *string           `json:"method"`
+	RequiredLevel *string           `json:"required_level"`
+	Summary       *string           `json:"summary,omitzero"`
+	Reasons       *[]witness.Reason `json:"reasons,omitzero"`
+	WitnessedAt   *string           `json:"witnessed_at,omitzero"`
+	DetailDigest  *string           `json:"detail_digest"`
+	Detail        json.RawMessage   `json:"detail,omitzero"`
+}
+
+// fill adds what the stored witness_detail says: the summary, the violations and gaps, and when.
+// keepDetail keeps the whole detail (?expand[]=witness.detail).
+func (w *ActionWitness) fill(detail []byte, keepDetail bool) {
+	rs := []witness.Reason{}
+	d, ok := witness.ParseDetail(detail)
+	if ok {
+		for _, r := range d.Reasons {
+			if r.Class == witness.Violation || r.Class == witness.Gap {
+				rs = append(rs, r)
+			}
+		}
+		sum := d.Summary
+		if sum == "" && len(d.Reasons) > 0 {
+			sum = d.Reasons[0].Message
+		}
+		if sum != "" {
+			w.Summary = &sum
+		}
+		if d.WitnessedAt != "" {
+			at := d.WitnessedAt
+			w.WitnessedAt = &at
+		}
+	}
+	w.Reasons = &rs
+	if keepDetail && detail != nil {
+		w.Detail = json.RawMessage(detail)
+	}
+}
+
+// Codes lists the witness reasons' codes, in order (nil when the reasons weren't read).
+func (w *ActionWitness) Codes() []string {
+	if w == nil || w.Reasons == nil {
+		return nil
+	}
+	out := make([]string, 0, len(*w.Reasons))
+	for _, r := range *w.Reasons {
+		out = append(out, string(r.Code))
+	}
+	return out
+}
+
+// Cause is the S13 cause of an unknown outcome the witness recorded (timeout, edge_lost,
+// client_cancelled, outcome_unknown), or "".
+func (w *ActionWitness) Cause() string {
+	if w == nil || w.Reasons == nil {
+		return ""
+	}
+	for _, r := range *w.Reasons {
+		if c, ok := r.Evidence["cause"].(string); ok {
+			return c
+		}
+		if r.Code == witness.CodeWitnessGaveUp {
+			return string(r.Code)
+		}
+	}
+	return ""
 }
 
 // ActionDecision is the policy decision as an agent reads it (S13): S11's Decision, its source and
@@ -212,15 +279,6 @@ type Action struct {
 	NextAction      *NextAction      `json:"next_action"`
 }
 
-// DetailWitness is the witness section of one action, with the stored diff.
-type DetailWitness struct {
-	Level   string          `json:"level"`
-	Verdict string          `json:"verdict"`
-	Method  *string         `json:"method"`
-	Reasons []string        `json:"reasons"`
-	Detail  json.RawMessage `json:"detail"` // null after pruning
-}
-
 // ActionEvent is one action_events row.
 type ActionEvent struct {
 	Object string          `json:"object"` // "action_event"
@@ -259,7 +317,7 @@ type ActionDetail struct {
 	Policy          ActionPolicy       `json:"policy"`
 	Approval        *ActionApproval    `json:"approval"`
 	Execution       *ActionExecution   `json:"execution"`
-	Witness         *DetailWitness     `json:"witness"`
+	Witness         *ActionWitness     `json:"witness"`
 	Cost            *Money             `json:"cost"`
 	RequestDigest   string             `json:"request_digest"`
 	ResultDigest    *string            `json:"result_digest"`
@@ -280,7 +338,8 @@ const actionCols = `a.id, a.created_at, a.agent_id, g.name, a.tool, a.connector_
   a.livemode, a.decision_code, a.decision_source, a.decision_reason, a.decision_message, a.policy_mode,
   a.shadow_decision, a.shadow_rule_id, a.shadow_version_id, a.approval_id, ap.status, ap.expires_at,
   a.executing_deadline, a.error_message,
-  a.denied_at IS NOT NULL, a.expired_at IS NOT NULL, a.cancelled_at IS NOT NULL, a.failed_at IS NOT NULL`
+  a.denied_at IS NOT NULL, a.expired_at IS NOT NULL, a.cancelled_at IS NOT NULL, a.failed_at IS NOT NULL,
+  a.witness_detail_digest, a.witness_required`
 
 const actionFrom = ` FROM deedglass.actions AS a
 JOIN deedglass.agents AS g ON g.org_id = a.org_id AND g.id = a.agent_id
@@ -304,12 +363,13 @@ func scanAction(row pgx.Row, extra ...any) (Action, time.Time, error) {
 		apExpires, deadline                    *time.Time
 		wasDenied, wasExpired, wasCancelled    bool
 		wasFailed                              bool
+		wDigest, wRequired                     *string
 	)
 	dest := []any{&a.ID, &created, &a.Agent.ID, &a.Agent.Name, &a.Tool, &a.Connector, &a.Mode, &a.State, &a.OnBehalfOf,
 		&a.Session, &polID, &pvID, &decision, &rID, &execStatus, &started, &finished, &latency, &errCode,
 		&wLevel, &wVerdict, &wMethod, &costAmount, &costCurrency, &a.RequestDigest, &a.ResultDigest, &pruned, &a.Deed,
 		&a.Livemode, &dCode, &dSource, &dReason, &dMsg, &polMode, &sDecision, &sRule, &sVersion, &apID, &apStatus, &apExpires,
-		&deadline, &errMsg, &wasDenied, &wasExpired, &wasCancelled, &wasFailed}
+		&deadline, &errMsg, &wasDenied, &wasExpired, &wasCancelled, &wasFailed, &wDigest, &wRequired}
 	if err := row.Scan(append(dest, extra...)...); err != nil {
 		return a, created, err
 	}
@@ -340,7 +400,8 @@ func scanAction(row pgx.Row, extra ...any) (Action, time.Time, error) {
 			ErrorCode: errCode, ErrorMessage: errMsg}
 	}
 	if wLevel != nil && wVerdict != nil {
-		a.Witness = &ActionWitness{Level: *wLevel, Verdict: *wVerdict, Method: wMethod}
+		a.Witness = &ActionWitness{Object: "witness", Level: *wLevel, Verdict: *wVerdict, Method: wMethod, RequiredLevel: wRequired,
+			DetailDigest: wDigest}
 	}
 	if costAmount != nil && costCurrency != nil {
 		a.Cost = &Money{Amount: *costAmount, Currency: *costCurrency}
@@ -580,8 +641,7 @@ func ReadAction(ctx context.Context, tx pgx.Tx, org ids.OrgID, id string) (*Acti
 		a.Execution.Result = res
 	}
 	if a.Witness != nil {
-		r := WitnessReasons(detail)
-		a.Witness.Reasons = &r
+		a.Witness.fill(detail, false)
 	}
 	return &a, nil
 }
@@ -604,21 +664,23 @@ func detailOf(a Action, req, res, detail []byte) *ActionDetail {
 		Cost: a.Cost, RequestDigest: a.RequestDigest, ResultDigest: a.ResultDigest, PayloadPrunedAt: a.PayloadPrunedAt,
 		Deed: a.Deed, NextAction: a.NextAction, Request: rawOrNull(req), Result: rawOrNull(res)}
 	if w := a.Witness; w != nil {
-		d.Witness = &DetailWitness{Level: w.Level, Verdict: w.Verdict, Method: w.Method, Reasons: WitnessReasons(detail), Detail: rawOrNull(detail)}
+		c := *w
+		c.fill(detail, true)
+		d.Witness = &c
 	}
 	return d
 }
 
-// WitnessReasons reads the reason codes the Gate stores in witness_detail ({"reasons": […]}). It
-// returns an empty list (never nil) when there are none, or when the detail is another shape.
+// WitnessReasons reads the reason codes in a stored witness_detail (v1, or S13's {"reasons": […]}),
+// in order. It returns an empty list (never nil) when there are none, or the detail can't be read.
 func WitnessReasons(detail []byte) []string {
-	var w struct {
-		Reasons []string `json:"reasons"`
+	out := []string{}
+	if d, ok := witness.ParseDetail(detail); ok {
+		for _, r := range d.Reasons {
+			out = append(out, string(r.Code))
+		}
 	}
-	if len(detail) > 0 && json.Unmarshal(detail, &w) == nil && w.Reasons != nil {
-		return w.Reasons
-	}
-	return []string{}
+	return out
 }
 
 func rawOrNull(b []byte) json.RawMessage {

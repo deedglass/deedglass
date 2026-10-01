@@ -31,5 +31,12 @@ config:
       args:
         id:     { in: path, type: string, pattern: "^[0-9]{1,12}$", required: true }
         status: { in: body, type: string, enum: [pending, shipped, cancelled], required: true }
-      readback: { tool: get, args: { id: "{{args.id}}" } }         # stored now; S19 uses it
-      postcondition: 'observation.body.status == request.status'
+      readback:                                     # S19: after a write, read the order back (L1)
+        tool: get                                   # a read tool of this connector (checked when saved)
+        args: { id: "{{args.id}}" }                 # whole-value templates only: {{args.<path>}} or {{result.body.<path>}}
+        expect: { "body.status": "{{args.status}}" }  # exact, per-field comparison
+        consistency: strong                         # strong (1 attempt) | eventual (attempts × interval_ms)
+        attempts: 1                                 # 1..5; eventual defaults to 3
+        interval_ms: 300                            # 100..2000
+        on_not_found: gap                           # gap | violation
+      postcondition: 'observation.status == 200 && observation.body.id == int(args.id)'   # optional CEL, for checks expect can't express

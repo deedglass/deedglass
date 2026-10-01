@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -33,49 +34,95 @@ import (
 	"github.com/deedglass/deedglass/internal/store/policystore"
 )
 
-// --- the worker and a deferring witness (S19's seam) ---
+// --- the worker and a read-back that outlasts the inline budget (S19) ---
 
-type deferringWitness struct {
-	fails atomic.Int32 // Deferred fails this many times first
-	calls atomic.Int32
+// readBackResolver wraps the world's resolver: fake.echo gets a read-back of itself, and its
+// executor reads back through readBackExec.
+type readBackResolver struct {
+	inner        Resolver
+	slow         atomic.Int32 // the next read-backs that wait out their budget
+	resolveFails atomic.Bool  // the worker can't resolve the tool
+	calls        atomic.Int32
+	body         string
+	expect       map[string]any
 }
 
-func (d *deferringWitness) Inline(context.Context, Subject, Execution) (WitnessOutcome, bool) {
-	return WitnessOutcome{}, true
-}
-
-func (d *deferringWitness) Deferred(context.Context, Subject) (WitnessOutcome, error) {
-	d.calls.Add(1)
-	if d.fails.Add(-1) >= 0 {
-		return WitnessOutcome{}, errors.New("the system of record is unreachable")
+func (r *readBackResolver) Resolve(ctx context.Context, org ids.OrgID, q string) (Executor, connector.ToolSpec, string, error) {
+	ex, spec, ctype, err := r.inner.Resolve(ctx, org, q)
+	if err != nil || q != "fake.echo" {
+		return ex, spec, ctype, err
 	}
-	return WitnessOutcome{Level: "L1", Verdict: VerdictVerified, Method: "readback.fake", Reasons: []string{}}, nil
+	if r.resolveFails.Load() {
+		return nil, spec, "", errors.New("the registry is unreachable")
+	}
+	spec.ReadBack = &connector.ReadBackSpec{Tool: "echo", Expect: r.expect}
+	return &readBackExec{Executor: ex, r: r}, spec, ctype, nil
 }
 
-func TestWorkerDeferredWitness(t *testing.T) {
-	w := newWorld(t, worldOpts{cfg: Config{WorkerMaxAttempts: 2}})
-	dw := &deferringWitness{}
-	w.p.o.Witness = dw
-	a := w.must(0, req("fake.echo", `{}`))
-	if a.State != "witnessing" || a.Status != "processing" {
-		t.Fatalf("%s", mustJSON(a))
+type readBackExec struct {
+	Executor
+	r *readBackResolver
+}
+
+func (e *readBackExec) CanReadBack() bool { return true }
+
+func (e *readBackExec) ReadBack(ctx context.Context, _ connector.Call, _ connector.Result) (connector.Observation, error) {
+	e.r.calls.Add(1)
+	if e.r.slow.Add(-1) >= 0 {
+		select {
+		case <-ctx.Done():
+			return connector.Observation{}, ctx.Err()
+		case <-time.After(10 * time.Second):
+		}
 	}
+	body := e.r.body
+	if body == "" {
+		body = `{"status":"shipped"}`
+	}
+	return connector.Observation{Body: json.RawMessage(body), Status: 200}, nil
+}
+
+func runWorker(t *testing.T, w *world) (stop func()) {
+	t.Helper()
 	wk := w.p.NewWorker("test")
 	wk.PollEvery, wk.SweepEvery, wk.Drain = 20*time.Millisecond, time.Hour, time.Second
 	w.keys.Listener().Listen(store.JobsChannel, wk.Wake, func() { wk.Wake("") })
 	ctx, cancel := context.WithCancel(bg)
 	done := make(chan struct{})
 	go func() { defer close(done); _ = wk.Run(ctx) }()
+	return func() { cancel(); <-done }
+}
+
+func TestWorkerDeferredWitness(t *testing.T) {
+	w := newWorld(t, worldOpts{cfg: Config{WorkerMaxAttempts: 2, Witness: WitnessConfig{InlineBudget: 100 * time.Millisecond}}})
+	rr := &readBackResolver{inner: w.p.o.Resolver, expect: map[string]any{"body.status": "shipped"}}
+	w.p.o.Resolver = rr
+	// The read-back waits out the inline budget: the action stays witnessing (processing).
+	rr.slow.Store(1)
+	a := w.must(0, req("fake.echo", `{}`))
+	if a.State != "witnessing" || a.Status != "processing" {
+		t.Fatalf("%s", mustJSON(a))
+	}
+	var jobs int
+	w.adminRow(`SELECT count(*) FROM deedglass.witness_jobs WHERE action_id = $1 AND kind = 'l1_readback'`, []any{a.ID}, &jobs)
+	if jobs != 1 {
+		t.Fatalf("%d l1_readback jobs", jobs)
+	}
+	stop := runWorker(t, w)
+	defer stop()
+	w.admin(`UPDATE deedglass.witness_jobs SET run_after = now() WHERE action_id = $1`, a.ID)
 	if err := w.p.Wait(bg, w.org, a.ID, "", 10*time.Second); err != nil {
 		t.Fatal(err)
 	}
 	v, _ := w.p.Get(bg, w.pr(0), a.ID, 0)
-	if v.State != "sealed" || v.Witness.Level != "L1" || v.Witness.Verdict != "VERIFIED" {
+	if v.State != "sealed" || v.Witness.Level != "L1" || v.Witness.Verdict != "VERIFIED" || *v.Witness.Method != "readback.fake.echo" {
 		t.Fatalf("%s", mustJSON(v))
 	}
-	// A witness that keeps failing: retried with backoff, then sealed UNVERIFIABLE (witness_gave_up).
-	dw.fails.Store(100)
+	// A job that can't run (the tool can't be resolved): retried with backoff, then decided
+	// without L1, with witness_gave_up listed as an L1 gap. Required L0 and a clean L0: L0 VERIFIED.
+	rr.slow.Store(1)
 	b := w.must(1, req("fake.echo", `{}`))
+	rr.resolveFails.Store(true)
 	deadline := time.Now().Add(15 * time.Second)
 	for {
 		// Pull the retry forward instead of waiting out the backoff.
@@ -86,16 +133,69 @@ func TestWorkerDeferredWitness(t *testing.T) {
 		}
 		time.Sleep(50 * time.Millisecond)
 	}
-	if v.State != "sealed" || v.Witness.Verdict != "UNVERIFIABLE" || (*v.Witness.Reasons)[0] != ReasonWitnessGaveUp {
+	if v.State != "sealed" || v.Witness.Verdict != "VERIFIED" || v.Witness.Level != "L0" || !slices.Contains(v.Witness.Codes(), ReasonWitnessGaveUp) {
 		t.Fatalf("%s", mustJSON(v))
 	}
-	cancel()
-	<-done
+	rr.resolveFails.Store(false)
 	var b2 strings.Builder
 	w.p.Metrics().Collect(&b2)
-	if !strings.Contains(b2.String(), `deedglass_worker_jobs_total{kind="witness",result="done"}`) ||
-		!strings.Contains(b2.String(), `deedglass_worker_jobs_total{kind="witness",result="retry"}`) {
+	if !strings.Contains(b2.String(), `deedglass_worker_jobs_total{kind="l1_readback",result="done"}`) ||
+		!strings.Contains(b2.String(), `deedglass_worker_jobs_total{kind="l1_readback",result="retry"}`) {
 		t.Fatalf("%s", b2.String())
+	}
+}
+
+// TestCrashBetweenB1AndB2: an instance that stops after B1 leaves a job; the worker reads back and
+// seals exactly once (S19 §3.7).
+func TestCrashBetweenB1AndB2(t *testing.T) {
+	w := newWorld(t, worldOpts{})
+	rr := &readBackResolver{inner: w.p.o.Resolver, expect: map[string]any{"body.status": "shipped"}}
+	w.p.o.Resolver = rr
+	w.p.hooks.afterB1 = func(ids.ActionID) bool { return true }
+	a := w.must(0, req("fake.echo", `{}`))
+	if a.State != "witnessing" || rr.calls.Load() != 0 {
+		t.Fatalf("%s", mustJSON(a))
+	}
+	w.p.hooks.afterB1 = nil
+	stop := runWorker(t, w)
+	defer stop()
+	w.admin(`UPDATE deedglass.witness_jobs SET run_after = now() WHERE action_id = $1`, a.ID)
+	if err := w.p.Wait(bg, w.org, a.ID, "", 10*time.Second); err != nil {
+		t.Fatal(err)
+	}
+	v, _ := w.p.Get(bg, w.pr(0), a.ID, 0)
+	var deeds, jobs int
+	w.adminRow(`SELECT count(*) FROM deedglass.deeds WHERE action_id = $1`, []any{a.ID}, &deeds)
+	w.adminRow(`SELECT count(*) FROM deedglass.witness_jobs WHERE action_id = $1`, []any{a.ID}, &jobs)
+	if v.State != "sealed" || v.Witness.Level != "L1" || deeds != 1 || jobs != 0 || rr.calls.Load() != 1 {
+		t.Fatalf("deeds %d jobs %d calls %d: %s", deeds, jobs, rr.calls.Load(), mustJSON(v))
+	}
+}
+
+// TestReadBackInline: the read-back finishes within the budget: one response, sealed, L1. The
+// lying target (MISMATCH) and invariant 3 (no transaction open during the read-back).
+func TestReadBackInline(t *testing.T) {
+	w := newWorld(t, worldOpts{})
+	rr := &readBackResolver{inner: w.p.o.Resolver, expect: map[string]any{"body.status": "shipped"}}
+	w.p.o.Resolver = rr
+	var acquired int32 = -1
+	w.p.hooks.beforeReadBack = func(string) { acquired = w.e.DB.PoolForTest().Stat().AcquiredConns() }
+	a := w.must(0, req("fake.echo", `{}`))
+	if a.State != "sealed" || a.Witness.Level != "L1" || a.Witness.Verdict != "VERIFIED" || acquired != 0 {
+		t.Fatalf("acquired %d: %s", acquired, mustJSON(a))
+	}
+	rr.body = `{"status":"pending"}`
+	b := w.must(0, req("fake.echo", `{}`))
+	if b.State != "sealed" || b.Witness.Level != "L1" || b.Witness.Verdict != "MISMATCH" || len(*b.Witness.Reasons) != 1 ||
+		(*b.Witness.Reasons)[0].Diff[0].Path != "body.status" {
+		t.Fatalf("%s", mustJSON(b))
+	}
+	// The detail digest is sha256(JCS(stored detail)), and the deed carries it.
+	var detail []byte
+	var digest string
+	w.adminRow(`SELECT witness_detail::text, witness_detail_digest FROM deedglass.actions WHERE id = $1`, []any{b.ID}, &detail, &digest)
+	if d, err := deed.DigestJSON(detail); err != nil || d != digest || b.Witness.DetailDigest == nil || *b.Witness.DetailDigest != digest {
+		t.Fatalf("digest %s vs %s (%v)", d, digest, err)
 	}
 }
 

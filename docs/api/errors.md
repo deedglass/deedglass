@@ -626,6 +626,20 @@ succeeded, failed or unknown."), the times, `error_code`, and `result_digest`, w
 RFC 8785 form), or leave it out."). `GET /v1/actions/{id}` takes only `wait` (0 to 25 seconds,
 sent once) and `expand[]`.
 
+**Connector read-backs** (S19). Creating or updating a connector checks each write tool's
+`readback` and `postcondition` ([CONNECTORS.md](../CONNECTORS.md#read-backs)). `param` is the
+field's path in the config; when several fields are wrong, the message names the first and says
+how many there are:
+
+| Param | Message |
+|---|---|
+| `config.tools[1].readback.tool` | `"update_status" writes, so it can't be a read-back. Name a read tool such as "get".` |
+| `config.tools[1].readback.tool` | `"list" isn't idempotent, so it can't be a read-back. Name a read tool that is.` |
+| `config.tools[1].readback.attempts` | `attempts above 1 need consistency: eventual.` |
+| `config.tools[1].postcondition` | `A postcondition needs a read-back to read from. Add readback: { tool: get, args: … } to this tool.` |
+| `config.tools[1].postcondition` | `1:28: request.status isn't a field. Did you mean args.status?` |
+| `config.tools[1].postcondition` | `This condition could cost up to 520,488,451 units per call; the limit is 100,000. Compare fewer fields, or use expect.` |
+
 **What to do.** Fix the field the message names, then retry.
 
 ```json
@@ -634,6 +648,15 @@ sent once) and `expand[]`.
   "code": "validation_failed",
   "message": "`limit` must be between 1 and 100.",
   "param": "limit"
+}
+```
+
+```json
+{
+  "type": "invalid_request_error",
+  "code": "validation_failed",
+  "message": "\"update_status\" writes, so it can't be a read-back. Name a read tool such as \"get\".",
+  "param": "config.tools[1].readback.tool"
 }
 ```
 

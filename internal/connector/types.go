@@ -34,11 +34,18 @@ func (s SideEffect) Rank() int {
 	return 0
 }
 
-// ReadBackSpec is how S19's L1 witness reads a write back: another tool of the same connector,
-// with arguments templated from the call ("{{args.id}}"). Stored and shape-checked in S16.
+// ReadBackSpec is how the L1 witness reads a write back (S19 §3.5): a read tool of the same
+// connector, with whole-value templated arguments ("{{args.id}}"), the fields to compare (expect),
+// and how patient to be with an eventually consistent target. witness.CompileToolSpec checks it
+// when the config is saved; witness.ReadBackSpec has the same JSON shape.
 type ReadBackSpec struct {
-	Tool string            `json:"tool"`
-	Args map[string]string `json:"args,omitempty"`
+	Tool        string            `json:"tool"`
+	Args        map[string]string `json:"args,omitempty"`
+	Expect      map[string]any    `json:"expect,omitempty"`      // path → template or literal JSON value (≤ 32)
+	Consistency string            `json:"consistency,omitempty"` // strong (default) | eventual
+	Attempts    int               `json:"attempts,omitempty"`    // 1..5; eventual defaults to 3
+	IntervalMS  int               `json:"interval_ms,omitempty"` // 100..2000
+	OnNotFound  string            `json:"on_not_found,omitempty"`
 }
 
 // ToolSpec describes one tool a connector serves. S16 extends S13's shape; it never replaces it.

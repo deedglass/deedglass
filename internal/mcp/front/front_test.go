@@ -245,6 +245,26 @@ func TestCallOutcomes(t *testing.T) {
 				t.Fatalf("%s", r.Env.Marshal())
 			}
 		}},
+		{"a VERIFIED verdict: _meta only (S19)", "echo", func(gate.ActionRequest) (*gate.Action, error) { return executed(id1, `{"ok":true}`), nil }, nil,
+			func(t *testing.T, r Response) {
+				m := result(t, r)
+				if !strings.Contains(string(m["_meta"]), `"com.deedglass/witness":{"level":"L0","verdict":"VERIFIED"}`) || textOf(t, r) != `{"ok":true}` {
+					t.Fatalf("%s", r.Env.Marshal())
+				}
+			}},
+		{"a MISMATCH: _meta and one line, isError false (S19)", "echo", func(gate.ActionRequest) (*gate.Action, error) {
+			a := executed(id1, `{"content":[{"type":"text","text":"Updated."}]}`)
+			sum := `orders.update_status reported success, but orders.get says status is "pending", not "shipped".`
+			a.Witness = &ledger.ActionWitness{Level: "L1", Verdict: "MISMATCH", Summary: &sum}
+			return a, nil
+		}, nil, func(t *testing.T, r Response) {
+			m := result(t, r)
+			want := `Updated.Deedglass witness · L1 · MISMATCH · orders.update_status reported success, but orders.get says status is "pending", not "shipped".`
+			if !strings.Contains(string(m["_meta"]), `"com.deedglass/witness":{"level":"L1","verdict":"MISMATCH"}`) || textOf(t, r) != want ||
+				string(m["isError"]) == "true" {
+				t.Fatalf("%s", r.Env.Marshal())
+			}
+		}},
 		{"a native connector's JSON", "echo", func(gate.ActionRequest) (*gate.Action, error) { return executed(id1, `{"echo":{"message":"hi"}}`), nil }, nil,
 			func(t *testing.T, r Response) {
 				m := result(t, r)

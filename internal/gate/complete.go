@@ -16,6 +16,7 @@ import (
 	"github.com/deedglass/deedglass/internal/ledger"
 	"github.com/deedglass/deedglass/internal/policy"
 	"github.com/deedglass/deedglass/internal/store"
+	"github.com/deedglass/deedglass/internal/witness"
 )
 
 // errSeal marks a failure of the seal step itself (a retired seal key, a draft the deed builder
@@ -52,15 +53,17 @@ func (p *Pipeline) sealView(ctx context.Context, tx pgx.Tx, id ids.ActionID, vie
 	return nil
 }
 
-// complete is Tx B (S13 §3.4): executing → executed | failed, witnessing → the verdict (L0, inline),
-// the cost, and the deed, in one transaction. If only the seal fails, the outcome is recorded
-// without it.
-func (p *Pipeline) complete(ctx context.Context, s Subject, e Execution, costTargets []policy.CostTarget, reservations []policy.Reservation,
+// complete is Tx B (S13 §3.4): executing → executed | failed, witnessing → the verdict, the cost,
+// and the deed, in one transaction. If only the seal fails, the outcome is recorded without it.
+// A write with a read-back (S19 §3.7) commits B1 (executed → witnessing, and an l1_readback job
+// due when the inline budget ends), reads back with no transaction open, and commits B2 (the
+// verdict and the deed); a read-back that outlasts the inline budget is left to the worker.
+func (p *Pipeline) complete(ctx context.Context, s Subject, e Execution, wc witnessCase, costTargets []policy.CostTarget, reservations []policy.Reservation,
 	actor, requestID string) (*ledger.Action, error) {
 	var view *ledger.Action
 	run := func(seal bool) error {
 		return p.o.Ledger.OrgTxRetry(ctx, s.Org, func(ctx context.Context, tx pgx.Tx) error {
-			v, err := p.recordExecution(ctx, tx, s, e, costTargets, reservations, actor, requestID, seal)
+			v, err := p.recordExecution(ctx, tx, s, e, wc, costTargets, reservations, actor, requestID, seal)
 			view = v
 			return err
 		})
@@ -71,14 +74,74 @@ func (p *Pipeline) complete(ctx context.Context, s Subject, e Execution, costTar
 			"agent_id", s.Agent.String(), "action_id", s.ID.String(), "err", err)
 		err = run(false)
 	}
-	return view, err
+	if err != nil || view == nil || !wc.readBack || view.State != string(Witnessing) {
+		return view, err
+	}
+	// B1 is committed: read back within the inline budget, with no transaction open.
+	if p.hooks.afterB1 != nil && p.hooks.afterB1(s.ID) {
+		return view, nil
+	}
+	rctx, cancel := witness.WithBudget(ctx, p.wcfg.InlineBudget)
+	out, deferred, err := p.observe(rctx, wc, false)
+	cancel()
+	if err != nil {
+		p.log.Error("gate: the witness couldn't finish inline; the worker retries", "org_id", s.Org.String(), "action_id", s.ID.String(), "err", err)
+		return view, nil
+	}
+	if deferred {
+		return view, nil // the worker finishes it when the job falls due
+	}
+	v, err := p.finishWitness(ctx, s.Org, s.ID, out, actor, requestID, JobL1ReadBack)
+	if err != nil {
+		if !errors.Is(err, ErrStateConflict) {
+			p.log.Error("gate: recording the verdict failed; the worker retries", "org_id", s.Org.String(), "action_id", s.ID.String(), "err", err)
+		}
+		return view, nil
+	}
+	return v, nil
+}
+
+// finishWitness is B2: witnessing → the verdict (a compare-and-set), the deed, and the job gone,
+// in one transaction. It returns the action as it stands.
+func (p *Pipeline) finishWitness(ctx context.Context, org ids.OrgID, id ids.ActionID, out witness.Outcome, actor, requestID, kind string) (*ledger.Action, error) {
+	var view *ledger.Action
+	run := func(seal bool) error {
+		return p.o.Ledger.OrgTxRetry(ctx, org, func(ctx context.Context, tx pgx.Tx) error {
+			if err := p.recordVerdict(ctx, tx, id, out, actor, requestID); err != nil {
+				return err
+			}
+			if err := store.DeleteActionJob(ctx, tx, org, id, kind); err != nil {
+				return err
+			}
+			v, err := ledger.ReadAction(ctx, tx, org, id.String())
+			if err != nil {
+				return err
+			}
+			view = v
+			if !seal {
+				return nil
+			}
+			return p.sealView(ctx, tx, id, v)
+		})
+	}
+	err := run(true)
+	if errors.Is(err, errSeal) {
+		p.log.Error("gate: the verdict is recorded, but its deed couldn't be sealed; the sweeper retries", "org_id", org.String(),
+			"action_id", id.String(), "err", err)
+		err = run(false)
+	}
+	if err != nil {
+		return nil, err
+	}
+	p.broker.Notify(id.String())
+	return view, nil
 }
 
 // recordExecution writes an execution onto an action in executing (its row is the CAS), then the
 // verdict and the usage, and seals when seal is true. It is the one place an execution becomes
-// columns, for the gateway, the edge report and crash recovery alike. It returns the action as it
-// stands at the end.
-func (p *Pipeline) recordExecution(ctx context.Context, tx pgx.Tx, s Subject, e Execution, costTargets []policy.CostTarget,
+// columns, for the gateway, the edge report and crash recovery alike. A planned read-back stops at
+// witnessing with an l1_readback job (B1). It returns the action as it stands at the end.
+func (p *Pipeline) recordExecution(ctx context.Context, tx pgx.Tx, s Subject, e Execution, wc witnessCase, costTargets []policy.CostTarget,
 	reservations []policy.Reservation, actor, requestID string, seal bool) (*ledger.Action, error) {
 	stored, digest, err := resultColumns(e.Result.Output, p.cfg.MaxResultBytes)
 	if err != nil {
@@ -124,65 +187,33 @@ func (p *Pipeline) recordExecution(ctx context.Context, tx pgx.Tx, s Subject, e 
 	}
 	plain := ledger.EventData{Actor: actor, RequestID: requestID}
 	steps := []ledger.Step{{To: Executed, Event: ev, Patch: &patch}, {To: Witnessing, Event: plain}}
-	w, deferred := p.o.Witness.Inline(ctx, s, e)
-	if !deferred {
-		to, wev, wpatch, err := verdictStep(w, plain)
-		if err != nil {
+	if wc.readBack && e.Status == ExecSucceeded {
+		// B1: the read-back runs after this commits, with no transaction open. The job is the
+		// durable promise: if this instance stops, the worker reads back when it falls due.
+		if err := p.o.Ledger.Advance(ctx, tx, id, Executing, steps...); err != nil {
 			return nil, err
 		}
-		steps = append(steps, ledger.Step{To: to, Event: wev, Patch: wpatch})
-	}
-	if err := p.o.Ledger.Advance(ctx, tx, id, Executing, steps...); err != nil {
-		return nil, err
-	}
-	if deferred {
-		if err := store.EnqueueJob(ctx, tx, s.Org, s.ID, "witness", p.now(), p.cfg.WorkerMaxAttempts); err != nil {
+		due := p.now().Add(p.wcfg.InlineBudget + readBackGrace)
+		if err := store.EnqueueJobPayload(ctx, tx, s.Org, s.ID, JobL1ReadBack, due, p.cfg.WorkerMaxAttempts, payloadOf(wc)); err != nil {
 			return nil, err
 		}
 		return ledger.ReadAction(ctx, tx, s.Org, id)
 	}
+	out, err := p.decide(wc)
+	if err != nil {
+		return nil, err
+	}
+	to, wev, wpatch := verdictStep(out, plain)
+	steps = append(steps, ledger.Step{To: to, Event: wev, Patch: wpatch})
+	if err := p.o.Ledger.Advance(ctx, tx, id, Executing, steps...); err != nil {
+		return nil, err
+	}
 	return finish()
 }
 
-// verdictStep is the edge witnessing → verified | mismatch | unverifiable with the witness columns.
-func verdictStep(w WitnessOutcome, ev ledger.EventData) (State, ledger.EventData, *ledger.Patch, error) {
-	reasons := w.Reasons
-	if reasons == nil {
-		reasons = []string{}
-	}
-	detail, err := json.Marshal(struct {
-		Reasons []string `json:"reasons"`
-	}{reasons})
-	if err != nil {
-		return "", ev, nil, err
-	}
-	dd, err := deed.DigestJSON(detail)
-	if err != nil {
-		return "", ev, nil, err
-	}
-	to := Unverifiable
-	switch w.Verdict {
-	case VerdictVerified:
-		to = Verified
-	case VerdictMismatch:
-		to = Mismatch
-	}
-	level, verdict, method := w.Level, w.Verdict, w.Method
-	ev.Level, ev.Verdict, ev.DetailDigest = &level, &verdict, &dd
-	if len(reasons) > 0 {
-		ev.Reason = &reasons[0]
-	}
-	return to, ev, &ledger.Patch{WitnessLevel: &level, WitnessVerdict: &verdict, WitnessMethod: &method, WitnessDetail: detail, WitnessDetailDigest: &dd}, nil
-}
-
-// recordVerdict moves witnessing → verified | mismatch | unverifiable with the witness columns.
-func (p *Pipeline) recordVerdict(ctx context.Context, tx pgx.Tx, id ids.ActionID, w WitnessOutcome, actor, requestID string) error {
-	to, ev, patch, err := verdictStep(w, ledger.EventData{Actor: actor, RequestID: requestID})
-	if err != nil {
-		return err
-	}
-	return p.o.Ledger.Transition(ctx, tx, id.String(), Witnessing, to, ev, *patch)
-}
+// readBackGrace is added to the inline budget before the worker may claim a read-back the request
+// path is still finishing.
+const readBackGrace = 2 * time.Second
 
 func reCurrency(c string) bool {
 	if len(c) != 3 {
@@ -286,7 +317,9 @@ func (p *Pipeline) ReportResult(ctx context.Context, pr principal, id string, r 
 				return httpx.ErrValidation("started_at", MsgResultTimes)
 			}
 			rs, ct := storedUsage(a)
-			view, err = p.recordExecution(ctx, tx, subjectOf(a), e, ct, rs, pr.AgentID.String(), httpx.RequestID(ctx), seal)
+			sub := subjectOf(a)
+			wc := p.newWitnessCase(sub, e, nil, connector.Call{Args: a.Request}, requiredOf(a), "", "")
+			view, err = p.recordExecution(ctx, tx, sub, e, wc, ct, rs, pr.AgentID.String(), httpx.RequestID(ctx), seal)
 			return err
 		})
 	}
@@ -509,11 +542,14 @@ func (p *Pipeline) step(ctx context.Context, org ids.OrgID, id ids.ActionID) (a 
 						done = true // authorized: the edge runs it now
 						break
 					}
-					ex, spec, _, err := p.o.Resolver.Resolve(ctx, org, ga.Tool)
+					ex, spec, ctype, err := p.o.Resolver.Resolve(ctx, org, ga.Tool)
 					if err != nil {
 						return err
 					}
+					sub.ConnectorType = ctype
+					_, schema, _ := enrich(ctx, ex, spec, ga.Request)
 					pl = &plan{subject: sub, exec: ex, actor: "system", costTargets: ct, reservations: rs,
+						required: requiredOf(ga), side: string(spec.SideEffect), defaultSchema: schema,
 						call: connector.Call{ActionID: id, OrgID: org, AgentID: ga.AgentID, Tool: spec, Qualified: ga.Tool, Args: ga.Request,
 							IdempotencyKey: sid, Deadline: now.Add(p.cfg.ExecuteTimeout), IntentHash: derefString(ga.IntentHash)}}
 				case "denied", "expired", "cancelled":
@@ -555,23 +591,21 @@ func (p *Pipeline) step(ctx context.Context, org ids.OrgID, id ids.ActionID) (a 
 				if e.FinishedAt.Before(e.StartedAt) {
 					e.FinishedAt = e.StartedAt
 				}
-				if _, err := p.recordExecution(ctx, tx, sub, e, ct, rs, "system", "", seal); err != nil {
+				wc := p.newWitnessCase(sub, e, nil, connector.Call{Args: ga.Request}, requiredOf(ga), "", "")
+				if _, err := p.recordExecution(ctx, tx, sub, e, wc, ct, rs, "system", "", seal); err != nil {
 					return err
 				}
 				done = true
 			case Executed:
+				// An action that reached executed without a witness (an older server): L0 decides.
 				if err := p.o.Ledger.Transition(ctx, tx, sid, Executed, Witnessing, ledger.EventData{}); err != nil {
 					return err
 				}
-				e := Execution{Status: ExecUnknown, Reason: ReasonOutcomeUnknown}
-				if ga.ExecutionStatus != nil {
-					e.Status = ExecStatus(*ga.ExecutionStatus)
+				out, err := p.decide(p.storedCase(ga))
+				if err != nil {
+					return err
 				}
-				w, deferred := p.o.Witness.Inline(ctx, sub, e)
-				if deferred {
-					return store.EnqueueJob(ctx, tx, org, id, "witness", now, p.cfg.WorkerMaxAttempts)
-				}
-				if err := p.recordVerdict(ctx, tx, id, w, "system", ""); err != nil {
+				if err := p.recordVerdict(ctx, tx, id, out, "system", ""); err != nil {
 					return err
 				}
 				if seal {
@@ -608,6 +642,15 @@ func (p *Pipeline) step(ctx context.Context, org ids.OrgID, id ids.ActionID) (a 
 		}
 		return a, done, moved, pl, err
 	}
+}
+
+// requiredOf is the level an action's policy required (S19), L0 for older rows.
+func requiredOf(a *store.GateAction) witness.Level {
+	l, ok := witness.ParseLevel(derefString(a.WitnessRequired))
+	if !ok {
+		return witness.L0
+	}
+	return l
 }
 
 // derefString is *s, or "".

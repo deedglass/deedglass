@@ -1,0 +1,1 @@
+UPDATE orders SET x = NULL WHERE id = 1

@@ -1,0 +1,1 @@
+UPDATE orders SET qty = CAST('5' AS integer) WHERE id = 1

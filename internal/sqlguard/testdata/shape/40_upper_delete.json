@@ -1,0 +1,27 @@
+{
+  "simple": true,
+  "kind": "delete",
+  "table": "public.orders",
+  "where": {
+    "columns": [
+      "id"
+    ],
+    "rows": [
+      [
+        {
+          "kind": "integer",
+          "text": "1"
+        }
+      ],
+      [
+        {
+          "kind": "integer",
+          "text": "2"
+        }
+      ]
+    ]
+  },
+  "returning": [
+    "id"
+  ]
+}

@@ -47,9 +47,12 @@ exit 0
         "error_message": null
       },
       "witness": {
+        "object": "witness",
         "level": "L2",
         "verdict": "MISMATCH",
-        "method": "postgres.pgoutput"
+        "method": "postgres.pgoutput",
+        "required_level": null,
+        "detail_digest": "sha256:HASH"
       },
       "cost": null,
       "request_digest": "sha256:HASH",

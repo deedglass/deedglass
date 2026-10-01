@@ -384,7 +384,8 @@ func TestStatusOf(t *testing.T) {
 	if len(Statuses) != 8 {
 		t.Fatal(Statuses)
 	}
-	if r := WitnessReasons([]byte(`{"reasons":["timeout"]}`)); len(r) != 1 || r[0] != "timeout" {
+	// S13's shape: its codes read as outcome_unknown (the cause kept as evidence, S19).
+	if r := WitnessReasons([]byte(`{"reasons":["timeout"]}`)); len(r) != 1 || r[0] != "outcome_unknown" {
 		t.Fatal(r)
 	}
 	if r := WitnessReasons(nil); r == nil || len(r) != 0 {

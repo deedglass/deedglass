@@ -1,0 +1,1 @@
+UPDATE orders SET note = E'tab\x41' WHERE id = 1

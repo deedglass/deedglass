@@ -66,6 +66,9 @@ go test ./internal/connector/postgres -run TestValuesGolden -update   # S17: tes
 DEEDGLASS_IT_PKGS=./internal/connector/postgres/ make integration   # S17: the Postgres connector on a throwaway cluster (DEEDGLASS_IT_GOFLAGS="-v -run TestOneTransaction")
 DEEDGLASS_IT_PKGS=./cmd/deedglass/ DEEDGLASS_IT_GOFLAGS="-v -run TestPostgresLive" make integration   # S17 §9 on a real server
 make bench-postgres # S17: the connector's extra latency over raw pgx and 100 writes/s for 30 s; JSON in bench/results/
+make bench-witness  # S19: Decide, L0 with a 64 KiB schema check, expect over 32 fields, a CEL postcondition; JSON in bench/results/
+go generate ./internal/witness   # S19: regenerate docs/witness/REASONS.md from the reason catalog
+DEEDGLASS_IT_PKGS="./cmd/deedglass/ -update" DEEDGLASS_IT_GOFLAGS="-run ^TestWitnessLive$" make integration   # S19 §9 on a real server; refresh testdata/gate/cli/witness-* (then SHA256SUMS)
 make attack         # S18: the V7 attack suite on a throwaway PG 18 (real serve, real Postgres, loopback upstreams), then the report
 make attack-report  # S18: print the last run and regenerate docs/ATTACK_SUITE.md (never edit that page by hand; -check in CI)
 DEEDGLASS_IT_ATTACK_RUN='TestAttack/H03' make attack   # one case; 'TestOrgIsolation' for the isolation sweep
@@ -407,6 +410,22 @@ and "open source" until the repo is public. Style bans: "revolutionary", "world-
   describe, the unsafe role (prod refuses), the live check matrix, a stale plan refused, missing setup, no password in
   the server log (log_statement=all). `cmd/deedglass` `TestPostgresLive` (S17 §9 on a real server, with the output
   sweep). Agent SQL never goes through `Conn.Exec` (pgx uses the simple protocol with no arguments).
+- S19 (the Witness): `internal/witness` is pure (archtest). `TestDecideExhaustive` (1,536 cases: every
+  {∅,P,G,V,PG,PV,GV,PGV} at L0/L1/L2 × required L0/L1/L2 against an independent oracle), the worked table,
+  notes ignored, `TestPrecedenceProperty` (100,000 seeded lists), `TestVerdictGuard` (only `precedence.go`
+  produces VERIFIED; it parses internal/ and cmd/, allows comparisons and case clauses, and keeps a reasoned
+  allowlist), the catalog rules (one class, ≤ 200 runes, a period, no banned word) and `TestReasonsDoc`
+  (`docs/witness/REASONS.md` is generated: `go generate ./internal/witness`), L0/L1/expect/CEL/detail tables,
+  the postcondition compile goldens (`testdata/postcondition`, `-update`), ≥ 85% coverage, `make bench-witness`.
+  `internal/sqlguard` `ShapeOf` (70 goldens in `testdata/shape`, `-update`; `FuzzShape`). `internal/connector/rest`
+  `TestReadBack*` (honest, lying, a 500, not found, redaction, path rules again, config refusals);
+  `internal/connector/postgres` `TestPostgresReadBack` (integration: row_written, a trigger's value_mismatch,
+  row_superseded, row_missing, typed values, not the PK, READ ONLY as deedglass_agent). `internal/gate`:
+  `TestReadBackInline` (no pooled connection held during the read-back; the detail digest), `TestCrashBetweenB1AndB2`
+  (one deed), `TestWorkerDeferredWitness` (inline budget → the worker; give-up decides without L1).
+  `cmd/deedglass` `TestWitnessLive` (honest, lying, read-back down, the API object and expand[]=witness.detail,
+  actions list --verdict, export → verify, the sentinel sweep incl. witness_jobs; CLI goldens `testdata/gate/cli/witness-*`).
+  The migration count is 18.
 - `cmd/deedglass verify` (S05): 80 golden cases in `testdata/verify/<case>/{args,stdout,stderr,exit}`
   (`go test ./cmd/deedglass -run TestVerifyGolden -update`), every vector's code and exit, `--keys`
   URL rules (same-host redirects, 1 MiB, timeout, loopback-only http), key-set merge conflicts, no

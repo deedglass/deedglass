@@ -1,0 +1,1 @@
+UPDATE t SET c = 1 WHERE a IN (1, 2) AND b = 3

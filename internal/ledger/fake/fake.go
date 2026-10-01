@@ -161,7 +161,8 @@ func plan(r *rand.Rand, kind Kind, agents int) Plan {
 	case Mismatch:
 		p.Tool, p.Level, p.Verdict, p.Method, p.RuleID = "postgres.execute", "L2", "MISMATCH", "postgres.pgoutput", "allow-order-updates"
 		p.Args = raw(map[string]any{"sql": "UPDATE public.orders SET status = $1 WHERE id = $2", "params": []any{"shipped", 4000 + r.IntN(1000)}})
-		p.Detail = raw(map[string]any{"table": "public.orders", "expected_rows": 1, "observed_rows": 301})
+		p.Detail = fakeDetail(p.Level, p.Verdict, p.Method, "row_count_mismatch", "violation", "row.count",
+			"Postgres changed 301 rows in public.orders. The agent reported 1.")
 		p.Result = raw(map[string]any{"rows_affected": 1})
 	case Unverifiable, Amend:
 		p.Tool = pick(r, "postgres.execute", "github.merge_pr", "stripe.create_refund")
@@ -170,7 +171,11 @@ func plan(r *rand.Rand, kind Kind, agents int) Plan {
 		if p.Tool == "postgres.execute" {
 			p.Level, p.Method = "L2", "postgres.pgoutput"
 		}
-		p.Detail = raw(map[string]any{"reason": "timeout"})
+		code, msg := "readback_timeout", "The read-back took longer than 10 s."
+		if p.Level == "L2" {
+			code, msg = "l2_timeout", "No evidence arrived before the time limit."
+		}
+		p.Detail = fakeDetail(p.Level, p.Verdict, p.Method, code, "gap", "readback", msg)
 	case Failed:
 		p.Tool, p.RuleID, p.ErrorCode = pick(r, Tools...), "", pick(r, "upstream_error", "upstream_error", "timeout")
 		p.RuleID = allowRule(p.Tool)
@@ -188,6 +193,21 @@ func plan(r *rand.Rand, kind Kind, agents int) Plan {
 		}
 	}
 	return p
+}
+
+// fakeDetail is a witness_detail v1 (S19) for the demo data: the claim, one reason and its
+// sentence. The L2 codes are the ones S21 registers; the demo shows their shape early.
+func fakeDetail(level, verdict, method, code, class, check, msg string) json.RawMessage {
+	lv := map[string]any{"L0": map[string]any{"verdict": "VERIFIED", "method": "reported"}, "L1": nil, "L2": nil}
+	lv[level] = map[string]any{"verdict": verdict, "method": method}
+	return raw(map[string]any{"object": "witness_detail", "version": 1,
+		"claim":   map[string]any{"level": level, "verdict": verdict, "method": method, "required_level": "L0"},
+		"summary": msg, "levels": lv,
+		"reasons": []any{
+			map[string]any{"code": "tool_reported_success", "class": "pass", "level": "L0", "check": "status", "message": "The tool reported success."},
+			map[string]any{"code": code, "class": class, "level": level, "check": check, "message": msg},
+		},
+		"witnessed_at": "2026-10-01T09:00:00.000Z"})
 }
 
 func allowRule(tool string) string {

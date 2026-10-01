@@ -369,7 +369,7 @@ paths:
                       error_code: null
                       error_message: null
                       result: {echo: {message: hello}}
-                    witness: {level: L0, verdict: VERIFIED, method: reported, reasons: []}
+                    witness: {object: witness, level: L0, verdict: VERIFIED, method: reported, required_level: L0, summary: The tool reported success., reasons: [], witnessed_at: "2026-10-05T04:12:09.130Z", detail_digest: "sha256:0b5f2e9a7c4d1e8f3a6b9c2d5e8f1a4b7c0d3e6f9a2b5c8d1e4f7a0b3c6d9e2f"}
                     cost: {amount: 0, currency: usd}
                     request_digest: sha256:c2cb9a8c51c029f97049fed02f985cc49cee22836423d2c9a8e1b74e333a3c4c
                     result_digest: sha256:fca08626754877b4929151a6f5a278d4189da0bdff4e71b4f523d6f97bb8f0d0
@@ -632,8 +632,8 @@ paths:
       operationId: getAction
       summary: Show one action, its events and deeds
       description: >-
-        The action plus its payloads (`request`, `result`, `witness.detail`; `null` once retention
-        removed them, see `payload_pruned_at`), up to 200 events in order, and the deeds about it
+        The action plus its payloads (`request`, `result`, and with `?expand[]=witness.detail` the
+        witness detail; `null` once retention removed them, see `payload_pruned_at`), up to 200 events in order, and the deeds about it
         (the action deed and any amendments). An id from another org is 404 `not_found`, exactly
         like an id that doesn't exist. Requires `actions:read`. With `?wait=` (0 to 25 seconds)
         it long-polls: it answers when the action is settled (sealed, or waiting for a person),
@@ -654,12 +654,13 @@ paths:
           in: query
           required: false
           description: >-
-            `request`, `result` or `events`, repeatable. Accepted for the SDKs; this response
-            always carries all three. Any other value, or any other query parameter, is 400
-            `validation_failed`.
+            `request`, `result`, `events` or `witness.detail`, repeatable. The first three are
+            accepted for the SDKs (this response always carries them); `witness.detail` adds the
+            full witness_detail v1 as `witness.detail`, with passes and notes (S19). Any other
+            value, or any other query parameter, is 400 `validation_failed`.
           schema:
             type: array
-            items: {type: string, enum: [request, result, events]}
+            items: {type: string, enum: [request, result, events, witness.detail]}
           style: form
           explode: true
       responses:
@@ -5187,18 +5188,7 @@ components:
                 `POST /v1/actions/{id}/result`); never on lists. `GET /v1/actions/{id}` has it as
                 the top-level `result`.
         witness:
-          type: [object, "null"]
-          required: [level, verdict, method]
-          properties:
-            level: {type: string, enum: [L0, L1, L2]}
-            verdict: {type: string, enum: [VERIFIED, MISMATCH, UNVERIFIABLE]}
-            method: {type: [string, "null"], description: '`reported` (L0: the tool reported success), `edge_reported` (L0, proxy mode: the edge reported success), or a later witness''s method.'}
-            reasons:
-              type: array
-              items: {type: string}
-              description: >-
-                Short codes (`outcome_unknown`, `timeout`, `edge_lost`, `witness_gave_up`, …), never
-                payloads. On the Gate's own responses and `GET /v1/actions/{id}`; left out of lists.
+          $ref: "#/components/schemas/Witness"
         cost:
           type: [object, "null"]
           required: [amount, currency]
@@ -5228,13 +5218,126 @@ components:
           policy: {id: null, version_id: null, mode: enforce, decision: allow, rule_id: allow-order-updates}
           approval: null
           execution: {status: succeeded, started_at: "2026-10-02T10:14:03.455Z", finished_at: "2026-10-02T10:14:03.496Z", latency_ms: 41, error_code: null, error_message: null}
-          witness: {level: L2, verdict: MISMATCH, method: postgres.pgoutput}
+          witness: {object: witness, level: L2, verdict: MISMATCH, method: postgres.pgoutput, required_level: L0, detail_digest: "sha256:c3e1a07e5d1c9b20c3e1a07e5d1c9b20c3e1a07e5d1c9b20c3e1a07e5d1c9b20"}
           cost: null
           request_digest: sha256:9c1e5b7d0a2f4c6e8b0d2f4a6c8e0b2d4f6a8c0e2b4d6f8a0c2e4b6d8f0a2c4e
           result_digest: null
           payload_pruned_at: null
           deed: deed_01j9zt3q5s7v9w1y3a5c7e9g1j
           next_action: null
+    Witness:
+      type: [object, "null"]
+      description: >-
+        The Witness's verdict about the action (S19): one level, one verdict and the method of that
+        level. A verdict is never stronger than its evidence: VERIFIED needs a clean level at or
+        above `required_level`; any contradicting evidence is MISMATCH; missing evidence is
+        UNVERIFIABLE. Lists carry the claim only. The Gate's own responses and `GET
+        /v1/actions/{id}` add `summary`, `reasons` (violations and gaps; passes and notes are in
+        the detail) and `witnessed_at`; `?expand[]=witness.detail` adds `detail`. An executed
+        action answers 200 whatever the verdict: the tool ran, and the verdict says what that means.
+      required: [object, level, verdict, method, required_level, detail_digest]
+      properties:
+        object: {type: string, const: witness}
+        level: {type: string, enum: [L0, L1, L2]}
+        verdict: {type: string, enum: [VERIFIED, MISMATCH, UNVERIFIABLE]}
+        method:
+          type: [string, "null"]
+          description: >-
+            The claimed level's method: `reported`, `edge_reported` or `response.schema` (L0);
+            `readback.<connector type>.<read tool>`, `readback.postgres.row` or
+            `postcondition.<connector type>` (L1); `postgres.pgoutput` (L2).
+        required_level: {type: [string, "null"], enum: [L0, L1, L2, null], description: 'The level the policy''s `verify:` asks for (null on actions recorded before S19).'}
+        summary: {type: string, description: One sentence a support engineer can read aloud.}
+        reasons:
+          type: array
+          items: {$ref: "#/components/schemas/WitnessReason"}
+        witnessed_at: {type: string, format: date-time}
+        detail_digest: {type: [string, "null"], description: '`sha256:` of JCS(witness_detail): the deed''s `witness.detail_digest`.'}
+        detail: {$ref: "#/components/schemas/WitnessDetail"}
+      examples:
+        - object: witness
+          level: L1
+          verdict: MISMATCH
+          method: readback.rest.get
+          required_level: L1
+          summary: 'orders.update_status reported success, but orders.get says status is "pending", not "shipped".'
+          reasons:
+            - code: postcondition_failed
+              class: violation
+              level: L1
+              check: readback.expect
+              message: 'orders.update_status reported success, but orders.get says status is "pending", not "shipped".'
+              diff: [{path: body.status, expected: shipped, observed: pending}]
+          witnessed_at: "2026-10-07T04:41:22.418Z"
+          detail_digest: "sha256:c3e1a07e5d1c9b20c3e1a07e5d1c9b20c3e1a07e5d1c9b20c3e1a07e5d1c9b20"
+    WitnessReason:
+      type: object
+      description: One piece of evidence, or one missing piece. The class and the message come from the reason catalog (docs/witness/REASONS.md).
+      required: [code, class, level, check, message]
+      properties:
+        code: {type: string, pattern: "^[a-z][a-z0-9_]{0,63}$"}
+        class: {type: string, enum: [pass, violation, gap, note]}
+        level: {type: string, enum: [L0, L1, L2]}
+        check: {type: string}
+        message: {type: string, maxLength: 400}
+        diff:
+          type: array
+          items:
+            type: object
+            required: [path, expected, observed]
+            properties:
+              path: {type: string}
+              expected: {}
+              observed: {}
+        evidence: {type: object, description: Small (at most 8 KiB); never payloads or secrets.}
+    WitnessDetail:
+      type: object
+      description: >-
+        witness_detail v1 (S19): what `actions.witness_detail` holds and what the deed's
+        `witness.detail_digest` is the digest of. Changes are additive only; S21 fills `levels.L2`.
+      required: [object, version, claim, summary, levels, reasons, witnessed_at]
+      properties:
+        object: {type: string, const: witness_detail}
+        version: {type: integer, const: 1}
+        claim:
+          type: object
+          required: [level, verdict, method, required_level]
+          properties:
+            level: {type: string, enum: [L0, L1, L2]}
+            verdict: {type: string, enum: [VERIFIED, MISMATCH, UNVERIFIABLE]}
+            method: {type: string}
+            required_level: {type: string, enum: [L0, L1, L2]}
+        summary: {type: string}
+        levels:
+          type: object
+          required: [L0, L1, L2]
+          properties:
+            L0: {$ref: "#/components/schemas/WitnessLevelDetail"}
+            L1: {$ref: "#/components/schemas/WitnessLevelDetail"}
+            L2: {$ref: "#/components/schemas/WitnessLevelDetail"}
+        reasons:
+          type: array
+          items: {$ref: "#/components/schemas/WitnessReason"}
+        witnessed_at: {type: string, format: date-time}
+        truncated: {type: integer, minimum: 0, description: Diff rows and evidence left out to stay under witness.max_detail_bytes.}
+    WitnessLevelDetail:
+      type: [object, "null"]
+      required: [verdict, method]
+      properties:
+        verdict: {type: string, enum: [VERIFIED, MISMATCH, UNVERIFIABLE]}
+        method: {type: string}
+        readback:
+          type: object
+          description: What the read-back did; the body it read is kept only as a digest.
+          required: [tool, attempts, latency_ms]
+          properties:
+            tool: {type: string}
+            target: {type: string}
+            request_digest: {type: string}
+            status: {type: integer}
+            response_digest: {type: string}
+            attempts: {type: integer, minimum: 1, maximum: 5}
+            latency_ms: {type: integer, minimum: 0}
     ActionDecision:
       type: [object, "null"]
       required: [outcome, code, source, rule_id, reason, message, policy, policy_version, shadow]
@@ -5467,16 +5570,6 @@ components:
       type: object
       required: [request, result, events, deeds, approval]
       properties:
-        witness:
-          type: [object, "null"]
-          required: [level, verdict, method, reasons, detail]
-          properties:
-            reasons:
-              type: array
-              items: {type: string}
-              description: Short codes such as `outcome_unknown`, `timeout` or `edge_lost`; an empty list when there are none.
-            detail:
-              description: The stored expected-vs-observed diff, or null after pruning.
         request:
           description: The tool arguments, or null after pruning.
         result:

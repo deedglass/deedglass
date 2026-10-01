@@ -20,6 +20,7 @@ import (
 	"github.com/deedglass/deedglass/internal/ledger"
 	"github.com/deedglass/deedglass/internal/policy"
 	"github.com/deedglass/deedglass/internal/store"
+	"github.com/deedglass/deedglass/internal/witness"
 )
 
 // Config is the gate.* section of deedglass.yaml (S13 §3.10), with defaults for zero values.
@@ -33,6 +34,7 @@ type Config struct {
 	WorkerMaxAttempts int
 	ApprovalTTL       time.Duration // when the rule sets no expires_in
 	MaxWaitsPerAgent  int           // open GET …?wait= per agent
+	Witness           WitnessConfig // witness.* (S19)
 }
 
 // MaxWait is the longest any request waits (POST wait, GET ?wait=).
@@ -78,14 +80,16 @@ func (c Config) withDefaults() Config {
 
 // Options are the Pipeline's dependencies. DB, Ledger, Policies, Usage and Resolver are required.
 type Options struct {
-	DB        *store.DB
-	Ledger    *ledger.Ledger // with a seal key
-	Policies  Policies
-	Usage     Usage
-	Intents   identity.IntentChecker // nil: headers are ignored (tests)
-	Guard     identity.Guard         // nil: long polls don't end on Stop (tests)
-	Resolver  Resolver
-	Witness   Witnesser // nil: L0
+	DB       *store.DB
+	Ledger   *ledger.Ledger // with a seal key
+	Policies Policies
+	Usage    Usage
+	Intents  identity.IntentChecker // nil: headers are ignored (tests)
+	Guard    identity.Guard         // nil: long polls don't end on Stop (tests)
+	Resolver Resolver
+	// Observer replaces the read-back path through the connectors' ReadBacker (tests). Nil: the
+	// connectors read back.
+	Observer  witness.Observer
 	Approvals Approvals // nil: StubApprovals
 	Broker    *Broker   // nil: a private one
 	Metrics   *Metrics  // nil: a private one
@@ -99,6 +103,7 @@ type Options struct {
 type Pipeline struct {
 	o      Options
 	cfg    Config
+	wcfg   WitnessConfig
 	log    *slog.Logger
 	now    func() time.Time
 	broker *Broker
@@ -113,17 +118,16 @@ type Pipeline struct {
 
 // hooks are test seams: they let a test observe the moments the invariants talk about.
 type hooks struct {
-	beforeExecute func(connector.Call) // invariant 5: no transaction open here
-	afterAdmit    func(ids.ActionID)   // crash tests: "killed between Tx A and Tx B"
+	beforeExecute  func(connector.Call)    // invariant 5: no transaction open here
+	afterAdmit     func(ids.ActionID)      // crash tests: "killed between Tx A and Tx B"
+	beforeReadBack func(action string)     // S19 invariant 3: no transaction open during a read-back
+	afterB1        func(ids.ActionID) bool // crash tests: true stops after B1, as if the instance died
 }
 
 // New returns a Pipeline.
 func New(o Options) (*Pipeline, error) {
 	if o.DB == nil || o.Ledger == nil || o.Policies == nil || o.Usage == nil || o.Resolver == nil {
 		return nil, errors.New("gate: DB, Ledger, Policies, Usage and Resolver are required")
-	}
-	if o.Witness == nil {
-		o.Witness = L0{}
 	}
 	cfg := o.Config.withDefaults()
 	if o.Clock == nil {
@@ -141,7 +145,7 @@ func New(o Options) (*Pipeline, error) {
 	if o.Logger == nil {
 		o.Logger = slog.Default()
 	}
-	return &Pipeline{o: o, cfg: cfg, log: o.Logger, now: o.Clock, broker: o.Broker, m: o.Metrics, waits: map[string]int{}}, nil
+	return &Pipeline{o: o, cfg: cfg, wcfg: cfg.Witness.withDefaults(), log: o.Logger, now: o.Clock, broker: o.Broker, m: o.Metrics, waits: map[string]int{}}, nil
 }
 
 // Metrics are the Gate's metrics (for serve's /metrics).
@@ -175,6 +179,11 @@ type plan struct {
 	reservations []policy.Reservation
 	actor        string
 	requestID    string
+	// The Witness (S19): the level the policy requires, the tool's side effect, and Postgres's
+	// default schema for the row read-back.
+	required      witness.Level
+	side          string
+	defaultSchema string
 	// link, when set, is the request's context: the tool call (and only the call, never the
 	// recording) is cancelled with ErrRequestGone when it ends (ActionRequest.CancelOn).
 	link context.Context
@@ -445,6 +454,8 @@ func (p *Pipeline) admit(ctx context.Context, pr principal, n *Normalized, req A
 		if err != nil {
 			return err
 		}
+		required := requiredLevel(string(d.Verify), in.Tool.SideEffect)
+		patch.WitnessRequired = strp(string(required))
 		evEval := ev
 		evEval.RuleID = nonEmpty(d.RuleID)
 		sub := Subject{ID: id, Org: org, Agent: agent, Mode: n.Mode, Tool: n.Tool, ConnectorType: n.ConnectorType}
@@ -474,6 +485,7 @@ func (p *Pipeline) admit(ctx context.Context, pr principal, n *Normalized, req A
 			if n.Mode == ModeGateway {
 				adm.plan = &plan{subject: sub, exec: ex, actor: actor, requestID: req.RequestID,
 					costTargets: d.CostBudgets, reservations: d.Reservations,
+					required: required, side: in.Tool.SideEffect, defaultSchema: n.DefaultSchema,
 					call: connector.Call{ActionID: id, OrgID: org, AgentID: agent, Tool: spec, Qualified: n.Tool, Args: n.Args,
 						IdempotencyKey: id.String(), Deadline: now.Add(p.cfg.ExecuteTimeout), IntentHash: ir.IntentHash}}
 			}
@@ -750,7 +762,8 @@ func (p *Pipeline) run(ctx context.Context, pl *plan) (*ledger.Action, time.Dura
 	}
 	e := p.execute(ectx, pl.exec, pl.call)
 	tool := e.FinishedAt.Sub(e.StartedAt)
-	v, err := p.complete(ctx, pl.subject, e, pl.costTargets, pl.reservations, pl.actor, pl.requestID)
+	wc := p.newWitnessCase(pl.subject, e, pl.exec, pl.call, pl.required, pl.side, pl.defaultSchema)
+	v, err := p.complete(ctx, pl.subject, e, wc, pl.costTargets, pl.reservations, pl.actor, pl.requestID)
 	if err != nil {
 		if !errors.Is(err, ErrStateConflict) {
 			p.log.Error("gate: recording an execution failed; the sweeper will finish it", "org_id", pl.subject.Org.String(),

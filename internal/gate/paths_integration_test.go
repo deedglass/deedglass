@@ -15,6 +15,7 @@ import (
 	"github.com/deedglass/deedglass/internal/ids"
 	"github.com/deedglass/deedglass/internal/ledger"
 	"github.com/deedglass/deedglass/internal/store"
+	"github.com/deedglass/deedglass/internal/witness"
 )
 
 // The remaining Resume paths, the unsealed sweeper, budget replays and edge-report validation.
@@ -83,7 +84,8 @@ func TestMorePaths(t *testing.T) {
 	}
 	e := w.p.execute(bg, ex, adm.plan.call)
 	_ = w.led.OrgTxRetry(bg, w.org, func(ctx context.Context, tx pgx.Tx) error {
-		_, err := w.p.recordExecution(ctx, tx, adm.plan.subject, e, nil, nil, "system", "", false)
+		wc := w.p.newWitnessCase(adm.plan.subject, e, adm.plan.exec, adm.plan.call, witness.L0, "", "")
+		_, err := w.p.recordExecution(ctx, tx, adm.plan.subject, e, wc, nil, nil, "system", "", false)
 		return err
 	})
 	w.admin(`ALTER TABLE deedglass.actions DISABLE TRIGGER actions_touch`)

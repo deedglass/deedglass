@@ -1,0 +1,1 @@
+UPDATE orders SET total = total + 1 WHERE id = 7

@@ -1,0 +1,6 @@
+{
+  "simple": false,
+  "why": "where_not_key",
+  "kind": "delete",
+  "table": "public.customers"
+}

@@ -25,6 +25,7 @@ import (
 	"github.com/deedglass/deedglass/internal/ledger"
 	"github.com/deedglass/deedglass/internal/policy"
 	"github.com/deedglass/deedglass/internal/store"
+	"github.com/deedglass/deedglass/internal/witness"
 )
 
 var update = flag.Bool("update", false, "rewrite testdata/gate/digests")
@@ -283,24 +284,26 @@ func TestClassify(t *testing.T) {
 		if e.Status == ExecSucceeded && e.ErrorMsg != "" || e.Status != ExecSucceeded && c.name != "invalid request never sent" && c.name != "config" && c.name != "upstream" && c.name != "timeout kind" && e.ErrorMsg == "" && c.name != "an unknown kind is unknown" {
 			t.Errorf("%s: message %q", c.name, e.ErrorMsg)
 		}
-		w, deferred := L0{}.Inline(context.Background(), Subject{}, e)
+		pp := &Pipeline{cfg: Config{}.withDefaults(), wcfg: WitnessConfig{}.withDefaults(), now: time.Now}
+		out, err := pp.decide(pp.newWitnessCase(Subject{Mode: ModeGateway, Tool: "fake.echo"}, e, nil, connector.Call{}, witness.L0, "write", ""))
 		switch {
-		case deferred:
-			t.Error("L0 deferred")
-		case e.Status == ExecSucceeded && w.Verdict != VerdictVerified:
-			t.Errorf("%s: %+v", c.name, w)
-		case e.Status == ExecUnknown && (w.Verdict != VerdictUnverifiable || len(w.Reasons) != 1):
-			t.Errorf("%s: an unknown outcome must be UNVERIFIABLE: %+v", c.name, w)
+		case err != nil:
+			t.Fatal(err)
+		case e.Status == ExecSucceeded && (out.Decision.Verdict != witness.Verified || out.Decision.Level != witness.L0):
+			t.Errorf("%s: %+v", c.name, out.Decision)
+		case e.Status == ExecUnknown && (out.Decision.Verdict != witness.Unverifiable || out.Decision.Reasons[0].Code != witness.CodeOutcomeUnknown):
+			t.Errorf("%s: an unknown outcome must be UNVERIFIABLE: %+v", c.name, out.Decision)
 		}
 	}
-	if w, _ := (L0{}).Inline(context.Background(), Subject{Mode: ModeProxy}, Execution{Status: ExecSucceeded}); w.Method != MethodEdgeReported {
-		t.Fatal(w)
+	pp := &Pipeline{cfg: Config{}.withDefaults(), wcfg: WitnessConfig{}.withDefaults(), now: time.Now}
+	if out, _ := pp.decide(pp.newWitnessCase(Subject{Mode: ModeProxy}, Execution{Status: ExecSucceeded}, nil, connector.Call{}, witness.L0, "", "")); out.Decision.Method != MethodEdgeReported {
+		t.Fatal(out.Decision)
 	}
-	if _, err := (L0{}).Deferred(context.Background(), Subject{}); !errors.Is(err, ErrNoDeferredWitness) {
-		t.Fatal(err)
-	}
-	if g := gaveUp(MethodReported); g.Verdict != VerdictUnverifiable || g.Reasons[0] != ReasonWitnessGaveUp {
-		t.Fatal(g)
+	// The worker's give-up: an L1 gap, decided with L0 (required L0 → L0 VERIFIED, the gap listed).
+	out, err := pp.decide(pp.newWitnessCase(Subject{Mode: ModeGateway}, Execution{Status: ExecSucceeded}, nil, connector.Call{}, witness.L0, "write", ""),
+		witness.GaveUp(witness.L1, 8, "the target is unreachable"))
+	if err != nil || out.Decision.Verdict != witness.Verified || out.Decision.Level != witness.L0 || out.Decision.Reasons[1].Code != witness.CodeWitnessGaveUp {
+		t.Fatal(out.Decision, err)
 	}
 	if long := clipMessage(strings.Repeat("é", 2000)); len(long) > MaxErrorMessage || !strings.HasSuffix(long, "…") {
 		t.Fatalf("%d", len(long))
@@ -398,12 +401,12 @@ func TestFraming(t *testing.T) {
 	for _, st := range []string{ledger.StatusAuthorized, ledger.StatusFailed, ledger.StatusProcessing, ledger.StatusExpired, ledger.StatusExecuted} {
 		_ = NextStep(&Action{Action: ledger.Action{ID: "act_x", Status: st}})
 	}
-	reasons := []string{ReasonTimeout}
+	reasons := []witness.Reason{witness.R(witness.L0, witness.CodeOutcomeUnknown, "status", map[string]any{"cause": ReasonTimeout}).WithEvidence(map[string]any{"cause": ReasonTimeout})}
 	unv := &Action{Action: ledger.Action{Status: ledger.StatusExecuted, Witness: &ledger.ActionWitness{Verdict: VerdictUnverifiable, Reasons: &reasons}}}
 	if NextStep(unv) != "Next: check the target system by hand, or raise gate.execute_timeout." || UnknownOutcomeMessage(unv, 1500*time.Millisecond) != "The tool did not answer within 1.5 s. It may have run." {
 		t.Fatal(UnknownOutcomeMessage(unv, 1500*time.Millisecond))
 	}
-	lost := []string{ReasonEdgeLost}
+	lost := []witness.Reason{witness.R(witness.L0, witness.CodeOutcomeUnknown, "status", nil).WithEvidence(map[string]any{"cause": ReasonEdgeLost})}
 	if UnknownOutcomeMessage(&Action{Action: ledger.Action{Witness: &ledger.ActionWitness{Reasons: &lost}}}, 0) != "The edge never reported a result. The tool may have run." ||
 		UnknownOutcomeMessage(&Action{}, 0) != "Deedglass could not learn whether the tool ran. It may have run." {
 		t.Fatal("unknown messages")

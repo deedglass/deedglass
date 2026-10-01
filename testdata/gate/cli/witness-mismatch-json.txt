@@ -1,0 +1,89 @@
+exit 1
+--- stdout
+{
+  "object": "action",
+  "id": "act_…",
+  "created_at": "T",
+  "livemode": true,
+  "agent": {
+    "id": "agt_…",
+    "name": "support-bot"
+  },
+  "tool": "orders.update_status",
+  "connector": null,
+  "mode": "gateway",
+  "state": "sealed",
+  "status": "executed",
+  "on_behalf_of": null,
+  "session": null,
+  "decision": {
+    "outcome": "allow",
+    "code": null,
+    "source": "rule",
+    "rule_id": "order-status",
+    "reason": null,
+    "message": null,
+    "policy": "pol_…",
+    "policy_version": "pv_…",
+    "shadow": null
+  },
+  "policy": {
+    "id": "pol_…",
+    "version_id": "pv_…",
+    "mode": "enforce",
+    "decision": "allow",
+    "rule_id": "order-status"
+  },
+  "approval": null,
+  "execution": {
+    "status": "succeeded",
+    "started_at": "T",
+    "finished_at": "T",
+    "latency_ms": N,
+    "error_code": null,
+    "error_message": null,
+    "result": {
+      "body": {
+        "id": 42,
+        "status": "cancelled"
+      },
+      "status": 200,
+      "headers": {
+        "content-type": "application/json"
+      }
+    }
+  },
+  "witness": {
+    "object": "witness",
+    "level": "L1",
+    "verdict": "MISMATCH",
+    "method": "readback.rest.get",
+    "required_level": "L1",
+    "summary": "orders.update_status reported success, but orders.get says status is \"shipped\", not \"cancelled\".",
+    "reasons": [
+      {
+        "code": "postcondition_failed",
+        "class": "violation",
+        "level": "L1",
+        "check": "readback.expect",
+        "message": "orders.update_status reported success, but orders.get says status is \"shipped\", not \"cancelled\".",
+        "diff": [
+          {
+            "path": "body.status",
+            "expected": "cancelled",
+            "observed": "shipped"
+          }
+        ]
+      }
+    ],
+    "witnessed_at": "T",
+    "detail_digest": "sha256:…"
+  },
+  "cost": null,
+  "request_digest": "sha256:…",
+  "result_digest": "sha256:…",
+  "payload_pruned_at": null,
+  "deed": "deed_…",
+  "next_action": null
+}
+--- stderr

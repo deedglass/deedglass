@@ -1,0 +1,1 @@
+UPDATE orders SET (a, b) = (1, 2) WHERE id = 1

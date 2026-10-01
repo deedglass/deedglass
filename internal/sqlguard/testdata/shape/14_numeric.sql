@@ -1,0 +1,1 @@
+UPDATE orders SET amount = 10.50 WHERE id = 1

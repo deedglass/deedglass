@@ -419,6 +419,62 @@ func (b *bound) Execute(ctx context.Context, call Call) (res Result, err error) 
 	return b.impl.Execute(ctx, b.inst, call)
 }
 
+// ReadBacking is an Executor whose connector reads writes back (S19's L1 witness).
+type ReadBacking interface {
+	CanReadBack() bool
+	ReadBack(ctx context.Context, call Call, res Result) (Observation, error)
+}
+
+// CanReadBack reports whether the bound connector type is a ReadBacker.
+func (b *bound) CanReadBack() bool {
+	_, ok := b.impl.(ReadBacker)
+	return ok
+}
+
+// ReadBack runs a read-back the way Execute runs a call: the read tool's arguments are validated
+// again (a template can't smuggle what the schema refuses), the per-call redactor covers the
+// credential, a panic is recovered, and the body is redacted and capped. It is never an action:
+// no deed, no budget.
+func (b *bound) ReadBack(ctx context.Context, call Call, res Result) (obs Observation, err error) {
+	rb, ok := b.impl.(ReadBacker)
+	if !ok {
+		return Observation{}, &ErrReadBackSkipped{Why: "the connector type " + b.impl.Type() + " can't read back"}
+	}
+	if call.Tool.SideEffect == SideEffectRead {
+		if err := ValidateArgs(call.Tool.InputSchema, call.Args); err != nil {
+			return Observation{}, err
+		}
+	}
+	if !call.Deadline.IsZero() {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithDeadline(ctx, call.Deadline)
+		defer cancel()
+	}
+	red := vault.NewRedactor()
+	ctx = vault.WithRedactor(ctx, red)
+	red = vault.RedactorFrom(ctx)
+	defer func() {
+		if p := recover(); p != nil {
+			b.r.log.ErrorContext(ctx, "connector: a read-back panicked", "connector", b.inst.Name, "type", b.impl.Type(),
+				"action_id", call.ActionID.String(), "panic", fmt.Sprint(p), "stack", string(debug.Stack()))
+			obs, err = Observation{}, &Error{Kind: KindUpstream, Code: CodeUpstreamError, AgentMessage: "The read-back stopped unexpectedly."}
+		}
+		if len(obs.Body) > 0 {
+			out := red.RedactBytes(obs.Body)
+			out = []byte(vault.Scrub(string(out)))
+			if !json.Valid(out) || len(out) > MaxOutput {
+				out = json.RawMessage(`{"redacted":"The read-back's answer couldn't be kept."}`)
+			}
+			obs.Body = out
+		}
+		if ce := AsError(err); ce != nil {
+			ce.AgentMessage = vault.Scrub(red.Redact(ce.AgentMessage))
+			ce.AdminDetail = vault.Scrub(red.Redact(ce.AdminDetail))
+		}
+	}()
+	return rb.ReadBack(ctx, b.inst, call, res)
+}
+
 // scrubResult redacts the output and the error's messages, and caps the output.
 func scrubResult(red *vault.Redactor, res Result, err error) (Result, error) {
 	if len(res.Output) > 0 {

@@ -550,6 +550,13 @@ func (f *Front) toolResult(r Request, t Tool, v *ledger.Action, raw json.RawMess
 	for k, val := range present.ActionMeta(v) {
 		meta[k] = jsonrpc.String(val)
 	}
+	if wm := present.WitnessMeta(v); wm != nil {
+		meta[present.MetaWitness] = wm
+		// The tool ran, so isError stays as it is; a verdict other than VERIFIED gets one line (S19).
+		if t := gate.MCPWitnessText(v); t != "" {
+			res["content"] = appendText(res["content"], t)
+		}
+	}
 	res["_meta"] = jsonrpc.MarshalObject(meta)
 	if r.Modern {
 		if _, ok := res["resultType"]; !ok {
@@ -564,6 +571,12 @@ func (f *Front) toolResult(r Request, t Tool, v *ledger.Action, raw json.RawMess
 func isCallToolResult(m map[string]json.RawMessage) bool {
 	c, ok := m["content"]
 	return ok && len(c) > 0 && c[0] == '['
+}
+
+func appendText(content json.RawMessage, text string) json.RawMessage {
+	var items []json.RawMessage
+	_ = json.Unmarshal(content, &items)
+	return jsonArray(append(items, jsonrpc.Value(map[string]string{"type": "text", "text": text})))
 }
 
 func prependText(content json.RawMessage, text string) json.RawMessage {

@@ -1,0 +1,1 @@
+UPDATE customers SET name = 'Asha' WHERE email = 'a@example.test'

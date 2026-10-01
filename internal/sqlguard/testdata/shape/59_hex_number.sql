@@ -1,0 +1,1 @@
+UPDATE orders SET total = 0x1F WHERE id = 1

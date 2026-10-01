@@ -1,0 +1,1 @@
+UPDATE orders SET total = 12.5::numeric(10, 2) WHERE id = 1

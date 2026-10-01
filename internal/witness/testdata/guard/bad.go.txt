@@ -1,0 +1,76 @@
+// Parsed by TestVerdictGuardCatches, never compiled. Lines marked "// want" must be reported;
+// every other use of the verdict here is a comparison, a case or a map key, and is allowed.
+package bad
+
+import (
+	"fmt"
+
+	w "github.com/deedglass/deedglass/internal/witness"
+)
+
+func decide() w.Verdict {
+	return w.Verified // want
+}
+
+func assign() string {
+	v := w.Verdict("")
+	v = w.Verified // want
+	s := "VERIFIED" // want
+	_ = v
+	return s
+}
+
+var pinned = w.Verified // want
+
+type claim struct{ Verdict w.Verdict }
+
+func literal() []claim {
+	return []claim{{Verdict: w.Verified}} // want
+}
+
+func element() []string {
+	return []string{"MISMATCH", `VERIFIED`} // want
+}
+
+func argument() {
+	fmt.Println((w.Verified)) // want
+}
+
+func send(c chan string) {
+	c <- "VERIFIED" // want
+}
+
+// Allowed: comparisons, cases and lookup keys.
+func allowed(v w.Verdict, s string) int {
+	if v == w.Verified || s != "VERIFIED" {
+		return 1
+	}
+	switch s {
+	case "VERIFIED":
+		return 2
+	}
+	switch v {
+	case w.Verified:
+		return 3
+	}
+	glyph := map[string]string{"VERIFIED": "ok"}
+	return len(glyph[s])
+}
+
+// Allowed: conversions inside comparisons and cases (cmd/deedglass/witness.go does this).
+func converted(v string) bool {
+	switch v {
+	case string(w.Verified):
+		return true
+	}
+	return v == string((w.Verified)) || w.Verdict(v) != w.Verified
+}
+
+// Reported: a conversion that produces the value.
+func produced() string {
+	return string(w.Verified) // want
+}
+
+func passed(f func(w.Verdict)) {
+	f(w.Verdict("VERIFIED")) // want
+}

@@ -1,0 +1,1 @@
+UPDATE t SET flag = a IS DISTINCT FROM b WHERE id = 1

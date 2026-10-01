@@ -428,7 +428,9 @@ func newGate(cfg *config.Config, db *store.DB, led *ledger.Ledger, pol *policies
 		Intents: identity.NewIntents(db, keys, nil), Guard: keys, Resolver: upstream.Resolver{Native: reg, Pool: pool}, Logger: log,
 		Config: gate.Config{WaitTimeout: g.WaitTimeout, ExecuteTimeout: g.ExecuteTimeout, EdgeResultTimeout: g.EdgeResultTimeout,
 			MaxArgsBytes: g.MaxArgsBytes, MaxResultBytes: g.MaxResultBytes, WorkerConcurrency: g.WorkerConcurrency,
-			WorkerMaxAttempts: g.WorkerMaxAttempts}})
+			WorkerMaxAttempts: g.WorkerMaxAttempts,
+			Witness: gate.WitnessConfig{InlineBudget: cfg.Witness.InlineBudget, ReadbackTimeout: cfg.Witness.ReadbackTimeout,
+				MaxDetailBytes: cfg.Witness.MaxDetailBytes}}})
 }
 
 // instanceName names this process in witness_jobs.locked_by: the host name and the pid.

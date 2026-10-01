@@ -1,0 +1,29 @@
+{
+  "simple": true,
+  "kind": "update",
+  "table": "public.orders",
+  "set": [
+    {
+      "column": "status",
+      "value": {
+        "kind": "param",
+        "text": "$2",
+        "param": 2
+      }
+    }
+  ],
+  "where": {
+    "columns": [
+      "id"
+    ],
+    "rows": [
+      [
+        {
+          "kind": "param",
+          "text": "$1",
+          "param": 1
+        }
+      ]
+    ]
+  }
+}

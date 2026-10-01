@@ -47,7 +47,13 @@ var Settings = []Setting{
 	{Path: "gate.worker.concurrency", Kind: SettingInt, Default: "4", Min: 1, Max: 64,
 		Doc: "Witness jobs one instance runs at once.", Owner: "S13"},
 	{Path: "gate.worker.max_attempts", Kind: SettingInt, Default: "8", Min: 1, Max: 100,
-		Doc: "Attempts per witness job before the action is sealed UNVERIFIABLE (witness_gave_up).", Owner: "S13"},
+		Doc: "Attempts per witness job that can't run before the Witness decides without it (witness_gave_up, listed as a gap).", Owner: "S13"},
+	{Path: "witness.inline_budget", Kind: SettingDuration, Default: "1500ms", Min: 100, Max: 5_000,
+		Doc: "The longest an L1 read-back may hold the request path. Past it, the worker finishes the read-back and the agent sees processing.", Owner: "S19"},
+	{Path: "witness.readback_timeout", Kind: SettingDuration, Default: "10s", Min: 100, Max: 60_000,
+		Doc: "The worker's limit for one read-back job; past it, the read-back is the gap readback_timeout.", Owner: "S19"},
+	{Path: "witness.max_detail_bytes", Kind: SettingInt, Default: "65536", Min: 4_096, Max: 262_144,
+		Doc: "The largest witness_detail (as JCS), in bytes. Beyond it, diff rows and evidence are cut and counted.", Owner: "S19"},
 }
 
 var settingByPath = func() map[string]Setting {
@@ -77,6 +83,13 @@ type GateSettings struct {
 	MaxResultBytes    int
 	WorkerConcurrency int
 	WorkerMaxAttempts int
+}
+
+// WitnessSettings are the witness.* settings, parsed (S19).
+type WitnessSettings struct {
+	InlineBudget    time.Duration
+	ReadbackTimeout time.Duration
+	MaxDetailBytes  int
 }
 
 // readSection flattens one section mapping into l.yaml under dotted paths.
@@ -126,10 +139,12 @@ func (l *loader) parseSettings(c *Config) {
 	durs := map[string]*time.Duration{
 		"gate.wait_timeout": &c.Gate.WaitTimeout, "gate.execute_timeout": &c.Gate.ExecuteTimeout,
 		"gate.edge_result_timeout": &c.Gate.EdgeResultTimeout,
+		"witness.inline_budget":    &c.Witness.InlineBudget, "witness.readback_timeout": &c.Witness.ReadbackTimeout,
 	}
 	ints := map[string]*int{
 		"gate.max_args_bytes": &c.Gate.MaxArgsBytes, "gate.max_result_bytes": &c.Gate.MaxResultBytes,
 		"gate.worker.concurrency": &c.Gate.WorkerConcurrency, "gate.worker.max_attempts": &c.Gate.WorkerMaxAttempts,
+		"witness.max_detail_bytes": &c.Witness.MaxDetailBytes,
 	}
 	for _, s := range Settings {
 		v, src := s.Default, SourceDefault

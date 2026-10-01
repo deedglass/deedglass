@@ -126,7 +126,10 @@ gate:
 | `gate.max_args_bytes` | `262144` | 1024 to 262144 | The largest args object POST /v1/actions accepts, in bytes (at most 256 KiB, the policy input limit). | S13 |
 | `gate.max_result_bytes` | `262144` | 1024 to 1048576 | The largest tool result stored on the action, in bytes. Larger results are digested, and only the digest is kept. | S13 |
 | `gate.worker.concurrency` | `4` | 1 to 64 | Witness jobs one instance runs at once. | S13 |
-| `gate.worker.max_attempts` | `8` | 1 to 100 | Attempts per witness job before the action is sealed UNVERIFIABLE (witness_gave_up). | S13 |
+| `gate.worker.max_attempts` | `8` | 1 to 100 | Attempts per witness job that can't run before the Witness decides without it (witness_gave_up, listed as a gap). | S13 |
+| `witness.inline_budget` | `1500ms` | 100ms to 5s | The longest an L1 read-back may hold the request path. Past it, the worker finishes the read-back and the agent sees processing. | S19 |
+| `witness.readback_timeout` | `10s` | 100ms to 1m0s | The worker's limit for one read-back job; past it, the read-back is the gap readback_timeout. | S19 |
+| `witness.max_detail_bytes` | `65536` | 4096 to 262144 | The largest witness_detail (as JCS), in bytes. Beyond it, diff rows and evidence are cut and counted. | S19 |
 <!-- settings:end -->
 
 ### The `mcp` section (S15)

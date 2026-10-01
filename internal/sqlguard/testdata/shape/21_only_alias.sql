@@ -1,0 +1,1 @@
+UPDATE ONLY orders AS o SET status='x' WHERE o.id = 1

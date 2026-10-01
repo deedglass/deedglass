@@ -1,0 +1,1 @@
+INSERT INTO public."Orders" ("Id", note) VALUES (1, E'a\nb')

@@ -1,0 +1,6 @@
+{
+  "simple": false,
+  "why": "function_call",
+  "kind": "update",
+  "table": "public.orders"
+}

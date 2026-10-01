@@ -142,9 +142,9 @@ func zoneName(t time.Time) string {
 
 // UnknownOutcomeMessage is the honest sentence for an action whose outcome Deedglass can't know.
 func UnknownOutcomeMessage(a *Action, executeTimeout time.Duration) string {
-	reasons := []string{}
+	reasons := []string{a.Witness.Cause()}
 	if a.Witness != nil && a.Witness.Reasons != nil {
-		reasons = *a.Witness.Reasons
+		reasons = append(reasons, a.Witness.Codes()...)
 	}
 	for _, r := range reasons {
 		switch r {
@@ -300,6 +300,21 @@ func MCPPendingText(a *ledger.Action, approvalID string, expires time.Time) stri
 	}
 	return fmt.Sprintf(`%s Nothing has run yet. Approval %s expires at %s. To continue, call deedglass.check_approval with {"approval_id": "%s"}.`,
 		msg, approvalID, clock(expires), approvalID)
+}
+
+// MCPWitnessText is the one line a tools/call result gets when its verdict isn't VERIFIED (S19):
+// "Deedglass witness · L1 · MISMATCH · orders.update_status reported success, but …". "" for a
+// VERIFIED verdict or none.
+func MCPWitnessText(a *ledger.Action) string {
+	w := a.Witness
+	if w == nil || w.Verdict == VerdictVerified {
+		return ""
+	}
+	line := "Deedglass witness · " + w.Level + " · " + w.Verdict
+	if w.Summary != nil && *w.Summary != "" {
+		line += " · " + *w.Summary
+	}
+	return line
 }
 
 // MCPStillPendingText answers deedglass.check_approval while a person hasn't decided.

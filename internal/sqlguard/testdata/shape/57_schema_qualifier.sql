@@ -1,0 +1,1 @@
+DELETE FROM public.orders WHERE public.orders.id = 1

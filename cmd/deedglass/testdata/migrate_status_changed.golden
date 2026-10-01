@@ -18,5 +18,6 @@ VERSION  NAME                STATE    APPLIED               CHECKSUM
 0015     policy_versions_v2  [35mpending[0m  —                     sha256:82ad…43b4
 0016     gate                [35mpending[0m  —                     sha256:27ef…38e4
 0017     connectors_vault    [35mpending[0m  —                     sha256:6159…c5e3
-[31m✕[0m 8 applied · 8 pending · 1 doesn't match this build. Run deedglass migrate verify for details.
+0018     witness             [35mpending[0m  —                     sha256:ef00…68b0
+[31m✕[0m 8 applied · 9 pending · 1 doesn't match this build. Run deedglass migrate verify for details.
 --- stderr

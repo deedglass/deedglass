@@ -117,7 +117,7 @@ A tool:
 | `side_effect` | Optional; only higher than the method's default. `tools[2] is a DELETE, so its side effect can't be "read". Use "destructive", or leave side_effect out.` |
 | `idempotent`, `idempotency_header` | Mark a write safe to retry. With `idempotency_header: Idempotency-Key` the header carries the action id, the same on every retry. |
 | `args` | Each arg: `in` (`path`, `query`, `body` or `header`), `type` (`string`, `integer`, `number`, `boolean`, `object`, `array`), and optionally `enum`, `pattern` (RE2), `min`, `max`, `max_length`, `required`, `sensitive`, `description`. A header arg names its header with `header: X-…` (`^X-[A-Za-z0-9-]{1,64}$`). At most 32. |
-| `readback`, `postcondition` | Stored and shape-checked today; S19's L1 witness uses them (`readback` must name a read tool of the same connector). |
+| `readback`, `postcondition` | The L1 read-back after a write, and an optional CEL condition over what it reads (S19). See [Read-backs](#read-backs). |
 
 The tool's input schema is generated from its args (`additionalProperties: false`), and
 `connector/schema` checks every call against it before anything is sent.
@@ -176,6 +176,75 @@ Witness and the Console; agents don't see it.
 
 Every code has a page in [api/errors.md](api/errors.md).
 
+## Read-backs
+
+After a write succeeds, the Witness can read the result back from the target (L1 Confirmed). A
+REST write tool names a read tool of the same connector and the fields to compare; a Postgres
+single-row `UPDATE` by primary key is read back without any config. How verdicts are decided, the
+CEL environment and the Postgres row rule are in [WITNESS.md](WITNESS.md).
+
+The orders example (`examples/connectors/orders.yaml`):
+
+```yaml
+    - name: update_status
+      description: Set an order's status.
+      method: PATCH
+      path: /v1/orders/{id}
+      idempotency_header: Idempotency-Key
+      args:
+        id:     { in: path, type: string, pattern: "^[0-9]{1,12}$", required: true }
+        status: { in: body, type: string, enum: [pending, shipped, cancelled], required: true }
+      readback:
+        tool: get                                     # a read tool of this connector (checked when saved)
+        args: { id: "{{args.id}}" }                   # whole-value templates only
+        expect: { "body.status": "{{args.status}}" }  # exact, per-field comparison
+        consistency: strong                           # strong (1 attempt) | eventual (attempts × interval_ms)
+        attempts: 1                                   # 1 to 5; eventual defaults to 3
+        interval_ms: 300                              # 100 to 2000
+        on_not_found: gap                             # gap | violation
+      postcondition: 'observation.body.status == args.status'   # optional CEL
+```
+
+The condition reads `args.status`, the write's own argument. S16's version of this example said
+`request.status`, which isn't a field; the config check now names the fix.
+
+| Key | Default | Limit |
+|---|---|---|
+| `readback.tool` | required | a tool of this connector with `side_effect: read` that is idempotent |
+| `readback.args` | none | each key an argument of the read tool; literals or `{{args.<path>}}` / `{{result.body.<path>}}` |
+| `readback.expect` | none | at most 32 paths like `body.status` or `body.items[0].id` |
+| `readback.consistency` | `strong` | `strong` or `eventual` |
+| `readback.attempts` | 1 (`eventual`: 3) | 1 to 5; above 1 needs `eventual` |
+| `readback.interval_ms` | 300 | 100 to 2000 |
+| `readback.on_not_found` | `gap` | `gap` or `violation` |
+| `postcondition` | none | CEL returning true or false; at most 2,048 characters and an estimated cost of 100,000; needs `readback` |
+
+The read-back runs through the same path as any call to the read tool (argument schema, path rules,
+egress and the pinned address, the credential added last, redaction, the size cap). It is not an
+action: it gets no deed of its own and doesn't count against the agent's budgets. Policy `verify:`
+sets the level a write must reach ([POLICY_LANGUAGE.md](POLICY_LANGUAGE.md#66-verify-and-the-witness)).
+
+### Config errors
+
+Creating or updating the connector checks every read-back and answers `400 validation_failed` with
+the field's `param`. The CLI prints `param: message`:
+
+```text
+config.tools[1].readback.tool: "update_status" writes, so it can't be a read-back. Name a read tool such as "get".
+config.tools[1].readback.tool: "fetch" isn't a tool of this connector. Name a read tool such as "get".
+config.tools[1].readback.tool: "list" isn't idempotent, so it can't be a read-back. Name a read tool that is.
+config.tools[1].readback.attempts: attempts above 1 need consistency: eventual.
+config.tools[1].postcondition: A postcondition needs a read-back to read from. Add readback: { tool: get, args: … } to this tool.
+config.tools[1].postcondition: 1:28: request.status isn't a field. Did you mean args.status?
+config.tools[1].postcondition: The postcondition must be true or false. Compare a field, like observation.body.status == args.status.
+config.tools[1].postcondition: This condition could cost up to 520,488,451 units per call; the limit is 100,000. Compare fewer fields, or use expect.
+```
+
+The position in a postcondition error is `line:column`, counted in characters from the start of the
+condition: `1:28` is where `request` starts in `observation.body.status == request.status`. The cost example is three nested `all()` loops over `observation.body.items`; compare
+fixed fields instead, or move the check to `expect`. When several fields are wrong, the API names the
+first and says how many there are; fix it and send the config again to see the next.
+
 ## The `mcp_http` connector (a remote MCP server)
 
 A remote MCP server over Streamable HTTP, as one org's connector. Its credential lives in the
@@ -218,9 +287,10 @@ kind, version and key id.
 - **No OpenAPI import yet.** You write the REST config by hand (`connector import` is planned).
 - **No proxies.** Environment proxies are ignored for connector traffic (v2).
 - **No custom trust roots** for private APIs with their own TLS authority yet.
-- **No read-back yet.** `readback` and `postcondition` are stored for S19; today a REST call is
-  witnessed at L0, so a service that answers 200 without saving (`MOCK_ORDERS_MODE=lying`) is
-  `VERIFIED` until S19 makes it an L1 `MISMATCH`.
+- **A read-back sees only what the target answers, and only the fields you name.** A service that
+  answers 200 without saving (`MOCK_ORDERS_MODE=lying`) is an L1 `MISMATCH` when its read tool
+  tells the truth; one that lies on reads too can't be caught by reading it back
+  ([WITNESS.md](WITNESS.md#what-the-witness-doesnt-do)).
 - **Sensitive args are redacted, not digested.** The action row keeps the arguments as sent.
 - **The MCP HTTP upstreams of S15 are still configured in `deedglass.yaml`** with their headers
   from the environment; moving them to connector rows with vault credentials (`mcp_http`) is S18

@@ -1,0 +1,1 @@
+DELETE FROM customers WHERE lower(email) = 'a@example.test'

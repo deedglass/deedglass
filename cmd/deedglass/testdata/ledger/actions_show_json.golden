@@ -44,14 +44,61 @@ exit 0
     "error_message": null
   },
   "witness": {
+    "object": "witness",
     "level": "L2",
     "verdict": "MISMATCH",
     "method": "postgres.pgoutput",
-    "reasons": [],
+    "required_level": null,
+    "summary": "Postgres changed 301 rows in public.orders. The agent reported 1.",
+    "reasons": [
+      {
+        "code": "row_count_mismatch",
+        "class": "violation",
+        "level": "L2",
+        "check": "row.count",
+        "message": "Postgres changed 301 rows in public.orders. The agent reported 1."
+      }
+    ],
+    "witnessed_at": "TIME",
+    "detail_digest": "sha256:HASH",
     "detail": {
-      "table": "public.orders",
-      "expected_rows": 1,
-      "observed_rows": 301
+      "claim": {
+        "level": "L2",
+        "method": "postgres.pgoutput",
+        "verdict": "MISMATCH",
+        "required_level": "L0"
+      },
+      "levels": {
+        "L0": {
+          "method": "reported",
+          "verdict": "VERIFIED"
+        },
+        "L1": null,
+        "L2": {
+          "method": "postgres.pgoutput",
+          "verdict": "MISMATCH"
+        }
+      },
+      "object": "witness_detail",
+      "reasons": [
+        {
+          "code": "tool_reported_success",
+          "check": "status",
+          "class": "pass",
+          "level": "L0",
+          "message": "The tool reported success."
+        },
+        {
+          "code": "row_count_mismatch",
+          "check": "row.count",
+          "class": "violation",
+          "level": "L2",
+          "message": "Postgres changed 301 rows in public.orders. The agent reported 1."
+        }
+      ],
+      "summary": "Postgres changed 301 rows in public.orders. The agent reported 1.",
+      "version": 1,
+      "witnessed_at": "TIME"
     }
   },
   "cost": null,

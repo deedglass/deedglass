@@ -19,6 +19,7 @@ import (
 	"github.com/deedglass/deedglass/internal/ledger"
 	"github.com/deedglass/deedglass/internal/policy"
 	"github.com/deedglass/deedglass/internal/store"
+	"github.com/deedglass/deedglass/internal/witness"
 	"github.com/deedglass/deedglass/pkg/deedglass"
 )
 
@@ -27,6 +28,14 @@ import (
 func (w *world) admin(sql string, args ...any) {
 	w.t.Helper()
 	if _, err := w.e.Admin(w.t).Exec(bg, sql, args...); err != nil {
+		w.t.Fatalf("%s: %v", sql, err)
+	}
+}
+
+// adminRow scans one row of an admin (superuser) query.
+func (w *world) adminRow(sql string, args []any, dest ...any) {
+	w.t.Helper()
+	if err := w.e.Admin(w.t).QueryRow(bg, sql, args...).Scan(dest...); err != nil {
 		w.t.Fatalf("%s: %v", sql, err)
 	}
 }
@@ -307,7 +316,7 @@ func TestTimeoutIsUnverifiable(t *testing.T) {
 	w := newWorld(t, worldOpts{cfg: Config{ExecuteTimeout: 50 * time.Millisecond}})
 	a := w.must(0, req("fake.slow", `{"_fake":{"latency_ms":5000}}`))
 	if a.Status != "executed" || a.State != "sealed" || *a.Execution.Status != "unknown" || *a.Execution.ErrorCode != "timeout" ||
-		a.Witness.Verdict != "UNVERIFIABLE" || (*a.Witness.Reasons)[0] != ReasonTimeout {
+		a.Witness.Verdict != "UNVERIFIABLE" || a.Witness.Cause() != ReasonTimeout {
 		t.Fatalf("%s", mustJSON(a))
 	}
 	if UnknownOutcomeMessage(a, 30*time.Second) != "The tool did not answer within 30 s. It may have run." {
@@ -728,7 +737,8 @@ func TestCrashBetweenTxAAndTxB(t *testing.T) {
 	}
 	e := w.p.execute(bg, ex, adm2.plan.call)
 	err = w.led.OrgTxRetry(bg, w.org, func(ctx context.Context, tx pgx.Tx) error {
-		_, err := w.p.recordExecution(ctx, tx, adm2.plan.subject, e, nil, nil, "system", "", false)
+		wc := w.p.newWitnessCase(adm2.plan.subject, e, adm2.plan.exec, adm2.plan.call, witness.L0, "", "")
+		_, err := w.p.recordExecution(ctx, tx, adm2.plan.subject, e, wc, nil, nil, "system", "", false)
 		return err
 	})
 	if err != nil {

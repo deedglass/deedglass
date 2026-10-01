@@ -102,12 +102,17 @@ type GateAction struct {
 	DeedID            *string
 	CreatedAt         time.Time
 	UpdatedAt         time.Time
+	// S19: the level the decision's verify: asks for, and the stored result (≤ gate.max_result_bytes;
+	// nil when it wasn't kept or was pruned) for read-back templates that name result.body.
+	WitnessRequired *string
+	Result          json.RawMessage
 }
 
 const gateActionSQL = `SELECT a.id, a.org_id, a.agent_id, a.api_key_id, a.mode, a.tool, a.connector, a.state, a.request,
   a.request_digest, a.request_fingerprint, a.idempotency_key, a.on_behalf_of, a.session_ref, a.context, a.livemode,
   a.intent_hash, a.intent_signed, a.decision, a.decision_detail, a.reservations, a.approval_id, ap.status, ap.expires_at,
-  a.executing_at, a.executing_deadline, a.execution_status, a.error_code, a.deed_id, a.created_at, a.updated_at
+  a.executing_at, a.executing_deadline, a.execution_status, a.error_code, a.deed_id, a.created_at, a.updated_at,
+  a.witness_required, a.result
 FROM deedglass.actions AS a
 LEFT JOIN deedglass.approvals AS ap ON ap.org_id = a.org_id AND ap.id = a.approval_id
 WHERE a.org_id = $1 AND a.id = $2`
@@ -120,15 +125,16 @@ func GetGateAction(ctx context.Context, tx pgx.Tx, org ids.OrgID, id ids.ActionI
 		q += ` FOR UPDATE OF a`
 	}
 	var a GateAction
-	var req, cx, detail, res []byte
+	var req, cx, detail, res, result []byte
 	err := tx.QueryRow(ctx, q, org, id).Scan(&a.ID, &a.OrgID, &a.AgentID, &a.APIKeyID, &a.Mode, &a.Tool, &a.Connector, &a.State,
 		&req, &a.RequestDigest, &a.Fingerprint, &a.IdempotencyKey, &a.OnBehalfOf, &a.Session, &cx, &a.Livemode,
 		&a.IntentHash, &a.IntentSigned, &a.Decision, &detail, &res, &a.ApprovalID, &a.ApprovalStatus, &a.ApprovalExpiresAt,
-		&a.ExecutingAt, &a.ExecutingDeadline, &a.ExecutionStatus, &a.ErrorCode, &a.DeedID, &a.CreatedAt, &a.UpdatedAt)
+		&a.ExecutingAt, &a.ExecutingDeadline, &a.ExecutionStatus, &a.ErrorCode, &a.DeedID, &a.CreatedAt, &a.UpdatedAt,
+		&a.WitnessRequired, &result)
 	if err != nil {
 		return nil, notFound(err)
 	}
-	a.Request, a.Context, a.DecisionDetail, a.Reservations = req, cx, detail, res
+	a.Request, a.Context, a.DecisionDetail, a.Reservations, a.Result = req, cx, detail, res, result
 	return &a, nil
 }
 

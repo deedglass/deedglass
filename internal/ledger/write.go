@@ -29,6 +29,10 @@ type EventData struct {
 	Verdict      *string `json:"verdict,omitempty"`
 	ApprovalID   *string `json:"approval_id,omitempty"`
 	DetailDigest *string `json:"detail_digest,omitempty"`
+	// S19, on the edges into a verdict: the level the policy required, and the claim-level codes
+	// (level_below_required, no_checks).
+	RequiredLevel *string `json:"required_level,omitempty"`
+	Flags         *string `json:"flags,omitempty"` // comma-separated codes
 
 	// Actor is who caused the event: "system" (the default), agt_… or usr_…. RequestID is the API
 	// request, when there is one. Both are columns, not data.
@@ -81,7 +85,7 @@ var patchColumns = [...][2]string{
 	{"execution_status", "text"}, {"result", "jsonb"}, {"result_digest", "text"}, {"error_code", "text"},
 	{"error_message", "text"}, {"cost_amount", "bigint"}, {"cost_currency", "text"}, {"latency_ms", "integer"},
 	{"started_at", "timestamptz"}, {"finished_at", "timestamptz"}, {"witness_level", "text"}, {"witness_verdict", "text"},
-	{"witness_method", "text"}, {"witness_detail", "jsonb"}, {"witness_detail_digest", "text"},
+	{"witness_method", "text"}, {"witness_detail", "jsonb"}, {"witness_detail_digest", "text"}, {"witness_required", "text"},
 }
 
 // patchSetFrom is the SET list for a Patch whose first parameter is $first: each column keeps its
@@ -114,7 +118,7 @@ const patchSet = `,
     started_at = COALESCE($36::timestamptz, started_at), finished_at = COALESCE($37::timestamptz, finished_at),
     witness_level = COALESCE($38::text, witness_level), witness_verdict = COALESCE($39::text, witness_verdict),
     witness_method = COALESCE($40::text, witness_method), witness_detail = COALESCE($41::jsonb, witness_detail),
-    witness_detail_digest = COALESCE($42::text, witness_detail_digest)`
+    witness_detail_digest = COALESCE($42::text, witness_detail_digest), witness_required = COALESCE($43::text, witness_required)`
 
 // transitionSQL is built once per state from stateColumn; patchSQL is the same statement with
 // patchSet (one UPDATE, so one compare-and-set, whichever columns an edge writes).
@@ -351,7 +355,7 @@ func (l *Ledger) Advance(ctx context.Context, tx pgx.Tx, actionID string, from g
 		}
 		if typ := eventFor(prev, s.To); typ != "" {
 			id := actionID
-			evs = append(evs, Event{Event: evt, Type: typ, ID: actionID, Action: &id, State: strp(string(s.To))})
+			evs = append(evs, withWitness(Event{Event: evt, Type: typ, ID: actionID, Action: &id, State: strp(string(s.To))}, s.Event))
 		}
 		prev = s.To
 	}
@@ -469,8 +473,21 @@ func (l *Ledger) transition(ctx context.Context, tx pgx.Tx, actionID string, fro
 	if typ == "" || sd != nil {
 		return at, nil // nothing to announce, or announced in the batch above
 	}
-	return at, l.Publish(ctx, tx, Event{Event: evt.String(), Type: typ, Org: org, ID: actionID, Action: &actionID,
-		State: strp(string(to)), At: deed.FormatTime(at)})
+	return at, l.Publish(ctx, tx, withWitness(Event{Event: evt.String(), Type: typ, Org: org, ID: actionID, Action: &actionID,
+		State: strp(string(to)), At: deed.FormatTime(at)}, d))
+}
+
+// withWitness adds the verdict to an action.witnessed event (S19): the level, the verdict, the
+// level the policy required and the claim-level flags. Other events are unchanged.
+func withWitness(ev Event, d EventData) Event {
+	if ev.Type != EventActionWitnessed {
+		return ev
+	}
+	ev.Level, ev.Verdict, ev.RequiredLevel = d.Level, d.Verdict, d.RequiredLevel
+	if d.Flags != nil && *d.Flags != "" {
+		ev.Flags = strings.Split(*d.Flags, ",")
+	}
+	return ev
 }
 
 // AppendEvent records a note on an action without changing its state (from_state = to_state =

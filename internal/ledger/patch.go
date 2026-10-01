@@ -36,6 +36,7 @@ type Patch struct {
 	ShadowVersionID   *string
 	ShadowDetail      json.RawMessage
 	Reservations      json.RawMessage
+	WitnessRequired   *string // L0 | L1 | L2: the level the decision's verify: asks for (S19)
 
 	// Approval: the edge into pending_approval.
 	ApprovalID *string
@@ -100,7 +101,7 @@ func (p *Patch) groups() patchGroup {
 		p.DecisionSource != nil, p.DecisionRuleID != nil, p.DecisionReason != nil, p.DecisionMessage != nil,
 		p.DecisionDetail != nil, p.PolicyID != nil, p.PolicyVersionID != nil, p.PolicyVersionHash != nil,
 		p.PolicyMode != nil, p.ShadowDecision != nil, p.ShadowRuleID != nil, p.ShadowVersionID != nil,
-		p.ShadowDetail != nil, p.Reservations != nil)
+		p.ShadowDetail != nil, p.Reservations != nil, p.WitnessRequired != nil)
 	set(groupApproval, p.ApprovalID != nil)
 	set(groupExecuting, p.ExecutingDeadline != nil)
 	set(groupExecution, p.ExecutionStatus != nil, p.Result != nil, p.ResultDigest != nil, p.ErrorCode != nil,
@@ -137,6 +138,7 @@ func (p *Patch) args() []any {
 		p.ExecutionStatus, rawArg(p.Result), p.ResultDigest, p.ErrorCode, p.ErrorMessage, p.CostAmount, p.CostCurrency,
 		p.LatencyMS, p.StartedAt, p.FinishedAt,
 		p.WitnessLevel, p.WitnessVerdict, p.WitnessMethod, rawArg(p.WitnessDetail), p.WitnessDetailDigest,
+		p.WitnessRequired,
 	}
 }
 
@@ -202,5 +204,6 @@ func (p *Patch) fromArgs(a []any) {
 		ExecutionStatus: s(a[20]), Result: raw(a[21]), ResultDigest: s(a[22]), ErrorCode: s(a[23]), ErrorMessage: s(a[24]),
 		CostAmount: i(a[25]), CostCurrency: s(a[26]), LatencyMS: i(a[27]), StartedAt: t(a[28]), FinishedAt: t(a[29]),
 		WitnessLevel: s(a[30]), WitnessVerdict: s(a[31]), WitnessMethod: s(a[32]), WitnessDetail: raw(a[33]), WitnessDetailDigest: s(a[34]),
+		WitnessRequired: s(a[35]),
 	}
 }

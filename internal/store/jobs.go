@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"encoding/json"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -69,14 +70,31 @@ func (db *DB) ReleaseActionKeys(ctx context.Context, limit int) (int, error) {
 // EnqueueJob adds a job for an action of org (once per action and kind) and wakes the workers when
 // tx commits.
 func EnqueueJob(ctx context.Context, tx pgx.Tx, org ids.OrgID, action ids.ActionID, kind string, runAfter time.Time, maxAttempts int) error {
+	return EnqueueJobPayload(ctx, tx, org, action, kind, runAfter, maxAttempts, nil)
+}
+
+// EnqueueJobPayload is EnqueueJob with a payload: at most 16 KiB of JSON the job's worker needs
+// (S19: the read-back's evidence), never a request or result body and never a secret.
+func EnqueueJobPayload(ctx context.Context, tx pgx.Tx, org ids.OrgID, action ids.ActionID, kind string, runAfter time.Time, maxAttempts int,
+	payload json.RawMessage) error {
 	if maxAttempts < 1 {
 		maxAttempts = 8
 	}
-	if _, err := tx.Exec(ctx, `INSERT INTO deedglass.witness_jobs (org_id, action_id, kind, run_after, max_attempts)
-	    VALUES ($1, $2, $3, $4, $5) ON CONFLICT (action_id, kind) DO NOTHING`, org, action, kind, runAfter, maxAttempts); err != nil {
+	var p any
+	if payload != nil {
+		p = string(payload)
+	}
+	if _, err := tx.Exec(ctx, `INSERT INTO deedglass.witness_jobs (org_id, action_id, kind, run_after, max_attempts, payload)
+	    VALUES ($1, $2, $3, $4, $5, $6::jsonb) ON CONFLICT (action_id, kind) DO NOTHING`, org, action, kind, runAfter, maxAttempts, p); err != nil {
 		return err
 	}
 	return NotifyJobs(ctx, tx, org.String())
+}
+
+// DeleteActionJob removes an action's job of one kind (S19: B2 finished the read-back inline).
+func DeleteActionJob(ctx context.Context, tx pgx.Tx, org ids.OrgID, action ids.ActionID, kind string) error {
+	_, err := tx.Exec(ctx, `DELETE FROM deedglass.witness_jobs WHERE org_id = $1 AND action_id = $2 AND kind = $3`, org, action, kind)
+	return err
 }
 
 // JobRow is a job as its worker reads it inside the org transaction.
@@ -85,13 +103,28 @@ type JobRow struct {
 	Attempts    int
 	MaxAttempts int
 	LockedBy    *string
+	Payload     json.RawMessage
+	LastError   *string
 }
 
 // GetJob reads one job of org, locking it. ErrNotFound when it is gone (another worker finished it).
 func GetJob(ctx context.Context, tx pgx.Tx, org ids.OrgID, id int64) (JobRow, error) {
 	var j JobRow
-	err := tx.QueryRow(ctx, `SELECT id, attempts, max_attempts, locked_by FROM deedglass.witness_jobs
-	    WHERE org_id = $1 AND id = $2 FOR UPDATE`, org, id).Scan(&j.ID, &j.Attempts, &j.MaxAttempts, &j.LockedBy)
+	var payload []byte
+	err := tx.QueryRow(ctx, `SELECT id, attempts, max_attempts, locked_by, payload, last_error FROM deedglass.witness_jobs
+	    WHERE org_id = $1 AND id = $2 FOR UPDATE`, org, id).Scan(&j.ID, &j.Attempts, &j.MaxAttempts, &j.LockedBy, &payload, &j.LastError)
+	j.Payload = payload
+	return j, notFound(err)
+}
+
+// PeekJob reads one job of org without locking it (inside a read transaction). ErrNotFound when it
+// is gone.
+func PeekJob(ctx context.Context, tx pgx.Tx, org ids.OrgID, id int64) (JobRow, error) {
+	var j JobRow
+	var payload []byte
+	err := tx.QueryRow(ctx, `SELECT id, attempts, max_attempts, locked_by, payload, last_error FROM deedglass.witness_jobs
+	    WHERE org_id = $1 AND id = $2`, org, id).Scan(&j.ID, &j.Attempts, &j.MaxAttempts, &j.LockedBy, &payload, &j.LastError)
+	j.Payload = payload
 	return j, notFound(err)
 }
 

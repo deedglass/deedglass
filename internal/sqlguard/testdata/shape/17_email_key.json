@@ -1,0 +1,27 @@
+{
+  "simple": true,
+  "kind": "update",
+  "table": "public.customers",
+  "set": [
+    {
+      "column": "name",
+      "value": {
+        "kind": "string",
+        "text": "Asha"
+      }
+    }
+  ],
+  "where": {
+    "columns": [
+      "email"
+    ],
+    "rows": [
+      [
+        {
+          "kind": "string",
+          "text": "a@example.test"
+        }
+      ]
+    ]
+  }
+}

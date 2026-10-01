@@ -38,7 +38,7 @@ Rules are read top to bottom, and **the first rule that matches decides**; when 
 3. The file format
 4. Fields
 5. Globs, money and durations
-6. Evaluation order and the two invariants (6.1 The decision, 6.2 The input, 6.3 The trace, 6.4 Messages, 6.5 `AlwaysDenies`)
+6. Evaluation order and the two invariants (6.1 The decision, 6.2 The input, 6.3 The trace, 6.4 Messages, 6.5 `AlwaysDenies`, 6.6 `verify:` and the Witness)
 7. The CEL environment
 8. Limits
 9. Normalization and `version_hash`
@@ -440,6 +440,29 @@ It walks the rules in order and stops at the first rule whose `match` (tool, con
 - otherwise the answer is whether that rule's decision is `deny`.
 
 If no rule covers the tool, the answer is whether `defaults.decision` is `deny`. A missing policy always denies. It ignores budgets and Stop, because they change from minute to minute.
+
+### 6.6 `verify:` and the Witness
+
+`verify:` sets the lowest witness level an allowed action must reach to be `VERIFIED` (S19,
+[WITNESS.md](WITNESS.md)). The decision carries it, and the Gate records it on the action as
+`required_level` when the decision is made, so a later policy change doesn't alter it.
+
+- **It applies to tools that may write:** side effect `write`, `destructive` or `unknown`. A read
+  always requires `L0`, whatever the rule says.
+- **The default is `L0`:** the rule's `verify`, else `defaults.verify`, else `L0`.
+- **It never weakens a verdict, and it is never lowered.** A violation at any level is still
+  `MISMATCH`. A clean level below the required one gives `UNVERIFIABLE` with the reason
+  `level_below_required`, at that level: `verify: L1` with a clean L0 and a failed read-back is
+  `L0 · UNVERIFIABLE`.
+- **A higher level never needs to be clean to keep a lower claim, unless the policy asks.** With
+  `verify: L0`, a clean L1 read-back and an L2 gap give `L1 · VERIFIED`, with the gap listed. With
+  `verify: L2`, the same evidence gives `L1 · UNVERIFIABLE`.
+- **It doesn't block the call.** The tool runs when the decision allows it; the required level
+  only decides what the verdict may say afterwards. To refuse writes that can't be confirmed, deny
+  them in the policy.
+- **Ask only for what can run.** `L1` needs a read-back on the tool (connector config, see
+  [CONNECTORS.md](CONNECTORS.md#read-backs)) or a Postgres single-row update by primary key; `L2`
+  needs the Postgres change stream (S21). Otherwise every such action is `UNVERIFIABLE`.
 
 ## 7. The CEL environment
 

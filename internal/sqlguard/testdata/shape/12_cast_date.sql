@@ -1,0 +1,1 @@
+UPDATE orders SET ship_on = '2026-10-07'::date WHERE id = 1

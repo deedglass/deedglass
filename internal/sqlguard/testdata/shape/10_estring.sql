@@ -1,0 +1,1 @@
+UPDATE orders SET note = E'it\'s' WHERE id = 1

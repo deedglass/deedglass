@@ -1,0 +1,1 @@
+UPDATE orders SET paid = TRUE WHERE id = 1

@@ -67,8 +67,9 @@ type Config struct {
 	Server *url.URL
 
 	// File-only settings (deedglass.yaml sections; settings.go).
-	Gate GateSettings
-	MCP  MCPSettings // mcp.* (S15)
+	Gate    GateSettings
+	MCP     MCPSettings     // mcp.* (S15)
+	Witness WitnessSettings // witness.* (S19)
 
 	raw        map[string]string // resolved raw values, for printing
 	sources    map[string]Source

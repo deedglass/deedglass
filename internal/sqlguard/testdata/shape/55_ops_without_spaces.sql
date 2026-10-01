@@ -1,0 +1,1 @@
+UPDATE orders SET qty=-1 WHERE id=-5

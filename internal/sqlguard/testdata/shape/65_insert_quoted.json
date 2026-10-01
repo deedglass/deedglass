@@ -1,0 +1,21 @@
+{
+  "simple": true,
+  "kind": "insert",
+  "table": "public.Orders",
+  "insert_cols": [
+    "Id",
+    "note"
+  ],
+  "insert_rows": [
+    [
+      {
+        "kind": "integer",
+        "text": "1"
+      },
+      {
+        "kind": "string",
+        "text": "a\nb"
+      }
+    ]
+  ]
+}

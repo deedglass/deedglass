@@ -1,0 +1,1 @@
+DELETE FROM orders WHERE id IN (SELECT order_id FROM order_tags)

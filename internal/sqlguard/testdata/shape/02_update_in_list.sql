@@ -1,0 +1,1 @@
+UPDATE orders SET status = 'shipped' WHERE id IN (1,2,3)

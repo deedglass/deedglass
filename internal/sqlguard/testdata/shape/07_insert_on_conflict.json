@@ -1,0 +1,5 @@
+{
+  "simple": false,
+  "why": "on_conflict",
+  "kind": "insert"
+}

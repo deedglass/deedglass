@@ -1,0 +1,1 @@
+DELETE FROM public.orders WHERE id = 5 RETURNING id, status

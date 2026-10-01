@@ -19,7 +19,17 @@ const (
 	MetaDecision = "com.deedglass/decision"
 	MetaRule     = "com.deedglass/rule"
 	MetaApproval = "com.deedglass/approval"
+	// MetaWitness (S19) is {"level":"L1","verdict":"MISMATCH"} on a witnessed tools/call result.
+	MetaWitness = "com.deedglass/witness"
 )
+
+// WitnessMeta is the com.deedglass/witness value for an action's verdict, or nil before one.
+func WitnessMeta(a *ledger.Action) json.RawMessage {
+	if a == nil || a.Witness == nil {
+		return nil
+	}
+	return jsonrpc.Value(map[string]string{"level": a.Witness.Level, "verdict": a.Witness.Verdict})
+}
 
 // CheckApprovalName is the wrapper's own tool.
 const CheckApprovalName = "deedglass.check_approval"

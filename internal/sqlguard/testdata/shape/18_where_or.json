@@ -1,0 +1,6 @@
+{
+  "simple": false,
+  "why": "where_not_key",
+  "kind": "update",
+  "table": "public.orders"
+}

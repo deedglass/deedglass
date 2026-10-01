@@ -1,0 +1,1 @@
+INSERT INTO orders (id, status) SELECT id, status FROM staging

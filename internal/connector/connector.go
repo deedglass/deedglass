@@ -126,16 +126,30 @@ type Enricher interface {
 	Enrich(ctx context.Context, inst *Instance, t ToolSpec, args json.RawMessage) (map[string]any, error)
 }
 
-// Observation is what a read-back saw (S19).
+// Observation is what a read-back saw (S19). Body is the response body as JSON (REST) or the
+// row read-back's result (Postgres); it reaches the Witness only, never an agent or a deed, and the
+// witness detail keeps only the compared fields and a digest of it.
 type Observation struct {
-	Body   json.RawMessage
-	Status int
+	Body      json.RawMessage
+	Status    int            // HTTP status, or 0
+	Meta      map[string]any // latency_ms, attempts, …
+	LatencyMS int64
 }
 
-// ReadBacker reads a write back for S19's L1 witness.
+// ReadBacker reads a write back for the L1 witness (S19). For a REST connector, call is the read
+// tool's call (its Tool and resolved Args); for Postgres, call and res are the statement that ran
+// and its result (Evidence["xid8"]). A read-back never writes. Errors are *Error values: a
+// KindNotFound answer means the target has nothing there; *ErrReadBackSkipped means the read-back
+// doesn't apply to this call.
 type ReadBacker interface {
 	ReadBack(ctx context.Context, inst *Instance, call Call, res Result) (Observation, error)
 }
+
+// ErrReadBackSkipped is a read-back that doesn't apply (a Postgres WHERE that isn't the primary
+// key). Why becomes the witness's readback_skipped note.
+type ErrReadBackSkipped struct{ Why string }
+
+func (e *ErrReadBackSkipped) Error() string { return "connector: no read-back: " + e.Why }
 
 // Instance is one configured connector of one org (a connectors row), or a built-in.
 type Instance struct {

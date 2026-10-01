@@ -41,6 +41,12 @@ type Event struct {
 	State  *string `json:"state"`  // action events: the state entered
 	Deed   *string `json:"deed"`   // deed_…
 	At     string  `json:"at"`     // RFC 3339, milliseconds, UTC
+	// action.witnessed only (S19, additive): the claim, the level the policy required, and the
+	// claim-level codes (level_below_required, no_checks). Absent on every other event.
+	Level         *string  `json:"level,omitempty"`
+	Verdict       *string  `json:"verdict,omitempty"`
+	RequiredLevel *string  `json:"required_level,omitempty"`
+	Flags         []string `json:"flags,omitempty"`
 }
 
 // eventFor maps a transition into to (contract §8 table): "" when the transition publishes nothing

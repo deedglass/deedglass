@@ -1,0 +1,1 @@
+INSERT INTO public.orders (id, status) VALUES (1,'a'), (2,'b') RETURNING *

@@ -1,0 +1,1 @@
+DELETE FROM orders WHERE id = 5 RETURNING id + 1

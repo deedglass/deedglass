@@ -164,28 +164,32 @@ func printAct(ctx context.Context, e *Env, c *deedglass.Client, a *ledger.Action
 	}
 	switch a.Status {
 	case ledger.StatusExecuted:
+		// S19: the first line's symbol follows the verdict; the witness line is
+		// "<level> · <VERDICT> · <summary>", then the reasons that matter and any field table.
 		w := a.Witness
-		switch {
-		case w != nil && w.Verdict == gate.VerdictUnverifiable:
-			head(s.Amber(ui.Unknown), "executed")
-			fmt.Fprintln(e.Stdout, "  "+s.Amber("UNVERIFIABLE")+" "+ui.Sep+" "+unknownSentence(a))
-			deedRow()
-			next()
-		case w != nil && w.Verdict == gate.VerdictMismatch:
-			head(s.Red(ui.Fail), "executed")
-			row("witness", w.Level+" "+ui.Sep+" "+s.Red("MISMATCH"))
-			deedRow()
-		default:
+		if w == nil {
 			head(s.Teal(ui.OK), "executed")
 			row("action", a.ID)
-			if w != nil {
-				method := ""
-				if w.Method != nil {
-					method = *w.Method
-				}
-				row("witness", w.Level+" "+ui.Sep+" "+w.Verdict+" "+ui.Sep+" "+gate.WitnessPhrase(w.Level, w.Verdict, method, reasonsOf(w)))
-			}
 			deedRow()
+			break
+		}
+		head(verdictSymbol(s, w.Verdict), "executed")
+		if w.Verdict == gate.VerdictVerified {
+			row("action", a.ID)
+		}
+		claim := witnessClaim(s, w, false)
+		if w.Verdict == gate.VerdictUnverifiable && w.Cause() != "" {
+			claim = w.Level + " " + ui.Sep + " " + verdictWord(s, w.Verdict) + " " + ui.Sep + " " + unknownSentence(a)
+		}
+		row("witness", claim)
+		for _, l := range witnessReasons(s, w, false, "           ") {
+			fmt.Fprintln(e.Stdout, l)
+		}
+		deedRow()
+		if n := witnessNext(a); n != "" {
+			fmt.Fprintln(e.Stdout, "  "+n)
+		} else if w.Verdict != gate.VerdictVerified {
+			next()
 		}
 	case ledger.StatusDenied, ledger.StatusExpired, ledger.StatusCancelled:
 		head(s.Red(ui.Fail), strings.ReplaceAll(a.Status, "_", " "))
@@ -243,11 +247,12 @@ func printAct(ctx context.Context, e *Env, c *deedglass.Client, a *ledger.Action
 	return nil
 }
 
+// reasonsOf is the witness's cause (timeout, edge_lost, …) and its reason codes.
 func reasonsOf(w *ledger.ActionWitness) []string {
 	if w == nil || w.Reasons == nil {
 		return nil
 	}
-	return *w.Reasons
+	return append([]string{w.Cause()}, w.Codes()...)
 }
 
 // unknownSentence is the honest line for an UNVERIFIABLE outcome. The CLI doesn't know the

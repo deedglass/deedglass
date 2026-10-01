@@ -1,0 +1,1 @@
+UPDATE orders SET x = now() WHERE id = 1

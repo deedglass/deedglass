@@ -1,0 +1,1 @@
+INSERT INTO orders (id, created) VALUES (1, now())

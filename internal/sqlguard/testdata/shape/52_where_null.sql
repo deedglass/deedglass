@@ -1,0 +1,1 @@
+UPDATE t SET c = 1 WHERE a = NULL

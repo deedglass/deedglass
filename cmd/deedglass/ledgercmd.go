@@ -3,7 +3,6 @@ package main
 import (
 	"bufio"
 	"context"
-	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -407,11 +406,11 @@ func runActionsShow(ctx context.Context, e *Env, args []string) error {
 	row("decision", dec)
 	row("execution", executionLine(d))
 	if w := d.Witness; w != nil {
-		chip, _ := witnessChip(st, ledger.Action{Witness: &ledger.ActionWitness{Level: w.Level, Verdict: w.Verdict}})
-		if sent := detailSentence(w.Verdict, w.Detail); sent != "" {
-			chip += " " + ui.Sep + " " + sent
+		// S19: the claim and its method, then every reason with its level, and field tables.
+		row("witness", witnessClaim(st, w, true))
+		for _, l := range witnessReasons(st, w, true, "             ") {
+			fmt.Fprintln(e.Stdout, l)
 		}
-		row("witness", chip)
 	} else {
 		chip, _ := witnessChip(st, ledger.Action{State: d.State, Policy: d.Policy, Execution: d.Execution})
 		row("witness", chip)
@@ -485,27 +484,6 @@ func executionLine(d *ledger.ActionDetail) string {
 		status += fmt.Sprintf(" %s %d ms", ui.Sep, *x.LatencyMS)
 	}
 	return status
-}
-
-// detailSentence turns a stored witness diff into the brand sentence: numbers first, no adjectives.
-func detailSentence(verdict string, raw json.RawMessage) string {
-	var d struct {
-		Table    string `json:"table"`
-		Expected *int64 `json:"expected_rows"`
-		Observed *int64 `json:"observed_rows"`
-		Reason   string `json:"reason"`
-	}
-	if len(raw) == 0 || json.Unmarshal(raw, &d) != nil {
-		return ""
-	}
-	switch {
-	case verdict == "MISMATCH" && d.Table != "" && d.Expected != nil && d.Observed != nil:
-		return fmt.Sprintf("Postgres changed %s %s in %s. The agent reported %s.", deed.FormatCount(*d.Observed),
-			plural(int(*d.Observed), "row", "rows"), clean(d.Table), deed.FormatCount(*d.Expected))
-	case verdict == "UNVERIFIABLE" && d.Reason == "timeout":
-		return "No evidence arrived before the time limit."
-	}
-	return ""
 }
 
 // exportToStdout writes the export to stdout (--out -), so it can be piped into deedglass verify -.

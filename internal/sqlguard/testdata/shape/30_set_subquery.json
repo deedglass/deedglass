@@ -1,0 +1,6 @@
+{
+  "simple": false,
+  "why": "subquery",
+  "kind": "update",
+  "table": "public.orders"
+}

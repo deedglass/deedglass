@@ -20,6 +20,7 @@ import (
 	"github.com/deedglass/deedglass/internal/connector/egress"
 	"github.com/deedglass/deedglass/internal/connector/schema"
 	"github.com/deedglass/deedglass/internal/deed"
+	"github.com/deedglass/deedglass/internal/witness"
 )
 
 // Type is the connector type.
@@ -339,15 +340,38 @@ func (c *Connector) normalize(ctx context.Context, env connector.Env, cfg *Confi
 		}
 		names[cfg.Tools[i].Name] = i
 	}
+	// Read-backs and postconditions (S19): the read tool exists, is a read and is idempotent; the
+	// templates name declared args; the CEL compiles under its cost limit.
+	infos := make(map[string]witness.ToolInfo, len(cfg.Tools))
+	for _, t := range cfg.Tools {
+		infos[t.Name] = toolInfo(t)
+	}
 	for i, t := range cfg.Tools {
-		if t.ReadBack != nil {
-			if _, ok := names[t.ReadBack.Tool]; !ok {
-				v.add(fmt.Sprintf("config.tools[%d].readback.tool", i), "readback.tool must name another tool of this connector.")
-			} else if rt := cfg.Tools[names[t.ReadBack.Tool]]; rt.sideOf() != connector.SideEffectRead {
-				v.add(fmt.Sprintf("config.tools[%d].readback.tool", i), "readback.tool must be a read (GET or HEAD).")
-			}
+		if t.ReadBack == nil && t.Postcondition == "" {
+			continue
+		}
+		for _, fe := range witness.CompileToolSpec(fmt.Sprintf("config.tools[%d]", i), infos[t.Name], WitnessReadBack(t.ReadBack), t.Postcondition, infos) {
+			v.add(fe.Param, "%s", fe.Message)
 		}
 	}
+}
+
+// toolInfo is what witness.CompileToolSpec needs to know about a tool.
+func toolInfo(t Tool) witness.ToolInfo {
+	args := make([]string, 0, len(t.Args))
+	for n := range t.Args {
+		args = append(args, n)
+	}
+	return witness.ToolInfo{Name: t.Name, SideEffect: string(t.sideOf()), Idempotent: t.idempotent(), Args: args}
+}
+
+// WitnessReadBack converts the stored read-back to the Witness's type (the same JSON shape).
+func WitnessReadBack(r *connector.ReadBackSpec) *witness.ReadBackSpec {
+	if r == nil {
+		return nil
+	}
+	return &witness.ReadBackSpec{Tool: r.Tool, Args: r.Args, Expect: r.Expect, Consistency: r.Consistency, Attempts: r.Attempts,
+		IntervalMS: r.IntervalMS, OnNotFound: r.OnNotFound}
 }
 
 func (c *Connector) normalizeTool(cfg *Config, i int, v *validator) {

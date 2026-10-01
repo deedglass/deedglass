@@ -1,0 +1,1 @@
+DELETE FROM orders USING customers WHERE orders.customer_id = customers.id

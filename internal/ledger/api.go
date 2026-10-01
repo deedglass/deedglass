@@ -65,29 +65,39 @@ type handlers struct {
 }
 
 // parseWait reads GET /v1/actions/{id}'s query: wait (0 to 25 seconds) and expand[] (request,
-// result, events: accepted for compatibility; the detail always carries them). Anything else is
-// refused, as before S13.
-func parseWait(r *http.Request) (time.Duration, error) {
+// result, events: accepted for compatibility, the detail always carries them; witness.detail, S19:
+// the full witness_detail). Anything else is refused, as before S13.
+func parseWait(r *http.Request) (time.Duration, bool, error) {
+	wait, full, err := parseWaitExpand(r)
+	return wait, full, err
+}
+
+func parseWaitExpand(r *http.Request) (time.Duration, bool, error) {
 	var wait time.Duration
+	full := false
 	for k, vs := range r.URL.Query() {
 		switch k {
 		case "wait":
 			n, err := strconv.ParseFloat(vs[len(vs)-1], 64)
 			if err != nil || n < 0 || n > PollWait || len(vs) > 1 {
-				return 0, httpx.ErrValidation("wait", "wait must be a number of seconds from 0 to 25, sent once.")
+				return 0, false, httpx.ErrValidation("wait", "wait must be a number of seconds from 0 to 25, sent once.")
 			}
 			wait = time.Duration(n * float64(time.Second))
 		case "expand[]", "expand":
 			for _, v := range vs {
-				if v != "request" && v != "result" && v != "events" {
-					return 0, httpx.ErrValidation(k, "expand[] takes request, result or events.")
+				switch v {
+				case "request", "result", "events":
+				case "witness.detail":
+					full = true
+				default:
+					return 0, false, httpx.ErrValidation(k, "expand[] takes request, result, events or witness.detail.")
 				}
 			}
 		default:
-			return 0, httpx.ErrValidation(k, "This endpoint takes only wait and expand[].")
+			return 0, false, httpx.ErrValidation(k, "This endpoint takes only wait and expand[].")
 		}
 	}
-	return wait, nil
+	return wait, full, nil
 }
 
 // org is the principal's org; every Ledger read is scoped to it.
@@ -161,7 +171,7 @@ func (h handlers) getAction(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	id := r.PathValue("id")
-	wait, err := parseWait(r)
+	wait, full, err := parseWait(r)
 	if err != nil {
 		return err
 	}
@@ -184,6 +194,9 @@ func (h handlers) getAction(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	httpx.Annotate(r.Context(), "", d.Agent.ID, d.ID)
+	if d.Witness != nil && !full {
+		d.Witness.Detail = nil
+	}
 	return httpx.WriteJSON(w, http.StatusOK, d)
 }
 

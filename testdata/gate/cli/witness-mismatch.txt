@@ -1,0 +1,9 @@
+exit 1
+--- stdout
+✕ executed · orders.update_status · N ms
+  witness  L1 · MISMATCH · orders.update_status reported success, but orders.get says status is "shipped", not "cancelled".
+           field          expected     observed
+           body.status    cancelled    shipped
+  deed     deed_… · seq N · sealed
+  Next: deedglass actions show act_… · https://docs.deedglass.com/witness/mismatch
+--- stderr

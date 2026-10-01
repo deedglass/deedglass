@@ -94,7 +94,7 @@ What Deedglass does not do, stated plainly. **Owner: S37**, which finalizes this
 - **No KMS yet.** The key ring lives in `DEEDGLASS_VAULT_KEY`; a KMS-backed key provider is v2.
 - **Egress sees addresses, not intent.** Misuse of an allowed API is policy's job ([NETWORK_EGRESS.md](NETWORK_EGRESS.md)).
 - **No HTTP proxy support** for connector traffic, and no per-connector trust roots for private APIs (v2).
-- **REST calls are witnessed at L0 only** until S19 adds read-back: a service that answers 200 without saving is VERIFIED today.
+- **A REST write without a read-back stays at L0:** a service that answers 200 without saving is `L0 · VERIFIED`. Add a `readback` to the tool to reach L1 ([WITNESS.md](WITNESS.md)).
 - **`sensitive` args are redacted from outputs and logs, not digested** in the action row (S22).
 - **Credentials aren't cached.** Every call reads its credential row (one indexed read); a 30 s cache is a stretch item, taken only if the benchmark asks for it.
 - **The MCP HTTP gateway's upstreams still take their headers from the environment** (S15's `mcp.upstreams`), not from the vault; their connections already go through egress. Moving them to `mcp_http` connector rows is S18 carry-over.
@@ -107,7 +107,7 @@ What Deedglass does not do, stated plainly. **Owner: S37**, which finalizes this
 - **`row_limit` caps what comes back, not what Postgres reads;** `statement_timeout` bounds the work.
 - **Triggers can write unwatched tables.** Those writes are invisible to L2 (S21 reports UNVERIFIABLE, never MISMATCH); `check` lists triggers on watched tables by name.
 - **DDL is blocked, not witnessed.**
-- **No L2 yet.** S20 creates the slot and decodes the stream, S21 turns it into verdicts. Until then, Postgres actions are L0, and `Result.Evidence` (`xid8`, `marker_lsn`, `sql_digest`, `command_tag`) isn't stored in the control plane; the witness reads the ledger in the customer database.
+- **No L2 yet.** S20 creates the slot and decodes the stream, S21 turns it into verdicts. Until then, Postgres actions are L0, except a single-row `UPDATE` by primary key, which S19 reads back (L1). `Result.Evidence` (`xid8`, `marker_lsn`, `sql_digest`, `command_tag`) isn't stored on the action row; a pending read-back job carries it until the verdict, and the L2 witness reads the ledger in the customer database.
 - **New tables aren't granted automatically:** run `init` again (no `ALTER DEFAULT PRIVILEGES` in v1).
 - **Roles are cluster-wide.** Two watched databases on one cluster share `deedglass_agent` and `deedglass_witness`, and `init --rotate-passwords` on one changes the password for both.
 - **No overloads** in `functions`, and arguments are scalars (strings, integers up to 2^53−1, booleans, null); send decimals as strings.
@@ -277,7 +277,7 @@ What the Gate doesn't do ([GATE.md](GATE.md)):
   result; the deed says `edge_reported` and records what the edge said. Deedglass can't tell a
   truthful edge from one that lies. S21's L2 witness checks Postgres on its own.
 - **L0 means the tool reported success.** It is the tool's own answer (method `reported`), not an
-  independent check. Until S19 every verdict is L0.
+  independent check. Without a read-back (S19) or L2 (S21), a verdict stays at L0.
 - **Timeouts and crashes become UNVERIFIABLE: it may have run.** When a tool doesn't answer within
   `gate.execute_timeout`, the edge never reports, or the server stops while a tool runs, the action
   is sealed with `execution.status: unknown` and the verdict UNVERIFIABLE. The deed says plainly
@@ -319,6 +319,18 @@ What the Gate doesn't do ([GATE.md](GATE.md)):
 - **Not covered:** a compromised Deedglass host, database superuser or seal key; malicious upstream
   behaviour beyond tool naming (S34); denial of service at scale; the supply chain beyond
   `govulncheck` (S35).
+
+## The Witness (S19)
+
+What the Witness doesn't do ([WITNESS.md](WITNESS.md)):
+
+- **L1 confirms what the target reports now, not what it reported at commit time.** A concurrent
+  change can make a REST read-back disagree, and the diff says so. For a Postgres row, a later
+  writer makes the read-back a gap (`row_superseded`), never a `MISMATCH`.
+- **L1 checks only the fields you name.** A tool that also changed something else is invisible to
+  L1; L2 (S21) sees every row change for Postgres.
+- **A read-back target that lies consistently can't be caught by reading it back.** L1 trusts the
+  read tool as much as the system it reads.
 
 ## What this page does not do
 

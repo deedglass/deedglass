@@ -1,0 +1,1 @@
+DELETE FROM orders JOIN customers ON customers.id = orders.customer_id WHERE customers.id = 1

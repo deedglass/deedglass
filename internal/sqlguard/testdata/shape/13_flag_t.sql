@@ -1,0 +1,1 @@
+UPDATE orders SET flag = 't' WHERE id = 1
