@@ -1,0 +1,60 @@
+# Test cases for default-deny.yaml. Run them with:
+#   deedglass policy test examples/policies/default-deny.yaml
+policy: default-deny.yaml
+defaults:
+  agent: { name: support-bot, labels: { env: prod } }
+  org: { timezone: Asia/Kolkata }
+  time: 2026-10-04T10:00:00+05:30
+cases:
+  # The default refuses everything
+  - name: a read is refused
+    input: { tool: postgres.query, sql: "SELECT id, status FROM public.orders WHERE id = 42" }
+    expect:
+      decision: deny
+      rule: default
+      code: policy_denied
+      message: "Blocked by policy \"default-deny\": Every new org starts with default-deny. Activate a starter policy in Console › Policies to allow actions."
+  - name: a write is refused
+    input: { tool: postgres.execute, sql: "UPDATE public.orders SET status = 'shipped' WHERE id = 42" }
+    expect: { decision: deny, rule: default, reason_contains: Activate a starter policy }
+  - name: a GitHub read is refused
+    input: { tool: github.get_file_contents, args: { owner: acme, repo: web, path: README.md } }
+    expect: { decision: deny, rule: default }
+  - name: a refund is refused
+    input: { tool: stripe.create_refund, args: { charge: ch_3PqR8s2eZvKYlo2C1a2b3c4d, amount: 2000 } }
+    expect: { decision: deny, rule: default }
+  - name: sending an email is refused
+    input: { tool: gmail.send_message, args: { to: [customer@example.com], subject: Your refund } }
+    expect: { decision: deny, rule: default }
+  - name: a destructive action is refused
+    input: { tool: { name: stripe.delete_customer, side_effect: destructive }, args: { customer: cus_QhR8s2eZvKYlo2 } }
+    expect: { decision: deny, rule: default }
+  - name: a tool Deedglass has never seen is refused
+    input: { tool: { name: acme_crm.export_contacts, connector_type: mcp }, args: { format: csv } }
+    expect: { decision: deny, rule: default }
+  - name: a signed intent changes nothing
+    input: { tool: postgres.query, sql: "SELECT 1", request: { mode: proxy, intent_signed: true } }
+    expect: { decision: deny, rule: default }
+
+  # Stop
+  - name: a stopped agent is refused before the default
+    input: { tool: postgres.query, sql: "SELECT 1", agent: { status: stopped } }
+    expect: { decision: deny, code: agent_stopped, rule: stop }
+  - name: a suspended agent is refused before the default
+    input: { tool: postgres.query, sql: "SELECT 1", agent: { status: suspended } }
+    expect: { decision: deny, code: agent_suspended, rule: stop, reason_contains: Console › Agents }
+  - name: a stopped org refuses every agent
+    input: { tool: postgres.query, sql: "SELECT 1", org: { stopped: true } }
+    expect: { decision: deny, code: org_stopped, rule: stop, reason_contains: Console › Settings }
+
+  # The budget
+  - name: the 61st call in a minute is refused by the budget
+    input: { tool: postgres.query, sql: "SELECT 1", usage: { calls_minute: 60 } }
+    expect:
+      decision: deny
+      code: budget_exceeded
+      rule: "budget:agent-rate"
+      reason_contains: "60 of 60 calls this minute"
+  - name: the 60th call in a minute still reaches the default
+    input: { tool: postgres.query, sql: "SELECT 1", usage: { calls_minute: 59 } }
+    expect: { decision: deny, code: policy_denied, rule: default }

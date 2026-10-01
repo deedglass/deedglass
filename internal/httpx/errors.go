@@ -26,7 +26,7 @@ const (
 // Code is the error envelope's "code". Codes are never renamed (contract §8).
 type Code string
 
-// The contract's 24 codes, then S03's 9 additions, then S07's 6, then S11's 1.
+// The contract's 24 codes, then S03's 9 additions, then S07's 6, then S11's 1, then S12's 1.
 const (
 	CodeInvalidAPIKey        Code = "invalid_api_key"
 	CodeAPIKeyRevoked        Code = "api_key_revoked"
@@ -71,6 +71,8 @@ const (
 	CodeLastOwner        Code = "last_owner"
 
 	CodePolicyUnavailable Code = "policy_unavailable"
+
+	CodePolicyInvalid Code = "policy_invalid"
 )
 
 // DocURLPrefix is where every code has a page (docs/api/errors.md, published by S33).
@@ -152,6 +154,9 @@ var catalog = []CatalogEntry{
 		"{org} needs at least one owner. Make someone else an owner first.", "S07"},
 
 	{CodePolicyUnavailable, 403, TypePolicy, "Deedglass could not evaluate the policy for this action, so it did not run. An admin can check Console › Policies.", "", "S11"},
+
+	{CodePolicyInvalid, 400, TypeInvalidRequest, "The policy wasn't accepted. The diagnostics list each problem with its line and a hint.",
+		"The policy has {n} errors. The first is on line {line}: {message}.", "S12"},
 }
 
 var byCode = func() map[Code]CatalogEntry {
@@ -181,7 +186,10 @@ type Error struct {
 	Message string      // from the catalog unless a call site gave something more exact
 	Param   string      // "" renders as null
 	Header  http.Header // Allow, Retry-After, WWW-Authenticate, …
-	cause   error
+	// Diagnostics is the additive envelope field of policy_invalid (S12): the compiler's
+	// diagnostics, each with its line, code and hint.
+	Diagnostics any
+	cause       error
 }
 
 func (e *Error) Error() string {
@@ -221,6 +229,9 @@ func WithHeader(k, v string) Opt {
 		e.Header.Add(k, v)
 	}
 }
+
+// WithDiagnostics attaches policy_invalid's diagnostics (rendered as "diagnostics").
+func WithDiagnostics(v any) Opt { return func(e *Error) { e.Diagnostics = v } }
 
 // Cause records the underlying error for the log. It is never rendered.
 func Cause(err error) Opt { return func(e *Error) { e.cause = err } }

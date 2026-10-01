@@ -44,6 +44,9 @@ func runVersion(ctx context.Context, e *Env, args []string) error {
 			Next: "Run deedglass help to see what this build can do."}
 	}
 	in := buildInfo()
+	if e.Globals.ServerFlag && e.Globals.Server == "" {
+		return usageErr(errors.New("flag --server needs a value"), "For example: deedglass version --server http://127.0.0.1:8080")
+	}
 	if e.Globals.Server != "" {
 		return versionWithServer(ctx, e, in, e.Globals.Server)
 	}

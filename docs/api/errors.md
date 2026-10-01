@@ -16,7 +16,7 @@ Every error Deedglass returns has the same body. Only the status line and a few 
 ```
 
 - `type` is one of the six types below. Branch on it for broad handling.
-- `code` is one of the 40 codes on this page. Branch on it for exact handling. Codes are never
+- `code` is one of the 41 codes on this page. Branch on it for exact handling. Codes are never
   renamed; new codes are added.
 - `message` is one or more sentences for a person, with a next step. Don't parse it: it can get
   more exact over time.
@@ -928,6 +928,28 @@ fixed.
   "code": "policy_unavailable",
   "message": "Deedglass could not evaluate the policy for this action, so it did not run. An admin can check Console › Policies.",
   "param": null
+}
+```
+
+## policy_invalid
+
+**400 · invalid_request_error**
+
+**When it happens.** A policy you pushed (`POST /v1/policies`, `POST /v1/policies/{id}/versions`), dry-ran (`POST /v1/policies/evaluate` with a `source`) or tested (`POST /v1/policies/test`) didn't compile. Nothing was saved (S12).
+
+**What to do.** Read `diagnostics`: each entry has the `line` and `column`, a stable `code` (documented in the policy errors reference), a `message` and a `hint`. Fix the file, check it locally with `deedglass policy lint`, and push again. `diagnostics` is an additive envelope field: it appears on this code only.
+
+```json
+{
+  "type": "invalid_request_error",
+  "code": "policy_invalid",
+  "message": "The policy has 1 error, on line 5: Unknown key \"desicion\" in rule \"a\".",
+  "param": "source",
+  "diagnostics": [
+    { "object": "policy_diagnostic", "severity": "error", "code": "unknown_key", "line": 5, "column": 5,
+      "message": "Unknown key \"desicion\" in rule \"a\".", "hint": "Did you mean \"decision\"?",
+      "doc_url": "https://docs.deedglass.com/policies/errors/unknown_key" }
+  ]
 }
 ```
 

@@ -1,0 +1,10 @@
+exit 0
+--- stdout
+✓ default-deny               13 cases · default and 1 budget covered
+✓ github-read-mostly         22 cases · 10 of 10 rules
+✓ gmail-drafts-only          14 cases · 4 of 4 rules
+✓ postgres-safe              28 cases · 12 of 12 rules
+✓ slack-post-with-approval   16 cases · 5 of 5 rules
+✓ stripe-refunds             21 cases · 8 of 8 rules
+✓ 114 cases passed · 6 policies · every rule covered · N s
+--- stderr

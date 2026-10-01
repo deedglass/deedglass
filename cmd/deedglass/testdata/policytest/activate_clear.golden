@@ -1,0 +1,4 @@
+exit 0
+--- stdout
+✓ postgres-safe v1 is no longer the shadow policy · deed_01jb8p3c sealed
+--- stderr

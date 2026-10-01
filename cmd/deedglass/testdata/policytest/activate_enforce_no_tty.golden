@@ -1,0 +1,5 @@
+exit 2
+--- stdout
+--- stderr
+✕ enforcing a policy needs a typed confirmation, and this isn't an interactive terminal.
+  Run it in a terminal, or add --yes in scripts.

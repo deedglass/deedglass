@@ -1,0 +1,5 @@
+policy: ../../../../examples/policies/postgres-safe.yaml
+cases:
+  - name: a typo in the input
+    input: { tool: postgres.query, sql: "SELECT 1", agnet: { name: support-bot } }
+    expect: { decision: allow }

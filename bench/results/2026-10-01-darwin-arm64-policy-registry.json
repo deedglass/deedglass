@@ -1,0 +1,35 @@
+{
+  "session": "S12",
+  "date": "2026-10-01",
+  "host": "darwin-arm64 (Apple M1, 8 cores)",
+  "go": "go1.27.1",
+  "postgres": "18.6 (Homebrew throwaway cluster)",
+  "registry_hit": {
+    "source": "go test ./internal/policy -run XXX -bench BenchmarkRegistryHit -benchtime=20000x",
+    "ns_per_op": 86.17, "allocs_per_op": 0, "bytes_per_op": 0, "target": "< 1 µs, 0 allocs"
+  },
+  "registry_cold_load_postgres_safe": {
+    "source": "go test ./internal/policy -run XXX -bench BenchmarkRegistryColdLoad -benchtime=20000x (compile + recompiled hash + deed verify + data digest, in-memory repo)",
+    "ns_per_op": 1215591, "allocs_per_op": 10242, "bytes_per_op": 738598, "target": "< 30 ms"
+  },
+  "hot_swap_two_instances": {
+    "source": "internal/store/policystore TestHotSwapTwoInstances (make integration, PG 18.6): activation committed through instance A until instance B's registry serves the new version_hash",
+    "runs": 20, "p50_ms": 1.882, "p99_ms": 2.980, "max_ms": 2.980,
+    "all_ms": [1.339, 1.347, 1.350, 1.353, 1.469, 1.526, 1.578, 1.585, 1.632, 1.644, 1.882, 1.917, 1.926, 2.008, 2.058, 2.115, 2.140, 2.157, 2.779, 2.980],
+    "target": "p99 < 500 ms; hard limit 2 s"
+  },
+  "listener_killed": {
+    "source": "internal/store/policystore TestListenerKilled: pg_terminate_backend on instance B's LISTEN connection, an activation while it is down, B serving the new version",
+    "converged_ms": 471.6, "target": "< 30 s"
+  },
+  "activation_end_to_end": {
+    "source": "curl POST /v1/policies/{id}/versions/{v}/activate against deedglass serve on 127.0.0.1:8091 (dev Postgres 18.6), org admin key, time_total",
+    "first_request_ms": 85.2,
+    "warm_ms": [16.6, 10.1, 12.0, 10.5, 14.0, 5.7, 11.1, 10.3, 13.2],
+    "target": "< 150 ms"
+  },
+  "policy_test_dir": {
+    "source": "deedglass policy test --dir examples/policies --require-coverage --voice",
+    "cases": 114, "policies": 6, "elapsed_s": 0.0, "target": "< 1 s"
+  }
+}

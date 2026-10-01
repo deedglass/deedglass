@@ -22,6 +22,18 @@ type Metrics struct {
 	requests map[reqKey]*atomic.Uint64
 	latency  map[string]*histogram
 	inFlight atomic.Int64
+	extra    []Collector
+}
+
+// Collector writes more metric families in the exposition format (S12's
+// deedglass_policy_* counters). It must write only bounded, label-free or fixed-label series.
+type Collector func(w io.Writer)
+
+// Collect adds a collector; it runs on every scrape, after the HTTP families.
+func (m *Metrics) Collect(c Collector) {
+	m.mu.Lock()
+	m.extra = append(m.extra, c)
+	m.mu.Unlock()
 }
 
 type reqKey struct {
@@ -133,6 +145,12 @@ func (m *Metrics) WriteTo(w io.Writer) (int64, error) {
 		fmt.Fprintf(&b, "deedglass_http_request_duration_seconds_bucket{route=%s,le=\"+Inf\"} %d\n", q(r), cum)
 		fmt.Fprintf(&b, "deedglass_http_request_duration_seconds_sum{route=%s} %s\n", q(r), fmtFloat(float64(h.sumNS.Load())/1e9))
 		fmt.Fprintf(&b, "deedglass_http_request_duration_seconds_count{route=%s} %d\n", q(r), h.count.Load())
+	}
+	m.mu.Lock()
+	extra := append([]Collector(nil), m.extra...)
+	m.mu.Unlock()
+	for _, c := range extra {
+		c(&b)
 	}
 	n, err := io.WriteString(w, b.String())
 	return int64(n), err

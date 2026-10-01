@@ -378,7 +378,11 @@ func keyAllowed(rt Route, p Principal) error {
 	for _, sc := range rt.Scopes {
 		if !contains(p.Scopes, sc) {
 			if sc == ScopeAdmin {
-				return ErrAgentKeyForAdmin()
+				e := ErrAgentKeyForAdmin()
+				if rt.AgentKeyMessage != "" {
+					e.Message = rt.AgentKeyMessage
+				}
+				return e
 			}
 			return ErrInsufficientScope(sc)
 		}

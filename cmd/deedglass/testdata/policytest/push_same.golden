@@ -1,0 +1,5 @@
+exit 0
+--- stdout
+○ postgres-safe v1 already has this content · nothing saved
+  Next: deedglass policy activate postgres-safe --version 1 --mode shadow --reason "…"
+--- stderr

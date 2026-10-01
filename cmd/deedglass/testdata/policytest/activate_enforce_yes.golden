@@ -1,0 +1,4 @@
+exit 0
+--- stdout
+✓ postgres-safe v1 enforced · deed_01jb8p2m4x9 sealed · shadow cleared
+--- stderr

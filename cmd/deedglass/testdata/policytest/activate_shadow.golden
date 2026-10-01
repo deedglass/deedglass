@@ -1,0 +1,5 @@
+exit 0
+--- stdout
+◐ postgres-safe v1 is now the shadow policy · deed_01jb8p1a1c3 sealed
+  It decides every action next to default-deny v1, and only records what it would have done.
+--- stderr

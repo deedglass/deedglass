@@ -81,6 +81,9 @@ type Route struct {
 	// Default "this request".
 	Purpose string
 	Scopes  []string // API key scopes; a key must hold every one (S08 defines the set)
+	// AgentKeyMessage replaces insufficient_scope's message when an agent key calls a route that
+	// needs the admin scope (S12: "Agents cannot read or test policies. …").
+	AgentKeyMessage string
 	// SkipStopChecks lets a stopped or suspended agent (or a stopped org) through, so it can learn
 	// why it is refused: GET /v1/whoami only (S08 §3.5).
 	SkipStopChecks bool

@@ -90,6 +90,7 @@ const (
 	msgMeasureError    = "Deedglass could not measure this action for budget %q (%s), so it did not run. An admin can check the budget's measure in Console › Policies."
 	msgBudget          = `Budget %q reached: %s of %s %s. %s`
 	msgAgentBudget     = `Budget %q for agent %q reached: %s of %s %s. %s`
+	msgBudgetProjected = `Budget %q reached: this action would bring %s total%s to %s of %s. %s`
 	msgRetryIn         = "Try again in %s."
 	msgResetsMidnight  = "It resets at midnight %s (in %s)."
 )
@@ -129,6 +130,17 @@ func windowPhrase(w string) string {
 		return "this hour"
 	}
 	return "today"
+}
+
+// windowTotal is "today's", "this hour's" or "this minute's".
+func windowTotal(w string) string {
+	switch w {
+	case WindowMinute:
+		return "this minute's"
+	case WindowHour:
+		return "this hour's"
+	}
+	return "today's"
 }
 
 // humanDuration renders a wait: "14 s", "12 m", "6 h 12 m". It rounds up, so it never promises
@@ -201,6 +213,16 @@ func budgetMessage(h *BudgetHit, agentName, tz string, at time.Time) string {
 		next = fmt.Sprintf(msgResetsMidnight, tz, humanDuration(h.ResetsAt.Sub(at)))
 	} else {
 		next = fmt.Sprintf(msgRetryIn, humanDuration(h.ResetsAt.Sub(at)))
+	}
+	if h.Projected > 0 {
+		// A measured budget (DL-025): name the total this action would reach, not only the usage
+		// before it, so "$490.00 of $500.00" never reads like room to spare.
+		across := ""
+		if h.Per == PerOrg {
+			across = " across all agents"
+		}
+		return fmt.Sprintf(msgBudgetProjected, h.ID, windowTotal(h.Window), across,
+			formatMoney(h.Projected, h.Unit), formatMoney(h.Limit, h.Unit), next)
 	}
 	if strings.HasPrefix(h.ID, "agent.") {
 		return fmt.Sprintf(msgAgentBudget, strings.TrimPrefix(h.ID, "agent."), clipName(agentName), used, limit, what, next)

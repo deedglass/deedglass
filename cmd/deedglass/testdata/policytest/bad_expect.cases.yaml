@@ -1,0 +1,5 @@
+policy: ../../../../examples/policies/postgres-safe.yaml
+cases:
+  - name: a typo in the expectation
+    input: { tool: postgres.query, sql: "SELECT 1" }
+    expect: { decision: allow, rul: allow-reads }

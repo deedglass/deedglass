@@ -1,19 +1,20 @@
 exit 0
 --- stdout
-VERSION  NAME              STATE    APPLIED               CHECKSUM
-0001     foundation        applied  2026-10-01 11:02 UTC  sha256:24dc…b0fa
-0002     identity          applied  2026-10-01 11:02 UTC  sha256:5e73…db50
-0003     policy            applied  2026-10-01 11:02 UTC  sha256:77c1…10f6
-0004     connectors        applied  2026-10-01 11:02 UTC  sha256:b871…117e
-0005     actions           applied  2026-10-01 11:02 UTC  sha256:6e37…9242
-0006     deeds             applied  2026-10-01 11:02 UTC  sha256:ed37…fd60
-0007     witness           applied  2026-10-01 11:02 UTC  sha256:4908…c982
-0008     learn             applied  2026-10-01 11:02 UTC  sha256:1139…c18f
-0009     webhooks_ops      applied  2026-10-01 11:02 UTC  sha256:e2b3…9542
-0010     ledger            pending  —                     sha256:c1fb…6ee7
-0011     identity_humans   pending  —                     sha256:34f9…8f1c
-0012     preauth           pending  —                     sha256:126a…f07c
-0013     identity_agents   pending  —                     sha256:b19c…ca13
-0014     identity_intents  pending  —                     sha256:9577…e712
-✓ 9 applied · 5 pending. Run deedglass migrate up to apply them.
+VERSION  NAME                STATE    APPLIED               CHECKSUM
+0001     foundation          applied  2026-10-01 11:02 UTC  sha256:24dc…b0fa
+0002     identity            applied  2026-10-01 11:02 UTC  sha256:5e73…db50
+0003     policy              applied  2026-10-01 11:02 UTC  sha256:77c1…10f6
+0004     connectors          applied  2026-10-01 11:02 UTC  sha256:b871…117e
+0005     actions             applied  2026-10-01 11:02 UTC  sha256:6e37…9242
+0006     deeds               applied  2026-10-01 11:02 UTC  sha256:ed37…fd60
+0007     witness             applied  2026-10-01 11:02 UTC  sha256:4908…c982
+0008     learn               applied  2026-10-01 11:02 UTC  sha256:1139…c18f
+0009     webhooks_ops        applied  2026-10-01 11:02 UTC  sha256:e2b3…9542
+0010     ledger              pending  —                     sha256:c1fb…6ee7
+0011     identity_humans     pending  —                     sha256:34f9…8f1c
+0012     preauth             pending  —                     sha256:126a…f07c
+0013     identity_agents     pending  —                     sha256:b19c…ca13
+0014     identity_intents    pending  —                     sha256:9577…e712
+0015     policy_versions_v2  pending  —                     sha256:82ad…43b4
+✓ 9 applied · 6 pending. Run deedglass migrate up to apply them.
 --- stderr

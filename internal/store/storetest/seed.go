@@ -145,17 +145,14 @@ func Rows(sk ids.SealKeyID) []Row {
 		}},
 		{"policy_versions", func(ctx context.Context, tx pgx.Tx, o *Org) error {
 			id := ids.New[ids.PolicyVersionKind]()
-			_, err := tx.Exec(ctx, `INSERT INTO deedglass.policy_versions (id, org_id, policy_id, version, yaml, compiled_hash)
-			    VALUES ($1, $2, $3::deedglass.pol_id, (SELECT COALESCE(pg_catalog.max(version), 0) + 1 FROM deedglass.policy_versions WHERE policy_id = $3::deedglass.pol_id), 'rules: []', $4)`,
-				id, o.ID, o.Policy, Digest([]byte("rules: []")))
+			_, err := tx.Exec(ctx, `INSERT INTO deedglass.policy_versions (id, org_id, policy_id, version, yaml, version_hash, source_hash, author_type)
+			    VALUES ($1, $2, $3::deedglass.pol_id, (SELECT COALESCE(pg_catalog.max(version), 0) + 1 FROM deedglass.policy_versions WHERE policy_id = $3::deedglass.pol_id), 'rules: []', $4, $5, 'system')`,
+				id, o.ID, o.Policy, Digest(rnd(16)), Digest([]byte("rules: []")))
 			if err == nil && o.Version.IsZero() {
 				o.Version = id
 			}
 			return err
 		}},
-		{"policy_activations", ex(`INSERT INTO deedglass.policy_activations (id, org_id, policy_id, version_id, mode, deactivated_at)
-		    VALUES ($1, $2, $3, $4, 'enforce', pg_catalog.now())`,
-			func(o *Org) []any { return []any{ids.New[ids.PolicyActivationKind](), o.ID, o.Policy, o.Version} })},
 		{"usage_counters", ex(`INSERT INTO deedglass.usage_counters (org_id, scope, counter, window_kind, window_start, value)
 		    VALUES ($1, 'org', 'calls', 'minute', pg_catalog.date_trunc('minute', pg_catalog.clock_timestamp()) + $2 * interval '1 minute', 1)`,
 			func(o *Org) []any { return []any{o.ID, int(rnd(1)[0])} })},
@@ -222,6 +219,14 @@ func Rows(sk ids.SealKeyID) []Row {
 			}
 			return err
 		}},
+		// An ended activation (so repeated inserts never meet the one-live-enforce index). Since S12
+		// an ended activation names who ended it and the deed that sealed it, so it comes after deeds.
+		{"policy_activations", ex(`INSERT INTO deedglass.policy_activations (id, org_id, policy_id, version_id, mode,
+		    activated_at, deactivated_at, deactivated_by, deactivation_deed_id)
+		    VALUES ($1, $2, $3, $4, 'enforce', pg_catalog.now(), pg_catalog.now(), 'system', $5)`,
+			func(o *Org) []any {
+				return []any{ids.New[ids.PolicyActivationKind](), o.ID, o.Policy, o.Version, o.Deed}
+			})},
 		{"admin_events", ex(`INSERT INTO deedglass.admin_events (id, org_id, actor_type, action) VALUES ($1, $2, 'system', 'agent.created')`,
 			func(o *Org) []any { return []any{ids.New[ids.AdminEventKind](), o.ID} })},
 		{"witness_jobs", func(ctx context.Context, tx pgx.Tx, o *Org) error {

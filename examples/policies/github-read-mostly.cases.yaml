@@ -1,0 +1,93 @@
+# Test cases for github-read-mostly.yaml. Run them with:
+#   deedglass policy test examples/policies/github-read-mostly.yaml
+policy: github-read-mostly.yaml
+defaults:
+  agent: { name: triage-bot, labels: { env: prod } }
+  org: { timezone: Asia/Kolkata }
+  time: 2026-10-04T10:00:00+05:30
+cases:
+  # Reads
+  - name: reading a file runs freely
+    input: { tool: github.get_file_contents, args: { owner: acme, repo: web, path: README.md } }
+    expect: { decision: allow, rule: github-reads, verify: L0 }
+  - name: listing pull requests runs freely
+    input: { tool: github.list_pull_requests, args: { owner: acme, repo: web, state: open } }
+    expect: { decision: allow, rule: github-reads }
+  - name: searching code runs freely
+    input: { tool: github.search_code, args: { q: "repo:acme/web retry_after" } }
+    expect: { decision: allow, rule: github-reads }
+
+  # Issues and comments
+  - name: opening an issue runs, witnessed at L1
+    input: { tool: github.create_issue, args: { owner: acme, repo: web, title: Flaky checkout test } }
+    expect: { decision: allow, rule: issues-and-comments, verify: L1 }
+  - name: commenting on an issue runs
+    input: { tool: github.add_issue_comment, args: { owner: acme, repo: web, issue_number: 812, body: Reproduced on main. } }
+    expect: { decision: allow, rule: issues-and-comments }
+  - name: relabelling an issue runs
+    input: { tool: github.update_issue, args: { owner: acme, repo: web, issue_number: 812, labels: [bug] } }
+    expect: { decision: allow, rule: issues-and-comments }
+  - name: closing an issue waits for a human
+    input: { tool: github.update_issue, args: { owner: acme, repo: web, issue_number: 812, state: closed } }
+    expect:
+      decision: require_approval
+      rule: closing-issues-needs-approval
+      code: approval_required
+      verify: L1
+      approval: { required: 1, approvers: [role:admin], expires_in: 24h }
+
+  # Branches and commits
+  - name: creating a branch runs
+    input: { tool: github.create_branch, args: { owner: acme, repo: web, branch: fix/checkout-retry, from_branch: main } }
+    expect: { decision: allow, rule: branches }
+  - name: a commit to a feature branch runs, witnessed at L1
+    input: { tool: github.create_or_update_file, args: { owner: acme, repo: web, branch: fix/checkout-retry, path: src/retry.ts } }
+    expect: { decision: allow, rule: feature-branch-writes, verify: L1 }
+  - name: a commit to main waits for a human
+    input: { tool: github.create_or_update_file, args: { owner: acme, repo: web, branch: main, path: src/retry.ts } }
+    expect:
+      decision: require_approval
+      rule: protected-branch-writes-need-approval
+      verify: L1
+      approval: { required: 1, approvers: [role:admin], expires_in: 2h }
+      notify: [slack]
+  - name: a commit to master waits for a human
+    input: { tool: github.create_or_update_file, args: { owner: acme, repo: legacy, branch: master, path: setup.py } }
+    expect: { decision: require_approval, rule: protected-branch-writes-need-approval }
+  - name: a commit to a release branch waits for a human
+    input: { tool: github.create_or_update_file, args: { owner: acme, repo: web, branch: release/2026.10, path: CHANGELOG.md } }
+    expect: { decision: require_approval, rule: protected-branch-writes-need-approval, reason_contains: feature branch }
+  - name: a commit with no branch counts as the default branch
+    input: { tool: github.create_or_update_file, args: { owner: acme, repo: web, path: src/retry.ts } }
+    expect: { decision: require_approval, rule: protected-branch-writes-need-approval }
+
+  # Pull requests
+  - name: a pull request into a feature branch runs
+    input: { tool: github.create_pull_request, args: { owner: acme, repo: web, head: fix/checkout-retry, base: develop } }
+    expect: { decision: allow, rule: pull-requests, verify: L1 }
+  - name: a pull request into main waits for a human
+    input: { tool: github.create_pull_request, args: { owner: acme, repo: web, head: fix/checkout-retry, base: main } }
+    expect: { decision: require_approval, rule: pull-requests-to-main-need-approval, notify: [slack] }
+  - name: a pull request with no base waits for a human
+    input: { tool: github.create_pull_request, args: { owner: acme, repo: web, head: fix/checkout-retry } }
+    expect: { decision: require_approval, rule: pull-requests-to-main-need-approval }
+  - name: editing a pull request's title runs
+    input: { tool: github.update_pull_request, args: { owner: acme, repo: web, pull_number: 77, title: Retry checkout once } }
+    expect: { decision: allow, rule: pull-requests }
+  - name: retargeting a pull request to a release branch waits for a human
+    input: { tool: github.update_pull_request, args: { owner: acme, repo: web, pull_number: 77, base: release/2026.10 } }
+    expect: { decision: require_approval, rule: pull-requests-to-main-need-approval }
+
+  # Merges, deletes and everything else
+  - name: merging never runs
+    input: { tool: github.merge_pull_request, args: { owner: acme, repo: web, pull_number: 77 } }
+    expect: { decision: deny, rule: no-merges-or-branch-deletes, code: policy_denied, reason_contains: stay with humans }
+  - name: deleting a branch never runs, even when declared destructive
+    input: { tool: { name: github.delete_branch, side_effect: destructive }, args: { owner: acme, repo: web, branch: fix/checkout-retry } }
+    expect: { decision: deny, rule: no-merges-or-branch-deletes }
+  - name: deleting a repository never runs
+    input: { tool: { name: github.delete_repository, side_effect: destructive }, args: { owner: acme, repo: web } }
+    expect: { decision: deny, rule: block-other-destructive, notify: [slack] }
+  - name: publishing a release falls to the default
+    input: { tool: github.create_release, args: { owner: acme, repo: web, tag_name: v2.4.0 } }
+    expect: { decision: deny, rule: default, reason_contains: Console › Policies }

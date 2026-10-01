@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
 	"reflect"
 	"strings"
 	"sync"
@@ -13,6 +12,8 @@ import (
 
 	"cel.dev/cel-go/cel"
 	"cel.dev/cel-go/common/types/ref"
+
+	"github.com/deedglass/deedglass/examples/policies"
 )
 
 var evalTime = time.Date(2026, 10, 4, 4, 30, 0, 0, time.UTC) // 10:00 in Asia/Kolkata
@@ -32,7 +33,7 @@ func mustCompile(t testing.TB, src string) *Compiled {
 
 func postgresSafe(t testing.TB) *Compiled {
 	t.Helper()
-	src, err := os.ReadFile("testdata/eval/postgres-safe.yaml")
+	src, err := policies.Source("postgres-safe")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -201,7 +202,51 @@ func TestEvaluateMatrix(t *testing.T) {
 				x.Usage.Budgets = map[string]int64{"refunds": 3001}
 				return x
 			},
-			[]check{is(Deny, CodeBudgetExceeded, SourceBudget, "refunds")}},
+			[]check{is(Deny, CodeBudgetExceeded, SourceBudget, "refunds"), func(t *testing.T, d Decision) {
+				// DL-025: a measured budget names the total this action would reach.
+				if d.Message != `Budget "refunds" reached: this action would bring today's total to $50.01 of $50.00. It resets at midnight Asia/Kolkata (in 14 h).` {
+					t.Fatal(d.Message)
+				}
+				if d.Budget == nil || d.Budget.Used != 3001 || d.Budget.Projected != 5001 || d.Budget.Limit != 5000 {
+					t.Fatalf("%+v", d.Budget)
+				}
+				last := d.Trace[len(d.Trace)-1]
+				if last.Detail != "$30.01 + $20.00 = $50.01 of $50.00 today" {
+					t.Fatal(last.Detail)
+				}
+			}}},
+		{"a measured org budget names the projected total across all agents",
+			evalHead + "budgets:\n  - id: refunds-per-day\n    per: org\n    window: day\n    max_spend: \"500.00 usd\"\n    measure: 'has(args.amount) ? args.amount : 0'\nrules:\n  - id: allow-all\n    decision: allow\n",
+			func() Input {
+				x := in("stripe.refund", `{"amount": 2000}`)
+				x.Usage.Budgets = map[string]int64{"refunds-per-day": 49000}
+				return x
+			},
+			[]check{is(Deny, CodeBudgetExceeded, SourceBudget, "refunds-per-day"), func(t *testing.T, d Decision) {
+				if d.Message != `Budget "refunds-per-day" reached: this action would bring today's total across all agents to $510.00 of $500.00. It resets at midnight Asia/Kolkata (in 14 h).` {
+					t.Fatal(d.Message)
+				}
+			}}},
+		{"a measured hourly budget says this hour's total",
+			evalHead + "budgets:\n  - id: refunds-hourly\n    window: hour\n    max_spend: \"100.00 usd\"\n    measure: 'has(args.amount) ? args.amount : 0'\nrules:\n  - id: allow-all\n    decision: allow\n",
+			func() Input {
+				x := in("stripe.refund", `{"amount": 2500}`)
+				x.Usage.Budgets = map[string]int64{"refunds-hourly": 9000}
+				return x
+			},
+			[]check{is(Deny, CodeBudgetExceeded, SourceBudget, "refunds-hourly"), func(t *testing.T, d Decision) {
+				if !strings.HasPrefix(d.Message, `Budget "refunds-hourly" reached: this action would bring this hour's total to $115.00 of $100.00. Try again in `) {
+					t.Fatal(d.Message)
+				}
+			}}},
+		{"a measured budget with room to spare allows, and a zero amount never trips it",
+			evalHead + "budgets:\n  - id: refunds\n    window: day\n    max_spend: \"50.00 usd\"\n    measure: 'has(args.amount) ? args.amount : 0'\nrules:\n  - id: allow-all\n    decision: allow\n",
+			func() Input {
+				x := in("stripe.refund", `{}`)
+				x.Usage.Budgets = map[string]int64{"refunds": 5000}
+				return x
+			},
+			[]check{is(Allow, CodeNone, SourceRule, "allow-all")}},
 		{"measure error denies policy_denied",
 			evalHead + "budgets:\n  - id: refunds\n    window: day\n    max_spend: \"50.00 usd\"\n    measure: 'args.amount'\nrules:\n  - id: allow-all\n    decision: allow\n",
 			func() Input { return in("stripe.refund", `{}`) },

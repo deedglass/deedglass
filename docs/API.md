@@ -220,6 +220,38 @@ curl -s -b cookies.txt 'http://127.0.0.1:8080/v1/actions?verdict=FAILED'
   "param": "verdict", "request_id": "req_01j9zv…", "doc_url": "https://docs.deedglass.com/errors/validation_failed" } }
 ```
 
+## The policy routes (S12)
+
+| Route | Role | Returns |
+|---|---|---|
+| `GET /v1/policies` | viewer+ | a list of `policy` objects by name |
+| `POST /v1/policies` | admin+ | 201: the `policy` and its v1 (`version`), not active; 400 `policy_invalid` with `diagnostics` |
+| `GET /v1/policies/active` | viewer+ | the `policy_active_set`: the org's enforce and shadow |
+| `GET /v1/policies/{id}` | viewer+ | a `policy` (`{id}` is a `pol_` id or the name) |
+| `GET /v1/policies/{id}/versions` | viewer+ | a list of `policy_version` objects, newest first, without `source` |
+| `POST /v1/policies/{id}/versions` | admin+ | 201 a new `policy_version`; 200 the existing one when the content is identical |
+| `GET /v1/policies/{id}/versions/{v}` | viewer+ | a `policy_version` with its `source` (`{v}` is a number or a `pv_` id) |
+| `POST /v1/policies/{id}/versions/{v}/activate` | admin+ | a `policy_activation` (`pa_` id) with the sealed `deeds` |
+| `POST /v1/policies/{id}/versions/{v}/deactivate` | admin+ | the ended shadow `policy_activation` with its deed |
+| `POST /v1/policies/lint` | viewer+ | a `policy_lint_result` (200 even when the policy is invalid) |
+| `POST /v1/policies/evaluate` | viewer+ | a `policy_decision` (the dry run; nothing is reserved) |
+| `POST /v1/policies/test` | viewer+ | a `policy_test_result` |
+
+Every one takes a Console session (by role; POSTs need the `Deedglass-CSRF` header) or an org admin
+key (scope `admin`, acting as admin). **Agent keys are refused on every policy route, reads
+included** (403 `insufficient_scope`: "Agents cannot read or test policies. Use the Console or an
+admin key."), so an agent can't probe its own policy for gaps. The changing POSTs accept
+`Idempotency-Key`; lint, evaluate and test change nothing and take 60 requests a minute per person
+or key, a 2 s timeout and bodies up to 1 MiB (2 MiB for test). Request and response shapes, with
+examples: `api/openapi.yaml` (tag `Policies`) and [POLICIES_GUIDE.md](POLICIES_GUIDE.md).
+
+```sh
+curl -s -X POST http://127.0.0.1:8080/v1/policies/postgres-safe/versions/1/activate \
+  -H "Authorization: Bearer $DEEDGLASS_API_KEY" -H "Idempotency-Key: pilot-enforce-1" \
+  -H "Content-Type: application/json" \
+  -d '{"mode":"enforce","reason":"Guard the orders database before the pilot."}'
+```
+
 ## Objects
 
 Every object carries `"object"`, naming its type (`"health"`, `"version"`, `"list"`, and so on),

@@ -159,6 +159,34 @@ What policies can't do ([POLICY_LANGUAGE.md](POLICY_LANGUAGE.md) section 12):
 - **A 50-rule policy where every condition runs allocates about 630 objects per evaluation**, over
   the target of 200. The realistic postgres-safe policy allocates about 170.
 
+## Policy versions, activation and the registry (S12)
+
+- **One enforced policy and at most one shadow per org.** No includes, no per-agent policies (use
+  `match.agent` and labels), no scheduled activations.
+- **The activation deed check trusts the published seal keys.** On every load the registry
+  recompiles the stored YAML, compares both hashes, and verifies the activation deed against the
+  keys in `deedglass.seal_keys` (the same set `keys.json` publishes). Someone with superuser access
+  who also registers a seal key of their own and appends a deed under it would pass that check; the
+  new key would show in `keys.json`, and `deedglass verify` against your own copy of the key set
+  would refuse those deeds. Keep a copy of `keys.json` outside Deedglass.
+- **`version_hash` is frozen per language version.** It is computed over the normalized policy. A
+  future build that normalized differently would see every stored version as changed and refuse
+  them (fail closed). The normalizer can't change within `deedglass.policy/v1`; `hashes.json` and
+  S10's lint goldens pin it.
+- **Shadow decides nothing yet.** The registry loads the shadow version and `EvaluatePair` decides
+  with it, but nothing records or shows shadow results until S13 (the Gate) and S27 (Insights).
+- **A shadow version that fails its checks is dropped, not enforced against.** It is logged and
+  counted; only an enforced version that fails makes the org refuse every action.
+- **The dry run reads usage as zero** unless the request gives it; it never reserves. Real counters
+  are read by the Gate (S13).
+- **NOTIFY is best effort; the poll is the backstop.** A lost notification is caught by the 30 s
+  safety poll, and a reconnect reloads everything. Within those windows an instance can serve the
+  previous version for up to 30 s if Postgres drops a notification; the measured hot swap is about
+  2 ms when it doesn't (`bench/results/2026-10-01-darwin-arm64-policy-registry.json`).
+- **Rate limits on lint, evaluate and test are per instance** (60 a minute per person or key, in
+  memory), like S07's limiter.
+- **`policy diff` and `policy replay` aren't built** (S27). The Console editor is S26.
+
 ## What this page does not do
 
 It does not list bugs or missing features on the schedule. It lists limits of the design that stay true after they ship.

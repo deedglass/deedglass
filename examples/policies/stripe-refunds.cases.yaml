@@ -1,0 +1,109 @@
+# Test cases for stripe-refunds.yaml. Run them with:
+#   deedglass policy test examples/policies/stripe-refunds.yaml
+policy: stripe-refunds.yaml
+defaults:
+  agent: { name: billing-bot, labels: { env: prod } }
+  org: { timezone: Asia/Kolkata }
+  time: 2026-10-04T10:00:00+05:30
+cases:
+  # Reads
+  - name: reading a charge runs freely
+    input: { tool: stripe.get_charge, args: { charge: ch_3PqR8s2eZvKYlo2C1a2b3c4d } }
+    expect: { decision: allow, rule: stripe-reads, verify: L0 }
+  - name: listing refunds runs freely
+    input: { tool: stripe.list_refunds, args: { charge: ch_3PqR8s2eZvKYlo2C1a2b3c4d, limit: 10 } }
+    expect: { decision: allow, rule: stripe-reads }
+
+  # Refunds without a usable amount
+  - name: a refund with no amount is refused
+    input: { tool: stripe.create_refund, args: { charge: ch_3PqR8s2eZvKYlo2C1a2b3c4d } }
+    expect: { decision: deny, rule: refunds-need-an-amount, code: policy_denied, reason_contains: "like 2000 for $20.00" }
+  - name: an amount written as dollars in a string is refused
+    input: { tool: stripe.create_refund, args: { charge: ch_3PqR8s2eZvKYlo2C1a2b3c4d, amount: "20.00" } }
+    expect: { decision: deny, rule: refunds-need-an-amount }
+  - name: an amount with a fraction is refused
+    input: { tool: stripe.create_refund, args: { charge: ch_3PqR8s2eZvKYlo2C1a2b3c4d, amount: 20.5 } }
+    expect: { decision: deny, rule: refunds-need-an-amount }
+  - name: a zero refund is refused
+    input: { tool: stripe.create_refund, args: { charge: ch_3PqR8s2eZvKYlo2C1a2b3c4d, amount: 0 } }
+    expect: { decision: deny, rule: refunds-need-an-amount }
+
+  # Small refunds
+  - name: a $20.00 refund runs, witnessed at L1
+    input: { tool: stripe.create_refund, args: { charge: ch_3PqR8s2eZvKYlo2C1a2b3c4d, amount: 2000 } }
+    expect: { decision: allow, rule: small-refunds, verify: L1 }
+  - name: exactly $50.00 still runs
+    input: { tool: stripe.create_refund, args: { charge: ch_3PqR8s2eZvKYlo2C1a2b3c4d, amount: 5000 } }
+    expect: { decision: allow, rule: small-refunds }
+
+  # Large refunds
+  - name: $50.01 waits for a human
+    input: { tool: stripe.create_refund, args: { charge: ch_3PqR8s2eZvKYlo2C1a2b3c4d, amount: 5001 } }
+    expect:
+      decision: require_approval
+      rule: large-refunds-need-approval
+      code: approval_required
+      verify: L1
+      approval: { required: 1, approvers: [role:admin], expires_in: 2h }
+      notify: [slack]
+  - name: a $250.00 refund waits for a human
+    input: { tool: stripe.create_refund, args: { payment_intent: pi_3PqR8s2eZvKYlo2C0x9y8z7w, amount: 25000 } }
+    expect: { decision: require_approval, rule: large-refunds-need-approval, reason_contains: Console › Approvals }
+
+  # The daily cap across all agents
+  - name: a refund that would pass the daily cap is refused and names the total
+    input:
+      tool: stripe.create_refund
+      args: { charge: ch_3PqR8s2eZvKYlo2C1a2b3c4d, amount: 2000 }
+      usage: { refunds-per-day: 49000 }
+    expect:
+      decision: deny
+      code: budget_exceeded
+      rule: "budget:refunds-per-day"
+      message: "Budget \"refunds-per-day\" reached: this action would bring today's total across all agents to $510.00 of $500.00. It resets at midnight Asia/Kolkata (in 14 h)."
+  - name: a refund that lands exactly on the cap runs
+    input:
+      tool: stripe.create_refund
+      args: { charge: ch_3PqR8s2eZvKYlo2C1a2b3c4d, amount: 2000 }
+      usage: { refunds-per-day: 48000 }
+    expect: { decision: allow, rule: small-refunds }
+  - name: a large refund over the cap is refused before it reaches approval
+    input:
+      tool: stripe.create_refund
+      args: { charge: ch_3PqR8s2eZvKYlo2C1a2b3c4d, amount: 10000 }
+      usage: { refunds-per-day: 45000 }
+    expect: { decision: deny, code: budget_exceeded, rule: "budget:refunds-per-day", reason_contains: "$550.00 of $500.00" }
+  - name: reads never count against the refund cap
+    input: { tool: stripe.get_refund, args: { refund: re_3PqR8s2eZvKYlo2C0a1b2c3d }, usage: { refunds-per-day: 50000 } }
+    expect: { decision: allow, rule: stripe-reads }
+
+  # Subscriptions, metadata and invoice items
+  - name: cancelling a subscription waits a day for a human
+    input: { tool: stripe.cancel_subscription, args: { subscription: sub_1PqR8s2eZvKYlo2C } }
+    expect:
+      decision: require_approval
+      rule: cancellations-need-approval
+      verify: L1
+      approval: { required: 1, approvers: [role:admin], expires_in: 24h }
+  - name: a cancellation declared destructive still goes to approval
+    input:
+      tool: { name: stripe.cancel_subscription, side_effect: destructive }
+      args: { subscription: sub_1PqR8s2eZvKYlo2C }
+    expect: { decision: require_approval, rule: cancellations-need-approval }
+  - name: updating customer metadata runs, witnessed at L1
+    input: { tool: stripe.update_customer_metadata, args: { customer: cus_QhR8s2eZvKYlo2, metadata: { tier: gold } } }
+    expect: { decision: allow, rule: metadata-updates, verify: L1 }
+  - name: an invoice item waits for a human
+    input: { tool: stripe.create_invoice_item, args: { customer: cus_QhR8s2eZvKYlo2, amount: 1500, currency: usd } }
+    expect: { decision: require_approval, rule: invoice-items-need-approval, approval: { expires_in: 2h } }
+
+  # Deletes and everything else
+  - name: deleting a customer never runs
+    input: { tool: { name: stripe.delete_customer, side_effect: destructive }, args: { customer: cus_QhR8s2eZvKYlo2 } }
+    expect: { decision: deny, rule: block-other-destructive, code: policy_denied, notify: [slack] }
+  - name: a payout falls to the default
+    input: { tool: stripe.create_payout, args: { amount: 100000, currency: usd } }
+    expect: { decision: deny, rule: default, reason_contains: No rule allows this action }
+  - name: a stopped agent is refused before any rule
+    input: { tool: stripe.get_charge, args: { charge: ch_3PqR8s2eZvKYlo2C1a2b3c4d }, agent: { status: stopped } }
+    expect: { decision: deny, code: agent_stopped, rule: stop }

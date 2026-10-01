@@ -1,0 +1,5 @@
+exit 1
+--- stdout
+✕ postgres-safe   no cases file (postgres-safe.cases.yaml)
+✕ no cases ran · fix the problems above, then run it again
+--- stderr

@@ -1,0 +1,12 @@
+# A cases file with one wrong expectation (the golden shows the diff).
+policy: ../../../../examples/policies/postgres-safe.yaml
+cases:
+  - name: reads run freely
+    input: { tool: postgres.query, sql: "SELECT 1" }
+    expect: { decision: allow, rule: allow-reads }
+  - name: a comment does not hide DROP
+    input: { tool: postgres.query, sql: "SELECT 2" }
+    expect: { decision: deny, rule: block-destructive-sql, verify: L2 }
+  - name: describe runs freely
+    input: { tool: postgres.describe }
+    expect: { decision: allow, rule: allow-describe }

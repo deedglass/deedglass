@@ -1,0 +1,5 @@
+exit 0
+--- stdout
+✓ postgres-safe   5 cases · 2 of 12 rules
+✓ 5 cases passed · 1 policy · 23 skipped by --run · N s
+--- stderr

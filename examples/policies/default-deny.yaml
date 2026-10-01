@@ -1,0 +1,23 @@
+# default-deny · a Deedglass starter policy
+#
+# Every new org is enforced with this policy. It has no rules on purpose, so the
+# default refuses every action: reads, writes and tools Deedglass has never seen.
+# Each agent is also held to 60 calls a minute by the "agent-rate" budget.
+#
+# To let agents act, activate a starter policy in Console › Policies, like
+# postgres-safe or github-read-mostly, or write your own rules below. Then check
+# your change:
+#   deedglass policy test examples/policies/default-deny.yaml
+deedglass: policy/v1
+name: default-deny
+description: Nothing runs until you activate a policy. Every new org starts here.
+
+defaults:
+  decision: deny
+  reason: Every new org starts with default-deny. Activate a starter policy in Console › Policies to allow actions.
+  verify: L0
+
+budgets:
+  - id: agent-rate
+    window: minute
+    max_calls: 60

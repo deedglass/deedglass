@@ -25,8 +25,8 @@ type Diagnostic struct {
 	File     string   `json:"file,omitempty"`
 	Line     int      `json:"line"`   // 1-based; 0 = the whole file
 	Col      int      `json:"column"` // 1-based, in runes
-	EndLine  int      `json:"end_line,omitempty"`
-	EndCol   int      `json:"end_column,omitempty"` // exclusive
+	EndLine  int      `json:"end_line,omitzero"`
+	EndCol   int      `json:"end_column,omitzero"` // exclusive
 	RuleID   string   `json:"rule_id,omitempty"`
 	Path     string   `json:"path,omitempty"` // YAML path, e.g. rules[3].when
 	DocURL   string   `json:"doc_url"`

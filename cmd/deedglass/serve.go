@@ -5,6 +5,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"log/slog"
 	"net"
 	"net/http"
@@ -27,9 +28,12 @@ import (
 	"github.com/deedglass/deedglass/internal/identity"
 	"github.com/deedglass/deedglass/internal/ledger"
 	"github.com/deedglass/deedglass/internal/mailer"
+	"github.com/deedglass/deedglass/internal/policy"
+	"github.com/deedglass/deedglass/internal/policyapi"
 	"github.com/deedglass/deedglass/internal/store"
 	"github.com/deedglass/deedglass/internal/store/migrate"
 	"github.com/deedglass/deedglass/internal/store/migrations"
+	"github.com/deedglass/deedglass/internal/store/policystore"
 )
 
 // --- flags ---
@@ -190,6 +194,14 @@ func runServe(ctx context.Context, e *Env, args []string) error {
 	if err != nil {
 		return err
 	}
+	// 5b. Policies (S12): the registry rides the same LISTEN connection as Stop (deedglass_policy
+	// next to deedglass_identity), so it subscribes before the listener starts.
+	pol := newPolicies(db, led, keys, log)
+	rctx, stopReg := context.WithCancel(context.WithoutCancel(ctx))
+	regDone := make(chan struct{})
+	pol.subscribe(rctx)
+	go func() { defer close(regDone); _ = pol.reg.Run(rctx) }()
+	defer func() { stopReg(); <-regDone }()
 	kctx, stopKeys := context.WithCancel(context.WithoutCancel(ctx))
 	keysDone := make(chan struct{})
 	go func() { defer close(keysDone); keys.Run(kctx) }()
@@ -199,7 +211,8 @@ func runServe(ctx context.Context, e *Env, args []string) error {
 		Logger: log, Prod: prod, BaseURL: cfg.BaseURL, TrustedProxies: cfg.TrustedProxies,
 		Idempotency: idemStore{db}, Sessions: people, Keys: keys,
 	})
-	api.Mount(serveRoutes(api, db, ms, sk, led, people, keys)...)
+	api.Metrics().Collect(policyMetrics(pol.reg))
+	api.Mount(serveRoutes(api, db, ms, sk, led, people, keys, pol)...)
 	ln, err := net.Listen("tcp", cfg.Listen)
 	if err != nil {
 		return &ExitError{Code: ExitFailure, ErrCode: "listen_failed", Err: fmt.Errorf("Can't listen on %s: %s", cfg.Listen, lastPart(err)),
@@ -276,8 +289,13 @@ type serveKey struct {
 // run httpx.CheckSpec on this list, so api/openapi.yaml must document each one. db and sk are nil
 // in route-table tests.
 func serveRoutes(api *httpx.Server, db *store.DB, ms []migrate.Migration, sk *serveKey, led *ledger.Ledger, people *identity.Service,
-	keys *identity.KeyAuth) []httpx.Route {
+	keys *identity.KeyAuth, pol *policies) []httpx.Route {
 	deps := httpx.SystemDeps{Spec: apiSpec()}
+	if pol == nil {
+		pol = &policies{svc: policy.NewService(nil)}
+	} else {
+		deps.Policies = func() string { return pol.reg.Health().Status }
+	}
 	issuer := "http://127.0.0.1:8080"
 	if db != nil {
 		deps.Health = healthSource{db: db, ms: ms}
@@ -305,7 +323,38 @@ func serveRoutes(api *httpx.Server, db *store.DB, ms []migrate.Migration, sk *se
 	if err != nil {
 		panic(err) // DEEDGLASS_BASE_URL was validated by config
 	}
-	return append(routes, identity.NewMCPAuth(base).MCPRoutes()...)
+	routes = append(routes, identity.NewMCPAuth(base).MCPRoutes()...)
+	// S12: policies, versions, activation deeds, lint, the dry run and the test runner.
+	return append(routes, policyapi.Routes(pol.svc, policyapi.Options{})...)
+}
+
+// policies is S12's wiring: the registry every instance keeps, the service the routes call, and
+// the change feed on the instance's one LISTEN connection.
+type policies struct {
+	reg     *policy.Registry
+	svc     *policy.Service
+	changes *policystore.Changes
+}
+
+func newPolicies(db *store.DB, led *ledger.Ledger, keys *identity.KeyAuth, log *slog.Logger) *policies {
+	repo := policystore.NewRepo(db, led)
+	ch := policystore.NewChanges(keys.Listener())
+	reg := policy.NewRegistry(repo, ch, policy.WithRegistryLogger(log))
+	return &policies{reg: reg, svc: policy.NewService(repo, policy.WithRegistry(reg)), changes: ch}
+}
+
+// subscribe registers deedglass_policy on the listener before it connects.
+func (p *policies) subscribe(ctx context.Context) { _, _, _ = p.changes.Subscribe(ctx) }
+
+// policyMetrics writes deedglass_policy_reloads_total, deedglass_policy_load_failures_total and
+// deedglass_policy_active_orgs (S12 §3.5).
+func policyMetrics(reg *policy.Registry) httpx.Collector {
+	return func(w io.Writer) {
+		st := reg.Stats()
+		fmt.Fprintf(w, "# HELP deedglass_policy_reloads_total Policy loads into the registry (cold, on NOTIFY or on the safety poll).\n# TYPE deedglass_policy_reloads_total counter\ndeedglass_policy_reloads_total %d\n", st.Reloads)
+		fmt.Fprintf(w, "# HELP deedglass_policy_load_failures_total Policy loads that failed their checks (the org then refuses every action).\n# TYPE deedglass_policy_load_failures_total counter\ndeedglass_policy_load_failures_total %d\n", st.LoadFailures)
+		fmt.Fprintf(w, "# HELP deedglass_policy_active_orgs Orgs whose policies this instance holds.\n# TYPE deedglass_policy_active_orgs gauge\ndeedglass_policy_active_orgs %d\n", st.ActiveOrgs)
+	}
 }
 
 // newKeyAuth is the API-key authenticator and Stop guard (S08). serve runs its listener.

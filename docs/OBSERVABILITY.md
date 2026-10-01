@@ -112,6 +112,9 @@ authentication, which is why it stays off the API port.
 | `deedglass_http_request_duration_seconds` | histogram | `route` | Time to serve a request. |
 | `deedglass_http_in_flight` | gauge | none | Requests being served now. |
 | `deedglass_build_info` | gauge, always `1` | `version`, `commit` | The build this server runs. |
+| `deedglass_policy_reloads_total` | counter | none | Policy loads into this instance's registry: cold, on a `deedglass_policy` notification, or on the 30 s safety poll (S12). |
+| `deedglass_policy_load_failures_total` | counter | none | Policy loads that failed their checks (compile, `version_hash`, `source_hash`, the activation deed's seal or data). The org's actions are then refused with `policy_unavailable`. Alert on any increase. |
+| `deedglass_policy_active_orgs` | gauge | none | Orgs whose policies this instance holds (idle orgs leave after 10 minutes). |
 
 **Labels are bounded.** `route` is the route pattern (`/v1/actions/{id}`), never a raw path, and
 `unmatched` for every request no route matched. `method` is `GET`, `HEAD`, `POST`, `PUT`,

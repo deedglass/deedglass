@@ -1,0 +1,9 @@
+exit 1
+--- stdout
+✕ a comment does not hide DROP · fail.cases.yaml:7
+    expected  deny · block-destructive-sql
+    got       allow · allow-reads
+    verify: expected L2, got L0
+✕ postgres-safe   3 cases · 1 failed · 2 of 12 rules
+✕ 2 passed · 1 failed · uncovered: block-unclassified-sql, one-statement-only, block-destructive-sql, block-schema-and-privilege-changes, block-server-side-code, block-unbounded-writes, allow-listed-writes, writes-need-approval, functions-need-approval, undo-needs-approval
+--- stderr

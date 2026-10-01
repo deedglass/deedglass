@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"go.yaml.in/yaml/v3"
+
+	"github.com/deedglass/deedglass/examples/policies"
 )
 
 // starterLike are policies of the shapes S12's starters use: postgres-safe, a refunds policy with
@@ -21,7 +23,7 @@ var starterLike = []string{
 }
 
 func FuzzEvaluate(f *testing.F) {
-	src, err := os.ReadFile("testdata/eval/postgres-safe.yaml")
+	src, err := policies.Source("postgres-safe")
 	if err != nil {
 		f.Fatal(err)
 	}

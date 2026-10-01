@@ -1,0 +1,57 @@
+# Test cases for gmail-drafts-only.yaml. Run them with:
+#   deedglass policy test examples/policies/gmail-drafts-only.yaml
+policy: gmail-drafts-only.yaml
+defaults:
+  agent: { name: inbox-bot, labels: { env: prod } }
+  org: { timezone: Asia/Kolkata }
+  time: 2026-10-04T10:00:00+05:30
+cases:
+  # Sending never runs
+  - name: sending a message never runs
+    input: { tool: gmail.send_message, args: { to: [customer@example.com], subject: Your refund } }
+    expect: { decision: deny, rule: block-sending, code: policy_denied, reason_contains: A person reviews and sends }
+  - name: sending a draft never runs
+    input: { tool: gmail.send_draft, args: { draft_id: r-4482910 } }
+    expect: { decision: deny, rule: block-sending }
+  - name: forwarding never runs
+    input: { tool: gmail.forward_message, args: { message_id: 18c2f0a9b7e1d3c4, to: [partner@example.com] } }
+    expect: { decision: deny, rule: block-sending }
+  - name: replying never runs
+    input: { tool: gmail.reply_to_message, args: { message_id: 18c2f0a9b7e1d3c4, body: "Thanks, we are on it." } }
+    expect: { decision: deny, rule: block-sending }
+  - name: a send tool declared as a write is still blocked
+    input: { tool: { name: gmail.batch_send, side_effect: write }, args: { draft_ids: [r-4482910, r-4482911] } }
+    expect: { decision: deny, rule: block-sending }
+
+  # Drafts
+  - name: writing a draft runs, witnessed at L1
+    input: { tool: gmail.create_draft, args: { to: [customer@example.com], subject: Your refund, body: Hello again. } }
+    expect: { decision: allow, rule: drafts, verify: L1 }
+  - name: editing a draft runs
+    input: { tool: gmail.update_draft, args: { draft_id: r-4482910, body: "Hello again, with the tracking link." } }
+    expect: { decision: allow, rule: drafts, verify: L1 }
+
+  # Reads
+  - name: reading a message runs freely
+    input: { tool: gmail.get_message, args: { message_id: 18c2f0a9b7e1d3c4 } }
+    expect: { decision: allow, rule: reads, verify: L0 }
+  - name: listing threads runs freely
+    input: { tool: gmail.list_threads, args: { label: INBOX, max_results: 20 } }
+    expect: { decision: allow, rule: reads }
+  - name: searching mail runs freely
+    input: { tool: gmail.search_messages, args: { q: "from:billing@example.com newer_than:7d" } }
+    expect: { decision: allow, rule: reads }
+
+  # Deletes and everything else
+  - name: deleting a message never runs
+    input: { tool: { name: gmail.delete_message, side_effect: destructive }, args: { message_id: 18c2f0a9b7e1d3c4 } }
+    expect: { decision: deny, rule: block-other-destructive, notify: [slack] }
+  - name: trashing a thread never runs
+    input: { tool: { name: gmail.trash_thread, side_effect: destructive }, args: { thread_id: 18c2f0a9b7e1d3c4 } }
+    expect: { decision: deny, rule: block-other-destructive }
+  - name: labelling mail falls to the default
+    input: { tool: gmail.modify_labels, args: { message_id: 18c2f0a9b7e1d3c4, add: [Label_12] } }
+    expect: { decision: deny, rule: default, reason_contains: Console › Policies }
+  - name: a send tool named in camel case is still refused, by the default
+    input: { tool: gmail.SendMessage, args: { to: [customer@example.com] } }
+    expect: { decision: deny, rule: default }

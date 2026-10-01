@@ -80,19 +80,20 @@ var contractRoutes = []ContractRoute{
 	cr("GET", "/.well-known/oauth-protected-resource/mcp/{connector}", Public, "", "S09", "CORS *"),
 	cr("GET", "/.well-known/oauth-protected-resource/mcp/native", Public, "", "S09", "CORS *"),
 
-	// S11/S12: policies (admin scope; agent keys are refused even for reads).
-	cr("GET", "/v1/policies", SessionOrKey, "admin", "S12"),
+	// S12: policies. Sessions by role, org admin keys (scope admin) as admin; agent keys are
+	// refused even for reads.
+	cr("GET", "/v1/policies", SessionOrKey, "viewer", "S12"),
 	cr("POST", "/v1/policies", SessionOrKey, "admin", "S12"),
-	cr("GET", "/v1/policies/active", SessionOrKey, "admin", "S12"),
-	cr("GET", "/v1/policies/{id}", SessionOrKey, "admin", "S12"),
-	cr("GET", "/v1/policies/{id}/versions", SessionOrKey, "admin", "S12"),
+	cr("GET", "/v1/policies/active", SessionOrKey, "viewer", "S12"),
+	cr("GET", "/v1/policies/{id}", SessionOrKey, "viewer", "S12"),
+	cr("GET", "/v1/policies/{id}/versions", SessionOrKey, "viewer", "S12"),
 	cr("POST", "/v1/policies/{id}/versions", SessionOrKey, "admin", "S12"),
-	cr("GET", "/v1/policies/{id}/versions/{v}", SessionOrKey, "admin", "S12"),
+	cr("GET", "/v1/policies/{id}/versions/{v}", SessionOrKey, "viewer", "S12"),
 	cr("POST", "/v1/policies/{id}/versions/{v}/activate", SessionOrKey, "admin", "S12"),
 	cr("POST", "/v1/policies/{id}/versions/{v}/deactivate", SessionOrKey, "admin", "S12"),
-	cr("POST", "/v1/policies/lint", SessionOrKey, "admin", "S12"),
-	cr("POST", "/v1/policies/evaluate", SessionOrKey, "admin", "S12"),
-	cr("POST", "/v1/policies/test", SessionOrKey, "admin", "S12"),
+	cr("POST", "/v1/policies/lint", SessionOrKey, "viewer", "S12", "IdemNever: no side effects"),
+	cr("POST", "/v1/policies/evaluate", SessionOrKey, "viewer", "S12", "IdemNever: no side effects"),
+	cr("POST", "/v1/policies/test", SessionOrKey, "viewer", "S12", "IdemNever: no side effects"),
 	cr("POST", "/v1/policies/{id}/versions/{v}/replay", SessionOrKey, "admin", "S27"),
 
 	// S13/S14: actions.

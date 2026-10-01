@@ -21,10 +21,11 @@ import (
 
 // OrgCreateHook runs inside org creation's one SystemTx(org_create) transaction, after the org, its
 // owner, the membership and the org.created deed are written (the transaction is scoped to the
-// new org). S12 registers policy.Bootstrap here, so no org ever exists without an enforced policy.
-type OrgCreateHook func(ctx context.Context, tx pgx.Tx, org store.Org) error
+// new org). led seals what the hook changes. S12 registers policystore.BootstrapOrg here
+// (cmd/deedglass), so no org ever exists without an enforced policy.
+type OrgCreateHook func(ctx context.Context, tx pgx.Tx, led *ledger.Ledger, org store.Org) error
 
-// OrgCreateHooks are run in order by CreateOrg. Empty until S12.
+// OrgCreateHooks are run in order by CreateOrg.
 var OrgCreateHooks []OrgCreateHook
 
 // Org is the org as the API shows it.
@@ -140,7 +141,7 @@ func CreateOrg(ctx context.Context, db *store.DB, led *ledger.Ledger, name, slug
 			return err
 		}
 		for _, h := range OrgCreateHooks {
-			if err := h(ctx, tx, o); err != nil {
+			if err := h(ctx, tx, led, o); err != nil {
 				return err
 			}
 		}

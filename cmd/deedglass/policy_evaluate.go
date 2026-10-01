@@ -41,7 +41,9 @@ type policyEvalOpts struct {
 
 func runPolicyEvaluate(ctx context.Context, e *Env, args []string) error {
 	var o policyEvalOpts
+	var version string
 	rest, err := parseInterleaved("deedglass policy evaluate", args, func(fs *flag.FlagSet) {
+		fs.StringVar(&version, "version", version, "with --server and a stored --policy: the version number")
 		fs.StringVar(&o.policy, "policy", o.policy, "policy file")
 		fs.StringVar(&o.input, "input", o.input, "input JSON file")
 		fs.StringVar(&o.tool, "tool", o.tool, "tool name")
@@ -62,8 +64,11 @@ func runPolicyEvaluate(ctx context.Context, e *Env, args []string) error {
 	if len(rest) > 0 {
 		return usageErr(fmt.Errorf("unexpected argument %q", clean(rest[0])), "Pass the policy with --policy, for example: deedglass policy evaluate --policy postgres-safe.yaml --tool postgres.query --sql \"SELECT 1\"")
 	}
+	if e.Globals.ServerFlag {
+		return runPolicyEvaluateServer(ctx, e, o, version)
+	}
 	if o.policy == "" {
-		return usageErr(errors.New("deedglass policy evaluate needs --policy <file>"),
+		return usageErr(errors.New("deedglass policy evaluate needs --policy <file>, or --server for the active policies"),
 			"For example: deedglass policy evaluate --policy postgres-safe.yaml --tool postgres.query --sql \"SELECT 1\"")
 	}
 	in, err := buildEvalInput(o)

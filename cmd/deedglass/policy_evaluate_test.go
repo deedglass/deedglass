@@ -28,7 +28,7 @@ func normalizeEval(r result) result {
 // TestPolicyEvaluateGoldens is S11 §5: the demo layout, every decision kind, --json, and every
 // exit code. Each case fixes --time, so budget messages are exact.
 func TestPolicyEvaluateGoldens(t *testing.T) {
-	const ps = "../../internal/policy/testdata/eval/postgres-safe.yaml"
+	const ps = "../../examples/policies/postgres-safe.yaml"
 	at := "--time=2026-10-04T04:30:46Z"
 	cases := []struct {
 		name string
@@ -61,7 +61,7 @@ func TestPolicyEvaluateGoldens(t *testing.T) {
 
 // TestPolicyEvaluateAcceptance runs the three S11 §9 lines on the in-process CLI.
 func TestPolicyEvaluateAcceptance(t *testing.T) {
-	const ps = "../../internal/policy/testdata/eval/postgres-safe.yaml"
+	const ps = "../../examples/policies/postgres-safe.yaml"
 	r := cli(t, nil, false, "policy", "evaluate", "--policy", ps, "--tool", "postgres.execute", "--sql", "/* tidy up */ DrOp TABLE public.orders", "--explain")
 	if r.code != 0 || !strings.HasPrefix(r.stdout, "✕ deny · block-destructive-sql") {
 		t.Fatalf("%+v", r)

@@ -1,0 +1,5 @@
+exit 2
+--- stdout
+--- stderr
+✕ --dir tests a whole directory; leave out file names and --cases.
+  deedglass policy test --dir examples/policies

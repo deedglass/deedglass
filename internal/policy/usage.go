@@ -119,11 +119,14 @@ func (t CostTarget) Counter(cur string) string {
 
 // BudgetHit says which budget denied an action, with exact numbers for the message and Retry-After.
 type BudgetHit struct {
-	ID          string    `json:"id"`
-	Per         string    `json:"per"`
-	Window      string    `json:"window"`
-	Limit       int64     `json:"limit"`
-	Used        int64     `json:"used"`
+	ID     string `json:"id"`
+	Per    string `json:"per"`
+	Window string `json:"window"`
+	Limit  int64  `json:"limit"`
+	Used   int64  `json:"used"`
+	// Projected is used plus this action's measured amount, for a measured budget the action would
+	// pass (DL-025); 0 otherwise.
+	Projected   int64     `json:"projected,omitzero"`
 	Unit        string    `json:"unit"` // "calls", or a currency (minor units)
 	ResetsAt    time.Time `json:"resets_at"`
 	RetryAfterS int64     `json:"retry_after_s"`

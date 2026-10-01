@@ -23,7 +23,7 @@ This is the Deedglass product repo: Go module `github.com/deedglass/deedglass`, 
 
 ```sh
 make help           # every target
-make ci             # fmt-check, tidy-check, vet, test (-race), fuzz-policy-short, testdata-check, rename-guard, banned-words, nocgo, web-verify-test
+make ci             # fmt-check, tidy-check, vet, test (-race), fuzz-policy-short, policy-test, testdata-check, rename-guard, banned-words, nocgo, web-verify-test
 make build          # bin/deedglass with version ldflags; bin/deedglass help
 make test           # go test -race -count=1 ./...     (make test-short: no -race, short mode)
 make integration    # throwaway PG (DEEDGLASS_IT_PG=18|17|16, DEEDGLASS_IT_MODE=brew|docker): sql/ smoke,
@@ -45,6 +45,9 @@ go test ./internal/sqlguard -run TestCorpus -v           # the sqlguard corpus (
 go test ./cmd/deedglass -run TestPolicyEvaluateGoldens -update  # regenerate the policy evaluate CLI goldens (µs normalised)
 go test ./internal/policy -run TestLintGolden -update   # regenerate the lint goldens, hashes.json and costs.json (review the diff)
 go test ./cmd/deedglass -run TestPolicyGoldens -update  # regenerate the policy lint/fmt CLI goldens
+make policy-test    # S12: deedglass policy test --dir examples/policies --require-coverage --voice (in ci)
+go test ./examples/policies -update   # re-pin the starters' version_hash in examples/policies/hashes.json (review the diff)
+go test ./cmd/deedglass -run 'TestPolicyTestGoldens|TestPolicyServerGoldens' -update  # the policy test/push/activate CLI goldens
 DEEDGLASS_IT_PKGS=./internal/identity/ make integration   # one suite (DEEDGLASS_IT_GOFLAGS="-v -run X" adds flags)
 scripts/dev-pg.sh up  # a Docker-free dev Postgres on 127.0.0.1:55432 (writes .tmp/dev-pg.env); down | reset
 scripts/demo/tamper-clip.sh  # S06's recording: 1,000 real deeds, export, verify ✓, flip one digit, verify ✕
@@ -183,8 +186,8 @@ and "open source" until the repo is public. Style bans: "revolutionary", "world-
   `store` never import each other).
 - `internal/httpx`: `Mount` panics on a route with no auth, a POST with no idempotency rule, or a
   route missing from `contract_routes.go` (contract §9 as data; `testdata/routes.golden`); the
-  40-code error catalog (copy rules, banned words, `docs/api/errors.md` headings; S11 added
-  `policy_unavailable`); the middleware and
+  41-code error catalog (copy rules, banned words, `docs/api/errors.md` headings; S11 added
+  `policy_unavailable`, S12 `policy_invalid` with the additive `diagnostics` envelope field); the middleware and
   idempotency tables; log canaries; `CheckSpec`/`CheckRequired` keep `api/openapi.yaml` equal to the
   mounted routes (also run on everything `serve` mounts in `cmd/deedglass`). A new route goes into
   `serveRoutes`, `contract_routes.go` (if new) and `api/openapi.yaml` in the same change.
@@ -284,6 +287,24 @@ and "open source" until the repo is public. Style bans: "revolutionary", "world-
   `TestPolicyEvaluateGoldens` (`testdata/policy/evaluate_*`), `TestStopMessagesMatchCatalog` (the
   evaluator's Stop and policy_unavailable strings equal `internal/httpx/errors.go`),
   `TestTimeZoneDatabase` (`time/tzdata` is embedded).
+- `internal/policy` + `internal/policyapi` + `internal/store/policystore` (S12): the service over
+  an in-memory repo with real sealed deeds (`memrepo_test.go`): every activation edge (shadow,
+  promote with two deeds, replace, roll back, deactivate shadow, the 409s), `default_allow` needs
+  `acknowledge_warnings` and the deed records it, identical pushes save nothing, 10 concurrent
+  activations; the registry: single flight (50 cold loads → 1), every load check fails closed
+  (compile, `version_hash`, `source_hash`, deed seal, deed target, deed data, wrong keys, database
+  down) and never falls back, a broken shadow never blocks, hot swap on NOTIFY, the safety poll,
+  reconnect invalidation, idle eviction, a cache hit allocates nothing (`TestRegistryHitAllocs`);
+  the case-input parser and test runner. `TestRouteRoleMatrix` (12 routes × owner/admin/viewer/admin
+  key/agent key/none; agent keys refused on reads too). `examples/policies`: `TestStarters` (every
+  starter compiles clean under `--voice`, passes its cases, covers every rule and budget, ≥ 84
+  cases, `hashes.json` pinned), `TestStartersAlwaysDeny`, `TestEmbedMatchesDisk`. `docs`:
+  `TestCookbook` (17 recipes lint clean and pass their cases). Integration: the table guards
+  (append-only versions, one live enforce, end-only activations, RLS), onboarding through
+  `identity.CreateOrg`, the service on Postgres with the chain intact, 10 parallel activations,
+  `TestHotSwapTwoInstances` (20 of 20 under 2 s), `TestListenerKilled`, `TestTamperFailsClosed`.
+  `internal/ledger`: `TestOneWritePath` allows `store.NotifyPolicy` as the one door for
+  `deedglass_policy`.
 - `cmd/deedglass verify` (S05): 80 golden cases in `testdata/verify/<case>/{args,stdout,stderr,exit}`
   (`go test ./cmd/deedglass -run TestVerifyGolden -update`), every vector's code and exit, `--keys`
   URL rules (same-host redirects, 1 MiB, timeout, loopback-only http), key-set merge conflicts, no

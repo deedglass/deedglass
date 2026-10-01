@@ -33,6 +33,27 @@ func (db *DB) NotifyIdentity(ctx context.Context, tx pgx.Tx, payload string) err
 	return err
 }
 
+// PolicyChannel is the NOTIFY channel for policy activations (contract §8). The payload is the
+// org id, nothing else: every instance reloads that org's policies from Postgres (S12 §3.5).
+const PolicyChannel = "deedglass_policy"
+
+// NotifyPolicy sends org on deedglass_policy inside tx: delivered only if the activation commits,
+// and a failed notification rolls the activation back.
+func NotifyPolicy(ctx context.Context, tx pgx.Tx, org string) error {
+	if len(org) > MaxNotifyPayload || tx == nil {
+		return errors.New("store: a policy notification needs a transaction and an org id")
+	}
+	_, err := tx.Exec(ctx, `SELECT pg_catalog.pg_notify('deedglass_policy', $1)`, org)
+	return err
+}
+
+// ChannelListener runs extra NOTIFY channels on an instance's one dedicated LISTEN connection
+// (S08's identity listener, generalized in S12). onMsg gets each payload; onReset runs after every
+// (re)connect, because anything cached may have missed a notification while it was away.
+type ChannelListener interface {
+	Listen(channel string, onMsg func(payload string), onReset func())
+}
+
 // ListenConfig returns a copy of the pool's connection settings, for a dedicated connection that
 // isn't part of the pool (the identity listener holds one for LISTEN).
 func (db *DB) ListenConfig() *pgx.ConnConfig { return db.pool.Config().ConnConfig.Copy() }

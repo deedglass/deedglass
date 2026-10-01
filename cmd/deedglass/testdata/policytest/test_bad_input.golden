@@ -1,0 +1,13 @@
+exit 1
+--- stdout
+✕ testdata/policytest/bad_input.cases.yaml:4:53 · unknown_key
+  Unknown key "agnet" in the input.
+
+    3 │   - name: a typo in the input
+    4 │     input: { tool: postgres.query, sql: "SELECT 1", agnet: { name: support-bot } }
+      │                                                     ^
+  hint: Did you mean "agent"?
+
+✕ bad_input   the cases file was not accepted
+✕ no cases ran · fix the problems above, then run it again
+--- stderr

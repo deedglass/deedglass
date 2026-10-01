@@ -43,18 +43,18 @@ planned    POST    /v1/intents/verify                                     agent_
 planned    GET     /.well-known/oauth-protected-resource                  public          -                S09    CORS *
 planned    GET     /.well-known/oauth-protected-resource/mcp/{connector}  public          -                S09    CORS *
 planned    GET     /.well-known/oauth-protected-resource/mcp/native       public          -                S09    CORS *
-planned    GET     /v1/policies                                           session_or_key  admin            S12
+planned    GET     /v1/policies                                           session_or_key  viewer           S12
 planned    POST    /v1/policies                                           session_or_key  admin            S12
-planned    GET     /v1/policies/active                                    session_or_key  admin            S12
-planned    GET     /v1/policies/{id}                                      session_or_key  admin            S12
-planned    GET     /v1/policies/{id}/versions                             session_or_key  admin            S12
+planned    GET     /v1/policies/active                                    session_or_key  viewer           S12
+planned    GET     /v1/policies/{id}                                      session_or_key  viewer           S12
+planned    GET     /v1/policies/{id}/versions                             session_or_key  viewer           S12
 planned    POST    /v1/policies/{id}/versions                             session_or_key  admin            S12
-planned    GET     /v1/policies/{id}/versions/{v}                         session_or_key  admin            S12
+planned    GET     /v1/policies/{id}/versions/{v}                         session_or_key  viewer           S12
 planned    POST    /v1/policies/{id}/versions/{v}/activate                session_or_key  admin            S12
 planned    POST    /v1/policies/{id}/versions/{v}/deactivate              session_or_key  admin            S12
-planned    POST    /v1/policies/lint                                      session_or_key  admin            S12
-planned    POST    /v1/policies/evaluate                                  session_or_key  admin            S12
-planned    POST    /v1/policies/test                                      session_or_key  admin            S12
+planned    POST    /v1/policies/lint                                      session_or_key  viewer           S12    IdemNever: no side effects
+planned    POST    /v1/policies/evaluate                                  session_or_key  viewer           S12    IdemNever: no side effects
+planned    POST    /v1/policies/test                                      session_or_key  viewer           S12    IdemNever: no side effects
 planned    POST    /v1/policies/{id}/versions/{v}/replay                  session_or_key  admin            S27
 planned    POST    /v1/actions                                            agent_key       actions:execute  S13    IdemNever: the Gate owns its idempotency
 planned    GET     /v1/actions                                            session_or_key  actions:read     S06    agent keys: own agent only (S08)

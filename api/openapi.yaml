@@ -46,6 +46,12 @@ tags:
       (docs/DEED_SPEC.md).
   - name: Intents
     description: "Signed intents: the conformance check SDK authors run against Deedglass."
+  - name: Policies
+    description: >-
+      Policies and their immutable versions, activation as enforce or shadow (each sealed as an
+      admin deed), and the lint, dry-run and test tools (docs/POLICY_LANGUAGE.md). Every route
+      accepts a Console session (by role) or an org admin key (`admin` scope). Agent keys get 403
+      `insufficient_scope` on all of them, reads included.
   - name: MCP
     description: "MCP authorization readiness: OAuth protected-resource metadata (RFC 9728) and the /mcp endpoints."
 paths:
@@ -1627,6 +1633,535 @@ paths:
                       doc_url: https://docs.deedglass.com/errors/intent_invalid
         default:
           $ref: "#/components/responses/Error"
+  /v1/policies:
+    get:
+      operationId: listPolicies
+      summary: List policies
+      description: >-
+        The org's policies, oldest first, each with its status and the versions that are enforced
+        or in shadow. Unknown parameters are refused. A Console session (viewer and up) or an org
+        admin key (`admin` scope); agent keys get 403 `insufficient_scope` ("Agents cannot read or
+        test policies. Use the Console or an admin key.").
+      tags: [Policies]
+      security: [{bearerAuth: []}, {sessionCookie: []}]
+      x-deedglass-auth: session_or_key
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+      responses:
+        "200":
+          description: A page of policies.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PolicyList"
+        default:
+          $ref: "#/components/responses/Error"
+    post:
+      operationId: createPolicy
+      summary: Create a policy from its YAML
+      description: >-
+        201. Compiles the source and saves the policy with its first version, which is not active
+        until you activate it. The policy's name comes from the YAML. Nothing is sealed: the
+        immutable version (author, time, `source_hash`, `version_hash`) is the record, and deeds
+        are for changes that take effect. A source that doesn't compile is 400 `policy_invalid`
+        with `diagnostics`, each with its line, code and hint. A name the org already uses is 409
+        `conflict` (push a new version to it instead). Bodies up to 1 MiB; the source itself up to
+        256 KiB. An admin+ Console session (with the `Deedglass-CSRF` header) or an org admin key;
+        agent keys get 403 `insufficient_scope` ("Agents cannot read or test policies. Use the
+        Console or an admin key.").
+      tags: [Policies]
+      security: [{bearerAuth: []}, {sessionCookie: []}]
+      x-deedglass-auth: session_or_key
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+        - $ref: "#/components/parameters/CSRFWithSession"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        $ref: "#/components/requestBodies/PolicySource"
+      responses:
+        "201":
+          description: The policy, with its first version.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+            Deedglass-Idempotent-Replayed:
+              $ref: "#/components/headers/DeedglassIdempotentReplayed"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PolicyCreated"
+        "400":
+          description: >-
+            The source wasn't accepted (`policy_invalid`, with `diagnostics`), or a field isn't
+            valid (`validation_failed`).
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+              examples:
+                policy_invalid:
+                  summary: A rule has no reason
+                  value:
+                    error:
+                      type: invalid_request_error
+                      code: policy_invalid
+                      message: The policy wasn't accepted. The diagnostics list each problem with its line and a hint.
+                      param: source
+                      request_id: req_01j9zr3m5k8q2w7x4t6v0b1c9d
+                      doc_url: https://docs.deedglass.com/errors/policy_invalid
+                      diagnostics:
+                        - object: policy_diagnostic
+                          severity: error
+                          code: reason_missing
+                          message: Rule "block-destructive-sql" denies but has no reason.
+                          hint: Write the one sentence the agent will see, like "Destructive SQL never runs for agents."
+                          line: 43
+                          column: 15
+                          rule_id: block-destructive-sql
+                          path: rules[2]
+                          doc_url: https://docs.deedglass.com/policies/errors/reason_missing
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/policies/active:
+    get:
+      operationId: getActivePolicies
+      summary: Show the enforced and shadow policies
+      description: >-
+        The org's live activations: the version that decides (`enforce`) and the version recorded
+        alongside it (`shadow`), each null when there is none. A Console session (viewer and up) or
+        an org admin key (`admin` scope); agent keys get 403 `insufficient_scope` ("Agents cannot
+        read or test policies. Use the Console or an admin key.").
+      tags: [Policies]
+      security: [{bearerAuth: []}, {sessionCookie: []}]
+      x-deedglass-auth: session_or_key
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+      responses:
+        "200":
+          description: The active set.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PolicyActiveSet"
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/policies/{id}:
+    get:
+      operationId: getPolicy
+      summary: Get a policy
+      description: >-
+        By `pol_` id or by name. A policy from another org is 404 `not_found`, like one that
+        doesn't exist. A Console session (viewer and up) or an org admin key (`admin` scope); agent
+        keys get 403 `insufficient_scope` ("Agents cannot read or test policies. Use the Console or
+        an admin key.").
+      tags: [Policies]
+      security: [{bearerAuth: []}, {sessionCookie: []}]
+      x-deedglass-auth: session_or_key
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+        - $ref: "#/components/parameters/PolicyRef"
+      responses:
+        "200":
+          description: The policy.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Policy"
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/policies/{id}/versions:
+    get:
+      operationId: listPolicyVersions
+      summary: List a policy's versions
+      description: >-
+        Newest first, without `source` (get one version to read it). Each version's `status` says
+        whether it is enforced, in shadow or inactive. A Console session (viewer and up) or an org
+        admin key (`admin` scope); agent keys get 403 `insufficient_scope` ("Agents cannot read or
+        test policies. Use the Console or an admin key.").
+      tags: [Policies]
+      security: [{bearerAuth: []}, {sessionCookie: []}]
+      x-deedglass-auth: session_or_key
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+        - $ref: "#/components/parameters/PolicyRef"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+      responses:
+        "200":
+          description: A page of versions.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PolicyVersionList"
+        default:
+          $ref: "#/components/responses/Error"
+    post:
+      operationId: createPolicyVersion
+      summary: Push a new version of a policy
+      description: >-
+        201 with the new version, which is not active until you activate it. Versions never
+        change. Content identical to an existing version (the same `version_hash`) saves nothing:
+        the answer is 200 with that version. The YAML's name must be the policy's name; another
+        name is 400 `validation_failed` on `source` (push it as a new policy). A source that
+        doesn't compile is 400 `policy_invalid` with `diagnostics`. Bodies up to 1 MiB. An admin+
+        Console session (with the `Deedglass-CSRF` header) or an org admin key; agent keys get 403
+        `insufficient_scope` ("Agents cannot read or test policies. Use the Console or an admin
+        key.").
+      tags: [Policies]
+      security: [{bearerAuth: []}, {sessionCookie: []}]
+      x-deedglass-auth: session_or_key
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+        - $ref: "#/components/parameters/CSRFWithSession"
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/PolicyRef"
+      requestBody:
+        $ref: "#/components/requestBodies/PolicySource"
+      responses:
+        "201":
+          description: The new version.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+            Deedglass-Idempotent-Replayed:
+              $ref: "#/components/headers/DeedglassIdempotentReplayed"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PolicyVersion"
+        "200":
+          description: The content is identical to this existing version; nothing was saved.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PolicyVersion"
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/policies/{id}/versions/{v}:
+    get:
+      operationId: getPolicyVersion
+      summary: Get one version of a policy, with its source
+      description: >-
+        By version number or `pv_` id; the body includes `source`, the YAML exactly as pushed. A
+        malformed `{v}` is 400 `validation_failed` on `v`. A Console session (viewer and up) or an
+        org admin key (`admin` scope); agent keys get 403 `insufficient_scope` ("Agents cannot read
+        or test policies. Use the Console or an admin key.").
+      tags: [Policies]
+      security: [{bearerAuth: []}, {sessionCookie: []}]
+      x-deedglass-auth: session_or_key
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+        - $ref: "#/components/parameters/PolicyRef"
+        - $ref: "#/components/parameters/PolicyVersionRef"
+      responses:
+        "200":
+          description: The version, with its source.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PolicyVersion"
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/policies/{id}/versions/{v}/activate:
+    post:
+      operationId: activatePolicyVersion
+      summary: Enforce a version, or run it in shadow
+      description: >-
+        `enforce` makes the version the org's deciding policy and replaces the one enforced before
+        (`previous`); `shadow` records its decisions alongside without deciding. Every instance
+        picks up the change within 2 s. Every activation seals an admin deed (`deeds`); promoting
+        the shadow version to enforce seals two, the shadow ending and then the version enforced.
+        Enforcing the version that is already enforced, or shadowing the enforced version, is 409
+        `conflict`. Enforcing a policy with the `default_allow` warning needs
+        `acknowledge_warnings: ["default_allow"]`; without it the answer is 400
+        `validation_failed` on `acknowledge_warnings`. An admin+ Console session (with the
+        `Deedglass-CSRF` header) or an org admin key; agent keys get 403 `insufficient_scope`
+        ("Agents cannot read or test policies. Use the Console or an admin key.").
+      tags: [Policies]
+      security: [{bearerAuth: []}, {sessionCookie: []}]
+      x-deedglass-auth: session_or_key
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+        - $ref: "#/components/parameters/CSRFWithSession"
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/PolicyRef"
+        - $ref: "#/components/parameters/PolicyVersionRef"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [mode, reason]
+              properties:
+                mode: {type: string, enum: [enforce, shadow]}
+                reason: {type: string, minLength: 3, maxLength: 280, description: One line, 3 to 280 characters. It goes into the deed.}
+                acknowledge_warnings:
+                  type: array
+                  description: Warning codes the version carries that you accept, like `default_allow`.
+                  items: {type: string}
+            example: {mode: enforce, reason: Guard the orders database before the pilot.}
+      responses:
+        "200":
+          description: The activation, with the deeds that sealed it.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+            Deedglass-Idempotent-Replayed:
+              $ref: "#/components/headers/DeedglassIdempotentReplayed"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PolicyActivation"
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/policies/{id}/versions/{v}/deactivate:
+    post:
+      operationId: deactivatePolicyVersion
+      summary: Switch off the shadow policy
+      description: >-
+        Ends the version's shadow activation and seals an admin deed. Only the shadow version can
+        be switched off: the enforced one is 409 `conflict` (activate another version instead), and
+        a version that isn't the shadow policy is 409 `conflict`. The reason is required (3 to 280
+        characters). An admin+ Console session (with the `Deedglass-CSRF` header) or an org admin
+        key; agent keys get 403 `insufficient_scope` ("Agents cannot read or test policies. Use the
+        Console or an admin key.").
+      tags: [Policies]
+      security: [{bearerAuth: []}, {sessionCookie: []}]
+      x-deedglass-auth: session_or_key
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+        - $ref: "#/components/parameters/CSRFWithSession"
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/PolicyRef"
+        - $ref: "#/components/parameters/PolicyVersionRef"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [reason]
+              properties:
+                reason: {type: string, minLength: 3, maxLength: 280, description: One line, 3 to 280 characters. It goes into the deed.}
+            example: {reason: Shadow run finished; v3 matched the review.}
+      responses:
+        "200":
+          description: The activation, now ended, with the deed.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+            Deedglass-Idempotent-Replayed:
+              $ref: "#/components/headers/DeedglassIdempotentReplayed"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PolicyActivation"
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/policies/lint:
+    post:
+      operationId: lintPolicy
+      summary: Check a policy's YAML without saving it
+      description: >-
+        Compiles the source and reports every error and warning. The answer is 200 even when the
+        policy is invalid: `valid` says so, and `errors` lists why. Nothing is saved and nothing
+        is sealed, so `Idempotency-Key` is ignored. Limited to 60 requests a minute per person or
+        key (429 `rate_limited`), with a 2 s timeout and bodies up to 1 MiB. A Console session
+        (viewer and up, with the `Deedglass-CSRF` header) or an org admin key (`admin` scope);
+        agent keys get 403 `insufficient_scope` ("Agents cannot read or test policies. Use the
+        Console or an admin key.").
+      tags: [Policies]
+      security: [{bearerAuth: []}, {sessionCookie: []}]
+      x-deedglass-auth: session_or_key
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+        - $ref: "#/components/parameters/CSRFWithSession"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [source]
+              properties:
+                source: {type: string, description: The policy YAML.}
+                voice: {type: boolean, default: false, description: Also check reasons against the brand voice (`reason_style` warnings).}
+            example: {source: "deedglass: policy/v1\nname: postgres-safe\n…"}
+      responses:
+        "200":
+          description: The lint result, valid or not.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PolicyLintResult"
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/policies/evaluate:
+    post:
+      operationId: evaluatePolicy
+      summary: Dry-run one action against a policy
+      description: >-
+        Evaluates one case input against the org's active policies (the default), a stored version
+        or a source, and returns the decision with its facts and, with `explain`, the trace. When a
+        shadow policy is active, `shadow` holds its decision too. It never reserves usage and
+        writes nothing: usage counts as zero unless the input gives it. An `agent.id` from another
+        org is 404 `not_found`; leave it out to use a local agent. Limited to 60 requests a minute
+        per person or key (429 `rate_limited`), with a 2 s timeout and bodies up to 1 MiB.
+        `Idempotency-Key` is ignored. A Console session (viewer and up, with the `Deedglass-CSRF`
+        header) or an org admin key (`admin` scope); agent keys get 403 `insufficient_scope`
+        ("Agents cannot read or test policies. Use the Console or an admin key.").
+      tags: [Policies]
+      security: [{bearerAuth: []}, {sessionCookie: []}]
+      x-deedglass-auth: session_or_key
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+        - $ref: "#/components/parameters/CSRFWithSession"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [input]
+              properties:
+                policy:
+                  description: Which policy decides. Leave it out for the active policies.
+                  oneOf:
+                    - {type: string, const: active}
+                    - type: object
+                      additionalProperties: false
+                      required: [id, version]
+                      properties:
+                        id: {type: string, description: A `pol_` id or the policy's name.}
+                        version: {type: integer, minimum: 1}
+                    - type: object
+                      additionalProperties: false
+                      required: [source]
+                      properties:
+                        source: {type: string, description: A policy YAML, compiled for this call only.}
+                input:
+                  type: object
+                  description: >-
+                    The action, in the case-input format (docs/POLICY_LANGUAGE.md §6.2): `tool`,
+                    `args` (or the `sql` shorthand), and optionally `agent`, `org`, `user`,
+                    `session`, `request`, `time`, `usage` and `anomaly`.
+                explain: {type: boolean, default: false, description: Include the trace.}
+            example:
+              input: {tool: postgres.execute, sql: "DELETE FROM public.orders"}
+              explain: true
+      responses:
+        "200":
+          description: The decision.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PolicyDecision"
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/policies/test:
+    post:
+      operationId: testPolicy
+      summary: Run test cases against a policy
+      description: >-
+        Runs a cases file against a source, or against a stored version (`policy` and `version`),
+        and reports each case and the rule coverage. Send `source` or `policy` with `version`, not
+        both. It never reserves usage and writes nothing. Limited to 60 requests a minute per
+        person or key (429 `rate_limited`), with a 2 s timeout and bodies up to 2 MiB.
+        `Idempotency-Key` is ignored. A Console session (viewer and up, with the `Deedglass-CSRF`
+        header) or an org admin key (`admin` scope); agent keys get 403 `insufficient_scope`
+        ("Agents cannot read or test policies. Use the Console or an admin key.").
+      tags: [Policies]
+      security: [{bearerAuth: []}, {sessionCookie: []}]
+      x-deedglass-auth: session_or_key
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+        - $ref: "#/components/parameters/CSRFWithSession"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [cases]
+              properties:
+                source: {type: string, description: A policy YAML. Not with policy.}
+                policy: {type: string, description: A stored policy, by `pol_` id or name. Needs version.}
+                version: {type: integer, minimum: 1, description: The stored version's number, with policy.}
+                cases:
+                  description: >-
+                    A cases file as a YAML string, or a list of cases (each with `name`, `input`
+                    and `expect`), or an object with `cases`.
+                  oneOf:
+                    - type: string
+                    - type: array
+                      items: {type: object}
+                    - type: object
+            example:
+              policy: postgres-safe
+              version: 3
+              cases:
+                - name: deletes never run
+                  input: {tool: postgres.execute, sql: "DELETE FROM public.orders"}
+                  expect: {decision: deny, rule: block-destructive-sql}
+      responses:
+        "200":
+          description: The test result.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PolicyTestResult"
+        default:
+          $ref: "#/components/responses/Error"
   /.well-known/oauth-protected-resource:
     get:
       operationId: getProtectedResourceMetadata
@@ -2013,6 +2548,20 @@ components:
       schema:
         type: string
         pattern: "^[0-9a-f]{32}$"
+    PolicyRef:
+      name: id
+      in: path
+      required: true
+      description: A pol_ id or the policy's name.
+      schema:
+        type: string
+    PolicyVersionRef:
+      name: v
+      in: path
+      required: true
+      description: A version number, like 3, or a pv_ id.
+      schema:
+        type: string
     DeedglassIntent:
       name: Deedglass-Intent
       in: header
@@ -2129,6 +2678,19 @@ components:
             properties:
               reason: {type: string, minLength: 3, maxLength: 280, description: One line, 3 to 280 characters.}
           example: {reason: "Root cause fixed: refund threshold was 100x"}
+    PolicySource:
+      required: true
+      description: The policy YAML, and optional notes kept with the version.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            required: [source]
+            properties:
+              source: {type: string, description: The policy YAML (deedglass policy/v1), at most 256 KiB.}
+              notes: {type: string, maxLength: 2000, description: Why this version exists. Kept with the version.}
+          example: {source: "deedglass: policy/v1\nname: postgres-safe\n…", notes: Allow-list writes to public.orders for the pilot.}
   schemas:
     LoginRequest:
       type: object
@@ -2619,6 +3181,468 @@ components:
           expires_at: "2026-10-03T09:31:00.000Z"
           nonce_consumed: true
           intent_mode: optional
+    PolicyActorRef:
+      type: object
+      required: [object, id]
+      description: Who acted, as a person, an API key, or the system (whose id is null).
+      properties:
+        object: {type: string, enum: [user, api_key, system]}
+        id: {type: [string, "null"], description: '`usr_…` or `key_…`; null for the system.'}
+    PolicyDiagnostic:
+      type: object
+      required: [severity, code, message, line, column, doc_url]
+      description: >-
+        One finding about a policy file, with its position and the next step. Codes are stable and
+        listed in docs/POLICY_ERRORS.md. In the `policy_invalid` error envelope each diagnostic
+        also carries `object: policy_diagnostic`.
+      properties:
+        object: {type: string, const: policy_diagnostic, description: In the error envelope only.}
+        severity: {type: string, enum: [error, warning]}
+        code: {type: string, description: Snake case and stable, like `reason_missing` or `default_allow`.}
+        message: {type: string, description: One sentence.}
+        hint: {type: string, description: The next step.}
+        file: {type: string}
+        line: {type: integer, minimum: 0, description: 1-based; 0 means the whole file.}
+        column: {type: integer, minimum: 0, description: 1-based, in characters.}
+        end_line: {type: integer, minimum: 1}
+        end_column: {type: integer, minimum: 1, description: Exclusive.}
+        rule_id: {type: string}
+        path: {type: string, description: 'The YAML path, like `rules[3].when`.'}
+        doc_url: {type: string, format: uri}
+      examples:
+        - object: policy_diagnostic
+          severity: warning
+          code: default_allow
+          message: "defaults.decision: allow lets every unmatched action run."
+          hint: Deedglass recommends deny. Enforcing this policy will need an explicit acknowledgement.
+          line: 4
+          column: 13
+          path: defaults.decision
+          doc_url: https://docs.deedglass.com/policies/errors/default_allow
+    Policy:
+      type: object
+      required: [object, id, name, description, status, active_version, shadow_version, latest_version, created_at, updated_at]
+      description: A named policy. Its versions never change; activating one makes it decide.
+      properties:
+        object: {type: string, const: policy}
+        id: {type: string, pattern: "^pol_[0-7][0-9a-hjkmnp-tv-z]{25}$"}
+        name: {type: string, description: From the YAML. Unique in the org and immutable.}
+        description: {type: string}
+        status:
+          type: string
+          enum: [enforced, shadow, inactive]
+          description: '`enforced` when a version decides, `shadow` when a version only runs in shadow, otherwise `inactive`.'
+        active_version: {type: [integer, "null"], minimum: 1, description: The enforced version's number; null when none is enforced.}
+        shadow_version: {type: [integer, "null"], minimum: 1, description: The shadow version's number; null when none runs in shadow.}
+        latest_version: {type: integer, minimum: 1}
+        created_at: {type: string, format: date-time}
+        updated_at: {type: string, format: date-time}
+      examples:
+        - object: policy
+          id: pol_01jb8m2x7k4q9r3t5v6w8y0z1a
+          name: postgres-safe
+          description: Reads run freely. Writes wait for a human. Schema changes never run.
+          status: enforced
+          active_version: 3
+          shadow_version: null
+          latest_version: 3
+          created_at: "2026-10-04T09:12:44.000Z"
+          updated_at: "2026-10-06T11:40:02.000Z"
+    PolicyCreated:
+      description: A new policy, with its first version.
+      allOf:
+        - $ref: "#/components/schemas/Policy"
+        - type: object
+          required: [version]
+          properties:
+            version:
+              $ref: "#/components/schemas/PolicyVersion"
+    PolicyList:
+      type: object
+      required: [object, data, has_more, next_cursor]
+      description: A page of policies.
+      properties:
+        object: {type: string, const: list}
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Policy"
+        has_more: {type: boolean}
+        next_cursor: {type: [string, "null"]}
+    PolicyVersion:
+      type: object
+      required: [object, id, policy, version, name, status, version_hash, source_hash, lang, origin, author, notes, rules, budgets, warnings, created_at]
+      description: >-
+        One immutable version of a policy. `source` is present on a single get only.
+        `version_hash` is the hash of the normalized policy, so formatting and comments don't
+        change it; `source_hash` is the hash of the exact bytes pushed.
+      properties:
+        object: {type: string, const: policy_version}
+        id: {type: string, pattern: "^pv_[0-7][0-9a-hjkmnp-tv-z]{25}$"}
+        policy: {type: string, pattern: "^pol_[0-7][0-9a-hjkmnp-tv-z]{25}$"}
+        version: {type: integer, minimum: 1}
+        name: {type: string}
+        status: {type: string, enum: [enforced, shadow, inactive]}
+        version_hash:
+          $ref: "#/components/schemas/Digest"
+        source_hash:
+          $ref: "#/components/schemas/Digest"
+        lang: {type: string, const: deedglass.policy/v1}
+        origin:
+          type: string
+          enum: [manual, suggestion, starter, onboarding]
+          description: Where the version came from. A person or an admin key pushing it is `manual`.
+        author:
+          $ref: "#/components/schemas/PolicyActorRef"
+        notes: {type: [string, "null"], maxLength: 2000}
+        rules: {type: integer, minimum: 0}
+        budgets: {type: integer, minimum: 0}
+        warnings:
+          type: array
+          items:
+            $ref: "#/components/schemas/PolicyDiagnostic"
+        source: {type: string, description: The YAML exactly as pushed (single get only).}
+        created_at: {type: string, format: date-time}
+      examples:
+        - object: policy_version
+          id: pv_01jb8m3c0d2f4g6h8j0k2m4n6p
+          policy: pol_01jb8m2x7k4q9r3t5v6w8y0z1a
+          version: 3
+          name: postgres-safe
+          status: enforced
+          version_hash: sha256:3e23e8160039594a33894f6564e1b1348bbd7a0088d42c4acb73eeaed59c009d
+          source_hash: sha256:2e7d2c03a9507ae265ecf5b5356885a53393a2029d241394997265a1a25aefc6
+          lang: deedglass.policy/v1
+          origin: manual
+          author: {object: user, id: usr_01k6c9kb2zcjsyn7b8g2k1vqvp}
+          notes: Allow-list writes to public.orders for the pilot.
+          rules: 12
+          budgets: 2
+          warnings: []
+          created_at: "2026-10-06T11:38:15.000Z"
+    PolicyVersionList:
+      type: object
+      required: [object, data, has_more, next_cursor]
+      description: A page of versions, without `source`.
+      properties:
+        object: {type: string, const: list}
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/PolicyVersion"
+        has_more: {type: boolean}
+        next_cursor: {type: [string, "null"]}
+    PolicyActivation:
+      type: object
+      required: [object, id, policy, name, mode, version, previous, promoted_from_shadow, acknowledged_warnings, reason, activated_by, activated_at, deactivated_at, deactivated_by, deeds]
+      description: >-
+        One activation of a version, as enforce or shadow, with the deeds that sealed it. `deeds`
+        is in seal order: one deed, or two for a promote from shadow (the shadow ending, then the
+        version enforced).
+      properties:
+        object: {type: string, const: policy_activation}
+        id: {type: string, pattern: "^pa_[0-7][0-9a-hjkmnp-tv-z]{25}$"}
+        policy: {type: string, pattern: "^pol_[0-7][0-9a-hjkmnp-tv-z]{25}$"}
+        name: {type: string}
+        mode: {type: string, enum: [enforce, shadow]}
+        version:
+          type: object
+          required: [id, version, version_hash]
+          properties:
+            id: {type: string, pattern: "^pv_[0-7][0-9a-hjkmnp-tv-z]{25}$"}
+            version: {type: integer, minimum: 1}
+            version_hash:
+              $ref: "#/components/schemas/Digest"
+        previous:
+          type: [object, "null"]
+          required: [policy, name, version]
+          description: The activation this one replaced in the same mode; null when there was none.
+          properties:
+            policy: {type: string}
+            name: {type: string}
+            version: {type: integer, minimum: 1}
+        promoted_from_shadow: {type: boolean, description: True when the version was the shadow policy and is now enforced.}
+        acknowledged_warnings:
+          type: array
+          description: The warning codes accepted for this activation, sorted.
+          items: {type: string}
+        reason: {type: string, minLength: 3, maxLength: 280}
+        activated_by:
+          $ref: "#/components/schemas/PolicyActorRef"
+        activated_at: {type: string, format: date-time}
+        deactivated_at: {type: [string, "null"], format: date-time}
+        deactivated_by:
+          description: Who switched it off; null while it is live.
+          anyOf:
+            - $ref: "#/components/schemas/PolicyActorRef"
+            - type: "null"
+        deeds:
+          type: array
+          minItems: 1
+          items: {type: string, pattern: "^deed_[0-7][0-9a-hjkmnp-tv-z]{25}$"}
+      examples:
+        - object: policy_activation
+          id: pa_01jb8p0z2b4d6f8h0k2n4q6s8v
+          policy: pol_01jb8m2x7k4q9r3t5v6w8y0z1a
+          name: postgres-safe
+          mode: enforce
+          version: {id: pv_01jb8m3c0d2f4g6h8j0k2m4n6p, version: 3, version_hash: "sha256:3e23e8160039594a33894f6564e1b1348bbd7a0088d42c4acb73eeaed59c009d"}
+          previous: {policy: pol_01jb8m2x7k4q9r3t5v6w8y0z1a, name: postgres-safe, version: 2}
+          promoted_from_shadow: true
+          acknowledged_warnings: []
+          reason: Guard the orders database before the pilot.
+          activated_by: {object: user, id: usr_01k6c9kb2zcjsyn7b8g2k1vqvp}
+          activated_at: "2026-10-06T11:40:02.000Z"
+          deactivated_at: null
+          deactivated_by: null
+          deeds: [deed_01jb8p0y1a3c5e7g9j1m3p5r7t, deed_01k6vrddq2atgb2023qvhhct3g]
+    PolicyActiveEntry:
+      type: object
+      required: [policy, name, version, version_id, version_hash, activation, activated_at, deed]
+      description: One live activation in the active set.
+      properties:
+        policy: {type: string, pattern: "^pol_[0-7][0-9a-hjkmnp-tv-z]{25}$"}
+        name: {type: string}
+        version: {type: integer, minimum: 1}
+        version_id: {type: string, pattern: "^pv_[0-7][0-9a-hjkmnp-tv-z]{25}$"}
+        version_hash:
+          $ref: "#/components/schemas/Digest"
+        activation: {type: string, pattern: "^pa_[0-7][0-9a-hjkmnp-tv-z]{25}$"}
+        activated_at: {type: string, format: date-time}
+        deed: {type: string, description: The deed that sealed the activation.}
+    PolicyActiveSet:
+      type: object
+      required: [object, enforce, shadow]
+      description: The org's enforced and shadow policies; each is null when there is none.
+      properties:
+        object: {type: string, const: policy_active_set}
+        enforce:
+          anyOf:
+            - $ref: "#/components/schemas/PolicyActiveEntry"
+            - type: "null"
+        shadow:
+          anyOf:
+            - $ref: "#/components/schemas/PolicyActiveEntry"
+            - type: "null"
+      examples:
+        - object: policy_active_set
+          enforce:
+            policy: pol_01jb8m2x7k4q9r3t5v6w8y0z1a
+            name: postgres-safe
+            version: 3
+            version_id: pv_01jb8m3c0d2f4g6h8j0k2m4n6p
+            version_hash: sha256:3e23e8160039594a33894f6564e1b1348bbd7a0088d42c4acb73eeaed59c009d
+            activation: pa_01jb8p0z2b4d6f8h0k2n4q6s8v
+            activated_at: "2026-10-06T11:40:02.000Z"
+            deed: deed_01k6vrddq2atgb2023qvhhct3g
+          shadow: null
+    PolicyLintResult:
+      type: object
+      required: [object, file, valid, name, version_hash, rules, budgets, errors, warnings]
+      description: What the compiler found. `valid` is false when `errors` is not empty.
+      properties:
+        object: {type: string, const: policy_lint_result}
+        file: {type: string, description: Empty for the API.}
+        valid: {type: boolean}
+        name: {type: [string, "null"], description: The policy's name, when the YAML gives one.}
+        version_hash: {type: [string, "null"], pattern: "^sha256:[0-9a-f]{64}$", description: Null when the policy is invalid.}
+        rules: {type: integer, minimum: 0}
+        budgets: {type: integer, minimum: 0}
+        errors:
+          type: array
+          items:
+            $ref: "#/components/schemas/PolicyDiagnostic"
+        warnings:
+          type: array
+          items:
+            $ref: "#/components/schemas/PolicyDiagnostic"
+    PolicyTraceStep:
+      type: object
+      required: [step, result, detail]
+      description: One line of an explain trace.
+      properties:
+        step: {type: string, enum: [stop, budget, rule, default]}
+        id: {type: string, description: The rule or budget id.}
+        line: {type: integer, minimum: 1, description: The rule's line in the policy file.}
+        result: {type: string, enum: [pass, match, no_match, error, exceeded, reserved, not_evaluated]}
+        detail: {type: string}
+        cost: {type: integer, minimum: 0, description: The condition's CEL cost.}
+    PolicyApproval:
+      type: object
+      required: [approvers, required, expires_in]
+      description: Who approves and for how long.
+      properties:
+        approvers:
+          type: array
+          description: '`role:owner`, `role:admin` or `user:<email>`, sorted.'
+          items: {type: string}
+        required: {type: integer, minimum: 1}
+        expires_in: {type: integer, minimum: 0, description: Seconds.}
+    PolicyDecision:
+      type: object
+      required: [object, decision, code, source, rule_id, rule_line, reason, message, approval, verify, notify, budget, policy, shadow, facts, trace, errors, sqlguard_version, evaluated_in_us]
+      description: >-
+        A dry-run decision. Nothing ran and no usage was reserved. `shadow` is the shadow policy's
+        decision for the same input, when one is active.
+      properties:
+        object: {type: string, const: policy_decision}
+        decision: {type: string, enum: [allow, deny, require_approval]}
+        code:
+          type: [string, "null"]
+          enum: [policy_denied, approval_required, budget_exceeded, agent_stopped, agent_suspended, org_stopped, policy_unavailable, null]
+        source: {type: string, enum: [stop, budget, rule, default, builtin]}
+        rule_id: {type: [string, "null"]}
+        rule_line: {type: [integer, "null"], minimum: 1}
+        reason: {type: [string, "null"]}
+        message: {type: string, description: What the agent would see.}
+        approval:
+          anyOf:
+            - $ref: "#/components/schemas/PolicyApproval"
+            - type: "null"
+        verify: {type: [string, "null"], enum: [L0, L1, L2, null]}
+        notify:
+          type: array
+          items: {type: string}
+        budget:
+          type: [object, "null"]
+          required: [id, per, window, limit, used, unit, resets_at, retry_after_s]
+          description: The budget that decided; null otherwise.
+          properties:
+            id: {type: string}
+            per: {type: string, enum: [agent, org]}
+            window: {type: string, enum: [minute, hour, day]}
+            limit: {type: integer, minimum: 0}
+            used: {type: integer, minimum: 0}
+            projected: {type: integer, minimum: 0, description: Used plus this action's measured amount, for a measured budget it would pass.}
+            unit: {type: string, description: '`calls`, or a currency in minor units.'}
+            resets_at: {type: string, format: date-time}
+            retry_after_s: {type: integer, minimum: 0}
+        policy:
+          type: object
+          required: [id, name, version, version_id, version_hash, mode]
+          description: The policy that decided. `id`, `version` and `version_id` are null for a source sent with the request.
+          properties:
+            id: {type: [string, "null"]}
+            name: {type: string}
+            version: {type: [integer, "null"], minimum: 1}
+            version_id: {type: [string, "null"]}
+            version_hash: {type: string}
+            mode: {type: string, enum: [enforce, shadow]}
+        shadow:
+          anyOf:
+            - $ref: "#/components/schemas/PolicyDecision"
+            - type: "null"
+        facts:
+          type: object
+          required: [sql, time]
+          description: >-
+            The derived facts the rules saw. `sql` is the SQL classifier's report on `args.sql`
+            (docs/SQLGUARD.md); `time` is the decision instant in the org's time zone (`now`,
+            `hour`, `minute`, `weekday`, `date`).
+          properties:
+            sql: {type: object}
+            time: {type: object}
+        trace:
+          type: array
+          description: With `explain` only; otherwise empty.
+          items:
+            $ref: "#/components/schemas/PolicyTraceStep"
+        errors:
+          type: array
+          items: {type: string}
+        sqlguard_version: {type: string}
+        evaluated_in_us: {type: integer, minimum: 1}
+    PolicyCaseResult:
+      type: object
+      required: [name, pass, expected, got]
+      description: One test case, what it expected and what the policy decided.
+      properties:
+        name: {type: string}
+        line: {type: integer, minimum: 1}
+        pass: {type: boolean}
+        expected:
+          type: object
+          required: [decision]
+          properties:
+            decision: {type: string, enum: [allow, deny, require_approval]}
+            rule: {type: string, description: 'A rule id, `default`, `budget:<id>` or `stop`.'}
+            code: {type: string}
+            reason_contains: {type: string}
+            message: {type: string}
+            verify: {type: string}
+            approval:
+              type: object
+              properties:
+                required: {type: integer}
+                approvers: {type: array, items: {type: string}}
+                expires_in: {type: integer}
+            notify: {type: array, items: {type: string}}
+        got:
+          type: object
+          required: [decision, rule, message]
+          properties:
+            decision: {type: string, enum: [allow, deny, require_approval]}
+            rule: {type: string}
+            code: {type: string}
+            reason: {type: string}
+            message: {type: string}
+            verify: {type: string}
+            approval:
+              $ref: "#/components/schemas/PolicyApproval"
+            notify: {type: array, items: {type: string}}
+        problems:
+          type: array
+          description: 'Each difference, like "rule: expected block-destructive-sql, got allow-reads".'
+          items: {type: string}
+    PolicyRuleCoverage:
+      type: object
+      required: [id, cases]
+      description: How many cases a rule or budget decided.
+      properties:
+        id: {type: string}
+        line: {type: integer, minimum: 1}
+        cases: {type: integer, minimum: 0}
+    PolicyCoverage:
+      type: object
+      required: [rules, covered, total, uncovered, default, budgets]
+      description: Which rules and budgets the cases reached.
+      properties:
+        rules:
+          type: array
+          items:
+            $ref: "#/components/schemas/PolicyRuleCoverage"
+        covered: {type: integer, minimum: 0, description: Rules that decided at least one case.}
+        total: {type: integer, minimum: 0}
+        uncovered:
+          type: array
+          items: {type: string}
+        default: {type: integer, minimum: 0, description: Cases the default decided.}
+        budgets:
+          type: array
+          items:
+            $ref: "#/components/schemas/PolicyRuleCoverage"
+    PolicyTestResult:
+      type: object
+      required: [object, policy, version_hash, ok, passed, failed, skipped, cases, coverage, elapsed_us]
+      description: The result of a test run. `ok` is true when every case passed.
+      properties:
+        object: {type: string, const: policy_test_result}
+        policy: {type: string, description: The policy's name.}
+        file: {type: string}
+        cases_file: {type: string}
+        version_hash:
+          $ref: "#/components/schemas/Digest"
+        ok: {type: boolean}
+        passed: {type: integer, minimum: 0}
+        failed: {type: integer, minimum: 0}
+        skipped: {type: integer, minimum: 0}
+        cases:
+          type: array
+          items:
+            $ref: "#/components/schemas/PolicyCaseResult"
+        coverage:
+          $ref: "#/components/schemas/PolicyCoverage"
+        elapsed_us: {type: integer, minimum: 0}
     ProtectedResourceMetadata:
       type: object
       additionalProperties: false
@@ -2718,6 +3742,7 @@ components:
                 - login_code_invalid
                 - last_owner
                 - policy_unavailable
+                - policy_invalid
             message:
               type: string
               description: One or more calm sentences with the next step.
@@ -2730,6 +3755,11 @@ components:
             doc_url:
               type: string
               format: uri
+            diagnostics:
+              type: array
+              description: On `policy_invalid` only. Each problem with its line, code and hint.
+              items:
+                $ref: "#/components/schemas/PolicyDiagnostic"
       examples:
         - error:
             type: invalid_request_error
@@ -2787,6 +3817,12 @@ components:
               $ref: "#/components/schemas/Check"
             decoder:
               $ref: "#/components/schemas/Check"
+            policies:
+              allOf:
+                - $ref: "#/components/schemas/Check"
+              description: >-
+                `ok`, `degraded` when an org's policy failed its load checks (its actions are
+                denied), or `not_configured`.
         time:
           type: string
           format: date-time
@@ -2800,6 +3836,7 @@ components:
             migrations: {status: ok, applied: 9, expected: 9}
             seal_key: {status: not_configured}
             decoder: {status: not_configured}
+            policies: {status: ok}
           time: "2026-10-01T09:30:00.000Z"
     Digest:
       type: string

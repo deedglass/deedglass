@@ -4,12 +4,18 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"regexp"
 	"sync"
 	"sync/atomic"
 	"time"
 
 	"github.com/jackc/pgx/v5"
+
+	"github.com/deedglass/deedglass/internal/store"
 )
+
+// channelRE is what Listen accepts: a deedglass_ channel name, safe to place in LISTEN.
+var channelRE = regexp.MustCompile(`^deedglass_[a-z]{1,40}$`)
 
 // Listener keeps the principal cache honest across instances (S08 §3.6).
 //
@@ -23,6 +29,11 @@ import (
 //
 // On any listener error: bypass, close, reconnect with backoff (100 ms → 5 s), LISTEN, flush the
 // cache, wait for the instance's own ping, then stop bypassing.
+//
+// S12 generalized it: other packages add channels with Listen (store.ChannelListener), and the
+// same connection, self-ping liveness and reconnect logic carry them. deedglass_policy is the
+// first: each payload goes to its handler, and every (re)connect runs the reset hooks, because a
+// notification may have been missed while the connection was away.
 type Listener struct {
 	k        *KeyAuth
 	instance string
@@ -40,6 +51,47 @@ type Listener struct {
 	onEvent func(t string)
 
 	reconnects atomic.Int64
+
+	chMu     sync.Mutex
+	channels map[string]*channelSub
+}
+
+type channelSub struct {
+	onMsg   func(payload string)
+	onReset func()
+}
+
+var _ store.ChannelListener = (*Listener)(nil)
+
+// Listen adds a channel to the listener's connection. Call it before Run; a channel added later
+// takes effect at the next reconnect, which this forces.
+func (l *Listener) Listen(channel string, onMsg func(payload string), onReset func()) {
+	if !channelRE.MatchString(channel) || channel == store.IdentityChannel {
+		panic("identity: Listen needs a deedglass_* channel other than deedglass_identity, got " + channel)
+	}
+	l.chMu.Lock()
+	if l.channels == nil {
+		l.channels = map[string]*channelSub{}
+	}
+	l.channels[channel] = &channelSub{onMsg: onMsg, onReset: onReset}
+	l.chMu.Unlock()
+	if l.pid.Load() != 0 {
+		l.mu.Lock()
+		if l.cancel != nil {
+			l.cancel()
+		}
+		l.mu.Unlock()
+	}
+}
+
+func (l *Listener) subs() map[string]*channelSub {
+	l.chMu.Lock()
+	defer l.chMu.Unlock()
+	out := make(map[string]*channelSub, len(l.channels))
+	for k, v := range l.channels {
+		out[k] = v
+	}
+	return out
 }
 
 // Liveness timing.
@@ -125,17 +177,35 @@ func (l *Listener) listenOnce(ctx context.Context, first bool) error {
 	if _, err := conn.Exec(cctx, `LISTEN deedglass_identity`); err != nil {
 		return err
 	}
+	subs := l.subs()
+	for ch := range subs {
+		// The channel name is checked against channelRE in Listen: a fixed identifier, never input.
+		if _, err := conn.Exec(cctx, `LISTEN `+ch); err != nil {
+			return err
+		}
+	}
 	if !first {
 		l.reconnects.Add(1)
 	}
 	l.pid.Store(conn.PgConn().PID())
 	// Anything cached before this connection may have missed a notification.
 	l.k.cache.Flush()
+	for _, sub := range subs {
+		if sub.onReset != nil {
+			sub.onReset()
+		}
+	}
 	l.lastPing.Store(time.Now().UnixNano()) // the watchdog measures silence from here
 	for {
 		n, err := conn.WaitForNotification(cctx)
 		if err != nil {
 			return err
+		}
+		if n.Channel != store.IdentityChannel {
+			if sub := subs[n.Channel]; sub != nil && !l.drop.Load() {
+				sub.onMsg(n.Payload)
+			}
+			continue
 		}
 		l.handle(n.Payload)
 	}

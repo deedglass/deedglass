@@ -1,0 +1,13 @@
+exit 1
+--- stdout
+✕ testdata/policytest/bad_expect.cases.yaml:5:32 · unknown_key
+  Unknown key "rul" in expect.
+
+    4 │     input: { tool: postgres.query, sql: "SELECT 1" }
+    5 │     expect: { decision: allow, rul: allow-reads }
+      │                                ^
+  hint: Did you mean "rule"?
+
+✕ bad_expect   the cases file was not accepted
+✕ no cases ran · fix the problems above, then run it again
+--- stderr

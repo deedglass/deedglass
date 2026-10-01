@@ -1,0 +1,4 @@
+cases:
+  - name: reads
+    input: { tool: postgres.query, sql: "SELECT 1" }
+    expect: { decision: allow }

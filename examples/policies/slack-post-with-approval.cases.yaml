@@ -1,0 +1,75 @@
+# Test cases for slack-post-with-approval.yaml. Run them with:
+#   deedglass policy test examples/policies/slack-post-with-approval.yaml
+policy: slack-post-with-approval.yaml
+defaults:
+  agent: { name: status-bot, labels: { env: prod } }
+  org: { timezone: Asia/Kolkata }
+  time: 2026-10-04T10:00:00+05:30
+cases:
+  # Reads and reactions
+  - name: listing channels runs freely
+    input: { tool: slack.list_channels, args: { limit: 100 } }
+    expect: { decision: allow, rule: slack-reads, verify: L0 }
+  - name: reading channel history runs freely
+    input: { tool: slack.get_channel_history, args: { channel: C0GENERAL1, limit: 50 } }
+    expect: { decision: allow, rule: slack-reads }
+  - name: searching messages runs freely
+    input: { tool: slack.search_messages, args: { query: "deploy failed in:#ops" } }
+    expect: { decision: allow, rule: slack-reads }
+  - name: adding a reaction runs
+    input: { tool: slack.add_reaction, args: { channel: C0GENERAL1, timestamp: "1759552200.000100", name: eyes } }
+    expect: { decision: allow, rule: reactions }
+  - name: removing a reaction runs
+    input: { tool: slack.remove_reaction, args: { channel: C0GENERAL1, timestamp: "1759552200.000100", name: eyes } }
+    expect: { decision: allow, rule: reactions }
+
+  # Allow-listed channels
+  - name: "a post to #agent-updates runs, witnessed at L1"
+    input: { tool: slack.post_message, args: { channel: "#agent-updates", text: Nightly sync finished. 42 orders updated. } }
+    expect: { decision: allow, rule: allow-listed-channels, verify: L1 }
+  - name: the same channel by its id runs
+    input: { tool: slack.post_message, args: { channel: C0AGENTUPD, text: Nightly sync finished. } }
+    expect: { decision: allow, rule: allow-listed-channels }
+  - name: "editing a message in #agent-updates runs"
+    input: { tool: slack.update_message, args: { channel: C0AGENTUPD, ts: "1759552200.000100", text: Nightly sync finished. 43 orders updated. } }
+    expect: { decision: allow, rule: allow-listed-channels }
+
+  # Messages that notify a whole channel
+  - name: "<!channel> waits for a human, even in #agent-updates"
+    input: { tool: slack.post_message, args: { channel: "#agent-updates", text: "<!channel> the sync is down." } }
+    expect:
+      decision: require_approval
+      rule: no-broadcast-mentions
+      code: approval_required
+      verify: L1
+      approval: { required: 1, approvers: [role:admin], expires_in: 1h }
+      notify: [slack]
+  - name: <!here> in another channel waits for a human
+    input: { tool: slack.post_message, args: { channel: "#general", text: "<!here> lunch is in the kitchen." } }
+    expect: { decision: require_approval, rule: no-broadcast-mentions, reason_contains: notify a whole channel }
+  - name: <!everyone> waits for a human
+    input: { tool: slack.schedule_message, args: { channel: C0AGENTUPD, text: "<!everyone> maintenance at 22:00.", post_at: 1759600000 } }
+    expect: { decision: require_approval, rule: no-broadcast-mentions }
+
+  # Every other channel
+  - name: "a post to #general waits for a human"
+    input: { tool: slack.post_message, args: { channel: "#general", text: The weekly report is ready. } }
+    expect:
+      decision: require_approval
+      rule: other-channels-need-approval
+      approval: { required: 1, approvers: [role:admin], expires_in: 1h }
+      notify: [slack]
+  - name: a direct message waits for a human
+    input: { tool: slack.post_message, args: { channel: D0PRIYA0001, text: Your export is ready. } }
+    expect: { decision: require_approval, rule: other-channels-need-approval }
+  - name: a post with no channel waits for a human
+    input: { tool: slack.post_message, args: { text: Nightly sync finished. } }
+    expect: { decision: require_approval, rule: other-channels-need-approval }
+  - name: a channel name that only looks similar waits for a human
+    input: { tool: slack.post_message, args: { channel: "#agent-updates-old", text: Nightly sync finished. } }
+    expect: { decision: require_approval, rule: other-channels-need-approval }
+
+  # Everything else
+  - name: deleting a message falls to the default
+    input: { tool: { name: slack.delete_message, side_effect: destructive }, args: { channel: C0AGENTUPD, ts: "1759552200.000100" } }
+    expect: { decision: deny, rule: default, reason_contains: No rule allows this action }

@@ -1,0 +1,38 @@
+# gmail-drafts-only · a Deedglass starter policy
+#
+# Agents read mail and write drafts. Sending, forwarding and replying never run:
+# a person reviews and sends every email from their own inbox. Deleting mail and
+# other destructive actions never run either.
+#
+# Tool names are matched with globs, so "gmail.*send*" also catches
+# gmail.send_draft and gmail.send_message. Matching is case-sensitive; a tool
+# none of these rules name falls to the default and is refused. To let agents
+# label or archive mail, add a rule for those tools above "block-other-destructive".
+# Then check your change:
+#   deedglass policy test examples/policies/gmail-drafts-only.yaml
+deedglass: policy/v1
+name: gmail-drafts-only
+description: Agents read mail and write drafts. A person sends every email.
+
+defaults:
+  decision: deny
+  reason: No rule allows this action. Add a rule in Console › Policies to allow it.
+  verify: L0
+
+rules:
+  - id: block-sending
+    match: { tool: ["gmail.*send*", "gmail.*forward*", "gmail.*reply*"] }
+    decision: deny
+    reason: Agents write drafts here. A person reviews and sends every email.
+  - id: drafts
+    match: { tool: [gmail.create_draft, gmail.update_draft] }
+    decision: allow
+    verify: L1
+  - id: reads
+    match: { tool: ["gmail.get_*", "gmail.list_*", "gmail.search_*"] }
+    decision: allow
+  - id: block-other-destructive
+    match: { side_effect: destructive }
+    decision: deny
+    reason: Deleting mail stays with people. Do it in Gmail, or ask an admin to add a rule in Console › Policies.
+    notify: [slack]

@@ -23,6 +23,9 @@ const (
 	EventActionExecuted  = "action.executed"
 	EventActionWitnessed = "action.witnessed"
 	EventDeedSealed      = "deed.sealed"
+	// EventPolicyActivated (S12): id is the activation (pa_…), state its mode, deed the
+	// policy.activated deed.
+	EventPolicyActivated = "policy.activated"
 )
 
 // Event is the one payload shape on deedglass_events. Every key is always present, null when it

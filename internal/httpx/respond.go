@@ -55,19 +55,21 @@ type envelopeError struct {
 	Param     *string `json:"param"`
 	RequestID string  `json:"request_id"`
 	DocURL    string  `json:"doc_url"`
+	// Diagnostics is policy_invalid's additive field (S12); absent on every other code.
+	Diagnostics any `json:"diagnostics,omitempty"`
 }
 
 // errorBody returns the envelope bytes for e under request id rid.
 func errorBody(e *Error, rid string) []byte {
 	env := envelope{Error: envelopeError{
-		Type: e.Type, Code: e.Code, Message: e.Message, RequestID: rid, DocURL: DocURLPrefix + string(e.Code),
+		Type: e.Type, Code: e.Code, Message: e.Message, RequestID: rid, DocURL: DocURLPrefix + string(e.Code), Diagnostics: e.Diagnostics,
 	}}
 	if e.Param != "" {
 		p := e.Param
 		env.Error.Param = &p
 	}
 	b, err := MarshalJSON(env)
-	if err != nil { // cannot happen: every field is a plain string
+	if err != nil { // cannot happen: every field is a plain string or plain data
 		return []byte(`{"error":{"type":"api_error","code":"internal_error"}}` + "\n")
 	}
 	return b

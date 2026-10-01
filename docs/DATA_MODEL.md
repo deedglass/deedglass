@@ -40,9 +40,9 @@ erDiagram
 | `agents` | Registered agents: name, status (active, suspended, stopped), labels, budgets, intent mode and intent keys. | S08, S09 |
 | `api_keys` | API keys: a globally unique 8-character prefix plus a hash of the secret. Admin keys have no agent and exactly the `admin` scope. | S08 |
 | `intent_nonces` | Replay memory for signed intents. | S09 |
-| `policies` | Named policies. | S12 |
-| `policy_versions` | One immutable version of a policy: its YAML and compiled hash. **Append-only.** | S12 |
-| `policy_activations` | Which version is active in enforce or shadow mode. At most one of each per org. | S12 |
+| `policies` | Named policies; the name is unique per org. | S12 |
+| `policy_versions` | One immutable version of a policy: its YAML, `version_hash` (the hash of the normalized policy), `source_hash`, `lang`, rule and budget counts, warnings, `origin` (`manual`, `suggestion`, `starter`, `onboarding`) and its author (`user`, `api_key` or `system`). One row per distinct content per policy. **Append-only.** | S02, S12 (0015) |
+| `policy_activations` | Which version is active in enforce or shadow mode: who activated it, why, and its `policy.activated` deed; when it ended, who ended it and the deed that sealed that. At most one live enforce and one live shadow per org (a partial unique index). Only the three end columns are writable, once. | S02, S12 (0015) |
 | `usage_counters` | Calls and spend per agent or org, per minute, hour and day: `(org_id, scope, counter, window_kind, window_start, value)`. `scope` is an agent id or `org`; `counter` is `calls`, `spend:<currency>` or `budget:<budget id>`; `window_kind` is `minute`, `hour` or `day` (UTC floors; day is the org's local midnight, stored as UTC). S11 uses migration 0003's table unchanged (no new migration; `TestUsageCountersShape` pins it). `Usage.Prune` deletes old windows through `SystemTx(maintenance)` ([BUDGETS.md](BUDGETS.md)). | S11 |
 | `connectors` | Configured tools. | S16 |
 | `credentials` | A connector's credentials, envelope-encrypted. Field names and a short hint are the only clear text. | S16 |
@@ -256,6 +256,32 @@ secrets, names or reasons:
 `s` is the new state (`active`, `suspended`, `stopped`, `rolled`, `revoked`). Each instance sends a
 `ping` every 500 ms to check that its own listener is alive. `store.NotifyIdentity` is the one door
 to the channel.
+
+### The `deedglass_policy` channel (S12)
+
+Every activation and deactivation sends a `NOTIFY` on `deedglass_policy` inside its transaction;
+the payload is the org id and nothing else. Every instance's registry reloads that org and checks it
+before serving it ([POLICIES_GUIDE.md](POLICIES_GUIDE.md) section 7). The channel rides the same
+dedicated `LISTEN` connection as `deedglass_identity` (S08's listener, generalized in S12), so its
+liveness and reconnects are shared; a reconnect makes the registry drop everything it holds.
+`store.NotifyPolicy` is the one door to the channel.
+
+## Policy versions v2 (0015, S12)
+
+S02's `0003_policy.sql` created the three policy tables; 0015 builds on them:
+
+- `policy_versions.compiled_hash` is renamed `version_hash`, and `policy_versions.source` is renamed
+  `origin` (the API's `source` is the YAML text); `origin` also allows `onboarding`.
+- New version columns: `source_hash`, `lang`, `rules_count`, `budgets_count`, `warnings` (JSON), and
+  `author_type`/`author_id` (`user` with `usr_…`, `api_key` with `key_…`, or `system` with no id).
+  `author_user_id` is kept and set for people. A unique index on `(policy_id, version_hash)` means
+  identical content is never stored twice.
+- New activation columns: `deactivated_by` and `deactivation_deed_id`; a check makes the three end
+  columns all set or all empty. A trigger allows an update only to end a live activation, and the
+  runtime role's column-level `UPDATE` grant is exactly those three columns. `DELETE` and `TRUNCATE`
+  raise `DG001`.
+- Every Go and SQL reference to `compiled_hash` was updated (`internal/ledger/write.go`,
+  `internal/store/storetest/seed.go`).
 
 ## Signed intents additions (0014, S09)
 

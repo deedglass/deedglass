@@ -100,8 +100,15 @@ var keyCodes = map[string]bool{"unknown_key": true, "yaml_duplicate_key": true, 
 // RenderText writes the diagnostics of one file with source excerpts and carets, then a summary
 // line. display is the file name to show.
 func RenderText(w io.Writer, r *LintResult, src []byte, display string, p Painter) {
+	RenderDiagnostics(w, ordered(r), src, display, p)
+	fmt.Fprintln(w, Summary(r, display, p))
+}
+
+// RenderDiagnostics writes diagnostics with source excerpts and carets, without a summary line
+// (the test runner shows cases-file problems this way).
+func RenderDiagnostics(w io.Writer, list []Diagnostic, src []byte, display string, p Painter) {
 	s := newSource(src)
-	for _, d := range ordered(r) {
+	for _, d := range list {
 		sym := p.Red("✕")
 		if d.Severity == SevWarning {
 			sym = p.Amber("○")
@@ -121,7 +128,6 @@ func RenderText(w io.Writer, r *LintResult, src []byte, display string, p Painte
 		}
 		fmt.Fprintln(w)
 	}
-	fmt.Fprintln(w, Summary(r, display, p))
 }
 
 // ordered merges errors and warnings back into position order (the cap was applied by Compile;

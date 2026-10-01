@@ -1,0 +1,6 @@
+exit 0
+--- stdout
+  From now on, every agent action in acme is decided by postgres-safe v1 (replacing default-deny v1).
+  The change is sealed as a deed.
+  Type the policy name to confirm: [36m✓[0m postgres-safe v1 enforced · deed_01jb8p2m4x9 sealed · shadow cleared
+--- stderr

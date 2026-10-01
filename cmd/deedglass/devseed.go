@@ -4,11 +4,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 
 	"github.com/jackc/pgx/v5"
 
+	starterpolicies "github.com/deedglass/deedglass/examples/policies"
 	"github.com/deedglass/deedglass/internal/config"
+	"github.com/deedglass/deedglass/internal/policy"
 	"github.com/deedglass/deedglass/internal/store"
+	"github.com/deedglass/deedglass/internal/store/policystore"
 )
 
 // The demo data `deedglass dev seed` loads. Running it again adds only what is missing.
@@ -77,9 +81,16 @@ func runDevSeed(ctx context.Context, e *Env, args []string) error {
 	if err != nil {
 		return seedErr(err)
 	}
+	// S12: every org gets default-deny enforced (orgs made before S12 have none), and the seeded
+	// org gets the other starter policies, inactive, to activate from the Console or the CLI.
+	bootstrapped, starters, err := seedPolicies(ctx, e, cfg, db, org.ID.String())
+	if err != nil {
+		return seedErr(err)
+	}
 	if e.Globals.JSON {
 		return writeJSON(e, map[string]any{"object": "seed", "org": org.ID, "slug": org.Slug,
-			"created": map[string]int{"orgs": b2i(createdOrg), "owners": b2i(createdOrg), "agents": createdAgents}})
+			"created": map[string]int{"orgs": b2i(createdOrg), "owners": b2i(createdOrg), "agents": createdAgents,
+				"policies": starters, "orgs_bootstrapped": bootstrapped}})
 	}
 	summary := "Seeded 1 org, 1 owner, 2 agents"
 	switch {
@@ -93,7 +104,57 @@ func runDevSeed(ctx context.Context, e *Env, args []string) error {
 	for _, a := range seedAgents {
 		fmt.Fprintf(e.Stdout, "  agent  %s\n", a.Name)
 	}
+	if bootstrapped > 0 {
+		fmt.Fprintf(e.Stdout, "  policy default-deny enforced in %d %s\n", bootstrapped, plural(bootstrapped, "org", "orgs"))
+	}
+	if starters > 0 {
+		fmt.Fprintf(e.Stdout, "  policy %d starter %s saved, inactive\n", starters, plural(starters, "policy", "policies"))
+	}
 	return nil
+}
+
+// seedPolicies enforces default-deny in every org without an enforced policy, and saves the
+// starter policies (origin starter, inactive) in the seeded org. It seals with the dev seal key.
+func seedPolicies(ctx context.Context, e *Env, cfg *config.Config, db *store.DB, seeded string) (bootstrapped, starters int, err error) {
+	signer, err := loadSealKeyQuiet(ctx, e, cfg, db, slog.New(slog.DiscardHandler), true)
+	if err != nil {
+		return 0, 0, err
+	}
+	led := newLedger(db, signer, cfg, slog.New(slog.DiscardHandler))
+	var orgs []store.Org
+	if err := db.SystemTx(ctx, store.ReasonMaintenance, func(ctx context.Context, tx pgx.Tx) error {
+		orgs, err = store.ListOrgs(ctx, tx)
+		return err
+	}); err != nil {
+		return 0, 0, err
+	}
+	for _, o := range orgs {
+		done, err := policystore.BootstrapExisting(ctx, db, led, o.ID.String())
+		if err != nil {
+			return bootstrapped, starters, err
+		}
+		bootstrapped += b2i(done)
+	}
+	svc := policy.NewService(policystore.NewRepo(db, led))
+	caller := policy.Caller{Org: seeded, Actor: policy.SystemActor}
+	for _, name := range starterpolicies.Starters() {
+		if name == policy.DefaultDenyName {
+			continue
+		}
+		if _, err := svc.Get(ctx, caller, name); err == nil {
+			continue
+		}
+		src, err := starterpolicies.Source(name)
+		if err != nil {
+			return bootstrapped, starters, err
+		}
+		if _, _, err := svc.Create(ctx, caller, policy.PushRequest{Source: src, Origin: policy.OriginStarter,
+			Notes: "A Deedglass starter policy, loaded by deedglass dev seed."}); err != nil {
+			return bootstrapped, starters, err
+		}
+		starters++
+	}
+	return bootstrapped, starters, nil
 }
 
 func seedErr(err error) error {

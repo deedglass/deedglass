@@ -1,0 +1,77 @@
+# stripe-refunds · a Deedglass starter policy
+#
+# Reads run freely. Refunds up to $50.00 run on their own; larger refunds wait for
+# a human. All agents together can refund at most $500.00 a day. Cancelling a
+# subscription and adding invoice items wait for a human, metadata updates run,
+# and deletes never run.
+#
+# Amounts are in minor units, the way Stripe takes them: 2000 is $20.00.
+# minor("50.00 usd") writes 5000 readably. To adapt it, change the $50.00 line in
+# "small-refunds" (and the reason in "large-refunds-need-approval"), or the daily
+# cap in "refunds-per-day". Then check your change:
+#   deedglass policy test examples/policies/stripe-refunds.yaml
+deedglass: policy/v1
+name: stripe-refunds
+description: Small refunds run. Large refunds and cancellations wait for a human. Deletes never run.
+
+defaults:
+  decision: deny
+  reason: No rule allows this action. Add a rule in Console › Policies to allow it.
+  verify: L0
+
+budgets:
+  - id: refunds-per-day
+    description: At most $500.00 of refunds a day, across every agent in the org.
+    match: { tool: stripe.create_refund }
+    per: org
+    window: day
+    max_spend: "500.00 usd"
+    # The measure is in single quotes because it contains " : ". In plain YAML
+    # that reads as a new key, and the file would not load. A refund with no
+    # whole-number amount counts as 0 here; "refunds-need-an-amount" refuses it.
+    measure: 'has(args.amount) && type(args.amount) == int ? args.amount : 0'
+
+rules:
+  - id: stripe-reads
+    match: { tool: ["stripe.get_*", "stripe.list_*"] }
+    decision: allow
+  - id: refunds-need-an-amount
+    description: A refund without an amount refunds the whole charge, so the amount is required.
+    match: { tool: stripe.create_refund }
+    when: '!has(args.amount) || type(args.amount) != int || args.amount <= 0'
+    decision: deny
+    reason: Refunds need an explicit amount in minor units, like 2000 for $20.00.
+  - id: small-refunds
+    match: { tool: stripe.create_refund }
+    when: args.amount <= minor("50.00 usd")
+    decision: allow
+    verify: L1
+  - id: large-refunds-need-approval
+    match: { tool: stripe.create_refund }
+    decision: require_approval
+    reason: Refunds over $50.00 wait for a human. An admin can approve in Console › Approvals.
+    approval: { approvers: [role:admin], required: 1, expires_in: 2h }
+    notify: [slack]
+    verify: L1
+  - id: cancellations-need-approval
+    match: { tool: stripe.cancel_subscription }
+    decision: require_approval
+    reason: Cancelling a subscription waits for a human. An admin can approve in Console › Approvals.
+    approval: { approvers: [role:admin], required: 1, expires_in: 24h }
+    verify: L1
+  - id: metadata-updates
+    description: Metadata is notes on Stripe objects; it never moves money.
+    match: { tool: "stripe.update_*_metadata" }
+    decision: allow
+    verify: L1
+  - id: invoice-items-need-approval
+    match: { tool: stripe.create_invoice_item }
+    decision: require_approval
+    reason: Invoice items add a charge to a customer's next invoice, so a human approves them first. An admin can approve in Console › Approvals.
+    approval: { approvers: [role:admin], required: 1, expires_in: 2h }
+    verify: L1
+  - id: block-other-destructive
+    match: { side_effect: destructive }
+    decision: deny
+    reason: Deletes stay with people. Make this change in the Stripe Dashboard, or ask an admin to add a rule in Console › Policies.
+    notify: [slack]

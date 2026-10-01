@@ -36,12 +36,17 @@ const (
 	AdminAgentIntentKeyRemoved = "agent.intent_key_removed"  // → agt; data: kid
 	AdminAgentIntentMode       = "agent.intent_mode_changed" // → agt; data: from, to
 
+	// S12: policies. Target {policy_version, pv_…}; data: policy_id, name, version, version_id,
+	// version_hash, source_hash, mode, activation_id, previous_version_id, acknowledged_warnings.
+	// The deed's policy block stays null (S04's validator refuses one on an admin deed).
+	AdminPolicyActivated   = "policy.activated"
+	AdminPolicyDeactivated = "policy.deactivated"
+
 	// S07: security events, recorded in admin_events without a deed (AppendAdminEvent).
 	AdminUserSignedIn  = "user.signed_in"
 	AdminUserSignedOut = "user.signed_out"
 
 	// Planned, each added by its session with the exact spelling below:
-	//   S12  policy.activated policy.deactivated
 	//   S16  connector.credentials_updated
 	//   S20  decoder.slot_created decoder.slot_dropped
 	//   S22  approval.decided approval.countersigned webhook.created webhook.deleted webhook.disabled
@@ -58,6 +63,7 @@ var AdminActions = []string{
 	AdminAgentCreated, AdminAgentUpdated, AdminAgentSuspended, AdminAgentResumed, AdminAgentStopped, AdminAgentStarted,
 	AdminOrgStoppedAll, AdminOrgStartedAll, AdminAPIKeyCreated, AdminAPIKeyRolled, AdminAPIKeyRevoked,
 	AdminAgentIntentKeyAdded, AdminAgentIntentKeyRemoved, AdminAgentIntentMode,
+	AdminPolicyActivated, AdminPolicyDeactivated,
 }
 
 // AdminEventActions are admin events recorded without a deed (AppendAdminEvent): security events

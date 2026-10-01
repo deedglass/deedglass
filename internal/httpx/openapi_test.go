@@ -85,6 +85,22 @@ func elsewhere() []Route {
 		pub("GET", "/.well-known/oauth-protected-resource/mcp/{connector}", "getMCPResourceMetadata"),
 		key("/mcp/{connector}", "mcpConnector"), key("/mcp/native", "mcpNative"),
 	)
+	// S12: policies (internal/policyapi). lint, evaluate and test change nothing (IdemNever).
+	tool := func(p, id string) Route {
+		r := adm("POST", p, id, RoleViewer)
+		r.Idempotency = IdemNever
+		return r
+	}
+	out = append(out,
+		adm("GET", "/v1/policies", "listPolicies", RoleViewer), adm("POST", "/v1/policies", "createPolicy", RoleAdmin),
+		adm("GET", "/v1/policies/active", "getActivePolicies", RoleViewer), adm("GET", "/v1/policies/{id}", "getPolicy", RoleViewer),
+		adm("GET", "/v1/policies/{id}/versions", "listPolicyVersions", RoleViewer),
+		adm("POST", "/v1/policies/{id}/versions", "createPolicyVersion", RoleAdmin),
+		adm("GET", "/v1/policies/{id}/versions/{v}", "getPolicyVersion", RoleViewer),
+		adm("POST", "/v1/policies/{id}/versions/{v}/activate", "activatePolicyVersion", RoleAdmin),
+		adm("POST", "/v1/policies/{id}/versions/{v}/deactivate", "deactivatePolicyVersion", RoleAdmin),
+		tool("/v1/policies/lint", "lintPolicy"), tool("/v1/policies/evaluate", "evaluatePolicy"), tool("/v1/policies/test", "testPolicy"),
+	)
 	return out
 }
 

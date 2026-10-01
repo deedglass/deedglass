@@ -1,0 +1,5 @@
+exit 1
+--- stdout
+✕ postgres-safe   1 case · 1 of 12 rules
+✕ 1 passed · 0 failed · uncovered: block-unclassified-sql, one-statement-only, block-destructive-sql, block-schema-and-privilege-changes, block-server-side-code, block-unbounded-writes, allow-describe, allow-listed-writes, writes-need-approval, functions-need-approval, undo-needs-approval
+--- stderr

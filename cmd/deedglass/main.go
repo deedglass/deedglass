@@ -37,9 +37,12 @@ type Globals struct {
 	JSON    bool
 	NoColor bool
 	Server  string
-	APIKey  string
-	Org     string
-	Verbose int
+	// ServerFlag is set by --server with or without a URL: commands that can run locally or on the
+	// server (policy evaluate) go to the server.
+	ServerFlag bool
+	APIKey     string
+	Org        string
+	Verbose    int
 }
 
 // Env is everything a command touches, injected so tests run without process state.
@@ -136,6 +139,13 @@ func parseGlobals(args []string) (Globals, []string, error) {
 		case name == "no-color" && !hasVal:
 			g.NoColor = true
 		case name == "server":
+			// A bare --server (followed by another flag, or last) means "the configured server"
+			// (S12: policy evaluate --server): --server, DEEDGLASS_SERVER, DEEDGLASS_BASE_URL, then
+			// http://127.0.0.1:8080.
+			g.ServerFlag = true
+			if !hasVal && (i+1 >= len(args) || strings.HasPrefix(args[i+1], "-")) {
+				break
+			}
 			g.Server, err = takeValue()
 		case name == "api-key":
 			g.APIKey, err = takeValue()

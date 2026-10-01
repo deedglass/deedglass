@@ -1,0 +1,5 @@
+exit 0
+--- stdout
+✓ postgres-safe v1 saved · pv_01jb8m3c0d2f4g6h8j0k2m4n6p · sha256:2c4c…04fd · 12 rules · 2 budgets
+  Next: deedglass policy test ../../examples/policies/postgres-safe.yaml
+--- stderr

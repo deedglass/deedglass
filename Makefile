@@ -11,7 +11,7 @@ LDFLAGS  := -s -w -X $(BI).Version=$(VERSION) -X $(BI).Commit=$(COMMIT) -X $(BI)
 .PHONY: all help ci build test test-short vet fmt fmt-check tidy-check testdata-check rename-guard banned-words nocgo \
 	integration matrix fuzz bench bench-store bench-deed cover clean \
 	dev dev-down dev-reset dev-logs run docker bench-http bench-verify \
-	web-verify-install web-verify-test web-verify-build web-verify-serve gencopy genmark bench-mark bench-ledger bench-stop bench-intents \
+	web-verify-install web-verify-test web-verify-build web-verify-serve gencopy genmark bench-mark bench-ledger bench-stop bench-intents policy-test \
 	fuzz-policy fuzz-policy-short bench-policy bench-eval
 
 all: ci
@@ -19,7 +19,7 @@ all: ci
 help: ## list the targets
 	@grep -E '^[a-z][a-z-]*:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-15s %s\n", $$1, $$2}'
 
-ci: fmt-check tidy-check vet test fuzz-policy-short testdata-check rename-guard banned-words nocgo web-verify-test ## everything the lint-unit and web-verify CI jobs run
+ci: fmt-check tidy-check vet test fuzz-policy-short policy-test testdata-check rename-guard banned-words nocgo web-verify-test ## everything the lint-unit and web-verify CI jobs run
 
 build: ## build bin/deedglass with version ldflags
 	$(GO) build -trimpath -ldflags '$(LDFLAGS)' -o bin/deedglass ./cmd/deedglass
@@ -93,6 +93,9 @@ fuzz-policy: ## S10-S11: the policy compiler, the safe YAML reader, the evaluato
 	$(GO) test ./internal/policy -run '^$$' -fuzz '^FuzzEvaluate$$' -fuzztime 60s
 	$(GO) test ./internal/sqlguard -run '^$$' -fuzz '^FuzzAnalyze$$' -fuzztime 60s
 	$(GO) test ./internal/sqlguard -run '^$$' -fuzz '^FuzzTokenize$$' -fuzztime 60s
+
+policy-test: ## (ci) S12: every starter policy's cases pass, every rule covered, no voice warnings
+	$(GO) run ./cmd/deedglass policy test --dir examples/policies --require-coverage --voice
 
 fuzz-policy-short: ## (ci) the same policy and sqlguard fuzz targets, 10 s each (5 s for the tokenizer)
 	$(GO) test ./internal/policy -run '^$$' -fuzz '^FuzzCompile$$' -fuzztime 10s

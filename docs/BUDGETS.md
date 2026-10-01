@@ -188,8 +188,10 @@ The org is in `Asia/Kolkata`, so the day starts at 18:30 UTC. At 17:48 local tim
 
 ```
 ✕ deny · budget refunds-per-day
-  Budget "refunds-per-day" reached: $490.00 of $500.00 across all agents today. It resets at midnight Asia/Kolkata (in 6 h 12 m).
+  Budget "refunds-per-day" reached: this action would bring today's total across all agents to $510.00 of $500.00. It resets at midnight Asia/Kolkata (in 6 h 12 m).
 ```
+
+A budget with a `measure` names the total the action would reach, with this action included, not only the usage before it: "$490.00 of $500.00" alone would read like room to spare. The decision's `budget` object carries both `used` (49,000) and `projected` (51,000), and the trace line reads `$490.00 + $20.00 = $510.00 of $500.00 today`. Call budgets and cost-based budgets (no `measure`) keep the plain "reached: 60 of 60" form, because there the usage before the action is already at or over the limit.
 
 A $10.00 refund would have been allowed, with a reservation of 1,000 on `budget:refunds-per-day` (scope `org`, limit 50,000). Because the amount comes from `measure`, the check is exact across instances. Only refunds count: the `match` limits the budget to `stripe.create_refund`.
 

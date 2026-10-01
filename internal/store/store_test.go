@@ -51,6 +51,7 @@ var systemTxCallSites = []string{
 	"internal/store/repo.go: SystemTx(ctx, ReasonOrgCreate",                      // CreateOrg
 	"internal/store/storetest/seed.go: SystemTx(ctx, store.ReasonMaintenance",    // test harness (integration tag only)
 	"cmd/deedglass/devseed.go: SystemTx(ctx, store.ReasonMaintenance",            // dev seed: find the demo org by slug (dev only)
+	"cmd/deedglass/devseed.go: SystemTx(ctx, store.ReasonMaintenance",            // dev seed: list orgs to enforce default-deny where none is (dev only, S12)
 	"internal/store/idempotency.go: SystemTx(ctx, ReasonMaintenance",             // PruneIdempotencyKeys (S03)
 	"cmd/deedglass/ledgercmd.go: SystemTx(ctx, store.ReasonMaintenance",          // DB-direct Ledger commands: list orgs to pick --org (S06)
 	"cmd/deedglass/fakeaction.go: SystemTx(ctx, store.ReasonMaintenance",         // dev fake-action: find the demo org by slug (dev only, S06)

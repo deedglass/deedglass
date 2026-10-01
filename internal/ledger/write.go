@@ -261,7 +261,7 @@ func (l *Ledger) AppendEvent(ctx context.Context, tx pgx.Tx, actionID string, d 
 // snapshotSQL reads everything ForAction needs, locking the action row.
 const snapshotSQL = `SELECT a.org_id, a.agent_id, g.name, a.on_behalf_of, a.session_ref, a.tool, a.connector_id, a.mode,
   a.request_digest, a.intent_hash, a.intent_signed, a.state, a.decision, a.decision_rule_id, a.policy_version_id,
-  pv.policy_id, pv.compiled_hash, a.approval_id, ap.status, ap.approved_by, ap.decided_by, ap.decided_at, ap.deed_id,
+  pv.policy_id, pv.version_hash, a.approval_id, ap.status, ap.approved_by, ap.decided_by, ap.decided_at, ap.deed_id,
   a.executing_at, a.executed_at, a.failed_at, a.execution_status, a.result_digest, a.error_code,
   a.witness_level, a.witness_verdict, a.witness_method, a.witness_detail_digest, a.cost_amount, a.cost_currency
 FROM deedglass.actions AS a

@@ -180,12 +180,12 @@ builds it. Hidden commands work but aren't in `deedglass help`.
 | `deedglass org start-all [--org acme] --reason "why it's safe now" [--json]` | Agents | Start every agent not stopped one by one | built |
 | `deedglass policy lint <file|dir|->... [--format text|json|github] [--voice] [--json]` | Policies | Check a policy file | built |
 | `deedglass policy fmt [-w] [--check] <file|dir|->... [--json]` | Policies | Format a policy file | built |
-| `deedglass policy test` | Policies | Run a policy's test cases | soon (S12) |
-| `deedglass policy push` | Policies | Upload a new policy version | soon (S12) |
-| `deedglass policy activate` | Policies | Activate a policy version | soon (S12) |
-| `deedglass policy evaluate --policy <file> --tool <name> [--sql …] [--args <json>] [--input <file>] [--agent …] [--label k=v] [--user …] [--time …] [--tz …] [--usage k=v] [--explain] [--json]` | Policies | Evaluate one action against a policy | built |
+| `deedglass policy test <policy.yaml|cases.yaml>... [--cases <file>] | --dir <dir> [--require-coverage] [--voice] [--run <regexp>] [--json]` | Policies | Run a policy's test cases | built |
+| `deedglass policy push <policy.yaml> [--notes "…"] [--json]` | Policies | Upload a new policy version | built |
+| `deedglass policy activate <name|pol_…> --version <n> --mode enforce|shadow --reason "…" [--yes] [--ack default_allow] | --clear --reason "…" [--json]` | Policies | Activate a policy version | built |
+| `deedglass policy evaluate --policy <file> | --server [--policy <name> --version <n>] --tool <name> [--sql …] [--args <json>] [--input <file>] [--agent …] [--label k=v] [--user …] [--time …] [--tz …] [--usage k=v] [--explain] [--json]` | Policies | Evaluate one action against a policy | built |
 | `deedglass policy replay` | Policies | Replay past actions against a version | soon (S27) |
-| `deedglass policy diff` | Policies | Compare two policy versions | soon (S12) |
+| `deedglass policy diff` | Policies | Compare two policy versions | soon (S27) |
 | `deedglass act` | Actions | Send a test action through the Gate | soon (S13) |
 | `deedglass actions list [--agent agt_…] [--tool stripe.*] [--state …] [--decision …] [--verdict MISMATCH] [--level L2] [--since 1h] [--q text] [--limit 25] [--cursor …] [--json]` | Actions | List actions | built |
 | `deedglass actions show <act_…> [--json]` | Actions | Show one action and its events | built |
@@ -498,7 +498,7 @@ cross-check vector: the header ends in `.TQAgBevx…nqjJCA`.)
   `--nonce` for real calls: a nonce works once.
 - **`--json`** prints `{"object":"signed_intent","header","intent_hash","intent","args_digest","nonce","kid","expires_at"}`.
 
-## Policies: `policy lint`, `policy fmt` and `policy evaluate`
+## Policies: `policy lint`, `policy fmt`, `policy evaluate`, `policy test`, `policy push` and `policy activate`
 
 The policy language is specified in [POLICY_LANGUAGE.md](POLICY_LANGUAGE.md), and every diagnostic
 code has a section in [POLICY_ERRORS.md](POLICY_ERRORS.md). Both commands work offline: no config,
@@ -623,7 +623,7 @@ section 6).
 (the lint report is printed); 2 for a usage error.
 
 ```
-$ deedglass policy evaluate --policy internal/policy/testdata/eval/postgres-safe.yaml \
+$ deedglass policy evaluate --policy examples/policies/postgres-safe.yaml \
     --tool postgres.execute --sql "/* tidy up */ DrOp TABLE public.orders" --explain
 ✕ deny · block-destructive-sql · 41 µs
   Blocked by policy "block-destructive-sql": DROP and TRUNCATE are never allowed for agents.
@@ -641,6 +641,101 @@ $ deedglass policy evaluate --policy internal/policy/testdata/eval/postgres-safe
 Deny is `✕` in red, require approval `◐` in violet, and allow `✓` in the neutral colour (teal is
 kept for VERIFIED). The exact outputs are pinned in `cmd/deedglass/testdata/policy/evaluate_*.golden`.
 
+### `deedglass policy test <policy.yaml|cases.yaml>... [--cases <file>] | --dir <dir>` (S12)
+
+Runs a policy's cases like unit tests, against the same evaluator the server uses, with rule
+coverage. Without `--cases` it pairs `<name>.cases.yaml` next to `<name>.yaml`; a cases file given
+directly names its policy with `policy:`. `--dir` tests every policy in a directory, and each one
+needs a cases file. The cases format, `expect` keys and coverage rules are in
+[POLICIES_GUIDE.md](POLICIES_GUIDE.md) section 3.
+
+- `--require-coverage` fails when a rule decides no case.
+- `--voice` also fails on `reason_style` warnings (the starter policies run with it).
+- `--run <regexp>` runs only the matching cases (coverage isn't judged then).
+- `--json` prints one `policy_test_run` with each policy's `policy_test_result` (the same object
+  `POST /v1/policies/test` returns).
+- Exit 0 when every case passes, 1 on any failure (or an uncovered rule with
+  `--require-coverage`), 2 on a usage error.
+
+```
+$ deedglass policy test --dir examples/policies --require-coverage --voice
+✓ default-deny               13 cases · default and 1 budget covered
+✓ github-read-mostly         22 cases · 10 of 10 rules
+✓ gmail-drafts-only          14 cases · 4 of 4 rules
+✓ postgres-safe              28 cases · 12 of 12 rules
+✓ slack-post-with-approval   16 cases · 5 of 5 rules
+✓ stripe-refunds             21 cases · 8 of 8 rules
+✓ 114 cases passed · 6 policies · every rule covered · 0.0 s
+
+$ deedglass policy test cmd/deedglass/testdata/policytest/fail.cases.yaml
+✕ a comment does not hide DROP · fail.cases.yaml:7
+    expected  deny · block-destructive-sql
+    got       allow · allow-reads
+    verify: expected L2, got L0
+✕ postgres-safe   3 cases · 1 failed · 2 of 12 rules
+```
+
+A cases-file problem is shown like a lint error, with the line and a did-you-mean
+(`Unknown key "rul" in expect.` · `hint: Did you mean "rule"?`). `make policy-test` (part of
+`make ci`) runs the first command above. Goldens: `cmd/deedglass/testdata/policytest/test_*`.
+
+### `deedglass policy push <policy.yaml> [--notes "…"]` (S12)
+
+Lints the file locally first (nothing is sent when it doesn't compile), then saves it on the server
+as a new policy (v1) or as the next version of the policy with that `name`. Content identical to an
+existing version saves nothing. It uses an org admin key (`--api-key` or `DEEDGLASS_API_KEY`) at
+`--server`, `DEEDGLASS_SERVER`, `DEEDGLASS_BASE_URL` or `http://127.0.0.1:8080`.
+
+```
+$ deedglass policy push examples/policies/postgres-safe.yaml --notes "Orders DB, first cut"
+✓ postgres-safe v1 saved · pv_01jb8m3c0d2f4g6h8j0k2m4n6p · sha256:2c4c…04fd · 12 rules · 2 budgets
+  Next: deedglass policy test examples/policies/postgres-safe.yaml
+
+$ deedglass policy push examples/policies/postgres-safe.yaml
+○ postgres-safe v1 already has this content · nothing saved
+```
+
+### `deedglass policy activate <name|pol_…> --version <n> --mode enforce|shadow --reason "…"` (S12)
+
+Activates a version and seals the change as a deed. `--mode shadow` runs it next to the enforced
+policy and only records what it would have decided; `--mode enforce` makes it decide every action.
+Enforcing asks you to type the policy name on a terminal; scripts pass `--yes`. `--ack
+default_allow` acknowledges a policy whose default allows. `--clear` (with `--version` and
+`--reason`) switches the shadow off. The reason (3 to 280 characters) is required and goes into
+the deed. Promoting the shadow version to enforce seals two deeds and clears the shadow.
+
+```
+$ deedglass policy activate postgres-safe --version 1 --mode shadow --reason "Watch it for a day before enforcing"
+◐ postgres-safe v1 is now the shadow policy · deed_01m3w10snw3gjnnt2df6p10e15 sealed
+  It decides every action next to default-deny v1, and only records what it would have done.
+
+$ deedglass policy activate postgres-safe --version 1 --mode enforce --reason "Guard the orders database before the pilot"
+  From now on, every agent action in acme is decided by postgres-safe v1 (replacing default-deny v1).
+  The change is sealed as a deed.
+  Type the policy name to confirm: postgres-safe
+✓ postgres-safe v1 enforced · deed_01m3w10sqhvpsa0z4chabr9zd5 sealed · shadow cleared
+```
+
+Deed ids are printed in full so you can check one offline:
+`deedglass deeds show <deed> --json > deed.json && deedglass verify deed.json --keys <server>/.well-known/deedglass/keys.json`.
+
+### `deedglass policy evaluate --server …` (S12)
+
+With `--server` (bare, or with a URL), `policy evaluate` sends the same flags to
+`POST /v1/policies/evaluate`: the org's active policies by default (exactly what the Gate would
+evaluate, including `policy_unavailable` when a version failed its load checks), a stored version
+with `--policy <name|pol_…> --version <n>`, or a local file's source with `--policy <file>`.
+`--agent agt_…` reads that agent's name, labels, status and budgets from the server. Usage counters
+are zero unless you pass `--usage`; nothing is reserved.
+
+```
+$ deedglass policy evaluate --server --tool postgres.execute --sql "DELETE FROM public.orders" --explain
+✕ deny · block-unbounded-writes · 69 µs
+  Blocked by policy "block-unbounded-writes": UPDATE and DELETE need a WHERE clause that names the rows to change.
+  …
+  policy  postgres-safe v1 · sha256:2c4c…04fd · sqlguard 1
+```
+
 ## What it doesn't do (yet)
 
 - The Ledger commands use the database directly; `--server`/`--api-key` (API mode) come with S09.
@@ -650,9 +745,10 @@ kept for VERIFIED). The exact outputs are pinned in `cmd/deedglass/testdata/poli
   `COLORFGBG` or `DEEDGLASS_THEME=light`. No image-protocol (iTerm2, Kitty) rendering yet.
 
 - No shell completion until S32 (`deedglass completion zsh|bash|fish`).
-- `policy lint` and `policy fmt` check and format files, and `policy evaluate` runs one action
-  against a local file; storing, testing, activating and `evaluate --server` come with S12. There is no language server; the Console editor (S26)
-  shows the same diagnostics inline.
+- `policy diff` (a semantic diff of two versions) and `policy replay` come with S27. There is no
+  language server; the Console editor (S26) shows the same diagnostics inline.
+- `policy push` and `policy activate` use an org admin key; there is no CLI sign-in with a Console
+  session.
 - Intent keys live in PEM files. `keygen` and `dev sign-intent` don't use an OS keychain, a KMS or
   an HSM; protect `.deedglass/intent/` like any other secret on the agent's machine.
 - `keys revoke` isn't built (planned; `docs/SEAL_KEYS.md`).

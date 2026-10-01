@@ -176,8 +176,14 @@ func (e *evaluator) stop() bool {
 func (e *evaluator) windowStart(w string) time.Time { return WindowStart(w, e.p.in.Time, e.p.loc) }
 
 func (e *evaluator) hit(id, per, window string, limit, used int64, unit string) bool {
+	return e.hitProjected(id, per, window, limit, used, 0, unit)
+}
+
+// hitProjected denies with budget_exceeded. projected > 0 is a measured budget's total with this
+// action included; the message and the trace then name it.
+func (e *evaluator) hitProjected(id, per, window string, limit, used, projected int64, unit string) bool {
 	end := WindowEnd(window, e.p.in.Time, e.p.loc)
-	h := &BudgetHit{ID: id, Per: per, Window: window, Limit: limit, Used: used, Unit: unit, ResetsAt: end,
+	h := &BudgetHit{ID: id, Per: per, Window: window, Limit: limit, Used: used, Projected: projected, Unit: unit, ResetsAt: end,
 		RetryAfterS: int64(math.Ceil(end.Sub(e.p.in.Time).Seconds()))}
 	if h.RetryAfterS < 1 {
 		h.RetryAfterS = 1
@@ -185,7 +191,12 @@ func (e *evaluator) hit(id, per, window string, limit, used int64, unit string) 
 	msg := budgetMessage(h, e.p.in.Agent.Name, e.p.in.Org.Timezone, e.p.in.Time)
 	e.deny(CodeBudgetExceeded, SourceBudget, id, 0, "", msg)
 	e.d.Budget = h
-	e.step(Step{Step: StepBudget, ID: id, Result: ResultExceeded, Detail: usedDetail(used, limit, unit, window)})
+	detail := usedDetail(used, limit, unit, window)
+	if projected > 0 {
+		detail = fmt.Sprintf("%s + %s = %s of %s %s", formatMoney(used, unit), formatMoney(projected-used, unit),
+			formatMoney(projected, unit), formatMoney(limit, unit), windowPhrase(window))
+	}
+	e.step(Step{Step: StepBudget, ID: id, Result: ResultExceeded, Detail: detail})
 	return true
 }
 
@@ -298,6 +309,9 @@ func (e *evaluator) policyBudgets() bool {
 			per = PerAgent
 		}
 		if costBased && used >= limit || !costBased && used+amount > limit {
+			if b.Measure != nil && amount > 0 {
+				return e.hitProjected(b.ID, per, b.Window, limit, used, used+amount, unit)
+			}
 			return e.hit(b.ID, per, b.Window, limit, used, unit)
 		}
 		scope := in.Agent.ID
