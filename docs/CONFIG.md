@@ -35,6 +35,7 @@ The first source that sets a key wins:
 | `DEEDGLASS_LOG_LEVEL` | `log_level` | `info` | no | all | Log level. | S01 |
 | `DEEDGLASS_SIGNUP` | `signup` | `invite` | no | serve | Who can join: invite (people an admin invites) or closed. | S01 |
 | `DEEDGLASS_RESEND_API_KEY` | `resend_api_key` (dev only) | — | yes | serve | Resend API key for sign-in and approval emails (starts with re_). Without it, dev prints emails to the log. | S01 |
+| `DEEDGLASS_MAIL_FROM` | `mail_from` | — | no | serve, org create | The From address of sign-in and invite emails, e.g. Deedglass <signin@deedglass.com>. Required when DEEDGLASS_RESEND_API_KEY is set. | S07 |
 | `DEEDGLASS_ANTHROPIC_API_KEY` | `anthropic_api_key` (dev only) | — | yes | serve, insights | Optional Anthropic API key for Insights phrasing (starts with sk-ant-). | S01 |
 | `DEEDGLASS_TRUSTED_PROXIES` | `trusted_proxies` | — | no | serve | Comma-separated CIDRs whose X-Forwarded-For is believed. | S01 |
 | `DEEDGLASS_ALLOW_PRIVATE_NETWORKS` | `allow_private_networks` | `false` | no | serve | Dev only: lets connectors reach private networks. Refused in prod. | S01 |

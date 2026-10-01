@@ -13,6 +13,7 @@ DEEDGLASS_API_KEY_PEPPER          ••••••••                      
 DEEDGLASS_LOG_LEVEL               debug                                                        [2menv[0m
 DEEDGLASS_SIGNUP                  invite                                                       [2mdefault[0m
 DEEDGLASS_RESEND_API_KEY          —                                                            [2mnot set[0m
+DEEDGLASS_MAIL_FROM               —                                                            [2mnot set[0m
 DEEDGLASS_ANTHROPIC_API_KEY       —                                                            [2mnot set[0m
 DEEDGLASS_TRUSTED_PROXIES         —                                                            [2mnot set[0m
 DEEDGLASS_ALLOW_PRIVATE_NETWORKS  false                                                        [2mdefault[0m

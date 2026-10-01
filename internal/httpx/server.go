@@ -311,8 +311,12 @@ func (s *Server) authenticate(rt Route, r *http.Request, ri *reqInfo) error {
 	if p.OrgID.IsZero() && p.Kind == "" {
 		return s.internal(r, errors.New("httpx: an authenticator returned an empty principal"))
 	}
-	// Scopes: a key must hold every scope the route lists. S08 sharpens this for admin keys; S07
-	// enforces MinRole for people (it adds insufficient_role).
+	// Roles: people are checked against MinRole on every request, with the live membership the
+	// session authenticator just read (S07). S08 applies the same check to admin keys.
+	if p.Kind == "user" && rt.MinRole != "" && !p.Role.AtLeast(rt.MinRole) {
+		return ErrInsufficientRole(p.OrgName, p.Role, rt.MinRole, rt.Purpose)
+	}
+	// Scopes: a key must hold every scope the route lists. S08 sharpens this for admin keys.
 	if p.Kind != "user" && p.Kind != "" {
 		for _, sc := range rt.Scopes {
 			if !contains(p.Scopes, sc) {

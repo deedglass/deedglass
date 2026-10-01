@@ -28,8 +28,8 @@ Last checked: S04, 2026-10-01 (S01 wrote it). Each session that changes the layo
 | `deed/deedtest/cmd/genchain` | built, bench helper (S05) | S05 | Writes a test chain (and bundle) of n deeds for benchmarks |
 | `ledger` | built (S06) | S06 | The one write path for actions, action events, admin events and deeds (`Transition`, `SealAction`, `SealAmendment`, `RecordAdmin`, `Publish`); queries with cursors; the chain check; exports; retention; the six Ledger routes (`docs/LEDGER.md`) |
 | `ledger/fake` | built, dev tool (S06) | S06 | `deedglass dev fake-action`: deterministic plans from a seed, run through the real write path |
-| `identity` | stub | S07–S09 | Orgs, users, sessions, agents, API keys, signed intents |
-| `mailer` | stub | S07 | Mail interface: log (dev) and Resend |
+| `identity` | people built (S07); agents and keys S08, intents S09 | S07–S09 | Sign-in (link and code), sessions and cookies, CSRF, roles, orgs, members, invites, the last-owner rule, admin deeds; the `/login`, `/auth/confirm` and `/app/` pages (`docs/IDENTITY.md`) |
+| `mailer` | built (S07) | S07 | `Mailer` (log in dev, Resend, none), the bounded send queue, login and invite templates with goldens (`docs/EMAIL.md`) |
 | `policy` | stub | S10–S12 | YAML → CEL compiler, evaluator, budgets, activation, replay input |
 | `sqlguard` | stub | S11 | Pure-Go SQL tokenizer and classifier |
 | `gate` | `state.go` built (S02, S06 `Sealable`); the rest stub | S13 | Action pipeline, state machine, idempotency, worker |

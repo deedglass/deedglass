@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<meta name="supported-color-schemes" content="light">
+<title>Sign in to Deedglass</title>
+</head>
+<body style="margin:0;padding:0;background-color:#F7F7F4;">
+<div style="display:none;max-height:0;max-width:0;overflow:hidden;opacity:0;font-size:1px;line-height:1px;color:#F7F7F4;mso-hide:all;">Your sign-in link for Acme. It works once and expires in 15 minutes.</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#F7F7F4" style="background-color:#F7F7F4;">
+<tr>
+<td align="center" style="padding:40px 16px;">
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:600px;">
+<tr>
+<td bgcolor="#FFFFFF" style="background-color:#FFFFFF;border:1px solid #E4E5EA;border-radius:14px;padding:40px;font-family:Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:15px;line-height:24px;color:#0D0F14;">
+<p style="margin:0 0 32px 0;font-size:20px;line-height:24px;font-weight:600;letter-spacing:-0.045em;color:#0D0F14;">deedglass</p>
+<h1 style="margin:0 0 16px 0;font-size:22px;line-height:30px;font-weight:600;letter-spacing:-0.02em;color:#0D0F14;">Sign in to Acme</h1>
+<p style="margin:0 0 24px 0;">Use the button to sign in as priya@acme.com. The link works once and expires in 15 minutes.</p>
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 24px 0;">
+<tr>
+<td align="center" bgcolor="#2F5BEA" height="44" style="background-color:#2F5BEA;border-radius:10px;">
+<a href="http://127.0.0.1:8080/auth/confirm#t=OEVkbr-q18qimgaDkbcE5mnZqQ2a1zGG7_TgYq8PKFc" style="display:inline-block;padding:0 24px;height:44px;line-height:44px;font-family:Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:15px;font-weight:600;color:#FFFFFF;text-decoration:none;border-radius:10px;">Sign in to Deedglass</a>
+</td>
+</tr>
+</table>
+<p style="margin:0 0 8px 0;font-size:13px;line-height:20px;color:#6B7080;">Or enter this code on the sign-in page:</p>
+<p style="margin:0 0 24px 0;font-family:'Geist Mono',ui-monospace,Menlo,monospace;font-size:22px;line-height:30px;letter-spacing:0.12em;color:#0D0F14;">482 913</p>
+<p style="margin:0 0 8px 0;font-size:13px;line-height:20px;color:#6B7080;">Requested from Chrome on macOS at 09:14 UTC.</p>
+<p style="margin:0;font-size:13px;line-height:20px;color:#6B7080;">If you didn't ask to sign in, you can ignore this email. Nothing happens until someone uses the link or the code.</p>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:32px 0 0 0;">
+<tr>
+<td style="border-top:1px solid #E4E5EA;padding:20px 0 0 0;font-size:13px;line-height:20px;color:#6B7080;">Deedglass · See what your agents actually did. · <a href="https://deedglass.com" style="color:#6B7080;text-decoration:underline;">deedglass.com</a></td>
+</tr>
+</table>
+</td>
+</tr>
+</table>
+</td>
+</tr>
+</table>
+</body>
+</html>
+

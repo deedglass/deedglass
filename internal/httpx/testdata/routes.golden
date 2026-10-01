@@ -15,7 +15,7 @@ planned    GET     /v1/org                                                sessio
 planned    PATCH   /v1/org                                                session         admin            S07
 planned    GET     /v1/org/members                                        session         viewer           S07
 planned    POST    /v1/org/members                                        session         admin            S07
-planned    PATCH   /v1/org/members/{id}                                   session         admin            S07
+planned    PATCH   /v1/org/members/{id}                                   session         owner            S07
 planned    DELETE  /v1/org/members/{id}                                   session         admin            S07
 planned    GET     /login                                                 public          -                S07    page
 planned    GET     /auth/confirm                                          public          -                S07    page

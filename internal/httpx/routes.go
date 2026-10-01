@@ -76,9 +76,12 @@ type Route struct {
 	Method, Pattern string // "GET", "/v1/health" (Go 1.22 mux syntax, which is also OpenAPI path syntax)
 	OperationID     string // must exist in api/openapi.yaml
 	Auth            Auth
-	MinRole         Role     // Session: viewer|admin|owner (S07 enforces it)
-	Scopes          []string // API key scopes; a key must hold every one (S08 defines the set)
-	Idempotency     Idem
+	MinRole         Role // people (sessions): viewer|admin|owner, checked live on every request (S07)
+	// Purpose says what the route does, for insufficient_role ("inviting people needs Admin").
+	// Default "this request".
+	Purpose     string
+	Scopes      []string // API key scopes; a key must hold every one (S08 defines the set)
+	Idempotency Idem
 	// Sensitive: the response carries a shown-once secret. It is stored for replay with the Redact
 	// fields set to null, so the secret never reaches the database.
 	Sensitive bool
@@ -140,6 +143,9 @@ func (rt Route) normalize(catalog map[string]ContractRoute) Route {
 	if rt.MinRole != "" && rt.MinRole.Rank() == 0 {
 		fail("MinRole %q is not viewer, admin or owner", rt.MinRole)
 	}
+	if rt.Purpose == "" {
+		rt.Purpose = "this request"
+	}
 	if rt.Timeout == 0 {
 		rt.Timeout = DefaultTimeout
 	}
@@ -171,6 +177,11 @@ func (rt Route) normalize(catalog map[string]ContractRoute) Route {
 		fail("isn't in the contract catalog (contract_routes.go); add it there, or set Extension to its ADR")
 	case c.Auth != rt.Auth:
 		fail("declares auth %s, but the contract catalog says %s", rt.Auth, c.Auth)
+	case Role(c.Access).Rank() > 0 && c.Access != string(rt.MinRole):
+		fail("declares MinRole %q, but the contract catalog says %s", rt.MinRole, c.Access)
+	}
+	if (rt.Auth == Session || rt.Auth == SessionOrKey) && rt.MinRole == "" {
+		fail("a route people can call must declare MinRole (viewer, admin or owner)")
 	}
 	return rt
 }

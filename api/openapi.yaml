@@ -20,6 +20,12 @@ servers:
   - url: https://api.deedglass.com
     description: The cloud beta
 tags:
+  - name: People
+    description: >-
+      Signing in with an emailed link or code (no passwords), sessions, your org and its members
+      (docs/IDENTITY.md).
+  - name: Pages
+    description: The server-rendered sign-in pages.
   - name: System
     description: Health, version and this document.
   - name: Ledger
@@ -388,6 +394,498 @@ paths:
                 $ref: "#/components/schemas/LedgerCheck"
         default:
           $ref: "#/components/responses/Error"
+  /v1/auth/login:
+    post:
+      operationId: requestLogin
+      summary: Ask for a sign-in link and code
+      description: >-
+        Public. Always 202 with the same body for every well-formed address, whether or not it has
+        an account: the server never reads the database here, and a worker sends the email. The
+        email carries one link (`/auth/confirm#t=…`, valid once for 15 minutes) and a 6-digit code
+        for another device. Limits: 20 requests per IP and 5 per address per hour (429
+        `rate_limited` with `Retry-After`).
+      tags: [People]
+      security: []
+      x-deedglass-auth: public
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [email]
+              properties:
+                email: {type: string, maxLength: 254}
+            example: {email: Priya@Acme.com}
+      responses:
+        "202":
+          description: Accepted. The same for known and unknown addresses.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginRequest"
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/auth/preview:
+    post:
+      operationId: previewLogin
+      summary: See what a sign-in link would do, without using it
+      description: >-
+        Public. The confirm page calls this first and shows whose account and which org the link
+        signs into, so nobody is signed in to an account they didn't expect (login CSRF). Nothing is
+        consumed. An unknown, used, replaced or expired token is 400 `login_link_invalid`; 30
+        failures per IP per hour are allowed.
+      tags: [People]
+      security: []
+      x-deedglass-auth: public
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [token]
+              properties:
+                token: {type: string, minLength: 43, maxLength: 43}
+            example: {token: OEVkbr-q18qimgaDkbcE5mnZqQ2a1zGG7_TgYq8PKFc}
+      responses:
+        "200":
+          description: What the link does.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginPreview"
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/auth/callback:
+    post:
+      operationId: completeLogin
+      summary: Sign in with a link's token, or with an email address and code
+      description: >-
+        Public. Uses the token once (only while unused, not replaced by a newer email and not
+        expired), accepts the invite when the link is one, and sets the session and CSRF cookies.
+        With `email` and `code`, the code must belong to the newest email; each code allows 5
+        attempts. Every miss is 400 `login_code_invalid` with the same message.
+      tags: [People]
+      security: []
+      x-deedglass-auth: public
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - type: object
+                  additionalProperties: false
+                  required: [token]
+                  properties:
+                    token: {type: string}
+                - type: object
+                  additionalProperties: false
+                  required: [email, code]
+                  properties:
+                    email: {type: string}
+                    code: {type: string, description: Six digits; spaces are ignored.}
+            examples:
+              link: {value: {token: OEVkbr-q18qimgaDkbcE5mnZqQ2a1zGG7_TgYq8PKFc}}
+              code: {value: {email: priya@acme.com, code: "482913"}}
+      responses:
+        "200":
+          description: Signed in. `Set-Cookie` carries `__Host-deedglass_session` and `__Host-deedglass_csrf`.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+            Set-Cookie:
+              schema: {type: string}
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Me"
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/auth/logout:
+    post:
+      operationId: logout
+      summary: Sign out
+      description: >-
+        Ends this session, or with `everywhere` every session of yours in every org, and expires the
+        cookies. Needs the `Deedglass-CSRF` header.
+      tags: [People]
+      security: [{sessionCookie: []}]
+      x-deedglass-auth: session
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+        - $ref: "#/components/parameters/CSRF"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                everywhere: {type: boolean, default: false}
+      responses:
+        "204":
+          description: Signed out.
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/auth/switch-org:
+    post:
+      operationId: switchOrg
+      summary: Switch to another org you belong to
+      description: >-
+        Issues a new session in the org (new cookies) and ends the current one. Needs the
+        `Deedglass-CSRF` header.
+      tags: [People]
+      security: [{sessionCookie: []}]
+      x-deedglass-auth: session
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+        - $ref: "#/components/parameters/CSRF"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [org]
+              properties:
+                org: {type: string}
+      responses:
+        "200":
+          description: The new session.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Me"
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/me:
+    get:
+      operationId: getMe
+      summary: Who is signed in
+      description: The person, the session's org, their role there, the orgs they can switch to, and the CSRF token.
+      tags: [People]
+      security: [{sessionCookie: []}]
+      x-deedglass-auth: session
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+      responses:
+        "200":
+          description: You.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Me"
+        default:
+          $ref: "#/components/responses/Error"
+    patch:
+      operationId: updateMe
+      summary: Change your name
+      description: The name other members see. An empty string clears it. Needs the `Deedglass-CSRF` header.
+      tags: [People]
+      security: [{sessionCookie: []}]
+      x-deedglass-auth: session
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+        - $ref: "#/components/parameters/CSRF"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [name]
+              properties:
+                name: {type: string, maxLength: 80}
+      responses:
+        "200":
+          description: You, updated.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Me"
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/org:
+    get:
+      operationId: getOrg
+      summary: Get your org
+      tags: [People]
+      security: [{sessionCookie: []}]
+      x-deedglass-auth: session
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+      responses:
+        "200":
+          description: The org.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Org"
+        default:
+          $ref: "#/components/responses/Error"
+    patch:
+      operationId: updateOrg
+      summary: Change the org's name or time zone
+      description: Admins and owners. Seals an `org.updated` admin deed when something changed. Needs the `Deedglass-CSRF` header.
+      tags: [People]
+      security: [{sessionCookie: []}]
+      x-deedglass-auth: session
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+        - $ref: "#/components/parameters/CSRF"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                name: {type: string, minLength: 1, maxLength: 100}
+                timezone: {type: string, description: An IANA time zone name such as Asia/Kolkata.}
+            example: {timezone: Asia/Kolkata}
+      responses:
+        "200":
+          description: The org, with the deed (null when nothing changed).
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Org"
+                  - type: object
+                    required: [deed]
+                    properties:
+                      deed: {type: [string, "null"]}
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/org/members:
+    get:
+      operationId: listMembers
+      summary: List the org's members
+      description: Oldest first. Without `status`, invited and active members; `status=removed` lists people who were removed.
+      tags: [People]
+      security: [{sessionCookie: []}]
+      x-deedglass-auth: session
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+        - {name: status, in: query, required: false, schema: {type: string, enum: [invited, active, removed]}}
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+      responses:
+        "200":
+          description: A page of members.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MembershipList"
+        default:
+          $ref: "#/components/responses/Error"
+    post:
+      operationId: inviteMember
+      summary: Invite someone
+      description: >-
+        Admins invite viewers and admins; only owners invite owners. Sends a one-time invite link,
+        valid for 7 days, and seals `member.invited`. 201 for a new invite; 200 when the person was
+        already invited (the old link stops working and a new one is sent); 409 `conflict` for an
+        active member. Needs the `Deedglass-CSRF` header.
+      tags: [People]
+      security: [{sessionCookie: []}]
+      x-deedglass-auth: session
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+        - $ref: "#/components/parameters/CSRF"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [email, role]
+              properties:
+                email: {type: string}
+                role: {type: string, enum: [viewer, admin, owner]}
+            example: {email: sam@acme.com, role: viewer}
+      responses:
+        "201":
+          description: Invited.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Membership"
+        "200":
+          description: Invited again, with a fresh link.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Membership"
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/org/members/{id}:
+    patch:
+      operationId: updateMember
+      summary: Change a member's role
+      description: >-
+        Owners only. Seals `member.role_changed`. Demoting the last owner is 409 `last_owner`. The
+        change applies on the member's next request. Needs the `Deedglass-CSRF` header.
+      tags: [People]
+      security: [{sessionCookie: []}]
+      x-deedglass-auth: session
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+        - $ref: "#/components/parameters/CSRF"
+        - {name: id, in: path, required: true, description: The membership id (`mem_…`)., schema: {type: string}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [role]
+              properties:
+                role: {type: string, enum: [viewer, admin, owner]}
+      responses:
+        "200":
+          description: The membership.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Membership"
+        default:
+          $ref: "#/components/responses/Error"
+    delete:
+      operationId: removeMember
+      summary: Remove a member, or leave
+      description: >-
+        Admins remove viewers and admins; owners remove anyone; removing yourself is leaving. The
+        member's sessions in the org end at once. Seals `member.removed`. Removing the last owner is
+        409 `last_owner`. Needs the `Deedglass-CSRF` header.
+      tags: [People]
+      security: [{sessionCookie: []}]
+      x-deedglass-auth: session
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+        - $ref: "#/components/parameters/CSRF"
+        - {name: id, in: path, required: true, description: The membership id (`mem_…`)., schema: {type: string}}
+      responses:
+        "200":
+          description: The membership, now removed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Membership"
+        default:
+          $ref: "#/components/responses/Error"
+  /login:
+    get:
+      operationId: loginPage
+      summary: The sign-in page
+      tags: [Pages]
+      security: []
+      x-deedglass-auth: public
+      x-deedglass-since: "2026-10-01"
+      responses:
+        "200":
+          description: HTML, with a strict Content-Security-Policy.
+          content:
+            text/html:
+              schema: {type: string}
+        default:
+          $ref: "#/components/responses/Error"
+  /auth/confirm:
+    get:
+      operationId: confirmPage
+      summary: The page a sign-in link opens
+      description: >-
+        The token is in the URL fragment (`#t=…`), which browsers never send to servers; the page
+        shows what the link does and signs in only when the person clicks. Fetching this page uses
+        nothing, so mail scanners that open links can't sign anyone in.
+      tags: [Pages]
+      security: []
+      x-deedglass-auth: public
+      x-deedglass-since: "2026-10-01"
+      responses:
+        "200":
+          description: HTML, with a strict Content-Security-Policy.
+          content:
+            text/html:
+              schema: {type: string}
+        default:
+          $ref: "#/components/responses/Error"
+  /app/:
+    get:
+      operationId: consolePage
+      summary: The Console
+      description: Until the Console ships, a plain page showing who is signed in.
+      tags: [Pages]
+      security: [{sessionCookie: []}]
+      x-deedglass-auth: session
+      x-deedglass-since: "2026-10-01"
+      responses:
+        "200":
+          description: HTML.
+          content:
+            text/html:
+              schema: {type: string}
+        default:
+          $ref: "#/components/responses/Error"
+  /auth/assets/{file}:
+    get:
+      operationId: authAsset
+      summary: The sign-in pages' stylesheet and script
+      tags: [Pages]
+      security: []
+      x-deedglass-auth: public
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - {name: file, in: path, required: true, schema: {type: string, enum: [auth.css, auth.js]}}
+      responses:
+        "200":
+          description: CSS or JavaScript.
+          content:
+            text/css:
+              schema: {type: string}
+            text/javascript:
+              schema: {type: string}
+        default:
+          $ref: "#/components/responses/Error"
 components:
   securitySchemes:
     bearerAuth:
@@ -457,6 +955,15 @@ components:
       schema:
         type: integer
         minimum: 1
+    CSRF:
+      name: Deedglass-CSRF
+      in: header
+      required: true
+      description: >-
+        The CSRF token from `GET /v1/me` (it equals the `__Host-deedglass_csrf` cookie). Every
+        session request that changes state needs it; without it the answer is 403 `csrf_failed`.
+      schema:
+        type: string
   headers:
     DeedglassRequestId:
       description: This request's id. Quote it to support; it matches `error.request_id`.
@@ -485,6 +992,156 @@ components:
           schema:
             $ref: "#/components/schemas/ErrorEnvelope"
   schemas:
+    LoginRequest:
+      type: object
+      required: [object, email, expires_in, message]
+      properties:
+        object: {type: string, const: login_request}
+        email: {type: string, description: The address, normalized.}
+        expires_in: {type: integer, description: Seconds the link and code work for.}
+        message: {type: string}
+      examples:
+        - object: login_request
+          email: priya@acme.com
+          expires_in: 900
+          message: If priya@acme.com has a Deedglass account, a sign-in link and code are on their way.
+    LoginPreview:
+      type: object
+      required: [object, purpose, email, org, role, invited_by, expires_at]
+      properties:
+        object: {type: string, const: login_preview}
+        purpose: {type: string, enum: [login, invite]}
+        email: {type: string}
+        org:
+          type: object
+          required: [id, name]
+          properties:
+            id: {type: string}
+            name: {type: string}
+        role: {type: string, enum: [viewer, admin, owner]}
+        invited_by:
+          type: [object, "null"]
+          required: [name, email]
+          properties:
+            name: {type: string}
+            email: {type: string}
+        expires_at: {type: string, format: date-time}
+      examples:
+        - object: login_preview
+          purpose: login
+          email: priya@acme.com
+          org: {id: org_01k6h7kp6msmzrhdzwtcr3jnkp, name: Acme}
+          role: owner
+          invited_by: null
+          expires_at: "2026-10-03T09:29:07.000Z"
+    Me:
+      type: object
+      required: [object, user, org, membership, orgs, session, csrf_token]
+      properties:
+        object: {type: string, const: me}
+        user:
+          type: object
+          required: [object, id, email, name, created_at]
+          properties:
+            object: {type: string, const: user}
+            id: {type: string}
+            email: {type: string}
+            name: {type: string}
+            created_at: {type: string, format: date-time}
+        org:
+          $ref: "#/components/schemas/Org"
+        membership:
+          type: object
+          required: [object, id, role, status]
+          properties:
+            object: {type: string, const: membership}
+            id: {type: string}
+            role: {type: string, enum: [viewer, admin, owner]}
+            status: {type: string}
+        orgs:
+          type: array
+          items:
+            type: object
+            required: [id, name, role]
+            properties:
+              id: {type: string}
+              name: {type: string}
+              role: {type: string}
+        session:
+          type: object
+          required: [id, idle_expires_at, expires_at]
+          properties:
+            id: {type: string}
+            idle_expires_at: {type: string, format: date-time}
+            expires_at: {type: string, format: date-time}
+        csrf_token:
+          type: [string, "null"]
+          description: Send it back as the `Deedglass-CSRF` header on requests that change state.
+      examples:
+        - object: me
+          user: {object: user, id: usr_01k6c9kb2zcjsyn7b8g2k1vqvp, email: priya@acme.com, name: Priya Raman, created_at: "2026-10-03T09:14:07.000Z"}
+          org: {object: org, id: org_01k6h7kp6msmzrhdzwtcr3jnkp, name: Acme, slug: acme, timezone: Asia/Kolkata, status: active, created_at: "2026-10-03T09:14:07.000Z"}
+          membership: {object: membership, id: mem_01k6zymkd83ftdv0mf9keseaz1, role: owner, status: active}
+          orgs: [{id: org_01k6h7kp6msmzrhdzwtcr3jnkp, name: Acme, role: owner}]
+          session: {id: ses_01k6ydnxs578tgcwjbknyjdh8m, idle_expires_at: "2026-10-03T21:14:07.000Z", expires_at: "2026-10-10T09:14:07.000Z"}
+          csrf_token: M3q1c0Zb9xK2yV7wQ4nH8pT6rJ5sD1fG0aL3kE9uW2c
+    Org:
+      type: object
+      required: [object, id, name, slug, timezone, status, created_at]
+      properties:
+        object: {type: string, const: org}
+        id: {type: string}
+        name: {type: string}
+        slug: {type: string}
+        timezone: {type: string}
+        status: {type: string, enum: [active, disabled]}
+        created_at: {type: string, format: date-time}
+    Membership:
+      type: object
+      required: [object, id, org, user, role, status, invited_by, invited_at, joined_at, removed_at, created_at]
+      properties:
+        object: {type: string, const: membership}
+        id: {type: string}
+        org: {type: string}
+        user:
+          type: object
+          required: [id, email, name]
+          properties:
+            id: {type: string}
+            email: {type: string}
+            name: {type: string}
+        role: {type: string, enum: [viewer, admin, owner]}
+        status: {type: string, enum: [invited, active, removed]}
+        invited_by: {type: [string, "null"]}
+        invited_at: {type: [string, "null"], format: date-time}
+        joined_at: {type: [string, "null"], format: date-time}
+        removed_at: {type: [string, "null"], format: date-time}
+        created_at: {type: string, format: date-time}
+        deed: {type: string, description: The admin deed this change sealed (on changes only).}
+      examples:
+        - object: membership
+          id: mem_01k6f6evxjk5zr0t0kntw9ehx5
+          org: org_01k6h7kp6msmzrhdzwtcr3jnkp
+          user: {id: usr_01k6s2anqftp0685ngz82kyz6y, email: sam@acme.com, name: ""}
+          role: viewer
+          status: invited
+          invited_by: usr_01k6c9kb2zcjsyn7b8g2k1vqvp
+          invited_at: "2026-10-03T09:20:11.000Z"
+          joined_at: null
+          removed_at: null
+          created_at: "2026-10-03T09:20:11.000Z"
+          deed: deed_01k6vrddq2atgb2023qvhhct3g
+    MembershipList:
+      type: object
+      required: [object, data, has_more, next_cursor]
+      properties:
+        object: {type: string, const: list}
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Membership"
+        has_more: {type: boolean}
+        next_cursor: {type: [string, "null"]}
     ErrorEnvelope:
       type: object
       additionalProperties: false
@@ -540,6 +1197,12 @@ components:
                 - idempotency_key_invalid
                 - idempotency_key_in_use
                 - service_unavailable
+                - session_expired
+                - csrf_failed
+                - insufficient_role
+                - login_link_invalid
+                - login_code_invalid
+                - last_owner
             message:
               type: string
               description: One or more calm sentences with the next step.

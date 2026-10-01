@@ -61,7 +61,7 @@ func TestMountRefusesBadRoutes(t *testing.T) {
 	})
 	t.Run("defaults", func(t *testing.T) {
 		s := New(Options{})
-		s.Mount(Route{Method: "POST", Pattern: "/v1/agents/{id}/keys", OperationID: "x", Auth: SessionOrKey, Idempotency: IdemRequired, Sensitive: true, Handler: ok})
+		s.Mount(Route{Method: "POST", Pattern: "/v1/agents/{id}/keys", OperationID: "x", Auth: SessionOrKey, MinRole: RoleAdmin, Idempotency: IdemRequired, Sensitive: true, Handler: ok})
 		r := s.Routes()[0]
 		if r.Timeout != DefaultTimeout || r.MaxBody != DefaultMaxBody || r.BodyType != BodyJSON || r.Since != "2026-10-01" ||
 			len(r.Redact) != 1 || r.Redact[0] != "secret" {

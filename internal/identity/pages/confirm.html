@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<meta name="color-scheme" content="dark light">
+<meta name="robots" content="noindex">
+<title>Sign in · Deedglass</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20viewBox=%220%200%20120%20120%22%3E%3Cdefs%3E%3ClinearGradient%20id=%22a%22%20gradientUnits=%22userSpaceOnUse%22%20x1=%2231.4%22%20y1=%228%22%20x2=%2265.2%22%20y2=%22112%22%3E%3Cstop%20offset=%220%22%20stop-color=%22%237C6CFF%22/%3E%3Cstop%20offset=%22.5%22%20stop-color=%22%234F8CFF%22/%3E%3Cstop%20offset=%221%22%20stop-color=%22%232FE6D1%22/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath%20d=%22M55.2%208.22A52%2052%200%200%200%2055.2%20111.78Z%22%20fill=%22url(%23a)%22/%3E%3Cpath%20d=%22M64.8%208.22A52%2052%200%200%201%2064.8%20111.78Z%22%20fill=%22%23C9CCD6%22/%3E%3C/svg%3E">
+<link rel="stylesheet" href="/auth/assets/auth.css">
+<script src="/auth/assets/auth.js" defer></script>
+</head>
+<body data-page="confirm">
+<main id="card" class="card" aria-labelledby="title" aria-busy="true">
+<div class="brand" aria-hidden="true"><svg class="mark" width="32" height="32" viewBox="0 0 120 120" aria-hidden="true" focusable="false"><defs><linearGradient id="f-aur" gradientUnits="userSpaceOnUse" x1="31.4" y1="8" x2="65.2" y2="112"><stop offset="0" stop-color="#7C6CFF"/><stop offset=".5" stop-color="#4F8CFF"/><stop offset="1" stop-color="#2FE6D1"/></linearGradient></defs><path d="M55.2 8.22A52 52 0 0 0 55.2 111.78Z" fill="url(#f-aur)"/><path class="mark-right" d="M64.8 8.22A52 52 0 0 1 64.8 111.78Z"/><rect class="mark-pane" x="58.4" y="8.22" width="3.2" height="103.56"/></svg><span class="wordmark">deedglass</span></div>
+<h1 id="title" tabindex="-1">Checking your link…</h1>
+<div id="skeleton" class="skeleton" aria-hidden="true"><span></span><span></span></div>
+<p id="lede" class="lede" hidden></p>
+<noscript><p class="noscript">Turn on JavaScript to finish signing in, or type the 6-digit code from the email at deedglass.com/login.</p></noscript>
+<div class="notice">
+<p id="alert" class="alert" role="alert"></p>
+<button id="retry" class="btn btn-secondary" type="button" hidden>Try again</button>
+</div>
+<button id="confirm-submit" class="btn btn-primary" type="button" aria-describedby="lede note" hidden>Sign in</button>
+<a id="new-link" class="btn btn-primary" href="/login" hidden>Get a new link</a>
+<p id="note" class="note" hidden>Not you, or didn't ask for this? Close this tab. Nothing happens.</p>
+</main>
+</body>
+</html>

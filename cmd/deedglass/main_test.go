@@ -261,6 +261,7 @@ func TestConfigPrintCanary(t *testing.T) {
 		"DEEDGLASS_API_KEY_PEPPER": key32,
 		"DEEDGLASS_DATABASE_URL":   "postgres://u:" + canary + "@127.0.0.1/db",
 		"DEEDGLASS_RESEND_API_KEY": "re_" + canary,
+		"DEEDGLASS_MAIL_FROM":      "Deedglass <signin@example.com>",
 	}
 	for _, args := range [][]string{{"config", "print"}, {"config", "print", "--json"}} {
 		r := cli(t, env, false, args...)

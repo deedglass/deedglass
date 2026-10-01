@@ -159,11 +159,11 @@ func TestMigrateGoldens(t *testing.T) {
 		{name: "migrate_status_mixed", f: fakeMigrator{applied: 8}, args: []string{"migrate", "status"}},
 		{name: "migrate_status_current", f: fakeMigrator{applied: 9}, args: []string{"migrate", "status"}},
 		{name: "migrate_status_changed", f: fakeMigrator{applied: 9, changed: 3}, tty: true, args: []string{"migrate", "status"}},
-		{name: "migrate_status_json", f: fakeMigrator{applied: 8, ahead: 12}, args: []string{"migrate", "status", "--json"}},
+		{name: "migrate_status_json", f: fakeMigrator{applied: 8, ahead: 99}, args: []string{"migrate", "status", "--json"}},
 		{name: "migrate_verify_ok", f: fakeMigrator{applied: 9}, args: []string{"migrate", "verify"}},
 		{name: "migrate_verify_changed", f: fakeMigrator{applied: 9, changed: 3}, args: []string{"migrate", "verify"}},
 		{name: "migrate_verify_changed_json", f: fakeMigrator{applied: 9, changed: 3}, args: []string{"migrate", "verify", "--json"}},
-		{name: "migrate_verify_ahead", f: fakeMigrator{applied: 9, ahead: 12}, args: []string{"migrate", "verify"}},
+		{name: "migrate_verify_ahead", f: fakeMigrator{applied: 9, ahead: 99}, args: []string{"migrate", "verify"}},
 		{name: "migrate_verify_args", args: []string{"migrate", "verify", "extra"}},
 	}
 	for _, c := range cases {
@@ -220,7 +220,7 @@ func TestMigrateJSONShapes(t *testing.T) {
 		} `json:"applied"`
 		Target Target `json:"target"`
 	}
-	if err := json.Unmarshal([]byte(r.stdout), &up); err != nil || up.Object != "migration_run" || up.Current != 10 || len(up.Applied) != 3 ||
+	if err := json.Unmarshal([]byte(r.stdout), &up); err != nil || up.Object != "migration_run" || up.Current != 12 || len(up.Applied) != 5 ||
 		up.Applied[0].Version != 8 || !strings.HasPrefix(up.Applied[0].Checksum, "sha256:") || up.Target.User != "deedglass_migrator" {
 		t.Fatalf("%v %s", err, r.stdout)
 	}

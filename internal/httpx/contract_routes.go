@@ -47,7 +47,7 @@ var contractRoutes = []ContractRoute{
 	cr("PATCH", "/v1/org", Session, "admin", "S07"),
 	cr("GET", "/v1/org/members", Session, "viewer", "S07"),
 	cr("POST", "/v1/org/members", Session, "admin", "S07"),
-	cr("PATCH", "/v1/org/members/{id}", Session, "admin", "S07"),
+	cr("PATCH", "/v1/org/members/{id}", Session, "owner", "S07"),
 	cr("DELETE", "/v1/org/members/{id}", Session, "admin", "S07"),
 	cr("GET", "/login", Public, "", "S07", "page"),
 	cr("GET", "/auth/confirm", Public, "", "S07", "page"),

@@ -27,14 +27,14 @@ func TestHTTPRoutes(t *testing.T) {
 	orgB, agentsB := en.newOrg(t, "beta")
 	resB := en.run(t, orgB, agentsB, 1, 3, fake.Allow)
 
-	srv := httpx.New(httpx.Options{Logger: slog.New(slog.DiscardHandler), Sessions: httpx.DevPrincipal{}})
+	srv := httpx.New(httpx.Options{Logger: slog.New(slog.DiscardHandler), Sessions: testSessions{}})
 	srv.Mount(ledger.Routes(en.led)...)
 	ts := httptest.NewServer(srv)
 	defer ts.Close()
 	get := func(path string, hdr ...string) (*http.Response, []byte) {
 		t.Helper()
 		req, _ := http.NewRequest("GET", ts.URL+path, nil)
-		req.Header.Set(httpx.DevOrgHeader, en.org.String())
+		req.Header.Set(testOrgHeader, en.org.String())
 		for i := 0; i+1 < len(hdr); i += 2 {
 			req.Header.Set(hdr[i], hdr[i+1])
 		}

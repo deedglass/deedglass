@@ -34,6 +34,10 @@
 # invite or closed.
 # signup: invite
 
+# The From address of sign-in and invite emails. Required with the Resend API key (set that in the
+# environment, never here).
+# mail_from: "Deedglass <signin@example.com>"
+
 # Proxies whose X-Forwarded-For is believed, as CIDRs.
 # trusted_proxies: [10.0.0.0/8]
 

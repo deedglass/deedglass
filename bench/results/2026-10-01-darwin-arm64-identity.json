@@ -1,0 +1,11 @@
+{"Time":"2026-10-01T15:36:40.168653+05:30","Action":"start","Package":"github.com/deedglass/deedglass/internal/identity"}
+{"Time":"2026-10-01T15:36:40.546332+05:30","Action":"run","Package":"github.com/deedglass/deedglass/internal/identity","Test":"TestIdentityBudget"}
+{"Time":"2026-10-01T15:36:40.546604+05:30","Action":"output","Package":"github.com/deedglass/deedglass/internal/identity","Test":"TestIdentityBudget","Output":"=== RUN   TestIdentityBudget\n","OutputType":"frame"}
+{"Time":"2026-10-01T15:36:41.234587+05:30","Action":"output","Package":"github.com/deedglass/deedglass/internal/identity","Test":"TestIdentityBudget","Output":"    identity_integration_test.go:720: PERF {\"name\":\"session middleware\",\"n\":2000,\"p50_us\":213.8,\"p99_us\":429.0}\n"}
+{"Time":"2026-10-01T15:36:41.236693+05:30","Action":"output","Package":"github.com/deedglass/deedglass/internal/identity","Test":"TestIdentityBudget","Output":"    identity_integration_test.go:720: PERF {\"name\":\"POST /v1/auth/login (handler, no worker)\",\"n\":2000,\"p50_us\":0.8,\"p99_us\":2.2}\n"}
+{"Time":"2026-10-01T15:36:41.673955+05:30","Action":"output","Package":"github.com/deedglass/deedglass/internal/identity","Test":"TestIdentityBudget","Output":"    identity_integration_test.go:720: PERF {\"name\":\"invite with deed\",\"n\":300,\"p50_us\":1388.0,\"p99_us\":2704.0}\n"}
+{"Time":"2026-10-01T15:36:41.706113+05:30","Action":"output","Package":"github.com/deedglass/deedglass/internal/identity","Test":"TestIdentityBudget","Output":"--- PASS: TestIdentityBudget (1.16s)\n","OutputType":"frame"}
+{"Time":"2026-10-01T15:36:41.706143+05:30","Action":"pass","Package":"github.com/deedglass/deedglass/internal/identity","Test":"TestIdentityBudget","Elapsed":1.16}
+{"Time":"2026-10-01T15:36:41.706208+05:30","Action":"output","Package":"github.com/deedglass/deedglass/internal/identity","Output":"PASS\n","OutputType":"frame"}
+{"Time":"2026-10-01T15:36:41.707219+05:30","Action":"output","Package":"github.com/deedglass/deedglass/internal/identity","Output":"ok  \tgithub.com/deedglass/deedglass/internal/identity\t1.538s\n"}
+{"Time":"2026-10-01T15:36:41.707251+05:30","Action":"pass","Package":"github.com/deedglass/deedglass/internal/identity","Elapsed":1.5390000000000001}

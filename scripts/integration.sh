@@ -17,6 +17,8 @@
 #   PGUSER               installer role, a superuser on the throwaway cluster (default: postgres)
 #   PGHOST/PGPORT/PGPASSWORD  honoured by psql when it connects over TCP
 #   DEEDGLASS_IT_DB            database name (default: deedglass_it)
+#   DEEDGLASS_IT_PKGS          the Go packages to test (default: every integration suite)
+#   DEEDGLASS_IT_GOFLAGS       extra go test flags (-v, -run X, -coverprofile=…)
 #   DEEDGLASS_IT_ADMIN_URL     postgres:// URL of the same cluster as the superuser, reachable from this host;
 #                              enables step 2 (make integration sets it; CI maps the service port)
 set -euo pipefail
@@ -78,7 +80,8 @@ echo "== control plane: deedglass migrate (live)"
 DG=("go" "run" "$ROOT/cmd/deedglass")
 cd "$ROOT"
 out="$(DEEDGLASS_ENV=dev "${DG[@]}" migrate up --database-url "$MIG_URL" --no-color)"; echo "$out"
-grep -q "Schema at 0010 · 10 applied" <<<"$out" || { echo "FAIL: first migrate up" >&2; exit 1; }
+nmig="$(ls "$ROOT"/internal/store/migrations/[0-9][0-9][0-9][0-9]_*.sql | wc -l | tr -d ' ')"
+grep -q "Schema at $(printf '%04d' "$nmig") · $nmig applied" <<<"$out" || { echo "FAIL: first migrate up" >&2; exit 1; }
 out="$(DEEDGLASS_ENV=dev "${DG[@]}" migrate up --database-url "$MIG_URL" --no-color)"; echo "$out"
 grep -q "Schema is current" <<<"$out" || { echo "FAIL: second migrate up" >&2; exit 1; }
 DEEDGLASS_ENV=dev "${DG[@]}" migrate verify --database-url "$MIG_URL" --no-color
@@ -92,7 +95,7 @@ echo "tables without RLS: $norls"
 [ "$norls" = "schema_migrations,seal_keys" ] || { echo "FAIL: tables without RLS: $norls" >&2; exit 1; }
 
 echo "== control plane: Go integration suites"
-go test -tags integration -count=1 ./internal/store/... ./internal/gate/... ./internal/ledger/... ./cmd/deedglass/
+go test -tags integration -count=1 ${DEEDGLASS_IT_GOFLAGS:-} ${DEEDGLASS_IT_PKGS:-./internal/store/... ./internal/gate/... ./internal/ledger/... ./internal/identity/... ./cmd/deedglass/}
 if [ -n "${DEEDGLASS_IT_BENCH_OUT:-}" ]; then
   echo "== store budget (S02 §3.9) -> $DEEDGLASS_IT_BENCH_OUT"
   run="${DEEDGLASS_IT_BENCH_RUN:-TestPerfBudget|TestExplainShowsInitPlan}"

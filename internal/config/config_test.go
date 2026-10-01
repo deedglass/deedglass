@@ -115,6 +115,7 @@ func TestLoad(t *testing.T) {
 			"DEEDGLASS_LOG_LEVEL":       "warn",
 			"DEEDGLASS_SIGNUP":          "closed",
 			"DEEDGLASS_RESEND_API_KEY":  "re_123",
+			"DEEDGLASS_MAIL_FROM":       "Deedglass <signin@deedglass.com>",
 			"DEEDGLASS_SEAL_KEY_FILE":   "/etc/deedglass/seal.key",
 		}), check: func(t *testing.T, c *Config, _ []Warning) {
 			if c.Env != Prod || len(c.TrustedProxies) != 2 || c.LogLevel != slog.LevelWarn || c.Signup != "closed" {

@@ -16,7 +16,7 @@ Every error Deedglass returns has the same body. Only the status line and a few 
 ```
 
 - `type` is one of the six types below. Branch on it for broad handling.
-- `code` is one of the 33 codes on this page. Branch on it for exact handling. Codes are never
+- `code` is one of the 39 codes on this page. Branch on it for exact handling. Codes are never
   renamed; new codes are added.
 - `message` is one or more sentences for a person, with a next step. Don't parse it: it can get
   more exact over time.
@@ -513,9 +513,10 @@ support.
 
 **401 · authentication_error**
 
-**When it happens.** The endpoint isn't public, and the request carries no credentials it accepts.
-Until S07 (Console sessions) and S08 (API keys) are in place, every non-public endpoint answers
-this. Endpoints that take API keys add `WWW-Authenticate: Bearer realm="deedglass"`.
+**When it happens.** The endpoint isn't public, and the request carries no credentials it accepts:
+no session cookie, a cookie for a session that doesn't exist, or (until S08) an API key. Every 401
+carries `WWW-Authenticate: Bearer realm="deedglass"`. For a Console route the message names the
+sign-in page: "You're not signed in. Sign in at https://app.deedglass.com/login."
 
 **What to do.** Send `Authorization: Bearer dg_live_…`, or call the endpoint from a signed-in
 Console session.
@@ -677,6 +678,124 @@ after it restarts, will take it.
   "type": "api_error",
   "code": "service_unavailable",
   "message": "Deedglass is starting or shutting down. Retry in a few seconds.",
+  "param": null
+}
+```
+
+## session_expired
+
+**401 · authentication_error**
+
+**When it happens.** The session cookie names a session that ended: 12 hours passed without a
+request, 7 days passed since sign-in, you signed out (here or everywhere), you switched org, or you
+were removed from the org. The message says which.
+
+**What to do.** Sign in again at `/login`. A new session gets new cookies.
+
+```json
+{
+  "type": "authentication_error",
+  "code": "session_expired",
+  "message": "Your session ended after 12 hours without activity. Sign in again at https://app.deedglass.com/login.",
+  "param": null
+}
+```
+
+## csrf_failed
+
+**403 · permission_error**
+
+**When it happens.** A Console request that changes something (POST, PUT, PATCH or DELETE) came
+without the `Deedglass-CSRF` header, with a header that doesn't match the `__Host-deedglass_csrf`
+cookie or the session, or from another site (`Sec-Fetch-Site: cross-site`, or an `Origin` that isn't
+this server). It stops other websites from acting with your session.
+
+**What to do.** Reload the page. Scripts send the `csrf_token` from `GET /v1/me` as
+`Deedglass-CSRF`. API keys (`Authorization: Bearer`) never need it.
+
+```json
+{
+  "type": "permission_error",
+  "code": "csrf_failed",
+  "message": "This request is missing its security token. Reload the page and try again.",
+  "param": null
+}
+```
+
+## insufficient_role
+
+**403 · permission_error**
+
+**When it happens.** You're signed in, and your role in the org is below what the endpoint needs.
+Viewers read; admins also change agents, keys, policies and connectors, invite and remove viewers
+and admins, and stop agents; owners also invite owners, change roles and start all agents again.
+Roles are read on every request, so a change applies at once.
+
+**What to do.** Ask an owner to change your role (Console › Settings › Members, or
+`PATCH /v1/org/members/{id}`).
+
+```json
+{
+  "type": "permission_error",
+  "code": "insufficient_role",
+  "message": "Your role in Acme is Viewer, and inviting people needs Admin. Ask an owner to change your role.",
+  "param": null
+}
+```
+
+## login_link_invalid
+
+**400 · invalid_request_error**
+
+**When it happens.** A sign-in or invite link was already used, was replaced by a newer email,
+expired (sign-in links after 15 minutes, invites after 7 days), or isn't a Deedglass link. Opening a
+link never uses it; only the button on the page does.
+
+**What to do.** Ask for a new link at `/login`, or ask an admin to invite you again.
+
+```json
+{
+  "type": "invalid_request_error",
+  "code": "login_link_invalid",
+  "message": "This sign-in link has expired or was already used. Get a new one at https://app.deedglass.com/login.",
+  "param": null
+}
+```
+
+## login_code_invalid
+
+**400 · invalid_request_error**
+
+**When it happens.** The 6-digit code doesn't match the newest sign-in email for that address, it
+expired, or it was tried 5 times. Every one of these, and an address with no account, gets the same
+answer, so the code form can't be used to find out who has an account.
+
+**What to do.** Check the latest email, or ask for a new code at `/login`.
+
+```json
+{
+  "type": "invalid_request_error",
+  "code": "login_code_invalid",
+  "message": "That code doesn't match, or it has expired. Check the latest email, or get a new code.",
+  "param": null
+}
+```
+
+## last_owner
+
+**409 · invalid_request_error**
+
+**When it happens.** The change would leave the org with no active owner: demoting or removing the
+only owner, or the only owner leaving.
+
+**What to do.** Make someone else an owner first (`PATCH /v1/org/members/{id}` with
+`{"role":"owner"}`), then make the change.
+
+```json
+{
+  "type": "invalid_request_error",
+  "code": "last_owner",
+  "message": "Acme needs at least one owner. Make someone else an owner first.",
   "param": null
 }
 ```

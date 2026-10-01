@@ -171,8 +171,8 @@ builds it. Hidden commands work but aren't in `deedglass help`.
 | `deedglass agent intent list` | Agents | List an agent's intent keys | soon (S09) |
 | `deedglass agent intent remove` | Agents | Remove an intent key | soon (S09) |
 | `deedglass agent intent mode` | Agents | Require, allow or ignore signed intents | soon (S09) |
-| `deedglass org create` | Agents | Create an org and its owner | soon (S07) |
-| `deedglass org login-link` | Agents | Print a one-time sign-in link | soon (S07) |
+| `deedglass org create --name "Acme" --owner-email priya@acme.com [--slug acme] [--print-link] [--json]` | Agents | Create an org and its owner | built |
+| `deedglass org login-link --email sam@acme.com [--org acme] [--json]` | Agents | Print a one-time sign-in link | built |
 | `deedglass org keys create` | Agents | Create an org admin key | soon (S08) |
 | `deedglass org keys list` | Agents | List org admin keys | soon (S08) |
 | `deedglass org keys revoke` | Agents | Revoke an org admin key | soon (S08) |
@@ -237,7 +237,7 @@ builds it. Hidden commands work but aren't in `deedglass help`.
 | `deedglass dev fake-action [--n 20] [--seed 42] [--kinds allow,deny,…] [--agents 3] [--batch 1] [--pace 0s] [--org-slug demo] [--quiet] [--json]` | Dev | Seal realistic fake actions (dev only) | built |
 | `deedglass dev simulate` | Dev | Simulate agent traffic | soon (S27) |
 | `deedglass dev agent-script` | Dev | Run a scripted agent | soon (S37) |
-| `deedglass dev mail-preview` | Dev | Preview emails in the browser | soon (S07) |
+| `deedglass dev mail-preview login|invite [--out /tmp/login.html] [--json]` | Dev | Preview emails in the browser | built |
 | `deedglass dev sign-intent` | Dev | Sign an intent with a local key | soon (S09) |
 | `deedglass dev stripe-fixtures` | Dev | Create Stripe test-mode fixtures | soon (S30) |
 | `deedglass dev id <prefix>` | Dev | Print a fresh id for a prefix | built, hidden |
@@ -385,6 +385,41 @@ real.
   transactions and seals them in order, 500 per transaction (bulk seeding).
 - Nothing calls a real tool. `executing_at` is set back by the simulated latency so deeds show a
   realistic `latency_ms`; every other time is the database clock.
+
+## People: `org create`, `org login-link`, `dev mail-preview`
+
+`org create` and `org login-link` are operator commands: they use the database directly
+(`DEEDGLASS_DATABASE_URL`), like `migrate`, and seal admin deeds with the seal key.
+
+```
+$ deedglass org create --name "Acme" --owner-email priya@acme.com
+✓ Org created · Acme · org_01k6h7kp6msmzrhdzwtcr3jnkp
+✓ Owner · priya@acme.com · usr_01k6c9kb2zcjsyn7b8g2k1vqvp
+✓ Deed sealed · org.created · deed_01k6vrddq2atgb2023qvhhct3g
+
+  Sign-in link for priya@acme.com (works once, expires in 15 minutes):
+  http://127.0.0.1:8080/auth/confirm#t=OEVkbr-q18qimgaDkbcE5mnZqQ2a1zGG7_TgYq8PKFc
+
+  Next: open the link, then register your first agent with `deedglass agent create`.
+
+$ deedglass org create --name "Acme" --owner-email priya@acme
+✕ "priya@acme" isn't a complete email address. Use the form name@company.com.      (exit 2)
+
+$ deedglass org login-link --email sam@acme.com
+✓ Sign-in link issued · sam@acme.com · Acme
+✓ Deed sealed · login_link.issued · deed_01k6…
+  https://app.deedglass.com/auth/confirm#t=…
+  Anyone with this link can sign in as sam@acme.com for 15 minutes. Send it privately.
+```
+
+- `org create` writes the org, the owner, the membership and the `org.created` deed in one
+  transaction. `--slug` defaults to one made from the name. In prod it emails the owner (or prints
+  the link with `--print-link`); in dev it always prints the link.
+- `org login-link` uses `--org` (an id or a slug), else the person's most recently used org. A
+  pending invitee gets an invite link (7 days).
+- `dev mail-preview login|invite [--out file.html]` renders the email with sample data and writes the
+  HTML and a `.txt` next to it.
+- `--json` prints the objects (the link included for `login-link`, and for `org create` when printed).
 
 ## What it doesn't do (yet)
 

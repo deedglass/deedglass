@@ -63,6 +63,8 @@ var Keys = []Key{
 		Commands: "serve", Doc: "Who can join: invite (people an admin invites) or closed.", Owner: "S01"},
 	{Name: "DEEDGLASS_RESEND_API_KEY", Kind: KindSecret, Secret: true,
 		Commands: "serve", Doc: "Resend API key for sign-in and approval emails (starts with re_). Without it, dev prints emails to the log.", Owner: "S01"},
+	{Name: "DEEDGLASS_MAIL_FROM", Kind: KindString,
+		Commands: "serve, org create", Doc: "The From address of sign-in and invite emails, e.g. Deedglass <signin@deedglass.com>. Required when DEEDGLASS_RESEND_API_KEY is set.", Owner: "S07"},
 	{Name: "DEEDGLASS_ANTHROPIC_API_KEY", Kind: KindSecret, Secret: true,
 		Commands: "serve, insights", Doc: "Optional Anthropic API key for Insights phrasing (starts with sk-ant-).", Owner: "S01"},
 	{Name: "DEEDGLASS_TRUSTED_PROXIES", Kind: KindCIDRList,

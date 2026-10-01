@@ -334,11 +334,23 @@ func TestRLSMatrix(t *testing.T) {
 		if n := countTx(t, tx, `SELECT count(*) FROM deedglass.waitlist`); n != 0 {
 			t.Error("the waitlist is readable outside system scope")
 		}
+		// An org may add a person it invites (insert_invited, S07): a fresh row in its first state
+		// only, which grants nothing and stays invisible until a membership links it.
+		newUser := ids.New[ids.UserKind]()
+		if _, err := inSavepoint(tx, func(tx pgx.Tx) (int64, error) {
+			_, err := tx.Exec(ctx, `INSERT INTO deedglass.users (id, email) VALUES ($1, 'new@example.test')`, newUser)
+			return 0, err
+		}); err != nil {
+			t.Errorf("OrgTx inserting an invited user: %v", err)
+		}
+		if n := countTx(t, tx, `SELECT count(*) FROM deedglass.users WHERE email = 'new@example.test'`); n != 0 {
+			t.Error("a user with no membership in the org is visible")
+		}
 		_, err := inSavepoint(tx, func(tx pgx.Tx) (int64, error) {
-			_, err := tx.Exec(ctx, `INSERT INTO deedglass.users (id, email) VALUES ($1, 'new@example.test')`, ids.New[ids.UserKind]())
+			_, err := tx.Exec(ctx, `INSERT INTO deedglass.users (id, email, status) VALUES ($1, 'active@example.test', 'active')`, ids.New[ids.UserKind]())
 			return 0, err
 		})
-		expectCode(t, "OrgTx inserting a user", err, "42501")
+		expectCode(t, "OrgTx inserting an active user", err, "42501")
 		n, err := inSavepoint(tx, func(tx pgx.Tx) (int64, error) {
 			ct, err := tx.Exec(ctx, `UPDATE deedglass.orgs SET name = 'x' WHERE id = $1`, b.ID)
 			return ct.RowsAffected(), err

@@ -81,6 +81,10 @@ func writeError(w http.ResponseWriter, rid string, e *Error) {
 			h.Add(k, v)
 		}
 	}
+	// Every 401 names the scheme (RFC 7235): a client learns it can retry with a bearer key.
+	if e.Status == http.StatusUnauthorized && h.Get("WWW-Authenticate") == "" {
+		h.Set("WWW-Authenticate", `Bearer realm="deedglass"`)
+	}
 	b := errorBody(e, rid)
 	h.Set("Content-Type", ContentTypeJSON)
 	h.Set("Content-Length", strconv.Itoa(len(b)))

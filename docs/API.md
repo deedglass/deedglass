@@ -205,14 +205,14 @@ the filters it was issued with ([LEDGER.md](LEDGER.md) §3).
 | `GET /v1/deeds/export` | `deeds:read` | a streamed export bundle (`application/gzip`) |
 | `GET /v1/ledger/check` | `deeds:read` | a `ledger_check` (intact, broken or incomplete) |
 
-All six are `SessionOrKey`, viewer and up. Until S07/S09 the only principal is the dev principal
-(`DEEDGLASS_ENV=dev`, loopback, `Deedglass-Dev-Org: org_…`); anything else is 401
+All six are `SessionOrKey`, viewer and up. Since S07 they take a Console session (the session
+cookie; GETs need no CSRF header); API keys arrive in S08. Without either the answer is 401
 `authentication_required`. Examples, filters and error copy: [LEDGER.md](LEDGER.md). The schemas
 are in `api/openapi.yaml` (`Action`, `ActionDetail`, `ActionEvent`, `ActionList`, `DeedList`,
 `LedgerCheck`).
 
 ```sh
-curl -s -H 'Deedglass-Dev-Org: org_01j9z8m2k4p6r8t0v2x4z6b8d0' 'http://127.0.0.1:8080/v1/actions?verdict=FAILED'
+curl -s -b cookies.txt 'http://127.0.0.1:8080/v1/actions?verdict=FAILED'
 ```
 ```json
 { "error": { "type": "invalid_request_error", "code": "validation_failed",

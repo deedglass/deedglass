@@ -72,7 +72,7 @@ Every table has `org_id` except these five.
 | Table | Why it is global | Row-level security |
 |---|---|---|
 | `orgs` | The org is the boundary itself. | Yes: `org_self` shows only the current org. |
-| `users` | One person can be in several orgs (the org switcher). Access comes only from memberships. | Yes: a user is visible only when they are a member of the current org. Inserting a user needs system scope. |
+| `users` | One person can be in several orgs (the org switcher). Access comes only from memberships; a user row grants nothing. | Yes: a user is visible only when they are a member of the current org. An org may insert a new person in the `invited` state only (`insert_invited`, S07: inviting someone new); everything else needs system scope. |
 | `seal_keys` | One set of seal keys signs every org's deeds (per-org keys are v2). They are public keys. | No. |
 | `waitlist` | People join before they have an org. | Yes: anyone may insert; only system scope reads. |
 | `schema_migrations` | It describes the schema, not an org. | No. The runtime role can only read it. |
@@ -183,6 +183,39 @@ Payloads are prunable; digests and deeds stay ([RETENTION.md](RETENTION.md), `de
 `(org_id, created_at DESC, id DESC)` and `(org_id, agent_id, created_at DESC, id DESC)` on
 `actions`, and `UNIQUE (action_id, seq)` on `action_events`, already existed (0005).
 
+## Identity additions (0011, 0012, S07)
+
+0002 already had S07's tables and column names; 0011 and 0012 add only the real gaps.
+
+| Object | What | Why |
+|---|---|---|
+| `login_tokens_user_time` | `(user_id, created_at DESC)` | voiding a user's older tokens; the hourly per-user cap |
+| `sessions_user_live` | `(user_id) WHERE revoked_at IS NULL` | logout everywhere; ending a removed member's sessions |
+| policy `insert_invited` on `users` | `FOR INSERT … WITH CHECK (status = 'invited' AND last_login_at IS NULL AND email_verified_at IS NULL)` | an org invites someone new; the row grants nothing and stays invisible until a membership links it |
+
+**Users are global, and access is never derived from the user row.** What a person may do is read
+on every request from their membership in the session's org (role and status), so a role change or a
+removal applies to their very next request.
+
+The five cross-org functions (0012). Each is `SECURITY DEFINER`, owned by `deedglass_migrator`
+(whose tables have no `FORCE ROW LEVEL SECURITY`), pins `search_path = pg_catalog, pg_temp`, takes a
+hash or an id (never a pattern) and is executable by `deedglass_app` only. `store.PreAuth` is the only
+Go caller; `TestPreAuthNamesStayInStore` fails if the names appear anywhere else.
+
+| Function | Returns | Used by |
+|---|---|---|
+| `preauth_session(token_hash)` | session id, org, user, CSRF hash, `last_seen_at`, both expiries, `revoked_at` | the session middleware |
+| `preauth_login_token(token_hash)` | token id, org, user, membership, purpose, `expires_at`, `used_at`, `voided_at` | preview and callback |
+| `preauth_user_by_email(email)` | user id and status; per non-removed membership: org id, name and status, role, status, `last_used_at`, `joined_at`; tokens created in the last hour | the sign-in worker, codes, invites, logout everywhere, the org list in `GET /v1/me` |
+| `preauth_code_token(user_id)` | the newest unused, unvoided, unexpired login token with a code | code sign-in |
+| `maint_prune_identity(limit)` | rows deleted | the prune job in `serve`, every 10 minutes |
+
+Writes (using a token, opening a session) always follow in a normal org-scoped transaction.
+
 ## Personal data
+
+Sessions and sign-in tokens keep the client IP address and User-Agent (at most 512 characters) for
+security review. `maint_prune_identity` deletes sign-in tokens 7 days after they expire and sessions
+30 days after they expire or are revoked; `serve` runs it every 10 minutes, 5,000 rows at a time.
 
 Email addresses live only in `users` and `waitlist`. Tokens and API keys are stored as hashes. Payloads are prunable. Event payloads (SSE and webhooks) carry ids, never emails.

@@ -8,9 +8,20 @@ import "regexp"
 const (
 	AdminLedgerPruned = "ledger.pruned" // S06: retention removed payloads (Prune)
 
+	// S07: people. Sealed: every change to who can act or what they may do.
+	AdminOrgCreated        = "org.created"         // operator → org
+	AdminOrgUpdated        = "org.updated"         // usr → org
+	AdminMemberInvited     = "member.invited"      // usr → mem
+	AdminMemberJoined      = "member.joined"       // invitee → mem
+	AdminMemberRoleChanged = "member.role_changed" // usr → mem
+	AdminMemberRemoved     = "member.removed"      // usr → mem
+	AdminLoginLinkIssued   = "login_link.issued"   // operator → usr
+
+	// S07: security events, recorded in admin_events without a deed (AppendAdminEvent).
+	AdminUserSignedIn  = "user.signed_in"
+	AdminUserSignedOut = "user.signed_out"
+
 	// Planned, each added by its session with the exact spelling below:
-	//   S07  org.created org.updated member.invited member.joined member.role_changed member.removed
-	//        login_link.issued (sign-ins and sign-outs are admin events without deeds)
 	//   S08  agent.created agent.updated agent.suspended agent.resumed agent.stopped agent.started
 	//        org.stopped_all org.started_all api_key.created api_key.rolled api_key.revoked
 	//   S09  agent.intent_key_added agent.intent_key_removed agent.intent_mode_changed
@@ -26,7 +37,13 @@ const (
 // pattern and for duplicates; RecordAdmin refuses names not in the list.
 var AdminActions = []string{
 	AdminLedgerPruned,
+	AdminOrgCreated, AdminOrgUpdated, AdminMemberInvited, AdminMemberJoined, AdminMemberRoleChanged,
+	AdminMemberRemoved, AdminLoginLinkIssued,
 }
+
+// AdminEventActions are admin events recorded without a deed (AppendAdminEvent): security events
+// that don't change who can act. RecordAdmin refuses them, and AppendAdminEvent refuses the rest.
+var AdminEventActions = []string{AdminUserSignedIn, AdminUserSignedOut}
 
 var reAdminAction = regexp.MustCompile(`^[a-z_]+\.[a-z_]+$`)
 

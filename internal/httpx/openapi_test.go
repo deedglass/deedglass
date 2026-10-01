@@ -17,7 +17,8 @@ func systemServer() *Server {
 	return s
 }
 
-// elsewhere stands in for routes other packages declare (internal/ledger, S06), so the spec checks
+// elsewhere stands in for routes other packages declare (internal/ledger S06, internal/identity
+// S07), so the spec checks
 // here see every documented operation. cmd/deedglass's TestServeRoutesMatchOpenAPI checks the real
 // declarations, from the list serve mounts.
 func elsewhere() []Route {
@@ -31,6 +32,28 @@ func elsewhere() []Route {
 		out = append(out, Route{Method: "GET", Pattern: op.pattern, OperationID: op.id, Auth: SessionOrKey,
 			MinRole: RoleViewer, Scopes: []string{op.scope}, Handler: stub})
 	}
+	// S07: people.
+	pub := func(m, p, id string) Route {
+		r := Route{Method: m, Pattern: p, OperationID: id, Auth: Public, Handler: stub}
+		if m == "POST" {
+			r.Idempotency = IdemNever
+		}
+		return r
+	}
+	ses := func(m, p, id string, role Role, idem Idem) Route {
+		return Route{Method: m, Pattern: p, OperationID: id, Auth: Session, MinRole: role, Idempotency: idem, Handler: stub}
+	}
+	out = append(out,
+		pub("POST", "/v1/auth/login", "requestLogin"), pub("POST", "/v1/auth/preview", "previewLogin"),
+		pub("POST", "/v1/auth/callback", "completeLogin"),
+		ses("POST", "/v1/auth/logout", "logout", RoleViewer, IdemNever), ses("POST", "/v1/auth/switch-org", "switchOrg", RoleViewer, IdemNever),
+		ses("GET", "/v1/me", "getMe", RoleViewer, 0), ses("PATCH", "/v1/me", "updateMe", RoleViewer, 0),
+		ses("GET", "/v1/org", "getOrg", RoleViewer, 0), ses("PATCH", "/v1/org", "updateOrg", RoleAdmin, 0),
+		ses("GET", "/v1/org/members", "listMembers", RoleViewer, 0), ses("POST", "/v1/org/members", "inviteMember", RoleAdmin, IdemOptional),
+		ses("PATCH", "/v1/org/members/{id}", "updateMember", RoleOwner, 0), ses("DELETE", "/v1/org/members/{id}", "removeMember", RoleAdmin, 0),
+		pub("GET", "/login", "loginPage"), pub("GET", "/auth/confirm", "confirmPage"), ses("GET", "/app/", "consolePage", RoleViewer, 0),
+		Route{Method: "GET", Pattern: "/auth/assets/{file}", OperationID: "authAsset", Auth: Public, Extension: "ADR-028", Handler: stub},
+	)
 	return out
 }
 

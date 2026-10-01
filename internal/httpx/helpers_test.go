@@ -166,7 +166,7 @@ func (h *harness) testRoutes() []Route {
 				p, _ := PrincipalFrom(r.Context())
 				return WriteJSON(w, http.StatusOK, map[string]string{"object": "whoami", "key": p.KeyID.String(), "version": APIVersion(r.Context())})
 			}},
-		{Method: "GET", Pattern: "/v1/_test/session", OperationID: "testSession", Auth: Session, Extension: "test",
+		{Method: "GET", Pattern: "/v1/_test/session", OperationID: "testSession", Auth: Session, MinRole: RoleViewer, Extension: "test",
 			Handler: func(w http.ResponseWriter, r *http.Request) error {
 				return WriteJSON(w, 200, map[string]string{"object": "me"})
 			}},

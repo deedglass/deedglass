@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 	"time"
 	"unicode/utf8"
 
@@ -441,6 +442,47 @@ type AdminEvent struct {
 	Reason    string         // optional, ≤ 280 characters, shown to auditors
 	Data      any            // admin_events.data: a JSON object ≤ 16 KiB; only its digest enters the deed
 	RequestID string         // req_…, when an API request caused it
+}
+
+// AppendAdminEvent writes an admin_events row without sealing a deed, for security events that
+// don't change who can act or what they may do: signing in and signing out (S07). The action must
+// be one of AdminEventActions; anything that changes access goes through RecordAdmin instead.
+func (l *Ledger) AppendAdminEvent(ctx context.Context, tx pgx.Tx, e AdminEvent) (ids.AdminEventID, error) {
+	if !reAdminAction.MatchString(e.Action) || !slices.Contains(AdminEventActions, e.Action) {
+		return ids.AdminEventID{}, fmt.Errorf("ledger: %q is not an unsealed admin event (add it to AdminEventActions)", e.Action)
+	}
+	if e.Actor.Type != "user" || e.Actor.ID == "" {
+		return ids.AdminEventID{}, errors.New("ledger: an unsealed admin event names the person it is about")
+	}
+	if utf8.RuneCountInString(e.Reason) > deed.MaxReason {
+		return ids.AdminEventID{}, fmt.Errorf("%w: the reason is longer than %d characters", ErrPayload, deed.MaxReason)
+	}
+	data := []byte("{}")
+	if e.Data != nil {
+		var err error
+		if data, err = json.Marshal(e.Data); err != nil {
+			return ids.AdminEventID{}, err
+		}
+	}
+	if len(data) > MaxAdminData || len(data) < 2 || data[0] != '{' {
+		return ids.AdminEventID{}, fmt.Errorf("%w: admin event data must be a JSON object of at most %d bytes", ErrPayload, MaxAdminData)
+	}
+	var org string
+	if err := tx.QueryRow(ctx, `SELECT pg_catalog.current_setting('deedglass.org_id', true)`).Scan(&org); err != nil {
+		return ids.AdminEventID{}, err
+	}
+	if org == "" {
+		return ids.AdminEventID{}, store.ErrNoOrg
+	}
+	var tType, tID *string
+	if e.Target != nil {
+		tType, tID = &e.Target.Type, &e.Target.ID
+	}
+	id := ids.New[ids.AdminEventKind]()
+	_, err := tx.Exec(ctx, `INSERT INTO deedglass.admin_events (id, org_id, actor_type, actor_id, action, target_type, target_id,
+	    reason, data, request_id) VALUES ($1, $2, 'user', $3, $4, $5, $6, $7, $8::jsonb, $9)`,
+		id, org, e.Actor.ID, e.Action, tType, tID, nullable(e.Reason), string(data), nullable(e.RequestID))
+	return id, err
 }
 
 // RecordAdmin seals an admin deed (deed.ForAdmin) for e, inserts the admin_events row that names

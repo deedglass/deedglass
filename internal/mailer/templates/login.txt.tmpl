@@ -1,0 +1,17 @@
+deedglass
+
+Sign in to {{.OrgName}}
+
+Use the link below to sign in as {{.Email}}. The link works once and expires in {{.ExpiresIn}}.
+
+Sign in to Deedglass:
+{{.Link}}
+
+Or enter this code on the sign-in page: {{.Code}}
+{{if .Requested}}
+{{.Requested}}
+{{end}}
+If you didn't ask to sign in, you can ignore this email. Nothing happens until someone uses the link or the code.
+
+─────────────
+Deedglass · See what your agents actually did. · deedglass.com

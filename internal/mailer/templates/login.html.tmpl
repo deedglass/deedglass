@@ -1,0 +1,7 @@
+{{template "head" .}}<h1 style="margin:0 0 16px 0;font-size:22px;line-height:30px;font-weight:600;letter-spacing:-0.02em;color:#0D0F14;">Sign in to {{.OrgName}}</h1>
+<p style="margin:0 0 24px 0;">Use the button to sign in as {{.Email}}. The link works once and expires in {{.ExpiresIn}}.</p>
+{{template "button" button .Link "Sign in to Deedglass"}}<p style="margin:0 0 8px 0;font-size:13px;line-height:20px;color:#6B7080;">Or enter this code on the sign-in page:</p>
+<p style="margin:0 0 24px 0;font-family:'Geist Mono',ui-monospace,Menlo,monospace;font-size:22px;line-height:30px;letter-spacing:0.12em;color:#0D0F14;">{{.Code}}</p>
+{{if .Requested}}<p style="margin:0 0 8px 0;font-size:13px;line-height:20px;color:#6B7080;">{{.Requested}}</p>
+{{end}}<p style="margin:0;font-size:13px;line-height:20px;color:#6B7080;">If you didn't ask to sign in, you can ignore this email. Nothing happens until someone uses the link or the code.</p>
+{{template "foot" .}}

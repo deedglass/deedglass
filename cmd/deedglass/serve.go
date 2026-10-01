@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"os/signal"
 	"strings"
@@ -23,7 +24,9 @@ import (
 	"github.com/deedglass/deedglass/internal/deed"
 	"github.com/deedglass/deedglass/internal/deed/archive"
 	"github.com/deedglass/deedglass/internal/httpx"
+	"github.com/deedglass/deedglass/internal/identity"
 	"github.com/deedglass/deedglass/internal/ledger"
+	"github.com/deedglass/deedglass/internal/mailer"
 	"github.com/deedglass/deedglass/internal/store"
 	"github.com/deedglass/deedglass/internal/store/migrate"
 	"github.com/deedglass/deedglass/internal/store/migrations"
@@ -74,7 +77,7 @@ func runServe(ctx context.Context, e *Env, args []string) error {
 	if err != nil {
 		return err
 	}
-	if err := cfg.Require(config.NeedDatabase); errors.As(err, &ps) {
+	if err := cfg.Require(config.NeedDatabase | config.NeedPepper); errors.As(err, &ps) {
 		return configProblems(e, ps, warnings)
 	}
 	prod := cfg.Env == config.Prod
@@ -165,13 +168,29 @@ func runServe(ctx context.Context, e *Env, args []string) error {
 	}
 	sk := &serveKey{issuer: strings.TrimSuffix(cfg.BaseURL.String(), "/"), id: signer.KeyID()}
 
-	// 5. Mount and listen.
+	// 5. People: the mailer, its queue and sign-in (S07).
 	led := newLedger(db, signer, cfg, log)
+	queue, err := newMailQueue(e, cfg, log)
+	if err != nil {
+		return err
+	}
+	queue.Start(context.WithoutCancel(ctx))
+	defer queue.Close()
+	people, err := newIdentity(cfg, db, led, queue, log)
+	if err != nil {
+		return err
+	}
+	if people.InsecureDevCookies() {
+		sc, cc := people.CookieNames()
+		log.Info("dev cookies", "session", sc, "csrf", cc, "why", "the base URL is http on localhost, so the cookies drop __Host- and Secure (dev only)")
+	}
+
+	// 6. Mount and listen.
 	api := httpx.New(httpx.Options{
 		Logger: log, Prod: prod, BaseURL: cfg.BaseURL, TrustedProxies: cfg.TrustedProxies,
-		Idempotency: idemStore{db}, Sessions: devSessions(prod),
+		Idempotency: idemStore{db}, Sessions: people,
 	})
-	api.Mount(serveRoutes(api, db, ms, sk, led)...)
+	api.Mount(serveRoutes(api, db, ms, sk, led, people)...)
 	ln, err := net.Listen("tcp", cfg.Listen)
 	if err != nil {
 		return &ExitError{Code: ExitFailure, ErrCode: "listen_failed", Err: fmt.Errorf("Can't listen on %s: %s", cfg.Listen, lastPart(err)),
@@ -191,14 +210,14 @@ func runServe(ctx context.Context, e *Env, args []string) error {
 	}
 	serveListening(ln.Addr())
 
-	// 6. The summary.
+	// 7. The summary.
 	fmt.Fprintln(e.Stdout, s.OKLine("Listening on http://"+ln.Addr().String()))
 	if metricsSrv != nil {
 		fmt.Fprintln(e.Stdout, s.OKLine("Metrics on http://"+cfg.MetricsListen+"/metrics"))
 	}
 	log.Info("started", "listen", ln.Addr().String(), "startup_ms", time.Since(started).Milliseconds(), "env", string(cfg.Env))
 
-	// 7. The prune job.
+	// 8. The prune jobs: idempotency keys, and old sign-in tokens and sessions (personal data).
 	pctx, stopPrune := context.WithCancel(context.WithoutCancel(ctx))
 	defer stopPrune()
 	go pruneLoop(pctx, db, log)
@@ -246,7 +265,7 @@ type serveKey struct {
 // serveRoutes is everything `serve` mounts. Later sessions add their routes here; the cmd tests
 // run httpx.CheckSpec on this list, so api/openapi.yaml must document each one. db and sk are nil
 // in route-table tests.
-func serveRoutes(api *httpx.Server, db *store.DB, ms []migrate.Migration, sk *serveKey, led *ledger.Ledger) []httpx.Route {
+func serveRoutes(api *httpx.Server, db *store.DB, ms []migrate.Migration, sk *serveKey, led *ledger.Ledger, people *identity.Service) []httpx.Route {
 	deps := httpx.SystemDeps{Spec: apiSpec()}
 	issuer := "http://127.0.0.1:8080"
 	if db != nil {
@@ -263,7 +282,55 @@ func serveRoutes(api *httpx.Server, db *store.DB, ms []migrate.Migration, sk *se
 	if led == nil {
 		led = ledger.New(db, nil, nil, ledger.WithIssuer(issuer))
 	}
-	return append(routes, ledger.Routes(led)...)
+	routes = append(routes, ledger.Routes(led)...)
+	if people == nil {
+		people = routeListingIdentity(issuer)
+	}
+	return append(routes, people.Routes()...)
+}
+
+// routeListingIdentity is an identity.Service with no database, for route-table tests.
+func routeListingIdentity(base string) *identity.Service {
+	u, _ := url.Parse(base)
+	s, err := identity.New(identity.Options{BaseURL: u, Pepper: make([]byte, 32)})
+	if err != nil {
+		panic(err)
+	}
+	return s
+}
+
+// newMailQueue picks the mailer (S07 §3.9): Resend when its key is set; else the log mailer in dev;
+// else, in prod, none (with one warning: self-hosters without email use deedglass org login-link).
+func newMailQueue(e *Env, cfg *config.Config, log *slog.Logger) (*mailer.Queue, error) {
+	var m mailer.Mailer
+	switch {
+	case cfg.ResendAPIKey.IsSet():
+		r, err := mailer.NewResend(mailer.ResendOptions{APIKey: cfg.ResendAPIKey.Reveal(), From: cfg.MailFrom, Logger: log})
+		if err != nil {
+			return nil, err
+		}
+		m = r
+	case cfg.Env != config.Prod:
+		l, err := mailer.NewLog(e.Stderr, false)
+		if err != nil {
+			return nil, err
+		}
+		m = l
+	default:
+		log.Warn("no mailer: DEEDGLASS_RESEND_API_KEY isn't set, so sign-in and invite emails aren't sent. Use deedglass org login-link.")
+		m = mailer.None{}
+	}
+	return mailer.NewQueue(m, mailer.QueueOptions{Logger: log}), nil
+}
+
+// newIdentity is sign-in, sessions and members for serve.
+func newIdentity(cfg *config.Config, db *store.DB, led *ledger.Ledger, q identity.MailQueue, log *slog.Logger) (*identity.Service, error) {
+	pepper, err := cfg.Pepper()
+	if err != nil {
+		return nil, err
+	}
+	return identity.New(identity.Options{DB: db, Ledger: led, Mail: q, Pepper: pepper, BaseURL: cfg.BaseURL,
+		Signup: cfg.Signup, Prod: cfg.Env == config.Prod, Logger: log})
 }
 
 // newLedger is the Ledger serve and the DB-direct CLI commands share. signer may be nil (reads only).
@@ -276,14 +343,6 @@ func newLedger(db *store.DB, signer deed.Signer, cfg *config.Config, log *slog.L
 		return ledger.New(db, nil, nil, opts...)
 	}
 	return ledger.New(db, deed.NewSealer(signer), signer, opts...)
-}
-
-// devSessions is the dev principal (S06 §3.9) outside prod; S07 replaces it with real sessions.
-func devSessions(prod bool) httpx.SessionAuthenticator {
-	if prod {
-		return nil
-	}
-	return httpx.DevPrincipal{}
 }
 
 func apiSpec() []byte { return api.Spec }
@@ -336,15 +395,25 @@ func pruneLoop(ctx context.Context, db *store.DB, log *slog.Logger) {
 		case <-ctx.Done():
 			return
 		case <-t.C:
-			n, err := db.PruneIdempotencyKeys(ctx)
-			if err != nil {
-				log.Warn("pruning idempotency keys failed", "error", err.Error())
-				continue
-			}
-			if n > 0 {
-				log.Info("pruned idempotency keys", "deleted", n)
-			}
+			pruneOnce(ctx, db, log)
 		}
+	}
+}
+
+// identityPruneBatch is how many sign-in tokens and sessions one prune run deletes at most.
+const identityPruneBatch = 5000
+
+// pruneOnce runs every prune job once.
+func pruneOnce(ctx context.Context, db *store.DB, log *slog.Logger) {
+	if n, err := db.PruneIdempotencyKeys(ctx); err != nil {
+		log.Warn("pruning idempotency keys failed", "error", err.Error())
+	} else if n > 0 {
+		log.Info("pruned idempotency keys", "deleted", n)
+	}
+	if n, err := db.PreAuth().PruneIdentity(ctx, identityPruneBatch); err != nil {
+		log.Warn("pruning sign-in tokens and sessions failed", "error", err.Error())
+	} else if n > 0 {
+		log.Info("pruned sign-in tokens and sessions", "deleted", n)
 	}
 }
 

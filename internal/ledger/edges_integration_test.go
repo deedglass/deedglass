@@ -33,13 +33,13 @@ func TestEdges(t *testing.T) {
 	if ro.SignerKeyID() != "" || en.led.SignerKeyID() != en.signer.KeyID() || en.led.Issuer() != "https://api.deedglass.example" {
 		t.Fatal("accessors")
 	}
-	srv := httpx.New(httpx.Options{Logger: slog.New(slog.DiscardHandler), Sessions: httpx.DevPrincipal{}})
+	srv := httpx.New(httpx.Options{Logger: slog.New(slog.DiscardHandler), Sessions: testSessions{}})
 	srv.Mount(ledger.Routes(ro)...)
 	ts := httptest.NewServer(srv)
 	defer ts.Close()
 	get := func(path string, hdr ...string) (int, string) {
 		req, _ := http.NewRequest("GET", ts.URL+path, nil)
-		req.Header.Set(httpx.DevOrgHeader, en.org.String())
+		req.Header.Set(testOrgHeader, en.org.String())
 		for i := 0; i+1 < len(hdr); i += 2 {
 			req.Header.Set(hdr[i], hdr[i+1])
 		}
@@ -78,12 +78,12 @@ func TestEdges(t *testing.T) {
 		}
 	}
 	empty, _ := en.newOrg(t, "hollow")
-	srv2 := httpx.New(httpx.Options{Logger: slog.New(slog.DiscardHandler), Sessions: httpx.DevPrincipal{}})
+	srv2 := httpx.New(httpx.Options{Logger: slog.New(slog.DiscardHandler), Sessions: testSessions{}})
 	srv2.Mount(ledger.Routes(en.led)...)
 	ts2 := httptest.NewServer(srv2)
 	defer ts2.Close()
 	req, _ := http.NewRequest("GET", ts2.URL+"/v1/deeds/export", nil)
-	req.Header.Set(httpx.DevOrgHeader, empty.String())
+	req.Header.Set(testOrgHeader, empty.String())
 	r, err := http.DefaultClient.Do(req)
 	if err != nil {
 		t.Fatal(err)

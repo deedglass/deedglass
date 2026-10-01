@@ -90,8 +90,7 @@ Rules:
 - An id from another org is 404 `not_found`, exactly like an id that doesn't exist.
 
 ```sh
-curl -s -H 'Deedglass-Dev-Org: org_01j9z8m2k4p6r8t0v2x4z6b8d0' \
-  'http://127.0.0.1:8080/v1/actions?verdict=MISMATCH&limit=2'
+curl -s -b cookies.txt 'http://127.0.0.1:8080/v1/actions?verdict=MISMATCH&limit=2'
 deedglass actions list --verdict MISMATCH --limit 2
 deedglass actions show act_01j9zt3a5c7e9g1j3m5p7r9t1v
 ```
@@ -100,9 +99,9 @@ deedglass actions show act_01j9zt3a5c7e9g1j3m5p7r9t1v
 200 `events`, the `deeds` about the action (its deed and any amendments) and `approval` (`null`
 until S22).
 
-Until sign-in (S07) and API keys (S08, S09) exist, the only principal is a dev principal: with
-`DEEDGLASS_ENV=dev`, from a loopback address, send `Deedglass-Dev-Org: org_…`. It is refused in
-prod and from any other address, and S07/S09 delete it.
+The routes take a Console session: sign in (docs/IDENTITY.md), and send the session cookie
+(`cookies.txt` above is a curl cookie jar from `POST /v1/auth/callback`). API keys arrive in S08.
+S06's loopback-only dev principal (`Deedglass-Dev-Org`) was removed in S07.
 
 ## 4. Deeds and the chain
 
@@ -236,7 +235,7 @@ incident:
   the chain unless you compare the head with one you kept elsewhere.
 - Retention is an operator command today (`deedglass ledger prune`); a daily sweep inside `serve`
   is planned.
-- Until S07/S09, the HTTP routes accept only the dev principal (loopback, `DEEDGLASS_ENV=dev`).
+- Until S08, the HTTP routes accept only a Console session; agents read them with API keys from S08.
 
 ## Performance
 

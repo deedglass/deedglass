@@ -13,6 +13,7 @@ DEEDGLASS_API_KEY_PEPPER          ••••••••                      
 DEEDGLASS_LOG_LEVEL               debug                                                        env
 DEEDGLASS_SIGNUP                  invite                                                       default
 DEEDGLASS_RESEND_API_KEY          —                                                            not set
+DEEDGLASS_MAIL_FROM               —                                                            not set
 DEEDGLASS_ANTHROPIC_API_KEY       —                                                            not set
 DEEDGLASS_TRUSTED_PROXIES         —                                                            not set
 DEEDGLASS_ALLOW_PRIVATE_NETWORKS  false                                                        default

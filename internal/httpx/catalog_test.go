@@ -59,8 +59,8 @@ func bannedWords(t *testing.T) []*regexp.Regexp {
 
 func TestCatalog(t *testing.T) {
 	cat := Catalog()
-	if len(cat) != 33 {
-		t.Fatalf("the catalog has %d codes, want 33 (24 contract + 9 S03)", len(cat))
+	if len(cat) != 39 {
+		t.Fatalf("the catalog has %d codes, want 39 (24 contract + 9 S03 + 6 S07)", len(cat))
 	}
 	added := map[string]int{}
 	codeRE := regexp.MustCompile(`^[a-z][a-z0-9_]*$`)
@@ -106,8 +106,8 @@ func TestCatalog(t *testing.T) {
 			t.Errorf("%s: E() disagrees with the catalog", c.Code)
 		}
 	}
-	if added["contract"] != 24 || added["S03"] != 9 {
-		t.Fatalf("added = %v, want 24 contract + 9 S03", added)
+	if added["contract"] != 24 || added["S03"] != 9 || added["S07"] != 6 {
+		t.Fatalf("added = %v, want 24 contract + 9 S03 + 6 S07", added)
 	}
 	// The contract's status decisions (§8).
 	for code, want := range map[Code]int{

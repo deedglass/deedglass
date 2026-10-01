@@ -8,6 +8,7 @@ import (
 	"io/fs"
 	"log/slog"
 	"net"
+	"net/mail"
 	"net/netip"
 	"net/url"
 	"os"
@@ -50,6 +51,7 @@ type Config struct {
 	LogLevel             slog.Level
 	Signup               string
 	ResendAPIKey         Secret
+	MailFrom             string // "Deedglass <signin@deedglass.com>" (S07)
 	AnthropicAPIKey      Secret
 	TrustedProxies       []netip.Prefix
 	AllowPrivateNetworks bool
@@ -192,6 +194,12 @@ func (l *loader) load() (*Config, []Warning, error) {
 		l.parse(c, k)
 	}
 	l.prodChecks(c)
+	if c.ResendAPIKey.IsSet() && c.MailFrom == "" {
+		if _, set := l.raw["DEEDGLASS_MAIL_FROM"]; !set {
+			l.problem("DEEDGLASS_MAIL_FROM", "isn't set, and DEEDGLASS_RESEND_API_KEY is.",
+				"Set it to the address emails come from, for example Deedglass <signin@example.com>.")
+		}
+	}
 	if len(l.problems) == 0 && l.env == Dev {
 		l.devSecrets(c)
 	}
@@ -396,6 +404,14 @@ func (l *loader) parse(c *Config, k Key) {
 			return
 		}
 		c.ResendAPIKey = NewSecret(v)
+	case "DEEDGLASS_MAIL_FROM":
+		a, err := mail.ParseAddress(v)
+		if err != nil || strings.ContainsAny(v, "\r\n") {
+			bad(fmt.Sprintf("isn't an email address (got %q).", v), "Use the form Deedglass <signin@example.com>.")
+			return
+		}
+		_ = a
+		c.MailFrom = v
 	case "DEEDGLASS_ANTHROPIC_API_KEY":
 		if !strings.HasPrefix(v, "sk-ant-") {
 			bad("doesn't look like an Anthropic API key (they start with sk-ant-).", "Copy it again from console.anthropic.com › API Keys.")
@@ -610,4 +626,19 @@ func checkHTTPURL(v string) (*url.URL, string) {
 
 func sortWarnings(ws []Warning) {
 	sort.SliceStable(ws, func(i, j int) bool { return ws[i].Key < ws[j].Key })
+}
+
+// Pepper returns DEEDGLASS_API_KEY_PEPPER decoded: the bytes mixed into API key hashes, sign-in
+// code hashes and sign-in rate-limit keys. It errors when the pepper isn't set.
+func (c *Config) Pepper() ([]byte, error) {
+	v := c.APIKeyPepper.Reveal()
+	if v == "" {
+		return nil, fmt.Errorf("DEEDGLASS_API_KEY_PEPPER isn't set")
+	}
+	for _, enc := range []*base64.Encoding{base64.StdEncoding, base64.RawStdEncoding, base64.URLEncoding, base64.RawURLEncoding} {
+		if b, err := enc.Strict().DecodeString(v); err == nil && len(b) >= 32 {
+			return b, nil
+		}
+	}
+	return nil, fmt.Errorf("DEEDGLASS_API_KEY_PEPPER must be base64 of at least 32 bytes")
 }

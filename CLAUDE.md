@@ -31,6 +31,8 @@ make matrix         # integration on 16, 17 and 18
 make fuzz           # 30 s each: intent and id parsers, deed envelope, verifier, key-set parsers, verify stream, bundle reader
 make bench-verify   # S05 budget: verify 100,000 deeds (.jsonl and bundle) and one deed cold; raw JSON in bench/results/
 make bench-ledger   # S06 budget at 100,000 actions: lists, get, chain check, export memory, seal overhead, EXPLAIN plans
+make bench-identity # S07 budget: session middleware, login handler, invite with its deed
+DEEDGLASS_IT_PKGS=./internal/identity/ make integration   # one suite (DEEDGLASS_IT_GOFLAGS="-v -run X" adds flags)
 scripts/dev-pg.sh up  # a Docker-free dev Postgres on 127.0.0.1:55432 (writes .tmp/dev-pg.env); down | reset
 scripts/demo/tamper-clip.sh  # S06's recording: 1,000 real deeds, export, verify ✓, flip one digit, verify ✕
 make gencopy        # regenerate testdata/deeds/messages.json and web/verify/src/*.gen.ts from Go
@@ -200,6 +202,16 @@ and "open source" until the repo is public. Style bans: "revolutionary", "world-
   HTTP routes against `api/openapi.yaml`. `TestLedgerBudget` (`make bench-ledger`) is the 100k
   budget. CLI goldens: `cmd/deedglass/testdata/ledger/` (`go test -tags integration ./cmd/deedglass
   -run TestLedgerCommandsLive -args -update`, against a throwaway cluster).
+- `internal/identity` (S07): every session route × every role (`TestRoleMatrix`); login enumeration
+  (identical answers, the handler runs with no database); tokens (10,000 distinct, malformed table,
+  `FuzzHashToken`), codes (chi-square over 1e6, 5 attempts), `FuzzEmailNormalize`; integration: the
+  demo flow, single use (50 racing runs), CSRF (5 refusals), sessions (idle, absolute, logout
+  everywhere across orgs, removal), the last owner (100 concurrent runs), RLS isolation, pre-auth
+  grants, prune, prod cookie attributes, no secrets in logs. `internal/store`: `TestPreAuthNamesStayInStore`
+  (the `preauth_*`/`maint_*` names and `set_config('deedglass.org_id'` only in `internal/store`).
+  `internal/httpx`: a Session or SessionOrKey route without `MinRole` can't mount; every 401 carries
+  `WWW-Authenticate`. `internal/mailer`: goldens (`-run TestGoldens -update`), Resend retry table,
+  log capture. The S06 dev principal is gone.
 - `cmd/deedglass verify` (S05): 80 golden cases in `testdata/verify/<case>/{args,stdout,stderr,exit}`
   (`go test ./cmd/deedglass -run TestVerifyGolden -update`), every vector's code and exit, `--keys`
   URL rules (same-host redirects, 1 MiB, timeout, loopback-only http), key-set merge conflicts, no

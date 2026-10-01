@@ -29,6 +29,22 @@ func (r Role) Rank() int {
 	return 0
 }
 
+// AtLeast reports whether r ranks at or above min. An unknown role is never enough.
+func (r Role) AtLeast(min Role) bool { return r.Rank() > 0 && r.Rank() >= min.Rank() }
+
+// Title is the role as prose shows it: "Viewer", "Admin", "Owner" (the API keeps lower case).
+func (r Role) Title() string {
+	switch r {
+	case RoleViewer:
+		return "Viewer"
+	case RoleAdmin:
+		return "Admin"
+	case RoleOwner:
+		return "Owner"
+	}
+	return string(r)
+}
+
 // Principal is who made a request. It is the ONE principal type: S07 aliases it
 // (type Principal = httpx.Principal) and adds helpers; S08 fills the key fields.
 type Principal struct {
@@ -42,6 +58,9 @@ type Principal struct {
 	Scopes     []string
 	Livemode   bool
 	APIVersion string // the org's pinned version (orgs.api_version)
+	OrgName    string // for messages ("Your role in Acme is Viewer, …"); people only (S07)
+	// MembershipID is the person's membership in OrgID (S07).
+	MembershipID ids.MembershipID
 }
 
 // Ref is the principal as idempotency scopes it: the agent for agent keys (so rolling a key keeps

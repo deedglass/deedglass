@@ -56,6 +56,17 @@ What Deedglass does not do, stated plainly. **Owner: S37**, which finalizes this
 - **Exports stop at 1,000,000 deeds and checks at 2,000,000 deeds or 30 s per request**; larger
   ranges are split (`next_from_seq`).
 
+## Identity limits (S07)
+
+- **Sign-in needs the email inbox, or an operator.** There are no passwords, no SSO or SCIM yet, and
+  no self-serve signup. Without a mail provider, operators issue links with `deedglass org login-link`.
+- **Rate limits live in each server process.** Behind N instances a client gets up to N times the IP
+  and email budgets; the per-user cap on new sign-in tokens is counted in the database.
+- **A newer sign-in email voids older links in its own org only**; a link into another org stays
+  usable until it expires (15 minutes).
+- **Unknown addresses and wrong codes take similar, not identical, time** (a dummy hash is computed
+  when there is nothing to compare; the number of database reads differs).
+
 ## What this page does not do
 
 It does not list bugs or missing features on the schedule. It lists limits of the design that stay true after they ship.

@@ -25,7 +25,7 @@ const (
 // Code is the error envelope's "code". Codes are never renamed (contract §8).
 type Code string
 
-// The contract's 24 codes, then S03's 9 additions.
+// The contract's 24 codes, then S03's 9 additions, then S07's 6.
 const (
 	CodeInvalidAPIKey        Code = "invalid_api_key"
 	CodeAPIKeyRevoked        Code = "api_key_revoked"
@@ -61,6 +61,13 @@ const (
 	CodeIdempotencyKeyInvalid  Code = "idempotency_key_invalid"
 	CodeIdempotencyKeyInUse    Code = "idempotency_key_in_use"
 	CodeServiceUnavailable     Code = "service_unavailable"
+
+	CodeSessionExpired   Code = "session_expired"
+	CodeCSRFFailed       Code = "csrf_failed"
+	CodeInsufficientRole Code = "insufficient_role"
+	CodeLoginLinkInvalid Code = "login_link_invalid"
+	CodeLoginCodeInvalid Code = "login_code_invalid"
+	CodeLastOwner        Code = "last_owner"
 )
 
 // DocURLPrefix is where every code has a page (docs/api/errors.md, published by S33).
@@ -125,6 +132,17 @@ var catalog = []CatalogEntry{
 	{CodeIdempotencyKeyInvalid, 400, TypeInvalidRequest, "Idempotency-Key must be 1–255 printable ASCII characters.", "", "S03"},
 	{CodeIdempotencyKeyInUse, 409, TypeInvalidRequest, "A request with this Idempotency-Key is still running. Retry in a moment.", "", "S03"},
 	{CodeServiceUnavailable, 503, TypeAPI, "Deedglass is starting or shutting down. Retry in a few seconds.", "", "S03"},
+
+	{CodeSessionExpired, 401, TypeAuthentication, "Your session ended. Sign in again.",
+		"Your session ended after 12 hours without activity. Sign in again at {base}/login.", "S07"},
+	{CodeCSRFFailed, 403, TypePermission, "This request is missing its security token. Reload the page and try again.", "", "S07"},
+	{CodeInsufficientRole, 403, TypePermission, "Your role in this org doesn't allow this. Ask an owner to change your role.",
+		"Your role in {org} is {Role}, and {what} needs {MinRole}. Ask an owner to change your role.", "S07"},
+	{CodeLoginLinkInvalid, 400, TypeInvalidRequest, "This sign-in link has expired or was already used. Get a new one at /login.",
+		"This sign-in link has expired or was already used. Get a new one at {base}/login.", "S07"},
+	{CodeLoginCodeInvalid, 400, TypeInvalidRequest, "That code doesn't match, or it has expired. Check the latest email, or get a new code.", "", "S07"},
+	{CodeLastOwner, 409, TypeInvalidRequest, "This org needs at least one owner. Make someone else an owner first.",
+		"{org} needs at least one owner. Make someone else an owner first.", "S07"},
 }
 
 var byCode = func() map[Code]CatalogEntry {
@@ -269,6 +287,19 @@ func ErrValidation(param, message string) *Error {
 // ErrInsufficientScope names the scope the endpoint needs.
 func ErrInsufficientScope(scope string) *Error {
 	return E(CodeInsufficientScope, Msgf("This key doesn't have the scope this endpoint needs. Create a key with the %s scope.", scope))
+}
+
+// ErrInsufficientRole is 403 insufficient_role: "Your role in Acme is Viewer, and inviting people
+// needs Admin. Ask an owner to change your role."
+func ErrInsufficientRole(org string, have, need Role, what string) *Error {
+	if org == "" {
+		org = "this org"
+	}
+	if what == "" {
+		what = "this request"
+	}
+	return E(CodeInsufficientRole, Msgf("Your role in %s is %s, and %s needs %s. Ask an owner to change your role.",
+		clip(org, 100), have.Title(), what, need.Title()))
 }
 
 func orList(xs []string) string {
