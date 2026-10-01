@@ -51,9 +51,9 @@ type Defaults struct {
 
 // ApprovalSpec says who approves and for how long.
 type ApprovalSpec struct {
-	Approvers []string // role:owner, role:admin, user:<email>; sorted, unique
-	Required  int
-	ExpiresIn int64 // seconds
+	Approvers []string `json:"approvers"` // role:owner, role:admin, user:<email>; sorted, unique
+	Required  int      `json:"required"`
+	ExpiresIn int64    `json:"expires_in"` // seconds
 }
 
 // Budget is one entry of `budgets`.

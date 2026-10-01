@@ -1,0 +1,11 @@
+{"v":1,
+ "org":{"id":"org_01jb8k0000000000000000000a","timezone":"Asia/Kolkata","stopped":false},
+ "agent":{"id":"agt_01jb8k0000000000000000000a","name":"support-bot","labels":{"env":"prod"},"status":"active",
+          "budgets":{"calls_per_minute":60,"calls_per_day":5000,"spend_per_day":{"amount":5000,"currency":"usd"}}},
+ "user":{"ref":"cust_8812","sub":"","iss":""},"session":{"ref":"sess_4410"},
+ "tool":{"name":"postgres.execute","connector":"postgres","connector_type":"postgres","side_effect":"write","default_schema":"public"},
+ "args":{"sql":"UPDATE public.orders SET status = 'shipped' WHERE id = 42"},
+ "request":{"mode":"gateway","bytes":71,"intent_signed":true,"digest":"sha256:5c1e"},
+ "time":"2026-10-04T04:30:00Z",
+ "usage":{"calls_minute":3,"calls_hour":40,"calls_today":212,"spend_today":0,"currency":"usd","budgets":{"agent-rate":3,"agent-daily":212}},
+ "anomaly":{"active":false}}

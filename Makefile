@@ -12,7 +12,7 @@ LDFLAGS  := -s -w -X $(BI).Version=$(VERSION) -X $(BI).Commit=$(COMMIT) -X $(BI)
 	integration matrix fuzz bench bench-store bench-deed cover clean \
 	dev dev-down dev-reset dev-logs run docker bench-http bench-verify \
 	web-verify-install web-verify-test web-verify-build web-verify-serve gencopy genmark bench-mark bench-ledger bench-stop bench-intents \
-	fuzz-policy fuzz-policy-short bench-policy
+	fuzz-policy fuzz-policy-short bench-policy bench-eval
 
 all: ci
 
@@ -84,16 +84,28 @@ bench-store: ## S02 store budget (OrgTx, insert, list) on a throwaway PG 18; raw
 	DEEDGLASS_IT_BENCH=1 DEEDGLASS_IT_BENCH_OUT="$(CURDIR)/bench/results/$$(date +%F)-$$(go env GOOS)-$$(go env GOARCH)-store.json" \
 		scripts/integration_local.sh
 
-cover: ## coverage of the packages with targets (ids 95%, config 90%, deed 90%, deed/archive 85%, policy 85%, cmd/deedglass 80%)
-	$(GO) test -count=1 -cover ./internal/ids ./internal/config ./internal/deed ./internal/deed/archive ./internal/policy ./cmd/deedglass
+cover: ## coverage of the packages with targets (ids 95%, config 90%, deed 90%, deed/archive 85%, policy 85%, sqlguard 90%, cmd/deedglass 80%)
+	$(GO) test -count=1 -cover ./internal/ids ./internal/config ./internal/deed ./internal/deed/archive ./internal/policy ./internal/sqlguard ./cmd/deedglass
 
-fuzz-policy: ## S10: the policy compiler and the safe YAML reader, 60 s each
+fuzz-policy: ## S10-S11: the policy compiler, the safe YAML reader, the evaluator and sqlguard, 60 s each
 	$(GO) test ./internal/policy -run '^$$' -fuzz '^FuzzCompile$$' -fuzztime 60s
 	$(GO) test ./internal/policy -run '^$$' -fuzz '^FuzzYAMLReader$$' -fuzztime 60s
+	$(GO) test ./internal/policy -run '^$$' -fuzz '^FuzzEvaluate$$' -fuzztime 60s
+	$(GO) test ./internal/sqlguard -run '^$$' -fuzz '^FuzzAnalyze$$' -fuzztime 60s
+	$(GO) test ./internal/sqlguard -run '^$$' -fuzz '^FuzzTokenize$$' -fuzztime 60s
 
-fuzz-policy-short: ## (ci) the same two policy fuzz targets, 10 s each
+fuzz-policy-short: ## (ci) the same policy and sqlguard fuzz targets, 10 s each (5 s for the tokenizer)
 	$(GO) test ./internal/policy -run '^$$' -fuzz '^FuzzCompile$$' -fuzztime 10s
 	$(GO) test ./internal/policy -run '^$$' -fuzz '^FuzzYAMLReader$$' -fuzztime 10s
+	$(GO) test ./internal/policy -run '^$$' -fuzz '^FuzzEvaluate$$' -fuzztime 10s
+	$(GO) test ./internal/sqlguard -run '^$$' -fuzz '^FuzzAnalyze$$' -fuzztime 10s
+	$(GO) test ./internal/sqlguard -run '^$$' -fuzz '^FuzzTokenize$$' -fuzztime 5s
+
+bench-eval: ## S11 budget: Evaluate p50/p99 at 50 and 500 rules (with and without explain) and sqlguard.Analyze at 200 B, 4 KiB, 256 KiB; JSON in bench/results/
+	@out="$(CURDIR)/bench/results/$$(date +%F)-$$(go env GOOS)-$$(go env GOARCH)-eval.json"; \
+	DEEDGLASS_BENCH_OUT="$$out" $(GO) test -tags bench -count=1 -run '^TestLatency$$' -v ./internal/policy | grep -E 'µs|ok|FAIL'; st=$$?; \
+	$(GO) test -count=1 -run '^$$' -bench '^Benchmark(Evaluate|Analyze)' -benchmem ./internal/policy ./internal/sqlguard | grep Benchmark; \
+	echo "raw: $$out"; exit $$st
 
 bench-policy: ## S10 budget: compile a 50-rule (< 20 ms) and a 500-rule (< 250 ms) policy; raw go test -json in bench/results/
 	@out="$(CURDIR)/bench/results/$$(date +%F)-$$(go env GOOS)-$$(go env GOARCH)-policy.json"; \

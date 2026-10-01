@@ -132,6 +132,33 @@ What policies can't do ([POLICY_LANGUAGE.md](POLICY_LANGUAGE.md) section 12):
   `approval` keeps that mapping in block style, and a comment between keys moves with the key that
   follows it.
 
+## Policy evaluation, sqlguard and budgets (S11)
+
+- **Cost-based budgets can overshoot.** A `max_spend` budget without a `measure`, and an agent's
+  `spend_per_day`, are checked before execution and counted after the tool reports its cost, so
+  actions already in flight can pass the limit ([BUDGETS.md](BUDGETS.md) section 7). Call budgets
+  and `measure` budgets are exact across instances.
+- **No FX.** A budget counts only costs in its own currency; there is no conversion. An agent's
+  `spend_per_day` compares usage in the snapshot's currency only.
+- **Static SQL analysis can't see what Postgres runs on your behalf.** Triggers, rules, function
+  bodies, `DO` bodies and settings changed earlier in a session are invisible to sqlguard. The L2
+  witness (S20 and S21) sees what Postgres actually changed ([SQLGUARD.md](SQLGUARD.md) section 12).
+- **sqlguard is conservative, so some valid SQL is refused as ambiguous**: a backslash in a plain
+  `'…'` string, non-ASCII identifiers outside quotes, `BEGIN ATOMIC` function bodies, and any
+  statement it doesn't recognise. A string with several statements counts as at least
+  `transaction`, never `read`.
+- **`where_trivial` is best effort.** It catches `WHERE true`, `WHERE 1 = 1` and a few similar
+  shapes, not every condition that is always true.
+- **`tables` is best effort.** `tables_complete` is false for functions in `FROM`, `LATERAL`,
+  three-part names and DDL on things that aren't tables; a policy that allow-lists tables should
+  require it.
+- **Very long lists in `args` hit the time limit before the cost limit.** cel-go v0.32.0's runtime
+  cost tracking grows quadratically with comprehension length, so for a list of tens of thousands
+  of items the 50 ms evaluation deadline stops the evaluation before the cost limit does. Either
+  way the action is denied (`policy_unavailable` or `policy_denied`), never allowed.
+- **A 50-rule policy where every condition runs allocates about 630 objects per evaluation**, over
+  the target of 200. The realistic postgres-safe policy allocates about 170.
+
 ## What this page does not do
 
 It does not list bugs or missing features on the schedule. It lists limits of the design that stay true after they ship.

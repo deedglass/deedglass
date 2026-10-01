@@ -1,0 +1,89 @@
+{
+  "cpus": 8,
+  "date": "2026-10-01T14:11:48Z",
+  "go": "go1.27.1",
+  "goarch": "arm64",
+  "goos": "darwin",
+  "host": "Arjuns-MacBook.local",
+  "results": [
+    {
+      "name": "evaluate_postgres_safe_mix",
+      "n": 100000,
+      "p50_us": 10.833,
+      "p90_us": 16.042,
+      "p99_us": 43.5,
+      "max_us": 318.125
+    },
+    {
+      "name": "evaluate_postgres_safe_explain",
+      "n": 100000,
+      "p50_us": 11.5,
+      "p90_us": 17.208,
+      "p99_us": 51.625,
+      "max_us": 261.625
+    },
+    {
+      "name": "evaluate_50_rules",
+      "n": 100000,
+      "p50_us": 45.709,
+      "p90_us": 54.5,
+      "p99_us": 138.041,
+      "max_us": 566.542,
+      "budget": "p50 \u003c 60 µs, p99 \u003c 250 µs (contract \u003c 1 ms)"
+    },
+    {
+      "name": "evaluate_50_rules_explain",
+      "n": 100000,
+      "p50_us": 47.958,
+      "p90_us": 81.166,
+      "p99_us": 157.583,
+      "max_us": 576.584,
+      "budget": "≤ 3× without explain"
+    },
+    {
+      "name": "evaluate_500_rules",
+      "n": 20000,
+      "p50_us": 414.292,
+      "p90_us": 550.833,
+      "p99_us": 917.375,
+      "max_us": 1978.042,
+      "budget": "p99 \u003c 1 ms"
+    },
+    {
+      "name": "evaluate_500_rules_explain",
+      "n": 20000,
+      "p50_us": 429,
+      "p90_us": 702.791,
+      "p99_us": 1007.459,
+      "max_us": 8927.667
+    },
+    {
+      "name": "analyze_200b",
+      "n": 100000,
+      "p50_us": 1.916,
+      "p90_us": 4.833,
+      "p99_us": 18.417,
+      "max_us": 110.833,
+      "budget": "\u003c 5 µs"
+    },
+    {
+      "name": "analyze_4kib",
+      "n": 20000,
+      "p50_us": 28.333,
+      "p90_us": 112.833,
+      "p99_us": 154.083,
+      "max_us": 291.417,
+      "budget": "\u003c 40 µs"
+    },
+    {
+      "name": "analyze_256kib",
+      "n": 300,
+      "p50_us": 2079.833,
+      "p90_us": 2460.542,
+      "p99_us": 3053.041,
+      "max_us": 3165.708,
+      "budget": "\u003c 5 ms"
+    }
+  ],
+  "session": "S11"
+}

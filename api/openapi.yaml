@@ -2717,6 +2717,7 @@ components:
                 - login_link_invalid
                 - login_code_invalid
                 - last_owner
+                - policy_unavailable
             message:
               type: string
               description: One or more calm sentences with the next step.

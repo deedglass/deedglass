@@ -16,7 +16,7 @@ Every error Deedglass returns has the same body. Only the status line and a few 
 ```
 
 - `type` is one of the six types below. Branch on it for broad handling.
-- `code` is one of the 39 codes on this page. Branch on it for exact handling. Codes are never
+- `code` is one of the 40 codes on this page. Branch on it for exact handling. Codes are never
   renamed; new codes are added.
 - `message` is one or more sentences for a person, with a next step. Don't parse it: it can get
   more exact over time.
@@ -906,6 +906,27 @@ only owner, or the only owner leaving.
   "type": "invalid_request_error",
   "code": "last_owner",
   "message": "Acme needs at least one owner. Make someone else an owner first.",
+  "param": null
+}
+```
+
+## policy_unavailable
+
+**403 · policy_error**
+
+**When it happens.** Deedglass could not evaluate the policy for this action: no policy was loaded,
+the evaluator failed, or evaluation ran past its time limit (50 ms by default). The action did not
+run. It is always a deny, so a broken or slow policy never lets an action through (S11).
+
+**What to do.** An admin checks the active policy in Console › Policies. The action's trace names
+the rule that was being evaluated when the time ran out. Send the action again once the policy is
+fixed.
+
+```json
+{
+  "type": "policy_error",
+  "code": "policy_unavailable",
+  "message": "Deedglass could not evaluate the policy for this action, so it did not run. An admin can check Console › Policies.",
   "param": null
 }
 ```

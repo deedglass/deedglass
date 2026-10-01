@@ -1,0 +1,6 @@
+exit 0
+--- stdout
+◐ require_approval · writes-need-approval · N µs
+  Waiting for approval under policy "writes-need-approval": Writes to this database wait for a human. An admin can approve in Console › Approvals.
+  approvers role:admin · 1 needed · expires in 30m · notify email, slack · verify L2
+--- stderr

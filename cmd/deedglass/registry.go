@@ -137,7 +137,9 @@ var commands = []*Command{
 	{Path: p("policy", "test"), Group: Policies, Summary: "Run a policy's test cases", Owner: "S12"},
 	{Path: p("policy", "push"), Group: Policies, Summary: "Upload a new policy version", Owner: "S12"},
 	{Path: p("policy", "activate"), Group: Policies, Summary: "Activate a policy version", Owner: "S12"},
-	{Path: p("policy", "evaluate"), Group: Policies, Summary: "Evaluate one action against a policy", Owner: "S11"},
+	{Path: p("policy", "evaluate"), Group: Policies, Summary: "Evaluate one action against a policy",
+		Usage: "--policy <file> --tool <name> [--sql …] [--args <json>] [--input <file>] [--agent …] [--label k=v] [--user …] [--time …] [--tz …] [--usage k=v] [--explain] [--json]",
+		Run:   runPolicyEvaluate, RawArgs: true},
 	{Path: p("policy", "replay"), Group: Policies, Summary: "Replay past actions against a version", Owner: "S27"},
 	{Path: p("policy", "diff"), Group: Policies, Summary: "Compare two policy versions", Owner: "S12"},
 

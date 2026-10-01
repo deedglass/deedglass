@@ -15,6 +15,7 @@ import (
 	"os"
 	"os/signal"
 	"strings"
+	_ "time/tzdata" // distroless images have no zoneinfo; policies read the org's time zone (S11)
 
 	"github.com/deedglass/deedglass/cmd/deedglass/internal/ui"
 	"github.com/deedglass/deedglass/internal/cli/mark"

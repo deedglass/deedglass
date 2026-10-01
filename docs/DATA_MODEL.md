@@ -43,7 +43,7 @@ erDiagram
 | `policies` | Named policies. | S12 |
 | `policy_versions` | One immutable version of a policy: its YAML and compiled hash. **Append-only.** | S12 |
 | `policy_activations` | Which version is active in enforce or shadow mode. At most one of each per org. | S12 |
-| `usage_counters` | Calls and spend per agent or org, per minute, hour and day. | S11 |
+| `usage_counters` | Calls and spend per agent or org, per minute, hour and day: `(org_id, scope, counter, window_kind, window_start, value)`. `scope` is an agent id or `org`; `counter` is `calls`, `spend:<currency>` or `budget:<budget id>`; `window_kind` is `minute`, `hour` or `day` (UTC floors; day is the org's local midnight, stored as UTC). S11 uses migration 0003's table unchanged (no new migration; `TestUsageCountersShape` pins it). `Usage.Prune` deletes old windows through `SystemTx(maintenance)` ([BUDGETS.md](BUDGETS.md)). | S11 |
 | `connectors` | Configured tools. | S16 |
 | `credentials` | A connector's credentials, envelope-encrypted. Field names and a short hint are the only clear text. | S16 |
 | `actions` | One tool call through the Gate, with its state, decision, result digest and witness verdict. | S13 |
@@ -54,7 +54,7 @@ erDiagram
 | `seal_keys` | The instance's public seal keys. | S04 |
 | `deeds` | Sealed deeds, one hash-linked chain per org. **Append-only.** | S04 |
 | `admin_events` | Administrative changes in an org. **Append-only.** | S07+ |
-| `witness_jobs` | Work queued for the Witness and the approval workers. | S13, S19–S22 |
+| `witness_jobs` | Work queued for the Witness and the approval workers. | S13, S19 to S22 |
 | `decoded_txs` | Transactions read from a watched database's change stream. | S20 |
 | `decoder_slots` | One logical replication slot per Postgres connector. | S20 |
 | `suggestions` | Insights suggestions a person accepts or rejects. | S28 |
@@ -102,7 +102,7 @@ Lookups that happen before the org is known (a session cookie, a login token, an
 
 | Prefix | Use | Sessions |
 |---|---|---|
-| `preauth_*` | Find the one row a credential points to, before the org is known | S07–S09, S22 |
+| `preauth_*` | Find the one row a credential points to, before the org is known | S07 to S09, S22 |
 | `claim_*` | Claim due jobs across orgs, with `FOR UPDATE SKIP LOCKED` | S13, S20, S22 |
 | `maint_*` | Pruning and other maintenance | S06, S09 |
 
@@ -142,7 +142,7 @@ Each one is owned by `deedglass_migrator`, pins `search_path = pg_catalog, pg_te
 | `DG005` | The org's last active owner can't be removed. |
 | `DG006` | Reserved for S22's approval-vote guard. |
 
-`DG101`–`DG103` are reserved for the customer-side guards (S17), so one code never means two things.
+`DG101` to `DG103` are reserved for the customer-side guards (S17), so one code never means two things.
 
 ### Not enforced by the database
 

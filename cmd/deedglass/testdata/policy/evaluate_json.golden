@@ -1,0 +1,134 @@
+exit 0
+--- stdout
+{
+  "object": "policy_decision",
+  "decision": "deny",
+  "code": "policy_denied",
+  "source": "rule",
+  "rule_id": "block-unbounded-writes",
+  "rule_line": 55,
+  "reason": "UPDATE and DELETE need a WHERE clause that names the rows to change.",
+  "message": "Blocked by policy \"block-unbounded-writes\": UPDATE and DELETE need a WHERE clause that names the rows to change.",
+  "facts": {
+    "sql": {
+      "present": true,
+      "kind": "delete",
+      "category": "write",
+      "kinds": [
+        "delete"
+      ],
+      "statements": 1,
+      "multi": false,
+      "writes": true,
+      "write_kinds": [
+        "delete"
+      ],
+      "has_where": false,
+      "unbounded_write": true,
+      "where_trivial": false,
+      "has_returning": false,
+      "cte_write": false,
+      "select_into": false,
+      "copy_program": false,
+      "explain_analyze": false,
+      "locks_rows": false,
+      "tables": [
+        "public.orders"
+      ],
+      "tables_complete": true,
+      "functions": [],
+      "dangerous_functions": [],
+      "write_functions": [],
+      "unknown_functions": [],
+      "ambiguous": false,
+      "reasons": [],
+      "bytes": 18
+    },
+    "time": {
+      "now": "2026-10-04T10:00:46+05:30",
+      "hour": 10,
+      "minute": 0,
+      "weekday": "sun",
+      "date": "2026-10-04"
+    }
+  },
+  "trace": [
+    {
+      "step": "stop",
+      "result": "pass",
+      "detail": "agent active · org running"
+    },
+    {
+      "step": "budget",
+      "id": "agent-rate",
+      "result": "pass",
+      "detail": "0 of 60 calls this minute"
+    },
+    {
+      "step": "budget",
+      "id": "agent-daily",
+      "result": "pass",
+      "detail": "0 of 5,000 calls today"
+    },
+    {
+      "step": "rule",
+      "id": "block-unclassified-sql",
+      "line": 27,
+      "result": "no_match",
+      "detail": "when → false",
+      "cost": 4
+    },
+    {
+      "step": "rule",
+      "id": "one-statement-only",
+      "line": 34,
+      "result": "no_match",
+      "detail": "when → false",
+      "cost": 2
+    },
+    {
+      "step": "rule",
+      "id": "block-destructive-sql",
+      "line": 39,
+      "result": "no_match",
+      "detail": "when → false",
+      "cost": 2
+    },
+    {
+      "step": "rule",
+      "id": "block-schema-and-privilege-changes",
+      "line": 45,
+      "result": "no_match",
+      "detail": "when → false",
+      "cost": 2
+    },
+    {
+      "step": "rule",
+      "id": "block-server-side-code",
+      "line": 50,
+      "result": "no_match",
+      "detail": "when → false",
+      "cost": 7
+    },
+    {
+      "step": "rule",
+      "id": "block-unbounded-writes",
+      "line": 55,
+      "result": "match",
+      "detail": "when → true",
+      "cost": 2
+    },
+    {
+      "step": "rule",
+      "result": "not_evaluated",
+      "detail": "6 more rules not evaluated"
+    }
+  ],
+  "sqlguard_version": "1",
+  "policy": {
+    "name": "postgres-safe",
+    "version_hash": "sha256:2c4c3f1058e5b52c0c96469dcde7354e1047cd4f238e785c074e5566efc504fd"
+  },
+  "evaluated_in_us": N
+}
+--- stderr

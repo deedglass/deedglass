@@ -1,0 +1,22 @@
+exit 0
+--- stdout
+✕ deny · default · N µs
+  Blocked by policy "postgres-safe": No rule allows this action. Add a rule in Console › Policies to allow it.
+
+  stop    ✓ agent active · org running
+  budget  agent-rate ✓ 0 of 60 this minute · agent-daily ✓ 0 of 5,000 today
+  rules   block-unclassified-sql               no match   match doesn't cover this action
+          one-statement-only                   no match   match doesn't cover this action
+          block-destructive-sql                no match   match doesn't cover this action
+          block-schema-and-privilege-changes   no match   match doesn't cover this action
+          block-server-side-code               no match   match doesn't cover this action
+          block-unbounded-writes               no match   match doesn't cover this action
+          allow-reads                          no match   match doesn't cover this action
+          allow-describe                       no match   match doesn't cover this action
+          allow-listed-writes                  no match   match doesn't cover this action
+          writes-need-approval                 no match   match doesn't cover this action
+          functions-need-approval              no match   match doesn't cover this action
+          undo-needs-approval                  no match   match doesn't cover this action
+          default                              no rule matched; defaults.deny
+  policy  postgres-safe · sha256:2c4c…04fd
+--- stderr

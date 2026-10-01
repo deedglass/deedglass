@@ -38,7 +38,7 @@ Rules are read top to bottom, and **the first rule that matches decides**; when 
 3. The file format
 4. Fields
 5. Globs, money and durations
-6. Evaluation order and the two invariants
+6. Evaluation order and the two invariants (6.1 The decision, 6.2 The input, 6.3 The trace, 6.4 Messages, 6.5 `AlwaysDenies`)
 7. The CEL environment
 8. Limits
 9. Normalization and `version_hash`
@@ -215,32 +215,231 @@ Every string (names, ids, descriptions, reasons, globs) is valid UTF-8 with no c
 
 ## 6. Evaluation order and the two invariants
 
-Evaluation is one pass with no I/O. S11 implements it exactly as written here.
+Evaluation is one pass with no I/O, no clock and no randomness: `policy.Evaluate(ctx, compiled, input, options)` in `internal/policy/evaluate.go`. It returns a decision and never a Go error. Every failure becomes a deny, and no failure ever becomes an allow.
 
 ```mermaid
 flowchart TD
-  A[Action] --> S{Org stopped, agent stopped or suspended?}
+  A[Action] --> P{Input readable?}
+  P -- no --> D0[deny: policy_denied, rule invalid-input]
+  P -- yes --> S{Org stopped, agent stopped or suspended?}
   S -- yes --> D1[deny: org_stopped / agent_stopped / agent_suspended]
-  S -- no --> B{Any budget would be passed?}
-  B -- yes --> D2[deny: budget_exceeded]
+  S -- no --> AB{Any agent budget would be passed?}
+  AB -- yes --> D2[deny: budget_exceeded, id agent.*]
+  AB -- no --> B{Any policy budget would be passed?}
+  B -- yes --> D3[deny: budget_exceeded]
   B -- no --> R{First rule whose match matches and whose when is true}
   R -- found --> O[That rule's decision]
   R -- none --> DF[defaults.decision]
 ```
 
-1. **Stop.** Org stopped → deny `org_stopped`. Agent stopped → deny `agent_stopped`. Agent suspended → deny `agent_suspended`. The identity layer already refuses these when the key is checked; this step is defence in depth, and it keeps replay honest.
-2. **Budgets.** First the agent's own budgets (set on the agent in S08: calls per minute, calls per day, spend per day), then the policy's `budgets` in file order. The first budget whose `match` applies and whose limit would be passed → deny `budget_exceeded`. Every budget applies, so the stricter one always wins.
-3. **Rules**, in file order. The first rule whose `match` matches and whose `when` is true decides.
-4. **The default.**
+The algorithm, as implemented:
+
+```
+if the policy is nil                     → deny policy_unavailable
+a panic anywhere in evaluation           → deny policy_unavailable ("evaluator error")
+Prepare(input)                           → on error: deny policy_denied, source builtin, rule "invalid-input"
+1  stop     org stopped                  → deny org_stopped
+            agent stopped / suspended    → deny agent_stopped / agent_suspended
+1b agent budgets (S08, on the agent row), in this order:
+            calls_per_minute, calls_per_day: used + 1 > limit → deny budget_exceeded, id agent.calls_per_minute / agent.calls_per_day
+            spend_per_day (cost based):  used >= limit        → deny budget_exceeded, id agent.spend_per_day
+            otherwise the standard calls reservations (minute, hour, day) carry the agent's limits
+2  policy budgets, in file order, each whose match applies:
+            amount := 1 (max_calls) | measure (max_spend with measure) | 0 (max_spend, cost based)
+            measure error, or a result that isn't a non-negative int
+                                         → deny policy_denied, rule "budget:<id>"
+            cost based:  used >= limit       → deny budget_exceeded
+            otherwise:   used + amount > limit → deny budget_exceeded
+            else collect a reservation (or a cost target, for a cost-based budget)
+3  rules, in file order:
+            match doesn't cover the action → no_match; next rule
+            no when                        → the rule decides
+            when → false                   → no_match; next rule
+            when → true                    → the rule decides
+            when over the cost limit       → deny policy_denied, whatever the rule's decision
+            other when error, allow rule   → error; next rule (invariant 1)
+            other when error, deny or require_approval rule → the rule decides, reason + suffix
+            when returns something that isn't a bool → treated as an error, as above
+4  default                               → defaults.decision
+decide: allow and require_approval keep the reservations (not in shadow mode); deny drops them
+the 50 ms deadline, or a CEL internal error, anywhere → deny policy_unavailable
+```
+
+1. **Prepare.** The input is decoded and checked once: the version, the decision time, the agent status, the org's time zone and `args` (a JSON object of at most 256 KiB, nested at most 32 deep). The SQL classifier runs here ([SQLGUARD.md](SQLGUARD.md)). An input that can't be read is denied with `policy_denied`, source `builtin`, rule `invalid-input`.
+2. **Stop.** Org stopped → `org_stopped`. Agent stopped → `agent_stopped`. Agent suspended → `agent_suspended`. The identity layer already refuses these when the key is checked; this step is defence in depth, and it keeps replay honest.
+3. **Budgets.** First the agent's own budgets (S08), then the policy's `budgets` in file order. Every budget applies, the first one that would be passed decides, and so the stricter limit always wins. A `measure` that fails is a deny with the rule id `budget:<id>`: an action is never let through uncounted. [BUDGETS.md](BUDGETS.md) has the counters, windows and accuracy.
+4. **Rules**, in file order. The first rule whose `match` matches and whose `when` is true decides.
+5. **The default.**
+
+**`policy_unavailable`** is always a deny, with the message `Deedglass could not evaluate the policy for this action, so it did not run. An admin can check Console › Policies.` It covers a missing policy, a panic, an internal CEL error (a panic inside a function) and the evaluation deadline. The deadline is a backstop of 50 ms per action (`EvalOptions.Deadline`); the CEL cost limit is the real bound. If the deadline passes after a rule has already decided deny, the deny stands; otherwise the decision becomes `policy_unavailable`, because a later deny rule might have matched.
 
 **Invariant 1. An error never widens access.**
-- If a `when` fails at run time (a missing key, a wrong type, the cost limit), an `allow` rule counts as *not matching*.
+- If a `when` fails at run time (a missing key, a wrong type, a result that isn't a bool), an `allow` rule counts as *not matching*.
 - A `deny` or `require_approval` rule counts as *matching*, and its reason gets the suffix ` (Deedglass could not evaluate this rule: <short error>.)`.
+- **Going over the runtime cost limit (100,000 units) is a deny for any rule**, `allow`, `deny` or `require_approval`, and for a budget `measure`. The decision is `policy_denied` with this reason: `Deedglass stopped evaluating this rule at its cost limit of 100,000, so the action did not run. Send smaller arguments, or ask an admin to simplify the rule in Console › Policies.` Skipping an allow rule would let the next rule decide, and an agent could then choose arguments large enough to skip any rule it likes; a clear deny closes that. (This was decided after S10, in DL-024; it is stricter than the first bullet.)
 - Guard optional arguments with `has()`: `has(args.amount) && args.amount > 5000`.
 
-**Invariant 2. Same input, same decision.** There is no clock, randomness or network inside evaluation. The time and the usage counters are inputs, recorded with the action. That is what makes replay (S27) exact.
+Every runtime error is also listed in the decision's `errors`, as `"<rule id>: <short error>"` (`"budget:<id>: …"` for a measure).
+
+**Invariant 2. Same input, same decision.** There is no clock, randomness or network inside evaluation. The time and the usage counters are inputs, recorded with the action. Running the same input 1,000 times in parallel gives identical decisions (a test does it). That is what makes shadow mode and replay (S27) exact. The one value that varies is the elapsed time, which is not part of the decision's JSON.
+
+**Shadow mode.** `EvaluatePair` evaluates the enforced policy and, when there is one, the shadow policy over the same prepared input. The shadow decision is computed independently and never carries reservations or cost budgets, so it never counts against a budget.
 
 **Why first match wins, and not deny-overrides.** A policy reads top to bottom like a firewall: to know what happens to an action, read until the first rule that matches. The alternative, used by Cedar and by many OPA policies, evaluates every rule and lets any deny win; it is order-independent, but a reader has to hold the whole file in mind to predict a decision. Deedglass chooses readability, and the compiler warns when an earlier rule makes a later one unreachable (`rule_unreachable`).
+
+### 6.1 The decision
+
+`Evaluate` returns a `Decision` (`internal/policy/decision.go`). In JSON:
+
+| Field | Meaning |
+|---|---|
+| `decision` | `allow`, `deny` or `require_approval` |
+| `code` | empty for allow; otherwise `policy_denied`, `approval_required`, `budget_exceeded`, `agent_stopped`, `agent_suspended`, `org_stopped` or `policy_unavailable` |
+| `source` | what decided: `stop`, `budget`, `rule`, `default` or `builtin` (invalid input, unavailable) |
+| `rule_id` | the rule id, a budget id (`agent-rate`, `agent.calls_per_minute`), `budget:<id>` for a failed measure, `invalid-input` or `unavailable`; empty for the default and for Stop |
+| `rule_line` | the rule's line in the policy file |
+| `reason` | the policy's own sentence, with the error suffix when a rule failed |
+| `message` | what the agent sees (section 6.4). Empty for allow |
+| `approval` | for `require_approval`: `approvers`, `required`, `expires_in` (seconds), the rule's approval merged over `defaults.approval` |
+| `verify` | for `allow` and `require_approval`: `L0`, `L1` or `L2` (the rule's, else `defaults.verify`, else `L0`) |
+| `notify` | the rule's `notify`, for deny and require_approval |
+| `budget` | for `budget_exceeded`: `id`, `per`, `window`, `limit`, `used`, `unit` (`calls` or a currency), `resets_at`, `retry_after_s` |
+| `reservations` | for allow and require_approval in enforce mode: the counter increments the Gate makes (`budget`, `scope`, `counter`, `window`, `window_start`, `amount`, `limit`, `resets_at`) |
+| `cost_budgets` | the counters the reported cost is added to after execution (`budget`, `scope`, `window`, `window_start`, `currency`) |
+| `facts` | the derived facts: `sql` (section 7.1) and `time` (`now`, `hour`, `minute`, `weekday`, `date`) |
+| `errors` | runtime errors, `"<rule id>: <short error>"` |
+| `trace` | the explain trace (section 6.3), only when asked for |
+| `sqlguard_version` | the classifier version, when SQL was classified |
+
+The caller adds which policy decided (S12's registry and S13's Gate add its id, name, version and mode). `deedglass policy evaluate --json` adds `object`, `policy` and `evaluated_in_us`. From `cmd/deedglass/testdata/policy/evaluate_json.golden` (`DELETE FROM orders` against the postgres-safe policy; the trace is trimmed to four of its ten steps):
+
+```json
+{
+  "object": "policy_decision",
+  "decision": "deny",
+  "code": "policy_denied",
+  "source": "rule",
+  "rule_id": "block-unbounded-writes",
+  "rule_line": 55,
+  "reason": "UPDATE and DELETE need a WHERE clause that names the rows to change.",
+  "message": "Blocked by policy \"block-unbounded-writes\": UPDATE and DELETE need a WHERE clause that names the rows to change.",
+  "facts": {
+    "sql": {
+      "present": true, "kind": "delete", "category": "write", "kinds": ["delete"],
+      "statements": 1, "multi": false, "writes": true, "write_kinds": ["delete"],
+      "has_where": false, "unbounded_write": true, "where_trivial": false, "has_returning": false,
+      "cte_write": false, "select_into": false, "copy_program": false, "explain_analyze": false,
+      "locks_rows": false, "tables": ["public.orders"], "tables_complete": true,
+      "functions": [], "dangerous_functions": [], "write_functions": [], "unknown_functions": [],
+      "ambiguous": false, "reasons": [], "bytes": 18
+    },
+    "time": { "now": "2026-10-04T10:00:46+05:30", "hour": 10, "minute": 0, "weekday": "sun", "date": "2026-10-04" }
+  },
+  "trace": [
+    { "step": "stop", "result": "pass", "detail": "agent active · org running" },
+    { "step": "budget", "id": "agent-rate", "result": "pass", "detail": "0 of 60 calls this minute" },
+    { "step": "rule", "id": "block-unbounded-writes", "line": 55, "result": "match", "detail": "when → true", "cost": 2 },
+    { "step": "rule", "result": "not_evaluated", "detail": "6 more rules not evaluated" }
+  ],
+  "sqlguard_version": "1",
+  "policy": {
+    "name": "postgres-safe",
+    "version_hash": "sha256:2c4c3f1058e5b52c0c96469dcde7354e1047cd4f238e785c074e5566efc504fd"
+  },
+  "evaluated_in_us": 41
+}
+```
+
+### 6.2 The input
+
+The Gate builds one `Input` per action (S13) and stores it canonically with the action, so a decision can be replayed (S27). `deedglass policy evaluate --input` reads the same shape (`cmd/deedglass/testdata/policy/evaluate_input.json`):
+
+```json
+{"v":1,
+ "org":{"id":"org_01jb8k0000000000000000000a","timezone":"Asia/Kolkata","stopped":false},
+ "agent":{"id":"agt_01jb8k0000000000000000000a","name":"support-bot","labels":{"env":"prod"},"status":"active",
+          "budgets":{"calls_per_minute":60,"calls_per_day":5000,"spend_per_day":{"amount":5000,"currency":"usd"}}},
+ "user":{"ref":"cust_8812","sub":"","iss":""},"session":{"ref":"sess_4410"},
+ "tool":{"name":"postgres.execute","connector":"postgres","connector_type":"postgres","side_effect":"write","default_schema":"public"},
+ "args":{"sql":"UPDATE public.orders SET status = 'shipped' WHERE id = 42"},
+ "request":{"mode":"gateway","bytes":71,"intent_signed":true,"digest":"sha256:5c1e"},
+ "time":"2026-10-04T04:30:00Z",
+ "usage":{"calls_minute":3,"calls_hour":40,"calls_today":212,"spend_today":0,"currency":"usd","budgets":{"agent-rate":3,"agent-daily":212}},
+ "anomaly":{"active":false}}
+```
+
+| Key | Holds |
+|---|---|
+| `v` | the input format, `1` |
+| `org` | `id`, `timezone` (IANA; empty means UTC), `stopped` |
+| `agent` | `id`, `name`, `labels`, `status` (`active`, `suspended`, `stopped`), and `budgets` (S08's limits; CEL never sees them) |
+| `user`, `session` | the on-behalf-of facts (S09) |
+| `tool` | `name`, `connector`, `connector_type`, `side_effect`, and `default_schema` for the SQL classifier |
+| `args` | the tool arguments, a JSON object of at most 256 KiB, nested at most 32 deep. Integers become `int`, other numbers `double` |
+| `request` | `mode`, `bytes`, `intent_signed`, `digest` |
+| `time` | the decision instant, set by the caller, in UTC |
+| `usage` | the counters for the current windows ([BUDGETS.md](BUDGETS.md)) |
+| `anomaly` | `active` (S27 fills it) |
+
+**Only raw facts are stored.** The derived facts (every `sql.*` field and the time parts `hour`, `minute`, `weekday`, `date`) are recomputed at each evaluation, so a replay under a newer classifier reflects it, and the decision records `sqlguard_version`. `Input.Digest()` is `sha256:` plus the hex SHA-256 of the input's canonical JSON.
+
+### 6.3 The trace
+
+With `explain` (`deedglass policy evaluate --explain`, the Console), the decision carries a trace: one step per thing evaluation looked at. Without it, evaluation builds no trace and allocates nothing for it.
+
+| Field | Meaning |
+|---|---|
+| `step` | `stop`, `budget`, `rule` or `default` |
+| `id` | the rule or budget id |
+| `line` | the rule's line in the policy file |
+| `result` | below |
+| `detail` | one short line: `when → true`, `when → false`, `match doesn't cover this action`, `when error: no such key: amount`, `0 of 60 calls this minute`, `currency_mismatch: usage is in eur`, `no rule matched; defaults.deny` |
+| `cost` | the actual CEL cost of the condition or measure |
+
+| Result | Meaning |
+|---|---|
+| `pass` | Stop checked and clear; a budget checked and within its limit |
+| `match` | this rule (or the default) decided |
+| `no_match` | the `match` doesn't cover the action, or `when` was false |
+| `error` | `when` or `measure` failed at run time; the detail says whether the rule still decided |
+| `exceeded` | Stop applies, or a budget would be passed: this step decided |
+| `reserved` | declared for budgets; `Evaluate` doesn't emit it in S11 (a budget that fits is `pass`, and its increment is in `reservations`) |
+| `not_evaluated` | the rules after the deciding one, summarised in one step: `… 6 more rules not evaluated` |
+
+Rules after the deciding one are not evaluated, so they are not listed one by one.
+
+### 6.4 Messages
+
+`message` is what the agent sees. Each message is exact and ends with a next step. The templates are constants in `internal/policy/decision.go`, with tests.
+
+| Case | Message |
+|---|---|
+| Deny by rule | `Blocked by policy "block-destructive-sql": DROP and TRUNCATE are never allowed for agents.` |
+| Deny by default | `Blocked by policy "postgres-safe": No rule allows this action. Add a rule in Console › Policies to allow it.` |
+| Approval | `Waiting for approval under policy "writes-need-approval": Writes to this database wait for a human. An admin can approve in Console › Approvals.` |
+| Budget (calls) | `Budget "agent-rate" reached: 60 of 60 calls this minute. Try again in 14 s.` |
+| Agent budget (S08) | `Budget "calls_per_minute" for agent "support-bot" reached: 60 of 60 calls this minute. Try again in 14 s.` |
+| Budget (money, org) | `Budget "refunds-per-day" reached: $500.00 of $500.00 across all agents today. It resets at midnight Asia/Kolkata (in 6 h 12 m).` |
+| Rule error on a deny | `Blocked by policy "cap-refunds": Refunds over $50.00 wait for a human. (Deedglass could not evaluate this rule: no such key: amount.)` |
+| Cost limit | `Blocked by policy "cap-refunds": Deedglass stopped evaluating this rule at its cost limit of 100,000, so the action did not run. Send smaller arguments, or ask an admin to simplify the rule in Console › Policies.` |
+| Measure error | `Blocked by policy "budget:refunds-per-day": Deedglass could not measure this action for budget "refunds-per-day" (no such key: amount), so it did not run. An admin can check the budget's measure in Console › Policies.` |
+| Invalid input | `Deedglass could not read this action's input (the arguments must be a JSON object), so it did not run. Check the arguments the agent sent.` |
+| Org stopped | `All agents in this org are stopped. An owner can start them again in Console › Settings.` |
+| Agent stopped | `Agent "support-bot" is stopped. Deedglass refuses its calls until an admin starts it in Console › Agents.` |
+| Agent suspended | `Agent "support-bot" is suspended. An admin can resume it in Console › Agents.` |
+| Unavailable | `Deedglass could not evaluate the policy for this action, so it did not run. An admin can check Console › Policies.` |
+
+The rule form `Blocked by policy "<rule id>": <reason>` names the rule, because in Deedglass's words a rule is a policy; the structured fields carry both the policy name and the rule id. The Stop messages are S08's error-catalog strings, and a test keeps them equal. A budget message quotes the usage recorded before this action, and rounds the wait up.
+
+### 6.5 `AlwaysDenies`
+
+`AlwaysDenies(policy, tool, agent)` answers one static question: is every call to this tool by this agent denied, whatever the arguments? S14 uses it to hide such tools from an MCP client's `tools/list`.
+
+It walks the rules in order and stops at the first rule whose `match` (tool, connector type, side effect, agent, labels) covers the tool:
+- a rule with a `when` can't be decided statically, so the answer is false;
+- otherwise the answer is whether that rule's decision is `deny`.
+
+If no rule covers the tool, the answer is whether `defaults.decision` is `deny`. A missing policy always denies. It ignores budgets and Stop, because they change from minute to minute.
 
 ## 7. The CEL environment
 
@@ -335,7 +534,8 @@ These are constants in `internal/policy/limits.go`. Changing one needs an ADR.
 | `when` and `measure` length | 4,096 characters | `cel_too_long` |
 | CEL parser recursion | 64 | `cel_syntax` |
 | Estimated maximum cost per `when` or `measure` | 100,000 units | `cel_cost` |
-| Runtime cost per expression | 100,000 units | fails closed (S11) |
+| Runtime cost per expression | 100,000 units | deny `policy_denied` with the cost-limit reason, for any rule (section 6) |
+| Evaluation time per action | 50 ms | deny `policy_unavailable` (section 6) |
 | Comprehension nesting | 2 | `cel_nesting` |
 | `matches()` pattern | 256 characters | `cel_regex` |
 | Diagnostics per file | 50, then one "and N more" entry | |

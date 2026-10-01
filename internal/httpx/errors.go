@@ -26,7 +26,7 @@ const (
 // Code is the error envelope's "code". Codes are never renamed (contract §8).
 type Code string
 
-// The contract's 24 codes, then S03's 9 additions, then S07's 6.
+// The contract's 24 codes, then S03's 9 additions, then S07's 6, then S11's 1.
 const (
 	CodeInvalidAPIKey        Code = "invalid_api_key"
 	CodeAPIKeyRevoked        Code = "api_key_revoked"
@@ -69,6 +69,8 @@ const (
 	CodeLoginLinkInvalid Code = "login_link_invalid"
 	CodeLoginCodeInvalid Code = "login_code_invalid"
 	CodeLastOwner        Code = "last_owner"
+
+	CodePolicyUnavailable Code = "policy_unavailable"
 )
 
 // DocURLPrefix is where every code has a page (docs/api/errors.md, published by S33).
@@ -148,6 +150,8 @@ var catalog = []CatalogEntry{
 	{CodeLoginCodeInvalid, 400, TypeInvalidRequest, "That code doesn't match, or it has expired. Check the latest email, or get a new code.", "", "S07"},
 	{CodeLastOwner, 409, TypeInvalidRequest, "This org needs at least one owner. Make someone else an owner first.",
 		"{org} needs at least one owner. Make someone else an owner first.", "S07"},
+
+	{CodePolicyUnavailable, 403, TypePolicy, "Deedglass could not evaluate the policy for this action, so it did not run. An admin can check Console › Policies.", "", "S11"},
 }
 
 var byCode = func() map[Code]CatalogEntry {

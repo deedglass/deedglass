@@ -1,0 +1,4 @@
+exit 0
+--- stdout
+✓ allow · allow-reads · verify L0 · N µs
+--- stderr

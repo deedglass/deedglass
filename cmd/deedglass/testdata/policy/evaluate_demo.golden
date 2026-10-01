@@ -1,0 +1,14 @@
+exit 0
+--- stdout
+✕ deny · block-destructive-sql · N µs
+  Blocked by policy "block-destructive-sql": DROP and TRUNCATE are never allowed for agents.
+
+  sql     drop · ddl · 1 statement · public.orders
+  stop    ✓ agent active · org running
+  budget  agent-rate ✓ 0 of 60 this minute · agent-daily ✓ 0 of 5,000 today
+  rules   block-unclassified-sql   no match   when → false
+          one-statement-only       no match   when → false
+          block-destructive-sql    match      when → true      line 39
+          … 9 more rules not evaluated
+  policy  postgres-safe · sha256:2c4c…04fd · sqlguard 1
+--- stderr

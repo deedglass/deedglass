@@ -183,7 +183,7 @@ builds it. Hidden commands work but aren't in `deedglass help`.
 | `deedglass policy test` | Policies | Run a policy's test cases | soon (S12) |
 | `deedglass policy push` | Policies | Upload a new policy version | soon (S12) |
 | `deedglass policy activate` | Policies | Activate a policy version | soon (S12) |
-| `deedglass policy evaluate` | Policies | Evaluate one action against a policy | soon (S11) |
+| `deedglass policy evaluate --policy <file> --tool <name> [--sql …] [--args <json>] [--input <file>] [--agent …] [--label k=v] [--user …] [--time …] [--tz …] [--usage k=v] [--explain] [--json]` | Policies | Evaluate one action against a policy | built |
 | `deedglass policy replay` | Policies | Replay past actions against a version | soon (S27) |
 | `deedglass policy diff` | Policies | Compare two policy versions | soon (S12) |
 | `deedglass act` | Actions | Send a test action through the Gate | soon (S13) |
@@ -250,7 +250,7 @@ builds it. Hidden commands work but aren't in `deedglass help`.
 | Command | Needs | Output | Exit |
 |---|---|---|---|
 | `keys gen [--dir <dir>]` | nothing (offline) | the key id, the file (0600), its thumbprint, and the `export DEEDGLASS_SEAL_KEY_FILE=…` line | 0; 1 when the file can't be written |
-| `keys rotate [--overlap 5m] [--dir <dir>]` | `DEEDGLASS_DATABASE_URL` | the new active key, when each old key retires, and what to restart | 0; 1 when the database refuses (the new file is removed); 2 for an overlap outside 1s–168h |
+| `keys rotate [--overlap 5m] [--dir <dir>]` | `DEEDGLASS_DATABASE_URL` | the new active key, when each old key retires, and what to restart | 0; 1 when the database refuses (the new file is removed); 2 for an overlap outside 1s to 168h |
 | `keys list` | `DEEDGLASS_DATABASE_URL` | every key, newest first, with status, activation, retirement and thumbprint | 0; 1 when the database is unreachable |
 | `keys list --server <url>` | nothing | the server's public `keys.json`, checked like a verifier does | 0; 1 when unreachable or a key is unsafe |
 
@@ -498,7 +498,7 @@ cross-check vector: the header ends in `.TQAgBevx…nqjJCA`.)
   `--nonce` for real calls: a nonce works once.
 - **`--json`** prints `{"object":"signed_intent","header","intent_hash","intent","args_digest","nonce","kid","expires_at"}`.
 
-## Policies: `policy lint` and `policy fmt`
+## Policies: `policy lint`, `policy fmt` and `policy evaluate`
 
 The policy language is specified in [POLICY_LANGUAGE.md](POLICY_LANGUAGE.md), and every diagnostic
 code has a section in [POLICY_ERRORS.md](POLICY_ERRORS.md). Both commands work offline: no config,
@@ -591,6 +591,56 @@ $ deedglass policy fmt --check policies/
 ✕ 1 of 2 files needs formatting
 ```
 
+### `deedglass policy evaluate`
+
+```
+deedglass policy evaluate --policy <file> --tool <name> [--sql …] [--args <json>] [--input <file>]
+    [--agent …] [--label k=v] [--user …] [--time …] [--tz …] [--usage k=v] [--explain] [--json]
+```
+
+Evaluates one action against a local policy file and prints the decision, the message the agent
+would see and, with `--explain`, the trace. It works offline: no config, database or server. The
+evaluation is the same `policy.Evaluate` the Gate runs ([POLICY_LANGUAGE.md](POLICY_LANGUAGE.md)
+section 6).
+
+| Flag | Sets |
+|---|---|
+| `--policy <file>` | the policy (required; `-` for stdin) |
+| `--input <file>` | a whole input as JSON ([POLICY_LANGUAGE.md](POLICY_LANGUAGE.md) section 6.2); the other flags apply over it |
+| `--tool <name>` | `tool.name` (required, unless the input file has one). When the prefix before the first dot is a known connector type (`postgres`, `rest`, `mcp`, `mcp_http`, `sdk`, `github`, `slack`, `stripe`, `gmail`, `notion`, `fake`), it also sets `tool.connector_type`, so `postgres.*` tools get SQL facts |
+| `--args '<json>'` | `args`, a JSON object |
+| `--sql "<sql>"` | `args.sql` |
+| `--agent <name or agt_…>` | the agent's name, or its id when it starts with `agt_` |
+| `--label k=v` | an agent label (repeatable) |
+| `--user <ref>` | `user.ref` (on behalf of) |
+| `--time <RFC 3339>` | the decision time (default: now) |
+| `--tz <IANA zone>` | the org's time zone (default: UTC) |
+| `--usage k=v` | a usage counter (repeatable): `calls_minute`, `calls_hour`, `calls_today`, `spend_today` (minor units), `currency`, or a budget id. A per-agent call budget with no value of its own takes the standard counter for its window ([BUDGETS.md](BUDGETS.md) section 10) |
+| `--explain` | print the trace |
+| `--json` | print the decision as a `policy_decision` object (it always includes the trace) |
+
+**Exit codes:** 0 when an evaluation ran, whatever the decision; 1 when the policy doesn't compile
+(the lint report is printed); 2 for a usage error.
+
+```
+$ deedglass policy evaluate --policy internal/policy/testdata/eval/postgres-safe.yaml \
+    --tool postgres.execute --sql "/* tidy up */ DrOp TABLE public.orders" --explain
+✕ deny · block-destructive-sql · 41 µs
+  Blocked by policy "block-destructive-sql": DROP and TRUNCATE are never allowed for agents.
+
+  sql     drop · ddl · 1 statement · public.orders
+  stop    ✓ agent active · org running
+  budget  agent-rate ✓ 0 of 60 this minute · agent-daily ✓ 0 of 5,000 today
+  rules   block-unclassified-sql   no match   when → false
+          one-statement-only       no match   when → false
+          block-destructive-sql    match      when → true      line 39
+          … 9 more rules not evaluated
+  policy  postgres-safe · sha256:2c4c…04fd · sqlguard 1
+```
+
+Deny is `✕` in red, require approval `◐` in violet, and allow `✓` in the neutral colour (teal is
+kept for VERIFIED). The exact outputs are pinned in `cmd/deedglass/testdata/policy/evaluate_*.golden`.
+
 ## What it doesn't do (yet)
 
 - The Ledger commands use the database directly; `--server`/`--api-key` (API mode) come with S09.
@@ -600,8 +650,8 @@ $ deedglass policy fmt --check policies/
   `COLORFGBG` or `DEEDGLASS_THEME=light`. No image-protocol (iTerm2, Kitty) rendering yet.
 
 - No shell completion until S32 (`deedglass completion zsh|bash|fish`).
-- `policy lint` and `policy fmt` check and format files; storing, testing, activating and
-  evaluating policies come with S11 and S12. There is no language server; the Console editor (S26)
+- `policy lint` and `policy fmt` check and format files, and `policy evaluate` runs one action
+  against a local file; storing, testing, activating and `evaluate --server` come with S12. There is no language server; the Console editor (S26)
   shows the same diagnostics inline.
 - Intent keys live in PEM files. `keygen` and `dev sign-intent` don't use an OS keychain, a KMS or
   an HSM; protect `.deedglass/intent/` like any other secret on the agent's machine.

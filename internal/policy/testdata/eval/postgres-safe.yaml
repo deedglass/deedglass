@@ -1,0 +1,97 @@
+# postgres-safe · a Deedglass starter policy
+#
+# Reads run freely. Writes wait for a human, except on the tables you allow-list.
+# Schema changes, server-side code, several statements at once, and SQL that
+# Deedglass cannot read with confidence never run.
+#
+# Edit the list in "allow-listed-writes", then check your change:
+#   deedglass policy test examples/policies/postgres-safe.yaml
+deedglass: policy/v1
+name: postgres-safe
+description: Reads run freely. Writes wait for a human. Schema changes never run.
+
+defaults:
+  decision: deny
+  reason: No rule allows this action. Add a rule in Console › Policies to allow it.
+  verify: L0
+
+budgets:
+  - id: agent-rate
+    window: minute
+    max_calls: 60
+  - id: agent-daily
+    window: day
+    max_calls: 5000
+
+rules:
+  - id: block-unclassified-sql
+    description: Fail closed on SQL the classifier cannot read with confidence.
+    match: { connector_type: postgres }
+    when: sql.present && sql.ambiguous
+    decision: deny
+    reason: Deedglass could not read this SQL with confidence, so it did not run. Send one plain statement.
+    notify: [slack]
+  - id: one-statement-only
+    match: { connector_type: postgres }
+    when: sql.multi
+    decision: deny
+    reason: Send one SQL statement per action. This request had several.
+  - id: block-destructive-sql
+    match: { connector_type: postgres }
+    when: sql.kind in ["drop", "truncate"]
+    decision: deny
+    reason: DROP and TRUNCATE are never allowed for agents.
+    notify: [slack]
+  - id: block-schema-and-privilege-changes
+    match: { connector_type: postgres }
+    when: sql.category in ["ddl", "privilege"]
+    decision: deny
+    reason: Schema and permission changes never run through agents. Ship them as a reviewed migration.
+  - id: block-server-side-code
+    match: { connector_type: postgres }
+    when: sql.category == "server_code" || size(sql.dangerous_functions) > 0
+    decision: deny
+    reason: Server-side code, COPY PROGRAM, and file, network or session functions are never allowed for agents.
+  - id: block-unbounded-writes
+    match: { connector_type: postgres }
+    when: sql.unbounded_write
+    decision: deny
+    reason: UPDATE and DELETE need a WHERE clause that names the rows to change.
+  - id: allow-reads
+    match: { tool: postgres.query }
+    when: >-
+      sql.category == "read" && !sql.writes && !sql.locks_rows
+      && size(sql.unknown_functions) == 0
+    decision: allow
+  - id: allow-describe
+    match: { tool: postgres.describe }
+    decision: allow
+  - id: allow-listed-writes
+    description: Writes to these tables run without approval. Edit the list for your schema.
+    match: { tool: postgres.execute }
+    when: >-
+      sql.kind in ["insert", "update"] && !sql.cte_write && sql.tables_complete
+      && size(sql.unknown_functions) == 0
+      && sql.tables.all(t, t in ["public.support_notes", "public.order_tags"])
+    decision: allow
+    verify: L2
+  - id: writes-need-approval
+    match: { tool: postgres.execute }
+    when: sql.category == "write"
+    decision: require_approval
+    reason: Writes to this database wait for a human. An admin can approve in Console › Approvals.
+    approval: { approvers: [role:admin], required: 1, expires_in: 30m }
+    notify: [email, slack]
+    verify: L2
+  - id: functions-need-approval
+    match: { tool: postgres.call }
+    decision: require_approval
+    reason: Calling a database function changes data, so a human approves it first.
+    approval: { approvers: [role:admin], required: 1, expires_in: 30m }
+    verify: L2
+  - id: undo-needs-approval
+    match: { tool: postgres.undo }
+    decision: require_approval
+    reason: Undoing a write changes data again, so a human confirms it first.
+    approval: { approvers: [role:admin], required: 1, expires_in: 30m }
+    verify: L2

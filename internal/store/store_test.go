@@ -48,13 +48,14 @@ func TestSetConfigIsTransactionLocal(t *testing.T) {
 // Every SystemTx call outside tests is listed here, so a new cross-org path shows up in review.
 // Pre-auth lookups and worker claims use SECURITY DEFINER functions instead (docs/DATA_MODEL.md).
 var systemTxCallSites = []string{
-	"internal/store/repo.go: SystemTx(ctx, ReasonOrgCreate",                   // CreateOrg
-	"internal/store/storetest/seed.go: SystemTx(ctx, store.ReasonMaintenance", // test harness (integration tag only)
-	"cmd/deedglass/devseed.go: SystemTx(ctx, store.ReasonMaintenance",         // dev seed: find the demo org by slug (dev only)
-	"internal/store/idempotency.go: SystemTx(ctx, ReasonMaintenance",          // PruneIdempotencyKeys (S03)
-	"cmd/deedglass/ledgercmd.go: SystemTx(ctx, store.ReasonMaintenance",       // DB-direct Ledger commands: list orgs to pick --org (S06)
-	"cmd/deedglass/fakeaction.go: SystemTx(ctx, store.ReasonMaintenance",      // dev fake-action: find the demo org by slug (dev only, S06)
-	"internal/identity/org.go: SystemTx(ctx, store.ReasonOrgCreate",           // deedglass org create: org, owner, org.created deed, hooks (S07)
+	"internal/store/repo.go: SystemTx(ctx, ReasonOrgCreate",                      // CreateOrg
+	"internal/store/storetest/seed.go: SystemTx(ctx, store.ReasonMaintenance",    // test harness (integration tag only)
+	"cmd/deedglass/devseed.go: SystemTx(ctx, store.ReasonMaintenance",            // dev seed: find the demo org by slug (dev only)
+	"internal/store/idempotency.go: SystemTx(ctx, ReasonMaintenance",             // PruneIdempotencyKeys (S03)
+	"cmd/deedglass/ledgercmd.go: SystemTx(ctx, store.ReasonMaintenance",          // DB-direct Ledger commands: list orgs to pick --org (S06)
+	"cmd/deedglass/fakeaction.go: SystemTx(ctx, store.ReasonMaintenance",         // dev fake-action: find the demo org by slug (dev only, S06)
+	"internal/identity/org.go: SystemTx(ctx, store.ReasonOrgCreate",              // deedglass org create: org, owner, org.created deed, hooks (S07)
+	"internal/store/policystore/usage.go: SystemTx(ctx, store.ReasonMaintenance", // Usage.Prune: drops old usage_counters windows across orgs (S11)
 }
 
 func TestSystemTxCallSites(t *testing.T) {

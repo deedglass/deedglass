@@ -1,0 +1,5 @@
+exit 0
+--- stdout
+✕ deny · budget agent-rate · N µs
+  Budget "agent-rate" reached: 60 of 60 calls this minute. Try again in 14 s.
+--- stderr

@@ -1,0 +1,5 @@
+exit 0
+--- stdout
+✕ deny · one-statement-only · N µs
+  Blocked by policy "one-statement-only": Send one SQL statement per action. This request had several.
+--- stderr

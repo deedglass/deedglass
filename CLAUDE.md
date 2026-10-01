@@ -38,8 +38,11 @@ make bench-identity # S07 budget: session middleware, login handler, invite with
 make bench-stop     # S08: Stop propagation across two instances (p50/p99) and the API-key budget; JSON in bench/results/
 make bench-intents  # S09: signed-intent checks without the DB (4 KiB args) and with the nonce insert; JSON in bench/results/
 go test ./internal/identity -run TestIntentVectors -update-intents   # regenerate testdata/intents/ (then update SHA256SUMS)
-make fuzz-policy    # S10: FuzzCompile and FuzzYAMLReader, 60 s each (fuzz-policy-short: 10 s each, in ci)
+make fuzz-policy    # S10-S11: FuzzCompile, FuzzYAMLReader, FuzzEvaluate, FuzzAnalyze, FuzzTokenize, 60 s each (fuzz-policy-short: 10 s, in ci)
 make bench-policy   # S10: compile 50 and 500 rules (< 20 ms, < 250 ms); JSON in bench/results/
+make bench-eval     # S11: Evaluate p50/p90/p99 at 50 and 500 rules, sqlguard.Analyze at 200 B / 4 KiB / 256 KiB; JSON in bench/results/
+go test ./internal/sqlguard -run TestCorpus -v           # the sqlguard corpus (testdata/corpus.yaml, 206 cases; differential run in make integration)
+go test ./cmd/deedglass -run TestPolicyEvaluateGoldens -update  # regenerate the policy evaluate CLI goldens (µs normalised)
 go test ./internal/policy -run TestLintGolden -update   # regenerate the lint goldens, hashes.json and costs.json (review the diff)
 go test ./cmd/deedglass -run TestPolicyGoldens -update  # regenerate the policy lint/fmt CLI goldens
 DEEDGLASS_IT_PKGS=./internal/identity/ make integration   # one suite (DEEDGLASS_IT_GOFLAGS="-v -run X" adds flags)
@@ -88,7 +91,7 @@ scripts/ci-local.sh # the CI jobs locally (docker-smoke and govulncheck skip whe
    v1.3.0 with `fxamacker/cbor/v2` v2.9.4 (ADR-026, in go.mod since S04). npm, dev only (`web/verify`,
    ADR-027, accepted): `typescript` 7.0.2, `vitest` 5.0.3, `vite` 8.3.1, `@types/node` 24.19.0; no runtime dependency.
    `cel.dev/cel-go` v0.32.0 (ADR-017, in go.mod since S10; brings protobuf, antlr4-go, cel.dev/expr,
-   genproto and x/exp; the binary-size budget is ADR-032, Proposed). Planned, and added only by
+   genproto and x/exp; the binary-size budget is ADR-032, accepted under DL-024: < 30 MB). Planned, and added only by
    the session that uses them: the MCP Go SDK v1.8.0 (S14, ADR-018), `pglogrepl` at the
    spike-verified pin (S20). No cgo in the main binary.
    `go.sum` is committed and CI runs `go mod verify`.
@@ -180,7 +183,8 @@ and "open source" until the repo is public. Style bans: "revolutionary", "world-
   `store` never import each other).
 - `internal/httpx`: `Mount` panics on a route with no auth, a POST with no idempotency rule, or a
   route missing from `contract_routes.go` (contract §9 as data; `testdata/routes.golden`); the
-  33-code error catalog (copy rules, banned words, `docs/api/errors.md` headings); the middleware and
+  40-code error catalog (copy rules, banned words, `docs/api/errors.md` headings; S11 added
+  `policy_unavailable`); the middleware and
   idempotency tables; log canaries; `CheckSpec`/`CheckRequired` keep `api/openapi.yaml` equal to the
   mounted routes (also run on everything `serve` mounts in `cmd/deedglass`). A new route goes into
   `serveRoutes`, `contract_routes.go` (if new) and `api/openapi.yaml` in the same change.
@@ -264,6 +268,22 @@ and "open source" until the repo is public. Style bans: "revolutionary", "world-
   `TestAgentIDPattern` (policy doesn't import `internal/ids`, which pulls in `database/sql/driver`);
   `FuzzCompile` (no panic, bounded time, deterministic, fmt idempotent) and `FuzzYAMLReader`.
   `cmd/deedglass`: `TestPolicyGoldens` (`testdata/policy/`, the §5 demo layout), `TestPolicyFmtWrite`.
+- `internal/sqlguard` + `internal/policy` evaluation (S11): `TestCorpus` (206 cases in
+  `testdata/corpus.yaml`, every expected fact; one readable line per differing field) and
+  `TestCorpusDifferential` (integration: every `differential: true` case inside BEGIN … ROLLBACK
+  on PG 16/17/18, command tags vs `kinds`; refuses server-code, dangerous-function, PROGRAM and role
+  cases); the 42-case tokenizer table and the lossless check; `TestInvariance` (comments, case,
+  whitespace), `TestTruncationFailsClosed`, `TestNeverReadWhenDangerous`; `FuzzTokenize`,
+  `FuzzAnalyze`. `TestEvaluateMatrix`, `TestCostLimitFailsClosed` (DL-024: over the runtime cost
+  limit is a deny for every rule decision and for measures), `TestHugeArgsNeverAllow`,
+  `TestEvaluateUnavailable` (nil policy, panics, deadline), `TestEvaluatePair`,
+  `TestEvaluateDeterminism` (1,000 goroutines), `TestPostgresSafeDemo` (the exact trace),
+  `TestAlwaysDenies` (12 cases), `TestPrepare`, `TestTimeParts`, `FuzzEvaluate`. `usagetest.Run` is
+  the one contract suite for `MemUsage` and `policystore.Usage` (integration: two-instance 400 → 60,
+  RLS, `TestUsageCountersShape` pins migration 0003's table). `cmd/deedglass`:
+  `TestPolicyEvaluateGoldens` (`testdata/policy/evaluate_*`), `TestStopMessagesMatchCatalog` (the
+  evaluator's Stop and policy_unavailable strings equal `internal/httpx/errors.go`),
+  `TestTimeZoneDatabase` (`time/tzdata` is embedded).
 - `cmd/deedglass verify` (S05): 80 golden cases in `testdata/verify/<case>/{args,stdout,stderr,exit}`
   (`go test ./cmd/deedglass -run TestVerifyGolden -update`), every vector's code and exit, `--keys`
   URL rules (same-host redirects, 1 MiB, timeout, loopback-only http), key-set merge conflicts, no
