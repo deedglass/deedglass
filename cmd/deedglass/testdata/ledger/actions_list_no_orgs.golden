@@ -1,0 +1,5 @@
+exit 1
+--- stdout
+--- stderr
+✕ This database has no orgs yet.
+  next  deedglass dev seed (dev), or deedglass dev fake-action to create a demo org with actions.

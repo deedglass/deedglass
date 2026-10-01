@@ -52,6 +52,8 @@ var systemTxCallSites = []string{
 	"internal/store/storetest/seed.go: SystemTx(ctx, store.ReasonMaintenance", // test harness (integration tag only)
 	"cmd/deedglass/devseed.go: SystemTx(ctx, store.ReasonMaintenance",         // dev seed: find the demo org by slug (dev only)
 	"internal/store/idempotency.go: SystemTx(ctx, ReasonMaintenance",          // PruneIdempotencyKeys (S03)
+	"cmd/deedglass/ledgercmd.go: SystemTx(ctx, store.ReasonMaintenance",       // DB-direct Ledger commands: list orgs to pick --org (S06)
+	"cmd/deedglass/fakeaction.go: SystemTx(ctx, store.ReasonMaintenance",      // dev fake-action: find the demo org by slug (dev only, S06)
 }
 
 func TestSystemTxCallSites(t *testing.T) {

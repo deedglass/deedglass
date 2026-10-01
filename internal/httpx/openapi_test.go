@@ -2,6 +2,7 @@ package httpx
 
 import (
 	"io"
+	"net/http"
 	"strings"
 	"testing"
 
@@ -12,7 +13,25 @@ func systemServer() *Server {
 	s := New(Options{Logger: NewLogger(io.Discard, true, nil)})
 	s.Mount(s.SystemRoutes(SystemDeps{Spec: api.Spec, Health: &fakeHealth{state: MigrationState{Applied: 9, Expected: 9}}})...)
 	s.Mount(s.WellKnownRoutes(testKeySet, nil)...)
+	s.Mount(elsewhere()...)
 	return s
+}
+
+// elsewhere stands in for routes other packages declare (internal/ledger, S06), so the spec checks
+// here see every documented operation. cmd/deedglass's TestServeRoutesMatchOpenAPI checks the real
+// declarations, from the list serve mounts.
+func elsewhere() []Route {
+	stub := func(w http.ResponseWriter, r *http.Request) error { return E(CodeNotFound) }
+	var out []Route
+	for _, op := range []struct{ pattern, id, scope string }{
+		{"/v1/actions", "listActions", "actions:read"}, {"/v1/actions/{id}", "getAction", "actions:read"},
+		{"/v1/deeds", "listDeeds", "deeds:read"}, {"/v1/deeds/{id}", "getDeed", "deeds:read"},
+		{"/v1/deeds/export", "exportDeeds", "deeds:read"}, {"/v1/ledger/check", "checkLedger", "deeds:read"},
+	} {
+		out = append(out, Route{Method: "GET", Pattern: op.pattern, OperationID: op.id, Auth: SessionOrKey,
+			MinRole: RoleViewer, Scopes: []string{op.scope}, Handler: stub})
+	}
+	return out
 }
 
 // TestOpenAPI runs checks 1–6: routes ⇄ operations, operationIds, x-deedglass-auth, the code enum,

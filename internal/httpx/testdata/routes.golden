@@ -57,8 +57,8 @@ planned    POST    /v1/policies/evaluate                                  sessio
 planned    POST    /v1/policies/test                                      session_or_key  admin            S12
 planned    POST    /v1/policies/{id}/versions/{v}/replay                  session_or_key  admin            S27
 planned    POST    /v1/actions                                            agent_key       actions:execute  S13    IdemNever: the Gate owns its idempotency
-planned    GET     /v1/actions                                            session_or_key  actions:read     S13
-planned    GET     /v1/actions/{id}                                       session_or_key  actions:read     S13
+planned    GET     /v1/actions                                            session_or_key  actions:read     S06
+planned    GET     /v1/actions/{id}                                       session_or_key  actions:read     S06
 planned    POST    /v1/actions/{id}/cancel                                session_or_key  admin            S13
 planned    POST    /v1/actions/{id}/result                                agent_key       actions:execute  S13    proxy mode
 planned    POST    /v1/tools/resolve                                      agent_key       actions:execute  S14

@@ -11,7 +11,7 @@ LDFLAGS  := -s -w -X $(BI).Version=$(VERSION) -X $(BI).Commit=$(COMMIT) -X $(BI)
 .PHONY: all help ci build test test-short vet fmt fmt-check tidy-check testdata-check rename-guard banned-words nocgo \
 	integration matrix fuzz bench bench-store bench-deed cover clean \
 	dev dev-down dev-reset dev-logs run docker bench-http bench-verify \
-	web-verify-install web-verify-test web-verify-build web-verify-serve gencopy genmark bench-mark
+	web-verify-install web-verify-test web-verify-build web-verify-serve gencopy genmark bench-mark bench-ledger
 
 all: ci
 
@@ -66,6 +66,7 @@ fuzz: ## 30 s each: the strict intent parser, the id parser, and the deed envelo
 	$(GO) test ./internal/deed -run '^$$' -fuzz '^FuzzVerifyEnvelope$$' -fuzztime 30s
 	$(GO) test ./internal/deed -run '^$$' -fuzz '^FuzzParseKeySet$$' -fuzztime 30s
 	$(GO) test ./internal/deed -run '^$$' -fuzz '^FuzzVerifyStream$$' -fuzztime 30s
+	$(GO) test ./internal/deed -run '^$$' -fuzz '^FuzzCanonical$$' -fuzztime 30s
 	$(GO) test ./internal/deed/archive -run '^$$' -fuzz '^FuzzArchiveOpen$$' -fuzztime 30s
 
 bench: ## benchmarks for ids and config
@@ -77,6 +78,11 @@ bench-store: ## S02 store budget (OrgTx, insert, list) on a throwaway PG 18; raw
 
 cover: ## coverage of the packages with targets (ids 95%, config 90%, deed 90%, deed/archive 85%, cmd/deedglass 80%)
 	$(GO) test -count=1 -cover ./internal/ids ./internal/config ./internal/deed ./internal/deed/archive ./cmd/deedglass
+
+bench-ledger: ## S06 Ledger budget at 100,000 actions (lists, get, chain check, export memory, seal overhead, EXPLAIN plans) on a throwaway PG 18; raw go test -json in bench/results/
+	@out="$(CURDIR)/bench/results/$$(date +%F)-$$(go env GOOS)-$$(go env GOARCH)-ledger.json"; \
+	DEEDGLASS_IT_BENCH_OUT="$$out" DEEDGLASS_IT_BENCH_RUN='TestLedgerBudget' DEEDGLASS_IT_BENCH_PKG=./internal/ledger/ scripts/integration_local.sh >/dev/null; st=$$?; \
+	grep -o 'PERF {[^}]*}[^\\]*' "$$out" | sed 's/\\"/"/g'; echo "raw: $$out"; exit $$st
 
 bench-deed: ## S04 deed budget: SealBody, VerifyEnvelope (1 core) and the Postgres Sealer p50/p99 on a throwaway PG 18; raw go test -json in bench/results/
 	@out="$(CURDIR)/bench/results/$$(date +%F)-$$(go env GOOS)-$$(go env GOARCH)-deed.json"; \

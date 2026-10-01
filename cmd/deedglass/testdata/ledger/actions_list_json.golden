@@ -1,0 +1,49 @@
+exit 0
+--- stdout
+{
+  "object": "list",
+  "data": [
+    {
+      "object": "action",
+      "id": "act_ID",
+      "created_at": "TIME",
+      "agent": {
+        "id": "agt_ID",
+        "name": "support-bot"
+      },
+      "tool": "postgres.execute",
+      "connector": null,
+      "mode": "gateway",
+      "state": "sealed",
+      "on_behalf_of": "u_5780",
+      "session": "chat_84",
+      "policy": {
+        "id": null,
+        "version_id": null,
+        "mode": "enforce",
+        "decision": "allow",
+        "rule_id": "allow-order-updates"
+      },
+      "execution": {
+        "status": "succeeded",
+        "started_at": "TIME",
+        "finished_at": "TIME",
+        "latency_ms": 55,
+        "error_code": null
+      },
+      "witness": {
+        "level": "L2",
+        "verdict": "MISMATCH",
+        "method": "postgres.pgoutput"
+      },
+      "cost": null,
+      "request_digest": "sha256:HASH",
+      "result_digest": "sha256:HASH",
+      "payload_pruned_at": null,
+      "deed": "deed_ID"
+    }
+  ],
+  "has_more": true,
+  "next_cursor": "CURSOR"
+}
+--- stderr

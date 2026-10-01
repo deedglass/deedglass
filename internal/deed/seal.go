@@ -90,7 +90,7 @@ func sealBody(s Signer, b Body) (*sealed, error) {
 	if err := b.Validate(); err != nil {
 		return nil, fmt.Errorf("%w: %w", ErrDraft, err)
 	}
-	bodyJCS, err := StrictCanonical(&b)
+	bodyJCS, err := canonicalBody(&b)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", ErrDraft, err)
 	}

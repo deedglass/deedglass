@@ -1,0 +1,10 @@
+exit 0
+--- stdout
+TIME     AGENT         TOOL                    DECISION   WITNESS             LATENCY
+AGO   ops-bot       github.merge_pr         allow      ○ L1 · UNVERIFIABLE 334 ms
+AGO   billing-bot   postgres.execute        allow      ✓ L2 · VERIFIED     53 ms
+AGO   support-bot   postgres.execute        deny       ✕ denied            —
+AGO   ops-bot       postgres.execute        allow      ✓ L2 · VERIFIED     25 ms
+AGO   billing-bot   stripe.create_refund    approval   ◐ pending           —
+5 of 50 · next page: deedglass actions list --cursor CURSOR
+--- stderr

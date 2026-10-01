@@ -20,7 +20,10 @@ import (
 	"github.com/deedglass/deedglass/cmd/deedglass/internal/ui"
 	"github.com/deedglass/deedglass/internal/buildinfo"
 	"github.com/deedglass/deedglass/internal/config"
+	"github.com/deedglass/deedglass/internal/deed"
+	"github.com/deedglass/deedglass/internal/deed/archive"
 	"github.com/deedglass/deedglass/internal/httpx"
+	"github.com/deedglass/deedglass/internal/ledger"
 	"github.com/deedglass/deedglass/internal/store"
 	"github.com/deedglass/deedglass/internal/store/migrate"
 	"github.com/deedglass/deedglass/internal/store/migrations"
@@ -163,11 +166,12 @@ func runServe(ctx context.Context, e *Env, args []string) error {
 	sk := &serveKey{issuer: strings.TrimSuffix(cfg.BaseURL.String(), "/"), id: signer.KeyID()}
 
 	// 5. Mount and listen.
+	led := newLedger(db, signer, cfg, log)
 	api := httpx.New(httpx.Options{
 		Logger: log, Prod: prod, BaseURL: cfg.BaseURL, TrustedProxies: cfg.TrustedProxies,
-		Idempotency: idemStore{db},
+		Idempotency: idemStore{db}, Sessions: devSessions(prod),
 	})
-	api.Mount(serveRoutes(api, db, ms, sk)...)
+	api.Mount(serveRoutes(api, db, ms, sk, led)...)
 	ln, err := net.Listen("tcp", cfg.Listen)
 	if err != nil {
 		return &ExitError{Code: ExitFailure, ErrCode: "listen_failed", Err: fmt.Errorf("Can't listen on %s: %s", cfg.Listen, lastPart(err)),
@@ -242,7 +246,7 @@ type serveKey struct {
 // serveRoutes is everything `serve` mounts. Later sessions add their routes here; the cmd tests
 // run httpx.CheckSpec on this list, so api/openapi.yaml must document each one. db and sk are nil
 // in route-table tests.
-func serveRoutes(api *httpx.Server, db *store.DB, ms []migrate.Migration, sk *serveKey) []httpx.Route {
+func serveRoutes(api *httpx.Server, db *store.DB, ms []migrate.Migration, sk *serveKey, led *ledger.Ledger) []httpx.Route {
 	deps := httpx.SystemDeps{Spec: apiSpec()}
 	issuer := "http://127.0.0.1:8080"
 	if db != nil {
@@ -255,7 +259,31 @@ func serveRoutes(api *httpx.Server, db *store.DB, ms []migrate.Migration, sk *se
 		}
 	}
 	routes := api.SystemRoutes(deps)
-	return append(routes, api.WellKnownRoutes(keySetSource(db, issuer), nil)...)
+	routes = append(routes, api.WellKnownRoutes(keySetSource(db, issuer), nil)...)
+	if led == nil {
+		led = ledger.New(db, nil, nil, ledger.WithIssuer(issuer))
+	}
+	return append(routes, ledger.Routes(led)...)
+}
+
+// newLedger is the Ledger serve and the DB-direct CLI commands share. signer may be nil (reads only).
+func newLedger(db *store.DB, signer deed.Signer, cfg *config.Config, log *slog.Logger) *ledger.Ledger {
+	bi := buildInfo()
+	opts := []ledger.Option{ledger.WithIssuer(strings.TrimSuffix(cfg.BaseURL.String(), "/")), ledger.WithLogger(log),
+		ledger.WithGenerator(archive.Generator{Name: "deedglass", Version: bi.Version, Commit: bi.Commit}),
+		ledger.WithDev(cfg.Env != config.Prod)}
+	if signer == nil {
+		return ledger.New(db, nil, nil, opts...)
+	}
+	return ledger.New(db, deed.NewSealer(signer), signer, opts...)
+}
+
+// devSessions is the dev principal (S06 §3.9) outside prod; S07 replaces it with real sessions.
+func devSessions(prod bool) httpx.SessionAuthenticator {
+	if prod {
+		return nil
+	}
+	return httpx.DevPrincipal{}
 }
 
 func apiSpec() []byte { return api.Spec }

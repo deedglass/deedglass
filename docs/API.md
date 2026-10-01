@@ -191,6 +191,35 @@ Every list has one shape:
 Cursors are unsigned on purpose. Row-level security scopes every query to your org, so a crafted
 cursor can only move within data you can already read.
 
+The Ledger lists (`GET /v1/actions`, `GET /v1/deeds`) default to 25 and bind their cursor to
+the filters it was issued with ([LEDGER.md](LEDGER.md) §3).
+
+## The Ledger routes (S06)
+
+| Route | Scope | Returns |
+|---|---|---|
+| `GET /v1/actions` | `actions:read` | a list of `action` objects, newest first, with filters |
+| `GET /v1/actions/{id}` | `actions:read` | the action with `request`, `result`, `witness.detail`, `events`, `deeds`, `approval` |
+| `GET /v1/deeds` | `deeds:read` | a list of deed envelopes by seq |
+| `GET /v1/deeds/{id}` | `deeds:read` | the stored canonical bytes; `ETag` = `body_hash`; `Accept: application/cose` for COSE_Sign1 |
+| `GET /v1/deeds/export` | `deeds:read` | a streamed export bundle (`application/gzip`) |
+| `GET /v1/ledger/check` | `deeds:read` | a `ledger_check` (intact, broken or incomplete) |
+
+All six are `SessionOrKey`, viewer and up. Until S07/S09 the only principal is the dev principal
+(`DEEDGLASS_ENV=dev`, loopback, `Deedglass-Dev-Org: org_…`); anything else is 401
+`authentication_required`. Examples, filters and error copy: [LEDGER.md](LEDGER.md). The schemas
+are in `api/openapi.yaml` (`Action`, `ActionDetail`, `ActionEvent`, `ActionList`, `DeedList`,
+`LedgerCheck`).
+
+```sh
+curl -s -H 'Deedglass-Dev-Org: org_01j9z8m2k4p6r8t0v2x4z6b8d0' 'http://127.0.0.1:8080/v1/actions?verdict=FAILED'
+```
+```json
+{ "error": { "type": "invalid_request_error", "code": "validation_failed",
+  "message": "verdict must be VERIFIED, MISMATCH or UNVERIFIABLE. You sent \"FAILED\".",
+  "param": "verdict", "request_id": "req_01j9zv…", "doc_url": "https://docs.deedglass.com/errors/validation_failed" } }
+```
+
 ## Objects
 
 Every object carries `"object"`, naming its type (`"health"`, `"version"`, `"list"`, and so on),

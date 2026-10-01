@@ -22,6 +22,10 @@ servers:
 tags:
   - name: System
     description: Health, version and this document.
+  - name: Ledger
+    description: >-
+      The searchable history of every action an agent took and every state change, and the deed
+      chain check (docs/LEDGER.md).
   - name: Deeds
     description: >-
       Signed records of what agents did, and the public seal keys that check them offline
@@ -164,6 +168,226 @@ paths:
                 type: string
         default:
           $ref: "#/components/responses/Error"
+  /v1/actions:
+    get:
+      operationId: listActions
+      summary: List actions
+      description: >-
+        Newest first, ordered by `(created_at, id)` descending, so rows added while you page only
+        appear on a fresh first page. Filters combine with AND; list filters take a comma list
+        (`verdict=MISMATCH,UNVERIFIABLE`). Unknown parameters are refused. A cursor is bound to the
+        filters it was issued with: reuse it with different filters and the answer is 400
+        `validation_failed` on `cursor`. Requires `actions:read` (viewer and up).
+      tags: [Ledger]
+      security: [{bearerAuth: []}, {sessionCookie: []}]
+      x-deedglass-auth: session_or_key
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+        - {name: agent, in: query, required: false, description: An agent id (`agt_…`)., schema: {type: string, pattern: "^agt_[0-7][0-9a-hjkmnp-tv-z]{25}$"}}
+        - {name: tool, in: query, required: false, description: 'A tool name, exact or a glob with `*` (`stripe.*`, `*.execute`); at most 200 bytes and three `*`.', schema: {type: string, maxLength: 200}}
+        - {name: state, in: query, required: false, description: A comma list of lifecycle states (contract §5)., schema: {type: string}}
+        - {name: decision, in: query, required: false, description: 'A comma list of `allow`, `deny`, `require_approval`.', schema: {type: string}}
+        - {name: verdict, in: query, required: false, description: 'A comma list of `VERIFIED`, `MISMATCH`, `UNVERIFIABLE`.', schema: {type: string}}
+        - {name: level, in: query, required: false, description: 'A comma list of `L0`, `L1`, `L2`.', schema: {type: string}}
+        - {name: on_behalf_of, in: query, required: false, description: The exact on-behalf-of reference., schema: {type: string, maxLength: 256}}
+        - {name: "created_at[gte]", in: query, required: false, description: RFC 3339; inclusive., schema: {type: string, format: date-time}}
+        - {name: "created_at[lt]", in: query, required: false, description: RFC 3339; exclusive., schema: {type: string, format: date-time}}
+        - {name: q, in: query, required: false, description: Text to find in the tool name or the error code (2–64 characters)., schema: {type: string, minLength: 2, maxLength: 64}}
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+      responses:
+        "200":
+          description: One page of actions.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+            Deedglass-Version:
+              $ref: "#/components/headers/DeedglassVersion"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActionList"
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/actions/{id}:
+    get:
+      operationId: getAction
+      summary: Show one action, its events and deeds
+      description: >-
+        The action plus its payloads (`request`, `result`, `witness.detail`; `null` once retention
+        removed them, see `payload_pruned_at`), up to 200 events in order, and the deeds about it
+        (the action deed and any amendments). An id from another org is 404 `not_found`, exactly
+        like an id that doesn't exist. Requires `actions:read`.
+      tags: [Ledger]
+      security: [{bearerAuth: []}, {sessionCookie: []}]
+      x-deedglass-auth: session_or_key
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+        - {name: id, in: path, required: true, description: The action id (`act_…`)., schema: {type: string}}
+      responses:
+        "200":
+          description: The action.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+            Deedglass-Version:
+              $ref: "#/components/headers/DeedglassVersion"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActionDetail"
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/deeds:
+    get:
+      operationId: listDeeds
+      summary: List deeds
+      description: >-
+        Deed envelopes by seq, oldest first (`order=desc` for newest first). Each item is a stored
+        deed; `GET /v1/deeds/{id}` returns its exact canonical bytes. Requires `deeds:read`.
+      tags: [Deeds]
+      security: [{bearerAuth: []}, {sessionCookie: []}]
+      x-deedglass-auth: session_or_key
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+        - $ref: "#/components/parameters/FromSeq"
+        - $ref: "#/components/parameters/ToSeq"
+        - {name: kind, in: query, required: false, description: 'A comma list of `action`, `admin`, `amendment`.', schema: {type: string}}
+        - {name: action, in: query, required: false, description: 'An action id: its deed and any amendments.', schema: {type: string}}
+        - {name: order, in: query, required: false, description: '`asc` (default) or `desc`.', schema: {type: string, enum: [asc, desc]}}
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+      responses:
+        "200":
+          description: One page of deeds.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+            Deedglass-Version:
+              $ref: "#/components/headers/DeedglassVersion"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeedList"
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/deeds/{id}:
+    get:
+      operationId: getDeed
+      summary: Get one deed's exact bytes
+      description: >-
+        The stored canonical JSON of the deed envelope, byte for byte, so its hash and seal check
+        offline. Deeds never change: the response is cacheable forever and its `ETag` is the
+        `body_hash`. With `Accept: application/cose` the deed comes as a COSE_Sign1 signed
+        statement (RFC 9052; not an RFC 9942 transparency-service object). Requires `deeds:read`.
+      tags: [Deeds]
+      security: [{bearerAuth: []}, {sessionCookie: []}]
+      x-deedglass-auth: session_or_key
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+        - {name: id, in: path, required: true, description: The deed id (`deed_…`)., schema: {type: string}}
+        - {name: If-None-Match, in: header, required: false, description: The `ETag` of a copy you hold., schema: {type: string}}
+      responses:
+        "200":
+          description: The deed.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+            ETag:
+              description: '`"sha256:<hex>"`: the deed''s `body_hash`.'
+              schema:
+                type: string
+            Cache-Control:
+              schema:
+                type: string
+                const: private, max-age=31536000, immutable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Deed"
+            application/cose:
+              schema:
+                type: string
+                contentMediaType: application/cose
+        "304":
+          description: The copy named in `If-None-Match` is current.
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/deeds/export:
+    get:
+      operationId: exportDeeds
+      summary: Export deeds as a bundle
+      description: >-
+        A streamed export bundle v1 (docs/BUNDLE_FORMAT.md): a deterministic tar.gz holding
+        README.txt, keys.json, deeds.jsonl, manifest.json and manifest.seal.json, read from one
+        database snapshot. Choose deeds by seq or by issued_at, at most 1,000,000 at a time; an
+        empty range is 404 with where the chain ends. Check the file with `deedglass verify
+        <file> --keys <this server>/.well-known/deedglass/keys.json`. Requires `deeds:read`.
+      tags: [Deeds]
+      security: [{bearerAuth: []}, {sessionCookie: []}]
+      x-deedglass-auth: session_or_key
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+        - $ref: "#/components/parameters/FromSeq"
+        - $ref: "#/components/parameters/ToSeq"
+        - {name: "issued_at[gte]", in: query, required: false, description: RFC 3339; inclusive. Not with from_seq or to_seq., schema: {type: string, format: date-time}}
+        - {name: "issued_at[lt]", in: query, required: false, description: RFC 3339; exclusive., schema: {type: string, format: date-time}}
+      responses:
+        "200":
+          description: The bundle, streamed.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+            Content-Disposition:
+              description: '`attachment; filename="deedglass-<org>-<first>-<last>.tar.gz"`.'
+              schema:
+                type: string
+          content:
+            application/gzip:
+              schema:
+                type: string
+                contentMediaType: application/gzip
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/ledger/check:
+    get:
+      operationId: checkLedger
+      summary: Check the deed chain
+      description: >-
+        Checks every deed in the range in seq order against this server's own seal keys: hashes,
+        seals, links and seq continuity. A broken chain is a 200 result with `status: broken` and
+        the first break, not an error. The check stops after 30 s or 2,000,000 deeds with `status:
+        incomplete` and `next_from_seq`. Keep `head` somewhere outside Deedglass: it is how a
+        deletion from the end of the chain becomes visible. Requires `deeds:read`.
+      tags: [Ledger]
+      security: [{bearerAuth: []}, {sessionCookie: []}]
+      x-deedglass-auth: session_or_key
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+        - $ref: "#/components/parameters/FromSeq"
+        - $ref: "#/components/parameters/ToSeq"
+        - {name: "issued_at[gte]", in: query, required: false, description: RFC 3339; inclusive. Not with from_seq or to_seq., schema: {type: string, format: date-time}}
+        - {name: "issued_at[lt]", in: query, required: false, description: RFC 3339; exclusive., schema: {type: string, format: date-time}}
+      responses:
+        "200":
+          description: The result.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+            Deedglass-Version:
+              $ref: "#/components/headers/DeedglassVersion"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LedgerCheck"
+        default:
+          $ref: "#/components/responses/Error"
 components:
   securitySchemes:
     bearerAuth:
@@ -201,6 +425,38 @@ components:
         type: string
         minLength: 1
         maxLength: 255
+    Limit:
+      name: limit
+      in: query
+      required: false
+      description: Page size, 1–100 (default 25).
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+    Cursor:
+      name: cursor
+      in: query
+      required: false
+      description: '`next_cursor` from the previous page, unchanged.'
+      schema:
+        type: string
+    FromSeq:
+      name: from_seq
+      in: query
+      required: false
+      description: The first deed seq (inclusive).
+      schema:
+        type: integer
+        minimum: 1
+    ToSeq:
+      name: to_seq
+      in: query
+      required: false
+      description: The last deed seq (inclusive).
+      schema:
+        type: integer
+        minimum: 1
   headers:
     DeedglassRequestId:
       description: This request's id. Quote it to support; it matches `error.request_id`.
@@ -581,6 +837,217 @@ components:
             data_digest: {type: [string, "null"]}
         amends: {type: [string, "null"]}
         seal_key_id: {type: string}
+    NullableTime:
+      type: [string, "null"]
+      format: date-time
+    Action:
+      type: object
+      required: [object, id, created_at, agent, tool, connector, mode, state, on_behalf_of, session, policy, execution, witness, cost, request_digest, result_digest, payload_pruned_at, deed]
+      description: One agent action. Its sections mirror the deed's.
+      properties:
+        object: {type: string, const: action}
+        id: {type: string, pattern: "^act_[0-7][0-9a-hjkmnp-tv-z]{25}$"}
+        created_at: {type: string, format: date-time}
+        agent:
+          type: object
+          required: [id, name]
+          properties:
+            id: {type: string}
+            name: {type: string}
+        tool: {type: string}
+        connector: {type: [string, "null"]}
+        mode: {type: string, enum: [gateway, proxy]}
+        state:
+          type: string
+          enum: [received, authenticated, evaluated, denied, pending_approval, executing, executed, failed, witnessing, verified, mismatch, unverifiable, sealed, expired, cancelled]
+        on_behalf_of: {type: [string, "null"]}
+        session: {type: [string, "null"]}
+        policy:
+          type: object
+          required: [id, version_id, mode, decision, rule_id]
+          properties:
+            id: {type: [string, "null"]}
+            version_id: {type: [string, "null"]}
+            mode: {type: string, enum: [enforce, shadow]}
+            decision: {type: [string, "null"], enum: [allow, deny, require_approval, null]}
+            rule_id: {type: [string, "null"]}
+        execution:
+          type: [object, "null"]
+          required: [status, started_at, finished_at, latency_ms, error_code]
+          properties:
+            status: {type: [string, "null"], enum: [succeeded, failed, unknown, null]}
+            started_at: {$ref: "#/components/schemas/NullableTime"}
+            finished_at: {$ref: "#/components/schemas/NullableTime"}
+            latency_ms: {type: [integer, "null"], minimum: 0}
+            error_code: {type: [string, "null"]}
+        witness:
+          type: [object, "null"]
+          required: [level, verdict, method]
+          properties:
+            level: {type: string, enum: [L0, L1, L2]}
+            verdict: {type: string, enum: [VERIFIED, MISMATCH, UNVERIFIABLE]}
+            method: {type: [string, "null"]}
+        cost:
+          type: [object, "null"]
+          required: [amount, currency]
+          properties:
+            amount: {type: integer, minimum: 0}
+            currency: {type: string, pattern: "^[a-z]{3}$"}
+        request_digest: {$ref: "#/components/schemas/Digest"}
+        result_digest: {type: [string, "null"]}
+        payload_pruned_at: {$ref: "#/components/schemas/NullableTime"}
+        deed: {type: [string, "null"]}
+      examples:
+        - object: action
+          id: act_01j9zt3a5c7e9g1j3m5p7r9t1v
+          created_at: "2026-10-02T10:14:03.401Z"
+          agent: {id: agt_01j9z9b1d3f5h7k9m1p3r5t7v9, name: support-bot}
+          tool: postgres.execute
+          connector: null
+          mode: gateway
+          state: sealed
+          on_behalf_of: u_4821
+          session: chat_77
+          policy: {id: null, version_id: null, mode: enforce, decision: allow, rule_id: allow-order-updates}
+          execution: {status: succeeded, started_at: "2026-10-02T10:14:03.455Z", finished_at: "2026-10-02T10:14:03.496Z", latency_ms: 41, error_code: null}
+          witness: {level: L2, verdict: MISMATCH, method: postgres.pgoutput}
+          cost: null
+          request_digest: sha256:9c1e5b7d0a2f4c6e8b0d2f4a6c8e0b2d4f6a8c0e2b4d6f8a0c2e4b6d8f0a2c4e
+          result_digest: null
+          payload_pruned_at: null
+          deed: deed_01j9zt3q5s7v9w1y3a5c7e9g1j
+    ActionList:
+      type: object
+      required: [object, data, has_more, next_cursor]
+      properties:
+        object: {type: string, const: list}
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Action"
+        has_more: {type: boolean}
+        next_cursor: {type: [string, "null"]}
+    ActionEvent:
+      type: object
+      required: [object, id, seq, from, to, at, actor, data]
+      properties:
+        object: {type: string, const: action_event}
+        id: {type: string, pattern: "^evt_[0-7][0-9a-hjkmnp-tv-z]{25}$"}
+        seq: {type: integer, minimum: 1}
+        from: {type: [string, "null"]}
+        to: {type: string}
+        at: {type: string, format: date-time}
+        actor: {type: string, description: '`system`, `agt_…` or `usr_…`.'}
+        data:
+          type: object
+          description: Short codes and digests (reason, rule_id, error_code, level, verdict, approval_id, detail_digest); never payloads.
+    ActionDetail:
+      allOf:
+        - $ref: "#/components/schemas/Action"
+      type: object
+      required: [request, result, events, deeds, approval]
+      properties:
+        witness:
+          type: [object, "null"]
+          required: [level, verdict, method, detail]
+          properties:
+            detail:
+              description: The stored expected-vs-observed diff, or null after pruning.
+        request:
+          description: The tool arguments, or null after pruning.
+        result:
+          description: The tool result, or null after pruning.
+        events:
+          type: object
+          required: [object, data, has_more, next_cursor]
+          properties:
+            object: {type: string, const: list}
+            data:
+              type: array
+              maxItems: 200
+              items:
+                $ref: "#/components/schemas/ActionEvent"
+            has_more: {type: boolean}
+            next_cursor: {type: "null"}
+        deeds:
+          type: array
+          items:
+            type: object
+            required: [id, kind, seq, issued_at]
+            properties:
+              id: {type: string}
+              kind: {type: string, enum: [action, amendment]}
+              seq: {type: integer, minimum: 1}
+              issued_at: {type: string, format: date-time}
+        approval:
+          type: "null"
+          description: The approval (S22); null until approvals ship.
+    DeedList:
+      type: object
+      required: [object, data, has_more, next_cursor]
+      properties:
+        object: {type: string, const: list}
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Deed"
+        has_more: {type: boolean}
+        next_cursor: {type: [string, "null"]}
+    LedgerCheck:
+      type: object
+      required: [object, org, status, checked, first_seq, last_seq, anchor, head, seal_keys, break, next_from_seq, duration_ms, checked_at]
+      properties:
+        object: {type: string, const: ledger_check}
+        org: {type: string}
+        status: {type: string, enum: [intact, broken, incomplete]}
+        checked: {type: integer, minimum: 0}
+        first_seq: {type: [integer, "null"]}
+        last_seq: {type: [integer, "null"]}
+        anchor:
+          type: object
+          required: [kind, seq, body_hash]
+          properties:
+            kind: {type: string, enum: [genesis, deed]}
+            seq: {type: integer, minimum: 0}
+            body_hash: {type: [string, "null"]}
+        head:
+          type: [object, "null"]
+          required: [seq, deed, body_hash, issued_at]
+          description: The last intact deed checked. Keep it outside Deedglass.
+          properties:
+            seq: {type: integer}
+            deed: {type: string}
+            body_hash: {$ref: "#/components/schemas/Digest"}
+            issued_at: {$ref: "#/components/schemas/DeedTime"}
+        seal_keys:
+          type: array
+          items: {type: string}
+        break:
+          type: [object, "null"]
+          required: [seq, deed, code, message, next]
+          properties:
+            seq: {type: [integer, "null"]}
+            deed: {type: [string, "null"]}
+            code: {type: string, examples: [body_hash_mismatch, chain_seq_gap, chain_prev_hash_mismatch, seal_invalid]}
+            message: {type: string, examples: ["Deed 812 was changed after it was sealed."]}
+            next: {type: string}
+        next_from_seq: {type: [integer, "null"]}
+        duration_ms: {type: integer, minimum: 0}
+        checked_at: {type: string, format: date-time}
+      examples:
+        - object: ledger_check
+          org: org_01j9z8m2k4p6r8t0v2x4z6b8d0
+          status: intact
+          checked: 1204
+          first_seq: 1
+          last_seq: 1204
+          anchor: {kind: genesis, seq: 0, body_hash: null}
+          head: {seq: 1204, deed: deed_01j9zx3q5s7v9w1y3a5c7e9g1j, body_hash: "sha256:5e0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8fa91c", issued_at: "2026-10-02T18:29:58.004Z"}
+          seal_keys: [sk_01j9zr8k2m4p6r8t0v2x4z6b8d]
+          break: null
+          next_from_seq: null
+          duration_ms: 312
+          checked_at: "2026-10-02T18:31:02.117Z"
     Version:
       type: object
       required: [object, version, commit, built_at, go, api_versions, default_api_version]

@@ -1,4 +1,6 @@
 exit 0
 --- stdout
-✓ Schema is current at 0009 · dry run, nothing to apply
+◐ Dry run on 127.0.0.1:55432 as deedglass_migrator · schema at 0009 · 1 pending
+  0010 ledger  sha256:c1fb…6ee7
+○ Nothing was applied. Run deedglass migrate up to apply it.
 --- stderr

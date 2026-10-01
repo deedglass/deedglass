@@ -42,6 +42,20 @@ What Deedglass does not do, stated plainly. **Owner: S37**, which finalizes this
 - **Browsers verify Ed25519 with their own engines.** The page checks key safety and `s < L` itself first and agrees with Go on every published vector and the 500-case parity corpus, but a browser engine could still differ on an input nobody has tried. The CLI is the reference verifier. Browsers without WebCrypto Ed25519 (before Safari 17, Firefox 129, Chrome 137) get "use the CLI", never a verdict.
 - **The browser verifier reads `.json` and `.jsonl`, not bundles, in v1.**
 
+## Ledger limits (S06)
+
+- **The chain check runs inside the database it checks.** It finds a changed, removed or reordered
+  deed anywhere before the head, but not deeds deleted from the end of the chain. Keep the head
+  (`deedglass ledger check` prints it) somewhere outside Deedglass and compare.
+- **Someone with database superuser rights can change history.** The append-only triggers stop
+  every Deedglass role; a superuser can disable them. The chain check and every external
+  `deedglass verify` then name the first changed deed; they can't undo the change or say who made it.
+- **Pruned payloads are gone.** Deeds keep their digests, so a copy you kept elsewhere can still be
+  matched, but Deedglass can no longer show the original arguments or results.
+- **No search inside payloads.** `q` matches the tool name and the error code only.
+- **Exports stop at 1,000,000 deeds and checks at 2,000,000 deeds or 30 s per request**; larger
+  ranges are split (`next_from_seq`).
+
 ## What this page does not do
 
 It does not list bugs or missing features on the schedule. It lists limits of the design that stay true after they ship.

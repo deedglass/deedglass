@@ -30,6 +30,9 @@ make bench-deed     # S04 seal/verify budget and the Postgres Sealer p50/p99; ra
 make matrix         # integration on 16, 17 and 18
 make fuzz           # 30 s each: intent and id parsers, deed envelope, verifier, key-set parsers, verify stream, bundle reader
 make bench-verify   # S05 budget: verify 100,000 deeds (.jsonl and bundle) and one deed cold; raw JSON in bench/results/
+make bench-ledger   # S06 budget at 100,000 actions: lists, get, chain check, export memory, seal overhead, EXPLAIN plans
+scripts/dev-pg.sh up  # a Docker-free dev Postgres on 127.0.0.1:55432 (writes .tmp/dev-pg.env); down | reset
+scripts/demo/tamper-clip.sh  # S06's recording: 1,000 real deeds, export, verify ✓, flip one digit, verify ✕
 make gencopy        # regenerate testdata/deeds/messages.json and web/verify/src/*.gen.ts from Go
 make web-verify-test  # (in ci) the browser verifier: npm ci once, tsc --noEmit, vitest (vectors, parity 500/500)
 make web-verify-serve # build and serve the verify page on http://127.0.0.1:5178
@@ -187,6 +190,16 @@ and "open source" until the repo is public. Style bans: "revolutionary", "world-
 - `internal/deed/archive` (S05): round trip, byte-identical writes (golden SHA-256), every reader rule,
   gzip bomb, seals, `FuzzArchiveOpen`; the reader never writes to disk.
 - `internal/deed/cmd/gencopy`: the generated TypeScript and JSON are never stale.
+- `internal/ledger` (S06): the one write path for `action_events`, `admin_events` and `deeds`
+  (nothing else writes them; `ledger.Publish` is the only `pg_notify('deedglass_events', …)`);
+  filter and cursor units, closed `EventData`, event payload shape ≤ 1 KiB, the admin catalogue;
+  integration: every seal path, illegal and concurrent transitions, NOTIFY only after COMMIT, the
+  filter matrix against an in-memory reference, pagination under concurrent inserts, RLS (foreign
+  ids are not found), a superuser rewrite (`body_hash_mismatch`) and delete (`chain_seq_gap`),
+  incomplete checks, export → verify byte-identical twice, export abort, prune → verify, and the six
+  HTTP routes against `api/openapi.yaml`. `TestLedgerBudget` (`make bench-ledger`) is the 100k
+  budget. CLI goldens: `cmd/deedglass/testdata/ledger/` (`go test -tags integration ./cmd/deedglass
+  -run TestLedgerCommandsLive -args -update`, against a throwaway cluster).
 - `cmd/deedglass verify` (S05): 80 golden cases in `testdata/verify/<case>/{args,stdout,stderr,exit}`
   (`go test ./cmd/deedglass -run TestVerifyGolden -update`), every vector's code and exit, `--keys`
   URL rules (same-host redirects, 1 MiB, timeout, loopback-only http), key-set merge conflicts, no

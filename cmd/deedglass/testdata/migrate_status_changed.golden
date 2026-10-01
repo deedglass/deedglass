@@ -10,5 +10,6 @@ VERSION  NAME          STATE    APPLIED               CHECKSUM
 0007     witness       applied  2026-10-01 11:02 UTC  sha256:4908…c982
 0008     learn         applied  2026-10-01 11:02 UTC  sha256:1139…c18f
 0009     webhooks_ops  applied  2026-10-01 11:02 UTC  sha256:e2b3…9542
-[31m✕[0m 8 applied · 0 pending · 1 doesn't match this build. Run deedglass migrate verify for details.
+0010     ledger        [35mpending[0m  —                     sha256:c1fb…6ee7
+[31m✕[0m 8 applied · 1 pending · 1 doesn't match this build. Run deedglass migrate verify for details.
 --- stderr

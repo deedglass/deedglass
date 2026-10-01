@@ -91,3 +91,45 @@ func TestNoExecutingShortcut(t *testing.T) {
 		t.Error("the honest-unknown path is missing")
 	}
 }
+
+// TestEdgesExhaustive lists every allowed edge of contract §5 by hand and checks all 225 pairs:
+// exactly these are allowed, everything else is refused.
+func TestEdgesExhaustive(t *testing.T) {
+	allowed := map[[2]State]bool{
+		{Received, Authenticated}: true, {Authenticated, Evaluated}: true,
+		{Evaluated, Denied}: true, {Evaluated, PendingApproval}: true, {Evaluated, Executing}: true,
+		{PendingApproval, Executing}: true, {PendingApproval, Denied}: true, {PendingApproval, Expired}: true,
+		{PendingApproval, Cancelled}: true,
+		{Denied, Sealed}:             true, {Expired, Sealed}: true, {Cancelled, Sealed}: true,
+		{Executing, Executed}: true, {Executing, Failed}: true, {Executed, Witnessing}: true,
+		{Witnessing, Verified}: true, {Witnessing, Mismatch}: true, {Witnessing, Unverifiable}: true,
+		{Verified, Sealed}: true, {Mismatch, Sealed}: true, {Unverifiable, Sealed}: true, {Failed, Sealed}: true,
+	}
+	if len(allowed) != 22 {
+		t.Fatalf("the hand-written table has %d edges, want 22", len(allowed))
+	}
+	pairs := 0
+	for _, from := range States() {
+		for _, to := range States() {
+			pairs++
+			if got, want := CanTransition(from, to), allowed[[2]State{from, to}]; got != want {
+				t.Errorf("CanTransition(%s, %s) = %v, want %v", from, to, got, want)
+			}
+		}
+	}
+	if pairs != 225 {
+		t.Fatalf("checked %d pairs, want 225", pairs)
+	}
+}
+
+func TestSealable(t *testing.T) {
+	want := map[State]bool{Denied: true, Expired: true, Cancelled: true, Failed: true, Verified: true, Mismatch: true, Unverifiable: true}
+	for _, s := range States() {
+		if s.Sealable() != want[s] {
+			t.Errorf("%s.Sealable() = %v, want %v", s, s.Sealable(), want[s])
+		}
+	}
+	if State("nope").Sealable() {
+		t.Error("an unknown state is sealable")
+	}
+}

@@ -81,3 +81,8 @@ func (s State) Next() []State { return append([]State(nil), edges[s]...) }
 
 // Terminal reports whether s has no way out. Only Sealed is terminal.
 func (s State) Terminal() bool { return s == Sealed }
+
+// Sealable reports whether an action in s is final and may be sealed: the seven states whose one
+// way out is Sealed (denied, expired, cancelled, failed, verified, mismatch, unverifiable).
+// ledger.SealAction refuses any other state (S06).
+func (s State) Sealable() bool { return CanTransition(s, Sealed) }

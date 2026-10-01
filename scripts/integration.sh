@@ -78,7 +78,7 @@ echo "== control plane: deedglass migrate (live)"
 DG=("go" "run" "$ROOT/cmd/deedglass")
 cd "$ROOT"
 out="$(DEEDGLASS_ENV=dev "${DG[@]}" migrate up --database-url "$MIG_URL" --no-color)"; echo "$out"
-grep -q "Schema at 0009 · 9 applied" <<<"$out" || { echo "FAIL: first migrate up" >&2; exit 1; }
+grep -q "Schema at 0010 · 10 applied" <<<"$out" || { echo "FAIL: first migrate up" >&2; exit 1; }
 out="$(DEEDGLASS_ENV=dev "${DG[@]}" migrate up --database-url "$MIG_URL" --no-color)"; echo "$out"
 grep -q "Schema is current" <<<"$out" || { echo "FAIL: second migrate up" >&2; exit 1; }
 DEEDGLASS_ENV=dev "${DG[@]}" migrate verify --database-url "$MIG_URL" --no-color
@@ -92,13 +92,15 @@ echo "tables without RLS: $norls"
 [ "$norls" = "schema_migrations,seal_keys" ] || { echo "FAIL: tables without RLS: $norls" >&2; exit 1; }
 
 echo "== control plane: Go integration suites"
-go test -tags integration -count=1 ./internal/store/... ./internal/gate/... ./cmd/deedglass/
+go test -tags integration -count=1 ./internal/store/... ./internal/gate/... ./internal/ledger/... ./cmd/deedglass/
 if [ -n "${DEEDGLASS_IT_BENCH_OUT:-}" ]; then
   echo "== store budget (S02 §3.9) -> $DEEDGLASS_IT_BENCH_OUT"
   run="${DEEDGLASS_IT_BENCH_RUN:-TestPerfBudget|TestExplainShowsInitPlan}"
-  DEEDGLASS_IT_BENCH=1 go test -tags integration -count=1 -json -run "$run" ./internal/store/ > "$DEEDGLASS_IT_BENCH_OUT"
+  pkg="${DEEDGLASS_IT_BENCH_PKG:-./internal/store/}"
+  DEEDGLASS_IT_BENCH=1 go test -tags integration -count=1 -timeout 30m -json -run "$run" "$pkg" > "$DEEDGLASS_IT_BENCH_OUT"
   sed -n 's/.*PERF \({.*}\)\\n".*/\1/p' "$DEEDGLASS_IT_BENCH_OUT" | sed 's/\\"/"/g'
   first="${run%%|*}"
-  grep -q '"Action":"pass","Package":"github.com/deedglass/deedglass/internal/store","Test":"'"$first"'"' "$DEEDGLASS_IT_BENCH_OUT" || { echo "FAIL: budget $first" >&2; exit 1; }
+  grep -q '"Action":"pass","Package":"github.com/deedglass/deedglass/'"${pkg#./}"'","Test":"'"$first"'"' "$DEEDGLASS_IT_BENCH_OUT" ||
+    grep -q '"Action":"pass","Package":"github.com/deedglass/deedglass/'"$(echo "${pkg#./}" | sed 's|/$||')"'","Test":"'"$first"'"' "$DEEDGLASS_IT_BENCH_OUT" || { echo "FAIL: budget $first" >&2; exit 1; }
 fi
 echo "PASS: control plane"

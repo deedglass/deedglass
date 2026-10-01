@@ -1,10 +1,7 @@
 package deed
 
 import (
-	"encoding/json"
 	"fmt"
-
-	"github.com/gowebpki/jcs"
 
 	"github.com/deedglass/deedglass/internal/intent"
 )
@@ -110,13 +107,9 @@ func parseEnvelope(raw []byte) (*parsed, *VerifyError) {
 	}
 	// The body is hashed from the parsed tree, so whitespace and key order in transit don't matter
 	// while every value does.
-	bj, err := json.Marshal(top["body"])
-	if err != nil {
-		return nil, errMalformed("body: " + err.Error())
-	}
-	c, err := jcs.Transform(bj)
-	if err != nil {
-		return nil, errMalformed("body: canonicalization failed: " + err.Error())
+	c, verr := canonicalTree(top["body"])
+	if verr != nil {
+		return nil, withRefs(verr, bodyTree)
 	}
 	p := &parsed{env: env, bodyJCS: c}
 	p.envJCS = canonicalEnvelope(env, c)

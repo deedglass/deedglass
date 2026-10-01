@@ -50,6 +50,12 @@ func keyErr(e *Env, code, msg, next string) error {
 // loadSealKey loads, checks and registers the seal key (S04 §3.7). It fails closed: serve never
 // starts with a key it would refuse to seal with.
 func loadSealKey(ctx context.Context, e *Env, cfg *config.Config, db *store.DB, log *slog.Logger) (*deed.FileSigner, error) {
+	return loadSealKeyQuiet(ctx, e, cfg, db, log, false)
+}
+
+// loadSealKeyQuiet is loadSealKey for commands that seal as a side effect (deeds export, ledger
+// prune, dev fake-action): with quiet set, success prints nothing; refusals still do.
+func loadSealKeyQuiet(ctx context.Context, e *Env, cfg *config.Config, db *store.DB, log *slog.Logger, quiet bool) (*deed.FileSigner, error) {
 	prod := cfg.Env == config.Prod
 	path, shown := cfg.SealKeyFile, cfg.SealKeyFile
 	if path == "" {
@@ -65,7 +71,12 @@ func loadSealKey(ctx context.Context, e *Env, cfg *config.Config, db *store.DB, 
 		if created {
 			format = devCreatedFormat
 		}
-		fmt.Fprintln(e.Stdout, e.Style.UnknownLine(fmt.Sprintf(format, shown)))
+		switch {
+		case !quiet:
+			fmt.Fprintln(e.Stdout, e.Style.UnknownLine(fmt.Sprintf(format, shown)))
+		case created:
+			fmt.Fprintln(e.Stderr, e.Style.UnknownLine(fmt.Sprintf(format, shown)))
+		}
 	}
 	s, err := deed.LoadKeyFile(path, deed.LoadOptions{Prod: prod})
 	var kfe *deed.KeyFileError
@@ -106,7 +117,9 @@ func loadSealKey(ctx context.Context, e *Env, cfg *config.Config, db *store.DB, 
 	}
 	tp := deed.Thumbprint(s.PublicKey())
 	log.Info("seal key loaded", "seal_key_id", s.KeyID(), "thumbprint", tp, "registered", created)
-	fmt.Fprintln(e.Stdout, e.Style.OKLine("Seal key "+ui.Sep+" "+s.KeyID()+" "+ui.Sep+" "+shortHash(tp)))
+	if !quiet {
+		fmt.Fprintln(e.Stdout, e.Style.OKLine("Seal key "+ui.Sep+" "+s.KeyID()+" "+ui.Sep+" "+shortHash(tp)))
+	}
 	return s, nil
 }
 

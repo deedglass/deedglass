@@ -1,0 +1,41 @@
+# S06: deed.SealBody and VerifyEnvelope with the direct JCS encoder (internal/deed/jcsenc.go).
+# go test -run '^$' -bench 'SealBody|VerifyEnvelope' -benchmem -cpu 1 -count 5 ./internal/deed
+# Budgets: SealBody <= 60 us/op, VerifyEnvelope <= 120 us/op. make bench-deed was not run (see the S06 report).
+
+## before (json.Marshal + strict parse + gowebpki/jcs), 2026-10-01 13:46 IST, load averages 1.77 2.34 2.59
+goos: darwin
+goarch: arm64
+pkg: github.com/deedglass/deedglass/internal/deed
+cpu: Apple M1
+BenchmarkSealBody       	   15710	     74373 ns/op	   32171 B/op	     729 allocs/op
+BenchmarkSealBody       	   16515	     72694 ns/op	   32171 B/op	     729 allocs/op
+BenchmarkSealBody       	   16480	     72884 ns/op	   32171 B/op	     729 allocs/op
+BenchmarkSealBody       	   16540	     72678 ns/op	   32171 B/op	     729 allocs/op
+BenchmarkSealBody       	   16564	     72527 ns/op	   32171 B/op	     729 allocs/op
+BenchmarkVerifyEnvelope 	   10000	    105401 ns/op	   35641 B/op	     844 allocs/op
+BenchmarkVerifyEnvelope 	   10000	    105494 ns/op	   35640 B/op	     844 allocs/op
+BenchmarkVerifyEnvelope 	   10000	    105441 ns/op	   35640 B/op	     844 allocs/op
+BenchmarkVerifyEnvelope 	   10000	    105579 ns/op	   35640 B/op	     844 allocs/op
+BenchmarkVerifyEnvelope 	   10000	    106019 ns/op	   35640 B/op	     844 allocs/op
+PASS
+ok  	github.com/deedglass/deedglass/internal/deed	11.880s
+
+## after, 2026-10-01 14:01 IST
+# uptime before: 14:01  up 6 days, 12:50, 1 user, load averages: 14.13 17.89 12.33
+goos: darwin
+goarch: arm64
+pkg: github.com/deedglass/deedglass/internal/deed
+cpu: Apple M1
+BenchmarkSealBody       	   36873	     30632 ns/op	    4336 B/op	      12 allocs/op
+BenchmarkSealBody       	   40045	     29962 ns/op	    4336 B/op	      12 allocs/op
+BenchmarkSealBody       	   40064	     30103 ns/op	    4336 B/op	      12 allocs/op
+BenchmarkSealBody       	   39951	     29978 ns/op	    4336 B/op	      12 allocs/op
+BenchmarkSealBody       	   40294	     29861 ns/op	    4336 B/op	      12 allocs/op
+BenchmarkVerifyEnvelope 	   15106	     79384 ns/op	   16872 B/op	     358 allocs/op
+BenchmarkVerifyEnvelope 	   15098	     80043 ns/op	   16872 B/op	     358 allocs/op
+BenchmarkVerifyEnvelope 	   15002	     79867 ns/op	   16872 B/op	     358 allocs/op
+BenchmarkVerifyEnvelope 	   15088	     79477 ns/op	   16872 B/op	     358 allocs/op
+BenchmarkVerifyEnvelope 	   15046	     79555 ns/op	   16872 B/op	     358 allocs/op
+PASS
+ok  	github.com/deedglass/deedglass/internal/deed	12.600s
+# uptime after: 14:02  up 6 days, 12:50, 1 user, load averages: 11.36 17.09 12.15

@@ -103,6 +103,43 @@ func (db *DB) OrgReadTx(ctx context.Context, org ids.OrgID, fn TxFunc) error {
 	return db.orgTx(ctx, org, pgx.TxOptions{AccessMode: pgx.ReadOnly}, fn)
 }
 
+// OrgSnapshotTx is OrgTx in a REPEATABLE READ READ ONLY transaction: every statement sees the same
+// snapshot, and writers are never blocked. Exports use it so their two passes agree (S06).
+func (db *DB) OrgSnapshotTx(ctx context.Context, org ids.OrgID, fn TxFunc) error {
+	return db.orgTx(ctx, org, pgx.TxOptions{IsoLevel: pgx.RepeatableRead, AccessMode: pgx.ReadOnly}, fn)
+}
+
+// ErrLocked: another process holds the advisory lock WithLock asked for.
+var ErrLocked = errors.New("store: another run holds this lock")
+
+// WithLock runs fn while one dedicated connection holds the session-level advisory lock named key
+// (pg_try_advisory_lock(hashtextextended(key, 0))). It never waits: when another session holds the
+// lock it returns ErrLocked. fn runs its own transactions on other pooled connections; the lock
+// lasts for all of them and is released at the end, or when the connection drops.
+func (db *DB) WithLock(ctx context.Context, key string, fn func(ctx context.Context) error) error {
+	c, err := db.pool.Acquire(ctx)
+	if err != nil {
+		return err
+	}
+	defer c.Release()
+	var got bool
+	if err := c.QueryRow(ctx, `SELECT pg_catalog.pg_try_advisory_lock(pg_catalog.hashtextextended($1::text, 0))`, key).Scan(&got); err != nil {
+		return err
+	}
+	if !got {
+		return ErrLocked
+	}
+	defer func() {
+		uctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
+		defer cancel()
+		if _, err := c.Exec(uctx, `SELECT pg_catalog.pg_advisory_unlock(pg_catalog.hashtextextended($1::text, 0))`, key); err != nil {
+			// The lock ends with the session: drop the connection rather than return it locked.
+			_ = c.Conn().Close(uctx)
+		}
+	}()
+	return fn(ctx)
+}
+
 func (db *DB) orgTx(ctx context.Context, org ids.OrgID, opts pgx.TxOptions, fn TxFunc) error {
 	if org.IsZero() {
 		return ErrNoOrg

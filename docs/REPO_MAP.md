@@ -26,12 +26,13 @@ Last checked: S04, 2026-10-01 (S01 wrote it). Each session that changes the layo
 | `deed/archive` | built (S05) | S05 | Export bundle v1: deterministic writer, streaming reader with strict limits (`docs/BUNDLE_FORMAT.md`) |
 | `deed/cmd/gencopy` | built, generator (S05) | S05 | Writes `testdata/deeds/messages.json` and `web/verify/src/*.gen.ts` from Go |
 | `deed/deedtest/cmd/genchain` | built, bench helper (S05) | S05 | Writes a test chain (and bundle) of n deeds for benchmarks |
-| `ledger` | stub | S06 | Action events, queries, chain check, export, retention |
+| `ledger` | built (S06) | S06 | The one write path for actions, action events, admin events and deeds (`Transition`, `SealAction`, `SealAmendment`, `RecordAdmin`, `Publish`); queries with cursors; the chain check; exports; retention; the six Ledger routes (`docs/LEDGER.md`) |
+| `ledger/fake` | built, dev tool (S06) | S06 | `deedglass dev fake-action`: deterministic plans from a seed, run through the real write path |
 | `identity` | stub | S07–S09 | Orgs, users, sessions, agents, API keys, signed intents |
 | `mailer` | stub | S07 | Mail interface: log (dev) and Resend |
 | `policy` | stub | S10–S12 | YAML → CEL compiler, evaluator, budgets, activation, replay input |
 | `sqlguard` | stub | S11 | Pure-Go SQL tokenizer and classifier |
-| `gate` | stub | S13 | Action pipeline, state machine, idempotency, worker (`gate/state.go` lands in S02) |
+| `gate` | `state.go` built (S02, S06 `Sealable`); the rest stub | S13 | Action pipeline, state machine, idempotency, worker |
 | `mcp` | stub | S14–S15 | MCP stdio wrap, Streamable HTTP gateway, `mcp serve` |
 | `vault` | stub | S16 | Envelope encryption of connector credentials, rotation |
 | `connector` | stub | S16–S17, S29–S30 | Connector interface, registry and implementations |
@@ -66,7 +67,7 @@ Last checked: S04, 2026-10-01 (S01 wrote it). Each session that changes the layo
 | `deploy/` | yes | kept from V0 | S03, S35 | Docker Compose for local Postgres; S03 adds the dev stack, S35 the release images |
 | `docs/` | yes | stubs | per page | Living docs; `docs/adr/` mirrors the ADR index; `docs/v0/` holds V0 references |
 | `internal/` | yes | see above | | Go packages |
-| `scripts/` | yes | built | S01 | `banned_words.sh`, `rename_guard.sh`, integration scripts |
+| `scripts/` | yes | built | S01 | `banned_words.sh`, `rename_guard.sh`, integration scripts; `dev-pg.sh` (a Docker-free dev Postgres, S06); `demo/flip-byte.sh` and `demo/tamper-clip.sh` (S06's recording) |
 | `sql/` | yes | kept from V0 | S02, S17 | V0 customer-side SQL `001`–`004`. S02 moves control-plane migrations to `internal/store/migrations` |
 | `testdata/` | yes | kept from V0; `deeds/` built (S04) | S04 | Offline vectors: JCS (RFC 8785), Ed25519 (RFC 8032, Wycheproof), Deed v1 (`deeds/`, generated), with `SHA256SUMS` |
 | `.github/workflows/` | yes | kept from V0 | S03 | `ci.yml` and `pg-matrix.yml` (Postgres 16, 17, 18) |

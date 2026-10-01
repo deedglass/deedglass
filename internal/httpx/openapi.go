@@ -147,6 +147,9 @@ func CheckRequired(spec []byte, schema string, body []byte) []error {
 		if !ok {
 			return
 		}
+		if v == nil && nullable(m) {
+			return // a nullable object that is null has no required properties
+		}
 		for _, sub := range anySlice(m["allOf"]) {
 			walk(sub, v, path)
 		}
@@ -195,3 +198,13 @@ func stringsAt(v any, path ...string) []string {
 }
 
 func anySlice(v any) []any { s, _ := v.([]any); return s }
+
+// nullable reports whether a schema's type list allows null (type: [object, "null"]).
+func nullable(m map[string]any) bool {
+	for _, t := range anySlice(m["type"]) {
+		if t == "null" {
+			return true
+		}
+	}
+	return false
+}

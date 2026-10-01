@@ -97,8 +97,8 @@ var contractRoutes = []ContractRoute{
 
 	// S13/S14: actions.
 	cr("POST", "/v1/actions", AgentKey, "actions:execute", "S13", "IdemNever: the Gate owns its idempotency"),
-	cr("GET", "/v1/actions", SessionOrKey, "actions:read", "S13"),
-	cr("GET", "/v1/actions/{id}", SessionOrKey, "actions:read", "S13"),
+	cr("GET", "/v1/actions", SessionOrKey, "actions:read", "S06"),
+	cr("GET", "/v1/actions/{id}", SessionOrKey, "actions:read", "S06"),
 	cr("POST", "/v1/actions/{id}/cancel", SessionOrKey, "admin", "S13"),
 	cr("POST", "/v1/actions/{id}/result", AgentKey, "actions:execute", "S13", "proxy mode"),
 	cr("POST", "/v1/tools/resolve", AgentKey, "actions:execute", "S14"),

@@ -1,0 +1,8 @@
+exit 0
+--- stdout
+SEQ     KIND       DEED             ABOUT                       SEALED
+1       action     deed_…   github.merge_pr             AGO
+2       action     deed_…   stripe.create_refund · VER… AGO
+3       action     deed_…   postgres.query · VERIFIED   AGO
+next page: deedglass deeds list --cursor CURSOR
+--- stderr

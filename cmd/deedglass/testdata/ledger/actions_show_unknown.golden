@@ -1,0 +1,5 @@
+exit 1
+--- stdout
+--- stderr
+✕ No action act_ID in demo.
+  next  deedglass actions list

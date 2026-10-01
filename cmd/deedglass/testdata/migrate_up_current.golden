@@ -1,4 +1,6 @@
 exit 0
 --- stdout
-✓ Schema is current at 0009
+◐ Migrating deedglass on 127.0.0.1:55432 as deedglass_migrator · 1 pending
+✓ 0010 ledger  11 ms
+✓ Schema at 0010 · 1 applied in 0.01 s
 --- stderr

@@ -187,8 +187,8 @@ builds it. Hidden commands work but aren't in `deedglass help`.
 | `deedglass policy replay` | Policies | Replay past actions against a version | soon (S27) |
 | `deedglass policy diff` | Policies | Compare two policy versions | soon (S12) |
 | `deedglass act` | Actions | Send a test action through the Gate | soon (S13) |
-| `deedglass actions list` | Actions | List actions | soon (S06) |
-| `deedglass actions show` | Actions | Show one action and its events | soon (S06) |
+| `deedglass actions list [--agent agt_…] [--tool stripe.*] [--state …] [--decision …] [--verdict MISMATCH] [--level L2] [--since 1h] [--q text] [--limit 25] [--cursor …] [--json]` | Actions | List actions | built |
+| `deedglass actions show <act_…> [--json]` | Actions | Show one action and its events | built |
 | `deedglass actions cancel` | Actions | Cancel a pending action | soon (S13) |
 | `deedglass approve` | Actions | Approve a pending action | soon (S22) |
 | `deedglass deny` | Actions | Deny a pending action | soon (S22) |
@@ -201,11 +201,11 @@ builds it. Hidden commands work but aren't in `deedglass help`.
 | `deedglass webhooks test` | Actions | Send a test event | soon (S22) |
 | `deedglass webhooks delete` | Actions | Remove a webhook endpoint | soon (S22) |
 | `deedglass verify <path|->... [--keys <file|url>] [--pin sha256:…] [--anchor <seq>:sha256:…] [--strict] [--all] [-q]` | Deeds | Check deeds offline | built |
-| `deedglass deeds list` | Deeds | List deeds | soon (S06) |
-| `deedglass deeds show` | Deeds | Show one deed | soon (S06) |
-| `deedglass deeds export` | Deeds | Export deeds as a bundle | soon (S06) |
-| `deedglass ledger check` | Deeds | Check the deed chain | soon (S06) |
-| `deedglass ledger prune` | Deeds | Remove events past retention | soon (S06) |
+| `deedglass deeds list [--from-seq n] [--to-seq n] [--kind action,admin,amendment] [--action act_…] [--order asc|desc] [--limit 25] [--json]` | Deeds | List deeds | built |
+| `deedglass deeds show <deed_…|seq> [--json]` | Deeds | Show one deed | built |
+| `deedglass deeds export [--out <file>] [--format tar.gz|jsonl] [--from-seq n] [--to-seq n] [--json]` | Deeds | Export deeds as a bundle | built |
+| `deedglass ledger check [--from-seq n] [--to-seq n] [--json]` | Deeds | Check the deed chain | built |
+| `deedglass ledger prune [--older-than 90d] [--dry-run] [--yes] [--json]` | Deeds | Remove old payloads; deeds stay | built |
 | `deedglass connector create` | Connectors | Add a connector | soon (S16) |
 | `deedglass connector list` | Connectors | List connectors | soon (S16) |
 | `deedglass connector show` | Connectors | Show one connector | soon (S16) |
@@ -234,7 +234,7 @@ builds it. Hidden commands work but aren't in `deedglass help`.
 | `deedglass insights suggestions generate` | Insights | Generate suggestions now | soon (S28) |
 | `deedglass insights digest` | Insights | Preview the weekly digest | soon (S28) |
 | `deedglass dev seed [--json]` | Dev | Load demo data into a dev database | built |
-| `deedglass dev fake-action` | Dev | Send realistic actions for demos | soon (S06) |
+| `deedglass dev fake-action [--n 20] [--seed 42] [--kinds allow,deny,…] [--agents 3] [--batch 1] [--pace 0s] [--org-slug demo] [--quiet] [--json]` | Dev | Seal realistic fake actions (dev only) | built |
 | `deedglass dev simulate` | Dev | Simulate agent traffic | soon (S27) |
 | `deedglass dev agent-script` | Dev | Run a scripted agent | soon (S37) |
 | `deedglass dev mail-preview` | Dev | Preview emails in the browser | soon (S07) |
@@ -330,7 +330,66 @@ Performance (S05 §3.9; `make bench-verify`, raw numbers in `bench/results/`): 1
 2.4 s wall with 71 MB peak RSS as `.jsonl`, 2.4 s as a bundle, one deed in under 10 ms, on an Apple
 M1 (8 cores), 2026-10-01.
 
+## Actions, deeds and the Ledger
+
+These run in direct database mode (`DEEDGLASS_DATABASE_URL`, the runtime role); API mode
+(`--server`, `--api-key`) arrives with S09's keys. With one org in the database they use it;
+with several, `--org <id or slug>` is required (the error lists them). Text output is for people
+(relative times, short ids); `--json` prints exactly the API's objects (RFC 3339 times, full ids).
+Full reference: [LEDGER.md](LEDGER.md), [RETENTION.md](RETENTION.md).
+
+| Command | Does | Exit |
+|---|---|---|
+| `actions list [--agent] [--tool stripe.*] [--state] [--decision] [--verdict] [--level] [--on-behalf-of] [--since 1h] [--q text] [--limit 25] [--cursor]` | newest first; the footer says `5 of 1,204` and prints the next page's command | 0; 2 for a bad filter |
+| `actions show <act_…>` | the decision, execution, witness (with the diff sentence), deeds and the event path | 0; 1 when not found |
+| `deeds list [--from-seq] [--to-seq] [--kind] [--action] [--order asc|desc]` | deeds by seq | 0 |
+| `deeds show <deed_…|seq>` | a summary; `--json` prints the stored bytes verbatim | 0; 1 when not found |
+| `deeds export [--out <file>] [--format tar.gz|jsonl] [--from-seq] [--to-seq]` | a sealed export bundle (or `.jsonl`), written to a temporary file and renamed at the end | 0; 1 for an empty range (nothing is written) |
+| `ledger check [--from-seq] [--to-seq]` | the chain check, with the head to keep elsewhere | 0 intact; 1 broken; 2 incomplete |
+| `ledger prune [--older-than 90d] [--dry-run] [--yes]` | removes payloads of old sealed actions and seals a `ledger.pruned` deed | 0; 1 not confirmed or another prune running; 2 without `--yes` off a terminal |
+| `dev fake-action [--n 20] [--seed 42] [--kinds …] [--agents 3] [--batch 1] [--pace 0s] [--org-slug demo] [--quiet]` | realistic actions through the real deed path (below) | 0; 1 outside `DEEDGLASS_ENV=dev` |
+
+```
+$ deedglass actions list --limit 5
+TIME     AGENT         TOOL                    DECISION   WITNESS             LATENCY
+2m ago   support-bot   postgres.execute        allow      ✕ L2 · MISMATCH     41 ms
+3m ago   support-bot   stripe.create_refund    approval   ◐ pending           —
+3m ago   billing-bot   stripe.create_refund    deny       ✕ denied            —
+4m ago   ops-bot       github.create_issue     allow      ✓ L1 · VERIFIED     212 ms
+5m ago   ops-bot       postgres.query          allow      ✓ L2 · VERIFIED     8 ms
+5 of 1,204 · next page: deedglass actions list --cursor eyJpZCI6…
+```
+
+Chips follow the brand (§12): `✓ L2 · VERIFIED` teal, `✕ L2 · MISMATCH` bold red, `✕ denied`
+plain red, `◐ pending` violet, `○ L1 · UNVERIFIABLE` amber; allowed and executed stay neutral on
+purpose. Colour only repeats what the symbol and words already say.
+
+### `dev fake-action`
+
+Dev only: it refuses unless `DEEDGLASS_ENV=dev`, before it reads any config or opens the database,
+and prints the database it writes to. It finds or creates the demo org (`--org-slug demo`, or an
+existing org with `--org`) and `--agents` demo agents, then walks every action through legal edges
+only (`ledger.Transition`) and seals it (`ledger.SealAction`), so the events fire and every deed is
+real.
+
+- **Deterministic:** `--seed` (PCG) fixes the tools, arguments, latencies and verdicts; ids and
+  times are real.
+- **Mix** (`--kinds` restricts it): 60% allowed and VERIFIED (L0 40%, L1 25%, L2 35%), 12% denied
+  (`block-destructive-sql`, `refund-limit`, `budget`), 6% L2 MISMATCH on `postgres.execute`, 8%
+  UNVERIFIABLE (`timeout`), 6% failed (`upstream_error`, `timeout`), 5% left waiting for approval
+  (not sealed), 3% sealed UNVERIFIABLE then amended to VERIFIED in its own amendment deed.
+- **Tools** are the canonical connector names: `postgres.query`, `postgres.execute`,
+  `stripe.create_refund`, `github.create_issue`, `github.merge_pr`, `slack.post_message`,
+  `gmail.create_draft`, `notion.create_page`, `orders.get`.
+- `--pace 200ms` spaces actions for live demos. `--batch 500` walks actions in parallel
+  transactions and seals them in order, 500 per transaction (bulk seeding).
+- Nothing calls a real tool. `executing_at` is set back by the simulated latency so deeds show a
+  realistic `latency_ms`; every other time is the database clock.
+
 ## What it doesn't do (yet)
+
+- The Ledger commands use the database directly; `--server`/`--api-key` (API mode) come with S09.
+  `actions list --follow` waits for S24's event stream.
 
 - The banner doesn't ask the terminal for its background colour (OSC 11); light terminals need
   `COLORFGBG` or `DEEDGLASS_THEME=light`. No image-protocol (iTerm2, Kitty) rendering yet.

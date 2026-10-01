@@ -100,6 +100,15 @@ func GetOrgBySlug(ctx context.Context, tx pgx.Tx, slug string) (Org, error) {
 	return scanOrg(tx.QueryRow(ctx, `SELECT `+orgCols+` FROM deedglass.orgs WHERE slug = $1`, slug))
 }
 
+// ListOrgs returns every org the transaction can see (all of them under SystemTx), oldest first.
+func ListOrgs(ctx context.Context, tx pgx.Tx) ([]Org, error) {
+	rows, err := tx.Query(ctx, `SELECT `+orgCols+` FROM deedglass.orgs ORDER BY created_at, id`)
+	if err != nil {
+		return nil, err
+	}
+	return pgx.CollectRows(rows, func(r pgx.CollectableRow) (Org, error) { return scanOrg(r) })
+}
+
 // UpsertUserByEmail returns the user with this email, creating it when missing. The email is
 // lowercased and trimmed. Inserting needs SystemTx (users are global; only a member is visible
 // from inside an org).

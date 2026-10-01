@@ -1,0 +1,29 @@
+exit 0
+--- stdout
+{
+  "object": "ledger_check",
+  "org": "org_ID",
+  "status": "intact",
+  "checked": 48,
+  "first_seq": 1,
+  "last_seq": 48,
+  "anchor": {
+    "kind": "genesis",
+    "seq": 0,
+    "body_hash": null
+  },
+  "head": {
+    "seq": 48,
+    "deed": "deed_ID",
+    "body_hash": "sha256:HASH",
+    "issued_at": "TIME"
+  },
+  "seal_keys": [
+    "sk_ID"
+  ],
+  "break": null,
+  "next_from_seq": null,
+  "duration_ms": N,
+  "checked_at": "TIME"
+}
+--- stderr

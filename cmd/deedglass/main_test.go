@@ -108,8 +108,8 @@ func TestGoldens(t *testing.T) {
 		{"config_print_txv", map[string]string{"TXV_DATABASE_URL": "x"}, false, []string{"config", "print"}, 1},
 		{"unknown_command", nil, false, []string{"polcy", "lint"}, 2},
 		{"unknown_no_match", nil, false, []string{"frobnicate"}, 2},
-		{"unbuilt_command", nil, false, []string{"deeds", "export", "--org", "org_x"}, 2},
-		{"json_error", nil, false, []string{"deeds", "export", "--json"}, 2},
+		{"unbuilt_command", nil, false, []string{"approvals", "list", "--org", "org_x"}, 2},
+		{"json_error", nil, false, []string{"approvals", "list", "--json"}, 2},
 		{"json_config_error", prod, false, []string{"--json", "config", "print"}, 1},
 		{"global_flag_after_subcommand", nil, false, []string{"version", "--no-color", "--json"}, 0},
 	}

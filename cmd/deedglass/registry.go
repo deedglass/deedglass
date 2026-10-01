@@ -121,8 +121,11 @@ var commands = []*Command{
 
 	// Actions.
 	{Path: p("act"), Group: Actions, Summary: "Send a test action through the Gate", Owner: "S13"},
-	{Path: p("actions", "list"), Group: Actions, Summary: "List actions", Owner: "S06"},
-	{Path: p("actions", "show"), Group: Actions, Summary: "Show one action and its events", Owner: "S06"},
+	{Path: p("actions", "list"), Group: Actions, Summary: "List actions",
+		Usage: "[--agent agt_…] [--tool stripe.*] [--state …] [--decision …] [--verdict MISMATCH] [--level L2] [--since 1h] [--q text] [--limit 25] [--cursor …] [--json]",
+		Flags: actionsListFlags, Needs: config.NeedDatabase, Run: runActionsList},
+	{Path: p("actions", "show"), Group: Actions, Summary: "Show one action and its events",
+		Usage: "<act_…> [--json]", Needs: config.NeedDatabase, Run: runActionsShow},
 	{Path: p("actions", "cancel"), Group: Actions, Summary: "Cancel a pending action", Owner: "S13"},
 	{Path: p("approve"), Group: Actions, Summary: "Approve a pending action", Owner: "S22"},
 	{Path: p("deny"), Group: Actions, Summary: "Deny a pending action", Owner: "S22"},
@@ -139,11 +142,18 @@ var commands = []*Command{
 	{Path: p("verify"), Group: Deeds, Summary: "Check deeds offline",
 		Usage: "<path|->... [--keys <file|url>] [--pin sha256:…] [--anchor <seq>:sha256:…] [--strict] [--all] [-q]",
 		Flags: verifyFlags, Run: runVerify, RawArgs: true},
-	{Path: p("deeds", "list"), Group: Deeds, Summary: "List deeds", Owner: "S06"},
-	{Path: p("deeds", "show"), Group: Deeds, Summary: "Show one deed", Owner: "S06"},
-	{Path: p("deeds", "export"), Group: Deeds, Summary: "Export deeds as a bundle", Owner: "S06"},
-	{Path: p("ledger", "check"), Group: Deeds, Summary: "Check the deed chain", Owner: "S06"},
-	{Path: p("ledger", "prune"), Group: Deeds, Summary: "Remove events past retention", Owner: "S06"},
+	{Path: p("deeds", "list"), Group: Deeds, Summary: "List deeds",
+		Usage: "[--from-seq n] [--to-seq n] [--kind action,admin,amendment] [--action act_…] [--order asc|desc] [--limit 25] [--json]",
+		Flags: deedsListFlags, Needs: config.NeedDatabase, Run: runDeedsList},
+	{Path: p("deeds", "show"), Group: Deeds, Summary: "Show one deed",
+		Usage: "<deed_…|seq> [--json]", Needs: config.NeedDatabase, Run: runDeedsShow},
+	{Path: p("deeds", "export"), Group: Deeds, Summary: "Export deeds as a bundle",
+		Usage: "[--out <file>] [--format tar.gz|jsonl] [--from-seq n] [--to-seq n] [--json]",
+		Flags: deedsExportFlags, Needs: config.NeedDatabase, Run: runDeedsExport},
+	{Path: p("ledger", "check"), Group: Deeds, Summary: "Check the deed chain",
+		Usage: "[--from-seq n] [--to-seq n] [--json]", Flags: ledgerCheckFlags, Needs: config.NeedDatabase, Run: runLedgerCheck},
+	{Path: p("ledger", "prune"), Group: Deeds, Summary: "Remove old payloads; deeds stay",
+		Usage: "[--older-than 90d] [--dry-run] [--yes] [--json]", Flags: ledgerPruneFlags, Needs: config.NeedDatabase, Run: runLedgerPrune},
 
 	// Connectors.
 	{Path: p("connector", "create"), Group: Connectors, Summary: "Add a connector", Owner: "S16"},
@@ -180,7 +190,9 @@ var commands = []*Command{
 
 	// Dev.
 	{Path: p("dev", "seed"), Group: Dev, Summary: "Load demo data into a dev database", Usage: "[--json]", Run: runDevSeed},
-	{Path: p("dev", "fake-action"), Group: Dev, Summary: "Send realistic actions for demos", Owner: "S06"},
+	{Path: p("dev", "fake-action"), Group: Dev, Summary: "Seal realistic fake actions (dev only)",
+		Usage: "[--n 20] [--seed 42] [--kinds allow,deny,…] [--agents 3] [--batch 1] [--pace 0s] [--org-slug demo] [--quiet] [--json]",
+		Flags: fakeActionFlags, Needs: config.NeedDatabase, Run: runFakeAction},
 	{Path: p("dev", "simulate"), Group: Dev, Summary: "Simulate agent traffic", Owner: "S27"},
 	{Path: p("dev", "agent-script"), Group: Dev, Summary: "Run a scripted agent", Owner: "S37"},
 	{Path: p("dev", "mail-preview"), Group: Dev, Summary: "Preview emails in the browser", Owner: "S07"},

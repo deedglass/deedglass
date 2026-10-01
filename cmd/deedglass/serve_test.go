@@ -19,18 +19,18 @@ import (
 // Every route serve mounts is documented in api/openapi.yaml (checks 1–6), from the real list.
 func TestServeRoutesMatchOpenAPI(t *testing.T) {
 	api := httpx.New(httpx.Options{Logger: slog.New(slog.DiscardHandler)})
-	api.Mount(serveRoutes(api, nil, nil, nil)...)
+	api.Mount(serveRoutes(api, nil, nil, nil, nil)...)
 	for _, err := range httpx.CheckSpec(apiSpec(), api.Routes()) {
 		t.Error(err)
 	}
-	if len(api.Routes()) != 4 {
-		t.Fatalf("serve mounts %d routes, want 4 (S03 + keys.json in S04)", len(api.Routes()))
+	if len(api.Routes()) != 10 {
+		t.Fatalf("serve mounts %d routes, want 10 (S03 + keys.json in S04 + the six Ledger routes in S06)", len(api.Routes()))
 	}
 }
 
 func TestVersionAgainstServer(t *testing.T) {
 	api := httpx.New(httpx.Options{Logger: slog.New(slog.DiscardHandler)})
-	api.Mount(serveRoutes(api, nil, nil, nil)...)
+	api.Mount(serveRoutes(api, nil, nil, nil, nil)...)
 	ts := httptest.NewServer(api)
 	defer ts.Close()
 
@@ -65,7 +65,7 @@ func TestVersionAgainstServer(t *testing.T) {
 func TestServeUntilStopped(t *testing.T) {
 	log := slog.New(slog.DiscardHandler)
 	api := httpx.New(httpx.Options{Logger: log})
-	api.Mount(serveRoutes(api, nil, nil, nil)...)
+	api.Mount(serveRoutes(api, nil, nil, nil, nil)...)
 	entered, release := make(chan struct{}), make(chan struct{})
 	api.Mount(httpx.Route{Method: "GET", Pattern: "/v1/_test/slow", OperationID: "slow", Auth: httpx.Public, Extension: "test",
 		Handler: func(w http.ResponseWriter, r *http.Request) error {
@@ -134,7 +134,7 @@ func TestServeUntilStopped(t *testing.T) {
 func TestSecondSignalExits(t *testing.T) {
 	log := slog.New(slog.DiscardHandler)
 	api := httpx.New(httpx.Options{Logger: log})
-	api.Mount(serveRoutes(api, nil, nil, nil)...)
+	api.Mount(serveRoutes(api, nil, nil, nil, nil)...)
 	ln, _ := net.Listen("tcp", "127.0.0.1:0")
 	exited := make(chan int, 1)
 	saved := serveExit

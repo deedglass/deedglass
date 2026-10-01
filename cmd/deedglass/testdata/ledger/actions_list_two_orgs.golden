@@ -1,0 +1,5 @@
+exit 2
+--- stdout
+--- stderr
+✕ This database has 2 orgs. Pick one with --org.
+  next  org_… (demo) · org_… (second)

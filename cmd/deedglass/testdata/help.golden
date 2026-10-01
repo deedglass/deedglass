@@ -30,8 +30,8 @@ Actions
   webhooks            Send events to your endpoints               soon   create · list · test · delete
 Deeds
   verify              Check deeds offline
-  deeds               Browse and export deeds                     soon   list · show · export
-  ledger              Check or prune the Ledger                   soon   check · prune
+  deeds               Browse and export deeds                            list · show · export
+  ledger              Check or prune the Ledger                          check · prune
 Connectors
   connector           Connect tools                               soon   create · list · show · test · types · credentials
   connector postgres  Prepare a Postgres database                 soon   init · check

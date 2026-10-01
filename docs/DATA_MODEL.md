@@ -154,7 +154,7 @@ Each one is owned by `deedglass_migrator`, pins `search_path = pg_catalog, pg_te
 
 ## Retention
 
-Payloads are prunable; digests and deeds stay.
+Payloads are prunable; digests and deeds stay ([RETENTION.md](RETENTION.md), `deedglass ledger prune`).
 
 | What | Kept |
 |---|---|
@@ -163,6 +163,25 @@ Payloads are prunable; digests and deeds stay.
 | `deeds`, `action_events`, `admin_events`, `policy_versions` | Always (append-only). |
 | `idempotency_keys` | 24 hours (S03's pruning job). |
 | `intent_nonces`, `login_tokens`, `sessions` | Until they expire (S07, S09). |
+
+## Ledger additions (0010, S06)
+
+`0010_ledger.sql` adds only what S06 needed beyond 0005/0006:
+
+| Object | What | Why |
+|---|---|---|
+| `actions.execution_status` | `succeeded`, `failed`, `unknown`, or NULL until the tool ran | the deed's `execution.status` (contract §6); `executing_at` is when execution started, `executed_at`/`failed_at` when it finished |
+| `actions_verdict_time` | `(org_id, witness_verdict, created_at DESC, id DESC)` | `GET /v1/actions?verdict=` |
+| `actions_tool_prefix` | `(org_id, tool text_pattern_ops)` | prefix globs (`tool=stripe.*`) |
+| `actions_org_open` | `(org_id, state) WHERE state <> 'sealed'` | the open actions of one org |
+| `action_events_data_size` | `CHECK (pg_column_size(data) <= 2048)` | event data is short codes and digests, never payloads |
+| `action_events_action` | `(org_id, action_id, seq)` | an action's events in order |
+| `admin_events_reason_len` | `CHECK (char_length(reason) <= 280)` | the deed's `admin.reason` limit |
+| `admin_events_data_size` | `CHECK (pg_column_size(data) <= 16384)` | only its digest enters the deed |
+| `deeds_org_kind_seq` | `(org_id, kind, seq)` | `GET /v1/deeds?kind=` |
+
+`(org_id, created_at DESC, id DESC)` and `(org_id, agent_id, created_at DESC, id DESC)` on
+`actions`, and `UNIQUE (action_id, seq)` on `action_events`, already existed (0005).
 
 ## Personal data
 

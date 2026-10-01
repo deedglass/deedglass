@@ -37,6 +37,20 @@ Run `make dev` again whenever you want the containers to pick up your code chang
 
 Docker's own output goes to `.tmp/dev.log`. To watch it as it happens, run `DEEDGLASS_DEV_VERBOSE=1 make dev`.
 
+### Without Docker
+
+When Docker Desktop isn't available, `scripts/dev-pg.sh up` starts a throwaway Homebrew
+PostgreSQL 18 cluster on the same port (`127.0.0.1:55432`, data in `.tmp/devpg`), creates the two
+roles and the database, applies migrations and writes `.tmp/dev-pg.env`. Then, in each terminal:
+
+```sh
+set -a; . .tmp/dev-pg.env; set +a
+deedglass serve
+```
+
+`scripts/dev-pg.sh down` stops it (data kept); `scripts/dev-pg.sh reset` deletes it. The passwords
+are dev-only constants for a cluster that listens on localhost only.
+
 ## Check it
 
 ```sh

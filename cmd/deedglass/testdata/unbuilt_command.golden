@@ -1,5 +1,5 @@
 exit 2
 --- stdout
 --- stderr
-deedglass deeds export isn't in this build yet.
+deedglass approvals list isn't in this build yet.
 Run deedglass help to see what this build can do.
