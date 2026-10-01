@@ -1,0 +1,47 @@
+{
+  "session": "S05X",
+  "date": "2026-10-01",
+  "machine": "Apple M1, 8 cores, 8 GiB, macOS, Go 1.27.1",
+  "benchmarks": {
+    "BenchmarkBanner (20 px orb, after founder tweaks)": {
+      "ns_per_op_runs": [
+        11830,
+        11595,
+        11573,
+        11597,
+        11574
+      ],
+      "bytes_per_op": 13200,
+      "allocs_per_op": 21,
+      "budget": "< 200000 ns, < 50 allocs"
+    },
+    "BenchmarkBanner (28 px orb, first version)": {
+      "ns_per_op_runs": [
+        22099,
+        21535,
+        21486,
+        21494,
+        21523
+      ],
+      "bytes_per_op": 13200,
+      "allocs_per_op": 21,
+      "budget": "< 200000 ns, < 50 allocs"
+    }
+  },
+  "startup": {
+    "method": "200 runs x 3 under script(1) for a real pty, COLORTERM=truecolor; bare deedglass (banner) vs deedglass -q (plain help)",
+    "banner_ms_per_run": [
+      11.0,
+      10.66,
+      10.9
+    ],
+    "quiet_ms_per_run": [
+      10.06,
+      9.53,
+      9.74
+    ],
+    "delta_ms_median": 1.1,
+    "budget_ms": 2,
+    "note": "measured with the first (28 px) banner; the 20 px banner writes fewer bytes"
+  }
+}

@@ -1,0 +1,13 @@
+exit 0
+--- stdout
+      ▓▓ │ ░░
+   ▓▓▓▓▓ │ ░░░░░
+ ▓▓▓▓▓▓▓ │ ░░░░░░░      deedglass  0.1.0-dev
+▓▓▓▓▓▓▓▓ │ ░░░░░░░░     See what your agents actually did.
+▓▓▓▓▓▓▓▓ │ ░░░░░░░░
+▓▓▓▓▓▓▓▓ │ ░░░░░░░░     docs.deedglass.com · API 2026-10-01
+▓▓▓▓▓▓▓▓ │ ░░░░░░░░     Run deedglass init to connect your first agent.
+ ▓▓▓▓▓▓▓ │ ░░░░░░░
+  ▓▓▓▓▓▓ │ ░░░░░░
+    ▓▓▓▓ │ ░░░░
+--- stderr

@@ -17,6 +17,7 @@ import (
 	"strings"
 
 	"github.com/deedglass/deedglass/cmd/deedglass/internal/ui"
+	"github.com/deedglass/deedglass/internal/cli/mark"
 	"github.com/deedglass/deedglass/internal/config"
 )
 
@@ -46,8 +47,10 @@ type Env struct {
 	Stdout, Stderr io.Writer
 	Getenv         func(string) string
 	IsTTY          bool
+	Width          int // terminal columns; 0 when unknown
 	Globals        Globals
 	Style          ui.Style
+	Mark           mark.Options // the terminal mark (banner, inline); Quiet off a TTY, in CI, with --json
 	LoadOptions    func() config.LoadOptions
 }
 
@@ -82,6 +85,7 @@ func main() {
 		Stderr:      os.Stderr,
 		Getenv:      os.Getenv,
 		IsTTY:       ui.IsTerminal(os.Stdout),
+		Width:       termWidth(os.Stdout, os.Getenv),
 		LoadOptions: config.OSOptions,
 	}
 	os.Exit(run(ctx, e, os.Args[1:]))
@@ -92,6 +96,7 @@ func run(ctx context.Context, e *Env, args []string) int {
 	g, rest, err := parseGlobals(args)
 	e.Globals = g
 	e.Style = ui.Style{Color: ui.ColorAllowed(e.IsTTY, e.Getenv, g.NoColor)}
+	e.Mark = markOptions(e)
 	if err == nil {
 		err = dispatch(ctx, e, rest)
 	}
@@ -153,8 +158,11 @@ func parseGlobals(args []string) (Globals, []string, error) {
 func dispatch(ctx context.Context, e *Env, args []string) error {
 	words, flags := splitPath(args)
 	if len(words) == 0 {
-		if hasHelpFlag(flags) || len(flags) == 0 {
+		if hasHelpFlag(flags) {
 			return printHelp(e, nil)
+		}
+		if bareOnly(flags) {
+			return runBare(ctx, e, flags)
 		}
 		return usageErr(fmt.Errorf("flag %s needs a command before it", flags[0]), "Run deedglass help to see every command.")
 	}

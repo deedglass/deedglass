@@ -48,3 +48,9 @@
 
 # Client commands (CLI, mcp, SDKs): the server to talk to.
 # server: https://api.deedglass.com
+
+# The CLI's terminal mark (docs/CLI.md, "Banner and quiet mode"). It never shows in pipes,
+# CI or --json. These are usually set in the shell, not here.
+# no_banner: false
+# theme: auto   # auto, light or dark
+# no_anim: false

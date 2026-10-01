@@ -1,6 +1,6 @@
 exit 0
 --- stdout
-[1mdeedglass[0m · the execution and accountability layer for AI agents
+[38;5;69m◖[38;5;231m│[38;5;252m◗[0m [1;38;5;255mdeedglass[0m · the execution and accountability layer for AI agents
 
 [1mUsage[0m  deedglass <command> [flags]
 

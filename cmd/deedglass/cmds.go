@@ -23,13 +23,15 @@ var buildInfo = buildinfo.Get
 
 // --- version ---
 
-type versionOpts struct{ check bool }
+type versionOpts struct{ check, quiet bool }
 
 var versionFlagValues versionOpts
 
 func versionFlags(fs *flag.FlagSet) {
 	versionFlagValues = versionOpts{}
 	fs.BoolVar(&versionFlagValues.check, "check", false, "check GitHub releases for a newer version (S35)")
+	fs.BoolVar(&versionFlagValues.quiet, "q", false, "no banner")
+	fs.BoolVar(&versionFlagValues.quiet, "quiet", false, "no banner")
 }
 
 func runVersion(ctx context.Context, e *Env, args []string) error {
@@ -49,6 +51,10 @@ func runVersion(ctx context.Context, e *Env, args []string) error {
 		enc := json.NewEncoder(e.Stdout)
 		enc.SetEscapeHTML(false)
 		return enc.Encode(in)
+	}
+	if !e.Mark.Quiet && !versionFlagValues.quiet {
+		fmt.Fprint(e.Stdout, versionBanner(e, in))
+		return nil
 	}
 	fmt.Fprintln(e.Stdout, clientLine(in))
 	return nil

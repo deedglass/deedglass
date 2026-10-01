@@ -59,6 +59,58 @@ CLI error codes so far: `unknown_command`, `usage_error`, `not_built`, `config_i
 `keys_unreadable`, `keys_invalid`, `keys_unreachable` and `keys_conflict`. Its own answer is not an
 error: `--json` prints the `verification_report` on stdout whatever the result.
 
+## Banner and quiet mode
+
+![The deedglass banner in Terminal.app, dark theme](images/cli-banner-dark.jpg)
+
+The Deedglass mark, drawn in the terminal: the Split Orb in half-block pixels, a calm welcome and
+one next step. It appears in exactly three places, and only on an interactive terminal:
+
+| Where | What |
+|---|---|
+| `deedglass` (no command) | the banner, then `Run deedglass init to connect your first agent.` |
+| `deedglass version`, `deedglass --version` | the banner, with commit, build date and platform as its last lines |
+| `deedglass help` | the inline mark `◖│◗ deedglass` as the header line |
+
+`init` and `doctor` will use the same mark from S32 (`internal/cli/mark`: `Banner`, `Inline`,
+`Sealed`). Every other command stays quiet.
+
+**It never shows** (bare `deedglass` prints the plain help instead, and `version` its plain line):
+
+| Switch | Effect |
+|---|---|
+| stdout is not a terminal (a pipe, a file, `/dev/null`) | no banner, no inline mark, no escape codes, even when stderr is a terminal |
+| `--json` | unchanged JSON, byte for byte |
+| `CI` set (`true`, `1`, …; not `0`/`false`) | no banner |
+| `DEEDGLASS_NO_BANNER=1` | no banner and no inline mark |
+| `-q` / `--quiet` (bare `deedglass`, `version`) | no banner |
+
+**How it looks:**
+
+| Switch | Effect |
+|---|---|
+| `COLORTERM=truecolor` or `24bit` | 24-bit colour |
+| `TERM=*256color` | the nearest xterm-256 colours (chosen by ΔE in OKLab when the grid is generated) |
+| any other colour terminal | the 16 ANSI colours |
+| `NO_COLOR` (non-empty) or `--no-color` | a monochrome orb in shades (`▓ │ ░`), no escape codes |
+| `TERM=dumb`; the Windows console outside Windows Terminal | ASCII only: `(\|) deedglass` and the text |
+| narrower than 60 columns | the inline mark and the text, no orb; under 40, the mark and one line |
+| `DEEDGLASS_THEME=light` / `dark` / `auto` | the palette for a light or dark background; `auto` reads `COLORFGBG`, else dark |
+| `DEEDGLASS_NO_ANIM=1` | the Sealed moment at the end of `init` (S32) shows only its final frame |
+
+On a light theme the right half turns to light glass and the pane takes your terminal's foreground
+colour:
+
+![The banner on a light Terminal.app theme](images/cli-banner-light.jpg)
+
+The banner is decoration, never a dependency: if detection fails it falls back to plain output,
+and it can never change an exit code. Scripts and CI never see it.
+
+Notes: Terminal.app renders 24-bit colour but doesn't set `COLORTERM`, so it gets the 256-colour
+orb unless you export `COLORTERM=truecolor`. The terminal isn't asked for its background colour
+(OSC 11) in this build; set `DEEDGLASS_THEME=light` on a light terminal that doesn't set
+`COLORFGBG`.
+
 ## Examples
 
 ```
@@ -279,6 +331,9 @@ Performance (S05 §3.9; `make bench-verify`, raw numbers in `bench/results/`): 1
 M1 (8 cores), 2026-10-01.
 
 ## What it doesn't do (yet)
+
+- The banner doesn't ask the terminal for its background colour (OSC 11); light terminals need
+  `COLORFGBG` or `DEEDGLASS_THEME=light`. No image-protocol (iTerm2, Kitty) rendering yet.
 
 - No shell completion until S32 (`deedglass completion zsh|bash|fish`).
 - `keys revoke` isn't built (planned; `docs/SEAL_KEYS.md`).

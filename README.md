@@ -5,6 +5,8 @@ it under control, checks the result against the system of record, and seals a de
 
 **Status: private, pre-release.** Nothing in this repository is published yet.
 
+![deedglass in a terminal](docs/images/cli-banner-dark.jpg)
+
 ## What works today
 
 This is the foundation. Most of the product is still ahead, and `deedglass help` says exactly what

@@ -13,6 +13,7 @@ Last checked: S04, 2026-10-01 (S01 wrote it). Each session that changes the layo
 | `config` | built | S01 | Env and file config, validation, redacted printing |
 | `ids` | built | S01 | Prefixed ULIDs and typed ids (`docs/IDS.md`) |
 | `buildinfo` | built | S01 | Version, commit, supported API versions |
+| `cli/mark` | built | S05X | The terminal mark: the Split Orb banner, the inline `◖│◗` mark and the Sealed moment; `go generate` builds its pixel grid |
 | `archtest` | built, test-only | S01 | The import-layering test |
 | `intent` | kept from V0, tested | S01 (kept) | Strict JSON parser, JCS, the V0 `TRANSFER` intent |
 | `keys` | kept from V0, tested | S01 (kept) | Ed25519 key checks (small-order refusal, `KID`) |

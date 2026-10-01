@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/deedglass/deedglass/cmd/deedglass/internal/ui"
+	"github.com/deedglass/deedglass/internal/cli/mark"
 )
 
 const tagline = "the execution and accountability layer for AI agents"
@@ -50,7 +51,11 @@ func helpAll(e *Env) {
 		sumW = max(sumW, ui.Width(l.Summary))
 	}
 	w := e.Stdout
-	fmt.Fprintf(w, "%s %s %s\n\n", s.Bold("deedglass"), ui.Sep, tagline)
+	if head := mark.Inline(e.Mark); head != "" {
+		fmt.Fprintf(w, "%s %s %s\n\n", head, ui.Sep, tagline)
+	} else {
+		fmt.Fprintf(w, "%s %s %s\n\n", s.Bold("deedglass"), ui.Sep, tagline)
+	}
 	fmt.Fprintf(w, "%s  deedglass <command> [flags]\n\n", s.Bold("Usage"))
 	group := Group(-1)
 	for _, l := range lines {

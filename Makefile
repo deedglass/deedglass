@@ -11,7 +11,7 @@ LDFLAGS  := -s -w -X $(BI).Version=$(VERSION) -X $(BI).Commit=$(COMMIT) -X $(BI)
 .PHONY: all help ci build test test-short vet fmt fmt-check tidy-check testdata-check rename-guard banned-words nocgo \
 	integration matrix fuzz bench bench-store bench-deed cover clean \
 	dev dev-down dev-reset dev-logs run docker bench-http bench-verify \
-	web-verify-install web-verify-test web-verify-build web-verify-serve gencopy
+	web-verify-install web-verify-test web-verify-build web-verify-serve gencopy genmark bench-mark
 
 all: ci
 
@@ -115,6 +115,12 @@ bench-http: ## S03 HTTP budget: pipeline, 404, cached health (50,000 runs) and t
 
 bench-verify: ## S05 budget: deedglass verify on 100,000 deeds (.jsonl and bundle) and one deed cold; raw JSON in bench/results/
 	bench/verify_100k.sh
+
+genmark: ## regenerate the terminal mark's pixel grid (internal/cli/mark/orb_gen.go); TestGeneratedFresh fails on drift
+	$(GO) generate ./internal/cli/mark
+
+bench-mark: ## benchmark the terminal banner (budget < 200 µs, < 50 allocs)
+	$(GO) test -run '^$$' -bench Banner -benchmem -count 5 ./internal/cli/mark
 
 gencopy: ## regenerate the verification copy, key lists and sample for the browser verifier from Go
 	$(GO) run ./internal/deed/cmd/gencopy

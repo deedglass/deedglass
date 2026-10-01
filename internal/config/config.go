@@ -440,6 +440,18 @@ func (l *loader) parse(c *Config, k Key) {
 			return
 		}
 		c.APIKey = NewSecret(v)
+	case "DEEDGLASS_NO_BANNER", "DEEDGLASS_NO_ANIM":
+		// Read by the CLI's terminal mark (internal/cli/mark) straight from the environment;
+		// checked here so config print and doctor flag a typo.
+		switch strings.ToLower(v) {
+		case "true", "1", "false", "0":
+		default:
+			bad(fmt.Sprintf("must be true or false (got %q).", v), "")
+		}
+	case "DEEDGLASS_THEME":
+		if v != "auto" && v != "light" && v != "dark" {
+			bad(fmt.Sprintf("must be auto, light or dark (got %q).", v), "Unset it to detect the terminal's background.")
+		}
 	default:
 		panic("config: key " + k.Name + " has no parser")
 	}

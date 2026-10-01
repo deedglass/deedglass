@@ -68,8 +68,8 @@ func TestLayering(t *testing.T) {
 		return p, ok
 	}
 
-	// ids and buildinfo: standard library only.
-	for _, rel := range []string{"internal/ids", "internal/buildinfo"} {
+	// ids, buildinfo and the terminal mark: standard library only.
+	for _, rel := range []string{"internal/ids", "internal/buildinfo", "internal/cli/mark"} {
 		p, ok := get(rel)
 		if !ok {
 			t.Fatalf("%s not found", rel)

@@ -79,6 +79,12 @@ var Keys = []Key{
 		Commands: "CLI, mcp, SDKs", Doc: "An agent or admin API key (dg_live_… or dg_test_…) for client commands.", Owner: "S01"},
 	{Name: "DEEDGLASS_SERVER", Kind: KindURL, Client: true,
 		Commands: "CLI, mcp, SDKs", Doc: "The Deedglass server client commands talk to.", Owner: "S01"},
+	{Name: "DEEDGLASS_NO_BANNER", Kind: KindBool, Default: "false", Client: true,
+		Commands: "CLI", Doc: "Never show the terminal banner or the inline mark (bare deedglass, version, help). Scripts, pipes and CI never see them anyway.", Owner: "S05X"},
+	{Name: "DEEDGLASS_THEME", Kind: KindEnum, Default: "auto", Enum: []string{"auto", "light", "dark"}, Client: true,
+		Commands: "CLI", Doc: "Draw the terminal mark for a light or dark terminal. auto: COLORFGBG decides, else dark.", Owner: "S05X"},
+	{Name: "DEEDGLASS_NO_ANIM", Kind: KindBool, Default: "false", Client: true,
+		Commands: "CLI", Doc: "Turn off the Sealed animation at the end of deedglass init; only its final frame shows.", Owner: "S05X"},
 }
 
 // toolingPrefixes are DEEDGLASS_ names that scripts use and the binary ignores.

@@ -20,6 +20,9 @@ DEEDGLASS_METRICS_LISTEN          —                                           
 DEEDGLASS_SLOT_LAG_ALERT_MB       512                                                          default
 DEEDGLASS_API_KEY                 —                                                            not set
 DEEDGLASS_SERVER                  —                                                            not set
+DEEDGLASS_NO_BANNER               false                                                        default
+DEEDGLASS_THEME                   auto                                                         default
+DEEDGLASS_NO_ANIM                 false                                                        default
 
 ✓ Valid for dev · 2 local secrets generated in .deedglass/ (never used in prod)
 --- stderr
