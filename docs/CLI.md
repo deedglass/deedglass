@@ -213,8 +213,8 @@ builds it. Hidden commands work but aren't in `deedglass help`.
 | `deedglass connector types [--json]` | Connectors | List connector types | built |
 | `deedglass connector credentials set <name|con_…> --from-env VAR | --stdin | --field KEY=env:VAR|file:PATH|stdin... [--kind bearer] [--json]` | Connectors | Store a connector's credentials | built |
 | `deedglass connector credentials remove <name|con_…> [--json]` | Connectors | Delete a connector's credentials | built |
-| `deedglass connector postgres init` | Connectors | Prepare a Postgres database | soon (S17) |
-| `deedglass connector postgres check` | Connectors | Check a prepared Postgres database | soon (S17) |
+| `deedglass connector postgres init --connector <name> [--admin-dsn-env DEEDGLASS_INIT_DSN] [--config <file>] [--apply] [--confirm <database>] [--rotate-passwords] [--dsn-host host:port] [--no-store] [--json]` | Connectors | Prepare a Postgres database | built |
+| `deedglass connector postgres check --connector <name> [--json]  ·  --dsn-env VAR [--witness-dsn-env VAR] [--config <file>] [--probe] [--json]` | Connectors | Check a prepared Postgres database | built |
 | `deedglass connector gmail authorize` | Connectors | Authorize the Gmail connector | soon (S30) |
 | `deedglass decoder status` | Connectors | Show Postgres change readers | soon (S20) |
 | `deedglass decoder drop` | Connectors | Remove a replication slot | soon (S20) |
@@ -476,6 +476,51 @@ $ deedglass vault rotate
 ```
 
 Every command takes `--json`.
+
+## Postgres: `connector postgres init` and `connector postgres check` (S17)
+
+`init` prepares a customer database for the Postgres connector; `check` reports whether it is ready
+for L2 ([POSTGRES.md](POSTGRES.md)). The admin DSN comes only from the environment
+(`DEEDGLASS_INIT_DSN`, or the variable `--admin-dsn-env` names), is read once, and is never stored or
+printed.
+
+```text
+$ deedglass connector postgres init --connector postgres
+Deedglass · Postgres setup plan · acme on 127.0.0.1:55434 · PostgreSQL 18.6 · local
+  + role deedglass_owner · NOLOGIN
+  + role deedglass_agent · password generated at apply
+  + role deedglass_witness · REPLICATION · password generated at apply
+  + schema deedglass · ledger · begin_action (sha256:2f3f…7bd4)
+  + grants · read public (5 tables) · write public.orders, public.refunds
+  + replica identity full · 3 watched tables · brief lock on each
+  + publication deedglass_pub · 4 tables
+7 changes · SQL for review: .deedglass/plans/postgres-20261001T2125Z.sql
+Next: deedglass connector postgres init --connector postgres --apply
+```
+
+- `--apply` runs the plan in one transaction: right away for a local host or a config with
+  `throwaway: true`, otherwise only with `--confirm <database>` (on a terminal it asks; without one
+  it refuses).
+- New login roles get generated passwords, sent to Postgres as SCRAM verifiers; `--rotate-passwords`
+  replaces both. The DSNs go to the vault, or with `--no-store` to `.deedglass/pg-<connector>.env`
+  (mode 0600). `--dsn-host host:port` stores the address the server uses when it differs from the
+  admin DSN's.
+- `--config <file>` plans offline from a connector file, without the server.
+- A second run on an unchanged database prints `Nothing to change.`
+
+`check --connector <name>` runs on the server with the stored DSNs; `check --dsn-env VAR
+[--witness-dsn-env VAR] [--config <file>] [--probe]` runs the same checks from this machine, and
+`--probe` also runs `begin_action` in a transaction it rolls back. It exits 1 when any line fails:
+
+```text
+$ deedglass connector postgres check --connector postgres
+PostgreSQL 18.6 · acme · orders-db · self-hosted
+✓ wal_level          logical
+✓ begin_action       security definer · search_path pinned · body sha256:2f3f…7bd4
+✓ agent role         least privilege · 2 writable tables · no ledger access
+○ slot               not created yet · the witness creates deedglass_01m3wnr88j9d4gbs3fxm0ypb66 on first start
+Ready for L2 · 14 passed · 3 notes · 0 failed
+```
 
 ## MCP: `mcp wrap` and `mcp snippet` (S14)
 
@@ -785,7 +830,7 @@ $ deedglass policy evaluate --policy examples/policies/postgres-safe.yaml \
   budget  agent-rate ✓ 0 of 60 this minute · agent-daily ✓ 0 of 5,000 today
   rules   block-unclassified-sql   no match   when → false
           one-statement-only       no match   when → false
-          block-destructive-sql    match      when → true      line 39
+          block-destructive-sql    match      when → true      line 45
           … 9 more rules not evaluated
   policy  postgres-safe · sha256:2c4c…04fd · sqlguard 1
 ```

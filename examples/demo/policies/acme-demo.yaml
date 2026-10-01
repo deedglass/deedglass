@@ -34,37 +34,48 @@ budgets:
 
 rules:
   - id: block-destructive-sql
-    match: { tool: orders.execute_sql }
+    match: { tool: [orders.execute_sql, postgres.query, postgres.execute] }
     when: sql.kind == "drop"
     decision: deny
     reason: DROP is never allowed for agents.
   - id: block-schema-changes
-    match: { tool: orders.execute_sql }
+    match: { tool: [orders.execute_sql, postgres.query, postgres.execute] }
     when: sql.category in ["ddl", "privilege", "server_code", "unknown"] || sql.multi || sql.ambiguous
     decision: deny
     reason: Schema changes, privileges, server code and multi-statement SQL are never allowed for agents.
   - id: block-unscoped-writes
-    match: { tool: orders.execute_sql }
+    match: { tool: [orders.execute_sql, postgres.query, postgres.execute] }
     when: sql.unbounded_write
     decision: deny
     reason: UPDATE and DELETE need a WHERE clause.
   - id: no-deletes-on-orders
-    match: { tool: orders.execute_sql }
+    match: { tool: [orders.execute_sql, postgres.query, postgres.execute] }
     when: sql.kind == "delete" || "delete" in sql.write_kinds
     decision: deny
     reason: Agents never delete orders. Set the status to 'cancelled' instead.
+  - id: allow-order-status-updates
+    description: The native connector's (S17) scoped status updates on orders run, so the change and its ledger row commit together.
+    match: { tool: postgres.execute }
+    when: >-
+      sql.kind == "update" && sql.tables == ["public.orders"] && sql.tables_complete
+      && !sql.cte_write && size(sql.unknown_functions) == 0
+    decision: allow
+  - id: allow-ship-order
+    match: { tool: postgres.call }
+    when: has(args.function) && args.function == "public.ship_order"
+    decision: allow
   - id: orders-writes-need-approval
-    match: { tool: orders.execute_sql }
+    match: { tool: [orders.execute_sql, postgres.execute] }
     when: sql.writes
     decision: require_approval
     reason: Writes to the orders database need a person to countersign.
     approval: { approvers: [role:admin], required: 1, expires_in: 30m }
   - id: allow-order-reads
-    match: { tool: orders.execute_sql }
+    match: { tool: [orders.execute_sql, postgres.query] }
     when: sql.category == "read" && !sql.writes
     decision: allow
   - id: allow-schema-browsing
-    match: { tool: [orders.list_schemas, orders.list_objects, orders.get_object_details] }
+    match: { tool: [orders.list_schemas, orders.list_objects, orders.get_object_details, postgres.describe] }
     decision: allow
   - id: allow-plain-explain
     match: { tool: orders.explain_query }

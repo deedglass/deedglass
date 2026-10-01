@@ -3377,6 +3377,54 @@ paths:
                 $ref: "#/components/schemas/ConnectorTest"
         default:
           $ref: "#/components/responses/Error"
+  /v1/connectors/{id}/initialized:
+    post:
+      operationId: recordConnectorInitialized
+      summary: Record a Postgres database setup
+      description: >-
+        What `deedglass connector postgres init` calls after it applied a setup plan in one
+        transaction: seals the admin deed `connector.postgres_initialized` with the plan's sha256,
+        its change count, the database, the server version, the provider and the roles it created.
+        Never the plan's SQL, a password or a verifier. Postgres connectors only. An admin+ Console
+        session or an org admin key.
+      tags: [Connectors]
+      security: [{bearerAuth: []}, {sessionCookie: []}]
+      x-deedglass-auth: session_or_key
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+        - $ref: "#/components/parameters/CSRFWithSession"
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/ConnectorRef"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [plan_sha256, changes, database, server_version, provider]
+              properties:
+                plan_sha256: {type: string, pattern: "^sha256:[0-9a-f]{64}$"}
+                changes: {type: integer, minimum: 1, maximum: 10000}
+                database: {type: string, maxLength: 63}
+                server_version: {type: string, example: "18.6"}
+                provider: {type: string, enum: [local, rds, aurora, supabase, neon, cloudsql, azure, postgres]}
+                roles_created:
+                  type: array
+                  items: {type: string, enum: [deedglass_owner, deedglass_agent, deedglass_witness]}
+      responses:
+        "201":
+          description: The sealed setup record.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectorSetup"
+        default:
+          $ref: "#/components/responses/Error"
   /v1/connector-types:
     get:
       operationId: listConnectorTypes
@@ -4749,6 +4797,10 @@ components:
                 - upstream_not_found
                 - upstream_rate_limited
                 - response_too_large
+                - statement_refused
+                - row_limit_exceeded
+                - database_role_unsafe
+                - database_not_ready
             message:
               type: string
               description: One or more calm sentences with the next step.
@@ -5602,13 +5654,22 @@ components:
             type: object
             required: [id, title, status, detail]
             properties:
-              id: {type: string, enum: [config, credentials, destination, tls, auth]}
+              id: {type: string, description: "REST (S16): config, credentials, destination, tls, auth. Postgres (S17): connection, version, wal_level, slot_capacity, wal_keep_cap, idle_slot_timeout, schema, begin_action, agent_role, witness_role, witness.watched_tables, writable_watched, publication, slot, tls, pooler, emit_message_acl, probe."}
               title: {type: string}
               status: {type: string, enum: [pass, warn, fail, skip]}
               detail: {type: string}
               fix: {type: string}
               fix_sql: {type: string}
               doc_url: {type: string}
+    ConnectorSetup:
+      type: object
+      required: [object, connector, plan_sha256, changes, deed]
+      properties:
+        object: {type: string, const: connector_setup}
+        connector: {type: string, description: "con_…"}
+        plan_sha256: {type: string}
+        changes: {type: integer}
+        deed: {type: string, description: "deed_… of connector.postgres_initialized"}
     ConnectorTypeList:
       type: object
       required: [object, data, has_more, next_cursor]

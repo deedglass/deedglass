@@ -1,0 +1,21 @@
+{
+  "date": "2026-10-01T21:38:18Z",
+  "load": {
+    "errors": 0,
+    "p50_ms": 1.837,
+    "p99_ms": 3.559,
+    "seconds": 30,
+    "target_p99_ms": 50,
+    "writes": 2997
+  },
+  "note": "localhost, one throwaway cluster shared with nothing else; laptop numbers, not a capacity claim",
+  "overhead": {
+    "connector_p50_ms": 0.283,
+    "connector_p99_ms": 0.587,
+    "extra_p50_ms": 0.141,
+    "n": 2000,
+    "raw_p50_ms": 0.142,
+    "raw_p99_ms": 0.209,
+    "target_extra_p50_ms": 1.5
+  }
+}

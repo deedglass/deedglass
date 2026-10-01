@@ -100,6 +100,22 @@ What Deedglass does not do, stated plainly. **Owner: S37**, which finalizes this
 - **The MCP HTTP gateway's upstreams still take their headers from the environment** (S15's `mcp.upstreams`), not from the vault; their connections already go through egress. Moving them to `mcp_http` connector rows is S18 carry-over.
 - **`/mcp/native` serves the built-in tools only.** An org's REST connectors are called through `POST /v1/actions`; listing them as MCP tools comes later.
 
+## The Postgres connector (S17)
+
+- **The marker alone can be forged.** `pg_logical_emit_message` is open to PUBLIC by default, so any role can write a message that looks like Deedglass's; the ledger row in the same transaction is what authenticates it. Anyone holding `deedglass_agent`'s credentials can write ledger rows through `begin_action`, so Deedglass witnesses what Postgres committed, not whether a compromised Deedglass told the truth ([POSTGRES.md](POSTGRES.md#the-ledger-and-the-marker)).
+- **A REPLICATION role can decode every row change in the database,** not only the watched tables.
+- **`row_limit` caps what comes back, not what Postgres reads;** `statement_timeout` bounds the work.
+- **Triggers can write unwatched tables.** Those writes are invisible to L2 (S21 reports UNVERIFIABLE, never MISMATCH); `check` lists triggers on watched tables by name.
+- **DDL is blocked, not witnessed.**
+- **No L2 yet.** S20 creates the slot and decodes the stream, S21 turns it into verdicts. Until then, Postgres actions are L0, and `Result.Evidence` (`xid8`, `marker_lsn`, `sql_digest`, `command_tag`) isn't stored in the control plane; the witness reads the ledger in the customer database.
+- **New tables aren't granted automatically:** run `init` again (no `ALTER DEFAULT PRIVILEGES` in v1).
+- **Roles are cluster-wide.** Two watched databases on one cluster share `deedglass_agent` and `deedglass_witness`, and `init --rotate-passwords` on one changes the password for both.
+- **No overloads** in `functions`, and arguments are scalars (strings, integers up to 2^53−1, booleans, null); send decimals as strings.
+- **The denylist is defence in depth, not the boundary.** A function it doesn't list (`pg_sleep`, for example) runs, bounded by `statement_timeout` and the role's privileges.
+- **Through a transaction pooler,** parameter types are inferred by the server from text, and `DISCARD ALL` is skipped (the pooler resets sessions).
+- **`--probe` runs in local mode only** (`check --dsn-env`); the server-side check is read-only.
+- **Managed providers are guidance only** until a smoke run exists ([CLOUD_COMPATIBILITY.md](CLOUD_COMPATIBILITY.md)).
+
 ## The MCP stdio wrapper (S14)
 
 - **Edge-reported results are the edge's word.** A call the wrapper forwards is sealed L0 VERIFIED
@@ -169,9 +185,6 @@ What Deedglass does not do, stated plainly. **Owner: S37**, which finalizes this
   can only do OAuth can't connect yet ([MCP_AUTHORIZATION.md](MCP_AUTHORIZATION.md)).
 - **Intent modes are enforced from S13.** In S09 the checks answered only
   `POST /v1/intents/verify`; since S13 the Gate checks the header on every `POST /v1/actions`.
-- **Two closed schemas share one tag.** The V0 transfer demo intent (`op: TRANSFER`) and the agent
-  intent both use `deedglass.intent/1`, with different field sets that don't overlap. No document
-  satisfies both, but the version string alone doesn't tell them apart.
 - **A valid intent works once for whoever holds it,** within its window (at most 5 minutes plus
   60 seconds of skew). The nonce stops the second use, not the first.
 - **Intent keys don't expire.** A registered key works until it is removed.

@@ -61,6 +61,12 @@ make bench-connectors # S16: vault open, redaction, egress classification, REST 
 go test ./internal/connector/egress -run TestCorpus -v   # the egress corpus (testdata/corpus.json, 59 destinations × prod and dev)
 go test ./internal/vault -run TestGoldenEnvelope -update   # testdata/vault/envelope_v1.json (then update SHA256SUMS)
 DEEDGLASS_IT_PKGS=./cmd/deedglass/ DEEDGLASS_IT_GOFLAGS="-v -run TestConnectorsLive" make integration   # S16 §9 on a real server, with the sentinel sweep
+go test ./internal/connector/postgres/setup -run TestPlannerGoldens -update   # S17: the setup planner goldens in setup/testdata/plans (review the diff)
+go test ./internal/connector/postgres -run TestValuesGolden -update   # S17: testdata/values.golden (values to JSON)
+DEEDGLASS_IT_PKGS=./internal/connector/postgres/ make integration   # S17: the Postgres connector on a throwaway cluster (DEEDGLASS_IT_GOFLAGS="-v -run TestOneTransaction")
+DEEDGLASS_IT_PKGS=./cmd/deedglass/ DEEDGLASS_IT_GOFLAGS="-v -run TestPostgresLive" make integration   # S17 §9 on a real server
+make bench-postgres # S17: the connector's extra latency over raw pgx and 100 writes/s for 30 s; JSON in bench/results/
+make demo-check     # S17: the Postgres connector's readiness report on the demo (make demo-up first; it runs init --apply)
 make demo-up        # S15: the Acme demo stack (examples/demo; HTTP=1 adds the everything upstream, DEMO_PORT=8091 if 8080 is taken)
 make demo-status | demo-snippet CLIENT=… | demo-follow | demo-verify | demo-psql | demo-reset [HARD=1] | demo-down
 make demo-smoke     # TestDemoScript: SCRIPT.md through the real wrapper and postgres-mcp, against the running stack
@@ -116,7 +122,7 @@ scripts/ci-local.sh # the CI jobs locally (docker-smoke and govulncheck skip whe
    genproto and x/exp; the binary-size budget is ADR-032, accepted under DL-024: < 30 MB). The MCP Go SDK
    `github.com/modelcontextprotocol/go-sdk` v1.8.0 (ADR-018, in go.mod since S14; since S15 the
    binary links it for the gateway's upstream client, ADR-037 accepted under DL-029; stripped binary 27.1 MB, budget 30 MB). S16 (vault,
-   egress, connectors) added no dependency: AES-256-GCM, the dialer and the JSON Schema subset are standard library (ADR-038 Proposed). Planned, and added only by the session that uses it: `pglogrepl` at the
+   egress, connectors) added no dependency: AES-256-GCM, the dialer and the JSON Schema subset are standard library (ADR-038, accepted under DL-030). S17 (the Postgres connector) added none either: `pgxpool` is part of pgx, SCRAM is `crypto/pbkdf2` (ADR-039 Proposed). Planned, and added only by the session that uses it: `pglogrepl` at the
    spike-verified pin (S20). No cgo in the main binary.
    `go.sum` is committed and CI runs `go mod verify`.
 7. CI matches the banned words (below) in files, strings and commit messages as whole words or
@@ -383,6 +389,18 @@ and "open source" until the repo is public. Style bans: "revolutionary", "world-
   `FuzzTemplatePath`. `internal/connectorapi`: the route × role matrix. `cmd/deedglass`: `TestConnectorsLive`
   (integration: create, credentials, test, every sealed code, metadata refusal, idempotency, 409, rotation, the dev
   override removed → `destination_blocked`, export → verify, the sentinel sweep: 0 hits). The migration count is 17.
+- S17 (the Postgres connector): `internal/connector/postgres` `TestAdmission` (S17 §6's table: stacked, transaction control,
+  session, DO/COPY/CALL/TRUNCATE/GRANT, comments, denylisted functions, schema deedglass, CTE writes, EXPLAIN ANALYZE, sizes),
+  `TestValuesGolden` (every §3.8 mapping, `testdata/values.golden`), config/DSN/params/digest/call tables; `setup`:
+  `TestBeginActionHash` (the pinned body sha256 recomputed from `sql/20_schema.sql`), `TestPlannerGoldens` (fresh, RDS,
+  partial, complete → `Nothing to change.`, table added/removed, function tampered, unsafe agent, control plane, missing
+  table; no plan holds `PASSWORD` or `SCRAM-SHA-256`), `TestChecksMatrix` (every check id's states), `TestSCRAMVerifier`
+  (recomputed from RFC 5802), `TestDetect`. Integration (throwaway cluster, under `pgtest.Lock`: the deedglass_* roles are
+  cluster-wide): the decode test (one xid for ledger insert, marker and change), the rows cap rollback, statement and
+  lock timeouts, the session reset, stacked statements refused by Postgres with admission bypassed, calls and RETURNING,
+  describe, the unsafe role (prod refuses), the live check matrix, a stale plan refused, missing setup, no password in
+  the server log (log_statement=all). `cmd/deedglass` `TestPostgresLive` (S17 §9 on a real server, with the output
+  sweep). Agent SQL never goes through `Conn.Exec` (pgx uses the simple protocol with no arguments).
 - `cmd/deedglass verify` (S05): 80 golden cases in `testdata/verify/<case>/{args,stdout,stderr,exit}`
   (`go test ./cmd/deedglass -run TestVerifyGolden -update`), every vector's code and exit, `--keys`
   URL rules (same-host redirects, 1 MiB, timeout, loopback-only http), key-set merge conflicts, no

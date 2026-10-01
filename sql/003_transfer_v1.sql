@@ -16,7 +16,7 @@
 -- SQLSTATEs (listed again in docs/EVALUATION_RUNBOOK.md):
 --   TX001 not the first write of the transaction   TX002 session_replication_role is not origin
 --   TX003 read-only transaction                     TX004 argument missing or wrong size
---   TX010 not a closed deedglass.intent/1 object           TX011 field type or format
+--   TX010 not a closed deedglass.transfer/1 object           TX011 field type or format
 --   TX020 bundle not active                          TX021 aud is not this deployment
 --   TX022 from = to                                  TX023 amount above bundle or mandate limit
 --   TX024 key not active for iss at iat              TX025 expired
@@ -94,7 +94,7 @@ BEGIN
                               WHERE k.key <> ALL (ARRAY['args', 'aud', 'bundle', 'exp', 'iat', 'iss', 'kid',
                                                         'nonce', 'op', 'op_v', 'v', 'agent']))
            ELSE false END) IS NOT TRUE THEN
-    RAISE EXCEPTION USING ERRCODE = 'TX010', MESSAGE = 'deedglass: not a closed deedglass.intent/1 object';
+    RAISE EXCEPTION USING ERRCODE = 'TX010', MESSAGE = 'deedglass: not a closed deedglass.transfer/1 object';
   END IF;
   v_args := v -> 'args';
   IF (CASE WHEN pg_catalog.jsonb_typeof(v_args) = 'object' THEN
@@ -104,7 +104,7 @@ BEGIN
            ELSE false END) IS NOT TRUE THEN
     RAISE EXCEPTION USING ERRCODE = 'TX010', MESSAGE = 'deedglass: args is not a closed object';
   END IF;
-  IF (    pg_catalog.jsonb_typeof(v -> 'v') = 'string'      AND (v ->> 'v') = 'deedglass.intent/1'
+  IF (    pg_catalog.jsonb_typeof(v -> 'v') = 'string'      AND (v ->> 'v') = 'deedglass.transfer/1'
       AND pg_catalog.jsonb_typeof(v -> 'op') = 'string'     AND (v ->> 'op') = 'TRANSFER'
       AND pg_catalog.jsonb_typeof(v -> 'op_v') = 'number'   AND (v ->> 'op_v') = '1'
       AND pg_catalog.jsonb_typeof(v -> 'iss') = 'string'    AND (v ->> 'iss') ~ '^[a-z0-9._-]{1,64}$'

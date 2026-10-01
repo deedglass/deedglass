@@ -15,6 +15,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -63,7 +64,7 @@ type API struct {
 	tests *httpx.Limiter
 }
 
-// Routes returns the nine connector routes.
+// Routes returns the ten connector routes (S16's nine, and S17's setup record).
 func Routes(a *API) []httpx.Route {
 	if a.Log == nil {
 		a.Log = slog.Default()
@@ -83,6 +84,7 @@ func Routes(a *API) []httpx.Route {
 		r("PUT", "/v1/connectors/{id}/credentials", "setConnectorCredentials", identity.RoleAdmin, a.putCredentials),
 		r("DELETE", "/v1/connectors/{id}/credentials", "deleteConnectorCredentials", identity.RoleAdmin, a.deleteCredentials),
 		r("POST", "/v1/connectors/{id}/test", "testConnector", identity.RoleAdmin, a.test),
+		r("POST", "/v1/connectors/{id}/initialized", "recordConnectorInitialized", identity.RoleAdmin, a.initialized),
 		r("GET", "/v1/connector-types", "listConnectorTypes", identity.RoleViewer, a.types),
 	}
 	for i := range routes {
@@ -100,6 +102,8 @@ func Routes(a *API) []httpx.Route {
 			rt.MaxBody, rt.Purpose = MaxSecretBody, "storing credentials"
 		case "deleteConnectorCredentials":
 			rt.Purpose = "removing credentials"
+		case "recordConnectorInitialized":
+			rt.Idempotency, rt.MaxBody, rt.Purpose = httpx.IdemOptional, 4<<10, "recording database setup"
 		case "testConnector":
 			rt.Idempotency, rt.MaxBody, rt.Purpose, rt.Timeout = httpx.IdemNever, 1<<10, "testing connectors", TestTimeout+5*time.Second
 		}
@@ -748,4 +752,86 @@ func (a *API) types(w http.ResponseWriter, r *http.Request) error {
 		out = append(out, t.Info())
 	}
 	return httpx.WriteJSON(w, http.StatusOK, httpx.NewList(out, false, nil))
+}
+
+// InitializedBody is what deedglass connector postgres init records after it applied a plan (S17
+// §3.9 step 6): the plan's identity and size, never its SQL and never a credential.
+type InitializedBody struct {
+	PlanSHA256    string   `json:"plan_sha256"`
+	Changes       int      `json:"changes"`
+	Database      string   `json:"database"`
+	ServerVersion string   `json:"server_version"`
+	Provider      string   `json:"provider"`
+	RolesCreated  []string `json:"roles_created"`
+}
+
+// Setup is the connector_setup object: the sealed record of one applied setup plan.
+type Setup struct {
+	Object     string `json:"object"` // "connector_setup"
+	Connector  string `json:"connector"`
+	PlanSHA256 string `json:"plan_sha256"`
+	Changes    int    `json:"changes"`
+	Deed       string `json:"deed"`
+}
+
+var (
+	reDigest   = regexp.MustCompile(`^sha256:[0-9a-f]{64}$`)
+	reDBName   = regexp.MustCompile(`^[A-Za-z0-9_$.-]{1,63}$`)
+	reVersion  = regexp.MustCompile(`^[0-9]{1,2}(\.[0-9]{1,4}){0,2}$`)
+	reProvider = regexp.MustCompile(`^[a-z]{1,16}$`)
+)
+
+// initialized seals connector.postgres_initialized for a postgres connector.
+func (a *API) initialized(w http.ResponseWriter, r *http.Request) error {
+	p, actor, err := caller(r)
+	if err != nil {
+		return err
+	}
+	var in InitializedBody
+	if err := httpx.DecodeJSON(r, &in); err != nil {
+		return err
+	}
+	switch {
+	case !reDigest.MatchString(in.PlanSHA256):
+		return httpx.ErrValidation("plan_sha256", "plan_sha256 must be sha256: and 64 lowercase hex digits.")
+	case in.Changes < 1 || in.Changes > 10000:
+		return httpx.ErrValidation("changes", "changes must be between 1 and 10000.")
+	case !reDBName.MatchString(in.Database):
+		return httpx.ErrValidation("database", "database must be a database name of at most 63 characters.")
+	case !reVersion.MatchString(in.ServerVersion):
+		return httpx.ErrValidation("server_version", "server_version must look like 18.6.")
+	case !reProvider.MatchString(in.Provider):
+		return httpx.ErrValidation("provider", "provider must be a lowercase word, like local or rds.")
+	}
+	for _, role := range in.RolesCreated {
+		if role != "deedglass_owner" && role != "deedglass_agent" && role != "deedglass_witness" {
+			return httpx.ErrValidation("roles_created", "roles_created lists only deedglass_owner, deedglass_agent and deedglass_witness.")
+		}
+	}
+	if in.RolesCreated == nil {
+		in.RolesCreated = []string{}
+	}
+	var out Setup
+	err = a.DB.OrgTx(r.Context(), p.OrgID, func(ctx context.Context, tx pgx.Tx) error {
+		c, err := lookup(ctx, tx, r.PathValue("id"), true)
+		if err != nil {
+			return err
+		}
+		if c.Type != "postgres" {
+			return httpx.ErrValidation("id", fmt.Sprintf("%s is a %s connector. Only postgres connectors record a database setup.", c.Name, c.Type))
+		}
+		env, err := a.Ledger.RecordAdmin(ctx, tx, ledger.AdminEvent{Action: ledger.AdminConnectorPostgresInitialized, Actor: actor.Ref,
+			Target: &deed.Ref{Type: "connector", ID: c.ID}, RequestID: httpx.RequestID(ctx),
+			Data: map[string]any{"type": c.Type, "connector": c.Name, "config_hash": c.ConfigHash, "plan_sha256": in.PlanSHA256,
+				"changes": in.Changes, "database": in.Database, "server_version": in.ServerVersion, "provider": in.Provider, "roles_created": in.RolesCreated}})
+		if err != nil {
+			return err
+		}
+		out = Setup{Object: "connector_setup", Connector: c.ID, PlanSHA256: in.PlanSHA256, Changes: in.Changes, Deed: env.ID}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	return httpx.WriteJSON(w, http.StatusCreated, out)
 }

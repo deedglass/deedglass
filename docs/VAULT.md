@@ -85,7 +85,10 @@ openssl rand -base64 32
 
 1. Add the new key **first** in the ring and keep the old one second:
    `DEEDGLASS_VAULT_KEY=<new>,<old>`.
-2. Restart every Deedglass instance, so each can open both.
+2. Restart every Deedglass instance with the new key list, so each can open both. **Do this
+   before step 3.** An instance still running with the old list can't open a data key that
+   `vault rotate` has rewrapped under the new key, so its calls fail as `vault_unavailable`
+   (and nothing is sent) until it restarts. S16's acceptance run saw exactly this (DL-030).
 3. On the server host, run `deedglass vault rotate`. It walks every org, rewraps up to 100 data
    keys per transaction (`FOR UPDATE SKIP LOCKED`), never re-encrypts a secret, and seals one
    `vault.rotated` deed per org it changed (counts only). It is safe to interrupt and run again,

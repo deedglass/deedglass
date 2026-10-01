@@ -8,7 +8,7 @@ exit 0
   [2mbudget [0m agent-rate ✓ 0 of 60 this minute · agent-daily ✓ 0 of 5,000 today
   [2mrules  [0m block-unclassified-sql   no match   when → false
   [2m       [0m one-statement-only       no match   when → false
-  [2m       [0m block-destructive-sql    match      when → true      line 39
+  [2m       [0m block-destructive-sql    match      when → true      line 45
   [2m       [0m … 9 more rules not evaluated
   [2mpolicy [0m postgres-safe · sha256:2c4c…04fd · sqlguard 1
 --- stderr

@@ -6,7 +6,7 @@ exit 0
   "code": "policy_denied",
   "source": "rule",
   "rule_id": "block-unbounded-writes",
-  "rule_line": 55,
+  "rule_line": 61,
   "reason": "UPDATE and DELETE need a WHERE clause that names the rows to change.",
   "message": "Blocked by policy \"block-unbounded-writes\": UPDATE and DELETE need a WHERE clause that names the rows to change.",
   "facts": {
@@ -73,7 +73,7 @@ exit 0
     {
       "step": "rule",
       "id": "block-unclassified-sql",
-      "line": 27,
+      "line": 33,
       "result": "no_match",
       "detail": "when → false",
       "cost": 4
@@ -81,7 +81,7 @@ exit 0
     {
       "step": "rule",
       "id": "one-statement-only",
-      "line": 34,
+      "line": 40,
       "result": "no_match",
       "detail": "when → false",
       "cost": 2
@@ -89,14 +89,6 @@ exit 0
     {
       "step": "rule",
       "id": "block-destructive-sql",
-      "line": 39,
-      "result": "no_match",
-      "detail": "when → false",
-      "cost": 2
-    },
-    {
-      "step": "rule",
-      "id": "block-schema-and-privilege-changes",
       "line": 45,
       "result": "no_match",
       "detail": "when → false",
@@ -104,8 +96,16 @@ exit 0
     },
     {
       "step": "rule",
+      "id": "block-schema-and-privilege-changes",
+      "line": 51,
+      "result": "no_match",
+      "detail": "when → false",
+      "cost": 2
+    },
+    {
+      "step": "rule",
       "id": "block-server-side-code",
-      "line": 50,
+      "line": 56,
       "result": "no_match",
       "detail": "when → false",
       "cost": 7
@@ -113,7 +113,7 @@ exit 0
     {
       "step": "rule",
       "id": "block-unbounded-writes",
-      "line": 55,
+      "line": 61,
       "result": "match",
       "detail": "when → true",
       "cost": 2

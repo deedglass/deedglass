@@ -8,7 +8,7 @@ exit 0
   budget  agent-rate ✓ 0 of 60 this minute · agent-daily ✓ 0 of 5,000 today
   rules   block-unclassified-sql   no match   when → false
           one-statement-only       no match   when → false
-          block-destructive-sql    match      when → true      line 39
+          block-destructive-sql    match      when → true      line 45
           … 9 more rules not evaluated
   policy  postgres-safe · sha256:2c4c…04fd · sqlguard 1
 --- stderr

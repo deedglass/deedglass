@@ -1,4 +1,4 @@
-// Package intent implements the signed intent format deedglass.intent/1 (spec §5,
+// Package intent implements the signed intent format deedglass.transfer/1 (spec §5,
 // amended by plan §3.0 #6): a closed-schema JSON object whose exact RFC 8785
 // (JCS) bytes are signed with pure Ed25519, with amounts carried as strings,
 // the Operation Bundle hash inside the signed content, and intent_hash =

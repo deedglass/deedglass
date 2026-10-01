@@ -224,6 +224,41 @@ Source of truth: `internal/gate/present.go` (the S15 block) and `internal/identi
 | Stored | ✓ Credentials stored · orders · bearer · …9f2c · encrypted with kek:3f9a1c2b7d8e / Agents never see this value. Deedglass adds it only when the Gate runs a call. |
 | Rotation | ◐ Rewrapping data keys · 2 of 2 / ✓ All 42 credentials use kek:3f9a1c2b7d8e. You can remove kek:77c0e1a9b442 from DEEDGLASS_VAULT_KEY. |
 
+## Postgres readiness (S17; S26 builds the panel)
+
+### Console
+
+| Where | String |
+|---|---|
+| Panel title, ready | Ready for L2 |
+| Panel title, not ready | Not ready for L2 · 2 items to fix |
+| Empty state | Connect a Postgres database to see what your agents actually changed. |
+| A check with `fix_sql` | **Copy SQL** button under the fix sentence |
+| Vocabulary | the **witness** role · **Ready for L2** · **watched tables** |
+
+Each warning says what breaks and what to do next, as `check` prints it (`internal/connector/postgres/setup/check.go` is the one source).
+
+### Agent messages (execution.error_message)
+
+| Code | Message |
+|---|---|
+| `statement_refused` | Refused by the Postgres connector: the statement has 2 commands. Deedglass runs one statement per action. |
+| `statement_refused` | postgres.query runs read-only statements. Use postgres.execute for UPDATE. |
+| `statement_refused` | Statements can't reference schema deedglass. |
+| `row_limit_exceeded` | The statement changed 1,204 rows, over this connector's limit of 1,000. Nothing was committed. Narrow the WHERE clause. |
+| `database_role_unsafe` | The connector's database role is a superuser. Deedglass refuses to run agent SQL with it. Run deedglass connector postgres init to create deedglass_agent. |
+| `database_not_ready` | Deedglass isn't set up in this database yet. Run deedglass connector postgres init --connector postgres. |
+| `timeout` | The statement ran past this connector's 5 s limit, so Postgres stopped it. Nothing was committed. |
+
+### CLI
+
+| When | String |
+|---|---|
+| Apply | ◐ Applying 7 changes in one transaction · lock_timeout 5s / ✓ Applied · 7 changes · 212 ms |
+| Stored | ✓ Credentials stored · postgres · deedglass_agent@127.0.0.1:5432/demo · deedglass_witness@127.0.0.1:5432/demo / Passwords were generated here and sent to Postgres as SCRAM verifiers. They weren't printed or logged. |
+| Unchanged | Nothing to change. |
+| Remote without --confirm | demo on db.example.com is remote and not marked throwaway. / Review the plan, then run again with --apply --confirm demo. |
+
 ## What this page doesn't do
 
 It doesn't hold every error: the full catalog, with when each code happens, is

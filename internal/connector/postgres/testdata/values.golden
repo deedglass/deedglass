@@ -1,0 +1,38 @@
+int2 (int2)	"-32768"	→ -32768
+int4 (int4)	"42"	→ 42
+int8 small (int8)	"9007199254740991"	→ 9007199254740991
+int8 2^53 (int8)	"9007199254740992"	→ "9007199254740992"
+int8 -2^53 (int8)	"-9007199254740992"	→ "-9007199254740992"
+int8 max (int8)	"9223372036854775807"	→ "9223372036854775807"
+numeric 0.1 (numeric)	"0.1"	→ "0.1"
+numeric NaN (numeric)	"NaN"	→ "NaN"
+float8 (float8)	"1.5"	→ 1.5
+float8 tiny (float8)	"1e-300"	→ 1e-300
+float8 NaN (float8)	"NaN"	→ "NaN"
+float8 Infinity (float8)	"Infinity"	→ "Infinity"
+float4 -Infinity (float4)	"-Infinity"	→ "-Infinity"
+bool true (bool)	"t"	→ true
+bool false (bool)	"f"	→ false
+text (text)	"he said \"hi\"\n"	→ "he said \"hi\"\n"
+varchar (varchar)	"paid"	→ "paid"
+uuid (uuid)	"6f1c2d3e-0000-4000-8000-00000000d001"	→ "6f1c2d3e-0000-4000-8000-00000000d001"
+inet (inet)	"10.0.0.1/32"	→ "10.0.0.1/32"
+enum (unknown oid) ()	"shipped"	→ "shipped"
+bytea (bytea)	"\\xdeadbeef"	→ "\\xdeadbeef"
+date (date)	"2026-10-06"	→ "2026-10-06"
+date infinity (date)	"infinity"	→ "infinity"
+timestamptz (timestamptz)	"2026-10-06 11:12:00.123456+00"	→ "2026-10-06T11:12:00.123456Z"
+timestamptz whole second (timestamptz)	"2026-10-06 11:12:00+00"	→ "2026-10-06T11:12:00.000000Z"
+timestamptz offset (timestamptz)	"2026-10-06 16:42:00+05:30"	→ "2026-10-06T11:12:00.000000Z"
+timestamptz infinity (timestamptz)	"infinity"	→ "infinity"
+timestamp (timestamp)	"2026-10-06 11:12:00.5"	→ "2026-10-06T11:12:00.500000"
+interval (interval)	"1 day 02:00:00"	→ "1 day 02:00:00"
+json (json)	"{\"a\": [1, 2.5, \"x\"], \"big\": 12345678901234567890}"	→ {"a":[1,2.5,"x"],"big":12345678901234567890}
+jsonb (jsonb)	"{\"a\": 1, \"b\": {\"c\": null}}"	→ {"a":1,"b":{"c":null}}
+int4[] (int4[])	"{1,2,NULL,4}"	→ [1,2,null,4]
+text[] quoted (text[])	"{plain,\"with space\",\"quote \\\" and \\\\ backslash\",NULL,\"NULL\"}"	→ ["plain","with space","quote \" and \\ backslash",null,"NULL"]
+int8[][] (int8[])	"{{1,2},{9223372036854775807,4}}"	→ [[1,2],["9223372036854775807",4]]
+int4[] empty (int4[])	"{}"	→ []
+int4[] bounds (int4[])	"[0:1]={5,6}"	→ [5,6]
+numeric[] (numeric[])	"{0.1,NaN}"	→ ["0.1","NaN"]
+null (text)	"NULL"	→ null

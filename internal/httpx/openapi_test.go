@@ -124,6 +124,8 @@ func elsewhere() []Route {
 		adm("DELETE", "/v1/connectors/{id}/credentials", "deleteConnectorCredentials", RoleAdmin),
 		adm("POST", "/v1/connectors/{id}/test", "testConnector", RoleAdmin), adm("GET", "/v1/connector-types", "listConnectorTypes", RoleViewer),
 	)
+	// S17: the Postgres setup record (internal/connectorapi).
+	out = append(out, adm("POST", "/v1/connectors/{id}/initialized", "recordConnectorInitialized", RoleAdmin))
 	return out
 }
 

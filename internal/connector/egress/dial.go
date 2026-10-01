@@ -21,6 +21,14 @@ const DialTimeout = 5 * time.Second
 func (p *Policy) DialContext(ctx context.Context, network, addr string) (net.Conn, error) {
 	switch network {
 	case "tcp", "tcp4", "tcp6":
+	case "unix":
+		// A Unix socket is this machine: the loopback rule applies (dev with the override only).
+		// The Postgres connector's socket DSNs (S17) come through here.
+		if !p.allowed(netip.IPv6Loopback(), ClassLoopback) {
+			return nil, &BlockedError{Host: addr, Class: ClassLoopback, Reason: "Unix sockets are allowed only in dev with DEEDGLASS_ALLOW_PRIVATE_NETWORKS=1. Connect over TCP."}
+		}
+		d := net.Dialer{Timeout: DialTimeout}
+		return d.DialContext(ctx, "unix", addr)
 	default:
 		return nil, fmt.Errorf("egress: network %q isn't allowed", network)
 	}

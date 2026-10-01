@@ -21,7 +21,7 @@ CREATE FUNCTION deedglass_it.intent(p_nonce text, p_amount text,
                               p_aud text DEFAULT '9b1c2d3e-0000-4000-8000-00000000d001')
 RETURNS bytea LANGUAGE sql AS $$
   SELECT convert_to(jsonb_build_object(
-           'v', 'deedglass.intent/1', 'op', 'TRANSFER', 'op_v', 1,
+           'v', 'deedglass.transfer/1', 'op', 'TRANSFER', 'op_v', 1,
            'iss', 'ops-approver', 'kid', p_kid, 'aud', p_aud,
            'bundle', 'sha256:' || repeat('0', 63) || '1',
            'nonce', p_nonce, 'iat', t.now_ms + p_iat_offset_ms, 'exp', t.now_ms + p_iat_offset_ms + p_ttl_ms,

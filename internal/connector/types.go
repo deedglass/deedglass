@@ -65,6 +65,7 @@ type Call struct {
 	Args           json.RawMessage // a JSON object
 	IdempotencyKey string          // "act_…": connectors pass it upstream where supported
 	Deadline       time.Time
+	IntentHash     string // "sha256:…" of the signed intent, when the call carried one (S17: the Postgres ledger row)
 }
 
 // Money is integer minor units plus a lowercase ISO 4217 currency.

@@ -140,6 +140,7 @@ var contractRoutes = []ContractRoute{
 	cr("PUT", "/v1/connectors/{id}/credentials", SessionOrKey, "admin", "S16", "write-only; never stored for replay"),
 	cr("DELETE", "/v1/connectors/{id}/credentials", SessionOrKey, "admin", "S16"),
 	cr("POST", "/v1/connectors/{id}/test", SessionOrKey, "admin", "S16", "IdemNever: 10 per minute per connector"),
+	cr("POST", "/v1/connectors/{id}/initialized", SessionOrKey, "admin", "S17", "postgres only: seals connector.postgres_initialized"),
 	cr("GET", "/v1/connector-types", SessionOrKey, "viewer", "S16"),
 	cr("GET", "/v1/connector-types/{type}", SessionOrKey, "admin", "S30"),
 	cr("GET", "/v1/connectors/{id}/decoder", SessionOrKey, "admin", "S20"),

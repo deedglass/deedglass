@@ -6,6 +6,12 @@
 #
 # Edit the list in "allow-listed-writes", then check your change:
 #   deedglass policy test examples/policies/postgres-safe.yaml
+#
+# The tools are the native Postgres connector's (S17, docs/POSTGRES.md): postgres.query,
+# postgres.execute, postgres.call and postgres.describe. The connector also refuses some SQL even
+# when a policy allows it (several statements, transaction control, schema deedglass, set_config
+# and other denylisted functions), and runs every statement as the least-privilege role
+# deedglass_agent. This policy decides what a human must see first.
 deedglass: policy/v1
 name: postgres-safe
 description: Reads run freely. Writes wait for a human. Schema changes never run.

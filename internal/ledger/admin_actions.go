@@ -52,6 +52,11 @@ const (
 	AdminConnectorCredentialsRemoved = "connector.credentials_removed"
 	AdminVaultRotated                = "vault.rotated" // target {org, org_…}; data: rewrapped, from, to
 
+	// S17: deedglass connector postgres init applied a plan. Target {connector, con_…}; data: type,
+	// connector, config_hash, plan_sha256, changes, database, server_version, provider,
+	// roles_created. Never the plan's SQL, a password or a verifier.
+	AdminConnectorPostgresInitialized = "connector.postgres_initialized"
+
 	// S07: security events, recorded in admin_events without a deed (AppendAdminEvent).
 	AdminUserSignedIn  = "user.signed_in"
 	AdminUserSignedOut = "user.signed_out"
@@ -74,7 +79,7 @@ var AdminActions = []string{
 	AdminAgentIntentKeyAdded, AdminAgentIntentKeyRemoved, AdminAgentIntentMode,
 	AdminPolicyActivated, AdminPolicyDeactivated,
 	AdminConnectorCreated, AdminConnectorUpdated, AdminConnectorDeleted, AdminConnectorCredentialsUpdated,
-	AdminConnectorCredentialsRemoved, AdminVaultRotated,
+	AdminConnectorCredentialsRemoved, AdminVaultRotated, AdminConnectorPostgresInitialized,
 }
 
 // AdminEventActions are admin events recorded without a deed (AppendAdminEvent): security events

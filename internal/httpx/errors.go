@@ -84,6 +84,12 @@ const (
 	CodeUpstreamNotFound    Code = "upstream_not_found"
 	CodeUpstreamRateLimited Code = "upstream_rate_limited"
 	CodeResponseTooLarge    Code = "response_too_large"
+
+	// S17: the Postgres connector. They appear as an action's execution.error_code.
+	CodeStatementRefused   Code = "statement_refused"
+	CodeRowLimitExceeded   Code = "row_limit_exceeded"
+	CodeDatabaseRoleUnsafe Code = "database_role_unsafe"
+	CodeDatabaseNotReady   Code = "database_not_ready"
 )
 
 // DocURLPrefix is where every code has a page (docs/api/errors.md, published by S33).
@@ -179,6 +185,14 @@ var catalog = []CatalogEntry{
 	{CodeUpstreamNotFound, 502, TypeAPI, "The service has nothing at that address. Check the arguments.", "", "S16"},
 	{CodeUpstreamRateLimited, 429, TypeRateLimit, "The service is limiting requests. Wait, then send the call again.", "", "S16"},
 	{CodeResponseTooLarge, 502, TypeAPI, "The service answered with more than the connector's max_response_bytes, so Deedglass kept none of it. The call ran.", "", "S16"},
+
+	{CodeStatementRefused, 400, TypeInvalidRequest, "Refused by the Postgres connector. Deedglass runs one plain statement per action, and never transaction control, schema changes or schema deedglass.",
+		"Refused by the Postgres connector: the statement has {n} commands. Deedglass runs one statement per action.", "S17"},
+	{CodeRowLimitExceeded, 400, TypeInvalidRequest, "The statement changed more rows than this connector allows. Nothing was committed. Narrow the WHERE clause.",
+		"The statement changed {n} rows, over this connector's limit of {max}. Nothing was committed. Narrow the WHERE clause.", "S17"},
+	{CodeDatabaseRoleUnsafe, 503, TypeAPI, "The connector's database role is a superuser. Deedglass refuses to run agent SQL with it. Run deedglass connector postgres init to create deedglass_agent.", "", "S17"},
+	{CodeDatabaseNotReady, 503, TypeAPI, "Deedglass isn't set up in this database yet. Run deedglass connector postgres init.",
+		"Deedglass isn't set up in this database yet. Run deedglass connector postgres init --connector {name}.", "S17"},
 }
 
 var byCode = func() map[Code]CatalogEntry {

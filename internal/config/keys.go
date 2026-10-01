@@ -83,6 +83,8 @@ var Keys = []Key{
 		Commands: "CLI, mcp, SDKs", Doc: "An agent or admin API key (dg_live_… or dg_test_…) for client commands.", Owner: "S01"},
 	{Name: "DEEDGLASS_SERVER", Kind: KindURL, Client: true,
 		Commands: "CLI, mcp, SDKs", Doc: "The Deedglass server client commands talk to.", Owner: "S01"},
+	{Name: "DEEDGLASS_INIT_DSN", Kind: KindSecret, Secret: true, Client: true,
+		Commands: "connector postgres init", Doc: "The admin DSN deedglass connector postgres init connects with to prepare a customer database (a superuser, or a role with CREATEROLE such as the RDS master user). Read once, never stored or printed. Rename it with --admin-dsn-env.", Owner: "S17"},
 	{Name: "DEEDGLASS_NO_BANNER", Kind: KindBool, Default: "false", Client: true,
 		Commands: "CLI", Doc: "Never show the terminal banner or the inline mark (bare deedglass, version, help). Scripts, pipes and CI never see them anyway.", Owner: "S05X"},
 	{Name: "DEEDGLASS_THEME", Kind: KindEnum, Default: "auto", Enum: []string{"auto", "light", "dark"}, Client: true,

@@ -11,6 +11,7 @@
 #   demo.sh psql      make demo-psql: psql on the orders database as acme_owner
 #   demo.sh follow    make demo-follow: deedglass actions list --follow --connector orders
 #   demo.sh verify    make demo-verify [SINCE=10m]: export recent deeds and verify the chain
+#   demo.sh check     make demo-check: the Postgres connector's readiness report (S17)
 #
 # Env: DEMO_PORT (default 8080, or what .env says), HTTP=1, HARD=1, CLIENT, KEYS=1, SINCE, NO_COLOR.
 set -euo pipefail
@@ -115,6 +116,37 @@ ours() { [ -f "$ENV_FILE" ] && [ -n "$(compose ps -q deedglass 2>/dev/null)" ]; 
 
 orders_sql() { compose exec -T orders-db psql -X -q -At -U postgres -d acme -c "$1"; }
 
+# admin_key is the demo org's admin key for the CLI's API steps (S17), created once DB-direct and
+# kept in .demo/admin-key (0600). A key the server no longer knows (after HARD=1) is replaced.
+admin_key() {
+  kf="$STATE/admin-key"
+  if [ -s "$kf" ] && env DEEDGLASS_API_KEY="$(cat "$kf")" DEEDGLASS_SERVER="http://127.0.0.1:$PORT" "$BIN" connector list >/dev/null 2>&1; then
+    cat "$kf"; return
+  fi
+  k="$(cd "$STATE" && host_env "$BIN" org keys create --org acme-demo --name demo-admin --mode test --json 2>/dev/null | sed -n 's/.*"secret": *"\(dg_[^"]*\)".*/\1/p')"
+  [ -n "$k" ] || fail "The demo's admin key couldn't be created. Run make demo-status, then make demo-up again."
+  umask 077; printf '%s' "$k" > "$kf"; chmod 600 "$kf"
+  printf '%s' "$k"
+}
+
+api() { env DEEDGLASS_API_KEY="$(admin_key)" DEEDGLASS_SERVER="http://127.0.0.1:$PORT" "$BIN" "$@"; }
+
+# postgres_up is S17's native Postgres connector on the orders database: the connector (once), then
+# init --apply. The demo database is marked throwaway in its config, so no --confirm; the server
+# reaches it as orders-db:5432 inside Docker. Passwords rotate on every up.
+postgres_up() {
+  if [ "$(orders_sql "select pg_catalog.to_regprocedure('public.ship_order(bigint)') is not null")" != "t" ]; then
+    compose exec -T orders-db sh -c "psql -X -q -U postgres -d acme -f /docker-entrypoint-initdb.d/20_functions.sql" >/dev/null || fail "public.ship_order couldn't be created."
+  fi
+  if ! api connector show postgres >/dev/null 2>&1; then
+    out="$(api connector create --config "$DEMO/connectors/postgres.yaml" 2>&1)" || { echo "$out" >&2; fail "The postgres connector couldn't be created."; }
+  fi
+  out="$(cd "$STATE" && DEEDGLASS_INIT_DSN="postgres://postgres:$(envget ORDERS_DB_PASSWORD)@127.0.0.1:55434/acme?sslmode=disable" \
+    api connector postgres init --connector postgres --apply --rotate-passwords --dsn-host orders-db:5432 2>&1)" || { echo "$out" >&2; fail "deedglass connector postgres init failed. The log is above."; }
+  echo "$out" > "$STATE/postgres-init.log"
+  ok "postgres connector · deedglass_agent · credentials in the vault · make demo-check"
+}
+
 reset_folder() {
   mkdir -p "$FOLDER/allowed"
   find "$FOLDER" -mindepth 1 -not -path "$FOLDER/allowed" -not -path "$FOLDER/allowed/hello.txt" -exec rm -rf {} + 2>/dev/null || true
@@ -151,6 +183,7 @@ EOF
   echo "$out"
   chmod 600 "$KEYS_FILE" 2>/dev/null || true
   reset_folder
+  postgres_up
   if [ "${HTTP:-}" = "1" ]; then ok "everything · http://127.0.0.1:3001/mcp · gateway at http://127.0.0.1:$PORT/mcp/everything"; fi
   echo "Demo ready. Next: make demo-snippet CLIENT=claude-desktop"
 }
@@ -167,18 +200,20 @@ reset() {
   need_docker
   if [ "${HARD:-}" = "1" ]; then
     compose --profile http down -v >/dev/null 2>&1
-    rm -f "$KEYS_FILE"
+    rm -f "$KEYS_FILE" "$STATE/admin-key"
     ok "Ledger and orders volumes removed; starting again"
     up
     return
   fi
   compose exec -T orders-db psql -X -q -U postgres -d postgres -c "DROP DATABASE IF EXISTS acme WITH (FORCE)" -c "CREATE DATABASE acme" >/dev/null
-  for f in 01_schema.sql 02_seed.sql 03_roles.sql; do
+  for f in 01_schema.sql 02_seed.sql 03_roles.sql 20_functions.sql; do
     compose exec -T orders-db sh -c "psql -X -q -U postgres -d acme -f /docker-entrypoint-initdb.d/$f" >/dev/null
   done
   reset_folder
   ok "orders-db reloaded · $(orders_sql "select count(*) from orders") orders · $(orders_sql "select count(*) from refunds") refunds · $(orders_sql "select count(*) from orders where status = 'cancelled'") cancelled"
   ok "$FOLDER reset · allowed/hello.txt"
+  build_cli >/dev/null
+  postgres_up
   echo "Ready for a new take. The Ledger keeps every deed (HARD=1 wipes it)."
 }
 
@@ -222,6 +257,7 @@ case "${1:-}" in
   snippet) snippet ;;
   psql) need_docker; compose exec orders-db psql -U acme_owner -d acme ;;
   follow) build_cli >/dev/null; cd "$STATE"; host_env "$BIN" actions list --follow --connector "${CONNECTOR:-orders}" --org acme-demo ;;
+  check) build_cli >/dev/null; cd "$STATE"; api connector postgres check --connector postgres ;;
   verify)
     build_cli >/dev/null; cd "$STATE"
     host_env "$BIN" deeds export --org acme-demo --since "${SINCE:-10m}" --out - | host_env "$BIN" verify - ;;

@@ -51,6 +51,10 @@ type Normalized struct {
 	// HTTP is the request a REST connector will send (S16's request.http), filled by the
 	// connector's enrichment before the decision; empty otherwise.
 	HTTP policy.HTTPFacts
+	// DefaultSchema and RaisedSideEffect come from the Postgres connector's enrichment (S17): the
+	// schema unqualified names resolve to, and a per-call side effect above the tool's declared one.
+	DefaultSchema    string
+	RaisedSideEffect string
 }
 
 // digestBody is what request_digest covers (S13 §3.6): JCS of these four members.

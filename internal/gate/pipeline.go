@@ -226,7 +226,7 @@ func (p *Pipeline) Submit(ctx context.Context, pr principal, req ActionRequest) 
 			return nil, err
 		default:
 			n.ConnectorType = ctype
-			n.HTTP = enrich(ctx, ex, spec, n.Args)
+			n.HTTP, n.DefaultSchema, n.RaisedSideEffect = enrich(ctx, ex, spec, n.Args)
 		}
 	}
 	// The active policies, before any transaction: a cold load reads Postgres on its own.
@@ -357,7 +357,7 @@ func (p *Pipeline) admit(ctx context.Context, pr principal, n *Normalized, req A
 			return err
 		}
 		if n.Mode == ModeGateway {
-			withSideEffect(&in, spec)
+			withSideEffect(&in, spec, n.RaisedSideEffect)
 		}
 		// 3. The decision: Stop first, then an unknown tool, then the policies (S11's sequence).
 		var (
@@ -475,7 +475,7 @@ func (p *Pipeline) admit(ctx context.Context, pr principal, n *Normalized, req A
 				adm.plan = &plan{subject: sub, exec: ex, actor: actor, requestID: req.RequestID,
 					costTargets: d.CostBudgets, reservations: d.Reservations,
 					call: connector.Call{ActionID: id, OrgID: org, AgentID: agent, Tool: spec, Qualified: n.Tool, Args: n.Args,
-						IdempotencyKey: id.String(), Deadline: now.Add(p.cfg.ExecuteTimeout)}}
+						IdempotencyKey: id.String(), Deadline: now.Add(p.cfg.ExecuteTimeout), IntentHash: ir.IntentHash}}
 			}
 		}
 		if err := p.o.Ledger.Advance(ctx, tx, id.String(), Received, steps...); err != nil {
@@ -558,7 +558,7 @@ func buildInput(org ids.OrgID, agent ids.AgentID, subj store.GateSubject, n *Nor
 		User:    policy.UserFacts{Ref: ir.OBO.OnBehalfOf},
 		Session: policy.SessionFacts{Ref: ir.OBO.Session},
 		Tool: policy.ToolInput{ToolFacts: policy.ToolFacts{Name: n.Tool, Connector: n.Connector, ConnectorType: ctype, SideEffect: side,
-			Type: ctype, Op: n.ToolName}},
+			Type: ctype, Op: n.ToolName}, DefaultSchema: n.DefaultSchema},
 		Args:    n.Args,
 		Request: policy.RequestFacts{Mode: string(n.Mode), Bytes: n.ArgsBytes, IntentSigned: ir.Signed, Digest: n.Digest, HTTP: n.HTTP},
 		Time:    now.UTC(),
@@ -566,25 +566,33 @@ func buildInput(org ids.OrgID, agent ids.AgentID, subj store.GateSubject, n *Nor
 	return in, loc, nil
 }
 
-// enrich asks a connector that enriches (S16: REST's request.http) for the call's facts. Invalid
-// arguments enrich nothing: the call then fails as validation_failed before anything is sent.
-func enrich(ctx context.Context, ex Executor, spec connector.ToolSpec, args json.RawMessage) policy.HTTPFacts {
+// enrich asks a connector that enriches for the call's facts: REST's request.http (S16), and
+// Postgres's default schema for the SQL classifier and a raised side effect (S17: destructive for
+// a DELETE). Invalid arguments enrich nothing: the call then fails as validation_failed before
+// anything is sent.
+func enrich(ctx context.Context, ex Executor, spec connector.ToolSpec, args json.RawMessage) (h policy.HTTPFacts, defaultSchema, side string) {
 	en, ok := ex.(connector.ArgsEnricher)
 	if !ok {
-		return policy.HTTPFacts{}
+		return policy.HTTPFacts{}, "", ""
 	}
 	m, err := en.EnrichArgs(ctx, spec, args)
 	if err != nil || m == nil {
-		return policy.HTTPFacts{}
+		return policy.HTTPFacts{}, "", ""
 	}
-	h, _ := m["http"].(map[string]string)
-	return policy.HTTPFacts{Method: h["method"], Path: h["path"], Host: h["host"]}
+	hm, _ := m["http"].(map[string]string)
+	defaultSchema, _ = m["default_schema"].(string)
+	side, _ = m["side_effect"].(string)
+	return policy.HTTPFacts{Method: hm["method"], Path: hm["path"], Host: hm["host"]}, defaultSchema, side
 }
 
-// withSideEffect sets the tool's declared side effect (gateway); MCP tools stay unknown.
-func withSideEffect(in *policy.Input, spec connector.ToolSpec) {
+// withSideEffect sets the tool's declared side effect (gateway), raised (never lowered) by the
+// connector's per-call enrichment; MCP tools stay unknown.
+func withSideEffect(in *policy.Input, spec connector.ToolSpec, raised string) {
 	if spec.SideEffect != "" {
 		in.Tool.SideEffect = string(spec.SideEffect)
+	}
+	if r := connector.SideEffect(raised); r.Rank() > connector.SideEffect(in.Tool.SideEffect).Rank() {
+		in.Tool.SideEffect = string(r)
 	}
 }
 

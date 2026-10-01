@@ -18,7 +18,7 @@ const golden = `{"args":{"amount":"1000000","currency":"USD","from":"alice","to"
 	`"bundle":"sha256:4f00000000000000000000000000000000000000000000000000000000000001",` +
 	`"exp":1759050300000,"iat":1759050000000,"iss":"ops-approver",` +
 	`"kid":"3fa9c1d2e3f405162738495a6b7c8d9e","nonce":"b7e2a1c3d4e5f60718293a4b5c6d7e8f",` +
-	`"op":"TRANSFER","op_v":1,"v":"deedglass.intent/1"}`
+	`"op":"TRANSFER","op_v":1,"v":"deedglass.transfer/1"}`
 
 // u returns a JSON backslash-u escape for hex digits h. The escape is built at
 // run time so the source never contains it literally (some editors and tools
@@ -232,7 +232,7 @@ func TestParseRejectsNonCanonical(t *testing.T) {
 		`"bundle":"sha256:4f00000000000000000000000000000000000000000000000000000000000001",` +
 		`"exp":1759050300000,"iat":1759050000000,"iss":"ops-approver",` +
 		`"kid":"3fa9c1d2e3f405162738495a6b7c8d9e","nonce":"b7e2a1c3d4e5f60718293a4b5c6d7e8f",` +
-		`"op":"TRANSFER","op_v":1,"v":"deedglass.intent/1"}`
+		`"op":"TRANSFER","op_v":1,"v":"deedglass.transfer/1"}`
 	escaped := strings.Replace(golden, `"alice"`, `"`+u("0061")+`lice"`, 1)
 	trailingNL := golden + "\n"
 	for name, in := range map[string]string{

@@ -75,9 +75,9 @@ intent_hash          sha256:87c73e450a53f0269e33f7adb8430a6f89714606f9aae38bc732
 signature (b64url)   TQAgBevx6iwlDM2Z7px4mrRiCjdbrAX3GCacB_gMAQbvPagJqCsJUWYz7xS7VuQqyV2rOK71uyRHvym2nqjJCA
 ```
 
-The V0 transfer demo intent (`op: TRANSFER`, `internal/intent/intent.go`) shares the version string
-`deedglass.intent/1` but is a different closed schema. The two field sets don't overlap, so no
-document satisfies both.
+The V0 transfer demo intent (`op: TRANSFER`, `internal/intent/intent.go`) is a different closed
+schema with its own tag, `deedglass.transfer/1` (renamed in S17 under DL-023), so the version string
+alone tells the two apart.
 
 ## 3. Canonicalization
 

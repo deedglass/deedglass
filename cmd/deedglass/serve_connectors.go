@@ -12,6 +12,7 @@ import (
 	"github.com/deedglass/deedglass/internal/config"
 	"github.com/deedglass/deedglass/internal/connector"
 	"github.com/deedglass/deedglass/internal/connector/egress"
+	"github.com/deedglass/deedglass/internal/connector/postgres"
 	"github.com/deedglass/deedglass/internal/connector/rest"
 	"github.com/deedglass/deedglass/internal/connectorapi"
 	"github.com/deedglass/deedglass/internal/httpx"
@@ -69,10 +70,10 @@ func selfAddrs(ctx context.Context, dsn string) []netip.AddrPort {
 }
 
 // newConnectors builds the vault (when a key ring is set) and the registry: fake in dev only, the
-// REST type everywhere.
+// REST and Postgres types everywhere.
 func newConnectors(ctx context.Context, cfg *config.Config, db *store.DB, led *ledger.Ledger, natives []connector.Connector, log *slog.Logger) (*connectors, error) {
 	c := &connectors{egress: egressPolicy(ctx, cfg, log)}
-	o := connector.Options{Builtins: natives, Types: []connector.Connector{rest.New()}, Loader: connector.DBLoader{DB: db},
+	o := connector.Options{Builtins: natives, Types: []connector.Connector{rest.New(), postgres.New(log)}, Loader: connector.DBLoader{DB: db},
 		Env: connector.Env{Name: string(cfg.Env), Egress: c.egress}, Logger: log}
 	if cfg.VaultKey.IsSet() {
 		ring, err := vault.NewRing(cfg.VaultKey.Reveal())
@@ -90,7 +91,7 @@ func newConnectors(ctx context.Context, cfg *config.Config, db *store.DB, led *l
 func connectorRoutes(db *store.DB, led *ledger.Ledger, cw *connectors, log *slog.Logger) []httpx.Route {
 	a := &connectorapi.API{DB: db, Ledger: led, Log: log}
 	if cw == nil {
-		a.Registry = connector.New(connector.Options{Types: []connector.Connector{rest.New()}})
+		a.Registry = connector.New(connector.Options{Types: []connector.Connector{rest.New(), postgres.New(nil)}})
 	} else {
 		a.Registry = cw.reg
 		if cw.vault != nil {

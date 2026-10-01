@@ -5,6 +5,31 @@ defaults:
   agent: { name: claude-desktop }
   time: 2026-10-05T10:00:00Z
 cases:
+  # The native Postgres connector (S17, gateway mode): postgres.query, execute, call, describe
+  - name: the native connector's read runs
+    input: { tool: { name: postgres.query, connector_type: postgres }, sql: "SELECT id, status FROM orders ORDER BY id DESC LIMIT 5" }
+    expect: { decision: allow, rule: allow-order-reads }
+  - name: the native connector's status update runs
+    input: { tool: { name: postgres.execute, connector_type: postgres }, sql: "UPDATE orders SET status = 'shipped' WHERE id = $1" }
+    expect: { decision: allow, rule: allow-order-status-updates }
+  - name: a refund through the native connector waits for a person
+    input: { tool: { name: postgres.execute, connector_type: postgres }, sql: "INSERT INTO refunds (id, order_id, amount_cents, reason, created_at) VALUES (999, 42, 500, 'damaged', now())" }
+    expect: { decision: require_approval, rule: orders-writes-need-approval }
+  - name: an update across two tables through the native connector waits for a person
+    input: { tool: { name: postgres.execute, connector_type: postgres }, sql: "UPDATE orders SET status = 'refunded' FROM refunds WHERE refunds.order_id = orders.id AND refunds.id = 7" }
+    expect: { decision: require_approval, rule: orders-writes-need-approval }
+  - name: the native connector never deletes orders
+    input: { tool: { name: postgres.execute, connector_type: postgres }, sql: "DELETE FROM orders WHERE id = 42" }
+    expect: { decision: deny, rule: no-deletes-on-orders }
+  - name: the native connector never runs DROP
+    input: { tool: { name: postgres.execute, connector_type: postgres }, sql: "DROP TABLE orders" }
+    expect: { decision: deny, rule: block-destructive-sql }
+  - name: shipping an order through the controlled function runs
+    input: { tool: { name: postgres.call, connector_type: postgres }, args: { function: public.ship_order, args: { p_order_id: 42 } } }
+    expect: { decision: allow, rule: allow-ship-order }
+  - name: describing the schema runs
+    input: { tool: { name: postgres.describe, connector_type: postgres } }
+    expect: { decision: allow, rule: allow-schema-browsing }
   # The orders database (proxy mode through deedglass mcp wrap --connector-type postgres)
   - name: the five newest orders run
     input: { tool: { name: orders.execute_sql, connector_type: postgres }, sql: "SELECT id, status, total_cents FROM public.orders ORDER BY created_at DESC LIMIT 5" }

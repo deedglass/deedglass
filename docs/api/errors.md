@@ -1198,6 +1198,92 @@ verdict `UNVERIFIABLE`.
 }
 ```
 
+## statement_refused
+
+**400 · invalid_request_error**
+
+**When it happens.** The Postgres connector refused the SQL before it reached the database, even
+though policy allowed the call (S17). It refuses more than one statement, a kind that doesn't
+match the tool (`postgres.query` runs only `SELECT`; `postgres.execute` runs one `INSERT`,
+`UPDATE`, `DELETE` or `MERGE`), transaction control, `SET`, `RESET`, `DISCARD`, `LISTEN`,
+`NOTIFY`, `COPY`, `DO`, `CALL`, `GRANT`, `REVOKE`, any schema change (including `TRUNCATE`),
+`EXPLAIN ANALYZE`, any reference to schema `deedglass`, functions on its denylist
+(`pg_logical_emit_message`, `set_config`, `pg_read_file`, `dblink*` and others), and SQL it can't
+classify. Nothing was sent, so the action is `failed`.
+
+**What to do.** Send one plain statement to the matching tool, with values as `$1`, `$2` params.
+
+```json
+{
+  "type": "invalid_request_error",
+  "code": "statement_refused",
+  "message": "Refused by the Postgres connector: the statement has 2 commands. Deedglass runs one statement per action.",
+  "param": null
+}
+```
+
+## row_limit_exceeded
+
+**400 · invalid_request_error**
+
+**When it happens.** A `postgres.execute` statement changed more rows than the connector's
+`max_rows_affected` (1,000 by default). Deedglass rolled the transaction back, so neither the
+change nor the ledger row was committed, and the action is `failed`.
+
+**What to do.** Narrow the `WHERE` clause, or raise `max_rows_affected` in the connector's config
+if the size is expected.
+
+```json
+{
+  "type": "invalid_request_error",
+  "code": "row_limit_exceeded",
+  "message": "The statement changed 1,204 rows, over this connector's limit of 1,000. Nothing was committed. Narrow the WHERE clause.",
+  "param": null
+}
+```
+
+## database_role_unsafe
+
+**503 · api_error**
+
+**When it happens.** The Postgres connector's DSN logs in as a role that isn't least privilege: a
+superuser, a role with `BYPASSRLS`, `REPLICATION`, `CREATEROLE` or `CREATEDB`, a member of
+`pg_write_all_data`, `rds_superuser`, `cloudsqlsuperuser`, `azure_pg_admin`, `neon_superuser`,
+`supabase_admin` or a server-file role, or any role other than `deedglass_agent`. Every new
+connection is checked (S17). In prod the connection is refused and nothing runs; in dev Deedglass
+logs a warning and `deedglass connector postgres check` fails its `agent_role` line.
+
+**What to do.** Run `deedglass connector postgres init --connector <name>` to create
+`deedglass_agent` and store its DSN, then `deedglass connector postgres check`.
+
+```json
+{
+  "type": "api_error",
+  "code": "database_role_unsafe",
+  "message": "The connector's database role is a superuser. Deedglass refuses to run agent SQL with it. Run deedglass connector postgres init to create deedglass_agent.",
+  "param": null
+}
+```
+
+## database_not_ready
+
+**503 · api_error**
+
+**When it happens.** The database the connector points at has no `deedglass.begin_action`, or
+`deedglass_agent` can't execute it (S17). Nothing ran.
+
+**What to do.** Run `deedglass connector postgres init --connector <name>`, review the plan, apply
+it, then `deedglass connector postgres check`.
+
+```json
+{
+  "type": "api_error",
+  "code": "database_not_ready",
+  "message": "Deedglass isn't set up in this database yet. Run deedglass connector postgres init.",
+  "param": null
+}
+```
+
 ## What this doesn't do
 
 - Errors don't carry localized messages. The copy is English, and the `code` is the stable part.

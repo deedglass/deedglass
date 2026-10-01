@@ -24,7 +24,7 @@ const (
 	CodeNumberRange    Code = "NUMBER_OUT_OF_RANGE" // ParseStrictArgs only: beyond the double range
 )
 
-// Schema failures for deedglass.intent/1. The verifier reports these as
+// Schema failures for deedglass.transfer/1. The verifier reports these as
 // INTENT_SCHEMA (spec §10.3 check 4).
 const (
 	CodeUnknownKey Code = "UNKNOWN_KEY"

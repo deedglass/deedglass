@@ -1,10 +1,10 @@
 # Connectors
 
-A **connector** turns a system your agents act on (an API today; Postgres in S17, GitHub, Slack,
+A **connector** turns a system your agents act on (an API, or a Postgres database since S17; GitHub, Slack,
 Stripe, Gmail and Notion later) into governed **tools**. An admin registers it once and stores its
 credential once. From then on every agent call passes through the Gate: it is decided by policy,
 runs with the credential added at the last moment, and is sealed as a deed. **The agent never sees
-the credential.** (S16)
+the credential.** (S16) The Postgres type has its own page: [POSTGRES.md](POSTGRES.md).
 
 ## Concepts
 

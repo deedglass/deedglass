@@ -16,7 +16,7 @@ exit 0
           allow-reads                          no match   match doesn't cover this action
           allow-describe                       no match   match doesn't cover this action
           allow-listed-writes                  no match   when → false
-          writes-need-approval                 match      when → true      line 78
+          writes-need-approval                 match      when → true      line 84
           … 2 more rules not evaluated
   policy  postgres-safe · sha256:2c4c…04fd · sqlguard 1
 --- stderr

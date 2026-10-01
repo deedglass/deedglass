@@ -2,9 +2,9 @@
   "v": "deedglass.bundle/1",
   "op": "TRANSFER",
   "op_v": 1,
-  "intent_schema_sha256": "9007497c43a3f6acdc63ed47e0af52c10362b59d9694e531dc5cb77fa654248a",
+  "intent_schema_sha256": "73439a0e30894df7d0e38843646a6590e9f2231386c7a15b78c750f2454df45f",
   "entry_fn": "deedglass.execute_transfer_v1(bytea,bytea)",
-  "fn_src_sha256": "76f90a1fea1802a58e19518cd614e92df4b841f1d139e31c4144c4988025a5c7",
+  "fn_src_sha256": "3c3a840b99951805bbcf6b8564462302b0ed2fb14d45a160a675c968f085874b",
   "schema_sha256": "d6bcb9c676b3c41227fc54fdab53dea309b88dd34ddcce3999c8378c4b2772d9",
   "write_set": [
     { "rel": "bank.accounts", "ops": ["UPDATE"], "rows": 2, "cols_changed": ["balance", "version"] },

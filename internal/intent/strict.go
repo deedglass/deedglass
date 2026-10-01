@@ -17,7 +17,7 @@ import (
 const MaxSafeInteger int64 = 1<<53 - 1
 
 // maxDepth bounds nesting so hostile input cannot exhaust the stack.
-// deedglass.intent/1 needs depth 2.
+// deedglass.transfer/1 needs depth 2.
 const maxDepth = 16
 
 // ParseStrict parses one JSON value under the deedglass strict profile and returns

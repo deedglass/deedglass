@@ -1,30 +1,32 @@
-// Package postgres is the Postgres connector: it prepares a customer database (deedglass connector
-// postgres init|check), runs SQL through the controlled function deedglass.begin_action, and gives
-// the Witness what it needs for L2 (contract §4).
+// Package postgres is the Postgres connector (S17, docs/POSTGRES.md): it runs agent SQL in a
+// transaction Deedglass controls, as the least-privilege role deedglass_agent, and leaves the
+// evidence the witness needs (S20–S21): a ledger row and a logical marker in the same transaction as
+// the change. Its subpackage setup prepares a customer database (deedglass connector postgres
+// init|check).
 //
-// Invariants:
-//   - The control-plane database and a watched customer database are never the same database.
-//   - Customer-side roles: deedglass_owner (NOLOGIN, owns the controlled functions),
-//     deedglass_agent (least privilege), deedglass_witness (REPLICATION, pinned session settings).
-//   - The publication deedglass_pub exists before any slot; the slot is deedglass_ plus the
-//     connector id without con_, lowercased.
-//   - Each action emits one transactional logical message with prefix deedglass and the action id.
-//   - SQL rules: no dynamic SQL, no EXCEPTION blocks in controlled functions, schema-qualified
-//     objects, search_path pinned to pg_catalog, pg_temp, REVOKE and GRANT with CREATE.
-//   - Customer-side SQLSTATEs are DG101–DG103; the V0 transfer demo keeps TX001–TX031.
+// Tools: postgres.query (read-only transaction, row and byte caps), postgres.execute (one INSERT,
+// UPDATE, DELETE or MERGE after begin_action), postgres.call (allow-listed functions, statement built
+// from config), postgres.describe (cached 60 s).
 //
-// Planned API (finalized by S17):
+// Invariants (each is a test):
+//   - The ledger row, the marker and the agent's change commit in one transaction or not at all.
+//   - begin_action is the first write; the agent's statement always runs after it, as
+//     deedglass_agent, through Conn.Query with an explicit exec mode (pgx's Exec with no arguments
+//     uses the simple protocol, which runs stacked statements).
+//   - postgres.query never commits.
+//   - In prod, no connection whose role is superuser-class (or isn't deedglass_agent) runs anything:
+//     the AfterConnect probe refuses it with database_role_unsafe.
+//   - The admin DSN and generated passwords are never stored by Deedglass or printed; Postgres sees
+//     only SCRAM verifiers.
+//   - marker_lsn is evidence only and never feeds a comparison.
+//   - Every refusal before COMMIT is a failed kind (nothing committed); only a lost COMMIT answer is
+//     unknown. Writes are never retried.
 //
-//	func Init(ctx context.Context, dsn config.Secret, opts InitOptions) (Plan, error)
-//	func Check(ctx context.Context, dsn config.Secret) (Report, error)
+// The control-plane database and a watched customer database are never the same database
+// (init refuses deedglass.schema_migrations; migrate refuses deedglass.ledger). Customer-side
+// SQLSTATEs are DG101–DG103; the V0 transfer demo keeps TX001–TX031.
 //
-// V0 note (the former executor and pgsql packages; sql/001–004 and bundles/transfer_v1): V0 ran a
-// transfer through deedglass.execute_transfer_v1, SECURITY DEFINER, owned by deedglass_owner,
-// called once per transaction as the first write (TX001 otherwise), with retries in a new
-// transaction. The installer refused minors below 16.15 / 17.11 / 18.6, created the publication
-// before the slot, and checked the live prosrc hash against the bundle's fn_src_sha256. The
-// privilege audit checked: no DML grants for application roles, no user triggers or rules on
-// boundary tables, forced RLS and REPLICA IDENTITY FULL. S17 absorbs these checks.
-//
-// Filled by: S17
+// V0 note: V0 ran a transfer through deedglass.execute_transfer_v1 (sql/001–004, bundles/transfer_v1)
+// with the same first-write guard, a NOLOGIN owner, a pinned search_path, and the publication before
+// the slot. S17 ports those rules to begin_action; the V0 demo SQL stays for the attack suite.
 package postgres

@@ -510,7 +510,7 @@ func TestPostgresSafeDemo(t *testing.T) {
 	if !reflect.DeepEqual(rules, want) {
 		t.Fatalf("trace:\n%s", strings.Join(rules, "\n"))
 	}
-	if d.RuleLine != 39 || d.SQLGuard != "1" || d.Facts.SQL.Kind != "drop" {
+	if d.RuleLine != 45 || d.SQLGuard != "1" || d.Facts.SQL.Kind != "drop" {
 		t.Fatalf("line %d sqlguard %q kind %q", d.RuleLine, d.SQLGuard, d.Facts.SQL.Kind)
 	}
 }

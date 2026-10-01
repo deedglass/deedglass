@@ -1,0 +1,30 @@
+# The Acme demo's native Postgres connector (S17). Tools: postgres.query, postgres.execute,
+# postgres.call and postgres.describe, run as the least-privilege role deedglass_agent.
+#
+#   deedglass connector create --config examples/demo/connectors/postgres.yaml
+#   DEEDGLASS_INIT_DSN=postgres://postgres:…@127.0.0.1:55434/acme?sslmode=disable \
+#     deedglass connector postgres init --connector postgres --apply
+#   deedglass connector postgres check --connector postgres
+#
+# make demo-up does all three. docs/POSTGRES.md explains every key.
+type: postgres
+name: postgres
+description: Acme Store orders database (demo, throwaway).
+config:
+  mode: sql
+  allowed_schemas: [public]
+  writable_tables: [public.orders, public.refunds]
+  row_limit: 500
+  max_rows_affected: 1000
+  statement_timeout_ms: 5000
+  lock_timeout_ms: 2000
+  witness:
+    enabled: true
+    watched_tables: [public.orders, public.refunds, public.customers]
+    sensitive_columns: [public.customers.email]
+  functions:
+    - name: public.ship_order
+      args: [{name: p_order_id, type: bigint}]
+      side_effect: write
+      description: Mark a paid order shipped.
+  throwaway: true

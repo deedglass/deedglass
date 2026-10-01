@@ -34,7 +34,7 @@ Deeds
   ledger              Check or prune the Ledger                          check · prune
 Connectors
   connector           Connect tools                                      create · list · show · test · types · credentials
-  connector postgres  Prepare a Postgres database                 soon   init · check
+  connector postgres  Prepare a Postgres database                        init · check
   connector gmail     Authorize the Gmail connector               soon   authorize
   decoder             Inspect Postgres change readers             soon   status · drop
   slack manifest      Print the Slack app manifest                soon

@@ -13,8 +13,8 @@ LDFLAGS  := -s -w -X $(BI).Version=$(VERSION) -X $(BI).Commit=$(COMMIT) -X $(BI)
 	dev dev-down dev-reset dev-logs run docker bench-http bench-verify \
 	web-verify-install web-verify-test web-verify-build web-verify-serve gencopy genmark bench-mark bench-ledger bench-stop bench-intents bench-gate policy-test \
 	fuzz-policy fuzz-policy-short bench-policy bench-eval mcp-it bench-mcp \
-	demo-up demo-down demo-reset demo-status demo-snippet demo-psql demo-follow demo-verify demo-smoke bench-gateway \
-	mock-orders bench-connectors
+	demo-up demo-down demo-reset demo-status demo-snippet demo-psql demo-follow demo-verify demo-check demo-smoke bench-gateway \
+	mock-orders bench-connectors bench-postgres
 
 all: ci
 
@@ -92,6 +92,11 @@ fuzz: ## 30 s each: the strict intent parser, the id parser, and the deed envelo
 
 mock-orders: ## S16: the mock orders API on 127.0.0.1:8090 (MOCK_ORDERS_TOKEN required; MOCK_ORDERS_MODE=lying for S19)
 	$(GO) run ./examples/mock-orders
+
+bench-postgres: ## S17: the Postgres connector's extra latency over raw pgx (p50 ≤ 1.5 ms) and 100 writes/s for 30 s (p99 < 50 ms) on a throwaway PG 18; JSON in bench/results/
+	@out="$(CURDIR)/bench/results/$$(date +%F)-$$(go env GOOS)-$$(go env GOARCH)-postgres.json"; log="$(CURDIR)/.tmp/bench-postgres.log"; mkdir -p "$(CURDIR)/.tmp" "$(CURDIR)/bench/results"; \
+	DEEDGLASS_IT_BENCH=1 DEEDGLASS_PG_BENCH_OUT="$$out" DEEDGLASS_IT_PKGS=./internal/connector/postgres/ DEEDGLASS_IT_GOFLAGS="-run TestPostgresBudget -v" \
+	scripts/integration_local.sh > "$$log" 2>&1; st=$$?; grep -E 'PERF|--- (PASS|FAIL)' "$$log"; echo "raw: $$out"; exit $$st
 
 bench-connectors: ## S16: vault open, redaction, egress classification and REST overhead (no network); JSON in bench/results/
 	@mkdir -p bench/results; out="$(CURDIR)/bench/results/$$(date +%F)-$$(go env GOOS)-$$(go env GOARCH)-connectors.json"; \
@@ -258,6 +263,9 @@ demo-follow: ## the demo terminal: deedglass actions list --follow --connector o
 
 demo-verify: ## export the demo's recent deeds (SINCE=10m) and verify the chain
 	@examples/demo/scripts/demo.sh verify
+
+demo-check: ## S17: the Postgres connector's readiness report on the demo's orders database (make demo-up first)
+	@examples/demo/scripts/demo.sh check
 
 demo-smoke: ## TestDemoScript against the running demo stack (make demo-up first)
 	DEEDGLASS_DEMO=1 $(GO) test -tags demo -count=1 -v -run TestDemoScript ./examples/demo/

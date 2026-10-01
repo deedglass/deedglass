@@ -57,7 +57,7 @@ EOF
     }
     trap cleanup EXIT
     "$BIN/pg_ctl" -D "$DATA" -l "$LOG" -w start >/dev/null
-    PSQL="$BIN/psql -h localhost -p $PORT" PGUSER=postgres \
+    PSQL="$BIN/psql -h localhost -p $PORT" PGUSER=postgres DEEDGLASS_IT_PG_LOG="$LOG" \
       DEEDGLASS_IT_ADMIN_URL="postgres://postgres@localhost:$PORT/postgres?sslmode=disable" "$ROOT/scripts/integration.sh"
     ;;
   docker)

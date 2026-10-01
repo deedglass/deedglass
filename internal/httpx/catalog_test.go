@@ -60,8 +60,8 @@ func bannedWords(t *testing.T) []*regexp.Regexp {
 
 func TestCatalog(t *testing.T) {
 	cat := Catalog()
-	if len(cat) != 48 {
-		t.Fatalf("the catalog has %d codes, want 48 (24 contract + 9 S03 + 6 S07 + 1 S11 + 1 S12 + 7 S16)", len(cat))
+	if len(cat) != 52 {
+		t.Fatalf("the catalog has %d codes, want 52 (24 contract + 9 S03 + 6 S07 + 1 S11 + 1 S12 + 7 S16 + 4 S17)", len(cat))
 	}
 	added := map[string]int{}
 	codeRE := regexp.MustCompile(`^[a-z][a-z0-9_]*$`)

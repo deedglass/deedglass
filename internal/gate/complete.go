@@ -515,7 +515,7 @@ func (p *Pipeline) step(ctx context.Context, org ids.OrgID, id ids.ActionID) (a 
 					}
 					pl = &plan{subject: sub, exec: ex, actor: "system", costTargets: ct, reservations: rs,
 						call: connector.Call{ActionID: id, OrgID: org, AgentID: ga.AgentID, Tool: spec, Qualified: ga.Tool, Args: ga.Request,
-							IdempotencyKey: sid, Deadline: now.Add(p.cfg.ExecuteTimeout)}}
+							IdempotencyKey: sid, Deadline: now.Add(p.cfg.ExecuteTimeout), IntentHash: derefString(ga.IntentHash)}}
 				case "denied", "expired", "cancelled":
 					to := map[string]State{"denied": Denied, "expired": Expired, "cancelled": Cancelled}[status]
 					ev := ledger.EventData{Reason: strp(status), ApprovalID: ga.ApprovalID}
@@ -608,4 +608,12 @@ func (p *Pipeline) step(ctx context.Context, org ids.OrgID, id ids.ActionID) (a 
 		}
 		return a, done, moved, pl, err
 	}
+}
+
+// derefString is *s, or "".
+func derefString(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return *s
 }

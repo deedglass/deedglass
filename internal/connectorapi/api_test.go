@@ -51,8 +51,8 @@ func principals() map[string]httpx.Principal {
 // an agent key is refused everywhere, reads included, with S16's message.
 func TestRouteRoleMatrix(t *testing.T) {
 	routes := Routes(&API{Registry: connector.New(connector.Options{Types: []connector.Connector{rest.New()}}), Log: slog.New(slog.DiscardHandler)})
-	if len(routes) != 9 {
-		t.Fatalf("%d routes, want 9", len(routes))
+	if len(routes) != 10 {
+		t.Fatalf("%d routes, want 10", len(routes))
 	}
 	for name, p := range principals() {
 		srv := httpx.New(httpx.Options{Logger: slog.New(slog.DiscardHandler), Sessions: who{p}, Keys: who{p}})

@@ -451,7 +451,7 @@ Every structured variable is declared field by field, so a typo like `sql.knid` 
 
 | Variable | Type | Fields |
 |---|---|---|
-| `tool` | object | `name`, `connector`, `connector_type`, `side_effect` (strings); since S16 also `type` (the connector type again, like `rest`) and `op` (the tool's name after the first dot, like `update_status` in `orders.update_status`) |
+| `tool` | object | `name`, `connector`, `connector_type`, `side_effect` (strings); since S16 also `type` (the connector type again, like `rest`) and `op` (the tool's name after the first dot, like `update_status` in `orders.update_status`). Since S17 the Postgres connector raises `side_effect` per call (never lowers it): `destructive` for a `postgres.execute` whose SQL deletes, and the function's own side effect for `postgres.call`; its first allowed schema is the classifier's default schema, so `sql.tables` names unqualified tables as the `search_path` will resolve them |
 | `args` | `map(string, dyn)` | the tool arguments as JSON: integers are `int`, other numbers are `double`, objects are maps, arrays are lists |
 | `request` | object | `mode` (`gateway` or `proxy`), `bytes` (int), `intent_signed` (bool), `digest` (string); since S16 `http`, an object with `method`, `path` and `host` (strings), filled by the REST connector before the decision with the request it will send: `request.http.path` is the path with the arguments filled in, like `/v1/orders/42`. Empty strings for every other connector, and when the arguments don't build a request (the call then fails as `validation_failed` and nothing is sent). |
 | `sql` | object | below; filled by the SQL classifier (S11) when the tool is a Postgres tool with an `args.sql` string, otherwise `present` is false and `kind` is `none` |

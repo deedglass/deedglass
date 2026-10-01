@@ -44,6 +44,7 @@ The first source that sets a key wins:
 | `DEEDGLASS_SLOT_LAG_ALERT_MB` | `slot_lag_alert_mb` | `512` | no | serve | Alert when a Postgres replication slot holds more WAL than this (1-1048576 MB). | S01 |
 | `DEEDGLASS_API_KEY` | `api_key` (dev only) | — | yes | CLI, mcp, SDKs | Client key; `serve` ignores it. An agent or admin API key (dg_live_… or dg_test_…) for client commands. | S01 |
 | `DEEDGLASS_SERVER` | `server` | — | no | CLI, mcp, SDKs | Client key; `serve` ignores it. The Deedglass server client commands talk to. | S01 |
+| `DEEDGLASS_INIT_DSN` | `init_dsn` (dev only) | — | yes | connector postgres init | Client key; `serve` ignores it. The admin DSN deedglass connector postgres init connects with to prepare a customer database (a superuser, or a role with CREATEROLE such as the RDS master user). Read once, never stored or printed. Rename it with --admin-dsn-env. | S17 |
 | `DEEDGLASS_NO_BANNER` | `no_banner` | `false` | no | CLI | Client key; `serve` ignores it. Never show the terminal banner or the inline mark (bare deedglass, version, help). Scripts, pipes and CI never see them anyway. | S05X |
 | `DEEDGLASS_THEME` | `theme` | `auto` | no | CLI | Client key; `serve` ignores it. Draw the terminal mark for a light or dark terminal. auto: COLORFGBG decides, else dark. | S05X |
 | `DEEDGLASS_NO_ANIM` | `no_anim` | `false` | no | CLI | Client key; `serve` ignores it. Turn off the Sealed animation at the end of deedglass init; only its final frame shows. | S05X |
