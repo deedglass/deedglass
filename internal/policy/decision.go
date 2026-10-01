@@ -95,6 +95,14 @@ const (
 	msgResetsMidnight  = "It resets at midnight %s (in %s)."
 )
 
+// Visibility reasons (S14): why a tool is hidden from tools/list. A person reads them in the
+// wrapper's log and in POST /v1/tools/resolve.
+const (
+	ReasonDefaultDeny = "No rule allows this tool, and the policy default is deny."
+	ReasonRuleDeny    = "A rule always denies this tool."
+	ReasonNoPolicy    = "No policy is active, so every tool is denied."
+)
+
 // MessageUnavailable is the policy_unavailable message, for the error catalog's test.
 const MessageUnavailable = msgUnavailable
 

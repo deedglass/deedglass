@@ -40,6 +40,7 @@ type Command struct {
 	Owner   string                                                 // "S04" while unbuilt; "" once built
 	Hidden  bool                                                   // left out of help
 	RawArgs bool                                                   // Run parses its own flags (they may follow paths)
+	Detail  string                                                 // help text after Usage: what it does, flags, examples (S14)
 }
 
 // Built reports whether the command runs in this build.
@@ -202,9 +203,13 @@ var commands = []*Command{
 	{Path: p("slack", "manifest"), Group: Connectors, Summary: "Print the Slack app manifest", Owner: "S29"},
 
 	// MCP.
-	{Path: p("mcp", "wrap"), Group: MCP, Summary: "Run an MCP server behind the Gate", Owner: "S14"},
+	{Path: p("mcp", "wrap"), Group: MCP, Summary: "Run an MCP server behind the Gate",
+		Usage: "--connector <name> [--connector-type mcp] [--hide-denied=false] [--call-timeout 2m] [--result-mode full|digest] [--log-file <path>] -- <command> [args…]",
+		Run:   runMCPWrap, RawArgs: true, Detail: mcpWrapHelp},
 	{Path: p("mcp", "serve"), Group: MCP, Summary: "Serve the Gate's native MCP tools", Owner: "S15"},
-	{Path: p("mcp", "snippet"), Group: MCP, Summary: "Print client config for an MCP client", Owner: "S15"},
+	{Path: p("mcp", "snippet"), Group: MCP, Summary: "Print client config for an MCP client",
+		Usage: "--client <claude-desktop|claude-code|cursor|windsurf|vscode> --connector <name> [--connector-type postgres] [--api-key-from-env] -- <command> [args…]",
+		Run:   runMCPSnippet, RawArgs: true, Detail: mcpSnippetHelp},
 
 	// Insights.
 	{Path: p("insights", "stats"), Group: Insights, Summary: "Show usage per agent and tool", Owner: "S27"},

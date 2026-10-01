@@ -48,6 +48,8 @@ wal_level = logical
 max_slot_wal_keep_size = 2GB
 max_replication_slots = 10
 max_wal_senders = 10
+# The suites run as parallel packages, each with its own pools (S14 added more live servers).
+max_connections = 300
 EOF
     cleanup() {
       "$BIN/pg_ctl" -D "$DATA" -m fast -w stop >/dev/null 2>&1 || true
@@ -66,7 +68,7 @@ EOF
     trap 'docker rm -f "$NAME" >/dev/null 2>&1 || true' EXIT
     echo "docker mode: postgres:$TAG"
     docker run -d --name "$NAME" -e POSTGRES_PASSWORD=deedglass-it-throwaway -p "127.0.0.1:$PORT:5432" \
-      "postgres:$TAG" postgres -c wal_level=logical -c max_slot_wal_keep_size=2GB >/dev/null
+      "postgres:$TAG" postgres -c wal_level=logical -c max_slot_wal_keep_size=2GB -c max_connections=300 >/dev/null
     for _ in $(seq 1 60); do
       docker exec "$NAME" pg_isready -U postgres -q && break
       sleep 1

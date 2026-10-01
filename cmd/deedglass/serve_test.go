@@ -23,8 +23,8 @@ func TestServeRoutesMatchOpenAPI(t *testing.T) {
 	for _, err := range httpx.CheckSpec(apiSpec(), api.Routes()) {
 		t.Error(err)
 	}
-	if len(api.Routes()) != 68 {
-		t.Fatalf("serve mounts %d routes, want 68 (S03 + keys.json in S04 + the six Ledger routes in S06 + 17 in S07 + 17 in S08 + 9 in S09 + 12 in S12 + 3 in S13)", len(api.Routes()))
+	if len(api.Routes()) != 69 {
+		t.Fatalf("serve mounts %d routes, want 69 (S03 + keys.json in S04 + the six Ledger routes in S06 + 17 in S07 + 17 in S08 + 9 in S09 + 12 in S12 + 3 in S13 + 1 in S14)", len(api.Routes()))
 	}
 }
 

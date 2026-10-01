@@ -1,0 +1,1 @@
+claude mcp add --env DEEDGLASS_API_KEY=dg_test_REPLACE_ME --env DEEDGLASS_SERVER=http://127.0.0.1:8080 --env PATH=/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin --transport stdio scratch -- /Users/you/txv/product/bin/deedglass mcp wrap --connector scratch -- /usr/local/bin/npx -y @modelcontextprotocol/server-filesystem@2026.8.31 /tmp/deedglass-demo

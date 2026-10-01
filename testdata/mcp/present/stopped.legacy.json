@@ -1,0 +1,14 @@
+{
+  "content": [
+    {
+      "type": "text",
+      "text": "Agent \"claude-desktop\" is stopped. Deedglass refuses its calls until an admin starts it in Console › Agents. Nothing was run."
+    }
+  ],
+  "isError": true,
+  "_meta": {
+    "com.deedglass/action": "act_01j9zr0000000000000000000b",
+    "com.deedglass/decision": "deny",
+    "com.deedglass/deed": "deed_01j9zr0000000000000000000b"
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "content": [
+    {
+      "type": "text",
+      "text": "Blocked by policy \"scratch-writes-only-in-allowed\": Agents may only write inside /tmp/deedglass-demo/allowed. Nothing was run. Deedglass sealed a deed of this attempt (deed_01j9zr0000000000000000000a). If this should be allowed, a person can change the policy in Console › Policies."
+    }
+  ],
+  "isError": true,
+  "_meta": {
+    "com.deedglass/action": "act_01j9zr0000000000000000000a",
+    "com.deedglass/decision": "deny",
+    "com.deedglass/deed": "deed_01j9zr0000000000000000000a",
+    "com.deedglass/rule": "scratch-writes-only-in-allowed"
+  }
+}

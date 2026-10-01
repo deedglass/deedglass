@@ -126,6 +126,14 @@ func helpCommand(e *Env, c *Command) {
 		usage += " " + c.Usage
 	}
 	fmt.Fprintf(w, "%s  %s\n", s.Bold("Usage"), usage)
+	if c.Detail != "" {
+		for _, l := range strings.Split(strings.TrimRight(c.Detail, "\n"), "\n") {
+			if l != "" && !strings.HasPrefix(l, " ") {
+				l = s.Bold(l)
+			}
+			fmt.Fprintln(w, l)
+		}
+	}
 	if !c.Built() {
 		fmt.Fprintf(w, "\n%s\n", s.Dim("Not in this build yet (planned for "+c.Owner+")."))
 	}

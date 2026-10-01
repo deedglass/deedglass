@@ -71,7 +71,7 @@ func WithIdempotencyKey(k string) Option {
 }
 
 // Do sends method path (with an optional query) and decodes the JSON response into out. in, when
-// not nil, is sent as the JSON body. POSTs get an Idempotency-Key unless one is set. A non-2xx
+// not nil, is sent as the JSON body (a json.RawMessage as is). POSTs get an Idempotency-Key unless one is set. A non-2xx
 // response is an *Error.
 func (c *Client) Do(ctx context.Context, method, path string, in, out any, opts ...Option) (*Response, error) {
 	if c == nil || c.BaseURL == "" {
@@ -82,7 +82,11 @@ func (c *Client) Do(ctx context.Context, method, path string, in, out any, opts 
 		return nil, errors.New("deedglass: the server URL must be http(s)://host[:port]")
 	}
 	var body io.Reader
-	if in != nil {
+	switch v := in.(type) {
+	case nil:
+	case json.RawMessage: // already encoded: sent as is (the caller vouches it is valid JSON)
+		body = bytes.NewReader(v)
+	default:
 		b, err := json.Marshal(in)
 		if err != nil {
 			return nil, err

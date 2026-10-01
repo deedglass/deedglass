@@ -585,9 +585,12 @@ func TestRouteRoleMatrix(t *testing.T) {
 			"read-only key": 403, "none": 401},
 		"POST /v1/actions/{id}/result": {"owner": 401, "admin": 401, "viewer": 401, "admin key": 403, "agent key": 503, "stopped agent key": 403,
 			"read-only key": 403, "none": 401},
+		// S14: a stopped agent is refused before the handler (the route doesn't record stops).
+		"POST /v1/tools/resolve": {"owner": 401, "admin": 401, "viewer": 401, "admin key": 403, "agent key": 503, "stopped agent key": 403,
+			"read-only key": 403, "none": 401},
 	}
-	routes := Routes(nil)
-	if len(routes) != 3 {
+	routes := append(Routes(nil), ToolRoutes(nil)...)
+	if len(routes) != 4 {
 		t.Fatalf("%d routes", len(routes))
 	}
 	for name, p := range principals {
@@ -618,5 +621,55 @@ func TestRouteRoleMatrix(t *testing.T) {
 			}
 		}
 		ts.Close()
+	}
+}
+
+// TestMCPCopy pins the MCP surfaces' sentences (S14 §5) and their framing.
+func TestMCPCopy(t *testing.T) {
+	exp := time.Date(2026, 10, 5, 10, 42, 0, 0, time.UTC)
+	msg := `Blocked by policy "scratch-writes-only-in-allowed": Agents may only write inside /tmp/deedglass-demo/allowed.`
+	src, deed, rule := "rule", "deed_x", "scratch-writes-only-in-allowed"
+	a := &ledger.Action{ID: "act_x", Deed: &deed, Decision: &ledger.ActionDecision{Message: &msg, Source: &src, RuleID: &rule}}
+	want := msg + " Nothing was run. Deedglass sealed a deed of this attempt (deed_x). If this should be allowed, a person can change the policy in Console › Policies."
+	if got := MCPDenyText(a, ""); got != want {
+		t.Fatal(got)
+	}
+	stop := "stop"
+	if got := MCPDenyText(&ledger.Action{Decision: &ledger.ActionDecision{Source: &stop}}, "Agent \"x\" is stopped."); got != `Agent "x" is stopped. Nothing was run.` {
+		t.Fatal(got)
+	}
+	pend := `Waiting for approval under policy "writes-need-approval": Writes wait for a human.`
+	pa := &ledger.Action{Decision: &ledger.ActionDecision{Message: &pend}}
+	if got := MCPPendingText(pa, "apr_x", exp); got != pend+` Nothing has run yet. Approval apr_x expires at 10:42 UTC. To continue, call deedglass.check_approval with {"approval_id": "apr_x"}.` {
+		t.Fatal(got)
+	}
+	if got := MCPPendingText(&ledger.Action{}, "apr_x", time.Time{}); !strings.HasPrefix(got, "Waiting for a person to approve this action. Nothing has run yet.") || !strings.Contains(got, "an unknown time") {
+		t.Fatal(got)
+	}
+	cases := map[string]string{
+		MCPStillPendingText("apr_x", exp):                    "Still waiting for approval apr_x. It expires at 10:42 UTC. Nothing has run yet. Check again in a minute.",
+		MCPApprovedRanText("scratch.write_file"):             "Approved by a person. Ran scratch.write_file.",
+		MCPAlreadyRanText("deed_x"):                          "This action already ran (deed_x). Nothing new was run.",
+		MCPRejectedText("args has a key that appears twice"): "args has a key that appears twice. Nothing was run.",
+		MCPRejectedText(""):                                  "Deedglass refused this call. Nothing was run.",
+		UnreachableMessage("http://127.0.0.1:8080"):          `Deedglass could not be reached at http://127.0.0.1:8080, so this was not run. Start it with "deedglass serve", then try again.`,
+		MCPCrashedText("scratch.x", "act_x"):                 "The MCP server stopped while running scratch.x. It may have run. Deedglass recorded it as UNVERIFIABLE (act_x).",
+		MCPTimeoutText("scratch.x", 30*time.Second, "act_x"): "The MCP server didn't answer scratch.x within 30 s. It may have run. Deedglass recorded it as UNVERIFIABLE (act_x).",
+		MCPApprovalFinishedText("apr_x", "executed"):         "The action behind approval apr_x has already finished (executed). Nothing new was run.",
+	}
+	for got, want := range cases {
+		if got != want {
+			t.Errorf("%q, want %q", got, want)
+		}
+	}
+	for _, m := range []string{MCPInstructions, MCPBadKey, MCPServerStopped, MCPKeepsCrashing, MCPTooLarge, MCPApprovalDenied, MCPApprovalIDBad,
+		MCPApprovalExpiredText("apr_x"), MCPApprovalCancelledText("apr_x"), MCPApprovalNotHereText("apr_x"), MCPToolChangedText("scratch.x"),
+		MCPUnknownToolText("x"), MCPCheckApprovalDescription} {
+		if reBadCopy.MatchString(m) || !strings.HasSuffix(m, ".") {
+			t.Errorf("copy: %q", m)
+		}
+	}
+	if clock(time.Date(2026, 1, 2, 3, 4, 0, 0, time.UTC)) != "03:04 UTC" {
+		t.Fatal(clock(time.Date(2026, 1, 2, 3, 4, 0, 0, time.UTC)))
 	}
 }

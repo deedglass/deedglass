@@ -818,6 +818,68 @@ paths:
                   doc_url: https://docs.deedglass.com/errors/conflict
         default:
           $ref: "#/components/responses/Error"
+  /v1/tools/resolve:
+    post:
+      operationId: resolveTools
+      summary: Which of an edge's tools the policy always denies
+      description: >-
+        For MCP wrappers (`deedglass mcp wrap`, docs/MCP.md): send the tools an MCP server lists,
+        and Deedglass answers, for each, whether the enforced policy denies every call to it from
+        this agent (`hidden`) or might allow it (`visible`). It reads the policy's static structure
+        only: the first rule whose `match` covers `<connector>.<name>` decides, a rule with a `when`
+        can't be decided ahead of time and counts as visible, and with no covering rule the
+        policy's default decides. Budgets and Stop are ignored, because they change from minute to
+        minute. MCP `annotations` are never read. Hiding is a convenience for the model: every call
+        still goes through `POST /v1/actions` and is decided there. Nothing is recorded. At most
+        500 tools. An agent key with `actions:execute`.
+      tags: [Gate]
+      security: [{bearerAuth: []}]
+      x-deedglass-auth: agent_key
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ToolResolveRequest"
+            example:
+              connector: scratch
+              tools:
+                - {name: read_text_file, digest: "sha256:1b0e5c1f8a7d6e4b3c2a19f0e8d7c6b5a4f3e2d1c0b9a8f7e6d5c4b3a2f1e0d9"}
+                - {name: move_file, digest: "sha256:a41c5c1f8a7d6e4b3c2a19f0e8d7c6b5a4f3e2d1c0b9a8f7e6d5c4b3a2f1e0d9"}
+      responses:
+        "200":
+          description: One `tool_visibility` per tool, in request order.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+            Deedglass-Version:
+              $ref: "#/components/headers/DeedglassVersion"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ToolVisibilityList"
+              example:
+                object: list
+                data:
+                  - {object: tool_visibility, name: read_text_file, tool: scratch.read_text_file, visibility: visible, rule_id: allow-scratch-reads, reason: null}
+                  - {object: tool_visibility, name: move_file, tool: scratch.move_file, visibility: hidden, rule_id: null, reason: "No rule allows this tool, and the policy default is deny."}
+                has_more: false
+                next_cursor: null
+                policy_version: pv_01k6w4a3d5f7h9k1n3q5s7v9x1
+        "400":
+          description: '`validation_failed`: the connector name, a tool name or digest, or more than 500 tools.'
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        default:
+          $ref: "#/components/responses/Error"
   /v1/deeds:
     get:
       operationId: listDeeds
@@ -4861,6 +4923,51 @@ components:
         error_message:
           type: [string, "null"]
           description: A short message. It is redacted and cut to 1 KiB before it is stored.
+    ToolResolveRequest:
+      type: object
+      additionalProperties: false
+      required: [connector, tools]
+      properties:
+        connector:
+          type: string
+          pattern: "^[a-z][a-z0-9-]{1,31}$"
+          description: The connector name the wrapper was given (`--connector`); tools are matched as `<connector>.<name>`.
+        connector_type:
+          type: string
+          description: S10's connector type the edge declares; `mcp` when left out (`postgres` for Postgres MCP servers).
+        tools:
+          type: array
+          minItems: 1
+          maxItems: 500
+          items:
+            type: object
+            additionalProperties: false
+            required: [name]
+            properties:
+              name: {type: string, pattern: "^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$"}
+              digest: {type: string, pattern: "^sha256:[0-9a-f]{64}$", description: The wrapper's pinned digest of the tool definition. Recorded nowhere yet; S18 uses it.}
+    ToolVisibility:
+      type: object
+      required: [object, name, tool, visibility, rule_id, reason]
+      properties:
+        object: {type: string, const: tool_visibility}
+        name: {type: string}
+        tool: {type: string, description: '`<connector>.<name>`, as policies match it.'}
+        visibility: {type: string, enum: [visible, hidden]}
+        rule_id: {type: [string, "null"], description: The first rule that covers the tool; null when the policy's default decides.}
+        reason: {type: [string, "null"], description: Why the tool is hidden; null when visible.}
+    ToolVisibilityList:
+      type: object
+      required: [object, data, has_more, next_cursor, policy_version]
+      properties:
+        object: {type: string, const: list}
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/ToolVisibility"
+        has_more: {type: boolean}
+        next_cursor: {type: [string, "null"]}
+        policy_version: {type: [string, "null"], description: 'The enforced policy version (`pv_…`); null when no policy is active.'}
     ActionList:
       type: object
       required: [object, data, has_more, next_cursor]

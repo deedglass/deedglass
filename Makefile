@@ -12,7 +12,7 @@ LDFLAGS  := -s -w -X $(BI).Version=$(VERSION) -X $(BI).Commit=$(COMMIT) -X $(BI)
 	integration matrix fuzz bench bench-store bench-deed cover clean \
 	dev dev-down dev-reset dev-logs run docker bench-http bench-verify \
 	web-verify-install web-verify-test web-verify-build web-verify-serve gencopy genmark bench-mark bench-ledger bench-stop bench-intents bench-gate policy-test \
-	fuzz-policy fuzz-policy-short bench-policy bench-eval
+	fuzz-policy fuzz-policy-short bench-policy bench-eval mcp-it bench-mcp
 
 all: ci
 
@@ -57,6 +57,14 @@ nocgo: ## (ci) the binary builds without cgo
 integration: ## throwaway PG cluster (Homebrew, else Docker): sql/ smoke, control-plane migrations, Go integration suites; DEEDGLASS_IT_PG=18|17|16 DEEDGLASS_IT_MODE=brew|docker
 	scripts/integration_local.sh
 
+mcp-it: ## S14: the real @modelcontextprotocol/server-filesystem via npx behind deedglass mcp wrap, on a throwaway PG 18 (needs Node.js; skips without it)
+	DEEDGLASS_IT_NODE=1 DEEDGLASS_IT_PKGS=./cmd/deedglass/ DEEDGLASS_IT_GOFLAGS="-v -run TestMCPWrap" scripts/integration_local.sh
+
+bench-mcp: ## S14 §3.10: the wrapper's relay, tools/call and tools/list overhead and memory against a real Gate on a throwaway PG 18; JSON in bench/results/
+	@out="$(CURDIR)/bench/results/$$(date +%F)-$$(go env GOOS)-$$(go env GOARCH)-mcp.json"; log="$(CURDIR)/.tmp/bench-mcp.log"; mkdir -p "$(CURDIR)/.tmp"; \
+	DEEDGLASS_IT_BENCH=1 DEEDGLASS_MCP_BENCH_OUT="$$out" DEEDGLASS_IT_PKGS=./cmd/deedglass/ DEEDGLASS_IT_GOFLAGS="-run TestMCPBudget -v" \
+	scripts/integration_local.sh > "$$log" 2>&1; st=$$?; grep -E 'PERF|over budget|--- (PASS|FAIL)' "$$log"; echo "raw: $$out"; exit $$st
+
 matrix: ## integration on 16, 17 and 18
 	@for v in 16 17 18; do echo "=== PostgreSQL $$v"; DEEDGLASS_IT_PG=$$v scripts/integration_local.sh || exit 1; done
 
@@ -96,6 +104,7 @@ fuzz-policy: ## S10-S11: the policy compiler, the safe YAML reader, the evaluato
 
 policy-test: ## (ci) S12: every starter policy's cases pass, every rule covered, no voice warnings
 	$(GO) run ./cmd/deedglass policy test --dir examples/policies --require-coverage --voice
+	$(GO) run ./cmd/deedglass policy test --dir examples/demo/policies --require-coverage --voice
 
 fuzz-policy-short: ## (ci) the same policy and sqlguard fuzz targets, 10 s each (5 s for the tokenizer)
 	$(GO) test ./internal/policy -run '^$$' -fuzz '^FuzzCompile$$' -fuzztime 10s

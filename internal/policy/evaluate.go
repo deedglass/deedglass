@@ -521,6 +521,30 @@ func AlwaysDenies(c *Compiled, tool ToolFacts, agent AgentFacts) bool {
 	return deny
 }
 
+// AlwaysDeniesWhy is AlwaysDenies with the deciding rule's id and the reason a person reads (S14:
+// tools/list and POST /v1/tools/resolve). It shares AlwaysDenies' walk, so the two always agree.
+// ruleID is the first rule that covers the tool ("" when the defaults decide); reason is set only
+// when denied: the rule's own reason, or ReasonDefaultDeny.
+func AlwaysDeniesWhy(c *Compiled, tool ToolFacts, agent AgentFacts) (denied bool, ruleID, reason string) {
+	deny, r, _ := alwaysDenies(c, tool, agent)
+	if r != nil {
+		ruleID = r.ID
+	}
+	if deny {
+		switch {
+		case r != nil && r.Reason != "":
+			reason = r.Reason
+		case r != nil:
+			reason = ReasonRuleDeny
+		case c == nil:
+			reason = ReasonNoPolicy
+		default:
+			reason = ReasonDefaultDeny
+		}
+	}
+	return deny, ruleID, reason
+}
+
 // alwaysDenies walks the rules once and returns the deciding rule (nil for the default). S14's
 // AlwaysDeniesWhy builds on it.
 func alwaysDenies(c *Compiled, tool ToolFacts, agent AgentFacts) (deny bool, rule *Rule, decided bool) {

@@ -782,3 +782,69 @@ func TestHugeArgsNeverAllow(t *testing.T) {
 		}
 	}
 }
+
+// TestAlwaysDeniesWhy is S14 §6's visibility table; AlwaysDeniesWhy must agree with AlwaysDenies.
+func TestAlwaysDeniesWhy(t *testing.T) {
+	demo := mustCompile(t, `deedglass: policy/v1
+name: why
+defaults:
+  decision: deny
+  reason: No rule allows this action.
+rules:
+  - id: never-delete
+    match: { tool: "scratch.delete_*" }
+    decision: deny
+    reason: Deleting files stays with people.
+  - id: writes-need-approval
+    match: { tool: scratch.write_file }
+    decision: require_approval
+    reason: Writes wait for a human.
+  - id: cond-writes
+    match: { tool: scratch.edit_file }
+    when: 'has(args.path) && args.path.startsWith("/tmp/")'
+    decision: deny
+    reason: Never outside tmp.
+  - id: bot-only
+    match: { tool: "scratch.move_*", agent: "bot-*" }
+    decision: allow
+  - id: pg-reads
+    match: { tool: "db.*", connector_type: postgres }
+    decision: allow
+  - id: reads
+    match: { tool: "scratch.read_*" }
+    decision: allow
+`)
+	allowDefault := mustCompile(t, "deedglass: policy/v1\nname: open\ndefaults:\n  decision: allow\nrules: []\n")
+	agent := AgentFacts{ID: "agt_01jb8k0000000000000000000a", Name: "claude-desktop"}
+	bot := AgentFacts{ID: "agt_01jb8k0000000000000000000b", Name: "bot-1"}
+	cases := []struct {
+		name   string
+		c      *Compiled
+		tool   ToolFacts
+		agent  AgentFacts
+		denied bool
+		rule   string
+		reason string
+	}{
+		{"unconditional deny", demo, ToolFacts{Name: "scratch.delete_file"}, agent, true, "never-delete", "Deleting files stays with people."},
+		{"a when means visible", demo, ToolFacts{Name: "scratch.edit_file"}, agent, false, "cond-writes", ""},
+		{"require_approval is visible", demo, ToolFacts{Name: "scratch.write_file"}, agent, false, "writes-need-approval", ""},
+		{"default deny", demo, ToolFacts{Name: "scratch.list_directory"}, agent, true, "", ReasonDefaultDeny},
+		{"agent glob not matching skips the rule", demo, ToolFacts{Name: "scratch.move_file"}, agent, true, "", ReasonDefaultDeny},
+		{"agent glob matching", demo, ToolFacts{Name: "scratch.move_file"}, bot, false, "bot-only", ""},
+		{"default allow", allowDefault, ToolFacts{Name: "scratch.anything"}, agent, false, "", ""},
+		{"connector_type postgres declared", demo, ToolFacts{Name: "db.query", ConnectorType: "postgres"}, agent, false, "pg-reads", ""},
+		{"connector_type mcp", demo, ToolFacts{Name: "db.query", ConnectorType: "mcp"}, agent, true, "", ReasonDefaultDeny},
+		{"an allow", demo, ToolFacts{Name: "scratch.read_text_file"}, agent, false, "reads", ""},
+		{"nil policy", nil, ToolFacts{Name: "x.y"}, agent, true, "", ReasonNoPolicy},
+	}
+	for _, k := range cases {
+		d, rule, reason := AlwaysDeniesWhy(k.c, k.tool, k.agent)
+		if d != k.denied || rule != k.rule || reason != k.reason {
+			t.Errorf("%s: (%v, %q, %q), want (%v, %q, %q)", k.name, d, rule, reason, k.denied, k.rule, k.reason)
+		}
+		if AlwaysDenies(k.c, k.tool, k.agent) != d {
+			t.Errorf("%s: AlwaysDenies disagrees", k.name)
+		}
+	}
+}

@@ -219,9 +219,9 @@ builds it. Hidden commands work but aren't in `deedglass help`.
 | `deedglass decoder status` | Connectors | Show Postgres change readers | soon (S20) |
 | `deedglass decoder drop` | Connectors | Remove a replication slot | soon (S20) |
 | `deedglass slack manifest` | Connectors | Print the Slack app manifest | soon (S29) |
-| `deedglass mcp wrap` | MCP | Run an MCP server behind the Gate | soon (S14) |
+| `deedglass mcp wrap --connector <name> [--connector-type mcp] [--hide-denied=false] [--call-timeout 2m] [--result-mode full|digest] [--log-file <path>] -- <command> [args…]` | MCP | Run an MCP server behind the Gate | built |
 | `deedglass mcp serve` | MCP | Serve the Gate's native MCP tools | soon (S15) |
-| `deedglass mcp snippet` | MCP | Print client config for an MCP client | soon (S15) |
+| `deedglass mcp snippet --client <claude-desktop|claude-code|cursor|windsurf|vscode> --connector <name> [--connector-type postgres] [--api-key-from-env] -- <command> [args…]` | MCP | Print client config for an MCP client | built |
 | `deedglass insights stats` | Insights | Show usage per agent and tool | soon (S27) |
 | `deedglass insights shadow` | Insights | Show shadow-policy results | soon (S27) |
 | `deedglass insights anomalies` | Insights | List anomalies | soon (S27) |
@@ -431,6 +431,27 @@ independent check. `--json` prints the action object (for a refusal, the sealed 
 `error.action`) with the same exit codes. The output is pinned in `testdata/gate/cli/` (TTY colour
 and plain), regenerated with `go test -tags integration ./cmd/deedglass -run TestGateLive -update`
 on a throwaway cluster.
+
+## MCP: `mcp wrap` and `mcp snippet` (S14)
+
+`deedglass mcp wrap --connector <name> -- <command> [args…]` runs an MCP server behind the Gate
+for an MCP client: every `tools/call` goes to `POST /v1/actions` in proxy mode first and runs only
+when it is authorized ([MCP.md](MCP.md)). Its stdout belongs to the client and carries JSON-RPC and
+nothing else; its own lines go to stderr and `~/.deedglass/logs/mcp-<connector>.log`. It takes an
+agent's key (`DEEDGLASS_API_KEY` or `--api-key`) and the server (`DEEDGLASS_SERVER` or
+`--server`); http is refused for anything but a loopback address. `--fail-open` works only with
+`DEEDGLASS_ENV=dev` and otherwise exits 2:
+
+```text
+$ DEEDGLASS_ENV=prod deedglass mcp wrap --connector scratch --fail-open -- npx -y @modelcontextprotocol/server-filesystem /tmp/deedglass-demo
+✕ --fail-open is for local development only.
+  Set DEEDGLASS_ENV=dev to use it.
+```
+
+`deedglass mcp snippet --client <claude-desktop|claude-code|cursor|windsurf|vscode> --connector <name> -- <command> [args…]`
+prints the client's config with absolute paths and `PATH` ([MCP_CLIENTS.md](MCP_CLIENTS.md));
+`--connector-type` is copied into the wrap command, and `--api-key-from-env` puts
+`DEEDGLASS_API_KEY` in place of the placeholder. `deedglass help mcp wrap` lists every flag.
 
 ## People: `org create`, `org login-link`, `dev mail-preview`
 

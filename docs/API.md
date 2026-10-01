@@ -440,6 +440,42 @@ curl -s -X POST http://127.0.0.1:8080/v1/actions/act_01k6w6c4e6g8j0m2p4r6t8w0y2/
 It answers with the action, `cancelled` and sealed. Once the action is executing, the answer is 409
 `conflict`: "This action is already executing, so it can't be cancelled."
 
+## Tool visibility for MCP wrappers (S14)
+
+`POST /v1/tools/resolve` (an agent key with `actions:execute`, at most 500 tools) answers, for each
+tool an MCP server lists, whether the enforced policy denies every call to it from this agent.
+`deedglass mcp wrap` uses it to leave such tools out of `tools/list` ([MCP.md](MCP.md)). Nothing is
+recorded, and the answer never replaces the decision on `POST /v1/actions`.
+
+```sh
+curl -s -X POST http://127.0.0.1:8080/v1/tools/resolve \
+  -H "Authorization: Bearer $DEEDGLASS_API_KEY" -H "Content-Type: application/json" \
+  -d '{"connector":"scratch","tools":[{"name":"read_text_file"},{"name":"move_file"}]}'
+```
+
+```json
+{
+  "object": "list",
+  "data": [
+    { "object": "tool_visibility", "name": "read_text_file", "tool": "scratch.read_text_file",
+      "visibility": "visible", "rule_id": "allow-scratch-reads", "reason": null },
+    { "object": "tool_visibility", "name": "move_file", "tool": "scratch.move_file",
+      "visibility": "hidden", "rule_id": null,
+      "reason": "No rule allows this tool, and the policy default is deny." }
+  ],
+  "has_more": false,
+  "next_cursor": null,
+  "policy_version": "pv_01k6w4a3d5f7h9k1n3q5s7v9x1"
+}
+```
+
+The first rule whose `match` covers `<connector>.<name>` decides; a rule with a `when` counts as
+visible (it can't be decided ahead of time); with no covering rule, the default decides. Budgets,
+Stop and MCP `annotations` are ignored. `connector_type` defaults to `mcp`; `digest` is the
+wrapper's pinned definition digest (optional). A malformed connector, name or digest, or more than
+500 tools, is 400 `validation_failed`. When policies can't be loaded, every tool is `visible` (the
+calls are still refused).
+
 ## The policy routes (S12)
 
 | Route | Role | Returns |

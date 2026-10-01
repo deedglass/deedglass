@@ -86,6 +86,29 @@ What Deedglass does not do, stated plainly. **Owner: S37**, which finalizes this
 - **Key lists show at most 100 keys per agent** (and 100 org admin keys), newest first, revoked ones
   included. There is no pagination yet.
 
+## The MCP stdio wrapper (S14)
+
+- **Edge-reported results are the edge's word.** A call the wrapper forwards is sealed L0 VERIFIED
+  with method `edge_reported` when the server says it succeeded; a server that lies is believed
+  until the Witness checks the system of record (Postgres from S21).
+- **Only `tools/call` is governed.** `resources/*`, `prompts/*`, `completion/complete`,
+  `subscriptions/listen` and the 2025-era server-to-client requests (`sampling/createMessage`,
+  `elicitation/create`, `roots/list`) pass through ungoverned in v1 ([MCP.md](MCP.md)).
+- **A server that acts outside MCP isn't stopped.** The wrapper governs the calls a client makes;
+  it can't see what the server does on its own.
+- **An approved call runs only in the wrapper process that created it.** After a restart the
+  model is asked to make the call again; until S22 there is no `GET /v1/approvals/{id}` to look up
+  an approval from another process.
+- **A report that never lands leaves the action executing** until its deadline
+  (`gate.edge_result_timeout`), when the Gate seals it UNVERIFIABLE (`edge_lost`).
+- **Hiding tools is advisory.** `tools/list` leaves out tools the policy always denies, but a
+  client can still call one by name; the Gate then denies it and seals a deed.
+- **A changed tool definition is refused until restart.** There is no way yet to accept a new
+  definition without restarting the wrapper.
+- **Path rules compare text.** A policy can't see where a symlink points; the server resolves it.
+- **No signed intents from MCP clients.** An agent in `required` intent mode can't act through
+  the wrapper (S09).
+
 ## Signed intents, on-behalf-of and MCP limits (S09)
 
 - **MCP clients can't sign intents in v1.** An agent in `required` mode can act only through the

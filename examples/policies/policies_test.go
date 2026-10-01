@@ -126,6 +126,43 @@ func TestStartersAlwaysDeny(t *testing.T) {
 		if got := policy.AlwaysDenies(c, tc.tool, agent); got != tc.want {
 			t.Errorf("%s · %s: AlwaysDenies %v, want %v", tc.policy, tc.tool.Name, got, tc.want)
 		}
+		if why, _, _ := policy.AlwaysDeniesWhy(c, tc.tool, agent); why != tc.want {
+			t.Errorf("%s · %s: AlwaysDeniesWhy disagrees", tc.policy, tc.tool.Name)
+		}
+	}
+}
+
+// TestDemoVisibility is S14 §6's visibility table on examples/demo/policies/acme-demo.yaml, as
+// POST /v1/tools/resolve sees wrapped tools (connector type mcp, side effect unknown).
+func TestDemoVisibility(t *testing.T) {
+	src, err := os.ReadFile(filepath.Join("..", "demo", "policies", "acme-demo.yaml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	c, diags := policy.Compile(src, policy.Options{})
+	if c == nil {
+		t.Fatal(diags)
+	}
+	agent := policy.AgentFacts{ID: policy.LocalAgentID, Name: "claude-desktop", Status: policy.StatusActive, Labels: map[string]string{}}
+	for _, tc := range []struct {
+		tool   string
+		hidden bool
+		rule   string
+	}{
+		{"scratch.read_text_file", false, "allow-scratch-reads"},
+		{"scratch.list_directory", false, "allow-scratch-reads"},
+		{"scratch.write_file", false, "scratch-writes-only-in-allowed"},
+		{"scratch.edit_file", false, "scratch-writes-only-in-allowed"},
+		{"scratch.move_file", true, ""},
+		{"scratch.create_directory", true, ""},
+		{"scratch.list_allowed_directories", false, "allow-scratch-reads"},
+		{"fake.echo", false, "allow-fake"},
+	} {
+		ft := policy.ToolFacts{Name: tc.tool, Connector: "scratch", ConnectorType: "mcp", SideEffect: "unknown"}
+		denied, rule, reason := policy.AlwaysDeniesWhy(c, ft, agent)
+		if denied != tc.hidden || rule != tc.rule || denied != policy.AlwaysDenies(c, ft, agent) || (denied && reason != policy.ReasonDefaultDeny) {
+			t.Errorf("%s: (%v, %q, %q)", tc.tool, denied, rule, reason)
+		}
 	}
 }
 

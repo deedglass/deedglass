@@ -107,6 +107,10 @@ func elsewhere() []Route {
 		Route{Method: "POST", Pattern: "/v1/actions/{id}/cancel", OperationID: "cancelAction", Auth: SessionOrKey, MinRole: RoleAdmin, Scopes: []string{ScopeActionsExecute}, Idempotency: IdemOptional, Handler: stub},
 		Route{Method: "POST", Pattern: "/v1/actions/{id}/result", OperationID: "reportActionResult", Auth: AgentKey, Scopes: []string{ScopeActionsExecute}, Idempotency: IdemOptional, Handler: stub},
 	)
+	// S14: tool visibility for MCP wrappers (internal/gate).
+	out = append(out,
+		Route{Method: "POST", Pattern: "/v1/tools/resolve", OperationID: "resolveTools", Auth: AgentKey, Scopes: []string{ScopeActionsExecute}, Idempotency: IdemNever, Handler: stub},
+	)
 	return out
 }
 

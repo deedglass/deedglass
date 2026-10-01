@@ -1,0 +1,20 @@
+{
+  "content": [
+    {
+      "type": "text",
+      "text": "Still waiting for approval apr_01j9zs4k7m2n3p5q6r7s8t9v0w. It expires at 10:42 UTC. Nothing has run yet. Check again in a minute."
+    }
+  ],
+  "structuredContent": {
+    "approval_id": "apr_01j9zs4k7m2n3p5q6r7s8t9v0w",
+    "expires_at": "2026-10-05T10:42:00Z",
+    "status": "pending_approval"
+  },
+  "isError": false,
+  "_meta": {
+    "com.deedglass/action": "act_01j9zs0000000000000000000a",
+    "com.deedglass/approval": "apr_01j9zs4k7m2n3p5q6r7s8t9v0w",
+    "com.deedglass/decision": "require_approval",
+    "com.deedglass/rule": "writes-need-approval"
+  }
+}

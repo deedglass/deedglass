@@ -1,0 +1,9 @@
+{
+  "content": [
+    {
+      "type": "text",
+      "text": "args has a key that appears twice in one object. Send each key once. Nothing was run."
+    }
+  ],
+  "isError": true
+}

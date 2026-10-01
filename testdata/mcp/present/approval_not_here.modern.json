@@ -1,0 +1,10 @@
+{
+  "content": [
+    {
+      "type": "text",
+      "text": "Approval apr_01j9zs4k7m2n3p5q6r7s8t9v0w wasn't requested in this MCP session, so Deedglass won't run it here. If the MCP server restarted since, make the call again."
+    }
+  ],
+  "isError": true,
+  "resultType": "complete"
+}

@@ -1,0 +1,15 @@
+{
+  "content": [
+    {
+      "type": "text",
+      "text": "Waiting for approval under policy \"writes-need-approval\": Writes wait for a human. Nothing has run yet. Approval apr_01j9zs4k7m2n3p5q6r7s8t9v0w expires at 10:42 UTC. To continue, call deedglass.check_approval with {\"approval_id\": \"apr_01j9zs4k7m2n3p5q6r7s8t9v0w\"}."
+    }
+  ],
+  "isError": true,
+  "_meta": {
+    "com.deedglass/action": "act_01j9zs0000000000000000000a",
+    "com.deedglass/approval": "apr_01j9zs4k7m2n3p5q6r7s8t9v0w",
+    "com.deedglass/decision": "require_approval",
+    "com.deedglass/rule": "writes-need-approval"
+  }
+}

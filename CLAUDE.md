@@ -51,6 +51,11 @@ go test ./internal/gate -run TestDigests -update   # re-pin testdata/gate/digest
 go test -tags integration ./cmd/deedglass -run TestGateLive -update   # the act CLI goldens in testdata/gate/cli (throwaway cluster)
 go test ./examples/policies -update   # re-pin the starters' version_hash in examples/policies/hashes.json (review the diff)
 go test ./cmd/deedglass -run 'TestPolicyTestGoldens|TestPolicyServerGoldens' -update  # the policy test/push/activate CLI goldens
+make mcp-it         # S14: the real @modelcontextprotocol/server-filesystem (npx) behind deedglass mcp wrap, on a throwaway PG 18
+make bench-mcp      # S14 §3.10: wrapper relay, tools/call and tools/list overhead, peak RSS; JSON in bench/results/
+go generate ./internal/mcp/snippet   # regenerate examples/clients and testdata/mcp/snippets (then update SHA256SUMS)
+go test ./internal/mcp/present -update   # the MCP result goldens in testdata/mcp/present (then update SHA256SUMS)
+go test ./internal/mcp/wrap -run TestStderrGolden -update   # testdata/mcp/stderr/session.txt (then update SHA256SUMS)
 DEEDGLASS_IT_PKGS=./internal/identity/ make integration   # one suite (DEEDGLASS_IT_GOFLAGS="-v -run X" adds flags)
 scripts/dev-pg.sh up  # a Docker-free dev Postgres on 127.0.0.1:55432 (writes .tmp/dev-pg.env); down | reset
 scripts/demo/tamper-clip.sh  # S06's recording: 1,000 real deeds, export, verify ✓, flip one digit, verify ✕
@@ -97,8 +102,9 @@ scripts/ci-local.sh # the CI jobs locally (docker-smoke and govulncheck skip whe
    v1.3.0 with `fxamacker/cbor/v2` v2.9.4 (ADR-026, in go.mod since S04). npm, dev only (`web/verify`,
    ADR-027, accepted): `typescript` 7.0.2, `vitest` 5.0.3, `vite` 8.3.1, `@types/node` 24.19.0; no runtime dependency.
    `cel.dev/cel-go` v0.32.0 (ADR-017, in go.mod since S10; brings protobuf, antlr4-go, cel.dev/expr,
-   genproto and x/exp; the binary-size budget is ADR-032, accepted under DL-024: < 30 MB). Planned, and added only by
-   the session that uses them: the MCP Go SDK v1.8.0 (S14, ADR-018), `pglogrepl` at the
+   genproto and x/exp; the binary-size budget is ADR-032, accepted under DL-024: < 30 MB). The MCP Go SDK
+   `github.com/modelcontextprotocol/go-sdk` v1.8.0 (ADR-018, in go.mod since S14, **tests only**: the
+   binary doesn't link it). Planned, and added only by the session that uses it: `pglogrepl` at the
    spike-verified pin (S20). No cgo in the main binary.
    `go.sum` is committed and CI runs `go mod verify`.
 7. CI matches the banned words (below) in files, strings and commit messages as whole words or
@@ -328,6 +334,18 @@ and "open source" until the repo is public. Style bans: "revolutionary", "world-
   `testdata/gate/cli`). `TestPreAuthNamesStayInStore` also keeps `claim_*` and
   `maint_release_action_keys` inside `internal/store`; `TestOneWritePath` allows `store.NotifyJobs`
   as the door for `deedglass_jobs`.
+- `internal/mcp` (S14): `jsonrpc` framing table (4 MiB + 1, truncation, batch, depth 129, non-UTF-8,
+  duplicate members, resync) and `FuzzReader`; `gateclient` maps every row of S13's status table and
+  treats every unreadable answer as Unreachable (retries reuse one Idempotency-Key); `wrap` runs the
+  fake server (`internal/mcp/mcptest`, the test binary re-executed with `FAKE_MCP_MODE`) in both eras
+  through every S14 §6 row, asserting that every stdout line parses as JSON-RPC, that a governed call
+  never reaches the server without `authorized`, and that the child never sees `DEEDGLASS_*`;
+  `TestSDKInterop` (go-sdk client ⇄ wrap ⇄ go-sdk server, 4 era combinations); goldens in
+  `testdata/mcp/{present,snippets,stderr}`. `internal/gate`: `POST /v1/tools/resolve` in the route ×
+  role matrix and `TestResolveTools`; `internal/policy`: `TestAlwaysDeniesWhy` (agrees with
+  `AlwaysDenies`); `examples/policies`: `TestDemoVisibility`. `cmd/deedglass`: `TestMCPSnippet`,
+  `TestMCPWrapRefusals`, and (integration) `TestMCPWrapLive`, `TestMCPWrapNodeLive` (`make mcp-it`),
+  `TestMCPBudget` (`make bench-mcp`).
 - `cmd/deedglass verify` (S05): 80 golden cases in `testdata/verify/<case>/{args,stdout,stderr,exit}`
   (`go test ./cmd/deedglass -run TestVerifyGolden -update`), every vector's code and exit, `--keys`
   URL rules (same-host redirects, 1 MiB, timeout, loopback-only http), key-set merge conflicts, no

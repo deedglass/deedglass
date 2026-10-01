@@ -1,0 +1,66 @@
+# Test cases for acme-demo.yaml. Run them with:
+#   deedglass policy test examples/demo/policies/acme-demo.yaml
+policy: acme-demo.yaml
+defaults:
+  agent: { name: claude-desktop }
+  time: 2026-10-05T10:00:00Z
+cases:
+  # The fake connector
+  - name: a fake echo runs
+    input: { tool: fake.echo, args: { message: hello } }
+    expect: { decision: allow, rule: allow-fake }
+  # Reads
+  - name: reading a file in the demo folder runs
+    input: { tool: scratch.read_text_file, args: { path: /tmp/deedglass-demo/allowed/hello.txt } }
+    expect: { decision: allow, rule: allow-scratch-reads }
+  - name: reading several files runs
+    input: { tool: scratch.read_multiple_files, args: { paths: [/tmp/deedglass-demo/allowed/hello.txt] } }
+    expect: { decision: allow, rule: allow-scratch-reads }
+  - name: listing a directory runs
+    input: { tool: scratch.list_directory, args: { path: /tmp/deedglass-demo } }
+    expect: { decision: allow, rule: allow-scratch-reads }
+  - name: file info runs
+    input: { tool: scratch.get_file_info, args: { path: /tmp/deedglass-demo/allowed/hello.txt } }
+    expect: { decision: allow, rule: allow-scratch-reads }
+  - name: searching runs
+    input: { tool: scratch.search_files, args: { path: /tmp/deedglass-demo, pattern: hello } }
+    expect: { decision: allow, rule: allow-scratch-reads }
+  - name: the directory tree runs
+    input: { tool: scratch.directory_tree, args: { path: /tmp/deedglass-demo } }
+    expect: { decision: allow, rule: allow-scratch-reads }
+  # Writes
+  - name: writing inside allowed runs
+    input: { tool: scratch.write_file, args: { path: /tmp/deedglass-demo/allowed/notes.txt, content: hi } }
+    expect: { decision: allow, rule: scratch-writes-in-allowed }
+  - name: editing inside allowed runs
+    input: { tool: scratch.edit_file, args: { path: /tmp/deedglass-demo/allowed/notes.txt, edits: [] } }
+    expect: { decision: allow, rule: scratch-writes-in-allowed }
+  - name: writing outside allowed is blocked
+    input: { tool: scratch.write_file, args: { path: /tmp/deedglass-demo/outside.txt, content: test } }
+    expect:
+      decision: deny
+      rule: scratch-writes-only-in-allowed
+      code: policy_denied
+      message: 'Blocked by policy "scratch-writes-only-in-allowed": Agents may only write inside /tmp/deedglass-demo/allowed.'
+  - name: a .. traversal out of allowed is blocked
+    input: { tool: scratch.write_file, args: { path: /tmp/deedglass-demo/allowed/../outside.txt, content: x } }
+    expect: { decision: deny, rule: scratch-writes-only-in-allowed }
+  - name: the allowed folder itself without a trailing slash is not a file inside it
+    input: { tool: scratch.write_file, args: { path: /tmp/deedglass-demo/allowed, content: x } }
+    expect: { decision: deny, rule: scratch-writes-only-in-allowed }
+  - name: a look-alike prefix is blocked
+    input: { tool: scratch.write_file, args: { path: /tmp/deedglass-demo/allowed-not/x.txt, content: x } }
+    expect: { decision: deny, rule: scratch-writes-only-in-allowed }
+  - name: a write with no path is blocked
+    input: { tool: scratch.write_file, args: { content: x } }
+    expect: { decision: deny, rule: scratch-writes-only-in-allowed }
+  - name: editing outside allowed is blocked
+    input: { tool: scratch.edit_file, args: { path: /etc/hosts, edits: [] } }
+    expect: { decision: deny, rule: scratch-writes-only-in-allowed }
+  # Everything else
+  - name: moving a file is denied by default
+    input: { tool: scratch.move_file, args: { source: /tmp/deedglass-demo/allowed/a, destination: /tmp/deedglass-demo/b } }
+    expect: { decision: deny, code: policy_denied }
+  - name: creating a directory is denied by default
+    input: { tool: scratch.create_directory, args: { path: /tmp/deedglass-demo/new } }
+    expect: { decision: deny }

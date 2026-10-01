@@ -1,0 +1,34 @@
+# acme-demo · the Deedglass demo policy (S14: the scratch folder; S15 adds the orders rules)
+#
+# The fake connector runs freely. The scratch folder (the MCP filesystem server behind
+# deedglass mcp wrap --connector scratch) can be read anywhere it serves, and written only inside
+# /tmp/deedglass-demo/allowed. Everything else, including moving files and making directories,
+# is denied by default, so deedglass mcp wrap hides those tools from the agent.
+#
+#   deedglass policy test examples/demo/policies/acme-demo.yaml
+#
+# Paths are compared as text. The filesystem server resolves symlinks itself and refuses paths
+# outside the directories it was started with; this policy doesn't see where a symlink points.
+deedglass: policy/v1
+name: acme-demo
+description: The demo rules. Fake tools run, scratch reads run, scratch writes run only inside /tmp/deedglass-demo/allowed.
+
+defaults:
+  decision: deny
+  reason: No rule allows this action. Add a rule in Console › Policies to allow it.
+
+rules:
+  - id: allow-fake
+    match: { tool: ["fake.*"] }
+    decision: allow
+  - id: allow-scratch-reads
+    match: { tool: ["scratch.read_*", "scratch.list_*", scratch.get_file_info, scratch.search_files, scratch.directory_tree] }
+    decision: allow
+  - id: scratch-writes-only-in-allowed
+    match: { tool: [scratch.write_file, scratch.edit_file] }
+    when: '!has(args.path) || !args.path.startsWith("/tmp/deedglass-demo/allowed/") || args.path.contains("..")'
+    decision: deny
+    reason: Agents may only write inside /tmp/deedglass-demo/allowed.
+  - id: scratch-writes-in-allowed
+    match: { tool: [scratch.write_file, scratch.edit_file] }
+    decision: allow

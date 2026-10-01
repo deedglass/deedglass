@@ -33,7 +33,7 @@ jobs:
     services:
       postgres:
         image: ${{ matrix.image }}
-        command: postgres -c wal_level=logical -c max_slot_wal_keep_size=2GB
+        command: postgres -c wal_level=logical -c max_slot_wal_keep_size=2GB -c max_connections=300
         env:
           POSTGRES_PASSWORD: deedglass-ci-throwaway
         ports:

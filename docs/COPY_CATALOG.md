@@ -149,6 +149,26 @@ The strings live in `cmd/deedglass/intentcmd.go`. Hashes and kids show in the br
 | `dev sign-intent`, `--obo` | `✕ --obo must be 1 to 256 characters: letters, digits and . _ ~ : @ / + = -.` · `Use an opaque user id such as usr_ext_4821, not a name or email.` |
 | `dev sign-intent`, key unreadable | `✕ Can't read {x.pem}: {no such file or directory}.` · `Generate a key with deedglass agent intent keygen <agent>.` |
 
+## MCP tool results (S14)
+
+What a model reads when `deedglass mcp wrap` answers for the server. Source of truth:
+`internal/gate/present.go` (the `MCP*` constants and functions); goldens for every result, in both
+MCP eras, in `testdata/mcp/present/`.
+
+| Situation | Text (`isError: true` unless noted) |
+|---|---|
+| Denied by a rule | `Blocked by policy "<rule>": <reason> Nothing was run. Deedglass sealed a deed of this attempt (deed_…). If this should be allowed, a person can change the policy in Console › Policies.` |
+| Waiting for approval | `Waiting for approval under policy "<rule>": <reason> Nothing has run yet. Approval apr_… expires at HH:MM UTC. To continue, call deedglass.check_approval with {"approval_id": "apr_…"}.` |
+| Still waiting (`isError: false`) | `Still waiting for approval apr_…. It expires at HH:MM UTC. Nothing has run yet. Check again in a minute.` |
+| Approved and ran | `Approved by a person. Ran <connector>.<tool>.`, then the tool's own content |
+| Agent stopped, budget | S08's and S11's sentences, then `Nothing was run.` |
+| Gate unreachable | `Deedglass could not be reached at <url>, so this was not run. Start it with "deedglass serve", then try again.` |
+| Bad key | `Deedglass did not accept the API key for this MCP server, so nothing was run. Create a key in Console › Agents and update your MCP client config.` |
+| Definition changed | `The server changed the definition of <tool> after it was first listed, so Deedglass hid it. Nothing was run. Restart the MCP server to accept the new definition after a person reviews it.` |
+| Server stopped mid-call | `The MCP server stopped while running <tool>. It may have run. Deedglass recorded it as UNVERIFIABLE (act_…).` |
+| Server keeps crashing | `The MCP server stopped 5 times in a minute, so Deedglass stopped restarting it. Nothing was run. Check the server's log, then restart your MCP client.` |
+| Instructions line | `Tool calls on this server pass through Deedglass. Some may be blocked by policy or wait for a person to approve them; the result will say so. Use deedglass.check_approval to continue after an approval.` |
+
 ## What this page doesn't do
 
 It doesn't hold every error: the full catalog, with when each code happens, is

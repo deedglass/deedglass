@@ -2,9 +2,11 @@ package gate
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
+	"github.com/deedglass/deedglass/internal/httpx"
 	"github.com/deedglass/deedglass/internal/intent"
 	"github.com/deedglass/deedglass/internal/ledger"
 )
@@ -155,9 +157,10 @@ func UnknownOutcomeMessage(a *Action, executeTimeout time.Duration) string {
 	return "Deedglass could not learn whether the tool ran. It may have run."
 }
 
-// UnreachableMessage is what an MCP surface says when the Deedglass server can't be reached.
+// UnreachableMessage is what an MCP surface says when the Deedglass server can't be reached (or
+// answers something it can't read): fail closed, and say how to fix it.
 func UnreachableMessage(server string) string {
-	return fmt.Sprintf("Deedglass at %s can't be reached, so this tool call was not run. Check that deedglass serve is running.", clip(server, 120))
+	return fmt.Sprintf(`Deedglass could not be reached at %s, so this was not run. Start it with "deedglass serve", then try again.`, clip(server, 120))
 }
 
 // WitnessPhrase is the method of a verdict in plain words, so L0 never reads like an independent
@@ -231,4 +234,142 @@ func clip(s string, n int) string {
 		cut = cut[:len(cut)-1]
 	}
 	return cut + "…"
+}
+
+// --- MCP surfaces (S14 stdio wrap, S15 HTTP gateway) ---
+//
+// The model reads these, then explains them to a person. Each says what happened, whether anything
+// ran, the rule or cause, and one next step. They carry only rule ids, the policy author's reason
+// and ids: never tool arguments or upstream text (S14 §7, deny message injection).
+
+// MCP-facing constants.
+const (
+	MCPInstructions             = "Tool calls on this server pass through Deedglass. Some may be blocked by policy or wait for a person to approve them; the result will say so. Use deedglass.check_approval to continue after an approval."
+	MCPBadKey                   = "Deedglass did not accept the API key for this MCP server, so nothing was run. Create a key in Console › Agents and update your MCP client config."
+	MCPServerStopped            = "The MCP server stopped. Deedglass is restarting it."
+	MCPKeepsCrashing            = "The MCP server stopped 5 times in a minute, so Deedglass stopped restarting it. Nothing was run. Check the server's log, then restart your MCP client."
+	MCPTooLarge                 = "The server's response was larger than 4 MiB."
+	MCPApprovalDenied           = "A person denied this action. Nothing was run."
+	MCPApprovalIDBad            = "approval_id must be an approval id from a Waiting for approval message, for example apr_01j9zs4k7m2n3p5q6r7s8t9v0w."
+	MCPCheckApprovalTitle       = "Check a Deedglass approval"
+	MCPCheckApprovalDescription = "Checks whether a person has countersigned an action that Deedglass paused for approval. Call it with the approval_id from a 'Waiting for approval' message. If it was approved, Deedglass runs the original tool call and returns its result. Nothing runs while the approval is pending."
+)
+
+// MCPDenyText frames a recorded refusal (policy, budget, Stop, unknown tool) for the model. fallback
+// is the API error's message, used when the action carries no decision message.
+func MCPDenyText(a *ledger.Action, fallback string) string {
+	x := &Action{Action: *a}
+	if (x.Decision == nil || x.Decision.Message == nil || *x.Decision.Message == "") && fallback != "" {
+		x.refusal = &httpx.Error{Message: fallback}
+	}
+	msg := DenyMessage(x)
+	src := ""
+	if a.Decision != nil && a.Decision.Source != nil {
+		src = *a.Decision.Source
+	}
+	if src == "rule" || src == "default" || src == "builtin" {
+		if a.Deed != nil {
+			msg += " Deedglass sealed a deed of this attempt (" + *a.Deed + ")."
+		}
+		msg += " If this should be allowed, a person can change the policy in Console › Policies."
+	}
+	return msg
+}
+
+// MCPRejectedText is a refusal the Gate didn't record (a malformed call, a signed-intent problem):
+// the API's own sentence, then that nothing ran.
+func MCPRejectedText(message string) string {
+	m := strings.TrimSpace(message)
+	if m == "" {
+		m = "Deedglass refused this call."
+	}
+	if !strings.HasSuffix(m, ".") {
+		m += "."
+	}
+	return m + " " + NothingRan
+}
+
+// MCPPendingText frames a pending approval and how to continue.
+func MCPPendingText(a *ledger.Action, approvalID string, expires time.Time) string {
+	msg := "Waiting for a person to approve this action."
+	if a.Decision != nil && a.Decision.Message != nil && *a.Decision.Message != "" {
+		msg = *a.Decision.Message
+	}
+	if !strings.HasSuffix(msg, ".") {
+		msg += "."
+	}
+	return fmt.Sprintf(`%s Nothing has run yet. Approval %s expires at %s. To continue, call deedglass.check_approval with {"approval_id": "%s"}.`,
+		msg, approvalID, clock(expires), approvalID)
+}
+
+// MCPStillPendingText answers deedglass.check_approval while a person hasn't decided.
+func MCPStillPendingText(approvalID string, expires time.Time) string {
+	return fmt.Sprintf("Still waiting for approval %s. It expires at %s. Nothing has run yet. Check again in a minute.", approvalID, clock(expires))
+}
+
+// MCPApprovedRanText heads the original tool's result after a person approved it.
+func MCPApprovedRanText(tool string) string {
+	return "Approved by a person. Ran " + clip(tool, 160) + "."
+}
+
+// MCPAlreadyRanText answers a second check after the approved call ran.
+func MCPAlreadyRanText(deedOrAction string) string {
+	return "This action already ran (" + deedOrAction + "). Nothing new was run."
+}
+
+// MCPApprovalExpiredText and MCPApprovalCancelledText end an approval that didn't run.
+func MCPApprovalExpiredText(approvalID string) string {
+	return "Approval " + approvalID + " expired before a person decided. Nothing was run. Make the call again to ask for a new approval."
+}
+
+// MCPApprovalCancelledText is a cancelled approval.
+func MCPApprovalCancelledText(approvalID string) string {
+	return "Approval " + approvalID + " was cancelled. Nothing was run. Make the call again if it is still needed."
+}
+
+// MCPApprovalNotHereText answers for an approval this wrapper process didn't create (another
+// session, or the MCP server restarted): it never runs someone else's call.
+func MCPApprovalNotHereText(approvalID string) string {
+	return "Approval " + approvalID + " wasn't requested in this MCP session, so Deedglass won't run it here. If the MCP server restarted since, make the call again."
+}
+
+// MCPApprovalFinishedText is an approval whose action already finished without this process.
+func MCPApprovalFinishedText(approvalID, status string) string {
+	return "The action behind approval " + approvalID + " has already finished (" + status + "). Nothing new was run."
+}
+
+// MCPToolChangedText is a call to a tool whose definition changed after it was first listed.
+func MCPToolChangedText(tool string) string {
+	return fmt.Sprintf("The server changed the definition of %s after it was first listed, so Deedglass hid it. Nothing was run. Restart the MCP server to accept the new definition after a person reviews it.", clip(tool, 160))
+}
+
+// MCPUnknownToolText is the JSON-RPC -32602 for a tool the server doesn't list.
+func MCPUnknownToolText(tool string) string {
+	return fmt.Sprintf("Unknown tool: %q. Call tools/list to see the tools this server offers.", clip(tool, 160))
+}
+
+// MCPCrashedText is a call the server died running: Deedglass can't know whether it applied.
+func MCPCrashedText(tool, actionID string) string {
+	return fmt.Sprintf("The MCP server stopped while running %s. It may have run. Deedglass recorded it as UNVERIFIABLE (%s).", clip(tool, 160), actionID)
+}
+
+// MCPTimeoutText is a call the server didn't answer within the wrapper's --call-timeout.
+func MCPTimeoutText(tool string, d time.Duration, actionID string) string {
+	return fmt.Sprintf("The MCP server didn't answer %s within %s. It may have run. Deedglass recorded it as UNVERIFIABLE (%s).", clip(tool, 160), humanSeconds(d), actionID)
+}
+
+// clock is HH:MM UTC.
+func clock(t time.Time) string {
+	if t.IsZero() {
+		return "an unknown time"
+	}
+	u := t.UTC()
+	return pad2(u.Hour()) + ":" + pad2(u.Minute()) + " UTC"
+}
+
+func pad2(n int) string {
+	if n < 10 {
+		return "0" + strconv.Itoa(n)
+	}
+	return strconv.Itoa(n)
 }

@@ -342,6 +342,8 @@ func serveRoutes(api *httpx.Server, db *store.DB, ms []migrate.Migration, sk *se
 	routes = append(routes, ledger.RoutesWith(led, wait)...)
 	// S13: the Gate.
 	routes = append(routes, gate.Routes(gp)...)
+	// S14: tool visibility for MCP wrappers.
+	routes = append(routes, gate.ToolRoutes(gp)...)
 	if people == nil {
 		people = routeListingIdentity(issuer)
 	}
