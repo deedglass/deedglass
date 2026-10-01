@@ -1,0 +1,59 @@
+# attack-baseline · the attack suite's policy (S18). Rule order is deliberate: the specific
+# refusals come before the allows. The first rule is the "permissive policy" of S18 §3.4, scoped
+# to one agent: permissive-bot's SQL is allowed by policy, so the Postgres connector's own
+# refusals are what stop it. One enforced policy serves every case; nothing is re-activated
+# mid-run.
+deedglass: policy/v1
+name: attack-baseline
+description: The attack suite's policy. SQL refusals first, then the allows.
+
+defaults:
+  decision: deny
+  reason: No rule allows this tool. Add a rule to allow it.
+
+rules:
+  - id: permissive-postgres
+    description: Allows every postgres.* call by permissive-bot, to show the connector refuses on its own.
+    match: { agent: permissive-bot, tool: "postgres.*" }
+    decision: allow
+  - id: block-multi-statement
+    match: { tool: "postgres.*" }
+    when: sql.multi
+    decision: deny
+    reason: One statement per action. Split it into separate actions.
+  - id: block-hidden-writes
+    match: { tool: "postgres.*" }
+    when: sql.cte_write
+    decision: deny
+    reason: Writes hidden inside a SELECT are never allowed. Send the write as its own statement.
+  - id: block-destructive-sql
+    match: { tool: "postgres.*" }
+    when: sql.kind in ["drop", "truncate"] || sql.category in ["ddl", "privilege"]
+    decision: deny
+    reason: DROP is never allowed for agents.
+  - id: block-copy
+    match: { tool: "postgres.*" }
+    when: sql.kind == "copy" || sql.copy_program
+    decision: deny
+    reason: COPY is never allowed for agents. Read rows with postgres.query instead.
+  - id: block-do
+    match: { tool: "postgres.*" }
+    when: sql.kind == "do"
+    decision: deny
+    reason: Anonymous code blocks are never allowed. Call an allow-listed function instead.
+  - id: block-unbounded-writes
+    match: { tool: postgres.execute }
+    when: sql.unbounded_write
+    decision: deny
+    reason: UPDATE and DELETE need a WHERE clause that names the rows to change.
+  - id: deny-unclassified
+    match: { tool: "postgres.*" }
+    when: sql.ambiguous || sql.category == "unknown"
+    decision: deny
+    reason: Deedglass couldn't classify this statement, so it did not run. Send one plain statement.
+  - id: allow-reads
+    match: { tool: [postgres.query, postgres.describe, fake.echo, fs.read_file, secrets.get, pgsecret.query, orders.get, meta.get, rebind.get, redirect.meta, redirect.cross] }
+    decision: allow
+  - id: allow-writes
+    match: { tool: [postgres.execute] }
+    decision: allow

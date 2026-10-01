@@ -210,6 +210,11 @@ func (l *loader) load() (*Config, []Warning, error) {
 			if u.URL.Scheme == "http" && l.env == Prod {
 				l.problem("mcp.upstreams."+u.Slug+".url", "must use https in prod.", "Serve the MCP server over TLS, or run Deedglass in dev.")
 			}
+			if len(u.HeadersFromEnv) > 0 && l.env == Prod {
+				// S18 (S16 step 14): upstream credentials live in the vault in prod.
+				l.problem("mcp.upstreams."+u.Slug+".headers_from_env", "is dev only; prod keeps upstream credentials in the vault.",
+					"Create an mcp_http connector for this server and store its credential with deedglass connector credentials set.")
+			}
 		}
 	}
 	l.prodChecks(c)

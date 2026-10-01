@@ -301,6 +301,22 @@ When the roles already exist (another database on the same cluster, or an earlie
 leaves their passwords alone: pass `--rotate-passwords` to set new ones and store new DSNs. Roles
 are cluster-wide in Postgres, so two databases on one cluster share them.
 
+### Shared roles on one cluster
+
+`deedglass_owner`, `deedglass_agent` and `deedglass_witness` belong to the Postgres **cluster**,
+not to one database. Every database on that cluster that `init` prepares uses the same three roles
+and the same two passwords. Three things follow:
+
+- `init --rotate-passwords` for one connector changes the password for **every** connector on that
+  cluster. Only the connector you ran it for gets the new DSNs in the vault; the others fail with
+  `upstream_auth_failed` until you store the new DSNs for them too (run `init --rotate-passwords
+  --apply` once, then `deedglass connector credentials set` for each other connector on that
+  cluster with the same DSNs, changing only the database name).
+- Grants stay per database: `deedglass_agent` can write only the `writable_tables` of each database
+  `init` prepared, and `deedglass_witness` reads only those databases' watched tables.
+- To keep connectors fully independent, put their databases on separate clusters. Separate
+  role names per database are not supported in v1.
+
 ## `check`
 
 ```

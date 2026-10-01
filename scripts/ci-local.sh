@@ -113,7 +113,7 @@ smoke_image() {
   size="$(docker image inspect deedglass:dev -f '{{.Size}}')"
   echo "user=$user size=$size bytes"
   [ "$user" = "65532:65532" ] || { echo "FAIL: .Config.User is '$user', want 65532:65532"; return 1; }
-  [ "$size" -lt 30000000 ] || { echo "FAIL: image is $size bytes, want < 30000000"; return 1; }
+  [ "$size" -lt 40000000 ] || { echo "FAIL: image is $size bytes, want < 40000000 (ADR-032 as amended by DL-031)"; return 1; }
 }
 
 smoke_health() {
@@ -156,7 +156,7 @@ job_docker_smoke() {
   mkdir -p .tmp
   rm -f "$SMOKE_ENV"
   trap smoke_cleanup EXIT
-  if run_step "build deedglass:dev; runs as 65532:65532 and is under 30 MB" smoke_image &&
+  if run_step "build deedglass:dev; runs as 65532:65532 and is under 40 MB" smoke_image &&
     run_step ".env with fresh throwaway secrets" env DEEDGLASS_DEV_ENV_FILE="$SMOKE_ENV" scripts/dev.sh env &&
     run_step "start Postgres (init scripts), migrate, then serve" smoke_compose up -d --no-build &&
     run_step "GET /v1/health reports \"status\":\"ok\" within 30 s" smoke_health &&

@@ -73,4 +73,9 @@ func TestMCPSettingsProblems(t *testing.T) {
 	if !errors.As(err, &ps) || !strings.Contains(ps.Error(), "must use https in prod") {
 		t.Fatalf("%v", err)
 	}
+	// headers_from_env is dev only (S18): prod keeps upstream credentials in the vault (mcp_http).
+	_, _, err = Load(LoadOptions{Env: env, FS: fstest.MapFS{"deedglass.yaml": {Data: []byte("mcp:\n  upstreams:\n    up: {url: https://x.test, headers_from_env: {Authorization: UP_AUTH}}\n")}}})
+	if !errors.As(err, &ps) || !strings.Contains(ps.Error(), "headers_from_env is dev only") || !strings.Contains(ps.Error(), "mcp_http connector") {
+		t.Fatalf("%v", err)
+	}
 }

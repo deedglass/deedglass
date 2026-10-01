@@ -17,6 +17,7 @@ import (
 	"github.com/deedglass/deedglass/internal/connectorapi"
 	"github.com/deedglass/deedglass/internal/httpx"
 	"github.com/deedglass/deedglass/internal/ledger"
+	"github.com/deedglass/deedglass/internal/mcp/upstream"
 	"github.com/deedglass/deedglass/internal/store"
 	"github.com/deedglass/deedglass/internal/vault"
 )
@@ -35,9 +36,17 @@ func egressPolicy(ctx context.Context, cfg *config.Config, log *slog.Logger) *eg
 	if cfg.Env == config.Dev {
 		env = egress.EnvDev
 	}
-	return &egress.Policy{Env: env, AllowPrivate: cfg.AllowPrivateNetworks, AllowCIDRs: cfg.EgressAllowCIDRs,
+	p := &egress.Policy{Env: env, AllowPrivate: cfg.AllowPrivateNetworks, AllowCIDRs: cfg.EgressAllowCIDRs,
 		Self: selfAddrs(ctx, cfg.DatabaseURL.Reveal()), Log: log}
+	if egressResolverHook != nil {
+		p.Resolver = egressResolverHook(cfg, log)
+	}
+	return p
 }
+
+// egressResolverHook is set only in a build with -tags attackhooks (attackhooks.go): the attack
+// harness's host answers, dev only. A release build has no hook (TestNoAttackHooks).
+var egressResolverHook func(cfg *config.Config, log *slog.Logger) egress.Resolver
 
 // selfAddrs resolves the database URL's host:port (Unix sockets and unparsable URLs give none).
 func selfAddrs(ctx context.Context, dsn string) []netip.AddrPort {
@@ -91,7 +100,8 @@ func newConnectors(ctx context.Context, cfg *config.Config, db *store.DB, led *l
 func connectorRoutes(db *store.DB, led *ledger.Ledger, cw *connectors, log *slog.Logger) []httpx.Route {
 	a := &connectorapi.API{DB: db, Ledger: led, Log: log}
 	if cw == nil {
-		a.Registry = connector.New(connector.Options{Types: []connector.Connector{rest.New(), postgres.New(nil)}})
+		p, _ := upstream.New(upstream.Options{})
+		a.Registry = connector.New(connector.Options{Types: []connector.Connector{rest.New(), postgres.New(nil), upstream.NewType(p)}})
 	} else {
 		a.Registry = cw.reg
 		if cw.vault != nil {

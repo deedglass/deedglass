@@ -3,13 +3,14 @@ package rest
 import (
 	"bytes"
 	"context"
+	"crypto/rand"
 	"crypto/sha256"
+	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
-	"math/rand/v2"
 	"mime"
 	"net/http"
 	"net/http/httptrace"
@@ -249,9 +250,18 @@ func (st *state) do(ctx context.Context, client *http.Client, t Tool, b *built, 
 	}
 }
 
+// unitFloat is a uniform float in [0, 1) from crypto/rand (lint G5: no math/rand).
+func unitFloat() float64 {
+	var b [8]byte
+	if _, err := rand.Read(b[:]); err != nil {
+		return 0.5
+	}
+	return float64(binary.LittleEndian.Uint64(b[:])>>11) / (1 << 53)
+}
+
 func backoff(attempt int) time.Duration {
 	d := baseBackoff << (attempt - 1)
-	j := 0.8 + 0.4*rand.Float64() // ±20%
+	j := 0.8 + 0.4*unitFloat() // ±20%
 	return time.Duration(float64(d) * j)
 }
 
@@ -337,8 +347,10 @@ func (st *state) attempt(ctx context.Context, client *http.Client, b *built, sec
 		}
 		var re2 *egress.RedirectError
 		if errors.As(cause, &re2) {
-			return connector.Result{Meta: meta}, false, &connector.Error{Kind: connector.KindUpstream, Code: connector.CodeUpstreamError,
-				AgentMessage: "The service answered with a redirect Deedglass doesn't follow. The call may have run.", AdminDetail: re2.Error()}
+			// Only read tools follow redirects (writes never do), so a refused redirect changed
+			// nothing, and nothing was sent to the new address (S18, attack K02).
+			return connector.Result{Meta: meta}, false, &connector.Error{Kind: connector.KindDestinationBlocked, Code: connector.CodeDestinationBlocked,
+				AgentMessage: "The service redirected the call to another host. Deedglass follows same-host redirects only, so nothing was sent there.", AdminDetail: re2.Error()}
 		}
 		return connector.Result{Meta: meta}, false, &connector.Error{Kind: connector.KindUpstream, Code: connector.CodeUpstreamError,
 			AgentMessage: "The connection to the service failed while the call was sent. The call may have run.", Err: errors.New(errText(cause))}

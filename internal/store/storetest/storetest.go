@@ -1,4 +1,4 @@
-//go:build integration
+//go:build integration || attack
 
 // Package storetest gives integration tests a fresh control-plane database on a THROWAWAY cluster.
 //
@@ -7,6 +7,8 @@
 // deedglass_migrator and deedglass_app when they are missing (password deedglass-it-throwaway),
 // creates a database deedglass_it_<random> owned by the migrator, and drops it in t.Cleanup.
 package storetest
+
+//deedglass:allow-sql-build test helper: the database name is generated here (deedglass_it_ plus random hex) and the role names are fixed
 
 import (
 	"context"

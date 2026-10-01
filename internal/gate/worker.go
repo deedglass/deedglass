@@ -2,8 +2,9 @@ package gate
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/binary"
 	"errors"
-	"math/rand/v2"
 	"sync"
 	"time"
 
@@ -61,7 +62,16 @@ func (w *Worker) Wake(string) {
 }
 
 func jitter(d time.Duration) time.Duration {
-	return d + time.Duration((rand.Float64()*0.4-0.2)*float64(d))
+	return d + time.Duration((unitFloat()*0.4-0.2)*float64(d))
+}
+
+// unitFloat is a uniform float in [0, 1) from crypto/rand (lint G5: no math/rand).
+func unitFloat() float64 {
+	var b [8]byte
+	if _, err := rand.Read(b[:]); err != nil {
+		return 0.5
+	}
+	return float64(binary.LittleEndian.Uint64(b[:])>>11) / (1 << 53)
 }
 
 // Run claims and sweeps until ctx ends, then stops claiming, lets in-flight jobs finish for up to

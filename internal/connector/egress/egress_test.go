@@ -272,6 +272,15 @@ func TestRedirects(t *testing.T) {
 			t.Errorf("same_host followed %s", path)
 		}
 	}
+	// S18 (K02): a redirect to a blocked destination is named as one; a cross-host redirect to an
+	// allowed one stays a refused redirect.
+	if _, err := get(same, "/to-metadata"); func() bool { _, ok := IsBlocked(err); return !ok }() {
+		t.Errorf("a redirect to metadata wasn't a blocked destination: %v", err)
+	}
+	var re *RedirectError
+	if _, err := get(same, "/cross-host"); !errors.As(err, &re) {
+		t.Errorf("cross-host: %v", err)
+	}
 	if hops != MaxRedirects+1 {
 		t.Errorf("the redirect loop made %d requests, want %d", hops, MaxRedirects+1)
 	}

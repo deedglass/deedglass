@@ -71,7 +71,25 @@ func (p *Policy) Client(o ClientOptions) *http.Client {
 		IdleConnTimeout:       90 * time.Second,
 		ExpectContinueTimeout: time.Second,
 	}
-	return newClient(tr, o)
+	c := newClient(tr, o)
+	if o.Redirects == RedirectSameHost {
+		// A refused redirect whose target is itself a blocked destination (cloud metadata, a
+		// reserved range) is named as one, so the admin sees an SSRF attempt rather than a plain
+		// refused redirect (S18, attack K02). Nothing is ever sent to the target either way.
+		c.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+			err := sameHost(req, via)
+			if err == nil {
+				return nil
+			}
+			if _, cerr := p.CheckURL(req.Context(), req.URL.String()); cerr != nil {
+				if be, ok := IsBlocked(cerr); ok {
+					return be
+				}
+			}
+			return err
+		}
+	}
+	return c
 }
 
 func newClient(tr http.RoundTripper, o ClientOptions) *http.Client {

@@ -84,8 +84,10 @@ creates it with 32 random bytes for each, so `deedglass config print` works with
 
 ## Names Deedglass ignores or refuses
 
-- **Tooling names** are ignored by the binary: `DEEDGLASS_IT_*` (integration scripts),
-  `DEEDGLASS_DEV_*` (local compose) and `DEEDGLASS_REPO_PUBLIC` (the banned-words check).
+- **Tooling names** are ignored by the binary: `DEEDGLASS_IT_*` (integration scripts and
+  `make attack`), `DEEDGLASS_DEV_*` (local compose; `DEEDGLASS_DEV_ATTACK_HOSTS` is read only by a
+  `-tags attackhooks` build in dev, for the attack suite's host answers) and `DEEDGLASS_REPO_PUBLIC`
+  (the banned-words check).
 - **Any `TXV_*` variable** is an error in both modes, with its new name:
   `✕ TXV_DATABASE_URL is from the old name. Rename it to DEEDGLASS_DATABASE_URL.`
 
@@ -137,7 +139,7 @@ their settings, so it is validated on its own; an unknown key is a problem like 
 | `mcp.allowed_origins` | `[]` | Browser origins (scheme and host) allowed to call `/mcp/*`, besides the server's own. Every other `Origin` gets 403. |
 | `mcp.passthrough` | `[]` | Method families forwarded to an upstream and logged, never sealed: `resources`, `prompts`, `completion`. |
 | `mcp.upstreams.<name>.url` | required | The upstream's Streamable HTTP endpoint. https; http only in dev with `allow_private_networks`; never credentials in the URL. `<name>` is 2 to 32 lowercase letters, digits or hyphens, not `deedglass`, `mcp`, `native` or `fake`. |
-| `mcp.upstreams.<name>.headers_from_env` | `{}` | Header name → environment variable name. Values are read once at start, never logged, returned or sealed. Names can't start with `DEEDGLASS_`. |
+| `mcp.upstreams.<name>.headers_from_env` | `{}` | Header name → environment variable name. Values are read once at start, never logged, returned or sealed. Names can't start with `DEEDGLASS_`. Dev only: prod refuses it (use an `mcp_http` connector with its credential in the vault; S18). |
 | `mcp.upstreams.<name>.timeout` | `30s` | Each HTTP request to the upstream (100ms to 10m). |
 | `mcp.upstreams.<name>.tools_ttl` | `30s` | How long its `tools/list` is cached (100ms to 10m; a shorter upstream `ttlMs` wins). |
 

@@ -253,7 +253,36 @@ Deedglass ran, not what an edge reported.
                     result + _meta ◄───┴── executed → L0 → sealed
 ```
 
-Configure the upstream in `deedglass.yaml`. Its secrets stay in the environment:
+There are two ways to declare an upstream. **In production, use a connector of type `mcp_http`**:
+its credential lives in the vault, and each org has its own.
+
+```sh
+cat > fs.yaml <<'YAML'
+type: mcp_http
+name: fs
+config:
+  url: https://mcp.example.com/mcp
+  auth: {kind: bearer}
+  timeout_ms: 30000
+  tools_ttl_ms: 30000
+YAML
+deedglass connector create --config fs.yaml
+deedglass connector credentials set fs --kind bearer --field token=env:FS_MCP_TOKEN
+deedglass connector test fs
+```
+
+`auth.kind` is `bearer` (`Authorization: Bearer <token>`), `header` (`auth.header` names the header;
+the credential is `{"value": …}`) or `none`. The `url` passes the egress door at create time
+(`destination_blocked` for metadata, private or reserved addresses in prod) and again at every
+connection. Point the client at `/mcp/fs`: the gateway finds the caller's org's `mcp_http`
+connector by name. The credential is opened only when the Gate opens a session; replacing it opens
+a new session on the next call. The connector's tools are also callable as `fs.<tool>` through
+`POST /v1/actions` in gateway mode.
+
+For local development you can still declare an upstream in `deedglass.yaml`, with its secrets in
+the environment. **`headers_from_env` is refused in prod** (S18); `serve` logs a warning in dev. A
+`deedglass.yaml` upstream is served to every org on the instance, and its name wins over an org's
+connector of the same name.
 
 ```yaml
 mcp:
@@ -296,11 +325,21 @@ What the gateway does with each message:
 - **Inbound credentials never travel upstream.** `Authorization`, `Proxy-Authorization`,
   `Cookie` and every `Deedglass-*` header are stripped before the operator's configured headers
   are added (`identity.StripInboundCredentials`; a test checks the upstream sees none of them).
-- **Outbound safety until S16:** TLS 1.2 or later, no redirects, no proxy from the environment, a
-  4 MiB response cap, `User-Agent: deedglass/<version>`, and a dial-time refusal of loopback,
-  private, link-local (including cloud metadata), CGNAT and multicast addresses unless
-  `DEEDGLASS_ALLOW_PRIVATE_NETWORKS=1` (dev). S16 replaces this with the full egress guard and
-  moves upstreams into connector rows of type `mcp_http` with credentials in the vault.
+- **Outbound safety:** every upstream connection goes through the egress door
+  ([NETWORK_EGRESS.md](NETWORK_EGRESS.md)): TLS 1.2 or later, no redirects, no proxy from the
+  environment, a 4 MiB response cap, `User-Agent: deedglass/<version>`, and a dial-time refusal of
+  metadata, link-local, reserved and (in prod) private addresses. Since S18, upstreams can be
+  connector rows of type `mcp_http` with credentials in the vault (above).
+
+### Your org's own connectors on `/mcp/native`
+
+Since S18, `/mcp/native` (and `GET /v1/tools`) lists the caller's org's own native connectors next to
+the built-ins: a Postgres connector named `postgres` shows `postgres.query`, `postgres.execute`,
+`postgres.call` and `postgres.describe`, and a REST connector named `orders` shows its tools as
+`orders.<tool>`. Every call is decided and recorded by the Gate in gateway mode, with the
+connector's credential added only when the call runs. An `mcp_http` connector is served at
+`/mcp/<name>` instead. At most 100 connectors per org are listed; a connector whose tools can't be
+listed is left out and logged, and a call to it is still recorded by the Gate.
 
 ## Use Deedglass as an MCP server
 

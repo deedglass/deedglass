@@ -14,7 +14,7 @@ LDFLAGS  := -s -w -X $(BI).Version=$(VERSION) -X $(BI).Commit=$(COMMIT) -X $(BI)
 	web-verify-install web-verify-test web-verify-build web-verify-serve gencopy genmark bench-mark bench-ledger bench-stop bench-intents bench-gate policy-test \
 	fuzz-policy fuzz-policy-short bench-policy bench-eval mcp-it bench-mcp \
 	demo-up demo-down demo-reset demo-status demo-snippet demo-psql demo-follow demo-verify demo-check demo-smoke bench-gateway \
-	mock-orders bench-connectors bench-postgres
+	mock-orders bench-connectors bench-postgres attack attack-report vuln
 
 all: ci
 
@@ -66,6 +66,16 @@ bench-mcp: ## S14 §3.10: the wrapper's relay, tools/call and tools/list overhea
 	@out="$(CURDIR)/bench/results/$$(date +%F)-$$(go env GOOS)-$$(go env GOARCH)-mcp.json"; log="$(CURDIR)/.tmp/bench-mcp.log"; mkdir -p "$(CURDIR)/.tmp"; \
 	DEEDGLASS_IT_BENCH=1 DEEDGLASS_MCP_BENCH_OUT="$$out" DEEDGLASS_IT_PKGS=./cmd/deedglass/ DEEDGLASS_IT_GOFLAGS="-run TestMCPBudget -v" \
 	scripts/integration_local.sh > "$$log" 2>&1; st=$$?; grep -E 'PERF|over budget|--- (PASS|FAIL)' "$$log"; echo "raw: $$out"; exit $$st
+
+attack: ## S18: the V7 attack suite on a throwaway PG 18 (a real serve, real Postgres, loopback upstreams); writes attack/results/latest.json, then docs/ATTACK_SUITE.md
+	scripts/attack_local.sh
+	$(GO) run ./attack/cmd/attack-report
+
+attack-report: ## S18: print the last attack run and regenerate docs/ATTACK_SUITE.md from the meta and attack/results/latest.json (-check in CI)
+	$(GO) run ./attack/cmd/attack-report
+
+vuln: ## S18: govulncheck, pinned (ADR-041); a dev tool, never linked into the binary
+	$(GO) run golang.org/x/vuln/cmd/govulncheck@v1.8.0 ./...
 
 matrix: ## integration on 16, 17 and 18
 	@for v in 16 17 18; do echo "=== PostgreSQL $$v"; DEEDGLASS_IT_PG=$$v scripts/integration_local.sh || exit 1; done

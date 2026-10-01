@@ -18,11 +18,30 @@ type Source struct {
 	p    *Pool
 	slug string
 	vis  front.Visibility
+	b    backend
+}
+
+// backend is where a Source's session comes from: a file upstream (mcp.upstreams) or an mcp_http
+// connector row whose credential is in the vault (S18).
+type backend interface {
+	session(ctx context.Context) (*up, error)
+}
+
+type fileBackend struct {
+	p    *Pool
+	slug string
+}
+
+func (f fileBackend) session(context.Context) (*up, error) {
+	if u := f.p.ups[f.slug]; u != nil {
+		return u, nil
+	}
+	return nil, ErrDown
 }
 
 // Source returns slug's ToolSource. vis marks the tools the active policy always denies.
 func (p *Pool) Source(slug string, vis front.Visibility) *Source {
-	return &Source{p: p, slug: slug, vis: vis}
+	return &Source{p: p, slug: slug, vis: vis, b: fileBackend{p: p, slug: slug}}
 }
 
 var _ front.ToolSource = (*Source)(nil)
@@ -34,13 +53,23 @@ func (s *Source) Label() string { return s.slug }
 // prefix and tools with invalid x-mcp-header annotations are left out (a conforming client would
 // drop the last ones too).
 func (s *Source) tools(ctx context.Context) ([]front.Tool, error) {
-	ts, err := s.p.ListTools(ctx, s.slug)
+	u, err := s.b.session(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %v", front.ErrUpstreamDown, err)
+	}
+	ts, err := s.p.listOn(ctx, u)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %v", front.ErrUpstreamDown, err)
 	}
 	out := make([]front.Tool, 0, len(ts))
 	for _, t := range ts {
-		if t == nil || !front.ReMCPName.MatchString(t.Name) || strings.HasPrefix(t.Name, "deedglass.") {
+		if t == nil || strings.HasPrefix(t.Name, "deedglass.") {
+			continue
+		}
+		if !front.ReMCPName.MatchString(t.Name) {
+			// S18 (attack K04): a look-alike name (Cyrillic letters, spaces, …) is never shown or
+			// callable; it is logged once per listing, quoted and clipped, for the admin.
+			s.p.log.Warn(HiddenToolMessage(t.Name, s.slug), "upstream", s.slug)
 			continue
 		}
 		def, err := json.Marshal(t)
@@ -102,9 +131,9 @@ func (s *Source) Lookup(ctx context.Context, _ identity.Principal, name string) 
 // Forward implements front.Passthrough for one upstream: resources/*, prompts/* and
 // completion/complete, through the SDK's typed calls. Logged by the front, never sealed.
 func (s *Source) Forward(ctx context.Context, method string, params json.RawMessage) (json.RawMessage, *mcpjson.ErrorObject, error) {
-	u := s.p.ups[s.slug]
-	if u == nil {
-		return nil, nil, front.ErrUpstreamDown
+	u, err := s.b.session(ctx)
+	if err != nil {
+		return nil, nil, fmt.Errorf("%w: %v", front.ErrUpstreamDown, err)
 	}
 	u.mu.Lock()
 	sess, err := u.sessionLocked(ctx)
@@ -149,4 +178,12 @@ func call[P any, R any](ctx context.Context, raw json.RawMessage, f func(context
 		return nil, &mcpWireError{Code: int64(mcpjson.CodeInvalidParams), Message: "The params couldn't be read: " + err.Error()}
 	}
 	return f(ctx, &p)
+}
+
+// HiddenToolMessage is the log line for an upstream tool whose name isn't in the MCP charset.
+func HiddenToolMessage(name, upstream string) string {
+	if r := []rune(name); len(r) > 64 {
+		name = string(r[:64]) + "…"
+	}
+	return fmt.Sprintf("Hid tool %q from %s: the name isn't plain ASCII (letters, digits, _ . -).", name, upstream)
 }

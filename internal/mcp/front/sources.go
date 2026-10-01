@@ -72,6 +72,9 @@ func markHidden(ctx context.Context, vis Visibility, pr identity.Principal, tool
 type NativeSource struct {
 	Connectors []connector.Connector
 	Vis        Visibility
+	// Rows lists the caller's org's connectors of native types with their tools (S18: postgres.*,
+	// orders.*, …). nil: built-ins only.
+	Rows func(ctx context.Context, pr identity.Principal) ([]connector.RowTools, error)
 }
 
 var _ ToolSource = (*NativeSource)(nil)
@@ -99,19 +102,31 @@ func (s *NativeSource) All(ctx context.Context, pr identity.Principal) ([]Native
 // AllWithPolicy is All plus the enforced policy version the visibility came from (nil when none).
 func (s *NativeSource) AllWithPolicy(ctx context.Context, pr identity.Principal) ([]NativeTool, *string, error) {
 	var nts []NativeTool
+	add := func(conn, typ string, spec connector.ToolSpec) {
+		if spec.Internal {
+			return
+		}
+		name := conn + "." + spec.Name
+		def := nativeDef(name, spec)
+		nts = append(nts, NativeTool{
+			Tool:      Tool{Name: name, Gate: name, Def: def, Schema: spec.InputSchema, Digest: DefDigest(def)},
+			Connector: conn, ConnectorType: typ, Title: title(spec.Name), Description: spec.Description,
+			SideEffect: SideEffectOf(spec.SideEffect), InputSchema: spec.InputSchema,
+		})
+	}
 	for _, cc := range s.Connectors {
 		c := connector.Builtin(cc)
 		for _, spec := range c.Tools() {
-			if spec.Internal {
-				continue
-			}
-			name := c.Name() + "." + spec.Name
-			def := nativeDef(name, spec)
-			nts = append(nts, NativeTool{
-				Tool:      Tool{Name: name, Gate: name, Def: def, Schema: spec.InputSchema, Digest: DefDigest(def)},
-				Connector: c.Name(), ConnectorType: c.Type(), Title: title(spec.Name), Description: spec.Description,
-				SideEffect: SideEffectOf(spec.SideEffect), InputSchema: spec.InputSchema,
-			})
+			add(c.Name(), c.Type(), spec)
+		}
+	}
+	rows, err := s.rows(ctx, pr)
+	if err != nil {
+		return nil, nil, err
+	}
+	for _, row := range rows {
+		for _, spec := range row.Tools {
+			add(row.Name, row.Type, spec)
 		}
 	}
 	sortNative(nts)
@@ -152,11 +167,15 @@ func (s *NativeSource) List(ctx context.Context, pr identity.Principal) ([]Tool,
 	return out, nil
 }
 
-// Lookup implements ToolSource. It needs no I/O.
-func (s *NativeSource) Lookup(_ context.Context, _ identity.Principal, name string) (Tool, bool, error) {
+// Lookup implements ToolSource. Built-ins need no I/O; the org's rows are read through Rows.
+func (s *NativeSource) Lookup(ctx context.Context, pr identity.Principal, name string) (Tool, bool, error) {
 	conn, tool, ok := strings.Cut(name, ".")
 	if !ok {
 		return Tool{}, false, nil
+	}
+	found := func(spec connector.ToolSpec) Tool {
+		def := nativeDef(name, spec)
+		return Tool{Name: name, Gate: name, Def: def, Schema: spec.InputSchema, Digest: DefDigest(def)}
 	}
 	for _, cc := range s.Connectors {
 		c := connector.Builtin(cc)
@@ -165,12 +184,33 @@ func (s *NativeSource) Lookup(_ context.Context, _ identity.Principal, name stri
 		}
 		for _, spec := range c.Tools() {
 			if spec.Name == tool && !spec.Internal {
-				def := nativeDef(name, spec)
-				return Tool{Name: name, Gate: name, Def: def, Schema: spec.InputSchema, Digest: DefDigest(def)}, true, nil
+				return found(spec), true, nil
+			}
+		}
+		return Tool{}, false, nil
+	}
+	rows, err := s.rows(ctx, pr)
+	if err != nil {
+		return Tool{}, false, err
+	}
+	for _, row := range rows {
+		if row.Name != conn {
+			continue
+		}
+		for _, spec := range row.Tools {
+			if spec.Name == tool && !spec.Internal {
+				return found(spec), true, nil
 			}
 		}
 	}
 	return Tool{}, false, nil
+}
+
+func (s *NativeSource) rows(ctx context.Context, pr identity.Principal) ([]connector.RowTools, error) {
+	if s.Rows == nil {
+		return nil, nil
+	}
+	return s.Rows(ctx, pr)
 }
 
 // nativeDef is an MCP tool definition for a native tool. The annotations repeat the connector's

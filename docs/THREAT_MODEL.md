@@ -56,6 +56,18 @@ Detail: [INTENTS.md](INTENTS.md) §13, [IDENTITY.md](IDENTITY.md) (threat notes)
 | **The agent's runtime is compromised** | **Not defended by intents:** the attacker holds both keys. Policies, budgets, approvals and Stop still apply. |
 | A prompt-injected agent signs a harmful, well-formed action | Not an intent problem: the signature records what was meant. Policy decides (S10 to S12). |
 
+## Attacker model for the attack suite (S18)
+
+The attack suite ([ATTACK_SUITE.md](ATTACK_SUITE.md)) plays four attackers. S34 writes the full
+STRIDE model.
+
+| Attacker | What they hold | What the suite checks |
+|---|---|---|
+| **A manipulated model** | An agent's valid key and the tools the policy lets it see; it has read poisoned data (a customer note telling it to drop a table) | Destructive, smuggled and hidden SQL is denied by policy with a sealed deed, and refused by the Postgres connector even when policy allows it (H01 to H07); a burst stops at the agent's budget (J04) |
+| **A stolen or misused agent key** | The key, possibly after an admin suspended the agent or revoked the key; a captured signed intent | Suspension and revocation take effect within 2 s; a signed intent is used exactly once, also under 16 concurrent replays (J01 to J03) |
+| **A hostile or careless upstream** | The upstream server an org connected: it can redirect, echo credentials in errors, and rename its tools | No request reaches cloud metadata or another host; no credential appears in any response, log line, event, deed or result; look-alike tool names are hidden, logged and refused (K01 to K04) |
+| **A curious org neighbour** | A valid admin key, agent key and owner session in another org on the same instance | Every route answers another org's ids exactly as it answers ids that exist nowhere; lists and exports show none of them; nothing changes (`TestOrgIsolation`) |
+
 ## What this page does not do
 
 It is not a security review or a penetration-test report, and it makes no claim until S34 writes one with its evidence. The V0 trust model lives in `~/txv/ops/plan/20_ARCHITECTURE_SPEC_V0.md` §2.2.

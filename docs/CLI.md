@@ -502,7 +502,8 @@ Next: deedglass connector postgres init --connector postgres --apply
   `throwaway: true`, otherwise only with `--confirm <database>` (on a terminal it asks; without one
   it refuses).
 - New login roles get generated passwords, sent to Postgres as SCRAM verifiers; `--rotate-passwords`
-  replaces both. The DSNs go to the vault, or with `--no-store` to `.deedglass/pg-<connector>.env`
+  replaces both. The roles are cluster-wide, so rotating them changes the passwords of every
+  connector whose database is on the same cluster ([shared roles](POSTGRES.md#shared-roles-on-one-cluster)). The DSNs go to the vault, or with `--no-store` to `.deedglass/pg-<connector>.env`
   (mode 0600). `--dsn-host host:port` stores the address the server uses when it differs from the
   admin DSN's.
 - `--config <file>` plans offline from a connector file, without the server.

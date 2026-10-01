@@ -43,9 +43,12 @@ const (
 // Gateway serves the MCP routes.
 type Gateway struct {
 	Native    *front.Front            // /mcp/native; nil answers "no connector"
-	Upstreams map[string]*front.Front // /mcp/{slug}
-	Guard     identity.Guard          // nil: a Stop doesn't cancel a running call (tests)
-	Log       *slog.Logger
+	Upstreams map[string]*front.Front // /mcp/{slug}: the file upstreams (mcp.upstreams)
+	// Rows returns the front of the caller's org's mcp_http connector named name (S18), or nil
+	// when the org has none. nil: only file upstreams are served.
+	Rows  func(ctx context.Context, p identity.Principal, name string) (*front.Front, error)
+	Guard identity.Guard // nil: a Stop doesn't cancel a running call (tests)
+	Log   *slog.Logger
 
 	mu       sync.Mutex
 	inflight map[string]int
@@ -55,6 +58,14 @@ type Gateway struct {
 func (g *Gateway) Connector(w http.ResponseWriter, r *http.Request) error {
 	name := r.PathValue("connector")
 	f := g.Upstreams[name]
+	if f == nil && g.Rows != nil {
+		if p, ok := identity.PrincipalFrom(r.Context()); ok && p.Kind == httpx.KindAgentKey {
+			var err error
+			if f, err = g.Rows(r.Context(), *p, name); err != nil {
+				return err
+			}
+		}
+	}
 	if f == nil {
 		writeRPC(w, http.StatusNotFound, jsonrpc.NewError(nil, jsonrpc.CodeInvalidRequest, gate.MCPUnknownConnectorText(name)), true)
 		return nil

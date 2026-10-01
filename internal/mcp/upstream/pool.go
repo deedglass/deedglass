@@ -61,12 +61,16 @@ type Options struct {
 	Clock        func() time.Time
 }
 
-// Pool holds the upstreams.
+// Pool holds the upstreams: the file-configured ones (mcp.upstreams, by slug) and the sessions of
+// mcp_http connector rows (S18), keyed by connector id, config hash and a keyed MAC of the
+// credential, so a replaced credential opens a new session.
 type Pool struct {
-	log   *slog.Logger
-	now   func() time.Time
-	ups   map[string]*up
-	stash stash
+	log     *slog.Logger
+	now     func() time.Time
+	ups     map[string]*up
+	rows    sync.Map // rowKey → *up
+	version string
+	stash   stash
 }
 
 type up struct {
@@ -86,7 +90,7 @@ var ErrDown = errors.New("upstream: the MCP server can't be reached")
 
 // New returns a Pool. Configs are validated by internal/config; New checks only what it needs.
 func New(o Options) (*Pool, error) {
-	p := &Pool{log: o.Log, now: o.Clock, ups: map[string]*up{}}
+	p := &Pool{log: o.Log, now: o.Clock, ups: map[string]*up{}, version: o.Version}
 	if p.log == nil {
 		p.log = slog.New(slog.DiscardHandler)
 	}
@@ -132,11 +136,15 @@ func New(o Options) (*Pool, error) {
 		if _, blocked := egress.IsBlocked(err); blocked {
 			return nil, fmt.Errorf("upstream %s: %w", c.Slug, err)
 		}
-		u := &up{cfg: c, pol: pol, httpc: newHTTPClient(c.Timeout, hdr, pol, o.Version)}
-		u.client = mcp.NewClient(&mcp.Implementation{Name: "deedglass-gate", Title: "Deedglass Gate", Version: o.Version}, nil)
-		p.ups[c.Slug] = u
+		p.ups[c.Slug] = newUp(c, hdr, pol, o.Version)
 	}
 	return p, nil
+}
+
+func newUp(c Config, hdr http.Header, pol *egress.Policy, version string) *up {
+	u := &up{cfg: c, pol: pol, httpc: newHTTPClient(c.Timeout, hdr, pol, version)}
+	u.client = mcp.NewClient(&mcp.Implementation{Name: "deedglass-gate", Title: "Deedglass Gate", Version: version}, nil)
+	return u
 }
 
 // Slugs lists the upstreams, sorted.
@@ -154,14 +162,19 @@ func (p *Pool) Has(slug string) bool { _, ok := p.ups[slug]; return ok }
 
 // Close ends every session.
 func (p *Pool) Close() error {
-	for _, u := range p.ups {
+	closeUp := func(u *up) {
 		u.mu.Lock()
-		if u.session != nil {
-			_ = u.session.Close()
-			u.session = nil
-		}
+		u.dropLocked()
 		u.mu.Unlock()
 	}
+	for _, u := range p.ups {
+		closeUp(u)
+	}
+	p.rows.Range(func(k, v any) bool {
+		closeUp(v.(*up))
+		p.rows.Delete(k)
+		return true
+	})
 	return nil
 }
 
@@ -197,6 +210,10 @@ func (p *Pool) ListTools(ctx context.Context, slug string) ([]*mcp.Tool, error) 
 	if u == nil {
 		return nil, connector.ErrToolUnknown
 	}
+	return p.listOn(ctx, u)
+}
+
+func (p *Pool) listOn(ctx context.Context, u *up) ([]*mcp.Tool, error) {
 	u.mu.Lock()
 	defer u.mu.Unlock()
 	if u.tools != nil && p.now().Before(u.fresh) {
@@ -249,6 +266,10 @@ func (p *Pool) cachedTool(slug, name string) *mcp.Tool {
 	if u == nil {
 		return nil
 	}
+	return u.cached(name)
+}
+
+func (u *up) cached(name string) *mcp.Tool {
 	u.mu.Lock()
 	defer u.mu.Unlock()
 	for _, t := range u.tools {
@@ -305,6 +326,11 @@ func (p *Pool) Execute(ctx context.Context, slug string, call connector.Call) (c
 		return connector.Result{}, &connector.Error{Kind: connector.KindConfig, Code: "connector_unavailable",
 			AgentMessage: gate.MCPUpstreamDownText(slug)}
 	}
+	return p.execOn(ctx, u, slug, call)
+}
+
+// execOn runs one tools/call on u; slug names it in messages.
+func (p *Pool) execOn(ctx context.Context, u *up, slug string, call connector.Call) (connector.Result, error) {
 	if ctx.Err() != nil {
 		return connector.Result{}, &connector.Error{Kind: connector.KindCancelled, Code: gate.ReasonClientCancelled,
 			AgentMessage: "The MCP client went away before the call was sent. Nothing was run.", Err: context.Cause(ctx)}

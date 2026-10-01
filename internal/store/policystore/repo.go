@@ -1,5 +1,7 @@
 package policystore
 
+//deedglass:allow-sql-build the column lists versionColsFull and versionColsList are package vars formatted once from constants; every value is a $n parameter
+
 import (
 	"context"
 	"encoding/json"

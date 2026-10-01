@@ -228,11 +228,14 @@ func runServe(ctx context.Context, e *Env, args []string) error {
 			Next: "Fix mcp.upstreams in deedglass.yaml (docs/MCP.md, \"Put the Gate in front of a remote MCP server\")."}
 	}
 	defer pool.Close()
+	// S18 (S16 step 14): remote MCP servers as mcp_http connector rows, credentials in the vault.
+	mcpType := upstream.NewType(pool)
+	cw.reg.RegisterType(mcpType)
 	gp, err := newGate(cfg, db, led, pol, keys, log, cw.reg, pool)
 	if err != nil {
 		return err
 	}
-	mw := newMCP(cfg, gp, natives, pool, keys, log)
+	mw := newMCP(cfg, gp, natives, pool, cw.reg, mcpType, keys, log)
 	serveGate(gp)
 	worker := gp.NewWorker(instanceName())
 	keys.Listener().Listen(ledger.Channel, gp.Broker().OnEvent, gp.Broker().Reset)

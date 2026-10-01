@@ -24,7 +24,9 @@ PostgreSQL 16, 17 and 18 are supported and tested (16.15, 17.11 and 18.6 in CI's
 
 ## Roles
 
-Roles are cluster-wide: two databases on one cluster share them.
+Roles are cluster-wide: two databases on one cluster share them, and their passwords. Rotating the
+passwords for one connector (`init --rotate-passwords`) rotates them for every connector on that
+cluster; see [shared roles](POSTGRES.md#shared-roles-on-one-cluster).
 
 | Role | Attributes | Grants |
 |---|---|---|

@@ -141,12 +141,12 @@ What Deedglass does not do, stated plainly. **Owner: S37**, which finalizes this
 
 ## The MCP gateway, /mcp/native and mcp serve (S15)
 
-- **Upstreams are configured in `deedglass.yaml` until S16.** There is no API or Console to add
-  one, and their credentials are static headers from the environment; S16 moves them into
-  connector rows (type `mcp_http`) with credentials in the vault.
-- **The outbound guard is basic until S16:** private and loopback addresses are refused at dial
-  time outside dev, redirects are never followed, TLS 1.2 or later; S16 brings the full egress
-  guard (one door, DNS pinning, allow-lists).
+- **Two ways to declare an upstream.** Since S18 an org adds a remote MCP server as an `mcp_http`
+  connector with its credential in the vault. A `deedglass.yaml` upstream (`mcp.upstreams`) is
+  served to every org on the instance; its `headers_from_env` is dev only (prod refuses it), and
+  its name wins over an org's connector of the same name.
+- **`mcp_http` connectors don't listen for `notifications/tools/list_changed`**: the pool is
+  sessionless, so a renamed or new tool appears when the tool cache expires (`tools_ttl_ms`).
 - **No SSE streaming of progress** from upstream servers; answers are single JSON objects.
 - **Resources and prompts are not governed** (`mcp.passthrough` forwards and logs them).
 - **No OAuth token exchange with upstreams**; an upstream that only accepts OAuth can't be fronted.
@@ -304,6 +304,21 @@ What the Gate doesn't do ([GATE.md](GATE.md)):
   when it was admitted.
 - **An Idempotency-Key lasts 24 hours.** After that the key is free again, and the same request
   with the same key creates a new action.
+
+## The attack suite (S18)
+
+- **It starts after the model was fooled.** The cases test what Deedglass does with the calls a
+  manipulated model makes; they don't measure how often a model falls for an injection.
+- **H08 to H11 wait on S21.** Their fixtures are declared (`attack/fixtures/sql/witness_h08_h11.sql`),
+  but without the L2 witness there is no verdict to observe, so they report "waiting on S21".
+- **It runs in dev with the private-network override**, so the server can reach the harness's
+  loopback upstreams. Metadata, link-local and cross-host targets stay blocked even then (K01,
+  K02); the prod-only rules for private ranges are covered by the egress corpus, not by the suite.
+- **The harness's DNS answers come from a file**, read only by a `-tags attackhooks` build in dev.
+  The release binary has no such hook.
+- **Not covered:** a compromised Deedglass host, database superuser or seal key; malicious upstream
+  behaviour beyond tool naming (S34); denial of service at scale; the supply chain beyond
+  `govulncheck` (S35).
 
 ## What this page does not do
 

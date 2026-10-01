@@ -169,11 +169,30 @@ Witness and the Console; agents don't see it.
 | no answer in time | `timeout` | `unknown` → `UNVERIFIABLE` |
 | over `max_response_bytes` | `response_too_large` | `unknown` (it ran) |
 | blocked destination | `destination_blocked` | `failed`, nothing sent |
+| a redirect to another host, or to a blocked address (read tools with `redirects: same_host`; S18) | `destination_blocked` | `failed`, nothing sent to the new address |
 | no credential | `credentials_missing` | `failed`, nothing sent |
 | credential can't be opened | `vault_unavailable` | `failed`, nothing sent |
 | arguments don't fit the schema or the path rules | `validation_failed` | `failed`, nothing sent |
 
 Every code has a page in [api/errors.md](api/errors.md).
+
+## The `mcp_http` connector (a remote MCP server)
+
+A remote MCP server over Streamable HTTP, as one org's connector. Its credential lives in the
+vault; the Gate adds it only when it opens a session. See
+[MCP.md](MCP.md#put-the-gate-in-front-of-a-remote-mcp-server) for the gateway route (`/mcp/<name>`).
+
+| Key | Default | Rules |
+|---|---|---|
+| `url` | required | `https://…` (`http` in dev with the private-network override); no credentials or fragment; passes the egress door at create time and at every dial |
+| `auth.kind` | `bearer` | `bearer` (credential `{"token"}` → `Authorization: Bearer …`), `header` (credential `{"value"}`), `none` |
+| `auth.header` | — | `header` only: a plain header name, not one the transport or MCP sets (`Host`, `Cookie`, `Mcp-*`, `Deedglass-*`, …) |
+| `timeout_ms` | `30000` | 100–600000, per HTTP request |
+| `tools_ttl_ms` | `30000` | 0–3600000; the shorter of this and the server's `ttlMs` |
+
+Its tools are the server's own names (the MCP charset), with side effect `unknown`, so write
+policies by tool name. A call is never retried. `connector test` runs config, destination,
+credentials and a `tools/list`.
 
 ## The API
 

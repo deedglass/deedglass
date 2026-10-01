@@ -8,6 +8,8 @@
 // latency so deeds show a realistic latency_ms; every other time is the database clock.
 package fake
 
+//deedglass:allow-math-rand the demo plan must be reproducible from a seed (PCG); it never makes a secret, an id or a token
+
 import (
 	"encoding/json"
 	"fmt"

@@ -831,7 +831,9 @@ paths:
       summary: The native tools this agent may see
       description: >-
         The tools of the Gate's native connectors (the ones `/mcp/native` serves), named
-        `<connector>.<tool>`, for SDKs and `deedglass mcp serve`. Tools the active policy always
+        `<connector>.<tool>`, for SDKs and `deedglass mcp serve`: the built-ins and, since S18, the
+        caller's org's own connectors of native types (`postgres.*`, REST connectors; up to 100;
+        `mcp_http` connectors are served at `/mcp/{connector}` instead). Tools the active policy always
         denies to this agent are left out; `include_hidden=true` lists them too, with `visibility:
         hidden` (the same answer `POST /v1/tools/resolve` gives, so nothing secret). Every call is
         still decided by `POST /v1/actions`. An agent key with `actions:execute`.

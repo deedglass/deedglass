@@ -1,5 +1,7 @@
 package ledger
 
+//deedglass:allow-sql-build list filters join fixed WHERE fragments and $n placeholder numbers; every filter value is a bound parameter
+
 import (
 	"context"
 	"encoding/json"

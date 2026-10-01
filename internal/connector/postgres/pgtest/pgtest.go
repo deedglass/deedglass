@@ -8,6 +8,8 @@
 // break each other's logins.
 package pgtest
 
+//deedglass:allow-sql-build test helper: database names must start with deedglass_it_ and are quoted with pgx.Identifier.Sanitize
+
 import (
 	"context"
 	"fmt"

@@ -521,3 +521,27 @@ func BenchmarkExecuteLoopback(b *testing.B) {
 		}
 	}
 }
+
+// TestRedirectRefusals (S18, attack K02): a read tool's redirect to metadata or to another host
+// is never followed; both fail as destination_blocked (nothing was sent there), not as an unknown.
+func TestRedirectRefusals(t *testing.T) {
+	var other atomic.Int64
+	elsewhere := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) { other.Add(1) }))
+	defer elsewhere.Close()
+	for _, to := range []string{"http://169.254.169.254/latest/meta-data/iam/", elsewhere.URL + "/v1/orders/1"} {
+		r, _ := newRig(t, func(w http.ResponseWriter, req *http.Request) {
+			http.Redirect(w, req, to, http.StatusFound)
+		}, "")
+		_, err := r.call(t, "get", `{"id":"42"}`)
+		ce := connector.AsError(err)
+		if ce == nil || ce.Code != connector.CodeDestinationBlocked || ce.Kind != connector.KindDestinationBlocked {
+			t.Fatalf("redirect to %s: %v", to, err)
+		}
+		if strings.Contains(ce.AgentMessage, "169.254") || strings.Contains(ce.AgentMessage, "127.0.0.1") {
+			t.Fatalf("the agent message names the address: %q", ce.AgentMessage)
+		}
+	}
+	if other.Load() != 0 {
+		t.Fatalf("the other host was hit %d times", other.Load())
+	}
+}

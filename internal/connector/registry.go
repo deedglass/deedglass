@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log/slog"
 	"runtime/debug"
+	"slices"
 	"sort"
 	"sync"
 
@@ -266,6 +267,96 @@ func (r *Registry) Resolve(ctx context.Context, org ids.OrgID, qualified string)
 		}
 	}
 	return nil, ToolSpec{}, "", ErrToolUnknown
+}
+
+// Lister is a Loader that can also list an org's live connectors (DBLoader is one).
+type Lister interface {
+	List(ctx context.Context, org ids.OrgID, max int) ([]store.Connector, error)
+}
+
+// List implements Lister: up to max live connectors, in id order.
+func (l DBLoader) List(ctx context.Context, org ids.OrgID, max int) ([]store.Connector, error) {
+	var out []store.Connector
+	err := l.DB.OrgReadTx(ctx, org, func(ctx context.Context, tx pgx.Tx) error {
+		var err error
+		out, _, err = store.ListConnectors(ctx, tx, "", max)
+		return err
+	})
+	return out, err
+}
+
+// MaxNativeRows bounds how many connector rows /mcp/native lists for one org.
+const MaxNativeRows = 100
+
+// RowTools is one of an org's live connectors of a native type, with its tools.
+type RowTools struct {
+	Name  string
+	Type  string
+	Tools []ToolSpec
+}
+
+// NativeRows lists org's active connectors of the native types this build serves (rest, postgres,
+// …; never fake, never mcp_http, which has its own /mcp/{name}) with their tools, for /mcp/native
+// and GET /v1/tools (S18). A connector whose tools can't be listed is left out and logged; its
+// calls still reach the Gate, which records them.
+func (r *Registry) NativeRows(ctx context.Context, org ids.OrgID) ([]RowTools, error) {
+	l, ok := r.loader.(Lister)
+	if !ok {
+		return nil, nil
+	}
+	rows, err := l.List(ctx, org, MaxNativeRows)
+	if err != nil {
+		return nil, err
+	}
+	var out []RowTools
+	for _, row := range rows {
+		if row.Status != "active" || row.Type == "fake" || !slices.Contains(NativeTypes, row.Type) {
+			continue
+		}
+		impl, ok := r.Type(row.Type)
+		if !ok {
+			continue
+		}
+		inst, err := r.Instance(org, row)
+		if err != nil {
+			continue
+		}
+		ts, err := impl.Tools(ctx, inst)
+		if err != nil {
+			r.log.WarnContext(ctx, "connector: a connector's tools couldn't be listed for /mcp/native", "connector", row.Name, "type", row.Type, "err", err.Error())
+			continue
+		}
+		out = append(out, RowTools{Name: row.Name, Type: row.Type, Tools: ts})
+	}
+	return out, nil
+}
+
+// Named returns org's live connector named name and its type, without resolving a tool (S18:
+// the MCP gateway serves mcp_http rows at /mcp/{name}). It returns ErrToolUnknown when org has no
+// such connector, and ErrConnectorUnavailable when it is disabled or its type isn't served.
+func (r *Registry) Named(ctx context.Context, org ids.OrgID, name string) (*Instance, Connector, error) {
+	if r.loader == nil || !ReConnector.MatchString(name) {
+		return nil, nil, ErrToolUnknown
+	}
+	head, err := r.loader.Head(ctx, org, name)
+	if errors.Is(err, store.ErrNotFound) {
+		return nil, nil, ErrToolUnknown
+	}
+	if err != nil {
+		return nil, nil, err
+	}
+	impl, ok := r.Type(head.Type)
+	if !ok {
+		return nil, nil, fmt.Errorf("%w: type %s isn't served by this build", ErrConnectorUnavailable, head.Type)
+	}
+	if head.Status != "active" {
+		return nil, nil, fmt.Errorf("%w: the connector is %s", ErrConnectorUnavailable, head.Status)
+	}
+	inst, err := r.instanceFor(ctx, org, head)
+	if err != nil {
+		return nil, nil, err
+	}
+	return inst, impl, nil
 }
 
 func (r *Registry) instanceFor(ctx context.Context, org ids.OrgID, head store.ConnectorHead) (*Instance, error) {

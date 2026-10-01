@@ -66,6 +66,11 @@ go test ./internal/connector/postgres -run TestValuesGolden -update   # S17: tes
 DEEDGLASS_IT_PKGS=./internal/connector/postgres/ make integration   # S17: the Postgres connector on a throwaway cluster (DEEDGLASS_IT_GOFLAGS="-v -run TestOneTransaction")
 DEEDGLASS_IT_PKGS=./cmd/deedglass/ DEEDGLASS_IT_GOFLAGS="-v -run TestPostgresLive" make integration   # S17 §9 on a real server
 make bench-postgres # S17: the connector's extra latency over raw pgx and 100 writes/s for 30 s; JSON in bench/results/
+make attack         # S18: the V7 attack suite on a throwaway PG 18 (real serve, real Postgres, loopback upstreams), then the report
+make attack-report  # S18: print the last run and regenerate docs/ATTACK_SUITE.md (never edit that page by hand; -check in CI)
+DEEDGLASS_IT_ATTACK_RUN='TestAttack/H03' make attack   # one case; 'TestOrgIsolation' for the isolation sweep
+make vuln           # S18: govulncheck v1.8.0 (ADR-024); also the CI govulncheck job
+go test ./internal/lint/...   # S18: static guards G1-G5 (allow markers: //deedglass:allow-sql-build <reason>, //deedglass:allow-math-rand <reason>)
 make demo-check     # S17: the Postgres connector's readiness report on the demo (make demo-up first; it runs init --apply)
 make demo-up        # S15: the Acme demo stack (examples/demo; HTTP=1 adds the everything upstream, DEMO_PORT=8091 if 8080 is taken)
 make demo-status | demo-snippet CLIENT=… | demo-follow | demo-verify | demo-psql | demo-reset [HARD=1] | demo-down
@@ -119,10 +124,10 @@ scripts/ci-local.sh # the CI jobs locally (docker-smoke and govulncheck skip whe
    v1.3.0 with `fxamacker/cbor/v2` v2.9.4 (ADR-026, in go.mod since S04). npm, dev only (`web/verify`,
    ADR-027, accepted): `typescript` 7.0.2, `vitest` 5.0.3, `vite` 8.3.1, `@types/node` 24.19.0; no runtime dependency.
    `cel.dev/cel-go` v0.32.0 (ADR-017, in go.mod since S10; brings protobuf, antlr4-go, cel.dev/expr,
-   genproto and x/exp; the binary-size budget is ADR-032, accepted under DL-024: < 30 MB). The MCP Go SDK
+   genproto and x/exp; the binary-size budget is ADR-032, accepted under DL-024 and amended under DL-031: < 40 MB). The MCP Go SDK
    `github.com/modelcontextprotocol/go-sdk` v1.8.0 (ADR-018, in go.mod since S14; since S15 the
-   binary links it for the gateway's upstream client, ADR-037 accepted under DL-029; stripped binary 27.1 MB, budget 30 MB). S16 (vault,
-   egress, connectors) added no dependency: AES-256-GCM, the dialer and the JSON Schema subset are standard library (ADR-038, accepted under DL-030). S17 (the Postgres connector) added none either: `pgxpool` is part of pgx, SCRAM is `crypto/pbkdf2` (ADR-039 Proposed). Planned, and added only by the session that uses it: `pglogrepl` at the
+   binary links it for the gateway's upstream client, ADR-037 accepted under DL-029; stripped binary 27.1 MB then, 29.6 MB at S17; budget 40 MB). S16 (vault,
+   egress, connectors) added no dependency: AES-256-GCM, the dialer and the JSON Schema subset are standard library (ADR-038, accepted under DL-030). S17 (the Postgres connector) added none either: `pgxpool` is part of pgx, SCRAM is `crypto/pbkdf2` (ADR-039, accepted under DL-031). Planned, and added only by the session that uses it: `pglogrepl` at the
    spike-verified pin (S20). No cgo in the main binary.
    `go.sum` is committed and CI runs `go mod verify`.
 7. CI matches the banned words (below) in files, strings and commit messages as whole words or
@@ -163,8 +168,9 @@ scripts/ci-local.sh # the CI jobs locally (docker-smoke and govulncheck skip whe
   "tenant" in anything a user sees).
 - Verdicts `VERIFIED` · `MISMATCH` · `UNVERIFIABLE`; levels `L0` Reported · `L1` Confirmed ·
   `L2` Witnessed; policy decisions `allow` · `deny` · `require_approval`.
-- The attack suite keeps its V0 outcome words (VALID, INVALID, INCONCLUSIVE, BLOCKED, DETECTED,
-  NO EFFECT, OUTSIDE SCOPE) until S18 applies ADR-021 (approved 2026-10-01).
+- The attack suite uses the verdict words since S18 applied ADR-021: VERIFIED, MISMATCH,
+  UNVERIFIABLE, plus BLOCKED, DETECTED, NO EFFECT, OUTSIDE SCOPE and S18's DENIED, REJECTED,
+  REDACTED. `TestADR021WordsOnly` maps the V0 words back to the frozen digest.
 - Prefer: see, show, seal, witness, verify, record, check, compare, detect, report.
 
 **Banned** in every file, string and commit message (canonical list: `scripts/banned_words.txt`):
@@ -407,7 +413,19 @@ and "open source" until the repo is public. Style bans: "revolutionary", "world-
   network without a `--keys` URL, terminal sanitizing.
 - `web/verify` (S05): vectors, parity 500/500, strict, JCS, keys (A13, RFC 8032, Wycheproof), page
   safety (CSP, no HTML from strings, no storage, one fetch).
-- `attack/`: all 66 case ids present, outcome enum, demo set, digest pin.
+- `attack/` (S18): 85 case ids (66 V0 + 19 V7: H01–H11, J01–J04, K01–K04), the outcome enum, the
+  demo sets, one pinned digest per group set (`expectedDigest` A–G after ADR-021,
+  `expectedDigestV7` H/J/K, ADR-040; a group without a pin fails), `TestADR021WordsOnly`, `needs`
+  names S19–S37 and stays outside the digest, V7 OWASP tags only ASI01/02/03/10. `make attack`
+  (tag `attack`): a real `serve` built with `-tags attackhooks` (hosts-file DNS, dev only;
+  `TestNoAttackHooks` keeps it out of default builds), per-case target clones, the five
+  invariants after every case (`TestInvariantsCatch` shows they can fail), `TestOrgIsolation`
+  (every id-bearing route answers another org's ids exactly as unknown ids; lists and exports leak
+  nothing; no Acme row changes; a route without a fixture fails), and `attack-report -check` (the
+  generated page matches the committed results). `internal/lint` (S18): G1–G5 with `TestRepoClean`
+  and a positive test per guard. `internal/httpx` `TestRouteAuthCoverage` and `cmd/deedglass`
+  `TestServeRoutesUnauthenticated`: the public route set is exact and every other route is 401
+  without a credential.
 - `scripts/integration_smoke.sql`: live prosrc hash, roles, grants, RLS, replica identity, one real
   transfer, refusals with exact SQLSTATEs, decode checks through pgoutput and test_decoding.
 - `scripts/rename_guard.sh` and `scripts/banned_words.sh`; `testdata/SHA256SUMS`. Test strings with

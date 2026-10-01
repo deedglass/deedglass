@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"log/slog"
 	"net/http"
@@ -43,6 +44,10 @@ func nativeConnectors(cfg *config.Config) []connector.Connector {
 func newPool(cfg *config.Config, getenv func(string) string, log *slog.Logger, pol *egress.Policy) (*upstream.Pool, error) {
 	ups := make([]upstream.Config, 0, len(cfg.MCP.Upstreams))
 	for _, u := range cfg.MCP.Upstreams {
+		if len(u.HeadersFromEnv) > 0 && log != nil {
+			// Prod refuses this at config load (S18); dev keeps it for local servers.
+			log.Warn("mcp: headers_from_env is for dev; in prod, create an mcp_http connector and keep its credential in the vault", "upstream", u.Slug)
+		}
 		ups = append(ups, upstream.Config{Slug: u.Slug, URL: u.URL, HeadersFromEnv: u.HeadersFromEnv, Timeout: u.Timeout, ToolsTTL: u.ToolsTTL})
 	}
 	return upstream.New(upstream.Options{Upstreams: ups, AllowPrivate: cfg.AllowPrivateNetworks, Egress: pol, Version: buildInfo().Version,
@@ -51,10 +56,16 @@ func newPool(cfg *config.Config, getenv func(string) string, log *slog.Logger, p
 
 // newMCP wires the fronts: /mcp/native over the native connectors, and one /mcp/<slug> per
 // upstream. Each call waits gate.execute_timeout + 2 s for the Gate's answer.
-func newMCP(cfg *config.Config, gp *gate.Pipeline, natives []connector.Connector, pool *upstream.Pool, guard identity.Guard, log *slog.Logger) *mcpWiring {
+func newMCP(cfg *config.Config, gp *gate.Pipeline, natives []connector.Connector, pool *upstream.Pool, reg *connector.Registry, typ *upstream.Type, guard identity.Guard, log *slog.Logger) *mcpWiring {
 	exec := gp.Config().ExecuteTimeout
 	base := front.Front{Version: buildInfo().Version, Gate: gp, CallWait: exec + 2*time.Second, ExecuteTimeout: exec, Log: log}
 	ns := &front.NativeSource{Connectors: natives, Vis: gp}
+	if reg != nil {
+		// S18: the org's own native connectors (postgres.*, orders.*, …) on /mcp/native too.
+		ns.Rows = func(ctx context.Context, p identity.Principal) ([]connector.RowTools, error) {
+			return reg.NativeRows(ctx, p.OrgID)
+		}
+	}
 	nf := base
 	nf.Tools = ns
 	pass := map[string]bool{}
@@ -68,8 +79,21 @@ func newMCP(cfg *config.Config, gp *gate.Pipeline, natives []connector.Connector
 		f.Tools, f.Results, f.Passthrough, f.PassMethods = src, pool, src, pass
 		ups[slug] = &f
 	}
-	return &mcpWiring{gw: &httpgw.Gateway{Native: &nf, Upstreams: ups, Guard: guard, Log: log}, native: ns, pool: pool,
-		timeout: exec + 30*time.Second, origins: cfg.MCP.AllowedOrigins}
+	gw := &httpgw.Gateway{Native: &nf, Upstreams: ups, Guard: guard, Log: log}
+	if reg != nil && typ != nil {
+		// S18: the org's mcp_http connectors, served at /mcp/{name} with their vault credential.
+		gw.Rows = func(ctx context.Context, p identity.Principal, name string) (*front.Front, error) {
+			ok, err := typ.Serves(ctx, reg, p, name)
+			if err != nil || !ok {
+				return nil, err
+			}
+			src := typ.RowSource(reg, p.OrgID, name, gp)
+			f := base
+			f.Tools, f.Results, f.Passthrough, f.PassMethods = src, pool, src, pass
+			return &f, nil
+		}
+	}
+	return &mcpWiring{gw: gw, native: ns, pool: pool, timeout: exec + 30*time.Second, origins: cfg.MCP.AllowedOrigins}
 }
 
 // mcpRoutes are the MCP endpoints: the gateway when wired, S09's stubs otherwise (route tests).

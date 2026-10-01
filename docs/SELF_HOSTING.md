@@ -20,7 +20,7 @@ What the root `Dockerfile` produces:
 | User | `65532:65532` (non-root) |
 | Entrypoint and command | `["/deedglass"]` and `["serve"]` |
 | Listens on | `0.0.0.0:8080` inside the container (`DEEDGLASS_LISTEN`), port 8080 exposed |
-| Size | Under 30 MB; CI fails the build otherwise |
+| Size | Under 40 MB (ADR-032, amended under DL-031); CI fails the build otherwise |
 
 The build context excludes `.env`, `.deedglass/`, key files and `.git` (see `.dockerignore`), so no secret enters a layer. Pass every setting at run time.
 

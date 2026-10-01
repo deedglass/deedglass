@@ -496,6 +496,51 @@ func TestNativeSource(t *testing.T) {
 	}
 }
 
+// TestNativeSourceRows: the org's native connector rows (S18) join the built-ins on /mcp/native.
+func TestNativeSourceRows(t *testing.T) {
+	calls := 0
+	ns := &NativeSource{Connectors: []connector.Connector{fake.New()}, Vis: visAll{},
+		Rows: func(context.Context, identity.Principal) ([]connector.RowTools, error) {
+			calls++
+			return []connector.RowTools{{Name: "postgres", Type: "postgres", Tools: []connector.ToolSpec{
+				{Name: "query", SideEffect: connector.SideEffectRead},
+				{Name: "execute", SideEffect: connector.SideEffectWrite},
+				{Name: "undo", Internal: true},
+			}}}, nil
+		}}
+	ctx := context.Background()
+	nts, _, err := ns.AllWithPolicy(ctx, identity.Principal{})
+	if err != nil || len(nts) != 6 {
+		t.Fatalf("%v %d", err, len(nts))
+	}
+	names := []string{}
+	for _, nt := range nts {
+		names = append(names, nt.Name+"/"+nt.ConnectorType)
+	}
+	if got := strings.Join(names, ","); !strings.Contains(got, "postgres.execute/postgres") || strings.Contains(got, "postgres.undo") {
+		t.Fatal(got)
+	}
+	if tl, ok, err := ns.Lookup(ctx, identity.Principal{}, "postgres.execute"); err != nil || !ok || tl.Gate != "postgres.execute" {
+		t.Fatalf("lookup %v %v", ok, err)
+	}
+	for _, miss := range []string{"postgres.undo", "postgres.nope", "other.query"} {
+		if _, ok, _ := ns.Lookup(ctx, identity.Principal{}, miss); ok {
+			t.Fatalf("found %s", miss)
+		}
+	}
+	// A built-in name never consults the rows.
+	before := calls
+	if _, ok, _ := ns.Lookup(ctx, identity.Principal{}, "fake.echo"); !ok || calls != before {
+		t.Fatal("built-in lookup read the rows")
+	}
+	boom := &NativeSource{Rows: func(context.Context, identity.Principal) ([]connector.RowTools, error) {
+		return nil, errors.New("db down")
+	}}
+	if _, _, err := boom.AllWithPolicy(ctx, identity.Principal{}); err == nil {
+		t.Fatal("a rows error was swallowed")
+	}
+}
+
 func TestParamHeaders(t *testing.T) {
 	ok := []struct {
 		schema string
