@@ -8,7 +8,6 @@ package upstream
 
 import (
 	"context"
-	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -27,6 +26,7 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"github.com/deedglass/deedglass/internal/connector"
+	"github.com/deedglass/deedglass/internal/connector/egress"
 	"github.com/deedglass/deedglass/internal/gate"
 	"github.com/deedglass/deedglass/internal/identity"
 	"github.com/deedglass/deedglass/internal/ids"
@@ -53,7 +53,8 @@ type Config struct {
 // Options configure a Pool.
 type Options struct {
 	Upstreams    []Config
-	AllowPrivate bool // DEEDGLASS_ALLOW_PRIVATE_NETWORKS (dev): http:// and private addresses
+	AllowPrivate bool           // DEEDGLASS_ALLOW_PRIVATE_NETWORKS (dev): http:// and private addresses
+	Egress       *egress.Policy // the one door (S16); nil: built from AllowPrivate (dev with the override, else prod)
 	Version      string
 	Getenv       func(string) string // nil: os.Getenv is not used; the caller resolves (tests pass a map)
 	Log          *slog.Logger
@@ -70,6 +71,7 @@ type Pool struct {
 
 type up struct {
 	cfg     Config
+	pol     *egress.Policy
 	client  *mcp.Client
 	httpc   *http.Client
 	mu      sync.Mutex // guards session and the cache
@@ -90,6 +92,13 @@ func New(o Options) (*Pool, error) {
 	}
 	if p.now == nil {
 		p.now = time.Now
+	}
+	pol := o.Egress
+	if pol == nil {
+		pol = &egress.Policy{Env: egress.EnvProd}
+		if o.AllowPrivate {
+			pol = &egress.Policy{Env: egress.EnvDev, AllowPrivate: true}
+		}
 	}
 	for _, c := range o.Upstreams {
 		if c.URL == nil || c.Slug == "" {
@@ -115,7 +124,15 @@ func New(o Options) (*Pool, error) {
 			}
 			hdr.Set(h, v)
 		}
-		u := &up{cfg: c, httpc: newHTTPClient(c.Timeout, hdr, o.AllowPrivate, o.Version)}
+		// The URL's shape, and its address when it is one (or resolves now) must pass egress;
+		// a name that doesn't resolve yet is checked again at every connect.
+		cctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		_, err := pol.CheckURL(cctx, c.URL.String())
+		cancel()
+		if _, blocked := egress.IsBlocked(err); blocked {
+			return nil, fmt.Errorf("upstream %s: %w", c.Slug, err)
+		}
+		u := &up{cfg: c, pol: pol, httpc: newHTTPClient(c.Timeout, hdr, pol, o.Version)}
 		u.client = mcp.NewClient(&mcp.Implementation{Name: "deedglass-gate", Title: "Deedglass Gate", Version: o.Version}, nil)
 		p.ups[c.Slug] = u
 	}
@@ -296,6 +313,13 @@ func (p *Pool) Execute(ctx context.Context, slug string, call connector.Call) (c
 	s, err := u.sessionLocked(ctx)
 	u.mu.Unlock()
 	if err != nil {
+		// The SDK flattens transport errors into text, so ask the egress policy directly whether
+		// the destination is the reason (destination_blocked rather than unavailable).
+		if _, cerr := u.pol.CheckURL(ctx, u.cfg.URL.String()); cerr != nil {
+			if be, ok := egress.IsBlocked(cerr); ok {
+				return connector.Result{}, connector.ErrDestinationBlocked(be)
+			}
+		}
 		return connector.Result{}, unavailable(slug, err)
 	}
 	res, err := s.CallTool(ctx, &mcp.CallToolParams{Name: call.Tool.Name, Arguments: json.RawMessage(call.Args)})
@@ -319,6 +343,9 @@ func (p *Pool) Execute(ctx context.Context, slug string, call connector.Call) (c
 }
 
 func unavailable(slug string, err error) error {
+	if be, ok := egress.IsBlocked(err); ok {
+		return connector.ErrDestinationBlocked(be)
+	}
 	return &connector.Error{Kind: connector.KindConfig, Code: "connector_unavailable", AgentMessage: gate.MCPUpstreamDownText(slug), Err: err}
 }
 
@@ -379,22 +406,13 @@ func (p *Pool) Take(actionID string) (json.RawMessage, json.RawMessage, bool) {
 var errRedirect = errors.New("upstream: redirects are not followed")
 var errTooLarge = errors.New("upstream: response larger than 4 MiB")
 
-func newHTTPClient(timeout time.Duration, hdr http.Header, allowPrivate bool, version string) *http.Client {
-	d := &net.Dialer{Timeout: 10 * time.Second, KeepAlive: 30 * time.Second, Control: dialGuard(allowPrivate)}
-	tr := &http.Transport{
-		Proxy:                 nil, // never from the environment
-		DialContext:           d.DialContext,
-		TLSClientConfig:       &tls.Config{MinVersion: tls.VersionTLS12},
-		ForceAttemptHTTP2:     true,
-		MaxIdleConnsPerHost:   16,
-		IdleConnTimeout:       90 * time.Second,
-		TLSHandshakeTimeout:   10 * time.Second,
-		ResponseHeaderTimeout: timeout,
-	}
-	return &http.Client{
-		Transport:     &roundTripper{next: tr, hdr: hdr, ua: "deedglass/" + version},
-		CheckRedirect: func(*http.Request, []*http.Request) error { return errRedirect },
-	}
+func newHTTPClient(timeout time.Duration, hdr http.Header, pol *egress.Policy, version string) *http.Client {
+	// The egress door (S16): resolution, classification and the connect-time check. Its User-Agent
+	// and body cap are replaced by the pool's own round tripper below.
+	c := pol.Client(egress.ClientOptions{HeaderTimeout: timeout, UserAgent: "deedglass/" + version})
+	c.Transport = &roundTripper{next: c.Transport, hdr: hdr, ua: "deedglass/" + version}
+	c.CheckRedirect = func(*http.Request, []*http.Request) error { return errRedirect }
+	return c
 }
 
 // roundTripper strips every inbound credential (identity.StripInboundCredentials: nothing a
@@ -443,34 +461,6 @@ func (c *capped) Read(b []byte) (int, error) {
 }
 
 func (c *capped) Close() error { return c.rc.Close() }
-
-// dialGuard refuses loopback, private (RFC 1918, ULA), link-local (incl. metadata), CGNAT,
-// unspecified and multicast addresses unless allowPrivate (dev). S16 replaces it with the full
-// egress guard.
-func dialGuard(allowPrivate bool) func(network, address string, c syscall.RawConn) error {
-	return func(_, address string, _ syscall.RawConn) error {
-		if allowPrivate {
-			return nil
-		}
-		host, _, err := net.SplitHostPort(address)
-		if err != nil {
-			return err
-		}
-		ip := net.ParseIP(host)
-		if ip == nil || Blocked(ip) {
-			return fmt.Errorf("upstream: %s is a private or reserved address; Deedglass doesn't connect to it outside dev", host)
-		}
-		return nil
-	}
-}
-
-var cgnat = &net.IPNet{IP: net.IPv4(100, 64, 0, 0), Mask: net.CIDRMask(10, 32)}
-
-// Blocked reports whether ip is an address the gateway refuses outside dev.
-func Blocked(ip net.IP) bool {
-	return ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() ||
-		ip.IsUnspecified() || ip.IsMulticast() || ip.IsInterfaceLocalMulticast() || cgnat.Contains(ip)
-}
 
 // --- the result stash ---
 

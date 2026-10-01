@@ -191,6 +191,39 @@ Source of truth: `internal/gate/present.go` (the S15 block) and `internal/identi
 | Client cancelled (error message on the action) | `The MCP client went away while the tool ran, so Deedglass cancelled it. It may have run.` |
 | `deedglass mcp serve`, server down | the S14 `could not be reached` sentence |
 
+## Connectors (S16; S26 builds the screen)
+
+### Console
+
+| Where | String |
+|---|---|
+| Empty state | No connectors yet. Add your first API in about two minutes: a base URL, one tool, one credential. |
+| Credential row | Set · bearer · …9f2c · updated 2h ago, with **Replace** and **Remove** |
+| Credential row, none | No credentials yet. Agents' calls fail as credentials_missing until you store one. |
+| Under the credential form | Agents never see this value. Deedglass adds it only when the Gate runs a call. |
+| Health | Passed · 4 checks · tested 5m ago / Failed · destination blocked |
+
+### API errors, as rendered
+
+| Code | Message |
+|---|---|
+| `credentials_missing` | The connector "orders" has no credentials yet. Run deedglass connector credentials set orders --from-env ORDERS_TOKEN. |
+| `destination_blocked` (agent) | The connector's destination is blocked by Deedglass's network rules. An admin can see why in Console › Connectors. |
+| `destination_blocked` (admin) | base_url resolves to 169.254.169.254, a cloud metadata address. Deedglass never connects to cloud metadata addresses, even in dev. Point base_url at the service's public address. |
+| `vault_unavailable` (agent) | Deedglass couldn't open this connector's credentials. An admin has been alerted. |
+| `vault_unavailable` (admin) | 2 credentials use kek:77c0e1a9b442, which isn't in DEEDGLASS_VAULT_KEY. Add it back as the second key, restart, then run deedglass vault rotate. |
+| `validation_failed` (side effect) | tools[2] is a DELETE, so its side effect can't be "read". Use "destructive", or leave side_effect out. |
+| insufficient_scope (agent key) | Agents can't list, create or read connectors. Use the Console or an admin key. |
+
+### CLI
+
+| When | String |
+|---|---|
+| Empty `--from-env` | ORDERS_TOKEN is empty or unset. Export it in this shell and run the command again. Deedglass never reads secrets from flags. |
+| Created | ✓ Connector created · orders · con_… / 2 tools · orders.get (read) · orders.update_status (write) / ○ No credentials yet. Next: deedglass connector credentials set orders --from-env ORDERS_TOKEN |
+| Stored | ✓ Credentials stored · orders · bearer · …9f2c · encrypted with kek:3f9a1c2b7d8e / Agents never see this value. Deedglass adds it only when the Gate runs a call. |
+| Rotation | ◐ Rewrapping data keys · 2 of 2 / ✓ All 42 credentials use kek:3f9a1c2b7d8e. You can remove kek:77c0e1a9b442 from DEEDGLASS_VAULT_KEY. |
+
 ## What this page doesn't do
 
 It doesn't hold every error: the full catalog, with when each code happens, is

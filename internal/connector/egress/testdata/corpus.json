@@ -1,0 +1,513 @@
+{
+ "v": 1,
+ "rows": [
+  {
+   "name": "metadata-aws-v4",
+   "url": "https://169.254.169.254/latest/meta-data/",
+   "prod": "block",
+   "dev": "block",
+   "class": "metadata"
+  },
+  {
+   "name": "metadata-aws-v6",
+   "url": "https://[fd00:ec2::254]/",
+   "prod": "block",
+   "dev": "block",
+   "class": "metadata"
+  },
+  {
+   "name": "metadata-gcp-v6",
+   "url": "https://[fd20:ce::254]/computeMetadata/v1",
+   "prod": "block",
+   "dev": "block",
+   "class": "metadata"
+  },
+  {
+   "name": "metadata-gcp-name",
+   "url": "https://metadata.google.internal/computeMetadata/v1/",
+   "prod": "block",
+   "dev": "block",
+   "class": "metadata"
+  },
+  {
+   "name": "metadata-alibaba",
+   "url": "https://100.100.100.200/",
+   "prod": "block",
+   "dev": "block",
+   "class": "metadata"
+  },
+  {
+   "name": "metadata-ecs-task",
+   "url": "https://169.254.170.2/v2/credentials",
+   "prod": "block",
+   "dev": "block",
+   "class": "metadata"
+  },
+  {
+   "name": "link-local-v6",
+   "url": "https://[fe80::1]/",
+   "prod": "block",
+   "dev": "block",
+   "class": "metadata"
+  },
+  {
+   "name": "link-local-v6-zone",
+   "url": "https://[fe80::1%25en0]/",
+   "prod": "refuse",
+   "dev": "refuse"
+  },
+  {
+   "name": "numeric-decimal",
+   "url": "https://2852039166/",
+   "prod": "refuse",
+   "dev": "refuse"
+  },
+  {
+   "name": "numeric-hex",
+   "url": "https://0xA9FEA9FE/",
+   "prod": "refuse",
+   "dev": "refuse"
+  },
+  {
+   "name": "numeric-octal",
+   "url": "https://0251.0376.0251.0376/",
+   "prod": "refuse",
+   "dev": "refuse"
+  },
+  {
+   "name": "numeric-short",
+   "url": "https://127.1/",
+   "prod": "refuse",
+   "dev": "refuse"
+  },
+  {
+   "name": "numeric-zero",
+   "url": "https://0/",
+   "prod": "refuse",
+   "dev": "refuse"
+  },
+  {
+   "name": "mapped-dotted",
+   "url": "https://[::ffff:169.254.169.254]/",
+   "prod": "block",
+   "dev": "block",
+   "class": "metadata"
+  },
+  {
+   "name": "mapped-hex",
+   "url": "https://[::ffff:a9fe:a9fe]/",
+   "prod": "block",
+   "dev": "block",
+   "class": "metadata"
+  },
+  {
+   "name": "nat64-metadata",
+   "url": "https://[64:ff9b::a9fe:a9fe]/",
+   "prod": "block",
+   "dev": "block",
+   "class": "metadata"
+  },
+  {
+   "name": "6to4-metadata",
+   "url": "https://[2002:a9fe:a9fe::]/",
+   "prod": "block",
+   "dev": "block",
+   "class": "metadata"
+  },
+  {
+   "name": "nat64-public",
+   "url": "https://[64:ff9b::5db8:d822]/",
+   "prod": "allow",
+   "dev": "allow",
+   "class": "public"
+  },
+  {
+   "name": "loopback-v4",
+   "url": "https://127.0.0.1/",
+   "prod": "block",
+   "dev": "allow",
+   "class": "loopback"
+  },
+  {
+   "name": "loopback-name",
+   "url": "https://localhost/",
+   "prod": "block",
+   "dev": "allow",
+   "class": "loopback"
+  },
+  {
+   "name": "loopback-name-dot",
+   "url": "https://localhost./",
+   "prod": "block",
+   "dev": "allow",
+   "class": "loopback"
+  },
+  {
+   "name": "loopback-subdomain",
+   "url": "https://api.localhost/",
+   "prod": "block",
+   "dev": "allow",
+   "class": "loopback"
+  },
+  {
+   "name": "loopback-v6",
+   "url": "https://[::1]/",
+   "prod": "block",
+   "dev": "allow",
+   "class": "loopback"
+  },
+  {
+   "name": "unspecified-v4",
+   "url": "https://0.0.0.0/",
+   "prod": "block",
+   "dev": "block",
+   "class": "reserved"
+  },
+  {
+   "name": "unspecified-v6",
+   "url": "https://[::]/",
+   "prod": "block",
+   "dev": "block",
+   "class": "reserved"
+  },
+  {
+   "name": "private-10",
+   "url": "https://10.0.0.1/",
+   "prod": "block",
+   "dev": "allow",
+   "class": "private"
+  },
+  {
+   "name": "private-172",
+   "url": "https://172.16.5.4/",
+   "prod": "block",
+   "dev": "allow",
+   "class": "private"
+  },
+  {
+   "name": "private-192",
+   "url": "https://192.168.1.1/",
+   "prod": "block",
+   "dev": "allow",
+   "class": "private"
+  },
+  {
+   "name": "private-cgnat",
+   "url": "https://100.64.0.1/",
+   "prod": "block",
+   "dev": "allow",
+   "class": "private"
+  },
+  {
+   "name": "private-ula",
+   "url": "https://[fc00::1]/",
+   "prod": "block",
+   "dev": "allow",
+   "class": "private"
+  },
+  {
+   "name": "reserved-benchmark",
+   "url": "https://198.18.0.1/",
+   "prod": "block",
+   "dev": "block",
+   "class": "reserved"
+  },
+  {
+   "name": "reserved-doc-v4",
+   "url": "https://192.0.2.1/",
+   "prod": "block",
+   "dev": "block",
+   "class": "reserved"
+  },
+  {
+   "name": "reserved-multicast",
+   "url": "https://224.0.0.1/",
+   "prod": "block",
+   "dev": "block",
+   "class": "reserved"
+  },
+  {
+   "name": "reserved-broadcast",
+   "url": "https://255.255.255.255/",
+   "prod": "block",
+   "dev": "block",
+   "class": "reserved"
+  },
+  {
+   "name": "reserved-doc-v6",
+   "url": "https://[2001:db8::1]/",
+   "prod": "block",
+   "dev": "block",
+   "class": "reserved"
+  },
+  {
+   "name": "reserved-doc-v6-new",
+   "url": "https://[3fff::1]/",
+   "prod": "block",
+   "dev": "block",
+   "class": "reserved"
+  },
+  {
+   "name": "reserved-teredo",
+   "url": "https://[2001::1]/",
+   "prod": "block",
+   "dev": "block",
+   "class": "reserved"
+  },
+  {
+   "name": "reserved-srv6",
+   "url": "https://[5f00::1]/",
+   "prod": "block",
+   "dev": "block",
+   "class": "reserved"
+  },
+  {
+   "name": "userinfo",
+   "url": "https://user:pass@example.com/",
+   "prod": "refuse",
+   "dev": "refuse"
+  },
+  {
+   "name": "userinfo-trick",
+   "url": "https://example.com@169.254.169.254/",
+   "prod": "refuse",
+   "dev": "refuse"
+  },
+  {
+   "name": "scheme-ftp",
+   "url": "ftp://example.com/",
+   "prod": "refuse",
+   "dev": "refuse"
+  },
+  {
+   "name": "scheme-file",
+   "url": "file:///etc/passwd",
+   "prod": "refuse",
+   "dev": "refuse"
+  },
+  {
+   "name": "scheme-gopher",
+   "url": "gopher://example.com/",
+   "prod": "refuse",
+   "dev": "refuse"
+  },
+  {
+   "name": "non-ascii-host",
+   "url": "https://exämple.com/",
+   "prod": "refuse",
+   "dev": "refuse"
+  },
+  {
+   "name": "http-in-prod",
+   "url": "http://example.com/",
+   "prod": "refuse",
+   "dev": "allow",
+   "class": "public",
+   "resolve": {
+    "example.com": [
+     "93.184.216.34"
+    ]
+   }
+  },
+  {
+   "name": "rebind",
+   "url": "https://rebind.attack.test/",
+   "prod": "allow",
+   "dev": "allow",
+   "class": "public",
+   "resolve": {
+    "rebind.attack.test": [
+     "93.184.216.34"
+    ]
+   },
+   "dial": {
+    "answer": [
+     "127.0.0.1"
+    ],
+    "prod": "block",
+    "dev": "allow"
+   },
+   "note": "public at check time, loopback at dial time"
+  },
+  {
+   "name": "rebind-metadata",
+   "url": "https://rebind2.attack.test/",
+   "prod": "allow",
+   "dev": "allow",
+   "class": "public",
+   "resolve": {
+    "rebind2.attack.test": [
+     "93.184.216.34"
+    ]
+   },
+   "dial": {
+    "answer": [
+     "169.254.169.254"
+    ],
+    "prod": "block",
+    "dev": "block"
+   }
+  },
+  {
+   "name": "multi-private",
+   "url": "https://multi.attack.test/",
+   "prod": "block",
+   "dev": "allow",
+   "class": "private",
+   "resolve": {
+    "multi.attack.test": [
+     "93.184.216.34",
+     "10.0.0.5"
+    ]
+   }
+  },
+  {
+   "name": "multi-metadata",
+   "url": "https://multi2.attack.test/",
+   "prod": "block",
+   "dev": "block",
+   "class": "metadata",
+   "resolve": {
+    "multi2.attack.test": [
+     "93.184.216.34",
+     "169.254.169.254"
+    ]
+   }
+  },
+  {
+   "name": "nip-metadata",
+   "url": "https://nip.attack.test/",
+   "prod": "block",
+   "dev": "block",
+   "class": "metadata",
+   "resolve": {
+    "nip.attack.test": [
+     "169.254.169.254"
+    ]
+   }
+  },
+  {
+   "name": "public-name",
+   "url": "https://orders.example.com/v1",
+   "prod": "allow",
+   "dev": "allow",
+   "class": "public",
+   "resolve": {
+    "orders.example.com": [
+     "93.184.216.34",
+     "2606:2800:220:1:248:1893:25c8:1946"
+    ]
+   }
+  },
+  {
+   "name": "public-v4",
+   "url": "https://93.184.216.34/",
+   "prod": "allow",
+   "dev": "allow",
+   "class": "public"
+  },
+  {
+   "name": "self-db",
+   "url": "https://db.internal:5432/",
+   "prod": "block",
+   "dev": "allow",
+   "class": "self",
+   "resolve": {
+    "db.internal": [
+     "10.1.2.3"
+    ]
+   },
+   "self": [
+    "10.1.2.3:5432"
+   ]
+  },
+  {
+   "name": "self-other-port",
+   "url": "https://db.internal:5433/",
+   "prod": "block",
+   "dev": "allow",
+   "class": "private",
+   "resolve": {
+    "db.internal": [
+     "10.1.2.3"
+    ]
+   },
+   "self": [
+    "10.1.2.3:5432"
+   ]
+  },
+  {
+   "name": "self-allow-listed",
+   "url": "https://db.internal:5432/",
+   "prod": "allow",
+   "dev": "allow",
+   "class": "self",
+   "resolve": {
+    "db.internal": [
+     "10.1.2.3"
+    ]
+   },
+   "allow_cidrs": [
+    "10.1.2.3/32"
+   ],
+   "self": [
+    "10.1.2.3:5432"
+   ]
+  },
+  {
+   "name": "self-range-not-enough",
+   "url": "https://db.internal:5432/",
+   "prod": "block",
+   "dev": "allow",
+   "class": "self",
+   "resolve": {
+    "db.internal": [
+     "10.1.2.3"
+    ]
+   },
+   "allow_cidrs": [
+    "10.1.0.0/16"
+   ],
+   "self": [
+    "10.1.2.3:5432"
+   ]
+  },
+  {
+   "name": "private-allow-listed",
+   "url": "https://api.corp.internal/",
+   "prod": "allow",
+   "dev": "allow",
+   "class": "private",
+   "resolve": {
+    "api.corp.internal": [
+     "10.20.3.4"
+    ]
+   },
+   "allow_cidrs": [
+    "10.20.0.0/16"
+   ]
+  },
+  {
+   "name": "private-outside-list",
+   "url": "https://api2.corp.internal/",
+   "prod": "block",
+   "dev": "allow",
+   "class": "private",
+   "resolve": {
+    "api2.corp.internal": [
+     "10.30.3.4"
+    ]
+   },
+   "allow_cidrs": [
+    "10.20.0.0/16"
+   ]
+  },
+  {
+   "name": "no-such-host",
+   "url": "https://nxdomain.attack.test/",
+   "prod": "refuse",
+   "dev": "refuse",
+   "note": "DNS failure: a ResolveError, never a dial"
+  }
+ ]
+}

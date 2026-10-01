@@ -48,6 +48,9 @@ type Normalized struct {
 	Fingerprint   string          // request_digest + on-behalf-of + session (the Idempotency-Key comparison)
 	Context       json.RawMessage // what the action row stores as context: the client, the transport, the connector type
 	Transport     string          //
+	// HTTP is the request a REST connector will send (S16's request.http), filled by the
+	// connector's enrichment before the decision; empty otherwise.
+	HTTP policy.HTTPFacts
 }
 
 // digestBody is what request_digest covers (S13 §3.6): JCS of these four members.

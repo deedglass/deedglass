@@ -52,13 +52,14 @@ func (p *InputProblem) Error() string { return p.Message }
 
 var (
 	inputKeys       = []string{"tool", "sql", "args", "agent", "org", "user", "session", "request", "time", "usage", "anomaly"}
-	toolKeys        = []string{"name", "connector", "connector_type", "side_effect", "default_schema"}
+	toolKeys        = []string{"name", "connector", "connector_type", "side_effect", "default_schema", "type", "op"}
 	agentKeys       = []string{"id", "name", "labels", "status", "budgets"}
 	agentBudgetKeys = []string{"calls_per_minute", "calls_per_day", "spend_per_day"}
 	orgKeys         = []string{"id", "timezone", "stopped"}
 	userKeys        = []string{"ref", "sub", "iss"}
 	sessionKeys     = []string{"ref"}
-	requestKeys     = []string{"mode", "intent_signed", "bytes", "digest"}
+	requestKeys     = []string{"mode", "intent_signed", "bytes", "digest", "http"}
+	httpKeys        = []string{"method", "path", "host"}
 	anomalyKeys     = []string{"active"}
 	usageKeys       = []string{"calls_minute", "calls_hour", "calls_today", "spend_today", "currency", "budgets"}
 	budgetIDRE      = regexp.MustCompile(`^[a-z0-9][a-z0-9_-]{0,63}$`)
@@ -146,7 +147,8 @@ func BuildInput(v any) (Input, *InputProblem) {
 			return in, p
 		}
 		for k, dst := range map[string]*string{"name": &in.Tool.Name, "connector": &in.Tool.Connector,
-			"connector_type": &in.Tool.ConnectorType, "side_effect": &in.Tool.SideEffect, "default_schema": &in.Tool.DefaultSchema} {
+			"connector_type": &in.Tool.ConnectorType, "side_effect": &in.Tool.SideEffect, "default_schema": &in.Tool.DefaultSchema,
+			"type": &in.Tool.Type, "op": &in.Tool.Op} {
 			if p := str(t, k, "tool."+k, dst); p != nil {
 				return in, p
 			}
@@ -166,6 +168,13 @@ func BuildInput(v any) (Input, *InputProblem) {
 	}
 	if in.Tool.SideEffect == "" {
 		in.Tool.SideEffect = "unknown"
+	}
+	// S16: tool.type defaults to the connector type and tool.op to the name after the first dot.
+	if in.Tool.Type == "" {
+		in.Tool.Type = in.Tool.ConnectorType
+	}
+	if in.Tool.Op == "" {
+		_, in.Tool.Op, _ = strings.Cut(in.Tool.Name, ".")
 	}
 	// args and the sql shorthand
 	args := map[string]any{}
@@ -319,6 +328,20 @@ func BuildInput(v any) (Input, *InputProblem) {
 		}
 		if p := str(rm, "mode", "request.mode", &in.Request.Mode); p != nil {
 			return in, p
+		}
+		if h, set := rm["http"]; set {
+			hm, ok := h.(map[string]any)
+			if !ok {
+				return in, wrongType("request.http", "a mapping", h)
+			}
+			if p := checkKeys("request.http", hm, httpKeys); p != nil {
+				return in, p
+			}
+			for k, dst := range map[string]*string{"method": &in.Request.HTTP.Method, "path": &in.Request.HTTP.Path, "host": &in.Request.HTTP.Host} {
+				if p := str(hm, k, "request.http."+k, dst); p != nil {
+					return in, p
+				}
+			}
 		}
 		if in.Request.Mode != "gateway" && in.Request.Mode != "proxy" {
 			return in, &InputProblem{Path: "request.mode", Message: "The request mode must be gateway or proxy."}

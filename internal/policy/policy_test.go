@@ -285,9 +285,9 @@ func TestDeclaredFields(t *testing.T) {
 		got = append(got, name+": "+strings.Join(celFields(typ), " "))
 	}
 	want := []string{
-		"tool: name connector connector_type side_effect",
+		"tool: name connector connector_type side_effect type op", // S16: type, op
 		"args: map(string, dyn)",
-		"request: mode bytes intent_signed digest",
+		"request: mode bytes intent_signed digest http", // S16: http {method, path, host}
 		"sql: present kind category kinds statements multi writes write_kinds has_where unbounded_write where_trivial has_returning cte_write select_into copy_program explain_analyze locks_rows tables tables_complete functions dangerous_functions write_functions unknown_functions ambiguous reasons bytes",
 		"agent: id name labels status",
 		"user: ref sub iss",

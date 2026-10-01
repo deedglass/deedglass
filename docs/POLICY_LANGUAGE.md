@@ -451,9 +451,9 @@ Every structured variable is declared field by field, so a typo like `sql.knid` 
 
 | Variable | Type | Fields |
 |---|---|---|
-| `tool` | object | `name`, `connector`, `connector_type`, `side_effect` (strings) |
+| `tool` | object | `name`, `connector`, `connector_type`, `side_effect` (strings); since S16 also `type` (the connector type again, like `rest`) and `op` (the tool's name after the first dot, like `update_status` in `orders.update_status`) |
 | `args` | `map(string, dyn)` | the tool arguments as JSON: integers are `int`, other numbers are `double`, objects are maps, arrays are lists |
-| `request` | object | `mode` (`gateway` or `proxy`), `bytes` (int), `intent_signed` (bool), `digest` (string) |
+| `request` | object | `mode` (`gateway` or `proxy`), `bytes` (int), `intent_signed` (bool), `digest` (string); since S16 `http`, an object with `method`, `path` and `host` (strings), filled by the REST connector before the decision with the request it will send: `request.http.path` is the path with the arguments filled in, like `/v1/orders/42`. Empty strings for every other connector, and when the arguments don't build a request (the call then fails as `validation_failed` and nothing is sent). |
 | `sql` | object | below; filled by the SQL classifier (S11) when the tool is a Postgres tool with an `args.sql` string, otherwise `present` is false and `kind` is `none` |
 | `agent` | object | `id`, `name`, `labels` (map string to string), `status` |
 | `user` | object | `ref`, `sub`, `iss` (empty strings when absent; from `Deedglass-On-Behalf-Of` or a signed intent, S09) |
@@ -495,6 +495,24 @@ The `sql` fields:
 | `bytes` | int | the SQL's size |
 
 Adding a field later is additive. Renaming or removing one needs a new language version.
+
+A REST rule that lets an agent read orders and change only their status (S16):
+
+```yaml
+rules:
+  - id: order-reads
+    match: { tool: ["orders.*"] }
+    when: tool.type == "rest" && request.http.method == "GET"
+    decision: allow
+  - id: order-status
+    match: { tool: [orders.update_status] }
+    when: request.http.method == "PATCH" && request.http.path.startsWith("/v1/orders/")
+    decision: allow
+```
+
+In policy test cases, set them as `tool: {name: orders.get, type: rest, op: get}` and
+`request: {http: {method: GET, path: /v1/orders/42, host: orders.example.com}}`. `type` defaults to
+`connector_type` and `op` to the name after the first dot.
 
 ### 7.2 Functions
 

@@ -83,15 +83,15 @@ planned    GET     /v1/deeds                                              sessio
 planned    GET     /v1/deeds/{id}                                         session_or_key  deeds:read       S06    agent keys: own agent only (S08)
 planned    GET     /v1/deeds/export                                       session_or_key  viewer           S06    keys: admin (S08)
 planned    GET     /v1/ledger/check                                       session_or_key  viewer           S06    keys: admin (S08)
-planned    GET     /v1/connectors                                         session_or_key  admin            S16
+planned    GET     /v1/connectors                                         session_or_key  viewer           S16
 planned    POST    /v1/connectors                                         session_or_key  admin            S16
-planned    GET     /v1/connectors/{id}                                    session_or_key  admin            S16
+planned    GET     /v1/connectors/{id}                                    session_or_key  viewer           S16
 planned    PATCH   /v1/connectors/{id}                                    session_or_key  admin            S16
 planned    DELETE  /v1/connectors/{id}                                    session_or_key  admin            S16
-planned    PUT     /v1/connectors/{id}/credentials                        session_or_key  admin            S16
+planned    PUT     /v1/connectors/{id}/credentials                        session_or_key  admin            S16    write-only; never stored for replay
 planned    DELETE  /v1/connectors/{id}/credentials                        session_or_key  admin            S16
-planned    POST    /v1/connectors/{id}/test                               session_or_key  admin            S16
-planned    GET     /v1/connector-types                                    session_or_key  admin            S16
+planned    POST    /v1/connectors/{id}/test                               session_or_key  admin            S16    IdemNever: 10 per minute per connector
+planned    GET     /v1/connector-types                                    session_or_key  viewer           S16
 planned    GET     /v1/connector-types/{type}                             session_or_key  admin            S30
 planned    GET     /v1/connectors/{id}/decoder                            session_or_key  admin            S20
 planned    DELETE  /v1/connectors/{id}/decoder                            session_or_key  admin            S20

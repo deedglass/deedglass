@@ -17,6 +17,7 @@ import (
 
 	"github.com/deedglass/deedglass/cmd/deedglass/internal/ui"
 	"github.com/deedglass/deedglass/internal/config"
+	"github.com/deedglass/deedglass/internal/connector/egress"
 	"github.com/deedglass/deedglass/internal/deed"
 	"github.com/deedglass/deedglass/internal/ids"
 	"github.com/deedglass/deedglass/internal/store"
@@ -309,7 +310,7 @@ func fetchKeySet(ctx context.Context, server string) (*deed.KeySet, string, erro
 	defer cancel()
 	req, _ := http.NewRequestWithContext(rctx, http.MethodGet, full, nil)
 	req.Header.Set("User-Agent", "deedglass/"+buildInfo().Version)
-	client := &http.Client{Timeout: 5 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
+	client := egress.FirstParty(egress.FirstPartyOptions{Timeout: 5 * time.Second})
 	res, err := client.Do(req)
 	if err != nil {
 		return nil, "", unreachable(lastPart(err))

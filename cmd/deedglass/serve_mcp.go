@@ -9,6 +9,7 @@ import (
 
 	"github.com/deedglass/deedglass/internal/config"
 	"github.com/deedglass/deedglass/internal/connector"
+	"github.com/deedglass/deedglass/internal/connector/egress"
 	"github.com/deedglass/deedglass/internal/connector/fake"
 	"github.com/deedglass/deedglass/internal/gate"
 	"github.com/deedglass/deedglass/internal/httpx"
@@ -39,12 +40,12 @@ func nativeConnectors(cfg *config.Config) []connector.Connector {
 
 // newPool is the upstream MCP servers of mcp.upstreams. Header values are read from the
 // environment once, here, and never logged.
-func newPool(cfg *config.Config, getenv func(string) string, log *slog.Logger) (*upstream.Pool, error) {
+func newPool(cfg *config.Config, getenv func(string) string, log *slog.Logger, pol *egress.Policy) (*upstream.Pool, error) {
 	ups := make([]upstream.Config, 0, len(cfg.MCP.Upstreams))
 	for _, u := range cfg.MCP.Upstreams {
 		ups = append(ups, upstream.Config{Slug: u.Slug, URL: u.URL, HeadersFromEnv: u.HeadersFromEnv, Timeout: u.Timeout, ToolsTTL: u.ToolsTTL})
 	}
-	return upstream.New(upstream.Options{Upstreams: ups, AllowPrivate: cfg.AllowPrivateNetworks, Version: buildInfo().Version,
+	return upstream.New(upstream.Options{Upstreams: ups, AllowPrivate: cfg.AllowPrivateNetworks, Egress: pol, Version: buildInfo().Version,
 		Getenv: getenv, Log: log})
 }
 

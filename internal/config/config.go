@@ -3,6 +3,7 @@ package config
 import (
 	"crypto/rand"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"io"
 	"io/fs"
@@ -15,6 +16,9 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+
+	"github.com/deedglass/deedglass/internal/connector/egress"
+	"github.com/deedglass/deedglass/internal/vault/keyring"
 )
 
 // Env is the deployment mode.
@@ -46,7 +50,7 @@ type Config struct {
 	MetricsListen        string // "" = no metrics listener (S03)
 	BaseURL              *url.URL
 	SealKeyFile          string
-	VaultKey             Secret // base64 of exactly 32 bytes
+	VaultKey             Secret // a ring of 1–4 comma-separated base64 32-byte keys; the first is active (S16)
 	APIKeyPepper         Secret // base64 of at least 32 bytes
 	LogLevel             slog.Level
 	Signup               string
@@ -55,6 +59,7 @@ type Config struct {
 	AnthropicAPIKey      Secret
 	TrustedProxies       []netip.Prefix
 	AllowPrivateNetworks bool
+	EgressAllowCIDRs     []netip.Prefix // DEEDGLASS_EGRESS_ALLOW_CIDRS: private networks connectors may reach (S16)
 	SlotLagAlertMB       int
 
 	// Client-side: the CLI, MCP commands and SDKs.
@@ -389,8 +394,13 @@ func (l *loader) parse(c *Config, k Key) {
 	case "DEEDGLASS_SEAL_KEY_FILE":
 		c.SealKeyFile = v
 	case "DEEDGLASS_VAULT_KEY":
-		if n, ok := b64Len(v); !ok || n != 32 {
-			bad("must be base64 of exactly 32 bytes"+gotBytes(n, ok)+".", "Generate one with `openssl rand -base64 32`.")
+		if _, err := keyring.Parse(v); err != nil {
+			var pr *keyring.Problem
+			if errors.As(err, &pr) {
+				bad(pr.Message, pr.Next)
+			} else {
+				bad("can't be read.", "Generate a key with `openssl rand -base64 32`.")
+			}
 			return
 		}
 		c.VaultKey = NewSecret(v)
@@ -457,6 +467,27 @@ func (l *loader) parse(c *Config, k Key) {
 		default:
 			bad(fmt.Sprintf("must be true or false (got %q).", v), "")
 		}
+	case "DEEDGLASS_EGRESS_ALLOW_CIDRS":
+		for _, part := range strings.Split(v, ",") {
+			part = strings.TrimSpace(part)
+			if part == "" {
+				continue
+			}
+			p, err := netip.ParsePrefix(part)
+			if err != nil {
+				next := "Write each one as a CIDR, for example 10.20.0.0/16."
+				if a, aerr := netip.ParseAddr(part); aerr == nil {
+					next = fmt.Sprintf("Write a single address as %s/%d.", a, a.BitLen())
+				}
+				bad(fmt.Sprintf("has an entry that isn't a CIDR (%q).", part), next)
+				return
+			}
+			if err := egress.CheckAllowCIDR(p); err != nil {
+				bad(fmt.Sprintf("has an entry Deedglass never allows: %s.", err), "List only the private networks connectors need, for example 10.20.0.0/16.")
+				return
+			}
+			c.EgressAllowCIDRs = append(c.EgressAllowCIDRs, p.Masked())
+		}
 	case "DEEDGLASS_SLOT_LAG_ALERT_MB":
 		n, err := strconv.Atoi(v)
 		if err != nil || n < 1 || n > 1048576 {
@@ -501,7 +532,7 @@ func (l *loader) prodChecks(c *Config) {
 		l.problem("DEEDGLASS_API_KEY_PEPPER", "isn't set.", "Generate one the same way, and keep it stable: changing it invalidates every API key.")
 	}
 	if c.AllowPrivateNetworks {
-		l.problem("DEEDGLASS_ALLOW_PRIVATE_NETWORKS", "is dev only.", "Remove it. In prod, list reachable networks explicitly (S16).")
+		l.problem("DEEDGLASS_ALLOW_PRIVATE_NETWORKS", "is dev only.", "Remove it. In prod, list the private networks connectors may reach in DEEDGLASS_EGRESS_ALLOW_CIDRS.")
 	}
 	for _, k := range []struct {
 		name string

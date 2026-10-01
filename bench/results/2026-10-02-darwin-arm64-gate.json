@@ -1,0 +1,10 @@
+{"Time":"2026-10-02T01:59:53.841366+05:30","Action":"start","Package":"github.com/deedglass/deedglass/internal/gate"}
+{"Time":"2026-10-02T01:59:54.177303+05:30","Action":"run","Package":"github.com/deedglass/deedglass/internal/gate","Test":"TestGateBudget"}
+{"Time":"2026-10-02T01:59:54.177432+05:30","Action":"output","Package":"github.com/deedglass/deedglass/internal/gate","Test":"TestGateBudget","Output":"=== RUN   TestGateBudget\n","OutputType":"frame"}
+{"Time":"2026-10-02T02:00:07.028942+05:30","Action":"output","Package":"github.com/deedglass/deedglass/internal/gate","Test":"TestGateBudget","Output":"    bench_integration_test.go:101: PERF {\"actions\":4000,\"benchmark\":\"BenchmarkGateAllowNoWitness\",\"concurrency\":8,\"eval_p99_us\":250,\"max_ms\":56.657708,\"ops_per_s\":340.48727723969733,\"orgs\":1,\"p50_ms\":22.308917,\"p90_ms\":34.349625,\"p99_ms\":41.926959,\"race\":false,\"rules\":50,\"target_eval_p99_us\":1000,\"target_p50_ms\":5,\"target_p99_ms\":25}\n"}
+{"Time":"2026-10-02T02:00:07.029033+05:30","Action":"output","Package":"github.com/deedglass/deedglass/internal/gate","Test":"TestGateBudget","Output":"    bench_integration_test.go:103: over budget: p50 22.308917ms (5 ms), p99 41.926959ms (25 ms), eval p99 250 µs (1,000)\n","OutputType":"error"}
+{"Time":"2026-10-02T02:00:07.069659+05:30","Action":"output","Package":"github.com/deedglass/deedglass/internal/gate","Test":"TestGateBudget","Output":"--- FAIL: TestGateBudget (12.89s)\n","OutputType":"frame"}
+{"Time":"2026-10-02T02:00:07.069697+05:30","Action":"fail","Package":"github.com/deedglass/deedglass/internal/gate","Test":"TestGateBudget","Elapsed":12.89}
+{"Time":"2026-10-02T02:00:07.069744+05:30","Action":"output","Package":"github.com/deedglass/deedglass/internal/gate","Output":"FAIL\n","OutputType":"frame"}
+{"Time":"2026-10-02T02:00:07.071277+05:30","Action":"output","Package":"github.com/deedglass/deedglass/internal/gate","Output":"FAIL\tgithub.com/deedglass/deedglass/internal/gate\t13.230s\n","OutputType":"frame"}
+{"Time":"2026-10-02T02:00:07.0713+05:30","Action":"fail","Package":"github.com/deedglass/deedglass/internal/gate","Elapsed":13.23}

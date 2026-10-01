@@ -41,11 +41,31 @@ func New() *Connector { return &Connector{byAction: map[string]int{}} }
 
 var _ connector.Connector = (*Connector)(nil)
 
-// Name implements connector.Connector.
-func (c *Connector) Name() string { return Name }
-
 // Type implements connector.Connector.
 func (c *Connector) Type() string { return Name }
+
+// Info implements connector.Connector.
+func (c *Connector) Info() connector.TypeInfo {
+	return connector.TypeInfo{Object: "connector_type", Type: Name, Title: "Fake (dev only)",
+		Description: "Four tools with real schemas and configurable latency, cost and outcome, so every Gate path runs without a real system.",
+		Levels:      []string{"L0"}, CredentialKinds: []connector.CredentialKind{}, ConfigSchema: json.RawMessage(`{"type":"object","additionalProperties":false}`),
+		DocsURL: "https://docs.deedglass.com/connectors/fake"}
+}
+
+// Validate implements connector.Connector: fake takes no config.
+func (c *Connector) Validate(_ context.Context, _ connector.Env, cfg json.RawMessage) (json.RawMessage, []connector.FieldError) {
+	if len(bytes.TrimSpace(cfg)) == 0 || bytes.Equal(bytes.TrimSpace(cfg), []byte("{}")) {
+		return json.RawMessage(`{}`), nil
+	}
+	return nil, []connector.FieldError{{Param: "config", Message: "The fake connector takes no config."}}
+}
+
+// Test implements connector.Connector.
+func (c *Connector) Test(context.Context, *connector.Instance) (connector.TestReport, error) {
+	r := connector.TestReport{Checks: []connector.Check{{ID: "config", Title: "config", Status: connector.CheckPass, Detail: "no config · 4 tools"}}}
+	r.Settle()
+	return r, nil
+}
 
 const fakeProp = `"_fake": {"type": "object", "properties": {
   "latency_ms": {"type": "integer", "minimum": 0, "maximum": 600000},
@@ -78,7 +98,9 @@ var tools = []connector.ToolSpec{
 }
 
 // Tools implements connector.Connector. The slice is a copy.
-func (c *Connector) Tools() []connector.ToolSpec { return append([]connector.ToolSpec(nil), tools...) }
+func (c *Connector) Tools(context.Context, *connector.Instance) ([]connector.ToolSpec, error) {
+	return append([]connector.ToolSpec(nil), tools...), nil
+}
 
 // Calls is the number of Execute calls so far.
 func (c *Connector) Calls() int64 { return c.calls.Load() }
@@ -101,7 +123,7 @@ type opts struct {
 }
 
 // Execute implements connector.Connector.
-func (c *Connector) Execute(ctx context.Context, call connector.Call) (connector.Result, error) {
+func (c *Connector) Execute(ctx context.Context, _ *connector.Instance, call connector.Call) (connector.Result, error) {
 	c.calls.Add(1)
 	c.mu.Lock()
 	c.byAction[call.ActionID.String()]++

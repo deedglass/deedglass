@@ -12,7 +12,7 @@ exit 0
   config print        Show the effective config, secrets hidden
   version             Show the client and server versions
   keys                Manage seal keys                            [2m    [0m   [2mgen · rotate · list[0m
-  vault               Check or rotate the credential vault        [2msoon[0m   [2mstatus · rotate[0m
+  vault               Check or rotate the credential vault        [2m    [0m   [2mstatus · rotate[0m
   completion          Print shell completion                      [2msoon[0m   [2mzsh · bash · fish[0m
 [1mAgents[0m
   agent               Register and control agents                 [2m    [0m   [2mcreate · list · show · suspend · resume · stop · start[0m
@@ -33,7 +33,7 @@ exit 0
   deeds               Browse and export deeds                     [2m    [0m   [2mlist · show · export[0m
   ledger              Check or prune the Ledger                   [2m    [0m   [2mcheck · prune[0m
 [1mConnectors[0m
-  connector           Connect tools                               [2msoon[0m   [2mcreate · list · show · test · types · credentials[0m
+  connector           Connect tools                               [2m    [0m   [2mcreate · list · show · test · types · credentials[0m
   connector postgres  Prepare a Postgres database                 [2msoon[0m   [2minit · check[0m
   connector gmail     Authorize the Gmail connector               [2msoon[0m   [2mauthorize[0m
   decoder             Inspect Postgres change readers             [2msoon[0m   [2mstatus · drop[0m

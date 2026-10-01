@@ -2,12 +2,14 @@ package config
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
 	"io/fs"
 	"log/slog"
+	"maps"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -228,7 +230,7 @@ func TestLoad(t *testing.T) {
 			`DEEDGLASS_ENV must be dev or prod (got "staging").`,
 			`DEEDGLASS_LISTEN must be host:port`,
 			`DEEDGLASS_BASE_URL must be an http or https URL`,
-			`DEEDGLASS_VAULT_KEY must be base64 of exactly 32 bytes (got 5).`,
+			`DEEDGLASS_VAULT_KEY has a first key of 5 bytes; each key must be exactly 32.`,
 			`DEEDGLASS_API_KEY_PEPPER must be base64 of at least 32 bytes (it isn't valid base64).`,
 			`DEEDGLASS_LOG_LEVEL must be one of debug, info, warn, error`,
 			`DEEDGLASS_SIGNUP must be one of invite, closed`,
@@ -699,5 +701,70 @@ func TestExampleYAML(t *testing.T) {
 	fsys := fstest.MapFS{"deedglass.yaml": {Data: []byte(strings.Join(out, "\n"))}}
 	if _, ws, err := Load(LoadOptions{Env: map[string]string{}, FS: fsys, Dir: t.TempDir()}); err != nil || len(ws) != 0 {
 		t.Fatalf("uncommented example: %v %v", err, ws)
+	}
+}
+
+// TestVaultKeyRing is S16's key-ring table: 1 key, 2 keys, then four precise refusals.
+func TestVaultKeyRing(t *testing.T) {
+	k1 := base64.StdEncoding.EncodeToString(bytes.Repeat([]byte{1}, 32))
+	k2 := base64.StdEncoding.EncodeToString(bytes.Repeat([]byte{2}, 32))
+	k31 := base64.StdEncoding.EncodeToString(bytes.Repeat([]byte{3}, 31))
+	cases := []struct {
+		ring    string
+		problem string
+		ids     int
+	}{
+		{ring: k1, ids: 1},
+		{ring: k1 + "," + k2, ids: 2},
+		{ring: k1 + ",!!notbase64", problem: "DEEDGLASS_VAULT_KEY has a second key that isn't base64. Generate a key with `openssl rand -base64 32`."},
+		{ring: k31, problem: "DEEDGLASS_VAULT_KEY has a first key of 31 bytes; each key must be exactly 32."},
+		{ring: k1 + "," + k1, problem: "DEEDGLASS_VAULT_KEY lists the same key twice (the first and the second, kek:"},
+		{ring: strings.Repeat(k1+",", 4) + k2, problem: "DEEDGLASS_VAULT_KEY holds 5 keys; a ring holds at most 4. Run deedglass vault rotate"},
+	}
+	for _, tc := range cases {
+		env := map[string]string{"DEEDGLASS_VAULT_KEY": tc.ring, "DEEDGLASS_API_KEY_PEPPER": key32}
+		c, _, err := Load(LoadOptions{Env: env, FS: fstest.MapFS{}})
+		if tc.problem != "" {
+			if err == nil || !strings.Contains(err.Error(), tc.problem) {
+				t.Errorf("%.20s…: err = %v, want %q", tc.ring, err, tc.problem)
+			}
+			if err != nil && (strings.Contains(err.Error(), k1) || strings.Contains(err.Error(), k31)) {
+				t.Errorf("the problem prints a key: %v", err)
+			}
+			continue
+		}
+		if err != nil {
+			t.Fatalf("%v", err)
+		}
+		ids := c.VaultKeyIDs()
+		if len(ids) != tc.ids {
+			t.Fatalf("ids = %v", ids)
+		}
+		var out bytes.Buffer
+		if err := c.Print(&out, false); err != nil {
+			t.Fatal(err)
+		}
+		if strings.Contains(out.String(), k1) || !strings.Contains(out.String(), ids[0]+" (active)") {
+			t.Errorf("config print: %s", out.String())
+		}
+	}
+}
+
+// TestEgressAllowCIDRs: private ranges are accepted; anything overlapping metadata, reserved,
+// IPv4-embedding or loopback ranges is refused.
+func TestEgressAllowCIDRs(t *testing.T) {
+	base := map[string]string{"DEEDGLASS_VAULT_KEY": key32, "DEEDGLASS_API_KEY_PEPPER": key32}
+	ok := maps.Clone(base)
+	ok["DEEDGLASS_EGRESS_ALLOW_CIDRS"] = "10.20.0.0/16, 192.168.4.7/32"
+	c, _, err := Load(LoadOptions{Env: ok, FS: fstest.MapFS{}})
+	if err != nil || len(c.EgressAllowCIDRs) != 2 {
+		t.Fatalf("%v %v", c, err)
+	}
+	for _, bad := range []string{"0.0.0.0/0", "169.254.0.0/16", "127.0.0.0/8", "::ffff:0:0/96", "10.0.0.1"} {
+		env := maps.Clone(base)
+		env["DEEDGLASS_EGRESS_ALLOW_CIDRS"] = bad
+		if _, _, err := Load(LoadOptions{Env: env, FS: fstest.MapFS{}}); err == nil || !strings.Contains(err.Error(), "DEEDGLASS_EGRESS_ALLOW_CIDRS") {
+			t.Errorf("%s: %v", bad, err)
+		}
 	}
 }

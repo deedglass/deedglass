@@ -26,7 +26,8 @@ const (
 // Code is the error envelope's "code". Codes are never renamed (contract §8).
 type Code string
 
-// The contract's 24 codes, then S03's 9 additions, then S07's 6, then S11's 1, then S12's 1.
+// The contract's 24 codes, then S03's 9 additions, then S07's 6, then S11's 1, then S12's 1, then
+// S16's 7.
 const (
 	CodeInvalidAPIKey        Code = "invalid_api_key"
 	CodeAPIKeyRevoked        Code = "api_key_revoked"
@@ -73,6 +74,16 @@ const (
 	CodePolicyUnavailable Code = "policy_unavailable"
 
 	CodePolicyInvalid Code = "policy_invalid"
+
+	// S16: connectors, the vault and egress. Most appear as an action's execution.error_code; the
+	// connector routes answer with destination_blocked and vault_unavailable directly.
+	CodeCredentialsMissing  Code = "credentials_missing"
+	CodeDestinationBlocked  Code = "destination_blocked"
+	CodeVaultUnavailable    Code = "vault_unavailable"
+	CodeUpstreamAuthFailed  Code = "upstream_auth_failed"
+	CodeUpstreamNotFound    Code = "upstream_not_found"
+	CodeUpstreamRateLimited Code = "upstream_rate_limited"
+	CodeResponseTooLarge    Code = "response_too_large"
 )
 
 // DocURLPrefix is where every code has a page (docs/api/errors.md, published by S33).
@@ -157,6 +168,17 @@ var catalog = []CatalogEntry{
 
 	{CodePolicyInvalid, 400, TypeInvalidRequest, "The policy wasn't accepted. The diagnostics list each problem with its line and a hint.",
 		"The policy has {n} errors. The first is on line {line}: {message}.", "S12"},
+
+	{CodeCredentialsMissing, 409, TypeInvalidRequest, "This connector has no credentials yet. Store them with deedglass connector credentials set, then retry.",
+		`The connector "{name}" has no credentials yet. Run deedglass connector credentials set {name} --from-env {NAME}_TOKEN.`, "S16"},
+	{CodeDestinationBlocked, 400, TypeInvalidRequest, "The connector's destination is blocked by Deedglass's network rules. An admin can see why in Console › Connectors.",
+		"base_url resolves to {ip}, {a class}. Deedglass never connects to it. Use the service's public address.", "S16"},
+	{CodeVaultUnavailable, 503, TypeAPI, "Deedglass couldn't open this connector's credentials. An admin has been alerted.",
+		"{n} credentials use {kek_id}, which isn't in DEEDGLASS_VAULT_KEY. Add it back as the second key, restart, then run deedglass vault rotate.", "S16"},
+	{CodeUpstreamAuthFailed, 502, TypeAPI, "The service refused the connector's credentials. An admin can replace them in Console › Connectors.", "", "S16"},
+	{CodeUpstreamNotFound, 502, TypeAPI, "The service has nothing at that address. Check the arguments.", "", "S16"},
+	{CodeUpstreamRateLimited, 429, TypeRateLimit, "The service is limiting requests. Wait, then send the call again.", "", "S16"},
+	{CodeResponseTooLarge, 502, TypeAPI, "The service answered with more than the connector's max_response_bytes, so Deedglass kept none of it. The call ran.", "", "S16"},
 }
 
 var byCode = func() map[Code]CatalogEntry {

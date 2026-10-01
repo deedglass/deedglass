@@ -60,9 +60,13 @@ func cliIn(t *testing.T, stdin []byte, env map[string]string, tty bool, args ...
 	return result{code, out.String(), errb.String()}
 }
 
+var reKEKID = regexp.MustCompile(`kek:[0-9a-f]{12}`)
+
 func golden(t *testing.T, name string, r result) {
 	t.Helper()
 	got := "exit " + string(rune('0'+r.code)) + "\n--- stdout\n" + r.stdout + "--- stderr\n" + r.stderr
+	// Dev secrets are generated per run, so the vault key's id is too (S16).
+	got = reKEKID.ReplaceAllString(got, "kek:000000000000")
 	path := filepath.Join("testdata", name+".golden")
 	if *update {
 		if err := os.MkdirAll("testdata", 0o755); err != nil {

@@ -42,12 +42,21 @@ const (
 	AdminPolicyActivated   = "policy.activated"
 	AdminPolicyDeactivated = "policy.deactivated"
 
+	// S16: connectors and the vault. Target {connector, con_…}; data: type, connector (the name),
+	// config_hash, and for credentials kind, version and kek_id. Never a value or a digest of one
+	// (a hash of a low-entropy password invites offline guessing).
+	AdminConnectorCreated            = "connector.created"
+	AdminConnectorUpdated            = "connector.updated"
+	AdminConnectorDeleted            = "connector.deleted"
+	AdminConnectorCredentialsUpdated = "connector.credentials_updated"
+	AdminConnectorCredentialsRemoved = "connector.credentials_removed"
+	AdminVaultRotated                = "vault.rotated" // target {org, org_…}; data: rewrapped, from, to
+
 	// S07: security events, recorded in admin_events without a deed (AppendAdminEvent).
 	AdminUserSignedIn  = "user.signed_in"
 	AdminUserSignedOut = "user.signed_out"
 
 	// Planned, each added by its session with the exact spelling below:
-	//   S16  connector.credentials_updated
 	//   S20  decoder.slot_created decoder.slot_dropped
 	//   S22  approval.decided approval.countersigned webhook.created webhook.deleted webhook.disabled
 	//   S27  anomaly.resolved insights.settings_changed
@@ -64,6 +73,8 @@ var AdminActions = []string{
 	AdminOrgStoppedAll, AdminOrgStartedAll, AdminAPIKeyCreated, AdminAPIKeyRolled, AdminAPIKeyRevoked,
 	AdminAgentIntentKeyAdded, AdminAgentIntentKeyRemoved, AdminAgentIntentMode,
 	AdminPolicyActivated, AdminPolicyDeactivated,
+	AdminConnectorCreated, AdminConnectorUpdated, AdminConnectorDeleted, AdminConnectorCredentialsUpdated,
+	AdminConnectorCredentialsRemoved, AdminVaultRotated,
 }
 
 // AdminEventActions are admin events recorded without a deed (AppendAdminEvent): security events

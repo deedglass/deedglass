@@ -15,6 +15,8 @@ import (
 	"time"
 
 	"go.yaml.in/yaml/v3"
+
+	"github.com/deedglass/deedglass/internal/vault/keyring"
 )
 
 // maxYAML caps deedglass.yaml. With anchors, aliases and merge keys refused, this defeats YAML bombs.
@@ -306,7 +308,9 @@ func (l *loader) devSecrets(c *Config) {
 		if err == nil {
 			err = json.Unmarshal(b, &f)
 		}
+		_, verr := keyring.Parse(f.VaultKey)
 		vn, vok := b64Len(f.VaultKey)
+		vok = vok && verr == nil
 		pn, pok := b64Len(f.APIKeyPepper)
 		if err != nil || !vok || vn != 32 || !pok || pn < 32 {
 			l.problem(rel, "is damaged.", "Delete it to generate new dev secrets. Dev API keys made with the old pepper stop working.")

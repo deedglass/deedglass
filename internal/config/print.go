@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io"
 	"strings"
+
+	"github.com/deedglass/deedglass/internal/vault/keyring"
 )
 
 // Row is one line of `deedglass config print`.
@@ -24,8 +26,16 @@ func (c *Config) Rows() []Row {
 		r := Row{Name: k.Name, Secret: k.Secret, Client: k.Client, Source: c.Source(k.Name)}
 		v, ok := c.raw[k.Name]
 		switch {
-		case k.Name == "DEEDGLASS_VAULT_KEY" && c.VaultKey.IsSet(),
-			k.Name == "DEEDGLASS_API_KEY_PEPPER" && c.APIKeyPepper.IsSet():
+		case k.Name == "DEEDGLASS_VAULT_KEY" && c.VaultKey.IsSet():
+			// Only the derived key ids, never the keys (S16): kek:3f9a1c2b7d8e (active), kek:… .
+			r.Value, r.Set = Redacted, true
+			if ids := c.VaultKeyIDs(); len(ids) > 0 {
+				r.Value = ids[0] + " (active)"
+				if len(ids) > 1 {
+					r.Value += ", " + strings.Join(ids[1:], ", ")
+				}
+			}
+		case k.Name == "DEEDGLASS_API_KEY_PEPPER" && c.APIKeyPepper.IsSet():
 			r.Value, r.Set = Redacted, true
 		case !ok:
 		case k.Kind == KindPostgresURL:
@@ -124,4 +134,16 @@ func MarkdownTable() string {
 		fmt.Fprintf(&b, "| `%s` | %s | %s | %s | %s | %s | %s |\n", k.Name, yamlKey, def, secret, k.Commands, doc, k.Owner)
 	}
 	return b.String()
+}
+
+// VaultKeyIDs lists the vault key ring's ids, active first, or nil when no ring is set.
+func (c *Config) VaultKeyIDs() []string {
+	if !c.VaultKey.IsSet() {
+		return nil
+	}
+	ks, err := keyring.Parse(c.VaultKey.Reveal())
+	if err != nil {
+		return nil
+	}
+	return keyring.IDs(ks)
 }

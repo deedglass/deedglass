@@ -17,15 +17,28 @@ const MaxErrorMessage = 1024
 
 // classify is the one table that turns a connector's answer into an execution status (S13 §3.5).
 // failed means the upstream certainly did not apply the call; anything in doubt is unknown. S16
-// adds kinds to the failed row (auth, not_found, rate_limited, destination_blocked,
-// credentials_missing, vault) and too_large to the unknown row.
+// adds auth, not_found, rate_limited, destination_blocked, credentials_missing and vault to the
+// failed row and too_large to the unknown row (the call ran; its answer was too big to keep).
 var classify = map[connector.Kind]ExecStatus{
-	connector.KindInvalidRequest: ExecFailed,
-	connector.KindConfig:         ExecFailed,
-	connector.KindToolError:      ExecFailed,
-	connector.KindCancelled:      ExecFailed,
-	connector.KindUpstream:       ExecUnknown,
-	connector.KindTimeout:        ExecUnknown,
+	connector.KindInvalidRequest:     ExecFailed,
+	connector.KindConfig:             ExecFailed,
+	connector.KindToolError:          ExecFailed,
+	connector.KindCancelled:          ExecFailed,
+	connector.KindAuth:               ExecFailed,
+	connector.KindNotFound:           ExecFailed,
+	connector.KindRateLimited:        ExecFailed,
+	connector.KindDestinationBlocked: ExecFailed,
+	connector.KindCredentialsMissing: ExecFailed,
+	connector.KindVault:              ExecFailed,
+	connector.KindUpstream:           ExecUnknown,
+	connector.KindTimeout:            ExecUnknown,
+	connector.KindTooLarge:           ExecUnknown,
+}
+
+// reached is the failed kinds whose request reached the upstream (it answered with a refusal), so
+// usage is recorded rather than released. The others never left Deedglass.
+var reached = map[connector.Kind]bool{
+	connector.KindToolError: true, connector.KindAuth: true, connector.KindNotFound: true, connector.KindRateLimited: true,
 }
 
 // errPanic marks a connector that panicked; the pipeline recovers it and records unknown.
@@ -77,7 +90,9 @@ func (p *Pipeline) execute(ctx context.Context, ex Executor, call connector.Call
 		switch st {
 		case ExecFailed:
 			e.ErrorCode = safeErrorCode(ce.Code, "tool_error")
-			e.Sent = ce.Kind == connector.KindToolError // invalid_request and config never reached the upstream
+			// invalid_request (unless the upstream answered it), config, destination_blocked,
+			// credentials_missing and vault never left Deedglass.
+			e.Sent = reached[ce.Kind] || ce.HTTPStatus != 0
 		default:
 			e.ErrorCode, e.Reason = safeErrorCode(ce.Code, "upstream_error"), ReasonOutcomeUnknown
 			if ce.Kind == connector.KindTimeout || errors.Is(err, context.DeadlineExceeded) {

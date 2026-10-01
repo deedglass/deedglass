@@ -13,7 +13,8 @@ LDFLAGS  := -s -w -X $(BI).Version=$(VERSION) -X $(BI).Commit=$(COMMIT) -X $(BI)
 	dev dev-down dev-reset dev-logs run docker bench-http bench-verify \
 	web-verify-install web-verify-test web-verify-build web-verify-serve gencopy genmark bench-mark bench-ledger bench-stop bench-intents bench-gate policy-test \
 	fuzz-policy fuzz-policy-short bench-policy bench-eval mcp-it bench-mcp \
-	demo-up demo-down demo-reset demo-status demo-snippet demo-psql demo-follow demo-verify demo-smoke bench-gateway
+	demo-up demo-down demo-reset demo-status demo-snippet demo-psql demo-follow demo-verify demo-smoke bench-gateway \
+	mock-orders bench-connectors
 
 all: ci
 
@@ -85,6 +86,17 @@ fuzz: ## 30 s each: the strict intent parser, the id parser, and the deed envelo
 	$(GO) test ./internal/policy -run '^$$' -fuzz '^FuzzCompile$$' -fuzztime 30s
 	$(GO) test ./internal/policy -run '^$$' -fuzz '^FuzzYAMLReader$$' -fuzztime 30s
 	$(GO) test ./internal/identity -run '^$$' -fuzz '^FuzzIntentHeader$$' -fuzztime 30s
+	$(GO) test ./internal/connector/rest -run '^$$' -fuzz '^FuzzTemplatePath$$' -fuzztime 30s
+	$(GO) test ./internal/connector/egress -run '^$$' -fuzz '^FuzzCheckURL$$' -fuzztime 30s
+	$(GO) test ./internal/vault -run '^$$' -fuzz '^FuzzRedactor$$' -fuzztime 30s
+
+mock-orders: ## S16: the mock orders API on 127.0.0.1:8090 (MOCK_ORDERS_TOKEN required; MOCK_ORDERS_MODE=lying for S19)
+	$(GO) run ./examples/mock-orders
+
+bench-connectors: ## S16: vault open, redaction, egress classification and REST overhead (no network); JSON in bench/results/
+	@mkdir -p bench/results; out="$(CURDIR)/bench/results/$$(date +%F)-$$(go env GOOS)-$$(go env GOARCH)-connectors.json"; \
+	$(GO) test -run '^$$' -bench . -benchmem -count 5 -json ./internal/vault ./internal/connector/egress ./internal/connector/rest > "$$out"; st=$$?; \
+	grep -o '"Output":"Benchmark[^"]*' "$$out" | sed 's/"Output":"//; s/\\t/ /g; s/\\n//' | sort | uniq | head -40; echo "raw: $$out"; exit $$st
 
 bench: ## benchmarks for ids and config
 	$(GO) test -run '^$$' -bench . -benchmem -cpu 1,8 ./internal/ids ./internal/config

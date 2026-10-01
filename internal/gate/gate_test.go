@@ -240,8 +240,30 @@ func TestClassify(t *testing.T) {
 			return connector.Result{}, &connector.Error{Kind: connector.KindTimeout}
 		}, ExecUnknown, "timeout", ReasonTimeout, true},
 		{"an unknown kind is unknown", func(context.Context, connector.Call) (connector.Result, error) {
-			return connector.Result{}, &connector.Error{Kind: "vault"}
+			return connector.Result{}, &connector.Error{Kind: "mystery"}
 		}, ExecUnknown, "upstream_error", ReasonOutcomeUnknown, true},
+		// S16's kinds.
+		{"auth reached the upstream", func(context.Context, connector.Call) (connector.Result, error) {
+			return connector.Result{}, connector.FromStatus(401, 0)
+		}, ExecFailed, "upstream_auth_failed", "", true},
+		{"rate limited", func(context.Context, connector.Call) (connector.Result, error) {
+			return connector.Result{}, connector.FromStatus(429, 2*time.Second)
+		}, ExecFailed, "upstream_rate_limited", "", true},
+		{"upstream 4xx answered", func(context.Context, connector.Call) (connector.Result, error) {
+			return connector.Result{}, connector.FromStatus(422, 0)
+		}, ExecFailed, "upstream_error", "", true},
+		{"destination blocked never sent", func(context.Context, connector.Call) (connector.Result, error) {
+			return connector.Result{}, &connector.Error{Kind: connector.KindDestinationBlocked, Code: "destination_blocked", AgentMessage: "Blocked."}
+		}, ExecFailed, "destination_blocked", "", false},
+		{"credentials missing never sent", func(context.Context, connector.Call) (connector.Result, error) {
+			return connector.Result{}, connector.ErrCredentialsMissing("orders")
+		}, ExecFailed, "credentials_missing", "", false},
+		{"vault never sent", func(context.Context, connector.Call) (connector.Result, error) {
+			return connector.Result{}, connector.ErrVaultUnavailable(errors.New("x"))
+		}, ExecFailed, "vault_unavailable", "", false},
+		{"too large ran", func(context.Context, connector.Call) (connector.Result, error) {
+			return connector.Result{}, connector.ErrResponseTooLarge(4 << 20)
+		}, ExecUnknown, "response_too_large", ReasonOutcomeUnknown, true},
 		{"untyped", func(context.Context, connector.Call) (connector.Result, error) {
 			return connector.Result{}, errors.New("socket closed")
 		}, ExecUnknown, "upstream_error", ReasonOutcomeUnknown, true},

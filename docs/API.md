@@ -502,6 +502,25 @@ documented in [MCP.md](MCP.md); `api/openapi.yaml` describes them without modell
 Their refusals before the message is read (401, 403, 413, 415, 429) are JSON-RPC errors whose
 `data` carries the usual `code`, `doc_url` and `request_id`.
 
+## Connectors and credentials (S16)
+
+Connectors turn an API into governed tools; their credentials are write-only
+([CONNECTORS.md](CONNECTORS.md), [VAULT.md](VAULT.md)). Every route takes a Console session (viewers
+read, admins change) or an org admin key; agent keys get 403 `insufficient_scope` everywhere.
+
+```sh
+deedglass connector credentials set orders --from-env ORDERS_TOKEN   # PUT /v1/connectors/{id}/credentials
+```
+
+```json
+{ "object": "credential", "connector": "con_01j9zq7c4m8x2v6t0r3n5k1h7d", "set": true, "kind": "bearer", "fields": ["token"],
+  "hint": "…9f2c", "version": 1, "kek_id": "kek:3f9a1c2b7d8e", "updated_at": "2026-10-06T05:14:02Z", "updated_by": "key_01j9…" }
+```
+
+No route returns a credential value. `PUT …/credentials` bodies are never logged and never stored
+for replay. A blocked `base_url` is 400 `destination_blocked` with `param: "config.base_url"`. The
+nine routes, their objects and their errors are in `api/openapi.yaml` (tag Connectors).
+
 ## The policy routes (S12)
 
 | Route | Role | Returns |

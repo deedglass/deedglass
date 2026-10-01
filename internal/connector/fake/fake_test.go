@@ -80,7 +80,7 @@ func TestSlowRespectsDeadline(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Millisecond)
 	defer cancel()
 	start := time.Now()
-	_, err := c.Execute(ctx, connector.Call{Tool: spec, Args: json.RawMessage(`{}`)})
+	_, err := c.Execute(ctx, nil, connector.Call{Tool: spec, Args: json.RawMessage(`{}`)})
 	ce := connector.AsError(err)
 	if ce == nil || ce.Kind != connector.KindTimeout || !errors.Is(err, context.DeadlineExceeded) {
 		t.Fatalf("err %v, want a timeout", err)
@@ -90,7 +90,7 @@ func TestSlowRespectsDeadline(t *testing.T) {
 	}
 	ctx2, cancel2 := context.WithCancel(context.Background())
 	cancel2()
-	_, err = c.Execute(ctx2, connector.Call{Tool: spec, Args: json.RawMessage(`{}`)})
+	_, err = c.Execute(ctx2, nil, connector.Call{Tool: spec, Args: json.RawMessage(`{}`)})
 	if ce := connector.AsError(err); ce == nil || ce.Kind != connector.KindUpstream {
 		t.Fatalf("cancelled: %v, want upstream", err)
 	}
@@ -105,18 +105,18 @@ func TestPanicAndCounters(t *testing.T) {
 				t.Error("no panic")
 			}
 		}()
-		_, _ = c.Execute(context.Background(), connector.Call{ActionID: id, Tool: tools[0], Args: json.RawMessage(`{"_fake":{"panic":true}}`)})
+		_, _ = c.Execute(context.Background(), nil, connector.Call{ActionID: id, Tool: tools[0], Args: json.RawMessage(`{"_fake":{"panic":true}}`)})
 	}()
 	if c.CallsFor(id.String()) != 1 || c.CallsFor("act_other") != 0 {
 		t.Fatalf("CallsFor %d", c.CallsFor(id.String()))
 	}
-	if _, err := c.Execute(context.Background(), connector.Call{Tool: connector.ToolSpec{Name: "nope"}, Args: json.RawMessage(`{}`)}); connector.AsError(err) == nil {
+	if _, err := c.Execute(context.Background(), nil, connector.Call{Tool: connector.ToolSpec{Name: "nope"}, Args: json.RawMessage(`{}`)}); connector.AsError(err) == nil {
 		t.Fatal("unknown tool ran")
 	}
-	if c.Name() != "fake" || c.Type() != "fake" || len(c.Tools()) != 4 {
+	if connector.Builtin(c).Name() != "fake" || c.Type() != "fake" || len(connector.Builtin(c).Tools()) != 4 {
 		t.Fatal("identity")
 	}
-	for _, sp := range c.Tools() {
+	for _, sp := range connector.Builtin(c).Tools() {
 		if !json.Valid(sp.InputSchema) || !strings.Contains(string(sp.InputSchema), `"additionalProperties": false`) {
 			t.Errorf("%s: schema", sp.Name)
 		}

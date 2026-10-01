@@ -41,8 +41,13 @@
 # Proxies whose X-Forwarded-For is believed, as CIDRs.
 # trusted_proxies: [10.0.0.0/8]
 
-# Dev only: let connectors reach private networks. Prod refuses it.
+# Dev only: let connectors reach private networks and loopback. Prod refuses it. Cloud metadata
+# and reserved addresses stay unreachable even with it (docs/NETWORK_EGRESS.md).
 # allow_private_networks: false
+
+# Private networks connectors may reach in any env, as CIDRs (S16). Never metadata, reserved,
+# IPv4-embedding or loopback ranges. Deedglass's own database needs its exact address (/32).
+# egress_allow_cidrs: 10.20.0.0/16,10.30.0.0/16
 
 # A separate listener for Prometheus metrics at /metrics. Off when unset; keep it on localhost.
 # metrics_listen: 127.0.0.1:9464

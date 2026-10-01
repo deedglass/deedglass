@@ -20,13 +20,38 @@ const (
 	SideEffectUnknown     SideEffect = "unknown"
 )
 
-// ToolSpec describes one tool a connector serves. S16 extends it; it never replaces it.
+// Rank orders side effects: read < write < destructive. Declared side effects can be raised,
+// never lowered (S16 §3.4).
+func (s SideEffect) Rank() int {
+	switch s {
+	case SideEffectRead:
+		return 1
+	case SideEffectWrite:
+		return 2
+	case SideEffectDestructive:
+		return 3
+	}
+	return 0
+}
+
+// ReadBackSpec is how S19's L1 witness reads a write back: another tool of the same connector,
+// with arguments templated from the call ("{{args.id}}"). Stored and shape-checked in S16.
+type ReadBackSpec struct {
+	Tool string            `json:"tool"`
+	Args map[string]string `json:"args,omitempty"`
+}
+
+// ToolSpec describes one tool a connector serves. S16 extends S13's shape; it never replaces it.
 type ToolSpec struct {
-	Name        string          // unqualified: "echo"
-	Description string          //
-	InputSchema json.RawMessage // a JSON Schema subset (ValidateArgs; S16 brings the full validator)
-	SideEffect  SideEffect      //
-	Idempotent  bool            // safe to run twice with the same arguments
+	Name          string          // unqualified: "echo", "get", "update_status"
+	Description   string          // ≤ 1,024 characters
+	InputSchema   json.RawMessage // the connector/schema subset
+	OutputSchema  json.RawMessage // feeds S19's L0 check
+	SideEffect    SideEffect      //
+	Idempotent    bool            // safe to run twice with the same arguments
+	Internal      bool            // never listed to agents (S23 postgres.undo)
+	Postcondition string          // CEL, S19
+	ReadBack      *ReadBackSpec   // S19
 }
 
 // Call is one execution the Gate asks a connector for. Args are the normalized arguments; the
@@ -50,16 +75,19 @@ type Money struct {
 
 // Result is what a tool returned when it ran.
 type Result struct {
-	Output  json.RawMessage // stored up to gate.max_result_bytes; larger outputs are digested and truncated
-	Meta    map[string]any  // http_status, rows_affected… (S16); never stored in a deed
-	Cost    *Money          // what the call cost, when the tool reports it
-	Latency time.Duration   // measured by the Gate when the connector leaves it zero
+	Output   json.RawMessage   // to the agent; ≤ MaxOutput; redacted by the registry
+	Meta     map[string]any    // http_status, rows_affected…; the witness and the Console see it, never a deed
+	Evidence map[string]string // xid8, marker_lsn… (S17); the witness only, never sent to agents
+	Cost     *Money            // what the call cost, when the tool reports it
+	Latency  time.Duration     // measured by the Gate when the connector leaves it zero
 }
 
+// MaxOutput is the most a connector's output may be after redaction.
+const MaxOutput = 1 << 20
+
 // Kind classifies a connector failure. The Gate maps it to execution.status (gate/execute.go):
-// invalid_request, config and tool_error certainly did not apply (failed); upstream and timeout
-// may have (unknown). S16 adds auth, not_found, rate_limited, destination_blocked,
-// credentials_missing, too_large and vault.
+// the kinds that certainly did not apply are failed; upstream, timeout and too_large may have
+// (unknown).
 type Kind string
 
 const (
@@ -71,20 +99,52 @@ const (
 	// KindCancelled: the caller went away (or the agent was stopped) before the call was sent, so
 	// nothing reached the upstream (S15).
 	KindCancelled Kind = "cancelled"
+
+	// S16.
+	KindAuth               Kind = "auth"                // the upstream refused the credential (401/403)
+	KindNotFound           Kind = "not_found"           // 404
+	KindRateLimited        Kind = "rate_limited"        // 429, after the retries the call allows
+	KindDestinationBlocked Kind = "destination_blocked" // egress refused the destination: nothing was sent
+	KindCredentialsMissing Kind = "credentials_missing" // the connector has no credentials: nothing was sent
+	KindTooLarge           Kind = "too_large"           // the response passed the cap: the call ran
+	KindVault              Kind = "vault"               // the credential couldn't be opened: nothing was sent
 )
 
-// Error is a typed connector failure. AgentMessage is safe to show the agent and already redacted;
-// Err is the cause for the server log and is never shown or stored.
+// Error codes connectors use (contract §8; each has a doc page).
+const (
+	CodeValidationFailed     = "validation_failed"
+	CodeUpstreamError        = "upstream_error"
+	CodeTimeout              = "timeout"
+	CodeUpstreamAuthFailed   = "upstream_auth_failed"
+	CodeUpstreamNotFound     = "upstream_not_found"
+	CodeUpstreamRateLimited  = "upstream_rate_limited"
+	CodeDestinationBlocked   = "destination_blocked"
+	CodeCredentialsMissing   = "credentials_missing"
+	CodeResponseTooLarge     = "response_too_large"
+	CodeConnectorUnavailable = "connector_unavailable"
+	CodeVaultUnavailable     = "vault_unavailable"
+)
+
+// Error is a typed connector failure. AgentMessage is safe to show the agent and already
+// redacted; AdminDetail is for the server log and the Console (never the agent); Err is the cause
+// for the server log and is never shown or stored.
 type Error struct {
 	Kind         Kind
 	Code         string // copied to execution.error_code: ^[a-z][a-z0-9_]{0,63}$
 	AgentMessage string
+	AdminDetail  string
+	Retryable    bool
+	RetryAfter   time.Duration
+	HTTPStatus   int
 	Err          error
 }
 
 func (e *Error) Error() string {
 	if e.Err != nil {
 		return fmt.Sprintf("connector %s (%s): %v", e.Kind, e.Code, e.Err)
+	}
+	if e.AdminDetail != "" {
+		return fmt.Sprintf("connector %s (%s): %s", e.Kind, e.Code, e.AdminDetail)
 	}
 	return fmt.Sprintf("connector %s (%s)", e.Kind, e.Code)
 }
@@ -104,6 +164,6 @@ func AsError(err error) *Error {
 var (
 	// ErrToolUnknown: no connector serves this tool (or the name isn't a tool name).
 	ErrToolUnknown = errors.New("connector: no tool by that name")
-	// ErrConnectorUnavailable: the connector exists but can't run now (S16: no credentials, disabled).
+	// ErrConnectorUnavailable: the connector exists but can't run now (disabled).
 	ErrConnectorUnavailable = errors.New("connector: unavailable")
 )

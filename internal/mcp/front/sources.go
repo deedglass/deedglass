@@ -99,8 +99,12 @@ func (s *NativeSource) All(ctx context.Context, pr identity.Principal) ([]Native
 // AllWithPolicy is All plus the enforced policy version the visibility came from (nil when none).
 func (s *NativeSource) AllWithPolicy(ctx context.Context, pr identity.Principal) ([]NativeTool, *string, error) {
 	var nts []NativeTool
-	for _, c := range s.Connectors {
+	for _, cc := range s.Connectors {
+		c := connector.Builtin(cc)
 		for _, spec := range c.Tools() {
+			if spec.Internal {
+				continue
+			}
 			name := c.Name() + "." + spec.Name
 			def := nativeDef(name, spec)
 			nts = append(nts, NativeTool{
@@ -154,12 +158,13 @@ func (s *NativeSource) Lookup(_ context.Context, _ identity.Principal, name stri
 	if !ok {
 		return Tool{}, false, nil
 	}
-	for _, c := range s.Connectors {
+	for _, cc := range s.Connectors {
+		c := connector.Builtin(cc)
 		if c.Name() != conn {
 			continue
 		}
 		for _, spec := range c.Tools() {
-			if spec.Name == tool {
+			if spec.Name == tool && !spec.Internal {
 				def := nativeDef(name, spec)
 				return Tool{Name: name, Gate: name, Def: def, Schema: spec.InputSchema, Digest: DefDigest(def)}, true, nil
 			}

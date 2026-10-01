@@ -56,6 +56,13 @@ tags:
       admin deed), and the lint, dry-run and test tools (docs/POLICY_LANGUAGE.md). Every route
       accepts a Console session (by role) or an org admin key (`admin` scope). Agent keys get 403
       `insufficient_scope` on all of them, reads included.
+  - name: Connectors
+    description: >-
+      Connectors turn an API into governed tools, and hold its credential (docs/CONNECTORS.md).
+      Credentials are write-only: no route returns a value, only the kind, the field names and a
+      short hint. Every route accepts a Console session (viewers read, admins change) or an org
+      admin key (`admin` scope); agent keys get 403 `insufficient_scope` on all of them, reads
+      included. Every change seals an admin deed.
   - name: MCP
     description: "MCP authorization readiness: OAuth protected-resource metadata (RFC 9728) and the /mcp endpoints."
 paths:
@@ -3107,6 +3114,295 @@ paths:
               schema: {type: string}
         default:
           $ref: "#/components/responses/Error"
+  /v1/connectors:
+    get:
+      operationId: listConnectors
+      summary: List connectors
+      description: >-
+        Live connectors, oldest id first, each with its tools, the credential's metadata (never a
+        value) and the last test result. A viewer+ Console session or an org admin key.
+      tags: [Connectors]
+      security: [{bearerAuth: []}, {sessionCookie: []}]
+      x-deedglass-auth: session_or_key
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+      responses:
+        "200":
+          description: A page of connectors.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectorList"
+        default:
+          $ref: "#/components/responses/Error"
+    post:
+      operationId: createConnector
+      summary: Add a connector
+      description: >-
+        Validates and normalizes the config, checks `base_url` through the egress rules (400
+        `destination_blocked` for metadata, reserved, loopback or private addresses that aren't
+        allowed), and seals `connector.created` with the type, name and config hash. Names are
+        `^[a-z][a-z0-9-]{1,31}$`, unique among live connectors; `deedglass`, `mcp`, `native` (and
+        `fake` outside dev) are reserved. A taken name is 409 `conflict`. Credentials are set
+        separately. An admin+ Console session (with `Deedglass-CSRF`) or an org admin key.
+      tags: [Connectors]
+      security: [{bearerAuth: []}, {sessionCookie: []}]
+      x-deedglass-auth: session_or_key
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+        - $ref: "#/components/parameters/CSRFWithSession"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [type, name, config]
+              properties:
+                type: {type: string, description: "A connector type from GET /v1/connector-types (rest in S16)."}
+                name: {type: string, pattern: "^[a-z][a-z0-9-]{1,31}$"}
+                description: {type: string, maxLength: 500}
+                config: {type: object, description: "The type's config (docs/CONNECTORS.md). At most 64 KiB."}
+      responses:
+        "201":
+          description: The connector, with the id of its admin deed.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Connector"
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/connectors/{id}:
+    get:
+      operationId: getConnector
+      summary: Get a connector
+      description: By `con_…` id or by name. A viewer+ Console session or an org admin key.
+      tags: [Connectors]
+      security: [{bearerAuth: []}, {sessionCookie: []}]
+      x-deedglass-auth: session_or_key
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+        - $ref: "#/components/parameters/ConnectorRef"
+      responses:
+        "200":
+          description: The connector.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Connector"
+        default:
+          $ref: "#/components/responses/Error"
+    patch:
+      operationId: updateConnector
+      summary: Update a connector
+      description: >-
+        Replaces `description`, `status` (`active` or `disabled`) or the whole `config`. With
+        `expected_config_hash`, a config that changed meanwhile is 409 `conflict`. A change seals
+        `connector.updated`; the next call uses the new config. An admin+ Console session or an org
+        admin key.
+      tags: [Connectors]
+      security: [{bearerAuth: []}, {sessionCookie: []}]
+      x-deedglass-auth: session_or_key
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+        - $ref: "#/components/parameters/CSRFWithSession"
+        - $ref: "#/components/parameters/ConnectorRef"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                description: {type: string, maxLength: 500}
+                status: {type: string, enum: [active, disabled]}
+                config: {type: object}
+                expected_config_hash: {type: string, pattern: "^sha256:[0-9a-f]{64}$"}
+      responses:
+        "200":
+          description: The connector after the change.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Connector"
+        default:
+          $ref: "#/components/responses/Error"
+    delete:
+      operationId: deleteConnector
+      summary: Delete a connector
+      description: >-
+        Soft-deletes the connector and crypto-shreds its credential (the data key is destroyed).
+        409 `conflict` while an action on it is executing. Seals `connector.deleted` (and
+        `connector.credentials_removed` when it had one). An admin+ Console session or an org admin
+        key.
+      tags: [Connectors]
+      security: [{bearerAuth: []}, {sessionCookie: []}]
+      x-deedglass-auth: session_or_key
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+        - $ref: "#/components/parameters/CSRFWithSession"
+        - $ref: "#/components/parameters/ConnectorRef"
+      responses:
+        "200":
+          description: The deletion.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectorDeleted"
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/connectors/{id}/credentials:
+    put:
+      operationId: setConnectorCredentials
+      summary: Store a connector's credentials
+      description: >-
+        Write-only. Encrypts the secret with a fresh data key (AES-256-GCM envelope,
+        docs/VAULT.md) as version n+1, replacing (and crypto-shredding) the previous one, and seals
+        `connector.credentials_updated` with the kind, version and key id only. The body is never
+        logged or stored for replay; errors name the `param`, never a value. The kind must be one the
+        type takes and match the config's `auth.kind`. An admin+ Console session or an org admin
+        key. 503 `vault_unavailable` when the server has no key ring.
+      tags: [Connectors]
+      security: [{bearerAuth: []}, {sessionCookie: []}]
+      x-deedglass-auth: session_or_key
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+        - $ref: "#/components/parameters/CSRFWithSession"
+        - $ref: "#/components/parameters/ConnectorRef"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [kind, secret]
+              properties:
+                kind: {type: string, enum: [bearer, header, basic, query, dsn, fields]}
+                secret:
+                  type: object
+                  description: "bearer {token} · header {value} · basic {username, password} · query {value} · dsn {dsn, witness_dsn?} · fields {any}. At most 16 KiB."
+                  additionalProperties: {type: string}
+      responses:
+        "200":
+          description: The credential's metadata.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Credential"
+        default:
+          $ref: "#/components/responses/Error"
+    delete:
+      operationId: deleteConnectorCredentials
+      summary: Delete a connector's credentials
+      description: >-
+        Removes the credential, which crypto-shreds it, and seals `connector.credentials_removed`.
+        Removing nothing answers `deleted: true` with no deed. An admin+ Console session or an org
+        admin key.
+      tags: [Connectors]
+      security: [{bearerAuth: []}, {sessionCookie: []}]
+      x-deedglass-auth: session_or_key
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+        - $ref: "#/components/parameters/CSRFWithSession"
+        - $ref: "#/components/parameters/ConnectorRef"
+      responses:
+        "200":
+          description: The credential, now unset.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Credential"
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/connectors/{id}/test:
+    post:
+      operationId: testConnector
+      summary: Test a connector
+      description: >-
+        Answers "will this work?" without changing anything: the config, the credential, the
+        destination (resolved and classified), TLS, and the config's test request (a GET or a HEAD)
+        with the credential. Records the result as the connector's `health`. At most 10 runs per
+        minute per connector (429 `rate_limited`). An admin+ Console session or an org admin key.
+      tags: [Connectors]
+      security: [{bearerAuth: []}, {sessionCookie: []}]
+      x-deedglass-auth: session_or_key
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+        - $ref: "#/components/parameters/CSRFWithSession"
+        - $ref: "#/components/parameters/ConnectorRef"
+      responses:
+        "200":
+          description: The checks.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectorTest"
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/connector-types:
+    get:
+      operationId: listConnectorTypes
+      summary: List connector types
+      description: >-
+        The types this server runs, each with its config schema and the credential kinds it takes
+        (each field marked secret or not). S26 builds the Console's forms from it. A viewer+ Console
+        session or an org admin key.
+      tags: [Connectors]
+      security: [{bearerAuth: []}, {sessionCookie: []}]
+      x-deedglass-auth: session_or_key
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+      responses:
+        "200":
+          description: The connector types.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectorTypeList"
+        default:
+          $ref: "#/components/responses/Error"
 components:
   securitySchemes:
     bearerAuth:
@@ -3207,6 +3503,13 @@ components:
       in: path
       required: true
       description: The agent id (`agt_…`).
+      schema:
+        type: string
+    ConnectorRef:
+      name: id
+      in: path
+      required: true
+      description: The connector's id (`con_…`) or its name.
       schema:
         type: string
     KeyId:
@@ -4439,6 +4742,13 @@ components:
                 - last_owner
                 - policy_unavailable
                 - policy_invalid
+                - credentials_missing
+                - destination_blocked
+                - vault_unavailable
+                - upstream_auth_failed
+                - upstream_not_found
+                - upstream_rate_limited
+                - response_too_large
             message:
               type: string
               description: One or more calm sentences with the next step.
@@ -5207,6 +5517,131 @@ components:
           next_from_seq: null
           duration_ms: 312
           checked_at: "2026-10-02T18:31:02.117Z"
+    Connector:
+      type: object
+      required: [object, id, type, name, description, status, config, config_hash, tools, credentials, health, created_at, updated_at]
+      properties:
+        object: {type: string, const: connector}
+        id: {type: string, pattern: "^con_[0-7][0-9a-hjkmnp-tv-z]{25}$"}
+        type: {type: string}
+        name: {type: string}
+        description: {type: string}
+        status: {type: string, enum: [active, disabled, error]}
+        config: {type: object, description: The normalized config.}
+        config_hash: {type: string, description: "sha256: of the normalized config's JCS form."}
+        tools:
+          type: array
+          items:
+            type: object
+            required: [object, name, side_effect, idempotent, levels]
+            properties:
+              object: {type: string, const: tool}
+              name: {type: string, description: "Qualified: <connector>.<tool>."}
+              description: {type: string}
+              side_effect: {type: string, enum: [read, write, destructive]}
+              idempotent: {type: boolean}
+              levels: {type: array, items: {type: string, enum: [L0, L1, L2]}}
+        credentials:
+          $ref: "#/components/schemas/Credential"
+        health:
+          type: object
+          required: [status, tested_at]
+          properties:
+            status: {type: string, enum: [unknown, pass, warn, fail, skip]}
+            tested_at: {type: [string, "null"], format: date-time}
+        created_at: {type: string, format: date-time}
+        updated_at: {type: string, format: date-time}
+        deed: {type: string, description: The admin deed of the change this answers.}
+    ConnectorList:
+      type: object
+      required: [object, data, has_more, next_cursor]
+      properties:
+        object: {type: string, const: list}
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Connector"
+        has_more: {type: boolean}
+        next_cursor: {type: [string, "null"]}
+    ConnectorDeleted:
+      type: object
+      required: [object, id, deleted, deed]
+      properties:
+        object: {type: string, const: connector}
+        id: {type: string}
+        deleted: {type: boolean, const: true}
+        deed: {type: string}
+    Credential:
+      type: object
+      description: A credential's metadata. Never a value, never a digest of one.
+      required: [object, connector, set]
+      properties:
+        object: {type: string, const: credential}
+        connector: {type: string}
+        set: {type: boolean}
+        kind: {type: string, enum: [bearer, header, basic, query, dsn, fields]}
+        fields: {type: array, items: {type: string}, description: The field names.}
+        hint: {type: string, description: "The last 4 characters of a token of 24 or more (…9f2c), the username of basic auth, or user@host:port/db of a DSN."}
+        version: {type: integer, minimum: 1}
+        kek_id: {type: string, pattern: "^kek:[0-9a-f]{12}$"}
+        updated_at: {type: string, format: date-time}
+        updated_by: {type: string}
+        deleted: {type: boolean}
+        deed: {type: string}
+    ConnectorTest:
+      type: object
+      required: [object, connector, status, duration_ms, checks]
+      properties:
+        object: {type: string, const: connector_test}
+        connector: {type: string}
+        status: {type: string, enum: [pass, warn, fail, skip]}
+        duration_ms: {type: integer}
+        checks:
+          type: array
+          items:
+            type: object
+            required: [id, title, status, detail]
+            properties:
+              id: {type: string, enum: [config, credentials, destination, tls, auth]}
+              title: {type: string}
+              status: {type: string, enum: [pass, warn, fail, skip]}
+              detail: {type: string}
+              fix: {type: string}
+              fix_sql: {type: string}
+              doc_url: {type: string}
+    ConnectorTypeList:
+      type: object
+      required: [object, data, has_more, next_cursor]
+      properties:
+        object: {type: string, const: list}
+        data:
+          type: array
+          items:
+            type: object
+            required: [object, type, title, levels, credential_kinds, config_schema, docs_url]
+            properties:
+              object: {type: string, const: connector_type}
+              type: {type: string}
+              title: {type: string}
+              description: {type: string}
+              levels: {type: array, items: {type: string}}
+              credential_kinds:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    kind: {type: string}
+                    fields:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          name: {type: string}
+                          secret: {type: boolean}
+              config_schema: {type: object}
+              docs_url: {type: string}
+        has_more: {type: boolean}
+        next_cursor: {type: [string, "null"]}
     Version:
       type: object
       required: [object, version, commit, built_at, go, api_versions, default_api_version]

@@ -1054,6 +1054,150 @@ fixed.
 }
 ```
 
+## credentials_missing
+
+**409 · invalid_request_error**
+
+**When it happens.** An action called a connector that has no credentials yet (S16). Nothing was
+sent: the action is `failed` with `execution.error_code: "credentials_missing"`, and its deed says
+so. The Gate never sends a call without the auth its connector is configured with.
+
+**What to do.** An admin stores the credential once, from the environment or stdin (never a flag):
+`deedglass connector credentials set orders --from-env ORDERS_TOKEN`. Then send the action again.
+
+```json
+{
+  "type": "invalid_request_error",
+  "code": "credentials_missing",
+  "message": "The connector \"orders\" has no credentials yet. Run deedglass connector credentials set orders --from-env ORDERS_TOKEN.",
+  "param": null
+}
+```
+
+## destination_blocked
+
+**400 · invalid_request_error**
+
+**When it happens.** A connector's destination is an address Deedglass never connects to: cloud
+metadata (even in dev), reserved or documentation ranges, an IPv6 address that embeds a blocked
+IPv4 one, loopback or a private network outside dev, or Deedglass's own database (S16,
+[NETWORK_EGRESS.md](../NETWORK_EGRESS.md)). Creating or updating the connector answers with this
+code and `param: "config.base_url"`. A destination that changes its DNS answer later is caught when
+the call dials: the action is then `failed` with this error code and nothing was sent. Agents see
+a terse message that names no address; admins see the address and its class.
+
+**What to do.** Point `base_url` at the service's public address. To reach a private network in
+prod on purpose, list it in `DEEDGLASS_EGRESS_ALLOW_CIDRS`.
+
+```json
+{
+  "type": "invalid_request_error",
+  "code": "destination_blocked",
+  "message": "base_url resolves to 169.254.169.254, a cloud metadata address. Deedglass never connects to it. Use the service's public address.",
+  "param": "config.base_url"
+}
+```
+
+## vault_unavailable
+
+**503 · api_error**
+
+**When it happens.** Deedglass couldn't open a connector's credential: it is wrapped by a key
+that isn't in `DEEDGLASS_VAULT_KEY`, or it failed to authenticate (a row moved to another org or
+connector, or changed on disk; the server logs the `vault_integrity` alert). Nothing was sent: the
+action is `failed` with this error code. Agents see only that an admin was alerted.
+
+**What to do.** If a key was removed too early, add it back as the second key, restart, and run
+`deedglass vault rotate` ([VAULT.md](../VAULT.md)). If the row failed to authenticate, store the
+credential again.
+
+```json
+{
+  "type": "api_error",
+  "code": "vault_unavailable",
+  "message": "Deedglass couldn't open this connector's credentials. An admin has been alerted.",
+  "param": null
+}
+```
+
+## upstream_auth_failed
+
+**502 · api_error**
+
+**When it happens.** The service a connector calls answered 401 or 403: it refused the stored
+credential (S16). The call reached the service and was refused, so the action is `failed`. The
+response body is kept in the action's result with every credential value replaced by `[redacted]`.
+
+**What to do.** Replace the credential: `deedglass connector credentials set orders --from-env
+ORDERS_TOKEN`, then check it with `deedglass connector test orders`.
+
+```json
+{
+  "type": "api_error",
+  "code": "upstream_auth_failed",
+  "message": "The service refused the connector's credentials. An admin can replace them in Console › Connectors.",
+  "param": null
+}
+```
+
+## upstream_not_found
+
+**502 · api_error**
+
+**When it happens.** The service answered 404 for the path the tool built from the agent's
+arguments (S16). The action is `failed`.
+
+**What to do.** Check the arguments, for example the order id.
+
+```json
+{
+  "type": "api_error",
+  "code": "upstream_not_found",
+  "message": "The service has nothing at that address. Check the arguments.",
+  "param": null
+}
+```
+
+## upstream_rate_limited
+
+**429 · rate_limit_error**
+
+**When it happens.** The service answered 429. Reads and calls with an idempotency header are
+retried up to twice, honouring a `Retry-After` of at most 5 s; a write without one is never
+retried (S16). The action is `failed`.
+
+**What to do.** Wait, then send the action again. If it happens often, give the agent a budget in
+its policy so it slows down before the service does.
+
+```json
+{
+  "type": "rate_limit_error",
+  "code": "upstream_rate_limited",
+  "message": "The service is limiting requests. Wait, then send the call again.",
+  "param": null
+}
+```
+
+## response_too_large
+
+**502 · api_error**
+
+**When it happens.** The service's answer passed the connector's `max_response_bytes` (4 MiB by
+default, 16 MiB at most), counted after decompression (S16). Deedglass read at most one byte past
+the limit and kept none of it. The call ran, so the action's outcome is `unknown` and its witness
+verdict `UNVERIFIABLE`.
+
+**What to do.** Narrow the request (a page size, a filter), or raise `max_response_bytes`.
+
+```json
+{
+  "type": "api_error",
+  "code": "response_too_large",
+  "message": "The service answered with more than the connector's max_response_bytes, so Deedglass kept none of it. The call ran.",
+  "param": null
+}
+```
+
 ## What this doesn't do
 
 - Errors don't carry localized messages. The copy is English, and the `code` is the stable part.

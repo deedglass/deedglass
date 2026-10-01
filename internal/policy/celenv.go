@@ -59,7 +59,7 @@ func newEnv() (*cel.Env, error) {
 			reflect.TypeFor[ToolFacts](), reflect.TypeFor[RequestFacts](), reflect.TypeFor[SQLFacts](),
 			reflect.TypeFor[AgentFacts](), reflect.TypeFor[UserFacts](), reflect.TypeFor[SessionFacts](),
 			reflect.TypeFor[OrgFacts](), reflect.TypeFor[TimeFacts](), reflect.TypeFor[UsageFacts](),
-			reflect.TypeFor[AnomalyFacts](),
+			reflect.TypeFor[AnomalyFacts](), reflect.TypeFor[HTTPFacts](),
 			ext.ParseStructTag("cel")),
 		cel.Variable("args", cel.MapType(cel.StringType, cel.DynType)),
 		cel.CrossTypeNumericComparisons(true),

@@ -1,17 +1,16 @@
-// Package vault encrypts connector credentials with AES-256-GCM envelope encryption, rotates the
-// key ring, and redacts credentials everywhere else (contract §11).
+// Package vault keeps connector credentials (S16, contract §2 and §4): AES-256-GCM envelope
+// encryption with one data key per credential version, a key ring for rotation, and redaction of
+// credential values everywhere else.
 //
 // Invariants:
-//   - Plaintext credentials exist only in memory during execution; they are never logged, returned
-//     or stored unencrypted.
-//   - DEEDGLASS_VAULT_KEY holds a ring of 1–4 keys; the first encrypts, all decrypt.
-//   - Each credential has its own data key; the record binds org and connector as associated data.
+//   - Plaintext credentials exist only in memory while the Gate runs a call. They are never logged,
+//     returned by any API or stored unencrypted. Only internal/connector (Instance.Secret) and the
+//     vault's own rotation call Opener.Open (TestOpenerCallSites).
+//   - DEEDGLASS_VAULT_KEY holds a ring of 1–4 keys; the first wraps new data keys, all unwrap.
+//   - Each ciphertext is bound to its org, connector, version and kind, and each wrapped data key
+//     to its org, connector and key id (the associated data). A row moved anywhere else fails to
+//     open (ErrIntegrity, the vault_integrity alert) and no call is ever sent without its auth.
+//   - Replacing a credential destroys its old data key, which crypto-shreds the old secret.
 //
-// Planned API (finalized by S16):
-//
-//	func New(ring []config.Secret) (*Vault, error)
-//	func (v *Vault) Seal(org ids.OrgID, con ids.ConnectorID, plaintext []byte) (Sealed, error)
-//	func (v *Vault) Open(org ids.OrgID, con ids.ConnectorID, s Sealed) ([]byte, error)
-//
-// Filled by: S16
+// Handlers hold only a Writer; the execute path holds an Opener; deedglass vault holds a Rotator.
 package vault

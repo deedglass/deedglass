@@ -20,6 +20,7 @@ var (
 	ErrNoOrg        = errors.New("store: org id is required") // a zero org id never reaches the database
 	ErrNotFound     = errors.New("store: not found")
 	ErrUnknownScope = errors.New("store: unknown system reason")
+	ErrConflict     = errors.New("store: a live row with that name exists") // S16: connector names
 )
 
 // Options tunes the pool. The zero value is fine for the server.

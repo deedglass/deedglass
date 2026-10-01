@@ -115,6 +115,15 @@ func elsewhere() []Route {
 	out = append(out,
 		Route{Method: "GET", Pattern: "/v1/tools", OperationID: "listTools", Auth: AgentKey, Scopes: []string{ScopeActionsExecute}, Handler: stub},
 	)
+	// S16: connectors (internal/connectorapi).
+	out = append(out,
+		adm("GET", "/v1/connectors", "listConnectors", RoleViewer), adm("POST", "/v1/connectors", "createConnector", RoleAdmin),
+		adm("GET", "/v1/connectors/{id}", "getConnector", RoleViewer), adm("PATCH", "/v1/connectors/{id}", "updateConnector", RoleAdmin),
+		adm("DELETE", "/v1/connectors/{id}", "deleteConnector", RoleAdmin),
+		adm("PUT", "/v1/connectors/{id}/credentials", "setConnectorCredentials", RoleAdmin),
+		adm("DELETE", "/v1/connectors/{id}/credentials", "deleteConnectorCredentials", RoleAdmin),
+		adm("POST", "/v1/connectors/{id}/test", "testConnector", RoleAdmin), adm("GET", "/v1/connector-types", "listConnectorTypes", RoleViewer),
+	)
 	return out
 }
 

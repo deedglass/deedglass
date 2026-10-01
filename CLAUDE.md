@@ -56,6 +56,11 @@ make bench-mcp      # S14 §3.10: wrapper relay, tools/call and tools/list overh
 go generate ./internal/mcp/snippet   # regenerate examples/clients, examples/demo/clients and testdata/mcp/snippets (then update SHA256SUMS)
 DEEDGLASS_IT_PKGS=./cmd/deedglass/ DEEDGLASS_IT_GOFLAGS="-v -run TestMCPGatewayLive" make integration   # S15: the HTTP gateway, /mcp/native and mcp serve on a real server
 make bench-gateway  # S15: /mcp/native fake.echo and the gateway's added latency; JSON in bench/results/
+make mock-orders    # S16: the mock orders API on 127.0.0.1:8090 (MOCK_ORDERS_TOKEN; MOCK_ORDERS_MODE=lying for S19)
+make bench-connectors # S16: vault open, redaction, egress classification, REST build and loopback call; JSON in bench/results/
+go test ./internal/connector/egress -run TestCorpus -v   # the egress corpus (testdata/corpus.json, 59 destinations × prod and dev)
+go test ./internal/vault -run TestGoldenEnvelope -update   # testdata/vault/envelope_v1.json (then update SHA256SUMS)
+DEEDGLASS_IT_PKGS=./cmd/deedglass/ DEEDGLASS_IT_GOFLAGS="-v -run TestConnectorsLive" make integration   # S16 §9 on a real server, with the sentinel sweep
 make demo-up        # S15: the Acme demo stack (examples/demo; HTTP=1 adds the everything upstream, DEMO_PORT=8091 if 8080 is taken)
 make demo-status | demo-snippet CLIENT=… | demo-follow | demo-verify | demo-psql | demo-reset [HARD=1] | demo-down
 make demo-smoke     # TestDemoScript: SCRIPT.md through the real wrapper and postgres-mcp, against the running stack
@@ -110,7 +115,8 @@ scripts/ci-local.sh # the CI jobs locally (docker-smoke and govulncheck skip whe
    `cel.dev/cel-go` v0.32.0 (ADR-017, in go.mod since S10; brings protobuf, antlr4-go, cel.dev/expr,
    genproto and x/exp; the binary-size budget is ADR-032, accepted under DL-024: < 30 MB). The MCP Go SDK
    `github.com/modelcontextprotocol/go-sdk` v1.8.0 (ADR-018, in go.mod since S14; since S15 the
-   binary links it for the gateway's upstream client, ADR-037 Proposed; stripped binary 27.1 MB, budget 30 MB). Planned, and added only by the session that uses it: `pglogrepl` at the
+   binary links it for the gateway's upstream client, ADR-037 accepted under DL-029; stripped binary 27.1 MB, budget 30 MB). S16 (vault,
+   egress, connectors) added no dependency: AES-256-GCM, the dialer and the JSON Schema subset are standard library (ADR-038 Proposed). Planned, and added only by the session that uses it: `pglogrepl` at the
    spike-verified pin (S20). No cgo in the main binary.
    `go.sum` is committed and CI runs `go mod verify`.
 7. CI matches the banned words (below) in files, strings and commit messages as whole words or
@@ -364,6 +370,19 @@ and "open source" until the repo is public. Style bans: "revolutionary", "world-
   `mcp serve` bridge), `TestGatewayBudget` (`make bench-gateway`), `TestFollowGolden`;
   `TestKeyRoutesDeclareScopes` pins `RecordStopped` to `POST /v1/actions` and the two MCP routes.
   `examples/demo`: `TestDemoScript` (`make demo-smoke`), the 42 `acme-demo` cases in `make policy-test`.
+- S16 (vault, egress, connectors): `internal/archtest` `TestSingleEgressDoor` (only `internal/connector/egress` builds an
+  `http.Client`/`Transport`, dials, or uses `http.DefaultClient`/`Get`/`Post`/`Head`/`PostForm`) and `TestOpenerCallSites`
+  (only `internal/connector` and the vault open credentials; nobody else names `vault.Opener`); `TestLayering` lets
+  `internal/config` import only the leaves `vault/keyring` and `connector/egress` (itself stdlib plus `buildinfo`).
+  `internal/vault`: round trip per kind, integrity (flipped bytes, org swap, version and kind edits), unknown key, every
+  formatter on `Secret`, redaction forms, `FuzzRedactor`, `Scrub` (12 patterns, 6 near misses), the golden envelope
+  (`testdata/vault/envelope_v1.json`, pinned); integration on PG 16/17/18: lifecycle with RLS and a sweep, a moved row,
+  rotation (2 orgs × 50, interrupted, two rotators, unknown key). `internal/connector/egress`: `TestCorpus` (59 rows ×
+  prod/dev, ≥ 47 required), rebinding on a real socket, redirects, body caps and gzip bombs, proxies ignored, the TLS
+  floor, `FuzzCheckURL`. `internal/connector/rest`: S16 §6's table, config refusals and normalization, the checks,
+  `FuzzTemplatePath`. `internal/connectorapi`: the route × role matrix. `cmd/deedglass`: `TestConnectorsLive`
+  (integration: create, credentials, test, every sealed code, metadata refusal, idempotency, 409, rotation, the dev
+  override removed → `destination_blocked`, export → verify, the sentinel sweep: 0 hits). The migration count is 17.
 - `cmd/deedglass verify` (S05): 80 golden cases in `testdata/verify/<case>/{args,stdout,stderr,exit}`
   (`go test ./cmd/deedglass -run TestVerifyGolden -update`), every vector's code and exit, `--keys`
   URL rules (same-host redirects, 1 MiB, timeout, loopback-only http), key-set merge conflicts, no

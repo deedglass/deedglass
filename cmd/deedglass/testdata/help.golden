@@ -12,7 +12,7 @@ Setup
   config print        Show the effective config, secrets hidden
   version             Show the client and server versions
   keys                Manage seal keys                                   gen · rotate · list
-  vault               Check or rotate the credential vault        soon   status · rotate
+  vault               Check or rotate the credential vault               status · rotate
   completion          Print shell completion                      soon   zsh · bash · fish
 Agents
   agent               Register and control agents                        create · list · show · suspend · resume · stop · start
@@ -33,7 +33,7 @@ Deeds
   deeds               Browse and export deeds                            list · show · export
   ledger              Check or prune the Ledger                          check · prune
 Connectors
-  connector           Connect tools                               soon   create · list · show · test · types · credentials
+  connector           Connect tools                                      create · list · show · test · types · credentials
   connector postgres  Prepare a Postgres database                 soon   init · check
   connector gmail     Authorize the Gmail connector               soon   authorize
   decoder             Inspect Postgres change readers             soon   status · drop

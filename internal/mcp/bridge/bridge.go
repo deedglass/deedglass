@@ -13,13 +13,12 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"net"
 	"net/http"
 	"net/url"
 	"strings"
 	"sync"
-	"time"
 
+	"github.com/deedglass/deedglass/internal/connector/egress"
 	"github.com/deedglass/deedglass/internal/gate"
 	"github.com/deedglass/deedglass/internal/mcp/httpgw"
 	"github.com/deedglass/deedglass/internal/mcp/jsonrpc"
@@ -61,10 +60,8 @@ func New(cfg Config) (*Bridge, error) {
 	}
 	c := cfg.Client
 	if c == nil {
-		d := &net.Dialer{Timeout: 5 * time.Second}
-		c = &http.Client{Transport: &http.Transport{Proxy: http.ProxyFromEnvironment, DialContext: d.DialContext,
-			MaxIdleConnsPerHost: MaxInFlight, IdleConnTimeout: 90 * time.Second},
-			CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
+		// The Deedglass server the person configured (egress.FirstParty: S16's one door).
+		c = egress.FirstParty(egress.FirstPartyOptions{Proxy: true, MaxIdle: MaxInFlight})
 	}
 	ep := strings.TrimSuffix(cfg.Server.String(), "/") + "/mcp/" + cfg.Connector
 	return &Bridge{cfg: cfg, endpoint: ep, client: c, inflight: map[string]context.CancelFunc{}}, nil

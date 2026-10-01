@@ -16,6 +16,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/deedglass/deedglass/internal/connector/egress"
 )
 
 // Resend defaults and limits.
@@ -92,7 +94,9 @@ func NewResend(o ResendOptions) (*Resend, error) {
 		sleep:    o.Sleep,
 	}
 	if r.client == nil {
-		r.client = &http.Client{Timeout: resendTimeout}
+		// The fixed Resend API (egress.FirstParty: a destination the operator's build names, never
+		// an org's config).
+		r.client = egress.FirstParty(egress.FirstPartyOptions{Timeout: resendTimeout})
 	}
 	if r.log == nil {
 		r.log = slog.Default()

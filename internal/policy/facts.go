@@ -13,6 +13,17 @@ type ToolFacts struct {
 	Connector     string `json:"connector" cel:"connector"`
 	ConnectorType string `json:"connector_type" cel:"connector_type"`
 	SideEffect    string `json:"side_effect" cel:"side_effect"`
+	// S16: the connector type again under its short name, and the tool's unqualified name
+	// ("update_status" in "orders.update_status"). Empty in inputs recorded before S16.
+	Type string `json:"type,omitempty" cel:"type"`
+	Op   string `json:"op,omitempty" cel:"op"`
+}
+
+// HTTPFacts is the HTTP request a REST connector will send (S16): request.http.
+type HTTPFacts struct {
+	Method string `json:"method" cel:"method"`
+	Path   string `json:"path" cel:"path"` // the templated path, with the values filled in
+	Host   string `json:"host" cel:"host"`
 }
 
 // RequestFacts describes the request that carried the action.
@@ -21,6 +32,8 @@ type RequestFacts struct {
 	Bytes        int64  `json:"bytes" cel:"bytes"`
 	IntentSigned bool   `json:"intent_signed" cel:"intent_signed"`
 	Digest       string `json:"digest" cel:"digest"`
+	// HTTP is set by the REST connector's enrichment (S16); empty fields otherwise.
+	HTTP HTTPFacts `json:"http,omitzero" cel:"http"`
 }
 
 // SQLFacts is what the S11 classifier reports about args.sql.

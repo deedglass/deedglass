@@ -149,8 +149,8 @@ builds it. Hidden commands work but aren't in `deedglass help`.
 | `deedglass keys gen [--dir <dir>] [--json]` | Setup | Generate a seal key | built |
 | `deedglass keys rotate [--overlap 5m] [--dir <dir>] [--json]` | Setup | Rotate the active seal key | built |
 | `deedglass keys list [--server <url>] [--json]` | Setup | List seal keys | built |
-| `deedglass vault status` | Setup | Show the credential vault's keys | soon (S16) |
-| `deedglass vault rotate` | Setup | Re-encrypt credentials with a new key | soon (S16) |
+| `deedglass vault status [--json]` | Setup | Show the credential vault's keys | built |
+| `deedglass vault rotate [--json]` | Setup | Re-encrypt credentials with a new key | built |
 | `deedglass help [<command>] [--json]` | Setup | Show help for deedglass or one command | built, hidden |
 | `deedglass completion zsh` | Setup | Print zsh completion | soon (S32) |
 | `deedglass completion bash` | Setup | Print bash completion | soon (S32) |
@@ -206,13 +206,13 @@ builds it. Hidden commands work but aren't in `deedglass help`.
 | `deedglass deeds export [--out <file>|-] [--format tar.gz|jsonl] [--from-seq n] [--to-seq n] [--since 1h] [--json]` | Deeds | Export deeds as a bundle | built |
 | `deedglass ledger check [--from-seq n] [--to-seq n] [--json]` | Deeds | Check the deed chain | built |
 | `deedglass ledger prune [--older-than 90d] [--dry-run] [--yes] [--json]` | Deeds | Remove old payloads; deeds stay | built |
-| `deedglass connector create` | Connectors | Add a connector | soon (S16) |
-| `deedglass connector list` | Connectors | List connectors | soon (S16) |
-| `deedglass connector show` | Connectors | Show one connector | soon (S16) |
-| `deedglass connector test` | Connectors | Test a connector's credentials | soon (S16) |
-| `deedglass connector types` | Connectors | List connector types | soon (S16) |
-| `deedglass connector credentials set` | Connectors | Store a connector's credentials | soon (S16) |
-| `deedglass connector credentials remove` | Connectors | Delete a connector's credentials | soon (S16) |
+| `deedglass connector create --config <file> [--type rest] [--name orders] [--description …] [--json]` | Connectors | Add a connector | built |
+| `deedglass connector list [--json]` | Connectors | List connectors | built |
+| `deedglass connector show <name|con_…> [--json]` | Connectors | Show one connector | built |
+| `deedglass connector test <name|con_…> [--json]` | Connectors | Test a connector's credentials | built |
+| `deedglass connector types [--json]` | Connectors | List connector types | built |
+| `deedglass connector credentials set <name|con_…> --from-env VAR | --stdin | --field KEY=env:VAR|file:PATH|stdin... [--kind bearer] [--json]` | Connectors | Store a connector's credentials | built |
+| `deedglass connector credentials remove <name|con_…> [--json]` | Connectors | Delete a connector's credentials | built |
 | `deedglass connector postgres init` | Connectors | Prepare a Postgres database | soon (S17) |
 | `deedglass connector postgres check` | Connectors | Check a prepared Postgres database | soon (S17) |
 | `deedglass connector gmail authorize` | Connectors | Authorize the Gmail connector | soon (S30) |
@@ -431,6 +431,51 @@ independent check. `--json` prints the action object (for a refusal, the sealed 
 `error.action`) with the same exit codes. The output is pinned in `testdata/gate/cli/` (TTY colour
 and plain), regenerated with `go test -tags integration ./cmd/deedglass -run TestGateLive -update`
 on a throwaway cluster.
+
+## Connectors and the vault (S16)
+
+The connector commands talk to the server with an org admin key (`DEEDGLASS_API_KEY`), like the
+agent commands ([CONNECTORS.md](CONNECTORS.md)):
+
+```text
+$ deedglass connector create --config examples/connectors/orders.yaml
+✓ Connector created · orders · con_01j9zq7c4m8x2v6t0r3n5k1h7d
+  2 tools · orders.get (read) · orders.update_status (write)
+  ○ No credentials yet. Next: deedglass connector credentials set orders --from-env ORDERS_TOKEN
+
+$ deedglass connector credentials set orders --from-env ORDERS_TOKEN
+✓ Credentials stored · orders · bearer · …9f2c · encrypted with kek:3f9a1c2b7d8e
+  Agents never see this value. Deedglass adds it only when the Gate runs a call.
+
+$ deedglass connector test metadata-probe
+✕ metadata-probe · destination blocked · 12 ms
+  ✕ destination   metadata.attack.test → 169.254.169.254 · cloud metadata
+    Deedglass never connects to cloud metadata addresses, even in dev. Point base_url at the service's public address.
+    https://docs.deedglass.com/errors/destination_blocked
+```
+
+- `connector create --config <file>` takes a YAML or JSON file holding `type`, `name` and `config`
+  (or a bare config with `--type` and `--name`).
+- `connector list`, `connector show <name|con_…>` and `connector types` read; `connector test`
+  exits 1 when a check fails.
+- `connector credentials set <name>` takes the value only from `--from-env VAR`, `--stdin` or
+  `--field KEY=env:VAR|file:PATH|stdin` (repeatable, for basic auth and `fields`). There is no
+  value flag: flag values land in shell history and `ps`. An empty variable answers `ORDERS_TOKEN
+  is empty or unset. Export it in this shell and run the command again. Deedglass never reads
+  secrets from flags.` `--kind` defaults to the config's `auth.kind`.
+- `connector credentials remove <name>` crypto-shreds the credential.
+
+`deedglass vault status` and `deedglass vault rotate` run on the server host, like `migrate`: they
+read `DEEDGLASS_DATABASE_URL` and `DEEDGLASS_VAULT_KEY` (and the seal key, to seal `vault.rotated`)
+and print key ids and counts only ([VAULT.md](VAULT.md)):
+
+```text
+$ deedglass vault rotate
+◐ Rewrapping data keys · 42 of 42
+✓ All 42 credentials use kek:3f9a1c2b7d8e. You can remove kek:77c0e1a9b442 from DEEDGLASS_VAULT_KEY.
+```
+
+Every command takes `--json`.
 
 ## MCP: `mcp wrap` and `mcp snippet` (S14)
 

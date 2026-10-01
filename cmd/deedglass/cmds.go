@@ -15,6 +15,7 @@ import (
 	"github.com/deedglass/deedglass/cmd/deedglass/internal/ui"
 	"github.com/deedglass/deedglass/internal/buildinfo"
 	"github.com/deedglass/deedglass/internal/config"
+	"github.com/deedglass/deedglass/internal/connector/egress"
 	"github.com/deedglass/deedglass/internal/ids"
 )
 
@@ -102,7 +103,7 @@ func versionWithServer(ctx context.Context, e *Env, in buildinfo.Info, server st
 	defer cancel()
 	req, _ := http.NewRequestWithContext(rctx, http.MethodGet, u.String()+"/v1/version", nil)
 	req.Header.Set("User-Agent", "deedglass/"+in.Version)
-	client := &http.Client{Timeout: versionTimeout, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
+	client := egress.FirstParty(egress.FirstPartyOptions{Timeout: versionTimeout})
 	res, err := client.Do(req)
 	if err != nil {
 		if errors.Is(err, context.DeadlineExceeded) || errors.Is(rctx.Err(), context.DeadlineExceeded) {

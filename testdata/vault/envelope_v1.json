@@ -1,0 +1,14 @@
+{
+  "Alg": "A256GCM-ENV-1",
+  "KEK": "QkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkI=",
+  "KEKID": "kek:ed666bfb3450",
+  "Org": "org_01k6c9kb2zcjsyn7b8g2k1vqvp",
+  "Connector": "con_01j9zq7c4m8x2v6t0r3n5k1h7d",
+  "Kind": "bearer",
+  "Version": 1,
+  "AADDEK": "deedglass/vault/dek/v1\norg_01k6c9kb2zcjsyn7b8g2k1vqvp\ncon_01j9zq7c4m8x2v6t0r3n5k1h7d\nkek:ed666bfb3450",
+  "AADSecret": "deedglass/vault/secret/v1\norg_01k6c9kb2zcjsyn7b8g2k1vqvp\ncon_01j9zq7c4m8x2v6t0r3n5k1h7d\n1\nbearer",
+  "WrappedDEK": "8cc451cab5a38dc11547200636881568e71910e6eab4d4dbad1647b562b5952e8822bc2dc102016e185daa60297df34ff81d32cd13c1717046669e1e",
+  "Ciphertext": "5f541beaa834e121d8e75eac8793854398ed75662e49d08c2fbc53c70cfe97718fda89d523f819ca901d62c8adecff0034a525270fb966548d76660eaeeb1129d0e3ff93e01b5a84873f20c33a6ce272e657345c555a3fe5f72604826e12786ae2f553cb3330634362304794a7",
+  "Plaintext": "{\"v\":1,\"kind\":\"bearer\",\"fields\":{\"token\":\"dg-test-token-not-a-real-secret-0001\"}}"
+}

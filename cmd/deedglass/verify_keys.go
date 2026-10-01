@@ -15,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/deedglass/deedglass/internal/connector/egress"
 	"github.com/deedglass/deedglass/internal/deed"
 )
 
@@ -30,15 +31,14 @@ const (
 // keysFetchTimeout is the whole budget for one --keys URL (a var so tests can shorten it).
 var keysFetchTimeout = 10 * time.Second
 
-// verifyTransport is replaced in tests (an httptest TLS server's transport).
-var verifyTransport http.RoundTripper = &http.Transport{
-	Proxy:                 nil, // never send the operator's proxy credentials anywhere
-	DialContext:           (&net.Dialer{Timeout: keysFetchTimeout}).DialContext,
-	TLSHandshakeTimeout:   keysFetchTimeout,
-	ResponseHeaderTimeout: keysFetchTimeout,
-	MaxIdleConns:          1,
-	DisableKeepAlives:     true,
-}
+// verifyTransport replaces the egress client's transport in tests (an httptest TLS server's).
+var verifyTransport http.RoundTripper
+
+// keysPolicy is the egress policy of --keys URLs (S16): a person at a terminal names them, so
+// loopback and private networks are reachable (verifying against a local server is the normal dev
+// case), while cloud metadata and reserved addresses never are. fetchKeys still allows plain http
+// only to loopback.
+var keysPolicy = &egress.Policy{Env: egress.EnvDev, AllowPrivate: true}
 
 // keySource is one parsed key set and where it came from.
 type keySource struct {
@@ -105,16 +105,20 @@ func fetchKeys(ctx context.Context, raw string) (*deed.KeySet, error) {
 	host := u.Host
 	ctx, cancel := context.WithTimeout(ctx, keysFetchTimeout)
 	defer cancel()
-	client := &http.Client{Transport: verifyTransport, Timeout: keysFetchTimeout,
-		CheckRedirect: func(req *http.Request, via []*http.Request) error {
-			if len(via) > keysMaxRedirects {
-				return errors.New("more than 3 redirects")
-			}
-			if req.URL.Host != host || req.URL.Scheme != u.Scheme {
-				return fmt.Errorf("it redirected to %s", req.URL.Host)
-			}
-			return nil
-		}}
+	opts := egress.ClientOptions{Timeout: keysFetchTimeout, HeaderTimeout: keysFetchTimeout, UserAgent: "deedglass/" + buildInfo().Version}
+	client := keysPolicy.Client(opts)
+	if verifyTransport != nil {
+		client = egress.Wrap(verifyTransport, opts)
+	}
+	client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+		if len(via) > keysMaxRedirects {
+			return errors.New("more than 3 redirects")
+		}
+		if req.URL.Host != host || req.URL.Scheme != u.Scheme {
+			return fmt.Errorf("it redirected to %s", req.URL.Host)
+		}
+		return nil
+	}
 	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("User-Agent", "deedglass/"+buildInfo().Version)

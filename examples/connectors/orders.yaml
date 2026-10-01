@@ -1,0 +1,35 @@
+# The REST connector over examples/mock-orders (S16). Create it in the dev org:
+#   make mock-orders                                   # in another terminal
+#   deedglass connector create --config examples/connectors/orders.yaml
+#   deedglass connector credentials set orders --from-env MOCK_ORDERS_TOKEN
+#   deedglass connector test orders
+# Never register it in the Acme demo org: that org's "orders" is the MCP-wrapped Postgres server.
+type: rest
+name: orders
+description: The mock orders API (examples/mock-orders).
+config:
+  base_url: http://127.0.0.1:8090          # dev only (DEEDGLASS_ALLOW_PRIVATE_NETWORKS=1); prod needs https
+  auth: { kind: bearer }                    # bearer | header | basic | query | none
+  allowed_methods: [GET, PATCH]
+  allowed_path_prefixes: [/v1/orders]
+  timeout_ms: 10000                         # max 60000
+  max_response_bytes: 4194304               # max 16 MiB
+  redirects: same_host                      # none | same_host (writes never follow one)
+  send_action_id: true
+  test: { method: GET, path: /v1/health }
+  tools:
+    - name: get
+      description: Read one order.
+      method: GET
+      path: /v1/orders/{id}
+      args: { id: { in: path, type: string, pattern: "^[0-9]{1,12}$", required: true } }
+    - name: update_status
+      description: Set an order's status.
+      method: PATCH
+      path: /v1/orders/{id}
+      idempotency_header: Idempotency-Key   # value = the action id
+      args:
+        id:     { in: path, type: string, pattern: "^[0-9]{1,12}$", required: true }
+        status: { in: body, type: string, enum: [pending, shipped, cancelled], required: true }
+      readback: { tool: get, args: { id: "{{args.id}}" } }         # stored now; S19 uses it
+      postcondition: 'observation.body.status == request.status'

@@ -30,7 +30,7 @@ The first source that sets a key wins:
 | `DEEDGLASS_LISTEN` | `listen` | `127.0.0.1:8080` | no | serve | Address the API, the Gate and the Console listen on (host:port). | S01 |
 | `DEEDGLASS_BASE_URL` | `base_url` | `http://127.0.0.1:8080` | no | serve, org login-link | The URL people and agents use to reach this server. Prod needs https. | S01 |
 | `DEEDGLASS_SEAL_KEY_FILE` | `seal_key_file` | — | no | serve, keys | Path to the seal key file used to seal deeds. | S01 |
-| `DEEDGLASS_VAULT_KEY` | `vault_key` (dev only) | — | yes | serve, vault, connector credentials | Base64 of exactly 32 bytes; encrypts connector credentials. Dev generates one in .deedglass/. | S01 |
+| `DEEDGLASS_VAULT_KEY` | `vault_key` (dev only) | — | yes | serve, vault, connector credentials | A key ring of 1 to 4 comma-separated base64 keys of exactly 32 bytes; the first encrypts connector credentials, the rest only decrypt during a rotation (S16). config print shows only the key ids (kek:…). Dev generates one in .deedglass/. | S01 |
 | `DEEDGLASS_API_KEY_PEPPER` | `api_key_pepper` (dev only) | — | yes | serve, org keys, agent keys | Base64 of at least 32 bytes, mixed into API key hashes. Keep it stable: changing it invalidates every API key. Dev generates one in .deedglass/. | S01 |
 | `DEEDGLASS_LOG_LEVEL` | `log_level` | `info` | no | all | Log level. | S01 |
 | `DEEDGLASS_SIGNUP` | `signup` | `invite` | no | serve | Who can join: invite (people an admin invites) or closed. | S01 |
@@ -39,6 +39,7 @@ The first source that sets a key wins:
 | `DEEDGLASS_ANTHROPIC_API_KEY` | `anthropic_api_key` (dev only) | — | yes | serve, insights | Optional Anthropic API key for Insights phrasing (starts with sk-ant-). | S01 |
 | `DEEDGLASS_TRUSTED_PROXIES` | `trusted_proxies` | — | no | serve | Comma-separated CIDRs whose X-Forwarded-For is believed. | S01 |
 | `DEEDGLASS_ALLOW_PRIVATE_NETWORKS` | `allow_private_networks` | `false` | no | serve | Dev only: lets connectors reach private networks. Refused in prod. | S01 |
+| `DEEDGLASS_EGRESS_ALLOW_CIDRS` | `egress_allow_cidrs` | — | no | serve | Comma-separated CIDRs of private networks connectors may reach, in prod too, for example 10.20.0.0/16. Never cloud metadata, reserved, IPv4-embedding or loopback ranges. Deedglass's own database is reachable only when its exact address is listed (a /32 or /128). | S16 |
 | `DEEDGLASS_METRICS_LISTEN` | `metrics_listen` | — | no | serve | Address for a separate listener serving Prometheus metrics at /metrics (host:port). Off when unset; bind it to localhost or a private network. | S03 |
 | `DEEDGLASS_SLOT_LAG_ALERT_MB` | `slot_lag_alert_mb` | `512` | no | serve | Alert when a Postgres replication slot holds more WAL than this (1-1048576 MB). | S01 |
 | `DEEDGLASS_API_KEY` | `api_key` (dev only) | — | yes | CLI, mcp, SDKs | Client key; `serve` ignores it. An agent or admin API key (dg_live_… or dg_test_…) for client commands. | S01 |

@@ -68,8 +68,8 @@ func TestLayering(t *testing.T) {
 		return p, ok
 	}
 
-	// ids, buildinfo and the terminal mark: standard library only.
-	for _, rel := range []string{"internal/ids", "internal/buildinfo", "internal/cli/mark"} {
+	// ids, buildinfo, the terminal mark and the vault's key-ring parser: standard library only.
+	for _, rel := range []string{"internal/ids", "internal/buildinfo", "internal/cli/mark", "internal/vault/keyring"} {
 		p, ok := get(rel)
 		if !ok {
 			t.Fatalf("%s not found", rel)
@@ -79,13 +79,25 @@ func TestLayering(t *testing.T) {
 		}
 	}
 
-	// config: standard library plus the YAML library.
+	// config: standard library plus the YAML library, and (S16) two leaves it validates with: the
+	// vault's key-ring parser and the egress classifier, which itself imports only buildinfo.
+	configLeaves := map[string]bool{"go.yaml.in/yaml/v3": true, module + "/internal/vault/keyring": true,
+		module + "/internal/connector/egress": true, module + "/internal/buildinfo": true}
 	if p, ok := get("internal/config"); !ok {
 		t.Fatal("internal/config not found")
 	} else {
 		for _, d := range nonStd(all, p) {
-			if d != "go.yaml.in/yaml/v3" {
-				t.Errorf("internal/config may import only the standard library and go.yaml.in/yaml/v3, got %s", d)
+			if !configLeaves[d] {
+				t.Errorf("internal/config may import only the standard library, go.yaml.in/yaml/v3, internal/vault/keyring and internal/connector/egress, got %s", d)
+			}
+		}
+	}
+	if p, ok := get("internal/connector/egress"); !ok {
+		t.Fatal("internal/connector/egress not found")
+	} else {
+		for _, d := range nonStd(all, p) {
+			if d != module+"/internal/buildinfo" {
+				t.Errorf("internal/connector/egress may import only the standard library and internal/buildinfo, got %s", d)
 			}
 		}
 	}

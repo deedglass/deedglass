@@ -13,6 +13,8 @@ import (
 	"net/url"
 	"strings"
 	"time"
+
+	"github.com/deedglass/deedglass/internal/connector/egress"
 )
 
 // APIVersion is the Deedglass-Version this client sends.
@@ -119,7 +121,7 @@ func (c *Client) Do(ctx context.Context, method, path string, in, out any, opts 
 	}
 	hc := c.HTTP
 	if hc == nil {
-		hc = &http.Client{Timeout: DefaultTimeout}
+		hc = egress.FirstParty(egress.FirstPartyOptions{Timeout: DefaultTimeout, Proxy: true})
 	}
 	resp, err := hc.Do(req)
 	if err != nil {

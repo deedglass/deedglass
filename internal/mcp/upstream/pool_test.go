@@ -5,12 +5,14 @@ import (
 	"encoding/json"
 	"errors"
 	"net"
+	"net/netip"
 	"net/url"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/deedglass/deedglass/internal/connector"
+	"github.com/deedglass/deedglass/internal/connector/egress"
 	"github.com/deedglass/deedglass/internal/gate"
 	"github.com/deedglass/deedglass/internal/identity"
 	"github.com/deedglass/deedglass/internal/ids"
@@ -147,13 +149,30 @@ func TestPoolRefusals(t *testing.T) {
 		Getenv: func(string) string { return "" }}); err == nil {
 		t.Fatal("empty header env accepted")
 	}
-	for _, ip := range []string{"127.0.0.1", "10.0.0.1", "169.254.169.254", "100.64.0.1", "::1", "fc00::1", "0.0.0.0"} {
-		if !upstream.Blocked(net.ParseIP(ip)) {
-			t.Errorf("%s not blocked", ip)
-		}
+	// S16: the pool dials through egress. Outside dev a loopback upstream is refused at start, and
+	// a name that rebinds to loopback after the start check fails as destination_blocked.
+	ln, _ := net.Listen("tcp", "127.0.0.1:0")
+	defer ln.Close()
+	_, port, _ := net.SplitHostPort(ln.Addr().String())
+	lu, _ := url.Parse("https://127.0.0.1:" + port + "/mcp")
+	if _, err := upstream.New(upstream.Options{Upstreams: []upstream.Config{{Slug: "loop", URL: lu}}}); err == nil {
+		t.Fatal("a loopback upstream was accepted in prod")
 	}
-	if upstream.Blocked(net.ParseIP("93.184.216.34")) {
-		t.Error("public blocked")
+	res := egress.StaticResolver(nil).Sequence("mcp.rebind.test", []netip.Addr{netip.MustParseAddr("93.184.216.34")}, []netip.Addr{netip.MustParseAddr("127.0.0.1")})
+	ru, _ := url.Parse("https://mcp.rebind.test:" + port + "/mcp")
+	p, err := upstream.New(upstream.Options{Egress: &egress.Policy{Env: egress.EnvProd, Resolver: res},
+		Upstreams: []upstream.Config{{Slug: "rebind", URL: ru, Timeout: time.Second}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ex, _, _, _ := p.Resolve(context.Background(), ids.OrgID{}, "rebind.echo")
+	_, err = ex.Execute(context.Background(), call("echo", `{}`))
+	if ce := connector.AsError(err); ce == nil || ce.Code != "destination_blocked" {
+		t.Fatalf("rebinding upstream: %v", err)
+	}
+	mu, _ := url.Parse("http://169.254.169.254/mcp")
+	if _, err := upstream.New(upstream.Options{AllowPrivate: true, Upstreams: []upstream.Config{{Slug: "meta", URL: mu}}}); err == nil {
+		t.Fatal("a metadata upstream was accepted in dev")
 	}
 }
 
@@ -236,11 +255,17 @@ func TestSourceAndResolver(t *testing.T) {
 
 type fakeConn struct{}
 
-func (fakeConn) Name() string { return "fk" }
-func (fakeConn) Type() string { return "fk" }
-func (fakeConn) Tools() []connector.ToolSpec {
-	return []connector.ToolSpec{{Name: "echo"}}
+func (fakeConn) Type() string             { return "fk" }
+func (fakeConn) Info() connector.TypeInfo { return connector.TypeInfo{Type: "fk"} }
+func (fakeConn) Validate(context.Context, connector.Env, json.RawMessage) (json.RawMessage, []connector.FieldError) {
+	return json.RawMessage(`{}`), nil
 }
-func (fakeConn) Execute(context.Context, connector.Call) (connector.Result, error) {
+func (fakeConn) Tools(context.Context, *connector.Instance) ([]connector.ToolSpec, error) {
+	return []connector.ToolSpec{{Name: "echo"}}, nil
+}
+func (fakeConn) Execute(context.Context, *connector.Instance, connector.Call) (connector.Result, error) {
 	return connector.Result{}, nil
+}
+func (fakeConn) Test(context.Context, *connector.Instance) (connector.TestReport, error) {
+	return connector.TestReport{}, nil
 }

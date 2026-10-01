@@ -86,6 +86,20 @@ What Deedglass does not do, stated plainly. **Owner: S37**, which finalizes this
 - **Key lists show at most 100 keys per agent** (and 100 org admin keys), newest first, revoked ones
   included. There is no pagination yet.
 
+## Connectors, the vault and egress (S16)
+
+- **Go can't reliably zero memory.** The vault zeroes the data keys and decrypted bytes it holds, but the garbage collector may have copied them, and HTTP header values are strings ([VAULT.md](VAULT.md)).
+- **A vault key plus a database dump reads every credential.** Rotation can't un-leak a key: rotate *and* replace the upstream credentials.
+- **The vault doesn't protect against a compromised Deedglass process** or the upstream service itself, and it has no rollback protection: restoring an older, consistent credential row brings the older credential back.
+- **No KMS yet.** The key ring lives in `DEEDGLASS_VAULT_KEY`; a KMS-backed key provider is v2.
+- **Egress sees addresses, not intent.** Misuse of an allowed API is policy's job ([NETWORK_EGRESS.md](NETWORK_EGRESS.md)).
+- **No HTTP proxy support** for connector traffic, and no per-connector trust roots for private APIs (v2).
+- **REST calls are witnessed at L0 only** until S19 adds read-back: a service that answers 200 without saving is VERIFIED today.
+- **`sensitive` args are redacted from outputs and logs, not digested** in the action row (S22).
+- **Credentials aren't cached.** Every call reads its credential row (one indexed read); a 30 s cache is a stretch item, taken only if the benchmark asks for it.
+- **The MCP HTTP gateway's upstreams still take their headers from the environment** (S15's `mcp.upstreams`), not from the vault; their connections already go through egress. Moving them to `mcp_http` connector rows is S18 carry-over.
+- **`/mcp/native` serves the built-in tools only.** An org's REST connectors are called through `POST /v1/actions`; listing them as MCP tools comes later.
+
 ## The MCP stdio wrapper (S14)
 
 - **Edge-reported results are the edge's word.** A call the wrapper forwards is sealed L0 VERIFIED

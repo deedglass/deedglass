@@ -164,8 +164,8 @@ func Rows(sk ids.SealKeyID) []Row {
 			}
 			return err
 		}},
-		{"credentials", ex(`INSERT INTO deedglass.credentials (org_id, connector_id, kind, kek_id, wrapped_dek, ciphertext)
-		    VALUES ($1, $2, 'dsn', 'kek:0123456789ab', $3, $4) ON CONFLICT DO NOTHING`,
+		{"credentials", ex(`INSERT INTO deedglass.credentials (org_id, connector_id, version, kind, field_names, kek_id, wrapped_dek, ciphertext, updated_by)
+		    VALUES ($1, $2, 1, 'dsn', '{dsn}', 'kek:0123456789ab', $3, $4, 'operator') ON CONFLICT DO NOTHING`,
 			func(o *Org) []any { return []any{o.ID, o.Connector, rnd(60), rnd(40)} })},
 		{"actions", func(ctx context.Context, tx pgx.Tx, o *Org) error {
 			id, err := NewAction(ctx, tx, o.ID, o.Agent)

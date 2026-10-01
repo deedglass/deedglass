@@ -37,6 +37,7 @@ import (
 	"github.com/deedglass/deedglass/internal/store/migrate"
 	"github.com/deedglass/deedglass/internal/store/migrations"
 	"github.com/deedglass/deedglass/internal/store/policystore"
+	"github.com/deedglass/deedglass/internal/vault"
 )
 
 // --- flags ---
@@ -96,7 +97,9 @@ func runServe(ctx context.Context, e *Env, args []string) error {
 	}
 	printWarnings(e, warnings)
 	s := e.Style
-	log := httpx.NewLogger(e.Stderr, prod, cfg.LogLevel)
+	// The S03 logger with the vault's redaction on top (S16): each call's credential values,
+	// carried in the context, and secrets by their shape.
+	log := slog.New(vault.NewRedactingHandler(httpx.NewLogger(e.Stderr, prod, cfg.LogLevel).Handler()))
 	bi := buildInfo()
 	fmt.Fprintf(e.Stdout, "%s %s api %s %s env %s\n", s.Bold("deedglass "+bi.Version), ui.Sep, buildinfo.LatestAPIVersion, ui.Sep, cfg.Env)
 
@@ -211,13 +214,21 @@ func runServe(ctx context.Context, e *Env, args []string) error {
 	// 5c. The Gate (S13): the pipeline, its wait broker and its worker, which also ride the
 	// listener (deedglass_events wakes long polls; deedglass_jobs wakes the worker).
 	natives := nativeConnectors(cfg)
-	pool, err := newPool(cfg, e.Getenv, log)
+	// 5d. Connectors (S16): the egress door, the vault and the registry.
+	cw, err := newConnectors(ctx, cfg, db, led, natives, log)
+	if err != nil {
+		return err
+	}
+	if cw.vault == nil {
+		log.Warn("vault: DEEDGLASS_VAULT_KEY isn't set, so connectors can't store or use credentials")
+	}
+	pool, err := newPool(cfg, e.Getenv, log, cw.egress)
 	if err != nil {
 		return &ExitError{Code: ExitFailure, ErrCode: "mcp_upstream_invalid", Err: err,
 			Next: "Fix mcp.upstreams in deedglass.yaml (docs/MCP.md, \"Put the Gate in front of a remote MCP server\")."}
 	}
 	defer pool.Close()
-	gp, err := newGate(cfg, db, led, pol, keys, log, natives, pool)
+	gp, err := newGate(cfg, db, led, pol, keys, log, cw.reg, pool)
 	if err != nil {
 		return err
 	}
@@ -247,7 +258,7 @@ func runServe(ctx context.Context, e *Env, args []string) error {
 	})
 	api.Metrics().Collect(policyMetrics(pol.reg))
 	api.Metrics().Collect(gp.Metrics().Collect)
-	api.Mount(serveRoutes(api, db, ms, sk, led, people, keys, pol, gp, mw)...)
+	api.Mount(serveRoutes(api, db, ms, sk, led, people, keys, pol, gp, mw, cw)...)
 	ln, err := net.Listen("tcp", cfg.Listen)
 	if err != nil {
 		return &ExitError{Code: ExitFailure, ErrCode: "listen_failed", Err: fmt.Errorf("Can't listen on %s: %s", cfg.Listen, lastPart(err)),
@@ -324,7 +335,7 @@ type serveKey struct {
 // run httpx.CheckSpec on this list, so api/openapi.yaml must document each one. db and sk are nil
 // in route-table tests.
 func serveRoutes(api *httpx.Server, db *store.DB, ms []migrate.Migration, sk *serveKey, led *ledger.Ledger, people *identity.Service,
-	keys *identity.KeyAuth, pol *policies, gp *gate.Pipeline, mw *mcpWiring) []httpx.Route {
+	keys *identity.KeyAuth, pol *policies, gp *gate.Pipeline, mw *mcpWiring, cw *connectors) []httpx.Route {
 	deps := httpx.SystemDeps{Spec: apiSpec()}
 	if pol == nil {
 		pol = &policies{svc: policy.NewService(nil)}
@@ -370,6 +381,8 @@ func serveRoutes(api *httpx.Server, db *store.DB, ms []migrate.Migration, sk *se
 	// S15: the MCP gateway (S09's stubs when it isn't wired) and GET /v1/tools.
 	routes = append(routes, mcpRoutes(identity.NewMCPAuth(base), mw)...)
 	routes = append(routes, toolsRoutes(mw)...)
+	// S16: connectors, write-only credentials, the connection test and the types.
+	routes = append(routes, connectorRoutes(db, led, cw, nil)...)
 	// S12: policies, versions, activation deeds, lint, the dry run and the test runner.
 	return append(routes, policyapi.Routes(pol.svc, policyapi.Options{})...)
 }
@@ -406,8 +419,7 @@ func policyMetrics(reg *policy.Registry) httpx.Collector {
 // newGate is the action pipeline (S13): the fake connector in dev only (S16 reserves the name
 // outside dev), S12's registry, S11's usage store, S09's intent checker and S08's Stop guard.
 func newGate(cfg *config.Config, db *store.DB, led *ledger.Ledger, pol *policies, keys *identity.KeyAuth, log *slog.Logger,
-	natives []connector.Connector, pool *upstream.Pool) (*gate.Pipeline, error) {
-	reg := connector.NewRegistry(natives...)
+	reg *connector.Registry, pool *upstream.Pool) (*gate.Pipeline, error) {
 	g := cfg.Gate
 	return gate.New(gate.Options{DB: db, Ledger: led, Policies: pol.reg, Usage: policystore.NewUsage(db),
 		Intents: identity.NewIntents(db, keys, nil), Guard: keys, Resolver: upstream.Resolver{Native: reg, Pool: pool}, Logger: log,

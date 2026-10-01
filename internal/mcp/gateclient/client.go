@@ -16,6 +16,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/deedglass/deedglass/internal/connector/egress"
 	"github.com/deedglass/deedglass/internal/deed"
 	"github.com/deedglass/deedglass/internal/gate"
 	"github.com/deedglass/deedglass/internal/ids"
@@ -82,7 +83,7 @@ func New(o Options) *Client {
 	}
 	hc := o.HTTP
 	if hc == nil {
-		hc = &http.Client{Transport: &http.Transport{Proxy: nil, MaxIdleConnsPerHost: 32, IdleConnTimeout: 90 * time.Second}}
+		hc = egress.FirstParty(egress.FirstPartyOptions{MaxIdle: 32}) // the configured Deedglass server
 	}
 	return &Client{o: o, api: &deedglass.Client{BaseURL: o.Server, APIKey: o.APIKey, HTTP: hc, UserAgent: o.UserAgent}}
 }

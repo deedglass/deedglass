@@ -226,6 +226,7 @@ func (p *Pipeline) Submit(ctx context.Context, pr principal, req ActionRequest) 
 			return nil, err
 		default:
 			n.ConnectorType = ctype
+			n.HTTP = enrich(ctx, ex, spec, n.Args)
 		}
 	}
 	// The active policies, before any transaction: a cold load reads Postgres on its own.
@@ -556,12 +557,28 @@ func buildInput(org ids.OrgID, agent ids.AgentID, subj store.GateSubject, n *Nor
 		Agent:   policy.AgentInput{AgentFacts: policy.AgentFacts{ID: agent.String(), Name: subj.AgentName, Labels: labels, Status: subj.AgentStatus}, Budgets: budgets},
 		User:    policy.UserFacts{Ref: ir.OBO.OnBehalfOf},
 		Session: policy.SessionFacts{Ref: ir.OBO.Session},
-		Tool:    policy.ToolInput{ToolFacts: policy.ToolFacts{Name: n.Tool, Connector: n.Connector, ConnectorType: ctype, SideEffect: side}},
+		Tool: policy.ToolInput{ToolFacts: policy.ToolFacts{Name: n.Tool, Connector: n.Connector, ConnectorType: ctype, SideEffect: side,
+			Type: ctype, Op: n.ToolName}},
 		Args:    n.Args,
-		Request: policy.RequestFacts{Mode: string(n.Mode), Bytes: n.ArgsBytes, IntentSigned: ir.Signed, Digest: n.Digest},
+		Request: policy.RequestFacts{Mode: string(n.Mode), Bytes: n.ArgsBytes, IntentSigned: ir.Signed, Digest: n.Digest, HTTP: n.HTTP},
 		Time:    now.UTC(),
 	}
 	return in, loc, nil
+}
+
+// enrich asks a connector that enriches (S16: REST's request.http) for the call's facts. Invalid
+// arguments enrich nothing: the call then fails as validation_failed before anything is sent.
+func enrich(ctx context.Context, ex Executor, spec connector.ToolSpec, args json.RawMessage) policy.HTTPFacts {
+	en, ok := ex.(connector.ArgsEnricher)
+	if !ok {
+		return policy.HTTPFacts{}
+	}
+	m, err := en.EnrichArgs(ctx, spec, args)
+	if err != nil || m == nil {
+		return policy.HTTPFacts{}
+	}
+	h, _ := m["http"].(map[string]string)
+	return policy.HTTPFacts{Method: h["method"], Path: h["path"], Host: h["host"]}
 }
 
 // withSideEffect sets the tool's declared side effect (gateway); MCP tools stay unknown.
