@@ -83,6 +83,11 @@ DEEDGLASS_IT_PKGS=./cmd/deedglass/ DEEDGLASS_IT_GOFLAGS="-v -run TestApprovalsLi
 go test ./internal/mailer -run 'TestGoldens|TestApprovalGoldens' -update   # S22: the approval email goldens (approval_requested, approval_foureyes)
 deedglass org dev mail-preview approval|approval-foureyes   # S22: render the approval email to the terminal (no send)
 make demo-approvals-on | demo-approvals-off | demo-approver EMAIL=… | demo-lan | demo-lan-off   # S22: the approval beat, real email (repo .env), phone links on the Wi-Fi
+go test ./internal/witness/undo -cover   # S23: the undo planner (net effect, order, digest, the twelve checks, SQL, exact footprint, copy, fuzz seeds); pure, no database
+go test ./internal/witness/undo -run TestSQLGoldens -update   # S23: the generated-statement goldens in internal/witness/undo/testdata/sql (review the diff)
+DEEDGLASS_IT_PKGS=./cmd/deedglass/ DEEDGLASS_IT_GOFLAGS="-v -run TestUndoLive" make integration   # S23 §9 on a real server: the hero MISMATCH, refused and clean previews, countersign by another admin, L2 VERIFIED, redo, the race
+make undo-matrix    # S23: the undo round trips and the property test, 2,000 seeds on PG 16, 17 and 18 (logs in .tmp/undo-matrix-<v>.log)
+make bench-undo     # S23 §3.10: plan 1,000 rows, preview 301, RunUndo 301 and 1,000; JSON in bench/results/
 make attack         # S18: the V7 attack suite on a throwaway PG 18 (real serve, real Postgres, loopback upstreams), then the report
 make attack-report  # S18: print the last run and regenerate docs/ATTACK_SUITE.md (never edit that page by hand; -check in CI)
 DEEDGLASS_IT_ATTACK_RUN='TestAttack/H03' make attack   # one case; 'TestOrgIsolation' for the isolation sweep
@@ -236,8 +241,8 @@ and "open source" until the repo is public. Style bans: "revolutionary", "world-
   overflow tests, pattern-vs-parser agreement, `FuzzParse`.
 - `internal/config`: the key table, every prod refusal, `.deedglass/` safety, secret canaries across
   fmt, JSON, slog and panics, and the `docs/CONFIG.md` drift test.
-- `internal/store`: catalog shape (33 tables since S22, RLS on every org table, `system_scope` list pinned,
-  composite FKs, grants), RLS matrix on all 28 org tables, pooled-connection leak, privilege
+- `internal/store`: catalog shape (34 tables since S23, RLS on every org table, `system_scope` list pinned,
+  composite FKs, grants), RLS matrix on all 29 org tables, pooled-connection leak, privilege
   matrix, deed chain, domains = `ids.Registry()`, `set_config(…, true)` grep, `SystemTx` call
   sites; `internal/gate`: 225-pair trigger test; migrate runner refusals. Integration tag,
   PG 16/17/18.
@@ -488,15 +493,43 @@ and "open source" until the repo is public. Style bans: "revolutionary", "world-
   (integration) `TestEstimate` (EXPLAIN only, READ ONLY as `deedglass_agent`, every missing-estimate
   reason). `internal/mailer` `TestApprovalGoldens`. `cmd/deedglass` `TestApprovalsLive`.
   `attack/`: group L (L01–L08, `expectedDigestL`, ADR-049). The migration count is 21.
+- S23 (undo): `internal/witness/undo` (pure) unit tests: `TestNetEffect` (the net-effect table: inserts,
+  updates, deletes, TOAST `'u'` datums, key moves, identity ALWAYS), `TestNetEffectCascadeOrder`,
+  `TestNetEffectUnavailable` (TRUNCATE, DDL, missing old images, sensitive values a step must write),
+  `TestSensitiveOnlyInGuard`, `TestCollapse`, `TestCollapseContradictions`, `TestDigestDeterministic`,
+  `TestKeySwapCycle`, `TestKeyReusedByAnotherRow`, `TestIdentityMovedThenReplaced`, `TestFromFrames`,
+  `TestFromFramesProblems`, `TestChecksAllPass`, `TestChecksOneEach` (a failing case per check),
+  `TestChecksWithoutPlan`, `TestHolds` (sensitive values by digest), `TestCompare` (byte-exact
+  guards), `TestSQLGoldens` (`testdata/sql`), `TestStatementsUseParameters`, `TestSQLRefusals`,
+  `TestValidTypeName`, `TestExactFootprint`, `TestExactFootprintCompare`, `TestExactFootprintMoved`,
+  `TestCopyRules` and the copy tests; fuzz `FuzzNetEffect` (a plan or a typed refusal, never a panic,
+  and a consistent sequence's plan puts the table back exactly) and `FuzzTypeName`.
+  `internal/witness/l2`: the ledger cross-check compares `sql_digest` with the plan digest. `internal/connector/postgres`:
+  `undo` is an internal tool; `internal/mcp/front`: internal tools never listed or resolved.
+  `internal/identity`: `console`, `system`, `deedglass` reserved. `internal/httpx` the route table
+  and OpenAPI cover `previewUndo` and `createUndo` (admin). `internal/store`: `undo_plans` grants
+  (`SIu`) and the 34-table catalog. `cmd/deedglass` usage tests for `undo preview|run` and
+  `TestUndoLive` (integration: the hero MISMATCH, a refused preview with the trigger's fix SQL, agent
+  keys 403, an agent refused `postgres.undo`, a stale plan, `already_undone` while pending, the self
+  rule, L2 VERIFIED with the table back byte for byte, a redo, the race ending `undo_conflict` with
+  nothing changed, the chain verifying with the original deed unchanged). `internal/gate`
+  `TestConsolePrincipal` (Stop all skips the console agent, only the console principal names
+  `undoes_action_id`, one live undo per action with `ErrUndoTaken`, a failed undo frees its slot, a
+  stopped console agent is denied). `internal/identity` `TestSystemAgent` (created once with one
+  deed, no keys, name reserved, Stop all doesn't count it). `internal/connector/postgres`
+  `TestUndoRoundTrip` (real pgoutput through the decoder's own code: the named type and column
+  cases, the race and lock conflicts, cascades, and the property test, 200 seeds by default and
+  2,000 per version in `make undo-matrix`) and `TestUndoBudget` (`make bench-undo`). `attack/`: group
+  U (U01–U05, `expectedDigestU`, ADR-052). The migration count is 22.
 - `cmd/deedglass verify` (S05): 80 golden cases in `testdata/verify/<case>/{args,stdout,stderr,exit}`
   (`go test ./cmd/deedglass -run TestVerifyGolden -update`), every vector's code and exit, `--keys`
   URL rules (same-host redirects, 1 MiB, timeout, loopback-only http), key-set merge conflicts, no
   network without a `--keys` URL, terminal sanitizing.
 - `web/verify` (S05): vectors, parity 500/500, strict, JCS, keys (A13, RFC 8032, Wycheproof), page
   safety (CSP, no HTML from strings, no storage, one fetch).
-- `attack/` (S18): 106 case ids (66 V0 + 19 V7: H01–H11, J01–J04, K01–K04 + S21's W01–W13 + S22's L01–L08), the outcome enum, the
+- `attack/` (S18): 106 case ids (66 V0 + 19 V7: H01–H11, J01–J04, K01–K04 + S21's W01–W13 + S22's L01–L08 + S23's U01–U05), the outcome enum, the
   demo sets, one pinned digest per group set (`expectedDigest` A–G after ADR-021,
-  `expectedDigestV7` H/J/K, ADR-040, `expectedDigestW` W, ADR-046, `expectedDigestL` L, ADR-049; a group without a pin fails), `TestADR021WordsOnly`, `needs`
+  `expectedDigestV7` H/J/K, ADR-040, `expectedDigestW` W, ADR-046, `expectedDigestL` L, ADR-049, `expectedDigestU` U, ADR-052; a group without a pin fails), `TestADR021WordsOnly`, `needs`
   names S19–S37 and stays outside the digest, V7 OWASP tags only ASI01/02/03/10. `make attack`
   (tag `attack`): a real `serve` built with `-tags attackhooks` (hosts-file DNS, dev only;
   `TestNoAttackHooks` keeps it out of default builds), per-case target clones, the five

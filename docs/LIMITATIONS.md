@@ -402,6 +402,35 @@ What the decoder doesn't do ([DECODER.md](DECODER.md), [OBSERVATION_BOUNDARY.md]
   create it again to resume. Events in between aren't replayed.
 - **Email only.** Approvals notify by email in S22; Slack arrives with S29, MCP tasks later.
 
+## Undo (S23)
+
+The whole story is in [UNDO.md](UNDO.md). Undo puts rows back from Postgres's own row images, and
+it refuses rather than guess:
+
+- **Postgres rows only, witnessed at L2.** Actions witnessed at L0 or L1 (REST, GitHub, Stripe and
+  the other connectors without a change log) can't be undone, and neither can proxy-mode actions,
+  which carry no Deedglass marker to bind the evidence.
+- **No DDL, no TRUNCATE.** A transaction that changed a table's definition or truncated a table is
+  refused; undo never runs DDL.
+- **Sequences are not rewound.** Rows get their original ids back (`OVERRIDING SYSTEM VALUE` for
+  identity columns); the sequence stays where it is.
+- **Rows changed since are refused.** Every row must still hold exactly what the action wrote, byte
+  for byte as Postgres prints it, so a `numeric` that reads `1.00` where the action wrote `1.0`
+  counts as changed. That is on purpose.
+- **A primary key on every table**, at most 1,000 rows (`undo.max_rows`), and actions sealed in the
+  last 7 days whose row images weren't pruned (`undo.max_age`).
+- **Sensitive values can't be written back.** The decoder kept only their digest. A sensitive value
+  that is only compared is compared by its digest and shown as `•••`.
+- **Rows that swapped keys** (a cycle) are refused: no order of single-row steps puts them back.
+- **Triggers, rules and cascading foreign keys** on the tables are refused by default.
+  `allow_triggers` (admins, with a reason) lets triggers fire again, and the L2 witness then shows
+  what they did; the undo is `MISMATCH` if they changed anything outside the plan.
+- **Nothing outside Postgres.** Emails sent, payments made, webhooks fired, caches and downstream
+  copies of the data stay as they are; those need new actions a person chooses.
+- **One live undo per action**, and a person always starts it: agent keys are refused, and the
+  starter policy asks another person to countersign, so a one-admin org can't run an undo until it
+  has a second admin or sets `self_countersign: allow` in its approval settings.
+
 ## What this page does not do
 
 It does not list bugs or missing features on the schedule. It lists limits of the design that stay true after they ship.

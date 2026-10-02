@@ -270,6 +270,62 @@ func (r *Registry) Resolve(ctx context.Context, org ids.OrgID, qualified string)
 	return nil, ToolSpec{}, "", ErrToolUnknown
 }
 
+// ResolveInternal finds an internal tool (S23: <connector>.undo) of one of org's connectors. Only
+// the Gate's person-initiated path (the console system agent) calls it; Resolve never returns an
+// internal tool, so an agent naming one gets tool_unknown. It returns ErrToolUnknown when the
+// connector has no such internal tool.
+func (r *Registry) ResolveInternal(ctx context.Context, org ids.OrgID, qualified string) (Executor, ToolSpec, string, error) {
+	conn, tool, ok := Split(qualified)
+	if !ok || r.loader == nil {
+		return nil, ToolSpec{}, "", ErrToolUnknown
+	}
+	r.mu.RLock()
+	_, isBuiltin := r.builtins[conn]
+	r.mu.RUnlock()
+	if isBuiltin {
+		return nil, ToolSpec{}, "", ErrToolUnknown
+	}
+	head, err := r.loader.Head(ctx, org, conn)
+	if errors.Is(err, store.ErrNotFound) {
+		return nil, ToolSpec{}, "", ErrToolUnknown
+	}
+	if err != nil {
+		return nil, ToolSpec{}, "", err
+	}
+	impl, ok := r.Type(head.Type)
+	if !ok || !ValidToolName(head.Type, tool) {
+		return nil, ToolSpec{}, "", ErrToolUnknown
+	}
+	if head.Status != "active" {
+		return nil, ToolSpec{}, "", fmt.Errorf("%w: the connector is %s", ErrConnectorUnavailable, head.Status)
+	}
+	inst, err := r.instanceFor(ctx, org, head)
+	if err != nil {
+		return nil, ToolSpec{}, "", err
+	}
+	tools, err := impl.Tools(ctx, inst)
+	if err != nil {
+		return nil, ToolSpec{}, "", fmt.Errorf("%w: %v", ErrConnectorUnavailable, err)
+	}
+	for _, t := range tools {
+		if t.Name == tool && t.Internal {
+			return &bound{r: r, impl: impl, inst: inst}, t, head.Type, nil
+		}
+	}
+	return nil, ToolSpec{}, "", ErrToolUnknown
+}
+
+// Bound is an org's connector instance as an Executor, with its type's implementation (S23: the
+// undo executor runs the plan through the type, never through Execute).
+type Bound interface {
+	Executor
+	Instance() *Instance
+	Impl() Connector
+}
+
+// Impl returns the bound connector's type implementation.
+func (b *bound) Impl() Connector { return b.impl }
+
 // Lister is a Loader that can also list an org's live connectors (DBLoader is one).
 type Lister interface {
 	List(ctx context.Context, org ids.OrgID, max int) ([]store.Connector, error)

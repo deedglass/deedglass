@@ -178,6 +178,11 @@ func (s *Service) CreateAgentKey(ctx context.Context, a Actor, org ids.OrgID, ag
 		if err != nil {
 			return err
 		}
+		if kind, err := agentKind(ctx, tx, org, agentID); err != nil {
+			return err
+		} else if kind == "system" {
+			return httpx.ErrValidation("agent", fmt.Sprintf(msgSystemAgentKeys, name))
+		}
 		n, err := countActiveKeys(ctx, tx, org, agentID)
 		if err != nil {
 			return err

@@ -152,6 +152,11 @@ gate:
 | `webhooks.max_attempts` | `8` | 1 to 8 | Retries after a delivery's first attempt (at 30s, 2m, 10m, 30m, 1h, 3h, 6h, 12h), then it is dead. | S22 |
 | `webhooks.disable_after` | `72h` | 1h0m0s to 720h0m0s | An endpoint that has failed every delivery for this long is disabled, with a webhook.disabled deed. | S22 |
 | `webhooks.max_endpoints_per_org` | `16` | 1 to 100 | The most webhook endpoints one org may have. | S22 |
+| `undo.max_rows` | `1000` | 1 to 100000 | The most rows one undo puts back (and at most decoder.max_images_per_tx, whose images it needs). | S23 |
+| `undo.max_age` | `168h` | 1m0s to 8760h0m0s | How long after an action is sealed it can be undone (while decoder.retention keeps its row images). | S23 |
+| `undo.lock_timeout` | `2s` | 100ms to 1m0s | How long an undo waits for a row lock before it fails with nothing changed. | S23 |
+| `undo.statement_timeout` | `10s` | 100ms to 1m0s | The longest any one statement of an undo may run. | S23 |
+| `undo.preview_steps` | `20` | 1 to 1000 | Steps a preview lists by default (?steps_limit= asks for up to 1,000). | S23 |
 <!-- settings:end -->
 
 ### The `mcp` section (S15)

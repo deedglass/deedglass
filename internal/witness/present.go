@@ -51,7 +51,7 @@ func Summary(d Decision) string {
 		return first(func(r Reason) bool { return r.Class == Violation })
 	case Verified:
 		// The most specific pass: a read-back over the bare "the tool reported success".
-		for _, c := range []Code{CodeRowWritten, CodeReadbackMatched, CodePostconditionHeld, CodeResponseSchemaValid, CodeEdgeReportedSuccess, CodeToolReportedSuccess} {
+		for _, c := range []Code{CodeUndoRestored, CodeRowWritten, CodeReadbackMatched, CodePostconditionHeld, CodeResponseSchemaValid, CodeEdgeReportedSuccess, CodeToolReportedSuccess} {
 			if s := first(func(r Reason) bool { return r.Code == c && r.Level == d.Level }); s != "" {
 				return s
 			}

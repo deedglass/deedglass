@@ -60,13 +60,15 @@ type envelopeError struct {
 	// Action is the sealed action on POST /v1/actions policy, permission and rate-limit errors
 	// (S13, Stripe-style): the refusal was recorded, and this is its record.
 	Action any `json:"action,omitempty"`
+	// Checks is undo_unavailable's additive field (S23): every check, with its fix.
+	Checks any `json:"checks,omitempty"`
 }
 
 // errorBody returns the envelope bytes for e under request id rid.
 func errorBody(e *Error, rid string) []byte {
 	env := envelope{Error: envelopeError{
 		Type: e.Type, Code: e.Code, Message: e.Message, RequestID: rid, DocURL: DocURLPrefix + string(e.Code), Diagnostics: e.Diagnostics,
-		Action: e.Action,
+		Action: e.Action, Checks: e.Checks,
 	}}
 	if e.Param != "" {
 		p := e.Param

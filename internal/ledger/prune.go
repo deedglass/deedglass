@@ -57,7 +57,7 @@ const payloadBytes = `COALESCE(pg_catalog.pg_column_size(request), 0) + COALESCE
   + COALESCE(pg_catalog.pg_column_size(witness_detail), 0) + COALESCE(pg_catalog.pg_column_size(policy_input), 0)`
 
 // Prune removes the payloads (request, result, witness_detail, and since S13 policy_input, which
-// holds the arguments) of org's sealed actions created
+// holds the arguments, and since S23 an undo's stored plan) of org's sealed actions created
 // before cutoff, and seals one ledger.pruned admin deed with the counts and range. It never
 // touches deeds, events, admin events, approvals, digests, ids or any action that is not sealed,
 // so every deed still verifies. One prune per org runs at a time (a session advisory lock); it
@@ -95,7 +95,10 @@ func (l *Ledger) Prune(ctx context.Context, org ids.OrgID, cutoff time.Time, o P
 				    UPDATE deedglass.actions AS a SET request = NULL, result = NULL, witness_detail = NULL, policy_input = NULL,
 				      payload_pruned_at = pg_catalog.clock_timestamp()
 				    FROM b WHERE a.org_id = $1 AND a.id = b.id
-				    RETURNING a.id, b.created_at, b.bytes)
+				    RETURNING a.id, b.created_at, b.bytes),
+				  p AS (
+				    UPDATE deedglass.undo_plans AS x SET plan = NULL
+				    FROM b WHERE x.org_id = $1 AND x.action_id = b.id AND x.plan IS NOT NULL)
 				  SELECT pg_catalog.count(*), COALESCE(pg_catalog.sum(bytes), 0)::bigint,
 				    (pg_catalog.array_agg(id ORDER BY created_at, id))[1],
 				    (pg_catalog.array_agg(id ORDER BY created_at DESC, id DESC))[1]

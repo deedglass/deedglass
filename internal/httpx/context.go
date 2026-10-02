@@ -74,6 +74,9 @@ const (
 	KindUser     = "user"
 	KindAgentKey = "agent_key"
 	KindAdminKey = "admin_key"
+	// KindConsole is a person's action through the org's console system agent (S23): AgentID is the
+	// console agent, UserID the person. Only server code builds it; no credential authenticates as it.
+	KindConsole = "console"
 )
 
 // API key scopes (contract §8). Agent keys default to the first three; admin is for org admin keys

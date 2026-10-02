@@ -34,7 +34,7 @@ var (
 		"orgs": "SIu", "users": "SIu", "memberships": "SIUD", "sessions": "SIUD", "login_tokens": "SIUD",
 		"agents": "SIu", "api_keys": "SIu", "intent_nonces": "SID", "policies": "SIU", "policy_versions": "SI",
 		"policy_activations": "SIu", "usage_counters": "SIUD", "connectors": "SIu", "credentials": "SIUD",
-		"actions": "SIu", "action_events": "SI", "approvals": "SIU", "approval_tokens": "SIUD", "approval_votes": "SI",
+		"actions": "SIu", "action_events": "SI", "approvals": "SIU", "approval_tokens": "SIUD", "approval_votes": "SI", "undo_plans": "SIu",
 		"idempotency_keys": "SIUD", "seal_keys": "SIu", "deeds": "SI", "admin_events": "SI",
 		"witness_jobs": "SIUD", "decoded_txs": "SI", "decoder_slots": "SIUD", "suggestions": "SIU",
 		"anomalies": "SIU", "replay_jobs": "SIU", "webhooks": "SIUD", "webhook_deliveries": "SIUD",
@@ -69,8 +69,8 @@ func TestSchemaShape(t *testing.T) {
 	e := storetest.New(t, storetest.Options{})
 	c := e.Admin(t)
 	all := tables(t, c, `SELECT c.relname FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = 'deedglass' AND c.relkind = 'r'`)
-	if len(all) != 33 {
-		t.Fatalf("%d tables, want 33 (30 from contract §4 + idempotency_keys + schema_migrations + S22's approval_votes): %v", len(all), all)
+	if len(all) != 34 {
+		t.Fatalf("%d tables, want 34 (30 from contract §4 + idempotency_keys + schema_migrations + S22's approval_votes + S23's undo_plans): %v", len(all), all)
 	}
 	for _, tbl := range all {
 		if _, ok := grants[tbl]; !ok {
@@ -241,8 +241,8 @@ func TestRLSMatrix(t *testing.T) {
 		insertB[r.Table] = r
 	}
 	ot := orgTables(t, e)
-	if len(ot) != 28 {
-		t.Fatalf("%d org tables, want 28: %v", len(ot), ot)
+	if len(ot) != 29 {
+		t.Fatalf("%d org tables, want 29: %v", len(ot), ot)
 	}
 	checked := 0
 	for _, tbl := range ot {

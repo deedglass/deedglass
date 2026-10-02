@@ -1,5 +1,5 @@
 exit 0
 --- stdout
-✓ postgres-safe   28 cases · 12 of 12 rules
-✓ 28 cases passed · 1 policy · every rule covered · N s
+✓ postgres-safe   29 cases · 12 of 12 rules
+✓ 29 cases passed · 1 policy · every rule covered · N s
 --- stderr

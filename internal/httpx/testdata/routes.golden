@@ -63,8 +63,8 @@ planned    POST    /v1/actions/{id}/cancel                                sessio
 planned    POST    /v1/actions/{id}/result                                agent_key       actions:execute  S13    proxy mode
 planned    POST    /v1/tools/resolve                                      agent_key       actions:execute  S14
 planned    GET     /v1/tools                                              agent_key       actions:execute  S15
-planned    POST    /v1/actions/{id}/undo/preview                          session_or_key  actions:undo     S23
-planned    POST    /v1/actions/{id}/undo                                  session_or_key  actions:undo     S23
+planned    POST    /v1/actions/{id}/undo/preview                          session_or_key  admin            S23    agent keys: insufficient_scope; IdemNever: writes nothing
+planned    POST    /v1/actions/{id}/undo                                  session_or_key  admin            S23    agent keys: insufficient_scope; the console system agent acts for the person
 planned    GET     /v1/approvals                                          session_or_key  viewer           S22    agent keys see their own actions only
 planned    GET     /v1/approvals/{id}                                     session_or_key  viewer           S22
 planned    POST    /v1/approvals/{id}/approve                             session_or_key  viewer           S22    only a person countersigns: keys get approval_needs_person; eligibility (not the role) decides

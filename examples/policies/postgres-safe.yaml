@@ -96,7 +96,8 @@ rules:
     approval: { approvers: [role:admin], required: 1, expires_in: 30m }
     verify: L2
   - id: undo-needs-approval
-    match: { tool: postgres.undo }
+    description: An undo (S23) puts rows back on any Postgres connector, so a person countersigns it first.
+    match: { tool: "*.undo", connector_type: postgres }
     decision: require_approval
     reason: Undoing a write changes data again, so a human confirms it first.
     approval: { approvers: [role:admin], required: 1, expires_in: 30m }

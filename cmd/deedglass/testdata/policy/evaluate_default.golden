@@ -18,5 +18,5 @@ exit 0
           functions-need-approval              no match   match doesn't cover this action
           undo-needs-approval                  no match   match doesn't cover this action
           default                              no rule matched; defaults.deny
-  policy  postgres-safe · sha256:2c4c…04fd
+  policy  postgres-safe · sha256:01ae…76f6
 --- stderr

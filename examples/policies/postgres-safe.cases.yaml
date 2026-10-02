@@ -99,8 +99,14 @@ cases:
     input: { tool: postgres.call, args: { function: public.refund_order, params: [42] } }
     expect: { decision: require_approval, rule: functions-need-approval, verify: L2 }
   - name: an undo waits for a human
-    input: { tool: postgres.undo, args: { action: act_01jb8m2x7k4q9r3t5v6w8y0z1a } }
-    expect: { decision: require_approval, rule: undo-needs-approval, approval: { required: 1 } }
+    input:
+      tool: postgres.undo
+      agent: { name: console }
+      args: { undoes: act_01jb8m2x7k4q9r3t5v6w8y0z1a, plan_digest: "sha256:c0a4", allow_triggers: false, reason: Trigger bug touched 300 extra orders. }
+    expect: { decision: require_approval, rule: undo-needs-approval, approval: { required: 1 }, verify: L2 }
+  - name: an undo on any Postgres connector waits for a human
+    input: { tool: { name: billing.undo, connector_type: postgres }, agent: { name: console }, args: { undoes: act_01jb8m2x7k4q9r3t5v6w8y0z1a } }
+    expect: { decision: require_approval, rule: undo-needs-approval }
 
   # Budgets and Stop
   - name: the minute budget stops a burst

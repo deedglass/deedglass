@@ -91,6 +91,8 @@ func TestOrgIsolation(t *testing.T) {
 		"/v1/actions/{id}":                                      {"id": act},
 		"/v1/actions/{id}/cancel":                               {"id": act},
 		"/v1/actions/{id}/result":                               {"id": act},
+		"/v1/actions/{id}/undo":                                 {"id": act},
+		"/v1/actions/{id}/undo/preview":                         {"id": act},
 		"/v1/deeds/{id}":                                        {"id": deed},
 		"/v1/org/members/{id}":                                  {"id": member},
 		"/v1/agents/{id}":                                       {"id": attacker.ID},

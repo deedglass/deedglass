@@ -1,4 +1,4 @@
 exit 2
 --- stdout
 --- stderr
-{"error":{"code":"not_built","doc_url":"https://docs.deedglass.com/errors/not_built","message":"deedglass undo preview isn't in this build yet. Run deedglass help to see what this build can do.","type":"invalid_request_error"}}
+{"error":{"code":"not_built","doc_url":"https://docs.deedglass.com/errors/not_built","message":"deedglass doctor isn't in this build yet. Run deedglass help to see what this build can do.","type":"invalid_request_error"}}

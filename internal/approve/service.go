@@ -216,6 +216,9 @@ func (s *Service) Prepare(ctx context.Context, in gate.ApprovalInput, d policy.D
 		snap.SQL.Estimate = se
 	}
 	snap.Summary = Summary(in.AgentName, snap.summaryFacts())
+	if sum := sectionSummary(snap.Sections); sum != "" {
+		snap.Summary = sum // S23: the undo section says what is put back, by whom, for whom
+	}
 	b, err := json.Marshal(snap)
 	if err != nil {
 		return gate.PreparedApproval{}, err

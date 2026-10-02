@@ -8,14 +8,14 @@ DATE     := $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
 BI       := github.com/deedglass/deedglass/internal/buildinfo
 LDFLAGS  := -s -w -X $(BI).Version=$(VERSION) -X $(BI).Commit=$(COMMIT) -X $(BI).Modified=$(MODIFIED) -X $(BI).Date=$(DATE)
 
-.PHONY: all help ci build test test-short vet fmt fmt-check tidy-check testdata-check rename-guard banned-words nocgo \
+.PHONY: bench-undo all help ci build test test-short vet fmt fmt-check tidy-check testdata-check rename-guard banned-words nocgo \
 	integration matrix fuzz bench bench-store bench-deed cover clean \
 	dev dev-down dev-reset dev-logs run docker bench-http bench-verify \
 	web-verify-install web-verify-test web-verify-build web-verify-serve gencopy genmark bench-mark bench-ledger bench-stop bench-intents bench-gate bench-witness policy-test \
 	fuzz-policy fuzz-policy-short bench-policy bench-eval mcp-it bench-mcp \
 	demo-up demo-down demo-reset demo-status demo-snippet demo-psql demo-follow demo-verify demo-check demo-smoke bench-gateway \
 	demo-trigger-on demo-trigger-off demo-order-reset demo-hero demo-hero-check demo-diff bench-l2 bench-approvals \
-	mock-orders bench-connectors bench-postgres bench-decoder attack attack-report vuln
+	mock-orders bench-connectors bench-postgres bench-decoder attack attack-report vuln undo-matrix
 
 all: ci
 
@@ -339,3 +339,14 @@ bench-gateway: ## S15: /mcp/native fake.echo and the gateway's added latency wit
 	@out="$(CURDIR)/bench/results/$$(date +%F)-$$(go env GOOS)-$$(go env GOARCH)-gateway.json"; log="$(CURDIR)/.tmp/bench-gateway.log"; mkdir -p "$(CURDIR)/.tmp"; \
 	DEEDGLASS_IT_BENCH=1 DEEDGLASS_GATEWAY_BENCH_OUT="$$out" DEEDGLASS_IT_PKGS=./cmd/deedglass/ DEEDGLASS_IT_GOFLAGS="-run TestGatewayBudget -v" \
 	scripts/integration_local.sh > "$$log" 2>&1; st=$$?; grep -E 'PERF|over budget|--- (PASS|FAIL)' "$$log"; echo "raw: $$out"; exit $$st
+
+undo-matrix: ## S23: the undo round trips and the property test (2,000 seeds) on throwaway PG 16, 17 and 18 in turn; logs in .tmp/undo-matrix-<v>.log
+	@mkdir -p "$(CURDIR)/.tmp"; for v in 16 17 18; do echo "=== PostgreSQL $$v"; log="$(CURDIR)/.tmp/undo-matrix-$$v.log"; \
+	DEEDGLASS_IT_PG=$$v DEEDGLASS_UNDO_SEEDS=2000 DEEDGLASS_IT_PKGS=./internal/connector/postgres/ DEEDGLASS_IT_GOFLAGS="-run TestUndoRoundTrip -v -timeout 1800s" \
+	scripts/integration_local.sh > "$$log" 2>&1; st=$$?; grep -E 'UNDO-PROPERTY|KNOWN ISSUE|--- (FAIL|SKIP)|^(ok|FAIL)[[:space:]]' "$$log"; echo "log: $$log"; \
+	[ $$st -eq 0 ] || exit $$st; done
+
+bench-undo: ## S23 §3.10: plan 1,000 rows, preview 301, RunUndo 301 and 1,000, commit to frame, on a throwaway PG 18; JSON in bench/results/
+	@out="$(CURDIR)/bench/results/$$(date +%F)-$$(go env GOOS)-$$(go env GOARCH)-undo.json"; mkdir -p "$(CURDIR)/bench/results"; \
+	DEEDGLASS_IT_BENCH=1 DEEDGLASS_UNDO_BENCH_OUT="$$out" DEEDGLASS_IT_PKGS=./internal/connector/postgres/ DEEDGLASS_IT_GOFLAGS="-run TestUndoBudget -v -timeout 900s" \
+	scripts/integration_local.sh && echo "wrote $$out"

@@ -1,0 +1,33 @@
+{
+  "at": "2026-10-02T08:06:30Z",
+  "commit_to_frame_ms": {
+    "note": "this rig's own peek loop, not the server's decoder; the server's commit → verdict is make bench-l2 (contract §12, p50 \u003c 1 s)",
+    "p50": 7.511,
+    "p95": 8.325
+  },
+  "goarch": "arm64",
+  "goos": "darwin",
+  "name": "undo",
+  "object": "bench",
+  "pg": 180006,
+  "plan_1000_ms": {
+    "p50": 12.764,
+    "p95": 13.378,
+    "target_ms": 20
+  },
+  "preview_301_ms": {
+    "p50": 6.07,
+    "p95": 6.825,
+    "target_p95_ms": 150
+  },
+  "run_1000_ms": {
+    "target_ms": 1500,
+    "value": 111.975
+  },
+  "run_301_ms": {
+    "note": "the whole undo transaction (begin_action, catalog re-check, FOR UPDATE guards, 301 single-row steps, COMMIT): an upper bound on the lock hold",
+    "p50": 30.554,
+    "p95": 31.735,
+    "target_ms": 300
+  }
+}

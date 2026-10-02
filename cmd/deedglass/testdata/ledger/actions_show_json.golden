@@ -226,6 +226,11 @@ exit 0
       "seq": 28,
       "issued_at": "TIME"
     }
-  ]
+  ],
+  "undo": {
+    "undoes": null,
+    "undone_by": null,
+    "eligible": false
+  }
 }
 --- stderr

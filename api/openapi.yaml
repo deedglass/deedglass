@@ -738,6 +738,127 @@ paths:
                   doc_url: https://docs.deedglass.com/errors/conflict
         default:
           $ref: "#/components/responses/Error"
+  /v1/actions/{id}/undo/preview:
+    post:
+      operationId: previewUndo
+      summary: Preview an undo
+      description: >-
+        Plans the undo of a Postgres write from what Postgres committed (the decoder's row
+        images, never the agent's report), and runs the twelve safety checks without taking a
+        lock. It writes nothing. `available` is true when no check failed; `steps.data` holds the
+        first 20 steps (`?steps_limit=` up to 1,000); `policy` is a dry run for the `console`
+        system agent. A signed-in admin or owner (with `Deedglass-CSRF`) or an org admin key;
+        agent keys get 403 `insufficient_scope`. Another org's action is 404 `not_found`.
+      tags: [Gate]
+      security: [{bearerAuth: []}, {sessionCookie: []}]
+      x-deedglass-auth: session_or_key
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+        - $ref: "#/components/parameters/CSRFWithSession"
+        - {name: id, in: path, required: true, description: The action to undo (`act_…`)., schema: {type: string}}
+        - {name: steps_limit, in: query, required: false, description: Steps to list, 1 to 1000 (default undo.preview_steps, 20)., schema: {type: integer, minimum: 1, maximum: 1000}}
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                allow_triggers: {type: boolean, description: Let triggers fire again (the triggers check is then a warning).}
+      responses:
+        "200":
+          description: The preview.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+            Deedglass-Version:
+              $ref: "#/components/headers/DeedglassVersion"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UndoPreview"
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/actions/{id}/undo:
+    post:
+      operationId: createUndo
+      summary: Undo an action
+      description: >-
+        Previews again, refuses `undo_unavailable` (409, with `error.checks`), `undo_plan_stale`
+        (409, the plan changed since the preview) or `already_undone` (409), then sends the undo
+        through the Gate as an action of the org's `console` system agent on behalf of the person:
+        tool `<connector>.undo`, policy (the starter rule asks for a countersign), approval, one
+        transaction in Postgres with the ledger row and the marker, an L2 witness against the
+        plan's exact footprint, and its own sealed deed. The answer is the action object (202
+        `pending_approval` with `next_action`, or 200 once sealed), with `undo.undoes`. A row
+        that changed after the plan was made fails the undo with `undo_conflict` as its
+        `execution.error_code`: Postgres rolled it back and nothing was changed.
+      tags: [Gate]
+      security: [{bearerAuth: []}, {sessionCookie: []}]
+      x-deedglass-auth: session_or_key
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+        - $ref: "#/components/parameters/CSRFWithSession"
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - {name: id, in: path, required: true, description: The action to undo (`act_…`)., schema: {type: string}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [plan_digest, reason]
+              properties:
+                plan_digest: {type: string, pattern: "^sha256:[0-9a-f]{64}$", description: The preview's plan_digest.}
+                reason: {type: string, minLength: 1, maxLength: 280, description: Why; the approver and the Ledger read it.}
+                allow_triggers: {type: boolean}
+                wait: {type: number, minimum: 0, maximum: 25, description: Seconds to wait for the outcome (gate.wait_timeout by default).}
+      responses:
+        "200":
+          description: The undo action, sealed.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+            Deedglass-Version:
+              $ref: "#/components/headers/DeedglassVersion"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Action"
+        "202":
+          description: The undo action, waiting for a person's countersign (or still running).
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+            Deedglass-Version:
+              $ref: "#/components/headers/DeedglassVersion"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Action"
+        "409":
+          description: '`undo_unavailable`, `undo_plan_stale` or `already_undone`.'
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+              example:
+                error:
+                  type: invalid_request_error
+                  code: undo_plan_stale
+                  message: The rows changed since you previewed this undo. Preview it again and use the new plan.
+                  param: plan_digest
+                  request_id: req_01k6w4a3d5f7h9k1n3q5s7v9x1
+                  doc_url: https://docs.deedglass.com/errors/undo_plan_stale
+        default:
+          $ref: "#/components/responses/Error"
   /v1/actions/{id}/result:
     post:
       operationId: reportActionResult
@@ -5437,6 +5558,10 @@ components:
                 - approval_unsatisfiable
                 - approval_link_invalid
                 - approval_link_review_only
+                - undo_unavailable
+                - undo_plan_stale
+                - already_undone
+                - undo_conflict
             message:
               type: string
               description: One or more calm sentences with the next step.
@@ -5460,6 +5585,11 @@ components:
                 On refusals of `POST /v1/actions` only (`policy_denied`, `policy_unavailable`,
                 `budget_exceeded`, `agent_stopped`, `agent_suspended`, `org_stopped`,
                 `tool_unknown`): the recorded, sealed action. Additive (S13).
+            checks:
+              type: array
+              description: On `undo_unavailable` only. Every check of the undo, each with its fix. Additive (S23).
+              items:
+                $ref: "#/components/schemas/UndoCheck"
       examples:
         - error:
             type: invalid_request_error
@@ -5792,6 +5922,8 @@ components:
             status of the state it was sealed from.
         on_behalf_of: {type: [string, "null"]}
         session: {type: [string, "null"]}
+        undo:
+          $ref: "#/components/schemas/ActionUndo"
         decision:
           $ref: "#/components/schemas/ActionDecision"
         policy:
@@ -6300,12 +6432,116 @@ components:
         data:
           type: object
           description: Short codes and digests (reason, rule_id, error_code, level, verdict, approval_id, detail_digest); never payloads.
+    ActionUndo:
+      type: object
+      required: [undoes, undone_by, eligible]
+      description: >-
+        The action's undo object (S23). `undoes` names the action an undo puts back; `undone_by`
+        names the undo that put this one back; `pending` an undo waiting for approval or running.
+        `eligible` is cheap (L2 evidence from a bound transaction, gateway mode, sealed, not
+        undone, within `undo.max_age`, the row images kept): it only decides whether the Console
+        shows Preview undo. The full answer is always the preview.
+      properties:
+        undoes: {type: [string, "null"]}
+        undone_by: {type: [string, "null"]}
+        pending: {type: [string, "null"]}
+        eligible: {type: boolean}
+    UndoCheck:
+      type: object
+      required: [id, title, status, detail]
+      description: One of the twelve safety checks (S23 §3.3). Available means no check failed.
+      properties:
+        id:
+          type: string
+          enum: [evidence, connector, age, not_undone, row_limit, replica_identity, primary_key, columns, triggers, cascades, unchanged, privileges]
+        title: {type: string}
+        status: {type: string, enum: [pass, warn, fail, skip]}
+        detail: {type: string}
+        fix: {type: string}
+        fix_sql: {type: string, description: SQL to copy, one statement per line.}
+        doc_url: {type: string, format: uri}
+    UndoStep:
+      type: object
+      required: [op, table, key]
+      description: >-
+        One step of the plan as a person reads it: `expect` is the row now (what the action
+        wrote), `set` what the undo writes back. A sensitive column shows as •••; NULL is null.
+      properties:
+        op: {type: string, enum: [update, insert, delete]}
+        table: {type: string}
+        key: {type: object, additionalProperties: {type: string}}
+        set: {type: object, additionalProperties: {type: [string, "null"]}}
+        expect: {type: object, additionalProperties: {type: [string, "null"]}}
+    UndoPreview:
+      type: object
+      required: [object, action, tool, available, summary, headline, plan_digest, connector, evidence, counts, rows, tables, steps, checks, notes, redacted, policy, undone_by]
+      properties:
+        object: {type: string, const: undo_preview}
+        action: {type: string}
+        tool: {type: string, description: The original action's tool.}
+        available: {type: boolean, description: No check failed.}
+        summary: {type: string}
+        headline: {type: string, description: '"301 rows in public.orders · 301 updates"'}
+        plan_digest: {type: [string, "null"], description: 'sha256: of the plan; send it to POST /v1/actions/{id}/undo.'}
+        connector:
+          type: [object, "null"]
+          required: [id, name, type]
+          properties:
+            id: {type: string}
+            name: {type: string}
+            type: {type: string}
+        evidence:
+          type: [object, "null"]
+          required: [level, verdict, xid, commit_lsn, committed_at, changes]
+          properties:
+            level: {type: string}
+            verdict: {type: string}
+            xid: {type: string}
+            commit_lsn: {type: string}
+            committed_at: {type: string}
+            changes: {type: integer}
+        counts:
+          type: object
+          required: [update, insert, delete]
+          properties:
+            update: {type: integer}
+            insert: {type: integer}
+            delete: {type: integer}
+        rows: {type: integer}
+        tables: {type: array, items: {type: string}}
+        steps:
+          type: object
+          required: [object, total, has_more, data]
+          properties:
+            object: {type: string, const: list}
+            total: {type: integer}
+            has_more: {type: boolean}
+            data:
+              type: array
+              items:
+                $ref: "#/components/schemas/UndoStep"
+        checks:
+          type: array
+          items:
+            $ref: "#/components/schemas/UndoCheck"
+        notes: {type: array, items: {type: string}}
+        redacted: {type: array, items: {type: string}, description: 'Columns marked sensitive, "schema.table.column": shown as ••• and compared by digest.'}
+        policy:
+          type: [object, "null"]
+          required: [decision, rule_id, reason]
+          properties:
+            decision: {type: string, enum: [allow, deny, require_approval]}
+            rule_id: {type: [string, "null"]}
+            reason: {type: [string, "null"]}
+        undone_by: {type: [string, "null"]}
     ActionDetail:
       allOf:
         - $ref: "#/components/schemas/Action"
       type: object
-      required: [request, result, events, deeds, approval]
+      required: [request, result, events, deeds, approval, undo]
       properties:
+        undo:
+          $ref: "#/components/schemas/ActionUndo"
         request:
           description: The tool arguments, or null after pruning.
         result:

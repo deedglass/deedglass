@@ -571,6 +571,20 @@ Only what the SQL plainly says becomes an expectation. Anything Deedglass can't 
 | An undo (S23) | `explicit` | exactly the footprint the Gate recorded (`actions.witness_expect`) |
 | A JOIN, `UPDATE … FROM`, `DELETE … USING`, a WITH query, a subquery or function call in SET, `ON CONFLICT`, `MERGE`, more than one statement, a WHERE that calls a function Deedglass doesn't know | `unknown` | nothing: the gap `footprint_unknown` names why |
 
+**The exact footprint (S23).** An undo ([UNDO.md](UNDO.md)) knows every row it will change before
+it runs, so its footprint carries `Exact` rows besides the per-table expectations: for each planned
+step the table, the operation, the key and, for an insert or update, the values Postgres must
+commit (as text under the decoder's settings), plus the stored generated columns that may change
+without being planned. The Gate stores it in `actions.witness_expect` before the connector runs
+(the column's cap rose to 8 MiB in migration 0022 to hold up to `undo.max_rows` rows). The
+comparison is then one to one: every observed change must be a planned row with the same key and
+operation, every planned row must be observed once, the planned columns must hold exactly the
+planned values, an update may change no column it didn't plan, and no other table may change
+except `deedglass.ledger`, whose `sql_digest` must equal the plan digest. When all of that holds the
+verdict is `VERIFIED` with the reason `undo_restored`, one per table: "Restored 51 rows in
+public.orders exactly as planned." Anything else is `MISMATCH` with the usual reasons and diff, for
+example when `allow_triggers` let a trigger change rows outside the plan.
+
 `deedglass.ledger` is never part of a footprint; its one insert is checked separately (below). When
 the result doesn't say how many rows changed, the count isn't asserted and the keys and
 `max_rows` still are.

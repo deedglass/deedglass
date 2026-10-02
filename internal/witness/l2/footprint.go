@@ -25,6 +25,10 @@ type Footprint struct {
 	Derivation string        `json:"derivation"`
 	Why        string        `json:"why,omitempty"` // unknown: the sqlguard ShapeWhy, or another short code
 	Tables     []TableExpect `json:"tables"`
+	// Exact (S23, an undo's plan): every row the transaction must change, with its operation and
+	// values. When set, the comparison is one to one: the same rows, keys and operations, the
+	// planned values, and nothing else changed (Compare's exact rules).
+	Exact []ExactRow `json:"exact,omitempty"`
 }
 
 // TableExpect is one table of a footprint.
@@ -36,6 +40,18 @@ type TableExpect struct {
 	Keys    []map[string]string `json:"keys,omitempty"`     // exact primary-key values (exact_keys)
 	Columns []string            `json:"columns,omitempty"`  // UPDATE: SET columns ∪ auto_columns; nil = any
 	Values  map[string]Literal  `json:"values,omitempty"`   // SET column → a plain literal, for the value check
+}
+
+// ExactRow is one planned row change (S23): its table, operation, the key the change names (the
+// row's key before the change: Postgres's old image for an update or delete, the new one for an
+// insert), and the values an insert or update must write (the text Postgres's change log prints).
+// Ignore lists columns that may change without being planned (stored generated columns).
+type ExactRow struct {
+	Table  string            `json:"table"`
+	Op     string            `json:"op"`
+	Key    map[string]string `json:"key"`
+	Values map[string]Value  `json:"values,omitempty"`
+	Ignore []string          `json:"ignore,omitempty"`
 }
 
 // Literal is a SET value the value check may compare: a string, an integer or a boolean literal,

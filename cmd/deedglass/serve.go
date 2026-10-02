@@ -40,6 +40,7 @@ import (
 	"github.com/deedglass/deedglass/internal/store/migrate"
 	"github.com/deedglass/deedglass/internal/store/migrations"
 	"github.com/deedglass/deedglass/internal/store/policystore"
+	"github.com/deedglass/deedglass/internal/undoapi"
 	"github.com/deedglass/deedglass/internal/vault"
 )
 
@@ -239,10 +240,15 @@ func runServe(ctx context.Context, e *Env, args []string) error {
 	if err != nil {
 		return err
 	}
-	gp, err := newGate(cfg, db, led, pol, keys, log, cw.reg, pool, aps)
+	// 5f. Undo (S23): the planner, the internal resolver the Gate uses for <connector>.undo, and
+	// the approval context section.
+	planner := undoapi.NewPlanner(db, cw.reg, undoConfig(cfg), log)
+	undoapi.RegisterSection()
+	gp, err := newGate(cfg, db, led, pol, keys, log, cw.reg, pool, aps, undoapi.Resolver{Reg: cw.reg, Planner: planner, DB: db, Log: log})
 	if err != nil {
 		return err
 	}
+	ua := &undoapi.API{Planner: planner, DB: db, Policies: pol.svc, Agents: people, Gate: gp}
 	aps.Attach(gp)
 	gp.SetJobHandler(gate.JobApprovalNotify, aps.NotifyJob)
 	whs := newWebhooks(cfg, db, led, cw, log)
@@ -304,7 +310,7 @@ func runServe(ctx context.Context, e *Env, args []string) error {
 	if dec != nil {
 		api.Metrics().Collect(dec.Metrics().Collect)
 	}
-	api.Mount(serveRoutes(api, db, ms, sk, led, people, keys, pol, gp, mw, cw, aps, whs)...)
+	api.Mount(serveRoutes(api, db, ms, sk, led, people, keys, pol, gp, mw, cw, aps, whs, ua)...)
 	ln, err := net.Listen("tcp", cfg.Listen)
 	if err != nil {
 		return &ExitError{Code: ExitFailure, ErrCode: "listen_failed", Err: fmt.Errorf("Can't listen on %s: %s", cfg.Listen, lastPart(err)),
@@ -381,7 +387,8 @@ type serveKey struct {
 // run httpx.CheckSpec on this list, so api/openapi.yaml must document each one. db and sk are nil
 // in route-table tests.
 func serveRoutes(api *httpx.Server, db *store.DB, ms []migrate.Migration, sk *serveKey, led *ledger.Ledger, people *identity.Service,
-	keys *identity.KeyAuth, pol *policies, gp *gate.Pipeline, mw *mcpWiring, cw *connectors, aps *approve.Service, whs *webhook.Service) []httpx.Route {
+	keys *identity.KeyAuth, pol *policies, gp *gate.Pipeline, mw *mcpWiring, cw *connectors, aps *approve.Service, whs *webhook.Service,
+	ua *undoapi.API) []httpx.Route {
 	deps := httpx.SystemDeps{Spec: apiSpec()}
 	if pol == nil {
 		pol = &policies{svc: policy.NewService(nil)}
@@ -436,6 +443,8 @@ func serveRoutes(api *httpx.Server, db *store.DB, ms []migrate.Migration, sk *se
 	routes = append(routes, approve.Routes(aps)...)
 	routes = append(routes, approve.PageRoutes()...)
 	routes = append(routes, webhook.Routes(whs)...)
+	// S23: undo (preview and run).
+	routes = append(routes, undoapi.Routes(ua)...)
 	// S12: policies, versions, activation deeds, lint, the dry run and the test runner.
 	return append(routes, policyapi.Routes(pol.svc, policyapi.Options{})...)
 }
@@ -472,19 +481,26 @@ func policyMetrics(reg *policy.Registry) httpx.Collector {
 // newGate is the action pipeline (S13): the fake connector in dev only (S16 reserves the name
 // outside dev), S12's registry, S11's usage store, S09's intent checker and S08's Stop guard.
 func newGate(cfg *config.Config, db *store.DB, led *ledger.Ledger, pol *policies, keys *identity.KeyAuth, log *slog.Logger,
-	reg *connector.Registry, pool *upstream.Pool, aps *approve.Service) (*gate.Pipeline, error) {
+	reg *connector.Registry, pool *upstream.Pool, aps *approve.Service, internal gate.Resolver) (*gate.Pipeline, error) {
 	g := cfg.Gate
 	var approvals gate.Approvals
 	if aps != nil {
 		approvals = aps
 	}
 	return gate.New(gate.Options{DB: db, Ledger: led, Policies: pol.reg, Usage: policystore.NewUsage(db), Approvals: approvals,
-		Intents: identity.NewIntents(db, keys, nil), Guard: keys, Resolver: upstream.Resolver{Native: reg, Pool: pool}, Logger: log,
+		Intents: identity.NewIntents(db, keys, nil), Guard: keys, Resolver: upstream.Resolver{Native: reg, Pool: pool}, Internal: internal, Logger: log,
 		Config: gate.Config{WaitTimeout: g.WaitTimeout, ExecuteTimeout: g.ExecuteTimeout, EdgeResultTimeout: g.EdgeResultTimeout,
 			MaxArgsBytes: g.MaxArgsBytes, MaxResultBytes: g.MaxResultBytes, WorkerConcurrency: g.WorkerConcurrency,
 			WorkerMaxAttempts: g.WorkerMaxAttempts,
 			Witness: gate.WitnessConfig{InlineBudget: cfg.Witness.InlineBudget, ReadbackTimeout: cfg.Witness.ReadbackTimeout,
 				MaxDetailBytes: cfg.Witness.MaxDetailBytes}}})
+}
+
+// undoConfig is undo.* (S23).
+func undoConfig(cfg *config.Config) undoapi.Config {
+	u := cfg.Undo
+	return undoapi.Config{MaxRows: u.MaxRows, MaxAge: u.MaxAge, LockTimeout: u.LockTimeout, StatementTimeout: u.StatementTimeout,
+		PreviewSteps: u.PreviewSteps}
 }
 
 // newApprovals is S22's approvals: the context snapshot, eligibility, links, four-eyes and the
@@ -579,7 +595,7 @@ func newLedger(db *store.DB, signer deed.Signer, cfg *config.Config, log *slog.L
 	bi := buildInfo()
 	opts := []ledger.Option{ledger.WithIssuer(strings.TrimSuffix(cfg.BaseURL.String(), "/")), ledger.WithLogger(log),
 		ledger.WithGenerator(archive.Generator{Name: "deedglass", Version: bi.Version, Commit: bi.Commit}),
-		ledger.WithDev(cfg.Env != config.Prod)}
+		ledger.WithDev(cfg.Env != config.Prod), ledger.WithUndoMaxAge(cfg.Undo.MaxAge)}
 	if signer == nil {
 		return ledger.New(db, nil, nil, opts...)
 	}

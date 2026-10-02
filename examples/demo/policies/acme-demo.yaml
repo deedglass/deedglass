@@ -54,6 +54,13 @@ rules:
     when: sql.kind == "delete" || "delete" in sql.write_kinds
     decision: deny
     reason: Agents never delete orders. Set the status to 'cancelled' instead.
+  - id: undo-needs-approval
+    description: An undo (S23) puts rows back the way Postgres recorded them; a person countersigns it first.
+    match: { tool: "*.undo", connector_type: postgres }
+    decision: require_approval
+    reason: Undoing a write changes data again, so a human confirms it first.
+    approval: { approvers: [role:admin], required: 1, expires_in: 30m }
+    verify: L2
   - id: allow-order-status-updates
     description: Single-order status changes run; Postgres witnesses every one (S21).
     match: { tool: postgres.execute }

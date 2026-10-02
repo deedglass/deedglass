@@ -1484,6 +1484,79 @@ look again with `deedglass decoder status --connector <name>`.
 }
 ```
 
+## undo_unavailable
+
+**409 · invalid_request_error**
+
+**When it happens.** `POST /v1/actions/{id}/undo` previewed the undo again and at least one of the twelve checks failed (S23): the action wasn't witnessed at L2, the connector is gone, a row changed since, a trigger would fire again, and so on. The additive `error.checks` field lists every check, each with its fix and, where it helps, SQL to copy.
+
+**What to do.** Run `deedglass undo preview act_…`, fix each failing check, preview again, and send the new `plan_digest`.
+
+```json
+{
+  "type": "invalid_request_error",
+  "code": "undo_unavailable",
+  "message": "Undo isn't available for act_01j9zw6k…: 1 check failed (triggers). Run deedglass undo preview act_01j9zw6kq3m8n2p4r6t8v0x2z4 for the fix.",
+  "param": null,
+  "checks": [
+    {"id": "triggers", "title": "Triggers", "status": "fail", "detail": "public.orders has trigger orders_bulk_touch. Undo would fire this trigger again.",
+     "fix": "An admin can pass allow_triggers with a reason; the L2 witness then shows what the trigger did.",
+     "fix_sql": "ALTER TABLE public.orders DISABLE TRIGGER orders_bulk_touch;", "doc_url": "https://docs.deedglass.com/undo#the-twelve-checks"}
+  ]
+}
+```
+
+## undo_plan_stale
+
+**409 · invalid_request_error**
+
+**When it happens.** The `plan_digest` you sent isn't the plan Deedglass builds now: the rows, the catalog or the evidence changed since you previewed. The Gate's undo executor checks the digest again right before it runs, so a stale plan never runs; that failure is recorded as the undo action's `execution.error_code`.
+
+**What to do.** Preview the undo again and use the new `plan_digest`.
+
+```json
+{
+  "type": "invalid_request_error",
+  "code": "undo_plan_stale",
+  "message": "The rows changed since you previewed this undo. Preview it again and use the new plan.",
+  "param": "plan_digest"
+}
+```
+
+## already_undone
+
+**409 · invalid_request_error**
+
+**When it happens.** Another undo of the same action already holds its one live slot: it was applied, or it is waiting for approval or running. At most one live undo per action is a unique index, so two requests at once get one action and one `already_undone`. A denied, expired, cancelled or failed undo frees the slot.
+
+**What to do.** Look at the action's `undo` object (`undone_by`, `pending`). To put back an undo, preview an undo of the undo action itself (a redo).
+
+```json
+{
+  "type": "invalid_request_error",
+  "code": "already_undone",
+  "message": "act_01j9zw6k… was already undone by act_01j9zx8m… at 10:14 IST.",
+  "param": null
+}
+```
+
+## undo_conflict
+
+**409 · invalid_request_error**
+
+**When it happens.** This code is an undo action's `execution.error_code` (the action is `failed`), not an HTTP answer: inside its one transaction the undo found a row that changed after the plan was made, a row locked longer than `undo.lock_timeout`, or a step that didn't change exactly one row. Postgres rolled the whole undo back, so nothing was changed.
+
+**What to do.** Preview the undo again; the new plan follows the rows as they are now. For a lock, try again in a moment.
+
+```json
+{
+  "type": "invalid_request_error",
+  "code": "undo_conflict",
+  "message": "Row public.orders id=42 changed after the plan was made (status is now 'cancelled'). Nothing was changed. Preview the undo again.",
+  "param": null
+}
+```
+
 ## What this doesn't do
 
 - Errors don't carry localized messages. The copy is English, and the `code` is the stable part.

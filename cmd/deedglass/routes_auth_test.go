@@ -92,7 +92,7 @@ func TestServeRoutesUnauthenticated(t *testing.T) {
 		t.Run(cfg.name, func(t *testing.T) {
 			cfg.opts.Logger = slog.New(slog.DiscardHandler)
 			api := httpx.New(cfg.opts)
-			api.Mount(serveRoutes(api, nil, nil, nil, nil, nil, nil, nil, nil, cfg.mcp, nil, nil, nil)...)
+			api.Mount(serveRoutes(api, nil, nil, nil, nil, nil, nil, nil, nil, cfg.mcp, nil, nil, nil, nil)...)
 			routes := api.Routes()
 			mux := http.NewServeMux()
 			for _, rt := range routes {

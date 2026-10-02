@@ -61,6 +61,11 @@ const (
 	CodeTriggersUnwatched    Code = "triggers_unwatched"
 )
 
+// L2 for an undo (S23): the exact footprint of a plan, row by row.
+const (
+	CodeUndoRestored Code = "undo_restored"
+)
+
 // Entry is one catalog row: the class every reason with this code has, the levels it is used at,
 // its sentence, what a person does next, and sample values for the tests and the generated page.
 type Entry struct {
@@ -130,6 +135,8 @@ var entries = []Entry{
 	// L2 (S21): Postgres's change log against the statement's footprint.
 	{CodeFootprintMatched, Pass, "L2", `Postgres committed {observed} {rows} in {table}, as the statement said.`,
 		"Nothing.", map[string]any{"observed": 1, "rows": "row", "table": "public.orders"}},
+	{CodeUndoRestored, Pass, "L2", `Restored {observed} {rows} in {table} exactly as planned.`,
+		"Nothing.", map[string]any{"observed": 301, "rows": "rows", "table": "public.orders"}},
 	{CodeRowCountExceeded, Violation, "L2", `Postgres changed {observed} rows in {table}. The agent reported {expected}.`,
 		"Read the diff: a trigger, rule or cascade changed rows the statement didn't name.",
 		map[string]any{"observed": 301, "table": "public.orders", "expected": 1}},

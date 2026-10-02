@@ -297,6 +297,19 @@ type Action struct {
 	PayloadPrunedAt *Time            `json:"payload_pruned_at"`
 	Deed            *string          `json:"deed"`
 	NextAction      *NextAction      `json:"next_action"`
+	// Undo (S23) is set on a single read and on an undo's own answers: what this action undoes, the
+	// undo that put it back, and whether the Console offers Preview undo.
+	Undo *ActionUndo `json:"undo,omitempty"`
+}
+
+// ActionUndo is the action's undo object (S23). Eligible is cheap (L2 evidence from a bound
+// transaction, gateway mode, sealed, not undone, within undo.max_age, the payload kept): it only
+// decides whether the Console shows Preview undo. The full answer is always the preview.
+type ActionUndo struct {
+	Undoes   *string `json:"undoes"`
+	UndoneBy *string `json:"undone_by"`
+	Pending  *string `json:"pending,omitempty"` // an undo waiting for approval or running
+	Eligible bool    `json:"eligible"`
 }
 
 // ActionEvent is one action_events row.
@@ -348,6 +361,7 @@ type ActionDetail struct {
 	Result          json.RawMessage    `json:"result"`
 	Events          *List[ActionEvent] `json:"events"`
 	Deeds           []DeedRef          `json:"deeds"`
+	Undo            *ActionUndo        `json:"undo"`
 }
 
 const actionCols = `a.id, a.created_at, a.agent_id, g.name, a.tool, a.connector_id, a.mode, a.state, a.on_behalf_of,
@@ -653,9 +667,46 @@ func (l *Ledger) GetAction(ctx context.Context, org ids.OrgID, id string) (*Acti
 			}
 			d.Witness.History = hist
 		}
+		if err != nil {
+			return err
+		}
+		d.Undo, err = UndoOf(ctx, tx, org, id, l.undoMaxAge, l.now())
 		return err
 	})
 	return d, err
+}
+
+// UndoOf reads an action's undo object (S23) inside tx.
+func UndoOf(ctx context.Context, tx pgx.Tx, org ids.OrgID, id string, maxAge time.Duration, now time.Time) (*ActionUndo, error) {
+	u := &ActionUndo{}
+	var (
+		state, mode                string
+		level, execStatus          *string
+		sealedAt, pruned           *time.Time
+		liveID, liveState, liveExe *string
+		bound                      bool
+	)
+	err := tx.QueryRow(ctx, `SELECT a.undoes_action_id, a.state, a.mode, a.witness_level, a.execution_status, a.sealed_at, a.payload_pruned_at,
+	    u.id, u.state, u.execution_status,
+	    EXISTS (SELECT 1 FROM deedglass.decoded_txs AS f WHERE f.org_id = a.org_id AND f.action_id = a.id AND f.class = 'bound')
+	  FROM deedglass.actions AS a
+	  LEFT JOIN LATERAL (SELECT x.id, x.state, x.execution_status FROM deedglass.actions AS x
+	      WHERE x.org_id = a.org_id AND x.undoes_action_id = a.id AND x.undo_released_at IS NULL ORDER BY x.created_at LIMIT 1) AS u ON true
+	  WHERE a.org_id = $1 AND a.id = $2`, org, id).
+		Scan(&u.Undoes, &state, &mode, &level, &execStatus, &sealedAt, &pruned, &liveID, &liveState, &liveExe, &bound)
+	if err != nil {
+		return nil, err
+	}
+	if liveID != nil {
+		if *liveState == string(gate.Sealed) && liveExe != nil && *liveExe != "failed" {
+			u.UndoneBy = liveID
+		} else {
+			u.Pending = liveID
+		}
+	}
+	u.Eligible = state == string(gate.Sealed) && mode == "gateway" && level != nil && *level == "L2" && bound && pruned == nil &&
+		liveID == nil && execStatus != nil && *execStatus != "failed" && sealedAt != nil && (maxAge <= 0 || now.Sub(*sealedAt) <= maxAge)
+	return u, nil
 }
 
 // witnessedReason is the reason the action's own verdict recorded (its first violation or gap):

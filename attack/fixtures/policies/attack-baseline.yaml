@@ -14,6 +14,13 @@ defaults:
 rules:
   # S22's group L: three agents whose fake.echo calls wait for people. They exist only for the
   # approval cases, so no other case meets these rules.
+  - id: undo-needs-approval
+    description: S23's starter rule. A person's undo waits for another person's countersign.
+    match: { tool: "*.undo", connector_type: postgres }
+    decision: require_approval
+    reason: Undoing a write changes data again, so a human confirms it first.
+    approval: { approvers: [role:admin], required: 1, expires_in: 30m }
+    verify: L2
   - id: approval-one-admin
     description: approval-bot's calls wait for one admin to countersign (L01, L03, L04, L06).
     match: { agent: approval-bot, tool: fake.echo }

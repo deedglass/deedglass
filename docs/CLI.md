@@ -194,8 +194,8 @@ builds it. Hidden commands work but aren't in `deedglass help`.
 | `deedglass deny <apr_…> --as <email> --reason "…" [--json]` | Actions | Deny a pending action | built |
 | `deedglass approvals list [--status pending] [--agent <name>] [--limit 25] [--json]` | Actions | List approvals | built |
 | `deedglass approvals show <apr_…> [--json]` | Actions | Show one approval | built |
-| `deedglass undo preview` | Actions | Show what an undo would change | soon (S23) |
-| `deedglass undo run` | Actions | Undo an action | soon (S23) |
+| `deedglass undo preview <act_…> [--allow-triggers] [--steps N] [--json]` | Actions | Show what an undo would change | built |
+| `deedglass undo run <act_…> --plan <sha256:…> --reason "…" [--allow-triggers] [--wait 25s] [--json]` | Actions | Undo an action | built |
 | `deedglass webhooks create --url <url> --events approval.requested,approval.decided [--description …] [--json]` | Actions | Add a webhook endpoint | built |
 | `deedglass webhooks list [--json]` | Actions | List webhook endpoints | built |
 | `deedglass webhooks test <whk_…> [--json]` | Actions | Send a test event | built |

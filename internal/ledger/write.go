@@ -182,6 +182,9 @@ type NewAction struct {
 	Fingerprint   string          // request digest + on-behalf-of + session; "" means RequestDigest
 	Context       json.RawMessage // {client, transport, connector_type}, ≤ 4 KiB, never in a digest
 	Livemode      bool            // dg_live_ key
+
+	// S23: the action this one undoes (a person's undo through the console system agent).
+	UndoesActionID *string
 }
 
 // CreateAction inserts an action in received, appends its first event and publishes
@@ -221,10 +224,10 @@ func (l *Ledger) CreateAction(ctx context.Context, tx pgx.Tx, org ids.OrgID, a N
 	}
 	err := tx.QueryRow(ctx, `INSERT INTO deedglass.actions (id, org_id, agent_id, on_behalf_of, session_ref, idempotency_key,
 	    mode, tool, connector_id, request, request_digest, intent_hash, intent_signed,
-	    api_key_id, connector, tool_digest, request_fingerprint, context, livemode)
-	  VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb, $11, $12, $13, $14, $15, $16, $17, $18::jsonb, $19) RETURNING created_at`,
+	    api_key_id, connector, tool_digest, request_fingerprint, context, livemode, undoes_action_id)
+	  VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb, $11, $12, $13, $14, $15, $16, $17, $18::jsonb, $19, $20) RETURNING created_at`,
 		id, org, a.Agent, a.OnBehalfOf, a.Session, a.IdempotencyKey, a.Mode, a.Tool, a.Connector, req, digest,
-		a.IntentHash, a.IntentSigned, a.APIKeyID, a.ConnectorSlug, a.ToolDigest, fp, cx, a.Livemode).Scan(&created)
+		a.IntentHash, a.IntentSigned, a.APIKeyID, a.ConnectorSlug, a.ToolDigest, fp, cx, a.Livemode, a.UndoesActionID).Scan(&created)
 	if err != nil {
 		return ids.ActionID{}, err
 	}
@@ -639,6 +642,13 @@ func (l *Ledger) SealAction(ctx context.Context, tx pgx.Tx, actionID string) (*d
 	}
 	sd := &sealedDeed{org: env.Body.Org, id: env.ID, seq: env.Body.Seq, at: env.Body.IssuedAt}
 	if _, err := l.transition(ctx, tx, actionID, st, gate.Sealed, EventData{}, sd, nil); err != nil {
+		return nil, err
+	}
+	// S23: an undo that ends without applying (denied, expired, cancelled or failed: nothing was
+	// changed) frees its action's one-live-undo slot, in the seal's own transaction.
+	if _, err := tx.Exec(ctx, `UPDATE deedglass.actions SET undo_released_at = pg_catalog.now()
+	    WHERE id = $1 AND undoes_action_id IS NOT NULL AND undo_released_at IS NULL
+	      AND (denied_at IS NOT NULL OR expired_at IS NOT NULL OR cancelled_at IS NOT NULL OR failed_at IS NOT NULL)`, actionID); err != nil {
 		return nil, err
 	}
 	return env, nil

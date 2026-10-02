@@ -28,7 +28,8 @@ erDiagram
 
 ## Tables
 
-32 tables: 30 from contract §4, plus `idempotency_keys` and `schema_migrations`.
+34 tables: 30 from contract §4, plus `idempotency_keys`, `schema_migrations`, `approval_votes` (S22) and
+`undo_plans` (S23). 29 of them are org tables.
 
 | Table | What it holds | Written by |
 |---|---|---|
@@ -37,7 +38,7 @@ erDiagram
 | `memberships` | A user's role in one org: owner, admin or viewer. | S07 |
 | `sessions` | Console sign-in sessions. Hashes of the cookie and CSRF secrets, never the secrets. `org_id` is the active org. | S07 |
 | `login_tokens` | Magic-link and invite tokens, hashed. No email column. | S07 |
-| `agents` | Registered agents: name, status (active, suspended, stopped), labels, budgets, intent mode and intent keys. | S08, S09 |
+| `agents` | Registered agents: name, status (active, suspended, stopped), labels, budgets, intent mode and intent keys. `kind` is `agent`, or `system` for the org's `console` agent (S23, migration 0022). | S08, S09, S23 |
 | `api_keys` | API keys: a globally unique 8-character prefix plus a hash of the secret. Admin keys have no agent and exactly the `admin` scope. | S08 |
 | `intent_nonces` | Replay memory for signed intents. | S09 |
 | `policies` | Named policies; the name is unique per org. | S12 |
@@ -46,11 +47,12 @@ erDiagram
 | `usage_counters` | Calls and spend per agent or org, per minute, hour and day: `(org_id, scope, counter, window_kind, window_start, value)`. `scope` is an agent id or `org`; `counter` is `calls`, `spend:<currency>` or `budget:<budget id>`; `window_kind` is `minute`, `hour` or `day` (UTC floors; day is the org's local midnight, stored as UTC). S11 uses migration 0003's table unchanged (no new migration; `TestUsageCountersShape` pins it). `Usage.Prune` deletes old windows through `SystemTx(maintenance)` ([BUDGETS.md](BUDGETS.md)). | S11 |
 | `connectors` | Configured tools. | S16 |
 | `credentials` | A connector's credentials, envelope-encrypted. Field names and a short hint are the only clear text. | S16 |
-| `actions` | One tool call through the Gate, with its state, decision, result digest and witness verdict. S21 (migration 0020): `witness_expect` (an explicit L2 footprint, written for S23's undo) and `witness_amendments` (the amendment deeds sealed about it, 0 to 3). | S13, S21 |
+| `actions` | One tool call through the Gate, with its state, decision, result digest and witness verdict. S21 (migration 0020): `witness_expect` (an explicit L2 footprint, written for S23's undo) and `witness_amendments` (the amendment deeds sealed about it, 0 to 3). S23 (0022): `undo_released_at`. | S13, S21, S23 |
 | `action_events` | Every state change of every action. **Append-only.** | S13 |
 | `approvals` | A request for a human decision on one action. | S13 (a stub: pending, then decided or expired), S22 |
 | `approval_tokens` | One-time approve or deny links, hashed. | S22 |
 | `approval_votes` | One row per person per approval: approve or deny, the reason, how (`console`, `email_link`, `cli_dev`), the context digest and the admin deed. **Append-only.** | S22 |
+| `undo_plans` | The plan each undo ran: the undo action, the action it undoes, the plan (pruned with the other payloads), its digest, the row count and the tables. Written once; only the plan is ever cleared. | S23 |
 | `idempotency_keys` | Stored responses for `Idempotency-Key`, kept 24 hours. | S03 |
 | `seal_keys` | The instance's public seal keys. | S04 |
 | `deeds` | Sealed deeds, one hash-linked chain per org. **Append-only.** | S04 |
@@ -373,6 +375,41 @@ rows. Every change they lead to runs afterwards in an org transaction with row-l
 
 The outbox: `ledger.Publish` inserts one `webhook_deliveries` row per subscribed endpoint in the
 same batch as its `NOTIFY`, inside the transaction that made the change.
+
+## Undo additions (0022, S23)
+
+`0022_undo.sql` adds what undo needs ([UNDO.md](UNDO.md)). An undo is an action like any other
+(tool `<connector>.undo`, `actions.undoes_action_id` from 0005), run by each org's `console` system
+agent on behalf of a person.
+
+- `agents.kind`: `text NOT NULL DEFAULT 'agent'`, `agent` or `system`. The `console` agent is the
+  only `system` agent; it is created on first use, holds no keys, and Stop all skips it
+  ([GATE.md](GATE.md#the-console-system-agent-s23)).
+- `actions.undo_released_at`: when an undo that didn't apply (denied, expired, cancelled, failed)
+  gave up its slot, set once at its seal. It is in the runtime role's column `UPDATE` grant. The
+  trigger `actions_undo_release_guard` raises DG001 when the value is cleared or moved once set, or
+  set on an action that isn't an undo.
+- `actions_one_live_undo`: a unique index on `actions (org_id, undoes_action_id) WHERE
+  undoes_action_id IS NOT NULL AND undo_released_at IS NULL`, so an action has at most one live
+  undo. A concurrent second request hits it and gets `409 already_undone`.
+- `actions_witness_expect_check`: an undo's exact footprint holds every planned row with its
+  values, up to `undo.max_rows` rows, so the cap on `witness_expect` rises from 64 KiB to 8 MiB
+  (still a JSON object).
+
+| Column of `undo_plans` | What |
+|---|---|
+| `org_id`, `action_id` | the undo action; the primary key, with a composite foreign key to `actions` |
+| `undoes_action_id` | the action it undoes (a composite foreign key to `actions`; never the undo itself) |
+| `plan` | the plan as JSON, at most 8 MiB; set to NULL when payloads are pruned |
+| `plan_digest` | `digest`, NOT NULL: stays after pruning |
+| `row_count` | 1 to 100,000 |
+| `tables` | `text[]`, 1 to 64 entries |
+| `created_at` | when the executor stored it |
+
+`undo_plans` is an org table with row-level security (`org_isolation`); the runtime role has
+`SELECT`, `INSERT` and `UPDATE (plan)` only. The trigger `undo_plans_guard` raises DG001 for any
+update except clearing `plan`, and row and statement triggers (`forbid_mutation`) refuse DELETE
+and TRUNCATE. The index `undo_plans_undoes` serves lookups by the undone action.
 
 ## Personal data
 

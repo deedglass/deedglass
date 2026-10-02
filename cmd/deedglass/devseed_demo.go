@@ -152,6 +152,29 @@ func runDevSeedDemo(ctx context.Context, e *Env) error {
 		}
 		activated = true
 	}
+	// 3b. S23: a second admin, ops@example.test, so the founder's undo can be countersigned by
+	// someone else (the self rule), and an org admin key minted by the founder (the CLI's undo
+	// runs on the founder's behalf), written to the keys file as admin=…
+	if err := addDemoMember(ctx, db, led, org.ID, demoSecondAdmin); err != nil {
+		return seedErr(err)
+	}
+	if keys[demoAdminKeyName] == "" {
+		founder, ferr := demoUserID(ctx, db, org.ID, demoOrg.Owner)
+		if ferr != nil {
+			return seedErr(ferr)
+		}
+		k, kerr := people.CreateAdminKey(ctx, identity.Actor{Ref: deed.Ref{Type: "user", ID: founder.String()}, By: founder.String()}, org.ID,
+			identity.CreateKeyInput{Name: "acme-demo-admin", Mode: identity.ModeTest})
+		if kerr != nil || k.Secret == nil {
+			return seedErr(fmt.Errorf("the founder's admin key: %v", kerr))
+		}
+		keys[demoAdminKeyName] = *k.Secret
+		if err := writeDemoKeys(devSeedValues.keysFile, keys); err != nil {
+			return &ExitError{Code: ExitFailure, ErrCode: "keys_file", Err: fmt.Errorf("The keys couldn't be saved to %s: %v", devSeedValues.keysFile, err),
+				Next: "Check the folder exists and is writable, then run make demo-reset HARD=1."}
+		}
+		createdKeys++
+	}
 	// 4. An approver (S22: make demo-approver EMAIL=…): an active admin, with a member.joined deed.
 	approver := ""
 	if strings.TrimSpace(devSeedValues.approver) != "" {
@@ -184,6 +207,38 @@ func runDevSeedDemo(ctx context.Context, e *Env) error {
 		fmt.Fprintln(e.Stdout, s.OKLine("approver "+approver+" · admin of "+org.Slug+" · approval emails go to this address"))
 	}
 	return nil
+}
+
+// S23's demo people and keys.
+const (
+	demoSecondAdmin  = "ops@example.test"
+	demoAdminKeyName = "admin"
+)
+
+// demoUserID is a member's user id by email (users are readable to their orgs' transactions).
+func demoUserID(ctx context.Context, db *store.DB, org ids.OrgID, email string) (ids.UserID, error) {
+	var id ids.UserID
+	err := db.OrgReadTx(ctx, org, func(ctx context.Context, tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `SELECT u.id FROM deedglass.users AS u JOIN deedglass.memberships AS m ON m.user_id = u.id
+		    WHERE m.org_id = $1 AND u.email = $2`, org, email).Scan(&id)
+	})
+	return id, err
+}
+
+// addDemoMember makes email an active admin of the demo org once: a second run changes nothing and
+// seals nothing (the seed stays idempotent).
+func addDemoMember(ctx context.Context, db *store.DB, led *ledger.Ledger, org ids.OrgID, email string) error {
+	var active bool
+	if err := db.OrgReadTx(ctx, org, func(ctx context.Context, tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM deedglass.memberships AS m JOIN deedglass.users AS u ON u.id = m.user_id
+		    WHERE m.org_id = $1 AND u.email = $2 AND m.status = 'active' AND m.role IN ('admin', 'owner'))`, org, email).Scan(&active)
+	}); err != nil {
+		return err
+	}
+	if active {
+		return nil
+	}
+	return addDemoApprover(ctx, db, led, org, email)
 }
 
 // addDemoApprover makes email an active admin of the demo org (dev only), and seals member.joined.

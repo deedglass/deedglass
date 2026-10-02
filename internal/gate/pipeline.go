@@ -88,6 +88,9 @@ type Options struct {
 	Intents  identity.IntentChecker // nil: headers are ignored (tests)
 	Guard    identity.Guard         // nil: long polls don't end on Stop (tests)
 	Resolver Resolver
+	// Internal resolves the internal tools a person's action may run (S23: <connector>.undo,
+	// wrapped by the undo executor). Nil: the console principal has nothing to run.
+	Internal Resolver
 	// Observer replaces the read-back path through the connectors' ReadBacker (tests). Nil: the
 	// connectors read back.
 	Observer  witness.Observer
@@ -226,8 +229,12 @@ func (e *needPrepare) Error() string { return "gate: the approval snapshot must 
 // transaction boundaries.
 func (p *Pipeline) Submit(ctx context.Context, pr principal, req ActionRequest) (*Action, error) {
 	t0 := p.now()
-	if pr.Kind != httpx.KindAgentKey || pr.AgentID.IsZero() || pr.OrgID.IsZero() {
+	console := pr.Kind == httpx.KindConsole
+	if pr.Kind != httpx.KindAgentKey && !console || pr.AgentID.IsZero() || pr.OrgID.IsZero() {
 		return nil, httpx.ErrInsufficientScope(httpx.ScopeActionsExecute)
+	}
+	if req.UndoesActionID != "" && !console {
+		return nil, httpx.ErrInsufficientScope(httpx.ScopeActionsUndo)
 	}
 	n, err := Normalize(req, p.cfg.MaxArgsBytes)
 	if err != nil {
@@ -245,7 +252,16 @@ func (p *Pipeline) Submit(ctx context.Context, pr principal, req ActionRequest) 
 	unknown := n.Unknown
 	if !unknown && n.Mode == ModeGateway {
 		var ctype string
-		ex, spec, ctype, err = p.o.Resolver.Resolve(ctx, pr.OrgID, n.Tool)
+		if console {
+			// A person's action runs only the connector's internal tools (S23); an agent never
+			// reaches them (Resolve refuses an internal tool as unknown).
+			err = connector.ErrToolUnknown
+			if p.o.Internal != nil {
+				ex, spec, ctype, err = p.o.Internal.Resolve(ctx, pr.OrgID, n.Tool)
+			}
+		} else {
+			ex, spec, ctype, err = p.o.Resolver.Resolve(ctx, pr.OrgID, n.Tool)
+		}
 		switch {
 		case errors.Is(err, connector.ErrToolUnknown):
 			unknown = true
@@ -395,6 +411,11 @@ func (p *Pipeline) admit(ctx context.Context, pr principal, n *Normalized, req A
 		if err != nil {
 			return err
 		}
+		if subj.AgentKind == "system" {
+			// Stop all skips the console system agent (S23): you stop agents, then undo what they
+			// wrote. An admin can still stop it on its own.
+			subj.OrgStopped = false
+		}
 		// 2. The signed intent (S09), inside this transaction: a failed insert never burns the
 		// nonce. Identity failures are not actions: nothing is recorded. Mode off ignores the
 		// header; optional checks one when it is sent; required needs one, and MCP clients can't
@@ -490,7 +511,7 @@ func (p *Pipeline) admit(ctx context.Context, pr principal, n *Normalized, req A
 		na := ledger.NewAction{Agent: agent, Mode: string(n.Mode), Tool: n.Tool, Request: n.Args, RequestDigest: n.Digest,
 			Actor: actor, RequestID: req.RequestID, Fingerprint: n.Fingerprint, Context: n.Context, Livemode: pr.Livemode,
 			ToolDigest: n.ToolDigest, OnBehalfOf: nonEmpty(ir.OBO.OnBehalfOf), Session: nonEmpty(ir.OBO.Session),
-			IntentSigned: ir.Signed, IdempotencyKey: nonEmpty(req.IdempotencyKey)}
+			IntentSigned: ir.Signed, IdempotencyKey: nonEmpty(req.IdempotencyKey), UndoesActionID: nonEmpty(req.UndoesActionID)}
 		if ir.Signed {
 			na.IntentHash = &ir.IntentHash
 		}
@@ -505,6 +526,9 @@ func (p *Pipeline) admit(ctx context.Context, pr principal, n *Normalized, req A
 		id, err := p.o.Ledger.CreateAction(ctx, tx, org, na)
 		if isKeyRace(err) {
 			return errKeyRace
+		}
+		if isUndoTaken(err) {
+			return ErrUndoTaken
 		}
 		if err != nil {
 			return err
@@ -605,6 +629,12 @@ func (p *Pipeline) admit(ctx context.Context, pr principal, n *Normalized, req A
 		return nil, err
 	}
 	return adm, nil
+}
+
+// isUndoTaken reports a unique violation of actions_one_live_undo (S23).
+func isUndoTaken(err error) bool {
+	var pe *pgconn.PgError
+	return errors.As(err, &pe) && pe.Code == "23505" && pe.ConstraintName == "actions_one_live_undo"
 }
 
 // isKeyRace reports a unique violation of actions_idem (org, agent, idempotency_key).

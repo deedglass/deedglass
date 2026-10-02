@@ -45,6 +45,7 @@ Every Witness verdict lists its reasons: what each check found, or what it could
 | `tool_reported_success` | pass | L0 | `The tool reported success.` | Nothing. Add a read-back to reach L1. |
 | `triggers_present` | note | L2 | `public.orders has triggers (orders_ship_open_batch). Their writes to watched tables are checked; writes elsewhere aren't visible.` | Nothing. Set witness.strict_triggers to treat unwatched trigger writes as a gap. |
 | `triggers_unwatched` | gap | L2 | `public.orders has triggers that may write tables Deedglass doesn't watch.` | Watch every table the triggers write, or turn off witness.strict_triggers. |
+| `undo_restored` | pass | L2 | `Restored 301 rows in public.orders exactly as planned.` | Nothing. |
 | `unexpected_column` | violation | L2 | `Postgres changed total_cents on 1 row in public.orders. The statement set only status.` | If a trigger maintains the column on purpose, list it in the connector's witness.auto_columns. |
 | `unexpected_key` | violation | L2 | `300 changed rows in public.orders are outside the rows the statement named (id = 42).` | Read the diff: the unexpected rows are listed first after the expected ones. |
 | `unexpected_operation` | violation | L2 | `Postgres deleted 1 row in public.orders. The statement only updates rows.` | Look for a trigger or rule that deletes, inserts or truncates on this table. |

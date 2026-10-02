@@ -26,7 +26,7 @@ Actions
   actions             Inspect actions                                    list · show · cancel
   approve · deny      Decide a pending approval
   approvals           List pending approvals                             list · show
-  undo                Preview or run an undo                      soon   preview · run
+  undo                Preview or run an undo                             preview · run
   webhooks            Send events to your endpoints                      create · list · test · delete
 Deeds
   verify              Check deeds offline

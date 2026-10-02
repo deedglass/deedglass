@@ -232,12 +232,22 @@ func Compare(fp Footprint, f *Frame, cfg Config) []witness.Reason {
 	for _, te := range fp.Tables {
 		rs = append(rs, compareTable(te, f, cfg)...)
 	}
+	if len(fp.Exact) > 0 {
+		rs = append(rs, exactChecks(fp, f)...)
+	}
 	rs = append(rs, rowLimits(byTable, observed, f, cfg)...)
 	clean := true
 	for _, r := range rs {
 		if r.Class == witness.Violation || r.Class == witness.Gap {
 			clean = false
 		}
+	}
+	if clean && len(fp.Exact) > 0 {
+		for _, t := range exactTables(fp) {
+			n := int64(f.Counts[t].Rows())
+			add(witness.CodeUndoRestored, "footprint", map[string]any{"observed": n, "rows": rowsWord(n), "table": t})
+		}
+		return rs
 	}
 	if clean {
 		for _, te := range fp.Tables {

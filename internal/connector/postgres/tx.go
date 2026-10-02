@@ -224,45 +224,12 @@ type TxResult struct {
 // Errors before COMMIT leave nothing committed: they are failed kinds. A COMMIT whose answer is
 // lost is unknown (the change may have applied). Kept internal and reusable for S23's undo.
 func (c *Connector) execInTx(ctx context.Context, e *poolEntry, name string, cfg Config, la LedgerArgs, stmts []Stmt) (*TxResult, error) {
-	pc, err := e.acquire(ctx, name)
+	pc, res, err := c.beginWrite(ctx, e, name, cfg, la)
 	if err != nil {
 		return nil, err
 	}
 	defer pc.Release()
 	conn := pc.Conn()
-	b := &pgx.Batch{}
-	b.Queue("BEGIN ISOLATION LEVEL READ COMMITTED READ WRITE")
-	b.Queue(settingsSQL, settingsArgs(cfg)...)
-	var intent any
-	if la.IntentHash != "" {
-		intent = la.IntentHash
-	}
-	b.Queue(`SELECT b.xid8::text, b.marker_lsn::text FROM deedglass.begin_action($1, $2, $3, $4, $5) AS b`, la.ActionID, la.OrgID, la.AgentID, intent, la.SQLDigest)
-	br := conn.SendBatch(ctx, b)
-	res := &TxResult{}
-	_, err = br.Exec()
-	if err == nil {
-		_, err = br.Exec()
-	}
-	if err == nil {
-		err = br.QueryRow().Scan(&res.XID8, &res.MarkerLSN)
-	}
-	if cerr := br.Close(); err == nil {
-		err = cerr
-	}
-	if err != nil {
-		rollback(pc)
-		if conn.IsClosed() || ctx.Err() != nil {
-			return nil, &connector.Error{Kind: connector.KindToolError, Code: connector.CodeTimeout,
-				AgentMessage: "The database didn't answer before the transaction began, so nothing ran.", Err: err}
-		}
-		ce := setupError(err, name, cfg)
-		if ce.Code == "internal_error" {
-			c.log.ErrorContext(ctx, "postgres: begin_action refused the connector's own transaction", "connector", name,
-				"sqlstate", sqlState(err), "alert", "begin_action_guard")
-		}
-		return nil, ce
-	}
 	mode := execMode(e)
 	for _, s := range stmts {
 		args := append([]any{mode, pgx.QueryResultFormats{pgx.TextFormatCode}}, s.Params...)
@@ -287,29 +254,86 @@ func (c *Connector) execInTx(ctx context.Context, e *poolEntry, name string, cfg
 		}
 		res.Results = append(res.Results, sr)
 	}
+	if err := c.commitWrite(ctx, pc, cfg); err != nil {
+		return nil, err
+	}
+	return res, nil
+}
+
+// beginWrite opens the write transaction (S17 §3.6): BEGIN READ COMMITTED READ WRITE, set_config,
+// any extra settings, and begin_action in one batch (one round trip). begin_action is the
+// transaction's first write: its guard refuses it once the transaction has an xid. The caller
+// releases the connection; on an error it is already rolled back and released.
+func (c *Connector) beginWrite(ctx context.Context, e *poolEntry, name string, cfg Config, la LedgerArgs, extra ...string) (*pgxpool.Conn, *TxResult, error) {
+	pc, err := e.acquire(ctx, name)
+	if err != nil {
+		return nil, nil, err
+	}
+	conn := pc.Conn()
+	b := &pgx.Batch{}
+	b.Queue("BEGIN ISOLATION LEVEL READ COMMITTED READ WRITE")
+	b.Queue(settingsSQL, settingsArgs(cfg)...)
+	for _, x := range extra {
+		b.Queue(x)
+	}
+	var intent any
+	if la.IntentHash != "" {
+		intent = la.IntentHash
+	}
+	b.Queue(`SELECT b.xid8::text, b.marker_lsn::text FROM deedglass.begin_action($1, $2, $3, $4, $5) AS b`, la.ActionID, la.OrgID, la.AgentID, intent, la.SQLDigest)
+	br := conn.SendBatch(ctx, b)
+	res := &TxResult{}
+	for i := 0; i < 2+len(extra) && err == nil; i++ {
+		_, err = br.Exec()
+	}
+	if err == nil {
+		err = br.QueryRow().Scan(&res.XID8, &res.MarkerLSN)
+	}
+	if cerr := br.Close(); err == nil {
+		err = cerr
+	}
+	if err != nil {
+		rollback(pc)
+		pc.Release()
+		if conn.IsClosed() || ctx.Err() != nil {
+			return nil, nil, &connector.Error{Kind: connector.KindToolError, Code: connector.CodeTimeout,
+				AgentMessage: "The database didn't answer before the transaction began, so nothing ran.", Err: err}
+		}
+		ce := setupError(err, name, cfg)
+		if ce.Code == "internal_error" {
+			c.log.ErrorContext(ctx, "postgres: begin_action refused the connector's own transaction", "connector", name,
+				"sqlstate", sqlState(err), "alert", "begin_action_guard")
+		}
+		return nil, nil, ce
+	}
+	return pc, res, nil
+}
+
+// commitWrite runs the beforeCommit hook and COMMIT. A server answer other than COMMIT means it
+// rolled back (a deferred constraint, a serialization failure); a lost answer means it may have
+// applied (unknown).
+func (c *Connector) commitWrite(ctx context.Context, pc *pgxpool.Conn, cfg Config) error {
 	if c.hooks.beforeCommit != nil {
 		if err := c.hooks.beforeCommit(ctx); err != nil {
 			rollback(pc)
-			return nil, err
+			return err
 		}
 	}
-	// COMMIT: a server answer other than COMMIT means it rolled back (a deferred constraint, a
-	// serialization failure); a lost answer means it may have applied.
-	tag, err := conn.Exec(context.WithoutCancel(ctx), "COMMIT")
+	tag, err := pc.Conn().Exec(context.WithoutCancel(ctx), "COMMIT")
 	if err != nil {
 		var pe *pgconn.PgError
 		if errors.As(err, &pe) {
 			abandonIfBusy(pc)
-			return nil, statementError(err, cfg)
+			return statementError(err, cfg)
 		}
 		abandon(pc)
-		return nil, &connector.Error{Kind: connector.KindUpstream, Code: connector.CodeUpstreamError, AgentMessage: msgCommitLost, Err: err}
+		return &connector.Error{Kind: connector.KindUpstream, Code: connector.CodeUpstreamError, AgentMessage: msgCommitLost, Err: err}
 	}
 	if tag.String() != "COMMIT" {
-		return nil, &connector.Error{Kind: connector.KindToolError, Code: connector.CodeUpstreamError,
+		return &connector.Error{Kind: connector.KindToolError, Code: connector.CodeUpstreamError,
 			AgentMessage: "Postgres rolled the transaction back at COMMIT. Nothing was committed."}
 	}
-	return res, nil
+	return nil
 }
 
 func abandonIfBusy(pc *pgxpool.Conn) {

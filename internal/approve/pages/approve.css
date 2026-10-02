@@ -269,3 +269,27 @@ textarea[aria-invalid="true"] { border-color: var(--danger); }
   .seal.short .half-l, .seal.short .half-r { transform: none; }
   .seal.closed.verified .pulse { animation: none; }
 }
+
+/* S23: the undo section. A compact diff (DESIGN.md table-row: 36px rows, hairlines between rows,
+   tabular numerals, values in mono); the After undo column is tinted with the pending state at 12%,
+   because nothing changes until a person countersigns. */
+.undo { margin: 12px 0 4px; }
+.undo-title { margin: 0 0 8px; color: var(--text); font-size: 14px; font-weight: 500; overflow-wrap: anywhere; }
+.undo-label { color: var(--muted); font-size: 13px; font-weight: 600; }
+.undo .banner { margin: 0 0 10px; }
+.undo-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; }
+.undo-wrap:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.undo-table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 13px; font-variant-numeric: tabular-nums; }
+.undo-table th:nth-child(1) { width: 46%; }
+.undo-table th {
+  height: 32px; padding: 0 8px; text-align: left; font-size: 12px; font-weight: 600; color: var(--muted); white-space: nowrap;
+  border-bottom: 1px solid var(--line);
+}
+.undo-table td {
+  height: 36px; padding: 6px 8px; font-family: var(--mono); white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis; box-sizing: border-box;
+}
+.undo-table td.k { white-space: normal; overflow-wrap: anywhere; }
+.undo-table tr + tr td { border-top: 1px solid var(--line); }
+.undo-table td.k { color: var(--muted); line-height: 1.35; }
+.undo-table td.after { background: var(--pending-bg); background: color-mix(in srgb, var(--pending) 12%, transparent); }

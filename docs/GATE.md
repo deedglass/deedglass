@@ -200,9 +200,33 @@ gate:
 limit fails closed (`policy_unavailable`), so each trip is a refused action, and each one is also
 logged at warn level with the org and agent.
 
+## The console system agent (S23)
+
+Every action needs an agent: `actions.agent_id` is required and the deed names one. Some actions are
+started by a person, not an agent, and the first is undo ([UNDO.md](UNDO.md)). For those, each org
+has a **system agent** named `console` (`agents.kind = 'system'`), described as "Actions a person
+starts from the Console or the CLI, such as undo." It is created on first use, with an
+`agent.created` admin deed whose actor is Deedglass.
+
+- **Person-initiated.** The principal is the `console` agent with the person attached: the action's
+  `on_behalf_of` is the person's `usr_` id (for an org admin key, the person who minted the key).
+  Policies can match it with `agent: console`, and S22's self rule keeps the person from
+  countersigning their own request.
+- **Internal tools are reachable only this way.** A connector can declare internal tools
+  (`ToolSpec.Internal`), such as the Postgres connector's `undo`. They are never listed to agents.
+  An agent that calls one gets a sealed `tool_unknown`; only the `console` principal resolves them
+  (`Registry.ResolveInternal`, wired in as `gate.Options.Internal`), and it resolves nothing else.
+- **It holds no keys.** Creating a key for it is `validation_failed`. The undo routes take an
+  admin or owner session or an org admin key; agent keys get `insufficient_scope`.
+- **Stop all skips it.** You stop your agents, then undo what they wrote. An admin can still stop
+  `console` on its own, and a stopped `console` refuses every person-initiated action
+  (`agent_stopped`).
+- **Reserved names.** No agent can be registered as `console`, `system` or `deedglass`.
+
 ## What the Gate doesn't do
 
-- It doesn't undo a tool that ran (S23 adds undo where a connector supports it).
+- It doesn't undo a tool by itself. A person can undo a Postgres write witnessed at L2 (S23,
+  [UNDO.md](UNDO.md)); anything else stays as it ran.
 - It doesn't make an edge-reported result independent. In proxy mode the deed says
   `edge_reported`: it records what the edge said. S21's L2 witness checks Postgres on its own.
 - It doesn't retry a tool. A timeout is an unknown outcome, never a second call.

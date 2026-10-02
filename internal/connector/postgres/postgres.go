@@ -173,7 +173,8 @@ func toolSpecs(cfg Config) []connector.ToolSpec {
 	specs = append(specs, connector.ToolSpec{Name: ToolDescribe, SideEffect: connector.SideEffectRead, Idempotent: true,
 		Description: "List the tables the agent can read: columns, types, primary keys, row estimates, and which tables are writable and watched.",
 		InputSchema: json.RawMessage(describeInput)})
-	return specs
+	// S23: the internal undo tool; never listed to agents and never resolved for them.
+	return append(specs, undoSpec())
 }
 
 // Tools implements connector.Connector.
@@ -255,6 +256,11 @@ func (c *Connector) Execute(ctx context.Context, inst *connector.Instance, call 
 		return c.callFunction(ctx, inst, st, call)
 	case ToolDescribe:
 		return c.describeTool(ctx, inst, st, call)
+	case ToolUndo:
+		// The undo runs only through the undo executor (internal/undoapi), which plans it from
+		// evidence and calls RunUndo; nothing reaches it with arguments alone.
+		return connector.Result{}, &connector.Error{Kind: connector.KindInvalidRequest, Code: "tool_unknown",
+			AgentMessage: "The Postgres connector has no tool by that name."}
 	}
 	return connector.Result{}, &connector.Error{Kind: connector.KindInvalidRequest, Code: "tool_unknown", AgentMessage: "The Postgres connector has no tool by that name."}
 }

@@ -24,6 +24,17 @@ import (
 // the cause is fixed: a result that came back is never lost to a sealing problem.
 var errSeal = errors.New("gate: sealing failed")
 
+// resolveStored resolves the tool of an action the Gate already admitted (a resume after approval,
+// a witness job): its principal was checked at admission, so an internal tool (S23's undo, only a
+// person's console action reaches it) resolves here too.
+func (p *Pipeline) resolveStored(ctx context.Context, org ids.OrgID, tool string) (Executor, connector.ToolSpec, string, error) {
+	ex, spec, ctype, err := p.o.Resolver.Resolve(ctx, org, tool)
+	if errors.Is(err, connector.ErrToolUnknown) && p.o.Internal != nil {
+		return p.o.Internal.Resolve(ctx, org, tool)
+	}
+	return ex, spec, ctype, err
+}
+
 // seal seals the action in tx; a chain conflict stays itself (OrgTxRetry retries it).
 func (p *Pipeline) seal(ctx context.Context, tx pgx.Tx, id ids.ActionID) error {
 	_, err := p.sealEnv(ctx, tx, id)
@@ -616,7 +627,7 @@ func (p *Pipeline) step(ctx context.Context, org ids.OrgID, id ids.ActionID) (a 
 						done = true // authorized: the edge runs it now
 						break
 					}
-					ex, spec, ctype, err := p.o.Resolver.Resolve(ctx, org, ga.Tool)
+					ex, spec, ctype, err := p.resolveStored(ctx, org, ga.Tool)
 					if err != nil {
 						return err
 					}

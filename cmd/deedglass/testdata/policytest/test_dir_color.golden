@@ -3,8 +3,8 @@ exit 0
 [36m✓[0m default-deny               13 cases · default and 1 budget covered
 [36m✓[0m github-read-mostly         22 cases · 10 of 10 rules
 [36m✓[0m gmail-drafts-only          14 cases · 4 of 4 rules
-[36m✓[0m postgres-safe              28 cases · 12 of 12 rules
+[36m✓[0m postgres-safe              29 cases · 12 of 12 rules
 [36m✓[0m slack-post-with-approval   16 cases · 5 of 5 rules
 [36m✓[0m stripe-refunds             21 cases · 8 of 8 rules
-[36m✓[0m 114 cases passed · 6 policies · every rule covered · N s
+[36m✓[0m 115 cases passed · 6 policies · every rule covered · N s
 --- stderr

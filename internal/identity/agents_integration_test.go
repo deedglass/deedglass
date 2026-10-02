@@ -847,3 +847,44 @@ func TestOwnerAndGuardCache(t *testing.T) {
 		t.Fatalf("an unknown agent must never act: %v", err)
 	}
 }
+
+// TestSystemAgent is S23's console system agent: created once on first use (one agent.created
+// deed, actor {system, deedglass}), the same id afterwards, no API keys, its name reserved for
+// people, and Stop all doesn't count it among the agents it stops.
+func TestSystemAgent(t *testing.T) {
+	w := newWorld(t)
+	f := newFleet(t, w, "Acme", "priya@acme.com")
+	f.agent(t, "support-bot")
+	var first, second ids.AgentID
+	for i, dst := range []*ids.AgentID{&first, &second} {
+		if err := w.e.DB.OrgTx(ctx, f.org.Org.ID, func(ctx context.Context, tx pgx.Tx) error {
+			var err error
+			*dst, err = w.svc.EnsureSystemAgent(ctx, tx, f.org.Org.ID, identity.ConsoleAgent)
+			return err
+		}); err != nil {
+			t.Fatalf("ensure %d: %v", i, err)
+		}
+	}
+	if first.IsZero() || first != second {
+		t.Fatalf("the console agent: %s then %s", first, second)
+	}
+	var deeds int
+	c := w.e.Admin(t)
+	if err := c.QueryRow(ctx, `SELECT count(*) FROM deedglass.admin_events WHERE org_id = $1 AND action = 'agent.created' AND target_id = $2
+	    AND actor_type = 'system'`, f.org.Org.ID, first).Scan(&deeds); err != nil || deeds != 1 {
+		t.Fatalf("agent.created deeds for console: %d %v", deeds, err)
+	}
+	r := w.call(t, f.admin, "POST", "/v1/agents/"+first.String()+"/keys", `{}`)
+	expect(t, r, 400, "validation_failed")
+	if !strings.Contains(r.message(), "system agent") {
+		t.Fatalf("key for console: %s", r.body)
+	}
+	expect(t, w.call(t, f.admin, "POST", "/v1/agents", `{"name":"console"}`), 400, "validation_failed")
+	r = w.call(t, f.admin, "POST", "/v1/org/stop-all", `{"reason":"Investigating"}`)
+	expect(t, r, 200, "")
+	var st identity.OrgStop
+	r.json(t, &st)
+	if st.AgentsAffected != 1 {
+		t.Fatalf("Stop all counted %d agents, want 1 (console is skipped): %s", st.AgentsAffected, r.body)
+	}
+}

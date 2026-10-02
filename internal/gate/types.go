@@ -73,6 +73,9 @@ type ActionRequest struct {
 	// context ends: the client disconnected, or a Stop cancelled it (identity.Guard.Watch). Nil:
 	// the execution is detached and finishes on its own.
 	CancelOn context.Context
+	// UndoesActionID (S23): the action a person's undo undoes; sets actions.undoes_action_id. Only
+	// the console principal sends it, and only with an internal <connector>.undo tool.
+	UndoesActionID string
 }
 
 // EdgeResult is the body of POST /v1/actions/{id}/result (proxy mode).
@@ -128,6 +131,10 @@ type Executor = connector.Executor
 type Resolver interface {
 	Resolve(ctx context.Context, org ids.OrgID, qualified string) (Executor, connector.ToolSpec, string, error)
 }
+
+// ErrUndoTaken: another undo of the same action already holds its one-live-undo slot (S23: the
+// unique index actions_one_live_undo). The undo route answers 409 already_undone.
+var ErrUndoTaken = errors.New("gate: another undo of this action is pending, running or applied")
 
 // Witnesser turns an execution into a verdict. S13's L0 witness answers inline; S19's
 // witness.Engine replaces it and may defer (then the worker calls Deferred).

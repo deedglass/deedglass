@@ -99,6 +99,25 @@ var Settings = []Setting{
 		Doc: "An endpoint that has failed every delivery for this long is disabled, with a webhook.disabled deed.", Owner: "S22"},
 	{Path: "webhooks.max_endpoints_per_org", Kind: SettingInt, Default: "16", Min: 1, Max: 100,
 		Doc: "The most webhook endpoints one org may have.", Owner: "S22"},
+	{Path: "undo.max_rows", Kind: SettingInt, Default: "1000", Min: 1, Max: 100_000,
+		Doc: "The most rows one undo puts back (and at most decoder.max_images_per_tx, whose images it needs).", Owner: "S23"},
+	{Path: "undo.max_age", Kind: SettingDuration, Default: "168h", Min: 60_000, Max: 31_536_000_000,
+		Doc: "How long after an action is sealed it can be undone (while decoder.retention keeps its row images).", Owner: "S23"},
+	{Path: "undo.lock_timeout", Kind: SettingDuration, Default: "2s", Min: 100, Max: 60_000,
+		Doc: "How long an undo waits for a row lock before it fails with nothing changed.", Owner: "S23"},
+	{Path: "undo.statement_timeout", Kind: SettingDuration, Default: "10s", Min: 100, Max: 60_000,
+		Doc: "The longest any one statement of an undo may run.", Owner: "S23"},
+	{Path: "undo.preview_steps", Kind: SettingInt, Default: "20", Min: 1, Max: 1_000,
+		Doc: "Steps a preview lists by default (?steps_limit= asks for up to 1,000).", Owner: "S23"},
+}
+
+// UndoSettings are the undo.* settings, parsed (S23).
+type UndoSettings struct {
+	MaxRows          int
+	MaxAge           time.Duration
+	LockTimeout      time.Duration
+	StatementTimeout time.Duration
+	PreviewSteps     int
 }
 
 // ApprovalSettings are the approvals.* settings, parsed (S22).
@@ -225,6 +244,7 @@ func (l *loader) parseSettings(c *Config) {
 		"approvals.default_expires_in": &c.Approvals.DefaultExpiresIn, "approvals.estimate_timeout": &c.Approvals.EstimateTimeout,
 		"approvals.link_max_ttl": &c.Approvals.LinkMaxTTL, "approvals.link_status_window": &c.Approvals.LinkStatusWindow,
 		"webhooks.timeout": &c.Webhooks.Timeout, "webhooks.disable_after": &c.Webhooks.DisableAfter,
+		"undo.max_age": &c.Undo.MaxAge, "undo.lock_timeout": &c.Undo.LockTimeout, "undo.statement_timeout": &c.Undo.StatementTimeout,
 	}
 	ints := map[string]*int{
 		"gate.max_args_bytes": &c.Gate.MaxArgsBytes, "gate.max_result_bytes": &c.Gate.MaxResultBytes,
@@ -233,6 +253,7 @@ func (l *loader) parseSettings(c *Config) {
 		"decoder.batch_changes":    &c.Decoder.BatchChanges, "decoder.max_images_per_tx": &c.Decoder.MaxImagesPerTx,
 		"approvals.context_max_bytes": &c.Approvals.ContextMaxBytes, "approvals.max_recipients": &c.Approvals.MaxRecipients,
 		"webhooks.max_attempts": &c.Webhooks.MaxAttempts, "webhooks.max_endpoints_per_org": &c.Webhooks.MaxEndpoints,
+		"undo.max_rows": &c.Undo.MaxRows, "undo.preview_steps": &c.Undo.PreviewSteps,
 	}
 	bools := map[string]*bool{"decoder.enabled": &c.Decoder.Enabled}
 	enums := map[string]*string{"decoder.transport": &c.Decoder.Transport}

@@ -61,10 +61,15 @@ type Ledger struct {
 	log    *slog.Logger
 	now    func() time.Time
 	dev    bool
+	// undoMaxAge is undo.max_age (S23), for the undo object's eligible flag.
+	undoMaxAge time.Duration
 }
 
 // Option tunes a Ledger.
 type Option func(*Ledger)
+
+// WithUndoMaxAge sets undo.max_age (S23; 168h by default), which the undo object's eligible flag reads.
+func WithUndoMaxAge(d time.Duration) Option { return func(l *Ledger) { l.undoMaxAge = d } }
 
 // WithIssuer sets the issuer (DEEDGLASS_BASE_URL) written into exports and the key set.
 func WithIssuer(u string) Option { return func(l *Ledger) { l.issuer = u } }
@@ -84,7 +89,8 @@ func WithDev(dev bool) Option { return func(l *Ledger) { l.dev = dev } }
 // New returns a Ledger over db. sealer and signer may be nil for a read-only Ledger.
 func New(db *store.DB, sealer *deed.Sealer, signer deed.Signer, opts ...Option) *Ledger {
 	l := &Ledger{db: db, sealer: sealer, signer: signer, issuer: "http://127.0.0.1:8080",
-		gen: archive.Generator{Name: "deedglass", Version: "dev", Commit: "unknown"}, log: slog.Default(), now: time.Now}
+		gen: archive.Generator{Name: "deedglass", Version: "dev", Commit: "unknown"}, log: slog.Default(), now: time.Now,
+		undoMaxAge: 168 * time.Hour}
 	for _, o := range opts {
 		o(l)
 	}

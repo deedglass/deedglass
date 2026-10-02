@@ -3,7 +3,7 @@
 **Status:** S12. Every policy and case on this page is checked in CI by `docs/cookbook_test.go`: each policy compiles with zero warnings under `--voice`, and each case passes.
 **Audience:** anyone writing a Deedglass policy who wants a starting point for a common need.
 
-Seventeen recipes. Each one has the problem in one sentence, a complete policy you can lint and test as it stands, one test case, and a note. The language itself is in [POLICY_LANGUAGE.md](POLICY_LANGUAGE.md); the workflow (lint, test, push, shadow, enforce) is in [POLICIES_GUIDE.md](POLICIES_GUIDE.md).
+Eighteen recipes. Each one has the problem in one sentence, a complete policy you can lint and test as it stands, one test case, and a note. The language itself is in [POLICY_LANGUAGE.md](POLICY_LANGUAGE.md); the workflow (lint, test, push, shadow, enforce) is in [POLICIES_GUIDE.md](POLICIES_GUIDE.md).
 
 **How to try a recipe.** Save the policy as `recipe.yaml` and the case as `recipe.cases.yaml` in the same folder, then run:
 
@@ -34,6 +34,7 @@ Recipes:
 15. Drafts, never send
 16. Alert on every blocked destructive attempt
 17. Tighten rules while an anomaly is active
+18. Require two people to undo writes to billing tables
 
 ## 1. Block destructive SQL
 
@@ -678,6 +679,46 @@ cases:
 ```
 
 **Note.** `anomaly.active` is live from S27, when Insights starts detecting anomalies. **Until then, `anomaly.active` is always false**, so this rule never decides an action on a server; the case sets it by hand. Put the rule above the allow rules it should tighten, because the first rule that matches decides.
+
+## 18. Require two people to undo writes to billing tables
+
+**Problem.** Putting rows back in your billing database changes money records again, so it should need two people, not one.
+
+```yaml
+deedglass: policy/v1
+name: billing-undo-four-eyes
+defaults:
+  decision: deny
+  reason: No rule allows this action. Add a rule in Console › Policies to allow it.
+rules:
+  - id: billing-undo-needs-two
+    match: { agent: console, tool: billing.undo, connector_type: postgres }
+    decision: require_approval
+    reason: Undoing a write to the billing tables changes money records again, so two people countersign it first.
+    approval: { approvers: [role:admin], required: 2 }
+    verify: L2
+  - id: undo-needs-approval
+    match: { agent: console, tool: "*.undo", connector_type: postgres }
+    decision: require_approval
+    reason: Undoing a write changes data again, so a human confirms it first.
+    approval: { approvers: [role:admin], required: 1 }
+    verify: L2
+```
+
+```yaml
+cases:
+  - name: an undo on the billing database waits for two admins
+    input:
+      tool: { name: billing.undo, connector_type: postgres }
+      agent: { name: console }
+      args: { undoes: act_01jb8m2x7k4q9r3t5v6w8y0z1a, plan_digest: "sha256:c0a4", allow_triggers: false, reason: A sync job overwrote 12 invoices. }
+    expect: { decision: require_approval, rule: billing-undo-needs-two, approval: { required: 2, approvers: [role:admin] }, verify: L2 }
+  - name: an undo on another Postgres connector waits for one admin
+    input: { tool: { name: postgres.undo, connector_type: postgres }, agent: { name: console }, args: { undoes: act_01jb8m2x7k4q9r3t5v6w8y0z1a } }
+    expect: { decision: require_approval, rule: undo-needs-approval, approval: { required: 1 } }
+```
+
+**Note.** An undo ([UNDO.md](UNDO.md)) is an action of your org's `console` system agent on behalf of the person who asked for it, with the tool `<connector>.undo`. Its arguments name the action it undoes and the plan digest, not the tables, so scope by connector: give the billing database its own Postgres connector (here named `billing`), and its undos are `billing.undo`. The requester never counts toward the two: S22's self rule asks for two *other* admins or owners, so the org needs at least three. Keep the general `*.undo` rule below the billing one, because the first rule that matches decides; without any undo rule, the default denies every undo.
 
 ## See also
 

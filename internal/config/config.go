@@ -73,6 +73,7 @@ type Config struct {
 	Witness   WitnessSettings  // witness.* (S19)
 	Decoder   DecoderSettings  // decoder.* (S20)
 	Approvals ApprovalSettings // approvals.* (S22)
+	Undo      UndoSettings     // undo.* (S23)
 	Webhooks  WebhookSettings  // webhooks.* (S22)
 
 	raw        map[string]string // resolved raw values, for printing

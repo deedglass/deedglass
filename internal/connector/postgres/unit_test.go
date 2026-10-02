@@ -297,8 +297,11 @@ func TestToolsAndEnrich(t *testing.T) {
 			t.Errorf("describe refuses {}: %v", err)
 		}
 	}
-	if strings.Join(names, " ") != "query/read execute/write call/write describe/read" {
+	if strings.Join(names, " ") != "query/read execute/write call/write describe/read undo/write" {
 		t.Fatalf("tools: %v", names)
+	}
+	if !tools[4].Internal {
+		t.Error("undo must be an internal tool (S23)")
 	}
 	spec := tools[1]
 	m, _ := c.Enrich(t.Context(), inst, spec, json.RawMessage(`{"sql":"DELETE FROM orders WHERE id = 1"}`))
@@ -317,7 +320,7 @@ func TestToolsAndEnrich(t *testing.T) {
 	norm2, _ := c.Validate(t.Context(), connector.Env{}, json.RawMessage(`{"mode":"controlled_functions","allowed_schemas":["public"]}`))
 	inst2 := connector.NewInstance(ids.New[ids.ConnectorKind](), ids.New[ids.OrgKind](), "pg", Type, norm2, "sha256:y", connector.Env{Name: "dev"}, nil)
 	tools2, _ := c.Tools(t.Context(), inst2)
-	if len(tools2) != 2 || tools2[0].Name != ToolQuery || tools2[1].Name != ToolDescribe {
+	if len(tools2) != 3 || tools2[0].Name != ToolQuery || tools2[1].Name != ToolDescribe || tools2[2].Name != ToolUndo || !tools2[2].Internal {
 		t.Fatalf("controlled_functions tools: %+v", tools2)
 	}
 	// no credential: credentials_missing, nothing sent

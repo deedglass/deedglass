@@ -68,6 +68,22 @@
     inMin: 'in {n} min',
     inHour: 'in {h} h {m} min',
     inHourExact: 'in {h} h',
+    // S23: the undo section (internal/witness/undo/present.go holds the CLI and API strings).
+    undoHead: '{rows} in {tables}',
+    undoUpdates: '{n}\u00a0updates',
+    undoUpdate: '1\u00a0update',
+    undoInserts: '{n}\u00a0inserts',
+    undoInsert: '1\u00a0insert',
+    undoDeletes: '{n}\u00a0deletes',
+    undoDelete: '1\u00a0delete',
+    undoMore: 'And {n} more steps in the plan.',
+    undoMoreOne: 'And 1 more step in the plan.',
+    undoTriggers: 'Triggers on these tables fire again during this undo. The witness shows what they did.',
+    undoAbsent: 'absent',
+    undoPresent: 'present',
+    undoPutBack: 'put back',
+    undoRemoved: 'removed',
+    undoNull: 'NULL',
   };
 
   const $ = (id) => document.getElementById(id);
@@ -216,6 +232,7 @@
       const who = cs.map((c, i) => fmt(COPY.fourEyesAt, { name: c.user.name, clock: (p.countersign_clocks || [])[i] || clock(c.at, p.time_zone) })).join(', ');
       $('f-four').textContent = fmt(COPY.fourEyes, { done: cs.length, need: a.required, who: who || '-' }).replace(/ · -$/, '');
     }
+    renderUndo(ctx.sections && ctx.sections.undo);
     $('sql-text').textContent = p.sql || '';
     show($('sql'), Boolean(p.sql));
     $('args-note').textContent = ctx.args_note || '';
@@ -241,6 +258,73 @@
     }
     show($('recent-wrap'), recent.length > 0);
     show($('context'), true);
+  }
+
+  // S23: an undo's plan, as the person who countersigns it reads it: what is put back, and the first
+  // steps as Now → After undo. Values are text only (textContent); sensitive ones arrive as •••.
+  // Two rows on a phone keep the decision above the fold; six where there is room.
+  const maxUndoRows = () => (window.matchMedia && window.matchMedia('(min-width: 441px)').matches ? 6 : 2);
+  const nf = (n) => Number(n).toLocaleString('en-US');
+  function plural(n, one, many) { return n === 1 ? one : fmt(many, { n: nf(n) }); }
+  function cell(text, cls) {
+    const td = document.createElement('td');
+    if (cls) td.className = cls;
+    td.translate = false;
+    td.textContent = text;
+    td.title = text; // the full value when the cell cuts it
+    return td;
+  }
+  function renderUndo(u) {
+    const on = Boolean(u && typeof u === 'object');
+    show($('undo'), on);
+    for (const id of ['f-why-label', 'f-why']) show($(id), on);
+    if (!on) return;
+    $('f-why').textContent = u.reason || '';
+    show($('f-why-label'), Boolean(u.reason));
+    show($('f-why'), Boolean(u.reason));
+    const c = u.counts || {};
+    const parts = [fmt(COPY.undoHead, { rows: plural(u.rows || 0, COPY.rowOne, COPY.rowMany), tables: (u.tables || []).join(', ') })];
+    if (c.update) parts.push(plural(c.update, COPY.undoUpdate, COPY.undoUpdates));
+    if (c.insert) parts.push(plural(c.insert, COPY.undoInsert, COPY.undoInserts));
+    if (c.delete) parts.push(plural(c.delete, COPY.undoDelete, COPY.undoDeletes));
+    $('undo-head').textContent = parts.join(' · ');
+    $('undo-triggers').textContent = u.allow_triggers ? COPY.undoTriggers : '';
+    show($('undo-triggers'), Boolean(u.allow_triggers));
+    const body = $('undo-rows');
+    body.textContent = '';
+    const steps = Array.isArray(u.steps) ? u.steps : [];
+    let shownSteps = 0;
+    let lines = 0;
+    const MAX_UNDO_ROWS = maxUndoRows();
+    for (const st of steps) {
+      if (lines >= MAX_UNDO_ROWS) break;
+      shownSteps++;
+      // With several tables, each row names its table (without the schema).
+      const many = (u.tables || []).length > 1;
+      const key = (many ? String(st.table || '').split('.').pop() + ' ' : '') +
+        Object.keys(st.key || {}).sort().map((k) => k + ' ' + st.key[k]).join(' ');
+      const val = (v) => (v === null || v === undefined ? COPY.undoNull : String(v));
+      if (st.op === 'update') {
+        for (const col of Object.keys(st.set || {}).sort()) {
+          if (lines >= MAX_UNDO_ROWS) break;
+          const tr = document.createElement('tr');
+          tr.append(cell(key + ' · ' + col, 'k'), cell(val((st.expect || {})[col]), 'now'), cell(val(st.set[col]), 'after'));
+          body.append(tr);
+          lines++;
+        }
+      } else {
+        const tr = document.createElement('tr');
+        const ins = st.op === 'insert';
+        tr.append(cell(key, 'k'), cell(ins ? COPY.undoAbsent : COPY.undoPresent, 'now'), cell(ins ? COPY.undoPutBack : COPY.undoRemoved, 'after'));
+        body.append(tr);
+        lines++;
+      }
+    }
+    const more = Math.max(0, (u.steps_more || 0) + steps.length - shownSteps);
+    show($('undo-wrap'), lines > 0);
+    $('undo-more').textContent = more ? fmt(more === 1 ? COPY.undoMoreOne : COPY.undoMore, { n: nf(more) }) : '';
+    $('undo-more').title = u.plan_digest || '';
+    show($('undo-more'), more > 0);
   }
 
   function renderPreview(p, focus) {

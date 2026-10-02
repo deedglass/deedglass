@@ -104,6 +104,12 @@ const (
 	CodeApprovalUnsatisfiable  Code = "approval_unsatisfiable"
 	CodeApprovalLinkInvalid    Code = "approval_link_invalid"
 	CodeApprovalLinkReviewOnly Code = "approval_link_review_only"
+
+	// S23: undo.
+	CodeUndoUnavailable Code = "undo_unavailable"
+	CodeUndoPlanStale   Code = "undo_plan_stale"
+	CodeAlreadyUndone   Code = "already_undone"
+	CodeUndoConflict    Code = "undo_conflict"
 )
 
 // DocURLPrefix is where every code has a page (docs/api/errors.md, published by S33).
@@ -225,6 +231,14 @@ var catalog = []CatalogEntry{
 		"No one in this org can approve this: the rule needs {n} people and only {m} {is} eligible. Nothing was run. Invite another admin, or allow self-countersign in Console › Settings › Approvals.", "S22"},
 	{CodeApprovalLinkInvalid, 401, TypeAuthentication, "This approval link has expired or was already used. Open Console › Approvals.", "", "S22"},
 	{CodeApprovalLinkReviewOnly, 403, TypePermission, "Your org decides approvals in the Console. Open Console › Approvals to countersign.", "", "S22"},
+
+	{CodeUndoUnavailable, 409, TypeInvalidRequest, "Undo isn't available for this action. The checks field lists each failing check with its fix.",
+		"Undo isn't available for {act}: {n} check failed ({ids}). Run deedglass undo preview {act} for the fix.", "S23"},
+	{CodeUndoPlanStale, 409, TypeInvalidRequest, "The rows changed since you previewed this undo. Preview it again and use the new plan.", "", "S23"},
+	{CodeAlreadyUndone, 409, TypeInvalidRequest, "This action was already undone, or an undo of it is waiting. Look at the action's undo object.",
+		"{act} was already undone by {undo} at {time}. / An undo of {act} is already waiting for approval: {undo}.", "S23"},
+	{CodeUndoConflict, 409, TypeInvalidRequest, "A row changed after the undo's plan was made, so Postgres rolled the undo back. Nothing was changed. Preview the undo again.",
+		"Row {table} {key} changed after the plan was made ({column} is now {value}). Nothing was changed. Preview the undo again.", "S23"},
 }
 
 var byCode = func() map[Code]CatalogEntry {
@@ -260,6 +274,8 @@ type Error struct {
 	// Action is the additive envelope field of POST /v1/actions refusals (S13): the recorded,
 	// sealed action, rendered as "action".
 	Action any
+	// Checks is the additive envelope field of undo_unavailable (S23): every check, with its fix.
+	Checks any
 	cause  error
 }
 
@@ -303,6 +319,9 @@ func WithHeader(k, v string) Opt {
 
 // WithAction attaches the recorded action to a refusal of POST /v1/actions (rendered as "action").
 func WithAction(v any) Opt { return func(e *Error) { e.Action = v } }
+
+// WithChecks attaches undo_unavailable's checks (rendered as "checks", S23).
+func WithChecks(v any) Opt { return func(e *Error) { e.Checks = v } }
 
 // WithDiagnostics attaches policy_invalid's diagnostics (rendered as "diagnostics").
 func WithDiagnostics(v any) Opt { return func(e *Error) { e.Diagnostics = v } }

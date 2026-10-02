@@ -150,6 +150,8 @@ func elsewhere() []Route {
 		adm("GET", "/v1/webhooks/{id}", "getWebhook", RoleAdmin), adm("DELETE", "/v1/webhooks/{id}", "deleteWebhook", RoleAdmin),
 		adm("POST", "/v1/webhooks/{id}/test", "testWebhook", RoleAdmin), adm("GET", "/v1/webhooks/{id}/deliveries", "listWebhookDeliveries", RoleAdmin),
 	)
+	// S23: undo (internal/undoapi).
+	out = append(out, adm("POST", "/v1/actions/{id}/undo/preview", "previewUndo", RoleAdmin), adm("POST", "/v1/actions/{id}/undo", "createUndo", RoleAdmin))
 	return out
 }
 

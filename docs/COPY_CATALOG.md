@@ -355,6 +355,108 @@ It expires at 05:11 UTC. Nothing has run yet. Check again in a minute." · "A pe
 but agent "claude-desktop" is stopped, so nothing ran." Every text is in
 [MCP.md](MCP.md#approvals-deedglasscheck_approval).
 
+## Undo (S23; S25 builds the panel)
+
+Every string lives in `internal/witness/undo/present.go`; the CLI's layout is in
+`cmd/deedglass/undo.go`. Vocabulary: undo, put back, restore, plan, preview, check, witness, deed.
+Never "rollback" for a person's undo (a rollback is what Postgres does to a failed transaction),
+never "revert". Status symbols: ✓ pass (teal), ✕ fail (red), ○ warn (amber), ◐ pending (violet).
+`%s` and `%q` are filled in by the code; examples use the hero's numbers.
+
+### Console (S25 renders them)
+
+| Constant | Copy |
+|---|---|
+| `ConsolePanelTitle` | `Undo` |
+| `ConsoleEligible` | `Put these rows back the way Postgres recorded them before this action.` |
+| `ConsolePreviewButton` | `Preview undo` |
+| `ConsoleSheetTitle` | `Undo %s?` (the short action id), subtitle the headline: `51 rows in public.orders · 51 updates` |
+| `ConsoleColNow` · `ConsoleColAfter` | `Now` · `After undo` (the diff table's columns; changed cells tinted at 12%) |
+| `ConsoleReasonLabel` | `Why are you undoing this? The approver and the Ledger read it.` |
+| `ConsoleRequestButton` | `Request undo` (it goes to approval; never "Undo now") |
+| `ConsoleUnavailable` | `Undo isn't available`, then each failing check with its fix |
+| `ConsoleCopyFix` | `Copy fix` (the button beside fix SQL) |
+| `ConsoleUndoneChip` | `Undone · %s · %s` (on the original: the undo's short id and its time, `Undone · act_01j9zx8… · 10:14 IST`) |
+| `ConsoleUndoesLine` | `This undoes %s.` (on the undo action, a link to the original) |
+| `ConsoleNotEligible` | `Undo works for Postgres writes Deedglass witnessed at L2.` |
+| `ConsoleAllowTriggers` | `Fire triggers again (admins only)` |
+| `ConsoleAllowTriggersOn` | `Triggers on these tables will fire again. The witness shows what they did.` |
+
+No red on the Undo button: red is for deny, mismatch and destructive actions, and asking for an
+undo is neither until a person countersigns.
+
+### Checks, summaries and notes
+
+| Where | Copy |
+|---|---|
+| Check titles (API `title`) | `L2 evidence` · `Connector` · `Age` · `Not undone` · `Row limit` · `Replica identity` · `Primary key` · `Columns` · `Triggers` · `Cascades` · `Rows unchanged since` · `Privileges` |
+| Summary (`Summary`) | `Put back 51 rows in public.orders to the values Postgres recorded before act_01j9zw6k…` (the CLI says `this action`) |
+| Headline (`Headline`) | `51 rows in public.orders · 51 updates` |
+| Approval summary (`ApprovalSummary`) | `console (for Priya) wants to put back 51 rows in public.orders, undoing act_01j9zw6k…` |
+| Result (`ResultText`) | `51 rows restored in public.orders` |
+| L2 VERIFIED detail (`WitnessText`, reason `undo_restored`) | `Restored 51 rows in public.orders exactly as planned.` |
+| Notes | `Sequences are not rewound.` · `Values in columns marked sensitive show as ••• and are compared by their digest.` · `Some rows were created and removed in the same transaction; they need no step.` · `Generated columns are recomputed by Postgres, never written.` · `Some rows were updated to the values they already had; they need no step.` |
+| Fixes | `Fix the failing check, then preview again.` · `Undo would fire this trigger again.` · `An admin can pass allow_triggers with a reason; the L2 witness then shows what the trigger did.` · `Set REPLICA IDENTITY FULL so the undo itself can be witnessed.` · `Grant the privilege, or add the table to writable_tables and run deedglass connector postgres init again.` · `Preview the undo again; the plan follows the rows as they are now.` |
+| A sensitive value | `•••` |
+
+The failing sentences of each check, with examples, are in [UNDO.md](UNDO.md#the-twelve-checks).
+
+### API errors, as rendered
+
+| Code | Message |
+|---|---|
+| `undo_unavailable` (409) | `Undo isn't available for act_01j9zw6k…: 1 check failed (triggers). Run deedglass undo preview act_01j9zw6k… for the fix.` |
+| `undo_plan_stale` (409) | `The rows changed since you previewed this undo. Preview it again and use the new plan.` |
+| `already_undone` (409) | `act_01j9zw6k… was already undone by act_01j9zx8… at 10:14 IST.` · while waiting: `An undo of act_01j9zw6k… is already waiting for approval: act_01j9zx8…` |
+| `validation_failed`, `param: reason` | `Say why you're undoing this. The approver and the Ledger read it.` · over 280 characters: `Keep the reason to 280 characters. The approver reads it on a phone.` |
+| `insufficient_scope` (403, agent key) | `Agent keys can't undo actions. A person starts an undo from the Console or with an admin key.` |
+
+### The failed undo (`undo_conflict`, the action's `execution.error_message`)
+
+| When | Copy |
+|---|---|
+| A row changed | `Row public.orders id=42 changed after the plan was made (status is now 'cancelled'). Nothing was changed. Preview the undo again.` |
+| A removed row is back | `Row public.orders id=9 exists again since the plan was made. Nothing was changed. Preview the undo again.` |
+| A row is gone | `Row public.orders id=42 is gone since the plan was made. Nothing was changed. Preview the undo again.` |
+| A lock wait | `public.orders id=42 is locked by another transaction. Nothing was changed. Try again in a moment.` |
+| A step changed other than one row | `A step of the undo changed 2 rows in public.orders instead of exactly 1, so Postgres rolled it back. Nothing was changed. Preview the undo again.` |
+| Postgres refused a step | `Postgres refused a step of the undo (%s), so it rolled the whole undo back. Nothing was changed.` |
+| The catalog changed | `The catalog changed since the plan was made (%s). Nothing was changed. Preview the undo again.` |
+
+### CLI
+
+```
+✕ Undo not available · act_01j9zw6k… · postgres.execute
+  Put back 51 rows in public.orders to the values Postgres recorded before this action.
+  ✓ evidence          L2 · MISMATCH · 51 row images · xid 88213
+  ✕ triggers          public.orders has trigger orders_ship_open_batch. Undo would fire this trigger again.
+                      Fix: ALTER TABLE public.orders DISABLE TRIGGER orders_ship_open_batch;
+  Next: fix the failing check, then preview again.
+
+✓ Undo available · 51 rows in public.orders · 51 updates
+  plan     sha256:c0a4…77e1
+  sample   id 42   status  shipped → paid
+  notes    Sequences are not rewound.
+  policy   undo-needs-approval · a person countersigns first
+  Next: deedglass undo run act_01j9zw6k… --plan sha256:c0a4…77e1 --reason "…"
+
+◐ pending approval · postgres.undo
+  Next: countersign it from the email or Console › Approvals, then run: deedglass actions show act_01j9zx8… --wait
+
+✓ executed · postgres.undo · 212 ms
+  undo     51 rows restored in public.orders · undoes act_01j9zw6k…
+  witness  L2 · VERIFIED · Restored 51 rows in public.orders exactly as planned
+
+✕ failed · postgres.undo
+  Next: preview the undo again: deedglass undo preview act_01j9zw6k…
+```
+
+Sample lines for other steps: `remove the row the action created` (a delete) and `put back the row
+the action removed` (an insert). The policy line also reads `runs without a countersign` or
+`✕ <rule> · denied: <reason>`. Usage errors: `--plan is the preview's plan digest` and `Say why
+you're undoing this` (exit 2). `MsgAllowTriggersRole` (`Only an admin can let an undo fire triggers
+again.`) is in the catalog for S25; today both undo routes already require an admin.
+
 ## What this page doesn't do
 
 It doesn't hold every error: the full catalog, with when each code happens, is

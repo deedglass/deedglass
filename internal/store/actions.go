@@ -53,16 +53,17 @@ type GateSubject struct {
 	OrgName     string
 	Timezone    string
 	OrgStopped  bool
+	AgentKind   string // agent | system (S23: the console agent; Stop all skips it)
 }
 
 // LoadGateSubject reads the agent and its org. ErrNotFound when the agent isn't in this org.
 func LoadGateSubject(ctx context.Context, tx pgx.Tx, org ids.OrgID, agent ids.AgentID) (GateSubject, error) {
 	var s GateSubject
 	var labels, budgets []byte
-	err := tx.QueryRow(ctx, `SELECT g.name, g.status, g.labels, g.budgets, g.intent_mode, o.name, o.timezone, o.stopped_at IS NOT NULL
+	err := tx.QueryRow(ctx, `SELECT g.name, g.status, g.labels, g.budgets, g.intent_mode, o.name, o.timezone, o.stopped_at IS NOT NULL, g.kind
 	    FROM deedglass.agents AS g JOIN deedglass.orgs AS o ON o.id = g.org_id
 	    WHERE g.org_id = $1 AND g.id = $2`, org, agent).
-		Scan(&s.AgentName, &s.AgentStatus, &labels, &budgets, &s.IntentMode, &s.OrgName, &s.Timezone, &s.OrgStopped)
+		Scan(&s.AgentName, &s.AgentStatus, &labels, &budgets, &s.IntentMode, &s.OrgName, &s.Timezone, &s.OrgStopped, &s.AgentKind)
 	if err != nil {
 		return s, notFound(err)
 	}

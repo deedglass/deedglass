@@ -106,8 +106,8 @@ var contractRoutes = []ContractRoute{
 	cr("GET", "/v1/tools", AgentKey, "actions:execute", "S15"),
 
 	// S23: undo.
-	cr("POST", "/v1/actions/{id}/undo/preview", SessionOrKey, "actions:undo", "S23"),
-	cr("POST", "/v1/actions/{id}/undo", SessionOrKey, "actions:undo", "S23"),
+	cr("POST", "/v1/actions/{id}/undo/preview", SessionOrKey, "admin", "S23", "agent keys: insufficient_scope; IdemNever: writes nothing"),
+	cr("POST", "/v1/actions/{id}/undo", SessionOrKey, "admin", "S23", "agent keys: insufficient_scope; the console system agent acts for the person"),
 
 	// S22: approvals, approval links and webhooks.
 	cr("GET", "/v1/approvals", SessionOrKey, "viewer", "S22", "agent keys see their own actions only"),

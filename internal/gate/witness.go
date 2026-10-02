@@ -314,7 +314,7 @@ func (p *Pipeline) jobCase(ctx context.Context, ga *store.GateAction, payload js
 		IntentHash: derefString(ga.IntentHash)}
 	var ex Executor
 	if sub.Mode == ModeGateway {
-		rex, spec, ctype, err := p.o.Resolver.Resolve(ctx, ga.OrgID, ga.Tool)
+		rex, spec, ctype, err := p.resolveStored(ctx, ga.OrgID, ga.Tool)
 		if err != nil {
 			return witnessCase{}, err
 		}

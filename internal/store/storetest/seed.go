@@ -233,6 +233,20 @@ func Rows(sk ids.SealKeyID) []Row {
 			    VALUES ($1, $2, $3, 'approve', 'console', $4, $5)`, o.ID, apr, o.Owner, Digest(rnd(8)), o.Deed)
 			return err
 		}},
+		// An undo plan (S23): a fresh original and undo action each time (one plan per undo action).
+		{"undo_plans", func(ctx context.Context, tx pgx.Tx, o *Org) error {
+			orig, err := NewAction(ctx, tx, o.ID, o.Agent)
+			if err != nil {
+				return err
+			}
+			und, err := NewAction(ctx, tx, o.ID, o.Agent)
+			if err != nil {
+				return err
+			}
+			_, err = tx.Exec(ctx, `INSERT INTO deedglass.undo_plans (org_id, action_id, undoes_action_id, plan, plan_digest, row_count, tables)
+			    VALUES ($1, $2, $3, '{"v":1}', $4, 1, ARRAY['public.orders'])`, o.ID, und, orig, Digest(rnd(8)))
+			return err
+		}},
 		// An ended activation (so repeated inserts never meet the one-live-enforce index). Since S12
 		// an ended activation names who ended it and the deed that sealed it, so it comes after deeds.
 		{"policy_activations", ex(`INSERT INTO deedglass.policy_activations (id, org_id, policy_id, version_id, mode,

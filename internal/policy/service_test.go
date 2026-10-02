@@ -415,7 +415,7 @@ func TestDryRunAndTest(t *testing.T) {
 	// The server test runner.
 	cases, _ := policies.Cases("postgres-safe")
 	tr, err := w.svc.Test(bg, w.who, TestRequest{PolicyRef: "postgres-safe", Version: VersionRef{Number: 1}, Cases: string(cases)})
-	if err != nil || !tr.OK || tr.Passed != 28 || tr.Coverage.Covered != 12 {
+	if err != nil || !tr.OK || tr.Passed != 29 || tr.Coverage.Covered != 12 {
 		t.Fatalf("%v %+v", err, tr)
 	}
 	_, err = w.svc.Test(bg, w.who, TestRequest{Source: string(starter(t, "postgres-safe")), Cases: []any{map[string]any{"name": "x", "input": map[string]any{"tool": "a.b"}}}})

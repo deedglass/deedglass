@@ -152,6 +152,25 @@ func buildSections(in gate.ApprovalInput) map[string]json.RawMessage {
 	return out
 }
 
+// sectionSummary is the first section's own "summary" (sections in name order), "" when none has
+// one. A section that knows the action better than the SQL facts (S23's undo) says it plainly.
+func sectionSummary(secs map[string]json.RawMessage) string {
+	names := make([]string, 0, len(secs))
+	for n := range secs {
+		names = append(names, n)
+	}
+	sort.Strings(names)
+	for _, n := range names {
+		var x struct {
+			Summary string `json:"summary"`
+		}
+		if json.Unmarshal(secs[n], &x) == nil && x.Summary != "" && utf8.RuneCountInString(x.Summary) <= 280 {
+			return x.Summary
+		}
+	}
+	return ""
+}
+
 // redactArgs returns the arguments as a person may see them: string values that look like a
 // secret are scrubbed (S16's redaction), and JSON over MaxArgsBytes is cut, with a note.
 func redactArgs(args json.RawMessage) (json.RawMessage, *string) {

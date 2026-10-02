@@ -33,6 +33,9 @@ const (
 	// expectedDigestL pins group L, the approval cases (S22; ADR-049, PROPOSED; the founder
 	// approves in chat). Declared before the cases were implemented.
 	expectedDigestL = "398129372b8ab6e0d2f87aa6b3a0cfa737de3329f484e277d892ccf69c6f36ec"
+	// expectedDigestU pins group U, the undo cases (S23; ADR-052, PROPOSED; the founder approves
+	// in chat). Declared before the cases were implemented.
+	expectedDigestU = "ece59deebe94a2d2fd70f1da3e9f0f70c55debfebbb0644620764cf84073bf58"
 )
 
 // groupSets maps each pinned digest to its groups. A later session adds its own row (S19 N,
@@ -44,6 +47,7 @@ var groupSets = []struct {
 	{"HJK", expectedDigestV7},
 	{"W", expectedDigestW},
 	{"L", expectedDigestL},
+	{"U", expectedDigestU},
 }
 
 type meta struct {
@@ -110,7 +114,7 @@ func wantIDs() []string {
 	for _, g := range []struct {
 		p string
 		n int
-	}{{"A", 13}, {"B", 7}, {"C", 10}, {"D", 17}, {"E", 11}, {"F", 4}, {"G", 4}, {"H", 11}, {"J", 4}, {"K", 4}, {"L", 8}, {"W", 13}} {
+	}{{"A", 13}, {"B", 7}, {"C", 10}, {"D", 17}, {"E", 11}, {"F", 4}, {"G", 4}, {"H", 11}, {"J", 4}, {"K", 4}, {"L", 8}, {"U", 5}, {"W", 13}} {
 		for i := 1; i <= g.n; i++ {
 			ids = append(ids, fmt.Sprintf("%s%02d", g.p, i))
 		}

@@ -26,6 +26,8 @@ var layers = []struct {
 		func(c harness.MetaCase) bool { return c.Group == "W" }},
 	{"Approvals, links and webhooks", "S22's group L. A person's countersign is the control here, so each case tries to get one without the right person: a replayed email link, a second vote from the same person, the person the action runs for, an agent key, a vote after the approval expired, a vote on an out-of-date view. Then a webhook aimed at cloud metadata, and a forged webhook signature.",
 		func(c harness.MetaCase) bool { return c.Group == "L" }},
+	{"Undo", "S23's group U. An undo writes to the customer's database on a person's request, so each case tries to make it write something Postgres didn't record, or to reach it without a person: rows that change under it, values smuggled into the request, a forged marker naming the action, an agent calling the internal tool, another org's action.",
+		func(c harness.MetaCase) bool { return c.Group == "U" }},
 }
 
 func statusText(r *harness.Result) string {

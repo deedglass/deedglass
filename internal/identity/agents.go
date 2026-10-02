@@ -56,6 +56,62 @@ var (
 // ReservedAgentNames can't be registered (contract §3): S23's system agent is "console".
 var ReservedAgentNames = []string{"console", "system", "deedglass"}
 
+// ConsoleAgent is each org's system agent (S23, agents.kind = 'system'): the principal of actions
+// a person starts from the Console or the CLI, such as an undo. It holds no keys, Stop all skips it,
+// and an admin can still stop it on its own.
+const (
+	ConsoleAgent            = "console"
+	ConsoleAgentDescription = "Actions a person starts from the Console or the CLI, such as undo."
+	msgSystemAgentKeys      = "%s is Deedglass's system agent for actions people start, so it has no API keys. Create a key for one of your agents instead."
+)
+
+// EnsureSystemAgent returns org's system agent named name, creating it on first use and sealing
+// agent.created with the actor {system, deedglass}, in tx (an org transaction for org).
+func (s *Service) EnsureSystemAgent(ctx context.Context, tx pgx.Tx, org ids.OrgID, name string) (ids.AgentID, error) {
+	if name != ConsoleAgent {
+		return ids.AgentID{}, fmt.Errorf("identity: %q isn't a system agent", name)
+	}
+	var id ids.AgentID
+	var kind string
+	err := tx.QueryRow(ctx, `SELECT id, kind FROM deedglass.agents WHERE org_id = $1 AND name = $2`, org, name).Scan(&id, &kind)
+	switch {
+	case err == nil && kind == "system":
+		return id, nil
+	case err == nil:
+		return ids.AgentID{}, fmt.Errorf("identity: an agent named %s exists and isn't the system agent", name)
+	case !errors.Is(err, pgx.ErrNoRows):
+		return ids.AgentID{}, err
+	}
+	id = ids.New[ids.AgentKind]()
+	tag, err := tx.Exec(ctx, `INSERT INTO deedglass.agents (id, org_id, name, description, labels, budgets, created_by, kind)
+	    VALUES ($1, $2, $3, $4, '{}'::jsonb, '{}'::jsonb, 'system', 'system') ON CONFLICT (org_id, name) DO NOTHING`, id, org, name, ConsoleAgentDescription)
+	if err != nil {
+		return ids.AgentID{}, err
+	}
+	if tag.RowsAffected() == 0 { // created by a concurrent request a moment ago
+		if err := tx.QueryRow(ctx, `SELECT id FROM deedglass.agents WHERE org_id = $1 AND name = $2 AND kind = 'system'`, org, name).Scan(&id); err != nil {
+			return ids.AgentID{}, err
+		}
+		return id, nil
+	}
+	if _, err := s.recordAdmin(ctx, tx, ledger.AdminEvent{Action: ledger.AdminAgentCreated, Actor: deed.Ref{Type: "system", ID: "deedglass"},
+		Target: &deed.Ref{Type: "agent", ID: id.String()}, Agent: &deed.AgentRef{ID: id.String(), Name: name},
+		Data: map[string]any{"name": name, "labels": map[string]string{}, "budgets": Budgets{}}}); err != nil {
+		return ids.AgentID{}, err
+	}
+	if err := s.notify(ctx, tx, identityMsg{T: "agent", Org: org.String(), ID: id.String(), S: string(AgentActive)}); err != nil {
+		return ids.AgentID{}, err
+	}
+	return id, nil
+}
+
+// agentKind reads an agent's kind (agent | system).
+func agentKind(ctx context.Context, tx pgx.Tx, org ids.OrgID, id string) (string, error) {
+	var k string
+	err := tx.QueryRow(ctx, `SELECT kind FROM deedglass.agents WHERE org_id = $1 AND id = $2`, org, id).Scan(&k)
+	return k, err
+}
+
 // Budgets are an agent's limits, in contract money. S08 stores and validates them; S11 enforces
 // them.
 type Budgets struct {
@@ -730,7 +786,7 @@ func (s *Service) setOrgStop(ctx context.Context, a Actor, org ids.OrgID, stop b
 			return err
 		}
 		var affected int
-		if err := tx.QueryRow(ctx, `SELECT pg_catalog.count(*)::integer FROM deedglass.agents WHERE org_id = $1 AND status <> 'stopped'`, org).
+		if err := tx.QueryRow(ctx, `SELECT pg_catalog.count(*)::integer FROM deedglass.agents WHERE org_id = $1 AND status <> 'stopped' AND kind = 'agent'`, org).
 			Scan(&affected); err != nil {
 			return err
 		}

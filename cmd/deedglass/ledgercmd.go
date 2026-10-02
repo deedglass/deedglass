@@ -419,6 +419,20 @@ func runActionsShow(ctx context.Context, e *Env, args []string) error {
 	}
 	row("decision", dec)
 	row("execution", executionLine(d))
+	if u := d.Undo; u != nil {
+		// S23: what this undo put back, or the undo that put this action back.
+		switch {
+		case u.Undoes != nil:
+			row("undo", undoResultText(&ledger.Action{Execution: d.Execution}, *u.Undoes))
+			if ex := d.Execution; ex != nil && ex.ErrorMessage != nil && ex.Status != nil && *ex.Status == "failed" {
+				row("", clean(*ex.ErrorMessage))
+			}
+		case u.UndoneBy != nil:
+			row("undo", "undone by "+shortID(*u.UndoneBy))
+		case u.Pending != nil:
+			row("undo", "an undo is waiting: "+shortID(*u.Pending))
+		}
+	}
 	if w := d.Witness; w != nil {
 		// S19: the claim and its method, then every reason with its level, and field tables.
 		row("witness", witnessClaim(st, w, true))

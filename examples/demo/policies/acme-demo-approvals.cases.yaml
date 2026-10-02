@@ -190,6 +190,13 @@ cases:
   - name: editing outside allowed is blocked
     input: { tool: scratch.edit_file, args: { path: /etc/hosts, edits: [] } }
     expect: { decision: deny, rule: scratch-writes-only-in-allowed }
+  # Undo (S23): a person's undo through the console system agent waits for another person.
+  - name: an undo waits for a countersign
+    input:
+      tool: postgres.undo
+      agent: { name: console }
+      args: { undoes: act_01jb8m2x7k4q9r3t5v6w8y0z1a, plan_digest: "sha256:c0a4", allow_triggers: false, reason: Trigger bug touched 300 extra orders. }
+    expect: { decision: require_approval, rule: undo-needs-approval, approval: { required: 1 }, verify: L2 }
   # Everything else
   - name: moving a file is denied by default
     input: { tool: scratch.move_file, args: { source: /tmp/deedglass-demo/allowed/a, destination: /tmp/deedglass-demo/b } }

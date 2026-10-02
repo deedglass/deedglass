@@ -6,9 +6,9 @@ These cases assume the model has already been manipulated. They test what Deedgl
 
 Every case's expected outcome was written in `attack/attack_meta.json` before its code existed, and `attack/meta_test.go` pins a digest of the expectations (ADR-040). A case that turns out different is shown as differs; its expectation is never edited to pass.
 
-**Last run:** 2026-10-02 · commit `4fd9b05+uncommitted` · PostgreSQL 18.6 · a real `deedglass serve` process, a real Postgres, loopback upstreams.
+**Last run:** 2026-10-02 · commit `aad1e6b+uncommitted` · PostgreSQL 18.6 · a real `deedglass serve` process, a real Postgres, loopback upstreams.
 
-**40 matched · 0 differ · 0 waiting on a later session.** After every case: the deed chains of both orgs are intact, the target database is unchanged wherever nothing should have run, every action is sealed, and the planted credential was seen 0 times across the server's logs, every HTTP response, and the recorded actions, events, deeds, admin events, connector configs and credential hints.
+**45 matched · 0 differ · 0 waiting on a later session.** After every case: the deed chains of both orgs are intact, the target database is unchanged wherever nothing should have run, every action is sealed, and the planted credential was seen 0 times across the server's logs, every HTTP response, and the recorded actions, events, deeds, admin events, connector configs and credential hints.
 
 Run it: `make attack` (a throwaway PostgreSQL 18 cluster, about two minutes on a laptop: L05 waits out a real one-minute approval expiry), then `make attack-report`. One case: `DEEDGLASS_IT_ATTACK_RUN='TestAttack/H03' make attack`.
 
@@ -93,6 +93,18 @@ S22's group L. A person's countersign is the control here, so each case tries to
 | L06 | A decision on a stale context digest | REJECTED (context_changed; the approval stays pending and nothing runs) | REJECTED (context_changed; the approval stays pending and nothing runs) | ✓ matched |
 | L07 | A webhook URL to the cloud metadata service | BLOCKED (destination_blocked at create; 0 deliveries) | BLOCKED (destination_blocked at create; 0 deliveries) | ✓ matched |
 | L08 | A forged webhook signature checked with webhook.Verify | REJECTED (ErrSignature for a wrong secret or changed body; ErrTimestamp outside 300 s) | REJECTED (ErrSignature for a wrong secret or changed body; ErrTimestamp outside 300 s) | ✓ matched |
+
+## Undo
+
+S23's group U. An undo writes to the customer's database on a person's request, so each case tries to make it write something Postgres didn't record, or to reach it without a person: rows that change under it, values smuggled into the request, a forged marker naming the action, an agent calling the internal tool, another org's action.
+
+| Case | Attack | Expected | Actual | Status |
+|---|---|---|---|---|
+| U01 | An undo whose rows change between the preview and the run | REJECTED (undo_conflict; the undo is failed and Postgres changed no row) | REJECTED (undo_conflict; the undo is failed and Postgres changed no row) | ✓ matched |
+| U02 | An undo request that smuggles values or a tampered plan digest | REJECTED (validation_failed for any field beyond plan_digest, reason, allow_triggers and wait; undo_plan_stale for a digest Deedglass didn't plan; no row changes) | REJECTED (validation_failed for any field beyond plan_digest, reason, allow_triggers and wait; undo_plan_stale for a digest Deedglass didn't plan; no row changes) | ✓ matched |
+| U03 | An undo of an action after a forged marker names it in another transaction | REJECTED (the forged transaction never becomes evidence: the plan holds only the action's own bound transaction, and the forged rows stay as they are) | REJECTED (the forged transaction never becomes evidence: the plan holds only the action's own bound transaction, and the forged rows stay as they are) | ✓ matched |
+| U04 | An agent calling the internal undo tool through POST /v1/actions | DENIED (tool_unknown, recorded and sealed; nothing reaches Postgres) | DENIED (tool_unknown, recorded and sealed; nothing reaches Postgres) | ✓ matched |
+| U05 | An undo of another org's action | REJECTED (not_found for preview and run, exactly as an unknown id; nothing is planned) | REJECTED (not_found for preview and run, exactly as an unknown id; nothing is planned) | ✓ matched |
 
 ## V0 controlled-write cases (A to G)
 

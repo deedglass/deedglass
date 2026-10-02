@@ -123,7 +123,7 @@ func TestPolicyAPILive(t *testing.T) {
 		} `json:"enforce"`
 	}
 	_ = json.Unmarshal([]byte(body), &set)
-	if code != 200 || set.Enforce.VersionHash != "sha256:2c4c3f1058e5b52c0c96469dcde7354e1047cd4f238e785c074e5566efc504fd" || set.Enforce.Deed != deedID {
+	if code != 200 || set.Enforce.VersionHash != "sha256:01aeae9dbb518cf6d5ead7ed0b042bc0ed4700856c123694954de3b8369a76f6" || set.Enforce.Deed != deedID {
 		t.Fatalf("%d %s", code, body)
 	}
 	// The activation deed verifies offline against the server's keys; the chain is intact.

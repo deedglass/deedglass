@@ -10,7 +10,7 @@ import (
 	"github.com/deedglass/deedglass/internal/policy"
 )
 
-// TestCookbook keeps docs/POLICY_COOKBOOK.md honest (S12 §8): it has exactly 17 recipes, each with
+// TestCookbook keeps docs/POLICY_COOKBOOK.md honest (S12 §8): it has exactly 18 recipes, each with
 // one policy that compiles with zero errors and zero warnings under --voice, and each recipe's
 // cases block passes against that policy.
 func TestCookbook(t *testing.T) {
@@ -19,8 +19,8 @@ func TestCookbook(t *testing.T) {
 		t.Fatal(err)
 	}
 	recipes := splitRecipes(string(raw))
-	if len(recipes) != 17 {
-		t.Fatalf("found %d recipes (headings like \"## 1. …\"); want 17", len(recipes))
+	if len(recipes) != 18 {
+		t.Fatalf("found %d recipes (headings like \"## 1. …\"); want 18", len(recipes))
 	}
 	policies := 0
 	for _, b := range yamlBlocks(string(raw)) {
@@ -28,8 +28,8 @@ func TestCookbook(t *testing.T) {
 			policies++
 		}
 	}
-	if policies != 17 {
-		t.Errorf("found %d policy blocks in the whole file; want 17, one per recipe", policies)
+	if policies != 18 {
+		t.Errorf("found %d policy blocks in the whole file; want 18, one per recipe", policies)
 	}
 	for i, r := range recipes {
 		if r.num != i+1 {
