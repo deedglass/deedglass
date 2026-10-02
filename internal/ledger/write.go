@@ -403,6 +403,9 @@ func (l *Ledger) Advance(ctx context.Context, tx pgx.Tx, actionID string, from g
 			return err
 		}
 		b.Queue(notifySQL, Channel, string(payload))
+		if err := queueOutbox(b, evs[i]); err != nil {
+			return err
+		}
 	}
 	return tx.SendBatch(ctx, b).Close()
 }
@@ -451,8 +454,14 @@ func (l *Ledger) transition(ctx context.Context, tx pgx.Tx, actionID string, fro
 		b := &pgx.Batch{}
 		b.Queue(stmt, args...)
 		b.Queue(notifySQL, Channel, string(payload))
+		if perr := queueOutbox(b, ev); perr != nil {
+			return time.Time{}, perr
+		}
 		br := tx.SendBatch(ctx, b)
 		err = br.QueryRow().Scan(&org, &at)
+		if err == nil {
+			_, err = br.Exec()
+		}
 		if err == nil {
 			_, err = br.Exec()
 		}
@@ -573,8 +582,11 @@ func snapshot(ctx context.Context, tx pgx.Tx, actionID string) (deed.ActionSnaps
 		if apState != nil {
 			ap.Outcome = *apState
 		}
+		// Approved: every countersigner (S22 four-eyes). Denied (a veto, even after an earlier
+		// countersign) and cancelled by a person: that person. Expired: nobody.
 		switch {
-		case len(apApproved) > 0:
+		case ap.Outcome == "expired":
+		case ap.Outcome == "approved" && len(apApproved) > 0:
 			ap.DecidedBy = apApproved
 		case apDecidedBy != nil && ids.Check(ids.User, *apDecidedBy) == nil:
 			ap.DecidedBy = []string{*apDecidedBy}

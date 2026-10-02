@@ -27,6 +27,7 @@ import (
 type connectors struct {
 	egress  *egress.Policy
 	vault   *vault.Store // nil when DEEDGLASS_VAULT_KEY isn't set
+	ring    *vault.Ring  // the key ring itself (S22: webhook signing secrets); nil without the key
 	reg     *connector.Registry
 	decoder *decoder.Supervisor // S20; nil when decoder.enabled is false
 }
@@ -91,6 +92,7 @@ func newConnectors(ctx context.Context, cfg *config.Config, db *store.DB, led *l
 		if err != nil {
 			return nil, err
 		}
+		c.ring = ring
 		c.vault = vault.NewStore(db, ring, vault.StoreOptions{Ledger: led, Logger: log, Prod: cfg.Env == config.Prod})
 		o.Opener = c.vault
 	}

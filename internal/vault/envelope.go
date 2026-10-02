@@ -82,6 +82,17 @@ func plural(n int, one, many string) string {
 type Ref struct {
 	Org       ids.OrgID
 	Connector ids.ConnectorID
+	// Webhook binds a webhook's signing secret instead of a connector credential (S22): exactly
+	// one of Connector and Webhook is set, and the envelope's AAD names it.
+	Webhook ids.WebhookID
+}
+
+// subject is the id the envelope's AAD binds: the connector, or the webhook (S22).
+func (r Ref) subject() string {
+	if !r.Webhook.IsZero() {
+		return r.Webhook.String()
+	}
+	return r.Connector.String()
 }
 
 // KEKProvider wraps and unwraps data keys. Ring implements it with keys from the environment; a
@@ -202,11 +213,11 @@ func open(key, ct, aad []byte) ([]byte, error) {
 // The associated data: each ciphertext is bound to its org, connector, version and kind, and each
 // wrapped key to its org, connector and KEK.
 func aadDEK(ref Ref, kekID string) []byte {
-	return []byte("deedglass/vault/dek/v1\n" + ref.Org.String() + "\n" + ref.Connector.String() + "\n" + kekID)
+	return []byte("deedglass/vault/dek/v1\n" + ref.Org.String() + "\n" + ref.subject() + "\n" + kekID)
 }
 
 func aadSecret(ref Ref, version int, kind string) []byte {
-	return []byte("deedglass/vault/secret/v1\n" + ref.Org.String() + "\n" + ref.Connector.String() + "\n" + strconv.Itoa(version) + "\n" + kind)
+	return []byte("deedglass/vault/secret/v1\n" + ref.Org.String() + "\n" + ref.subject() + "\n" + strconv.Itoa(version) + "\n" + kind)
 }
 
 // Sealed is one stored credential version: what the credentials row holds besides its names.

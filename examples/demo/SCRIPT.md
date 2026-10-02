@@ -87,7 +87,21 @@ Waiting for approval under policy "orders-writes-need-approval": Writes to the o
 ```
 
 The terminal prints `◐ orders.execute_sql   waiting   orders-writes-need-approval   apr_…`.
-(S22 completes this beat with the approval link; for tonight, end here.)
+Then countersign it (S22). Either open the approval email's link (the dev log prints it:
+`docker compose -p deedglass-demo logs deedglass | grep approve#t=`, or a real inbox after
+`make demo-approver EMAIL=…`; `make demo-lan` makes the link open on a phone on the same Wi-Fi),
+check the context, and press **Approve and run**; or, off camera:
+
+```sh
+bin/deedglass approve apr_… --as <the approver's email>
+```
+
+Back in Claude Desktop:
+
+> Did it go through?
+
+The model calls `deedglass.check_approval` and gets `Approved by a person. Ran
+orders.execute_sql.` with the tool's own result. The page follows the action to **Sealed**.
 
 **Beat 5 (terminal only).** Stop the follow (Ctrl-C), then:
 

@@ -69,7 +69,18 @@ func TestOrgIsolation(t *testing.T) {
 	ib := acme.Agents["intent-bot"]
 	kid := firstKID(e, acme, ib.ID)
 	member := e.CPQuery("SELECT id FROM deedglass.memberships WHERE org_id = $1 LIMIT 1", acme.ID)[0][0]
-	acmeIDs := []string{acme.ID, attacker.ID, attacker.KeyID, act, deed, acme.Policy, acme.PolicyV, acme.Conns["orders"], acme.Conns["fs"], member, kid}
+	// S22: a pending approval (approval-bot meets the attack-baseline's approval rule; the owner can
+	// countersign) and a webhook to a loopback listener.
+	if acme.Agents["approval-bot"] == nil {
+		e.AddAgent(acme, "approval-bot", nil)
+	}
+	pr := acme.Agents["approval-bot"].API.Do("POST", "/v1/actions", map[string]any{"tool": "fake.echo", "args": map[string]any{"message": "fixture"},
+		"mode": "gateway", "wait": 0})
+	apr := harness.Str(pr.Map(), "approval", "id")
+	wh := harness.Str(acme.Admin.Do("POST", "/v1/webhooks", map[string]any{"url": e.Up.Orders.URL + "/hook",
+		"events": []string{"approval.decided"}}).Map(), "id")
+	acmeIDs := []string{acme.ID, attacker.ID, attacker.KeyID, act, deed, acme.Policy, acme.PolicyV, acme.Conns["orders"], acme.Conns["fs"], member, kid,
+		apr, wh}
 	for _, id := range acmeIDs {
 		if id == "" {
 			t.Fatalf("an Acme fixture is missing: %v", acmeIDs)
@@ -102,9 +113,16 @@ func TestOrgIsolation(t *testing.T) {
 		"/v1/connectors/{id}/test":                              {"id": acme.Conns["orders"]},
 		"/v1/connectors/{id}/initialized":                       {"id": acme.Conns["postgres"]},
 		"/v1/connectors/{id}/decoder":                           {"id": acme.Conns["postgres"]},
+		"/v1/approvals/{id}":                                    {"id": apr},
+		"/v1/approvals/{id}/approve":                            {"id": apr},
+		"/v1/approvals/{id}/deny":                               {"id": apr},
+		"/v1/webhooks/{id}":                                     {"id": wh},
+		"/v1/webhooks/{id}/deliveries":                          {"id": wh},
+		"/v1/webhooks/{id}/test":                                {"id": wh},
 		"/mcp/{connector}":                                      {"connector": "fs"},
 		"/.well-known/oauth-protected-resource/mcp/{connector}": nil, // public metadata: no org data
 		"/auth/assets/{file}":                                   nil, // public static file
+		"/approve/assets/{file}":                                nil, // public static file (S22's approval page)
 	}
 	raw, err := os.ReadFile(filepath.Join(e.Root, "api", "openapi.yaml"))
 	if err != nil {

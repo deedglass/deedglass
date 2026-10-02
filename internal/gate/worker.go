@@ -116,11 +116,16 @@ func (w *Worker) Run(ctx context.Context) error {
 				wg.Add(1)
 				go func(j store.ClaimedJob) {
 					defer func() { <-sem; wg.Done(); w.drop(j.ID) }()
-					if j.Kind == JobL2Match {
+					switch {
+					case j.Kind == JobL2Match:
 						w.handleL2Job(jobCtx, j)
-						return
+					case j.Kind == JobApprovalResume:
+						w.handleOther(jobCtx, j, w.p.resumeJob)
+					case w.p.jobHandler(j.Kind) != nil:
+						w.handleOther(jobCtx, j, w.p.jobHandler(j.Kind))
+					default:
+						w.handle(jobCtx, j)
 					}
-					w.handle(jobCtx, j)
 				}(j)
 			}
 		}
@@ -272,3 +277,73 @@ func (w *Worker) handle(ctx context.Context, j store.ClaimedJob) {
 // redact keeps an error's message short for last_error and logs; errors here never carry payloads,
 // but a connector's might, so the cap is hard.
 func redact(err error) string { return clipMessage(err.Error()) }
+
+// Approval job kinds (S22). approval_resume is the Gate's own (Resume); approval_notify belongs to
+// internal/approve, which registers its handler with SetJobHandler.
+const (
+	JobApprovalNotify = "approval_notify"
+	JobApprovalResume = "approval_resume"
+)
+
+// JobHandler runs one job of a kind the Gate doesn't own. An error retries the job with backoff,
+// up to its max_attempts; the handler must be idempotent.
+type JobHandler func(ctx context.Context, org ids.OrgID, action ids.ActionID, attempts int) error
+
+// SetJobHandler registers the handler of a job kind before the worker runs (serve wires
+// approve.Service's approval_notify).
+func (p *Pipeline) SetJobHandler(kind string, h JobHandler) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if p.jobs == nil {
+		p.jobs = map[string]JobHandler{}
+	}
+	p.jobs[kind] = h
+}
+
+func (p *Pipeline) jobHandler(kind string) JobHandler {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return p.jobs[kind]
+}
+
+// resumeJob is approval_resume: an approved action runs (gateway) or becomes authorized at the edge
+// (proxy) through Resume, whose compare-and-set makes a second worker or a retry a no-op.
+func (p *Pipeline) resumeJob(ctx context.Context, org ids.OrgID, action ids.ActionID, _ int) error {
+	_, _, err := p.resume(ctx, org, action)
+	if errors.Is(err, store.ErrNotFound) {
+		return nil
+	}
+	return err
+}
+
+// handleOther runs a job through h, then ends it in an org transaction: done, retried with backoff,
+// or (at max_attempts) dropped with a warning.
+func (w *Worker) handleOther(ctx context.Context, j store.ClaimedJob, h JobHandler) {
+	p := w.p
+	herr := h(ctx, j.OrgID, j.ActionID, j.Attempts)
+	err := p.o.DB.OrgTx(ctx, j.OrgID, func(ctx context.Context, tx pgx.Tx) error {
+		job, err := store.GetJob(ctx, tx, j.OrgID, j.ID)
+		if errors.Is(err, store.ErrNotFound) {
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+		if herr != nil && job.Attempts < job.MaxAttempts {
+			return store.RetryJob(ctx, tx, j.OrgID, j.ID, p.now().Add(backoff(job.Attempts)), redact(herr))
+		}
+		return store.CompleteJob(ctx, tx, j.OrgID, j.ID)
+	})
+	switch {
+	case err != nil:
+		p.m.job(j.Kind, "error")
+		p.log.Warn("gate: ending a job failed", "kind", j.Kind, "org_id", j.OrgID.String(), "action_id", j.ActionID.String(), "err", redact(err))
+	case herr != nil:
+		p.m.job(j.Kind, "retry")
+		p.log.Warn("gate: a job failed and will retry", "kind", j.Kind, "org_id", j.OrgID.String(), "action_id", j.ActionID.String(),
+			"attempt", j.Attempts, "err", redact(herr))
+	default:
+		p.m.job(j.Kind, "done")
+	}
+	p.broker.Notify(j.ActionID.String())
+}

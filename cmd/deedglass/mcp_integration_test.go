@@ -49,7 +49,11 @@ func (m *mcpLive) stop(t *testing.T) {
 	}
 }
 
-func newMCPLive(t *testing.T) *mcpLive {
+func newMCPLive(t *testing.T) *mcpLive { return newMCPLiveWith(t, nil) }
+
+// newMCPLiveWith is newMCPLive with extra server environment (S22: private networks for a
+// loopback webhook receiver).
+func newMCPLiveWith(t *testing.T, extra map[string]string) *mcpLive {
 	t.Helper()
 	e := storetest.New(t, storetest.Options{NoMigrate: true})
 	dir := t.TempDir()
@@ -57,6 +61,9 @@ func newMCPLive(t *testing.T) *mcpLive {
 	env := map[string]string{"DEEDGLASS_DATABASE_URL": e.AppURL, "DEEDGLASS_MIGRATE_DATABASE_URL": e.MigratorURL,
 		"DEEDGLASS_LISTEN": "127.0.0.1:0", "DEEDGLASS_LOG_LEVEL": "warn", "DEEDGLASS_SEAL_KEY_FILE": keyFile,
 		"DEEDGLASS_API_KEY_PEPPER": key32, "DEEDGLASS_VAULT_KEY": key32}
+	for k, v := range extra {
+		env[k] = v
+	}
 	s := startServe(t, env, "--migrate")
 	var base string
 	select {

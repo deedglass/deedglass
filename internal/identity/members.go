@@ -133,7 +133,11 @@ func getMember(ctx context.Context, tx pgx.Tx, id ids.MembershipID) (Member, err
 // demoting each other can't both see two owners. It returns the org's name.
 func lockOrg(ctx context.Context, tx pgx.Tx, org ids.OrgID) (string, error) {
 	var name string
-	err := tx.QueryRow(ctx, `SELECT name FROM deedglass.orgs WHERE id = $1 FOR UPDATE`, org).Scan(&name)
+	// FOR NO KEY UPDATE, not FOR UPDATE: it still serializes membership changes (it conflicts with
+	// itself), but not with the KEY SHARE lock a deed insert's foreign key takes on this row, so a
+	// sealer holding the chain lock never deadlocks with a membership change (40P01, found by S22's
+	// attack harness).
+	err := tx.QueryRow(ctx, `SELECT name FROM deedglass.orgs WHERE id = $1 FOR NO KEY UPDATE`, org).Scan(&name)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return "", store.ErrNotFound
 	}

@@ -47,6 +47,9 @@ KEY="$(grep -E "^$AGENT=" "$KEYS_FILE" 2>/dev/null | head -1 | cut -d= -f2- || t
 [ -n "$KEY" ] || fail "No key for the $AGENT agent in examples/demo/.demo-keys. Run make demo-up."
 curl -fsS "$SERVER/v1/health" >/dev/null 2>&1 || fail "Deedglass isn't answering on $SERVER. Run make demo-status."
 (cd "$ROOT" && go build -trimpath -o bin/deedglass ./cmd/deedglass) || fail "bin/deedglass didn't build. Run make build to see why."
+# S22: the hero runs with approvals off (acme-demo.yaml's allow-order-status-updates), so it never
+# waits for a person.
+"$SH" approvals-off >/dev/null || fail "make demo-approvals-off failed. Run it to see why."
 
 # host_env runs a DB-direct command against the demo's own database (demo.sh's host_env).
 host_env() {

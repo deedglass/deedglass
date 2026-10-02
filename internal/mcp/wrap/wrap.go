@@ -167,7 +167,15 @@ func (w *Wrapper) hello() {
 	case me.Agent == nil:
 		w.log.sym(symDenied, "this is an org admin key", "the wrapper needs an agent's key (deedglass agent keys create <agent>)")
 	default:
-		w.log.sym(symOK, "Gate reachable", "agent "+me.Agent.Name+" ("+me.Agent.ID+")", "key "+me.Key.Mode)
+		// DL-028: the startup line names the policy that decides this session's calls.
+		pol := "policy unknown"
+		if v, err := w.gc.Resolve(w.ctx, w.cfg.Connector, w.cfg.ConnectorType, nil); err == nil {
+			pol = "no active policy (every call is denied)"
+			if v.Policy != nil {
+				pol = "policy " + v.Policy.Name + " v" + itoa(v.Policy.Version)
+			}
+		}
+		w.log.sym(symOK, "Gate reachable", "agent "+me.Agent.Name+" ("+me.Agent.ID+")", "key "+me.Key.Mode, pol)
 	}
 }
 

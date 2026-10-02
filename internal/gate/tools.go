@@ -58,11 +58,21 @@ type ToolVisibilityList struct {
 	HasMore       bool             `json:"has_more"`
 	NextCursor    *string          `json:"next_cursor"`
 	PolicyVersion *string          `json:"policy_version"`
+	// Policy names the active enforce policy (S22, DL-028: the wrapper's startup line names it):
+	// null when none is active or it can't be loaded.
+	Policy *ResolvedPolicy `json:"policy"`
+}
+
+// ResolvedPolicy is the enforce policy a visibility answer came from.
+type ResolvedPolicy struct {
+	Name      string `json:"name"`
+	Version   int    `json:"version"`
+	VersionID string `json:"version_id"`
 }
 
 const (
 	msgResolveConnector = `connector must be a connector name: 2 to 32 lowercase letters, digits or hyphens, starting with a letter, for example "scratch".`
-	msgResolveTools     = "tools must be a list of 1 to 500 tools, each with a name."
+	msgResolveTools     = "tools must be a list of at most 500 tools, each with a name. An empty list asks only for the active policy."
 	msgResolveDigest    = `tools[].digest must be "sha256:" followed by 64 lowercase hex characters, or left out.`
 )
 
@@ -85,7 +95,10 @@ func (p *Pipeline) ResolveTools(ctx context.Context, pr principal, req ResolveRe
 	case !policy.KnownConnectorTypes[ctype]:
 		return nil, httpx.ErrValidation("connector_type", msgConnectorTypeUnknown(ctype))
 	}
-	if len(req.Tools) == 0 || len(req.Tools) > MaxResolveTools {
+	if req.Tools == nil {
+		req.Tools = []ToolRef{}
+	}
+	if len(req.Tools) > MaxResolveTools {
 		return nil, httpx.ErrValidation("tools", msgResolveTools)
 	}
 	for _, t := range req.Tools {
@@ -142,6 +155,7 @@ func (p *Pipeline) Visibility(ctx context.Context, pr principal, tools []policy.
 	if enforce != nil && !enforce.Builtin && enforce.VersionID != "" {
 		v := enforce.VersionID
 		out.PolicyVersion = &v
+		out.Policy = &ResolvedPolicy{Name: enforce.Name, Version: enforce.Version, VersionID: enforce.VersionID}
 	}
 	for _, f := range tools {
 		tv := ToolVisibility{Object: "tool_visibility", Name: f.Name, Tool: f.Name, Visibility: VisibilityVisible}

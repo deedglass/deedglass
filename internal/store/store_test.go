@@ -58,6 +58,7 @@ var systemTxCallSites = []string{
 	"internal/identity/org.go: SystemTx(ctx, store.ReasonOrgCreate",              // deedglass org create: org, owner, org.created deed, hooks (S07)
 	"internal/store/policystore/usage.go: SystemTx(ctx, store.ReasonMaintenance", // Usage.Prune: drops old usage_counters windows across orgs (S11)
 	"cmd/deedglass/devseed_demo.go: SystemTx(ctx, store.ReasonMaintenance",       // dev seed --demo: find the acme-demo org by slug (dev only, S15)
+	"cmd/deedglass/devseed_demo.go: SystemTx(ctx, store.ReasonMaintenance",       // dev seed --demo --approver: upsert the approver's user row (users is global; dev only, S22)
 	"internal/store/connectors.go: SystemTx(ctx, ReasonMaintenance",              // OrgIDs: deedglass vault status|rotate walk orgs, one org tx each (S16)
 }
 

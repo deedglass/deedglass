@@ -129,6 +129,27 @@ func elsewhere() []Route {
 	// S20: the decoder (internal/connectorapi/decoder.go).
 	out = append(out, adm("GET", "/v1/connectors/{id}/decoder", "getConnectorDecoder", RoleViewer),
 		adm("DELETE", "/v1/connectors/{id}/decoder", "dropConnectorDecoder", RoleAdmin))
+	// S22: approvals, approval links, the /approve page (internal/approve) and webhooks (internal/notify/webhook).
+	actionsRead := []string{ScopeActionsRead}
+	link := func(method, pattern, op string) Route {
+		r := Route{Method: method, Pattern: pattern, OperationID: op, Auth: Public, Handler: stub}
+		if method == "POST" {
+			r.Idempotency = IdemNever
+		}
+		return r
+	}
+	out = append(out,
+		Route{Method: "GET", Pattern: "/v1/approvals", OperationID: "listApprovals", Auth: SessionOrKey, MinRole: RoleViewer, Scopes: actionsRead, Handler: stub},
+		Route{Method: "GET", Pattern: "/v1/approvals/{id}", OperationID: "getApproval", Auth: SessionOrKey, MinRole: RoleViewer, Scopes: actionsRead, Handler: stub},
+		Route{Method: "POST", Pattern: "/v1/approvals/{id}/approve", OperationID: "approveApproval", Auth: SessionOrKey, MinRole: RoleViewer, Scopes: actionsRead, Idempotency: IdemOptional, Handler: stub},
+		Route{Method: "POST", Pattern: "/v1/approvals/{id}/deny", OperationID: "denyApproval", Auth: SessionOrKey, MinRole: RoleViewer, Scopes: actionsRead, Idempotency: IdemOptional, Handler: stub},
+		link("POST", "/v1/approval-links/preview", "previewApprovalLink"), link("POST", "/v1/approval-links/decide", "decideApprovalLink"),
+		link("POST", "/v1/approval-links/status", "approvalLinkStatus"), link("GET", "/approve", "approvePage"),
+		Route{Method: "GET", Pattern: "/approve/assets/{file}", OperationID: "approveAsset", Auth: Public, Extension: "ADR-048", Handler: stub},
+		adm("GET", "/v1/webhooks", "listWebhooks", RoleAdmin), adm("POST", "/v1/webhooks", "createWebhook", RoleAdmin),
+		adm("GET", "/v1/webhooks/{id}", "getWebhook", RoleAdmin), adm("DELETE", "/v1/webhooks/{id}", "deleteWebhook", RoleAdmin),
+		adm("POST", "/v1/webhooks/{id}/test", "testWebhook", RoleAdmin), adm("GET", "/v1/webhooks/{id}/deliveries", "listWebhookDeliveries", RoleAdmin),
+	)
 	return out
 }
 

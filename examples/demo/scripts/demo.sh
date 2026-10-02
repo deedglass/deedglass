@@ -19,6 +19,13 @@
 #   demo.sh hero      make demo-hero: the L2 hero, VERIFIED then MISMATCH (examples/demo/scripts/hero.sh)
 #   demo.sh diff      make demo-diff [ID=act_…]: deedglass actions show --diff (default: the newest
 #                     postgres.execute action)
+#   demo.sh approvals-on   make demo-approvals-on: enforce acme-demo-approvals.yaml (S22: Claude
+#                          Desktop's writes to the orders database wait for a person)
+#   demo.sh approvals-off  make demo-approvals-off: enforce acme-demo.yaml again
+#   demo.sh approver  make demo-approver EMAIL=…: add EMAIL as an admin of the demo org (approval emails)
+#   demo.sh lan       make demo-lan: serve on this Mac's Wi-Fi address so a phone can open approval
+#                     links (DEEDGLASS_BASE_URL follows); anyone on the network can reach it
+#   demo.sh lan-off   make demo-lan-off: back to 127.0.0.1 only, and approval emails back to the log
 #
 # Env: DEMO_PORT (default 8080, or what .env says), HTTP=1, HARD=1, CLIENT, KEYS=1, SINCE, ORDER, ID, NO_COLOR.
 set -euo pipefail
@@ -51,8 +58,19 @@ need_docker() {
   docker info >/dev/null 2>&1 || fail "Docker isn't running. Start Docker Desktop, then run make demo-up again."
 }
 
+# compose runs docker compose on the demo stack. Two opt-ins live in .demo/ (S22): lan.yaml (make
+# demo-lan) publishes Deedglass on the Wi-Fi address, and mail-on (make demo-approver) lets the
+# server read DEEDGLASS_RESEND_API_KEY and DEEDGLASS_MAIL_FROM from the repo's .env, so approval
+# emails reach a real inbox. Without mail-on, emails go to the server's log. The demo's own .env
+# comes last, so its values win.
 compose() {
-  docker compose -p "$PROJECT" -f "$DEMO/compose.yaml" --env-file "$ENV_FILE" "$@"
+  set -- -p "$PROJECT" -f "$DEMO/compose.yaml" "$@"
+  if [ -f "$STATE/lan.yaml" ]; then set -- -f "$STATE/lan.yaml" "$@"; fi
+  if [ -f "$STATE/mail-on" ] && [ -f "$ROOT/.env" ]; then
+    docker compose --env-file "$ROOT/.env" --env-file "$ENV_FILE" "$@"
+  else
+    docker compose --env-file "$ENV_FILE" "$@"
+  fi
 }
 
 profiles() { if [ "${HTTP:-}" = "1" ]; then echo "--profile http"; fi; }
@@ -315,7 +333,81 @@ snippet() {
   (cd "$ROOT" && go run ./examples/demo/snippet $args)
 }
 
+# activate_policy pushes a demo policy file (a new acme-demo version only when it changed) and
+# enforces that version, with its activation deed.
+activate_policy() {
+  file="$1"
+  out="$(api --json policy push "$file" 2>&1)" || { echo "$out" >&2; fail "The policy couldn't be pushed. The error is above."; }
+  v="$(printf '%s' "$out" | sed -n 's/.*"version": *\([0-9][0-9]*\).*/\1/p' | head -1)"
+  [ -n "$v" ] || fail "The pushed version couldn't be read. Run bin/deedglass policy push $file to see why."
+  out="$(api policy activate acme-demo --version "$v" --mode enforce --reason "$2" --yes 2>&1)" || { echo "$out" >&2; fail "The policy couldn't be activated."; }
+  echo "$v"
+}
+
+approvals_on() {
+  [ -f "$ENV_FILE" ] || fail "Run make demo-up first."
+  build_cli >/dev/null
+  v="$(activate_policy "$DEMO/policies/acme-demo-approvals.yaml" "S22 approvals demo: Claude Desktop's writes wait for a person")"
+  ok "Approvals on · acme-demo v$v (acme-demo-approvals.yaml) · Claude Desktop's writes wait for a person"
+}
+
+approvals_off() {
+  [ -f "$ENV_FILE" ] || fail "Run make demo-up first."
+  build_cli >/dev/null
+  v="$(activate_policy "$DEMO/policies/acme-demo.yaml" "Back to the demo policy (make demo-approvals-off)")"
+  ok "Approvals off · acme-demo v$v (acme-demo.yaml)"
+}
+
+approver() {
+  [ -f "$ENV_FILE" ] || fail "Run make demo-up first."
+  [ -n "${EMAIL:-}" ] || fail "Say whose email: make demo-approver EMAIL=you@deedglass.com"
+  need_docker
+  build_cli >/dev/null
+  (cd "$STATE" && host_env "$BIN" dev seed --demo --keys-file "$KEYS_FILE" --approver "$EMAIL") || fail "The approver couldn't be added. The error is above."
+  touch "$STATE/mail-on"
+  compose up -d --wait deedglass >>"$LOG" 2>&1 || { tail -n 20 "$LOG" >&2; fail "Deedglass didn't restart. The log is $LOG."; }
+  ok "Real email on for the demo · the server reads the Resend key and sender from the repo's .env (make demo-lan-off turns it off)"
+  pend "Without them in .env, approval emails go to the server's log: docker compose -p $PROJECT logs deedglass"
+}
+
+lan_ip() { ipconfig getifaddr en0 2>/dev/null || ipconfig getifaddr en1 2>/dev/null || true; }
+
+lan() {
+  [ -f "$ENV_FILE" ] || fail "Run make demo-up first."
+  need_docker
+  ip="$(lan_ip)"
+  [ -n "$ip" ] || fail "This Mac has no Wi-Fi address (en0/en1). Join the same Wi-Fi as your phone, then run make demo-lan again."
+  mkdir -p "$STATE"
+  cat > "$STATE/lan.yaml" <<YAML
+# Written by make demo-lan (removed by make demo-lan-off). Publishes Deedglass on this Mac's
+# Wi-Fi address so a phone can open approval links.
+services:
+  deedglass:
+    ports: !override
+      - "$ip:$PORT:8080"
+    environment:
+      DEEDGLASS_BASE_URL: "http://$ip:$PORT"
+YAML
+  compose up -d --wait deedglass >>"$LOG" 2>&1 ||
+    { tail -n 20 "$LOG" >&2; fail "Deedglass didn't restart on $ip. The log is $LOG."; }
+  ok "Deedglass on http://$ip:$PORT · approval links in new emails point here"
+  pend "Anyone on this Wi-Fi can reach it while it is on. Run make demo-lan-off when you're done."
+}
+
+lan_off() {
+  [ -f "$ENV_FILE" ] || fail "Run make demo-up first."
+  need_docker
+  rm -f "$STATE/lan.yaml" "$STATE/mail-on"
+  compose up -d --wait deedglass >>"$LOG" 2>&1 || { tail -n 20 "$LOG" >&2; fail "Deedglass didn't restart. The log is $LOG."; }
+  ok "Deedglass back on http://127.0.0.1:$PORT only · approval emails go to the server's log again"
+}
+
 case "${1:-}" in
+  approvals-on) approvals_on ;;
+  approvals-off) approvals_off ;;
+  approver) approver ;;
+  lan) lan ;;
+  lan-off) lan_off ;;
   up) up ;;
   down) down ;;
   reset) reset ;;

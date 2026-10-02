@@ -270,3 +270,150 @@ type buttonView struct{ Link, Label string }
 
 // newButton is the templates' "button" function: {{template "button" button .Link "Label"}}.
 func newButton(link, label string) buttonView { return buttonView{Link: link, Label: label} }
+
+// ApprovalData fills the approval email (S22 §5.2): one person's link to countersign one action.
+type ApprovalData struct {
+	AgentName string // "claude-desktop"
+	OrgName   string
+	Tool      string // "postgres.execute"
+	RuleID    string // the rule's id; empty when the default asked
+	Reason    string // the policy author's reason for the rule
+	// Summary is the plain sentence ("UPDATE about 1 row in public.orders"); Estimated adds
+	// "(planner estimate)".
+	Summary   string
+	Estimated bool
+	// Detail is up to 300 characters of the SQL (approvals.email_detail: full); empty by default,
+	// so no argument values leave Deedglass by email.
+	Detail          string
+	Required        int
+	CountersignedBy []ApprovalCountersign
+	ExpiresAt       time.Time
+	Location        *time.Location // the org's time zone; UTC when nil
+	ApprovalID      string
+	Email           string // the recipient, used as To
+	Link            string // {base}/approve#t=…
+	ReviewOnly      bool   // the org decides approvals in the Console
+	Self            bool   // the action runs on the recipient's behalf
+}
+
+// ApprovalCountersign is one earlier countersign of a four-eyes approval.
+type ApprovalCountersign struct {
+	Name string
+	At   time.Time
+}
+
+type approvalView struct {
+	Subject, Preheader, Agent, OrgName, Tool, Rule, Reason, Summary, Detail, Needs, Expires string
+	Countersigns                                                                            []string
+	Self                                                                                    bool
+	Link, ButtonLabel, Fineprint, Count, ApprovalShort                                      string
+}
+
+// RenderApproval renders the approval email. It refuses a missing agent, tool, org or recipient,
+// a link that isn't http(s), and an approval that has already expired.
+func RenderApproval(d ApprovalData, now time.Time) (Rendered, error) {
+	agent, org, tool, email := clean(d.AgentName), clean(d.OrgName), clean(d.Tool), clean(d.Email)
+	switch {
+	case agent == "" || tool == "" || org == "":
+		return Rendered{}, errors.New("mailer: the approval email needs the agent, the tool and the org; set ApprovalData")
+	case email == "":
+		return Rendered{}, errors.New("mailer: the approval email needs a recipient; set ApprovalData.Email")
+	case !d.ExpiresAt.After(now):
+		return Rendered{}, errors.New("mailer: the approval has already expired; check ApprovalData.ExpiresAt")
+	}
+	if err := checkLink(d.Link); err != nil {
+		return Rendered{}, err
+	}
+	loc := d.Location
+	if loc == nil {
+		loc = time.UTC
+	}
+	clock := d.ExpiresAt.In(loc).Format("15:04 MST")
+	summary := clean(d.Summary)
+	if summary == "" {
+		summary = "run " + tool
+	}
+	shown := capitalise(summary)
+	if d.Estimated {
+		shown += " (planner estimate)"
+	}
+	required := max(d.Required, 1)
+	v := approvalView{
+		Subject:   agent + " is waiting for your countersign",
+		Preheader: tool + " on " + org + " · " + summary + " · expires " + clock,
+		Agent:     agent, OrgName: org, Tool: tool, Rule: clean(d.RuleID), Reason: clean(d.Reason), Summary: shown, Detail: clean(d.Detail),
+		Needs:   needs(required, len(d.CountersignedBy)),
+		Expires: clock + " · in " + untilWords(d.ExpiresAt.Sub(now)),
+		Self:    d.Self, Link: d.Link, ButtonLabel: "Review and countersign",
+		Fineprint:     "This link is yours alone. It works once, until " + clock + ". Nothing runs unless you approve.",
+		Count:         itoaInt(max(required-len(d.CountersignedBy), 1)) + " of " + itoaInt(required) + " " + word(required, "countersign") + " needed",
+		ApprovalShort: shortID(clean(d.ApprovalID)),
+	}
+	if d.ReviewOnly {
+		v.ButtonLabel = "Review the action"
+		v.Fineprint = "This link is yours alone and works until " + clock + ". Your org decides approvals in the Console."
+	}
+	for _, c := range d.CountersignedBy {
+		left := required - len(d.CountersignedBy)
+		more := "One more countersign is needed."
+		if left > 1 {
+			more = itoaInt(left) + " more countersigns are needed."
+		}
+		v.Countersigns = append(v.Countersigns, clean(c.Name)+" countersigned at "+c.At.In(loc).Format("15:04 MST")+". "+more)
+	}
+	return render("approval", v, v.Subject, v.Preheader)
+}
+
+// ApprovalMessage renders the approval email as a Message of kind "approval" to d.Email. The
+// caller sets IdempotencyKey (approval/<apr>/<token id>), UserID and RequestID.
+func ApprovalMessage(d ApprovalData, now time.Time) (Message, error) {
+	r, err := RenderApproval(d, now)
+	if err != nil {
+		return Message{}, err
+	}
+	return Message{To: clean(d.Email), Subject: r.Subject, HTML: r.HTML, Text: r.Text, Kind: "approval"}, nil
+}
+
+func itoaInt(n int) string { return strconv.Itoa(n) }
+
+// untilWords is "27 min", "1 h 52 min", "under a minute".
+func untilWords(d time.Duration) string {
+	switch {
+	case d < time.Minute:
+		return "under a minute"
+	case d < time.Hour:
+		return strconv.Itoa(int(d.Minutes())) + " min"
+	}
+	h, m := int(d.Hours()), int(d.Minutes())%60
+	if m == 0 {
+		return strconv.Itoa(h) + " h"
+	}
+	return strconv.Itoa(h) + " h " + strconv.Itoa(m) + " min"
+}
+
+// shortID is an id cut for people: "apr_01j9zw6q…".
+func shortID(id string) string {
+	if len(id) <= 12 {
+		return id
+	}
+	return id[:12] + "…"
+}
+
+// needs is the context table's Needs row: "1 person", "2 people · 1 countersigned".
+func needs(required, done int) string {
+	s := "1 person"
+	if required != 1 {
+		s = itoaInt(required) + " people"
+	}
+	if done > 0 {
+		s += " · " + itoaInt(done) + " countersigned"
+	}
+	return s
+}
+
+func word(n int, w string) string {
+	if n == 1 {
+		return w
+	}
+	return w + "s"
+}

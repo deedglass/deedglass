@@ -67,8 +67,8 @@ planned    POST    /v1/actions/{id}/undo/preview                          sessio
 planned    POST    /v1/actions/{id}/undo                                  session_or_key  actions:undo     S23
 planned    GET     /v1/approvals                                          session_or_key  viewer           S22    agent keys see their own actions only
 planned    GET     /v1/approvals/{id}                                     session_or_key  viewer           S22
-planned    POST    /v1/approvals/{id}/approve                             session         admin            S22    only a person countersigns
-planned    POST    /v1/approvals/{id}/deny                                session         admin            S22    only a person countersigns
+planned    POST    /v1/approvals/{id}/approve                             session_or_key  viewer           S22    only a person countersigns: keys get approval_needs_person; eligibility (not the role) decides
+planned    POST    /v1/approvals/{id}/deny                                session_or_key  viewer           S22    only a person countersigns: keys get approval_needs_person; eligibility (not the role) decides
 planned    POST    /v1/approval-links/preview                             public          -                S22    one-time token in the body
 planned    POST    /v1/approval-links/decide                              public          -                S22    one-time token in the body
 planned    POST    /v1/approval-links/status                              public          -                S22    one-time token in the body

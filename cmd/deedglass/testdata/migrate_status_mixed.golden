@@ -21,5 +21,6 @@ VERSION  NAME                STATE    APPLIED               CHECKSUM
 0018     witness             pending  —                     sha256:ef00…68b0
 0019     decoder             pending  —                     sha256:d5ec…5712
 0020     witness_l2          pending  —                     sha256:7d10…f427
-✓ 8 applied · 12 pending. Run deedglass migrate up to apply them.
+0021     approvals           pending  —                     sha256:2c70…6b6f
+✓ 8 applied · 13 pending. Run deedglass migrate up to apply them.
 --- stderr

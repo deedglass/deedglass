@@ -40,7 +40,10 @@ DEEDGLASS_IT_PG=17 make attack                       # another major version
 2. It creates two orgs with `deedglass org create --admin-key`: **acme** runs the cases, **globex**
    is the neighbour for the isolation sweep. Acme gets six agents, the `attack-baseline` policy,
    a REST connector, an `mcp_http` connector and a Postgres connector prepared with
-   `deedglass connector postgres init --apply` on `attack_target_tpl`.
+   `deedglass connector postgres init --apply` on `attack_target_tpl`. Group L (S22) adds two
+   admins to Acme on first use (invited by the owner's session, signed in with
+   `deedglass org login-link`) and three agents the policy's approval rules name; approval links
+   come from the dev mail log on the server's stderr (no mail provider is configured).
 3. Every case gets its own clone, `CREATE DATABASE case_<id> TEMPLATE attack_target_tpl`, and the
    Postgres connector's credential is pointed at it.
 4. After every case the invariants run: both deed chains intact; the target's fingerprint and
@@ -59,6 +62,8 @@ DEEDGLASS_IT_PG=17 make attack                       # another major version
 3. **Implement it.** Add a `harness.Case{ID, Run}` with `register(...)` in a `cases_*_test.go` file.
    `Run` returns what it observed (`Outcome`, a `Detail` head, the action ids, evidence, forbidden
    listeners); the runner compares it with the meta. A case has no expected value of its own.
+   A case runs for at most 30 s; set `Cap` when it must wait longer (L05 waits out a real
+   one-minute approval expiry).
 4. Flip `status` to `"implemented"` (outside the digest) and run `make attack && make attack-report`.
 
 If a case differs, fix the code or the fixture, never the expectation. A case that was declared

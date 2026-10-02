@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="referrer" content="no-referrer">
+<meta name="color-scheme" content="dark light">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#07080c" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f7f7f4" media="(prefers-color-scheme: light)">
+<title>Countersign · Deedglass</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20viewBox=%220%200%20120%20120%22%3E%3Cdefs%3E%3ClinearGradient%20id=%22a%22%20gradientUnits=%22userSpaceOnUse%22%20x1=%2231.4%22%20y1=%228%22%20x2=%2265.2%22%20y2=%22112%22%3E%3Cstop%20offset=%220%22%20stop-color=%22%237C6CFF%22/%3E%3Cstop%20offset=%22.5%22%20stop-color=%22%234F8CFF%22/%3E%3Cstop%20offset=%221%22%20stop-color=%22%232FE6D1%22/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath%20d=%22M55.2%208.22A52%2052%200%200%200%2055.2%20111.78Z%22%20fill=%22url(%23a)%22/%3E%3Cpath%20d=%22M64.8%208.22A52%2052%200%200%201%2064.8%20111.78Z%22%20fill=%22%23C9CCD6%22/%3E%3C/svg%3E">
+<link rel="stylesheet" href="/auth/assets/tokens.css">
+<link rel="stylesheet" href="/approve/assets/approve.css">
+<script src="/approve/assets/approve.js" defer></script>
+</head>
+<body>
+<main id="card" class="card" aria-labelledby="title" aria-busy="true">
+<div class="brand" aria-hidden="true"><svg class="mark" width="28" height="28" viewBox="0 0 120 120" focusable="false"><defs><linearGradient id="m-aur" gradientUnits="userSpaceOnUse" x1="31.4" y1="8" x2="65.2" y2="112"><stop offset="0" stop-color="#7C6CFF"/><stop offset=".5" stop-color="#4F8CFF"/><stop offset="1" stop-color="#2FE6D1"/></linearGradient></defs><path d="M55.2 8.22A52 52 0 0 0 55.2 111.78Z" fill="url(#m-aur)"/><path class="mark-right" d="M64.8 8.22A52 52 0 0 1 64.8 111.78Z"/><rect class="mark-pane" x="58.4" y="8.22" width="3.2" height="103.56"/></svg><span class="wordmark" translate="no">deedglass</span></div>
+
+<p id="chip" class="chip chip-pending" hidden><span aria-hidden="true">&#9680;</span> <span id="chip-text">Waiting for you</span></p>
+<p id="banner" class="banner" role="note" hidden></p>
+<h1 id="title" tabindex="-1">Opening the approval…</h1>
+<div id="skeleton" class="skeleton" aria-hidden="true"><span></span><span></span><span></span></div>
+<p id="lede" class="lede" hidden></p>
+
+<div id="seal" class="seal" hidden aria-hidden="true">
+<svg class="orb" width="72" height="72" viewBox="0 0 120 120" focusable="false"><defs><linearGradient id="s-aur" gradientUnits="userSpaceOnUse" x1="31.4" y1="8" x2="65.2" y2="112"><stop offset="0" stop-color="#7C6CFF"/><stop offset=".5" stop-color="#4F8CFF"/><stop offset="1" stop-color="#2FE6D1"/></linearGradient></defs><circle class="pulse" cx="60" cy="60" r="52"/><g class="half half-l"><path d="M55.2 8.22A52 52 0 0 0 55.2 111.78Z" fill="url(#s-aur)"/></g><g class="half half-r"><path class="mark-right" d="M64.8 8.22A52 52 0 0 1 64.8 111.78Z"/></g><rect class="pane" x="58.4" y="8.22" width="3.2" height="103.56"/></svg>
+</div>
+
+<section id="context" class="context" aria-label="What the agent wants to do" hidden>
+<dl class="facts">
+<dt>Agent</dt><dd id="f-agent" translate="no"></dd>
+<dt>Tool</dt><dd><code id="f-tool" translate="no"></code></dd>
+<dt>Rule</dt><dd><code id="f-rule" translate="no"></code><span id="f-reason" class="reason"></span></dd>
+<dt id="f-rows-label" hidden>Estimate</dt><dd id="f-rows" hidden></dd>
+<dt>Expires</dt><dd id="f-expires" class="num"></dd>
+<dt id="f-four-label" hidden>Approved</dt><dd id="f-four" hidden></dd>
+</dl>
+<pre id="sql" class="code" translate="no" hidden><code id="sql-text"></code></pre>
+<p id="args-note" class="note" hidden></p>
+</section>
+
+<div id="deed" class="deed" hidden>
+<span class="deed-label">Deed</span>
+<code id="deed-id" translate="no"></code>
+<button id="copy" class="btn-copy" type="button">Copy</button>
+</div>
+
+<div class="notice">
+<p id="alert" class="alert" role="alert"></p>
+<button id="retry" class="btn btn-secondary" type="button" hidden>Try again</button>
+</div>
+
+<div id="actions" class="actions" hidden>
+<button id="approve" class="btn btn-primary" type="button">Approve and run</button>
+<button id="deny-open" class="btn btn-secondary" type="button" aria-controls="deny-sheet" aria-expanded="false">Deny…</button>
+</div>
+
+<form id="deny-sheet" class="sheet" hidden novalidate>
+<h2 class="sub">Deny this action</h2>
+<label for="reason">Reason (the agent sees this)</label>
+<textarea id="reason" name="reason" rows="3" maxlength="280" autocomplete="off" required aria-describedby="reason-help reason-count"></textarea>
+<p class="help"><span id="reason-help">Required. Nothing runs.</span> <span id="reason-count" class="num" aria-live="polite">0 / 280</span></p>
+<button id="deny" class="btn btn-danger" type="submit">Deny</button>
+<button id="deny-back" class="btn btn-secondary" type="button">Back</button>
+</form>
+
+<a id="console" class="btn btn-secondary" href="/app/" hidden>Open in Console</a>
+<p id="fine" class="note" hidden>This link is yours alone. It works once. Nothing runs unless you approve.</p>
+<div id="recent-wrap" hidden>
+<h2 class="sub">Recent actions by this agent</h2>
+<ul id="recent" class="recent"></ul>
+</div>
+<p id="status" class="note" role="status" aria-live="polite"></p>
+<noscript><p class="noscript">Turn on JavaScript to review this approval, or open Console › Approvals.</p></noscript>
+</main>
+</body>
+</html>

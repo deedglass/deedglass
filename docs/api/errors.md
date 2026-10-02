@@ -275,18 +275,21 @@ for the decision (S22). `POST /v1/actions` doesn't use this code: it answers 202
 
 ## approval_expired
 
-**403 · policy_error**
+**409 · invalid_request_error**
 
-**When it happens.** An action waited for approval, and the approval window closed with no
-decision (S22).
+**When it happens.** A person tried to countersign or deny after the approval's `expires_at`
+(S22). Timeout means no: nothing ran, and the expiry sweeper seals the action as `expired` with no
+decider. `POST /v1/actions` doesn't use this code: an agent learns about the expiry from the
+action's `status: expired` (or `deedglass.check_approval`).
 
-**What to do.** Send the action again to ask for a new approval. Use a new Idempotency-Key for it.
+**What to do.** Nothing runs on its own. If the action is still needed, ask the agent to send it
+again: that asks for a new approval.
 
 ```json
 {
-  "type": "policy_error",
+  "type": "invalid_request_error",
   "code": "approval_expired",
-  "message": "No one decided before the approval window closed. Send the action again to ask for a new approval.",
+  "message": "This approval expired at 10:41 IST. Nothing ran. Ask the agent to try again if it's still needed.",
   "param": null
 }
 ```
@@ -1324,6 +1327,159 @@ look again with `deedglass decoder status --connector <name>`.
   "type": "invalid_request_error",
   "code": "witness_not_configured",
   "message": "This connector isn't witnessed, so it has no decoder. Turn on witness.enabled in its config first.",
+  "param": null
+}
+```
+
+## approval_decided
+
+**409 · invalid_request_error**
+
+**When it happens.** A person tried to countersign or deny an approval that already has a final decision (S22): someone else approved or denied it first, or it was cancelled. The first final decision wins under a row lock; nothing is decided twice.
+
+**What to do.** Nothing to do. The message names the outcome, who decided and when; Console › Approvals has the full record and the deed.
+
+```json
+{
+  "type": "invalid_request_error",
+  "code": "approval_decided",
+  "message": "This approval was already decided: approved by Priya Raman at 10:14 IST.",
+  "param": null
+}
+```
+
+## already_countersigned
+
+**409 · invalid_request_error**
+
+**When it happens.** You countersigned a four-eyes approval (a rule with `required: 2` or more) and tried to countersign it again (S22). Four-eyes counts distinct people, so a second vote from the same person never counts.
+
+**What to do.** Ask another approver of the rule to countersign. The action runs when the last required person approves.
+
+```json
+{
+  "type": "invalid_request_error",
+  "code": "already_countersigned",
+  "message": "You already countersigned this. It needs one more person.",
+  "param": null
+}
+```
+
+## approver_not_eligible
+
+**403 · permission_error**
+
+**When it happens.** The person deciding isn't an approver of the rule that paused the action (S22). Eligibility is read live when you vote: `role:admin` means an admin or owner, `role:owner` an owner, and `user:<email>` that member. A role that changed after the email was sent counts as it is now.
+
+**What to do.** Ask one of the approvers the message names, or ask an owner to change your role in Console › Settings.
+
+```json
+{
+  "type": "permission_error",
+  "code": "approver_not_eligible",
+  "message": "Rule \"large-refunds-need-approval\" needs role:admin or user:priya@acme.com to countersign. Ask one of them.",
+  "param": null
+}
+```
+
+## self_approval
+
+**403 · permission_error**
+
+**When it happens.** The action runs on your behalf (its `Deedglass-On-Behalf-Of` names your user id or email), and your org keeps separation of duties: the person an action is for can't countersign it (S22, `settings.approvals.self_countersign: deny`, the default). Denying is still allowed.
+
+**What to do.** Ask another approver to countersign, or deny it. A one-person org can allow self-countersign in Console › Settings › Approvals.
+
+```json
+{
+  "type": "permission_error",
+  "code": "self_approval",
+  "message": "This action runs on your behalf, so another approver has to countersign it. You can still deny it.",
+  "param": null
+}
+```
+
+## approval_needs_person
+
+**403 · permission_error**
+
+**When it happens.** An agent key or an org admin key called `POST /v1/approvals/{id}/approve` or `/deny` (S22). Approvals are a person's decision: no key, agent or automation can countersign.
+
+**What to do.** Countersign as a person: in Console › Approvals, with the link in the approval email, or (dev only) with `deedglass approve --as <email>`.
+
+```json
+{
+  "type": "permission_error",
+  "code": "approval_needs_person",
+  "message": "Approvals need a person. Agents and API keys can't countersign. Use Console › Approvals or the emailed link.",
+  "param": null
+}
+```
+
+## context_changed
+
+**409 · invalid_request_error**
+
+**When it happens.** The decision carried a `context_digest` that isn't the approval's (S22). Every decision names the exact context snapshot the person reviewed; a page showing something else can't be used to approve.
+
+**What to do.** Reload the approval, review what it shows now, and decide again.
+
+```json
+{
+  "type": "invalid_request_error",
+  "code": "context_changed",
+  "message": "What you reviewed is out of date. Reload the approval and review it again.",
+  "param": null
+}
+```
+
+## approval_unsatisfiable
+
+**403 · policy_error**
+
+**When it happens.** A rule asked for more countersigning people than this org has eligible approvers, after leaving out the person the action runs on behalf of (S22). Deedglass records the approval as denied by the system and seals the action as denied in the same transaction; the refusal carries the sealed `action`.
+
+**What to do.** Invite another admin in Console › Settings, lower the rule's `required`, or allow self-countersign in Console › Settings › Approvals.
+
+```json
+{
+  "type": "policy_error",
+  "code": "approval_unsatisfiable",
+  "message": "No one in this org can approve this: the rule needs 2 people and only 1 is eligible. Nothing was run. Invite another admin, or allow self-countersign in Console › Settings › Approvals.",
+  "param": null
+}
+```
+
+## approval_link_invalid
+
+**401 · authentication_error**
+
+**When it happens.** An emailed approval link was unknown, already used, replaced by a newer email, past its 24-hour limit, or voided by a final decision (S22). Each answers the same way, at the same speed, so a guess learns nothing.
+
+**What to do.** Open Console › Approvals, which always has the latest. Approval links work once, for one person, for up to 24 hours.
+
+```json
+{
+  "type": "authentication_error",
+  "code": "approval_link_invalid",
+  "message": "This approval link has expired or was already used. Open Console › Approvals.",
+  "param": null
+}
+```
+
+## approval_link_review_only
+
+**403 · permission_error**
+
+**When it happens.** Your org set `settings.approvals.email_links: review` (S22): approval emails show the context, and decisions happen only in the Console, where your session and CSRF protection apply.
+
+**What to do.** Open Console › Approvals and countersign there.
+
+```json
+{
+  "type": "permission_error",
+  "code": "approval_link_review_only",
+  "message": "Your org decides approvals in the Console. Open Console › Approvals to countersign.",
   "param": null
 }
 ```

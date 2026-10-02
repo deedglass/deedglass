@@ -1,0 +1,109 @@
+# acme-demo (approvals on) · S22's variant of acme-demo.yaml for make demo-approvals-on. It differs
+# in one rule: orders-writes-need-approval sits above allow-order-status-updates, applies to Claude
+# Desktop, and asks for L2. make demo-approvals-off activates acme-demo.yaml again.
+#
+# acme-demo · the Deedglass demo policy (S14: the scratch folder; S15: the orders database and
+# the everything upstream)
+#
+# The orders database (crystaldba/postgres-mcp behind deedglass mcp wrap --connector orders
+# --connector-type postgres, so S11's SQL classifier reads args.sql): reads run, writes wait for a
+# person, destructive SQL never runs. Through the native connector (postgres.*, S17), a status
+# update of orders runs and is witnessed at L2 by Postgres's change log (S21's hero). Rule order matters: DROP hits block-destructive-sql first, so
+# the message on camera is exactly the brand's example sentence.
+#
+# The everything upstream (the MCP gateway, /mcp/everything): its harmless demo tools run;
+# get-env and the rest fall to the default deny and are hidden.
+#
+# The fake connector runs freely. The scratch folder (the MCP filesystem server behind
+# deedglass mcp wrap --connector scratch) can be read anywhere it serves, and written only inside
+# /tmp/deedglass-demo/allowed. Everything else, including moving files and making directories,
+# is denied by default, so deedglass mcp wrap hides those tools from the agent.
+#
+#   deedglass policy test examples/demo/policies/acme-demo.yaml
+#
+# Paths are compared as text. The filesystem server resolves symlinks itself and refuses paths
+# outside the directories it was started with; this policy doesn't see where a symlink points.
+deedglass: policy/v1
+name: acme-demo
+description: Acme Store demo with approvals on (S22). Claude Desktop's writes wait for a person to countersign.
+
+defaults:
+  decision: deny
+  reason: No rule allows this action. Add a rule in Console › Policies to allow it.
+
+budgets:
+  - id: agent-rate
+    per: agent
+    window: minute
+    max_calls: 30
+
+rules:
+  - id: block-destructive-sql
+    match: { tool: [orders.execute_sql, postgres.query, postgres.execute] }
+    when: sql.kind == "drop"
+    decision: deny
+    reason: DROP is never allowed for agents.
+  - id: block-schema-changes
+    match: { tool: [orders.execute_sql, postgres.query, postgres.execute] }
+    when: sql.category in ["ddl", "privilege", "server_code", "unknown"] || sql.multi || sql.ambiguous
+    decision: deny
+    reason: Schema changes, privileges, server code and multi-statement SQL are never allowed for agents.
+  - id: block-unscoped-writes
+    match: { tool: [orders.execute_sql, postgres.query, postgres.execute] }
+    when: sql.unbounded_write
+    decision: deny
+    reason: UPDATE and DELETE need a WHERE clause.
+  - id: no-deletes-on-orders
+    match: { tool: [orders.execute_sql, postgres.query, postgres.execute] }
+    when: sql.kind == "delete" || "delete" in sql.write_kinds
+    decision: deny
+    reason: Agents never delete orders. Set the status to 'cancelled' instead.
+  - id: orders-writes-need-approval
+    description: S22's approvals demo. Claude Desktop's writes to the orders database wait for a person.
+    match: { tool: [orders.execute_sql, postgres.execute], agent: [claude-desktop] }
+    when: sql.writes
+    decision: require_approval
+    reason: Writes to the orders database need a person to countersign.
+    approval: { approvers: [role:admin], required: 1, expires_in: 30m }
+    verify: L2
+  - id: allow-order-status-updates
+    description: Single-order status changes run; Postgres witnesses every one (S21).
+    match: { tool: postgres.execute }
+    when: >-
+      sql.kind == "update" && sql.tables == ["public.orders"] && sql.tables_complete
+      && !sql.unbounded_write && !sql.multi && !sql.cte_write && size(sql.unknown_functions) == 0
+    decision: allow
+    verify: L2
+  - id: allow-ship-order
+    match: { tool: postgres.call }
+    when: has(args.function) && args.function == "public.ship_order"
+    decision: allow
+  - id: allow-order-reads
+    match: { tool: [orders.execute_sql, postgres.query] }
+    when: sql.category == "read" && !sql.writes
+    decision: allow
+    verify: L0
+  - id: allow-schema-browsing
+    match: { tool: [orders.list_schemas, orders.list_objects, orders.get_object_details, postgres.describe] }
+    decision: allow
+  - id: allow-plain-explain
+    match: { tool: orders.explain_query }
+    when: sql.category == "read" && !sql.writes && !sql.explain_analyze && !(has(args.analyze) && args.analyze == true)
+    decision: allow
+  - id: allow-everything-demo-tools
+    match: { tool: [everything.echo, everything.get-sum, everything.get-tiny-image, everything.get-annotated-message, everything.get-structured-content] }
+    decision: allow
+  - id: allow-fake
+    match: { tool: ["fake.*"] }
+    decision: allow
+  - id: allow-scratch-reads
+    match: { tool: ["scratch.read_*", "scratch.list_*", scratch.get_file_info, scratch.search_files, scratch.directory_tree] }
+    decision: allow
+  - id: scratch-writes-only-in-allowed
+    match: { tool: [scratch.write_file, scratch.edit_file] }
+    when: '!has(args.path) || !args.path.startsWith("/tmp/deedglass-demo/allowed/") || args.path.contains("..")'
+    decision: deny
+    reason: Agents may only write inside /tmp/deedglass-demo/allowed.
+  - id: scratch-writes-in-allowed
+    match: { tool: [scratch.write_file, scratch.edit_file] }
+    decision: allow

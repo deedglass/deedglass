@@ -194,6 +194,10 @@ type ActionApproval struct {
 	ID        string `json:"id"`
 	Status    string `json:"status"` // pending | approved | denied | expired | cancelled
 	ExpiresAt Time   `json:"expires_at"`
+	// DecisionReason is the reason a person gave for denying (S22, additive): the approval page
+	// says "the agent sees your reason". Absent otherwise; an approver's own reasons and names
+	// stay on the approval object.
+	DecisionReason *string `json:"decision_reason,omitempty"`
 }
 
 // NextAction tells the caller what happens next: wait for a person (await_approval) or run the
@@ -355,7 +359,8 @@ const actionCols = `a.id, a.created_at, a.agent_id, g.name, a.tool, a.connector_
   a.shadow_decision, a.shadow_rule_id, a.shadow_version_id, a.approval_id, ap.status, ap.expires_at,
   a.executing_deadline, a.error_message,
   a.denied_at IS NOT NULL, a.expired_at IS NOT NULL, a.cancelled_at IS NOT NULL, a.failed_at IS NOT NULL,
-  a.witness_detail_digest, a.witness_required`
+  a.witness_detail_digest, a.witness_required,
+  CASE WHEN ap.status = 'denied' AND ap.decided_by LIKE 'usr\_%' THEN ap.decision_reason END`
 
 const actionFrom = ` FROM deedglass.actions AS a
 JOIN deedglass.agents AS g ON g.org_id = a.org_id AND g.id = a.agent_id
@@ -380,12 +385,13 @@ func scanAction(row pgx.Row, extra ...any) (Action, time.Time, error) {
 		wasDenied, wasExpired, wasCancelled    bool
 		wasFailed                              bool
 		wDigest, wRequired                     *string
+		apReason                               *string
 	)
 	dest := []any{&a.ID, &created, &a.Agent.ID, &a.Agent.Name, &a.Tool, &a.Connector, &a.Mode, &a.State, &a.OnBehalfOf,
 		&a.Session, &polID, &pvID, &decision, &rID, &execStatus, &started, &finished, &latency, &errCode,
 		&wLevel, &wVerdict, &wMethod, &costAmount, &costCurrency, &a.RequestDigest, &a.ResultDigest, &pruned, &a.Deed,
 		&a.Livemode, &dCode, &dSource, &dReason, &dMsg, &polMode, &sDecision, &sRule, &sVersion, &apID, &apStatus, &apExpires,
-		&deadline, &errMsg, &wasDenied, &wasExpired, &wasCancelled, &wasFailed, &wDigest, &wRequired}
+		&deadline, &errMsg, &wasDenied, &wasExpired, &wasCancelled, &wasFailed, &wDigest, &wRequired, &apReason}
 	if err := row.Scan(append(dest, extra...)...); err != nil {
 		return a, created, err
 	}
@@ -404,7 +410,7 @@ func scanAction(row pgx.Row, extra ...any) (Action, time.Time, error) {
 		}
 	}
 	if apID != nil && apStatus != nil && apExpires != nil {
-		a.Approval = &ActionApproval{ID: *apID, Status: *apStatus, ExpiresAt: Time(*apExpires)}
+		a.Approval = &ActionApproval{ID: *apID, Status: *apStatus, ExpiresAt: Time(*apExpires), DecisionReason: apReason}
 	}
 	a.NextAction = nextAction(&a, deadline)
 	if started != nil {

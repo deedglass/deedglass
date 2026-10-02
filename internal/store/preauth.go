@@ -221,3 +221,45 @@ func (p PreAuth) APIKey(ctx context.Context, prefix string) (PreAuthKey, error) 
 			&k.AgentName, &k.AgentStatus, &k.OrgName, &k.OrgStatus, &k.OrgStoppedAt, &k.OrgVersion, &k.IntentMode, &k.IntentKeys)
 	return k, notFound(err)
 }
+
+// PreAuthApprovalToken is the emailed approval link behind a token (S22).
+type PreAuthApprovalToken struct {
+	OrgID      ids.OrgID
+	TokenID    ids.ApprovalTokenID
+	ApprovalID ids.ApprovalID
+	UserID     ids.UserID
+	ExpiresAt  time.Time
+	UsedAt     *time.Time
+	VoidedAt   *time.Time
+}
+
+// ApprovalToken returns the approval link whose token hashes to tokenHash (S22's
+// deedglass.preauth_approval_token), or ErrNotFound. Everything after it runs in an OrgTx.
+func (p PreAuth) ApprovalToken(ctx context.Context, tokenHash []byte) (PreAuthApprovalToken, error) {
+	var t PreAuthApprovalToken
+	err := p.db.pool.QueryRow(ctx, `SELECT org_id, token_id, approval_id, user_id, expires_at, used_at, voided_at
+	    FROM deedglass.preauth_approval_token($1)`, tokenHash).
+		Scan(&t.OrgID, &t.TokenID, &t.ApprovalID, &t.UserID, &t.ExpiresAt, &t.UsedAt, &t.VoidedAt)
+	return t, notFound(err)
+}
+
+// ClaimedDelivery is one leased webhook_deliveries row (S22).
+type ClaimedDelivery struct {
+	ID        ids.WebhookDeliveryID
+	OrgID     ids.OrgID
+	WebhookID ids.WebhookID
+}
+
+// ClaimWebhookDeliveries leases up to limit due deliveries to worker for lease (S22's
+// deedglass.claim_webhook_deliveries: FOR UPDATE SKIP LOCKED, at most 4 in flight per endpoint).
+func (db *DB) ClaimWebhookDeliveries(ctx context.Context, worker string, limit int, lease time.Duration) ([]ClaimedDelivery, error) {
+	rows, err := db.pool.Query(ctx, `SELECT id, org_id, webhook_id FROM deedglass.claim_webhook_deliveries($1, $2, $3)`, worker, limit, lease)
+	if err != nil {
+		return nil, err
+	}
+	return pgx.CollectRows(rows, func(r pgx.CollectableRow) (ClaimedDelivery, error) {
+		var d ClaimedDelivery
+		err := r.Scan(&d.ID, &d.OrgID, &d.WebhookID)
+		return d, err
+	})
+}

@@ -219,6 +219,20 @@ func Rows(sk ids.SealKeyID) []Row {
 			}
 			return err
 		}},
+		// A vote (S22) on a fresh approval each time: the primary key is one vote per person.
+		{"approval_votes", func(ctx context.Context, tx pgx.Tx, o *Org) error {
+			act, err := NewAction(ctx, tx, o.ID, o.Agent)
+			if err != nil {
+				return err
+			}
+			apr := ids.New[ids.ApprovalKind]()
+			if _, err = tx.Exec(ctx, `INSERT INTO deedglass.approvals (id, org_id, action_id, expires_at) VALUES ($1, $2, $3, pg_catalog.now() + interval '1 hour')`, apr, o.ID, act); err != nil {
+				return err
+			}
+			_, err = tx.Exec(ctx, `INSERT INTO deedglass.approval_votes (org_id, approval_id, user_id, vote, via, context_digest, deed_id)
+			    VALUES ($1, $2, $3, 'approve', 'console', $4, $5)`, o.ID, apr, o.Owner, Digest(rnd(8)), o.Deed)
+			return err
+		}},
 		// An ended activation (so repeated inserts never meet the one-live-enforce index). Since S12
 		// an ended activation names who ended it and the deed that sealed it, so it comes after deeds.
 		{"policy_activations", ex(`INSERT INTO deedglass.policy_activations (id, org_id, policy_id, version_id, mode,

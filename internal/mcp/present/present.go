@@ -124,6 +124,6 @@ func WithAction(text, actionID string, modern bool) json.RawMessage {
 func CheckApprovalTool() json.RawMessage {
 	return json.RawMessage(`{"name":"deedglass.check_approval","title":` + string(jsonrpc.String(gate.MCPCheckApprovalTitle)) +
 		`,"description":` + string(jsonrpc.String(gate.MCPCheckApprovalDescription)) +
-		`,"inputSchema":{"type":"object","additionalProperties":false,"required":["approval_id"],"properties":{"approval_id":{"type":"string","pattern":"^apr_[0-9a-hjkmnp-tv-z]{26}$","description":"The approval id, for example apr_01j9zs4k7m2n3p5q6r7s8t9v0w"}}},` +
+		`,"inputSchema":{"type":"object","additionalProperties":false,"required":["approval_id"],"properties":{"approval_id":{"type":"string","pattern":"^apr_[0-9a-hjkmnp-tv-z]{26}$","description":"The approval id, for example apr_01j9zs4k7m2n3p5q6r7s8t9v0w"},"wait_seconds":{"type":"integer","minimum":0,"maximum":20,"default":10,"description":"How long to wait for a person's decision before answering, in seconds."}}},` +
 		`"annotations":{"readOnlyHint":false,"idempotentHint":true,"openWorldHint":false}}`)
 }

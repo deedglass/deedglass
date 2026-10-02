@@ -1,0 +1,81 @@
+/* Deedglass page tokens: one file for every server-rendered page (S07's sign-in pages, S22's
+   /approve). Dark by default; light follows the system. Values come from DESIGN.md (the brand in
+   DESIGN.md format); never hard-code them in a page's own stylesheet.
+   DEEDGLASS_BRAND.md §6 (colour), §7 (type), §8 (shape), §10 (motion), §14 (access). */
+
+:root {
+  color-scheme: dark light;
+  --bg: #07080c;          /* ink-950 */
+  --card: #0e1017;        /* ink-900 */
+  --line: #1c1f2a;        /* ink-800 hairline */
+  --text: #f5f6fa;        /* snow-text */
+  --muted: #8b90a0;       /* slate-400 */
+  --accent: #6f8dff;
+  --accent-hover: #87a0ff;
+  --on-accent: #07080c;
+  --field: #141722;       /* ink-850 */
+  --field-line: #6b7080;  /* slate-500: 3.6:1 on the field, WCAG 1.4.11 */
+  --skeleton: #1c1f2a;
+  --danger: #ff7a70;
+  --danger-bg: #3a1512;
+  --danger-line: #5c2621;
+  --mark-right: #e6eaf5;
+  --mark-right-opacity: 0.85;
+  --mark-pane: #fff;
+  --mark-pane-opacity: 1;
+  --font: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  --mono: "Geist Mono", ui-monospace, Menlo, monospace;
+  --enter: cubic-bezier(.2, .8, .2, 1);
+  /* States (DESIGN.md: verdicts and states), dark. */
+  --pending: #a99cff;
+  --pending-bg: #211c45;
+  --verified: #34e3c9;
+  --verified-bg: #0f2a28;
+  --mismatch: #ff7a70;
+  --mismatch-bg: #3a1512;
+  --unverifiable: #f7b955;
+  --unverifiable-bg: #352407;
+  --neutral: #c9ccd6;
+  --neutral-bg: #1c1f2a;
+  --raised: #141722;      /* ink-850 */
+  --code-bg: #0e1017;     /* ink-900: code in both themes */
+  --code-line: #1c1f2a;   /* ink-800 */
+  --code-text: #f5f6fa;
+  --tertiary: #7d8293;    /* slate-450 */
+  --exit: cubic-bezier(.4, 0, 1, 1);
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg: #f7f7f4;        /* paper-50 */
+    --card: #fff;
+    --line: #e4e5ea;
+    --text: #0d0f14;      /* ink-text */
+    --muted: #6b7080;     /* slate-500 */
+    --accent: #2f5bea;
+    --accent-hover: #2449c4;
+    --on-accent: #fff;
+    --field: #fff;
+    --field-line: #8b90a0; /* slate-400: 3.3:1 on white, WCAG 1.4.11 */
+    --skeleton: #edeef2;  /* mist-100 */
+    --danger: #c8322b;
+    --danger-bg: #fdecea;
+    --danger-line: #f3c4bf;
+    --mark-right: #c3cadb;
+    --mark-right-opacity: 1;
+    --mark-pane: #0d0f14;
+    --mark-pane-opacity: 0.7;
+    --pending: #5b4bdb;
+    --pending-bg: #efedff;
+    --verified: #0f766e;
+    --verified-bg: #e6f6f3;
+    --mismatch: #c8322b;
+    --mismatch-bg: #fdecea;
+    --unverifiable: #9a5b00;
+    --unverifiable-bg: #fff4e0;
+    --neutral: #3f4453;
+    --neutral-bg: #edeef2;
+    --raised: #edeef2;    /* mist-100 */
+    --tertiary: #6b7080;  /* slate-500 */
+  }
+}

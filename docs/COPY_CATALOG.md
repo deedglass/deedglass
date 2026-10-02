@@ -309,6 +309,52 @@ The "Sealed" moment (brand §10) for S25 and the videos: a VERIFIED verdict clos
 halves with one soft teal pulse; a MISMATCH stops the halves short with a hairline red gap, and
 never shakes.
 
+## Approvals (S22)
+
+The page's strings live in `internal/approve/pages/approve.js` (`COPY`), the agent's and the API's
+sentences with details in `internal/approve/present.go`, the MCP texts in `internal/gate/present.go`,
+and the email in `internal/mailer/templates/approval.*.tmpl`. Vocabulary: approval, countersign,
+approve, deny, expired, deed, sealed.
+
+### The approval page (`/approve`)
+
+| State | Chip | Title | Body |
+|---|---|---|---|
+| review | Waiting for you | Countersign this action? | the summary: "claude-desktop wants to UPDATE about 1 row in public.orders." |
+| four-eyes, you voted | Waiting for others | Countersigned (1 of 2) | It runs when one more person approves. |
+| self | Waiting for you | You can't countersign this one | It runs on your behalf, so another approver has to. You can still deny it. |
+| not eligible | none | You're not an approver for this rule | Your role changed since the email was sent. Nothing was decided. |
+| review only | Waiting for you | Review this action | the summary, then "Your org decides approvals in the Console." |
+| running | executing | Countersigned | Deedglass is running it now. |
+| sealed | `L2 · VERIFIED` | Sealed | the Witness's summary |
+| sealed, mismatch | `L2 · MISMATCH` | Sealed with a mismatch | the Witness's summary |
+| denied | denied | Denied | Nothing ran. The agent sees your reason. |
+| decided elsewhere | approved / denied / cancelled | Already decided | "Priya Raman approved this at 10:14 IST." |
+| expired | expired | This approval expired | Nobody approved it before 10:41 IST, so nothing ran. |
+| link unusable | none | This link has expired or was already used | Approval links work once, for one person, for up to 24 hours. Console › Approvals has the latest. |
+
+Buttons: **Approve and run**, **Deny…** (opens the reason sheet: "Reason (the agent sees this)",
+**Deny**, **Back**), **Open in Console**, **Copy**. Fine print: "This link is yours alone. It works
+once. Nothing runs unless you approve." Errors: "What you reviewed is out of date. Review it again
+below." · "A reason is required to deny. The agent sees it." · "Deedglass couldn't reach the
+server. Check your connection and try again." · "Too many requests for this link. Try again in a
+minute."
+
+### The email
+
+Subject: "claude-desktop is waiting for your countersign". Heading: "claude-desktop is waiting for
+you". Button: **Review and countersign**. Fine print: "This link is yours alone. It works once,
+until 10:41 IST. Nothing runs unless you approve." and "If you weren't expecting this, you can
+ignore it. Nothing happens."
+
+### The agent (MCP and REST)
+
+Agent-facing texts never name the person: "Approved by a person. Ran scratch.write_file." · "A
+person denied this action. Nothing was run. Reason: "…"" · "Still waiting for approval apr_….
+It expires at 05:11 UTC. Nothing has run yet. Check again in a minute." · "A person approved this,
+but agent "claude-desktop" is stopped, so nothing ran." Every text is in
+[MCP.md](MCP.md#approvals-deedglasscheck_approval).
+
 ## What this page doesn't do
 
 It doesn't hold every error: the full catalog, with when each code happens, is

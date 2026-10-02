@@ -60,8 +60,8 @@ func bannedWords(t *testing.T) []*regexp.Regexp {
 
 func TestCatalog(t *testing.T) {
 	cat := Catalog()
-	if len(cat) != 53 {
-		t.Fatalf("the catalog has %d codes, want 53 (24 contract + 9 S03 + 6 S07 + 1 S11 + 1 S12 + 7 S16 + 4 S17 + 1 S20)", len(cat))
+	if len(cat) != 62 {
+		t.Fatalf("the catalog has %d codes, want 62 (24 contract + 9 S03 + 6 S07 + 1 S11 + 1 S12 + 7 S16 + 4 S17 + 1 S20 + 9 S22)", len(cat))
 	}
 	added := map[string]int{}
 	codeRE := regexp.MustCompile(`^[a-z][a-z0-9_]*$`)
@@ -114,6 +114,10 @@ func TestCatalog(t *testing.T) {
 	for code, want := range map[Code]int{
 		CodeIntentRequired: 403, CodeIntentInvalid: 403, CodeIntentReplay: 403, CodeBudgetExceeded: 429,
 		CodeInvalidAPIKey: 401, CodeAPIKeyRevoked: 401, CodeAPIKeyExpired: 401, CodeIdempotencyConflict: 422, CodeIdempotencyKeyInUse: 409,
+		// S22 §5.4.
+		CodeApprovalExpired: 409, CodeApprovalDecided: 409, CodeAlreadyCountersigned: 409, CodeApproverNotEligible: 403,
+		CodeSelfApproval: 403, CodeApprovalNeedsPerson: 403, CodeContextChanged: 409, CodeApprovalUnsatisfiable: 403,
+		CodeApprovalLinkInvalid: 401, CodeApprovalLinkReviewOnly: 403,
 	} {
 		if byCode[code].Status != want {
 			t.Errorf("%s: status %d, contract says %d", code, byCode[code].Status, want)

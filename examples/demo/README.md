@@ -82,10 +82,25 @@ curl -s localhost:8080/mcp/everything -H "Authorization: Bearer $KEY" -H 'Conten
   git-ignored. `DEEDGLASS_ALLOW_PRIVATE_NETWORKS=1` exists only in this stack, so the gateway can
   reach the `everything` container. This stack is for local demos; never expose it.
 - **`orders-direct` bypasses Deedglass.** It exists to show the difference, nothing else.
-- **Approving "mark order 42 as shipped"** arrives with S22 (email link and Console); today the
-  action waits, and expires after 30 minutes.
+- **Approving "mark order 42 as shipped"** (S22): the approval email's link, or
+  `bin/deedglass approve apr_… --as <email>` on this dev stack. Nobody deciding within 30 minutes
+  means it expires and never runs. See "Approve from your phone" below.
 - The first `make demo-up` builds the Deedglass image and pulls about 1 GB of images; later runs
   take seconds. `HTTP=1` downloads the `everything` server from npm on its first start.
+
+## Approve from your phone (S22)
+
+```sh
+make demo-approver EMAIL=you@yourdomain.example   # you become an admin of the demo org; real email on
+make demo-lan                                     # Deedglass on this Mac's Wi-Fi address
+make demo-approvals-on                            # optional: Claude Desktop's order writes wait for you, L2 required
+```
+
+Ask Claude Desktop to mark order 42 as shipped. The email reaches your inbox only when the repo's
+`.env` has `DEEDGLASS_RESEND_API_KEY` and `DEEDGLASS_MAIL_FROM` (you put them there); without them
+the email is in the server's log. Open the link on a phone on the same Wi-Fi, read the context,
+and press **Approve and run**. Then `make demo-lan-off` (127.0.0.1 only, email back to the log)
+and `make demo-approvals-off`. While `demo-lan` is on, anyone on the network can reach the demo.
 
 ## Remove everything
 

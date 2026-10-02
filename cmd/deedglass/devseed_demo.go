@@ -15,7 +15,10 @@ import (
 
 	demopolicies "github.com/deedglass/deedglass/examples/demo/policies"
 	"github.com/deedglass/deedglass/internal/config"
+	"github.com/deedglass/deedglass/internal/deed"
 	"github.com/deedglass/deedglass/internal/identity"
+	"github.com/deedglass/deedglass/internal/ids"
+	"github.com/deedglass/deedglass/internal/ledger"
 	"github.com/deedglass/deedglass/internal/policy"
 	"github.com/deedglass/deedglass/internal/store"
 	"github.com/deedglass/deedglass/internal/store/policystore"
@@ -29,11 +32,13 @@ import (
 var devSeedValues struct {
 	demo     bool
 	keysFile string
+	approver string
 }
 
 func devSeedFlags(fs *flag.FlagSet) {
-	devSeedValues.demo, devSeedValues.keysFile = false, ""
+	devSeedValues.demo, devSeedValues.keysFile, devSeedValues.approver = false, "", ""
 	fs.BoolVar(&devSeedValues.demo, "demo", false, "load the Acme demo org, agents, keys and policy instead (S15)")
+	fs.StringVar(&devSeedValues.approver, "approver", "", "with --demo: add this email as an admin of the demo org, so approval emails reach it (S22)")
 	fs.StringVar(&devSeedValues.keysFile, "keys-file", filepath.Join("examples", "demo", ".demo-keys"), "with --demo: where the agents' keys are written (0600)")
 }
 
@@ -147,8 +152,20 @@ func runDevSeedDemo(ctx context.Context, e *Env) error {
 		}
 		activated = true
 	}
+	// 4. An approver (S22: make demo-approver EMAIL=…): an active admin, with a member.joined deed.
+	approver := ""
+	if strings.TrimSpace(devSeedValues.approver) != "" {
+		email, err := identity.NormalizeEmail(devSeedValues.approver)
+		if err != nil {
+			return &ExitError{Code: ExitUsage, ErrCode: "validation_failed", Err: err}
+		}
+		if err := addDemoApprover(ctx, db, led, org.ID, email); err != nil {
+			return seedErr(err)
+		}
+		approver = email
+	}
 	if e.Globals.JSON {
-		return writeJSON(e, map[string]any{"object": "demo_seed", "org": org.ID.String(), "slug": org.Slug, "policy_version": version,
+		return writeJSON(e, map[string]any{"object": "demo_seed", "org": org.ID.String(), "slug": org.Slug, "policy_version": version, "approver": approver,
 			"created":   map[string]any{"org": createdOrg, "agents": createdAgents, "keys": createdKeys, "activated": activated},
 			"keys_file": devSeedValues.keysFile})
 	}
@@ -163,7 +180,49 @@ func runDevSeedDemo(ctx context.Context, e *Env) error {
 		keysNote = "keys already in " + devSeedValues.keysFile
 	}
 	fmt.Fprintln(e.Stdout, s.OKLine("agents "+strings.Join(names, ", ")+" · "+keysNote))
+	if approver != "" {
+		fmt.Fprintln(e.Stdout, s.OKLine("approver "+approver+" · admin of "+org.Slug+" · approval emails go to this address"))
+	}
 	return nil
+}
+
+// addDemoApprover makes email an active admin of the demo org (dev only), and seals member.joined.
+// An existing member keeps their role unless it is viewer, which becomes admin.
+func addDemoApprover(ctx context.Context, db *store.DB, led *ledger.Ledger, org ids.OrgID, email string) error {
+	var user ids.UserID
+	if err := db.SystemTx(ctx, store.ReasonMaintenance, func(ctx context.Context, tx pgx.Tx) error {
+		u, err := store.UpsertUserByEmail(ctx, tx, email, "")
+		if err != nil {
+			return err
+		}
+		user = u.ID
+		_, err = tx.Exec(ctx, `UPDATE deedglass.users SET status = 'active' WHERE id = $1 AND status = 'invited'`, u.ID)
+		return err
+	}); err != nil {
+		return err
+	}
+	return db.OrgTx(ctx, org, func(ctx context.Context, tx pgx.Tx) error {
+		var mem ids.MembershipID
+		err := tx.QueryRow(ctx, `SELECT id FROM deedglass.memberships WHERE org_id = $1 AND user_id = $2`, org, user).Scan(&mem)
+		switch {
+		case errors.Is(err, pgx.ErrNoRows):
+			mem = ids.New[ids.MembershipKind]()
+			if _, err := tx.Exec(ctx, `INSERT INTO deedglass.memberships (id, org_id, user_id, role, status, joined_at)
+			    VALUES ($1, $2, $3, 'admin', 'active', pg_catalog.now())`, mem, org, user); err != nil {
+				return err
+			}
+		case err != nil:
+			return err
+		default:
+			if _, err := tx.Exec(ctx, `UPDATE deedglass.memberships SET status = 'active', removed_at = NULL, joined_at = COALESCE(joined_at, pg_catalog.now()),
+			    role = CASE WHEN role = 'viewer' THEN 'admin' ELSE role END WHERE id = $1`, mem); err != nil {
+				return err
+			}
+		}
+		_, err = led.RecordAdmin(ctx, tx, ledger.AdminEvent{Action: ledger.AdminMemberJoined, Actor: deed.Ref{Type: "system", ID: "operator"},
+			Target: &deed.Ref{Type: "membership", ID: mem.String()}, Reason: "Added as the demo's approver (deedglass dev seed --demo --approver)."})
+		return err
+	})
 }
 
 // readDemoKeys reads NAME=dg_test_… lines; a missing file is empty.

@@ -32,7 +32,31 @@ const (
 	EventDecoderDegraded  = "decoder.degraded"
 	EventDecoderRecovered = "decoder.recovered"
 	EventDecoderAlert     = "decoder.alert"
+	// Approvals (S22): id is the approval (apr_…); action, status, agent, tool, rule_id, required
+	// and countersigned (a count) are set; deed is the decision's admin deed. decided carries the
+	// final status: approved, denied, expired or cancelled.
+	EventApprovalRequested = "approval.requested"
+	EventApprovalDecided   = "approval.decided"
+	// Agents and the org's Stop all (S22 publishes S08's changes): id is the agent (or org), state
+	// the new status, deed the admin deed. Start and resume both emit agent.resumed (contract §8).
+	EventAgentStopped   = "agent.stopped"
+	EventAgentResumed   = "agent.resumed"
+	EventAgentSuspended = "agent.suspended"
+	EventOrgStopped     = "org.stopped"
+	EventOrgStarted     = "org.started"
+	// EventWebhookTest is sent to one endpoint only, by POST /v1/webhooks/{id}/test (S22).
+	EventWebhookTest = "webhook.test"
 )
+
+// WebhookEvents are the event types an endpoint may subscribe to (contract §8): every type above
+// that is published, plus the Insights events S27 and S28 add.
+var WebhookEvents = []string{
+	EventActionCreated, EventActionDecided, EventActionExecuted, EventActionWitnessed, EventDeedSealed,
+	EventApprovalRequested, EventApprovalDecided,
+	EventAgentStopped, EventAgentResumed, EventAgentSuspended, EventOrgStopped, EventOrgStarted,
+	"anomaly.detected", "suggestion.created",
+	EventPolicyActivated, EventDecoderDegraded, EventDecoderRecovered, EventDecoderAlert, EventWebhookTest,
+}
 
 // Event is the one payload shape on deedglass_events. Every key is always present, null when it
 // doesn't apply. Payloads are ids and states, never request or result data.
@@ -58,6 +82,14 @@ type Event struct {
 	Reason *string `json:"reason,omitempty"`
 	Kind   *string `json:"kind,omitempty"`
 	LSN    *string `json:"lsn,omitempty"`
+	// approval.* only (S22, additive): the approval's status and request, never its context, a
+	// person's name or an email address. Absent on every other event.
+	Status        *string `json:"status,omitempty"`
+	Agent         *string `json:"agent,omitempty"`
+	Tool          *string `json:"tool,omitempty"`
+	RuleID        *string `json:"rule_id,omitempty"`
+	Required      *int    `json:"required,omitempty"`
+	Countersigned *int    `json:"countersigned,omitempty"`
 }
 
 // eventFor maps a transition into to (contract §8 table): "" when the transition publishes nothing
@@ -88,8 +120,12 @@ func (l *Ledger) Publish(ctx context.Context, tx pgx.Tx, ev Event) error {
 	if err != nil {
 		return err
 	}
-	_, err = tx.Exec(ctx, notifySQL, Channel, string(b))
-	return err
+	bt := &pgx.Batch{}
+	bt.Queue(notifySQL, Channel, string(b))
+	if err := queueOutbox(bt, ev); err != nil {
+		return err
+	}
+	return tx.SendBatch(ctx, bt).Close()
 }
 
 // notifySQL is the only pg_notify in Deedglass (TestOneWritePath): Publish runs it, and SealAction

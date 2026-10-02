@@ -2308,6 +2308,428 @@ paths:
                       doc_url: https://docs.deedglass.com/errors/intent_invalid
         default:
           $ref: "#/components/responses/Error"
+  /v1/approvals:
+    get:
+      operationId: listApprovals
+      summary: List approvals
+      description: >-
+        Approvals in this org (S22). `?status=pending` lists the inbox, oldest expiry first; any
+        other filter lists newest first. Filters: `status` (comma-separated: pending, approved,
+        denied, expired, cancelled), `agent` (id or name), `tool`, with `limit` (1 to 100) and
+        `cursor`. A viewer+ Console session or an org admin key sees the full object; an agent key
+        sees only its own agent's approvals, in the agent view (no context, no approvers, no
+        names, `countersigned` as a count).
+      tags: [Approvals]
+      security: [{bearerAuth: []}, {sessionCookie: []}]
+      x-deedglass-auth: session_or_key
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+        - {name: status, in: query, required: false, schema: {type: string}}
+        - {name: agent, in: query, required: false, schema: {type: string}}
+        - {name: tool, in: query, required: false, schema: {type: string}}
+        - {name: limit, in: query, required: false, schema: {type: integer, minimum: 1, maximum: 100, default: 20}}
+        - {name: cursor, in: query, required: false, schema: {type: string}}
+      responses:
+        "200":
+          description: A list of approvals.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApprovalList"
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/approvals/{id}:
+    get:
+      operationId: getApproval
+      summary: Retrieve an approval
+      description: >-
+        One approval (S22). `?wait=0..25` is a long poll: it returns as soon as the status is no
+        longer `pending`, or when the wait ends. An agent key reads only its own agent's approvals
+        (the agent view); another agent's is 404 `not_found`.
+      tags: [Approvals]
+      security: [{bearerAuth: []}, {sessionCookie: []}]
+      x-deedglass-auth: session_or_key
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+        - {name: id, in: path, required: true, description: The approval id (`apr_…`)., schema: {type: string}}
+        - {name: wait, in: query, required: false, schema: {type: number, minimum: 0, maximum: 25}}
+      responses:
+        "200":
+          description: The approval.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Approval"
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/approvals/{id}/approve:
+    post:
+      operationId: approveApproval
+      summary: Countersign an approval
+      description: >-
+        A person countersigns (S22): a Console session with the `Deedglass-CSRF` header. Any role may
+        call it; the rule's approvers decide who is eligible, read live. The body names the context
+        the person reviewed (`context_digest`; a different one is 409 `context_changed`). The first
+        final decision wins (`approval_decided`); four-eyes counts distinct people
+        (`already_countersigned`); the person the action runs on behalf of can't countersign
+        (`self_approval`). Agent and admin keys are 403 `approval_needs_person`. The answer never
+        waits for the tool: an approved action answers `action_status: processing`.
+      tags: [Approvals]
+      security: [{bearerAuth: []}, {sessionCookie: []}]
+      x-deedglass-auth: session_or_key
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+        - $ref: "#/components/parameters/CSRFWithSession"
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - {name: id, in: path, required: true, description: The approval id (`apr_…`)., schema: {type: string}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApprovalVote"
+      responses:
+        "200":
+          description: "The approval after the vote, with `action_status`."
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Approval"
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/approvals/{id}/deny:
+    post:
+      operationId: denyApproval
+      summary: Deny an approval
+      description: >-
+        A person denies (S22): a veto, final at once. `reason` is required (at most 280 characters;
+        the agent sees it). The action is denied and sealed in the same transaction. Same rules as
+        approve, except the person the action runs on behalf of may deny.
+      tags: [Approvals]
+      security: [{bearerAuth: []}, {sessionCookie: []}]
+      x-deedglass-auth: session_or_key
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+        - $ref: "#/components/parameters/CSRFWithSession"
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - {name: id, in: path, required: true, description: The approval id (`apr_…`)., schema: {type: string}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApprovalVote"
+      responses:
+        "200":
+          description: "The denied approval, with `action_status: denied`."
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Approval"
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/approval-links/preview:
+    post:
+      operationId: previewApprovalLink
+      summary: Show the approval behind an emailed link
+      description: >-
+        Public: the one-time token (from the link's `#t=` fragment) in the body is the credential
+        (S22). Previewing never consumes the link. Unknown, used, voided and expired tokens all
+        answer the same 401 `approval_link_invalid`. Limited to 30 a minute per client and 10 per
+        token.
+      tags: [Approvals]
+      security: []
+      x-deedglass-auth: public
+      x-deedglass-since: "2026-10-01"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApprovalLinkToken"
+      responses:
+        "200":
+          description: The approval as the link's person sees it.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApprovalLinkPreview"
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/approval-links/decide:
+    post:
+      operationId: decideApprovalLink
+      summary: Decide with an emailed link
+      description: >-
+        The link's person approves or denies (`via: email_link`). The token is consumed in the
+        decision's own transaction, so a refused decision never burns it, and it works exactly
+        once. An org with `settings.approvals.email_links: review` answers 403
+        `approval_link_review_only`.
+      tags: [Approvals]
+      security: []
+      x-deedglass-auth: public
+      x-deedglass-since: "2026-10-01"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApprovalLinkDecision"
+      responses:
+        "200":
+          description: The approval after the vote.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Approval"
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/approval-links/status:
+    post:
+      operationId: approvalLinkStatus
+      summary: Follow a decided action from its link
+      description: >-
+        After deciding, the page follows the action until it is sealed: a token used within
+        `approvals.link_status_window` (15 minutes), or one still usable. The action carries its
+        state, witness and deed, never the tool's result.
+      tags: [Approvals]
+      security: []
+      x-deedglass-auth: public
+      x-deedglass-since: "2026-10-01"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApprovalLinkToken"
+      responses:
+        "200":
+          description: The approval and its action.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApprovalLinkStatus"
+        default:
+          $ref: "#/components/responses/Error"
+  /approve:
+    get:
+      operationId: approvePage
+      summary: The page an approval link opens
+      description: >-
+        The token is in the URL fragment (`#t=…`), which browsers never send to servers. The page
+        reads no cookie and decides nothing on load: only its Approve and Deny buttons post a
+        decision. `Cache-Control: no-store`, `Referrer-Policy: no-referrer` and a strict
+        Content-Security-Policy.
+      tags: [Pages]
+      security: []
+      x-deedglass-auth: public
+      x-deedglass-since: "2026-10-01"
+      responses:
+        "200":
+          description: HTML, with a strict Content-Security-Policy.
+          content:
+            text/html:
+              schema: {type: string}
+        default:
+          $ref: "#/components/responses/Error"
+  /approve/assets/{file}:
+    get:
+      operationId: approveAsset
+      summary: The approval page's stylesheet and script
+      tags: [Pages]
+      security: []
+      x-deedglass-auth: public
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - {name: file, in: path, required: true, schema: {type: string, enum: [approve.css, approve.js]}}
+      responses:
+        "200":
+          description: CSS or JavaScript.
+          content:
+            text/css:
+              schema: {type: string}
+            text/javascript:
+              schema: {type: string}
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/webhooks:
+    get:
+      operationId: listWebhooks
+      summary: List webhook endpoints
+      description: Every endpoint of the org (at most 16). An admin+ Console session or an org admin key.
+      tags: [Webhooks]
+      security: [{bearerAuth: []}, {sessionCookie: []}]
+      x-deedglass-auth: session_or_key
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+      responses:
+        "200":
+          description: A list of webhooks.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookList"
+        default:
+          $ref: "#/components/responses/Error"
+    post:
+      operationId: createWebhook
+      summary: Create a webhook endpoint
+      description: >-
+        The URL passes the egress rules (https outside dev; never metadata, private or loopback
+        addresses) now and at every delivery. The signing secret (`whsec_…`) is in this response
+        only; Deedglass keeps it in the vault. Seals `webhook.created`. At most 16 per org (409).
+      tags: [Webhooks]
+      security: [{bearerAuth: []}, {sessionCookie: []}]
+      x-deedglass-auth: session_or_key
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+        - $ref: "#/components/parameters/CSRFWithSession"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WebhookCreate"
+      responses:
+        "201":
+          description: The webhook, with its secret (shown once).
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Webhook"
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/webhooks/{id}:
+    get:
+      operationId: getWebhook
+      summary: Retrieve a webhook endpoint
+      tags: [Webhooks]
+      security: [{bearerAuth: []}, {sessionCookie: []}]
+      x-deedglass-auth: session_or_key
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+        - {name: id, in: path, required: true, description: The webhook id (`whk_…`)., schema: {type: string}}
+      responses:
+        "200":
+          description: The webhook (never its secret).
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Webhook"
+        default:
+          $ref: "#/components/responses/Error"
+    delete:
+      operationId: deleteWebhook
+      summary: Delete a webhook endpoint
+      description: Removes the endpoint and its queued deliveries, and seals `webhook.deleted`.
+      tags: [Webhooks]
+      security: [{bearerAuth: []}, {sessionCookie: []}]
+      x-deedglass-auth: session_or_key
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+        - $ref: "#/components/parameters/CSRFWithSession"
+        - {name: id, in: path, required: true, description: The webhook id (`whk_…`)., schema: {type: string}}
+      responses:
+        "200":
+          description: "`{object: webhook, id, deleted: true, deed}`."
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+          content:
+            application/json:
+              schema: {type: object}
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/webhooks/{id}/test:
+    post:
+      operationId: testWebhook
+      summary: Send a test event
+      description: >-
+        Sends `webhook.test` to this endpoint now, signed like every delivery, and answers with the
+        outcome (`delivered`, `response_status`, `response_ms`). A failure is retried on the usual
+        schedule.
+      tags: [Webhooks]
+      security: [{bearerAuth: []}, {sessionCookie: []}]
+      x-deedglass-auth: session_or_key
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+        - $ref: "#/components/parameters/CSRFWithSession"
+        - {name: id, in: path, required: true, description: The webhook id (`whk_…`)., schema: {type: string}}
+      responses:
+        "200":
+          description: The test delivery's outcome.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+          content:
+            application/json:
+              schema: {type: object}
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/webhooks/{id}/deliveries:
+    get:
+      operationId: listWebhookDeliveries
+      summary: List an endpoint's deliveries
+      description: The endpoint's last deliveries, newest first (`limit` 1 to 100, default 20). Never a payload.
+      tags: [Webhooks]
+      security: [{bearerAuth: []}, {sessionCookie: []}]
+      x-deedglass-auth: session_or_key
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+        - {name: id, in: path, required: true, description: The webhook id (`whk_…`)., schema: {type: string}}
+        - {name: limit, in: query, required: false, schema: {type: integer, minimum: 1, maximum: 100, default: 20}}
+      responses:
+        "200":
+          description: A list of deliveries.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+          content:
+            application/json:
+              schema: {type: object}
+        default:
+          $ref: "#/components/responses/Error"
   /v1/policies:
     get:
       operationId: listPolicies
@@ -3106,7 +3528,7 @@ paths:
       x-deedglass-auth: public
       x-deedglass-since: "2026-10-01"
       parameters:
-        - {name: file, in: path, required: true, schema: {type: string, enum: [auth.css, auth.js]}}
+        - {name: file, in: path, required: true, schema: {type: string, enum: [tokens.css, auth.css, auth.js]}}
       responses:
         "200":
           description: CSS or JavaScript.
@@ -3817,6 +4239,132 @@ components:
               notes: {type: string, maxLength: 2000, description: Why this version exists. Kept with the version.}
           example: {source: "deedglass: policy/v1\nname: postgres-safe\n…", notes: Allow-list writes to public.orders for the pilot.}
   schemas:
+    Approval:
+      type: object
+      description: >-
+        A person's countersign on one action (S22). The agent view leaves out `context`,
+        `approvers` and `denied_by`, and `countersigned` is a count.
+      required: [object, id, action, agent, tool, status, rule_id, reason, required, countersigned, decision_reason, summary, context_digest, created_at, expires_at, decided_at, deed, livemode]
+      properties:
+        object: {type: string, enum: [approval]}
+        id: {type: string}
+        action: {type: string}
+        agent: {type: object, properties: {id: {type: string}, name: {type: string}}}
+        tool: {type: string}
+        status: {type: string, enum: [pending, approved, denied, expired, cancelled]}
+        rule_id: {type: [string, "null"]}
+        reason: {type: [string, "null"]}
+        required: {type: integer}
+        approvers: {type: array, items: {type: string}}
+        countersigned:
+          oneOf:
+            - {type: integer}
+            - type: array
+              items:
+                type: object
+                properties:
+                  user: {type: object, properties: {id: {type: string}, name: {type: string}}}
+                  at: {type: string}
+                  via: {type: string, enum: [console, email_link, slack, cli_dev]}
+                  reason: {type: [string, "null"]}
+                  deed: {type: string}
+        denied_by: {type: object, properties: {id: {type: string}, name: {type: string}}}
+        decision_reason: {type: [string, "null"]}
+        summary: {type: string}
+        context: {type: object, description: The context snapshot v1 the person countersigns (docs/APPROVALS.md).}
+        context_digest: {type: [string, "null"]}
+        you:
+          type: object
+          properties:
+            eligible: {type: boolean}
+            can_decide: {type: boolean}
+            why_not: {type: [string, "null"]}
+        created_at: {type: string}
+        expires_at: {type: string}
+        decided_at: {type: [string, "null"]}
+        deed: {type: [string, "null"]}
+        livemode: {type: boolean}
+        action_status: {type: string, description: Decide answers only.}
+    ApprovalList:
+      type: object
+      required: [object, data, has_more, next_cursor]
+      properties:
+        object: {type: string, enum: [list]}
+        data: {type: array, items: {$ref: "#/components/schemas/Approval"}}
+        has_more: {type: boolean}
+        next_cursor: {type: [string, "null"]}
+    ApprovalVote:
+      type: object
+      additionalProperties: false
+      required: [context_digest]
+      properties:
+        reason: {type: string, maxLength: 280, description: Required to deny. The agent sees it.}
+        context_digest: {type: string, description: The digest of the context the person reviewed.}
+    ApprovalLinkToken:
+      type: object
+      required: [token]
+      properties:
+        token: {type: string, description: The 43-character token from the link's fragment.}
+    ApprovalLinkDecision:
+      type: object
+      required: [token, vote, context_digest]
+      properties:
+        token: {type: string}
+        vote: {type: string, enum: [approve, deny]}
+        reason: {type: string, maxLength: 280}
+        context_digest: {type: string}
+    ApprovalLinkPreview:
+      type: object
+      properties:
+        object: {type: string, enum: [approval_link_preview]}
+        approval: {$ref: "#/components/schemas/Approval"}
+        review_only: {type: boolean}
+        org_name: {type: string}
+        time_zone: {type: string}
+        agent_stopped: {type: boolean}
+        sql: {type: string}
+        console_url: {type: string}
+        expires_clock: {type: string}
+        decided_clock: {type: string}
+        countersign_clocks: {type: array, items: {type: string}}
+    ApprovalLinkStatus:
+      type: object
+      properties:
+        object: {type: string, enum: [approval_link_status]}
+        approval: {$ref: "#/components/schemas/Approval"}
+        action: {type: object}
+    Webhook:
+      type: object
+      required: [object, id, url, events, status, api_version, created_at]
+      properties:
+        object: {type: string, enum: [webhook]}
+        id: {type: string}
+        url: {type: string}
+        events: {type: array, items: {type: string}}
+        description: {type: [string, "null"]}
+        status: {type: string, enum: [active, disabled]}
+        disabled_reason: {type: [string, "null"]}
+        api_version: {type: string}
+        secret_hint: {type: [string, "null"]}
+        secret: {type: string, description: The signing secret (whsec_…). In the create response only.}
+        failing_since: {type: [string, "null"]}
+        last_success_at: {type: [string, "null"]}
+        created_at: {type: string}
+        deed: {type: string}
+    WebhookList:
+      type: object
+      properties:
+        object: {type: string, enum: [list]}
+        data: {type: array, items: {$ref: "#/components/schemas/Webhook"}}
+        has_more: {type: boolean}
+        next_cursor: {type: [string, "null"]}
+    WebhookCreate:
+      type: object
+      required: [url, events]
+      properties:
+        url: {type: string, maxLength: 2048}
+        events: {type: array, minItems: 1, maxItems: 32, items: {type: string}}
+        description: {type: string, maxLength: 200}
     LoginRequest:
       type: object
       required: [object, email, expires_in, message]
@@ -4880,6 +5428,15 @@ components:
                 - database_role_unsafe
                 - database_not_ready
                 - witness_not_configured
+                - approval_decided
+                - already_countersigned
+                - approver_not_eligible
+                - self_approval
+                - approval_needs_person
+                - context_changed
+                - approval_unsatisfiable
+                - approval_link_invalid
+                - approval_link_review_only
             message:
               type: string
               description: One or more calm sentences with the next step.
@@ -5540,6 +6097,7 @@ components:
         id: {type: string, description: The approval id (`apr_…`).}
         status: {type: string, enum: [pending, approved, denied, expired, cancelled]}
         expires_at: {type: string, format: date-time}
+        decision_reason: {type: string, description: 'S22, additive: the reason a person gave when they denied it. Absent otherwise.'}
     NextAction:
       type: [object, "null"]
       required: [type]
@@ -5654,7 +6212,7 @@ components:
           description: S10's connector type the edge declares; `mcp` when left out (`postgres` for Postgres MCP servers).
         tools:
           type: array
-          minItems: 1
+          minItems: 0
           maxItems: 500
           items:
             type: object
@@ -5685,6 +6243,14 @@ components:
         has_more: {type: boolean}
         next_cursor: {type: [string, "null"]}
         policy_version: {type: [string, "null"], description: 'The enforced policy version (`pv_…`); null when no policy is active.'}
+        policy:
+          type: [object, "null"]
+          description: 'S22, additive: the enforced policy by name and version, for the wrapper''s startup line. Null when no policy is active.'
+          required: [name, version, version_id]
+          properties:
+            name: {type: string}
+            version: {type: integer}
+            version_id: {type: string}
     Tool:
       type: object
       required: [object, name, connector, title, description, input_schema, side_effect, visibility]

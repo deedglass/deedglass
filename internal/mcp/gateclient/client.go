@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -313,6 +314,49 @@ func (c *Client) GetAction(ctx context.Context, id string) (*ledger.Action, erro
 		return nil, err
 	}
 	return &a, nil
+}
+
+// GetActionWait is GetAction as a long poll (GET /v1/actions/{id}?wait=): it returns at the
+// action's next change or after wait (S22: deedglass.check_approval's wait_seconds).
+func (c *Client) GetActionWait(ctx context.Context, id string, wait time.Duration) (*ledger.Action, error) {
+	if wait <= 0 {
+		return c.GetAction(ctx, id)
+	}
+	actx, cancel := context.WithTimeout(ctx, c.o.SubmitTimeout+wait)
+	defer cancel()
+	var a ledger.Action
+	q := "?wait=" + strconv.Itoa(int(wait/time.Second))
+	if _, err := c.api.Do(actx, http.MethodGet, "/v1/actions/"+url.PathEscape(id)+q, nil, &a); err != nil {
+		return nil, err
+	}
+	return &a, nil
+}
+
+// Approval is the agent view of an approval (GET /v1/approvals/{id}): what a wrapper that
+// restarted can learn about an approval it didn't request.
+type Approval struct {
+	ID             string  `json:"id"`
+	Action         string  `json:"action"`
+	Status         string  `json:"status"`
+	ExpiresAt      string  `json:"expires_at"`
+	DecisionReason *string `json:"decision_reason"`
+}
+
+// GetApproval reads one approval of this agent (S22); another agent's is not found.
+func (c *Client) GetApproval(ctx context.Context, id string) (*Approval, error) {
+	actx, cancel := context.WithTimeout(ctx, c.o.SubmitTimeout)
+	defer cancel()
+	var a Approval
+	if _, err := c.api.Do(actx, http.MethodGet, "/v1/approvals/"+url.PathEscape(id), nil, &a); err != nil {
+		return nil, err
+	}
+	return &a, nil
+}
+
+// IsNotFound reports a 404 from any call.
+func IsNotFound(err error) bool {
+	var de *deedglass.Error
+	return errors.As(err, &de) && de.Status == http.StatusNotFound
 }
 
 // Resolve asks which tools the policy always denies (POST /v1/tools/resolve).

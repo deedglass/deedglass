@@ -19,6 +19,8 @@
   .dg-rule { border-top-color: #1C1F2A !important; }
   .dg-code { background-color: #141722 !important; color: #F5F6FA !important; }
   .dg-orb-r { background-color: #D3D7E2 !important; }
+  .dg-panel { background-color: #141722 !important; border-color: #1C1F2A !important; }
+  .dg-label { color: #8B90A0 !important; }
 }
 </style>
 </head>

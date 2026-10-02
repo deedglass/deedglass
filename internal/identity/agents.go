@@ -658,6 +658,14 @@ func (s *Service) SetAgentStatus(ctx context.Context, a Actor, org ids.OrgID, id
 		if err := s.notify(ctx, tx, identityMsg{T: "agent", Org: org.String(), ID: id, S: string(r.to)}); err != nil {
 			return err
 		}
+		// The contract event (S22 publishes it, so webhooks see Stop): start and resume both emit
+		// agent.resumed.
+		ev := map[StatusOp]string{OpSuspend: ledger.EventAgentSuspended, OpResume: ledger.EventAgentResumed,
+			OpStop: ledger.EventAgentStopped, OpStart: ledger.EventAgentResumed}[op]
+		st := string(r.to)
+		if err := s.led.Publish(ctx, tx, ledger.Event{Type: ev, Org: org.String(), ID: id, State: &st, Deed: d}); err != nil {
+			return err
+		}
 		ag, err := getAgent(ctx, tx, org, id)
 		res = AgentResult{Agent: ag, Deed: d}
 		return err
@@ -713,7 +721,7 @@ func (s *Service) setOrgStop(ctx context.Context, a Actor, org ids.OrgID, stop b
 			stoppedAt          *time.Time
 			stoppedBy, stopWhy *string
 		)
-		err := tx.QueryRow(ctx, `SELECT stopped_at, stopped_by, stop_reason FROM deedglass.orgs WHERE id = $1 FOR UPDATE`, org).
+		err := tx.QueryRow(ctx, `SELECT stopped_at, stopped_by, stop_reason FROM deedglass.orgs WHERE id = $1 FOR NO KEY UPDATE`, org).
 			Scan(&stoppedAt, &stoppedBy, &stopWhy)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return store.ErrNotFound
@@ -750,6 +758,13 @@ func (s *Service) setOrgStop(ctx context.Context, a Actor, org ids.OrgID, stop b
 			return err
 		}
 		if err := s.notify(ctx, tx, identityMsg{T: "org", Org: org.String(), ID: org.String(), S: state}); err != nil {
+			return err
+		}
+		ev := ledger.EventOrgStarted
+		if stop {
+			ev = ledger.EventOrgStopped
+		}
+		if err := s.led.Publish(ctx, tx, ledger.Event{Type: ev, Org: org.String(), ID: org.String(), State: &state, Deed: d}); err != nil {
 			return err
 		}
 		out.Stopped, out.StoppedAt, out.Deed = stop, optTime(stoppedAt), d

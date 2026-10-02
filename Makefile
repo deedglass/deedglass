@@ -14,7 +14,7 @@ LDFLAGS  := -s -w -X $(BI).Version=$(VERSION) -X $(BI).Commit=$(COMMIT) -X $(BI)
 	web-verify-install web-verify-test web-verify-build web-verify-serve gencopy genmark bench-mark bench-ledger bench-stop bench-intents bench-gate bench-witness policy-test \
 	fuzz-policy fuzz-policy-short bench-policy bench-eval mcp-it bench-mcp \
 	demo-up demo-down demo-reset demo-status demo-snippet demo-psql demo-follow demo-verify demo-check demo-smoke bench-gateway \
-	demo-trigger-on demo-trigger-off demo-order-reset demo-hero demo-hero-check demo-diff bench-l2 \
+	demo-trigger-on demo-trigger-off demo-order-reset demo-hero demo-hero-check demo-diff bench-l2 bench-approvals \
 	mock-orders bench-connectors bench-postgres bench-decoder attack attack-report vuln
 
 all: ci
@@ -180,6 +180,12 @@ bench-witness: ## S19: Decide (< 2 µs), L0 with a 64 KiB schema check, expect o
 	$(GO) test -json -count=3 -run '^$$' -bench '^Benchmark' -benchmem -benchtime 1s ./internal/witness > "$$out"; st=$$?; \
 	grep -ho '"Output":"Benchmark[^"]*' "$$out" | sed 's/"Output":"//; s/\\t/  /g; s/\\n//'; echo "raw: $$out"; exit $$st
 
+bench-approvals: ## S22: submit to pending, Decide, decide to worker pickup, the approval long poll's wake (300 approvals) on a throwaway PG 18; JSON in bench/results/
+	@out="$(CURDIR)/bench/results/$$(date +%F)-$$(go env GOOS)-$$(go env GOARCH)-approvals.json"; \
+	DEEDGLASS_IT_PKGS=./internal/approve/ DEEDGLASS_IT_GOFLAGS="-run TestLinks/one_person" \
+	DEEDGLASS_IT_BENCH_OUT="$$out" DEEDGLASS_IT_BENCH_RUN='TestApprovalsBudget' DEEDGLASS_IT_BENCH_PKG=./internal/approve/ scripts/integration_local.sh >/dev/null; st=$$?; \
+	grep -o 'PERF {[^}]*}' "$$out" | sed 's/\\"/"/g'; echo "raw: $$out"; exit $$st
+
 bench-gate: ## S13: Gate overhead (allow, no witness, fake.echo, concurrency 8, 1 org, 50 rules) on a throwaway PG 18: p50 < 5 ms, p99 < 25 ms; raw go test -json in bench/results/
 	@out="$(CURDIR)/bench/results/$$(date +%F)-$$(go env GOOS)-$$(go env GOARCH)-gate.json"; \
 	DEEDGLASS_IT_PKGS=./internal/gate/ DEEDGLASS_IT_GOFLAGS="-run TestAllowSealsL0Verified" \
@@ -307,6 +313,21 @@ demo-hero: ## S21: the L2 hero in one command (VERIFIED, then MISMATCH with 301 
 
 demo-diff: ## S21: deedglass actions show --diff for ID=act_… (default: the newest postgres.execute action)
 	@examples/demo/scripts/demo.sh diff
+
+demo-approvals-on: ## S22: enforce acme-demo-approvals.yaml (Claude Desktop's writes to the orders database wait for a person)
+	@examples/demo/scripts/demo.sh approvals-on
+
+demo-approvals-off: ## S22: enforce acme-demo.yaml again
+	@examples/demo/scripts/demo.sh approvals-off
+
+demo-approver: ## S22: EMAIL=you@… becomes an admin of the demo org, so approval emails reach it
+	@EMAIL="$(EMAIL)" examples/demo/scripts/demo.sh approver
+
+demo-lan: ## S22: serve the demo on this Mac's Wi-Fi address so a phone can open approval links (anyone on the Wi-Fi can reach it)
+	@examples/demo/scripts/demo.sh lan
+
+demo-lan-off: ## S22: back to 127.0.0.1 only
+	@examples/demo/scripts/demo.sh lan-off
 
 demo-hero-check: ## S21: TestHeroScript, hero.sh twice with demo-reset between (make demo-up first)
 	DEEDGLASS_DEMO=1 $(GO) test -tags demo -count=1 -v -run TestHeroScript ./examples/demo/

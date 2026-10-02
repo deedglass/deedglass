@@ -1,0 +1,28 @@
+deedglass
+
+{{.Agent}} is waiting for you
+
+It wants to run {{.Tool}} on {{.OrgName}}. {{if .Rule}}Policy "{{.Rule}}" asks a person to countersign{{if .Reason}}: {{.Reason}}{{else}}.{{end}}{{else}}A policy asks a person to countersign.{{end}}
+
+  {{.Summary}}
+{{if .Detail}}
+  {{.Detail}}
+{{end}}
+  Agent    {{.Agent}}
+{{if .Rule}}  Rule     {{.Rule}}
+{{end}}  Needs    {{.Needs}}
+  Expires  {{.Expires}}
+{{range .Countersigns}}
+{{.}}
+{{end}}{{if .Self}}
+It runs on your behalf, so another approver has to countersign it. You can still deny it.
+{{end}}
+{{.ButtonLabel}}:
+{{.Link}}
+
+{{.Fineprint}}
+{{.Count}} · approval {{.ApprovalShort}}
+If you weren't expecting this, you can ignore it. Nothing happens.
+
+─────────────
+Deedglass · See what your agents actually did. · deedglass.com

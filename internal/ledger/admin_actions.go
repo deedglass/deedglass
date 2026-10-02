@@ -63,12 +63,22 @@ const (
 	AdminDecoderSlotCreated = "decoder.slot_created"
 	AdminDecoderSlotDropped = "decoder.slot_dropped"
 
+	// S22: approvals and webhooks. Approvals: actor {user, usr_…}, target {approval, apr_…}; data:
+	// approval, action, vote, via, count, required, rule_id, context_digest, request_digest (never a
+	// payload, a name or an email); the person's reason in admin.reason. countersigned is a vote
+	// that doesn't reach the rule's required count; decided is the final approve or a deny.
+	// Webhooks: target {webhook, whk_…}; data: url_host, events, reason (disabled: failing).
+	AdminApprovalCountersigned = "approval.countersigned"
+	AdminApprovalDecided       = "approval.decided"
+	AdminWebhookCreated        = "webhook.created"
+	AdminWebhookDeleted        = "webhook.deleted"
+	AdminWebhookDisabled       = "webhook.disabled"
+
 	// S07: security events, recorded in admin_events without a deed (AppendAdminEvent).
 	AdminUserSignedIn  = "user.signed_in"
 	AdminUserSignedOut = "user.signed_out"
 
 	// Planned, each added by its session with the exact spelling below:
-	//   S22  approval.decided approval.countersigned webhook.created webhook.deleted webhook.disabled
 	//   S27  anomaly.resolved insights.settings_changed
 	//   S28  suggestion.accepted suggestion.rejected
 )
@@ -86,6 +96,7 @@ var AdminActions = []string{
 	AdminConnectorCreated, AdminConnectorUpdated, AdminConnectorDeleted, AdminConnectorCredentialsUpdated,
 	AdminConnectorCredentialsRemoved, AdminVaultRotated, AdminConnectorPostgresInitialized,
 	AdminDecoderSlotCreated, AdminDecoderSlotDropped,
+	AdminApprovalCountersigned, AdminApprovalDecided, AdminWebhookCreated, AdminWebhookDeleted, AdminWebhookDisabled,
 }
 
 // AdminEventActions are admin events recorded without a deed (AppendAdminEvent): security events

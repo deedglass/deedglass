@@ -118,6 +118,7 @@ type Pipeline struct {
 	waits    map[string]int // open long polls per agent
 
 	hooks hooks
+	jobs  map[string]JobHandler // job kinds other packages own (S22's approval_notify); guarded by mu
 }
 
 // hooks are test seams: they let a test observe the moments the invariants talk about.
@@ -210,6 +211,15 @@ type admission struct {
 // our insert. The caller answers as a replay.
 var errKeyRace = errors.New("gate: idempotency key taken by a concurrent request")
 
+// needPrepare: Tx A decided require_approval and has no prepared snapshot for that rule yet. It
+// rolls back; Submit prepares and runs Tx A again.
+type needPrepare struct {
+	in ApprovalInput
+	d  policy.Decision
+}
+
+func (e *needPrepare) Error() string { return "gate: the approval snapshot must be prepared first" }
+
 // Submit takes one action from an agent key through the pipeline: normalize, decide, record, and
 // (gateway, allowed) execute, witness and seal. It returns the action and, for a refusal, the
 // error to answer with (the action is attached to it and sealed). See S13 §3.4 for the
@@ -267,7 +277,29 @@ func (p *Pipeline) Submit(ctx context.Context, pr principal, req ActionRequest) 
 		}
 		release = k // nil, or an action whose 24-hour window has closed
 	}
-	adm, err := p.admit(ctx, pr, n, req, act, spec, ex, unknown, release)
+	// Tx A. A require_approval decision first needs its snapshot prepared with no transaction
+	// open (the connector's estimate, the agent's recent actions): Tx A rolls back, Prepare runs,
+	// and Tx A runs again with it (S22). The second decision normally matches; if it names another
+	// rule, the snapshot is prepared once more.
+	var (
+		adm  *admission
+		prep *PreparedApproval
+	)
+	for attempt := 0; ; attempt++ {
+		adm, err = p.admit(ctx, pr, n, req, act, spec, ex, unknown, release, prep)
+		var np *needPrepare
+		if !errors.As(err, &np) {
+			break
+		}
+		if attempt >= 2 {
+			return nil, errors.New("gate: the approval's decision kept changing while it was prepared")
+		}
+		pa, perr := p.o.Approvals.Prepare(ctx, np.in, np.d)
+		if perr != nil {
+			return nil, perr
+		}
+		prep = &pa
+	}
 	if errors.Is(err, errKeyRace) {
 		a, _, err := p.replay(ctx, pr, n, req, wait)
 		switch {
@@ -349,7 +381,7 @@ func mustAction(id string) ids.ActionID {
 // its transitions up to denied → sealed, pending_approval, or executing. One transaction, retried
 // once on a chain conflict.
 func (p *Pipeline) admit(ctx context.Context, pr principal, n *Normalized, req ActionRequest, act *policy.Active,
-	spec connector.ToolSpec, ex Executor, unknown bool, release *store.KeyedAction) (*admission, error) {
+	spec connector.ToolSpec, ex Executor, unknown bool, release *store.KeyedAction, prep *PreparedApproval) (*admission, error) {
 	org, agent := pr.OrgID, pr.AgentID
 	actor := agent.String()
 	var adm *admission
@@ -416,6 +448,14 @@ func (p *Pipeline) admit(ctx context.Context, pr principal, n *Normalized, req A
 				d.Errors = []string{loaded.Unavailable.Error()}
 			}
 			p.watchTimeLimit(org, agent, d, sd)
+		}
+		// 3b. A person must countersign: what they will see is prepared outside this transaction.
+		var ain ApprovalInput
+		if d.Outcome == policy.RequireApproval {
+			ain = approvalInput(pr, n, subj, in, ir, loaded, spec, ex)
+			if prep == nil || prep.RuleID != d.RuleID {
+				return &needPrepare{in: ain, d: d}
+			}
 		}
 		// 4. Reserve (allow, require_approval), in a savepoint: a refused reservation is a
 		// budget_exceeded deny, recorded like any other.
@@ -488,7 +528,24 @@ func (p *Pipeline) admit(ctx context.Context, pr principal, n *Normalized, req A
 			evDeny.Reason = nonEmpty(string(d.Code))
 			steps = append(steps, ledger.Step{To: Denied, Event: evDeny})
 		case policy.RequireApproval:
-			apr, _, err := p.o.Approvals.Request(ctx, tx, sub, d)
+			ain.Subject = sub
+			apr, _, err := p.o.Approvals.Request(ctx, tx, ain, d, *prep)
+			var unsat *UnsatisfiableError
+			if errors.As(err, &unsat) {
+				// Nobody can countersign: the approval is recorded denied by the system, and the
+				// action is denied and sealed in this transaction (S22 §3.6).
+				apr, err = unsat.Approval, nil
+				a := apr.String()
+				evPend := evEval
+				evPend.Reason, evPend.ApprovalID = strp("approval_required"), &a
+				evDeny := evEval
+				evDeny.Reason, evDeny.ApprovalID = strp(string(httpx.CodeApprovalUnsatisfiable)), &a
+				// The action doesn't link the approval: a deed's approval section names a person
+				// for a denial, and here nobody could decide. The approval row keeps the record.
+				steps = append(steps, ledger.Step{To: PendingApproval, Event: evPend}, ledger.Step{To: Denied, Event: evDeny})
+				adm.refusal = httpx.E(httpx.CodeApprovalUnsatisfiable, httpx.Msg(unsat.Message))
+				break
+			}
 			if err != nil {
 				return err
 			}
@@ -524,11 +581,22 @@ func (p *Pipeline) admit(ctx context.Context, pr principal, n *Normalized, req A
 		if err != nil {
 			return err
 		}
-		if d.Outcome == policy.Deny {
+		switch {
+		case d.Outcome == policy.Deny:
 			if err := p.sealView(ctx, tx, id, view); err != nil {
 				return err
 			}
 			adm.refusal = refusalFor(d, view)
+		case adm.refusal != nil: // approval_unsatisfiable: denied in this transaction
+			if reserved {
+				if err := p.o.Usage.ReleaseTx(ctx, tx, org.String(), d.Reservations); err != nil {
+					return err
+				}
+			}
+			if err := p.sealView(ctx, tx, id, view); err != nil {
+				return err
+			}
+			adm.refusal.Action = view
 		}
 		adm.view = view
 		return nil
@@ -558,6 +626,25 @@ func (p *Pipeline) watchTimeLimit(org ids.OrgID, agent ids.AgentID, d policy.Dec
 		p.log.Warn("gate: shadow policy evaluation hit the time limit (recorded, never enforced)",
 			"org_id", org.String(), "agent_id", agent.String(), "mode", "shadow", "errors", sd.Errors, "elapsed_ms", sd.Elapsed.Milliseconds())
 	}
+}
+
+// approvalInput is what Approvals.Prepare and Request see (S22): the request as normalized, the
+// policy that decided, and (gateway) the resolved tool for the connector's estimate.
+func approvalInput(pr principal, n *Normalized, subj store.GateSubject, in policy.Input, ir identity.IntentResult,
+	loaded *policy.Loaded, spec connector.ToolSpec, ex Executor) ApprovalInput {
+	a := ApprovalInput{
+		Subject:   Subject{Org: pr.OrgID, Agent: pr.AgentID, Mode: n.Mode, Tool: n.Tool, ConnectorType: n.ConnectorType},
+		AgentName: subj.AgentName, Connector: n.Connector, SideEffect: in.Tool.SideEffect, RequestDigest: n.Digest,
+		Args: n.Args, OnBehalfOf: ir.OBO.OnBehalfOf, Livemode: pr.Livemode,
+	}
+	if loaded != nil && !loaded.Builtin {
+		a.PolicyID, a.PolicyName, a.PolicyVersionID, a.PolicyVersion = loaded.PolicyID, loaded.Name, loaded.VersionID, loaded.Version
+	}
+	if n.Mode == ModeGateway && ex != nil {
+		a.Exec = ex
+		a.Call = connector.Call{OrgID: pr.OrgID, AgentID: pr.AgentID, Tool: spec, Qualified: n.Tool, Args: n.Args, IntentHash: ir.IntentHash}
+	}
+	return a
 }
 
 // buildInput is S11's policy.Input for this action (S13 §3.6 step 4): raw facts only.

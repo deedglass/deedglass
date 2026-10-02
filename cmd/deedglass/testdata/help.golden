@@ -24,10 +24,10 @@ Policies
 Actions
   act                 Send a test action through the Gate
   actions             Inspect actions                                    list · show · cancel
-  approve · deny      Decide a pending approval                   soon
-  approvals           List pending approvals                      soon   list · show
+  approve · deny      Decide a pending approval
+  approvals           List pending approvals                             list · show
   undo                Preview or run an undo                      soon   preview · run
-  webhooks            Send events to your endpoints               soon   create · list · test · delete
+  webhooks            Send events to your endpoints                      create · list · test · delete
 Deeds
   verify              Check deeds offline
   deeds               Browse and export deeds                            list · show · export

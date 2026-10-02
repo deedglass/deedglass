@@ -278,16 +278,29 @@ func runMailPreview(_ context.Context, e *Env, args []string) error {
 		}
 		args = append(args[:1], fs.Args()...)
 	}
-	if len(args) != 1 || (args[0] != "login" && args[0] != "invite") {
-		return usageErr(errors.New("say which email: login or invite"), "deedglass dev mail-preview login --out /tmp/login.html")
+	if len(args) != 1 || (args[0] != "login" && args[0] != "invite" && args[0] != "approval" && args[0] != "approval-foureyes") {
+		return usageErr(errors.New("say which email: login, invite, approval or approval-foureyes"), "deedglass dev mail-preview approval --out /tmp/approval.html")
 	}
 	var r mailer.Rendered
 	var err error
-	if args[0] == "login" {
+	switch args[0] {
+	case "approval", "approval-foureyes":
+		// S22's example: claude-desktop ships order 42; four-eyes adds Priya's earlier countersign.
+		loc, _ := time.LoadLocation("Asia/Kolkata")
+		d := mailer.ApprovalData{AgentName: "claude-desktop", OrgName: "Acme Demo", Tool: "postgres.execute", RuleID: "orders-writes-need-approval",
+			Reason: "Writes to the orders database need a person to countersign.", Summary: "UPDATE about 1 row in public.orders", Estimated: true,
+			Required: 1, ExpiresAt: previewNow.Add(27 * time.Minute), Location: loc, ApprovalID: "apr_01m3y2z9q4hk7c8vd5w3e6f2ab",
+			Email: "arjun@acme.com", Link: "http://127.0.0.1:8080/approve#t=OEVkbr-q18qimgaDkbcE5mnZqQ2a1zGG7_TgYq8PKFc"}
+		if args[0] == "approval-foureyes" {
+			d.Required = 2
+			d.CountersignedBy = []mailer.ApprovalCountersign{{Name: "Priya Raman", At: previewNow.Add(-4 * time.Minute)}}
+		}
+		r, err = mailer.RenderApproval(d, previewNow)
+	case "login":
 		r, err = mailer.RenderLogin(mailer.LoginData{OrgName: "Acme", Email: "priya@acme.com",
 			Link: "http://127.0.0.1:8080/auth/confirm#t=OEVkbr-q18qimgaDkbcE5mnZqQ2a1zGG7_TgYq8PKFc", Code: "482913",
 			RequestedFrom: "Chrome on macOS", RequestedAt: previewNow, ExpiresIn: identity.LoginTTL})
-	} else {
+	default:
 		r, err = mailer.RenderInvite(mailer.InviteData{InviterName: "Priya Raman", InviterEmail: "priya@acme.com", OrgName: "Acme",
 			Role: "viewer", Email: "sam@acme.com", Link: "http://127.0.0.1:8080/auth/confirm#t=OEVkbr-q18qimgaDkbcE5mnZqQ2a1zGG7_TgYq8PKFc",
 			ExpiresAt: previewNow.Add(identity.InviteTTL), Now: previewNow})

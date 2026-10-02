@@ -100,7 +100,7 @@ func TestContractCatalog(t *testing.T) {
 		"POST /v1/approval-links/decide":       Public,
 		"POST /v1/slack/interact":              Public,
 		"POST /v1/org/start-all":               Session,
-		"POST /v1/approvals/{id}/approve":      Session,
+		"POST /v1/approvals/{id}/approve":      SessionOrKey, // S22: keys reach the handler and get approval_needs_person
 		"GET /v1/org/keys":                     Session,
 		"GET /v1/whoami":                       AgentKey,
 		"POST /v1/actions":                     AgentKey,

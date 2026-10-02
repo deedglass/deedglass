@@ -127,8 +127,8 @@ What Deedglass does not do, stated plainly. **Owner: S37**, which finalizes this
 - **A server that acts outside MCP isn't stopped.** The wrapper governs the calls a client makes;
   it can't see what the server does on its own.
 - **An approved call runs only in the wrapper process that created it.** After a restart the
-  model is asked to make the call again; until S22 there is no `GET /v1/approvals/{id}` to look up
-  an approval from another process.
+  wrapper looks the approval up (`GET /v1/approvals/{id}`, S22) and asks the model to make the call
+  again; it never runs the earlier call.
 - **A report that never lands leaves the action executing** until its deadline
   (`gate.edge_result_timeout`), when the Gate seals it UNVERIFIABLE (`edge_lost`).
 - **Hiding tools is advisory.** `tools/list` leaves out tools the policy always denies, but a
@@ -155,8 +155,8 @@ What Deedglass does not do, stated plainly. **Owner: S37**, which finalizes this
 - **The bridge doesn't send `Mcp-Param-*` headers**, so a modern client calling an upstream tool
   that declares `x-mcp-header` through `deedglass mcp serve --connector <name>` is refused
   (`-32020`). No native tool declares one today.
-- **`deedglass.check_approval` scans the org's actions** for the approval id (no index on
-  `actions.approval_id` yet); fine at demo scale, revisited with S22's approval routes.
+- **`deedglass.check_approval` looks the action up by approval id** through the
+  `actions_approval` index (S22, migration 0021).
 - **The upstream pool's sessions are per instance and in memory**; a legacy upstream that loses its
   session gets one reconnect for `tools/list`, never for `tools/call`.
 
@@ -381,6 +381,26 @@ What the decoder doesn't do ([DECODER.md](DECODER.md), [OBSERVATION_BOUNDARY.md]
   in both the decoder's SQL peek and the witness step under sustained load (`make bench-l2`,
   `bench/results/2026-10-02-darwin-arm64-l2.json`). S35 re-measures on an idle machine and decides on
   the streaming transport.
+
+## Approvals and webhooks (S22)
+
+- **An approval link is a bearer token for one person and one approval.** Whoever holds the email
+  can use the link until it is used, voided or expires (at most 24 hours, never past the
+  approval). The token is in the URL fragment, so it doesn't reach logs, proxies or referrers, but
+  a forwarded email forwards the link. Orgs that want a session for every decision set
+  `email_links: review`.
+- **The page shows the arguments** (with secrets scrubbed) to whoever opens a valid link, so the
+  person sees what they countersign. `email_detail: summary` keeps them out of the email itself.
+- **The row estimate is the planner's**, from table statistics: "about 1 row" can be wrong, which
+  is why the Witness still compares what actually changed.
+- **The policy isn't evaluated again at approval time.** A rule changed while an approval waits
+  applies to the next action.
+- **Webhook payloads are thin**: ids and states. Receivers fetch the object for anything else.
+- **Webhook deliveries are at least once and unordered.** Dedupe by `Deedglass-Event-Id`; a retry
+  can arrive after a later event.
+- **A disabled webhook endpoint stays disabled.** After 72 hours of failures it is turned off;
+  create it again to resume. Events in between aren't replayed.
+- **Email only.** Approvals notify by email in S22; Slack arrives with S29, MCP tasks later.
 
 ## What this page does not do
 

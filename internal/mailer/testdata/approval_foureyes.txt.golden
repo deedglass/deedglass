@@ -1,0 +1,24 @@
+deedglass
+
+claude-desktop is waiting for you
+
+It wants to run postgres.execute on Acme Demo. Policy "orders-writes-need-approval" asks a person to countersign: Writes to the orders database need a person to countersign.
+
+  UPDATE about 1 row in public.orders (planner estimate)
+
+  Agent    claude-desktop
+  Rule     orders-writes-need-approval
+  Needs    2 people · 1 countersigned
+  Expires  10:41 IST · in 30 min
+
+Priya Raman countersigned at 09:44 IST. One more countersign is needed.
+
+Review and countersign:
+http://127.0.0.1:8080/approve#t=OEVkbr-q18qimgaDkbcE5mnZqQ2a1zGG7_TgYq8PKFc
+
+This link is yours alone. It works once, until 10:41 IST. Nothing runs unless you approve.
+1 of 2 countersigns needed · approval apr_01m3y2z9…
+If you weren't expecting this, you can ignore it. Nothing happens.
+
+─────────────
+Deedglass · See what your agents actually did. · deedglass.com

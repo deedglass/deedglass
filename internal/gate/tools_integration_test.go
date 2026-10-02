@@ -34,7 +34,6 @@ func TestResolveTools(t *testing.T) {
 	}
 	bad := []ResolveRequest{
 		{Connector: "Scratch", Tools: []ToolRef{{Name: "x"}}},
-		{Connector: "scratch"},
 		{Connector: "scratch", Tools: make([]ToolRef, MaxResolveTools+1)},
 		{Connector: "scratch", Tools: []ToolRef{{Name: "has space"}}},
 		{Connector: "scratch", Tools: []ToolRef{{Name: "x", Digest: "md5:1"}}},
@@ -45,6 +44,10 @@ func TestResolveTools(t *testing.T) {
 		if _, err := w.p.ResolveTools(bg, w.pr(0), b); !errors.As(err, &he) || he.Code != httpx.CodeValidationFailed {
 			t.Errorf("%d: %v", i, err)
 		}
+	}
+	// No tools asks only for the policy (S22: the wrapper's startup line names it).
+	if out, err := w.p.ResolveTools(bg, w.pr(0), ResolveRequest{Connector: "scratch"}); err != nil || len(out.Data) != 0 || out.Policy == nil || out.Policy.Name == "" {
+		t.Fatalf("no tools: %v %+v", err, out)
 	}
 	if _, err := w.p.ResolveTools(bg, principal{Kind: httpx.KindAdminKey, OrgID: w.org}, ResolveRequest{}); err == nil {
 		t.Fatal("admin key")

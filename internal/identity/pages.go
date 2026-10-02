@@ -12,7 +12,7 @@ import (
 // S24 may re-skin them, but /auth/confirm and its #t= fragment stay: emails already in inboxes
 // point there.
 //
-//go:embed pages/login.html pages/confirm.html pages/app.html pages/auth.css pages/auth.js
+//go:embed pages/login.html pages/confirm.html pages/app.html pages/tokens.css pages/auth.css pages/auth.js
 var pagesFS embed.FS
 
 // PageCSP is the Content-Security-Policy of every sign-in page: no inline code, nothing from
@@ -24,8 +24,9 @@ const PageCSP = "default-src 'none'; script-src 'self'; style-src 'self'; img-sr
 const AssetsADR = "ADR-028"
 
 var assetTypes = map[string]string{
-	"auth.css": "text/css; charset=utf-8",
-	"auth.js":  "text/javascript; charset=utf-8",
+	"tokens.css": "text/css; charset=utf-8", // shared with S22's /approve page
+	"auth.css":   "text/css; charset=utf-8",
+	"auth.js":    "text/javascript; charset=utf-8",
 }
 
 func (s *Service) pageRoutes() []httpx.Route {

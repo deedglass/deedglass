@@ -190,16 +190,16 @@ builds it. Hidden commands work but aren't in `deedglass help`.
 | `deedglass actions list [--agent agt_…] [--tool stripe.*] [--state …] [--decision …] [--verdict MISMATCH] [--level L2] [--since 1h] [--q text] [--limit 25] [--cursor …] [--json] [--follow] [--connector orders]` | Actions | List actions | built |
 | `deedglass actions show <act_…> [--wait] [--diff] [--json]` | Actions | Show one action, its events and its L2 diff | built |
 | `deedglass actions cancel <act_…> [--json]` | Actions | Cancel a pending action | built |
-| `deedglass approve` | Actions | Approve a pending action | soon (S22) |
-| `deedglass deny` | Actions | Deny a pending action | soon (S22) |
-| `deedglass approvals list` | Actions | List approvals | soon (S22) |
-| `deedglass approvals show` | Actions | Show one approval | soon (S22) |
+| `deedglass approve <apr_…> --as <email> [--reason …] [--json]` | Actions | Approve a pending action | built |
+| `deedglass deny <apr_…> --as <email> --reason "…" [--json]` | Actions | Deny a pending action | built |
+| `deedglass approvals list [--status pending] [--agent <name>] [--limit 25] [--json]` | Actions | List approvals | built |
+| `deedglass approvals show <apr_…> [--json]` | Actions | Show one approval | built |
 | `deedglass undo preview` | Actions | Show what an undo would change | soon (S23) |
 | `deedglass undo run` | Actions | Undo an action | soon (S23) |
-| `deedglass webhooks create` | Actions | Add a webhook endpoint | soon (S22) |
-| `deedglass webhooks list` | Actions | List webhook endpoints | soon (S22) |
-| `deedglass webhooks test` | Actions | Send a test event | soon (S22) |
-| `deedglass webhooks delete` | Actions | Remove a webhook endpoint | soon (S22) |
+| `deedglass webhooks create --url <url> --events approval.requested,approval.decided [--description …] [--json]` | Actions | Add a webhook endpoint | built |
+| `deedglass webhooks list [--json]` | Actions | List webhook endpoints | built |
+| `deedglass webhooks test <whk_…> [--json]` | Actions | Send a test event | built |
+| `deedglass webhooks delete <whk_…> [--json]` | Actions | Remove a webhook endpoint | built |
 | `deedglass verify <path|->... [--keys <file|url>] [--pin sha256:…] [--anchor <seq>:sha256:…] [--strict] [--all] [-q]` | Deeds | Check deeds offline | built |
 | `deedglass deeds list [--from-seq n] [--to-seq n] [--kind action,admin,amendment] [--action act_…] [--order asc|desc] [--limit 25] [--json]` | Deeds | List deeds | built |
 | `deedglass deeds show <deed_…|seq> [--json]` | Deeds | Show one deed | built |
@@ -233,11 +233,11 @@ builds it. Hidden commands work but aren't in `deedglass help`.
 | `deedglass insights suggestions reject` | Insights | Reject a suggestion | soon (S28) |
 | `deedglass insights suggestions generate` | Insights | Generate suggestions now | soon (S28) |
 | `deedglass insights digest` | Insights | Preview the weekly digest | soon (S28) |
-| `deedglass dev seed [--demo [--keys-file <path>]] [--json]` | Dev | Load demo data into a dev database | built |
+| `deedglass dev seed [--demo [--keys-file <path>] [--approver <email>]] [--json]` | Dev | Load demo data into a dev database | built |
 | `deedglass dev fake-action [--n 20] [--seed 42] [--kinds allow,deny,…] [--agents 3] [--batch 1] [--pace 0s] [--org-slug demo] [--quiet] [--json]` | Dev | Seal realistic fake actions (dev only) | built |
 | `deedglass dev simulate` | Dev | Simulate agent traffic | soon (S27) |
 | `deedglass dev agent-script` | Dev | Run a scripted agent | soon (S37) |
-| `deedglass dev mail-preview login|invite [--out /tmp/login.html] [--json]` | Dev | Preview emails in the browser | built |
+| `deedglass dev mail-preview login|invite|approval|approval-foureyes [--out /tmp/login.html] [--json]` | Dev | Preview emails in the browser | built |
 | `deedglass dev sign-intent --key <pem> --tool stripe.refund --args '{…}' [--org org_… --agent agt_…] [--obo …] [--session …] [--ttl 60s] [--explain] [--json]` | Dev | Sign an intent with a local key | built |
 | `deedglass dev stripe-fixtures` | Dev | Create Stripe test-mode fixtures | soon (S30) |
 | `deedglass dev id <prefix>` | Dev | Print a fresh id for a prefix | built, hidden |

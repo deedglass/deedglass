@@ -78,6 +78,11 @@ go test ./internal/witness/l2 -run TestRenderGoldens -update   # S21: the L2 dif
 DEEDGLASS_IT_PKGS=./cmd/deedglass/ DEEDGLASS_IT_GOFLAGS="-v -run TestWitnessL2Live" make integration   # S21 on a real server: VERIFIED, the hero MISMATCH, MCP, an amendment
 make demo-hero      # S21: the L2 hero in one command (make demo-up first; HERO_PACE=2 for recording); demo-hero-check runs it twice
 make demo-trigger-on | demo-trigger-off | demo-order-reset [ORDER=42] | demo-diff [ID=act_…]   # S21: the hero's pieces
+DEEDGLASS_IT_PKGS="./internal/approve/ ./internal/notify/..." make integration   # S22: approvals (decision table, 200-run decide race, links, ?wait) and webhooks (outbox, signing, retries, egress)
+DEEDGLASS_IT_PKGS=./cmd/deedglass/ DEEDGLASS_IT_GOFLAGS="-v -run TestApprovalsLive" make integration   # S22 §9 on a real server: approve-then-run through mcp wrap, the deny reason, the emailed link (dev mail log), a signed webhook
+go test ./internal/mailer -run 'TestGoldens|TestApprovalGoldens' -update   # S22: the approval email goldens (approval_requested, approval_foureyes)
+deedglass org dev mail-preview approval|approval-foureyes   # S22: render the approval email to the terminal (no send)
+make demo-approvals-on | demo-approvals-off | demo-approver EMAIL=… | demo-lan | demo-lan-off   # S22: the approval beat, real email (repo .env), phone links on the Wi-Fi
 make attack         # S18: the V7 attack suite on a throwaway PG 18 (real serve, real Postgres, loopback upstreams), then the report
 make attack-report  # S18: print the last run and regenerate docs/ATTACK_SUITE.md (never edit that page by hand; -check in CI)
 DEEDGLASS_IT_ATTACK_RUN='TestAttack/H03' make attack   # one case; 'TestOrgIsolation' for the isolation sweep
@@ -231,8 +236,8 @@ and "open source" until the repo is public. Style bans: "revolutionary", "world-
   overflow tests, pattern-vs-parser agreement, `FuzzParse`.
 - `internal/config`: the key table, every prod refusal, `.deedglass/` safety, secret canaries across
   fmt, JSON, slog and panics, and the `docs/CONFIG.md` drift test.
-- `internal/store`: catalog shape (32 tables, RLS on every org table, `system_scope` list pinned,
-  composite FKs, grants), RLS matrix on all 27 org tables, pooled-connection leak, privilege
+- `internal/store`: catalog shape (33 tables since S22, RLS on every org table, `system_scope` list pinned,
+  composite FKs, grants), RLS matrix on all 28 org tables, pooled-connection leak, privilege
   matrix, deed chain, domains = `ids.Registry()`, `set_config(…, true)` grep, `SystemTx` call
   sites; `internal/gate`: 225-pair trigger test; migrate runner refusals. Integration tag,
   PG 16/17/18.
@@ -467,15 +472,31 @@ and "open source" until the repo is public. Style bans: "revolutionary", "world-
   the Go SDK, an amendment, export → verify), `TestL2Budget` (`make bench-l2`). `attack/`: group W
   (W01–W13, `expectedDigestW`, ADR-046) and H08–H11 run; every case points the decoder at its clone
   (`H.L2Ready`). `examples/demo` `TestHeroScript` (`make demo-hero-check`). The migration count is 20.
+- S22 (approvals and webhooks): `internal/approve` unit tests (agent and API copy, summaries,
+  clocks, `CheckDecideInput`, eligibility and the self rule, link tokens, `redactArgs`,
+  `fitContext`, sections, `FuzzApprovalLinkBody`); integration on PG 16/17/18: `TestApproveRunsOnce`,
+  `TestDecisionTable` (four-eyes, veto, self, not eligible, keys never vote, stale context, expiry,
+  cancel), `TestApprovalGuard` (DG006: context, request, decided rows, append-only countersigns;
+  a vote can't be edited; `internal/store`'s append-only test covers `approval_votes`), `TestDecideRace` (200 runs: one decision),
+  `TestApproveRacesExpiryAndCancel`, `TestLinks` (preview decides nothing, one use, void, review
+  mode, 401 for every unusable link), `TestWaitWakes`. `internal/notify`: the email notifier over a
+  fake queue (one link per person, idempotency key, reserved addresses skipped under Resend).
+  `internal/notify/webhook` (integration): `TestWebhookDelivery` (outbox in the change's
+  transaction, signature, retries, auto-disable with a deed),
+  `TestWebhookDestinations` (egress refusals). `pkg/deedglass/webhook`: sign/verify table,
+  rotation, `FuzzSignatureHeader`, 100% coverage. `internal/connector/postgres` `TestPlanRows` and
+  (integration) `TestEstimate` (EXPLAIN only, READ ONLY as `deedglass_agent`, every missing-estimate
+  reason). `internal/mailer` `TestApprovalGoldens`. `cmd/deedglass` `TestApprovalsLive`.
+  `attack/`: group L (L01–L08, `expectedDigestL`, ADR-049). The migration count is 21.
 - `cmd/deedglass verify` (S05): 80 golden cases in `testdata/verify/<case>/{args,stdout,stderr,exit}`
   (`go test ./cmd/deedglass -run TestVerifyGolden -update`), every vector's code and exit, `--keys`
   URL rules (same-host redirects, 1 MiB, timeout, loopback-only http), key-set merge conflicts, no
   network without a `--keys` URL, terminal sanitizing.
 - `web/verify` (S05): vectors, parity 500/500, strict, JCS, keys (A13, RFC 8032, Wycheproof), page
   safety (CSP, no HTML from strings, no storage, one fetch).
-- `attack/` (S18): 98 case ids (66 V0 + 19 V7: H01–H11, J01–J04, K01–K04 + S21's W01–W13), the outcome enum, the
+- `attack/` (S18): 106 case ids (66 V0 + 19 V7: H01–H11, J01–J04, K01–K04 + S21's W01–W13 + S22's L01–L08), the outcome enum, the
   demo sets, one pinned digest per group set (`expectedDigest` A–G after ADR-021,
-  `expectedDigestV7` H/J/K, ADR-040, `expectedDigestW` W, ADR-046; a group without a pin fails), `TestADR021WordsOnly`, `needs`
+  `expectedDigestV7` H/J/K, ADR-040, `expectedDigestW` W, ADR-046, `expectedDigestL` L, ADR-049; a group without a pin fails), `TestADR021WordsOnly`, `needs`
   names S19–S37 and stays outside the digest, V7 OWASP tags only ASI01/02/03/10. `make attack`
   (tag `attack`): a real `serve` built with `-tags attackhooks` (hosts-file DNS, dev only;
   `TestNoAttackHooks` keeps it out of default builds), per-case target clones, the five

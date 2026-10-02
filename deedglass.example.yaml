@@ -128,3 +128,23 @@
 #       headers_from_env: {Authorization: EVERYTHING_MCP_AUTH}
 #       timeout: 30s
 #       tools_ttl: 30s
+
+# Approvals (docs/APPROVALS.md, S22). File-only.
+# approvals:
+#   # When neither the rule nor the policy's defaults set expires_in. Timeout means no.
+#   default_expires_in: 30m
+#   # The connector's estimate (Postgres: EXPLAIN, never ANALYZE) while the approval is prepared.
+#   estimate_timeout: 500ms
+#   context_max_bytes: 32768
+#   # Emailed links work once, for one person, never past the approval's expiry.
+#   link_max_ttl: 24h
+#   link_status_window: 15m
+#   max_recipients: 20
+
+# Webhooks (docs/WEBHOOKS.md, S22). File-only.
+# webhooks:
+#   timeout: 10s
+#   # Retries after the first attempt: 30s, 2m, 10m, 30m, 1h, 3h, 6h, 12h (±20%), then dead.
+#   max_attempts: 8
+#   disable_after: 72h
+#   max_endpoints_per_org: 16

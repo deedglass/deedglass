@@ -112,8 +112,8 @@ var contractRoutes = []ContractRoute{
 	// S22: approvals, approval links and webhooks.
 	cr("GET", "/v1/approvals", SessionOrKey, "viewer", "S22", "agent keys see their own actions only"),
 	cr("GET", "/v1/approvals/{id}", SessionOrKey, "viewer", "S22"),
-	cr("POST", "/v1/approvals/{id}/approve", Session, "admin", "S22", "only a person countersigns"),
-	cr("POST", "/v1/approvals/{id}/deny", Session, "admin", "S22", "only a person countersigns"),
+	cr("POST", "/v1/approvals/{id}/approve", SessionOrKey, "viewer", "S22", "only a person countersigns: keys get approval_needs_person; eligibility (not the role) decides"),
+	cr("POST", "/v1/approvals/{id}/deny", SessionOrKey, "viewer", "S22", "only a person countersigns: keys get approval_needs_person; eligibility (not the role) decides"),
 	cr("POST", "/v1/approval-links/preview", Public, "", "S22", "one-time token in the body"),
 	cr("POST", "/v1/approval-links/decide", Public, "", "S22", "one-time token in the body"),
 	cr("POST", "/v1/approval-links/status", Public, "", "S22", "one-time token in the body"),

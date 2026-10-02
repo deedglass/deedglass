@@ -302,9 +302,9 @@ func TestPendingThenApproval(t *testing.T) {
 				t.Fatalf("%s: %q", status, r.text())
 			}
 		}
-		// Not from this session, and a malformed id.
+		// Not from this session (the Gate doesn't know it for this agent), and a malformed id.
 		r = result(t, h.call("deedglass.check_approval", `{"approval_id":"apr_01k6w4a3d5f7h9k1n3q5s7v999"}`))
-		if !r.IsError || r.text() != gate.MCPApprovalNotHereText("apr_01k6w4a3d5f7h9k1n3q5s7v999") {
+		if !r.IsError || r.text() != gate.MCPApprovalUnknownText("apr_01k6w4a3d5f7h9k1n3q5s7v999") {
 			t.Fatal(r.text())
 		}
 		r = result(t, h.call("deedglass.check_approval", `{"approval_id":"nope"}`))

@@ -78,7 +78,7 @@ func TestMorePaths(t *testing.T) {
 	n.ConnectorType = "fake"
 	act, _ := w.reg.Active(bg, w.org.String())
 	ex, spec, _, _ := w.p.o.Resolver.Resolve(bg, w.org, "fake.echo")
-	adm, err := w.p.admit(bg, w.pr(0), n, req("fake.echo", `{}`), act, spec, ex, false, nil)
+	adm, err := w.p.admit(bg, w.pr(0), n, req("fake.echo", `{}`), act, spec, ex, false, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -96,7 +96,7 @@ func TestMorePaths(t *testing.T) {
 	}
 	w.deedOf(adm.view.ID)
 	// An action left in executed (a witness that crashed): Resume witnesses and seals it.
-	adm2, err := w.p.admit(bg, w.pr(1), n, req("fake.echo", `{}`), act, spec, ex, false, nil)
+	adm2, err := w.p.admit(bg, w.pr(1), n, req("fake.echo", `{}`), act, spec, ex, false, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

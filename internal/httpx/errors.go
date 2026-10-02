@@ -93,6 +93,17 @@ const (
 
 	// S20: the decoder routes.
 	CodeWitnessNotConfigured Code = "witness_not_configured"
+
+	// S22: approvals and approval links.
+	CodeApprovalDecided        Code = "approval_decided"
+	CodeAlreadyCountersigned   Code = "already_countersigned"
+	CodeApproverNotEligible    Code = "approver_not_eligible"
+	CodeSelfApproval           Code = "self_approval"
+	CodeApprovalNeedsPerson    Code = "approval_needs_person"
+	CodeContextChanged         Code = "context_changed"
+	CodeApprovalUnsatisfiable  Code = "approval_unsatisfiable"
+	CodeApprovalLinkInvalid    Code = "approval_link_invalid"
+	CodeApprovalLinkReviewOnly Code = "approval_link_review_only"
 )
 
 // DocURLPrefix is where every code has a page (docs/api/errors.md, published by S33).
@@ -127,7 +138,8 @@ var catalog = []CatalogEntry{
 	{CodePolicyDenied, 403, TypePolicy, "Blocked by policy. The action in Console › Actions names the rule and the reason.",
 		`Blocked by policy "{rule}": {reason}.`, "contract"},
 	{CodeApprovalRequired, 403, TypePolicy, "This action needs approval. It runs once someone approves it in Console › Approvals.", "", "contract"},
-	{CodeApprovalExpired, 403, TypePolicy, "No one decided before the approval window closed. Send the action again to ask for a new approval.", "", "contract"},
+	{CodeApprovalExpired, 409, TypeInvalidRequest, "This approval expired before anyone decided. Nothing ran. Ask the agent to try again if it's still needed.",
+		"This approval expired at {time}. Nothing ran. Ask the agent to try again if it's still needed.", "contract"},
 	{CodeBudgetExceeded, 429, TypeRateLimit, "This agent has used its budget for the period. It resets when the next period starts, or an admin can raise it.",
 		"This agent has used its budget for the period. It resets at {time}, or an admin can raise it.", "contract"},
 	{CodeIntentRequired, 403, TypePermission, "This agent must sign its requests. Send a Deedglass-Intent header.", "", "contract"},
@@ -199,6 +211,20 @@ var catalog = []CatalogEntry{
 
 	{CodeWitnessNotConfigured, 409, TypeInvalidRequest, "This connector isn't witnessed, so it has no decoder. Turn on witness.enabled in its config first.",
 		`The connector "{name}" isn't witnessed. Set witness.enabled to true in its config, then run deedglass connector postgres check {name}.`, "S20"},
+
+	{CodeApprovalDecided, 409, TypeInvalidRequest, "This approval was already decided. Console › Approvals shows who decided and when.",
+		"This approval was already decided: {outcome} by {name} at {time}.", "S22"},
+	{CodeAlreadyCountersigned, 409, TypeInvalidRequest, "You already countersigned this. It needs another person.",
+		"You already countersigned this. It needs {n} more {person}.", "S22"},
+	{CodeApproverNotEligible, 403, TypePermission, "You're not an approver for this rule. Ask one of its approvers to countersign.",
+		`Rule "{rule}" needs {approvers} to countersign. Ask one of them.`, "S22"},
+	{CodeSelfApproval, 403, TypePermission, "This action runs on your behalf, so another approver has to countersign it. You can still deny it.", "", "S22"},
+	{CodeApprovalNeedsPerson, 403, TypePermission, "Approvals need a person. Agents and API keys can't countersign. Use Console › Approvals or the emailed link.", "", "S22"},
+	{CodeContextChanged, 409, TypeInvalidRequest, "What you reviewed is out of date. Reload the approval and review it again.", "", "S22"},
+	{CodeApprovalUnsatisfiable, 403, TypePolicy, "No one in this org can approve this, so it did not run. Invite another admin, or allow self-countersign in Console › Settings › Approvals.",
+		"No one in this org can approve this: the rule needs {n} people and only {m} {is} eligible. Nothing was run. Invite another admin, or allow self-countersign in Console › Settings › Approvals.", "S22"},
+	{CodeApprovalLinkInvalid, 401, TypeAuthentication, "This approval link has expired or was already used. Open Console › Approvals.", "", "S22"},
+	{CodeApprovalLinkReviewOnly, 403, TypePermission, "Your org decides approvals in the Console. Open Console › Approvals to countersign.", "", "S22"},
 }
 
 var byCode = func() map[Code]CatalogEntry {

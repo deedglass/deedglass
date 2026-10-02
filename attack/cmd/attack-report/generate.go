@@ -24,6 +24,8 @@ var layers = []struct {
 		func(c harness.MetaCase) bool { return c.Group == "H" && c.ID >= "H08" }},
 	{"Witness (L2): expected and observed", "S21's group W: triggers that widen, rewrite or delete, forged and replayed evidence, missing old rows, statements too complex to predict, and a decoder that is late, loses its slot or loses its publication. A gap is UNVERIFIABLE, never MISMATCH; late evidence is an amendment deed, never an edit.",
 		func(c harness.MetaCase) bool { return c.Group == "W" }},
+	{"Approvals, links and webhooks", "S22's group L. A person's countersign is the control here, so each case tries to get one without the right person: a replayed email link, a second vote from the same person, the person the action runs for, an agent key, a vote after the approval expired, a vote on an out-of-date view. Then a webhook aimed at cloud metadata, and a forged webhook signature.",
+		func(c harness.MetaCase) bool { return c.Group == "L" }},
 }
 
 func statusText(r *harness.Result) string {
@@ -64,7 +66,7 @@ func Generate(meta *harness.Meta, run *harness.Run) []byte {
 	s := run.Summary
 	w("**%d matched · %d differ · %d waiting on a later session.** After every case: the deed chains of both orgs are %s, the target database is unchanged wherever nothing should have run, every action is sealed, and the planted credential was seen %d times across the server's logs, every HTTP response, and the recorded actions, events, deeds, admin events, connector configs and credential hints.\n\n",
 		s.Matched, s.Differs, s.Waiting, run.Invariants.Chains, run.Invariants.SecretsSeen)
-	w("Run it: `make attack` (a throwaway PostgreSQL 18 cluster, under a minute on a laptop), then `make attack-report`. One case: `DEEDGLASS_IT_ATTACK_RUN='TestAttack/H03' make attack`.\n\n")
+	w("Run it: `make attack` (a throwaway PostgreSQL 18 cluster, about two minutes on a laptop: L05 waits out a real one-minute approval expiry), then `make attack-report`. One case: `DEEDGLASS_IT_ATTACK_RUN='TestAttack/H03' make attack`.\n\n")
 	for _, l := range layers {
 		w("## %s\n\n%s\n\n", l.title, l.intro)
 		w("| Case | Attack | Expected | Actual | Status |\n|---|---|---|---|---|\n")

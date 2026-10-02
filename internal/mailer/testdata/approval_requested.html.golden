@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="supported-color-schemes" content="light dark">
+<title>claude-desktop is waiting for your countersign</title>
+<style>
+@media (max-width: 480px) {
+  .dg-card { padding: 28px 22px !important; }
+  .dg-outer { padding: 24px 12px !important; }
+}
+@media (prefers-color-scheme: dark) {
+  .dg-bg { background-color: #07080C !important; }
+  .dg-card { background-color: #0E1017 !important; border-color: #1C1F2A !important; color: #F5F6FA !important; }
+  .dg-text { color: #F5F6FA !important; }
+  .dg-muted, .dg-muted a { color: #8B90A0 !important; }
+  .dg-rule { border-top-color: #1C1F2A !important; }
+  .dg-code { background-color: #141722 !important; color: #F5F6FA !important; }
+  .dg-orb-r { background-color: #D3D7E2 !important; }
+  .dg-panel { background-color: #141722 !important; border-color: #1C1F2A !important; }
+  .dg-label { color: #8B90A0 !important; }
+}
+</style>
+</head>
+<body class="dg-bg" style="margin:0;padding:0;background-color:#F7F7F4;">
+<div style="display:none;max-height:0;max-width:0;overflow:hidden;opacity:0;font-size:1px;line-height:1px;color:#F7F7F4;mso-hide:all;">postgres.execute on Acme Demo · UPDATE about 1 row in public.orders · expires 10:41 IST</div>
+<table role="presentation" class="dg-bg" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#F7F7F4" style="background-color:#F7F7F4;">
+<tr>
+<td class="dg-outer" align="center" style="padding:40px 16px;">
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:600px;">
+<tr>
+<td class="dg-card" bgcolor="#FFFFFF" style="background-color:#FFFFFF;border:1px solid #E4E5EA;border-radius:14px;padding:40px;font-family:Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:15px;line-height:24px;color:#0D0F14;">
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 32px 0;">
+<tr>
+<td aria-hidden="true" width="15" height="32" bgcolor="#4F8CFF" style="width:15px;height:32px;background-color:#4F8CFF;border-radius:16px 0 0 16px;font-size:0;line-height:0;">&nbsp;</td>
+<td aria-hidden="true" width="2" height="32" style="width:2px;height:32px;font-size:0;line-height:0;">&nbsp;</td>
+<td aria-hidden="true" class="dg-orb-r" width="15" height="32" bgcolor="#D9DEEA" style="width:15px;height:32px;background-color:#D9DEEA;border-radius:0 16px 16px 0;font-size:0;line-height:0;">&nbsp;</td>
+<td class="dg-text" translate="no" style="padding:0 0 0 10px;font-size:20px;line-height:24px;font-weight:600;letter-spacing:-0.045em;color:#0D0F14;">deedglass</td>
+</tr>
+</table>
+<h1 class="dg-text" style="text-wrap:balance;margin:0 0 16px 0;font-size:22px;line-height:30px;font-weight:600;letter-spacing:-0.02em;color:#0D0F14;">claude-desktop is waiting for you</h1>
+<p style="margin:0 0 20px 0;">It wants to run <span translate="no" style="font-family:'Geist Mono',ui-monospace,Menlo,monospace;font-size:14px;">postgres.execute</span> on Acme Demo. Policy &ldquo;orders-writes-need-approval&rdquo; asks a person to countersign: Writes to the orders database need a person to countersign.</p>
+<table role="presentation" class="dg-panel" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#F7F7F4" style="margin:0 0 24px 0;background-color:#F7F7F4;border:1px solid #E4E5EA;border-radius:10px;">
+<tr><td style="padding:16px 18px 4px 18px;font-size:16px;line-height:24px;font-weight:600;" class="dg-text">UPDATE about 1 row in public.orders (planner estimate)</td></tr>
+<tr><td style="padding:12px 18px 16px 18px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="font-size:14px;line-height:22px;">
+<tr><td class="dg-label" width="96" valign="top" style="width:96px;color:#6B7080;font-size:13px;">Agent</td><td class="dg-text" translate="no" style="color:#0D0F14;">claude-desktop</td></tr>
+<tr><td class="dg-label" valign="top" style="color:#6B7080;font-size:13px;">Rule</td><td class="dg-text" translate="no" style="color:#0D0F14;font-family:'Geist Mono',ui-monospace,Menlo,monospace;font-size:13px;word-break:break-all;">orders-writes-need-approval</td></tr>
+<tr><td class="dg-label" valign="top" style="color:#6B7080;font-size:13px;">Needs</td><td class="dg-text" style="color:#0D0F14;">1 person</td></tr>
+<tr><td class="dg-label" valign="top" style="color:#6B7080;font-size:13px;">Expires</td><td class="dg-text" style="color:#0D0F14;font-variant-numeric:tabular-nums;">10:41 IST · in 30 min</td></tr>
+</table></td></tr>
+</table>
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 24px 0;">
+<tr>
+<td align="center" bgcolor="#2F5BEA" height="44" style="background-color:#2F5BEA;border-radius:10px;">
+<a href="http://127.0.0.1:8080/approve#t=OEVkbr-q18qimgaDkbcE5mnZqQ2a1zGG7_TgYq8PKFc" style="display:inline-block;padding:0 24px;height:44px;line-height:44px;font-family:Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:15px;font-weight:600;color:#FFFFFF;text-decoration:none;border-radius:10px;">Review and countersign</a>
+</td>
+</tr>
+</table>
+<p class="dg-muted" style="margin:0 0 8px 0;font-size:13px;line-height:20px;color:#6B7080;">This link is yours alone. It works once, until 10:41 IST. Nothing runs unless you approve.</p>
+<p class="dg-muted" style="margin:0 0 8px 0;font-size:13px;line-height:20px;color:#6B7080;">1 of 1 countersign needed &middot; approval <span translate="no" style="font-family:'Geist Mono',ui-monospace,Menlo,monospace;font-size:12px;">apr_01m3y2z9…</span></p>
+<p class="dg-muted" style="margin:0;font-size:13px;line-height:20px;color:#6B7080;">If you weren&rsquo;t expecting this, you can ignore it. Nothing happens.</p>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:32px 0 0 0;">
+<tr>
+<td class="dg-rule dg-muted" style="border-top:1px solid #E4E5EA;padding:20px 0 0 0;font-size:13px;line-height:20px;color:#6B7080;">Deedglass · See what your agents actually did. · <a href="https://deedglass.com" style="color:#6B7080;text-decoration:underline;">deedglass.com</a></td>
+</tr>
+</table>
+</td>
+</tr>
+</table>
+</td>
+</tr>
+</table>
+</body>
+</html>
+

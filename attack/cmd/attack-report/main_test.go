@@ -13,7 +13,7 @@ import (
 func sampleRun(meta *harness.Meta) *harness.Run {
 	run := &harness.Run{Object: "attack_run", StartedAt: "2026-10-02T00:10:00Z", Commit: "abc1234", Postgres: "18.6 (Homebrew)"}
 	for _, c := range meta.Cases {
-		if !strings.Contains("HJKW", c.Group) {
+		if !strings.Contains("HJKLW", c.Group) {
 			continue
 		}
 		r := harness.Result{ID: c.ID, Title: c.Title, Expected: c.Expected, Actual: c.Expected, Detail: c.ExpectedDetail, Status: harness.StatusMatched, MS: 12}
@@ -43,7 +43,7 @@ func TestGenerateDeterministic(t *testing.T) {
 		t.Fatal("the page depends on timings or log counts")
 	}
 	page := string(a)
-	for _, want := range []string{"Don't edit it by hand", "32 matched · 0 differ · 0 waiting on a later session", "| H01 |", "| W01 |", "✓ matched",
+	for _, want := range []string{"Don't edit it by hand", "40 matched · 0 differ · 0 waiting on a later session", "| H01 |", "| W01 |", "| L01 |", "✓ matched",
 		"What this suite doesn't cover", "| A01 |", "V0 suite", "expectedDigestV7"} {
 		if !strings.Contains(page, want) {
 			t.Errorf("the page lacks %q", want)
@@ -79,7 +79,7 @@ func TestCheckStale(t *testing.T) {
 	if code := run(root, false, false, &out, &errb); code != 0 {
 		t.Fatalf("generate: %d %s", code, errb.String())
 	}
-	if !strings.Contains(out.String(), "32 matched · 0 differ · 0 waiting on a later session · chain intact · 0 secrets seen in 1,234 log lines") {
+	if !strings.Contains(out.String(), "40 matched · 0 differ · 0 waiting on a later session · chain intact · 0 secrets seen in 1,234 log lines") {
 		t.Fatalf("summary line:\n%s", out.String())
 	}
 	if code := run(root, true, true, &out, &errb); code != 0 {

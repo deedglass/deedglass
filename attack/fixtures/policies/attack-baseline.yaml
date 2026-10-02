@@ -12,6 +12,26 @@ defaults:
   reason: No rule allows this tool. Add a rule to allow it.
 
 rules:
+  # S22's group L: three agents whose fake.echo calls wait for people. They exist only for the
+  # approval cases, so no other case meets these rules.
+  - id: approval-one-admin
+    description: approval-bot's calls wait for one admin to countersign (L01, L03, L04, L06).
+    match: { agent: approval-bot, tool: fake.echo }
+    decision: require_approval
+    reason: One admin countersigns approval-bot's calls.
+    approval: { approvers: [role:admin], required: 1, expires_in: 30m }
+  - id: approval-four-eyes
+    description: foureyes-bot's calls wait for two different admins (L02).
+    match: { agent: foureyes-bot, tool: fake.echo }
+    decision: require_approval
+    reason: Two different admins countersign foureyes-bot's calls.
+    approval: { approvers: [role:admin], required: 2, expires_in: 30m }
+  - id: approval-short-expiry
+    description: expiry-bot's approvals expire after the shortest time a rule may give (L05).
+    match: { agent: expiry-bot, tool: fake.echo }
+    decision: require_approval
+    reason: One admin countersigns expiry-bot's calls within a minute.
+    approval: { approvers: [role:admin], required: 1, expires_in: 1m }
   - id: witness-writes
     description: witness-bot's single statements run and are witnessed at L2 by Postgres (S21's W cases and H08 to H11).
     match: { agent: witness-bot, tool: "postgres.*" }

@@ -95,7 +95,7 @@ echo "tables without RLS: $norls"
 [ "$norls" = "schema_migrations,seal_keys" ] || { echo "FAIL: tables without RLS: $norls" >&2; exit 1; }
 
 echo "== control plane: Go integration suites"
-go test -tags integration -count=1 ${DEEDGLASS_IT_GOFLAGS:-} ${DEEDGLASS_IT_PKGS:-./internal/store/... ./internal/gate/... ./internal/ledger/... ./internal/identity/... ./internal/sqlguard/ ./internal/vault/ ./internal/connector/postgres/ ./internal/decoder/ ./cmd/deedglass/}
+go test -tags integration -count=1 ${DEEDGLASS_IT_GOFLAGS:-} ${DEEDGLASS_IT_PKGS:-./internal/store/... ./internal/gate/... ./internal/ledger/... ./internal/identity/... ./internal/sqlguard/ ./internal/vault/ ./internal/connector/postgres/ ./internal/decoder/ ./internal/approve/ ./internal/notify/... ./cmd/deedglass/}
 if [ -n "${DEEDGLASS_IT_BENCH_OUT:-}" ]; then
   echo "== store budget (S02 §3.9) -> $DEEDGLASS_IT_BENCH_OUT"
   run="${DEEDGLASS_IT_BENCH_RUN:-TestPerfBudget|TestExplainShowsInitPlan}"

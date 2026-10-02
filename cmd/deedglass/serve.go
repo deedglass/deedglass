@@ -20,6 +20,7 @@ import (
 
 	"github.com/deedglass/deedglass/api"
 	"github.com/deedglass/deedglass/cmd/deedglass/internal/ui"
+	"github.com/deedglass/deedglass/internal/approve"
 	"github.com/deedglass/deedglass/internal/buildinfo"
 	"github.com/deedglass/deedglass/internal/config"
 	"github.com/deedglass/deedglass/internal/connector"
@@ -31,6 +32,8 @@ import (
 	"github.com/deedglass/deedglass/internal/ledger"
 	"github.com/deedglass/deedglass/internal/mailer"
 	"github.com/deedglass/deedglass/internal/mcp/upstream"
+	"github.com/deedglass/deedglass/internal/notify"
+	"github.com/deedglass/deedglass/internal/notify/webhook"
 	"github.com/deedglass/deedglass/internal/policy"
 	"github.com/deedglass/deedglass/internal/policyapi"
 	"github.com/deedglass/deedglass/internal/store"
@@ -231,10 +234,19 @@ func runServe(ctx context.Context, e *Env, args []string) error {
 	// S18 (S16 step 14): remote MCP servers as mcp_http connector rows, credentials in the vault.
 	mcpType := upstream.NewType(pool)
 	cw.reg.RegisterType(mcpType)
-	gp, err := newGate(cfg, db, led, pol, keys, log, cw.reg, pool)
+	// 5e. Approvals (S22): the Gate pauses through them, and their notify job and links run beside it.
+	aps, err := newApprovals(cfg, db, led, queue, log)
 	if err != nil {
 		return err
 	}
+	gp, err := newGate(cfg, db, led, pol, keys, log, cw.reg, pool, aps)
+	if err != nil {
+		return err
+	}
+	aps.Attach(gp)
+	gp.SetJobHandler(gate.JobApprovalNotify, aps.NotifyJob)
+	whs := newWebhooks(cfg, db, led, cw, log)
+	whWorker := whs.NewWorker(instanceName())
 	mw := newMCP(cfg, gp, natives, pool, cw.reg, mcpType, keys, log)
 	serveGate(gp)
 	worker := gp.NewWorker(instanceName())
@@ -245,7 +257,13 @@ func runServe(ctx context.Context, e *Env, args []string) error {
 	if dec != nil {
 		gp.SetNudge(dec.Nudge) // S21: an action waiting for L2 makes its connector's runner poll fast
 	}
-	keys.Listener().Listen(ledger.Channel, gp.Broker().OnEvent, gp.Broker().Reset)
+	keys.Listener().Listen(ledger.Channel, func(p string) {
+		gp.Broker().OnEvent(p)
+		whWorker.Wake(p) // an event may have queued webhook deliveries
+	}, func() {
+		gp.Broker().Reset()
+		whWorker.Wake("")
+	})
 	keys.Listener().Listen(store.JobsChannel, func(p string) {
 		worker.Wake(p)
 		if dec != nil {
@@ -259,6 +277,10 @@ func runServe(ctx context.Context, e *Env, args []string) error {
 	wctx, stopWorker := context.WithCancel(context.WithoutCancel(ctx))
 	workerDone := make(chan struct{})
 	go func() { defer close(workerDone); _ = worker.Run(wctx) }()
+	hctx, stopHooks := context.WithCancel(context.WithoutCancel(ctx))
+	hooksDone := make(chan struct{})
+	go func() { defer close(hooksDone); _ = whWorker.Run(hctx) }()
+	defer func() { stopHooks(); <-hooksDone }()
 	if dec != nil {
 		dctx, stopDec := context.WithCancel(context.WithoutCancel(ctx))
 		decDone := make(chan struct{})
@@ -282,7 +304,7 @@ func runServe(ctx context.Context, e *Env, args []string) error {
 	if dec != nil {
 		api.Metrics().Collect(dec.Metrics().Collect)
 	}
-	api.Mount(serveRoutes(api, db, ms, sk, led, people, keys, pol, gp, mw, cw)...)
+	api.Mount(serveRoutes(api, db, ms, sk, led, people, keys, pol, gp, mw, cw, aps, whs)...)
 	ln, err := net.Listen("tcp", cfg.Listen)
 	if err != nil {
 		return &ExitError{Code: ExitFailure, ErrCode: "listen_failed", Err: fmt.Errorf("Can't listen on %s: %s", cfg.Listen, lastPart(err)),
@@ -359,7 +381,7 @@ type serveKey struct {
 // run httpx.CheckSpec on this list, so api/openapi.yaml must document each one. db and sk are nil
 // in route-table tests.
 func serveRoutes(api *httpx.Server, db *store.DB, ms []migrate.Migration, sk *serveKey, led *ledger.Ledger, people *identity.Service,
-	keys *identity.KeyAuth, pol *policies, gp *gate.Pipeline, mw *mcpWiring, cw *connectors) []httpx.Route {
+	keys *identity.KeyAuth, pol *policies, gp *gate.Pipeline, mw *mcpWiring, cw *connectors, aps *approve.Service, whs *webhook.Service) []httpx.Route {
 	deps := httpx.SystemDeps{Spec: apiSpec()}
 	if pol == nil {
 		pol = &policies{svc: policy.NewService(nil)}
@@ -410,6 +432,10 @@ func serveRoutes(api *httpx.Server, db *store.DB, ms []migrate.Migration, sk *se
 	routes = append(routes, toolsRoutes(mw)...)
 	// S16: connectors, write-only credentials, the connection test and the types.
 	routes = append(routes, connectorRoutes(db, led, cw, nil)...)
+	// S22: approvals, approval links, the /approve page and webhooks.
+	routes = append(routes, approve.Routes(aps)...)
+	routes = append(routes, approve.PageRoutes()...)
+	routes = append(routes, webhook.Routes(whs)...)
 	// S12: policies, versions, activation deeds, lint, the dry run and the test runner.
 	return append(routes, policyapi.Routes(pol.svc, policyapi.Options{})...)
 }
@@ -446,15 +472,41 @@ func policyMetrics(reg *policy.Registry) httpx.Collector {
 // newGate is the action pipeline (S13): the fake connector in dev only (S16 reserves the name
 // outside dev), S12's registry, S11's usage store, S09's intent checker and S08's Stop guard.
 func newGate(cfg *config.Config, db *store.DB, led *ledger.Ledger, pol *policies, keys *identity.KeyAuth, log *slog.Logger,
-	reg *connector.Registry, pool *upstream.Pool) (*gate.Pipeline, error) {
+	reg *connector.Registry, pool *upstream.Pool, aps *approve.Service) (*gate.Pipeline, error) {
 	g := cfg.Gate
-	return gate.New(gate.Options{DB: db, Ledger: led, Policies: pol.reg, Usage: policystore.NewUsage(db),
+	var approvals gate.Approvals
+	if aps != nil {
+		approvals = aps
+	}
+	return gate.New(gate.Options{DB: db, Ledger: led, Policies: pol.reg, Usage: policystore.NewUsage(db), Approvals: approvals,
 		Intents: identity.NewIntents(db, keys, nil), Guard: keys, Resolver: upstream.Resolver{Native: reg, Pool: pool}, Logger: log,
 		Config: gate.Config{WaitTimeout: g.WaitTimeout, ExecuteTimeout: g.ExecuteTimeout, EdgeResultTimeout: g.EdgeResultTimeout,
 			MaxArgsBytes: g.MaxArgsBytes, MaxResultBytes: g.MaxResultBytes, WorkerConcurrency: g.WorkerConcurrency,
 			WorkerMaxAttempts: g.WorkerMaxAttempts,
 			Witness: gate.WitnessConfig{InlineBudget: cfg.Witness.InlineBudget, ReadbackTimeout: cfg.Witness.ReadbackTimeout,
 				MaxDetailBytes: cfg.Witness.MaxDetailBytes}}})
+}
+
+// newApprovals is S22's approvals: the context snapshot, eligibility, links, four-eyes and the
+// approval email through S07's mail queue.
+func newApprovals(cfg *config.Config, db *store.DB, led *ledger.Ledger, q *mailer.Queue, log *slog.Logger) (*approve.Service, error) {
+	a := cfg.Approvals
+	return approve.New(approve.Options{DB: db, Ledger: led, BaseURL: cfg.BaseURL, Logger: log,
+		Notifiers: []notify.Notifier{&notify.Email{Queue: q, SkipReserved: cfg.ResendAPIKey.IsSet()}},
+		Config: approve.Config{DefaultExpiresIn: a.DefaultExpiresIn, EstimateTimeout: a.EstimateTimeout, ContextMaxBytes: a.ContextMaxBytes,
+			LinkMaxTTL: a.LinkMaxTTL, LinkStatusWindow: a.LinkStatusWindow, MaxRecipients: a.MaxRecipients}})
+}
+
+// newWebhooks is S22's webhooks: signing secrets in the vault (no key ring, no webhooks), every
+// delivery through the egress door.
+func newWebhooks(cfg *config.Config, db *store.DB, led *ledger.Ledger, cw *connectors, log *slog.Logger) *webhook.Service {
+	w := cfg.Webhooks
+	o := webhook.Options{DB: db, Ledger: led, Egress: cw.egress, Logger: log,
+		Config: webhook.Config{Timeout: w.Timeout, MaxAttempts: w.MaxAttempts, DisableAfter: w.DisableAfter, MaxEndpoints: w.MaxEndpoints}}
+	if cw.ring != nil {
+		o.KEK = cw.ring
+	}
+	return webhook.New(o)
 }
 
 // instanceName names this process in witness_jobs.locked_by: the host name and the pid.

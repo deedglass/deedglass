@@ -24,10 +24,10 @@ exit 0
 [1mActions[0m
   act                 Send a test action through the Gate
   actions             Inspect actions                             [2m    [0m   [2mlist · show · cancel[0m
-  approve · deny      Decide a pending approval                   [2msoon[0m
-  approvals           List pending approvals                      [2msoon[0m   [2mlist · show[0m
+  approve · deny      Decide a pending approval
+  approvals           List pending approvals                      [2m    [0m   [2mlist · show[0m
   undo                Preview or run an undo                      [2msoon[0m   [2mpreview · run[0m
-  webhooks            Send events to your endpoints               [2msoon[0m   [2mcreate · list · test · delete[0m
+  webhooks            Send events to your endpoints               [2m    [0m   [2mcreate · list · test · delete[0m
 [1mDeeds[0m
   verify              Check deeds offline
   deeds               Browse and export deeds                     [2m    [0m   [2mlist · show · export[0m

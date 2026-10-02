@@ -143,8 +143,32 @@ After a person approves it, the model calls `deedglass.check_approval`; the wrap
 person. Ran scratch.write_file.` followed by the tool's own result. A second check says it already
 ran. Only the wrapper process that created the action runs it; after a restart, the answer asks the
 agent to make the call again, so a call never runs twice. Claude Code shows the tool as
-`mcp__scratch__deedglass_check_approval`. Until S22, approvals are decided in the database by tests
-and S22's routes; there are no notifications yet.
+`mcp__scratch__deedglass_check_approval`.
+
+Since S22, a person decides from the emailed link, the Console's API (`POST
+/v1/approvals/{id}/approve` or `/deny`) or, on a dev server, `deedglass approve <apr_…> --as
+<email>`. [APPROVALS.md](APPROVALS.md) has the whole flow.
+
+**`wait_seconds`.** `deedglass.check_approval` takes `{"approval_id": "apr_…", "wait_seconds": 10}`.
+It waits up to `wait_seconds` (0 to 20, default 10) for a decision before it answers, so one call
+usually returns the outcome instead of "still waiting". 0 answers at once.
+
+**What the agent is told.** Agent-facing texts never name the person:
+
+| Outcome | The tool result |
+|---|---|
+| still pending | `Still waiting for approval apr_…. It expires at 05:11 UTC. Nothing has run yet. Check again in a minute.` |
+| approved | `Approved by a person. Ran scratch.write_file.` and then the tool's own result |
+| denied | `A person denied this action. Nothing was run. Reason: "Order 42 hasn't been paid yet."` (`isError: true`; the reason is quoted on one line, double quotes made single, at most 280 characters) |
+| approved, agent stopped | `A person approved this, but agent "claude-desktop" is stopped, so nothing ran.` |
+| expired | `Approval apr_… expired before a person decided. Nothing was run. Make the call again to ask for a new approval.` |
+| no one can approve | the call is refused at once with `approval_unsatisfiable`: `No one in this org can approve this: the rule needs 2 people and only 1 is eligible. Nothing was run. …` |
+
+**Restarts.** The wrapper remembers its pending calls in memory only. After it restarts, a check
+for an approval it no longer knows asks the server (`GET /v1/approvals/{id}`): an approved one
+answers that the call was made before the restart and should be made again, so the earlier call
+never runs twice; a denied, expired or cancelled one gives its usual text. The gateway and
+`/mcp/native` keep nothing in memory: their checks resume the action on the server.
 
 ### Tool pinning
 

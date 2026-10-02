@@ -79,6 +79,44 @@ var Settings = []Setting{
 		Doc: "How often a runner checks that every ledger row has a frame; one without is recorded as missing.", Owner: "S20"},
 	{Path: "decoder.retention", Kind: SettingDuration, Default: "168h", Min: 3_600_000, Max: 31_536_000_000,
 		Doc: "How long decoded frames (row images included) are kept. Unattributed and forged-marker frames stay 30 days.", Owner: "S20"},
+	{Path: "approvals.default_expires_in", Kind: SettingDuration, Default: "30m", Min: 60_000, Max: 604_800_000,
+		Doc: "How long an approval waits for a person when neither the rule nor the policy's defaults say. Timeout means no.", Owner: "S22"},
+	{Path: "approvals.estimate_timeout", Kind: SettingDuration, Default: "500ms", Min: 50, Max: 5_000,
+		Doc: "The longest the connector's estimate (Postgres: EXPLAIN, never ANALYZE) may take while the approval is prepared.", Owner: "S22"},
+	{Path: "approvals.context_max_bytes", Kind: SettingInt, Default: "32768", Min: 8_192, Max: 65_536,
+		Doc: "The largest context snapshot a person countersigns, in bytes. Recent actions, then sections, then arguments are cut first.", Owner: "S22"},
+	{Path: "approvals.link_max_ttl", Kind: SettingDuration, Default: "24h", Min: 300_000, Max: 86_400_000,
+		Doc: "The longest an emailed approval link works (never past the approval's own expiry).", Owner: "S22"},
+	{Path: "approvals.link_status_window", Kind: SettingDuration, Default: "15m", Min: 60_000, Max: 3_600_000,
+		Doc: "How long a used link may still follow its action on the approval page, until the deed is sealed.", Owner: "S22"},
+	{Path: "approvals.max_recipients", Kind: SettingInt, Default: "20", Min: 1, Max: 100,
+		Doc: "The most people one approval emails.", Owner: "S22"},
+	{Path: "webhooks.timeout", Kind: SettingDuration, Default: "10s", Min: 1_000, Max: 30_000,
+		Doc: "A webhook delivery succeeds on a 2xx within this time; anything else is retried.", Owner: "S22"},
+	{Path: "webhooks.max_attempts", Kind: SettingInt, Default: "8", Min: 1, Max: 8,
+		Doc: "Retries after a delivery's first attempt (at 30s, 2m, 10m, 30m, 1h, 3h, 6h, 12h), then it is dead.", Owner: "S22"},
+	{Path: "webhooks.disable_after", Kind: SettingDuration, Default: "72h", Min: 3_600_000, Max: 2_592_000_000,
+		Doc: "An endpoint that has failed every delivery for this long is disabled, with a webhook.disabled deed.", Owner: "S22"},
+	{Path: "webhooks.max_endpoints_per_org", Kind: SettingInt, Default: "16", Min: 1, Max: 100,
+		Doc: "The most webhook endpoints one org may have.", Owner: "S22"},
+}
+
+// ApprovalSettings are the approvals.* settings, parsed (S22).
+type ApprovalSettings struct {
+	DefaultExpiresIn time.Duration
+	EstimateTimeout  time.Duration
+	ContextMaxBytes  int
+	LinkMaxTTL       time.Duration
+	LinkStatusWindow time.Duration
+	MaxRecipients    int
+}
+
+// WebhookSettings are the webhooks.* settings, parsed (S22).
+type WebhookSettings struct {
+	Timeout      time.Duration
+	MaxAttempts  int
+	DisableAfter time.Duration
+	MaxEndpoints int
 }
 
 var settingByPath = func() map[string]Setting {
@@ -183,13 +221,18 @@ func (l *loader) parseSettings(c *Config) {
 		"decoder.poll_active": &c.Decoder.PollActive, "decoder.poll_idle": &c.Decoder.PollIdle,
 		"decoder.heartbeat_interval": &c.Decoder.HeartbeatInterval, "decoder.heartbeat_deadline": &c.Decoder.HeartbeatDeadline,
 		"decoder.lease": &c.Decoder.Lease, "decoder.reconcile_interval": &c.Decoder.ReconcileInterval,
-		"decoder.retention": &c.Decoder.Retention,
+		"decoder.retention":            &c.Decoder.Retention,
+		"approvals.default_expires_in": &c.Approvals.DefaultExpiresIn, "approvals.estimate_timeout": &c.Approvals.EstimateTimeout,
+		"approvals.link_max_ttl": &c.Approvals.LinkMaxTTL, "approvals.link_status_window": &c.Approvals.LinkStatusWindow,
+		"webhooks.timeout": &c.Webhooks.Timeout, "webhooks.disable_after": &c.Webhooks.DisableAfter,
 	}
 	ints := map[string]*int{
 		"gate.max_args_bytes": &c.Gate.MaxArgsBytes, "gate.max_result_bytes": &c.Gate.MaxResultBytes,
 		"gate.worker.concurrency": &c.Gate.WorkerConcurrency, "gate.worker.max_attempts": &c.Gate.WorkerMaxAttempts,
 		"witness.max_detail_bytes": &c.Witness.MaxDetailBytes,
 		"decoder.batch_changes":    &c.Decoder.BatchChanges, "decoder.max_images_per_tx": &c.Decoder.MaxImagesPerTx,
+		"approvals.context_max_bytes": &c.Approvals.ContextMaxBytes, "approvals.max_recipients": &c.Approvals.MaxRecipients,
+		"webhooks.max_attempts": &c.Webhooks.MaxAttempts, "webhooks.max_endpoints_per_org": &c.Webhooks.MaxEndpoints,
 	}
 	bools := map[string]*bool{"decoder.enabled": &c.Decoder.Enabled}
 	enums := map[string]*string{"decoder.transport": &c.Decoder.Transport}

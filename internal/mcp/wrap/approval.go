@@ -8,6 +8,8 @@ import (
 
 	"github.com/deedglass/deedglass/internal/gate"
 	"github.com/deedglass/deedglass/internal/ledger"
+	"github.com/deedglass/deedglass/internal/mcp/front"
+	"github.com/deedglass/deedglass/internal/mcp/gateclient"
 	"github.com/deedglass/deedglass/internal/mcp/jsonrpc"
 	"github.com/deedglass/deedglass/internal/mcp/present"
 )
@@ -47,7 +49,8 @@ func (w *Wrapper) rememberApproval(a *ledger.Action, cp callParams, pm map[strin
 func (w *Wrapper) checkApproval(e jsonrpc.Envelope, modern bool, cp callParams) {
 	id := e.ID()
 	var args struct {
-		ApprovalID string `json:"approval_id"`
+		ApprovalID  string `json:"approval_id"`
+		WaitSeconds *int   `json:"wait_seconds"`
 	}
 	if json.Unmarshal(cp.Arguments, &args) != nil || !reApproval.MatchString(args.ApprovalID) {
 		w.respond(id, present.Plain(gate.MCPApprovalIDBad, modern))
@@ -57,9 +60,21 @@ func (w *Wrapper) checkApproval(e jsonrpc.Envelope, modern bool, cp callParams) 
 	ent := w.approvals[args.ApprovalID]
 	w.amu.Unlock()
 	if ent == nil {
-		// GET /v1/approvals/{id} arrives with S22; until then an approval from another process
-		// (or from before a restart) is never run here.
-		w.respond(id, present.Plain(gate.MCPApprovalNotHereText(args.ApprovalID), modern))
+		// An approval from another process, or from before a restart (S22): look it up as this
+		// agent (GET /v1/approvals/{id}) and say where it stands; it is never run here.
+		ap, err := w.gc.GetApproval(w.ctx, args.ApprovalID)
+		switch {
+		case gateclient.IsNotFound(err):
+			w.respond(id, present.Plain(gate.MCPApprovalUnknownText(args.ApprovalID), modern))
+		case err != nil:
+			w.respond(id, present.Plain(gate.MCPApprovalNotHereText(args.ApprovalID), modern))
+		case ap.Status == "denied":
+			v := &ledger.Action{Approval: &ledger.ActionApproval{ID: ap.ID, Status: ap.Status, DecisionReason: ap.DecisionReason}}
+			w.respond(id, present.Text(gate.MCPApprovalDeniedText(v), true, modern, present.Meta{present.MetaAction: ap.Action}, nil))
+		default:
+			w.respond(id, present.Text(gate.MCPApprovalElsewhereText(args.ApprovalID, ap.Status), ap.Status != "pending", modern,
+				present.Meta{present.MetaAction: ap.Action}, nil))
+		}
 		return
 	}
 	ent.mu.Lock()
@@ -73,6 +88,20 @@ func (w *Wrapper) checkApproval(e jsonrpc.Envelope, modern bool, cp callParams) 
 		return
 	}
 	a, err := w.gc.GetAction(w.ctx, ent.actionID)
+	if err == nil && a.Status == ledger.StatusPendingApproval {
+		// Wait for the decision (wait_seconds, default 10), so one call is usually enough.
+		ent.mu.Unlock()
+		a, err = w.gc.GetActionWait(w.ctx, ent.actionID, front.CheckWait(args.WaitSeconds))
+		ent.mu.Lock()
+		if err == nil && a.Status == ledger.StatusProcessing {
+			a, err = w.gc.GetActionWait(w.ctx, ent.actionID, 2*time.Second) // approved: the resume job is moving it
+		}
+		if err == nil && ent.ran {
+			ent.mu.Unlock()
+			w.respond(id, present.Text(gate.MCPAlreadyRanText(ent.actionID), false, modern, present.Meta{present.MetaAction: ent.actionID}, nil))
+			return
+		}
+	}
 	if err != nil {
 		ent.mu.Unlock()
 		w.unreachableErr(err)
@@ -93,7 +122,11 @@ func (w *Wrapper) checkApproval(e jsonrpc.Envelope, modern bool, cp callParams) 
 		w.forwardCall(up, ent.params, modern, cs, f)
 	case ledger.StatusDenied:
 		ent.mu.Unlock()
-		w.respond(id, present.Text(gate.MCPApprovalDenied, true, modern, present.ActionMeta(a), nil))
+		text := gate.MCPApprovalDeniedText(a)
+		if a.Approval != nil && a.Approval.Status == "approved" {
+			text = gate.MCPApprovedStoppedText(a.Agent.Name)
+		}
+		w.respond(id, present.Text(text, true, modern, present.ActionMeta(a), nil))
 	case ledger.StatusExpired:
 		ent.mu.Unlock()
 		w.respond(id, present.Text(gate.MCPApprovalExpiredText(args.ApprovalID), true, modern, present.ActionMeta(a), nil))

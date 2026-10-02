@@ -455,9 +455,27 @@ func (p *Pipeline) Cancel(ctx context.Context, pr principal, id string) (*Action
 		default:
 			return httpx.E(httpx.CodeConflict, httpx.Msg(MsgCancelExecuting))
 		}
+		if a.ApprovalStatus != nil && *a.ApprovalStatus == "approved" {
+			// A person approved it first (S22): the resume job runs it, so it can't be cancelled.
+			return httpx.E(httpx.CodeConflict, httpx.Msg(MsgCancelApproved))
+		}
 		if a.ApprovalID != nil {
-			if err := store.DecideApproval(ctx, tx, pr.OrgID, *a.ApprovalID, "cancelled", deciderOf(pr), nil); err != nil && !errors.Is(err, store.ErrNoRow) {
+			err := store.DecideApproval(ctx, tx, pr.OrgID, *a.ApprovalID, "cancelled", deciderOf(pr), nil)
+			if errors.Is(err, store.ErrNoRow) {
+				// The approval was decided while this request waited for the action's lock (the
+				// joined status above is the snapshot from before the wait).
+				if st, serr := store.ApprovalStatus(ctx, tx, pr.OrgID, *a.ApprovalID); serr == nil && st == "approved" {
+					return httpx.E(httpx.CodeConflict, httpx.Msg(MsgCancelApproved))
+				}
+				return httpx.E(httpx.CodeConflict, httpx.Msg(MsgCancelDone))
+			}
+			if err != nil {
 				return err
+			}
+			if h, ok := p.o.Approvals.(ApprovalHooks); ok && err == nil {
+				if err := h.OnCancelled(ctx, tx, pr.OrgID, *a.ApprovalID, actorOf(pr)); err != nil {
+					return err
+				}
 			}
 		}
 		ev := ledger.EventData{Actor: actorOf(pr), RequestID: httpx.RequestID(ctx), Reason: strp("cancelled"), ApprovalID: a.ApprovalID}
@@ -551,6 +569,11 @@ func (p *Pipeline) step(ctx context.Context, org ids.OrgID, id ids.ActionID) (a 
 					if err := store.DecideApproval(ctx, tx, org, *ga.ApprovalID, "expired", nil, nil); err != nil {
 						return err
 					}
+					if h, ok := p.o.Approvals.(ApprovalHooks); ok {
+						if err := h.OnExpired(ctx, tx, org, *ga.ApprovalID); err != nil {
+							return err
+						}
+					}
 					status = "expired"
 				}
 				switch status {
@@ -604,18 +627,8 @@ func (p *Pipeline) step(ctx context.Context, org ids.OrgID, id ids.ActionID) (a 
 						call: connector.Call{ActionID: id, OrgID: org, AgentID: ga.AgentID, Tool: spec, Qualified: ga.Tool, Args: ga.Request,
 							IdempotencyKey: sid, Deadline: now.Add(p.cfg.ExecuteTimeout), IntentHash: derefString(ga.IntentHash)}}
 				case "denied", "expired", "cancelled":
-					to := map[string]State{"denied": Denied, "expired": Expired, "cancelled": Cancelled}[status]
-					ev := ledger.EventData{Reason: strp(status), ApprovalID: ga.ApprovalID}
-					if err := p.o.Ledger.Transition(ctx, tx, sid, PendingApproval, to, ev); err != nil {
+					if err := p.conclude(ctx, tx, org, ga, status, seal); err != nil {
 						return err
-					}
-					if err := p.o.Usage.ReleaseTx(ctx, tx, org.String(), rs); err != nil {
-						return err
-					}
-					if seal {
-						if err := p.seal(ctx, tx, id); err != nil {
-							return err
-						}
 					}
 					done = true
 				default:
@@ -693,6 +706,50 @@ func (p *Pipeline) step(ctx context.Context, org ids.OrgID, id ids.ActionID) (a 
 		}
 		return a, done, moved, pl, err
 	}
+}
+
+// conclude ends a pending action whose approval was denied, expired or cancelled: the edge out of
+// pending_approval, the reservation released, and (seal) the deed, in the caller's transaction.
+func (p *Pipeline) conclude(ctx context.Context, tx pgx.Tx, org ids.OrgID, ga *store.GateAction, status string, seal bool) error {
+	to, ok := map[string]State{"denied": Denied, "expired": Expired, "cancelled": Cancelled}[status]
+	if !ok {
+		return fmt.Errorf("gate: an approval %s doesn't end an action", status)
+	}
+	rs, _ := storedUsage(ga)
+	ev := ledger.EventData{Reason: strp(status), ApprovalID: ga.ApprovalID}
+	if err := p.o.Ledger.Transition(ctx, tx, ga.ID.String(), PendingApproval, to, ev); err != nil {
+		return err
+	}
+	if err := p.o.Usage.ReleaseTx(ctx, tx, org.String(), rs); err != nil {
+		return err
+	}
+	if seal {
+		return p.seal(ctx, tx, ga.ID)
+	}
+	return nil
+}
+
+// ConcludeApprovalTx ends a pending action whose approval a person has just denied, inside the
+// transaction that recorded the denial (S22's Decide): pending_approval → denied, the reservation
+// released, and the deed sealed, all in one commit. The approval row must already say denied.
+// ErrStateConflict when the action isn't pending (another transaction ended it).
+func (p *Pipeline) ConcludeApprovalTx(ctx context.Context, tx pgx.Tx, org ids.OrgID, id ids.ActionID) error {
+	ga, err := store.GetGateAction(ctx, tx, org, id, true)
+	if err != nil {
+		return err
+	}
+	if State(ga.State) != PendingApproval {
+		return fmt.Errorf("%w: %s is %s", ErrStateConflict, id, ga.State)
+	}
+	status := ""
+	if ga.ApprovalStatus != nil {
+		status = *ga.ApprovalStatus
+	}
+	if err := p.conclude(ctx, tx, org, ga, status, true); err != nil {
+		return err
+	}
+	p.broker.Notify(id.String())
+	return nil
 }
 
 // requiredOf is the level an action's policy required (S19), L0 for older rows.

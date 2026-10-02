@@ -131,9 +131,11 @@ func TestSingleEgressDoor(t *testing.T) {
 }
 
 // TestOpenerCallSites (S16 invariant 2): vault.Opener.Open is called only from
-// internal/connector (Instance.Secret) and the vault itself. Handlers hold a vault.Writer.
+// internal/connector (Instance.Secret), the vault itself, and S22's webhook dispatcher (each
+// endpoint's signing secret). Handlers hold a vault.Writer.
 func TestOpenerCallSites(t *testing.T) {
-	allowed := map[string]bool{"internal/connector": true, "internal/vault": true}
+	// S22: the webhook dispatcher opens each endpoint's signing secret (vault.Open with a webhook Ref).
+	allowed := map[string]bool{"internal/connector": true, "internal/vault": true, "internal/notify/webhook": true}
 	var hits []string
 	for path, f := range goFiles(t) {
 		if allowed[filepath.ToSlash(filepath.Dir(path))] {

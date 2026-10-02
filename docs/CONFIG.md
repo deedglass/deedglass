@@ -142,6 +142,16 @@ gate:
 | `decoder.lease` | `15s` | 5s to 2m0s | How long an instance holds a connector's slot without renewing; another instance takes over after it. | S20 |
 | `decoder.reconcile_interval` | `60s` | 5s to 1h0m0s | How often a runner checks that every ledger row has a frame; one without is recorded as missing. | S20 |
 | `decoder.retention` | `168h` | 1h0m0s to 8760h0m0s | How long decoded frames (row images included) are kept. Unattributed and forged-marker frames stay 30 days. | S20 |
+| `approvals.default_expires_in` | `30m` | 1m0s to 168h0m0s | How long an approval waits for a person when neither the rule nor the policy's defaults say. Timeout means no. | S22 |
+| `approvals.estimate_timeout` | `500ms` | 50ms to 5s | The longest the connector's estimate (Postgres: EXPLAIN, never ANALYZE) may take while the approval is prepared. | S22 |
+| `approvals.context_max_bytes` | `32768` | 8192 to 65536 | The largest context snapshot a person countersigns, in bytes. Recent actions, then sections, then arguments are cut first. | S22 |
+| `approvals.link_max_ttl` | `24h` | 5m0s to 24h0m0s | The longest an emailed approval link works (never past the approval's own expiry). | S22 |
+| `approvals.link_status_window` | `15m` | 1m0s to 1h0m0s | How long a used link may still follow its action on the approval page, until the deed is sealed. | S22 |
+| `approvals.max_recipients` | `20` | 1 to 100 | The most people one approval emails. | S22 |
+| `webhooks.timeout` | `10s` | 1s to 30s | A webhook delivery succeeds on a 2xx within this time; anything else is retried. | S22 |
+| `webhooks.max_attempts` | `8` | 1 to 8 | Retries after a delivery's first attempt (at 30s, 2m, 10m, 30m, 1h, 3h, 6h, 12h), then it is dead. | S22 |
+| `webhooks.disable_after` | `72h` | 1h0m0s to 720h0m0s | An endpoint that has failed every delivery for this long is disabled, with a webhook.disabled deed. | S22 |
+| `webhooks.max_endpoints_per_org` | `16` | 1 to 100 | The most webhook endpoints one org may have. | S22 |
 <!-- settings:end -->
 
 ### The `mcp` section (S15)

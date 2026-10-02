@@ -594,12 +594,13 @@ func prependText(content json.RawMessage, text string) json.RawMessage {
 func (f *Front) checkApproval(ctx context.Context, r Request, cp CallParams) Response {
 	id := r.Env.ID()
 	var args struct {
-		ApprovalID string `json:"approval_id"`
+		ApprovalID  string `json:"approval_id"`
+		WaitSeconds *int   `json:"wait_seconds"`
 	}
 	if json.Unmarshal(cp.Arguments, &args) != nil || !reApproval(args.ApprovalID) {
 		return f.result(id, present.Plain(gate.MCPApprovalIDBad, r.Modern))
 	}
-	a, err := f.Gate.ByApproval(ctx, r.Principal, args.ApprovalID, 0)
+	a, err := f.Gate.ByApproval(ctx, r.Principal, args.ApprovalID, CheckWait(args.WaitSeconds))
 	if err != nil {
 		if e := httpx.AsError(err); e != nil && e.Status == 404 {
 			return f.result(id, present.Plain(gate.MCPApprovalUnknownText(args.ApprovalID), r.Modern))
@@ -619,11 +620,23 @@ func (f *Front) checkApproval(ctx context.Context, r Request, cp CallParams) Res
 		return f.result(id, present.StillPending(v, r.Modern))
 	case ledger.StatusDenied:
 		if v.Approval != nil && v.Approval.Status == "denied" {
-			return f.result(id, present.Text(gate.MCPApprovalDenied, true, r.Modern, present.ActionMeta(v), nil))
+			return f.result(id, present.Text(gate.MCPApprovalDeniedText(v), true, r.Modern, present.ActionMeta(v), nil))
+		}
+		if v.Approval != nil && v.Approval.Status == "approved" {
+			return f.result(id, present.Text(gate.MCPApprovedStoppedText(v.Agent.Name), true, r.Modern, present.ActionMeta(v), nil))
 		}
 	}
 	t := Tool{Name: v.Tool, Gate: v.Tool}
 	return f.outcome(ctx, r, t, a, nil, a.Status == ledger.StatusExecuted || a.Status == ledger.StatusFailed)
+}
+
+// CheckWait is deedglass.check_approval's wait_seconds: 0 to 20, default 10 (S22 §3.8), so a model
+// checks once instead of looping.
+func CheckWait(s *int) time.Duration {
+	if s == nil {
+		return 10 * time.Second
+	}
+	return time.Duration(min(max(*s, 0), 20)) * time.Second
 }
 
 var reApprovalID = regexp.MustCompile(`^apr_[0-7][0-9a-hjkmnp-tv-z]{25}$`)

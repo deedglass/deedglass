@@ -214,3 +214,10 @@ func ActionByApproval(ctx context.Context, tx pgx.Tx, org ids.OrgID, approval st
 	}
 	return action, agent, err
 }
+
+// ApprovalStatus is an approval's status now (S22: Cancel re-reads it after waiting for a lock).
+func ApprovalStatus(ctx context.Context, tx pgx.Tx, org ids.OrgID, id string) (string, error) {
+	var st string
+	err := tx.QueryRow(ctx, `SELECT status FROM deedglass.approvals WHERE org_id = $1 AND id = $2`, org, id).Scan(&st)
+	return st, notFound(err)
+}

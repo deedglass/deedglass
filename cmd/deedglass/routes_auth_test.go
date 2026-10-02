@@ -92,7 +92,7 @@ func TestServeRoutesUnauthenticated(t *testing.T) {
 		t.Run(cfg.name, func(t *testing.T) {
 			cfg.opts.Logger = slog.New(slog.DiscardHandler)
 			api := httpx.New(cfg.opts)
-			api.Mount(serveRoutes(api, nil, nil, nil, nil, nil, nil, nil, nil, cfg.mcp, nil)...)
+			api.Mount(serveRoutes(api, nil, nil, nil, nil, nil, nil, nil, nil, cfg.mcp, nil, nil, nil)...)
 			routes := api.Routes()
 			mux := http.NewServeMux()
 			for _, rt := range routes {
@@ -187,7 +187,8 @@ func TestServeRoutesUnauthenticated(t *testing.T) {
 // rauthPublicExtensions are the public routes serve mounts beyond contract §9 (Route.Extension
 // names their ADR), each with the reason it needs no credentials.
 var rauthPublicExtensions = map[string]string{
-	"GET /auth/assets/{file}": "ADR-028: the sign-in pages' stylesheet and script (auth.css, auth.js); static files, no org data",
+	"GET /auth/assets/{file}":    "ADR-028: the sign-in pages' stylesheet and script (auth.css, auth.js); static files, no org data",
+	"GET /approve/assets/{file}": "ADR-048: the approval page's stylesheet and script (approve.css, approve.js); static files, no org data",
 }
 
 var rauthIDPrefix = map[string]string{

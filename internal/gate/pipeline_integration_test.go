@@ -282,7 +282,22 @@ func TestApprovalExpiresAndReleases(t *testing.T) {
 	if _, err := w.submit(0, req("fake.echo", `{}`)); httpx.AsError(err) == nil || httpx.AsError(err).Code != httpx.CodeBudgetExceeded {
 		t.Fatalf("budget not held: %v", err)
 	}
-	w.admin(`UPDATE deedglass.approvals SET expires_at = now() - interval '1 second' WHERE id = $1`, a.Approval.ID)
+	// The approvals guard (S22, DG006) keeps an approval's request, expiry included, immutable; as a
+	// superuser with triggers off for this one transaction, the test moves the expiry into the past
+	// so the sweeper (which compares with the database's now()) ends it.
+	tx, err := w.e.Admin(t).Begin(bg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := tx.Exec(bg, `SET LOCAL session_replication_role = replica`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := tx.Exec(bg, `UPDATE deedglass.approvals SET expires_at = now() - interval '1 second' WHERE id = $1`, a.Approval.ID); err != nil {
+		t.Fatal(err)
+	}
+	if err := tx.Commit(bg); err != nil {
+		t.Fatal(err)
+	}
 	r := w.p.Sweep(bg)
 	if r.Expired != 1 || r.Errors != 0 {
 		t.Fatalf("%+v", r)
@@ -710,7 +725,7 @@ func TestCrashBetweenTxAAndTxB(t *testing.T) {
 	n.ConnectorType = "fake"
 	act, _ := w.reg.Active(bg, w.org.String())
 	ex, spec, _, _ := connector.NewRegistry(w.fake).Resolve(bg, w.org, "fake.echo")
-	adm, err := w.p.admit(bg, pr, n, req("fake.echo", `{}`), act, spec, ex, false, nil)
+	adm, err := w.p.admit(bg, pr, n, req("fake.echo", `{}`), act, spec, ex, false, nil, nil)
 	if err != nil || adm.plan == nil {
 		t.Fatalf("%v %+v", err, adm)
 	}
@@ -731,7 +746,7 @@ func TestCrashBetweenTxAAndTxB(t *testing.T) {
 	}
 	// A crash between the outcome and the seal: the action is verified but unsealed, and Resume
 	// (the unsealed sweeper) seals it.
-	adm2, err := w.p.admit(bg, pr, n, req("fake.echo", `{}`), act, spec, ex, false, nil)
+	adm2, err := w.p.admit(bg, pr, n, req("fake.echo", `{}`), act, spec, ex, false, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

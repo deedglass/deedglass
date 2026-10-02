@@ -1,0 +1,9 @@
+{"Time":"2026-10-02T12:04:02.105012+05:30","Action":"start","Package":"github.com/deedglass/deedglass/internal/connector/postgres"}
+{"Time":"2026-10-02T12:04:02.413612+05:30","Action":"run","Package":"github.com/deedglass/deedglass/internal/connector/postgres","Test":"TestEstimate"}
+{"Time":"2026-10-02T12:04:02.413825+05:30","Action":"output","Package":"github.com/deedglass/deedglass/internal/connector/postgres","Test":"TestEstimate","Output":"=== RUN   TestEstimate\n","OutputType":"frame"}
+{"Time":"2026-10-02T12:04:02.560266+05:30","Action":"output","Package":"github.com/deedglass/deedglass/internal/connector/postgres","Test":"TestEstimate","Output":"    estimate_integration_test.go:80: PERF {\"benchmark\":\"TestEstimate\",\"estimates\":50,\"p50_ms\":0.28,\"p99_ms\":3.43,\"target_typical_ms\":10,\"cap_ms\":500}\n"}
+{"Time":"2026-10-02T12:04:03.06957+05:30","Action":"output","Package":"github.com/deedglass/deedglass/internal/connector/postgres","Test":"TestEstimate","Output":"--- PASS: TestEstimate (0.66s)\n","OutputType":"frame"}
+{"Time":"2026-10-02T12:04:03.069684+05:30","Action":"pass","Package":"github.com/deedglass/deedglass/internal/connector/postgres","Test":"TestEstimate","Elapsed":0.66}
+{"Time":"2026-10-02T12:04:03.069728+05:30","Action":"output","Package":"github.com/deedglass/deedglass/internal/connector/postgres","Output":"PASS\n","OutputType":"frame"}
+{"Time":"2026-10-02T12:04:03.072348+05:30","Action":"output","Package":"github.com/deedglass/deedglass/internal/connector/postgres","Output":"ok  \tgithub.com/deedglass/deedglass/internal/connector/postgres\t0.967s\n"}
+{"Time":"2026-10-02T12:04:03.072477+05:30","Action":"pass","Package":"github.com/deedglass/deedglass/internal/connector/postgres","Elapsed":0.967}

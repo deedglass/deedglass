@@ -107,7 +107,7 @@ func (g *fakeGate) serve(w http.ResponseWriter, r *http.Request) {
 				data = append(data, `{"object":"tool_visibility","name":"`+t.Name+`","tool":"scratch.`+t.Name+`","visibility":"visible","rule_id":null,"reason":null}`)
 			}
 		}
-		io.WriteString(w, `{"object":"list","data":[`+strings.Join(data, ",")+`],"has_more":false,"next_cursor":null,"policy_version":"pv_01k6w4a3d5f7h9k1n3q5s7v9x1"}`)
+		io.WriteString(w, `{"object":"list","data":[`+strings.Join(data, ",")+`],"has_more":false,"next_cursor":null,"policy_version":"pv_01k6w4a3d5f7h9k1n3q5s7v9x1","policy":{"name":"scratch-demo","version":3,"version_id":"pv_01k6w4a3d5f7h9k1n3q5s7v9x1"}}`)
 	case r.Method == "POST" && r.URL.Path == "/v1/actions":
 		if g.mode == "garbage" {
 			io.WriteString(w, `{"ok":true}`)

@@ -14,6 +14,8 @@ import (
 type Case struct {
 	ID  string
 	Run func(h *H) Observed
+	// Cap bounds this case instead of CaseCap (S22's L05 waits out a real one-minute expiry).
+	Cap time.Duration
 }
 
 // Observed is what a case saw: the outcome word, a detail head, the actions it created and the
@@ -100,10 +102,14 @@ func runCapped(t *testing.T, h *H, c Case) (obs Observed, waiting string) {
 		}()
 		obs = c.Run(h)
 	}()
+	limit := CaseCap
+	if c.Cap > 0 {
+		limit = c.Cap
+	}
 	select {
 	case <-done:
-	case <-time.After(CaseCap):
-		t.Fatalf("%s ran longer than %s", c.ID, CaseCap)
+	case <-time.After(limit):
+		t.Fatalf("%s ran longer than %s", c.ID, limit)
 	}
 	if panicked != nil {
 		h.problems = append(h.problems, fmt.Sprintf("the case stopped: %v", panicked))

@@ -1,0 +1,19 @@
+{{template "head" .}}<h1 class="dg-text" style="text-wrap:balance;margin:0 0 16px 0;font-size:22px;line-height:30px;font-weight:600;letter-spacing:-0.02em;color:#0D0F14;">{{.Agent}} is waiting for you</h1>
+<p style="margin:0 0 20px 0;">It wants to run <span translate="no" style="font-family:'Geist Mono',ui-monospace,Menlo,monospace;font-size:14px;">{{.Tool}}</span> on {{.OrgName}}. {{if .Rule}}Policy &ldquo;{{.Rule}}&rdquo; asks a person to countersign{{if .Reason}}: {{.Reason}}{{else}}.{{end}}{{else}}A policy asks a person to countersign.{{end}}</p>
+<table role="presentation" class="dg-panel" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#F7F7F4" style="margin:0 0 24px 0;background-color:#F7F7F4;border:1px solid #E4E5EA;border-radius:10px;">
+<tr><td style="padding:16px 18px 4px 18px;font-size:16px;line-height:24px;font-weight:600;" class="dg-text">{{.Summary}}</td></tr>
+{{if .Detail}}<tr><td style="padding:8px 18px 0 18px;"><div translate="no" style="padding:10px 12px;background-color:#0E1017;border-radius:6px;font-family:'Geist Mono',ui-monospace,Menlo,monospace;font-size:13px;line-height:19px;color:#F5F6FA;word-break:break-all;">{{.Detail}}</div></td></tr>
+{{end}}<tr><td style="padding:12px 18px 16px 18px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="font-size:14px;line-height:22px;">
+<tr><td class="dg-label" width="96" valign="top" style="width:96px;color:#6B7080;font-size:13px;">Agent</td><td class="dg-text" translate="no" style="color:#0D0F14;">{{.Agent}}</td></tr>
+{{if .Rule}}<tr><td class="dg-label" valign="top" style="color:#6B7080;font-size:13px;">Rule</td><td class="dg-text" translate="no" style="color:#0D0F14;font-family:'Geist Mono',ui-monospace,Menlo,monospace;font-size:13px;word-break:break-all;">{{.Rule}}</td></tr>
+{{end}}<tr><td class="dg-label" valign="top" style="color:#6B7080;font-size:13px;">Needs</td><td class="dg-text" style="color:#0D0F14;">{{.Needs}}</td></tr>
+<tr><td class="dg-label" valign="top" style="color:#6B7080;font-size:13px;">Expires</td><td class="dg-text" style="color:#0D0F14;font-variant-numeric:tabular-nums;">{{.Expires}}</td></tr>
+</table></td></tr>
+</table>
+{{range .Countersigns}}<p style="margin:0 0 16px 0;">{{.}}</p>
+{{end}}{{if .Self}}<p style="margin:0 0 16px 0;">It runs on your behalf, so another approver has to countersign it. You can still deny it.</p>
+{{end}}{{template "button" button .Link .ButtonLabel}}<p class="dg-muted" style="margin:0 0 8px 0;font-size:13px;line-height:20px;color:#6B7080;">{{.Fineprint}}</p>
+<p class="dg-muted" style="margin:0 0 8px 0;font-size:13px;line-height:20px;color:#6B7080;">{{.Count}} &middot; approval <span translate="no" style="font-family:'Geist Mono',ui-monospace,Menlo,monospace;font-size:12px;">{{.ApprovalShort}}</span></p>
+<p class="dg-muted" style="margin:0;font-size:13px;line-height:20px;color:#6B7080;">If you weren&rsquo;t expecting this, you can ignore it. Nothing happens.</p>
+{{template "foot" .}}

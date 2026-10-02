@@ -3,6 +3,7 @@ package gate
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -135,11 +136,66 @@ type Witnesser interface {
 	Deferred(ctx context.Context, s Subject) (WitnessOutcome, error)
 }
 
-// Approvals asks for a person's decision. S13's stub inserts a pending approval; S22 replaces it
-// (notifications, four-eyes, links) and calls Pipeline.Resume when someone decides.
+// Approvals asks for a person's decision (S13's seam; S22 changed it). Prepare runs with no
+// transaction open, only for require_approval, and does the slow part (the connector's estimate,
+// the agent's recent actions); Request runs inside Tx A and writes the approval with the snapshot
+// completed (the action id and times) and digested. internal/approve implements it; gate never
+// imports approve (cmd/deedglass serve wires them). StubApprovals is the dependency-free default.
 type Approvals interface {
-	Request(ctx context.Context, tx pgx.Tx, s Subject, d policy.Decision) (ids.ApprovalID, time.Time, error)
+	Prepare(ctx context.Context, in ApprovalInput, d policy.Decision) (PreparedApproval, error)
+	Request(ctx context.Context, tx pgx.Tx, in ApprovalInput, d policy.Decision, p PreparedApproval) (ids.ApprovalID, time.Time, error)
 }
+
+// ApprovalHooks is optional on an Approvals: the Gate calls it inside the transaction that ends an
+// approval without a person's decision (the expiry sweeper, Pipeline.Cancel), so links are voided
+// and approval.decided is published in the same commit.
+type ApprovalHooks interface {
+	OnExpired(ctx context.Context, tx pgx.Tx, org ids.OrgID, approval string) error
+	OnCancelled(ctx context.Context, tx pgx.Tx, org ids.OrgID, approval string, actor string) error
+}
+
+// ApprovalInput is what an Approvals knows about the action it pauses: built by the Gate from the
+// normalized request and the decision, with no I/O. Subject.ID is zero in Prepare (the action is
+// created in Tx A) and set in Request.
+type ApprovalInput struct {
+	Subject
+	AgentName       string
+	Connector       string // the connector's name ("postgres")
+	SideEffect      string // the policy fact tool.side_effect
+	RequestDigest   string
+	Args            json.RawMessage // never stored as is: the snapshot redacts and caps it
+	OnBehalfOf      string
+	Livemode        bool
+	PolicyID        string
+	PolicyName      string
+	PolicyVersionID string
+	PolicyVersion   int
+	// Exec and Call are the resolved tool and the call it would get (gateway only; nil in proxy
+	// mode), for the connector's estimate. Call has no action id yet.
+	Exec Executor
+	Call connector.Call
+}
+
+// PreparedApproval is Prepare's partial snapshot. RuleID is the rule it was prepared for: when Tx A
+// decides under another rule, the Gate prepares again.
+type PreparedApproval struct {
+	Context json.RawMessage
+	RuleID  string
+}
+
+// ErrApprovalUnsatisfiable: fewer people can countersign than the rule needs (S22 §3.6). Request
+// returns it (as *UnsatisfiableError) after recording the approval as denied by the system; the
+// Gate then denies and seals the action and answers 403 approval_unsatisfiable.
+var ErrApprovalUnsatisfiable = errors.New("gate: no one in this org can approve this action")
+
+// UnsatisfiableError is ErrApprovalUnsatisfiable with the sentence for the person or agent.
+type UnsatisfiableError struct {
+	Approval ids.ApprovalID
+	Message  string
+}
+
+func (e *UnsatisfiableError) Error() string { return e.Message }
+func (e *UnsatisfiableError) Unwrap() error { return ErrApprovalUnsatisfiable }
 
 // Policies is the active-policy cache (S12's *policy.Registry).
 type Policies interface {

@@ -82,6 +82,7 @@ func ConnectorUnavailableMessage(connector string) string {
 const (
 	MsgIdempotencyConflict = "This Idempotency-Key was used with a different request in the last 24 hours. Use a new key for a new request."
 	MsgCancelExecuting     = "This action is already executing, so it can't be cancelled."
+	MsgCancelApproved      = "A person already approved this action, so it can't be cancelled. It runs now."
 	MsgCancelDone          = "This action has already finished, so there is nothing to cancel."
 	MsgResultReported      = "A result was already reported for this action."
 	MsgResultLate          = "This action was already sealed as UNVERIFIABLE because its result arrived after the deadline."
@@ -252,7 +253,7 @@ const (
 	MCPApprovalDenied           = "A person denied this action. Nothing was run."
 	MCPApprovalIDBad            = "approval_id must be an approval id from a Waiting for approval message, for example apr_01j9zs4k7m2n3p5q6r7s8t9v0w."
 	MCPCheckApprovalTitle       = "Check a Deedglass approval"
-	MCPCheckApprovalDescription = "Checks whether a person has countersigned an action that Deedglass paused for approval. Call it with the approval_id from a 'Waiting for approval' message. If it was approved, Deedglass runs the original tool call and returns its result. Nothing runs while the approval is pending."
+	MCPCheckApprovalDescription = "Checks whether a person has countersigned an action that Deedglass paused for approval. Call it with the approval_id from a 'Waiting for approval' message. It waits up to wait_seconds (0 to 20, default 10) for the decision, so one call is usually enough. If it was approved, Deedglass runs the original tool call and returns its result. Nothing runs while the approval is pending."
 )
 
 // MCPDenyText frames a recorded refusal (policy, budget, Stop, unknown tool) for the model. fallback
@@ -329,6 +330,40 @@ func MCPStillPendingText(approvalID string, expires time.Time) string {
 // MCPApprovedRanText heads the original tool's result after a person approved it.
 func MCPApprovedRanText(tool string) string {
 	return "Approved by a person. Ran " + clip(tool, 160) + "."
+}
+
+// MCPApprovalDeniedText is a person's denial, with their reason when they gave one (S22, DL-028:
+// the reason reaches the MCP client). Agent-facing texts never name the person.
+func MCPApprovalDeniedText(a *ledger.Action) string {
+	if a == nil || a.Approval == nil || a.Approval.DecisionReason == nil {
+		return MCPApprovalDenied
+	}
+	r := strings.Join(strings.Fields(*a.Approval.DecisionReason), " ")
+	r = strings.ReplaceAll(clip(r, 280), `"`, "'")
+	if r == "" {
+		return MCPApprovalDenied
+	}
+	if !strings.HasSuffix(r, ".") && !strings.HasSuffix(r, "?") {
+		r += "."
+	}
+	return MCPApprovalDenied + ` Reason: "` + r + `"`
+}
+
+// MCPApprovedStoppedText is an approval whose agent was stopped before it could run.
+func MCPApprovedStoppedText(agent string) string {
+	return fmt.Sprintf("A person approved this, but agent %q is stopped, so nothing ran.", clip(agent, 64))
+}
+
+// MCPApprovalElsewhereText answers, after a wrapper restart, for an approval this process didn't
+// request (it found it through GET /v1/approvals/{id}): it never runs the earlier call.
+func MCPApprovalElsewhereText(approvalID, status string) string {
+	switch status {
+	case "approved":
+		return "A person approved " + approvalID + ", but the call was made before this MCP server restarted, so Deedglass won't run it here. Make the call again to run it."
+	case "pending":
+		return "Approval " + approvalID + " is still waiting for a person. It was requested before this MCP server restarted, so after it is approved, make the call again."
+	}
+	return "Approval " + approvalID + " is " + status + ". Nothing was run here. Make the call again if it is still needed."
 }
 
 // MCPAlreadyRanText answers a second check after the approved call ran.

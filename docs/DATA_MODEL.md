@@ -50,6 +50,7 @@ erDiagram
 | `action_events` | Every state change of every action. **Append-only.** | S13 |
 | `approvals` | A request for a human decision on one action. | S13 (a stub: pending, then decided or expired), S22 |
 | `approval_tokens` | One-time approve or deny links, hashed. | S22 |
+| `approval_votes` | One row per person per approval: approve or deny, the reason, how (`console`, `email_link`, `cli_dev`), the context digest and the admin deed. **Append-only.** | S22 |
 | `idempotency_keys` | Stored responses for `Idempotency-Key`, kept 24 hours. | S03 |
 | `seal_keys` | The instance's public seal keys. | S04 |
 | `deeds` | Sealed deeds, one hash-linked chain per org. **Append-only.** | S04 |
@@ -140,7 +141,7 @@ Each one is owned by `deedglass_migrator`, pins `search_path = pg_catalog, pg_te
 | `DG003` | The deed's `prev_hash` doesn't link. |
 | `DG004` | The action can't make that state change. |
 | `DG005` | The org's last active owner can't be removed. |
-| `DG006` | Reserved for S22's approval-vote guard. |
+| `DG006` | An approval's context or request changed, a decided approval changed, or its countersigns shrank (`approvals_guard`, S22). |
 
 `DG101` to `DG103` are reserved for the customer-side guards (S17), so one code never means two things.
 
@@ -348,6 +349,30 @@ rows. Every change they lead to runs afterwards in an org transaction with row-l
 | `claim_witness_jobs(p_worker, p_limit, p_lease)` | `(id, org_id, action_id, kind, attempts)` for at most `p_limit` (1 to 100) due jobs, leased to `p_worker` until `now() + p_lease` with `attempts` incremented, taken `FOR UPDATE SKIP LOCKED` so two workers never hold the same job | the worker, every 2 s (±20%) and on `deedglass_jobs` |
 | `claim_stale_actions(p_limit)` | `(org_id, action_id, state)` for at most `p_limit` (1 to 1,000) actions of each kind: `executing` past `executing_deadline`, a final pre-seal state idle for 30 s, and `pending_approval` past its approval's `expires_at`; locked `SKIP LOCKED` for the call only | the sweepers, every 5 s; each change is a compare-and-set on `state`, so two instances that get the same id race safely |
 | `maint_release_action_keys(p_limit)` | how many keys it cleared: `idempotency_key = NULL` on at most `p_limit` (1 to 10,000) actions created more than 24 hours ago | the idempotency-release sweeper, 1,000 per pass; the action and its deed are untouched |
+
+## Approvals and webhooks additions (0021, S22)
+
+- `approvals` gains the request it pauses (`agent_id`, `tool`, `on_behalf_of`,
+  `policy_version_id`), `notified_count` and `notified_at`, and the index `approvals_org_pending`.
+  The trigger `approvals_guard` raises DG006 when the context snapshot or its digest changes, when
+  the request changes, when a decided approval changes, or when `approved_by` loses a member.
+- `approval_votes` (new, org table, RLS, `SELECT` and `INSERT` only for `deedglass_app`):
+  primary key (org, approval, user), so one person votes once; row and statement triggers refuse
+  UPDATE, DELETE and TRUNCATE.
+- `approval_tokens` gains `voided_at`, `previewed_at` and the purpose `decide`; the partial index
+  `approval_tokens_open` serves the link lookups. `preauth_approval_token(hash)` is the
+  `SECURITY DEFINER` lookup the public link routes use before any org is known (it returns ids and
+  times, never a row).
+- `actions_approval` indexes `actions (org_id, approval_id)` (DL-029).
+- `webhooks` keep the signing secret as a vault envelope bound to the `whk_` id
+  (`secret_envelope`, `secret_hint`, `kek_id`), plus `api_version`, `failing_since` and
+  `last_success_at`. `webhook_deliveries` gain the payload, a lease (`locked_by`, `locked_until`)
+  and a unique `(webhook_id, event_id)`, so an event is queued once per endpoint.
+- `claim_webhook_deliveries(worker, limit, lease)` leases due deliveries `SKIP LOCKED`, at most 4
+  in flight per endpoint.
+
+The outbox: `ledger.Publish` inserts one `webhook_deliveries` row per subscribed endpoint in the
+same batch as its `NOTIFY`, inside the transaction that made the change.
 
 ## Personal data
 

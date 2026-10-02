@@ -20,18 +20,18 @@ import (
 // Every route serve mounts is documented in api/openapi.yaml (checks 1–6), from the real list.
 func TestServeRoutesMatchOpenAPI(t *testing.T) {
 	api := httpx.New(httpx.Options{Logger: slog.New(slog.DiscardHandler)})
-	api.Mount(serveRoutes(api, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)...)
+	api.Mount(serveRoutes(api, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)...)
 	for _, err := range httpx.CheckSpec(apiSpec(), api.Routes()) {
 		t.Error(err)
 	}
-	if len(api.Routes()) != 82 {
-		t.Fatalf("serve mounts %d routes, want 82 (S03 + keys.json in S04 + the six Ledger routes in S06 + 17 in S07 + 17 in S08 + 9 in S09 + 12 in S12 + 3 in S13 + 1 in S14 + 1 in S15 + 9 in S16 + 1 in S17 + 2 in S20)", len(api.Routes()))
+	if len(api.Routes()) != 97 {
+		t.Fatalf("serve mounts %d routes, want 97 (S03 + keys.json in S04 + the six Ledger routes in S06 + 17 in S07 + 17 in S08 + 9 in S09 + 12 in S12 + 3 in S13 + 1 in S14 + 1 in S15 + 9 in S16 + 1 in S17 + 2 in S20 + 15 in S22)", len(api.Routes()))
 	}
 }
 
 func TestVersionAgainstServer(t *testing.T) {
 	api := httpx.New(httpx.Options{Logger: slog.New(slog.DiscardHandler)})
-	api.Mount(serveRoutes(api, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)...)
+	api.Mount(serveRoutes(api, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)...)
 	ts := httptest.NewServer(api)
 	defer ts.Close()
 
@@ -66,7 +66,7 @@ func TestVersionAgainstServer(t *testing.T) {
 func TestServeUntilStopped(t *testing.T) {
 	log := slog.New(slog.DiscardHandler)
 	api := httpx.New(httpx.Options{Logger: log})
-	api.Mount(serveRoutes(api, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)...)
+	api.Mount(serveRoutes(api, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)...)
 	entered, release := make(chan struct{}), make(chan struct{})
 	api.Mount(httpx.Route{Method: "GET", Pattern: "/v1/_test/slow", OperationID: "slow", Auth: httpx.Public, Extension: "test",
 		Handler: func(w http.ResponseWriter, r *http.Request) error {
@@ -135,7 +135,7 @@ func TestServeUntilStopped(t *testing.T) {
 func TestSecondSignalExits(t *testing.T) {
 	log := slog.New(slog.DiscardHandler)
 	api := httpx.New(httpx.Options{Logger: log})
-	api.Mount(serveRoutes(api, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)...)
+	api.Mount(serveRoutes(api, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)...)
 	ln, _ := net.Listen("tcp", "127.0.0.1:0")
 	exited := make(chan int, 1)
 	saved := serveExit
@@ -170,7 +170,7 @@ func TestPGVersion(t *testing.T) {
 // tools/call through the Gate, which refuses it.
 func TestKeyRoutesDeclareScopes(t *testing.T) {
 	api := httpx.New(httpx.Options{Logger: slog.New(slog.DiscardHandler)})
-	api.Mount(serveRoutes(api, nil, nil, nil, nil, nil, nil, nil, nil, &mcpWiring{gw: &httpgw.Gateway{}, timeout: time.Minute}, nil)...)
+	api.Mount(serveRoutes(api, nil, nil, nil, nil, nil, nil, nil, nil, &mcpWiring{gw: &httpgw.Gateway{}, timeout: time.Minute}, nil, nil, nil)...)
 	keyRoutes := 0
 	for _, r := range api.Routes() {
 		if r.Auth != httpx.AgentKey && r.Auth != httpx.SessionOrKey {
