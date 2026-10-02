@@ -10,6 +10,7 @@ import (
 	"slices"
 	"sort"
 	"sync"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -417,6 +418,69 @@ func (b *bound) Execute(ctx context.Context, call Call) (res Result, err error) 
 		res, err = scrubResult(red, res, err)
 	}()
 	return b.impl.Execute(ctx, b.inst, call)
+}
+
+// L2Target is what the Witness needs to witness one call at L2 (S21): the authorized statement,
+// its ledger digest (S17's recipe), and the connector's witness settings.
+type L2Target struct {
+	ConnectorID    string
+	Tool           string // execute | call (the connector's unqualified tool name)
+	SQL            string
+	Params         []json.RawMessage
+	DefaultSchema  string
+	SQLDigest      string    // "" when it can't be computed; then the ledger's sql_digest isn't compared
+	Writes         []L2Write // call: the function's declared contract
+	Watched        []string
+	AutoColumns    map[string][]string
+	MaxRows        map[string]int64
+	StrictTriggers bool
+	Timeout        time.Duration
+	DiffRows       int
+}
+
+// L2Write is one table a controlled function declares it writes.
+type L2Write struct {
+	Table   string
+	Ops     []string
+	MaxRows *int64
+	Columns []string
+}
+
+// L2Witnesser is a connector type whose writes are witnessed at L2 (S21: postgres).
+type L2Witnesser interface {
+	// L2Target returns the call's L2 target, or nil when L2 doesn't apply (witness off, a read tool).
+	L2Target(inst *Instance, call Call) (*L2Target, error)
+	// L2Triggers lists the enabled user triggers of each table (S21's triggers_present note);
+	// fresh skips the cache (a MISMATCH looks again, so a trigger added a moment ago is named).
+	L2Triggers(ctx context.Context, inst *Instance, tables []string, fresh bool) (map[string][]string, error)
+}
+
+// L2Witnessing is an Executor whose connector is witnessed at L2.
+type L2Witnessing interface {
+	L2Target(call Call) (*L2Target, error)
+	L2Triggers(ctx context.Context, tables []string, fresh bool) (map[string][]string, error)
+}
+
+// L2Target implements L2Witnessing; nil when the type isn't witnessed at L2.
+func (b *bound) L2Target(call Call) (*L2Target, error) {
+	w, ok := b.impl.(L2Witnesser)
+	if !ok {
+		return nil, nil
+	}
+	t, err := w.L2Target(b.inst, call)
+	if t != nil && b.inst != nil {
+		t.ConnectorID = b.inst.ID.String()
+	}
+	return t, err
+}
+
+// L2Triggers implements L2Witnessing.
+func (b *bound) L2Triggers(ctx context.Context, tables []string, fresh bool) (map[string][]string, error) {
+	w, ok := b.impl.(L2Witnesser)
+	if !ok {
+		return nil, nil
+	}
+	return w.L2Triggers(ctx, b.inst, tables, fresh)
 }
 
 // ReadBacking is an Executor whose connector reads writes back (S19's L1 witness).

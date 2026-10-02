@@ -289,6 +289,26 @@ words: the decoder doesn't decide.
 | Drop | `✓ Slot dropped · deedglass_01j9zq7c… · admin deed deed_01j9zv8k… · a new slot starts on the next sync` |
 | API, not witnessed | `This connector isn't witnessed, so it has no decoder. Turn on witness.enabled in its config first.` |
 
+## L2: expected and observed (S21; S25 builds the Witness panel)
+
+The strings live in `internal/witness/l2/summary.go` (`Copy*`) and `internal/witness/l2/render.go`.
+
+| Where | Copy |
+|---|---|
+| Diff column headers | `Expected` · `Observed` |
+| Row badges | `expected` / `unexpected` |
+| Footer | `Witnessed by Postgres · commit {lsn} · {time}` |
+| Truncation line | `Showing the first 20 of 301 changed rows.` |
+| Amendment banner | `This action has a later verdict. The original deed is unchanged; the amendment deed records what Postgres showed afterwards.` |
+| Empty state (a Postgres connector without the witness) | `Turn on Witness to compare what the agent reported with what Postgres committed.` |
+| After an UNVERIFIABLE that may still change | `Deedglass keeps watching. If Postgres's change log shows it later, an amendment deed records the result.` |
+| MCP tool result, not VERIFIED | `Deedglass witness · L2 · MISMATCH · Postgres changed 301 rows in public.orders. The agent reported 1.` |
+| MCP tool result, still waiting | `Deedglass witness · pending · Postgres's change log hasn't shown this write yet. The verdict will appear in Console › Actions.` |
+
+The "Sealed" moment (brand §10) for S25 and the videos: a VERIFIED verdict closes the Mirror's two
+halves with one soft teal pulse; a MISMATCH stops the halves short with a hairline red gap, and
+never shakes.
+
 ## What this page doesn't do
 
 It doesn't hold every error: the full catalog, with when each code happens, is

@@ -46,7 +46,7 @@ erDiagram
 | `usage_counters` | Calls and spend per agent or org, per minute, hour and day: `(org_id, scope, counter, window_kind, window_start, value)`. `scope` is an agent id or `org`; `counter` is `calls`, `spend:<currency>` or `budget:<budget id>`; `window_kind` is `minute`, `hour` or `day` (UTC floors; day is the org's local midnight, stored as UTC). S11 uses migration 0003's table unchanged (no new migration; `TestUsageCountersShape` pins it). `Usage.Prune` deletes old windows through `SystemTx(maintenance)` ([BUDGETS.md](BUDGETS.md)). | S11 |
 | `connectors` | Configured tools. | S16 |
 | `credentials` | A connector's credentials, envelope-encrypted. Field names and a short hint are the only clear text. | S16 |
-| `actions` | One tool call through the Gate, with its state, decision, result digest and witness verdict. | S13 |
+| `actions` | One tool call through the Gate, with its state, decision, result digest and witness verdict. S21 (migration 0020): `witness_expect` (an explicit L2 footprint, written for S23's undo) and `witness_amendments` (the amendment deeds sealed about it, 0 to 3). | S13, S21 |
 | `action_events` | Every state change of every action. **Append-only.** | S13 |
 | `approvals` | A request for a human decision on one action. | S13 (a stub: pending, then decided or expired), S22 |
 | `approval_tokens` | One-time approve or deny links, hashed. | S22 |
@@ -54,7 +54,7 @@ erDiagram
 | `seal_keys` | The instance's public seal keys. | S04 |
 | `deeds` | Sealed deeds, one hash-linked chain per org. **Append-only.** | S04 |
 | `admin_events` | Administrative changes in an org. **Append-only.** | S07+ |
-| `witness_jobs` | Work queued for the Witness and the approval workers. | S13, S19 to S22 |
+| `witness_jobs` | Work queued for the Witness and the approval workers: `l1_readback` (S19) and `l2_match`, which ends an L2 wait at `witness.l2_timeout` (S21). | S13, S19 to S22 |
 | `decoded_txs` | Frames: transactions read from a watched database's change stream, with their class, ledger rows, markers, tables, counts, row images (the first 1,000) and digest. Unique by (connector, system id, timeline, commit LSN, stray message); `missing` rows (reconcile) have no LSN. Evidence: UPDATE and TRUNCATE raise DG001, and only `maint_prune_decoded_txs` deletes ([DECODER.md](DECODER.md)). | S20 |
 | `decoder_slots` | One logical replication slot per witnessed Postgres connector: the lease (`claim_decoder_leases`), status and reason, positions, lag, counters, relation shapes and the reconcile watermark. `sync_decoder_slots` keeps one row per witnessed connector. | S20 |
 | `suggestions` | Insights suggestions a person accepts or rejects. | S28 |

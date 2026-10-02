@@ -1,6 +1,5 @@
--- Declared fixtures for H08–H11 (S18). They need S21's L2 witness: the cases call
--- RequireWitness("S21") first and report "waiting on S21" until it lands. S21 loads this file
--- into the case's database before each of those cases and removes the cases' `needs`.
+-- Declared fixtures for H08–H11 (S18). S21's L2 witness makes them observable: each of those cases
+-- loads this whole file into its clone (as the superuser), then points the decoder at the clone.
 
 -- H08: trigger fan-out. The agent updates 1 order; the trigger touches 300 order_events rows, so
 -- Postgres commits 301 changed rows while the agent reports 1.
@@ -17,6 +16,11 @@ BEGIN
 END
 $fn$;
 CREATE TRIGGER orders_fan_out AFTER UPDATE OF status ON public.orders FOR EACH ROW EXECUTE FUNCTION public.fan_out();
+-- S21: the trigger runs as the agent's role, so that role may update order_events; and the table is
+-- in the publication with full old rows, so Postgres's change log shows the 300 rows.
+GRANT SELECT, UPDATE ON public.order_events TO deedglass_agent;
+ALTER TABLE public.order_events REPLICA IDENTITY FULL;
+ALTER PUBLICATION deedglass_pub ADD TABLE public.order_events;
 
 -- H09: a trigger changes a column outside the statement's SET list (internal_note).
 ALTER TABLE public.orders ADD COLUMN internal_note text NOT NULL DEFAULT '';

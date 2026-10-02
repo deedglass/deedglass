@@ -162,6 +162,8 @@ type Runner struct {
 
 	nudge     chan struct{}
 	reconcile chan struct{} // ReconcileNow
+	resync    chan struct{} // Resync: the connector was written, so a halted runner retries at once
+	freshSlot bool          // this session created its slot: earlier relation shapes don't apply
 
 	mu   sync.Mutex
 	view RunnerView
@@ -215,7 +217,7 @@ type RunnerView struct {
 
 func newRunner(d *Deps, cfg Config, org ids.OrgID, id ids.ConnectorID, slot string) *Runner {
 	return &Runner{org: org, id: id, slot: slot, d: d, cfg: cfg, nudge: make(chan struct{}, 1), reconcile: make(chan struct{}, 1),
-		log: d.Log.With("connector", id.String(), "slot", slot)}
+		resync: make(chan struct{}, 1), log: d.Log.With("connector", id.String(), "slot", slot)}
 }
 
 // View returns the runner's state.
@@ -249,6 +251,20 @@ func (r *Runner) Nudge() {
 	}
 }
 
+// Resync wakes a halted runner at once (S21): its connector was written (new credentials, a
+// changed config, init applied again), so the cause of the halt may be gone. Nudges don't wake a
+// halted runner; only connector writes do, so a halt is retried at the pace of real changes.
+func (r *Runner) Resync() {
+	select {
+	case r.resync <- struct{}{}:
+	default:
+	}
+	select {
+	case r.nudge <- struct{}{}:
+	default:
+	}
+}
+
 func (r *Runner) active() bool {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -276,7 +292,11 @@ func (r *Runner) Run(ctx context.Context) {
 			if h.lost && r.d.Hooks.SlotLost != nil {
 				r.d.Hooks.SlotLost(ctx, r.org, r.id, h.reason)
 			}
-			if !sleepCtx(ctx, r.cfg.HaltRetry, nil) {
+			select { // a Resync from before the halt doesn't count
+			case <-r.resync:
+			default:
+			}
+			if !sleepCtx(ctx, r.cfg.HaltRetry, r.resync) {
 				return
 			}
 		case errors.Is(err, errWaiting):
@@ -400,6 +420,11 @@ func (r *Runner) session(ctx context.Context) error {
 	}
 	r.hb = NewHeartbeat(r.id.String(), r.d.Now())
 	r.shapes = map[uint32]string{}
+	if r.freshSlot {
+		// A new slot is a new stream (S21): relation shapes seen through an earlier slot (perhaps
+		// in another database) say nothing about this one, so relation_changed starts afresh.
+		row.Shapes, r.freshSlot = nil, false
+	}
 	for k, v := range row.Shapes {
 		if n, err := strconv.ParseUint(k, 10, 32); err == nil {
 			r.shapes[uint32(n)] = v
@@ -495,6 +520,7 @@ func (r *Runner) startChecks(ctx context.Context, row store.DecoderSlot) error {
 		if err := r.recordSlotCreated(ctx, lsn); err != nil {
 			return err
 		}
+		r.freshSlot = true
 	case st.Plugin != "pgoutput" || st.Database != db:
 		return halt(ReasonSlotConflict, false, "plugin", st.Plugin, "database", st.Database)
 	case st.Invalidated():

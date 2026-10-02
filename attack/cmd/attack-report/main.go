@@ -116,7 +116,7 @@ func clip(s string, n int) string {
 func printRun(w io.Writer, meta *harness.Meta, res *harness.Run, on bool) {
 	declared := 0
 	for _, c := range meta.Cases {
-		if strings.Contains("HJK", c.Group) {
+		if strings.Contains("HJKW", c.Group) {
 			declared++
 		}
 	}
@@ -151,7 +151,7 @@ func printRun(w io.Writer, meta *harness.Meta, res *harness.Run, on bool) {
 		}
 	}
 	s := res.Summary
-	fmt.Fprintf(w, "%d matched · %d differ · %d waiting on S21 · chain %s · %d secrets seen in %s log lines\n",
+	fmt.Fprintf(w, "%d matched · %d differ · %d waiting on a later session · chain %s · %d secrets seen in %s log lines\n",
 		s.Matched, s.Differs, s.Waiting, res.Invariants.Chains, res.Invariants.SecretsSeen, thousands(res.Invariants.LogLines))
 }
 

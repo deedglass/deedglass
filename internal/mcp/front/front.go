@@ -450,6 +450,9 @@ func (f *Front) outcome(ctx context.Context, r Request, t Tool, a *gate.Action, 
 		return f.result(id, present.Deny(v, msg, r.Modern))
 	case v.Status == ledger.StatusPendingApproval:
 		return f.result(id, present.Pending(v, r.Modern))
+	case v.Status == ledger.StatusProcessing && v.State == string(gate.Witnessing):
+		// S21: the tool ran; the verdict still waits for Postgres's change log.
+		return f.result(id, present.WithAction(gate.MCPWitnessPendingText, v.ID, r.Modern))
 	case v.Status == ledger.StatusProcessing:
 		return f.result(id, present.WithAction(gate.MCPStillRunningText(v.ID), v.ID, r.Modern))
 	case v.Status == ledger.StatusDenied:

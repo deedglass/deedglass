@@ -441,7 +441,7 @@ func (e *Env) setupOrgs() {
 	globex := e.createOrg("Globex", "globex")
 	src, err := os.ReadFile(filepath.Join(e.Root, "attack", "fixtures", "policies", "attack-baseline.yaml"))
 	must(err)
-	for _, n := range []string{"attacker", "permissive-bot", "suspend-bot", "revoke-bot", "intent-bot"} {
+	for _, n := range []string{"attacker", "permissive-bot", "suspend-bot", "revoke-bot", "intent-bot", "witness-bot"} {
 		e.AddAgent(acme, n, nil)
 	}
 	e.AddAgent(acme, "burst-bot", map[string]any{"calls_per_minute": 60})
@@ -495,7 +495,7 @@ func (e *Env) setupTarget() *TargetTemplate {
 	acme := e.Orgs["acme"]
 	cfg := map[string]any{"mode": "sql", "allowed_schemas": []string{"public"}, "writable_tables": []string{"public.orders", "public.customers"},
 		"row_limit": 500, "max_rows_affected": 1000, "statement_timeout_ms": 5000, "lock_timeout_ms": 2000,
-		"witness": map[string]any{"enabled": true, "watched_tables": t.Tables}, "throwaway": true}
+		"witness": map[string]any{"enabled": true, "watched_tables": t.Tables, "l2_timeout": "5s"}, "throwaway": true}
 	ok(e.AddConnector(acme, "postgres", "postgres", cfg, "", nil), "postgres connector", 201)
 	u, err := url.Parse(e.AdminURL)
 	must(err)
@@ -534,4 +534,54 @@ func withDB(dsn, db string) string {
 	must(err)
 	u.Path = "/" + db
 	return u.String()
+}
+
+// ListenAlerts listens on deedglass_events on the control plane (as the superuser) and returns a
+// wait function that reports whether a decoder.alert of kind arrived before d passed, and a stop
+// function. Start it before the attack.
+func (e *Env) ListenAlerts(kind string) (wait func(d time.Duration) bool, stop func()) {
+	c := e.adminConn(e.CP.Name)
+	if _, err := c.Exec(context.Background(), "LISTEN deedglass_events"); err != nil {
+		c.Close(context.Background())
+		panic(err)
+	}
+	wait = func(d time.Duration) bool {
+		deadline := time.Now().Add(d)
+		for time.Now().Before(deadline) {
+			ctx, cancel := context.WithDeadline(context.Background(), deadline)
+			n, err := c.WaitForNotification(ctx)
+			cancel()
+			if err != nil {
+				return false
+			}
+			if strings.Contains(n.Payload, `"type":"decoder.alert"`) && strings.Contains(n.Payload, `"kind":"`+kind+`"`) {
+				return true
+			}
+		}
+		return false
+	}
+	return wait, func() { c.Close(context.Background()) }
+}
+
+// Repoint stores the clone's credentials again: a connector write, which makes the decoder retry
+// at once (S21's Resync).
+func (tg *Target) Repoint() {
+	e := tg.env
+	secret := map[string]string{"dsn": tg.DSN}
+	if e.Target.WitnessDSN != "" {
+		secret["witness_dsn"] = withDB(e.Target.WitnessDSN, tg.Name)
+	}
+	acme := e.Orgs["acme"]
+	r := acme.Admin.Do("PUT", "/v1/connectors/"+acme.Conns["postgres"]+"/credentials", map[string]any{"kind": "dsn", "secret": secret})
+	if r.Status != 200 && r.Status != 201 {
+		panic(fmt.Sprintf("repoint %s: HTTP %d %s", tg.Name, r.Status, r.Body))
+	}
+}
+
+// AdminExec runs SQL as the superuser on the cluster's postgres database (roles are cluster-wide).
+func (e *Env) AdminExec(sql string, args ...any) error {
+	c := e.adminConn("postgres")
+	defer c.Close(context.Background())
+	_, err := c.Exec(context.Background(), sql, args...)
+	return err
 }

@@ -1,13 +1,16 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/deedglass/deedglass/cmd/deedglass/internal/ui"
 	"github.com/deedglass/deedglass/internal/gate"
 	"github.com/deedglass/deedglass/internal/ledger"
 	"github.com/deedglass/deedglass/internal/witness"
+	"github.com/deedglass/deedglass/internal/witness/l2"
 )
 
 // The witness block (S19 §5): the claim on one line, "<level> · <VERDICT> · <summary>", then the
@@ -144,6 +147,9 @@ func witnessNext(a *ledger.Action) string {
 	case gate.VerdictMismatch:
 		return "Next: deedglass actions show " + a.ID + " " + ui.Sep + " https://docs.deedglass.com/witness/mismatch"
 	case gate.VerdictUnverifiable:
+		if hasL2Reason(w) {
+			return "Next: deedglass decoder status " + ui.Sep + " deedglass actions show " + a.ID
+		}
 		for _, c := range w.Codes() {
 			if c == string(witness.CodeReadbackFailed) || c == string(witness.CodeReadbackTimeout) {
 				conn, _, _ := strings.Cut(a.Tool, ".")
@@ -152,4 +158,67 @@ func witnessNext(a *ledger.Action) string {
 		}
 	}
 	return ""
+}
+
+// l2Lines is the L2 diff under a witness claim (S21 §0): the expected and observed pair, the
+// rows and the "Witnessed by Postgres" footer, from a stored witness_detail. nil when the detail
+// has no L2 evidence. With footerOnly, only the footer (a VERIFIED claim needs no diff).
+func l2Lines(e *Env, detail json.RawMessage, pad string, footerOnly bool) []string {
+	d, ok := witness.ParseDetail(detail)
+	if !ok || d.Levels.L2 == nil || d.Levels.L2.L2Evidence == nil {
+		return nil
+	}
+	if footerOnly {
+		if t := d.Levels.L2.Transaction; t != nil {
+			return []string{pad + e.Style.Dim(l2.Footer(t))}
+		}
+		return nil
+	}
+	w := e.Width
+	if w <= 0 {
+		w = 120
+	}
+	return l2.Render(d, l2.RenderOptions{Width: w, Style: e.Style, Indent: pad})
+}
+
+// historyLines are the witness sections sealed about an action, oldest first (S21 §5):
+// "L1 · UNVERIFIABLE · sealed 13:20:11 · l2_timeout", then each amendment.
+func historyLines(st ui.Style, w *ledger.ActionWitness, summary string) []string {
+	if w == nil || len(w.History) < 2 {
+		return nil
+	}
+	var out []string
+	for i, h := range w.History {
+		at := h.At
+		if t, err := time.Parse("2006-01-02T15:04:05.000Z", h.At); err == nil {
+			at = t.UTC().Format("15:04:05")
+		}
+		line := h.Level + " " + ui.Sep + " " + verdictWord(st, h.Verdict) + " " + ui.Sep
+		if h.Kind == "amendment" {
+			line += " amendment " + shortID(h.Deed) + " " + ui.Sep + " " + at
+		} else {
+			line += " sealed " + at
+		}
+		if h.Reason != nil {
+			line += " " + ui.Sep + " " + reasonWords(*h.Reason)
+		}
+		if i == len(w.History)-1 && summary != "" {
+			line += " " + ui.Sep + " " + clean(summary)
+		}
+		out = append(out, line)
+	}
+	return out
+}
+
+// reasonWords says a history entry's reason code briefly.
+func reasonWords(code string) string {
+	switch witness.Code(code) {
+	case witness.CodeL2Timeout:
+		return "L2 timed out"
+	case witness.CodeSlotDropped:
+		return "the slot was dropped"
+	case witness.CodeDecoderHalted:
+		return "the decoder had stopped"
+	}
+	return strings.ReplaceAll(code, "_", " ")
 }

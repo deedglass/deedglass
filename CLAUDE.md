@@ -73,6 +73,11 @@ make bench-decoder  # S20: SafeParse vs Parse, then 100 writes/s for 60 s (commi
 DEEDGLASS_IT_PKGS=./internal/decoder/ make integration   # S20: the decoder on a throwaway cluster (crash, prepared and E08 tests start their own Homebrew cluster; skipped without one)
 DEEDGLASS_IT_PKGS="./internal/decoder/ -update-corpus" DEEDGLASS_IT_GOFLAGS="-run TestCaptureCorpus" make integration   # S20: re-capture testdata/decoder/pgoutput (per DEEDGLASS_IT_PG; then SHA256SUMS)
 go test ./internal/decoder -run TestSafeParsePrefixes -v   # S20: every strict prefix of the corpus refused (0 panics, 0 accepted)
+make bench-l2       # S21: Derive, Compare, the render, then 100 writes/s for 60 s through a real serve (commit → verdict p50 < 1 s); JSON in bench/results/
+go test ./internal/witness/l2 -run TestRenderGoldens -update   # S21: the L2 diff goldens in internal/witness/l2/testdata/golden (review the diff)
+DEEDGLASS_IT_PKGS=./cmd/deedglass/ DEEDGLASS_IT_GOFLAGS="-v -run TestWitnessL2Live" make integration   # S21 on a real server: VERIFIED, the hero MISMATCH, MCP, an amendment
+make demo-hero      # S21: the L2 hero in one command (make demo-up first; HERO_PACE=2 for recording); demo-hero-check runs it twice
+make demo-trigger-on | demo-trigger-off | demo-order-reset [ORDER=42] | demo-diff [ID=act_…]   # S21: the hero's pieces
 make attack         # S18: the V7 attack suite on a throwaway PG 18 (real serve, real Postgres, loopback upstreams), then the report
 make attack-report  # S18: print the last run and regenerate docs/ATTACK_SUITE.md (never edit that page by hand; -check in CI)
 DEEDGLASS_IT_ATTACK_RUN='TestAttack/H03' make attack   # one case; 'TestOrgIsolation' for the isolation sweep
@@ -135,7 +140,7 @@ scripts/ci-local.sh # the CI jobs locally (docker-smoke and govulncheck skip whe
    `github.com/modelcontextprotocol/go-sdk` v1.8.0 (ADR-018, in go.mod since S14; since S15 the
    binary links it for the gateway's upstream client, ADR-037 accepted under DL-029; stripped binary 27.1 MB then, 29.6 MB at S17; budget 40 MB). S16 (vault,
    egress, connectors) added no dependency: AES-256-GCM, the dialer and the JSON Schema subset are standard library (ADR-038, accepted under DL-030). S17 (the Postgres connector) added none either: `pgxpool` is part of pgx, SCRAM is `crypto/pbkdf2` (ADR-039, accepted under DL-031). S20 (the decoder) added `github.com/jackc/pglogrepl`
-   v0.0.0-20260824121319-4ae5c490f7ce with `jackc/pgio` v1.0.0 (MIT; ADR-043, Proposed): only `Parse`
+   v0.0.0-20260824121319-4ae5c490f7ce with `jackc/pgio` v1.0.0 (MIT; ADR-043, accepted under DL-034): only `Parse`
    and the message types, always behind `decoder.SafeParse`. No cgo in the main binary.
    `go.sum` is committed and CI runs `go mod verify`.
 7. CI matches the banned words (below) in files, strings and commit messages as whole words or
@@ -450,15 +455,27 @@ and "open source" until the repo is public. Style bans: "revolutionary", "world-
   re-slot with missing frames, ledger_function_changed; on a private Homebrew cluster: E02 rewind, E05, E07, E03,
   E08 (skipped in Docker mode). `TestCaptureCorpus` (`-update-corpus`). `cmd/deedglass` `TestDecoderCommandGoldens`
   (`testdata/decoder/`), `TestDecoderWordsCopy`. `internal/gate` `TestEvidenceJSON` (ADR-044). The migration count is 19.
+- S21 (L2): `internal/witness/l2` is pure (archtest). `TestFootprintTable` (30 rows in
+  `testdata/footprint/cases.json`), `TestCompareTable` (S21 §6), `TestCompareProperty` (a fitting
+  frame never gives a violation; one extra row always does), `TestNoGapBecomesViolation` (every L2
+  catalog code through `Decide`), `TestHero`, `TestRenderGoldens` (`testdata/golden`, 80/120 columns,
+  TTY and plain, redacted, many columns, `detail_hero.json`), `TestCrossCheck`, `TestDetailCap`.
+  `internal/gate` (integration): `TestL2FrameArrives`, `TestL2FrameBeforeB1` (the race),
+  `TestL2UnknownExecution` (E06), `TestL2SlotLostAndMissing` (and halted/dropped decoders),
+  `TestL2Amendments` (late VERIFIED, multiple_transactions, l2_late_confirmed, the 3-amendment
+  limit, the chain). `cmd/deedglass` `TestWitnessL2Live` (real decoder, CLI, API, `/mcp/native` with
+  the Go SDK, an amendment, export → verify), `TestL2Budget` (`make bench-l2`). `attack/`: group W
+  (W01–W13, `expectedDigestW`, ADR-046) and H08–H11 run; every case points the decoder at its clone
+  (`H.L2Ready`). `examples/demo` `TestHeroScript` (`make demo-hero-check`). The migration count is 20.
 - `cmd/deedglass verify` (S05): 80 golden cases in `testdata/verify/<case>/{args,stdout,stderr,exit}`
   (`go test ./cmd/deedglass -run TestVerifyGolden -update`), every vector's code and exit, `--keys`
   URL rules (same-host redirects, 1 MiB, timeout, loopback-only http), key-set merge conflicts, no
   network without a `--keys` URL, terminal sanitizing.
 - `web/verify` (S05): vectors, parity 500/500, strict, JCS, keys (A13, RFC 8032, Wycheproof), page
   safety (CSP, no HTML from strings, no storage, one fetch).
-- `attack/` (S18): 85 case ids (66 V0 + 19 V7: H01–H11, J01–J04, K01–K04), the outcome enum, the
+- `attack/` (S18): 98 case ids (66 V0 + 19 V7: H01–H11, J01–J04, K01–K04 + S21's W01–W13), the outcome enum, the
   demo sets, one pinned digest per group set (`expectedDigest` A–G after ADR-021,
-  `expectedDigestV7` H/J/K, ADR-040; a group without a pin fails), `TestADR021WordsOnly`, `needs`
+  `expectedDigestV7` H/J/K, ADR-040, `expectedDigestW` W, ADR-046; a group without a pin fails), `TestADR021WordsOnly`, `needs`
   names S19–S37 and stays outside the digest, V7 OWASP tags only ASI01/02/03/10. `make attack`
   (tag `attack`): a real `serve` built with `-tags attackhooks` (hosts-file DNS, dev only;
   `TestNoAttackHooks` keeps it out of default builds), per-case target clones, the five

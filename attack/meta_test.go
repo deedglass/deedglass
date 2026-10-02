@@ -27,6 +27,9 @@ const (
 	expectedDigestV0Words = "503500269dfa2de0f6a52979922486e63e5894696b8446d5f8cdc3463f00c14b"
 	// expectedDigestV7 pins groups H, J and K (S18; ADR-040, PROPOSED; the founder approves in chat).
 	expectedDigestV7 = "b1583ab49a0ea3efdfc4bed2f4842a41e5d82a38c58f79b1e5d8d8c78f337428"
+	// expectedDigestW pins group W, the L2 witness cases (S21; ADR-046, PROPOSED; the founder
+	// approves in chat). Declared before the L2 code was written.
+	expectedDigestW = "6662565a418a4a1f3f8218220d387b5df1176c35bca10e6d368213f53573c0ff"
 )
 
 // groupSets maps each pinned digest to its groups. A later session adds its own row (S19 N,
@@ -36,6 +39,7 @@ var groupSets = []struct {
 }{
 	{"ABCDEFG", expectedDigest},
 	{"HJK", expectedDigestV7},
+	{"W", expectedDigestW},
 }
 
 type meta struct {
@@ -102,7 +106,7 @@ func wantIDs() []string {
 	for _, g := range []struct {
 		p string
 		n int
-	}{{"A", 13}, {"B", 7}, {"C", 10}, {"D", 17}, {"E", 11}, {"F", 4}, {"G", 4}, {"H", 11}, {"J", 4}, {"K", 4}} {
+	}{{"A", 13}, {"B", 7}, {"C", 10}, {"D", 17}, {"E", 11}, {"F", 4}, {"G", 4}, {"H", 11}, {"J", 4}, {"K", 4}, {"W", 13}} {
 		for i := 1; i <= g.n; i++ {
 			ids = append(ids, fmt.Sprintf("%s%02d", g.p, i))
 		}
@@ -189,6 +193,8 @@ func TestAttackMeta(t *testing.T) {
 		"D05": "DETECTED", "D06": "UNVERIFIABLE", "G01": "OUTSIDE SCOPE",
 		// S18's demo set.
 		"H01": "DENIED", "H08": "MISMATCH", "K01": "BLOCKED",
+		// S21's hero.
+		"W01": "MISMATCH",
 	} {
 		if !demo[id] || byID[id] != exp || pri[id] != "P0" {
 			t.Errorf("demo case %s: demo=%v expected=%s priority=%s", id, demo[id], byID[id], pri[id])

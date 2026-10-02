@@ -162,12 +162,18 @@ func TestHeartbeatCheck(t *testing.T) {
 	hb := NewHeartbeat(con, t0)
 	other := NewHeartbeat("con_01j9zq7c4m8x2v6t0r3n5k1h7e", t0)
 	ok := hb.Content(t0.Add(5))
+	// The MAC's last hex digit, changed: always a different digit (a fixed "0" equalled the real
+	// one 1 time in 16 and turned the forged case into the valid one; S21).
+	last := "0"
+	if strings.HasSuffix(ok, "0") {
+		last = "1"
+	}
 	cases := map[string]HeartbeatVerdict{
 		ok:                                     HeartbeatValid,
 		hb.Content(t0.Add(-1)):                 HeartbeatStale,
 		other.Content(t0.Add(5)):               HeartbeatForeign,
 		strings.Replace(ok, ":", ":0", 2):      HeartbeatForged,
-		ok[:len(ok)-1] + "0":                   HeartbeatForged,
+		ok[:len(ok)-1] + last:                  HeartbeatForged,
 		strings.ToUpper(ok[:4]) + ok[4:]:       HeartbeatForged,
 		"hb1:" + con + ":5:" + ok[len(ok)-64:]: HeartbeatStale,
 		"hb1:nope":                             HeartbeatForged,

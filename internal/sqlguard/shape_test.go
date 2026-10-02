@@ -484,3 +484,35 @@ func FuzzShape(f *testing.F) {
 		checkShapeInvariants(t, s)
 	})
 }
+
+func TestShapeAnyWhere(t *testing.T) {
+	o := ShapeOptions{AnyWhere: true}
+	cases := []struct {
+		sql         string
+		simple      bool
+		other       bool
+		kind, table string
+		set         int
+	}{
+		{"UPDATE orders SET status = 'shipped' WHERE status = 'paid' AND total_cents > 100", true, true, "update", "public.orders", 1},
+		{"UPDATE orders SET status = 'shipped' WHERE id = 42", true, false, "update", "public.orders", 1},
+		{"UPDATE orders SET status = 'shipped'", true, true, "update", "public.orders", 1},
+		{"DELETE FROM orders WHERE created_at < now() RETURNING id", true, true, "delete", "public.orders", 0},
+		{"UPDATE orders o SET status = 'x' FROM customers c WHERE c.id = o.customer_id", false, false, "update", "", 0},
+		{"UPDATE orders SET status = lower('X') WHERE status > 'a'", false, false, "update", "public.orders", 0},
+		{"UPDATE orders SET status = 'x' WHERE", false, false, "update", "public.orders", 0},
+	}
+	for _, c := range cases {
+		s := ShapeOf(c.sql, o)
+		if s.Simple != c.simple || s.WhereOther != c.other || s.Kind != c.kind || (c.table != "" && s.Table != c.table) || len(s.Set) != c.set {
+			t.Errorf("%s: %+v", c.sql, s)
+		}
+		if s.WhereOther && s.Where != nil {
+			t.Errorf("%s: WhereOther with a key predicate", c.sql)
+		}
+		// Without the option the same statements keep S19's answers.
+		if d := ShapeOf(c.sql, ShapeOptions{}); d.WhereOther {
+			t.Errorf("%s: WhereOther without AnyWhere", c.sql)
+		}
+	}
+}

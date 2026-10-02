@@ -4,35 +4,59 @@ Every Witness verdict lists its reasons: what each check found, or what it could
 
 | Code | Class | Level | Message | What to do next |
 |---|---|---|---|---|
+| `decoder_halted` | gap | L2 | `The decoder for this connector has stopped (publication_missing), so Postgres's change log wasn't read.` | Run deedglass decoder status; it names the cause and the fix. |
 | `edge_reported_success` | pass | L0 | `The edge reported success. Deedglass did not run this call itself.` | Nothing. Proxy-mode calls stay at L0 unless the system of record is witnessed (L2). |
+| `footprint_matched` | pass | L2 | `Postgres committed 1 row in public.orders, as the statement said.` | Nothing. |
+| `footprint_unknown` | gap | L2 | `The statement is too complex for Deedglass to predict which rows it touches (UPDATE … FROM), so L2 can't compare.` | Use a single-table statement with a key in WHERE, or a controlled function that declares what it writes. |
 | `internal_error` | gap | any | `The witness hit an internal error, so the action isn't marked verified.` | Report it with the action id; it is a bug in Deedglass. |
+| `keys_unknown` | gap | L2 | `Deedglass couldn't match rows in public.orders to the statement's keys (the table has no primary key).` | Give the table a primary key, or raise decoder.max_images_per_tx for large statements. |
+| `l2_timeout` | gap | L2 | `Postgres's change log didn't show this action within 10s.` | Check deedglass decoder status. If the change log shows it later, an amendment deed records the result. |
+| `ledger_mismatch` | violation | L2 | `The ledger row in Postgres doesn't match what Deedglass authorized (sql_digest).` | Treat the execution path as compromised: the statement that ran isn't the one the policy allowed. |
 | `level_below_required` | gap | none | `The policy asks for L1. The strongest clean evidence was L0.` | Fix what kept the stronger level from running (the other reasons say what), or lower verify: in the policy. |
+| `marker_count` | violation | L2 | `This action's transaction in Postgres holds 2 ledger rows and 1 markers, not one of each.` | Treat the database as tampered with: something wrote Deedglass's ledger outside begin_action. |
+| `marker_mismatch` | violation | L2 | `This action's transaction in Postgres doesn't match its own ledger row (the marker names another action).` | Treat the database as tampered with: the ledger row and the marker disagree. |
+| `missing_change` | violation | L2 | `The agent reported 1 row changed in public.orders, but Postgres committed 0.` | Check the target: the change the tool reported isn't in Postgres's change log. |
+| `multiple_transactions` | violation | L2 | `2 transactions in Postgres claim this action. Only one can be real.` | Treat the database as tampered with: a ledger row and marker for this action were written again. |
 | `no_checks` | gap | none | `No check could run for this action.` | Check that the tool reports a result. |
+| `no_evidence` | gap | L2 | `This action's ledger row is in Postgres, but its transaction never appeared in the change log.` | Run deedglass decoder status: the slot may have been recreated after the action committed. |
+| `old_image_missing` | gap | L2 | `public.orders doesn't keep full old rows (REPLICA IDENTITY DEFAULT), so Deedglass can't tell which columns changed.` | Run ALTER TABLE … REPLICA IDENTITY FULL on the table (docs/POSTGRES_DEPLOYMENT.md has the cost note). |
 | `outcome_unknown` | gap | L0 | `Deedglass couldn't tell whether the tool ran (timeout). It may have.` | Check the target system for the change, and the connector's timeout. |
 | `postcondition_error` | gap | L1 | `The postcondition couldn't be evaluated: no such key: status.` | Fix the postcondition in the connector config; guard optional fields with has(). |
 | `postcondition_failed` | violation | L1 | `orders.update_status reported success, but orders.get says status is "pending", not "shipped".` | Read the diff, then check the target system: the write isn't there as the tool said. |
 | `postcondition_held` | pass | L1 | `Postcondition held: observation.body.status == args.status.` | Nothing. |
+| `publication_gap` | gap | L2 | `The publication changed while this action ran, so the change log may be missing its rows.` | Nothing to fix for this action. Change deedglass_pub only while no agent writes. |
 | `readback_absent` | violation | L1 | `orders.update_status reported success, but orders.get found nothing at /v1/orders/42.` | Check the target system: the record the tool said it wrote isn't there. |
 | `readback_failed` | gap | L1 | `The read-back orders.get failed (upstream_error), so the result couldn't be confirmed.` | Check the connector (deedglass connector test) and the target's health. |
 | `readback_matched` | pass | L1 | `Read back orders.get: status is "shipped".` | Nothing. |
 | `readback_not_found` | gap | L1 | `orders.get found nothing at /v1/orders/42. It may not be visible yet.` | If the target is eventually consistent, set readback.consistency to eventual. |
 | `readback_skipped` | note | L1 | `No read-back: the statement isn't a single-row update by primary key.` | Nothing. Add a read-back, or witness the connector at L2. |
 | `readback_timeout` | gap | L1 | `The read-back orders.get took longer than 10 s.` | Check the target's latency, or raise witness.readback_timeout. |
+| `relation_changed` | gap | L2 | `The structure of public.orders changed in this transaction, so the comparison may be incomplete.` | Nothing to fix. Run schema changes outside agent actions. |
 | `response_schema_invalid` | gap | L0 | `The response didn't match the tool's output schema at body.status, so Deedglass can't read it with confidence.` | Check the tool's output schema against what the service returns now. |
 | `response_schema_valid` | pass | L0 | `The response matched the tool's output schema.` | Nothing. |
+| `row_count_exceeded` | violation | L2 | `Postgres changed 301 rows in public.orders. The agent reported 1.` | Read the diff: a trigger, rule or cascade changed rows the statement didn't name. |
+| `row_limit_exceeded` | violation | L2 | `Postgres changed 301 rows in public.orders; this connector allows at most 1 per action.` | Read the diff, then check why one action changed this many rows. |
 | `row_missing` | gap | L1 | `Row id = 42 in public.orders isn't there any more, so a read-back can't confirm it.` | Check whether another process deleted the row. |
 | `row_superseded` | gap | L1 | `Another transaction changed row id = 42 in public.orders after this action, so a read-back can't confirm it.` | Nothing to fix. L2 (the change stream) sees each transaction on its own. |
 | `row_written` | pass | L1 | `Postgres shows row id = 42 in public.orders was last written by this action's transaction.` | Nothing. |
 | `schema_skipped` | note | L0 | `The response was too large to check against the output schema.` | Nothing. Responses over 256 KiB are kept as a digest only. |
+| `slot_dropped` | gap | L2 | `The replication slot was dropped while this action waited, so its change log can't be read.` | Nothing to fix for this action. The next sync creates a new slot for later ones. |
+| `slot_invalidated` | gap | L2 | `Postgres invalidated the replication slot (wal_removed), so this action's change log is gone.` | Read deedglass decoder status, raise max_slot_wal_keep_size if WAL ran out, then drop and recreate the slot. |
 | `tool_reported_success` | pass | L0 | `The tool reported success.` | Nothing. Add a read-back to reach L1. |
+| `triggers_present` | note | L2 | `public.orders has triggers (orders_ship_open_batch). Their writes to watched tables are checked; writes elsewhere aren't visible.` | Nothing. Set witness.strict_triggers to treat unwatched trigger writes as a gap. |
+| `triggers_unwatched` | gap | L2 | `public.orders has triggers that may write tables Deedglass doesn't watch.` | Watch every table the triggers write, or turn off witness.strict_triggers. |
+| `unexpected_column` | violation | L2 | `Postgres changed total_cents on 1 row in public.orders. The statement set only status.` | If a trigger maintains the column on purpose, list it in the connector's witness.auto_columns. |
+| `unexpected_key` | violation | L2 | `300 changed rows in public.orders are outside the rows the statement named (id = 42).` | Read the diff: the unexpected rows are listed first after the expected ones. |
+| `unexpected_operation` | violation | L2 | `Postgres deleted 1 row in public.orders. The statement only updates rows.` | Look for a trigger or rule that deletes, inserts or truncates on this table. |
+| `unexpected_table` | violation | L2 | `Postgres also changed 1 row in public.audit, which the statement doesn't touch.` | Look for a trigger or rule on the statement's table that writes this one. |
+| `unwatched_table` | gap | L2 | `public.invoices isn't watched, so Postgres's change log doesn't show it.` | Add the table to witness.watched_tables and run deedglass connector postgres init again. |
 | `value_mismatch` | violation | L1, L2 | `Postgres has status = "cancelled" on row id = 42 in public.orders. The statement set "shipped".` | Look for a trigger, rule or default that rewrites the column. |
 | `witness_gave_up` | gap | any | `The witness stopped after 8 attempts: the target is unreachable.` | Check the connector and the server log for the error. |
 
-## Reserved for S20 and S21
+## Reserved
 
-These codes are taken for the decoder and L2. They aren't used yet.
+These codes were set aside before L2 chose its names. They stay unused, so they never mean something else.
 
-- `l2_timeout`
 - `rows_outside_footprint`
 - `column_outside_set`
 - `replica_identity_missing`

@@ -12,8 +12,15 @@
 #   demo.sh follow    make demo-follow: deedglass actions list --follow --connector orders
 #   demo.sh verify    make demo-verify [SINCE=10m]: export recent deeds and verify the chain
 #   demo.sh check     make demo-check: the Postgres connector's readiness report (S17)
+#   demo.sh trigger-on   make demo-trigger-on: the hero's legacy trigger (S21; orders-db only)
+#   demo.sh trigger-off  make demo-trigger-off: drop it
+#   demo.sh order-reset  make demo-order-reset [ORDER=42]: one order back to paid, or every order
+#                        back to the seed's status (as acme_owner)
+#   demo.sh hero      make demo-hero: the L2 hero, VERIFIED then MISMATCH (examples/demo/scripts/hero.sh)
+#   demo.sh diff      make demo-diff [ID=act_…]: deedglass actions show --diff (default: the newest
+#                     postgres.execute action)
 #
-# Env: DEMO_PORT (default 8080, or what .env says), HTTP=1, HARD=1, CLIENT, KEYS=1, SINCE, NO_COLOR.
+# Env: DEMO_PORT (default 8080, or what .env says), HTTP=1, HARD=1, CLIENT, KEYS=1, SINCE, ORDER, ID, NO_COLOR.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
@@ -147,6 +154,63 @@ postgres_up() {
   ok "postgres connector · deedglass_agent · credentials in the vault · make demo-check"
 }
 
+# orders_only refuses to touch any database but the demo's own orders-db (published on
+# 127.0.0.1:55434): the hero's trigger must never reach anything else (S21 §7).
+orders_only() {
+  [ -f "$ENV_FILE" ] || fail "The demo stack isn't set up. Run make demo-up first."
+  need_docker
+  published="$(compose port orders-db 5432 2>/dev/null || true)"
+  [ "$published" = "127.0.0.1:55434" ] || fail "The demo's orders-db isn't running on 127.0.0.1:55434 (found '${published:-nothing}'). Run make demo-up first."
+}
+
+orders_file() { compose exec -T -e PGOPTIONS='-c client_min_messages=warning' orders-db psql -X -q -v ON_ERROR_STOP=1 -U "${2:-postgres}" -d acme -f "/docker-entrypoint-initdb.d/$1" >/dev/null; }
+
+trigger_on() {
+  orders_only
+  n="$(orders_sql "select count(*) from public.orders where id <> 42 and status <> 'shipped'")"
+  if [ "${n:-0}" -lt 300 ]; then
+    fail "The seed has only $n open orders besides 42; the hero needs 300. Run make demo-order-reset, or make demo-reset."
+  fi
+  orders_file 10_trigger_on.sql || fail "The trigger couldn't be created. Run make demo-psql and check public.orders."
+  ok "Trigger on · orders_ship_open_batch · $n open orders besides 42"
+}
+
+trigger_off() {
+  orders_only
+  orders_file 11_trigger_off.sql || fail "The trigger couldn't be dropped. Run make demo-psql and check public.orders."
+  ok "Trigger off · orders_ship_open_batch dropped"
+}
+
+order_reset() {
+  orders_only
+  if [ -n "${ORDER:-}" ]; then
+    case "$ORDER" in *[!0-9]*|'') fail "ORDER must be an order id, like ORDER=42." ;; esac
+    compose exec -T orders-db psql -X -q -v ON_ERROR_STOP=1 -U acme_owner -d acme \
+      -c "UPDATE public.orders SET status = 'paid' WHERE id = $ORDER AND status IS DISTINCT FROM 'paid'" >/dev/null ||
+      fail "Order $ORDER couldn't be reset. Run make demo-psql."
+    ok "Order $ORDER · paid"
+    return
+  fi
+  orders_file 12_order_statuses.sql acme_owner || fail "The orders couldn't be reset. Run make demo-reset."
+  ok "Orders reset · $(orders_sql "select count(*) from public.orders where status <> 'shipped' and id <> 42") open besides 42 · order 42 paid"
+}
+
+# decoder_running waits (up to 30 s) until the decoder reads the orders database's slot.
+decoder_running() {
+  for _ in $(seq 1 60); do
+    if api decoder status --connector postgres --json 2>/dev/null | grep -q '"status": *"running"'; then return 0; fi
+    sleep 0.5
+  done
+  return 1
+}
+
+# decoder_fresh: the orders database was just recreated, so its replication slot went with it.
+# Record that (decoder drop seals an admin deed) and let the decoder start a new slot (S21).
+decoder_fresh() {
+  api decoder drop --connector postgres --confirm postgres >/dev/null 2>&1 || true
+  if decoder_running; then ok "decoder · running on a new slot"; else bad "decoder · not running yet (deedglass decoder status says why)"; fi
+}
+
 reset_folder() {
   mkdir -p "$FOLDER/allowed"
   find "$FOLDER" -mindepth 1 -not -path "$FOLDER/allowed" -not -path "$FOLDER/allowed/hello.txt" -exec rm -rf {} + 2>/dev/null || true
@@ -184,6 +248,7 @@ EOF
   chmod 600 "$KEYS_FILE" 2>/dev/null || true
   reset_folder
   postgres_up
+  if decoder_running; then ok "decoder · running · Postgres's change log is witnessed (L2)"; else bad "decoder · not running yet (deedglass decoder status says why)"; fi
   if [ "${HTTP:-}" = "1" ]; then ok "everything · http://127.0.0.1:3001/mcp · gateway at http://127.0.0.1:$PORT/mcp/everything"; fi
   echo "Demo ready. Next: make demo-snippet CLIENT=claude-desktop"
 }
@@ -214,6 +279,7 @@ reset() {
   ok "$FOLDER reset · allowed/hello.txt"
   build_cli >/dev/null
   postgres_up
+  decoder_fresh
   echo "Ready for a new take. The Ledger keeps every deed (HARD=1 wipes it)."
 }
 
@@ -258,6 +324,19 @@ case "${1:-}" in
   psql) need_docker; compose exec orders-db psql -U acme_owner -d acme ;;
   follow) build_cli >/dev/null; cd "$STATE"; host_env "$BIN" actions list --follow --connector "${CONNECTOR:-orders}" --org acme-demo ;;
   check) build_cli >/dev/null; cd "$STATE"; api connector postgres check --connector postgres ;;
+  trigger-on) trigger_on ;;
+  trigger-off) trigger_off ;;
+  order-reset) order_reset ;;
+  decoder-wait) decoder_running || fail "The decoder isn't running. Run deedglass decoder status (make demo-check), or make demo-reset." ;;
+  hero) exec "$DEMO/scripts/hero.sh" ;;
+  diff)
+    build_cli >/dev/null; cd "$STATE"
+    id="${ID:-}"
+    if [ -z "$id" ]; then
+      id="$(host_env "$BIN" actions list --org acme-demo --tool postgres.execute --limit 1 --json | grep -o '"id": *"act_[0-9a-z]*"' | head -1 | grep -o 'act_[0-9a-z]*' || true)"
+    fi
+    [ -n "$id" ] || fail "No postgres.execute action yet. Ask the agent to ship order 42 first."
+    host_env "$BIN" actions show "$id" --diff --org acme-demo ;;
   verify)
     build_cli >/dev/null; cd "$STATE"
     host_env "$BIN" deeds export --org acme-demo --since "${SINCE:-10m}" --out - | host_env "$BIN" verify - ;;

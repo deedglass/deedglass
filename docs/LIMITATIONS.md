@@ -105,9 +105,9 @@ What Deedglass does not do, stated plainly. **Owner: S37**, which finalizes this
 - **The marker alone can be forged.** `pg_logical_emit_message` is open to PUBLIC by default, so any role can write a message that looks like Deedglass's; the ledger row in the same transaction is what authenticates it. Anyone holding `deedglass_agent`'s credentials can write ledger rows through `begin_action`, so Deedglass witnesses what Postgres committed, not whether a compromised Deedglass told the truth ([POSTGRES.md](POSTGRES.md#the-ledger-and-the-marker)).
 - **A REPLICATION role can decode every row change in the database,** not only the watched tables.
 - **`row_limit` caps what comes back, not what Postgres reads;** `statement_timeout` bounds the work.
-- **Triggers can write unwatched tables.** Those writes are invisible to L2 (S21 reports UNVERIFIABLE, never MISMATCH); `check` lists triggers on watched tables by name.
+- **Triggers can write unwatched tables.** Those writes are invisible to L2: the note `triggers_present` names the triggers, and `witness.strict_triggers: true` makes it the gap `triggers_unwatched` (UNVERIFIABLE, never MISMATCH); `check` lists triggers on watched tables by name.
 - **DDL is blocked, not witnessed.**
-- **No L2 yet.** S20 creates the slot and decodes the stream, S21 turns it into verdicts. Until then, Postgres actions are L0, except a single-row `UPDATE` by primary key, which S19 reads back (L1). `Result.Evidence` (`xid8`, `marker_lsn`, `sql_digest`, `command_tag`) isn't stored on the action row; a pending read-back job carries it until the verdict, and the L2 witness reads the ledger in the customer database.
+- **L2 needs the decoder.** A write on a witnessed connector waits for its frame (S21); when the decoder is dropped or disabled there is no L2 and the claim stays at L0 or L1, and when it is halted the gap `decoder_halted` is listed at once.
 - **New tables aren't granted automatically:** run `init` again (no `ALTER DEFAULT PRIVILEGES` in v1).
 - **Roles are cluster-wide.** Two watched databases on one cluster share `deedglass_agent` and `deedglass_witness`, and `init --rotate-passwords` on one changes the password for both.
 - **No overloads** in `functions`, and arguments are scalars (strings, integers up to 2^53−1, booleans, null); send decimals as strings.
@@ -120,7 +120,7 @@ What Deedglass does not do, stated plainly. **Owner: S37**, which finalizes this
 
 - **Edge-reported results are the edge's word.** A call the wrapper forwards is sealed L0 VERIFIED
   with method `edge_reported` when the server says it succeeded; a server that lies is believed
-  until the Witness checks the system of record (Postgres from S21).
+  until the Witness checks the system of record (Postgres, in gateway mode).
 - **Only `tools/call` is governed.** `resources/*`, `prompts/*`, `completion/complete`,
   `subscriptions/listen` and the 2025-era server-to-client requests (`sampling/createMessage`,
   `elicitation/create`, `roots/list`) pass through ungoverned in v1 ([MCP.md](MCP.md)).
@@ -223,7 +223,7 @@ What policies can't do ([POLICY_LANGUAGE.md](POLICY_LANGUAGE.md) section 12):
   `spend_per_day` compares usage in the snapshot's currency only.
 - **Static SQL analysis can't see what Postgres runs on your behalf.** Triggers, rules, function
   bodies, `DO` bodies and settings changed earlier in a session are invisible to sqlguard. The L2
-  witness (S20 and S21) sees what Postgres actually changed ([SQLGUARD.md](SQLGUARD.md) section 12).
+  witness sees what Postgres actually changed ([SQLGUARD.md](SQLGUARD.md) section 12; [WITNESS.md](WITNESS.md)).
 - **sqlguard is conservative, so some valid SQL is refused as ambiguous**: a backslash in a plain
   `'…'` string, non-ASCII identifiers outside quotes, `BEGIN ATOMIC` function bodies, and any
   statement it doesn't recognise. A string with several statements counts as at least
@@ -275,9 +275,9 @@ What the Gate doesn't do ([GATE.md](GATE.md)):
 
 - **A proxy-mode result is the edge's word.** In proxy mode the edge runs the tool and reports the
   result; the deed says `edge_reported` and records what the edge said. Deedglass can't tell a
-  truthful edge from one that lies. S21's L2 witness checks Postgres on its own.
+  truthful edge from one that lies. The L2 witness checks Postgres on its own (gateway mode).
 - **L0 means the tool reported success.** It is the tool's own answer (method `reported`), not an
-  independent check. Without a read-back (S19) or L2 (S21), a verdict stays at L0.
+  independent check. Without a read-back (S19) or L2, a verdict stays at L0.
 - **Timeouts and crashes become UNVERIFIABLE: it may have run.** When a tool doesn't answer within
   `gate.execute_timeout`, the edge never reports, or the server stops while a tool runs, the action
   is sealed with `execution.status: unknown` and the verdict UNVERIFIABLE. The deed says plainly
@@ -309,8 +309,9 @@ What the Gate doesn't do ([GATE.md](GATE.md)):
 
 - **It starts after the model was fooled.** The cases test what Deedglass does with the calls a
   manipulated model makes; they don't measure how often a model falls for an injection.
-- **H08 to H11 wait on S21.** Their fixtures are declared (`attack/fixtures/sql/witness_h08_h11.sql`),
-  but without the L2 witness there is no verdict to observe, so they report "waiting on S21".
+- **The W cases and H08 to H11 run on PostgreSQL 18 only** (`make attack`). W12's publication gap is
+  what PostgreSQL 18 decodes; 16 and 17 halt the decoder instead (`decoder_halted`), which the decoder
+  suite covers on all three.
 - **It runs in dev with the private-network override**, so the server can reach the harness's
   loopback upstreams. Metadata, link-local and cross-host targets stay blocked even then (K01,
   K02); the prod-only rules for private ranges are covered by the egress corpus, not by the suite.
@@ -328,7 +329,7 @@ What the Witness doesn't do ([WITNESS.md](WITNESS.md)):
   change can make a REST read-back disagree, and the diff says so. For a Postgres row, a later
   writer makes the read-back a gap (`row_superseded`), never a `MISMATCH`.
 - **L1 checks only the fields you name.** A tool that also changed something else is invisible to
-  L1; L2 (S21) sees every row change for Postgres.
+  L1; L2 sees every row change of the watched tables for Postgres.
 - **A read-back target that lies consistently can't be caught by reading it back.** L1 trusts the
   read tool as much as the system it reads.
 
@@ -353,6 +354,33 @@ What the decoder doesn't do ([DECODER.md](DECODER.md), [OBSERVATION_BOUNDARY.md]
   slot_orphaned`, with the SQL to drop it by hand).
 - **A logical message's content is held in memory whole.** A role that writes a huge message makes
   the decoder hold it once.
+
+## The L2 witness (S21)
+
+- **Expectations only for simple statements.** A single-table `UPDATE`, `DELETE` or `INSERT … VALUES`
+  gets a footprint; a JOIN, `UPDATE … FROM`, a WITH query, `ON CONFLICT`, `MERGE` or a subquery in
+  SET gets the gap `footprint_unknown`, plus `witness.max_rows` when the connector sets it.
+- **Column checks need `REPLICA IDENTITY FULL`.** Without it, counts and keys are still compared and
+  column checks are the gap `old_image_missing`.
+- **The value check is narrow.** Only plain string, integer and boolean SET literals, only for text,
+  varchar, char, integer and boolean columns. Numerics, timestamps, JSON and expressions aren't
+  compared (that isn't a gap).
+- **Keys of other types aren't matched.** A primary key whose type isn't text, an integer, a boolean
+  or a uuid is checked by count only.
+- **The diff keeps 20 rows** (`witness.diff_rows`, at most 100) and the decoder keeps at most 1,000
+  row images per transaction; counts and the digest cover every row.
+- **No L2 in proxy mode** (a wrapped third-party Postgres MCP server): there is no marker to bind.
+- **No L2 for actions recovered after a crash** (executing past its deadline, sealed `unknown` by the
+  sweeper): the sweeper has no connector at hand, so it seals at L0. The ledger row and the frame
+  stay, and reconcile reports them.
+- **At most three amendment deeds per action**, while the decoder keeps the frames (7 days).
+- **Trigger bodies aren't read.** Deedglass sees what a trigger did to watched tables, not what it
+  might do elsewhere.
+- **The 100 writes/s benchmark's tail varies.** Commit to verdict p50 met the contract (< 1 s) in every
+  run on an Apple M1, and the aim (< 300 ms) in most; p99 ranged from about 1 s to several seconds,
+  in both the decoder's SQL peek and the witness step under sustained load (`make bench-l2`,
+  `bench/results/2026-10-02-darwin-arm64-l2.json`). S35 re-measures on an idle machine and decides on
+  the streaming transport.
 
 ## What this page does not do
 

@@ -12,6 +12,27 @@ cases:
   - name: the native connector's status update runs
     input: { tool: { name: postgres.execute, connector_type: postgres }, sql: "UPDATE orders SET status = 'shipped' WHERE id = $1" }
     expect: { decision: allow, rule: allow-order-status-updates }
+  - name: the hero's update of order 42 runs, and Postgres witnesses it (S21)
+    input: { tool: { name: postgres.execute, connector_type: postgres }, sql: "UPDATE public.orders SET status = 'shipped' WHERE id = 42" }
+    expect: { decision: allow, rule: allow-order-status-updates }
+  - name: a status update of every order through the native connector never runs
+    input: { tool: { name: postgres.execute, connector_type: postgres }, sql: "UPDATE public.orders SET status = 'shipped'" }
+    expect: { decision: deny, rule: block-unscoped-writes }
+  - name: two status updates in one call through the native connector never run
+    input: { tool: { name: postgres.execute, connector_type: postgres }, sql: "UPDATE orders SET status = 'shipped' WHERE id = 42; UPDATE orders SET status = 'shipped' WHERE id = 43" }
+    expect: { decision: deny, rule: block-schema-changes }
+  - name: a DROP through the native connector gets the brand's sentence
+    input: { tool: { name: postgres.execute, connector_type: postgres }, sql: "DROP TABLE public.orders" }
+    expect:
+      decision: deny
+      rule: block-destructive-sql
+      message: 'Blocked by policy "block-destructive-sql": DROP is never allowed for agents.'
+  - name: an ALTER through the native connector is a schema change
+    input: { tool: { name: postgres.execute, connector_type: postgres }, sql: "ALTER TABLE public.orders ADD COLUMN note text" }
+    expect: { decision: deny, rule: block-schema-changes }
+  - name: how many orders are pending runs through the native connector
+    input: { tool: { name: postgres.query, connector_type: postgres }, sql: "SELECT count(*) FROM public.orders WHERE status = 'pending'" }
+    expect: { decision: allow, rule: allow-order-reads }
   - name: a refund through the native connector waits for a person
     input: { tool: { name: postgres.execute, connector_type: postgres }, sql: "INSERT INTO refunds (id, order_id, amount_cents, reason, created_at) VALUES (999, 42, 500, 'damaged', now())" }
     expect: { decision: require_approval, rule: orders-writes-need-approval }

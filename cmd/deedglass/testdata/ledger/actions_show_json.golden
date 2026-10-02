@@ -99,7 +99,16 @@ exit 0
       "summary": "Postgres changed 301 rows in public.orders. The agent reported 1.",
       "version": 1,
       "witnessed_at": "TIME"
-    }
+    },
+    "history": [
+      {
+        "deed": "deed_ID",
+        "kind": "action",
+        "level": "L2",
+        "verdict": "MISMATCH",
+        "at": "TIME"
+      }
+    ]
   },
   "cost": null,
   "request_digest": "sha256:HASH",

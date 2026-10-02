@@ -14,6 +14,7 @@ LDFLAGS  := -s -w -X $(BI).Version=$(VERSION) -X $(BI).Commit=$(COMMIT) -X $(BI)
 	web-verify-install web-verify-test web-verify-build web-verify-serve gencopy genmark bench-mark bench-ledger bench-stop bench-intents bench-gate bench-witness policy-test \
 	fuzz-policy fuzz-policy-short bench-policy bench-eval mcp-it bench-mcp \
 	demo-up demo-down demo-reset demo-status demo-snippet demo-psql demo-follow demo-verify demo-check demo-smoke bench-gateway \
+	demo-trigger-on demo-trigger-off demo-order-reset demo-hero demo-hero-check demo-diff bench-l2 \
 	mock-orders bench-connectors bench-postgres bench-decoder attack attack-report vuln
 
 all: ci
@@ -111,6 +112,11 @@ bench-postgres: ## S17: the Postgres connector's extra latency over raw pgx (p50
 bench-decoder: ## S20: SafeParse vs Parse, then 100 writes/s for 60 s on a throwaway PG 18 (commit to frame persisted p50 < 250 ms, p99 < 1 s; poll round p50 < 20 ms); JSON in bench/results/
 	@out="$(CURDIR)/bench/results/$$(date +%F)-$$(go env GOOS)-$$(go env GOARCH)-decoder.json"; log="$(CURDIR)/.tmp/bench-decoder.log"; mkdir -p "$(CURDIR)/.tmp" "$(CURDIR)/bench/results"; \
 	DEEDGLASS_IT_BENCH=1 DEEDGLASS_DECODER_BENCH_OUT="$$out" DEEDGLASS_IT_PKGS=./internal/decoder/ DEEDGLASS_IT_GOFLAGS="-run TestDecoderBudget -v -timeout 900s" \
+	scripts/integration_local.sh > "$$log" 2>&1; st=$$?; grep -E 'PERF|--- (PASS|FAIL)' "$$log"; echo "raw: $$out"; exit $$st
+
+bench-l2: ## S21: Derive, Compare (1,000 images; 200,000 rows), the render, then 100 writes/s for 60 s through a real serve on a throwaway PG 18 (commit to verdict p50 < 1 s); JSON in bench/results/
+	@out="$(CURDIR)/bench/results/$$(date +%F)-$$(go env GOOS)-$$(go env GOARCH)-l2.json"; log="$(CURDIR)/.tmp/bench-l2.log"; mkdir -p "$(CURDIR)/.tmp" "$(CURDIR)/bench/results"; \
+	DEEDGLASS_IT_BENCH=1 DEEDGLASS_L2_BENCH_OUT="$$out" DEEDGLASS_IT_PKGS=./cmd/deedglass/ DEEDGLASS_IT_GOFLAGS="-run TestL2Budget -v -timeout 900s" \
 	scripts/integration_local.sh > "$$log" 2>&1; st=$$?; grep -E 'PERF|--- (PASS|FAIL)' "$$log"; echo "raw: $$out"; exit $$st
 
 bench-connectors: ## S16: vault open, redaction, egress classification and REST overhead (no network); JSON in bench/results/
@@ -286,6 +292,24 @@ demo-verify: ## export the demo's recent deeds (SINCE=10m) and verify the chain
 
 demo-check: ## S17: the Postgres connector's readiness report on the demo's orders database (make demo-up first)
 	@examples/demo/scripts/demo.sh check
+
+demo-trigger-on: ## S21: the hero's legacy trigger on the demo's orders-db (it ships 300 more orders when one ships)
+	@examples/demo/scripts/demo.sh trigger-on
+
+demo-trigger-off: ## S21: drop the hero's trigger
+	@examples/demo/scripts/demo.sh trigger-off
+
+demo-order-reset: ## S21: ORDER=42 sets one order back to paid; no ORDER puts every order back to the seed's status
+	@examples/demo/scripts/demo.sh order-reset
+
+demo-hero: ## S21: the L2 hero in one command (VERIFIED, then MISMATCH with 301 rows, the diff, verify); HERO_PACE=2 for recording
+	@examples/demo/scripts/demo.sh hero
+
+demo-diff: ## S21: deedglass actions show --diff for ID=act_… (default: the newest postgres.execute action)
+	@examples/demo/scripts/demo.sh diff
+
+demo-hero-check: ## S21: TestHeroScript, hero.sh twice with demo-reset between (make demo-up first)
+	DEEDGLASS_DEMO=1 $(GO) test -tags demo -count=1 -v -run TestHeroScript ./examples/demo/
 
 demo-smoke: ## TestDemoScript against the running demo stack (make demo-up first)
 	DEEDGLASS_DEMO=1 $(GO) test -tags demo -count=1 -v -run TestDemoScript ./examples/demo/

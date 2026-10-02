@@ -188,7 +188,7 @@ builds it. Hidden commands work but aren't in `deedglass help`.
 | `deedglass policy diff` | Policies | Compare two policy versions | soon (S27) |
 | `deedglass act <tool> [--args '{"k":"v"}'] [--mode gateway|proxy] [--wait 60s] [--idempotency-key K] [--json]` | Actions | Send a test action through the Gate | built |
 | `deedglass actions list [--agent agt_…] [--tool stripe.*] [--state …] [--decision …] [--verdict MISMATCH] [--level L2] [--since 1h] [--q text] [--limit 25] [--cursor …] [--json] [--follow] [--connector orders]` | Actions | List actions | built |
-| `deedglass actions show <act_…> [--wait] [--json]` | Actions | Show one action and its events | built |
+| `deedglass actions show <act_…> [--wait] [--diff] [--json]` | Actions | Show one action, its events and its L2 diff | built |
 | `deedglass actions cancel <act_…> [--json]` | Actions | Cancel a pending action | built |
 | `deedglass approve` | Actions | Approve a pending action | soon (S22) |
 | `deedglass deny` | Actions | Deny a pending action | soon (S22) |
@@ -341,7 +341,8 @@ Full reference: [LEDGER.md](LEDGER.md), [RETENTION.md](RETENTION.md).
 | Command | Does | Exit |
 |---|---|---|
 | `actions list [--agent] [--tool stripe.*] [--state] [--decision] [--verdict] [--level] [--on-behalf-of] [--since 1h] [--q text] [--limit 25] [--cursor]` | newest first; the footer says `5 of 1,204` and prints the next page's command | 0; 2 for a bad filter |
-| `actions show <act_…> [--wait]` | the decision, execution, witness (with the diff sentence), deeds and the event path; `--wait` (S13) re-reads it until it is sealed or waiting for a person (an action already waiting waits for its next change), at most 25 s | 0; 1 when not found |
+| `actions show <act_…> [--wait]` | the decision, execution, witness (with the diff sentence), the witness `history` when an amendment deed exists (S21), deeds and the event path; `--wait` (S13) re-reads it until it is sealed or waiting for a person (an action already waiting waits for its next change), at most 25 s | 0; 1 when not found |
+| `actions show <act_…> --diff [--json]` | S21: the claim, then L2's expected and observed lines, the changed rows (expected first) and the "Witnessed by Postgres" footer ([witness/DIFFS.md](witness/DIFFS.md)); `--json` prints the `witness_detail` | 0; 1 when not found or not witnessed yet |
 | `deeds list [--from-seq] [--to-seq] [--kind] [--action] [--order asc|desc]` | deeds by seq | 0 |
 | `deeds show <deed_…|seq>` | a summary; `--json` prints the stored bytes verbatim | 0; 1 when not found |
 | `deeds export [--out <file>|-] [--format tar.gz|jsonl] [--from-seq] [--to-seq] [--since 1h]` | a sealed export bundle (or `.jsonl`), written to a temporary file and renamed at the end; `--out -` writes to stdout for `deedglass verify -`, with the summary on stderr; `--since` keeps the deeds issued in that window (S13) | 0; 1 for an empty range (nothing is written) |

@@ -5330,6 +5330,23 @@ components:
         witnessed_at: {type: string, format: date-time}
         detail_digest: {type: [string, "null"], description: '`sha256:` of JCS(witness_detail): the deed''s `witness.detail_digest`.'}
         detail: {$ref: "#/components/schemas/WitnessDetail"}
+        history:
+          type: array
+          description: >-
+            `GET /v1/actions/{id}` only (S21): every witness section sealed about the action, oldest
+            first: the action deed, then any amendment deeds (a later verdict never edits a deed;
+            at most three amendments). An entry a later amendment replaced names the reason it
+            stopped where it did (`l2_timeout`, …).
+          items:
+            type: object
+            required: [deed, kind, level, verdict, at]
+            properties:
+              deed: {type: string, pattern: "^deed_[0-7][0-9a-hjkmnp-tv-z]{25}$"}
+              kind: {type: string, enum: [action, amendment]}
+              level: {type: string, enum: [L0, L1, L2]}
+              verdict: {type: string, enum: [VERIFIED, MISMATCH, UNVERIFIABLE]}
+              at: {type: string, format: date-time}
+              reason: {type: string}
       examples:
         - object: witness
           level: L1
@@ -5414,6 +5431,83 @@ components:
             response_digest: {type: string}
             attempts: {type: integer, minimum: 1, maximum: 5}
             latency_ms: {type: integer, minimum: 0}
+        transaction:
+          type: object
+          description: >-
+            L2 only (S21): the committed transaction the verdict is about. Every L2 verdict that
+            read a frame names its system, timeline and commit LSN; `marker_lsn` is evidence only
+            and is never compared.
+          required: [system_id, timeline, commit_lsn, xid, committed_at]
+          properties:
+            system_id: {type: string}
+            timeline: {type: integer}
+            commit_lsn: {type: string}
+            xid: {type: integer}
+            committed_at: {type: string, format: date-time}
+            marker_lsn: {type: string}
+            changes_digest: {type: string}
+        expected:
+          type: object
+          description: L2 only. What the statement should touch (S21 §3.3).
+          required: [derivation, tables]
+          properties:
+            derivation: {type: string, enum: [exact_keys, count_only, contract, explicit, unknown]}
+            why: {type: string}
+            tables:
+              type: array
+              items:
+                type: object
+                required: [table, ops]
+                properties:
+                  table: {type: string}
+                  ops: {type: array, items: {type: string, enum: [insert, update, delete]}}
+                  rows: {type: integer}
+                  max_rows: {type: integer}
+                  keys: {type: array, items: {type: object, additionalProperties: {type: string}}}
+                  columns: {type: array, items: {type: string}}
+        observed:
+          type: object
+          description: L2 only. Exact counts per table, from Postgres's change log.
+          required: [total, tables]
+          properties:
+            total: {type: integer, minimum: 0}
+            tables:
+              type: array
+              items:
+                type: object
+                required: [table, insert, update, delete]
+                properties:
+                  table: {type: string}
+                  insert: {type: integer}
+                  update: {type: integer}
+                  delete: {type: integer}
+                  truncate: {type: integer}
+        rows:
+          type: array
+          description: L2 only. Changed rows, expected ones first, then unexpected ones in stream order (at most witness.diff_rows).
+          items:
+            type: object
+            required: [table, op, key, expected, cells]
+            properties:
+              table: {type: string}
+              op: {type: string, enum: [insert, update, delete]}
+              key: {type: object, additionalProperties: {type: string}}
+              expected: {type: boolean}
+              cells:
+                type: array
+                items:
+                  type: object
+                  required: [column, before, after]
+                  properties:
+                    column: {type: string}
+                    before: {type: [string, "null"]}
+                    after: {type: [string, "null"], description: 'Postgres''s text output; a sensitive column is "•••".'}
+        rows_shown: {type: integer, minimum: 0}
+        rows_more: {type: integer, minimum: 0}
+        columns_more: {type: integer, minimum: 0}
+        redacted: {type: array, items: {type: string}, description: 'schema.table.column of the sensitive columns shown as "•••".'}
+        frames: {type: integer, minimum: 0, description: How many transactions in the change log named the action.}
+        frame_ids: {type: array, items: {type: string}}
     ActionDecision:
       type: [object, "null"]
       required: [outcome, code, source, rule_id, reason, message, policy, policy_version, shadow]

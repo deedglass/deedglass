@@ -3,7 +3,7 @@
 Other tools log what your agent asked for. The Witness shows what it actually did. After a tool
 runs, it compares what the tool reported with what the target shows, and records a **verdict**
 with a **level** and a **method** in the action's deed. This page covers the verdict engine, the
-L0 checks and the L1 read-backs (S19). L2, the Postgres change stream, arrives in S21.
+L0 checks and the L1 read-backs (S19), and L2: what Postgres's own change log shows (S21).
 
 Every reason a verdict can carry, with what to do next, is in [witness/REASONS.md](witness/REASONS.md)
 (generated from the reason catalog). The formal statements behind each verdict are in
@@ -113,7 +113,7 @@ Worked cases (each one is a test, `TestDecideWorkedTable`):
 | pass | gap (`readback_failed`) | none | L0 | `L0 · VERIFIED`, the gap listed |
 | pass | gap | none | L1 | `L0 · UNVERIFIABLE` + `level_below_required` |
 | gap (`response_schema_invalid`) | pass | none | L0 | `L1 · VERIFIED`, the L0 gap listed |
-| pass | pass | gap (an L2 gap, S21) | L2 | `L1 · UNVERIFIABLE` + `level_below_required` |
+| pass | pass | gap (an L2 gap) | L2 | `L1 · UNVERIFIABLE` + `level_below_required` |
 | pass | pass | violation | L0 | `L2 · MISMATCH` |
 | none | none | none | L0 | `L0 · UNVERIFIABLE` + `no_checks` |
 
@@ -484,18 +484,248 @@ Deedglass witness · L1 · MISMATCH · orders.update_status reported success, bu
 `isError` stays `false`, because the tool did run. Proxy mode (`deedglass mcp wrap`) returns before
 the witness and is unchanged.
 
+## L2: witnessed by Postgres
+
+An agent runs one `UPDATE` to ship order 42, and the tool tells it `1 row`. A forgotten trigger
+quietly ships 300 more. A read-back of order 42 says it is shipped, and it is. Only the database's
+own change log shows the other 300. L2 reads it:
+
+```text
+$ deedglass act postgres.execute --args '{"sql":"UPDATE public.orders SET status = '\''shipped'\'' WHERE id = 42"}'
+✕ executed · postgres.execute · 5 ms
+  witness  L2 · MISMATCH · Postgres changed 301 rows in public.orders. The agent reported 1.
+           ✕ L2  300 changed rows in public.orders are outside the rows the statement named (id = 42).
+
+  expected   UPDATE 1 row in public.orders where id = 42 · sets status
+  observed   UPDATE 301 rows in public.orders · 300 outside id = 42
+
+  public.orders    id    status
+  ✓ expected       42    paid → shipped
+  ✕ unexpected     251   cancelled → shipped
+  ✕ unexpected     82    cancelled → shipped
+  …                first 20 of 301 rows · the rest in Console › Actions
+
+  Witnessed by Postgres · commit 0/1DD2520 · 2026-10-02 03:29:40 UTC
+  deed     deed_01m3xaj5… · seq 16 · sealed
+```
+
+That is the demo's hero (`make demo-hero`, below), printed by a real run. The same statement with
+the trigger off prints `L2 · VERIFIED · Postgres committed 1 row in public.orders, as the statement
+said.` and the "Witnessed by Postgres" line.
+
+```mermaid
+sequenceDiagram
+    participant A as Agent
+    participant G as Gate
+    participant PG as Postgres (the customer's database)
+    participant D as Decoder (S20)
+    participant W as Witness (pure)
+    A->>G: postgres.execute {sql: UPDATE … WHERE id = 42}
+    G->>PG: BEGIN · begin_action (ledger row + marker) · UPDATE · COMMIT
+    PG-->>G: UPDATE 1
+    G->>G: Tx B1: executed → witnessing; l2_match job due at + l2_timeout; the L1 read-back
+    G->>G: the post-commit look (a frame may already be there)
+    D->>PG: read the slot (every 100 ms while an action waits)
+    D->>D: one ledger row and one marker naming the action: the frame is bound; persist; advance
+    D->>G: OnBound(org, act_…)
+    G->>W: Derive (the footprint) · Compare (the frame) · Decide (L0, L1, L2)
+    G->>G: Tx B2: witnessing → verdict → sealed (one deed)
+    G-->>A: the result, and one line when the verdict isn't VERIFIED
+```
+
+**When an action waits for L2.** All of these hold: the tool runs in gateway mode on a `postgres`
+connector with `witness.enabled: true`; the connector's decoder isn't `dropped` or `disabled`; the
+tool may write (`postgres.execute` or `postgres.call`); and the execution `succeeded` or is
+`unknown`. An unknown outcome matters most: when the connection dropped after `COMMIT`, L0 can't
+tell, and Postgres's change log says what happened. A decoder that is already `halted` gives the
+gap `decoder_halted` at once, with no wait.
+
+**When the wait ends.** On the first of these; each runs the same step, which is safe to repeat
+because every state change is a compare-and-set:
+
+| What happened | L2's reasons |
+|---|---|
+| The decoder bound a frame to the action (or the frame was already there when Tx B1 committed) | from the comparison below |
+| The frame's class is `marker_count` or `marker_mismatch` | violation `marker_count` / `marker_mismatch` |
+| The frame's class is `publication_gap` | gap `publication_gap` |
+| `witness.l2_timeout` passed with no frame | gap `l2_timeout` |
+| The slot was lost (invalidated, dropped, missing) or the decoder halted | gap `slot_invalidated`, `slot_dropped` or `decoder_halted` |
+| Reconcile found the ledger row with no transaction | gap `no_evidence` |
+
+When the tool also gets an L1 read-back, the read-back runs first; its reasons are kept, and the
+action is sealed once, across all three levels.
+
+## How Deedglass predicts a statement's rows
+
+Only what the SQL plainly says becomes an expectation. Anything Deedglass can't predict is the gap
+`footprint_unknown`, never a guess.
+
+| The statement | Derivation | What is expected |
+|---|---|---|
+| `UPDATE t SET a = …, b = … WHERE <primary key> = v` (or `IN (v1, v2)`, or every column of a composite key) | `exact_keys` | updates of t only; exactly those keys; the columns a, b and the table's `auto_columns`; the reported row count; the SET values that are plain literals |
+| `UPDATE t SET … WHERE <anything else>`, or with no WHERE | `count_only` | updates of t only; the reported row count; the same columns and values |
+| `DELETE FROM t WHERE <primary key> = v` | `exact_keys` | deletes of t only; those keys; the reported count |
+| `DELETE FROM t WHERE <anything else>` | `count_only` | deletes of t only; the reported count |
+| `INSERT INTO t (…) VALUES (…), (…)` | `count_only`, or `exact_keys` when `RETURNING` gives every primary-key column | inserts of t only; one row per VALUES row |
+| `postgres.call` of a function that declares `writes` | `contract` | per table: its operations, `max_rows`, its columns |
+| An undo (S23) | `explicit` | exactly the footprint the Gate recorded (`actions.witness_expect`) |
+| A JOIN, `UPDATE … FROM`, `DELETE … USING`, a WITH query, a subquery or function call in SET, `ON CONFLICT`, `MERGE`, more than one statement, a WHERE that calls a function Deedglass doesn't know | `unknown` | nothing: the gap `footprint_unknown` names why |
+
+`deedglass.ledger` is never part of a footprint; its one insert is checked separately (below). When
+the result doesn't say how many rows changed, the count isn't asserted and the keys and
+`max_rows` still are.
+
+**The comparison.** Every rule runs and every finding is listed. Counts come from the frame's
+per-table counts, which the decoder takes from the WAL: they are exact, never estimated from
+`EXPLAIN` or the command tag.
+
+| Code | Class | When |
+|---|---|---|
+| `footprint_matched` | pass | nothing contradicts the footprint and nothing is missing |
+| `row_count_exceeded` | violation | more rows changed than the agent was told |
+| `missing_change` | violation | fewer rows changed than the agent was told |
+| `unexpected_table` | violation | a table outside the footprint changed |
+| `unexpected_operation` | violation | a delete where only updates were expected, or a truncate |
+| `unexpected_key` | violation | `exact_keys`, and a changed row isn't one the statement named |
+| `unexpected_column` | violation | an update changed a column outside the SET list and `auto_columns` (needs full old rows) |
+| `value_mismatch` | violation | a SET literal differs from the committed value (text, varchar, char, integers and booleans only) |
+| `row_limit_exceeded` | violation | a table changed more rows than `witness.max_rows` allows |
+| `marker_count`, `marker_mismatch`, `multiple_transactions`, `ledger_mismatch` | violation | the evidence itself doesn't add up (below) |
+| `old_image_missing` | gap | a column check was needed and the table isn't `REPLICA IDENTITY FULL` |
+| `keys_unknown` | gap | the keys can't be matched (no primary key, or past the 1,000-image cap) |
+| `relation_changed` | gap | the table's structure changed in this transaction |
+| `unwatched_table` | gap | a footprint table isn't watched, so the change log doesn't show it |
+| `triggers_present` | note | the table has triggers; their writes to watched tables are checked |
+| `triggers_unwatched` | gap | the same, with `witness.strict_triggers: true` |
+
+**The value check is deliberately narrow.** It compares only a SET value that is a plain string,
+integer or boolean literal (or a `$n` parameter holding one), and only for columns of type `text`,
+`varchar`, `char`, `smallint`, `integer`, `bigint` or `boolean`, as text: integers as Postgres
+prints them, booleans as `t` and `f`. Anything else isn't compared, and that isn't a gap: the
+column was expected to change.
+
+**Cross-checks against the Gate's own record.** Before the rows, the frame's ledger row is checked
+against what the Gate authorized: the org, the agent, the intent hash, and the `sql_digest` of the
+authorized statement with S17's exact recipe. Any difference is `ledger_mismatch`, which names the
+field and never the values. Two transactions that both claim the action are `multiple_transactions`.
+Both can amend a deed that is already sealed.
+
+**The summary.** A `MISMATCH`'s one sentence is the first violation present in this order:
+`row_count_exceeded`, `unexpected_table`, `unexpected_operation`, `missing_change`, `unexpected_key`,
+`unexpected_column`, `value_mismatch`, `row_limit_exceeded`, `multiple_transactions`,
+`ledger_mismatch`, `marker_count`, `marker_mismatch`. The hero's reasons are L0
+`tool_reported_success`, L1 `row_written` (row 42 really is shipped, and that pass stays listed),
+L2 `row_count_exceeded` and `unexpected_key`, and the note `triggers_present`: `L2 · MISMATCH`.
+
+### Reading an L2 MISMATCH
+
+`deedglass actions show <id> --diff` prints the claim and the diff; `--json` prints the
+`witness_detail`. [witness/DIFFS.md](witness/DIFFS.md) explains each line. The API's `witness`
+object adds `history` on `GET /v1/actions/{id}`; `levels.L2` in the detail holds the transaction
+(`system_id`, `timeline`, `commit_lsn`, `xid`, `committed_at`, `marker_lsn`, `changes_digest`),
+the expected footprint, the observed counts and up to `witness.diff_rows` rows. Over MCP the result
+gets one line the agent can repeat word for word:
+
+```text
+Deedglass witness · L2 · MISMATCH · Postgres changed 301 rows in public.orders. The agent reported 1.
+```
+
+with `_meta["com.deedglass/witness"] = {"level": "L2", "verdict": "MISMATCH"}`. When the call's
+wait ends before Postgres's change log has shown the write, the line is `Deedglass witness ·
+pending · Postgres's change log hasn't shown this write yet. The verdict will appear in Console ›
+Actions.`
+
+## Why some results are UNVERIFIABLE
+
+`UNVERIFIABLE` is not a failure of the agent. It says which evidence is missing:
+
+- **The policy asks for L2, and L2 has a gap.** With `verify: L2`, a clean L1 read-back isn't
+  enough: `L1 · UNVERIFIABLE · The policy asks for L2. The strongest clean evidence was L1.`, with
+  the L2 gap listed (`l2_timeout`, `old_image_missing`, `footprint_unknown`, …). With `verify: L0`
+  or `L1`, the same gap is listed and the claim stays at the clean level.
+- **The decoder was late.** The deed is sealed at `witness.l2_timeout` with `l2_timeout`. If the
+  change log shows the action later, an amendment deed records the L2 verdict (below).
+- **The statement is too complex to predict.** `footprint_unknown` names why. Send a single-table
+  statement with the primary key in WHERE, or call a controlled function that declares `writes`.
+- **The table doesn't keep full old rows.** Counts and keys are still checked; column checks need
+  `REPLICA IDENTITY FULL`. A violation still wins over this gap: the hero's trigger on a table
+  without full old rows is still `MISMATCH` (attack case W08).
+
+## Amendment deeds
+
+A deed is never edited. When Postgres's change log shows an action after its deed was sealed, the
+Witness decides again with the new L2 reasons in place of the earlier L2 gap, and:
+
+1. if the claim (level and verdict) differs from the latest sealed one, it seals an **amendment
+   deed** (`kind: amendment`, `amends:` the action deed), updates the action's witness to the new
+   claim, and publishes `action.witnessed` and `deed.sealed`;
+2. if it is the same, it records a note on the action (`l2_late_confirmed`) and seals nothing;
+3. at most three amendments per action: a fourth attempt raises `decoder.alert` (`kind:
+   amendment_limit`) and changes nothing.
+
+`GET /v1/actions/{id}` shows every sealed claim in `witness.history`:
+
+```text
+$ deedglass actions show act_01m3xa8bq5x7qmfgxdcyvz1q64
+  witness    L2 · VERIFIED · postgres.pgoutput
+  history    L1 · UNVERIFIABLE · sealed 03:24:23 · L2 timed out
+             L2 · VERIFIED · amendment deed_01m3xa8q… · 03:24:31 · Postgres committed 1 row in public.orders, as the statement said.
+```
+
+Late evidence can amend while the decoder keeps frames (`decoder.retention`, 7 days).
+[AMENDMENTS.md](AMENDMENTS.md) has the details and how `deedglass verify` counts them.
+
+## Triggers, rules and what L2 can't see
+
+- **L2 sees only the tables in the publication.** A trigger that writes a watched table is caught
+  (the hero); a write to an unwatched, unlogged or temporary table is invisible. The note
+  `triggers_present` names the target table's triggers; `witness.strict_triggers: true` makes it
+  the gap `triggers_unwatched`.
+- **Effects outside Postgres** (an email, a payment, a file) are never in its change log.
+- **Expectations exist only for simple statements.** The rest get `footprint_unknown`, plus
+  `max_rows` when the connector sets it.
+- **Column checks need `REPLICA IDENTITY FULL`.** It costs extra WAL per update; see
+  [POSTGRES_DEPLOYMENT.md](POSTGRES_DEPLOYMENT.md).
+- **No L2 in proxy mode.** A third-party Postgres MCP server wrapped by `deedglass mcp wrap` has no
+  ledger row or marker to bind; its actions stay at L0.
+- **Trigger bodies aren't read.** Deedglass sees what a trigger did, not what it might do.
+
+## Tuning: auto_columns, max_rows, l2_timeout
+
+The connector's `witness.*` settings (all optional; [POSTGRES.md](POSTGRES.md)):
+
+| Setting | Default | Use |
+|---|---|---|
+| `auto_columns` | none | `{public.orders: [updated_at]}`: columns a trigger maintains on purpose, so they don't count as `unexpected_column` |
+| `max_rows` | none | `{public.orders: 1}`: the most rows one action may change in a table (`row_limit_exceeded`), whatever the statement |
+| `strict_triggers` | `false` | treat triggers on a footprint table as the gap `triggers_unwatched` |
+| `l2_timeout` | `10s` (1s to 60s) | how long an action waits for its frame before it is sealed with `l2_timeout` |
+| `diff_rows` | `20` (1 to 100) | how many changed rows the diff keeps |
+
+A controlled function can declare what it writes, so `postgres.call` gets a `contract` footprint:
+
+```yaml
+functions:
+  - name: public.ship_order
+    args: [{name: p_order_id, type: bigint}]
+    writes:
+      - {table: public.orders, ops: [update], max_rows: 1, columns: [status]}
+```
+
 ## What the Witness doesn't do
 
 - **L1 confirms what the target reports now, not what it reported at commit time.** A concurrent
   change can make a REST read-back disagree, and the diff says so. For Postgres, the xmin rule
   turns that case into a gap, never a `MISMATCH`.
 - **L1 checks only the fields you name.** A tool that also changed something else is invisible to
-  L1. L2 (S21) sees every row change for Postgres.
+  L1. L2 sees every row change of the watched tables for Postgres.
 - **A target that lies consistently can't be caught by reading it back.** L1 trusts the read tool
   as much as the system it reads. L2 reads Postgres's own change stream instead.
 - **No read-back in proxy mode, and none for an unknown outcome.** Both stay at L0.
 - **No read-back for most Postgres statements.** Only a single-row `UPDATE` by primary key is read
   back; everything else waits for L2.
+- **L2 is Postgres only, gateway mode only, and only for simple statements.** See "Triggers, rules
+  and what L2 can't see" above.
 - **The L0 schema check of a 64 KiB output takes about 1 ms** (0.99 to 1.00 ms per check on an
   Apple M1, `bench/results/2026-10-02-darwin-arm64-witness.json`), above the 200 µs target. The
   cost is in S16's schema validator (`internal/connector/schema`), and it applies only to tools

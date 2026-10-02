@@ -13,6 +13,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/deedglass/deedglass/internal/deed"
 	gate "github.com/deedglass/deedglass/internal/gate/lifecycle"
 	"github.com/deedglass/deedglass/internal/httpx"
 	"github.com/deedglass/deedglass/internal/ids"
@@ -92,6 +93,21 @@ type ActionWitness struct {
 	WitnessedAt   *string           `json:"witnessed_at,omitzero"`
 	DetailDigest  *string           `json:"detail_digest"`
 	Detail        json.RawMessage   `json:"detail,omitzero"`
+	// History is every witness section sealed about the action, oldest first (S21): the action
+	// deed, then any amendment deeds. GET /v1/actions/{id} only.
+	History []WitnessHistory `json:"history,omitzero"`
+}
+
+// WitnessHistory is one sealed witness section: the deed that carries it, its kind (action or
+// amendment), the claim and when it was sealed. A section a later amendment replaced names the
+// reason it stopped where it did (l2_timeout, …).
+type WitnessHistory struct {
+	Deed    string  `json:"deed"`
+	Kind    string  `json:"kind"`
+	Level   string  `json:"level"`
+	Verdict string  `json:"verdict"`
+	At      string  `json:"at"`
+	Reason  *string `json:"reason,omitempty"`
 }
 
 // fill adds what the stored witness_detail says: the summary, the violations and gaps, and when.
@@ -605,23 +621,52 @@ func (l *Ledger) GetAction(ctx context.Context, org ids.OrgID, id string) (*Acti
 		}
 		d.Events = newList(evs, "")
 		d.Events.HasMore = more
-		rows, err = tx.Query(ctx, `SELECT id, kind, seq, issued_at FROM deedglass.deeds WHERE org_id = $1 AND action_id = $2 ORDER BY seq`, org, id)
+		rows, err = tx.Query(ctx, `SELECT id, kind, seq, issued_at, body -> 'witness' ->> 'level', body -> 'witness' ->> 'verdict'
+		    FROM deedglass.deeds WHERE org_id = $1 AND action_id = $2 ORDER BY seq`, org, id)
 		if err != nil {
 			return err
 		}
+		var hist []WitnessHistory
 		d.Deeds, err = pgx.CollectRows(rows, func(r pgx.CollectableRow) (DeedRef, error) {
 			var x DeedRef
 			var at time.Time
-			err := r.Scan(&x.ID, &x.Kind, &x.Seq, &at)
+			var level, verdict *string
+			err := r.Scan(&x.ID, &x.Kind, &x.Seq, &at, &level, &verdict)
 			x.IssuedAt = Time(at)
+			if err == nil && level != nil && verdict != nil {
+				hist = append(hist, WitnessHistory{Deed: x.ID, Kind: x.Kind, Level: *level, Verdict: *verdict, At: deed.FormatTime(at)})
+			}
 			return x, err
 		})
 		if d.Deeds == nil {
 			d.Deeds = []DeedRef{}
 		}
+		if err == nil && d.Witness != nil && len(hist) > 0 {
+			if len(hist) > 1 {
+				hist[0].Reason = witnessedReason(evs)
+			}
+			d.Witness.History = hist
+		}
 		return err
 	})
 	return d, err
+}
+
+// witnessedReason is the reason the action's own verdict recorded (its first violation or gap):
+// the action.witnessed transition's event data.
+func witnessedReason(evs []ActionEvent) *string {
+	for _, e := range evs {
+		switch e.To {
+		case string(gate.Verified), string(gate.Mismatch), string(gate.Unverifiable):
+			var x struct {
+				Reason *string `json:"reason"`
+			}
+			if json.Unmarshal(e.Data, &x) == nil && x.Reason != nil {
+				return x.Reason
+			}
+		}
+	}
+	return nil
 }
 
 // ReadAction reads one action object inside tx (an org transaction for org), with its stored

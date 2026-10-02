@@ -70,7 +70,7 @@ func TestAttack(t *testing.T) {
 		byID[c.ID] = c
 	}
 	for _, mc := range meta.Cases {
-		if !strings.Contains("HJK", mc.Group) {
+		if !strings.Contains("HJKW", mc.Group) {
 			continue // V0 groups run in their own suites (deed_test.go, deed_verify_test.go, S34)
 		}
 		c, ok := byID[mc.ID]

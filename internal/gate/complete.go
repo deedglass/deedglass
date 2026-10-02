@@ -74,8 +74,14 @@ func (p *Pipeline) complete(ctx context.Context, s Subject, e Execution, wc witn
 			"agent_id", s.Agent.String(), "action_id", s.ID.String(), "err", err)
 		err = run(false)
 	}
-	if err != nil || view == nil || !wc.readBack || view.State != string(Witnessing) {
+	waitL2 := wc.l2 != nil && wc.l2.wait
+	if err != nil || view == nil || view.State != string(Witnessing) || !wc.readBack && !waitL2 {
 		return view, err
+	}
+	if !wc.readBack {
+		// B1 is committed with an L2 wait only: the decoder (or the job) finishes it.
+		p.afterL2B1(ctx, wc)
+		return p.readView(ctx, s.Org, s.ID, view), nil
 	}
 	// B1 is committed: read back within the inline budget, with no transaction open.
 	if p.hooks.afterB1 != nil && p.hooks.afterB1(s.ID) {
@@ -91,6 +97,17 @@ func (p *Pipeline) complete(ctx context.Context, s Subject, e Execution, wc witn
 	if deferred {
 		return view, nil // the worker finishes it when the job falls due
 	}
+	if waitL2 {
+		// S21 §3.2: L0 and L1 are kept with no claim; finalizeL2 decides across all three levels.
+		if err := p.storeL1Partial(ctx, s.Org, s.ID, out); err != nil {
+			if !errors.Is(err, ErrStateConflict) {
+				p.log.Error("gate: the read-back couldn't be kept for L2; the worker retries", "org_id", s.Org.String(), "action_id", s.ID.String(), "err", err)
+			}
+			return view, nil
+		}
+		p.afterL2B1(ctx, wc)
+		return p.readView(ctx, s.Org, s.ID, view), nil
+	}
 	v, err := p.finishWitness(ctx, s.Org, s.ID, out, actor, requestID, JobL1ReadBack)
 	if err != nil {
 		if !errors.Is(err, ErrStateConflict) {
@@ -99,6 +116,15 @@ func (p *Pipeline) complete(ctx context.Context, s Subject, e Execution, wc witn
 		return view, nil
 	}
 	return v, nil
+}
+
+// readView re-reads an action's view after a step that may have moved it; prev when the read fails.
+func (p *Pipeline) readView(ctx context.Context, org ids.OrgID, id ids.ActionID, prev *ledger.Action) *ledger.Action {
+	v, err := p.o.Ledger.ReadActionView(ctx, org, id.String())
+	if err != nil {
+		return prev
+	}
+	return v
 }
 
 // finishWitness is B2: witnessing → the verdict (a compare-and-set), the deed, and the job gone,
@@ -188,6 +214,30 @@ func (p *Pipeline) recordExecution(ctx context.Context, tx pgx.Tx, s Subject, e 
 	}
 	plain := ledger.EventData{Actor: actor, RequestID: requestID}
 	steps := []ledger.Step{{To: Executed, Event: ev, Patch: &patch}, {To: Witnessing, Event: plain}}
+	// S21: a write on a connector witnessed at L2 waits in witnessing for the decoder's frame,
+	// unless the decoder is gone (no wait) or halted (the gap now).
+	if wc.l2 != nil {
+		waiting, gap, err := l2Status(ctx, tx, wc.l2.target.ConnectorID)
+		if err != nil {
+			return nil, err
+		}
+		wc.l2.wait, wc.l2.gap = waiting, gap
+	}
+	if wc.l2 != nil && wc.l2.wait {
+		if err := p.o.Ledger.Advance(ctx, tx, id, Executing, steps...); err != nil {
+			return nil, err
+		}
+		if err := p.enqueueL2(ctx, tx, s, wc); err != nil {
+			return nil, err
+		}
+		if wc.readBack && e.Status == ExecSucceeded {
+			due := p.now().Add(p.wcfg.InlineBudget + readBackGrace)
+			if err := store.EnqueueJobPayload(ctx, tx, s.Org, s.ID, JobL1ReadBack, due, p.cfg.WorkerMaxAttempts, payloadOf(wc)); err != nil {
+				return nil, err
+			}
+		}
+		return ledger.ReadAction(ctx, tx, s.Org, id)
+	}
 	if wc.readBack && e.Status == ExecSucceeded {
 		// B1: the read-back runs after this commits, with no transaction open. The job is the
 		// durable promise: if this instance stops, the worker reads back when it falls due.

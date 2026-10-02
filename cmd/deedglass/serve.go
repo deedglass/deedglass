@@ -240,8 +240,11 @@ func runServe(ctx context.Context, e *Env, args []string) error {
 	worker := gp.NewWorker(instanceName())
 	// 5e. The decoder (S20): reads every witnessed Postgres connector whose lease this instance
 	// holds; deedglass_jobs also wakes its runners.
-	dec := newDecoder(cfg, db, led, cw, log)
+	dec := newDecoder(cfg, db, led, cw, log, l2Hooks(gp))
 	cw.decoder = dec
+	if dec != nil {
+		gp.SetNudge(dec.Nudge) // S21: an action waiting for L2 makes its connector's runner poll fast
+	}
 	keys.Listener().Listen(ledger.Channel, gp.Broker().OnEvent, gp.Broker().Reset)
 	keys.Listener().Listen(store.JobsChannel, func(p string) {
 		worker.Wake(p)

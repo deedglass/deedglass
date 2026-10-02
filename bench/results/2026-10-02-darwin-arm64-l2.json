@@ -1,0 +1,36 @@
+{
+  "cpus": 8,
+  "date": "2026-10-02T03:49:49Z",
+  "go": "go1.27.1",
+  "goarch": "arm64",
+  "goos": "darwin",
+  "l2": {
+    "actions": 6000,
+    "commit_to_verdict_ms": {
+      "max": 1790.251,
+      "p50": 182.023,
+      "p90": 525.961,
+      "p99": 1699.09
+    },
+    "over_1500_ms": 301,
+    "rate_per_s": 100,
+    "seconds": 60,
+    "sent_in_s": 59.993330708,
+    "verdicts": {
+      "L2 VERIFIED": 6000
+    }
+  },
+  "pure": {
+    "compare_1000_ns": 171416,
+    "compare_200k_ns": 2079,
+    "derive_ns": 2856,
+    "diff_build_1000_ns": 261171,
+    "render_ns": 8579
+  },
+  "segments_ms": {
+    "decode_p50": 101.128,
+    "decode_p99": 1324.93,
+    "witness_p50": 74.782,
+    "witness_p99": 1183.623
+  }
+}

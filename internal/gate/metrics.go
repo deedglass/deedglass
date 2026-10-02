@@ -8,6 +8,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/deedglass/deedglass/internal/witness"
 )
 
 // Metrics are the Gate's Prometheus families (S13 §3.8), hand-written like S03's: bounded labels
@@ -17,6 +19,7 @@ type Metrics struct {
 	actions  map[[2]string]*atomic.Uint64 // {mode, status}
 	jobs     map[[2]string]*atomic.Uint64 // {kind, result}
 	sweeps   map[[2]string]*atomic.Uint64 // {sweeper, result}
+	verdicts map[[2]string]*atomic.Uint64 // {level, verdict}: L2 verdicts sealed (S21; S27 reads mismatch rates)
 	overhead histogram
 	inflight atomic.Int64 // jobs this instance holds now (deedglass_worker_queue_depth)
 	// DL-025: every evaluation stopped by the 50 ms time limit (it fails closed), by mode.
@@ -43,7 +46,8 @@ func (h *histogram) observe(d time.Duration) {
 
 // NewMetrics returns empty metrics.
 func NewMetrics() *Metrics {
-	return &Metrics{actions: map[[2]string]*atomic.Uint64{}, jobs: map[[2]string]*atomic.Uint64{}, sweeps: map[[2]string]*atomic.Uint64{}}
+	return &Metrics{actions: map[[2]string]*atomic.Uint64{}, jobs: map[[2]string]*atomic.Uint64{}, sweeps: map[[2]string]*atomic.Uint64{},
+		verdicts: map[[2]string]*atomic.Uint64{}}
 }
 
 func (m *Metrics) inc(set map[[2]string]*atomic.Uint64, a, b string) { m.add(set, a, b, 1) }
@@ -78,6 +82,13 @@ func (m *Metrics) job(kind, result string) {
 func (m *Metrics) sweep(sweeper, result string) {
 	if m != nil {
 		m.inc(m.sweeps, sweeper, result)
+	}
+}
+
+// l2 counts one verdict sealed after an L2 wait.
+func (m *Metrics) l2(d witness.Decision) {
+	if m != nil {
+		m.inc(m.verdicts, string(d.Level), string(d.Verdict))
 	}
 }
 
@@ -135,6 +146,7 @@ func (m *Metrics) Collect(w io.Writer) {
 	family("deedglass_worker_jobs_total", "Witness jobs the worker finished, by kind and result.", "counter", m.jobs, "kind", "result")
 	fmt.Fprintf(&b, "# HELP deedglass_worker_queue_depth Witness jobs this instance holds now.\n# TYPE deedglass_worker_queue_depth gauge\ndeedglass_worker_queue_depth %d\n", m.inflight.Load())
 	family("deedglass_gate_sweeps_total", "Actions the sweepers handled, by sweeper and result.", "counter", m.sweeps, "sweeper", "result")
+	family("deedglass_witness_verdicts_total", "Verdicts sealed after an L2 wait, by claimed level and verdict.", "counter", m.verdicts, "level", "verdict")
 	fmt.Fprintf(&b, "# HELP deedglass_policy_eval_time_limit_total Evaluations stopped by the 50 ms time limit, which denies with policy_unavailable (DL-025).\n# TYPE deedglass_policy_eval_time_limit_total counter\n")
 	fmt.Fprintf(&b, "deedglass_policy_eval_time_limit_total{mode=\"enforce\"} %d\ndeedglass_policy_eval_time_limit_total{mode=\"shadow\"} %d\n",
 		m.timeLimitEnforce.Load(), m.timeLimitShadow.Load())

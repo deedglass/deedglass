@@ -1,6 +1,6 @@
 exit 0
 --- stdout
-◐ Dry run on 127.0.0.1:55432 as deedglass_migrator · schema at 0009 · 10 pending
+◐ Dry run on 127.0.0.1:55432 as deedglass_migrator · schema at 0009 · 11 pending
   0010 ledger              sha256:c1fb…6ee7
   0011 identity_humans     sha256:34f9…8f1c
   0012 preauth             sha256:126a…f07c
@@ -11,5 +11,6 @@ exit 0
   0017 connectors_vault    sha256:6159…c5e3
   0018 witness             sha256:ef00…68b0
   0019 decoder             sha256:d5ec…5712
+  0020 witness_l2          sha256:7d10…f427
 ○ Nothing was applied. Run deedglass migrate up to apply them.
 --- stderr

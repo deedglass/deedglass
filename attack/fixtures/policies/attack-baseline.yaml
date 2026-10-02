@@ -12,6 +12,12 @@ defaults:
   reason: No rule allows this tool. Add a rule to allow it.
 
 rules:
+  - id: witness-writes
+    description: witness-bot's single statements run and are witnessed at L2 by Postgres (S21's W cases and H08 to H11).
+    match: { agent: witness-bot, tool: "postgres.*" }
+    when: '!sql.multi && !sql.cte_write && !sql.ambiguous && sql.category != "unknown"'
+    decision: allow
+    verify: L2
   - id: permissive-postgres
     description: Allows every postgres.* call by permissive-bot, to show the connector refuses on its own.
     match: { agent: permissive-bot, tool: "postgres.*" }

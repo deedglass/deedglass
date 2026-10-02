@@ -32,6 +32,35 @@ const (
 	CodeInternalError         Code = "internal_error"
 )
 
+// L2 reason codes (S21): what Postgres's change log showed, compared with what the statement said.
+const (
+	CodeFootprintMatched     Code = "footprint_matched"
+	CodeRowCountExceeded     Code = "row_count_exceeded"
+	CodeMissingChange        Code = "missing_change"
+	CodeUnexpectedTable      Code = "unexpected_table"
+	CodeUnexpectedOperation  Code = "unexpected_operation"
+	CodeUnexpectedKey        Code = "unexpected_key"
+	CodeUnexpectedColumn     Code = "unexpected_column"
+	CodeRowLimitExceeded     Code = "row_limit_exceeded"
+	CodeMarkerCount          Code = "marker_count"
+	CodeMarkerMismatch       Code = "marker_mismatch"
+	CodeMultipleTransactions Code = "multiple_transactions"
+	CodeLedgerMismatch       Code = "ledger_mismatch"
+	CodeOldImageMissing      Code = "old_image_missing"
+	CodeKeysUnknown          Code = "keys_unknown"
+	CodeRelationChanged      Code = "relation_changed"
+	CodeFootprintUnknown     Code = "footprint_unknown"
+	CodeUnwatchedTable       Code = "unwatched_table"
+	CodeL2Timeout            Code = "l2_timeout"
+	CodeSlotInvalidated      Code = "slot_invalidated"
+	CodeSlotDropped          Code = "slot_dropped"
+	CodeDecoderHalted        Code = "decoder_halted"
+	CodeNoEvidence           Code = "no_evidence"
+	CodePublicationGap       Code = "publication_gap"
+	CodeTriggersPresent      Code = "triggers_present"
+	CodeTriggersUnwatched    Code = "triggers_unwatched"
+)
+
 // Entry is one catalog row: the class every reason with this code has, the levels it is used at,
 // its sentence, what a person does next, and sample values for the tests and the generated page.
 type Entry struct {
@@ -97,6 +126,76 @@ var entries = []Entry{
 		map[string]any{"required": "L1", "reached": "L0"}},
 	{CodeInternalError, Gap, "any", `The witness hit an internal error, so the action isn't marked verified.`,
 		"Report it with the action id; it is a bug in Deedglass.", nil},
+
+	// L2 (S21): Postgres's change log against the statement's footprint.
+	{CodeFootprintMatched, Pass, "L2", `Postgres committed {observed} {rows} in {table}, as the statement said.`,
+		"Nothing.", map[string]any{"observed": 1, "rows": "row", "table": "public.orders"}},
+	{CodeRowCountExceeded, Violation, "L2", `Postgres changed {observed} rows in {table}. The agent reported {expected}.`,
+		"Read the diff: a trigger, rule or cascade changed rows the statement didn't name.",
+		map[string]any{"observed": 301, "table": "public.orders", "expected": 1}},
+	{CodeMissingChange, Violation, "L2", `The agent reported {expected} {rows} changed in {table}, but Postgres committed {observed}.`,
+		"Check the target: the change the tool reported isn't in Postgres's change log.",
+		map[string]any{"expected": 1, "rows": "row", "table": "public.orders", "observed": 0}},
+	{CodeUnexpectedTable, Violation, "L2", `Postgres also changed {n} {rows} in {table}, which the statement doesn't touch.`,
+		"Look for a trigger or rule on the statement's table that writes this one.",
+		map[string]any{"n": 1, "rows": "row", "table": "public.audit"}},
+	{CodeUnexpectedOperation, Violation, "L2", `Postgres {op_past} {n} {rows} in {table}. The statement only {expected_op}.`,
+		"Look for a trigger or rule that deletes, inserts or truncates on this table.",
+		map[string]any{"op_past": "deleted", "n": 1, "rows": "row", "table": "public.orders", "expected_op": "updates rows"}},
+	{CodeUnexpectedKey, Violation, "L2", `{n} changed {rows} in {table} {are} outside the rows the statement named ({keys}).`,
+		"Read the diff: the unexpected rows are listed first after the expected ones.",
+		map[string]any{"n": 300, "rows": "rows", "table": "public.orders", "are": "are", "keys": "id = 42"}},
+	{CodeUnexpectedColumn, Violation, "L2", `Postgres changed {column} on {n} {rows} in {table}. The statement set only {columns}.`,
+		"If a trigger maintains the column on purpose, list it in the connector's witness.auto_columns.",
+		map[string]any{"column": "total_cents", "n": 1, "rows": "row", "table": "public.orders", "columns": "status"}},
+	{CodeRowLimitExceeded, Violation, "L2", `Postgres changed {observed} rows in {table}; this connector allows at most {max} per action.`,
+		"Read the diff, then check why one action changed this many rows.",
+		map[string]any{"observed": 301, "table": "public.orders", "max": 1}},
+	{CodeMarkerCount, Violation, "L2", `This action's transaction in Postgres holds {ledger} ledger rows and {markers} markers, not one of each.`,
+		"Treat the database as tampered with: something wrote Deedglass's ledger outside begin_action.",
+		map[string]any{"ledger": 2, "markers": 1}},
+	{CodeMarkerMismatch, Violation, "L2", `This action's transaction in Postgres doesn't match its own ledger row ({why}).`,
+		"Treat the database as tampered with: the ledger row and the marker disagree.",
+		map[string]any{"why": "the marker names another action"}},
+	{CodeMultipleTransactions, Violation, "L2", `{n} transactions in Postgres claim this action. Only one can be real.`,
+		"Treat the database as tampered with: a ledger row and marker for this action were written again.",
+		map[string]any{"n": 2}},
+	{CodeLedgerMismatch, Violation, "L2", `The ledger row in Postgres doesn't match what Deedglass authorized ({field}).`,
+		"Treat the execution path as compromised: the statement that ran isn't the one the policy allowed.",
+		map[string]any{"field": "sql_digest"}},
+	{CodeOldImageMissing, Gap, "L2", `{table} doesn't keep full old rows (REPLICA IDENTITY {identity}), so Deedglass can't tell which columns changed.`,
+		"Run ALTER TABLE … REPLICA IDENTITY FULL on the table (docs/POSTGRES_DEPLOYMENT.md has the cost note).",
+		map[string]any{"table": "public.orders", "identity": "DEFAULT"}},
+	{CodeKeysUnknown, Gap, "L2", `Deedglass couldn't match rows in {table} to the statement's keys ({why}).`,
+		"Give the table a primary key, or raise decoder.max_images_per_tx for large statements.",
+		map[string]any{"table": "public.orders", "why": "the table has no primary key"}},
+	{CodeRelationChanged, Gap, "L2", `The structure of {table} changed in this transaction, so the comparison may be incomplete.`,
+		"Nothing to fix. Run schema changes outside agent actions.", map[string]any{"table": "public.orders"}},
+	{CodeFootprintUnknown, Gap, "L2", `The statement is too complex for Deedglass to predict which rows it touches ({why}), so L2 can't compare.`,
+		"Use a single-table statement with a key in WHERE, or a controlled function that declares what it writes.",
+		map[string]any{"why": "UPDATE … FROM"}},
+	{CodeUnwatchedTable, Gap, "L2", `{table} isn't watched, so Postgres's change log doesn't show it.`,
+		"Add the table to witness.watched_tables and run deedglass connector postgres init again.",
+		map[string]any{"table": "public.invoices"}},
+	{CodeL2Timeout, Gap, "L2", `Postgres's change log didn't show this action within {timeout}.`,
+		"Check deedglass decoder status. If the change log shows it later, an amendment deed records the result.",
+		map[string]any{"timeout": "10s"}},
+	{CodeSlotInvalidated, Gap, "L2", `Postgres invalidated the replication slot ({why}), so this action's change log is gone.`,
+		"Read deedglass decoder status, raise max_slot_wal_keep_size if WAL ran out, then drop and recreate the slot.",
+		map[string]any{"why": "wal_removed"}},
+	{CodeSlotDropped, Gap, "L2", `The replication slot was dropped while this action waited, so its change log can't be read.`,
+		"Nothing to fix for this action. The next sync creates a new slot for later ones.", nil},
+	{CodeDecoderHalted, Gap, "L2", `The decoder for this connector has stopped ({why}), so Postgres's change log wasn't read.`,
+		"Run deedglass decoder status; it names the cause and the fix.", map[string]any{"why": "publication_missing"}},
+	{CodeNoEvidence, Gap, "L2", `This action's ledger row is in Postgres, but its transaction never appeared in the change log.`,
+		"Run deedglass decoder status: the slot may have been recreated after the action committed.", nil},
+	{CodePublicationGap, Gap, "L2", `The publication changed while this action ran, so the change log may be missing its rows.`,
+		"Nothing to fix for this action. Change deedglass_pub only while no agent writes.", nil},
+	{CodeTriggersPresent, Note, "L2", `{table} has triggers ({names}). Their writes to watched tables are checked; writes elsewhere aren't visible.`,
+		"Nothing. Set witness.strict_triggers to treat unwatched trigger writes as a gap.",
+		map[string]any{"table": "public.orders", "names": "orders_ship_open_batch"}},
+	{CodeTriggersUnwatched, Gap, "L2", `{table} has triggers that may write tables Deedglass doesn't watch.`,
+		"Watch every table the triggers write, or turn off witness.strict_triggers.", map[string]any{"table": "public.orders"}},
 }
 
 var catalog = func() map[Code]Entry {
@@ -110,9 +209,9 @@ var catalog = func() map[Code]Entry {
 	return m
 }()
 
-// Reserved are codes S20 and S21 will register for the decoder and L2. They are listed so nobody
-// takes them for something else.
-var Reserved = []Code{"l2_timeout", "rows_outside_footprint", "column_outside_set", "replica_identity_missing",
+// Reserved are codes S19 set aside for the decoder and L2 before S21 chose its names (S21 uses
+// l2_timeout; the rest stay unused). They are listed so nobody takes them for something else.
+var Reserved = []Code{"rows_outside_footprint", "column_outside_set", "replica_identity_missing",
 	"forged_marker", "decoder_degraded", "row_count_mismatch", "rows_witnessed"}
 
 // Lookup returns a code's catalog entry.

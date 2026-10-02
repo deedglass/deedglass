@@ -3,11 +3,13 @@ package main
 import (
 	"context"
 	"log/slog"
+	"time"
 
 	"github.com/deedglass/deedglass/internal/config"
 	"github.com/deedglass/deedglass/internal/connector"
 	"github.com/deedglass/deedglass/internal/connector/postgres"
 	"github.com/deedglass/deedglass/internal/decoder"
+	"github.com/deedglass/deedglass/internal/gate"
 	"github.com/deedglass/deedglass/internal/httpx"
 	"github.com/deedglass/deedglass/internal/ids"
 	"github.com/deedglass/deedglass/internal/ledger"
@@ -31,7 +33,7 @@ func decoderConfig(cfg *config.Config) decoder.Config {
 // newDecoder is S20's wiring: one supervisor per server, reading every witnessed Postgres
 // connector whose lease this instance holds. The witness DSN comes through the registry's
 // instance and the Postgres connector (Instance.Secret), never the vault directly.
-func newDecoder(cfg *config.Config, db *store.DB, led *ledger.Ledger, cw *connectors, log *slog.Logger) *decoder.Supervisor {
+func newDecoder(cfg *config.Config, db *store.DB, led *ledger.Ledger, cw *connectors, log *slog.Logger, hooks decoder.Hooks) *decoder.Supervisor {
 	if !cfg.Decoder.Enabled || db == nil || cw == nil {
 		return nil
 	}
@@ -49,7 +51,34 @@ func newDecoder(cfg *config.Config, db *store.DB, led *ledger.Ledger, cw *connec
 		return t, row.Name, err
 	}
 	return decoder.NewSupervisor(decoder.Deps{DB: db, Ledger: led, Target: target, Log: log.With("component", "decoder"),
-		Worker: instanceName() + "/decoder"}, decoderConfig(cfg))
+		Worker: instanceName() + "/decoder", Hooks: hooks}, decoderConfig(cfg))
+}
+
+// l2Hooks are S21's consumers of the decoder's hooks: a frame naming an action finalizes its L2
+// wait (or amends its deed), reconcile's missing frame and a lost slot end waits with their gaps.
+// The hooks run in the runner's goroutine, so the work goes to its own goroutine, bounded.
+func l2Hooks(gp *gate.Pipeline) decoder.Hooks {
+	sem := make(chan struct{}, 16)
+	async := func(f func(ctx context.Context)) {
+		sem <- struct{}{}
+		go func() {
+			defer func() { <-sem }()
+			ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+			defer cancel()
+			f(ctx)
+		}()
+	}
+	return decoder.Hooks{
+		OnBound: func(_ context.Context, org ids.OrgID, _ ids.ConnectorID, actionID string, _ decoder.Class, _ decoder.LSN) {
+			async(func(ctx context.Context) { gp.L2Evidence(ctx, org, actionID) })
+		},
+		OnMissing: func(_ context.Context, org ids.OrgID, _ ids.ConnectorID, actionID string) {
+			async(func(ctx context.Context) { gp.L2Missing(ctx, org, actionID) })
+		},
+		SlotLost: func(_ context.Context, org ids.OrgID, con ids.ConnectorID, reason string) {
+			async(func(ctx context.Context) { gp.L2SlotLost(ctx, org, con, reason) })
+		},
+	}
 }
 
 // decoderHealth is /v1/health's decoder check on this instance.

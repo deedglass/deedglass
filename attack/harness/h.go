@@ -254,3 +254,78 @@ func (h *H) FailedWith(o *Org, actionID, code string) string {
 	}
 	return ""
 }
+
+// L2Ready points the decoder at this case's clone (S21). A clone has no replication slot of its
+// own, so the decoder's slot row is dropped (decoder.slot_dropped, an admin deed) and a new slot
+// starts in the clone; L2Ready returns once the decoder runs on it and has read past now.
+func (h *H) L2Ready() {
+	h.T.Helper()
+	acme := h.Acme
+	id := acme.Conns["postgres"]
+	r := acme.Admin.Do("DELETE", "/v1/connectors/"+id+"/decoder", map[string]any{"confirm": "postgres"})
+	if r.Status != 200 && r.Status != 409 {
+		panic(fmt.Sprintf("decoder drop: HTTP %d %s", r.Status, r.Body))
+	}
+	c := h.Target.Conn()
+	defer c.Close(context.Background())
+	ctx := context.Background()
+	deadline := time.Now().Add(20 * time.Second)
+	var lsn string
+	for {
+		if time.Now().After(deadline) {
+			v := acme.Admin.Do("GET", "/v1/connectors/"+id+"/decoder", nil)
+			panic(fmt.Sprintf("the decoder never read the clone %s: %s", h.Target.Name, v.Body))
+		}
+		var ok bool
+		_ = c.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM pg_catalog.pg_replication_slots WHERE database = pg_catalog.current_database()
+		    AND slot_name LIKE 'deedglass\_%')`).Scan(&ok)
+		if ok && lsn == "" {
+			_ = c.QueryRow(ctx, `SELECT pg_catalog.pg_current_wal_lsn()::text`).Scan(&lsn)
+		}
+		if lsn != "" {
+			var caught bool
+			_ = c.QueryRow(ctx, `SELECT confirmed_flush_lsn >= $1::text::pg_lsn FROM pg_catalog.pg_replication_slots
+			    WHERE database = pg_catalog.current_database() AND slot_name LIKE 'deedglass\_%'`, lsn).Scan(&caught)
+			v := acme.Admin.Do("GET", "/v1/connectors/"+id+"/decoder", nil).Map()
+			if caught && Str(v, "status") == "running" {
+				return
+			}
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+}
+
+// Exec runs SQL on this case's clone as the superuser (fixtures, the attacks themselves).
+func (tg *Target) Exec(sql string, args ...any) error {
+	c := tg.Conn()
+	defer c.Close(context.Background())
+	_, err := c.Exec(context.Background(), sql, args...)
+	return err
+}
+
+// WitnessOf returns an action's witness object with its detail (GET ?expand[]=witness.detail),
+// after waiting for it to be sealed.
+func (h *H) WitnessOf(o *Org, id string) map[string]any {
+	h.WaitSealed(o, id)
+	a := o.Admin.Do("GET", "/v1/actions/"+id+"?expand[]=witness.detail", nil).Map()
+	w, _ := a["witness"].(map[string]any)
+	if w == nil {
+		return map[string]any{}
+	}
+	return w
+}
+
+// ReasonCodes lists a witness object's reason codes at one level ("" for every level), from its
+// detail (passes and notes included).
+func ReasonCodes(w map[string]any, level string) []string {
+	var out []string
+	d, _ := w["detail"].(map[string]any)
+	rs, _ := d["reasons"].([]any)
+	for _, x := range rs {
+		r, _ := x.(map[string]any)
+		if level == "" || Str(r, "level") == level {
+			out = append(out, Str(r, "code"))
+		}
+	}
+	return out
+}

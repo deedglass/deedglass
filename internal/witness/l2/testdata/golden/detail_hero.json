@@ -1,0 +1,354 @@
+{
+  "verdict": "MISMATCH",
+  "method": "postgres.pgoutput",
+  "transaction": {
+    "system_id": "7690386503164422802",
+    "timeline": 1,
+    "commit_lsn": "0/3E65020",
+    "xid": 13130,
+    "committed_at": "2026-10-07T13:12:09.114Z",
+    "marker_lsn": "0/3E64FD0",
+    "changes_digest": "sha256:9d4100000000000000000000000000000000000000000000000000000000007ac"
+  },
+  "expected": {
+    "derivation": "exact_keys",
+    "tables": [
+      {
+        "table": "public.orders",
+        "ops": [
+          "update"
+        ],
+        "rows": 1,
+        "keys": [
+          {
+            "id": "42"
+          }
+        ],
+        "columns": [
+          "status"
+        ]
+      }
+    ]
+  },
+  "observed": {
+    "total": 301,
+    "tables": [
+      {
+        "table": "public.orders",
+        "insert": 0,
+        "update": 301,
+        "delete": 0
+      }
+    ]
+  },
+  "rows": [
+    {
+      "table": "public.orders",
+      "op": "update",
+      "key": {
+        "id": "42"
+      },
+      "expected": true,
+      "cells": [
+        {
+          "column": "status",
+          "before": "paid",
+          "after": "shipped"
+        }
+      ]
+    },
+    {
+      "table": "public.orders",
+      "op": "update",
+      "key": {
+        "id": "1"
+      },
+      "expected": false,
+      "cells": [
+        {
+          "column": "status",
+          "before": "paid",
+          "after": "shipped"
+        }
+      ]
+    },
+    {
+      "table": "public.orders",
+      "op": "update",
+      "key": {
+        "id": "2"
+      },
+      "expected": false,
+      "cells": [
+        {
+          "column": "status",
+          "before": "pending",
+          "after": "shipped"
+        }
+      ]
+    },
+    {
+      "table": "public.orders",
+      "op": "update",
+      "key": {
+        "id": "3"
+      },
+      "expected": false,
+      "cells": [
+        {
+          "column": "status",
+          "before": "paid",
+          "after": "shipped"
+        }
+      ]
+    },
+    {
+      "table": "public.orders",
+      "op": "update",
+      "key": {
+        "id": "4"
+      },
+      "expected": false,
+      "cells": [
+        {
+          "column": "status",
+          "before": "paid",
+          "after": "shipped"
+        }
+      ]
+    },
+    {
+      "table": "public.orders",
+      "op": "update",
+      "key": {
+        "id": "5"
+      },
+      "expected": false,
+      "cells": [
+        {
+          "column": "status",
+          "before": "pending",
+          "after": "shipped"
+        }
+      ]
+    },
+    {
+      "table": "public.orders",
+      "op": "update",
+      "key": {
+        "id": "6"
+      },
+      "expected": false,
+      "cells": [
+        {
+          "column": "status",
+          "before": "paid",
+          "after": "shipped"
+        }
+      ]
+    },
+    {
+      "table": "public.orders",
+      "op": "update",
+      "key": {
+        "id": "7"
+      },
+      "expected": false,
+      "cells": [
+        {
+          "column": "status",
+          "before": "paid",
+          "after": "shipped"
+        }
+      ]
+    },
+    {
+      "table": "public.orders",
+      "op": "update",
+      "key": {
+        "id": "8"
+      },
+      "expected": false,
+      "cells": [
+        {
+          "column": "status",
+          "before": "pending",
+          "after": "shipped"
+        }
+      ]
+    },
+    {
+      "table": "public.orders",
+      "op": "update",
+      "key": {
+        "id": "9"
+      },
+      "expected": false,
+      "cells": [
+        {
+          "column": "status",
+          "before": "paid",
+          "after": "shipped"
+        }
+      ]
+    },
+    {
+      "table": "public.orders",
+      "op": "update",
+      "key": {
+        "id": "10"
+      },
+      "expected": false,
+      "cells": [
+        {
+          "column": "status",
+          "before": "paid",
+          "after": "shipped"
+        }
+      ]
+    },
+    {
+      "table": "public.orders",
+      "op": "update",
+      "key": {
+        "id": "11"
+      },
+      "expected": false,
+      "cells": [
+        {
+          "column": "status",
+          "before": "pending",
+          "after": "shipped"
+        }
+      ]
+    },
+    {
+      "table": "public.orders",
+      "op": "update",
+      "key": {
+        "id": "12"
+      },
+      "expected": false,
+      "cells": [
+        {
+          "column": "status",
+          "before": "paid",
+          "after": "shipped"
+        }
+      ]
+    },
+    {
+      "table": "public.orders",
+      "op": "update",
+      "key": {
+        "id": "13"
+      },
+      "expected": false,
+      "cells": [
+        {
+          "column": "status",
+          "before": "paid",
+          "after": "shipped"
+        }
+      ]
+    },
+    {
+      "table": "public.orders",
+      "op": "update",
+      "key": {
+        "id": "14"
+      },
+      "expected": false,
+      "cells": [
+        {
+          "column": "status",
+          "before": "pending",
+          "after": "shipped"
+        }
+      ]
+    },
+    {
+      "table": "public.orders",
+      "op": "update",
+      "key": {
+        "id": "15"
+      },
+      "expected": false,
+      "cells": [
+        {
+          "column": "status",
+          "before": "paid",
+          "after": "shipped"
+        }
+      ]
+    },
+    {
+      "table": "public.orders",
+      "op": "update",
+      "key": {
+        "id": "16"
+      },
+      "expected": false,
+      "cells": [
+        {
+          "column": "status",
+          "before": "paid",
+          "after": "shipped"
+        }
+      ]
+    },
+    {
+      "table": "public.orders",
+      "op": "update",
+      "key": {
+        "id": "17"
+      },
+      "expected": false,
+      "cells": [
+        {
+          "column": "status",
+          "before": "pending",
+          "after": "shipped"
+        }
+      ]
+    },
+    {
+      "table": "public.orders",
+      "op": "update",
+      "key": {
+        "id": "18"
+      },
+      "expected": false,
+      "cells": [
+        {
+          "column": "status",
+          "before": "paid",
+          "after": "shipped"
+        }
+      ]
+    },
+    {
+      "table": "public.orders",
+      "op": "update",
+      "key": {
+        "id": "19"
+      },
+      "expected": false,
+      "cells": [
+        {
+          "column": "status",
+          "before": "paid",
+          "after": "shipped"
+        }
+      ]
+    }
+  ],
+  "rows_shown": 20,
+  "rows_more": 281,
+  "columns_more": 0,
+  "redacted": [],
+  "frames": 1,
+  "frame_ids": [
+    "dtx_01m3x71p6wesj7xewec6bwbwy0"
+  ]
+}

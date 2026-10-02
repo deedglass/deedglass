@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"io"
 	"math/big"
 	"time"
 )
@@ -63,8 +64,12 @@ var codeMax = big.NewInt(1_000_000)
 
 // NewCode returns a uniformly random 6-digit code, leading zeros kept ("004817"). crypto/rand.Int
 // samples by rejection, so no value is more likely than another.
-func NewCode() (string, error) {
-	n, err := rand.Int(rand.Reader, codeMax)
+func NewCode() (string, error) { return newCodeFrom(rand.Reader) }
+
+// newCodeFrom draws a code from r: crypto/rand in production, a seeded stream in the uniformity
+// test, so that test is deterministic (DL-034).
+func newCodeFrom(r io.Reader) (string, error) {
+	n, err := rand.Int(r, codeMax)
 	if err != nil {
 		return "", fmt.Errorf("identity: reading random bytes: %w", err)
 	}

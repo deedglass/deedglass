@@ -37,6 +37,14 @@ func Summary(d Decision) string {
 	}
 	switch d.Verdict {
 	case Mismatch:
+		// L2's violations in S21's order: the count the agent got wrong says the most.
+		if d.Level == L2 {
+			for _, c := range L2SummaryOrder {
+				if s := first(func(r Reason) bool { return r.Code == c && r.Level == L2 }); s != "" {
+					return s
+				}
+			}
+		}
 		if s := first(func(r Reason) bool { return r.Class == Violation && r.Level == d.Level }); s != "" {
 			return s
 		}
@@ -60,3 +68,9 @@ func Summary(d Decision) string {
 	}
 	return first(func(r Reason) bool { return r.Class == Gap })
 }
+
+// L2SummaryOrder is the order in which L2's violations become a MISMATCH's summary (S21 §3.6):
+// the first one present is the sentence a support engineer reads aloud.
+var L2SummaryOrder = []Code{CodeRowCountExceeded, CodeUnexpectedTable, CodeUnexpectedOperation, CodeMissingChange,
+	CodeUnexpectedKey, CodeUnexpectedColumn, CodeValueMismatch, CodeRowLimitExceeded, CodeMultipleTransactions,
+	CodeLedgerMismatch, CodeMarkerCount, CodeMarkerMismatch}

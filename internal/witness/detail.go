@@ -28,11 +28,99 @@ type Claim struct {
 	RequiredLevel Level   `json:"required_level"`
 }
 
-// LevelDetail is one level that ran.
+// LevelDetail is one level that ran. L2 adds its evidence inline (S21 §3.7): the transaction,
+// the expected footprint, the observed counts and the row diff.
 type LevelDetail struct {
 	Verdict  Verdict         `json:"verdict"`
 	Method   string          `json:"method"`
 	Readback *ReadbackDetail `json:"readback,omitempty"`
+	*L2Evidence
+}
+
+// L2Evidence is what levels.L2 holds beyond its verdict and method (S21 §3.7). Every L2 verdict
+// that read a frame names its transaction (system_id, timeline, commit_lsn); marker_lsn is
+// evidence only and is never compared. Values are Postgres's text output; a sensitive column is
+// "•••" and listed in redacted.
+type L2Evidence struct {
+	Transaction *L2Transaction `json:"transaction,omitempty"`
+	Expected    *L2Expected    `json:"expected,omitempty"`
+	Observed    *L2Observed    `json:"observed,omitempty"`
+	Rows        []L2Row        `json:"rows"`
+	RowsShown   int            `json:"rows_shown"`
+	RowsMore    int            `json:"rows_more"`
+	ColumnsMore int            `json:"columns_more"`
+	Redacted    []string       `json:"redacted"`
+	// Frames is how many transactions in the change log named the action (more than one is
+	// multiple_transactions); FrameIDs are their decoded_txs ids, so a later look at the same
+	// evidence is recognised and changes nothing.
+	Frames   int      `json:"frames"`
+	FrameIDs []string `json:"frame_ids,omitempty"`
+}
+
+// L2Transaction is the committed transaction the verdict is about.
+type L2Transaction struct {
+	SystemID      string `json:"system_id"`
+	Timeline      int    `json:"timeline"`
+	CommitLSN     string `json:"commit_lsn"`
+	Xid           int64  `json:"xid"`
+	CommittedAt   string `json:"committed_at"`
+	MarkerLSN     string `json:"marker_lsn,omitempty"`
+	ChangesDigest string `json:"changes_digest,omitempty"`
+}
+
+// L2Expected is the footprint as derived from the statement (l2.Derive).
+type L2Expected struct {
+	Derivation string            `json:"derivation"` // exact_keys | count_only | contract | explicit | unknown
+	Why        string            `json:"why,omitempty"`
+	Tables     []L2ExpectedTable `json:"tables"`
+}
+
+// L2ExpectedTable is one table of the footprint.
+type L2ExpectedTable struct {
+	Table   string              `json:"table"`
+	Ops     []string            `json:"ops"`
+	Rows    *int64              `json:"rows,omitempty"`
+	MaxRows *int64              `json:"max_rows,omitempty"`
+	Keys    []map[string]string `json:"keys,omitempty"`
+	Columns []string            `json:"columns,omitempty"`
+}
+
+// L2Observed is what the transaction changed, per table, counted from the WAL (never estimated).
+type L2Observed struct {
+	Total  int               `json:"total"`
+	Tables []L2ObservedTable `json:"tables"`
+}
+
+// L2ObservedTable is one table's exact counts.
+type L2ObservedTable struct {
+	Table    string `json:"table"`
+	Insert   int    `json:"insert"`
+	Update   int    `json:"update"`
+	Delete   int    `json:"delete"`
+	Truncate int    `json:"truncate,omitempty"`
+}
+
+// L2Row is one changed row in the diff: expected rows first, then unexpected ones in stream order.
+type L2Row struct {
+	Table    string            `json:"table"`
+	Op       string            `json:"op"` // insert | update | delete
+	Key      map[string]string `json:"key"`
+	Expected bool              `json:"expected"`
+	Cells    []L2Cell          `json:"cells"`
+}
+
+// L2Cell is one changed column: its value before and after, as Postgres prints it (null for SQL
+// NULL or an image Postgres didn't send).
+type L2Cell struct {
+	Column string  `json:"column"`
+	Before *string `json:"before"`
+	After  *string `json:"after"`
+}
+
+// Extras is what Finish adds to the levels beyond their verdicts: L1's read-back and L2's evidence.
+type Extras struct {
+	Readback *ReadbackDetail
+	L2       *L2Evidence
 }
 
 // LevelsDetail holds the three levels; a level that didn't run is null.
@@ -69,6 +157,13 @@ func (o Outcome) Flags() []string { return o.Decision.Flags() }
 // Finish builds the detail of a decision: the summary, the levels that ran with their methods, and
 // the reasons, cut to maxBytes (JCS) by dropping diff rows and evidence first.
 func Finish(d Decision, methods map[Level]string, rb *ReadbackDetail, at time.Time, maxBytes int) (Outcome, error) {
+	return FinishWith(d, methods, Extras{Readback: rb}, at, maxBytes)
+}
+
+// FinishWith is Finish with every level's extras (S21: L2's evidence). When the detail is over
+// maxBytes, L2's rows are cut first (rows_more counts them), then diff rows and evidence.
+func FinishWith(d Decision, methods map[Level]string, x Extras, at time.Time, maxBytes int) (Outcome, error) {
+	rb := x.Readback
 	if maxBytes <= 0 {
 		maxBytes = DefaultMaxDetailBytes
 	}
@@ -86,12 +181,36 @@ func Finish(d Decision, methods map[Level]string, rb *ReadbackDetail, at time.Ti
 		case L1:
 			det.Levels.L1 = ld
 		case L2:
+			if ld == nil && x.L2 != nil && x.L2.Transaction != nil {
+				// L2 read a frame but every L2 reason was a note: the level still names its evidence.
+				m := methods[L2]
+				if m == "" {
+					m = defaultMethod(L2)
+				}
+				ld = &LevelDetail{Verdict: Unverifiable, Method: m}
+			}
+			if ld != nil && x.L2 != nil {
+				ev := *x.L2
+				if ev.Rows == nil {
+					ev.Rows = []L2Row{}
+				}
+				if ev.Redacted == nil {
+					ev.Redacted = []string{}
+				}
+				ld.L2Evidence = &ev
+			}
 			det.Levels.L2 = ld
 		}
 	}
 	b, err := canonical(det)
 	if err != nil {
 		return Outcome{}, err
+	}
+	if len(b) > maxBytes && det.Levels.L2 != nil && det.Levels.L2.L2Evidence != nil {
+		det, b, err = shrinkL2(det, maxBytes)
+		if err != nil {
+			return Outcome{}, err
+		}
 	}
 	if len(b) > maxBytes {
 		det, b, err = shrink(det, maxBytes)
@@ -132,6 +251,27 @@ func canonical(v any) ([]byte, error) {
 		return nil, err
 	}
 	return jcs.Transform(bytes.TrimSpace(buf.Bytes()))
+}
+
+// shrinkL2 halves L2's shown rows until the detail fits (or none are left); rows_more counts what
+// was cut, and Truncated says rows were left out.
+func shrinkL2(det Detail, maxBytes int) (Detail, []byte, error) {
+	l2 := *det.Levels.L2
+	ev := *l2.L2Evidence
+	l2.L2Evidence = &ev
+	det.Levels.L2 = &l2
+	for {
+		b, err := canonical(det)
+		if err != nil || len(b) <= maxBytes || len(ev.Rows) == 0 {
+			return det, b, err
+		}
+		keep := len(ev.Rows) / 2
+		cut := len(ev.Rows) - keep
+		ev.Rows = ev.Rows[:keep]
+		ev.RowsShown -= cut
+		ev.RowsMore += cut
+		det.Truncated += cut
+	}
 }
 
 // shrink cuts diff rows, then evidence, until the detail fits; the count of what was cut is kept.

@@ -3,7 +3,8 @@
 #
 # The orders database (crystaldba/postgres-mcp behind deedglass mcp wrap --connector orders
 # --connector-type postgres, so S11's SQL classifier reads args.sql): reads run, writes wait for a
-# person, destructive SQL never runs. Rule order matters: DROP hits block-destructive-sql first, so
+# person, destructive SQL never runs. Through the native connector (postgres.*, S17), a status
+# update of orders runs and is witnessed at L2 by Postgres's change log (S21's hero). Rule order matters: DROP hits block-destructive-sql first, so
 # the message on camera is exactly the brand's example sentence.
 #
 # The everything upstream (the MCP gateway, /mcp/everything): its harmless demo tools run;
@@ -54,12 +55,13 @@ rules:
     decision: deny
     reason: Agents never delete orders. Set the status to 'cancelled' instead.
   - id: allow-order-status-updates
-    description: The native connector's (S17) scoped status updates on orders run, so the change and its ledger row commit together.
+    description: Single-order status changes run; Postgres witnesses every one (S21).
     match: { tool: postgres.execute }
     when: >-
       sql.kind == "update" && sql.tables == ["public.orders"] && sql.tables_complete
-      && !sql.cte_write && size(sql.unknown_functions) == 0
+      && !sql.unbounded_write && !sql.multi && !sql.cte_write && size(sql.unknown_functions) == 0
     decision: allow
+    verify: L2
   - id: allow-ship-order
     match: { tool: postgres.call }
     when: has(args.function) && args.function == "public.ship_order"
@@ -74,6 +76,7 @@ rules:
     match: { tool: [orders.execute_sql, postgres.query] }
     when: sql.category == "read" && !sql.writes
     decision: allow
+    verify: L0
   - id: allow-schema-browsing
     match: { tool: [orders.list_schemas, orders.list_objects, orders.get_object_details, postgres.describe] }
     decision: allow

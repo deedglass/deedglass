@@ -7,6 +7,7 @@ import (
 	"slices"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/deedglass/deedglass/internal/connector"
 	"github.com/deedglass/deedglass/internal/connector/postgres/setup"
@@ -51,6 +52,17 @@ type Function struct {
 	Args        []FunctionArg `json:"args"`
 	SideEffect  string        `json:"side_effect"` // read, write or destructive (default write)
 	Description string        `json:"description,omitempty"`
+	// Writes is the function's contract for L2 (S21): the tables it writes, with which operations,
+	// at most how many rows, and which columns. Without it a call's footprint is unknown.
+	Writes []FunctionWrite `json:"writes,omitempty"`
+}
+
+// FunctionWrite is one table a controlled function declares it writes.
+type FunctionWrite struct {
+	Table   string   `json:"table"`
+	Ops     []string `json:"ops"`
+	MaxRows *int64   `json:"max_rows,omitempty"`
+	Columns []string `json:"columns,omitempty"`
 }
 
 // Signature is "public.ship_order(bigint)".
@@ -67,6 +79,30 @@ type Witness struct {
 	Enabled          bool     `json:"enabled"`
 	WatchedTables    []string `json:"watched_tables"`
 	SensitiveColumns []string `json:"sensitive_columns"`
+	// S21: L2's settings. Every one is optional and left out when unset, so older configs keep
+	// their config_hash.
+	AutoColumns    map[string][]string `json:"auto_columns,omitempty"`    // table → columns a trigger maintains (updated_at)
+	MaxRows        map[string]int64    `json:"max_rows,omitempty"`        // table → the most rows one action may change
+	StrictTriggers bool                `json:"strict_triggers,omitempty"` // triggers that may write unwatched tables are a gap
+	L2Timeout      string              `json:"l2_timeout,omitempty"`      // how long an action waits for its frame (1s to 60s; 10s)
+	DiffRows       int                 `json:"diff_rows,omitempty"`       // rows the diff shows (1 to 100; 20)
+}
+
+// L2 defaults and limits (S21 §3.12).
+const (
+	DefaultL2Timeout = 10 * time.Second
+	MinL2Timeout     = time.Second
+	MaxL2Timeout     = 60 * time.Second
+	DefaultDiffRows  = 20
+	MaxDiffRows      = 100
+)
+
+// L2TimeoutOrDefault is witness.l2_timeout, parsed (the default when unset).
+func (w Witness) L2TimeoutOrDefault() time.Duration {
+	if d, err := time.ParseDuration(w.L2Timeout); err == nil && d >= MinL2Timeout && d <= MaxL2Timeout {
+		return d
+	}
+	return DefaultL2Timeout
 }
 
 // Config is a Postgres connector's config (S17 §3.4), as stored after normalization.
@@ -233,6 +269,45 @@ func ParseConfig(raw json.RawMessage) (Config, []connector.FieldError) {
 	}
 	sort.Strings(sens)
 	c.Witness.SensitiveColumns = sens
+	watchedTable := func(param, t string) bool {
+		if !slices.Contains(c.Witness.WatchedTables, t) {
+			bad(param, fmt.Sprintf("names %s, which isn't a watched table.", t))
+			return false
+		}
+		return true
+	}
+	for _, t := range sortedMapKeys(c.Witness.AutoColumns) {
+		param := "witness.auto_columns." + t
+		if !watchedTable(param, t) {
+			continue
+		}
+		cols := c.Witness.AutoColumns[t]
+		if len(cols) == 0 || len(cols) > 32 {
+			bad(param, "lists 1 to 32 columns.")
+		}
+		for j, col := range cols {
+			if !setup.ValidIdent(col) {
+				bad(fmt.Sprintf("%s[%d]", param, j), "must be a lowercase column name.")
+			}
+		}
+	}
+	for _, t := range sortedMapKeys(c.Witness.MaxRows) {
+		param := "witness.max_rows." + t
+		if watchedTable(param, t) && (c.Witness.MaxRows[t] < 1 || c.Witness.MaxRows[t] > MaxMaxRowsAffected) {
+			bad(param, fmt.Sprintf("must be between 1 and %d.", MaxMaxRowsAffected))
+		}
+	}
+	if c.Witness.L2Timeout != "" {
+		if d, err := time.ParseDuration(c.Witness.L2Timeout); err != nil || d < MinL2Timeout || d > MaxL2Timeout {
+			bad("witness.l2_timeout", "must be a duration between 1s and 60s, like 10s.")
+		}
+	}
+	if c.Witness.DiffRows != 0 && (c.Witness.DiffRows < 1 || c.Witness.DiffRows > MaxDiffRows) {
+		bad("witness.diff_rows", fmt.Sprintf("must be between 1 and %d.", MaxDiffRows))
+	}
+	if !c.Witness.Enabled && (len(c.Witness.AutoColumns) > 0 || len(c.Witness.MaxRows) > 0 || c.Witness.StrictTriggers || c.Witness.L2Timeout != "" || c.Witness.DiffRows != 0) {
+		bad("witness.enabled", "must be true for the L2 settings to apply. Turn the witness on, or remove them.")
+	}
 	// functions
 	if len(c.Functions) > 64 {
 		bad("functions", "lists at most 64 functions.")
@@ -279,6 +354,32 @@ func ParseConfig(raw json.RawMessage) (Config, []connector.FieldError) {
 		if f.Args == nil {
 			c.Functions[i].Args = []FunctionArg{}
 		}
+		for j, w := range f.Writes {
+			wp := fmt.Sprintf("%s.writes[%d]", param, j)
+			if _, ok := setup.SplitQualified(w.Table, 2); !ok {
+				bad(wp+".table", "must be schema.table in lowercase, like public.orders.")
+			}
+			if len(w.Ops) == 0 {
+				bad(wp+".ops", "lists insert, update or delete.")
+			}
+			for _, op := range w.Ops {
+				if op != "insert" && op != "update" && op != "delete" {
+					bad(wp+".ops", "lists only insert, update and delete.")
+					break
+				}
+			}
+			if w.MaxRows != nil && (*w.MaxRows < 1 || *w.MaxRows > MaxMaxRowsAffected) {
+				bad(wp+".max_rows", fmt.Sprintf("must be between 1 and %d.", MaxMaxRowsAffected))
+			}
+			for k, col := range w.Columns {
+				if !setup.ValidIdent(col) {
+					bad(fmt.Sprintf("%s.columns[%d]", wp, k), "must be a lowercase column name.")
+				}
+			}
+		}
+		if len(f.Writes) > 16 {
+			bad(param+".writes", "lists at most 16 tables.")
+		}
 	}
 	if c.Functions == nil {
 		c.Functions = []Function{}
@@ -293,4 +394,13 @@ func ParseConfig(raw json.RawMessage) (Config, []connector.FieldError) {
 func (c Config) Normalize() json.RawMessage {
 	b, _ := json.Marshal(c)
 	return b
+}
+
+func sortedMapKeys[V any](m map[string]V) []string {
+	out := make([]string, 0, len(m))
+	for k := range m {
+		out = append(out, k)
+	}
+	sort.Strings(out)
+	return out
 }

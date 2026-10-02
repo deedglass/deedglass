@@ -203,7 +203,8 @@ Each move into degraded or halted publishes `decoder.degraded` (`state`, `reason
 back publishes `decoder.recovered`. Security signals publish `decoder.alert` with the `kind`
 (`forged_marker`, `forged_marker_nontx`, `foreign_ledger`), the frame's commit LSN and the action
 it names. Events are ids and states only. Halts that lose evidence tell the Witness (`SlotLost`), so
-actions waiting for L2 become evidence gaps (S21).
+actions waiting for L2 become evidence gaps (S21: `slot_invalidated`, `slot_dropped` or
+`decoder_halted`).
 
 Metrics (`DEEDGLASS_METRICS_LISTEN`): `deedglass_decoder_frames_total{connector,class}`,
 `deedglass_decoder_halts_total{connector,reason}`, `deedglass_decoder_peek_seconds` (histogram),
@@ -284,11 +285,21 @@ Runbook:
 5. **Deleting a witnessed connector** drops its slot first and seals `decoder.slot_dropped`
    (`connector_deleted`). When the database can't be reached, the decoder shows `disabled ·
    slot_orphaned` with the slot's name and the SQL to drop it by hand.
+6. **Halted, `slot_missing`, after the database was recreated** (a demo reset, a restore): the slot
+   went with the old database. Drop it to start a new slot in the new one (`make demo-reset` does
+   this for the demo).
+
+**Since S21:** a write to the connector (new credentials, a changed config, `init` again) wakes a
+halted runner at once, instead of after `decoder.halt_retry` (5 minutes): the cause may be gone.
+Nudges from waiting actions don't wake a halted runner. A new slot is a new stream, so relation
+shapes seen through an earlier slot (perhaps in another database) are forgotten and
+`relation_changed` starts afresh.
 
 ## What the decoder doesn't do
 
 - **It doesn't decide verdicts.** It produces frames; the Witness (S21) compares them with each
-  action. Until S21, frames are stored and counted, and nothing is amended.
+  action through the hooks `OnBound`, `OnMissing` and `SlotLost`, and amends a sealed deed when a
+  frame arrives late ([WITNESS.md](WITNESS.md#l2-witnessed-by-postgres)).
 - **It sees only the publication's tables.** Unpublished, unlogged and temporary tables, sequences
   and large objects are invisible. DDL shows only as a relation shape change. See
   [OBSERVATION_BOUNDARY.md](OBSERVATION_BOUNDARY.md).

@@ -77,7 +77,7 @@ const configSchema = `{"type":"object","required":["allowed_schemas"],"propertie
 "statement_timeout_ms":{"type":"integer","minimum":100,"maximum":60000},
 "lock_timeout_ms":{"type":"integer","minimum":100,"maximum":60000},
 "max_connections":{"type":"integer","minimum":1,"maximum":16},
-"witness":{"type":"object","properties":{"enabled":{"type":"boolean"},"watched_tables":{"type":"array","items":{"type":"string"}},"sensitive_columns":{"type":"array","items":{"type":"string"}}}},
+"witness":{"type":"object","properties":{"enabled":{"type":"boolean"},"watched_tables":{"type":"array","items":{"type":"string"}},"sensitive_columns":{"type":"array","items":{"type":"string"}},"auto_columns":{"type":"object","description":"table → columns a trigger maintains, like {public.orders: [updated_at]}"},"max_rows":{"type":"object","description":"table → the most rows one action may change"},"strict_triggers":{"type":"boolean"},"l2_timeout":{"type":"string","description":"how long an action waits for Postgres's change log, 1s to 60s (10s)"},"diff_rows":{"type":"integer","minimum":1,"maximum":100}}},
 "functions":{"type":"array","items":{"type":"object","required":["name"]}},
 "throwaway":{"type":"boolean"}}}`
 
@@ -85,7 +85,7 @@ const configSchema = `{"type":"object","required":["allowed_schemas"],"propertie
 func (c *Connector) Info() connector.TypeInfo {
 	return connector.TypeInfo{Object: "connector_type", Type: Type, Title: "PostgreSQL",
 		Description: "Agent SQL in a transaction Deedglass controls: one statement per action, run as the least-privilege role deedglass_agent, with a ledger row and a logical marker committed with the change for the witness.",
-		Levels:      []string{"L0"},
+		Levels:      []string{"L0", "L1", "L2"},
 		CredentialKinds: []connector.CredentialKind{
 			{Kind: "dsn", Fields: []connector.CredentialField{{Name: "dsn", Secret: true}, {Name: "witness_dsn", Secret: true}}},
 		},

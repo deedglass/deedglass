@@ -18,6 +18,11 @@ import (
 // ShapeOptions parameterise ShapeOf.
 type ShapeOptions struct {
 	DefaultSchema string // the schema unqualified table names resolve to; "" means "public"
+	// AnyWhere (S21, L2's count-only footprints) accepts an UPDATE or DELETE whose WHERE is not a
+	// key predicate, or that has no WHERE: the shape is then Simple with Where nil and WhereOther
+	// true. Everything else about the statement (one table, no FROM, USING, JOIN or CTE, a SET
+	// list without subqueries or function calls) must still be recognised.
+	AnyWhere bool
 }
 
 // Shape is what ShapeOf reports about one SQL string.
@@ -31,6 +36,7 @@ type Shape struct {
 	Table      string    `json:"table,omitempty"`       // schema.table; unquoted names lowercased, quoted ones exact
 	Set        []Assign  `json:"set,omitempty"`         // UPDATE only, in statement order
 	Where      *KeyPred  `json:"where,omitempty"`       // UPDATE and DELETE: the key predicate
+	WhereOther bool      `json:"where_other,omitempty"` // AnyWhere only: the WHERE isn't a key predicate (or is missing)
 	InsertCols []string  `json:"insert_cols,omitempty"` // INSERT only
 	InsertRows [][]Value `json:"insert_rows,omitempty"` // INSERT only: one []Value per VALUES row, in column order
 	Returning  []string  `json:"returning,omitempty"`   // plain column names, or "*"
@@ -157,7 +163,7 @@ func ShapeOf(sql string, o ShapeOptions) (s Shape) {
 		}
 		return Shape{Kind: ShapeKindOther, Why: ShapeWhyEmpty}
 	}
-	p := &shapeParser{src: sql, sig: stmts[0], schema: schema}
+	p := &shapeParser{src: sql, sig: stmts[0], schema: schema, anyWhere: o.AnyWhere}
 	kind := p.kind()
 	switch {
 	case err != nil:
@@ -243,6 +249,7 @@ type shapeParser struct {
 	i      int
 	// The target table: its name as written (last part), its resolved schema, and its alias.
 	tname, tschema, alias string
+	anyWhere              bool
 }
 
 func (p *shapeParser) fail(why string) { panic(shapeFail{why}) }
@@ -477,6 +484,11 @@ func (p *shapeParser) delete(s *Shape) {
 func (p *shapeParser) whereAndReturning(s *Shape) {
 	if p.kw(p.i) != "where" {
 		if p.i >= len(p.sig) || p.kw(p.i) == "returning" {
+			if p.anyWhere {
+				s.WhereOther = true
+				p.returning(s)
+				return
+			}
 			p.fail(ShapeWhyNoWhere)
 		}
 		p.fail(ShapeWhyOther)
@@ -486,9 +498,31 @@ func (p *shapeParser) whereAndReturning(s *Shape) {
 	if end < 0 {
 		end = len(p.sig)
 	}
-	s.Where = p.keyPred(p.i, end)
+	if p.anyWhere {
+		s.Where, s.WhereOther = p.keyPredOrOther(p.i, end)
+	} else {
+		s.Where = p.keyPred(p.i, end)
+	}
 	p.i = end
 	p.returning(s)
+}
+
+// keyPredOrOther is keyPred, except that a WHERE that isn't a key predicate is reported as other
+// (AnyWhere) instead of failing the shape. Any other failure still fails it.
+func (p *shapeParser) keyPredOrOther(from, end int) (k *KeyPred, other bool) {
+	defer func() {
+		if r := recover(); r != nil {
+			if f, ok := r.(shapeFail); ok && f.why == ShapeWhyWhereNotKey {
+				k, other = nil, true
+				return
+			}
+			panic(r)
+		}
+	}()
+	if from >= end {
+		p.fail(ShapeWhyOther)
+	}
+	return p.keyPred(from, end), false
 }
 
 // insert needs no JOIN check: a JOIN at the statement's depth can only follow INSERT … SELECT,

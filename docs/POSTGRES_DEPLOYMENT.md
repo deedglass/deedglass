@@ -61,6 +61,31 @@ starts a new one, and reconcile records the actions that fell in the gap as miss
   `extra_float_digits` in the connection's startup packet, which outranks `ALTER ROLE … SET`, and
   checks them before every read.
 
+## Tuning L2 per table
+
+The L2 witness (S21, [WITNESS.md](WITNESS.md)) compares each write with Postgres's change log. Two
+choices per watched table decide how much it can check:
+
+- **`REPLICA IDENTITY FULL`.** `init` sets it on every watched table. With it, the change log
+  carries each updated row's old values, so L2 can see which columns changed (`unexpected_column`,
+  the diff's before values). Without it (`DEFAULT`), counts and keys are still checked and column
+  checks are the gap `old_image_missing`. The cost is more WAL per `UPDATE` and `DELETE` on that
+  table, proportional to the row's width; measure it on your own write mix before turning it off for
+  a busy, wide table.
+- **`witness.auto_columns`.** A table whose trigger keeps a column such as `updated_at` current
+  would show that column as `unexpected_column` on every update. List it:
+
+  ```yaml
+  witness:
+    enabled: true
+    watched_tables: [public.orders]
+    auto_columns: {public.orders: [updated_at]}
+    max_rows: {public.orders: 1}
+  ```
+
+  `max_rows` is the other half: a table where one action should never change more than a few rows
+  gets `row_limit_exceeded` (a MISMATCH) when it does, whatever the statement looked like.
+
 ## Providers
 
 The provider steps (parameter groups, flags, which role can grant REPLICATION) are in

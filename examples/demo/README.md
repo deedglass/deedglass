@@ -54,8 +54,13 @@ to countersign; schema browsing and plain `EXPLAIN` run; at most 30 calls a minu
 | `make demo-follow` | `deedglass actions list --follow --connector orders` against the demo's Ledger (`CONNECTOR=everything` for the gateway). |
 | `make demo-verify [SINCE=10m]` | Exports the recent deeds and verifies them: `✓ n deeds · chain intact`. |
 | `make demo-psql` | `psql` on `acme` as `acme_owner`. |
-| `make demo-reset` | Reloads `acme` from `sql/` and resets `/tmp/deedglass-demo/allowed/hello.txt`, for a new take. The Ledger keeps every deed. `HARD=1` also wipes the Ledger and re-seeds (new keys). |
+| `make demo-reset` | Reloads `acme` from `sql/` and resets `/tmp/deedglass-demo/allowed/hello.txt`, for a new take; the old replication slot went with the database, so it is recorded as dropped and the decoder starts a new one. The Ledger keeps every deed. `HARD=1` also wipes the Ledger and re-seeds (new keys). |
 | `make demo-smoke` | `TestDemoScript`: plays `SCRIPT.md` through the real wrapper and Postgres MCP server, then checks Postgres and the chain. |
+| `make demo-hero` | S21's hero in one command (`scripts/hero.sh`): trigger off → `L2 · VERIFIED`; trigger on → `L2 · MISMATCH · Postgres changed 301 rows in public.orders. The agent reported 1.`; the diff; verify. `HERO_PACE=2` paces it for recording ([SCRIPT.md §Hero](SCRIPT.md#hero-the-l2-clip-s21)). |
+| `make demo-hero-check` | `TestHeroScript`: `demo-hero` twice, with `demo-reset` between. |
+| `make demo-diff [ID=act_…]` | `deedglass actions show --diff` for the action (default: the newest `postgres.execute` one). |
+| `make demo-trigger-on` / `demo-trigger-off` | The hero's legacy trigger (`sql/10_trigger_on.sql`, `sql/11_trigger_off.sql`) on the demo's `orders-db` only (127.0.0.1:55434). |
+| `make demo-order-reset [ORDER=42]` | One order back to `paid`, or every order back to the seed's status (`sql/12_order_statuses.sql`), as `acme_owner`. |
 | `make demo-down` | Stops the stack; the data stays. |
 
 The gateway with the `everything` upstream:

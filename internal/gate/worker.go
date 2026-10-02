@@ -116,6 +116,10 @@ func (w *Worker) Run(ctx context.Context) error {
 				wg.Add(1)
 				go func(j store.ClaimedJob) {
 					defer func() { <-sem; wg.Done(); w.drop(j.ID) }()
+					if j.Kind == JobL2Match {
+						w.handleL2Job(jobCtx, j)
+						return
+					}
 					w.handle(jobCtx, j)
 				}(j)
 			}
@@ -203,7 +207,9 @@ func (w *Worker) handle(ctx context.Context, j store.ClaimedJob) {
 			cancel()
 		}
 	}
+	partial := false // S21: L2 is waiting too, so the read-back is kept and finalizeL2 decides
 	err = p.o.Ledger.OrgTxRetry(ctx, j.OrgID, func(ctx context.Context, tx pgx.Tx) error {
+		partial = false
 		job, err := store.GetJob(ctx, tx, j.OrgID, j.ID)
 		if errors.Is(err, store.ErrNotFound) {
 			return nil // another worker finished it
@@ -229,6 +235,12 @@ func (w *Worker) handle(ctx context.Context, j store.ClaimedJob) {
 				return err
 			}
 		}
+		if waiting, err := l2Waiting(ctx, tx, j.OrgID, j.ActionID); err != nil {
+			return err
+		} else if waiting {
+			partial = true
+			return nil // stored below, outside this transaction's verdict path
+		}
 		if err := p.recordVerdict(ctx, tx, j.ActionID, out, "system", ""); err != nil && !errors.Is(err, ledger.ErrStateConflict) {
 			return err
 		}
@@ -237,6 +249,14 @@ func (w *Worker) handle(ctx context.Context, j store.ClaimedJob) {
 		}
 		return store.CompleteJob(ctx, tx, j.OrgID, j.ID)
 	})
+	if err == nil && partial {
+		if err = p.storeL1Partial(ctx, j.OrgID, j.ActionID, out); err == nil || errors.Is(err, ErrStateConflict) {
+			err = p.finalizeL2(ctx, j.OrgID, j.ActionID, l2Check, "")
+			if errors.Is(err, ErrStateConflict) {
+				err = nil
+			}
+		}
+	}
 	switch {
 	case err != nil:
 		p.m.job(j.Kind, "error")

@@ -317,6 +317,10 @@ func MCPWitnessText(a *ledger.Action) string {
 	return line
 }
 
+// MCPWitnessPendingText is a tools/call result whose tool ran while its L2 verdict still waits for
+// Postgres's change log when the call's wait ends (S21 §3.9).
+const MCPWitnessPendingText = "Deedglass witness · pending · Postgres's change log hasn't shown this write yet. The verdict will appear in Console › Actions."
+
 // MCPStillPendingText answers deedglass.check_approval while a person hasn't decided.
 func MCPStillPendingText(approvalID string, expires time.Time) string {
 	return fmt.Sprintf("Still waiting for approval %s. It expires at %s. Nothing has run yet. Check again in a minute.", approvalID, clock(expires))

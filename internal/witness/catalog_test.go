@@ -239,8 +239,8 @@ func reasonsDoc() string {
 		msg := render(e.Template, e.Sample)
 		b.WriteString("| `" + string(e.Code) + "` | " + string(e.Class) + " | " + e.Levels + " | `" + mdCell(msg) + "` | " + mdCell(e.Next) + " |\n")
 	}
-	b.WriteString("\n## Reserved for S20 and S21\n\n")
-	b.WriteString("These codes are taken for the decoder and L2. They aren't used yet.\n\n")
+	b.WriteString("\n## Reserved\n\n")
+	b.WriteString("These codes were set aside before L2 chose its names. They stay unused, so they never mean something else.\n\n")
 	for _, c := range Reserved {
 		b.WriteString("- `" + string(c) + "`\n")
 	}

@@ -84,7 +84,15 @@ func (s *Supervisor) Sync(ctx context.Context) error {
 	case s.wake <- struct{}{}:
 	default:
 	}
-	s.NudgeOrg("")
+	s.mu.Lock()
+	var rs []*Runner
+	for _, h := range s.runners {
+		rs = append(rs, h.r)
+	}
+	s.mu.Unlock()
+	for _, r := range rs {
+		r.Resync() // a halted runner retries now (S21: init applied again after a reset)
+	}
 	return err
 }
 

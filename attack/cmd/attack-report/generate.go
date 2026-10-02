@@ -20,8 +20,10 @@ var layers = []struct {
 		func(c harness.MetaCase) bool { return c.Group == "J" }},
 	{"Connectors, egress and secrets", "A hostile connector config, a hostile or careless upstream, and an MCP server that renames its tools.",
 		func(c harness.MetaCase) bool { return c.Group == "K" }},
-	{"Witness (L2)", "Postgres committed something the agent didn't report. These cases need the L2 witness (S21) and wait for it.",
+	{"Witness (L2)", "Postgres committed something the agent didn't report. The L2 witness (S21) reads Postgres's change log and seals the difference.",
 		func(c harness.MetaCase) bool { return c.Group == "H" && c.ID >= "H08" }},
+	{"Witness (L2): expected and observed", "S21's group W: triggers that widen, rewrite or delete, forged and replayed evidence, missing old rows, statements too complex to predict, and a decoder that is late, loses its slot or loses its publication. A gap is UNVERIFIABLE, never MISMATCH; late evidence is an amendment deed, never an edit.",
+		func(c harness.MetaCase) bool { return c.Group == "W" }},
 }
 
 func statusText(r *harness.Result) string {
@@ -60,7 +62,7 @@ func Generate(meta *harness.Meta, run *harness.Run) []byte {
 	w("Every case's expected outcome was written in `attack/attack_meta.json` before its code existed, and `attack/meta_test.go` pins a digest of the expectations (ADR-040). A case that turns out different is shown as differs; its expectation is never edited to pass.\n\n")
 	w("**Last run:** %s · commit `%s` · PostgreSQL %s · a real `deedglass serve` process, a real Postgres, loopback upstreams.\n\n", day, run.Commit, pgVersion(run.Postgres))
 	s := run.Summary
-	w("**%d matched · %d differ · %d waiting on S21.** After every case: the deed chains of both orgs are %s, the target database is unchanged wherever nothing should have run, every action is sealed, and the planted credential was seen %d times across the server's logs, every HTTP response, and the recorded actions, events, deeds, admin events, connector configs and credential hints.\n\n",
+	w("**%d matched · %d differ · %d waiting on a later session.** After every case: the deed chains of both orgs are %s, the target database is unchanged wherever nothing should have run, every action is sealed, and the planted credential was seen %d times across the server's logs, every HTTP response, and the recorded actions, events, deeds, admin events, connector configs and credential hints.\n\n",
 		s.Matched, s.Differs, s.Waiting, run.Invariants.Chains, run.Invariants.SecretsSeen)
 	w("Run it: `make attack` (a throwaway PostgreSQL 18 cluster, under a minute on a laptop), then `make attack-report`. One case: `DEEDGLASS_IT_ATTACK_RUN='TestAttack/H03' make attack`.\n\n")
 	for _, l := range layers {
@@ -80,7 +82,7 @@ func Generate(meta *harness.Meta, run *harness.Run) []byte {
 		w("\n")
 	}
 	w("## V0 controlled-write cases (A to G)\n\n")
-	w("The 66 cases frozen on 2026-09-28 for the V0 controlled-function design. A13 and F01 to F04 run in `attack/deed_test.go` and `attack/deed_verify_test.go`. The decoder's half of D01 to D04, D17, E01 to E05, E07, E08, E10 and E11 (what is stored, bound, alerted or halted) runs in `internal/decoder`'s integration suite on PostgreSQL 16, 17 and 18 (S20); their verdicts arrive with S21. The others are scheduled for S21 and S34. `make attack` doesn't run them.\n\n")
+	w("The 66 cases frozen on 2026-09-28 for the V0 controlled-function design. A13 and F01 to F04 run in `attack/deed_test.go` and `attack/deed_verify_test.go`. The decoder's half of D01 to D04, D17, E01 to E05, E07, E08, E10 and E11 (what is stored, bound, alerted or halted) runs in `internal/decoder`'s integration suite on PostgreSQL 16, 17 and 18 (S20); their L2 verdicts are the W group's (S21). The others are scheduled for S34. `make attack` doesn't run them.\n\n")
 	w("| Case | Attack | Expected | Status |\n|---|---|---|---|\n")
 	for _, c := range meta.Cases {
 		if strings.Contains("ABCDEFG", c.Group) {
@@ -110,7 +112,8 @@ func Generate(meta *harness.Meta, run *harness.Run) []byte {
 	w("- Malicious upstream behaviour beyond tool naming: tool descriptions that carry instructions, poisoned results, slow-drip responses (S34).\n")
 	w("- Denial of service at scale. J04 checks one agent's budget, not a flood.\n")
 	w("- The supply chain beyond `govulncheck` (S35 adds the SBOM and container scanning).\n")
-	w("- The L2 witness cases H08 to H11 until S21, and the V0 cases not listed as running above.\n")
+	w("- The V0 cases not listed as running above.\n")
+	w("- What L2 can't see: effects outside Postgres, writes to tables outside the publication, and proxy-mode SQL servers (no marker to bind). `docs/WITNESS.md` lists them.\n")
 	w("- Production network rules for private ranges: the suite runs in dev with the private-network override so it can reach its own loopback servers. Metadata, link-local and cross-host targets stay blocked even then (K01, K02); the prod-only rules are covered by the egress corpus (`internal/connector/egress`).\n")
 	return b.Bytes()
 }

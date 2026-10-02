@@ -1,0 +1,28 @@
+witness  L2 · MISMATCH · Postgres changed 301 rows in public.orders. The agent reported 1.
+  [2mexpected   [0mUPDATE 1 row in public.orders where id = 42 · sets status
+  [2mobserved   [0mUPDATE 301 rows in public.orders · 300 outside
+
+  [2mpublic.orders    id   status[0m
+  [36m✓[0m expected       42   paid → shipped
+  [31m✕[0m unexpected     1    paid → shipped
+  [31m✕[0m unexpected     2    pending → shipped
+  [31m✕[0m unexpected     3    paid → shipped
+  [31m✕[0m unexpected     4    paid → shipped
+  [31m✕[0m unexpected     5    pending → shipped
+  [31m✕[0m unexpected     6    paid → shipped
+  [31m✕[0m unexpected     7    paid → shipped
+  [31m✕[0m unexpected     8    pending → shipped
+  [31m✕[0m unexpected     9    paid → shipped
+  [31m✕[0m unexpected     10   paid → shipped
+  [31m✕[0m unexpected     11   pending → shipped
+  [31m✕[0m unexpected     12   paid → shipped
+  [31m✕[0m unexpected     13   paid → shipped
+  [31m✕[0m unexpected     14   pending → shipped
+  [31m✕[0m unexpected     15   paid → shipped
+  [31m✕[0m unexpected     16   paid → shipped
+  [31m✕[0m unexpected     17   pending → shipped
+  [31m✕[0m unexpected     18   paid → shipped
+  [31m✕[0m unexpected     19   paid → shipped
+  [2m…                first 20 of 301 rows · the rest in Console › Actions[0m
+
+  Witnessed by Postgres · commit 0/3E65020 · 2026-10-07 13:12:09 UTC

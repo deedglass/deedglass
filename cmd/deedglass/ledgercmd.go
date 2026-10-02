@@ -352,9 +352,14 @@ func relTime(now, t time.Time) string {
 // (and, when it already waits for a person, for its next change), at most 25 s (S13).
 var actionsShowWait bool
 
+// actionsShowDiff is actions show --diff (S21): the L2 diff (expected, observed, the rows); with
+// --json, the witness_detail itself.
+var actionsShowDiff bool
+
 func actionsShowFlags(fs *flag.FlagSet) {
-	actionsShowWait = false
+	actionsShowWait, actionsShowDiff = false, false
 	fs.BoolVar(&actionsShowWait, "wait", false, "wait (up to 25 s) until the action is sealed or waits for a person")
+	fs.BoolVar(&actionsShowDiff, "diff", false, "show what Postgres committed next to what the statement named (L2)")
 }
 
 // showWaitPoll is how often actions show --wait re-reads the action (a DB-direct command has no
@@ -386,9 +391,18 @@ func runActionsShow(ctx context.Context, e *Env, args []string) error {
 		return err
 	}
 	if e.Globals.JSON {
+		if actionsShowDiff {
+			if d.Witness == nil || len(d.Witness.Detail) == 0 {
+				return failNext(e, ExitFailure, "not_found", fmt.Sprintf("Action %s has no witness detail yet.", clean(id)), "deedglass actions show "+clean(id)+" --wait")
+			}
+			return writeAPIJSON(e, d.Witness.Detail)
+		}
 		return writeAPIJSON(e, d)
 	}
 	st := e.Style
+	if actionsShowDiff {
+		return printDiff(e, d)
+	}
 	head := d.Tool + " " + ui.Sep + " " + d.Agent.Name
 	if d.OnBehalfOf != nil {
 		head += " on behalf of " + *d.OnBehalfOf
@@ -410,6 +424,20 @@ func runActionsShow(ctx context.Context, e *Env, args []string) error {
 		row("witness", witnessClaim(st, w, true))
 		for _, l := range witnessReasons(st, w, true, "             ") {
 			fmt.Fprintln(e.Stdout, l)
+		}
+		summary := ""
+		if w.Summary != nil {
+			summary = *w.Summary
+		}
+		for i, l := range historyLines(st, w, summary) {
+			k := ""
+			if i == 0 {
+				k = "history"
+			}
+			row(k, l)
+		}
+		if lines := l2Lines(e, w.Detail, "             ", true); len(lines) > 0 && w.Level == "L2" {
+			fmt.Fprintln(e.Stdout, lines[0])
 		}
 	} else {
 		chip, _ := witnessChip(st, ledger.Action{State: d.State, Policy: d.Policy, Execution: d.Execution})
@@ -439,6 +467,32 @@ func runActionsShow(ctx context.Context, e *Env, args []string) error {
 	row("events", strings.Join(states, " → "))
 	if d.Deed != nil {
 		row("next", "deedglass deeds show "+*d.Deed)
+	}
+	return nil
+}
+
+// printDiff is actions show --diff (S21 §3.9): the claim with its summary, then the L2 diff.
+func printDiff(e *Env, d *ledger.ActionDetail) error {
+	st := e.Style
+	w := d.Witness
+	if w == nil {
+		return failNext(e, ExitFailure, "not_found", fmt.Sprintf("Action %s hasn't been witnessed yet.", clean(d.ID)),
+			"deedglass actions show "+clean(d.ID)+" --wait")
+	}
+	head := verdictSymbol(st, w.Verdict) + " " + clean(d.Tool) + " " + ui.Sep + " " + d.ID
+	fmt.Fprintln(e.Stdout, head)
+	fmt.Fprintf(e.Stdout, "  %s %s\n", ui.Pad("witness", 8), witnessClaim(st, w, false))
+	lines := l2Lines(e, w.Detail, "  ", false)
+	if len(lines) == 0 {
+		fmt.Fprintln(e.Stdout, "  "+st.Dim("No L2 diff: this action wasn't witnessed by Postgres's change log."))
+		return nil
+	}
+	fmt.Fprintln(e.Stdout)
+	for _, l := range lines {
+		fmt.Fprintln(e.Stdout, l)
+	}
+	if d.Deed != nil {
+		fmt.Fprintf(e.Stdout, "  %s %s\n", ui.Pad("deed", 8), shortID(*d.Deed)+" "+ui.Sep+" sealed")
 	}
 	return nil
 }

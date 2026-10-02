@@ -104,7 +104,7 @@ func TestLayering(t *testing.T) {
 
 	// The pure packages. Vacuous while they are empty, and never failing on an empty package.
 	forbidden := []string{"net/http", "database/sql", "github.com/jackc/", module + "/internal/store", module + "/internal/httpx"}
-	for _, rel := range []string{"internal/deed", "internal/sqlguard", "internal/policy", "internal/witness"} {
+	for _, rel := range []string{"internal/deed", "internal/sqlguard", "internal/policy", "internal/witness", "internal/witness/l2"} {
 		p, ok := get(rel)
 		if !ok {
 			continue

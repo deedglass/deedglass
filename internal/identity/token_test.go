@@ -3,6 +3,7 @@ package identity
 import (
 	"bytes"
 	"crypto/sha256"
+	mrand "math/rand/v2"
 	"strings"
 	"testing"
 )
@@ -70,15 +71,20 @@ func FuzzHashToken(f *testing.F) {
 
 // Six positions × ten digits over 1,000,000 codes: each position's digit counts must look uniform
 // (chi-square with 9 degrees of freedom below 27.88, which is p > 0.001).
+// TestNewCodeUniform checks the sampling (crypto/rand.Int's rejection over 10^6) with a seeded
+// ChaCha8 stream in place of crypto/rand, so the chi-square statistic is the same on every run and
+// the test can't flake (DL-034: it failed once in ~1,000 runs at p < 0.001 on crypto/rand).
+// TestNewCodeFormat covers the crypto/rand path itself.
 func TestNewCodeUniform(t *testing.T) {
 	n := 1_000_000
 	if testing.Short() {
 		n = 100_000
 	}
+	src := mrand.NewChaCha8([32]byte{'d', 'e', 'e', 'd', 'g', 'l', 'a', 's', 's'})
 	var counts [CodeDigits][10]int
 	leadingZero := false
 	for i := 0; i < n; i++ {
-		c, err := NewCode()
+		c, err := newCodeFrom(src)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -104,6 +110,18 @@ func TestNewCodeUniform(t *testing.T) {
 		}
 		if chi >= 27.88 {
 			t.Errorf("position %d: chi-square %.2f ≥ 27.88 (p < 0.001): %v", p, chi, counts[p])
+		}
+	}
+}
+
+func TestNewCodeFormat(t *testing.T) {
+	for i := 0; i < 2_000; i++ {
+		c, err := NewCode()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, ok := NormalizeCode(c); !ok || len(c) != CodeDigits {
+			t.Fatalf("code %q", c)
 		}
 	}
 }

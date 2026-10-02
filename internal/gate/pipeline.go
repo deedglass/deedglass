@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"strconv"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -91,11 +92,14 @@ type Options struct {
 	// connectors read back.
 	Observer  witness.Observer
 	Approvals Approvals // nil: StubApprovals
-	Broker    *Broker   // nil: a private one
-	Metrics   *Metrics  // nil: a private one
-	Config    Config
-	Logger    *slog.Logger
-	Clock     func() time.Time
+	// Nudge makes the decoder poll a connector's slot fast (S21: an action started waiting for L2).
+	// Nil without a decoder; set after New with SetNudge when the decoder starts later.
+	Nudge   func(connectorID string)
+	Broker  *Broker  // nil: a private one
+	Metrics *Metrics // nil: a private one
+	Config  Config
+	Logger  *slog.Logger
+	Clock   func() time.Time
 }
 
 // Pipeline is the Gate: every agent action, from every surface, enters through Submit and leaves
@@ -123,6 +127,9 @@ type hooks struct {
 	beforeReadBack func(action string)     // S19 invariant 3: no transaction open during a read-back
 	afterB1        func(ids.ActionID) bool // crash tests: true stops after B1, as if the instance died
 }
+
+// SetNudge sets Options.Nudge once the decoder exists (serve starts it after the Gate).
+func (p *Pipeline) SetNudge(f func(connectorID string)) { p.o.Nudge = f }
 
 // New returns a Pipeline.
 func New(o Options) (*Pipeline, error) {
@@ -187,6 +194,9 @@ type plan struct {
 	// link, when set, is the request's context: the tool call (and only the call, never the
 	// recording) is cancelled with ErrRequestGone when it ends (ActionRequest.CancelOn).
 	link context.Context
+	// l2 is set by run when the execution waits for L2 (S21), so Submit keeps waiting for the
+	// verdict within the request's wait.
+	l2 atomic.Pointer[l2Plan]
 }
 
 // admission is the outcome of Tx A.
@@ -302,6 +312,16 @@ func (p *Pipeline) Submit(ctx context.Context, pr principal, req ActionRequest) 
 		if v == nil { // recording failed (the sweeper finishes it): answer with what is stored
 			if v, err = p.o.Ledger.ReadActionView(context.WithoutCancel(ctx), pr.OrgID, adm.view.ID); err != nil {
 				return nil, err
+			}
+		}
+		if v.State == string(Witnessing) && adm.plan.l2.Load() != nil {
+			// S21: the verdict waits for Postgres's change log; keep waiting within the request's wait.
+			left := wait - p.now().Sub(t0)
+			if w, err := p.waitView(ctx, pr.OrgID, ids.ActionID(mustAction(v.ID)), left, func(x *ledger.Action) bool {
+				return x.State != string(Witnessing)
+			}); err == nil && w != nil {
+				w.Execution = keepExecutionResult(v.Execution, w.Execution)
+				v = w
 			}
 		}
 		p.m.observeOverhead(p.now().Sub(t0) - toolTime)
@@ -764,6 +784,9 @@ func (p *Pipeline) run(ctx context.Context, pl *plan) (*ledger.Action, time.Dura
 	tool := e.FinishedAt.Sub(e.StartedAt)
 	wc := p.newWitnessCase(pl.subject, e, pl.exec, pl.call, pl.required, pl.side, pl.defaultSchema)
 	v, err := p.complete(ctx, pl.subject, e, wc, pl.costTargets, pl.reservations, pl.actor, pl.requestID)
+	if wc.l2 != nil && wc.l2.wait {
+		pl.l2.Store(wc.l2)
+	}
 	if err != nil {
 		if !errors.Is(err, ErrStateConflict) {
 			p.log.Error("gate: recording an execution failed; the sweeper will finish it", "org_id", pl.subject.Org.String(),
@@ -783,3 +806,11 @@ func nonEmpty(s string) *string {
 }
 
 func strp(s string) *string { return &s }
+
+// keepExecutionResult keeps the tool's result from the first view when a later read leaves it out.
+func keepExecutionResult(prev, next *ledger.ActionExecution) *ledger.ActionExecution {
+	if next != nil && prev != nil && next.Result == nil {
+		next.Result = prev.Result
+	}
+	return next
+}

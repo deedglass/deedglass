@@ -2,7 +2,7 @@
 
 The Postgres connector runs agent SQL in a transaction Deedglass controls. Every statement runs as
 the least-privilege role `deedglass_agent`, one statement per action, and every write commits
-together with a ledger row and a logical marker that the witness reads (S20 and S21). Setting up a
+together with a ledger row and a logical marker that the witness reads (S20 and S21: L2, [WITNESS.md](WITNESS.md)). Setting up a
 database takes two commands: `init` plans and applies the roles, schema, grants and publication;
 `check` tells you whether the database is ready for L2.
 
@@ -139,6 +139,12 @@ people, not instructions. Results are cached for 60 seconds per connector.
 | `witness.enabled` | false | S20 creates a slot only for connectors with the witness on |
 | `witness.watched_tables` | `[]` | must include every writable table when the witness is on |
 | `witness.sensitive_columns` | `[]` | `schema.table.column` in a watched table; stored as digests and masked in the Console, diffs and approvals (S20–S22) |
+| `witness.auto_columns` | none | S21: `{schema.table: [column, …]}`, columns a trigger maintains on purpose (`updated_at`); L2 doesn't count them as `unexpected_column` |
+| `witness.max_rows` | none | S21: `{schema.table: n}`, the most rows one action may change in a watched table (`row_limit_exceeded`) |
+| `witness.strict_triggers` | `false` | S21: triggers on a footprint table are the gap `triggers_unwatched` instead of a note |
+| `witness.l2_timeout` | `10s` | S21: how long a write waits for its frame (1s to 60s); past it the deed is sealed with `l2_timeout`, and a late frame amends it |
+| `witness.diff_rows` | `20` | S21: changed rows kept in the L2 diff (1 to 100) |
+| `functions[].writes` | none | S21: `[{table, ops, max_rows, columns}]`, what a controlled function writes, so `postgres.call` gets an L2 footprint ([WITNESS.md](WITNESS.md)) |
 | `functions` | `[]` | `{name: schema.function, args: [{name, type}], side_effect: read\|write\|destructive, description}`; at most 64, no overloads |
 | `throwaway` | false | `true` only for disposable databases: `init --apply` then needs no `--confirm` |
 

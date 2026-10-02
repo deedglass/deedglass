@@ -14,6 +14,7 @@ import (
 	"github.com/deedglass/deedglass/cmd/deedglass/internal/ui"
 	"github.com/deedglass/deedglass/internal/gate"
 	"github.com/deedglass/deedglass/internal/ledger"
+	"github.com/deedglass/deedglass/internal/witness/l2"
 	"github.com/deedglass/deedglass/pkg/deedglass"
 )
 
@@ -115,6 +116,32 @@ func runAct(ctx context.Context, e *Env, args []string) error {
 	return printAct(ctx, e, c, &a, nil)
 }
 
+// hasL2Reason reports whether a witness lists an L2 gap or violation (an L2 wait ran).
+func hasL2Reason(w *ledger.ActionWitness) bool {
+	if w.Reasons == nil {
+		return false
+	}
+	for _, r := range *w.Reasons {
+		if r.Level == "L2" {
+			return true
+		}
+	}
+	return false
+}
+
+// actDetail reads the action's witness_detail (GET ?expand[]=witness.detail); nil when it can't.
+func actDetail(ctx context.Context, c *deedglass.Client, id string) json.RawMessage {
+	var d struct {
+		Witness *struct {
+			Detail json.RawMessage `json:"detail"`
+		} `json:"witness"`
+	}
+	if _, err := c.Do(ctx, http.MethodGet, "/v1/actions/"+url.PathEscape(id)+"?expand[]=witness.detail", nil, &d); err != nil || d.Witness == nil {
+		return nil
+	}
+	return d.Witness.Detail
+}
+
 // keepResult keeps the result the create call returned when a later read leaves it out.
 func keepResult(prev, next *ledger.ActionExecution) *ledger.ActionExecution {
 	if next != nil && prev != nil && next.Result == nil {
@@ -185,7 +212,25 @@ func printAct(ctx context.Context, e *Env, c *deedglass.Client, a *ledger.Action
 		for _, l := range witnessReasons(s, w, false, "           ") {
 			fmt.Fprintln(e.Stdout, l)
 		}
+		// S21: an L2 claim shows where it came from; a MISMATCH shows the diff.
+		if w.Level == "L2" || hasL2Reason(w) {
+			if detail := actDetail(ctx, c, a.ID); detail != nil {
+				if w.Verdict == gate.VerdictMismatch && w.Level == "L2" {
+					if lines := l2Lines(e, detail, "  ", false); len(lines) > 0 {
+						fmt.Fprintln(e.Stdout)
+						for _, l := range lines {
+							fmt.Fprintln(e.Stdout, l)
+						}
+					}
+				} else if lines := l2Lines(e, detail, "           ", true); len(lines) > 0 && w.Level == "L2" {
+					fmt.Fprintln(e.Stdout, lines[0])
+				}
+			}
+		}
 		deedRow()
+		if w.Verdict == gate.VerdictUnverifiable && hasL2Reason(w) {
+			fmt.Fprintln(e.Stdout, "  "+l2.CopyKeepsWatching)
+		}
 		if n := witnessNext(a); n != "" {
 			fmt.Fprintln(e.Stdout, "  "+n)
 		} else if w.Verdict != gate.VerdictVerified {

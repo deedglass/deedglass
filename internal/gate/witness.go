@@ -15,6 +15,7 @@ import (
 	"github.com/deedglass/deedglass/internal/ledger"
 	"github.com/deedglass/deedglass/internal/store"
 	"github.com/deedglass/deedglass/internal/witness"
+	"github.com/deedglass/deedglass/internal/witness/l2"
 )
 
 // Verdicts, levels and methods (contract §6), for presenting a verdict. A verdict itself only ever
@@ -75,7 +76,10 @@ type witnessCase struct {
 	ex       Executor       // the connector that ran it (gateway); nil in proxy mode
 	call     connector.Call // the call as it ran (the Postgres row read-back reads its statement)
 	res      connector.Result
-	readBack bool // L1 is planned: B1, a read-back with no transaction open, then B2
+	readBack bool             // L1 is planned: B1, a read-back with no transaction open, then B2
+	l2       *l2Plan          // S21: the connector is witnessed at L2 (shared by copies: Tx B sets wait)
+	extra    []witness.Reason // reasons decided before any check ran (S21: decoder_halted at plan time)
+	expect   *l2.Footprint    // S21: actions.witness_expect (S23's undo)
 }
 
 // requiredLevel is the level the decision's verify: asks for: it applies to anything that may
@@ -121,7 +125,8 @@ func (p *Pipeline) newWitnessCase(s Subject, e Execution, ex Executor, call conn
 		ws.Result.Cause = ReasonOutcomeUnknown
 	}
 	rb, _ := ex.(connector.ReadBacking)
-	return witnessCase{sub: ws, ex: ex, call: call, res: e.Result, readBack: witness.PlanFor(ws).L1 && rb != nil && rb.CanReadBack()}
+	return witnessCase{sub: ws, ex: ex, call: call, res: e.Result, readBack: witness.PlanFor(ws).L1 && rb != nil && rb.CanReadBack(),
+		l2: planL2(s, e, ex, call, side)}
 }
 
 // decide runs the Witness with no read-back (L0, and the readback_skipped note where one applies).
@@ -131,8 +136,8 @@ func (p *Pipeline) decide(wc witnessCase, extra ...witness.Reason) (witness.Outc
 		// No read-back runs here: drop it from the plan, so L0 (and extra) decide.
 		sub.Spec.ReadBack, sub.Spec.PostgresRow = nil, false
 	}
-	out, _, err := witness.Run(context.Background(), witness.Input{Subject: sub, Extra: extra, Final: true, Now: p.now(),
-		MaxDetailBytes: p.wcfg.MaxDetailBytes})
+	out, _, err := witness.Run(context.Background(), witness.Input{Subject: sub, Extra: append(wc.reasons(), extra...),
+		Final: true, Now: p.now(), MaxDetailBytes: p.wcfg.MaxDetailBytes})
 	return out, err
 }
 
@@ -146,7 +151,8 @@ func (p *Pipeline) observe(ctx context.Context, wc witnessCase, final bool) (wit
 	if obs == nil {
 		obs = &observer{p: p, wc: wc}
 	}
-	return witness.Run(ctx, witness.Input{Subject: wc.sub, Observer: obs, Final: final, Now: p.now(), MaxDetailBytes: p.wcfg.MaxDetailBytes})
+	return witness.Run(ctx, witness.Input{Subject: wc.sub, Observer: obs, Final: final, Extra: wc.reasons(), Now: p.now(),
+		MaxDetailBytes: p.wcfg.MaxDetailBytes})
 }
 
 // observer is the Witness's Observer over the connector's ReadBacker: a REST read tool through the
@@ -230,10 +236,19 @@ func verdictStep(out witness.Outcome, ev ledger.EventData) (State, ledger.EventD
 		joined := strings.Join(f, ",")
 		ev.Flags = &joined
 	}
-	for _, r := range d.Reasons {
-		if r.Class == witness.Violation || r.Class == witness.Gap {
-			c := string(r.Code)
-			ev.Reason = &c
+	// The reason is the first violation or gap a check found; the claim-level codes
+	// (level_below_required, no_checks) are already in the flags. When there is none, the first
+	// claim-level code stands in.
+	for _, pass := range []bool{false, true} {
+		for _, r := range d.Reasons {
+			claim := r.Code == witness.CodeLevelBelowRequired || r.Code == witness.CodeNoChecks
+			if (r.Class == witness.Violation || r.Class == witness.Gap) && claim == pass {
+				c := string(r.Code)
+				ev.Reason = &c
+				break
+			}
+		}
+		if ev.Reason != nil {
 			break
 		}
 	}
@@ -258,12 +273,13 @@ type jobPayload struct {
 	OutputBytes   int               `json:"output_bytes"`
 	Meta          map[string]any    `json:"meta,omitempty"`
 	Evidence      map[string]string `json:"evidence,omitempty"`
+	Extra         []witness.Reason  `json:"extra,omitempty"` // S21: decoder_halted at plan time
 }
 
 func payloadOf(wc witnessCase) json.RawMessage {
 	pl := jobPayload{Required: string(wc.sub.Required), SideEffect: wc.sub.SideEffect, DefaultSchema: wc.sub.Spec.DefaultSchema,
 		Status: wc.sub.Result.Status, Cause: wc.sub.Result.Cause, OutputBytes: wc.sub.Result.OutputBytes,
-		Meta: wc.sub.Result.Meta, Evidence: wc.sub.Result.Evidence}
+		Meta: wc.sub.Result.Meta, Evidence: wc.sub.Result.Evidence, Extra: wc.reasons()}
 	b, err := json.Marshal(pl)
 	if err != nil || len(b) > 12<<10 {
 		pl.Meta = nil
@@ -307,6 +323,13 @@ func (p *Pipeline) jobCase(ctx context.Context, ga *store.GateAction, payload js
 	req, _ := witness.ParseLevel(pl.Required)
 	wc := p.newWitnessCase(sub, e, ex, call, req, pl.SideEffect, pl.DefaultSchema)
 	wc.sub.Result.OutputBytes = max(wc.sub.Result.OutputBytes, pl.OutputBytes)
+	wc.extra = pl.Extra
+	if len(ga.WitnessExpect) > 0 {
+		var fp l2.Footprint
+		if json.Unmarshal(ga.WitnessExpect, &fp) == nil {
+			wc.expect = &fp
+		}
+	}
 	return wc, nil
 }
 
