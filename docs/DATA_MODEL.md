@@ -55,8 +55,8 @@ erDiagram
 | `deeds` | Sealed deeds, one hash-linked chain per org. **Append-only.** | S04 |
 | `admin_events` | Administrative changes in an org. **Append-only.** | S07+ |
 | `witness_jobs` | Work queued for the Witness and the approval workers. | S13, S19 to S22 |
-| `decoded_txs` | Transactions read from a watched database's change stream. | S20 |
-| `decoder_slots` | One logical replication slot per Postgres connector. | S20 |
+| `decoded_txs` | Frames: transactions read from a watched database's change stream, with their class, ledger rows, markers, tables, counts, row images (the first 1,000) and digest. Unique by (connector, system id, timeline, commit LSN, stray message); `missing` rows (reconcile) have no LSN. Evidence: UPDATE and TRUNCATE raise DG001, and only `maint_prune_decoded_txs` deletes ([DECODER.md](DECODER.md)). | S20 |
+| `decoder_slots` | One logical replication slot per witnessed Postgres connector: the lease (`claim_decoder_leases`), status and reason, positions, lag, counters, relation shapes and the reconcile watermark. `sync_decoder_slots` keeps one row per witnessed connector. | S20 |
 | `suggestions` | Insights suggestions a person accepts or rejects. | S28 |
 | `anomalies` | Insights anomalies. | S27 |
 | `replay_jobs` | Replays of past actions against a policy version. | S27 |

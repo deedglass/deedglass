@@ -86,6 +86,7 @@ var patchColumns = [...][2]string{
 	{"error_message", "text"}, {"cost_amount", "bigint"}, {"cost_currency", "text"}, {"latency_ms", "integer"},
 	{"started_at", "timestamptz"}, {"finished_at", "timestamptz"}, {"witness_level", "text"}, {"witness_verdict", "text"},
 	{"witness_method", "text"}, {"witness_detail", "jsonb"}, {"witness_detail_digest", "text"}, {"witness_required", "text"},
+	{"execution_evidence", "jsonb"},
 }
 
 // patchSetFrom is the SET list for a Patch whose first parameter is $first: each column keeps its
@@ -118,7 +119,8 @@ const patchSet = `,
     started_at = COALESCE($36::timestamptz, started_at), finished_at = COALESCE($37::timestamptz, finished_at),
     witness_level = COALESCE($38::text, witness_level), witness_verdict = COALESCE($39::text, witness_verdict),
     witness_method = COALESCE($40::text, witness_method), witness_detail = COALESCE($41::jsonb, witness_detail),
-    witness_detail_digest = COALESCE($42::text, witness_detail_digest), witness_required = COALESCE($43::text, witness_required)`
+    witness_detail_digest = COALESCE($42::text, witness_detail_digest), witness_required = COALESCE($43::text, witness_required),
+    execution_evidence = COALESCE($44::jsonb, execution_evidence)`
 
 // transitionSQL is built once per state from stateColumn; patchSQL is the same statement with
 // patchSet (one UPDATE, so one compare-and-set, whichever columns an edge writes).

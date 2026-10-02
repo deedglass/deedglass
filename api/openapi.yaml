@@ -3428,6 +3428,81 @@ paths:
                 $ref: "#/components/schemas/ConnectorSetup"
         default:
           $ref: "#/components/responses/Error"
+  /v1/connectors/{id}/decoder:
+    get:
+      operationId: getConnectorDecoder
+      summary: Show a connector's decoder
+      description: >-
+        What the decoder reads from this connector's database (S20): its slot, status and health,
+        the WAL positions and lag, the watched tables, the frame counters per class and the most
+        recent frames (`?recent=N`, 0 to 50, default 10; no row images). A witnessed connector that
+        no runner has picked up yet shows `pending`. A connector that isn't witnessed is 409
+        `witness_not_configured`. A viewer+ Console session or an org admin key; agent keys get 403
+        `insufficient_scope`.
+      tags: [Connectors]
+      security: [{bearerAuth: []}, {sessionCookie: []}]
+      x-deedglass-auth: session_or_key
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+        - $ref: "#/components/parameters/ConnectorRef"
+        - name: recent
+          in: query
+          required: false
+          schema: {type: integer, minimum: 0, maximum: 50, default: 10}
+      responses:
+        "200":
+          description: The decoder.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Decoder"
+        default:
+          $ref: "#/components/responses/Error"
+    delete:
+      operationId: dropConnectorDecoder
+      summary: Drop a connector's slot
+      description: >-
+        Stops the connector's decoder, drops its replication slot (as the witness role), seals the
+        admin deed `decoder.slot_dropped` and marks the decoder `dropped`. Actions still waiting for
+        L2 evidence on this connector become evidence gaps. The next sync creates a new slot: a new
+        baseline, and reconcile records any action in the gap as `missing`. The body must confirm
+        the connector's name. 409 `conflict` while another process reads the slot; 409
+        `witness_not_configured` for a connector that isn't witnessed. An admin+ Console session or
+        an org admin key.
+      tags: [Connectors]
+      security: [{bearerAuth: []}, {sessionCookie: []}]
+      x-deedglass-auth: session_or_key
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+        - $ref: "#/components/parameters/CSRFWithSession"
+        - $ref: "#/components/parameters/ConnectorRef"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [confirm]
+              properties:
+                confirm: {type: string, description: "The connector's name, typed to confirm.", example: postgres}
+      responses:
+        "200":
+          description: The slot is dropped, with the deed.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DecoderDropped"
+        default:
+          $ref: "#/components/responses/Error"
   /v1/connector-types:
     get:
       operationId: listConnectorTypes
@@ -4804,6 +4879,7 @@ components:
                 - row_limit_exceeded
                 - database_role_unsafe
                 - database_not_ready
+                - witness_not_configured
             message:
               type: string
               description: One or more calm sentences with the next step.
@@ -5756,6 +5832,101 @@ components:
               fix: {type: string}
               fix_sql: {type: string}
               doc_url: {type: string}
+    Decoder:
+      type: object
+      description: >-
+        A connector's decoder (S20): what Deedglass reads from the database's change stream. The
+        decoder never decides a verdict; S21 turns bound frames into L2 verdicts.
+      required: [object, connector, name, slot, publication, status, health, reason, detail, since, transport, server,
+        positions, lag, wal_status, watching, last_commit, last_heartbeat_at, frames, recent, updated_at]
+      properties:
+        object: {type: string, enum: [decoder]}
+        connector: {type: string, pattern: "^con_[0-7][0-9a-hjkmnp-tv-z]{25}$"}
+        name: {type: string, example: postgres}
+        slot: {type: string, example: deedglass_01j9zq7c4m8x2v6t0r3n5k1h7d}
+        publication: {type: string, example: deedglass_pub}
+        status: {type: string, enum: [pending, connecting, running, degraded, waiting, halted, dropped, disabled]}
+        health: {type: string, enum: [healthy, pending, connecting, degraded, waiting, halted, dropped, disabled]}
+        reason:
+          type: [string, "null"]
+          description: >-
+            Why the status is what it is: lag_high, restart_retained, stalled, publication_changed,
+            timeline_changed, peek_slow (degraded); slot_invalidated, slot_missing,
+            publication_missing, publication_invalid, malformed_evidence, session_settings_changed,
+            ledger_function_changed, system_changed, wal_level, not_replication, slot_conflict
+            (halted); held_elsewhere (waiting); credentials_missing, unreachable (connecting);
+            dropped, not_witnessed, connector_deleted, slot_orphaned.
+        detail: {type: object, additionalProperties: true}
+        since: {type: string, format: date-time}
+        transport: {type: string, enum: [peek]}
+        server:
+          type: object
+          required: [version, system_id, timeline]
+          properties:
+            version: {type: [string, "null"], example: "18.6"}
+            system_id: {type: [string, "null"]}
+            timeline: {type: [integer, "null"]}
+        positions:
+          type: object
+          required: [checkpoint_lsn, confirmed_flush_lsn, restart_lsn, current_wal_lsn]
+          properties:
+            checkpoint_lsn: {type: [string, "null"], example: 0/3E65050}
+            confirmed_flush_lsn: {type: [string, "null"]}
+            restart_lsn: {type: [string, "null"]}
+            current_wal_lsn: {type: [string, "null"]}
+        lag:
+          type: object
+          required: [bytes, seconds, retained_bytes]
+          properties:
+            bytes: {type: [integer, "null"], description: "From the slot's confirmed position to the server's."}
+            seconds: {type: [number, "null"], description: "Since the decoder last read everything flushed."}
+            retained_bytes: {type: [integer, "null"], description: "WAL the slot keeps on the database (from restart_lsn)."}
+        wal_status: {type: [string, "null"], example: reserved}
+        watching: {type: array, items: {type: string}}
+        last_commit:
+          type: [object, "null"]
+          required: [lsn, at]
+          properties:
+            lsn: {type: string}
+            at: {type: [string, "null"], format: date-time}
+        last_heartbeat_at: {type: [string, "null"], format: date-time}
+        frames:
+          type: object
+          description: Frames stored, per class.
+          additionalProperties: {type: integer}
+        recent:
+          type: array
+          items:
+            type: object
+            required: [commit_lsn, class, action, counts, flags, at]
+            properties:
+              commit_lsn: {type: [string, "null"]}
+              class: {type: string, enum: [bound, unattributed, forged_marker, forged_marker_nontx, marker_count, marker_mismatch,
+                foreign_ledger, publication_gap, missing]}
+              action: {type: [string, "null"]}
+              counts:
+                type: object
+                additionalProperties:
+                  type: object
+                  properties:
+                    insert: {type: integer}
+                    update: {type: integer}
+                    delete: {type: integer}
+                    truncate: {type: integer}
+              flags: {type: array, items: {type: string}}
+              at: {type: string, format: date-time}
+        updated_at: {type: string, format: date-time}
+    DecoderDropped:
+      type: object
+      required: [object, connector, name, slot, dropped, deed, status]
+      properties:
+        object: {type: string, enum: [decoder]}
+        connector: {type: string}
+        name: {type: string}
+        slot: {type: string}
+        dropped: {type: boolean, enum: [true]}
+        deed: {type: string, description: "The decoder.slot_dropped admin deed."}
+        status: {type: string, enum: [dropped]}
     ConnectorSetup:
       type: object
       required: [object, connector, plan_sha256, changes, deed]

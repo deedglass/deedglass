@@ -14,7 +14,7 @@ LDFLAGS  := -s -w -X $(BI).Version=$(VERSION) -X $(BI).Commit=$(COMMIT) -X $(BI)
 	web-verify-install web-verify-test web-verify-build web-verify-serve gencopy genmark bench-mark bench-ledger bench-stop bench-intents bench-gate bench-witness policy-test \
 	fuzz-policy fuzz-policy-short bench-policy bench-eval mcp-it bench-mcp \
 	demo-up demo-down demo-reset demo-status demo-snippet demo-psql demo-follow demo-verify demo-check demo-smoke bench-gateway \
-	mock-orders bench-connectors bench-postgres attack attack-report vuln
+	mock-orders bench-connectors bench-postgres bench-decoder attack attack-report vuln
 
 all: ci
 
@@ -106,6 +106,11 @@ mock-orders: ## S16: the mock orders API on 127.0.0.1:8090 (MOCK_ORDERS_TOKEN re
 bench-postgres: ## S17: the Postgres connector's extra latency over raw pgx (p50 ≤ 1.5 ms) and 100 writes/s for 30 s (p99 < 50 ms) on a throwaway PG 18; JSON in bench/results/
 	@out="$(CURDIR)/bench/results/$$(date +%F)-$$(go env GOOS)-$$(go env GOARCH)-postgres.json"; log="$(CURDIR)/.tmp/bench-postgres.log"; mkdir -p "$(CURDIR)/.tmp" "$(CURDIR)/bench/results"; \
 	DEEDGLASS_IT_BENCH=1 DEEDGLASS_PG_BENCH_OUT="$$out" DEEDGLASS_IT_PKGS=./internal/connector/postgres/ DEEDGLASS_IT_GOFLAGS="-run TestPostgresBudget -v" \
+	scripts/integration_local.sh > "$$log" 2>&1; st=$$?; grep -E 'PERF|--- (PASS|FAIL)' "$$log"; echo "raw: $$out"; exit $$st
+
+bench-decoder: ## S20: SafeParse vs Parse, then 100 writes/s for 60 s on a throwaway PG 18 (commit to frame persisted p50 < 250 ms, p99 < 1 s; poll round p50 < 20 ms); JSON in bench/results/
+	@out="$(CURDIR)/bench/results/$$(date +%F)-$$(go env GOOS)-$$(go env GOARCH)-decoder.json"; log="$(CURDIR)/.tmp/bench-decoder.log"; mkdir -p "$(CURDIR)/.tmp" "$(CURDIR)/bench/results"; \
+	DEEDGLASS_IT_BENCH=1 DEEDGLASS_DECODER_BENCH_OUT="$$out" DEEDGLASS_IT_PKGS=./internal/decoder/ DEEDGLASS_IT_GOFLAGS="-run TestDecoderBudget -v -timeout 900s" \
 	scripts/integration_local.sh > "$$log" 2>&1; st=$$?; grep -E 'PERF|--- (PASS|FAIL)' "$$log"; echo "raw: $$out"; exit $$st
 
 bench-connectors: ## S16: vault open, redaction, egress classification and REST overhead (no network); JSON in bench/results/

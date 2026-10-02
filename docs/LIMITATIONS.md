@@ -332,6 +332,28 @@ What the Witness doesn't do ([WITNESS.md](WITNESS.md)):
 - **A read-back target that lies consistently can't be caught by reading it back.** L1 trusts the
   read tool as much as the system it reads.
 
+## The decoder (S20)
+
+What the decoder doesn't do ([DECODER.md](DECODER.md), [OBSERVATION_BOUNDARY.md](OBSERVATION_BOUNDARY.md)):
+
+- **`deedglass_witness` could decode every table in its database.** REPLICATION isn't scoped to
+  tables (spike S1(h)). Deedglass asks only for the publication's tables and stores only those; the
+  credential lives in the vault. Treat `witness_dsn` as a read-everything credential.
+- **Only the publication is watched.** Changes to unpublished, unlogged or temporary tables,
+  sequences and large objects are invisible, and so are effects outside the WAL.
+- **DDL leaves only a shape change** (`relation_changed:<table>`) on the next change to that table.
+- **Failover slots and point-in-time recovery are not tested.** A new timeline degrades the decoder;
+  a different cluster halts it.
+- **Each read re-reads WAL from the slot's restart point.** A long transaction elsewhere makes reads
+  slower (`peek_slow`, `restart_retained`); the streaming transport is the fix.
+- **Stored row images are customer data.** They stay for `decoder.retention` (7 days; frames with no
+  Deedglass action 30 days), under row-level security, with `witness.sensitive_columns` stored only
+  as a digest. A frame keeps at most 1,000 images; its counts and digest cover every change.
+- **A deleted connector whose database can't be reached leaves its slot behind** (`disabled ·
+  slot_orphaned`, with the SQL to drop it by hand).
+- **A logical message's content is held in memory whole.** A role that writes a huge message makes
+  the decoder hold it once.
+
 ## What this page does not do
 
 It does not list bugs or missing features on the schedule. It lists limits of the design that stay true after they ship.

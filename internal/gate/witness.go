@@ -289,7 +289,11 @@ func (p *Pipeline) jobCase(ctx context.Context, ga *store.GateAction, payload js
 	if pl.Status == "" {
 		pl.Status = derefString(ga.ExecutionStatus)
 	}
-	e := Execution{Status: ExecStatus(pl.Status), Reason: pl.Cause, Result: connector.Result{Output: ga.Result, Meta: pl.Meta, Evidence: pl.Evidence}}
+	ev := pl.Evidence
+	if len(ev) == 0 {
+		ev = ga.ExecutionEvidence // ADR-044: the action keeps it too
+	}
+	e := Execution{Status: ExecStatus(pl.Status), Reason: pl.Cause, Result: connector.Result{Output: ga.Result, Meta: pl.Meta, Evidence: ev}}
 	call := connector.Call{ActionID: ga.ID, OrgID: ga.OrgID, AgentID: ga.AgentID, Qualified: ga.Tool, Args: ga.Request,
 		IntentHash: derefString(ga.IntentHash)}
 	var ex Executor

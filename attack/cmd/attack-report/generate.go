@@ -80,11 +80,15 @@ func Generate(meta *harness.Meta, run *harness.Run) []byte {
 		w("\n")
 	}
 	w("## V0 controlled-write cases (A to G)\n\n")
-	w("The 66 cases frozen on 2026-09-28 for the V0 controlled-function design. A13 and F01 to F04 run in `attack/deed_test.go` and `attack/deed_verify_test.go`; the others are scheduled for S21 and S34. `make attack` doesn't run them.\n\n")
+	w("The 66 cases frozen on 2026-09-28 for the V0 controlled-function design. A13 and F01 to F04 run in `attack/deed_test.go` and `attack/deed_verify_test.go`. The decoder's half of D01 to D04, D17, E01 to E05, E07, E08, E10 and E11 (what is stored, bound, alerted or halted) runs in `internal/decoder`'s integration suite on PostgreSQL 16, 17 and 18 (S20); their verdicts arrive with S21. The others are scheduled for S21 and S34. `make attack` doesn't run them.\n\n")
 	w("| Case | Attack | Expected | Status |\n|---|---|---|---|\n")
 	for _, c := range meta.Cases {
 		if strings.Contains("ABCDEFG", c.Group) {
-			w("| %s | %s | %s | V0 suite |\n", c.ID, cell(c.Title), cell(c.ExpectedDetail))
+			where := "V0 suite"
+			if c.Status == "implemented" && strings.Contains("DE", c.Group) {
+				where = "decoder suite (S20)"
+			}
+			w("| %s | %s | %s | %s |\n", c.ID, cell(c.Title), cell(c.ExpectedDetail), where)
 		}
 	}
 	w("\n## Outcome words\n\n")

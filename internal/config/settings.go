@@ -22,6 +22,7 @@ type Setting struct {
 	Max     int64
 	Doc     string
 	Owner   string
+	Enum    []string // SettingEnum: the allowed values
 }
 
 // SettingKind is how a setting's value is parsed.
@@ -30,6 +31,8 @@ type SettingKind int
 const (
 	SettingDuration SettingKind = iota // Go duration: 10s, 10m
 	SettingInt                         // a whole number
+	SettingBool                        // true or false
+	SettingEnum                        // one of Enum
 )
 
 // Settings lists every file-only setting, in display order.
@@ -54,6 +57,28 @@ var Settings = []Setting{
 		Doc: "The worker's limit for one read-back job; past it, the read-back is the gap readback_timeout.", Owner: "S19"},
 	{Path: "witness.max_detail_bytes", Kind: SettingInt, Default: "65536", Min: 4_096, Max: 262_144,
 		Doc: "The largest witness_detail (as JCS), in bytes. Beyond it, diff rows and evidence are cut and counted.", Owner: "S19"},
+	{Path: "decoder.enabled", Kind: SettingBool, Default: "true",
+		Doc: "Run the decoder on this server. A connector opts in with witness.enabled: true.", Owner: "S20"},
+	{Path: "decoder.transport", Kind: SettingEnum, Default: "peek", Enum: []string{"peek"},
+		Doc: "How the decoder reads a slot: peek (SQL peek, then advance). Streaming is planned.", Owner: "S20"},
+	{Path: "decoder.poll_active", Kind: SettingDuration, Default: "100ms", Min: 10, Max: 1_000,
+		Doc: "How often a runner reads its slot while an action waits for L2 evidence.", Owner: "S20"},
+	{Path: "decoder.poll_idle", Kind: SettingDuration, Default: "1s", Min: 100, Max: 10_000,
+		Doc: "How often a runner reads its slot otherwise. It doubles (to 5s) while a read takes more than a quarter of it.", Owner: "S20"},
+	{Path: "decoder.batch_changes", Kind: SettingInt, Default: "5000", Min: 100, Max: 100_000,
+		Doc: "Rows one read asks for (upto_nchanges). Postgres returns whole transactions, so a larger one comes in full.", Owner: "S20"},
+	{Path: "decoder.max_images_per_tx", Kind: SettingInt, Default: "1000", Min: 0, Max: 10_000,
+		Doc: "Row changes per transaction whose before and after images are kept. Counts and the digest cover every change.", Owner: "S20"},
+	{Path: "decoder.heartbeat_interval", Kind: SettingDuration, Default: "10s", Min: 1_000, Max: 60_000,
+		Doc: "How often a runner writes a heartbeat message to the watched database.", Owner: "S20"},
+	{Path: "decoder.heartbeat_deadline", Kind: SettingDuration, Default: "60s", Min: 5_000, Max: 600_000,
+		Doc: "With no heartbeat read back within this time, the runner is degraded (stalled).", Owner: "S20"},
+	{Path: "decoder.lease", Kind: SettingDuration, Default: "15s", Min: 5_000, Max: 120_000,
+		Doc: "How long an instance holds a connector's slot without renewing; another instance takes over after it.", Owner: "S20"},
+	{Path: "decoder.reconcile_interval", Kind: SettingDuration, Default: "60s", Min: 5_000, Max: 3_600_000,
+		Doc: "How often a runner checks that every ledger row has a frame; one without is recorded as missing.", Owner: "S20"},
+	{Path: "decoder.retention", Kind: SettingDuration, Default: "168h", Min: 3_600_000, Max: 31_536_000_000,
+		Doc: "How long decoded frames (row images included) are kept. Unattributed and forged-marker frames stay 30 days.", Owner: "S20"},
 }
 
 var settingByPath = func() map[string]Setting {
@@ -83,6 +108,21 @@ type GateSettings struct {
 	MaxResultBytes    int
 	WorkerConcurrency int
 	WorkerMaxAttempts int
+}
+
+// DecoderSettings are the decoder.* settings, parsed (S20).
+type DecoderSettings struct {
+	Enabled           bool
+	Transport         string
+	PollActive        time.Duration
+	PollIdle          time.Duration
+	BatchChanges      int
+	MaxImagesPerTx    int
+	HeartbeatInterval time.Duration
+	HeartbeatDeadline time.Duration
+	Lease             time.Duration
+	ReconcileInterval time.Duration
+	Retention         time.Duration
 }
 
 // WitnessSettings are the witness.* settings, parsed (S19).
@@ -140,12 +180,19 @@ func (l *loader) parseSettings(c *Config) {
 		"gate.wait_timeout": &c.Gate.WaitTimeout, "gate.execute_timeout": &c.Gate.ExecuteTimeout,
 		"gate.edge_result_timeout": &c.Gate.EdgeResultTimeout,
 		"witness.inline_budget":    &c.Witness.InlineBudget, "witness.readback_timeout": &c.Witness.ReadbackTimeout,
+		"decoder.poll_active": &c.Decoder.PollActive, "decoder.poll_idle": &c.Decoder.PollIdle,
+		"decoder.heartbeat_interval": &c.Decoder.HeartbeatInterval, "decoder.heartbeat_deadline": &c.Decoder.HeartbeatDeadline,
+		"decoder.lease": &c.Decoder.Lease, "decoder.reconcile_interval": &c.Decoder.ReconcileInterval,
+		"decoder.retention": &c.Decoder.Retention,
 	}
 	ints := map[string]*int{
 		"gate.max_args_bytes": &c.Gate.MaxArgsBytes, "gate.max_result_bytes": &c.Gate.MaxResultBytes,
 		"gate.worker.concurrency": &c.Gate.WorkerConcurrency, "gate.worker.max_attempts": &c.Gate.WorkerMaxAttempts,
 		"witness.max_detail_bytes": &c.Witness.MaxDetailBytes,
+		"decoder.batch_changes":    &c.Decoder.BatchChanges, "decoder.max_images_per_tx": &c.Decoder.MaxImagesPerTx,
 	}
+	bools := map[string]*bool{"decoder.enabled": &c.Decoder.Enabled}
+	enums := map[string]*string{"decoder.transport": &c.Decoder.Transport}
 	for _, s := range Settings {
 		v, src := s.Default, SourceDefault
 		if y, ok := l.yaml[s.Path]; ok && y.s != "" {
@@ -169,8 +216,32 @@ func (l *loader) parseSettings(c *Config) {
 				continue
 			}
 			*ints[s.Path] = int(n)
+		case SettingBool:
+			switch strings.ToLower(v) {
+			case "true":
+				*bools[s.Path] = true
+			case "false":
+				*bools[s.Path] = false
+			default:
+				l.problem(s.Path, fmt.Sprintf("must be true or false (got %q).", v), "For example "+s.Path+": "+s.Default+".")
+			}
+		case SettingEnum:
+			if !slicesContains(s.Enum, v) {
+				l.problem(s.Path, fmt.Sprintf("must be one of %s (got %q).", strings.Join(s.Enum, ", "), v), "For example "+s.Path+": "+s.Default+".")
+				continue
+			}
+			*enums[s.Path] = v
 		}
 	}
+}
+
+func slicesContains(xs []string, v string) bool {
+	for _, x := range xs {
+		if x == v {
+			return true
+		}
+	}
+	return false
 }
 
 // SettingsMarkdown is the settings table of docs/CONFIG.md (TestSettingsDocs keeps them equal).
@@ -179,8 +250,13 @@ func SettingsMarkdown() string {
 	b.WriteString("| Setting | Default | Range | What it does | Added |\n|---|---|---|---|---|\n")
 	for _, s := range Settings {
 		rng := fmt.Sprintf("%d to %d", s.Min, s.Max)
-		if s.Kind == SettingDuration {
+		switch s.Kind {
+		case SettingDuration:
 			rng = fmt.Sprintf("%s to %s", time.Duration(s.Min)*time.Millisecond, time.Duration(s.Max)*time.Millisecond)
+		case SettingBool:
+			rng = "true or false"
+		case SettingEnum:
+			rng = strings.Join(s.Enum, ", ")
 		}
 		fmt.Fprintf(&b, "| `%s` | `%s` | %s | %s | %s |\n", s.Path, s.Default, rng, s.Doc, s.Owner)
 	}

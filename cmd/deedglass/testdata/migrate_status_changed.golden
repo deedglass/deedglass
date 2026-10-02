@@ -19,5 +19,6 @@ VERSION  NAME                STATE    APPLIED               CHECKSUM
 0016     gate                [35mpending[0m  —                     sha256:27ef…38e4
 0017     connectors_vault    [35mpending[0m  —                     sha256:6159…c5e3
 0018     witness             [35mpending[0m  —                     sha256:ef00…68b0
-[31m✕[0m 8 applied · 9 pending · 1 doesn't match this build. Run deedglass migrate verify for details.
+0019     decoder             [35mpending[0m  —                     sha256:d5ec…5712
+[31m✕[0m 8 applied · 10 pending · 1 doesn't match this build. Run deedglass migrate verify for details.
 --- stderr

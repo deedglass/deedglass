@@ -144,11 +144,16 @@ func TestSealConcurrency(t *testing.T) {
 	t.Logf("✓ %d deeds · chain intact · %d seal key", s.Deeds, len(s.SealKeys))
 }
 
-// Holding org A's chain lock never slows org B.
+// Holding org A's chain lock never blocks org B. The test has no wall-clock bound on org B's
+// speed (S19's 200 ms bound tripped on a slow CI runner, DL-033): org A keeps its lock until org B
+// has sealed all 20 deeds, so if B's seals waited on A's lock they could never finish and the
+// 60 s deadline would fail the test. Org B's seals use their own context with that deadline, and
+// org A's transaction must still hold its lock (still open) when B is done.
 func TestSealOrgsIndependent(t *testing.T) {
 	se := newSealEnv(t, 2, 10)
 	a, b := se.orgs[0], se.orgs[1]
 	held := make(chan struct{})
+	release := make(chan struct{})
 	done := make(chan error, 1)
 	go func() {
 		done <- se.e.DB.OrgTx(ctx, a, func(ctx context.Context, tx pgx.Tx) error {
@@ -156,25 +161,43 @@ func TestSealOrgsIndependent(t *testing.T) {
 				return err
 			}
 			close(held)
-			time.Sleep(2 * time.Second)
-			return nil
+			select {
+			case <-release:
+				return nil
+			case <-time.After(90 * time.Second):
+				return errors.New("org A's lock was never released")
+			}
 		})
 	}()
 	<-held
+	bctx, cancel := context.WithTimeout(ctx, 60*time.Second)
+	defer cancel()
 	start := time.Now()
-	for range 20 {
-		if _, err := se.seal(b); err != nil {
-			t.Fatal(err)
+	for i := range 20 {
+		err := se.e.DB.OrgTx(bctx, b, func(ctx context.Context, tx pgx.Tx) error {
+			_, err := se.sealer.Seal(ctx, store.DeedTx(tx), adminDraft(b))
+			return err
+		})
+		if err != nil {
+			close(release)
+			<-done
+			t.Fatalf("seal %d on org B while org A held its chain lock: %v", i+1, err)
 		}
 	}
 	took := time.Since(start)
+	select {
+	case err := <-done:
+		t.Fatalf("org A's transaction ended before org B finished: %v", err)
+	default:
+	}
+	close(release)
 	if err := <-done; err != nil {
 		t.Fatal(err)
 	}
-	if took > 200*time.Millisecond {
-		t.Fatalf("20 seals on org B took %v while org A's chain was locked", took)
+	if s := se.chainOf(t, b); s.Deeds != 20 {
+		t.Fatalf("org B: %+v", s)
 	}
-	t.Logf("20 seals on org B in %v while org A was locked", took)
+	t.Logf("20 seals on org B in %v while org A held its chain lock", took)
 }
 
 func TestSealRollbackBurnsNoSeq(t *testing.T) {

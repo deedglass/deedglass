@@ -54,6 +54,8 @@
 
 # Alert when a Postgres replication slot holds more WAL than this many MB.
 # slot_lag_alert_mb: 512
+# Dev only: decoder runners stop reading after their current poll (tests of late evidence). Refused in prod.
+# decoder_pause: false
 
 # Client commands (CLI, mcp, SDKs): the server to talk to.
 # server: https://api.deedglass.com
@@ -91,6 +93,25 @@
 #   readback_timeout: 10s
 #   # The largest witness_detail, in bytes; beyond it, diff rows and evidence are cut and counted.
 #   max_detail_bytes: 65536
+
+# The decoder (docs/DECODER.md, S20): reads what each witnessed Postgres database committed.
+# File-only, like gate. A connector opts in with witness.enabled: true in its own config.
+# decoder:
+#   enabled: true
+#   transport: peek
+#   # How often a runner reads its slot while an action waits for L2 evidence, and otherwise.
+#   poll_active: 100ms
+#   poll_idle: 1s
+#   # Rows one read asks for; whole transactions always come in full.
+#   batch_changes: 5000
+#   # Row changes per transaction whose before and after images are kept (counts cover all).
+#   max_images_per_tx: 1000
+#   heartbeat_interval: 10s
+#   heartbeat_deadline: 60s
+#   lease: 15s
+#   reconcile_interval: 60s
+#   # How long frames (with row images) are kept; unattributed and forged-marker frames stay 30 days.
+#   retention: 168h
 
 # MCP (docs/MCP.md, S15). File-only, like gate.
 # mcp:

@@ -57,12 +57,17 @@ const (
 	// roles_created. Never the plan's SQL, a password or a verifier.
 	AdminConnectorPostgresInitialized = "connector.postgres_initialized"
 
+	// S20: the decoder created or dropped a connector's replication slot. Target {connector, con_…};
+	// data: connector (the name), slot, system_id, reason (created: start; dropped: dropped,
+	// connector_deleted, not_witnessed). A new slot is a new baseline.
+	AdminDecoderSlotCreated = "decoder.slot_created"
+	AdminDecoderSlotDropped = "decoder.slot_dropped"
+
 	// S07: security events, recorded in admin_events without a deed (AppendAdminEvent).
 	AdminUserSignedIn  = "user.signed_in"
 	AdminUserSignedOut = "user.signed_out"
 
 	// Planned, each added by its session with the exact spelling below:
-	//   S20  decoder.slot_created decoder.slot_dropped
 	//   S22  approval.decided approval.countersigned webhook.created webhook.deleted webhook.disabled
 	//   S27  anomaly.resolved insights.settings_changed
 	//   S28  suggestion.accepted suggestion.rejected
@@ -80,6 +85,7 @@ var AdminActions = []string{
 	AdminPolicyActivated, AdminPolicyDeactivated,
 	AdminConnectorCreated, AdminConnectorUpdated, AdminConnectorDeleted, AdminConnectorCredentialsUpdated,
 	AdminConnectorCredentialsRemoved, AdminVaultRotated, AdminConnectorPostgresInitialized,
+	AdminDecoderSlotCreated, AdminDecoderSlotDropped,
 }
 
 // AdminEventActions are admin events recorded without a deed (AppendAdminEvent): security events

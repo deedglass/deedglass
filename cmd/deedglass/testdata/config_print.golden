@@ -20,6 +20,7 @@ DEEDGLASS_ALLOW_PRIVATE_NETWORKS  false                                         
 DEEDGLASS_EGRESS_ALLOW_CIDRS      —                                                            not set
 DEEDGLASS_METRICS_LISTEN          —                                                            not set
 DEEDGLASS_SLOT_LAG_ALERT_MB       512                                                          default
+DEEDGLASS_DECODER_PAUSE           false                                                        default
 DEEDGLASS_API_KEY                 —                                                            not set
 DEEDGLASS_SERVER                  —                                                            not set
 DEEDGLASS_INIT_DSN                —                                                            not set

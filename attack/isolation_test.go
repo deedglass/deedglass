@@ -101,6 +101,7 @@ func TestOrgIsolation(t *testing.T) {
 		"/v1/connectors/{id}/credentials":                       {"id": acme.Conns["orders"]},
 		"/v1/connectors/{id}/test":                              {"id": acme.Conns["orders"]},
 		"/v1/connectors/{id}/initialized":                       {"id": acme.Conns["postgres"]},
+		"/v1/connectors/{id}/decoder":                           {"id": acme.Conns["postgres"]},
 		"/mcp/{connector}":                                      {"connector": "fs"},
 		"/.well-known/oauth-protected-resource/mcp/{connector}": nil, // public metadata: no org data
 		"/auth/assets/{file}":                                   nil, // public static file

@@ -69,6 +69,10 @@ make bench-postgres # S17: the connector's extra latency over raw pgx and 100 wr
 make bench-witness  # S19: Decide, L0 with a 64 KiB schema check, expect over 32 fields, a CEL postcondition; JSON in bench/results/
 go generate ./internal/witness   # S19: regenerate docs/witness/REASONS.md from the reason catalog
 DEEDGLASS_IT_PKGS="./cmd/deedglass/ -update" DEEDGLASS_IT_GOFLAGS="-run ^TestWitnessLive$" make integration   # S19 §9 on a real server; refresh testdata/gate/cli/witness-* (then SHA256SUMS)
+make bench-decoder  # S20: SafeParse vs Parse, then 100 writes/s for 60 s (commit → frame persisted, poll round); JSON in bench/results/
+DEEDGLASS_IT_PKGS=./internal/decoder/ make integration   # S20: the decoder on a throwaway cluster (crash, prepared and E08 tests start their own Homebrew cluster; skipped without one)
+DEEDGLASS_IT_PKGS="./internal/decoder/ -update-corpus" DEEDGLASS_IT_GOFLAGS="-run TestCaptureCorpus" make integration   # S20: re-capture testdata/decoder/pgoutput (per DEEDGLASS_IT_PG; then SHA256SUMS)
+go test ./internal/decoder -run TestSafeParsePrefixes -v   # S20: every strict prefix of the corpus refused (0 panics, 0 accepted)
 make attack         # S18: the V7 attack suite on a throwaway PG 18 (real serve, real Postgres, loopback upstreams), then the report
 make attack-report  # S18: print the last run and regenerate docs/ATTACK_SUITE.md (never edit that page by hand; -check in CI)
 DEEDGLASS_IT_ATTACK_RUN='TestAttack/H03' make attack   # one case; 'TestOrgIsolation' for the isolation sweep
@@ -130,8 +134,9 @@ scripts/ci-local.sh # the CI jobs locally (docker-smoke and govulncheck skip whe
    genproto and x/exp; the binary-size budget is ADR-032, accepted under DL-024 and amended under DL-031: < 40 MB). The MCP Go SDK
    `github.com/modelcontextprotocol/go-sdk` v1.8.0 (ADR-018, in go.mod since S14; since S15 the
    binary links it for the gateway's upstream client, ADR-037 accepted under DL-029; stripped binary 27.1 MB then, 29.6 MB at S17; budget 40 MB). S16 (vault,
-   egress, connectors) added no dependency: AES-256-GCM, the dialer and the JSON Schema subset are standard library (ADR-038, accepted under DL-030). S17 (the Postgres connector) added none either: `pgxpool` is part of pgx, SCRAM is `crypto/pbkdf2` (ADR-039, accepted under DL-031). Planned, and added only by the session that uses it: `pglogrepl` at the
-   spike-verified pin (S20). No cgo in the main binary.
+   egress, connectors) added no dependency: AES-256-GCM, the dialer and the JSON Schema subset are standard library (ADR-038, accepted under DL-030). S17 (the Postgres connector) added none either: `pgxpool` is part of pgx, SCRAM is `crypto/pbkdf2` (ADR-039, accepted under DL-031). S20 (the decoder) added `github.com/jackc/pglogrepl`
+   v0.0.0-20260824121319-4ae5c490f7ce with `jackc/pgio` v1.0.0 (MIT; ADR-043, Proposed): only `Parse`
+   and the message types, always behind `decoder.SafeParse`. No cgo in the main binary.
    `go.sum` is committed and CI runs `go mod verify`.
 7. CI matches the banned words (below) in files, strings and commit messages as whole words or
    phrases, case-insensitive, and fails on any hit not in `.banned-words-allow`
@@ -192,20 +197,28 @@ and "open source" until the repo is public. Style bans: "revolutionary", "world-
 1. `pg_logical_emit_message` returns the END LSN of the message record; it equals `commit_lsn` only
    by coincidence. The marker LSN is evidence only and is never compared with `commit_lsn`.
 2. `pg_control_system()` is PUBLIC-executable on PG 17/18; no `pg_monitor` grant is needed.
-3. No custom pgoutput parser: `pglogrepl.Parse` runs inside `safeParse` (recover, per-type minimum
-   lengths, declared-length checks). Any failure halts that connector's verdicts rather than
-   guessing. A fuzz test is seeded from the spike truncation corpus.
+3. No custom pgoutput parser: `pglogrepl.Parse` runs only inside `decoder.SafeParse`, which first
+   checks the message's whole layout (fixed sizes, strings inside the message, declared lengths
+   exact, no trailing bytes, tuple kinds n/u/t only), then calls Parse in `recover`. Any failure
+   halts that connector's runner (`malformed_evidence`) before anything is persisted.
+   `FuzzSafeParse` and `TestSafeParsePrefixes` run on the captured corpus `testdata/decoder/pgoutput`.
 4. COSE encodings use alg -8 (EdDSA, crv Ed25519), ADR-008: go-cose 1.3.0 has no built-in -19.
 5. Decode sessions pin `TimeZone='UTC'`, `DateStyle='ISO, YMD'`, `IntervalStyle='postgres'`,
-   `bytea_output='hex'`, `extra_float_digits=3`, set with `ALTER ROLE deedglass_witness SET`
-   (`sql/001_roles.sql`), asserted on every poll.
+   `bytea_output='hex'`, `extra_float_digits=3`: sent in the decoder's startup packet (a client
+   setting outranks `ALTER ROLE … SET`), also set by S17's init on the role, and asserted before
+   every peek (`session_settings_changed` halts).
 6. The strict pre-parser runs before JCS: gowebpki/jcs rounds 9007199254740993 and accepts 1.5, so
    integers only, magnitude at most 2^53-1, then `bytes == JCS(bytes)` (`internal/intent`).
 7. Small-order Ed25519 public keys are refused at registration (`internal/keys`; attack case A13).
 8. A controlled function's entry guard shows "first write", not "only write": extra markers are
    caught by counting markers per transaction. Callers retry in a NEW transaction.
 9. Classification uses frame position and the message's transactional flag, never the peek `xid`
-   or an assumed monotonic peek `lsn`; the checkpoint is `max(COMMIT.end_lsn)`.
+   or an assumed monotonic peek `lsn`. The checkpoint is the largest `COMMIT.end_lsn` or message LSN
+   returned, and, when the peek drained, the flush LSN read before it (ADR-045, amending ADR-002 point
+   2). Frames are persisted before the slot advances.
+10. A frame is bound only with exactly one `deedglass.ledger` insert and one transactional
+   `deedglass` marker naming the same action, of the connector's org, with low32(xid8) = BEGIN.xid
+   (ADR-003). The decoder never decides a verdict.
 
 ## Guards in place (keep them green; extend, never weaken)
 
@@ -426,6 +439,17 @@ and "open source" until the repo is public. Style bans: "revolutionary", "world-
   `cmd/deedglass` `TestWitnessLive` (honest, lying, read-back down, the API object and expand[]=witness.detail,
   actions list --verdict, export → verify, the sentinel sweep incl. witness_jobs; CLI goldens `testdata/gate/cli/witness-*`).
   The migration count is 18.
+- S20 (the decoder): `internal/decoder` unit tests: `TestSafeParsePrefixes` (≥ 50,000 prefixes: 0 panics, 0 accepted),
+  `TestSafeParseMatchesParse`, `TestSafeParseRefusals`, `FuzzSafeParse`; the assembler (old images, TOAST `u`, the
+  1,000-image cap with the same digest, sensitive digests, `relation_changed`, malformed streams) and `TestCanonMatchesJCS`;
+  `TestClassifyTable` (every class); heartbeat, marker and ledger-row parsing; the guards `TestMarkerLSNNeverComparedWithCommitLSN`
+  (AST over internal/, cmd/, pkg/ plus SQL), `TestRawHasNoXid`, `TestEmitMessageThreeArguments`, `TestNoVerdictWords`;
+  `TestConsoleCopy`. Integration on PG 16/17/18: the bound update, exact images (2^53+1), D01–D04, D17, sensitive columns,
+  E01, the 500-action burst across a restart, E10, E11, the 12,000-row transaction, the publication drop (16/17 halt,
+  18 gap), idle advance, two supervisors and the lease move, the advisory-lock wait, relation_changed, E04 drop and
+  re-slot with missing frames, ledger_function_changed; on a private Homebrew cluster: E02 rewind, E05, E07, E03,
+  E08 (skipped in Docker mode). `TestCaptureCorpus` (`-update-corpus`). `cmd/deedglass` `TestDecoderCommandGoldens`
+  (`testdata/decoder/`), `TestDecoderWordsCopy`. `internal/gate` `TestEvidenceJSON` (ADR-044). The migration count is 19.
 - `cmd/deedglass verify` (S05): 80 golden cases in `testdata/verify/<case>/{args,stdout,stderr,exit}`
   (`go test ./cmd/deedglass -run TestVerifyGolden -update`), every vector's code and exit, `--keys`
   URL rules (same-host redirects, 1 MiB, timeout, loopback-only http), key-set merge conflicts, no

@@ -211,8 +211,12 @@ var commands = []*Command{
 		Flags: pgCheckFlags, Run: runPostgresCheck,
 		Detail: "Read-only: wal_level, slots, the schema, begin_action's pinned body, the agent and witness roles, watched tables, the publication and the slot.\n--probe (local mode) also runs begin_action in a transaction it rolls back."},
 	{Path: p("connector", "gmail", "authorize"), Group: Connectors, Summary: "Authorize the Gmail connector", Owner: "S30"},
-	{Path: p("decoder", "status"), Group: Connectors, Summary: "Show Postgres change readers", Owner: "S20"},
-	{Path: p("decoder", "drop"), Group: Connectors, Summary: "Remove a replication slot", Owner: "S20"},
+	{Path: p("decoder", "status"), Group: Connectors, Summary: "Show what the decoder reads from Postgres",
+		Usage: "[--connector <name>] [--recent N] [--json]", Flags: decoderStatusFlags, Run: runDecoderStatus,
+		Detail: "One line per witnessed connector: healthy, degraded, halted or connecting, with the lag and the next step.\n--connector shows one in detail: the slot, positions, watched tables, frame counts and the newest frames."},
+	{Path: p("decoder", "drop"), Group: Connectors, Summary: "Drop a connector's replication slot",
+		Usage: "--connector <name> [--confirm <name>] [--json]", Flags: decoderDropFlags, Run: runDecoderDrop,
+		Detail: "Stops the decoder, drops the slot and seals decoder.slot_dropped. A new slot starts on the next sync: a new baseline,\nand actions in the gap are recorded as missing. Type the connector's name to confirm, or pass --confirm in scripts."},
 	{Path: p("slack", "manifest"), Group: Connectors, Summary: "Print the Slack app manifest", Owner: "S29"},
 
 	// MCP.

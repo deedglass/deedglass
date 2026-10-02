@@ -155,7 +155,8 @@ func (p *Pipeline) recordExecution(ctx context.Context, tx pgx.Tx, s Subject, e 
 	started, finished := truncateMS(e.StartedAt), truncateMS(e.FinishedAt)
 	lat := latencyMS(e)
 	patch := ledger.Patch{ExecutionStatus: &status, Result: stored, ResultDigest: digest, ErrorCode: nonEmpty(e.ErrorCode),
-		ErrorMessage: nonEmpty(e.ErrorMsg), LatencyMS: &lat, StartedAt: &started, FinishedAt: &finished}
+		ErrorMessage: nonEmpty(e.ErrorMsg), LatencyMS: &lat, StartedAt: &started, FinishedAt: &finished,
+		ExecutionEvidence: EvidenceJSON(e.Result.Evidence)}
 	if c := e.Result.Cost; c != nil && c.Amount >= 0 && reCurrency(c.Currency) {
 		amt, cur := c.Amount, c.Currency
 		patch.CostAmount, patch.CostCurrency = &amt, &cur

@@ -90,6 +90,9 @@ const (
 	CodeRowLimitExceeded   Code = "row_limit_exceeded"
 	CodeDatabaseRoleUnsafe Code = "database_role_unsafe"
 	CodeDatabaseNotReady   Code = "database_not_ready"
+
+	// S20: the decoder routes.
+	CodeWitnessNotConfigured Code = "witness_not_configured"
 )
 
 // DocURLPrefix is where every code has a page (docs/api/errors.md, published by S33).
@@ -193,6 +196,9 @@ var catalog = []CatalogEntry{
 	{CodeDatabaseRoleUnsafe, 503, TypeAPI, "The connector's database role is a superuser. Deedglass refuses to run agent SQL with it. Run deedglass connector postgres init to create deedglass_agent.", "", "S17"},
 	{CodeDatabaseNotReady, 503, TypeAPI, "Deedglass isn't set up in this database yet. Run deedglass connector postgres init.",
 		"Deedglass isn't set up in this database yet. Run deedglass connector postgres init --connector {name}.", "S17"},
+
+	{CodeWitnessNotConfigured, 409, TypeInvalidRequest, "This connector isn't witnessed, so it has no decoder. Turn on witness.enabled in its config first.",
+		`The connector "{name}" isn't witnessed. Set witness.enabled to true in its config, then run deedglass connector postgres check {name}.`, "S20"},
 }
 
 var byCode = func() map[Code]CatalogEntry {

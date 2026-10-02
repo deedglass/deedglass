@@ -259,6 +259,36 @@ Each warning says what breaks and what to do next, as `check` prints it (`intern
 | Unchanged | Nothing to change. |
 | Remote without --confirm | demo on db.example.com is remote and not marked throwaway. / Review the plan, then run again with --apply --confirm demo. |
 
+## The decoder (S20)
+
+Source of truth: `internal/decoder/present.go` (Console) and `cmd/deedglass/decoder.go`
+(`decoderWords`: the CLI's status lines). The user-facing noun is **decoder**; what it produces are
+**frames**, and a frame is **bound** to an action. Say **unattributed**, not "unbound". No verdict
+words: the decoder doesn't decide.
+
+### Console (S26 renders them)
+
+| Surface | Copy |
+|---|---|
+| Decoder row | `Witness · healthy · 3.9 kB behind · last commit 4s ago` |
+| Empty state | `This connector isn't witnessed yet. Turn on Witness to see what Postgres actually committed for every agent write. It needs wal_level=logical and a publication; the check below walks you through it.` |
+| Alert toast (forged marker) | `Forged marker on postgres: a transaction claimed to be a Deedglass action without a ledger row. Nothing was bound to it.` |
+| Alert toast (forged message) | `Forged message on postgres: a message outside any transaction claimed to come from Deedglass. Nothing was bound to it.` |
+| Alert toast (foreign ledger) | `Ledger row from another org on postgres: a transaction named an action of a different org. Nothing was bound to it.` |
+
+### CLI and halts (one line plus a next step)
+
+| Reason | Copy |
+|---|---|
+| `publication_missing` (16, 17) | `Postgres can't read past a point where deedglass_pub didn't exist. Re-create it (deedglass connector postgres init postgres), then drop and re-create the slot: deedglass decoder drop --connector postgres.` |
+| `publication_changed` (18) | `deedglass_pub changed while Deedglass was reading. Postgres 18 skips row changes it can't publish, so actions from that moment are marked with an evidence gap.` |
+| `malformed_evidence` | `Deedglass stopped reading at 0/3E65020: a message didn't match the pgoutput format (type M, byte 41). Nothing after it was used. This is rare; please send deedglass decoder status --json to support.` |
+| `session_settings_changed` | `The decoder's session settings changed (TimeZone is "Pacific/Chatham"). Deedglass stopped so every value stays exact. Restart deedglass serve; check ALTER ROLE deedglass_witness.` |
+| `lag_high` | `lag 611 MB, above the 512 MB alert` / `The slot is holding WAL on the watched database. Deedglass is still reading; it is behind.` / `Next: check deedglass serve is running and healthy, or raise DEEDGLASS_SLOT_LAG_ALERT_MB if this is expected.` |
+| `slot_invalidated` | `slot invalidated at 2026-10-07 07:40 UTC (wal_status lost)` / `Actions waiting on L2 for analytics won't get that evidence (slot_invalidated).` / `Next: deedglass decoder drop --connector analytics, then check max_slot_wal_keep_size (docs.deedglass.com/decoder#sizing)` |
+| Drop | `✓ Slot dropped · deedglass_01j9zq7c… · admin deed deed_01j9zv8k… · a new slot starts on the next sync` |
+| API, not witnessed | `This connector isn't witnessed, so it has no decoder. Turn on witness.enabled in its config first.` |
+
 ## What this page doesn't do
 
 It doesn't hold every error: the full catalog, with when each code happens, is

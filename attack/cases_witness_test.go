@@ -17,7 +17,7 @@ import (
 func witnessCase(id string, attack string) harness.Case {
 	return harness.Case{ID: id, Run: func(h *harness.H) harness.Observed {
 		h.RequireWitness("S21")
-		// Reached only once the decoder route exists (S20) without S21's observation code.
+		// Reached only once the postgres type lists L2 (S21) and before this body is replaced.
 		return harness.Observed{Outcome: "NOT OBSERVED", Detail: "S21 implements: " + attack}
 	}}
 }

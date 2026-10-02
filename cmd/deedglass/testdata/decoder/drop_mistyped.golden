@@ -1,0 +1,7 @@
+exit 1
+--- stdout
+This drops slot deedglass_01j9zq7c4m8x2v6t0r3n5k1h7d on "postgres".
+Actions still waiting for L2 evidence on this connector won't get it (slot_dropped).
+A new slot starts a new baseline. Type the connector name to confirm: --- stderr
+✕ Nothing was dropped: the confirmation didn't match.
+  Run it again and type postgres, or press Ctrl-C to leave the slot as it is.

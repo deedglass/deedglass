@@ -1,0 +1,11 @@
+exit 0
+--- stdout
+[36m✓[0m postgres · healthy · slot deedglass_01j9zq7c4m8x2v6t0r3n5k1h7d · PG 18.6
+  [2mlag        [0m 3.9 kB · 0.1 s behind         [2mcheckpoint[0m  0/3E65050
+  [2mwatching   [0m public.orders · public.order_items · public.refunds  [2m(+ deedglass.ledger)[0m
+  [2mframes     [0m bound 1204 · unattributed 3 · forged_marker 1
+  [2mrecent     [0m 0/3E65020   bound          act_01j9zt3a…     public.orders U 1
+  [2m           [0m 0/3E61A88   bound          act_01j9zt1q…     public.orders U 301
+  [2m           [0m 0/3E5F010   unattributed   —                 public.refunds I 2
+  [2m           [0m 0/3E5C7F8   forged marker  —                 (no ledger row) · alert sent
+--- stderr

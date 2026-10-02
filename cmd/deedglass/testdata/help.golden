@@ -36,7 +36,7 @@ Connectors
   connector           Connect tools                                      create · list · show · test · types · credentials
   connector postgres  Prepare a Postgres database                        init · check
   connector gmail     Authorize the Gmail connector               soon   authorize
-  decoder             Inspect Postgres change readers             soon   status · drop
+  decoder             Inspect Postgres change readers                    status · drop
   slack manifest      Print the Slack app manifest                soon
 MCP
   mcp                 Put the Gate in front of MCP servers               wrap · serve · snippet

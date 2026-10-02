@@ -26,6 +26,12 @@ const (
 	// EventPolicyActivated (S12): id is the activation (pa_…), state its mode, deed the
 	// policy.activated deed.
 	EventPolicyActivated = "policy.activated"
+	// The decoder (S20): id is the connector (con_…). degraded and recovered carry the status in
+	// state, the reason and the LSN; alert carries the kind (forged_marker, forged_marker_nontx,
+	// foreign_ledger), the frame's commit LSN in lsn, and the named action when there is one.
+	EventDecoderDegraded  = "decoder.degraded"
+	EventDecoderRecovered = "decoder.recovered"
+	EventDecoderAlert     = "decoder.alert"
 )
 
 // Event is the one payload shape on deedglass_events. Every key is always present, null when it
@@ -47,6 +53,11 @@ type Event struct {
 	Verdict       *string  `json:"verdict,omitempty"`
 	RequiredLevel *string  `json:"required_level,omitempty"`
 	Flags         []string `json:"flags,omitempty"`
+	// decoder.* only (S20, additive): why the status changed or what an alert is, and the WAL
+	// position it is about. Absent on every other event.
+	Reason *string `json:"reason,omitempty"`
+	Kind   *string `json:"kind,omitempty"`
+	LSN    *string `json:"lsn,omitempty"`
 }
 
 // eventFor maps a transition into to (contract §8 table): "" when the transition publishes nothing

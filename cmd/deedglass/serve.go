@@ -238,8 +238,17 @@ func runServe(ctx context.Context, e *Env, args []string) error {
 	mw := newMCP(cfg, gp, natives, pool, cw.reg, mcpType, keys, log)
 	serveGate(gp)
 	worker := gp.NewWorker(instanceName())
+	// 5e. The decoder (S20): reads every witnessed Postgres connector whose lease this instance
+	// holds; deedglass_jobs also wakes its runners.
+	dec := newDecoder(cfg, db, led, cw, log)
+	cw.decoder = dec
 	keys.Listener().Listen(ledger.Channel, gp.Broker().OnEvent, gp.Broker().Reset)
-	keys.Listener().Listen(store.JobsChannel, worker.Wake, func() { worker.Wake("") })
+	keys.Listener().Listen(store.JobsChannel, func(p string) {
+		worker.Wake(p)
+		if dec != nil {
+			dec.NudgeOrg(p)
+		}
+	}, func() { worker.Wake("") })
 	kctx, stopKeys := context.WithCancel(context.WithoutCancel(ctx))
 	keysDone := make(chan struct{})
 	go func() { defer close(keysDone); keys.Run(kctx) }()
@@ -247,6 +256,12 @@ func runServe(ctx context.Context, e *Env, args []string) error {
 	wctx, stopWorker := context.WithCancel(context.WithoutCancel(ctx))
 	workerDone := make(chan struct{})
 	go func() { defer close(workerDone); _ = worker.Run(wctx) }()
+	if dec != nil {
+		dctx, stopDec := context.WithCancel(context.WithoutCancel(ctx))
+		decDone := make(chan struct{})
+		go func() { defer close(decDone); _ = dec.Run(dctx) }()
+		defer func() { stopDec(); <-decDone }()
+	}
 	defer func() {
 		stopWorker()
 		<-workerDone
@@ -261,6 +276,9 @@ func runServe(ctx context.Context, e *Env, args []string) error {
 	})
 	api.Metrics().Collect(policyMetrics(pol.reg))
 	api.Metrics().Collect(gp.Metrics().Collect)
+	if dec != nil {
+		api.Metrics().Collect(dec.Metrics().Collect)
+	}
 	api.Mount(serveRoutes(api, db, ms, sk, led, people, keys, pol, gp, mw, cw)...)
 	ln, err := net.Listen("tcp", cfg.Listen)
 	if err != nil {
@@ -354,6 +372,9 @@ func serveRoutes(api *httpx.Server, db *store.DB, ms []migrate.Migration, sk *se
 		if db != nil {
 			deps.SealKey = sealKeyCheck(db, sk.id)
 		}
+	}
+	if cw != nil && cw.decoder != nil {
+		deps.Decoder = decoderHealth(cw.decoder)
 	}
 	routes := api.SystemRoutes(deps)
 	routes = append(routes, api.WellKnownRoutes(keySetSource(db, issuer), nil)...)

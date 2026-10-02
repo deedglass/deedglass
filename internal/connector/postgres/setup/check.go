@@ -231,8 +231,10 @@ func EmitHardenSQL(versionNum int) string {
 	}
 	var lines []string
 	for _, sig := range sigs {
+		// deedglass_owner emits the marker (begin_action); deedglass_witness emits the decoder's
+		// heartbeat (S20), a non-transactional message that shows the slot is moving.
 		lines = append(lines, "REVOKE EXECUTE ON FUNCTION pg_catalog.pg_logical_emit_message("+sig+") FROM PUBLIC;",
-			"GRANT EXECUTE ON FUNCTION pg_catalog.pg_logical_emit_message("+sig+") TO deedglass_owner;")
+			"GRANT EXECUTE ON FUNCTION pg_catalog.pg_logical_emit_message("+sig+") TO deedglass_owner, deedglass_witness;")
 	}
 	return strings.Join(lines, "\n")
 }

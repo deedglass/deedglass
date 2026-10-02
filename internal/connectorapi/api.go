@@ -60,11 +60,14 @@ type API struct {
 	Ledger   *ledger.Ledger
 	Log      *slog.Logger
 	Now      func() time.Time
+	// Decoder is the decoder's supervisor (S20): connector writes keep its slot rows in sync, and
+	// the decoder routes drop slots through it. nil: the decoder isn't running here.
+	Decoder DecoderControl
 
 	tests *httpx.Limiter
 }
 
-// Routes returns the ten connector routes (S16's nine, and S17's setup record).
+// Routes returns the connector routes: S16's nine, S17's setup record and S20's two decoder routes.
 func Routes(a *API) []httpx.Route {
 	if a.Log == nil {
 		a.Log = slog.Default()
@@ -87,6 +90,7 @@ func Routes(a *API) []httpx.Route {
 		r("POST", "/v1/connectors/{id}/initialized", "recordConnectorInitialized", identity.RoleAdmin, a.initialized),
 		r("GET", "/v1/connector-types", "listConnectorTypes", identity.RoleViewer, a.types),
 	}
+	routes = append(routes, DecoderRoutes(a)...)
 	for i := range routes {
 		rt := &routes[i]
 		switch rt.OperationID {
@@ -421,6 +425,7 @@ func (a *API) create(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
+	a.syncDecoder(r.Context())
 	return httpx.WriteJSON(w, http.StatusCreated, out)
 }
 
@@ -532,6 +537,10 @@ func (a *API) patch(w http.ResponseWriter, r *http.Request) error {
 	}
 	if forget != "" {
 		a.Registry.Forget(forget)
+		if c := (store.Connector{ID: out.ID, Type: out.Type, Config: out.Config}); c.Type == "postgres" && (!witnessed(c) || out.Status != "active") {
+			a.retireDecoder(r.Context(), p.OrgID, c, "not_witnessed")
+		}
+		a.syncDecoder(r.Context())
 	}
 	return httpx.WriteJSON(w, http.StatusOK, out)
 }
@@ -543,6 +552,24 @@ func (a *API) delete(w http.ResponseWriter, r *http.Request) error {
 	}
 	var id string
 	var deeds []string
+	// A witnessed connector's slot is dropped first, while its credential still exists (S20).
+	var pre store.Connector
+	err = a.DB.OrgReadTx(r.Context(), p.OrgID, func(ctx context.Context, tx pgx.Tx) error {
+		c, err := lookup(ctx, tx, r.PathValue("id"), false)
+		if err != nil {
+			return err
+		}
+		pre = c
+		busy, err := store.ConnectorExecuting(ctx, tx, c.Name)
+		if err == nil && busy {
+			return httpx.E(httpx.CodeConflict, httpx.Msgf("An action on %s is running right now. Wait for it to finish (deedglass actions list --connector %s), then delete the connector.", c.Name, c.Name))
+		}
+		return err
+	})
+	if err != nil {
+		return err
+	}
+	a.retireDecoder(r.Context(), p.OrgID, pre, "connector_deleted")
 	err = a.DB.OrgTx(r.Context(), p.OrgID, func(ctx context.Context, tx pgx.Tx) error {
 		c, err := lookup(ctx, tx, r.PathValue("id"), true)
 		if err != nil {
@@ -583,6 +610,7 @@ func (a *API) delete(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	a.Registry.Forget(id)
+	a.syncDecoder(r.Context())
 	return httpx.WriteJSON(w, http.StatusOK, map[string]any{"object": "connector", "id": id, "deleted": true, "deed": deeds[len(deeds)-1]})
 }
 
@@ -641,6 +669,7 @@ func (a *API) putCredentials(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return a.vaultErr(err)
 	}
+	a.syncDecoder(r.Context())
 	return httpx.WriteJSON(w, http.StatusOK, m)
 }
 

@@ -36,7 +36,7 @@ var (
 		"policy_activations": "SIu", "usage_counters": "SIUD", "connectors": "SIu", "credentials": "SIUD",
 		"actions": "SIu", "action_events": "SI", "approvals": "SIU", "approval_tokens": "SIUD",
 		"idempotency_keys": "SIUD", "seal_keys": "SIu", "deeds": "SI", "admin_events": "SI",
-		"witness_jobs": "SIUD", "decoded_txs": "SID", "decoder_slots": "SIUD", "suggestions": "SIU",
+		"witness_jobs": "SIUD", "decoded_txs": "SI", "decoder_slots": "SIUD", "suggestions": "SIU",
 		"anomalies": "SIU", "replay_jobs": "SIU", "webhooks": "SIUD", "webhook_deliveries": "SIUD",
 		"waitlist": "SI", "schema_migrations": "S",
 	}

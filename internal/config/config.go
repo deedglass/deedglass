@@ -61,6 +61,7 @@ type Config struct {
 	AllowPrivateNetworks bool
 	EgressAllowCIDRs     []netip.Prefix // DEEDGLASS_EGRESS_ALLOW_CIDRS: private networks connectors may reach (S16)
 	SlotLagAlertMB       int
+	DecoderPause         bool // DEEDGLASS_DECODER_PAUSE (S20; dev only): runners stop polling, for late-evidence tests
 
 	// Client-side: the CLI, MCP commands and SDKs.
 	APIKey Secret
@@ -70,6 +71,7 @@ type Config struct {
 	Gate    GateSettings
 	MCP     MCPSettings     // mcp.* (S15)
 	Witness WitnessSettings // witness.* (S19)
+	Decoder DecoderSettings // decoder.* (S20)
 
 	raw        map[string]string // resolved raw values, for printing
 	sources    map[string]Source
@@ -494,6 +496,14 @@ func (l *loader) parse(c *Config, k Key) {
 			}
 			c.EgressAllowCIDRs = append(c.EgressAllowCIDRs, p.Masked())
 		}
+	case "DEEDGLASS_DECODER_PAUSE":
+		switch strings.ToLower(v) {
+		case "true", "1":
+			c.DecoderPause = true
+		case "false", "0":
+		default:
+			bad(fmt.Sprintf("must be true or false (got %q).", v), "")
+		}
 	case "DEEDGLASS_SLOT_LAG_ALERT_MB":
 		n, err := strconv.Atoi(v)
 		if err != nil || n < 1 || n > 1048576 {
@@ -539,6 +549,9 @@ func (l *loader) prodChecks(c *Config) {
 	}
 	if c.AllowPrivateNetworks {
 		l.problem("DEEDGLASS_ALLOW_PRIVATE_NETWORKS", "is dev only.", "Remove it. In prod, list the private networks connectors may reach in DEEDGLASS_EGRESS_ALLOW_CIDRS.")
+	}
+	if c.DecoderPause {
+		l.problem("DEEDGLASS_DECODER_PAUSE", "is dev only.", "Remove it. In prod the decoder always reads.")
 	}
 	for _, k := range []struct {
 		name string

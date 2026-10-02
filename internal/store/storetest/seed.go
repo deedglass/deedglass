@@ -237,8 +237,9 @@ func Rows(sk ids.SealKeyID) []Row {
 			_, err = tx.Exec(ctx, `INSERT INTO deedglass.witness_jobs (org_id, action_id) VALUES ($1, $2)`, o.ID, act)
 			return err
 		}},
-		{"decoded_txs", ex(`INSERT INTO deedglass.decoded_txs (id, org_id, connector_id, xid, commit_lsn, end_lsn, commit_time, change_count)
-		    VALUES ($1, $2, $3, 1, $4::pg_lsn, $4::pg_lsn, pg_catalog.now(), 0)`,
+		{"decoded_txs", ex(`INSERT INTO deedglass.decoded_txs (id, org_id, connector_id, xid, commit_lsn, end_lsn, commit_time, change_count,
+		    system_id, timeline_id, class)
+		    VALUES ($1, $2, $3, 1, $4::pg_lsn, $4::pg_lsn, pg_catalog.now(), 0, '7690386503164422802', 1, 'unattributed')`,
 			func(o *Org) []any {
 				b := rnd(3)
 				return []any{ids.New[ids.DecodedTxKind](), o.ID, o.Connector, fmt.Sprintf("0/%X", int(b[0])<<16|int(b[1])<<8|int(b[2]))}

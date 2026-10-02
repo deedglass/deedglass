@@ -1,0 +1,9 @@
+exit 1
+--- stdout
+[36m✓[0m [1mpostgres [0m · healthy · lag 3.9 kB · last commit 4s ago
+[35m◐[0m [1mbilling  [0m · connecting · attempt 3 · next try in 8s
+  Last error: dial tcp 10.0.0.5:5432: connect: connection refused
+[31m✕[0m [1manalytics[0m · halted · slot invalidated at 2026-10-07 07:40 UTC (wal_status lost)
+  Actions waiting on L2 for analytics won't get that evidence (slot_invalidated).
+  Next: deedglass decoder drop --connector analytics, then check max_slot_wal_keep_size (docs.deedglass.com/decoder#sizing)
+--- stderr

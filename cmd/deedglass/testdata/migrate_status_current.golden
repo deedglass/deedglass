@@ -19,5 +19,6 @@ VERSION  NAME                STATE    APPLIED               CHECKSUM
 0016     gate                pending  —                     sha256:27ef…38e4
 0017     connectors_vault    pending  —                     sha256:6159…c5e3
 0018     witness             pending  —                     sha256:ef00…68b0
-✓ 9 applied · 9 pending. Run deedglass migrate up to apply them.
+0019     decoder             pending  —                     sha256:d5ec…5712
+✓ 9 applied · 10 pending. Run deedglass migrate up to apply them.
 --- stderr

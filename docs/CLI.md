@@ -216,8 +216,8 @@ builds it. Hidden commands work but aren't in `deedglass help`.
 | `deedglass connector postgres init --connector <name> [--admin-dsn-env DEEDGLASS_INIT_DSN] [--config <file>] [--apply] [--confirm <database>] [--rotate-passwords] [--dsn-host host:port] [--no-store] [--json]` | Connectors | Prepare a Postgres database | built |
 | `deedglass connector postgres check --connector <name> [--json]  ·  --dsn-env VAR [--witness-dsn-env VAR] [--config <file>] [--probe] [--json]` | Connectors | Check a prepared Postgres database | built |
 | `deedglass connector gmail authorize` | Connectors | Authorize the Gmail connector | soon (S30) |
-| `deedglass decoder status` | Connectors | Show Postgres change readers | soon (S20) |
-| `deedglass decoder drop` | Connectors | Remove a replication slot | soon (S20) |
+| `deedglass decoder status [--connector <name>] [--recent N] [--json]` | Connectors | Show what the decoder reads from Postgres | built |
+| `deedglass decoder drop --connector <name> [--confirm <name>] [--json]` | Connectors | Drop a connector's replication slot | built |
 | `deedglass slack manifest` | Connectors | Print the Slack app manifest | soon (S29) |
 | `deedglass mcp wrap --connector <name> [--connector-type mcp] [--hide-denied=false] [--call-timeout 2m] [--result-mode full|digest] [--log-file <path>] -- <command> [args…]` | MCP | Run an MCP server behind the Gate | built |
 | `deedglass mcp serve [--connector native|<name>]` | MCP | Serve the Gate's native MCP tools | built |
@@ -522,6 +522,23 @@ PostgreSQL 18.6 · acme · orders-db · self-hosted
 ○ slot               not created yet · the witness creates deedglass_01m3wnr88j9d4gbs3fxm0ypb66 on first start
 Ready for L2 · 14 passed · 3 notes · 0 failed
 ```
+
+## The decoder: `decoder status` and `decoder drop` (S20)
+
+Both talk to the server with an admin key (or a session's role: viewers can read, admins drop).
+
+- `deedglass decoder status` prints one line per witnessed connector: `✓ healthy` with the lag and
+  the last commit, `○ degraded` with why and a next step, `✕ halted` with what was lost and how to
+  recover, `◐ connecting`, `waiting` or `pending`. It exits 1 when any decoder is halted, so a
+  monitor can run it.
+- `--connector <name>` shows one decoder in detail: the slot, the server version, lag and
+  checkpoint, the watched tables, the frame counters per class and, with `--recent N` (0 to 50), the
+  newest frames with their action and row counts. `--json` prints the decoder object of
+  `GET /v1/connectors/{id}/decoder` (a list without `--connector`).
+- `deedglass decoder drop --connector <name>` drops the connector's replication slot after you type
+  the connector's name (`--confirm <name>` in scripts; without a terminal it refuses). It seals
+  `decoder.slot_dropped`; the next sync creates a new slot and reconcile records the actions in the
+  gap as missing. Goldens: `cmd/deedglass/testdata/decoder/`.
 
 ## MCP: `mcp wrap` and `mcp snippet` (S14)
 

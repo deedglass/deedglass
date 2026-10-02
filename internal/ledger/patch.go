@@ -55,6 +55,9 @@ type Patch struct {
 	LatencyMS       *int64
 	StartedAt       *time.Time
 	FinishedAt      *time.Time
+	// ExecutionEvidence is the connector's evidence of where its write landed (Postgres: xid8,
+	// marker_lsn, sql_digest, command_tag; ADR-044), for the Witness only. A JSON object ≤ 1 KiB.
+	ExecutionEvidence json.RawMessage
 
 	// Witness: the edges into verified, mismatch and unverifiable.
 	WitnessLevel        *string
@@ -106,7 +109,7 @@ func (p *Patch) groups() patchGroup {
 	set(groupExecuting, p.ExecutingDeadline != nil)
 	set(groupExecution, p.ExecutionStatus != nil, p.Result != nil, p.ResultDigest != nil, p.ErrorCode != nil,
 		p.ErrorMessage != nil, p.CostAmount != nil, p.CostCurrency != nil, p.LatencyMS != nil, p.StartedAt != nil,
-		p.FinishedAt != nil)
+		p.FinishedAt != nil, p.ExecutionEvidence != nil)
 	set(groupWitness, p.WitnessLevel != nil, p.WitnessVerdict != nil, p.WitnessMethod != nil, p.WitnessDetail != nil,
 		p.WitnessDetailDigest != nil)
 	return g
@@ -138,7 +141,7 @@ func (p *Patch) args() []any {
 		p.ExecutionStatus, rawArg(p.Result), p.ResultDigest, p.ErrorCode, p.ErrorMessage, p.CostAmount, p.CostCurrency,
 		p.LatencyMS, p.StartedAt, p.FinishedAt,
 		p.WitnessLevel, p.WitnessVerdict, p.WitnessMethod, rawArg(p.WitnessDetail), p.WitnessDetailDigest,
-		p.WitnessRequired,
+		p.WitnessRequired, rawArg(p.ExecutionEvidence),
 	}
 }
 
@@ -204,6 +207,6 @@ func (p *Patch) fromArgs(a []any) {
 		ExecutionStatus: s(a[20]), Result: raw(a[21]), ResultDigest: s(a[22]), ErrorCode: s(a[23]), ErrorMessage: s(a[24]),
 		CostAmount: i(a[25]), CostCurrency: s(a[26]), LatencyMS: i(a[27]), StartedAt: t(a[28]), FinishedAt: t(a[29]),
 		WitnessLevel: s(a[30]), WitnessVerdict: s(a[31]), WitnessMethod: s(a[32]), WitnessDetail: raw(a[33]), WitnessDetailDigest: s(a[34]),
-		WitnessRequired: s(a[35]),
+		WitnessRequired: s(a[35]), ExecutionEvidence: raw(a[36]),
 	}
 }

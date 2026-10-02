@@ -1,0 +1,24 @@
+{
+  "commit_to_frame_ms": {
+    "max": 87.259,
+    "p50": 43.216,
+    "p90": 72.811,
+    "p99": 81.638
+  },
+  "cpus": 8,
+  "date": "2026-10-02T00:49:08Z",
+  "go": "go1.27.1",
+  "goarch": "arm64",
+  "goos": "darwin",
+  "parse_ns_per_msg": 2080,
+  "poll_round_ms": {
+    "n": 859,
+    "p50": 19.853,
+    "p99": 24.079
+  },
+  "rate_per_s": 100,
+  "safeparse_ns_per_msg": 2165,
+  "safeparse_overhead_ns": 85,
+  "seconds": 60,
+  "writes": 6000
+}

@@ -1,0 +1,10 @@
+exit 0
+--- stdout
+○ postgres · degraded · slot deedglass_01j9zq7c4m8x2v6t0r3n5k1h7d · PG 18.6
+  lag 611 MB, above the 512 MB alert
+  The slot is holding WAL on the watched database. Deedglass is still reading; it is behind.
+  Next: check deedglass serve is running and healthy, or raise DEEDGLASS_SLOT_LAG_ALERT_MB if this is expected.
+  lag         611 MB · 42.0 s behind        checkpoint  0/3E65050
+  watching    public.orders · public.order_items · public.refunds  (+ deedglass.ledger)
+  frames      bound 1204 · unattributed 3 · forged_marker 1
+--- stderr

@@ -15,6 +15,7 @@ import (
 	"github.com/deedglass/deedglass/internal/connector/postgres"
 	"github.com/deedglass/deedglass/internal/connector/rest"
 	"github.com/deedglass/deedglass/internal/connectorapi"
+	"github.com/deedglass/deedglass/internal/decoder"
 	"github.com/deedglass/deedglass/internal/httpx"
 	"github.com/deedglass/deedglass/internal/ledger"
 	"github.com/deedglass/deedglass/internal/mcp/upstream"
@@ -24,9 +25,10 @@ import (
 
 // connectors is S16's wiring: the egress policy, the vault and the connector registry.
 type connectors struct {
-	egress *egress.Policy
-	vault  *vault.Store // nil when DEEDGLASS_VAULT_KEY isn't set
-	reg    *connector.Registry
+	egress  *egress.Policy
+	vault   *vault.Store // nil when DEEDGLASS_VAULT_KEY isn't set
+	reg     *connector.Registry
+	decoder *decoder.Supervisor // S20; nil when decoder.enabled is false
 }
 
 // egressPolicy builds the process's one door from its config. self is Deedglass's own database,
@@ -106,6 +108,9 @@ func connectorRoutes(db *store.DB, led *ledger.Ledger, cw *connectors, log *slog
 		a.Registry = cw.reg
 		if cw.vault != nil {
 			a.Vault = cw.vault
+		}
+		if cw.decoder != nil {
+			a.Decoder = cw.decoder
 		}
 	}
 	return connectorapi.Routes(a)

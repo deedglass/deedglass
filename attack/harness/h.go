@@ -8,7 +8,9 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -141,10 +143,28 @@ func (h *H) RequireWitness(session string) {
 	}
 }
 
-// WitnessAvailable probes for the L2 witness: S20/S21 add the decoder route.
+// WitnessAvailable probes for the L2 witness: the decoder (S20) reads the change stream, and S21's
+// verdicts make the postgres connector type list "L2" in its levels (GET /v1/connector-types).
 func (h *H) WitnessAvailable() bool {
-	r := h.Acme.Admin.Do("GET", "/v1/connectors/"+h.Acme.Conns["postgres"]+"/decoder", nil)
-	return r.Status == 200
+	r := h.Acme.Admin.Do("GET", "/v1/connector-types", nil)
+	if r.Status != 200 {
+		return false
+	}
+	var l struct {
+		Data []struct {
+			Type   string   `json:"type"`
+			Levels []string `json:"levels"`
+		} `json:"data"`
+	}
+	if json.Unmarshal(r.Body, &l) != nil {
+		return false
+	}
+	for _, t := range l.Data {
+		if t.Type == "postgres" && slices.Contains(t.Levels, "L2") {
+			return true
+		}
+	}
+	return false
 }
 
 // Action fetches an action (as the org admin), waiting up to wait seconds for it to settle.

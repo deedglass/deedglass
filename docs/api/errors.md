@@ -1307,6 +1307,27 @@ it, then `deedglass connector postgres check`.
 }
 ```
 
+## witness_not_configured
+
+**409 · invalid_request_error**
+
+**When it happens.** `GET` or `DELETE /v1/connectors/{id}/decoder` named a connector that isn't
+witnessed (S20): it isn't a `postgres` connector, or its config has `witness.enabled: false`, so
+there is no slot and no decoder to show or drop.
+
+**What to do.** Set `witness.enabled: true` (and `witness.watched_tables`) in the connector's
+config, run `deedglass connector postgres init` and `deedglass connector postgres check`, then
+look again with `deedglass decoder status --connector <name>`.
+
+```json
+{
+  "type": "invalid_request_error",
+  "code": "witness_not_configured",
+  "message": "This connector isn't witnessed, so it has no decoder. Turn on witness.enabled in its config first.",
+  "param": null
+}
+```
+
 ## What this doesn't do
 
 - Errors don't carry localized messages. The copy is English, and the `code` is the stable part.

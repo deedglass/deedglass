@@ -52,7 +52,7 @@ type HealthChecks struct {
 	Database   DatabaseCheck  `json:"database"`
 	Migrations MigrationCheck `json:"migrations"`
 	SealKey    SimpleCheck    `json:"seal_key"` // required since S04 (SystemDeps.SealKey)
-	Decoder    SimpleCheck    `json:"decoder"`  // S20 makes it required
+	Decoder    SimpleCheck    `json:"decoder"`  // S20: ok, degraded, or not_configured when decoder.enabled is false
 	Policies   SimpleCheck    `json:"policies"` // S12: ok, or degraded when an org's policy failed its load checks
 }
 
@@ -99,6 +99,7 @@ type SystemDeps struct {
 	Health   HealthSource // nil: the database check reports not_configured
 	SealKey  SealKeyCheck // nil: the seal key check reports not_configured
 	Policies PolicyCheck  // nil: the policies check reports not_configured
+	Decoder  PolicyCheck  // S20: ok, or degraded when a decoder runner on this instance is degraded or halted
 	Spec     []byte       // api/openapi.yaml, embedded (api.Spec)
 	Now      func() time.Time
 }
@@ -110,6 +111,7 @@ type health struct {
 	src      HealthSource
 	sealKey  SealKeyCheck
 	policies PolicyCheck
+	decoder  PolicyCheck
 	now      func() time.Time
 	mu       sync.Mutex
 	cur      HealthBody
@@ -123,7 +125,7 @@ func (s *Server) SystemRoutes(d SystemDeps) []Route {
 	if d.Now == nil {
 		d.Now = time.Now
 	}
-	h := &health{src: d.Health, sealKey: d.SealKey, policies: d.Policies, now: d.Now, s: s}
+	h := &health{src: d.Health, sealKey: d.SealKey, policies: d.Policies, decoder: d.Decoder, now: d.Now, s: s}
 	return []Route{
 		{Method: "GET", Pattern: "/v1/health", OperationID: "getHealth", Auth: Public, Timeout: 5 * time.Second, Since: "2026-10-01", Handler: h.serve},
 		{Method: "GET", Pattern: "/v1/version", OperationID: "getVersion", Auth: Public, Timeout: 5 * time.Second, Since: "2026-10-01", Handler: serveVersion},
@@ -240,6 +242,10 @@ func (h *health) compute(ctx context.Context) HealthBody {
 		if b.Checks.Policies.Status != StatusOK {
 			b.Status = StatusDegraded
 		}
+	}
+	if h.decoder != nil {
+		// Informative: one connector's decoder never makes the whole server unhealthy.
+		b.Checks.Decoder.Status = h.decoder()
 	}
 	if h.src == nil {
 		return b

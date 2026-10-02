@@ -42,6 +42,7 @@ The first source that sets a key wins:
 | `DEEDGLASS_EGRESS_ALLOW_CIDRS` | `egress_allow_cidrs` | — | no | serve | Comma-separated CIDRs of private networks connectors may reach, in prod too, for example 10.20.0.0/16. Never cloud metadata, reserved, IPv4-embedding or loopback ranges. Deedglass's own database is reachable only when its exact address is listed (a /32 or /128). | S16 |
 | `DEEDGLASS_METRICS_LISTEN` | `metrics_listen` | — | no | serve | Address for a separate listener serving Prometheus metrics at /metrics (host:port). Off when unset; bind it to localhost or a private network. | S03 |
 | `DEEDGLASS_SLOT_LAG_ALERT_MB` | `slot_lag_alert_mb` | `512` | no | serve | Alert when a Postgres replication slot holds more WAL than this (1-1048576 MB). | S01 |
+| `DEEDGLASS_DECODER_PAUSE` | `decoder_pause` | `false` | no | serve | Dev only: decoder runners stop reading after their current poll, so tests can see late evidence. Refused in prod. | S20 |
 | `DEEDGLASS_API_KEY` | `api_key` (dev only) | — | yes | CLI, mcp, SDKs | Client key; `serve` ignores it. An agent or admin API key (dg_live_… or dg_test_…) for client commands. | S01 |
 | `DEEDGLASS_SERVER` | `server` | — | no | CLI, mcp, SDKs | Client key; `serve` ignores it. The Deedglass server client commands talk to. | S01 |
 | `DEEDGLASS_INIT_DSN` | `init_dsn` (dev only) | — | yes | connector postgres init | Client key; `serve` ignores it. The admin DSN deedglass connector postgres init connects with to prepare a customer database (a superuser, or a role with CREATEROLE such as the RDS master user). Read once, never stored or printed. Rename it with --admin-dsn-env. | S17 |
@@ -130,6 +131,17 @@ gate:
 | `witness.inline_budget` | `1500ms` | 100ms to 5s | The longest an L1 read-back may hold the request path. Past it, the worker finishes the read-back and the agent sees processing. | S19 |
 | `witness.readback_timeout` | `10s` | 100ms to 1m0s | The worker's limit for one read-back job; past it, the read-back is the gap readback_timeout. | S19 |
 | `witness.max_detail_bytes` | `65536` | 4096 to 262144 | The largest witness_detail (as JCS), in bytes. Beyond it, diff rows and evidence are cut and counted. | S19 |
+| `decoder.enabled` | `true` | true or false | Run the decoder on this server. A connector opts in with witness.enabled: true. | S20 |
+| `decoder.transport` | `peek` | peek | How the decoder reads a slot: peek (SQL peek, then advance). Streaming is planned. | S20 |
+| `decoder.poll_active` | `100ms` | 10ms to 1s | How often a runner reads its slot while an action waits for L2 evidence. | S20 |
+| `decoder.poll_idle` | `1s` | 100ms to 10s | How often a runner reads its slot otherwise. It doubles (to 5s) while a read takes more than a quarter of it. | S20 |
+| `decoder.batch_changes` | `5000` | 100 to 100000 | Rows one read asks for (upto_nchanges). Postgres returns whole transactions, so a larger one comes in full. | S20 |
+| `decoder.max_images_per_tx` | `1000` | 0 to 10000 | Row changes per transaction whose before and after images are kept. Counts and the digest cover every change. | S20 |
+| `decoder.heartbeat_interval` | `10s` | 1s to 1m0s | How often a runner writes a heartbeat message to the watched database. | S20 |
+| `decoder.heartbeat_deadline` | `60s` | 5s to 10m0s | With no heartbeat read back within this time, the runner is degraded (stalled). | S20 |
+| `decoder.lease` | `15s` | 5s to 2m0s | How long an instance holds a connector's slot without renewing; another instance takes over after it. | S20 |
+| `decoder.reconcile_interval` | `60s` | 5s to 1h0m0s | How often a runner checks that every ledger row has a frame; one without is recorded as missing. | S20 |
+| `decoder.retention` | `168h` | 1h0m0s to 8760h0m0s | How long decoded frames (row images included) are kept. Unattributed and forged-marker frames stay 30 days. | S20 |
 <!-- settings:end -->
 
 ### The `mcp` section (S15)

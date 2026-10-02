@@ -77,6 +77,8 @@ var Keys = []Key{
 		Commands: "serve", Doc: "Address for a separate listener serving Prometheus metrics at /metrics (host:port). Off when unset; bind it to localhost or a private network.", Owner: "S03"},
 	{Name: "DEEDGLASS_SLOT_LAG_ALERT_MB", Kind: KindInt, Default: "512",
 		Commands: "serve", Doc: "Alert when a Postgres replication slot holds more WAL than this (1-1048576 MB).", Owner: "S01"},
+	{Name: "DEEDGLASS_DECODER_PAUSE", Kind: KindBool, Default: "false", DevOnly: true,
+		Commands: "serve", Doc: "Dev only: decoder runners stop reading after their current poll, so tests can see late evidence. Refused in prod.", Owner: "S20"},
 
 	// Client-side keys: the CLI, MCP commands and SDKs read them; serve ignores them.
 	{Name: "DEEDGLASS_API_KEY", Kind: KindSecret, Secret: true, Client: true,

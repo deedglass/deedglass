@@ -1,0 +1,11 @@
+exit 0
+--- stdout
+✓ postgres · healthy · slot deedglass_01j9zq7c4m8x2v6t0r3n5k1h7d · PG 18.6
+  lag         3.9 kB · 0.1 s behind         checkpoint  0/3E65050
+  watching    public.orders · public.order_items · public.refunds  (+ deedglass.ledger)
+  frames      bound 1204 · unattributed 3 · forged_marker 1
+  recent      0/3E65020   bound          act_01j9zt3a…     public.orders U 1
+              0/3E61A88   bound          act_01j9zt1q…     public.orders U 301
+              0/3E5F010   unattributed   —                 public.refunds I 2
+              0/3E5C7F8   forged marker  —                 (no ledger row) · alert sent
+--- stderr
