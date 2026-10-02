@@ -1,0 +1,12 @@
+---
+import ScreenStub from '../components/ScreenStub.astro';
+import { copy } from '../lib/copy.ts';
+const p = copy.pages.connectors;
+---
+<ScreenStub title={p.title} lede={p.lede} screen="connectors" />
+<script>
+  import { bootShell } from '../controllers/shell.ts';
+  import { mountScreen } from '../controllers/screens.ts';
+  bootShell({ title: 'Connectors' });
+  mountScreen('connectors');
+</script>

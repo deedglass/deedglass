@@ -1,0 +1,6 @@
+---
+interface Props { level: 'L0' | 'L1' | 'L2' }
+const { level } = Astro.props;
+const names = { L0: 'Reported', L1: 'Confirmed', L2: 'Witnessed' } as const;
+---
+<span class="level"><b>{level}</b>{names[level]}</span>

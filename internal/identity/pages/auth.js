@@ -179,6 +179,30 @@
     field.focus();
   }
 
+  // ---------- the return path (S24) ----------
+  // /login?next=/app/… brings a person back to the Console page that sent them here. The same check
+  // as the server's (internal/console.SafeNext); only this one parameter is ever read from the
+  // query, so a token a scanner or a mangled link puts there is still ignored.
+  const NEXT_KEY = 'deedglass.next';
+  const NEXT_RE = /^\/app(\/[A-Za-z0-9._~%\/?&=,*:+-]*)?$/;
+  function safeNext(p) {
+    if (typeof p !== 'string' || p.length > 1024 || !NEXT_RE.test(p) || p.includes('//') || p.includes('\\')) return null;
+    try {
+      const u = decodeURIComponent(p);
+      if (u.includes('..') || u.includes('//') || u.includes('\\')) return null;
+    } catch (e) { return null; }
+    return p;
+  }
+  function rememberNext() {
+    const n = safeNext(new URLSearchParams(window.location.search).get('next'));
+    try { if (n) sessionStorage.setItem(NEXT_KEY, n); } catch (e) { /* storage blocked: back to /app */ }
+  }
+  function goNext() {
+    let n = null;
+    try { n = safeNext(sessionStorage.getItem(NEXT_KEY)); sessionStorage.removeItem(NEXT_KEY); } catch (e) { n = null; }
+    location.assign(n || '/app');
+  }
+
   // ---------- /login ----------
   function initLogin() {
     const [title, lede, emailForm, email, emailBtn, codeForm, code, codeBtn] =
@@ -232,7 +256,7 @@
       const send = () => run(codeBtn, async () => {
         quiet();
         const r = await api('POST', '/v1/auth/callback', { email: sentTo, code: value });
-        if (r.ok) { location.assign('/app/'); return true; }
+        if (r.ok) { goNext(); return true; }
         if (r.err && r.err.code === 'login_code_invalid') {
           code.value = '';
           invalid(code, true);
@@ -314,7 +338,7 @@
         if (!token) { invalidState(); return null; }
         quiet();
         const r = await api('POST', '/v1/auth/callback', { token });
-        if (r.ok) { location.assign('/app/'); return true; }
+        if (r.ok) { goNext(); return true; }
         if (r.status === 400) { invalidState(); return null; }
         report(r, send);
         return btn;
@@ -413,7 +437,7 @@
   window.addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
 
   const page = document.body.dataset.page;
-  if (page === 'login') initLogin();
+  if (page === 'login') { rememberNext(); initLogin(); }
   else if (page === 'confirm') initConfirm();
   else if (page === 'app') initApp();
 })();

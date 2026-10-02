@@ -1,0 +1,8 @@
+---
+// Allowed (neutral) · Denied (outline, never filled, so it never reads as a MISMATCH) · Approval.
+import Icon from './Icon.astro';
+interface Props { decision: 'allow' | 'deny' | 'require_approval' }
+const { decision } = Astro.props;
+const m = { allow: ['chip-neutral', 'arrow-right', 'Allowed'], deny: ['chip-denied', 'ban', 'Denied'], require_approval: ['chip-pending', 'contrast', 'Approval'] }[decision];
+---
+<span class:list={['chip', m[0]]}><Icon name={m[1] as never} size={16} />{m[2]}</span>

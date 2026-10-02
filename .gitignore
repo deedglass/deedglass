@@ -26,3 +26,11 @@ web/verify/dist/
 examples/demo/.demo-keys
 examples/demo/.demo-keys.tmp
 examples/demo/.demo/
+# the Console (web/ → make web-build): the build is embedded from internal/console/dist; only .keep is committed
+internal/console/dist/*
+!internal/console/dist/.keep
+web/node_modules/
+web/.astro/
+web/test-results/
+web/playwright-report/
+web/e2e/.auth/

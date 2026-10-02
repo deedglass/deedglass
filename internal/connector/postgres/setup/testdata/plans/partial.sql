@@ -5,7 +5,7 @@
 + replica identity full · 3 watched tables · brief lock on each
 + publication deedglass_pub · 4 tables
 ○ wal_level is replica. L2 needs logical. Set wal_level = logical, then restart Postgres (pg_ctl -D "$PGDATA" restart). In Docker, add command: ["postgres", "-c", "wal_level=logical", "-c", "max_slot_wal_keep_size=4GB"] and run docker compose up -d --force-recreate.
-plan sha256:34d06b62ad4f036efca985cb4aab065742f65cfe42304410c20d59c679b3fece
+plan sha256:af424d8cd17fb24d67c77c0bd97c1a3934ef6c7a908bd86f194afd494f06ac9b
 
 BEGIN;
 SET LOCAL search_path = pg_catalog, pg_temp;
@@ -91,6 +91,6 @@ ALTER TABLE "public"."orders" REPLICA IDENTITY FULL;
 ALTER TABLE "public"."refunds" REPLICA IDENTITY FULL;
 
 -- + publication deedglass_pub · 4 tables
-CREATE PUBLICATION deedglass_pub FOR TABLE deedglass.ledger, "public"."customers", "public"."orders", "public"."refunds" WITH (publish = 'insert, update, delete, truncate');
+CREATE PUBLICATION deedglass_pub FOR TABLE deedglass.ledger, "public"."customers", "public"."orders", "public"."refunds" WITH (publish = 'insert, update, delete, truncate', publish_generated_columns = stored);
 
 COMMIT;

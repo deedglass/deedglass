@@ -449,7 +449,7 @@ func (l *Ledger) transition(ctx context.Context, tx pgx.Tx, actionID string, fro
 		// Sealing: the deed.sealed event is known in full before the statement runs, so the
 		// transition and its NOTIFY go in one round trip.
 		ev := Event{Event: evt.String(), Type: EventDeedSealed, Org: sd.org, ID: sd.id, Seq: &sd.seq, Action: &actionID,
-			State: strp(string(gate.Sealed)), Deed: &sd.id, At: sd.at}
+			State: strp(string(gate.Sealed)), Deed: &sd.id, At: sd.at, Kind: strp(string(deed.KindAction))}
 		payload, perr := marshalEvent(&ev, l.now())
 		if perr != nil {
 			return time.Time{}, perr
@@ -713,7 +713,7 @@ func (l *Ledger) SealAmendment(ctx context.Context, tx pgx.Tx, actionID string, 
 	}
 	seq := env.Body.Seq
 	return env, l.Publish(ctx, tx, Event{Type: EventDeedSealed, Org: env.Body.Org, ID: env.ID, Seq: &seq, Action: &actionID,
-		State: strp(string(gate.Sealed)), Deed: &env.ID, At: env.Body.IssuedAt})
+		State: strp(string(gate.Sealed)), Deed: &env.ID, At: env.Body.IssuedAt, Kind: strp(string(deed.KindAmendment))})
 }
 
 // AdminEvent is one administrative change: who did what to which object, and why.
@@ -832,5 +832,6 @@ func (l *Ledger) RecordAdmin(ctx context.Context, tx pgx.Tx, e AdminEvent) (*dee
 		return nil, err
 	}
 	seq := env.Body.Seq
-	return env, l.Publish(ctx, tx, Event{Type: EventDeedSealed, Org: org, ID: env.ID, Seq: &seq, Deed: &env.ID, At: env.Body.IssuedAt})
+	return env, l.Publish(ctx, tx, Event{Type: EventDeedSealed, Org: org, ID: env.ID, Seq: &seq, Deed: &env.ID, At: env.Body.IssuedAt,
+		Kind: strp(string(deed.KindAdmin))})
 }

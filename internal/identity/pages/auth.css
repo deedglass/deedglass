@@ -32,8 +32,9 @@ body {
 }
 
 @keyframes card-in {
-  from { opacity: 0; transform: translateY(4px); }
-  to { opacity: 1; transform: none; }
+  /* transform only: a card that starts at opacity 0 has no first contentful paint (Lighthouse NO_FCP, S24) */
+  from { transform: translateY(4px); }
+  to { transform: none; }
 }
 
 @media (max-width: 440px) {

@@ -1,0 +1,14 @@
+---
+import AppShell from '../layouts/AppShell.astro';
+import PageHead from './PageHead.astro';
+import Skeleton from './Skeleton.astro';
+interface Props { title: string; lede: string; screen: string }
+const { title, lede, screen } = Astro.props;
+---
+<AppShell title={title} screen={screen}>
+  <PageHead title={title} lede={lede}><slot name="actions" slot="actions" /></PageHead>
+  <section id="screen-body" aria-labelledby="page-title" aria-busy="true" data-screen-body={screen}>
+    <Skeleton />
+  </section>
+  <slot />
+</AppShell>

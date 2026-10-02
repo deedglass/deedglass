@@ -1,0 +1,8 @@
+---
+// An agent's or key's lifecycle status: Active · Suspended · Stopped · Test (not a verdict).
+import Icon from './Icon.astro';
+interface Props { status: 'active' | 'suspended' | 'stopped' | 'test' }
+const { status } = Astro.props;
+const m = { active: ['check', 'Active'], suspended: ['pause', 'Suspended'], stopped: ['stop', 'Stopped'], test: ['key-round', 'Test'] }[status];
+---
+<span class:list={['status', `status-${status}`]}><Icon name={m[0] as never} size={16} />{m[1]}</span>

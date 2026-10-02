@@ -88,6 +88,10 @@ go test ./internal/witness/undo -run TestSQLGoldens -update   # S23: the generat
 DEEDGLASS_IT_PKGS=./cmd/deedglass/ DEEDGLASS_IT_GOFLAGS="-v -run TestUndoLive" make integration   # S23 §9 on a real server: the hero MISMATCH, refused and clean previews, countersign by another admin, L2 VERIFIED, redo, the race
 make undo-matrix    # S23: the undo round trips and the property test, 2,000 seeds on PG 16, 17 and 18 (logs in .tmp/undo-matrix-<v>.log)
 make bench-undo     # S23 §3.10: plan 1,000 rows, preview 301, RunUndo 301 and 1,000; JSON in bench/results/
+make bench-events   # S24 §3.12: the event hub, 1,000 events/s to 200 SSE streams (p99 enqueue→write < 50 ms), memory per stream (< 64 KiB); JSON in bench/results/
+go test ./internal/console -run 'TestIsolationProperty|TestResume|TestBackpressure|TestEvents' -v   # S24: the live stream (isolation, resume, backpressure, timers in synctest, limits, hydration)
+DEEDGLASS_IT_PKGS=./cmd/deedglass/ DEEDGLASS_IT_GOFLAGS="-v -run ^TestEventsLive$" make integration   # S24 on a real server: fake-action over /v1/events, two orgs, agent key, rollback, clean stop
+go test ./cmd/deedglass -run TestFollowSSEGolden -update-follow   # testdata/cli/actions-follow-sse.txt, --follow over SSE (then update SHA256SUMS)
 make attack         # S18: the V7 attack suite on a throwaway PG 18 (real serve, real Postgres, loopback upstreams), then the report
 make attack-report  # S18: print the last run and regenerate docs/ATTACK_SUITE.md (never edit that page by hand; -check in CI)
 DEEDGLASS_IT_ATTACK_RUN='TestAttack/H03' make attack   # one case; 'TestOrgIsolation' for the isolation sweep
@@ -106,6 +110,13 @@ scripts/demo/tamper-clip.sh  # S06's recording: 1,000 real deeds, export, verify
 make gencopy        # regenerate testdata/deeds/messages.json and web/verify/src/*.gen.ts from Go
 make web-verify-test  # (in ci) the browser verifier: npm ci once, tsc --noEmit, vitest (vectors, parity 500/500)
 make web-verify-serve # build and serve the verify page on http://127.0.0.1:5178
+make web-build      # S24: the Console (web/): tokens → icons → astro build → .br/.gz → check-dist; writes internal/console/dist (make build runs it when Node is present; make build-only skips it)
+make web-test       # (in ci) S24: tsc + Vitest (api, stream, format, palette, dom, tokens and contrast, copy, icons, sinks, types)
+make web-e2e        # S24: Playwright in the installed Chrome against a throwaway PG 18 and a real serve (shell, keyboard, palette, Stop all, live, axe, CSP)
+make web-lighthouse # S24: Lighthouse 13 on /app, /app/_kit and /login, desktop and mobile (≥ 95 accessibility and best practices)
+DEEDGLASS_IT_THROWAWAY=1 scripts/web_e2e.sh serve|shots   # S24: keep the Acme stack up on :18241, or write the screenshot pass to ~/txv/ops/plan/prompts-v7/reports/screens/S24
+node web/scripts/contrast.mjs   # S24: WCAG ratios for every token pair in both themes (exit 1 on a failure); make web-tokens regenerates the token files
+go test ./internal/console -run 'TestPages|TestTokensMatchDesignMD' -v   # S24: the page handler (routes, redirect, CSP, assets, placeholder) and the tokens.json ⇄ DESIGN.md lockstep
 make rename-guard   # retired identifiers (rule 5)
 make banned-words   # the banned list over files and every commit message
 make bench | make cover
@@ -115,8 +126,8 @@ make docker         # the deedglass:dev image (distroless, 65532); make bench-ht
 scripts/ci-local.sh # the CI jobs locally (docker-smoke and govulncheck skip when Docker or network is missing)
 ```
 
-- Go 1.27.1 at `/opt/homebrew/bin/go`. Node 24 (`/opt/homebrew/bin/node`) for `web/verify` only; its dev
-  tools are exact pins in `web/verify/package-lock.json` (ADR-027), installed with `npm ci --ignore-scripts`. PostgreSQL 16, 17 and 18 are installed at
+- Go 1.27.1 at `/opt/homebrew/bin/go`. Node 24 (`/opt/homebrew/bin/node`) for `web/verify` and the Console (`web/`); their dev
+  tools are exact pins in `web/verify/package-lock.json` (ADR-027) and `web/package-lock.json` (ADR-053), installed with `npm ci --ignore-scripts`. PostgreSQL 16, 17 and 18 are installed at
   `/opt/homebrew/opt/postgresql@{16,17,18}/bin` (keg-only; never `brew services`). Docker images
   `postgres:16.15`, `17.11` and `18.6` work too (`DEEDGLASS_IT_MODE=docker`).
 - Integration scripts refuse to run unless `DEEDGLASS_IT_THROWAWAY=1` (set by `make integration`).
@@ -144,7 +155,7 @@ scripts/ci-local.sh # the CI jobs locally (docker-smoke and govulncheck skip whe
    `github.com/gowebpki/jcs` v1.0.2 (ADR-005); `go.yaml.in/yaml/v3` v3.0.5 (ADR-015);
    `github.com/jackc/pgx/v5` v5.11.0 (ADR-001, in go.mod since S02); `github.com/veraison/go-cose`
    v1.3.0 with `fxamacker/cbor/v2` v2.9.4 (ADR-026, in go.mod since S04). npm, dev only (`web/verify`,
-   ADR-027, accepted): `typescript` 7.0.2, `vitest` 5.0.3, `vite` 8.3.1, `@types/node` 24.19.0; no runtime dependency.
+   ADR-027, accepted): `typescript` 7.0.2, `vitest` 5.0.3, `vite` 8.3.1, `@types/node` 24.19.0; no runtime dependency. The Console (`web/`, ADR-053, proposed in S24), dev and build only: `astro` 7.3.5, `tailwindcss` and `@tailwindcss/vite` 4.3.3, `@fontsource-variable/inter` and `@fontsource/geist-mono` 5.3.0, `lucide-static` 1.49.0, `typescript` 7.0.2, `vitest` 5.0.3, `happy-dom` 20.14.5, `@playwright/test` 1.63.0, `@axe-core/playwright` 4.13.0, `lighthouse` 13.5.0; nothing from npm runs in the shipped Console.
    `cel.dev/cel-go` v0.32.0 (ADR-017, in go.mod since S10; brings protobuf, antlr4-go, cel.dev/expr,
    genproto and x/exp; the binary-size budget is ADR-032, accepted under DL-024 and amended under DL-031: < 40 MB). The MCP Go SDK
    `github.com/modelcontextprotocol/go-sdk` v1.8.0 (ADR-018, in go.mod since S14; since S15 the
@@ -521,6 +532,16 @@ and "open source" until the repo is public. Style bans: "revolutionary", "world-
   cases, the race and lock conflicts, cascades, and the property test, 200 seeds by default and
   2,000 per version in `make undo-matrix`) and `TestUndoBudget` (`make bench-undo`). `attack/`: group
   U (U01–U05, `expectedDigestU`, ADR-052). The migration count is 22.
+- S24 (the Console): `internal/console` `TestPages` (every route, the exact CSP, ETag and 304, HEAD),
+  `TestNotFoundNeverEchoes`, `TestKitIsDevOnly`, `TestSignedOutRedirects`, `TestSafeNext`, `TestAssets`
+  (immutable, br/gzip, Vary), `TestPlaceholder` (prod refuses), `TestEmbeddedBuild`, `TestTokensMatchDesignMD`
+  (tokens.json ⇄ DESIGN.md), plus the hub and events suites. `web/` Vitest: the HTML-sink and storage greps, no
+  hex outside tokens.json, aurora only in the Mirror, the copy lift and banned words, icons used/missing, token
+  staleness, contrast (0 failing pairs, the S24 §3.2 ratios), `types.ts` against the Go goldens and structs.
+  `scripts/check-dist.mjs` (no inline script or style, no sinks, budgets). Playwright (`make web-e2e`): 41 cases
+  with a CSP-violation and console-error listener on every page, axe 0 serious or critical in both themes.
+  `internal/connector/postgres` `TestGeneratedColumnsPG18` (DL-037: `publish_generated_columns = stored`, the
+  S17-era publication upgraded, virtual generated columns refused).
 - `cmd/deedglass verify` (S05): 80 golden cases in `testdata/verify/<case>/{args,stdout,stderr,exit}`
   (`go test ./cmd/deedglass -run TestVerifyGolden -update`), every vector's code and exit, `--keys`
   URL rules (same-host redirects, 1 MiB, timeout, loopback-only http), key-set merge conflicts, no

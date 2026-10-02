@@ -97,7 +97,11 @@ type Route struct {
 	// fields set to null, so the secret never reaches the database.
 	Sensitive bool
 	Redact    []string      // top-level JSON fields to null before storing (default ["secret"] when Sensitive)
-	Timeout   time.Duration // default 30 s
+	Timeout   time.Duration // default 30 s; ignored on a Streaming route
+	// Streaming marks a long-lived response (GET /v1/events, S24): no route timeout and no write
+	// deadline from the pipeline. The handler owns its lifetime and sets a write deadline with
+	// http.ResponseController before each write. GET only, and never a request body.
+	Streaming bool
 	// MaxBody is the body limit in bytes. 0 means 1 MiB on POST, PUT and PATCH, and no body on the
 	// other methods; NoBody refuses a body on any method.
 	MaxBody  int64
@@ -156,6 +160,12 @@ func (rt Route) normalize(catalog map[string]ContractRoute) Route {
 	}
 	if rt.Sensitive && rt.Idempotency == IdemNever {
 		fail("a Sensitive route is stored for replay, so it can't be IdemNever")
+	}
+	if rt.Streaming && rt.Method != http.MethodGet {
+		fail("a Streaming route must be a GET")
+	}
+	if rt.Streaming && rt.MaxBody > 0 {
+		fail("a Streaming route takes no request body")
 	}
 	if rt.MinRole != "" && rt.MinRole.Rank() == 0 {
 		fail("MinRole %q is not viewer, admin or owner", rt.MinRole)

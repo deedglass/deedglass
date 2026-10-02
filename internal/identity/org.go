@@ -37,6 +37,18 @@ type Org struct {
 	Timezone string     `json:"timezone"`
 	Status   string     `json:"status"`
 	Created  httpx.Time `json:"created_at"`
+	// Stop is the Stop all overlay, on GET /v1/org only (S24, additive): the Console's org-stopped
+	// banner reads it on load and again on org.stopped and org.started.
+	Stop *OrgStopState `json:"stop,omitempty"`
+}
+
+// OrgStopState is GET /v1/org's stop: whether Stop all is on, since when, by whom (the person's
+// name, else their email, else the actor id) and why.
+type OrgStopState struct {
+	Stopped   bool        `json:"stopped"`
+	StoppedAt *httpx.Time `json:"stopped_at"`
+	StoppedBy *string     `json:"stopped_by"`
+	Reason    *string     `json:"reason"`
 }
 
 // Org name and slug rules (orgs has the same CHECKs).
@@ -267,7 +279,21 @@ func (s *Service) GetOrg(ctx context.Context, p *Principal) (Org, error) {
 	err := s.db.OrgReadTx(ctx, p.OrgID, func(ctx context.Context, tx pgx.Tx) error {
 		var err error
 		o, err = getOrg(ctx, tx, p.OrgID)
-		return err
+		if err != nil {
+			return err
+		}
+		var (
+			at      *time.Time
+			by, why *string
+		)
+		if err := tx.QueryRow(ctx, `SELECT o.stopped_at,
+			    COALESCE((SELECT COALESCE(NULLIF(u.display_name, ''), u.email::text) FROM deedglass.users AS u WHERE u.id = o.stopped_by), o.stopped_by),
+			    o.stop_reason
+			  FROM deedglass.orgs AS o WHERE o.id = $1`, p.OrgID).Scan(&at, &by, &why); err != nil {
+			return err
+		}
+		o.Stop = &OrgStopState{Stopped: at != nil, StoppedAt: optTime(at), StoppedBy: by, Reason: why}
+		return nil
 	})
 	return o, err
 }

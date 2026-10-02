@@ -62,11 +62,15 @@ colors:
   allowed-bg-dark: "#1C1F2A"     # 10.2:1
   danger-light: "#C8322B"        # Stop, Stop all, delete (white text 5.3:1)
   danger-dark: "#FF7A70"         # Stop, Stop all, delete (ink-950 text 7.9:1)
+  danger-light-hover: "#A92820"  # proposed (S24): hover on filled danger, light (white text 6.97:1)
+  danger-dark-hover: "#FF968E"   # proposed (S24): hover on filled danger, dark (ink-950 text 9.54:1)
 
   # Glass (brand doc 9)
   glass-dark: "rgba(14,16,23,.72)"
   glass-light: "rgba(255,255,255,.72)"
   glass-highlight: "rgba(255,255,255,.06)"
+  scrim-dark: "rgba(7,8,12,.64)"     # proposed (S24): behind sheets, dialogs and the palette, dark
+  scrim-light: "rgba(13,15,20,.32)"  # proposed (S24): the same, light
 
   # CLI and logo frost (brand doc 5, 13.3)
   frost-dark: "#E6EAF5"          # flat logo right half on dark, at ~85%
@@ -186,6 +190,62 @@ typography:
     fontWeight: 400
     lineHeight: 28px
     letterSpacing: 0
+  # The Console's compact scale (S24 §3.3; web/tokens/tokens.json typography, in lockstep).
+  console-title-2:
+    fontFamily: Inter Variable
+    fontSize: 24px
+    fontWeight: 600
+    lineHeight: 30px
+    letterSpacing: -0.02em
+  console-title-3:
+    fontFamily: Inter Variable
+    fontSize: 20px
+    fontWeight: 600
+    lineHeight: 26px
+    letterSpacing: -0.015em
+  console-headline:
+    fontFamily: Inter Variable
+    fontSize: 15px
+    fontWeight: 600
+    lineHeight: 22px
+    letterSpacing: 0
+  console-body:
+    fontFamily: Inter Variable
+    fontSize: 14px
+    fontWeight: 400
+    lineHeight: 20px
+    letterSpacing: 0
+  console-body-dense:
+    fontFamily: Inter Variable
+    fontSize: 13px
+    fontWeight: 400
+    lineHeight: 18px
+    letterSpacing: 0
+  console-footnote:
+    fontFamily: Inter Variable
+    fontSize: 13px
+    fontWeight: 450
+    lineHeight: 18px
+    letterSpacing: 0
+  console-caption:
+    fontFamily: Inter Variable
+    fontSize: 12px
+    fontWeight: 600
+    lineHeight: 16px
+    letterSpacing: 0.04em
+    fontVariant: small-caps
+  console-metric:
+    fontFamily: Inter Variable
+    fontSize: 28px
+    fontWeight: 600
+    lineHeight: 32px
+    letterSpacing: -0.02em
+  console-mono-s:
+    fontFamily: Geist Mono
+    fontSize: 12.5px
+    fontWeight: 400
+    lineHeight: 18px
+    letterSpacing: 0
   og-title:
     fontFamily: Inter Variable
     fontSize: 64px
@@ -298,7 +358,7 @@ components:
     backgroundColor: "{colors.white} | {colors.ink-900}"
     textColor: "{colors.ink-text} | {colors.snow-text}"
     placeholderColor: "{colors.slate-500} | {colors.slate-450}"
-    border: "1px {colors.slate-300} | 1px {colors.ink-700}"
+    border: "1px {colors.slate-400} | 1px {colors.slate-500}"   # S24 contrast: slate-300 on white is 1.88 (fails WCAG 1.4.11); slate-400 on white 3.18, slate-500 on ink-900 3.85; light inputs sit on white, never paper-50
     typography: "{typography.body-console}"
     rounded: "{rounded.input}"
     height: 32px
@@ -337,7 +397,7 @@ components:
     backdropFilter: "{elevation.glass-blur}"
     shadow: "{elevation.glass}, {elevation.overlay-*}"
     rounded: "{rounded.sheet}"
-    width: 640px                   # proposed
+    width: 560px                   # S24 §3.8; full screen under 640px
     rowHeight: 36px
   toast:
     backgroundColor: "{colors.glass-light} | {colors.glass-dark}"
@@ -359,11 +419,11 @@ components:
     padding: 16px
   top-bar-console:
     backgroundColor: "{colors.paper-50} | {colors.ink-950}; glass on scroll"
-    height: 52px                   # proposed
+    height: 56px                   # S24 §3.3
   sidebar-console:
     backgroundColor: "{colors.paper-50} | {colors.ink-950}"
     width: "{spacing.sidebar-console}"
-    itemHeight: 32px               # proposed
+    itemHeight: 36px               # S24 §3.7 (rail 64px from 768 to 1023px; bottom bar 64px + safe area below 768px)
   email-layout:
     width: "{spacing.email-width}"
     backgroundColor: "{colors.paper-50}"
@@ -684,6 +744,18 @@ $ deedglass verify deeds.jsonl --keys https://deedglass.com/.well-known/deedglas
 ### Approval page
 **`approval-page`** (S22, `/approve`): one person countersigns one action. A single 400px card (mobile: full width minus 32px, 28px/24px padding; ≥ 441px: 36px padding) on `--bg`, centred when the viewport is tall. Top to bottom: the wordmark, a status chip (`verdict-badge` metrics; sentence-case labels render uppercase like the verdicts: `Waiting for you`, `Waiting for others`, `executing`, `L2 · VERIFIED`), the title (22px/600, balanced), the summary lede (16px), the context as a `deed-card`-style fact grid (caption labels, mono values, the rule's reason in secondary text), the SQL as a `code-block`, then the decision: **Approve and run** (`button-primary`, 44px) and **Deny…** (`button-secondary`), above the fold at 360×800. Fine print and the agent's last five actions (tool, time, verdict chip) sit below the decision. Deny opens an inline sheet (a required reason, 280 characters, the error under the field), never a modal. After a decision the context collapses and the page follows the action to the seal: the orb's halves close (240ms) with one teal pulse for VERIFIED, or stop short with a red hairline for MISMATCH; reduced motion shows the end state at once. Every terminal state offers **Open in Console**. Tokens come from the shared `internal/identity/pages/tokens.css` (also used by the sign-in pages), so the auth and approval pages can't drift.
 
+### Console kit (S24)
+The Console builds every screen from the kit at `/app/_kit` (dev builds; `web/src/components`, `web/src/lib/chips.ts`, `web/src/controllers`). Rules the kit settled:
+- **Chips:** verdict chips keep their capitals (`L2 · VERIFIED`) at 12px/600 with +0.04em; decision, state and status chips are sentence case at 12px/550 (`Allowed`, `Pending approval`, `Stopped`). Every chip has an icon and a word. Denied is an outline.
+- **Table header:** caption size, small caps (`font-variant-caps: small-caps`), secondary text. Row links read as text and turn accent on hover, so a column of tool names doesn't become a column of blue.
+- **Tables under 640px:** compact cards: the first cell as the title, the meta cells (agent, verdict, time) on one line, the rest (`data-card="hide"`) on the detail page.
+- **Secondary text on raised surfaces** (kbd hints, the segmented control, a selected palette row) uses `text-2-on-alt`.
+- **Sheets:** right side, 480px (a bottom sheet under 640px), glass, Escape and the scrim close, focus trapped and returned, the page behind inert. **ConfirmDialog** (typed): the red button enables only on an exact, case-sensitive match; Cancel has the initial focus; the reason says where it goes.
+- **Banner:** a 3px inset rule on the leading edge (red only for the org-stopped banner), an icon, one or two lines; no button when the top bar already carries the action.
+- **Palette:** 560px glass, 20vh from the top (full screen under 640px), groups Jump to id · Go to · Actions · Agents · Recent, shortcuts as kbd chips, a pasted id jumps.
+- **The Mirror in lists:** only live rows that were just witnessed show it (VERIFIED plays Sealed, MISMATCH stops short); history rows show a quiet icon, so aurora stays out of lists.
+- **Avatar:** initials in an 8px-radius square, not a circle.
+
 ### Undo diff (approval page)
 **`undo-diff`** (S23, inside `approval-page` when the action is an undo): what the undo puts back, read like a `deed-card` diff. A caption line `Puts back` (secondary, 13px/600) followed by the headline in primary text (`51 rows in public.orders · 51 updates`, counts joined with non-breaking spaces); an optional amber `banner` when `allow_triggers` is on; then a three-column table in a 10px-radius hairline frame: `Row` (46%, secondary mono, wraps; the table name leads when several tables), `Now`, `After undo` (mono, one line, cut with an ellipsis and the full value in `title`). Header 32px caption type; rows 36px with a hairline between rows (none on the last); tabular numerals. The `After undo` cells carry the pending state at 12% (`color-mix(in srgb, var(--pending) 12%, transparent)`, fallback `--pending-bg`): nothing changes until a person countersigns, so the tint is the waiting colour, never verified teal. Two rows on a phone (keeps **Approve and run** above the fold at 360×800), six from 441px; `And N more steps in the plan.` below (the plan digest in its `title`). The scroll frame is a focusable `region` with the 2px accent focus ring. The requester's reason is a `Why` fact in the context grid. No red anywhere: asking for an undo is not destructive until a person countersigns.
 
@@ -827,9 +899,9 @@ Colour only on a TTY; respect `NO_COLOR`. Symbols: `✓` verified (teal), `✕` 
 
 - **Proposed values** (brand doc silent): `slate-450` tertiary text on dark; `slate-600` secondary text on light; accent hover colours; `on-accent-dark` (ink-950 text, because white fails on #6F8DFF); syntax colours; overlay shadows under glass; button, input, chip, pill and row heights other than the 36px table row; Console body weight 430; display-m, title-3, subhead-l and OG title tracking; spacing tokens above 48px; command palette, toast and empty-state widths; toast dwell time; skeleton pulse timing; tablet icon rail; Lucide icon choices for verdicts; email card padding, wordmark size and dark-safe technique; pill radius for status pills.
 - **Type scale weights.** `site/src/styles/global.css` sets display-xl at weight 700 and tracking -0.015em. The brand doc asks for 600 to 650 and -0.02 to -0.045em. This file follows the brand doc; the site CSS needs updating.
-- **Site colour tokens predate the brand doc.** `global.css` uses `#000000` dark background and `#1f4fd8` accent. The token build (S24) should replace them with `ink-950` and `#2F5BEA` / `#6F8DFF`.
+- **Site colour tokens predate the brand doc.** `global.css` uses `#000000` dark background and `#1f4fd8` accent. S24's token build generates the replacement but doesn't touch the site: in S36 the site imports `web/tokens/tokens.json` through the same generator (add a third output, `site/src/styles/tokens.css`, the roles as `--bg`, `--surface`, `--text`, `--accent`, …), deletes its own colour block, and keeps its marketing type scale (display-xl and friends stay in `global.css`, corrected to the brand doc's weights and tracking). `TestTokensMatchDesignMD` then covers the site too.
 - **Charts.** The brand doc bans aurora in charts but defines no chart palette. Until one exists, charts use neutrals plus verdict colours for verdict series only (see the dataviz skill for a validated method).
 - **Final logo vectors** are pending (S36). Until then use `~/txv/site/brand/deedglass/reference/final-orb.png` and `reference/chosen-split-orb-icon.png` as reference only.
 - **Light-mode code blocks** stay dark (`ink-900`) per brand doc 13.2; confirm this holds for inline code (proposed: inline code on light uses `mist-100` fill and `ink-text`).
 - **Forced-colors mode** (Windows High Contrast) is not specified; chips must keep their border and icon so meaning survives.
-- **Contrast script** (S24) has not run yet; ratios here were computed by hand with the WCAG formula and should be re-checked by CI.
+- **Contrast script** ran in S24: `web/scripts/contrast.mjs` checks every declared pair in both themes (54 pairs, 0 failing) in `make web-test` and CI; the generated table is in `docs/DESIGN_SYSTEM.md`. Role fixes inside the palette: `on-accent-dark` = ink-950, `on-danger` dark = ink-950, secondary text on mist-100 = `#3F4453` (the `text-2-on-alt` role), input borders slate-400 / slate-500.

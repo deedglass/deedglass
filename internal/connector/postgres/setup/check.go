@@ -382,6 +382,7 @@ func watchedTables(in CheckInput, initFix string) []connector.Check {
 	}
 	w := connector.Check{ID: "witness.watched_tables", Title: "watched tables", DocURL: doc("watched-tables")}
 	var fails, warns []string
+	virtual := false
 	pk := 0
 	for _, t := range d.WatchedTables {
 		ts, ok := st.Tables[t]
@@ -393,6 +394,10 @@ func watchedTables(in CheckInput, initFix string) []connector.Check {
 			fails = append(fails, t+" is UNLOGGED (its changes never reach the log)")
 		case ts.ReplIdent != "f":
 			fails = append(fails, t+" replica identity isn't full")
+		}
+		if len(ts.VirtualGenerated) > 0 {
+			virtual = true
+			fails = append(fails, t+" has virtual generated columns ("+strings.Join(ts.VirtualGenerated, ", ")+"); PG 18 refuses updates and deletes on a watched table that has one")
 		}
 		if ts.HasPK {
 			pk++
@@ -410,6 +415,9 @@ func watchedTables(in CheckInput, initFix string) []connector.Check {
 	switch {
 	case len(fails) > 0:
 		w.Status, w.Detail, w.Fix = connector.CheckFail, strings.Join(fails, " · "), initFix
+		if virtual {
+			w.Fix = "Make each virtual generated column STORED (drop it and add it back with GENERATED ALWAYS AS (…) STORED), or remove the table from witness.watched_tables. Then run init again."
+		}
 	case len(warns) > 0:
 		w.Status, w.Detail = connector.CheckWarn, strings.Join(warns, " · ")
 		w.Fix = "Rows without a primary key can't be matched one to one; triggers that write elsewhere make actions UNVERIFIABLE, never MISMATCH."
@@ -461,6 +469,8 @@ func publication(in CheckInput, initFix string) connector.Check {
 		c.Status, c.Detail, c.Fix = connector.CheckFail, "missing "+strings.Join(missing, ", "), initFix
 	case strings.Join(p.Publish, ", ") != "insert, update, delete, truncate":
 		c.Status, c.Detail, c.Fix = connector.CheckFail, "publishes "+strings.Join(p.Publish, ", "), initFix
+	case st.VersionNum >= 180000 && p.GenCols != GenColsStored:
+		c.Status, c.Detail, c.Fix = connector.CheckFail, "doesn't publish stored generated columns, so PG 18 refuses updates and deletes on watched tables that have one", initFix
 	case len(extra) > 0 || len(p.Schemas) > 0:
 		c.Status, c.Detail, c.Fix = connector.CheckWarn, "extra tables: "+strings.Join(append(extra, p.Schemas...), ", "), initFix
 	default:

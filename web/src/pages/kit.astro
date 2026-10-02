@@ -1,0 +1,324 @@
+---
+// /app/_kit (dev builds only; the server answers 404 in prod): every component in every state,
+// built only from the generated tokens. Demo data tells the Acme story (no placeholder people).
+import AppShell from '../layouts/AppShell.astro';
+import PageHead from '../components/PageHead.astro';
+import Icon from '../components/Icon.astro';
+import IconButton from '../components/IconButton.astro';
+import Button from '../components/Button.astro';
+import Mirror from '../components/Mirror.astro';
+import VerdictChip from '../components/VerdictChip.astro';
+import DecisionChip from '../components/DecisionChip.astro';
+import StateChip from '../components/StateChip.astro';
+import StatusChip from '../components/StatusChip.astro';
+import LevelBadge from '../components/LevelBadge.astro';
+import Badge from '../components/Badge.astro';
+import IdChip from '../components/IdChip.astro';
+import RelativeTime from '../components/RelativeTime.astro';
+import Field from '../components/Field.astro';
+import EmptyState from '../components/EmptyState.astro';
+import CodeBlock from '../components/CodeBlock.astro';
+import Meter from '../components/Meter.astro';
+import Sparkline from '../components/Sparkline.astro';
+import Skeleton from '../components/Skeleton.astro';
+import { copy } from '../lib/copy.ts';
+import { contrastFindings, contrastRows } from '../lib/contrast.gen.ts';
+import { iconNames } from '../icons/names.gen.ts';
+import { STATE_STYLES } from '../lib/states.ts';
+
+// Times are relative to the build, so the kit's "2m ago" stays true when reltime.ts re-renders.
+const now = new Date(Math.floor(Date.now() / 60000) * 60000).toISOString();
+const ago = (s: number) => new Date(Date.parse(now) - s * 1000).toISOString();
+const rows = [
+  { tool: 'postgres.execute', agent: 'billing-sync', decision: 'allow', verdict: 'VERIFIED', level: 'L2', id: 'act_01k6h7mz3c9d8e7f6g5h4jq3m8', ms: 41, at: ago(130) },
+  { tool: 'postgres.execute', agent: 'support-bot', decision: 'allow', verdict: 'MISMATCH', level: 'L2', id: 'act_01k6h7n2ab3cd4ef5gh6jk7x9a', ms: 63, at: ago(420) },
+  { tool: 'stripe.create_refund', agent: 'support-bot', decision: 'require_approval', verdict: null, level: null, id: 'act_01k6h7p8qr9st0vw1xy2zm4c1q', ms: null, at: ago(900) },
+  { tool: 'postgres.query', agent: 'claude-desktop', decision: 'allow', verdict: 'UNVERIFIABLE', level: 'L0', id: 'act_01k6h7q4zz5yy6xx7ww8vv9t2r', ms: 1204, at: ago(3700) },
+  { tool: 'postgres.execute', agent: 'billing-sync', decision: 'deny', verdict: null, level: null, id: 'act_01k6h7r1aa2bb3cc4dd5ee6f7g', ms: null, at: ago(86400 * 2) },
+] as const;
+const states = Object.keys(STATE_STYLES);
+const icons = [...iconNames];
+const policy = `version: 1
+rules:
+  - id: block-destructive-sql
+    match: { tool: "postgres.*" }
+    deny_if: request.sql.kind in ["drop", "truncate"]
+    reason: "DROP is never allowed for agents."`;
+---
+<AppShell title={copy.kit.title} screen="">
+  <PageHead title={copy.kit.title} lede={copy.kit.lede} />
+
+  <section class="section" aria-labelledby="k-colour">
+    <h2 class="t-title-3" id="k-colour">Colour and contrast</h2>
+    <div class="kit-grid">
+      {[['sw-bg', 'bg'], ['sw-surface', 'surface'], ['sw-raised', 'surface-raised'], ['sw-hairline', 'hairline'], ['sw-text', 'text'], ['sw-text-2', 'text-2'], ['sw-accent', 'accent'], ['sw-danger', 'danger'], ['sw-verified', 'verified-fg'], ['sw-mismatch', 'mismatch-fg'], ['sw-pending', 'pending-fg'], ['sw-unverifiable', 'unverifiable-fg']].map(([c, n]) => (
+        <div class="swatch"><i class={c}></i><span class="mono">--{n}</span></div>
+      ))}
+    </div>
+    <p class="t-2 m-0">{copy.kit.contrastLede}</p>
+    <div class="table-frame">
+      <table class="dt cards">
+        <caption class="sr-only">{copy.kit.contrast}</caption>
+        <thead><tr><th scope="col">Theme</th><th scope="col">Foreground</th><th scope="col">Background</th><th scope="col">Kind</th><th scope="col" class="num">Ratio</th><th scope="col">Result</th></tr></thead>
+        <tbody>
+          {contrastRows.map((r) => (
+            <tr><td data-label="Theme">{r.theme}</td><td data-label="Foreground" class="mono">{r.fg}</td><td data-label="Background" class="mono">{r.bg}</td><td data-label="Kind">{r.kind}</td><td data-label="Ratio" class="num">{r.ratio.toFixed(2)}</td>
+              <td data-label="Result">{r.kind === 'decorative' ? <span class="t-2">decorative</span> : r.pass ? <span class="pass">pass · {r.need}:1</span> : <span class="fail">fails · {r.need}:1</span>}</td></tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+    <ul class="t-footnote t-2 m-0 pl-5">
+      {contrastFindings.map((f) => <li>{f.label}: {f.ratio.toFixed(2)} · {f.decision}</li>)}
+    </ul>
+  </section>
+
+  <section class="section" aria-labelledby="k-type">
+    <h2 class="t-title-3" id="k-type">Type</h2>
+    <div class="card card-pad grid gap-3">
+      <p class="t-title-2">Title 2 · Actions</p>
+      <p class="t-title-3">Title 3 · Witness</p>
+      <p class="t-headline">Headline · UPDATE public.orders by billing-sync</p>
+      <p class="t-body m-0">Body · Postgres committed 301 rows; the agent reported 1.</p>
+      <p class="t-dense m-0">Body dense · table cells and dense lists</p>
+      <p class="t-footnote t-2 m-0">Footnote · Sealed 2m ago in Asia/Kolkata</p>
+      <p class="t-caption t-2 m-0">Caption · column header</p>
+      <p class="t-metric m-0">1,204</p>
+      <p class="mono m-0">deed_01k6h7mz3c9d8e7f6g5h4jq3m8 · sha256:3f9a…c21e</p>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="k-icons">
+    <h2 class="t-title-3" id="k-icons">Icons · 20 and 16 px</h2>
+    <div class="card card-pad kit-icons">
+      {icons.map((n) => (
+        <figure><span class="flex items-center gap-2"><Icon name={n} /><Icon name={n} size={16} /></span><figcaption>{n}</figcaption></figure>
+      ))}
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="k-mirror">
+    <div class="section-head">
+      <h2 class="t-title-3" id="k-mirror">The Mirror and Sealed</h2>
+      <div class="kit-row">
+        <Button variant="secondary" size="sm" id="play-sealed" icon="check">{copy.kit.playSealed}</Button>
+        <Button variant="secondary" size="sm" id="play-mismatch" icon="x">{copy.kit.playMismatch}</Button>
+        <Button variant="quiet" size="sm" id="play-reset" icon="refresh-cw">{copy.kit.reset}</Button>
+      </div>
+    </div>
+    <div class="card card-pad grid gap-6">
+      <div class="kit-mirrors" id="kit-player">
+        {[16, 20, 32, 48].map((sz) => <figure><Mirror size={sz as 16} state="open" class="play-target" /><figcaption>{sz} px</figcaption></figure>)}
+      </div>
+      <div class="kit-mirrors">
+        {(['open', 'sealed', 'mismatch', 'pending', 'unverifiable'] as const).map((st) => <figure><Mirror size={48} state={st} /><figcaption>{st}</figcaption></figure>)}
+      </div>
+      <p class="t-footnote t-2 m-0" id="play-note">Sealed: the halves meet in 240 ms, then one teal ring (400 ms, 20% opacity). Mismatch: the halves stop short and a red hairline fades in. Reduced motion shows the end state at once.</p>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="k-buttons">
+    <h2 class="t-title-3" id="k-buttons">Buttons</h2>
+    <div class="card card-pad grid gap-4">
+      <div class="kit-row">
+        <Button variant="primary" icon="plus">Create agent</Button>
+        <Button variant="secondary" icon="copy">Copy deed</Button>
+        <Button variant="quiet">Cancel</Button>
+        <Button variant="danger-outline" icon="stop">Stop all agents</Button>
+        <Button variant="danger">Stop agent</Button>
+      </div>
+      <div class="kit-row">
+        <Button variant="primary" size="sm">Approve</Button>
+        <Button variant="primary">Approve</Button>
+        <Button variant="primary" size="lg">Approve and run</Button>
+        <Button variant="primary" loading>Sealing</Button>
+        <Button variant="primary" disabled>Approve</Button>
+        <Button variant="danger-outline" disabled icon="stop">Stop all agents</Button>
+      </div>
+      <div class="kit-row">
+        <IconButton icon="copy" label="Copy id" />
+        <IconButton icon="refresh-cw" label="Refresh" />
+        <IconButton icon="ellipsis" label="More actions" id="kit-menu-btn" />
+      </div>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="k-inputs">
+    <h2 class="t-title-3" id="k-inputs">Inputs</h2>
+    <div class="card card-pad kit-grid">
+      <Field id="k-name" label="Agent name" help="Lowercase letters, digits and hyphens, like support-bot."><input class="input" id="k-name" name="k-name" autocomplete="off" spellcheck="false" value="support-bot" aria-describedby="k-name-help" /></Field>
+      <Field id="k-bad" label="Agent name" error="Agent names use lowercase letters, digits and hyphens, 2 to 63 characters, like support-bot."><input class="input" id="k-bad" name="k-bad" autocomplete="off" spellcheck="false" value="Support Bot" aria-invalid="true" aria-describedby="k-bad-error" /></Field>
+      <Field id="k-dis" label="Org slug" help="Set when the org was created."><input class="input mono" id="k-dis" name="k-dis" autocomplete="off" spellcheck="false" value="acme" disabled aria-describedby="k-dis-help" /></Field>
+      <Field id="k-ro" label="Org id"><input class="input mono" id="k-ro" name="k-ro" autocomplete="off" spellcheck="false" value="org_01k6h7kp6msmzrhdzwtcr3jnkp" readonly /></Field>
+      <Field id="k-reason" label="Why is it safe to start again?"><textarea class="textarea" id="k-reason" name="k-reason" autocomplete="off">Refunds job fixed and redeployed.</textarea></Field>
+      <Field id="k-sel" label="Time zone"><div class="select-wrap"><select class="select" id="k-sel" name="k-sel"><option>Asia/Kolkata</option><option>America/New_York</option><option>UTC</option></select><Icon name="chevron-down" size={16} /></div></Field>
+      <fieldset class="field border-0 p-0 m-0">
+        <legend class="label mb-1.5">Notify me about</legend>
+        <label class="check"><input type="checkbox" checked /> Approvals waiting for me</label>
+        <label class="check"><input type="checkbox" /> Every MISMATCH</label>
+      </fieldset>
+      <fieldset class="field border-0 p-0 m-0">
+        <legend class="label mb-1.5">Intent mode</legend>
+        <label class="check"><input type="radio" name="k-mode" checked /> Off</label>
+        <label class="check"><input type="radio" name="k-mode" /> Optional</label>
+        <label class="check"><input type="radio" name="k-mode" /> Required</label>
+      </fieldset>
+      <div class="field">
+        <span class="label" id="k-sw">Witness</span>
+        <label class="switch"><input type="checkbox" role="switch" checked aria-labelledby="k-sw" /> <span>On for pg-main</span></label>
+        <label class="switch"><input type="checkbox" role="switch" disabled aria-label="Witness for orders-api" /> <span class="t-2">Not available for REST connectors</span></label>
+      </div>
+      <div class="field">
+        <span class="label" id="k-seg">Theme</span>
+        <div class="segmented" role="radiogroup" aria-labelledby="k-seg" id="kit-seg">
+          <button type="button" role="radio" aria-checked="true">Dark</button><button type="button" role="radio" aria-checked="false" tabindex="-1">Light</button><button type="button" role="radio" aria-checked="false" tabindex="-1">System</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="k-chips">
+    <h2 class="t-title-3" id="k-chips">Chips, badges and ids</h2>
+    <div class="card card-pad grid gap-4">
+      <div><p class="kit-label">VerdictChip</p><div class="kit-row">
+        {(['L0', 'L1', 'L2'] as const).map((l) => <VerdictChip verdict="VERIFIED" level={l} />)}
+        <VerdictChip verdict="MISMATCH" level="L2" /><VerdictChip verdict="UNVERIFIABLE" level="L1" /><VerdictChip verdict="UNVERIFIABLE" />
+      </div></div>
+      <div><p class="kit-label">DecisionChip</p><div class="kit-row"><DecisionChip decision="allow" /><DecisionChip decision="deny" /><DecisionChip decision="require_approval" /></div></div>
+      <div><p class="kit-label">StateChip · the 15 lifecycle states</p><div class="kit-row">{states.map((s) => <StateChip state={s} />)}</div></div>
+      <div><p class="kit-label">StatusChip and LevelBadge</p><div class="kit-row">
+        <StatusChip status="active" /><StatusChip status="suspended" /><StatusChip status="stopped" /><StatusChip status="test" />
+        <LevelBadge level="L0" /><LevelBadge level="L1" /><LevelBadge level="L2" />
+      </div></div>
+      <div><p class="kit-label">Badge · hidden at 0, capped at 99+</p><div class="kit-row">
+        <span class="flex items-center gap-2">Approvals <Badge count={3} label="3 approvals waiting" /></span>
+        <span class="flex items-center gap-2">Approvals <Badge count={120} label="99+ approvals waiting" /></span>
+        <span class="flex items-center gap-2 t-2">Approvals <Badge count={0} label="No approvals waiting" /> (0, hidden)</span>
+      </div></div>
+      <div><p class="kit-label">IdChip, HashChip, RelativeTime and Kbd</p><div class="kit-row">
+        <IdChip value="agt_01k6h7kp6msmzrhdzwtcr3vqvp" /><IdChip value="deed_01k6h7mz3c9d8e7f6g5h4jx9a2" />
+        <IdChip value="sha256:3f9a8c0e5b2d4a6c8e0f1a3b5c7d9e1f2a4b6c8d0e2f4a6b8c0d2e4f6a8bc21e" hash />
+        <RelativeTime iso={ago(130)} now={now} tz="Asia/Kolkata" /><RelativeTime iso={ago(86400 * 9)} now={now} tz="Asia/Kolkata" />
+        <span class="flex gap-1"><kbd class="kbd">⌘</kbd><kbd class="kbd">K</kbd></span><span class="flex gap-1"><kbd class="kbd">g</kbd><kbd class="kbd">a</kbd></span>
+      </div></div>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="k-table">
+    <h2 class="t-title-3" id="k-table">Table</h2>
+    <p class="t-2 m-0">Sortable headers, 36 px rows, j and k to move, Enter to open. Below 640 px each row becomes a card.</p>
+    <div class="table-frame">
+      <table class="dt cards" id="kit-table">
+        <thead><tr>
+          <th scope="col"><button type="button">Tool</button></th><th scope="col">Agent</th><th scope="col">Decision</th><th scope="col">Verdict</th><th scope="col">Action</th>
+          <th scope="col" class="num"><button type="button">Latency</button></th><th scope="col" class="num" aria-sort="descending"><button type="button">When</button></th>
+        </tr></thead>
+        <tbody>
+          {rows.map((r) => (
+            <tr data-row aria-selected="false">
+              <td data-label="Tool" data-sort={r.tool}><a href={`/app/actions/${r.id}`} class="tool">{r.tool}</a></td>
+              <td data-label="Agent">{r.agent}</td>
+              <td data-label="Decision"><DecisionChip decision={r.decision} /></td>
+              <td data-label="Verdict">{r.verdict ? <VerdictChip verdict={r.verdict} level={r.level ?? undefined} /> : <StateChip state={r.decision === 'deny' ? 'denied' : 'pending_approval'} />}</td>
+              <td data-label="Action"><IdChip value={r.id} /></td>
+              <td data-label="Latency" class="num" data-sort={r.ms ?? -1}>{r.ms === null ? '·' : r.ms < 1000 ? `${r.ms} ms` : `${(r.ms / 1000).toFixed(1)} s`}</td>
+              <td data-label="When" class="num" data-sort={r.at}><RelativeTime iso={r.at} now={now} tz="Asia/Kolkata" /></td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="k-cards">
+    <h2 class="t-title-3" id="k-cards">Card, Section, KeyValue and Tabs</h2>
+    <div class="grid gap-4 lg:grid-cols-2">
+      <article class="card">
+        <div class="card-head"><h3 class="t-headline"><Icon name="deed" size={16} />UPDATE public.orders by billing-sync</h3><VerdictChip verdict="MISMATCH" level="L2" /></div>
+        <div class="card-pad grid gap-4">
+          <dl class="kv">
+            <dt>Deed</dt><dd><IdChip value="deed_01k6h7mz3c9d8e7f6g5h4jx9a2" /></dd>
+            <dt>Agent</dt><dd>billing-sync</dd>
+            <dt>Policy</dt><dd class="mono">orders-writes-need-approval</dd>
+            <dt>Sealed</dt><dd><RelativeTime iso={ago(420)} now={now} tz="Asia/Kolkata" /></dd>
+          </dl>
+          <p class="m-0">MISMATCH · Postgres changed 301 rows in public.orders. The agent reported 1.</p>
+        </div>
+      </article>
+      <div class="card card-pad">
+        <div class="tabs" role="tablist" aria-label="Action sections" id="kit-tabs">
+          <button type="button" role="tab" id="kt-1" aria-controls="kt-panel" aria-selected="true" data-section="witness">Witness</button>
+          <button type="button" role="tab" id="kt-2" aria-controls="kt-panel" aria-selected="false" tabindex="-1" data-section="deed">Deed</button>
+          <button type="button" role="tab" id="kt-3" aria-controls="kt-panel" aria-selected="false" tabindex="-1" data-section="events">Events</button>
+        </div>
+        <div class="tabpanel" role="tabpanel" id="kt-panel" aria-labelledby="kt-1" tabindex="0">
+          <ol class="timeline">
+            <li><span class="node"><Icon name="arrow-right" size={16} /></span><div class="what">Received<p>support-bot called postgres.execute</p></div><span class="t-footnote t-2 num">14:02:09</span></li>
+            <li><span class="node"><Icon name="gate" size={16} /></span><div class="what">Allowed by policy<p class="mono">orders-writes</p></div><span class="t-footnote t-2 num">14:02:09</span></li>
+            <li><span class="node wait"><Icon name="witness" size={16} /></span><div class="what">Witnessing at L2<p>Waiting for Postgres's change log</p></div><span class="t-footnote t-2 num">14:02:09</span></li>
+            <li><span class="node bad"><Icon name="x" size={16} /></span><div class="what">MISMATCH<p>301 rows changed, 1 reported</p></div><span class="t-footnote t-2 num">14:02:10</span></li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="k-over">
+    <h2 class="t-title-3" id="k-over">Sheets, dialogs, menus, tooltips and toasts</h2>
+    <div class="card card-pad grid gap-4">
+      <div class="kit-row">
+        <Button variant="secondary" id="kit-sheet">Open sheet</Button>
+        <Button variant="secondary" id="kit-dialog">Open dialog</Button>
+        <Button variant="danger-outline" id="kit-confirm" icon="stop">Stop support-bot…</Button>
+        <Button variant="secondary" id="kit-popover">Popover</Button>
+        <button type="button" class="btn btn-secondary" data-tip="Stopping agents needs Admin. Ask an owner to change your role.">Tooltip on hover or focus</button>
+      </div>
+      <div class="kit-row">
+        <Button variant="quiet" id="kit-toast-neutral" icon="info">Neutral toast</Button>
+        <Button variant="quiet" id="kit-toast-success" icon="check">Success toast</Button>
+        <Button variant="quiet" id="kit-toast-error" icon="circle-alert">Error toast</Button>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="k-banners">
+    <h2 class="t-title-3" id="k-banners">Banners</h2>
+    <div class="grid gap-2">
+      <div class="banner banner-stopped" role="status"><Icon name="stop" /><div class="body"><p><strong>All agents in Acme are stopped · since 14:05 · by Priya Raman</strong></p><p class="t-2">“Investigating unexpected refunds”</p></div></div>
+      <div class="banner banner-offline" role="status"><Icon name="wifi-off" /><div class="body"><p>{copy.states.offlineBanner}</p></div></div>
+      <div class="banner banner-readonly" role="note"><Icon name="lock" /><div class="body"><p>You're a Viewer in Acme. You can see everything; changes need an Admin.</p></div></div>
+      <div class="banner banner-warn" role="status"><Icon name="triangle-alert" /><div class="body"><p>Witness · 3.9 kB behind on pg-main. Verdicts may take longer than usual.</p></div></div>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="k-states">
+    <h2 class="t-title-3" id="k-states">Empty, error, permission and loading</h2>
+    <div class="grid gap-4 lg:grid-cols-2">
+      <div class="card"><EmptyState icon="bot" title="No agents yet." body="Connect your first agent in about two minutes." action={{ label: 'Create agent', href: '/app/agents?new=1' }} docs="https://docs.deedglass.com/quickstart" /></div>
+      <div class="card"><EmptyState icon="circle-alert" kind="error" title="Deedglass couldn't load agents." body="Retry, and share request req_01k6h7s9t0u1v2w3x4y5z6a7b8 if it keeps happening."><div class="actions"><Button variant="secondary" icon="refresh-cw">Retry</Button></div></EmptyState></div>
+      <div class="card"><EmptyState icon="lock" title="You can't see this yet" body="This needs the Admin role in Acme. Ask an owner to change your role." /></div>
+      <div class="card card-pad"><p class="kit-label">Skeleton in the table's shape</p><Skeleton rows={4} /></div>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="k-data">
+    <h2 class="t-title-3" id="k-data">CodeBlock, Sparkline and Meter</h2>
+    <div class="grid gap-4 lg:grid-cols-2">
+      <CodeBlock lang="policy.yaml" code={policy} />
+      <figure class="code m-0"><figcaption class="code-head"><span>terminal</span></figcaption><pre tabindex="0"><span class="p">$</span> deedglass verify deeds.jsonl --keys https://deedglass.com/.well-known/deedglass/keys.json
+<span class="ok">✓</span> 1,204 deeds · chain intact · 2 seal keys · 2026-10-01 → 2026-10-02</pre></figure>
+      <div class="card card-pad grid gap-5">
+        <div class="flex items-center justify-between gap-4"><span>Actions per hour · billing-sync</span><Sparkline values={[4, 6, 5, 9, 12, 8, 11, 14, 10, 13, 17, 15]} label="Actions per hour, last 12 hours: 4 to 17" /></div>
+        <Meter label="Refunds today · support-bot" used={210} limit={500} unit="" />
+        <Meter label="Refunds today · billing-sync" used={430} limit={500} />
+        <Meter label="Rows written this hour · billing-sync" used={10000} limit={10000} />
+      </div>
+    </div>
+  </section>
+</AppShell>
+<script>
+  import { bootShell } from '../controllers/shell.ts';
+  import { mountKit } from '../controllers/kit.ts';
+  bootShell({ title: 'Component kit' });
+  mountKit();
+</script>

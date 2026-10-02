@@ -1,0 +1,7 @@
+---
+import Icon from './Icon.astro';
+import type { IconName } from '../icons/names.gen.ts';
+interface Props { icon: IconName; label: string; id?: string; tip?: boolean; [k: string]: unknown }
+const { icon, label, id, tip = true, ...rest } = Astro.props;
+---
+<button type="button" class="icon-btn" id={id} aria-label={label} data-tip={tip ? label : undefined} {...rest}><Icon name={icon} /></button>

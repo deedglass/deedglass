@@ -4,6 +4,7 @@ package harness
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -140,6 +141,34 @@ func (c *Client) Do(method, path string, body any, hdr ...string) Response {
 			hb.WriteString(k + ": " + strings.Join(vs, ",") + "\n")
 		}
 		c.log.add([]byte(hb.String()))
+	}
+	return Response{Status: res.StatusCode, Header: res.Header, Body: raw}
+}
+
+// Peek sends GET path and reads the answer for at most d: for a stream (GET /v1/events) that
+// never ends on its own. The body is what arrived in that time; it is logged like any other.
+func (c *Client) Peek(path string, d time.Duration) Response {
+	ctx, cancel := context.WithTimeout(context.Background(), d)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, "GET", c.Base+path, nil)
+	if err != nil {
+		panic(err)
+	}
+	req.Header.Set("Accept", "text/event-stream")
+	if c.Key != "" {
+		req.Header.Set("Authorization", "Bearer "+c.Key)
+	}
+	for k, v := range c.Headers {
+		req.Header.Set(k, v)
+	}
+	res, err := c.hc.Do(req)
+	if err != nil {
+		panic(fmt.Sprintf("GET %s: %v", path, err))
+	}
+	defer res.Body.Close()
+	raw, _ := io.ReadAll(io.LimitReader(res.Body, 64<<20)) // ends at the deadline
+	if c.log != nil {
+		c.log.add(raw)
 	}
 	return Response{Status: res.StatusCode, Header: res.Header, Body: raw}
 }

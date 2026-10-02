@@ -1,0 +1,31 @@
+---
+import AppShell from '../layouts/AppShell.astro';
+import PageHead from '../components/PageHead.astro';
+import { copy } from '../lib/copy.ts';
+import { SETTINGS_SECTIONS } from '../lib/nav.ts';
+const p = copy.pages.settings;
+---
+<AppShell title={p.title} screen="settings">
+  <PageHead title={p.title} lede={p.lede} />
+  <div class="tabs" role="tablist" aria-label="Settings sections" id="settings-tabs">
+    {SETTINGS_SECTIONS.map((s, i) => (
+      <button type="button" role="tab" id={`tab-${s.key}`} aria-controls="settings-panel" aria-selected={i === 0 ? 'true' : 'false'} tabindex={i === 0 ? 0 : -1} data-section={s.key}>{s.label}</button>
+    ))}
+  </div>
+  <section class="tabpanel" role="tabpanel" id="settings-panel" aria-labelledby="tab-org">
+    <div class="card card-pad" id="settings-body" aria-busy="true">
+      <dl class="kv">
+        <dt>Org</dt><dd><span class="skel skel-line w-40"></span></dd>
+        <dt>Slug</dt><dd><span class="skel skel-line w-24"></span></dd>
+        <dt>Time zone</dt><dd><span class="skel skel-line w-32"></span></dd>
+        <dt>Your role</dt><dd><span class="skel skel-line w-16"></span></dd>
+      </dl>
+    </div>
+  </section>
+</AppShell>
+<script>
+  import { bootShell } from '../controllers/shell.ts';
+  import { mountSettings } from '../controllers/settings.ts';
+  bootShell({ title: 'Settings' });
+  mountSettings();
+</script>

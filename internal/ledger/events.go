@@ -77,8 +77,9 @@ type Event struct {
 	Verdict       *string  `json:"verdict,omitempty"`
 	RequiredLevel *string  `json:"required_level,omitempty"`
 	Flags         []string `json:"flags,omitempty"`
-	// decoder.* only (S20, additive): why the status changed or what an alert is, and the WAL
-	// position it is about. Absent on every other event.
+	// decoder.* (S20, additive): why the status changed or what an alert is, and the WAL position
+	// it is about. Kind is also set on deed.sealed (S24): the deed's kind (action, amendment or
+	// admin). Absent on every other event.
 	Reason *string `json:"reason,omitempty"`
 	Kind   *string `json:"kind,omitempty"`
 	LSN    *string `json:"lsn,omitempty"`

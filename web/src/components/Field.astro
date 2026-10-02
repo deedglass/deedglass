@@ -1,0 +1,11 @@
+---
+// A labelled control: the label above, help below, the error below that (with aria-describedby).
+interface Props { id: string; label: string; help?: string; error?: string }
+const { id, label, help, error } = Astro.props;
+---
+<div class="field">
+  <label class="label" for={id}>{label}</label>
+  <slot />
+  {help && <p class="help" id={`${id}-help`}>{help}</p>}
+  {error && <p class="error" id={`${id}-error`}>{error}</p>}
+</div>

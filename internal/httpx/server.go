@@ -192,10 +192,14 @@ func (s *Server) routeHandler(rt Route) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ri := info(r.Context())
 		ri.route = rt.Pattern
-		ctx, cancel := context.WithTimeout(r.Context(), rt.Timeout)
-		defer cancel()
-		_ = http.NewResponseController(w).SetWriteDeadline(s.o.Now().Add(rt.Timeout + 5*time.Second))
-		r = r.WithContext(ctx)
+		ri.rt = &rt
+		if !rt.Streaming {
+			// A streaming route (S24) owns its lifetime and write deadlines.
+			ctx, cancel := context.WithTimeout(r.Context(), rt.Timeout)
+			defer cancel()
+			_ = http.NewResponseController(w).SetWriteDeadline(s.o.Now().Add(rt.Timeout + 5*time.Second))
+			r = r.WithContext(ctx)
+		}
 
 		if rt.Guard != nil && !rt.Guard.Admit(w, r) {
 			return
@@ -343,6 +347,17 @@ func (s *Server) authenticate(rt Route, r *http.Request, ri *reqInfo) error {
 		}
 	}
 	return nil
+}
+
+// Recheck authenticates r again exactly as its route did when it started: the same credential,
+// the same role, scope and stop checks, read live (S24: a stream re-checks its principal every
+// 60 s). It returns the refusal the route would answer now, or nil.
+func (s *Server) Recheck(r *http.Request) error {
+	ri := info(r.Context())
+	if ri == nil || ri.rt == nil {
+		return E(CodeAuthenticationRequired)
+	}
+	return s.authenticate(*ri.rt, r, &reqInfo{requestID: ri.requestID, ip: ri.ip})
 }
 
 // keyAllowed is §3.5 steps 6–9 for an authenticated key. A RecordStopped route (POST /v1/actions)

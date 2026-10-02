@@ -12,7 +12,7 @@ import (
 // S24 may re-skin them, but /auth/confirm and its #t= fragment stay: emails already in inboxes
 // point there.
 //
-//go:embed pages/login.html pages/confirm.html pages/app.html pages/tokens.css pages/auth.css pages/auth.js
+//go:embed pages/login.html pages/confirm.html pages/tokens.css pages/auth.css pages/auth.js
 var pagesFS embed.FS
 
 // PageCSP is the Content-Security-Policy of every sign-in page: no inline code, nothing from
@@ -33,8 +33,7 @@ func (s *Service) pageRoutes() []httpx.Route {
 	return []httpx.Route{
 		{Method: "GET", Pattern: "/login", OperationID: "loginPage", Auth: httpx.Public, Handler: page("pages/login.html")},
 		{Method: "GET", Pattern: "/auth/confirm", OperationID: "confirmPage", Auth: httpx.Public, Handler: page("pages/confirm.html")},
-		// Until the Console (S24) serves /app/, a plain page shows who is signed in.
-		{Method: "GET", Pattern: "/app/", OperationID: "consolePage", Auth: httpx.Session, MinRole: RoleViewer, Handler: page("pages/app.html")},
+		// /app and everything under it is the Console's (internal/console, S24).
 		{Method: "GET", Pattern: "/auth/assets/{file}", OperationID: "authAsset", Auth: httpx.Public, Extension: AssetsADR, Handler: asset},
 	}
 }

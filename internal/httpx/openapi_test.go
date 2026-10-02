@@ -51,7 +51,7 @@ func elsewhere() []Route {
 		ses("GET", "/v1/org", "getOrg", RoleViewer, 0), ses("PATCH", "/v1/org", "updateOrg", RoleAdmin, 0),
 		ses("GET", "/v1/org/members", "listMembers", RoleViewer, 0), ses("POST", "/v1/org/members", "inviteMember", RoleAdmin, IdemOptional),
 		ses("PATCH", "/v1/org/members/{id}", "updateMember", RoleOwner, 0), ses("DELETE", "/v1/org/members/{id}", "removeMember", RoleAdmin, 0),
-		pub("GET", "/login", "loginPage"), pub("GET", "/auth/confirm", "confirmPage"), ses("GET", "/app/", "consolePage", RoleViewer, 0),
+		pub("GET", "/login", "loginPage"), pub("GET", "/auth/confirm", "confirmPage"), pub("GET", "/app", "consoleIndex"), pub("GET", "/app/{path...}", "consolePage"),
 		Route{Method: "GET", Pattern: "/auth/assets/{file}", OperationID: "authAsset", Auth: Public, Extension: "ADR-028", Handler: stub},
 	)
 	// S08: agents, keys and Stop.
@@ -150,6 +150,9 @@ func elsewhere() []Route {
 		adm("GET", "/v1/webhooks/{id}", "getWebhook", RoleAdmin), adm("DELETE", "/v1/webhooks/{id}", "deleteWebhook", RoleAdmin),
 		adm("POST", "/v1/webhooks/{id}/test", "testWebhook", RoleAdmin), adm("GET", "/v1/webhooks/{id}/deliveries", "listWebhookDeliveries", RoleAdmin),
 	)
+	// S24: the live event stream (internal/console).
+	out = append(out, Route{Method: "GET", Pattern: "/v1/events", OperationID: "streamEvents", Auth: SessionOrKey, MinRole: RoleViewer,
+		Scopes: actionsRead, Streaming: true, Handler: stub})
 	// S23: undo (internal/undoapi).
 	out = append(out, adm("POST", "/v1/actions/{id}/undo/preview", "previewUndo", RoleAdmin), adm("POST", "/v1/actions/{id}/undo", "createUndo", RoleAdmin))
 	return out

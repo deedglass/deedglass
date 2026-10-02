@@ -1,0 +1,28 @@
+{
+  "arch": "arm64",
+  "bench": "S24 hub fan-out (make bench-events)",
+  "both_ends_bytes_per_connection": 48332.8,
+  "budget": {
+    "kib_per_subscriber": 64,
+    "p99_ms": 50
+  },
+  "bytes_per_subscriber": 45260.8,
+  "client_side_bytes_per_connection": 3072,
+  "cpus": 8,
+  "date": "2026-10-02T11:12:35Z",
+  "enqueue_to_write_ms": {
+    "max": 8.774,
+    "p50": 0.379,
+    "p90": 0.697,
+    "p99": 1.182
+  },
+  "events_per_s": 999.1870355482139,
+  "events_sent": 4996,
+  "go": "go1.27.1",
+  "kib_per_subscriber": 44.2,
+  "lagged": 0,
+  "note": "200 loopback SSE connections in one process; the server's cost per stream is the heap and stack growth with them open, minus the same clients' cost against a listener that only holds the connections",
+  "os": "darwin",
+  "subscribers": 200,
+  "writes": 999200
+}

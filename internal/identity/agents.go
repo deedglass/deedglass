@@ -343,6 +343,37 @@ func (s *Service) ListAgents(ctx context.Context, org ids.OrgID, f AgentFilter) 
 	return out, more, nil
 }
 
+// AgentsByID returns org's agents with the given ids, in the list shape GET /v1/agents uses, read
+// in one read-only org transaction (S24: the live stream hydrates a batch of events with it).
+// Unknown ids are absent.
+func (s *Service) AgentsByID(ctx context.Context, org ids.OrgID, agentIDs []string) (map[string]Agent, error) {
+	want := make([]string, 0, len(agentIDs))
+	for _, id := range agentIDs {
+		if ids.Check(ids.Agent, id) == nil {
+			want = append(want, id)
+		}
+	}
+	out := make(map[string]Agent, len(want))
+	if len(want) == 0 || s.db == nil {
+		return out, nil
+	}
+	err := s.db.OrgReadTx(ctx, org, func(ctx context.Context, tx pgx.Tx) error {
+		rows, err := tx.Query(ctx, `SELECT `+agentCols+` FROM deedglass.agents AS a WHERE a.org_id = $1 AND a.id = ANY ($2::text[])`, org, want)
+		if err != nil {
+			return err
+		}
+		as, err := pgx.CollectRows(rows, func(r pgx.CollectableRow) (Agent, error) { return scanAgent(r) })
+		for _, a := range as {
+			out[a.ID] = a
+		}
+		return err
+	})
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // GetAgent returns one agent, or store.ErrNotFound.
 func (s *Service) GetAgent(ctx context.Context, org ids.OrgID, id string) (Agent, error) {
 	var a Agent

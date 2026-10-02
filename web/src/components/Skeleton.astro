@@ -1,0 +1,11 @@
+---
+// A skeleton in the final table's shape (S24 §3.6): no copy, no spinner; the pulse stops as soon
+// as data arrives and never runs under reduced motion.
+interface Props { rows?: number }
+const { rows = 6 } = Astro.props;
+---
+<div class="table-frame" aria-hidden="true">
+  {Array.from({ length: rows }, () => (
+    <div class="skel-row"><span class="skel skel-line"></span><span class="skel skel-line"></span><span class="skel skel-line"></span><span class="skel skel-line"></span><span class="skel skel-line"></span></div>
+  ))}
+</div>

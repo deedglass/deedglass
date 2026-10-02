@@ -96,8 +96,9 @@ planned    GET     /v1/connector-types                                    sessio
 planned    GET     /v1/connector-types/{type}                             session_or_key  admin            S30
 planned    GET     /v1/connectors/{id}/decoder                            session_or_key  viewer           S20    keys: admin; ?recent=0..50
 planned    DELETE  /v1/connectors/{id}/decoder                            session_or_key  admin            S20    body {confirm: <name>}; seals decoder.slot_dropped
-planned    GET     /v1/events                                             session_or_key  viewer           S24    SSE
-planned    GET     /app/                                                  session         viewer           S24    Console pages
+planned    GET     /v1/events                                             session_or_key  viewer           S24    SSE; agent keys need actions:read and see their own agent's events only
+planned    GET     /app                                                   public          -                S24    Console pages: the handler redirects to /login?next= without a session
+planned    GET     /app/{path...}                                         public          -                S24    Console pages: the handler redirects to /login?next= without a session
 planned    GET     /v1/overview                                           session_or_key  viewer           S25
 planned    GET     /v1/insights/stats                                     session_or_key  viewer           S27
 planned    GET     /v1/insights/anomalies                                 session_or_key  viewer           S27

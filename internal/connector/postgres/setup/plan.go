@@ -543,7 +543,13 @@ func (b *planner) publication() {
 			quoted[i] = quoteIdent(t)
 		}
 	}
-	create := fmt.Sprintf("CREATE PUBLICATION deedglass_pub FOR TABLE %s WITH (publish = 'insert, update, delete, truncate');", strings.Join(quoted, ", "))
+	with := "publish = 'insert, update, delete, truncate'"
+	if st.VersionNum >= 180000 {
+		// PG 18 refuses UPDATE and DELETE on a published REPLICA IDENTITY FULL table with a stored
+		// generated column unless the publication publishes them (DL-037).
+		with += ", publish_generated_columns = " + GenColsStored
+	}
+	create := fmt.Sprintf("CREATE PUBLICATION deedglass_pub FOR TABLE %s WITH (%s);", strings.Join(quoted, ", "), with)
 	pub := st.Publication
 	n := len(want)
 	switch {
@@ -571,10 +577,20 @@ func (b *planner) publication() {
 		sql = append(sql, "ALTER PUBLICATION deedglass_pub SET (publish = 'insert, update, delete, truncate');")
 		what = append(what, "insert, update, delete, truncate")
 	}
+	if st.VersionNum >= 180000 && pub.GenCols != GenColsStored {
+		sql = append(sql, "ALTER PUBLICATION deedglass_pub SET (publish_generated_columns = "+GenColsStored+");")
+		what = append(what, "stored generated columns")
+	}
 	if len(sql) > 0 {
 		b.add(Change{Op: "~", Summary: "publication deedglass_pub · " + strings.Join(what, " · "), SQL: sql})
 	}
 }
+
+// publish_generated_columns values (PG 18+).
+const (
+	GenColsNone   = "none"
+	GenColsStored = "stored"
+)
 
 func (b *planner) notes() {
 	if b.st.Settings["wal_level"] != "logical" {

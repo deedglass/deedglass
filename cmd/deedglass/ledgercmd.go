@@ -230,6 +230,17 @@ func runActionsList(ctx context.Context, e *Env, args []string) error {
 	if o := actionsListValues; o.connector != "" && o.tool != "" {
 		return usageErr(errors.New("use --connector or --tool, not both"), "For example: deedglass actions list --connector orders.")
 	}
+	if actionsListValues.follow && firstNonEmpty(e.Globals.APIKey, e.Getenv("DEEDGLASS_API_KEY")) != "" {
+		// S24: with an API key, follow the server's live event stream; a server without one (404)
+		// falls back to polling the Ledger below.
+		c, err := apiClient(e)
+		if err != nil {
+			return err
+		}
+		if err := runActionsFollowSSE(ctx, e, c, f); !errors.Is(err, errFollowNoStream) {
+			return err
+		}
+	}
 	s, err := openLedger(ctx, e, false)
 	if err != nil {
 		return err

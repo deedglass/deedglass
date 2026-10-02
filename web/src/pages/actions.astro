@@ -1,0 +1,12 @@
+---
+import ScreenStub from '../components/ScreenStub.astro';
+import { copy } from '../lib/copy.ts';
+const p = copy.pages.actions;
+---
+<ScreenStub title={p.title} lede={p.lede} screen="actions" />
+<script>
+  import { bootShell } from '../controllers/shell.ts';
+  import { mountScreen } from '../controllers/screens.ts';
+  bootShell({ title: 'Actions' });
+  mountScreen('actions');
+</script>

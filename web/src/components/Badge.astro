@@ -1,0 +1,6 @@
+---
+// A count: hidden at 0, capped at 99+, with a spoken label.
+interface Props { count: number; label: string }
+const { count, label } = Astro.props;
+---
+<span class="badge" hidden={count === 0} aria-label={label}>{count > 99 ? '99+' : count}</span>

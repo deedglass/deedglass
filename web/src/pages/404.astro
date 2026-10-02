@@ -1,0 +1,16 @@
+---
+import AppShell from '../layouts/AppShell.astro';
+import Icon from '../components/Icon.astro';
+import { copy } from '../lib/copy.ts';
+---
+<AppShell title="Not found" screen="">
+  <div class="state" role="status">
+    <span class="well"><Icon name="search" /></span>
+    <h1 class="t-title-3">{copy.pages.notFound.title}</h1>
+    <div class="actions"><a class="btn btn-primary" href="/app">{copy.pages.notFound.action}</a></div>
+  </div>
+</AppShell>
+<script>
+  import { bootShell } from '../controllers/shell.ts';
+  bootShell({ title: 'Not found' });
+</script>

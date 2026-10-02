@@ -1,0 +1,27 @@
+---
+// Button: primary (one per view) · secondary · quiet · danger (confirm sheets only) ·
+// danger-outline (Stop all). Sizes 32 / 36 / 44; 44 under (pointer: coarse).
+import Icon from './Icon.astro';
+import type { IconName } from '../icons/names.gen.ts';
+interface Props {
+  variant?: 'primary' | 'secondary' | 'quiet' | 'danger' | 'danger-outline';
+  size?: 'sm' | 'md' | 'lg';
+  icon?: IconName;
+  href?: string;
+  disabled?: boolean;
+  loading?: boolean;
+  type?: 'button' | 'submit';
+  id?: string;
+  label?: string;
+  [k: string]: unknown;
+}
+const { variant = 'secondary', size = 'md', icon, href, disabled, loading, type = 'button', id, label, ...rest } = Astro.props;
+const cls = ['btn', `btn-${variant}`, size === 'sm' && 'btn-sm', size === 'lg' && 'btn-lg'];
+---
+{href ? (
+  <a class:list={cls} href={href} id={id} aria-label={label} {...rest}>{icon && <Icon name={icon} size={16} />}<slot /></a>
+) : (
+  <button class:list={cls} type={type} id={id} disabled={disabled} aria-busy={loading ? 'true' : undefined} aria-label={label} {...rest}>
+    {loading ? <span class="busy" aria-hidden="true">◐</span> : icon && <Icon name={icon} size={16} />}<slot />
+  </button>
+)}

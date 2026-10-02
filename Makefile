@@ -8,7 +8,7 @@ DATE     := $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
 BI       := github.com/deedglass/deedglass/internal/buildinfo
 LDFLAGS  := -s -w -X $(BI).Version=$(VERSION) -X $(BI).Commit=$(COMMIT) -X $(BI).Modified=$(MODIFIED) -X $(BI).Date=$(DATE)
 
-.PHONY: bench-undo all help ci build test test-short vet fmt fmt-check tidy-check testdata-check rename-guard banned-words nocgo \
+.PHONY: web-install web-tokens web-build web-test web-e2e web-lighthouse web-dev build-only bench-undo all help ci build test test-short vet fmt fmt-check tidy-check testdata-check rename-guard banned-words nocgo \
 	integration matrix fuzz bench bench-store bench-deed cover clean \
 	dev dev-down dev-reset dev-logs run docker bench-http bench-verify \
 	web-verify-install web-verify-test web-verify-build web-verify-serve gencopy genmark bench-mark bench-ledger bench-stop bench-intents bench-gate bench-witness policy-test \
@@ -22,9 +22,10 @@ all: ci
 help: ## list the targets
 	@grep -E '^[a-z][a-z-]*:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-15s %s\n", $$1, $$2}'
 
-ci: fmt-check tidy-check vet test fuzz-policy-short policy-test testdata-check rename-guard banned-words nocgo web-verify-test ## everything the lint-unit and web-verify CI jobs run
+ci: fmt-check tidy-check vet test fuzz-policy-short policy-test testdata-check rename-guard banned-words nocgo web-verify-test web-test ## everything the lint-unit, web-verify and web CI jobs run
 
-build: ## build bin/deedglass with version ldflags
+build: ## build bin/deedglass with version ldflags (with Node 24 present, the real Console first: make web-build)
+	@if command -v node >/dev/null 2>&1; then $(MAKE) --no-print-directory web-build; else echo "build: Node isn't installed, so the binary carries the Console placeholder (dev only; prod refuses it)"; fi
 	$(GO) build -trimpath -ldflags '$(LDFLAGS)' -o bin/deedglass ./cmd/deedglass
 
 test: ## (ci) unit tests with the race detector
@@ -254,6 +255,35 @@ gencopy: ## regenerate the verification copy, key lists and sample for the brows
 
 # The browser verifier (web/verify): TypeScript and Vitest are dev-only tools (ADR-027); no runtime dependencies.
 WEB_VERIFY := web/verify
+WEB := web
+
+# --- the Console (S24): Astro 7, static, embedded from internal/console/dist (ADR-053) ---
+web-install: ## npm ci for web/ (the Console's exact pins from package-lock.json, no install scripts)
+	cd $(WEB) && npm ci --ignore-scripts --no-audit --no-fund
+
+$(WEB)/node_modules/.package-lock.json: $(WEB)/package-lock.json
+	cd $(WEB) && npm ci --ignore-scripts --no-audit --no-fund
+
+web-tokens: $(WEB)/node_modules/.package-lock.json ## regenerate the token CSS, the verify token block, the favicon and the icon sprite from web/tokens/tokens.json
+	cd $(WEB) && node scripts/gen-tokens.mjs && node scripts/icons.mjs
+
+web-build: $(WEB)/node_modules/.package-lock.json ## tokens → icons → astro build → .br/.gz → check-dist (budgets, no inline code); writes internal/console/dist
+	cd $(WEB) && ASTRO_TELEMETRY_DISABLED=1 npm run build
+
+web-test: $(WEB)/node_modules/.package-lock.json ## (ci) typecheck, Vitest (api, stream, format, palette, dom, tokens, contrast, copy, icons, sinks, types)
+	cd $(WEB) && npx tsc -p . --noEmit && npx vitest run && node scripts/contrast.mjs | tail -1
+
+web-e2e: web-build build-only ## Playwright (system Chrome) against a throwaway PG 18 and a real serve: shell, keyboard, palette, Stop all, live events, axe, CSP, screenshots
+	DEEDGLASS_IT_THROWAWAY=1 scripts/web_e2e.sh test
+
+web-lighthouse: web-build build-only ## Lighthouse 13 (accessibility and best practices ≥ 95) on /app, /app/_kit and /login, desktop and mobile; JSON in ~/txv/ops/plan/prompts-v7/reports/lighthouse/S24
+	DEEDGLASS_IT_THROWAWAY=1 scripts/web_e2e.sh lighthouse
+
+web-dev: $(WEB)/node_modules/.package-lock.json ## astro dev on :4321, proxying /v1, /login, /auth and /.well-known to :8080 (start serve with DEEDGLASS_BASE_URL=http://localhost:4321)
+	cd $(WEB) && ASTRO_TELEMETRY_DISABLED=1 npx astro dev --port 4321
+
+build-only: ## bin/deedglass from the current internal/console/dist (no web build)
+	$(GO) build -trimpath -ldflags '$(LDFLAGS)' -o bin/deedglass ./cmd/deedglass
 
 web-verify-install: ## npm ci for web/verify (exact pins from package-lock.json, no install scripts)
 	cd $(WEB_VERIFY) && npm ci --ignore-scripts --no-audit --no-fund
@@ -350,3 +380,9 @@ bench-undo: ## S23 §3.10: plan 1,000 rows, preview 301, RunUndo 301 and 1,000, 
 	@out="$(CURDIR)/bench/results/$$(date +%F)-$$(go env GOOS)-$$(go env GOARCH)-undo.json"; mkdir -p "$(CURDIR)/bench/results"; \
 	DEEDGLASS_IT_BENCH=1 DEEDGLASS_UNDO_BENCH_OUT="$$out" DEEDGLASS_IT_PKGS=./internal/connector/postgres/ DEEDGLASS_IT_GOFLAGS="-run TestUndoBudget -v -timeout 900s" \
 	scripts/integration_local.sh && echo "wrote $$out"
+
+.PHONY: bench-events
+bench-events: ## S24 §3.12: the event hub, 1,000 events/s to 200 SSE streams (p99 enqueue→write < 50 ms) and memory per stream (< 64 KiB); JSON in bench/results/
+	@out="$(CURDIR)/bench/results/$$(date +%F)-$$(go env GOOS)-$$(go env GOARCH)-events.json"; mkdir -p "$(CURDIR)/bench/results"; \
+	DEEDGLASS_EVENTS_BENCH_OUT="$$out" $(GO) test -count=1 -run '^TestHubBudget$$' -v ./internal/console/ > "$$out.log" 2>&1; st=$$?; \
+	grep -E '^(--- |ok|FAIL)|"(p50|p99|kib_per_subscriber|events_per_s)"' "$$out.log"; rm -f "$$out.log"; echo "raw: $$out"; exit $$st

@@ -1,0 +1,8 @@
+---
+// Mono, shortened per brand §12, the full value in the title, click to copy.
+import Icon from './Icon.astro';
+import { shortHash, shortId } from '../lib/format.ts';
+interface Props { value: string; hash?: boolean }
+const { value, hash = false } = Astro.props;
+---
+<button type="button" class="idchip" data-copy={value} title={value} aria-label={`Copy ${value}`} translate="no">{hash ? shortHash(value) : shortId(value)}<Icon name="copy" size={16} /></button>

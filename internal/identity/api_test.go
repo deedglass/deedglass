@@ -303,13 +303,16 @@ func TestPages(t *testing.T) {
 	if r, _ := get("/auth/assets/login.html"); r.StatusCode != 404 {
 		t.Errorf("only the two assets are served: %d", r.StatusCode)
 	}
-	if r, _ := get("/app/"); r.StatusCode != 401 {
-		t.Errorf("/app/ needs a session: %d", r.StatusCode)
+	if r, _ := get("/app/"); r.StatusCode != 404 {
+		t.Errorf("/app is the Console's since S24, not identity's: %d", r.StatusCode)
 	}
-	// The script never reads the query string, and only reads the fragment it was given.
+	// The script reads one query parameter, next (S24: the Console return path, checked like
+	// console.SafeNext), never a token from the query, and only reads the fragment it was given.
 	js, _ := pagesFS.ReadFile("pages/auth.js")
-	if strings.Contains(string(js), "location.search") || strings.Contains(string(js), "innerHTML") || !strings.Contains(string(js), "replaceState") {
-		t.Error("auth.js must not read location.search or use innerHTML, and must clear the fragment")
+	src := string(js)
+	if strings.Count(src, "location.search") != 1 || !strings.Contains(src, "new URLSearchParams(window.location.search).get('next')") ||
+		strings.Contains(src, "innerHTML") || !strings.Contains(src, "replaceState") {
+		t.Error("auth.js may read only next from location.search, must not use innerHTML, and must clear the fragment")
 	}
 }
 

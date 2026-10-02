@@ -66,6 +66,10 @@ type TableState struct {
 	Sequences      []string `json:"sequences,omitempty"`       // owned (serial or identity) sequences, schema.name
 	SeqAgentUsage  []string `json:"seq_agent_usage,omitempty"` // the owned sequences deedglass_agent may use
 	PartitionChild bool     `json:"partition_child,omitempty"`
+	// VirtualGenerated names the table's virtual generated columns (PG 18+). PG 18 refuses UPDATE
+	// and DELETE on a published REPLICA IDENTITY FULL table that has one (42P10), so a watched
+	// table must not (DL-037).
+	VirtualGenerated []string `json:"virtual_generated,omitempty"`
 }
 
 // HasAgent reports whether deedglass_agent holds priv on the table.
@@ -123,6 +127,10 @@ type PublicationState struct {
 	RowFilters []string `json:"row_filters,omitempty"`
 	ColLists   []string `json:"column_lists,omitempty"`
 	ViaRoot    bool     `json:"via_root,omitempty"`
+	// GenCols is publish_generated_columns on PG 18+ ("none" or "stored"); empty before 18. PG 18
+	// refuses UPDATE and DELETE on a published REPLICA IDENTITY FULL table with a stored generated
+	// column unless the publication publishes them (DL-037).
+	GenCols string `json:"generated_columns,omitempty"`
 }
 
 // SlotState is one replication slot.
@@ -517,6 +525,12 @@ func readTables(ctx context.Context, q Querier, st *State, w Want, agentOK, witn
 		if err := scanStrings(ctx, q, &t.Triggers, `SELECT t.tgname::text FROM pg_catalog.pg_trigger AS t WHERE t.tgrelid = $1 AND NOT t.tgisinternal ORDER BY 1`, r.oid); err != nil {
 			return err
 		}
+		if st.VersionNum >= 180000 {
+			if err := scanStrings(ctx, q, &t.VirtualGenerated, `SELECT a.attname::text FROM pg_catalog.pg_attribute AS a
+				WHERE a.attrelid = $1 AND a.attnum > 0 AND NOT a.attisdropped AND a.attgenerated = 'v' ORDER BY a.attnum`, r.oid); err != nil {
+				return err
+			}
+		}
 		if agentOK {
 			if t.AgentPrivs, err = privsOf(ctx, q, RoleAgent, r.oid); err != nil {
 				return err
@@ -580,6 +594,16 @@ func readPublication(ctx context.Context, q Querier, st *State) error {
 		return fmt.Errorf("setup: reading the publication: %w", err)
 	}
 	p.Exists = true
+	if st.VersionNum >= 180000 {
+		var gc string
+		if err := q.QueryRow(ctx, `SELECT p.pubgencols::text FROM pg_catalog.pg_publication AS p WHERE p.oid = $1`, oid).Scan(&gc); err != nil {
+			return fmt.Errorf("setup: reading the publication's generated columns: %w", err)
+		}
+		p.GenCols = map[string]string{"n": GenColsNone, "s": GenColsStored}[gc]
+		if p.GenCols == "" {
+			p.GenCols = gc
+		}
+	}
 	for _, x := range []struct {
 		on   bool
 		name string

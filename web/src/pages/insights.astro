@@ -1,0 +1,22 @@
+---
+import AppShell from '../layouts/AppShell.astro';
+import PageHead from '../components/PageHead.astro';
+import Icon from '../components/Icon.astro';
+import { copy } from '../lib/copy.ts';
+const p = copy.pages.insights;
+---
+<AppShell title={p.title} screen="insights">
+  <PageHead title={p.title} lede={p.lede} />
+  <section id="screen-body" aria-labelledby="page-title">
+    <div class="state" role="status">
+      <span class="well"><Icon name="chart-line" /></span>
+      <p class="t-headline">Insights appear after about 50 actions.</p>
+      <p>Every suggestion waits for your approval.</p>
+      <div class="actions"><a class="btn btn-quiet" href="https://docs.deedglass.com/insights">Read the docs <Icon name="arrow-up-right" size={16} /></a></div>
+    </div>
+  </section>
+</AppShell>
+<script>
+  import { bootShell } from '../controllers/shell.ts';
+  bootShell({ title: 'Insights' });
+</script>

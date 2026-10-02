@@ -24,6 +24,7 @@ import (
 	"github.com/deedglass/deedglass/internal/buildinfo"
 	"github.com/deedglass/deedglass/internal/config"
 	"github.com/deedglass/deedglass/internal/connector"
+	"github.com/deedglass/deedglass/internal/console"
 	"github.com/deedglass/deedglass/internal/deed"
 	"github.com/deedglass/deedglass/internal/deed/archive"
 	"github.com/deedglass/deedglass/internal/gate"
@@ -197,6 +198,16 @@ func runServe(ctx context.Context, e *Env, args []string) error {
 	if err != nil {
 		return err
 	}
+	// 5a. The Console's pages (S24). In prod a binary built without the Console refuses to start.
+	con, err := console.New(console.Options{Prod: prod, Sessions: people, Log: log})
+	if errors.Is(err, console.ErrNotBuilt) {
+		return &ExitError{Code: ExitFailure, ErrCode: "console_not_built",
+			Err:  errors.New("Refusing to start: the Console wasn't built into this binary"),
+			Next: "Run make web-build, then make build, and start the new binary."}
+	}
+	if err != nil {
+		return err
+	}
 	if people.InsecureDevCookies() {
 		sc, cc := people.CookieNames()
 		log.Info("dev cookies", "session", sc, "csrf", cc, "why", "the base URL is http on localhost, so the cookies drop __Host- and Secure (dev only)")
@@ -263,13 +274,19 @@ func runServe(ctx context.Context, e *Env, args []string) error {
 	if dec != nil {
 		gp.SetNudge(dec.Nudge) // S21: an action waiting for L2 makes its connector's runner poll fast
 	}
-	keys.Listener().Listen(ledger.Channel, func(p string) {
-		gp.Broker().OnEvent(p)
-		whWorker.Wake(p) // an event may have queued webhook deliveries
-	}, func() {
-		gp.Broker().Reset()
-		whWorker.Wake("")
-	})
+	// S24: deedglass_events rides the one LISTEN connection into ledger.Bus, which fans it out: the
+	// Gate's long polls and the webhook wake inline, the Console's event hub through its queue. A
+	// reconnect reaches all of them as a Gap.
+	bus := ledger.NewBus()
+	bus.Handle(gp.Broker().OnBus)
+	bus.Handle(func(ledger.BusMsg) { whWorker.Wake("") }) // an event may have queued webhook deliveries
+	keys.Listener().Listen(ledger.Channel, bus.Notify, bus.Reset)
+	hub := console.NewHub(console.HubOptions{Hydrator: console.DBHydrator{Ledger: led, Approve: aps, People: people}, Log: log})
+	hubIn, unsubHub := bus.Subscribe(console.BusBuffer)
+	hubCtx, stopHub := context.WithCancel(context.WithoutCancel(ctx))
+	hubDone := make(chan struct{})
+	go func() { defer close(hubDone); _ = hub.Run(hubCtx, hubIn) }()
+	defer func() { stopHub(); unsubHub(); <-hubDone }()
 	keys.Listener().Listen(store.JobsChannel, func(p string) {
 		worker.Wake(p)
 		if dec != nil {
@@ -307,16 +324,18 @@ func runServe(ctx context.Context, e *Env, args []string) error {
 	})
 	api.Metrics().Collect(policyMetrics(pol.reg))
 	api.Metrics().Collect(gp.Metrics().Collect)
+	api.Metrics().Collect(eventMetrics(hub, bus))
 	if dec != nil {
 		api.Metrics().Collect(dec.Metrics().Collect)
 	}
-	api.Mount(serveRoutes(api, db, ms, sk, led, people, keys, pol, gp, mw, cw, aps, whs, ua)...)
+	api.Mount(serveRoutes(api, db, ms, sk, led, people, keys, pol, gp, mw, cw, aps, whs, ua, &liveWiring{hub: hub, con: con})...)
 	ln, err := net.Listen("tcp", cfg.Listen)
 	if err != nil {
 		return &ExitError{Code: ExitFailure, ErrCode: "listen_failed", Err: fmt.Errorf("Can't listen on %s: %s", cfg.Listen, lastPart(err)),
 			Next: "Another process may be using the port. Set DEEDGLASS_LISTEN to a free address."}
 	}
 	hs := newHTTPServer(api, log)
+	hs.RegisterOnShutdown(hub.Close) // open event streams end when shutdown starts; clients reconnect elsewhere
 	var metricsSrv *http.Server
 	if cfg.MetricsListen != "" {
 		mln, err := net.Listen("tcp", cfg.MetricsListen)
@@ -388,7 +407,7 @@ type serveKey struct {
 // in route-table tests.
 func serveRoutes(api *httpx.Server, db *store.DB, ms []migrate.Migration, sk *serveKey, led *ledger.Ledger, people *identity.Service,
 	keys *identity.KeyAuth, pol *policies, gp *gate.Pipeline, mw *mcpWiring, cw *connectors, aps *approve.Service, whs *webhook.Service,
-	ua *undoapi.API) []httpx.Route {
+	ua *undoapi.API, lw *liveWiring) []httpx.Route {
 	deps := httpx.SystemDeps{Spec: apiSpec()}
 	if pol == nil {
 		pol = &policies{svc: policy.NewService(nil)}
@@ -445,8 +464,39 @@ func serveRoutes(api *httpx.Server, db *store.DB, ms []migrate.Migration, sk *se
 	routes = append(routes, webhook.Routes(whs)...)
 	// S23: undo (preview and run).
 	routes = append(routes, undoapi.Routes(ua)...)
+	// S24: the Console's pages and the live event stream.
+	if lw == nil {
+		lw = &liveWiring{}
+	}
+	if lw.con == nil {
+		c, err := console.New(console.Options{Sessions: people})
+		if err != nil {
+			panic(err) // dev mode never refuses
+		}
+		lw.con = c
+	}
+	routes = append(routes, lw.con.Routes()...)
+	routes = append(routes, console.EventRoutes(console.EventsOptions{Hub: lw.hub, Recheck: api.Recheck})...)
 	// S12: policies, versions, activation deeds, lint, the dry run and the test runner.
 	return append(routes, policyapi.Routes(pol.svc, policyapi.Options{})...)
+}
+
+// liveWiring is S24's: the Console's page handler and the event hub (nil in route-table tests).
+type liveWiring struct {
+	hub *console.Hub
+	con *console.Console
+}
+
+// eventMetrics writes the live stream's gauges and counters (S24).
+func eventMetrics(hub *console.Hub, bus *ledger.Bus) httpx.Collector {
+	return func(w io.Writer) {
+		st, bs := hub.Stats(), bus.Stats()
+		fmt.Fprintf(w, "# HELP deedglass_events_streams Open GET /v1/events streams on this instance.\n# TYPE deedglass_events_streams gauge\ndeedglass_events_streams %d\n", st.Streams)
+		fmt.Fprintf(w, "# HELP deedglass_events_total Events the hub appended to an org's ring.\n# TYPE deedglass_events_total counter\ndeedglass_events_total %d\n", st.Events)
+		fmt.Fprintf(w, "# HELP deedglass_events_resyncs_total Resyncs sent (expired or foreign cursors, bus gaps, lagged streams).\n# TYPE deedglass_events_resyncs_total counter\ndeedglass_events_resyncs_total %d\n", st.Resyncs+st.Lagged)
+		fmt.Fprintf(w, "# HELP deedglass_events_hydrate_errors_total Hydration reads that failed (events went out thin).\n# TYPE deedglass_events_hydrate_errors_total counter\ndeedglass_events_hydrate_errors_total %d\n", st.HydrateErrors)
+		fmt.Fprintf(w, "# HELP deedglass_bus_dropped_total Bus messages dropped for a full subscriber (each turns into a Gap).\n# TYPE deedglass_bus_dropped_total counter\ndeedglass_bus_dropped_total %d\n", bs.Dropped)
+	}
 }
 
 // policies is S12's wiring: the registry every instance keeps, the service the routes call, and

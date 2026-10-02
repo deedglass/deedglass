@@ -574,6 +574,47 @@ func (l *Ledger) ListActions(ctx context.Context, org ids.OrgID, f ActionFilter,
 	return newList(out, next), nil
 }
 
+// MaxActionsByID is the most ids ActionsByID reads at once.
+const MaxActionsByID = 200
+
+// ActionsByID returns org's actions with the given ids, in the list shape GET /v1/actions uses,
+// read in one read-only org transaction (S24: the live stream hydrates a batch of events with it).
+// Unknown ids, and ids of another org, are simply absent.
+func (l *Ledger) ActionsByID(ctx context.Context, org ids.OrgID, actionIDs []string) (map[string]Action, error) {
+	if len(actionIDs) > MaxActionsByID {
+		return nil, fmt.Errorf("ledger: ActionsByID takes at most %d ids, got %d", MaxActionsByID, len(actionIDs))
+	}
+	want := make([]string, 0, len(actionIDs))
+	for _, id := range actionIDs {
+		if ids.Check(ids.Action, id) == nil {
+			want = append(want, id)
+		}
+	}
+	out := make(map[string]Action, len(want))
+	if len(want) == 0 {
+		return out, nil
+	}
+	err := l.readTx(ctx, org, func(ctx context.Context, tx pgx.Tx) error {
+		rows, err := tx.Query(ctx, `SELECT `+actionCols+actionFrom+` WHERE a.org_id = $1 AND a.id = ANY($2::text[])`, org, want)
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+		for rows.Next() {
+			a, _, err := scanAction(rows)
+			if err != nil {
+				return err
+			}
+			out[a.ID] = a
+		}
+		return rows.Err()
+	})
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ListSQL is the first-page SQL ListActions runs for f (bench and EXPLAIN only).
 func ListSQL(org ids.OrgID, f ActionFilter, limit int) (string, []any) {
 	where, args := f.where(org)

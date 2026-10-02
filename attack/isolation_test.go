@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strings"
 	"testing"
+	"time"
 
 	"go.yaml.in/yaml/v3"
 
@@ -125,6 +126,7 @@ func TestOrgIsolation(t *testing.T) {
 		"/.well-known/oauth-protected-resource/mcp/{connector}": nil, // public metadata: no org data
 		"/auth/assets/{file}":                                   nil, // public static file
 		"/approve/assets/{file}":                                nil, // public static file (S22's approval page)
+		"/app/{path...}":                                        nil, // S24's Console pages: public static files with no org data
 	}
 	raw, err := os.ReadFile(filepath.Join(e.Root, "api", "openapi.yaml"))
 	if err != nil {
@@ -156,7 +158,12 @@ func TestOrgIsolation(t *testing.T) {
 				if method == "GET" && op.Auth != "public" {
 					lists++
 					for _, c := range clientsFor(op.Auth, agentKey, globex) {
-						r := c.Do("GET", p, nil)
+						var r harness.Response
+						if p == "/v1/events" {
+							r = c.Peek(p, 2*time.Second) // S24: a stream; read what it sends for a moment
+						} else {
+							r = c.Do("GET", p, nil)
+						}
 						if leaked := leaks(r.Body, acmeIDs); leaked != "" {
 							t.Errorf("GET %s as globex shows Acme's %s", p, leaked)
 						}

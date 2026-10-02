@@ -197,7 +197,7 @@ func complete() *State {
 	f.AgentExec = true
 	st.Functions["public.ship_order(bigint)"] = f
 	st.Publication = PublicationState{Exists: true, Publish: []string{"insert", "update", "delete", "truncate"},
-		Tables: []string{"deedglass.ledger", "public.customers", "public.orders", "public.refunds"}}
+		Tables: []string{"deedglass.ledger", "public.customers", "public.orders", "public.refunds"}, GenCols: GenColsStored}
 	return st
 }
 
@@ -253,6 +253,18 @@ func TestPlannerGoldens(t *testing.T) {
 		"control_plane": func() (*State, Desired) {
 			st := fresh()
 			st.ControlPlane, st.Database = true, "deedglass"
+			return st, demoDesired()
+		},
+		"fresh_pg17": func() (*State, Desired) {
+			// before PG 18 there is no publish_generated_columns
+			st := fresh()
+			st.VersionNum, st.Version = 170011, "17.11"
+			return st, demoDesired()
+		},
+		"pg18_gencols": func() (*State, Desired) {
+			// an S17-era publication on PG 18: stored generated columns aren't published (DL-037)
+			st := complete()
+			st.Publication.GenCols = GenColsNone
 			return st, demoDesired()
 		},
 		"missing_table": func() (*State, Desired) {
@@ -346,6 +358,12 @@ func TestChecksMatrix(t *testing.T) {
 			in.State.Publication.Tables = []string{"deedglass.ledger", "public.customers", "public.orders"}
 		}, "publication", connector.CheckFail, "missing public.refunds"},
 		{"row filter", func(in *CheckInput) { in.State.Publication.RowFilters = []string{"public.orders"} }, "publication", connector.CheckFail, "row filters"},
+		{"generated columns not published (PG 18)", func(in *CheckInput) { in.State.Publication.GenCols = GenColsNone }, "publication", connector.CheckFail, "stored generated columns"},
+		{"virtual generated column (PG 18)", func(in *CheckInput) {
+			t := in.State.Tables["public.orders"]
+			t.VirtualGenerated = []string{"total_with_tax"}
+			in.State.Tables["public.orders"] = t
+		}, "witness.watched_tables", connector.CheckFail, "virtual generated columns (total_with_tax)"},
 		{"agent superuser", func(in *CheckInput) { r := in.State.Roles[RoleAgent]; r.Super = true; in.State.Roles[RoleAgent] = r }, "agent_role", connector.CheckFail, "superuser-class: SUPERUSER"},
 		{"agent member of pg_write_all_data", func(in *CheckInput) {
 			r := in.State.Roles[RoleAgent]

@@ -56,6 +56,10 @@ var publicRoutes = map[string]string{
 	"POST /v1/approval-links/decide":  "S22: one-time approval token in the body is the credential",
 	"POST /v1/approval-links/status":  "S22: one-time approval token in the body is the credential",
 	"GET /approve":                    "S22: the page an approval link opens; it posts the token to /v1/approval-links/*",
+	// S24's Console pages: static HTML with no data; the handler checks the session itself and
+	// redirects to /login?next= without one (a page is never served signed out).
+	"GET /app":           "S24: the Console's pages hold no data; without a session the handler redirects to /login",
+	"GET /app/{path...}": "S24: the Console's pages and assets hold no data; without a session pages redirect to /login",
 }
 
 // sweepCookie is the session cookie sweepSessions accepts.

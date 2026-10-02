@@ -76,6 +76,38 @@ jobs:
         working-directory: web/verify
         run: npx vitest run
 
+  # The Console (S24): typecheck, Vitest (tokens, contrast, copy, icons, sinks, types, api, stream),
+  # then the real build with check-dist (no inline code, budgets). Dev tools only (ADR-053), exact pins,
+  # no install scripts. Playwright, axe and Lighthouse need a real serve and a browser: make web-e2e and
+  # make web-lighthouse run them locally before a commit.
+  web:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+      - name: npm ci (exact pins, no install scripts)
+        working-directory: web
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: typecheck
+        working-directory: web
+        run: npx tsc -p . --noEmit
+      - name: vitest
+        working-directory: web
+        run: npx vitest run
+      - name: contrast (0 failing pairs)
+        working-directory: web
+        run: node scripts/contrast.mjs
+      - name: build (tokens, icons, astro, compress, check-dist)
+        working-directory: web
+        env:
+          ASTRO_TELEMETRY_DISABLED: "1"
+        run: npm run build
+
   integration-pg18:
     runs-on: ubuntu-latest
     timeout-minutes: 10

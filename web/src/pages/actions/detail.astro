@@ -1,0 +1,19 @@
+---
+import AppShell from '../../layouts/AppShell.astro';
+import Icon from '../../components/Icon.astro';
+import { copy } from '../../lib/copy.ts';
+const p = copy.pages.actions;
+---
+<AppShell title={p.title} screen="actions">
+  <a class="btn btn-quiet btn-sm -ml-3 mb-3" href="/app/actions"><Icon name="chevron-right" size={16} class="rotate-180" />{p.title}</a>
+  <div class="page-head"><div><h1 class="t-title-2 mono" id="page-title">{p.title}</h1></div></div>
+  <section class="card card-pad" id="detail-body" aria-labelledby="page-title" aria-busy="true">
+    <dl class="kv"><dt>Id</dt><dd><span class="skel skel-line w-56"></span></dd><dt>Created</dt><dd><span class="skel skel-line w-32"></span></dd></dl>
+  </section>
+</AppShell>
+<script>
+  import { bootShell } from '../../controllers/shell.ts';
+  import { mountDetail } from '../../controllers/detail.ts';
+  bootShell({ title: location.pathname.split('/').pop() ?? 'actions' });
+  mountDetail('actions');
+</script>

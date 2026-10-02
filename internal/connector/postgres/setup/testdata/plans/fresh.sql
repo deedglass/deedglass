@@ -5,7 +5,7 @@
 + grants · read public (5 tables) · write public.orders, public.refunds
 + replica identity full · 3 watched tables · brief lock on each
 + publication deedglass_pub · 4 tables
-plan sha256:cb3ea99333c195484f42f01d7917ad9aa40c0b766c32e51fbe5fc823156a8468
+plan sha256:19e3debfa0653d3103635aafb572b97c19bd5384f696441fa7f63912b2204df0
 
 BEGIN;
 SET LOCAL search_path = pg_catalog, pg_temp;
@@ -99,6 +99,6 @@ ALTER TABLE "public"."orders" REPLICA IDENTITY FULL;
 ALTER TABLE "public"."refunds" REPLICA IDENTITY FULL;
 
 -- + publication deedglass_pub · 4 tables
-CREATE PUBLICATION deedglass_pub FOR TABLE deedglass.ledger, "public"."customers", "public"."orders", "public"."refunds" WITH (publish = 'insert, update, delete, truncate');
+CREATE PUBLICATION deedglass_pub FOR TABLE deedglass.ledger, "public"."customers", "public"."orders", "public"."refunds" WITH (publish = 'insert, update, delete, truncate', publish_generated_columns = stored);
 
 COMMIT;

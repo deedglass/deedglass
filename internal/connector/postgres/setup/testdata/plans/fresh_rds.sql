@@ -7,7 +7,7 @@
 + replica identity full · 3 watched tables · brief lock on each
 + publication deedglass_pub · 4 tables
 ○ wal_level is replica. L2 needs logical. Amazon RDS: set rds.logical_replication = 1 in a custom DB parameter group, then reboot the instance. The parameter is static, and turning it on needs rds_superuser.
-plan sha256:ad39b760df1309ed9c1f5ce0a5ed0e9462c6494014dac198763d18563471ecf3
+plan sha256:c6fd59b4d1d2b564329ca4bec2241596d26ccb2a37a9ff4ae3e8e413ba76770c
 
 BEGIN;
 SET LOCAL search_path = pg_catalog, pg_temp;
@@ -105,6 +105,6 @@ ALTER TABLE "public"."orders" REPLICA IDENTITY FULL;
 ALTER TABLE "public"."refunds" REPLICA IDENTITY FULL;
 
 -- + publication deedglass_pub · 4 tables
-CREATE PUBLICATION deedglass_pub FOR TABLE deedglass.ledger, "public"."customers", "public"."orders", "public"."refunds" WITH (publish = 'insert, update, delete, truncate');
+CREATE PUBLICATION deedglass_pub FOR TABLE deedglass.ledger, "public"."customers", "public"."orders", "public"."refunds" WITH (publish = 'insert, update, delete, truncate', publish_generated_columns = stored);
 
 COMMIT;

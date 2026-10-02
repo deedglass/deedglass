@@ -1,0 +1,11 @@
+---
+// A sparkline: neutral stroke, a faint area, no aurora (brand §6.2); the values are in the label.
+interface Props { values: number[]; label: string; width?: number; height?: number }
+const { values, label, width = 120, height = 28 } = Astro.props;
+const max = Math.max(...values, 1);
+const step = width / Math.max(1, values.length - 1);
+const pts = values.map((v, i) => [i * step, height - 2 - (v / max) * (height - 4)] as const);
+const line = pts.map(([x, y], i) => `${i ? 'L' : 'M'}${x.toFixed(1)} ${y.toFixed(1)}`).join(' ');
+const area = `${line} L${width} ${height} L0 ${height} Z`;
+---
+<svg class="spark" width={width} height={height} viewBox={`0 0 ${width} ${height}`} role="img" aria-label={label}><path class="area" d={area} /><path d={line} /></svg>

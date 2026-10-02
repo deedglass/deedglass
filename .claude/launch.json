@@ -7,6 +7,20 @@
       "runtimeArgs": ["web/verify/scripts/serve.mjs"],
       "port": 5178,
       "url": "http://127.0.0.1:5178"
+    },
+    {
+      "name": "console-e2e-stack",
+      "runtimeExecutable": "env",
+      "runtimeArgs": ["DEEDGLASS_IT_THROWAWAY=1", "scripts/web_e2e.sh", "serve"],
+      "port": 18241,
+      "url": "http://127.0.0.1:18241"
+    },
+    {
+      "name": "console-dev",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["--prefix", "web", "astro", "dev", "--root", "web", "--port", "4321"],
+      "port": 4321,
+      "url": "http://localhost:4321"
     }
   ]
 }

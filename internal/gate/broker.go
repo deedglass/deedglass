@@ -3,14 +3,16 @@ package gate
 import (
 	"encoding/json"
 	"sync"
+
+	"github.com/deedglass/deedglass/internal/ledger"
 )
 
 // Broker wakes long polls (GET /v1/actions/{id}?wait=, and POST /v1/actions waiting on an
 // in-flight duplicate) when an action changes. It is fed by the instance's one LISTEN connection
 // on deedglass_events (S06's payload: ids and states only) and by the pipeline itself after each
 // commit, so a wait on this instance doesn't depend on the round trip. A waiter also re-reads on a
-// timer, so a lost notification costs latency, never correctness. S24 moves SSE onto ledger.Bus;
-// this stays the Gate's own.
+// timer, so a lost notification costs latency, never correctness. Since S24 it is an inline
+// handler on ledger.Bus (OnBus), next to the Console's event hub.
 type Broker struct {
 	mu   sync.Mutex
 	subs map[string]map[chan struct{}]struct{}
@@ -60,6 +62,16 @@ func (b *Broker) OnEvent(payload string) {
 	}
 	if json.Unmarshal([]byte(payload), &ev) == nil && ev.Action != nil {
 		b.Notify(*ev.Action)
+	}
+}
+
+// OnBus is the ledger.Bus handler: an event wakes its action's waiters, a Gap wakes everyone.
+func (b *Broker) OnBus(m ledger.BusMsg) {
+	switch {
+	case m.Gap:
+		b.Reset()
+	case m.Event != nil && m.Event.Action != nil:
+		b.Notify(*m.Event.Action)
 	}
 }
 

@@ -1,0 +1,7 @@
+---
+// "2m ago", the absolute time in the org's zone in the title; reltime.ts updates it every 30 s.
+import { dateTime, relative } from '../lib/format.ts';
+interface Props { iso: string; tz?: string; now?: string }
+const { iso, tz = 'UTC', now } = Astro.props;
+---
+<time class="reltime" datetime={iso} data-tz={tz} title={dateTime(iso, tz)}>{relative(iso, now ? new Date(now) : new Date(), tz)}</time>

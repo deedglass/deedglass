@@ -1,0 +1,10 @@
+---
+// Always ink-900 in both themes (brand §13.2); a header with the language and a copy button.
+import Icon from './Icon.astro';
+interface Props { lang: string; code: string }
+const { lang, code } = Astro.props;
+---
+<figure class="code">
+  <figcaption class="code-head"><span>{lang}</span><button type="button" class="icon-btn" data-copy={code} aria-label={`Copy ${lang}`}><Icon name="copy" size={16} /></button></figcaption>
+  <pre tabindex="0"><slot>{code}</slot></pre>
+</figure>

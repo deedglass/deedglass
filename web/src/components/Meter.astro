@@ -1,0 +1,15 @@
+---
+// Usage against a limit: amber from 80 %, red at the limit, always with words (S24 §3.6).
+interface Props { label: string; used: number; limit: number; unit?: string }
+const { label, used, limit, unit = '' } = Astro.props;
+const pct = Math.min(100, Math.round((used / limit) * 100));
+const level = used >= limit ? 'at' : pct >= 80 ? 'near' : 'ok';
+const fmt = (n: number) => new Intl.NumberFormat('en-US').format(n) + unit;
+const id = `m-${label.replace(/\W+/g, '-').toLowerCase()}`;
+---
+<div class="meter" data-level={level}>
+  <div class="meter-top"><span id={id}>{label}</span><span class="num t-2">{fmt(used)} of {fmt(limit)}</span></div>
+  <progress max={limit} value={Math.min(used, limit)} aria-labelledby={id}>{pct}%</progress>
+  {level === 'near' && <p class="meter-note">{pct}% used · near the limit</p>}
+  {level === 'at' && <p class="meter-note">At the limit · new calls are refused</p>}
+</div>

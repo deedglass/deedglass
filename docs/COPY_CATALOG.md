@@ -1,5 +1,9 @@
 # Copy catalog
 
+**Console strings live in `web/src/lib/copy.ts` (S24).** The Console sections below are the source the
+first strings were lifted from verbatim; `web/test/checks.test.ts` asserts each lifted string still
+appears here, and the banned-word list runs over `copy.ts`. New Console copy goes into `copy.ts` first.
+
 One place for the words people see in the Console, the API and the CLI, so every surface says the
 same thing the same way. The Console lifts its strings verbatim from here into
 `web/src/lib/copy.ts` (S25, S26). API messages are rendered by `internal/httpx/errors.go` and the

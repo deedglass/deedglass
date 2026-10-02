@@ -147,8 +147,9 @@ var contractRoutes = []ContractRoute{
 	cr("DELETE", "/v1/connectors/{id}/decoder", SessionOrKey, "admin", "S20", "body {confirm: <name>}; seals decoder.slot_dropped"),
 
 	// S24/S25: the Console and the live stream.
-	cr("GET", "/v1/events", SessionOrKey, "viewer", "S24", "SSE"),
-	cr("GET", "/app/", Session, "viewer", "S24", "Console pages"),
+	cr("GET", "/v1/events", SessionOrKey, "viewer", "S24", "SSE; agent keys need actions:read and see their own agent's events only"),
+	cr("GET", "/app", Public, "", "S24", "Console pages: the handler redirects to /login?next= without a session"),
+	cr("GET", "/app/{path...}", Public, "", "S24", "Console pages: the handler redirects to /login?next= without a session"),
 	cr("GET", "/v1/overview", SessionOrKey, "viewer", "S25"),
 
 	// S27/S28: Insights.

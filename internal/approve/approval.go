@@ -339,6 +339,78 @@ func (s *Service) Wait(ctx context.Context, v Viewer, id string, d time.Duration
 	}
 }
 
+// MaxByID is the most ids ByID reads at once.
+const MaxByID = 200
+
+// ByID returns v's view of the approvals with the given ids, in the list shape GET /v1/approvals
+// uses, read in one read-only org transaction (S24: the live stream hydrates a batch of events with
+// it). Unknown ids, another org's ids and, for an agent key, another agent's approvals are absent.
+func (s *Service) ByID(ctx context.Context, v Viewer, approvalIDs []string) (map[string]*Approval, error) {
+	if len(approvalIDs) > MaxByID {
+		return nil, errors.New("approve: ByID takes at most " + itoa(MaxByID) + " ids")
+	}
+	want := make([]string, 0, len(approvalIDs))
+	for _, id := range approvalIDs {
+		if ids.Check(ids.Approval, id) == nil {
+			want = append(want, id)
+		}
+	}
+	out := make(map[string]*Approval, len(want))
+	if len(want) == 0 {
+		return out, nil
+	}
+	q := rowSQL + ` WHERE ap.org_id = $1 AND ap.id = ANY ($2::text[])`
+	args := []any{v.Org, want}
+	if v.agent() {
+		q += ` AND a.agent_id = $3`
+		args = append(args, v.AgentID.String())
+	}
+	err := s.o.DB.OrgReadTx(ctx, v.Org, func(ctx context.Context, tx pgx.Tx) error {
+		rows, err := tx.Query(ctx, q, args...)
+		if err != nil {
+			return err
+		}
+		var xs []*row
+		for rows.Next() {
+			x, err := scanRow(rows)
+			if err != nil {
+				rows.Close()
+				return err
+			}
+			xs = append(xs, x)
+		}
+		rows.Close()
+		if err := rows.Err(); err != nil {
+			return err
+		}
+		if len(xs) == 0 {
+			return nil
+		}
+		org, err := readOrg(ctx, tx, v.Org)
+		if err != nil {
+			return err
+		}
+		for _, x := range xs {
+			var votes []vote
+			if !v.agent() {
+				if votes, err = readVotes(ctx, tx, v.Org, x.ID); err != nil {
+					return err
+				}
+			}
+			a, err := s.object(ctx, tx, v, x, votes, org)
+			if err != nil {
+				return err
+			}
+			out[a.ID] = a
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // Filter narrows a list of approvals.
 type Filter struct {
 	Statuses []Status

@@ -91,3 +91,130 @@ export class Mirror {
     }
   }
 }
+
+// ---------------------------------------------------------------------------------------------
+// The Console's Mirror (S24 §3.4): one implementation, two consumers. Four sizes, five states, and
+// the Sealed and Mismatch moments with the Web Animations API (no inline styles, so the Console's
+// CSP holds). Colours come from CSS classes (`dg-mirror` rules in each consumer's stylesheet), never
+// from hex in code. The mark is decorative: aria-hidden, and the chip beside it carries the meaning.
+//
+//   Sealed     0–240 ms   halves move from ±4 to ±1.5 and meet on the pane (enter easing)
+//              240–640    one ring r 44→58, aurora-teal stroke, opacity .20→0
+//   Mismatch   0–240 ms   halves move to ±2.5 and stop short
+//              240–420    a 1-unit hairline in the gap fades in. No shake.
+//   Pending    static, apart; the right half's rim in the pending colour
+//   Unverifiable  static, apart; the right half's rim dashed, in the unverifiable colour
+//   Reduced motion: the final geometry at once, then a 180 ms colour fade only.
+
+export type ConsoleMirrorState = 'open' | 'sealed' | 'mismatch' | 'pending' | 'unverifiable';
+export type MirrorSize = 16 | 20 | 32 | 48;
+
+export interface MirrorHandle {
+  set(s: ConsoleMirrorState, o?: { animate?: boolean }): Promise<void>;
+  state(): ConsoleMirrorState;
+  destroy(): void;
+}
+
+const EASE_ENTER = 'cubic-bezier(.2,.8,.2,1)';
+let mirrorSeq = 0;
+
+function offsetFor(s: ConsoleMirrorState): number {
+  return s === 'sealed' ? CLOSED : s === 'mismatch' ? SHORT : APART;
+}
+
+function reducedMotion(): boolean {
+  return typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+/** mountMirror draws the mark into host and returns its handle. */
+export function mountMirror(host: HTMLElement, o: { size: MirrorSize; state: ConsoleMirrorState }): MirrorHandle {
+  const uid = `dgm${++mirrorSeq}`;
+  const flat = o.size < 24;
+  const svg = el('svg', { viewBox: '0 0 120 120', width: o.size, height: o.size, class: `dg-mirror${flat ? ' flat' : ''}`, 'aria-hidden': 'true', focusable: 'false', 'data-state': o.state });
+  const defs = el('defs', {});
+  const grad = el('linearGradient', { id: `${uid}-a`, x1: '0', y1: '0', x2: '1', y2: '1' }); // 135°
+  grad.append(el('stop', { offset: '0', class: 'a0' }), el('stop', { offset: '0.5', class: 'a1' }), el('stop', { offset: '1', class: 'a2' }));
+  defs.append(grad);
+  svg.append(defs);
+  const ring = el('circle', { cx: 60, cy: 60, r: R, class: 'ring' });
+  const left = el('g', { class: 'half left' });
+  left.append(el('path', { d: half('left'), fill: `url(#${uid}-a)` }));
+  const right = el('g', { class: 'half right' });
+  right.append(el('path', { d: half('right'), class: 'frost' }), el('path', { d: half('right'), class: 'rim' }));
+  const pane = el('rect', { x: 58.5, y: 60 - R + 6, width: 3, height: 2 * R - 12, rx: 1.5, class: 'pane' });
+  const hair = el('rect', { x: 59.5, y: 60 - R + 4, width: 1, height: 2 * R - 8, class: 'hairline' });
+  svg.append(ring, left, right, pane, hair);
+  host.replaceChildren(svg);
+
+  let current = o.state;
+  let running: Animation[] = [];
+  const place = (off: number) => {
+    left.setAttribute('transform', `translate(${-off} 0)`);
+    right.setAttribute('transform', `translate(${off} 0)`);
+  };
+  const stopAll = () => {
+    for (const a of running) a.cancel();
+    running = [];
+  };
+  place(offsetFor(current));
+  if (current === 'mismatch') hair.classList.add('on');
+
+  const finish = (s: ConsoleMirrorState) => {
+    stopAll();
+    place(offsetFor(s));
+    hair.classList.toggle('on', s === 'mismatch');
+    svg.setAttribute('data-state', s);
+  };
+
+  return {
+    state: () => current,
+    destroy: () => {
+      stopAll();
+      svg.remove();
+    },
+    async set(s, opts = {}) {
+      const from = offsetFor(current);
+      current = s;
+      const animate = opts.animate === true && (s === 'sealed' || s === 'mismatch') && typeof svg.animate === 'function';
+      if (!animate) {
+        finish(s);
+        return;
+      }
+      stopAll();
+      svg.setAttribute('data-state', s);
+      if (reducedMotion()) {
+        finish(s);
+        const fade = svg.animate([{ opacity: 0.6 }, { opacity: 1 }], { duration: 180, easing: 'linear' });
+        running = [fade];
+        await fade.finished.catch(() => undefined);
+        return;
+      }
+      const to = offsetFor(s);
+      // Animate from the current geometry; the attribute holds the end state for when it finishes.
+      left.removeAttribute('transform');
+      right.removeAttribute('transform');
+      const opt: KeyframeAnimationOptions = { duration: 240, easing: EASE_ENTER, fill: 'forwards' };
+      const l = left.animate([{ transform: `translateX(${-from}px)` }, { transform: `translateX(${-to}px)` }], opt);
+      const r = right.animate([{ transform: `translateX(${from}px)` }, { transform: `translateX(${to}px)` }], opt);
+      running = [l, r];
+      if (s === 'sealed') {
+        // The ring grows r 44 → 58 as a scale from the centre (transform-box: fill-box in CSS).
+        const g = ring.animate(
+          [{ transform: 'scale(1)', opacity: 0.2 }, { transform: `scale(${58 / R})`, opacity: 0 }],
+          { duration: 400, delay: 240, easing: EASE_ENTER, fill: 'forwards' },
+        );
+        running.push(g);
+      } else {
+        hair.classList.add('on');
+        const hf = hair.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 180, delay: 240, easing: 'linear', fill: 'both' });
+        running.push(hf);
+      }
+      await Promise.all(running.map((a) => a.finished.catch(() => undefined)));
+      if (current === s) {
+        for (const a of running) a.cancel();
+        running = [];
+        place(to);
+      }
+    },
+  };
+}

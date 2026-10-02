@@ -1,0 +1,27 @@
+---
+import AppShell from '../layouts/AppShell.astro';
+import PageHead from '../components/PageHead.astro';
+import Icon from '../components/Icon.astro';
+import { copy } from '../lib/copy.ts';
+---
+<AppShell title={copy.pages.overview.title} screen="overview">
+  <PageHead title={copy.pages.overview.title} lede={copy.pages.overview.lede} />
+  <section class="card" aria-labelledby="live-title">
+    <div class="card-head">
+      <h2 class="t-headline" id="live-title"><Icon name="activity" size={16} />{copy.live.title}</h2>
+      <span class="t-footnote t-2 num" id="live-count"></span>
+    </div>
+    <ul class="live-list" id="live-list" aria-live="polite" aria-relevant="additions" aria-label={copy.live.region}></ul>
+    <div class="state" id="live-empty">
+      <span class="well"><Icon name="witness" /></span>
+      <p>{copy.live.lede}</p>
+      <p class="t-footnote">{copy.live.empty} <code class="nowrap">{copy.live.emptyCommand}</code></p>
+    </div>
+  </section>
+</AppShell>
+<script>
+  import { bootShell } from '../controllers/shell.ts';
+  import { mountLive } from '../controllers/live.ts';
+  bootShell({ title: 'Overview' });
+  mountLive();
+</script>

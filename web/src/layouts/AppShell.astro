@@ -1,0 +1,102 @@
+---
+// The app shell (S24 §3.7): sidebar ≥ 1024 px, a 64 px icon rail from 768, a top bar plus a bottom
+// bar below 768. Static markup only; src/controllers/shell.ts fills in who, where and what is live.
+// The page contains no data: every value arrives through api.ts after load.
+import '../styles/app.css';
+import Icon from '../components/Icon.astro';
+import IconButton from '../components/IconButton.astro';
+import Mirror from '../components/Mirror.astro';
+import { asset } from '../lib/assets.ts';
+import { copy } from '../lib/copy.ts';
+import { BOTTOM, DESTS } from '../lib/nav.ts';
+import pkg from '../../package.json';
+import tokens from '../../tokens/tokens.json';
+
+interface Props {
+  title: string;
+  screen: string; // the nav key that is current, or '' for none
+  description?: string;
+}
+const { title, screen, description = 'The Deedglass Console.' } = Astro.props;
+const docTitle = title === 'Overview' ? 'Deedglass Console' : `${title} · Deedglass`;
+const bottom = DESTS.filter((d) => (BOTTOM as readonly string[]).includes(d.key));
+---
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="referrer" content="no-referrer" />
+    <meta name="color-scheme" content="dark light" />
+    <meta name="theme-color" content={tokens.primitives['ink-950']} media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content={tokens.primitives['paper-50']} media="(prefers-color-scheme: light)" />
+    <meta name="robots" content="noindex" />
+    <meta name="description" content={description} />
+    <meta name="dg-icons" content={asset('icons.svg')} />
+    <title>{docTitle}</title>
+    <link rel="icon" href={asset('favicon.svg')} type="image/svg+xml" />
+    <script is:inline src={asset('theme.js')}></script>
+  </head>
+  <body data-screen={screen}>
+    <a class="skip" href="#main">{copy.nav.skip}</a>
+    <div class="shell" id="shell-root">
+      <aside class="sidebar" aria-label={copy.nav.label}>
+        <a class="brand" href="/app" aria-label="Deedglass Console, Overview">
+          <Mirror size={20} state="open" />
+          <span class="wordmark" aria-hidden="true">{copy.wordmark}</span>
+        </a>
+        <nav class="nav" aria-label={copy.nav.label}>
+          {DESTS.map((d) => (
+            <a class="nav-item" href={d.href} aria-current={d.key === screen ? 'page' : undefined} data-tip={d.label} data-tip-side="right" data-nav={d.key}>
+              <Icon name={d.icon as never} />
+              <span class="label">{d.label}</span>
+              {d.key === 'approvals' && <span class="badge" data-badge="approvals" hidden>0</span>}
+              {d.key === 'approvals' && <span class="badge-dot" data-badge-dot="approvals" hidden aria-hidden="true"></span>}
+            </a>
+          ))}
+        </nav>
+        <div class="nav-foot">
+          <a href="https://docs.deedglass.com/" rel="noopener">{copy.nav.docs} <Icon name="arrow-up-right" size={16} /></a>
+          <span class="num">v{pkg.version} · API 2026-10-01</span>
+        </div>
+      </aside>
+
+      <div class="workspace">
+        <header class="topbar" id="topbar">
+          <a class="show-sm brand" href="/app" aria-label="Deedglass Console, Overview"><Mirror size={20} state="open" /></a>
+          <button type="button" class="btn btn-quiet btn-sm" id="org-btn" aria-label={copy.topbar.switchOrg}>
+            <Icon name="building-2" size={16} /><span id="org-name" class="hide-sm">{copy.topbar.org}</span><Icon name="chevrons-up-down" size={16} class="hide-sm" />
+          </button>
+          <button type="button" class="search" id="search-btn" aria-label={copy.topbar.searchLabel} aria-keyshortcuts="Meta+K Control+K /">
+            <Icon name="search" size={16} /><span class="label">{copy.topbar.search}</span><kbd class="kbd">{copy.topbar.searchShortcut}</kbd>
+          </button>
+          <span class="spacer"></span>
+          <span id="stop-slot"></span>
+          <span class="conn hide-sm" id="conn" data-state="connecting"><span class="glyph" aria-hidden="true"></span><span id="conn-label">{copy.connection.connecting}</span></span>
+          <span class="hide-sm"><IconButton icon="moon" id="theme-btn" label={copy.topbar.theme} /></span>
+          <button type="button" class="icon-btn" id="account-btn" aria-label={copy.topbar.account}><span class="avatar" id="avatar" aria-hidden="true"></span></button>
+        </header>
+        <div id="top-sentinel" aria-hidden="true"></div>
+        <div class="banners" id="banners"></div>
+        <main class="main" id="main" tabindex="-1">
+          <slot />
+        </main>
+      </div>
+    </div>
+
+    <nav class="bottombar" id="bottombar" aria-label={copy.nav.label}>
+      {bottom.map((d) => (
+        <a href={d.href} aria-current={d.key === screen ? 'page' : undefined}>
+          <Icon name={d.icon as never} />
+          <span>{d.label}</span>
+          {d.key === 'approvals' && <span class="badge" data-badge="approvals" hidden>0</span>}
+        </a>
+      ))}
+      <button type="button" id="more-btn" aria-haspopup="dialog"><Icon name="ellipsis" /><span>{copy.nav.more}</span></button>
+    </nav>
+
+    <div id="live" class="sr-only" role="status" aria-live="polite"></div>
+    <section id="toasts" class="toasts" aria-label="Notifications"></section>
+    <slot name="after" />
+  </body>
+</html>

@@ -15,8 +15,9 @@ import (
 )
 
 // deedglass actions list --follow (S15): one line per action as it is decided or sealed, for the
-// demo's terminal. It polls the Ledger once a second in direct database mode; S24 moves it to the
-// event stream.
+// demo's terminal. This file is the polling follower: once a second, in direct database mode. With
+// an API key, S24's follow_sse.go follows the server's event stream instead and falls back to this
+// when the server has none.
 
 // Seams for tests.
 var (

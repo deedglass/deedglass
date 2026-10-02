@@ -541,6 +541,22 @@ func TestStopAllOverlay(t *testing.T) {
 		t.Fatalf("stop-all: %s", r.body)
 	}
 	expect(t, w.call(t, kb, "GET", "/v1/deeds?limit=1", ""), 403, "org_stopped")
+	// S24: GET /v1/org carries the overlay for the Console's banner (an admin key's id when a key stopped it).
+	orgStop := func() identity.OrgStopState {
+		t.Helper()
+		r := f.owner.do("GET", "/v1/org", "")
+		expect(t, r, 200, "")
+		var o identity.Org
+		r.json(t, &o)
+		if o.Stop == nil {
+			t.Fatalf("GET /v1/org has no stop: %s", r.body)
+		}
+		return *o.Stop
+	}
+	if s := orgStop(); !s.Stopped || s.StoppedAt == nil || s.Reason == nil || *s.Reason != "Investigating unexpected refunds" ||
+		s.StoppedBy == nil || !strings.HasPrefix(*s.StoppedBy, "key_") {
+		t.Fatalf("org stop after stop-all: %+v", s)
+	}
 	// Start all needs a reason, and leaves A stopped.
 	expect(t, f.owner.do("POST", "/v1/org/start-all", ``), 400, "validation_failed")
 	r = f.owner.do("POST", "/v1/org/start-all", `{"reason":"Root cause fixed: refund threshold was 100x"}`)
@@ -555,6 +571,15 @@ func TestStopAllOverlay(t *testing.T) {
 	if r.status != 200 || !strings.Contains(flat(r), `"deed":null`) {
 		t.Fatalf("a repeated start-all: %s", r.body)
 	}
+	if s := orgStop(); s.Stopped || s.StoppedAt != nil || s.StoppedBy != nil || s.Reason != nil {
+		t.Fatalf("org stop after start-all: %+v", s)
+	}
+	// A person who stops all is named (display name, else email), never as a bare user id.
+	expect(t, f.owner.do("POST", "/v1/org/stop-all", `{}`), 200, "")
+	if s := orgStop(); !s.Stopped || s.StoppedBy == nil || strings.HasPrefix(*s.StoppedBy, "usr_") || s.Reason != nil {
+		t.Fatalf("org stop by a person: %+v", s)
+	}
+	expect(t, f.owner.do("POST", "/v1/org/start-all", `{"reason":"Drill over"}`), 200, "")
 }
 
 func TestNotifyFailureChangesNothing(t *testing.T) {

@@ -182,6 +182,7 @@ type reqInfo struct {
 	actionID        string
 	replayed        bool
 	values          map[any]any // SetRequestValue (S09: on-behalf-of)
+	rt              *Route      // the matched route (Recheck)
 }
 
 type ctxKey struct{}

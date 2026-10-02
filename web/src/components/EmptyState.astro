@@ -1,0 +1,18 @@
+---
+// An empty state that teaches: one sentence, one action, one docs link.
+import Icon from './Icon.astro';
+interface Props { icon: string; title: string; body?: string; action?: { label: string; href: string }; docs?: string; kind?: 'empty' | 'error' }
+const { icon, title, body, action, docs, kind = 'empty' } = Astro.props;
+---
+<div class:list={['state', kind === 'error' && 'state-error']} role={kind === 'error' ? 'alert' : 'status'}>
+  <span class="well"><Icon name={icon as never} /></span>
+  <p class="t-headline">{title}</p>
+  {body && <p>{body}</p>}
+  <slot />
+  {(action || docs) && (
+    <div class="actions">
+      {action && <a class="btn btn-primary" href={action.href}>{action.label}</a>}
+      {docs && <a class="btn btn-quiet" href={docs}>Read the docs <Icon name="arrow-up-right" size={16} /></a>}
+    </div>
+  )}
+</div>

@@ -486,6 +486,15 @@ func TestBroker(t *testing.T) {
 	<-ch2
 	b.Reset()
 	<-ch
+	// S24: the same broker as a ledger.Bus handler.
+	bus := ledger.NewBus()
+	bus.Handle(b.OnBus)
+	bus.Notify(`{"v":1,"event":"evt_1","type":"action.executed","org":"org_1","id":"act_1","action":"act_1"}`)
+	<-ch
+	<-ch2
+	bus.Reset()
+	<-ch
+	<-ch2
 	cancel()
 	cancel2()
 	if b.Waiters() != 0 {

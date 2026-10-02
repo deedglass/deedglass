@@ -1,0 +1,9 @@
+---
+// A sprite icon: aria-hidden, 16 or 20 px; icon-only buttons carry their own aria-label.
+import { asset } from '../lib/assets.ts';
+import type { IconName } from '../icons/names.gen.ts';
+interface Props { name: IconName; size?: 16 | 20; class?: string }
+const { name, size = 20, class: cls = '' } = Astro.props;
+const href = `${asset('icons.svg')}#i-${name}`;
+---
+<svg class:list={['icon', cls]} width={size} height={size} viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href={href} /></svg>

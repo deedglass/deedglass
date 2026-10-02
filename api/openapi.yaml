@@ -33,13 +33,17 @@ tags:
       error_description="…"`; a 403 `insufficient_scope` carries `WWW-Authenticate: Bearer
       realm="deedglass", error="insufficient_scope", scope="…"`. Every change seals an admin deed.
   - name: Pages
-    description: The server-rendered sign-in pages.
+    description: The server-rendered sign-in pages and the Console.
   - name: System
     description: Health, version and this document.
   - name: Ledger
     description: >-
       The searchable history of every action an agent took and every state change, and the deed
       chain check (docs/LEDGER.md).
+  - name: Events
+    description: >-
+      The live event stream (Server-Sent Events) the Console and `deedglass actions list --follow`
+      read (docs/EVENTS.md).
   - name: Gate
     description: >-
       Sending actions through the Gate, cancelling one that waits for approval, and reporting the
@@ -201,6 +205,80 @@ paths:
               description: '`"sha256:<hex>"` of the body.'
               schema:
                 type: string
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/events:
+    get:
+      operationId: streamEvents
+      summary: Stream live events (Server-Sent Events)
+      description: >-
+        What Postgres committed in your org, in commit order, as `text/event-stream`
+        (docs/EVENTS.md). A Console session (viewer and up) or an org admin key sees the whole org;
+        an agent key needs `actions:read` and sees only its own agent's actions, approvals and
+        deeds. The stream starts with `retry: 3000`, then `event: hello`, then one message per
+        event: `id: <instance>.<seq>` (the stream cursor, not the `evt_` id), `event: <type>` and
+        `data:` the event object, which is exactly the webhook envelope (`object`, `id`, `type`,
+        `api_version`, `created_at`, `livemode`, `org`, `data.object`) plus `hydrated`. When
+        `hydrated` is true, `data.object` is the object in the shape its REST list returns
+        (`deed.sealed` carries a `deed_summary`); otherwise it is the thin webhook object. Events
+        never carry request or result payloads, approval context or email addresses. A `: ping`
+        comment comes every 15 s when nothing else does; the server closes the stream after 30
+        minutes (reconnect with the last cursor). The credential is checked again every 60 s; when
+        it is no longer valid, `event: session_ended` carries the error code and message, and the
+        stream closes. Whenever you may have missed events (a cursor this instance can't serve,
+        the server's connection to Postgres reconnected, or your client fell behind), `event:
+        resync` names the reason: refetch your lists. Resume is best effort, within about 5
+        minutes on the same instance. Filters and cursors are checked before the first byte; a bad
+        one is a `400` envelope. More than 8 open streams for one person or key is `429`
+        `rate_limited`.
+      tags: [Events]
+      security: [{bearerAuth: []}, {sessionCookie: []}]
+      x-deedglass-auth: session_or_key
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+        - {name: types, in: query, required: false, description: 'A comma list of event types or family wildcards: `action.*,deed.sealed`. Default every type.', schema: {type: string, maxLength: 1200}, example: "action.*,deed.sealed"}
+        - {name: agent, in: query, required: false, description: Only this agent's events. An agent key may name only its own agent., schema: {type: string, pattern: "^agt_[0-7][0-9a-hjkmnp-tv-z]{25}$"}}
+        - {name: last_event_id, in: query, required: false, description: 'The last `id:` you received, to resume (for clients that can''t set `Last-Event-ID`; the header wins).', schema: {type: string, pattern: "^[0-9a-z]{1,32}\\.[0-9]{1,19}$"}, example: "7f3k2m.1842"}
+        - {name: Last-Event-ID, in: header, required: false, description: The last `id:` you received; EventSource sends it on reconnect., schema: {type: string}}
+      responses:
+        "200":
+          description: >-
+            The stream. Messages: `hello` (StreamHello), one per event (Event), `resync`
+            (StreamResync), `session_ended` (StreamSessionEnded), and `: ping` comments.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+            Deedglass-Version:
+              $ref: "#/components/headers/DeedglassVersion"
+          content:
+            text/event-stream:
+              schema:
+                type: string
+                description: Server-Sent Events; each data line is one JSON object of the schemas named above.
+              examples:
+                live:
+                  summary: A hello, then an action event
+                  value: |+
+                    retry: 3000
+
+                    id: 7f3k2m.1841
+                    event: hello
+                    data: {"object":"stream","instance":"7f3k2m","resumed":false,"heartbeat_s":15,"server_time":"2026-10-08T14:02:09.100Z"}
+
+                    id: 7f3k2m.1842
+                    event: action.witnessed
+                    data: {"object":"event","id":"evt_01k6h7mz3c9d8e7f6g5h4j3k2m","type":"action.witnessed","api_version":"2026-10-01","created_at":"2026-10-08T14:02:09.512Z","livemode":false,"org":"org_01k6h7kp6msmzrhdzwtcr3jnkp","hydrated":true,"data":{"object":{"object":"action","id":"act_01k6h7mz3c9d8e7f6g5h4j3k2m","state":"witnessing"}}}
+
+                    : ping
+
+                resync:
+                  summary: The client may have missed events
+                  value: |+
+                    id: 7f3k2m.1900
+                    event: resync
+                    data: {"object":"resync","reason":"cursor_expired"}
+
         default:
           $ref: "#/components/responses/Error"
   /v1/actions:
@@ -3623,18 +3701,62 @@ paths:
               schema: {type: string}
         default:
           $ref: "#/components/responses/Error"
-  /app/:
+  /app:
     get:
-      operationId: consolePage
-      summary: The Console
-      description: Until the Console ships, a plain page showing who is signed in.
+      operationId: consoleIndex
+      summary: The Console's Overview page
+      description: >-
+        The Console is static HTML embedded in the binary; pages hold no data (they read the API).
+        Without a valid session the answer is `302` to `/login?next=/app`. Served with
+        `Cache-Control: no-cache`, a content-hash `ETag` and the Console's Content-Security-Policy
+        (docs/CONSOLE.md).
       tags: [Pages]
-      security: [{sessionCookie: []}]
-      x-deedglass-auth: session
+      security: []
+      x-deedglass-auth: public
       x-deedglass-since: "2026-10-01"
       responses:
         "200":
-          description: HTML.
+          description: HTML, with the Console's Content-Security-Policy.
+          content:
+            text/html:
+              schema: {type: string}
+        "302":
+          description: No valid session; `Location` is `/login?next=` with this path.
+          headers:
+            Location:
+              schema: {type: string}
+        default:
+          $ref: "#/components/responses/Error"
+  /app/{path...}:
+    get:
+      operationId: consolePage
+      summary: A Console page or asset
+      description: >-
+        Pages (`/app/actions`, `/app/actions/act_…`, `/app/settings/…`) redirect to
+        `/login?next=<path and query>` (`302`) without a valid session; `next` is kept only when it
+        is a plain path under `/app`. An unknown page or an id with the wrong prefix serves the
+        Console's 404 page, which never echoes the path. Assets (`/app/_astro/…`, fonts, icons)
+        are public and immutable, sent precompressed by `Accept-Encoding`. `/app/_kit` is 404 in
+        prod.
+      tags: [Pages]
+      security: []
+      x-deedglass-auth: public
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - {name: "path...", in: path, required: true, description: The page or asset path under /app., schema: {type: string}}
+      responses:
+        "200":
+          description: HTML, CSS, JavaScript, a font or an image.
+          content:
+            text/html:
+              schema: {type: string}
+        "302":
+          description: No valid session; `Location` is `/login?next=` with this path and query.
+          headers:
+            Location:
+              schema: {type: string}
+        "404":
+          description: The Console's 404 page.
           content:
             text/html:
               schema: {type: string}
@@ -4590,6 +4712,17 @@ components:
         timezone: {type: string}
         status: {type: string, enum: [active, disabled]}
         created_at: {type: string, format: date-time}
+        stop:
+          type: object
+          description: >-
+            GET /v1/org only (additive): the Stop all overlay, which the Console's org-stopped
+            banner reads. Omitted elsewhere.
+          required: [stopped, stopped_at, stopped_by, reason]
+          properties:
+            stopped: {type: boolean}
+            stopped_at: {type: [string, "null"], format: date-time}
+            stopped_by: {type: [string, "null"], description: Who turned it on.}
+            reason: {type: [string, "null"]}
     Membership:
       type: object
       required: [object, id, org, user, role, status, invited_by, invited_at, joined_at, removed_at, created_at]
@@ -6865,6 +6998,61 @@ components:
               docs_url: {type: string}
         has_more: {type: boolean}
         next_cursor: {type: [string, "null"]}
+    Event:
+      type: object
+      description: >-
+        One event, on the stream and in webhooks (contract §8). On the stream, `hydrated` says
+        whether `data.object` is the REST list shape (true) or the thin webhook object (false).
+      required: [object, id, type, api_version, created_at, livemode, org, data]
+      properties:
+        object: {type: string, const: event}
+        id: {type: string, description: "The event id (evt_…)."}
+        type: {type: string, example: action.witnessed}
+        api_version: {type: string}
+        created_at: {type: string, format: date-time}
+        livemode: {type: boolean}
+        org: {type: string}
+        hydrated: {type: boolean, description: Stream only.}
+        data:
+          type: object
+          required: [object]
+          properties:
+            object:
+              type: object
+              description: >-
+                An action, approval or agent in its list shape, a DeedSummary, or the thin
+                object (ids and states) when not hydrated.
+    DeedSummary:
+      type: object
+      required: [object, id, seq, kind, action, issued_at]
+      properties:
+        object: {type: string, const: deed_summary}
+        id: {type: string}
+        seq: {type: integer}
+        kind: {type: string, enum: [action, amendment, admin]}
+        action: {type: [string, "null"]}
+        issued_at: {type: string, format: date-time}
+    StreamHello:
+      type: object
+      required: [object, instance, resumed, heartbeat_s, server_time]
+      properties:
+        object: {type: string, const: stream}
+        instance: {type: string, description: The instance part of this stream's cursors.}
+        resumed: {type: boolean, description: True when the cursor you sent was replayed from.}
+        heartbeat_s: {type: integer, example: 15}
+        server_time: {type: string, format: date-time}
+    StreamResync:
+      type: object
+      required: [object, reason]
+      properties:
+        object: {type: string, const: resync}
+        reason: {type: string, enum: [cursor_expired, other_instance, lagged, bus_reconnected]}
+    StreamSessionEnded:
+      type: object
+      required: [code, message]
+      properties:
+        code: {type: string, example: api_key_revoked}
+        message: {type: string}
     Version:
       type: object
       required: [object, version, commit, built_at, go, api_versions, default_api_version]

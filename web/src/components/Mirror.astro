@@ -1,0 +1,23 @@
+---
+// The Mirror, rendered at build time with the same markup mountMirror() draws (web/verify/src/ui/
+// mirror.ts), so it shows before any script runs. data-mirror lets a controller take it over for
+// the Sealed moment. Decorative: aria-hidden (the chip beside it carries the meaning).
+import { uid } from '../lib/assets.ts';
+interface Props { size?: 16 | 20 | 32 | 48; state?: 'open' | 'sealed' | 'mismatch' | 'pending' | 'unverifiable'; id?: string; class?: string }
+const { size = 20, state = 'open', id, class: cls } = Astro.props;
+const R = 44;
+const off = state === 'sealed' ? 1.5 : state === 'mismatch' ? 2.5 : 4;
+const id2 = uid('m');
+const left = `M60 ${60 - R} A${R} ${R} 0 0 0 60 ${60 + R} Z`;
+const right = `M60 ${60 - R} A${R} ${R} 0 0 1 60 ${60 + R} Z`;
+---
+<span class:list={['mirror-host', cls]} id={id} data-mirror={state} data-size={size}>
+  <svg viewBox="0 0 120 120" width={size} height={size} class:list={['dg-mirror', size < 24 && 'flat']} aria-hidden="true" focusable="false" data-state={state}>
+    <defs><linearGradient id={`${id2}-a`} x1="0" y1="0" x2="1" y2="1"><stop offset="0" class="a0" /><stop offset="0.5" class="a1" /><stop offset="1" class="a2" /></linearGradient></defs>
+    <circle cx="60" cy="60" r={R} class="ring" />
+    <g class="half left" transform={`translate(${-off} 0)`}><path d={left} fill={`url(#${id2}-a)`} /></g>
+    <g class="half right" transform={`translate(${off} 0)`}><path d={right} class="frost" /><path d={right} class="rim" /></g>
+    <rect x="58.5" y={60 - R + 6} width="3" height={2 * R - 12} rx="1.5" class="pane" />
+    <rect x="59.5" y={60 - R + 4} width="1" height={2 * R - 8} class:list={['hairline', state === 'mismatch' && 'on']} />
+  </svg>
+</span>
