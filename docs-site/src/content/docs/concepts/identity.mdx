@@ -1,0 +1,52 @@
+---
+title: Agents, keys and identity
+description: Agents, their API keys and scopes, org admin keys, people in the Console, on-behalf-of, and signed intents.
+lastVerified: "2026-10-05"
+---
+
+import Limits from '../../../components/Limits.astro';
+
+Every action names who did it: the agent, the key it used, and, when you say so, the person it acted for.
+
+## Agents and their keys
+
+An **agent** is a registered caller in your org (`agt_…`). It authenticates with an API key:
+
+- `dg_live_<prefix>_<secret>` or `dg_test_…`, 49 characters, shown once at creation. Deedglass stores only a peppered hash.
+- Default scopes `actions:execute`, `actions:read` and `deeds:read`. An agent key can read only its own agent's actions and deeds, and can never change any agent, not even itself.
+- Keys roll with an overlap (`deedglass agent keys roll`), so a deploy can switch without downtime.
+
+**Org admin keys** carry exactly the `admin` scope. They act as the admin role for automation, can't stop or start every agent, and can't mint more admin keys.
+
+## People
+
+People sign in to the Console with a one-time email link. Roles are owner, admin and viewer. Only people approve actions; keys never vote.
+
+## On behalf of and sessions
+
+Send `Deedglass-On-Behalf-Of: usr_ref:priya` and `Deedglass-Session: …` with a call, and the deed records them. They are what the agent claims unless you sign them.
+
+## Signed intents
+
+With an intent key registered for the agent, the agent's runtime signs each call (`Deedglass-Intent`): the tool, a digest of the arguments, on-behalf-of, a nonce and a short expiry. Modes per agent:
+
+| Mode | What happens |
+|---|---|
+| `off` (default) | Intents are ignored. |
+| `optional` | A signed call is checked; an unsigned one still runs. |
+| `required` | Every call must carry a valid, unused intent, or it is refused (403). |
+
+A signed intent binds the call to what the signer saw. It stops a stolen key from sending different arguments, and stops a replay.
+
+## What it doesn't do
+
+<Limits>
+- An agent key in a compromised process can still be used by that process. Stop the agent, then roll the key.
+- On-behalf-of without a signed intent is a claim, recorded as such.
+- There is no OAuth authorization server in v1: MCP clients use API keys as bearer tokens.
+</Limits>
+
+## Next
+
+- [Rotate seal keys and API keys](/guides/rotate-keys/)
+- [Signed intents spec](/reference/intents/)

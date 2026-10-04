@@ -1,0 +1,47 @@
+---
+title: Test a policy against last week
+description: Replay a policy version over the actions your agents really sent, see every decision that would change, then try it in shadow.
+lastVerified: "2026-10-05"
+---
+
+import Limits from '../../../components/Limits.astro';
+
+By the end you'll know exactly which of last week's actions a new policy version would decide differently, before it touches a live agent.
+
+**Before you start**
+
+- A pushed policy version (`deedglass policy push`).
+- An org admin key. Replays are limited to 10 an hour per org.
+
+## 1. Replay it
+
+```sh test=skip reason="needs a pushed policy version with a week of history"
+deedglass policy replay orders-guard --version 2 --from 7d --wait
+```
+
+The replay runs the version's compiled rules over the stored inputs of every action in the window, with the same evaluator the Gate uses, and compares each result with what was recorded. It prints how many decisions would change, by rule, with examples. Add `--baseline v1` to compare two versions instead of the recorded decisions.
+
+## 2. Read the differences
+
+Each changed decision names the action, the old and new decision and the rule. Look hardest at actions that would move from `require_approval` or `deny` to `allow`.
+
+## 3. Try it in shadow
+
+```sh test=skip reason="changes the org's shadow policy"
+deedglass policy activate orders-guard --version 2 --mode shadow --reason "replay showed 3 changes, all expected"
+deedglass insights shadow
+```
+
+Shadow runs the version alongside the enforced one on new traffic. When the disagreements are the ones you expect, enforce it.
+
+## What it doesn't do
+
+<Limits>
+- Replay uses each action's stored policy input. Actions older than the retention period have none and are skipped, and the result says how many.
+- It shows decisions, not consequences: an action that would now be allowed didn't run, so there's no verdict for it.
+- Facts that depended on the moment (an anomaly, a budget) are replayed as recorded.
+</Limits>
+
+## Next
+
+- [Insights](/concepts/insights/)

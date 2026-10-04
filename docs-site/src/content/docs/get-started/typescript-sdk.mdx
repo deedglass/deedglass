@@ -1,0 +1,85 @@
+---
+title: Use the TypeScript SDK
+description: Send your TypeScript agent's tool calls through the Gate with @deedglass/sdk, and wrap your own functions so each call is decided and sealed.
+lastVerified: "2026-10-05"
+---
+
+import Limits from '../../../components/Limits.astro';
+
+Your TypeScript code asks the Gate before a tool runs, and gets back the decision, the result and the verdict.
+
+**Before you start**
+
+- Node 22.12 or later (Bun and Deno work too).
+- A running Deedglass server and an agent key. The [Quickstart](/quickstart/) gives you both.
+
+## 1. Install
+
+```sh test=skip reason="the npm package is published in the release session; make sdk-ts builds the same package"
+npm install @deedglass/sdk
+```
+
+The package is ESM only and has no runtime dependency.
+
+## 2. Configure
+
+```sh title="Terminal"
+export DEEDGLASS_API_KEY="$(cat .deedglass/quickstart.key)"
+export DEEDGLASS_SERVER=http://127.0.0.1:8080
+```
+
+## 3. Send an action
+
+```ts check title="agent.ts"
+import { Deedglass, PolicyDeniedError } from '@deedglass/sdk';
+
+const dg = new Deedglass(); // reads DEEDGLASS_API_KEY and DEEDGLASS_SERVER
+
+try {
+  await dg.act('postgres.execute', { sql: 'DROP TABLE public.orders' });
+} catch (e) {
+  if (e instanceof PolicyDeniedError) console.log('blocked:', e.message);
+  else throw e;
+}
+
+const action = await dg.act(
+  'postgres.execute',
+  { sql: "UPDATE public.orders SET status = 'shipped' WHERE id = 42" },
+  { approval: { wait: true, timeoutMs: 120_000 } },
+);
+console.log(action.status, action.witness?.level, action.witness?.verdict, action.deed);
+```
+
+## 4. Wrap your own function
+
+`wrapTool` asks the Gate before your function runs (proxy mode), then reports what it returned, so your own tools get a policy decision and a deed too:
+
+```ts check title="refund.ts"
+import { Deedglass, wrapTool } from '@deedglass/sdk';
+
+const dg = new Deedglass();
+
+async function refundCustomer(args: { charge: string; amount: number }) {
+  return { refunded: args.amount, charge: args.charge };
+}
+
+export const refund = wrapTool(refundCustomer, { client: dg, tool: 'billing.refund_customer' });
+
+const result = await refund({ charge: 'ch_123', amount: 2000 });
+console.log(result.refunded);
+```
+
+A thrown error is recorded as `unknown` (it may have run) unless you pass `failureMeans: 'not_applied'`. Adapters for the Vercel AI SDK, OpenAI Agents, LangChain.js and the Claude Agent SDK are subpath imports: see the [TypeScript reference](/sdks/typescript/).
+
+## What it doesn't do
+
+<Limits>
+- `wrapTool` decides whether your code runs. It doesn't sandbox what your code does.
+- A wrapped function's result is what your function said (L0 Reported). Only connectors that read the target back reach L1 or L2.
+- In a browser, never ship an agent key. Call your own server, and let it hold the key.
+</Limits>
+
+## Next
+
+- [TypeScript SDK reference](/sdks/typescript/)
+- [Gateway and proxy modes](/concepts/modes/)

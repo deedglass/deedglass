@@ -1,0 +1,52 @@
+---
+title: Rotate seal keys and API keys
+description: Roll an agent's API key with an overlap, rotate the seal key without breaking the chain, and rotate the vault's key ring.
+lastVerified: "2026-10-05"
+---
+
+import Limits from '../../../components/Limits.astro';
+
+By the end you'll have rolled an API key without downtime, rotated the seal key with an overlap, and know how to rotate the vault key.
+
+**Before you start**
+
+- An org admin key for API keys. For seal and vault keys: shell access to the server, with its database URL and seal key path.
+
+## 1. Roll an agent's API key
+
+```sh test=skip reason="needs a key id from your own stack"
+deedglass agent keys roll key_01j9… --overlap 24h
+```
+
+The new key is shown once. The old key keeps working for 24 hours, then answers `api_key_expired`. Deploy the new key inside the overlap. A leaked key: `deedglass agent keys revoke key_…`, which takes effect on every instance within 2 seconds.
+
+## 2. Rotate the seal key
+
+```sh test=skip reason="rotates the server's seal key; run it on your own server"
+deedglass keys rotate --overlap 5m
+```
+
+The new key becomes active and the old one is retired at the end of the overlap. Both stay in `/.well-known/deedglass/keys.json` with their dates, so deeds sealed by the old key still verify. `/v1/health` shows `seal_key: degraded` during the overlap. Restart every instance inside it.
+
+## 3. Rotate the vault key
+
+`DEEDGLASS_VAULT_KEY` holds a ring of up to four keys; the first is active. Put a new key first, keep the old one after it, restart, then:
+
+```sh test=skip reason="re-encrypts stored credentials on your own server"
+deedglass vault rotate
+```
+
+Every credential is re-wrapped under the new key. When `deedglass vault status` shows nothing left under the old key, remove it from the ring.
+
+## What it doesn't do
+
+<Limits>
+- Rotating the seal key doesn't re-seal old deeds. They keep verifying with the old public key.
+- Changing `DEEDGLASS_API_KEY_PEPPER` invalidates every API key. Don't rotate it.
+- Per-org seal keys aren't in this release.
+</Limits>
+
+## Next
+
+- [Seal keys engineering note](/reference/engineering/seal-keys/)
+- [Agents, keys and identity](/concepts/identity/)

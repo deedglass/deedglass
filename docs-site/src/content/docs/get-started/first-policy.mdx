@@ -1,0 +1,111 @@
+---
+title: Your first policy
+description: Write a policy in YAML, test it against cases on your machine, push it, run it in shadow, then enforce it.
+lastVerified: "2026-10-05"
+---
+
+import Limits from '../../../components/Limits.astro';
+
+By the end you'll have a policy that lets reads run, blocks `DROP`, and sends every other write to a person, tested on your machine before it touches an agent.
+
+**Before you start**
+
+- The `deedglass` CLI. Linting and testing need no server.
+- For steps 4 and 5, a server and `DEEDGLASS_API_KEY` set to an org admin key.
+
+## 1. Write it
+
+```sh test title="Terminal"
+$ cat > orders-guard.yaml <<'YAML'
+deedglass: policy/v1
+name: orders-guard
+description: Reads run. DROP never runs. Other writes wait for a person.
+defaults:
+  decision: deny
+  reason: No rule allows this action. Add a rule in Console › Policies to allow it.
+rules:
+  - id: block-destructive-sql
+    match: { connector_type: postgres }
+    when: sql.kind in ["drop", "truncate"]
+    decision: deny
+    reason: DROP and TRUNCATE are never allowed for agents.
+  - id: allow-reads
+    match: { tool: postgres.query }
+    when: sql.category == "read" && !sql.writes
+    decision: allow
+  - id: writes-need-approval
+    match: { tool: postgres.execute }
+    when: sql.category == "write"
+    decision: require_approval
+    reason: Writes wait for a person. An admin can approve in Console › Approvals.
+    approval: { approvers: [role:admin], required: 1, expires_in: 30m }
+    verify: L2
+YAML
+```
+
+Every rule has an `id`; the first rule that matches decides. Anything no rule matches gets the default: deny, with a reason that says what to do.
+
+## 2. Lint it
+
+```sh test title="Terminal"
+$ deedglass policy lint orders-guard.yaml
+✓ orders-guard · 3 rules · 0 budgets · sha256:…
+```
+
+Lint compiles every `when` (CEL) and checks the facts it uses. A mistake prints the line, the problem and a fix.
+
+## 3. Test it against cases
+
+```sh test title="Terminal"
+$ cat > orders-guard.cases.yaml <<'YAML'
+policy: orders-guard.yaml
+cases:
+  - name: reads run
+    input: { tool: postgres.query, sql: "SELECT id FROM public.orders WHERE id = 42" }
+    expect: { decision: allow, rule: allow-reads }
+  - name: DROP never runs
+    input: { tool: postgres.execute, sql: "DROP TABLE public.orders" }
+    expect: { decision: deny, rule: block-destructive-sql }
+  - name: an UPDATE waits for a person
+    input: { tool: postgres.execute, sql: "UPDATE public.orders SET status = 'shipped' WHERE id = 42" }
+    expect: { decision: require_approval, rule: writes-need-approval }
+YAML
+$ deedglass policy test orders-guard.yaml
+✓ orders-guard …3 cases · 3 of 3 rules
+✓ 3 cases passed · 1 policy · every rule covered · …
+```
+
+Cases run the same compiler and evaluator the server uses, so a passing case means the server decides the same way.
+
+## 4. Push it
+
+```sh test title="Terminal"
+$ deedglass policy push orders-guard.yaml
+…orders-guard…
+```
+
+Pushing stores a new immutable version. It changes nothing yet.
+
+## 5. Shadow, then enforce
+
+```sh test=skip reason="changes which policy the org enforces; run it on your own stack"
+deedglass policy activate orders-guard --version 1 --mode shadow --reason "trying it next to the current policy"
+deedglass insights shadow
+deedglass policy activate orders-guard --version 1 --mode enforce --reason "a day in shadow, no surprises"
+```
+
+In shadow, the policy decides every action alongside the enforced one, and only the enforced decision counts. `deedglass insights shadow` lists where they differ. Each activation is sealed as an admin deed.
+
+## What it doesn't do
+
+<Limits>
+- A policy decides what an agent may do through the Gate. It doesn't see calls that never reach the Gate.
+- SQL it can't read with confidence should be denied: add `sql.present && sql.ambiguous` to a deny rule, as `postgres-safe` does.
+- Deedglass never activates a policy by itself. [Insights](/concepts/insights/) can suggest one; a person accepts it, into shadow only.
+</Limits>
+
+## Next
+
+- [Policies](/concepts/policies/): how a decision is made.
+- [Policy language](/reference/policy-language/): every key and fact.
+- [Test a policy against last week](/guides/replay/)

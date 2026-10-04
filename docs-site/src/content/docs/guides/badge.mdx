@@ -1,0 +1,51 @@
+---
+title: Add the badge
+description: Show your grade in your README. You add it; we never do.
+lastVerified: "2026-10-05"
+---
+
+import Limits from '../../../components/Limits.astro';
+
+Show your grade in your README. You add it; we never do.
+
+**Before you start**
+
+- A scan you're happy to show: [Scan in 60 seconds](/get-started/scan/).
+- A public GitHub repository, so shields.io can read the file.
+
+## 1. Write the badge file
+
+```sh test title="Terminal"
+$ npx -y deedglass scan --badge --no-write
+…
+[![Blast radius](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/…/.deedglass/score.json)](https://deedglass.com/score)
+```
+
+`--badge` writes `.deedglass/score.json`, a shields.io endpoint file such as `{"schemaVersion":1,"label":"blast radius","message":"C","color":"yellow"}`, and prints the Markdown line for your README. With a GitHub remote, the line has your owner, repo and branch filled in; without one, it has placeholders to replace.
+
+## 2. Commit it yourself
+
+`deedglass init` puts `.deedglass/` in `.gitignore`, so add the one file by name:
+
+```sh test=skip reason="writes to your git history"
+git add -f .deedglass/score.json
+git commit -m "Add the Deedglass blast-radius badge"
+```
+
+Paste the printed line into your README and push. shields.io reads your own file, and caches it, so a new grade can take a few minutes to show. The badge links to `deedglass.com/score`, which explains what the grade means.
+
+## Share a result without a badge
+
+`deedglass scan --share` prints a link, `https://deedglass.com/s#v1.…`. Everything after `#` stays in the browser: no server receives it. The link holds only the grade, the points, the finding counts, the finding ids and the deduction ids, never a path, a table, a host or a variable name.
+
+## What it doesn't do
+
+<Limits>
+- Deedglass never adds a badge to anyone's repo, and never opens a pull request, issue or comment to suggest one.
+- The scan never runs git. Committing the file is your step.
+- A grade is a snapshot of one machine's setup when you ran the scan. Run it again after you change your configs.
+</Limits>
+
+## Next
+
+- [Scan in 60 seconds](/get-started/scan/): what each deduction means.

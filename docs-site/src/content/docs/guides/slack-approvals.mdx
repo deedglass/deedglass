@@ -1,0 +1,51 @@
+---
+title: Slack approvals
+description: Send approval cards to a Slack channel, where people with a matching Deedglass account approve or deny with one click, and the card updates as votes arrive.
+lastVerified: "2026-10-05"
+---
+
+import Limits from '../../../components/Limits.astro';
+
+By the end, an action that needs approval posts a card in Slack, and the right person approves it there.
+
+**Before you start**
+
+- A Slack workspace where you can install an app.
+- A Deedglass server reachable from Slack over HTTPS (Slack posts button clicks to it).
+
+## 1. Make the Slack app
+
+```sh test title="Terminal"
+$ deedglass slack manifest --base-url https://deedglass.example.com
+…
+```
+
+Paste the manifest into api.slack.com › Your apps › Create from manifest, install it, and keep the bot token and signing secret.
+
+## 2. Connect it
+
+```sh test=skip reason="needs a Slack app's bot token and signing secret"
+deedglass connector create --config slack.yaml
+deedglass connector credentials set slack --field bot_token=env:SLACK_BOT_TOKEN --field signing_secret=env:SLACK_SIGNING_SECRET
+```
+
+## 3. Notify Slack from a rule
+
+Add `notify: [slack]` to a `require_approval` rule. Its approvals post a card to the approvals channel: the agent, the tool, the arguments (redacted), the rule's reason, and Approve and Deny buttons.
+
+## 4. Approve
+
+A click is checked against the Slack signing secret within a 5-minute window, and replays are refused. The person's Slack email must match a confirmed Deedglass account, or the click is refused with `approver_unmapped`. Four-eyes and the self rule apply as in the Console. The card updates as votes arrive, and shows the final verdict.
+
+## What it doesn't do
+
+<Limits>
+- Slack is a way to vote, not the record. The deed in Deedglass is the record.
+- A Slack account without a matching Deedglass account can't approve.
+- Deedglass doesn't read your channels. It posts cards and receives button clicks.
+</Limits>
+
+## Next
+
+- [Approvals](/concepts/approvals/)
+- [Slack connector reference](/reference/connectors/slack/)

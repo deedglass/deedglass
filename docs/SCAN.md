@@ -66,7 +66,7 @@ symlink out of `--dir`, skips files over 1 MiB, and stops after `--max-files` (2
 Any use of `@modelcontextprotocol/server-postgres`, at any version, in a client config or a
 dependency file is a finding, one per place it appears:
 
-> This Postgres MCP server was archived on 2025-05-29. Its read-only mode runs queries in a
+> This Postgres MCP server was archived on 2025-05-28. Its read-only mode runs queries in a
 > read-only transaction that a stacked COMMIT; can end (Datadog Security Labs). If its database role
 > can write, the agent can write.
 

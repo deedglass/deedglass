@@ -1,0 +1,40 @@
+---
+// /_kit: every docs component, in the current theme (S33 §3.2). Not in search or the sitemap
+// (postbuild drops it), and noindex. Switch the theme in the header to see the other one.
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
+import VerdictChip from '../components/VerdictChip.astro';
+import LevelBadge from '../components/LevelBadge.astro';
+import DeedCard from '../components/DeedCard.astro';
+import Terminal from '../components/Terminal.astro';
+import Limits from '../components/Limits.astro';
+import Since from '../components/Since.astro';
+import ErrorEnvelope from '../components/ErrorEnvelope.astro';
+import SealedMark from '../components/SealedMark.astro';
+export function getStaticPaths() {
+  return [{ params: { kit: '_kit' } }];
+}
+const sample = `$ deedglass verify deeds.jsonl --keys keys.json
+✓ 1,204 deeds · chain intact · 2 seal keys
+✕ Deed 812 was changed after it was sealed.
+◐ waiting for approval
+○ UNVERIFIABLE · the read-back timed out`;
+---
+<StarlightPage frontmatter={{ title: 'Component kit', description: 'Every docs component, for review.', pagefind: false, head: [{ tag: 'meta', attrs: { name: 'robots', content: 'noindex' } }] }}>
+  <h2>VerdictChip</h2>
+  <p><VerdictChip verdict="VERIFIED" level="L2" /> <VerdictChip verdict="MISMATCH" level="L2" /> <VerdictChip verdict="UNVERIFIABLE" level="L1" /> <VerdictChip verdict="VERIFIED" /></p>
+  <h2>LevelBadge</h2>
+  <p><LevelBadge level="L0" /> <LevelBadge level="L1" /> <LevelBadge level="L2" /></p>
+  <h2>Since</h2>
+  <p><Since version="0.1.0" /></p>
+  <h2>SealedMark</h2>
+  <p><SealedMark size={64} state="open" /> <SealedMark size={64} state="sealed" animate /> <SealedMark size={64} state="mismatch" /></p>
+  <h2>Terminal</h2>
+  <Terminal title="deedglass verify" text={sample} />
+  <h2>ErrorEnvelope</h2>
+  <ErrorEnvelope code="budget_exceeded" />
+  <h2>DeedCard</h2>
+  <DeedCard sample="verified" />
+  <DeedCard sample="tampered" />
+  <h2>Limits</h2>
+  <Limits><ul><li>It doesn't do this one thing.</li><li>Nor that one.</li></ul></Limits>
+</StarlightPage>

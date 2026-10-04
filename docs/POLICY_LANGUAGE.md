@@ -50,7 +50,7 @@ Rules are read top to bottom, and **the first rule that matches decides**; when 
 15. FAQ
 16. Diagnostics at a glance
 
-The diagnostic codes (`unknown_key`, `cel_type`, …) are listed in section 16 and, with examples and fixes, in [POLICY_ERRORS.md](POLICY_ERRORS.md). The CLI is in [CLI.md](CLI.md#policies).
+The diagnostic codes (`unknown_key`, `cel_type`, …) are listed in section 16 and, with examples and fixes, in [POLICY_ERRORS.md](POLICY_ERRORS.md). The CLI is in [CLI.md](CLI.md#policies-policy-lint-policy-fmt-policy-evaluate-policy-test-policy-push-and-policy-activate).
 
 ## 3. The file format
 

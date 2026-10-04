@@ -1,0 +1,71 @@
+---
+title: Verify deeds as an auditor
+description: Check an export of deeds offline with the issuer's public keys, without trusting or reaching the Deedglass server that sealed them.
+lastVerified: "2026-10-05"
+---
+
+import Limits from '../../../components/Limits.astro';
+
+By the end you'll have checked every deed in an export against the issuer's public keys, offline.
+
+**Before you start**
+
+- An export from the org (`deeds.tar.gz` or `deeds.jsonl`), from someone with access, made with `deedglass deeds export`.
+- The issuer's public keys: `<server>/.well-known/deedglass/keys.json`, or a `keys.json` file they gave you.
+- The `deedglass` CLI. Any machine; no account.
+
+## 1. Get an export
+
+The org's admin runs:
+
+```sh test title="Terminal"
+$ deedglass deeds export --out deeds.tar.gz
+…
+```
+
+A bundle holds the deeds, the keys and a manifest sealed with the same key. Export the whole chain: a part that doesn't start at deed 1 needs an anchor (step 3).
+
+## 2. Verify it
+
+```sh test title="Terminal"
+$ deedglass verify deeds.tar.gz --keys "$DEEDGLASS_SERVER/.well-known/deedglass/keys.json"
+✓ … deeds · chain intact · …
+```
+
+The exit code is the answer: **0** every check passed, **1** something failed, **2** it couldn't decide (no keys, an unreadable file, a newer format). `--json` prints the full report; `--all` lists every break instead of stopping at the first.
+
+## 3. Pin the keys
+
+A `keys.json` URL is only as good as the server behind it. Pin the key set you trust:
+
+```sh test=skip reason="needs the thumbprint of a key set you already trust"
+deedglass verify deeds.tar.gz --keys keys.json --pin sha256:…
+```
+
+`--anchor <seq>:sha256:…` pins a deed you recorded earlier, so a rewritten history before it fails. It is also how you check part of a chain, such as `deeds export --since 24h`: anchor it to the `body_hash` of the deed just before it.
+
+## What a failure looks like
+
+```text
+✕ Deed 812 was changed after it was sealed.
+  deed       deed_01j9zt3q5s7v9w1y3a5c7e9g1j (line 812)
+  sealed     body_hash sha256:3f9a…c21e
+  computed   sha256:9b1d…04aa
+  before it  811 deeds intact · stopped at the first break
+  next       Get a fresh export from the issuer and compare deed 812. Add --all to list every break.
+```
+
+The same checks run in the browser ([try one](/concepts/deeds/)) and in the TypeScript and Python SDKs, with the same answers.
+
+## What it doesn't do
+
+<Limits>
+- A verified chain shows the deeds are as the issuer sealed them. It doesn't show the issuer's host was honest when it sealed them.
+- Deeds hold digests. To match a deed to a request, you need the request.
+- An export covers a range. Deeds outside it aren't checked; use `--from-seq` and `--anchor` to cover the gap.
+</Limits>
+
+## Next
+
+- [Deed spec](/reference/deed-spec/)
+- [The verification engineering note](/reference/engineering/verifying-deeds/)

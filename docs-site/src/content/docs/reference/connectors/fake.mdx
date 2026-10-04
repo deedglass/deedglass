@@ -1,0 +1,24 @@
+---
+title: fake (dev only)
+description: The fake connector's four tools for trying the Gate in dev, which exist only when DEEDGLASS_ENV is dev.
+lastVerified: "2026-10-05"
+---
+
+The `fake` connector exists only when `DEEDGLASS_ENV=dev`. Its tools let you try the Gate, policies and the Witness without any real system:
+
+| Tool | What it does |
+|---|---|
+| `fake.echo` | Returns its arguments. A read. |
+| `fake.write` | Pretends to write and returns success. |
+| `fake.fail` | Fails, as a tool that certainly didn't apply. |
+| `fake.slow` | Waits, to try timeouts and unknown outcomes. |
+
+```sh test=skip reason="needs an agent key on a dev server with a policy that allows fake.*"
+deedglass act fake.echo --args '{"message":"hello"}'
+```
+
+In prod the name `fake` is reserved, and no connector can use it.
+
+## What it doesn't do
+
+- Nothing it does touches a real system, so its verdicts are L0 only.

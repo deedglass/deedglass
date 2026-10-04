@@ -1,0 +1,12 @@
+---
+// The calm 404 (S33 §4 step 3). Never echoes the path.
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
+---
+<StarlightPage frontmatter={{ title: 'There’s no page here', description: 'This page does not exist.', template: 'splash', pagefind: false }}>
+  <p class="dg-404">Search the docs, or start at the <a href="/quickstart/">Quickstart</a>.</p>
+  <p class="dg-404-links"><a href="/errors/">Error codes</a> · <a href="/reference/cli/">CLI reference</a> · <a href="/faq/">FAQ</a></p>
+</StarlightPage>
+<style>
+  .dg-404 { font-size: 1.125rem; color: var(--dg-text-2); }
+  .dg-404-links { color: var(--dg-text-2); }
+</style>

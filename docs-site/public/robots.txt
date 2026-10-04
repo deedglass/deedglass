@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /_kit/
+
+Sitemap: https://docs.deedglass.com/sitemap-index.xml

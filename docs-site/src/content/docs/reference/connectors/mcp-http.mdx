@@ -1,0 +1,42 @@
+---
+title: Remote MCP servers
+description: The mcp_http connector type puts a remote MCP server behind the gateway at /mcp/<name>, with its credential in the vault.
+lastVerified: "2026-10-05"
+---
+
+The `mcp_http` connector puts a remote MCP server behind the Gate. Clients connect to `/mcp/<name>` with their agent key; Deedglass connects upstream with the server's own credential from the vault.
+
+## Config
+
+```yaml title="everything.yaml"
+type: mcp_http
+name: everything
+config:
+  url: https://mcp.example.com/mcp
+  auth: { kind: bearer }   # bearer | header | none
+  timeout_ms: 30000
+  tools_ttl_ms: 30000
+```
+
+| Key | What it does |
+|---|---|
+| `url` | The upstream's Streamable HTTP endpoint. Production needs `https`. |
+| `auth.kind` | `bearer` sends `Authorization: Bearer <credential>`; `header` sends `auth.header: <credential>`; `none` sends nothing. |
+| `timeout_ms` | How long one call may take. |
+| `tools_ttl_ms` | How long the upstream's `tools/list` is cached. |
+
+`deedglass connector credentials set everything --from-env EVERYTHING_TOKEN` stores the credential.
+
+## Behaviour
+
+- Inbound credentials are stripped before anything goes upstream. Each session is keyed by a MAC of the upstream credential.
+- Upstream tools have the side effect `unknown` and connector type `mcp_http`. Write policy rules per tool.
+- Tool names that aren't plain ASCII are hidden and logged.
+- A stopped agent's `tools/call` is recorded and sealed, then refused.
+- Both MCP eras are served: 2026-07-28 with mirrored-header checks, and the 2025 revisions through `initialize`.
+
+## What it doesn't do
+
+- Results are the upstream's words: L0 Reported.
+- Tool descriptions that carry instructions aren't rewritten.
+- There's no OAuth to the upstream in this release: a static credential only.

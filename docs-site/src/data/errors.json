@@ -1,0 +1,718 @@
+[
+  {
+    "code": "invalid_api_key",
+    "status": 401,
+    "type": "authentication_error",
+    "default_message": "The API key isn't valid. Check that you copied all of it (it starts with dg_live_ or dg_test_), or create a new one in Console › Agents.",
+    "owner": "contract",
+    "retryable": false,
+    "doc_url": "https://docs.deedglass.com/errors/invalid_api_key"
+  },
+  {
+    "code": "api_key_revoked",
+    "status": 401,
+    "type": "authentication_error",
+    "default_message": "The API key has been revoked. Create a new key in Console › Agents.",
+    "owner": "contract",
+    "retryable": false,
+    "doc_url": "https://docs.deedglass.com/errors/api_key_revoked"
+  },
+  {
+    "code": "api_key_expired",
+    "status": 401,
+    "type": "authentication_error",
+    "default_message": "The API key expired after it was rolled. Use the new key, or create one in Console › Agents.",
+    "template": "The API key expired at {time} UTC after it was rolled. Use the new key, or create one in Console › Agents.",
+    "owner": "contract",
+    "retryable": false,
+    "doc_url": "https://docs.deedglass.com/errors/api_key_expired"
+  },
+  {
+    "code": "agent_suspended",
+    "status": 403,
+    "type": "permission_error",
+    "default_message": "This agent is suspended. An admin can resume it in Console › Agents.",
+    "template": "Agent \"{name}\" is suspended. An admin can resume it in Console › Agents.",
+    "owner": "contract",
+    "retryable": false,
+    "doc_url": "https://docs.deedglass.com/errors/agent_suspended"
+  },
+  {
+    "code": "agent_stopped",
+    "status": 403,
+    "type": "permission_error",
+    "default_message": "This agent is stopped. Deedglass refuses its calls until an admin starts it in Console › Agents.",
+    "template": "Agent \"{name}\" is stopped. Deedglass refuses its calls until an admin starts it in Console › Agents.",
+    "owner": "contract",
+    "retryable": false,
+    "doc_url": "https://docs.deedglass.com/errors/agent_stopped"
+  },
+  {
+    "code": "org_stopped",
+    "status": 403,
+    "type": "permission_error",
+    "default_message": "All agents in this org are stopped. An owner can start them again in Console › Settings.",
+    "template": "All agents in {org} are stopped. An owner can start them again in Console › Settings.",
+    "owner": "contract",
+    "retryable": false,
+    "doc_url": "https://docs.deedglass.com/errors/org_stopped"
+  },
+  {
+    "code": "insufficient_scope",
+    "status": 403,
+    "type": "permission_error",
+    "default_message": "This key doesn't have the scope this endpoint needs. Create a key with that scope in Console › Agents.",
+    "template": "This key doesn't have the {scope} scope. Create a key with {scope} in Console › Agents.",
+    "owner": "contract",
+    "retryable": false,
+    "doc_url": "https://docs.deedglass.com/errors/insufficient_scope"
+  },
+  {
+    "code": "policy_denied",
+    "status": 403,
+    "type": "policy_error",
+    "default_message": "Blocked by policy. The action in Console › Actions names the rule and the reason.",
+    "template": "Blocked by policy \"{rule}\": {reason}.",
+    "owner": "contract",
+    "retryable": false,
+    "doc_url": "https://docs.deedglass.com/errors/policy_denied"
+  },
+  {
+    "code": "approval_required",
+    "status": 403,
+    "type": "policy_error",
+    "default_message": "This action needs approval. It runs once someone approves it in Console › Approvals.",
+    "owner": "contract",
+    "retryable": false,
+    "doc_url": "https://docs.deedglass.com/errors/approval_required"
+  },
+  {
+    "code": "approval_expired",
+    "status": 409,
+    "type": "invalid_request_error",
+    "default_message": "This approval expired before anyone decided. Nothing ran. Ask the agent to try again if it's still needed.",
+    "template": "This approval expired at {time}. Nothing ran. Ask the agent to try again if it's still needed.",
+    "owner": "contract",
+    "retryable": false,
+    "doc_url": "https://docs.deedglass.com/errors/approval_expired"
+  },
+  {
+    "code": "budget_exceeded",
+    "status": 429,
+    "type": "rate_limit_error",
+    "default_message": "This agent has used its budget for the period. It resets when the next period starts, or an admin can raise it.",
+    "template": "This agent has used its budget for the period. It resets at {time}, or an admin can raise it.",
+    "owner": "contract",
+    "retryable": true,
+    "doc_url": "https://docs.deedglass.com/errors/budget_exceeded"
+  },
+  {
+    "code": "intent_required",
+    "status": 403,
+    "type": "permission_error",
+    "default_message": "This agent must sign its requests. Send a Deedglass-Intent header.",
+    "owner": "contract",
+    "retryable": false,
+    "doc_url": "https://docs.deedglass.com/errors/intent_required"
+  },
+  {
+    "code": "intent_invalid",
+    "status": 403,
+    "type": "permission_error",
+    "default_message": "The signed intent doesn't match this request. Sign the exact tool and arguments you send.",
+    "owner": "contract",
+    "retryable": false,
+    "doc_url": "https://docs.deedglass.com/errors/intent_invalid"
+  },
+  {
+    "code": "intent_replay",
+    "status": 403,
+    "type": "permission_error",
+    "default_message": "This signed intent was already used. Sign a new one with a fresh nonce.",
+    "owner": "contract",
+    "retryable": false,
+    "doc_url": "https://docs.deedglass.com/errors/intent_replay"
+  },
+  {
+    "code": "tool_unknown",
+    "status": 404,
+    "type": "invalid_request_error",
+    "default_message": "No connector provides this tool. Check the name, or add a connector in Console › Connectors.",
+    "template": "No tool named \"{tool}\". Tools look like \"connector.tool\", for example \"fake.echo\".",
+    "owner": "contract",
+    "retryable": false,
+    "doc_url": "https://docs.deedglass.com/errors/tool_unknown"
+  },
+  {
+    "code": "connector_unavailable",
+    "status": 503,
+    "type": "api_error",
+    "default_message": "The connector isn't reachable right now. Check Console › Connectors, then retry.",
+    "owner": "contract",
+    "retryable": true,
+    "doc_url": "https://docs.deedglass.com/errors/connector_unavailable"
+  },
+  {
+    "code": "upstream_error",
+    "status": 502,
+    "type": "api_error",
+    "default_message": "The tool returned an error. The details are on the action in Console › Actions.",
+    "owner": "contract",
+    "retryable": false,
+    "doc_url": "https://docs.deedglass.com/errors/upstream_error"
+  },
+  {
+    "code": "timeout",
+    "status": 504,
+    "type": "api_error",
+    "default_message": "The request timed out. It may have partly run, so fetch the object to see its state before you send it again.",
+    "template": "The request timed out after {n} s. It may have partly run, so fetch the object to see its state before you send it again.",
+    "owner": "contract",
+    "retryable": true,
+    "doc_url": "https://docs.deedglass.com/errors/timeout"
+  },
+  {
+    "code": "rate_limited",
+    "status": 429,
+    "type": "rate_limit_error",
+    "default_message": "Too many requests. Retry after the number of seconds in the Retry-After header.",
+    "template": "Too many requests. Retry after {n} s.",
+    "owner": "contract",
+    "retryable": true,
+    "doc_url": "https://docs.deedglass.com/errors/rate_limited"
+  },
+  {
+    "code": "idempotency_conflict",
+    "status": 422,
+    "type": "invalid_request_error",
+    "default_message": "This Idempotency-Key was already used with a different request. Use a new key for a new request.",
+    "owner": "contract",
+    "retryable": false,
+    "doc_url": "https://docs.deedglass.com/errors/idempotency_conflict"
+  },
+  {
+    "code": "validation_failed",
+    "status": 400,
+    "type": "invalid_request_error",
+    "default_message": "A field in the request isn't valid. The param field names it.",
+    "template": "{field-specific sentence}.",
+    "owner": "contract",
+    "retryable": false,
+    "doc_url": "https://docs.deedglass.com/errors/validation_failed"
+  },
+  {
+    "code": "not_found",
+    "status": 404,
+    "type": "invalid_request_error",
+    "default_message": "There's no object with that id in this org. Check the id.",
+    "template": "There's no {object} with id {id}. / There's no endpoint at {METHOD} {path}. Did you mean {p}?",
+    "owner": "contract",
+    "retryable": false,
+    "doc_url": "https://docs.deedglass.com/errors/not_found"
+  },
+  {
+    "code": "conflict",
+    "status": 409,
+    "type": "invalid_request_error",
+    "default_message": "That conflicts with the current state. Fetch the latest version, then retry.",
+    "owner": "contract",
+    "retryable": false,
+    "doc_url": "https://docs.deedglass.com/errors/conflict"
+  },
+  {
+    "code": "internal_error",
+    "status": 500,
+    "type": "api_error",
+    "default_message": "Something went wrong on our side. It's logged under this request id. Retry, and share the id if it happens again.",
+    "owner": "contract",
+    "retryable": false,
+    "doc_url": "https://docs.deedglass.com/errors/internal_error"
+  },
+  {
+    "code": "authentication_required",
+    "status": 401,
+    "type": "authentication_error",
+    "default_message": "This endpoint needs an API key (Authorization: Bearer dg_live_…) or a Console session.",
+    "owner": "S03",
+    "retryable": false,
+    "doc_url": "https://docs.deedglass.com/errors/authentication_required"
+  },
+  {
+    "code": "method_not_allowed",
+    "status": 405,
+    "type": "invalid_request_error",
+    "default_message": "This method isn't supported on this path. The Allow header lists the ones that are.",
+    "template": "{METHOD} isn't supported on {path}. Use {allowed}.",
+    "owner": "S03",
+    "retryable": false,
+    "doc_url": "https://docs.deedglass.com/errors/method_not_allowed"
+  },
+  {
+    "code": "request_too_large",
+    "status": 413,
+    "type": "invalid_request_error",
+    "default_message": "The request body is too large for this endpoint. Send a smaller body.",
+    "template": "The request body is larger than {limit}. Send a smaller body.",
+    "owner": "S03",
+    "retryable": false,
+    "doc_url": "https://docs.deedglass.com/errors/request_too_large"
+  },
+  {
+    "code": "unsupported_media_type",
+    "status": 415,
+    "type": "invalid_request_error",
+    "default_message": "Send the body as JSON, with Content-Type: application/json.",
+    "owner": "S03",
+    "retryable": false,
+    "doc_url": "https://docs.deedglass.com/errors/unsupported_media_type"
+  },
+  {
+    "code": "invalid_json",
+    "status": 400,
+    "type": "invalid_request_error",
+    "default_message": "The body isn't valid JSON. Fix it and retry.",
+    "template": "The body isn't valid JSON (line {l}, column {c}). Fix it and retry.",
+    "owner": "S03",
+    "retryable": false,
+    "doc_url": "https://docs.deedglass.com/errors/invalid_json"
+  },
+  {
+    "code": "api_version_invalid",
+    "status": 400,
+    "type": "invalid_request_error",
+    "default_message": "Deedglass-Version isn't a known version. Use 2026-10-01, or leave it out to use your org's pinned version.",
+    "owner": "S03",
+    "retryable": false,
+    "doc_url": "https://docs.deedglass.com/errors/api_version_invalid"
+  },
+  {
+    "code": "idempotency_key_invalid",
+    "status": 400,
+    "type": "invalid_request_error",
+    "default_message": "Idempotency-Key must be 1 to 255 printable ASCII characters.",
+    "owner": "S03",
+    "retryable": false,
+    "doc_url": "https://docs.deedglass.com/errors/idempotency_key_invalid"
+  },
+  {
+    "code": "idempotency_key_in_use",
+    "status": 409,
+    "type": "invalid_request_error",
+    "default_message": "A request with this Idempotency-Key is still running. Retry in a moment.",
+    "owner": "S03",
+    "retryable": true,
+    "doc_url": "https://docs.deedglass.com/errors/idempotency_key_in_use"
+  },
+  {
+    "code": "service_unavailable",
+    "status": 503,
+    "type": "api_error",
+    "default_message": "Deedglass is starting or shutting down. Retry in a few seconds.",
+    "owner": "S03",
+    "retryable": true,
+    "doc_url": "https://docs.deedglass.com/errors/service_unavailable"
+  },
+  {
+    "code": "session_expired",
+    "status": 401,
+    "type": "authentication_error",
+    "default_message": "Your session ended. Sign in again.",
+    "template": "Your session ended after 12 hours without activity. Sign in again at {base}/login.",
+    "owner": "S07",
+    "retryable": false,
+    "doc_url": "https://docs.deedglass.com/errors/session_expired"
+  },
+  {
+    "code": "csrf_failed",
+    "status": 403,
+    "type": "permission_error",
+    "default_message": "This request is missing its security token. Reload the page and try again.",
+    "owner": "S07",
+    "retryable": false,
+    "doc_url": "https://docs.deedglass.com/errors/csrf_failed"
+  },
+  {
+    "code": "insufficient_role",
+    "status": 403,
+    "type": "permission_error",
+    "default_message": "Your role in this org doesn't allow this. Ask an owner to change your role.",
+    "template": "Your role in {org} is {Role}, and {what} needs {MinRole}. Ask an owner to change your role.",
+    "owner": "S07",
+    "retryable": false,
+    "doc_url": "https://docs.deedglass.com/errors/insufficient_role"
+  },
+  {
+    "code": "login_link_invalid",
+    "status": 400,
+    "type": "invalid_request_error",
+    "default_message": "This sign-in link has expired or was already used. Get a new one at /login.",
+    "template": "This sign-in link has expired or was already used. Get a new one at {base}/login.",
+    "owner": "S07",
+    "retryable": false,
+    "doc_url": "https://docs.deedglass.com/errors/login_link_invalid"
+  },
+  {
+    "code": "login_code_invalid",
+    "status": 400,
+    "type": "invalid_request_error",
+    "default_message": "That code doesn't match, or it has expired. Check the latest email, or get a new code.",
+    "owner": "S07",
+    "retryable": false,
+    "doc_url": "https://docs.deedglass.com/errors/login_code_invalid"
+  },
+  {
+    "code": "last_owner",
+    "status": 409,
+    "type": "invalid_request_error",
+    "default_message": "This org needs at least one owner. Make someone else an owner first.",
+    "template": "{org} needs at least one owner. Make someone else an owner first.",
+    "owner": "S07",
+    "retryable": false,
+    "doc_url": "https://docs.deedglass.com/errors/last_owner"
+  },
+  {
+    "code": "policy_unavailable",
+    "status": 403,
+    "type": "policy_error",
+    "default_message": "Deedglass could not evaluate the policy for this action, so it did not run. An admin can check Console › Policies.",
+    "owner": "S11",
+    "retryable": false,
+    "doc_url": "https://docs.deedglass.com/errors/policy_unavailable"
+  },
+  {
+    "code": "policy_invalid",
+    "status": 400,
+    "type": "invalid_request_error",
+    "default_message": "The policy wasn't accepted. The diagnostics list each problem with its line and a hint.",
+    "template": "The policy has {n} errors. The first is on line {line}: {message}.",
+    "owner": "S12",
+    "retryable": false,
+    "doc_url": "https://docs.deedglass.com/errors/policy_invalid"
+  },
+  {
+    "code": "credentials_missing",
+    "status": 409,
+    "type": "invalid_request_error",
+    "default_message": "This connector has no credentials yet. Store them with deedglass connector credentials set, then retry.",
+    "template": "The connector \"{name}\" has no credentials yet. Run deedglass connector credentials set {name} --from-env {NAME}_TOKEN.",
+    "owner": "S16",
+    "retryable": false,
+    "doc_url": "https://docs.deedglass.com/errors/credentials_missing"
+  },
+  {
+    "code": "destination_blocked",
+    "status": 400,
+    "type": "invalid_request_error",
+    "default_message": "The connector's destination is blocked by Deedglass's network rules. An admin can see why in Console › Connectors.",
+    "template": "base_url resolves to {ip}, {a class}. Deedglass never connects to it. Use the service's public address.",
+    "owner": "S16",
+    "retryable": false,
+    "doc_url": "https://docs.deedglass.com/errors/destination_blocked"
+  },
+  {
+    "code": "vault_unavailable",
+    "status": 503,
+    "type": "api_error",
+    "default_message": "Deedglass couldn't open this connector's credentials. An admin has been alerted.",
+    "template": "{n} credentials use {kek_id}, which isn't in DEEDGLASS_VAULT_KEY. Add it back as the second key, restart, then run deedglass vault rotate.",
+    "owner": "S16",
+    "retryable": true,
+    "doc_url": "https://docs.deedglass.com/errors/vault_unavailable"
+  },
+  {
+    "code": "upstream_auth_failed",
+    "status": 502,
+    "type": "api_error",
+    "default_message": "The service refused the connector's credentials. An admin can replace them in Console › Connectors.",
+    "owner": "S16",
+    "retryable": false,
+    "doc_url": "https://docs.deedglass.com/errors/upstream_auth_failed"
+  },
+  {
+    "code": "upstream_not_found",
+    "status": 502,
+    "type": "api_error",
+    "default_message": "The service has nothing at that address. Check the arguments.",
+    "owner": "S16",
+    "retryable": false,
+    "doc_url": "https://docs.deedglass.com/errors/upstream_not_found"
+  },
+  {
+    "code": "upstream_rate_limited",
+    "status": 429,
+    "type": "rate_limit_error",
+    "default_message": "The service is limiting requests. Wait, then send the call again.",
+    "owner": "S16",
+    "retryable": true,
+    "doc_url": "https://docs.deedglass.com/errors/upstream_rate_limited"
+  },
+  {
+    "code": "response_too_large",
+    "status": 502,
+    "type": "api_error",
+    "default_message": "The service answered with more than the connector's max_response_bytes, so Deedglass kept none of it. The call ran.",
+    "owner": "S16",
+    "retryable": false,
+    "doc_url": "https://docs.deedglass.com/errors/response_too_large"
+  },
+  {
+    "code": "statement_refused",
+    "status": 400,
+    "type": "invalid_request_error",
+    "default_message": "Refused by the Postgres connector. Deedglass runs one plain statement per action, and never transaction control, schema changes or schema deedglass.",
+    "template": "Refused by the Postgres connector: the statement has {n} commands. Deedglass runs one statement per action.",
+    "owner": "S17",
+    "retryable": false,
+    "doc_url": "https://docs.deedglass.com/errors/statement_refused"
+  },
+  {
+    "code": "row_limit_exceeded",
+    "status": 400,
+    "type": "invalid_request_error",
+    "default_message": "The statement changed more rows than this connector allows. Nothing was committed. Narrow the WHERE clause.",
+    "template": "The statement changed {n} rows, over this connector's limit of {max}. Nothing was committed. Narrow the WHERE clause.",
+    "owner": "S17",
+    "retryable": false,
+    "doc_url": "https://docs.deedglass.com/errors/row_limit_exceeded"
+  },
+  {
+    "code": "database_role_unsafe",
+    "status": 503,
+    "type": "api_error",
+    "default_message": "The connector's database role is a superuser. Deedglass refuses to run agent SQL with it. Run deedglass connector postgres init to create deedglass_agent.",
+    "owner": "S17",
+    "retryable": true,
+    "doc_url": "https://docs.deedglass.com/errors/database_role_unsafe"
+  },
+  {
+    "code": "database_not_ready",
+    "status": 503,
+    "type": "api_error",
+    "default_message": "Deedglass isn't set up in this database yet. Run deedglass connector postgres init.",
+    "template": "Deedglass isn't set up in this database yet. Run deedglass connector postgres init --connector {name}.",
+    "owner": "S17",
+    "retryable": true,
+    "doc_url": "https://docs.deedglass.com/errors/database_not_ready"
+  },
+  {
+    "code": "witness_not_configured",
+    "status": 409,
+    "type": "invalid_request_error",
+    "default_message": "This connector isn't witnessed, so it has no decoder. Turn on witness.enabled in its config first.",
+    "template": "The connector \"{name}\" isn't witnessed. Set witness.enabled to true in its config, then run deedglass connector postgres check {name}.",
+    "owner": "S20",
+    "retryable": false,
+    "doc_url": "https://docs.deedglass.com/errors/witness_not_configured"
+  },
+  {
+    "code": "approval_decided",
+    "status": 409,
+    "type": "invalid_request_error",
+    "default_message": "This approval was already decided. Console › Approvals shows who decided and when.",
+    "template": "This approval was already decided: {outcome} by {name} at {time}.",
+    "owner": "S22",
+    "retryable": false,
+    "doc_url": "https://docs.deedglass.com/errors/approval_decided"
+  },
+  {
+    "code": "already_countersigned",
+    "status": 409,
+    "type": "invalid_request_error",
+    "default_message": "You already countersigned this. It needs another person.",
+    "template": "You already countersigned this. It needs {n} more {person}.",
+    "owner": "S22",
+    "retryable": false,
+    "doc_url": "https://docs.deedglass.com/errors/already_countersigned"
+  },
+  {
+    "code": "approver_not_eligible",
+    "status": 403,
+    "type": "permission_error",
+    "default_message": "You're not an approver for this rule. Ask one of its approvers to countersign.",
+    "template": "Rule \"{rule}\" needs {approvers} to countersign. Ask one of them.",
+    "owner": "S22",
+    "retryable": false,
+    "doc_url": "https://docs.deedglass.com/errors/approver_not_eligible"
+  },
+  {
+    "code": "self_approval",
+    "status": 403,
+    "type": "permission_error",
+    "default_message": "This action runs on your behalf, so another approver has to countersign it. You can still deny it.",
+    "owner": "S22",
+    "retryable": false,
+    "doc_url": "https://docs.deedglass.com/errors/self_approval"
+  },
+  {
+    "code": "approval_needs_person",
+    "status": 403,
+    "type": "permission_error",
+    "default_message": "Approvals need a person. Agents and API keys can't countersign. Use Console › Approvals or the emailed link.",
+    "owner": "S22",
+    "retryable": false,
+    "doc_url": "https://docs.deedglass.com/errors/approval_needs_person"
+  },
+  {
+    "code": "context_changed",
+    "status": 409,
+    "type": "invalid_request_error",
+    "default_message": "What you reviewed is out of date. Reload the approval and review it again.",
+    "owner": "S22",
+    "retryable": false,
+    "doc_url": "https://docs.deedglass.com/errors/context_changed"
+  },
+  {
+    "code": "approval_unsatisfiable",
+    "status": 403,
+    "type": "policy_error",
+    "default_message": "No one in this org can approve this, so it did not run. Invite another admin, or allow self-countersign in Console › Settings › Approvals.",
+    "template": "No one in this org can approve this: the rule needs {n} people and only {m} {is} eligible. Nothing was run. Invite another admin, or allow self-countersign in Console › Settings › Approvals.",
+    "owner": "S22",
+    "retryable": false,
+    "doc_url": "https://docs.deedglass.com/errors/approval_unsatisfiable"
+  },
+  {
+    "code": "approval_link_invalid",
+    "status": 401,
+    "type": "authentication_error",
+    "default_message": "This approval link has expired or was already used. Open Console › Approvals.",
+    "owner": "S22",
+    "retryable": false,
+    "doc_url": "https://docs.deedglass.com/errors/approval_link_invalid"
+  },
+  {
+    "code": "approval_link_review_only",
+    "status": 403,
+    "type": "permission_error",
+    "default_message": "Your org decides approvals in the Console. Open Console › Approvals to countersign.",
+    "owner": "S22",
+    "retryable": false,
+    "doc_url": "https://docs.deedglass.com/errors/approval_link_review_only"
+  },
+  {
+    "code": "approver_unmapped",
+    "status": 403,
+    "type": "permission_error",
+    "default_message": "No person in this org matches that Slack account. Invite them in Console › Settings › Members.",
+    "owner": "S29",
+    "retryable": false,
+    "doc_url": "https://docs.deedglass.com/errors/approver_unmapped"
+  },
+  {
+    "code": "stripe_live_key_refused",
+    "status": 400,
+    "type": "invalid_request_error",
+    "default_message": "This is a live-mode Stripe key. Deedglass connects to Stripe sandboxes only. Use a restricted key that starts with rk_test_.",
+    "owner": "S30",
+    "retryable": false,
+    "doc_url": "https://docs.deedglass.com/errors/stripe_live_key_refused"
+  },
+  {
+    "code": "stripe_livemode_detected",
+    "status": 502,
+    "type": "api_error",
+    "default_message": "The stripe connector is disabled. An admin has been alerted.",
+    "template": "Stripe answered in live mode for request {req}. Deedglass disabled the {name} connector. Check the request in your Stripe dashboard, then replace the key with a sandbox key.",
+    "owner": "S30",
+    "retryable": false,
+    "doc_url": "https://docs.deedglass.com/errors/stripe_livemode_detected"
+  },
+  {
+    "code": "upstream_approval_pending",
+    "status": 502,
+    "type": "api_error",
+    "default_message": "Stripe is holding this for its own approval. Deedglass can't see whether a Stripe reviewer approves it. Check Settings › Approvals in Stripe.",
+    "template": "Stripe is holding this refund for its own approval ({apreq}). Deedglass can't see whether a Stripe reviewer approves it. Check Settings › Approvals in Stripe.",
+    "owner": "S30",
+    "retryable": false,
+    "doc_url": "https://docs.deedglass.com/errors/upstream_approval_pending"
+  },
+  {
+    "code": "undo_unavailable",
+    "status": 409,
+    "type": "invalid_request_error",
+    "default_message": "Undo isn't available for this action. The checks field lists each failing check with its fix.",
+    "template": "Undo isn't available for {act}: {n} check failed ({ids}). Run deedglass undo preview {act} for the fix.",
+    "owner": "S23",
+    "retryable": false,
+    "doc_url": "https://docs.deedglass.com/errors/undo_unavailable"
+  },
+  {
+    "code": "undo_plan_stale",
+    "status": 409,
+    "type": "invalid_request_error",
+    "default_message": "The rows changed since you previewed this undo. Preview it again and use the new plan.",
+    "owner": "S23",
+    "retryable": false,
+    "doc_url": "https://docs.deedglass.com/errors/undo_plan_stale"
+  },
+  {
+    "code": "already_undone",
+    "status": 409,
+    "type": "invalid_request_error",
+    "default_message": "This action was already undone, or an undo of it is waiting. Look at the action's undo object.",
+    "template": "{act} was already undone by {undo} at {time}. / An undo of {act} is already waiting for approval: {undo}.",
+    "owner": "S23",
+    "retryable": false,
+    "doc_url": "https://docs.deedglass.com/errors/already_undone"
+  },
+  {
+    "code": "undo_conflict",
+    "status": 409,
+    "type": "invalid_request_error",
+    "default_message": "A row changed after the undo's plan was made, so Postgres rolled the undo back. Nothing was changed. Preview the undo again.",
+    "template": "Row {table} {key} changed after the plan was made ({column} is now {value}). Nothing was changed. Preview the undo again.",
+    "owner": "S23",
+    "retryable": false,
+    "doc_url": "https://docs.deedglass.com/errors/undo_conflict"
+  },
+  {
+    "code": "replay_too_large",
+    "status": 400,
+    "type": "invalid_request_error",
+    "default_message": "This replay covers more than 1,000,000 actions. Narrow the window with from and to.",
+    "template": "This replay covers {n} actions; the limit is 1,000,000. Narrow the window with from and to.",
+    "owner": "S27",
+    "retryable": false,
+    "doc_url": "https://docs.deedglass.com/errors/replay_too_large"
+  },
+  {
+    "code": "replay_window_invalid",
+    "status": 400,
+    "type": "invalid_request_error",
+    "default_message": "The window must start before it ends, and it can be at most 90 days long. Send from before to.",
+    "owner": "S27",
+    "retryable": false,
+    "doc_url": "https://docs.deedglass.com/errors/replay_window_invalid"
+  },
+  {
+    "code": "suggestion_stale",
+    "status": 409,
+    "type": "invalid_request_error",
+    "default_message": "The policy changed since this suggestion was written. Generate suggestions again: POST /v1/suggestions/generate.",
+    "template": "{policy} v{now} has been enforced since this suggestion was written for v{base}. Generate suggestions again: POST /v1/suggestions/generate.",
+    "owner": "S28",
+    "retryable": false,
+    "doc_url": "https://docs.deedglass.com/errors/suggestion_stale"
+  },
+  {
+    "code": "shadow_slot_taken",
+    "status": 409,
+    "type": "invalid_request_error",
+    "default_message": "Another version is already running in shadow. Promote or clear it first, or accept with replace_shadow: true to replace it.",
+    "template": "{policy} v{n} is already running in shadow. Promote or clear it first, or accept with replace_shadow: true to replace it.",
+    "owner": "S28",
+    "retryable": false,
+    "doc_url": "https://docs.deedglass.com/errors/shadow_slot_taken"
+  },
+  {
+    "code": "suggestion_decided",
+    "status": 409,
+    "type": "invalid_request_error",
+    "default_message": "This suggestion was already decided. Look at its status, or generate suggestions again.",
+    "template": "This suggestion was already accepted on {date} by {who}. It created {policy} v{n}.",
+    "owner": "S28",
+    "retryable": false,
+    "doc_url": "https://docs.deedglass.com/errors/suggestion_decided"
+  }
+]

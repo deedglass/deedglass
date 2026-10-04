@@ -8,7 +8,7 @@ DATE     := $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
 BI       := github.com/deedglass/deedglass/internal/buildinfo
 LDFLAGS  := -s -w -X $(BI).Version=$(VERSION) -X $(BI).Commit=$(COMMIT) -X $(BI).Modified=$(MODIFIED) -X $(BI).Date=$(DATE)
 
-.PHONY: py-ci py-build py-examples web-install web-tokens web-build web-test web-e2e web-lighthouse web-dev build-only bench-undo all help ci build test test-short vet fmt fmt-check tidy-check testdata-check rename-guard banned-words nocgo \
+.PHONY: docs docs-dev docs-check docs-snippets docs-lighthouse py-ci py-build py-examples web-install web-tokens web-build web-test web-e2e web-lighthouse web-dev build-only bench-undo all help ci build test test-short vet fmt fmt-check tidy-check testdata-check rename-guard banned-words nocgo \
 	integration matrix fuzz bench bench-store bench-deed cover clean \
 	dev dev-down dev-reset dev-logs run docker bench-http bench-verify \
 	web-verify-install web-verify-test sdk-ts sdk-ts-it sdk-sync-verify sdk-runtime sdk-examples web-verify-build web-verify-serve gencopy genmark bench-mark bench-ledger bench-stop bench-intents bench-gate bench-witness policy-test \
@@ -308,6 +308,29 @@ web-verify-serve: web-verify-build ## the verify page on http://127.0.0.1:5178 (
 
 # --- the TypeScript SDK (S31): @deedglass/sdk, zero runtime dependencies; dev tools pinned in sdk/typescript/package-lock.json (ADR-062) ---
 SDK_TS := sdk/typescript
+
+# S33: docs.deedglass.com (docs-site/, Astro + Starlight, ADR-064). Dev and build tools only, exact pins,
+# installed without install scripts; nothing from npm runs on the published site.
+DOCS := docs-site
+$(DOCS)/node_modules/.package-lock.json: $(DOCS)/package-lock.json
+	cd $(DOCS) && npm ci --ignore-scripts --no-audit --no-fund
+
+docs: $(DOCS)/node_modules/.package-lock.json ## S33: build docs-site/dist (imports docs/*.md, generates /errors, CLI, config and attack pages, postbuild headers and redirects)
+	cd $(DOCS) && npm run build --silent
+
+docs-dev: $(DOCS)/node_modules/.package-lock.json ## S33: the docs dev server on http://127.0.0.1:4321 (drafts shown)
+	cd $(DOCS) && npm run dev
+
+docs-check: docs ## S33: every offline docs gate: generated data fresh, unit tests, spelling, banned words, pages, drafts, pricing, claims, css, install links, workflows, errors, links and dist
+	cd $(DOCS) && node scripts/check-all.mjs --offline
+
+docs-snippets: $(DOCS)/node_modules/.package-lock.json ## S33: run the docs' sh test blocks against the demo stack (make demo-up DEMO_PORT=8091 first; the Quickstart runs deedglass init in Docker) and type-check python/ts blocks
+	@test -f examples/demo/.demo-keys || { echo "✕ The demo stack isn't up. Next: make demo-up DEMO_PORT=8091"; exit 1; }
+	$(MAKE) --no-print-directory build-only
+	cd $(DOCS) && DOCS_SERVER=http://127.0.0.1:$${DEMO_PORT:-8091} node scripts/test-snippets.mjs
+
+docs-lighthouse: docs ## S33: Lighthouse 13 (from web/) on the six docs pages, desktop and mobile; JSON in ~/txv/ops/plan/prompts-v7/reports/lighthouse/S33
+	cd $(DOCS) && node scripts/lighthouse.mjs
 
 $(SDK_TS)/node_modules/.package-lock.json: $(SDK_TS)/package-lock.json
 	cd $(SDK_TS) && npm ci --ignore-scripts --no-audit --no-fund

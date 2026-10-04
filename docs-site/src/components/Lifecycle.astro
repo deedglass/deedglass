@@ -1,0 +1,71 @@
+---
+// The action state machine (contract §5), drawn at build time from src/data/lifecycle.json, which
+// gen-data.mjs reads from docs/GATE.md (kept equal to internal/gate/lifecycle by a Go test). A
+// static SVG with a text alternative: no client-side script. A state without a position here
+// fails the build, so a new state can't be drawn silently wrong.
+import data from '../data/lifecycle.json';
+const pos: Record<string, [number, number]> = {
+  received: [1, 0], authenticated: [1, 1], evaluated: [1, 2],
+  denied: [0, 3], pending_approval: [1, 3], executing: [2, 3],
+  expired: [0, 4], cancelled: [1, 4], executed: [2, 4], failed: [3, 4],
+  witnessing: [2, 5],
+  verified: [1, 6], mismatch: [2, 6], unverifiable: [3, 6],
+  sealed: [1.5, 7.2],
+};
+for (const s of data.states) if (!pos[s]) throw new Error(`Lifecycle.astro: no position for state ${s}`);
+const W = 156, H = 34, GX = 180, GY = 72, PX = 8, PY = 8;
+const box = (s: string) => { const [c, r] = pos[s]; return { x: PX + c * GX, y: PY + r * GY }; };
+const terminalish = new Set(['denied', 'expired', 'cancelled', 'failed', 'verified', 'mismatch', 'unverifiable']);
+const tone = (s: string) => (s === 'sealed' ? 'sealed' : s === 'verified' ? 'verified' : s === 'mismatch' ? 'bad' : s === 'denied' ? 'denied' : s === 'unverifiable' ? 'gap' : s === 'pending_approval' ? 'wait' : 'plain');
+const width = PX * 2 + 3 * GX + W;
+const height = PY * 2 + 7.2 * GY + H;
+function path(a: string, b: string) {
+  const A = box(a), B = box(b);
+  const ax = A.x + W / 2, bx = B.x + W / 2;
+  if (pos[a][1] === pos[b][1]) {
+    const dir = B.x > A.x ? 1 : -1;
+    const y = A.y + H / 2;
+    return `M${A.x + (dir > 0 ? W : 0)} ${y} L${B.x + (dir > 0 ? 0 : W)} ${y}`;
+  }
+  const y1 = A.y + H, y2 = B.y;
+  const my = (y1 + y2) / 2;
+  return `M${ax} ${y1} C${ax} ${my} ${bx} ${my} ${bx} ${y2}`;
+}
+const lines = data.edges.map(([a, b]) => `${a} → ${b}`);
+---
+<figure class="dg-life">
+  <div class="scroll" tabindex="0" role="group" aria-label="The action lifecycle diagram; the text list below has every edge">
+    <svg viewBox={`0 0 ${width} ${height}`} width={width} height={height} aria-hidden="true" focusable="false">
+      <defs><marker id="dg-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L8 4 L0 8 z" class="head" /></marker></defs>
+      {data.edges.map(([a, b]) => <path d={path(a, b)} class:list={['edge', terminalish.has(a) && b === 'sealed' && 'toseal']} marker-end="url(#dg-arrow)" />)}
+      {data.states.map((s) => { const { x, y } = box(s); return (
+        <g class:list={['node', tone(s)]}><rect x={x} y={y} width={W} height={H} rx="10" /><text x={x + W / 2} y={y + H / 2 + 4.5} text-anchor="middle">{s}</text></g>
+      ); })}
+    </svg>
+  </div>
+  <figcaption>
+    <details>
+      <summary>Every edge as text ({data.edges.length} edges, {data.states.length} states)</summary>
+      <ul>{lines.map((l) => <li><code>{l}</code></li>)}</ul>
+    </details>
+  </figcaption>
+</figure>
+<style>
+  .dg-life { margin: 1.5rem 0; }
+  .scroll { overflow-x: auto; border: 1px solid var(--dg-hairline); border-radius: 14px; background: var(--dg-surface); padding: 0.75rem; }
+  svg { display: block; margin: 0 auto; max-width: none; height: auto; }
+  .edge { fill: none; stroke: var(--dg-text-3); stroke-width: 1.25; }
+  .edge.toseal { stroke-dasharray: 3 4; }
+  .head { fill: var(--dg-text-3); }
+  .node rect { fill: var(--sl-color-bg); stroke: var(--dg-hairline); stroke-width: 1; }
+  .node text { font-family: var(--__sl-font-mono); font-size: 12.5px; fill: var(--sl-color-white); }
+  .node.verified rect { fill: var(--dg-verified-bg); stroke: none; } .node.verified text { fill: var(--dg-verified-text); }
+  .node.bad rect { fill: var(--dg-mismatch-bg); stroke: none; } .node.bad text { fill: var(--dg-mismatch-text); }
+  .node.gap rect { fill: var(--dg-unverifiable-bg); stroke: none; } .node.gap text { fill: var(--dg-unverifiable-text); }
+  .node.wait rect { fill: var(--dg-pending-bg); stroke: none; } .node.wait text { fill: var(--dg-pending-text); }
+  .node.denied rect { stroke: var(--dg-denied); } .node.denied text { fill: var(--dg-denied); }
+  .node.sealed rect { stroke: var(--dg-accent); }
+  figcaption { margin-top: 0.75rem; font-size: 0.875rem; }
+  figcaption ul { columns: 2; padding-inline-start: 1.1rem; }
+  @media (max-width: 40rem) { figcaption ul { columns: 1; } }
+</style>

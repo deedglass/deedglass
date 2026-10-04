@@ -1,0 +1,489 @@
+/* docs.deedglass.com theme (S33 §3.2): brand tokens → Starlight's custom properties.
+   Every value comes from tokens.gen.css (a byte copy of web/src/styles/tokens.css, checked by
+   `npm run gen:check`) or from DESIGN.md. Dark is the default, as in the Console.
+   Rules: aurora appears once (the home hero, .dg-hero-glow); red only for mismatch, deny and
+   danger; glass only on the top bar; focus is a 2px accent ring with a 2px offset. */
+
+:root {
+  --sl-font: 'Inter Variable', 'Inter Fallback', ui-sans-serif, system-ui, sans-serif;
+  --sl-font-mono: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* dark ramp (brand §6.1) */
+  --sl-color-white: var(--snow-text);
+  --sl-color-gray-1: var(--snow-text);
+  --sl-color-gray-2: var(--slate-300);
+  --sl-color-gray-3: var(--slate-400);
+  --sl-color-gray-4: var(--slate-450);
+  --sl-color-gray-5: var(--ink-700);
+  --sl-color-gray-6: var(--ink-850);
+  --sl-color-gray-7: var(--ink-900);
+  --sl-color-black: var(--ink-950);
+
+  --sl-color-accent-low: var(--ink-850);
+  --sl-color-accent: var(--accent-dark);
+  --sl-color-accent-high: var(--accent-dark-hover);
+
+  --sl-color-text: var(--snow-text);
+  --sl-color-text-accent: var(--accent-dark);
+  --sl-color-text-invert: var(--on-accent-dark);
+  --sl-color-bg: var(--ink-950);
+  --sl-color-bg-nav: var(--ink-950);
+  --sl-color-bg-sidebar: var(--ink-950);
+  --sl-color-bg-inline-code: var(--ink-850);
+  --sl-color-bg-accent: var(--accent-dark);
+  --sl-color-hairline-light: var(--ink-800);
+  --sl-color-hairline: var(--ink-800);
+  --sl-color-hairline-shade: var(--ink-950);
+  --sl-color-backdrop-overlay: var(--scrim-dark);
+
+  /* asides and badges map onto the brand's state pairs (brand §6.3), never Starlight's hues */
+  --sl-color-blue-low: var(--ink-850);
+  --sl-color-blue: var(--accent-dark);
+  --sl-color-blue-high: var(--accent-dark);
+  --sl-color-green-low: var(--verified-bg-dark);
+  --sl-color-green: var(--verified-text-dark);
+  --sl-color-green-high: var(--verified-text-dark);
+  --sl-color-orange-low: var(--unverifiable-bg-dark);
+  --sl-color-orange: var(--unverifiable-text-dark);
+  --sl-color-orange-high: var(--unverifiable-text-dark);
+  --sl-color-purple-low: var(--pending-bg-dark);
+  --sl-color-purple: var(--pending-text-dark);
+  --sl-color-purple-high: var(--pending-text-dark);
+  --sl-color-red-low: var(--mismatch-bg-dark);
+  --sl-color-red: var(--mismatch-text-dark);
+  --sl-color-red-high: var(--mismatch-text-dark);
+
+  --sl-shadow-sm: none;
+  --sl-shadow-md: 0 12px 32px rgba(0, 0, 0, 0.36);
+  --sl-shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.36);
+
+  /* type: Inter for prose, 16/28 body, headings with display tracking (brand §7) */
+  --sl-text-h1: 2.25rem;
+  --sl-text-h2: 1.5rem;
+  --sl-text-h3: 1.1875rem;
+  --sl-text-h4: 1.0625rem;
+  --sl-line-height: 1.7;
+  --sl-line-height-headings: 1.2;
+  --sl-text-code: 0.875rem;
+
+  /* layout: the docs text column is 760px (brand §8) */
+  --sl-content-width: 47.5rem;
+  --sl-sidebar-width: 17.5rem;
+  --sl-nav-height: 3.5rem;
+
+  --dg-surface: var(--ink-900);
+  --dg-surface-raised: var(--ink-850);
+  --dg-hairline: var(--ink-800);
+  --dg-text-2: var(--slate-400);
+  --dg-text-3: var(--slate-450);
+  --dg-accent: var(--accent-dark);
+  --dg-focus-offset: var(--ink-950);
+  --dg-verified-text: var(--verified-text-dark);
+  --dg-verified-bg: var(--verified-bg-dark);
+  --dg-mismatch-text: var(--mismatch-text-dark);
+  --dg-mismatch-bg: var(--mismatch-bg-dark);
+  --dg-denied: var(--denied-dark);
+  --dg-pending-text: var(--pending-text-dark);
+  --dg-pending-bg: var(--pending-bg-dark);
+  --dg-unverifiable-text: var(--unverifiable-text-dark);
+  --dg-unverifiable-bg: var(--unverifiable-bg-dark);
+  --dg-allowed-text: var(--allowed-text-dark);
+  --dg-allowed-bg: var(--allowed-bg-dark);
+  --dg-glass: var(--glass-dark);
+  --dg-frost: var(--frost-dark);
+  --dg-pane: var(--white);
+  --dg-ease-enter: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --dg-ease-exit: cubic-bezier(0.4, 0, 1, 1);
+  color-scheme: dark;
+}
+
+:root[data-theme='light'] {
+  --sl-color-white: var(--ink-text);
+  --sl-color-gray-1: var(--ink-text);
+  --sl-color-gray-2: var(--slate-600);
+  --sl-color-gray-3: var(--slate-600);
+  --sl-color-gray-4: var(--slate-500);
+  --sl-color-gray-5: var(--slate-300);
+  --sl-color-gray-6: var(--mist-100);
+  --sl-color-gray-7: var(--white);
+  --sl-color-black: var(--paper-50);
+
+  --sl-color-accent-low: var(--mist-100);
+  --sl-color-accent: var(--accent-light);
+  --sl-color-accent-high: var(--accent-light-hover);
+
+  --sl-color-text: var(--ink-text);
+  --sl-color-text-accent: var(--accent-light);
+  --sl-color-text-invert: var(--on-accent-light);
+  --sl-color-bg: var(--paper-50);
+  --sl-color-bg-nav: var(--paper-50);
+  --sl-color-bg-sidebar: var(--paper-50);
+  --sl-color-bg-inline-code: var(--mist-100);
+  --sl-color-bg-accent: var(--accent-light);
+  --sl-color-hairline-light: var(--hairline-light);
+  --sl-color-hairline: var(--hairline-light);
+  --sl-color-hairline-shade: var(--slate-300);
+  --sl-color-backdrop-overlay: var(--scrim-light);
+
+  --sl-color-blue-low: var(--mist-100);
+  --sl-color-blue: var(--accent-light);
+  --sl-color-blue-high: var(--accent-light);
+  --sl-color-green-low: var(--verified-bg-light);
+  --sl-color-green: var(--verified-text-light);
+  --sl-color-green-high: var(--verified-text-light);
+  --sl-color-orange-low: var(--unverifiable-bg-light);
+  --sl-color-orange: var(--unverifiable-text-light);
+  --sl-color-orange-high: var(--unverifiable-text-light);
+  --sl-color-purple-low: var(--pending-bg-light);
+  --sl-color-purple: var(--pending-text-light);
+  --sl-color-purple-high: var(--pending-text-light);
+  --sl-color-red-low: var(--mismatch-bg-light);
+  --sl-color-red: var(--mismatch-text-light);
+  --sl-color-red-high: var(--mismatch-text-light);
+
+  --sl-shadow-md: 0 12px 32px rgba(13, 15, 20, 0.1);
+  --sl-shadow-lg: 0 12px 32px rgba(13, 15, 20, 0.1);
+
+  --dg-surface: var(--white);
+  --dg-surface-raised: var(--mist-100);
+  --dg-hairline: var(--hairline-light);
+  --dg-text-2: var(--slate-600);
+  --dg-text-3: var(--slate-500);
+  --dg-accent: var(--accent-light);
+  --dg-focus-offset: var(--paper-50);
+  --dg-verified-text: var(--verified-text-light);
+  --dg-verified-bg: var(--verified-bg-light);
+  --dg-mismatch-text: var(--mismatch-text-light);
+  --dg-mismatch-bg: var(--mismatch-bg-light);
+  --dg-denied: var(--denied-light);
+  --dg-pending-text: var(--pending-text-light);
+  --dg-pending-bg: var(--pending-bg-light);
+  --dg-unverifiable-text: var(--unverifiable-text-light);
+  --dg-unverifiable-bg: var(--unverifiable-bg-light);
+  --dg-allowed-text: var(--allowed-text-light);
+  --dg-allowed-bg: var(--allowed-bg-light);
+  --dg-glass: var(--glass-light);
+  --dg-frost: var(--frost-light);
+  --dg-pane: var(--ink-text);
+  color-scheme: light;
+}
+
+/* ---------- type ---------- */
+/* A metric-matched fallback, so the swap to Inter doesn't move the page (CLS 0). */
+@font-face {
+  font-family: 'Inter Fallback';
+  src: local('Arial');
+  ascent-override: 90.44%;
+  descent-override: 22.52%;
+  line-gap-override: 0%;
+  size-adjust: 107.12%;
+}
+body {
+  font-feature-settings: 'cv11', 'ss01';
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+.sl-markdown-content :is(h1, h2, h3, h4),
+h1#_top {
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+h1#_top {
+  letter-spacing: -0.03em;
+}
+.sl-markdown-content h3 {
+  letter-spacing: -0.01em;
+}
+.sl-markdown-content p,
+.sl-markdown-content li {
+  text-wrap: pretty;
+}
+:is(table, .tabular, time, .dg-num) {
+  font-variant-numeric: tabular-nums;
+}
+code,
+kbd,
+pre,
+.dg-mono {
+  font-family: var(--__sl-font-mono);
+  font-variant-ligatures: none;
+}
+.sl-markdown-content :not(pre) > code {
+  font-size: 0.875em;
+  padding: 0.1em 0.35em;
+  border-radius: 6px;
+  border: 1px solid var(--dg-hairline);
+  background: var(--sl-color-bg-inline-code);
+  overflow-wrap: anywhere;
+}
+.sl-markdown-content a {
+  text-underline-offset: 0.2em;
+  text-decoration-thickness: 1px;
+  text-decoration-color: color-mix(in srgb, currentColor 40%, transparent);
+}
+.sl-markdown-content a:hover {
+  text-decoration-color: currentColor;
+}
+
+/* ---------- top bar: the one glass layer (brand §9) ---------- */
+header.header {
+  background: var(--dg-glass);
+  backdrop-filter: blur(20px) saturate(140%);
+  -webkit-backdrop-filter: blur(20px) saturate(140%);
+  border-bottom: 1px solid var(--dg-hairline);
+  box-shadow: inset 0 1px 0 var(--glass-highlight);
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  header.header {
+    background: var(--sl-color-bg);
+  }
+}
+
+/* ---------- sidebar: Linear-calm, no filled pills ---------- */
+#starlight__sidebar {
+  font-size: 0.875rem;
+}
+.sidebar-content .large {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  font-variant: small-caps;
+  text-transform: lowercase;
+  color: var(--dg-text-2);
+}
+.sidebar-content summary .large {
+  font-size: 0.8125rem;
+}
+.sidebar-content a {
+  color: var(--dg-text-2);
+  border-radius: 6px;
+  padding-block: 0.32em;
+  transition: color 120ms var(--dg-ease-enter), background-color 120ms var(--dg-ease-enter);
+}
+.sidebar-content a:hover {
+  color: var(--sl-color-white);
+  background: var(--dg-surface-raised);
+}
+.sidebar-content [aria-current='page'],
+.sidebar-content [aria-current='page']:hover,
+.sidebar-content [aria-current='page']:focus {
+  color: var(--sl-color-white);
+  background: var(--dg-surface-raised);
+  font-weight: 550;
+  box-shadow: inset 2px 0 0 var(--dg-accent);
+}
+.sidebar-content ul ul li {
+  border-inline-start-color: var(--dg-hairline);
+}
+
+/* ---------- focus: 2px accent ring, 2px offset, everywhere (brand §14) ---------- */
+:where(a, button, input, select, summary, textarea, [tabindex]):focus-visible,
+.pagefind-ui__result-link:focus-visible,
+.pagefind-ui__search-input:focus-visible {
+  outline: 2px solid var(--dg-accent);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* ---------- tables: hairlines, tabular numerals ---------- */
+.sl-markdown-content table {
+  font-size: 0.875rem;
+  border-collapse: collapse;
+  display: block;
+  overflow-x: auto;
+}
+.sl-markdown-content :is(th, td) {
+  border-bottom: 1px solid var(--dg-hairline);
+  border-inline: none;
+  padding: 0.5rem 0.75rem;
+  vertical-align: top;
+}
+.sl-markdown-content th {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--dg-text-2);
+  background: transparent;
+  text-align: start;
+}
+.sl-markdown-content tr:nth-child(2n) {
+  background: transparent;
+}
+
+/* ---------- asides: hairline cards in the state colours ---------- */
+.starlight-aside {
+  border: 1px solid var(--dg-hairline);
+  border-inline-start: 2px solid var(--sl-color-asides-border);
+  border-radius: 10px;
+  background: var(--dg-surface);
+}
+.starlight-aside__title {
+  font-size: 0.875rem;
+  letter-spacing: 0.01em;
+}
+
+/* ---------- code: ink-900 in both themes (brand §13.2) ---------- */
+.expressive-code .frame {
+  --header-border-radius: 10px;
+}
+.expressive-code pre {
+  border: 1px solid var(--ink-800);
+}
+
+/* ---------- search (Pagefind) ---------- */
+site-search button[data-open-modal] {
+  border-radius: 10px;
+  border-color: var(--dg-hairline);
+  background: var(--dg-surface);
+  color: var(--dg-text-2);
+}
+site-search dialog {
+  border-radius: 20px;
+  border: 1px solid var(--dg-hairline);
+}
+#starlight__search {
+  --pagefind-ui-primary: var(--dg-accent);
+  --pagefind-ui-text: var(--sl-color-text);
+  --pagefind-ui-background: var(--dg-surface);
+  --pagefind-ui-border: var(--dg-hairline);
+  --pagefind-ui-tag: var(--dg-surface-raised);
+  --pagefind-ui-border-radius: 10px;
+  --pagefind-ui-font: var(--sl-font);
+}
+
+/* ---------- page furniture ---------- */
+.sl-markdown-content hr {
+  border-color: var(--dg-hairline);
+}
+.pagination-links a {
+  border-radius: 14px;
+  border-color: var(--dg-hairline);
+  box-shadow: none;
+}
+.pagination-links a:hover {
+  border-color: var(--dg-accent);
+}
+starlight-toc nav a[aria-current='true'] {
+  color: var(--dg-accent);
+}
+
+/* ---------- shared chips (VerdictChip, LevelBadge, Terminal words) ---------- */
+.dg-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  line-height: 16px;
+  white-space: nowrap;
+  vertical-align: middle;
+  font-variant-numeric: tabular-nums;
+}
+.dg-chip svg {
+  width: 14px;
+  height: 14px;
+  flex: none;
+}
+.dg-chip--verified {
+  color: var(--dg-verified-text);
+  background: var(--dg-verified-bg);
+}
+.dg-chip--mismatch {
+  color: var(--dg-mismatch-text);
+  background: var(--dg-mismatch-bg);
+}
+.dg-chip--unverifiable {
+  color: var(--dg-unverifiable-text);
+  background: var(--dg-unverifiable-bg);
+}
+.dg-chip--pending {
+  color: var(--dg-pending-text);
+  background: var(--dg-pending-bg);
+}
+.dg-chip--denied {
+  color: var(--dg-denied);
+  box-shadow: inset 0 0 0 1px var(--dg-denied);
+}
+.dg-chip--allowed {
+  color: var(--dg-allowed-text);
+  background: var(--dg-allowed-bg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-property: opacity, color, background-color !important;
+    transition-duration: 120ms !important;
+  }
+}
+
+/* ---------- generated reference: the key-value strip under an error or results title ---------- */
+.sl-markdown-content .dg-kv {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.5rem;
+  align-items: center;
+  font-size: 0.875rem;
+  color: var(--dg-text-2);
+  padding: 0.625rem 0.875rem;
+  border: 1px solid var(--dg-hairline);
+  border-radius: 10px;
+  background: var(--dg-surface);
+}
+.sl-markdown-content .dg-kv strong {
+  color: var(--sl-color-white);
+}
+.sl-markdown-content .dg-home .line,
+.sl-markdown-content .dg-home code.line {
+  background: none;
+  border: 0;
+  padding: 0;
+}
+
+/* web-design-guidelines pass (S33): no double-tap zoom delay on controls */
+:where(a, button, summary, select) {
+  touch-action: manipulation;
+}
+
+/* ---------- OpenAPI pages: HTTP methods are neutral chips, never state colours ---------- */
+.sl-openapi-operation-method-badge.sl-openapi-operation-method-badge {
+  background-color: var(--dg-allowed-bg);
+  border-color: var(--dg-hairline);
+  color: var(--dg-allowed-text);
+  border-radius: 6px;
+  font-family: var(--__sl-font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+}
+
+/* ---------- the mobile menu button: a quiet hairline square, not a filled disc ---------- */
+.sl-menu-button.sl-menu-button {
+  background-color: transparent;
+  color: var(--sl-color-white);
+  border: 1px solid var(--dg-hairline);
+  border-radius: 10px;
+  box-shadow: none;
+}
+
+/* ---------- result words in generated tables: the CLI's symbols, coloured, with the word ---------- */
+.dg-st {
+  white-space: nowrap;
+  font-weight: 550;
+}
+.dg-st.ok > span {
+  color: var(--dg-verified-text);
+}
+.dg-st.bad > span {
+  color: var(--dg-mismatch-text);
+}
+.dg-st.gap > span {
+  color: var(--dg-unverifiable-text);
+}

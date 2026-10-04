@@ -1,0 +1,47 @@
+---
+title: Go client
+description: The small public Go client in pkg/deedglass, for sending actions, reading them back, reporting edge results and verifying webhooks.
+lastVerified: "2026-10-05"
+---
+
+import Limits from '../../../components/Limits.astro';
+
+`github.com/deedglass/deedglass/pkg/deedglass` is a small client. The CLI uses it, and so can your Go agent.
+
+```go title="main.go"
+package main
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"os"
+
+	"github.com/deedglass/deedglass/pkg/deedglass"
+)
+
+func main() {
+	c := deedglass.NewClient(os.Getenv("DEEDGLASS_API_KEY"), os.Getenv("DEEDGLASS_SERVER"))
+	args, _ := json.Marshal(map[string]any{"sql": "SELECT id, status FROM public.orders WHERE id = 42"})
+	a, _, err := c.Act(context.Background(), deedglass.ActRequest{Tool: "postgres.query", Args: args})
+	if err != nil {
+		fmt.Println(err) // a *deedglass.Error carries type, code, message and doc_url
+		return
+	}
+	fmt.Println(a.ID, a.Status)
+}
+```
+
+## What it has
+
+- `Act`, `GetAction` (with a long-poll wait), `ReportResult` (proxy mode) and `Tools`.
+- `Client.Do` for any route, sending `Deedglass-Version` and an automatic `Idempotency-Key` on POSTs.
+- Signed intents: `LoadIntentSigner`, `Sign`, `ArgsDigest`, and `WithOnBehalfOf` / `WithSession`.
+- `pkg/deedglass/webhook`: `Sign` and `Verify` for webhook signatures.
+
+## What it doesn't do
+
+<Limits>
+- No framework adapters. Use the TypeScript or Python SDK for those.
+- No automatic retries beyond what you write. Reuse the Idempotency-Key when you retry.
+</Limits>

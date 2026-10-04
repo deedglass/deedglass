@@ -1,0 +1,8 @@
+---
+interface Props { version: string }
+const { version } = Astro.props;
+---
+<span class="dg-since dg-num" title={`Available since Deedglass ${version}`}>Since {version}</span>
+<style>
+  .dg-since { display: inline-block; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.04em; color: var(--dg-text-2); border: 1px solid var(--dg-hairline); border-radius: 6px; padding: 0 6px; line-height: 20px; }
+</style>

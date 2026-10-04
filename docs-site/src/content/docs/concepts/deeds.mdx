@@ -1,0 +1,56 @@
+---
+title: Deeds and the deed chain
+description: The signed record of every action, what it holds, how deeds link into a chain per org, and how anyone checks them offline.
+lastVerified: "2026-10-05"
+---
+
+import Limits from '../../../components/Limits.astro';
+import DeedCard from '../../../components/DeedCard.astro';
+
+A deed is the signed record of one action: who asked, what was decided, what ran, and the verdict.
+
+## What a deed holds
+
+- The agent, on-behalf-of and session; the tool, connector and mode; digests of the request and the signed intent.
+- The policy version, decision and rule; the approval, with who countersigned.
+- The execution: status, timings, a digest of the result, the error code.
+- The witness: level, verdict, method and a digest of the detail.
+- The cost, and the previous deed's hash.
+
+Payloads never go inside a deed, only their SHA-256 digests. The body is canonical JSON (RFC 8785), and the seal is an Ed25519 signature over `"deedglass/deed/v1\n" + body_hash`.
+
+## Try one
+
+This is a real sample deed, sealed with a published test key. The check runs in your browser:
+
+<DeedCard sample="verified" />
+
+The same deed with one digit changed in its body:
+
+<DeedCard sample="tampered" />
+
+## The chain
+
+Each org's deeds are numbered from 1 with no gaps. Each deed carries the hash of the one before it, and the database refuses a second deed with the same predecessor, so the chain can't fork. Seal keys are published at `/.well-known/deedglass/keys.json`.
+
+```sh test title="Terminal"
+$ deedglass ledger check
+✓ Chain intact · … deeds · seq 1 → … · …
+```
+
+## Check deeds offline
+
+Anyone with the public keys can check a chain without Deedglass running: `deedglass verify`, the TypeScript or Python verifier, or this page's checker. See [Verify deeds as an auditor](/guides/verify-as-an-auditor/).
+
+## What it doesn't do
+
+<Limits>
+- A deed shows that a request with a given digest was handled. You need the original request to match it.
+- Seal keys are per deployment: one set signs every org's deeds. Per-org seal keys come later.
+- A deed is signed by your Deedglass instance. It's as trustworthy as that instance and its seal key.
+</Limits>
+
+## Next
+
+- [Deed spec](/reference/deed-spec/)
+- [The Ledger](/concepts/ledger/)

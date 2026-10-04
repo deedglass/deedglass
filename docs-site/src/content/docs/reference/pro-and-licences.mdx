@@ -1,0 +1,59 @@
+---
+title: Pro and licences
+description: What Pro adds, how the licence works offline, and everything that stays free.
+lastVerified: "2026-10-05"
+draft: true
+owner: S48
+---
+
+import Limits from '../../../components/Limits.astro';
+
+What Pro adds, how the licence works offline, and everything that stays free.
+
+## What stays free, always
+
+Gate, Witness, deeds, Stop, Undo, Insights, `scan`, the Action on public repos, and the free policy packs. Nothing free today becomes paid.
+
+## What Pro adds
+
+The Action on private repos, `scan --full` (the full report), Pro policy packs, `scan --fix`, and priority email.
+
+## Prices
+
+Pro is $29 a month or $290 a year. The full scan report is $29 once, and counts toward Pro within 30 days. Team and Cloud: join the waitlist. Want a person to look? Reviews from $750, on request.
+
+## Activate a licence
+
+```sh test=skip reason="licences ship in S48"
+deedglass licence activate <key>
+deedglass licence show
+```
+
+The key arrives by email from Dodo, our payment provider and reseller, and on the return page. The CLI activates the key with Dodo, then our server checks it again and returns a signed record, saved to `.deedglass/licence.json` (mode 0600; `DEEDGLASS_LICENCE_FILE` moves it). `deedglass licence refresh` and `deedglass licence deactivate` do what they say.
+
+## Offline and grace
+
+Pro checks in at most once a day, and only when a Pro feature runs. `DEEDGLASS_NO_NETWORK=1` stops every check. Pro keeps working **14 days** offline. After that, Pro is read-only: existing full reports open, installed Pro packs keep enforcing, `scan --full` and `--fix` refuse, and the private-repo Action posts a summary line. The exact line:
+
+```text
+Pro paused: your licence was last checked 15 days ago. Run deedglass licence refresh. Everything free still works.
+```
+
+## Free features never read the licence
+
+No network call and no telemetry. The free test suite passes with an expired, corrupt or missing licence.
+
+## Billing
+
+Invoices, cancelling and the payment method are behind the link Dodo emails you. Refunds follow the refunds page on deedglass.com.
+
+## Licence of the code
+
+The core, SDKs, CLI and the Action are Apache-2.0. Pro features live in `ee/` under FSL-1.1-ALv2; each release becomes Apache-2.0 after two years.
+
+## What it doesn't do
+
+<Limits>
+- A lapsed licence never weakens a policy that is already enforcing.
+- Pro has no seat counting.
+</Limits>

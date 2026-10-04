@@ -1,0 +1,10 @@
+---
+// The "What it doesn't do" box. Pages put the heading in Markdown (`## What it doesn't do`, the
+// last H2, so it is in the table of contents) and the list inside <Limits>. check-pages.mjs
+// enforces it on every Concept, Guide and SDK page. Honest limits are part of the brand (§4).
+---
+<div class="dg-limits"><slot /></div>
+<style>
+  .dg-limits { border: 1px solid var(--dg-hairline); border-radius: 14px; padding: 0.25rem 1.25rem; background: var(--dg-surface); }
+  .dg-limits :global(ul) { padding-inline-start: 1.1rem; }
+</style>

@@ -1,0 +1,61 @@
+---
+title: Connect Claude Code
+description: Put the Gate between Claude Code and its tools, over HTTP to the local server or as a wrapped stdio MCP server.
+lastVerified: "2026-10-05"
+---
+
+import { Code } from '@astrojs/starlight/components';
+import http from '../../../../../examples/clients/http-claude-code.sh?raw';
+import stdio from '../../../../../examples/clients/claude-code.sh?raw';
+import Limits from '../../../components/Limits.astro';
+
+Claude Code's tool calls go through the Gate: a policy decides each one, and each is sealed as a deed.
+
+**Before you start**
+
+- A running Deedglass server: the [Quickstart](/quickstart/) gives you one on `127.0.0.1:8080`.
+- An agent key (`dg_test_…`). `init` saved one to `.deedglass/quickstart.key`.
+
+## 1. Add the native gateway
+
+The server's own tools (the Postgres connector and any other connector you set up) are one MCP endpoint, `/mcp/native`. This is the line `deedglass mcp snippet --transport http --client claude-code` prints:
+
+<Code code={http.trim()} lang="sh" title="Terminal" />
+
+Replace `dg_test_REPLACE_ME` with your key. From the Quickstart directory you can let the shell fill it in:
+
+```sh test=skip reason="needs the claude CLI and writes to your Claude Code config"
+claude mcp add --transport http --header "Authorization: Bearer $(cat .deedglass/quickstart.key)" deedglass http://127.0.0.1:8080/mcp/native
+```
+
+Add `--scope project` to write the server into this repo's `.mcp.json` instead of your user config.
+
+## 2. Or wrap an MCP server you already use
+
+`deedglass mcp wrap` sits in front of any stdio MCP server. Claude Code starts the wrapper; the wrapper starts the server and sends every `tools/call` to the Gate first. This is the generated line for the demo's filesystem server:
+
+<Code code={stdio.trim()} lang="sh" title="Terminal" />
+
+Make one for your own server with `deedglass mcp snippet --client claude-code --connector <name> -- <command> [args…]`.
+
+## 3. Try it
+
+Ask Claude Code to drop a table in the demo database. The tool result says the call was blocked, names the rule, and gives the deed id. Then list what happened:
+
+```sh test title="Terminal"
+$ deedglass actions list --limit 5
+…
+```
+
+## What it doesn't do
+
+<Limits>
+- It doesn't change what Claude Code decides to do. It decides what Claude Code's tool calls may do.
+- Tools Claude Code runs on its own (its shell, file edits) don't pass through MCP, so the Gate never sees them. Use Claude Code's permission settings for those.
+- The key in the config is an agent key. It can't change policies or approve anything.
+</Limits>
+
+## Next
+
+- [Your first policy](/get-started/first-policy/)
+- [Govern an MCP server](/get-started/govern-an-mcp-server/): stdio wrap and the HTTP gateway in detail.

@@ -1,0 +1,33 @@
+---
+title: REST API overview
+description: Base URL, JSON conventions, prefixed ids, money, timestamps, and where to find every endpoint and error.
+lastVerified: "2026-10-05"
+---
+
+import ErrorEnvelope from '../../../../components/ErrorEnvelope.astro';
+
+The API is JSON over HTTPS under `/v1`. Every endpoint is in the [endpoint reference](/reference/api/), generated from `api/openapi.yaml`, the same file a test keeps equal to the server's routes.
+
+## Conventions
+
+- **Objects** carry `"object": "<type>"` and an `"id"` with a prefix: `act_`, `deed_`, `agt_`, `pol_`, … ([Ids](/reference/ids/)). Ids are lowercase.
+- **Timestamps** are RFC 3339 in UTC.
+- **Money** is `amount` in minor units (an integer) plus `currency` (ISO 4217, lowercase): `{"amount": 12000, "currency": "usd"}` is $120.00.
+- **Every response** carries `Deedglass-Request-Id` and the `Deedglass-Version` it was answered with.
+- **CORS** is closed, except for the public key set and the MCP protected-resource metadata.
+
+## Errors
+
+Every error has the same envelope and a page of its own:
+
+<ErrorEnvelope code="validation_failed" />
+
+Branch on `type` and `code`, never on the message. See [every error code](/errors/).
+
+## The pages in this section
+
+- [Authentication](/reference/http/authentication/): API keys and the Console session.
+- [Versioning](/reference/http/versioning/): the `Deedglass-Version` header.
+- [Idempotency](/reference/http/idempotency/): safe retries.
+- [Pagination](/reference/http/pagination/): lists and cursors.
+- [Events and webhooks](/reference/http/events-and-webhooks/): the event object, SSE and signed webhooks.

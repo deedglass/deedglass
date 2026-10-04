@@ -1,0 +1,43 @@
+---
+title: Stop
+description: Stop one agent or every agent in the org, honoured on every instance within two seconds, with every stopped call still recorded.
+lastVerified: "2026-10-05"
+---
+
+import Limits from '../../../components/Limits.astro';
+import { Aside } from '@astrojs/starlight/components';
+
+Stop refuses every call from an agent, or from every agent in your org, until a person starts them again.
+
+## Stop one agent
+
+```sh test=skip reason="stops a demo agent; run it on your own stack"
+deedglass agent stop billing-agent --reason "refund loop in the logs"
+deedglass agent start billing-agent --reason "loop fixed in 1.4.2"
+```
+
+Or Console › Agents › Stop. The agent's calls are refused with `agent_stopped`, and each refused call is still recorded and sealed. Suspend is the softer version: refused with `agent_suspended`, meant for a pause you expect to lift.
+
+## Stop all agents
+
+Console › top bar › **Stop all agents**, with a typed confirmation, or `deedglass org stop-all`. Every agent key is refused with `org_stopped`; org admin keys keep read-only access; people in the Console are unaffected. Only an owner (or the operator, on the server) starts them again, with a reason. Agents stopped one by one stay stopped.
+
+<Aside type="caution">
+Stop takes effect on the next call. Work that started before it finishes or is cancelled at its next check: the Gate checks again right before running anything queued, approved or long-polled.
+</Aside>
+
+## How fast
+
+A stop is committed together with a notification to every Deedglass instance. Each instance also checks that it hears its own notifications every 500 ms, and reads Postgres directly when it doesn't. So a stop is honoured on every instance within 2 seconds, even when a notification is lost. Measured on two instances: 0.14 ms median from the stop's answer to the first refusal on the other instance, and 1.6 s when the listener was silently stalled.
+
+## What it doesn't do
+
+<Limits>
+- Stop refuses calls through the Gate. It doesn't kill the agent's process or revoke credentials it holds elsewhere.
+- A tool call already running when the stop lands finishes, or times out. Its result is recorded.
+- Stop doesn't roll anything back. Use [Undo](/guides/undo/) for Postgres rows.
+</Limits>
+
+## Next
+
+- [Agents, keys and identity](/concepts/identity/)

@@ -1,0 +1,54 @@
+---
+// The Split Orb (flat, brand §5) with the Sealed moment (brand §10): the halves slide together
+// over 240 ms and one teal pulse ripples out (400 ms, 20% opacity). state="mismatch" stops the
+// halves short with a hairline red gap, no shake. glow adds the page's one aurora moment
+// (40px blur, 35% opacity), used only on the home hero. Decorative: aria-hidden.
+interface Props { size?: number; state?: 'open' | 'sealed' | 'mismatch'; glow?: boolean; animate?: boolean; class?: string }
+const { size = 120, state = 'sealed', glow = false, animate = false, class: cls } = Astro.props;
+---
+<span class:list={['dg-orb', cls, glow && 'glow', animate && 'animate']} data-state={state} style={`--orb:${size}px`}>
+  {glow && <span class="dg-hero-glow" aria-hidden="true"></span>}
+  <svg viewBox="0 0 120 120" width={size} height={size} aria-hidden="true" focusable="false">
+    <defs>
+      <linearGradient id="dg-orb-aurora" gradientUnits="userSpaceOnUse" x1="31.4" y1="8" x2="65.2" y2="112">
+        <stop offset="0" stop-color="#7C6CFF" /><stop offset=".5" stop-color="#4F8CFF" /><stop offset="1" stop-color="#2FE6D1" />
+      </linearGradient>
+    </defs>
+    <circle class="pulse" cx="60" cy="60" r="52" />
+    <g class="half left"><path d="M55.2 8.22A52 52 0 0 0 55.2 111.78Z" fill="url(#dg-orb-aurora)" /></g>
+    <g class="half right"><path d="M64.8 8.22A52 52 0 0 1 64.8 111.78Z" class="frost" /></g>
+    <rect class="pane" x="58.4" y="8.22" width="3.2" height="103.56" />
+    <rect class="gap-line" x="59.6" y="8.22" width="0.8" height="103.56" />
+  </svg>
+</span>
+<style>
+  .dg-orb { position: relative; display: inline-grid; place-items: center; width: var(--orb); height: var(--orb); }
+  svg { position: relative; overflow: visible; }
+  .frost { fill: var(--dg-frost); fill-opacity: 0.85; }
+  .pane { fill: var(--dg-pane); }
+  .gap-line { fill: var(--dg-mismatch-text); opacity: 0; }
+  .pulse { fill: none; stroke: var(--verified-text-dark); stroke-width: 2; opacity: 0; transform-origin: 60px 60px; }
+  .half { transition: transform 240ms var(--dg-ease-enter); }
+  [data-state='open'] .left { transform: translateX(-6px); }
+  [data-state='open'] .right { transform: translateX(6px); }
+  [data-state='mismatch'] .left { transform: translateX(-3px); }
+  [data-state='mismatch'] .right { transform: translateX(3px); }
+  [data-state='mismatch'] .pane { opacity: 0; }
+  [data-state='mismatch'] .gap-line { opacity: 1; }
+  .animate[data-state='sealed'] .left { animation: dg-close-l 240ms var(--dg-ease-enter) both; }
+  .animate[data-state='sealed'] .right { animation: dg-close-r 240ms var(--dg-ease-enter) both; }
+  .animate[data-state='sealed'] .pulse { animation: dg-pulse 400ms var(--dg-ease-enter) 240ms 1 both; }
+  @keyframes dg-close-l { from { transform: translateX(-6px); } to { transform: none; } }
+  @keyframes dg-close-r { from { transform: translateX(6px); } to { transform: none; } }
+  @keyframes dg-pulse { 0% { opacity: 0.2; transform: scale(1); } 100% { opacity: 0; transform: scale(1.35); } }
+  .dg-hero-glow {
+    position: absolute; inset: -30%; border-radius: 50%;
+    background: linear-gradient(135deg, var(--aurora-violet), var(--aurora-blue) 50%, var(--aurora-teal));
+    filter: blur(40px); opacity: 0.35; pointer-events: none;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .half, .pane { transition: opacity 120ms linear; }
+    .animate[data-state='sealed'] .left, .animate[data-state='sealed'] .right { animation: none; transform: none; }
+    .animate[data-state='sealed'] .pulse { animation: none; }
+  }
+</style>

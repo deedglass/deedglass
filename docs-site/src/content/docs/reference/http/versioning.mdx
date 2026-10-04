@@ -1,0 +1,17 @@
+---
+title: Versioning
+description: Dated API versions with the Deedglass-Version header, what changes count as breaking, and where the changelog is.
+lastVerified: "2026-10-05"
+---
+
+Send the version you built against:
+
+```http
+Deedglass-Version: 2026-10-01
+```
+
+Without the header, your account's pinned version is used. Every response, errors included, echoes the version it was answered with. An unknown version is [`api_version_invalid`](/errors/api_version_invalid/).
+
+Within a version, changes are additive only: new endpoints, new optional fields, new error codes, new enum values on fields documented as open. Error codes are never renamed. A change that could break a careful client gets a new dated version.
+
+The SDKs pin the version they were built for. [API versions](/reference/api-versions/) lists every version and what changed.

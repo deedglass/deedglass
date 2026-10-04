@@ -1,0 +1,50 @@
+---
+title: Connect Claude Desktop
+description: Give Claude Desktop the Gate's tools through the deedglass mcp serve bridge, or wrap a stdio MCP server it already runs.
+lastVerified: "2026-10-05"
+---
+
+import { Code } from '@astrojs/starlight/components';
+import Limits from '../../../components/Limits.astro';
+import bridge from '../../../../../examples/clients/http-claude-desktop.json?raw';
+import wrap from '../../../../../examples/clients/claude-desktop.json?raw';
+
+Claude Desktop starts MCP servers as local processes. Deedglass gives it one: a small bridge to the Gate, or a wrapper around a server you already use.
+
+**Before you start**
+
+- A running Deedglass server and an agent key. The [Quickstart](/quickstart/) gives you both.
+- The `deedglass` binary on disk. Claude Desktop needs its full path.
+
+## 1. Add the bridge
+
+`deedglass mcp serve` speaks MCP over stdio to Claude Desktop and HTTP to the server's `/mcp/native`. This is the config `deedglass mcp snippet --transport http --client claude-desktop` prints:
+
+<Code code={bridge.trim()} lang="json" title="claude_desktop_config.json" />
+
+Open Claude Desktop › Settings › Developer › Edit Config, paste it inside `mcpServers`, set `command` to the output of `which deedglass` and `DEEDGLASS_API_KEY` to your key, then quit and reopen Claude Desktop.
+
+## 2. Or wrap a server it already runs
+
+Put `deedglass mcp wrap --connector <name> --` in front of the server's own command. The generated config for the demo's filesystem server:
+
+<Code code={wrap.trim()} lang="json" title="claude_desktop_config.json" />
+
+Make yours with `deedglass mcp snippet --client claude-desktop --connector <name> -- <command> [args…]`. `PATH` is set because Claude Desktop starts servers without your shell's `PATH`.
+
+## 3. Check it
+
+Ask Claude to list the files it may see, then to delete one. The delete comes back blocked by policy, with the rule and the deed id in the tool result, and Claude Desktop shows it as a normal tool answer.
+
+## What it doesn't do
+
+<Limits>
+- Claude Desktop keeps the key in its config file in plain text. Use a `dg_test_` key with only the default scopes, and roll it if the file leaves your machine.
+- It doesn't install anything: you paste the config yourself.
+- Tools Claude Desktop has outside MCP never reach the Gate.
+</Limits>
+
+## Next
+
+- [Govern an MCP server](/get-started/govern-an-mcp-server/)
+- [Approvals on your phone](/guides/phone-approvals/)

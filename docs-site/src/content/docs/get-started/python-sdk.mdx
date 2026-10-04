@@ -1,0 +1,78 @@
+---
+title: Use the Python SDK
+description: Send your Python agent's tool calls through the Gate with the deedglass package, sync or async, and read the verdict on every action.
+lastVerified: "2026-10-05"
+---
+
+import Limits from '../../../components/Limits.astro';
+
+Your Python code asks the Gate before a tool runs, and gets back the decision, the result and the verdict.
+
+**Before you start**
+
+- Python 3.10 to 3.14.
+- A running Deedglass server and an agent key. The [Quickstart](/quickstart/) gives you both.
+
+## 1. Install
+
+```sh test=skip reason="the PyPI package is published in the release session; make py-build builds the same wheel"
+pip install deedglass
+```
+
+The client has one dependency, `httpx`. Extras: `deedglass[crypto]` for offline deed checks and signed intents, `deedglass[langchain]` and `deedglass[claude-agent-sdk]` for the adapters.
+
+## 2. Configure
+
+```sh title="Terminal"
+export DEEDGLASS_API_KEY="$(cat .deedglass/quickstart.key)"
+export DEEDGLASS_SERVER=http://127.0.0.1:8080
+```
+
+## 3. Send an action
+
+```python check title="agent.py"
+from deedglass import Deedglass, PolicyDeniedError
+
+with Deedglass() as dg:  # reads DEEDGLASS_API_KEY and DEEDGLASS_SERVER
+    try:
+        dg.act("postgres.execute", {"sql": "DROP TABLE public.orders"})
+    except PolicyDeniedError as e:
+        print("blocked:", e.message)
+
+    action = dg.act(
+        "postgres.execute",
+        {"sql": "UPDATE public.orders SET status = 'shipped' WHERE id = 42"},
+        wait_for_approval=120,
+    )
+    print(action)
+```
+
+The `DROP` raises `PolicyDeniedError` with the policy's own sentence. The `UPDATE` waits up to 120 seconds for a person to approve it (under `postgres-safe`), runs, and prints a line like `act_… · postgres.execute · executed · L2 · VERIFIED · deed_…`.
+
+`AsyncDeedglass` has the same methods with `await`.
+
+## 4. Read the verdict
+
+A MISMATCH is not an exception: the action ran and the Witness found a difference. Check it:
+
+```python check title="agent.py"
+from deedglass import Deedglass
+
+dg = Deedglass()
+action = dg.act("postgres.execute", {"sql": "UPDATE public.orders SET status = 'shipped' WHERE id = 42"})
+if action.witness and action.witness.verdict == "MISMATCH":
+    print("Postgres changed something else:", action.witness.summary)
+```
+
+## What it doesn't do
+
+<Limits>
+- The SDK asks before your function runs and reports what happened. It doesn't sandbox your function.
+- It doesn't retry a 500: the server stores that answer under the request's Idempotency-Key and would replay it.
+- The OpenAI Agents and CrewAI adapters come in the next release. Importing them today raises `ImportError` saying so.
+</Limits>
+
+## Next
+
+- [Python SDK reference](/sdks/python/): every method, the adapters and the error classes.
+- [What VERIFIED means](/concepts/what-verified-means/)

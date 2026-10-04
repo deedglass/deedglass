@@ -1,0 +1,45 @@
+---
+title: The playground
+description: See an agent say 1 row while 301 changed, block it, and undo it, in your browser.
+lastVerified: "2026-10-05"
+draft: true
+owner: S47
+---
+
+import Limits from '../../../components/Limits.astro';
+
+See an agent say 1 row while 301 changed, block it, and undo it, in your browser.
+
+**Before you start**
+
+- A browser. Nothing to install, no account.
+
+## Open it
+
+Go to `deedglass.com/play`. Everything runs in your browser: Postgres (PGlite) and the policy engine (cel-js) are served from deedglass.com, and the page makes no third-party requests.
+
+## The three scenes
+
+1. **A blocked `DROP`.** The agent sends `DROP TABLE public.orders`. The policy denies it before Postgres sees it, and a deed records the attempt.
+2. **1 row reported, 301 changed.** The agent updates one order. A trigger on the table changes 300 more. The verdict is `L2 · MISMATCH`, with the diff.
+3. **Approve, then Undo.** You countersign the write as a person would, then undo it and watch the table go back.
+
+## Edit the policy
+
+A 6-line policy sits beside the scenes. Change a rule and run the scene again; the decision and the deed change with it. Each deed can be checked in the page.
+
+The playground compares table snapshots in your browser. The real Witness reads Postgres's own change log.
+
+## Next: open this in your terminal
+
+```sh test=skip reason="the playground ships in S47"
+npx deedglass scan
+```
+
+## What it doesn't do
+
+<Limits>
+- The playground's policy engine is cel-js running compiled policies. The product compiles and runs them in Go.
+- Its verdicts come from comparing snapshots, not from a change log.
+- Nothing you do there reaches a server. Close the tab and it's gone.
+</Limits>

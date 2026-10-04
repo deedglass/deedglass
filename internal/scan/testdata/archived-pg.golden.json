@@ -275,7 +275,7 @@
       "id": "archived_postgres_mcp",
       "severity": "medium",
       "title": "Archived Postgres MCP server",
-      "detail": "This Postgres MCP server was archived on 2025-05-29. Its read-only mode runs queries in a read-only transaction that a stacked COMMIT; can end (Datadog Security Labs). If its database role can write, the agent can write.",
+      "detail": "This Postgres MCP server was archived on 2025-05-28. Its read-only mode runs queries in a read-only transaction that a stacked COMMIT; can end (Datadog Security Labs). If its database role can write, the agent can write.",
       "fix": [
         "Give the server a role that can only SELECT.",
         "Or route it through Deedglass: deedglass mcp wrap --connector \u003cname\u003e -- \u003cthe server's command\u003e."
@@ -292,7 +292,7 @@
       "id": "archived_postgres_mcp",
       "severity": "medium",
       "title": "Archived Postgres MCP server",
-      "detail": "This Postgres MCP server was archived on 2025-05-29. Its read-only mode runs queries in a read-only transaction that a stacked COMMIT; can end (Datadog Security Labs). If its database role can write, the agent can write.",
+      "detail": "This Postgres MCP server was archived on 2025-05-28. Its read-only mode runs queries in a read-only transaction that a stacked COMMIT; can end (Datadog Security Labs). If its database role can write, the agent can write.",
       "fix": [
         "Give the server a role that can only SELECT.",
         "Or route it through Deedglass: deedglass mcp wrap --connector \u003cname\u003e -- \u003cthe server's command\u003e."

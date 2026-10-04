@@ -1,0 +1,3 @@
+# External links that may fail the check, each with a reason (check-external.mjs).
+https://app.deedglass.com/login the hosted Console isn't live before launch (an example URL in the identity notes)
+https://console.cloud.google.com/apis/library/gmail.googleapis.com Google's console needs a signed-in browser and doesn't answer a plain request

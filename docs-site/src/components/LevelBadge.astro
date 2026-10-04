@@ -1,0 +1,13 @@
+---
+// L0 Reported · L1 Confirmed · L2 Witnessed. Levels carry no colour of their own (DESIGN.md);
+// the verdict owns the colour. The tooltip text is also the accessible description.
+interface Props { level: 'L0' | 'L1' | 'L2' }
+const { level } = Astro.props;
+const text = {
+  L0: 'L0 Reported: the tool’s own response.',
+  L1: 'L1 Confirmed: read back from the target after the action.',
+  L2: 'L2 Witnessed: the change Postgres committed, read from its change log.',
+}[level];
+const name = { L0: 'Reported', L1: 'Confirmed', L2: 'Witnessed' }[level];
+---
+<span class="dg-chip dg-chip--allowed dg-level" title={text} translate="no">{level} {name}<span class="sr-only"> ({text})</span></span>

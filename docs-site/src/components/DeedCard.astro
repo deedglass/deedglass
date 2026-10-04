@@ -1,0 +1,93 @@
+---
+// A sample deed with its hash, seal key and an in-page check (S33 §3.2). "Verify in this page"
+// runs the same verifier as web/verify (S05), bundled into this site: no network, no upload.
+// A VERIFIED result plays the Sealed moment; a tampered deed shows the MISMATCH halves and the
+// exact sentence `deedglass verify` prints.
+import samples from '../data/samples.json';
+import SealedMark from './SealedMark.astro';
+interface Props { sample?: 'verified' | 'tampered' }
+const { sample = 'verified' } = Astro.props;
+const text: string = sample === 'tampered' ? samples.tampered : samples.deed;
+const env = JSON.parse(samples.deed);
+const short = (h: string) => h.replace(/^sha256:(.{4}).*(.{4})$/, 'sha256:$1…$2');
+const pretty = JSON.stringify(JSON.parse(text).body, null, 2);
+---
+<div class="dg-deed" data-deed-card data-deed={text} data-keys={samples.keys}>
+  <div class="head">
+    <SealedMark size={28} state="open" class="mark" />
+    <div class="meta">
+      <span class="id" translate="no">{env.id}</span>
+      <span class="sub dg-num">seq {env.body.seq} · {env.body.issued_at} · seal key <code>{env.seal_key_id}</code></span>
+    </div>
+  </div>
+  <dl class="facts">
+    <div><dt>Body hash</dt><dd><code title={env.body_hash}>{short(env.body_hash)}</code> <button type="button" class="copy" data-copy={env.body_hash} aria-label="Copy the body hash">Copy</button></dd></div>
+    <div><dt>Tool</dt><dd><code>{env.body.action.tool}</code></dd></div>
+    <div><dt>Witness</dt><dd><code>{env.body.witness.level} · {env.body.witness.verdict}</code></dd></div>
+  </dl>
+  <details>
+    <summary>Deed body{sample === 'tampered' ? ' (one digit changed)' : ''}</summary>
+    <pre tabindex="0" aria-label="Deed body"><code>{pretty}</code></pre>
+  </details>
+  <div class="act">
+    <button type="button" class="verify" data-verify>Verify in this page</button>
+    <p class="result" role="status" aria-live="polite" data-result>Nothing checked yet. The check runs in your browser with the published test key.</p>
+  </div>
+</div>
+<script>
+  import { verifyDeed, parseKeySet, VerifyError, message } from '../../../web/verify/src/index.ts';
+  for (const card of document.querySelectorAll<HTMLElement>('[data-deed-card]')) {
+    const out = card.querySelector<HTMLElement>('[data-result]')!;
+    const orb = card.querySelector<HTMLElement>('.dg-orb')!;
+    card.querySelector('[data-copy]')?.addEventListener('click', (e) => {
+      const b = e.currentTarget as HTMLButtonElement;
+      navigator.clipboard?.writeText(b.dataset.copy ?? '').then(() => { b.textContent = 'Copied'; setTimeout(() => (b.textContent = 'Copy'), 1500); });
+    });
+    card.querySelector('[data-verify]')!.addEventListener('click', async () => {
+      out.dataset.state = '';
+      out.textContent = 'Checking…';
+      try {
+        const keys = await parseKeySet(card.dataset.keys!);
+        const r = await verifyDeed(card.dataset.deed!, keys);
+        orb.dataset.state = 'sealed';
+        orb.classList.add('animate');
+        out.dataset.state = 'verified';
+        out.textContent = `VERIFIED · deed ${r.deedId}, seq ${r.seq}: the body hash is exact and the seal matches seal key ${r.sealKeyId}.`;
+      } catch (err) {
+        orb.dataset.state = 'mismatch';
+        orb.classList.remove('animate');
+        out.dataset.state = 'mismatch';
+        if (err instanceof VerifyError) {
+          const m = message(err);
+          out.textContent = `MISMATCH · ${m.sentence} ${m.next}`;
+        } else {
+          out.textContent = 'This browser could not run the check. Use deedglass verify instead.';
+        }
+      }
+    });
+  }
+</script>
+<style>
+  .dg-deed { border: 1px solid var(--dg-hairline); border-radius: 14px; background: var(--dg-surface); padding: 20px; margin: 1.25rem 0; }
+  .head { display: flex; gap: 12px; align-items: center; }
+  .meta { display: grid; min-width: 0; }
+  .id { font-family: var(--__sl-font-mono); font-size: 0.875rem; color: var(--sl-color-white); overflow-wrap: anywhere; }
+  .sub { font-size: 0.75rem; color: var(--dg-text-2); }
+  .sub code { font-size: 0.75rem; }
+  .facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px 24px; margin: 16px 0; }
+  .facts div { margin: 0; }
+  dt { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.04em; color: var(--dg-text-2); }
+  dd { margin: 2px 0 0; font-size: 0.875rem; }
+  .copy, .verify { font: inherit; font-size: 0.8125rem; font-weight: 550; border-radius: 10px; cursor: pointer; min-height: 28px; }
+  .copy { padding: 0 8px; background: transparent; color: var(--dg-accent); border: 1px solid var(--dg-hairline); }
+  .verify { padding: 0 14px; min-height: 32px; background: var(--sl-color-accent); color: var(--sl-color-text-invert); border: 0; }
+  .verify:hover { background: var(--sl-color-accent-high); }
+  .copy:hover { border-color: var(--dg-accent); }
+  details { margin-top: 8px; }
+  summary { cursor: pointer; font-size: 0.875rem; color: var(--dg-text-2); }
+  details pre { max-height: 320px; overflow: auto; font-size: 0.75rem; background: var(--ink-900); color: var(--code-plain); border: 1px solid var(--ink-800); border-radius: 10px; padding: 12px; }
+  .act { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-top: 16px; }
+  .result { margin: 0; font-size: 0.875rem; color: var(--dg-text-2); flex: 1 1 260px; }
+  .result[data-state='verified'] { color: var(--dg-verified-text); }
+  .result[data-state='mismatch'] { color: var(--dg-mismatch-text); }
+</style>

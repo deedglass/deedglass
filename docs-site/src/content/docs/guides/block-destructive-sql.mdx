@@ -1,0 +1,80 @@
+---
+title: Block destructive SQL
+description: Stop DROP, TRUNCATE, unbounded writes and smuggled statements before Postgres sees them, and record every attempt.
+lastVerified: "2026-10-05"
+---
+
+import Limits from '../../../components/Limits.astro';
+
+By the end, an agent that sends `DROP TABLE` gets a calm refusal, Postgres never sees the statement, and a deed records the attempt.
+
+**Before you start**
+
+- The [Quickstart](/quickstart/) stack, or any server with a Postgres connector.
+- The agent key from `.deedglass/quickstart.key`.
+
+## 1. Send a DROP
+
+```sh test title="Terminal"
+$ export DEEDGLASS_API_KEY="$(cat .deedglass/quickstart.key)"
+$ deedglass act postgres.execute --args '{"sql":"DROP TABLE public.orders"}' # exit 1
+✕ denied · postgres.execute
+  Blocked by policy "block-destructive-sql": DROP…
+  action   act_…
+  deed     deed_… · sealed
+```
+
+It exits 1, and the deed is sealed. The policy's rule `block-destructive-sql` matched `sql.kind in ["drop", "truncate"]`. Nothing ran.
+
+## 2. Try to hide it
+
+```sh test title="Terminal"
+$ deedglass act postgres.execute --args '{"sql":"/* tidy up */ DrOp TABLE public.orders"}' # exit 1
+✕ denied · postgres.execute
+  Blocked by policy "block-destructive-sql": …
+$ deedglass act postgres.execute --args '{"sql":"SELECT 1; DROP TABLE public.orders"}' # exit 1
+✕ denied · postgres.execute
+  Blocked by policy …
+```
+
+Comments and case don't hide the statement: Deedglass reads SQL with its own tokenizer before any rule runs. Several statements in one request are refused by `one-statement-only`.
+
+## 3. The rules that do this
+
+```yaml title="from postgres-safe.yaml"
+  - id: block-destructive-sql
+    match: { connector_type: postgres }
+    when: sql.kind in ["drop", "truncate"]
+    decision: deny
+    reason: DROP and TRUNCATE are never allowed for agents.
+  - id: block-unbounded-writes
+    match: { connector_type: postgres }
+    when: sql.unbounded_write
+    decision: deny
+    reason: UPDATE and DELETE need a WHERE clause that names the rows to change.
+  - id: block-unclassified-sql
+    match: { connector_type: postgres }
+    when: sql.present && sql.ambiguous
+    decision: deny
+    reason: Deedglass could not read this SQL with confidence, so it did not run. Send one plain statement.
+```
+
+## 4. Two layers, not one
+
+Under a policy that allowed every Postgres call, the connector itself still refuses several statements at once, transaction control, `DO` blocks, `COPY … PROGRAM`, the `deedglass` schema and session-changing functions, and runs every statement as the least-privilege role `deedglass_agent`. The policy decides what a person must see first; the connector decides what can never run.
+
+## What you'll see
+
+Console › Actions shows the attempt as **Denied** with the rule. `deedglass actions list --decision deny` lists it, and its deed records the rule and that nothing ran.
+
+## What it doesn't do
+
+<Limits>
+- It reads SQL; it doesn't know your business rules. "Delete only last week's test orders" needs a rule you write.
+- A statement that calls a function hides what the function does. Allow-list functions in the connector config.
+- An agent with a direct database connection that skips Deedglass isn't governed. Run [the scan](/get-started/scan/) to find those paths.
+</Limits>
+
+## Next
+
+- [Catch "1 row reported, 301 committed"](/guides/catch-a-mismatch/)

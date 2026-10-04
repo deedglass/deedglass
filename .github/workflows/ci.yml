@@ -165,6 +165,42 @@ jobs:
           ASTRO_TELEMETRY_DISABLED: "1"
         run: npm run build
 
+  # S33: docs.deedglass.com. The generated data must match the Go sources (gen-data --check runs the
+  # generators), then the site builds and every offline gate runs: unit tests, spelling, banned
+  # words, pages, drafts, pricing, css, install links, workflows (structure), errors (every doc_url the
+  # product prints resolves), links and anchors, third-party and secret scans. Snippets (make
+  # docs-snippets: needs the demo stack and Docker) and Lighthouse run locally before a commit.
+  docs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+      - name: the CLI and the browser verifier (the DeedCard test compares their sentences)
+        run: |
+          go build -o bin/deedglass ./cmd/deedglass
+          cd web/verify && npm ci --ignore-scripts --no-audit --no-fund && npm run build
+      - name: npm ci (exact pins, no install scripts)
+        working-directory: docs-site
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: build
+        working-directory: docs-site
+        env:
+          ASTRO_TELEMETRY_DISABLED: "1"
+        run: npm run build
+      - name: every offline gate
+        working-directory: docs-site
+        run: node scripts/check-all.mjs --offline
+
   integration-pg18:
     runs-on: ubuntu-latest
     timeout-minutes: 20

@@ -20,7 +20,7 @@ deedglass scan      # what your own agent setup can change, graded A to F (local
 `deedglass init` ends with a blocked `DROP TABLE` and an `UPDATE` witnessed by Postgres's change log
 (L2); a second run says `Nothing to change.` Then govern a LangChain agent in three lines with the
 Python SDK (`pip install "deedglass[langchain]"`, `docs/SDK_PYTHON.md`) or a TypeScript one with
-`@deedglass/sdk`. `docs/QUICKSTART.md` walks through it.
+`@deedglass/sdk`. The Quickstart (`docs-site/src/content/docs/quickstart.mdx`, published at docs.deedglass.com/quickstart) walks through it.
 
 ## What works today
 
@@ -60,7 +60,7 @@ make help                           # every target
 | `docs/ARCHITECTURE.md` | how the parts fit, the action lifecycle, what each part doesn't do |
 | `docs/REPO_MAP.md` | every directory and package, its status and owner session |
 | `docs/NAMING.md` | the product vocabulary and the rename from the V0 names |
-| `docs/QUICKSTART.md` | from nothing to a blocked and a witnessed action in five minutes |
+| `docs-site/` | docs.deedglass.com: the Quickstart, concepts, guides, the generated reference (`make docs`) |
 | `docs/INIT_AND_DOCTOR.md` | every `deedglass init` step and `deedglass doctor` check |
 | `docs/SCAN.md` | `deedglass scan`: what it reads, the score, the read-only database report |
 | `docs/SDK_PYTHON.md` | the Python SDK and its LangChain and Claude Agent SDK adapters |

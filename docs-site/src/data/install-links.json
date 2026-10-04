@@ -1,0 +1,48 @@
+{
+  "object": "install_links",
+  "generator": "docs-site/scripts/gen-data.mjs (until S47: deedglass mcp install-links)",
+  "server": {
+    "command": "npx",
+    "args": [
+      "-y",
+      "deedglass",
+      "mcp",
+      "serve"
+    ]
+  },
+  "clients": [
+    {
+      "client": "Cursor",
+      "link": "cursor://anysphere.cursor-deeplink/mcp/install?name=deedglass&config=eyJjb21tYW5kIjoibnB4IiwiYXJncyI6WyIteSIsImRlZWRnbGFzcyIsIm1jcCIsInNlcnZlIl19",
+      "web": "https://cursor.com/en/install-mcp?name=deedglass&config=eyJjb21tYW5kIjoibnB4IiwiYXJncyI6WyIteSIsImRlZWRnbGFzcyIsIm1jcCIsInNlcnZlIl19",
+      "source": "https://docs.cursor.com/en/tools/developers"
+    },
+    {
+      "client": "VS Code",
+      "link": "vscode:mcp/install?%7B%22name%22%3A%22deedglass%22%2C%22command%22%3A%22npx%22%2C%22args%22%3A%5B%22-y%22%2C%22deedglass%22%2C%22mcp%22%2C%22serve%22%5D%7D",
+      "web": "https://vscode.dev/redirect/mcp/install?name=deedglass&config=%7B%22command%22%3A%22npx%22%2C%22args%22%3A%5B%22-y%22%2C%22deedglass%22%2C%22mcp%22%2C%22serve%22%5D%7D",
+      "command": "code --add-mcp '{\"name\":\"deedglass\",\"command\":\"npx\",\"args\":[\"-y\",\"deedglass\",\"mcp\",\"serve\"]}'",
+      "source": "https://code.visualstudio.com/docs/copilot/customization/mcp-servers"
+    },
+    {
+      "client": "LM Studio",
+      "link": "lmstudio://add_mcp?name=deedglass&config=eyJjb21tYW5kIjoibnB4IiwiYXJncyI6WyIteSIsImRlZWRnbGFzcyIsIm1jcCIsInNlcnZlIl19",
+      "source": "https://lmstudio.ai/docs/app/plugins/mcp/deeplink"
+    },
+    {
+      "client": "Goose",
+      "link": "goose://extension?cmd=npx&arg=-y&arg=deedglass&arg=mcp&arg=serve&id=deedglass&name=Deedglass&description=Put%20a%20policy%2C%20a%20witness%20and%20a%20signed%20deed%20on%20every%20agent%20tool%20call.",
+      "source": "https://block.github.io/goose/docs/getting-started/using-extensions"
+    },
+    {
+      "client": "Claude Code",
+      "command": "claude mcp add deedglass -- npx -y deedglass mcp serve",
+      "source": "https://docs.anthropic.com/en/docs/claude-code/mcp"
+    },
+    {
+      "client": "Claude Desktop",
+      "bundle": "deedglass.mcpb, attached to each GitHub release",
+      "source": "https://github.com/anthropics/mcpb"
+    }
+  ]
+}

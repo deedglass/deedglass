@@ -1,0 +1,39 @@
+---
+title: The action lifecycle
+description: The 15 states and 22 edges every action moves through, from received to sealed, drawn from the Gate's own state table.
+lastVerified: "2026-10-05"
+---
+
+import Limits from '../../../components/Limits.astro';
+import Lifecycle from '../../../components/Lifecycle.astro';
+
+Every action moves through the same state machine, and the database refuses any edge that isn't in it.
+
+<Lifecycle />
+
+The diagram is drawn at build time from the Gate's edge table, the same table a database trigger mirrors. Dashed lines lead to `sealed`.
+
+## The paths, in words
+
+- **Denied:** `received → authenticated → evaluated → denied → sealed`. Nothing ran.
+- **Approved:** `evaluated → pending_approval → executing`. A person's countersign moves it on; if no one decides in time it goes to `expired`, and an agent or admin can move it to `cancelled`.
+- **Ran:** `executing → executed → witnessing → verified | mismatch | unverifiable → sealed`.
+- **Failed:** `executing → failed → sealed`. Failed means the tool certainly did not apply.
+
+## Honest unknowns
+
+When Deedglass can't know whether a tool ran (a timeout, a crash, a lost connection), the action goes `executing → executed` with `execution.status = unknown`, then `witnessing → unverifiable`. There is no other edge for this, and recovery after a crash never invents one.
+
+A later verdict never edits an existing deed. It seals an **amendment deed** that points to the first.
+
+## What it doesn't do
+
+<Limits>
+- `status` on the API is a short summary (`processing`, `executed`, …); `state` is the exact lifecycle state. Use `state` when you need the edge.
+- A sealed action never changes. Undo is a new action, with its own deed.
+</Limits>
+
+## Next
+
+- [Verification levels](/concepts/verification-levels/)
+- [Deeds and the deed chain](/concepts/deeds/)

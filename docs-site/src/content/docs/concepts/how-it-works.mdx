@@ -1,0 +1,35 @@
+---
+title: How Deedglass works
+description: The seven parts between an agent and a tool, in the order a call meets them, from the Gate to the sealed deed.
+lastVerified: "2026-10-05"
+---
+
+import Limits from '../../../components/Limits.astro';
+import Arch from '../../../components/Architecture.astro';
+
+Deedglass sits between your AI agents and the tools they use. Every call meets the same seven parts, in the same order.
+
+<Arch />
+
+1. **The agent and its key.** An agent is registered in your org and holds an API key (`dg_live_…` or `dg_test_…`). It never holds the tool's credentials.
+2. **The Gate.** Every tool call arrives here: over MCP (a stdio wrap or the HTTP gateway), through an SDK, or straight to `POST /v1/actions`. The Gate checks the key, whether the agent or the org is stopped, and the request's shape.
+3. **Policies.** The org's enforced policy decides: `allow`, `deny` or `require_approval`. A shadow policy can decide alongside it, for comparison only.
+4. **Approvals.** A risky action waits for a person to countersign it in the Console, by email, in Slack or on a phone.
+5. **Connectors.** An allowed call runs through a connector (Postgres, REST, GitHub, Slack, Stripe test mode, Gmail drafts, Notion, a remote MCP server), with credentials opened from the vault for that one call. In proxy mode the call runs at the edge instead, and the edge reports the result.
+6. **The Witness.** It compares what the tool reported with an independent observation: L0 the tool's own answer, L1 a read-back from the target, L2 the change Postgres committed, read from its change log. The verdict is `VERIFIED`, `MISMATCH` or `UNVERIFIABLE`.
+7. **The deed and the Ledger.** The whole story (who, what, which rule, who approved, what ran, the verdict) is sealed as a signed deed in the org's hash-linked chain. The Ledger is the searchable history; anyone with the public key can check the deeds offline.
+
+Denied, stopped and refused calls are sealed too. A deed holds digests of the request and result, never the payloads.
+
+## What it doesn't do
+
+<Limits>
+- It governs the calls that pass through it. A tool an agent can reach some other way is outside it.
+- It doesn't judge whether an allowed action was a good idea. It records what was decided and what happened.
+- It doesn't make a model behave. It assumes the model may already be manipulated, and limits what the model's calls can do.
+</Limits>
+
+## Next
+
+- [The action lifecycle](/concepts/action-lifecycle/)
+- [What VERIFIED means](/concepts/what-verified-means/)

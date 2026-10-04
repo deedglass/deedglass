@@ -1,0 +1,77 @@
+---
+title: Put Deedglass in front of Postgres
+description: Connect your own Postgres database so agents run SQL as a least-privilege role and every write is witnessed against Postgres's change log (L2).
+lastVerified: "2026-10-05"
+---
+
+import { Aside } from '@astrojs/starlight/components';
+import Limits from '../../../components/Limits.astro';
+
+Agents run SQL through the Postgres connector: one statement per action, as the role `deedglass_agent`, with every write witnessed in Postgres's own change log.
+
+**Before you start**
+
+- PostgreSQL 16, 17 or 18 with `wal_level = logical` (needed for L2; L0 and L1 work without it).
+- An admin connection string for setup: a superuser, or a role with `CREATEROLE` such as the RDS master user. Deedglass reads it once and never stores it.
+- A Deedglass server, and `DEEDGLASS_API_KEY` set to an org admin key.
+
+## 1. Describe the connector
+
+```yaml title="postgres.yaml"
+type: postgres
+name: orders
+description: The orders database.
+config:
+  mode: sql
+  allowed_schemas: [public]
+  writable_tables: [public.orders, public.refunds]
+  row_limit: 500
+  max_rows_affected: 1000
+  statement_timeout_ms: 5000
+  witness:
+    enabled: true
+    watched_tables: [public.orders, public.refunds, public.customers]
+    sensitive_columns: [public.customers.email]
+```
+
+`writable_tables` is the only place an agent can write. `watched_tables` is what the Witness reads in the change log. `sensitive_columns` are compared by digest and never stored.
+
+## 2. Create it, plan, apply
+
+```sh test=skip reason="needs your own database and an admin DSN"
+deedglass connector create --config postgres.yaml
+export DEEDGLASS_INIT_DSN='postgres://postgres:…@db.internal:5432/orders?sslmode=require'
+deedglass connector postgres init --connector orders
+deedglass connector postgres init --connector orders --apply
+```
+
+The first `init` prints the plan (roles, the `deedglass` schema, grants, replica identity on the watched tables, the publication) and writes the exact SQL to `.deedglass/plans/` for you to review. `--apply` runs it in one transaction. Passwords are generated on your machine and reach Postgres only as SCRAM verifiers.
+
+<Aside type="caution">
+The `deedglass_*` roles are cluster-wide: every database on one Postgres server shares them. Read [the Postgres connector reference](/reference/connectors/postgres/) before you set up a second database on the same server.
+</Aside>
+
+## 3. Check it
+
+```sh test=skip reason="needs your own database"
+deedglass connector postgres check --connector orders
+```
+
+It ends with `Ready for L2 · … passed · 0 failed`, or names what is missing and the SQL that fixes it.
+
+## 4. Allow it in a policy
+
+The `postgres-safe` starter lets reads run, sends writes to a person, and never runs schema changes. [Your first policy](/get-started/first-policy/) shows how to edit and activate it.
+
+## What it doesn't do
+
+<Limits>
+- L2 sees what Postgres commits in the watched tables. Effects outside Postgres, and writes to tables outside the publication, are not witnessed.
+- Managed services differ: some don't allow logical replication on every plan. The reference lists RDS, Supabase and Neon specifics.
+- It doesn't migrate your schema. Schema changes through agents are refused; ship them as reviewed migrations.
+</Limits>
+
+## Next
+
+- [Catch "1 row reported, 301 committed"](/guides/catch-a-mismatch/)
+- [Postgres connector reference](/reference/connectors/postgres/)

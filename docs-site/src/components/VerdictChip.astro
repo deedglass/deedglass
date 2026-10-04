@@ -1,0 +1,10 @@
+---
+// [icon] L2 · VERIFIED (brand §12): caption size, weight 600, +0.04em, small caps; icon and word always.
+import Icon from './Icon.astro';
+interface Props { verdict: 'VERIFIED' | 'MISMATCH' | 'UNVERIFIABLE'; level?: 'L0' | 'L1' | 'L2' }
+const { verdict, level } = Astro.props;
+const look = { VERIFIED: ['verified', 'check'], MISMATCH: ['mismatch', 'x'], UNVERIFIABLE: ['unverifiable', 'circle-dashed'] } as const;
+const [kind, icon] = look[verdict];
+const names = { L0: 'Reported', L1: 'Confirmed', L2: 'Witnessed' } as const;
+---
+<span class={`dg-chip dg-chip--${kind}`} title={level ? `${level} ${names[level]} · ${verdict}` : verdict} translate="no"><Icon name={icon} />{level && <span>{level} ·</span>}<span>{verdict}</span></span>

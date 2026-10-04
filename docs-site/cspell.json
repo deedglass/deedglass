@@ -1,0 +1,17 @@
+{
+  "version": "0.2",
+  "language": "en,en-GB",
+  "dictionaryDefinitions": [{ "name": "deedglass", "path": "./dictionary.txt", "addWords": true }],
+  "dictionaries": ["deedglass", "softwareTerms", "typescript", "node", "npm", "python", "golang", "bash", "sql", "companies"],
+  "files": ["src/content/docs/**/*.mdx", "src/components/**/*.astro"],
+  "ignorePaths": ["node_modules/**", "dist/**", "src/data/**"],
+  "ignoreRegExpList": [
+    "/`[^`\\n]*`/g",
+    "/```[\\s\\S]*?```/g",
+    "/\\b(act|deed|agt|pol|pv|con|key|sk|org|usr|apr|evt|req|sug|anm|rpl|whk|ltk|pa|cred|atk|dtx|whd|adm|wl|idk|ses|mem)_[0-9a-z…]+/g",
+    "/sha256:[0-9a-f…]+/g",
+    "/https?:\\/\\/\\S+/g",
+    "/import .* from .*/g",
+    "/\\{[^}\\n]*\\}/g"
+  ]
+}

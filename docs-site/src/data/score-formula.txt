@@ -1,0 +1,7 @@
+points = 100
+       − 35                             if the database role is a superuser or has BYPASSRLS
+       − 20 × min(2, high findings)
+       −  8 × min(3, medium findings)
+       −  4 × min(5, unchecked write paths)
+points = max(points, 0)
+grade  = A ≥ 90 · B 80–89 · C 65–79 · D 50–64 · F < 50

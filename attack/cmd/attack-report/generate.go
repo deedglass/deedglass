@@ -30,6 +30,19 @@ var layers = []struct {
 		func(c harness.MetaCase) bool { return c.Group == "U" }},
 }
 
+// notCovered is the honest list under "What this suite doesn't cover", shared by the page and the
+// docs site's data (DocsData).
+var notCovered = []string{
+	"How often models fall for injections. These cases start after the model was fooled.",
+	"A compromised Deedglass host, database superuser or seal key.",
+	"Malicious upstream behaviour beyond tool naming: tool descriptions that carry instructions, poisoned results, slow-drip responses (S34).",
+	"Denial of service at scale. J04 checks one agent's budget, not a flood.",
+	"The supply chain beyond `govulncheck` (S35 adds the SBOM and container scanning).",
+	"The V0 cases not listed as running above.",
+	"What L2 can't see: effects outside Postgres, writes to tables outside the publication, and proxy-mode SQL servers (no marker to bind). `docs/WITNESS.md` lists them.",
+	"Production network rules for private ranges: the suite runs in dev with the private-network override so it can reach its own loopback servers. Metadata, link-local and cross-host targets stay blocked even then (K01, K02); the prod-only rules are covered by the egress corpus (`internal/connector/egress`).",
+}
+
 func statusText(r *harness.Result) string {
 	switch {
 	case r == nil:
@@ -111,13 +124,78 @@ func Generate(meta *harness.Meta, run *harness.Run) []byte {
 	w("| W | S21 (the L2 witness, W01 to W13) | `expectedDigestW` |\n| L | S22 (approvals, links, webhooks) | `expectedDigestL` |\n| U | S23 (undo) | `expectedDigestU` |\n| P, Q, R | S34 | `expectedDigestS34` |\n\n")
 	w("I, M, O, S, T, V, X, Y and Z are unassigned. A session that needs a group takes the next free letter and adds a row here.\n\n")
 	w("## What this suite doesn't cover\n\n")
-	w("- How often models fall for injections. These cases start after the model was fooled.\n")
-	w("- A compromised Deedglass host, database superuser or seal key.\n")
-	w("- Malicious upstream behaviour beyond tool naming: tool descriptions that carry instructions, poisoned results, slow-drip responses (S34).\n")
-	w("- Denial of service at scale. J04 checks one agent's budget, not a flood.\n")
-	w("- The supply chain beyond `govulncheck` (S35 adds the SBOM and container scanning).\n")
-	w("- The V0 cases not listed as running above.\n")
-	w("- What L2 can't see: effects outside Postgres, writes to tables outside the publication, and proxy-mode SQL servers (no marker to bind). `docs/WITNESS.md` lists them.\n")
-	w("- Production network rules for private ranges: the suite runs in dev with the private-network override so it can reach its own loopback servers. Metadata, link-local and cross-host targets stay blocked even then (K01, K02); the prod-only rules are covered by the egress corpus (`internal/connector/egress`).\n")
+	for _, line := range notCovered {
+		w("- %s\n", line)
+	}
 	return b.Bytes()
+}
+
+// DocsCase is one row of the docs site's attack-suite page.
+type DocsCase struct {
+	ID       string `json:"id"`
+	Title    string `json:"title"`
+	Expected string `json:"expected"`
+	Actual   string `json:"actual"`
+	Status   string `json:"status"` // matched | differs | waiting | not_run
+}
+
+// DocsLayer is one table of the page.
+type DocsLayer struct {
+	Title string     `json:"title"`
+	Intro string     `json:"intro"`
+	Cases []DocsCase `json:"cases"`
+}
+
+// DocsPage is what docs-site/src/data/attack.json holds (S33 §3.4): the same layers, results and
+// limits as docs/ATTACK_SUITE.md, without timings or log counts.
+type DocsPage struct {
+	Object     string          `json:"object"`
+	Day        string          `json:"day"`
+	Commit     string          `json:"commit"`
+	Postgres   string          `json:"postgres"`
+	Summary    harness.Summary `json:"summary"`
+	Chains     string          `json:"chains"`
+	Secrets    int             `json:"secrets_seen"`
+	Layers     []DocsLayer     `json:"layers"`
+	NotCovered []string        `json:"not_covered"`
+}
+
+// DocsData renders the docs site's view of the run.
+func DocsData(meta *harness.Meta, run *harness.Run) DocsPage {
+	byID := map[string]*harness.Result{}
+	for i := range run.Cases {
+		byID[run.Cases[i].ID] = &run.Cases[i]
+	}
+	day := run.StartedAt
+	if t, err := time.Parse(time.RFC3339, run.StartedAt); err == nil {
+		if ist, err := time.LoadLocation("Asia/Kolkata"); err == nil {
+			t = t.In(ist)
+		}
+		day = t.Format("2006-01-02")
+	}
+	p := DocsPage{Object: "attack_page", Day: day, Commit: run.Commit, Postgres: pgVersion(run.Postgres), Summary: run.Summary,
+		Chains: run.Invariants.Chains, Secrets: run.Invariants.SecretsSeen, NotCovered: notCovered}
+	for _, l := range layers {
+		dl := DocsLayer{Title: l.title, Intro: l.intro}
+		for _, c := range meta.Cases {
+			if !l.ids(c) {
+				continue
+			}
+			r := byID[c.ID]
+			dc := DocsCase{ID: c.ID, Title: c.Title, Expected: c.ExpectedDetail, Actual: "not run", Status: "not_run"}
+			if r != nil {
+				switch r.Status {
+				case harness.StatusMatched:
+					dc.Status, dc.Actual = "matched", r.Detail
+				case harness.StatusDiffers:
+					dc.Status, dc.Actual = "differs", r.Detail
+				default:
+					dc.Status, dc.Actual = "waiting", "waiting on "+r.Waiting
+				}
+			}
+			dl.Cases = append(dl.Cases, dc)
+		}
+		p.Layers = append(p.Layers, dl)
+	}
+	return p
 }

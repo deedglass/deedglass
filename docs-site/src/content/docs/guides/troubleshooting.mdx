@@ -1,0 +1,46 @@
+---
+title: Troubleshooting with doctor
+description: Run deedglass doctor to check config, keys, the database, the server, the chain, connectors and decoder slots, and fix what it finds.
+lastVerified: "2026-10-05"
+---
+
+import Limits from '../../../components/Limits.astro';
+
+`deedglass doctor` runs 16 read-only checks in parallel and prints a fix for anything wrong.
+
+**Before you start**
+
+- Run it where the server's settings are, or where `deedglass init` ran.
+
+## 1. Run it
+
+```sh test=skip reason="reads this machine's local stack; the Quickstart page runs it"
+deedglass doctor
+```
+
+Exit codes: **0** every check is fine, **1** a problem, **2** doctor couldn't run, **3** the key was refused. `--only db.reachable,ledger.chain` runs a few; `--json` prints the full result.
+
+## 2. Read a problem
+
+Each line is one check: `✓` fine, `○` a note, `✕` a problem with its fix. The fix is a sentence you can act on, such as the command or SQL to run. Every check has its own section in [Doctor checks](/reference/doctor-checks/).
+
+## Common problems
+
+| You see | What to do |
+|---|---|
+| `✕ Server` not reachable | Start it (`deedglass init` again, or `deedglass serve`), or set `DEEDGLASS_SERVER`. |
+| `✕ Clock` more than 30 s off | Sync the machine's clock. Signed intents and expiries depend on it. |
+| `✕ Deed chain` | Stop and read [the Ledger notes](/reference/engineering/ledger/#9-when-the-chain-is-broken). Never edit deeds by hand. |
+| `✕ Decoder slots` halted or lagging | `deedglass decoder status` names the reason; a lagging slot holds WAL on your database. |
+| `✕ Policies` none enforced | `deedglass policy activate … --mode enforce`. Until then, `default-deny` refuses everything. |
+
+## What it doesn't do
+
+<Limits>
+- Doctor reads; it never fixes anything itself. Every fix is yours to run.
+- It checks this machine's view. A second instance needs its own run.
+</Limits>
+
+## Next
+
+- [Doctor checks](/reference/doctor-checks/)

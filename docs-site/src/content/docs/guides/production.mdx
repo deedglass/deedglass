@@ -1,0 +1,57 @@
+---
+title: Run in production on one VM
+description: Run the Deedglass server from its container image on one VM with its own Postgres, TLS in front, separate migrations, health checks and backups.
+lastVerified: "2026-10-05"
+---
+
+import Limits from '../../../components/Limits.astro';
+import { Aside } from '@astrojs/starlight/components';
+
+By the end you'll have one Deedglass server in prod mode, behind TLS, with its own Postgres.
+
+**Before you start**
+
+- A VM with Docker, and a Postgres 16, 17 or 18 for Deedglass's own data (the control plane), separate from the databases it watches.
+- A DNS name and a TLS terminator (Caddy, nginx, a load balancer).
+
+## 1. Build the image
+
+There is no published image yet. Build it from a checkout: `make docker`, or `docker build -t deedglass:0.1.0 .`. It is one static binary on a distroless base, running as a non-root user, under 40 MB.
+
+## 2. Create the roles
+
+The control plane needs `deedglass_migrator` (owns the schema, runs migrations) and `deedglass_app` (the runtime role: owns nothing, so row-level security applies). The server refuses to start in prod as a superuser or a role that bypasses row-level security.
+
+## 3. Set the secrets
+
+`DEEDGLASS_ENV=prod`, `DEEDGLASS_DATABASE_URL` (with `sslmode=require`), `DEEDGLASS_BASE_URL` (https), `DEEDGLASS_VAULT_KEY` (`openssl rand -base64 32`), `DEEDGLASS_API_KEY_PEPPER`, `DEEDGLASS_SEAL_KEY_FILE`, and mail if you want email approvals. Keep them in your secret store. [Configuration](/reference/config/) lists every setting.
+
+## 4. Migrate, then serve
+
+```sh test=skip reason="runs against your production database"
+docker run --rm --env-file migrate.env deedglass:0.1.0 migrate up
+docker run -d --name deedglass --env-file deedglass.env -p 127.0.0.1:8080:8080 deedglass:0.1.0
+```
+
+Migrations are a separate step with the migrator's URL; the server never holds it.
+
+## 5. TLS and health
+
+Terminate TLS in front and set `DEEDGLASS_TRUSTED_PROXIES` to the proxy's address. Point the load balancer at `/v1/health`. Run `deedglass doctor` on the VM after every change.
+
+<Aside type="caution">
+Back up the control-plane database and the seal key. Without the seal key, nothing new can be sealed under it; without the database, the chain is gone.
+</Aside>
+
+## What it doesn't do
+
+<Limits>
+- One VM is one point of failure. Several instances can share one Postgres; Stop and caches stay consistent across them.
+- There is no hosted Deedglass in this release. Team and Cloud are on the waitlist.
+- Deedglass doesn't back itself up.
+</Limits>
+
+## Next
+
+- [Self-hosting engineering note](/reference/engineering/self-hosting/)
+- [Security overview](/security/overview/)

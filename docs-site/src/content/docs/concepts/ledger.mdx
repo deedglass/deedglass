@@ -1,0 +1,52 @@
+---
+title: The Ledger
+description: The searchable history of every action and event in an org, with filters, a live stream, exports and retention.
+lastVerified: "2026-10-05"
+---
+
+import Limits from '../../../components/Limits.astro';
+
+The Ledger is the history of every action and event in your org: what each agent asked, what was decided, and what happened.
+
+## What it records
+
+Every action, including denied, stopped and refused ones; each state change as an event; every admin change (keys, policies, connectors, members) as an admin deed. Events carry ids and states, never request or result bodies.
+
+## Search it
+
+```sh test title="Terminal"
+$ deedglass actions list --decision deny --since 24h --limit 5
+…
+```
+
+Filter by agent, tool (`stripe.*`), state, decision, verdict, level, time and text. Console › Actions has the same filters. `deedglass actions show <act_…> --diff` prints an L2 diff.
+
+## Follow it live
+
+`deedglass actions list --follow` and Console › Actions read `GET /v1/events`, a Server-Sent Events stream of what Postgres committed, in commit order. A reconnect resumes from the last event it saw when it can, and says so when it can't.
+
+## Export it
+
+```sh test title="Terminal"
+$ deedglass deeds export --since 1h --out deeds.tar.gz
+…
+```
+
+An export bundle is a deterministic `tar.gz` of the deeds, the keys and a sealed manifest. `deedglass verify deeds.tar.gz` checks it.
+
+## Retention
+
+Request and result payloads, policy inputs and decoded rows are pruned after the org's retention period (90 days by default; an owner can set 1 to 3,650). Deeds and the chain stay.
+
+## What it doesn't do
+
+<Limits>
+- The live stream resumes on a best-effort basis (about 5 minutes or 1,024 events per org). After a gap it sends `resync`; refetch the list.
+- Pruning removes payloads, not deeds. A deed's digests can't be matched to a request you no longer have.
+- The Ledger is per org. There is no cross-org search.
+</Limits>
+
+## Next
+
+- [Deeds and the deed chain](/concepts/deeds/)
+- [Events and webhooks](/reference/http/events-and-webhooks/)

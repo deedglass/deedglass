@@ -1,0 +1,22 @@
+---
+// The exact error envelope for a catalog code, from src/data (generated; never hand-typed).
+import errors from '../data/errors.json';
+import prose from '../data/errors-prose.json';
+interface Props { code: string; requestId?: string }
+const { code, requestId = 'req_01j9zr3m5k8q2w7x4t6v0b1c9d' } = Astro.props;
+const e = (errors as Array<{ code: string; status: number; type: string; default_message: string; doc_url: string }>).find((x) => x.code === code);
+if (!e) throw new Error(`ErrorEnvelope: ${code} is not in the catalog`);
+const ex = (prose as Record<string, { example?: Record<string, unknown> }>)[code]?.example;
+const inner = { ...(ex ?? { type: e.type, code: e.code, message: e.default_message, param: null }), request_id: requestId, doc_url: e.doc_url };
+const body = JSON.stringify({ error: inner }, null, 2);
+---
+<figure class="dg-env">
+  <figcaption><span class="dg-num">HTTP {e.status}</span> · <code>{e.type}</code></figcaption>
+  <pre tabindex="0" aria-label={`Example ${code} response body`}><code>{body}</code></pre>
+</figure>
+<style>
+  .dg-env { margin: 1rem 0; border: 1px solid var(--ink-800); border-radius: 10px; background: var(--ink-900); overflow: hidden; }
+  figcaption { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.04em; color: var(--slate-400); padding: 0.4rem 0.9rem; border-bottom: 1px solid var(--ink-800); background: var(--ink-850); }
+  figcaption code { color: var(--slate-300); background: none; border: 0; font-size: 0.75rem; }
+  pre { margin: 0; padding: 0.9rem; overflow-x: auto; font-size: 0.8125rem; line-height: 1.6; color: var(--code-string); background: transparent; border: 0; }
+</style>

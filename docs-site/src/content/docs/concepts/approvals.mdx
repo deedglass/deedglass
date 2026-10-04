@@ -1,0 +1,43 @@
+---
+title: Approvals
+description: How a person countersigns a risky action in the Console, by email, in Slack or on a phone, with four-eyes, expiry and the self rule.
+lastVerified: "2026-10-05"
+---
+
+import Limits from '../../../components/Limits.astro';
+
+A rule with `decision: require_approval` holds the action until the right people countersign it.
+
+## What the approver sees
+
+A snapshot of the request, frozen when the approval opened: the agent, the tool, the arguments (redacted where they hold secrets), the rule and its reason, and, for Postgres, an estimate of the rows the statement would touch. If anything that decision depends on changes before someone votes, the vote is refused (`context_changed`) and the page reloads.
+
+## Where people approve
+
+- **Console › Approvals**, signed in.
+- **Email:** one link per person, valid for at most 24 hours. The token is in the URL fragment, so it never reaches a server log. An org can set email links to review only.
+- **Slack:** an approval card with Approve and Deny buttons. The person's Slack email must match a confirmed Deedglass account.
+- **Phone:** the same email link, on any phone.
+
+## The rules
+
+- `required: 2` is four-eyes: two different people.
+- A deny from anyone eligible denies the action.
+- The person the action runs for can't approve it (the self rule), unless an owner allows self-countersigning.
+- Keys never vote: `approval_needs_person`.
+- Past `expires_in`, the action is `expired` and sealed. Nothing ran.
+
+An approved action runs once, even if two people approve at the same moment.
+
+## What it doesn't do
+
+<Limits>
+- An approval says a person agreed. It doesn't check that the person read the details.
+- An approval can't be undone after the action runs. Use [Undo](/guides/undo/) for Postgres rows.
+- If no one eligible exists, the action is denied with `approval_unsatisfiable` instead of waiting forever.
+</Limits>
+
+## Next
+
+- [Slack approvals](/guides/slack-approvals/)
+- [Approvals on your phone](/guides/phone-approvals/)

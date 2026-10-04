@@ -1,0 +1,40 @@
+---
+title: Gateway and proxy modes
+description: Gateway mode runs the call inside Deedglass with credentials from the vault; proxy mode lets the edge run it and report back. What each can witness.
+lastVerified: "2026-10-05"
+---
+
+import Limits from '../../../components/Limits.astro';
+
+Every action runs in one of two modes. The mode decides who runs the tool and what the Witness can check.
+
+| | Gateway | Proxy |
+|---|---|---|
+| Who runs the tool | Deedglass, through a connector | The edge: your code (`wrapTool`), or a wrapped MCP server |
+| Who holds the credentials | The vault | The edge |
+| Highest level | L1 for most connectors, L2 for Postgres | L0: the edge's own report |
+| Examples | `POST /v1/actions`, `/mcp/native`, `/mcp/<connector>` | `deedglass mcp wrap`, `wrapTool`, the SDK adapters |
+
+## Gateway mode
+
+The agent asks; Deedglass decides, opens the credential for that one call, runs it, reads back or reads the change log, and seals the deed. The agent never sees the credential.
+
+## Proxy mode
+
+The agent's side asks first (`next_action: execute_at_edge`), runs the tool only if allowed, then reports the result before a deadline. A report that never arrives makes the action `unknown`, then UNVERIFIABLE. Deedglass decides and records; it can't observe what the edge did.
+
+## Which to choose
+
+Use gateway mode when Deedglass has a connector for the system and you want the agent to hold no credentials. Use proxy mode to put a policy and a record in front of code or servers you can't move behind a connector yet.
+
+## What it doesn't do
+
+<Limits>
+- Proxy mode can't witness beyond what the edge reports. An edge that lies is recorded as having said it.
+- Gateway mode doesn't run arbitrary code: only the connector's tools.
+</Limits>
+
+## Next
+
+- [Govern an MCP server](/get-started/govern-an-mcp-server/)
+- [Connectors](/reference/connectors/overview/)

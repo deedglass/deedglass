@@ -1,0 +1,64 @@
+---
+title: Catch "1 row reported, 301 committed"
+description: Watch the L2 Witness compare what the agent reported with what Postgres committed, and seal a MISMATCH with the diff when a trigger changes 300 more rows.
+lastVerified: "2026-10-05"
+---
+
+import Limits from '../../../components/Limits.astro';
+import VerdictChip from '../../../components/VerdictChip.astro';
+
+By the end you'll have seen the same `UPDATE` sealed twice: once <VerdictChip verdict="VERIFIED" level="L2" />, and once, with a trigger on, <VerdictChip verdict="MISMATCH" level="L2" /> with the 301 rows Postgres actually changed.
+
+**Before you start**
+
+- A Postgres connector with `witness.enabled: true` and `wal_level = logical`. The [Quickstart](/quickstart/) stack has one.
+- `psql` access to the database as an owner, to add a trigger.
+
+## 1. An honest update
+
+```sh test=skip reason="needs approval under postgres-safe; init's smoke test does this step"
+deedglass act postgres.execute --args '{"sql":"UPDATE public.orders SET status = '"'"'shipped'"'"' WHERE id = 42"}'
+```
+
+The agent reports one row. Postgres's change log shows one row of `public.orders` changed in that transaction. Verdict: `L2 · VERIFIED`.
+
+## 2. Add a trigger that does more
+
+```sql title="As the database owner"
+CREATE FUNCTION public.ship_open_batch() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  IF NEW.status = 'shipped' THEN
+    UPDATE public.orders SET status = 'shipped' WHERE status = 'paid' AND id <> NEW.id;
+  END IF;
+  RETURN NEW;
+END $$;
+CREATE TRIGGER orders_ship_open_batch AFTER UPDATE OF status ON public.orders
+  FOR EACH ROW WHEN (pg_trigger_depth() = 0) EXECUTE FUNCTION public.ship_open_batch();
+```
+
+## 3. The same update again
+
+Run the same `UPDATE` on another paid order. The tool still answers `UPDATE 1`. The Witness reads the transaction from the change log and finds 301 changed rows:
+
+```text
+L2 · MISMATCH · Postgres changed 301 rows in public.orders. The agent reported 1.
+```
+
+`deedglass actions show <act_…> --diff` prints the expected and observed rows side by side. Console › Actions shows the same diff, with changed cells highlighted.
+
+## Why this matters
+
+The agent didn't lie: the tool really did report one row. The extra 300 came from the database itself. Only a check against the system of record sees it.
+
+## What it doesn't do
+
+<Limits>
+- L2 sees the watched tables only. A trigger that writes to an unwatched table, or calls out of Postgres, isn't seen.
+- Deedglass sees what the trigger did, not its code.
+- A MISMATCH doesn't roll anything back. The change committed. [Undo a bad write](/guides/undo/) puts the rows back.
+</Limits>
+
+## Next
+
+- [Undo a bad write](/guides/undo/)
+- [Verification levels](/concepts/verification-levels/)

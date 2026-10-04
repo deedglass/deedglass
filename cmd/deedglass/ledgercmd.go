@@ -56,7 +56,11 @@ func (s *ledgerSession) Close() { s.db.Close() }
 // openLedger loads the config, connects as the runtime role and picks the org (--org, or the only
 // org). With sign set it also loads the seal key, for commands that seal (prune, export, fake-action).
 func openLedger(ctx context.Context, e *Env, sign bool) (*ledgerSession, error) {
-	cfg, warnings, err := config.Load(e.LoadOptions())
+	opts, _, err := withInitStack(e.LoadOptions())
+	if err != nil {
+		return nil, err
+	}
+	cfg, warnings, err := config.Load(opts)
 	var ps *config.Problems
 	if errors.As(err, &ps) {
 		return nil, configProblems(e, ps, warnings)

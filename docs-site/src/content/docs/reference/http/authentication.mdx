@@ -1,0 +1,31 @@
+---
+title: Authentication
+description: Agent and org admin API keys as bearer tokens, scopes, the order of checks, and how the Console's session and CSRF work.
+lastVerified: "2026-10-05"
+---
+
+Agents and automation send an API key; people use the Console's session.
+
+## API keys
+
+```http
+Authorization: Bearer dg_live_<prefix>_<secret>
+```
+
+Keys are `dg_live_…` or `dg_test_…`, 49 characters, shown once. Agent keys have the scopes `actions:execute`, `actions:read` and `deeds:read`; org admin keys have exactly `admin`. Every route that takes a key declares its scopes; `GET /v1/whoami` takes any key and tells you whose it is.
+
+## The order of checks
+
+The first failure wins: the header is present → the failed-auth limiter → the key's format, prefix and secret ([`invalid_api_key`](/errors/invalid_api_key/), one message for every reason) → revoked → expired → the org stopped → the agent stopped → the agent suspended → scopes ([`insufficient_scope`](/errors/insufficient_scope/)). Key problems are 401 with `WWW-Authenticate: Bearer`.
+
+## Signed intents and on-behalf-of
+
+`Deedglass-Intent`, `Deedglass-On-Behalf-Of` and `Deedglass-Session` add who and what to a call. See [Agents, keys and identity](/concepts/identity/) and the [signed intents spec](/reference/intents/).
+
+## The Console
+
+The Console uses the cookie `__Host-deedglass_session` plus CSRF: the `__Host-deedglass_csrf` cookie echoed in the `Deedglass-CSRF` header. Sign-in is by a one-time email link.
+
+## MCP clients
+
+MCP clients send the API key as the bearer token. `/.well-known/oauth-protected-resource` describes the resource and lists no authorization server: v1 has none.

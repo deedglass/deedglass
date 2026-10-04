@@ -1,0 +1,30 @@
+---
+title: REST connector
+description: Govern any HTTP API with a declared set of tools, methods and path prefixes, a credential in the vault, and read-backs for L1.
+lastVerified: "2026-10-05"
+---
+
+import { Code } from '@astrojs/starlight/components';
+import orders from '../../../../../../examples/connectors/orders.yaml?raw';
+
+The REST connector turns an HTTP API into a fixed set of tools. The agent can call only the tools you declare, on the methods and path prefixes you allow, and never sees the credential.
+
+## A complete example
+
+<Code code={orders.trim()} lang="yaml" title="examples/connectors/orders.yaml" />
+
+## The rules it enforces
+
+- Only `allowed_methods` on paths under `allowed_path_prefixes`. Path arguments are validated against their patterns and can't add segments.
+- Production needs `https`. Every request goes through the egress door, which refuses private, link-local and metadata addresses unless a dev override is on.
+- Response bodies are capped (`max_response_bytes`, 16 MiB at most). Writes never follow a redirect.
+- With `idempotency_header`, each write sends the action id, so a retried action can't apply twice.
+- A `readback` reads the record after a write and compares the fields you name: L1 Confirmed.
+
+The full key list and every check are in the [connectors overview](/reference/connectors/overview/).
+
+## What it doesn't do
+
+- It doesn't discover an API. Every tool is declared.
+- L1 compares only the fields you name in `expect`.
+- An API that answers consistently but falsely can't be caught by reading it back.

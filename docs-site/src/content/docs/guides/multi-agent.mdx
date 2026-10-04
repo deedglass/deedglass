@@ -1,0 +1,53 @@
+---
+title: Multi-agent teams
+description: Give each agent in a team its own identity, key, labels and budget, so policies, Stop and the Ledger tell them apart.
+lastVerified: "2026-10-05"
+---
+
+import Limits from '../../../components/Limits.astro';
+
+By the end, each agent in your team has its own key and budget, your policy treats them differently, and you can stop one without stopping the rest.
+
+**Before you start**
+
+- An org admin key.
+
+## 1. One agent per role
+
+```sh test=skip reason="creates agents in your org"
+deedglass agent create researcher --label team=support --calls-per-minute 60
+deedglass agent create refunder --label team=support --label money=yes --spend-per-day 50000 --currency usd
+deedglass agent keys create refunder --mode test
+```
+
+Each agent gets its own key. Never share one key across agents: the Ledger, budgets and Stop work per agent.
+
+## 2. Write rules per label
+
+```yaml title="a rule that only the money agents reach"
+  - id: refunds-for-money-agents
+    match: { tool: stripe.create_refund }
+    when: agent.labels.money == "yes" && args.amount <= 5000
+    decision: allow
+    verify: L1
+```
+
+## 3. Pass the person along
+
+When an agent acts for a user, send `Deedglass-On-Behalf-Of` (`on_behalf_of=` in Python, `onBehalfOf` in TypeScript). The deed records it, and Insights watches for bursts of new on-behalf-of users.
+
+## 4. Stop one
+
+`deedglass agent stop refunder --reason "…"` stops only the refunder. The researcher keeps working.
+
+## What it doesn't do
+
+<Limits>
+- Deedglass doesn't orchestrate agents or pass messages between them. It governs each one's tool calls.
+- An agent that calls another agent's API with that agent's key is recorded as that agent. Keep keys apart.
+</Limits>
+
+## Next
+
+- [Agents, keys and identity](/concepts/identity/)
+- [Stop](/concepts/stop/)

@@ -1,0 +1,34 @@
+---
+title: Data handling and privacy
+description: What leaves your machine (nothing, when self-hosted), what Deedglass stores and for how long, and the one opt-in feature that sends aggregates to a model.
+lastVerified: "2026-10-05"
+---
+
+import Limits from '../../../components/Limits.astro';
+
+Self-hosted, Deedglass sends nothing anywhere you didn't configure.
+
+## What leaves your machine
+
+- **Nothing by default.** No telemetry, no analytics, no update checks. `deedglass version --check` asks GitHub for releases only when you run it.
+- **The calls you configure:** connectors call the systems you point them at; mail goes through Resend when you set a key; webhooks go to the URLs you add.
+- **Optional phrasing (off by default).** If the operator sets `DEEDGLASS_ANTHROPIC_API_KEY` and an org admin opts in, Insights asks Claude to reword a suggestion. Only placeholders, product tool names, decisions and numbers are sent, never your data, names, SQL or arguments, and the reply is used only if every number in it matches the evidence. Capped per day and per month.
+- **`deedglass scan`** sends nothing. Its share link keeps its contents after `#`, in the browser.
+
+## What Deedglass stores
+
+- Actions with their decision, digests, verdict and timings; the request's policy input and the result, until retention prunes them (90 days by default).
+- Deeds: digests only, kept for good.
+- Decoded row images from the change log, for 7 days (30 for frames no action claims). Columns you mark sensitive are stored as digests only.
+- Connector credentials, encrypted in the vault. API keys as peppered hashes; session and link tokens as hashes.
+
+## These docs
+
+docs.deedglass.com sets no cookies, loads nothing from another site, and has no analytics. Search runs in your browser.
+
+## What it doesn't do
+
+<Limits>
+- It doesn't anonymise what you send through it. Payloads you pass to tools are stored until retention prunes them.
+- Self-hosting means your operators can read your Deedglass database. Its access controls are yours.
+</Limits>

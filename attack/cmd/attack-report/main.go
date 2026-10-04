@@ -6,10 +6,12 @@
 //	go run ./attack/cmd/attack-report            # print the run, rewrite the page
 //	go run ./attack/cmd/attack-report -check     # print the run, fail if the page is stale
 //	go run ./attack/cmd/attack-report -quiet     # rewrite the page only
+//	go run ./attack/cmd/attack-report -docs-json # print the docs site's data (docs-site/src/data/attack.json)
 package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
@@ -29,8 +31,34 @@ func main() {
 	check := flag.Bool("check", false, "fail when docs/ATTACK_SUITE.md differs from the generated page")
 	quiet := flag.Bool("quiet", false, "don't print the run")
 	root := flag.String("root", ".", "the repo root")
+	docsJSON := flag.Bool("docs-json", false, "print the docs site's attack data as JSON and change nothing")
 	flag.Parse()
+	if *docsJSON {
+		os.Exit(runDocsJSON(*root, os.Stdout, os.Stderr))
+	}
 	os.Exit(run(*root, *check, *quiet, os.Stdout, os.Stderr))
+}
+
+// runDocsJSON prints DocsData. A missing results file is an error: the docs never show stale or
+// invented numbers (S33 §3.4).
+func runDocsJSON(root string, stdout, stderr io.Writer) int {
+	meta, err := harness.LoadMeta(filepath.Join(root, "attack", "attack_meta.json"))
+	if err != nil {
+		fmt.Fprintf(stderr, "✕ Can't read the attack meta: %v\n  Next: run from the repo root.\n", err)
+		return 1
+	}
+	res, err := harness.ReadRun(filepath.Join(root, "attack", "results", "latest.json"))
+	if err != nil {
+		fmt.Fprintf(stderr, "✕ No attack results yet: %v\n  Next: Run make attack first.\n", err)
+		return 1
+	}
+	b, err := json.MarshalIndent(DocsData(meta, res), "", "  ")
+	if err != nil {
+		fmt.Fprintln(stderr, "✕", err)
+		return 1
+	}
+	fmt.Fprintf(stdout, "%s\n", b)
+	return 0
 }
 
 func run(root string, check, quiet bool, stdout, stderr io.Writer) int {

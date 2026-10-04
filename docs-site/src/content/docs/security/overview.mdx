@@ -1,0 +1,31 @@
+---
+title: Security overview
+description: "The principles Deedglass is built on: fail closed, agents never hold credentials, people approve risky actions, and deeds can be checked offline."
+lastVerified: "2026-10-05"
+---
+
+Deedglass assumes the model may already be manipulated. Its job is to limit what the model's tool calls can do, and to record exactly what they did.
+
+## The principles
+
+- **Fail closed.** No enforced policy means `default-deny`. A policy that can't be loaded, SQL that can't be read with confidence, a lookup that fails: each is a deny, never an allow.
+- **Agents never hold credentials.** In gateway mode, connector credentials live in the vault (AES-256-GCM, a data key per credential version) and are opened for one call. Agents hold only a Deedglass key.
+- **People approve risky actions.** Keys never vote. Four-eyes, expiry and the self rule are enforced by the database.
+- **Every attempt is recorded.** Denied, stopped and refused calls are sealed too.
+- **Deeds can be checked offline.** Anyone with the public keys can verify a chain without trusting the server that sealed it.
+- **Unknown stays unknown.** When Deedglass can't tell whether a tool ran, the verdict is UNVERIFIABLE.
+
+## How it is checked
+
+- An [attack suite](/security/attack-suite/) runs against a real server and a real Postgres. Every expected outcome was written before its code.
+- Row-level security on every org table, tested with a matrix; the runtime role owns nothing.
+- One egress door for every outbound call, which refuses private, link-local and metadata addresses.
+- Secrets are hashed or encrypted, never logged; tests plant canaries and search every log and response for them.
+
+## Read more
+
+- [Threat model](/security/threat-model/)
+- [Limitations](/security/limitations/): every known limit.
+- [Security review](/security/review/)
+- [Data handling and privacy](/security/data-handling/)
+- [Responsible disclosure](/security/disclosure/)

@@ -1,0 +1,47 @@
+---
+// "How Deedglass works": the seven parts as a static SVG (horizontal from 50rem, vertical below).
+// The numbered list on the page is the text alternative; the SVG is labelled, and decorative
+// details are hidden from assistive tech.
+const parts = ['Agent', 'Gate', 'Policies', 'Approvals', 'Connector', 'Witness', 'Deed'];
+const notes = ['its key, no tool credentials', 'every call arrives', 'allow · deny · approve', 'a person countersigns', 'runs the call', 'L0 · L1 · L2', 'sealed, in the chain'];
+const bw = 124, bh = 58, gap = 22;
+const W = parts.length * bw + (parts.length - 1) * gap + 4;
+const vbw = 300, vbh = 54, vgap = 18;
+const VH = parts.length * vbh + (parts.length - 1) * vgap + 4;
+---
+<figure class="dg-arch">
+  <svg class="h" viewBox={`0 0 ${W} ${bh + 4}`} role="img" aria-label="Agent, then the Gate, policies, approvals, a connector, the Witness, and a sealed deed.">
+    {parts.map((p, i) => { const x = 2 + i * (bw + gap); return (
+      <g aria-hidden="true">
+        <rect x={x} y="2" width={bw} height={bh} rx="10" class:list={['box', p === 'Deed' && 'deed']} />
+        <text x={x + bw / 2} y="26" text-anchor="middle" class="t">{p}</text>
+        <text x={x + bw / 2} y="44" text-anchor="middle" class="n">{notes[i]}</text>
+        {i < parts.length - 1 && <path d={`M${x + bw + 4} ${2 + bh / 2} h${gap - 8}`} class="arrow" marker-end="url(#dg-arch-a)" />}
+      </g>
+    ); })}
+    <defs><marker id="dg-arch-a" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L8 4 L0 8 z" class="head" /></marker></defs>
+  </svg>
+  <svg class="v" viewBox={`0 0 ${vbw + 4} ${VH}`} role="img" aria-label="Agent, then the Gate, policies, approvals, a connector, the Witness, and a sealed deed.">
+    {parts.map((p, i) => { const y = 2 + i * (vbh + vgap); return (
+      <g aria-hidden="true">
+        <rect x="2" y={y} width={vbw} height={vbh} rx="10" class:list={['box', p === 'Deed' && 'deed']} />
+        <text x="18" y={y + 24} class="t">{p}</text>
+        <text x="18" y={y + 42} class="n">{notes[i]}</text>
+        {i < parts.length - 1 && <path d={`M${2 + vbw / 2} ${y + vbh + 3} v${vgap - 8}`} class="arrow" marker-end="url(#dg-arch-b)" />}
+      </g>
+    ); })}
+    <defs><marker id="dg-arch-b" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L8 4 L0 8 z" class="head" /></marker></defs>
+  </svg>
+</figure>
+<style>
+  .dg-arch { margin: 1.5rem 0; padding: 1rem; border: 1px solid var(--dg-hairline); border-radius: 14px; background: var(--dg-surface); }
+  svg { display: block; width: 100%; height: auto; }
+  .v { display: none; max-width: 22rem; margin: 0 auto; }
+  @media (max-width: 50rem) { .h { display: none; } .v { display: block; } }
+  .box { fill: var(--sl-color-bg); stroke: var(--dg-hairline); }
+  .box.deed { stroke: var(--dg-accent); }
+  .t { font-size: 14px; font-weight: 600; fill: var(--sl-color-white); font-family: var(--__sl-font); }
+  .n { font-size: 11px; fill: var(--dg-text-2); font-family: var(--__sl-font); }
+  .arrow { stroke: var(--dg-text-3); stroke-width: 1.25; fill: none; }
+  .head { fill: var(--dg-text-3); }
+</style>

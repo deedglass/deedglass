@@ -1,0 +1,41 @@
+---
+title: FAQ
+description: Short, exact answers to the questions people ask first, with links to the pages that go deeper.
+lastVerified: "2026-10-05"
+---
+
+## How is this different from an MCP gateway, Okta or Cloudflare?
+
+Those decide who may connect. Deedglass decides what each tool call may do, runs it, then checks the result against the system of record and seals a signed deed of what actually happened. Use them together: an identity provider for people, a network edge for traffic, Deedglass for agent actions. See [How Deedglass works](/concepts/how-it-works/).
+
+## What does VERIFIED actually mean?
+
+That Deedglass compared what the agent reported with an independent observation and found no difference. The level says which: the tool's own answer (L0), a read-back (L1), or the change Postgres committed (L2). It doesn't mean the action was a good idea. [The exact definition](/concepts/what-verified-means/).
+
+## Does it slow my agent down?
+
+It adds a decision, a few database writes and a seal to every call. Measured on an M1 laptop with Postgres on the same machine, an allowed call with no witness added 22 ms at the median and 42 ms at p99, at 8 concurrent calls (`bench/results/2026-10-02-darwin-arm64-gate.json`). That is above the 5 ms and 25 ms targets; the release pass re-measures on a server. Policy evaluation itself is under 1 ms at p99. An L2 verdict arrives after the change log is read, so it adds no time to the call when you don't wait for it.
+
+## Where does my data go?
+
+Nowhere you didn't configure. Self-hosted, Deedglass sends no telemetry. Payloads stay in your database until retention prunes them; deeds hold only digests. [Data handling and privacy](/security/data-handling/).
+
+## Why Postgres first?
+
+Because Postgres keeps its own record of every committed change, the change log, and Deedglass can read it. That makes L2 possible: comparing the agent's report with what the database actually committed. Other systems are checked by reading back (L1).
+
+## Can an agent get around it?
+
+Not through Deedglass: denied calls never run, stopped agents are refused, and the attack suite tests the ways a manipulated model tries. But an agent with another path to a system (its own credentials, a direct database URL) isn't governed on that path. [Scan your setup](/get-started/scan/) to find those paths.
+
+## What happens if Deedglass is down?
+
+Calls fail closed: the MCP wrapper and the SDKs refuse to run a governed tool they can't get a decision for, and say so. Nothing runs ungoverned. A call that was running when Deedglass went away is recorded as unknown, then UNVERIFIABLE.
+
+## Is it free?
+
+The core is free and Apache-2.0. Pro adds the Action on private repos, the full report and Pro packs, from $29 a month.
+
+## Who is behind it?
+
+Deedglass is built by Arjun Prabhakaran, a solo founder in India.

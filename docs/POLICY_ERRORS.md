@@ -1658,4 +1658,4 @@ The compiler itself failed on this file. This is a bug in Deedglass, not in your
 ## See also
 
 - [POLICY_LANGUAGE.md](POLICY_LANGUAGE.md): the policy language, its limits and the CEL environment.
-- [CLI.md](CLI.md#policies): `deedglass policy lint` and `deedglass policy fmt`.
+- [CLI.md](CLI.md#policies-policy-lint-policy-fmt-policy-evaluate-policy-test-policy-push-and-policy-activate): `deedglass policy lint` and `deedglass policy fmt`.

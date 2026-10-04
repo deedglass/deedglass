@@ -1,0 +1,37 @@
+---
+title: Events and webhooks
+description: The one event object for Server-Sent Events and webhooks, the event types, the GET /v1/events stream, and how webhook signatures are checked.
+lastVerified: "2026-10-05"
+---
+
+The same event object arrives over `GET /v1/events` and over webhooks.
+
+```json
+{ "object": "event", "id": "evt_…", "type": "action.witnessed", "api_version": "2026-10-01",
+  "created_at": "2026-10-05T09:00:00Z", "livemode": false, "org": "org_…",
+  "data": { "object": { "object": "action", "id": "act_…", "state": "sealed" } } }
+```
+
+Payloads are thin: ids, states and shapes, never request or result bodies, context or email addresses. Fetch the object when you need more.
+
+## Types
+
+`action.created`, `action.decided`, `action.executed`, `action.witnessed`, `deed.sealed`, `approval.requested`, `approval.decided`, `agent.stopped`, `agent.resumed`, `agent.suspended`, `org.stopped`, `org.started`, `anomaly.detected`, `suggestion.created`, `policy.activated`, `decoder.degraded`, `decoder.recovered`, `decoder.alert`, `webhook.test`.
+
+## The stream
+
+`GET /v1/events` is Server-Sent Events of what Postgres committed for one org, in commit order. Filter with `types` (`action.*` works) and `agent`. Resume with `Last-Event-ID`; resume is best effort (about 5 minutes or 1,024 events), and a `resync` event tells you to refetch. At most 8 streams per person or key.
+
+## Webhooks
+
+```sh test=skip reason="needs a public HTTPS endpoint of yours"
+deedglass webhooks create --url https://hooks.example.com/deedglass --events approval.requested,approval.decided
+```
+
+Each delivery is signed:
+
+```http
+Deedglass-Signature: t=1759654800,v1=5f2b…
+```
+
+`v1` is the hex HMAC-SHA256 of `"<t>.<raw body>"` with your `whsec_…` secret as the key. Check it against the raw body, in constant time, and refuse a `t` older than 5 minutes. The Go client has `webhook.Verify`. Failed deliveries are retried with backoff, and a webhook that keeps failing is disabled with an admin deed.

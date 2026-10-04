@@ -30,10 +30,11 @@ func doctorFlags(fs *flag.FlagSet) {
 	fs.StringVar(&doctorValues.only, "only", "", "run only these checks: ids or prefixes, like db.* or seal.key,clock.skew")
 }
 
-// doctorEnv resolves what doctor checks: the environment first, then what deedglass init wrote in
-// .deedglass/ (stack.json and admin.key) when this directory has it.
-func doctorEnv(e *Env) (*doctor.Env, error) {
-	opts := e.LoadOptions()
+// withInitStack fills what deedglass init wrote in .deedglass/stack.json into the settings, under
+// whatever the environment already sets: dev, the runtime role's database URL, the seal key and the
+// listen address. Doctor and the DB-direct Ledger commands (actions list, deeds export, ledger
+// check, …) use it, so they work in a directory deedglass init set up (S33's Quickstart test).
+func withInitStack(opts config.LoadOptions) (config.LoadOptions, *setup.Stack, error) {
 	env := maps.Clone(opts.Env)
 	if env == nil {
 		env = map[string]string{}
@@ -44,7 +45,7 @@ func doctorEnv(e *Env) (*doctor.Env, error) {
 	}
 	st, err := setup.ReadStack(dir)
 	if err != nil {
-		return nil, err
+		return opts, nil, err
 	}
 	if st != nil {
 		setDefault := func(k, v string) {
@@ -58,6 +59,21 @@ func doctorEnv(e *Env) (*doctor.Env, error) {
 		setDefault("DEEDGLASS_LISTEN", st.Listen)
 	}
 	opts.Env = env
+	return opts, st, nil
+}
+
+// doctorEnv resolves what doctor checks: the environment first, then what deedglass init wrote in
+// .deedglass/ (stack.json and admin.key) when this directory has it.
+func doctorEnv(e *Env) (*doctor.Env, error) {
+	opts, st, err := withInitStack(e.LoadOptions())
+	if err != nil {
+		return nil, err
+	}
+	env := opts.Env
+	dir := opts.Dir
+	if dir == "" {
+		dir = "."
+	}
 	cfg, _, cerr := config.Load(opts)
 	d := &doctor.Env{Dir: dir, ConfigErr: cerr, EnvName: "dev", CLIVersion: buildInfo().Version, APIVersion: currentAPIVersion(),
 		Now: time.Now, Statfs: statfsFree, Connect: nil}

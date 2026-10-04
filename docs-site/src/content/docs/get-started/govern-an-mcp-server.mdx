@@ -1,0 +1,78 @@
+---
+title: Govern an MCP server
+description: Put any MCP server behind the Gate, as a stdio wrap on the agent's machine or as a remote server behind the HTTP gateway, with its credential in the vault.
+lastVerified: "2026-10-05"
+---
+
+import { Aside } from '@astrojs/starlight/components';
+import Limits from '../../../components/Limits.astro';
+
+Every `tools/call` to the server goes to the Gate first: the policy decides, the call runs only if allowed, and a deed records the result.
+
+**Before you start**
+
+- A Deedglass server, an agent key (`DEEDGLASS_API_KEY`) and its address (`DEEDGLASS_SERVER`).
+- The MCP server you want to govern.
+
+## Two ways in
+
+| | stdio wrap | HTTP gateway |
+|---|---|---|
+| Where the server runs | On the agent's machine, started by the client | Anywhere Deedglass can reach over HTTP |
+| Command | `deedglass mcp wrap --connector <name> -- <cmd>` | a `mcp_http` connector, served at `/mcp/<name>` |
+| Who holds the server's credential | The process on the agent's machine | The vault, on the Deedglass server |
+| Mode | proxy: the call runs at the edge, Deedglass decides and records | gateway: Deedglass runs the call |
+
+## 1. Wrap a stdio server
+
+```sh test=skip reason="starts an interactive MCP session on stdin"
+deedglass mcp wrap --connector files -- npx -y @modelcontextprotocol/server-filesystem@2026.8.31 /tmp/deedglass-demo
+```
+
+The wrapper relays everything else untouched. It hides tools the policy always denies (`--hide-denied`, on by default), so the model doesn't keep trying them. If the server is unreachable, the call fails closed.
+
+## 2. Or put a remote server behind the gateway
+
+Create an `mcp_http` connector. Its credential goes into the vault and never reaches the agent:
+
+```yaml title="everything.yaml"
+type: mcp_http
+name: everything
+config:
+  url: https://mcp.example.com/mcp
+  auth: { kind: bearer }
+  timeout_ms: 30000
+```
+
+```sh test=skip reason="needs a reachable remote MCP server and its token"
+deedglass connector create --config everything.yaml
+deedglass connector credentials set everything --from-env EVERYTHING_TOKEN
+```
+
+Clients then connect to `http://127.0.0.1:8080/mcp/everything` with their agent key. Upstream tools have the side effect `unknown`, so write a policy rule for each tool you allow.
+
+<Aside type="caution">
+Agents send their Deedglass key, never the upstream's. Deedglass strips inbound credentials before anything is forwarded.
+</Aside>
+
+## 3. Watch the calls
+
+```sh test title="Terminal"
+$ deedglass actions list --limit 5
+…
+```
+
+`deedglass actions list --follow --connector files` streams them as they are decided.
+
+## What it doesn't do
+
+<Limits>
+- MCP results are the server's own words: the Witness records them at L0 (Reported). Only connectors that can read the target back reach L1 or L2.
+- A wrapped server still runs with its own access on the agent's machine. The wrap governs the calls an agent makes through MCP, not the process itself.
+- Tool descriptions that carry instructions aren't rewritten. Upstream tool names that aren't plain ASCII are hidden.
+</Limits>
+
+## Next
+
+- [Gateway and proxy modes](/concepts/modes/)
+- [Remote MCP servers](/reference/connectors/mcp-http/): every config key.

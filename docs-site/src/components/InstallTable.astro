@@ -1,0 +1,26 @@
+---
+// "Install in any client": one row per client, from src/data/install-links.json (generated; S47
+// replaces the generator with `deedglass mcp install-links`). check-install-links.mjs decodes each.
+import data from '../data/install-links.json';
+---
+<div class="dg-install">
+  {data.clients.map((c) => (
+    <section>
+      <h3>{c.client}</h3>
+      {c.link && <p><a class="btn" href={c.link}>Add to {c.client}</a>{c.web && <> · <a href={c.web}>web link</a></>}</p>}
+      {c.command && <pre tabindex="0" aria-label={`${c.client} command`}><code>{c.command}</code></pre>}
+      {c.bundle && <p>Open <code>{c.bundle}</code>.</p>}
+      {c.link && <details><summary>The link</summary><pre tabindex="0" aria-label={`${c.client} link`}><code>{c.link}</code></pre></details>}
+      <p class="src">Source: <a href={c.source}>{new URL(c.source).host}</a></p>
+    </section>
+  ))}
+</div>
+<style>
+  .dg-install { display: grid; gap: 1rem; }
+  section { border: 1px solid var(--dg-hairline); border-radius: 14px; padding: 1rem 1.25rem; background: var(--dg-surface); }
+  h3 { margin: 0 0 0.5rem; font-size: 1rem; }
+  .btn { display: inline-flex; align-items: center; min-height: 32px; padding: 0 14px; border-radius: 10px; background: var(--sl-color-accent); color: var(--sl-color-text-invert); text-decoration: none; font-weight: 550; font-size: 0.875rem; }
+  .btn:hover { background: var(--sl-color-accent-high); }
+  pre { overflow-x: auto; font-size: 0.75rem; background: var(--ink-900); color: var(--code-plain); border: 1px solid var(--ink-800); border-radius: 10px; padding: 0.75rem; }
+  .src { font-size: 0.8125rem; color: var(--dg-text-2); margin-bottom: 0; }
+</style>

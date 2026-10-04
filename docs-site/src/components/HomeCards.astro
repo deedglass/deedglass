@@ -1,0 +1,45 @@
+---
+// The home page below the hero: four calm cards and "Works with" as plain text labels (S33 §3.3).
+import VerdictChip from './VerdictChip.astro';
+const cards = [
+  { title: 'Gate', href: '/concepts/how-it-works/', body: 'Every tool call passes through the Gate. A policy decides: allow, deny, or wait for a person to approve.' },
+  { title: 'Witness', href: '/concepts/verification-levels/', body: 'After the call, the Witness compares what the tool reported with an independent observation, up to the change Postgres committed.' },
+  { title: 'Deeds', href: '/concepts/deeds/', body: 'Each action is sealed as a signed deed in a hash-linked chain. Anyone with the public key can check it offline.' },
+  { title: 'Stop', href: '/concepts/stop/', body: 'Stop one agent, or every agent in the org, in under two seconds. Stopped calls are refused and still recorded.' },
+];
+const works = ['Claude', 'OpenAI', 'Gemini', 'Cursor', 'any MCP client', 'Postgres', 'GitHub', 'Slack', 'Stripe test mode'];
+---
+<section class="dg-home" aria-label="What Deedglass does">
+  <div class="example">
+    <code class="line" translate="no">postgres.execute · UPDATE public.orders … WHERE id = 42</code>
+    <span class="chips"><VerdictChip verdict="MISMATCH" level="L2" /></span>
+    <p class="said">Postgres changed 301 rows in public.orders. The agent reported 1.</p>
+  </div>
+  <ul class="cards">
+    {cards.map((c) => (
+      <li><a href={c.href}><h2>{c.title}</h2><p>{c.body}</p></a></li>
+    ))}
+  </ul>
+  <div class="works">
+    <h2>Works with</h2>
+    <p>{works.map((w, i) => (<><span>{w}</span>{i < works.length - 1 && <span class="sep" aria-hidden="true"> · </span>}</>))}</p>
+  </div>
+  <p class="next">New here? Start with the <a href="/quickstart/">Quickstart</a>, then read <a href="/concepts/what-verified-means/">what VERIFIED means</a>. Already running agents? <a href="/get-started/scan/">Scan your setup in 60 seconds</a>.</p>
+</section>
+<style>
+  .dg-home { display: grid; gap: 3rem; margin-top: 0.5rem; }
+  .example { justify-self: center; max-width: 40rem; width: 100%; border: 1px solid var(--dg-hairline); border-radius: 14px; background: var(--dg-surface); padding: 1rem 1.25rem; display: grid; gap: 0.5rem; }
+  .line { font-family: var(--__sl-font-mono); font-size: 0.8125rem; color: var(--dg-text-2); background: none; border: 0; padding: 0; overflow-wrap: anywhere; }
+  .said { margin: 0; font-size: 0.9375rem; }
+  .cards { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 1rem; }
+  .cards li { margin: 0; }
+  .cards a { display: block; height: 100%; padding: 1.25rem; border: 1px solid var(--dg-hairline); border-radius: 14px; background: var(--dg-surface); text-decoration: none; color: inherit; transition: border-color 180ms var(--dg-ease-enter); }
+  .cards a:hover { border-color: var(--dg-text-3); }
+  .cards h2 { margin: 0 0 0.5rem; font-size: 1.0625rem; font-weight: 600; letter-spacing: -0.01em; color: var(--sl-color-white); }
+  .cards p { margin: 0; font-size: 0.9375rem; line-height: 1.6; color: var(--dg-text-2); }
+  .works { text-align: center; }
+  .works h2 { margin: 0 0 0.5rem; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.04em; font-variant: small-caps; text-transform: lowercase; color: var(--dg-text-2); }
+  .works p { margin: 0; color: var(--sl-color-white); font-size: 0.9375rem; }
+  .sep { color: var(--dg-text-3); }
+  .next { text-align: center; margin: 0; color: var(--dg-text-2); }
+</style>

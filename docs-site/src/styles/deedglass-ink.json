@@ -1,0 +1,24 @@
+{
+  "name": "deedglass-ink",
+  "type": "dark",
+  "colors": {
+    "editor.background": "#0E1017",
+    "editor.foreground": "#F5F6FA",
+    "editor.selectionBackground": "#2A2E3B",
+    "editor.lineHighlightBackground": "#141722",
+    "editorLineNumber.foreground": "#7D8293",
+    "terminal.foreground": "#F5F6FA",
+    "terminal.background": "#0E1017"
+  },
+  "tokenColors": [
+    { "scope": ["comment", "punctuation.definition.comment"], "settings": { "foreground": "#8B90A0" } },
+    { "scope": ["string", "string.quoted", "markup.inline.raw"], "settings": { "foreground": "#9FD8CE" } },
+    { "scope": ["constant.numeric", "constant.language", "constant.language.boolean"], "settings": { "foreground": "#E0C48A" } },
+    { "scope": ["keyword", "storage", "storage.type", "keyword.control", "support.function.builtin", "entity.name.tag", "support.type.property-name"], "settings": { "foreground": "#6F8DFF" } },
+    { "scope": ["entity.name.function", "support.function", "meta.function-call", "entity.other.attribute-name"], "settings": { "foreground": "#F5F6FA" } },
+    { "scope": ["punctuation", "meta.brace", "keyword.operator"], "settings": { "foreground": "#B9BDC8" } },
+    { "scope": ["variable", "variable.other", "variable.parameter"], "settings": { "foreground": "#F5F6FA" } },
+    { "scope": ["markup.deleted", "punctuation.definition.deleted"], "settings": { "foreground": "#FF7A70" } },
+    { "scope": ["markup.inserted", "punctuation.definition.inserted"], "settings": { "foreground": "#34E3C9" } }
+  ]
+}

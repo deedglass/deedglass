@@ -1,0 +1,15 @@
+---
+title: Pagination
+description: List endpoints return a list object with has_more and next_cursor; pass limit and cursor to page through.
+lastVerified: "2026-10-05"
+---
+
+Every list endpoint answers the same shape:
+
+```json
+{ "object": "list", "data": [ … ], "has_more": true, "next_cursor": "c_…" }
+```
+
+Pass `?limit=` (1 to 100) and `&cursor=<next_cursor>` to get the next page. A cursor is opaque: don't build or edit one. A `limit` outside 1 to 100 is [`validation_failed`](/errors/validation_failed/) with `param: limit`.
+
+Lists are stable under concurrent inserts: a page never repeats or skips a row that existed when you started. The SDKs iterate pages for you.

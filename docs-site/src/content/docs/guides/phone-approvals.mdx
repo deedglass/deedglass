@@ -1,0 +1,38 @@
+---
+title: Approvals on your phone
+description: Approve or deny an action from the email link on your phone, with the full context, in a page that works without the Console.
+lastVerified: "2026-10-05"
+---
+
+import Limits from '../../../components/Limits.astro';
+
+By the end, you approve an action from your phone in under a minute.
+
+**Before you start**
+
+- A rule with `decision: require_approval` and `notify: [email]`.
+- Mail set up on the server (`DEEDGLASS_RESEND_API_KEY` and `DEEDGLASS_MAIL_FROM`). In dev, mail goes to the server log instead.
+
+## 1. Get the email
+
+When the approval opens, each eligible person gets one email with one link. The link is personal, works once, and expires within 24 hours. Its token is in the part of the URL after `#`, so it never reaches a server log.
+
+## 2. Open the page
+
+The approval page shows the same context the Console shows: the agent, the tool, the arguments, the rule and its reason, the estimate of rows for Postgres, and who else has voted. It is a small page with no third-party scripts, built for a phone.
+
+## 3. Decide
+
+Approve, or deny with a reason. If the context changed since the email was sent, the page shows the new context before it accepts a vote. Owners can set links to review only (`email_links: review`), so the email shows the details and the decision happens in the Console.
+
+## What it doesn't do
+
+<Limits>
+- A forwarded link still works for whoever holds it, until it is used or expires. Use review-only links if that's a concern.
+- The page doesn't sign you in to the Console.
+- No push notifications: email and Slack are the channels.
+</Limits>
+
+## Next
+
+- [Approvals](/concepts/approvals/)

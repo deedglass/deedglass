@@ -1,0 +1,719 @@
+[
+  {
+    "code": "anchor_missing",
+    "exit": [
+      1
+    ],
+    "messages": null,
+    "next": [
+      "deedglass ledger check (the whole chain names the first break)"
+    ]
+  },
+  {
+    "code": "below_fail_under",
+    "exit": [
+      1
+    ],
+    "messages": null
+  },
+  {
+    "code": "cancelled",
+    "exit": [
+      1
+    ],
+    "messages": [
+      "Cancelled.",
+      "Nothing was changed.",
+      "Nothing applied: the name didn't match."
+    ]
+  },
+  {
+    "code": "config_invalid",
+    "exit": [
+      1,
+      2
+    ],
+    "messages": [
+      "DEEDGLASS_VAULT_KEY can't be read."
+    ],
+    "next": [
+      "Fix each one; see docs/CONFIG.md.",
+      "Run deedglass config print for the problem."
+    ]
+  },
+  {
+    "code": "confirmation_required",
+    "exit": [
+      2
+    ],
+    "messages": null
+  },
+  {
+    "code": "connector_test_failed",
+    "exit": [
+      1
+    ],
+    "messages": [
+      "connector test failed.",
+      "not ready for L2."
+    ]
+  },
+  {
+    "code": "console_not_built",
+    "exit": [
+      1
+    ],
+    "messages": [
+      "Refusing to start: the Console wasn't built into this binary."
+    ],
+    "next": [
+      "Run make web-build, then make build, and start the new binary."
+    ]
+  },
+  {
+    "code": "database_ahead",
+    "exit": [
+      1
+    ],
+    "messages": null,
+    "next": [
+      "Run a deedglass build that has these migrations, or check that the URL points at the right database."
+    ]
+  },
+  {
+    "code": "database_error",
+    "exit": [
+      1
+    ],
+    "messages": [
+      "Can't read the orgs in this database."
+    ],
+    "next": [
+      "Run deedglass migrate up, and use the runtime role deedglass_app (docs/DATABASE_SETUP.md)."
+    ]
+  },
+  {
+    "code": "database_unreachable",
+    "exit": [
+      1,
+      2
+    ],
+    "messages": [
+      "Can't reach the database in DEEDGLASS_DATABASE_URL."
+    ],
+    "next": [
+      "Check that Postgres is running and that migrations ran (deedglass migrate up).",
+      "Is Postgres running? Try make dev."
+    ]
+  },
+  {
+    "code": "decoder_halted",
+    "exit": [
+      1
+    ],
+    "messages": [
+      "a decoder is halted.",
+      "the decoder is halted."
+    ]
+  },
+  {
+    "code": "dev_only",
+    "exit": [
+      1
+    ],
+    "messages": [
+      "deedglass dev seed is for dev databases only.",
+      "deedglass dev seed --demo is for dev databases only.",
+      "insights detect --backfill only runs with DEEDGLASS_ENV=dev. It judges past hours as if they were now."
+    ],
+    "next": [
+      "Unset DEEDGLASS_ENV=prod, and point DEEDGLASS_DATABASE_URL at a local database.",
+      "Unset DEEDGLASS_ENV=prod, and point DEEDGLASS_DATABASE_URL at the demo's database."
+    ]
+  },
+  {
+    "code": "doctor_failed",
+    "exit": [
+      2
+    ],
+    "messages": null,
+    "next": [
+      "Check .deedglass/stack.json (deedglass init writes it), then run deedglass doctor again."
+    ]
+  },
+  {
+    "code": "doctor_problems",
+    "exit": [
+      1
+    ],
+    "messages": null
+  },
+  {
+    "code": "dsn_unset",
+    "exit": [
+      2
+    ],
+    "messages": null
+  },
+  {
+    "code": "export_failed",
+    "exit": [
+      1
+    ],
+    "messages": null,
+    "next": [
+      "Choose another directory with --out.",
+      "Choose another path with --out."
+    ]
+  },
+  {
+    "code": "failed",
+    "exit": [
+      1
+    ],
+    "messages": null
+  },
+  {
+    "code": "file_unreadable",
+    "exit": [
+      1
+    ],
+    "messages": null,
+    "next": [
+      "Check the path."
+    ]
+  },
+  {
+    "code": "gmail_authorize_failed",
+    "exit": [
+      1
+    ],
+    "messages": null
+  },
+  {
+    "code": "init_failed",
+    "exit": [
+      1
+    ],
+    "messages": null
+  },
+  {
+    "code": "init_running",
+    "exit": [
+      1
+    ],
+    "messages": [
+      "another deedglass init is running in this directory."
+    ],
+    "next": [
+      "Wait for it to finish, then run deedglass init again."
+    ]
+  },
+  {
+    "code": "interrupted",
+    "exit": [
+      1
+    ],
+    "messages": [
+      "Stopped before finishing."
+    ],
+    "next": [
+      "Run the command again."
+    ]
+  },
+  {
+    "code": "key_exists",
+    "exit": [
+      1
+    ],
+    "messages": null,
+    "next": [
+      "Keep using it, or pass --force to replace it (register the new key before you remove the old one)."
+    ]
+  },
+  {
+    "code": "key_failed",
+    "exit": [
+      1
+    ],
+    "messages": null,
+    "next": [
+      "Run deedglass migrate up, then try again."
+    ]
+  },
+  {
+    "code": "key_file_write_failed",
+    "exit": [
+      1
+    ],
+    "messages": null,
+    "next": [
+      "Check the directory's permissions, or choose another with --dir."
+    ]
+  },
+  {
+    "code": "key_invalid",
+    "exit": [
+      1
+    ],
+    "messages": null,
+    "next": [
+      "Generate a key with deedglass agent intent keygen \u003cagent\u003e."
+    ]
+  },
+  {
+    "code": "key_unreadable",
+    "exit": [
+      1
+    ],
+    "messages": null,
+    "next": [
+      "Generate a key with deedglass agent intent keygen \u003cagent\u003e."
+    ]
+  },
+  {
+    "code": "keys_conflict",
+    "exit": [
+      1
+    ],
+    "messages": null,
+    "next": [
+      "Use one key set from the issuer. Two different keys with one id is a sign of tampering."
+    ]
+  },
+  {
+    "code": "keys_file",
+    "exit": [
+      1
+    ],
+    "messages": null,
+    "next": [
+      "Check the folder exists and is writable, then run make demo-reset HARD=1."
+    ]
+  },
+  {
+    "code": "keys_invalid",
+    "exit": [
+      2
+    ],
+    "messages": null,
+    "next": [
+      "Pass the issuer's keys.json: --keys \u003cissuer\u003e/.well-known/deedglass/keys.json"
+    ]
+  },
+  {
+    "code": "keys_unreachable",
+    "exit": [
+      2
+    ],
+    "messages": null,
+    "next": [
+      "Check the URL, or download keys.json and pass it as a file: --keys keys.json"
+    ]
+  },
+  {
+    "code": "link_failed",
+    "exit": [
+      1
+    ],
+    "messages": null,
+    "next": [
+      "Run deedglass migrate up, then try again."
+    ]
+  },
+  {
+    "code": "listen_failed",
+    "exit": [
+      1
+    ],
+    "messages": null,
+    "next": [
+      "Another process may be using the port. Set DEEDGLASS_LISTEN to a free address.",
+      "Set DEEDGLASS_METRICS_LISTEN to a free address, or unset it."
+    ]
+  },
+  {
+    "code": "mcp_upstream_invalid",
+    "exit": [
+      1
+    ],
+    "messages": null,
+    "next": [
+      "Fix mcp.upstreams in deedglass.yaml (docs/MCP.md, \"Put the Gate in front of a remote MCP server\")."
+    ]
+  },
+  {
+    "code": "migrate_failed",
+    "exit": [
+      1
+    ],
+    "messages": null,
+    "next": [
+      "Nothing after the failed migration was applied. Fix the cause and run deedglass migrate up again."
+    ]
+  },
+  {
+    "code": "migrate_locked",
+    "exit": [
+      1
+    ],
+    "messages": [
+      "Another deedglass is migrating this database."
+    ],
+    "next": [
+      "Wait for it to finish, or look for the lock holder in pg_locks."
+    ]
+  },
+  {
+    "code": "migrate_permission_denied",
+    "exit": [
+      1
+    ],
+    "messages": null,
+    "next": [
+      "Run migrations as deedglass_migrator: set DEEDGLASS_MIGRATE_DATABASE_URL, or pass --database-url."
+    ]
+  },
+  {
+    "code": "migration_changed",
+    "exit": [
+      1
+    ],
+    "messages": [
+      "Refusing to start: the database's migrations don't match this build."
+    ],
+    "next": [
+      "An applied migration must never change. Restore the original file, and put the change in a new migration.",
+      "Run deedglass migrate verify for details."
+    ]
+  },
+  {
+    "code": "migrations_pending",
+    "exit": [
+      1
+    ],
+    "messages": null,
+    "next": [
+      "Run deedglass migrate up first."
+    ]
+  },
+  {
+    "code": "no_orgs",
+    "exit": [
+      1
+    ],
+    "messages": [
+      "This database has no orgs yet."
+    ],
+    "next": [
+      "deedglass dev seed (dev), or deedglass dev fake-action to create a demo org with actions."
+    ]
+  },
+  {
+    "code": "not_built",
+    "exit": [
+      2
+    ],
+    "messages": [
+      "deedglass version --check isn't in this build yet."
+    ],
+    "next": [
+      "Run deedglass help to see what this build can do."
+    ]
+  },
+  {
+    "code": "not_confirmed",
+    "exit": [
+      1
+    ],
+    "messages": [
+      "Nothing was stopped: the confirmation didn't match.",
+      "Nothing was dropped: the confirmation didn't match.",
+      "That isn't the org id. Nothing changed."
+    ]
+  },
+  {
+    "code": "not_control_plane",
+    "exit": [
+      1
+    ],
+    "messages": null,
+    "next": [
+      "Deedglass keeps its own state in a separate database. Point DEEDGLASS_MIGRATE_DATABASE_URL at that one."
+    ]
+  },
+  {
+    "code": "not_set_up",
+    "exit": [
+      1
+    ],
+    "messages": [
+      "there's no local stack in this directory."
+    ],
+    "next": [
+      "Run deedglass init first."
+    ]
+  },
+  {
+    "code": "not_simulated",
+    "exit": [
+      1
+    ],
+    "messages": null
+  },
+  {
+    "code": "org_create_failed",
+    "exit": [
+      1
+    ],
+    "messages": null,
+    "next": [
+      "Run deedglass migrate up, and check the runtime role (docs/DATABASE_SETUP.md)."
+    ]
+  },
+  {
+    "code": "org_not_found",
+    "exit": [
+      2
+    ],
+    "messages": null
+  },
+  {
+    "code": "org_required",
+    "exit": [
+      2
+    ],
+    "messages": null
+  },
+  {
+    "code": "pending",
+    "exit": [
+      2
+    ],
+    "messages": [
+      "the undo is waiting."
+    ]
+  },
+  {
+    "code": "policy_test_failed",
+    "exit": [
+      1
+    ],
+    "messages": [
+      "policy tests failed."
+    ]
+  },
+  {
+    "code": "policy_unformatted",
+    "exit": [
+      1
+    ],
+    "messages": [
+      "not formatted."
+    ]
+  },
+  {
+    "code": "postgres_unreachable",
+    "exit": [
+      1
+    ],
+    "messages": [
+      "the Postgres part failed; the file part was written."
+    ]
+  },
+  {
+    "code": "prune_running",
+    "exit": [
+      1
+    ],
+    "messages": [
+      "Another prune is running for this org."
+    ],
+    "next": [
+      "Wait for it to finish, then run this again."
+    ]
+  },
+  {
+    "code": "replay_cancelled",
+    "exit": [
+      1
+    ],
+    "messages": null
+  },
+  {
+    "code": "replay_failed",
+    "exit": [
+      1
+    ],
+    "messages": null
+  },
+  {
+    "code": "revoke_failed",
+    "exit": [
+      1
+    ],
+    "messages": null,
+    "next": [
+      "Check the database, then try again."
+    ]
+  },
+  {
+    "code": "role_missing",
+    "exit": [
+      1
+    ],
+    "messages": [
+      "Role deedglass_app doesn't exist yet."
+    ],
+    "next": [
+      "Create the roles first: psql -f deploy/postgres/control-plane-roles.sql (see docs/DATABASE_SETUP.md)."
+    ]
+  },
+  {
+    "code": "scenario_invalid",
+    "exit": [
+      2
+    ],
+    "messages": null,
+    "next": [
+      "Fix the scenario file; docs/SIMULATOR.md lists every key."
+    ]
+  },
+  {
+    "code": "seal_key_rejected",
+    "exit": [
+      1
+    ],
+    "messages": [
+      "The database holds a seal key Deedglass refuses to publish."
+    ],
+    "next": [
+      "Run deedglass keys list --json to see it, and contact support."
+    ]
+  },
+  {
+    "code": "seal_key_rotation_failed",
+    "exit": [
+      1
+    ],
+    "messages": null,
+    "next": [
+      "Nothing changed. Check the database connection and run deedglass keys rotate again."
+    ]
+  },
+  {
+    "code": "seed_failed",
+    "exit": [
+      1
+    ],
+    "messages": null
+  },
+  {
+    "code": "server_too_old",
+    "exit": [
+      1
+    ],
+    "messages": null,
+    "next": [
+      "Upgrade Postgres, or point at a PostgreSQL 16, 17 or 18 server."
+    ]
+  },
+  {
+    "code": "server_unreachable",
+    "exit": [
+      1
+    ],
+    "messages": null,
+    "next": [
+      "Check --server or DEEDGLASS_SERVER, and that deedglass serve is running.",
+      "Check the URL, and that deedglass serve is running (make dev)."
+    ]
+  },
+  {
+    "code": "sign_failed",
+    "exit": [
+      1
+    ],
+    "messages": null,
+    "next": [
+      "Check --org, --agent, --tool and --args against docs/INTENTS.md."
+    ]
+  },
+  {
+    "code": "simulation_overlap",
+    "exit": [
+      1
+    ],
+    "messages": null
+  },
+  {
+    "code": "source_missing",
+    "exit": [
+      1
+    ],
+    "messages": null,
+    "next": [
+      "Read it with deedglass policy show."
+    ]
+  },
+  {
+    "code": "start_failed",
+    "exit": [
+      1
+    ],
+    "messages": null,
+    "next": [
+      "Check the database, then run it again."
+    ]
+  },
+  {
+    "code": "superuser_refused",
+    "exit": [
+      1
+    ],
+    "messages": null,
+    "next": [
+      "Run migrations as deedglass_migrator."
+    ]
+  },
+  {
+    "code": "undo_not_verified",
+    "exit": [
+      1
+    ],
+    "messages": [
+      "the undo didn't run or wasn't verified."
+    ]
+  },
+  {
+    "code": "unsafe_database_role",
+    "exit": [
+      1
+    ],
+    "messages": null,
+    "next": [
+      "Connect as deedglass_app (docs/DATABASE_SETUP.md)."
+    ]
+  },
+  {
+    "code": "webhook_failed",
+    "exit": [
+      1
+    ],
+    "messages": null,
+    "next": [
+      "Check that the endpoint answers 2xx within 10 s. Deedglass retries on its schedule."
+    ]
+  },
+  {
+    "code": "write_failed",
+    "exit": [
+      1
+    ],
+    "messages": null,
+    "next": [
+      "Pick another path with --out.",
+      "Check the file's permissions and try again."
+    ]
+  }
+]

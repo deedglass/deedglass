@@ -1,0 +1,23 @@
+---
+title: Idempotency
+description: Retry POST requests safely with the Idempotency-Key header, and how POST /v1/actions handles duplicates.
+lastVerified: "2026-10-05"
+---
+
+Send an `Idempotency-Key` with every POST, and a retry with the same key gets the same answer instead of doing the work twice.
+
+```http
+Idempotency-Key: 6f1c2a3e-retry-safe-key
+```
+
+- Keys last 24 hours, scoped to your org and the caller.
+- Every completed answer is stored and replayed with `Deedglass-Idempotent-Replayed: true`, 5xx answers included.
+- The same key with a different body is [`idempotency_conflict`](/errors/idempotency_conflict/) (422).
+- The same key while the first request still runs is [`idempotency_key_in_use`](/errors/idempotency_key_in_use/) (409). Wait and retry.
+- A stored answer that held a shown-once secret is replayed with the secret set to `null`.
+
+## Actions
+
+`POST /v1/actions` keeps its own idempotency per agent: a duplicate that arrives while the first is in flight waits for it and gets its answer, and the tool runs once. The SDKs send a key automatically and reuse it for their own retries.
+
+Because a stored 500 is replayed, retrying a 500 with the same key returns the same 500. The Python SDK doesn't retry 500s for that reason.

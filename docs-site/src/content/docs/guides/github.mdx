@@ -1,0 +1,45 @@
+---
+title: GitHub agent guardrails
+description: Let an agent read code and open pull requests through a fine-grained token in the vault, while merges and pushes to protected branches wait for a person.
+lastVerified: "2026-10-05"
+---
+
+import Limits from '../../../components/Limits.astro';
+
+By the end, your agent reads repos and opens pull requests through Deedglass, and anything that merges or writes to a protected branch waits for a person.
+
+**Before you start**
+
+- A fine-grained GitHub token (or a GitHub App) with access to the repos the agent may touch.
+- A Deedglass server and an org admin key.
+
+## 1. Create the connector
+
+```sh test=skip reason="needs a GitHub token"
+deedglass connector create --config github.yaml
+deedglass connector credentials set github --from-env GITHUB_TOKEN
+deedglass connector test github
+```
+
+The token lives in the vault. The agent never sees it.
+
+## 2. Use the github-read-mostly starter
+
+Reads run. Opening a pull request runs and is read back from GitHub (L1). Merging, and anything that writes to a default or protected branch, waits for an admin. The policy reads the repository and the pull request from GitHub first (`request.github.*`), so a rule can name real facts, such as the base branch.
+
+## 3. Watch it work
+
+Ask the agent to open a pull request, then to merge it. The first is `L1 · VERIFIED`: GitHub's own record matches. The merge waits in Console › Approvals.
+
+## What it doesn't do
+
+<Limits>
+- It governs the calls the agent makes through Deedglass. A token the agent holds elsewhere isn't governed.
+- L1 confirms what GitHub reports. It doesn't review the code in the pull request.
+- Branch protection on GitHub still applies. Use both.
+</Limits>
+
+## Next
+
+- [GitHub connector reference](/reference/connectors/github/)
+- [Slack approvals](/guides/slack-approvals/)

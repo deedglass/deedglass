@@ -1,0 +1,40 @@
+---
+title: Insights
+description: Stats, shadow comparisons, anomalies and policy suggestions a person approves. Insights never changes an enforced policy by itself.
+lastVerified: "2026-10-05"
+---
+
+import Limits from '../../../components/Limits.astro';
+
+Insights reads the Ledger and tells you where your policies and your agents disagree with what you expected. A person decides every change.
+
+## What it shows
+
+- **Stats:** actions, denials, approvals and verdicts by rule, tool or agent, over 7 or 30 days.
+- **Shadow:** where a shadow policy would have decided differently from the enforced one, action by action.
+- **Anomalies:** six detectors (`new_tool`, `volume_spike`, `off_hours`, `deny_spike`, `mismatch_spike`, `user_ref_burst`) compare each hour with the agent's last 14 days and open an episode with its evidence. Policies can read `anomaly.active` when an owner turns that on.
+- **Replay:** run any policy version over last week's real actions and see what it would have decided. See [Test a policy against last week](/guides/replay/).
+
+## Suggestions
+
+Insights proposes changes: loosen a rule whose approvals people always grant, tighten a rule that let a MISMATCH through, raise a rule's verify level, add a budget. Each suggestion shows its evidence and a replay of the change over recent actions. Accepting one pushes a new policy version and runs it **in shadow**, never enforced. A person promotes it to enforce later.
+
+```sh test title="Terminal"
+$ deedglass insights suggestions list
+…
+```
+
+Optional phrasing by a language model rewrites a suggestion's sentence from aggregates only, under a monthly cap. Off by default.
+
+## What it doesn't do
+
+<Limits>
+- Insights never activates or enforces a policy. Its code can create a version and run it in shadow; nothing else. A test checks that.
+- It doesn't learn from your data in a model. The detectors are fixed rules over your Ledger.
+- Suggestions are only as good as the history they read. A week with no traffic suggests nothing.
+</Limits>
+
+## Next
+
+- [Policies](/concepts/policies/)
+- [Data handling and privacy](/security/data-handling/)

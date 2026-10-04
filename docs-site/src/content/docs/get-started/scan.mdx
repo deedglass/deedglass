@@ -1,0 +1,95 @@
+---
+title: Scan in 60 seconds
+description: Grade your own agent setup from A to F with one command. Nothing leaves your machine.
+lastVerified: "2026-10-05"
+claims: [C-086, C-088]
+---
+
+import { Aside } from '@astrojs/starlight/components';
+import Limits from '../../../components/Limits.astro';
+import formula from '../../../data/score-formula.txt?raw';
+
+Grade your own agent setup from A to F with one command. Nothing leaves your machine.
+
+**Before you start**
+
+- Node 22.12 or later, for `npx`. No account, no key, no server.
+- A project with agent configs: `.mcp.json`, `.cursor/mcp.json`, `.vscode/mcp.json`, `claude_desktop_config.json`, `package.json` or `pyproject.toml`.
+
+## 1. Run it
+
+In your project:
+
+```sh test title="Terminal"
+$ npx -y deedglass scan --no-write
+Blast radius: …
+  A means a small blast radius, not a safe agent.
+…
+Full report with fixes: deedglass.com/pro ($29 once).
+```
+
+The scan reads your files and the MCP configs in your home directory, finds the MCP servers and agent frameworks you use, and works out what they can change. It sends nothing anywhere. Without `--no-write` it also writes `deedglass-scan.md` and `deedglass-scan.html`.
+
+## 2. Read the score
+
+The first line is the grade, the number of write paths with no check, and the one thing to fix first. The small print under it matters: `A means a small blast radius, not a safe agent.` The grade measures what your setup could change, not what your agent will do.
+
+Every deduction follows, one per line. The score never appears without them.
+
+<details>
+<summary>The formula, in full (formula v1)</summary>
+
+<pre tabindex="0" aria-label="Score formula v1"><code>{formula}</code></pre>
+
+An unchecked write path is a tool that can write, delete or move money, or a table the role can `DELETE` or `TRUNCATE`, that isn't routed through `deedglass mcp wrap` with an active policy. Low and info findings never deduct.
+</details>
+
+## 3. Rank the tables your agent can change
+
+Point the scan at the database your agent uses, by the name of the variable that holds its URL:
+
+```sh test=skip reason="needs your agent's database URL in an environment variable"
+npx -y deedglass scan --postgres-dsn-env DATABASE_URL
+```
+
+It opens one read-only session (`BEGIN READ ONLY`, six catalog queries, `ROLLBACK`) as your agent's role, and lists every table that role can write, with its enabled triggers. A trigger is how one reported row becomes 301. The scan reads the variable's name from you and its value from your shell; the value is never printed or saved.
+
+## 4. Add the three suggested policies
+
+The report ends with three starter policies matched to what it found. Save them, then lint and test them as in [Your first policy](/get-started/first-policy/).
+
+## Findings
+
+Each finding has an id. SARIF output and the HTML report link to these anchors.
+
+<a id="archived_postgres_mcp"></a>
+**archived_postgres_mcp** · high when its role can write. Anthropic archived its reference Postgres MCP server (`@modelcontextprotocol/server-postgres`) on 2025-05-28. Its read-only mode runs each query in a read-only transaction that a stacked `COMMIT;` can end (Datadog Security Labs), after which the role's full rights apply. Fix: move to a maintained server, and put it behind `deedglass mcp wrap`.
+
+<a id="database_url_in_client_args"></a>
+**database_url_in_client_args** · medium. A database URL with a password sits in a client config's arguments, where every process listing can read it. Fix: pass it through an environment variable.
+
+<a id="security_definer_executable"></a>
+**security_definer_executable** · medium. The role can run `SECURITY DEFINER` functions, which run with their owner's rights. Fix: revoke `EXECUTE` from the agent's role, or allow-list the functions in the Postgres connector.
+
+<a id="no_primary_key_on_writable_table"></a>
+**no_primary_key_on_writable_table** · low. A table the role can write has no primary key, so a change can't be matched to one row. Fix: add a primary key.
+
+<a id="wal_level_not_logical"></a>
+**wal_level_not_logical** · info. `wal_level` isn't `logical`, so L2 witnessing isn't available on this database yet. Fix: set `wal_level = logical` and restart Postgres.
+
+## 5. Next
+
+- [Add the badge](/guides/badge/) to show your grade in your README.
+- The full report with fixes for every finding: `deedglass.com/pro` ($29 once).
+
+<Aside>
+`deedglass scan --ci --fail-under C` exits 1 below a C, for your own CI. `--format sarif` writes a SARIF file for code scanning.
+</Aside>
+
+## What it doesn't do
+
+<Limits>
+- It grades only your own setup. It doesn't run your agent, call your tools or test a model.
+- It reads environment variable names, never their values, except the one database URL you name with `--postgres-dsn-env`.
+- A server it doesn't recognise counts as a write path. When the scan can't tell, the deduction says `not shown to be routed`.
+</Limits>

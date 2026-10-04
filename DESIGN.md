@@ -942,6 +942,16 @@ The hero is on `ink-950` with the Split Orb and an aurora glow, then the page mo
 ### Docs (docs.deedglass.com)
 Starlight themed with these tokens. 760px text column, `{typography.body}`, code blocks in Geist Mono on `ink-900` in both themes. Flat logo in the header. Callouts use neutral surfaces with a state icon, not coloured slabs.
 
+Built in S33 (`docs-site/`, Astro + Starlight, ADR-064). How the tokens map, so later pages stay in lockstep:
+- **Theme source.** `docs-site/src/styles/tokens.gen.css` is a byte copy of the Console's `web/src/styles/tokens.css` (`npm run gen:check` fails on drift); `deedglass.css` maps it onto Starlight's `--sl-*` variables. Dark is the default; light follows `prefers-color-scheme` or the theme picker. No hex outside the token files and the mark (`check-css.mjs`).
+- **Type.** Inter Variable (self-hosted, latin preloaded, a metric-matched `Inter Fallback` so the swap never shifts), body 16/27, H1 36px at -0.03em, H2 24px at -0.02em, weight 600; Geist Mono 14px for code. Tabular numerals in every table.
+- **Chrome.** The top bar is the one glass layer (`glass-dark|light`, blur 20px). The sidebar is quiet: group labels in small caps at `slate-400`/`slate-600`, the current page on `ink-850`/`mist-100` with a 2px accent bar on its left edge, never a filled accent pill. The mobile menu button is a hairline square, not a filled disc.
+- **Components** (`docs-site/src/components`, all on `/_kit`): `VerdictChip` and `LevelBadge` (the chip pairs of brand §6.3, icon and word), `DeedCard` (a sample deed with an in-page check through `web/verify`; VERIFIED plays the Sealed moment, a tampered deed shows the MISMATCH halves and the CLI's own sentence), `Terminal` (✓ ✕ ◐ ○ coloured, `aria-hidden`, words kept), `ErrorEnvelope`, `Limits` (the hairline card under "What it doesn't do"), `Since`, `SealedMark` (the flat Split Orb; `glow` is the page's one aurora moment, home hero only), `Lifecycle` and `Architecture` (static SVG drawn at build, with a text alternative).
+- **Asides** map Starlight's hues onto the state pairs: note → accent, tip → verified, caution → unverifiable, danger → mismatch; a hairline card with a 2px state edge.
+- **Code.** Expressive Code theme `deedglass-ink` (the `code-*` tokens on `ink-900`, both themes), 10px radius, hairline `ink-800`, copy buttons copy commands only (the `$ ` transcript lines).
+- **OpenAPI pages.** HTTP methods are neutral chips (`allowed-*`), never state colours.
+- **OG images** (`public/og/*.png`, `scripts/og.mjs`): 1200×630 per section in the §13.7 template.
+
 ### Email
 600px, table-based, `paper-50`, black wordmark, one accent link or button, no images other than the logo, a text-only alternative, and the dark-safe rules in Components.
 

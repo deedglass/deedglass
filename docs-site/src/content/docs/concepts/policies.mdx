@@ -1,0 +1,45 @@
+---
+title: Policies
+description: How a policy decides allow, deny or require_approval for each action, with rules, budgets, CEL conditions, shadow mode and activation deeds.
+lastVerified: "2026-10-05"
+---
+
+import Limits from '../../../components/Limits.astro';
+
+A policy is a YAML file of rules. The org's enforced policy decides every action before anything runs.
+
+## How a decision is made
+
+1. The Gate builds the facts: the tool, its connector and side effect, the agent and its labels, the time, and per-connector facts such as the SQL's kind and tables (Postgres) or the refund amount (Stripe).
+2. Budgets are checked: calls or spend per minute, hour or day, per agent.
+3. Rules are checked in order. A rule's `match` picks tools and connectors; its `when` is a CEL expression over the facts. The first rule that matches decides.
+4. No rule matched: the policy's default decides, usually `deny` with a reason that says what to do.
+
+Each decision records the rule id, the policy version's hash and the reason, and the deed carries them.
+
+## Decisions
+
+| Decision | What happens |
+|---|---|
+| `allow` | The action runs, then the Witness checks it at the rule's `verify` level. |
+| `deny` | Nothing runs. The agent gets the rule's reason; a deed records the attempt. |
+| `require_approval` | The action waits for the people the rule names (`approvers`, `required`, `expires_in`). |
+
+## Versions, shadow and enforce
+
+Every push is a new immutable version. Activating a version in **shadow** runs it alongside the enforced one, records what it would have decided, and changes nothing. **Enforce** makes it the deciding policy. Each activation is sealed as an admin deed, and the server re-checks each version's hash and activation deed when it loads it, failing closed if either is wrong.
+
+New orgs start with `default-deny` enforced: nothing runs until you allow it.
+
+## What it doesn't do
+
+<Limits>
+- A policy can only use the facts Deedglass computes. SQL it can't read with confidence should be denied with `sql.ambiguous`.
+- Budgets count calls and spend through the Gate. They don't see usage outside it.
+- No policy is ever activated by a machine. [Insights](/concepts/insights/) suggestions go into shadow only, after a person accepts them.
+</Limits>
+
+## Next
+
+- [Your first policy](/get-started/first-policy/)
+- [Policy language](/reference/policy-language/)

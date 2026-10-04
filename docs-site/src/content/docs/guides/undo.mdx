@@ -1,0 +1,64 @@
+---
+title: Undo a bad write
+description: Put Postgres rows back the way they were before an agent's action, after twelve checks, with a person's countersign and an L2-witnessed result.
+lastVerified: "2026-10-05"
+---
+
+import Limits from '../../../components/Limits.astro';
+
+By the end, the rows an agent's action changed are back the way they were, the undo is witnessed at L2, and both actions have deeds.
+
+**Before you start**
+
+- An action witnessed at L2 by a Postgres connector, sealed within the last 7 days.
+- An admin role in the Console, or an org admin key in `DEEDGLASS_API_KEY`.
+
+## 1. Preview
+
+```sh test=skip reason="needs an L2-witnessed action id from your own stack"
+deedglass undo preview act_01j9zw6k…
+```
+
+The preview builds a plan from Postgres's own record of the change: for each row, the statement that puts it back. It runs twelve checks, prints the result of each, and ends with the plan's digest and the command to run it. Exit code 0 means available; 1 means a check failed, and the line says how to fix it.
+
+## The twelve checks
+
+| Check | Passes when |
+|---|---|
+| `evidence` | Exactly one committed transaction is bound to the action, with full old images of every row, and nothing was truncated or redefined. |
+| `connector` | The action ran through a native Postgres connector that still exists, is active, and has the witness on. |
+| `age` | The action was sealed within `undo.max_age` (7 days), while its row images are kept. |
+| `not_undone` | No other undo of this action is pending, running or applied. |
+| `row_limit` | The plan changes at most `undo.max_rows` rows (1,000). |
+| `replica_identity` | Every table the plan touches is `REPLICA IDENTITY FULL`, so the undo itself can be witnessed. |
+| `primary_key` | Every table has the same primary key the action's rows were keyed by. |
+| `columns` | Every table and column the plan writes still exists with the same type. |
+| `triggers` | No enabled user trigger would fire again. An admin can allow triggers with a reason. |
+| `cascades` | No foreign key would cascade the undo into rows it didn't plan. |
+| `unchanged` | Every row still holds the values the action wrote, and every key to re-insert is still absent. |
+| `privileges` | `deedglass_agent` has the rights the plan needs. |
+
+## 2. Run it
+
+```sh test=skip reason="needs an L2-witnessed action id from your own stack"
+deedglass undo run act_01j9zw6k… --plan sha256:c0a4…77e1 --reason "Trigger bug touched 50 extra orders."
+```
+
+`--plan` is the preview's digest: if the rows changed since, the run is refused with `undo_plan_stale` and you preview again. The undo is an ordinary action by your org's `console` agent, so your policy decides it. The starter policies send it to another admin to countersign.
+
+## 3. What you'll see
+
+Once countersigned, the plan runs in one transaction, and the Witness checks it at L2 against the exact rows it was meant to restore: `L2 · VERIFIED` with the reason `undo_restored`. The original action's deed never changes; the undo has its own deed, linked both ways.
+
+## What it doesn't do
+
+<Limits>
+- It only undoes Postgres rows Deedglass witnessed at L2. Emails, API calls and other systems can't be undone this way.
+- Schema changes, `TRUNCATE` and changes to unwatched tables are never undone.
+- If someone changed a row since, the undo refuses rather than overwrite it.
+</Limits>
+
+## Next
+
+- [Catch "1 row reported, 301 committed"](/guides/catch-a-mismatch/)
+- [The undo engineering note](/reference/engineering/undo/): every check's fix, and how it runs.

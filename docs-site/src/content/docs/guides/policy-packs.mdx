@@ -1,0 +1,43 @@
+---
+title: Policy packs
+description: Install a tested set of policies, checked and shown to you before anything is written.
+lastVerified: "2026-10-05"
+draft: true
+owner: S47
+---
+
+import Limits from '../../../components/Limits.astro';
+
+Install a tested set of policies, checked and shown to you before anything is written.
+
+**Before you start**
+
+- The `deedglass` CLI. Installing a pack writes a policy file; pushing it needs an org admin key.
+
+## 1. List the packs
+
+```sh test=skip reason="policy packs ship in S47"
+deedglass policy packs list
+deedglass policy packs verify
+```
+
+`verify` checks the signature on the pack index against the release key.
+
+## 2. Install one
+
+```sh test=skip reason="policy packs ship in S47"
+deedglass policy install postgres-safe
+```
+
+Install checks the index signature, runs the pack's cases, and shows you the diff before it writes anything. Pin a version with `postgres-safe@<version>`.
+
+## Free and Pro packs
+
+Free: `postgres-safe`, `supabase-mcp`, `stripe-refunds`, `github-agent`. Pro packs carry `tier: pro` (money movement, multi-tenant SaaS, agency handover). A Pro pack without a licence prints where to get one and writes nothing.
+
+## What it doesn't do
+
+<Limits>
+- A pack is a starting point. Read its cases before you enforce it.
+- It never activates a policy. You push and activate it, in shadow first.
+</Limits>

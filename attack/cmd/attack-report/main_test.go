@@ -86,3 +86,36 @@ func TestCheckStale(t *testing.T) {
 		t.Fatalf("a fresh page failed -check: %s", errb.String())
 	}
 }
+
+func TestDocsData(t *testing.T) {
+	meta, err := harness.LoadMeta(filepath.Join("..", "..", "attack_meta.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	run := &harness.Run{StartedAt: "2026-10-05T01:00:00Z", Commit: "abc", Postgres: "18.6 (Homebrew)",
+		Cases: []harness.Result{{ID: "H01", Status: harness.StatusMatched, Detail: "DENIED"}}}
+	p := DocsData(meta, run)
+	if len(p.Layers) != len(layers) || len(p.NotCovered) != len(notCovered) || p.Day != "2026-10-05" {
+		t.Fatalf("page %+v", p)
+	}
+	var h01 *DocsCase
+	n := 0
+	for _, l := range p.Layers {
+		for i := range l.Cases {
+			n++
+			if l.Cases[i].ID == "H01" {
+				h01 = &l.Cases[i]
+			}
+		}
+	}
+	if h01 == nil || h01.Status != "matched" || h01.Actual != "DENIED" || n < 40 {
+		t.Fatalf("H01 %+v, %d cases", h01, n)
+	}
+	for _, l := range p.Layers {
+		for _, c := range l.Cases {
+			if c.ID != "H01" && c.Status != "not_run" {
+				t.Fatalf("%s should be not_run", c.ID)
+			}
+		}
+	}
+}

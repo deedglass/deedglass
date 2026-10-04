@@ -1,0 +1,65 @@
+---
+title: Connect Cursor, VS Code and Windsurf
+description: The exact MCP config for Cursor, VS Code and Windsurf, generated from deedglass mcp snippet, over HTTP to the Gate or as a wrapped stdio server.
+lastVerified: "2026-10-05"
+claims: [C-091]
+---
+
+import { Code, Tabs, TabItem } from '@astrojs/starlight/components';
+import Limits from '../../../components/Limits.astro';
+import cursor from '../../../../../examples/clients/http-cursor.json?raw';
+import vscode from '../../../../../examples/clients/http-vscode.json?raw';
+import windsurf from '../../../../../examples/clients/http-windsurf.json?raw';
+import cursorWrap from '../../../../../examples/clients/cursor.json?raw';
+
+All three editors read an MCP config file. Point it at the Gate's HTTP endpoint, `/mcp/native`, with an agent key.
+
+**Before you start**
+
+- A running Deedglass server and an agent key, from the [Quickstart](/quickstart/).
+
+## 1. Paste the config
+
+Each block is what `deedglass mcp snippet --transport http --client <editor>` prints.
+
+<Tabs syncKey="editor">
+  <TabItem label="Cursor">
+    Put it in `.cursor/mcp.json` in your project, or `~/.cursor/mcp.json` for every project.
+    <Code code={cursor.trim()} lang="json" title=".cursor/mcp.json" />
+  </TabItem>
+  <TabItem label="VS Code">
+    VS Code reads a root `.mcp.json` first, then `.vscode/mcp.json`. It asks for the key once and keeps it in its secret storage.
+    <Code code={vscode.trim()} lang="json" title=".mcp.json" />
+  </TabItem>
+  <TabItem label="Windsurf">
+    Windsurf reads `~/.config/devin/mcp_config.json`.
+    <Code code={windsurf.trim()} lang="json" title="~/.config/devin/mcp_config.json" />
+  </TabItem>
+</Tabs>
+
+Replace `dg_test_REPLACE_ME` with your key, then reload the editor's MCP servers.
+
+## 2. Or wrap a stdio server
+
+The same `deedglass mcp wrap` line works in every editor. Cursor's generated form:
+
+<Code code={cursorWrap.trim()} lang="json" title=".cursor/mcp.json" />
+
+`deedglass mcp snippet --client cursor|vscode|windsurf --connector <name> -- <command> [args…]` prints yours.
+
+## 3. Check it
+
+Ask the editor's agent for something your policy denies. The tool result names the rule and the deed; `deedglass actions list` shows the same action.
+
+## What it doesn't do
+
+<Limits>
+- Editor agents also edit files and run terminal commands without MCP. The Gate governs MCP tool calls only.
+- Config file locations change between editor releases. When a path here stops working, run `deedglass mcp snippet` from the newest CLI.
+- A config file with a pasted key is a secret. Keep it out of git, or use VS Code's prompt.
+</Limits>
+
+## Next
+
+- [Your first policy](/get-started/first-policy/)
+- [MCP compatibility](/reference/mcp-compatibility/): the spec revisions and clients tested.

@@ -1,0 +1,64 @@
+---
+title: Stripe refunds with approval
+description: Let an agent refund small amounts in a Stripe sandbox, send large or disputed refunds to a person, and read every refund back from Stripe (L1).
+lastVerified: "2026-10-05"
+---
+
+import Limits from '../../../components/Limits.astro';
+
+By the end, a $20 refund runs and is confirmed from Stripe's own objects, and a $120 refund waits for a person.
+
+**Before you start**
+
+- A Stripe **sandbox** restricted key (`rk_test_…`). Live keys are refused.
+- A Deedglass server and an org admin key.
+
+## 1. Create the connector
+
+```sh test=skip reason="needs a Stripe sandbox key"
+deedglass connector create --config stripe.yaml
+deedglass connector credentials set stripe --from-env STRIPE_TEST_KEY
+deedglass connector test stripe
+```
+
+Deedglass refuses any key that isn't `sk_test_` or `rk_test_` before it is stored, checks it again before every call, and disables the connector if Stripe ever answers with `livemode: true`.
+
+## 2. Use the stripe-refunds starter
+
+It reads the charge from Stripe before deciding, so the policy reasons about the real currency, the amount left to refund and whether the charge is disputed, never what the agent claims:
+
+```yaml title="from stripe-refunds.yaml"
+  - id: refunds-need-an-amount
+    match: { tool: stripe.create_refund }
+    when: '!has(args.amount) || type(args.amount) != int || args.amount <= 0'
+    decision: deny
+    reason: Refunds need an explicit amount in minor units, like 2000 for $20.00.
+  - id: refund-within-charge
+    match: { tool: stripe.create_refund }
+    when: args.amount > request.stripe.refundable
+    decision: deny
+    reason: This refund is larger than what is left to refund on the charge.
+```
+
+A daily budget caps USD refunds across every agent at $500.00. Larger refunds, other currencies and disputed charges go to an admin.
+
+## 3. Refund
+
+```sh test=skip reason="needs a Stripe sandbox charge"
+deedglass act stripe.create_refund --args '{"charge":"ch_…","amount":2000}'
+```
+
+$20.00 runs, and the refund is read back from Stripe: `L1 · VERIFIED`. $120.00 waits in Console › Approvals (and Slack, if you set it up); once approved, it runs once and is read back the same way.
+
+## What it doesn't do
+
+<Limits>
+- Sandbox only. There is no switch for live money in this release.
+- A refund Stripe marks `requires_action` is UNVERIFIABLE until it settles: the read-back can't confirm it yet.
+- The policy sees what Stripe reports about the charge. It doesn't know your refund rules unless you write them.
+</Limits>
+
+## Next
+
+- [Slack approvals](/guides/slack-approvals/)
+- [Stripe connector reference](/reference/connectors/stripe/)

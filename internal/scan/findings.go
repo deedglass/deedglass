@@ -16,7 +16,7 @@ var archivedSources = []string{
 // Copy (exact, S32 §3.13.2 and §5).
 const (
 	ArchivedTitle  = "Archived Postgres MCP server"
-	ArchivedDetail = "This Postgres MCP server was archived on 2025-05-29. Its read-only mode runs queries in a read-only transaction that a stacked COMMIT; can end (Datadog Security Labs). If its database role can write, the agent can write."
+	ArchivedDetail = "This Postgres MCP server was archived on 2025-05-28. Its read-only mode runs queries in a read-only transaction that a stacked COMMIT; can end (Datadog Security Labs). If its database role can write, the agent can write."
 	ArchivedFix1   = "Give the server a role that can only SELECT."
 	ArchivedFix2   = "Or route it through Deedglass: deedglass mcp wrap --connector <name> -- <the server's command>."
 )

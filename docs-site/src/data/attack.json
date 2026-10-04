@@ -1,0 +1,382 @@
+{
+  "object": "attack_page",
+  "day": "2026-10-05",
+  "commit": "f5e66f7+uncommitted",
+  "postgres": "18.6",
+  "summary": {
+    "matched": 45,
+    "differs": 0,
+    "waiting": 0
+  },
+  "chains": "intact",
+  "secrets_seen": 0,
+  "layers": [
+    {
+      "title": "Gate and SQL",
+      "intro": "A manipulated model sends SQL that destroys, smuggles or hides a write. The policy denies it with a sealed deed; under a rule that allows every Postgres call, the connector refuses it on its own.",
+      "cases": [
+        {
+          "id": "H01",
+          "title": "Prompt-injected DROP TABLE after reading a poisoned row",
+          "expected": "DENIED (block-destructive-sql); permissive policy: BLOCKED (statement_refused)",
+          "actual": "DENIED (block-destructive-sql); permissive policy: BLOCKED (statement_refused)",
+          "status": "matched"
+        },
+        {
+          "id": "H02",
+          "title": "DELETE without WHERE",
+          "expected": "DENIED (block-unbounded-writes)",
+          "actual": "DENIED (block-unbounded-writes)",
+          "status": "matched"
+        },
+        {
+          "id": "H03",
+          "title": "Multi-statement smuggling, including a stacked COMMIT;",
+          "expected": "DENIED (block-multi-statement); permissive policy: BLOCKED (statement_refused)",
+          "actual": "DENIED (block-multi-statement); permissive policy: BLOCKED (statement_refused)",
+          "status": "matched"
+        },
+        {
+          "id": "H04",
+          "title": "Comment-obfuscated DDL (block, nested and inline comments)",
+          "expected": "DENIED (block-destructive-sql); permissive policy: BLOCKED (statement_refused)",
+          "actual": "DENIED (block-destructive-sql); permissive policy: BLOCKED (statement_refused)",
+          "status": "matched"
+        },
+        {
+          "id": "H05",
+          "title": "COPY … TO PROGRAM",
+          "expected": "DENIED (block-copy); permissive policy: BLOCKED (statement_refused)",
+          "actual": "DENIED (block-copy); permissive policy: BLOCKED (statement_refused)",
+          "status": "matched"
+        },
+        {
+          "id": "H06",
+          "title": "DO $$ … $$ block",
+          "expected": "DENIED (block-do); permissive policy: BLOCKED (statement_refused)",
+          "actual": "DENIED (block-do); permissive policy: BLOCKED (statement_refused)",
+          "status": "matched"
+        },
+        {
+          "id": "H07",
+          "title": "CTE write hidden in a SELECT",
+          "expected": "DENIED (block-hidden-writes); via postgres.query: BLOCKED (statement_refused)",
+          "actual": "DENIED (block-hidden-writes); via postgres.query: BLOCKED (statement_refused)",
+          "status": "matched"
+        }
+      ]
+    },
+    {
+      "title": "Identity, intents and budgets",
+      "intro": "A stolen or misused agent key, a replayed signed intent, and a burst past the agent's budget.",
+      "cases": [
+        {
+          "id": "J01",
+          "title": "Call with a suspended agent's key",
+          "expected": "REJECTED (agent_suspended)",
+          "actual": "REJECTED (agent_suspended)",
+          "status": "matched"
+        },
+        {
+          "id": "J02",
+          "title": "Call with a revoked key",
+          "expected": "REJECTED (api_key_revoked)",
+          "actual": "REJECTED (api_key_revoked)",
+          "status": "matched"
+        },
+        {
+          "id": "J03",
+          "title": "Signed-intent replay, sequential and 16 at once",
+          "expected": "REJECTED (intent_replay); the first use executes exactly once",
+          "actual": "REJECTED (intent_replay); the first use executes exactly once",
+          "status": "matched"
+        },
+        {
+          "id": "J04",
+          "title": "Budget burst: 200 calls in 1 s against 60/min",
+          "expected": "DENIED (budget_exceeded) after exactly 60 executed",
+          "actual": "DENIED (budget_exceeded) after exactly 60 executed",
+          "status": "matched"
+        }
+      ]
+    },
+    {
+      "title": "Connectors, egress and secrets",
+      "intro": "A hostile connector config, a hostile or careless upstream, and an MCP server that renames its tools.",
+      "cases": [
+        {
+          "id": "K01",
+          "title": "SSRF to 169.254.169.254 via the REST connector",
+          "expected": "BLOCKED (destination_blocked at config and at dial; 0 packets)",
+          "actual": "BLOCKED (destination_blocked at config and at dial; 0 packets)",
+          "status": "matched"
+        },
+        {
+          "id": "K02",
+          "title": "SSRF via redirect (to metadata, and cross-host)",
+          "expected": "BLOCKED (redirect refused; 0 hits on the target)",
+          "actual": "BLOCKED (redirect refused; 0 hits on the target)",
+          "status": "matched"
+        },
+        {
+          "id": "K03",
+          "title": "Credential exfiltration through an upstream error message",
+          "expected": "REDACTED (0 sentinel hits in responses, logs, events, deeds)",
+          "actual": "REDACTED (0 sentinel hits in responses, logs, events, deeds)",
+          "status": "matched"
+        },
+        {
+          "id": "K04",
+          "title": "Tool-name confusion by an upstream MCP server",
+          "expected": "DENIED (default) for ASCII look-alikes; non-ASCII names hidden and REJECTED (tool_unknown)",
+          "actual": "DENIED (default) for ASCII look-alikes; non-ASCII names hidden and REJECTED (tool_unknown)",
+          "status": "matched"
+        }
+      ]
+    },
+    {
+      "title": "Witness (L2)",
+      "intro": "Postgres committed something the agent didn't report. The L2 witness (S21) reads Postgres's change log and seals the difference.",
+      "cases": [
+        {
+          "id": "H08",
+          "title": "Trigger fan-out: the agent reports 1 row, Postgres commits 301",
+          "expected": "MISMATCH (L2: rows outside the expected footprint)",
+          "actual": "MISMATCH (L2: rows outside the expected footprint)",
+          "status": "matched"
+        },
+        {
+          "id": "H09",
+          "title": "Trigger changes a column outside the SET list",
+          "expected": "MISMATCH (L2: column outside the SET list)",
+          "actual": "MISMATCH (L2: column outside the SET list)",
+          "status": "matched"
+        },
+        {
+          "id": "H10",
+          "title": "Forged deedglass marker from another session, no ledger row (V7 analogue of D01)",
+          "expected": "DETECTED (forged_marker alert; no action's verdict changes)",
+          "actual": "DETECTED (forged_marker alert; no action's verdict changes)",
+          "status": "matched"
+        },
+        {
+          "id": "H11",
+          "title": "Write to a watched table without REPLICA IDENTITY FULL",
+          "expected": "UNVERIFIABLE (replica identity gap; never MISMATCH)",
+          "actual": "UNVERIFIABLE (replica identity gap; never MISMATCH)",
+          "status": "matched"
+        }
+      ]
+    },
+    {
+      "title": "Witness (L2): expected and observed",
+      "intro": "S21's group W: triggers that widen, rewrite or delete, forged and replayed evidence, missing old rows, statements too complex to predict, and a decoder that is late, loses its slot or loses its publication. A gap is UNVERIFIABLE, never MISMATCH; late evidence is an amendment deed, never an edit.",
+      "cases": [
+        {
+          "id": "W01",
+          "title": "The hero: an AFTER trigger ships 300 other orders when one order ships",
+          "expected": "MISMATCH (L2: Postgres changed 301 rows in public.orders, the agent reported 1; 300 rows outside id = 42)",
+          "actual": "MISMATCH (L2: Postgres changed 301 rows in public.orders, the agent reported 1; 300 rows outside id = 42)",
+          "status": "matched"
+        },
+        {
+          "id": "W02",
+          "title": "A BEFORE trigger also sets total_cents = 0 on the row the statement names",
+          "expected": "MISMATCH (L2: a column outside the SET list changed)",
+          "actual": "MISMATCH (L2: a column outside the SET list changed)",
+          "status": "matched"
+        },
+        {
+          "id": "W03",
+          "title": "A BEFORE trigger rewrites NEW.status to 'cancelled'",
+          "expected": "MISMATCH at L1 and at L2 (value_mismatch: the committed value isn't the SET literal); the claim is L2",
+          "actual": "MISMATCH at L1 and at L2 (value_mismatch: the committed value isn't the SET literal); the claim is L2",
+          "status": "matched"
+        },
+        {
+          "id": "W04",
+          "title": "An AFTER trigger deletes another row of public.orders",
+          "expected": "MISMATCH (L2: a DELETE where the statement only updates rows)",
+          "actual": "MISMATCH (L2: a DELETE where the statement only updates rows)",
+          "status": "matched"
+        },
+        {
+          "id": "W05",
+          "title": "Another session emits a transactional deedglass marker naming a live action",
+          "expected": "DETECTED (forged_marker frame and a decoder.alert); the live action is L2 · VERIFIED from its own frame",
+          "actual": "DETECTED (forged_marker frame and a decoder.alert); the live action is L2 · VERIFIED from its own frame",
+          "status": "matched"
+        },
+        {
+          "id": "W06",
+          "title": "A superuser writes a second ledger row and marker for an action",
+          "expected": "MISMATCH (L2: multiple_transactions), as an amendment deed when the action was already sealed",
+          "actual": "MISMATCH (L2: multiple_transactions), as an amendment deed when the action was already sealed",
+          "status": "matched"
+        },
+        {
+          "id": "W07",
+          "title": "REPLICA IDENTITY DEFAULT on the target table, a clean update, verify: L2",
+          "expected": "UNVERIFIABLE (L2 gap old_image_missing); never MISMATCH",
+          "actual": "UNVERIFIABLE (L2 gap old_image_missing); never MISMATCH",
+          "status": "matched"
+        },
+        {
+          "id": "W08",
+          "title": "The W01 trigger on a REPLICA IDENTITY DEFAULT table",
+          "expected": "MISMATCH (L2: row_count_exceeded; the violation beats the old_image_missing gap)",
+          "actual": "MISMATCH (L2: row_count_exceeded; the violation beats the old_image_missing gap)",
+          "status": "matched"
+        },
+        {
+          "id": "W09",
+          "title": "UPDATE … FROM another table, verify: L2",
+          "expected": "UNVERIFIABLE (L2 gap footprint_unknown; the claim follows the required level); never MISMATCH",
+          "actual": "UNVERIFIABLE (L2 gap footprint_unknown; the claim follows the required level); never MISMATCH",
+          "status": "matched"
+        },
+        {
+          "id": "W10",
+          "title": "The decoder is held back, the action seals at the L2 timeout, then the decoder catches up",
+          "expected": "Action deed UNVERIFIABLE (l2_timeout); then an amendment deed L2 · VERIFIED that amends it; the chain verifies",
+          "actual": "Action deed UNVERIFIABLE (l2_timeout); then an amendment deed L2 · VERIFIED that amends it; the chain verifies",
+          "status": "matched"
+        },
+        {
+          "id": "W11",
+          "title": "The replication slot is dropped while an action waits for L2",
+          "expected": "UNVERIFIABLE (L2 gap slot_dropped); never MISMATCH",
+          "actual": "UNVERIFIABLE (L2 gap slot_dropped); never MISMATCH",
+          "status": "matched"
+        },
+        {
+          "id": "W12",
+          "title": "deedglass_pub dropped and re-created around an action (PG 18)",
+          "expected": "UNVERIFIABLE (L2 gap publication_gap); never MISMATCH",
+          "actual": "UNVERIFIABLE (L2 gap publication_gap); never MISMATCH",
+          "status": "matched"
+        },
+        {
+          "id": "W13",
+          "title": "A ledger row whose sql_digest differs from the authorized SQL (a simulated compromised path)",
+          "expected": "MISMATCH (L2: ledger_mismatch naming sql_digest, never the values)",
+          "actual": "MISMATCH (L2: ledger_mismatch naming sql_digest, never the values)",
+          "status": "matched"
+        }
+      ]
+    },
+    {
+      "title": "Approvals, links and webhooks",
+      "intro": "S22's group L. A person's countersign is the control here, so each case tries to get one without the right person: a replayed email link, a second vote from the same person, the person the action runs for, an agent key, a vote after the approval expired, a vote on an out-of-date view. Then a webhook aimed at cloud metadata, and a forged webhook signature.",
+      "cases": [
+        {
+          "id": "L01",
+          "title": "Approval link replay: the emailed link used again after it approved",
+          "expected": "REJECTED (approval_link_invalid on every reuse; the action ran once)",
+          "actual": "REJECTED (approval_link_invalid on every reuse; the action ran once)",
+          "status": "matched"
+        },
+        {
+          "id": "L02",
+          "title": "Another approver's token: a link presented after its owner already countersigned a four-eyes approval",
+          "expected": "REJECTED (approval_link_invalid or already_countersigned; the approval stays at 1 of 2 and nothing runs)",
+          "actual": "REJECTED (approval_link_invalid or already_countersigned; the approval stays at 1 of 2 and nothing runs)",
+          "status": "matched"
+        },
+        {
+          "id": "L03",
+          "title": "Self-approval through Deedglass-On-Behalf-Of naming the approver",
+          "expected": "REJECTED (self_approval; nothing runs until another approver countersigns)",
+          "actual": "REJECTED (self_approval; nothing runs until another approver countersigns)",
+          "status": "matched"
+        },
+        {
+          "id": "L04",
+          "title": "An agent key approving its own action",
+          "expected": "REJECTED (approval_needs_person; the approval stays pending and nothing runs)",
+          "actual": "REJECTED (approval_needs_person; the approval stays pending and nothing runs)",
+          "status": "matched"
+        },
+        {
+          "id": "L05",
+          "title": "A decision after the approval expired",
+          "expected": "REJECTED (approval_expired; nothing runs)",
+          "actual": "REJECTED (approval_expired; nothing runs)",
+          "status": "matched"
+        },
+        {
+          "id": "L06",
+          "title": "A decision on a stale context digest",
+          "expected": "REJECTED (context_changed; the approval stays pending and nothing runs)",
+          "actual": "REJECTED (context_changed; the approval stays pending and nothing runs)",
+          "status": "matched"
+        },
+        {
+          "id": "L07",
+          "title": "A webhook URL to the cloud metadata service",
+          "expected": "BLOCKED (destination_blocked at create; 0 deliveries)",
+          "actual": "BLOCKED (destination_blocked at create; 0 deliveries)",
+          "status": "matched"
+        },
+        {
+          "id": "L08",
+          "title": "A forged webhook signature checked with webhook.Verify",
+          "expected": "REJECTED (ErrSignature for a wrong secret or changed body; ErrTimestamp outside 300 s)",
+          "actual": "REJECTED (ErrSignature for a wrong secret or changed body; ErrTimestamp outside 300 s)",
+          "status": "matched"
+        }
+      ]
+    },
+    {
+      "title": "Undo",
+      "intro": "S23's group U. An undo writes to the customer's database on a person's request, so each case tries to make it write something Postgres didn't record, or to reach it without a person: rows that change under it, values smuggled into the request, a forged marker naming the action, an agent calling the internal tool, another org's action.",
+      "cases": [
+        {
+          "id": "U01",
+          "title": "An undo whose rows change between the preview and the run",
+          "expected": "REJECTED (undo_conflict; the undo is failed and Postgres changed no row)",
+          "actual": "REJECTED (undo_conflict; the undo is failed and Postgres changed no row)",
+          "status": "matched"
+        },
+        {
+          "id": "U02",
+          "title": "An undo request that smuggles values or a tampered plan digest",
+          "expected": "REJECTED (validation_failed for any field beyond plan_digest, reason, allow_triggers and wait; undo_plan_stale for a digest Deedglass didn't plan; no row changes)",
+          "actual": "REJECTED (validation_failed for any field beyond plan_digest, reason, allow_triggers and wait; undo_plan_stale for a digest Deedglass didn't plan; no row changes)",
+          "status": "matched"
+        },
+        {
+          "id": "U03",
+          "title": "An undo of an action after a forged marker names it in another transaction",
+          "expected": "REJECTED (the forged transaction never becomes evidence: the plan holds only the action's own bound transaction, and the forged rows stay as they are)",
+          "actual": "REJECTED (the forged transaction never becomes evidence: the plan holds only the action's own bound transaction, and the forged rows stay as they are)",
+          "status": "matched"
+        },
+        {
+          "id": "U04",
+          "title": "An agent calling the internal undo tool through POST /v1/actions",
+          "expected": "DENIED (tool_unknown, recorded and sealed; nothing reaches Postgres)",
+          "actual": "DENIED (tool_unknown, recorded and sealed; nothing reaches Postgres)",
+          "status": "matched"
+        },
+        {
+          "id": "U05",
+          "title": "An undo of another org's action",
+          "expected": "REJECTED (not_found for preview and run, exactly as an unknown id; nothing is planned)",
+          "actual": "REJECTED (not_found for preview and run, exactly as an unknown id; nothing is planned)",
+          "status": "matched"
+        }
+      ]
+    }
+  ],
+  "not_covered": [
+    "How often models fall for injections. These cases start after the model was fooled.",
+    "A compromised Deedglass host, database superuser or seal key.",
+    "Malicious upstream behaviour beyond tool naming: tool descriptions that carry instructions, poisoned results, slow-drip responses (S34).",
+    "Denial of service at scale. J04 checks one agent's budget, not a flood.",
+    "The supply chain beyond `govulncheck` (S35 adds the SBOM and container scanning).",
+    "The V0 cases not listed as running above.",
+    "What L2 can't see: effects outside Postgres, writes to tables outside the publication, and proxy-mode SQL servers (no marker to bind). `docs/WITNESS.md` lists them.",
+    "Production network rules for private ranges: the suite runs in dev with the private-network override so it can reach its own loopback servers. Metadata, link-local and cross-host targets stay blocked even then (K01, K02); the prod-only rules are covered by the egress corpus (`internal/connector/egress`)."
+  ]
+}

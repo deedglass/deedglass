@@ -1,0 +1,46 @@
+---
+title: Verification levels
+description: L0 Reported, L1 Confirmed and L2 Witnessed, which connectors reach which level, and how one verdict is chosen from many checks.
+lastVerified: "2026-10-05"
+---
+
+import Limits from '../../../components/Limits.astro';
+import VerdictChip from '../../../components/VerdictChip.astro';
+import LevelBadge from '../../../components/LevelBadge.astro';
+
+After an action runs, the Witness checks it against an observation. The level says which observation.
+
+| Level | What it compares the report with | Who reaches it |
+|---|---|---|
+| <LevelBadge level="L0" /> | The tool's own response: it returned success, and its output matched the tool's schema | Every connector, and every proxy-mode edge |
+| <LevelBadge level="L1" /> | A read-back from the target after the action: the record exists and the named fields match | REST, Postgres (the row, by `xmin`), GitHub, Slack, Stripe test mode, Notion |
+| <LevelBadge level="L2" /> | The row changes Postgres committed in the action's transaction, read from its own change log | Postgres, with `wal_level = logical` |
+
+A policy rule says the level it needs (`verify: L2`). The deed claims one level and one verdict.
+
+## The three verdicts
+
+- <VerdictChip verdict="VERIFIED" level="L2" /> The observation at that level found no difference, and nothing at any level disagreed.
+- <VerdictChip verdict="MISMATCH" level="L2" /> Some level found a difference: for example, Postgres changed 301 rows where the agent reported 1. A violation anywhere gives MISMATCH, at the highest level that found one.
+- <VerdictChip verdict="UNVERIFIABLE" level="L1" /> No level disagreed, but none at or above the required level could observe cleanly: a read-back timed out, the change log was behind, or Deedglass couldn't tell whether the tool ran. The reasons name the gap.
+
+## How one verdict is chosen
+
+Each check produces reasons, each a pass, a gap or a violation. Any violation gives MISMATCH. Otherwise, a level with at least one pass and no gap, at or above the required level, gives VERIFIED at the highest such level. Otherwise the verdict is UNVERIFIABLE. A gap is never turned into a MISMATCH, and nothing short of a clean pass becomes VERIFIED. One function makes this decision, and it is tested over every combination of results.
+
+## Late evidence
+
+L2 can arrive after the deed was sealed (the change log was behind). The late verdict seals an **amendment deed**; the first deed never changes.
+
+## What it doesn't do
+
+<Limits>
+- L1 trusts the target's answer. A target that answers consistently but falsely can't be caught by reading it back.
+- L2 sees only the watched tables in Postgres's change log: not effects outside Postgres, not unlogged or temporary tables, not other databases.
+- L2 expectations exist for simple statements. A JOIN, `UPDATE … FROM`, a CTE or `MERGE` gets the gap `footprint_unknown`, so it can't be VERIFIED at L2.
+</Limits>
+
+## Next
+
+- [What VERIFIED means](/concepts/what-verified-means/), and what it doesn't
+- [Catch "1 row reported, 301 committed"](/guides/catch-a-mismatch/)

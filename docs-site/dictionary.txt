@@ -1,0 +1,19 @@
+# Project words for cspell (S33 §3.6): product names, people, tools and Postgres terms.
+Deedglass
+Deedglass's
+deedglass
+DEEDGLASS
+Arjun
+Prabhakaran
+distroless
+Glama
+llms
+SARIF
+Supabase
+terminalish
+toseal
+unlogged
+vgap
+waitlist
+wordmark
+zizmor

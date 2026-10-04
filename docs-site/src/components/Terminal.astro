@@ -1,0 +1,27 @@
+---
+// A terminal transcript with the CLI's symbols coloured by state (brand §13.3): ✓ verified,
+// ✕ mismatch or denied, ◐ pending, ○ unverifiable. Symbols are aria-hidden; the words stay.
+interface Props { title?: string; text: string }
+const { title = 'Terminal', text } = Astro.props;
+const cls: Record<string, string> = { '✓': 'ok', '✕': 'bad', '◐': 'wait', '○': 'gap' };
+const lines = text.replace(/\n$/, '').split('\n').map((l) => {
+  const m = /^(\s*)([✓✕◐○])(.*)$/.exec(l);
+  return m ? { pre: m[1], sym: m[2], rest: m[3], cmd: false } : { pre: '', sym: '', rest: l, cmd: l.startsWith('$ ') };
+});
+---
+<figure class="dg-term">
+  <figcaption>{title}</figcaption>
+  <pre tabindex="0" aria-label={title}><code>{lines.map((l) => (
+    <span class:list={['ln', l.cmd && 'cmd']}>{l.pre}{l.sym && <span class={`sym ${cls[l.sym]}`} aria-hidden="true">{l.sym}</span>}{l.rest}{'\n'}</span>
+  ))}</code></pre>
+</figure>
+<style>
+  .dg-term { margin: 1.25rem 0; border: 1px solid var(--ink-800); border-radius: 10px; background: var(--ink-900); overflow: hidden; }
+  figcaption { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.04em; color: var(--slate-400); padding: 0.4rem 0.9rem; border-bottom: 1px solid var(--ink-800); background: var(--ink-850); }
+  pre { margin: 0; padding: 0.9rem; overflow-x: auto; font-size: 0.8125rem; line-height: 1.6; color: var(--code-plain); background: transparent; border: 0; }
+  .cmd { color: var(--snow-text); font-weight: 500; }
+  .sym.ok { color: var(--verified-text-dark); }
+  .sym.bad { color: var(--mismatch-text-dark); }
+  .sym.wait { color: var(--pending-text-dark); }
+  .sym.gap { color: var(--unverifiable-text-dark); }
+</style>
