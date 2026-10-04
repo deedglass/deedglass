@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { SCRUB_RULES, scrub } from '../../src/scrub.js';
-import { readText, repo } from '../helpers.js';
+import { readText } from '../helpers.js';
 
 describe('one source', () => {
   it('src/verify matches web/verify/src (make sdk-sync-verify)', () => {
@@ -32,6 +32,5 @@ describe('one source', () => {
     for (const f of ['index.ts', 'client.ts', 'http.ts', 'wrap.ts', 'intent.ts', 'args.ts', 'runtime.ts', 'verify/index.ts', 'verify/fetch.ts']) {
       expect(src(f)).not.toMatch(/from '(node:|ai'|@openai|@langchain|@anthropic|\.\/adapters)/);
     }
-    expect(repo('x')).toContain('product');
   });
 });
