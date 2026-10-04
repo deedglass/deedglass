@@ -1,19 +1,24 @@
 ---
+// One deed (S25 §3.6): its sections, the raw JCS, the DeedPanel and ← → by seq. src/controllers/deeds.ts.
 import AppShell from '../../layouts/AppShell.astro';
-import Icon from '../../components/Icon.astro';
 import { copy } from '../../lib/copy.ts';
 const p = copy.pages.deeds;
 ---
 <AppShell title={p.title} screen="deeds">
-  <a class="btn btn-quiet btn-sm -ml-3 mb-3" href="/app/deeds"><Icon name="chevron-right" size={16} class="rotate-180" />{p.title}</a>
-  <div class="page-head"><div><h1 class="t-title-2 mono" id="page-title">{p.title}</h1></div></div>
-  <section class="card card-pad" id="detail-body" aria-labelledby="page-title" aria-busy="true">
-    <dl class="kv"><dt>Id</dt><dd><span class="skel skel-line w-56"></span></dd><dt>Created</dt><dd><span class="skel skel-line w-32"></span></dd></dl>
+  <section id="detail-body" class="detail" aria-busy="true" aria-labelledby="page-title">
+    <header class="detail-head" aria-hidden="true">
+      <span class="skel skel-line w-32"></span>
+      <h1 class="t-title-2" id="page-title"><span class="skel skel-title"></span></h1>
+    </header>
+    <div class="detail-grid">
+      <aside class="detail-aside"><div class="card card-pad">{[0, 1, 2, 3].map(() => <span class="skel skel-line skel-gap"></span>)}</div></aside>
+      <div class="detail-main">{[0, 1].map(() => <div class="card card-pad">{[0, 1, 2, 3].map(() => <span class="skel skel-line skel-gap"></span>)}</div>)}</div>
+    </div>
   </section>
 </AppShell>
 <script>
   import { bootShell } from '../../controllers/shell.ts';
-  import { mountDetail } from '../../controllers/detail.ts';
+  import { mountDeedView } from '../../controllers/deedview.ts';
   bootShell({ title: location.pathname.split('/').pop() ?? 'deeds' });
-  mountDetail('deeds');
+  mountDeedView();
 </script>

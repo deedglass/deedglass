@@ -1,0 +1,641 @@
+{
+    "object": "action",
+    "id": "act_01m428xxh19yvhw5aybcgjwa9c",
+    "created_at": "2026-10-04T01:37:20.416Z",
+    "livemode": true,
+    "agent": {
+        "id": "agt_01m428xt8n3emtb9ee55mt0egb",
+        "name": "support-bot"
+    },
+    "tool": "postgres.execute",
+    "connector": null,
+    "mode": "gateway",
+    "state": "sealed",
+    "status": "executed",
+    "on_behalf_of": null,
+    "session": null,
+    "decision": {
+        "outcome": "allow",
+        "code": null,
+        "source": "rule",
+        "rule_id": "allow-order-status-updates",
+        "reason": null,
+        "message": null,
+        "policy": "pol_01m428xxa47f6f3hzzc8psnz03",
+        "policy_version": "pv_01m428xxa47f6f3hzzc8psnz04",
+        "shadow": null
+    },
+    "policy": {
+        "id": "pol_01m428xxa47f6f3hzzc8psnz03",
+        "version_id": "pv_01m428xxa47f6f3hzzc8psnz04",
+        "mode": "enforce",
+        "decision": "allow",
+        "rule_id": "allow-order-status-updates"
+    },
+    "approval": null,
+    "execution": {
+        "status": "succeeded",
+        "started_at": "2026-10-04T01:37:20.419Z",
+        "finished_at": "2026-10-04T01:37:20.424Z",
+        "latency_ms": 5,
+        "error_code": null,
+        "error_message": null
+    },
+    "witness": {
+        "object": "witness",
+        "level": "L2",
+        "verdict": "MISMATCH",
+        "method": "postgres.pgoutput",
+        "required_level": "L2",
+        "summary": "Postgres changed 301 rows in public.orders. The agent reported 1.",
+        "reasons": [
+            {
+                "code": "row_count_exceeded",
+                "class": "violation",
+                "level": "L2",
+                "check": "rows",
+                "message": "Postgres changed 301 rows in public.orders. The agent reported 1.",
+                "evidence": {
+                    "expected": 1,
+                    "observed": 301
+                }
+            },
+            {
+                "code": "unexpected_key",
+                "class": "violation",
+                "level": "L2",
+                "check": "keys",
+                "message": "300 changed rows in public.orders are outside the rows the statement named (id = 42).",
+                "evidence": {
+                    "imaged": true,
+                    "outside": 300
+                }
+            }
+        ],
+        "witnessed_at": "2026-10-04T01:37:20.445Z",
+        "detail_digest": "sha256:34dd07a7a9482d86350b7057fa16d789862ea570d5c6ca3f7b72bc884b5c618f",
+        "detail": {
+            "claim": {
+                "level": "L2",
+                "method": "postgres.pgoutput",
+                "verdict": "MISMATCH",
+                "required_level": "L2"
+            },
+            "levels": {
+                "L0": {
+                    "method": "reported",
+                    "verdict": "VERIFIED"
+                },
+                "L1": {
+                    "method": "readback.postgres.row",
+                    "verdict": "VERIFIED",
+                    "readback": {
+                        "tool": "postgres.row",
+                        "target": "id = 42 in public.orders",
+                        "attempts": 1,
+                        "latency_ms": 1
+                    }
+                },
+                "L2": {
+                    "rows": [
+                        {
+                            "op": "update",
+                            "key": {
+                                "id": "42"
+                            },
+                            "cells": [
+                                {
+                                    "after": "shipped",
+                                    "before": "paid",
+                                    "column": "status"
+                                }
+                            ],
+                            "table": "public.orders",
+                            "expected": true
+                        },
+                        {
+                            "op": "update",
+                            "key": {
+                                "id": "251"
+                            },
+                            "cells": [
+                                {
+                                    "after": "shipped",
+                                    "before": "cancelled",
+                                    "column": "status"
+                                }
+                            ],
+                            "table": "public.orders",
+                            "expected": false
+                        },
+                        {
+                            "op": "update",
+                            "key": {
+                                "id": "82"
+                            },
+                            "cells": [
+                                {
+                                    "after": "shipped",
+                                    "before": "cancelled",
+                                    "column": "status"
+                                }
+                            ],
+                            "table": "public.orders",
+                            "expected": false
+                        },
+                        {
+                            "op": "update",
+                            "key": {
+                                "id": "107"
+                            },
+                            "cells": [
+                                {
+                                    "after": "shipped",
+                                    "before": "cancelled",
+                                    "column": "status"
+                                }
+                            ],
+                            "table": "public.orders",
+                            "expected": false
+                        },
+                        {
+                            "op": "update",
+                            "key": {
+                                "id": "400"
+                            },
+                            "cells": [
+                                {
+                                    "after": "shipped",
+                                    "before": "cancelled",
+                                    "column": "status"
+                                }
+                            ],
+                            "table": "public.orders",
+                            "expected": false
+                        },
+                        {
+                            "op": "update",
+                            "key": {
+                                "id": "421"
+                            },
+                            "cells": [
+                                {
+                                    "after": "shipped",
+                                    "before": "cancelled",
+                                    "column": "status"
+                                }
+                            ],
+                            "table": "public.orders",
+                            "expected": false
+                        },
+                        {
+                            "op": "update",
+                            "key": {
+                                "id": "170"
+                            },
+                            "cells": [
+                                {
+                                    "after": "shipped",
+                                    "before": "cancelled",
+                                    "column": "status"
+                                }
+                            ],
+                            "table": "public.orders",
+                            "expected": false
+                        },
+                        {
+                            "op": "update",
+                            "key": {
+                                "id": "115"
+                            },
+                            "cells": [
+                                {
+                                    "after": "shipped",
+                                    "before": "cancelled",
+                                    "column": "status"
+                                }
+                            ],
+                            "table": "public.orders",
+                            "expected": false
+                        },
+                        {
+                            "op": "update",
+                            "key": {
+                                "id": "54"
+                            },
+                            "cells": [
+                                {
+                                    "after": "shipped",
+                                    "before": "cancelled",
+                                    "column": "status"
+                                }
+                            ],
+                            "table": "public.orders",
+                            "expected": false
+                        },
+                        {
+                            "op": "update",
+                            "key": {
+                                "id": "209"
+                            },
+                            "cells": [
+                                {
+                                    "after": "shipped",
+                                    "before": "cancelled",
+                                    "column": "status"
+                                }
+                            ],
+                            "table": "public.orders",
+                            "expected": false
+                        },
+                        {
+                            "op": "update",
+                            "key": {
+                                "id": "95"
+                            },
+                            "cells": [
+                                {
+                                    "after": "shipped",
+                                    "before": "cancelled",
+                                    "column": "status"
+                                }
+                            ],
+                            "table": "public.orders",
+                            "expected": false
+                        },
+                        {
+                            "op": "update",
+                            "key": {
+                                "id": "231"
+                            },
+                            "cells": [
+                                {
+                                    "after": "shipped",
+                                    "before": "cancelled",
+                                    "column": "status"
+                                }
+                            ],
+                            "table": "public.orders",
+                            "expected": false
+                        },
+                        {
+                            "op": "update",
+                            "key": {
+                                "id": "152"
+                            },
+                            "cells": [
+                                {
+                                    "after": "shipped",
+                                    "before": "cancelled",
+                                    "column": "status"
+                                }
+                            ],
+                            "table": "public.orders",
+                            "expected": false
+                        },
+                        {
+                            "op": "update",
+                            "key": {
+                                "id": "225"
+                            },
+                            "cells": [
+                                {
+                                    "after": "shipped",
+                                    "before": "cancelled",
+                                    "column": "status"
+                                }
+                            ],
+                            "table": "public.orders",
+                            "expected": false
+                        },
+                        {
+                            "op": "update",
+                            "key": {
+                                "id": "317"
+                            },
+                            "cells": [
+                                {
+                                    "after": "shipped",
+                                    "before": "cancelled",
+                                    "column": "status"
+                                }
+                            ],
+                            "table": "public.orders",
+                            "expected": false
+                        },
+                        {
+                            "op": "update",
+                            "key": {
+                                "id": "429"
+                            },
+                            "cells": [
+                                {
+                                    "after": "shipped",
+                                    "before": "cancelled",
+                                    "column": "status"
+                                }
+                            ],
+                            "table": "public.orders",
+                            "expected": false
+                        },
+                        {
+                            "op": "update",
+                            "key": {
+                                "id": "160"
+                            },
+                            "cells": [
+                                {
+                                    "after": "shipped",
+                                    "before": "cancelled",
+                                    "column": "status"
+                                }
+                            ],
+                            "table": "public.orders",
+                            "expected": false
+                        },
+                        {
+                            "op": "update",
+                            "key": {
+                                "id": "309"
+                            },
+                            "cells": [
+                                {
+                                    "after": "shipped",
+                                    "before": "cancelled",
+                                    "column": "status"
+                                }
+                            ],
+                            "table": "public.orders",
+                            "expected": false
+                        },
+                        {
+                            "op": "update",
+                            "key": {
+                                "id": "75"
+                            },
+                            "cells": [
+                                {
+                                    "after": "shipped",
+                                    "before": "cancelled",
+                                    "column": "status"
+                                }
+                            ],
+                            "table": "public.orders",
+                            "expected": false
+                        },
+                        {
+                            "op": "update",
+                            "key": {
+                                "id": "230"
+                            },
+                            "cells": [
+                                {
+                                    "after": "shipped",
+                                    "before": "cancelled",
+                                    "column": "status"
+                                }
+                            ],
+                            "table": "public.orders",
+                            "expected": false
+                        }
+                    ],
+                    "frames": 1,
+                    "method": "postgres.pgoutput",
+                    "verdict": "MISMATCH",
+                    "expected": {
+                        "tables": [
+                            {
+                                "ops": [
+                                    "update"
+                                ],
+                                "keys": [
+                                    {
+                                        "id": "42"
+                                    }
+                                ],
+                                "rows": 1,
+                                "table": "public.orders",
+                                "columns": [
+                                    "status"
+                                ]
+                            }
+                        ],
+                        "derivation": "exact_keys"
+                    },
+                    "observed": {
+                        "total": 301,
+                        "tables": [
+                            {
+                                "table": "public.orders",
+                                "delete": 0,
+                                "insert": 0,
+                                "update": 301
+                            }
+                        ]
+                    },
+                    "redacted": [],
+                    "frame_ids": [
+                        "dtx_01m428xxhk7f7239qf857ryzj3"
+                    ],
+                    "rows_more": 281,
+                    "rows_shown": 20,
+                    "transaction": {
+                        "xid": 807,
+                        "timeline": 1,
+                        "system_id": "7692620743896881136",
+                        "commit_lsn": "0/1D706C8",
+                        "marker_lsn": "0/1D516A8",
+                        "committed_at": "2026-10-04T01:37:20.424Z",
+                        "changes_digest": "sha256:0f5dc7481655207416df62525502819c9292c40dcebbd68c2f5379a205eee9ba"
+                    },
+                    "columns_more": 0
+                }
+            },
+            "object": "witness_detail",
+            "reasons": [
+                {
+                    "code": "tool_reported_success",
+                    "check": "status",
+                    "class": "pass",
+                    "level": "L0",
+                    "message": "The tool reported success."
+                },
+                {
+                    "code": "row_written",
+                    "check": "row.xmin",
+                    "class": "pass",
+                    "level": "L1",
+                    "message": "Postgres shows row id = 42 in public.orders was last written by this action's transaction.",
+                    "evidence": {
+                        "compared": "1 of 1 columns"
+                    }
+                },
+                {
+                    "code": "row_count_exceeded",
+                    "check": "rows",
+                    "class": "violation",
+                    "level": "L2",
+                    "message": "Postgres changed 301 rows in public.orders. The agent reported 1.",
+                    "evidence": {
+                        "expected": 1,
+                        "observed": 301
+                    }
+                },
+                {
+                    "code": "unexpected_key",
+                    "check": "keys",
+                    "class": "violation",
+                    "level": "L2",
+                    "message": "300 changed rows in public.orders are outside the rows the statement named (id = 42).",
+                    "evidence": {
+                        "imaged": true,
+                        "outside": 300
+                    }
+                },
+                {
+                    "code": "triggers_present",
+                    "check": "triggers",
+                    "class": "note",
+                    "level": "L2",
+                    "message": "public.orders has triggers (orders_ship_open_batch). Their writes to watched tables are checked; writes elsewhere aren't visible."
+                }
+            ],
+            "summary": "Postgres changed 301 rows in public.orders. The agent reported 1.",
+            "version": 1,
+            "witnessed_at": "2026-10-04T01:37:20.445Z"
+        },
+        "history": [
+            {
+                "deed": "deed_01m428xxj12wbmxsh4bx8cv509",
+                "kind": "action",
+                "level": "L2",
+                "verdict": "MISMATCH",
+                "at": "2026-10-04T01:37:20.449Z"
+            }
+        ]
+    },
+    "cost": null,
+    "request_digest": "sha256:4d57532ff25215063b85d141d5f46b88f2424a759d485ea1ecd33ddd4c141ca1",
+    "result_digest": "sha256:bac8c854b5b6cf225e63ed0f2b03eaa6561230a8432c6d1391a4493d3f2abfc6",
+    "payload_pruned_at": null,
+    "deed": "deed_01m428xxj12wbmxsh4bx8cv509",
+    "next_action": null,
+    "request": {
+        "sql": "UPDATE public.orders SET status = 'shipped' WHERE id = 42"
+    },
+    "result": {
+        "command": "UPDATE",
+        "returning": null,
+        "rows_affected": 1
+    },
+    "events": {
+        "object": "list",
+        "data": [
+            {
+                "object": "action_event",
+                "id": "evt_01m428xxh2fsec6d49m53pqhth",
+                "seq": 1,
+                "from": null,
+                "to": "received",
+                "at": "2026-10-04T01:37:20.416Z",
+                "actor": "agt_01m428xt8n3emtb9ee55mt0egb",
+                "data": {}
+            },
+            {
+                "object": "action_event",
+                "id": "evt_01m428xxh2fsec6d49m53pqhtj",
+                "seq": 2,
+                "from": "received",
+                "to": "authenticated",
+                "at": "2026-10-04T01:37:20.418Z",
+                "actor": "agt_01m428xt8n3emtb9ee55mt0egb",
+                "data": {}
+            },
+            {
+                "object": "action_event",
+                "id": "evt_01m428xxh2fsec6d49m53pqhtk",
+                "seq": 3,
+                "from": "authenticated",
+                "to": "evaluated",
+                "at": "2026-10-04T01:37:20.418Z",
+                "actor": "agt_01m428xt8n3emtb9ee55mt0egb",
+                "data": {
+                    "rule_id": "allow-order-status-updates"
+                }
+            },
+            {
+                "object": "action_event",
+                "id": "evt_01m428xxh2fsec6d49m53pqhtm",
+                "seq": 4,
+                "from": "evaluated",
+                "to": "executing",
+                "at": "2026-10-04T01:37:20.418Z",
+                "actor": "agt_01m428xt8n3emtb9ee55mt0egb",
+                "data": {
+                    "rule_id": "allow-order-status-updates"
+                }
+            },
+            {
+                "object": "action_event",
+                "id": "evt_01m428xxh9kh9zepsrqn5zsfts",
+                "seq": 5,
+                "from": "executing",
+                "to": "executed",
+                "at": "2026-10-04T01:37:20.425Z",
+                "actor": "agt_01m428xt8n3emtb9ee55mt0egb",
+                "data": {}
+            },
+            {
+                "object": "action_event",
+                "id": "evt_01m428xxh9kh9zepsrqn5zsftt",
+                "seq": 6,
+                "from": "executed",
+                "to": "witnessing",
+                "at": "2026-10-04T01:37:20.425Z",
+                "actor": "agt_01m428xt8n3emtb9ee55mt0egb",
+                "data": {}
+            },
+            {
+                "object": "action_event",
+                "id": "evt_01m428xxhybg40am4hgp77y20m",
+                "seq": 7,
+                "from": "witnessing",
+                "to": "mismatch",
+                "at": "2026-10-04T01:37:20.446Z",
+                "actor": "system",
+                "data": {
+                    "level": "L2",
+                    "reason": "row_count_exceeded",
+                    "verdict": "MISMATCH",
+                    "detail_digest": "sha256:34dd07a7a9482d86350b7057fa16d789862ea570d5c6ca3f7b72bc884b5c618f",
+                    "required_level": "L2"
+                }
+            },
+            {
+                "object": "action_event",
+                "id": "evt_01m428xxj27f4haywmhye520a1",
+                "seq": 8,
+                "from": "mismatch",
+                "to": "sealed",
+                "at": "2026-10-04T01:37:20.451Z",
+                "actor": "system",
+                "data": {}
+            }
+        ],
+        "has_more": false,
+        "next_cursor": null
+    },
+    "deeds": [
+        {
+            "id": "deed_01m428xxj12wbmxsh4bx8cv509",
+            "kind": "action",
+            "seq": 617,
+            "issued_at": "2026-10-04T01:37:20.449Z"
+        }
+    ],
+    "undo": {
+        "undoes": null,
+        "undone_by": null,
+        "eligible": true
+    }
+}

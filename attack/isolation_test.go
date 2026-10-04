@@ -230,6 +230,23 @@ func TestOrgIsolation(t *testing.T) {
 			}
 		}
 	}
+	// S25: the Overview, both windows and the agents' usage expansion, as globex: none of Acme's
+	// ids (agents, actions, approvals, connectors) and 200 for globex's own credentials; an agent
+	// key is refused before any read.
+	for _, p := range []string{"/v1/overview", "/v1/overview?window=7d", "/v1/agents?expand[]=usage"} {
+		for _, c := range []*harness.Client{globex.Admin, globex.Session} {
+			r := c.Do("GET", p, nil)
+			if r.Status != 200 {
+				t.Errorf("GET %s as globex: HTTP %d %s", p, r.Status, r.ErrorCode())
+			}
+			if leaked := leaks(r.Body, acmeIDs); leaked != "" {
+				t.Errorf("GET %s as globex shows Acme's %s", p, leaked)
+			}
+		}
+	}
+	if r := agentKey.Do("GET", "/v1/overview", nil); r.Status != 403 || r.ErrorCode() != "insufficient_scope" {
+		t.Errorf("GET /v1/overview with globex's agent key: HTTP %d %s, want 403 insufficient_scope", r.Status, r.ErrorCode())
+	}
 	// Exports: globex's deed export holds none of Acme's ids.
 	exp := globex.Admin.Do("GET", "/v1/deeds/export", nil)
 	if leaked := leaks(exp.Body, acmeIDs); leaked != "" {

@@ -48,7 +48,7 @@ export function listKeys(): void {
     const cur = rows.findIndex((r) => r.getAttribute('aria-selected') === 'true');
     if (e.key === 'Enter') {
       if (cur < 0 || document.activeElement !== rows[cur]) return;
-      const a = rows[cur]!.querySelector<HTMLAnchorElement>('a[href]');
+      const a = rows[cur]!.querySelector<HTMLAnchorElement>('a.rowlink[href]') ?? rows[cur]!.querySelector<HTMLAnchorElement>('a[href]');
       if (a) {
         e.preventDefault();
         a.click();

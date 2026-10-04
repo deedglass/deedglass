@@ -1,0 +1,123 @@
+{
+    "object": "action",
+    "id": "act_01m428xv6pk3r46j4pa6fy7yw9",
+    "created_at": "2026-10-04T01:37:17.089Z",
+    "livemode": false,
+    "agent": {
+        "id": "agt_01m428xt8ra9jazsj6em5gvpdb",
+        "name": "research-bot"
+    },
+    "tool": "stripe.create_refund",
+    "connector": null,
+    "mode": "gateway",
+    "state": "sealed",
+    "status": "denied",
+    "on_behalf_of": "u_7174",
+    "session": "chat_88",
+    "decision": {
+        "outcome": "deny",
+        "code": null,
+        "source": null,
+        "rule_id": "refund-limit",
+        "reason": null,
+        "message": null,
+        "policy": null,
+        "policy_version": null,
+        "shadow": null
+    },
+    "policy": {
+        "id": null,
+        "version_id": null,
+        "mode": "enforce",
+        "decision": "deny",
+        "rule_id": "refund-limit"
+    },
+    "approval": null,
+    "execution": null,
+    "witness": null,
+    "cost": null,
+    "request_digest": "sha256:a2981bb1a31799b3250cd6f742101c8776a84201b78c2ea8719a7113f5f49497",
+    "result_digest": null,
+    "payload_pruned_at": null,
+    "deed": "deed_01m428xvkttx82p9ez1y6gq94w",
+    "next_action": null,
+    "request": {
+        "amount": 45000,
+        "charge": "ch_056982",
+        "currency": "usd"
+    },
+    "result": null,
+    "events": {
+        "object": "list",
+        "data": [
+            {
+                "object": "action_event",
+                "id": "evt_01m428xv6qwg1y211pbhz63c89",
+                "seq": 1,
+                "from": null,
+                "to": "received",
+                "at": "2026-10-04T01:37:17.089Z",
+                "actor": "agt_01m428xt8ra9jazsj6em5gvpdb",
+                "data": {}
+            },
+            {
+                "object": "action_event",
+                "id": "evt_01m428xv6qwg1y211pbhz63c8a",
+                "seq": 2,
+                "from": "received",
+                "to": "authenticated",
+                "at": "2026-10-04T01:37:18.040Z",
+                "actor": "system",
+                "data": {}
+            },
+            {
+                "object": "action_event",
+                "id": "evt_01m428xv6rn9gyw3by3mvt21gv",
+                "seq": 3,
+                "from": "authenticated",
+                "to": "evaluated",
+                "at": "2026-10-04T01:37:18.040Z",
+                "actor": "system",
+                "data": {}
+            },
+            {
+                "object": "action_event",
+                "id": "evt_01m428xv6twkvsfvtpkcb5fk1y",
+                "seq": 4,
+                "from": "evaluated",
+                "to": "denied",
+                "at": "2026-10-04T01:37:18.042Z",
+                "actor": "system",
+                "data": {
+                    "reason": "policy",
+                    "rule_id": "refund-limit"
+                }
+            },
+            {
+                "object": "action_event",
+                "id": "evt_01m428xvkt6k5brrgtvy05knrq",
+                "seq": 5,
+                "from": "denied",
+                "to": "sealed",
+                "at": "2026-10-04T01:37:18.458Z",
+                "actor": "system",
+                "data": {}
+            }
+        ],
+        "has_more": false,
+        "next_cursor": null
+    },
+    "deeds": [
+        {
+            "id": "deed_01m428xvkttx82p9ez1y6gq94w",
+            "kind": "action",
+            "seq": 183,
+            "issued_at": "2026-10-04T01:37:18.458Z"
+        }
+    ],
+    "undo": {
+        "undoes": null,
+        "undone_by": null,
+        "eligible": false
+    }
+}

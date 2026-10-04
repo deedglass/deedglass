@@ -206,7 +206,16 @@ func hasComments(n *yaml.Node) bool {
 // whenStyle: plain when YAML allows it, single quotes when it doesn't, a folded block over 80
 // characters. A value that already spans lines keeps its block style.
 func whenStyle(n *yaml.Node) {
-	if n.Kind != yaml.ScalarNode || strings.Contains(n.Value, "\n") {
+	if n.Kind != yaml.ScalarNode {
+		return
+	}
+	if strings.Contains(n.Value, "\n") {
+		// A folded block whose value has a more-indented line can't be re-emitted folded without
+		// gaining a blank line each pass (FuzzCompile, S25): write it literal, which keeps the value
+		// byte for byte.
+		if n.Style&yaml.FoldedStyle != 0 && moreIndented(n.Value) {
+			n.Style = yaml.LiteralStyle
+		}
 		return
 	}
 	n.Tag = "!!str"
@@ -218,6 +227,16 @@ func whenStyle(n *yaml.Node) {
 	default:
 		n.Style = yaml.SingleQuotedStyle
 	}
+}
+
+// moreIndented reports whether a line after the first starts with a space or a tab.
+func moreIndented(v string) bool {
+	for _, l := range strings.Split(v, "\n")[1:] {
+		if strings.HasPrefix(l, " ") || strings.HasPrefix(l, "\t") {
+			return true
+		}
+	}
+	return false
 }
 
 // plainSafe reports whether YAML would write s as a plain scalar that reads back as the same string.

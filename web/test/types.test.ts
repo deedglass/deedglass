@@ -31,6 +31,15 @@ const READS = {
   orgStop: ['stopped', 'stopped_at', 'stopped_by', 'reason'],
   orgStopResult: ['object', 'org', 'stopped', 'stopped_at', 'stopped_by', 'reason', 'agents_affected', 'deed'],
   meOrg: ['id', 'name', 'role'],
+  // S25: the action detail, the witness detail's L2 evidence, approvals, undo and the ledger check.
+  actionDetail: ['on_behalf_of', 'session', 'approval', 'cost', 'request_digest', 'result_digest', 'payload_pruned_at', 'request', 'result', 'events', 'deeds', 'undo'],
+  l2: ['transaction', 'expected', 'observed', 'rows', 'rows_shown', 'rows_more', 'columns_more', 'redacted', 'frames'],
+  l2Row: ['table', 'op', 'key', 'expected', 'cells'],
+  undo: ['undoes', 'undone_by', 'pending', 'eligible'],
+  approvalDetail: ['countersigned', 'denied_by', 'decision_reason', 'decided_at', 'deed', 'reason', 'approvers'],
+  countersign: ['user', 'at', 'via', 'reason', 'deed'],
+  ledgerCheck: ['object', 'status', 'checked', 'first_seq', 'last_seq', 'head', 'seal_keys', 'break', 'next_from_seq', 'checked_at'],
+  chainBreak: ['seq', 'deed', 'code', 'message', 'next'],
 };
 
 describe('types.ts matches the server', () => {
@@ -54,5 +63,21 @@ describe('types.ts matches the server', () => {
     check(READS.org, 'internal/identity/org.go', 'Org');
     check(READS.orgStop, 'internal/identity/org.go', 'OrgStopState');
     check(READS.orgStopResult, 'internal/identity/agents.go', 'OrgStop');
+  });
+  it('S25 shapes: the real action detail and the Go structs', () => {
+    const d = JSON.parse(read(repo('web/test/fixtures/action-mismatch-l2.json')));
+    for (const k of READS.actionDetail) expect(k in d, `action.${k}`).toBe(true);
+    const l2 = d.witness.detail.levels.L2;
+    for (const k of READS.l2) expect(k in l2, `levels.L2.${k}`).toBe(true);
+    for (const k of READS.l2Row) expect(k in l2.rows[0], `levels.L2.rows[].${k}`).toBe(true);
+    const check = (keys: string[], path: string, type: string) => {
+      const t = tags(path, type);
+      for (const k of keys) expect(t.has(k), `${type}.${k}`).toBe(true);
+    };
+    check(READS.undo, 'internal/ledger/read.go', 'ActionUndo');
+    check(READS.approvalDetail, 'internal/approve/approval.go', 'Approval');
+    check(READS.countersign, 'internal/approve/approval.go', 'Countersign');
+    check(READS.ledgerCheck, 'internal/ledger/check.go', 'ChainCheck');
+    check(READS.chainBreak, 'internal/ledger/check.go', 'ChainBreak');
   });
 });

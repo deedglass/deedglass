@@ -411,6 +411,15 @@ agent on behalf of a person.
 update except clearing `plan`, and row and statement triggers (`forbid_mutation`) refuse DELETE
 and TRUNCATE. The index `undo_plans_undoes` serves lookups by the undone action.
 
+## Overview index (0023, S25)
+
+`0023_overview.sql` adds one index and nothing else: `actions_overview` on `actions (org_id,
+created_at) INCLUDE (decision, witness_verdict, witness_level)`. `GET /v1/overview` counts an org's
+actions in its window by bucket, decision, verdict and level ([OVERVIEW_METRICS.md](OVERVIEW_METRICS.md)),
+and with these columns in the index the scan doesn't read the wide action rows where they are
+all-visible. Every transition already changes `state`, an indexed column, so action updates were
+never HOT; the index adds one small entry per row version.
+
 ## Personal data
 
 Sessions and sign-in tokens keep the client IP address and User-Agent (at most 512 characters) for

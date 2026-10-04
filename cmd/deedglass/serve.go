@@ -328,7 +328,10 @@ func runServe(ctx context.Context, e *Env, args []string) error {
 	if dec != nil {
 		api.Metrics().Collect(dec.Metrics().Collect)
 	}
-	api.Mount(serveRoutes(api, db, ms, sk, led, people, keys, pol, gp, mw, cw, aps, whs, ua, &liveWiring{hub: hub, con: con})...)
+	// S25: GET /v1/overview, with S11's usage counters and the decoder's lag threshold.
+	ov := console.NewOverview(console.OverviewOptions{Ledger: led, Usage: console.UsageFromStore(policystore.NewUsage(db)),
+		SlotLagAlertBytes: int64(cfg.SlotLagAlertMB) << 20, Log: log})
+	api.Mount(serveRoutes(api, db, ms, sk, led, people, keys, pol, gp, mw, cw, aps, whs, ua, &liveWiring{hub: hub, con: con, ov: ov})...)
 	ln, err := net.Listen("tcp", cfg.Listen)
 	if err != nil {
 		return &ExitError{Code: ExitFailure, ErrCode: "listen_failed", Err: fmt.Errorf("Can't listen on %s: %s", cfg.Listen, lastPart(err)),
@@ -477,14 +480,21 @@ func serveRoutes(api *httpx.Server, db *store.DB, ms []migrate.Migration, sk *se
 	}
 	routes = append(routes, lw.con.Routes()...)
 	routes = append(routes, console.EventRoutes(console.EventsOptions{Hub: lw.hub, Recheck: api.Recheck})...)
+	// S25: the Overview's numbers (a nil Ledger answers 503 in route-table tests).
+	if lw.ov == nil {
+		lw.ov = console.NewOverview(console.OverviewOptions{})
+	}
+	routes = append(routes, lw.ov.Routes()...)
 	// S12: policies, versions, activation deeds, lint, the dry run and the test runner.
 	return append(routes, policyapi.Routes(pol.svc, policyapi.Options{})...)
 }
 
-// liveWiring is S24's: the Console's page handler and the event hub (nil in route-table tests).
+// liveWiring is S24's: the Console's page handler and the event hub, and S25's Overview (nil in
+// route-table tests).
 type liveWiring struct {
 	hub *console.Hub
 	con *console.Console
+	ov  *console.Overview
 }
 
 // eventMetrics writes the live stream's gauges and counters (S24).

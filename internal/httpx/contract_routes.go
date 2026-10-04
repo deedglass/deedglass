@@ -150,7 +150,7 @@ var contractRoutes = []ContractRoute{
 	cr("GET", "/v1/events", SessionOrKey, "viewer", "S24", "SSE; agent keys need actions:read and see their own agent's events only"),
 	cr("GET", "/app", Public, "", "S24", "Console pages: the handler redirects to /login?next= without a session"),
 	cr("GET", "/app/{path...}", Public, "", "S24", "Console pages: the handler redirects to /login?next= without a session"),
-	cr("GET", "/v1/overview", SessionOrKey, "viewer", "S25"),
+	cr("GET", "/v1/overview", SessionOrKey, "viewer", "S25", "keys: admin; agent keys 403"),
 
 	// S27/S28: Insights.
 	cr("GET", "/v1/insights/stats", SessionOrKey, "viewer", "S27"),

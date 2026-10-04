@@ -1,6 +1,7 @@
 # Copy catalog
 
-**Console strings live in `web/src/lib/copy.ts` (S24).** The Console sections below are the source the
+**Console strings live in `web/src/lib/copy.ts` (S24; S25 adds the Overview, the feed, the action
+detail, the deed panel, the undo panel (S23's strings, verbatim), Deeds and Agents).** The Console sections below are the source the
 first strings were lifted from verbatim; `web/test/checks.test.ts` asserts each lifted string still
 appears here, and the banned-word list runs over `copy.ts`. New Console copy goes into `copy.ts` first.
 

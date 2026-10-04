@@ -1,0 +1,610 @@
+{
+  "object": "overview",
+  "window": "24h",
+  "from": "now-84600.000s",
+  "to": "now+1800.000s",
+  "timezone": "UTC",
+  "generated_at": "now+0.000s",
+  "actions": {
+    "total": 206,
+    "previous": 34,
+    "series": [
+      8,
+      9,
+      9,
+      8,
+      9,
+      8,
+      9,
+      8,
+      9,
+      9,
+      8,
+      9,
+      8,
+      9,
+      8,
+      9,
+      9,
+      8,
+      9,
+      8,
+      9,
+      8,
+      9,
+      9
+    ]
+  },
+  "blocked": {
+    "total": 27,
+    "previous": 4,
+    "series": [
+      1,
+      1,
+      1,
+      2,
+      0,
+      4,
+      1,
+      1,
+      2,
+      1,
+      1,
+      0,
+      1,
+      2,
+      0,
+      1,
+      1,
+      1,
+      2,
+      0,
+      0,
+      0,
+      2,
+      2
+    ]
+  },
+  "approvals": {
+    "pending": 2,
+    "expiring_soon": 1,
+    "next_expires_at": "now+600.000s"
+  },
+  "verification": {
+    "verified": 128,
+    "mismatch": 4,
+    "unverifiable": 21,
+    "not_witnessed": 53,
+    "by_level": {
+      "L0": 50,
+      "L1": 51,
+      "L2": 52
+    },
+    "series": {
+      "verified": [
+        4,
+        4,
+        7,
+        4,
+        6,
+        2,
+        4,
+        5,
+        6,
+        5,
+        6,
+        7,
+        5,
+        7,
+        6,
+        7,
+        6,
+        5,
+        4,
+        6,
+        9,
+        5,
+        3,
+        5
+      ],
+      "mismatch": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        4,
+        0
+      ],
+      "unverifiable": [
+        0,
+        3,
+        1,
+        1,
+        2,
+        2,
+        1,
+        2,
+        0,
+        0,
+        1,
+        0,
+        1,
+        0,
+        0,
+        1,
+        0,
+        2,
+        1,
+        1,
+        0,
+        1,
+        0,
+        1
+      ]
+    }
+  },
+  "agents": {
+    "object": "list",
+    "has_more": false,
+    "data": [
+      {
+        "id": "<agt_1>",
+        "name": "ops-bot",
+        "status": "active",
+        "last_action_at": "now+1770.000s",
+        "usage": {
+          "calls_today": 0,
+          "spend_today": null
+        },
+        "budgets": {}
+      },
+      {
+        "id": "<agt_2>",
+        "name": "support-bot",
+        "status": "active",
+        "last_action_at": "now+1350.000s",
+        "usage": {
+          "calls_today": 12,
+          "spend_today": {
+            "amount": 1234,
+            "currency": "usd"
+          }
+        },
+        "budgets": {}
+      },
+      {
+        "id": "<agt_3>",
+        "name": "billing-bot",
+        "status": "active",
+        "last_action_at": "now+90.000s",
+        "usage": {
+          "calls_today": 85,
+          "spend_today": null
+        },
+        "budgets": {
+          "calls_per_minute": 50,
+          "calls_per_day": 100
+        }
+      }
+    ]
+  },
+  "attention": [
+    {
+      "object": "attention_item",
+      "kind": "mismatch",
+      "severity": "high",
+      "at": "now-2430.000s",
+      "ref": "<act_1>",
+      "data": {
+        "agent": "support-bot",
+        "agent_id": "<agt_2>",
+        "level": "L2",
+        "summary": "Postgres changed 301 rows in public.orders. The agent reported 1.",
+        "tool": "postgres.execute"
+      }
+    },
+    {
+      "object": "attention_item",
+      "kind": "mismatch",
+      "severity": "high",
+      "at": "now-2850.000s",
+      "ref": "<act_2>",
+      "data": {
+        "agent": "support-bot",
+        "agent_id": "<agt_2>",
+        "level": "L2",
+        "summary": "Postgres changed 301 rows in public.orders. The agent reported 1.",
+        "tool": "postgres.execute"
+      }
+    },
+    {
+      "object": "attention_item",
+      "kind": "mismatch",
+      "severity": "high",
+      "at": "now-3270.000s",
+      "ref": "<act_3>",
+      "data": {
+        "agent": "ops-bot",
+        "agent_id": "<agt_1>",
+        "level": "L2",
+        "summary": "Postgres changed 301 rows in public.orders. The agent reported 1.",
+        "tool": "postgres.execute"
+      }
+    },
+    {
+      "object": "attention_item",
+      "kind": "mismatch",
+      "severity": "high",
+      "at": "now-3690.000s",
+      "ref": "<act_4>",
+      "data": {
+        "agent": "support-bot",
+        "agent_id": "<agt_2>",
+        "level": "L2",
+        "summary": "Postgres changed 301 rows in public.orders. The agent reported 1.",
+        "tool": "postgres.execute"
+      }
+    },
+    {
+      "object": "attention_item",
+      "kind": "approval_expiring",
+      "severity": "medium",
+      "at": "now-60.000s",
+      "ref": "<apr_1>",
+      "data": {
+        "action": "<act_5>",
+        "agent": "ops-bot",
+        "agent_id": "<agt_1>",
+        "expires_at": "now+600.000s",
+        "tool": "stripe.create_refund"
+      }
+    },
+    {
+      "object": "attention_item",
+      "kind": "budget_near",
+      "severity": "low",
+      "at": "now+0.000s",
+      "ref": "<agt_3>",
+      "data": {
+        "agent": "billing-bot",
+        "agent_id": "<agt_3>",
+        "budget": "calls_per_day",
+        "limit": 100,
+        "used": 85
+      }
+    }
+  ]
+}
+{
+  "object": "overview",
+  "window": "7d",
+  "from": "now-585000.000s",
+  "to": "now+19800.000s",
+  "timezone": "UTC",
+  "generated_at": "now+0.000s",
+  "actions": {
+    "total": 240,
+    "previous": 0,
+    "series": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      25,
+      52,
+      51,
+      52,
+      51,
+      9
+    ]
+  },
+  "blocked": {
+    "total": 31,
+    "previous": 0,
+    "series": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      3,
+      6,
+      10,
+      5,
+      5,
+      2
+    ]
+  },
+  "approvals": {
+    "pending": 2,
+    "expiring_soon": 1,
+    "next_expires_at": "now+600.000s"
+  },
+  "verification": {
+    "verified": 146,
+    "mismatch": 4,
+    "unverifiable": 27,
+    "not_witnessed": 63,
+    "by_level": {
+      "L0": 57,
+      "L1": 62,
+      "L2": 58
+    },
+    "series": {
+      "verified": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        15,
+        28,
+        28,
+        38,
+        32,
+        5
+      ],
+      "mismatch": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        4,
+        0
+      ],
+      "unverifiable": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        4,
+        9,
+        6,
+        2,
+        5,
+        1
+      ]
+    }
+  },
+  "agents": {
+    "object": "list",
+    "has_more": false,
+    "data": [
+      {
+        "id": "<agt_1>",
+        "name": "ops-bot",
+        "status": "active",
+        "last_action_at": "now+1770.000s",
+        "usage": {
+          "calls_today": 0,
+          "spend_today": null
+        },
+        "budgets": {}
+      },
+      {
+        "id": "<agt_2>",
+        "name": "support-bot",
+        "status": "active",
+        "last_action_at": "now+1350.000s",
+        "usage": {
+          "calls_today": 12,
+          "spend_today": {
+            "amount": 1234,
+            "currency": "usd"
+          }
+        },
+        "budgets": {}
+      },
+      {
+        "id": "<agt_3>",
+        "name": "billing-bot",
+        "status": "active",
+        "last_action_at": "now+90.000s",
+        "usage": {
+          "calls_today": 85,
+          "spend_today": null
+        },
+        "budgets": {
+          "calls_per_minute": 50,
+          "calls_per_day": 100
+        }
+      }
+    ]
+  },
+  "attention": [
+    {
+      "object": "attention_item",
+      "kind": "mismatch",
+      "severity": "high",
+      "at": "now-2430.000s",
+      "ref": "<act_1>",
+      "data": {
+        "agent": "support-bot",
+        "agent_id": "<agt_2>",
+        "level": "L2",
+        "summary": "Postgres changed 301 rows in public.orders. The agent reported 1.",
+        "tool": "postgres.execute"
+      }
+    },
+    {
+      "object": "attention_item",
+      "kind": "mismatch",
+      "severity": "high",
+      "at": "now-2850.000s",
+      "ref": "<act_2>",
+      "data": {
+        "agent": "support-bot",
+        "agent_id": "<agt_2>",
+        "level": "L2",
+        "summary": "Postgres changed 301 rows in public.orders. The agent reported 1.",
+        "tool": "postgres.execute"
+      }
+    },
+    {
+      "object": "attention_item",
+      "kind": "mismatch",
+      "severity": "high",
+      "at": "now-3270.000s",
+      "ref": "<act_3>",
+      "data": {
+        "agent": "ops-bot",
+        "agent_id": "<agt_1>",
+        "level": "L2",
+        "summary": "Postgres changed 301 rows in public.orders. The agent reported 1.",
+        "tool": "postgres.execute"
+      }
+    },
+    {
+      "object": "attention_item",
+      "kind": "mismatch",
+      "severity": "high",
+      "at": "now-3690.000s",
+      "ref": "<act_4>",
+      "data": {
+        "agent": "support-bot",
+        "agent_id": "<agt_2>",
+        "level": "L2",
+        "summary": "Postgres changed 301 rows in public.orders. The agent reported 1.",
+        "tool": "postgres.execute"
+      }
+    },
+    {
+      "object": "attention_item",
+      "kind": "approval_expiring",
+      "severity": "medium",
+      "at": "now-60.000s",
+      "ref": "<apr_1>",
+      "data": {
+        "action": "<act_5>",
+        "agent": "ops-bot",
+        "agent_id": "<agt_1>",
+        "expires_at": "now+600.000s",
+        "tool": "stripe.create_refund"
+      }
+    },
+    {
+      "object": "attention_item",
+      "kind": "budget_near",
+      "severity": "low",
+      "at": "now+0.000s",
+      "ref": "<agt_3>",
+      "data": {
+        "agent": "billing-bot",
+        "agent_id": "<agt_3>",
+        "budget": "calls_per_day",
+        "limit": 100,
+        "used": 85
+      }
+    }
+  ]
+}

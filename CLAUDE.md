@@ -88,6 +88,10 @@ go test ./internal/witness/undo -run TestSQLGoldens -update   # S23: the generat
 DEEDGLASS_IT_PKGS=./cmd/deedglass/ DEEDGLASS_IT_GOFLAGS="-v -run TestUndoLive" make integration   # S23 §9 on a real server: the hero MISMATCH, refused and clean previews, countersign by another admin, L2 VERIFIED, redo, the race
 make undo-matrix    # S23: the undo round trips and the property test, 2,000 seeds on PG 16, 17 and 18 (logs in .tmp/undo-matrix-<v>.log)
 make bench-undo     # S23 §3.10: plan 1,000 rows, preview 301, RunUndo 301 and 1,000; JSON in bench/results/
+make bench-overview # S25 §3.8: GET /v1/overview's read (cache bypassed) at 100,000 actions in 24 h, both windows (p99 < 80 ms) and the EXPLAIN plans; JSON in bench/results/
+DEEDGLASS_IT_PKGS="./internal/console/ ./internal/ledger/ ./internal/identity/" DEEDGLASS_IT_GOFLAGS="-v -run TestOverview|TestAgentsExpandUsage" make integration   # S25: the Overview (golden, windows, isolation, attention, live chain check) and ?expand[]=usage
+DEEDGLASS_IT_PKGS="./internal/ledger/ -args -update-overview" DEEDGLASS_IT_GOFLAGS="-run TestOverviewGolden" make integration   # S25: regenerate internal/ledger/testdata/overview_golden.json (review the diff)
+go test ./internal/identity -run TestAgentObjectGolden -args -update-agent-golden   # S25: the plain agent object's bytes (must not change)
 make bench-events   # S24 §3.12: the event hub, 1,000 events/s to 200 SSE streams (p99 enqueue→write < 50 ms), memory per stream (< 64 KiB); JSON in bench/results/
 go test ./internal/console -run 'TestIsolationProperty|TestResume|TestBackpressure|TestEvents' -v   # S24: the live stream (isolation, resume, backpressure, timers in synctest, limits, hydration)
 DEEDGLASS_IT_PKGS=./cmd/deedglass/ DEEDGLASS_IT_GOFLAGS="-v -run ^TestEventsLive$" make integration   # S24 on a real server: fake-action over /v1/events, two orgs, agent key, rollback, clean stop
@@ -112,9 +116,10 @@ make web-verify-test  # (in ci) the browser verifier: npm ci once, tsc --noEmit,
 make web-verify-serve # build and serve the verify page on http://127.0.0.1:5178
 make web-build      # S24: the Console (web/): tokens → icons → astro build → .br/.gz → check-dist; writes internal/console/dist (make build runs it when Node is present; make build-only skips it)
 make web-test       # (in ci) S24: tsc + Vitest (api, stream, format, palette, dom, tokens and contrast, copy, icons, sinks, types)
-make web-e2e        # S24: Playwright in the installed Chrome against a throwaway PG 18 and a real serve (shell, keyboard, palette, Stop all, live, axe, CSP)
-make web-lighthouse # S24: Lighthouse 13 on /app, /app/_kit and /login, desktop and mobile (≥ 95 accessibility and best practices)
-DEEDGLASS_IT_THROWAWAY=1 scripts/web_e2e.sh serve|shots   # S24: keep the Acme stack up on :18241, or write the screenshot pass to ~/txv/ops/plan/prompts-v7/reports/screens/S24
+make web-e2e        # S24/S25: Playwright in the installed Chrome against a throwaway PG 18 and a real serve, seeded with 600 fake actions and the real L2 hero (shell, keyboard, palette, Stop all, live, the five S25 screens, the seal check, keys shown once, viewer, 200 events/s, axe, CSP)
+make web-lighthouse # S24/S25: Lighthouse 13 on /login, /app/_kit and the seven S25 pages (the MISMATCH detail, a deed, an agent), desktop and mobile (≥ 95 accessibility and best practices); JSON in ~/txv/ops/plan/prompts-v7/reports/lighthouse/S25
+DEEDGLASS_IT_THROWAWAY=1 scripts/web_e2e.sh serve|shots   # keep the seeded Acme stack up on :18241 (PG 18 on :55468, the Acme Store on :55469; ids in .tmp/web-e2e/fixtures.json; WEB_E2E_SEED=0 skips the seed), or write the screenshot pass to ~/txv/ops/plan/prompts-v7/reports/screens/S25
+DEEDGLASS_DEV_PROXY=http://127.0.0.1:18241 make web-dev   # S25: astro dev proxied to that throwaway stack instead of :8080
 node web/scripts/contrast.mjs   # S24: WCAG ratios for every token pair in both themes (exit 1 on a failure); make web-tokens regenerates the token files
 go test ./internal/console -run 'TestPages|TestTokensMatchDesignMD' -v   # S24: the page handler (routes, redirect, CSP, assets, placeholder) and the tokens.json ⇄ DESIGN.md lockstep
 make rename-guard   # retired identifiers (rule 5)
@@ -155,7 +160,7 @@ scripts/ci-local.sh # the CI jobs locally (docker-smoke and govulncheck skip whe
    `github.com/gowebpki/jcs` v1.0.2 (ADR-005); `go.yaml.in/yaml/v3` v3.0.5 (ADR-015);
    `github.com/jackc/pgx/v5` v5.11.0 (ADR-001, in go.mod since S02); `github.com/veraison/go-cose`
    v1.3.0 with `fxamacker/cbor/v2` v2.9.4 (ADR-026, in go.mod since S04). npm, dev only (`web/verify`,
-   ADR-027, accepted): `typescript` 7.0.2, `vitest` 5.0.3, `vite` 8.3.1, `@types/node` 24.19.0; no runtime dependency. The Console (`web/`, ADR-053, proposed in S24), dev and build only: `astro` 7.3.5, `tailwindcss` and `@tailwindcss/vite` 4.3.3, `@fontsource-variable/inter` and `@fontsource/geist-mono` 5.3.0, `lucide-static` 1.49.0, `typescript` 7.0.2, `vitest` 5.0.3, `happy-dom` 20.14.5, `@playwright/test` 1.63.0, `@axe-core/playwright` 4.13.0, `lighthouse` 13.5.0; nothing from npm runs in the shipped Console.
+   ADR-027, accepted): `typescript` 7.0.2, `vitest` 5.0.3, `vite` 8.3.1, `@types/node` 24.19.0; no runtime dependency. The Console (`web/`, ADR-053, accepted under DL-038), dev and build only: `astro` 7.3.5, `tailwindcss` and `@tailwindcss/vite` 4.3.3, `@fontsource-variable/inter` and `@fontsource/geist-mono` 5.3.0, `lucide-static` 1.49.0, `typescript` 7.0.2, `vitest` 5.0.3, `happy-dom` 20.14.5, `@playwright/test` 1.63.0, `@axe-core/playwright` 4.13.0, `lighthouse` 13.5.0; nothing from npm runs in the shipped Console.
    `cel.dev/cel-go` v0.32.0 (ADR-017, in go.mod since S10; brings protobuf, antlr4-go, cel.dev/expr,
    genproto and x/exp; the binary-size budget is ADR-032, accepted under DL-024 and amended under DL-031: < 40 MB). The MCP Go SDK
    `github.com/modelcontextprotocol/go-sdk` v1.8.0 (ADR-018, in go.mod since S14; since S15 the
@@ -542,6 +547,19 @@ and "open source" until the repo is public. Style bans: "revolutionary", "world-
   with a CSP-violation and console-error listener on every page, axe 0 serious or critical in both themes.
   `internal/connector/postgres` `TestGeneratedColumnsPG18` (DL-037: `publish_generated_columns = stored`, the
   S17-era publication upgraded, virtual generated columns refused).
+- S25 (Console screens I): `GET /v1/overview` (`internal/console/overview.go`, `internal/ledger/overview.go`; one
+  read-only org transaction, 2 s statement timeout, a forced custom plan; 10 s cache with single flight; a background
+  24 h chain check at most every 5 min per org), migration 0023 (`actions_overview`, a covering index); `?expand[]=usage`
+  on the agents routes (`identity/agents_usage.go`, `policystore.Usage.AgentsTx`; without it the agent object is
+  byte-identical, `TestAgentObjectGolden`). Tests: ledger `TestOverviewGolden`, `TestOverviewWindowBoundaries`,
+  `TestOverviewIsolation`, `TestOverviewAttention`, `TestOverviewNoSystemAgent`, `TestOverviewBudget` (`make
+  bench-overview`); console `TestOverviewRoleMatrix` (agent keys 403), `TestOverviewLive`; identity
+  `TestAgentsExpandUsage`; `TestOrgIsolation` sweeps the Overview. `web/` Vitest: `filters`, `feed`, `diff` (S21's
+  fixtures and the real hero), `sentences`, `snippets` (equal to the CLI goldens), `overview`, `deedview`. Playwright
+  (`make web-e2e`, 65 cases on a seeded stack with the real L2 hero): the five screens, the in-browser seal check and
+  the byte-exact download, keys shown once, Stop across tabs < 2 s, viewer refusals, the state matrix, 360 px, reduced
+  motion, 200 events/s with 0 long tasks. `internal/policy`: a folded `when` with a more-indented line is written
+  literal (FuzzCompile seed `8dc64553839b3266`). The migration count is 23.
 - `cmd/deedglass verify` (S05): 80 golden cases in `testdata/verify/<case>/{args,stdout,stderr,exit}`
   (`go test ./cmd/deedglass -run TestVerifyGolden -update`), every vector's code and exit, `--keys`
   URL rules (same-host redirects, 1 MiB, timeout, loopback-only http), key-set merge conflicts, no

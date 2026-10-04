@@ -1,27 +1,35 @@
 ---
+// Overview (S25 §3.3): tiles, Needs attention, Agents, Live actions and the Chain card, or the
+// first-run flow when the org has no agents. src/controllers/overview.ts fills it from
+// GET /v1/overview; the markup here is the loading state in the final geometry.
 import AppShell from '../layouts/AppShell.astro';
-import PageHead from '../components/PageHead.astro';
-import Icon from '../components/Icon.astro';
 import { copy } from '../lib/copy.ts';
 ---
 <AppShell title={copy.pages.overview.title} screen="overview">
-  <PageHead title={copy.pages.overview.title} lede={copy.pages.overview.lede} />
-  <section class="card" aria-labelledby="live-title">
-    <div class="card-head">
-      <h2 class="t-headline" id="live-title"><Icon name="activity" size={16} />{copy.live.title}</h2>
-      <span class="t-footnote t-2 num" id="live-count"></span>
+  <div class="page-head">
+    <div>
+      <h1 class="t-title-2" id="page-title">{copy.pages.overview.title}</h1>
+      <p class="lede" id="page-lede">{copy.pages.overview.lede}</p>
     </div>
-    <ul class="live-list" id="live-list" aria-live="polite" aria-relevant="additions" aria-label={copy.live.region}></ul>
-    <div class="state" id="live-empty">
-      <span class="well"><Icon name="witness" /></span>
-      <p>{copy.live.lede}</p>
-      <p class="t-footnote">{copy.live.empty} <code class="nowrap">{copy.live.emptyCommand}</code></p>
+    <div class="flex items-center gap-2" id="ov-actions"></div>
+  </div>
+  <div id="ov-body" aria-busy="true" aria-labelledby="page-title">
+    <div class="ov" aria-hidden="true">
+      <div class="tiles">
+        {[0, 1, 2, 3].map(() => (
+          <div class="tile"><span class="skel skel-line w-16"></span><span class="skel skel-metric"></span><span class="skel skel-line w-32"></span></div>
+        ))}
+      </div>
+      <div class="ov-grid">
+        <div class="ov-main"><div class="card card-pad">{[0, 1, 2, 3].map(() => <span class="skel skel-line skel-gap"></span>)}</div></div>
+        <div class="ov-side"><div class="card card-pad">{[0, 1, 2, 3].map(() => <span class="skel skel-line skel-gap"></span>)}</div></div>
+      </div>
     </div>
-  </section>
+  </div>
 </AppShell>
 <script>
   import { bootShell } from '../controllers/shell.ts';
-  import { mountLive } from '../controllers/live.ts';
+  import { mountOverview } from '../controllers/overview.ts';
   bootShell({ title: 'Overview' });
-  mountLive();
+  mountOverview();
 </script>

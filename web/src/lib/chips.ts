@@ -57,8 +57,9 @@ export function statusChip(status: 'active' | 'suspended' | 'stopped' | 'test'):
 /** idChip: mono, shortened, the full id in the title, click to copy. */
 export function idChip(id: string, href?: string): HTMLElement {
   const short = shortId(id);
-  const btn = h('button', { type: 'button', class: 'idchip', 'data-copy': id, title: id, 'aria-label': `Copy ${id}`, translate: 'no' }, short, icon('copy', 16));
-  if (!href) return btn;
+  if (!href) return h('button', { type: 'button', class: 'idchip', 'data-copy': id, title: id, 'aria-label': `Copy ${id}`, translate: 'no' }, short, icon('copy', 16));
+  // Linked: the id is the link; the copy button beside it is the icon alone.
+  const btn = h('button', { type: 'button', class: 'idchip idchip-icon', 'data-copy': id, title: `Copy ${id}`, 'aria-label': `Copy ${id}` }, icon('copy', 16));
   return h('span', { class: 'idlink' }, h('a', { href, class: 'mono', translate: 'no', title: id }, short), btn);
 }
 

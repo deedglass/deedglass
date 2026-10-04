@@ -404,7 +404,9 @@ func TestResumeExpiresByAge(t *testing.T) {
 // --- backpressure ---
 
 func TestBackpressure(t *testing.T) {
-	h, in := startHub(t, HubOptions{Instance: "bp1", SubBuffer: 4, MaxPerUser: 100})
+	// A 32-event buffer: under -race on a loaded machine a fast reader can miss a few scheduling
+	// slices; the stalled reader still overflows it (200 events) and must be marked lagged (S25).
+	h, in := startHub(t, HubOptions{Instance: "bp1", SubBuffer: 32, MaxPerUser: 100})
 	stalled, _, _, _ := mustSub(t, h, Filter{Org: "org_a", Owner: "usr_1"}, "")
 	var fast []*Sub
 	for i := range 5 {

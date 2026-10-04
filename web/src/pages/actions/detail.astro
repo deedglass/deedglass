@@ -1,19 +1,26 @@
 ---
+// Action detail (S25 §3.5). src/controllers/actiondetail.ts renders it from GET /v1/actions/{id};
+// the markup is the loading state in the final geometry (header, the deed panel, the sections).
 import AppShell from '../../layouts/AppShell.astro';
-import Icon from '../../components/Icon.astro';
 import { copy } from '../../lib/copy.ts';
 const p = copy.pages.actions;
 ---
 <AppShell title={p.title} screen="actions">
-  <a class="btn btn-quiet btn-sm -ml-3 mb-3" href="/app/actions"><Icon name="chevron-right" size={16} class="rotate-180" />{p.title}</a>
-  <div class="page-head"><div><h1 class="t-title-2 mono" id="page-title">{p.title}</h1></div></div>
-  <section class="card card-pad" id="detail-body" aria-labelledby="page-title" aria-busy="true">
-    <dl class="kv"><dt>Id</dt><dd><span class="skel skel-line w-56"></span></dd><dt>Created</dt><dd><span class="skel skel-line w-32"></span></dd></dl>
+  <section id="detail-body" class="detail" aria-busy="true" aria-labelledby="page-title">
+    <header class="detail-head" aria-hidden="true">
+      <span class="skel skel-line w-32"></span>
+      <h1 class="t-title-2" id="page-title"><span class="skel skel-title"></span></h1>
+      <span class="skel skel-line w-56"></span>
+    </header>
+    <div class="detail-grid">
+      <aside class="detail-aside"><div class="card card-pad">{[0, 1, 2, 3].map(() => <span class="skel skel-line skel-gap"></span>)}</div></aside>
+      <div class="detail-main">{[0, 1, 2].map(() => <div class="card card-pad">{[0, 1, 2, 3].map(() => <span class="skel skel-line skel-gap"></span>)}</div>)}</div>
+    </div>
   </section>
 </AppShell>
 <script>
   import { bootShell } from '../../controllers/shell.ts';
-  import { mountDetail } from '../../controllers/detail.ts';
+  import { mountActionDetail } from '../../controllers/actiondetail.ts';
   bootShell({ title: location.pathname.split('/').pop() ?? 'actions' });
-  mountDetail('actions');
+  mountActionDetail();
 </script>

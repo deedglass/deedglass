@@ -1,0 +1,380 @@
+{
+  "object": "undo_preview",
+  "action": "act_01m427zt6m8q1j435va4dfmyc3",
+  "tool": "postgres.execute",
+  "available": true,
+  "summary": "Put back 301 rows in public.orders to the values Postgres recorded before act_01m427zt…",
+  "headline": "301 rows in public.orders · 301 updates",
+  "plan_digest": "sha256:10ed4a8e05ab20d27569b871e705d04dca79ff0a6e421768dd14478ebf7fb3e4",
+  "connector": {
+    "id": "con_01m427zswq4mw4tasc3v0wea9b",
+    "name": "postgres",
+    "type": "postgres"
+  },
+  "evidence": {
+    "level": "L2",
+    "verdict": "MISMATCH",
+    "xid": "807",
+    "commit_lsn": "0/1D706C8",
+    "committed_at": "2026-10-04T01:20:53.978Z",
+    "changes": 301
+  },
+  "counts": {
+    "update": 301,
+    "insert": 0,
+    "delete": 0
+  },
+  "rows": 301,
+  "tables": [
+    "public.orders"
+  ],
+  "steps": {
+    "object": "list",
+    "total": 301,
+    "has_more": true,
+    "data": [
+      {
+        "op": "update",
+        "table": "public.orders",
+        "key": {
+          "id": "144"
+        },
+        "set": {
+          "status": "paid"
+        },
+        "expect": {
+          "status": "shipped"
+        }
+      },
+      {
+        "op": "update",
+        "table": "public.orders",
+        "key": {
+          "id": "310"
+        },
+        "set": {
+          "status": "paid"
+        },
+        "expect": {
+          "status": "shipped"
+        }
+      },
+      {
+        "op": "update",
+        "table": "public.orders",
+        "key": {
+          "id": "238"
+        },
+        "set": {
+          "status": "paid"
+        },
+        "expect": {
+          "status": "shipped"
+        }
+      },
+      {
+        "op": "update",
+        "table": "public.orders",
+        "key": {
+          "id": "259"
+        },
+        "set": {
+          "status": "paid"
+        },
+        "expect": {
+          "status": "shipped"
+        }
+      },
+      {
+        "op": "update",
+        "table": "public.orders",
+        "key": {
+          "id": "375"
+        },
+        "set": {
+          "status": "paid"
+        },
+        "expect": {
+          "status": "shipped"
+        }
+      },
+      {
+        "op": "update",
+        "table": "public.orders",
+        "key": {
+          "id": "108"
+        },
+        "set": {
+          "status": "paid"
+        },
+        "expect": {
+          "status": "shipped"
+        }
+      },
+      {
+        "op": "update",
+        "table": "public.orders",
+        "key": {
+          "id": "197"
+        },
+        "set": {
+          "status": "paid"
+        },
+        "expect": {
+          "status": "shipped"
+        }
+      },
+      {
+        "op": "update",
+        "table": "public.orders",
+        "key": {
+          "id": "348"
+        },
+        "set": {
+          "status": "paid"
+        },
+        "expect": {
+          "status": "shipped"
+        }
+      },
+      {
+        "op": "update",
+        "table": "public.orders",
+        "key": {
+          "id": "123"
+        },
+        "set": {
+          "status": "paid"
+        },
+        "expect": {
+          "status": "shipped"
+        }
+      },
+      {
+        "op": "update",
+        "table": "public.orders",
+        "key": {
+          "id": "420"
+        },
+        "set": {
+          "status": "paid"
+        },
+        "expect": {
+          "status": "shipped"
+        }
+      },
+      {
+        "op": "update",
+        "table": "public.orders",
+        "key": {
+          "id": "337"
+        },
+        "set": {
+          "status": "paid"
+        },
+        "expect": {
+          "status": "shipped"
+        }
+      },
+      {
+        "op": "update",
+        "table": "public.orders",
+        "key": {
+          "id": "406"
+        },
+        "set": {
+          "status": "paid"
+        },
+        "expect": {
+          "status": "shipped"
+        }
+      },
+      {
+        "op": "update",
+        "table": "public.orders",
+        "key": {
+          "id": "73"
+        },
+        "set": {
+          "status": "paid"
+        },
+        "expect": {
+          "status": "shipped"
+        }
+      },
+      {
+        "op": "update",
+        "table": "public.orders",
+        "key": {
+          "id": "365"
+        },
+        "set": {
+          "status": "paid"
+        },
+        "expect": {
+          "status": "shipped"
+        }
+      },
+      {
+        "op": "update",
+        "table": "public.orders",
+        "key": {
+          "id": "356"
+        },
+        "set": {
+          "status": "paid"
+        },
+        "expect": {
+          "status": "shipped"
+        }
+      },
+      {
+        "op": "update",
+        "table": "public.orders",
+        "key": {
+          "id": "212"
+        },
+        "set": {
+          "status": "paid"
+        },
+        "expect": {
+          "status": "shipped"
+        }
+      },
+      {
+        "op": "update",
+        "table": "public.orders",
+        "key": {
+          "id": "69"
+        },
+        "set": {
+          "status": "paid"
+        },
+        "expect": {
+          "status": "shipped"
+        }
+      },
+      {
+        "op": "update",
+        "table": "public.orders",
+        "key": {
+          "id": "439"
+        },
+        "set": {
+          "status": "paid"
+        },
+        "expect": {
+          "status": "shipped"
+        }
+      },
+      {
+        "op": "update",
+        "table": "public.orders",
+        "key": {
+          "id": "345"
+        },
+        "set": {
+          "status": "paid"
+        },
+        "expect": {
+          "status": "shipped"
+        }
+      },
+      {
+        "op": "update",
+        "table": "public.orders",
+        "key": {
+          "id": "67"
+        },
+        "set": {
+          "status": "paid"
+        },
+        "expect": {
+          "status": "shipped"
+        }
+      }
+    ]
+  },
+  "checks": [
+    {
+      "id": "evidence",
+      "title": "L2 evidence",
+      "status": "pass",
+      "detail": "L2 · MISMATCH · 301 row images · xid 807"
+    },
+    {
+      "id": "connector",
+      "title": "Connector",
+      "status": "pass",
+      "detail": "postgres (native Postgres) · active"
+    },
+    {
+      "id": "age",
+      "title": "Age",
+      "status": "pass",
+      "detail": "sealed just now · limit 7 days"
+    },
+    {
+      "id": "not_undone",
+      "title": "Not undone",
+      "status": "pass",
+      "detail": ""
+    },
+    {
+      "id": "row_limit",
+      "title": "Row limit",
+      "status": "pass",
+      "detail": "301 of 1,000"
+    },
+    {
+      "id": "replica_identity",
+      "title": "Replica identity",
+      "status": "pass",
+      "detail": "full on public.orders"
+    },
+    {
+      "id": "primary_key",
+      "title": "Primary key",
+      "status": "pass",
+      "detail": "public.orders (id)"
+    },
+    {
+      "id": "columns",
+      "title": "Columns",
+      "status": "pass",
+      "detail": "unchanged since the action"
+    },
+    {
+      "id": "triggers",
+      "title": "Triggers",
+      "status": "pass",
+      "detail": "No enabled triggers on public.orders."
+    },
+    {
+      "id": "cascades",
+      "title": "Cascades",
+      "status": "pass",
+      "detail": "no cascading foreign keys"
+    },
+    {
+      "id": "unchanged",
+      "title": "Rows unchanged since",
+      "status": "pass",
+      "detail": "301 of 301 rows still hold what the action wrote"
+    },
+    {
+      "id": "privileges",
+      "title": "Privileges",
+      "status": "pass",
+      "detail": "deedglass_agent can SELECT and UPDATE public.orders"
+    }
+  ],
+  "notes": [],
+  "redacted": [],
+  "policy": {
+    "decision": "require_approval",
+    "rule_id": "undo-needs-approval",
+    "reason": "Undoing a write changes data again, so a human confirms it first."
+  },
+  "undone_by": null
+}

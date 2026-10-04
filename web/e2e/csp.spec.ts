@@ -1,16 +1,16 @@
 // The CSP and Trusted Types (S24 §3.10): every page loads with zero violations and zero console
 // errors, and an HTML-string sink throws.
-import { AUTH, expect, guard, test } from './fixtures.ts';
+import { AUTH, expect, guard, hero, test } from './fixtures.ts';
 
 test.use({ storageState: AUTH('owner') });
 
 const PAGES = ['/app', '/app/actions', '/app/approvals', '/app/agents', '/app/policies', '/app/connectors', '/app/insights', '/app/deeds', '/app/settings',
-  '/app/settings/members', '/app/_kit', '/app/actions/act_01k6h7mz3c9d8e7f6g5h4jq3m8', '/app/nope'];
+  '/app/settings/members', '/app/_kit', '/app/actions/act_01k6h7mz3c9d8e7f6g5h4jq3m8', '/app/nope', 'hero', 'verified'];
 
 for (const p of PAGES) {
   test(`no violations on ${p}`, async ({ page }) => {
     const done = await guard(page);
-    const res = await page.goto(p);
+    const res = await page.goto(p === 'hero' ? `/app/actions/${hero().mismatch}` : p === 'verified' ? `/app/actions/${hero().verified}` : p);
     expect(res?.headers()['content-security-policy']).toContain("require-trusted-types-for 'script'; trusted-types 'none'");
     await page.waitForLoadState('networkidle');
     await done();

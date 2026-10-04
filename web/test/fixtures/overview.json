@@ -1,0 +1,328 @@
+{
+    "object": "overview",
+    "window": "24h",
+    "from": "2026-10-03T02:00:00.000Z",
+    "to": "2026-10-04T02:00:00.000Z",
+    "timezone": "UTC",
+    "generated_at": "2026-10-04T01:48:13.484Z",
+    "actions": {
+        "total": 602,
+        "previous": 0,
+        "series": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            602
+        ]
+    },
+    "blocked": {
+        "total": 59,
+        "previous": 0,
+        "series": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            59
+        ]
+    },
+    "approvals": {
+        "pending": 0,
+        "expiring_soon": 0,
+        "next_expires_at": null
+    },
+    "verification": {
+        "verified": 376,
+        "mismatch": 38,
+        "unverifiable": 55,
+        "not_witnessed": 133,
+        "by_level": {
+            "L0": 136,
+            "L1": 151,
+            "L2": 182
+        },
+        "series": {
+            "verified": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                376
+            ],
+            "mismatch": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                38
+            ],
+            "unverifiable": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                55
+            ]
+        }
+    },
+    "agents": {
+        "object": "list",
+        "has_more": false,
+        "data": [
+            {
+                "id": "agt_01m428xt8n3emtb9ee55mt0egb",
+                "name": "support-bot",
+                "status": "active",
+                "last_action_at": "2026-10-04T01:37:20.416Z",
+                "usage": {
+                    "calls_today": 2,
+                    "spend_today": null
+                },
+                "budgets": {}
+            },
+            {
+                "id": "agt_01m428xt8q2pj0sksj8ab0p7hm",
+                "name": "billing-bot",
+                "status": "active",
+                "last_action_at": "2026-10-04T01:37:17.089Z",
+                "usage": {
+                    "calls_today": 0,
+                    "spend_today": null
+                },
+                "budgets": {}
+            },
+            {
+                "id": "agt_01m428xt8ra9jazsj6em5gvpda",
+                "name": "ops-bot",
+                "status": "active",
+                "last_action_at": "2026-10-04T01:37:17.089Z",
+                "usage": {
+                    "calls_today": 0,
+                    "spend_today": null
+                },
+                "budgets": {}
+            },
+            {
+                "id": "agt_01m428xt8ra9jazsj6em5gvpdb",
+                "name": "research-bot",
+                "status": "active",
+                "last_action_at": "2026-10-04T01:37:17.089Z",
+                "usage": {
+                    "calls_today": 0,
+                    "spend_today": null
+                },
+                "budgets": {}
+            }
+        ]
+    },
+    "attention": [
+        {
+            "object": "attention_item",
+            "kind": "mismatch",
+            "severity": "high",
+            "at": "2026-10-04T01:37:20.416Z",
+            "ref": "act_01m428xxh19yvhw5aybcgjwa9c",
+            "data": {
+                "agent": "support-bot",
+                "agent_id": "agt_01m428xt8n3emtb9ee55mt0egb",
+                "level": "L2",
+                "summary": "Postgres changed 301 rows in public.orders. The agent reported 1.",
+                "tool": "postgres.execute"
+            }
+        },
+        {
+            "object": "attention_item",
+            "kind": "mismatch",
+            "severity": "high",
+            "at": "2026-10-04T01:37:17.089Z",
+            "ref": "act_01m428xv8jzcqkfsfz1kpxdmsx",
+            "data": {
+                "agent": "ops-bot",
+                "agent_id": "agt_01m428xt8ra9jazsj6em5gvpda",
+                "level": "L2",
+                "summary": "Postgres changed 301 rows in public.orders. The agent reported 1.",
+                "tool": "postgres.execute"
+            }
+        },
+        {
+            "object": "attention_item",
+            "kind": "mismatch",
+            "severity": "high",
+            "at": "2026-10-04T01:37:17.089Z",
+            "ref": "act_01m428xv1q5qsr4fnb8gv8kqny",
+            "data": {
+                "agent": "billing-bot",
+                "agent_id": "agt_01m428xt8q2pj0sksj8ab0p7hm",
+                "level": "L2",
+                "summary": "Postgres changed 301 rows in public.orders. The agent reported 1.",
+                "tool": "postgres.execute"
+            }
+        },
+        {
+            "object": "attention_item",
+            "kind": "mismatch",
+            "severity": "high",
+            "at": "2026-10-04T01:37:17.089Z",
+            "ref": "act_01m428xtzpxvgqge1knr7cs6gd",
+            "data": {
+                "agent": "ops-bot",
+                "agent_id": "agt_01m428xt8ra9jazsj6em5gvpda",
+                "level": "L2",
+                "summary": "Postgres changed 301 rows in public.orders. The agent reported 1.",
+                "tool": "postgres.execute"
+            }
+        },
+        {
+            "object": "attention_item",
+            "kind": "mismatch",
+            "severity": "high",
+            "at": "2026-10-04T01:37:17.089Z",
+            "ref": "act_01m428xtz1a5ce660dv13fkztd",
+            "data": {
+                "agent": "support-bot",
+                "agent_id": "agt_01m428xt8n3emtb9ee55mt0egb",
+                "level": "L2",
+                "summary": "Postgres changed 301 rows in public.orders. The agent reported 1.",
+                "tool": "postgres.execute"
+            }
+        },
+        {
+            "object": "attention_item",
+            "kind": "mismatch",
+            "severity": "high",
+            "at": "2026-10-04T01:37:17.089Z",
+            "ref": "act_01m428xtwnz7st0kdar9qwhpec",
+            "data": {
+                "agent": "ops-bot",
+                "agent_id": "agt_01m428xt8ra9jazsj6em5gvpda",
+                "level": "L2",
+                "summary": "Postgres changed 301 rows in public.orders. The agent reported 1.",
+                "tool": "postgres.execute"
+            }
+        },
+        {
+            "object": "attention_item",
+            "kind": "mismatch",
+            "severity": "high",
+            "at": "2026-10-04T01:37:17.089Z",
+            "ref": "act_01m428xttqy52yq9mw0kj426tb",
+            "data": {
+                "agent": "research-bot",
+                "agent_id": "agt_01m428xt8ra9jazsj6em5gvpdb",
+                "level": "L2",
+                "summary": "Postgres changed 301 rows in public.orders. The agent reported 1.",
+                "tool": "postgres.execute"
+            }
+        },
+        {
+            "object": "attention_item",
+            "kind": "mismatch",
+            "severity": "high",
+            "at": "2026-10-04T01:37:17.089Z",
+            "ref": "act_01m428xtth4x8a6bj6dksphyr8",
+            "data": {
+                "agent": "support-bot",
+                "agent_id": "agt_01m428xt8n3emtb9ee55mt0egb",
+                "level": "L2",
+                "summary": "Postgres changed 301 rows in public.orders. The agent reported 1.",
+                "tool": "postgres.execute"
+            }
+        }
+    ]
+}

@@ -1,6 +1,6 @@
 exit 0
 --- stdout
-◐ Migrating deedglass on 127.0.0.1:55432 as deedglass_migrator · 22 pending
+◐ Migrating deedglass on 127.0.0.1:55432 as deedglass_migrator · 23 pending
 ✓ 0001 foundation          14 ms
 ✓ 0002 identity            38 ms
 ✓ 0003 policy              21 ms
@@ -23,5 +23,6 @@ exit 0
 ✓ 0020 witness_l2          11 ms
 ✓ 0021 approvals           11 ms
 ✓ 0022 undo                11 ms
-✓ Schema at 0022 · 22 applied in 0.35 s
+✓ 0023 overview            11 ms
+✓ Schema at 0023 · 23 applied in 0.36 s
 --- stderr

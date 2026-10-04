@@ -44,6 +44,10 @@ tags:
     description: >-
       The live event stream (Server-Sent Events) the Console and `deedglass actions list --follow`
       read (docs/EVENTS.md).
+  - name: Overview
+    description: >-
+      The Console's first screen as numbers: actions, blocks, verdicts, approvals, the most active
+      agents and what needs a person (docs/OVERVIEW_METRICS.md).
   - name: Gate
     description: >-
       Sending actions through the Gate, cancelling one that waits for approval, and reporting the
@@ -279,6 +283,45 @@ paths:
                     event: resync
                     data: {"object":"resync","reason":"cursor_expired"}
 
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/overview:
+    get:
+      operationId: getOverview
+      summary: Get the overview
+      description: >-
+        The Overview screen's numbers for your org (docs/OVERVIEW_METRICS.md has every
+        definition). `window` is `24h` (24 hourly buckets, the default) or `7d` (28 six-hour
+        buckets). `to` is the first bucket boundary at or after now, in UTC, so the current partial
+        bucket is the last one; `from` is `to` minus the window; an action counts when `from <=
+        created_at < to`. `previous` is the window before. Blocked means the decision was `deny`
+        (policy, budget and Stop). `not_witnessed` is the window's actions with no verdict. Approvals
+        count every pending approval, whatever the window. `agents` is the 8 most recently active
+        agents with today's usage in the org's time zone. `attention` holds at most 8 items in
+        priority order (`chain_broken`, `org_stopped`, `slot_invalidated`, `slot_lagging`,
+        `mismatch`, `approval_expiring`, `budget_near`): kinds and data, never sentences, except a
+        mismatch's witness summary. Answers are cached for 10 s per org and window. Any other
+        parameter, or another window, is 400 `validation_failed`. A Console session (viewer and up)
+        or an org admin key; agent keys get 403 `insufficient_scope`.
+      tags: [Overview]
+      security: [{bearerAuth: []}, {sessionCookie: []}]
+      x-deedglass-auth: session_or_key
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+        - {name: window, in: query, required: false, description: '`24h` (default) or `7d`, sent once.', schema: {type: string, enum: [24h, 7d], default: 24h}}
+      responses:
+        "200":
+          description: The overview.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+            Deedglass-Version:
+              $ref: "#/components/headers/DeedglassVersion"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Overview"
         default:
           $ref: "#/components/responses/Error"
   /v1/actions:
@@ -1724,6 +1767,18 @@ paths:
         - {name: name, in: query, required: false, description: The exact agent name (the CLI resolves names this way)., schema: {type: string, pattern: "^[a-z0-9][a-z0-9-]{1,62}$"}}
         - $ref: "#/components/parameters/Limit"
         - $ref: "#/components/parameters/Cursor"
+        - name: "expand[]"
+          in: query
+          required: false
+          description: >-
+            `usage` (also `expand=usage`) adds `usage` (S11's counters: calls this minute, hour and
+            org-local day, spend today) and `last_action_at` to each agent, read in one batch for a
+            page. Never included by default; any other value is 400 `validation_failed`.
+          schema:
+            type: array
+            items: {type: string, enum: [usage]}
+          style: form
+          explode: true
       responses:
         "200":
           description: A page of agents.
@@ -1802,6 +1857,18 @@ paths:
       parameters:
         - $ref: "#/components/parameters/DeedglassVersion"
         - $ref: "#/components/parameters/AgentId"
+        - name: "expand[]"
+          in: query
+          required: false
+          description: >-
+            `usage` (also `expand=usage`) adds `usage` (S11's counters: calls this minute, hour and
+            org-local day, spend today) and `last_action_at` to each agent, read in one batch for a
+            page. Never included by default; any other value is 400 `validation_failed`.
+          schema:
+            type: array
+            items: {type: string, enum: [usage]}
+          style: form
+          explode: true
       responses:
         "200":
           description: The agent.
@@ -4827,6 +4894,12 @@ components:
           description: >-
             Signed intents (S09): off (headers ignored), optional (checked when sent) or required
             (every call needs one).
+        usage:
+          $ref: "#/components/schemas/AgentUsage"
+        last_action_at:
+          type: [string, "null"]
+          format: date-time
+          description: With `?expand[]=usage` only. When the agent's newest action was created.
       examples:
         - object: agent
           id: agt_01k633rrmh3bcz2p39gg4vp46q
@@ -4869,6 +4942,170 @@ components:
           updated_at: "2026-10-03T10:02:11.000Z"
           intent_mode: "off"
           deed: deed_01k6vrddq2atgb2023qvhhct3g
+    AgentUsage:
+      type: object
+      description: >-
+        With `?expand[]=usage` only (S25). The agent's standard usage counters (S11), in the windows
+        its budgets use: calls this UTC minute, this UTC hour and this day in the org's time zone,
+        and spend today in the agent's spend-budget currency (usd when it has none). `spend_today`
+        is null when nothing was spent today and the agent has no spend budget.
+      required: [calls_minute, calls_hour, calls_today, spend_today]
+      properties:
+        calls_minute: {type: integer, minimum: 0}
+        calls_hour: {type: integer, minimum: 0}
+        calls_today: {type: integer, minimum: 0}
+        spend_today:
+          type: [object, "null"]
+          required: [amount, currency]
+          properties:
+            amount: {type: integer, minimum: 0, description: Minor units.}
+            currency: {type: string, pattern: "^[a-z]{3}$"}
+      examples:
+        - {calls_minute: 3, calls_hour: 41, calls_today: 212, spend_today: {amount: 1200, currency: usd}}
+    Overview:
+      type: object
+      description: GET /v1/overview (S25). docs/OVERVIEW_METRICS.md defines every number.
+      required: [object, window, from, to, timezone, generated_at, actions, blocked, approvals, verification, agents, attention]
+      properties:
+        object: {type: string, const: overview}
+        window: {type: string, enum: [24h, 7d]}
+        from: {type: string, format: date-time, description: Inclusive.}
+        to: {type: string, format: date-time, description: Exclusive; the first bucket boundary at or after now (UTC).}
+        timezone: {type: string, description: "The org's time zone (IANA), the day `usage.calls_today` counts."}
+        generated_at: {type: string, format: date-time, description: When this answer was read (answers are cached for 10 s).}
+        actions:
+          $ref: "#/components/schemas/OverviewCount"
+        blocked:
+          $ref: "#/components/schemas/OverviewCount"
+        approvals:
+          type: object
+          required: [pending, expiring_soon, next_expires_at]
+          properties:
+            pending: {type: integer, minimum: 0, description: Every pending approval, whatever the window.}
+            expiring_soon: {type: integer, minimum: 0, description: Pending approvals that expire within 15 minutes.}
+            next_expires_at: {type: [string, "null"], format: date-time}
+        verification:
+          type: object
+          required: [verified, mismatch, unverifiable, not_witnessed, by_level, series]
+          properties:
+            verified: {type: integer, minimum: 0}
+            mismatch: {type: integer, minimum: 0}
+            unverifiable: {type: integer, minimum: 0}
+            not_witnessed: {type: integer, minimum: 0, description: "The window's actions with no verdict: denied, failed before running, pending or in flight."}
+            by_level:
+              type: object
+              description: Witnessed actions by level; the three sum to verified + mismatch + unverifiable.
+              required: [L0, L1, L2]
+              properties:
+                L0: {type: integer, minimum: 0}
+                L1: {type: integer, minimum: 0}
+                L2: {type: integer, minimum: 0}
+            series:
+              type: object
+              required: [verified, mismatch, unverifiable]
+              properties:
+                verified: {type: array, items: {type: integer, minimum: 0}}
+                mismatch: {type: array, items: {type: integer, minimum: 0}}
+                unverifiable: {type: array, items: {type: integer, minimum: 0}}
+        agents:
+          type: object
+          required: [object, has_more, data]
+          properties:
+            object: {type: string, const: list}
+            has_more: {type: boolean}
+            data:
+              type: array
+              maxItems: 8
+              items:
+                type: object
+                required: [id, name, status, last_action_at, usage, budgets]
+                properties:
+                  id: {type: string, pattern: "^agt_[0-7][0-9a-hjkmnp-tv-z]{25}$"}
+                  name: {type: string}
+                  status: {type: string, enum: [active, suspended, stopped]}
+                  last_action_at: {type: [string, "null"], format: date-time}
+                  usage:
+                    type: object
+                    required: [calls_today, spend_today]
+                    properties:
+                      calls_today: {type: integer, minimum: 0}
+                      spend_today:
+                        type: [object, "null"]
+                        required: [amount, currency]
+                        properties:
+                          amount: {type: integer, minimum: 0}
+                          currency: {type: string, pattern: "^[a-z]{3}$"}
+                  budgets:
+                    $ref: "#/components/schemas/Budgets"
+        attention:
+          type: array
+          maxItems: 8
+          items:
+            $ref: "#/components/schemas/AttentionItem"
+      examples:
+        - object: overview
+          window: 24h
+          from: "2026-10-08T14:00:00.000Z"
+          to: "2026-10-09T14:00:00.000Z"
+          timezone: Asia/Kolkata
+          generated_at: "2026-10-09T13:59:58.000Z"
+          actions: {total: 1204, previous: 1115, series: [31, 28, 44, 52, 61, 49, 55, 58, 60, 47, 50, 49, 52, 54, 51, 48, 46, 53, 55, 57, 50, 44, 41, 38]}
+          blocked: {total: 37, previous: 41, series: [1, 0, 2, 3, 2, 1, 2, 1, 2, 2, 1, 2, 2, 1, 2, 1, 2, 2, 1, 2, 1, 2, 1, 1]}
+          approvals: {pending: 2, expiring_soon: 1, next_expires_at: "2026-10-09T14:06:00.000Z"}
+          verification:
+            verified: 1021
+            mismatch: 3
+            unverifiable: 58
+            not_witnessed: 122
+            by_level: {L0: 400, L1: 262, L2: 420}
+            series:
+              verified: [27, 24, 37, 44, 52, 41, 47, 49, 51, 40, 43, 41, 44, 46, 43, 41, 39, 45, 47, 48, 42, 37, 35, 39]
+              mismatch: [0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0]
+              unverifiable: [2, 2, 3, 3, 3, 3, 3, 2, 3, 2, 2, 2, 2, 3, 2, 2, 2, 2, 3, 3, 2, 2, 2, 2]
+          agents:
+            object: list
+            has_more: true
+            data:
+              - id: agt_01k633rrmh3bcz2p39gg4vp46q
+                name: support-bot
+                status: active
+                last_action_at: "2026-10-09T13:59:41.000Z"
+                usage: {calls_today: 212, spend_today: {amount: 1200, currency: usd}}
+                budgets: {calls_per_day: 5000}
+          attention:
+            - object: attention_item
+              kind: mismatch
+              severity: high
+              at: "2026-10-09T13:41:09.000Z"
+              ref: act_01k6f0k9hx2q3c1m6b8v5r7w2d
+              data: {tool: postgres.execute, agent: support-bot, agent_id: agt_01k633rrmh3bcz2p39gg4vp46q, summary: "Postgres changed 301 rows in public.orders. The agent reported 1.", level: L2}
+    OverviewCount:
+      type: object
+      required: [total, previous, series]
+      properties:
+        total: {type: integer, minimum: 0}
+        previous: {type: integer, minimum: 0, description: The same count over the window before.}
+        series: {type: array, items: {type: integer, minimum: 0}, description: 24 hourly or 28 six-hour buckets, oldest first.}
+    AttentionItem:
+      type: object
+      description: >-
+        One thing on the Overview that needs a person. The server sends a kind and its data; the
+        Console words it. `ref` is the id to open (an action, approval, agent, connector or deed),
+        or null. Data per kind: `chain_broken` {seq, deed, code, checked, checked_at};
+        `org_stopped` {since, by, reason}; `slot_invalidated` {connector, connector_id, status,
+        status_reason}; `slot_lagging` {connector, connector_id, lag_bytes, threshold_bytes};
+        `mismatch` {tool, agent, agent_id, summary (the witness summary, verbatim), level};
+        `approval_expiring` {tool, agent, agent_id, expires_at, action}; `budget_near` {agent,
+        agent_id, budget (calls_per_minute, calls_per_day or spend_per_day), used, limit, and
+        currency for spend}.
+      required: [object, kind, severity, at, ref, data]
+      properties:
+        object: {type: string, const: attention_item}
+        kind: {type: string, enum: [chain_broken, org_stopped, slot_invalidated, slot_lagging, mismatch, approval_expiring, budget_near]}
+        severity: {type: string, enum: [high, medium, low]}
+        at: {type: string, format: date-time}
+        ref: {type: [string, "null"]}
+        data: {type: object}
     AgentList:
       type: object
       required: [object, data, has_more, next_cursor]

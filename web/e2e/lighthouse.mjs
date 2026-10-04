@@ -1,10 +1,11 @@
-// Lighthouse 13 on the Console (S24 §6): /app, /app/_kit and /login, desktop and mobile. Playwright
+// Lighthouse 13 on the Console (S24 §6, S25 §6): /login, /app/_kit and the seven S25 pages (with the
+// real L2 hero, a real deed and a real agent), desktop and mobile. Playwright
 // launches the installed Chrome with a remote-debugging port in a persistent profile, signs in with a
 // real link, and Lighthouse runs on the same browser (storage kept, so the session holds). Writes the
 // JSON reports to LIGHTHOUSE_DIR and fails when accessibility or best practices is below 95.
 // Run through scripts/web_e2e.sh lighthouse (make web-lighthouse).
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { chromium } from '@playwright/test';
@@ -26,16 +27,25 @@ const page = ctx.pages()[0] ?? (await ctx.newPage());
 await page.goto(BASE + '/login'); // warm the browser once, signed out
 
 // /login first, signed out (signed in, it hands over to the Console); then sign in for the rest.
-const plan = [['/login', false], ['/app', true], ['/app/_kit', true]];
+const hero = JSON.parse(readFileSync(join(process.env.WEB_E2E_WORK ?? '.', 'fixtures.json'), 'utf8'));
+const plan = [['/login', false], ['/app', true], ['/app/_kit', true], ['/app/actions', true], [`/app/actions/${hero.mismatch}`, true], ['/app/deeds', true], ['DEED', true], ['/app/agents', true], ['AGENT', true]];
 const rows = [];
 let failed = 0;
 let signedIn = false;
-for (const [p, needsSession] of plan) {
+for (let [p, needsSession] of plan) {
   if (needsSession && !signedIn) {
     await page.goto(link);
     await page.getByRole('button', { name: 'Sign in' }).click();
     await page.waitForURL(/\/app\/?$/);
     signedIn = true;
+  }
+  if (p === 'DEED' || p === 'AGENT') {
+    const r = await page.evaluate(async ([kind, act]) => {
+      const h = { 'Deedglass-Version': '2026-10-01' };
+      if (kind === 'DEED') return (await (await fetch(`/v1/actions/${act}`, { headers: h })).json()).deed;
+      return (await (await fetch('/v1/agents?limit=1', { headers: h })).json()).data[0].id;
+    }, [p, hero.mismatch]);
+    p = p === 'DEED' ? `/app/deeds/${r}` : `/app/agents/${r}`;
   }
   for (const formFactor of ['desktop', 'mobile']) {
     const flags = { port: PORT, output: 'json', logLevel: 'error', disableStorageReset: true, onlyCategories: ['accessibility', 'best-practices', 'performance'] };
@@ -45,7 +55,7 @@ for (const [p, needsSession] of plan) {
     const row = { page: p, formFactor, accessibility: score('accessibility'), bestPractices: score('best-practices'), performance: score('performance'),
       lcpMs: Math.round(lhr.audits['largest-contentful-paint']?.numericValue ?? 0), cls: lhr.audits['cumulative-layout-shift']?.numericValue ?? 0 };
     rows.push(row);
-    const name = `${p === '/app' ? 'app' : p.replace(/^\/(app\/)?_?/, '').replace(/\//g, '-')}-${formFactor}.json`;
+    const name = `${p === '/app' ? 'app' : p.replace(/^\/(app\/)?_?/, '').replace(/\//g, '-').replace(/-(act|deed|agt)_[0-9a-z]+$/, '-$1')}-${formFactor}.json`;
     writeFileSync(join(OUT, name), JSON.stringify(lhr, null, 1));
     if (row.accessibility < 95 || row.bestPractices < 95) {
       failed++;
@@ -56,8 +66,8 @@ for (const [p, needsSession] of plan) {
 }
 await ctx.close();
 rmSync(profile, { recursive: true, force: true });
-console.log('page            form     a11y  best-pr  perf  LCP ms  CLS');
-for (const r of rows) console.log(`${r.page.padEnd(15)} ${r.formFactor.padEnd(8)} ${String(r.accessibility).padStart(4)}  ${String(r.bestPractices).padStart(7)}  ${String(r.performance).padStart(4)}  ${String(r.lcpMs).padStart(6)}  ${r.cls.toFixed(3)}`);
+console.log('page                       form     a11y  best-pr  perf  LCP ms  CLS');
+for (const r of rows) console.log(`${r.page.replace(/(act|deed|agt)_[0-9a-z]+$/, '$1_…').padEnd(26)} ${r.formFactor.padEnd(8)} ${String(r.accessibility).padStart(4)}  ${String(r.bestPractices).padStart(7)}  ${String(r.performance).padStart(4)}  ${String(r.lcpMs).padStart(6)}  ${r.cls.toFixed(3)}`);
 writeFileSync(join(OUT, 'summary.json'), JSON.stringify(rows, null, 2));
 if (failed) process.exit(1);
 console.log(`✓ accessibility and best practices ≥ 95 on ${rows.length} runs · reports in ${OUT}`);

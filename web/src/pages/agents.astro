@@ -1,12 +1,20 @@
 ---
-import ScreenStub from '../components/ScreenStub.astro';
+// Agents (S25 §3.7): every agent with today's usage. src/controllers/agents.ts.
+import AppShell from '../layouts/AppShell.astro';
+import PageHead from '../components/PageHead.astro';
+import Skeleton from '../components/Skeleton.astro';
 import { copy } from '../lib/copy.ts';
 const p = copy.pages.agents;
 ---
-<ScreenStub title={p.title} lede={p.lede} screen="agents" />
+<AppShell title={p.title} screen="agents">
+  <PageHead title={p.title} lede={p.lede}><span slot="actions" class="flex items-center gap-2" id="agents-actions"></span></PageHead>
+  <section id="screen-body" aria-labelledby="page-title" aria-busy="true" data-screen-body="agents">
+    <Skeleton rows={8} />
+  </section>
+</AppShell>
 <script>
   import { bootShell } from '../controllers/shell.ts';
-  import { mountScreen } from '../controllers/screens.ts';
+  import { mountAgents } from '../controllers/agents.ts';
   bootShell({ title: 'Agents' });
-  mountScreen('agents');
+  mountAgents();
 </script>

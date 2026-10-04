@@ -134,6 +134,7 @@ export function confirmTyped(o: ConfirmOptions): Overlay {
   };
   confirmInput?.addEventListener('input', ready);
   reason?.addEventListener('input', ready);
+  ready(); // a confirmation with nothing to type or explain is ready at once
   const body: Child[] = [h('p', null, o.body)];
   if (confirmInput) {
     body.push(h('div', { class: 'field' },

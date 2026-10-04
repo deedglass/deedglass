@@ -386,3 +386,10 @@ bench-events: ## S24 §3.12: the event hub, 1,000 events/s to 200 SSE streams (p
 	@out="$(CURDIR)/bench/results/$$(date +%F)-$$(go env GOOS)-$$(go env GOARCH)-events.json"; mkdir -p "$(CURDIR)/bench/results"; \
 	DEEDGLASS_EVENTS_BENCH_OUT="$$out" $(GO) test -count=1 -run '^TestHubBudget$$' -v ./internal/console/ > "$$out.log" 2>&1; st=$$?; \
 	grep -E '^(--- |ok|FAIL)|"(p50|p99|kib_per_subscriber|events_per_s)"' "$$out.log"; rm -f "$$out.log"; echo "raw: $$out"; exit $$st
+
+.PHONY: bench-overview
+bench-overview: ## S25 §3.8: GET /v1/overview's read (cache bypassed) at 100,000 actions in 24 h, both windows (p99 < 80 ms) and the EXPLAIN plans, on a throwaway PG 18; raw go test -json in bench/results/
+	@out="$(CURDIR)/bench/results/$$(date +%F)-$$(go env GOOS)-$$(go env GOARCH)-overview.json"; mkdir -p "$(CURDIR)/bench/results"; \
+	DEEDGLASS_IT_BENCH_OUT="$$out" DEEDGLASS_IT_BENCH_RUN='TestOverviewBudget' DEEDGLASS_IT_BENCH_PKG=./internal/ledger/ \
+	DEEDGLASS_IT_PKGS=./internal/ledger/ DEEDGLASS_IT_GOFLAGS='-run ^$$' scripts/integration_local.sh >/dev/null; st=$$?; \
+	grep -o 'PERF {[^}]*}[^\\]*' "$$out" | sed 's/\\"/"/g'; echo "raw: $$out"; exit $$st

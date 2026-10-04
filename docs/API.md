@@ -553,6 +553,19 @@ curl -s -X POST http://127.0.0.1:8080/v1/policies/postgres-safe/versions/1/activ
   -d '{"mode":"enforce","reason":"Guard the orders database before the pilot."}'
 ```
 
+## The Overview and agent usage (S25)
+
+| Route | Who | Returns |
+|---|---|---|
+| `GET /v1/overview?window=24h\|7d` | a Console session (viewer and up) or an org admin key; agent keys get 403 `insufficient_scope` | an `overview`: action, block and verdict counts with their series, pending approvals, the 8 most recently active agents with today's usage, and up to 8 `attention_item`s |
+| `GET /v1/agents?expand[]=usage`, `GET /v1/agents/{id}?expand[]=usage` | as the agent routes | each agent plus `usage` (`calls_minute`, `calls_hour`, `calls_today`, `spend_today`) and `last_action_at` |
+
+Every number, window and attention rule is defined in [OVERVIEW_METRICS.md](OVERVIEW_METRICS.md).
+The overview is cached for 10 seconds per org and window; `generated_at` says when it was read.
+`expand=usage` works too; any other expand value is 400 `validation_failed`, and without the
+expansion the agent object is unchanged. The schemas are `Overview`, `OverviewCount`,
+`AttentionItem` and `AgentUsage` in `api/openapi.yaml`.
+
 ## Objects
 
 Every object carries `"object"`, naming its type (`"health"`, `"version"`, `"list"`, and so on),

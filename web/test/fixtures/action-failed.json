@@ -1,0 +1,140 @@
+{
+    "object": "action",
+    "id": "act_01m428xva7d8e9vpxgn1gwq04z",
+    "created_at": "2026-10-04T01:37:17.089Z",
+    "livemode": false,
+    "agent": {
+        "id": "agt_01m428xt8n3emtb9ee55mt0egb",
+        "name": "support-bot"
+    },
+    "tool": "github.merge_pr",
+    "connector": null,
+    "mode": "gateway",
+    "state": "sealed",
+    "status": "failed",
+    "on_behalf_of": "u_8164",
+    "session": "chat_70",
+    "decision": {
+        "outcome": "allow",
+        "code": null,
+        "source": null,
+        "rule_id": "allow-github",
+        "reason": null,
+        "message": null,
+        "policy": null,
+        "policy_version": null,
+        "shadow": null
+    },
+    "policy": {
+        "id": null,
+        "version_id": null,
+        "mode": "enforce",
+        "decision": "allow",
+        "rule_id": "allow-github"
+    },
+    "approval": null,
+    "execution": {
+        "status": "failed",
+        "started_at": "2026-10-04T01:37:17.958Z",
+        "finished_at": "2026-10-04T01:37:18.155Z",
+        "latency_ms": 197,
+        "error_code": "upstream_error",
+        "error_message": null
+    },
+    "witness": null,
+    "cost": null,
+    "request_digest": "sha256:d62361027ff5cbd6cf6830754bb19a220952bbfea75d88ca8f2c22d805a85e5f",
+    "result_digest": null,
+    "payload_pruned_at": null,
+    "deed": "deed_01m428xvmh7cmpg25nv12vy8n6",
+    "next_action": null,
+    "request": {
+        "repo": "acme/web",
+        "number": 634
+    },
+    "result": null,
+    "events": {
+        "object": "list",
+        "data": [
+            {
+                "object": "action_event",
+                "id": "evt_01m428xva89dak6xgwghg1kzpf",
+                "seq": 1,
+                "from": null,
+                "to": "received",
+                "at": "2026-10-04T01:37:17.089Z",
+                "actor": "agt_01m428xt8n3emtb9ee55mt0egb",
+                "data": {}
+            },
+            {
+                "object": "action_event",
+                "id": "evt_01m428xva89dak6xgwghg1kzpg",
+                "seq": 2,
+                "from": "received",
+                "to": "authenticated",
+                "at": "2026-10-04T01:37:18.152Z",
+                "actor": "system",
+                "data": {}
+            },
+            {
+                "object": "action_event",
+                "id": "evt_01m428xva9yb5751b5pkbkv1pr",
+                "seq": 3,
+                "from": "authenticated",
+                "to": "evaluated",
+                "at": "2026-10-04T01:37:18.153Z",
+                "actor": "system",
+                "data": {}
+            },
+            {
+                "object": "action_event",
+                "id": "evt_01m428xvaad2y4jb7g6wqyrp1n",
+                "seq": 4,
+                "from": "evaluated",
+                "to": "executing",
+                "at": "2026-10-04T01:37:18.154Z",
+                "actor": "system",
+                "data": {
+                    "rule_id": "allow-github"
+                }
+            },
+            {
+                "object": "action_event",
+                "id": "evt_01m428xvab1ndf5mb41zcf7gd5",
+                "seq": 5,
+                "from": "executing",
+                "to": "failed",
+                "at": "2026-10-04T01:37:18.155Z",
+                "actor": "system",
+                "data": {
+                    "error_code": "upstream_error"
+                }
+            },
+            {
+                "object": "action_event",
+                "id": "evt_01m428xvmj14dcf00a8fr33dtp",
+                "seq": 6,
+                "from": "failed",
+                "to": "sealed",
+                "at": "2026-10-04T01:37:18.482Z",
+                "actor": "system",
+                "data": {}
+            }
+        ],
+        "has_more": false,
+        "next_cursor": null
+    },
+    "deeds": [
+        {
+            "id": "deed_01m428xvmh7cmpg25nv12vy8n6",
+            "kind": "action",
+            "seq": 200,
+            "issued_at": "2026-10-04T01:37:18.481Z"
+        }
+    ],
+    "undo": {
+        "undoes": null,
+        "undone_by": null,
+        "eligible": false
+    }
+}

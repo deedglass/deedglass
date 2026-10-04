@@ -1,0 +1,2 @@
+go test fuzz v1
+[]byte("deedglass: policy/v1\nname: a0\ndefaults:\n  decision: deny\n  reason: ›\nrules:\n  - id: a0\n    when: >\n     (args.A)&&\n      args.A\n    decision: allow")

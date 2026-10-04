@@ -315,10 +315,17 @@ rules:
       </div>
     </div>
   </section>
+
+  <section class="section" aria-labelledby="k-s25">
+    <h2 class="t-title-3" id="k-s25">S25 components</h2>
+    <div class="grid gap-4" id="kit-s25"></div>
+  </section>
 </AppShell>
 <script>
   import { bootShell } from '../controllers/shell.ts';
   import { mountKit } from '../controllers/kit.ts';
+  import { mountKit25 } from '../controllers/kit25.ts';
   bootShell({ title: 'Component kit' });
   mountKit();
+  mountKit25();
 </script>

@@ -1,12 +1,20 @@
 ---
-import ScreenStub from '../components/ScreenStub.astro';
+// Deeds (S25 §3.6): the chain card, then every deed newest first. src/controllers/deeds.ts.
+import AppShell from '../layouts/AppShell.astro';
+import PageHead from '../components/PageHead.astro';
+import Skeleton from '../components/Skeleton.astro';
 import { copy } from '../lib/copy.ts';
 const p = copy.pages.deeds;
 ---
-<ScreenStub title={p.title} lede={p.lede} screen="deeds" />
+<AppShell title={p.title} screen="deeds">
+  <PageHead title={p.title} lede={p.lede}><span slot="actions" class="flex items-center gap-2" id="deeds-actions"></span></PageHead>
+  <section id="screen-body" aria-labelledby="page-title" aria-busy="true" data-screen-body="deeds">
+    <Skeleton />
+  </section>
+</AppShell>
 <script>
   import { bootShell } from '../controllers/shell.ts';
-  import { mountScreen } from '../controllers/screens.ts';
+  import { mountDeeds } from '../controllers/deeds.ts';
   bootShell({ title: 'Deeds' });
-  mountScreen('deeds');
+  mountDeeds();
 </script>

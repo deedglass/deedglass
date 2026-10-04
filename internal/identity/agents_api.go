@@ -95,7 +95,11 @@ func (s *Service) handleListAgents(w http.ResponseWriter, r *http.Request) error
 	if !ok {
 		return httpx.E(httpx.CodeAuthenticationRequired)
 	}
-	if err := onlyQuery(r, "status", "label", "name", "limit", "cursor"); err != nil {
+	if err := onlyQuery(r, "status", "label", "name", "limit", "cursor", "expand[]", "expand"); err != nil {
+		return err
+	}
+	usage, err := parseExpandUsage(r)
+	if err != nil {
 		return err
 	}
 	q := r.URL.Query()
@@ -136,6 +140,13 @@ func (s *Service) handleListAgents(w http.ResponseWriter, r *http.Request) error
 			return err
 		}
 	}
+	if usage {
+		ex, err := s.WithUsage(r.Context(), p.OrgID, list)
+		if err != nil {
+			return err
+		}
+		return httpx.WriteJSON(w, http.StatusOK, httpx.NewList(ex, more, next))
+	}
 	return httpx.WriteJSON(w, http.StatusOK, httpx.NewList(list, more, next))
 }
 
@@ -161,13 +172,26 @@ func (s *Service) handleGetAgent(w http.ResponseWriter, r *http.Request) error {
 	if !ok {
 		return httpx.E(httpx.CodeAuthenticationRequired)
 	}
-	if err := onlyQuery(r); err != nil {
+	for k := range r.URL.Query() {
+		if k != "expand[]" && k != "expand" {
+			return httpx.ErrValidation(k, MsgAgentQuery)
+		}
+	}
+	usage, err := parseExpandUsage(r)
+	if err != nil {
 		return err
 	}
 	id := r.PathValue("id")
 	ag, err := s.GetAgent(r.Context(), p.OrgID, id)
 	if err != nil {
 		return notFoundAs(err, func() *httpx.Error { return ErrAgentNotFound(id) })
+	}
+	if usage {
+		ex, err := s.WithUsage(r.Context(), p.OrgID, []Agent{ag})
+		if err != nil {
+			return err
+		}
+		return httpx.WriteJSON(w, http.StatusOK, ex[0])
 	}
 	return httpx.WriteJSON(w, http.StatusOK, ag)
 }

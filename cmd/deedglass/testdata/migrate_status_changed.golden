@@ -23,5 +23,6 @@ VERSION  NAME                STATE    APPLIED               CHECKSUM
 0020     witness_l2          [35mpending[0m  —                     sha256:7d10…f427
 0021     approvals           [35mpending[0m  —                     sha256:2c70…6b6f
 0022     undo                [35mpending[0m  —                     sha256:79be…f260
-[31m✕[0m 8 applied · 13 pending · 1 doesn't match this build. Run deedglass migrate verify for details.
+0023     overview            [35mpending[0m  —                     sha256:ca3e…65d2
+[31m✕[0m 8 applied · 14 pending · 1 doesn't match this build. Run deedglass migrate verify for details.
 --- stderr

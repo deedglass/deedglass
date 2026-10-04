@@ -4,6 +4,7 @@ import { defineConfig } from 'astro/config';
 import tailwindcss from '@tailwindcss/vite';
 import { fileURLToPath } from 'node:url';
 
+// make web-dev proxies to the founder's serve on :8080; DEEDGLASS_DEV_PROXY points it at a throwaway stack instead.
 const verify = fileURLToPath(new URL('./verify/src', import.meta.url));
 
 export default defineConfig({
@@ -21,7 +22,7 @@ export default defineConfig({
     resolve: { alias: { '@verify': verify } },
     server: {
       fs: { allow: [fileURLToPath(new URL('.', import.meta.url))] },
-      proxy: Object.fromEntries(['/v1', '/login', '/auth', '/.well-known'].map((p) => [p, { target: 'http://127.0.0.1:8080', changeOrigin: false }])),
+      proxy: Object.fromEntries(['/v1', '/login', '/auth', '/.well-known'].map((p) => [p, { target: process.env.DEEDGLASS_DEV_PROXY ?? 'http://127.0.0.1:8080', changeOrigin: false }])),
     },
   },
 });

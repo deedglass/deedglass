@@ -1,12 +1,23 @@
 ---
-import ScreenStub from '../components/ScreenStub.astro';
+// Actions (S25 §3.4): the live feed. src/controllers/actions.ts renders the filter bar, the table
+// and the pill; this markup is the loading state in the final geometry.
+import AppShell from '../layouts/AppShell.astro';
+import PageHead from '../components/PageHead.astro';
 import { copy } from '../lib/copy.ts';
 const p = copy.pages.actions;
 ---
-<ScreenStub title={p.title} lede={p.lede} screen="actions" />
+<AppShell title={p.title} screen="actions">
+  <PageHead title={p.title} lede={p.lede}><span slot="actions" id="feed-pause"></span></PageHead>
+  <div class="filterbar-host" id="feed-filters"><div class="filterbar" aria-hidden="true"><span class="skel skel-line w-56"></span></div></div>
+  <section id="screen-body" aria-labelledby="page-title" aria-busy="true" data-screen-body="actions">
+    <div class="table-frame" aria-hidden="true">
+      {Array.from({ length: 12 }, () => <div class="skel-row skel-feed">{[0, 1, 2, 3, 4, 5].map(() => <span class="skel skel-line"></span>)}</div>)}
+    </div>
+  </section>
+</AppShell>
 <script>
   import { bootShell } from '../controllers/shell.ts';
-  import { mountScreen } from '../controllers/screens.ts';
+  import { mountActions } from '../controllers/actions.ts';
   bootShell({ title: 'Actions' });
-  mountScreen('actions');
+  mountActions();
 </script>

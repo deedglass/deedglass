@@ -1,0 +1,28 @@
+{
+  "object": "agent",
+  "id": "agt_01k633rrmh3bcz2p39gg4vp46q",
+  "name": "support-bot",
+  "description": "Answers refund tickets",
+  "labels": {
+    "env": "prod",
+    "team": "support"
+  },
+  "budgets": {
+    "calls_per_minute": 60,
+    "calls_per_day": 5000,
+    "spend_per_day": {
+      "amount": 5000,
+      "currency": "usd"
+    }
+  },
+  "status": "suspended",
+  "status_reason": "drill",
+  "status_changed_at": "2026-10-03T10:02:11.000Z",
+  "status_changed_by": "usr_01k6c9kb2zcjsyn7b8g2k1vqvp",
+  "owner": "usr_01k6c9kb2zcjsyn7b8g2k1vqvp",
+  "active_keys": 2,
+  "intent_mode": "optional",
+  "last_used_at": "2026-10-03T10:02:11.000Z",
+  "created_at": "2026-10-03T10:02:11.000Z",
+  "updated_at": "2026-10-03T10:02:11.000Z"
+}

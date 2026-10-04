@@ -1,0 +1,230 @@
+{
+    "object": "action",
+    "id": "act_01m428xv7fe1ndavetj00z5kee",
+    "created_at": "2026-10-04T01:37:17.089Z",
+    "livemode": false,
+    "agent": {
+        "id": "agt_01m428xt8n3emtb9ee55mt0egb",
+        "name": "support-bot"
+    },
+    "tool": "github.merge_pr",
+    "connector": null,
+    "mode": "gateway",
+    "state": "sealed",
+    "status": "executed",
+    "on_behalf_of": "u_3307",
+    "session": "chat_35",
+    "decision": {
+        "outcome": "allow",
+        "code": null,
+        "source": null,
+        "rule_id": "allow-github",
+        "reason": null,
+        "message": null,
+        "policy": null,
+        "policy_version": null,
+        "shadow": null
+    },
+    "policy": {
+        "id": null,
+        "version_id": null,
+        "mode": "enforce",
+        "decision": "allow",
+        "rule_id": "allow-github"
+    },
+    "approval": null,
+    "execution": {
+        "status": "succeeded",
+        "started_at": "2026-10-04T01:37:17.840Z",
+        "finished_at": "2026-10-04T01:37:18.066Z",
+        "latency_ms": 226,
+        "error_code": null,
+        "error_message": null
+    },
+    "witness": {
+        "object": "witness",
+        "level": "L1",
+        "verdict": "UNVERIFIABLE",
+        "method": "readback.github.merge_pr",
+        "required_level": null,
+        "summary": "The read-back took longer than 10 s.",
+        "reasons": [
+            {
+                "code": "readback_timeout",
+                "class": "gap",
+                "level": "L1",
+                "check": "readback",
+                "message": "The read-back took longer than 10 s."
+            }
+        ],
+        "witnessed_at": "2026-10-01T09:00:00.000Z",
+        "detail_digest": "sha256:ca13686e4b51a11870b83248816df4c5f2288a623e44dd63e66e905b217f08ee",
+        "detail": {
+            "claim": {
+                "level": "L1",
+                "method": "readback.github.merge_pr",
+                "verdict": "UNVERIFIABLE",
+                "required_level": "L0"
+            },
+            "levels": {
+                "L0": {
+                    "method": "reported",
+                    "verdict": "VERIFIED"
+                },
+                "L1": {
+                    "method": "readback.github.merge_pr",
+                    "verdict": "UNVERIFIABLE"
+                },
+                "L2": null
+            },
+            "object": "witness_detail",
+            "reasons": [
+                {
+                    "code": "tool_reported_success",
+                    "check": "status",
+                    "class": "pass",
+                    "level": "L0",
+                    "message": "The tool reported success."
+                },
+                {
+                    "code": "readback_timeout",
+                    "check": "readback",
+                    "class": "gap",
+                    "level": "L1",
+                    "message": "The read-back took longer than 10 s."
+                }
+            ],
+            "summary": "The read-back took longer than 10 s.",
+            "version": 1,
+            "witnessed_at": "2026-10-01T09:00:00.000Z"
+        },
+        "history": [
+            {
+                "deed": "deed_01m428xvkz61t14ak1w5fhav7h",
+                "kind": "action",
+                "level": "L1",
+                "verdict": "UNVERIFIABLE",
+                "at": "2026-10-04T01:37:18.463Z"
+            }
+        ]
+    },
+    "cost": null,
+    "request_digest": "sha256:fe229262ed24bf080e80bdd9ff731848654bdef24c6e15745a4319999fdb922b",
+    "result_digest": "sha256:4062edaf750fb8074e7e83e0c9028c94e32468a8b6f1614774328ef045150f93",
+    "payload_pruned_at": null,
+    "deed": "deed_01m428xvkz61t14ak1w5fhav7h",
+    "next_action": null,
+    "request": {
+        "repo": "acme/web",
+        "number": 554
+    },
+    "result": {
+        "ok": true
+    },
+    "events": {
+        "object": "list",
+        "data": [
+            {
+                "object": "action_event",
+                "id": "evt_01m428xv7fe1ndavetj00z5keg",
+                "seq": 1,
+                "from": null,
+                "to": "received",
+                "at": "2026-10-04T01:37:17.089Z",
+                "actor": "agt_01m428xt8n3emtb9ee55mt0egb",
+                "data": {}
+            },
+            {
+                "object": "action_event",
+                "id": "evt_01m428xv7fe1ndavetj00z5kej",
+                "seq": 2,
+                "from": "received",
+                "to": "authenticated",
+                "at": "2026-10-04T01:37:18.063Z",
+                "actor": "system",
+                "data": {}
+            },
+            {
+                "object": "action_event",
+                "id": "evt_01m428xv7g385tv129xp9peny6",
+                "seq": 3,
+                "from": "authenticated",
+                "to": "evaluated",
+                "at": "2026-10-04T01:37:18.064Z",
+                "actor": "system",
+                "data": {}
+            },
+            {
+                "object": "action_event",
+                "id": "evt_01m428xv7hkz0knrv3s5egt40r",
+                "seq": 4,
+                "from": "evaluated",
+                "to": "executing",
+                "at": "2026-10-04T01:37:18.065Z",
+                "actor": "system",
+                "data": {
+                    "rule_id": "allow-github"
+                }
+            },
+            {
+                "object": "action_event",
+                "id": "evt_01m428xv7j5awcr2dc1acky29p",
+                "seq": 5,
+                "from": "executing",
+                "to": "executed",
+                "at": "2026-10-04T01:37:18.066Z",
+                "actor": "system",
+                "data": {}
+            },
+            {
+                "object": "action_event",
+                "id": "evt_01m428xv7k6a98pvw7yjctncbh",
+                "seq": 6,
+                "from": "executed",
+                "to": "witnessing",
+                "at": "2026-10-04T01:37:18.067Z",
+                "actor": "system",
+                "data": {}
+            },
+            {
+                "object": "action_event",
+                "id": "evt_01m428xv7ndv6y1w1xystxzy6a",
+                "seq": 7,
+                "from": "witnessing",
+                "to": "unverifiable",
+                "at": "2026-10-04T01:37:18.069Z",
+                "actor": "system",
+                "data": {
+                    "level": "L1",
+                    "verdict": "UNVERIFIABLE",
+                    "detail_digest": "sha256:ca13686e4b51a11870b83248816df4c5f2288a623e44dd63e66e905b217f08ee"
+                }
+            },
+            {
+                "object": "action_event",
+                "id": "evt_01m428xvm02hnv64s94qx4c58v",
+                "seq": 8,
+                "from": "unverifiable",
+                "to": "sealed",
+                "at": "2026-10-04T01:37:18.464Z",
+                "actor": "system",
+                "data": {}
+            }
+        ],
+        "has_more": false,
+        "next_cursor": null
+    },
+    "deeds": [
+        {
+            "id": "deed_01m428xvkz61t14ak1w5fhav7h",
+            "kind": "action",
+            "seq": 187,
+            "issued_at": "2026-10-04T01:37:18.463Z"
+        }
+    ],
+    "undo": {
+        "undoes": null,
+        "undone_by": null,
+        "eligible": false
+    }
+}

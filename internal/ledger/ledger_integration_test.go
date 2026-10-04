@@ -718,7 +718,9 @@ func mustTime(t testing.TB, s string) time.Time {
 
 // Export → verify, byte-identical twice with the same created_at; ranges and an empty range.
 func TestExportThenVerify(t *testing.T) {
-	pinned := time.Date(2026, 10, 2, 18, 0, 0, 0, time.UTC)
+	// A fixed export clock (two exports must be byte-identical), after the seal key's activation:
+	// a calendar date here made the bundle's seal predate its key once that date passed (S25).
+	pinned := time.Now().UTC().Add(time.Hour).Truncate(time.Second)
 	en := newEnv(t, ledger.WithClock(func() time.Time { return pinned }))
 	res := en.run(t, en.org, en.agents, 42, 1204, fake.Allow, fake.Deny, fake.Mismatch, fake.Unverifiable, fake.Failed)
 	if res.Deeds != 1204 {

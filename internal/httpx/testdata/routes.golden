@@ -99,7 +99,7 @@ planned    DELETE  /v1/connectors/{id}/decoder                            sessio
 planned    GET     /v1/events                                             session_or_key  viewer           S24    SSE; agent keys need actions:read and see their own agent's events only
 planned    GET     /app                                                   public          -                S24    Console pages: the handler redirects to /login?next= without a session
 planned    GET     /app/{path...}                                         public          -                S24    Console pages: the handler redirects to /login?next= without a session
-planned    GET     /v1/overview                                           session_or_key  viewer           S25
+planned    GET     /v1/overview                                           session_or_key  viewer           S25    keys: admin; agent keys 403
 planned    GET     /v1/insights/stats                                     session_or_key  viewer           S27
 planned    GET     /v1/insights/anomalies                                 session_or_key  viewer           S27
 planned    GET     /v1/insights/anomalies/{id}                            session_or_key  viewer           S27

@@ -183,6 +183,15 @@ export function permissionState(role: string): HTMLElement {
     h('p', null, fill(copy.states.permissionBody, { role, org: st?.org.name ?? 'this org' })));
 }
 
+/** notFound: the Console 404, identical for a missing id and another org's id (S24). */
+export function notFound(message: string): HTMLElement {
+  return h('div', { class: 'state', role: 'status' },
+    h('span', { class: 'well' }, icon('search', 20)),
+    h('p', { class: 't-headline' }, copy.pages.notFound.title),
+    h('p', null, message),
+    h('div', { class: 'actions' }, h('a', { class: 'btn btn-secondary', href: '/app' }, copy.pages.notFound.action)));
+}
+
 // ---------- the list ----------
 
 function table(sc: Screen, rows: Row[], tz: string): HTMLElement {

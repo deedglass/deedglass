@@ -352,3 +352,45 @@ func (u *Usage) Prune(ctx context.Context, now time.Time) (int64, error) {
 	}
 	return n, nil
 }
+
+// AgentsTx reads the standard counters of several agents (calls this minute, this hour and this
+// org-local day; spend today in one currency each) in one statement, inside the caller's org
+// transaction (S25: GET /v1/overview's agents and ?expand[]=usage on the agent routes). The keys
+// and windows are policy.SnapshotKeys', the ones the evaluator reads, so the numbers are the
+// numbers the budgets see. currencies[i] is agents[i]'s spend currency ("" means usd).
+func (u *Usage) AgentsTx(ctx context.Context, tx pgx.Tx, org ids.OrgID, loc *time.Location, at time.Time, agents, currencies []string) ([]policy.UsageSnapshot, error) {
+	if len(currencies) != len(agents) {
+		return nil, fmt.Errorf("policystore: %d agents and %d currencies", len(agents), len(currencies))
+	}
+	if len(agents) == 0 {
+		return nil, nil
+	}
+	var (
+		scopes, counters, windows []string
+		starts                    []time.Time
+		keys                      = make([][]policy.SnapshotKey, len(agents))
+		curs                      = make([]string, len(agents))
+	)
+	for i, a := range agents {
+		ks, cur, err := policy.SnapshotKeys(policy.SnapshotRequest{Org: org.String(), Agent: a, Location: loc, At: at, Currency: currencies[i]})
+		if err != nil {
+			return nil, err
+		}
+		keys[i], curs[i] = ks, cur
+		for _, k := range ks {
+			scopes, counters, windows = append(scopes, k.Scope), append(counters, k.Counter), append(windows, k.Window)
+			starts = append(starts, k.WindowStart.UTC())
+		}
+	}
+	vals := make([]int64, len(scopes))
+	if err := readSnapshot(ctx, tx, org, scopes, counters, windows, starts, vals, len(scopes)); err != nil {
+		return nil, err
+	}
+	out := make([]policy.UsageSnapshot, len(agents))
+	off := 0
+	for i, ks := range keys {
+		out[i] = policy.FillSnapshot(ks, curs[i], vals[off:off+len(ks)])
+		off += len(ks)
+	}
+	return out, nil
+}

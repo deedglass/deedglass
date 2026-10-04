@@ -1,4 +1,5 @@
 import { execFileSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import { expect, test as base, type Page } from '@playwright/test';
 
 export const AUTH = (role: 'owner' | 'admin' | 'viewer') => `e2e/.auth/${role}.json`;
@@ -36,3 +37,16 @@ export async function guard(page: Page): Promise<() => Promise<void>> {
 
 export const test = base;
 export { expect };
+
+/** hero is the real L2 pair scripts/web_e2e.sh seeded (fixtures.json in the stack's directory). */
+export function hero(): { verified: string; mismatch: string } {
+  return JSON.parse(readFileSync(`${process.env.WEB_E2E_WORK}/fixtures.json`, 'utf8'));
+}
+
+/** loginAs signs a fresh context in through a real link for an org (first run uses acme-staging). */
+export async function signIn(page: Page, email: string, org = 'acme'): Promise<void> {
+  const link = JSON.parse(dg('org', 'login-link', '--email', email, '--org', org, '--json')).link as string;
+  await page.goto(link);
+  await page.getByRole('button', { name: /^(Sign in|Accept invite)$/ }).click();
+  await page.waitForURL(/\/app\/?$/);
+}

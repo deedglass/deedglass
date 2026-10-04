@@ -155,6 +155,9 @@ func elsewhere() []Route {
 		Scopes: actionsRead, Streaming: true, Handler: stub})
 	// S23: undo (internal/undoapi).
 	out = append(out, adm("POST", "/v1/actions/{id}/undo/preview", "previewUndo", RoleAdmin), adm("POST", "/v1/actions/{id}/undo", "createUndo", RoleAdmin))
+	// S25: the Overview (internal/console).
+	out = append(out, Route{Method: "GET", Pattern: "/v1/overview", OperationID: "getOverview", Auth: SessionOrKey, MinRole: RoleViewer,
+		Scopes: []string{ScopeAdmin}, Handler: stub})
 	return out
 }
 
