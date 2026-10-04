@@ -1,0 +1,99 @@
+{
+  "object": "decoder",
+  "connector": "con_01m42fmxj177kh3ve33xqv934g",
+  "name": "postgres",
+  "slot": "deedglass_01m42fmxj177kh3ve33xqv934g",
+  "publication": "deedglass_pub",
+  "status": "running",
+  "health": "healthy",
+  "reason": null,
+  "detail": {},
+  "since": "2026-10-04T03:34:45.65145Z",
+  "transport": "peek",
+  "server": {
+    "version": "18.6",
+    "system_id": "7692651003399326046",
+    "timeline": 1
+  },
+  "positions": {
+    "checkpoint_lsn": "0/1DDD578",
+    "confirmed_flush_lsn": "0/1DDD578",
+    "restart_lsn": "0/1D715D0",
+    "current_wal_lsn": "0/1DDD578"
+  },
+  "lag": {
+    "bytes": 0,
+    "seconds": 0.013895584,
+    "retained_bytes": 442280
+  },
+  "wal_status": "reserved",
+  "watching": [
+    "public.customers",
+    "public.orders",
+    "public.refunds"
+  ],
+  "last_commit": {
+    "lsn": "0/1D706C8",
+    "at": "2026-10-04T09:04:45.900917+05:30"
+  },
+  "last_heartbeat_at": "2026-10-04T09:06:17.978465+05:30",
+  "frames": {
+    "bound": 2,
+    "foreign_ledger": 0,
+    "forged_marker": 0,
+    "forged_marker_nontx": 0,
+    "marker_count": 0,
+    "marker_mismatch": 0,
+    "missing": 0,
+    "publication_gap": 0,
+    "unattributed": 1
+  },
+  "recent": [
+    {
+      "commit_lsn": "0/1D706C8",
+      "class": "bound",
+      "action": "act_01m42fmxw5n5csd4pnjansvtkr",
+      "counts": {
+        "public.orders": {
+          "delete": 0,
+          "insert": 0,
+          "truncate": 0,
+          "update": 301
+        }
+      },
+      "flags": [],
+      "at": "2026-10-04T03:34:45.912637Z"
+    },
+    {
+      "commit_lsn": "0/1D514D0",
+      "class": "unattributed",
+      "action": null,
+      "counts": {
+        "public.orders": {
+          "delete": 0,
+          "insert": 0,
+          "truncate": 0,
+          "update": 1
+        }
+      },
+      "flags": [],
+      "at": "2026-10-04T03:34:45.884335Z"
+    },
+    {
+      "commit_lsn": "0/1D4FB88",
+      "class": "bound",
+      "action": "act_01m42fmxqpmmtc33dw8n5xj7wx",
+      "counts": {
+        "public.orders": {
+          "delete": 0,
+          "insert": 0,
+          "truncate": 0,
+          "update": 1
+        }
+      },
+      "flags": [],
+      "at": "2026-10-04T03:34:45.772378Z"
+    }
+  ],
+  "updated_at": "2026-10-04T03:36:26.106904Z"
+}

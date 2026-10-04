@@ -1,0 +1,134 @@
+{
+  "object": "policy_decision",
+  "decision": "allow",
+  "code": null,
+  "source": "rule",
+  "rule_id": "allow-order-status-updates",
+  "rule_line": 64,
+  "reason": null,
+  "message": "",
+  "approval": null,
+  "verify": "L2",
+  "notify": [],
+  "budget": null,
+  "policy": {
+    "id": "pol_01m42fmxmvwje3p9x57t2kjkdq",
+    "name": "acme-demo",
+    "version": 1,
+    "version_id": "pv_01m42fmxmwvxegzp25b7yhbk0e",
+    "version_hash": "sha256:23e1ae1de718fca29abeb6f3caa943295c277762f35482d8fbfb62f8a1985284",
+    "mode": "enforce"
+  },
+  "shadow": null,
+  "facts": {
+    "sql": {
+      "present": true,
+      "kind": "update",
+      "category": "write",
+      "kinds": [
+        "update"
+      ],
+      "statements": 1,
+      "multi": false,
+      "writes": true,
+      "write_kinds": [
+        "update"
+      ],
+      "has_where": true,
+      "unbounded_write": false,
+      "where_trivial": false,
+      "has_returning": false,
+      "cte_write": false,
+      "select_into": false,
+      "copy_program": false,
+      "explain_analyze": false,
+      "locks_rows": false,
+      "tables": [
+        "public.orders"
+      ],
+      "tables_complete": true,
+      "functions": [],
+      "dangerous_functions": [],
+      "write_functions": [],
+      "unknown_functions": [],
+      "ambiguous": false,
+      "reasons": [],
+      "bytes": 57
+    },
+    "time": {
+      "now": "2026-10-04T03:37:33.189Z",
+      "hour": 3,
+      "minute": 37,
+      "weekday": "sun",
+      "date": "2026-10-04"
+    }
+  },
+  "trace": [
+    {
+      "step": "stop",
+      "result": "pass",
+      "detail": "agent active · org running"
+    },
+    {
+      "step": "budget",
+      "id": "agent-rate",
+      "result": "pass",
+      "detail": "0 of 30 calls this minute"
+    },
+    {
+      "step": "rule",
+      "id": "block-destructive-sql",
+      "line": 37,
+      "result": "no_match",
+      "detail": "when → false",
+      "cost": 3
+    },
+    {
+      "step": "rule",
+      "id": "block-schema-changes",
+      "line": 42,
+      "result": "no_match",
+      "detail": "when → false",
+      "cost": 6
+    },
+    {
+      "step": "rule",
+      "id": "block-unscoped-writes",
+      "line": 47,
+      "result": "no_match",
+      "detail": "when → false",
+      "cost": 2
+    },
+    {
+      "step": "rule",
+      "id": "no-deletes-on-orders",
+      "line": 52,
+      "result": "no_match",
+      "detail": "when → false",
+      "cost": 6
+    },
+    {
+      "step": "rule",
+      "id": "undo-needs-approval",
+      "line": 57,
+      "result": "no_match",
+      "detail": "match doesn't cover this action"
+    },
+    {
+      "step": "rule",
+      "id": "allow-order-status-updates",
+      "line": 64,
+      "result": "match",
+      "detail": "when → true",
+      "cost": 21
+    },
+    {
+      "step": "rule",
+      "result": "not_evaluated",
+      "detail": "10 more rules not evaluated"
+    }
+  ],
+  "errors": [],
+  "sqlguard_version": "1",
+  "evaluated_in_us": 52
+}

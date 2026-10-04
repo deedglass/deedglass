@@ -2,6 +2,8 @@ package ledger
 
 import (
 	"encoding/json"
+	"fmt"
+	"strings"
 	"testing"
 	"time"
 )
@@ -101,14 +103,14 @@ func TestAttentionOrderAndCap(t *testing.T) {
 	var a attention
 	seq, deed := int64(42), "deed_x"
 	a.chain(&ChainCheck{Status: CheckIntact})
-	if len(a.items) != 0 {
+	if len(a.list()) != 0 {
 		t.Fatal("an intact chain made an item")
 	}
 	a.chain(&ChainCheck{Status: CheckBroken, Break: &ChainBreak{Seq: &seq, Deed: &deed, Code: "body_hash_mismatch", Message: "A sentence."}})
-	if len(a.items) != 1 || a.items[0].Kind != AttentionChainBroken || a.items[0].Severity != SeverityHigh || *a.items[0].Ref != deed {
-		t.Fatalf("chain: %+v", a.items)
+	if items := a.list(); len(items) != 1 || items[0].Kind != AttentionChainBroken || items[0].Severity != SeverityHigh || *items[0].Ref != deed {
+		t.Fatalf("chain: %+v", items)
 	}
-	if _, ok := a.items[0].Data["message"]; ok {
+	if _, ok := a.list()[0].Data["message"]; ok {
 		t.Error("chain_broken carries the break's sentence; the server sends data, not sentences")
 	}
 	a.budgets([]budgetAgent{
@@ -120,7 +122,8 @@ func TestAttentionOrderAndCap(t *testing.T) {
 		{id: "agt_e", name: "empty-bot", budgets: AgentBudgets{CallsPerDay: i64(0)}, usage: AgentUsage{CallsToday: 5}}, // no limit
 	}, now)
 	var got []string
-	for _, it := range a.items[1:] {
+	items := a.list()
+	for _, it := range items[1:] {
 		got = append(got, it.Data["agent"].(string)+"/"+it.Data["budget"].(string))
 		if it.Kind != AttentionBudgetNear || it.Severity != SeverityLow || !time.Time(it.At).Equal(now) {
 			t.Errorf("budget item: %+v", it)
@@ -135,16 +138,17 @@ func TestAttentionOrderAndCap(t *testing.T) {
 			t.Fatalf("budget_near: %v, want %v", got, want)
 		}
 	}
-	if a.items[2].Data["currency"] != "inr" {
-		t.Errorf("spend item without its currency: %+v", a.items[2].Data)
+	if items[2].Data["currency"] != "inr" {
+		t.Errorf("spend item without its currency: %+v", items[2].Data)
 	}
 	for range 20 {
 		a.add(&AttentionItem{Object: "attention_item", Kind: AttentionMismatch})
 	}
-	if len(a.items) != AttentionMax {
-		t.Fatalf("%d items, want at most %d", len(a.items), AttentionMax)
+	items = a.list()
+	if len(items) != AttentionMax {
+		t.Fatalf("%d items, want at most %d", len(items), AttentionMax)
 	}
-	b, err := json.Marshal(a.items[0])
+	b, err := json.Marshal(items[0])
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -154,6 +158,96 @@ func TestAttentionOrderAndCap(t *testing.T) {
 		if _, ok := m[k]; !ok {
 			t.Errorf("attention_item lacks %q: %s", k, b)
 		}
+	}
+}
+
+// attentionOf builds the selection from counts of each kind (system items as slot_lagging).
+func attentionOf(system, mismatch, expiring, budget int) []AttentionItem {
+	var a attention
+	for kind, n := range map[string]int{AttentionSlotLagging: system, AttentionMismatch: mismatch,
+		AttentionApprovalExpiry: expiring, AttentionBudgetNear: budget} {
+		for i := range n {
+			a.add(&AttentionItem{Object: "attention_item", Kind: kind, Ref: ref(fmt.Sprintf("%s-%02d", kind, i))})
+		}
+	}
+	return a.list()
+}
+
+func kindsOf(items []AttentionItem) string {
+	var b strings.Builder
+	for i, it := range items {
+		if i > 0 {
+			b.WriteByte(',')
+		}
+		b.WriteString(it.Kind)
+	}
+	return b.String()
+}
+
+// TestAttentionReservations (S26, DL-041): mismatches never crowd out expiring approvals and budget
+// warnings; system items are never dropped for the reservations; spare slots go back to the others;
+// each group keeps its own order (the first n of it) and the answer keeps the priority order.
+func TestAttentionReservations(t *testing.T) {
+	rep := func(kind string, n int) []string {
+		out := make([]string, n)
+		for i := range out {
+			out[i] = kind
+		}
+		return out
+	}
+	join := func(parts ...[]string) string {
+		var all []string
+		for _, p := range parts {
+			all = append(all, p...)
+		}
+		return strings.Join(all, ",")
+	}
+	const (
+		sys, mis, exp, bud = AttentionSlotLagging, AttentionMismatch, AttentionApprovalExpiry, AttentionBudgetNear
+	)
+	cases := []struct {
+		system, mismatch, expiring, budget int
+		want                               string
+	}{
+		{0, 20, 4, 3, join(rep(mis, 3), rep(exp, 3), rep(bud, 2))},
+		{0, 20, 0, 0, join(rep(mis, 8))},
+		{2, 20, 4, 3, join(rep(sys, 2), rep(mis, 1), rep(exp, 3), rep(bud, 2))},
+		{6, 20, 4, 3, join(rep(sys, 6), rep(exp, 2))},
+		{7, 20, 4, 3, join(rep(sys, 7), rep(exp, 1))},
+		{8, 20, 4, 3, join(rep(sys, 8))},
+		{12, 0, 4, 3, join(rep(sys, 8))},
+		{0, 2, 1, 0, join(rep(mis, 2), rep(exp, 1))},
+		{0, 0, 10, 10, join(rep(exp, 6), rep(bud, 2))}, // reservations 3+2, then 3 more expiring before budgets
+		{0, 1, 10, 10, join(rep(mis, 1), rep(exp, 5), rep(bud, 2))},
+		{0, 4, 1, 10, join(rep(mis, 4), rep(exp, 1), rep(bud, 3))},
+		{1, 0, 0, 0, sys},
+		{0, 0, 0, 0, ""},
+	}
+	for _, c := range cases {
+		got := attentionOf(c.system, c.mismatch, c.expiring, c.budget)
+		if kindsOf(got) != c.want {
+			t.Errorf("%d system, %d mismatch, %d expiring, %d budget:\n got %s\nwant %s", c.system, c.mismatch, c.expiring, c.budget, kindsOf(got), c.want)
+		}
+		// Each group is its first n items, in order.
+		next := map[string]int{}
+		for _, it := range got {
+			if want := fmt.Sprintf("%s-%02d", it.Kind, next[it.Kind]); *it.Ref != want {
+				t.Errorf("%v: %s, want %s", c, *it.Ref, want)
+			}
+			next[it.Kind]++
+		}
+	}
+	// The real system kinds keep their order ahead of everything.
+	var a attention
+	seq, deed := int64(1), "deed_x"
+	for range 20 {
+		a.add(&AttentionItem{Object: "attention_item", Kind: AttentionMismatch})
+	}
+	a.add(&AttentionItem{Object: "attention_item", Kind: AttentionApprovalExpiry})
+	a.chain(&ChainCheck{Status: CheckBroken, Break: &ChainBreak{Seq: &seq, Deed: &deed, Code: "body_hash_mismatch"}})
+	a.add(&AttentionItem{Object: "attention_item", Kind: AttentionOrgStopped})
+	if got, want := kindsOf(a.list()), "chain_broken,org_stopped,mismatch,mismatch,mismatch,mismatch,mismatch,approval_expiring"; got != want {
+		t.Errorf("got %s, want %s", got, want)
 	}
 }
 

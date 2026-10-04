@@ -1,0 +1,25 @@
+{
+  "object": "seal_key_set",
+  "issuer": "http://127.0.0.1:18241",
+  "updated_at": "2026-10-04T03:34:38.100Z",
+  "keys": [
+    {
+      "object": "seal_key",
+      "id": "sk_01m42fmp8fa1zzy2yx6dpdf6vr",
+      "alg": "Ed25519",
+      "public_key": "THAV2Is67TWvx3IsxciQmIXqdg87gX2m2LjvtoX52QI",
+      "thumbprint": "sha256:738775328e65f9c7049a04d40371e3ba07b05a27cc3f661dbb76cf1e57756f2b",
+      "status": "active",
+      "activated_at": "2026-10-04T03:34:38.100Z",
+      "retired_at": null,
+      "revoked_at": null,
+      "jwk": {
+        "kty": "OKP",
+        "crv": "Ed25519",
+        "x": "THAV2Is67TWvx3IsxciQmIXqdg87gX2m2LjvtoX52QI",
+        "kid": "sk_01m42fmp8fa1zzy2yx6dpdf6vr",
+        "use": "sig"
+      }
+    }
+  ]
+}

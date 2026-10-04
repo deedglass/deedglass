@@ -153,10 +153,151 @@ banner (content stays; the Overview says `Last updated 14:02`). Dark and light, 
   (suspend or resume; stop with the typed confirmation; start with a reason). Status changes arrive
   live through `agent.*` events.
 
+## The screens (S26)
+
+S26 makes the Console operable: approving, editing and enforcing policies, adding connectors, and
+running the org, all without the CLI. The API still decides every rule; the Console hides or
+disables what a role can't do and says why.
+
+### Approvals (`/app/approvals`, `/app/approvals/{id}`)
+
+- **Designed at 360 px first.** Under 1024 px the inbox and an approval are separate screens; from
+  1024 px they sit side by side (a 400 px list and the detail). Selecting an approval changes the
+  URL, so a reload or a shared link opens the same one. `?tab=history` shows decided approvals,
+  filtered by status and agent.
+- **The card:** the tool and the countdown, the one-line effect (Stripe `$120.00 to cus_Q3…`,
+  Postgres `UPDATE ~1 row in public.orders`, GitHub `merge PR #212 in acme/api`, otherwise the side
+  effect and the tool), the agent and who it acts for, the rule and `1 of 2` when two people must
+  countersign. The effect comes from the server's context snapshot, never from the agent's text.
+- **The detail, in order:** the effect, the rule and its reason, the SQL with its kind, tables,
+  WHERE clause and `≈ 1 row (EXPLAIN estimate)`, the arguments exactly as the agent sent them (in a
+  bordered region labelled `Arguments (from the agent)`), the agent's last 10 actions with their
+  verdicts, the decisions so far, and the expiry: `Expires at 09:50 (in 9 min). If nobody decides,
+  it is denied automatically.`
+- **Deciding:** Approve and Deny open a sheet (a bottom sheet on a phone, a dialog from 640 px);
+  nothing is sent without it. Approve takes an optional reason, Deny needs 3 to 280 characters.
+  Both send the reason and the `context_digest` of what you reviewed, with one Idempotency-Key per
+  sheet, so a double tap sends once. ⌘ Enter or Ctrl Enter submits. If the context changed, the
+  sheet shows `What you reviewed is out of date. Reload the approval and review it again.` and
+  sends nothing else.
+- **Keyboard (desktop):** `↑`/`↓` (or `j`/`k`) move, `A` opens Approve, `D` opens Deny. Neither
+  submits by itself.
+- **Four-eyes, self and races:** `1 of 2 countersigned · Priya Raman`; after your countersign the
+  buttons give way to `You countersigned at 09:41. Waiting for one more approver.`; an action that
+  runs on your behalf shows `You asked for this action, so someone else must approve it. You can
+  still deny it.` and Deny only (S22 lets you deny it); a decision by someone else turns the card
+  read-only in place (`Priya Raman approved this 20 seconds ago.`), and a 409 from a race shows the
+  server's sentence. Nothing is lost silently.
+- **Follow-through:** after an approve the card stays and follows its action:
+  `Countersigned by you · running…`, `◐ Running`, then `Executed · L2 · VERIFIED · deed sealed`
+  with the Mirror's Sealed moment once and a link to the action. After 10 s it leaves Pending.
+- **Offline:** the buttons are disabled with `You're offline. Decisions need a connection so they
+  can be sealed.` Decisions are never queued.
+- The emailed approval page (S22) links back with `Open in Console` in every state.
+
+### Policies (`/app/policies`, `/app/policies/{id}`)
+
+- **The list:** name, status (`Enforced`, `Shadow` in a violet outline, `Inactive`), the active and
+  latest versions, the rules count and who changed it when. `New policy` opens the six starters
+  from `examples/policies` (bundled at build time, loaded on demand) or `Blank`; the new policy is
+  v1 and nothing is enforced until you choose to.
+- **A policy** (`?tab=editor|dry-run|tests|versions|replay&v=3&line=55`): the header shows the
+  version you opened (`v4 · sha256:3f9a…c21e`, the author, notes) and the actions `Save as v5`
+  (when the buffer differs), `Run in shadow` and `Enforce`.
+- **Editor:** see `docs/POLICY_EDITOR.md`. Lint runs 400 ms after you stop typing; diagnostics
+  show in the gutter, as underlines and in the list below with `Apply fix` and the docs link. A
+  viewer gets the editor read-only: `Viewers can read policies. Editing needs the Admin role.`
+  Leaving with unsaved changes asks `Discard changes to acme-demo?`. Saving identical content
+  answers `No changes: this is already v4.` (comments don't change a version's hash).
+- **Dry run:** a tool (suggested from your connectors), SQL for `postgres.*`, JSON arguments
+  (strict: a syntax error names its line, a repeated key is refused), an agent, on behalf of, a
+  time; evaluated against the unsaved draft, the enforced version, or the version you opened. The
+  result is the decision, the Gate's message, the rule with its line (click to reveal it in the
+  editor), the trace step by step, the SQL facts and the evaluation time.
+- **Tests:** paste a cases file or choose one (read in the browser, up to 1 MiB, sent only to this
+  server's `POST /v1/policies/test` with the buffer). `24 cases passed · every rule covered`, or
+  what failed and which rules have no case.
+- **Versions:** every version with its status, hash, author and notes; tick two to compare them
+  (a line diff with neutral highlights: a policy diff isn't a verdict). The latest two are
+  compared on open.
+- **Shadow and enforce:** `Run acme-demo v4 in shadow?` needs a reason. `Enforce acme-demo v3?`
+  shows the exact version and hash, needs the policy's name typed and a reason, and, for a
+  version whose default is allow, a ticked `I understand this policy allows every action no rule
+  matches.` The toast reads `acme-demo v3 enforced · deed sealed` with `View deed`. Rolling back is
+  `Enforce v2 again` on an older row. While a shadow runs, the header says
+  `Shadow disagreed on 3 of 212 actions in the last 24 h · View`, which opens the feed filtered to
+  `shadow_differs=true`.
+- **Replay:** the form posts to S27's `POST /v1/policies/{id}/versions/{v}/replay` and follows the
+  job. Until S27 lands, the server answers 404 and the tab says
+  `Replay isn't available on this server yet. Use Dry run to test a single action.`
+
+### Connectors (`/app/connectors`, `/app/connectors/new`, `/app/connectors/{id}`)
+
+- **The list:** name, type (an icon and its title), the levels it reaches, health (`Passing`,
+  `Warnings`, `Failing`, `Not tested`), the credential (`Set · bearer · …9f2c · updated 2h ago` or
+  `Not set`) and the tool count.
+- **Adding one** is three steps, each its own URL: the type (cards from `GET /v1/connector-types`),
+  the configuration (a form drawn from the type's `config_schema`: text, URLs, numbers with their
+  range, switches, selects, checkboxes for enum lists, chips for string lists, fieldsets for nested
+  objects, and JSON where the schema goes beyond that), then the credential, followed by a test.
+  Server errors land under the field their `param` names, word for word.
+- **Credentials are write-only here too:** the fields are never pre-filled, a `Show` toggle resets
+  when you leave the field, and the values are cleared from the page as soon as the save answers,
+  success or not. `Remove` warns that agents will get `connector_unavailable`.
+- **Test:** each check as ✓ (quiet), ○ or ✕ with its detail, the fix and `Copy SQL`, which copies
+  the SQL behind the header `-- Review before running. Run as a superuser on <db>.` Nothing runs
+  from the Console. The button rests 6 s after a run (the server allows 10 a minute).
+- **Postgres:** the test is the readiness report (`Ready for L2 · 14 passed · 3 notes · 0 failed`,
+  or `Not ready for L2 · 1 item to fix`), with the provider's note when it applies and the CLI
+  equivalent. The Witness card reads the decoder S20 already records (`GET …/decoder`):
+  `Witness · healthy · 12 MB behind · last commit 4s ago`; lagging adds
+  `L2 verdicts will arrive late.`, an invalidated slot gives the recovery steps. It never connects
+  to your database when the page loads.
+- **Tools:** name, side effect (`destructive` is the one red), idempotency, levels, and a link that
+  dry-runs the tool against the enforced policy.
+- **Editing** the configuration sends `expected_config_hash`; if it changed meanwhile:
+  `This connector changed since you opened it. Reload to see the latest.`
+
+### Settings (`/app/settings/{section}`)
+
+A side menu on desktop, a list on a phone; each section has its own URL (`/app/settings/org` still
+opens General).
+
+| Section | What it does | Who |
+|---|---|---|
+| General | org name, slug, time zone (searchable), payload retention in days. `After 90 days, request and result bodies are removed. Deeds hold digests only, so they keep verifying.` | read: everyone · edit: admin · retention: owner |
+| Members | name, email, role, status, joined; invite (an email and a role), resend an invite, change a role (owner), remove (typed email), leave. The last owner can't be removed or demoted (S07's message) | invite: admin · roles: owner |
+| API keys | org admin keys: create (shown once), roll, revoke (typed name) | admin, signed in |
+| Approvals | email links (Decide or Review only), email detail (Summary or Full), self-countersign (Deny or Allow, which needs the org slug typed) | read: admin · edit: owner |
+| Webhooks | endpoints, events, status; add (the `whsec_…` secret shown once), send a test, recent deliveries, delete (typed host) | admin |
+| Seal keys | the server's public keys, read-only. `Whoever runs this Deedglass server rotates seal keys with deedglass keys rotate. Old keys stay listed so older deeds keep verifying.` | everyone |
+| Notifications | who receives approval emails, the org's email defaults, and where Slack approvals live (the Slack connector, S29) | admin |
+| Danger zone | Stop all agents, Start all agents (owner), export every deed | admin · owner |
+
+Seal keys have no rotate button because they belong to the server, not the org. Retention prunes
+payloads, never deeds.
+
+### Roles in the Console
+
+| Control | Viewer | Admin | Owner |
+|---|---|---|---|
+| Approve or deny | only if a rule names them | when the rule's approvers include them | same as Admin |
+| Policy edit, save, shadow, enforce | read-only editor; dry run and tests allowed | yes | yes |
+| Connector create, edit, credentials, test | read and test results only | yes | yes |
+| Members invite / role change | no / no | viewers and admins / no | yes / yes |
+| Org keys, webhooks | no | yes | yes |
+| Retention | no | no | yes |
+| Approval settings | no | read | yes |
+| Stop all / Start all | no / no | yes / no | yes / yes |
+
+`web/e2e/roles.spec.ts` checks every row twice: the UI state, and the API answering the page's own
+call with the documented status.
+
 ## Adding a screen
 
 1. The page in `web/src/pages/` (and `<screen>/detail.astro` if it has ids), on `AppShell`.
-2. Every string in `web/src/lib/copy.ts`.
+2. Every string in `web/src/lib/copy.ts`, or for a larger screen in its own `web/src/lib/copy-<area>.ts`
+   (S26), which `test/checks.test.ts` walks too, so a page bundles only its own strings.
 3. The four states: loading (a skeleton in the final shape), empty (one teaching sentence, one
    action), error (the server's message, the request id, Retry) and no permission.
 4. Live updates through `stream().on(...)`, and a refetch on `onResync`.
@@ -175,7 +316,17 @@ closedby>` isn't in stable Safari, so sheets implement their own light dismiss.
 - No offline mode: without the network the Console says so and reconnects when it can.
 - No mobile app; the Console works down to 360 px wide.
 - No third-party analytics, fonts, scripts or CDNs, ever.
-- Approvals, Policies, Connectors and Settings are still S24's stubs (S26 builds them).
+- No collaborative editing of policies: the last save wins, versions never change, and the diff
+  shows what changed between them.
+- No Slack approvals in the Console until S29; Slack approvals will be set on the Slack connector.
+- Replay needs S27's job API; until then the tab says so. Replay can only re-decide actions whose
+  stored inputs haven't been pruned; those count as unknown.
+- Approvals aren't queued offline, and the Console has no push notifications (a PWA with Web Push
+  would need an ADR; v2).
+- The editor has no syntax colouring (plain text over a diagnostics mirror) and no completion.
+- Deleting an org isn't in the Console (no route yet; the v0.2 backlog in `docs/LIMITATIONS.md`).
+- Members have no last-active time, and invites have no separate resend route: Resend posts the
+  invite again, which S07 allows for an invited member.
 - The browser seal check trusts the keys this server serves; it is a convenience, not an
   independent check.
 - The REST action detail carries the request and result (S13); the Console renders them only when

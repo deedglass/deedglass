@@ -1,27 +1,47 @@
 ---
+// Settings (S26 §3.4): eight sections, each its own URL (/app/settings/<section>; the server serves
+// this page for all of them). A sub-nav on the left from 1024 px, a scrolling row from 768 px, and
+// under 768 px the section list is its own screen with a back link on each section.
+// src/controllers/settings.ts renders the sections.
 import AppShell from '../layouts/AppShell.astro';
 import PageHead from '../components/PageHead.astro';
+import Icon from '../components/Icon.astro';
 import { copy } from '../lib/copy.ts';
+import { settingsCopy } from '../lib/copy-settings.ts';
 import { SETTINGS_SECTIONS } from '../lib/nav.ts';
 const p = copy.pages.settings;
+const c = settingsCopy;
 ---
 <AppShell title={p.title} screen="settings">
   <PageHead title={p.title} lede={p.lede} />
-  <div class="tabs" role="tablist" aria-label="Settings sections" id="settings-tabs">
-    {SETTINGS_SECTIONS.map((s, i) => (
-      <button type="button" role="tab" id={`tab-${s.key}`} aria-controls="settings-panel" aria-selected={i === 0 ? 'true' : 'false'} tabindex={i === 0 ? 0 : -1} data-section={s.key}>{s.label}</button>
-    ))}
+  <div class="settings" id="settings" data-view="section">
+    <nav class="settings-nav" id="settings-nav" aria-label={c.navLabel}>
+      <ul>
+        {SETTINGS_SECTIONS.map((s) => (
+          <li>
+            <a href={`/app/settings/${s.key}`} data-section={s.key}>
+              <span class="settings-nav-label">{s.label}</span>
+              <Icon name="chevron-right" size={16} class="settings-nav-chev" />
+            </a>
+          </li>
+        ))}
+      </ul>
+    </nav>
+    <section class="settings-main" aria-labelledby="settings-h">
+      <a class="settings-back" href="/app/settings" data-settings-link="list"><Icon name="chevron-right" size={16} class="settings-back-icon" />{c.back}</a>
+      <h2 class="t-title-3 settings-title" id="settings-h" tabindex="-1">{c.sections.general.title}</h2>
+      <div class="settings-body" id="settings-body" aria-busy="true" aria-live="off">
+        <div class="set-group card" aria-hidden="true">
+          {[0, 1, 2, 3, 4, 5].map(() => (
+            <div class="set-row">
+              <div class="set-row-text"><span class="skel skel-line set-skel-label"></span><span class="skel skel-line set-skel-help"></span></div>
+              <div class="set-row-control"><span class="skel set-skel-control"></span></div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
   </div>
-  <section class="tabpanel" role="tabpanel" id="settings-panel" aria-labelledby="tab-org">
-    <div class="card card-pad" id="settings-body" aria-busy="true">
-      <dl class="kv">
-        <dt>Org</dt><dd><span class="skel skel-line w-40"></span></dd>
-        <dt>Slug</dt><dd><span class="skel skel-line w-24"></span></dd>
-        <dt>Time zone</dt><dd><span class="skel skel-line w-32"></span></dd>
-        <dt>Your role</dt><dd><span class="skel skel-line w-16"></span></dd>
-      </dl>
-    </div>
-  </section>
 </AppShell>
 <script>
   import { bootShell } from '../controllers/shell.ts';

@@ -431,6 +431,22 @@ it refuses rather than guess:
   starter policy asks another person to countersign, so a one-admin org can't run an undo until it
   has a second admin or sets `self_countersign: allow` in its approval settings.
 
+## The Console's control screens (S26)
+
+- **An org can't be deleted from the Console.** There is no route for it yet (owner only, the typed
+  slug, a 7-day grace period you can cancel, an admin deed, and a purge worker). It is on the v0.2
+  backlog; until then an operator removes an org in the database.
+- **Policy editing is single-writer.** Two people editing the same policy each save their own
+  version; the last save is the newest version. Versions never change and the diff shows exactly
+  what each one changed.
+- **The editor is plain text** with diagnostics underlined from the server's lint; it has no syntax
+  colouring and no completion, and quick fixes exist only where the lint names the replacement
+  (`Did you mean "decision"?`).
+- **Readiness and the Witness card show what Deedglass last recorded.** The readiness report runs
+  when you ask (it connects to your database, at most 10 times a minute); the Witness card reads
+  the decoder's own record and never connects on page load, so it can be up to one decoder poll
+  behind.
+
 ## What this page does not do
 
 It does not list bugs or missing features on the schedule. It lists limits of the design that stay true after they ship.

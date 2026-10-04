@@ -1,0 +1,14 @@
+{
+  "object": "policy_active_set",
+  "enforce": {
+    "policy": "pol_01m42fmxmvwje3p9x57t2kjkdq",
+    "name": "acme-demo",
+    "version": 1,
+    "version_id": "pv_01m42fmxmwvxegzp25b7yhbk0e",
+    "version_hash": "sha256:23e1ae1de718fca29abeb6f3caa943295c277762f35482d8fbfb62f8a1985284",
+    "activation": "pa_01m42fmxnhfjfy02v115hsr6hj",
+    "activated_at": "2026-10-04T03:34:45.682Z",
+    "deed": "deed_01m42fmxnhyy694bfbjg1zg2k6"
+  },
+  "shadow": null
+}

@@ -1,0 +1,176 @@
+{
+  "object": "list",
+  "data": [
+    {
+      "object": "action",
+      "id": "act_01m42frkmg21fc3dyyv33nkbgp",
+      "created_at": "2026-10-04T03:36:46.479Z",
+      "livemode": true,
+      "agent": {
+        "id": "agt_01m42fmq6ja96nbpjmk4nnh26r",
+        "name": "support-bot"
+      },
+      "tool": "postgres.execute",
+      "connector": null,
+      "mode": "gateway",
+      "state": "pending_approval",
+      "status": "pending_approval",
+      "on_behalf_of": "u_4821",
+      "session": "chat_77",
+      "decision": {
+        "outcome": "require_approval",
+        "code": "approval_required",
+        "source": "rule",
+        "rule_id": "orders-writes-need-approval",
+        "reason": "Writes to the orders database need a person to countersign.",
+        "message": "Waiting for approval under policy \"orders-writes-need-approval\": Writes to the orders database need a person to countersign.",
+        "policy": "pol_01m42fmxmvwje3p9x57t2kjkdq",
+        "policy_version": "pv_01m42fmxmwvxegzp25b7yhbk0e",
+        "shadow": null
+      },
+      "policy": {
+        "id": "pol_01m42fmxmvwje3p9x57t2kjkdq",
+        "version_id": "pv_01m42fmxmwvxegzp25b7yhbk0e",
+        "mode": "enforce",
+        "decision": "require_approval",
+        "rule_id": "orders-writes-need-approval"
+      },
+      "approval": {
+        "id": "apr_01m42frkmj054kx505efq4mbhe",
+        "status": "pending",
+        "expires_at": "2026-10-04T04:06:46.482Z"
+      },
+      "execution": null,
+      "witness": null,
+      "cost": null,
+      "request_digest": "sha256:4ac67a6917aac234a5c15f689c1a503670b63349ddf2b4d47b03d896075115ba",
+      "result_digest": null,
+      "payload_pruned_at": null,
+      "deed": null,
+      "next_action": {
+        "type": "await_approval",
+        "approval": "apr_01m42frkmj054kx505efq4mbhe",
+        "expires_at": "2026-10-04T04:06:46.482Z",
+        "poll_url": "/v1/actions/act_01m42frkmg21fc3dyyv33nkbgp?wait=25"
+      }
+    },
+    {
+      "object": "action",
+      "id": "act_01m42fmxw5n5csd4pnjansvtkr",
+      "created_at": "2026-10-04T03:34:45.892Z",
+      "livemode": true,
+      "agent": {
+        "id": "agt_01m42fmq6ja96nbpjmk4nnh26r",
+        "name": "support-bot"
+      },
+      "tool": "postgres.execute",
+      "connector": null,
+      "mode": "gateway",
+      "state": "sealed",
+      "status": "executed",
+      "on_behalf_of": null,
+      "session": null,
+      "decision": {
+        "outcome": "allow",
+        "code": null,
+        "source": "rule",
+        "rule_id": "allow-order-status-updates",
+        "reason": null,
+        "message": null,
+        "policy": "pol_01m42fmxmvwje3p9x57t2kjkdq",
+        "policy_version": "pv_01m42fmxmwvxegzp25b7yhbk0e",
+        "shadow": null
+      },
+      "policy": {
+        "id": "pol_01m42fmxmvwje3p9x57t2kjkdq",
+        "version_id": "pv_01m42fmxmwvxegzp25b7yhbk0e",
+        "mode": "enforce",
+        "decision": "allow",
+        "rule_id": "allow-order-status-updates"
+      },
+      "approval": null,
+      "execution": {
+        "status": "succeeded",
+        "started_at": "2026-10-04T03:34:45.895Z",
+        "finished_at": "2026-10-04T03:34:45.901Z",
+        "latency_ms": 5,
+        "error_code": null,
+        "error_message": null
+      },
+      "witness": {
+        "object": "witness",
+        "level": "L2",
+        "verdict": "MISMATCH",
+        "method": "postgres.pgoutput",
+        "required_level": "L2",
+        "detail_digest": "sha256:060d4d7a58eb8cc34962ef23dd897173b359998992da548ce515b1948a1264dc"
+      },
+      "cost": null,
+      "request_digest": "sha256:4d57532ff25215063b85d141d5f46b88f2424a759d485ea1ecd33ddd4c141ca1",
+      "result_digest": "sha256:bac8c854b5b6cf225e63ed0f2b03eaa6561230a8432c6d1391a4493d3f2abfc6",
+      "payload_pruned_at": null,
+      "deed": "deed_01m42fmxx625x1tve27as9dvwz",
+      "next_action": null
+    },
+    {
+      "object": "action",
+      "id": "act_01m42fmxqpmmtc33dw8n5xj7wx",
+      "created_at": "2026-10-04T03:34:45.748Z",
+      "livemode": true,
+      "agent": {
+        "id": "agt_01m42fmq6ja96nbpjmk4nnh26r",
+        "name": "support-bot"
+      },
+      "tool": "postgres.execute",
+      "connector": null,
+      "mode": "gateway",
+      "state": "sealed",
+      "status": "executed",
+      "on_behalf_of": null,
+      "session": null,
+      "decision": {
+        "outcome": "allow",
+        "code": null,
+        "source": "rule",
+        "rule_id": "allow-order-status-updates",
+        "reason": null,
+        "message": null,
+        "policy": "pol_01m42fmxmvwje3p9x57t2kjkdq",
+        "policy_version": "pv_01m42fmxmwvxegzp25b7yhbk0e",
+        "shadow": null
+      },
+      "policy": {
+        "id": "pol_01m42fmxmvwje3p9x57t2kjkdq",
+        "version_id": "pv_01m42fmxmwvxegzp25b7yhbk0e",
+        "mode": "enforce",
+        "decision": "allow",
+        "rule_id": "allow-order-status-updates"
+      },
+      "approval": null,
+      "execution": {
+        "status": "succeeded",
+        "started_at": "2026-10-04T03:34:45.755Z",
+        "finished_at": "2026-10-04T03:34:45.762Z",
+        "latency_ms": 7,
+        "error_code": null,
+        "error_message": null
+      },
+      "witness": {
+        "object": "witness",
+        "level": "L2",
+        "verdict": "VERIFIED",
+        "method": "postgres.pgoutput",
+        "required_level": "L2",
+        "detail_digest": "sha256:4e98c24157486f5e4d774dffb0e7c44c5e2d178f002c2f15fe1cecf6c1746b0f"
+      },
+      "cost": null,
+      "request_digest": "sha256:4d57532ff25215063b85d141d5f46b88f2424a759d485ea1ecd33ddd4c141ca1",
+      "result_digest": "sha256:bac8c854b5b6cf225e63ed0f2b03eaa6561230a8432c6d1391a4493d3f2abfc6",
+      "payload_pruned_at": null,
+      "deed": "deed_01m42fmxrmjekn5tw2p9txr06m",
+      "next_action": null
+    }
+  ],
+  "has_more": true,
+  "next_cursor": "eyJpZCI6ImFjdF8wMW00MmZteHFwbW10YzMzZHc4bjV4ajd3eCIsImsiOiIyMDI2LTEwLTA0VDAzOjM0OjQ1Ljc0ODU1OVoiLCJxIjoiYWFmZWUwYTE1Zjk4OGJiMyIsInYiOjF9"
+}

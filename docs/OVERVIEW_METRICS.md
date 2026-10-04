@@ -118,9 +118,19 @@ id the Console links to, or null) and `data`. The server sends kinds and data, n
 the Console turns them into words. The one exception is a mismatch's witness summary, which is
 the Witness's own sentence, verbatim.
 
-Items come in this priority order. A kind lower in the list appears only while there is room left
-under the cap of 8, so with many mismatches the later kinds may not show; their counts are still
-on the screen (the approvals tile counts expiring approvals).
+Items come in the priority order of the table below. The 8 slots are filled in this order:
+
+1. Every system item (`chain_broken`, `org_stopped`, `slot_invalidated`, `slot_lagging`), up to
+   all 8. System items are never dropped to make room for anything else.
+2. Up to 3 `approval_expiring` items, then up to 2 `budget_near` items, from the slots left.
+3. `mismatch` items fill what is left.
+4. If slots still remain, more `approval_expiring` items, then more `budget_near` items.
+
+So 20 mismatches, 4 expiring approvals and 3 budget warnings show as 3 mismatches, 3 expiring
+approvals and 2 budget warnings; 20 mismatches alone show as 8 mismatches. Within each kind the
+items keep their own order (newest, soonest or fullest first), and the answer lists the kinds in
+priority order whatever slot they won. Anything left out still counts on the screen (the
+approvals tile counts expiring approvals).
 
 | Kind | Severity | When | `at` | `ref` | `data` |
 |---|---|---|---|---|---|

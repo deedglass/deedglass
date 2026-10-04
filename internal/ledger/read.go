@@ -509,6 +509,10 @@ func (f ActionFilter) where(org ids.OrgID) (string, []any) {
 	if f.Q != "" {
 		add(`(a.tool ILIKE $? ESCAPE '\' OR a.error_code ILIKE $? ESCAPE '\')`, containsPattern(f.Q))
 	}
+	if f.ShadowDiffers {
+		// A fixed fragment with no value: the shadow policy decided, and not as the enforced one did.
+		conds = append(conds, "(a.shadow_decision IS NOT NULL AND a.shadow_decision IS DISTINCT FROM a.decision)")
+	}
 	return " WHERE " + strings.Join(conds, " AND "), args
 }
 

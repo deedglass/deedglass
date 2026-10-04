@@ -1,0 +1,28 @@
+{
+  "object": "list",
+  "data": [
+    {
+      "object": "policy_version",
+      "id": "pv_01m42fmxmwvxegzp25b7yhbk0e",
+      "policy": "pol_01m42fmxmvwje3p9x57t2kjkdq",
+      "version": 1,
+      "name": "acme-demo",
+      "status": "enforced",
+      "version_hash": "sha256:23e1ae1de718fca29abeb6f3caa943295c277762f35482d8fbfb62f8a1985284",
+      "source_hash": "sha256:85839448fcb3f13fd76f52c66545d0dfee362cc7c185af65cdb5cb3054975072",
+      "lang": "deedglass.policy/v1",
+      "origin": "manual",
+      "author": {
+        "object": "api_key",
+        "id": "key_01m42fmxh1qs0yh5fnh9ww3qak"
+      },
+      "notes": null,
+      "rules": 16,
+      "budgets": 1,
+      "warnings": [],
+      "created_at": "2026-10-04T03:34:45.658Z"
+    }
+  ],
+  "has_more": false,
+  "next_cursor": null
+}

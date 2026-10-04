@@ -1,0 +1,376 @@
+/* S26: SchemaForm, SecretField, CheckList and Countdown. Tokens only (tokens.css); no hex, no rgb(). */
+
+/* ---------- SchemaForm ---------- */
+.sf,
+.sf-fields {
+  display: grid;
+  gap: var(--space-5);
+  min-width: 0;
+}
+.sf-label {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px var(--space-2);
+}
+.sf-key {
+  color: var(--text-2);
+  font-weight: 400;
+  overflow-wrap: anywhere;
+}
+.sf-req {
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line);
+  font-weight: 550;
+  color: var(--text-2);
+}
+.sf-num {
+  max-width: 20ch;
+}
+.sf-group,
+.sf-multi {
+  margin: 0;
+  padding: var(--space-4);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-card);
+  min-width: 0;
+  display: grid;
+  gap: var(--space-3);
+}
+.sf-group > .sf-fields {
+  gap: var(--space-4);
+}
+.sf-legend {
+  padding: 0 var(--space-1);
+  margin-left: calc(-1 * var(--space-1));
+  font-size: var(--type-footnote-size);
+  line-height: var(--type-footnote-line);
+  font-weight: 550;
+  color: var(--text);
+}
+.sf-group[aria-invalid='true'],
+.sf-multi:has([aria-invalid='true']) {
+  border-color: var(--mismatch-fg);
+}
+.sf-group > .help,
+.sf-group > .error,
+.sf-multi > .help,
+.sf-multi > .error {
+  margin: 0;
+  font-size: var(--type-footnote-size);
+  line-height: var(--type-footnote-line);
+}
+.sf-group > .help,
+.sf-multi > .help {
+  color: var(--text-2);
+}
+.sf-group > .error,
+.sf-multi > .error {
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
+  color: var(--mismatch-fg);
+}
+.sf-multi-opts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-5);
+}
+.sf-multi-opts .check {
+  min-height: 24px;
+  align-items: center;
+}
+.sf-switch .switch {
+  align-items: flex-start;
+  min-height: 24px;
+}
+.sf-switch .switch input {
+  margin-top: 1px;
+}
+.sf-switch-text {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px var(--space-2);
+  font-size: var(--type-footnote-size);
+  line-height: var(--type-footnote-line);
+  font-weight: 550;
+}
+.field .error .icon,
+.sf-formerror > .icon {
+  flex: none;
+  margin-top: 2px;
+}
+
+/* chip input: removable chips, then the input */
+.sf-chipbox {
+  display: grid;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.sf-chips {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.sf-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  max-width: 100%;
+  min-height: 28px;
+  padding: 0 2px 0 10px;
+  border-radius: var(--radius-chip);
+  background: var(--surface-raised);
+  border: 1px solid var(--hairline);
+  color: var(--text);
+}
+.sf-chip > .mono {
+  overflow-wrap: anywhere;
+}
+.sf-chip-x {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text-2);
+  cursor: pointer;
+  transition: background-color var(--dur-micro) var(--ease-enter), color var(--dur-micro) var(--ease-enter);
+}
+.sf-chip-x:hover {
+  background: var(--neutral-bg);
+  color: var(--text);
+}
+@media (pointer: coarse) {
+  .sf-chip { min-height: 44px; }
+  .sf-chip-x { width: 44px; height: 44px; }
+}
+.sf-readonly .sf-chip {
+  padding-right: 10px;
+}
+
+/* the server's messages that name no field */
+.sf-formerror {
+  display: flex;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  box-shadow: inset 3px 0 0 var(--mismatch-fg);
+  color: var(--text);
+  font-size: var(--type-footnote-size);
+  line-height: var(--type-footnote-line);
+}
+.sf-formerror > .icon {
+  color: var(--mismatch-fg);
+}
+.sf-formerror p {
+  margin: 0;
+}
+.sf-formerror-title {
+  font-weight: 550;
+}
+
+/* ---------- SecretField ---------- */
+.secret-row {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  min-width: 0;
+}
+.secret-row .secret-input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.secret-toggle {
+  flex: none;
+  min-width: 64px;
+}
+.secret-toggle[aria-pressed='true'] {
+  background: var(--surface-raised);
+  box-shadow: inset 0 0 0 1px var(--border-strong);
+}
+
+/* ---------- CheckList ---------- */
+.cl {
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+}
+.cl-heading {
+  margin: 0;
+}
+.cl-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+}
+.cl-row {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr);
+  gap: var(--space-3);
+  padding: var(--space-3) 0;
+  border-top: 1px solid var(--hairline);
+}
+.cl-row:first-child {
+  border-top: 0;
+}
+.cl-mark {
+  font-family: var(--font-mono);
+  font-size: 15px;
+  line-height: 20px;
+  text-align: center;
+  color: var(--text-2);
+}
+.cl-warn .cl-mark { color: var(--unverifiable-fg); }
+.cl-fail .cl-mark { color: var(--mismatch-fg); }
+.cl-body {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.cl-body p {
+  margin: 0;
+}
+.cl-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px var(--space-2);
+}
+.cl-title {
+  font-size: var(--type-body-dense-size);
+  line-height: var(--type-body-dense-line);
+  font-weight: 550;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+.cl-word {
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line);
+  font-weight: 550;
+  color: var(--text-2);
+}
+.cl-warn .cl-word { color: var(--unverifiable-fg); }
+.cl-fail .cl-word { color: var(--mismatch-fg); }
+.cl-detail {
+  font-size: var(--type-footnote-size);
+  line-height: var(--type-footnote-line);
+  color: var(--text-2);
+  overflow-wrap: anywhere;
+}
+/* passes are quiet: the title steps back to secondary text */
+.cl-pass .cl-title,
+.cl-skip .cl-title {
+  font-weight: 400;
+  color: var(--text-2);
+}
+.cl-fix {
+  font-size: var(--type-footnote-size);
+  line-height: var(--type-footnote-line);
+  color: var(--text);
+}
+.cl-fix-label {
+  font-weight: 600;
+}
+.cl-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
+}
+.cl-sql {
+  min-width: 0;
+}
+.cl-sql > summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 24px;
+  cursor: pointer;
+  list-style: none;
+  font-size: var(--type-footnote-size);
+  line-height: var(--type-footnote-line);
+  font-weight: 550;
+  color: var(--text-2);
+  border-radius: var(--radius-button);
+}
+.cl-sql > summary::-webkit-details-marker {
+  display: none;
+}
+.cl-sql > summary:hover {
+  color: var(--text);
+}
+.cl-chev {
+  transition: transform var(--dur-micro) var(--ease-enter);
+}
+.cl-sql[open] .cl-chev {
+  transform: rotate(90deg);
+}
+.cl-sql .code {
+  margin-top: var(--space-2);
+}
+.cl-sql pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+@media (pointer: coarse) {
+  .cl-sql > summary { min-height: 44px; }
+}
+
+/* the summary lines */
+.readiness {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
+  margin: 0;
+  font-size: var(--type-body-dense-size);
+  line-height: var(--type-body-dense-line);
+  font-weight: 550;
+  color: var(--text);
+}
+.readiness-mark {
+  font-family: var(--font-mono);
+}
+.readiness-ok .readiness-mark { color: var(--text-2); }
+.readiness-fail .readiness-mark { color: var(--mismatch-fg); }
+
+/* ---------- Countdown ---------- */
+.cd {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--text-2);
+}
+/* under 5 minutes: weight, not colour (an expiry isn't a mismatch) */
+.cd-urgent {
+  color: var(--text);
+  font-weight: 600;
+}
+.cd-expired {
+  color: var(--text-2);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sf-chip-x,
+  .cl-chev {
+    transition: none;
+  }
+}
+
+/* A plan reads as a calm column of ✓ (S26 §5): passing rows are compact and carry no links; the
+   exceptions (notes, failures) keep their fix, SQL and docs. */
+.cl-row.cl-pass { padding: var(--space-2) 0; }
+.cl-row.cl-pass .cl-actions { display: none; }
+.cl-row.cl-pass .cl-detail { color: var(--text-2); }
+.secret-toggle[aria-pressed='true']:focus-visible { box-shadow: var(--focus-ring); }

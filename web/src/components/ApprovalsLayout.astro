@@ -1,0 +1,37 @@
+---
+// The Approvals screen's static shell (S26 §3.1): page head, tabs, the list and the detail pane,
+// each with a skeleton in its final geometry. src/controllers/approvals.ts fills them.
+import AppShell from '../layouts/AppShell.astro';
+import PageHead from './PageHead.astro';
+import { copy } from '../lib/copy.ts';
+import { approvalsCopy } from '../lib/copy-approvals.ts';
+interface Props { selected?: boolean }
+const { selected = false } = Astro.props;
+const p = copy.pages.approvals;
+const c = approvalsCopy;
+---
+<AppShell title={p.title} screen="approvals">
+  <div class="apv" id="apv-root" data-selected={selected ? 'true' : 'false'}>
+    <h1 class="sr-only apv-h1" id="apv-h1">{p.title}</h1>
+    <div class="apv-listcol">
+      <PageHead title={p.title} lede={p.lede} />
+      <div class="apv-tabs" id="apv-tabs">
+        <div class="segmented" aria-hidden="true"><button type="button" tabindex="-1" disabled aria-pressed="true">{c.tabs.pending}</button><button type="button" tabindex="-1" disabled>{c.tabs.history}</button></div>
+      </div>
+      <section id="apv-list" class="apv-list" aria-label={p.title} aria-busy="true">
+        <ul class="apv-cards" aria-hidden="true">
+          {[0, 1, 2].map(() => <li><span class="apv-card apv-card-skel"><span class="skel skel-line w-56"></span><span class="skel skel-line w-40"></span><span class="skel skel-line w-32"></span></span></li>)}
+        </ul>
+      </section>
+    </div>
+    <section id="apv-detail" class="apv-detailcol" aria-live="off">
+      <div class="card card-pad" aria-hidden="true">{[0, 1, 2, 3, 4].map(() => <span class="skel skel-line skel-gap"></span>)}</div>
+    </section>
+  </div>
+</AppShell>
+<script>
+  import { bootShell } from '../controllers/shell.ts';
+  import { mountApprovals } from '../controllers/approvals.ts';
+  bootShell({ title: 'Approvals' });
+  mountApprovals();
+</script>

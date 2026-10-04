@@ -3,12 +3,33 @@
 // and the pill; this markup is the loading state in the final geometry.
 import AppShell from '../layouts/AppShell.astro';
 import PageHead from '../components/PageHead.astro';
+import Icon from '../components/Icon.astro';
 import { copy } from '../lib/copy.ts';
 const p = copy.pages.actions;
+const f = copy.feed;
+const c = copy.chips;
 ---
 <AppShell title={p.title} screen="actions">
-  <PageHead title={p.title} lede={p.lede}><span slot="actions" id="feed-pause"></span></PageHead>
-  <div class="filterbar-host" id="feed-filters"><div class="filterbar" aria-hidden="true"><span class="skel skel-line w-56"></span></div></div>
+  <PageHead title={p.title} lede={p.lede}><span slot="actions" id="feed-pause"><button type="button" class="btn btn-secondary btn-sm skel-ghost" disabled tabindex="-1" aria-hidden="true"><Icon name="pause" size={16} />{f.pause}</button></span></PageHead>
+  {/* The filter bar's loading state in its final geometry (S26 carry-over: no layout shift on phones). */}
+  <div class="filterbar-host" id="feed-filters">
+    <div class="filterbar skel-ghost" aria-hidden="true" inert>
+      <div class="filterbar-row">
+        <div class="filter-search"><Icon name="search" size={16} /><input class="input" tabindex="-1" disabled aria-hidden="true" /></div>
+        <div class="filterbar-controls">
+          <span class="select-wrap"><select class="select" tabindex="-1" disabled aria-hidden="true"><option>{f.agentAny}</option></select><Icon name="chevron-down" size={16} /></span>
+          <div class="filter-tool"><input class="input" tabindex="-1" disabled aria-hidden="true" /></div>
+          <span class="select-wrap"><select class="select" tabindex="-1" disabled aria-hidden="true"><option>{f.timeAny}</option></select><Icon name="chevron-down" size={16} /></span>
+        </div>
+        <div class="filterbar-end"><button type="button" class="btn btn-secondary btn-sm" tabindex="-1" disabled><Icon name="sliders-horizontal" size={16} />{f.more}</button></div>
+      </div>
+      <div class="filterbar-row filterbar-segs">
+        <div class="segmented">{[f.decisionAll, c.allowed, c.denied, c.approval].map((l) => <button type="button" tabindex="-1" disabled>{l}</button>)}</div>
+        <div class="segmented">{['Verified', 'Mismatch', 'Unverifiable'].map((l) => <button type="button" tabindex="-1" disabled>{l}</button>)}</div>
+        <div class="segmented">{['L0', 'L1', 'L2'].map((l) => <button type="button" tabindex="-1" disabled>{l}</button>)}</div>
+      </div>
+    </div>
+  </div>
   <section id="screen-body" aria-labelledby="page-title" aria-busy="true" data-screen-body="actions">
     <div class="table-frame" aria-hidden="true">
       {Array.from({ length: 12 }, () => <div class="skel-row skel-feed">{[0, 1, 2, 3, 4, 5].map(() => <span class="skel skel-line"></span>)}</div>)}

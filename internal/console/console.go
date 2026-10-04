@@ -151,6 +151,9 @@ func (c *Console) serve(w http.ResponseWriter, r *http.Request) error {
 	return c.write(w, r, status, file, b, "no-cache")
 }
 
+// connectorsNewPage is /app/connectors/new's page file (S26).
+const connectorsNewPage = "connectors/new.html"
+
 // route maps the path after /app/ to a page file. Anything unknown is the Console 404, which
 // never echoes the path.
 func (c *Console) route(rest string) (string, int) {
@@ -176,6 +179,13 @@ func (c *Console) route(rest string) (string, int) {
 	case 2:
 		if parts[0] == "settings" && sectionRE.MatchString(parts[1]) {
 			return "settings.html", http.StatusOK
+		}
+		// S26: the add-a-connector page. A build without the page answers the Console 404.
+		if parts[0] == "connectors" && parts[1] == "new" {
+			if _, err := fs.Stat(c.fsys, connectorsNewPage); err != nil {
+				return notFound()
+			}
+			return connectorsNewPage, http.StatusOK
 		}
 		if prefix != "" && strings.HasPrefix(parts[1], prefix) && idRE.MatchString(parts[1]) {
 			return parts[0] + "/detail.html", http.StatusOK

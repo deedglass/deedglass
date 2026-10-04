@@ -1,12 +1,6 @@
 ---
-import ScreenStub from '../components/ScreenStub.astro';
-import { copy } from '../lib/copy.ts';
-const p = copy.pages.approvals;
+// Approvals (S26 §3.1): the inbox, designed at 360 px first. src/controllers/approvals.ts renders
+// the list, the detail and the decision sheet; this markup is the loading state in its final shape.
+import ApprovalsLayout from '../components/ApprovalsLayout.astro';
 ---
-<ScreenStub title={p.title} lede={p.lede} screen="approvals" />
-<script>
-  import { bootShell } from '../controllers/shell.ts';
-  import { mountScreen } from '../controllers/screens.ts';
-  bootShell({ title: 'Approvals' });
-  mountScreen('approvals');
-</script>
+<ApprovalsLayout />

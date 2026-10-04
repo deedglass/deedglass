@@ -200,9 +200,11 @@
     show(sheet, false);
     denyOpen.setAttribute('aria-expanded', 'false');
   }
-  function consoleAt(url) {
+  // quiet: while the decision buttons show, the Console link is a plain text link below them.
+  function consoleAt(url, quiet) {
     if (url) consoleLink.href = url;
     consoleLink.textContent = COPY.openConsole;
+    consoleLink.className = quiet ? 'link-quiet' : 'btn btn-secondary';
     show(consoleLink, true);
   }
   function hideContext() {
@@ -372,17 +374,20 @@
       setChip('pending', COPY.waitingOthers);
       setTitle(fmt(COPY.partialTitle, { done: cs.length, need: a.required }), partialBody(a), focus);
       actions(false, false);
+      consoleAt(p.console_url, true);
       return;
     }
     if (you.why_not) {
       setChip('pending', COPY.waiting);
       setTitle(COPY.selfTitle, COPY.selfBody, focus);
       actions(false, true);
+      consoleAt(p.console_url, true);
       return;
     }
     setChip('pending', COPY.waiting);
     setTitle(COPY.reviewTitle, a.summary, focus);
     actions(true, true);
+    consoleAt(p.console_url, true);
     show($('fine'), true);
   }
 

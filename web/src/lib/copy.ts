@@ -1,7 +1,10 @@
 // copy.ts: every Console string (S24 §3.9). Calm, exact, sentence case, a next step on every error,
 // no exclamation marks, no emoji, no em dashes (brand §4, Taste §9.G). Strings marked "lifted" come
-// verbatim from docs/COPY_CATALOG.md (S08, S09, S16, S17, S20); test/copy.test.ts asserts each one
+// verbatim from docs/COPY_CATALOG.md (S08, S09, S16, S17, S20); test/checks.test.ts asserts each one
 // against that file and runs the banned-word list over this file. COPY_CATALOG.md points here.
+// S26's screens keep their strings in copy-<area>.ts (approvals, policies, connectors, settings,
+// editor, forms) so a page bundles only its own; test/checks.test.ts walks those files too.
+
 
 export type Vars = Record<string, string | number>;
 
@@ -563,6 +566,7 @@ export const copy = {
     copy: 'Copy',
     keyPlaceholder: 'Create the agent in step 1 to fill in its key.',
   },
+
 
   kit: {
     title: 'Component kit',

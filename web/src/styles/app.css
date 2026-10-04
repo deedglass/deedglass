@@ -5,6 +5,10 @@
 
 @import 'tailwindcss';
 @import './tokens.css';
+@import './s26-editor.css';
+@import './s26-forms.css';
+@import './s26.css';
+@import './s26-settings.css';
 
 /* Inter Variable with the optical-size axis and Geist Mono 400, Latin, self-hosted (the site's faces). */
 @font-face {

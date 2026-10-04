@@ -60,7 +60,7 @@ async function signOut(everywhere = false): Promise<void> {
 }
 
 // ---------- Stop all / Start all ----------
-function stopAll(): void {
+export function stopAll(): void {
   const s = get();
   if (!s) return;
   if (!atLeast(s.me.membership.role, 'admin')) {
@@ -85,7 +85,7 @@ function stopAll(): void {
   });
 }
 
-function startAll(): void {
+export function startAll(): void {
   const s = get();
   if (!s) return;
   confirmTyped({

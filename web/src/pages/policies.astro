@@ -1,12 +1,20 @@
 ---
-import ScreenStub from '../components/ScreenStub.astro';
+// Policies (S26 §3.2): the list and the starter picker. src/controllers/policies.ts.
+import AppShell from '../layouts/AppShell.astro';
+import PageHead from '../components/PageHead.astro';
+import Skeleton from '../components/Skeleton.astro';
 import { copy } from '../lib/copy.ts';
 const p = copy.pages.policies;
 ---
-<ScreenStub title={p.title} lede={p.lede} screen="policies" />
+<AppShell title={p.title} screen="policies">
+  <PageHead title={p.title} lede={p.lede}><span slot="actions" class="flex items-center gap-2" id="policies-actions"></span></PageHead>
+  <section id="screen-body" aria-labelledby="page-title" aria-busy="true" data-screen-body="policies">
+    <Skeleton rows={4} />
+  </section>
+</AppShell>
 <script>
   import { bootShell } from '../controllers/shell.ts';
-  import { mountScreen } from '../controllers/screens.ts';
+  import { mountPolicies } from '../controllers/policies.ts';
   bootShell({ title: 'Policies' });
-  mountScreen('policies');
+  mountPolicies();
 </script>

@@ -50,8 +50,8 @@ countersign) and again at every vote.
   characters, no control or direction-changing characters); the agent sees it.
 - **The self rule.** When an action runs on a member's behalf (`Deedglass-On-Behalf-Of` names their
   `usr_…` id or email), that member may deny it but not countersign it: `self_approval` (403).
-  An org can allow self-countersign (`self_countersign: allow` in the org's approval settings;
-  the Console form arrives in S26).
+  An org can allow self-countersign (`self_countersign: allow` in the org's approval settings,
+  which an owner changes with `PATCH /v1/org`, `settings.approvals`, since S26).
 - **Not eligible.** Anyone else gets `approver_not_eligible` (403), naming the rule and its
   approvers.
 

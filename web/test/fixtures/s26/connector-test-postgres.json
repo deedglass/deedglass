@@ -1,0 +1,121 @@
+{
+  "object": "connector_test",
+  "connector": "con_01m42fmxj177kh3ve33xqv934g",
+  "status": "warn",
+  "duration_ms": 0,
+  "checks": [
+    {
+      "id": "connection",
+      "title": "connection",
+      "status": "pass",
+      "detail": "deedglass_agent@127.0.0.1:55469/acme · local"
+    },
+    {
+      "id": "version",
+      "title": "version",
+      "status": "pass",
+      "detail": "PostgreSQL 18.6"
+    },
+    {
+      "id": "wal_level",
+      "title": "wal_level",
+      "status": "pass",
+      "detail": "logical"
+    },
+    {
+      "id": "slot_capacity",
+      "title": "slot capacity",
+      "status": "pass",
+      "detail": "1 of 10 slots used · 0 of 10 senders"
+    },
+    {
+      "id": "wal_keep_cap",
+      "title": "wal keep cap",
+      "status": "pass",
+      "detail": "1 GB"
+    },
+    {
+      "id": "idle_slot_timeout",
+      "title": "idle slot timeout",
+      "status": "pass",
+      "detail": "off"
+    },
+    {
+      "id": "schema",
+      "title": "schema deedglass",
+      "status": "pass",
+      "detail": "ledger · RLS forced · replica identity full"
+    },
+    {
+      "id": "begin_action",
+      "title": "begin_action",
+      "status": "pass",
+      "detail": "security definer · search_path pinned · body sha256:2f3f…7bd4"
+    },
+    {
+      "id": "agent_role",
+      "title": "agent role",
+      "status": "pass",
+      "detail": "least privilege · 2 writable tables · no ledger access",
+      "doc_url": "https://docs.deedglass.com/connectors/postgres#agent-role"
+    },
+    {
+      "id": "witness_role",
+      "title": "witness role",
+      "status": "pass",
+      "detail": "replication · pinned settings · read-only",
+      "doc_url": "https://docs.deedglass.com/connectors/postgres#witness-role"
+    },
+    {
+      "id": "witness.watched_tables",
+      "title": "watched tables",
+      "status": "pass",
+      "detail": "3 of 3 · primary keys · replica identity full",
+      "doc_url": "https://docs.deedglass.com/connectors/postgres#watched-tables"
+    },
+    {
+      "id": "writable_watched",
+      "title": "writable watched",
+      "status": "pass",
+      "detail": "2 writable tables, all watched",
+      "doc_url": "https://docs.deedglass.com/connectors/postgres#watched-tables"
+    },
+    {
+      "id": "publication",
+      "title": "publication",
+      "status": "pass",
+      "detail": "deedglass_pub · 4 tables · insert, update, delete, truncate",
+      "doc_url": "https://docs.deedglass.com/connectors/postgres#publication"
+    },
+    {
+      "id": "slot",
+      "title": "slot",
+      "status": "warn",
+      "detail": "deedglass_01m42fmxj177kh3ve33xqv934g · inactive · WAL is kept until the witness reconnects",
+      "doc_url": "https://docs.deedglass.com/connectors/postgres#slot"
+    },
+    {
+      "id": "tls",
+      "title": "tls",
+      "status": "warn",
+      "detail": "off · local host",
+      "fix": "Use sslmode=verify-full for any database that isn't on this machine.",
+      "doc_url": "https://docs.deedglass.com/connectors/postgres#tls"
+    },
+    {
+      "id": "pooler",
+      "title": "pooler",
+      "status": "pass",
+      "detail": "direct"
+    },
+    {
+      "id": "emit_message_acl",
+      "title": "marker ACL",
+      "status": "warn",
+      "detail": "PUBLIC may call pg_logical_emit_message (the default) · a forged marker has no ledger row, so the witness flags it",
+      "fix": "Optional hardening, as a superuser: revoke it from PUBLIC and grant it to deedglass_owner.",
+      "fix_sql": "REVOKE EXECUTE ON FUNCTION pg_catalog.pg_logical_emit_message(boolean, text, text, boolean) FROM PUBLIC;\nGRANT EXECUTE ON FUNCTION pg_catalog.pg_logical_emit_message(boolean, text, text, boolean) TO deedglass_owner, deedglass_witness;\nREVOKE EXECUTE ON FUNCTION pg_catalog.pg_logical_emit_message(boolean, text, bytea, boolean) FROM PUBLIC;\nGRANT EXECUTE ON FUNCTION pg_catalog.pg_logical_emit_message(boolean, text, bytea, boolean) TO deedglass_owner, deedglass_witness;",
+      "doc_url": "https://docs.deedglass.com/connectors/postgres#marker-acl"
+    }
+  ]
+}

@@ -1,0 +1,39 @@
+{
+  "object": "list",
+  "data": [
+    {
+      "object": "api_key",
+      "id": "key_01m42fqg3b3e7vzt82nyxydz4x",
+      "agent": null,
+      "name": "s26-capture",
+      "mode": "test",
+      "prefix": "dg_test_h0YWKWAh",
+      "scopes": [
+        "admin"
+      ],
+      "expires_at": null,
+      "last_used_at": "2026-10-04T03:36:27.506Z",
+      "revoked_at": null,
+      "rolled_from": null,
+      "created_at": "2026-10-04T03:36:10.091Z"
+    },
+    {
+      "object": "api_key",
+      "id": "key_01m42fmxh1qs0yh5fnh9ww3qak",
+      "agent": null,
+      "name": "e2e-admin",
+      "mode": "test",
+      "prefix": "dg_test_0S1vTi1T",
+      "scopes": [
+        "admin"
+      ],
+      "expires_at": null,
+      "last_used_at": "2026-10-04T03:34:45.718Z",
+      "revoked_at": null,
+      "rolled_from": null,
+      "created_at": "2026-10-04T03:34:45.537Z"
+    }
+  ],
+  "has_more": false,
+  "next_cursor": null
+}

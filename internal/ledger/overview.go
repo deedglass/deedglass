@@ -67,13 +67,17 @@ func (w OverviewWindow) BucketIndex(from, t time.Time) int {
 
 // Overview thresholds (docs/OVERVIEW_METRICS.md).
 const (
-	OverviewAgentsShown  = 8                // the agents strip
-	AttentionMax         = 8                // attention items in one answer
-	ApprovalExpiringSoon = 15 * time.Minute // approvals.expiring_soon and approval_expiring
-	MismatchLookback     = 24 * time.Hour   // mismatch items, whatever the window
-	BudgetNearPercent    = 80               // budget_near: at least this share of a budget used
-	overviewTimeout      = "2s"             // statement_timeout for the Overview's reads
-	overviewBudgetAgents = 500              // agents with budgets checked for budget_near
+	OverviewAgentsShown = 8 // the agents strip
+	AttentionMax        = 8 // attention items in one answer
+	// After the system items, slots kept for approval_expiring and budget_near before mismatches
+	// fill the rest (S26, DL-041), so a burst of mismatches never hides an expiring approval.
+	AttentionReservedApprovals = 3
+	AttentionReservedBudgets   = 2
+	ApprovalExpiringSoon       = 15 * time.Minute // approvals.expiring_soon and approval_expiring
+	MismatchLookback           = 24 * time.Hour   // mismatch items, whatever the window
+	BudgetNearPercent          = 80               // budget_near: at least this share of a budget used
+	overviewTimeout            = "2s"             // statement_timeout for the Overview's reads
+	overviewBudgetAgents       = 500              // agents with budgets checked for budget_near
 )
 
 // Attention kinds, in priority order, and severities.
@@ -277,8 +281,8 @@ func (l *Ledger) Overview(ctx context.Context, org ids.OrgID, o OverviewOptions)
 	if err != nil {
 		return nil, err
 	}
-	if len(att.items) > 0 {
-		ov.Attention = att.items // otherwise the empty list, never null
+	if items := att.list(); len(items) > 0 {
+		ov.Attention = items // otherwise the empty list, never null
 	}
 	return ov, nil
 }
@@ -557,19 +561,57 @@ func spendToday(b AgentBudgets, u AgentUsage) *Money {
 	return &Money{Amount: u.SpendToday, Currency: cur}
 }
 
-// attention collects items in priority order, at most AttentionMax.
-type attention struct{ items []AttentionItem }
+// attention collects candidates per group, each in its own order and at most AttentionMax, and
+// list selects the answer. System items (chain_broken, org_stopped, slot_invalidated,
+// slot_lagging) come first, up to the cap; then up to AttentionReservedApprovals approval_expiring
+// and AttentionReservedBudgets budget_near; then mismatches fill what is left; then more
+// approval_expiring and budget_near if slots remain. The answer keeps the kinds' priority order.
+type attention struct {
+	system, mismatch, expiring, budget []AttentionItem
+}
 
-func (a *attention) full() bool { return len(a.items) >= AttentionMax }
-
+// add files it under its kind's group; a group past AttentionMax drops the rest.
 func (a *attention) add(it *AttentionItem) {
-	if it == nil || a.full() {
+	if it == nil {
+		return
+	}
+	g := &a.system
+	switch it.Kind {
+	case AttentionMismatch:
+		g = &a.mismatch
+	case AttentionApprovalExpiry:
+		g = &a.expiring
+	case AttentionBudgetNear:
+		g = &a.budget
+	}
+	if len(*g) >= AttentionMax {
 		return
 	}
 	if it.Data == nil {
 		it.Data = map[string]any{}
 	}
-	a.items = append(a.items, *it)
+	*g = append(*g, *it)
+}
+
+// list is the selected items, at most AttentionMax, in priority order.
+func (a *attention) list() []AttentionItem {
+	take := func(have, limit, free int) int { return max(0, min(have, limit, free)) }
+	sys := take(len(a.system), AttentionMax, AttentionMax)
+	free := AttentionMax - sys
+	exp := take(len(a.expiring), AttentionReservedApprovals, free)
+	free -= exp
+	bud := take(len(a.budget), AttentionReservedBudgets, free)
+	free -= bud
+	mis := take(len(a.mismatch), AttentionMax, free)
+	free -= mis
+	more := take(len(a.expiring)-exp, AttentionMax, free)
+	exp, free = exp+more, free-more
+	bud += take(len(a.budget)-bud, AttentionMax, free)
+	out := make([]AttentionItem, 0, sys+mis+exp+bud)
+	out = append(out, a.system[:sys]...)
+	out = append(out, a.mismatch[:mis]...)
+	out = append(out, a.expiring[:exp]...)
+	return append(out, a.budget[:bud]...)
 }
 
 func ref(s string) *string { return &s }
@@ -588,9 +630,6 @@ func (a *attention) chain(c *ChainCheck) {
 // slots adds slot_invalidated (a halted runner, an invalidated slot, or wal_status lost) and
 // slot_lagging (lag above DEEDGLASS_SLOT_LAG_ALERT_MB, as the decoder's lag_high).
 func (a *attention) slots(ctx context.Context, tx pgx.Tx, org ids.OrgID, lagAlert int64) error {
-	if a.full() {
-		return nil
-	}
 	rows, err := tx.Query(ctx, overviewSlotsSQL, org)
 	if err != nil {
 		return err
@@ -632,10 +671,7 @@ func (a *attention) slots(ctx context.Context, tx pgx.Tx, org ids.OrgID, lagAler
 
 // mismatches adds the last 24 h's MISMATCH verdicts, newest first (actions_verdict_time).
 func (a *attention) mismatches(ctx context.Context, tx pgx.Tx, org ids.OrgID, now time.Time) error {
-	if a.full() {
-		return nil
-	}
-	rows, err := tx.Query(ctx, overviewMismatchSQL, org, now.Add(-MismatchLookback), now, AttentionMax-len(a.items))
+	rows, err := tx.Query(ctx, overviewMismatchSQL, org, now.Add(-MismatchLookback), now, AttentionMax)
 	if err != nil {
 		return err
 	}
@@ -660,10 +696,7 @@ func (a *attention) mismatches(ctx context.Context, tx pgx.Tx, org ids.OrgID, no
 
 // approvals adds pending approvals that expire within 15 minutes, soonest first.
 func (a *attention) approvals(ctx context.Context, tx pgx.Tx, org ids.OrgID, now time.Time) error {
-	if a.full() {
-		return nil
-	}
-	rows, err := tx.Query(ctx, overviewExpiringSQL, org, now.Add(ApprovalExpiringSoon), AttentionMax-len(a.items))
+	rows, err := tx.Query(ctx, overviewExpiringSQL, org, now.Add(ApprovalExpiringSoon), AttentionMax)
 	if err != nil {
 		return err
 	}

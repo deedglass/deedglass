@@ -116,9 +116,9 @@ make web-verify-test  # (in ci) the browser verifier: npm ci once, tsc --noEmit,
 make web-verify-serve # build and serve the verify page on http://127.0.0.1:5178
 make web-build      # S24: the Console (web/): tokens → icons → astro build → .br/.gz → check-dist; writes internal/console/dist (make build runs it when Node is present; make build-only skips it)
 make web-test       # (in ci) S24: tsc + Vitest (api, stream, format, palette, dom, tokens and contrast, copy, icons, sinks, types)
-make web-e2e        # S24/S25: Playwright in the installed Chrome against a throwaway PG 18 and a real serve, seeded with 600 fake actions and the real L2 hero (shell, keyboard, palette, Stop all, live, the five S25 screens, the seal check, keys shown once, viewer, 200 events/s, axe, CSP)
-make web-lighthouse # S24/S25: Lighthouse 13 on /login, /app/_kit and the seven S25 pages (the MISMATCH detail, a deed, an agent), desktop and mobile (≥ 95 accessibility and best practices); JSON in ~/txv/ops/plan/prompts-v7/reports/lighthouse/S25
-DEEDGLASS_IT_THROWAWAY=1 scripts/web_e2e.sh serve|shots   # keep the seeded Acme stack up on :18241 (PG 18 on :55468, the Acme Store on :55469; ids in .tmp/web-e2e/fixtures.json; WEB_E2E_SEED=0 skips the seed), or write the screenshot pass to ~/txv/ops/plan/prompts-v7/reports/screens/S25
+make web-e2e        # S24–S26: Playwright in the installed Chrome against a throwaway PG 18 and a real serve, seeded with 600 fake actions, the real L2 hero, acme-demo v2 (a four-eyes refund rule) and a pending approval (shell, keyboard, palette, Stop all, live, the S25 screens, approvals at 360 and 1440, four-eyes, the race, policy edit → shadow → enforce → verify, connectors with the mock orders API, settings invite and webhooks, the roles sweep, the founder's demo loop, axe, CSP)
+make web-lighthouse # S24–S26: Lighthouse 13 on /login, /app/_kit, the seven S25 pages and the seven S26 pages (approvals, an approval, policies, a policy, connectors, the Postgres connector, settings/members), desktop and mobile (≥ 95 accessibility and best practices); JSON in ~/txv/ops/plan/prompts-v7/reports/lighthouse/S26
+DEEDGLASS_IT_THROWAWAY=1 scripts/web_e2e.sh serve|shots   # keep the seeded Acme stack up on :18241 (PG 18 on :55468, the Acme Store on :55469, the mock orders API on :18290; ids and the throwaway admin and agent keys in .tmp/web-e2e/fixtures.json; WEB_E2E_SEED=0 skips the seed), or write the S26 screenshot pass to ~/txv/ops/plan/prompts-v7/reports/screens/S26 (the S24/S25 passes are the playwright project shots25)
 DEEDGLASS_DEV_PROXY=http://127.0.0.1:18241 make web-dev   # S25: astro dev proxied to that throwaway stack instead of :8080
 node web/scripts/contrast.mjs   # S24: WCAG ratios for every token pair in both themes (exit 1 on a failure); make web-tokens regenerates the token files
 go test ./internal/console -run 'TestPages|TestTokensMatchDesignMD' -v   # S24: the page handler (routes, redirect, CSP, assets, placeholder) and the tokens.json ⇄ DESIGN.md lockstep
@@ -560,6 +560,15 @@ and "open source" until the repo is public. Style bans: "revolutionary", "world-
   the byte-exact download, keys shown once, Stop across tabs < 2 s, viewer refusals, the state matrix, 360 px, reduced
   motion, 200 events/s with 0 long tasks. `internal/policy`: a folded `when` with a more-indented line is written
   literal (FuzzCompile seed `8dc64553839b3266`). The migration count is 23.
+- S26 (Console screens II): `GET`/`PATCH /v1/org` carry owner-only `retention_days` and `settings.approvals`
+  (`TestOrgRetentionAndSettings`, `TestUpdateOrgRefusals`, `TestOrgPatchUnknownKeys`); `GET /v1/actions?shadow_differs=true`
+  (`TestShadowDiffersFilter`); `/app/connectors/new` (`TestPages`, `TestConnectorsNewMissingPage`); the attention
+  reservations (`TestAttentionReservations`). `web/` Vitest: `models26` (approval, policy and connector models on real
+  captured answers in `web/test/fixtures/s26`), `decisionsheet` (no send without the button, deny needs a reason, one
+  Idempotency-Key, the stale-context reload), `linediff`, `editormath`, `lintloop`, `policyeditor`, `traceview`, `schema`,
+  `secretfield` (the value is gone from every node after save or error), `checklist`, `countdown`, `settings`; the copy
+  walk covers `copy-*.ts`. Playwright: `approvals`, `policies`, `connectors`, `settings`, `roles` (every row of the role
+  matrix: the UI and the page's own API call), `demo-loop`, the S26 axe sweep (pages and sheets, both themes).
 - `cmd/deedglass verify` (S05): 80 golden cases in `testdata/verify/<case>/{args,stdout,stderr,exit}`
   (`go test ./cmd/deedglass -run TestVerifyGolden -update`), every vector's code and exit, `--keys`
   URL rules (same-host redirects, 1 MiB, timeout, loopback-only http), key-set merge conflicts, no

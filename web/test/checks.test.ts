@@ -1,6 +1,12 @@
 import { execFileSync } from 'node:child_process';
 import { describe, expect, it } from 'vitest';
 import { copy, lifted } from '../src/lib/copy.ts';
+import { approvalsCopy } from '../src/lib/copy-approvals.ts';
+import { connectorsCopy } from '../src/lib/copy-connectors.ts';
+import { editorCopy } from '../src/lib/copy-editor.ts';
+import { formsCopy } from '../src/lib/copy-forms.ts';
+import { policiesCopy } from '../src/lib/copy-policies.ts';
+import { settingsCopy } from '../src/lib/copy-settings.ts';
 import { iconNames } from '../src/icons/names.gen.ts';
 import { files, read, repo, web } from './helpers.ts';
 
@@ -63,6 +69,7 @@ describe('copy', () => {
     else if (o && typeof o === 'object') Object.values(o).forEach(walk);
   };
   walk(copy);
+  for (const area of [approvalsCopy, connectorsCopy, editorCopy, formsCopy, policiesCopy, settingsCopy]) walk(area);
   it('follows the voice: no exclamation marks, no em or en dashes, no emoji', () => {
     for (const s of all) {
       expect(s.includes('!'), s).toBe(false);

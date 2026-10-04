@@ -36,6 +36,7 @@ STORE="$ROOT/.tmp/web-e2e-store"
 STOREPORT=55469
 SERVE_PID=""
 cleanup() {
+  [ -n "${MOCK_PID:-}" ] && kill "$MOCK_PID" 2>/dev/null || true
   [ -n "$SERVE_PID" ] && kill "$SERVE_PID" 2>/dev/null && wait "$SERVE_PID" 2>/dev/null || true
   "$BIN/pg_ctl" -D "$DATA" -m fast -w stop >/dev/null 2>&1 || true
   "$BIN/pg_ctl" -D "$STORE" -m fast -w stop >/dev/null 2>&1 || true
@@ -128,19 +129,57 @@ seed() {
   MISMATCH_ID="$(hero_act)" || { echo "web-e2e seed: the second act failed" >&2; return 1; }; v="$(waitv "$MISMATCH_ID")"
   [ "$v" = "sealed L2 MISMATCH" ] || { echo "web-e2e seed: expected L2 MISMATCH for $MISMATCH_ID, got '$v'" >&2; return 1; }
   store_sql -d acme -c "SET client_min_messages = warning" -f "$demo/sql/11_trigger_off.sql" >/dev/null
-  python3 - "$WORK/fixtures.json" "$VERIFIED_ID" "$MISMATCH_ID" <<'PY'
-import json, sys
-json.dump({"verified": sys.argv[2], "mismatch": sys.argv[3]}, open(sys.argv[1], "w"))
+  # S26: acme-demo v2 adds a four-eyes rule for refund changes and asks for L2 on approved writes,
+  # so the Approvals tests see "1 of 2" and "L2 · VERIFIED". Approvals snapshot their rule, so the
+  # policy tests can change the enforced version later without touching seeded approvals.
+  python3 - "$demo/policies/acme-demo.yaml" "$WORK/acme-demo-v2.yaml" <<'PY'
+import sys
+src = open(sys.argv[1]).read()
+anchor = "  - id: orders-writes-need-approval\n"
+four = """  - id: refunds-need-two
+    description: S26 e2e. Changing a refund needs two people.
+    match: { tool: postgres.execute }
+    when: sql.kind == "update" && sql.tables == ["public.refunds"] && !sql.unbounded_write
+    decision: require_approval
+    reason: Changing a refund needs two people to countersign.
+    approval: { approvers: [role:admin], required: 2, expires_in: 30m }
+    verify: L2
+"""
+assert anchor in src
+src = src.replace(anchor, four + anchor, 1)
+i = src.index(anchor)
+j = src.index("expires_in: 30m }\n", i) + len("expires_in: 30m }\n")
+src = src[:j] + "    verify: L2\n" + src[j:]
+open(sys.argv[2], "w").write(src)
 PY
+  apiv policy push "$WORK/acme-demo-v2.yaml" >/dev/null
+  apiv policy activate acme-demo --version 2 --mode enforce --reason "web e2e: four-eyes refunds and L2 approvals" --yes >/dev/null
+  # One refund waiting for a person, so Approvals (and Lighthouse) open on a real card.
+  { DEEDGLASS_API_KEY="$agentkey" DEEDGLASS_SERVER="http://127.0.0.1:$PORT" "$DG" act postgres.execute --no-color --json \
+      --args "{\"sql\":\"INSERT INTO public.refunds (id, order_id, amount_cents, reason, created_at) VALUES (9001, 42, 12000, 'Damaged in transit', '2026-10-04 10:00:00+00')\"}" >/dev/null 2>&1 || true; }
+  python3 - "$WORK/fixtures.json" "$VERIFIED_ID" "$MISMATCH_ID" "$admin" "$agentkey" <<'PY'
+import json, sys
+json.dump({"verified": sys.argv[2], "mismatch": sys.argv[3], "adminKey": sys.argv[4], "agentKey": sys.argv[5]}, open(sys.argv[1], "w"))
+PY
+  chmod 600 "$WORK/fixtures.json"
   echo "web-e2e: seeded · L2 VERIFIED $VERIFIED_ID · L2 MISMATCH $MISMATCH_ID"
 }
 if [ "${WEB_E2E_SEED:-1}" = "1" ]; then seed; fi
 
+# S26: the mock orders API (S16) for the REST connector test, on its own loopback port.
+MOCK_PID=""
+MOCK_PORT="${WEB_E2E_MOCK_PORT:-18290}"
+export WEB_E2E_MOCK_TOKEN="mock-orders-e2e-throwaway"
+if (cd "$ROOT" && /opt/homebrew/bin/go build -o "$WORK/mock-orders" ./examples/mock-orders); then
+  MOCK_ORDERS_TOKEN="$WEB_E2E_MOCK_TOKEN" MOCK_ORDERS_ADDR="127.0.0.1:$MOCK_PORT" "$WORK/mock-orders" > "$ROOT/.tmp/web-e2e-mock.log" 2>&1 &
+  MOCK_PID=$!
+  export WEB_E2E_MOCK_URL="http://127.0.0.1:$MOCK_PORT"
+fi
 export WEB_E2E_BASE="http://127.0.0.1:$PORT"
 export WEB_E2E_DG="$DG"
 export WEB_E2E_WORK="$WORK"
-export SHOTS_DIR="${SHOTS_DIR:-$HOME/txv/ops/plan/prompts-v7/reports/screens/S25}"
-export LIGHTHOUSE_DIR="${LIGHTHOUSE_DIR:-$HOME/txv/ops/plan/prompts-v7/reports/lighthouse/S25}"
+export SHOTS_DIR="${SHOTS_DIR:-$HOME/txv/ops/plan/prompts-v7/reports/screens/S26}"
+export LIGHTHOUSE_DIR="${LIGHTHOUSE_DIR:-$HOME/txv/ops/plan/prompts-v7/reports/lighthouse/S26}"
 cd "$ROOT/web"
 st=0
 case "$MODE" in

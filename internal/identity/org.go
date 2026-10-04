@@ -4,8 +4,11 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
+	"encoding/json/jsontext"
 	"errors"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 	_ "time/tzdata" // time zones load the same in a distroless image as on a laptop
@@ -37,6 +40,11 @@ type Org struct {
 	Timezone string     `json:"timezone"`
 	Status   string     `json:"status"`
 	Created  httpx.Time `json:"created_at"`
+	// RetentionDays and Settings are on GET and PATCH /v1/org only (S26, additive): the effective
+	// payload retention (orgs.retention_days, or ledger.DefaultRetentionDays when NULL) and the
+	// approval settings with their defaults applied.
+	RetentionDays *int         `json:"retention_days,omitempty"`
+	Settings      *OrgSettings `json:"settings,omitempty"`
 	// Stop is the Stop all overlay, on GET /v1/org only (S24, additive): the Console's org-stopped
 	// banner reads it on load and again on org.stopped and org.started.
 	Stop *OrgStopState `json:"stop,omitempty"`
@@ -50,6 +58,25 @@ type OrgStopState struct {
 	StoppedBy *string     `json:"stopped_by"`
 	Reason    *string     `json:"reason"`
 }
+
+// OrgSettings is the org's settings as GET /v1/org shows them (orgs.settings, defaults applied).
+type OrgSettings struct {
+	Approvals ApprovalSettings `json:"approvals"`
+}
+
+// ApprovalSettings are orgs.settings.approvals. internal/approve reads the same keys with the same
+// defaults (approve.Settings); keep the two in step.
+type ApprovalSettings struct {
+	EmailLinks      string `json:"email_links"`      // decide (default) | review
+	EmailDetail     string `json:"email_detail"`     // summary (default) | full
+	SelfCountersign string `json:"self_countersign"` // deny (default) | allow
+}
+
+// Retention bounds (orgs has the same CHECK).
+const (
+	MinRetentionDays = 1
+	MaxRetentionDays = 3650
+)
 
 // Org name and slug rules (orgs has the same CHECKs).
 const maxOrgName = 100
@@ -273,6 +300,43 @@ func getOrg(ctx context.Context, tx pgx.Tx, id ids.OrgID) (Org, error) {
 	return orgObject(id, name, slug, tz, status, created), err
 }
 
+// withSettings adds the effective retention and approval settings to o (GET and PATCH /v1/org).
+func withSettings(ctx context.Context, tx pgx.Tx, o *Org) error {
+	var (
+		days *int
+		raw  []byte
+	)
+	if err := tx.QueryRow(ctx, `SELECT retention_days, settings FROM deedglass.orgs WHERE id = $1`, o.ID).Scan(&days, &raw); err != nil {
+		return err
+	}
+	d := ledger.DefaultRetentionDays
+	if days != nil {
+		d = *days
+	}
+	a := approvalSettings(raw)
+	o.RetentionDays, o.Settings = &d, &OrgSettings{Approvals: a}
+	return nil
+}
+
+// approvalSettings reads orgs.settings.approvals with the defaults approve.Settings applies.
+func approvalSettings(raw []byte) ApprovalSettings {
+	var s struct {
+		Approvals ApprovalSettings `json:"approvals"`
+	}
+	_ = json.Unmarshal(raw, &s)
+	a := s.Approvals
+	if a.EmailLinks != "review" {
+		a.EmailLinks = "decide"
+	}
+	if a.EmailDetail != "full" {
+		a.EmailDetail = "summary"
+	}
+	if a.SelfCountersign != "allow" {
+		a.SelfCountersign = "deny"
+	}
+	return a
+}
+
 // GetOrg is GET /v1/org.
 func (s *Service) GetOrg(ctx context.Context, p *Principal) (Org, error) {
 	var o Org
@@ -280,6 +344,9 @@ func (s *Service) GetOrg(ctx context.Context, p *Principal) (Org, error) {
 		var err error
 		o, err = getOrg(ctx, tx, p.OrgID)
 		if err != nil {
+			return err
+		}
+		if err := withSettings(ctx, tx, &o); err != nil {
 			return err
 		}
 		var (
@@ -298,15 +365,80 @@ func (s *Service) GetOrg(ctx context.Context, p *Principal) (Org, error) {
 	return o, err
 }
 
-// OrgPatch is PATCH /v1/org: only the fields sent change.
+// OrgPatch is PATCH /v1/org: only the fields sent change. Name and timezone are admin; retention
+// and settings are owner only (S26).
 type OrgPatch struct {
 	Name     *string `json:"name"`
 	Timezone *string `json:"timezone"`
+	// RetentionDays is the raw value, so JSON null (back to the default) differs from leaving it out.
+	RetentionDays jsontext.Value    `json:"retention_days"`
+	Settings      *OrgSettingsPatch `json:"settings"`
 }
 
-// UpdateOrg changes the org's name or time zone and seals org.updated.
+// OrgSettingsPatch is PATCH /v1/org's settings: only the keys sent change; unknown keys are refused
+// by the strict decoder with their path as param (settings.approvals.foo).
+type OrgSettingsPatch struct {
+	Approvals *ApprovalSettingsPatch `json:"approvals"`
+}
+
+// ApprovalSettingsPatch is settings.approvals in PATCH /v1/org.
+type ApprovalSettingsPatch struct {
+	EmailLinks      *string `json:"email_links"`
+	EmailDetail     *string `json:"email_detail"`
+	SelfCountersign *string `json:"self_countersign"`
+}
+
+// approvalFields are the settings.approvals keys PATCH /v1/org takes, with their allowed values
+// (the default first) and the validation message.
+var approvalFields = []struct {
+	key, msg string
+	values   [2]string
+	get      func(*ApprovalSettingsPatch) *string
+}{
+	{"email_links", "`settings.approvals.email_links` must be decide or review.", [2]string{"decide", "review"},
+		func(a *ApprovalSettingsPatch) *string { return a.EmailLinks }},
+	{"email_detail", "`settings.approvals.email_detail` must be summary or full.", [2]string{"summary", "full"},
+		func(a *ApprovalSettingsPatch) *string { return a.EmailDetail }},
+	{"self_countersign", "`settings.approvals.self_countersign` must be deny or allow.", [2]string{"deny", "allow"},
+		func(a *ApprovalSettingsPatch) *string { return a.SelfCountersign }},
+}
+
+// parseRetention reads retention_days: nil for JSON null (the default), else a whole number of
+// days from 1 to 3650.
+func parseRetention(v jsontext.Value) (*int, error) {
+	t := strings.TrimSpace(string(v))
+	if t == "null" {
+		return nil, nil
+	}
+	n, err := strconv.ParseInt(t, 10, 32)
+	if err != nil || n < MinRetentionDays || n > MaxRetentionDays {
+		return nil, httpx.ErrValidation("retention_days",
+			"`retention_days` must be a whole number of days from 1 to 3650, or null for the default of 90.")
+	}
+	d := int(n)
+	return &d, nil
+}
+
+// UpdateOrg changes the org's name, time zone, payload retention or approval settings, and seals
+// org.updated when something changed. Retention and settings need an owner.
 func (s *Service) UpdateOrg(ctx context.Context, p *Principal, in OrgPatch) (Org, *string, error) {
 	var fields []string
+	retentionSent := in.RetentionDays != nil
+	var approvals map[string]string
+	if in.Settings != nil && in.Settings.Approvals != nil {
+		approvals = map[string]string{}
+		for _, f := range approvalFields {
+			if v := f.get(in.Settings.Approvals); v != nil {
+				approvals[f.key] = *v
+			}
+		}
+	}
+	if retentionSent && !p.Role.AtLeast(RoleOwner) {
+		return Org{}, nil, httpx.ErrInsufficientRole(p.OrgName, p.Role, RoleOwner, "changing payload retention")
+	}
+	if in.Settings != nil && !p.Role.AtLeast(RoleOwner) {
+		return Org{}, nil, httpx.ErrInsufficientRole(p.OrgName, p.Role, RoleOwner, "changing approval settings")
+	}
 	if in.Name != nil {
 		n, err := CheckOrgName(*in.Name)
 		if err != nil {
@@ -322,8 +454,33 @@ func (s *Service) UpdateOrg(ctx context.Context, p *Principal, in OrgPatch) (Org
 		}
 		fields = append(fields, "timezone")
 	}
+	var retention *int
+	if retentionSent {
+		var err error
+		if retention, err = parseRetention(in.RetentionDays); err != nil {
+			return Org{}, nil, err
+		}
+		fields = append(fields, "retention_days")
+	}
+	for _, f := range approvalFields {
+		v, ok := approvals[f.key]
+		if !ok {
+			continue
+		}
+		if v != f.values[0] && v != f.values[1] {
+			return Org{}, nil, httpx.ErrValidation("settings.approvals."+f.key, f.msg)
+		}
+		fields = append(fields, "settings.approvals."+f.key)
+	}
 	if len(fields) == 0 {
-		return Org{}, nil, httpx.ErrValidation("", "Send name, timezone or both.")
+		return Org{}, nil, httpx.ErrValidation("", "Send at least one of name, timezone, retention_days or settings.approvals.")
+	}
+	var patch []byte
+	if len(approvals) > 0 {
+		var err error
+		if patch, err = json.Marshal(approvals); err != nil {
+			return Org{}, nil, err
+		}
 	}
 	var (
 		o Org
@@ -334,21 +491,59 @@ func (s *Service) UpdateOrg(ctx context.Context, p *Principal, in OrgPatch) (Org
 		if err != nil {
 			return err
 		}
-		if _, err := tx.Exec(ctx, `UPDATE deedglass.orgs SET name = COALESCE($2, name), timezone = COALESCE($3, timezone) WHERE id = $1`,
-			p.OrgID, in.Name, in.Timezone); err != nil {
+		if err := withSettings(ctx, tx, &cur); err != nil {
+			return err
+		}
+		var curDays *int
+		if err := tx.QueryRow(ctx, `SELECT retention_days FROM deedglass.orgs WHERE id = $1`, p.OrgID).Scan(&curDays); err != nil {
+			return err
+		}
+		days := curDays
+		if retentionSent {
+			days = retention
+		}
+		// Settings merge under "approvals" only: other keys, and approval keys not sent, stay.
+		if _, err := tx.Exec(ctx, `UPDATE deedglass.orgs SET name = COALESCE($2, name), timezone = COALESCE($3, timezone),
+		      retention_days = $4,
+		      settings = CASE WHEN $5::jsonb IS NULL THEN settings
+		        ELSE pg_catalog.jsonb_set(settings, '{approvals}',
+		          (CASE WHEN pg_catalog.jsonb_typeof(settings -> 'approvals') = 'object' THEN settings -> 'approvals' ELSE '{}'::jsonb END) || $5::jsonb) END
+		    WHERE id = $1`,
+			p.OrgID, in.Name, in.Timezone, days, patch); err != nil {
 			return err
 		}
 		if o, err = getOrg(ctx, tx, p.OrgID); err != nil {
 			return err
 		}
-		if o.Name == cur.Name && o.Timezone == cur.Timezone {
+		if err := withSettings(ctx, tx, &o); err != nil {
+			return err
+		}
+		if o.Name == cur.Name && o.Timezone == cur.Timezone && equalIntPtr(days, curDays) && *o.Settings == *cur.Settings {
 			return nil // nothing changed: no deed
 		}
+		data := map[string]any{"fields": fields, "timezone": o.Timezone}
+		if retentionSent {
+			data["retention_days"] = nil // null: the default (ledger.DefaultRetentionDays)
+			if days != nil {
+				data["retention_days"] = *days
+			}
+		}
+		if len(approvals) > 0 {
+			a := o.Settings.Approvals
+			data["approvals"] = map[string]any{"email_links": a.EmailLinks, "email_detail": a.EmailDetail, "self_countersign": a.SelfCountersign}
+		}
 		d, err = s.recordAdmin(ctx, tx, ledger.AdminEvent{Action: ledger.AdminOrgUpdated, Actor: userRef(p.UserID), Target: orgRef(p.OrgID),
-			Data: map[string]any{"fields": fields, "timezone": o.Timezone}})
+			Data: data})
 		return err
 	})
 	return o, d, err
+}
+
+func equalIntPtr(a, b *int) bool {
+	if a == nil || b == nil {
+		return a == b
+	}
+	return *a == *b
 }
 
 // ValidTimezone reports whether tz is an IANA zone name Go can load (time.LoadLocation), and not

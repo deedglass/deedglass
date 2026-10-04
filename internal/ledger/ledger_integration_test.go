@@ -503,6 +503,99 @@ func TestFilterMatrix(t *testing.T) {
 	}
 }
 
+// S26: shadow_differs=true lists the actions whose shadow policy decided, and decided differently
+// from the enforced decision (a NULL decision counts as different), over pages, with the count,
+// and only in the caller's org.
+func TestShadowDiffersFilter(t *testing.T) {
+	en := newEnv(t)
+	en.run(t, en.org, en.agents, 7, 300)
+	orgB, agentsB := en.newOrg(t, "beta")
+	en.run(t, orgB, agentsB, 8, 30)
+	// A third of the rows shadow-differ, a third agree, a third have no shadow decision.
+	shadow := `WITH n AS (SELECT id, row_number() OVER (ORDER BY id) AS i FROM deedglass.actions)
+	  UPDATE deedglass.actions AS a SET shadow_decision = CASE n.i % 3
+	      WHEN 0 THEN CASE WHEN a.decision = 'allow' THEN 'deny' ELSE 'allow' END
+	      WHEN 1 THEN a.decision END
+	    FROM n WHERE n.id = a.id`
+	for _, o := range []ids.OrgID{en.org, orgB} {
+		if err := en.e.DB.OrgTx(ctx, o, func(ctx context.Context, tx pgx.Tx) error { _, err := tx.Exec(ctx, shadow); return err }); err != nil {
+			t.Fatal(err)
+		}
+	}
+	// One row with a shadow decision and no enforced one.
+	if err := en.e.DB.OrgTx(ctx, en.org, func(ctx context.Context, tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, `UPDATE deedglass.actions SET shadow_decision = 'deny'
+		    WHERE id = (SELECT id FROM deedglass.actions WHERE decision IS NULL ORDER BY id LIMIT 1)`)
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	var want []string
+	var nulls int
+	err := en.e.DB.OrgReadTx(ctx, en.org, func(ctx context.Context, tx pgx.Tx) error {
+		rows, err := tx.Query(ctx, `SELECT id, decision, shadow_decision FROM deedglass.actions ORDER BY created_at DESC, id DESC`)
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var id string
+			var d, s *string
+			if err := rows.Scan(&id, &d, &s); err != nil {
+				return err
+			}
+			if s != nil && (d == nil || *d != *s) {
+				want = append(want, id)
+				if d == nil {
+					nulls++
+				}
+			}
+		}
+		return rows.Err()
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(want) < 90 {
+		t.Fatalf("only %d rows differ", len(want))
+	}
+	var got []string
+	for _, a := range listAll(t, en, en.org, url.Values{"shadow_differs": {"true"}}, 37) {
+		got = append(got, a.ID)
+		if a.Decision != nil && (a.Decision.Shadow == nil || a.Decision.Shadow.Outcome == a.Decision.Outcome) {
+			t.Errorf("%s: shadow %+v, decision %s", a.ID, a.Decision.Shadow, a.Decision.Outcome)
+		}
+	}
+	if !slices.Equal(got, want) {
+		t.Fatalf("shadow_differs: %d ids, want %d (%d without a decision)", len(got), len(want), nulls)
+	}
+	f, _, _ := ledger.ParseActionQuery(url.Values{"shadow_differs": {"true"}})
+	if n, err := en.led.CountActions(ctx, en.org, f); err != nil || n != int64(len(want)) {
+		t.Fatalf("count %d %v, want %d", n, err, len(want))
+	}
+	// With another filter, and a cursor from the plain list is refused.
+	f2, p2, _ := ledger.ParseActionQuery(url.Values{"shadow_differs": {"true"}, "decision": {"deny"}})
+	l, err := en.led.ListActions(ctx, en.org, f2, p2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, a := range l.Data {
+		if a.Policy.Decision == nil || *a.Policy.Decision != "deny" || a.Decision.Shadow == nil || a.Decision.Shadow.Outcome == "deny" {
+			t.Fatalf("%s: %+v", a.ID, a.Decision)
+		}
+	}
+	fp, pp, _ := ledger.ParseActionQuery(url.Values{"limit": {"5"}})
+	lp, err := en.led.ListActions(ctx, en.org, fp, pp)
+	if err != nil {
+		t.Fatal(err)
+	}
+	f3, p3, _ := ledger.ParseActionQuery(url.Values{"shadow_differs": {"true"}, "cursor": {*lp.NextCursor}})
+	var pe *ledger.ParamError
+	if _, err := en.led.ListActions(ctx, en.org, f3, p3); !errors.As(err, &pe) || pe.Param != "cursor" {
+		t.Fatalf("cursor reuse: %v", err)
+	}
+}
+
 // Paging through 1,000 actions while 500 more arrive: no duplicate, nothing skipped.
 func TestPaginationUnderConcurrentInserts(t *testing.T) {
 	en := newEnv(t)

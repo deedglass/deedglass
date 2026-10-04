@@ -1,0 +1,10 @@
+{
+  "error": {
+    "type": "invalid_request_error",
+    "code": "not_found",
+    "message": "There's no endpoint at POST /v1/policies/pol_01m42fmxmvwje3p9x57t2kjkdq/versions/1/replay. Check the path in the API reference.",
+    "param": null,
+    "request_id": "req_01m42ft18vxq222g4tw57ha9y0",
+    "doc_url": "https://docs.deedglass.com/errors/not_found"
+  }
+}

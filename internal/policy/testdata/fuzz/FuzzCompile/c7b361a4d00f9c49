@@ -1,0 +1,2 @@
+go test fuzz v1
+[]byte("deedglass: policy/v1\nname: a0\ndefaults:\n    decision: require_approval\n    reason: ›\n    approval:\n     approvers: []#0")

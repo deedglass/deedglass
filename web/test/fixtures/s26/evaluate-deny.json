@@ -1,0 +1,111 @@
+{
+  "object": "policy_decision",
+  "decision": "deny",
+  "code": "policy_denied",
+  "source": "rule",
+  "rule_id": "block-unscoped-writes",
+  "rule_line": 47,
+  "reason": "UPDATE and DELETE need a WHERE clause.",
+  "message": "Blocked by policy \"block-unscoped-writes\": UPDATE and DELETE need a WHERE clause.",
+  "approval": null,
+  "verify": null,
+  "notify": [],
+  "budget": null,
+  "policy": {
+    "id": null,
+    "name": "acme-demo",
+    "version": null,
+    "version_id": null,
+    "version_hash": "sha256:23e1ae1de718fca29abeb6f3caa943295c277762f35482d8fbfb62f8a1985284",
+    "mode": "enforce"
+  },
+  "shadow": null,
+  "facts": {
+    "sql": {
+      "present": true,
+      "kind": "delete",
+      "category": "write",
+      "kinds": [
+        "delete"
+      ],
+      "statements": 1,
+      "multi": false,
+      "writes": true,
+      "write_kinds": [
+        "delete"
+      ],
+      "has_where": false,
+      "unbounded_write": true,
+      "where_trivial": false,
+      "has_returning": false,
+      "cte_write": false,
+      "select_into": false,
+      "copy_program": false,
+      "explain_analyze": false,
+      "locks_rows": false,
+      "tables": [
+        "public.orders"
+      ],
+      "tables_complete": true,
+      "functions": [],
+      "dangerous_functions": [],
+      "write_functions": [],
+      "unknown_functions": [],
+      "ambiguous": false,
+      "reasons": [],
+      "bytes": 25
+    },
+    "time": {
+      "now": "2026-10-04T03:37:33.182Z",
+      "hour": 3,
+      "minute": 37,
+      "weekday": "sun",
+      "date": "2026-10-04"
+    }
+  },
+  "trace": [
+    {
+      "step": "stop",
+      "result": "pass",
+      "detail": "agent active · org running"
+    },
+    {
+      "step": "budget",
+      "id": "agent-rate",
+      "result": "pass",
+      "detail": "0 of 30 calls this minute"
+    },
+    {
+      "step": "rule",
+      "id": "block-destructive-sql",
+      "line": 37,
+      "result": "no_match",
+      "detail": "when → false",
+      "cost": 3
+    },
+    {
+      "step": "rule",
+      "id": "block-schema-changes",
+      "line": 42,
+      "result": "no_match",
+      "detail": "when → false",
+      "cost": 6
+    },
+    {
+      "step": "rule",
+      "id": "block-unscoped-writes",
+      "line": 47,
+      "result": "match",
+      "detail": "when → true",
+      "cost": 2
+    },
+    {
+      "step": "rule",
+      "result": "not_evaluated",
+      "detail": "13 more rules not evaluated"
+    }
+  ],
+  "errors": [],
+  "sqlguard_version": "1",
+  "evaluated_in_us": 48
+}

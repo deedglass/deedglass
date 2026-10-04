@@ -4,6 +4,9 @@
 detail, the deed panel, the undo panel (S23's strings, verbatim), Deeds and Agents).** The Console sections below are the source the
 first strings were lifted from verbatim; `web/test/checks.test.ts` asserts each lifted string still
 appears here, and the banned-word list runs over `copy.ts`. New Console copy goes into `copy.ts` first.
+S26's screens keep theirs in `web/src/lib/copy-{approvals,policies,connectors,settings,editor,forms}.ts`
+(one file per area, so a page bundles only its own strings); the same voice and banned-word checks walk
+them. S12's activation sheets, S22's approval sentences and S17's readiness copy are lifted verbatim.
 
 One place for the words people see in the Console, the API and the CLI, so every surface says the
 same thing the same way. The Console lifts its strings verbatim from here into

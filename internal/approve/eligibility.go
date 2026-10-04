@@ -135,8 +135,9 @@ func eligiblePeople(all []Person, s Spec, onBehalfOf string, allowSelf bool) (pe
 	return people, canCountersign
 }
 
-// Settings are the org's approval settings (orgs.settings.approvals), read with defaults. S26 adds
-// the Console's form.
+// Settings are the org's approval settings (orgs.settings.approvals), read with defaults. Owners
+// change them with PATCH /v1/org (S26, identity.UpdateOrg), which shows them with the same
+// defaults (identity.ApprovalSettings); keep the two in step.
 type Settings struct {
 	EmailLinks      string `json:"email_links"`      // decide (default) | review
 	EmailDetail     string `json:"email_detail"`     // summary (default) | full
@@ -148,6 +149,13 @@ type orgInfo struct {
 	Name     string
 	TimeZone string
 	Settings Settings
+}
+
+// ReadSettings is the org's approval settings as every approval path reads them (defaults
+// applied), inside the caller's org transaction.
+func ReadSettings(ctx context.Context, tx pgx.Tx, org ids.OrgID) (Settings, error) {
+	o, err := readOrg(ctx, tx, org)
+	return o.Settings, err
 }
 
 func readOrg(ctx context.Context, tx pgx.Tx, org ids.OrgID) (orgInfo, error) {

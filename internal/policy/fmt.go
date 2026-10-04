@@ -30,7 +30,27 @@ var keyOrder = map[string][]string{
 
 // Format rewrites a valid policy into the canonical layout (docs/POLICY_LANGUAGE.md §11), keeping
 // comments. The result compiles to the same version_hash, or Format returns an error.
+//
+// Format is idempotent: it repeats the one-pass layout until the text stops changing (at most
+// fmtPasses times). One pass is not always a fixed point: the YAML emitter can drop a comment that
+// is glued to a flow collection (`approvers: []#0`, FuzzCompile seed c7b361a4d00f9c49), and the
+// next pass then lays the same mapping out in flow style.
 func Format(src []byte) ([]byte, error) {
+	out, err := formatOnce(src)
+	for i := 1; err == nil && i < fmtPasses; i++ {
+		again, err2 := formatOnce(out)
+		if err2 != nil || bytes.Equal(again, out) {
+			return out, err2
+		}
+		out = again
+	}
+	return out, err
+}
+
+// fmtPasses bounds Format's passes; real files settle in one, the comment edge case in two.
+const fmtPasses = 4
+
+func formatOnce(src []byte) ([]byte, error) {
 	c, _ := Compile(src, Options{})
 	if c == nil {
 		return nil, ErrNotFormatted

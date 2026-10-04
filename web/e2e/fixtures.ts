@@ -50,3 +50,40 @@ export async function signIn(page: Page, email: string, org = 'acme'): Promise<v
   await page.getByRole('button', { name: /^(Sign in|Accept invite)$/ }).click();
   await page.waitForURL(/\/app\/?$/);
 }
+
+// ---------- S26 helpers: real approvals created through the API with the seeded agent key ----------
+
+export interface Seeds { verified: string; mismatch: string; adminKey: string; agentKey: string }
+
+export function seeds(): Seeds {
+  return JSON.parse(readFileSync(`${process.env.WEB_E2E_WORK}/fixtures.json`, 'utf8'));
+}
+
+const apiBase = () => process.env.WEB_E2E_BASE ?? 'http://127.0.0.1:18241';
+
+/** apiAs calls the API with a bearer key (Node fetch, outside the browser). */
+export async function apiAs<T = Record<string, unknown>>(key: string, method: string, path: string, body?: unknown, headers: Record<string, string> = {}): Promise<{ status: number; body: T }> {
+  const r = await fetch(apiBase() + path, {
+    method,
+    headers: { Authorization: `Bearer ${key}`, 'Deedglass-Version': '2026-10-01', ...(body ? { 'Content-Type': 'application/json' } : {}), ...(method === 'POST' ? { 'Idempotency-Key': crypto.randomUUID() } : {}), ...headers },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  return { status: r.status, body: (await r.json().catch(() => ({}))) as T };
+}
+
+let refundSeq = 20_000 + Math.floor(Math.random() * 9_000) * 10;
+
+/**
+ * pendingRefund makes support-bot ask to INSERT a refund (one approver, L2) or, with fourEyes,
+ * to UPDATE an existing refund (two approvers), and returns the action and approval ids.
+ */
+export async function pendingRefund(o: { fourEyes?: boolean; onBehalfOf?: string; cents?: number } = {}): Promise<{ action: string; approval: string; refund: number }> {
+  const id = ++refundSeq;
+  const sql = o.fourEyes
+    ? `UPDATE public.refunds SET reason = 'Customer called back (${id})' WHERE id = ${1 + (id % 50)}`
+    : `INSERT INTO public.refunds (id, order_id, amount_cents, reason, created_at) VALUES (${id}, 42, ${o.cents ?? 12000}, 'Damaged in transit', '2026-10-04 10:00:00+00')`;
+  const r = await apiAs<{ id: string; approval?: { id: string }; status: string }>(seeds().agentKey, 'POST', '/v1/actions', { tool: 'postgres.execute', args: { sql } },
+    { 'Deedglass-On-Behalf-Of': o.onBehalfOf ?? 'u_4821', 'Deedglass-Session': 'chat_77' });
+  if (r.status !== 202 || !r.body.approval) throw new Error(`expected a pending approval, got ${r.status} ${JSON.stringify(r.body).slice(0, 300)}`);
+  return { action: r.body.id, approval: r.body.approval.id, refund: id };
+}

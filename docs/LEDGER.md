@@ -75,6 +75,7 @@ it is sealed as an amendment deed.
 | `on_behalf_of` | the exact reference the agent sent | `u_4821` |
 | `created_at[gte]`, `created_at[lt]` | RFC 3339 | `2026-10-02T00:00:00Z` |
 | `q` | 2 to 64 characters to find in the tool name or the error code | `refund` |
+| `shadow_differs` | only `true`: actions whose shadow policy decided, and decided differently from the enforced decision (S26) | `true` |
 | `limit` | 1–100, default 25 | `100` |
 | `cursor` | `next_cursor` from the previous page | |
 

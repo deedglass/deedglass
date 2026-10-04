@@ -39,6 +39,7 @@ func buildFS() fstest.MapFS {
 		m[s+".html"] = page(s)
 		m[s+"/detail.html"] = page(s + "-detail")
 	}
+	m["connectors/new.html"] = page("connectors-new")
 	return m
 }
 
@@ -75,6 +76,7 @@ func TestPages(t *testing.T) {
 		{"/app/agents/agt_01k6h7mz3c9d8e7f6g5h4jq3m8", "agents-detail"},
 		{"/app/policies/pol_01k6h7mz3c9d8e7f6g5h4jq3m8", "policies-detail"},
 		{"/app/connectors/con_01k6h7mz3c9d8e7f6g5h4jq3m8", "connectors-detail"},
+		{"/app/connectors/new", "connectors-new"}, {"/app/connectors/new/", "connectors-new"},
 		{"/app/deeds/deed_01k6h7mz3c9d8e7f6g5h4jq3m8", "deeds-detail"},
 		{"/app/_kit", "kit"},
 	}
@@ -103,7 +105,8 @@ func TestPages(t *testing.T) {
 func TestNotFoundNeverEchoes(t *testing.T) {
 	s := newConsole(t, false, true)
 	for _, p := range []string{"/app/actions/not-an-id", "/app/actions/agt_01k6h7mz3c9d8e7f6g5h4jq3m8", "/app/nope", "/app/insights/anm_01k6h7mz3c9d8e7f6g5h4jq3m8",
-		"/app/settings/Bad_Section", "/app/actions/act_01k6h7mz3c9d8e7f6g5h4jq3m8/extra", "/app/%3Cscript%3E"} {
+		"/app/settings/Bad_Section", "/app/actions/act_01k6h7mz3c9d8e7f6g5h4jq3m8/extra", "/app/%3Cscript%3E",
+		"/app/connectors/neww", "/app/connectors/New", "/app/connectors/new/extra", "/app/policies/new", "/app/agents/new"} {
 		w := get(s, "GET", p)
 		if w.Code != 404 || !strings.Contains(w.Body.String(), "<title>404</title>") {
 			t.Errorf("%s: %d %q, want the Console 404", p, w.Code, w.Body.String())
@@ -114,6 +117,21 @@ func TestNotFoundNeverEchoes(t *testing.T) {
 		if w.Header().Get("Content-Security-Policy") != CSP {
 			t.Errorf("%s: 404 without the CSP", p)
 		}
+	}
+}
+
+// A build without connectors/new.html answers the Console 404 there, never a 500.
+func TestConnectorsNewMissingPage(t *testing.T) {
+	fsys := buildFS()
+	delete(fsys, "connectors/new.html")
+	c, err := New(Options{Sessions: fakeSessions{ok: true}, FS: fsys})
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := httpx.New(httpx.Options{})
+	s.Mount(c.Routes()...)
+	if w := get(s, "GET", "/app/connectors/new"); w.Code != 404 || !strings.Contains(w.Body.String(), "<title>404</title>") {
+		t.Fatalf("%d %q", w.Code, w.Body.String())
 	}
 }
 

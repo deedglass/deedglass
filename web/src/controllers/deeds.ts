@@ -41,12 +41,14 @@ export function chainBanner(): { el: HTMLElement; load: () => Promise<void> } {
   return { el, load };
 }
 
-function exportSheet(): void {
+/** exportSheet: the export sheet; `range` (YYYY-MM-DD days) presets it, e.g. Settings' full range. */
+export function exportSheet(preset?: { from?: string; to?: string } | Event): void {
+  const range = preset instanceof Event ? undefined : preset; // a click listener passes its event
   const tz = tzOf();
   const today = new Date();
   const iso = (d: Date) => d.toISOString().slice(0, 10);
-  const from = h('input', { class: 'input', type: 'date', id: 'exp-from', name: 'from', autocomplete: 'off', value: iso(new Date(today.getTime() - 7 * 86_400_000)) });
-  const to = h('input', { class: 'input', type: 'date', id: 'exp-to', name: 'to', autocomplete: 'off', value: iso(today) });
+  const from = h('input', { class: 'input', type: 'date', id: 'exp-from', name: 'from', autocomplete: 'off', value: range?.from ?? iso(new Date(today.getTime() - 7 * 86_400_000)) });
+  const to = h('input', { class: 'input', type: 'date', id: 'exp-to', name: 'to', autocomplete: 'off', value: range?.to ?? iso(today) });
   const err = h('p', { class: 'error', role: 'alert', hidden: true });
   const go = h('button', { type: 'button', class: 'btn btn-primary' }, icon('download', 16), copy.deeds.exportButton);
   const cmd = h('div', { class: 'export-cmd' });

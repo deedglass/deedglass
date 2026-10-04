@@ -63,6 +63,9 @@ type ActionFilter struct {
 	CreatedGTE *time.Time
 	CreatedLT  *time.Time
 	Q          string
+	// ShadowDiffers (S26, shadow_differs=true) keeps actions whose shadow policy decided
+	// differently from the enforced one. omitempty keeps the hash, so older cursors stay valid.
+	ShadowDiffers bool `json:",omitempty"`
 }
 
 // Page is a page request: limit and the opaque cursor from the previous page.
@@ -75,7 +78,7 @@ type Page struct {
 // Unknown parameters are refused, so a typo never silently widens a query.
 func ParseActionQuery(v url.Values) (ActionFilter, Page, error) {
 	var f ActionFilter
-	known := []string{"agent", "tool", "state", "decision", "verdict", "level", "on_behalf_of", "created_at[gte]", "created_at[lt]", "q", "limit", "cursor"}
+	known := []string{"agent", "tool", "state", "decision", "verdict", "level", "on_behalf_of", "created_at[gte]", "created_at[lt]", "q", "shadow_differs", "limit", "cursor"}
 	if err := onlyKnown(v, known); err != nil {
 		return f, Page{}, err
 	}
@@ -137,6 +140,14 @@ func ParseActionQuery(v url.Values) (ActionFilter, Page, error) {
 		if n := utf8.RuneCountInString(f.Q); n < 2 || n > 64 || !utf8.ValidString(f.Q) {
 			return f, Page{}, paramErr("q", "q must be 2 to 64 characters.")
 		}
+	}
+	if sd, err := single(v, "shadow_differs"); err != nil {
+		return f, Page{}, err
+	} else if v.Has("shadow_differs") {
+		if sd != "true" {
+			return f, Page{}, paramErr("shadow_differs", "shadow_differs takes only true. Leave it out to list every action. You sent %q.", clip(sd))
+		}
+		f.ShadowDiffers = true
 	}
 	p, err := parsePage(v)
 	return f, p, err

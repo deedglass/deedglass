@@ -16,7 +16,8 @@ export default defineConfig({
   use: { baseURL: base, channel: 'chrome', trace: 'retain-on-failure', colorScheme: 'dark' },
   projects: [
     { name: 'setup', testMatch: /auth\.setup\.ts/ },
-    { name: 'chromium', testMatch: /(shell|a11y|csp|live|kit|screens|perf)\.spec\.ts/, dependencies: ['setup'] },
-    { name: 'shots', testMatch: /(screenshots|shots-s25)\.spec\.ts/, dependencies: ['setup'] },
+    { name: 'chromium', testMatch: /(shell|a11y|csp|live|kit|screens|perf|approvals|policies|connectors|settings|roles|demo-loop)\.spec\.ts/, dependencies: ['setup'] },
+    { name: 'shots', testMatch: /shots-s26\.spec\.ts/, dependencies: ['setup'] },
+    { name: 'shots25', testMatch: /(screenshots|shots-s25)\.spec\.ts/, dependencies: ['setup'] },
   ],
 });

@@ -1,0 +1,557 @@
+/* S26: the policy editor, diagnostics, trace and line diff. Tokens only (tokens.css); no hex, no rgb(). */
+
+/* ---------- PolicyEditor ----------
+   A code block in both themes (DESIGN.md Code block: code-bg with a code-hairline), so colours
+   inside it use the dark primitives, like .code .ok does. The textarea, the mirror and the gutter
+   share one set of metrics: Geist Mono 13/20, tab-size 2, white-space pre, 12px 16px padding. */
+.pe {
+  --pe-pad-y: 12px;
+  --pe-pad-x: 16px;
+  color-scheme: dark;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  height: clamp(320px, 62vh, 720px);
+  min-width: 0;
+  overflow: hidden;
+  background: var(--code-bg);
+  border: 1px solid var(--code-hairline);
+  border-radius: var(--radius-button);
+  color: var(--code-plain);
+}
+.pe:has(.pe-input:focus-visible) {
+  box-shadow: var(--focus-ring);
+}
+.pe-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  height: 32px;
+  padding: 0 var(--space-3) 0 var(--space-4);
+  border-bottom: 1px solid var(--code-hairline);
+  color: var(--code-comment);
+  font-size: 12px;
+  line-height: 16px;
+}
+.pe-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  color: var(--code-comment);
+}
+.pe-head-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex: none;
+}
+.pe-caret {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.pe-ro {
+  padding: 0 6px;
+  border: 1px solid var(--ink-700);
+  border-radius: var(--radius-chip);
+  color: var(--code-punct);
+  font-weight: 550;
+}
+.pe-main {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  min-height: 0;
+}
+.pe-gutter {
+  position: relative;
+  overflow: hidden;
+  border-right: 1px solid var(--code-hairline);
+  user-select: none;
+}
+.pe-gutter-inner {
+  display: flex;
+  padding: var(--pe-pad-y) 0;
+  will-change: transform;
+}
+.pe-marks,
+.pe-nums,
+.pe-mirror,
+.pe-input {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 20px;
+  letter-spacing: 0;
+  font-variant-ligatures: none;
+  font-kerning: none;
+  tab-size: 2;
+  white-space: pre;
+  word-wrap: normal;
+}
+.pe-marks {
+  width: 20px;
+  padding-left: 6px;
+  text-align: center;
+}
+.pe-mk {
+  cursor: pointer;
+}
+.pe-mk-error {
+  color: var(--mismatch-text-dark);
+}
+.pe-mk-warning {
+  color: var(--unverifiable-text-dark);
+}
+.pe-nums {
+  min-width: 4ch;
+  box-sizing: content-box;
+  padding: 0 var(--space-3) 0 var(--space-1);
+  text-align: right;
+  color: var(--code-comment);
+  font-variant-numeric: tabular-nums;
+}
+.pe-wide .pe-nums {
+  min-width: 5ch;
+}
+.pe-body {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+}
+.pe-clip {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.pe-mirror {
+  position: absolute;
+  top: 0;
+  left: 0;
+  min-width: 100%;
+  padding: var(--pe-pad-y) var(--pe-pad-x);
+  color: transparent;
+  will-change: transform;
+}
+.pe-hl {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 20px;
+  background: color-mix(in srgb, var(--accent-dark) 16%, transparent);
+  box-shadow: inset 2px 0 0 var(--accent-dark);
+  color: transparent;
+}
+.pe-u {
+  text-decoration-line: underline;
+  text-decoration-style: wavy;
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 4px;
+  text-decoration-skip-ink: none;
+}
+.pe-u-error {
+  text-decoration-color: var(--mismatch-text-dark);
+}
+.pe-u-warning {
+  text-decoration-color: var(--unverifiable-text-dark);
+}
+.pe-input {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  padding: var(--pe-pad-y) var(--pe-pad-x);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--code-plain);
+  caret-color: var(--code-plain);
+  resize: none;
+  overflow: auto;
+  outline: none;
+  scrollbar-color: var(--ink-700) transparent;
+}
+.pe-input:focus-visible {
+  box-shadow: none;
+}
+.pe-input::selection {
+  background: color-mix(in srgb, var(--accent-dark) 40%, transparent);
+}
+.pe[data-readonly='true'] .pe-input {
+  cursor: default;
+}
+.pe-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1) var(--space-3);
+  min-height: 18px;
+  margin-top: var(--space-2);
+}
+.pe-status,
+.pe-ro-note,
+.pe-busy {
+  margin: 0;
+}
+.pe-diags {
+  margin-top: var(--space-2);
+  min-width: 0;
+}
+.pe-diags[aria-busy='true'] .dl-list {
+  opacity: 0.72;
+}
+
+/* ---------- DiagnosticsList ---------- */
+.dl {
+  display: grid;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.dl-summary,
+.dl-more {
+  margin: 0;
+  color: var(--text-2);
+}
+.dl-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-button);
+  overflow: hidden;
+}
+.dl-row {
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-1) var(--space-3);
+  min-height: 44px;
+  padding: var(--space-1) var(--space-3);
+  border-bottom: 1px solid var(--hairline);
+  transition: background-color var(--dur-micro) var(--ease-enter);
+}
+.dl-row:last-child {
+  border-bottom: 0;
+}
+.dl-row[data-line]:not([data-line='']) {
+  cursor: pointer;
+}
+.dl-row:hover {
+  background: var(--surface-raised);
+}
+.dl-sev {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  line-height: 20px;
+  font-weight: 550;
+}
+.dl-sev-error {
+  color: var(--mismatch-fg);
+}
+.dl-sev-warning {
+  color: var(--unverifiable-fg);
+}
+.dl-main {
+  min-width: 0;
+  padding: 6px 0;
+  border: 0;
+  border-radius: 4px;
+  background: none;
+  color: var(--text);
+  font-size: 14px;
+  line-height: 20px;
+  text-align: left;
+  overflow-wrap: anywhere;
+  text-wrap: pretty;
+}
+.dl-loc {
+  color: var(--text-2);
+  white-space: nowrap;
+}
+.dl-dot {
+  color: var(--text-2);
+}
+.dl-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+.dl-docs .icon {
+  color: var(--text-2);
+}
+.dl-clean-line {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  font-size: 14px;
+  line-height: 20px;
+}
+.dl-glyph {
+  color: var(--text-2);
+  font-weight: 600;
+}
+@media (max-width: 639.98px) {
+  .dl-row {
+    grid-template-columns: minmax(0, 1fr);
+    padding: var(--space-2) var(--space-3);
+  }
+  .dl-main {
+    padding: 0;
+  }
+}
+
+/* ---------- TraceView ---------- */
+.tv {
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+}
+.tv-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-3);
+}
+.tv-msg {
+  margin: 0;
+  font-size: var(--type-headline-size);
+  line-height: var(--type-headline-line);
+  font-weight: 550;
+  text-wrap: pretty;
+  overflow-wrap: anywhere;
+}
+.tv-rule {
+  margin: 0;
+  font-size: 14px;
+  line-height: 20px;
+  overflow-wrap: anywhere;
+}
+.tv-sep {
+  color: var(--text-2);
+}
+.tv-line,
+.tv-id {
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: none;
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: var(--type-mono-s-size);
+  text-underline-offset: 3px;
+}
+/* A column of rule ids reads as text (S24 kit: row links turn accent on hover). */
+.tv-id {
+  color: inherit;
+  text-decoration: underline dotted var(--border-strong);
+}
+button.tv-line:hover,
+button.tv-id:hover {
+  color: var(--accent);
+  text-decoration: underline;
+}
+span.tv-line {
+  color: var(--text-2);
+}
+.tv-trace {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  padding: var(--space-3) 0 0;
+  list-style: none;
+  border-top: 1px solid var(--hairline);
+  font-size: var(--type-mono-s-size);
+  line-height: 20px;
+}
+.tv-step {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr);
+  gap: var(--space-2);
+}
+.tv-text {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.tv-glyph {
+  text-align: center;
+  font-weight: 600;
+}
+.tv-ok .tv-glyph,
+.tv-glyph.tv-ok {
+  color: var(--text);
+}
+.tv-deny .tv-glyph,
+.tv-glyph.tv-deny {
+  color: var(--denied-fg);
+}
+.tv-pending .tv-glyph {
+  color: var(--pending-fg);
+}
+.tv-warn .tv-glyph {
+  color: var(--unverifiable-fg);
+}
+.tv-quiet {
+  color: var(--text-2);
+}
+.tv-facts,
+.tv-errors p,
+.tv-errors ul {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.tv-errors ul {
+  padding-left: var(--space-4);
+}
+
+/* ---------- Policy test results ---------- */
+.pt {
+  display: grid;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.pt-sum {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  font-weight: 550;
+}
+.pt-frame {
+  max-width: 100%;
+  overflow-x: auto;
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-button);
+}
+.pt-table td {
+  height: auto;
+  padding-top: var(--space-2);
+  padding-bottom: var(--space-2);
+  vertical-align: top;
+  white-space: normal;
+  max-width: none;
+  overflow: visible;
+}
+.pt-table td.mono {
+  min-width: 150px;
+}
+.pt-case {
+  min-width: 220px;
+}
+.pt-name,
+.pt-line,
+.pt-problem {
+  display: block;
+}
+.pt-line {
+  font-size: 12px;
+  line-height: 16px;
+}
+.pt-res {
+  text-align: center;
+}
+.pt-detail {
+  min-width: 240px;
+}
+.pt-problem {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 18px;
+  overflow-wrap: anywhere;
+}
+.pt-fail td:first-child {
+  box-shadow: inset 3px 0 0 var(--denied-fg);
+}
+
+/* ---------- LineDiff ---------- */
+.ld-wrap {
+  display: grid;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.ld-summary,
+.ld-note {
+  margin: 0;
+}
+.ld-frame {
+  max-width: 100%;
+  overflow-x: auto;
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-button);
+}
+.ld {
+  width: max-content;
+  min-width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-mono);
+  font-size: var(--type-mono-s-size);
+  line-height: 20px;
+  font-variant-ligatures: none;
+  font-variant-numeric: tabular-nums;
+}
+.ld td {
+  padding: 0 var(--space-2);
+  white-space: pre;
+  vertical-align: top;
+}
+.ld-n {
+  width: 1%;
+  min-width: 3ch;
+  text-align: right;
+  color: var(--text-2);
+  user-select: none;
+}
+.ld-sign {
+  width: 1%;
+  padding: 0 var(--space-1);
+  text-align: center;
+  color: var(--text-2);
+  user-select: none;
+}
+.ld-text {
+  tab-size: 2;
+  color: var(--text);
+  padding-right: var(--space-4);
+}
+.ld-add td {
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+.ld-add .ld-sign {
+  color: var(--accent);
+}
+.ld-add .ld-n {
+  color: var(--text-2-on-alt);
+}
+.ld-del td {
+  background: var(--surface-alt);
+}
+.ld-del .ld-sign,
+.ld-del .ld-n {
+  color: var(--text-2-on-alt);
+}
+.ld-hunk td {
+  padding: var(--space-1) var(--space-2);
+  color: var(--text-2);
+  font-size: 12px;
+}
+.ld-hunk:not(:first-child) td {
+  border-top: 1px solid var(--hairline);
+}
+
+/* Phones: a narrower gutter and padding, so code gets the width. */
+@media (max-width: 639.98px) {
+  .pe { --pe-pad-x: 10px; }
+  .pe-marks { width: 14px; padding-left: 2px; }
+  .pe-nums { min-width: 3ch; padding: 0 var(--space-2) 0 2px; }
+}

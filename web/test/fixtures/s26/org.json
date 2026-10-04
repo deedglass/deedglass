@@ -1,0 +1,15 @@
+{
+  "object": "org",
+  "id": "org_01m42fmp8tpykc3qrjk75n186j",
+  "name": "Acme",
+  "slug": "acme",
+  "timezone": "UTC",
+  "status": "active",
+  "created_at": "2026-10-04T03:34:38.103Z",
+  "stop": {
+    "stopped": false,
+    "stopped_at": null,
+    "stopped_by": null,
+    "reason": null
+  }
+}

@@ -1,4 +1,4 @@
-// Lighthouse 13 on the Console (S24 §6, S25 §6): /login, /app/_kit and the seven S25 pages (with the
+// Lighthouse 13 on the Console (S24 §6, S25 §6, S26 §6): /login, /app/_kit, the seven S25 pages and the seven S26 pages (with the
 // real L2 hero, a real deed and a real agent), desktop and mobile. Playwright
 // launches the installed Chrome with a remote-debugging port in a persistent profile, signs in with a
 // real link, and Lighthouse runs on the same browser (storage kept, so the session holds). Writes the
@@ -28,7 +28,9 @@ await page.goto(BASE + '/login'); // warm the browser once, signed out
 
 // /login first, signed out (signed in, it hands over to the Console); then sign in for the rest.
 const hero = JSON.parse(readFileSync(join(process.env.WEB_E2E_WORK ?? '.', 'fixtures.json'), 'utf8'));
-const plan = [['/login', false], ['/app', true], ['/app/_kit', true], ['/app/actions', true], [`/app/actions/${hero.mismatch}`, true], ['/app/deeds', true], ['DEED', true], ['/app/agents', true], ['AGENT', true]];
+const plan = [['/login', false], ['/app', true], ['/app/_kit', true], ['/app/actions', true], [`/app/actions/${hero.mismatch}`, true], ['/app/deeds', true], ['DEED', true], ['/app/agents', true], ['AGENT', true],
+  // S26: the seven control pages (a pending approval, the acme-demo policy, the demo Postgres connector)
+  ['/app/approvals', true], ['APPROVAL', true], ['/app/policies', true], ['POLICY', true], ['/app/connectors', true], ['CONNECTOR', true], ['/app/settings/members', true]];
 const rows = [];
 let failed = 0;
 let signedIn = false;
@@ -39,13 +41,19 @@ for (let [p, needsSession] of plan) {
     await page.waitForURL(/\/app\/?$/);
     signedIn = true;
   }
-  if (p === 'DEED' || p === 'AGENT') {
+  if (['DEED', 'AGENT', 'APPROVAL', 'POLICY', 'CONNECTOR'].includes(p)) {
     const r = await page.evaluate(async ([kind, act]) => {
       const h = { 'Deedglass-Version': '2026-10-01' };
-      if (kind === 'DEED') return (await (await fetch(`/v1/actions/${act}`, { headers: h })).json()).deed;
-      return (await (await fetch('/v1/agents?limit=1', { headers: h })).json()).data[0].id;
+      const get = async (u) => (await fetch(u, { headers: h })).json();
+      if (kind === 'DEED') return (await get(`/v1/actions/${act}`)).deed;
+      if (kind === 'AGENT') return (await get('/v1/agents?limit=1')).data[0].id;
+      if (kind === 'APPROVAL') return (await get('/v1/approvals?status=pending&limit=1')).data[0]?.id ?? null;
+      if (kind === 'POLICY') return (await get('/v1/policies')).data.find((x) => x.name === 'acme-demo')?.id ?? null;
+      return (await get('/v1/connectors')).data.find((x) => x.name === 'postgres')?.id ?? null;
     }, [p, hero.mismatch]);
-    p = p === 'DEED' ? `/app/deeds/${r}` : `/app/agents/${r}`;
+    if (!r) { console.log(`lighthouse: no ${p.toLowerCase()} to open; skipped`); continue; }
+    const base = { DEED: 'deeds', AGENT: 'agents', APPROVAL: 'approvals', POLICY: 'policies', CONNECTOR: 'connectors' }[p];
+    p = `/app/${base}/${r}`;
   }
   for (const formFactor of ['desktop', 'mobile']) {
     const flags = { port: PORT, output: 'json', logLevel: 'error', disableStorageReset: true, onlyCategories: ['accessibility', 'best-practices', 'performance'] };
@@ -55,7 +63,7 @@ for (let [p, needsSession] of plan) {
     const row = { page: p, formFactor, accessibility: score('accessibility'), bestPractices: score('best-practices'), performance: score('performance'),
       lcpMs: Math.round(lhr.audits['largest-contentful-paint']?.numericValue ?? 0), cls: lhr.audits['cumulative-layout-shift']?.numericValue ?? 0 };
     rows.push(row);
-    const name = `${p === '/app' ? 'app' : p.replace(/^\/(app\/)?_?/, '').replace(/\//g, '-').replace(/-(act|deed|agt)_[0-9a-z]+$/, '-$1')}-${formFactor}.json`;
+    const name = `${p === '/app' ? 'app' : p.replace(/^\/(app\/)?_?/, '').replace(/\//g, '-').replace(/-(act|deed|agt|apr|pol|con)_[0-9a-z]+$/, '-$1')}-${formFactor}.json`;
     writeFileSync(join(OUT, name), JSON.stringify(lhr, null, 1));
     if (row.accessibility < 95 || row.bestPractices < 95) {
       failed++;

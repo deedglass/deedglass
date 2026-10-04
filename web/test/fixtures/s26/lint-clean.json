@@ -1,0 +1,11 @@
+{
+  "object": "policy_lint_result",
+  "file": "",
+  "valid": true,
+  "name": "acme-demo",
+  "version_hash": "sha256:23e1ae1de718fca29abeb6f3caa943295c277762f35482d8fbfb62f8a1985284",
+  "rules": 16,
+  "budgets": 1,
+  "errors": [],
+  "warnings": []
+}

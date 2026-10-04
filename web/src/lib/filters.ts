@@ -21,6 +21,7 @@ export interface Filters {
   from: string; // ISO, custom range only
   to: string;
   q: string;
+  shadow_differs: boolean; // S26: actions where the shadow policy decided differently
 }
 
 export const DECISIONS: readonly Decision[] = ['allow', 'deny', 'require_approval'];
@@ -33,7 +34,7 @@ export const STATES: readonly string[] = [
 const RANGE_MS: Record<'1h' | '24h' | '7d', number> = { '1h': 3_600_000, '24h': 86_400_000, '7d': 7 * 86_400_000 };
 
 export function emptyFilters(): Filters {
-  return { agent: '', tool: '', decision: '', verdict: [], level: [], state: [], on_behalf_of: '', time: '', from: '', to: '', q: '' };
+  return { agent: '', tool: '', decision: '', verdict: [], level: [], state: [], on_behalf_of: '', time: '', from: '', to: '', q: '', shadow_differs: false };
 }
 
 const AGENT_RE = /^agt_[0-7][0-9a-hjkmnp-tv-z]{25}$/;
@@ -77,6 +78,7 @@ export function parseFilters(sp: URLSearchParams): Filters {
   }
   const q = (sp.get('q') ?? '').trim();
   if (q.length >= 2 && q.length <= 64) f.q = q;
+  if (sp.get('shadow_differs') === 'true') f.shadow_differs = true;
   return f;
 }
 
@@ -95,6 +97,7 @@ export function filtersToSearch(f: Filters): URLSearchParams {
     if (f.to) sp.set('to', f.to);
   } else if (f.time) sp.set('time', f.time);
   if (f.q) sp.set('q', f.q);
+  if (f.shadow_differs) sp.set('shadow_differs', 'true');
   return sp;
 }
 
@@ -119,6 +122,7 @@ export function toApiQuery(f: Filters, now: Date): Record<string, string> {
   if (b.from) q['created_at[gte]'] = b.from.toISOString();
   if (b.to) q['created_at[lt]'] = b.to.toISOString();
   if (f.q) q.q = f.q;
+  if (f.shadow_differs) q.shadow_differs = 'true';
   return q;
 }
 
@@ -161,6 +165,7 @@ export function matches(f: Filters, a: Action, now: Date): boolean {
   if (f.level.length && (!a.witness || !f.level.includes(a.witness.level))) return false;
   if (f.state.length && !f.state.includes(a.state)) return false;
   if (f.on_behalf_of && a.on_behalf_of !== f.on_behalf_of) return false;
+  if (f.shadow_differs && (!a.decision?.shadow?.outcome || a.decision.shadow.outcome === decisionOf(a))) return false;
   const b = bounds(f, now);
   const t = new Date(a.created_at).getTime();
   if (b.from && t < b.from.getTime()) return false;

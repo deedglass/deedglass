@@ -1,0 +1,168 @@
+{
+  "object": "approval",
+  "id": "apr_01m42frkmj054kx505efq4mbhe",
+  "action": "act_01m42frkmg21fc3dyyv33nkbgp",
+  "agent": {
+    "id": "agt_01m42fmq6ja96nbpjmk4nnh26r",
+    "name": "support-bot"
+  },
+  "tool": "postgres.execute",
+  "status": "pending",
+  "rule_id": "orders-writes-need-approval",
+  "reason": "Writes to the orders database need a person to countersign.",
+  "required": 1,
+  "approvers": [
+    "role:admin"
+  ],
+  "countersigned": [],
+  "decision_reason": null,
+  "summary": "support-bot wants to INSERT about 1 row in public.refunds.",
+  "context": {
+    "v": 1,
+    "sql": {
+      "kind": "insert",
+      "tables": [
+        "public.refunds"
+      ],
+      "writes": true,
+      "estimate": {
+        "rows": 1,
+        "method": "explain",
+        "took_ms": 1
+      },
+      "has_where": false
+    },
+    "args": {
+      "sql": "INSERT INTO public.refunds (id, order_id, amount_cents, reason, created_at) VALUES (9001, 42, 12000, 'Damaged in transit', now())"
+    },
+    "agent": {
+      "id": "agt_01m42fmq6ja96nbpjmk4nnh26r",
+      "name": "support-bot",
+      "labels": {
+        "demo": "true"
+      },
+      "recent": [
+        {
+          "at": "2026-10-04T03:34:45.892Z",
+          "tool": "postgres.execute",
+          "level": "L2",
+          "action": "act_01m42fmxw5n5csd4pnjansvtkr",
+          "status": "executed",
+          "verdict": "MISMATCH"
+        },
+        {
+          "at": "2026-10-04T03:34:45.748Z",
+          "tool": "postgres.execute",
+          "level": "L2",
+          "action": "act_01m42fmxqpmmtc33dw8n5xj7wx",
+          "status": "executed",
+          "verdict": "VERIFIED"
+        },
+        {
+          "at": "2026-10-04T03:34:39.081Z",
+          "tool": "postgres.execute",
+          "level": "L2",
+          "action": "act_01m42fmvf4ap0pwyr4rbrz82h5",
+          "status": "executed",
+          "verdict": "UNVERIFIABLE"
+        },
+        {
+          "at": "2026-10-04T03:34:39.081Z",
+          "tool": "github.merge_pr",
+          "level": "L1",
+          "action": "act_01m42fmvefmjwh0v5hcdacpshj",
+          "status": "executed",
+          "verdict": "VERIFIED"
+        },
+        {
+          "at": "2026-10-04T03:34:39.081Z",
+          "tool": "notion.create_page",
+          "level": "L0",
+          "action": "act_01m42fmvcrtc830r1scg3r7jpn",
+          "status": "executed",
+          "verdict": "VERIFIED"
+        },
+        {
+          "at": "2026-10-04T03:34:39.081Z",
+          "tool": "stripe.create_refund",
+          "level": "L1",
+          "action": "act_01m42fmva4cxew64x1av7sd6kh",
+          "status": "executed",
+          "verdict": "VERIFIED"
+        },
+        {
+          "at": "2026-10-04T03:34:39.081Z",
+          "tool": "github.merge_pr",
+          "level": "L1",
+          "action": "act_01m42fmv9ef4218cwx75yptgh7",
+          "status": "executed",
+          "verdict": "VERIFIED"
+        },
+        {
+          "at": "2026-10-04T03:34:39.081Z",
+          "tool": "stripe.create_refund",
+          "level": null,
+          "action": "act_01m42fmv8mmtsq3tvy9zx8qxds",
+          "status": "denied",
+          "verdict": null
+        },
+        {
+          "at": "2026-10-04T03:34:39.081Z",
+          "tool": "gmail.create_draft",
+          "level": null,
+          "action": "act_01m42fmv6ngc5c5g7kcedybtrs",
+          "status": "failed",
+          "verdict": null
+        },
+        {
+          "at": "2026-10-04T03:34:39.081Z",
+          "tool": "postgres.execute",
+          "level": null,
+          "action": "act_01m42fmv6h54e60arc27gsv1jn",
+          "status": "denied",
+          "verdict": null
+        }
+      ],
+      "status": "active"
+    },
+    "action": {
+      "id": "act_01m42frkmg21fc3dyyv33nkbgp",
+      "mode": "gateway",
+      "tool": "postgres.execute",
+      "connector": "postgres",
+      "side_effect": "write",
+      "connector_type": "postgres",
+      "request_digest": "sha256:4ac67a6917aac234a5c15f689c1a503670b63349ddf2b4d47b03d896075115ba"
+    },
+    "policy": {
+      "id": "pol_01m42fmxmvwje3p9x57t2kjkdq",
+      "name": "acme-demo",
+      "reason": "Writes to the orders database need a person to countersign.",
+      "verify": "L0",
+      "rule_id": "orders-writes-need-approval",
+      "version": 1,
+      "required": 1,
+      "approvers": [
+        "role:admin"
+      ],
+      "version_id": "pv_01m42fmxmwvxegzp25b7yhbk0e"
+    },
+    "summary": "support-bot wants to INSERT about 1 row in public.refunds.",
+    "sections": {},
+    "args_note": null,
+    "expires_at": "2026-10-04T04:06:46.482Z",
+    "on_behalf_of": "u_4821",
+    "requested_at": "2026-10-04T03:36:46.482Z"
+  },
+  "context_digest": "sha256:20396816f1854bcb90c2c4dd12f5937ac6e3b61520befe5a9fe909c3f0d46f3b",
+  "you": {
+    "eligible": true,
+    "can_decide": true,
+    "why_not": null
+  },
+  "created_at": "2026-10-04T03:36:46.479Z",
+  "expires_at": "2026-10-04T04:06:46.482Z",
+  "decided_at": null,
+  "deed": null,
+  "livemode": true
+}

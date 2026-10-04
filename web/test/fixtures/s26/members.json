@@ -1,0 +1,58 @@
+{
+  "object": "list",
+  "data": [
+    {
+      "object": "membership",
+      "id": "mem_01m42fmp8w8ykedxcsaazzx6sb",
+      "org": "org_01m42fmp8tpykc3qrjk75n186j",
+      "user": {
+        "id": "usr_01m42fmp8q1tnsms9h08cw3rez",
+        "email": "owner@acme.example",
+        "name": "Arjun Mehta"
+      },
+      "role": "owner",
+      "status": "active",
+      "invited_by": null,
+      "invited_at": null,
+      "joined_at": "2026-10-04T03:34:38.103Z",
+      "removed_at": null,
+      "created_at": "2026-10-04T03:34:38.103Z"
+    },
+    {
+      "object": "membership",
+      "id": "mem_1w9mwm2m1phg7qh82yh4rt1mq3",
+      "org": "org_01m42fmp8tpykc3qrjk75n186j",
+      "user": {
+        "id": "usr_1n4erjr65bzgsv84xv6dgkxh78",
+        "email": "priya.raman@acme.example",
+        "name": "Priya Raman"
+      },
+      "role": "admin",
+      "status": "active",
+      "invited_by": null,
+      "invited_at": null,
+      "joined_at": "2026-10-04T03:34:38.452Z",
+      "removed_at": null,
+      "created_at": "2026-10-04T03:34:38.452Z"
+    },
+    {
+      "object": "membership",
+      "id": "mem_3ve0mwr3f73pd5cewz112gtqwy",
+      "org": "org_01m42fmp8tpykc3qrjk75n186j",
+      "user": {
+        "id": "usr_24gfwm7t5gdrsk7eh09md30xce",
+        "email": "sam.okafor@acme.example",
+        "name": "Sam Okafor"
+      },
+      "role": "viewer",
+      "status": "active",
+      "invited_by": null,
+      "invited_at": null,
+      "joined_at": "2026-10-04T03:34:38.620Z",
+      "removed_at": null,
+      "created_at": "2026-10-04T03:34:38.620Z"
+    }
+  ],
+  "has_more": false,
+  "next_cursor": null
+}

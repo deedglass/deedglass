@@ -1,19 +1,25 @@
 ---
+// One policy (S26 §3.2): Editor · Dry run · Tests · Versions · Replay. src/controllers/policies.ts.
 import AppShell from '../../layouts/AppShell.astro';
-import Icon from '../../components/Icon.astro';
 import { copy } from '../../lib/copy.ts';
+import { policiesCopy } from '../../lib/copy-policies.ts';
 const p = copy.pages.policies;
+const c = policiesCopy;
 ---
 <AppShell title={p.title} screen="policies">
-  <a class="btn btn-quiet btn-sm -ml-3 mb-3" href="/app/policies"><Icon name="chevron-right" size={16} class="rotate-180" />{p.title}</a>
-  <div class="page-head"><div><h1 class="t-title-2 mono" id="page-title">{p.title}</h1></div></div>
-  <section class="card card-pad" id="detail-body" aria-labelledby="page-title" aria-busy="true">
-    <dl class="kv"><dt>Id</dt><dd><span class="skel skel-line w-56"></span></dd><dt>Created</dt><dd><span class="skel skel-line w-32"></span></dd></dl>
+  <section id="detail-body" class="detail pp" aria-busy="true" aria-labelledby="page-title">
+    <header class="detail-head" aria-hidden="true">
+      <span class="skel skel-line w-32"></span>
+      <h1 class="t-title-2" id="page-title"><span class="skel skel-title"></span></h1>
+      <span class="skel skel-line w-56"></span>
+    </header>
+    <div class="tabs" aria-hidden="true">{Object.values(c.tabs).map((t) => <button type="button" role="tab" tabindex="-1" disabled>{t}</button>)}</div>
+    <div class="pe-skel card" aria-hidden="true">{Array.from({ length: 14 }, () => <span class="skel skel-line skel-gap"></span>)}</div>
   </section>
 </AppShell>
 <script>
   import { bootShell } from '../../controllers/shell.ts';
-  import { mountDetail } from '../../controllers/detail.ts';
+  import { mountPolicy } from '../../controllers/policies.ts';
   bootShell({ title: location.pathname.split('/').pop() ?? 'policies' });
-  mountDetail('policies');
+  mountPolicy();
 </script>

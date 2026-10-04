@@ -1,12 +1,20 @@
 ---
-import ScreenStub from '../components/ScreenStub.astro';
+// Connectors (S26 §3.3): the list. src/controllers/connectors.ts.
+import AppShell from '../layouts/AppShell.astro';
+import PageHead from '../components/PageHead.astro';
+import Skeleton from '../components/Skeleton.astro';
 import { copy } from '../lib/copy.ts';
 const p = copy.pages.connectors;
 ---
-<ScreenStub title={p.title} lede={p.lede} screen="connectors" />
+<AppShell title={p.title} screen="connectors">
+  <PageHead title={p.title} lede={p.lede}><span slot="actions" class="flex items-center gap-2" id="connectors-actions"></span></PageHead>
+  <section id="screen-body" aria-labelledby="page-title" aria-busy="true" data-screen-body="connectors">
+    <Skeleton rows={4} />
+  </section>
+</AppShell>
 <script>
   import { bootShell } from '../controllers/shell.ts';
-  import { mountScreen } from '../controllers/screens.ts';
+  import { mountConnectors } from '../controllers/connectors.ts';
   bootShell({ title: 'Connectors' });
-  mountScreen('connectors');
+  mountConnectors();
 </script>

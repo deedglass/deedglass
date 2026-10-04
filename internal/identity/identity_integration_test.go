@@ -17,6 +17,9 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/deedglass/deedglass/api"
+	"github.com/deedglass/deedglass/internal/approve"
+	"github.com/deedglass/deedglass/internal/httpx"
 	"github.com/deedglass/deedglass/internal/identity"
 	"github.com/deedglass/deedglass/internal/ids"
 	"github.com/deedglass/deedglass/internal/ledger"
@@ -909,5 +912,152 @@ func TestMembersListAndOrg(t *testing.T) {
 	priya.do("GET", "/v1/me", "").json(t, &me)
 	if r := priya.do("POST", "/v1/auth/switch-org", `{"org":"`+me.Org.ID+`"}`); r.status != 409 {
 		t.Fatalf("switch to the current org: %d", r.status)
+	}
+}
+
+// S26: PATCH /v1/org's owner-only fields. Retention and approval settings: an owner can, an admin
+// and a viewer can't; validation; null resets retention; settings merge under approvals; one deed
+// per change and none for a no-op; the approvals reader sees the new values.
+func TestOrgRetentionAndSettings(t *testing.T) {
+	w := newWorld(t)
+	c, priya := w.org(t, "Acme", "priya@acme.com")
+	_, sam := w.invite(t, priya, "sam@acme.com", "admin")
+	_, viv := w.invite(t, priya, "viv@acme.com", "viewer")
+	type orgView struct {
+		identity.Org
+		Deed *string `json:"deed"`
+	}
+	get := func() identity.Org {
+		t.Helper()
+		var o identity.Org
+		r := priya.do("GET", "/v1/org", "")
+		r.json(t, &o)
+		for _, err := range httpx.CheckRequired(api.Spec, "Org", r.body) {
+			t.Error(err)
+		}
+		return o
+	}
+	o := get()
+	if o.RetentionDays == nil || *o.RetentionDays != ledger.DefaultRetentionDays || o.Settings == nil ||
+		o.Settings.Approvals != (identity.ApprovalSettings{EmailLinks: "decide", EmailDetail: "summary", SelfCountersign: "deny"}) {
+		t.Fatalf("defaults: %+v %+v", o.RetentionDays, o.Settings)
+	}
+	// /v1/me's org keeps its S07 shape.
+	if r := priya.do("GET", "/v1/me", ""); strings.Contains(string(r.body), "retention_days") || strings.Contains(string(r.body), `"settings"`) {
+		t.Fatalf("/v1/me grew: %s", r.body)
+	}
+	base := adminActions(t, w, c.Org.ID)["org.updated"]
+
+	// Refusals: admin by the handler, viewer by the route.
+	for _, b := range []string{`{"retention_days":30}`, `{"retention_days":null}`, `{"settings":{"approvals":{"email_links":"review"}}}`} {
+		if r := sam.do("PATCH", "/v1/org", b); r.status != 403 || r.code() != "insufficient_role" || !strings.Contains(r.message(), "needs Owner") {
+			t.Errorf("admin %s: %d %s", b, r.status, r.body)
+		}
+		if r := viv.do("PATCH", "/v1/org", b); r.status != 403 || r.code() != "insufficient_role" {
+			t.Errorf("viewer %s: %d %s", b, r.status, r.body)
+		}
+	}
+	if r := sam.do("PATCH", "/v1/org", `{"timezone":"Asia/Kolkata"}`); r.status != 200 {
+		t.Fatalf("admin timezone: %d %s", r.status, r.body)
+	}
+	// Validation.
+	for b, param := range map[string]string{
+		`{"retention_days":0}`: "retention_days", `{"retention_days":3651}`: "retention_days", `{"retention_days":1.5}`: "retention_days",
+		`{"retention_days":"30"}`: "retention_days", `{"settings":{"approvals":{"email_links":"x"}}}`: "settings.approvals.email_links",
+		`{"settings":{"approvals":{"foo":"x"}}}`: "settings.approvals.foo", `{"settings":{"bar":1}}`: "settings.bar",
+	} {
+		r := priya.do("PATCH", "/v1/org", b)
+		var e struct {
+			Error struct{ Param string } `json:"error"`
+		}
+		r.json(t, &e)
+		if r.status != 400 || r.code() != "validation_failed" || e.Error.Param != param {
+			t.Errorf("%s: %d %s", b, r.status, r.body)
+		}
+	}
+	if n := adminActions(t, w, c.Org.ID)["org.updated"]; n != base+1 {
+		t.Fatalf("refusals sealed: %d deeds, want %d", n, base+1)
+	}
+	base++
+
+	// Keys outside approvals survive the merge.
+	if err := w.e.DB.OrgTx(ctx, c.Org.ID, func(ctx context.Context, tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, `UPDATE deedglass.orgs SET settings = '{"other":{"k":1},"approvals":{"email_detail":"full"}}' WHERE id = $1`, c.Org.ID)
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	var v orgView
+	r := priya.do("PATCH", "/v1/org", `{"retention_days":30,"settings":{"approvals":{"email_links":"review","self_countersign":"allow"}}}`)
+	r.json(t, &v)
+	if r.status != 200 || v.Deed == nil || *v.RetentionDays != 30 ||
+		v.Settings.Approvals != (identity.ApprovalSettings{EmailLinks: "review", EmailDetail: "full", SelfCountersign: "allow"}) {
+		t.Fatalf("owner patch: %d %s", r.status, r.body)
+	}
+	var raw string
+	var data map[string]any
+	if err := w.e.DB.OrgReadTx(ctx, c.Org.ID, func(ctx context.Context, tx pgx.Tx) error {
+		if err := tx.QueryRow(ctx, `SELECT settings::text FROM deedglass.orgs WHERE id = $1`, c.Org.ID).Scan(&raw); err != nil {
+			return err
+		}
+		if err := tx.QueryRow(ctx, `SELECT data FROM deedglass.admin_events WHERE deed_id = $1`, *v.Deed).Scan(&data); err != nil {
+			return err
+		}
+		s, err := approve.ReadSettings(ctx, tx, c.Org.ID)
+		if err != nil {
+			return err
+		}
+		if s != (approve.Settings{EmailLinks: "review", EmailDetail: "full", SelfCountersign: "allow"}) {
+			t.Errorf("approvals reader: %+v", s)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if raw != `{"other": {"k": 1}, "approvals": {"email_links": "review", "email_detail": "full", "self_countersign": "allow"}}` {
+		t.Fatalf("settings: %s", raw)
+	}
+	if fmt.Sprint(data["fields"]) != "[retention_days settings.approvals.email_links settings.approvals.self_countersign]" ||
+		data["retention_days"] != float64(30) || data["timezone"] != "Asia/Kolkata" ||
+		fmt.Sprint(data["approvals"]) != "map[email_detail:full email_links:review self_countersign:allow]" {
+		t.Fatalf("deed data: %v", data)
+	}
+	if days, err := w.led.RetentionDays(ctx, c.Org.ID); err != nil || days != 30 {
+		t.Fatalf("ledger retention: %d %v", days, err)
+	}
+	if n := adminActions(t, w, c.Org.ID)["org.updated"]; n != base+1 {
+		t.Fatalf("deeds: %d, want %d", n, base+1)
+	}
+	// The same values again: no deed.
+	r = priya.do("PATCH", "/v1/org", `{"retention_days":30,"settings":{"approvals":{"email_links":"review"}}}`)
+	if r.status != 200 || !strings.Contains(string(r.body), `"deed": null`) {
+		t.Fatalf("no-op: %d %s", r.status, r.body)
+	}
+	if n := adminActions(t, w, c.Org.ID)["org.updated"]; n != base+1 {
+		t.Fatalf("no-op sealed: %d", n)
+	}
+	// null resets to the default, and that is a change.
+	v = orgView{}
+	r = priya.do("PATCH", "/v1/org", `{"retention_days":null}`)
+	r.json(t, &v)
+	if r.status != 200 || v.Deed == nil || *v.RetentionDays != ledger.DefaultRetentionDays {
+		t.Fatalf("reset: %d %s", r.status, r.body)
+	}
+	var stored *int
+	_ = w.e.DB.OrgReadTx(ctx, c.Org.ID, func(ctx context.Context, tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `SELECT retention_days FROM deedglass.orgs WHERE id = $1`, c.Org.ID).Scan(&stored)
+	})
+	if stored != nil {
+		t.Fatalf("reset stored %d, want NULL", *stored)
+	}
+	if n := adminActions(t, w, c.Org.ID)["org.updated"]; n != base+2 {
+		t.Fatalf("reset deeds: %d", n)
+	}
+	// Resetting again changes nothing.
+	if r := priya.do("PATCH", "/v1/org", `{"retention_days":null}`); !strings.Contains(string(r.body), `"deed": null`) {
+		t.Fatalf("second reset: %s", r.body)
+	}
+	if o := get(); *o.RetentionDays != 90 || o.Settings.Approvals.EmailLinks != "review" || o.Stop == nil {
+		t.Fatalf("after: %+v", o)
 	}
 }

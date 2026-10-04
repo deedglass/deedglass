@@ -1,0 +1,23 @@
+---
+// Add a connector (S26 §3.3): Type → Configure → Credentials, each step its own URL state.
+import AppShell from '../../layouts/AppShell.astro';
+import PageHead from '../../components/PageHead.astro';
+import Icon from '../../components/Icon.astro';
+import { copy } from '../../lib/copy.ts';
+import { connectorsCopy } from '../../lib/copy-connectors.ts';
+const c = connectorsCopy;
+---
+<AppShell title={c.newTitle} screen="connectors">
+  <a class="btn btn-quiet btn-sm -ml-3 mb-3" href="/app/connectors"><Icon name="chevron-left" size={16} />{copy.pages.connectors.title}</a>
+  <PageHead title={c.newTitle} lede={c.newLede} />
+  <nav id="new-steps" class="new-steps" aria-label="Steps"><p class="t-footnote t-2">&nbsp;</p><ol class="steps"><li class="current">{c.steps.type}</li><li>{c.steps.configure}</li><li>{c.steps.credentials}</li></ol></nav>
+  <section id="new-body" class="new-body" aria-busy="true" tabindex="-1" aria-label={c.newTitle}>
+    <ul class="type-cards" aria-hidden="true">{[0, 1, 2].map(() => <li><span class="type-card"><span class="skel skel-line w-40"></span><span class="skel skel-line"></span></span></li>)}</ul>
+  </section>
+</AppShell>
+<script>
+  import { bootShell } from '../../controllers/shell.ts';
+  import { mountConnectorNew } from '../../controllers/connectors.ts';
+  bootShell({ title: 'Add a connector' });
+  mountConnectorNew();
+</script>

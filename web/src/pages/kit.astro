@@ -320,12 +320,24 @@ rules:
     <h2 class="t-title-3" id="k-s25">S25 components</h2>
     <div class="grid gap-4" id="kit-s25"></div>
   </section>
+
+  <section class="section" aria-labelledby="k-s26e">
+    <h2 class="t-title-3" id="k-s26e">S26 components: policy editor</h2>
+    <div class="grid gap-4" id="kit-s26-editor"></div>
+  </section>
+
+  <section class="section" aria-labelledby="k-s26f">
+    <h2 class="t-title-3" id="k-s26f">S26 components: forms and checks</h2>
+    <div class="grid gap-4" id="kit-s26-forms"></div>
+  </section>
 </AppShell>
 <script>
   import { bootShell } from '../controllers/shell.ts';
   import { mountKit } from '../controllers/kit.ts';
-  import { mountKit25 } from '../controllers/kit25.ts';
   bootShell({ title: 'Component kit' });
   mountKit();
-  mountKit25();
+  // The S25 and S26 sections load on demand, so the kit page stays inside check-dist's per-page budget.
+  void import('../controllers/kit25.ts').then((m) => m.mountKit25());
+  void import('../controllers/kit26-editor.ts').then((m) => m.mountKitEditor());
+  void import('../controllers/kit26-forms.ts').then((m) => m.mountKitForms());
 </script>

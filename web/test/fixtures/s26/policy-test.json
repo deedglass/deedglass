@@ -1,0 +1,1050 @@
+{
+  "object": "policy_test_result",
+  "policy": "acme-demo",
+  "cases_file": "cases",
+  "version_hash": "sha256:23e1ae1de718fca29abeb6f3caa943295c277762f35482d8fbfb62f8a1985284",
+  "ok": true,
+  "passed": 57,
+  "failed": 0,
+  "skipped": 0,
+  "cases": [
+    {
+      "name": "the native connector's read runs",
+      "line": 9,
+      "pass": true,
+      "expected": {
+        "decision": "allow",
+        "rule": "allow-order-reads"
+      },
+      "got": {
+        "decision": "allow",
+        "rule": "allow-order-reads",
+        "message": "",
+        "verify": "L0"
+      }
+    },
+    {
+      "name": "the native connector's status update runs",
+      "line": 12,
+      "pass": true,
+      "expected": {
+        "decision": "allow",
+        "rule": "allow-order-status-updates"
+      },
+      "got": {
+        "decision": "allow",
+        "rule": "allow-order-status-updates",
+        "message": "",
+        "verify": "L2"
+      }
+    },
+    {
+      "name": "the hero's update of order 42 runs, and Postgres witnesses it (S21)",
+      "line": 15,
+      "pass": true,
+      "expected": {
+        "decision": "allow",
+        "rule": "allow-order-status-updates"
+      },
+      "got": {
+        "decision": "allow",
+        "rule": "allow-order-status-updates",
+        "message": "",
+        "verify": "L2"
+      }
+    },
+    {
+      "name": "a status update of every order through the native connector never runs",
+      "line": 18,
+      "pass": true,
+      "expected": {
+        "decision": "deny",
+        "rule": "block-unscoped-writes"
+      },
+      "got": {
+        "decision": "deny",
+        "rule": "block-unscoped-writes",
+        "code": "policy_denied",
+        "reason": "UPDATE and DELETE need a WHERE clause.",
+        "message": "Blocked by policy \"block-unscoped-writes\": UPDATE and DELETE need a WHERE clause."
+      }
+    },
+    {
+      "name": "two status updates in one call through the native connector never run",
+      "line": 21,
+      "pass": true,
+      "expected": {
+        "decision": "deny",
+        "rule": "block-schema-changes"
+      },
+      "got": {
+        "decision": "deny",
+        "rule": "block-schema-changes",
+        "code": "policy_denied",
+        "reason": "Schema changes, privileges, server code and multi-statement SQL are never allowed for agents.",
+        "message": "Blocked by policy \"block-schema-changes\": Schema changes, privileges, server code and multi-statement SQL are never allowed for agents."
+      }
+    },
+    {
+      "name": "a DROP through the native connector gets the brand's sentence",
+      "line": 24,
+      "pass": true,
+      "expected": {
+        "decision": "deny",
+        "rule": "block-destructive-sql",
+        "message": "Blocked by policy \"block-destructive-sql\": DROP is never allowed for agents."
+      },
+      "got": {
+        "decision": "deny",
+        "rule": "block-destructive-sql",
+        "code": "policy_denied",
+        "reason": "DROP is never allowed for agents.",
+        "message": "Blocked by policy \"block-destructive-sql\": DROP is never allowed for agents."
+      }
+    },
+    {
+      "name": "an ALTER through the native connector is a schema change",
+      "line": 30,
+      "pass": true,
+      "expected": {
+        "decision": "deny",
+        "rule": "block-schema-changes"
+      },
+      "got": {
+        "decision": "deny",
+        "rule": "block-schema-changes",
+        "code": "policy_denied",
+        "reason": "Schema changes, privileges, server code and multi-statement SQL are never allowed for agents.",
+        "message": "Blocked by policy \"block-schema-changes\": Schema changes, privileges, server code and multi-statement SQL are never allowed for agents."
+      }
+    },
+    {
+      "name": "how many orders are pending runs through the native connector",
+      "line": 33,
+      "pass": true,
+      "expected": {
+        "decision": "allow",
+        "rule": "allow-order-reads"
+      },
+      "got": {
+        "decision": "allow",
+        "rule": "allow-order-reads",
+        "message": "",
+        "verify": "L0"
+      }
+    },
+    {
+      "name": "a refund through the native connector waits for a person",
+      "line": 36,
+      "pass": true,
+      "expected": {
+        "decision": "require_approval",
+        "rule": "orders-writes-need-approval"
+      },
+      "got": {
+        "decision": "require_approval",
+        "rule": "orders-writes-need-approval",
+        "code": "approval_required",
+        "reason": "Writes to the orders database need a person to countersign.",
+        "message": "Waiting for approval under policy \"orders-writes-need-approval\": Writes to the orders database need a person to countersign.",
+        "verify": "L0",
+        "approval": {
+          "approvers": [
+            "role:admin"
+          ],
+          "required": 1,
+          "expires_in": 1800
+        }
+      }
+    },
+    {
+      "name": "an update across two tables through the native connector waits for a person",
+      "line": 39,
+      "pass": true,
+      "expected": {
+        "decision": "require_approval",
+        "rule": "orders-writes-need-approval"
+      },
+      "got": {
+        "decision": "require_approval",
+        "rule": "orders-writes-need-approval",
+        "code": "approval_required",
+        "reason": "Writes to the orders database need a person to countersign.",
+        "message": "Waiting for approval under policy \"orders-writes-need-approval\": Writes to the orders database need a person to countersign.",
+        "verify": "L0",
+        "approval": {
+          "approvers": [
+            "role:admin"
+          ],
+          "required": 1,
+          "expires_in": 1800
+        }
+      }
+    },
+    {
+      "name": "the native connector never deletes orders",
+      "line": 42,
+      "pass": true,
+      "expected": {
+        "decision": "deny",
+        "rule": "no-deletes-on-orders"
+      },
+      "got": {
+        "decision": "deny",
+        "rule": "no-deletes-on-orders",
+        "code": "policy_denied",
+        "reason": "Agents never delete orders. Set the status to 'cancelled' instead.",
+        "message": "Blocked by policy \"no-deletes-on-orders\": Agents never delete orders. Set the status to 'cancelled' instead."
+      }
+    },
+    {
+      "name": "the native connector never runs DROP",
+      "line": 45,
+      "pass": true,
+      "expected": {
+        "decision": "deny",
+        "rule": "block-destructive-sql"
+      },
+      "got": {
+        "decision": "deny",
+        "rule": "block-destructive-sql",
+        "code": "policy_denied",
+        "reason": "DROP is never allowed for agents.",
+        "message": "Blocked by policy \"block-destructive-sql\": DROP is never allowed for agents."
+      }
+    },
+    {
+      "name": "shipping an order through the controlled function runs",
+      "line": 48,
+      "pass": true,
+      "expected": {
+        "decision": "allow",
+        "rule": "allow-ship-order"
+      },
+      "got": {
+        "decision": "allow",
+        "rule": "allow-ship-order",
+        "message": "",
+        "verify": "L0"
+      }
+    },
+    {
+      "name": "describing the schema runs",
+      "line": 51,
+      "pass": true,
+      "expected": {
+        "decision": "allow",
+        "rule": "allow-schema-browsing"
+      },
+      "got": {
+        "decision": "allow",
+        "rule": "allow-schema-browsing",
+        "message": "",
+        "verify": "L0"
+      }
+    },
+    {
+      "name": "the five newest orders run",
+      "line": 55,
+      "pass": true,
+      "expected": {
+        "decision": "allow",
+        "rule": "allow-order-reads"
+      },
+      "got": {
+        "decision": "allow",
+        "rule": "allow-order-reads",
+        "message": "",
+        "verify": "L0"
+      }
+    },
+    {
+      "name": "a count of cancelled orders runs",
+      "line": 58,
+      "pass": true,
+      "expected": {
+        "decision": "allow",
+        "rule": "allow-order-reads"
+      },
+      "got": {
+        "decision": "allow",
+        "rule": "allow-order-reads",
+        "message": "",
+        "verify": "L0"
+      }
+    },
+    {
+      "name": "DROP never runs, with the brand's sentence",
+      "line": 61,
+      "pass": true,
+      "expected": {
+        "decision": "deny",
+        "rule": "block-destructive-sql",
+        "message": "Blocked by policy \"block-destructive-sql\": DROP is never allowed for agents."
+      },
+      "got": {
+        "decision": "deny",
+        "rule": "block-destructive-sql",
+        "code": "policy_denied",
+        "reason": "DROP is never allowed for agents.",
+        "message": "Blocked by policy \"block-destructive-sql\": DROP is never allowed for agents."
+      }
+    },
+    {
+      "name": "a DROP hidden behind a comment never runs",
+      "line": 67,
+      "pass": true,
+      "expected": {
+        "decision": "deny",
+        "rule": "block-destructive-sql"
+      },
+      "got": {
+        "decision": "deny",
+        "rule": "block-destructive-sql",
+        "code": "policy_denied",
+        "reason": "DROP is never allowed for agents.",
+        "message": "Blocked by policy \"block-destructive-sql\": DROP is never allowed for agents."
+      }
+    },
+    {
+      "name": "a DROP smuggled after a read is refused as multi-statement",
+      "line": 70,
+      "pass": true,
+      "expected": {
+        "decision": "deny",
+        "rule": "block-schema-changes"
+      },
+      "got": {
+        "decision": "deny",
+        "rule": "block-schema-changes",
+        "code": "policy_denied",
+        "reason": "Schema changes, privileges, server code and multi-statement SQL are never allowed for agents.",
+        "message": "Blocked by policy \"block-schema-changes\": Schema changes, privileges, server code and multi-statement SQL are never allowed for agents."
+      }
+    },
+    {
+      "name": "a read smuggling an update is refused as multi-statement",
+      "line": 73,
+      "pass": true,
+      "expected": {
+        "decision": "deny",
+        "rule": "block-schema-changes"
+      },
+      "got": {
+        "decision": "deny",
+        "rule": "block-schema-changes",
+        "code": "policy_denied",
+        "reason": "Schema changes, privileges, server code and multi-statement SQL are never allowed for agents.",
+        "message": "Blocked by policy \"block-schema-changes\": Schema changes, privileges, server code and multi-statement SQL are never allowed for agents."
+      }
+    },
+    {
+      "name": "ALTER is a schema change",
+      "line": 76,
+      "pass": true,
+      "expected": {
+        "decision": "deny",
+        "rule": "block-schema-changes"
+      },
+      "got": {
+        "decision": "deny",
+        "rule": "block-schema-changes",
+        "code": "policy_denied",
+        "reason": "Schema changes, privileges, server code and multi-statement SQL are never allowed for agents.",
+        "message": "Blocked by policy \"block-schema-changes\": Schema changes, privileges, server code and multi-statement SQL are never allowed for agents."
+      }
+    },
+    {
+      "name": "GRANT is a privilege change",
+      "line": 79,
+      "pass": true,
+      "expected": {
+        "decision": "deny",
+        "rule": "block-schema-changes"
+      },
+      "got": {
+        "decision": "deny",
+        "rule": "block-schema-changes",
+        "code": "policy_denied",
+        "reason": "Schema changes, privileges, server code and multi-statement SQL are never allowed for agents.",
+        "message": "Blocked by policy \"block-schema-changes\": Schema changes, privileges, server code and multi-statement SQL are never allowed for agents."
+      }
+    },
+    {
+      "name": "a DO block is server code",
+      "line": 82,
+      "pass": true,
+      "expected": {
+        "decision": "deny",
+        "rule": "block-schema-changes"
+      },
+      "got": {
+        "decision": "deny",
+        "rule": "block-schema-changes",
+        "code": "policy_denied",
+        "reason": "Schema changes, privileges, server code and multi-statement SQL are never allowed for agents.",
+        "message": "Blocked by policy \"block-schema-changes\": Schema changes, privileges, server code and multi-statement SQL are never allowed for agents."
+      }
+    },
+    {
+      "name": "UPDATE without WHERE never runs",
+      "line": 85,
+      "pass": true,
+      "expected": {
+        "decision": "deny",
+        "rule": "block-unscoped-writes",
+        "reason_contains": "WHERE"
+      },
+      "got": {
+        "decision": "deny",
+        "rule": "block-unscoped-writes",
+        "code": "policy_denied",
+        "reason": "UPDATE and DELETE need a WHERE clause.",
+        "message": "Blocked by policy \"block-unscoped-writes\": UPDATE and DELETE need a WHERE clause."
+      }
+    },
+    {
+      "name": "DELETE without WHERE never runs",
+      "line": 88,
+      "pass": true,
+      "expected": {
+        "decision": "deny",
+        "rule": "block-unscoped-writes"
+      },
+      "got": {
+        "decision": "deny",
+        "rule": "block-unscoped-writes",
+        "code": "policy_denied",
+        "reason": "UPDATE and DELETE need a WHERE clause.",
+        "message": "Blocked by policy \"block-unscoped-writes\": UPDATE and DELETE need a WHERE clause."
+      }
+    },
+    {
+      "name": "deleting the cancelled orders never runs",
+      "line": 91,
+      "pass": true,
+      "expected": {
+        "decision": "deny",
+        "rule": "no-deletes-on-orders",
+        "message": "Blocked by policy \"no-deletes-on-orders\": Agents never delete orders. Set the status to 'cancelled' instead."
+      },
+      "got": {
+        "decision": "deny",
+        "rule": "no-deletes-on-orders",
+        "code": "policy_denied",
+        "reason": "Agents never delete orders. Set the status to 'cancelled' instead.",
+        "message": "Blocked by policy \"no-deletes-on-orders\": Agents never delete orders. Set the status to 'cancelled' instead."
+      }
+    },
+    {
+      "name": "a delete inside a CTE is still a delete",
+      "line": 97,
+      "pass": true,
+      "expected": {
+        "decision": "deny",
+        "rule": "no-deletes-on-orders"
+      },
+      "got": {
+        "decision": "deny",
+        "rule": "no-deletes-on-orders",
+        "code": "policy_denied",
+        "reason": "Agents never delete orders. Set the status to 'cancelled' instead.",
+        "message": "Blocked by policy \"no-deletes-on-orders\": Agents never delete orders. Set the status to 'cancelled' instead."
+      }
+    },
+    {
+      "name": "marking order 42 as shipped waits for a person",
+      "line": 100,
+      "pass": true,
+      "expected": {
+        "decision": "require_approval",
+        "rule": "orders-writes-need-approval",
+        "approval": {
+          "required": 1,
+          "approvers": [
+            "role:admin"
+          ],
+          "expires_in": 1800
+        }
+      },
+      "got": {
+        "decision": "require_approval",
+        "rule": "orders-writes-need-approval",
+        "code": "approval_required",
+        "reason": "Writes to the orders database need a person to countersign.",
+        "message": "Waiting for approval under policy \"orders-writes-need-approval\": Writes to the orders database need a person to countersign.",
+        "verify": "L0",
+        "approval": {
+          "approvers": [
+            "role:admin"
+          ],
+          "required": 1,
+          "expires_in": 1800
+        }
+      }
+    },
+    {
+      "name": "an INSERT waits for a person",
+      "line": 103,
+      "pass": true,
+      "expected": {
+        "decision": "require_approval",
+        "rule": "orders-writes-need-approval"
+      },
+      "got": {
+        "decision": "require_approval",
+        "rule": "orders-writes-need-approval",
+        "code": "approval_required",
+        "reason": "Writes to the orders database need a person to countersign.",
+        "message": "Waiting for approval under policy \"orders-writes-need-approval\": Writes to the orders database need a person to countersign.",
+        "verify": "L0",
+        "approval": {
+          "approvers": [
+            "role:admin"
+          ],
+          "required": 1,
+          "expires_in": 1800
+        }
+      }
+    },
+    {
+      "name": "listing schemas runs",
+      "line": 106,
+      "pass": true,
+      "expected": {
+        "decision": "allow",
+        "rule": "allow-schema-browsing"
+      },
+      "got": {
+        "decision": "allow",
+        "rule": "allow-schema-browsing",
+        "message": "",
+        "verify": "L0"
+      }
+    },
+    {
+      "name": "listing objects runs",
+      "line": 109,
+      "pass": true,
+      "expected": {
+        "decision": "allow",
+        "rule": "allow-schema-browsing"
+      },
+      "got": {
+        "decision": "allow",
+        "rule": "allow-schema-browsing",
+        "message": "",
+        "verify": "L0"
+      }
+    },
+    {
+      "name": "object details run",
+      "line": 112,
+      "pass": true,
+      "expected": {
+        "decision": "allow",
+        "rule": "allow-schema-browsing"
+      },
+      "got": {
+        "decision": "allow",
+        "rule": "allow-schema-browsing",
+        "message": "",
+        "verify": "L0"
+      }
+    },
+    {
+      "name": "a plain EXPLAIN runs",
+      "line": 115,
+      "pass": true,
+      "expected": {
+        "decision": "allow",
+        "rule": "allow-plain-explain"
+      },
+      "got": {
+        "decision": "allow",
+        "rule": "allow-plain-explain",
+        "message": "",
+        "verify": "L0"
+      }
+    },
+    {
+      "name": "EXPLAIN with analyze true runs the statement, so it is denied",
+      "line": 118,
+      "pass": true,
+      "expected": {
+        "decision": "deny"
+      },
+      "got": {
+        "decision": "deny",
+        "rule": "default",
+        "code": "policy_denied",
+        "reason": "No rule allows this action. Add a rule in Console › Policies to allow it.",
+        "message": "Blocked by policy \"acme-demo\": No rule allows this action. Add a rule in Console › Policies to allow it."
+      }
+    },
+    {
+      "name": "EXPLAIN ANALYZE of a DELETE in the SQL text is denied",
+      "line": 121,
+      "pass": true,
+      "expected": {
+        "decision": "deny"
+      },
+      "got": {
+        "decision": "deny",
+        "rule": "default",
+        "code": "policy_denied",
+        "reason": "No rule allows this action. Add a rule in Console › Policies to allow it.",
+        "message": "Blocked by policy \"acme-demo\": No rule allows this action. Add a rule in Console › Policies to allow it."
+      }
+    },
+    {
+      "name": "other orders tools fall to the default deny",
+      "line": 124,
+      "pass": true,
+      "expected": {
+        "decision": "deny",
+        "code": "policy_denied"
+      },
+      "got": {
+        "decision": "deny",
+        "rule": "default",
+        "code": "policy_denied",
+        "reason": "No rule allows this action. Add a rule in Console › Policies to allow it.",
+        "message": "Blocked by policy \"acme-demo\": No rule allows this action. Add a rule in Console › Policies to allow it."
+      }
+    },
+    {
+      "name": "the 31st call in a minute is over the agent budget",
+      "line": 127,
+      "pass": true,
+      "expected": {
+        "decision": "deny",
+        "code": "budget_exceeded"
+      },
+      "got": {
+        "decision": "deny",
+        "rule": "budget:agent-rate",
+        "code": "budget_exceeded",
+        "message": "Budget \"agent-rate\" reached: 30 of 30 calls this minute. Try again in 60 s."
+      }
+    },
+    {
+      "name": "everything echo runs",
+      "line": 131,
+      "pass": true,
+      "expected": {
+        "decision": "allow",
+        "rule": "allow-everything-demo-tools"
+      },
+      "got": {
+        "decision": "allow",
+        "rule": "allow-everything-demo-tools",
+        "message": "",
+        "verify": "L0"
+      }
+    },
+    {
+      "name": "everything get-env is denied by default (it would show the server's environment)",
+      "line": 134,
+      "pass": true,
+      "expected": {
+        "decision": "deny"
+      },
+      "got": {
+        "decision": "deny",
+        "rule": "default",
+        "code": "policy_denied",
+        "reason": "No rule allows this action. Add a rule in Console › Policies to allow it.",
+        "message": "Blocked by policy \"acme-demo\": No rule allows this action. Add a rule in Console › Policies to allow it."
+      }
+    },
+    {
+      "name": "a fake echo runs",
+      "line": 138,
+      "pass": true,
+      "expected": {
+        "decision": "allow",
+        "rule": "allow-fake"
+      },
+      "got": {
+        "decision": "allow",
+        "rule": "allow-fake",
+        "message": "",
+        "verify": "L0"
+      }
+    },
+    {
+      "name": "reading a file in the demo folder runs",
+      "line": 142,
+      "pass": true,
+      "expected": {
+        "decision": "allow",
+        "rule": "allow-scratch-reads"
+      },
+      "got": {
+        "decision": "allow",
+        "rule": "allow-scratch-reads",
+        "message": "",
+        "verify": "L0"
+      }
+    },
+    {
+      "name": "reading several files runs",
+      "line": 145,
+      "pass": true,
+      "expected": {
+        "decision": "allow",
+        "rule": "allow-scratch-reads"
+      },
+      "got": {
+        "decision": "allow",
+        "rule": "allow-scratch-reads",
+        "message": "",
+        "verify": "L0"
+      }
+    },
+    {
+      "name": "listing a directory runs",
+      "line": 148,
+      "pass": true,
+      "expected": {
+        "decision": "allow",
+        "rule": "allow-scratch-reads"
+      },
+      "got": {
+        "decision": "allow",
+        "rule": "allow-scratch-reads",
+        "message": "",
+        "verify": "L0"
+      }
+    },
+    {
+      "name": "file info runs",
+      "line": 151,
+      "pass": true,
+      "expected": {
+        "decision": "allow",
+        "rule": "allow-scratch-reads"
+      },
+      "got": {
+        "decision": "allow",
+        "rule": "allow-scratch-reads",
+        "message": "",
+        "verify": "L0"
+      }
+    },
+    {
+      "name": "searching runs",
+      "line": 154,
+      "pass": true,
+      "expected": {
+        "decision": "allow",
+        "rule": "allow-scratch-reads"
+      },
+      "got": {
+        "decision": "allow",
+        "rule": "allow-scratch-reads",
+        "message": "",
+        "verify": "L0"
+      }
+    },
+    {
+      "name": "the directory tree runs",
+      "line": 157,
+      "pass": true,
+      "expected": {
+        "decision": "allow",
+        "rule": "allow-scratch-reads"
+      },
+      "got": {
+        "decision": "allow",
+        "rule": "allow-scratch-reads",
+        "message": "",
+        "verify": "L0"
+      }
+    },
+    {
+      "name": "writing inside allowed runs",
+      "line": 161,
+      "pass": true,
+      "expected": {
+        "decision": "allow",
+        "rule": "scratch-writes-in-allowed"
+      },
+      "got": {
+        "decision": "allow",
+        "rule": "scratch-writes-in-allowed",
+        "message": "",
+        "verify": "L0"
+      }
+    },
+    {
+      "name": "editing inside allowed runs",
+      "line": 164,
+      "pass": true,
+      "expected": {
+        "decision": "allow",
+        "rule": "scratch-writes-in-allowed"
+      },
+      "got": {
+        "decision": "allow",
+        "rule": "scratch-writes-in-allowed",
+        "message": "",
+        "verify": "L0"
+      }
+    },
+    {
+      "name": "writing outside allowed is blocked",
+      "line": 167,
+      "pass": true,
+      "expected": {
+        "decision": "deny",
+        "rule": "scratch-writes-only-in-allowed",
+        "code": "policy_denied",
+        "message": "Blocked by policy \"scratch-writes-only-in-allowed\": Agents may only write inside /tmp/deedglass-demo/allowed."
+      },
+      "got": {
+        "decision": "deny",
+        "rule": "scratch-writes-only-in-allowed",
+        "code": "policy_denied",
+        "reason": "Agents may only write inside /tmp/deedglass-demo/allowed.",
+        "message": "Blocked by policy \"scratch-writes-only-in-allowed\": Agents may only write inside /tmp/deedglass-demo/allowed."
+      }
+    },
+    {
+      "name": "a .. traversal out of allowed is blocked",
+      "line": 174,
+      "pass": true,
+      "expected": {
+        "decision": "deny",
+        "rule": "scratch-writes-only-in-allowed"
+      },
+      "got": {
+        "decision": "deny",
+        "rule": "scratch-writes-only-in-allowed",
+        "code": "policy_denied",
+        "reason": "Agents may only write inside /tmp/deedglass-demo/allowed.",
+        "message": "Blocked by policy \"scratch-writes-only-in-allowed\": Agents may only write inside /tmp/deedglass-demo/allowed."
+      }
+    },
+    {
+      "name": "the allowed folder itself without a trailing slash is not a file inside it",
+      "line": 177,
+      "pass": true,
+      "expected": {
+        "decision": "deny",
+        "rule": "scratch-writes-only-in-allowed"
+      },
+      "got": {
+        "decision": "deny",
+        "rule": "scratch-writes-only-in-allowed",
+        "code": "policy_denied",
+        "reason": "Agents may only write inside /tmp/deedglass-demo/allowed.",
+        "message": "Blocked by policy \"scratch-writes-only-in-allowed\": Agents may only write inside /tmp/deedglass-demo/allowed."
+      }
+    },
+    {
+      "name": "a look-alike prefix is blocked",
+      "line": 180,
+      "pass": true,
+      "expected": {
+        "decision": "deny",
+        "rule": "scratch-writes-only-in-allowed"
+      },
+      "got": {
+        "decision": "deny",
+        "rule": "scratch-writes-only-in-allowed",
+        "code": "policy_denied",
+        "reason": "Agents may only write inside /tmp/deedglass-demo/allowed.",
+        "message": "Blocked by policy \"scratch-writes-only-in-allowed\": Agents may only write inside /tmp/deedglass-demo/allowed."
+      }
+    },
+    {
+      "name": "a write with no path is blocked",
+      "line": 183,
+      "pass": true,
+      "expected": {
+        "decision": "deny",
+        "rule": "scratch-writes-only-in-allowed"
+      },
+      "got": {
+        "decision": "deny",
+        "rule": "scratch-writes-only-in-allowed",
+        "code": "policy_denied",
+        "reason": "Agents may only write inside /tmp/deedglass-demo/allowed.",
+        "message": "Blocked by policy \"scratch-writes-only-in-allowed\": Agents may only write inside /tmp/deedglass-demo/allowed."
+      }
+    },
+    {
+      "name": "editing outside allowed is blocked",
+      "line": 186,
+      "pass": true,
+      "expected": {
+        "decision": "deny",
+        "rule": "scratch-writes-only-in-allowed"
+      },
+      "got": {
+        "decision": "deny",
+        "rule": "scratch-writes-only-in-allowed",
+        "code": "policy_denied",
+        "reason": "Agents may only write inside /tmp/deedglass-demo/allowed.",
+        "message": "Blocked by policy \"scratch-writes-only-in-allowed\": Agents may only write inside /tmp/deedglass-demo/allowed."
+      }
+    },
+    {
+      "name": "an undo waits for a countersign",
+      "line": 190,
+      "pass": true,
+      "expected": {
+        "decision": "require_approval",
+        "rule": "undo-needs-approval",
+        "verify": "L2",
+        "approval": {
+          "required": 1
+        }
+      },
+      "got": {
+        "decision": "require_approval",
+        "rule": "undo-needs-approval",
+        "code": "approval_required",
+        "reason": "Undoing a write changes data again, so a human confirms it first.",
+        "message": "Waiting for approval under policy \"undo-needs-approval\": Undoing a write changes data again, so a human confirms it first.",
+        "verify": "L2",
+        "approval": {
+          "approvers": [
+            "role:admin"
+          ],
+          "required": 1,
+          "expires_in": 1800
+        }
+      }
+    },
+    {
+      "name": "moving a file is denied by default",
+      "line": 197,
+      "pass": true,
+      "expected": {
+        "decision": "deny",
+        "code": "policy_denied"
+      },
+      "got": {
+        "decision": "deny",
+        "rule": "default",
+        "code": "policy_denied",
+        "reason": "No rule allows this action. Add a rule in Console › Policies to allow it.",
+        "message": "Blocked by policy \"acme-demo\": No rule allows this action. Add a rule in Console › Policies to allow it."
+      }
+    },
+    {
+      "name": "creating a directory is denied by default",
+      "line": 200,
+      "pass": true,
+      "expected": {
+        "decision": "deny"
+      },
+      "got": {
+        "decision": "deny",
+        "rule": "default",
+        "code": "policy_denied",
+        "reason": "No rule allows this action. Add a rule in Console › Policies to allow it.",
+        "message": "Blocked by policy \"acme-demo\": No rule allows this action. Add a rule in Console › Policies to allow it."
+      }
+    }
+  ],
+  "coverage": {
+    "rules": [
+      {
+        "id": "block-destructive-sql",
+        "line": 37,
+        "cases": 4
+      },
+      {
+        "id": "block-schema-changes",
+        "line": 42,
+        "cases": 7
+      },
+      {
+        "id": "block-unscoped-writes",
+        "line": 47,
+        "cases": 3
+      },
+      {
+        "id": "no-deletes-on-orders",
+        "line": 52,
+        "cases": 3
+      },
+      {
+        "id": "undo-needs-approval",
+        "line": 57,
+        "cases": 1
+      },
+      {
+        "id": "allow-order-status-updates",
+        "line": 64,
+        "cases": 2
+      },
+      {
+        "id": "allow-ship-order",
+        "line": 72,
+        "cases": 1
+      },
+      {
+        "id": "orders-writes-need-approval",
+        "line": 76,
+        "cases": 4
+      },
+      {
+        "id": "allow-order-reads",
+        "line": 82,
+        "cases": 4
+      },
+      {
+        "id": "allow-schema-browsing",
+        "line": 87,
+        "cases": 4
+      },
+      {
+        "id": "allow-plain-explain",
+        "line": 90,
+        "cases": 1
+      },
+      {
+        "id": "allow-everything-demo-tools",
+        "line": 94,
+        "cases": 1
+      },
+      {
+        "id": "allow-fake",
+        "line": 97,
+        "cases": 1
+      },
+      {
+        "id": "allow-scratch-reads",
+        "line": 100,
+        "cases": 6
+      },
+      {
+        "id": "scratch-writes-only-in-allowed",
+        "line": 103,
+        "cases": 6
+      },
+      {
+        "id": "scratch-writes-in-allowed",
+        "line": 108,
+        "cases": 2
+      }
+    ],
+    "covered": 16,
+    "total": 16,
+    "uncovered": [],
+    "default": 6,
+    "budgets": [
+      {
+        "id": "agent-rate",
+        "line": 31,
+        "cases": 1
+      }
+    ]
+  },
+  "elapsed_us": 555
+}

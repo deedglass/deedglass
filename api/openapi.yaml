@@ -350,6 +350,7 @@ paths:
         - {name: "created_at[gte]", in: query, required: false, description: RFC 3339; inclusive., schema: {type: string, format: date-time}}
         - {name: "created_at[lt]", in: query, required: false, description: RFC 3339; exclusive., schema: {type: string, format: date-time}}
         - {name: q, in: query, required: false, description: Text to find in the tool name or the error code (2 to 64 characters)., schema: {type: string, minLength: 2, maxLength: 64}}
+        - {name: shadow_differs, in: query, required: false, description: 'Only `true` (S26): actions whose shadow policy decided, and decided differently from the enforced decision. Any other value is 400 `validation_failed`.', schema: {type: string, enum: ["true"]}}
         - $ref: "#/components/parameters/Limit"
         - $ref: "#/components/parameters/Cursor"
       responses:
@@ -1590,8 +1591,13 @@ paths:
           $ref: "#/components/responses/Error"
     patch:
       operationId: updateOrg
-      summary: Change the org's name or time zone
-      description: Admins and owners. Seals an `org.updated` admin deed when something changed. Needs the `Deedglass-CSRF` header.
+      summary: Change the org's name, time zone, payload retention or approval settings
+      description: >-
+        Admins and owners change `name` and `timezone`; only an owner may send `retention_days` or
+        `settings` (an admin gets 403 `insufficient_role`). Only the fields and keys sent change;
+        `settings.approvals` is merged into the stored settings. Seals one `org.updated` admin deed
+        when something changed (data: `fields`, `timezone`, and the new `retention_days` and
+        `approvals` when sent), none otherwise. Needs the `Deedglass-CSRF` header.
       tags: [People]
       security: [{sessionCookie: []}]
       x-deedglass-auth: session
@@ -1609,6 +1615,23 @@ paths:
               properties:
                 name: {type: string, minLength: 1, maxLength: 100}
                 timezone: {type: string, description: An IANA time zone name such as Asia/Kolkata.}
+                retention_days:
+                  type: [integer, "null"]
+                  minimum: 1
+                  maximum: 3650
+                  description: Owner only (S26). Days to keep action payloads; null goes back to the default of 90.
+                settings:
+                  type: object
+                  additionalProperties: false
+                  description: Owner only (S26). Unknown keys are 400 `validation_failed` with their path as `param`.
+                  properties:
+                    approvals:
+                      type: object
+                      additionalProperties: false
+                      properties:
+                        email_links: {type: string, enum: [decide, review]}
+                        email_detail: {type: string, enum: [summary, full]}
+                        self_countersign: {type: string, enum: [deny, allow]}
             example: {timezone: Asia/Kolkata}
       responses:
         "200":
@@ -4779,6 +4802,25 @@ components:
         timezone: {type: string}
         status: {type: string, enum: [active, disabled]}
         created_at: {type: string, format: date-time}
+        retention_days:
+          type: integer
+          minimum: 1
+          maximum: 3650
+          description: >-
+            GET and PATCH /v1/org only (S26, additive): how many days action payloads are kept, the
+            org's setting or the default of 90. Omitted elsewhere.
+        settings:
+          type: object
+          description: GET and PATCH /v1/org only (S26, additive), with defaults applied. Omitted elsewhere.
+          required: [approvals]
+          properties:
+            approvals:
+              type: object
+              required: [email_links, email_detail, self_countersign]
+              properties:
+                email_links: {type: string, enum: [decide, review], description: Whether emailed approval links can decide (default) or only open the review page.}
+                email_detail: {type: string, enum: [summary, full], description: How much of the request approval emails show (default summary).}
+                self_countersign: {type: string, enum: [deny, allow], description: Whether the person an action runs on behalf of may countersign it (default deny).}
         stop:
           type: object
           description: >-

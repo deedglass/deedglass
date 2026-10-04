@@ -52,6 +52,8 @@ func TestParseActionQuery(t *testing.T) {
 		{"q=refund&on_behalf_of=u_4821&agent=agt_01j9z9b1d3f5h7k9m1p3r5t7v9", func(f ActionFilter, p Page) bool {
 			return f.Q == "refund" && f.OnBehalfOf == "u_4821" && f.Agent != ""
 		}},
+		{"shadow_differs=true", func(f ActionFilter, p Page) bool { return f.ShadowDiffers }},
+		{"verdict=MISMATCH", func(f ActionFilter, p Page) bool { return !f.ShadowDiffers }},
 	}
 	for _, c := range ok {
 		f, p, err := ParseActionQuery(q(c.in))
@@ -80,6 +82,11 @@ func TestParseActionQuery(t *testing.T) {
 		{"verdict=MISMATCH&verdict=VERIFIED", "verdict"},
 		{"sort=asc", "sort"},
 		{"cursor=", "cursor"},
+		{"shadow_differs=false", "shadow_differs"},
+		{"shadow_differs=1", "shadow_differs"},
+		{"shadow_differs=TRUE", "shadow_differs"},
+		{"shadow_differs=", "shadow_differs"},
+		{"shadow_differs=true&shadow_differs=true", "shadow_differs"},
 	}
 	for _, c := range bad {
 		_, _, err := ParseActionQuery(q(c.in))
@@ -116,6 +123,36 @@ func TestFiltersNeverReachSQLText(t *testing.T) {
 				t.Errorf("%s=%q: not bound (%d args)", k, h, len(args))
 			}
 		}
+	}
+}
+
+// shadow_differs adds one fixed fragment and no value; leaving it out keeps the S06 filter hash
+// (so cursors issued before S26 stay valid).
+func TestShadowDiffersFilter(t *testing.T) {
+	f, _, err := ParseActionQuery(q("shadow_differs=true&verdict=MISMATCH"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	where, args := f.where(mustOrg())
+	if want := " WHERE a.org_id = $1 AND a.witness_verdict = $2 AND (a.shadow_decision IS NOT NULL AND a.shadow_decision IS DISTINCT FROM a.decision)"; where != want || len(args) != 2 {
+		t.Fatalf("where: %s %v", where, args)
+	}
+	plain, _, _ := ParseActionQuery(q("verdict=MISMATCH"))
+	if plain.hash() == f.hash() {
+		t.Fatal("shadow_differs must change the filter hash")
+	}
+	if got := shortHash("actions", struct {
+		Agent, Tool                         string
+		States, Decisions, Verdicts, Levels []string
+		OnBehalfOf                          string
+		CreatedGTE, CreatedLT               *time.Time
+		Q                                   string
+	}{Verdicts: []string{"MISMATCH"}}); got != plain.hash() {
+		t.Fatalf("the hash without shadow_differs changed: %s, want %s", plain.hash(), got)
+	}
+	_, _, err = ParseActionQuery(q("shadow_differs=yes"))
+	if err == nil || err.Error() != `shadow_differs takes only true. Leave it out to list every action. You sent "yes".` {
+		t.Fatalf("message: %v", err)
 	}
 }
 

@@ -177,7 +177,7 @@ security events, not changes: they go to `admin_events` without a deed.
 | Action | Actor → target | Sealed | Data (only its digest enters the deed) |
 |---|---|---|---|
 | `org.created` | operator → org | yes | `{name_digest, owner}` |
-| `org.updated` | user → org | yes | `{fields, timezone}` |
+| `org.updated` | user → org | yes | `{fields, timezone}`, plus `retention_days` (null for the default) and `approvals` (all three settings) when sent (S26) |
 | `member.invited` | user → membership | yes | `{user, role}` |
 | `member.joined` | invitee → membership | yes | `{role}` |
 | `member.role_changed` | user → membership | yes | `{from, to}` |

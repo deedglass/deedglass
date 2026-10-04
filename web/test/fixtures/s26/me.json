@@ -1,0 +1,43 @@
+{
+  "object": "me",
+  "user": {
+    "object": "user",
+    "id": "usr_01m42fmp8q1tnsms9h08cw3rez",
+    "email": "owner@acme.example",
+    "name": "Arjun Mehta",
+    "created_at": "2026-10-04T03:34:38.103Z"
+  },
+  "org": {
+    "object": "org",
+    "id": "org_01m42fmp8tpykc3qrjk75n186j",
+    "name": "Acme",
+    "slug": "acme",
+    "timezone": "UTC",
+    "status": "active",
+    "created_at": "2026-10-04T03:34:38.103Z"
+  },
+  "membership": {
+    "object": "membership",
+    "id": "mem_01m42fmp8w8ykedxcsaazzx6sb",
+    "role": "owner",
+    "status": "active"
+  },
+  "orgs": [
+    {
+      "id": "org_01m42fmp8tpykc3qrjk75n186j",
+      "name": "Acme",
+      "role": "owner"
+    },
+    {
+      "id": "org_01m42fmpbg3ya7eyqzyn9jf6t2",
+      "name": "Acme Staging",
+      "role": "owner"
+    }
+  ],
+  "session": {
+    "id": "ses_01m42fmp8xxxxxxxxxxxxxxxxx",
+    "idle_expires_at": "2026-10-04T15:37:03.367Z",
+    "expires_at": "2026-10-11T03:37:03.367Z"
+  },
+  "csrf_token": "csrf-redacted"
+}

@@ -24,11 +24,14 @@ export const DESTS: readonly Dest[] = [
 /** The bottom bar under 768 px: four destinations and More. */
 export const BOTTOM = ['overview', 'actions', 'approvals', 'agents'] as const;
 
-/** Settings sections the palette can jump to. */
+/** Settings sections (S26 §3.4), in sub-nav order; each is /app/settings/<key>. The palette jumps to them. */
 export const SETTINGS_SECTIONS: readonly { key: string; label: string }[] = [
-  { key: 'org', label: 'Org' },
-  { key: 'members', label: 'People' },
-  { key: 'keys', label: 'Admin keys' },
+  { key: 'general', label: 'General' },
+  { key: 'members', label: 'Members' },
+  { key: 'keys', label: 'API keys' },
+  { key: 'approvals', label: 'Approvals' },
   { key: 'webhooks', label: 'Webhooks' },
   { key: 'seal-keys', label: 'Seal keys' },
+  { key: 'notifications', label: 'Notifications' },
+  { key: 'danger', label: 'Danger zone' },
 ];

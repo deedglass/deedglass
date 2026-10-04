@@ -207,6 +207,19 @@ code, .code { font-family: var(--mono); }
 .btn:disabled { opacity: 0.7; cursor: default; }
 .btn[aria-busy="true"] { cursor: progress; }
 .notice > .btn, #console { margin-top: 16px; }
+/* Pending: Open in Console is a quiet text link under the decision buttons (44 px target). */
+.link-quiet {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  color: var(--muted);
+  font: 500 14px/1.2 var(--font);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.link-quiet:hover { color: var(--text); }
+#console.link-quiet { margin-top: 8px; }
 
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 

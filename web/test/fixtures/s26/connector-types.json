@@ -1,0 +1,370 @@
+{
+  "object": "list",
+  "data": [
+    {
+      "object": "connector_type",
+      "type": "mcp_http",
+      "title": "Remote MCP server",
+      "description": "A remote MCP server over Streamable HTTP. Its tools pass through the Gate; its credential stays in the vault and is added only when the Gate opens a session.",
+      "levels": [
+        "L0"
+      ],
+      "credential_kinds": [
+        {
+          "kind": "bearer",
+          "fields": [
+            {
+              "name": "token",
+              "secret": true
+            }
+          ]
+        },
+        {
+          "kind": "header",
+          "fields": [
+            {
+              "name": "value",
+              "secret": true
+            }
+          ]
+        }
+      ],
+      "config_schema": {
+        "type": "object",
+        "required": [
+          "url"
+        ],
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "https://mcp.example.com/mcp (http in dev only)"
+          },
+          "auth": {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "bearer",
+                  "header",
+                  "none"
+                ]
+              },
+              "header": {
+                "type": "string"
+              }
+            }
+          },
+          "timeout_ms": {
+            "type": "integer",
+            "minimum": 100,
+            "maximum": 600000
+          },
+          "tools_ttl_ms": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 3600000
+          }
+        }
+      },
+      "docs_url": "https://docs.deedglass.com/connectors/mcp-http"
+    },
+    {
+      "object": "connector_type",
+      "type": "postgres",
+      "title": "PostgreSQL",
+      "description": "Agent SQL in a transaction Deedglass controls: one statement per action, run as the least-privilege role deedglass_agent, with a ledger row and a logical marker committed with the change for the witness.",
+      "levels": [
+        "L0",
+        "L1",
+        "L2"
+      ],
+      "credential_kinds": [
+        {
+          "kind": "dsn",
+          "fields": [
+            {
+              "name": "dsn",
+              "secret": true
+            },
+            {
+              "name": "witness_dsn",
+              "secret": true
+            }
+          ]
+        }
+      ],
+      "config_schema": {
+        "type": "object",
+        "required": [
+          "allowed_schemas"
+        ],
+        "properties": {
+          "mode": {
+            "type": "string",
+            "enum": [
+              "sql",
+              "controlled_functions"
+            ]
+          },
+          "allowed_schemas": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "the read scope and search_path, like [public]"
+          },
+          "writable_tables": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "schema.table the agent may INSERT, UPDATE and DELETE"
+          },
+          "row_limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10000
+          },
+          "max_result_bytes": {
+            "type": "integer",
+            "minimum": 1024,
+            "maximum": 16777216
+          },
+          "max_rows_affected": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000000
+          },
+          "statement_timeout_ms": {
+            "type": "integer",
+            "minimum": 100,
+            "maximum": 60000
+          },
+          "lock_timeout_ms": {
+            "type": "integer",
+            "minimum": 100,
+            "maximum": 60000
+          },
+          "max_connections": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 16
+          },
+          "witness": {
+            "type": "object",
+            "properties": {
+              "enabled": {
+                "type": "boolean"
+              },
+              "watched_tables": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "sensitive_columns": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "auto_columns": {
+                "type": "object",
+                "description": "table → columns a trigger maintains, like {public.orders: [updated_at]}"
+              },
+              "max_rows": {
+                "type": "object",
+                "description": "table → the most rows one action may change"
+              },
+              "strict_triggers": {
+                "type": "boolean"
+              },
+              "l2_timeout": {
+                "type": "string",
+                "description": "how long an action waits for Postgres's change log, 1s to 60s (10s)"
+              },
+              "diff_rows": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100
+              }
+            }
+          },
+          "functions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "name"
+              ]
+            }
+          },
+          "throwaway": {
+            "type": "boolean"
+          }
+        }
+      },
+      "docs_url": "https://docs.deedglass.com/connectors/postgres"
+    },
+    {
+      "object": "connector_type",
+      "type": "rest",
+      "title": "REST API",
+      "description": "Any JSON API as governed tools: one method on one templated path per tool, with the credential added only when the Gate runs a call.",
+      "levels": [
+        "L0"
+      ],
+      "credential_kinds": [
+        {
+          "kind": "bearer",
+          "fields": [
+            {
+              "name": "token",
+              "secret": true
+            }
+          ]
+        },
+        {
+          "kind": "header",
+          "fields": [
+            {
+              "name": "value",
+              "secret": true
+            }
+          ]
+        },
+        {
+          "kind": "basic",
+          "fields": [
+            {
+              "name": "username",
+              "secret": false
+            },
+            {
+              "name": "password",
+              "secret": true
+            }
+          ]
+        },
+        {
+          "kind": "query",
+          "fields": [
+            {
+              "name": "value",
+              "secret": true
+            }
+          ]
+        }
+      ],
+      "config_schema": {
+        "type": "object",
+        "required": [
+          "base_url",
+          "allowed_methods",
+          "allowed_path_prefixes",
+          "tools"
+        ],
+        "properties": {
+          "base_url": {
+            "type": "string",
+            "description": "https://api.example.com (http in dev only)"
+          },
+          "auth": {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "bearer",
+                  "header",
+                  "basic",
+                  "query",
+                  "none"
+                ]
+              },
+              "header": {
+                "type": "string"
+              },
+              "param": {
+                "type": "string"
+              }
+            }
+          },
+          "allowed_methods": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "GET",
+                "HEAD",
+                "POST",
+                "PUT",
+                "PATCH",
+                "DELETE"
+              ]
+            }
+          },
+          "allowed_path_prefixes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "timeout_ms": {
+            "type": "integer",
+            "minimum": 100,
+            "maximum": 60000
+          },
+          "max_response_bytes": {
+            "type": "integer",
+            "minimum": 1024,
+            "maximum": 16777216
+          },
+          "redirects": {
+            "type": "string",
+            "enum": [
+              "none",
+              "same_host"
+            ]
+          },
+          "send_action_id": {
+            "type": "boolean"
+          },
+          "headers": {
+            "type": "object"
+          },
+          "test": {
+            "type": "object",
+            "properties": {
+              "method": {
+                "type": "string",
+                "enum": [
+                  "GET",
+                  "HEAD"
+                ]
+              },
+              "path": {
+                "type": "string"
+              }
+            }
+          },
+          "tools": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "name",
+                "method",
+                "path"
+              ]
+            }
+          }
+        }
+      },
+      "docs_url": "https://docs.deedglass.com/connectors/rest"
+    }
+  ],
+  "has_more": false,
+  "next_cursor": null
+}

@@ -1,0 +1,25 @@
+{
+  "object": "policy_lint_result",
+  "file": "",
+  "valid": false,
+  "name": "acme-demo",
+  "version_hash": null,
+  "rules": 16,
+  "budgets": 1,
+  "errors": [
+    {
+      "severity": "error",
+      "code": "unknown_key",
+      "message": "Unknown key \"desicion\" in rule \"block-destructive-sql\".",
+      "hint": "Did you mean \"decision\"?",
+      "line": 40,
+      "column": 5,
+      "end_line": 40,
+      "end_column": 13,
+      "rule_id": "block-destructive-sql",
+      "path": "rules[0].desicion",
+      "doc_url": "https://docs.deedglass.com/policies/errors/unknown_key"
+    }
+  ],
+  "warnings": []
+}
