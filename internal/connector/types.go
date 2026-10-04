@@ -59,6 +59,9 @@ type ToolSpec struct {
 	Internal      bool            // never listed to agents (S23 postgres.undo)
 	Postcondition string          // CEL, S19
 	ReadBack      *ReadBackSpec   // S19
+	// L1 is the sentence a native read-back checks ("GitHub shows the issue with the same title,
+	// body and marker"): set, the connector reads the write back in code (NativeReadBacker, S29).
+	L1 string
 }
 
 // Call is one execution the Gate asks a connector for. Args are the normalized arguments; the

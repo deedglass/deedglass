@@ -8,4 +8,9 @@
     if (v === 'dark' || v === 'light' || v === 'system') t = v;
   } catch (e) { /* storage blocked: dark */ }
   document.documentElement.setAttribute('data-theme', t);
+  // S29: this browser last showed a simulated org, so the shell will draw its banner on boot: the
+  // page waits for that first pass (app.css). Real orgs never wait. Keep in step with theme.ts.
+  try {
+    if (window.localStorage.getItem('deedglass.simulated') === '1') document.documentElement.setAttribute('data-sim-hint', '');
+  } catch (e) { /* storage blocked: no hint */ }
 })();

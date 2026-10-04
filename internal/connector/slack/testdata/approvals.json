@@ -1,0 +1,20 @@
+[
+  {"name": "approval post", "method": "POST", "path": "/api/chat.postMessage",
+   "body_subset": {"channel": "C0APPROV1", "text": "Approval needed · github.create_pr", "blocks": "[{\"type\":\"section\",\"text\":{\"type\":\"mrkdwn\",\"text\":\"hi\"}}]",
+                   "unfurl_links": "false", "unfurl_media": "false"},
+   "status": 200, "body": {"ok": true, "channel": "C0APPROV1", "ts": "1760000100.000200"}},
+  {"name": "approval update", "method": "POST", "path": "/api/chat.update",
+   "body_subset": {"channel": "C0APPROV1", "ts": "1760000100.000200", "text": "Approved by Arjun"},
+   "status": 200, "body": {"ok": true, "channel": "C0APPROV1", "ts": "1760000100.000200"}},
+  {"name": "users.info", "method": "GET", "path": "/api/users.info", "query": {"user": "U0ARJUN01"}, "status": 200,
+   "body": {"ok": true, "user": {"id": "U0ARJUN01", "team_id": "T0123ABCD", "name": "arjun", "real_name": "Arjun", "deleted": false, "is_bot": false,
+     "is_restricted": false, "is_ultra_restricted": false, "is_email_confirmed": true, "profile": {"email": "Arjun@Example.COM", "real_name": "Arjun"}}}},
+  {"name": "views.open", "method": "POST", "path": "/api/views.open",
+   "body_subset": {"trigger_id": "12345.98765.abcd2358fdea", "view": "{\"type\":\"modal\",\"callback_id\":\"deedglass_deny\"}"},
+   "status": 200, "body": {"ok": true, "view": {"id": "V0VIEW001"}}},
+  {"name": "respond", "method": "POST", "path": "/actions/T0123ABCD/1234/abcdef",
+   "require_headers": {"Content-Type": "application/json"},
+   "absent_headers": ["Authorization"],
+   "body_subset": {"response_type": "ephemeral", "replace_original": false, "text": "You asked for this action, so someone else approves it."},
+   "status": 200, "headers": {"Content-Type": "text/plain"}, "body": "\"ok\""}
+]

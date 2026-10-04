@@ -58,11 +58,14 @@ var (
 	orgKeys         = []string{"id", "timezone", "stopped"}
 	userKeys        = []string{"ref", "sub", "iss"}
 	sessionKeys     = []string{"ref"}
-	requestKeys     = []string{"mode", "intent_signed", "bytes", "digest", "http"}
+	requestKeys     = []string{"mode", "intent_signed", "bytes", "digest", "http", "github", "slack"}
 	httpKeys        = []string{"method", "path", "host"}
-	anomalyKeys     = []string{"active", "kinds", "severity"}
-	usageKeys       = []string{"calls_minute", "calls_hour", "calls_today", "spend_today", "currency", "budgets"}
-	budgetIDRE      = regexp.MustCompile(`^[a-z0-9][a-z0-9_-]{0,63}$`)
+	githubKeys      = []string{"repo", "owner", "name", "default_branch", "branch", "base", "head", "path", "protected_branch",
+		"is_default_branch", "touches_workflows", "enriched"}
+	slackKeys   = []string{"channel_id", "channel_name", "is_private", "is_im", "is_ext_shared", "broadcast", "user_mentions", "enriched"}
+	anomalyKeys = []string{"active", "kinds", "severity"}
+	usageKeys   = []string{"calls_minute", "calls_hour", "calls_today", "spend_today", "currency", "budgets"}
+	budgetIDRE  = regexp.MustCompile(`^[a-z0-9][a-z0-9_-]{0,63}$`)
 )
 
 // MergeCaseInput deep-merges over into base (maps merge key by key; anything else is replaced) and
@@ -341,6 +344,56 @@ func BuildInput(v any) (Input, *InputProblem) {
 				if p := str(hm, k, "request.http."+k, dst); p != nil {
 					return in, p
 				}
+			}
+		}
+		if g, set := rm["github"]; set {
+			gm, ok := g.(map[string]any)
+			if !ok {
+				return in, wrongType("request.github", "a mapping", g)
+			}
+			if p := checkKeys("request.github", gm, githubKeys); p != nil {
+				return in, p
+			}
+			gh := &in.Request.GitHub
+			for k, dst := range map[string]*string{"repo": &gh.Repo, "owner": &gh.Owner, "name": &gh.Name, "default_branch": &gh.DefaultBranch,
+				"branch": &gh.Branch, "base": &gh.Base, "head": &gh.Head, "path": &gh.Path} {
+				if p := str(gm, k, "request.github."+k, dst); p != nil {
+					return in, p
+				}
+			}
+			for k, dst := range map[string]*bool{"protected_branch": &gh.ProtectedBranch, "is_default_branch": &gh.IsDefaultBranch,
+				"touches_workflows": &gh.TouchesWorkflows, "enriched": &gh.Enriched} {
+				if p := boolean(gm, k, "request.github."+k, dst); p != nil {
+					return in, p
+				}
+			}
+		}
+		if sl, set := rm["slack"]; set {
+			sm, ok := sl.(map[string]any)
+			if !ok {
+				return in, wrongType("request.slack", "a mapping", sl)
+			}
+			if p := checkKeys("request.slack", sm, slackKeys); p != nil {
+				return in, p
+			}
+			sf := &in.Request.Slack
+			for k, dst := range map[string]*string{"channel_id": &sf.ChannelID, "channel_name": &sf.ChannelName} {
+				if p := str(sm, k, "request.slack."+k, dst); p != nil {
+					return in, p
+				}
+			}
+			for k, dst := range map[string]*bool{"is_private": &sf.IsPrivate, "is_im": &sf.IsIM, "is_ext_shared": &sf.IsExtShared,
+				"broadcast": &sf.Broadcast, "enriched": &sf.Enriched} {
+				if p := boolean(sm, k, "request.slack."+k, dst); p != nil {
+					return in, p
+				}
+			}
+			if x, set := sm["user_mentions"]; set {
+				n, p := wholeNumber("request.slack.user_mentions", x)
+				if p != nil {
+					return in, p
+				}
+				sf.UserMentions = n
 			}
 		}
 		if in.Request.Mode != "gateway" && in.Request.Mode != "proxy" {

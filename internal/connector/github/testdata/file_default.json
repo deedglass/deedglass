@@ -1,0 +1,31 @@
+[
+  {
+    "name": "PUT contents",
+    "method": "PUT",
+    "path": "/repos/arjun/deedglass-sandbox/contents/docs/x.md",
+    "status": 200,
+    "body": {
+      "content": {
+        "path": "docs/x.md",
+        "sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "commit": {
+        "sha": "9f2c4e6a8b0d1f3a5c7e9b1d3f5a7c9e1b3d5f7a"
+      }
+    },
+    "body_subset": {
+      "sha": "0123456789abcdef0123456789abcdef01234567"
+    }
+  },
+  {
+    "name": "GET contents",
+    "method": "GET",
+    "path": "/repos/arjun/deedglass-sandbox/contents/docs/x.md",
+    "status": 200,
+    "body": {
+      "type": "file",
+      "path": "docs/x.md",
+      "sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    }
+  }
+]

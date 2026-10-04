@@ -1,0 +1,49 @@
+[
+  {
+    "name": "GET repo",
+    "method": "GET",
+    "path": "/repos/arjun/deedglass-sandbox",
+    "status": 200,
+    "body": {
+      "id": 901,
+      "node_id": "R_kgDOsandbox",
+      "full_name": "arjun/deedglass-sandbox",
+      "private": true,
+      "default_branch": "main",
+      "archived": false,
+      "description": "Sandbox for Deedglass",
+      "html_url": "https://github.com/arjun/deedglass-sandbox",
+      "url": "https://api.github.com/repos/arjun/deedglass-sandbox",
+      "open_issues_count": 3,
+      "permissions": {
+        "admin": false,
+        "push": true,
+        "pull": true
+      },
+      "owner": {
+        "login": "arjun",
+        "email": "arjun@example.com",
+        "node_id": "U_owner"
+      }
+    }
+  },
+  {
+    "name": "DELETE ref",
+    "method": "DELETE",
+    "path": "/repos/arjun/deedglass-sandbox/git/refs/heads/agent/fix-typo",
+    "status": 204
+  },
+  {
+    "name": "GET ref",
+    "method": "GET",
+    "path": "/repos/arjun/deedglass-sandbox/git/ref/heads/agent/fix-typo",
+    "status": 200,
+    "body": {
+      "ref": "refs/heads/agent/fix-typo",
+      "object": {
+        "sha": "9f2c4e6a8b0d1f3a5c7e9b1d3f5a7c9e1b3d5f7a",
+        "type": "commit"
+      }
+    }
+  }
+]

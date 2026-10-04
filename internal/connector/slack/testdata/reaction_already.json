@@ -1,0 +1,6 @@
+[
+  {"name": "reactions.add (already)", "method": "POST", "path": "/api/reactions.add",
+   "status": 200, "body": {"ok": false, "error": "already_reacted"}},
+  {"name": "reactions.get (someone else)", "method": "GET", "path": "/api/reactions.get", "status": 200,
+   "body": {"ok": true, "message": {"reactions": [{"name": "eyes", "users": ["U0PERSON1"], "count": 1}]}}}
+]

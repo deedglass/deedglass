@@ -1,0 +1,10 @@
+[
+  {"name": "conversations.list page 1", "method": "GET", "path": "/api/conversations.list",
+   "query": {"limit": "200"}, "status": 200,
+   "body": {"ok": true, "channels": [{"id": "C0AGENT01", "name": "agent-updates", "is_member": true}, {"id": "bad", "name": "skipped"}],
+            "response_metadata": {"next_cursor": "dGVhbTpDMEFHRU5UMDE="}}},
+  {"name": "conversations.list page 2", "method": "GET", "path": "/api/conversations.list",
+   "query": {"cursor": "dGVhbTpDMEFHRU5UMDE="}, "status": 200,
+   "body": {"ok": true, "channels": [{"id": "C0LATER01", "name": "later", "is_member": true}, {"id": "C0OUTSID1", "name": "outside", "is_member": false}],
+            "response_metadata": {"next_cursor": ""}}}
+]

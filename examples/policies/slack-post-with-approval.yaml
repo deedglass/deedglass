@@ -6,8 +6,12 @@
 # a human, even in an allow-listed channel. Anything not named here, like
 # deleting messages, is refused by the default.
 #
-# Edit the channel list in "allow-listed-channels". List a channel by its name
-# and by its id (like C0AGENTUPD), because agents may send either. Then check
+# The Slack connector fills request.slack before the decision: the channel's id
+# (resolved from a #name), whether the text notifies a whole channel, and more.
+# Channels are compared by id, so renaming a channel never moves it in or out of
+# the list. Edit the ids in "allow-listed-channels" (find them with
+# deedglass act slack.list_channels). When the connector couldn't look the
+# channel up, the rule falls back to the channel the agent named. Then check
 # your change:
 #   deedglass policy test examples/policies/slack-post-with-approval.yaml
 deedglass: policy/v1
@@ -21,28 +25,32 @@ defaults:
 
 rules:
   - id: slack-reads
-    match: { tool: ["slack.get_*", "slack.list_*", "slack.search_*"] }
+    match: { tool: ["slack.list_*", "slack.read_*"] }
     decision: allow
   - id: reactions
-    match: { tool: [slack.add_reaction, slack.remove_reaction] }
+    match: { tool: slack.add_reaction }
     decision: allow
+    verify: L1
   - id: no-broadcast-mentions
-    match: { tool: [slack.post_message, slack.update_message, slack.schedule_message] }
+    match: { tool: slack.post_message }
     when: >-
-      has(args.text) && (args.text.contains("<!channel>") || args.text.contains("<!here>")
-      || args.text.contains("<!everyone>"))
+      request.slack.broadcast
+      || (has(args.text) && (args.text.contains("<!channel>") || args.text.contains("<!here>")
+      || args.text.contains("<!everyone>")))
     decision: require_approval
     reason: Messages that notify a whole channel wait for a human. An admin can approve in Console › Approvals.
     approval: { approvers: [role:admin], required: 1, expires_in: 1h }
     notify: [slack]
     verify: L1
   - id: allow-listed-channels
-    match: { tool: [slack.post_message, slack.update_message, slack.schedule_message] }
-    when: args.channel in ["#agent-updates", "C0AGENTUPD"]
+    match: { tool: slack.post_message }
+    when: >-
+      (request.slack.enriched && request.slack.channel_id in ["C0AGENTUPD"])
+      || (!request.slack.enriched && has(args.channel) && args.channel in ["#agent-updates", "C0AGENTUPD"])
     decision: allow
     verify: L1
   - id: other-channels-need-approval
-    match: { tool: [slack.post_message, slack.update_message, slack.schedule_message] }
+    match: { tool: slack.post_message }
     decision: require_approval
     reason: Posts outside the allow-listed channels wait for a human. An admin can approve in Console › Approvals, or add the channel in Console › Policies.
     approval: { approvers: [role:admin], required: 1, expires_in: 1h }

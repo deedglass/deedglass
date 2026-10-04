@@ -157,6 +157,24 @@ func (s *Service) resolved(ctx context.Context, org ids.OrgID, apr ids.ApprovalI
 	}()
 }
 
+// changed tells the notifiers that can show progress (Slack, S29) that a countersign landed but
+// the approval still waits for more. Best effort, off the decision's path.
+func (s *Service) changed(ctx context.Context, org ids.OrgID, apr ids.ApprovalID, action string) {
+	for _, nt := range s.o.Notifiers {
+		u, ok := nt.(notify.ApprovalUpdater)
+		if !ok {
+			continue
+		}
+		go func() {
+			ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+			defer cancel()
+			if err := u.ApprovalChanged(ctx, org, apr.String(), action); err != nil {
+				s.log.Warn("approve: a notifier failed", "notifier", nt.Name(), "org_id", org.String(), "approval_id", apr.String(), "err", err)
+			}
+		}()
+	}
+}
+
 func clipRunes(s string, n int) string {
 	r := []rune(s)
 	if len(r) <= n {

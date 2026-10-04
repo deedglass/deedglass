@@ -1,0 +1,11 @@
+[
+  {"name": "chat.postMessage", "method": "POST", "path": "/api/chat.postMessage",
+   "require_headers": {"Authorization": "Bearer xoxb-0000000000-dgSENTINELslackBOT7Q2vK9", "Content-Type": "application/x-www-form-urlencoded"},
+   "body_subset": {"channel": "C0AGENT01", "text": "a & b <c>", "unfurl_links": "false", "unfurl_media": "false", "link_names": "false",
+                   "metadata": "{\"event_payload\":{\"action_id\":\"act_01j9zq7c4m8x2v6t0r3n5k1h7d\"},\"event_type\":\"deedglass_action\"}"},
+   "status": 200, "body": {"ok": true, "channel": "C0AGENT01", "ts": "1760000000.000100", "message": {"text": "a &amp; b &lt;c&gt;"}}},
+  {"name": "readback history", "method": "GET", "path": "/api/conversations.history",
+   "query": {"channel": "C0AGENT01", "oldest": "1760000000.000100", "latest": "1760000000.000100", "inclusive": "true", "limit": "1", "include_all_metadata": "true"},
+   "status": 200, "body": {"ok": true, "messages": [{"type": "message", "ts": "1760000000.000100", "text": "a &amp; b &lt;c&gt;",
+     "metadata": {"event_type": "deedglass_action", "event_payload": {"action_id": "act_01j9zq7c4m8x2v6t0r3n5k1h7d"}}}]}}
+]

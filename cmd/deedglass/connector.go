@@ -457,6 +457,11 @@ func runConnectorCredentialsSet(ctx context.Context, e *Env, args []string) erro
 	kind := firstNonEmpty(v.kind, configAuth(x.Config))
 	if kind == "none" {
 		kind = vault.KindBearer
+		if len(v.fields) > 0 {
+			// S29: several named fields with no auth.kind in the config (Slack's bot_token and
+			// signing_secret, a GitHub App's private_key) are a fields credential.
+			kind = vault.KindFields
+		}
 	}
 	secret := map[string]string{}
 	defer func() {
@@ -500,9 +505,15 @@ func runConnectorCredentialsSet(ctx context.Context, e *Env, args []string) erro
 					return &ExitError{Code: ExitUsage, ErrCode: "validation_failed", Err: errors.New(strings.TrimSuffix(emptyEnvMessage(name), "."))}
 				}
 			case strings.HasPrefix(src, "file:"):
-				b, err := os.ReadFile(strings.TrimPrefix(src, "file:"))
+				path := strings.TrimPrefix(src, "file:")
+				b, err := os.ReadFile(path)
 				if err != nil {
-					return usageErr(fmt.Errorf("Can't read %s: %s", strings.TrimPrefix(src, "file:"), lastPart(err)), "Check the path.")
+					return usageErr(fmt.Errorf("Can't read %s: %s", path, lastPart(err)), "Check the path.")
+				}
+				if fi, err := os.Stat(path); err == nil && fi.Mode().Perm()&0o077 != 0 {
+					// S29: a key file others can read. Still stored; the warning says how to fix it.
+					fmt.Fprintf(e.Stderr, "%s %s can be read by other users (mode %04o). Run chmod 600 %s.\n",
+						e.Style.Amber(ui.Unknown), path, fi.Mode().Perm(), path)
 				}
 				val = strings.TrimRight(string(b), "\r\n")
 			case src == "stdin":

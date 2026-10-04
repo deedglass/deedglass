@@ -62,6 +62,11 @@ type OrgStopState struct {
 // OrgSettings is the org's settings as GET /v1/org shows them (orgs.settings, defaults applied).
 type OrgSettings struct {
 	Approvals ApprovalSettings `json:"approvals"`
+	// Simulated is orgs.settings.simulated (S29, additive, read only): the org's history came from
+	// deedglass dev simulate, and the Console shows its simulated banner from the first paint.
+	// omitzero (not omitempty: the API encodes with json/v2, where omitempty keeps false) leaves it
+	// out when false, so a real org's object is unchanged; PATCH /v1/org refuses the key.
+	Simulated bool `json:"simulated,omitzero"`
 }
 
 // ApprovalSettings are orgs.settings.approvals. internal/approve reads the same keys with the same
@@ -300,13 +305,17 @@ func getOrg(ctx context.Context, tx pgx.Tx, id ids.OrgID) (Org, error) {
 	return orgObject(id, name, slug, tz, status, created), err
 }
 
-// withSettings adds the effective retention and approval settings to o (GET and PATCH /v1/org).
+// withSettings adds the effective retention, approval settings and simulated flag to o (GET and
+// PATCH /v1/org).
 func withSettings(ctx context.Context, tx pgx.Tx, o *Org) error {
 	var (
-		days *int
-		raw  []byte
+		days      *int
+		raw       []byte
+		simulated bool
 	)
-	if err := tx.QueryRow(ctx, `SELECT retention_days, settings FROM deedglass.orgs WHERE id = $1`, o.ID).Scan(&days, &raw); err != nil {
+	// simulated is the same test internal/learn makes (settings ->> 'simulated' = 'true').
+	if err := tx.QueryRow(ctx, `SELECT retention_days, settings, COALESCE((settings ->> 'simulated') = 'true', false)
+	    FROM deedglass.orgs WHERE id = $1`, o.ID).Scan(&days, &raw, &simulated); err != nil {
 		return err
 	}
 	d := ledger.DefaultRetentionDays
@@ -314,7 +323,7 @@ func withSettings(ctx context.Context, tx pgx.Tx, o *Org) error {
 		d = *days
 	}
 	a := approvalSettings(raw)
-	o.RetentionDays, o.Settings = &d, &OrgSettings{Approvals: a}
+	o.RetentionDays, o.Settings = &d, &OrgSettings{Approvals: a, Simulated: simulated}
 	return nil
 }
 

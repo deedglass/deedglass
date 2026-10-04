@@ -1,0 +1,11 @@
+[
+  {
+    "name": "PUT merge",
+    "method": "PUT",
+    "path": "/repos/arjun/deedglass-sandbox/pulls/7/merge",
+    "status": 405,
+    "body": {
+      "message": "Pull Request is not mergeable"
+    }
+  }
+]

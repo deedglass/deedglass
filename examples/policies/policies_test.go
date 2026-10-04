@@ -113,7 +113,7 @@ func TestStartersAlwaysDeny(t *testing.T) {
 		{"postgres-safe", tool("postgres.query", "unknown"), false},
 		{"default-deny", tool("postgres.query", "unknown"), true},
 		{"default-deny", tool("stripe.create_refund", "write"), true},
-		{"github-read-mostly", tool("github.merge_pull_request", "unknown"), true},
+		{"github-read-mostly", tool("github.merge_pr", "destructive"), true},
 		{"stripe-refunds", tool("stripe.delete_customer", "destructive"), true},
 		{"stripe-refunds", tool("stripe.create_refund", "write"), false},
 		{"slack-post-with-approval", tool("slack.post_message", "write"), false},

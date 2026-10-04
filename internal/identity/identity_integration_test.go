@@ -1057,7 +1057,41 @@ func TestOrgRetentionAndSettings(t *testing.T) {
 	if r := priya.do("PATCH", "/v1/org", `{"retention_days":null}`); !strings.Contains(string(r.body), `"deed": null`) {
 		t.Fatalf("second reset: %s", r.body)
 	}
-	if o := get(); *o.RetentionDays != 90 || o.Settings.Approvals.EmailLinks != "review" || o.Stop == nil {
+	if o := get(); *o.RetentionDays != 90 || o.Settings.Approvals.EmailLinks != "review" || o.Stop == nil || o.Settings.Simulated {
 		t.Fatalf("after: %+v", o)
+	}
+
+	// S29: settings.simulated is omitted for a real org, shown (read only) for a simulated one, and
+	// survives an approvals merge.
+	if r := priya.do("GET", "/v1/org", ""); strings.Contains(string(r.body), "simulated") {
+		t.Fatalf("real org shows simulated: %s", r.body)
+	}
+	if err := w.e.DB.OrgTx(ctx, c.Org.ID, func(ctx context.Context, tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, `UPDATE deedglass.orgs SET settings = pg_catalog.jsonb_set(settings, '{simulated}', 'true'::jsonb) WHERE id = $1`, c.Org.ID)
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if o := get(); !o.Settings.Simulated || o.Settings.Approvals.EmailLinks != "review" {
+		t.Fatalf("simulated: %+v", o.Settings)
+	}
+	for _, b := range []string{`{"settings":{"simulated":false}}`, `{"settings":{"simulated":true}}`} {
+		var e struct {
+			Error struct{ Param string } `json:"error"`
+		}
+		r := priya.do("PATCH", "/v1/org", b)
+		r.json(t, &e)
+		if r.status != 400 || r.code() != "validation_failed" || e.Error.Param != "settings.simulated" {
+			t.Errorf("%s: %d %s", b, r.status, r.body)
+		}
+	}
+	v = orgView{}
+	r = priya.do("PATCH", "/v1/org", `{"settings":{"approvals":{"email_links":"decide"}}}`)
+	r.json(t, &v)
+	if r.status != 200 || v.Deed == nil || !v.Settings.Simulated || v.Settings.Approvals.EmailLinks != "decide" {
+		t.Fatalf("simulated patch: %d %s", r.status, r.body)
+	}
+	if r := priya.do("GET", "/v1/me", ""); strings.Contains(string(r.body), "simulated") {
+		t.Fatalf("/v1/me grew: %s", r.body)
 	}
 }

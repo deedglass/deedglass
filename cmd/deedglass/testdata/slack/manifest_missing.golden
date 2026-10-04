@@ -1,0 +1,5 @@
+exit 2
+--- stdout
+--- stderr
+✕ --base-url is required.
+  Pass your server's public HTTPS URL, for example: deedglass slack manifest --base-url https://abc.trycloudflare.com

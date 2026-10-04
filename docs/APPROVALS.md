@@ -151,6 +151,130 @@ Payloads are thin (ids and states: the approval, its action, agent, tool, rule, 
 and countersigned counts, and the decision's deed). Fetch the approval with the API for the rest.
 See [WEBHOOKS.md](WEBHOOKS.md).
 
+## Approve in Slack (S29)
+
+A rule with `notify: [slack]` also puts a card in your approvals channel. People approve and deny
+from Slack, on a phone too, and the card follows the action to its deed. A Slack click goes through
+the same `Decide` as the Console and the email link: the same four-eyes rule, the same self rule,
+the same context digest and the same admin deed, with `via: slack`.
+
+```mermaid
+sequenceDiagram
+  participant A as Agent
+  participant G as Gate
+  participant S as Approvals
+  participant N as Slack notifier
+  participant SL as Slack
+  participant H as POST /v1/slack/interact
+  A->>G: github.create_pr (rule: require_approval, notify: slack)
+  G->>S: pause, approval apr_…
+  S->>N: approval_notify job
+  N->>SL: chat.postMessage (the card)
+  SL->>H: Approve (signed)
+  H->>H: size · timestamp · route · signature · replay · person
+  H->>S: Decide (via slack, with the card's context digest)
+  H-->>SL: 200 within 2.5 s
+  S->>G: approval_resume job: run, witness, seal
+  N->>SL: chat.update (approved, then the deed)
+```
+
+### Set it up
+
+1. Run `deedglass slack manifest --base-url https://your-host` and create the app from it at
+   api.slack.com/apps (Create New App › From a manifest). The request URL is
+   `https://your-host/v1/slack/interact`; Slack needs a public HTTPS address (for a laptop, a
+   tunnel such as `cloudflared tunnel --url http://127.0.0.1:8080`).
+2. Install it to your workspace, then create the connector with `approvals.enabled: true` and the
+   approvals channel ([connectors/slack.md](connectors/slack.md)), and store the two credentials:
+   `deedglass connector credentials set slack --field bot_token=env:SLACK_BOT_TOKEN --field signing_secret=env:SLACK_SIGNING_SECRET`.
+3. Invite `@deedglass` to the approvals channel and run `deedglass connector test slack`.
+4. Add `notify: [slack]` to the rules whose approvals should reach Slack. Email still goes out.
+
+One live Slack connector per org receives approvals, and one Slack app routes to one org.
+
+### Who can decide from Slack
+
+Deedglass matches the person who clicked to a member of your org by email:
+
+- Slack must report the email as confirmed, and the account must be a full member of the
+  workspace: guests (restricted and single-channel), bots and deactivated accounts are refused.
+- With `approvals.require_email_domains` set (for example `[acme.com]`), only those domains count.
+- The email must belong to an active member of the org. Then S22's rules apply as in the Console:
+  the rule's approvers, the self rule and four-eyes.
+
+Anyone else sees a message only they can see, and nothing is recorded:
+
+| Case | What the person sees |
+|---|---|
+| No matching member | Deedglass couldn't match your Slack account to a person in this org. Ask an admin to invite you in Console › Settings › Members with the email you use in Slack, then try again. |
+| Not an approver of the rule | You can see this request, but policy "pull-requests-to-main-need-approval" needs an admin to approve it. |
+| The action is for them | You asked for this action, so someone else approves it. |
+| Already decided | Arjun already approved this at 10:14. Nothing else to do. |
+| Four-eyes, second click | You already approved. One more person needs to. |
+| Expired | This request expired at 11:14. Nothing ran. |
+| Slack was slow to say who they are | Deedglass couldn't check who you are in time. Try again in a moment. |
+
+Times are Slack date tokens, so each person sees their own time zone.
+
+### Deny needs a reason
+
+Deny opens a short form: one field, "Reason · recorded with the decision", 1 to 280 characters.
+An empty reason keeps the form open with "Add a short reason. It is recorded with the decision."
+The reason goes into the decision's admin deed and the agent reads it, as with every deny.
+
+### The card
+
+Facts first, the agent's words fenced and labelled, one primary button:
+
+- **Header:** `Approval needed · github.create_pr`.
+- **Summary:** one sentence Deedglass writes from the tool and the connector's facts, never from
+  free agent text: *support-bot* wants to open a pull request in *arjun/deedglass-sandbox* from
+  `agent/fix-typo` into `main`.
+- **Fields:** Rule, Reason (the rule's reason, written by your org), On behalf of, Expires (in the
+  viewer's time zone), Approvals (`1 of 2 needed`), Request (`sha256:3f9a…c21e`).
+- **Arguments:** under the label *Values below come from the agent's request.*, in a code block of
+  at most 1,200 characters, with sensitive arguments shown as digests.
+- **Context:** the action, the approval and the policy version, as ids.
+- **Buttons:** Approve (with a confirmation: "Deedglass will run github.create_pr as
+  support-bot."), Deny (the form above), Open in Console.
+
+Every value on the card is escaped, so an agent can't put a mention (`<!channel>`), a link or a
+fake button on it, and a run of three backticks can't close the code block. Each button carries
+the approval id and the digest of the context the card shows, so a person countersigns exactly what
+they saw (a changed context is refused).
+
+After a decision the header reads `Approval request · github.create_pr` and the card shrinks to two
+quiet lines: `✓ Approved by Arjun · today at 10:14`, then `✓ Deed sealed · L1 · VERIFIED` with the
+deed id in the context line (or `✕ L1 · MISMATCH · GitHub shows a different title.`);
+`✕ Denied by Arjun · today at 10:14 · "Not during the release freeze."`; `○ Expired today at 11:14.
+Nothing ran.`; `○ Cancelled by the agent. Nothing ran.` A four-eyes approval shows
+`◐ 1 of 2 approvals · Arjun approved today at 10:14. Waiting for one more person.` and keeps its
+buttons. Dates are Slack date tokens, so each person sees their own time zone.
+
+### The security model
+
+- **Signature first.** Deedglass reads only the payload's team and app ids before verifying, to
+  pick whose signing secret to check. The request must be signed with that org's secret
+  (`v0=` HMAC-SHA256 over `v0:{timestamp}:{body}`), its timestamp within 5 minutes, and its
+  signature never seen before (replays answer 200 and do nothing). Every refusal is a bare 401.
+- **Same rules as the Console.** The handler calls S22's `Decide`; it never runs the action. The
+  Gate resumes an approved action in its worker.
+- **One winner.** A Slack click and a Console click on the same approval produce one decision; the
+  other person is told it was already decided.
+- **The card is a job.** Posting and editing it never blocks an approval: when Slack is down, the
+  Console and email work, the edit is retried 4 times, and then the card is marked
+  `delivery_failed`.
+
+### Honest limits
+
+- Email matching trusts your Slack workspace's admins, who control emails. Use a workspace that
+  enforces SSO, and `require_email_domains`.
+- A compromised Slack account of an approver can approve, the same as a compromised Console session.
+- Slack sees the approval context you send it: the summary, the rule, the reason and the arguments
+  on the card.
+- One approvals channel per org; per-rule channels are a later addition.
+- Slack needs to reach your server over public HTTPS (no Socket Mode yet).
+
 ## Decide from the CLI (dev)
 
 ```sh
@@ -168,7 +292,7 @@ config they print the Console link and exit 2: in prod, approvals need a person.
 - **Admin deeds.** Every vote seals an admin deed: `approval.countersigned` for each approval of
   a four-eyes approval that isn't the last, `approval.decided` for the decision that ends it
   (approved or denied). They name the person (`usr_…`), the approval, the context digest and how
-  they decided (`console`, `email_link` or `cli_dev`), and the person's reason when they gave one.
+  they decided (`console`, `email_link`, `slack` or `cli_dev`), and the person's reason when they gave one.
 - **The action's deed** carries the `approval` section: the approval id, the outcome, everyone who
   decided (`usr_…`, sorted; empty when it expired), when, and the deed of the decision.
 - **Events:** `approval.requested` and `approval.decided` on the event stream and to webhooks.
@@ -185,7 +309,7 @@ to a log line or a webhook.
 - They don't hide argument values from the people who open the link: the page shows the
   arguments (with secrets scrubbed) so the person sees what they countersign. The email shows only
   the summary unless the org chose `full`.
-- They don't notify Slack until S29, and they don't use MCP tasks yet (a later stretch).
+- They don't use MCP tasks yet (a later stretch).
 - A link is a bearer token for its one person and one approval: whoever holds the email can use
   it until it is used or expires. See [LIMITATIONS.md](LIMITATIONS.md).
 

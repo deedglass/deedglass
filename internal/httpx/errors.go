@@ -104,6 +104,8 @@ const (
 	CodeApprovalUnsatisfiable  Code = "approval_unsatisfiable"
 	CodeApprovalLinkInvalid    Code = "approval_link_invalid"
 	CodeApprovalLinkReviewOnly Code = "approval_link_review_only"
+	// S29: a Slack account that maps to no active member of the org.
+	CodeApproverUnmapped Code = "approver_unmapped"
 
 	// S23: undo.
 	CodeUndoUnavailable Code = "undo_unavailable"
@@ -239,6 +241,7 @@ var catalog = []CatalogEntry{
 		"No one in this org can approve this: the rule needs {n} people and only {m} {is} eligible. Nothing was run. Invite another admin, or allow self-countersign in Console › Settings › Approvals.", "S22"},
 	{CodeApprovalLinkInvalid, 401, TypeAuthentication, "This approval link has expired or was already used. Open Console › Approvals.", "", "S22"},
 	{CodeApprovalLinkReviewOnly, 403, TypePermission, "Your org decides approvals in the Console. Open Console › Approvals to countersign.", "", "S22"},
+	{CodeApproverUnmapped, 403, TypePermission, "No person in this org matches that Slack account. Invite them in Console › Settings › Members.", "", "S29"},
 
 	{CodeUndoUnavailable, 409, TypeInvalidRequest, "Undo isn't available for this action. The checks field lists each failing check with its fix.",
 		"Undo isn't available for {act}: {n} check failed ({ids}). Run deedglass undo preview {act} for the fix.", "S23"},

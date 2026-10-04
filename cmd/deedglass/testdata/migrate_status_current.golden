@@ -26,5 +26,6 @@ VERSION  NAME                STATE    APPLIED               CHECKSUM
 0023     overview            pending  —                     sha256:ca3e…65d2
 0024     learn_v2            pending  —                     sha256:4f58…6f51
 0025     suggestions_v2      pending  —                     sha256:dd82…72e9
-✓ 9 applied · 16 pending. Run deedglass migrate up to apply them.
+0026     slack_approvals     pending  —                     sha256:a590…3ac3
+✓ 9 applied · 17 pending. Run deedglass migrate up to apply them.
 --- stderr

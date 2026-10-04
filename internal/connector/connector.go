@@ -131,6 +131,7 @@ type Enricher interface {
 // witness detail keeps only the compared fields and a digest of it.
 type Observation struct {
 	Body      json.RawMessage
+	Target    string         // S29 native read-backs: what was read, as people name it ("issue #42 on GitHub")
 	Status    int            // HTTP status, or 0
 	Meta      map[string]any // latency_ms, attempts, …
 	LatencyMS int64

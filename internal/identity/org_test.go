@@ -2,7 +2,9 @@ package identity
 
 import (
 	"context"
+	"encoding/json"
 	"encoding/json/jsontext"
+	jsonv2 "encoding/json/v2"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -43,6 +45,26 @@ func TestApprovalSettingsDefaults(t *testing.T) {
 	for raw, want := range cases {
 		if got := approvalSettings([]byte(raw)); got != want {
 			t.Errorf("%s: %+v, want %+v", raw, got, want)
+		}
+	}
+}
+
+// settings.simulated is omitted for a real org, so its object stays byte-identical (S29).
+func TestOrgSettingsSimulatedJSON(t *testing.T) {
+	a := ApprovalSettings{"decide", "summary", "deny"}
+	for _, c := range []struct {
+		in   OrgSettings
+		want string
+	}{
+		{OrgSettings{Approvals: a}, `{"approvals":{"email_links":"decide","email_detail":"summary","self_countersign":"deny"}}`},
+		{OrgSettings{Approvals: a, Simulated: true}, `{"approvals":{"email_links":"decide","email_detail":"summary","self_countersign":"deny"},"simulated":true}`},
+	} {
+		// The API writes with json/v2 (where omitempty would keep false); check v1 as well.
+		for name, marshal := range map[string]func(any) ([]byte, error){"v2": func(v any) ([]byte, error) { return jsonv2.Marshal(v) }, "v1": json.Marshal} {
+			b, err := marshal(c.in)
+			if err != nil || string(b) != c.want {
+				t.Errorf("%s %+v: %s %v, want %s", name, c.in, b, err, c.want)
+			}
 		}
 	}
 }
@@ -104,6 +126,8 @@ func TestOrgPatchUnknownKeys(t *testing.T) {
 	for body, param := range map[string]string{
 		`{"settings":{"approvals":{"foo":"x"}}}`: "settings.approvals.foo",
 		`{"settings":{"webhooks":{}}}`:           "settings.webhooks",
+		`{"settings":{"simulated":true}}`:        "settings.simulated", // read only (S29)
+		`{"settings":{"simulated":false}}`:       "settings.simulated",
 		`{"retention":30}`:                       "retention",
 	} {
 		_, err := decodePatch(t, body)

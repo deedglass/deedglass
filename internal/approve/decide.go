@@ -256,6 +256,8 @@ func (s *Service) Decide(ctx context.Context, in DecideInput) (*Approval, error)
 	}
 	if final != "" {
 		s.resolved(context.WithoutCancel(ctx), in.Org, aid)
+	} else {
+		s.changed(context.WithoutCancel(ctx), in.Org, aid, out.Action)
 	}
 	return out, nil
 }

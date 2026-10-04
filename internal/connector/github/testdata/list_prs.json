@@ -1,0 +1,42 @@
+[
+  {
+    "name": "GET pulls",
+    "method": "GET",
+    "path": "/repos/arjun/deedglass-sandbox/pulls",
+    "status": 200,
+    "body": [
+      {
+        "number": 7,
+        "node_id": "PR_x",
+        "url": "https://api.github.com/repos/arjun/deedglass-sandbox/pulls/7",
+        "html_url": "https://github.com/arjun/deedglass-sandbox/pull/7",
+        "state": "open",
+        "title": "Fix typo in README",
+        "body": "Fixes the typo.\n\n<!-- deedglass:act_01j9zq3m8x2k7w4c5v6b7n8p9r -->",
+        "head": {
+          "ref": "agent/fix-typo",
+          "sha": "9f2c4e6a8b0d1f3a5c7e9b1d3f5a7c9e1b3d5f7a",
+          "label": "arjun:agent/fix-typo"
+        },
+        "base": {
+          "ref": "main",
+          "sha": "5b1f3a9c2e7d4b6a8f0c1e3d5a7b9c2e4f6a8b0c"
+        },
+        "draft": false,
+        "merged": false,
+        "mergeable": true,
+        "merge_commit_sha": null,
+        "user": {
+          "login": "arjun-sandbox-bot",
+          "email": "bot@example.com"
+        },
+        "created_at": "2026-10-04T10:00:01Z"
+      }
+    ],
+    "query": {
+      "state": "all",
+      "base": "main",
+      "per_page": "30"
+    }
+  }
+]

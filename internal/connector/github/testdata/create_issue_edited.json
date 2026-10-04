@@ -1,0 +1,63 @@
+[
+  {
+    "name": "POST issues",
+    "method": "POST",
+    "path": "/repos/arjun/deedglass-sandbox/issues",
+    "status": 201,
+    "body": {
+      "number": 42,
+      "html_url": "https://github.com/arjun/deedglass-sandbox/issues/42",
+      "state": "open",
+      "title": "Flaky checkout test"
+    },
+    "body_subset": {
+      "body": "Fails 1 in 20 runs on CI. Fails 1 in 20 runs on CI. Fails 1 in 20 runs on CI. Fails 1 in 20 runs on CI. Fails 1 in 20 runs on CI. Fails 1 in 20 runs on CI. Fails 1 in 20 runs on CI. Fails 1 in 20 runs on CI. Fails 1 in 20 runs on CI. Fails 1 in 20 runs on CI. Fails 1 in 20 runs on CI. Fails 1 in 20 runs on CI.\n\n<!-- deedglass:act_01j9zq3m8x2k7w4c5v6b7n8p9r -->"
+    }
+  },
+  {
+    "name": "GET user",
+    "method": "GET",
+    "path": "/user",
+    "status": 200,
+    "body": {
+      "login": "arjun-sandbox-bot",
+      "id": 77,
+      "node_id": "U_bot",
+      "email": "bot@example.com",
+      "url": "https://api.github.com/users/arjun-sandbox-bot"
+    },
+    "repeat": true,
+    "headers": {
+      "github-authentication-token-expiration": "2026-11-03 10:00:00 UTC"
+    }
+  },
+  {
+    "name": "GET issue",
+    "method": "GET",
+    "path": "/repos/arjun/deedglass-sandbox/issues/42",
+    "status": 200,
+    "body": {
+      "number": 42,
+      "node_id": "I_x42",
+      "url": "https://api.github.com/repos/arjun/deedglass-sandbox/issues/42",
+      "html_url": "https://github.com/arjun/deedglass-sandbox/issues/42",
+      "title": "Flaky checkout test",
+      "state": "open",
+      "state_reason": null,
+      "body": "Fails 1 in 20 runs on CI. Fails 1 in 20 runs on CI. Fails 1 in 20 runs on CI. Fails 1 in 20 runs on CI. Fails 1 in 20 runs on CI. Fails 1 in 20 runs on CI. Fails 1 in 20 runs on CI. Fails 1 in 20 runs on CI. Fails 1 in 20 runs on CI. Fails 1 in 20 runs on CI. Fails 1 in 20 runs on CI. Fails 1 in 20 runs on CI. Edited by someone.\n\n<!-- deedglass:act_01j9zq3m8x2k7w4c5v6b7n8p9r -->",
+      "labels": [
+        {
+          "name": "bug",
+          "id": 1
+        }
+      ],
+      "user": {
+        "login": "arjun-sandbox-bot",
+        "email": "bot@example.com"
+      },
+      "comments": 0,
+      "created_at": "2026-10-04T10:00:01Z",
+      "closed_at": null
+    }
+  }
+]

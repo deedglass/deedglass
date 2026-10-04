@@ -1,0 +1,14 @@
+[
+  {
+    "name": "POST issues",
+    "method": "POST",
+    "path": "/repos/arjun/deedglass-sandbox/issues",
+    "status": 403,
+    "body": {
+      "message": "Resource not accessible by personal access token"
+    },
+    "headers": {
+      "X-Accepted-GitHub-Permissions": "issues=write"
+    }
+  }
+]

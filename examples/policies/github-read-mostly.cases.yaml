@@ -1,5 +1,6 @@
 # Test cases for github-read-mostly.yaml. Run them with:
 #   deedglass policy test examples/policies/github-read-mostly.yaml
+# request.github is what the GitHub connector fills before the decision (S29).
 policy: github-read-mostly.yaml
 defaults:
   agent: { name: triage-bot, labels: { env: prod } }
@@ -8,86 +9,127 @@ defaults:
 cases:
   # Reads
   - name: reading a file runs freely
-    input: { tool: github.get_file_contents, args: { owner: acme, repo: web, path: README.md } }
+    input: { tool: github.get_file, args: { repo: acme/web, path: README.md } }
     expect: { decision: allow, rule: github-reads, verify: L0 }
   - name: listing pull requests runs freely
-    input: { tool: github.list_pull_requests, args: { owner: acme, repo: web, state: open } }
+    input: { tool: github.list_prs, args: { repo: acme/web, state: open } }
     expect: { decision: allow, rule: github-reads }
-  - name: searching code runs freely
-    input: { tool: github.search_code, args: { q: "repo:acme/web retry_after" } }
+  - name: reading an issue runs freely
+    input: { tool: github.get_issue, args: { repo: acme/web, number: 812 } }
+    expect: { decision: allow, rule: github-reads }
+  - name: reading the repository runs freely
+    input: { tool: github.get_repo, args: { repo: acme/web } }
     expect: { decision: allow, rule: github-reads }
 
   # Issues and comments
   - name: opening an issue runs, witnessed at L1
-    input: { tool: github.create_issue, args: { owner: acme, repo: web, title: Flaky checkout test } }
+    input: { tool: github.create_issue, args: { repo: acme/web, title: Flaky checkout test, body: Fails 1 in 20 runs on CI. } }
     expect: { decision: allow, rule: issues-and-comments, verify: L1 }
   - name: commenting on an issue runs
-    input: { tool: github.add_issue_comment, args: { owner: acme, repo: web, issue_number: 812, body: Reproduced on main. } }
-    expect: { decision: allow, rule: issues-and-comments }
-  - name: relabelling an issue runs
-    input: { tool: github.update_issue, args: { owner: acme, repo: web, issue_number: 812, labels: [bug] } }
-    expect: { decision: allow, rule: issues-and-comments }
+    input: { tool: github.comment, args: { repo: acme/web, number: 812, body: Reproduced on main. } }
+    expect: { decision: allow, rule: issues-and-comments, verify: L1 }
   - name: closing an issue waits for a human
-    input: { tool: github.update_issue, args: { owner: acme, repo: web, issue_number: 812, state: closed } }
+    input: { tool: { name: github.close_issue, side_effect: destructive }, args: { repo: acme/web, number: 812, state_reason: completed } }
     expect:
       decision: require_approval
       rule: closing-issues-needs-approval
       code: approval_required
       verify: L1
       approval: { required: 1, approvers: [role:admin], expires_in: 24h }
+      notify: [slack]
 
   # Branches and commits
   - name: creating a branch runs
-    input: { tool: github.create_branch, args: { owner: acme, repo: web, branch: fix/checkout-retry, from_branch: main } }
-    expect: { decision: allow, rule: branches }
+    input: { tool: github.create_branch, args: { repo: acme/web, branch: fix/checkout-retry, from: main } }
+    expect: { decision: allow, rule: branches, verify: L1 }
   - name: a commit to a feature branch runs, witnessed at L1
-    input: { tool: github.create_or_update_file, args: { owner: acme, repo: web, branch: fix/checkout-retry, path: src/retry.ts } }
+    input:
+      tool: github.create_or_update_file
+      args: { repo: acme/web, branch: fix/checkout-retry, path: src/retry.ts }
+      request: { github: { enriched: true, repo: acme/web, branch: fix/checkout-retry, default_branch: main, path: src/retry.ts } }
     expect: { decision: allow, rule: feature-branch-writes, verify: L1 }
   - name: a commit to main waits for a human
-    input: { tool: github.create_or_update_file, args: { owner: acme, repo: web, branch: main, path: src/retry.ts } }
+    input:
+      tool: github.create_or_update_file
+      args: { repo: acme/web, branch: main, path: src/retry.ts }
+      request: { github: { enriched: true, repo: acme/web, branch: main, default_branch: main, protected_branch: true, is_default_branch: true } }
     expect:
       decision: require_approval
       rule: protected-branch-writes-need-approval
       verify: L1
       approval: { required: 1, approvers: [role:admin], expires_in: 2h }
       notify: [slack]
-  - name: a commit to master waits for a human
-    input: { tool: github.create_or_update_file, args: { owner: acme, repo: legacy, branch: master, path: setup.py } }
-    expect: { decision: require_approval, rule: protected-branch-writes-need-approval }
   - name: a commit to a release branch waits for a human
-    input: { tool: github.create_or_update_file, args: { owner: acme, repo: web, branch: release/2026.10, path: CHANGELOG.md } }
+    input:
+      tool: github.create_or_update_file
+      args: { repo: acme/web, branch: release/2026.10, path: CHANGELOG.md }
+      request: { github: { enriched: true, branch: release/2026.10, default_branch: main, protected_branch: true } }
     expect: { decision: require_approval, rule: protected-branch-writes-need-approval, reason_contains: feature branch }
-  - name: a commit with no branch counts as the default branch
-    input: { tool: github.create_or_update_file, args: { owner: acme, repo: web, path: src/retry.ts } }
+  - name: a commit with no branch writes the default branch, which is protected
+    input:
+      tool: github.create_or_update_file
+      args: { repo: acme/web, path: src/retry.ts }
+      request: { github: { enriched: true, branch: main, default_branch: main, protected_branch: true, is_default_branch: true } }
     expect: { decision: require_approval, rule: protected-branch-writes-need-approval }
+  - name: when the connector couldn't look the repository up, the branch counts as protected
+    input:
+      tool: github.create_or_update_file
+      args: { repo: acme/web, branch: fix/checkout-retry, path: src/retry.ts }
+      request: { github: { enriched: false } }
+    expect: { decision: require_approval, rule: protected-branch-writes-need-approval }
+  - name: a workflow file on a feature branch waits for a human
+    input:
+      tool: github.create_or_update_file
+      args: { repo: acme/web, branch: fix/ci, path: .github/workflows/ci.yml }
+      request: { github: { enriched: true, branch: fix/ci, default_branch: main, path: .github/workflows/ci.yml, touches_workflows: true } }
+    expect:
+      decision: require_approval
+      rule: workflow-files-need-approval
+      reason_contains: repository's secrets
+      notify: [slack]
+  - name: a composite action is a workflow file too
+    input:
+      tool: github.create_or_update_file
+      args: { repo: acme/web, branch: fix/ci, path: .github/actions/setup/action.yml }
+      request: { github: { enriched: true, branch: fix/ci, path: .github/actions/setup/action.yml, touches_workflows: true } }
+    expect: { decision: require_approval, rule: workflow-files-need-approval }
+  - name: a file that only mentions .github elsewhere is an ordinary commit
+    input:
+      tool: github.create_or_update_file
+      args: { repo: acme/web, branch: docs/ci, path: docs/.github-notes.md }
+      request: { github: { enriched: true, branch: docs/ci, path: docs/.github-notes.md } }
+    expect: { decision: allow, rule: feature-branch-writes }
 
   # Pull requests
   - name: a pull request into a feature branch runs
-    input: { tool: github.create_pull_request, args: { owner: acme, repo: web, head: fix/checkout-retry, base: develop } }
+    input:
+      tool: github.create_pr
+      args: { repo: acme/web, head: fix/checkout-retry, base: develop, title: Retry checkout once }
+      request: { github: { enriched: true, head: fix/checkout-retry, base: develop, default_branch: main } }
     expect: { decision: allow, rule: pull-requests, verify: L1 }
   - name: a pull request into main waits for a human
-    input: { tool: github.create_pull_request, args: { owner: acme, repo: web, head: fix/checkout-retry, base: main } }
-    expect: { decision: require_approval, rule: pull-requests-to-main-need-approval, notify: [slack] }
-  - name: a pull request with no base waits for a human
-    input: { tool: github.create_pull_request, args: { owner: acme, repo: web, head: fix/checkout-retry } }
-    expect: { decision: require_approval, rule: pull-requests-to-main-need-approval }
-  - name: editing a pull request's title runs
-    input: { tool: github.update_pull_request, args: { owner: acme, repo: web, pull_number: 77, title: Retry checkout once } }
-    expect: { decision: allow, rule: pull-requests }
-  - name: retargeting a pull request to a release branch waits for a human
-    input: { tool: github.update_pull_request, args: { owner: acme, repo: web, pull_number: 77, base: release/2026.10 } }
+    input:
+      tool: github.create_pr
+      args: { repo: arjun/deedglass-sandbox, head: agent/fix-typo, base: main, title: Fix typo in README }
+      request: { github: { enriched: true, head: agent/fix-typo, base: main, default_branch: main, protected_branch: true, is_default_branch: true } }
+    expect: { decision: require_approval, rule: pull-requests-to-main-need-approval, notify: [slack], verify: L1 }
+  - name: a pull request the connector couldn't look up waits for a human
+    input:
+      tool: github.create_pr
+      args: { repo: acme/web, head: fix/checkout-retry, base: develop }
+      request: { github: { enriched: false } }
     expect: { decision: require_approval, rule: pull-requests-to-main-need-approval }
 
   # Merges, deletes and everything else
   - name: merging never runs
-    input: { tool: github.merge_pull_request, args: { owner: acme, repo: web, pull_number: 77 } }
+    input: { tool: { name: github.merge_pr, side_effect: destructive }, args: { repo: acme/web, number: 77, expected_head_sha: 9f2c0b1a } }
     expect: { decision: deny, rule: no-merges-or-branch-deletes, code: policy_denied, reason_contains: stay with humans }
-  - name: deleting a branch never runs, even when declared destructive
-    input: { tool: { name: github.delete_branch, side_effect: destructive }, args: { owner: acme, repo: web, branch: fix/checkout-retry } }
+  - name: deleting a branch never runs
+    input: { tool: { name: github.delete_branch, side_effect: destructive }, args: { repo: acme/web, branch: fix/checkout-retry } }
     expect: { decision: deny, rule: no-merges-or-branch-deletes }
   - name: deleting a repository never runs
-    input: { tool: { name: github.delete_repository, side_effect: destructive }, args: { owner: acme, repo: web } }
+    input: { tool: { name: github.delete_repository, side_effect: destructive }, args: { repo: acme/web } }
     expect: { decision: deny, rule: block-other-destructive, notify: [slack] }
   - name: publishing a release falls to the default
-    input: { tool: github.create_release, args: { owner: acme, repo: web, tag_name: v2.4.0 } }
+    input: { tool: github.create_release, args: { repo: acme/web, tag_name: v2.4.0 } }
     expect: { decision: deny, rule: default, reason_contains: Console › Policies }

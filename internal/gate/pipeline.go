@@ -294,7 +294,8 @@ func (p *Pipeline) Submit(ctx context.Context, pr principal, req ActionRequest) 
 			return nil, err
 		default:
 			n.ConnectorType = ctype
-			n.HTTP, n.DefaultSchema, n.RaisedSideEffect = enrich(ctx, ex, spec, n.Args)
+			e := enrichAll(ctx, ex, spec, n.Args)
+			n.HTTP, n.GitHub, n.Slack, n.DefaultSchema, n.RaisedSideEffect = e.HTTP, e.GitHub, e.Slack, e.DefaultSchema, e.Side
 		}
 	}
 	// The active policies, before any transaction: a cold load reads Postgres on its own. The
@@ -746,9 +747,10 @@ func buildInput(org ids.OrgID, agent ids.AgentID, subj store.GateSubject, n *Nor
 		Session: policy.SessionFacts{Ref: ir.OBO.Session},
 		Tool: policy.ToolInput{ToolFacts: policy.ToolFacts{Name: n.Tool, Connector: n.Connector, ConnectorType: ctype, SideEffect: side,
 			Type: ctype, Op: n.ToolName}, DefaultSchema: n.DefaultSchema},
-		Args:    n.Args,
-		Request: policy.RequestFacts{Mode: string(n.Mode), Bytes: n.ArgsBytes, IntentSigned: ir.Signed, Digest: n.Digest, HTTP: n.HTTP},
-		Time:    now.UTC(),
+		Args: n.Args,
+		Request: policy.RequestFacts{Mode: string(n.Mode), Bytes: n.ArgsBytes, IntentSigned: ir.Signed, Digest: n.Digest, HTTP: n.HTTP,
+			GitHub: n.GitHub, Slack: n.Slack},
+		Time: now.UTC(),
 	}
 	return in, loc, nil
 }
@@ -758,18 +760,47 @@ func buildInput(org ids.OrgID, agent ids.AgentID, subj store.GateSubject, n *Nor
 // a DELETE). Invalid arguments enrich nothing: the call then fails as validation_failed before
 // anything is sent.
 func enrich(ctx context.Context, ex Executor, spec connector.ToolSpec, args json.RawMessage) (h policy.HTTPFacts, defaultSchema, side string) {
+	e := enrichAll(ctx, ex, spec, args)
+	return e.HTTP, e.DefaultSchema, e.Side
+}
+
+// enriched is everything a connector's enrichment adds before the decision.
+type enriched struct {
+	HTTP          policy.HTTPFacts
+	GitHub        policy.GitHubFacts // S29
+	Slack         policy.SlackFacts  // S29
+	DefaultSchema string
+	Side          string
+}
+
+// enrichAll asks the connector for its facts. GitHub and Slack answer {"github": {…}} and
+// {"slack": {…}} as plain JSON values; a value that doesn't fit leaves the facts zero (enriched
+// false), so the starter rules treat the call as unknown, never as safe.
+func enrichAll(ctx context.Context, ex Executor, spec connector.ToolSpec, args json.RawMessage) enriched {
+	var e enriched
 	en, ok := ex.(connector.ArgsEnricher)
 	if !ok {
-		return policy.HTTPFacts{}, "", ""
+		return e
 	}
 	m, err := en.EnrichArgs(ctx, spec, args)
 	if err != nil || m == nil {
-		return policy.HTTPFacts{}, "", ""
+		return e
 	}
 	hm, _ := m["http"].(map[string]string)
-	defaultSchema, _ = m["default_schema"].(string)
-	side, _ = m["side_effect"].(string)
-	return policy.HTTPFacts{Method: hm["method"], Path: hm["path"], Host: hm["host"]}, defaultSchema, side
+	e.HTTP = policy.HTTPFacts{Method: hm["method"], Path: hm["path"], Host: hm["host"]}
+	e.DefaultSchema, _ = m["default_schema"].(string)
+	e.Side, _ = m["side_effect"].(string)
+	if g, ok := m["github"]; ok {
+		if b, err := json.Marshal(g); err == nil && json.Unmarshal(b, &e.GitHub) != nil {
+			e.GitHub = policy.GitHubFacts{}
+		}
+	}
+	if s, ok := m["slack"]; ok {
+		if b, err := json.Marshal(s); err == nil && json.Unmarshal(b, &e.Slack) != nil {
+			e.Slack = policy.SlackFacts{}
+		}
+	}
+	return e
 }
 
 // withSideEffect sets the tool's declared side effect (gateway), raised (never lowered) by the

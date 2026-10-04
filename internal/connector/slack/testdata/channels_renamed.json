@@ -1,0 +1,8 @@
+[
+  {"name": "conversations.list (renamed)", "method": "GET", "path": "/api/conversations.list",
+   "query": {"types": "public_channel,private_channel", "limit": "200"}, "status": 200, "repeat": true,
+   "body": {"ok": true, "channels": [
+     {"id": "C0AGENT01", "name": "agent-news", "is_member": true},
+     {"id": "C0IMPOST1", "name": "agent-updates", "is_member": true}
+   ], "response_metadata": {"next_cursor": ""}}}
+]

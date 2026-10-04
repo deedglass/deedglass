@@ -120,12 +120,19 @@ func (p *Pipeline) newWitnessCase(s Subject, e Execution, ex Executor, call conn
 		if b, ok := ex.(interface{ Instance() *connector.Instance }); ok && b.Instance() != nil {
 			ws.Spec.ConfigHash = b.Instance().ConfigHash
 		}
+		if nr, ok := ex.(connector.NativeReadBacking); ok && nr.CanNativeReadBack(t) {
+			ws.Spec.Native, ws.Spec.NativeL1 = true, t.L1
+		}
 	}
 	if e.Status == ExecUnknown && ws.Result.Cause == "" {
 		ws.Result.Cause = ReasonOutcomeUnknown
 	}
 	rb, _ := ex.(connector.ReadBacking)
-	return witnessCase{sub: ws, ex: ex, call: call, res: e.Result, readBack: witness.PlanFor(ws).L1 && rb != nil && rb.CanReadBack(),
+	canRead := rb != nil && rb.CanReadBack()
+	if ws.Spec.Native {
+		canRead = true // the NativeReadBacking check above
+	}
+	return witnessCase{sub: ws, ex: ex, call: call, res: e.Result, readBack: witness.PlanFor(ws).L1 && canRead,
 		l2: planL2(s, e, ex, call, side)}
 }
 
@@ -164,6 +171,9 @@ type observer struct {
 
 func (o *observer) ReadBack(ctx context.Context, s witness.Subject, req witness.ReadRequest, attempt int) (witness.Observation, error) {
 	call, ex := o.wc.call, o.wc.ex
+	if req.Native {
+		return o.native(ctx, call, ex)
+	}
 	if req.Tool != "" {
 		rex, spec, _, err := o.p.o.Resolver.Resolve(ctx, o.wc.call.OrgID, req.Tool)
 		if err != nil {
@@ -203,6 +213,38 @@ func (o *observer) ReadBack(ctx context.Context, s witness.Subject, req witness.
 		return w, witness.ErrNotFound
 	case ce != nil && ce.Kind == connector.KindTimeout && ctx.Err() != nil:
 		return w, context.DeadlineExceeded
+	case ce != nil:
+		return w, &witness.ReadError{Code: ce.Code, Err: err}
+	}
+	return w, &witness.ReadError{Code: connector.CodeUpstreamError, Err: err}
+}
+
+// native runs a connector's native read-back of the write itself (S29).
+func (o *observer) native(ctx context.Context, call connector.Call, ex Executor) (witness.Observation, error) {
+	if dl, ok := ctx.Deadline(); ok {
+		call.Deadline = dl
+	}
+	nr, ok := ex.(connector.NativeReadBacking)
+	if !ok || !nr.CanNativeReadBack(call.Tool) {
+		return witness.Observation{}, &witness.SkipError{Why: "the connector can't read this tool back"}
+	}
+	at := o.p.now()
+	co, fs, err := nr.NativeReadBack(ctx, call, o.wc.res)
+	w := witness.Observation{Status: co.Status, Meta: co.Meta, At: at, Source: call.Qualified, Target: co.Target, LatencyMS: co.LatencyMS}
+	for _, f := range fs {
+		w.Findings = append(w.Findings, witness.Finding{Field: f.Field, Expected: f.Expected, Observed: f.Observed, Match: f.Match})
+	}
+	if err == nil {
+		return w, nil
+	}
+	var skip *connector.ErrReadBackSkipped
+	switch ce := connector.AsError(err); {
+	case errors.As(err, &skip):
+		return w, &witness.SkipError{Why: skip.Why}
+	case ctx.Err() != nil || errors.Is(err, context.DeadlineExceeded):
+		return w, context.DeadlineExceeded
+	case ce != nil && ce.Kind == connector.KindNotFound:
+		return w, witness.ErrNotFound
 	case ce != nil:
 		return w, &witness.ReadError{Code: ce.Code, Err: err}
 	}

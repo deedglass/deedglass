@@ -1,0 +1,15 @@
+[
+  {
+    "name": "POST issues",
+    "method": "POST",
+    "path": "/repos/arjun/deedglass-sandbox/issues",
+    "status": 403,
+    "body": {
+      "message": "API rate limit exceeded for user ID 77."
+    },
+    "headers": {
+      "X-RateLimit-Remaining": "0",
+      "X-RateLimit-Reset": "1791108120"
+    }
+  }
+]

@@ -2833,6 +2833,60 @@ paths:
                 $ref: "#/components/schemas/ApprovalLinkStatus"
         default:
           $ref: "#/components/responses/Error"
+  /v1/slack/interact:
+    post:
+      operationId: slackInteract
+      summary: Slack interactivity (approve and deny from an approval card)
+      description: >-
+        Slack's Interactivity Request URL (S29). Not part of the JSON API: Slack posts a form body
+        with one field, `payload` (Slack's JSON), signed with the app's signing secret. Deedglass
+        routes by the payload's team and app ids, checks `X-Slack-Signature`
+        (`v0=` + hex HMAC-SHA256 of `v0:{timestamp}:{body}`) with that org's secret, refuses a
+        timestamp more than 300 seconds from now, and acts on one signature once. Every refusal
+        before the signature verifies is a bare 401 with no body. A verified click answers 200 within
+        2.5 seconds; refusals of the decision (not eligible, self, already decided, expired) reach
+        the person as a message only they can see. A deny opens a form whose submission answers 200,
+        or 200 with `{"response_action":"errors",…}` when the reason is missing.
+      tags: [Approvals]
+      security: []
+      x-deedglass-auth: public
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - in: header
+          name: X-Slack-Request-Timestamp
+          required: true
+          schema: {type: string, pattern: "^[0-9]{1,12}$"}
+        - in: header
+          name: X-Slack-Signature
+          required: true
+          schema: {type: string, pattern: "^v0=[0-9a-f]{64}$"}
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required: [payload]
+              properties:
+                payload:
+                  type: string
+                  description: Slack's interaction payload (block_actions or view_submission) as JSON, at most 256 KiB.
+      responses:
+        "200":
+          description: Received. The body is empty, or the deny form's field errors.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  response_action: {type: string, enum: [errors]}
+                  errors: {type: object, additionalProperties: {type: string}}
+        "401":
+          description: Refused (bad or missing signature, stale timestamp, unknown team or app, malformed body). No body.
+        "429":
+          description: Too many requests from this address. No body.
+        default:
+          $ref: "#/components/responses/Error"
   /approve:
     get:
       operationId: approvePage
@@ -6083,6 +6137,7 @@ components:
                 email_links: {type: string, enum: [decide, review], description: Whether emailed approval links can decide (default) or only open the review page.}
                 email_detail: {type: string, enum: [summary, full], description: How much of the request approval emails show (default summary).}
                 self_countersign: {type: string, enum: [deny, allow], description: Whether the person an action runs on behalf of may countersign it (default deny).}
+            simulated: {type: boolean, const: true, description: "Read only (S29, additive): present and true when the org was made by deedglass dev simulate; omitted otherwise. PATCH /v1/org refuses it."}
         stop:
           type: object
           description: >-
@@ -7232,6 +7287,7 @@ components:
                 - approval_unsatisfiable
                 - approval_link_invalid
                 - approval_link_review_only
+                - approver_unmapped
                 - undo_unavailable
                 - undo_plan_stale
                 - already_undone

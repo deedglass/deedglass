@@ -86,7 +86,11 @@ type ToolWitnessSpec struct {
 	Postcondition string          // CEL, evaluated over the read-back's observation
 	ConfigHash    string          // the connector config's hash: the compiled-postcondition cache key
 	PostgresRow   bool            // postgres.execute: the row read-back applies to a simple single-row update
-	DefaultSchema string          // postgres: the schema unqualified tables resolve to
+	// Native: the connector reads this tool's writes back and compares them in code (S29: github,
+	// slack); NativeL1 is the tool's sentence for what that check shows.
+	Native        bool
+	NativeL1      string
+	DefaultSchema string // postgres: the schema unqualified tables resolve to
 }
 
 // Subject is one action, as plain data the Gate fills: no storage types.
@@ -100,14 +104,26 @@ type Subject struct {
 
 // Observation is what a read-back saw.
 type Observation struct {
-	Body           any            // decoded JSON (UseNumber); Postgres: {"row_found", "xmin_matches", "columns", …}
-	Status         int            // HTTP status, or 0
-	Meta           map[string]any // redacted: latency_ms, attempts, …
-	At             time.Time
-	Source         string // "orders.get"
+	Body   any            // decoded JSON (UseNumber); Postgres: {"row_found", "xmin_matches", "columns", …}
+	Status int            // HTTP status, or 0
+	Meta   map[string]any // redacted: latency_ms, attempts, …
+	At     time.Time
+	Source string // "orders.get"
+	Target string // native read-backs (S29): what was read, as people name it ("issue #42 on GitHub")
+	// Findings are a native read-back's compared fields (S29). Nil for every other read-back.
+	Findings       []Finding
 	RequestDigest  string // sha256:… of the read-back's arguments
 	ResponseDigest string // sha256:… of the response body; the body itself is never kept
 	LatencyMS      int64
+}
+
+// Finding is one field a native read-back compared (S29): what the call implies and what the
+// service shows. The connector digests long values.
+type Finding struct {
+	Field    string
+	Expected any
+	Observed any
+	Match    bool
 }
 
 // ReadRequest is one read-back to run: the read tool and its resolved arguments. Postgres row
@@ -116,6 +132,7 @@ type ReadRequest struct {
 	Tool   string          // qualified: "orders.get"; "" for the Postgres row read-back
 	Args   json.RawMessage // the resolved arguments
 	Target string          // how the docs and messages name what was read: "/v1/orders/42", "id = 42 in public.orders"
+	Native bool            // S29: the connector's native read-back of the write itself
 }
 
 // Observer reads a write back from the target. The Gate implements it through the connector's
@@ -153,6 +170,7 @@ func (e *SkipError) Error() string { return "witness: no read-back: " + e.Why }
 const (
 	KindReadBack    = "readback"
 	KindPostgresRow = "postgres_row"
+	KindNative      = "native" // S29
 )
 
 // Plan is what the Witness will check for one execution.
@@ -168,6 +186,9 @@ type Plan struct {
 func PlanFor(s Subject) Plan {
 	if s.Mode == ModeProxy || s.Result.Status != StatusSucceeded {
 		return Plan{}
+	}
+	if s.Spec.Native {
+		return Plan{L1: true, Kind: KindNative}
 	}
 	if s.Spec.ReadBack != nil {
 		return Plan{L1: true, Kind: KindReadBack}

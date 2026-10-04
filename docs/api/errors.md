@@ -1484,6 +1484,23 @@ look again with `deedglass decoder status --connector <name>`.
 }
 ```
 
+## approver_unmapped
+
+**403 · permission_error**
+
+**When it happens.** Someone clicked Approve or Deny on a Deedglass card in Slack (S29), and Deedglass couldn't match their Slack account to an active member of the org. A Slack user maps to a person only by an email address Slack has confirmed, and only when the account is a full member of the workspace (not a guest, a bot or a deactivated account) and, when the Slack connector sets `approvals.require_email_domains`, only when the email is in one of those domains. Slack shows the person a message only they can see; nothing is decided.
+
+**What to do.** Invite the person in Console › Settings › Members with the email they use in Slack, then click again. Or decide in Console › Approvals.
+
+```json
+{
+  "type": "permission_error",
+  "code": "approver_unmapped",
+  "message": "No person in this org matches that Slack account. Invite them in Console › Settings › Members.",
+  "param": null
+}
+```
+
 ## undo_unavailable
 
 **409 · invalid_request_error**

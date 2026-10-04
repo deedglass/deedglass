@@ -206,10 +206,16 @@ var scrubRules = []scrubRule{
 	{regexp.MustCompile(`\bgh[pousr]_[A-Za-z0-9]{36,}`), RedactedText, "gh"},
 	{regexp.MustCompile(`\bgithub_pat_[A-Za-z0-9_]{22,}`), RedactedText, "github_pat_"},
 	{regexp.MustCompile(`\bxox[abprs]-[A-Za-z0-9-]{10,}`), RedactedText, "xox"},
+	// S29: Slack app-level tokens, PEM private keys (a GitHub App's), and compact JWTs (an App's
+	// signed assertion). An unterminated PEM block is redacted to the end of the text.
+	{regexp.MustCompile(`\bxapp-[A-Za-z0-9-]{10,}`), RedactedText, "xapp-"},
+	{regexp.MustCompile(`-----BEGIN (?:[A-Z0-9]+ )*PRIVATE KEY-----(?:[\s\S]*?-----END (?:[A-Z0-9]+ )*PRIVATE KEY-----|[\s\S]*)`), RedactedText, "PRIVATE KEY-----"},
+	{regexp.MustCompile(`\beyJ[A-Za-z0-9_-]{8,}\.eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{16,}`), RedactedText, "eyJ"},
 }
 
 // Scrub removes secrets by their shape: Deedglass API keys, Stripe secret and restricted keys,
-// bearer tokens, URL passwords, AWS access key ids, GitHub tokens and Slack tokens.
+// bearer tokens, URL passwords, AWS access key ids, GitHub tokens (ghs_ App installation tokens
+// included), Slack tokens (xapp- since S29), PEM private keys and compact JWTs.
 func Scrub(s string) string {
 	for _, r := range scrubRules {
 		if r.hint != "" && !strings.Contains(s, r.hint) {

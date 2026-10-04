@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
 // Connectors and their credentials (S16, migrations 0004 and 0017). Every function runs inside
@@ -55,6 +56,9 @@ func InsertConnector(ctx context.Context, tx pgx.Tx, c Connector) error {
 		c.ID, c.OrgID, c.Type, c.Name, c.Description, string(c.Config), c.ConfigHash, c.Status, c.CreatedBy)
 	if SQLState(err) == CodeUniqueViolation {
 		_ = sp.Rollback(ctx)
+		if e := slackApprovalsTaken(err); e != nil {
+			return e
+		}
 		return ErrConflict
 	}
 	if err != nil {
@@ -130,9 +134,20 @@ func ListConnectors(ctx context.Context, tx pgx.Tx, afterID string, limit int) (
 
 // UpdateConnector writes the mutable fields of c (description, status, config and its hash).
 func UpdateConnector(ctx context.Context, tx pgx.Tx, c Connector) error {
-	tag, err := tx.Exec(ctx, `UPDATE deedglass.connectors SET description = $2, status = $3, config = $4::jsonb, config_hash = $5,
+	sp, err := tx.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	tag, err := sp.Exec(ctx, `UPDATE deedglass.connectors SET description = $2, status = $3, config = $4::jsonb, config_hash = $5,
 	    updated_by = $6 WHERE id = $1 AND deleted_at IS NULL`, c.ID, c.Description, c.Status, string(c.Config), c.ConfigHash, c.UpdatedBy)
 	if err != nil {
+		_ = sp.Rollback(ctx)
+		if e := slackApprovalsTaken(err); e != nil {
+			return e
+		}
+		return err
+	}
+	if err := sp.Commit(ctx); err != nil {
 		return err
 	}
 	if tag.RowsAffected() == 0 {
@@ -297,4 +312,27 @@ func (db *DB) OrgIDs(ctx context.Context) ([]string, error) {
 		return rows.Err()
 	})
 	return out, err
+}
+
+// Slack approvals routing (migration 0026): a Slack app routes to one live connector with approvals
+// on, and an org has at most one.
+var (
+	// ErrSlackAppTaken: another connector (in any org) already receives this Slack app's approvals.
+	ErrSlackAppTaken = errors.New("store: another connector already receives this Slack app's approvals")
+	// ErrSlackApprovalsTaken: this org already has a Slack connector with approvals on.
+	ErrSlackApprovalsTaken = errors.New("store: this org already has a Slack connector with approvals on")
+)
+
+func slackApprovalsTaken(err error) error {
+	var pe *pgconn.PgError
+	if !errors.As(err, &pe) || pe.Code != CodeUniqueViolation {
+		return nil
+	}
+	switch pe.ConstraintName {
+	case "connectors_slack_route_uq":
+		return ErrSlackAppTaken
+	case "connectors_slack_approvals_org_uq":
+		return ErrSlackApprovalsTaken
+	}
+	return nil
 }

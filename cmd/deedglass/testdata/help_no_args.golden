@@ -37,7 +37,7 @@ Connectors
   connector postgres  Prepare a Postgres database                        init · check
   connector gmail     Authorize the Gmail connector               soon   authorize
   decoder             Inspect Postgres change readers                    status · drop
-  slack manifest      Print the Slack app manifest                soon
+  slack manifest      Print the Slack app manifest
 MCP
   mcp                 Put the Gate in front of MCP servers               wrap · serve · snippet
 Insights

@@ -1,0 +1,12 @@
+[
+  {"name": "reactions.add", "method": "POST", "path": "/api/reactions.add",
+   "body_subset": {"channel": "C0AGENT01", "timestamp": "1760000000.000100", "name": "eyes"},
+   "status": 200, "body": {"ok": true}},
+  {"name": "auth.test", "method": "GET", "path": "/api/auth.test", "status": 200,
+   "body": {"ok": true, "team": "Arjun Sandbox", "team_id": "T0123ABCD", "user": "deedglass", "user_id": "U0BOT0001", "bot_id": "B0BOT0001"}},
+  {"name": "reactions.get", "method": "GET", "path": "/api/reactions.get",
+   "query": {"channel": "C0AGENT01", "timestamp": "1760000000.000100", "full": "true"}, "status": 200,
+   "body": {"ok": true, "type": "message", "message": {"ts": "1760000000.000100", "reactions": [
+     {"name": "thumbsup", "users": ["U0BOT0001"], "count": 1},
+     {"name": "eyes", "users": ["U0PERSON1", "U0BOT0001"], "count": 2}]}}}
+]

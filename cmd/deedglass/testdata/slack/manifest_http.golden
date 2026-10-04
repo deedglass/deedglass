@@ -1,0 +1,5 @@
+exit 2
+--- stdout
+--- stderr
+✕ --base-url must be your server's public https:// address with no path, like https://deedglass.example.com.
+  deedglass slack manifest --base-url https://your-host [--name Deedglass]

@@ -1,0 +1,11 @@
+[
+  {
+    "name": "GET repo",
+    "method": "GET",
+    "path": "/repos/arjun/deedglass-sandbox",
+    "status": 401,
+    "body": {
+      "message": "Bad credentials"
+    }
+  }
+]

@@ -1,0 +1,44 @@
+[
+  {
+    "name": "GET user",
+    "method": "GET",
+    "path": "/user",
+    "status": 200,
+    "body": {
+      "login": "arjun-sandbox-bot",
+      "id": 77,
+      "node_id": "U_bot",
+      "email": "bot@example.com",
+      "url": "https://api.github.com/users/arjun-sandbox-bot"
+    }
+  },
+  {
+    "name": "GET repo",
+    "method": "GET",
+    "path": "/repos/arjun/deedglass-sandbox",
+    "status": 404,
+    "body": {
+      "message": "Not Found",
+      "documentation_url": "https://docs.github.com/rest"
+    }
+  },
+  {
+    "name": "GET rate",
+    "method": "GET",
+    "path": "/rate_limit",
+    "status": 200,
+    "body": {
+      "resources": {
+        "core": {
+          "limit": 5000,
+          "remaining": 4987,
+          "reset": 1791111720,
+          "used": 13
+        }
+      },
+      "rate": {
+        "limit": 5000
+      }
+    }
+  }
+]

@@ -229,7 +229,9 @@ var commands = []*Command{
 	{Path: p("decoder", "drop"), Group: Connectors, Summary: "Drop a connector's replication slot",
 		Usage: "--connector <name> [--confirm <name>] [--json]", Flags: decoderDropFlags, Run: runDecoderDrop,
 		Detail: "Stops the decoder, drops the slot and seals decoder.slot_dropped. A new slot starts on the next sync: a new baseline,\nand actions in the gap are recorded as missing. Type the connector's name to confirm, or pass --confirm in scripts."},
-	{Path: p("slack", "manifest"), Group: Connectors, Summary: "Print the Slack app manifest", Owner: "S29"},
+	{Path: p("slack", "manifest"), Group: Connectors, Summary: "Print the Slack app manifest",
+		Usage: "--base-url <https://host> [--name Deedglass] [--json]", Flags: slackManifestFlags, Run: runSlackManifest,
+		Detail: "Prints the app manifest for Slack approvals with request_url set to <base-url>/v1/slack/interact.\nPaste it at api.slack.com/apps › Create New App › From a manifest. The docs say why each scope is needed."},
 
 	// MCP.
 	{Path: p("mcp", "wrap"), Group: MCP, Summary: "Run an MCP server behind the Gate",

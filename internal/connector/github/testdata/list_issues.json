@@ -1,0 +1,65 @@
+[
+  {
+    "name": "GET issues",
+    "method": "GET",
+    "path": "/repos/arjun/deedglass-sandbox/issues",
+    "status": 200,
+    "body": [
+      {
+        "number": 42,
+        "node_id": "I_x42",
+        "url": "https://api.github.com/repos/arjun/deedglass-sandbox/issues/42",
+        "html_url": "https://github.com/arjun/deedglass-sandbox/issues/42",
+        "title": "Flaky checkout test",
+        "state": "open",
+        "state_reason": null,
+        "body": "Fails 1 in 20 runs on CI.\n\n<!-- deedglass:act_01j9zq3m8x2k7w4c5v6b7n8p9r -->",
+        "labels": [
+          {
+            "name": "bug",
+            "id": 1
+          }
+        ],
+        "user": {
+          "login": "arjun-sandbox-bot",
+          "email": "bot@example.com"
+        },
+        "comments": 0,
+        "created_at": "2026-10-04T10:00:01Z",
+        "closed_at": null
+      },
+      {
+        "number": 7,
+        "node_id": "I_x7",
+        "url": "https://api.github.com/repos/arjun/deedglass-sandbox/issues/7",
+        "html_url": "https://github.com/arjun/deedglass-sandbox/issues/7",
+        "title": "Fix typo in README",
+        "state": "open",
+        "state_reason": null,
+        "body": "x",
+        "labels": [
+          {
+            "name": "bug",
+            "id": 1
+          }
+        ],
+        "user": {
+          "login": "arjun-sandbox-bot",
+          "email": "bot@example.com"
+        },
+        "comments": 0,
+        "created_at": "2026-10-04T10:00:01Z",
+        "closed_at": null,
+        "pull_request": {
+          "url": "https://api.github.com/repos/arjun/deedglass-sandbox/pulls/7"
+        }
+      }
+    ],
+    "query": {
+      "state": "open",
+      "labels": "bug",
+      "per_page": "10",
+      "page": "2"
+    }
+  }
+]

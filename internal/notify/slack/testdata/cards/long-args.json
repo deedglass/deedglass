@@ -1,0 +1,144 @@
+{
+  "text": "Approval needed · github.create_or_update_file · support-bot",
+  "blocks": [
+    {
+      "type": "header",
+      "text": {
+        "type": "plain_text",
+        "text": "Approval needed · github.create_or_update_file",
+        "emoji": false
+      }
+    },
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "*support-bot* wants to change `docs/CHANGELOG.md` in *arjun/deedglass-sandbox*."
+      }
+    },
+    {
+      "type": "section",
+      "fields": [
+        {
+          "type": "mrkdwn",
+          "text": "*Rule*\n`pull-requests-to-main-need-approval`"
+        },
+        {
+          "type": "mrkdwn",
+          "text": "*Reason*\nPull requests into main need an admin to approve."
+        },
+        {
+          "type": "mrkdwn",
+          "text": "*On behalf of*\nPriya Nair"
+        },
+        {
+          "type": "mrkdwn",
+          "text": "*Expires*\n<!date^1791607440^{date_short_pretty} at {time}|2026-10-10 04:44 UTC>"
+        },
+        {
+          "type": "mrkdwn",
+          "text": "*Approvals*\n1 needed"
+        },
+        {
+          "type": "mrkdwn",
+          "text": "*Request*\n`sha256:3f9a…c21e`"
+        }
+      ]
+    },
+    {
+      "type": "context",
+      "elements": [
+        {
+          "type": "mrkdwn",
+          "text": "_Values below come from the agent's request._"
+        }
+      ]
+    },
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "```\n{\n  \"repo\": \"arjun/deedglass-sandbox\",\n  \"path\": \"docs/CHANGELOG.md\",\n  \"message\": \"Add the October entries\",\n  \"content\": \"- Fixed the checkout retry on slow networks, entry \\n- Fixed the checkout retry on slow networks, entry x\\n- Fixed the checkout retry on slow networks, entry xx\\n- Fixed the checkout retry on slow networks, entry xxx\\n- Fixed the checkout retry on slow networks, entry xxxx\\n- Fixed the checkout retry on slow networks, entry xxxxx\\n- Fixed the checkout retry on slow networks, entry xxxxxx\\n- Fixed the checkout retry on slow networks, entry \\n- Fixed the checkout retry on slow networks, entry x\\n- Fixed the checkout retry on slow networks, entry xx\\n- Fixed the checkout retry on slow networks, entry xxx\\n- Fixed the checkout retry on slow networks, entry xxxx\\n- Fixed the checkout retry on slow networks, entry xxxxx\\n- Fixed the checkout retry on slow networks, entry xxxxxx\\n- Fixed the checkout retry on slow networks, entry \\n- Fixed the checkout retry on slow networks, entry x\\n- Fixed the checkout retry on slow networks, entry xx\\n- Fixed the checkout retry on slow networks, entry xxx\\n- Fixed the checkout retry on slow networks, entry xxxx\\n- Fixed the check\n```"
+      }
+    },
+    {
+      "type": "context",
+      "elements": [
+        {
+          "type": "mrkdwn",
+          "text": "… 2,281 more characters. The full request is in the Console."
+        }
+      ]
+    },
+    {
+      "type": "context",
+      "elements": [
+        {
+          "type": "mrkdwn",
+          "text": "`act_01j9…7p9q` · `apr_01j9…0b1c` · policy acme-demo v7"
+        }
+      ]
+    },
+    {
+      "type": "actions",
+      "block_id": "deedglass_actions",
+      "elements": [
+        {
+          "type": "button",
+          "text": {
+            "type": "plain_text",
+            "text": "Approve",
+            "emoji": false
+          },
+          "action_id": "deedglass_approve",
+          "value": "apr_01j9zx4k7m2q8r5t3v6w9y0b1c|sha256:7c1e5d0b9a8f6e4d2c0b1a3f5e7d9c1b3a5f7e9d1c3b5a7f9e1d3c5b7a9f1e3d",
+          "style": "primary",
+          "confirm": {
+            "title": {
+              "type": "plain_text",
+              "text": "Approve this action?",
+              "emoji": false
+            },
+            "text": {
+              "type": "plain_text",
+              "text": "Deedglass will run github.create_or_update_file as support-bot.",
+              "emoji": false
+            },
+            "confirm": {
+              "type": "plain_text",
+              "text": "Approve",
+              "emoji": false
+            },
+            "deny": {
+              "type": "plain_text",
+              "text": "Cancel",
+              "emoji": false
+            },
+            "style": "primary"
+          }
+        },
+        {
+          "type": "button",
+          "text": {
+            "type": "plain_text",
+            "text": "Deny",
+            "emoji": false
+          },
+          "action_id": "deedglass_deny",
+          "value": "apr_01j9zx4k7m2q8r5t3v6w9y0b1c|sha256:7c1e5d0b9a8f6e4d2c0b1a3f5e7d9c1b3a5f7e9d1c3b5a7f9e1d3c5b7a9f1e3d",
+          "style": "danger"
+        },
+        {
+          "type": "button",
+          "text": {
+            "type": "plain_text",
+            "text": "Open in Console",
+            "emoji": false
+          },
+          "action_id": "deedglass_open",
+          "url": "https://app.deedglass.com/app/approvals/apr_01j9zx4k7m2q8r5t3v6w9y0b1c"
+        }
+      ]
+    }
+  ]
+}

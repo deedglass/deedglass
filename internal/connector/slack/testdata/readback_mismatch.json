@@ -1,0 +1,6 @@
+[
+  {"name": "readback history (edited)", "method": "GET", "path": "/api/conversations.history",
+   "query": {"channel": "C0AGENT01", "latest": "1760000000.000100", "include_all_metadata": "true"},
+   "status": 200, "body": {"ok": true, "messages": [{"ts": "1760000000.000100", "text": "something else entirely",
+     "metadata": {"event_type": "deedglass_action", "event_payload": {"action_id": "act_01j9zq7c4m8x2v6t0r3n5k1h7d"}}}]}}
+]

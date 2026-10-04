@@ -9,6 +9,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -316,6 +317,15 @@ func Rows(sk ids.SealKeyID) []Row {
 			func(o *Org) []any {
 				return []any{ids.New[ids.WebhookDeliveryKind](), o.ID, o.Webhook, ids.New[ids.ActionEventKind](), Digest(rnd(8))}
 			})},
+		// S29: approvals in Slack.
+		{"notification_messages", ex(`INSERT INTO deedglass.notification_messages (org_id, subject_type, subject_id, action_id, channel_kind,
+		    connector_id, channel_id, message_ts, state) VALUES ($1, 'approval', $2, $3, 'slack', $4, $5, '1760069640.000100', 'posted')`,
+			func(o *Org) []any {
+				return []any{o.ID, o.Approval, o.Action, o.Connector, "C" + strings.ToUpper(hex.EncodeToString(rnd(6)))}
+			})},
+		{"inbound_replay", ex(`INSERT INTO deedglass.inbound_replay (org_id, source, digest, expires_at)
+		    VALUES ($1, 'slack', $2, pg_catalog.now() + interval '10 minutes')`,
+			func(o *Org) []any { return []any{o.ID, Digest(rnd(8))} })},
 	}
 }
 

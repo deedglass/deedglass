@@ -1,0 +1,70 @@
+[
+  {
+    "name": "GET repo",
+    "method": "GET",
+    "path": "/repos/arjun/deedglass-sandbox",
+    "status": 200,
+    "body": {
+      "id": 901,
+      "node_id": "R_kgDOsandbox",
+      "full_name": "arjun/deedglass-sandbox",
+      "private": true,
+      "default_branch": "main",
+      "archived": false,
+      "description": "Sandbox for Deedglass",
+      "html_url": "https://github.com/arjun/deedglass-sandbox",
+      "url": "https://api.github.com/repos/arjun/deedglass-sandbox",
+      "open_issues_count": 3,
+      "permissions": {
+        "admin": false,
+        "push": true,
+        "pull": true
+      },
+      "owner": {
+        "login": "arjun",
+        "email": "arjun@example.com",
+        "node_id": "U_owner"
+      }
+    }
+  },
+  {
+    "name": "GET ref main",
+    "method": "GET",
+    "path": "/repos/arjun/deedglass-sandbox/git/ref/heads/main",
+    "status": 200,
+    "body": {
+      "ref": "refs/heads/main",
+      "object": {
+        "sha": "5b1f3a9c2e7d4b6a8f0c1e3d5a7b9c2e4f6a8b0c"
+      }
+    }
+  },
+  {
+    "name": "POST refs",
+    "method": "POST",
+    "path": "/repos/arjun/deedglass-sandbox/git/refs",
+    "status": 201,
+    "body": {
+      "ref": "refs/heads/agent/fix-typo",
+      "object": {
+        "sha": "5b1f3a9c2e7d4b6a8f0c1e3d5a7b9c2e4f6a8b0c"
+      }
+    },
+    "body_subset": {
+      "ref": "refs/heads/agent/fix-typo",
+      "sha": "5b1f3a9c2e7d4b6a8f0c1e3d5a7b9c2e4f6a8b0c"
+    }
+  },
+  {
+    "name": "GET ref",
+    "method": "GET",
+    "path": "/repos/arjun/deedglass-sandbox/git/ref/heads/agent/fix-typo",
+    "status": 200,
+    "body": {
+      "ref": "refs/heads/agent/fix-typo",
+      "object": {
+        "sha": "5b1f3a9c2e7d4b6a8f0c1e3d5a7b9c2e4f6a8b0c"
+      }
+    }
+  }
+]

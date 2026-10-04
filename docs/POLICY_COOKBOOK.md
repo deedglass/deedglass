@@ -358,7 +358,7 @@ defaults:
   reason: No rule allows this action. Add a rule in Console › Policies to allow it.
 rules:
   - id: merges-need-two-approvals
-    match: { tool: github.merge_pull_request }
+    match: { tool: github.merge_pr }
     decision: require_approval
     reason: Merging needs two people. Two admins can approve in Console › Approvals.
     approval: { approvers: [role:admin], required: 2 }
@@ -369,7 +369,7 @@ rules:
 ```yaml
 cases:
   - name: a merge waits for two admins
-    input: { tool: github.merge_pull_request, args: { owner: acme, repo: web, pull_number: 77 } }
+    input: { tool: github.merge_pr, args: { repo: acme/web, number: 77, expected_head_sha: 9f2c0b1a } }
     expect: { decision: require_approval, rule: merges-need-two-approvals, approval: { required: 2, approvers: [role:admin] } }
 ```
 

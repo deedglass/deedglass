@@ -1,0 +1,17 @@
+# The GitHub connector on the founder's sandbox repository (S29; docs/connectors/github.md).
+#   deedglass connector create --config examples/connectors/github.yaml
+#   deedglass connector credentials set github --from-env GITHUB_TOKEN          # auth: pat
+#   deedglass connector credentials set github --field private_key=file:./app.pem   # auth: app
+#   deedglass connector test github
+type: github
+name: github
+description: GitHub, limited to the sandbox repository.
+config:
+  auth: pat                        # pat | app
+  # app: { client_id: Iv23liAbC123, app_id: 1234567, installation_id: 76543210 }   # when auth: app
+  repos: [arjun/deedglass-sandbox] # 1 to 50 entries, "owner/name" or "owner/*"; the hard boundary
+  protected_branches: [main, master, "release/*"]
+  issue_marker: true               # append <!-- deedglass:act_… --> to bodies Deedglass creates
+  api_base_url: https://api.github.com
+  api_version: "2026-03-10"        # X-GitHub-Api-Version; verified 2026-09-30, re-check
+  max_file_bytes: 1048576          # at most 1 MiB

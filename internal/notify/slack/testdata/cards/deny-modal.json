@@ -1,0 +1,38 @@
+{
+  "blocks": [
+    {
+      "block_id": "reason",
+      "element": {
+        "action_id": "reason",
+        "max_length": 280,
+        "min_length": 1,
+        "multiline": true,
+        "type": "plain_text_input"
+      },
+      "label": {
+        "emoji": false,
+        "text": "Reason · recorded with the decision",
+        "type": "plain_text"
+      },
+      "type": "input"
+    }
+  ],
+  "callback_id": "deedglass_deny",
+  "close": {
+    "emoji": false,
+    "text": "Cancel",
+    "type": "plain_text"
+  },
+  "private_metadata": "apr_01j9zx4k7m2q8r5t3v6w9y0b1c|sha256:7c1e5d0b9a8f6e4d2c0b1a3f5e7d9c1b3a5f7e9d1c3b5a7f9e1d3c5b7a9f1e3d",
+  "submit": {
+    "emoji": false,
+    "text": "Deny",
+    "type": "plain_text"
+  },
+  "title": {
+    "emoji": false,
+    "text": "Deny action",
+    "type": "plain_text"
+  },
+  "type": "modal"
+}

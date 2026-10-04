@@ -2,12 +2,17 @@
 #
 # Reads run freely. Agents can open issues, comment, create branches, commit to
 # feature branches and open pull requests. Commits and pull requests that target
-# main, master or a release branch wait for a human, and so does closing an issue.
-# Merging, deleting branches and other destructive actions never run.
+# a protected branch wait for a human, and so do changes to workflow files and
+# closing an issue. Merging, deleting branches and other destructive actions
+# never run.
 #
-# To adapt it, edit the protected branch names in
-# "protected-branch-writes-need-approval" and "pull-requests-to-main-need-approval"
-# (for example, add "develop"). Then check your change:
+# The GitHub connector fills request.github before the decision: the branch a
+# commit writes to (or a pull request's base), whether it matches the connector's
+# protected_branches (main, master and release/* by default), and whether a path
+# is under .github/workflows/ or .github/actions/. When it can't look the
+# repository up (request.github.enriched is false), the branch counts as
+# protected. To protect another branch, add it to protected_branches in the
+# connector's config. Then check your change:
 #   deedglass policy test examples/policies/github-read-mostly.yaml
 deedglass: policy/v1
 name: github-read-mostly
@@ -20,23 +25,32 @@ defaults:
 
 rules:
   - id: github-reads
-    match: { tool: ["github.get_*", "github.list_*", "github.search_*"] }
+    match: { tool: ["github.get_*", "github.list_*"] }
     decision: allow
   - id: issues-and-comments
-    description: Opening, editing and commenting on issues. Closing one is handled below.
-    match: { tool: [github.create_issue, github.update_issue, github.add_issue_comment] }
-    when: '!has(args.state) || args.state != "closed"'
+    description: Opening and commenting on issues. Closing one is handled below.
+    match: { tool: [github.create_issue, github.comment] }
     decision: allow
     verify: L1
   - id: branches
     match: { tool: github.create_branch }
     decision: allow
+    verify: L1
   - id: protected-branch-writes-need-approval
-    description: A commit with no branch goes to the default branch, so it counts as protected.
+    description: A commit to a protected branch, or to a branch the connector couldn't look up.
     match: { tool: github.create_or_update_file }
-    when: '!has(args.branch) || args.branch in ["main", "master"] || args.branch.startsWith("release/")'
+    when: '!request.github.enriched || request.github.protected_branch'
     decision: require_approval
     reason: Commits to main, master or a release branch wait for a human. Commit to a feature branch instead, or ask an admin to approve in Console › Approvals.
+    approval: { approvers: [role:admin], required: 1, expires_in: 2h }
+    notify: [slack]
+    verify: L1
+  - id: workflow-files-need-approval
+    description: Workflow files run with repository secrets.
+    match: { tool: github.create_or_update_file }
+    when: request.github.touches_workflows
+    decision: require_approval
+    reason: Changes under .github/workflows run with your repository's secrets, so a person approves them.
     approval: { approvers: [role:admin], required: 1, expires_in: 2h }
     notify: [slack]
     verify: L1
@@ -45,30 +59,28 @@ rules:
     decision: allow
     verify: L1
   - id: pull-requests-to-main-need-approval
-    description: Opening a pull request into a protected branch, or retargeting one there.
-    match: { tool: [github.create_pull_request, github.update_pull_request] }
-    when: >-
-      (tool.name == "github.create_pull_request" && !has(args.base))
-      || (has(args.base) && (args.base in ["main", "master"] || args.base.startsWith("release/")))
+    description: A pull request into a protected branch, or into a branch the connector couldn't look up.
+    match: { tool: github.create_pr }
+    when: '!request.github.enriched || request.github.protected_branch'
     decision: require_approval
     reason: Pull requests into main, master or a release branch wait for a human. An admin can approve in Console › Approvals.
     approval: { approvers: [role:admin], required: 1, expires_in: 2h }
     notify: [slack]
     verify: L1
   - id: pull-requests
-    match: { tool: [github.create_pull_request, github.update_pull_request] }
+    match: { tool: github.create_pr }
     decision: allow
     verify: L1
   - id: no-merges-or-branch-deletes
-    match: { tool: [github.merge_pull_request, github.delete_branch] }
+    match: { tool: [github.merge_pr, github.delete_branch] }
     decision: deny
     reason: Merging and deleting branches stay with humans on GitHub.
   - id: closing-issues-needs-approval
-    match: { tool: github.update_issue }
-    when: has(args.state) && args.state == "closed"
+    match: { tool: github.close_issue }
     decision: require_approval
     reason: Closing an issue waits for a human. An admin can approve in Console › Approvals.
     approval: { approvers: [role:admin], required: 1, expires_in: 24h }
+    notify: [slack]
     verify: L1
   - id: block-other-destructive
     match: { side_effect: destructive }

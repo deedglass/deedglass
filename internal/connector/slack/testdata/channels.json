@@ -1,0 +1,12 @@
+[
+  {"name": "conversations.list", "method": "GET", "path": "/api/conversations.list",
+   "query": {"types": "public_channel,private_channel", "exclude_archived": "true", "limit": "200"},
+   "require_headers": {"Authorization": "Bearer xoxb-0000000000-dgSENTINELslackBOT7Q2vK9"},
+   "status": 200, "repeat": true,
+   "body": {"ok": true, "channels": [
+     {"id": "C0AGENT01", "name": "agent-updates", "is_private": false, "is_member": true},
+     {"id": "C0APPROV1", "name": "deedglass-approvals", "is_private": false, "is_member": false},
+     {"id": "C0RANDOM1", "name": "random", "is_private": false, "is_member": true},
+     {"id": "G0PRIV001", "name": "ops-private", "is_private": true, "is_member": true}
+   ], "response_metadata": {"next_cursor": ""}}}
+]

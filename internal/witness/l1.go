@@ -47,8 +47,11 @@ func EvaluateL1(ctx context.Context, s Subject, obs Observer, final bool) L1Resu
 	if obs == nil {
 		return L1Result{Reasons: []Reason{R(L1, CodeInternalError, "readback", nil)}}
 	}
-	if p.Kind == KindPostgresRow {
+	switch p.Kind {
+	case KindPostgresRow:
 		return postgresRow(ctx, s, obs, final)
+	case KindNative:
+		return nativeReadBack(ctx, s, obs, final)
 	}
 	return readBack(ctx, s, obs, final)
 }

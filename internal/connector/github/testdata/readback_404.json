@@ -1,0 +1,13 @@
+[
+  {
+    "name": "GET issue",
+    "method": "GET",
+    "path": "/repos/arjun/deedglass-sandbox/issues/42",
+    "status": 404,
+    "body": {
+      "message": "Not Found",
+      "documentation_url": "https://docs.github.com/rest"
+    },
+    "repeat": true
+  }
+]

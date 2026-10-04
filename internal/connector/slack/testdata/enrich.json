@@ -1,0 +1,5 @@
+[
+  {"name": "conversations.info", "method": "GET", "path": "/api/conversations.info",
+   "query": {"channel": "C0AGENT01"}, "status": 200,
+   "body": {"ok": true, "channel": {"id": "C0AGENT01", "name": "agent-updates", "is_private": false, "is_im": false, "is_ext_shared": true}}}
+]

@@ -26,6 +26,37 @@ type HTTPFacts struct {
 	Host   string `json:"host" cel:"host"`
 }
 
+// GitHubFacts is what the GitHub connector knows about a call before the decision (S29):
+// request.github. Enriched is false when the lookup failed; starter rules then treat the branch
+// as protected.
+type GitHubFacts struct {
+	Repo             string `json:"repo" cel:"repo"`                     // "owner/name"
+	Owner            string `json:"owner" cel:"owner"`                   //
+	Name             string `json:"name" cel:"name"`                     //
+	DefaultBranch    string `json:"default_branch" cel:"default_branch"` // the repository's default branch
+	Branch           string `json:"branch" cel:"branch"`                 // the branch written (a commit's branch, else the default)
+	Base             string `json:"base" cel:"base"`                     // a pull request's base
+	Head             string `json:"head" cel:"head"`                     // a pull request's head
+	Path             string `json:"path" cel:"path"`                     // a file's path
+	ProtectedBranch  bool   `json:"protected_branch" cel:"protected_branch"`
+	IsDefaultBranch  bool   `json:"is_default_branch" cel:"is_default_branch"`
+	TouchesWorkflows bool   `json:"touches_workflows" cel:"touches_workflows"` // path under .github/workflows/ or .github/actions/
+	Enriched         bool   `json:"enriched" cel:"enriched"`
+}
+
+// SlackFacts is what the Slack connector knows about a call before the decision (S29):
+// request.slack. Channels are compared by id, so a renamed channel keeps its rules.
+type SlackFacts struct {
+	ChannelID    string `json:"channel_id" cel:"channel_id"`
+	ChannelName  string `json:"channel_name" cel:"channel_name"` // without the #
+	IsPrivate    bool   `json:"is_private" cel:"is_private"`
+	IsIM         bool   `json:"is_im" cel:"is_im"`
+	IsExtShared  bool   `json:"is_ext_shared" cel:"is_ext_shared"`
+	Broadcast    bool   `json:"broadcast" cel:"broadcast"`         // <!channel>, <!here> or <!everyone> in the text
+	UserMentions int64  `json:"user_mentions" cel:"user_mentions"` // how many <@U…> mentions the text holds
+	Enriched     bool   `json:"enriched" cel:"enriched"`
+}
+
 // RequestFacts describes the request that carried the action.
 type RequestFacts struct {
 	Mode         string `json:"mode" cel:"mode"`
@@ -34,6 +65,9 @@ type RequestFacts struct {
 	Digest       string `json:"digest" cel:"digest"`
 	// HTTP is set by the REST connector's enrichment (S16); empty fields otherwise.
 	HTTP HTTPFacts `json:"http,omitzero" cel:"http"`
+	// GitHub and Slack are set by those connectors' enrichment (S29); zero for every other tool.
+	GitHub GitHubFacts `json:"github,omitzero" cel:"github"`
+	Slack  SlackFacts  `json:"slack,omitzero" cel:"slack"`
 }
 
 // SQLFacts is what the S11 classifier reports about args.sql.

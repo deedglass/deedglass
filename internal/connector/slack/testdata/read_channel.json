@@ -1,0 +1,8 @@
+[
+  {"name": "conversations.history", "method": "GET", "path": "/api/conversations.history",
+   "query": {"channel": "C0AGENT01", "limit": "2"}, "status": 200,
+   "body": {"ok": true, "has_more": false, "messages": [
+     {"ts": "1760000002.000100", "user": "U0PERSON1", "text": "deploy done", "thread_ts": "1760000001.000100", "blocks": [{"type": "rich_text"}]},
+     {"ts": "1760000001.000100", "bot_id": "B0OTHER01", "text": "LONGTEXT"},
+     {"ts": "1760000000.000100", "user": "U0PERSON2", "text": "beyond the limit"}]}}
+]

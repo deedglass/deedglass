@@ -66,3 +66,9 @@ type Notifier interface {
 	// sends nothing.
 	ApprovalResolved(ctx context.Context, n ApprovalNotice) error
 }
+
+// ApprovalUpdater is an optional Notifier extension (S29): a person countersigned but the approval
+// still waits for more (four-eyes). Slack edits its card to show who approved so far.
+type ApprovalUpdater interface {
+	ApprovalChanged(ctx context.Context, org ids.OrgID, approvalID, actionID string) error
+}

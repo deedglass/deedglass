@@ -1,0 +1,102 @@
+[
+  {
+    "name": "POST access_tokens",
+    "method": "POST",
+    "path": "/app/installations/76543210/access_tokens",
+    "status": 201,
+    "body": {
+      "token": "test-installation-token-0001",
+      "expires_at": "2026-10-04T11:00:00Z",
+      "permissions": {
+        "contents": "write"
+      },
+      "repository_selection": "selected"
+    },
+    "body_subset": {
+      "repositories": [
+        "deedglass-sandbox"
+      ],
+      "permissions": {
+        "contents": "write",
+        "issues": "write",
+        "pull_requests": "write",
+        "metadata": "read"
+      }
+    }
+  },
+  {
+    "name": "GET app",
+    "method": "GET",
+    "path": "/app",
+    "status": 200,
+    "body": {
+      "id": 1234567,
+      "slug": "deedglass-sandbox",
+      "name": "Deedglass sandbox"
+    }
+  },
+  {
+    "name": "GET installation repos",
+    "method": "GET",
+    "path": "/installation/repositories",
+    "status": 200,
+    "body": {
+      "total_count": 1,
+      "repositories": [
+        {
+          "full_name": "arjun/deedglass-sandbox"
+        }
+      ]
+    },
+    "require_headers": {
+      "Authorization": "Bearer test-installation-token-0001"
+    }
+  },
+  {
+    "name": "GET repo",
+    "method": "GET",
+    "path": "/repos/arjun/deedglass-sandbox",
+    "status": 200,
+    "body": {
+      "id": 901,
+      "node_id": "R_kgDOsandbox",
+      "full_name": "arjun/deedglass-sandbox",
+      "private": true,
+      "default_branch": "main",
+      "archived": false,
+      "description": "Sandbox for Deedglass",
+      "html_url": "https://github.com/arjun/deedglass-sandbox",
+      "url": "https://api.github.com/repos/arjun/deedglass-sandbox",
+      "open_issues_count": 3,
+      "permissions": {
+        "admin": false,
+        "push": true,
+        "pull": true
+      },
+      "owner": {
+        "login": "arjun",
+        "email": "arjun@example.com",
+        "node_id": "U_owner"
+      }
+    }
+  },
+  {
+    "name": "GET rate",
+    "method": "GET",
+    "path": "/rate_limit",
+    "status": 200,
+    "body": {
+      "resources": {
+        "core": {
+          "limit": 5000,
+          "remaining": 4987,
+          "reset": 1791111720,
+          "used": 13
+        }
+      },
+      "rate": {
+        "limit": 5000
+      }
+    }
+  }
+]

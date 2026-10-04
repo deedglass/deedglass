@@ -1,0 +1,4 @@
+[
+  {"name": "readback history (429)", "method": "GET", "path": "/api/conversations.history",
+   "status": 429, "headers": {"Retry-After": "30"}, "body": {"ok": false, "error": "ratelimited"}}
+]

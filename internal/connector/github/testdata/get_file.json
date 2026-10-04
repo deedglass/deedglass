@@ -1,0 +1,22 @@
+[
+  {
+    "name": "GET contents",
+    "method": "GET",
+    "path": "/repos/arjun/deedglass-sandbox/contents/README.md",
+    "status": 200,
+    "body": {
+      "type": "file",
+      "name": "README.md",
+      "path": "README.md",
+      "sha": "3b18e512dba79e4c8300dd08aeb37f8e728b8dad",
+      "size": 20,
+      "encoding": "base64",
+      "content": "IyBEZWVkZ2xhc3MgU2FuZGJveAo=\n",
+      "html_url": "https://github.com/arjun/deedglass-sandbox/blob/main/README.md",
+      "download_url": "https://raw.githubusercontent.com/x"
+    },
+    "query": {
+      "ref": "main"
+    }
+  }
+]

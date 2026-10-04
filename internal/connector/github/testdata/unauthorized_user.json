@@ -1,0 +1,11 @@
+[
+  {
+    "name": "GET user",
+    "method": "GET",
+    "path": "/user",
+    "status": 401,
+    "body": {
+      "message": "Bad credentials"
+    }
+  }
+]

@@ -35,6 +35,8 @@ import (
 	"github.com/deedglass/deedglass/internal/mailer"
 	"github.com/deedglass/deedglass/internal/mcp/upstream"
 	"github.com/deedglass/deedglass/internal/notify"
+	slacknotify "github.com/deedglass/deedglass/internal/notify/slack"
+	"github.com/deedglass/deedglass/internal/notify/slack/slackstore"
 	"github.com/deedglass/deedglass/internal/notify/webhook"
 	"github.com/deedglass/deedglass/internal/policy"
 	"github.com/deedglass/deedglass/internal/policyapi"
@@ -249,7 +251,10 @@ func runServe(ctx context.Context, e *Env, args []string) error {
 	mcpType := upstream.NewType(pool)
 	cw.reg.RegisterType(mcpType)
 	// 5e. Approvals (S22): the Gate pauses through them, and their notify job and links run beside it.
-	aps, err := newApprovals(cfg, db, led, queue, log)
+	// S29: approvals in Slack (the card is posted and edited by the notifier; clicks arrive at
+	// POST /v1/slack/interact).
+	slackN := &slacknotify.Notifier{Store: slackstore.DB{DB: db}, Conns: cw.reg, BaseURL: cfg.BaseURL.String(), Log: log}
+	aps, err := newApprovals(cfg, db, led, queue, log, slackN)
 	if err != nil {
 		return err
 	}
@@ -269,6 +274,7 @@ func runServe(ctx context.Context, e *Env, args []string) error {
 	ua := &undoapi.API{Planner: planner, DB: db, Policies: pol.svc, Agents: people, Gate: gp}
 	aps.Attach(gp)
 	gp.SetJobHandler(gate.JobApprovalNotify, aps.NotifyJob)
+	gp.SetJobHandler(slacknotify.JobNotifyUpdate, slackN.UpdateJob)
 	whs := newWebhooks(cfg, db, led, cw, log)
 	whWorker := whs.NewWorker(instanceName())
 	mw := newMCP(cfg, gp, natives, pool, cw.reg, mcpType, keys, log)
@@ -294,6 +300,7 @@ func runServe(ctx context.Context, e *Env, args []string) error {
 	hubDone := make(chan struct{})
 	go func() { defer close(hubDone); _ = hub.Run(hubCtx, hubIn) }()
 	defer func() { stopHub(); unsubHub(); <-hubDone }()
+	go slackN.Watch(hubCtx, bus) // S29: approval.decided and deed.sealed edit the Slack cards
 	keys.Listener().Listen(store.JobsChannel, func(p string) {
 		worker.Wake(p)
 		if dec != nil {
@@ -344,7 +351,8 @@ func runServe(ctx context.Context, e *Env, args []string) error {
 	// S25: GET /v1/overview, with S11's usage counters and the decoder's lag threshold.
 	ov := console.NewOverview(console.OverviewOptions{Ledger: led, Usage: console.UsageFromStore(policystore.NewUsage(db)),
 		SlotLagAlertBytes: int64(cfg.SlotLagAlertMB) << 20, Log: log})
-	api.Mount(serveRoutes(api, db, ms, sk, led, people, keys, pol, gp, mw, cw, aps, whs, ua, &liveWiring{hub: hub, con: con, ov: ov, ins: ins})...)
+	api.Mount(serveRoutes(api, db, ms, sk, led, people, keys, pol, gp, mw, cw, aps, whs, ua, &liveWiring{hub: hub, con: con, ov: ov, ins: ins,
+		slack: &slacknotify.Handler{Store: slackstore.DB{DB: db}, Conns: cw.reg, Approvals: aps, Log: log}})...)
 	ln, err := net.Listen("tcp", cfg.Listen)
 	if err != nil {
 		return &ExitError{Code: ExitFailure, ErrCode: "listen_failed", Err: fmt.Errorf("Can't listen on %s: %s", cfg.Listen, lastPart(err)),
@@ -513,6 +521,12 @@ func serveRoutes(api *httpx.Server, db *store.DB, ms []migrate.Migration, sk *se
 		sugSvc = lw.ins.sugSvc
 	}
 	routes = append(routes, learn.SuggestionRoutes(sugSvc)...)
+	// S29: Slack interactivity (Approve and Deny on the approval card).
+	sh := lw.slack
+	if sh == nil {
+		sh = &slacknotify.Handler{}
+	}
+	routes = append(routes, sh.Routes()...)
 	// S12: policies, versions, activation deeds, lint, the dry run and the test runner.
 	return append(routes, policyapi.Routes(pol.svc, policyapi.Options{})...)
 }
@@ -520,10 +534,11 @@ func serveRoutes(api *httpx.Server, db *store.DB, ms []migrate.Migration, sk *se
 // liveWiring is S24's: the Console's page handler and the event hub, and S25's Overview (nil in
 // route-table tests).
 type liveWiring struct {
-	hub *console.Hub
-	con *console.Console
-	ov  *console.Overview
-	ins *insights
+	hub   *console.Hub
+	con   *console.Console
+	ov    *console.Overview
+	ins   *insights
+	slack *slacknotify.Handler // S29
 }
 
 // insights is S27's wiring.
@@ -617,10 +632,10 @@ func undoConfig(cfg *config.Config) undoapi.Config {
 
 // newApprovals is S22's approvals: the context snapshot, eligibility, links, four-eyes and the
 // approval email through S07's mail queue.
-func newApprovals(cfg *config.Config, db *store.DB, led *ledger.Ledger, q *mailer.Queue, log *slog.Logger) (*approve.Service, error) {
+func newApprovals(cfg *config.Config, db *store.DB, led *ledger.Ledger, q *mailer.Queue, log *slog.Logger, extra ...notify.Notifier) (*approve.Service, error) {
 	a := cfg.Approvals
 	return approve.New(approve.Options{DB: db, Ledger: led, BaseURL: cfg.BaseURL, Logger: log,
-		Notifiers: []notify.Notifier{&notify.Email{Queue: q, SkipReserved: cfg.ResendAPIKey.IsSet()}},
+		Notifiers: append([]notify.Notifier{&notify.Email{Queue: q, SkipReserved: cfg.ResendAPIKey.IsSet()}}, extra...),
 		Config: approve.Config{DefaultExpiresIn: a.DefaultExpiresIn, EstimateTimeout: a.EstimateTimeout, ContextMaxBytes: a.ContextMaxBytes,
 			LinkMaxTTL: a.LinkMaxTTL, LinkStatusWindow: a.LinkStatusWindow, MaxRecipients: a.MaxRecipients}})
 }
@@ -810,6 +825,14 @@ func nonceLoop(ctx context.Context, db *store.DB, log *slog.Logger) {
 				if n < noncePruneBatch {
 					break
 				}
+			}
+			// S29: Slack signatures past their replay window.
+			if n, err := db.PreAuth().PruneInboundReplay(ctx, noncePruneBatch); err != nil {
+				if ctx.Err() == nil {
+					log.Warn("pruning Slack replay digests failed", "error", err.Error())
+				}
+			} else if n > 0 {
+				log.Debug("pruned Slack replay digests", "deleted", n)
 			}
 		}
 	}

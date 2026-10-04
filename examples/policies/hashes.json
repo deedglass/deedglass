@@ -1,8 +1,8 @@
 {
   "default-deny": "sha256:2620833a1d6c796de63d8b6cc065024d3d7c90bb5dd7eb9054c1e41602c5d142",
-  "github-read-mostly": "sha256:0d6a5d8de8e819196d6fc6b42cdf576db66ed536f46b6b2f0284050ce083c78d",
+  "github-read-mostly": "sha256:932ac932520091f587f54ff8ae6b5663006d27e6c64446039d6febcec27fbe1e",
   "gmail-drafts-only": "sha256:6c59276a5b51ff126f6a65334d66486600f1f4502e7b69a6342929a90b573d28",
   "postgres-safe": "sha256:01aeae9dbb518cf6d5ead7ed0b042bc0ed4700856c123694954de3b8369a76f6",
-  "slack-post-with-approval": "sha256:e012013b5b0a4d19750742b507d0462a8b319261d772f0268efff46cf01dd6b0",
+  "slack-post-with-approval": "sha256:cc1239d7b83a84332d209cb5974f3d88fcaebf7048ffce9ab65ae5d55beacb1a",
   "stripe-refunds": "sha256:3fb1bc32481d615a8453ba4e36a61a59bc96b11247c80e59e5a76034504d4c7f"
 }

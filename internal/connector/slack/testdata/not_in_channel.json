@@ -1,0 +1,4 @@
+[
+  {"name": "chat.postMessage (not in channel)", "method": "POST", "path": "/api/chat.postMessage",
+   "status": 200, "body": {"ok": false, "error": "not_in_channel"}}
+]

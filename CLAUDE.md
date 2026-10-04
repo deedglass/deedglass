@@ -46,6 +46,9 @@ go test ./cmd/deedglass -run TestPolicyEvaluateGoldens -update  # regenerate the
 go test ./internal/policy -run TestLintGolden -update   # regenerate the lint goldens, hashes.json and costs.json (review the diff)
 go test ./cmd/deedglass -run TestPolicyGoldens -update  # regenerate the policy lint/fmt CLI goldens
 make policy-test    # S12: deedglass policy test --dir examples/policies --require-coverage --voice (in ci)
+make bench-slack    # S29: Slack signature check, the approval card, GitHub execute overhead, the interaction handler on fixtures; JSON in bench/results/
+DEEDGLASS_IT_PKGS="./internal/notify/slack/ ./internal/store/" DEEDGLASS_IT_GOFLAGS="-run TestSlackApprovalLoop|TestSlackApprovalsStore" make integration   # S29: the Slack approval loop (create_pr → card → signed Approve → L1 VERIFIED → sealed card) and the routing/replay/card store
+go test ./internal/notify/slack -run TestCardPreview -preview=DIR   # S29: render every card state to a Slack-like HTML mock (screenshots)
 make bench-gate     # S13: Gate overhead (allow, fake.echo, concurrency 8, 1 org, 50 rules): p50 < 5 ms, p99 < 25 ms; JSON in bench/results/
 go test ./internal/gate -run TestDigests -update   # re-pin testdata/gate/digests (request_digest and fingerprint; review the diff)
 go test -tags integration ./cmd/deedglass -run TestGateLive -update   # the act CLI goldens in testdata/gate/cli (throwaway cluster)
@@ -266,8 +269,8 @@ and "open source" until the repo is public. Style bans: "revolutionary", "world-
   overflow tests, pattern-vs-parser agreement, `FuzzParse`.
 - `internal/config`: the key table, every prod refusal, `.deedglass/` safety, secret canaries across
   fmt, JSON, slog and panics, and the `docs/CONFIG.md` drift test.
-- `internal/store`: catalog shape (35 tables since S27; 0025 reshapes suggestions, RLS on every org table, `system_scope` list pinned,
-  composite FKs, grants), RLS matrix on all 30 org tables, pooled-connection leak, privilege
+- `internal/store`: catalog shape (37 tables since S29; 0025 reshapes suggestions, RLS on every org table, `system_scope` list pinned,
+  composite FKs, grants), RLS matrix on all 32 org tables, pooled-connection leak, privilege
   matrix, deed chain, domains = `ids.Registry()`, `set_config(…, true)` grep, `SystemTx` call
   sites; `internal/gate`: 225-pair trigger test; migrate runner refusals. Integration tag,
   PG 16/17/18.
@@ -600,6 +603,14 @@ and "open source" until the repo is public. Style bans: "revolutionary", "world-
   (100%), the phrasing fallbacks, the six generators, the pipeline, the lifecycle table and the route × role matrix;
   integration `TestSuggestionsLive` and `TestNeverEnforceBehaviour`; `internal/mailer` the digest goldens; `attack/`
   `TestOrgIsolation` covers the suggestion routes. The migration count is 25.
+- S29 (GitHub, Slack, approvals in Slack): `internal/connector/saas` (retry only when idempotent, auth last, caps,
+  `SentError`, single-flight `TokenCache`, the RS256 golden); `internal/connector/github` (S29 §6's table on fixtures,
+  `FuzzGitHubPath`, the blob vector, JWT and downscope goldens, the sentinel sweep); `internal/connector/slack` (§6's
+  table, `FuzzSlackVerify`, the approvals API); `internal/witness` `TestNativeReadBack` (findings → catalog reasons
+  only; a 404 or a rate limit is a gap); `internal/notify/slack` (the card goldens and limits, `FuzzSlackEscape`, the
+  handler's refusal, people and decide tables, bare 401s, replay, latency; the notifier's version rule) and
+  (integration) `TestSlackApprovalLoop`; `internal/store` `TestSlackApprovalsStore`. `TestPreAuthNamesStayInStore`
+  keeps `slack_route` and `maint_prune_inbound_replay` in `internal/store`. The migration count is 26.
 - `cmd/deedglass verify` (S05): 80 golden cases in `testdata/verify/<case>/{args,stdout,stderr,exit}`
   (`go test ./cmd/deedglass -run TestVerifyGolden -update`), every vector's code and exit, `--keys`
   URL rules (same-host redirects, 1 MiB, timeout, loopback-only http), key-set merge conflicts, no

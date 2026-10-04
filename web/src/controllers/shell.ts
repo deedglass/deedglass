@@ -12,7 +12,7 @@ import { forgetAll, remember } from '../lib/recent.ts';
 import { Sequencer } from '../lib/shortcuts.ts';
 import { atLeast, get, load, onChange, refreshOrg, type State } from '../lib/state.ts';
 import { stream, type StreamState } from '../lib/stream.ts';
-import { getTheme, nextTheme, setTheme, type Theme } from '../lib/theme.ts';
+import { getSimHint, getTheme, nextTheme, setSimHint, setTheme, type Theme } from '../lib/theme.ts';
 import type { ListResponse, OrgStop } from '../lib/types.ts';
 import { wireCopy } from './copyid.ts';
 import { confirmTyped, menuButton, openPopover, openSheet, tooltips, type MenuItem } from './overlay.ts';
@@ -56,6 +56,7 @@ async function signOut(everywhere = false): Promise<void> {
     }
   }
   forgetAll();
+  setSimHint(false);
   location.assign('/login');
 }
 
@@ -128,12 +129,21 @@ function renderStopButton(s: State): void {
 // ---------- banners ----------
 // S28: a simulated org (deedglass dev simulate) shows a neutral bar on every screen. GET /v1/org's
 // settings.simulated sets it; a screen that learns it another way (Insights' settings) calls this.
+// S29: until the org loads, the last org's flag (theme.ts getSimHint) draws it at boot, so the
+// banner is in place before page content and nothing shifts when GET /v1/org answers.
 let simulated = false;
 let lastOffline = false;
 export function setSimulated(on: boolean): void {
   if (simulated === on) return;
   simulated = on;
   renderBanners(get(), lastOffline);
+}
+
+function showsSim(s: State | null): boolean {
+  if (!s) return getSimHint();
+  const on = simulated || (s.org as { settings?: { simulated?: unknown } | null }).settings?.simulated === true;
+  setSimHint(on);
+  return on;
 }
 
 function renderBanners(s: State | null, offline: boolean): void {
@@ -153,7 +163,7 @@ function renderBanners(s: State | null, offline: boolean): void {
       h('div', { class: 'body' }, h('p', null, h('strong', null, parts.join(' · '))), st.reason ? h('p', { class: 't-2' }, `“${st.reason}”`) : null,
         s.me.membership.role === 'owner' ? null : h('p', { class: 't-2' }, copy.stop.startOwnerOnly))));
   }
-  if (s && (simulated || (s.org as { settings?: { simulated?: unknown } }).settings?.simulated === true)) {
+  if (showsSim(s)) {
     out.push(h('div', { class: 'banner banner-sim', role: 'note', id: 'banner-simulated' }, icon('flask-conical', 20),
       h('div', { class: 'body' }, h('p', null, copy.states.simulatedBanner))));
   }
@@ -267,6 +277,10 @@ export interface ShellOptions {
 }
 
 export function bootShell(o: ShellOptions): void {
+  // First, in this task: the simulated banner from the last org's flag, then reveal the page (app.css
+  // keeps .main hidden until data-shell is set), so the banner never pushes painted content down.
+  renderBanners(null, false);
+  document.body.setAttribute('data-shell', 'ready');
   wireCopy();
   tooltips();
   tickTimes();

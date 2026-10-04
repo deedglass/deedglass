@@ -405,6 +405,9 @@ func (a *API) create(w http.ResponseWriter, r *http.Request) error {
 		if errors.Is(err, store.ErrConflict) {
 			return httpx.E(httpx.CodeConflict, httpx.Param("name"), httpx.Msgf("A connector named %s already exists in this org. Pick another name, or update that one.", in.Name))
 		}
+		if e := slackTaken(err); e != nil {
+			return e
+		}
 		if err != nil {
 			return err
 		}
@@ -512,6 +515,9 @@ func (a *API) patch(w http.ResponseWriter, r *http.Request) error {
 		if len(changed) > 0 {
 			c.UpdatedBy = actor.By
 			if err := store.UpdateConnector(ctx, tx, c); err != nil {
+				if e := slackTaken(err); e != nil {
+					return e
+				}
 				return err
 			}
 			env, err := a.Ledger.RecordAdmin(ctx, tx, ledger.AdminEvent{Action: ledger.AdminConnectorUpdated, Actor: actor.Ref,
@@ -863,4 +869,17 @@ func (a *API) initialized(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	return httpx.WriteJSON(w, http.StatusCreated, out)
+}
+
+// slackTaken is S29's 409 for a second Slack connector receiving approvals (migration 0026).
+func slackTaken(err error) error {
+	switch {
+	case errors.Is(err, store.ErrSlackAppTaken):
+		return httpx.E(httpx.CodeConflict, httpx.Param("config.approvals.enabled"),
+			httpx.Msg("Another Deedglass connector already receives approvals for this Slack app (the same team_id and app_id). Turn approvals off there first, or use another Slack app."))
+	case errors.Is(err, store.ErrSlackApprovalsTaken):
+		return httpx.E(httpx.CodeConflict, httpx.Param("config.approvals.enabled"),
+			httpx.Msg("This org already has a Slack connector that receives approvals. Turn approvals off on that connector first."))
+	}
+	return nil
 }

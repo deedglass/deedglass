@@ -1,0 +1,30 @@
+[
+  {
+    "name": "POST comments",
+    "method": "POST",
+    "path": "/repos/arjun/deedglass-sandbox/issues/42/comments",
+    "status": 201,
+    "body": {
+      "id": 1
+    },
+    "delay_ms": 5000
+  },
+  {
+    "name": "GET comments since",
+    "method": "GET",
+    "path": "/repos/arjun/deedglass-sandbox/issues/42/comments",
+    "status": 200,
+    "body": [
+      {
+        "id": 1001,
+        "body": "Looks good.\n\n<!-- deedglass:act_01j9zq3m8x2k7w4c5v6b7n8p9r -->",
+        "html_url": "https://github.com/arjun/deedglass-sandbox/issues/42#issuecomment-1001",
+        "issue_url": "https://api.github.com/repos/arjun/deedglass-sandbox/issues/42"
+      }
+    ],
+    "query": {
+      "since": "2026-10-04T09:59:00Z",
+      "per_page": "30"
+    }
+  }
+]

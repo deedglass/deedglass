@@ -1,0 +1,48 @@
+[
+  {
+    "name": "PUT contents",
+    "method": "PUT",
+    "path": "/repos/arjun/deedglass-sandbox/contents/docs/x.md",
+    "status": 201,
+    "body": {
+      "content": {
+        "name": "x.md",
+        "path": "docs/x.md",
+        "sha": "ce013625030ba8dba906f756967f9e9ca394464a",
+        "size": 6,
+        "html_url": "https://github.com/arjun/deedglass-sandbox/blob/agent/fix-typo/docs/x.md",
+        "url": "https://api.github.com/x",
+        "git_url": "https://api.github.com/g"
+      },
+      "commit": {
+        "sha": "9f2c4e6a8b0d1f3a5c7e9b1d3f5a7c9e1b3d5f7a",
+        "author": {
+          "email": "bot@example.com"
+        }
+      }
+    },
+    "body_subset": {
+      "content": "aGVsbG8K",
+      "branch": "agent/fix-typo",
+      "message": "Add x"
+    }
+  },
+  {
+    "name": "GET contents",
+    "method": "GET",
+    "path": "/repos/arjun/deedglass-sandbox/contents/docs/x.md",
+    "status": 200,
+    "body": {
+      "type": "file",
+      "name": "x.md",
+      "path": "docs/x.md",
+      "sha": "ce013625030ba8dba906f756967f9e9ca394464a",
+      "size": 6,
+      "encoding": "base64",
+      "content": "aGVsbG8K\n"
+    },
+    "query": {
+      "ref": "agent/fix-typo"
+    }
+  }
+]

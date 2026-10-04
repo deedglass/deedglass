@@ -167,8 +167,11 @@
 .ins-early { margin: 0 0 var(--space-3); align-items: flex-start; }
 .ins-early .icon { margin-top: 2px; }
 
-/* the simulated-org banner (shell) */
+/* the simulated-org banner (shell); S29: the icon sits on the first line when the copy wraps (phones),
+   and the copy wraps without a lone last word */
+.banner.banner-sim { align-items: flex-start; } /* .banner (later in app.css) centres */
 .banner-sim > .icon { color: var(--text-2); }
+.banner-sim .body p { text-wrap: pretty; }
 
 /* phones: one column; a card's actions stick to its bottom edge above the bottom bar */
 @media (max-width: 639.98px) {

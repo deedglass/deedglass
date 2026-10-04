@@ -1,0 +1,52 @@
+{
+  "text": "Deed sealed, MISMATCH · github.create_pr · support-bot",
+  "blocks": [
+    {
+      "type": "header",
+      "text": {
+        "type": "plain_text",
+        "text": "Approval request · github.create_pr",
+        "emoji": false
+      }
+    },
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "*support-bot* wants to open a pull request in *arjun/deedglass-sandbox* from `agent/fix-typo` into `main`."
+      }
+    },
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "✓ Approved by Arjun · <!date^1791606000^{date_short_pretty} at {time}|2026-10-10 04:20 UTC>\n✕ L1 · MISMATCH · GitHub shows a different title."
+      }
+    },
+    {
+      "type": "context",
+      "elements": [
+        {
+          "type": "mrkdwn",
+          "text": "`deed_01j9…6j8k` · `act_01j9…7p9q` · `apr_01j9…0b1c` · policy acme-demo v7"
+        }
+      ]
+    },
+    {
+      "type": "actions",
+      "block_id": "deedglass_actions",
+      "elements": [
+        {
+          "type": "button",
+          "text": {
+            "type": "plain_text",
+            "text": "Open in Console",
+            "emoji": false
+          },
+          "action_id": "deedglass_open",
+          "url": "https://app.deedglass.com/app/approvals/apr_01j9zx4k7m2q8r5t3v6w9y0b1c"
+        }
+      ]
+    }
+  ]
+}

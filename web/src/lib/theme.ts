@@ -40,6 +40,28 @@ export function nextTheme(t: Theme): Theme {
   return t === 'dark' ? 'light' : t === 'light' ? 'system' : 'dark';
 }
 
+// S29: whether the last org this browser showed had the simulated banner, so the shell can draw the
+// banner (and reserve its space) at boot instead of after GET /v1/org. A display hint only: one
+// flag, no org id, no data; GET /v1/org corrects it on every load and sign-out clears it.
+export const SIM_KEY = 'deedglass.simulated';
+
+export function getSimHint(storage: Pick<Storage, 'getItem'> | null = safeStorage()): boolean {
+  try {
+    return storage?.getItem(SIM_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+export function setSimHint(on: boolean, storage: Pick<Storage, 'setItem' | 'removeItem'> | null = safeStorage()): void {
+  try {
+    if (on) storage?.setItem(SIM_KEY, '1');
+    else storage?.removeItem(SIM_KEY);
+  } catch {
+    /* storage blocked: the banner waits for GET /v1/org */
+  }
+}
+
 function safeStorage(): Storage | null {
   try {
     return typeof localStorage === 'undefined' ? null : localStorage;

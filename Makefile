@@ -14,7 +14,7 @@ LDFLAGS  := -s -w -X $(BI).Version=$(VERSION) -X $(BI).Commit=$(COMMIT) -X $(BI)
 	web-verify-install web-verify-test web-verify-build web-verify-serve gencopy genmark bench-mark bench-ledger bench-stop bench-intents bench-gate bench-witness policy-test \
 	fuzz-policy fuzz-policy-short bench-policy bench-eval mcp-it bench-mcp \
 	demo-up demo-down demo-reset demo-status demo-snippet demo-psql demo-follow demo-verify demo-check demo-smoke bench-gateway \
-	demo-trigger-on demo-trigger-off demo-order-reset demo-hero demo-hero-check demo-diff bench-l2 bench-approvals \
+	demo-trigger-on demo-trigger-off demo-order-reset demo-hero demo-hero-check demo-diff bench-l2 bench-approvals bench-slack \
 	mock-orders bench-connectors bench-postgres bench-decoder attack attack-report vuln undo-matrix
 
 all: ci
@@ -186,6 +186,12 @@ bench-approvals: ## S22: submit to pending, Decide, decide to worker pickup, the
 	DEEDGLASS_IT_PKGS=./internal/approve/ DEEDGLASS_IT_GOFLAGS="-run TestLinks/one_person" \
 	DEEDGLASS_IT_BENCH_OUT="$$out" DEEDGLASS_IT_BENCH_RUN='TestApprovalsBudget' DEEDGLASS_IT_BENCH_PKG=./internal/approve/ scripts/integration_local.sh >/dev/null; st=$$?; \
 	grep -o 'PERF {[^}]*}' "$$out" | sed 's/\\"/"/g'; echo "raw: $$out"; exit $$st
+
+bench-slack: ## S29: Slack signature check (4 KiB), the approval card, GitHub execute overhead, the interaction handler's latency on fixtures; raw go test -json in bench/results/
+	@out="$(CURDIR)/bench/results/$$(date +%F)-$$(go env GOOS)-$$(go env GOARCH)-s29.json"; \
+	go test -json -run '^TestInteractLatency$$' -bench 'BenchmarkSlackVerify|BenchmarkGitHubExecute|BenchmarkBuildApprovalCard' -benchmem -count=1 -v \
+	  ./internal/connector/slack/ ./internal/connector/github/ ./internal/notify/slack/ > "$$out"; st=$$?; \
+	grep -o '"Output":"\(Benchmark[^"]*\|[^"]*handler [a-z]*: [^"]*\)' "$$out" | sed 's/"Output":"//; s/\\t/ /g; s/\\n//g'; echo "raw: $$out"; exit $$st
 
 bench-gate: ## S13: Gate overhead (allow, no witness, fake.echo, concurrency 8, 1 org, 50 rules) on a throwaway PG 18: p50 < 5 ms, p99 < 25 ms; raw go test -json in bench/results/
 	@out="$(CURDIR)/bench/results/$$(date +%F)-$$(go env GOOS)-$$(go env GOARCH)-gate.json"; \

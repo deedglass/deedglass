@@ -504,6 +504,30 @@ it refuses rather than guess:
 - **At most 10 open suggestions per org.** The rest wait for a later pass.
 - **The digest is numbers only, in English, weekly.** No per-person schedule, no other languages.
 
+## GitHub, Slack and approvals in Slack (S29)
+
+- **L1, not L2.** GitHub and Slack writes are read back from the service's own API (L1). That shows
+  what GitHub and Slack report now, not whether the change was wise, and not a system-of-record
+  change stream.
+- **The GitHub marker is visible.** Issue, comment and pull request bodies end with
+  `<!-- deedglass:act_… -->` (hidden when rendered, visible in the raw body). `issue_marker: false`
+  removes it, and with it the reconciliation of an uncertain create.
+- **An uncertain GitHub create is looked up once.** When a create times out after sending, the
+  connector reads the newest items once; if the marker isn't there yet, the action is UNVERIFIABLE
+  ("It may have run"), never retried.
+- **GitHub REST only.** No GraphQL, no Actions runs, no org administration; GitHub Enterprise Server
+  is untested. File paths must be ASCII or contain no combining marks (a conservative NFC check
+  without a Unicode library).
+- **Slack identity is the workspace's word.** A Slack user maps to a person by an email Slack
+  reports as confirmed. Use an SSO workspace and `approvals.require_email_domains`; a compromised
+  Slack account can approve like a compromised Console session.
+- **Slack sees the card.** The summary, the rule, the reason and the arguments (sensitive ones as
+  digests) are sent to Slack.
+- **One approvals channel per org, a public URL.** No per-rule channels and no Socket Mode yet;
+  Slack must reach `POST /v1/slack/interact` over HTTPS.
+- **Cards can lag.** An edit is a job that retries 4 times; after that the card says nothing new and
+  the Console is the source of truth.
+
 ## What this page does not do
 
 It does not list bugs or missing features on the schedule. It lists limits of the design that stay true after they ship.

@@ -1,0 +1,4 @@
+[
+  {"name": "readback history (empty)", "method": "GET", "path": "/api/conversations.history",
+   "status": 200, "body": {"ok": true, "messages": []}}
+]

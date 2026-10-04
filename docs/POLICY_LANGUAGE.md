@@ -476,7 +476,7 @@ Every structured variable is declared field by field, so a typo like `sql.knid` 
 |---|---|---|
 | `tool` | object | `name`, `connector`, `connector_type`, `side_effect` (strings); since S16 also `type` (the connector type again, like `rest`) and `op` (the tool's name after the first dot, like `update_status` in `orders.update_status`). Since S17 the Postgres connector raises `side_effect` per call (never lowers it): `destructive` for a `postgres.execute` whose SQL deletes, and the function's own side effect for `postgres.call`; its first allowed schema is the classifier's default schema, so `sql.tables` names unqualified tables as the `search_path` will resolve them |
 | `args` | `map(string, dyn)` | the tool arguments as JSON: integers are `int`, other numbers are `double`, objects are maps, arrays are lists |
-| `request` | object | `mode` (`gateway` or `proxy`), `bytes` (int), `intent_signed` (bool), `digest` (string); since S16 `http`, an object with `method`, `path` and `host` (strings), filled by the REST connector before the decision with the request it will send: `request.http.path` is the path with the arguments filled in, like `/v1/orders/42`. Empty strings for every other connector, and when the arguments don't build a request (the call then fails as `validation_failed` and nothing is sent). |
+| `request` | object | `mode` (`gateway` or `proxy`), `bytes` (int), `intent_signed` (bool), `digest` (string); since S16 `http`, an object with `method`, `path` and `host` (strings), filled by the REST connector before the decision with the request it will send: `request.http.path` is the path with the arguments filled in, like `/v1/orders/42`. Empty strings for every other connector, and when the arguments don't build a request (the call then fails as `validation_failed` and nothing is sent). Since S29 also `github` and `slack`, below. |
 | `sql` | object | below; filled by the SQL classifier (S11) when the tool is a Postgres tool with an `args.sql` string, otherwise `present` is false and `kind` is `none` |
 | `agent` | object | `id`, `name`, `labels` (map string to string), `status` |
 | `user` | object | `ref`, `sub`, `iss` (empty strings when absent; from `Deedglass-On-Behalf-Of` or a signed intent, S09) |
@@ -485,6 +485,38 @@ Every structured variable is declared field by field, so a typo like `sql.knid` 
 | `time` | object | `now` (timestamp), `hour` (0 to 23), `minute` (0 to 59), `weekday` (`"mon"` … `"sun"`), `date` (`"2026-10-04"`), all in the org's time zone |
 | `usage` | object | `calls_minute`, `calls_hour`, `calls_today`, `spend_today` (int, minor units), `currency`, `budgets` (map from budget id to its value in the current window) |
 | `anomaly` | object | `active` (bool), `kinds` (list(string)), `severity` (string): what Insights says about this agent at decision time; below |
+
+#### `request.github` and `request.slack` (S29)
+
+The GitHub and Slack connectors fill these before the decision, from the call's arguments and one cached lookup (5 minutes). For every other tool all fields are empty strings, `false` and `0`. When the lookup fails, `enriched` is `false` and the other fields may be empty: write rules so that a missing fact is treated as the risky case, like the starter does with `!request.github.enriched || request.github.protected_branch`.
+
+| Field | Type | Meaning |
+|---|---|---|
+| `request.github.repo`, `owner`, `name` | string | the repository (`acme/web`, `acme`, `web`) |
+| `request.github.default_branch` | string | the repository's default branch, from GitHub |
+| `request.github.branch` | string | the branch a write goes to: a commit's `branch`, or the default branch when the call names none |
+| `request.github.base`, `head` | string | a pull request's base and head |
+| `request.github.path` | string | a file's path |
+| `request.github.protected_branch` | bool | `branch` (or `base` for a pull request) matches one of the connector's `protected_branches` globs (`main`, `master`, `release/*` by default) |
+| `request.github.is_default_branch` | bool | the write goes to the default branch |
+| `request.github.touches_workflows` | bool | `path` is under `.github/workflows/` or `.github/actions/` (files that run with the repository's secrets) |
+| `request.github.enriched` | bool | the connector looked the repository up |
+| `request.slack.channel_id` | string | the channel's id (`C0AGENTUPD`), resolved from a `#name`. Compare ids: a renamed channel keeps its id |
+| `request.slack.channel_name` | string | the channel's name without `#` |
+| `request.slack.is_private`, `is_im`, `is_ext_shared` | bool | a private channel, a direct message, a channel shared with another workspace |
+| `request.slack.broadcast` | bool | the text holds `<!channel>`, `<!here>` or `<!everyone>` |
+| `request.slack.user_mentions` | int | how many people the text mentions (`<@U…>`) |
+| `request.slack.enriched` | bool | the connector looked the channel up |
+
+```yaml
+- id: workflow-files-need-approval
+  match: { tool: github.create_or_update_file }
+  when: request.github.touches_workflows
+  decision: require_approval
+  reason: Changes under .github/workflows run with your repository's secrets, so a person approves them.
+```
+
+In policy test cases, set them under `request`: `input: { tool: github.create_pr, args: {…}, request: { github: { enriched: true, base: main, protected_branch: true } } }`.
 
 #### The `anomaly` variable
 

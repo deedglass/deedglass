@@ -1,0 +1,7 @@
+[
+  {"name": "auth.test", "method": "GET", "path": "/api/auth.test", "status": 200,
+   "headers": {"X-OAuth-Scopes": "chat:write,channels:read,groups:read,channels:history,groups:history,reactions:read,reactions:write,users:read,users:read.email"},
+   "body": {"ok": true, "team": "Arjun Sandbox", "team_id": "T0123ABCD", "user": "deedglass", "user_id": "U0BOT0001", "bot_id": "B0BOT0001"}},
+  {"name": "bots.info", "method": "GET", "path": "/api/bots.info", "query": {"bot": "B0BOT0001"}, "status": 200,
+   "body": {"ok": true, "bot": {"id": "B0BOT0001", "app_id": "A0123ABCD", "name": "deedglass"}}}
+]

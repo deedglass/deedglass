@@ -218,7 +218,7 @@ builds it. Hidden commands work but aren't in `deedglass help`.
 | `deedglass connector gmail authorize` | Connectors | Authorize the Gmail connector | soon (S30) |
 | `deedglass decoder status [--connector <name>] [--recent N] [--json]` | Connectors | Show what the decoder reads from Postgres | built |
 | `deedglass decoder drop --connector <name> [--confirm <name>] [--json]` | Connectors | Drop a connector's replication slot | built |
-| `deedglass slack manifest` | Connectors | Print the Slack app manifest | soon (S29) |
+| `deedglass slack manifest --base-url <https://host> [--name Deedglass] [--json]` | Connectors | Print the Slack app manifest | built |
 | `deedglass mcp wrap --connector <name> [--connector-type mcp] [--hide-denied=false] [--call-timeout 2m] [--result-mode full|digest] [--log-file <path>] -- <command> [args…]` | MCP | Run an MCP server behind the Gate | built |
 | `deedglass mcp serve [--connector native|<name>]` | MCP | Serve the Gate's native MCP tools | built |
 | `deedglass mcp snippet --client <claude-desktop|claude-code|cursor|windsurf|vscode> --connector <name> [--connector-type postgres] [--api-key-from-env] -- <command> [args…]  ·  --transport http --client <…> [--connector native|<name>]` | MCP | Print client config for an MCP client | built |

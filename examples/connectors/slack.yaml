@@ -1,0 +1,20 @@
+# The Slack connector (S29). Create the app from the manifest, install it, then:
+#   deedglass slack manifest --base-url https://YOUR-HOST     # paste at api.slack.com/apps › Create New App › From a manifest
+#   deedglass connector create --config examples/connectors/slack.yaml
+#   deedglass connector credentials set slack --field bot_token=env:SLACK_BOT_TOKEN --field signing_secret=env:SLACK_SIGNING_SECRET
+#   deedglass connector test slack
+# Invite @deedglass to every channel below (/invite @deedglass in the channel). Use your own team and app ids.
+# docs/connectors/slack.md has the whole walk-through.
+type: slack
+name: slack
+description: The team's Slack workspace, as a bot.
+config:
+  team_id: T0123ABCD               # checked against auth.test
+  app_id: A0123ABCD                # from the app's Basic Information page; checked via bots.info
+  channels: ["#agent-updates"]     # post allow-list (#name or C… id); ["*"] = any channel the bot is in
+  read_channels: ["#agent-updates"]
+  max_read_messages: 20            # ≤ 100
+  approvals:
+    enabled: true                  # at most one live Slack connector per org has this on
+    channel: "#deedglass-approvals"
+    require_email_domains: []      # e.g. [acme.com]; empty = any confirmed email

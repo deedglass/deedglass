@@ -447,6 +447,20 @@ table {
 .banners:empty {
   display: none;
 }
+/* S29: when this browser last showed a simulated org (theme.js sets data-sim-hint before paint), the
+   page waits for the shell's first pass, run inline when the page script starts (bootShell draws the
+   simulated banner, then sets data-shell), so the banner never pushes painted content down (CLS).
+   Real orgs never wait. Without JavaScript the page still shows after 1.5 s; !important and the
+   specificity keep the reduced-motion rule from replacing this reveal. */
+html[data-sim-hint] body:not([data-shell]) .workspace > .main {
+  visibility: hidden;
+  animation: dg-shell-reveal 0s linear 1.5s forwards !important;
+}
+@keyframes dg-shell-reveal {
+  to {
+    visibility: visible;
+  }
+}
 
 .bottombar {
   display: none;

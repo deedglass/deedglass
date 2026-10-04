@@ -1,0 +1,27 @@
+[
+  {
+    "name": "POST refs",
+    "method": "POST",
+    "path": "/repos/arjun/deedglass-sandbox/git/refs",
+    "status": 422,
+    "body": {
+      "message": "Reference already exists",
+      "documentation_url": "https://docs.github.com"
+    },
+    "body_subset": {
+      "sha": "5b1f3a9c2e7d4b6a8f0c1e3d5a7b9c2e4f6a8b0c"
+    }
+  },
+  {
+    "name": "GET ref",
+    "method": "GET",
+    "path": "/repos/arjun/deedglass-sandbox/git/ref/heads/agent/fix-typo",
+    "status": 200,
+    "body": {
+      "ref": "refs/heads/agent/fix-typo",
+      "object": {
+        "sha": "0123456789abcdef0123456789abcdef01234567"
+      }
+    }
+  }
+]

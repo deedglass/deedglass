@@ -1,0 +1,11 @@
+[
+  {
+    "name": "PUT merge",
+    "method": "PUT",
+    "path": "/repos/arjun/deedglass-sandbox/pulls/7/merge",
+    "status": 409,
+    "body": {
+      "message": "Head branch was modified. Review and try the merge again."
+    }
+  }
+]

@@ -271,6 +271,12 @@ func TestScrub(t *testing.T) {
 		"github_pat_11ABCDEFG0123456789_abcdefghijklmnopqrstuvwxyz",
 		"xoxb-123456789012-abcdefghij",
 		"xoxp-1234-5678-abcdefghijkl",
+		// S29
+		"ghs_" + strings.Repeat("Ab12", 9),
+		"xapp-1-A0123ABCD-1234567890-abcdef",
+		"-----BEGIN RSA PRIVATE KEY-----\nMIIEpAIBAAKCAQEA\n-----END RSA PRIVATE KEY-----",
+		"-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkq",
+		"eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJJdjIzbGkifQ.c2lnbmF0dXJlc2lnbmF0dXJlc2ln",
 	}
 	for _, p := range positives {
 		in := "x " + p + " y"
@@ -286,6 +292,12 @@ func TestScrub(t *testing.T) {
 		"https://example.com/path@v2",
 		"AKIA is how AWS key ids start",
 		"ghp_short",
+		// S29
+		"ghs_short",
+		"xapp- is the app-level prefix",
+		"-----BEGIN PUBLIC KEY-----",
+		"eyJ is how a JSON object starts in base64",
+		"eyJhbGciOiJIUzI1NiJ9.e30.abc",
 	}
 	for _, n := range negatives {
 		if out := Scrub(n); out != n {
