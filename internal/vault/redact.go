@@ -215,12 +215,15 @@ var scrubRules = []scrubRule{
 	{regexp.MustCompile(`\bya29\.[A-Za-z0-9_-]{16,}`), RedactedText, "ya29."},
 	{regexp.MustCompile(`\b1//0[A-Za-z0-9_-]{16,}`), RedactedText, "1//"},
 	{regexp.MustCompile(`\bGOCSPX-[A-Za-z0-9_-]{16,}`), RedactedText, "GOCSPX-"},
+	// S31 (the Notion connector): internal integration tokens and the legacy 43-character secret_ form.
+	{regexp.MustCompile(`\bntn_[A-Za-z0-9]{20,}`), RedactedText, "ntn_"},
+	{regexp.MustCompile(`\bsecret_[A-Za-z0-9]{43}\b`), RedactedText, "secret_"},
 }
 
 // Scrub removes secrets by their shape: Deedglass API keys, Stripe secret and restricted keys,
 // bearer tokens, URL passwords, AWS access key ids, GitHub tokens (ghs_ App installation tokens
 // included), Slack tokens (xapp- since S29), PEM private keys, compact JWTs, and Google OAuth
-// access tokens, refresh tokens and client secrets (S30).
+// access tokens, refresh tokens and client secrets (S30), and Notion integration tokens (S31).
 func Scrub(s string) string {
 	for _, r := range scrubRules {
 		if r.hint != "" && !strings.Contains(s, r.hint) {

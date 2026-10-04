@@ -138,17 +138,17 @@ export class Decoder {
 
 // --- patterns (DEED_SPEC.md §4) ---
 
-export const reDigest = /^sha256:[0-9a-f]{64}$/;
-export const reSeal = /^ed25519:[A-Za-z0-9_-]{86}$/;
-export const reTime = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
-export const reHeaderRef = /^[A-Za-z0-9._~:@/+=-]{1,256}$/;
-export const reMethod = /^[a-z0-9][a-z0-9._-]{0,63}$/;
-export const reErrorCode = /^[a-z][a-z0-9_]{0,63}$/;
-export const reRuleID = /^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$/;
-export const reAdminAct = /^[a-z][a-z_]{0,30}\.[a-z][a-z_]{0,30}$/;
-export const reRefType = /^[a-z][a-z_]{0,31}$/;
-export const reRefID = /^[a-z][a-z0-9_-]{0,63}$/;
-export const reCurrency = /^[a-z]{3}$/;
+export const reDigest: RegExp = /^sha256:[0-9a-f]{64}$/;
+export const reSeal: RegExp = /^ed25519:[A-Za-z0-9_-]{86}$/;
+export const reTime: RegExp = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
+export const reHeaderRef: RegExp = /^[A-Za-z0-9._~:@/+=-]{1,256}$/;
+export const reMethod: RegExp = /^[a-z0-9][a-z0-9._-]{0,63}$/;
+export const reErrorCode: RegExp = /^[a-z][a-z0-9_]{0,63}$/;
+export const reRuleID: RegExp = /^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$/;
+export const reAdminAct: RegExp = /^[a-z][a-z_]{0,30}\.[a-z][a-z_]{0,30}$/;
+export const reRefType: RegExp = /^[a-z][a-z_]{0,31}$/;
+export const reRefID: RegExp = /^[a-z][a-z0-9_-]{0,63}$/;
+export const reCurrency: RegExp = /^[a-z]{3}$/;
 
 const idPatterns = new Map<string, RegExp>();
 

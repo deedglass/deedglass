@@ -28,10 +28,10 @@ import {
 } from './schema.js';
 import { decodeUTF8, type JsonObject, type JsonValue, malformedFrom, parseStrictValue, StrictError } from './strict.js';
 
-export const MAX_INPUT_BYTES = 64 * 1024;
-export const MAX_ENVELOPE_BYTES = 16 * 1024;
-export const TAG_DEED = 'deedglass/deed/v1\n';
-export const TAG_GENESIS = 'deedglass/genesis\n';
+export const MAX_INPUT_BYTES: number = 64 * 1024;
+export const MAX_ENVELOPE_BYTES: number = 16 * 1024;
+export const TAG_DEED: string = 'deedglass/deed/v1\n';
+export const TAG_GENESIS: string = 'deedglass/genesis\n';
 
 export interface Ref {
   type: string;

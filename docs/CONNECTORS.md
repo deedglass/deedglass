@@ -305,6 +305,7 @@ fake       Fake (dev only)     L0         4             dev only
 github     GitHub              L0 L1      14
 gmail      Gmail               L0 L1      5             drafts only
 mcp_http   Remote MCP server   L0         from server
+notion     Notion              L0 L1      3
 postgres   PostgreSQL          L0 L1 L2   built-in
 rest       REST API            L0 L1      from config
 slack      Slack               L0 L1      4
@@ -318,7 +319,8 @@ S26's connector-add form reads the same catalog: the credential fields, their he
 and the setup steps.
 
 Connector pages: [GitHub](connectors/github.md), [Slack](connectors/slack.md),
-[Stripe](connectors/stripe.md) (sandbox only), [Gmail](connectors/gmail.md) (drafts only).
+[Stripe](connectors/stripe.md) (sandbox only), [Gmail](connectors/gmail.md) (drafts only),
+[Notion](connectors/notion.md) (under the parent pages you list).
 
 ## What connectors don't do
 

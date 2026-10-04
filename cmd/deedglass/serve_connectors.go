@@ -14,6 +14,7 @@ import (
 	"github.com/deedglass/deedglass/internal/connector/egress"
 	"github.com/deedglass/deedglass/internal/connector/github"
 	gmailconn "github.com/deedglass/deedglass/internal/connector/gmail"
+	notionconn "github.com/deedglass/deedglass/internal/connector/notion"
 	"github.com/deedglass/deedglass/internal/connector/postgres"
 	"github.com/deedglass/deedglass/internal/connector/rest"
 	slackconn "github.com/deedglass/deedglass/internal/connector/slack"
@@ -89,7 +90,7 @@ func selfAddrs(ctx context.Context, dsn string) []netip.AddrPort {
 // REST and Postgres types everywhere.
 func newConnectors(ctx context.Context, cfg *config.Config, db *store.DB, led *ledger.Ledger, natives []connector.Connector, log *slog.Logger) (*connectors, error) {
 	c := &connectors{egress: egressPolicy(ctx, cfg, log)}
-	o := connector.Options{Builtins: natives, Types: []connector.Connector{rest.New(), postgres.New(log), github.New(), slackconn.New(), stripeconn.New(), gmailconn.New()},
+	o := connector.Options{Builtins: natives, Types: []connector.Connector{rest.New(), postgres.New(log), github.New(), slackconn.New(), stripeconn.New(), gmailconn.New(), notionconn.New()},
 		Loader: connector.DBLoader{DB: db},
 		Env:    connector.Env{Name: string(cfg.Env), Egress: c.egress}, Logger: log}
 	if cfg.VaultKey.IsSet() {
@@ -114,7 +115,7 @@ func connectorRoutes(db *store.DB, led *ledger.Ledger, cw *connectors, log *slog
 	if cw == nil {
 		p, _ := upstream.New(upstream.Options{})
 		a.Registry = connector.New(connector.Options{Types: []connector.Connector{rest.New(), postgres.New(nil), upstream.NewType(p),
-			github.New(), slackconn.New(), stripeconn.New(), gmailconn.New()}})
+			github.New(), slackconn.New(), stripeconn.New(), gmailconn.New(), notionconn.New()}})
 	} else {
 		a.Registry = cw.reg
 		if cw.vault != nil {

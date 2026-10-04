@@ -23,7 +23,7 @@ var update = flag.Bool("update", false, "rewrite hashes.json")
 // decides at least one case.
 func TestStarters(t *testing.T) {
 	names := policies.Starters()
-	want := []string{"default-deny", "github-read-mostly", "gmail-drafts-only", "postgres-safe", "slack-post-with-approval", "stripe-refunds"}
+	want := []string{"claude-agent-local", "default-deny", "github-read-mostly", "gmail-drafts-only", "notion-pages", "postgres-safe", "sdk-demo", "slack-post-with-approval", "stripe-refunds"}
 	if strings.Join(names, ",") != strings.Join(want, ",") {
 		t.Fatalf("starters %v, want %v", names, want)
 	}
@@ -110,6 +110,10 @@ func TestStartersAlwaysDeny(t *testing.T) {
 	}{
 		{"gmail-drafts-only", tool("gmail.send_email", "unknown"), true},
 		{"gmail-drafts-only", tool("gmail.create_draft", "unknown"), false},
+		{"notion-pages", tool("notion.delete_page", "destructive"), true},
+		{"notion-pages", tool("notion.create_page", "write"), false},
+		{"sdk-demo", tool("billing.delete_customer", "unknown"), true},
+		{"claude-agent-local", tool("claude.Read", "unknown"), false},
 		{"postgres-safe", tool("postgres.query", "unknown"), false},
 		{"default-deny", tool("postgres.query", "unknown"), true},
 		{"default-deny", tool("stripe.create_refund", "write"), true},

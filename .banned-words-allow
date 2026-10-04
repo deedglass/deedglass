@@ -67,3 +67,4 @@ DESIGN.md::trustless::the brand's 'words we never use' list, copied verbatim fro
 DESIGN.md::unbreakable::the brand's 'words we never use' list, copied verbatim from ops/brand/DESIGN.md (explanatory negation)
 DESIGN.md::unhackable::the brand's 'words we never use' list, copied verbatim from ops/brand/DESIGN.md (explanatory negation)
 DESIGN.md::world-class::the brand's 'words we never use' list, copied verbatim from ops/brand/DESIGN.md (explanatory negation)
+sdk/typescript/LICENSE::compliance::the Apache-2.0 licence text, verbatim (a copy of the root LICENSE that npm pack ships)

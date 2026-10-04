@@ -76,6 +76,44 @@ jobs:
         working-directory: web/verify
         run: npx vitest run
 
+  # The TypeScript SDK (S31): the verify copy is current, typecheck, Vitest (transport, wrapTool,
+  # intent and deed vectors, parity 500/500, the four adapters on their real frameworks, coverage),
+  # then the build, zero runtime dependencies, the pack golden, publint, attw and the size budgets.
+  # Dev tools only (ADR-062), exact pins, no install scripts. Nothing is published.
+  sdk-ts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+      - name: npm ci (exact pins, no install scripts)
+        working-directory: sdk/typescript
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: the verify copy matches web/verify/src
+        working-directory: sdk/typescript
+        run: node scripts/sync-verify.mjs --check
+      - name: typecheck
+        working-directory: sdk/typescript
+        run: npx tsc -p . --noEmit
+      - name: vitest with coverage
+        working-directory: sdk/typescript
+        run: npx vitest run --project unit --coverage
+      - name: build, dependencies, pack golden, publint, attw
+        working-directory: sdk/typescript
+        run: |
+          npm run build --silent
+          node scripts/deps-check.mjs
+          node scripts/pack-check.mjs
+          npx publint --strict
+          npx attw --pack . --profile node16 --ignore-rules cjs-resolves-to-esm --quiet
+      - name: size budgets (gzip only; timings are measured locally)
+        working-directory: sdk/typescript
+        run: node scripts/size.mjs --sizes-only
+
   # The Console (S24): typecheck, Vitest (tokens, contrast, copy, icons, sinks, types, api, stream),
   # then the real build with check-dist (no inline code, budgets). Dev tools only (ADR-053), exact pins,
   # no install scripts. Playwright, axe and Lighthouse need a real serve and a browser: make web-e2e and

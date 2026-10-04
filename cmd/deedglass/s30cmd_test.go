@@ -73,7 +73,7 @@ func TestConnectorTypesCLI(t *testing.T) {
 	golden(t, "connector_types", r)
 	r = cli(t, env, false, "connector", "types", "--json")
 	var out []connector.TypeInfo
-	if err := json.Unmarshal([]byte(r.stdout), &out); err != nil || len(out) != 8 {
+	if err := json.Unmarshal([]byte(r.stdout), &out); err != nil || len(out) != 9 {
 		t.Fatalf("--json: %v %d", err, len(out))
 	}
 	r = cli(t, env, false, "connector", "types", "--type", "stripe")

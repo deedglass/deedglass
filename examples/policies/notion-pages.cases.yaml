@@ -1,0 +1,29 @@
+# Test cases for notion-pages.yaml. Run them with:
+#   deedglass policy test examples/policies/notion-pages.yaml
+policy: notion-pages.yaml
+defaults:
+  agent: { name: notes-bot, labels: { env: prod } }
+  org: { timezone: Asia/Kolkata }
+  time: 2026-10-04T10:00:00+05:30
+cases:
+  - name: searching runs freely
+    input: { tool: notion.search, args: { query: weekly notes, limit: 5 } }
+    expect: { decision: allow, rule: reads, verify: L0 }
+  - name: creating a page runs, witnessed at L1
+    input: { tool: notion.create_page, args: { parent_page_id: 11111111-2222-4333-8444-555555555555, title: Weekly notes, paragraphs: [Shipped the refund fix.] } }
+    expect: { decision: allow, rule: writes, verify: L1 }
+  - name: appending paragraphs runs, witnessed at L1
+    input: { tool: notion.append_block, args: { page_id: 99999999-8888-4777-8666-555555555555, paragraphs: [One more line.] } }
+    expect: { decision: allow, rule: writes, verify: L1 }
+  - name: deleting a page never runs
+    input: { tool: { name: notion.delete_page, side_effect: destructive }, args: { page_id: 99999999-8888-4777-8666-555555555555 } }
+    expect: { decision: deny, rule: block-other-destructive, code: policy_denied, reason_contains: stays with people }
+  - name: a destructive tool named like a write is still blocked
+    input: { tool: { name: notion.append_block, side_effect: destructive }, args: { page_id: 99999999-8888-4777-8666-555555555555, paragraphs: [x] } }
+    expect: { decision: deny, rule: block-other-destructive }
+  - name: a tool no rule names falls to the default
+    input: { tool: notion.update_page, args: { page_id: 99999999-8888-4777-8666-555555555555, title: Renamed } }
+    expect: { decision: deny, code: policy_denied, reason_contains: No rule allows this action }
+  - name: another connector's tool falls to the default
+    input: { tool: github.create_issue, args: { repo: arjun/deedglass-sandbox, title: x } }
+    expect: { decision: deny }

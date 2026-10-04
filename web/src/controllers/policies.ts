@@ -69,7 +69,7 @@ async function loadPeople(): Promise<void> {
 
 async function loadStarters(): Promise<Starter[]> {
   const out = await Promise.all(Object.values(STARTERS).map((f) => f().then(starterOf)));
-  const order = ['postgres-safe', 'stripe-refunds', 'github-read-mostly', 'slack-post-with-approval', 'gmail-drafts-only', 'default-deny'];
+  const order = ['postgres-safe', 'stripe-refunds', 'github-read-mostly', 'slack-post-with-approval', 'gmail-drafts-only', 'notion-pages', 'default-deny'];
   return out.sort((a, b) => (order.indexOf(a.name) + 99) % 99 - (order.indexOf(b.name) + 99) % 99);
 }
 

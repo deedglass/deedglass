@@ -1,0 +1,39 @@
+# sdk-demo · the @deedglass/sdk examples' policy (S31)
+#
+# Small refunds run, refunds over $50.00 wait for a human, and deleting a
+# customer never runs. The fake connector's tools run freely, so the examples
+# work without a real service. Push and activate it, then run the examples:
+#   deedglass policy push examples/policies/sdk-demo.yaml
+#   deedglass policy activate sdk-demo --version 1 --mode enforce --reason "SDK examples" --yes
+#   make sdk-examples
+# Check a change with:
+#   deedglass policy test examples/policies/sdk-demo.yaml
+deedglass: policy/v1
+name: sdk-demo
+description: Refunds up to $50.00 run, larger ones wait for a human, and agents never delete customers.
+
+defaults:
+  decision: deny
+  reason: No rule allows this action. Add a rule in Console › Policies to allow it.
+  verify: L0
+
+rules:   # order matters
+  - id: no-deletes
+    match: { tool: billing.delete_customer }
+    decision: deny
+    reason: Agents never delete customers.
+  - id: large-refunds-need-approval
+    match: { tool: billing.refund_customer }
+    when: '!has(args.amount) || type(args.amount) != int || args.amount > 5000'
+    decision: require_approval
+    reason: Refunds over $50.00 wait for a human.
+    approval: { approvers: [role:admin], required: 1, expires_in: 1h }
+  - id: small-refunds
+    match: { tool: billing.refund_customer }
+    decision: allow
+  - id: reports
+    match: { tool: billing.send_report }
+    decision: allow
+  - id: fake-tools
+    match: { tool: "fake.*" }
+    decision: allow

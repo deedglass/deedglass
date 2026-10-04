@@ -1,0 +1,48 @@
+# claude-agent-local · a policy for the Claude Agent SDK hooks (S31)
+#
+# deedglassHooks records every tool the SDK routes through hooks as
+# claude.<tool>: claude.Bash, claude.Write, claude.mcp__github__create_issue.
+# Reads run. Destructive shell commands and writes to .env files never run.
+# Writes outside /workspace/ and every MCP tool wait for a human. When this
+# policy allows a call, the SDK's own permission prompts still apply.
+#   deedglass policy test examples/policies/claude-agent-local.yaml
+deedglass: policy/v1
+name: claude-agent-local
+description: Reads run; rm -rf /, curl to a shell, force pushes and .env writes never run; writes outside /workspace/ and MCP tools wait for a human.
+
+defaults:
+  decision: deny
+  reason: No rule allows this tool. Add a rule in Console › Policies to allow it.
+  verify: L0
+
+rules:   # order matters
+  - id: destructive-shell
+    match: { tool: claude.Bash }
+    when: 'has(args.command) && type(args.command) == string && args.command.matches("rm\\s+-[a-zA-Z]*r[a-zA-Z]*f[a-zA-Z]*\\s+/(\\s|$|\\*)|rm\\s+-[a-zA-Z]*f[a-zA-Z]*r[a-zA-Z]*\\s+/(\\s|$|\\*)|curl[^|;]*\\|\\s*(ba|z)?sh|git\\s+push\\s+(.*\\s)?(--force|-f)(\\s|$)")'
+    decision: deny
+    reason: Agents never run rm -rf /, pipe curl into a shell or force-push. Run it yourself if you mean it.
+  - id: no-env-files
+    match: { tool: [claude.Write, claude.Edit] }
+    when: 'has(args.file_path) && type(args.file_path) == string && args.file_path.matches("(^|/)\\.env(\\.[A-Za-z0-9_-]+)?$")'
+    decision: deny
+    reason: Agents never write .env files. Edit secrets yourself.
+  - id: reads
+    match: { tool: [claude.Read, claude.Glob, claude.Grep] }
+    decision: allow
+  - id: mcp-tools-need-approval
+    match: { tool: "claude.mcp__*" }
+    decision: require_approval
+    reason: MCP tools wait for a human. An admin can approve in Console › Approvals.
+    approval: { approvers: [role:admin], required: 1, expires_in: 1h }
+  - id: writes-outside-workspace-need-approval
+    match: { tool: [claude.Write, claude.Edit] }
+    when: '!has(args.file_path) || type(args.file_path) != string || !args.file_path.startsWith("/workspace/")'
+    decision: require_approval
+    reason: Writes outside /workspace/ wait for a human. An admin can approve in Console › Approvals.
+    approval: { approvers: [role:admin], required: 1, expires_in: 1h }
+  - id: workspace-writes
+    match: { tool: [claude.Write, claude.Edit] }
+    decision: allow
+  - id: shell
+    match: { tool: claude.Bash }
+    decision: allow

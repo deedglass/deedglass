@@ -1,0 +1,13 @@
+# The Notion connector (S31). Create it, store an internal integration token, test it:
+#   deedglass connector create --config examples/connectors/notion.yaml
+#   deedglass connector credentials set notion --from-env NOTION_TOKEN
+#   deedglass connector test notion
+# Share each parent page with the integration first (the page › ••• › Connections).
+type: notion
+name: notion
+description: Agent notes under the Acme team pages in Notion.
+config:
+  parents:                       # the hard boundary: pages are created only under these
+    - 11111111-2222-4333-8444-555555555555
+  max_blocks: 50                 # the most paragraphs one call may write
+  api_version: "2026-03-11"      # sent as Notion-Version on every request

@@ -5,6 +5,7 @@ fake       Fake (dev only)     L0         4             dev only
 github     GitHub              L0 L1      14
 gmail      Gmail               L0 L1      5             drafts only
 mcp_http   Remote MCP server   L0         from server
+notion     Notion              L0 L1      3
 postgres   PostgreSQL          L0 L1 L2   built-in
 rest       REST API            L0 L1      from config
 slack      Slack               L0 L1      4

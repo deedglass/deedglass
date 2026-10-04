@@ -1,0 +1,31 @@
+# notion-pages · a Deedglass starter policy
+#
+# Agents search Notion and write pages and paragraphs under the parent pages the
+# connector lists. Every write is read back from Notion at L1. Deleting, moving or
+# archiving pages stays with people.
+#
+# The connector itself refuses any page outside its parents, so these rules
+# decide what may run inside that boundary. A tool none of these rules name falls
+# to the default and is refused. Then check your change:
+#   deedglass policy test examples/policies/notion-pages.yaml
+deedglass: policy/v1
+name: notion-pages
+description: Agents search Notion and write pages under the listed parents, read back at L1.
+
+defaults:
+  decision: deny
+  reason: No rule allows this action. Add a rule in Console › Policies to allow it.
+  verify: L0
+
+rules:
+  - id: block-other-destructive
+    match: { side_effect: destructive }
+    decision: deny
+    reason: Deleting, moving and archiving Notion pages stays with people. Do it in Notion, or ask an admin to add a rule in Console › Policies.
+  - id: writes
+    match: { tool: [notion.create_page, notion.append_block] }
+    decision: allow
+    verify: L1
+  - id: reads
+    match: { tool: [notion.search] }
+    decision: allow

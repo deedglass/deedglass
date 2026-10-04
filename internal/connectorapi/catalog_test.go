@@ -65,7 +65,7 @@ func TestCatalogRoutes(t *testing.T) {
 	for _, x := range l.Data {
 		order = append(order, x.Title)
 	}
-	if strings.Join(order, ",") != "GitHub,Gmail,PostgreSQL,REST API,Remote MCP server,Slack,Stripe" {
+	if strings.Join(order, ",") != "GitHub,Gmail,Notion,PostgreSQL,REST API,Remote MCP server,Slack,Stripe" {
 		t.Errorf("order %v", order)
 	}
 	// A second server (a restart) gives the same ETag; If-None-Match answers 304.
@@ -88,7 +88,7 @@ func TestCatalogRoutes(t *testing.T) {
 	if r5, _ := get(t, ts.URL+"/v1/connector-types/stripe", map[string]string{"If-None-Match": r4.Header.Get("ETag")}); r5.StatusCode != 304 {
 		t.Errorf("type 304: %d", r5.StatusCode)
 	}
-	if r6, b6 := get(t, ts.URL+"/v1/connector-types/notion", nil); r6.StatusCode != 404 || !strings.Contains(string(b6), `"not_found"`) {
+	if r6, b6 := get(t, ts.URL+"/v1/connector-types/jira", nil); r6.StatusCode != 404 || !strings.Contains(string(b6), `"not_found"`) {
 		t.Errorf("unknown: %d %s", r6.StatusCode, b6)
 	}
 	tsAgent := catalogServer(t, ps["agent key"])

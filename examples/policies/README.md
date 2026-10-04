@@ -1,6 +1,6 @@
 # Starter policies
 
-Six complete policies to start from. Each one is a single readable file with a plain-English header, a cases file that covers every rule, and reasons that tell the agent what to do next. They lint with zero warnings under `--voice`.
+Nine complete policies to start from. Each one is a single readable file with a plain-English header, a cases file that covers every rule, and reasons that tell the agent what to do next. They lint with zero warnings under `--voice`.
 
 | File | What it is for | Rules | Cases |
 |---|---|---|---|
@@ -9,9 +9,12 @@ Six complete policies to start from. Each one is a single readable file with a p
 | [`stripe-refunds.yaml`](stripe-refunds.yaml) | Refunds up to $50.00 run; larger ones wait for a human. All agents together refund at most $500.00 a day. Cancellations and invoice items wait for a human; deletes never run. | 8 (and 1 budget) | 21 |
 | [`github-read-mostly.yaml`](github-read-mostly.yaml) | Reads, issues, comments and feature branches run. Commits and pull requests to main, master or a release branch wait for a human. Merges and branch deletes never run. | 10 | 22 |
 | [`gmail-drafts-only.yaml`](gmail-drafts-only.yaml) | Agents read mail and write drafts. A person sends every email. | 4 | 14 |
+| [`notion-pages.yaml`](notion-pages.yaml) | Agents search Notion and write pages and paragraphs under the listed parent pages, read back at L1. Deleting, moving and archiving stay with people. | 3 | 7 |
+| [`sdk-demo.yaml`](sdk-demo.yaml) | The `@deedglass/sdk` examples: refunds up to $50.00 run, larger ones wait for a human, and agents never delete customers. | 5 | 8 |
+| [`claude-agent-local.yaml`](claude-agent-local.yaml) | The Claude Agent SDK hooks: reads run; `rm -rf /`, curl into a shell, force pushes and `.env` writes never run; writes outside `/workspace/` and MCP tools wait for a human. | 7 | 15 |
 | [`slack-post-with-approval.yaml`](slack-post-with-approval.yaml) | Agents post on their own in allow-listed channels. Everywhere else waits for a human, and so does any message that notifies a whole channel. | 5 | 16 |
 
-Each `<name>.yaml` has its cases in `<name>.cases.yaml` next to it. The GitHub, Slack, Stripe and Gmail tool names follow the v1 connector plans; the real connectors arrive in S29 and S30, and the names may change then.
+Each `<name>.yaml` has its cases in `<name>.cases.yaml` next to it. The GitHub, Slack, Stripe, Gmail and Notion tool names are the real connectors' (S29–S31).
 
 ## Test them
 

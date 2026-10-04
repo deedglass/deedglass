@@ -36,3 +36,9 @@ web/.astro/
 web/test-results/
 web/playwright-report/
 web/e2e/.auth/
+
+# S31: the TypeScript SDK
+sdk/typescript/node_modules/
+sdk/typescript/dist/
+sdk/typescript/coverage/
+examples/ts/node_modules/

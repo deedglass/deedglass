@@ -542,7 +542,21 @@ it refuses rather than guess:
   sending; Deedglass enforces drafts only in code (no tool, an endpoint allow-list, a source test).
 - **Google apps in Testing need re-authorization every 7 days.**
 - **No attachments, labels or deletes** in Gmail, and HTML bodies are stored, never rendered.
-- **Notion isn't shipped yet** (carried over from S30).
+- **Notion writes plain paragraphs under the listed parent pages only** (S31). No databases, data
+  source rows, files, comments, edits or deletes; the read-back compares plain text, not rich
+  formatting; Notion has no idempotency key, so a create whose answer was lost is UNVERIFIABLE and is
+  never sent again.
+
+## The TypeScript SDK (S31)
+
+- **`wrapTool` decides whether your code runs; it doesn't sandbox what it does.** Results your code
+  reports are L0 (edge-reported); independent L1 and L2 checks need a Deedglass connector.
+- **The Claude Agent SDK hooks see only the tools the SDK routes through hooks.**
+- **No framework call ids reach Deedglass:** the 2026-10-01 API's `context` takes only the client and
+  the transport.
+- **Agent keys are secrets, so the client refuses to start in a browser page** unless told otherwise;
+  short-lived browser tokens are a v2 item.
+- **Offline verification checks seals and the chain, not whether the action was wise.**
 
 ## What this page does not do
 

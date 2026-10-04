@@ -1,0 +1,32 @@
+# Test cases for sdk-demo.yaml. Run them with:
+#   deedglass policy test examples/policies/sdk-demo.yaml
+policy: sdk-demo.yaml
+defaults:
+  agent: { name: support-bot, labels: { env: dev } }
+  org: { timezone: UTC }
+  time: 2026-10-10T10:00:00Z
+cases:
+  - name: a $20.00 refund runs
+    input: { tool: billing.refund_customer, args: { customer: cus_123, amount: 2000 } }
+    expect: { decision: allow, rule: small-refunds }
+  - name: exactly $50.00 runs
+    input: { tool: billing.refund_customer, args: { customer: cus_123, amount: 5000 } }
+    expect: { decision: allow, rule: small-refunds }
+  - name: a $120.00 refund waits for a human
+    input: { tool: billing.refund_customer, args: { customer: cus_123, amount: 12000 } }
+    expect: { decision: require_approval, rule: large-refunds-need-approval, reason_contains: wait for a human }
+  - name: a refund without an amount waits for a human
+    input: { tool: billing.refund_customer, args: { customer: cus_123 } }
+    expect: { decision: require_approval, rule: large-refunds-need-approval }
+  - name: deleting a customer never runs
+    input: { tool: billing.delete_customer, args: { customer: cus_123 } }
+    expect: { decision: deny, rule: no-deletes, code: policy_denied, reason_contains: never delete customers }
+  - name: sending a report runs
+    input: { tool: billing.send_report, args: { to: ops@example.test } }
+    expect: { decision: allow, rule: reports }
+  - name: the fake echo runs
+    input: { tool: fake.echo, args: { text: hi } }
+    expect: { decision: allow, rule: fake-tools }
+  - name: anything else falls to the default
+    input: { tool: billing.void_invoice, args: { invoice: in_1 } }
+    expect: { decision: deny, code: policy_denied, reason_contains: No rule allows this action }

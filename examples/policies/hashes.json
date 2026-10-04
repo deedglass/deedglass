@@ -1,8 +1,11 @@
 {
+  "claude-agent-local": "sha256:bd66fc6e0d2e2f1a2fc835ea9e4c4d6128c0dbded8100e7b98024f1284d290f6",
   "default-deny": "sha256:2620833a1d6c796de63d8b6cc065024d3d7c90bb5dd7eb9054c1e41602c5d142",
   "github-read-mostly": "sha256:932ac932520091f587f54ff8ae6b5663006d27e6c64446039d6febcec27fbe1e",
   "gmail-drafts-only": "sha256:6c59276a5b51ff126f6a65334d66486600f1f4502e7b69a6342929a90b573d28",
+  "notion-pages": "sha256:8914c48dcb2f378f199fa5e471b97e15962bcc89dc01494661b0a4039a39a97e",
   "postgres-safe": "sha256:01aeae9dbb518cf6d5ead7ed0b042bc0ed4700856c123694954de3b8369a76f6",
+  "sdk-demo": "sha256:0fa6f633d197c128e55958c0b2f8bc7ac2b535b283c8cb3306ac5159db73d46e",
   "slack-post-with-approval": "sha256:cc1239d7b83a84332d209cb5974f3d88fcaebf7048ffce9ab65ae5d55beacb1a",
   "stripe-refunds": "sha256:0f8cfebdd4797577b7f1c8f50d5a749b5fcd1f863cb81eada4bd0d2c7ab98948"
 }

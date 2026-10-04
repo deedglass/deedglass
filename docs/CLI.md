@@ -875,13 +875,16 @@ needs a cases file. The cases format, `expect` keys and coverage rules are in
 
 ```
 $ deedglass policy test --dir examples/policies --require-coverage --voice
+✓ claude-agent-local         15 cases · 7 of 7 rules
 ✓ default-deny               13 cases · default and 1 budget covered
-✓ github-read-mostly         22 cases · 10 of 10 rules
-✓ gmail-drafts-only          14 cases · 4 of 4 rules
-✓ postgres-safe              28 cases · 12 of 12 rules
+✓ github-read-mostly         23 cases · 11 of 11 rules
+✓ gmail-drafts-only          18 cases · 4 of 4 rules
+✓ notion-pages               7 cases · 3 of 3 rules
+✓ postgres-safe              29 cases · 12 of 12 rules
+✓ sdk-demo                   8 cases · 5 of 5 rules
 ✓ slack-post-with-approval   16 cases · 5 of 5 rules
-✓ stripe-refunds             21 cases · 8 of 8 rules
-✓ 114 cases passed · 6 policies · every rule covered · 0.0 s
+✓ stripe-refunds             27 cases · 12 of 12 rules
+✓ 156 cases passed · 9 policies · every rule covered · 0.0 s
 
 $ deedglass policy test cmd/deedglass/testdata/policytest/fail.cases.yaml
 ✕ a comment does not hide DROP · fail.cases.yaml:7

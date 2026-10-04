@@ -11,7 +11,7 @@ LDFLAGS  := -s -w -X $(BI).Version=$(VERSION) -X $(BI).Commit=$(COMMIT) -X $(BI)
 .PHONY: web-install web-tokens web-build web-test web-e2e web-lighthouse web-dev build-only bench-undo all help ci build test test-short vet fmt fmt-check tidy-check testdata-check rename-guard banned-words nocgo \
 	integration matrix fuzz bench bench-store bench-deed cover clean \
 	dev dev-down dev-reset dev-logs run docker bench-http bench-verify \
-	web-verify-install web-verify-test web-verify-build web-verify-serve gencopy genmark bench-mark bench-ledger bench-stop bench-intents bench-gate bench-witness policy-test \
+	web-verify-install web-verify-test sdk-ts sdk-ts-it sdk-sync-verify sdk-runtime sdk-examples web-verify-build web-verify-serve gencopy genmark bench-mark bench-ledger bench-stop bench-intents bench-gate bench-witness policy-test \
 	fuzz-policy fuzz-policy-short bench-policy bench-eval mcp-it bench-mcp \
 	demo-up demo-down demo-reset demo-status demo-snippet demo-psql demo-follow demo-verify demo-check demo-smoke bench-gateway \
 	demo-trigger-on demo-trigger-off demo-order-reset demo-hero demo-hero-check demo-diff bench-l2 bench-approvals bench-slack \
@@ -22,7 +22,7 @@ all: ci
 help: ## list the targets
 	@grep -E '^[a-z][a-z-]*:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-15s %s\n", $$1, $$2}'
 
-ci: fmt-check tidy-check vet test fuzz-policy-short policy-test testdata-check rename-guard banned-words nocgo web-verify-test web-test ## everything the lint-unit, web-verify and web CI jobs run
+ci: fmt-check tidy-check vet test fuzz-policy-short policy-test testdata-check rename-guard banned-words nocgo web-verify-test web-test sdk-ts ## everything the lint-unit, web-verify and web CI jobs run
 
 build: ## build bin/deedglass with version ldflags (with Node 24 present, the real Console first: make web-build)
 	@if command -v node >/dev/null 2>&1; then $(MAKE) --no-print-directory web-build; else echo "build: Node isn't installed, so the binary carries the Console placeholder (dev only; prod refuses it)"; fi
@@ -58,8 +58,8 @@ banned-words: ## (ci) banned words in files and commit messages
 nocgo: ## (ci) the binary builds without cgo
 	CGO_ENABLED=0 $(GO) build -o /dev/null ./cmd/deedglass
 
-integration: ## throwaway PG cluster (Homebrew, else Docker): sql/ smoke, control-plane migrations, Go integration suites; DEEDGLASS_IT_PG=18|17|16 DEEDGLASS_IT_MODE=brew|docker
-	scripts/integration_local.sh
+integration: ## throwaway PG cluster (Homebrew, else Docker): sql/ smoke, control-plane migrations, Go integration suites (S31: with sdk-ts-it's TestSDKTypeScriptLive when sdk/typescript is installed); DEEDGLASS_IT_PG=18|17|16 DEEDGLASS_IT_MODE=brew|docker
+	DEEDGLASS_IT_SDK_TS=1 scripts/integration_local.sh
 
 mcp-it: ## S14: the real @modelcontextprotocol/server-filesystem via npx behind deedglass mcp wrap, on a throwaway PG 18 (needs Node.js; skips without it)
 	DEEDGLASS_IT_NODE=1 DEEDGLASS_IT_PKGS=./cmd/deedglass/ DEEDGLASS_IT_GOFLAGS="-v -run TestMCPWrap" scripts/integration_local.sh
@@ -305,6 +305,29 @@ web-verify-build: $(WEB_VERIFY)/node_modules/.package-lock.json ## compile the p
 
 web-verify-serve: web-verify-build ## the verify page on http://127.0.0.1:5178 (no dependency server)
 	node $(WEB_VERIFY)/scripts/serve.mjs
+
+# --- the TypeScript SDK (S31): @deedglass/sdk, zero runtime dependencies; dev tools pinned in sdk/typescript/package-lock.json (ADR-062) ---
+SDK_TS := sdk/typescript
+
+$(SDK_TS)/node_modules/.package-lock.json: $(SDK_TS)/package-lock.json
+	cd $(SDK_TS) && npm ci --ignore-scripts --no-audit --no-fund
+
+sdk-ts: $(SDK_TS)/node_modules/.package-lock.json ## (ci) S31: the verify copy is current, tsc, Vitest (transport, wrapTool, intents and deed vectors, parity 500/500, the four adapters on their real frameworks, coverage), build, deps, pack golden, publint, attw, size budgets
+	cd $(SDK_TS) && node scripts/sync-verify.mjs --check && npx tsc -p . --noEmit && npx vitest run --project unit --coverage && npm run build --silent \
+	  && node scripts/deps-check.mjs && node scripts/pack-check.mjs && npx publint --strict && npx attw --pack . --profile node16 --ignore-rules cjs-resolves-to-esm --quiet && node scripts/size.mjs
+
+sdk-ts-it: $(SDK_TS)/node_modules/.package-lock.json ## S31: the SDK against a real serve on a throwaway PG 18 (act, denial, pending → approve, wrapTool, intents conformance, deeds verify)
+	DEEDGLASS_IT_SDK_TS=1 DEEDGLASS_IT_PKGS=./cmd/deedglass/ DEEDGLASS_IT_GOFLAGS="-v -run ^TestSDKTypeScriptLive$$" scripts/integration_local.sh
+
+sdk-sync-verify: ## S31: fail when sdk/typescript/src/verify drifted from web/verify/src (npm run sync-verify there to copy)
+	node $(SDK_TS)/scripts/sync-verify.mjs --check
+
+sdk-runtime: $(SDK_TS)/node_modules/.package-lock.json ## S31: the packed SDK on Node 22.12, 24 and 26 (Docker when not local), Bun and Deno when installed
+	cd $(SDK_TS) && npm run build --silent && scripts/runtime-matrix.sh
+
+sdk-examples: $(SDK_TS)/node_modules/.package-lock.json ## S31: every examples/ts example in scripted mode against make demo-up (sdk-demo.yaml active; DEEDGLASS_API_KEY an agent key)
+	cd $(SDK_TS) && npm run build --silent
+	scripts/sdk_examples.sh
 
 # --- the Acme demo stack (S15; examples/demo/README.md) ---
 
