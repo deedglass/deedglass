@@ -85,8 +85,13 @@ const (
 	AdminAnomalyResolved         = "anomaly.resolved"
 	AdminInsightsSettingsChanged = "insights.settings_changed"
 
-	// Planned, each added by its session with the exact spelling below:
-	//   S28  suggestion.accepted suggestion.rejected
+	// S28: suggestions. A person accepted a suggestion (target {suggestion, sug_…}; data:
+	// suggestion, kind, generator, fingerprint, evidence_digest, replay_result_digest, policy_id,
+	// version_id, version_hash, replaced_shadow_version_id; the person's reason in admin.reason;
+	// policy.activated (shadow) is sealed just before it), or rejected one (data: suggestion, kind,
+	// generator, fingerprint, evidence_digest). Numbers and ids only, never the diff or the YAML.
+	AdminSuggestionAccepted = "suggestion.accepted"
+	AdminSuggestionRejected = "suggestion.rejected"
 )
 
 // AdminActions lists every admin action this build records. Tests check each name against the
@@ -104,6 +109,7 @@ var AdminActions = []string{
 	AdminDecoderSlotCreated, AdminDecoderSlotDropped,
 	AdminApprovalCountersigned, AdminApprovalDecided, AdminWebhookCreated, AdminWebhookDeleted, AdminWebhookDisabled,
 	AdminAnomalyResolved, AdminInsightsSettingsChanged,
+	AdminSuggestionAccepted, AdminSuggestionRejected,
 }
 
 // AdminEventActions are admin events recorded without a deed (AppendAdminEvent): security events

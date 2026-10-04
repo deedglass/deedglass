@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"sync"
 	"unicode"
 	"unicode/utf8"
 )
@@ -214,4 +215,30 @@ func voice(src *source, d *diags, p *draft) {
 	if n := p.defaultsReasonNode; n != nil {
 		check(p.defaults.Reason, "defaults.reason", "", n.Line, n.Column)
 	}
+}
+
+var bannedPublic struct {
+	once sync.Once
+	re   *regexp.Regexp
+}
+
+// BannedWordIn returns the first banned word or phrase in s (scripts/banned_words.txt, matched as
+// CI matches it), or "". Safe for concurrent use; S28's phrasing validator calls it.
+func BannedWordIn(s string) string {
+	bannedPublic.once.Do(func() {
+		var alts []string
+		for _, l := range strings.Split(bannedWords, "\n") {
+			l = strings.TrimSpace(l)
+			if l == "" || strings.HasPrefix(l, "#") {
+				continue
+			}
+			l = strings.TrimPrefix(l, "@until-public ")
+			alts = append(alts, strings.ReplaceAll(regexp.QuoteMeta(l), `\ `, `[\s-]+`))
+		}
+		bannedPublic.re = regexp.MustCompile(`(?i)(?:^|[^A-Za-z0-9_])(` + strings.Join(alts, "|") + `)(?:$|[^A-Za-z0-9_])`)
+	})
+	if m := bannedPublic.re.FindStringSubmatch(s); m != nil {
+		return m[1]
+	}
+	return ""
 }

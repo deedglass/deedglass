@@ -173,6 +173,16 @@ Each incident exists to make one check fire, in Insights or in S28's suggestions
 | `new_user_refs` | `count` on-behalf-of refs the agent never used. The calls already in that hour take the new refs first, and only the shortfall is added | the `user_ref_burst` anomaly. Taking over the hour's usual calls keeps the burst from also being a `volume_spike` |
 | `budget_pressure` | refunds on each listed day, inside the agent's hours, until the budget's counter for the org-local calendar day that holds most of that day's span reaches `target` × its `max_spend`, counted the way the Gate reserves it (`policy.Evaluate`'s reservations against the enforce policy) | the stats' `budgets` row (`days_over_80`) and S28's `budget.near_limit` suggestion |
 
+**The approvals that make the loosen case (S28).** The default scenario sets ops-agent's
+`approvals` to `approve: 1` (with a wait median of 20 minutes and a p95 of 2 hours): people approve
+every order update it sends to approval, and the few whose wait runs past the rule's 4-hour expiry
+expire. That is the history S28's `loosen.approval_rate` generator looks for (at least 30 approvals
+in 14 days and no denial), so seed 7 yields a loosen suggestion for `approve-order-updates`
+([SUGGESTIONS.md](SUGGESTIONS.md#a-worked-example-seed-7)). Before S28 the fraction was below 1, and
+seed 7 had one denied order update (397 approved, 1 denied), which by design blocks any loosening.
+With `approve: 1` seed 7 has 398 approved, 5 expired, 8 still pending at the window's end, and none
+denied.
+
 The anomaly thresholds are in [INSIGHTS.md](INSIGHTS.md#the-six-kinds). After a run, `deedglass insights detect --backfill 7d --org acme-sim` judges every past hour as if it were now, so the anomalies appear at their virtual times.
 
 ## The three seams
@@ -226,13 +236,13 @@ $ deedglass dev simulate --days 7 --seed 7
   ✕     3 mismatch      L2 · postgres.execute 3
   ○   188 unverifiable  …
   ·   100 failed        upstream_error 100
-  ◐    14 pending       waiting for approval
-  approvals  418 requested · 401 approved · 0 denied · 3 expired · median wait 21 min
+  ◐     8 pending       waiting for approval
+  approvals  411 requested · 398 approved · 0 denied · 5 expired · median wait 19 min
   incidents  ops-agent 3 mismatches (day 5) · ops-agent first github.merge_pr (day 5) · growth-agent spike ×9 (day 6) · growth-agent 12 off-hours calls (day 6) · support-bot 25 new users (day 7) · support-bot budget pressure (days 2, 4, 6)
   next       deedglass insights detect --backfill 7d --org acme-sim   ·   deedglass insights stats --window 7d
 ```
 
-The numbers are illustrative; a run prints its own, and the same seed prints the same counts. `deeds sealed` counts every deed in the org's chain: the sealed actions and the admin deeds (the org, its members, the policy activations, the approval votes). An action still waiting for approval has no deed yet. `--quiet` prints only the `✓` line. `--json` prints a `simulation` object: `org`, `slug`, `appended`, `seed`, `window`, `planned`, `plan_digest`, `actions`, `deeds`, `chain_intact`, `agents`, `policy`, `enforce_version`, `shadow_version`, `counts`, `approvals`, `elapsed_ms`.
+The approvals line follows seed 7 with the S28 scenario; the other numbers are illustrative. A run prints its own, and the same seed prints the same counts. `deeds sealed` counts every deed in the org's chain: the sealed actions and the admin deeds (the org, its members, the policy activations, the approval votes). An action still waiting for approval has no deed yet. `--quiet` prints only the `✓` line. `--json` prints a `simulation` object: `org`, `slug`, `appended`, `seed`, `window`, `planned`, `plan_digest`, `actions`, `deeds`, `chain_intact`, `agents`, `policy`, `enforce_version`, `shadow_version`, `counts`, `approvals`, `elapsed_ms`.
 
 | Exit | When |
 |---|---|

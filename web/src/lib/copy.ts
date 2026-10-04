@@ -134,7 +134,7 @@ export const copy = {
     agents: { title: 'Agents', lede: 'The agents that may call tools in this org, and their keys.' },
     policies: { title: 'Policies', lede: 'The rules the Gate applies to every call, as signed versions.', empty: 'No policies beyond default-deny yet. Start from a starter policy and test it before you activate it.' },
     connectors: { title: 'Connectors', lede: 'The tools and databases agents reach through the Gate.' },
-    insights: { title: 'Insights', lede: 'Patterns in what your agents did, and suggestions a person approves.', empty: 'Insights appear after about 50 actions, and every suggestion waits for your approval.' },
+    insights: { title: 'Insights', lede: "Suggestions from your agents' traffic. Nothing changes until someone on your team accepts it." },
     deeds: { title: 'Deeds', lede: 'The sealed record of every action and admin change, in chain order.', empty: 'No deeds yet. Every action and admin change is sealed here as it happens.' },
     settings: { title: 'Settings', lede: 'Your org, its people, its keys and how Deedglass reaches you.' },
     detail: { loading: 'Loading…', backTo: 'Back to {screen}' },
@@ -150,6 +150,8 @@ export const copy = {
     permissionTitle: "You can't see this yet",
     permissionBody: 'This needs the {role} role in {org}. Ask an owner to change your role.',
     viewerBanner: "You're a Viewer in {org}. You can see everything; changes need an Admin.",
+    // S28: internal/learn/copy.go SimulatedBanner, word for word (test/insights.test.ts pins it).
+    simulatedBanner: 'Simulated history. These actions came from deedglass dev simulate. Their deeds were sealed when the simulation ran, and their witness method is simulated.',
     offlineBanner: 'Offline · Deedglass will reconnect when your network is back.',
     sessionEnded: 'Your session ended. Sign in again to continue.',
     signIn: 'Sign in',

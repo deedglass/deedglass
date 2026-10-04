@@ -37,6 +37,9 @@
 # The From address of sign-in and invite emails. Required with the Resend API key (set that in the
 # environment, never here).
 # mail_from: "Deedglass <signin@example.com>"
+# The Claude model that rewords Insights suggestions, when an org turns phrasing on and
+# DEEDGLASS_ANTHROPIC_API_KEY is set (S28).
+# anthropic_model: claude-sonnet-5-5
 
 # Proxies whose X-Forwarded-For is believed, as CIDRs.
 # trusted_proxies: [10.0.0.0/8]

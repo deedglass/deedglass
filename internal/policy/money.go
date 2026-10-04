@@ -249,3 +249,7 @@ func moneyLetters(s string) bool {
 	}
 	return true
 }
+
+// FormatMoney writes minor units for people: "$4,000.00", "¥500", "1,250.00 chf" (S28's
+// suggestion copy uses the same form as the budget messages).
+func FormatMoney(amount int64, currency string) string { return formatMoney(amount, currency) }

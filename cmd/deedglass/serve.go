@@ -260,6 +260,7 @@ func runServe(ctx context.Context, e *Env, args []string) error {
 	// 5g. Insights (S27): the store, the opt-in anomaly facts the Gate reads (dropped on NOTIFY
 	// deedglass_learn), replay jobs and anomaly detection.
 	ins := newInsights(db, led, log)
+	ins.wireSuggestions(cfg, pol, queue, log) // S28: suggestions, the digest and their schedule
 	keys.Listener().Listen(store.LearnChannel, ins.facts.Invalidate, func() { ins.facts.Invalidate("") })
 	gp, err := newGate(cfg, db, led, pol, keys, log, cw.reg, pool, aps, undoapi.Resolver{Reg: cw.reg, Planner: planner, DB: db, Log: log}, ins.facts)
 	if err != nil {
@@ -317,10 +318,11 @@ func runServe(ctx context.Context, e *Env, args []string) error {
 		defer func() { stopDec(); <-decDone }()
 	}
 	ictx, stopIns := context.WithCancel(context.WithoutCancel(ctx))
-	insDone := make(chan struct{}, 2)
+	insDone := make(chan struct{}, 3)
 	go func() { _ = ins.runner.Run(ictx); insDone <- struct{}{} }()
 	go func() { _ = ins.detector.Run(ictx); insDone <- struct{}{} }()
-	defer func() { stopIns(); <-insDone; <-insDone }()
+	go func() { _ = ins.schedule.Run(ictx); insDone <- struct{}{} }()
+	defer func() { stopIns(); <-insDone; <-insDone; <-insDone; ins.sugSvc.Suggester.WaitPhrasing() }()
 	defer func() {
 		stopWorker()
 		<-workerDone
@@ -505,6 +507,12 @@ func serveRoutes(api *httpx.Server, db *store.DB, ms []migrate.Migration, sk *se
 		insSvc = lw.ins.svc
 	}
 	routes = append(routes, learn.Routes(insSvc)...)
+	// S28: suggestions (generate, accept into shadow, reject); a nil service answers 503.
+	var sugSvc *learn.SuggestionService
+	if lw.ins != nil {
+		sugSvc = lw.ins.sugSvc
+	}
+	routes = append(routes, learn.SuggestionRoutes(sugSvc)...)
 	// S12: policies, versions, activation deeds, lint, the dry run and the test runner.
 	return append(routes, policyapi.Routes(pol.svc, policyapi.Options{})...)
 }
@@ -525,6 +533,10 @@ type insights struct {
 	runner   *learn.Runner
 	detector *learn.Detector
 	svc      *learn.Service
+	// S28
+	sugSvc   *learn.SuggestionService
+	digest   *learn.Digester
+	schedule *learn.Scheduler
 }
 
 func newInsights(db *store.DB, led *ledger.Ledger, log *slog.Logger) *insights {

@@ -283,8 +283,14 @@ func Rows(sk ids.SealKeyID) []Row {
 			}
 			return err
 		}},
-		{"suggestions", ex(`INSERT INTO deedglass.suggestions (id, org_id, kind, title, replay_job_id) VALUES ($1, $2, 'advisory', 'Look at this', $3)`,
-			func(o *Org) []any { return []any{ids.New[ids.SuggestionKind](), o.ID, o.Replay} })},
+		// S28's 0025: a suggestion names its generator, a fingerprint (unique while open) and the base version.
+		{"suggestions", ex(`INSERT INTO deedglass.suggestions (id, org_id, kind, title, replay_job_id, generator, generator_version, fingerprint,
+		      policy_id, base_version_id, base_version_hash, evidence_digest, window_from, window_to)
+		    VALUES ($1, $2, 'advisory', 'Look at this', $3, 'advisory.deny_heavy', '1', $4, $5, $6, $4, $4,
+		      pg_catalog.now() - interval '14 days', pg_catalog.now())`,
+			func(o *Org) []any {
+				return []any{ids.New[ids.SuggestionKind](), o.ID, o.Replay, fmt.Sprintf("sha256:%x", rnd(32)), o.Policy, o.Version}
+			})},
 		{"anomalies", ex(`INSERT INTO deedglass.anomalies (id, org_id, agent_id, kind, severity, window_start, window_end, score, episode_key,
 		      active_until, detector_version)
 		    VALUES ($1, $2, $3, 'volume_spike', 'info', pg_catalog.now() - interval '1 hour', pg_catalog.now(), 3.5, $4,

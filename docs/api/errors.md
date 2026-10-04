@@ -1591,6 +1591,57 @@ look again with `deedglass decoder status --connector <name>`.
 }
 ```
 
+## suggestion_stale
+
+**409 · invalid_request_error**
+
+**When it happens.** You accepted a suggestion, but the policy it was written for is no longer the one enforced: someone activated another version since. Deedglass marks the suggestion `superseded` (`stale_reason: base_changed`) and changes nothing, because its diff and replay describe a policy that is no longer live.
+
+**What to do.** Generate suggestions again (`POST /v1/suggestions/generate`, or `deedglass insights suggestions generate`). If the evidence still holds, a new suggestion is written against the version enforced now.
+
+```json
+{
+  "type": "invalid_request_error",
+  "code": "suggestion_stale",
+  "message": "acme-sim v2 has been enforced since this suggestion was written for v1. Generate suggestions again: POST /v1/suggestions/generate.",
+  "param": null
+}
+```
+
+## shadow_slot_taken
+
+**409 · invalid_request_error**
+
+**When it happens.** An org runs at most one policy version in shadow. Accepting a suggestion creates a new version and runs it in shadow, and another version is already running there. The suggestion goes back to `open`; nothing changed.
+
+**What to do.** Promote or deactivate the running shadow first, or accept again with `"replace_shadow": true` (`--replace-shadow` in the CLI) to replace it. Replacing seals a deed that names the version it replaced.
+
+```json
+{
+  "type": "invalid_request_error",
+  "code": "shadow_slot_taken",
+  "message": "acme-sim v2 is already running in shadow. Promote or clear it first, or accept with replace_shadow: true to replace it.",
+  "param": "replace_shadow"
+}
+```
+
+## suggestion_decided
+
+**409 · invalid_request_error**
+
+**When it happens.** The suggestion was already accepted, rejected or superseded, or another person's accept of it is still running. Exactly one decision is recorded per suggestion, with one deed.
+
+**What to do.** Read the suggestion (`GET /v1/suggestions/{id}`): `status`, `decided_by`, `decided_at` and `resulting_version` say what happened. To change the policy further, generate suggestions again or push a version yourself.
+
+```json
+{
+  "type": "invalid_request_error",
+  "code": "suggestion_decided",
+  "message": "This suggestion was already accepted on 2026-10-09 by priya@example.test. It created acme-sim v3.",
+  "param": null
+}
+```
+
 ## What this doesn't do
 
 - Errors don't carry localized messages. The copy is English, and the `code` is the stable part.

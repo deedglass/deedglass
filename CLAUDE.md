@@ -97,6 +97,10 @@ DEEDGLASS_IT_PKGS=./internal/learn/ make integration   # S27: TestSeed7 (honest 
 DEEDGLASS_IT_PKGS="./internal/learn/ -args -update-learn" DEEDGLASS_IT_GOFLAGS="-run TestSeed7" make integration   # S27: regenerate internal/learn/testdata/*.golden.json (review the diff)
 go test ./internal/learn/... -cover   # S27: replay engine, jobs, detectors (100%), facts cache, service, API route × role, the sim scenario and generator
 deedglass dev simulate --days 7 --seed 7   # S27 (dev only): a week of honest simulated history in a new org flagged simulated (acme-sim, acme-sim-2, …)
+DEEDGLASS_IT_THROWAWAY=1 scripts/insights_e2e.sh   # S28 §9: simulate → detect → suggestions generate → accept into shadow → 2 more days → promote → export → verify → digest preview (KEEP=1 keeps the stack up on :18297; stop it with kill -TERM <script pid>)
+go test ./internal/policy -run TestPatchGoldens -update   # S28: the patcher goldens in internal/policy/testdata/patch (untouched lines must stay byte-identical)
+DEEDGLASS_IT_PKGS=./internal/learn/ DEEDGLASS_IT_GOFLAGS="-v -run TestSuggestionsLive|TestNeverEnforceBehaviour" make integration   # S28: suggestions on Postgres (generate, dedupe, accept saga, crash and sweeper, reject, stale base) and 30 days of the schedule never enforcing
+go test ./internal/mailer -run TestDigest -update   # S28: the weekly digest goldens
 make bench-events   # S24 §3.12: the event hub, 1,000 events/s to 200 SSE streams (p99 enqueue→write < 50 ms), memory per stream (< 64 KiB); JSON in bench/results/
 go test ./internal/console -run 'TestIsolationProperty|TestResume|TestBackpressure|TestEvents' -v   # S24: the live stream (isolation, resume, backpressure, timers in synctest, limits, hydration)
 DEEDGLASS_IT_PKGS=./cmd/deedglass/ DEEDGLASS_IT_GOFLAGS="-v -run ^TestEventsLive$" make integration   # S24 on a real server: fake-action over /v1/events, two orgs, agent key, rollback, clean stop
@@ -122,7 +126,7 @@ make web-verify-serve # build and serve the verify page on http://127.0.0.1:5178
 make web-build      # S24: the Console (web/): tokens → icons → astro build → .br/.gz → check-dist; writes internal/console/dist (make build runs it when Node is present; make build-only skips it)
 make web-test       # (in ci) S24: tsc + Vitest (api, stream, format, palette, dom, tokens and contrast, copy, icons, sinks, types)
 make web-e2e        # S24–S26: Playwright in the installed Chrome against a throwaway PG 18 and a real serve, seeded with 600 fake actions, the real L2 hero, acme-demo v2 (a four-eyes refund rule) and a pending approval (shell, keyboard, palette, Stop all, live, the S25 screens, approvals at 360 and 1440, four-eyes, the race, policy edit → shadow → enforce → verify, connectors with the mock orders API, settings invite and webhooks, the roles sweep, the founder's demo loop, axe, CSP)
-make web-lighthouse # S24–S26: Lighthouse 13 on /login, /app/_kit, the seven S25 pages and the seven S26 pages (approvals, an approval, policies, a policy, connectors, the Postgres connector, settings/members), desktop and mobile (≥ 95 accessibility and best practices); JSON in ~/txv/ops/plan/prompts-v7/reports/lighthouse/S26
+make web-lighthouse # S24–S26: Lighthouse 13 on /login, /app/_kit, the seven S25 pages and the seven S26 pages (approvals, an approval, policies, a policy, connectors, the Postgres connector, settings/members), desktop and mobile (≥ 95 accessibility and best practices); JSON in ~/txv/ops/plan/prompts-v7/reports/lighthouse/S28 (S28 adds Insights in both themes)
 DEEDGLASS_IT_THROWAWAY=1 scripts/web_e2e.sh serve|shots   # keep the seeded Acme stack up on :18241 (PG 18 on :55468, the Acme Store on :55469, the mock orders API on :18290; ids and the throwaway admin and agent keys in .tmp/web-e2e/fixtures.json; WEB_E2E_SEED=0 skips the seed), or write the S26 screenshot pass to ~/txv/ops/plan/prompts-v7/reports/screens/S26 (the S24/S25 passes are the playwright project shots25)
 DEEDGLASS_DEV_PROXY=http://127.0.0.1:18241 make web-dev   # S25: astro dev proxied to that throwaway stack instead of :8080
 node web/scripts/contrast.mjs   # S24: WCAG ratios for every token pair in both themes (exit 1 on a failure); make web-tokens regenerates the token files
@@ -262,7 +266,7 @@ and "open source" until the repo is public. Style bans: "revolutionary", "world-
   overflow tests, pattern-vs-parser agreement, `FuzzParse`.
 - `internal/config`: the key table, every prod refusal, `.deedglass/` safety, secret canaries across
   fmt, JSON, slog and panics, and the `docs/CONFIG.md` drift test.
-- `internal/store`: catalog shape (35 tables since S27, RLS on every org table, `system_scope` list pinned,
+- `internal/store`: catalog shape (35 tables since S27; 0025 reshapes suggestions, RLS on every org table, `system_scope` list pinned,
   composite FKs, grants), RLS matrix on all 30 org tables, pooled-connection leak, privilege
   matrix, deed chain, domains = `ids.Registry()`, `set_config(…, true)` grep, `SystemTx` call
   sites; `internal/gate`: 225-pair trigger test; migrate runner refusals. Integration tag,
@@ -588,6 +592,14 @@ and "open source" until the repo is public. Style bans: "revolutionary", "world-
   `TestDecisionClock` and `TestAnomalyFactsDecide`. `TestPreAuthNamesStayInStore` keeps `claim_replay_jobs` and
   `claim_learn_orgs` in `internal/store`; `TestOneWritePath` allows `store.NotifyLearn` as the door for
   `deedglass_learn`. `attack/` `TestOrgIsolation` sweeps the replay and anomaly routes. The migration count is 24.
+- S28 (suggestions): `internal/policy` `TestPatchGoldens` (13 goldens, CRLF kept, mixed endings and flow lists
+  refused), `TestPatchProperty` (400 random inserts: compiles, base rules intact, no line removed), `TestDiffProperty`
+  (2,000 cases); `internal/learn` the never-enforce pair (`TestNeverEnforceMethodSet`: `PolicyWriter` has exactly
+  `AddSuggestedVersion` and `ActivateShadow`; `TestNeverEnforceSource`: no non-test file names `policy.ModeEnforce` or
+  calls `Activate`), privacy (sentinels, the key allow-list, a property test, the hostile environment), the validator
+  (100%), the phrasing fallbacks, the six generators, the pipeline, the lifecycle table and the route × role matrix;
+  integration `TestSuggestionsLive` and `TestNeverEnforceBehaviour`; `internal/mailer` the digest goldens; `attack/`
+  `TestOrgIsolation` covers the suggestion routes. The migration count is 25.
 - `cmd/deedglass verify` (S05): 80 golden cases in `testdata/verify/<case>/{args,stdout,stderr,exit}`
   (`go test ./cmd/deedglass -run TestVerifyGolden -update`), every vector's code and exit, `--keys`
   URL rules (same-host redirects, 1 MiB, timeout, loopback-only http), key-set merge conflicts, no

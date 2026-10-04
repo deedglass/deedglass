@@ -617,6 +617,116 @@ schemas in `api/openapi.yaml` (tag `Insights`). `anomaly.detected` reaches the e
 webhooks with `object: "anomaly"`, the episode `id`, `agent`, `kind`, `tool`, `severity` and
 `status`.
 
+## Suggestions (S28)
+
+Insights proposes policy changes; a person accepts them into shadow, or rejects them
+([SUGGESTIONS.md](SUGGESTIONS.md)). ADR-058 records the shape.
+
+| Route | Role | Returns |
+|---|---|---|
+| `GET /v1/suggestions` | viewer+ | a list of `suggestion` objects, by impact then creation (`?status=open\|accepting\|accepted\|rejected\|superseded\|all`, default open and accepting; `kind=loosen\|tighten\|budget\|explicit_rule\|advisory`; `limit`, `cursor`) |
+| `GET /v1/suggestions/{id}` | viewer+ | a `suggestion` |
+| `POST /v1/suggestions/generate` | admin+ | a `learn_run`; no body, optional `Idempotency-Key`, 60 s timeout |
+| `POST /v1/suggestions/{id}/accept` | admin+ | the `suggestion`, `accepted`, with `resulting_version` and `deeds`; body `{"reason":"…","replace_shadow":false}` (reason optional, at most 280 characters on one line), optional `Idempotency-Key`, at most 16 KiB |
+| `POST /v1/suggestions/{id}/reject` | admin+ | the `suggestion`, `rejected`, with its deed; body `{"reason":"…"}`, 3 to 280 characters, required |
+
+The same rules as the other Insights routes: a Console session (POSTs need the `Deedglass-CSRF`
+header) or an org admin key, and **agent keys get 403 `insufficient_scope` on every route, reads
+included.**
+
+**The `suggestion` object:**
+
+```json
+{"object":"suggestion","id":"sug_01k6z…","status":"open","kind":"loosen","generator":"loosen.approval_rate",
+ "title":"Allow updates to public.orders without approval",
+ "rationale":"People approved 398 of 403 updates to public.orders by ops-agent in the last 14 days and denied none. Each waited a median of 19 minutes.",
+ "phrasing":{"source":"template"},
+ "policy":{"id":"pol_01k6y…","name":"acme-sim","base_version":1,"base_version_id":"pv_01k6y…","base_version_hash":"sha256:5c1e…"},
+ "target_rule_id":"approve-order-updates",
+ "evidence":{"window":{"from":"2026-09-25T13:00:00Z","to":"2026-10-09T13:00:00Z"},
+             "approvals":{"requested":411,"approved":398,"denied":0,"expired":5,"pending":8},
+             "median_wait_seconds":1140,"approvers":2,"agents":["ops-agent"],"tool":"postgres.execute","rule":"approve-order-updates",
+             "pattern":{"agents":["ops-agent"],"sql.kind":"update","sql.statements":1,"sql.tables":["public.orders"],"tool":"postgres.execute"},
+             "sample_actions":["act_01k6x…","act_01k6x…"]},
+ "evidence_digest":"sha256:7a1c…e9d0",
+ "diff":{"hunks":[{"old_start":52,"old_lines":6,"new_start":52,"new_lines":14,"lines":[{"op":"+","text":"  - id: allow-order-updates"}]}],
+         "text":"@@ -52,6 +52,14 @@\n …","added":8,"removed":0},
+ "warnings":[],
+ "replay":{"id":"rpl_01k6z…","window":{"from":"…","to":"…"},"summary":{"actions":5612,"evaluated":5612,"unchanged":5201,"changed":411,"rule_changed":0,"unknown":0},
+           "transitions":[{"from":"require_approval","to":"allow","count":411,
+                           "human_outcome":{"approved":398,"denied":0,"expired":5,"cancelled":0,"pending":8}}],
+           "result_digest":"sha256:c4d2…"},
+ "risk_note":"ops-agent could update single rows of public.orders without a person looking. Other statements, and writes without a WHERE clause, still go to approval.",
+ "impact":411,"stale_reason":null,"created_at":"2026-10-09T13:00:02Z",
+ "decided_by":null,"decided_at":null,"decision_reason":null,"resulting_version":null,"decision_deed":null}
+```
+
+- `phrasing` says whose words the title and rationale are: `{"source":"template"}`, or
+  `{"source":"claude","model":"claude-sonnet-5-5",…}` with the tokens, the cost in micro-dollars and
+  the template title it replaced; a failed attempt keeps `source: template` and sets `reason`
+  ([INSIGHTS_PRIVACY.md](INSIGHTS_PRIVACY.md)).
+- `diff`, `replay` and `target_rule_id` are `null` for an advisory; `impact` is then 0.
+- `warnings` are the candidate's compile warnings (severity W).
+- `replay.id` is a `replay` you can read with `GET /v1/replays/{id}` (`purpose: suggestion`).
+- `stale_reason` is `base_changed` on a superseded suggestion.
+- The accept answer adds `deeds` (the ids sealed: `policy.activated`, then `suggestion.accepted`),
+  `replaced_shadow_version` when a shadow was replaced, and `note` when the change already existed
+  as a version. The reject answer adds `deeds` with the `suggestion.rejected` deed.
+
+The evidence keys differ by generator (approvals for a loosen, mismatches for a tighten, the days
+for a budget); every one has `window`. The numbers above are the seed-7 loosen suggestion's; ids,
+digests, the window and the replay's total are illustrative.
+
+**The `learn_run` object** (`POST /v1/suggestions/generate`):
+
+```json
+{"object":"learn_run","kind":"suggest","period":"m-20261009T130000.000000Z-7k2mq",
+ "policy":{"id":"pol_01k6y…","name":"acme-sim","base_version":1,"base_version_id":"pv_01k6y…","base_version_hash":"sha256:5c1e…"},
+ "window":{"from":"2026-09-25T13:00:00Z","to":"2026-10-09T13:00:00Z"},"actions":5612,
+ "created":[{"id":"sug_01k6z…","kind":"loosen","generator":"loosen.approval_rate","target_rule_id":"approve-order-updates",
+             "target":"approve-order-updates","title":"Allow updates to public.orders without approval","impact":411}],
+ "superseded":0,"unchanged":0,"waiting":0,
+ "dropped":[{"generator":"loosen.approval_rate","target":"refund-approval","reason":"its replay would allow 2 actions a person denied"}],
+ "notice":null,"elapsed_ms":310}
+```
+
+`unchanged` counts proposals already open with the same fingerprint; `waiting` those over the cap
+of 10 open suggestions, which come back on a later pass. With no enforced policy, `notice` says to
+activate one and nothing else is filled in.
+
+**Errors** (each has a section in [api/errors.md](api/errors.md)):
+
+| Code | Status | When |
+|---|---|---|
+| `suggestion_stale` | 409 | the enforced version moved on since the suggestion was written; it is now superseded. "acme-sim v2 has been enforced since this suggestion was written for v1. Generate suggestions again: POST /v1/suggestions/generate." |
+| `shadow_slot_taken` | 409, `param: replace_shadow` | another version runs in shadow and `replace_shadow` is false; the suggestion stays open |
+| `suggestion_decided` | 409 | already accepted, rejected or superseded, or being accepted right now; the message says by whom and when |
+
+The rest are canonical: 409 `conflict` to accept an advisory or to generate while a pass runs for
+the org on the same instance, 400 `validation_failed` on `reason`, 404 `not_found`, 403
+`insufficient_role` and `insufficient_scope`.
+
+**The event `suggestion.created`** is published in the transaction that stores the suggestion, to
+the event stream and webhooks: `{"object":"suggestion","id":"sug_…","kind":"loosen","status":"open","rule_id":"approve-order-updates"}`.
+`rule_id` is the target rule and is left out when there is none (budgets, advisories, appended
+rules). It never carries the title, the evidence or any name beyond the rule id.
+
+**Settings.** `PATCH /v1/insights/settings` also takes `llm_phrasing` (boolean),
+`llm_monthly_cap_cents` (0 to 10,000) and `digest` (`{"recipients":"owners"|"admins"|"off"}`); the
+`insights_settings` object adds those and the read-only `phrasing_available`. Turning
+`llm_phrasing` on while the server has no `DEEDGLASS_ANTHROPIC_API_KEY` is 400 `validation_failed`
+on `llm_phrasing` ([INSIGHTS.md](INSIGHTS.md#settings)).
+
+```sh
+curl -s -X POST http://127.0.0.1:8080/v1/suggestions/generate \
+  -H "Authorization: Bearer $DEEDGLASS_API_KEY" | jq '.created'
+
+curl -s -X POST http://127.0.0.1:8080/v1/suggestions/sug_01k6z…/accept \
+  -H "Authorization: Bearer $DEEDGLASS_API_KEY" -H "Idempotency-Key: accept-orders-loosen" \
+  -H "Content-Type: application/json" \
+  -d '{"reason":"Ops approves these every time","replace_shadow":true}'
+```
+
 ## Objects
 
 Every object carries `"object"`, naming its type (`"health"`, `"version"`, `"list"`, and so on),

@@ -1,7 +1,7 @@
 # Email
 
-Deedglass sends two emails today: the sign-in email (a link and a 6-digit code) and the invite.
-S22 adds approval requests. Every email is plain, 600 px wide, with an HTML part and a plain-text
+Deedglass sends the sign-in email (a link and a 6-digit code), the invite, approval requests (S22)
+and the weekly Insights digest (S28). Every email is plain, 600 px wide, with an HTML part and a plain-text
 part, and loads nothing from the internet: no images, fonts, tracking pixels or click tracking.
 
 ## Providers
@@ -84,6 +84,66 @@ The templates are `internal/mailer/templates/{login,invite}.{html,txt}.tmpl` (wi
   button keeps `#2F5BEA` with white text in both themes (5.5:1).
 - Under 102 KB (Gmail clips above that); today about 4.5 KB.
 - Screenshots at 600 and 360 px, light and dark: `ops/plan/prompts-v7/reports/screens/S08/email-*`.
+
+## The weekly Insights digest
+
+A summary of the org's week for the people who run it (S28; `internal/learn/digest.go`, templates
+`internal/mailer/templates/digest.{html,txt}.tmpl`, renderer `internal/mailer/digest.go`).
+
+- **When:** Mondays from 09:00 in the org's time zone, for the ISO week that just ended. The
+  schedule loop in every `serve` instance checks every 5 minutes; a `learn_runs` row
+  `(digest, 2026-W41)`, claimed with insert-on-conflict-skip, makes it happen exactly once per org
+  and week, however many instances run.
+- **Who:** the org's active members by `digest.recipients` in the Insights settings: `owners` (the
+  default), `admins` (owners and admins) or `off`. One email per person.
+- **What:** numbers only, never payloads, arguments, SQL or customer refs. Actions, the verified
+  share, denials and mismatches; the open suggestions (the count and the top title); open anomalies
+  and how many opened and resolved; the shadow's agreement; and the three rules that denied most.
+- **Subject:** `Acme · week 41 · 5,612 agent actions, 2 suggestions to review` (no suggestions:
+  `Acme · week 41 · 5,612 agent actions`; one: `1 suggestion to review`).
+- **One button,** "Open Insights", to `DEEDGLASS_BASE_URL` + `/app/insights`, and the same link in
+  the text part.
+- **Footer:** "You get this weekly summary because you're an owner of Acme on Deedglass. Change who
+  receives it in Console › Insights › Settings." (an admin reads "an admin of Acme").
+- **Idempotent:** each email carries the key `digest/<org>/<ISO week>/<user>`, so a retried send
+  never delivers twice. It goes through the same bounded queue as every email, never inside a
+  transaction.
+- **No tracking:** no pixel, no remote image, no click tracking, like every Deedglass email.
+
+The text part, from the golden `internal/mailer/testdata/digest.txt.golden`:
+
+```
+Deedglass · Acme · week 41 (5 to 11 Oct 2026)
+
+5,612 agent actions · 88.9% verified · 311 denied · 9 mismatches
+
+To review
+  2 suggestions: "Allow updates to public.orders without approval" and 1 more
+  1 open anomaly: 3 MISMATCH verdicts in 1 hour for ops-agent
+Shadow
+  acme-sim v3 has run in shadow for 2 days and agrees on 1,180 of 1,204 actions.
+Denied most by
+  refund-limit 15 · @default 2
+
+Open Insights: https://app.deedglass.com/app/insights
+
+You get this weekly summary because you're an owner of Acme on Deedglass.
+Change who receives it in Console › Insights › Settings.
+```
+
+A quiet week reads "Nothing to review this week." Preview this week's digest for an org without
+sending anything (it reads the database directly):
+
+```
+$ deedglass insights digest --preview --org acme-sim --html /tmp/digest.html
+Subject: Acme (simulated) · week 41 · 5,612 agent actions, 3 suggestions to review
+To: 1 recipient (not sent: preview)
+…
+✓ HTML written to /tmp/digest.html
+```
+
+The numbers above are illustrative. The goldens are regenerated with
+`go test ./internal/mailer -run TestDigest -update` after checking the change.
 
 ## What it doesn't do
 

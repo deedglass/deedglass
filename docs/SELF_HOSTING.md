@@ -40,6 +40,8 @@ The server reads its settings from the process environment. In prod it ignores `
 | `DEEDGLASS_LOG_LEVEL` | No | `debug`, `info` (default), `warn` or `error` |
 | `DEEDGLASS_TRUSTED_PROXIES` | Behind a proxy | Comma-separated CIDRs whose `X-Forwarded-For` the server believes (see TLS below) |
 | `DEEDGLASS_METRICS_LISTEN` | No | Off by default. An address such as `0.0.0.0:9464` serves `/metrics` (see Metrics below) |
+| `DEEDGLASS_ANTHROPIC_API_KEY` | No | Off by default. An Anthropic API key (`sk-ant-…`) lets orgs that opt in have Claude reword Insights suggestions; without it no request to Anthropic is ever made ([INSIGHTS_PRIVACY.md](INSIGHTS_PRIVACY.md)) |
+| `DEEDGLASS_ANTHROPIC_MODEL` | No | The model for that rewording: a Claude model id without a date suffix, default `claude-sonnet-5-5` |
 
 `docs/CONFIG.md` lists every setting. Keep the secrets in your secret store and pass them as environment variables, for example with `docker run --env-file` from a file only root can read.
 

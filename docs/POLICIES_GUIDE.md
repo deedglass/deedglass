@@ -178,7 +178,7 @@ A shadow policy runs next to the enforced one. For every action, Deedglass evalu
 - **To stop shadowing,** switch the shadow off with a reason: `deedglass policy activate postgres-safe --version 2 --clear --reason "…"`. This is sealed as `policy.deactivated`.
 - **To promote,** enforce the shadow version (section 5).
 
-**Seeing where they disagree.** Insights (S27) will compare shadow and enforced decisions over time and show you where they differ. **It isn't built yet.** Until then, you can try a version against single actions with `deedglass policy evaluate --server` (section 10). The Gate stores each shadow decision with its action from S13.
+**Seeing where they disagree.** `deedglass insights shadow` (or Console › Insights › Shadow) compares the shadow's decisions with the enforced ones on live traffic and names the rules behind each difference ([INSIGHTS.md](INSIGHTS.md#shadow-disagreements)). To see what a version would have done over past traffic before shadowing it, replay it ([REPLAY.md](REPLAY.md)). You can also try a version against single actions with `deedglass policy evaluate --server` (section 10).
 
 ## 5. Activation and deeds
 
@@ -229,6 +229,24 @@ deedglass verify deed.json --keys https://<your-server>/.well-known/deedglass/ke
 - **A push compiles first.** A policy with errors is refused with `400 policy_invalid` and the same diagnostics `lint` prints. A push is not sealed as a deed: the version row is the record of what was saved, and deeds are for changes that take effect.
 - **Names are fixed per policy.** Pushing YAML named `stripe-refunds` to the policy `postgres-safe` is refused with `400 validation_failed`. Push it as a new policy, or change the name.
 - **Rolling back is activating an older version.** There is no separate rollback: `deedglass policy activate postgres-safe --version 2 --mode enforce --reason "Roll back v3, which blocked the nightly sync"`. It is sealed like any other activation.
+
+### Suggested versions
+
+Insights can propose a change to your enforced policy ([SUGGESTIONS.md](SUGGESTIONS.md)). When a person accepts a suggestion, Deedglass pushes the changed file as a new version of the same policy and runs it in shadow. Nothing about it is enforced until a person promotes it.
+
+- **`origin: suggestion` and `suggestion_id`.** The version records where it came from: its `origin` is `suggestion` and its `suggestion_id` names the `sug_` suggestion; its notes read "Created from Deedglass Insights suggestion sug_…". Its author is the person (or org admin key) who accepted it. If the same content already exists as a version, accepting reuses it and says so.
+- **The comment line.** The patcher edits your file in place: every comment and untouched line stays byte for byte, and a rule it inserts or appends gets one comment line above it, so the version reads back to its source:
+
+  ```yaml
+    # Accepted from Deedglass Insights suggestion sug_01k6z… · evidence sha256:7a1c…e9d0
+    - id: allow-order-updates
+      description: People approved 398 of 403 of these between 2026-09-25 and 2026-10-09.
+  ```
+
+  A changed `verify` or budget limit is edited on its own line, with no comment. Compare any two versions with `deedglass policy diff acme-sim 1 3`.
+- **Files the patcher refuses.** A `rules` or `budgets` list in flow style (`[…]`), or a file that mixes LF and CRLF line endings, gets no suggestion that edits it. Run `deedglass policy fmt -w` and push the result.
+- **The shadow slot.** An org has one shadow. Accepting while another version is in shadow needs `replace_shadow` (`--replace-shadow`, or the checkbox in the Accept sheet), and replaces it.
+- **Promoting** is the activation in section 5, by a person: `deedglass policy activate acme-sim --version 3 --mode enforce --reason "…"`, or Promote in Console › Insights › Shadow, where you type the policy name. It seals `policy.deactivated` (the shadow) and `policy.activated` (enforce). The `suggestion.accepted` deed sealed at accept time already ties the suggestion, its evidence digest and its replay digest to the version id and hash.
 
 ## 7. How a change reaches every instance
 
@@ -312,6 +330,6 @@ The trace shows Stop, every budget, and each rule up to the one that decided, wi
 - **No per-agent policies.** One policy decides for every agent in the org. Use `match.agent` and agent labels to give agents different rules ([POLICY_COOKBOOK.md](POLICY_COOKBOOK.md) recipe 11).
 - **No scheduled activations.** An activation takes effect when you make it. Rules can use the time of day (`time.hour`, `time.weekday`, recipe 8).
 - **`notify` and approvals are decided, not yet delivered.** A decision says who to notify and who may approve. Email delivery and approvals arrive in S22, and Slack in S29.
-- **Shadow results become visible from S27,** when Insights shows where shadow and enforced decisions disagree.
+- **No automatic changes.** Insights suggests versions; a person accepts each one into shadow, and a person promotes it ([SUGGESTIONS.md](SUGGESTIONS.md)).
 - **Tool names are provisional.** The GitHub, Slack, Stripe and Gmail names in the starters follow the v1 connector plans; the real connector tool names arrive in S29 and S30.
 - **No editor yet.** The Console's policy editor, dry-run panel and version diff arrive in S26. Until then, use files, the CLI and the API.

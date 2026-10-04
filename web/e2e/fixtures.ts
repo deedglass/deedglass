@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { copyFileSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { expect, test as base, type Page } from '@playwright/test';
 
 export const AUTH = (role: 'owner' | 'admin' | 'viewer') => `e2e/.auth/${role}.json`;
@@ -86,4 +86,28 @@ export async function pendingRefund(o: { fourEyes?: boolean; onBehalfOf?: string
     { 'Deedglass-On-Behalf-Of': o.onBehalfOf ?? 'u_4821', 'Deedglass-Session': 'chat_77' });
   if (r.status !== 202 || !r.body.approval) throw new Error(`expected a pending approval, got ${r.status} ${JSON.stringify(r.body).slice(0, 300)}`);
   return { action: r.body.id, approval: r.body.approval.id, refund: id };
+}
+
+// ---------- S28 helpers: the simulated org ----------
+
+/**
+ * appendQuietDays runs `deedglass dev simulate --append --days N --seed 8` on the simulated org.
+ * The embedded scenario's incidents sit on days 2 to 7, and the planner refuses a window shorter
+ * than its last incident day even when appending (reported to the backend session), so the append
+ * uses a copy of examples/sim/acme.yaml with the incidents removed: the same agents, tools and
+ * policies, just ordinary traffic.
+ */
+export function appendQuietDays(slug: string, days = 2): void {
+  const src = `${process.cwd()}/../examples/sim`;
+  const dir = `${process.env.WEB_E2E_WORK}/sim-quiet`;
+  mkdirSync(dir, { recursive: true });
+  for (const f of ['acme-sim.v1.yaml', 'acme-sim.v2.yaml']) copyFileSync(`${src}/${f}`, `${dir}/${f}`);
+  const yaml = readFileSync(`${src}/acme.yaml`, 'utf8');
+  const i = yaml.indexOf('\nincidents:');
+  writeFileSync(`${dir}/acme.yaml`, (i >= 0 ? yaml.slice(0, i) : yaml) + '\nincidents: []\n');
+  try {
+    dg('dev', 'simulate', '--org-slug', slug, '--append', '--days', String(days), '--seed', '8', '--no-color');
+  } catch {
+    dg('dev', 'simulate', '--org-slug', slug, '--append', '--days', String(days), '--seed', '8', '--scenario', `${dir}/acme.yaml`, '--no-color');
+  }
 }

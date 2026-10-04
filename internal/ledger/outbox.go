@@ -128,6 +128,11 @@ func eventObject(ev Event) map[string]any {
 		put("tool", ev.Tool)
 		put("severity", ev.Severity)
 		put("status", ev.State)
+	case ev.Type == EventSuggestionCreated:
+		o["object"] = "suggestion"
+		put("kind", ev.Kind)
+		put("status", ev.Status)
+		put("rule_id", ev.RuleID)
 	default:
 		o["object"] = strings.SplitN(ev.Type, ".", 2)[0]
 		put("state", ev.State)

@@ -1,0 +1,121 @@
+{
+    "object": "shadow_report",
+    "shadow": {
+        "policy": "pol_01m43609ky741wh57e1ra09sb7",
+        "name": "acme-sim",
+        "version": 2,
+        "version_id": "pv_01m4360nx29jccys7shyc04bzs",
+        "live": true,
+        "since": "2026-10-04T10:05:39.622998Z"
+    },
+    "enforce": [
+        {
+            "name": "acme-sim",
+            "version": 1,
+            "version_id": "pv_01m43609ky741wh57e1ra09sb8",
+            "actions": 4179
+        }
+    ],
+    "window": {
+        "from": null,
+        "to": null
+    },
+    "summary": {
+        "evaluated": 4179,
+        "agree": 4004,
+        "disagree": 175,
+        "agreement": 0.9581
+    },
+    "transitions": [
+        {
+            "enforce": "allow",
+            "shadow": "require_approval",
+            "count": 158,
+            "by_rule": [
+                {
+                    "rule_id": "refund-approval-over-30",
+                    "count": 158
+                }
+            ],
+            "by_tool": [
+                {
+                    "tool": "stripe.create_refund",
+                    "count": 158
+                }
+            ],
+            "by_agent": [
+                {
+                    "agent": "agt_01m43609khvcatmyvbzx8z6cmm",
+                    "name": "support-bot",
+                    "count": 158
+                }
+            ],
+            "samples": [
+                "act_01m4360p6b9pr7fkmpt0jm1w89",
+                "act_01m4360pnke60nbvr014a94syf",
+                "act_01m4360q17kt02wr0md6pxhp0q",
+                "act_01m4360q1mxrd2z54ekyqh3kxg",
+                "act_01m4360qdz1hz0je2vdtvxn9jn",
+                "act_01m4360qez89m5b087e069rgq1",
+                "act_01m4360qqtez4m49a5c4s0et2c",
+                "act_01m4360qv3hwtj2w8h0cs3bd7d",
+                "act_01m4360r3h7ypw72hkg1f6p6bs",
+                "act_01m4360r4rv0h6ddq1tjgdymfa",
+                "act_01m4360ragqefx6438tgj2gftq",
+                "act_01m4360ratb6hcjsg89yk3a9n6",
+                "act_01m4360s5abx4k9yr2cgaaje33",
+                "act_01m4360ttd4vsbajyhzpkn0ntz",
+                "act_01m4360v3pxv3tm3ts8cemj8sx",
+                "act_01m4360y873bw0d5njwz6fbvg1",
+                "act_01m4360y8n8zb0xjapyqkfxxg2",
+                "act_01m4360yb639g50ss7qqezs5b5",
+                "act_01m4360yf9jxg176d3qmqm9re7",
+                "act_01m4360yfr6s7avpr3jdjnsmb2"
+            ]
+        },
+        {
+            "enforce": "allow",
+            "shadow": "deny",
+            "count": 17,
+            "by_rule": [
+                {
+                    "rule_id": "slack-allowlist",
+                    "count": 17
+                }
+            ],
+            "by_tool": [
+                {
+                    "tool": "slack.post_message",
+                    "count": 17
+                }
+            ],
+            "by_agent": [
+                {
+                    "agent": "agt_01m43609kq0z8rqjb0zhkz09je",
+                    "name": "growth-agent",
+                    "count": 17
+                }
+            ],
+            "samples": [
+                "act_01m4360rdarq14cycmvy39ytj7",
+                "act_01m4360rxrw5jq4pvxnj032wdr",
+                "act_01m4360vkgaggkqrjw45s4dwts",
+                "act_01m43612xms8d9c0jc3w20bm4g",
+                "act_01m4361bebcypa1w6ch0tt010f",
+                "act_01m4361ydphnzbty3paj0m8e0y",
+                "act_01m4361zyv9pe79hqqpq386cp9",
+                "act_01m436239av6wxygazxzy3bc5a",
+                "act_01m43623e49wnarwns9k4g4srw",
+                "act_01m4362490tvd4gpsqx42zensh",
+                "act_01m43624gkthk1xa30k9f0qp2w",
+                "act_01m43625f7hspnzp80fvxj6hhv",
+                "act_01m4362b37msbab02tcyzdkfg4",
+                "act_01m4362bcjb1sj65pmcr0zzmz8",
+                "act_01m4362bw673pg308672vvvvme",
+                "act_01m4362d3n34zyk7tp6wwxsqt6",
+                "act_01m4362pqfh6pkjxdpqra45mg8"
+            ]
+        }
+    ],
+    "sentence": "Shadow acme-sim v2 would have sent 158 actions to approval and denied 17 that v1 allowed (refund-approval-over-30: 158, slack-allowlist: 17)."
+}

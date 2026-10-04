@@ -1,0 +1,18 @@
+Deedglass · {{.OrgName}} · week {{.Week}} ({{.Range}})
+
+{{.Numbers}}
+
+{{if .Review}}To review
+{{range .Review}}  {{.}}
+{{end}}{{else}}  Nothing to review this week.
+{{end}}{{if .Anomalies}}Anomalies this week
+  {{.Anomalies}}
+{{end}}{{if .Shadow}}Shadow
+  {{.Shadow}}
+{{end}}{{if .Rules}}Denied most by
+  {{range $i, $r := .Rules}}{{if $i}} · {{end}}{{$r.Rule}} {{$r.Count}}{{end}}
+{{end}}
+Open Insights: {{.Link}}
+
+You get this weekly summary because you're {{.RoleArticle}} of {{.OrgName}} on Deedglass.
+Change who receives it in Console › Insights › Settings.

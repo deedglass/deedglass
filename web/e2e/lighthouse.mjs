@@ -77,9 +77,39 @@ for (let [p, needsSession] of plan) {
     }
   }
 }
+// S28: Insights on the simulated org (acme-sim, scripts/web_e2e.sh), signed in as Priya, in the
+// dark and the light theme (the theme lives in localStorage, which disableStorageReset keeps).
+const simFile = join(process.env.WEB_E2E_WORK ?? '.', 'sim.json');
+let simReady = false;
+try { readFileSync(simFile); simReady = true; } catch { console.log('lighthouse: no simulated org; Insights skipped'); }
+if (simReady && (!only || only.some((x) => x.startsWith('INSIGHTS')))) {
+  const simLink = JSON.parse(execFileSync(process.env.WEB_E2E_DG ?? '../bin/deedglass', ['org', 'login-link', '--email', 'priya.raman@acme.example', '--org', 'acme-sim', '--json'],
+    { cwd: process.env.WEB_E2E_WORK, encoding: 'utf8', env: process.env })).link;
+  await page.goto(simLink);
+  await page.getByRole('button', { name: 'Sign in' }).click();
+  await page.waitForURL(/\/app\/?$/);
+  for (const theme of ['dark', 'light']) {
+    await page.evaluate((t) => localStorage.setItem('deedglass.theme', t), theme);
+    for (const formFactor of ['desktop', 'mobile']) {
+      const flags = { port: PORT, output: 'json', logLevel: 'error', disableStorageReset: true, onlyCategories: ['accessibility', 'best-practices', 'performance'] };
+      const r = await lighthouse(BASE + '/app/insights', flags, formFactor === 'desktop' ? desktopConfig : undefined);
+      const lhr = r.lhr;
+      const score = (k) => Math.round((lhr.categories[k]?.score ?? 0) * 100);
+      const row = { page: `/app/insights (${theme})`, formFactor, accessibility: score('accessibility'), bestPractices: score('best-practices'), performance: score('performance'),
+        lcpMs: Math.round(lhr.audits['largest-contentful-paint']?.numericValue ?? 0), cls: lhr.audits['cumulative-layout-shift']?.numericValue ?? 0 };
+      rows.push(row);
+      writeFileSync(join(OUT, `insights-${theme}-${formFactor}.json`), JSON.stringify(lhr, null, 1));
+      if (row.accessibility < 95 || row.bestPractices < 95) {
+        failed++;
+        const bad = Object.values(lhr.audits).filter((a) => a.score !== null && a.score < 1 && a.scoreDisplayMode === 'binary').map((a) => a.id);
+        console.error(`✕ /app/insights ${theme} ${formFactor}: accessibility ${row.accessibility}, best practices ${row.bestPractices} · ${bad.join(', ')}`);
+      }
+    }
+  }
+}
 await ctx.close();
 rmSync(profile, { recursive: true, force: true });
-console.log('page                       form     a11y  best-pr  perf  LCP ms  CLS');
+console.log('page                          form     a11y  best-pr  perf  LCP ms  CLS');
 for (const r of rows) console.log(`${r.page.replace(/(act|deed|agt)_[0-9a-z]+$/, '$1_…').padEnd(26)} ${r.formFactor.padEnd(8)} ${String(r.accessibility).padStart(4)}  ${String(r.bestPractices).padStart(7)}  ${String(r.performance).padStart(4)}  ${String(r.lcpMs).padStart(6)}  ${r.cls.toFixed(3)}`);
 writeFileSync(join(OUT, 'summary.json'), JSON.stringify(rows, null, 2));
 if (failed) process.exit(1);

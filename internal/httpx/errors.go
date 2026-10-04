@@ -113,6 +113,11 @@ const (
 	// S27: Insights replay limits.
 	CodeReplayTooLarge      Code = "replay_too_large"
 	CodeReplayWindowInvalid Code = "replay_window_invalid"
+
+	// S28: suggestions.
+	CodeSuggestionStale   Code = "suggestion_stale"
+	CodeShadowSlotTaken   Code = "shadow_slot_taken"
+	CodeSuggestionDecided Code = "suggestion_decided"
 )
 
 // DocURLPrefix is where every code has a page (docs/api/errors.md, published by S33).
@@ -246,6 +251,13 @@ var catalog = []CatalogEntry{
 	{CodeReplayTooLarge, 400, TypeInvalidRequest, "This replay covers more than 1,000,000 actions. Narrow the window with from and to.",
 		"This replay covers {n} actions; the limit is 1,000,000. Narrow the window with from and to.", "S27"},
 	{CodeReplayWindowInvalid, 400, TypeInvalidRequest, "The window must start before it ends, and it can be at most 90 days long. Send from before to.", "", "S27"},
+
+	{CodeSuggestionStale, 409, TypeInvalidRequest, "The policy changed since this suggestion was written. Generate suggestions again: POST /v1/suggestions/generate.",
+		"{policy} v{now} has been enforced since this suggestion was written for v{base}. Generate suggestions again: POST /v1/suggestions/generate.", "S28"},
+	{CodeShadowSlotTaken, 409, TypeInvalidRequest, "Another version is already running in shadow. Promote or clear it first, or accept with replace_shadow: true to replace it.",
+		"{policy} v{n} is already running in shadow. Promote or clear it first, or accept with replace_shadow: true to replace it.", "S28"},
+	{CodeSuggestionDecided, 409, TypeInvalidRequest, "This suggestion was already decided. Look at its status, or generate suggestions again.",
+		"This suggestion was already accepted on {date} by {who}. It created {policy} v{n}.", "S28"},
 }
 
 var byCode = func() map[Code]CatalogEntry {

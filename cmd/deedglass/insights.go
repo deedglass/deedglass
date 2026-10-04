@@ -19,6 +19,7 @@ import (
 	"github.com/deedglass/deedglass/internal/deed"
 	"github.com/deedglass/deedglass/internal/ids"
 	"github.com/deedglass/deedglass/internal/learn"
+	"github.com/deedglass/deedglass/internal/policy"
 	"github.com/deedglass/deedglass/internal/store"
 	"github.com/deedglass/deedglass/internal/store/learnstore"
 	"github.com/deedglass/deedglass/pkg/deedglass"
@@ -531,14 +532,17 @@ func printAnomalies(e *Env, l *learn.AnomalyList, days int, now time.Time) {
 
 func runInsightsSettings(ctx context.Context, e *Env, args []string) error {
 	var (
-		facts, reason         string
-		activeMins, staleMins int
-		jsonOut               bool
+		facts, reason, phrasing, digest string
+		activeMins, staleMins, capCents int
+		jsonOut                         bool
 	)
 	pos, err := parseInterleaved("deedglass insights settings", args, func(fs *flag.FlagSet) {
 		fs.StringVar(&facts, "anomaly-facts", facts, "on or off: let this org's policies read anomaly.*")
 		fs.IntVar(&activeMins, "active-minutes", activeMins, "how long an anomaly stays active after its last finding (5 to 1,440)")
 		fs.IntVar(&staleMins, "stale-minutes", staleMins, "how old detection may be before policies treat agents as anomalous (10 to 240)")
+		fs.StringVar(&phrasing, "llm-phrasing", phrasing, "on or off: let Claude reword suggestions (needs DEEDGLASS_ANTHROPIC_API_KEY on the server)")
+		fs.IntVar(&capCents, "llm-cap-cents", -1, "the month's phrasing spend cap in cents (0 to 10,000; 200 = $2.00)")
+		fs.StringVar(&digest, "digest", digest, "who gets the weekly digest: owners, admins or off")
 		fs.StringVar(&reason, "reason", reason, "why (required for a change; sealed in the deed)")
 		fs.BoolVar(&jsonOut, "json", jsonOut, "print JSON")
 	})
@@ -553,7 +557,7 @@ func runInsightsSettings(ctx context.Context, e *Env, args []string) error {
 		return err
 	}
 	var o learn.SettingsObject
-	change := facts != "" || activeMins != 0 || staleMins != 0
+	change := facts != "" || activeMins != 0 || staleMins != 0 || phrasing != "" || capCents >= 0 || digest != ""
 	if change {
 		body := map[string]any{"reason": reason}
 		switch facts {
@@ -570,6 +574,21 @@ func runInsightsSettings(ctx context.Context, e *Env, args []string) error {
 		}
 		if staleMins != 0 {
 			body["anomaly_stale_after_minutes"] = staleMins
+		}
+		switch phrasing {
+		case "":
+		case "on":
+			body["llm_phrasing"] = true
+		case "off":
+			body["llm_phrasing"] = false
+		default:
+			return usageErr(fmt.Errorf("--llm-phrasing is on or off (got %q)", phrasing), `deedglass insights settings --llm-phrasing off --reason "…"`)
+		}
+		if capCents >= 0 {
+			body["llm_monthly_cap_cents"] = capCents
+		}
+		if digest != "" {
+			body["digest"] = map[string]any{"recipients": digest}
 		}
 		if _, err := cl.Do(ctx, "PATCH", "/v1/insights/settings", body, &o); err != nil {
 			return apiErr(e, cl, err)
@@ -590,6 +609,16 @@ func runInsightsSettings(ctx context.Context, e *Env, args []string) error {
 	if o.Notice != nil {
 		fmt.Fprintln(w, "  "+*o.Notice)
 	}
+	ph := "off"
+	if o.LLMPhrasing {
+		ph = "on"
+	}
+	avail := "no Anthropic key on the server, so Deedglass's own wording"
+	if o.PhrasingAvailable {
+		avail = "the server has an Anthropic key"
+	}
+	fmt.Fprintf(w, "  phrasing       %s %s cap %s a month %s %s\n", ph, ui.Sep, policy.FormatMoney(int64(o.LLMMonthlyCapCents), "usd"), ui.Sep, avail)
+	fmt.Fprintf(w, "  digest         %s\n", o.Digest.Recipients)
 	if o.Deed != nil {
 		fmt.Fprintln(w, st.OKLine("Settings changed "+ui.Sep+" deed "+shortID(*o.Deed)+" sealed"))
 	}

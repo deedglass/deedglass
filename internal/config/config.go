@@ -13,6 +13,7 @@ import (
 	"net/netip"
 	"net/url"
 	"os"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -20,6 +21,9 @@ import (
 	"github.com/deedglass/deedglass/internal/connector/egress"
 	"github.com/deedglass/deedglass/internal/vault/keyring"
 )
+
+// anthropicModelRE is a Claude model id without a date suffix (DEEDGLASS_ANTHROPIC_MODEL).
+var anthropicModelRE = regexp.MustCompile(`^claude-[a-z]+(-[0-9]+)+$`)
 
 // Env is the deployment mode.
 type Env string
@@ -57,6 +61,7 @@ type Config struct {
 	ResendAPIKey         Secret
 	MailFrom             string // "Deedglass <signin@deedglass.com>" (S07)
 	AnthropicAPIKey      Secret
+	AnthropicModel       string // DEEDGLASS_ANTHROPIC_MODEL (S28): the phrasing model
 	TrustedProxies       []netip.Prefix
 	AllowPrivateNetworks bool
 	EgressAllowCIDRs     []netip.Prefix // DEEDGLASS_EGRESS_ALLOW_CIDRS: private networks connectors may reach (S16)
@@ -453,6 +458,12 @@ func (l *loader) parse(c *Config, k Key) {
 			return
 		}
 		c.AnthropicAPIKey = NewSecret(v)
+	case "DEEDGLASS_ANTHROPIC_MODEL":
+		if !anthropicModelRE.MatchString(v) {
+			bad(fmt.Sprintf("isn't a Claude model id (got %q).", v), "Use an id like claude-sonnet-5-5, without a date suffix.")
+			return
+		}
+		c.AnthropicModel = v
 	case "DEEDGLASS_TRUSTED_PROXIES":
 		for _, part := range strings.Split(v, ",") {
 			part = strings.TrimSpace(part)

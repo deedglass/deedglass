@@ -47,9 +47,9 @@
       "count": 411,
       "from": "require_approval",
       "human_outcome": {
-        "approved": 397,
+        "approved": 398,
         "cancelled": 0,
-        "denied": 1,
+        "denied": 0,
         "expired": 5,
         "pending": 8
       },

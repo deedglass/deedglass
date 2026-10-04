@@ -11,7 +11,7 @@ Usage  deedglass policy <command> [flags]
   activate  Activate a policy version
   evaluate  Evaluate one action against a policy
   replay    Replay past actions against a version
-  diff      Compare two policy versions             soon · S28
+  diff      Compare two policy versions
 
 soon: listed in the contract, not in this build yet; the session that builds it is shown.
 --- stderr

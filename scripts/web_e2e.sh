@@ -5,6 +5,7 @@
 #   scripts/web_e2e.sh test         Playwright (system Chrome): shell, keyboard, palette, Stop all, live events, axe, CSP
 #   scripts/web_e2e.sh lighthouse   Lighthouse 13 on /app, /app/_kit and /login (desktop and mobile)
 #   scripts/web_e2e.sh shots        the screenshot pass (writes ~/txv/ops/plan/prompts-v7/reports/screens/S24)
+#   scripts/web_e2e.sh shots28      the S28 Insights screenshot pass (reports/screens/S28)
 #   scripts/web_e2e.sh serve        keep the stack up until Ctrl-C (for playwright-cli and manual looks)
 #
 # The cluster lives in .tmp/web-e2e-pg (port 5546x, never the founder's 55432); the server's working
@@ -84,6 +85,23 @@ for spec in "admin|priya.raman@acme.example|Priya Raman" "viewer|sam.okafor@acme
     -c "INSERT INTO deedglass.memberships (id, org_id, user_id, role, status, joined_at) VALUES ('$(newid mem)', '$org', '$uid', '$role', 'active', now())"
 done
 psql_admin -d deedglass -c "UPDATE deedglass.users SET display_name = 'Arjun Mehta' WHERE email = 'owner@acme.example'"
+
+# S28: a simulated org for Insights (acme-sim: seed 7, a week ending two days ago, then the anomaly
+# backfill), with Priya as an admin and Sam as a viewer. It runs before serve starts: serve's
+# approval-expiry sweep runs on the real clock and would expire the simulator's virtual approvals.
+# WEB_E2E_SIM=0 skips it (the Insights specs then skip themselves).
+SIM_ORG=""
+if [ "${WEB_E2E_SEED:-1}" = "1" ] && [ "${WEB_E2E_SIM:-1}" = "1" ]; then
+  SIM_END="$(python3 -c 'import datetime as d;print((d.datetime.now(d.timezone.utc)-d.timedelta(days=2)).strftime("%Y-%m-%dT06:30:00Z"))')"
+  "$DG" dev simulate --days 7 --end "$SIM_END" --seed 7 --no-color >/dev/null
+  "$DG" insights detect --backfill 9d --org acme-sim --no-color >/dev/null
+  SIM_ORG="$(psql_admin -d deedglass -c "SELECT id FROM deedglass.orgs WHERE slug = 'acme-sim'")"
+  for spec in "admin|priya.raman@acme.example" "viewer|sam.okafor@acme.example"; do
+    IFS='|' read -r role email <<<"$spec"
+    psql_admin -d deedglass -c "INSERT INTO deedglass.memberships (id, org_id, user_id, role, status, joined_at)
+      SELECT '$(newid mem)', '$SIM_ORG', id, '$role', 'active', now() FROM deedglass.users WHERE email = '$email'"
+  done
+fi
 
 "$DG" serve > "$ROOT/.tmp/web-e2e-serve.log" 2>&1 &
 SERVE_PID=$!
@@ -165,6 +183,18 @@ PY
   echo "web-e2e: seeded · L2 VERIFIED $VERIFIED_ID · L2 MISMATCH $MISMATCH_ID"
 }
 if [ "${WEB_E2E_SEED:-1}" = "1" ]; then seed; fi
+# S28: the simulated org's suggestions (a loosen, a tighten and a budget), generated through the API
+# with a throwaway admin key; its id and key go to $WORK/sim.json for web/e2e/insights.spec.ts.
+if [ -n "$SIM_ORG" ]; then
+  simkey="$("$DG" org keys create --org acme-sim --name e2e-insights --mode test --json | python3 -c 'import sys,json;print(json.load(sys.stdin)["secret"])')"
+  DEEDGLASS_API_KEY="$simkey" DEEDGLASS_SERVER="http://127.0.0.1:$PORT" "$DG" --no-color insights suggestions generate >/dev/null
+  python3 - "$WORK/sim.json" "$SIM_ORG" "$simkey" <<'PY'
+import json, sys
+json.dump({"org": sys.argv[2], "slug": "acme-sim", "adminKey": sys.argv[3]}, open(sys.argv[1], "w"))
+PY
+  chmod 600 "$WORK/sim.json"
+  echo "web-e2e: simulated org acme-sim ($SIM_ORG) with suggestions"
+fi
 
 # S26: the mock orders API (S16) for the REST connector test, on its own loopback port.
 MOCK_PID=""
@@ -179,13 +209,15 @@ export WEB_E2E_BASE="http://127.0.0.1:$PORT"
 export WEB_E2E_DG="$DG"
 export WEB_E2E_WORK="$WORK"
 export SHOTS_DIR="${SHOTS_DIR:-$HOME/txv/ops/plan/prompts-v7/reports/screens/S26}"
-export LIGHTHOUSE_DIR="${LIGHTHOUSE_DIR:-$HOME/txv/ops/plan/prompts-v7/reports/lighthouse/S26}"
+export WEB_E2E_SIM_DONE="${SIM_ORG:+1}"
+export LIGHTHOUSE_DIR="${LIGHTHOUSE_DIR:-$HOME/txv/ops/plan/prompts-v7/reports/lighthouse/S28}"
 cd "$ROOT/web"
 st=0
 case "$MODE" in
-  test) npx playwright test --project=chromium || st=$? ;;
+  test) npx playwright test --project=chromium ${PW_ARGS:-} || st=$? ;;
   lighthouse) node e2e/lighthouse.mjs || st=$? ;;
   shots) npx playwright test --project=shots || st=$? ;;
+  shots28) SHOTS_DIR="${SHOTS28_DIR:-$HOME/txv/ops/plan/prompts-v7/reports/screens/S28}" npx playwright test --project=shots28 || st=$? ;;
   serve) echo "web-e2e: up. Sign-in links: $DG org login-link --email owner@acme.example --org acme (cwd $WORK). Ctrl-C to stop."; wait "$SERVE_PID" || st=$? ;;
   *) echo "unknown mode $MODE" >&2; st=2 ;;
 esac

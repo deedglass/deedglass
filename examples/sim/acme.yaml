@@ -27,7 +27,7 @@ agents:
     tools: [ { tool: postgres.execute, weight: 50, sql: ["UPDATE public.orders SET status = 'shipped' WHERE id = {id}"] },
              { tool: postgres.execute, weight: 20, sql: ["UPDATE public.inventory SET reserved = reserved - 1 WHERE sku = {sku}"] },
              { tool: postgres.query, weight: 30 } ]    # v1: orders updates need approval; allow-db-writes allows inventory
-    approvals: { approve: 0.99, wait: { median: 20m, p95: 2h } }
+    approvals: { approve: 1, wait: { median: 20m, p95: 2h } }   # every one approved (S28's loosen case); a few expire
   - { name: growth-agent, hours: "11-20", per_day: 60,
       tools: [ { tool: slack.post_message, weight: 70 }, { tool: notion.append_block, weight: 30 } ] }
   # nightly-etl's batch runs overnight, 00:00 to 08:00. Packed into two hours, its own busiest

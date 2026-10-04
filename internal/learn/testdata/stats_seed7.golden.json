@@ -206,14 +206,14 @@
     {
       "actions": 411,
       "approval": {
-        "approved": 397,
+        "approved": 398,
         "cancelled": 0,
-        "denied": 1,
+        "denied": 0,
         "expired": 5,
         "median_seconds": 1123,
         "p95_seconds": 6578,
         "pending": 8,
-        "rate": 0.9975,
+        "rate": 1,
         "requested": 411
       },
       "cost": [],
@@ -223,7 +223,7 @@
         "require_approval": 411
       },
       "deny_rate": 0,
-      "executed": 397,
+      "executed": 398,
       "key": {
         "rule_id": "approve-order-updates"
       },
@@ -232,7 +232,7 @@
         "p95": 88
       },
       "levels": {
-        "L0": 397,
+        "L0": 398,
         "L1": 0,
         "L2": 0
       },
@@ -241,8 +241,8 @@
       "verdicts": {
         "MISMATCH": 0,
         "UNVERIFIABLE": 0,
-        "VERIFIED": 397,
-        "none": 14
+        "VERIFIED": 398,
+        "none": 13
       },
       "versions": [
         1
@@ -522,7 +522,7 @@
       "denied": 2,
       "mismatch": 3,
       "unverifiable": 9,
-      "verified": 912
+      "verified": 913
     },
     {
       "actions": 772,
@@ -545,14 +545,14 @@
   "totals": {
     "actions": 5890,
     "approval": {
-      "approved": 397,
+      "approved": 398,
       "cancelled": 0,
-      "denied": 1,
+      "denied": 0,
       "expired": 5,
       "median_seconds": 1123,
       "p95_seconds": 6578,
       "pending": 8,
-      "rate": 0.9975,
+      "rate": 1,
       "requested": 411
     },
     "cost": [
@@ -569,13 +569,13 @@
       "require_approval": 411
     },
     "deny_rate": 0.0029,
-    "executed": 5859,
+    "executed": 5860,
     "latency_ms": {
       "p50": 56,
       "p95": 466
     },
     "levels": {
-      "L0": 4650,
+      "L0": 4651,
       "L1": 805,
       "L2": 352
     },
@@ -584,8 +584,8 @@
     "verdicts": {
       "MISMATCH": 3,
       "UNVERIFIABLE": 42,
-      "VERIFIED": 5762,
-      "none": 83
+      "VERIFIED": 5763,
+      "none": 82
     }
   },
   "window": {

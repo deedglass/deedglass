@@ -1,0 +1,16 @@
+Deedglass · Acme · week 41 (5 to 11 Oct 2026)
+
+5,612 agent actions · 88.9% verified · 311 denied · 9 mismatches
+
+To review
+  2 suggestions: "Allow updates to public.orders without approval" and 1 more
+  1 open anomaly: 3 MISMATCH verdicts in 1 hour for ops-agent
+Shadow
+  acme-sim v3 has run in shadow for 2 days and agrees on 1,180 of 1,204 actions.
+Denied most by
+  refund-limit 15 · @default 2
+
+Open Insights: https://app.deedglass.com/app/insights
+
+You get this weekly summary because you're an owner of Acme on Deedglass.
+Change who receives it in Console › Insights › Settings.

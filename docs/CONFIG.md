@@ -37,6 +37,7 @@ The first source that sets a key wins:
 | `DEEDGLASS_RESEND_API_KEY` | `resend_api_key` (dev only) | — | yes | serve | Resend API key for sign-in and approval emails (starts with re_). Without it, dev prints emails to the log. | S01 |
 | `DEEDGLASS_MAIL_FROM` | `mail_from` | — | no | serve, org create | The From address of sign-in and invite emails, e.g. Deedglass <signin@deedglass.com>. Required when DEEDGLASS_RESEND_API_KEY is set. | S07 |
 | `DEEDGLASS_ANTHROPIC_API_KEY` | `anthropic_api_key` (dev only) | — | yes | serve, insights | Optional Anthropic API key for Insights phrasing (starts with sk-ant-). | S01 |
+| `DEEDGLASS_ANTHROPIC_MODEL` | `anthropic_model` | `claude-sonnet-5-5` | no | serve | The Claude model that rewords Insights suggestions when an org turns phrasing on (a model id like claude-sonnet-5-5, no date suffix). | S28 |
 | `DEEDGLASS_TRUSTED_PROXIES` | `trusted_proxies` | — | no | serve | Comma-separated CIDRs whose X-Forwarded-For is believed. | S01 |
 | `DEEDGLASS_ALLOW_PRIVATE_NETWORKS` | `allow_private_networks` | `false` | no | serve | Dev only: lets connectors reach private networks. Refused in prod. | S01 |
 | `DEEDGLASS_EGRESS_ALLOW_CIDRS` | `egress_allow_cidrs` | — | no | serve | Comma-separated CIDRs of private networks connectors may reach, in prod too, for example 10.20.0.0/16. Never cloud metadata, reserved, IPv4-embedding or loopback ranges. Deedglass's own database is reachable only when its exact address is listed (a /32 or /128). | S16 |

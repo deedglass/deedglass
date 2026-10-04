@@ -15,6 +15,7 @@ DEEDGLASS_SIGNUP                  invite                                        
 DEEDGLASS_RESEND_API_KEY          —                                                            [2mnot set[0m
 DEEDGLASS_MAIL_FROM               —                                                            [2mnot set[0m
 DEEDGLASS_ANTHROPIC_API_KEY       —                                                            [2mnot set[0m
+DEEDGLASS_ANTHROPIC_MODEL         claude-sonnet-5-5                                            [2mdefault[0m
 DEEDGLASS_TRUSTED_PROXIES         —                                                            [2mnot set[0m
 DEEDGLASS_ALLOW_PRIVATE_NETWORKS  false                                                        [2mdefault[0m
 DEEDGLASS_EGRESS_ALLOW_CIDRS      —                                                            [2mnot set[0m

@@ -150,7 +150,8 @@ var commands = []*Command{
 		Run:   runPolicyEvaluate, RawArgs: true},
 	{Path: p("policy", "replay"), Group: Policies, Summary: "Replay past actions against a version",
 		Usage: `<name|pol_…> --version <n> [--from 7d] [--to now] [--baseline recorded|vN] [--wait] [--quiet] [--json]`, Run: runPolicyReplay, RawArgs: true},
-	{Path: p("policy", "diff"), Group: Policies, Summary: "Compare two policy versions", Owner: "S28"},
+	{Path: p("policy", "diff"), Group: Policies, Summary: "Compare two policy versions",
+		Usage: "<old.yaml> <new.yaml> | <policy> <vA> <vB> [--context 3] [--json]", Run: runPolicyDiff, RawArgs: true},
 
 	// Actions.
 	{Path: p("act"), Group: Actions, Summary: "Send a test action through the Gate",
@@ -252,13 +253,21 @@ var commands = []*Command{
 	{Path: p("insights", "detect"), Group: Insights, Summary: "Run anomaly detection now",
 		Usage: "[--org org_…|slug] [--backfill 7d] [--json]", Needs: config.NeedDatabase, Run: runInsightsDetect, RawArgs: true},
 	{Path: p("insights", "settings"), Group: Insights, Summary: "Show or change Insights settings",
-		Usage: `[--anomaly-facts on|off] [--active-minutes 60] [--stale-minutes 15] [--reason "…"] [--json]`, Run: runInsightsSettings, RawArgs: true},
-	{Path: p("insights", "suggestions", "list"), Group: Insights, Summary: "List suggestions", Owner: "S28"},
-	{Path: p("insights", "suggestions", "show"), Group: Insights, Summary: "Show one suggestion", Owner: "S28"},
-	{Path: p("insights", "suggestions", "accept"), Group: Insights, Summary: "Accept a suggestion", Owner: "S28"},
-	{Path: p("insights", "suggestions", "reject"), Group: Insights, Summary: "Reject a suggestion", Owner: "S28"},
-	{Path: p("insights", "suggestions", "generate"), Group: Insights, Summary: "Generate suggestions now", Owner: "S28"},
-	{Path: p("insights", "digest"), Group: Insights, Summary: "Preview the weekly digest", Owner: "S28"},
+		Usage: `[--anomaly-facts on|off] [--active-minutes 60] [--stale-minutes 15] [--llm-phrasing on|off] [--llm-cap-cents 200] [--digest owners|admins|off] [--reason "…"] [--json]`, Run: runInsightsSettings, RawArgs: true},
+	{Path: p("insights", "suggestions", "list"), Group: Insights, Summary: "List suggestions",
+		Usage: "[--status open|accepted|rejected|superseded|all] [--kind loosen|tighten|budget|explicit_rule|advisory] [--limit 25] [--json]",
+		Run:   runSuggestionsList, RawArgs: true},
+	{Path: p("insights", "suggestions", "show"), Group: Insights, Summary: "Show one suggestion",
+		Usage: "sug_… [--no-diff] [--json]", Run: runSuggestionsShow, RawArgs: true},
+	{Path: p("insights", "suggestions", "accept"), Group: Insights, Summary: "Accept a suggestion into shadow",
+		Usage: `sug_… [--reason "…"] [--replace-shadow] [--json]`, Run: runSuggestionsAccept, RawArgs: true,
+		Detail: "Creates a policy version from the suggestion and runs it in shadow next to the enforced one. Nothing is enforced:\npromote it later with deedglass policy activate <name> --version N --mode enforce."},
+	{Path: p("insights", "suggestions", "reject"), Group: Insights, Summary: "Reject a suggestion",
+		Usage: `sug_… --reason "…" [--json]`, Run: runSuggestionsReject, RawArgs: true},
+	{Path: p("insights", "suggestions", "generate"), Group: Insights, Summary: "Generate suggestions now",
+		Usage: "[--json]", Run: runSuggestionsGenerate, RawArgs: true},
+	{Path: p("insights", "digest"), Group: Insights, Summary: "Preview the weekly digest",
+		Usage: "--preview [--org org_…|slug] [--html /tmp/digest.html] [--json]", Needs: config.NeedDatabase, Run: runInsightsDigest, RawArgs: true},
 
 	// Dev.
 	{Path: p("dev", "seed"), Group: Dev, Summary: "Load demo data into a dev database", Usage: "[--demo [--keys-file <path>] [--approver <email>]] [--json]",
@@ -326,7 +335,7 @@ var lines = []Line{
 
 	{Name: "mcp", Group: MCP, Summary: "Put the Gate in front of MCP servers", Subs: subs("wrap serve snippet"), Paths: ps("mcp wrap", "mcp serve", "mcp snippet")},
 
-	{Name: "insights", Group: Insights, Summary: "Usage, shadow results and anomalies", Subs: subs("stats shadow anomalies detect settings suggestions digest"),
+	{Name: "insights", Group: Insights, Summary: "Suggestions, shadow results and anomalies", Subs: subs("stats shadow anomalies detect settings suggestions digest"),
 		Paths: ps("insights stats", "insights shadow", "insights anomalies", "insights detect", "insights settings",
 			"insights suggestions list", "insights suggestions show", "insights suggestions accept", "insights suggestions reject",
 			"insights suggestions generate", "insights digest")},

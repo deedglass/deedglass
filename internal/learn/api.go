@@ -145,7 +145,7 @@ func (a *api) listReplays(w http.ResponseWriter, r *http.Request) error {
 	}
 	data, next, err := a.s.Store.ListReplays(r.Context(), p.OrgID, f, limit, cursor)
 	if err != nil {
-		return err
+		return cursorErr(err)
 	}
 	return writeList(w, data, next)
 }
@@ -333,7 +333,7 @@ func (a *api) listAnomalies(w http.ResponseWriter, r *http.Request) error {
 	}
 	l, err := a.s.Anomalies(r.Context(), p.OrgID, f, limit, cursor)
 	if err != nil {
-		return err
+		return cursorErr(err)
 	}
 	return httpx.WriteJSON(w, http.StatusOK, l)
 }

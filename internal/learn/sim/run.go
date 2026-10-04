@@ -76,6 +76,13 @@ func Run(ctx context.Context, env Env, o Options) (*Result, error) {
 	if sc == nil {
 		sc = Default()
 	}
+	if o.Append && len(sc.Incidents) > 0 {
+		// The scenario's incidents describe its first week, counted from the org's first day; days
+		// appended later are ordinary traffic (S28: two quiet days for the shadow to watch).
+		quiet := *sc
+		quiet.Incidents = nil
+		sc = &quiet
+	}
 	started := time.Now()
 	w, err := Span(sc, o.Days, o.End)
 	if err != nil {

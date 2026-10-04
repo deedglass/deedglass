@@ -451,8 +451,12 @@ func TestSettingsService(t *testing.T) {
 		``:   DefaultSettings(),
 		`{`:  DefaultSettings(),
 		`{}`: DefaultSettings(),
-		`{"insights":{"anomaly_facts":true,"anomaly_active_minutes":30,"anomaly_stale_after_minutes":20}}`: {AnomalyFacts: true, AnomalyActiveMinutes: 30, AnomalyStaleAfterMinutes: 20},
-		`{"insights":{"anomaly_active_minutes":1,"anomaly_stale_after_minutes":9999}}`:                     DefaultSettings(),
+		`{"insights":{"anomaly_facts":true,"anomaly_active_minutes":30,"anomaly_stale_after_minutes":20}}`: {AnomalyFacts: true, AnomalyActiveMinutes: 30, AnomalyStaleAfterMinutes: 20,
+			LLMMonthlyCapCents: DefaultLLMCapCents, Digest: DigestSettings{Recipients: DigestOwners}},
+		`{"insights":{"llm_phrasing":true,"llm_monthly_cap_cents":500,"digest":{"recipients":"admins"}}}`: {AnomalyActiveMinutes: DefaultActiveMinutes,
+			AnomalyStaleAfterMinutes: DefaultStaleMinutes, LLMPhrasing: true, LLMMonthlyCapCents: 500, Digest: DigestSettings{Recipients: DigestAdmins}},
+		`{"insights":{"llm_monthly_cap_cents":-1,"digest":{"recipients":"everyone"}}}`: DefaultSettings(),
+		`{"insights":{"anomaly_active_minutes":1,"anomaly_stale_after_minutes":9999}}`: DefaultSettings(),
 	} {
 		if got := ParseSettings([]byte(in)); got != want {
 			t.Fatalf("%s: %+v", in, got)

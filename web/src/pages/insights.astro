@@ -1,22 +1,70 @@
 ---
+// Insights (S28 §3.8): Suggestions, Shadow, Anomalies and Trends in one scroll, and a right rail
+// (settings summary, how it works) from 1280 px. The headings and skeletons are static; every
+// value arrives through src/controllers/insights.ts after load.
 import AppShell from '../layouts/AppShell.astro';
 import PageHead from '../components/PageHead.astro';
 import Icon from '../components/Icon.astro';
-import { copy } from '../lib/copy.ts';
-const p = copy.pages.insights;
+import { insightsCopy as c } from '../lib/copy-insights.ts';
+const sections = [
+  { key: 'suggestions', icon: 'file-diff', title: c.sections.suggestions },
+  { key: 'shadow', icon: 'git-compare', title: c.sections.shadow },
+  { key: 'anomalies', icon: 'activity', title: c.sections.anomalies },
+  { key: 'trends', icon: 'chart-column', title: c.sections.trends },
+] as const;
 ---
-<AppShell title={p.title} screen="insights">
-  <PageHead title={p.title} lede={p.lede} />
-  <section id="screen-body" aria-labelledby="page-title">
-    <div class="state" role="status">
-      <span class="well"><Icon name="chart-line" /></span>
-      <p class="t-headline">Insights appear after about 50 actions.</p>
-      <p>Every suggestion waits for your approval.</p>
-      <div class="actions"><a class="btn btn-quiet" href="https://docs.deedglass.com/insights">Read the docs <Icon name="arrow-up-right" size={16} /></a></div>
+<AppShell title={c.title} screen="insights">
+  <PageHead title={c.title} lede={c.lede} />
+  <div class="ins" id="insights">
+    <div class="ins-main">
+      {sections.map((s) => (
+        <section class="ins-sec" id={`sec-${s.key}`} aria-labelledby={`h-${s.key}`}>
+          <header class="ins-sec-head">
+            <h2 class="t-headline" id={`h-${s.key}`}><Icon name={s.icon} />{s.title}</h2>
+            <span class="ins-sec-side">
+              <span class="ins-sec-meta" id={`meta-${s.key}`}></span>
+              {s.key === 'suggestions' && <span id="insights-actions"></span>}
+            </span>
+          </header>
+          <div class="ins-sec-body" id={`body-${s.key}`} aria-busy="true">
+            {s.key === 'suggestions'
+              ? [0, 1].map(() => (
+                  <div class="card card-pad ins-skel ins-skel-card" aria-hidden="true">
+                    <span class="skel skel-line w-40"></span><span class="skel skel-title"></span><span class="skel skel-line"></span><span class="skel skel-line w-3/4"></span>
+                  </div>
+                ))
+              : (
+                  <div class="card card-pad ins-skel" aria-hidden="true">
+                    <span class="skel skel-line w-56"></span><span class="skel skel-line"></span><span class="skel skel-line w-2/3"></span>
+                  </div>
+                )}
+          </div>
+        </section>
+      ))}
     </div>
-  </section>
+    <aside class="ins-rail" aria-label={c.rail.settings}>
+      <section class="card card-pad ins-rail-card" aria-labelledby="h-rail-settings">
+        <div class="ins-rail-head">
+          <h2 class="t-footnote" id="h-rail-settings">{c.rail.settings}</h2>
+          <span id="rail-change"></span>
+        </div>
+        <dl class="ins-rail-kv" id="rail-settings" aria-busy="true">
+          <dt>{c.rail.facts}</dt><dd><span class="skel skel-line w-40"></span></dd>
+          <dt>{c.rail.phrasing}</dt><dd><span class="skel skel-line w-40"></span></dd>
+          <dt>{c.rail.digest}</dt><dd><span class="skel skel-line w-24"></span></dd>
+        </dl>
+      </section>
+      <section class="card card-pad ins-rail-card" aria-labelledby="h-rail-how">
+        <h2 class="t-footnote" id="h-rail-how">{c.rail.how}</h2>
+        <ol class="ins-how">{c.rail.steps.map((t) => <li>{t}</li>)}</ol>
+        <a class="ins-docs" href={c.docs}>{c.rail.docs} <Icon name="arrow-up-right" size={16} /></a>
+      </section>
+    </aside>
+  </div>
 </AppShell>
 <script>
   import { bootShell } from '../controllers/shell.ts';
+  import { mountInsights } from '../controllers/insights.ts';
   bootShell({ title: 'Insights' });
+  mountInsights();
 </script>

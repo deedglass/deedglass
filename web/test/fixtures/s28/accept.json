@@ -1,0 +1,221 @@
+{
+    "object": "suggestion",
+    "id": "sug_01m4362v9f1bg0v1vqbdwewjah",
+    "status": "accepted",
+    "kind": "loosen",
+    "generator": "loosen.approval_rate",
+    "title": "Allow updates to public.orders without approval",
+    "rationale": "People approved 398 of 403 updates to public.orders by ops-agent in the last 14 days and denied none. Each waited a median of 19 minutes.",
+    "phrasing": {
+        "source": "template",
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "cost_usd_micros": 0,
+        "duration_ms": 0
+    },
+    "policy": {
+        "id": "pol_01m43609ky741wh57e1ra09sb7",
+        "name": "acme-sim",
+        "base_version": 1,
+        "base_version_id": "pv_01m43609ky741wh57e1ra09sb8",
+        "base_version_hash": "sha256:3a5e623e24a4db9ed3fec73fdba630049284735d1912dc5cd4862470badb3f6d"
+    },
+    "target_rule_id": "approve-order-updates",
+    "evidence": {
+        "agents": [
+            "ops-agent"
+        ],
+        "approvals": {
+            "approved": 398,
+            "denied": 0,
+            "expired": 5,
+            "pending": 8,
+            "requested": 411
+        },
+        "approvers": 2,
+        "median_wait_seconds": 1123,
+        "pattern": {
+            "agents": [
+                "ops-agent"
+            ],
+            "sql.kind": "update",
+            "sql.statements": 1,
+            "sql.tables": [
+                "public.orders"
+            ],
+            "tool": "postgres.execute"
+        },
+        "rule": "approve-order-updates",
+        "sample_actions": [
+            "act_01m43609ma5pbq3p3nq3x13sk3",
+            "act_01m43609mwqxbatarkrtmsramk",
+            "act_01m43609nwhaagvy5vdbvy3y38",
+            "act_01m43609p13xap8bvkk6esavez",
+            "act_01m43609psbpnmtjq0p0hdc8ep"
+        ],
+        "tool": "postgres.execute",
+        "window": {
+            "from": "2026-09-20T10:06:50Z",
+            "to": "2026-10-04T10:06:50Z"
+        }
+    },
+    "evidence_digest": "sha256:68256aac088f71c940ec37eac45b226b9054c26707b73f6ee6c65fbcc0c723dd",
+    "diff": {
+        "hunks": [
+            {
+                "old_start": 52,
+                "old_lines": 6,
+                "new_start": 52,
+                "new_lines": 14,
+                "lines": [
+                    {
+                        "op": " ",
+                        "text": "    match: { tool: stripe.create_refund }"
+                    },
+                    {
+                        "op": " ",
+                        "text": "    decision: allow"
+                    },
+                    {
+                        "op": " ",
+                        "text": ""
+                    },
+                    {
+                        "op": "+",
+                        "text": "  # Accepted from Deedglass Insights suggestion sug_01m4362v9f1bg0v1vqbdwewjah \u00b7 evidence sha256:6825\u202623dd"
+                    },
+                    {
+                        "op": "+",
+                        "text": "  - id: allow-order-updates"
+                    },
+                    {
+                        "op": "+",
+                        "text": "    description: People approved 398 of 403 of these between 2026-09-20 and 2026-10-04."
+                    },
+                    {
+                        "op": "+",
+                        "text": "    match: { tool: postgres.execute, agent: [ops-agent] }"
+                    },
+                    {
+                        "op": "+",
+                        "text": "    when: 'sql.kind == \"update\" && sql.tables == [\"public.orders\"] && sql.statements == 1 && sql.has_where && !sql.unbounded_write && size(sql.dangerous_functions) == 0 && sql.tables_complete'"
+                    },
+                    {
+                        "op": "+",
+                        "text": "    decision: allow"
+                    },
+                    {
+                        "op": "+",
+                        "text": "    verify: L0"
+                    },
+                    {
+                        "op": "+",
+                        "text": ""
+                    },
+                    {
+                        "op": " ",
+                        "text": "  # Updating orders waits for one admin. The 4h expiry is long enough that about 1% of the"
+                    },
+                    {
+                        "op": " ",
+                        "text": "  # simulated waits (median 20 minutes, p95 2 hours) run out."
+                    },
+                    {
+                        "op": " ",
+                        "text": "  - id: approve-order-updates"
+                    }
+                ]
+            }
+        ],
+        "text": "@@ -52,6 +52,14 @@\n     match: { tool: stripe.create_refund }\n     decision: allow\n \n+  # Accepted from Deedglass Insights suggestion sug_01m4362v9f1bg0v1vqbdwewjah \u00b7 evidence sha256:6825\u202623dd\n+  - id: allow-order-updates\n+    description: People approved 398 of 403 of these between 2026-09-20 and 2026-10-04.\n+    match: { tool: postgres.execute, agent: [ops-agent] }\n+    when: 'sql.kind == \"update\" && sql.tables == [\"public.orders\"] && sql.statements == 1 && sql.has_where && !sql.unbounded_write && size(sql.dangerous_functions) == 0 && sql.tables_complete'\n+    decision: allow\n+    verify: L0\n+\n   # Updating orders waits for one admin. The 4h expiry is long enough that about 1% of the\n   # simulated waits (median 20 minutes, p95 2 hours) run out.\n   - id: approve-order-updates\n",
+        "added": 8,
+        "removed": 0
+    },
+    "warnings": [],
+    "replay": {
+        "id": "rpl_01m4362vc9kfgmw9cd24g1h3hd",
+        "window": {
+            "from": "2026-09-20T10:06:50.529308Z",
+            "to": "2026-10-04T10:06:50.529308Z"
+        },
+        "summary": {
+            "actions": 5890,
+            "evaluated": 5890,
+            "unchanged": 5479,
+            "changed": 411,
+            "rule_changed": 0,
+            "unknown": 0
+        },
+        "transitions": [
+            {
+                "from": "require_approval",
+                "to": "allow",
+                "count": 411,
+                "human_outcome": {
+                    "approved": 398,
+                    "denied": 0,
+                    "expired": 5,
+                    "cancelled": 0,
+                    "pending": 8,
+                    "not_requested": 0
+                },
+                "by_rule": [
+                    {
+                        "rule_id": "allow-order-updates",
+                        "count": 411
+                    }
+                ],
+                "by_tool": [
+                    {
+                        "tool": "postgres.execute",
+                        "count": 411
+                    }
+                ],
+                "samples": [
+                    "act_01m43609ma5pbq3p3nq3x13sk3",
+                    "act_01m43609mwqxbatarkrtmsramk",
+                    "act_01m43609nwhaagvy5vdbvy3y38",
+                    "act_01m43609p13xap8bvkk6esavez",
+                    "act_01m43609psbpnmtjq0p0hdc8ep",
+                    "act_01m43609pyht2tmd0n9k8xt7st",
+                    "act_01m43609q7fedp3v0tm0gv11rn",
+                    "act_01m43609qfxd5cmzz3fspxtad5",
+                    "act_01m43609refrwbxhwa8wnnbx7s",
+                    "act_01m43609tshddxj9007cmg2jsj",
+                    "act_01m43609vf402vrvrpzrkmcnmb",
+                    "act_01m43609vzaba7q4nms1jr8xqe",
+                    "act_01m43609xn1vsn3hgte3f4vvgh",
+                    "act_01m43609ynmp6cdqzzdg3b16rv",
+                    "act_01m43609zne3ak92dxcwq6gwcj",
+                    "act_01m4360a08n0cp4sfrb30xvhsw",
+                    "act_01m4360a1tgcwqs00vg83k9jmp",
+                    "act_01m4360a2c3dj23py7h1d1c25f",
+                    "act_01m4360a45cb6jqvn6227tweba",
+                    "act_01m4360a5czwpq0xnfwck3b5sc"
+                ]
+            }
+        ],
+        "result_digest": "sha256:8a4dad7047e1fdc69a5e897da68b5c5dd2654c7f8d336e28a068252e449464c9"
+    },
+    "risk_note": "ops-agent could update single rows of public.orders without a person looking. Other statements, and writes without a WHERE clause, still go to approval.",
+    "impact": 411,
+    "stale_reason": null,
+    "created_at": "2026-10-04T10:06:50.85056Z",
+    "decided_by": {
+        "type": "api_key",
+        "id": "key_01m4362v30y41f0nht68m69vjz"
+    },
+    "decided_at": "2026-10-04T10:19:35.123462Z",
+    "decision_reason": "Ops approves these every time",
+    "resulting_version": {
+        "id": "pv_01m436t5sy3k61j4g328xqys5a",
+        "version": 3,
+        "version_hash": "sha256:73f1f6617975f97cbcfb6e2a469447f461708f578d4800b45b2ec12f5f10d4c4"
+    },
+    "decision_deed": "deed_01m436t5tm9pfnpphhj23fpytr",
+    "deeds": [
+        "deed_01m436t5tat95mr565470er4tx",
+        "deed_01m436t5tm9pfnpphhj23fpytr"
+    ],
+    "replaced_shadow_version": 2
+}

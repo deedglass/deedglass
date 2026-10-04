@@ -60,7 +60,7 @@ erDiagram
 | `witness_jobs` | Work queued for the Witness and the approval workers: `l1_readback` (S19) and `l2_match`, which ends an L2 wait at `witness.l2_timeout` (S21). | S13, S19 to S22 |
 | `decoded_txs` | Frames: transactions read from a watched database's change stream, with their class, ledger rows, markers, tables, counts, row images (the first 1,000) and digest. Unique by (connector, system id, timeline, commit LSN, stray message); `missing` rows (reconcile) have no LSN. Evidence: UPDATE and TRUNCATE raise DG001, and only `maint_prune_decoded_txs` deletes ([DECODER.md](DECODER.md)). | S20 |
 | `decoder_slots` | One logical replication slot per witnessed Postgres connector: the lease (`claim_decoder_leases`), status and reason, positions, lag, counters, relation shapes and the reconcile watermark. `sync_decoder_slots` keeps one row per witnessed connector. | S20 |
-| `suggestions` | Insights suggestions a person accepts or rejects. | S28 |
+| `suggestions` | Insights suggestions a person accepts or rejects: the generator, the enforced version it was written for, the candidate source, the evidence and its digest, the replay, the diff, phrasing, and the decision with its deed. S28 (0025) added the generator, saga and phrasing columns. | S28 |
 | `anomalies` | Insights anomaly episodes: one row per unresolved series of findings for an agent, kind and tool, with its evidence (numbers, hours, tool names, action ids), `active_until` (what `anomaly.active` sees) and the review status (`open`, `acknowledged`, `resolved`). S27 (0024) added the episode, lifecycle and fact columns. | S27 |
 | `replay_jobs` | Replays of past actions against a policy version (or a draft source): the window, the baseline, the lease, the progress and, once succeeded, the result and its digest. S27 (0024) added the job columns. | S27 |
 | `learn_runs` | Insights' background runs, one row per org, kind (`detect`, `suggest`, `digest`) and period: their status, times and counts. The anomaly facts read the last successful live `detect` run to decide whether detection is stale. | S27 (0024) |
@@ -491,6 +491,45 @@ index `learn_runs_recent` serves the latest runs. The detect loop deletes its ro
 The work itself runs afterwards in each org's own transaction, under row-level security. The
 Insights settings live in `orgs.settings -> 'insights'` and a simulated org carries
 `orgs.settings.simulated = true` ([SIMULATOR.md](SIMULATOR.md)); neither needs a column.
+
+## Suggestions additions (0025, S28)
+
+`0025_suggestions_v2.sql` adds what suggestions need ([SUGGESTIONS.md](SUGGESTIONS.md)). Nothing
+wrote to `suggestions` before S28, so the migration tightens the table in place, and first refuses,
+with a clear message, if it holds rows. With it the migration count is 25 (`0001` to `0025`).
+
+| Column | What |
+|---|---|
+| `generator`, `generator_version` | which generator wrote it (`loosen.approval_rate`, …) and the version of its thresholds (`1`) |
+| `fingerprint` | `sha256(JCS{generator, policy_id, target, pattern})`: one open suggestion per change |
+| `policy_id`, `base_version_id`, `base_version_hash` | the policy and the enforced version it was written against (foreign keys to `policies` and `policy_versions`) |
+| `target_rule_id` | the rule it changes, or NULL (at most 64 characters) |
+| `candidate_source`, `candidate_source_hash` | the patched policy (at most 256 KiB) and its hash; both NULL for an advisory, and only for an advisory |
+| `evidence_digest` | the digest of the evidence object (the evidence itself at most 64 KiB) |
+| `window_from`, `window_to` | the 14-day window |
+| `impact` | the actions whose decision the replay would change (the ranking) |
+| `warnings` | the candidate's compile warnings (at most 16 KiB) |
+| `phrased_title`, `phrased_rationale`, `phrasing` | Claude's wording when it passed the checks (at most 90 and 400 characters), and `phrasing` (`{"source":"template"}` by default; model, tokens and cost when worded). `title` and `rationale` keep the template text |
+| `stale_reason` | `base_changed` on a superseded suggestion |
+| `decided_by_type`, `replace_shadow`, `decision_request_id` | the accept saga: who started it (`user` or `api_key`), what they asked for, the request, so the sweeper can finish it as them |
+| `decision_deed_id` | the `suggestion.accepted` or `suggestion.rejected` deed |
+| `updated_at` | kept by the `suggestions_touch` trigger |
+
+**Status** is `open`, `accepting`, `accepted`, `rejected` or `superseded` (0025 adds `accepting`).
+Checks tie each status to its fields: `accepted` needs a resulting version, a decision deed and a
+time; `rejected` a deed, a time and a reason; `accepting` who started it; `superseded` its
+`stale_reason`. The replay result is at most 256 KiB.
+
+| Index | On | Serves |
+|---|---|---|
+| `suggestions_open_fp_uq` | unique `(org_id, fingerprint) WHERE status IN ('open','accepting')` | one open suggestion per change, across instances |
+| `suggestions_org_status_idx` | `(org_id, status, impact DESC, created_at DESC)` | the list, by impact |
+| `suggestions_org_fp_idx` | `(org_id, fingerprint, decided_at DESC)` | the dedupe read: a fingerprint's latest rejection |
+
+0008's `suggestions_open` index is dropped. A suggestion's replay is a `replay_jobs` row with
+`purpose: suggestion`, and the daily pass and the digest use `learn_runs` (`suggest`, `digest`).
+The settings `llm_phrasing`, `llm_monthly_cap_cents` and `digest.recipients` live in
+`orgs.settings -> 'insights'`; no column.
 
 ## Personal data
 

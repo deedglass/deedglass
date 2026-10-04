@@ -48,6 +48,8 @@ type Service struct {
 	Log    *slog.Logger
 	// StatsTTL caches stats answers per org and query (60 s; negative turns it off).
 	StatsTTL time.Duration
+	// PhrasingKeySet: DEEDGLASS_ANTHROPIC_API_KEY is set, so an org may turn llm_phrasing on.
+	PhrasingKeySet bool
 
 	mu       sync.Mutex
 	stats    map[string]statsEntry
@@ -476,7 +478,8 @@ func (s *Service) SettingsOf(ctx context.Context, org ids.OrgID) (*SettingsObjec
 	if err != nil {
 		return nil, err
 	}
-	o := &SettingsObject{Object: "insights_settings", Settings: info.Settings}
+	o := &SettingsObject{Object: "insights_settings", Settings: info.Settings, PhrasingAvailable: s.PhrasingKeySet,
+		Simulated: info.Simulated}
 	label, reads, err := s.policyReadsAnomaly(ctx, org)
 	if err != nil {
 		return nil, err
@@ -518,6 +521,15 @@ func (s *Service) PatchSettings(ctx context.Context, org ids.OrgID, by Actor, p 
 	}
 	if p.AnomalyStaleAfterMinutes != nil && (*p.AnomalyStaleAfterMinutes < MinStaleMinutes || *p.AnomalyStaleAfterMinutes > MaxStaleMinutes) {
 		return nil, httpx.ErrValidation("anomaly_stale_after_minutes", MsgStaleMinutes)
+	}
+	if p.LLMMonthlyCapCents != nil && (*p.LLMMonthlyCapCents < 0 || *p.LLMMonthlyCapCents > MaxLLMCapCents) {
+		return nil, httpx.ErrValidation("llm_monthly_cap_cents", MsgPhrasingCap)
+	}
+	if p.Digest != nil && (p.Digest.Recipients == nil || !validRecipients(*p.Digest.Recipients)) {
+		return nil, httpx.ErrValidation("digest.recipients", MsgDigestRecipients)
+	}
+	if p.LLMPhrasing != nil && *p.LLMPhrasing && !s.PhrasingKeySet {
+		return nil, httpx.ErrValidation("llm_phrasing", MsgPhrasingNeedsKey)
 	}
 	if err := checkReason(p.Reason, MsgSettingsReason); err != nil {
 		return nil, err

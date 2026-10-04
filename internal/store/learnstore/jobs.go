@@ -5,7 +5,6 @@ package learnstore
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -139,7 +138,7 @@ func decodeCursor(c string) (time.Time, string, bool) {
 }
 
 // ErrBadCursor: a cursor that this store didn't hand out.
-var ErrBadCursor = errors.New("learnstore: the cursor isn't valid")
+var ErrBadCursor = learn.ErrBadCursor
 
 // ListReplays lists replays, newest first.
 func (s *Store) ListReplays(ctx context.Context, org ids.OrgID, f learn.ReplayFilter, limit int, cursor string) ([]learn.Replay, string, error) {

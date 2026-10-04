@@ -65,7 +65,7 @@ Every transition out of `require_approval` carries `human_outcome`: what people 
 | `pending` | approvals still pending, or actions with no approval row |
 | `not_requested` | with a `version` baseline only: the baseline asked for approval, but the recorded decision didn't, so no person was asked. Left out when 0 |
 
-This is what makes a loosening defensible: "require_approval → allow, 404 actions, humans approved 401, expired 3, denied 0".
+This is what makes a loosening defensible: "require_approval → allow, 411 actions, humans approved 398, expired 5, pending 8, denied 0" (seed 7's loosen suggestion). A suggestion's guard reads exactly these counts ([SUGGESTIONS.md](SUGGESTIONS.md#the-six-generators)).
 
 ## Unknowns
 
@@ -175,12 +175,12 @@ GET /v1/replays/rpl_01jbq3…
  "progress":{"processed":5612,"total":5612,"percent":100},
  "requested_by":{"type":"api_key","id":"key_01jb…"},"attempts":1,
  "created_at":"2026-10-09T13:02:11Z","started_at":"2026-10-09T13:02:11Z","finished_at":"2026-10-09T13:02:12Z","error":null,
- "summary":{"actions":5612,"evaluated":5612,"unchanged":5200,"changed":408,"rule_changed":4,"unknown":0},
+ "summary":{"actions":5612,"evaluated":5612,"unchanged":5193,"changed":415,"rule_changed":4,"unknown":0},
  "transitions":[
-   {"from":"require_approval","to":"allow","count":404,
-    "human_outcome":{"approved":401,"denied":0,"expired":3,"cancelled":0,"pending":0},
-    "by_rule":[{"rule_id":"allow-order-status-updates","count":404}],
-    "by_tool":[{"tool":"postgres.execute","count":404}],
+   {"from":"require_approval","to":"allow","count":411,
+    "human_outcome":{"approved":398,"denied":0,"expired":5,"cancelled":0,"pending":8},
+    "by_rule":[{"rule_id":"allow-order-updates","count":411}],
+    "by_tool":[{"tool":"postgres.execute","count":411}],
     "samples":["act_01jb9x…","act_01jb9y…"]},
    {"from":"allow","to":"deny","count":4,
     "by_rule":[{"rule_id":"refund-limit-strict","count":4}],
@@ -214,8 +214,8 @@ deedglass policy replay <name|pol_…> --version <n> [--from 7d] [--to now] [--b
 $ deedglass policy replay acme-sim --version 3 --from 7d --wait
 ◐ Replaying acme-sim v3 against 5,612 actions (2026-10-02 to 2026-10-09) · baseline: recorded decisions
   ████████████████████████████████ 100% · 0.6 s
-✓ 408 decisions would change · 4 by a different rule · 5,200 unchanged · 0 unknown
-  require_approval → allow     404   allow-order-status-updates · humans approved 401, expired 3, denied 0
+✓ 415 decisions would change · 4 by a different rule · 5,193 unchanged · 0 unknown
+  require_approval → allow     411   allow-order-updates · humans approved 398, expired 5, denied 0, pending 8
   allow → deny                   4   refund-limit-strict
   result sha256:9c1e…40ab · same inputs and version always give this digest
   next       deedglass policy activate acme-sim --version 3 --mode shadow --reason "…"
@@ -241,5 +241,5 @@ When some inputs can't be replayed, they get their own line:
 - **It doesn't predict the future.** It re-decides the past. Traffic next week can differ from the window you replayed.
 - **It doesn't replay what people would do.** `human_outcome` is what people did with the approvals that were asked for; when the candidate asks for an approval the recorded decision didn't, nobody was asked, and replay can't know what they would have said.
 - **It doesn't hide classifier changes.** SQL facts are recomputed with the current sqlguard; the result names the recorded and current versions rather than freezing the old classification.
-- **It doesn't replay drafts over HTTP yet.** The engine replays an unsaved source (S28's suggestions use it); the API replays stored versions only.
+- **It doesn't replay drafts over HTTP yet.** The engine replays an unsaved source: every suggestion's replay is one, stored with `purpose: suggestion` and readable with `GET /v1/replays/{id}` ([SUGGESTIONS.md](SUGGESTIONS.md#the-pass)). The API creates replays of stored versions only.
 - **It doesn't change anything.** A replay result changes no policy and no setting. Activating a version is a separate step, by a person, sealed as a deed.

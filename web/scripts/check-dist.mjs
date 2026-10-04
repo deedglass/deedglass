@@ -67,7 +67,7 @@ if (maxJS > 60 * 1024) fails.push(`JS ${kb(maxJS)} gzip on one page; the budget 
 if (cssGz > 30 * 1024) fails.push(`CSS ${kb(cssGz)} gzip; the budget is 30 KB`);
 if (fontBytes > 120 * 1024) fails.push(`fonts ${kb(fontBytes)}; the budget is 120 KB`);
 console.log(`check-dist: ${pages.length} pages · JS ≤ ${kb(maxJS)} gzip per page (budget 60 KB) · CSS ${kb(cssGz)} gzip (30 KB) · fonts ${kb(fontBytes)} (120 KB)`);
-for (const [p, n] of budget.sort((a, b) => b[1] - a[1]).slice(0, 4)) console.log(`  ${p}: ${kb(n)} JS gzip`);
+for (const [p, n] of budget.sort((a, b) => b[1] - a[1]).filter((x, i) => i < 4 || /insights/.test(x[0]))) console.log(`  ${p}: ${kb(n)} JS gzip`);
 if (fails.length) {
   for (const f of fails) console.error('✕ ' + f);
   process.exit(1);

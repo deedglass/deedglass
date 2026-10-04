@@ -1,0 +1,48 @@
+# A comment-heavy policy: every comment and blank line must survive a patch byte for byte.
+deedglass: policy/v1   # the language
+name: patch-comments
+description: Comments everywhere.
+
+defaults:
+  decision: deny          # refuse what no rule names
+  reason: No rule allows this. Add one in Console › Policies.
+
+budgets:
+  # Calls first.
+  - id: calls-per-hour
+    match: { tool: "slack.*" }
+    per: agent
+    window: hour
+    max_calls: 120   # two a minute
+  # Money second.
+  - id: spend-per-day
+    match:
+      tool: stripe.create_refund
+    per: org
+    window: day
+    max_spend: "500.00 usd"
+
+rules:
+  # Reads run.
+  - id: allow-reads
+    match: { tool: postgres.query }
+    when: sql.category == "read"
+    decision: allow
+
+  # Orders wait for a person.
+  # (two comment lines above this rule)
+  - id: approve-orders
+    match:
+      tool: postgres.execute
+    when: >-
+      sql.kind == "update" && "public.orders" in sql.tables
+    decision: require_approval
+    reason: Order updates wait for a person.
+    approval: { approvers: [role:admin], required: 1, expires_in: 4h }
+
+  - id: allow-writes   # inline comment on the id
+    match: { tool: postgres.execute }
+    decision: allow
+    verify: L1   # asked for L1
+
+# trailing comment at the end of the file

@@ -1,11 +1,11 @@
 # Insights
 
-**Status:** S27 (replay, shadow disagreements, stats, anomalies, the simulator). S28 adds suggestions and the Console screen.
+**Status:** S27 (replay, shadow disagreements, stats, anomalies, the simulator); S28 (suggestions, the Console's Insights screen, optional phrasing and the weekly digest).
 **Audience:** anyone who wants to know whether their rules are right, and how Deedglass counts.
 
 Insights reads what the Gate recorded and reports it: exact counts, every number with its window. It makes suggestions that people approve. **Nothing changes by itself.** Insights never activates a policy, never edits one, and never blocks an action. Its only input into decisions is the opt-in anomaly facts: an org can turn on `anomaly.active` for its policies, and then what an anomaly means is whatever that org's own rules say.
 
-This page covers decision time, the stats, shadow disagreements and anomalies. Replay has its own page ([REPLAY.md](REPLAY.md)), and so does the simulator that seeds history for demos and tests ([SIMULATOR.md](SIMULATOR.md)).
+This page covers decision time, the stats, shadow disagreements, anomalies, the Console screen, the settings and the weekly digest. Replay has its own page ([REPLAY.md](REPLAY.md)), and so do suggestions ([SUGGESTIONS.md](SUGGESTIONS.md)), the optional Claude phrasing and what it sends ([INSIGHTS_PRIVACY.md](INSIGHTS_PRIVACY.md)), and the simulator that seeds history for demos and tests ([SIMULATOR.md](SIMULATOR.md)).
 
 ## Contents
 
@@ -14,9 +14,12 @@ This page covers decision time, the stats, shadow disagreements and anomalies. R
 3. [Shadow disagreements](#shadow-disagreements)
 4. [Anomalies](#anomalies)
 5. [Anomaly facts in policies](#anomaly-facts-in-policies)
-6. [Routes](#routes)
-7. [The CLI](#the-cli)
-8. [What Insights doesn't do](#what-insights-doesnt-do)
+6. [Suggestions](#suggestions)
+7. [The Insights screen](#the-insights-screen)
+8. [The weekly digest](#the-weekly-digest)
+9. [Routes](#routes)
+10. [The CLI](#the-cli)
+11. [What Insights doesn't do](#what-insights-doesnt-do)
 
 ## Decision time and seal time
 
@@ -89,12 +92,12 @@ Each row has the `limit`, `days` (the date, the amount `used` and its `utilisati
 ```json
 {"object":"insights_stats","window":{"from":"2026-10-02T13:05:00Z","to":"2026-10-09T13:05:00Z","days":7},
  "timezone":"Asia/Kolkata","by":"rule","filters":{"agent":null,"tool":null},
- "totals":{"actions":5612,"decisions":{"allow":4883,"deny":311,"require_approval":418},"…":"…"},
- "groups":[{"key":{"rule_id":"approve-order-updates"},"versions":[1],"actions":418,
-            "decisions":{"allow":0,"deny":0,"require_approval":418},
-            "approval":{"requested":418,"approved":401,"denied":0,"expired":3,"cancelled":0,"pending":14,
-                        "rate":1,"median_seconds":1260,"p95_seconds":6840},
-            "deny_rate":0,"verdicts":{"VERIFIED":392,"MISMATCH":0,"UNVERIFIABLE":6,"none":20},
+ "totals":{"actions":5612,"decisions":{"allow":4890,"deny":311,"require_approval":411},"…":"…"},
+ "groups":[{"key":{"rule_id":"approve-order-updates"},"versions":[1],"actions":411,
+            "decisions":{"allow":0,"deny":0,"require_approval":411},
+            "approval":{"requested":411,"approved":398,"denied":0,"expired":5,"cancelled":0,"pending":8,
+                        "rate":1,"median_seconds":1140,"p95_seconds":6840},
+            "deny_rate":0,"verdicts":{"VERIFIED":392,"MISMATCH":0,"UNVERIFIABLE":6,"none":13},
             "levels":{"L0":120,"L1":200,"L2":78},"executed":398,"mismatch_rate":0,"unverifiable_rate":0.0151,
             "latency_ms":{"p50":41,"p95":180},"cost":[]}],
  "budgets":[{"agent":null,"budget":"refunds-per-day","kind":"policy","limit":{"amount":400000,"currency":"usd"},
@@ -103,7 +106,7 @@ Each row has the `limit`, `days` (the date, the amount `used` and its `utilisati
  "generated_at":"2026-10-09T13:05:00Z","empty":null}
 ```
 
-The numbers above are illustrative; `"…"` stands for the same fields as a group.
+The approval counts follow the seed-7 simulated week (398 approved, 5 expired, 8 pending, none denied); the other numbers are illustrative. `"…"` stands for the same fields as a group.
 
 ## Shadow disagreements
 
@@ -233,8 +236,13 @@ The settings live in `orgs.settings -> 'insights'`:
 | `anomaly_facts` | `false` | | lets this org's policies read `anomaly.*` |
 | `anomaly_active_minutes` | 60 | 5 to 1,440 | how long an episode stays active after its last finding |
 | `anomaly_stale_after_minutes` | 15 | 10 to 240 | how old the last live detection pass may be before the facts fail closed |
+| `llm_phrasing` | `false` | | lets Claude reword this org's suggestions; also needs the operator's `DEEDGLASS_ANTHROPIC_API_KEY` ([INSIGHTS_PRIVACY.md](INSIGHTS_PRIVACY.md)) |
+| `llm_monthly_cap_cents` | 200 | 0 to 10,000 | the most the org's phrasing calls may cost in a calendar month, in US cents ($2.00 by default; 0 stops every call) |
+| `digest.recipients` | `owners` | `owners`, `admins`, `off` | who gets the weekly digest: owners, owners and admins, or nobody |
 
-`PATCH /v1/insights/settings` (admin) takes any of the three fields and a required `reason` (3 to 280 characters). A change **seals an admin deed `insights.settings_changed`** with the before and after values, because it changes what policies see, and sends `NOTIFY deedglass_learn`. A PATCH that changes nothing seals nothing and returns no `deed`.
+The settings object also carries `phrasing_available` (read-only): true when the operator set `DEEDGLASS_ANTHROPIC_API_KEY`, so `llm_phrasing` can be turned on. Turning `llm_phrasing` on without it is 400 `validation_failed` on `llm_phrasing`. The operator picks the model with `DEEDGLASS_ANTHROPIC_MODEL` (default `claude-sonnet-5-5`).
+
+`PATCH /v1/insights/settings` (admin) takes any of these fields and a required `reason` (3 to 280 characters). A change **seals an admin deed `insights.settings_changed`** with the before and after values, because it changes what policies see, and sends `NOTIFY deedglass_learn`. A PATCH that changes nothing seals nothing and returns no `deed`.
 
 ```http
 PATCH /v1/insights/settings
@@ -242,10 +250,30 @@ PATCH /v1/insights/settings
 
 200
 {"object":"insights_settings","anomaly_facts":true,"anomaly_active_minutes":60,"anomaly_stale_after_minutes":15,
- "active_policy_reads_anomaly":true,"notice":null,"deed":"deed_01jbr…"}
+ "llm_phrasing":false,"llm_monthly_cap_cents":200,"digest":{"recipients":"owners"},
+ "active_policy_reads_anomaly":true,"notice":null,"phrasing_available":false,"deed":"deed_01jbr…"}
 ```
 
 `active_policy_reads_anomaly` is true when the enforced or the shadow version reads `anomaly` in a rule's `when` or a budget's `measure` (`policy.ReadsAnomaly` walks the checked expressions, so a mention in a string doesn't count). When a policy reads it while the facts are off, `notice` says so: "acme-sim v1 reads anomaly.active, but anomaly facts are off for this org, so it always sees false. Turn them on in Console › Insights › Settings." The anomalies list carries the same `notice`.
+
+## Suggestions
+
+Once a day, after 03:00 org-local, and whenever an admin asks, Insights reads the last 14 days of decisions under the enforced policy and writes suggestions: loosen a rule people approve every time, send a tool to approval after a MISMATCH, raise a verify level the writes already reach, raise a budget that runs close to its limit, name a tool the defaults keep deciding, or flag an agent the policy keeps refusing. Each comes with its evidence, the exact change as a diff, a replay against the same 14 days and a risk note. A person accepts it, which creates a new version (`origin: suggestion`) running **in shadow**, and later a person promotes it. Nothing is enforced by Insights. Every generator, threshold, guard and state is in [SUGGESTIONS.md](SUGGESTIONS.md).
+
+## The Insights screen
+
+Console › Insights is one calm page, a decision per card, with four sections in one scroll:
+
+1. **Suggestions:** cards ordered by impact. Each shows the kind and target rule, the title and rationale, the evidence, the replay's transitions with what people did, the risk note and, collapsed, the policy change. Admins get **Reject** and **Accept and run in shadow**; viewers read only ("Only admins can accept or reject suggestions.").
+2. **Shadow:** the live shadow version, S27's shadow report and **Promote**.
+3. **Anomalies:** open episodes, newest first, with Acknowledge and Resolve (Resolve asks for a reason and seals a deed).
+4. **Trends:** the verification mix per day over 30 days, denials per day and approval wait.
+
+The **Accept** sheet says what it creates ("Deedglass creates acme-sim v3 from it and runs it in shadow next to v1. Nothing is enforced until someone promotes it."), takes an optional reason, and asks for a checkbox when a shadow is live, because accepting replaces it. **Reject** needs a reason. **Promote** shows the shadow numbers, asks you to type the policy name and a reason, and enforces the version through S12's activation. Each step ends in a toast naming the sealed deed. On a wide screen a right rail shows the settings (anomaly facts, phrasing, digest recipients). The keyboard works throughout: `j` and `k` move between cards, `Enter` opens or closes the diff, `a` opens Accept, `r` opens Reject and `?` lists the shortcuts. New suggestions, anomalies, activations and deeds arrive over the live stream. A simulated org shows a banner on every screen. The Console page itself is described in [CONSOLE.md](CONSOLE.md).
+
+## The weekly digest
+
+On Monday from 09:00 org-local, Deedglass emails the previous ISO week's numbers to the org's owners (or owners and admins, or nobody: `digest.recipients`): actions, the verified share, denials and mismatches, the open suggestions, anomalies, the shadow's agreement and the rules that denied most. Numbers and rule names only, never payloads or customer refs. It goes out once per org and week, however many instances run. The format, the subject line and the preview command are in [EMAIL.md](EMAIL.md#the-weekly-insights-digest).
 
 ## Routes
 
@@ -264,6 +292,9 @@ Every route takes a Console session or an org admin key (scope `admin`, acting a
 | `POST /v1/insights/anomalies/{id}/resolve` | admin | `{"reason": "…"}`, 3 to 280 characters; seals `anomaly.resolved` |
 | `GET /v1/insights/settings` | viewer | the `insights_settings` object |
 | `PATCH /v1/insights/settings` | admin | seals `insights.settings_changed` on a change |
+| `GET /v1/suggestions`, `GET /v1/suggestions/{id}` | viewer | `?status=&kind=`; [SUGGESTIONS.md](SUGGESTIONS.md#the-api) |
+| `POST /v1/suggestions/generate` | admin | a `learn_run`; 60 s timeout |
+| `POST /v1/suggestions/{id}/accept`, `…/reject` | admin | accept seals `policy.activated` (shadow) and `suggestion.accepted`; reject seals `suggestion.rejected` |
 
 The anomalies list adds `active_now` (episodes active now), `anomaly_facts`, `notice` and `baseline_building` (agents with under 72 hours of history: `agent`, `name`, `hours`, `sentence`) to the list envelope. The `anomaly` object: `id`, `agent` (`id`, `name`), `kind`, `tool`, `severity`, `score`, `title`, `status`, `active`, `active_until`, `window` (`start`, `end`), `occurrences`, `evidence`, `detector_version`, `acknowledged` (`by`, `at`, or null), `resolved` (`by`, `at`, `reason`, `deed`, or null), `created_at`, `updated_at`. Errors and their codes are in [api/errors.md](api/errors.md); the schemas are in `api/openapi.yaml`.
 
@@ -277,6 +308,9 @@ $ deedglass insights shadow
 $ deedglass insights anomalies
 $ deedglass insights detect --backfill 7d --org acme-sim
 $ deedglass insights settings --anomaly-facts on --reason "Require approval while an agent spikes"
+$ deedglass insights suggestions generate
+$ deedglass insights suggestions accept sug_… --reason "…" --replace-shadow
+$ deedglass insights digest --preview --html /tmp/digest.html
 ```
 
 ```
@@ -295,7 +329,7 @@ The numbers are illustrative. Severities print amber (`info` plain), never red.
 ## What Insights doesn't do
 
 - **No machine learning.** The checks are counts, means, standard deviations and fixed thresholds you can recompute with SQL. Nothing is trained, and the same history gives the same findings.
-- **No automatic blocking, and no automatic policy change, ever.** Insights reads and reports. An anomaly blocks or holds nothing unless your org turned anomaly facts on and your own policy says what to do with them. Suggestions (S28) are applied only when a person accepts them.
+- **No automatic blocking, and no automatic policy change, ever.** Insights reads and reports. An anomaly blocks or holds nothing unless your org turned anomaly facts on and your own policy says what to do with them. Suggestions are applied only when a person accepts them, and then only in shadow until a person promotes them ([SUGGESTIONS.md](SUGGESTIONS.md#what-suggestions-dont-do)).
 - **No learning across orgs.** Every baseline is one agent's own history in one org. No org's data informs another's.
 - **Baselines need 72 hours.** Until then an agent gets only `new_tool`; volume, hours, deny, mismatch and user-ref checks start after 72 hours of history.
 - **A slow ramp can move a baseline.** An agent whose volume grows a little every day raises its own mean and never looks like a spike. Budgets and rate limits are the hard controls; anomalies are signals.

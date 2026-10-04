@@ -1,0 +1,18 @@
+{{template "head" .}}<h1 class="dg-text" style="text-wrap:balance;margin:0 0 4px 0;font-size:22px;line-height:30px;font-weight:600;letter-spacing:-0.02em;color:#0D0F14;">{{.OrgName}} &middot; week {{.Week}}</h1>
+<p class="dg-muted" style="margin:0 0 20px 0;font-size:13px;line-height:20px;color:#6B7080;font-variant-numeric:tabular-nums;">{{.Range}}</p>
+<table role="presentation" class="dg-panel" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#F7F7F4" style="margin:0 0 24px 0;background-color:#F7F7F4;border:1px solid #E4E5EA;border-radius:10px;">
+<tr><td class="dg-text" style="padding:14px 18px;font-size:16px;line-height:24px;font-weight:600;color:#0D0F14;font-variant-numeric:tabular-nums;">{{range $i, $p := .NumberParts}}{{if $i}} &middot; {{end}}<span style="white-space:nowrap;">{{$p}}</span>{{end}}</td></tr>
+</table>
+{{if .Review}}<h2 class="dg-label" style="margin:0 0 4px 0;font-size:12px;line-height:16px;font-weight:600;letter-spacing:0.04em;color:#6B7080;">To review</h2>
+{{range .Review}}<p style="margin:0 0 4px 0;">{{.}}</p>
+{{end}}<p style="margin:0 0 16px 0;font-size:0;line-height:0;">&nbsp;</p>
+{{else}}<p style="margin:0 0 20px 0;">Nothing to review this week.</p>
+{{end}}{{if .Anomalies}}<h2 class="dg-label" style="margin:0 0 4px 0;font-size:12px;line-height:16px;font-weight:600;letter-spacing:0.04em;color:#6B7080;">Anomalies this week</h2>
+<p style="margin:0 0 20px 0;font-variant-numeric:tabular-nums;">{{.Anomalies}}</p>
+{{end}}{{if .Shadow}}<h2 class="dg-label" style="margin:0 0 4px 0;font-size:12px;line-height:16px;font-weight:600;letter-spacing:0.04em;color:#6B7080;">Shadow</h2>
+<p style="margin:0 0 20px 0;">{{.Shadow}}</p>
+{{end}}{{if .Rules}}<h2 class="dg-label" style="margin:0 0 4px 0;font-size:12px;line-height:16px;font-weight:600;letter-spacing:0.04em;color:#6B7080;">Denied most by</h2>
+<p style="margin:0 0 20px 0;font-variant-numeric:tabular-nums;">{{range $i, $r := .Rules}}{{if $i}} &middot; {{end}}<span translate="no" style="font-family:'Geist Mono',ui-monospace,Menlo,monospace;font-size:13px;">{{$r.Rule}}</span> {{$r.Count}}{{end}}</p>
+{{end}}<div style="height:8px;line-height:8px;font-size:0;">&nbsp;</div>
+{{template "button" button .Link "Open Insights"}}<p class="dg-muted" style="margin:0;font-size:13px;line-height:20px;color:#6B7080;">You get this weekly summary because you&rsquo;re {{.RoleArticle}} of {{.OrgName}} on Deedglass. Change who receives it in Console &rsaquo; Insights &rsaquo; Settings.</p>
+{{template "foot" .}}

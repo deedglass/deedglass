@@ -1,0 +1,14 @@
+{
+    "object": "insights_settings",
+    "anomaly_facts": false,
+    "anomaly_active_minutes": 60,
+    "anomaly_stale_after_minutes": 15,
+    "llm_phrasing": false,
+    "llm_monthly_cap_cents": 200,
+    "digest": {
+        "recipients": "owners"
+    },
+    "active_policy_reads_anomaly": false,
+    "notice": null,
+    "phrasing_available": false
+}

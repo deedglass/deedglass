@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/deedglass/deedglass/internal/ids"
+	"github.com/deedglass/deedglass/internal/policy"
 )
 
 // Window is a half-open range of decision time, [From, To). Insights buckets everything by
@@ -68,4 +69,21 @@ type InputSource interface {
 type Actor struct {
 	Type string `json:"type"` // user | api_key | system
 	ID   string `json:"id"`   // usr_…, key_…, or "deedglass"
+}
+
+// Principal is who acts on a suggestion, as the PolicyWriter needs it.
+type Principal struct {
+	Org       ids.OrgID
+	Actor     Actor
+	RequestID string
+}
+
+// PolicyWriter is the only way Insights touches policies (S28 §3.6): it can add a version made from
+// a suggestion and run a version in shadow. It has no way to enforce anything, by construction:
+// cmd/deedglass implements it over S12's policy.Service with the mode fixed to shadow, and a test
+// pins this method set. Promoting a shadow to enforce is a separate act by a person, through the
+// policy routes.
+type PolicyWriter interface {
+	AddSuggestedVersion(ctx context.Context, p Principal, policyID string, src []byte, sug string, notes string) (*policy.Version, bool, error)
+	ActivateShadow(ctx context.Context, p Principal, policyID string, version int, reason string) (*policy.Activation, error)
 }

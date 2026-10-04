@@ -20,7 +20,7 @@ exit 0
   agent intent        Manage an agent's signed-intent keys        [2m    [0m   [2mkeygen · add · list · remove · mode[0m
   org                 Create orgs and keys; stop or start all     [2m    [0m   [2mcreate · login-link · keys · stop-all · start-all[0m
 [1mPolicies[0m
-  policy              Write, test and activate policies           [2msoon[0m   [2mlint · fmt · test · push · activate · evaluate · replay · diff[0m
+  policy              Write, test and activate policies           [2m    [0m   [2mlint · fmt · test · push · activate · evaluate · replay · diff[0m
 [1mActions[0m
   act                 Send a test action through the Gate
   actions             Inspect actions                             [2m    [0m   [2mlist · show · cancel[0m
@@ -41,7 +41,7 @@ exit 0
 [1mMCP[0m
   mcp                 Put the Gate in front of MCP servers        [2m    [0m   [2mwrap · serve · snippet[0m
 [1mInsights[0m
-  insights            Usage, shadow results and anomalies         [2msoon[0m   [2mstats · shadow · anomalies · detect · settings · suggestions · digest[0m
+  insights            Suggestions, shadow results and anomalies   [2m    [0m   [2mstats · shadow · anomalies · detect · settings · suggestions · digest[0m
 [1mDev[0m
   dev                 Local helpers                               [2msoon[0m   [2mseed · fake-action · simulate · agent-script · mail-preview · sign-intent · stripe-fixtures[0m
 

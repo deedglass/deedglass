@@ -87,8 +87,14 @@ func TestOrgIsolation(t *testing.T) {
 	    active_until, detector_version, title)
 	  VALUES ($1, $2, $3, 'volume_spike', 'warn', now() - interval '1 hour', now(), 4.2, $4, now() - interval '1 minute', '1',
 	    'fixture') RETURNING id`, ids.New[ids.AnomalyKind]().String(), acme.ID, attacker.ID, attacker.ID+"|volume_spike|")[0][0]
+	// S28: a suggestion (advice, written as the superuser: a suggest pass needs 14 days of history).
+	sug := e.CPQuery(`INSERT INTO deedglass.suggestions (id, org_id, kind, title, generator, generator_version, fingerprint, policy_id,
+	    base_version_id, base_version_hash, evidence_digest, window_from, window_to)
+	  SELECT $1::text, $2::text, 'advisory', 'fixture', 'advisory.deny_heavy', '1', 'sha256:' || repeat('a', 64), v.policy_id, v.id, v.version_hash,
+	    'sha256:' || repeat('b', 64), now() - interval '14 days', now()
+	  FROM deedglass.policy_versions AS v WHERE v.org_id = $2::text AND v.id = $3::text RETURNING id`, ids.New[ids.SuggestionKind]().String(), acme.ID, acme.PolicyV)[0][0]
 	acmeIDs := []string{acme.ID, attacker.ID, attacker.KeyID, act, deed, acme.Policy, acme.PolicyV, acme.Conns["orders"], acme.Conns["fs"], member, kid,
-		apr, wh, rpl, anm}
+		apr, wh, rpl, anm, sug}
 	for _, id := range acmeIDs {
 		if id == "" {
 			t.Fatalf("an Acme fixture is missing: %v", acmeIDs)
@@ -135,6 +141,9 @@ func TestOrgIsolation(t *testing.T) {
 		"/v1/insights/anomalies/{id}":                           {"id": anm},
 		"/v1/insights/anomalies/{id}/acknowledge":               {"id": anm},
 		"/v1/insights/anomalies/{id}/resolve":                   {"id": anm},
+		"/v1/suggestions/{id}":                                  {"id": sug},
+		"/v1/suggestions/{id}/accept":                           {"id": sug},
+		"/v1/suggestions/{id}/reject":                           {"id": sug},
 		"/mcp/{connector}":                                      {"connector": "fs"},
 		"/.well-known/oauth-protected-resource/mcp/{connector}": nil, // public metadata: no org data
 		"/auth/assets/{file}":                                   nil, // public static file

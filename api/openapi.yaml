@@ -4646,6 +4646,265 @@ paths:
                   doc_url: https://docs.deedglass.com/errors/conflict
         default:
           $ref: "#/components/responses/Error"
+  /v1/suggestions:
+    get:
+      operationId: listSuggestions
+      summary: List suggestions
+      description: >-
+        Policy changes Insights proposes from the last 14 days of decisions (S28), ordered by
+        impact (the actions whose decision the suggestion's replay would change), then by creation.
+        `status` defaults to open and accepting; `all` lists every status. Nothing in a suggestion
+        is applied until a person accepts it, and accepting only runs it in shadow. A Console
+        session (viewer and up) or an org admin key (`admin` scope); agent keys get 403
+        `insufficient_scope`.
+      tags: [Insights]
+      security: [{bearerAuth: []}, {sessionCookie: []}]
+      x-deedglass-auth: session_or_key
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+        - {name: status, in: query, required: false, description: 'open (default: open and accepting), accepting, accepted, rejected, superseded or all.', schema: {type: string, enum: [open, accepting, accepted, rejected, superseded, all]}}
+        - {name: kind, in: query, required: false, description: Only this kind., schema: {type: string, enum: [loosen, tighten, budget, explicit_rule, advisory]}}
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+      responses:
+        "200":
+          description: A page of suggestions.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+            Deedglass-Version:
+              $ref: "#/components/headers/DeedglassVersion"
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [object, data, has_more, next_cursor]
+                properties:
+                  object: {type: string, const: list}
+                  data: {type: array, items: {$ref: "#/components/schemas/Suggestion"}}
+                  has_more: {type: boolean}
+                  next_cursor: {type: [string, "null"]}
+        "400":
+          description: A bad status, kind, limit or cursor (`validation_failed`).
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/suggestions/generate:
+    post:
+      operationId: generateSuggestions
+      summary: Generate suggestions now
+      description: >-
+        Runs a suggest pass now (the server also runs one a day after 03:00 org-local): it reads
+        14 days of decisions against the enforced version, runs the six generators, patches the
+        policy text, compiles it with every existing rule intact, replays the change against the
+        same 14 days and drops anything its guard refuses (a loosening that would allow an action
+        a person denied, or more actions than people approved). Open suggestions written for a
+        version that is no longer enforced are superseded first. At most 10 are open at once.
+        Answers a `learn_run`. No body. An admin+ Console session (with the `Deedglass-CSRF`
+        header) or an org admin key; viewers get 403 `insufficient_role`, agent keys 403
+        `insufficient_scope`; 409 `conflict` while another pass runs for the org.
+      tags: [Insights]
+      security: [{bearerAuth: []}, {sessionCookie: []}]
+      x-deedglass-auth: session_or_key
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+        - $ref: "#/components/parameters/CSRFWithSession"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "200":
+          description: The pass's result.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+            Deedglass-Version:
+              $ref: "#/components/headers/DeedglassVersion"
+            Deedglass-Idempotent-Replayed:
+              $ref: "#/components/headers/DeedglassIdempotentReplayed"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LearnRun"
+        "409":
+          description: Another pass is running for this org (`conflict`).
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/suggestions/{id}:
+    get:
+      operationId: getSuggestion
+      summary: Retrieve a suggestion
+      description: >-
+        One suggestion with its evidence, the policy change as a unified diff, the replay summary
+        (the full replay is `GET /v1/replays/{replay.id}`), the risk note and its decision. An id
+        that isn't one of this org's suggestions is 404 `not_found`. A Console session (viewer and
+        up) or an org admin key; agent keys get 403.
+      tags: [Insights]
+      security: [{bearerAuth: []}, {sessionCookie: []}]
+      x-deedglass-auth: session_or_key
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+        - {name: id, in: path, required: true, description: The suggestion id (`sug_…`)., schema: {type: string}}
+      responses:
+        "200":
+          description: The suggestion.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+            Deedglass-Version:
+              $ref: "#/components/headers/DeedglassVersion"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Suggestion"
+        "404":
+          description: No such suggestion in this org.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/suggestions/{id}/accept:
+    post:
+      operationId: acceptSuggestion
+      summary: Accept a suggestion into shadow
+      description: >-
+        Creates a policy version from the suggestion (origin `suggestion`, `suggestion_id` set; an
+        identical version already stored is reused and `note` says so) and runs it in shadow next
+        to the enforced version. Nothing is enforced: promote it later with
+        `POST /v1/policies/{id}/versions/{v}/activate` and `mode: enforce`. Seals
+        `policy.activated` (shadow) and `suggestion.accepted` (`deeds`, in that order). `reason` is
+        optional (up to 280 characters). An org runs at most one version in shadow: 409
+        `shadow_slot_taken` unless `replace_shadow` is true; 409 `suggestion_stale` when the
+        enforced version changed since (the suggestion is superseded); 409 `suggestion_decided`
+        when it was already decided; 409 `conflict` for advice. An admin+ Console session or an
+        org admin key; viewers get 403 `insufficient_role`, agent keys 403 `insufficient_scope`.
+      tags: [Insights]
+      security: [{bearerAuth: []}, {sessionCookie: []}]
+      x-deedglass-auth: session_or_key
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+        - $ref: "#/components/parameters/CSRFWithSession"
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - {name: id, in: path, required: true, description: The suggestion id (`sug_…`)., schema: {type: string}}
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                reason: {type: string, maxLength: 280, description: Optional. It goes into both deeds.}
+                replace_shadow: {type: boolean, default: false, description: Replace the version running in shadow now.}
+            example: {reason: Ops approves these every time, replace_shadow: true}
+      responses:
+        "200":
+          description: The suggestion, accepted, with the version it created and the deeds.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+            Deedglass-Version:
+              $ref: "#/components/headers/DeedglassVersion"
+            Deedglass-Idempotent-Replayed:
+              $ref: "#/components/headers/DeedglassIdempotentReplayed"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Suggestion"
+        "409":
+          description: '`shadow_slot_taken`, `suggestion_stale`, `suggestion_decided`, or `conflict` for advice.'
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+              example:
+                error:
+                  type: invalid_request_error
+                  code: shadow_slot_taken
+                  message: "acme-sim v2 is already running in shadow. Promote or clear it first, or accept with replace_shadow: true to replace it."
+                  param: replace_shadow
+                  request_id: req_01m435q4ne4yj7meyd2bdz8kdm
+                  doc_url: https://docs.deedglass.com/errors/shadow_slot_taken
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/suggestions/{id}/reject:
+    post:
+      operationId: rejectSuggestion
+      summary: Reject a suggestion
+      description: >-
+        Closes an open suggestion and seals `suggestion.rejected` with the reason. `reason` is
+        required, 3 to 280 characters (400 `validation_failed` on `reason`). Deedglass doesn't
+        suggest the same change again for 30 days unless its main count doubles. 409
+        `suggestion_decided` when it was already decided. An admin+ Console session or an org
+        admin key.
+      tags: [Insights]
+      security: [{bearerAuth: []}, {sessionCookie: []}]
+      x-deedglass-auth: session_or_key
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+        - $ref: "#/components/parameters/CSRFWithSession"
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - {name: id, in: path, required: true, description: The suggestion id (`sug_…`)., schema: {type: string}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [reason]
+              properties:
+                reason: {type: string, minLength: 3, maxLength: 280, description: One line. It goes into the deed.}
+            example: {reason: We review inventory writes by hand}
+      responses:
+        "200":
+          description: The suggestion, rejected, with the deed.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+            Deedglass-Version:
+              $ref: "#/components/headers/DeedglassVersion"
+            Deedglass-Idempotent-Replayed:
+              $ref: "#/components/headers/DeedglassIdempotentReplayed"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Suggestion"
+        "400":
+          description: No reason, or one outside 3 to 280 characters.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        default:
+          $ref: "#/components/responses/Error"
   /v1/insights/stats:
     get:
       operationId: getInsightsStats
@@ -6979,6 +7238,9 @@ components:
                 - undo_conflict
                 - replay_too_large
                 - replay_window_invalid
+                - suggestion_stale
+                - shadow_slot_taken
+                - suggestion_decided
             message:
               type: string
               description: One or more calm sentences with the next step.
@@ -8966,6 +9228,99 @@ components:
         status: {type: string, const: open, description: An episode is open when it is detected.}
       examples:
         - {object: anomaly, id: anm_01m42vb27wzpyw0b2n6aycjxkh, agent: agt_01m42v9q4500m4rfchvb8j53da, kind: volume_spike, severity: high, status: open}
+    Suggestion:
+      type: object
+      description: A policy change Insights proposes, with its evidence, diff, replay and risk (S28). Nothing applies until a person accepts it, and accepting only runs it in shadow.
+      required: [object, id, status, kind, generator, title, rationale, phrasing, policy, target_rule_id, evidence, evidence_digest, diff, warnings, replay, risk_note, impact, stale_reason, created_at, decided_by, decided_at, decision_reason, resulting_version, decision_deed]
+      properties:
+        object: {type: string, const: suggestion}
+        id: {type: string, pattern: '^sug_[0-7][0-9a-hjkmnp-tv-z]{25}$'}
+        status: {type: string, enum: [open, accepting, accepted, rejected, superseded]}
+        kind: {type: string, enum: [loosen, tighten, budget, explicit_rule, advisory]}
+        generator: {type: string, enum: [loosen.approval_rate, tighten.mismatch, tighten.verify_level, budget.near_limit, explicit_rule.default_hit, advisory.deny_heavy]}
+        title: {type: string}
+        rationale: {type: string}
+        phrasing:
+          type: object
+          required: [source]
+          properties:
+            source: {type: string, enum: [template, claude]}
+            model: {type: string}
+            reason: {type: string, description: Why the template wording stands (validation:…, refusal, timeout, http_429, …).}
+            input_tokens: {type: integer}
+            output_tokens: {type: integer}
+            cost_usd_micros: {type: integer}
+            duration_ms: {type: integer}
+            at: {type: string, format: date-time}
+            template_title: {type: string, description: When worded by Claude, the template title it replaced.}
+        policy:
+          type: object
+          required: [id, name, base_version, base_version_id, base_version_hash]
+          properties:
+            id: {type: string}
+            name: {type: string}
+            base_version: {type: integer, description: The enforced version the suggestion was written for.}
+            base_version_id: {type: string}
+            base_version_hash: {type: string}
+        target_rule_id: {type: [string, "null"]}
+        evidence: {type: object, description: 'The numbers that triggered it: window, approvals, median_wait_seconds, approvers, agents, tool, pattern, sample_actions (loosen); mismatches (tighten); days and limits (budget); and so on per generator.'}
+        evidence_digest: {type: string}
+        diff:
+          type: [object, "null"]
+          description: The change as unified hunks with 3 lines of context; null for advice.
+          properties:
+            hunks:
+              type: array
+              items:
+                type: object
+                properties:
+                  old_start: {type: integer}
+                  old_lines: {type: integer}
+                  new_start: {type: integer}
+                  new_lines: {type: integer}
+                  lines: {type: array, items: {type: object, properties: {op: {type: string, enum: [" ", "+", "-"]}, text: {type: string}}}}
+            text: {type: string}
+            added: {type: integer}
+            removed: {type: integer}
+        warnings: {type: array, items: {type: object}, description: The candidate's compile warnings (severity warning).}
+        replay:
+          type: [object, "null"]
+          description: The change replayed against the same 14 days, compared with the enforced version.
+          properties:
+            id: {type: string, description: The replay (`rpl_…`, purpose suggestion).}
+            window: {type: object}
+            summary: {type: object}
+            transitions: {type: array, items: {type: object}}
+            result_digest: {type: string}
+        risk_note: {type: string}
+        impact: {type: integer, description: Actions whose decision the replay changes.}
+        stale_reason: {type: [string, "null"], enum: [base_changed, null]}
+        created_at: {type: string, format: date-time}
+        decided_by: {type: [object, "null"], properties: {type: {type: string, enum: [user, api_key]}, id: {type: string}}}
+        decided_at: {type: [string, "null"], format: date-time}
+        decision_reason: {type: [string, "null"]}
+        resulting_version: {type: [object, "null"], properties: {id: {type: string}, version: {type: integer}, version_hash: {type: string}}}
+        decision_deed: {type: [string, "null"]}
+        deeds: {type: array, items: {type: string}, description: 'Accept and reject answers only: the deeds sealed, in order.'}
+        replaced_shadow_version: {type: integer, description: Accept only, when the shadow it replaced.}
+        note: {type: string, description: Accept only, when the change already existed as a version.}
+    LearnRun:
+      type: object
+      required: [object, kind, period, policy, window, actions, created, superseded, unchanged, waiting, dropped, notice, elapsed_ms]
+      properties:
+        object: {type: string, const: learn_run}
+        kind: {type: string, const: suggest}
+        period: {type: string}
+        policy: {type: [object, "null"]}
+        window: {type: object}
+        actions: {type: integer}
+        created: {type: array, items: {type: object, properties: {id: {type: string}, kind: {type: string}, generator: {type: string}, target_rule_id: {type: string}, target: {type: string}, title: {type: string}, impact: {type: integer}}}}
+        superseded: {type: integer}
+        unchanged: {type: integer}
+        waiting: {type: integer}
+        dropped: {type: array, items: {type: object, properties: {generator: {type: string}, target: {type: string}, reason: {type: string}}}}
+        notice: {type: [string, "null"]}
+        elapsed_ms: {type: integer}
     InsightsSettings:
       type: object
       required: [object, anomaly_facts, anomaly_active_minutes, anomaly_stale_after_minutes, active_policy_reads_anomaly, notice]
@@ -8982,6 +9337,11 @@ components:
             (`detector_stale`), because unknown isn't usual (default 15).
         active_policy_reads_anomaly: {type: boolean, description: The enforced or shadow policy reads `anomaly.*`.}
         notice: {type: [string, "null"], description: The sentence when a policy reads anomaly facts but they are off.}
+        llm_phrasing: {type: boolean, description: 'S28: Claude may reword suggestions (off by default; needs the operator''s DEEDGLASS_ANTHROPIC_API_KEY).'}
+        llm_monthly_cap_cents: {type: integer, minimum: 0, maximum: 10000, description: The month's phrasing spend cap in cents (default 200).}
+        digest: {type: object, properties: {recipients: {type: string, enum: [owners, admins, "off"]}}, description: Who gets the weekly digest (default owners).}
+        phrasing_available: {type: boolean, description: The server has an Anthropic key, so llm_phrasing can be on.}
+        simulated: {type: boolean, description: 'S28: the org''s history came from `deedglass dev simulate` (the Console shows a banner).'}
         deed: {type: string, description: 'PATCH only, when something changed: the `insights.settings_changed` admin deed.'}
     InsightsSettingsPatch:
       type: object
@@ -8992,4 +9352,7 @@ components:
         anomaly_facts: {type: boolean}
         anomaly_active_minutes: {type: integer, minimum: 5, maximum: 1440}
         anomaly_stale_after_minutes: {type: integer, minimum: 10, maximum: 240}
+        llm_phrasing: {type: boolean, description: 'true without DEEDGLASS_ANTHROPIC_API_KEY on the server is 400 `validation_failed` on `llm_phrasing`.'}
+        llm_monthly_cap_cents: {type: integer, minimum: 0, maximum: 10000}
+        digest: {type: object, additionalProperties: false, required: [recipients], properties: {recipients: {type: string, enum: [owners, admins, "off"]}}}
         reason: {type: string, minLength: 3, maxLength: 280, description: One line, 3 to 280 characters. It goes into the deed.}

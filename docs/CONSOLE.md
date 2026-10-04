@@ -293,6 +293,32 @@ payloads, never deeds.
 `web/e2e/roles.spec.ts` checks every row twice: the UI state, and the API answering the page's own
 call with the documented status.
 
+## The screen (S28)
+
+### Insights (`/app/insights`)
+
+One scroll with four sections; each reads the Insights API (docs/INSIGHTS.md, docs/SUGGESTIONS.md):
+
+- **Suggestions.** One card per open suggestion, by impact: the kind and target rule, the title and rationale,
+  the evidence numbers, the replay's transitions with the decision chips (Allowed neutral, Denied a red outline,
+  approval violet), the risk note, and the policy change collapsed as `Policy change +N lines` (a mono diff:
+  added lines on an accent tint, removed lines neutral; never red). `Accept and run in shadow` opens a sheet
+  (an optional reason; a required checkbox when another version runs in shadow, which sends `replace_shadow`);
+  `Reject` asks for a reason. Generate runs a pass now (admins).
+- **Shadow.** The live shadow's report and `Promote`, which reuses S26's typed activation sheet (type the policy
+  name, give a reason); under 100 decided actions or 24 hours a neutral notice says so.
+- **Anomalies.** Open episodes, newest first; Acknowledge and Resolve (a reason, sealed as a deed).
+- **Trends.** Inline SVG charts of the verification mix, denials and approval wait per day for 30 days, each
+  with a "Show as table" fallback.
+
+At 1280 px and wider a right rail shows the settings (anomaly facts, phrasing, digest recipients) and how
+Insights works; admins change them in a sheet with a reason. Viewers see everything and none of the buttons.
+Live events (`suggestion.created`, `anomaly.detected`, `policy.activated`, `deed.sealed`) refresh the affected
+section and announce new suggestions politely. Keyboard: `j`/`k` move between cards, `Enter` opens or closes
+the diff, `a` accept, `r` reject, `?` lists the keys.
+
+A simulated org (`dev simulate`) shows a neutral banner under the top bar on every screen.
+
 ## Adding a screen
 
 1. The page in `web/src/pages/` (and `<screen>/detail.astro` if it has ids), on `AppShell`.

@@ -367,8 +367,14 @@ func TestPlan30DaysFast(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if el := time.Since(start); el > time.Second {
-		t.Fatalf("30 days took %v, budget 1 s", el)
+	// The 1 s budget is for a normal build; the race detector multiplies the work several times
+	// over, and make ci runs it next to every other package (S28: it failed at 1.07 s there).
+	budget := time.Second
+	if raceEnabled {
+		budget = 5 * time.Second
+	}
+	if el := time.Since(start); el > budget {
+		t.Fatalf("30 days took %v, budget %v", el, budget)
 	}
 	if len(p) < 24000 {
 		t.Fatalf("%d actions in 30 days", len(p))

@@ -1,0 +1,184 @@
+{
+    "object": "insights_stats",
+    "window": {
+        "from": "2026-09-04T10:07:06.480681Z",
+        "to": "2026-10-04T10:07:06.480681Z",
+        "days": 30
+    },
+    "timezone": "Asia/Kolkata",
+    "by": "none",
+    "filters": {
+        "agent": null,
+        "tool": null
+    },
+    "totals": {
+        "actions": 5890,
+        "decisions": {
+            "allow": 5462,
+            "deny": 17,
+            "require_approval": 411
+        },
+        "approval": {
+            "requested": 411,
+            "approved": 398,
+            "denied": 0,
+            "expired": 13,
+            "cancelled": 0,
+            "pending": 0,
+            "rate": 1,
+            "median_seconds": 1123,
+            "p95_seconds": 6578
+        },
+        "deny_rate": 0.0029,
+        "verdicts": {
+            "VERIFIED": 5763,
+            "MISMATCH": 3,
+            "UNVERIFIABLE": 42,
+            "none": 82
+        },
+        "levels": {
+            "L0": 4651,
+            "L1": 805,
+            "L2": 352
+        },
+        "executed": 5860,
+        "mismatch_rate": 0.0005,
+        "unverifiable_rate": 0.0072,
+        "latency_ms": {
+            "p50": 56,
+            "p95": 466
+        },
+        "cost": [
+            {
+                "currency": "usd",
+                "total": 1795727,
+                "p50": 2211,
+                "p95": 7837
+            }
+        ]
+    },
+    "groups": [],
+    "budgets": [
+        {
+            "agent": null,
+            "budget": "refunds-per-day",
+            "kind": "policy",
+            "limit": {
+                "amount": 400000,
+                "currency": "usd"
+            },
+            "max_utilisation": 0.95,
+            "days_over_80": 3,
+            "days": [
+                {
+                    "date": "2026-09-25",
+                    "used": 140354,
+                    "utilisation": 0.3509
+                },
+                {
+                    "date": "2026-09-26",
+                    "used": 380000,
+                    "utilisation": 0.95
+                },
+                {
+                    "date": "2026-09-27",
+                    "used": 177710,
+                    "utilisation": 0.4443
+                },
+                {
+                    "date": "2026-09-28",
+                    "used": 380000,
+                    "utilisation": 0.95
+                },
+                {
+                    "date": "2026-09-29",
+                    "used": 219559,
+                    "utilisation": 0.5489
+                },
+                {
+                    "date": "2026-09-30",
+                    "used": 380000,
+                    "utilisation": 0.95
+                },
+                {
+                    "date": "2026-10-01",
+                    "used": 162097,
+                    "utilisation": 0.4052
+                },
+                {
+                    "date": "2026-10-02",
+                    "used": 39759,
+                    "utilisation": 0.0994
+                }
+            ]
+        }
+    ],
+    "series": [
+        {
+            "date": "2026-09-25",
+            "actions": 335,
+            "denied": 1,
+            "verified": 322,
+            "mismatch": 0,
+            "unverifiable": 6
+        },
+        {
+            "date": "2026-09-26",
+            "actions": 890,
+            "denied": 4,
+            "verified": 870,
+            "mismatch": 0,
+            "unverifiable": 8
+        },
+        {
+            "date": "2026-09-27",
+            "actions": 821,
+            "denied": 0,
+            "verified": 806,
+            "mismatch": 0,
+            "unverifiable": 6
+        },
+        {
+            "date": "2026-09-28",
+            "actions": 815,
+            "denied": 3,
+            "verified": 795,
+            "mismatch": 0,
+            "unverifiable": 5
+        },
+        {
+            "date": "2026-09-29",
+            "actions": 833,
+            "denied": 5,
+            "verified": 815,
+            "mismatch": 0,
+            "unverifiable": 5
+        },
+        {
+            "date": "2026-09-30",
+            "actions": 933,
+            "denied": 2,
+            "verified": 913,
+            "mismatch": 3,
+            "unverifiable": 9
+        },
+        {
+            "date": "2026-10-01",
+            "actions": 772,
+            "denied": 2,
+            "verified": 763,
+            "mismatch": 0,
+            "unverifiable": 0
+        },
+        {
+            "date": "2026-10-02",
+            "actions": 491,
+            "denied": 0,
+            "verified": 479,
+            "mismatch": 0,
+            "unverifiable": 3
+        }
+    ],
+    "generated_at": "2026-10-04T10:07:06.480685Z",
+    "empty": null
+}

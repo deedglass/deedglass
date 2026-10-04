@@ -185,7 +185,7 @@ builds it. Hidden commands work but aren't in `deedglass help`.
 | `deedglass policy activate <name|pol_…> --version <n> --mode enforce|shadow --reason "…" [--yes] [--ack default_allow] | --clear --reason "…" [--json]` | Policies | Activate a policy version | built |
 | `deedglass policy evaluate --policy <file> | --server [--policy <name> --version <n>] --tool <name> [--sql …] [--args <json>] [--input <file>] [--agent …] [--label k=v] [--user …] [--time …] [--tz …] [--usage k=v] [--explain] [--json]` | Policies | Evaluate one action against a policy | built |
 | `deedglass policy replay <name|pol_…> --version <n> [--from 7d] [--to now] [--baseline recorded|vN] [--wait] [--quiet] [--json]` | Policies | Replay past actions against a version | built |
-| `deedglass policy diff` | Policies | Compare two policy versions | soon (S28) |
+| `deedglass policy diff <old.yaml> <new.yaml> | <policy> <vA> <vB> [--context 3] [--json]` | Policies | Compare two policy versions | built |
 | `deedglass act <tool> [--args '{"k":"v"}'] [--mode gateway|proxy] [--wait 60s] [--idempotency-key K] [--json]` | Actions | Send a test action through the Gate | built |
 | `deedglass actions list [--agent agt_…] [--tool stripe.*] [--state …] [--decision …] [--verdict MISMATCH] [--level L2] [--since 1h] [--q text] [--limit 25] [--cursor …] [--json] [--follow] [--connector orders]` | Actions | List actions | built |
 | `deedglass actions show <act_…> [--wait] [--diff] [--json]` | Actions | Show one action, its events and its L2 diff | built |
@@ -226,13 +226,13 @@ builds it. Hidden commands work but aren't in `deedglass help`.
 | `deedglass insights shadow [--shadow-version pv_…] [--from …] [--to …] [--json]` | Insights | Show where the shadow policy disagrees | built |
 | `deedglass insights anomalies [--status open|acknowledged|resolved|all] [--agent agt_…] [--kind volume_spike] [--days 14] [--limit 50] [--json]` | Insights | List anomalies | built |
 | `deedglass insights detect [--org org_…|slug] [--backfill 7d] [--json]` | Insights | Run anomaly detection now | built |
-| `deedglass insights settings [--anomaly-facts on|off] [--active-minutes 60] [--stale-minutes 15] [--reason "…"] [--json]` | Insights | Show or change Insights settings | built |
-| `deedglass insights suggestions list` | Insights | List suggestions | soon (S28) |
-| `deedglass insights suggestions show` | Insights | Show one suggestion | soon (S28) |
-| `deedglass insights suggestions accept` | Insights | Accept a suggestion | soon (S28) |
-| `deedglass insights suggestions reject` | Insights | Reject a suggestion | soon (S28) |
-| `deedglass insights suggestions generate` | Insights | Generate suggestions now | soon (S28) |
-| `deedglass insights digest` | Insights | Preview the weekly digest | soon (S28) |
+| `deedglass insights settings [--anomaly-facts on|off] [--active-minutes 60] [--stale-minutes 15] [--llm-phrasing on|off] [--llm-cap-cents 200] [--digest owners|admins|off] [--reason "…"] [--json]` | Insights | Show or change Insights settings | built |
+| `deedglass insights suggestions list [--status open|accepted|rejected|superseded|all] [--kind loosen|tighten|budget|explicit_rule|advisory] [--limit 25] [--json]` | Insights | List suggestions | built |
+| `deedglass insights suggestions show sug_… [--no-diff] [--json]` | Insights | Show one suggestion | built |
+| `deedglass insights suggestions accept sug_… [--reason "…"] [--replace-shadow] [--json]` | Insights | Accept a suggestion into shadow | built |
+| `deedglass insights suggestions reject sug_… --reason "…" [--json]` | Insights | Reject a suggestion | built |
+| `deedglass insights suggestions generate [--json]` | Insights | Generate suggestions now | built |
+| `deedglass insights digest --preview [--org org_…|slug] [--html /tmp/digest.html] [--json]` | Insights | Preview the weekly digest | built |
 | `deedglass dev seed [--demo [--keys-file <path>] [--approver <email>]] [--json]` | Dev | Load demo data into a dev database | built |
 | `deedglass dev fake-action [--n 20] [--seed 42] [--kinds allow,deny,…] [--agents 3] [--batch 1] [--pace 0s] [--org-slug demo] [--quiet] [--json]` | Dev | Seal realistic fake actions (dev only) | built |
 | `deedglass dev simulate [--scenario examples/sim/acme.yaml] [--days 7] [--end now|-2d] [--seed 7] [--org org_… | --org-slug acme-sim] [--append] [--pace 0s] [--quiet] [--json]` | Dev | Simulate a week of agent traffic (dev only) | built |
@@ -973,8 +973,8 @@ with it, it polls until the replay ends.
 $ deedglass policy replay acme-sim --version 3 --from 7d --wait
 ◐ Replaying acme-sim v3 against 5,612 actions (2026-10-02 to 2026-10-09) · baseline: recorded decisions
   ████████████████████████████████ 100% · 0.6 s
-✓ 408 decisions would change · 4 by a different rule · 5,200 unchanged · 0 unknown
-  require_approval → allow     404   allow-order-status-updates · humans approved 401, expired 3, denied 0
+✓ 415 decisions would change · 4 by a different rule · 5,193 unchanged · 0 unknown
+  require_approval → allow     411   allow-order-updates · humans approved 398, expired 5, denied 0, pending 8
   allow → deny                   4   refund-limit-strict
   result sha256:9c1e…40ab · same inputs and version always give this digest
   next       deedglass policy activate acme-sim --version 3 --mode shadow --reason "…"
@@ -992,15 +992,15 @@ by rule unless `--by` says otherwise. Every definition is in [INSIGHTS.md](INSIG
 ```
 $ deedglass insights stats --window 7d
 Insights · 2026-10-02 18:35 to 2026-10-09 18:35 IST · 7 days · 5,612 actions
-  decisions  allow 4,883 · deny 311 · require_approval 418 · deny rate 5.5%
-  approvals  418 requested · 401 approved (100% of decided) · 3 expired · median wait 21 min · p95 1 h 54 min
+  decisions  allow 4,890 · deny 311 · require_approval 411 · deny rate 5.5%
+  approvals  411 requested · 398 approved (100% of decided) · 5 expired · median wait 19 min · p95 1 h 54 min
   verdicts   4,990 VERIFIED · 3 MISMATCH · 188 UNVERIFIABLE · 431 not witnessed
   latency    p50 41 ms · p95 180 ms
   by rule
     RULE                   ACTIONS  DENY  APPROVED    MEDIAN WAIT  VERIFIED  MISMATCH  UNVERIFIABLE
     allow-gmail-drafts     1,540    0     —           —            1,410     0         72
     allow-db-reads         1,312    0     —           —            1,250     0         34
-    approve-order-updates  418      0     401 (100%)  21 min       392       0         6
+    approve-order-updates  411      0     398 (100%)  19 min       392       0         6
     @default               96       96    —           —            0         0         0
   budget     refunds-per-day (org) · max 95.1% · 3 days over 80%
 ```
@@ -1108,6 +1108,114 @@ into an org that isn't simulated (`not_simulated`) or would overlap (`simulation
 that doesn't exist (`not_found`), or a chain that didn't check out; 2 for a usage error or an
 invalid scenario (`scenario_invalid`, with the file and line).
 
+## Suggestions: `insights suggestions`, `insights digest` and `policy diff` (S28)
+
+Insights proposes policy changes from 14 days of traffic, each with its evidence, a diff and a
+replay; a person accepts one into shadow or rejects it ([SUGGESTIONS.md](SUGGESTIONS.md)). The
+`insights suggestions` commands call the server with an org admin key (`--api-key` or
+`DEEDGLASS_API_KEY`). `insights digest --preview` reads the database directly and never sends.
+Every command takes `--json`.
+
+### `deedglass insights suggestions generate [--json]`
+
+`POST /v1/suggestions/generate`: runs a pass now (the server also runs one daily after 03:00
+org-local). It prints what it created, with how many recorded decisions each would change, what it
+dropped and why, and what was already open.
+
+```
+$ deedglass insights suggestions generate
+◐ Read 14 days of acme-sim traffic (5,890 actions) against acme-sim v1
+✓ 3 suggestions
+  loosen   approve-order-updates  Allow updates to public.orders without approval                  411 would change
+  tighten  allow-db-writes        Send updates to public.inventory to approval after 3 mismatches  180 would change
+  budget   refunds-per-day        Raise refunds-per-day from $4,000.00 to $5,000.00                0 would change
+  next      deedglass insights suggestions show sug_01k6z…
+```
+
+Titles over 72 characters are cut with `…` in this table. A dropped proposal gets a line like
+`· dropped loosen.approval_rate on refund-approval: its replay would allow 2 actions a person denied`;
+a second run prints `✓ 0 suggestions` and `· 3 already open, unchanged`. An advisory shows
+`advice` instead of a count.
+
+### `deedglass insights suggestions list [--status open|accepted|rejected|superseded|all] [--kind …] [--limit 25] [--json]`
+
+`GET /v1/suggestions`: one line per suggestion (id, status, kind, target rule, title), by impact.
+The default is open ones (and any being accepted). With none: "No suggestions yet. Deedglass
+suggests a change once a rule has at least 30 decisions in the last 14 days."
+
+### `deedglass insights suggestions show sug_… [--no-diff] [--json]`
+
+One suggestion: the kind and target, the title and rationale (with "Worded by …" when Claude
+worded it), the policy version it was written for, the window, the approvals, the pattern, the
+evidence digest, the replay and its transitions with what people did, the risk note, any compile
+warnings, and the policy change as a diff (added lines marked `+`, removed lines dim and marked
+`−`; never red). An open suggestion ends with the accept and reject commands.
+
+### `deedglass insights suggestions accept sug_… [--reason "…"] [--replace-shadow] [--json]`
+
+`POST /v1/suggestions/{id}/accept`: creates the version and runs it in shadow. `--reason` is
+optional (at most 280 characters) and is sealed in the deed. When another version is already in
+shadow, the server answers `shadow_slot_taken` unless you pass `--replace-shadow`.
+
+```
+$ deedglass insights suggestions accept sug_01k6z… --reason "Ops approves these every time" --replace-shadow
+◐ acme-sim v3 created from sug_01k6z… · running in shadow (replaced v2)
+✓ 2 deeds sealed · policy.activated (shadow) · suggestion.accepted
+  Nothing is enforced yet. Watch it: deedglass insights shadow · promote: deedglass policy activate acme-sim --version 3 --mode enforce
+```
+
+### `deedglass insights suggestions reject sug_… --reason "…" [--json]`
+
+`POST /v1/suggestions/{id}/reject`: the reason is required (3 to 280 characters) and sealed in the
+`suggestion.rejected` deed.
+
+```
+$ deedglass insights suggestions reject sug_01k6z… --reason "We review order updates by hand this quarter"
+✓ Rejected sug_01k6z… · deed deed_01k6z… sealed
+  Deedglass won't suggest this again for 30 days unless the numbers double.
+```
+
+The suggestion commands exit 0 on success, 1 when the server refuses (`suggestion_stale`,
+`shadow_slot_taken`, `suggestion_decided`, `conflict`, `not_found`) or can't be reached, 2 for a
+usage error and 3 when not authenticated.
+
+### `deedglass insights digest --preview [--org org_…|slug] [--html /tmp/digest.html] [--json]`
+
+Renders this week's digest so far for one org (default: the most recently active one) without
+sending it: the subject, how many people would get it, and the text part; `--html` also writes the
+HTML part to a file. `--preview` is required: the command never sends. The digest itself is in
+[EMAIL.md](EMAIL.md#the-weekly-insights-digest).
+
+```
+$ deedglass insights digest --preview --org acme-sim --html /tmp/digest.html
+Subject: Acme (simulated) · week 41 · 5,612 agent actions, 2 suggestions to review
+To: 1 recipient (not sent: preview)
+…
+✓ HTML written to /tmp/digest.html
+```
+
+When the org's digest is off it says so and points to Console › Insights › Settings.
+
+### `deedglass policy diff <old.yaml> <new.yaml> | <policy> <vA> <vB> [--context 3] [--json]`
+
+The same line diff suggestions use (Myers, unified hunks), between two files, or between two
+stored versions of a policy (read with an org admin key). `--context` is 0 to 20 lines.
+
+```
+$ deedglass policy diff acme-sim 1 3
+acme-sim v1 → acme-sim v3  +8 lines, −0
+@@ lines 52 to 65 @@
+      match: { tool: stripe.create_refund }
+      decision: allow
+
++   # Accepted from Deedglass Insights suggestion sug_01k6z… · evidence sha256:7a1c…e9d0
++   - id: allow-order-updates
+…
+```
+
+No changes prints `✓ No changes between …`. Exit 0 on success, 1 when a file can't be read or the
+server refuses, 2 for a usage error.
+
 ## What it doesn't do (yet)
 
 - The Ledger commands use the database directly; `--server`/`--api-key` (API mode) come with S09.
@@ -1117,10 +1225,15 @@ invalid scenario (`scenario_invalid`, with the file and line).
   `COLORFGBG` or `DEEDGLASS_THEME=light`. No image-protocol (iTerm2, Kitty) rendering yet.
 
 - No shell completion until S32 (`deedglass completion zsh|bash|fish`).
-- `policy diff` (a semantic diff of two versions) isn't built. `policy replay` replays stored
-  versions only; replaying an unsaved file comes later. There is no language server; the Console
+- `policy diff` is a line diff, not a semantic one: reformatting a file shows as changed lines even
+  when `version_hash` is the same. `policy replay` replays stored versions only; replaying an unsaved
+  file comes later. There is no language server; the Console
   editor (S26) shows the same diagnostics inline.
 - There are no CLI commands to acknowledge or resolve an anomaly; use the API or the Console.
+- `insights settings` sets `llm_phrasing` (`--llm-phrasing on|off`), `llm_monthly_cap_cents`
+  (`--llm-cap-cents`) and `digest.recipients` (`--digest owners|admins|off`) with a reason, like the
+  anomaly settings.
+- `insights digest` only previews; the weekly send runs inside `serve`.
 - `policy push` and `policy activate` use an org admin key; there is no CLI sign-in with a Console
   session.
 - Intent keys live in PEM files. `keygen` and `dev sign-intent` don't use an OS keychain, a KMS or

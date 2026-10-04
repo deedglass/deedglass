@@ -1,0 +1,24 @@
+{
+    "object": "shadow_report",
+    "shadow": {
+        "policy": "pol_01m43609ky741wh57e1ra09sb7",
+        "name": "acme-sim",
+        "version": 3,
+        "version_id": "pv_01m436t5sy3k61j4g328xqys5a",
+        "live": true,
+        "since": "2026-10-04T10:19:35.12232Z"
+    },
+    "enforce": [],
+    "window": {
+        "from": null,
+        "to": null
+    },
+    "summary": {
+        "evaluated": 0,
+        "agree": 0,
+        "disagree": 0,
+        "agreement": 0
+    },
+    "transitions": [],
+    "sentence": "Shadow acme-sim v3 hasn't seen any actions yet."
+}

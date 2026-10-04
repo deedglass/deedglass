@@ -49,6 +49,10 @@ const (
 	// EventAnomalyDetected (S27): id is the anomaly episode (anm_…); agent, kind, tool and severity
 	// are set. Published when an episode opens and on each new occurrence, never per finding.
 	EventAnomalyDetected = "anomaly.detected"
+	// EventSuggestionCreated (S28): id is the suggestion (sug_…); kind (loosen, tighten, budget,
+	// explicit_rule, advisory), status (open) and rule_id (the target rule, when there is one) are
+	// set. Published once, when the suggestion is stored.
+	EventSuggestionCreated = "suggestion.created"
 )
 
 // WebhookEvents are the event types an endpoint may subscribe to (contract §8): every type above
@@ -57,7 +61,7 @@ var WebhookEvents = []string{
 	EventActionCreated, EventActionDecided, EventActionExecuted, EventActionWitnessed, EventDeedSealed,
 	EventApprovalRequested, EventApprovalDecided,
 	EventAgentStopped, EventAgentResumed, EventAgentSuspended, EventOrgStopped, EventOrgStarted,
-	EventAnomalyDetected, "suggestion.created",
+	EventAnomalyDetected, EventSuggestionCreated,
 	EventPolicyActivated, EventDecoderDegraded, EventDecoderRecovered, EventDecoderAlert, EventWebhookTest,
 }
 

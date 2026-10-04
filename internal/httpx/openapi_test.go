@@ -168,6 +168,12 @@ func elsewhere() []Route {
 		adm("POST", "/v1/insights/anomalies/{id}/resolve", "resolveAnomaly", RoleAdmin),
 		adm("GET", "/v1/insights/settings", "getInsightsSettings", RoleViewer), adm("PATCH", "/v1/insights/settings", "updateInsightsSettings", RoleAdmin),
 	)
+	// S28: suggestions (internal/learn).
+	out = append(out,
+		adm("GET", "/v1/suggestions", "listSuggestions", RoleViewer), adm("GET", "/v1/suggestions/{id}", "getSuggestion", RoleViewer),
+		adm("POST", "/v1/suggestions/generate", "generateSuggestions", RoleAdmin),
+		adm("POST", "/v1/suggestions/{id}/accept", "acceptSuggestion", RoleAdmin), adm("POST", "/v1/suggestions/{id}/reject", "rejectSuggestion", RoleAdmin),
+	)
 	return out
 }
 

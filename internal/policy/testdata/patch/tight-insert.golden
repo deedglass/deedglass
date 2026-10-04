@@ -1,0 +1,20 @@
+deedglass: policy/v1
+name: patch-tight
+description: Rules without blank lines between them.
+defaults:
+  decision: deny
+  reason: No rule allows this.
+rules:
+- id: allow-reads
+  match: { tool: postgres.query }
+  decision: allow
+# Accepted from Deedglass Insights suggestion sug_test · evidence sha256:7a1c…e9d0
+- id: allow-order-updates
+  description: People approved 401 of 404 of these between 2026-09-25 and 2026-10-09.
+  match: { tool: postgres.execute, agent: [ops-agent] }
+  when: 'sql.kind == "update" && sql.tables == ["public.orders"] && sql.statements == 1 && sql.has_where'
+  decision: allow
+  verify: L2
+- id: allow-posts
+  match: { tool: slack.post_message }
+  decision: allow

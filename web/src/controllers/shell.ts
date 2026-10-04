@@ -126,7 +126,18 @@ function renderStopButton(s: State): void {
 }
 
 // ---------- banners ----------
+// S28: a simulated org (deedglass dev simulate) shows a neutral bar on every screen. GET /v1/org's
+// settings.simulated sets it; a screen that learns it another way (Insights' settings) calls this.
+let simulated = false;
+let lastOffline = false;
+export function setSimulated(on: boolean): void {
+  if (simulated === on) return;
+  simulated = on;
+  renderBanners(get(), lastOffline);
+}
+
 function renderBanners(s: State | null, offline: boolean): void {
+  lastOffline = offline;
   const host = maybe('banners');
   if (!host) return;
   const out: HTMLElement[] = [];
@@ -141,6 +152,10 @@ function renderBanners(s: State | null, offline: boolean): void {
     out.push(h('div', { class: 'banner banner-stopped', role: 'status', id: 'banner-stopped' }, icon('stop', 20),
       h('div', { class: 'body' }, h('p', null, h('strong', null, parts.join(' · '))), st.reason ? h('p', { class: 't-2' }, `“${st.reason}”`) : null,
         s.me.membership.role === 'owner' ? null : h('p', { class: 't-2' }, copy.stop.startOwnerOnly))));
+  }
+  if (s && (simulated || (s.org as { settings?: { simulated?: unknown } }).settings?.simulated === true)) {
+    out.push(h('div', { class: 'banner banner-sim', role: 'note', id: 'banner-simulated' }, icon('flask-conical', 20),
+      h('div', { class: 'body' }, h('p', null, copy.states.simulatedBanner))));
   }
   if (s && s.me.membership.role === 'viewer') {
     out.push(h('div', { class: 'banner banner-readonly', role: 'note' }, icon('lock', 20),
@@ -363,6 +378,14 @@ export function bootShell(o: ShellOptions): void {
     });
 }
 
+// S28: a screen adds its own keys to the ? sheet (Insights: j/k, Enter, a, r).
+let pageKeys: { title: string; rows: [string, string][] } | null = null;
+export function setPageShortcuts(title: string, rows: [string, string][]): void {
+  pageKeys = { title, rows };
+}
+
+const keyList = (rows: [string, string][]) => h('dl', { class: 'kv' }, ...rows.flatMap(([k, v]) => [h('dt', null, ...k.split(' ').map((x) => h('kbd', { class: 'kbd' }, x))), h('dd', null, v)]));
+
 function showShortcuts(): void {
   const rows: [string, string][] = [
     ['⌘K', copy.shortcuts.open],
@@ -373,8 +396,8 @@ function showShortcuts(): void {
     ['Enter', copy.shortcuts.enter],
     ['Esc', copy.shortcuts.esc],
   ];
-  const dl = h('dl', { class: 'kv' }, ...rows.flatMap(([k, v]) => [h('dt', null, ...k.split(' ').map((x) => h('kbd', { class: 'kbd' }, x))), h('dd', null, v)]));
-  openSheet({ title: copy.shortcuts.title, body: [dl, h('p', null, copy.shortcuts.note)] });
+  const page = pageKeys ? [h('h3', { class: 't-footnote t-2 m-0' }, pageKeys.title), keyList(pageKeys.rows)] : [];
+  openSheet({ title: copy.shortcuts.title, body: [...page, keyList(rows), h('p', null, copy.shortcuts.note)] });
 }
 
 /** byIdSafe: used by pages that know their markup. */

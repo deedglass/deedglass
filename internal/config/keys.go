@@ -67,6 +67,8 @@ var Keys = []Key{
 		Commands: "serve, org create", Doc: "The From address of sign-in and invite emails, e.g. Deedglass <signin@deedglass.com>. Required when DEEDGLASS_RESEND_API_KEY is set.", Owner: "S07"},
 	{Name: "DEEDGLASS_ANTHROPIC_API_KEY", Kind: KindSecret, Secret: true,
 		Commands: "serve, insights", Doc: "Optional Anthropic API key for Insights phrasing (starts with sk-ant-).", Owner: "S01"},
+	{Name: "DEEDGLASS_ANTHROPIC_MODEL", Kind: KindString, Default: "claude-sonnet-5-5",
+		Commands: "serve", Doc: "The Claude model that rewords Insights suggestions when an org turns phrasing on (a model id like claude-sonnet-5-5, no date suffix).", Owner: "S28"},
 	{Name: "DEEDGLASS_TRUSTED_PROXIES", Kind: KindCIDRList,
 		Commands: "serve", Doc: "Comma-separated CIDRs whose X-Forwarded-For is believed.", Owner: "S01"},
 	{Name: "DEEDGLASS_ALLOW_PRIVATE_NETWORKS", Kind: KindBool, Default: "false", DevOnly: true,

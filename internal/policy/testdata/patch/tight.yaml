@@ -1,0 +1,13 @@
+deedglass: policy/v1
+name: patch-tight
+description: Rules without blank lines between them.
+defaults:
+  decision: deny
+  reason: No rule allows this.
+rules:
+- id: allow-reads
+  match: { tool: postgres.query }
+  decision: allow
+- id: allow-posts
+  match: { tool: slack.post_message }
+  decision: allow

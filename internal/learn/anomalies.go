@@ -3,8 +3,10 @@ package learn
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"time"
 
+	"github.com/deedglass/deedglass/internal/httpx"
 	"github.com/deedglass/deedglass/internal/ids"
 )
 
@@ -215,6 +217,20 @@ type AnomalyStore interface {
 
 // ErrNotFound is the stores' not-found (the API maps it to not_found).
 var ErrNotFound = errNotFound{}
+
+// ErrBadCursor is a list cursor the store didn't hand out (the API answers 400 with param cursor).
+var ErrBadCursor = errors.New("learn: the cursor isn't valid")
+
+// MsgBadCursor is its message.
+const MsgBadCursor = "This cursor isn't one this list returned. Start again without cursor, then pass next_cursor."
+
+// cursorErr maps ErrBadCursor to the API error.
+func cursorErr(err error) error {
+	if errors.Is(err, ErrBadCursor) {
+		return httpx.ErrValidation("cursor", MsgBadCursor)
+	}
+	return err
+}
 
 type errNotFound struct{}
 

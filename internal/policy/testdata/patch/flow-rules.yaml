@@ -1,0 +1,5 @@
+deedglass: policy/v1
+name: patch-flow
+description: The whole rules list in flow style.
+defaults: { decision: deny, reason: No rule allows this. }
+rules: [ { id: allow-reads, match: { tool: postgres.query }, decision: allow } ]

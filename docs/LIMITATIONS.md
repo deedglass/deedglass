@@ -478,6 +478,32 @@ it refuses rather than guess:
   Witness (`witness.method: simulated`), and runs actions one at a time, so it is no load test
   ([SIMULATOR.md](SIMULATOR.md)).
 
+## Suggestions, phrasing and the digest (S28)
+
+- **Suggestions never change anything by themselves.** Accepting creates a version in shadow;
+  promoting it to enforce is a separate act by a person. `internal/learn` has no way to enforce
+  (three tests pin it; [SUGGESTIONS.md](SUGGESTIONS.md)).
+- **Template wording only, unless opted in.** Claude rewords suggestions only when the operator set
+  `DEEDGLASS_ANTHROPIC_API_KEY` and the org turned `llm_phrasing` on; a reply that fails any check
+  is discarded ([INSIGHTS_PRIVACY.md](INSIGHTS_PRIVACY.md)).
+- **One org's data, 14 days.** Suggestions read only the org's own decisions in the last 14 days,
+  under the enforced version. No learning across orgs, and no machine learning: fixed thresholds
+  over counts.
+- **They can't see intent.** Approving every order update doesn't say why people approved, or how
+  closely they looked.
+- **Budget replays show 0 changes.** Replay keeps each action's recorded usage, so it can't show
+  what a higher budget would have let through. Budget suggestions rest on the near-limit days.
+- **Agent budgets are advice only.** They live on the agent; the suggestion names the command and
+  changes nothing.
+- **The patcher refuses some files:** flow-style `rules` or `budgets` lists and files that mix LF
+  and CRLF line endings. `deedglass policy fmt -w` fixes both.
+- **The schedule runs on every instance.** Each `serve` checks every 5 minutes; `learn_runs` rows
+  make the daily pass and the weekly digest happen once per org and period. A manual generate
+  refuses a second pass for the same org on the same instance only; two instances can run one each,
+  and the unique index keeps one open suggestion per change.
+- **At most 10 open suggestions per org.** The rest wait for a later pass.
+- **The digest is numbers only, in English, weekly.** No per-person schedule, no other languages.
+
 ## What this page does not do
 
 It does not list bugs or missing features on the schedule. It lists limits of the design that stay true after they ship.

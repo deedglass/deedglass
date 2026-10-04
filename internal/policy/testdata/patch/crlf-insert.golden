@@ -1,0 +1,17 @@
+deedglass: policy/v1
+name: patch-crlf
+description: Windows line endings.
+defaults:
+  decision: deny
+  reason: No rule allows this.
+rules:
+  # Accepted from Deedglass Insights suggestion sug_test · evidence sha256:7a1c…e9d0
+  - id: allow-order-updates
+    description: People approved 401 of 404 of these between 2026-09-25 and 2026-10-09.
+    match: { tool: postgres.execute, agent: [ops-agent] }
+    when: 'sql.kind == "update" && sql.tables == ["public.orders"] && sql.statements == 1 && sql.has_where'
+    decision: allow
+    verify: L2
+  - id: allow-reads
+    match: { tool: postgres.query }
+    decision: allow

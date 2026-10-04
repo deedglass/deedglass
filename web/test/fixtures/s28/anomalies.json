@@ -1,0 +1,281 @@
+{
+    "object": "list",
+    "data": [
+        {
+            "object": "anomaly",
+            "id": "anm_01m4362tnrcvb66x57jpsmsryr",
+            "agent": {
+                "id": "agt_01m43609khvcatmyvbzx8z6cmm",
+                "name": "support-bot"
+            },
+            "kind": "user_ref_burst",
+            "tool": null,
+            "severity": "warn",
+            "score": 4.43,
+            "title": "25 new on-behalf-of users, 16:00 to 17:00 IST \u00b7 usually 2.4 an hour",
+            "status": "open",
+            "active": false,
+            "active_until": "2026-10-01T12:30:00Z",
+            "window": {
+                "start": "2026-10-01T10:30:00Z",
+                "end": "2026-10-01T11:30:00Z"
+            },
+            "occurrences": 1,
+            "evidence": {
+                "hour": "16:00",
+                "count": 25,
+                "factor": 10.6,
+                "points": [
+                    {
+                        "count": 25,
+                        "score": 4.43,
+                        "window_end": "2026-10-01T11:30:00.000Z",
+                        "window_start": "2026-10-01T10:30:00.000Z"
+                    }
+                ],
+                "new_refs": 25,
+                "timezone": "IST",
+                "action_ids": [
+                    "act_01m4362qcj3tkwpqvyc2tk5cks",
+                    "act_01m4362qd26h6r44e9q7x07242",
+                    "act_01m4362qdc4ddvccxpqnn6g858",
+                    "act_01m4362qdsdmtznbk3b50zhhv5",
+                    "act_01m4362qe4yaa7av3jfaq7z9f3",
+                    "act_01m4362qe9jbedptc90mn9pnag",
+                    "act_01m4362qephx17ww6m27sax34x",
+                    "act_01m4362qfhs0nkynzy1d7vzwdt",
+                    "act_01m4362qfpn46qtfced0yh5vsc",
+                    "act_01m4362qfvecbvq0kkjbyctgrt"
+                ],
+                "window_end": "2026-10-01T11:30:00Z",
+                "window_start": "2026-10-01T10:30:00Z",
+                "baseline_mean": 2.36,
+                "history_hours": 148,
+                "baseline_stddev": 5.11
+            },
+            "detector_version": "1",
+            "acknowledged": null,
+            "resolved": null,
+            "created_at": "2026-10-04T10:06:49.952017Z",
+            "updated_at": "2026-10-04T10:06:49.952017Z"
+        },
+        {
+            "object": "anomaly",
+            "id": "anm_01m4362tnb833sg6wv2vf29n58",
+            "agent": {
+                "id": "agt_01m43609kq0z8rqjb0zhkz09je",
+                "name": "growth-agent"
+            },
+            "kind": "off_hours",
+            "tool": null,
+            "severity": "warn",
+            "score": 12,
+            "title": "12 calls, 02:00 to 03:00 IST \u00b7 usually 0.2% of its calls at this hour",
+            "status": "open",
+            "active": false,
+            "active_until": "2026-09-30T22:30:00Z",
+            "window": {
+                "start": "2026-09-30T20:30:00Z",
+                "end": "2026-09-30T21:30:00Z"
+            },
+            "occurrences": 1,
+            "evidence": {
+                "hour": "02:00",
+                "count": 12,
+                "share": 0.0024,
+                "points": [
+                    {
+                        "count": 12,
+                        "score": 12,
+                        "window_end": "2026-09-30T21:30:00.000Z",
+                        "window_start": "2026-09-30T20:30:00.000Z"
+                    }
+                ],
+                "writes": 12,
+                "timezone": "IST",
+                "action_ids": [
+                    "act_01m4362cw8kbm7pssrf9pw1vww",
+                    "act_01m4362czf1yb1mbyrpgj67zwj",
+                    "act_01m4362d0797vpybvezgrpxq3m",
+                    "act_01m4362d0j1y67d38ymfbpnb4x",
+                    "act_01m4362d3n34zyk7tp6wwxsqt6",
+                    "act_01m4362d6c6yfcqyxvyr950xtv",
+                    "act_01m4362d6q5x3jma924phvpz7z",
+                    "act_01m4362dc87vvz62vec1tvakpt",
+                    "act_01m4362ddyjv2fy9mvpkx5qbyd",
+                    "act_01m4362dh2jke8xd0pr0ht8abv"
+                ],
+                "window_end": "2026-09-30T21:30:00Z",
+                "window_start": "2026-09-30T20:30:00Z",
+                "history_hours": 134
+            },
+            "detector_version": "1",
+            "acknowledged": null,
+            "resolved": null,
+            "created_at": "2026-10-04T10:06:49.952017Z",
+            "updated_at": "2026-10-04T10:06:49.952017Z"
+        },
+        {
+            "object": "anomaly",
+            "id": "anm_01m4362tn6rsgwdwse4rbng9ev",
+            "agent": {
+                "id": "agt_01m43609kq0z8rqjb0zhkz09je",
+                "name": "growth-agent"
+            },
+            "kind": "volume_spike",
+            "tool": null,
+            "severity": "high",
+            "score": 22.8,
+            "title": "85 calls, 14:00 to 15:00 IST \u00b7 34.8\u00d7 its usual 2.4",
+            "status": "open",
+            "active": false,
+            "active_until": "2026-09-30T10:30:00Z",
+            "window": {
+                "start": "2026-09-30T08:30:00Z",
+                "end": "2026-09-30T09:30:00Z"
+            },
+            "occurrences": 1,
+            "evidence": {
+                "hour": "14:00",
+                "count": 85,
+                "factor": 34.8,
+                "points": [
+                    {
+                        "count": 85,
+                        "score": 22.8,
+                        "window_end": "2026-09-30T09:30:00.000Z",
+                        "window_start": "2026-09-30T08:30:00.000Z"
+                    }
+                ],
+                "writes": 85,
+                "timezone": "IST",
+                "action_ids": [
+                    "act_01m43621zzz7vsqfp9a3afrs15",
+                    "act_01m436221mxsasvkhng5b2z43a",
+                    "act_01m436221x6cxep6c40nzc0fca",
+                    "act_01m436222hq567675hrrd9p2xh",
+                    "act_01m436223vvmaq372mdp2fbvtf",
+                    "act_01m436224gq366kcd4rads0b59",
+                    "act_01m436225j8t0e0zj5b1qjh6fz",
+                    "act_01m436225wnf34nzv4nacrt42c",
+                    "act_01m4362269fbx0mazcnna522ya",
+                    "act_01m436227p029r50xegxe3d6vx"
+                ],
+                "window_end": "2026-09-30T09:30:00Z",
+                "window_start": "2026-09-30T08:30:00Z",
+                "baseline_mean": 2.44,
+                "history_hours": 122,
+                "baseline_stddev": 3.62
+            },
+            "detector_version": "1",
+            "acknowledged": null,
+            "resolved": null,
+            "created_at": "2026-10-04T10:06:49.952017Z",
+            "updated_at": "2026-10-04T10:06:49.952017Z"
+        },
+        {
+            "object": "anomaly",
+            "id": "anm_01m4362tn4wga776vy8dth4b9b",
+            "agent": {
+                "id": "agt_01m43609knc9r96svsmbedazsk",
+                "name": "ops-agent"
+            },
+            "kind": "mismatch_spike",
+            "tool": null,
+            "severity": "high",
+            "score": 3,
+            "title": "3 MISMATCH verdicts, 11:00 to 12:00 IST \u00b7 usually 0",
+            "status": "open",
+            "active": false,
+            "active_until": "2026-09-30T07:30:00Z",
+            "window": {
+                "start": "2026-09-30T05:30:00Z",
+                "end": "2026-09-30T06:30:00Z"
+            },
+            "occurrences": 1,
+            "evidence": {
+                "hour": "11:00",
+                "count": 9,
+                "points": [
+                    {
+                        "count": 9,
+                        "score": 3,
+                        "window_end": "2026-09-30T06:30:00.000Z",
+                        "window_start": "2026-09-30T05:30:00.000Z"
+                    }
+                ],
+                "timezone": "IST",
+                "action_ids": [
+                    "act_01m4361wqz9xrh36gdja67exc0",
+                    "act_01m4361wvx91d9fnkk3q5g4rae",
+                    "act_01m4361x2c1jbj0td0zpggd0ze"
+                ],
+                "mismatches": 3,
+                "window_end": "2026-09-30T06:30:00Z",
+                "window_start": "2026-09-30T05:30:00Z",
+                "baseline_mean": 0,
+                "history_hours": 119,
+                "baseline_stddev": 1
+            },
+            "detector_version": "1",
+            "acknowledged": null,
+            "resolved": null,
+            "created_at": "2026-10-04T10:06:49.952017Z",
+            "updated_at": "2026-10-04T10:06:49.952017Z"
+        },
+        {
+            "object": "anomaly",
+            "id": "anm_01m4362tmvrj4gvjpt35j6msr9",
+            "agent": {
+                "id": "agt_01m43609knc9r96svsmbedazsk",
+                "name": "ops-agent"
+            },
+            "kind": "new_tool",
+            "tool": "github.merge_pr",
+            "severity": "warn",
+            "score": 2,
+            "title": "first github.merge_pr (write), 15:00 to 16:00 IST",
+            "status": "open",
+            "active": false,
+            "active_until": "2026-09-29T11:30:00Z",
+            "window": {
+                "start": "2026-09-29T09:30:00Z",
+                "end": "2026-09-29T10:30:00Z"
+            },
+            "occurrences": 1,
+            "evidence": {
+                "hour": "15:00",
+                "tool": "github.merge_pr",
+                "count": 2,
+                "points": [
+                    {
+                        "count": 2,
+                        "score": 2,
+                        "window_end": "2026-09-29T10:30:00.000Z",
+                        "window_start": "2026-09-29T09:30:00.000Z"
+                    }
+                ],
+                "timezone": "IST",
+                "action_ids": [
+                    "act_01m4361jyeqtnnvbq2cg1ch0t0",
+                    "act_01m4361md23bv59t6c6bx4dazz"
+                ],
+                "window_end": "2026-09-29T10:30:00Z",
+                "side_effect": "write",
+                "window_start": "2026-09-29T09:30:00Z",
+                "history_hours": 99
+            },
+            "detector_version": "1",
+            "acknowledged": null,
+            "resolved": null,
+            "created_at": "2026-10-04T10:06:49.952017Z",
+            "updated_at": "2026-10-04T10:06:49.952017Z"
+        }
+    ],
+    "has_more": false,
+    "next_cursor": null,
+    "active_now": 0,
+    "anomaly_facts": false,
+    "notice": null,
+    "baseline_building": []
+}
