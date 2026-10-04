@@ -153,9 +153,13 @@ type Runner struct {
 	mu      sync.Mutex
 	running int
 	wake    chan struct{}
+	once    sync.Once
 }
 
-func (r *Runner) defaults() {
+// defaults fills the zero settings once (Run and Wake call it from different goroutines).
+func (r *Runner) defaults() { r.once.Do(r.setDefaults) }
+
+func (r *Runner) setDefaults() {
 	if r.Lease <= 0 {
 		r.Lease = ReplayLease
 	}
@@ -168,11 +172,9 @@ func (r *Runner) defaults() {
 	if r.Log == nil {
 		r.Log = slog.Default()
 	}
-	r.mu.Lock()
 	if r.wake == nil {
 		r.wake = make(chan struct{}, 1)
 	}
-	r.mu.Unlock()
 }
 
 // Wake makes the runner look for work now (a replay was just queued on this instance).
