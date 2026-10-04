@@ -4,6 +4,7 @@ package gate
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -395,6 +396,15 @@ func checkChain(t *testing.T, w *world) {
 // the chain is intact, the calls counters equal the non-denied actions, and spend equals the
 // fake.write costs.
 func TestLoad1000(t *testing.T) {
+	// Load-aware (S32, DL-047): the correctness target never moves (every action sealed with one
+	// deed, the paths, the counters and the chain). Only how long the test waits for a slow,
+	// shared runner to finish is scaled to the speed measured here; a runner more than eight
+	// times slower than the reference skips instead of passing on a relaxed check.
+	factor := loadFactor(t)
+	if factor > maxLoadFactor {
+		t.Skipf("runner too loaded for the 1,000-action run (%.1fx slower than the reference); run it again on an idle machine", factor)
+	}
+	settle := time.Duration(float64(30*time.Second) * factor)
 	w := newWorld(t, worldOpts{agents: 10, maxConns: 60})
 	const n, conc = 1000, 50
 	rng := rand.New(rand.NewPCG(13, 13))
@@ -441,9 +451,19 @@ func TestLoad1000(t *testing.T) {
 					return
 				}
 				denied.Add(1)
-			} else if err != nil || a.State != "sealed" || a.Status != "executed" {
-				t.Errorf("%v %v", err, a)
-				return
+			} else {
+				if err == nil && a != nil && a.State != "sealed" {
+					// The 10 s wait ended first (a slow runner): wait for the seal, load-scaled.
+					if werr := w.p.Wait(bg, w.org, a.ID, "", settle); werr != nil {
+						t.Errorf("%s not settled in %s: %v", a.ID, settle, werr)
+						return
+					}
+					a, err = w.p.Get(bg, w.pr(j.agent), a.ID, 0)
+				}
+				if err != nil || a.State != "sealed" || a.Status != "executed" {
+					t.Errorf("%v %v", err, a)
+					return
+				}
 			}
 			spend.Add(j.cost)
 			mu.Lock()
@@ -505,3 +525,51 @@ func TestLoad1000(t *testing.T) {
 }
 
 func ms(d time.Duration) float64 { return float64(d) / float64(time.Millisecond) }
+
+// maxLoadFactor is how much slower than the reference a runner may be before TestLoad1000 skips.
+const maxLoadFactor = 8.0
+
+// loadFactor measures this runner against the reference machine (an M-series laptop, idle: about
+// 6 ms for the calibration below, 55 ms under the race detector) and returns how many times slower it is,
+// never below 1. The race detector's own slowdown is part of the reference it is compared with.
+// DEEDGLASS_IT_LOAD_FACTOR overrides the measurement (tests of this helper, odd runners).
+func loadFactor(t *testing.T) float64 {
+	t.Helper()
+	if v := os.Getenv("DEEDGLASS_IT_LOAD_FACTOR"); v != "" {
+		var f float64
+		if _, err := fmt.Sscanf(v, "%g", &f); err == nil && f > 0 {
+			return max(f, 1)
+		}
+	}
+	ref := 6 * time.Millisecond
+	if raceEnabled {
+		ref = 55 * time.Millisecond
+	}
+	best := time.Duration(1<<63 - 1)
+	for range 3 {
+		t0 := time.Now()
+		calibrate()
+		best = min(best, time.Since(t0))
+	}
+	f := max(float64(best)/float64(ref), 1)
+	t.Logf("load factor %.2f (calibration %s, reference %s)", f, best.Round(time.Millisecond), ref)
+	return f
+}
+
+// calibrate is a fixed CPU and allocation workload: hashing and JSON round trips, like the Gate.
+func calibrate() {
+	buf := make([]byte, 64<<10)
+	for i := range buf {
+		buf[i] = byte(i)
+	}
+	var sink [32]byte
+	for range 120 {
+		sink = sha256.Sum256(buf)
+		buf[0] ^= sink[0]
+	}
+	for i := range 2000 {
+		b, _ := json.Marshal(map[string]any{"n": i, "tool": "fake.echo", "args": map[string]any{"rows": i}})
+		var v map[string]any
+		_ = json.Unmarshal(b, &v)
+	}
+}

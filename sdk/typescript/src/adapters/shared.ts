@@ -99,7 +99,7 @@ export async function governCall<R>(
   tool: string,
   args: JsonObject,
   run: (signal: AbortSignal) => Promise<R> | R,
-  call: { signal?: AbortSignal | undefined } = {},
+  call: { signal?: AbortSignal | undefined; callId?: string | undefined } = {},
 ): Promise<R | string> {
   const w = wrapTool<JsonObject, R>((_a, ctx) => run(ctx.signal), {
     client: o.client,
@@ -110,7 +110,7 @@ export async function governCall<R>(
     ...(o.onAction ? { onSealed: o.onAction } : {}),
   });
   try {
-    return await w(args, call.signal ? { signal: call.signal } : {});
+    return await w(args, { ...(call.signal ? { signal: call.signal } : {}), ...(typeof call.callId === 'string' ? { callId: call.callId } : {}) });
   } catch (err) {
     if (err instanceof ApprovalPendingError || (isDeedglassError(err) && err.code === 'approval_required')) {
       if (o.onPending === 'throw') throw err;

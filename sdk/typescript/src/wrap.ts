@@ -45,6 +45,8 @@ export interface CallOptions {
   signal?: AbortSignal;
   onBehalfOf?: string;
   session?: string;
+  /** The framework's tool call id, sent as context.call_id (S32). */
+  callId?: string;
 }
 
 export type ToolFn<A, R> = (args: A, ctx: { signal: AbortSignal; actionId: string }) => Promise<R> | R;
@@ -271,6 +273,7 @@ export function wrapTool<A extends JsonObject, R>(fn: ToolFn<A, R>, opts: WrapTo
       ...(call.onBehalfOf !== undefined ? { onBehalfOf: call.onBehalfOf } : {}),
       ...(call.session !== undefined ? { session: call.session } : {}),
       ...(call.signal ? { signal: call.signal } : {}),
+      ...(call.callId !== undefined ? { callId: call.callId } : {}),
       waitMs: 0,
     });
     return decide(a);

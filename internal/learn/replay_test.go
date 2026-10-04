@@ -152,7 +152,9 @@ func fixture(t testing.TB, n int) []InputRow {
 		if err != nil {
 			t.Fatal(err)
 		}
-		d := policy.Evaluate(bg, v1, in, policy.EvalOptions{})
+		// The replay's own backstop, not the 50 ms default: a loaded runner must not record a
+		// deadline deny that the replay (2 s) then reports as changed.
+		d := policy.Evaluate(bg, v1, in, policy.EvalOptions{Deadline: 2 * time.Second})
 		r := InputRow{ActionID: fmt.Sprintf("act_%04d", i), DecidedAt: at, Tool: tool, Input: raw,
 			Recorded: RecordedDecision{Decision: string(d.Outcome), Code: string(d.Code), Source: d.Source, RuleID: d.RuleID, PolicyVersionID: "pv_1"}}
 		if d.Outcome == policy.RequireApproval {

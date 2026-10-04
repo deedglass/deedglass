@@ -5,7 +5,7 @@
   "lines": [
     {
       "name": "core gzip (without verify)",
-      "value": 12.17,
+      "value": 12.24,
       "budget": 16,
       "unit": "KiB",
       "pass": true
@@ -19,35 +19,35 @@
     },
     {
       "name": "adapter ai-sdk gzip",
-      "value": 0.58,
+      "value": 0.59,
       "budget": 3,
       "unit": "KiB",
       "pass": true
     },
     {
       "name": "adapter openai-agents gzip",
-      "value": 0.53,
+      "value": 0.54,
       "budget": 3,
       "unit": "KiB",
       "pass": true
     },
     {
       "name": "adapter langchain gzip",
-      "value": 0.41,
+      "value": 0.42,
       "budget": 3,
       "unit": "KiB",
       "pass": true
     },
     {
       "name": "adapter claude-agent-sdk gzip",
-      "value": 1.63,
+      "value": 1.65,
       "budget": 3,
       "unit": "KiB",
       "pass": true
     },
     {
       "name": "adapters/shared gzip (once)",
-      "value": 1.45,
+      "value": 1.47,
       "budget": 3,
       "unit": "KiB",
       "pass": true
@@ -61,7 +61,7 @@
     },
     {
       "name": "verifyDeeds 1,000 deeds",
-      "value": 88,
+      "value": 87,
       "budget": 1500,
       "unit": "ms",
       "pass": true

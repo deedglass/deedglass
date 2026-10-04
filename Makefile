@@ -8,7 +8,7 @@ DATE     := $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
 BI       := github.com/deedglass/deedglass/internal/buildinfo
 LDFLAGS  := -s -w -X $(BI).Version=$(VERSION) -X $(BI).Commit=$(COMMIT) -X $(BI).Modified=$(MODIFIED) -X $(BI).Date=$(DATE)
 
-.PHONY: web-install web-tokens web-build web-test web-e2e web-lighthouse web-dev build-only bench-undo all help ci build test test-short vet fmt fmt-check tidy-check testdata-check rename-guard banned-words nocgo \
+.PHONY: py-ci py-build py-examples web-install web-tokens web-build web-test web-e2e web-lighthouse web-dev build-only bench-undo all help ci build test test-short vet fmt fmt-check tidy-check testdata-check rename-guard banned-words nocgo \
 	integration matrix fuzz bench bench-store bench-deed cover clean \
 	dev dev-down dev-reset dev-logs run docker bench-http bench-verify \
 	web-verify-install web-verify-test sdk-ts sdk-ts-it sdk-sync-verify sdk-runtime sdk-examples web-verify-build web-verify-serve gencopy genmark bench-mark bench-ledger bench-stop bench-intents bench-gate bench-witness policy-test \
@@ -22,7 +22,7 @@ all: ci
 help: ## list the targets
 	@grep -E '^[a-z][a-z-]*:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-15s %s\n", $$1, $$2}'
 
-ci: fmt-check tidy-check vet test fuzz-policy-short policy-test testdata-check rename-guard banned-words nocgo web-verify-test web-test sdk-ts ## everything the lint-unit, web-verify and web CI jobs run
+ci: fmt-check tidy-check vet test fuzz-policy-short policy-test testdata-check rename-guard banned-words nocgo web-verify-test web-test sdk-ts py-ci ## everything the lint-unit, web-verify and web CI jobs run
 
 build: ## build bin/deedglass with version ldflags (with Node 24 present, the real Console first: make web-build)
 	@if command -v node >/dev/null 2>&1; then $(MAKE) --no-print-directory web-build; else echo "build: Node isn't installed, so the binary carries the Console placeholder (dev only; prod refuses it)"; fi
@@ -432,3 +432,26 @@ bench-overview: ## S25 §3.8: GET /v1/overview's read (cache bypassed) at 100,00
 	DEEDGLASS_IT_BENCH_OUT="$$out" DEEDGLASS_IT_BENCH_RUN='TestOverviewBudget' DEEDGLASS_IT_BENCH_PKG=./internal/ledger/ \
 	DEEDGLASS_IT_PKGS=./internal/ledger/ DEEDGLASS_IT_GOFLAGS='-run ^$$' scripts/integration_local.sh >/dev/null; st=$$?; \
 	grep -o 'PERF {[^}]*}[^\\]*' "$$out" | sed 's/\\"/"/g'; echo "raw: $$out"; exit $$st
+
+# --- S32: the Python SDK (sdk/python), ADR-063 ---
+PY_SDK := sdk/python
+PY ?= $(shell for p in python3.13 python3.14 python3.12 python3.11 python3.10 python3; do command -v $$p >/dev/null 2>&1 && { echo $$p; break; }; done)
+
+$(PY_SDK)/.venv/.installed: $(PY_SDK)/requirements-dev.txt $(PY_SDK)/pyproject.toml
+	@test -n "$(PY)" || { echo "py: Python 3.10 or newer isn't installed. Install it (brew install python@3.13), then run make py-ci again."; exit 1; }
+	$(PY) -m venv $(PY_SDK)/.venv
+	$(PY_SDK)/.venv/bin/pip install -q --disable-pip-version-check -r $(PY_SDK)/requirements-dev.txt
+	$(PY_SDK)/.venv/bin/pip install -q --disable-pip-version-check --no-deps -e $(PY_SDK)
+	@touch $@
+
+py-ci: $(PY_SDK)/.venv/.installed ## (ci) S32: the Python SDK: ruff, ruff format --check, mypy --strict, pytest (vectors, parity 500/500, intents, client table sync and async, adapters on LangChain and the Claude Agent SDK) with coverage >= 90%
+	cd $(PY_SDK) && .venv/bin/ruff check src tests && .venv/bin/ruff format --check src tests && .venv/bin/mypy && .venv/bin/python -m pytest -q --cov --cov-report=term:skip-covered
+
+py-build: $(PY_SDK)/.venv/.installed ## S32: the wheel and sdist (python -m build), twine check, and the wheel holds py.typed and no tests
+	rm -rf $(PY_SDK)/dist && cd $(PY_SDK) && .venv/bin/python -m build -q . && .venv/bin/twine check dist/*
+	@unzip -l $(PY_SDK)/dist/*.whl | grep -q 'deedglass/py.typed' || { echo "py-build: the wheel lacks deedglass/py.typed"; exit 1; }
+	@! unzip -l $(PY_SDK)/dist/*.whl | grep -q 'tests/' || { echo "py-build: the wheel holds tests"; exit 1; }
+	@echo "py-build: $$(ls $(PY_SDK)/dist)"
+
+py-examples: $(PY_SDK)/.venv/.installed ## S32: examples/python in scripted mode against DEEDGLASS_SERVER (make demo-up; DEEDGLASS_API_KEY an agent key)
+	scripts/py_examples.sh

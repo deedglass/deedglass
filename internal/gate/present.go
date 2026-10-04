@@ -28,6 +28,7 @@ const (
 	msgToolDigest           = `tool_digest must be "sha256:" followed by 64 lowercase hex characters, or left out.`
 	msgTransport            = "context.transport must be a short lowercase name, such as rest, sdk, mcp_stdio or mcp_http."
 	msgClient               = "context.client.name and context.client.version must be text of at most 64 characters each."
+	msgCallID               = "context.call_id must be 1 to 128 printable ASCII characters with no spaces, such as your framework's tool call id."
 	msgWait                 = "wait must be a number of seconds from 0 to 25."
 )
 

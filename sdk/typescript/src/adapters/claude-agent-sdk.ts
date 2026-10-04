@@ -60,7 +60,7 @@ export function deedglassHooks(o: HooksOptions): Hooks {
     if (input.hook_event_name !== 'PreToolUse') return {};
     const id = input.tool_use_id ?? toolUseID ?? '';
     try {
-      let a = await client.submitProxy(`${connector}.${input.tool_name}`, argsOf(input.tool_input), { waitMs: 0, signal });
+      let a = await client.submitProxy(`${connector}.${input.tool_name}`, argsOf(input.tool_input), { waitMs: 0, signal, ...(id ? { callId: id } : {}) });
       if (a.status === 'pending_approval' && o.onPending === 'wait') a = await client.actions.waitUntilSettled(a.id, { timeoutMs, signal });
       switch (a.status) {
         case 'authorized':

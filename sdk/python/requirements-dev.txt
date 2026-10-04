@@ -1,0 +1,19 @@
+# S32 (ADR-063): the Python SDK's dev and test tools, exact pins. The SDK itself depends only on
+# httpx; cryptography is the `crypto` extra; LangChain and the Claude Agent SDK are adapter extras
+# installed here so the adapters are tested on their real frameworks.
+httpx==0.28.1
+cryptography==50.0.2
+langchain==1.4.3
+langchain-core==1.6.6
+langgraph==1.2.12
+claude-agent-sdk==0.2.163
+pytest==9.1.1
+pytest-asyncio==1.4.0
+pytest-cov==7.1.0
+coverage==7.16.2
+hypothesis==6.168.3
+mypy==2.4.0
+ruff==0.16.10
+hatchling==1.32.4
+build==1.6.1
+twine==7.0.0

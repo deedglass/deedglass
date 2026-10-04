@@ -39,6 +39,15 @@ describe('transport and client (S31 §6)', () => {
     expect(s.calls[0]!.body).toMatchObject({ tool: 'billing.refund_customer', mode: 'gateway', wait: 10, context: { client: { name: '@deedglass/sdk', version: '0.1.0' }, transport: 'sdk' } });
   });
 
+  it('callId becomes context.call_id; an id outside the API rule is left out (S32)', async () => {
+    const s = scriptedFetch(() => json(200, action()), () => json(200, action()));
+    const c = client(s.fetch);
+    await c.act('billing.refund_customer', { amount: 1 }, { callId: 'toolu_01AbC' });
+    await c.act('billing.refund_customer', { amount: 1 }, { callId: 'has a space' });
+    expect((s.calls[0]!.body as { context: { call_id?: string } }).context.call_id).toBe('toolu_01AbC');
+    expect((s.calls[1]!.body as { context: object }).context).not.toHaveProperty('call_id');
+  });
+
   it('202 pending without wait returns pending; with wait it long-polls until executed', async () => {
     const pend = action({ ...PENDING, mode: 'gateway' });
     let s = scriptedFetch(() => json(202, pend));

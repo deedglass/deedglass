@@ -69,6 +69,10 @@ func TestNormalizeTable(t *testing.T) {
 		{name: "bad tool digest", r: ActionRequest{Tool: "fake.echo", Args: raw(`{}`), ToolDigest: "sha256:XY"}, param: "tool_digest"},
 		{name: "bad transport", r: ActionRequest{Tool: "fake.echo", Args: raw(`{}`), Context: &RequestContext{Transport: "MCP!"}}, param: "context.transport"},
 		{name: "long client", r: ActionRequest{Tool: "fake.echo", Args: raw(`{}`), Context: &RequestContext{Client: &ClientInfo{Name: strings.Repeat("c", 65)}}}, param: "context.client"},
+		{name: "call id", r: ActionRequest{Tool: "fake.echo", Args: raw(`{}`), Context: &RequestContext{CallID: "toolu_01AbC:call/7=x"}}, connector: "fake", tool: "echo"},
+		{name: "call id with a space", r: ActionRequest{Tool: "fake.echo", Args: raw(`{}`), Context: &RequestContext{CallID: "call 1"}}, param: "context.call_id"},
+		{name: "call id too long", r: ActionRequest{Tool: "fake.echo", Args: raw(`{}`), Context: &RequestContext{CallID: strings.Repeat("c", 129)}}, param: "context.call_id"},
+		{name: "call id not ascii", r: ActionRequest{Tool: "fake.echo", Args: raw(`{}`), Context: &RequestContext{CallID: "cаll_1"}}, param: "context.call_id"},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -338,7 +342,7 @@ var reBadCopy = regexp.MustCompile(`[—–!]|(?i)\b(successfully|oops|` + "rece
 
 func TestCopy(t *testing.T) {
 	msgs := []string{msgToolEmpty, msgToolTooLong, msgToolNotUTF8, msgArgsMissing, msgArgsNotObject, msgConnectorTypeGateway, msgToolDigest,
-		msgTransport, msgClient, msgWait, msgMode("x"), msgToolGrammar("Fake.echo"), msgConnectorTypeUnknown("oracle"),
+		msgTransport, msgClient, msgCallID, msgWait, msgMode("x"), msgToolGrammar("Fake.echo"), msgConnectorTypeUnknown("oracle"),
 		msgArgsTooLarge(320_000, MaxArgsBytes), ToolUnknownMessage("fake.ecko"), ConnectorUnavailableMessage("fake"),
 		MsgIdempotencyConflict, MsgCancelExecuting, MsgCancelDone, MsgResultReported, MsgResultLate, MsgResultNotProxy,
 		MsgResultNotAuthorized, MsgResultDigest, MsgResultMissing, MsgResultStatus, MsgResultTimes, MsgResultTooLarge,
@@ -705,5 +709,22 @@ func TestMCPCopy(t *testing.T) {
 	}
 	if clock(time.Date(2026, 1, 2, 3, 4, 0, 0, time.UTC)) != "03:04 UTC" {
 		t.Fatal(clock(time.Date(2026, 1, 2, 3, 4, 0, 0, time.UTC)))
+	}
+}
+
+// TestContextCallID: the framework's call id is stored with the context (S32, DL-047), alone or
+// beside the client, and never changes the request digest.
+func TestContextCallID(t *testing.T) {
+	a, err := Normalize(ActionRequest{Tool: "fake.echo", Args: raw(`{"n":1}`), Context: &RequestContext{CallID: "call_abc"}}, 0)
+	if err != nil || string(a.Context) != `{"call_id":"call_abc"}` {
+		t.Fatalf("%s %v", a.Context, err)
+	}
+	b, err := Normalize(ActionRequest{Tool: "fake.echo", Args: raw(`{"n":1}`), Context: &RequestContext{Client: &ClientInfo{Name: "deedglass-python", Version: "0.1.0"}, Transport: "sdk", CallID: "toolu_01"}}, 0)
+	if err != nil || string(b.Context) != `{"client":{"name":"deedglass-python","version":"0.1.0"},"transport":"sdk","call_id":"toolu_01"}` {
+		t.Fatalf("%s %v", b.Context, err)
+	}
+	c, _ := Normalize(ActionRequest{Tool: "fake.echo", Args: raw(`{"n":1}`)}, 0)
+	if a.Digest != c.Digest || b.Digest != c.Digest || a.Fingerprint != c.Fingerprint {
+		t.Fatal("the call id changed the request digest")
 	}
 }

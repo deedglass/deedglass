@@ -6,7 +6,6 @@ package ui
 import (
 	"os"
 	"strings"
-	"unicode/utf8"
 )
 
 // Symbols.
@@ -76,12 +75,36 @@ func (s Style) UnknownLine(t string) string { return s.Amber(Unknown) + " " + t 
 
 // Pad right-pads t to width w, counting runes, not bytes.
 func Pad(t string, w int) string {
-	n := utf8.RuneCountInString(t)
+	n := Width(t)
 	if n >= w {
 		return t
 	}
 	return t + strings.Repeat(" ", w-n)
 }
 
-// Width is the display width of t in runes.
-func Width(t string) int { return utf8.RuneCountInString(t) }
+// Width is the display width of t in terminal columns: East Asian wide and fullwidth runes take
+// two (S32 §3.11), combining marks none.
+func Width(t string) int {
+	n := 0
+	for _, r := range t {
+		switch {
+		case r < 0x300:
+			n++
+		case r >= 0x300 && r <= 0x36F, r == 0x200B, r == 0x200D, r >= 0xFE00 && r <= 0xFE0F:
+		case wide(r):
+			n += 2
+		default:
+			n++
+		}
+	}
+	return n
+}
+
+// wide reports East Asian Wide (W) and Fullwidth (F) runes, by block.
+func wide(r rune) bool {
+	return (r >= 0x1100 && r <= 0x115F) || (r >= 0x2E80 && r <= 0x303E) || (r >= 0x3041 && r <= 0x33FF) ||
+		(r >= 0x3400 && r <= 0x4DBF) || (r >= 0x4E00 && r <= 0x9FFF) || (r >= 0xA000 && r <= 0xA4CF) ||
+		(r >= 0xAC00 && r <= 0xD7A3) || (r >= 0xF900 && r <= 0xFAFF) || (r >= 0xFE30 && r <= 0xFE4F) ||
+		(r >= 0xFF00 && r <= 0xFF60) || (r >= 0xFFE0 && r <= 0xFFE6) || (r >= 0x1F300 && r <= 0x1F64F) ||
+		(r >= 0x1F900 && r <= 0x1F9FF) || (r >= 0x20000 && r <= 0x3FFFD)
+}

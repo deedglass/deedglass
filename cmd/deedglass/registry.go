@@ -58,8 +58,17 @@ type Line struct {
 // commands is the whole contract §10 tree (revised 2026-10-01). Keep it in contract order.
 var commands = []*Command{
 	// Setup.
-	{Path: p("init"), Group: Setup, Summary: "Set up Deedglass in this directory", Owner: "S32"},
-	{Path: p("doctor"), Group: Setup, Summary: "Check config, database and keys", Owner: "S32"},
+	{Path: p("init"), Group: Setup, Summary: "Set up Deedglass in this directory",
+		Usage: "[--yes] [--dir .] [--client claude-code|claude-desktop|cursor|vscode|windsurf|sdk-python|sdk-typescript|none] [--listen 127.0.0.1:8080] [--pg-port 55432] [--no-open] [--no-smoke] [--stop] [--json]",
+		Flags: initFlags, Run: runInit,
+		Detail: "Postgres 18.6 in Docker, deedglass serve, keys in .deedglass/ (0700, files 0600), an org Local, an agent quickstart-agent with a dg_test_ key (shown once, saved to .deedglass/quickstart.key), the Acme demo database with a Postgres connector ready for L2, the postgres-safe policy enforced, then three smoke actions: a read, a blocked DROP TABLE and an UPDATE witnessed at L2. Run it again: Nothing to change.\n\nExamples:\n  deedglass init\n  deedglass init --yes --client none\n  deedglass init --listen 127.0.0.1:8090 --pg-port 55440\n  deedglass init --stop"},
+	{Path: p("doctor"), Group: Setup, Summary: "Check config, database and keys",
+		Usage: "[--only <ids>] [--json]", Flags: doctorFlags, Run: runDoctor,
+		Detail: "Sixteen read-only checks, each with what it saw and, when it isn't OK, the exact fix: config.valid, state.dir, db.reachable, db.role, db.migrations, seal.key, vault.key, server.health, clock.skew, ledger.chain, connectors.postgres, decoder.slots, wal.level, disk.space, version.drift, policy.active. In a directory where you ran deedglass init, it reads .deedglass/ to find the local stack.\n\nExit codes: 0 all OK (warnings allowed) · 1 a problem · 2 doctor itself couldn't run · 3 the server refused the API key."},
+	{Path: p("scan"), Group: Setup, Summary: "Show what your agent setup can change",
+		Usage: "[--dir .] [--postgres-dsn-env VAR] [--format md,html,json,sarif] [--score] [--badge] [--share] [--ci] [--fail-under A|B|C|D] [--json]",
+		Flags: scanFlags, Run: runScan,
+		Detail: "A local, read-only report: MCP client configs, agent and database dependencies, database URL variable names (never values) and tools that can write, then, with --postgres-dsn-env, the tables your agent's role can change, ranked. It opens with the Agent Blast-Radius Score (A to F). Nothing is sent anywhere.\n\nExit codes: 0 the report was written · 1 the grade is below --fail-under, or the Postgres part failed (the file part was written) · 2 usage, or the DSN variable is unset.\n\nExamples:\n  deedglass scan\n  deedglass scan --dir ~/code/my-agent --postgres-dsn-env DATABASE_URL\n  deedglass scan --ci --format sarif --fail-under C"},
 	{Path: p("serve"), Group: Setup, Summary: "Run the API, the Gate and the Console",
 		Usage: "[--migrate]", Flags: serveFlags, Run: runServe},
 	{Path: p("migrate", "up"), Group: Setup, Summary: "Apply database migrations",
@@ -84,9 +93,9 @@ var commands = []*Command{
 		Usage: "[--json]", Needs: config.NeedDatabase | config.NeedVault | config.NeedSealKey, Run: runVaultRotate},
 	{Path: p("help"), Group: Setup, Summary: "Show help for deedglass or one command",
 		Usage: "[<command>] [--json]", Hidden: true}, // Run is set in init: help reads this table,
-	{Path: p("completion", "zsh"), Group: Setup, Summary: "Print zsh completion", Owner: "S32"},
-	{Path: p("completion", "bash"), Group: Setup, Summary: "Print bash completion", Owner: "S32"},
-	{Path: p("completion", "fish"), Group: Setup, Summary: "Print fish completion", Owner: "S32"},
+	{Path: p("completion", "zsh"), Group: Setup, Summary: "Print zsh completion", Owner: "S35"},
+	{Path: p("completion", "bash"), Group: Setup, Summary: "Print bash completion", Owner: "S35"},
+	{Path: p("completion", "fish"), Group: Setup, Summary: "Print fish completion", Owner: "S35"},
 
 	// Agents.
 	{Path: p("agent", "create"), Group: Agents, Summary: "Register an agent",
@@ -301,6 +310,7 @@ var commands = []*Command{
 var lines = []Line{
 	{Name: "init", Group: Setup, Summary: "Set up Deedglass in this directory", Paths: ps("init")},
 	{Name: "doctor", Group: Setup, Summary: "Check config, database and keys", Paths: ps("doctor")},
+	{Name: "scan", Group: Setup, Summary: "Show what your agent setup can change", Paths: ps("scan")},
 	{Name: "serve", Group: Setup, Summary: "Run the API, the Gate and the Console", Paths: ps("serve")},
 	{Name: "migrate", Group: Setup, Summary: "Apply or check database migrations", Subs: subs("up status verify"), Paths: ps("migrate up", "migrate status", "migrate verify")},
 	{Name: "config print", Group: Setup, Summary: "Show the effective config, secrets hidden", Paths: ps("config print")},

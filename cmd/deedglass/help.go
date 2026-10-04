@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"strings"
 
@@ -141,24 +142,87 @@ func helpCommand(e *Env, c *Command) {
 		s.Bold("Global flags"), ui.Sep, ui.Sep, ui.Sep, ui.Sep, ui.Sep)
 }
 
+// flagValues are the closed value lists help --json carries for completions (S35 generates them).
+var flagValues = map[string][]string{
+	"init --client":     initClients,
+	"init --postgres":   {"docker"},
+	"scan --format":     scanFormats,
+	"scan --fail-under": {"A", "B", "C", "D"},
+}
+
+// helpJSON is the registry as data (S32 §3.11): S33 renders the CLI reference from it and S35
+// generates shell completions from it. A golden locks the schema.
 func helpJSON(e *Env) error {
-	type item struct {
-		Path    string `json:"path"`
-		Group   string `json:"group"`
-		Summary string `json:"summary"`
-		Usage   string `json:"usage"`
-		Built   bool   `json:"built"`
-		Owner   string `json:"owner,omitempty"`
-		Hidden  bool   `json:"hidden"`
+	type flagItem struct {
+		Name    string   `json:"name"`
+		Type    string   `json:"type"`
+		Default string   `json:"default"`
+		Usage   string   `json:"usage"`
+		Values  []string `json:"values,omitempty"`
+	}
+	type cmdItem struct {
+		Path    []string   `json:"path"`
+		Summary string     `json:"summary"`
+		Usage   string     `json:"usage"`
+		Flags   []flagItem `json:"flags"`
+		Built   bool       `json:"built"`
+		Owner   string     `json:"owner,omitempty"`
+		Hidden  bool       `json:"hidden,omitempty"`
+	}
+	type group struct {
+		Name     string    `json:"name"`
+		Commands []cmdItem `json:"commands"`
 	}
 	out := struct {
-		Object string `json:"object"`
-		Data   []item `json:"data"`
-	}{Object: "command_list"}
+		Object      string            `json:"object"`
+		Version     string            `json:"version"`
+		Groups      []group           `json:"groups"`
+		GlobalFlags []flagItem        `json:"global_flags"`
+		ExitCodes   map[string]string `json:"exit_codes"`
+	}{Object: "command_tree", Version: buildInfo().Version,
+		GlobalFlags: []flagItem{
+			{Name: "json", Type: "bool", Default: "false", Usage: "print JSON"},
+			{Name: "server", Type: "string", Default: "", Usage: "the Deedglass server URL (else DEEDGLASS_SERVER, DEEDGLASS_BASE_URL, http://127.0.0.1:8080)"},
+			{Name: "api-key", Type: "string", Default: "", Usage: "an API key (else DEEDGLASS_API_KEY)"},
+			{Name: "org", Type: "string", Default: "", Usage: "the org, for operator commands"},
+			{Name: "no-color", Type: "bool", Default: "false", Usage: "no colour"},
+			{Name: "v", Type: "bool", Default: "false", Usage: "more detail"},
+		},
+		ExitCodes: map[string]string{"0": "ok", "1": "failure or invalid", "2": "cannot determine, or a usage error", "3": "not authenticated"}}
+	byGroup := map[Group][]cmdItem{}
 	for _, c := range commands {
-		out.Data = append(out.Data, item{strings.Join(c.Path, " "), c.Group.String(), c.Summary, c.Usage, c.Built(), c.Owner, c.Hidden})
+		it := cmdItem{Path: c.Path, Summary: c.Summary, Usage: c.Usage, Built: c.Built(), Owner: c.Owner, Hidden: c.Hidden, Flags: []flagItem{}}
+		if c.Flags != nil {
+			fs := flag.NewFlagSet(strings.Join(c.Path, " "), flag.ContinueOnError)
+			c.Flags(fs)
+			fs.VisitAll(func(f *flag.Flag) {
+				fi := flagItem{Name: f.Name, Type: flagType(f), Default: f.DefValue, Usage: f.Usage}
+				fi.Values = flagValues[strings.Join(c.Path, " ")+" --"+f.Name]
+				it.Flags = append(it.Flags, fi)
+			})
+		}
+		byGroup[c.Group] = append(byGroup[c.Group], it)
+	}
+	for g := Setup; g <= Dev; g++ {
+		out.Groups = append(out.Groups, group{Name: g.String(), Commands: byGroup[g]})
 	}
 	enc := json.NewEncoder(e.Stdout)
 	enc.SetEscapeHTML(false)
 	return enc.Encode(out)
+}
+
+// flagType names a flag's type: bool, int, duration, float or string.
+func flagType(f *flag.Flag) string {
+	if b, ok := f.Value.(interface{ IsBoolFlag() bool }); ok && b.IsBoolFlag() {
+		return "bool"
+	}
+	switch t := fmt.Sprintf("%T", f.Value); {
+	case strings.Contains(t, "int"):
+		return "int"
+	case strings.Contains(t, "duration"):
+		return "duration"
+	case strings.Contains(t, "float"):
+		return "float"
+	}
+	return "string"
 }

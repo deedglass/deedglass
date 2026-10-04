@@ -1,0 +1,351 @@
+{
+  "object": "scan_report",
+  "version": 1,
+  "scanned_at": "2026-10-11T09:12:03Z",
+  "deedglass_version": "0.1.0",
+  "dir": "archived-pg",
+  "offline": true,
+  "score": {
+    "grade": "D",
+    "points": 56,
+    "deductions": [
+      {
+        "id": "medium_finding",
+        "points": 8,
+        "subject": "archived_postgres_mcp",
+        "detail": "Archived Postgres MCP server"
+      },
+      {
+        "id": "medium_finding",
+        "points": 8,
+        "subject": "archived_postgres_mcp",
+        "detail": "Archived Postgres MCP server"
+      },
+      {
+        "id": "medium_finding",
+        "points": 8,
+        "subject": "database_url_in_client_args",
+        "detail": "A database URL sits in a client config"
+      },
+      {
+        "id": "unchecked_write_path",
+        "points": 4,
+        "subject": "@modelcontextprotocol/server-postgres.query",
+        "detail": "write · package.json"
+      },
+      {
+        "id": "unchecked_write_path",
+        "points": 4,
+        "subject": "files.edit_file",
+        "detail": "write · .cursor/mcp.json"
+      },
+      {
+        "id": "unchecked_write_path",
+        "points": 4,
+        "subject": "files.move_file",
+        "detail": "destructive · .cursor/mcp.json"
+      },
+      {
+        "id": "unchecked_write_path",
+        "points": 4,
+        "subject": "files.write_file",
+        "detail": "write · .cursor/mcp.json"
+      },
+      {
+        "id": "unchecked_write_path",
+        "points": 4,
+        "subject": "orders.execute_sql",
+        "detail": "write · claude_desktop_config.json · wrapped, but no active policy was found"
+      },
+      {
+        "id": "unchecked_write_path",
+        "points": 0,
+        "subject": "postgres.query",
+        "detail": "write · .cursor/mcp.json (over the cap)"
+      },
+      {
+        "id": "unchecked_write_path",
+        "points": 0,
+        "subject": "stripe.payment_intents.create",
+        "detail": "money · package.json (over the cap)"
+      },
+      {
+        "id": "unchecked_write_path",
+        "points": 0,
+        "subject": "stripe.refunds.create",
+        "detail": "money · package.json (over the cap)"
+      }
+    ],
+    "formula_version": 1,
+    "unchecked_write_paths": 8,
+    "database_checked": false,
+    "fix_first": "Archived Postgres MCP server"
+  },
+  "summary": {
+    "configs": 2,
+    "mcp_servers": 3,
+    "write_capable_tools": 8,
+    "tables_can_change": 0,
+    "findings": {
+      "high": 0,
+      "info": 0,
+      "low": 0,
+      "medium": 3
+    }
+  },
+  "configs": [
+    {
+      "path": ".cursor/mcp.json",
+      "client": "cursor",
+      "user": false,
+      "servers": [
+        {
+          "name": "files",
+          "package": "@modelcontextprotocol/server-filesystem",
+          "version": "2026.8.31",
+          "transport": "stdio",
+          "command": "npx",
+          "env_names": [],
+          "database_url_in_args": false,
+          "routed": false,
+          "catalog_id": "mcp.filesystem"
+        },
+        {
+          "name": "postgres",
+          "package": "@modelcontextprotocol/server-postgres",
+          "version": "0.6.2",
+          "transport": "stdio",
+          "command": "npx",
+          "env_names": [
+            "PGSSLMODE"
+          ],
+          "database_url_in_args": true,
+          "routed": false,
+          "catalog_id": "mcp.server-postgres"
+        }
+      ]
+    },
+    {
+      "path": "claude_desktop_config.json",
+      "client": "claude-desktop",
+      "user": false,
+      "servers": [
+        {
+          "name": "orders",
+          "package": "postgres-mcp",
+          "transport": "stdio",
+          "command": "uvx",
+          "env_names": [
+            "DATABASE_URI"
+          ],
+          "database_url_in_args": false,
+          "routed": true,
+          "catalog_id": "mcp.postgres-mcp"
+        }
+      ]
+    }
+  ],
+  "dependencies": [
+    {
+      "file": "package.json",
+      "name": "@anthropic-ai/claude-agent-sdk",
+      "spec": "^0.3.0",
+      "catalog_id": "framework.claude-agent-sdk"
+    },
+    {
+      "file": "package.json",
+      "name": "@modelcontextprotocol/server-postgres",
+      "spec": "^0.6.2",
+      "catalog_id": "mcp.server-postgres"
+    },
+    {
+      "file": "package.json",
+      "name": "stripe",
+      "spec": "^23.0.0",
+      "catalog_id": "sdk.stripe"
+    },
+    {
+      "file": "requirements.txt",
+      "name": "langchain",
+      "spec": "\u003e=1.0,\u003c2",
+      "catalog_id": "framework.langchain"
+    }
+  ],
+  "env_names": null,
+  "tools": [
+    {
+      "server": "files",
+      "tool": "write_file",
+      "side_effect": "write",
+      "source": "catalog",
+      "routed": false,
+      "where": ".cursor/mcp.json"
+    },
+    {
+      "server": "files",
+      "tool": "edit_file",
+      "side_effect": "write",
+      "source": "catalog",
+      "routed": false,
+      "where": ".cursor/mcp.json"
+    },
+    {
+      "server": "files",
+      "tool": "move_file",
+      "side_effect": "destructive",
+      "source": "catalog",
+      "routed": false,
+      "where": ".cursor/mcp.json"
+    },
+    {
+      "server": "files",
+      "tool": "read_text_file",
+      "side_effect": "read",
+      "source": "catalog",
+      "routed": false,
+      "where": ".cursor/mcp.json"
+    },
+    {
+      "server": "postgres",
+      "tool": "query",
+      "side_effect": "write",
+      "source": "catalog",
+      "routed": false,
+      "where": ".cursor/mcp.json"
+    },
+    {
+      "server": "orders",
+      "tool": "execute_sql",
+      "side_effect": "write",
+      "source": "catalog",
+      "routed": true,
+      "where": "claude_desktop_config.json"
+    },
+    {
+      "server": "orders",
+      "tool": "list_schemas",
+      "side_effect": "read",
+      "source": "catalog",
+      "routed": true,
+      "where": "claude_desktop_config.json"
+    },
+    {
+      "server": "orders",
+      "tool": "explain_query",
+      "side_effect": "read",
+      "source": "catalog",
+      "routed": true,
+      "where": "claude_desktop_config.json"
+    },
+    {
+      "server": "orders",
+      "tool": "analyze_db_health",
+      "side_effect": "read",
+      "source": "catalog",
+      "routed": true,
+      "where": "claude_desktop_config.json"
+    },
+    {
+      "server": "@modelcontextprotocol/server-postgres",
+      "tool": "query",
+      "side_effect": "write",
+      "source": "catalog",
+      "routed": false,
+      "where": "package.json"
+    },
+    {
+      "server": "stripe",
+      "tool": "refunds.create",
+      "side_effect": "money",
+      "source": "catalog",
+      "routed": false,
+      "where": "package.json"
+    },
+    {
+      "server": "stripe",
+      "tool": "payment_intents.create",
+      "side_effect": "money",
+      "source": "catalog",
+      "routed": false,
+      "where": "package.json"
+    }
+  ],
+  "findings": [
+    {
+      "id": "archived_postgres_mcp",
+      "severity": "medium",
+      "title": "Archived Postgres MCP server",
+      "detail": "This Postgres MCP server was archived on 2025-05-29. Its read-only mode runs queries in a read-only transaction that a stacked COMMIT; can end (Datadog Security Labs). If its database role can write, the agent can write.",
+      "fix": [
+        "Give the server a role that can only SELECT.",
+        "Or route it through Deedglass: deedglass mcp wrap --connector \u003cname\u003e -- \u003cthe server's command\u003e."
+      ],
+      "paths": [
+        ".cursor/mcp.json"
+      ],
+      "sources": [
+        "https://github.com/modelcontextprotocol/servers-archived/tree/main/src/postgres",
+        "https://securitylabs.datadoghq.com/articles/mcp-vulnerability-case-study-SQL-injection-in-the-postgresql-mcp-server/"
+      ]
+    },
+    {
+      "id": "archived_postgres_mcp",
+      "severity": "medium",
+      "title": "Archived Postgres MCP server",
+      "detail": "This Postgres MCP server was archived on 2025-05-29. Its read-only mode runs queries in a read-only transaction that a stacked COMMIT; can end (Datadog Security Labs). If its database role can write, the agent can write.",
+      "fix": [
+        "Give the server a role that can only SELECT.",
+        "Or route it through Deedglass: deedglass mcp wrap --connector \u003cname\u003e -- \u003cthe server's command\u003e."
+      ],
+      "paths": [
+        "package.json"
+      ],
+      "sources": [
+        "https://github.com/modelcontextprotocol/servers-archived/tree/main/src/postgres",
+        "https://securitylabs.datadoghq.com/articles/mcp-vulnerability-case-study-SQL-injection-in-the-postgresql-mcp-server/"
+      ]
+    },
+    {
+      "id": "database_url_in_client_args",
+      "severity": "medium",
+      "title": "A database URL sits in a client config",
+      "detail": "Server \"postgres\" has a database URL in its arguments, so the password travels with the file.",
+      "fix": [
+        "Move it to an environment variable the client reads, so it isn't copied with the file."
+      ],
+      "paths": [
+        ".cursor/mcp.json"
+      ],
+      "sources": []
+    }
+  ],
+  "postgres": null,
+  "policies": [
+    {
+      "starter": "postgres-safe",
+      "rule": "block-destructive-sql",
+      "why": "DROP and TRUNCATE never run, whatever the agent sends.",
+      "yaml": "deedglass: policy/v1\nname: scan-block-destructive-sql\ndescription: Suggested by deedglass scan from the postgres-safe starter.\n\ndefaults:\n  decision: deny\n  reason: No rule allows this action. Add a rule in Console › Policies to allow it.\n\nrules:\n  - id: block-destructive-sql\n    match: { connector_type: postgres }\n    when: sql.kind in [\"drop\", \"truncate\"]\n    decision: deny\n    reason: DROP and TRUNCATE are never allowed for agents.\n    notify: [slack]\n"
+    },
+    {
+      "starter": "postgres-safe",
+      "rule": "writes-need-approval",
+      "why": "Writes wait for a person in Console › Approvals.",
+      "yaml": "deedglass: policy/v1\nname: scan-writes-need-approval\ndescription: Suggested by deedglass scan from the postgres-safe starter.\n\ndefaults:\n  decision: deny\n  reason: No rule allows this action. Add a rule in Console › Policies to allow it.\n\nrules:\n  - id: writes-need-approval\n    match: { tool: postgres.execute }\n    when: sql.category == \"write\"\n    decision: require_approval\n    reason: Writes to this database wait for a human. An admin can approve in Console › Approvals.\n    approval: { approvers: [role:admin], required: 1, expires_in: 30m }\n    notify: [email, slack]\n    verify: L2\n"
+    },
+    {
+      "starter": "stripe-refunds",
+      "rule": "refunds-per-day",
+      "why": "More than $500.00 of refunds in a day waits until the next day.",
+      "yaml": "deedglass: policy/v1\nname: scan-refunds-per-day\ndescription: Suggested by deedglass scan from the stripe-refunds starter.\n\ndefaults:\n  decision: deny\n  reason: No rule allows this action. Add a rule in Console › Policies to allow it.\n\nbudgets:\n  - id: refunds-per-day\n    description: At most $500.00 of USD refunds a day, across every agent in the org.\n    match: { tool: stripe.create_refund }\n    per: org\n    window: day\n    max_spend: \"500.00 usd\"\n    # The measure is in single quotes because it contains \" : \". In plain YAML\n    # that reads as a new key, and the file would not load. Only refunds whose\n    # charge Stripe confirmed as USD count; other currencies go to a person\n    # (\"non-usd-refunds-need-approval\"), and a refund with no whole-number\n    # amount counts as 0 here (\"refunds-need-an-amount\" refuses it).\n    measure: 'request.stripe.enriched \u0026\u0026 request.stripe.currency == \"usd\" \u0026\u0026 has(args.amount) \u0026\u0026 type(args.amount) == int ? args.amount : 0'\n"
+    }
+  ],
+  "notes": [],
+  "footer": "Full report with fixes: deedglass.com/pro ($29 once).",
+  "took_ms": 0,
+  "walk": {
+    "files": 0,
+    "skipped_big": 0,
+    "stopped": false
+  }
+}

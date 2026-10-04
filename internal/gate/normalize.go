@@ -29,6 +29,7 @@ var (
 	reMCPTool    = regexp.MustCompile(`^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$`)
 	reDigest     = regexp.MustCompile(`^sha256:[0-9a-f]{64}$`)
 	reTransport  = regexp.MustCompile(`^[a-z][a-z0-9_]{0,31}$`)
+	reCallID     = regexp.MustCompile(`^[\x21-\x7e]{1,128}$`)
 	reErrorCode  = regexp.MustCompile(`^[a-z][a-z0-9_]{0,63}$`)
 )
 
@@ -219,6 +220,7 @@ type storedContext struct {
 	Client        *ClientInfo `json:"client,omitempty"`
 	Transport     string      `json:"transport,omitempty"`
 	ConnectorType string      `json:"connector_type,omitempty"` // proxy: the edge's declared type
+	CallID        string      `json:"call_id,omitempty"`        // the framework's tool call id (S32)
 }
 
 func contextJSON(c *RequestContext, mode Mode, ctype string) (json.RawMessage, string, error) {
@@ -240,8 +242,12 @@ func contextJSON(c *RequestContext, mode Mode, ctype string) (json.RawMessage, s
 			}
 		}
 		sc.Transport = c.Transport
+		if c.CallID != "" && !reCallID.MatchString(c.CallID) {
+			return nil, "", httpx.ErrValidation("context.call_id", msgCallID)
+		}
+		sc.CallID = c.CallID
 	}
-	if sc.Client == nil && sc.Transport == "" && sc.ConnectorType == "" {
+	if sc.Client == nil && sc.Transport == "" && sc.ConnectorType == "" && sc.CallID == "" {
 		return nil, "", nil
 	}
 	b, err := json.Marshal(sc)
@@ -249,7 +255,7 @@ func contextJSON(c *RequestContext, mode Mode, ctype string) (json.RawMessage, s
 		return nil, "", err
 	}
 	if len(b) > MaxContextBytes {
-		return nil, "", httpx.ErrValidation("context", fmt.Sprintf("context is %d bytes; the limit is %d. Send the client name, version and transport only.", len(b), MaxContextBytes))
+		return nil, "", httpx.ErrValidation("context", fmt.Sprintf("context is %d bytes; the limit is %d. Send the client name, version, transport and call id only.", len(b), MaxContextBytes))
 	}
 	return b, sc.Transport, nil
 }

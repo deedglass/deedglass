@@ -36,7 +36,9 @@ describe('ai-sdk adapter (ai 7, MockLanguageModelV4, no network)', () => {
     expect(spy).toHaveBeenCalledTimes(1);
     expect(r.toolResults[0]?.output).toEqual({ refunded: 2000 });
     expect(s.calls[0]!.body).toMatchObject({ tool: 'billing.refund_customer', mode: 'proxy', connector_type: 'sdk' });
-    expect(Object.keys((s.calls[0]!.body as { context: object }).context)).toEqual(['client', 'transport']);
+    const cx = (s.calls[0]!.body as { context: Record<string, unknown> }).context;
+    expect(Object.keys(cx)).toEqual(['client', 'transport', 'call_id']);
+    expect(typeof cx.call_id).toBe('string'); // the AI SDK's toolCallId (S32: context.call_id)
   });
 
   it('denied: the model reads the policy sentence; the tool never runs; the run continues', async () => {

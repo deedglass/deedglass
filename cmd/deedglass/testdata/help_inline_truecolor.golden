@@ -5,8 +5,9 @@ exit 0
 [1mUsage[0m  deedglass <command> [flags]
 
 [1mSetup[0m
-  init                Set up Deedglass in this directory          [2msoon[0m
-  doctor              Check config, database and keys             [2msoon[0m
+  init                Set up Deedglass in this directory
+  doctor              Check config, database and keys
+  scan                Show what your agent setup can change
   serve               Run the API, the Gate and the Console
   migrate             Apply or check database migrations          [2m    [0m   [2mup · status · verify[0m
   config print        Show the effective config, secrets hidden

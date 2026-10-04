@@ -50,12 +50,21 @@ export interface ActOptions {
   /** wait: true long-polls a pending approval until a person decides (or timeoutMs passes). */
   approval?: { wait: boolean; timeoutMs?: number };
   signal?: AbortSignal;
+  /**
+   * The framework's own id for this tool call (an AI SDK toolCallId, a Claude tool_use_id, an
+   * OpenAI call id), sent as `context.call_id` for correlation. An id that doesn't fit the API's
+   * rule (1 to 128 printable ASCII characters, no spaces) is left out, never an error.
+   */
+  callId?: string;
 }
 
 /** Internal: a proxy-mode submission (wrapTool and the adapters). */
 export interface ProxyOptions extends Omit<ActOptions, 'approval'> {
   connectorType?: string;
 }
+
+/** The API's rule for context.call_id (S32). */
+const CALL_ID = /^[\x21-\x7e]{1,128}$/;
 
 const KEYS = new WeakMap<object, string>();
 
@@ -148,9 +157,13 @@ export class Deedglass {
       args: checked,
       mode,
       wait: waitMs / 1000,
-      // The 2026-10-01 API's context is exactly { client: { name, version }, transport }: unknown
-      // fields are refused, so framework ids (a tool call id) aren't sent.
-      context: { client: { name: CLIENT_NAME, version: VERSION }, transport: 'sdk' },
+      // The API's context is { client: { name, version }, transport, call_id } (call_id since S32,
+      // DL-047); unknown fields are refused.
+      context: {
+        client: { name: CLIENT_NAME, version: VERSION },
+        transport: 'sdk',
+        ...(opts.callId !== undefined && CALL_ID.test(opts.callId) ? { call_id: opts.callId } : {}),
+      },
     };
     if (mode === 'proxy') body.connector_type = opts.connectorType ?? 'sdk';
     const headers: Record<string, string | undefined> = { 'Deedglass-On-Behalf-Of': opts.onBehalfOf, 'Deedglass-Session': opts.session };

@@ -42,3 +42,21 @@ sdk/typescript/node_modules/
 sdk/typescript/dist/
 sdk/typescript/coverage/
 examples/ts/node_modules/
+
+# S32: the Python SDK and deedglass scan's outputs
+sdk/python/.venv/
+sdk/python/dist/
+sdk/python/.pytest_cache/
+sdk/python/.mypy_cache/
+sdk/python/.ruff_cache/
+sdk/python/.coverage
+sdk/python/htmlcov/
+__pycache__/
+/deedglass-scan.md
+/deedglass-scan.html
+/deedglass-scan.json
+/deedglass-scan.sarif
+npm/node_modules/
+npm/*.tgz
+npm/cli-*/deedglass
+npm/cli-*/deedglass.exe

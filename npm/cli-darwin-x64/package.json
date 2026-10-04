@@ -1,0 +1,11 @@
+{
+  "name": "@deedglass/cli-darwin-x64",
+  "version": "0.1.0",
+  "description": "The deedglass binary for darwin/x64 (installed by the deedglass package).",
+  "license": "Apache-2.0",
+  "repository": { "type": "git", "url": "git+https://github.com/deedglass/deedglass.git", "directory": "npm/cli-darwin-x64" },
+  "os": ["darwin"],
+  "cpu": ["x64"],
+  "files": ["deedglass"],
+  "preferUnplugged": true
+}

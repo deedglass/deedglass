@@ -40,9 +40,10 @@ Every request sends `Authorization: Bearer …`, `Deedglass-Version: 2026-10-01`
 `User-Agent` of `deedglass-sdk-typescript/0.1.0 (<runtime>)` where the runtime allows one, an
 `Idempotency-Key` on every POST, and `Deedglass-On-Behalf-Of`, `Deedglass-Session` and
 `Deedglass-Intent` when set. The body's `context` is `{ client: { name: "@deedglass/sdk", version },
-transport: "sdk" }`: the 2026-10-01 API refuses any other `context` field, so framework call ids
-aren't sent. `Deedglass-Request-Id` is kept on every answer (`action.meta.requestId`) and error
-(`err.requestId`); a replayed POST sets `action.meta.replayed`.
+transport: "sdk", call_id? }`: since S32 (DL-047, PROPOSED as C1 of ADR-063) the API accepts an optional
+`context.call_id`, and `ActOptions.callId` (and every adapter: the AI SDK's `toolCallId`, LangChain's
+`toolCall.id`, the OpenAI Agents SDK's `callId`, Claude's `tool_use_id`) sends it; an id outside the
+API's rule (1 to 128 printable ASCII characters, no spaces) is left out, never an error.
 
 **The key** is checked at construction (no request is made with a bad one), held in a private
 field, and never printed: `String(client)`, `JSON.stringify(client)` and `util.inspect(client)` show
@@ -145,4 +146,3 @@ redirects, reads at most 1 MiB and returns `{ keys, pinned: true, source }`.
 - Proxy-mode results are L0 (edge-reported). Independent L1 and L2 checks need a Deedglass connector.
 - The Claude hooks see only tools the Agent SDK routes through hooks.
 - Offline verification checks seals and the chain, not whether the action was wise.
-- The SDK doesn't send framework call ids (the API's `context` takes only client and transport).

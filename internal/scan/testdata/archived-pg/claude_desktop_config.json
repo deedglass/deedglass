@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "orders": {
+      "command": "deedglass",
+      "args": ["mcp", "wrap", "--connector", "orders", "--", "uvx", "postgres-mcp", "--access-mode=unrestricted"],
+      "env": {"DATABASE_URI": "postgresql://never-shown:canary-env-9z@localhost/acme"}
+    }
+  }
+}

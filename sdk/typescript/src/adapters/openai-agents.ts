@@ -26,7 +26,7 @@ export function governTool<T extends FunctionTool<any, any, any>>(t: T, o: Gover
   return {
     ...t,
     invoke: (runContext: any, input: string, details?: any) =>
-      governCall(o, dg, parse(input), () => invoke(runContext, input, details), { signal: details?.signal }),
+      governCall(o, dg, parse(input), () => invoke(runContext, input, details), { signal: details?.signal, callId: details?.toolCall?.callId }),
   } as T;
 }
 

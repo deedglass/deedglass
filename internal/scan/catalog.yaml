@@ -1,0 +1,101 @@
+# deedglass scan's catalog (S32 §3.13.1): known MCP servers and packages, the tools they expose and
+# what each tool can do. Side effects: read · write · destructive · money · governed. Every entry
+# has a primary source and the date it was checked (a test fails on one without). The scan never
+# starts a server: everything here is matched by name.
+#
+# match: npm:<package> · pypi:<package> · docker:<image> · cmd:<command base name>
+entries:
+  - id: mcp.server-postgres
+    kind: mcp_server
+    database: true
+    archived: true
+    match: [npm:@modelcontextprotocol/server-postgres]
+    tools:
+      - {name: query, side_effect: write}
+    note: Archived; its read-only mode runs queries in a read-only transaction that a stacked COMMIT; can end.
+    source: https://github.com/modelcontextprotocol/servers-archived/tree/main/src/postgres
+    checked: "2026-10-05"
+  - id: mcp.postgres-mcp
+    kind: mcp_server
+    database: true
+    match: [pypi:postgres-mcp, docker:crystaldba/postgres-mcp, cmd:postgres-mcp]
+    tools:
+      - {name: execute_sql, side_effect: write}
+      - {name: list_schemas, side_effect: read}
+      - {name: explain_query, side_effect: read}
+      - {name: analyze_db_health, side_effect: read}
+    note: Crystal DBA's server; execute_sql writes in --access-mode=unrestricted and is read-only in restricted mode.
+    source: https://github.com/crystaldba/postgres-mcp
+    checked: "2026-10-05"
+  - id: mcp.supabase
+    kind: mcp_server
+    database: true
+    match: [npm:@supabase/mcp-server-supabase]
+    tools:
+      - {name: execute_sql, side_effect: write}
+      - {name: apply_migration, side_effect: destructive}
+      - {name: list_tables, side_effect: read}
+    source: https://github.com/supabase-community/supabase-mcp
+    checked: "2026-10-05"
+  - id: mcp.neon
+    kind: mcp_server
+    database: true
+    match: [npm:@neondatabase/mcp-server-neon]
+    tools:
+      - {name: run_sql, side_effect: write}
+      - {name: run_sql_transaction, side_effect: write}
+      - {name: create_branch, side_effect: write}
+      - {name: delete_project, side_effect: destructive}
+    source: https://github.com/neondatabase/mcp-server-neon
+    checked: "2026-10-05"
+  - id: mcp.pgedge
+    kind: mcp_server
+    database: true
+    match: [cmd:pgedge-postgres-mcp, docker:pgedge/pgedge-postgres-mcp]
+    tools:
+      - {name: query_database, side_effect: write}
+    source: https://github.com/pgEdge/pgedge-postgres-mcp
+    checked: "2026-10-05"
+  - id: mcp.filesystem
+    kind: mcp_server
+    match: [npm:@modelcontextprotocol/server-filesystem]
+    tools:
+      - {name: write_file, side_effect: write}
+      - {name: edit_file, side_effect: write}
+      - {name: move_file, side_effect: destructive}
+      - {name: read_text_file, side_effect: read}
+    source: https://github.com/modelcontextprotocol/servers/tree/main/src/filesystem
+    checked: "2026-10-05"
+  - id: mcp.deedglass
+    kind: mcp_server
+    governed: true
+    match: [cmd:deedglass, npm:deedglass]
+    tools:
+      - {name: "*", side_effect: governed}
+    note: Every call is decided by a policy, recorded and sealed.
+    source: https://docs.deedglass.com/mcp
+    checked: "2026-10-05"
+  - id: sdk.stripe
+    kind: sdk
+    match: [npm:stripe, pypi:stripe]
+    tools:
+      - {name: refunds.create, side_effect: money}
+      - {name: payment_intents.create, side_effect: money}
+    source: https://github.com/stripe/stripe-node
+    checked: "2026-10-05"
+  - id: sdk.stripe-agent-toolkit
+    kind: sdk
+    match: [npm:@stripe/agent-toolkit, pypi:stripe-agent-toolkit, npm:@stripe/mcp]
+    tools:
+      - {name: create_refund, side_effect: money}
+      - {name: create_payment_link, side_effect: money}
+    source: https://github.com/stripe/agent-toolkit
+    checked: "2026-10-05"
+  - {id: framework.langchain, kind: framework, match: [pypi:langchain, npm:langchain], source: https://github.com/langchain-ai/langchain, checked: "2026-10-05"}
+  - {id: framework.langgraph, kind: framework, match: [pypi:langgraph, npm:@langchain/langgraph], source: https://github.com/langchain-ai/langgraph, checked: "2026-10-05"}
+  - {id: framework.openai-agents, kind: framework, match: [pypi:openai-agents, npm:@openai/agents], source: https://github.com/openai/openai-agents-python, checked: "2026-10-05"}
+  - {id: framework.crewai, kind: framework, match: [pypi:crewai], source: https://github.com/crewAIInc/crewAI, checked: "2026-10-05"}
+  - {id: framework.claude-agent-sdk, kind: framework, match: [pypi:claude-agent-sdk, npm:@anthropic-ai/claude-agent-sdk], source: https://github.com/anthropics/claude-agent-sdk-python, checked: "2026-10-05"}
+  - {id: framework.ai-sdk, kind: framework, match: [npm:ai], source: https://github.com/vercel/ai, checked: "2026-10-05"}
+  - {id: framework.mastra, kind: framework, match: [npm:@mastra/core], source: https://github.com/mastra-ai/mastra, checked: "2026-10-05"}
+  - {id: sdk.deedglass, kind: framework, governed: true, match: [pypi:deedglass, npm:@deedglass/sdk], source: https://docs.deedglass.com/sdk, checked: "2026-10-05"}

@@ -1,0 +1,532 @@
+{
+  "codes": [
+    {
+      "code": "invalid_api_key",
+      "status": 401,
+      "type": "authentication_error",
+      "class": "AuthenticationError",
+      "doc_url": "https://docs.deedglass.com/errors/invalid_api_key"
+    },
+    {
+      "code": "api_key_revoked",
+      "status": 401,
+      "type": "authentication_error",
+      "class": "AuthenticationError",
+      "doc_url": "https://docs.deedglass.com/errors/api_key_revoked"
+    },
+    {
+      "code": "api_key_expired",
+      "status": 401,
+      "type": "authentication_error",
+      "class": "AuthenticationError",
+      "doc_url": "https://docs.deedglass.com/errors/api_key_expired"
+    },
+    {
+      "code": "agent_suspended",
+      "status": 403,
+      "type": "permission_error",
+      "class": "PermissionDeniedError",
+      "doc_url": "https://docs.deedglass.com/errors/agent_suspended"
+    },
+    {
+      "code": "agent_stopped",
+      "status": 403,
+      "type": "permission_error",
+      "class": "PermissionDeniedError",
+      "doc_url": "https://docs.deedglass.com/errors/agent_stopped"
+    },
+    {
+      "code": "org_stopped",
+      "status": 403,
+      "type": "permission_error",
+      "class": "PermissionDeniedError",
+      "doc_url": "https://docs.deedglass.com/errors/org_stopped"
+    },
+    {
+      "code": "insufficient_scope",
+      "status": 403,
+      "type": "permission_error",
+      "class": "PermissionDeniedError",
+      "doc_url": "https://docs.deedglass.com/errors/insufficient_scope"
+    },
+    {
+      "code": "policy_denied",
+      "status": 403,
+      "type": "policy_error",
+      "class": "PolicyDeniedError",
+      "doc_url": "https://docs.deedglass.com/errors/policy_denied"
+    },
+    {
+      "code": "approval_required",
+      "status": 403,
+      "type": "policy_error",
+      "class": "PolicyDeniedError",
+      "doc_url": "https://docs.deedglass.com/errors/approval_required"
+    },
+    {
+      "code": "approval_expired",
+      "status": 409,
+      "type": "invalid_request_error",
+      "class": "InvalidRequestError",
+      "doc_url": "https://docs.deedglass.com/errors/approval_expired"
+    },
+    {
+      "code": "budget_exceeded",
+      "status": 429,
+      "type": "rate_limit_error",
+      "class": "BudgetExceededError",
+      "doc_url": "https://docs.deedglass.com/errors/budget_exceeded"
+    },
+    {
+      "code": "intent_required",
+      "status": 403,
+      "type": "permission_error",
+      "class": "PermissionDeniedError",
+      "doc_url": "https://docs.deedglass.com/errors/intent_required"
+    },
+    {
+      "code": "intent_invalid",
+      "status": 403,
+      "type": "permission_error",
+      "class": "PermissionDeniedError",
+      "doc_url": "https://docs.deedglass.com/errors/intent_invalid"
+    },
+    {
+      "code": "intent_replay",
+      "status": 403,
+      "type": "permission_error",
+      "class": "PermissionDeniedError",
+      "doc_url": "https://docs.deedglass.com/errors/intent_replay"
+    },
+    {
+      "code": "tool_unknown",
+      "status": 404,
+      "type": "invalid_request_error",
+      "class": "InvalidRequestError",
+      "doc_url": "https://docs.deedglass.com/errors/tool_unknown"
+    },
+    {
+      "code": "connector_unavailable",
+      "status": 503,
+      "type": "api_error",
+      "class": "APIError",
+      "doc_url": "https://docs.deedglass.com/errors/connector_unavailable"
+    },
+    {
+      "code": "upstream_error",
+      "status": 502,
+      "type": "api_error",
+      "class": "APIError",
+      "doc_url": "https://docs.deedglass.com/errors/upstream_error"
+    },
+    {
+      "code": "timeout",
+      "status": 504,
+      "type": "api_error",
+      "class": "APIError",
+      "doc_url": "https://docs.deedglass.com/errors/timeout"
+    },
+    {
+      "code": "rate_limited",
+      "status": 429,
+      "type": "rate_limit_error",
+      "class": "RateLimitError",
+      "doc_url": "https://docs.deedglass.com/errors/rate_limited"
+    },
+    {
+      "code": "idempotency_conflict",
+      "status": 422,
+      "type": "invalid_request_error",
+      "class": "InvalidRequestError",
+      "doc_url": "https://docs.deedglass.com/errors/idempotency_conflict"
+    },
+    {
+      "code": "validation_failed",
+      "status": 400,
+      "type": "invalid_request_error",
+      "class": "InvalidRequestError",
+      "doc_url": "https://docs.deedglass.com/errors/validation_failed"
+    },
+    {
+      "code": "not_found",
+      "status": 404,
+      "type": "invalid_request_error",
+      "class": "InvalidRequestError",
+      "doc_url": "https://docs.deedglass.com/errors/not_found"
+    },
+    {
+      "code": "conflict",
+      "status": 409,
+      "type": "invalid_request_error",
+      "class": "InvalidRequestError",
+      "doc_url": "https://docs.deedglass.com/errors/conflict"
+    },
+    {
+      "code": "internal_error",
+      "status": 500,
+      "type": "api_error",
+      "class": "APIError",
+      "doc_url": "https://docs.deedglass.com/errors/internal_error"
+    },
+    {
+      "code": "authentication_required",
+      "status": 401,
+      "type": "authentication_error",
+      "class": "AuthenticationError",
+      "doc_url": "https://docs.deedglass.com/errors/authentication_required"
+    },
+    {
+      "code": "method_not_allowed",
+      "status": 405,
+      "type": "invalid_request_error",
+      "class": "InvalidRequestError",
+      "doc_url": "https://docs.deedglass.com/errors/method_not_allowed"
+    },
+    {
+      "code": "request_too_large",
+      "status": 413,
+      "type": "invalid_request_error",
+      "class": "InvalidRequestError",
+      "doc_url": "https://docs.deedglass.com/errors/request_too_large"
+    },
+    {
+      "code": "unsupported_media_type",
+      "status": 415,
+      "type": "invalid_request_error",
+      "class": "InvalidRequestError",
+      "doc_url": "https://docs.deedglass.com/errors/unsupported_media_type"
+    },
+    {
+      "code": "invalid_json",
+      "status": 400,
+      "type": "invalid_request_error",
+      "class": "InvalidRequestError",
+      "doc_url": "https://docs.deedglass.com/errors/invalid_json"
+    },
+    {
+      "code": "api_version_invalid",
+      "status": 400,
+      "type": "invalid_request_error",
+      "class": "InvalidRequestError",
+      "doc_url": "https://docs.deedglass.com/errors/api_version_invalid"
+    },
+    {
+      "code": "idempotency_key_invalid",
+      "status": 400,
+      "type": "invalid_request_error",
+      "class": "InvalidRequestError",
+      "doc_url": "https://docs.deedglass.com/errors/idempotency_key_invalid"
+    },
+    {
+      "code": "idempotency_key_in_use",
+      "status": 409,
+      "type": "invalid_request_error",
+      "class": "InvalidRequestError",
+      "doc_url": "https://docs.deedglass.com/errors/idempotency_key_in_use"
+    },
+    {
+      "code": "service_unavailable",
+      "status": 503,
+      "type": "api_error",
+      "class": "APIError",
+      "doc_url": "https://docs.deedglass.com/errors/service_unavailable"
+    },
+    {
+      "code": "session_expired",
+      "status": 401,
+      "type": "authentication_error",
+      "class": "AuthenticationError",
+      "doc_url": "https://docs.deedglass.com/errors/session_expired"
+    },
+    {
+      "code": "csrf_failed",
+      "status": 403,
+      "type": "permission_error",
+      "class": "PermissionDeniedError",
+      "doc_url": "https://docs.deedglass.com/errors/csrf_failed"
+    },
+    {
+      "code": "insufficient_role",
+      "status": 403,
+      "type": "permission_error",
+      "class": "PermissionDeniedError",
+      "doc_url": "https://docs.deedglass.com/errors/insufficient_role"
+    },
+    {
+      "code": "login_link_invalid",
+      "status": 400,
+      "type": "invalid_request_error",
+      "class": "InvalidRequestError",
+      "doc_url": "https://docs.deedglass.com/errors/login_link_invalid"
+    },
+    {
+      "code": "login_code_invalid",
+      "status": 400,
+      "type": "invalid_request_error",
+      "class": "InvalidRequestError",
+      "doc_url": "https://docs.deedglass.com/errors/login_code_invalid"
+    },
+    {
+      "code": "last_owner",
+      "status": 409,
+      "type": "invalid_request_error",
+      "class": "InvalidRequestError",
+      "doc_url": "https://docs.deedglass.com/errors/last_owner"
+    },
+    {
+      "code": "policy_unavailable",
+      "status": 403,
+      "type": "policy_error",
+      "class": "PolicyDeniedError",
+      "doc_url": "https://docs.deedglass.com/errors/policy_unavailable"
+    },
+    {
+      "code": "policy_invalid",
+      "status": 400,
+      "type": "invalid_request_error",
+      "class": "InvalidRequestError",
+      "doc_url": "https://docs.deedglass.com/errors/policy_invalid"
+    },
+    {
+      "code": "credentials_missing",
+      "status": 409,
+      "type": "invalid_request_error",
+      "class": "InvalidRequestError",
+      "doc_url": "https://docs.deedglass.com/errors/credentials_missing"
+    },
+    {
+      "code": "destination_blocked",
+      "status": 400,
+      "type": "invalid_request_error",
+      "class": "InvalidRequestError",
+      "doc_url": "https://docs.deedglass.com/errors/destination_blocked"
+    },
+    {
+      "code": "vault_unavailable",
+      "status": 503,
+      "type": "api_error",
+      "class": "APIError",
+      "doc_url": "https://docs.deedglass.com/errors/vault_unavailable"
+    },
+    {
+      "code": "upstream_auth_failed",
+      "status": 502,
+      "type": "api_error",
+      "class": "APIError",
+      "doc_url": "https://docs.deedglass.com/errors/upstream_auth_failed"
+    },
+    {
+      "code": "upstream_not_found",
+      "status": 502,
+      "type": "api_error",
+      "class": "APIError",
+      "doc_url": "https://docs.deedglass.com/errors/upstream_not_found"
+    },
+    {
+      "code": "upstream_rate_limited",
+      "status": 429,
+      "type": "rate_limit_error",
+      "class": "RateLimitError",
+      "doc_url": "https://docs.deedglass.com/errors/upstream_rate_limited"
+    },
+    {
+      "code": "response_too_large",
+      "status": 502,
+      "type": "api_error",
+      "class": "APIError",
+      "doc_url": "https://docs.deedglass.com/errors/response_too_large"
+    },
+    {
+      "code": "statement_refused",
+      "status": 400,
+      "type": "invalid_request_error",
+      "class": "InvalidRequestError",
+      "doc_url": "https://docs.deedglass.com/errors/statement_refused"
+    },
+    {
+      "code": "row_limit_exceeded",
+      "status": 400,
+      "type": "invalid_request_error",
+      "class": "InvalidRequestError",
+      "doc_url": "https://docs.deedglass.com/errors/row_limit_exceeded"
+    },
+    {
+      "code": "database_role_unsafe",
+      "status": 503,
+      "type": "api_error",
+      "class": "APIError",
+      "doc_url": "https://docs.deedglass.com/errors/database_role_unsafe"
+    },
+    {
+      "code": "database_not_ready",
+      "status": 503,
+      "type": "api_error",
+      "class": "APIError",
+      "doc_url": "https://docs.deedglass.com/errors/database_not_ready"
+    },
+    {
+      "code": "witness_not_configured",
+      "status": 409,
+      "type": "invalid_request_error",
+      "class": "InvalidRequestError",
+      "doc_url": "https://docs.deedglass.com/errors/witness_not_configured"
+    },
+    {
+      "code": "approval_decided",
+      "status": 409,
+      "type": "invalid_request_error",
+      "class": "InvalidRequestError",
+      "doc_url": "https://docs.deedglass.com/errors/approval_decided"
+    },
+    {
+      "code": "already_countersigned",
+      "status": 409,
+      "type": "invalid_request_error",
+      "class": "InvalidRequestError",
+      "doc_url": "https://docs.deedglass.com/errors/already_countersigned"
+    },
+    {
+      "code": "approver_not_eligible",
+      "status": 403,
+      "type": "permission_error",
+      "class": "PermissionDeniedError",
+      "doc_url": "https://docs.deedglass.com/errors/approver_not_eligible"
+    },
+    {
+      "code": "self_approval",
+      "status": 403,
+      "type": "permission_error",
+      "class": "PermissionDeniedError",
+      "doc_url": "https://docs.deedglass.com/errors/self_approval"
+    },
+    {
+      "code": "approval_needs_person",
+      "status": 403,
+      "type": "permission_error",
+      "class": "PermissionDeniedError",
+      "doc_url": "https://docs.deedglass.com/errors/approval_needs_person"
+    },
+    {
+      "code": "context_changed",
+      "status": 409,
+      "type": "invalid_request_error",
+      "class": "InvalidRequestError",
+      "doc_url": "https://docs.deedglass.com/errors/context_changed"
+    },
+    {
+      "code": "approval_unsatisfiable",
+      "status": 403,
+      "type": "policy_error",
+      "class": "PolicyDeniedError",
+      "doc_url": "https://docs.deedglass.com/errors/approval_unsatisfiable"
+    },
+    {
+      "code": "approval_link_invalid",
+      "status": 401,
+      "type": "authentication_error",
+      "class": "AuthenticationError",
+      "doc_url": "https://docs.deedglass.com/errors/approval_link_invalid"
+    },
+    {
+      "code": "approval_link_review_only",
+      "status": 403,
+      "type": "permission_error",
+      "class": "PermissionDeniedError",
+      "doc_url": "https://docs.deedglass.com/errors/approval_link_review_only"
+    },
+    {
+      "code": "approver_unmapped",
+      "status": 403,
+      "type": "permission_error",
+      "class": "PermissionDeniedError",
+      "doc_url": "https://docs.deedglass.com/errors/approver_unmapped"
+    },
+    {
+      "code": "stripe_live_key_refused",
+      "status": 400,
+      "type": "invalid_request_error",
+      "class": "InvalidRequestError",
+      "doc_url": "https://docs.deedglass.com/errors/stripe_live_key_refused"
+    },
+    {
+      "code": "stripe_livemode_detected",
+      "status": 502,
+      "type": "api_error",
+      "class": "APIError",
+      "doc_url": "https://docs.deedglass.com/errors/stripe_livemode_detected"
+    },
+    {
+      "code": "upstream_approval_pending",
+      "status": 502,
+      "type": "api_error",
+      "class": "APIError",
+      "doc_url": "https://docs.deedglass.com/errors/upstream_approval_pending"
+    },
+    {
+      "code": "undo_unavailable",
+      "status": 409,
+      "type": "invalid_request_error",
+      "class": "InvalidRequestError",
+      "doc_url": "https://docs.deedglass.com/errors/undo_unavailable"
+    },
+    {
+      "code": "undo_plan_stale",
+      "status": 409,
+      "type": "invalid_request_error",
+      "class": "InvalidRequestError",
+      "doc_url": "https://docs.deedglass.com/errors/undo_plan_stale"
+    },
+    {
+      "code": "already_undone",
+      "status": 409,
+      "type": "invalid_request_error",
+      "class": "InvalidRequestError",
+      "doc_url": "https://docs.deedglass.com/errors/already_undone"
+    },
+    {
+      "code": "undo_conflict",
+      "status": 409,
+      "type": "invalid_request_error",
+      "class": "InvalidRequestError",
+      "doc_url": "https://docs.deedglass.com/errors/undo_conflict"
+    },
+    {
+      "code": "replay_too_large",
+      "status": 400,
+      "type": "invalid_request_error",
+      "class": "InvalidRequestError",
+      "doc_url": "https://docs.deedglass.com/errors/replay_too_large"
+    },
+    {
+      "code": "replay_window_invalid",
+      "status": 400,
+      "type": "invalid_request_error",
+      "class": "InvalidRequestError",
+      "doc_url": "https://docs.deedglass.com/errors/replay_window_invalid"
+    },
+    {
+      "code": "suggestion_stale",
+      "status": 409,
+      "type": "invalid_request_error",
+      "class": "InvalidRequestError",
+      "doc_url": "https://docs.deedglass.com/errors/suggestion_stale"
+    },
+    {
+      "code": "shadow_slot_taken",
+      "status": 409,
+      "type": "invalid_request_error",
+      "class": "InvalidRequestError",
+      "doc_url": "https://docs.deedglass.com/errors/shadow_slot_taken"
+    },
+    {
+      "code": "suggestion_decided",
+      "status": 409,
+      "type": "invalid_request_error",
+      "class": "InvalidRequestError",
+      "doc_url": "https://docs.deedglass.com/errors/suggestion_decided"
+    }
+  ],
+  "generated_from": "internal/httpx/errors.go (go run ./internal/httpx/cmd/gensdkerrors)",
+  "object": "sdk_error_catalog",
+  "version": 1
+}

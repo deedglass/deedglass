@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "postgres": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-postgres@0.6.2", "postgresql://app_rw:canary-pass-7f3@db.internal:5432/acme"],
+      "env": {"PGSSLMODE": "require"}
+    },
+    "files": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem@2026.8.31", "/tmp/work"]
+    }
+  }
+}

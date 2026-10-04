@@ -5,8 +5,9 @@ deedglass · the execution and accountability layer for AI agents
 Usage  deedglass <command> [flags]
 
 Setup
-  init                Set up Deedglass in this directory          soon
-  doctor              Check config, database and keys             soon
+  init                Set up Deedglass in this directory
+  doctor              Check config, database and keys
+  scan                Show what your agent setup can change
   serve               Run the API, the Gate and the Console
   migrate             Apply or check database migrations                 up · status · verify
   config print        Show the effective config, secrets hidden

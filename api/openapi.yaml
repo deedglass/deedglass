@@ -8078,6 +8078,13 @@ components:
               type: string
               pattern: "^[a-z][a-z0-9_]{0,31}$"
               description: '`rest`, `sdk`, `mcp_stdio` or `mcp_http`. A call through `mcp_stdio` or `mcp_http` for an agent whose intent mode is `required` is refused with `intent_required`.'
+            call_id:
+              type: string
+              pattern: "^[\\x21-\\x7e]{1,128}$"
+              description: >-
+                The agent framework's own id for this tool call (a LangChain `tool_call_id`, a Claude
+                `tool_use_id`, an OpenAI `call_id`), stored with the context for correlation. Never part of
+                a digest or a deed. Added 2026-10-05 (S32), additive.
         connector_type:
           type: string
           description: >-

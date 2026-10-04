@@ -59,6 +59,25 @@ CLI error codes so far: `unknown_command`, `usage_error`, `not_built`, `config_i
 `keys_unreadable`, `keys_invalid`, `keys_unreachable` and `keys_conflict`. Its own answer is not an
 error: `--json` prints the `verification_report` on stdout whatever the result.
 
+## Setup: `init`, `doctor`, `scan` and `help --json` (S32)
+
+- `deedglass init [--yes] [--client …] [--listen …] [--pg-port …] [--no-smoke] [--stop] [--json]` sets
+  up a local Deedglass in Docker and runs three smoke actions; run it again and it says `Nothing to
+  change.` [INIT_AND_DOCTOR.md](INIT_AND_DOCTOR.md) has every step.
+- `deedglass doctor [--only db.*] [--json]`: sixteen read-only checks, each with a fix. Exit 1 on a
+  problem, 3 when the server refused the API key.
+- `deedglass scan [--dir .] [--postgres-dsn-env VAR] [--format md,html,json,sarif] [--score]
+  [--badge] [--share] [--ci] [--fail-under A|B|C|D] [--json]`: what your agent setup can change,
+  graded A to F, read-only and local. Exit 1 also means below `--fail-under`. [SCAN.md](SCAN.md).
+- `deedglass help --json` prints the whole tree as one `command_tree` object: `groups` (the nine
+  of contract §10) of `commands`, each with `path`, `summary`, `usage`, `built` and `flags` (`name`,
+  `type`, `default`, `usage`, and `values` for closed lists such as `scan --format`), plus
+  `global_flags` and `exit_codes`. S33 renders the CLI reference from it and S35 generates the shell
+  completions from it; a golden locks the schema.
+- Every built command passes the `--json` audit (exactly one JSON value; an `object` field; nothing
+  on stdout when it fails; the error on stderr in the API envelope) and the error-copy audit
+  (sentence case, a next step, no banned word): `go test ./cmd/deedglass -run 'Audit'`.
+
 ## Banner and quiet mode
 
 ![The deedglass banner in Terminal.app, dark theme](images/cli-banner-dark.jpg)
@@ -138,8 +157,9 @@ builds it. Hidden commands work but aren't in `deedglass help`.
 <!-- commands:begin (generated from cmd/deedglass/registry.go; go test ./cmd/deedglass -run TestDocsTree -update) -->
 | Command | Group | What it does | Status |
 |---|---|---|---|
-| `deedglass init` | Setup | Set up Deedglass in this directory | soon (S32) |
-| `deedglass doctor` | Setup | Check config, database and keys | soon (S32) |
+| `deedglass init [--yes] [--dir .] [--client claude-code|claude-desktop|cursor|vscode|windsurf|sdk-python|sdk-typescript|none] [--listen 127.0.0.1:8080] [--pg-port 55432] [--no-open] [--no-smoke] [--stop] [--json]` | Setup | Set up Deedglass in this directory | built |
+| `deedglass doctor [--only <ids>] [--json]` | Setup | Check config, database and keys | built |
+| `deedglass scan [--dir .] [--postgres-dsn-env VAR] [--format md,html,json,sarif] [--score] [--badge] [--share] [--ci] [--fail-under A|B|C|D] [--json]` | Setup | Show what your agent setup can change | built |
 | `deedglass serve [--migrate]` | Setup | Run the API, the Gate and the Console | built |
 | `deedglass migrate up [--database-url <url>] [--dry-run] [--json]` | Setup | Apply database migrations | built |
 | `deedglass migrate status [--database-url <url>] [--json]` | Setup | Show applied and pending migrations | built |
@@ -152,9 +172,9 @@ builds it. Hidden commands work but aren't in `deedglass help`.
 | `deedglass vault status [--json]` | Setup | Show the credential vault's keys | built |
 | `deedglass vault rotate [--json]` | Setup | Re-encrypt credentials with a new key | built |
 | `deedglass help [<command>] [--json]` | Setup | Show help for deedglass or one command | built, hidden |
-| `deedglass completion zsh` | Setup | Print zsh completion | soon (S32) |
-| `deedglass completion bash` | Setup | Print bash completion | soon (S32) |
-| `deedglass completion fish` | Setup | Print fish completion | soon (S32) |
+| `deedglass completion zsh` | Setup | Print zsh completion | soon (S35) |
+| `deedglass completion bash` | Setup | Print bash completion | soon (S35) |
+| `deedglass completion fish` | Setup | Print fish completion | soon (S35) |
 | `deedglass agent create <name> [--description …] [--label env=prod]... [--calls-per-minute n] [--calls-per-day n] [--spend-per-day minor --currency usd] [--owner usr_…] [--json]` | Agents | Register an agent | built |
 | `deedglass agent list [--status active|suspended|stopped] [--label env:prod] [--json]` | Agents | List agents | built |
 | `deedglass agent show <name|agt_…> [--json]` | Agents | Show one agent | built |

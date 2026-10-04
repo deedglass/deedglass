@@ -57,3 +57,14 @@ func TestStyle(t *testing.T) {
 		t.Fatal("a regular file is not a terminal")
 	}
 }
+
+func TestWidthEastAsian(t *testing.T) {
+	for in, want := range map[string]int{"abc": 3, "注文": 4, "ｱ": 1, "ＡＢ": 4, "é": 1, "é": 1, "✓ ok": 4, "한국": 4} {
+		if got := Width(in); got != want {
+			t.Errorf("Width(%q) = %d, want %d", in, got, want)
+		}
+	}
+	if Pad("注文", 6) != "注文  " {
+		t.Fatalf("%q", Pad("注文", 6))
+	}
+}

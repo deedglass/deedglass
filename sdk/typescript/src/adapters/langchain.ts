@@ -15,7 +15,7 @@ export function governTool(t: StructuredToolInterface, o: GovernOptions): Struct
   const dg = deedglassName(o, t.name);
   return tool(
     async (input: unknown, config: any) =>
-      governCall(o, dg, (input ?? {}) as JsonObject, () => t.invoke(input as never, config), { signal: config?.signal }),
+      governCall(o, dg, (input ?? {}) as JsonObject, () => t.invoke(input as never, config), { signal: config?.signal, callId: config?.toolCall?.id }),
     { name: t.name, description: t.description, schema: t.schema as never },
   ) as unknown as StructuredToolInterface;
 }

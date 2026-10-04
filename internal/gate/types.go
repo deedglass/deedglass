@@ -46,6 +46,10 @@ const (
 type RequestContext struct {
 	Client    *ClientInfo `json:"client,omitempty"`
 	Transport string      `json:"transport,omitempty"`
+	// CallID (S32, DL-047) is the agent framework's own id for this tool call (a LangChain
+	// tool_call_id, a Claude tool_use_id, an OpenAI call_id): 1–128 printable ASCII characters,
+	// no spaces. Stored with the context for correlation only; never in a digest or a deed.
+	CallID string `json:"call_id,omitempty"`
 }
 
 // ClientInfo names the client software.
@@ -61,7 +65,7 @@ type ActionRequest struct {
 	Mode           Mode
 	ToolDigest     string          // optional "sha256:…", sent by MCP edges (S14)
 	ConnectorType  string          // proxy only: the edge's declared type from S10's enum (default "mcp")
-	Context        *RequestContext // {client:{name,version}, transport}
+	Context        *RequestContext // {client:{name,version}, transport, call_id}
 	Wait           time.Duration   // gateway: 0..25 s; the default is gate.wait_timeout
 	WaitSet        bool            // Wait was sent (0 means "don't wait")
 	IdempotencyKey string          // header Idempotency-Key

@@ -26,7 +26,7 @@ export function governTools<T extends Record<string, object>>(tools: T, o: Gover
     out[name] = {
       ...t,
       execute: (input: unknown, options: { toolCallId?: string; abortSignal?: AbortSignal }) =>
-        governCall(o, dg, (input ?? {}) as JsonObject, (signal) => exec.call(t, input, { ...options, abortSignal: signal }), { signal: options?.abortSignal }),
+        governCall(o, dg, (input ?? {}) as JsonObject, (signal) => exec.call(t, input, { ...options, abortSignal: signal }), { signal: options?.abortSignal, callId: options?.toolCallId }),
     } as AnyTool;
   }
   return out as T;

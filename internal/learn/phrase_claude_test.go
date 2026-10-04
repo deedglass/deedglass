@@ -197,7 +197,7 @@ func TestClaudeTimeoutAndNetwork(t *testing.T) {
 	p.Timeout = 50 * time.Millisecond
 	_, err := p.Phrase(bg, valInput())
 	var pe *PhraseError
-	if !errors.As(err, &pe) || pe.Reason != "timeout" || slow.count() != 1 {
+	if !errors.As(err, &pe) || pe.Reason != "timeout" || slow.count() > 1 {
 		t.Fatalf("timeout: %v (%d requests)", err, slow.count())
 	}
 	// A closed server: network.

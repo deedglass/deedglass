@@ -135,6 +135,15 @@ make sdk-ts-it       # S31: TestSDKTypeScriptLive: the SDK and every examples/ts
 make sdk-runtime     # S31: the packed SDK on Node 22.12, 24 and 26 (Docker node:<v>-alpine when not local), Bun and Deno when installed
 make sdk-sync-verify # S31: sdk/typescript/src/verify must equal web/verify/src (edit web/verify/src, then npm run sync-verify in sdk/typescript)
 make sdk-examples    # S31: examples/ts against DEEDGLASS_SERVER with an agent key and sdk-demo.yaml active
+make py-ci           # (in ci) S32: the Python SDK (sdk/python): ruff, format check, mypy --strict, pytest (vectors, parity 500/500, intents, client table sync and async, LangChain and Claude Agent SDK adapters), coverage >= 90%; venv from the first python3.1x found (PY=… overrides)
+make py-build        # S32: wheel and sdist, twine check, the wheel holds py.typed and no tests (never publish)
+make py-examples     # S32: examples/python against DEEDGLASS_SERVER with an agent key (scripts/py_examples.sh)
+go run ./internal/httpx/cmd/gensdkerrors   # S32: sdk/errors.json and the Python _errors_gen.py from internal/httpx/errors.go (TestSDKErrorsFresh fails when stale; make gencopy also writes the Python verify copy)
+go test ./internal/scan -run TestJSONGolden -update   # S32: internal/scan/testdata/archived-pg.golden.json (review the diff)
+go test ./cmd/deedglass -run TestHelpJSONGolden -update   # S32: testdata/help-json.golden (the help --json command_tree)
+DEEDGLASS_IT_PKGS="./internal/scan/ ./internal/doctor/" make integration   # S32: scan and doctor are read-only under log_statement=all (BEGIN READ ONLY, six SELECTs, ROLLBACK; a write is 25006)
+DEEDGLASS_IT_INIT=1 go test -tags integration ./internal/setup -run TestInitLive -v   # S32: deedglass init end to end in Docker on its own ports (two postgres:18.6 containers, removed after)
+scripts/quickstart_timed.sh | scripts/npx_cold.sh   # S32: the timed quickstart and the cold npx run against a local registry; JSON in bench/results/
 make web-verify-test  # (in ci) the browser verifier: npm ci once, tsc --noEmit, vitest (vectors, parity 500/500)
 make web-verify-serve # build and serve the verify page on http://127.0.0.1:5178
 make web-build      # S24: the Console (web/): tokens → icons → astro build → .br/.gz → check-dist; writes internal/console/dist (make build runs it when Node is present; make build-only skips it)
@@ -183,7 +192,7 @@ scripts/ci-local.sh # the CI jobs locally (docker-smoke and govulncheck skip whe
    `github.com/gowebpki/jcs` v1.0.2 (ADR-005); `go.yaml.in/yaml/v3` v3.0.5 (ADR-015);
    `github.com/jackc/pgx/v5` v5.11.0 (ADR-001, in go.mod since S02); `github.com/veraison/go-cose`
    v1.3.0 with `fxamacker/cbor/v2` v2.9.4 (ADR-026, in go.mod since S04). npm, dev only (`web/verify`,
-   ADR-027, accepted; `sdk/typescript`, ADR-062, proposed: `ai` 7.0.127, `@openai/agents` 0.18.0, `@langchain/core` 1.2.14, `@anthropic-ai/claude-agent-sdk` 0.3.289, `zod` 4.6.5, `publint` 0.3.25, `@arethetypeswrong/cli` 0.18.5, `@vitest/coverage-v8` 5.0.3; `@deedglass/sdk` itself has no runtime dependency): `typescript` 7.0.2, `vitest` 5.0.3, `vite` 8.3.1, `@types/node` 24.19.0; no runtime dependency. The Console (`web/`, ADR-053, accepted under DL-038), dev and build only: `astro` 7.3.5, `tailwindcss` and `@tailwindcss/vite` 4.3.3, `@fontsource-variable/inter` and `@fontsource/geist-mono` 5.3.0, `lucide-static` 1.49.0, `typescript` 7.0.2, `vitest` 5.0.3, `happy-dom` 20.14.5, `@playwright/test` 1.63.0, `@axe-core/playwright` 4.13.0, `lighthouse` 13.5.0; nothing from npm runs in the shipped Console.
+   ADR-027, accepted; `sdk/typescript`, ADR-062, proposed: `ai` 7.0.127, `@openai/agents` 0.18.0, `@langchain/core` 1.2.14, `@anthropic-ai/claude-agent-sdk` 0.3.289, `zod` 4.6.5, `publint` 0.3.25, `@arethetypeswrong/cli` 0.18.5, `@vitest/coverage-v8` 5.0.3; `@deedglass/sdk` itself has no runtime dependency); Python, `sdk/python` (ADR-063, proposed): runtime `httpx` >=0.28.1,<0.29 only, extras `cryptography`, `langchain`, `claude-agent-sdk` (`openai-agents` and `crewai` declared), dev tools exact pins in `sdk/python/requirements-dev.txt`: `typescript` 7.0.2, `vitest` 5.0.3, `vite` 8.3.1, `@types/node` 24.19.0; no runtime dependency. The Console (`web/`, ADR-053, accepted under DL-038), dev and build only: `astro` 7.3.5, `tailwindcss` and `@tailwindcss/vite` 4.3.3, `@fontsource-variable/inter` and `@fontsource/geist-mono` 5.3.0, `lucide-static` 1.49.0, `typescript` 7.0.2, `vitest` 5.0.3, `happy-dom` 20.14.5, `@playwright/test` 1.63.0, `@axe-core/playwright` 4.13.0, `lighthouse` 13.5.0; nothing from npm runs in the shipped Console.
    `cel.dev/cel-go` v0.32.0 (ADR-017, in go.mod since S10; brings protobuf, antlr4-go, cel.dev/expr,
    genproto and x/exp; the binary-size budget is ADR-032, accepted under DL-024 and amended under DL-031: < 40 MB). The MCP Go SDK
    `github.com/modelcontextprotocol/go-sdk` v1.8.0 (ADR-018, in go.mod since S14; since S15 the
