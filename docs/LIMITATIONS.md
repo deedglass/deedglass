@@ -528,6 +528,22 @@ it refuses rather than guess:
 - **Cards can lag.** An edit is a job that retries 4 times; after that the card says nothing new and
   the Console is the source of truth.
 
+## Stripe and Gmail (S30)
+
+- **Stripe sandboxes only.** Live keys are refused and a live-mode answer disables the connector.
+  There is no switch: live mode needs a founder-approved ADR and its own review.
+- **L1 shows Stripe's record, not whether the refund was right.**
+- **Stripe's own approvals are invisible.** A refund Stripe holds for an agent-tagged key's
+  approval rule is UNVERIFIABLE; Deedglass doesn't poll for the outcome yet (a reconcile job is a
+  stretch goal).
+- **The refund budget counts USD.** The starter's `refunds-per-day` measures USD refunds Stripe
+  confirmed; other currencies go to a person.
+- **Drafts only is Deedglass's rule, not Google's.** The `gmail.compose` scope itself permits
+  sending; Deedglass enforces drafts only in code (no tool, an endpoint allow-list, a source test).
+- **Google apps in Testing need re-authorization every 7 days.**
+- **No attachments, labels or deletes** in Gmail, and HTML bodies are stored, never rendered.
+- **Notion isn't shipped yet** (carried over from S30).
+
 ## What this page does not do
 
 It does not list bugs or missing features on the schedule. It lists limits of the design that stay true after they ship.

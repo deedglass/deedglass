@@ -61,6 +61,7 @@ func newEnv() (*cel.Env, error) {
 			reflect.TypeFor[OrgFacts](), reflect.TypeFor[TimeFacts](), reflect.TypeFor[UsageFacts](),
 			reflect.TypeFor[AnomalyFacts](), reflect.TypeFor[HTTPFacts](),
 			reflect.TypeFor[GitHubFacts](), reflect.TypeFor[SlackFacts](),
+			reflect.TypeFor[StripeFacts](), reflect.TypeFor[EmailFacts](),
 			ext.ParseStructTag("cel")),
 		cel.Variable("args", cel.MapType(cel.StringType, cel.DynType)),
 		cel.CrossTypeNumericComparisons(true),

@@ -70,8 +70,23 @@ func (c *Connector) Info() connector.TypeInfo {
 		Description: "Post and react in allowed channels as a bot, read recent messages, and approve actions from Slack. Posts are read back through message metadata that carries the action id.",
 		Levels:      []string{"L0", "L1"},
 		CredentialKinds: []connector.CredentialKind{{Kind: "fields", Fields: []connector.CredentialField{
-			{Name: "bot_token", Secret: true}, {Name: "signing_secret", Secret: true}}}},
-		ConfigSchema: json.RawMessage(configSchema), DocsURL: DocsURL}
+			{Name: "bot_token", Secret: true, Help: "The Bot User OAuth Token from the app's OAuth & Permissions page.", PrefixHint: "xoxb-"},
+			{Name: "signing_secret", Secret: true, Help: "From the app's Basic Information page: 32 hex characters."}}}},
+		ConfigSchema: json.RawMessage(configSchema), DocsURL: DocsURL,
+		Summary: "Posts, reactions and approvals in the Slack channels you allow.",
+		Status:  "beta", Icon: "message-square", Modes: []string{},
+		Setup: []connector.SetupStep{
+			{Title: "Create the Slack app from the manifest", Command: "deedglass slack manifest --base-url https://your-host", URL: "https://api.slack.com/apps"},
+			{Title: "Create the connector", Command: "deedglass connector create --config examples/connectors/slack.yaml"},
+			{Title: "Store the bot token and signing secret", Command: "deedglass connector credentials set slack --field bot_token=env:SLACK_BOT_TOKEN --field signing_secret=env:SLACK_SIGNING_SECRET"},
+			{Title: "Test the connection", Command: "deedglass connector test slack"},
+		},
+		Limits: []string{
+			"Only channels in the config, compared by id.",
+			"No direct messages to people, file uploads or message deletes.",
+			"Approvals map a Slack account to a person only by a confirmed email address.",
+		},
+		Tools: connector.CatalogTools(Type, toolSpecs(DefaultMaxReadMessages))}
 }
 
 // state is an instance's parsed config, its caches and its client.

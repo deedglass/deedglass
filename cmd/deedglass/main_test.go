@@ -142,7 +142,7 @@ func TestExitCodes(t *testing.T) {
 		{[]string{"agent"}, 2, "deedglass agent needs a subcommand.", ""},
 		{[]string{"agent", "frob"}, 2, `Unknown command "agent frob".`, ""},
 		{[]string{"agent", "kyes", "list"}, 2, `Did you mean "agent keys"?`, ""},
-		{[]string{"connector", "gmail", "authorize", "--json"}, 2, `"code":"not_built"`, ""},
+		{[]string{"dev", "agent-script", "--json"}, 2, `"code":"not_built"`, ""},
 		{[]string{"policy", "diff", "--json"}, 2, `"code":"usage_error"`, ""},
 		{[]string{"policy", "test", "--json"}, 2, `"code":"usage_error"`, ""},
 		{[]string{"policy", "lint", "--json"}, 2, `"code":"usage_error"`, ""},

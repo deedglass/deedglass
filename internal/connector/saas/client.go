@@ -42,6 +42,12 @@ type Client struct {
 	// IdempotencyHeader is the service's header for Request.IdempotencyKey ("Idempotency-Key").
 	IdempotencyHeader string
 	MaxBody           int64 // default DefaultMaxBody
+	// RetryIf, when set, decides whether an Idempotent request's answer is retried (S30: Stripe's
+	// Stripe-Should-Retry header and its 409 idempotency_key_in_use), and after how long. It
+	// replaces the default 502/503/504 and 429 rule for answers; a connect error is still retried
+	// once. It runs only for Idempotent requests, so a call without an idempotency guarantee is
+	// never sent twice.
+	RetryIf func(*Response) (retry bool, after time.Duration)
 	// Sleep waits between attempts (tests replace it); nil waits on a timer or ctx.
 	Sleep func(ctx context.Context, d time.Duration) bool
 }
@@ -191,6 +197,13 @@ func (c *Client) once(ctx context.Context, r Request) (*Response, error, bool, t
 	}
 	if ce.HTTPStatus == 0 {
 		ce.HTTPStatus = resp.Status
+	}
+	if c.RetryIf != nil {
+		retry, after := c.RetryIf(resp)
+		if after > MaxRetryWait {
+			after = MaxRetryWait
+		}
+		return resp, ce, retry, after
 	}
 	switch {
 	case resp.Status == 502 || resp.Status == 503 || resp.Status == 504:

@@ -49,6 +49,12 @@ make policy-test    # S12: deedglass policy test --dir examples/policies --requi
 make bench-slack    # S29: Slack signature check, the approval card, GitHub execute overhead, the interaction handler on fixtures; JSON in bench/results/
 DEEDGLASS_IT_PKGS="./internal/notify/slack/ ./internal/store/" DEEDGLASS_IT_GOFLAGS="-run TestSlackApprovalLoop|TestSlackApprovalsStore" make integration   # S29: the Slack approval loop (create_pr → card → signed Approve → L1 VERIFIED → sealed card) and the routing/replay/card store
 go test ./internal/notify/slack -run TestCardPreview -preview=DIR   # S29: render every card state to a Slack-like HTML mock (screenshots)
+go run ./internal/connector/cmd/gendocs   # S30: rewrite the generated catalog section of docs/connectors/<type>.md (TestConnectorDocsFresh fails when stale)
+DEEDGLASS_UPDATE_CATALOG=1 go test ./internal/connectorapi -run TestCatalogRoutes   # S30: re-pin the GET /v1/connector-types golden (review the diff)
+go test ./internal/connector/gmail -run 'Golden' -update   # S30: the MIME goldens (testdata/mime/*.eml) and the loopback page goldens
+DEEDGLASS_IT_PKGS=./internal/notify/slack/ DEEDGLASS_IT_GOFLAGS="-v -run TestStripeRefund" make integration   # S30: the refund loop ($20 → L1 VERIFIED, $120 → Slack → approve → VERIFIED, live key refused, livemode breaker, offline verify) and the refunds-per-day budget
+go test ./internal/connector/stripe ./internal/connector/gmail -run '^$' -fuzz FuzzStripeForm|FuzzLivemodeScan|FuzzMIMEHeaders -fuzztime 60s   # S30 fuzzers (one -fuzz per run)
+deedglass dev stripe-fixtures --from-env STRIPE_TEST_KEY   # S30 (dev only): sandbox demo objects through the connector's rails; ids in examples/demo/.stripe-fixtures.json
 make bench-gate     # S13: Gate overhead (allow, fake.echo, concurrency 8, 1 org, 50 rules): p50 < 5 ms, p99 < 25 ms; JSON in bench/results/
 go test ./internal/gate -run TestDigests -update   # re-pin testdata/gate/digests (request_digest and fingerprint; review the diff)
 go test -tags integration ./cmd/deedglass -run TestGateLive -update   # the act CLI goldens in testdata/gate/cli (throwaway cluster)

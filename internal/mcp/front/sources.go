@@ -91,6 +91,8 @@ type NativeTool struct {
 	Description   string
 	SideEffect    string
 	InputSchema   json.RawMessage
+	Levels        []string // S30: the levels the tool reaches (connector.ToolLevels)
+	ReadBack      string   // S30: the L1 sentence; "" when the tool isn't read back
 }
 
 // All lists every native tool with Hidden set for pr, sorted by name.
@@ -112,6 +114,7 @@ func (s *NativeSource) AllWithPolicy(ctx context.Context, pr identity.Principal)
 			Tool:      Tool{Name: name, Gate: name, Def: def, Schema: spec.InputSchema, Digest: DefDigest(def)},
 			Connector: conn, ConnectorType: typ, Title: title(spec.Name), Description: spec.Description,
 			SideEffect: SideEffectOf(spec.SideEffect), InputSchema: spec.InputSchema,
+			Levels: nativeLevels(typ, spec), ReadBack: readBackSentence(spec),
 		})
 	}
 	for _, cc := range s.Connectors {
@@ -255,4 +258,20 @@ func title(name string) string {
 		return s
 	}
 	return strings.ToUpper(s[:1]) + s[1:]
+}
+
+// nativeLevels is the levels a native tool reaches: Postgres writes add L2 (S30's catalog rule).
+func nativeLevels(typ string, spec connector.ToolSpec) []string {
+	ls := connector.ToolLevels(spec)
+	if typ == "postgres" && spec.SideEffect != connector.SideEffectRead {
+		return []string{"L0", "L1", "L2"}
+	}
+	return ls
+}
+
+func readBackSentence(spec connector.ToolSpec) string {
+	if spec.SideEffect == connector.SideEffectRead {
+		return ""
+	}
+	return spec.L1
 }

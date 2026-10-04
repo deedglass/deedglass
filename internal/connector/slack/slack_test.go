@@ -29,8 +29,9 @@ func TestInfo(t *testing.T) {
 		t.Fatalf("levels = %v", info.Levels)
 	}
 	if len(info.CredentialKinds) != 1 || info.CredentialKinds[0].Kind != "fields" || len(info.CredentialKinds[0].Fields) != 2 ||
-		info.CredentialKinds[0].Fields[0] != (connector.CredentialField{Name: "bot_token", Secret: true}) ||
-		info.CredentialKinds[0].Fields[1] != (connector.CredentialField{Name: "signing_secret", Secret: true}) {
+		info.CredentialKinds[0].Fields[0].Name != "bot_token" || !info.CredentialKinds[0].Fields[0].Secret ||
+		info.CredentialKinds[0].Fields[0].PrefixHint != "xoxb-" ||
+		info.CredentialKinds[0].Fields[1].Name != "signing_secret" || !info.CredentialKinds[0].Fields[1].Secret {
 		t.Fatalf("credential kinds = %+v", info.CredentialKinds)
 	}
 	if !json.Valid(info.ConfigSchema) {

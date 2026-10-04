@@ -108,6 +108,59 @@ compares **ids**:
 - If someone then creates a new `#agent-updates`, it has a new id, so it can't slip through.
 - A channel outside the list is `validation_failed`, and nothing is sent to Slack.
 
+## Catalog
+
+The table below comes from `GET /v1/connector-types/slack` (`deedglass connector types --type slack`).
+
+<!-- deedglass:generated start -->
+<!-- Generated from the connector catalog by go run ./internal/connector/cmd/gendocs. Don't edit by hand. -->
+
+**Slack** · beta · levels L0 L1
+
+Posts, reactions and approvals in the Slack channels you allow.
+
+### Tools
+
+| Tool | Side effect | Levels | What L1 checks |
+|---|---|---|---|
+| `slack.list_channels` | read | L0 | Not read back |
+| `slack.read_channel` | read | L0 | Not read back |
+| `slack.post_message` | write | L0 L1 | Slack shows the message in that channel with the same text and this action's id in its metadata. |
+| `slack.add_reaction` | write | L0 L1 | Slack lists the reaction on that message by this bot. |
+
+| Tool | What it does |
+|---|---|
+| `slack.list_channels` | List the public and private channels the bot is in (at most 200). |
+| `slack.read_channel` | Read recent messages of an allowed channel: ts, user, text (up to 4 KiB each) and thread_ts. |
+| `slack.post_message` | Post a message as the bot in an allowed channel, optionally in a thread. Links are not unfurled. |
+| `slack.add_reaction` | Add an emoji reaction as the bot to a message in an allowed channel. A reaction already there counts as done. |
+
+### Credentials
+
+Kind `fields`:
+
+- `bot_token` (secret): The Bot User OAuth Token from the app's OAuth & Permissions page. Starts with `xoxb-`.
+- `signing_secret` (secret): From the app's Basic Information page: 32 hex characters.
+
+### Setup
+
+1. **Create the Slack app from the manifest.** https://api.slack.com/apps
+   `deedglass slack manifest --base-url https://your-host`
+2. **Create the connector.**
+   `deedglass connector create --config examples/connectors/slack.yaml`
+3. **Store the bot token and signing secret.**
+   `deedglass connector credentials set slack --field bot_token=env:SLACK_BOT_TOKEN --field signing_secret=env:SLACK_SIGNING_SECRET`
+4. **Test the connection.**
+   `deedglass connector test slack`
+
+### What it doesn't do
+
+- Only channels in the config, compared by id.
+- No direct messages to people, file uploads or message deletes.
+- Approvals map a Slack account to a person only by a confirmed email address.
+
+<!-- deedglass:generated end -->
+
 ## Tools
 
 | Tool | Side effect | Slack call | L1 check |

@@ -33,6 +33,9 @@ var classify = map[connector.Kind]ExecStatus{
 	connector.KindUpstream:           ExecUnknown,
 	connector.KindTimeout:            ExecUnknown,
 	connector.KindTooLarge:           ExecUnknown,
+	// S30: the service holds the call for its own approval (Stripe approval_required): nothing
+	// happened yet, but it may still happen without Deedglass, so unknown → UNVERIFIABLE.
+	connector.KindUpstreamPending: ExecUnknown,
 }
 
 // reached is the failed kinds whose request reached the upstream (it answered with a refusal), so

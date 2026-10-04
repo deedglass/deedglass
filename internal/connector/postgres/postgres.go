@@ -87,9 +87,37 @@ func (c *Connector) Info() connector.TypeInfo {
 		Description: "Agent SQL in a transaction Deedglass controls: one statement per action, run as the least-privilege role deedglass_agent, with a ledger row and a logical marker committed with the change for the witness.",
 		Levels:      []string{"L0", "L1", "L2"},
 		CredentialKinds: []connector.CredentialKind{
-			{Kind: "dsn", Fields: []connector.CredentialField{{Name: "dsn", Secret: true}, {Name: "witness_dsn", Secret: true}}},
+			{Kind: "dsn", Fields: []connector.CredentialField{{Name: "dsn", Secret: true, Help: "postgres:// for the deedglass_agent role.", PrefixHint: "postgres://"},
+				{Name: "witness_dsn", Secret: true, Help: "postgres:// for the deedglass_witness role (L2)."}}},
 		},
-		ConfigSchema: json.RawMessage(configSchema), DocsURL: "https://docs.deedglass.com/connectors/postgres"}
+		ConfigSchema: json.RawMessage(configSchema), DocsURL: "https://docs.deedglass.com/connectors/postgres",
+		Summary: "Agent SQL in a controlled transaction, witnessed by Postgres's own change log.",
+		Status:  "stable", Icon: "database", Modes: []string{}, ToolsDynamic: false, Tools: catalogTools(),
+		Setup: []connector.SetupStep{
+			{Title: "Create the connector", Command: "deedglass connector create --type postgres --name pg-main --config pg-main.yaml"},
+			{Title: "Prepare the database", Detail: "Review the plan, then apply it in one transaction.", Command: "deedglass connector postgres init --connector pg-main --apply"},
+			{Title: "Check it", Command: "deedglass connector postgres check --connector pg-main"},
+		},
+		Limits: []string{
+			"One statement per action, run as deedglass_agent.",
+			"L2 needs logical replication (wal_level logical) and a replication slot.",
+			"No DDL, COPY, DO blocks or session settings from agents.",
+		}}
+}
+
+// catalogTools is the catalog's tool list: the default config's tools, with L2 on the writes.
+func catalogTools() []connector.ToolInfo {
+	cfg, _ := ParseConfig(json.RawMessage(`{"mode":"sql"}`))
+	ts := connector.CatalogTools(Type, toolSpecs(cfg))
+	for i := range ts {
+		if ts[i].SideEffect != connector.SideEffectRead {
+			ts[i].Levels = []string{"L0", "L1", "L2"}
+			if ts[i].ReadBack == "" {
+				ts[i].ReadBack = "Postgres's change log shows exactly the rows the statement changed (L2); the row read-back confirms them (L1)."
+			}
+		}
+	}
+	return ts
 }
 
 // Validate implements connector.Connector.

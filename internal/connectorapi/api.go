@@ -10,13 +10,17 @@ package connectorapi
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
 	"regexp"
+	"sort"
 	"strings"
+	"sync"
 	"time"
 	"unicode/utf8"
 
@@ -65,6 +69,9 @@ type API struct {
 	Decoder DecoderControl
 
 	tests *httpx.Limiter
+
+	catOnce sync.Once
+	cat     *catalogCache
 }
 
 // Routes returns the connector routes: S16's nine, S17's setup record and S20's two decoder routes.
@@ -89,6 +96,7 @@ func Routes(a *API) []httpx.Route {
 		r("POST", "/v1/connectors/{id}/test", "testConnector", identity.RoleAdmin, a.test),
 		r("POST", "/v1/connectors/{id}/initialized", "recordConnectorInitialized", identity.RoleAdmin, a.initialized),
 		r("GET", "/v1/connector-types", "listConnectorTypes", identity.RoleViewer, a.types),
+		r("GET", "/v1/connector-types/{type}", "getConnectorType", identity.RoleViewer, a.connectorType),
 	}
 	routes = append(routes, DecoderRoutes(a)...)
 	for i := range routes {
@@ -131,6 +139,7 @@ type Tool struct {
 type Health struct {
 	Status   string     `json:"status"` // unknown | pass | warn | fail
 	TestedAt *time.Time `json:"tested_at"`
+	Reason   string     `json:"reason,omitempty"` // S30: why a breaker disabled the connector (livemode_detected)
 }
 
 // Connector is the connector object.
@@ -657,6 +666,15 @@ func (a *API) putCredentials(w http.ResponseWriter, r *http.Request) error {
 			return httpx.ErrValidation("kind", fmt.Sprintf("This connector's auth.kind is %s, so its credential must be a %s. Change auth.kind first to store another kind.", want, want))
 		}
 	}
+	if cc, ok := impl.(connector.CredentialChecker); ok {
+		// S30: refused before encryption, so the value is never stored, logged or echoed.
+		if ref := cc.CheckCredential(in.Kind, in.Secret); ref != nil {
+			if ref.Code != "" {
+				return httpx.E(httpx.Code(ref.Code), httpx.Msg(ref.Message), httpx.Param(ref.Param))
+			}
+			return httpx.ErrValidation(ref.Param, ref.Message)
+		}
+	}
 	fields := make(map[string][]byte, len(in.Secret))
 	for k, v := range in.Secret {
 		fields[k] = []byte(v)
@@ -782,11 +800,90 @@ func (a *API) types(w http.ResponseWriter, r *http.Request) error {
 	if _, err := principal(r); err != nil {
 		return err
 	}
+	c := a.catalog()
+	return writeCached(w, r, c.list, c.listTag)
+}
+
+// connectorType is GET /v1/connector-types/{type} (S30): one catalog entry, or 404.
+func (a *API) connectorType(w http.ResponseWriter, r *http.Request) error {
+	if _, err := principal(r); err != nil {
+		return err
+	}
+	c := a.catalog()
+	t := r.PathValue("type")
+	b, ok := c.one[t]
+	if !ok {
+		return httpx.E(httpx.CodeNotFound, httpx.Msgf("There is no connector type %q. deedglass connector types lists them.", clipName(t)), httpx.Param("type"))
+	}
+	return writeCached(w, r, b, c.oneTag[t])
+}
+
+func clipName(s string) string {
+	if len(s) > 40 {
+		return s[:40] + "…"
+	}
+	return s
+}
+
+// catalogCache is the connector catalog, computed once (S30 §3.4): every type's TypeInfo in title
+// order, the list body and each type's body with its ETag.
+type catalogCache struct {
+	list    []byte
+	listTag string
+	one     map[string][]byte
+	oneTag  map[string]string
+}
+
+// Catalog returns the catalog in its deterministic order (by title, then type).
+func Catalog(reg *connector.Registry) []connector.TypeInfo {
 	out := []connector.TypeInfo{}
-	for _, t := range a.Registry.Types() {
+	for _, t := range reg.Types() {
 		out = append(out, t.Info())
 	}
-	return httpx.WriteJSON(w, http.StatusOK, httpx.NewList(out, false, nil))
+	sort.SliceStable(out, func(i, j int) bool {
+		if out[i].Title != out[j].Title {
+			return out[i].Title < out[j].Title
+		}
+		return out[i].Type < out[j].Type
+	})
+	return out
+}
+
+func (a *API) catalog() *catalogCache {
+	a.catOnce.Do(func() {
+		infos := Catalog(a.Registry)
+		c := &catalogCache{one: map[string][]byte{}, oneTag: map[string]string{}}
+		c.list, _ = json.Marshal(httpx.NewList(infos, false, nil))
+		c.listTag = etagOf(c.list)
+		for _, t := range infos {
+			b, _ := json.Marshal(t)
+			c.one[t.Type], c.oneTag[t.Type] = b, etagOf(b)
+		}
+		a.cat = c
+	})
+	return a.cat
+}
+
+func etagOf(b []byte) string {
+	sum := sha256.Sum256(b)
+	return `"sha256:` + hex.EncodeToString(sum[:]) + `"`
+}
+
+// writeCached answers a catalog body with its ETag, or 304 when If-None-Match names it.
+func writeCached(w http.ResponseWriter, r *http.Request, body []byte, tag string) error {
+	w.Header().Set("ETag", tag)
+	w.Header().Set("Cache-Control", "private, max-age=300")
+	for _, m := range strings.Split(r.Header.Get("If-None-Match"), ",") {
+		m = strings.TrimPrefix(strings.TrimSpace(m), "W/")
+		if m == tag || m == "*" {
+			w.WriteHeader(http.StatusNotModified)
+			return nil
+		}
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_, err := w.Write(append(body, '\n'))
+	return err
 }
 
 // InitializedBody is what deedglass connector postgres init records after it applied a plan (S17

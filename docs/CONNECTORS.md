@@ -276,13 +276,49 @@ credentials and a `tools/list`.
 | `PUT /v1/connectors/{id}/credentials` | admin+ | Write-only: `{"kind":"bearer","secret":{"token":"…"}}` (≤ 16 KiB). Never logged, never stored for replay. |
 | `DELETE /v1/connectors/{id}/credentials` | admin+ | Remove (crypto-shred) the credential. |
 | `POST /v1/connectors/{id}/test` | admin+ | The checklist above, as a `connector_test` object. |
-| `GET /v1/connector-types` | viewer+ | Each type's config schema and credential kinds, with a `secret` flag per field. |
+| `GET /v1/connector-types` | viewer+ | The catalog: each type's config schema, credential kinds (with a `secret` flag, `help` and `prefix_hint` per field), setup, limits and tools (S30). ETag and 304. |
+| `GET /v1/connector-types/{type}` | viewer+ | One catalog entry, or 404 (S30). |
 
 Agent keys get 403 `insufficient_scope` on every connector route, reads included: agents can't
 list, create or read connectors. Every change seals an admin deed (`connector.created`,
 `connector.updated`, `connector.deleted`, `connector.credentials_updated`,
 `connector.credentials_removed`) with the type, the name, the config hash and, for credentials, the
-kind, version and key id.
+kind, version and key id. A safety breaker (S30: Stripe answered in live mode) seals
+`connector.disabled` as `{system, deedglass}` with the reason, and sets `health.reason`.
+
+## The connector catalog (S30)
+
+`GET /v1/connector-types` is the one source for the Console's connector forms (S26), the docs
+pages, the CLI and the SDKs. Each `connector_type` keeps S16's fields and adds `summary`, `status`
+(`stable`, `beta`, `dev`), `icon` (a Lucide name), `modes` (`sandbox_only`, `drafts_only`,
+`dev_only`), `setup` steps, honest `limits`, `tools_dynamic`, and the fixed `tools` with their
+`side_effect`, `levels` and `read_back` sentence (what L1 checks). Credential fields gain `help` and
+`prefix_hint`. The list is in title order, computed once at start-up, with `ETag: "sha256:…"` and
+`Cache-Control: private, max-age=300`; `If-None-Match` answers 304.
+`GET /v1/connector-types/{type}` returns one entry, or 404 `not_found`. `GET /v1/tools` gains
+`levels` and `read_back` on each tool, additively.
+
+```
+$ deedglass connector types
+TYPE       TITLE               LEVELS     TOOLS         MODE
+fake       Fake (dev only)     L0         4             dev only
+github     GitHub              L0 L1      14
+gmail      Gmail               L0 L1      5             drafts only
+mcp_http   Remote MCP server   L0         from server
+postgres   PostgreSQL          L0 L1 L2   built-in
+rest       REST API            L0 L1      from config
+slack      Slack               L0 L1      4
+stripe     Stripe              L0 L1      10            sandbox only
+```
+
+`deedglass connector types --type stripe` shows one type with its tools, setup and limits. The tool
+tables in `docs/connectors/<type>.md` are generated from the catalog
+(`go run ./internal/connector/cmd/gendocs`); `TestConnectorDocsFresh` fails when a page is stale.
+S26's connector-add form reads the same catalog: the credential fields, their help and prefix hints,
+and the setup steps.
+
+Connector pages: [GitHub](connectors/github.md), [Slack](connectors/slack.md),
+[Stripe](connectors/stripe.md) (sandbox only), [Gmail](connectors/gmail.md) (drafts only).
 
 ## What connectors don't do
 

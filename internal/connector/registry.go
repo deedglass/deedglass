@@ -453,6 +453,11 @@ func (b *bound) EnrichArgs(ctx context.Context, t ToolSpec, args json.RawMessage
 // recovers a panic (a stack in the log, upstream_error to the caller), and redacts and caps the
 // output and every message.
 func (b *bound) Execute(ctx context.Context, call Call) (res Result, err error) {
+	if ac, ok := b.impl.(ArgsChecker); ok {
+		if err := ac.CheckArgs(call.Tool, call.Args); err != nil {
+			return Result{}, err
+		}
+	}
 	if err := ValidateArgs(call.Tool.InputSchema, call.Args); err != nil {
 		return Result{}, err
 	}

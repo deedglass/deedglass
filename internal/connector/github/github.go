@@ -99,10 +99,24 @@ func (c *Connector) Info() connector.TypeInfo {
 		Description: "Issues, branches, files and pull requests in the repositories you list, with every write read back from GitHub.",
 		Levels:      []string{"L0", "L1"},
 		CredentialKinds: []connector.CredentialKind{
-			{Kind: "bearer", Fields: []connector.CredentialField{{Name: "token", Secret: true}}},
-			{Kind: "fields", Fields: []connector.CredentialField{{Name: "private_key", Secret: true}}},
+			{Kind: "bearer", Fields: []connector.CredentialField{{Name: "token", Secret: true, Help: "A fine-grained personal access token for the listed repositories.", PrefixHint: "github_pat_"}}},
+			{Kind: "fields", Fields: []connector.CredentialField{{Name: "private_key", Secret: true, Help: "A GitHub App's private key (PEM)."}}},
 		},
-		ConfigSchema: json.RawMessage(configSchema), DocsURL: DocsURL}
+		ConfigSchema: json.RawMessage(configSchema), DocsURL: DocsURL,
+		Summary: "Issues, branches, files and pull requests in the repositories you list.",
+		Status:  "beta", Icon: "github", Modes: []string{},
+		Setup: []connector.SetupStep{
+			{Title: "Create a fine-grained token", Detail: "Only the repositories you list, with Contents, Issues and Pull requests read and write. Or install a GitHub App.", URL: "https://github.com/settings/personal-access-tokens/new"},
+			{Title: "Create the connector", Command: "deedglass connector create --config examples/connectors/github.yaml"},
+			{Title: "Store the token", Command: "deedglass connector credentials set github --from-env GITHUB_SANDBOX_TOKEN"},
+			{Title: "Test the connection", Command: "deedglass connector test github"},
+		},
+		Limits: []string{
+			"Only the repositories in the config. Nothing outside them, including forks.",
+			"No repository settings, secrets, Actions runs or force pushes.",
+			"L1 shows GitHub's state, not whether the change was right.",
+		},
+		Tools: connector.CatalogTools(Type, toolSpecs)}
 }
 
 // state is an instance's parsed config and caches.

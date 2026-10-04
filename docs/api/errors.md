@@ -1501,6 +1501,57 @@ look again with `deedglass decoder status --connector <name>`.
 }
 ```
 
+
+## stripe_live_key_refused
+
+**400 · invalid_request_error**
+
+**When it happens.** Someone tried to store a Stripe key that starts with `sk_live_` or `rk_live_` on a Stripe connector (S30). Deedglass connects to Stripe sandboxes only: the key is refused before it is encrypted, so it is never stored, logged or echoed (the message shows its first 8 characters at most). The CLI refuses it before sending anything. A live key that reaches a stored row some other way is refused again before every call, and the connector is disabled.
+
+**What to do.** In your Stripe sandbox, open Developers › API keys and create a restricted key (it starts with `rk_test_`). Store it with `deedglass connector credentials set stripe --from-env STRIPE_TEST_KEY`. There is no setting that allows live mode.
+
+```json
+{
+  "type": "invalid_request_error",
+  "code": "stripe_live_key_refused",
+  "message": "This is a live-mode Stripe key. Deedglass connects to Stripe sandboxes only. Use a restricted key that starts with rk_test_.",
+  "param": "secret.token"
+}
+```
+
+## stripe_livemode_detected
+
+**502 · api_error**
+
+**When it happens.** Stripe answered a call in live mode (`livemode: true` anywhere in the answer). The breaker disabled the Stripe connector at once: no further request leaves, the connector's health reason is `livemode_detected`, the admin deed `connector.disabled` is sealed with Stripe's request id, and an alert goes to the server log. The action is recorded as unknown and its deed is UNVERIFIABLE, because something may have happened in live mode. The agent sees only that the connector is disabled.
+
+**What to do.** Find the request id from the deed (`connector.disabled`) in your Stripe dashboard and check what it did. Replace the key with a sandbox key, then set the connector back to active in Console › Connectors and run `deedglass connector test stripe`.
+
+```json
+{
+  "type": "api_error",
+  "code": "stripe_livemode_detected",
+  "message": "The stripe connector is disabled. An admin has been alerted.",
+  "param": null
+}
+```
+
+## upstream_approval_pending
+
+**502 · api_error**
+
+**When it happens.** Stripe held the call for its own approval: the key is tagged as an agent key, and a Stripe approval rule (by default, refunds and subscription cancellations) answered `approval_required` with an approval request (`apreq_…`). Nothing happened yet, but Stripe completes the action by itself if its reviewer approves within 14 days, so Deedglass records the action as unknown and the deed as UNVERIFIABLE. The admin detail names the approval request.
+
+**What to do.** Pick one approval surface. Use a restricted key **without** the agent tag when Deedglass is the gateway (Deedglass shows, approves and seals everything), or keep Stripe's rules and expect UNVERIFIABLE deeds for held actions. Check Settings › Approvals in Stripe for the request.
+
+```json
+{
+  "type": "api_error",
+  "code": "upstream_approval_pending",
+  "message": "Stripe is holding this for its own approval. Deedglass can't see whether a Stripe reviewer approves it. Check Settings › Approvals in Stripe.",
+  "param": null
+}
+```
 ## undo_unavailable
 
 **409 · invalid_request_error**

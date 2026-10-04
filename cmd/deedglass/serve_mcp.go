@@ -125,6 +125,8 @@ type toolObject struct {
 	InputSchema json.RawMessage `json:"input_schema"`
 	SideEffect  string          `json:"side_effect"`
 	Visibility  string          `json:"visibility"`
+	Levels      []string        `json:"levels"`    // S30, additive: the levels the tool reaches
+	ReadBack    string          `json:"read_back"` // S30, additive: the L1 sentence, "" when none
 }
 
 type toolList struct {
@@ -171,8 +173,16 @@ func toolsHandler(ns *front.NativeSource) httpx.HandlerFunc {
 				schema = json.RawMessage(`{"type":"object"}`)
 			}
 			out.Data = append(out.Data, toolObject{Object: "tool", Name: t.Name, Connector: t.Connector, Title: t.Title,
-				Description: t.Description, InputSchema: schema, SideEffect: t.SideEffect, Visibility: vis})
+				Description: t.Description, InputSchema: schema, SideEffect: t.SideEffect, Visibility: vis,
+				Levels: nonNilLevels(t.Levels), ReadBack: t.ReadBack})
 		}
 		return httpx.WriteJSON(w, http.StatusOK, out)
 	}
+}
+
+func nonNilLevels(ls []string) []string {
+	if len(ls) == 0 {
+		return []string{"L0"}
+	}
+	return ls
 }

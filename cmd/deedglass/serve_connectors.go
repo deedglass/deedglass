@@ -13,9 +13,11 @@ import (
 	"github.com/deedglass/deedglass/internal/connector"
 	"github.com/deedglass/deedglass/internal/connector/egress"
 	"github.com/deedglass/deedglass/internal/connector/github"
+	gmailconn "github.com/deedglass/deedglass/internal/connector/gmail"
 	"github.com/deedglass/deedglass/internal/connector/postgres"
 	"github.com/deedglass/deedglass/internal/connector/rest"
 	slackconn "github.com/deedglass/deedglass/internal/connector/slack"
+	stripeconn "github.com/deedglass/deedglass/internal/connector/stripe"
 	"github.com/deedglass/deedglass/internal/connectorapi"
 	"github.com/deedglass/deedglass/internal/decoder"
 	"github.com/deedglass/deedglass/internal/httpx"
@@ -87,7 +89,7 @@ func selfAddrs(ctx context.Context, dsn string) []netip.AddrPort {
 // REST and Postgres types everywhere.
 func newConnectors(ctx context.Context, cfg *config.Config, db *store.DB, led *ledger.Ledger, natives []connector.Connector, log *slog.Logger) (*connectors, error) {
 	c := &connectors{egress: egressPolicy(ctx, cfg, log)}
-	o := connector.Options{Builtins: natives, Types: []connector.Connector{rest.New(), postgres.New(log), github.New(), slackconn.New()},
+	o := connector.Options{Builtins: natives, Types: []connector.Connector{rest.New(), postgres.New(log), github.New(), slackconn.New(), stripeconn.New(), gmailconn.New()},
 		Loader: connector.DBLoader{DB: db},
 		Env:    connector.Env{Name: string(cfg.Env), Egress: c.egress}, Logger: log}
 	if cfg.VaultKey.IsSet() {
@@ -99,7 +101,10 @@ func newConnectors(ctx context.Context, cfg *config.Config, db *store.DB, led *l
 		c.vault = vault.NewStore(db, ring, vault.StoreOptions{Ledger: led, Logger: log, Prod: cfg.Env == config.Prod})
 		o.Opener = c.vault
 	}
+	br := &connectorapi.Breaker{DB: db, Ledger: led, Log: log}
+	o.Env.Breaker = br
 	c.reg = connector.New(o)
+	br.Registry = c.reg
 	return c, nil
 }
 
@@ -109,7 +114,7 @@ func connectorRoutes(db *store.DB, led *ledger.Ledger, cw *connectors, log *slog
 	if cw == nil {
 		p, _ := upstream.New(upstream.Options{})
 		a.Registry = connector.New(connector.Options{Types: []connector.Connector{rest.New(), postgres.New(nil), upstream.NewType(p),
-			github.New(), slackconn.New()}})
+			github.New(), slackconn.New(), stripeconn.New(), gmailconn.New()}})
 	} else {
 		a.Registry = cw.reg
 		if cw.vault != nil {

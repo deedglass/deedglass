@@ -49,7 +49,12 @@ func (c *Connector) Info() connector.TypeInfo {
 	return connector.TypeInfo{Object: "connector_type", Type: Name, Title: "Fake (dev only)",
 		Description: "Four tools with real schemas and configurable latency, cost and outcome, so every Gate path runs without a real system.",
 		Levels:      []string{"L0"}, CredentialKinds: []connector.CredentialKind{}, ConfigSchema: json.RawMessage(`{"type":"object","additionalProperties":false}`),
-		DocsURL: "https://docs.deedglass.com/connectors/fake"}
+		DocsURL: "https://docs.deedglass.com/connectors/fake",
+		Summary: "Four tools that act real, for trying every Gate path in dev.",
+		Status:  "dev", Icon: "plug", Modes: []string{"dev_only"},
+		Setup:  []connector.SetupStep{{Title: "Run a dev server", Detail: "fake is registered only when DEEDGLASS_ENV=dev.", Command: "deedglass dev fake-action"}},
+		Limits: []string{"Dev only. It never reaches a real system."},
+		Tools:  connector.CatalogTools(Name, tools)}
 }
 
 // Validate implements connector.Connector: fake takes no config.

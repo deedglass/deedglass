@@ -1,0 +1,15 @@
+{
+  "session": "S30",
+  "date": "2026-10-04",
+  "host": "darwin-arm64 (founder laptop, loaded)",
+  "go": "1.27.1",
+  "note": "go test -bench with -benchtime 2000x; the execute number includes one loopback HTTP round trip to the fixture server, so Deedglass's own overhead is below it.",
+  "results": [
+    {"name": "stripe enrich, cache hit", "target": "< 50 µs", "ns_per_op": 22209, "pass": true},
+    {"name": "stripe.create_refund execute (registry, loopback fixture, enrich cached)", "target": "p50 < 500 µs excluding network", "ns_per_op": 100921, "pass": true},
+    {"name": "stripe form encoder", "ns_per_op": 373},
+    {"name": "stripe livemode scan (refund body)", "ns_per_op": 3598},
+    {"name": "GET /v1/connector-types through the router", "target": "p99 < 5 ms", "ns_per_op": 11682, "pass": true},
+    {"name": "gendocs (built binary, 4 pages)", "target": "< 1 s", "seconds": 0.01, "pass": true}
+  ]
+}

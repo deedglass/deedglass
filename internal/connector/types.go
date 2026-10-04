@@ -62,6 +62,9 @@ type ToolSpec struct {
 	// L1 is the sentence a native read-back checks ("GitHub shows the issue with the same title,
 	// body and marker"): set, the connector reads the write back in code (NativeReadBacker, S29).
 	L1 string
+	// RequiresScope names an optional upstream scope the tool needs (S30: gmail.readonly for
+	// gmail.get_thread); the catalog shows it.
+	RequiresScope string
 }
 
 // Call is one execution the Gate asks a connector for. Args are the normalized arguments; the
@@ -119,6 +122,11 @@ const (
 	KindCredentialsMissing Kind = "credentials_missing" // the connector has no credentials: nothing was sent
 	KindTooLarge           Kind = "too_large"           // the response passed the cap: the call ran
 	KindVault              Kind = "vault"               // the credential couldn't be opened: nothing was sent
+
+	// S30: the service holds the call for its own approval (Stripe's approval_required for an
+	// agent-tagged key). Nothing happened yet, but the service completes it by itself if its
+	// reviewer approves, so the Gate records it as unknown, never failed.
+	KindUpstreamPending Kind = "upstream_pending"
 )
 
 // Error codes connectors use (contract §8; each has a doc page).
@@ -134,6 +142,11 @@ const (
 	CodeResponseTooLarge     = "response_too_large"
 	CodeConnectorUnavailable = "connector_unavailable"
 	CodeVaultUnavailable     = "vault_unavailable"
+
+	// S30.
+	CodeStripeLiveKeyRefused    = "stripe_live_key_refused"
+	CodeStripeLivemodeDetected  = "stripe_livemode_detected"
+	CodeUpstreamApprovalPending = "upstream_approval_pending"
 )
 
 // Error is a typed connector failure. AgentMessage is safe to show the agent and already

@@ -4503,6 +4503,38 @@ paths:
                 $ref: "#/components/schemas/ConnectorTypeList"
         default:
           $ref: "#/components/responses/Error"
+  /v1/connector-types/{type}:
+    get:
+      operationId: getConnectorType
+      summary: Get one connector type
+      description: >-
+        One catalog entry (S30): the type's tools with their levels and read-back sentences, its
+        credentials, setup steps and limits. A viewer+ Console session or an org admin key. The body
+        carries an ETag; If-None-Match answers 304. An unknown type is 404 not_found.
+      tags: [Connectors]
+      security: [{bearerAuth: []}, {sessionCookie: []}]
+      x-deedglass-auth: session_or_key
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+        - {name: type, in: path, required: true, schema: {type: string}, description: 'The type, like stripe.'}
+      responses:
+        "200":
+          description: The connector type.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+            ETag:
+              schema: {type: string}
+              description: '"sha256:…" of the body.'
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectorType"
+        "304":
+          description: Not modified (If-None-Match matched the ETag).
+        default:
+          $ref: "#/components/responses/Error"
   /v1/replays:
     get:
       operationId: listReplays
@@ -7288,6 +7320,9 @@ components:
                 - approval_link_invalid
                 - approval_link_review_only
                 - approver_unmapped
+                - stripe_live_key_refused
+                - stripe_livemode_detected
+                - upstream_approval_pending
                 - undo_unavailable
                 - undo_plan_stale
                 - already_undone
@@ -8145,6 +8180,8 @@ components:
         input_schema: {type: object, description: The tool's JSON Schema for its arguments.}
         side_effect: {type: string, enum: [read, write, destructive, unknown], description: What the connector declares the tool does.}
         visibility: {type: string, enum: [visible, hidden]}
+        levels: {type: array, items: {type: string, enum: [L0, L1, L2]}, description: 'S30, additive: the verification levels the tool reaches.'}
+        read_back: {type: string, description: 'S30, additive: what the L1 read-back checks, in one sentence; empty when the tool is not read back.'}
     ToolList:
       type: object
       required: [object, data, has_more, next_cursor, policy_version]
@@ -8590,31 +8627,70 @@ components:
         data:
           type: array
           items:
+            $ref: "#/components/schemas/ConnectorType"
+        has_more: {type: boolean}
+        next_cursor: {type: [string, "null"]}
+    ConnectorType:
+      type: object
+      description: >-
+        One connector type in the catalog (S30 TypeInfo v2, additive to S16's shape): what it does,
+        its credentials and setup, honest limits, and its fixed tools with what the Witness checks.
+      required: [object, type, title, levels, credential_kinds, config_schema, docs_url, summary, status, icon, modes, setup, limits, tools_dynamic, tools]
+      properties:
+        object: {type: string, const: connector_type}
+        type: {type: string}
+        title: {type: string}
+        description: {type: string}
+        levels: {type: array, items: {type: string}}
+        credential_kinds:
+          type: array
+          items:
             type: object
-            required: [object, type, title, levels, credential_kinds, config_schema, docs_url]
             properties:
-              object: {type: string, const: connector_type}
-              type: {type: string}
-              title: {type: string}
-              description: {type: string}
-              levels: {type: array, items: {type: string}}
-              credential_kinds:
+              kind: {type: string}
+              fields:
                 type: array
                 items:
                   type: object
                   properties:
-                    kind: {type: string}
-                    fields:
-                      type: array
-                      items:
-                        type: object
-                        properties:
-                          name: {type: string}
-                          secret: {type: boolean}
-              config_schema: {type: object}
-              docs_url: {type: string}
-        has_more: {type: boolean}
-        next_cursor: {type: [string, "null"]}
+                    name: {type: string}
+                    secret: {type: boolean}
+                    help: {type: string}
+                    prefix_hint: {type: string}
+        config_schema: {type: object}
+        docs_url: {type: string}
+        summary: {type: string}
+        status: {type: string, enum: [stable, beta, dev]}
+        icon: {type: string, description: A Lucide icon name.}
+        modes: {type: array, items: {type: string, enum: [sandbox_only, drafts_only, dev_only]}}
+        setup:
+          type: array
+          items:
+            type: object
+            required: [title]
+            properties:
+              title: {type: string}
+              detail: {type: string}
+              command: {type: string}
+              url: {type: string}
+        limits: {type: array, items: {type: string}}
+        tools_dynamic: {type: boolean, description: True when tools come from config (rest) or the server (mcp_http).}
+        tools:
+          type: array
+          items:
+            type: object
+            required: [object, name, title, description, side_effect, idempotent, levels, read_back, input_schema]
+            properties:
+              object: {type: string, const: tool}
+              name: {type: string}
+              title: {type: string}
+              description: {type: string}
+              side_effect: {type: string, enum: [read, write, destructive, unknown]}
+              idempotent: {type: boolean}
+              levels: {type: array, items: {type: string}}
+              read_back: {type: string}
+              requires_scope: {type: string}
+              input_schema: {type: object}
     Event:
       type: object
       description: >-

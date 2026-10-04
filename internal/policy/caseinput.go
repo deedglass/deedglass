@@ -1,9 +1,11 @@
 package policy
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"math"
+	"reflect"
 	"regexp"
 	"sort"
 	"strings"
@@ -58,7 +60,7 @@ var (
 	orgKeys         = []string{"id", "timezone", "stopped"}
 	userKeys        = []string{"ref", "sub", "iss"}
 	sessionKeys     = []string{"ref"}
-	requestKeys     = []string{"mode", "intent_signed", "bytes", "digest", "http", "github", "slack"}
+	requestKeys     = []string{"mode", "intent_signed", "bytes", "digest", "http", "github", "slack", "stripe", "email"}
 	httpKeys        = []string{"method", "path", "host"}
 	githubKeys      = []string{"repo", "owner", "name", "default_branch", "branch", "base", "head", "path", "protected_branch",
 		"is_default_branch", "touches_workflows", "enriched"}
@@ -396,6 +398,16 @@ func BuildInput(v any) (Input, *InputProblem) {
 				sf.UserMentions = n
 			}
 		}
+		if v, set := rm["stripe"]; set {
+			if p := factsFrom("request.stripe", v, jsonKeys[StripeFacts](), &in.Request.Stripe); p != nil {
+				return in, p
+			}
+		}
+		if v, set := rm["email"]; set {
+			if p := factsFrom("request.email", v, jsonKeys[EmailFacts](), &in.Request.Email); p != nil {
+				return in, p
+			}
+		}
 		if in.Request.Mode != "gateway" && in.Request.Mode != "proxy" {
 			return in, &InputProblem{Path: "request.mode", Message: "The request mode must be gateway or proxy."}
 		}
@@ -683,4 +695,38 @@ func sortedKeys(m map[string]any) []string {
 	}
 	sort.Strings(ks)
 	return ks
+}
+
+// jsonKeys lists a facts struct's JSON keys (S30's request.stripe and request.email).
+func jsonKeys[T any]() []string {
+	t := reflect.TypeFor[T]()
+	out := make([]string, 0, t.NumField())
+	for i := range t.NumField() {
+		name, _, _ := strings.Cut(t.Field(i).Tag.Get("json"), ",")
+		out = append(out, name)
+	}
+	return out
+}
+
+// factsFrom reads a facts mapping from a test case into dst: known keys only, each of the
+// field's type (a whole number for amounts, a list of strings for domains).
+func factsFrom(path string, v any, keys []string, dst any) *InputProblem {
+	m, ok := v.(map[string]any)
+	if !ok {
+		return wrongType(path, "a mapping", v)
+	}
+	if p := checkKeys(path, m, keys); p != nil {
+		return p
+	}
+	b, err := json.Marshal(m)
+	if err == nil {
+		dec := json.NewDecoder(bytes.NewReader(b))
+		dec.DisallowUnknownFields()
+		err = dec.Decode(dst)
+	}
+	if err != nil {
+		msg := "The values under " + path + " have the wrong types."
+		return &InputProblem{Path: path, Message: msg, Hint: "Amounts are whole numbers of minor units, flags are true or false, and domains are a list of strings."}
+	}
+	return nil
 }

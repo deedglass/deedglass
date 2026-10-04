@@ -1,0 +1,73 @@
+package gmail
+
+import (
+	"html/template"
+	"io"
+)
+
+// The loopback callback page (S30 §3.2 step 8, §5.D): plain HTML with no external asset, so the
+// browser tab loads nothing from anywhere. Colours are DESIGN.md's tokens (paper-50 / ink-950,
+// the verified and mismatch pairs, the accent focus ring), light and dark by
+// prefers-color-scheme. One message, one next step.
+var pageTmpl = template.Must(template.New("page").Parse(`<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#F7F7F4" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#07080C" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="data:,">
+<title>{{.Title}} · Deedglass</title>
+<style>
+:root{color-scheme:light dark;--bg:#F7F7F4;--surface:#FFFFFF;--text:#0D0F14;--text-2:#4A4F5E;--hairline:#E4E5EA;--ok-text:#0F766E;--ok-bg:#E6F6F3;--bad-text:#C8322B;--bad-bg:#FDECEA;--mono-bg:#EDEEF2;--frost:#D9DEEA;--frost-o:1}
+@media (prefers-color-scheme:dark){:root{--bg:#07080C;--surface:#0E1017;--text:#F5F6FA;--text-2:#8B90A0;--hairline:#1C1F2A;--ok-text:#34E3C9;--ok-bg:#0F2A28;--bad-text:#FF7A70;--bad-bg:#3A1512;--mono-bg:#141722;--frost:#E6EAF5;--frost-o:.85}}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;min-height:100vh;min-height:100dvh;display:grid;place-items:center;
+padding:max(24px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(24px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left));background:var(--bg);color:var(--text);
+font:400 16px/24px "Inter Variable",Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
+main{width:100%;max-width:400px;background:var(--surface);border:1px solid var(--hairline);border-radius:14px;padding:28px 24px}
+@media (min-width:441px){main{padding:36px}}
+.mark{display:flex;align-items:center;gap:10px;font-weight:600;letter-spacing:-.04em;font-size:17px;margin:0 0 28px}
+.mark svg{flex:none}
+.frost{fill:var(--frost);fill-opacity:var(--frost-o)}
+.chip{display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 8px;border-radius:6px;font-size:12px;font-weight:600;line-height:16px;letter-spacing:.04em;text-transform:uppercase}
+.ok{color:var(--ok-text);background:var(--ok-bg)}
+.bad{color:var(--bad-text);background:var(--bad-bg)}
+h1{font-size:22px;line-height:28px;font-weight:600;letter-spacing:-.015em;margin:16px 0 8px;text-wrap:balance}
+p{margin:0 0 12px;color:var(--text-2);text-wrap:pretty}
+.who{color:var(--text);overflow-wrap:anywhere}
+code{font:400 13px/19px "Geist Mono",ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--mono-bg);border-radius:6px;padding:2px 6px;overflow-wrap:anywhere}
+.fine{font-size:13px;line-height:18px;margin-top:20px;padding-top:16px;border-top:1px solid var(--hairline)}
+@media (prefers-reduced-motion:no-preference){main{animation:in .24s cubic-bezier(.2,.8,.2,1)}@keyframes in{from{opacity:0;transform:translateY(4px)}}}
+</style>
+</head>
+<body>
+<main>
+<header class="mark"><svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true" focusable="false"><defs><linearGradient id="a" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7C6CFF"/><stop offset=".5" stop-color="#4F8CFF"/><stop offset="1" stop-color="#2FE6D1"/></linearGradient></defs><path d="M10.2 1A10 10 0 0 0 10.2 21Z" fill="url(#a)"/><path class="frost" d="M11.8 1A10 10 0 0 1 11.8 21Z"/></svg><span translate="no">deedglass</span></header>
+{{if .OK}}<span class="chip ok"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 6.2 5 8.6 9.5 3.6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>Connected</span>
+{{else}}<span class="chip bad"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M3.5 3.5 8.5 8.5M8.5 3.5 3.5 8.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>Not connected</span>{{end}}
+<h1>{{.Title}}</h1>
+{{if .OK}}<p>Deedglass is connected to <span class="who" translate="no">{{.Email}}</span>. You can close this tab.</p>
+<p class="fine">Deedglass writes drafts only. People send them.</p>
+{{else}}<p>{{.Message}}</p>
+<p>Then, in your terminal: <code translate="no">deedglass connector gmail authorize {{.Name}}</code></p>
+<p class="fine">Nothing was stored. You can close this tab.</p>{{end}}
+</main>
+</body>
+</html>
+`))
+
+// PageData fills the callback page.
+type PageData struct {
+	OK      bool
+	Title   string
+	Email   string
+	Message string
+	Name    string
+}
+
+// WritePage renders the callback page.
+func WritePage(w io.Writer, d PageData) error { return pageTmpl.Execute(w, d) }

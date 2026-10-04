@@ -57,6 +57,41 @@ type SlackFacts struct {
 	Enriched     bool   `json:"enriched" cel:"enriched"`
 }
 
+// StripeFacts is what the Stripe connector read from Stripe before the decision (S30):
+// request.stripe. Amounts are minor units of Currency, from Stripe's own objects, never from the
+// agent's arguments. Enriched is false when the read failed; the starter sends those refunds to a
+// person.
+type StripeFacts struct {
+	Charge           string `json:"charge" cel:"charge"`
+	PaymentIntent    string `json:"payment_intent" cel:"payment_intent"`
+	Customer         string `json:"customer" cel:"customer"`
+	Currency         string `json:"currency" cel:"currency"`               // lowercase ISO 4217
+	ChargeAmount     int64  `json:"charge_amount" cel:"charge_amount"`     // what the charge was for
+	AmountRefunded   int64  `json:"amount_refunded" cel:"amount_refunded"` // refunded so far
+	Refundable       int64  `json:"refundable" cel:"refundable"`           // charge_amount − amount_refunded
+	Disputed         bool   `json:"disputed" cel:"disputed"`
+	ChargeAgeDays    int64  `json:"charge_age_days" cel:"charge_age_days"`
+	AmountDisplay    string `json:"amount_display" cel:"amount_display"` // args.amount for people: "$120.00"
+	Subscription     string `json:"subscription" cel:"subscription"`
+	Status           string `json:"status" cel:"status"`                         // the subscription's
+	CurrentPeriodEnd int64  `json:"current_period_end" cel:"current_period_end"` // Unix seconds
+	AmountPerPeriod  int64  `json:"amount_per_period" cel:"amount_per_period"`
+	Interval         string `json:"interval" cel:"interval"`
+	Enriched         bool   `json:"enriched" cel:"enriched"`
+}
+
+// EmailFacts is what the Gmail connector knows about a draft before the decision (S30):
+// request.email. Domains are lowercase; internal domains come from the connector's config.
+type EmailFacts struct {
+	RecipientCount  int64    `json:"recipient_count" cel:"recipient_count"` // to + cc + bcc
+	Domains         []string `json:"domains" cel:"domains"`
+	ExternalDomains []string `json:"external_domains" cel:"external_domains"`
+	HasExternal     bool     `json:"has_external" cel:"has_external"`
+	HasBcc          bool     `json:"has_bcc" cel:"has_bcc"`
+	IsReply         bool     `json:"is_reply" cel:"is_reply"`
+	Enriched        bool     `json:"enriched" cel:"enriched"`
+}
+
 // RequestFacts describes the request that carried the action.
 type RequestFacts struct {
 	Mode         string `json:"mode" cel:"mode"`
@@ -68,6 +103,9 @@ type RequestFacts struct {
 	// GitHub and Slack are set by those connectors' enrichment (S29); zero for every other tool.
 	GitHub GitHubFacts `json:"github,omitzero" cel:"github"`
 	Slack  SlackFacts  `json:"slack,omitzero" cel:"slack"`
+	// Stripe and Email are those connectors' facts (S30); zero for every other tool.
+	Stripe StripeFacts `json:"stripe,omitzero" cel:"stripe"`
+	Email  EmailFacts  `json:"email,omitzero" cel:"email"`
 }
 
 // SQLFacts is what the S11 classifier reports about args.sql.

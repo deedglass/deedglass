@@ -106,6 +106,10 @@ const (
 	CodeApprovalLinkReviewOnly Code = "approval_link_review_only"
 	// S29: a Slack account that maps to no active member of the org.
 	CodeApproverUnmapped Code = "approver_unmapped"
+	// S30: Stripe sandbox rails and Stripe's own approvals.
+	CodeStripeLiveKeyRefused    Code = "stripe_live_key_refused"
+	CodeStripeLivemodeDetected  Code = "stripe_livemode_detected"
+	CodeUpstreamApprovalPending Code = "upstream_approval_pending"
 
 	// S23: undo.
 	CodeUndoUnavailable Code = "undo_unavailable"
@@ -242,6 +246,11 @@ var catalog = []CatalogEntry{
 	{CodeApprovalLinkInvalid, 401, TypeAuthentication, "This approval link has expired or was already used. Open Console › Approvals.", "", "S22"},
 	{CodeApprovalLinkReviewOnly, 403, TypePermission, "Your org decides approvals in the Console. Open Console › Approvals to countersign.", "", "S22"},
 	{CodeApproverUnmapped, 403, TypePermission, "No person in this org matches that Slack account. Invite them in Console › Settings › Members.", "", "S29"},
+	{CodeStripeLiveKeyRefused, 400, TypeInvalidRequest, "This is a live-mode Stripe key. Deedglass connects to Stripe sandboxes only. Use a restricted key that starts with rk_test_.", "", "S30"},
+	{CodeStripeLivemodeDetected, 502, TypeAPI, "The stripe connector is disabled. An admin has been alerted.",
+		"Stripe answered in live mode for request {req}. Deedglass disabled the {name} connector. Check the request in your Stripe dashboard, then replace the key with a sandbox key.", "S30"},
+	{CodeUpstreamApprovalPending, 502, TypeAPI, "Stripe is holding this for its own approval. Deedglass can't see whether a Stripe reviewer approves it. Check Settings › Approvals in Stripe.",
+		"Stripe is holding this refund for its own approval ({apreq}). Deedglass can't see whether a Stripe reviewer approves it. Check Settings › Approvals in Stripe.", "S30"},
 
 	{CodeUndoUnavailable, 409, TypeInvalidRequest, "Undo isn't available for this action. The checks field lists each failing check with its fix.",
 		"Undo isn't available for {act}: {n} check failed ({ids}). Run deedglass undo preview {act} for the fix.", "S23"},

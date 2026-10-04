@@ -210,12 +210,12 @@ builds it. Hidden commands work but aren't in `deedglass help`.
 | `deedglass connector list [--json]` | Connectors | List connectors | built |
 | `deedglass connector show <name|con_…> [--json]` | Connectors | Show one connector | built |
 | `deedglass connector test <name|con_…> [--json]` | Connectors | Test a connector's credentials | built |
-| `deedglass connector types [--json]` | Connectors | List connector types | built |
+| `deedglass connector types [--type stripe] [--json]` | Connectors | List connector types | built |
 | `deedglass connector credentials set <name|con_…> --from-env VAR | --stdin | --field KEY=env:VAR|file:PATH|stdin... [--kind bearer] [--json]` | Connectors | Store a connector's credentials | built |
 | `deedglass connector credentials remove <name|con_…> [--json]` | Connectors | Delete a connector's credentials | built |
 | `deedglass connector postgres init --connector <name> [--admin-dsn-env DEEDGLASS_INIT_DSN] [--config <file>] [--apply] [--confirm <database>] [--rotate-passwords] [--dsn-host host:port] [--no-store] [--json]` | Connectors | Prepare a Postgres database | built |
 | `deedglass connector postgres check --connector <name> [--json]  ·  --dsn-env VAR [--witness-dsn-env VAR] [--config <file>] [--probe] [--json]` | Connectors | Check a prepared Postgres database | built |
-| `deedglass connector gmail authorize` | Connectors | Authorize the Gmail connector | soon (S30) |
+| `deedglass connector gmail authorize <name> --client-file ./client_secret.json [--readonly] [--no-browser] [--json]` | Connectors | Authorize the Gmail connector | built |
 | `deedglass decoder status [--connector <name>] [--recent N] [--json]` | Connectors | Show what the decoder reads from Postgres | built |
 | `deedglass decoder drop --connector <name> [--confirm <name>] [--json]` | Connectors | Drop a connector's replication slot | built |
 | `deedglass slack manifest --base-url <https://host> [--name Deedglass] [--json]` | Connectors | Print the Slack app manifest | built |
@@ -239,7 +239,7 @@ builds it. Hidden commands work but aren't in `deedglass help`.
 | `deedglass dev agent-script` | Dev | Run a scripted agent | soon (S37) |
 | `deedglass dev mail-preview login|invite|approval|approval-foureyes [--out /tmp/login.html] [--json]` | Dev | Preview emails in the browser | built |
 | `deedglass dev sign-intent --key <pem> --tool stripe.refund --args '{…}' [--org org_… --agent agt_…] [--obo …] [--session …] [--ttl 60s] [--explain] [--json]` | Dev | Sign an intent with a local key | built |
-| `deedglass dev stripe-fixtures` | Dev | Create Stripe test-mode fixtures | soon (S30) |
+| `deedglass dev stripe-fixtures [--from-env STRIPE_TEST_KEY] [--connector stripe] [--out examples/demo/.stripe-fixtures.json] [--json]` | Dev | Create Stripe sandbox fixtures | built |
 | `deedglass dev id <prefix>` | Dev | Print a fresh id for a prefix | built, hidden |
 <!-- commands:end -->
 

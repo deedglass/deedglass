@@ -121,6 +121,81 @@ An unknown key is refused with its path (`config.extra`, `config.app.extra`). Ev
 `Accept: application/vnd.github+json`, the API version, Deedglass's `User-Agent`, and the credential,
 added last.
 
+## Catalog
+
+The table below comes from `GET /v1/connector-types/github` (`deedglass connector types --type github`).
+
+<!-- deedglass:generated start -->
+<!-- Generated from the connector catalog by go run ./internal/connector/cmd/gendocs. Don't edit by hand. -->
+
+**GitHub** · beta · levels L0 L1
+
+Issues, branches, files and pull requests in the repositories you list.
+
+### Tools
+
+| Tool | Side effect | Levels | What L1 checks |
+|---|---|---|---|
+| `github.get_repo` | read | L0 | Not read back |
+| `github.list_issues` | read | L0 | Not read back |
+| `github.get_issue` | read | L0 | Not read back |
+| `github.get_file` | read | L0 | Not read back |
+| `github.list_prs` | read | L0 | Not read back |
+| `github.get_pr` | read | L0 | Not read back |
+| `github.create_issue` | write | L0 L1 | GitHub shows the issue with the same title, body and marker, opened by this connector's identity. |
+| `github.comment` | write | L0 L1 | The comment exists on issue n with the same body and marker. |
+| `github.create_branch` | write | L0 L1 | The branch points at the requested commit. |
+| `github.create_or_update_file` | write | L0 L1 | The file's blob SHA on that branch equals the git blob SHA of the content Deedglass sent. |
+| `github.create_pr` | write | L0 L1 | The pull request is open from head into base with the same title and body. |
+| `github.merge_pr` | destructive | L0 L1 | GitHub reports it merged, and the merge commit is contained in base. |
+| `github.delete_branch` | destructive | L0 L1 | The branch no longer resolves (404). |
+| `github.close_issue` | destructive | L0 L1 | The issue is closed with that reason. |
+
+| Tool | What it does |
+|---|---|
+| `github.get_repo` | Read a repository's settings: visibility, default branch, description. |
+| `github.list_issues` | List issues (and pull requests, flagged) in a repository, newest first, up to 50 a page. |
+| `github.get_issue` | Read one issue: title, body, state and labels. |
+| `github.get_file` | Read a file at a branch, tag or commit. Text up to 256 KiB comes back as is; anything larger or binary as a digest. |
+| `github.list_prs` | List pull requests in a repository, newest first, up to 50 a page. |
+| `github.get_pr` | Read one pull request: title, body, head, base and merge state. |
+| `github.create_issue` | Open an issue. Deedglass appends a hidden marker with the action id to the body. |
+| `github.comment` | Comment on an issue or a pull request. Deedglass appends a hidden marker with the action id. |
+| `github.create_branch` | Create a branch from another branch or a commit (default: the default branch). |
+| `github.create_or_update_file` | Create or replace one text file on a branch in one commit. Send expected_sha to replace an existing file. |
+| `github.create_pr` | Open a pull request from head into base. Deedglass appends a hidden marker with the action id to the body. |
+| `github.merge_pr` | Merge a pull request. expected_head_sha is required: GitHub refuses the merge if the head moved. |
+| `github.delete_branch` | Delete a branch. The repository's default branch is never deleted. |
+| `github.close_issue` | Close an issue as completed or not planned. |
+
+### Credentials
+
+Kind `bearer`:
+
+- `token` (secret): A fine-grained personal access token for the listed repositories. Starts with `github_pat_`.
+
+Kind `fields`:
+
+- `private_key` (secret): A GitHub App's private key (PEM).
+
+### Setup
+
+1. **Create a fine-grained token.** Only the repositories you list, with Contents, Issues and Pull requests read and write. Or install a GitHub App. https://github.com/settings/personal-access-tokens/new
+2. **Create the connector.**
+   `deedglass connector create --config examples/connectors/github.yaml`
+3. **Store the token.**
+   `deedglass connector credentials set github --from-env GITHUB_SANDBOX_TOKEN`
+4. **Test the connection.**
+   `deedglass connector test github`
+
+### What it doesn't do
+
+- Only the repositories in the config. Nothing outside them, including forks.
+- No repository settings, secrets, Actions runs or force pushes.
+- L1 shows GitHub's state, not whether the change was right.
+
+<!-- deedglass:generated end -->
+
 ## Tools
 
 | Tool | Side effect | GitHub call | L1 check |

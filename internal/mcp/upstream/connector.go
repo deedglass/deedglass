@@ -90,10 +90,21 @@ func (t *Type) Info() connector.TypeInfo {
 		Description: "A remote MCP server over Streamable HTTP. Its tools pass through the Gate; its credential stays in the vault and is added only when the Gate opens a session.",
 		Levels:      []string{"L0"},
 		CredentialKinds: []connector.CredentialKind{
-			{Kind: "bearer", Fields: []connector.CredentialField{{Name: "token", Secret: true}}},
-			{Kind: "header", Fields: []connector.CredentialField{{Name: "value", Secret: true}}},
+			{Kind: "bearer", Fields: []connector.CredentialField{{Name: "token", Secret: true, Help: "The server's bearer token."}}},
+			{Kind: "header", Fields: []connector.CredentialField{{Name: "value", Secret: true, Help: "The value of the header the config names."}}},
 		},
-		ConfigSchema: json.RawMessage(rowConfigSchema), DocsURL: "https://docs.deedglass.com/connectors/mcp-http"}
+		ConfigSchema: json.RawMessage(rowConfigSchema), DocsURL: "https://docs.deedglass.com/connectors/mcp-http",
+		Summary: "A remote MCP server's tools, through the Gate.",
+		Status:  "beta", Icon: "plug", Modes: []string{}, ToolsDynamic: true, Tools: []connector.ToolInfo{},
+		Setup: []connector.SetupStep{
+			{Title: "Create the connector", Detail: "The server's URL and how it authenticates.", Command: "deedglass connector create --type mcp_http --name my-mcp --config my-mcp.yaml"},
+			{Title: "Store the credential", Command: "deedglass connector credentials set my-mcp --from-env MCP_TOKEN"},
+			{Title: "Test the connection", Command: "deedglass connector test my-mcp"},
+		},
+		Limits: []string{
+			"Tools come from the server. Their side effect is unknown: their annotations are the server's claim.",
+			"L0 only: Deedglass can't read an MCP server's writes back.",
+		}}
 }
 
 // Validate implements connector.Connector.

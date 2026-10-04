@@ -162,6 +162,19 @@ func SetConnectorHealth(ctx context.Context, tx pgx.Tx, id string, health json.R
 	return err
 }
 
+// DisableConnector turns an active connector off after a safety trip (S30's Stripe breaker): status
+// disabled and health {status: fail, reason}. It reports whether this call changed the row, so the
+// caller seals connector.disabled once.
+func DisableConnector(ctx context.Context, tx pgx.Tx, id, reason string) (bool, error) {
+	tag, err := tx.Exec(ctx, `UPDATE deedglass.connectors SET status = 'disabled',
+	    health = jsonb_build_object('status', 'fail', 'reason', $2::text, 'tested_at', to_jsonb(now()))
+	    WHERE id = $1 AND deleted_at IS NULL AND status <> 'disabled'`, id, reason)
+	if err != nil {
+		return false, err
+	}
+	return tag.RowsAffected() == 1, nil
+}
+
 // SoftDeleteConnector marks a connector deleted; its name is free again.
 func SoftDeleteConnector(ctx context.Context, tx pgx.Tx, id, by string) error {
 	tag, err := tx.Exec(ctx, `UPDATE deedglass.connectors SET deleted_at = pg_catalog.now(), status = 'disabled', updated_by = $2

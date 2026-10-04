@@ -25,10 +25,16 @@ cases:
 
   # Drafts
   - name: writing a draft runs, witnessed at L1
-    input: { tool: gmail.create_draft, args: { to: [customer@example.com], subject: Your refund, body: Hello again. } }
+    input: { tool: gmail.create_draft, args: { to: [customer@example.com], subject: Your refund, body_text: Hello again. } }
     expect: { decision: allow, rule: drafts, verify: L1 }
   - name: editing a draft runs
-    input: { tool: gmail.update_draft, args: { draft_id: r-4482910, body: "Hello again, with the tracking link." } }
+    input: { tool: gmail.update_draft, args: { draft_id: r-4482910, to: [customer@example.com], subject: Your refund, body_text: "Hello again, with the tracking link." } }
+    expect: { decision: allow, rule: drafts, verify: L1 }
+  - name: a draft to someone outside the org is still only a draft, and runs
+    input:
+      tool: gmail.create_draft
+      args: { to: [priya@acme.com, bob@globex.test], subject: "Re: Order 4121", body_text: On its way. }
+      request: { email: { enriched: true, recipient_count: 2, domains: [acme.com, globex.test], external_domains: [globex.test], has_external: true, is_reply: true } }
     expect: { decision: allow, rule: drafts, verify: L1 }
 
   # Reads
@@ -40,6 +46,16 @@ cases:
     expect: { decision: allow, rule: reads }
   - name: searching mail runs freely
     input: { tool: gmail.search_messages, args: { q: "from:billing@example.com newer_than:7d" } }
+    expect: { decision: allow, rule: reads }
+
+  - name: reading a draft runs freely
+    input: { tool: gmail.get_draft, args: { draft_id: r-4482910 } }
+    expect: { decision: allow, rule: reads }
+  - name: listing drafts runs freely
+    input: { tool: gmail.list_drafts, args: { limit: 10 } }
+    expect: { decision: allow, rule: reads }
+  - name: reading a thread runs freely
+    input: { tool: gmail.get_thread, args: { thread_id: 18c2f0a9b7e1d3c4 } }
     expect: { decision: allow, rule: reads }
 
   # Deletes and everything else

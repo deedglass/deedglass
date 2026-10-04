@@ -149,6 +149,7 @@ func TestOrgIsolation(t *testing.T) {
 		"/auth/assets/{file}":                                   nil, // public static file
 		"/approve/assets/{file}":                                nil, // public static file (S22's approval page)
 		"/app/{path...}":                                        nil, // S24's Console pages: public static files with no org data
+		"/v1/connector-types/{type}":                            nil, // S30: the deployment-wide catalog; a type name, no org data
 	}
 	raw, err := os.ReadFile(filepath.Join(e.Root, "api", "openapi.yaml"))
 	if err != nil {

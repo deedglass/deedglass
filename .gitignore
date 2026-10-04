@@ -26,6 +26,8 @@ web/verify/dist/
 examples/demo/.demo-keys
 examples/demo/.demo-keys.tmp
 examples/demo/.demo/
+# S30: deedglass dev stripe-fixtures writes the sandbox ids here (mode 0600)
+examples/demo/.stripe-fixtures.json
 # the Console (web/ → make web-build): the build is embedded from internal/console/dist; only .keep is committed
 internal/console/dist/*
 !internal/console/dist/.keep

@@ -1,0 +1,14 @@
+# The Gmail connector (S30), drafts only. Create it, then authorize it with your Desktop OAuth client:
+#   deedglass connector create --config examples/connectors/gmail.yaml
+#   deedglass connector gmail authorize gmail --client-file ~/.deedglass-secrets/client_secret.json
+#   deedglass connector test gmail
+# No tool sends: people send the drafts from Gmail.
+type: gmail
+name: gmail
+description: Support drafts in the Acme support mailbox.
+config:
+  auth: oauth                # oauth | service_account (Google Workspace)
+  mailbox: me                # service_account: the user to act as, like ops@acme.com
+  internal_domains: [acme.com]
+  max_recipients: 20
+  allow_bcc: false

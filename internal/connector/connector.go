@@ -15,17 +15,21 @@ import (
 
 // Env is what a connector may know about where it runs.
 type Env struct {
-	Name   string         // "dev" or "prod"
-	Egress *egress.Policy // the only outbound path
+	Name    string         // "dev" or "prod"
+	Egress  *egress.Policy // the only outbound path
+	Breaker Breaker        // S30: disables a connector after a safety trip; nil in tests that don't need it
 }
 
 // Dev reports whether this is a dev deployment.
 func (e Env) Dev() bool { return e.Name == egress.EnvDev }
 
-// CredentialField is one field of a credential kind.
+// CredentialField is one field of a credential kind. Help and PrefixHint are S30's catalog
+// additions for S26's forms ("A restricted key from your Stripe sandbox.", "rk_test_").
 type CredentialField struct {
-	Name   string `json:"name"`
-	Secret bool   `json:"secret"`
+	Name       string `json:"name"`
+	Secret     bool   `json:"secret"`
+	Help       string `json:"help,omitempty"`
+	PrefixHint string `json:"prefix_hint,omitempty"`
 }
 
 // CredentialKind is a kind a connector type accepts, with its fields (S26 builds forms from it).
@@ -35,6 +39,9 @@ type CredentialKind struct {
 }
 
 // TypeInfo describes a connector type: the connector_type object of GET /v1/connector-types.
+// S30 (TypeInfo v2) adds the catalog fields, additively: S16's fields keep their names and
+// meaning, so S26's forms keep working. The catalog is the one source for the Console's forms, the
+// docs tables (gendocs), the CLI and the SDKs.
 type TypeInfo struct {
 	Object          string           `json:"object"` // "connector_type"
 	Type            string           `json:"type"`
@@ -44,6 +51,38 @@ type TypeInfo struct {
 	CredentialKinds []CredentialKind `json:"credential_kinds"`
 	ConfigSchema    json.RawMessage  `json:"config_schema"`
 	DocsURL         string           `json:"docs_url"`
+
+	// S30.
+	Summary      string      `json:"summary"`       // one sentence: what it does
+	Status       string      `json:"status"`        // stable | beta | dev
+	Icon         string      `json:"icon"`          // a Lucide icon name
+	Modes        []string    `json:"modes"`         // sandbox_only, drafts_only, dev_only; [] when none
+	Setup        []SetupStep `json:"setup"`         // the steps to connect it
+	Limits       []string    `json:"limits"`        // what it doesn't do, honestly
+	ToolsDynamic bool        `json:"tools_dynamic"` // rest, mcp_http: tools come from config or the server
+	Tools        []ToolInfo  `json:"tools"`         // the fixed tools; [] when ToolsDynamic
+}
+
+// SetupStep is one step of connecting a type.
+type SetupStep struct {
+	Title   string `json:"title"`
+	Detail  string `json:"detail,omitempty"`
+	Command string `json:"command,omitempty"`
+	URL     string `json:"url,omitempty"`
+}
+
+// ToolInfo is a tool in the catalog: the tool object's shape plus what the Witness checks.
+type ToolInfo struct {
+	Object        string          `json:"object"` // "tool"
+	Name          string          `json:"name"`   // qualified with the type: "stripe.create_refund"
+	Title         string          `json:"title"`
+	Description   string          `json:"description"`
+	SideEffect    SideEffect      `json:"side_effect"`
+	Idempotent    bool            `json:"idempotent"`
+	Levels        []string        `json:"levels"`
+	ReadBack      string          `json:"read_back"` // the L1 sentence; "" when the tool isn't read back
+	RequiresScope string          `json:"requires_scope,omitempty"`
+	InputSchema   json.RawMessage `json:"input_schema"`
 }
 
 // FieldError is one refused config field: param is its path ("config.tools[1].path").
@@ -124,6 +163,34 @@ type Connector interface {
 // Enricher adds facts to the policy input before the decision (REST: request.http).
 type Enricher interface {
 	Enrich(ctx context.Context, inst *Instance, t ToolSpec, args json.RawMessage) (map[string]any, error)
+}
+
+// ArgsChecker is a type with its own argument rules, checked before the schema so its message
+// can say exactly what to send (S30: Stripe's "Send amount as an integer in minor units"). It
+// returns a *Error (validation_failed) or nil. Nothing is sent when it refuses.
+type ArgsChecker interface {
+	CheckArgs(t ToolSpec, args json.RawMessage) error
+}
+
+// CredentialRefusal is a credential value a type refuses before it is stored (S30: a live Stripe
+// key). Message never contains the value; it may name the value's first 8 characters at most.
+type CredentialRefusal struct {
+	Code    string // "stripe_live_key_refused", or "" for validation_failed
+	Param   string // "secret.token"
+	Message string
+}
+
+// CredentialChecker is a type that refuses some credential values on PUT …/credentials, before
+// encryption, so a refused value is never stored, logged or echoed.
+type CredentialChecker interface {
+	CheckCredential(kind string, fields map[string]string) *CredentialRefusal
+}
+
+// Breaker disables a connector after a safety trip (S30: Stripe answered in live mode). The serve
+// wiring implements it over the store and the Ledger: the connector goes to status disabled with
+// health.reason, and the admin deed connector.disabled is sealed. It must be safe to call twice.
+type Breaker interface {
+	Trip(ctx context.Context, inst *Instance, reason, detail string) error
 }
 
 // Observation is what a read-back saw (S19). Body is the response body as JSON (REST) or the

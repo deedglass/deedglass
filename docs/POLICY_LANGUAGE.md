@@ -518,6 +518,38 @@ The GitHub and Slack connectors fill these before the decision, from the call's 
 
 In policy test cases, set them under `request`: `input: { tool: github.create_pr, args: {…}, request: { github: { enriched: true, base: main, protected_branch: true } } }`.
 
+#### `request.stripe` and `request.email` (S30)
+
+The Stripe connector reads the charge (or the PaymentIntent's latest charge, or the subscription)
+from Stripe before the decision, cached 30 seconds per object; the Gmail connector reads the
+recipients from the arguments and the connector's `internal_domains`, with no call. Amounts are
+minor units of `request.stripe.currency`, from Stripe, never from the agent's arguments. When a
+read fails, `enriched` is `false`: the starter `stripe-refunds` sends those refunds to a person.
+
+| Field | Type | Meaning |
+|---|---|---|
+| `request.stripe.charge`, `payment_intent`, `customer` | string | ids from Stripe |
+| `request.stripe.currency` | string | the charge's currency, lowercase ISO 4217 |
+| `request.stripe.charge_amount`, `amount_refunded`, `refundable` | int | minor units; `refundable = charge_amount − amount_refunded` |
+| `request.stripe.disputed` | bool | the charge is disputed |
+| `request.stripe.charge_age_days` | int | whole days since the charge |
+| `request.stripe.amount_display` | string | `args.amount` for people, like `$120.00` or `¥5,000` |
+| `request.stripe.subscription`, `status`, `current_period_end`, `amount_per_period`, `interval` | string, string, int (Unix seconds), int, string | for `stripe.cancel_subscription` |
+| `request.stripe.enriched` | bool | Stripe was read |
+| `request.email.recipient_count` | int | to + cc + bcc |
+| `request.email.domains`, `external_domains` | list(string) | lowercase; external means not in the connector's `internal_domains` |
+| `request.email.has_external`, `has_bcc`, `is_reply` | bool | |
+| `request.email.enriched` | bool | the recipients could be read |
+
+A budget's `measure` sees the same variables as `when`, `request` included (S30 confirmed it with
+the starter's `refunds-per-day`):
+
+```yaml
+measure: 'request.stripe.enriched && request.stripe.currency == "usd" && has(args.amount) && type(args.amount) == int ? args.amount : 0'
+```
+
+In policy test cases: `request: { stripe: { enriched: true, currency: usd, refundable: 14900 } }`.
+
 #### The `anomaly` variable
 
 `anomaly` is what Insights' anomaly detection says about the acting agent at the decision instant ([INSIGHTS.md](INSIGHTS.md)).

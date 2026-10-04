@@ -296,6 +296,7 @@ func (p *Pipeline) Submit(ctx context.Context, pr principal, req ActionRequest) 
 			n.ConnectorType = ctype
 			e := enrichAll(ctx, ex, spec, n.Args)
 			n.HTTP, n.GitHub, n.Slack, n.DefaultSchema, n.RaisedSideEffect = e.HTTP, e.GitHub, e.Slack, e.DefaultSchema, e.Side
+			n.Stripe, n.Email = e.Stripe, e.Email
 		}
 	}
 	// The active policies, before any transaction: a cold load reads Postgres on its own. The
@@ -749,7 +750,7 @@ func buildInput(org ids.OrgID, agent ids.AgentID, subj store.GateSubject, n *Nor
 			Type: ctype, Op: n.ToolName}, DefaultSchema: n.DefaultSchema},
 		Args: n.Args,
 		Request: policy.RequestFacts{Mode: string(n.Mode), Bytes: n.ArgsBytes, IntentSigned: ir.Signed, Digest: n.Digest, HTTP: n.HTTP,
-			GitHub: n.GitHub, Slack: n.Slack},
+			GitHub: n.GitHub, Slack: n.Slack, Stripe: n.Stripe, Email: n.Email},
 		Time: now.UTC(),
 	}
 	return in, loc, nil
@@ -769,6 +770,8 @@ type enriched struct {
 	HTTP          policy.HTTPFacts
 	GitHub        policy.GitHubFacts // S29
 	Slack         policy.SlackFacts  // S29
+	Stripe        policy.StripeFacts // S30
+	Email         policy.EmailFacts  // S30
 	DefaultSchema string
 	Side          string
 }
@@ -798,6 +801,16 @@ func enrichAll(ctx context.Context, ex Executor, spec connector.ToolSpec, args j
 	if s, ok := m["slack"]; ok {
 		if b, err := json.Marshal(s); err == nil && json.Unmarshal(b, &e.Slack) != nil {
 			e.Slack = policy.SlackFacts{}
+		}
+	}
+	if s, ok := m["stripe"]; ok {
+		if b, err := json.Marshal(s); err == nil && json.Unmarshal(b, &e.Stripe) != nil {
+			e.Stripe = policy.StripeFacts{}
+		}
+	}
+	if s, ok := m["email"]; ok {
+		if b, err := json.Marshal(s); err == nil && json.Unmarshal(b, &e.Email) != nil {
+			e.Email = policy.EmailFacts{}
 		}
 	}
 	return e

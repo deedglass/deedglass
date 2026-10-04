@@ -54,6 +54,9 @@ type Normalized struct {
 	// GitHub and Slack are those connectors' facts (S29: request.github, request.slack).
 	GitHub policy.GitHubFacts
 	Slack  policy.SlackFacts
+	// Stripe and Email are S30's request.stripe and request.email.
+	Stripe policy.StripeFacts
+	Email  policy.EmailFacts
 	// DefaultSchema and RaisedSideEffect come from the Postgres connector's enrichment (S17): the
 	// schema unqualified names resolve to, and a per-call side effect above the tool's declared one.
 	DefaultSchema    string

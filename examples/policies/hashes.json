@@ -4,5 +4,5 @@
   "gmail-drafts-only": "sha256:6c59276a5b51ff126f6a65334d66486600f1f4502e7b69a6342929a90b573d28",
   "postgres-safe": "sha256:01aeae9dbb518cf6d5ead7ed0b042bc0ed4700856c123694954de3b8369a76f6",
   "slack-post-with-approval": "sha256:cc1239d7b83a84332d209cb5974f3d88fcaebf7048ffce9ab65ae5d55beacb1a",
-  "stripe-refunds": "sha256:3fb1bc32481d615a8453ba4e36a61a59bc96b11247c80e59e5a76034504d4c7f"
+  "stripe-refunds": "sha256:0f8cfebdd4797577b7f1c8f50d5a749b5fcd1f863cb81eada4bd0d2c7ab98948"
 }

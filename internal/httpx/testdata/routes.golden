@@ -93,7 +93,7 @@ planned    DELETE  /v1/connectors/{id}/credentials                        sessio
 planned    POST    /v1/connectors/{id}/test                               session_or_key  admin            S16    IdemNever: 10 per minute per connector
 planned    POST    /v1/connectors/{id}/initialized                        session_or_key  admin            S17    postgres only: seals connector.postgres_initialized
 planned    GET     /v1/connector-types                                    session_or_key  viewer           S16
-planned    GET     /v1/connector-types/{type}                             session_or_key  admin            S30
+planned    GET     /v1/connector-types/{type}                             session_or_key  viewer           S30    keys: admin; ETag, If-None-Match → 304
 planned    GET     /v1/connectors/{id}/decoder                            session_or_key  viewer           S20    keys: admin; ?recent=0..50
 planned    DELETE  /v1/connectors/{id}/decoder                            session_or_key  admin            S20    body {confirm: <name>}; seals decoder.slot_dropped
 planned    GET     /v1/events                                             session_or_key  viewer           S24    SSE; agent keys need actions:read and see their own agent's events only

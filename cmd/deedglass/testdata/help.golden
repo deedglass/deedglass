@@ -35,7 +35,7 @@ Deeds
 Connectors
   connector           Connect tools                                      create · list · show · test · types · credentials
   connector postgres  Prepare a Postgres database                        init · check
-  connector gmail     Authorize the Gmail connector               soon   authorize
+  connector gmail     Authorize the Gmail connector                      authorize
   decoder             Inspect Postgres change readers                    status · drop
   slack manifest      Print the Slack app manifest
 MCP

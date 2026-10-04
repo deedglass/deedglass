@@ -17,6 +17,7 @@ import (
 
 	"github.com/deedglass/deedglass/cmd/deedglass/internal/ui"
 	"github.com/deedglass/deedglass/internal/connector"
+	"github.com/deedglass/deedglass/internal/connector/stripe"
 	"github.com/deedglass/deedglass/internal/connectorapi"
 	"github.com/deedglass/deedglass/internal/httpx"
 	"github.com/deedglass/deedglass/internal/vault"
@@ -261,33 +262,6 @@ func runConnectorShow(ctx context.Context, e *Env, args []string) error {
 	return nil
 }
 
-func runConnectorTypes(ctx context.Context, e *Env, args []string) error {
-	if len(args) > 0 {
-		return usageErr(fmt.Errorf("deedglass connector types takes no arguments (got %q)", args[0]), "deedglass connector types [--json]")
-	}
-	c, err := apiClient(e)
-	if err != nil {
-		return err
-	}
-	var l httpx.List[connector.TypeInfo]
-	if _, err := c.Do(ctx, "GET", "/v1/connector-types", nil, &l); err != nil {
-		return apiErr(e, c, err)
-	}
-	if e.Globals.JSON {
-		return writeJSON(e, l)
-	}
-	rows := [][]string{{"TYPE", "TITLE", "LEVELS", "CREDENTIALS"}}
-	for _, t := range l.Data {
-		kinds := []string{}
-		for _, k := range t.CredentialKinds {
-			kinds = append(kinds, k.Kind)
-		}
-		rows = append(rows, []string{t.Type, t.Title, strings.Join(t.Levels, " "), strings.Join(kinds, ", ")})
-	}
-	printTable(e, rows, headerDim(e))
-	return nil
-}
-
 // --- test ---
 
 func runConnectorTest(ctx context.Context, e *Env, args []string) error {
@@ -446,6 +420,21 @@ func runConnectorCredentialsSet(ctx context.Context, e *Env, args []string) erro
 		return usageErr(errors.New("pass exactly one of --from-env, --stdin or --field"),
 			"deedglass connector credentials set "+ref+" --from-env "+connector.EnvVarFor(ref)+". Deedglass never reads secrets from flags.")
 	}
+	if v.fromEnv != "" || len(v.fields) > 0 {
+		// S30: a live Stripe key is refused before Deedglass talks to any server, whatever the
+		// connector, so it never leaves this machine.
+		vals := []string{e.Getenv(v.fromEnv)}
+		for _, f := range v.fields {
+			if _, src, ok := strings.Cut(f, "="); ok && strings.HasPrefix(src, "env:") {
+				vals = append(vals, e.Getenv(strings.TrimPrefix(src, "env:")))
+			}
+		}
+		for _, val := range vals {
+			if code, _ := stripe.CheckKey(val); code == connector.CodeStripeLiveKeyRefused {
+				return stripeKeyRefusal(ref, val)
+			}
+		}
+	}
 	c, err := apiClient(e)
 	if err != nil {
 		return err
@@ -530,6 +519,12 @@ func runConnectorCredentialsSet(ctx context.Context, e *Env, args []string) erro
 				return usageErr(fmt.Errorf("--field %s takes env:, file: or stdin, never a value", k), "Deedglass never reads secrets from flags.")
 			}
 			secret[k] = val
+		}
+	}
+	if x.Type == stripe.Type {
+		// S30: a key that isn't a Stripe sandbox key never leaves this machine.
+		if err := stripeKeyRefusal(x.Name, secret[stripe.FieldToken]); err != nil {
+			return err
 		}
 	}
 	var m vault.Meta

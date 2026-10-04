@@ -46,14 +46,27 @@ const configSchema = `{"type":"object","required":["base_url","allowed_methods",
 func (c *Connector) Info() connector.TypeInfo {
 	return connector.TypeInfo{Object: "connector_type", Type: Type, Title: "REST API",
 		Description: "Any JSON API as governed tools: one method on one templated path per tool, with the credential added only when the Gate runs a call.",
-		Levels:      []string{"L0"},
+		Levels:      []string{"L0", "L1"},
 		CredentialKinds: []connector.CredentialKind{
 			{Kind: "bearer", Fields: []connector.CredentialField{{Name: "token", Secret: true}}},
 			{Kind: "header", Fields: []connector.CredentialField{{Name: "value", Secret: true}}},
 			{Kind: "basic", Fields: []connector.CredentialField{{Name: "username", Secret: false}, {Name: "password", Secret: true}}},
 			{Kind: "query", Fields: []connector.CredentialField{{Name: "value", Secret: true}}},
 		},
-		ConfigSchema: json.RawMessage(configSchema), DocsURL: "https://docs.deedglass.com/connectors/rest"}
+		ConfigSchema: json.RawMessage(configSchema), DocsURL: "https://docs.deedglass.com/connectors/rest",
+		Summary: "Any JSON API as governed tools, one method and path per tool.",
+		Status:  "stable", Icon: "globe", Modes: []string{}, ToolsDynamic: true, Tools: []connector.ToolInfo{},
+		Setup: []connector.SetupStep{
+			{Title: "Describe the tools", Detail: "One method on one templated path per tool, with an argument schema and, for writes, a read-back.", URL: "https://docs.deedglass.com/connectors/rest"},
+			{Title: "Create the connector", Command: "deedglass connector create --config examples/connectors/orders.yaml"},
+			{Title: "Store the credential", Command: "deedglass connector credentials set orders --from-env ORDERS_TOKEN"},
+			{Title: "Test the connection", Command: "deedglass connector test orders"},
+		},
+		Limits: []string{
+			"Tools come from your config: Deedglass knows only what you describe.",
+			"L1 needs a read tool and a read-back in the config; without one, writes stay at L0.",
+			"JSON only. No streaming, uploads or redirects to other hosts.",
+		}}
 }
 
 // state is an instance's parsed config and its clients.

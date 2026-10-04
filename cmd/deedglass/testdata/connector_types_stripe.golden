@@ -1,0 +1,35 @@
+exit 0
+--- stdout
+stripe · Stripe · L0 L1 · beta · sandbox only
+  Refunds, invoice items and subscriptions in a Stripe sandbox.
+
+TOOL                              SIDE EFFECT   LEVELS   READ-BACK
+stripe.get_customer               read          L0
+stripe.list_charges               read          L0
+stripe.get_charge                 read          L0
+stripe.get_payment_intent         read          L0
+stripe.list_refunds               read          L0
+stripe.get_subscription           read          L0
+stripe.create_refund              write         L0 L1    Stripe shows the refund for the same amount and currency on the same charge, status succeeded or pending.
+stripe.create_invoice_item        write         L0 L1    Stripe shows the invoice item with the same amount, currency and customer.
+stripe.update_customer_metadata   write         L0 L1    Every key has the requested value, and deleted keys are gone.
+stripe.cancel_subscription        destructive   L0 L1    Stripe shows the subscription canceled, or set to cancel at the period end.
+
+Setup
+  1. Create a restricted key
+  2. Create the connector
+     deedglass connector create --config examples/connectors/stripe.yaml
+  3. Store the key
+     deedglass connector credentials set stripe --from-env STRIPE_TEST_KEY
+  4. Test the connection
+     deedglass connector test stripe
+
+What it doesn't do
+  · Sandbox only. Live keys are refused, and a live-mode answer disables the connector.
+  · No payouts, transfers or payment creation.
+  · No Stripe Connect accounts.
+  · L1 shows Stripe's record, not whether the refund was right.
+  · A refund Stripe holds for its own approval is UNVERIFIABLE: Deedglass can't see Stripe's reviewers.
+
+https://docs.deedglass.com/connectors/stripe
+--- stderr

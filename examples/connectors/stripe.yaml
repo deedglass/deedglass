@@ -1,0 +1,16 @@
+# The Stripe connector (S30), sandbox only. Create it, store a restricted rk_test_ key, test it:
+#   deedglass connector create --config examples/connectors/stripe.yaml
+#   deedglass connector credentials set stripe --from-env STRIPE_TEST_KEY
+#   deedglass connector test stripe
+# Live keys are refused, and there is no setting that allows live mode.
+type: stripe
+name: stripe
+description: Refunds and subscriptions in the Acme Stripe sandbox.
+config:
+  api_version: "2026-08-26.dahlia"   # sent as Stripe-Version on every request
+  refund_limits:                     # the most one refund may be, in minor units; other currencies are refused
+    usd: 100000                      # $1,000.00
+    eur: 100000                      # €1,000.00
+    inr: 5000000                     # ₹50,000.00
+    jpy: 150000                      # ¥150,000 (zero-decimal)
+  refund_reasons: [duplicate, fraudulent, requested_by_customer]

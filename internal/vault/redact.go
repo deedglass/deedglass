@@ -211,11 +211,16 @@ var scrubRules = []scrubRule{
 	{regexp.MustCompile(`\bxapp-[A-Za-z0-9-]{10,}`), RedactedText, "xapp-"},
 	{regexp.MustCompile(`-----BEGIN (?:[A-Z0-9]+ )*PRIVATE KEY-----(?:[\s\S]*?-----END (?:[A-Z0-9]+ )*PRIVATE KEY-----|[\s\S]*)`), RedactedText, "PRIVATE KEY-----"},
 	{regexp.MustCompile(`\beyJ[A-Za-z0-9_-]{8,}\.eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{16,}`), RedactedText, "eyJ"},
+	// S30: Google OAuth access tokens, refresh tokens and client secrets (the Gmail connector).
+	{regexp.MustCompile(`\bya29\.[A-Za-z0-9_-]{16,}`), RedactedText, "ya29."},
+	{regexp.MustCompile(`\b1//0[A-Za-z0-9_-]{16,}`), RedactedText, "1//"},
+	{regexp.MustCompile(`\bGOCSPX-[A-Za-z0-9_-]{16,}`), RedactedText, "GOCSPX-"},
 }
 
 // Scrub removes secrets by their shape: Deedglass API keys, Stripe secret and restricted keys,
 // bearer tokens, URL passwords, AWS access key ids, GitHub tokens (ghs_ App installation tokens
-// included), Slack tokens (xapp- since S29), PEM private keys and compact JWTs.
+// included), Slack tokens (xapp- since S29), PEM private keys, compact JWTs, and Google OAuth
+// access tokens, refresh tokens and client secrets (S30).
 func Scrub(s string) string {
 	for _, r := range scrubRules {
 		if r.hint != "" && !strings.Contains(s, r.hint) {

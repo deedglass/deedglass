@@ -57,6 +57,12 @@ const (
 	// roles_created. Never the plan's SQL, a password or a verifier.
 	AdminConnectorPostgresInitialized = "connector.postgres_initialized"
 
+	// S30: a connector's safety breaker disabled it (Stripe answered in live mode, or a stored key
+	// isn't a sandbox key). Actor {system, deedglass}; target {connector, con_…}; data: type,
+	// connector (the name), reason (livemode_detected, live_key_stored). The admin detail with
+	// Stripe's request id goes in admin.reason; never a key or a prefix longer than 8 characters.
+	AdminConnectorDisabled = "connector.disabled"
+
 	// S20: the decoder created or dropped a connector's replication slot. Target {connector, con_…};
 	// data: connector (the name), slot, system_id, reason (created: start; dropped: dropped,
 	// connector_deleted, not_witnessed). A new slot is a new baseline.
@@ -105,7 +111,7 @@ var AdminActions = []string{
 	AdminAgentIntentKeyAdded, AdminAgentIntentKeyRemoved, AdminAgentIntentMode,
 	AdminPolicyActivated, AdminPolicyDeactivated,
 	AdminConnectorCreated, AdminConnectorUpdated, AdminConnectorDeleted, AdminConnectorCredentialsUpdated,
-	AdminConnectorCredentialsRemoved, AdminVaultRotated, AdminConnectorPostgresInitialized,
+	AdminConnectorCredentialsRemoved, AdminVaultRotated, AdminConnectorPostgresInitialized, AdminConnectorDisabled,
 	AdminDecoderSlotCreated, AdminDecoderSlotDropped,
 	AdminApprovalCountersigned, AdminApprovalDecided, AdminWebhookCreated, AdminWebhookDeleted, AdminWebhookDisabled,
 	AdminAnomalyResolved, AdminInsightsSettingsChanged,
