@@ -60,7 +60,7 @@ var (
 	sessionKeys     = []string{"ref"}
 	requestKeys     = []string{"mode", "intent_signed", "bytes", "digest", "http"}
 	httpKeys        = []string{"method", "path", "host"}
-	anomalyKeys     = []string{"active"}
+	anomalyKeys     = []string{"active", "kinds", "severity"}
 	usageKeys       = []string{"calls_minute", "calls_hour", "calls_today", "spend_today", "currency", "budgets"}
 	budgetIDRE      = regexp.MustCompile(`^[a-z0-9][a-z0-9_-]{0,63}$`)
 )
@@ -373,6 +373,27 @@ func BuildInput(v any) (Input, *InputProblem) {
 		}
 		if p := boolean(am, "active", "anomaly.active", &in.Anomaly.Active); p != nil {
 			return in, p
+		}
+		if k, set := am["kinds"]; set {
+			list, ok := k.([]any)
+			if !ok {
+				return in, wrongType("anomaly.kinds", "a list of kinds", k)
+			}
+			for i, x := range list {
+				s, ok := x.(string)
+				if !ok || s == "" {
+					return in, wrongType(fmt.Sprintf("anomaly.kinds[%d]", i), "a kind like volume_spike", x)
+				}
+				in.Anomaly.Kinds = append(in.Anomaly.Kinds, s)
+			}
+		}
+		if p := str(am, "severity", "anomaly.severity", &in.Anomaly.Severity); p != nil {
+			return in, p
+		}
+		switch in.Anomaly.Severity {
+		case "", "info", "warn", "high":
+		default:
+			return in, &InputProblem{Path: "anomaly.severity", Message: "anomaly.severity is info, warn or high."}
 		}
 	}
 	// time

@@ -45,6 +45,8 @@ type Env struct {
 type Options struct {
 	NoMigrate bool // leave the database empty (runner tests)
 	MaxConns  int32
+	// AsyncCommit: synchronous_commit = off on the pool (bulk fixtures such as S27's simulator).
+	AsyncCommit bool
 }
 
 // New creates a database and, unless o.NoMigrate, applies every migration as the migrator.
@@ -117,7 +119,7 @@ func New(t testing.TB, o Options) *Env {
 			t.Fatalf("migrate up: %v", err)
 		}
 	}
-	e.DB, err = store.Open(ctx, config.NewSecret(e.AppURL), store.Options{MaxConns: o.MaxConns})
+	e.DB, err = store.Open(ctx, config.NewSecret(e.AppURL), store.Options{MaxConns: o.MaxConns, AsyncCommit: o.AsyncCommit})
 	if err != nil {
 		t.Fatalf("store.Open: %v", err)
 	}

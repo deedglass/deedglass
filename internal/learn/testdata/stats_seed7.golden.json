@@ -1,0 +1,596 @@
+{
+  "budgets": [
+    {
+      "agent": null,
+      "budget": "refunds-per-day",
+      "days": [
+        {
+          "date": "2026-09-27",
+          "used": 140354,
+          "utilisation": 0.3509
+        },
+        {
+          "date": "2026-09-28",
+          "used": 380000,
+          "utilisation": 0.95
+        },
+        {
+          "date": "2026-09-29",
+          "used": 177710,
+          "utilisation": 0.4443
+        },
+        {
+          "date": "2026-09-30",
+          "used": 380000,
+          "utilisation": 0.95
+        },
+        {
+          "date": "2026-10-01",
+          "used": 219559,
+          "utilisation": 0.5489
+        },
+        {
+          "date": "2026-10-02",
+          "used": 380000,
+          "utilisation": 0.95
+        },
+        {
+          "date": "2026-10-03",
+          "used": 162097,
+          "utilisation": 0.4052
+        },
+        {
+          "date": "2026-10-04",
+          "used": 39759,
+          "utilisation": 0.0994
+        }
+      ],
+      "days_over_80": 3,
+      "kind": "policy",
+      "limit": {
+        "amount": 400000,
+        "currency": "usd"
+      },
+      "max_utilisation": 0.95
+    }
+  ],
+  "by": "rule",
+  "empty": null,
+  "filters": {
+    "agent": null,
+    "tool": null
+  },
+  "groups": [
+    {
+      "actions": 3345,
+      "approval": {
+        "approved": 0,
+        "cancelled": 0,
+        "denied": 0,
+        "expired": 0,
+        "median_seconds": null,
+        "p95_seconds": null,
+        "pending": 0,
+        "rate": null,
+        "requested": 0
+      },
+      "cost": [],
+      "decisions": {
+        "allow": 3345,
+        "deny": 0,
+        "require_approval": 0
+      },
+      "deny_rate": 0,
+      "executed": 3345,
+      "key": {
+        "rule_id": "allow-db-reads"
+      },
+      "latency_ms": {
+        "p50": 41,
+        "p95": 89
+      },
+      "levels": {
+        "L0": 3125,
+        "L1": 146,
+        "L2": 60
+      },
+      "mismatch_rate": 0,
+      "unverifiable_rate": 0.0009,
+      "verdicts": {
+        "MISMATCH": 0,
+        "UNVERIFIABLE": 3,
+        "VERIFIED": 3328,
+        "none": 14
+      },
+      "versions": [
+        1
+      ]
+    },
+    {
+      "actions": 793,
+      "approval": {
+        "approved": 0,
+        "cancelled": 0,
+        "denied": 0,
+        "expired": 0,
+        "median_seconds": null,
+        "p95_seconds": null,
+        "pending": 0,
+        "rate": null,
+        "requested": 0
+      },
+      "cost": [],
+      "decisions": {
+        "allow": 793,
+        "deny": 0,
+        "require_approval": 0
+      },
+      "deny_rate": 0,
+      "executed": 793,
+      "key": {
+        "rule_id": "allow-gmail-drafts"
+      },
+      "latency_ms": {
+        "p50": 256,
+        "p95": 594
+      },
+      "levels": {
+        "L0": 239,
+        "L1": 381,
+        "L2": 155
+      },
+      "mismatch_rate": 0,
+      "unverifiable_rate": 0.0303,
+      "verdicts": {
+        "MISMATCH": 0,
+        "UNVERIFIABLE": 24,
+        "VERIFIED": 751,
+        "none": 18
+      },
+      "versions": [
+        1
+      ]
+    },
+    {
+      "actions": 648,
+      "approval": {
+        "approved": 0,
+        "cancelled": 0,
+        "denied": 0,
+        "expired": 0,
+        "median_seconds": null,
+        "p95_seconds": null,
+        "pending": 0,
+        "rate": null,
+        "requested": 0
+      },
+      "cost": [
+        {
+          "currency": "usd",
+          "p50": 2211,
+          "p95": 7837,
+          "total": 1795727
+        }
+      ],
+      "decisions": {
+        "allow": 648,
+        "deny": 0,
+        "require_approval": 0
+      },
+      "deny_rate": 0,
+      "executed": 648,
+      "key": {
+        "rule_id": "allow-refunds"
+      },
+      "latency_ms": {
+        "p50": 312,
+        "p95": 744
+      },
+      "levels": {
+        "L0": 216,
+        "L1": 278,
+        "L2": 134
+      },
+      "mismatch_rate": 0,
+      "unverifiable_rate": 0.0231,
+      "verdicts": {
+        "MISMATCH": 0,
+        "UNVERIFIABLE": 15,
+        "VERIFIED": 613,
+        "none": 20
+      },
+      "versions": [
+        1
+      ]
+    },
+    {
+      "actions": 411,
+      "approval": {
+        "approved": 397,
+        "cancelled": 0,
+        "denied": 1,
+        "expired": 5,
+        "median_seconds": 1123,
+        "p95_seconds": 6578,
+        "pending": 8,
+        "rate": 0.9975,
+        "requested": 411
+      },
+      "cost": [],
+      "decisions": {
+        "allow": 0,
+        "deny": 0,
+        "require_approval": 411
+      },
+      "deny_rate": 0,
+      "executed": 397,
+      "key": {
+        "rule_id": "approve-order-updates"
+      },
+      "latency_ms": {
+        "p50": 40,
+        "p95": 88
+      },
+      "levels": {
+        "L0": 397,
+        "L1": 0,
+        "L2": 0
+      },
+      "mismatch_rate": 0,
+      "unverifiable_rate": 0,
+      "verdicts": {
+        "MISMATCH": 0,
+        "UNVERIFIABLE": 0,
+        "VERIFIED": 397,
+        "none": 14
+      },
+      "versions": [
+        1
+      ]
+    },
+    {
+      "actions": 363,
+      "approval": {
+        "approved": 0,
+        "cancelled": 0,
+        "denied": 0,
+        "expired": 0,
+        "median_seconds": null,
+        "p95_seconds": null,
+        "pending": 0,
+        "rate": null,
+        "requested": 0
+      },
+      "cost": [],
+      "decisions": {
+        "allow": 363,
+        "deny": 0,
+        "require_approval": 0
+      },
+      "deny_rate": 0,
+      "executed": 363,
+      "key": {
+        "rule_id": "allow-slack-posts"
+      },
+      "latency_ms": {
+        "p50": 181,
+        "p95": 417
+      },
+      "levels": {
+        "L0": 363,
+        "L1": 0,
+        "L2": 0
+      },
+      "mismatch_rate": 0,
+      "unverifiable_rate": 0,
+      "verdicts": {
+        "MISMATCH": 0,
+        "UNVERIFIABLE": 0,
+        "VERIFIED": 363,
+        "none": 0
+      },
+      "versions": [
+        1
+      ]
+    },
+    {
+      "actions": 180,
+      "approval": {
+        "approved": 0,
+        "cancelled": 0,
+        "denied": 0,
+        "expired": 0,
+        "median_seconds": null,
+        "p95_seconds": null,
+        "pending": 0,
+        "rate": null,
+        "requested": 0
+      },
+      "cost": [],
+      "decisions": {
+        "allow": 180,
+        "deny": 0,
+        "require_approval": 0
+      },
+      "deny_rate": 0,
+      "executed": 180,
+      "key": {
+        "rule_id": "allow-db-writes"
+      },
+      "latency_ms": {
+        "p50": 39,
+        "p95": 82
+      },
+      "levels": {
+        "L0": 177,
+        "L1": 0,
+        "L2": 3
+      },
+      "mismatch_rate": 0.0167,
+      "unverifiable_rate": 0,
+      "verdicts": {
+        "MISMATCH": 3,
+        "UNVERIFIABLE": 0,
+        "VERIFIED": 177,
+        "none": 0
+      },
+      "versions": [
+        1
+      ]
+    },
+    {
+      "actions": 133,
+      "approval": {
+        "approved": 0,
+        "cancelled": 0,
+        "denied": 0,
+        "expired": 0,
+        "median_seconds": null,
+        "p95_seconds": null,
+        "pending": 0,
+        "rate": null,
+        "requested": 0
+      },
+      "cost": [],
+      "decisions": {
+        "allow": 133,
+        "deny": 0,
+        "require_approval": 0
+      },
+      "deny_rate": 0,
+      "executed": 133,
+      "key": {
+        "rule_id": "allow-notion-appends"
+      },
+      "latency_ms": {
+        "p50": 372,
+        "p95": 823
+      },
+      "levels": {
+        "L0": 133,
+        "L1": 0,
+        "L2": 0
+      },
+      "mismatch_rate": 0,
+      "unverifiable_rate": 0,
+      "verdicts": {
+        "MISMATCH": 0,
+        "UNVERIFIABLE": 0,
+        "VERIFIED": 133,
+        "none": 0
+      },
+      "versions": [
+        1
+      ]
+    },
+    {
+      "actions": 15,
+      "approval": {
+        "approved": 0,
+        "cancelled": 0,
+        "denied": 0,
+        "expired": 0,
+        "median_seconds": null,
+        "p95_seconds": null,
+        "pending": 0,
+        "rate": null,
+        "requested": 0
+      },
+      "cost": [],
+      "decisions": {
+        "allow": 0,
+        "deny": 15,
+        "require_approval": 0
+      },
+      "deny_rate": 1,
+      "executed": 0,
+      "key": {
+        "rule_id": "refund-limit"
+      },
+      "latency_ms": {
+        "p50": null,
+        "p95": null
+      },
+      "levels": {
+        "L0": 0,
+        "L1": 0,
+        "L2": 0
+      },
+      "mismatch_rate": 0,
+      "unverifiable_rate": 0,
+      "verdicts": {
+        "MISMATCH": 0,
+        "UNVERIFIABLE": 0,
+        "VERIFIED": 0,
+        "none": 15
+      },
+      "versions": [
+        1
+      ]
+    },
+    {
+      "actions": 2,
+      "approval": {
+        "approved": 0,
+        "cancelled": 0,
+        "denied": 0,
+        "expired": 0,
+        "median_seconds": null,
+        "p95_seconds": null,
+        "pending": 0,
+        "rate": null,
+        "requested": 0
+      },
+      "cost": [],
+      "decisions": {
+        "allow": 0,
+        "deny": 2,
+        "require_approval": 0
+      },
+      "deny_rate": 1,
+      "executed": 0,
+      "key": {
+        "rule_id": "@default"
+      },
+      "latency_ms": {
+        "p50": null,
+        "p95": null
+      },
+      "levels": {
+        "L0": 0,
+        "L1": 0,
+        "L2": 0
+      },
+      "mismatch_rate": 0,
+      "unverifiable_rate": 0,
+      "verdicts": {
+        "MISMATCH": 0,
+        "UNVERIFIABLE": 0,
+        "VERIFIED": 0,
+        "none": 2
+      },
+      "versions": [
+        1
+      ]
+    }
+  ],
+  "object": "insights_stats",
+  "series": [
+    {
+      "actions": 335,
+      "date": "2026-09-27",
+      "denied": 1,
+      "mismatch": 0,
+      "unverifiable": 6,
+      "verified": 322
+    },
+    {
+      "actions": 890,
+      "date": "2026-09-28",
+      "denied": 4,
+      "mismatch": 0,
+      "unverifiable": 8,
+      "verified": 870
+    },
+    {
+      "actions": 821,
+      "date": "2026-09-29",
+      "denied": 0,
+      "mismatch": 0,
+      "unverifiable": 6,
+      "verified": 806
+    },
+    {
+      "actions": 815,
+      "date": "2026-09-30",
+      "denied": 3,
+      "mismatch": 0,
+      "unverifiable": 5,
+      "verified": 795
+    },
+    {
+      "actions": 833,
+      "date": "2026-10-01",
+      "denied": 5,
+      "mismatch": 0,
+      "unverifiable": 5,
+      "verified": 815
+    },
+    {
+      "actions": 933,
+      "date": "2026-10-02",
+      "denied": 2,
+      "mismatch": 3,
+      "unverifiable": 9,
+      "verified": 912
+    },
+    {
+      "actions": 772,
+      "date": "2026-10-03",
+      "denied": 2,
+      "mismatch": 0,
+      "unverifiable": 0,
+      "verified": 763
+    },
+    {
+      "actions": 491,
+      "date": "2026-10-04",
+      "denied": 0,
+      "mismatch": 0,
+      "unverifiable": 3,
+      "verified": 479
+    }
+  ],
+  "timezone": "Asia/Kolkata",
+  "totals": {
+    "actions": 5890,
+    "approval": {
+      "approved": 397,
+      "cancelled": 0,
+      "denied": 1,
+      "expired": 5,
+      "median_seconds": 1123,
+      "p95_seconds": 6578,
+      "pending": 8,
+      "rate": 0.9975,
+      "requested": 411
+    },
+    "cost": [
+      {
+        "currency": "usd",
+        "p50": 2211,
+        "p95": 7837,
+        "total": 1795727
+      }
+    ],
+    "decisions": {
+      "allow": 5462,
+      "deny": 17,
+      "require_approval": 411
+    },
+    "deny_rate": 0.0029,
+    "executed": 5859,
+    "latency_ms": {
+      "p50": 56,
+      "p95": 466
+    },
+    "levels": {
+      "L0": 4650,
+      "L1": 805,
+      "L2": 352
+    },
+    "mismatch_rate": 0.0005,
+    "unverifiable_rate": 0.0072,
+    "verdicts": {
+      "MISMATCH": 3,
+      "UNVERIFIABLE": 42,
+      "VERIFIED": 5762,
+      "none": 83
+    }
+  },
+  "window": {
+    "days": 7,
+    "from": "2026-09-27T06:30:00Z",
+    "to": "2026-10-04T06:30:00Z"
+  }
+}

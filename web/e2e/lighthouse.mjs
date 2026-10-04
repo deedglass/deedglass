@@ -29,31 +29,35 @@ await page.goto(BASE + '/login'); // warm the browser once, signed out
 // /login first, signed out (signed in, it hands over to the Console); then sign in for the rest.
 const hero = JSON.parse(readFileSync(join(process.env.WEB_E2E_WORK ?? '.', 'fixtures.json'), 'utf8'));
 const plan = [['/login', false], ['/app', true], ['/app/_kit', true], ['/app/actions', true], [`/app/actions/${hero.mismatch}`, true], ['/app/deeds', true], ['DEED', true], ['/app/agents', true], ['AGENT', true],
-  // S26: the seven control pages (a pending approval, the acme-demo policy, the demo Postgres connector)
-  ['/app/approvals', true], ['APPROVAL', true], ['/app/policies', true], ['POLICY', true], ['/app/connectors', true], ['CONNECTOR', true], ['/app/settings/members', true]];
+  // S26: the seven control pages (a pending approval, the acme-demo policy, the demo Postgres connector);
+  // S27: the policy's Replay tab (it opens on the latest replay)
+  ['/app/approvals', true], ['APPROVAL', true], ['/app/policies', true], ['POLICY', true], ['POLICY_REPLAY', true], ['/app/connectors', true], ['CONNECTOR', true], ['/app/settings/members', true]];
 const rows = [];
 let failed = 0;
 let signedIn = false;
+// LIGHTHOUSE_ONLY=POLICY_REPLAY,/login runs just those entries (a session's own page, cheaply)
+const only = process.env.LIGHTHOUSE_ONLY ? process.env.LIGHTHOUSE_ONLY.split(',') : null;
 for (let [p, needsSession] of plan) {
+  if (only && !only.includes(p)) continue;
   if (needsSession && !signedIn) {
     await page.goto(link);
     await page.getByRole('button', { name: 'Sign in' }).click();
     await page.waitForURL(/\/app\/?$/);
     signedIn = true;
   }
-  if (['DEED', 'AGENT', 'APPROVAL', 'POLICY', 'CONNECTOR'].includes(p)) {
+  if (['DEED', 'AGENT', 'APPROVAL', 'POLICY', 'POLICY_REPLAY', 'CONNECTOR'].includes(p)) {
     const r = await page.evaluate(async ([kind, act]) => {
       const h = { 'Deedglass-Version': '2026-10-01' };
       const get = async (u) => (await fetch(u, { headers: h })).json();
       if (kind === 'DEED') return (await get(`/v1/actions/${act}`)).deed;
       if (kind === 'AGENT') return (await get('/v1/agents?limit=1')).data[0].id;
       if (kind === 'APPROVAL') return (await get('/v1/approvals?status=pending&limit=1')).data[0]?.id ?? null;
-      if (kind === 'POLICY') return (await get('/v1/policies')).data.find((x) => x.name === 'acme-demo')?.id ?? null;
+      if (kind === 'POLICY' || kind === 'POLICY_REPLAY') return (await get('/v1/policies')).data.find((x) => x.name === 'acme-demo')?.id ?? null;
       return (await get('/v1/connectors')).data.find((x) => x.name === 'postgres')?.id ?? null;
     }, [p, hero.mismatch]);
     if (!r) { console.log(`lighthouse: no ${p.toLowerCase()} to open; skipped`); continue; }
-    const base = { DEED: 'deeds', AGENT: 'agents', APPROVAL: 'approvals', POLICY: 'policies', CONNECTOR: 'connectors' }[p];
-    p = `/app/${base}/${r}`;
+    const base = { DEED: 'deeds', AGENT: 'agents', APPROVAL: 'approvals', POLICY: 'policies', POLICY_REPLAY: 'policies', CONNECTOR: 'connectors' }[p];
+    p = `/app/${base}/${r}${p === 'POLICY_REPLAY' ? '?tab=replay' : ''}`;
   }
   for (const formFactor of ['desktop', 'mobile']) {
     const flags = { port: PORT, output: 'json', logLevel: 'error', disableStorageReset: true, onlyCategories: ['accessibility', 'best-practices', 'performance'] };
@@ -63,7 +67,8 @@ for (let [p, needsSession] of plan) {
     const row = { page: p, formFactor, accessibility: score('accessibility'), bestPractices: score('best-practices'), performance: score('performance'),
       lcpMs: Math.round(lhr.audits['largest-contentful-paint']?.numericValue ?? 0), cls: lhr.audits['cumulative-layout-shift']?.numericValue ?? 0 };
     rows.push(row);
-    const name = `${p === '/app' ? 'app' : p.replace(/^\/(app\/)?_?/, '').replace(/\//g, '-').replace(/-(act|deed|agt|apr|pol|con)_[0-9a-z]+$/, '-$1')}-${formFactor}.json`;
+    const [path, query] = p.split('?');
+    const name = `${path === '/app' ? 'app' : path.replace(/^\/(app\/)?_?/, '').replace(/\//g, '-').replace(/-(act|deed|agt|apr|pol|con)_[0-9a-z]+$/, '-$1')}${query ? '-' + query.replace(/^tab=/, '') : ''}-${formFactor}.json`;
     writeFileSync(join(OUT, name), JSON.stringify(lhr, null, 1));
     if (row.accessibility < 95 || row.bestPractices < 95) {
       failed++;

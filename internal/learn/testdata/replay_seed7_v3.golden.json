@@ -1,0 +1,89 @@
+{
+  "baseline": {
+    "type": "recorded"
+  },
+  "candidate": {
+    "name": "acme-sim",
+    "version": 3,
+    "version_hash": "sha256:3d09f641a6d5f6962ef719d05a59c6cea0362d950ea6f920418b01125b6bbb7b"
+  },
+  "rule_changes": [
+    {
+      "count": 15,
+      "decision": "deny",
+      "from_rule": "refund-limit",
+      "samples": "…",
+      "to_rule": "refund-limit-strict"
+    }
+  ],
+  "sqlguard": {
+    "current": "1",
+    "recorded": [
+      "1"
+    ]
+  },
+  "summary": {
+    "actions": 5890,
+    "changed": 453,
+    "evaluated": 5890,
+    "rule_changed": 15,
+    "unchanged": 5422,
+    "unknown": 0
+  },
+  "transitions": [
+    {
+      "by_rule": [
+        {
+          "count": 411,
+          "rule_id": "allow-order-status-updates"
+        }
+      ],
+      "by_tool": [
+        {
+          "count": 411,
+          "tool": "postgres.execute"
+        }
+      ],
+      "count": 411,
+      "from": "require_approval",
+      "human_outcome": {
+        "approved": 397,
+        "cancelled": 0,
+        "denied": 1,
+        "expired": 5,
+        "pending": 8
+      },
+      "samples": "…",
+      "to": "allow"
+    },
+    {
+      "by_rule": [
+        {
+          "count": 42,
+          "rule_id": "refund-limit-strict"
+        }
+      ],
+      "by_tool": [
+        {
+          "count": 42,
+          "tool": "stripe.create_refund"
+        }
+      ],
+      "count": 42,
+      "from": "allow",
+      "samples": "…",
+      "to": "deny"
+    }
+  ],
+  "unknown": {
+    "evaluation_time_limit": 0,
+    "input_missing": 0,
+    "input_pruned": 0,
+    "input_unreadable": 0,
+    "input_version_unsupported": 0
+  },
+  "window": {
+    "from": "2026-09-27T06:30:00Z",
+    "to": "2026-10-04T06:30:00Z"
+  }
+}

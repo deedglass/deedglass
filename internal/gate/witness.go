@@ -258,7 +258,7 @@ func verdictStep(out witness.Outcome, ev ledger.EventData) (State, ledger.EventD
 
 // recordVerdict moves witnessing → verified | mismatch | unverifiable with the witness columns.
 func (p *Pipeline) recordVerdict(ctx context.Context, tx pgx.Tx, id ids.ActionID, out witness.Outcome, actor, requestID string) error {
-	to, ev, patch := verdictStep(out, ledger.EventData{Actor: actor, RequestID: requestID})
+	to, ev, patch := verdictStep(out, ledger.EventData{Actor: actor, RequestID: requestID, At: p.now()})
 	return p.o.Ledger.Transition(ctx, tx, id.String(), Witnessing, to, ev, *patch)
 }
 

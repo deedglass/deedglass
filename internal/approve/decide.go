@@ -183,12 +183,12 @@ func (s *Service) Decide(ctx context.Context, in DecideInput) (*Approval, error)
 		var tag interface{ RowsAffected() int64 }
 		switch final {
 		case StatusDenied:
-			tag, err = tx.Exec(ctx, `UPDATE deedglass.approvals SET status = 'denied', decided_by = $3, decided_at = pg_catalog.clock_timestamp(),
-			    decision_reason = $4, deed_id = $5 WHERE org_id = $1 AND id = $2 AND status = 'pending'`, in.Org, aid, user, nonEmpty(reason), env.ID)
+			tag, err = tx.Exec(ctx, `UPDATE deedglass.approvals SET status = 'denied', decided_by = $3, decided_at = $6::timestamptz,
+			    decision_reason = $4, deed_id = $5 WHERE org_id = $1 AND id = $2 AND status = 'pending'`, in.Org, aid, user, nonEmpty(reason), env.ID, now.UTC())
 		case StatusApproved:
 			tag, err = tx.Exec(ctx, `UPDATE deedglass.approvals SET status = 'approved', approved_by = pg_catalog.array_append(approved_by, $3::text),
-			    decided_by = $3, decided_at = pg_catalog.clock_timestamp(), decision_reason = $4, deed_id = $5
-			    WHERE org_id = $1 AND id = $2 AND status = 'pending'`, in.Org, aid, user, nonEmpty(reason), env.ID)
+			    decided_by = $3, decided_at = $6::timestamptz, decision_reason = $4, deed_id = $5
+			    WHERE org_id = $1 AND id = $2 AND status = 'pending'`, in.Org, aid, user, nonEmpty(reason), env.ID, now.UTC())
 		default:
 			tag, err = tx.Exec(ctx, `UPDATE deedglass.approvals SET approved_by = pg_catalog.array_append(approved_by, $3::text)
 			    WHERE org_id = $1 AND id = $2 AND status = 'pending'`, in.Org, aid, user)

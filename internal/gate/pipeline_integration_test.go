@@ -195,7 +195,7 @@ func TestApprovalApprovedRuns(t *testing.T) {
 	}
 	err := w.e.DB.OrgTx(bg, w.org, func(ctx context.Context, tx pgx.Tx) error {
 		by := w.owner.String()
-		return store.DecideApproval(ctx, tx, w.org, a.Approval.ID, "approved", &by, nil)
+		return store.DecideApproval(ctx, tx, w.org, a.Approval.ID, "approved", &by, nil, time.Now())
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -230,7 +230,7 @@ func TestApprovalStoppedAgentNeverRuns(t *testing.T) {
 	a := w.must(0, req("fake.write", `{"rows":1,"table":"approvals"}`))
 	_ = w.e.DB.OrgTx(bg, w.org, func(ctx context.Context, tx pgx.Tx) error {
 		by := w.owner.String()
-		return store.DecideApproval(ctx, tx, w.org, a.Approval.ID, "approved", &by, nil)
+		return store.DecideApproval(ctx, tx, w.org, a.Approval.ID, "approved", &by, nil, time.Now())
 	})
 	w.admin(`UPDATE deedglass.agents SET status = 'stopped' WHERE id = $1`, w.agents[0].ID)
 	r, err := w.p.Resume(bg, w.org, mustAction(a.ID))
@@ -725,7 +725,7 @@ func TestCrashBetweenTxAAndTxB(t *testing.T) {
 	n.ConnectorType = "fake"
 	act, _ := w.reg.Active(bg, w.org.String())
 	ex, spec, _, _ := connector.NewRegistry(w.fake).Resolve(bg, w.org, "fake.echo")
-	adm, err := w.p.admit(bg, pr, n, req("fake.echo", `{}`), act, spec, ex, false, nil, nil)
+	adm, err := w.p.admit(bg, pr, n, req("fake.echo", `{}`), act, anomalyIn{}, spec, ex, false, nil, nil)
 	if err != nil || adm.plan == nil {
 		t.Fatalf("%v %+v", err, adm)
 	}
@@ -746,7 +746,7 @@ func TestCrashBetweenTxAAndTxB(t *testing.T) {
 	}
 	// A crash between the outcome and the seal: the action is verified but unsealed, and Resume
 	// (the unsealed sweeper) seals it.
-	adm2, err := w.p.admit(bg, pr, n, req("fake.echo", `{}`), act, spec, ex, false, nil, nil)
+	adm2, err := w.p.admit(bg, pr, n, req("fake.echo", `{}`), act, anomalyIn{}, spec, ex, false, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

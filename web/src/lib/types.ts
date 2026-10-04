@@ -93,6 +93,8 @@ export interface ActionDecision {
   policy?: string | null;
   policy_version?: string | null;
   shadow?: { outcome: string; rule_id?: string | null; policy?: string | null; policy_version?: string | null; reason?: string | null } | null;
+  /** S27 §3.8: the trace line about the anomaly facts the policy saw ("anomaly facts: volume_spike"); omitted when inactive. */
+  anomaly?: string;
 }
 
 export interface Action {

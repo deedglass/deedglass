@@ -191,11 +191,13 @@ func InsertApproval(ctx context.Context, tx pgx.Tx, org ids.OrgID, a NewApproval
 // DecideApproval moves a pending approval to status (approved, denied, expired or cancelled),
 // recording who decided (usr_…, agt_…, or nil for the expiry sweeper) and, for approved, adding
 // the person to approved_by. ErrNoRow when it wasn't pending.
-func DecideApproval(ctx context.Context, tx pgx.Tx, org ids.OrgID, id string, status string, by *string, reason *string) error {
-	tag, err := tx.Exec(ctx, `UPDATE deedglass.approvals SET status = $3::text, decided_at = pg_catalog.clock_timestamp(),
+//
+// at is the decision time from the caller's clock (S27 §3.2: the Gate's pipeline clock), never SQL now().
+func DecideApproval(ctx context.Context, tx pgx.Tx, org ids.OrgID, id string, status string, by *string, reason *string, at time.Time) error {
+	tag, err := tx.Exec(ctx, `UPDATE deedglass.approvals SET status = $3::text, decided_at = $6::timestamptz,
 	    decided_by = $4::text, decision_reason = $5::text,
 	    approved_by = CASE WHEN $3::text = 'approved' AND $4::text LIKE 'usr\_%' THEN pg_catalog.array_append(approved_by, $4::text) ELSE approved_by END
-	    WHERE org_id = $1 AND id = $2 AND status = 'pending'`, org, id, status, by, reason)
+	    WHERE org_id = $1 AND id = $2 AND status = 'pending'`, org, id, status, by, reason, at.UTC())
 	if err != nil {
 		return err
 	}

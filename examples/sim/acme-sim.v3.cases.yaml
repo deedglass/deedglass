@@ -1,0 +1,100 @@
+# Test cases for acme-sim.v3.yaml. Run them with:
+#   deedglass policy test examples/sim/acme-sim.v3.yaml --require-coverage --voice
+policy: acme-sim.v3.yaml
+defaults:
+  agent: { name: support-bot }
+  org: { timezone: Asia/Kolkata }
+  time: 2026-10-04T11:00:00+05:30
+cases:
+  # Destructive SQL
+  - name: DROP never runs
+    input: { tool: postgres.execute, agent: { name: ops-agent }, sql: "DROP TABLE public.orders" }
+    expect: { decision: deny, rule: block-destructive-sql, code: policy_denied }
+  - name: TRUNCATE never runs, even through a read tool
+    input: { tool: postgres.query, agent: { name: nightly-etl }, sql: "TRUNCATE public.inventory" }
+    expect: { decision: deny, rule: block-destructive-sql }
+  - name: a DELETE with no WHERE never runs
+    input: { tool: postgres.execute, agent: { name: ops-agent }, sql: "DELETE FROM public.orders" }
+    expect:
+      decision: deny
+      rule: block-destructive-sql
+      message: 'Blocked by policy "block-destructive-sql": DROP, TRUNCATE and DELETE without a WHERE clause are never allowed for agents.'
+  - name: a DELETE with a WHERE falls to the default
+    input: { tool: postgres.execute, agent: { name: ops-agent }, sql: "DELETE FROM public.orders WHERE id = 4242" }
+    expect: { decision: deny, rule: default }
+
+  # Refunds
+  - name: a $24.00 refund runs
+    input: { tool: stripe.create_refund, args: { amount: 2400, currency: usd } }
+    expect: { decision: allow, rule: allow-refunds, verify: L0 }
+  - name: exactly $75.00 still runs
+    input: { tool: stripe.create_refund, args: { amount: 7500, currency: usd } }
+    expect: { decision: allow, rule: allow-refunds }
+  - name: $75.01 never runs in version 3
+    input: { tool: stripe.create_refund, args: { amount: 7501, currency: usd } }
+    expect: { decision: deny, rule: refund-limit-strict, code: policy_denied, reason_contains: "$75.00" }
+  - name: a $90.00 refund version 1 allowed never runs
+    input: { tool: stripe.create_refund, args: { amount: 9000, currency: usd } }
+    expect: { decision: deny, rule: refund-limit-strict }
+  - name: a refund with no amount never runs
+    input: { tool: stripe.create_refund, args: { currency: usd } }
+    expect: { decision: deny, rule: refund-limit-strict }
+  - name: a refund that would pass the daily cap is refused
+    input:
+      tool: stripe.create_refund
+      args: { amount: 2000, currency: usd }
+      usage: { refunds-per-day: 399000 }
+    expect: { decision: deny, code: budget_exceeded, rule: "budget:refunds-per-day", reason_contains: "$4,010.00 of $4,000.00" }
+  - name: a refund that lands exactly on the cap runs
+    input:
+      tool: stripe.create_refund
+      args: { amount: 2000, currency: usd }
+      usage: { refunds-per-day: 398000 }
+    expect: { decision: allow, rule: allow-refunds }
+
+  # Orders and inventory
+  - name: shipping an order runs on its own, witnessed at L2
+    input: { tool: postgres.execute, agent: { name: ops-agent }, sql: "UPDATE public.orders SET status = 'shipped' WHERE id = 4242" }
+    expect: { decision: allow, rule: allow-order-status-updates, verify: L2 }
+  - name: an update of orders joined to another table is a plain write
+    input: { tool: postgres.execute, agent: { name: ops-agent }, sql: "UPDATE public.orders SET status = 'refunded' FROM public.refunds WHERE refunds.order_id = orders.id AND refunds.id = 7" }
+    expect: { decision: allow, rule: allow-db-writes }
+  - name: updating every order never runs
+    input: { tool: postgres.execute, agent: { name: ops-agent }, sql: "UPDATE public.orders SET status = 'shipped'" }
+    expect: { decision: deny, rule: default }
+  - name: releasing a reserved item runs
+    input: { tool: postgres.execute, agent: { name: ops-agent }, sql: "UPDATE public.inventory SET reserved = reserved - 1 WHERE sku = 'SKU-0042'" }
+    expect: { decision: allow, rule: allow-db-writes }
+  - name: an insert into inventory runs
+    input: { tool: postgres.execute, agent: { name: ops-agent }, sql: "INSERT INTO public.inventory (sku, reserved) VALUES ('SKU-0501', 0)" }
+    expect: { decision: allow, rule: allow-db-writes }
+  - name: two writes in one call fall to the default
+    input: { tool: postgres.execute, agent: { name: ops-agent }, sql: "UPDATE public.inventory SET reserved = 0 WHERE sku = 'SKU-0001'; UPDATE public.inventory SET reserved = 0 WHERE sku = 'SKU-0002'" }
+    expect: { decision: deny, rule: default }
+
+  # Reads
+  - name: the nightly read of orders runs
+    input: { tool: postgres.query, agent: { name: nightly-etl }, sql: "SELECT id, status FROM public.orders WHERE id = 4242" }
+    expect: { decision: allow, rule: allow-db-reads }
+  - name: a write sent through the read tool falls to the default
+    input: { tool: postgres.query, agent: { name: nightly-etl }, sql: "UPDATE public.orders SET status = 'shipped' WHERE id = 4242" }
+    expect: { decision: deny, rule: default }
+
+  # Gmail, Slack and Notion
+  - name: a refund update draft runs
+    input: { tool: gmail.create_draft, args: { thread: thr_48213, template: refund_update } }
+    expect: { decision: allow, rule: allow-gmail-drafts }
+  - name: "a post in #support runs"
+    input: { tool: slack.post_message, agent: { name: growth-agent }, args: { channel: "#support", text_chars: 180 } }
+    expect: { decision: allow, rule: allow-slack-posts }
+  - name: "a post in #random runs in version 1"
+    input: { tool: slack.post_message, agent: { name: growth-agent }, args: { channel: "#random", text_chars: 60 } }
+    expect: { decision: allow, rule: allow-slack-posts }
+  - name: appending to a Notion page runs
+    input: { tool: notion.append_block, agent: { name: growth-agent }, args: { page: pg_20417, blocks: 2 } }
+    expect: { decision: allow, rule: allow-notion-appends }
+
+  # Everything else
+  - name: merging a pull request falls to the default
+    input: { tool: github.merge_pr, agent: { name: ops-agent }, args: { repo: acme/store, pr: 418 } }
+    expect: { decision: deny, rule: default, reason_contains: No rule allows this action }

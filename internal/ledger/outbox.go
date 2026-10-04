@@ -121,6 +121,13 @@ func eventObject(ev Event) map[string]any {
 		put("action", ev.Action)
 	case ev.Type == EventWebhookTest:
 		o["object"] = "webhook"
+	case ev.Type == EventAnomalyDetected:
+		o["object"] = "anomaly"
+		put("agent", ev.Agent)
+		put("kind", ev.Kind)
+		put("tool", ev.Tool)
+		put("severity", ev.Severity)
+		put("status", ev.State)
 	default:
 		o["object"] = strings.SplitN(ev.Type, ".", 2)[0]
 		put("state", ev.State)

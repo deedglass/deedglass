@@ -158,6 +158,16 @@ func elsewhere() []Route {
 	// S25: the Overview (internal/console).
 	out = append(out, Route{Method: "GET", Pattern: "/v1/overview", OperationID: "getOverview", Auth: SessionOrKey, MinRole: RoleViewer,
 		Scopes: []string{ScopeAdmin}, Handler: stub})
+	// S27: Insights (internal/learn).
+	out = append(out,
+		adm("POST", "/v1/policies/{id}/versions/{v}/replay", "createReplay", RoleAdmin), adm("GET", "/v1/replays", "listReplays", RoleViewer),
+		adm("GET", "/v1/replays/{id}", "getReplay", RoleViewer), adm("POST", "/v1/replays/{id}/cancel", "cancelReplay", RoleAdmin),
+		adm("GET", "/v1/insights/stats", "getInsightsStats", RoleViewer), adm("GET", "/v1/insights/shadow", "getShadowReport", RoleViewer),
+		adm("GET", "/v1/insights/anomalies", "listAnomalies", RoleViewer), adm("GET", "/v1/insights/anomalies/{id}", "getAnomaly", RoleViewer),
+		adm("POST", "/v1/insights/anomalies/{id}/acknowledge", "acknowledgeAnomaly", RoleAdmin),
+		adm("POST", "/v1/insights/anomalies/{id}/resolve", "resolveAnomaly", RoleAdmin),
+		adm("GET", "/v1/insights/settings", "getInsightsSettings", RoleViewer), adm("PATCH", "/v1/insights/settings", "updateInsightsSettings", RoleAdmin),
+	)
 	return out
 }
 

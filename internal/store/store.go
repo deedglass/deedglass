@@ -31,6 +31,10 @@ type Options struct {
 	// Tracer observes every query (profiling and tests only; S13's overhead budget used it). It
 	// sees SQL text and arguments, so it must never log arguments.
 	Tracer pgx.QueryTracer
+	// AsyncCommit sets synchronous_commit = off on every connection: a commit returns before its
+	// WAL reaches disk (a crash may lose the last few commits, never corrupt them). Dev bulk tools
+	// only (deedglass dev simulate on a throwaway database); the server never sets it.
+	AsyncCommit bool
 }
 
 // Session settings sent in the startup packet of every pooled connection. Transaction-local
@@ -62,6 +66,9 @@ func Open(ctx context.Context, url config.Secret, o Options) (*DB, error) {
 	}
 	for k, v := range sessionParams {
 		pc.ConnConfig.RuntimeParams[k] = v
+	}
+	if o.AsyncCommit {
+		pc.ConnConfig.RuntimeParams["synchronous_commit"] = "off"
 	}
 	if pc.ConnConfig.ConnectTimeout == 0 {
 		pc.ConnConfig.ConnectTimeout = 5 * time.Second

@@ -83,10 +83,12 @@ type world struct {
 }
 
 type worldOpts struct {
-	cfg      Config
-	maxConns int32
-	policy   string // "" testPolicy
-	agents   int
+	cfg       Config
+	maxConns  int32
+	policy    string // "" testPolicy
+	agents    int
+	clock     func() time.Time // nil: time.Now (S27: a virtual pipeline clock)
+	anomalies AnomalySource    // S27: the opt-in anomaly facts
 }
 
 func newWorld(t testing.TB, o worldOpts) *world {
@@ -125,7 +127,7 @@ func newWorld(t testing.TB, o worldOpts) *world {
 	w.fake = fake.New()
 	w.p, err = New(Options{DB: e.DB, Ledger: w.led, Policies: w.reg, Usage: policystore.NewUsage(e.DB),
 		Intents: identity.NewIntents(e.DB, w.keys, nil), Guard: w.keys, Resolver: connector.NewRegistry(w.fake),
-		Config: o.cfg, Logger: log})
+		Config: o.cfg, Logger: log, Clock: o.clock, Anomalies: o.anomalies})
 	if err != nil {
 		t.Fatal(err)
 	}

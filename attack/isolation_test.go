@@ -80,8 +80,15 @@ func TestOrgIsolation(t *testing.T) {
 	apr := harness.Str(pr.Map(), "approval", "id")
 	wh := harness.Str(acme.Admin.Do("POST", "/v1/webhooks", map[string]any{"url": e.Up.Orders.URL + "/hook",
 		"events": []string{"approval.decided"}}).Map(), "id")
+	// S27: a replay of Acme's policy, and an anomaly episode (written as the superuser: detection
+	// would need a week of history).
+	rpl := harness.Str(acme.Admin.Do("POST", "/v1/policies/"+acme.Policy+"/versions/1/replay", map[string]any{}).Map(), "id")
+	anm := e.CPQuery(`INSERT INTO deedglass.anomalies (id, org_id, agent_id, kind, severity, window_start, window_end, score, episode_key,
+	    active_until, detector_version, title)
+	  VALUES ($1, $2, $3, 'volume_spike', 'warn', now() - interval '1 hour', now(), 4.2, $4, now() - interval '1 minute', '1',
+	    'fixture') RETURNING id`, ids.New[ids.AnomalyKind]().String(), acme.ID, attacker.ID, attacker.ID+"|volume_spike|")[0][0]
 	acmeIDs := []string{acme.ID, attacker.ID, attacker.KeyID, act, deed, acme.Policy, acme.PolicyV, acme.Conns["orders"], acme.Conns["fs"], member, kid,
-		apr, wh}
+		apr, wh, rpl, anm}
 	for _, id := range acmeIDs {
 		if id == "" {
 			t.Fatalf("an Acme fixture is missing: %v", acmeIDs)
@@ -122,6 +129,12 @@ func TestOrgIsolation(t *testing.T) {
 		"/v1/webhooks/{id}":                                     {"id": wh},
 		"/v1/webhooks/{id}/deliveries":                          {"id": wh},
 		"/v1/webhooks/{id}/test":                                {"id": wh},
+		"/v1/policies/{id}/versions/{v}/replay":                 {"id": acme.Policy, "v": "1"},
+		"/v1/replays/{id}":                                      {"id": rpl},
+		"/v1/replays/{id}/cancel":                               {"id": rpl},
+		"/v1/insights/anomalies/{id}":                           {"id": anm},
+		"/v1/insights/anomalies/{id}/acknowledge":               {"id": anm},
+		"/v1/insights/anomalies/{id}/resolve":                   {"id": anm},
 		"/mcp/{connector}":                                      {"connector": "fs"},
 		"/.well-known/oauth-protected-resource/mcp/{connector}": nil, // public metadata: no org data
 		"/auth/assets/{file}":                                   nil, // public static file

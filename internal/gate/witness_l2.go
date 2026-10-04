@@ -563,7 +563,7 @@ func (p *Pipeline) amendL2(ctx context.Context, org ids.OrgID, id ids.ActionID, 
 		}
 		if string(d.Level) == level && string(d.Verdict) == verdict {
 			lv, vd := level, verdict
-			return p.o.Ledger.AppendEvent(ctx, tx, id.String(), ledger.EventData{Actor: "system", Reason: strp(ReasonL2LateConfirmed),
+			return p.o.Ledger.AppendEvent(ctx, tx, id.String(), ledger.EventData{Actor: "system", At: p.now(), Reason: strp(ReasonL2LateConfirmed),
 				Level: &lv, Verdict: &vd})
 		}
 		if amended >= MaxAmendments {

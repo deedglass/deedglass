@@ -184,8 +184,8 @@ builds it. Hidden commands work but aren't in `deedglass help`.
 | `deedglass policy push <policy.yaml> [--notes "…"] [--json]` | Policies | Upload a new policy version | built |
 | `deedglass policy activate <name|pol_…> --version <n> --mode enforce|shadow --reason "…" [--yes] [--ack default_allow] | --clear --reason "…" [--json]` | Policies | Activate a policy version | built |
 | `deedglass policy evaluate --policy <file> | --server [--policy <name> --version <n>] --tool <name> [--sql …] [--args <json>] [--input <file>] [--agent …] [--label k=v] [--user …] [--time …] [--tz …] [--usage k=v] [--explain] [--json]` | Policies | Evaluate one action against a policy | built |
-| `deedglass policy replay` | Policies | Replay past actions against a version | soon (S27) |
-| `deedglass policy diff` | Policies | Compare two policy versions | soon (S27) |
+| `deedglass policy replay <name|pol_…> --version <n> [--from 7d] [--to now] [--baseline recorded|vN] [--wait] [--quiet] [--json]` | Policies | Replay past actions against a version | built |
+| `deedglass policy diff` | Policies | Compare two policy versions | soon (S28) |
 | `deedglass act <tool> [--args '{"k":"v"}'] [--mode gateway|proxy] [--wait 60s] [--idempotency-key K] [--json]` | Actions | Send a test action through the Gate | built |
 | `deedglass actions list [--agent agt_…] [--tool stripe.*] [--state …] [--decision …] [--verdict MISMATCH] [--level L2] [--since 1h] [--q text] [--limit 25] [--cursor …] [--json] [--follow] [--connector orders]` | Actions | List actions | built |
 | `deedglass actions show <act_…> [--wait] [--diff] [--json]` | Actions | Show one action, its events and its L2 diff | built |
@@ -222,11 +222,11 @@ builds it. Hidden commands work but aren't in `deedglass help`.
 | `deedglass mcp wrap --connector <name> [--connector-type mcp] [--hide-denied=false] [--call-timeout 2m] [--result-mode full|digest] [--log-file <path>] -- <command> [args…]` | MCP | Run an MCP server behind the Gate | built |
 | `deedglass mcp serve [--connector native|<name>]` | MCP | Serve the Gate's native MCP tools | built |
 | `deedglass mcp snippet --client <claude-desktop|claude-code|cursor|windsurf|vscode> --connector <name> [--connector-type postgres] [--api-key-from-env] -- <command> [args…]  ·  --transport http --client <…> [--connector native|<name>]` | MCP | Print client config for an MCP client | built |
-| `deedglass insights stats` | Insights | Show usage per agent and tool | soon (S27) |
-| `deedglass insights shadow` | Insights | Show shadow-policy results | soon (S27) |
-| `deedglass insights anomalies` | Insights | List anomalies | soon (S27) |
-| `deedglass insights detect` | Insights | Run anomaly detection now | soon (S27) |
-| `deedglass insights settings` | Insights | Show or change Insights settings | soon (S27) |
+| `deedglass insights stats [--window 7d|30d | --from … --to …] [--by rule|tool|agent|none] [--agent agt_…] [--tool stripe.*] [--compare] [--json]` | Insights | Show decisions, approvals and verdicts by rule | built |
+| `deedglass insights shadow [--shadow-version pv_…] [--from …] [--to …] [--json]` | Insights | Show where the shadow policy disagrees | built |
+| `deedglass insights anomalies [--status open|acknowledged|resolved|all] [--agent agt_…] [--kind volume_spike] [--days 14] [--limit 50] [--json]` | Insights | List anomalies | built |
+| `deedglass insights detect [--org org_…|slug] [--backfill 7d] [--json]` | Insights | Run anomaly detection now | built |
+| `deedglass insights settings [--anomaly-facts on|off] [--active-minutes 60] [--stale-minutes 15] [--reason "…"] [--json]` | Insights | Show or change Insights settings | built |
 | `deedglass insights suggestions list` | Insights | List suggestions | soon (S28) |
 | `deedglass insights suggestions show` | Insights | Show one suggestion | soon (S28) |
 | `deedglass insights suggestions accept` | Insights | Accept a suggestion | soon (S28) |
@@ -235,7 +235,7 @@ builds it. Hidden commands work but aren't in `deedglass help`.
 | `deedglass insights digest` | Insights | Preview the weekly digest | soon (S28) |
 | `deedglass dev seed [--demo [--keys-file <path>] [--approver <email>]] [--json]` | Dev | Load demo data into a dev database | built |
 | `deedglass dev fake-action [--n 20] [--seed 42] [--kinds allow,deny,…] [--agents 3] [--batch 1] [--pace 0s] [--org-slug demo] [--quiet] [--json]` | Dev | Seal realistic fake actions (dev only) | built |
-| `deedglass dev simulate` | Dev | Simulate agent traffic | soon (S27) |
+| `deedglass dev simulate [--scenario examples/sim/acme.yaml] [--days 7] [--end now|-2d] [--seed 7] [--org org_… | --org-slug acme-sim] [--append] [--pace 0s] [--quiet] [--json]` | Dev | Simulate a week of agent traffic (dev only) | built |
 | `deedglass dev agent-script` | Dev | Run a scripted agent | soon (S37) |
 | `deedglass dev mail-preview login|invite|approval|approval-foureyes [--out /tmp/login.html] [--json]` | Dev | Preview emails in the browser | built |
 | `deedglass dev sign-intent --key <pem> --tool stripe.refund --args '{…}' [--org org_… --agent agt_…] [--obo …] [--session …] [--ttl 60s] [--explain] [--json]` | Dev | Sign an intent with a local key | built |
@@ -952,6 +952,162 @@ $ deedglass policy evaluate --server --tool postgres.execute --sql "DELETE FROM 
   policy  postgres-safe v1 · sha256:2c4c…04fd · sqlguard 1
 ```
 
+## Insights: `policy replay`, `insights …` and `dev simulate` (S27)
+
+Insights reads what the Gate recorded and reports it, numbers first ([INSIGHTS.md](INSIGHTS.md)).
+`policy replay` and the `insights stats`, `shadow`, `anomalies` and `settings` commands call the
+server with an org admin key (`--api-key` or `DEEDGLASS_API_KEY`, at `--server` or
+`DEEDGLASS_SERVER`). `insights detect` and `dev simulate` are operator commands that use the
+database in `DEEDGLASS_DATABASE_URL` directly. Every one takes `--json`. Anomalies print amber
+(`info` plain), never red.
+
+### `deedglass policy replay <name|pol_…> --version <n> [--from 7d] [--to now] [--baseline recorded|vN] [--wait] [--quiet] [--json]`
+
+Re-decides the recorded actions of a window under a stored version, and counts what would change
+([REPLAY.md](REPLAY.md)). `--from` is days (`7d`, 1 to 90) or a duration (`48h`) back from `--to`,
+or an RFC 3339 time; `--to` is `now` or an RFC 3339 time. `--baseline v2` compares with version 2
+re-evaluated instead of the recorded decisions. Without `--wait` it prints the queued replay's id;
+with it, it polls until the replay ends.
+
+```
+$ deedglass policy replay acme-sim --version 3 --from 7d --wait
+◐ Replaying acme-sim v3 against 5,612 actions (2026-10-02 to 2026-10-09) · baseline: recorded decisions
+  ████████████████████████████████ 100% · 0.6 s
+✓ 408 decisions would change · 4 by a different rule · 5,200 unchanged · 0 unknown
+  require_approval → allow     404   allow-order-status-updates · humans approved 401, expired 3, denied 0
+  allow → deny                   4   refund-limit-strict
+  result sha256:9c1e…40ab · same inputs and version always give this digest
+  next       deedglass policy activate acme-sim --version 3 --mode shadow --reason "…"
+```
+
+Exit 0 when the replay succeeded or was queued; 1 when the server refused it (`replay_too_large`,
+`replay_window_invalid`, `not_found`, `rate_limited`) or it failed (`replay_failed`) or was
+cancelled (`replay_cancelled`); 2 for a usage error; 3 when not authenticated.
+
+### `deedglass insights stats [--window 7d|30d | --from … --to …] [--by rule|tool|agent|none] [--agent agt_…] [--tool stripe.*] [--compare] [--json]`
+
+`GET /v1/insights/stats`: decisions, approvals and their waits, verdicts, latency and budget use,
+by rule unless `--by` says otherwise. Every definition is in [INSIGHTS.md](INSIGHTS.md#stats).
+
+```
+$ deedglass insights stats --window 7d
+Insights · 2026-10-02 18:35 to 2026-10-09 18:35 IST · 7 days · 5,612 actions
+  decisions  allow 4,883 · deny 311 · require_approval 418 · deny rate 5.5%
+  approvals  418 requested · 401 approved (100% of decided) · 3 expired · median wait 21 min · p95 1 h 54 min
+  verdicts   4,990 VERIFIED · 3 MISMATCH · 188 UNVERIFIABLE · 431 not witnessed
+  latency    p50 41 ms · p95 180 ms
+  by rule
+    RULE                   ACTIONS  DENY  APPROVED    MEDIAN WAIT  VERIFIED  MISMATCH  UNVERIFIABLE
+    allow-gmail-drafts     1,540    0     —           —            1,410     0         72
+    allow-db-reads         1,312    0     —           —            1,250     0         34
+    approve-order-updates  418      0     401 (100%)  21 min       392       0         6
+    @default               96       96    —           —            0         0         0
+  budget     refunds-per-day (org) · max 95.1% · 3 days over 80%
+```
+
+The numbers are illustrative. An empty window prints `○ No actions between … Send one: deedglass
+act fake.echo --args '{"x":1}'`.
+
+### `deedglass insights shadow [--shadow-version pv_…] [--from …] [--to …] [--json]`
+
+`GET /v1/insights/shadow`: where the shadow policy disagrees with the enforced one, by transition
+and rule ([INSIGHTS.md](INSIGHTS.md#shadow-disagreements)). The default is the live shadow.
+
+```
+$ deedglass insights shadow
+Shadow acme-sim v2 would have sent 41 actions to approval and denied 5 that v1 allowed (refund-approval-over-30: 41, slack-allowlist: 5).
+  agreement  98.6% of 3,207 actions · 46 disagree
+  allow → require_approval  41   refund-approval-over-30 41
+  allow → deny  5   slack-allowlist 5
+```
+
+### `deedglass insights anomalies [--status open|acknowledged|resolved|all] [--agent agt_…] [--kind volume_spike] [--days 14] [--limit 50] [--json]`
+
+`GET /v1/insights/anomalies`: the review inbox, the latest finding first. By default open and
+acknowledged episodes with a finding in the last 14 days, at most 50 (1 to 100). The last line says
+whether this org's policies see anomaly facts.
+
+```
+$ deedglass insights anomalies
+5 anomalies · none active now · last 14 days
+  high  mismatch_spike  ops-agent     3 MISMATCH verdicts, 11:00 to 12:00 IST · usually 0                  52h ago  anm_01jbx3k2…
+  warn  new_tool        ops-agent     first github.merge_pr (write), 15:00 to 16:00 IST                    48h ago  anm_01jbx4d4…
+  warn  volume_spike    growth-agent  212 calls, 14:00 to 15:00 IST · 9.4× its usual 22.6                  26h ago  anm_01jbx5p7…
+  info  off_hours       growth-agent  12 calls, 02:00 to 03:00 IST · usually none at this hour             38h ago  anm_01jbx5h9…
+  warn  user_ref_burst  support-bot   25 new on-behalf-of users, 16:00 to 17:00 IST · usually 0.1 an hour  1h ago   anm_01jbx6w3…
+  Policies don't read anomalies in this org. Turn it on: deedglass insights settings --anomaly-facts on --reason "…"
+```
+
+An episode that isn't open shows its status after the title (`(acknowledged)`); agents with under
+72 hours of history get their own line ("support-bot has 41 hours of history. Volume and hours
+checks start after 72 hours."). Acknowledge and resolve are API routes and Console actions; resolving
+needs a reason and seals a deed.
+
+### `deedglass insights detect [--org org_…|slug] [--backfill 7d] [--json]`
+
+Runs anomaly detection now, the pass `serve` runs every 5 minutes: for one org, or for every org
+with actions in the last 2 hours or with anomaly facts on. It reads the database directly.
+`--backfill 7d` (1 hour to 30 days, like `48h`) walks the range one org-local hour at a time, each
+judged as if it were now, so simulated history gets its anomalies at the right times; it runs only
+with `DEEDGLASS_ENV=dev`. A backfill is idempotent: a window already in an episode is skipped.
+
+```
+$ DEEDGLASS_ENV=dev deedglass insights detect --backfill 7d --org acme-sim
+✓ Detection ran over 168 hours, hour by hour for 1 org · 5 anomalies opened · 3 extended · 9 findings
+  next       deedglass insights anomalies
+```
+
+Exit 0 on success; 1 for `--backfill` outside dev (`dev_only`), an org that doesn't exist
+(`not_found`), a backfill while another pass holds the org's lock, or another failure; 2 for a
+usage error, a `--backfill` outside 1 hour to 30 days, or a database it can't reach
+(`database_unreachable`).
+
+### `deedglass insights settings [--anomaly-facts on|off] [--active-minutes 60] [--stale-minutes 15] [--reason "…"] [--json]`
+
+Without flags, shows the org's Insights settings (`GET /v1/insights/settings`). With any of them,
+changes them (`PATCH`): `--anomaly-facts on` lets this org's policies read `anomaly.*`,
+`--active-minutes` (5 to 1,440) is how long an anomaly stays active after its last finding, and
+`--stale-minutes` (10 to 240) how old detection may be before the facts fail closed. A change needs
+`--reason` (3 to 280 characters) and seals an `insights.settings_changed` deed.
+
+```
+$ deedglass insights settings --anomaly-facts on --reason "Require approval while an agent spikes"
+  anomaly facts  on · active 60 min after a finding · stale after 15 min
+✓ Settings changed · deed deed_01jbr3k2… sealed
+```
+
+The `stats`, `shadow`, `anomalies` and `settings` commands exit 0 on success, 1 when the server
+refuses or can't be reached, 2 for a usage error (like `--anomaly-facts maybe`) and 3 when not
+authenticated.
+
+### `deedglass dev simulate [--scenario …] [--days 7] [--end now|-2d] [--seed 7] [--org org_… | --org-slug acme-sim] [--append] [--pace 0s] [--quiet] [--json]`
+
+Pushes seeded, simulated traffic through the real Gate into a fresh simulated org. Dev only: it
+refuses unless `DEEDGLASS_ENV=dev`, before it opens anything. The scenario format, the incidents,
+the honesty rules and the append rules are in [SIMULATOR.md](SIMULATOR.md).
+
+```
+$ deedglass dev simulate --days 7 --seed 7
+◐ Simulating 7 days for a new org (acme-sim) · seed 7 · database 127.0.0.1:55432
+  org        acme-sim (org_01jbq2…) · 2026-10-02 19:00 to 2026-10-09 19:00 IST
+  agents     support-bot · ops-agent · growth-agent · nightly-etl
+  policies   acme-sim v1 enforced · acme-sim v2 in shadow from day 3
+✓ 5,612 actions through the Gate · 5,598 deeds sealed · chain intact
+  …
+  next       deedglass insights detect --backfill 7d --org acme-sim   ·   deedglass insights stats --window 7d
+```
+
+```
+$ deedglass dev simulate
+✕ dev simulate only runs with DEEDGLASS_ENV=dev. It writes a simulated org into this database.
+  next  Use a throwaway database: make dev, then DEEDGLASS_ENV=dev deedglass dev simulate
+```
+
+Exit 0 when the run finished with the chain intact; 1 outside dev (`dev_only`), for `--append`
+into an org that isn't simulated (`not_simulated`) or would overlap (`simulation_overlap`), an org
+that doesn't exist (`not_found`), or a chain that didn't check out; 2 for a usage error or an
+invalid scenario (`scenario_invalid`, with the file and line).
+
 ## What it doesn't do (yet)
 
 - The Ledger commands use the database directly; `--server`/`--api-key` (API mode) come with S09.
@@ -961,8 +1117,10 @@ $ deedglass policy evaluate --server --tool postgres.execute --sql "DELETE FROM 
   `COLORFGBG` or `DEEDGLASS_THEME=light`. No image-protocol (iTerm2, Kitty) rendering yet.
 
 - No shell completion until S32 (`deedglass completion zsh|bash|fish`).
-- `policy diff` (a semantic diff of two versions) and `policy replay` come with S27. There is no
-  language server; the Console editor (S26) shows the same diagnostics inline.
+- `policy diff` (a semantic diff of two versions) isn't built. `policy replay` replays stored
+  versions only; replaying an unsaved file comes later. There is no language server; the Console
+  editor (S26) shows the same diagnostics inline.
+- There are no CLI commands to acknowledge or resolve an anomaly; use the API or the Console.
 - `policy push` and `policy activate` use an org admin key; there is no CLI sign-in with a Console
   session.
 - Intent keys live in PEM files. `keygen` and `dev sign-intent` don't use an OS keychain, a KMS or

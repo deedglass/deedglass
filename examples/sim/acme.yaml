@@ -1,0 +1,47 @@
+# The default scenario for deedglass dev simulate: a simulated week at the Acme store.
+#
+# Four agents, their working hours and daily volume, the tools they call and how those calls
+# turn out, and the incidents that make the week worth reading. Everything is seeded: the same
+# scenario, seed and end time give the same plan, action for action. The people, customers and
+# amounts are made up; addresses use the reserved .test domain.
+#
+# Day d is the d-th 24 hours of the window; an incident's hour is the org-local hour inside it.
+v: 1
+org: { slug: acme-sim, name: "Acme (simulated)", timezone: Asia/Kolkata }
+policies: { enforce: acme-sim.v1.yaml, shadow: { file: acme-sim.v2.yaml, from_day: 3 } }
+approvers: [priya@example.test, sam@example.test]
+agents:
+  - name: support-bot
+    hours: "09-19"                     # org-local; 3% of volume falls outside
+    per_day: 220
+    user_refs: { pool: 400, prefix: cust_ }
+    tools:
+      - { tool: stripe.create_refund, weight: 30, args: { amount: { lognormal: { median: 2400, sigma: 0.8 } }, currency: usd } }
+      - { tool: gmail.create_draft,    weight: 50 }
+      - { tool: postgres.query,        weight: 20, sql: ["SELECT id, status FROM public.orders WHERE id = {id}"] }
+    outcomes: { verified: 0.92, unverifiable: 0.05, failed: 0.03 }
+    levels:   { L0: 0.3, L1: 0.5, L2: 0.2 }
+  - name: ops-agent                    # approval-heavy
+    hours: "10-18"
+    per_day: 120
+    tools: [ { tool: postgres.execute, weight: 50, sql: ["UPDATE public.orders SET status = 'shipped' WHERE id = {id}"] },
+             { tool: postgres.execute, weight: 20, sql: ["UPDATE public.inventory SET reserved = reserved - 1 WHERE sku = {sku}"] },
+             { tool: postgres.query, weight: 30 } ]    # v1: orders updates need approval; allow-db-writes allows inventory
+    approvals: { approve: 0.99, wait: { median: 20m, p95: 2h } }
+  - { name: growth-agent, hours: "11-20", per_day: 60,
+      tools: [ { tool: slack.post_message, weight: 70 }, { tool: notion.append_block, weight: 30 } ] }
+  # nightly-etl's batch runs overnight, 00:00 to 08:00. Packed into two hours, its own busiest
+  # hour would sit 3 standard deviations above its 24-hour mean and read as a volume spike every
+  # few nights (the volume check compares an hour with the agent's 14 days of hours).
+  - { name: nightly-etl, hours: "00-08", per_day: 400, tools: [ { tool: postgres.query, weight: 100 } ] }
+incidents:
+  - { day: 5, hour: 11, agent: ops-agent,    kind: mismatch,       tool: postgres.execute, table: public.inventory, count: 3 }
+  - { day: 5, hour: 15, agent: ops-agent,    kind: first_use,      tool: github.merge_pr, count: 2 }
+  - { day: 6, hour: 14, agent: growth-agent, kind: spike,          tool: slack.post_message, factor: 9 }
+  # The off_hours incident is on day 6, not day 4: the off_hours detector needs at least 5 days
+  # of history before it reports anything.
+  - { day: 6, hour: 2,  agent: growth-agent, kind: off_hours,      count: 12 }
+  # The new users take over the hour's usual calls (about 25 at 16:00), so the burst isn't also a
+  # volume spike.
+  - { day: 7, hour: 16, agent: support-bot,  kind: new_user_refs,  count: 25 }
+  - { days: [2, 4, 6],  agent: support-bot,  kind: budget_pressure, budget: refunds-per-day, target: 0.95 }

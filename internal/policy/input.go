@@ -127,6 +127,9 @@ func Prepare(in Input) (*Prepared, error) {
 		p.act.usage.Budgets = emptyBudgets
 	}
 	p.act.anomaly = in.Anomaly
+	if p.act.anomaly.Kinds == nil {
+		p.act.anomaly.Kinds = emptyStrings
+	}
 	lt := in.Time.In(loc)
 	p.act.time = TimeFacts{Now: lt, Hour: int64(lt.Hour()), Minute: int64(lt.Minute()),
 		Weekday: weekdays[lt.Weekday()], Date: lt.Format("2006-01-02")}

@@ -321,7 +321,7 @@ func TestMCPGatewayLive(t *testing.T) {
 	}
 	actID := metaOf(r)["com.deedglass/action"]
 	if err := g.e.DB.OrgTx(bg, g.org, func(ctx context.Context, tx pgx.Tx) error {
-		return store.DecideApproval(ctx, tx, g.org, apr, "approved", nil, nil)
+		return store.DecideApproval(ctx, tx, g.org, apr, "approved", nil, nil, time.Now())
 	}); err != nil {
 		t.Fatal(err)
 	}

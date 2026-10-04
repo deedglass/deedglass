@@ -53,6 +53,11 @@ func loginLinkFlags(fs *flag.FlagSet) {
 // openPeople loads the config, connects as the runtime role, loads the seal key and returns the
 // sealing Ledger and identity service a DB-direct people command uses.
 func openPeople(ctx context.Context, e *Env) (*config.Config, *store.DB, *ledger.Ledger, *identity.Service, func(), error) {
+	return openPeopleWith(ctx, e, store.Options{MaxConns: 2})
+}
+
+// openPeopleWith is openPeople with the pool's options (dev simulate: more connections, async commit).
+func openPeopleWith(ctx context.Context, e *Env, so store.Options) (*config.Config, *store.DB, *ledger.Ledger, *identity.Service, func(), error) {
 	cfg, warnings, err := config.Load(e.LoadOptions())
 	var ps *config.Problems
 	if errors.As(err, &ps) {
@@ -64,7 +69,7 @@ func openPeople(ctx context.Context, e *Env) (*config.Config, *store.DB, *ledger
 	if err := cfg.Require(config.NeedDatabase | config.NeedPepper); errors.As(err, &ps) {
 		return nil, nil, nil, nil, nil, configProblems(e, ps, warnings)
 	}
-	db, err := store.Open(ctx, cfg.DatabaseURL, store.Options{MaxConns: 2})
+	db, err := store.Open(ctx, cfg.DatabaseURL, so)
 	if err != nil {
 		return nil, nil, nil, nil, nil, failNext(e, ExitUsage, "database_unreachable", "Can't reach the database in DEEDGLASS_DATABASE_URL.",
 			"Check that Postgres is running and that migrations ran (deedglass migrate up).")

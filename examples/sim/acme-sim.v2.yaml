@@ -1,0 +1,109 @@
+# acme-sim, version 2 · the shadow policy of the simulated Acme store
+#
+# examples/sim/acme.yaml runs this version in shadow mode from day 3, next to version 1, so the
+# Console can show what it would have changed. Nothing here is a real store: the agents,
+# customers and amounts are made up.
+#
+# Version 1 plus two stricter rules: refunds over $30.00 wait for a person, and Slack posts run
+# only in #support and #launches. Each sits just above the version 1 rule it overrides, because
+# the first rule that matches decides.
+#
+# Amounts are in minor units, the way Stripe takes them: 2400 is $24.00.
+#
+#   deedglass policy test examples/sim/acme-sim.v2.yaml --require-coverage --voice
+deedglass: policy/v1
+name: acme-sim
+description: Simulated Acme store (deedglass dev simulate), version 2. Version 1 with refunds over $30.00 waiting for a person and Slack posts in two channels only.
+
+defaults:
+  decision: deny
+  reason: No rule allows this action. Add a rule in Console › Policies to allow it.
+
+budgets:
+  # All agents together refund at most $4,000.00 a day (the org's calendar day). The support
+  # bot's usual day is about $1,800.00 of refunds, well under 80% of this cap; the simulator's
+  # budget_pressure incident adds refunds until a day reaches 95% of it. Refunds this policy
+  # denies never count, because a deny drops its reservation.
+  - id: refunds-per-day
+    description: At most $4,000.00 of refunds a day, across every agent in the org.
+    match: { tool: stripe.create_refund }
+    per: org
+    window: day
+    max_spend: "4000.00 usd"
+    measure: 'has(args.amount) && type(args.amount) == int ? args.amount : 0'
+
+rules:
+  # DROP and TRUNCATE anywhere in the SQL, or a DELETE with no WHERE, never run.
+  - id: block-destructive-sql
+    match: { tool: "postgres.*" }
+    when: '"drop" in sql.kinds || "truncate" in sql.kinds || (sql.unbounded_write && "delete" in sql.write_kinds)'
+    decision: deny
+    reason: DROP, TRUNCATE and DELETE without a WHERE clause are never allowed for agents.
+
+  # A refund over $100.00, or one without a whole-number amount, never runs. About 4% of the
+  # support bot's refunds land here.
+  - id: refund-limit
+    match: { tool: stripe.create_refund }
+    when: '!has(args.amount) || type(args.amount) != int || args.amount <= 0 || args.amount > minor("100.00 usd")'
+    decision: deny
+    reason: Refunds over $100.00 are never made by agents. A person can refund it in the Stripe Dashboard.
+
+  # New in version 2: a refund over $30.00 (and up to $100.00) waits for one admin.
+  - id: refund-approval-over-30
+    match: { tool: stripe.create_refund }
+    when: args.amount > minor("30.00 usd")
+    decision: require_approval
+    reason: Refunds over $30.00 wait for a person. An admin can approve in Console › Approvals.
+    approval: { approvers: [role:admin], required: 1, expires_in: 4h }
+
+  # Every other refund runs, inside the daily cap above.
+  - id: allow-refunds
+    match: { tool: stripe.create_refund }
+    decision: allow
+
+  # Updating orders waits for one admin. The 4h expiry is long enough that about 1% of the
+  # simulated waits (median 20 minutes, p95 2 hours) run out.
+  - id: approve-order-updates
+    match: { tool: postgres.execute }
+    when: sql.kind == "update" && "public.orders" in sql.tables && !sql.multi && !sql.unbounded_write
+    decision: require_approval
+    reason: Order updates wait for a person. An admin can approve in Console › Approvals.
+    approval: { approvers: [role:admin], required: 1, expires_in: 4h }
+
+  # Other single-statement inserts and updates with a WHERE clause run, like the inventory
+  # reservations the ops agent makes.
+  - id: allow-db-writes
+    match: { tool: postgres.execute }
+    when: >-
+      sql.kind in ["insert", "update"] && !sql.multi && !sql.ambiguous && !sql.unbounded_write
+      && !sql.cte_write
+    decision: allow
+
+  # Plain reads run.
+  - id: allow-db-reads
+    match: { tool: postgres.query }
+    when: sql.category == "read" && !sql.writes
+    decision: allow
+
+  # Drafts wait in Gmail for a person to send them.
+  - id: allow-gmail-drafts
+    match: { tool: gmail.create_draft }
+    decision: allow
+
+  # New in version 2: posts outside #support and #launches never run.
+  - id: slack-allowlist
+    match: { tool: slack.post_message }
+    when: '!has(args.channel) || !(args.channel in ["#support", "#launches"])'
+    decision: deny
+    reason: "Agents post only in #support and #launches. Ask an admin to add a channel in Console › Policies."
+
+  # Slack posts in the two channels above run.
+  - id: allow-slack-posts
+    match: { tool: slack.post_message }
+    decision: allow
+
+  # Appending blocks to a Notion page runs.
+  - id: allow-notion-appends
+    match: { tool: notion.append_block }
+    decision: allow
+  # github.merge_pr and every other tool fall to the default deny.

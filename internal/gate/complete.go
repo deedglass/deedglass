@@ -42,7 +42,7 @@ func (p *Pipeline) seal(ctx context.Context, tx pgx.Tx, id ids.ActionID) error {
 }
 
 func (p *Pipeline) sealEnv(ctx context.Context, tx pgx.Tx, id ids.ActionID) (*deed.Envelope, error) {
-	env, err := p.o.Ledger.SealAction(ctx, tx, id.String())
+	env, err := p.o.Ledger.SealActionAt(ctx, tx, id.String(), p.now())
 	if err != nil {
 		if errors.Is(err, deed.ErrChainConflict) || errors.Is(err, ledger.ErrStateConflict) {
 			return nil, err
@@ -198,7 +198,7 @@ func (p *Pipeline) recordExecution(ctx context.Context, tx pgx.Tx, s Subject, e 
 		amt, cur := c.Amount, c.Currency
 		patch.CostAmount, patch.CostCurrency = &amt, &cur
 	}
-	ev := ledger.EventData{Actor: actor, RequestID: requestID, ErrorCode: nonEmpty(e.ErrorCode)}
+	ev := ledger.EventData{Actor: actor, RequestID: requestID, ErrorCode: nonEmpty(e.ErrorCode), At: p.now()}
 	id := s.ID.String()
 	finish := func() (*ledger.Action, error) {
 		view, err := ledger.ReadAction(ctx, tx, s.Org, id)
@@ -223,7 +223,7 @@ func (p *Pipeline) recordExecution(ctx context.Context, tx pgx.Tx, s Subject, e 
 			return nil, err
 		}
 	}
-	plain := ledger.EventData{Actor: actor, RequestID: requestID}
+	plain := ledger.EventData{Actor: actor, RequestID: requestID, At: ev.At}
 	steps := []ledger.Step{{To: Executed, Event: ev, Patch: &patch}, {To: Witnessing, Event: plain}}
 	// S21: a write on a connector witnessed at L2 waits in witnessing for the decoder's frame,
 	// unless the decoder is gone (no wait) or halted (the gap now).
@@ -261,7 +261,12 @@ func (p *Pipeline) recordExecution(ctx context.Context, tx pgx.Tx, s Subject, e 
 		}
 		return ledger.ReadAction(ctx, tx, s.Org, id)
 	}
-	out, err := p.decide(wc)
+	var out witness.Outcome
+	if p.o.Simulated != nil {
+		out, err = p.o.Simulated.Verdict(ctx, s, e, wc.sub.Required)
+	} else {
+		out, err = p.decide(wc)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -471,7 +476,7 @@ func (p *Pipeline) Cancel(ctx context.Context, pr principal, id string) (*Action
 			return httpx.E(httpx.CodeConflict, httpx.Msg(MsgCancelApproved))
 		}
 		if a.ApprovalID != nil {
-			err := store.DecideApproval(ctx, tx, pr.OrgID, *a.ApprovalID, "cancelled", deciderOf(pr), nil)
+			err := store.DecideApproval(ctx, tx, pr.OrgID, *a.ApprovalID, "cancelled", deciderOf(pr), nil, p.now())
 			if errors.Is(err, store.ErrNoRow) {
 				// The approval was decided while this request waited for the action's lock (the
 				// joined status above is the snapshot from before the wait).
@@ -489,7 +494,7 @@ func (p *Pipeline) Cancel(ctx context.Context, pr principal, id string) (*Action
 				}
 			}
 		}
-		ev := ledger.EventData{Actor: actorOf(pr), RequestID: httpx.RequestID(ctx), Reason: strp("cancelled"), ApprovalID: a.ApprovalID}
+		ev := ledger.EventData{Actor: actorOf(pr), RequestID: httpx.RequestID(ctx), Reason: strp("cancelled"), ApprovalID: a.ApprovalID, At: p.now()}
 		if err := p.o.Ledger.Transition(ctx, tx, id, PendingApproval, Cancelled, ev); err != nil {
 			return err
 		}
@@ -577,7 +582,7 @@ func (p *Pipeline) step(ctx context.Context, org ids.OrgID, id ids.ActionID) (a 
 					status = *ga.ApprovalStatus
 				}
 				if status == "pending" && ga.ApprovalExpiresAt != nil && !now.Before(*ga.ApprovalExpiresAt) {
-					if err := store.DecideApproval(ctx, tx, org, *ga.ApprovalID, "expired", nil, nil); err != nil {
+					if err := store.DecideApproval(ctx, tx, org, *ga.ApprovalID, "expired", nil, nil, now); err != nil {
 						return err
 					}
 					if h, ok := p.o.Approvals.(ApprovalHooks); ok {
@@ -598,7 +603,7 @@ func (p *Pipeline) step(ctx context.Context, org ids.OrgID, id ids.ActionID) (a 
 					}
 					if subj.OrgStopped || subj.AgentStatus != "active" {
 						d := stopDecision(subj)
-						ev := ledger.EventData{Reason: strp(string(d.Code))}
+						ev := ledger.EventData{Reason: strp(string(d.Code)), At: now}
 						patch := ledger.Patch{Decision: strp(string(d.Outcome)), DecisionCode: strp(string(d.Code)), DecisionSource: strp(d.Source),
 							DecisionMessage: nonEmpty(d.Message)}
 						if err := p.o.Ledger.Transition(ctx, tx, sid, PendingApproval, Denied, ev, patch); err != nil {
@@ -619,7 +624,7 @@ func (p *Pipeline) step(ctx context.Context, org ids.OrgID, id ids.ActionID) (a 
 					if sub.Mode == ModeProxy {
 						deadline = now.Add(p.cfg.EdgeResultTimeout)
 					}
-					ev := ledger.EventData{Reason: strp("approved"), ApprovalID: ga.ApprovalID}
+					ev := ledger.EventData{Reason: strp("approved"), ApprovalID: ga.ApprovalID, At: now}
 					if err := p.o.Ledger.Transition(ctx, tx, sid, PendingApproval, Executing, ev, ledger.Patch{ExecutingDeadline: &deadline}); err != nil {
 						return err
 					}
@@ -673,7 +678,7 @@ func (p *Pipeline) step(ctx context.Context, org ids.OrgID, id ids.ActionID) (a 
 				done = true
 			case Executed:
 				// An action that reached executed without a witness (an older server): L0 decides.
-				if err := p.o.Ledger.Transition(ctx, tx, sid, Executed, Witnessing, ledger.EventData{}); err != nil {
+				if err := p.o.Ledger.Transition(ctx, tx, sid, Executed, Witnessing, ledger.EventData{At: now}); err != nil {
 					return err
 				}
 				out, err := p.decide(p.storedCase(ga))
@@ -727,7 +732,7 @@ func (p *Pipeline) conclude(ctx context.Context, tx pgx.Tx, org ids.OrgID, ga *s
 		return fmt.Errorf("gate: an approval %s doesn't end an action", status)
 	}
 	rs, _ := storedUsage(ga)
-	ev := ledger.EventData{Reason: strp(status), ApprovalID: ga.ApprovalID}
+	ev := ledger.EventData{Reason: strp(status), ApprovalID: ga.ApprovalID, At: p.now()}
 	if err := p.o.Ledger.Transition(ctx, tx, ga.ID.String(), PendingApproval, to, ev); err != nil {
 		return err
 	}

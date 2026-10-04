@@ -566,6 +566,57 @@ The overview is cached for 10 seconds per org and window; `generated_at` says wh
 expansion the agent object is unchanged. The schemas are `Overview`, `OverviewCount`,
 `AttentionItem` and `AgentUsage` in `api/openapi.yaml`.
 
+## Insights (S27)
+
+Replay, stats, shadow disagreements, anomalies and the Insights settings. Insights reads and
+reports; its only input into decisions is the opt-in anomaly facts ([INSIGHTS.md](INSIGHTS.md)).
+
+| Route | Role | Returns |
+|---|---|---|
+| `POST /v1/policies/{id}/versions/{v}/replay` | admin+ | 202 a queued `replay` (`rpl_` id); optional `Idempotency-Key`; `{v}` is the version number |
+| `GET /v1/replays` | viewer+ | a list of `replay` objects, newest first (`?policy=pol_…&status=…`) |
+| `GET /v1/replays/{id}` | viewer+ | a `replay`, with its result once `status` is `succeeded` |
+| `POST /v1/replays/{id}/cancel` | admin+ | the `replay`, `cancelled`; 409 `conflict` once it finished |
+| `GET /v1/insights/stats` | viewer+ | an `insights_stats` (`?window=7d\|30d` or `from`/`to`, `by=rule\|tool\|agent\|none`, `agent`, `tool`, `compare=previous`) |
+| `GET /v1/insights/shadow` | viewer+ | a `shadow_report` (`?shadow_version=pv_…&from=&to=`) |
+| `GET /v1/insights/anomalies` | viewer+ | a list of `anomaly` objects plus `active_now`, `anomaly_facts`, `notice` and `baseline_building` |
+| `GET /v1/insights/anomalies/{id}` | viewer+ | an `anomaly` |
+| `POST /v1/insights/anomalies/{id}/acknowledge` | admin+ | the `anomaly`, `acknowledged` |
+| `POST /v1/insights/anomalies/{id}/resolve` | admin+ | the `anomaly`, `resolved`, with the sealed `anomaly.resolved` deed; `{"reason":"…"}`, 3 to 280 characters |
+| `GET /v1/insights/settings` | viewer+ | the `insights_settings` |
+| `PATCH /v1/insights/settings` | admin+ | the `insights_settings`, with the sealed `insights.settings_changed` deed when something changed |
+
+Every route takes a Console session (by role; POST and PATCH need the `Deedglass-CSRF` header) or
+an org admin key (scope `admin`, acting as admin). **Agent keys get 403 `insufficient_scope` on every
+Insights route, reads included**: "Agent keys can't read Insights. Use the Console or an org admin key." The
+Insights lists take `limit` 1 to 100 and default to 25. Stats and the shadow report have a 10 s
+timeout; every Insights read runs in a read-only org transaction with a 5 s statement timeout.
+
+Errors specific to Insights: 400 `replay_window_invalid` (a window over 90 days, or `from` not
+before `to`), 400 `replay_too_large` (over 1,000,000 actions), and 429 `rate_limited` after 10
+replays created by an org in an hour (`Retry-After: 300`). The rest are canonical codes:
+`not_found`, `conflict`, `validation_failed`, `insufficient_role`, `insufficient_scope`.
+
+```sh
+curl -s -X POST http://127.0.0.1:8080/v1/policies/acme-sim/versions/3/replay \
+  -H "Authorization: Bearer $DEEDGLASS_API_KEY" -H "Idempotency-Key: replay-v3-week-41" \
+  -H "Content-Type: application/json" \
+  -d '{"from":"2026-10-02T00:00:00Z","to":"2026-10-09T00:00:00Z","baseline":{"type":"recorded"}}'
+
+curl -s -H "Authorization: Bearer $DEEDGLASS_API_KEY" \
+  "http://127.0.0.1:8080/v1/insights/stats?window=7d&by=rule" | jq '.groups[0].approval'
+
+curl -s -X PATCH http://127.0.0.1:8080/v1/insights/settings \
+  -H "Authorization: Bearer $DEEDGLASS_API_KEY" -H "Content-Type: application/json" \
+  -d '{"anomaly_facts":true,"reason":"Require approval while an agent spikes"}'
+```
+
+The replay object, the result digest and full examples are in [REPLAY.md](REPLAY.md); every stats
+definition, the shadow report and the anomaly lifecycle in [INSIGHTS.md](INSIGHTS.md); the
+schemas in `api/openapi.yaml` (tag `Insights`). `anomaly.detected` reaches the event stream and
+webhooks with `object: "anomaly"`, the episode `id`, `agent`, `kind`, `tool`, `severity` and
+`status`.
+
 ## Objects
 
 Every object carries `"object"`, naming its type (`"health"`, `"version"`, `"list"`, and so on),
@@ -660,7 +711,7 @@ Responses use 2-space indentation and end with a newline.
 | Body on GET, HEAD and DELETE | None, unless the endpoint says otherwise; sending one is 413 `request_too_large`. |
 | Request time | 30 s by default; 5 s for health, version and the OpenAPI document. Past it, 504 `timeout`. |
 | Request headers | 64 KiB. |
-| `limit` on lists | 1–100, default 20. |
+| `limit` on lists | 1 to 100, default 20 (25 on the Insights lists). |
 | `Idempotency-Key` | 1 to 255 printable ASCII characters. |
 | `X-Request-Id` | 64 printable ASCII characters (longer values are ignored). |
 

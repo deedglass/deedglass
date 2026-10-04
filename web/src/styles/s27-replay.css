@@ -1,0 +1,81 @@
+/* S27: the Policies screen's Replay tab (controllers/replay.ts; DESIGN.md "Console: Replay (S27)").
+   Neutral by design: a replay is a what-if, not a verdict. Red only as the denied outline on a
+   `deny` the candidate would newly decide; amber only on the unknown line; no aurora, no accent fill. */
+
+.rp-form { display: grid; gap: var(--space-3); }
+.rp-controls { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--space-3) var(--space-6); }
+.rp-baseline { min-width: 220px; }
+.rp-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.rp-viewer { margin: 0; }
+
+/* progress, cancelled, failed */
+.rp-state { display: grid; gap: var(--space-3); }
+.rp-line { display: flex; align-items: center; gap: var(--space-2); font-weight: 550; }
+.rp-line .icon { color: var(--text-2); }
+.rp-glyph { flex: none; width: 1em; text-align: center; line-height: 1; color: var(--text-2); }
+.rp-progress { appearance: none; width: 100%; height: 4px; border: 0; border-radius: 2px; background: var(--surface-raised); overflow: hidden; }
+.rp-progress::-webkit-progress-bar { background: var(--surface-raised); border-radius: 2px; }
+.rp-progress::-webkit-progress-value { background: var(--text-2); border-radius: 2px; }
+.rp-progress::-moz-progress-bar { background: var(--text-2); }
+.banner.rp-alert { margin: 0; align-items: flex-start; }
+.banner.rp-alert > .icon { color: var(--text-2); margin-top: 3px; }
+.banner.rp-alert .body { display: grid; gap: var(--space-1); }
+
+/* the result */
+.rp-result { padding: 0; overflow: hidden; }
+.rp-head { display: grid; gap: var(--space-1); padding: var(--space-5) var(--space-5) var(--space-4); border-bottom: 1px solid var(--hairline); }
+.rp-summary { margin: 0; font-size: var(--type-headline-size); line-height: var(--type-headline-line); font-weight: 600; text-wrap: pretty; }
+.rp-meta { text-wrap: pretty; }
+.rp-unknown { display: flex; align-items: baseline; gap: var(--space-2); margin-top: var(--space-1); }
+.rp-unknown-text { min-width: 0; }
+.rp-unknown .rp-glyph { color: var(--unverifiable-fg); }
+.rp-unknown-n { font-weight: 550; }
+.rp-drift { display: flex; align-items: flex-start; gap: var(--space-2); }
+.rp-drift .icon { margin-top: 2px; }
+.rp-section { padding: var(--space-4) var(--space-5); display: grid; gap: var(--space-2); }
+.rp-section + .rp-section { border-top: 1px solid var(--hairline); }
+.rp-h { margin: 0; font-size: var(--type-footnote-size); line-height: var(--type-footnote-line); font-weight: 600; color: var(--text-2); }
+.rp-rows { list-style: none; margin: 0; padding: 0; }
+.rp-row { display: grid; gap: 6px; padding: var(--space-3) 0; border-bottom: 1px solid var(--hairline); }
+.rp-row:first-child { padding-top: var(--space-1); }
+.rp-row:last-child { border-bottom: 0; padding-bottom: 0; }
+.rp-row-head { display: flex; align-items: baseline; gap: var(--space-3); min-height: 24px; min-width: 0; }
+.rp-row-body { display: grid; gap: 6px; min-width: 0; justify-items: start; }
+/* from 768px a row reads like the CLI: the pair, its count, then what decided it */
+@media (min-width: 768px) {
+  .rp-row { grid-template-columns: minmax(0, 34ch) minmax(0, 1fr); column-gap: var(--space-6); }
+  .rp-row-head { align-self: start; }
+  .rp-count { min-width: 6ch; text-align: right; }
+}
+.rp-pair { min-width: 0; overflow-wrap: anywhere; color: var(--text); }
+.rp-arrow { color: var(--text-2); }
+.rp-dec { white-space: nowrap; }
+/* the only red: the denied outline on a deny the candidate would newly decide (never filled) */
+.rp-dec[data-decision='deny'][data-side='to'] { color: var(--denied-fg); box-shadow: inset 0 0 0 1px currentColor; border-radius: var(--radius-chip); padding: 0 5px; }
+.rp-count { margin-left: auto; flex: none; font-weight: 600; font-size: var(--type-body-size); }
+.rp-chips { display: flex; flex-wrap: wrap; gap: 4px; min-width: 0; }
+.rp-chips .label-chip { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+.rp-chip-n { margin-left: 6px; color: var(--text-2-on-alt); }
+.rp-human { color: var(--text); }
+.rp-tools { overflow-wrap: anywhere; }
+.rp-samples > summary { cursor: pointer; touch-action: manipulation; width: fit-content; border-radius: var(--radius-chip); list-style-position: inside; }
+.rp-samples > summary:hover { color: var(--text); }
+.rp-ids { list-style: none; margin: var(--space-2) 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(15ch, 1fr)); gap: 2px var(--space-3); }
+.rp-ids a { color: var(--text); font-size: var(--type-mono-s-size); }
+.rp-ids a:hover { color: var(--accent); }
+.rp-foot { display: flex; align-items: flex-start; gap: var(--space-2); padding: var(--space-3) var(--space-5); border-top: 1px solid var(--hairline); background: var(--surface-alt); color: var(--text-2-on-alt); }
+.rp-foot-text { flex: 0 1 auto; min-width: 0; padding-top: 2px; }
+.rp-foot .mono { color: var(--text); }
+.rp-rules { overflow-wrap: anywhere; color: var(--text); }
+.rp-copy .icon { opacity: 1; }
+
+@media (max-width: 639.98px) {
+  .rp-unknown-why { display: block; }
+  .rp-sep { display: none; }
+  .rp-head, .rp-section { padding-left: var(--space-4); padding-right: var(--space-4); }
+  .rp-foot { padding-left: var(--space-4); padding-right: var(--space-4); }
+  .rp-baseline { min-width: 0; width: 100%; }
+  .rp-controls > .field { width: 100%; }
+  .rp-actions .btn { flex: 1; justify-content: center; }
+}
+.rp-samples { justify-self: stretch; min-width: 0; }

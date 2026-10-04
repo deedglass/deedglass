@@ -46,6 +46,9 @@ const (
 	EventOrgStarted     = "org.started"
 	// EventWebhookTest is sent to one endpoint only, by POST /v1/webhooks/{id}/test (S22).
 	EventWebhookTest = "webhook.test"
+	// EventAnomalyDetected (S27): id is the anomaly episode (anm_…); agent, kind, tool and severity
+	// are set. Published when an episode opens and on each new occurrence, never per finding.
+	EventAnomalyDetected = "anomaly.detected"
 )
 
 // WebhookEvents are the event types an endpoint may subscribe to (contract §8): every type above
@@ -54,7 +57,7 @@ var WebhookEvents = []string{
 	EventActionCreated, EventActionDecided, EventActionExecuted, EventActionWitnessed, EventDeedSealed,
 	EventApprovalRequested, EventApprovalDecided,
 	EventAgentStopped, EventAgentResumed, EventAgentSuspended, EventOrgStopped, EventOrgStarted,
-	"anomaly.detected", "suggestion.created",
+	EventAnomalyDetected, "suggestion.created",
 	EventPolicyActivated, EventDecoderDegraded, EventDecoderRecovered, EventDecoderAlert, EventWebhookTest,
 }
 
@@ -91,6 +94,9 @@ type Event struct {
 	RuleID        *string `json:"rule_id,omitempty"`
 	Required      *int    `json:"required,omitempty"`
 	Countersigned *int    `json:"countersigned,omitempty"`
+	// anomaly.detected only (S27, additive): the episode's severity (info, warn or high); Agent,
+	// Kind and Tool above carry the rest. Absent on every other event.
+	Severity *string `json:"severity,omitempty"`
 }
 
 // eventFor maps a transition into to (contract §8 table): "" when the transition publishes nothing

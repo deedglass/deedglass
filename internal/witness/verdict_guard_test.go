@@ -24,6 +24,7 @@ var verdictGuardAllow = map[string]string{
 	"internal/ledger/fake/fake.go":      "the demo ledger's fake data; never a real action",
 	"internal/ledger/fake/run.go":       "the demo ledger's fake amendments; never a real action",
 	"cmd/deedglass/verify.go":           "presentation: counts deeds per verdict word in the CLI output",
+	"cmd/deedglass/insights.go":         "presentation: the stats table's column header for counts the database already holds",
 	"internal/witness/precedence.go":    "Decide: the one function that produces VERIFIED",
 	"internal/witness/verdict.go":       "declares the Verified constant",
 }

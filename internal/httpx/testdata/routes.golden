@@ -108,8 +108,8 @@ planned    POST    /v1/insights/anomalies/{id}/resolve                    sessio
 planned    GET     /v1/insights/shadow                                    session_or_key  viewer           S27
 planned    GET     /v1/insights/settings                                  session_or_key  viewer           S27
 planned    PATCH   /v1/insights/settings                                  session_or_key  admin            S27
-planned    GET     /v1/replays                                            session_or_key  admin            S27
-planned    GET     /v1/replays/{id}                                       session_or_key  admin            S27
+planned    GET     /v1/replays                                            session_or_key  viewer           S27
+planned    GET     /v1/replays/{id}                                       session_or_key  viewer           S27
 planned    POST    /v1/replays/{id}/cancel                                session_or_key  admin            S27
 planned    GET     /v1/suggestions                                        session_or_key  viewer           S28
 planned    GET     /v1/suggestions/{id}                                   session_or_key  viewer           S28

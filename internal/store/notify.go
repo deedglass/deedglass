@@ -70,3 +70,17 @@ type ChannelListener interface {
 // ListenConfig returns a copy of the pool's connection settings, for a dedicated connection that
 // isn't part of the pool (the identity listener holds one for LISTEN).
 func (db *DB) ListenConfig() *pgx.ConnConfig { return db.pool.Config().ConnConfig.Copy() }
+
+// LearnChannel is the NOTIFY channel for Insights (contract §8, S27). The payload is the org id:
+// every instance drops that org's anomaly facts from its cache (an episode inserted, extended or
+// resolved, or Insights settings changed) and reloads them from Postgres on the next action.
+const LearnChannel = "deedglass_learn"
+
+// NotifyLearn sends org on deedglass_learn inside tx: delivered only if the change commits.
+func NotifyLearn(ctx context.Context, tx pgx.Tx, org string) error {
+	if len(org) > MaxNotifyPayload || tx == nil {
+		return errors.New("store: a learn notification needs a transaction and an org id")
+	}
+	_, err := tx.Exec(ctx, `SELECT pg_catalog.pg_notify('deedglass_learn', $1)`, org)
+	return err
+}

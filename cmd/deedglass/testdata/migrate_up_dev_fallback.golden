@@ -1,6 +1,6 @@
 exit 0
 --- stdout
-◐ Migrating deedglass on 127.0.0.1:55432 as deedglass_migrator · 14 pending
+◐ Migrating deedglass on 127.0.0.1:55432 as deedglass_migrator · 15 pending
 ✓ 0010 ledger              11 ms
 ✓ 0011 identity_humans     11 ms
 ✓ 0012 preauth             11 ms
@@ -15,7 +15,8 @@ exit 0
 ✓ 0021 approvals           11 ms
 ✓ 0022 undo                11 ms
 ✓ 0023 overview            11 ms
-✓ Schema at 0023 · 14 applied in 0.15 s
+✓ 0024 learn_v2            11 ms
+✓ Schema at 0024 · 15 applied in 0.17 s
 --- stderr
 ○ Using DEEDGLASS_DATABASE_URL for migrations (dev only).
 ○ Migrating as a superuser. Dev allows it; prod refuses. Run migrations as deedglass_migrator.

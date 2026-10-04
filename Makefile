@@ -387,6 +387,16 @@ bench-events: ## S24 §3.12: the event hub, 1,000 events/s to 200 SSE streams (p
 	DEEDGLASS_EVENTS_BENCH_OUT="$$out" $(GO) test -count=1 -run '^TestHubBudget$$' -v ./internal/console/ > "$$out.log" 2>&1; st=$$?; \
 	grep -E '^(--- |ok|FAIL)|"(p50|p99|kib_per_subscriber|events_per_s)"' "$$out.log"; rm -f "$$out.log"; echo "raw: $$out"; exit $$st
 
+.PHONY: bench-insights
+bench-insights: ## S27: replay, stats (p99 + EXPLAIN), detect and FactsCache at 100k actions / 20 agents, then S13's gate budget with the anomaly opt-in on, on a throwaway PG 18; raw go test -json in bench/results/
+	@d="$$(date +%F)-$$(go env GOOS)-$$(go env GOARCH)"; out="$(CURDIR)/bench/results/$$d-insights.json"; gout="$(CURDIR)/bench/results/$$d-gate-anomalies.json"; mkdir -p "$(CURDIR)/bench/results"; \
+	DEEDGLASS_IT_BENCH_OUT="$$out" DEEDGLASS_IT_BENCH_RUN='TestInsightsBudget' DEEDGLASS_IT_BENCH_PKG=./internal/learn/ \
+	DEEDGLASS_IT_PKGS=./internal/learn/ DEEDGLASS_IT_GOFLAGS='-run ^$$' scripts/integration_local.sh >/dev/null; st=$$?; \
+	grep -o 'PERF {[^}]*}' "$$out" | sed 's/\\"/"/g'; echo "raw: $$out"; st1=$$st; \
+	DEEDGLASS_IT_BENCH_ANOMALIES=1 DEEDGLASS_IT_BENCH_OUT="$$gout" DEEDGLASS_IT_BENCH_RUN='TestGateBudget' DEEDGLASS_IT_BENCH_PKG=./internal/gate/ \
+	DEEDGLASS_IT_PKGS=./internal/gate/ DEEDGLASS_IT_GOFLAGS='-run ^$$' scripts/integration_local.sh >/dev/null; st=$$?; \
+	grep -o 'PERF {[^}]*}' "$$gout" | sed 's/\\"/"/g'; echo "raw: $$gout"; [ $$st1 -eq 0 ] && exit $$st || exit $$st1
+
 .PHONY: bench-overview
 bench-overview: ## S25 §3.8: GET /v1/overview's read (cache bypassed) at 100,000 actions in 24 h, both windows (p99 < 80 ms) and the EXPLAIN plans, on a throwaway PG 18; raw go test -json in bench/results/
 	@out="$(CURDIR)/bench/results/$$(date +%F)-$$(go env GOOS)-$$(go env GOARCH)-overview.json"; mkdir -p "$(CURDIR)/bench/results"; \

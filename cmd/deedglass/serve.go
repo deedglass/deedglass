@@ -30,6 +30,7 @@ import (
 	"github.com/deedglass/deedglass/internal/gate"
 	"github.com/deedglass/deedglass/internal/httpx"
 	"github.com/deedglass/deedglass/internal/identity"
+	"github.com/deedglass/deedglass/internal/learn"
 	"github.com/deedglass/deedglass/internal/ledger"
 	"github.com/deedglass/deedglass/internal/mailer"
 	"github.com/deedglass/deedglass/internal/mcp/upstream"
@@ -38,6 +39,7 @@ import (
 	"github.com/deedglass/deedglass/internal/policy"
 	"github.com/deedglass/deedglass/internal/policyapi"
 	"github.com/deedglass/deedglass/internal/store"
+	"github.com/deedglass/deedglass/internal/store/learnstore"
 	"github.com/deedglass/deedglass/internal/store/migrate"
 	"github.com/deedglass/deedglass/internal/store/migrations"
 	"github.com/deedglass/deedglass/internal/store/policystore"
@@ -255,7 +257,11 @@ func runServe(ctx context.Context, e *Env, args []string) error {
 	// the approval context section.
 	planner := undoapi.NewPlanner(db, cw.reg, undoConfig(cfg), log)
 	undoapi.RegisterSection()
-	gp, err := newGate(cfg, db, led, pol, keys, log, cw.reg, pool, aps, undoapi.Resolver{Reg: cw.reg, Planner: planner, DB: db, Log: log})
+	// 5g. Insights (S27): the store, the opt-in anomaly facts the Gate reads (dropped on NOTIFY
+	// deedglass_learn), replay jobs and anomaly detection.
+	ins := newInsights(db, led, log)
+	keys.Listener().Listen(store.LearnChannel, ins.facts.Invalidate, func() { ins.facts.Invalidate("") })
+	gp, err := newGate(cfg, db, led, pol, keys, log, cw.reg, pool, aps, undoapi.Resolver{Reg: cw.reg, Planner: planner, DB: db, Log: log}, ins.facts)
 	if err != nil {
 		return err
 	}
@@ -310,6 +316,11 @@ func runServe(ctx context.Context, e *Env, args []string) error {
 		go func() { defer close(decDone); _ = dec.Run(dctx) }()
 		defer func() { stopDec(); <-decDone }()
 	}
+	ictx, stopIns := context.WithCancel(context.WithoutCancel(ctx))
+	insDone := make(chan struct{}, 2)
+	go func() { _ = ins.runner.Run(ictx); insDone <- struct{}{} }()
+	go func() { _ = ins.detector.Run(ictx); insDone <- struct{}{} }()
+	defer func() { stopIns(); <-insDone; <-insDone }()
 	defer func() {
 		stopWorker()
 		<-workerDone
@@ -331,7 +342,7 @@ func runServe(ctx context.Context, e *Env, args []string) error {
 	// S25: GET /v1/overview, with S11's usage counters and the decoder's lag threshold.
 	ov := console.NewOverview(console.OverviewOptions{Ledger: led, Usage: console.UsageFromStore(policystore.NewUsage(db)),
 		SlotLagAlertBytes: int64(cfg.SlotLagAlertMB) << 20, Log: log})
-	api.Mount(serveRoutes(api, db, ms, sk, led, people, keys, pol, gp, mw, cw, aps, whs, ua, &liveWiring{hub: hub, con: con, ov: ov})...)
+	api.Mount(serveRoutes(api, db, ms, sk, led, people, keys, pol, gp, mw, cw, aps, whs, ua, &liveWiring{hub: hub, con: con, ov: ov, ins: ins})...)
 	ln, err := net.Listen("tcp", cfg.Listen)
 	if err != nil {
 		return &ExitError{Code: ExitFailure, ErrCode: "listen_failed", Err: fmt.Errorf("Can't listen on %s: %s", cfg.Listen, lastPart(err)),
@@ -430,6 +441,9 @@ func serveRoutes(api *httpx.Server, db *store.DB, ms []migrate.Migration, sk *se
 	if cw != nil && cw.decoder != nil {
 		deps.Decoder = decoderHealth(cw.decoder)
 	}
+	if lw != nil && lw.ins != nil && lw.ins.detector != nil {
+		deps.Insights = lw.ins.detector.Health
+	}
 	routes := api.SystemRoutes(deps)
 	routes = append(routes, api.WellKnownRoutes(keySetSource(db, issuer), nil)...)
 	if led == nil {
@@ -485,6 +499,12 @@ func serveRoutes(api *httpx.Server, db *store.DB, ms []migrate.Migration, sk *se
 		lw.ov = console.NewOverview(console.OverviewOptions{})
 	}
 	routes = append(routes, lw.ov.Routes()...)
+	// S27: Insights (replays, shadow, stats, anomalies, settings); a nil service answers 503.
+	var insSvc *learn.Service
+	if lw.ins != nil {
+		insSvc = lw.ins.svc
+	}
+	routes = append(routes, learn.Routes(insSvc)...)
 	// S12: policies, versions, activation deeds, lint, the dry run and the test runner.
 	return append(routes, policyapi.Routes(pol.svc, policyapi.Options{})...)
 }
@@ -495,6 +515,25 @@ type liveWiring struct {
 	hub *console.Hub
 	con *console.Console
 	ov  *console.Overview
+	ins *insights
+}
+
+// insights is S27's wiring.
+type insights struct {
+	store    *learnstore.Store
+	facts    *learn.FactsCache
+	runner   *learn.Runner
+	detector *learn.Detector
+	svc      *learn.Service
+}
+
+func newInsights(db *store.DB, led *ledger.Ledger, log *slog.Logger) *insights {
+	ls := learnstore.New(db, led)
+	facts := &learn.FactsCache{Store: ls, Log: log}
+	runner := &learn.Runner{Engine: &learn.Engine{Src: ls.Inputs}, Jobs: ls, Worker: instanceName(), Log: log}
+	det := &learn.Detector{Store: ls, Log: log}
+	return &insights{store: ls, facts: facts, runner: runner, detector: det,
+		svc: &learn.Service{Store: ls, Inputs: ls.Inputs, Runner: runner, Facts: facts, Log: log}}
 }
 
 // eventMetrics writes the live stream's gauges and counters (S24).
@@ -541,7 +580,7 @@ func policyMetrics(reg *policy.Registry) httpx.Collector {
 // newGate is the action pipeline (S13): the fake connector in dev only (S16 reserves the name
 // outside dev), S12's registry, S11's usage store, S09's intent checker and S08's Stop guard.
 func newGate(cfg *config.Config, db *store.DB, led *ledger.Ledger, pol *policies, keys *identity.KeyAuth, log *slog.Logger,
-	reg *connector.Registry, pool *upstream.Pool, aps *approve.Service, internal gate.Resolver) (*gate.Pipeline, error) {
+	reg *connector.Registry, pool *upstream.Pool, aps *approve.Service, internal gate.Resolver, anomalies gate.AnomalySource) (*gate.Pipeline, error) {
 	g := cfg.Gate
 	var approvals gate.Approvals
 	if aps != nil {
@@ -549,6 +588,7 @@ func newGate(cfg *config.Config, db *store.DB, led *ledger.Ledger, pol *policies
 	}
 	return gate.New(gate.Options{DB: db, Ledger: led, Policies: pol.reg, Usage: policystore.NewUsage(db), Approvals: approvals,
 		Intents: identity.NewIntents(db, keys, nil), Guard: keys, Resolver: upstream.Resolver{Native: reg, Pool: pool}, Internal: internal, Logger: log,
+		Anomalies: anomalies,
 		Config: gate.Config{WaitTimeout: g.WaitTimeout, ExecuteTimeout: g.ExecuteTimeout, EdgeResultTimeout: g.EdgeResultTimeout,
 			MaxArgsBytes: g.MaxArgsBytes, MaxResultBytes: g.MaxResultBytes, WorkerConcurrency: g.WorkerConcurrency,
 			WorkerMaxAttempts: g.WorkerMaxAttempts,

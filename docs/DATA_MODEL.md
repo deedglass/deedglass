@@ -28,8 +28,8 @@ erDiagram
 
 ## Tables
 
-34 tables: 30 from contract §4, plus `idempotency_keys`, `schema_migrations`, `approval_votes` (S22) and
-`undo_plans` (S23). 29 of them are org tables.
+35 tables: 30 from contract §4, plus `idempotency_keys`, `schema_migrations`, `approval_votes` (S22),
+`undo_plans` (S23) and `learn_runs` (S27). 30 of them are org tables.
 
 | Table | What it holds | Written by |
 |---|---|---|
@@ -61,8 +61,9 @@ erDiagram
 | `decoded_txs` | Frames: transactions read from a watched database's change stream, with their class, ledger rows, markers, tables, counts, row images (the first 1,000) and digest. Unique by (connector, system id, timeline, commit LSN, stray message); `missing` rows (reconcile) have no LSN. Evidence: UPDATE and TRUNCATE raise DG001, and only `maint_prune_decoded_txs` deletes ([DECODER.md](DECODER.md)). | S20 |
 | `decoder_slots` | One logical replication slot per witnessed Postgres connector: the lease (`claim_decoder_leases`), status and reason, positions, lag, counters, relation shapes and the reconcile watermark. `sync_decoder_slots` keeps one row per witnessed connector. | S20 |
 | `suggestions` | Insights suggestions a person accepts or rejects. | S28 |
-| `anomalies` | Insights anomalies. | S27 |
-| `replay_jobs` | Replays of past actions against a policy version. | S27 |
+| `anomalies` | Insights anomaly episodes: one row per unresolved series of findings for an agent, kind and tool, with its evidence (numbers, hours, tool names, action ids), `active_until` (what `anomaly.active` sees) and the review status (`open`, `acknowledged`, `resolved`). S27 (0024) added the episode, lifecycle and fact columns. | S27 |
+| `replay_jobs` | Replays of past actions against a policy version (or a draft source): the window, the baseline, the lease, the progress and, once succeeded, the result and its digest. S27 (0024) added the job columns. | S27 |
+| `learn_runs` | Insights' background runs, one row per org, kind (`detect`, `suggest`, `digest`) and period: their status, times and counts. The anomaly facts read the last successful live `detect` run to decide whether detection is stale. | S27 (0024) |
 | `webhooks` | Webhook endpoints, with the signing secret encrypted. | S22 |
 | `webhook_deliveries` | Each delivery attempt. | S22 |
 | `waitlist` | Waitlist entries. | S36 |
@@ -106,7 +107,7 @@ Lookups that happen before the org is known (a session cookie, a login token, an
 | Prefix | Use | Sessions |
 |---|---|---|
 | `preauth_*` | Find the one row a credential points to, before the org is known | S07 to S09, S22 |
-| `claim_*` | Claim due jobs across orgs, with `FOR UPDATE SKIP LOCKED` | S13, S20, S22 |
+| `claim_*` | Claim due jobs across orgs, with `FOR UPDATE SKIP LOCKED`; list the orgs a background pass covers | S13, S20, S22, S27 |
 | `maint_*` | Pruning and other maintenance | S06, S09, S13 |
 
 Each one is owned by `deedglass_migrator`, pins `search_path = pg_catalog, pg_temp`, returns the minimum columns, and is granted only to `deedglass_app`. `SystemTx` stays for org creation, health checks and tests.
@@ -419,6 +420,77 @@ actions in its window by bucket, decision, verdict and level ([OVERVIEW_METRICS.
 and with these columns in the index the scan doesn't read the wide action rows where they are
 all-visible. Every transition already changes `state`, an indexed column, so action updates were
 never HOT; the index adds one small entry per row version.
+
+## Insights additions (0024, S27)
+
+`0024_learn_v2.sql` adds what Insights needs ([INSIGHTS.md](INSIGHTS.md), [REPLAY.md](REPLAY.md)).
+Nothing wrote to `replay_jobs` or `anomalies` before S27, so the migration tightens their checks in
+place, and first refuses, with a clear message, if either table holds rows.
+
+**`replay_jobs`** (0008's table, `version_id` now nullable for a draft):
+
+| Column | What |
+|---|---|
+| `source`, `source_hash` | a draft candidate's policy source (at most 256 KiB) and its hash; exactly one of `version_id` and `source` is set (`replay_candidate`) |
+| `baseline` | `{"type":"recorded"}` (default) or `{"type":"version",…}` |
+| `purpose` | `manual` (default) or `suggestion` (S28); only manual replays count toward the 10-an-hour limit |
+| `sqlguard_version` | the classifier version that ran the replay |
+| `total`, `processed` | the actions in the window (counted at creation) and how many are done |
+| `result_digest` | `sha256:` digest of the result; the result itself (`result`) is at most 1 MiB |
+| `attempts`, `locked_by`, `locked_until` | the lease: a claim sets `locked_until = now() + lease` and adds an attempt |
+| `cancel_requested_at` | when a cancel was asked for |
+| `requested_by_type`, `requested_by_id` | `user`, `api_key` or `system`, and the id |
+
+`status` is now `queued`, `running`, `succeeded`, `failed` or `cancelled` (it replaces 0008's
+`done`). Indexes: `replay_jobs_claim_idx` on `(created_at) WHERE status IN ('queued','running')`,
+and `replay_jobs_org_time` on `(org_id, created_at DESC, id DESC)` for the list.
+
+**`anomalies`** (0008's table):
+
+| Column | What |
+|---|---|
+| `tool` | the tool, for `new_tool`; NULL otherwise |
+| `score` | the highest score of the episode's findings |
+| `episode_key` | `agent\|kind\|tool` (the tool is empty except for `new_tool`) |
+| `occurrences` | how many times the episode became active again after its activity had ended (1 to start) |
+| `active_until` | the last finding's window end plus `anomaly_active_minutes`; feeds `anomaly.active` and ends on its own |
+| `detector_version` | the detector thresholds that found it (`1`) |
+| `title` | the latest finding's sentence, at most 280 characters |
+| `acknowledged_by`, `acknowledged_at` | who acknowledged, and when |
+| `resolved_by`, `resolution_reason`, `resolution_deed_id` | who resolved (`system` for the 14-day close), why (at most 280 characters), and the `anomaly.resolved` deed (none for the system's close) |
+| `updated_at` | kept by the `anomalies_touch` trigger |
+
+The evidence is at most 32 KiB, and a resolved episode must name who resolved it
+(`anomalies_resolution`). Indexes: `anomalies_open_episode_uq`, a unique
+`(org_id, episode_key) WHERE status <> 'resolved'` (one unresolved episode per key), and
+`anomalies_active_idx` on `(org_id, agent_id, active_until) WHERE status <> 'resolved'` (the
+anomaly facts).
+
+**`learn_runs`** (new, org table, row-level security, `SELECT`, `INSERT`, `UPDATE` and `DELETE` for
+`deedglass_app`): primary key `(org_id, kind, period_key)`; `kind` is `detect`, `suggest` or
+`digest`; `period_key` names the period (`2026-10-09T14:05Z` for a live detect pass, `bf:…` for a
+backfill, `2026-10-09` for a suggest run, `2026-W41` for a digest); `status` is `running`,
+`succeeded` or `failed`, with `started_at`, `finished_at`, `stats` (at most 4 KiB) and `error`. The
+index `learn_runs_recent` serves the latest runs. The detect loop deletes its rows older than 7 days.
+
+**Two indexes on `actions`.** Insights reads actions by decision time:
+
+| Index | On | Serves |
+|---|---|---|
+| `actions_org_evaluated_idx` | `(org_id, evaluated_at, id)` | stats, the replay scan (keyset in `(evaluated_at, id)` order) and detection |
+| `actions_org_shadow_idx` | `(org_id, shadow_version_id, evaluated_at) WHERE shadow_version_id IS NOT NULL` | the shadow report |
+
+**Two cross-org functions**, both `SECURITY DEFINER` with `search_path = pg_catalog, pg_temp` and
+`EXECUTE` for `deedglass_app` only, returning ids:
+
+| Function | Returns | Used by |
+|---|---|---|
+| `claim_replay_jobs(p_worker, p_limit, p_lease)` | `(org_id, id, attempts)`. Under one transaction-level advisory lock, it leases at most `p_limit` (1 to 16) jobs to `p_worker`: queued jobs, and running jobs whose lease ran out, at most one per org, and none for an org that already has a job with a live lease. A claim sets `status = 'running'`, the lease, `attempts + 1`, `processed = 0` and `started_at` | the replay runner, every 2 s and when a replay is created |
+| `claim_learn_orgs(p_recent)` | `(org_id)`: active orgs with an action decided in the last `p_recent`, or with `settings.insights.anomaly_facts` true; at most 10,000 | the detect loop, every 5 minutes |
+
+The work itself runs afterwards in each org's own transaction, under row-level security. The
+Insights settings live in `orgs.settings -> 'insights'` and a simulated org carries
+`orgs.settings.simulated = true` ([SIMULATOR.md](SIMULATOR.md)); neither needs a column.
 
 ## Personal data
 

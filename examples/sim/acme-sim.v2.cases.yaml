@@ -1,0 +1,117 @@
+# Test cases for acme-sim.v2.yaml. Run them with:
+#   deedglass policy test examples/sim/acme-sim.v2.yaml --require-coverage --voice
+policy: acme-sim.v2.yaml
+defaults:
+  agent: { name: support-bot }
+  org: { timezone: Asia/Kolkata }
+  time: 2026-10-04T11:00:00+05:30
+cases:
+  # Destructive SQL
+  - name: DROP never runs
+    input: { tool: postgres.execute, agent: { name: ops-agent }, sql: "DROP TABLE public.orders" }
+    expect: { decision: deny, rule: block-destructive-sql, code: policy_denied }
+  - name: TRUNCATE never runs, even through a read tool
+    input: { tool: postgres.query, agent: { name: nightly-etl }, sql: "TRUNCATE public.inventory" }
+    expect: { decision: deny, rule: block-destructive-sql }
+  - name: a DELETE with no WHERE never runs
+    input: { tool: postgres.execute, agent: { name: ops-agent }, sql: "DELETE FROM public.orders" }
+    expect:
+      decision: deny
+      rule: block-destructive-sql
+      message: 'Blocked by policy "block-destructive-sql": DROP, TRUNCATE and DELETE without a WHERE clause are never allowed for agents.'
+  - name: a DELETE with a WHERE falls to the default
+    input: { tool: postgres.execute, agent: { name: ops-agent }, sql: "DELETE FROM public.orders WHERE id = 4242" }
+    expect: { decision: deny, rule: default }
+
+  # Refunds
+  - name: a $24.00 refund runs
+    input: { tool: stripe.create_refund, args: { amount: 2400, currency: usd } }
+    expect: { decision: allow, rule: allow-refunds, verify: L0 }
+  - name: exactly $30.00 still runs on its own
+    input: { tool: stripe.create_refund, args: { amount: 3000, currency: usd } }
+    expect: { decision: allow, rule: allow-refunds }
+  - name: $30.01 waits for an admin
+    input: { tool: stripe.create_refund, args: { amount: 3001, currency: usd } }
+    expect:
+      decision: require_approval
+      rule: refund-approval-over-30
+      code: approval_required
+      approval: { approvers: [role:admin], required: 1, expires_in: 4h }
+  - name: exactly $100.00 waits for an admin
+    input: { tool: stripe.create_refund, args: { amount: 10000, currency: usd } }
+    expect: { decision: require_approval, rule: refund-approval-over-30, reason_contains: Console › Approvals }
+  - name: $100.01 never runs
+    input: { tool: stripe.create_refund, args: { amount: 10001, currency: usd } }
+    expect: { decision: deny, rule: refund-limit, code: policy_denied, reason_contains: Stripe Dashboard }
+  - name: a refund with no amount never runs
+    input: { tool: stripe.create_refund, args: { currency: usd } }
+    expect: { decision: deny, rule: refund-limit }
+  - name: a refund that would pass the daily cap is refused
+    input:
+      tool: stripe.create_refund
+      args: { amount: 2000, currency: usd }
+      usage: { refunds-per-day: 399000 }
+    expect: { decision: deny, code: budget_exceeded, rule: "budget:refunds-per-day", reason_contains: "$4,010.00 of $4,000.00" }
+  - name: a refund that lands exactly on the cap runs
+    input:
+      tool: stripe.create_refund
+      args: { amount: 2000, currency: usd }
+      usage: { refunds-per-day: 398000 }
+    expect: { decision: allow, rule: allow-refunds }
+
+  # Orders and inventory
+  - name: shipping an order waits for an admin
+    input: { tool: postgres.execute, agent: { name: ops-agent }, sql: "UPDATE public.orders SET status = 'shipped' WHERE id = 4242" }
+    expect:
+      decision: require_approval
+      rule: approve-order-updates
+      code: approval_required
+      approval: { approvers: [role:admin], required: 1, expires_in: 4h }
+  - name: updating every order never runs
+    input: { tool: postgres.execute, agent: { name: ops-agent }, sql: "UPDATE public.orders SET status = 'shipped'" }
+    expect: { decision: deny, rule: default }
+  - name: releasing a reserved item runs
+    input: { tool: postgres.execute, agent: { name: ops-agent }, sql: "UPDATE public.inventory SET reserved = reserved - 1 WHERE sku = 'SKU-0042'" }
+    expect: { decision: allow, rule: allow-db-writes }
+  - name: an insert into inventory runs
+    input: { tool: postgres.execute, agent: { name: ops-agent }, sql: "INSERT INTO public.inventory (sku, reserved) VALUES ('SKU-0501', 0)" }
+    expect: { decision: allow, rule: allow-db-writes }
+  - name: two writes in one call fall to the default
+    input: { tool: postgres.execute, agent: { name: ops-agent }, sql: "UPDATE public.inventory SET reserved = 0 WHERE sku = 'SKU-0001'; UPDATE public.inventory SET reserved = 0 WHERE sku = 'SKU-0002'" }
+    expect: { decision: deny, rule: default }
+
+  # Reads
+  - name: the nightly read of orders runs
+    input: { tool: postgres.query, agent: { name: nightly-etl }, sql: "SELECT id, status FROM public.orders WHERE id = 4242" }
+    expect: { decision: allow, rule: allow-db-reads }
+  - name: a write sent through the read tool falls to the default
+    input: { tool: postgres.query, agent: { name: nightly-etl }, sql: "UPDATE public.orders SET status = 'shipped' WHERE id = 4242" }
+    expect: { decision: deny, rule: default }
+
+  # Gmail, Slack and Notion
+  - name: a refund update draft runs
+    input: { tool: gmail.create_draft, args: { thread: thr_48213, template: refund_update } }
+    expect: { decision: allow, rule: allow-gmail-drafts }
+  - name: "a post in #support runs"
+    input: { tool: slack.post_message, agent: { name: growth-agent }, args: { channel: "#support", text_chars: 180 } }
+    expect: { decision: allow, rule: allow-slack-posts }
+  - name: "a post in #launches runs"
+    input: { tool: slack.post_message, agent: { name: growth-agent }, args: { channel: "#launches", text_chars: 240 } }
+    expect: { decision: allow, rule: allow-slack-posts }
+  - name: "a post in #random never runs in version 2"
+    input: { tool: slack.post_message, agent: { name: growth-agent }, args: { channel: "#random", text_chars: 60 } }
+    expect:
+      decision: deny
+      rule: slack-allowlist
+      message: 'Blocked by policy "slack-allowlist": Agents post only in #support and #launches. Ask an admin to add a channel in Console › Policies.'
+  - name: a post with no channel never runs
+    input: { tool: slack.post_message, agent: { name: growth-agent }, args: { text_chars: 60 } }
+    expect: { decision: deny, rule: slack-allowlist }
+  - name: appending to a Notion page runs
+    input: { tool: notion.append_block, agent: { name: growth-agent }, args: { page: pg_20417, blocks: 2 } }
+    expect: { decision: allow, rule: allow-notion-appends }
+
+  # Everything else
+  - name: merging a pull request falls to the default
+    input: { tool: github.merge_pr, agent: { name: ops-agent }, args: { repo: acme/store, pr: 418 } }
+    expect: { decision: deny, rule: default, reason_contains: No rule allows this action }

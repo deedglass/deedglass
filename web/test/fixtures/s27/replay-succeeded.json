@@ -1,0 +1,172 @@
+{
+  "object": "replay",
+  "id": "rpl_01m42vk4snzxq7gnssmfc54bv6",
+  "status": "succeeded",
+  "purpose": "manual",
+  "candidate": {
+    "policy": "pol_01m42v9q4bjwfqmk8bd58vzkdh",
+    "name": "acme-sim",
+    "version": 3,
+    "version_id": "pv_01m42vcmkk193cy009pdzt4c6s",
+    "version_hash": "sha256:3d09f641a6d5f6962ef719d05a59c6cea0362d950ea6f920418b01125b6bbb7b"
+  },
+  "baseline": {
+    "type": "recorded",
+    "version": 0
+  },
+  "window": {
+    "from": "2026-09-26T07:03:30Z",
+    "to": "2026-10-04T07:03:30Z"
+  },
+  "progress": {
+    "processed": 5890,
+    "total": 5890,
+    "percent": 100
+  },
+  "requested_by": {
+    "type": "api_key",
+    "id": "key_01m42vbv2s105agpkrzjpnhzpa"
+  },
+  "attempts": 1,
+  "created_at": "2026-10-04T07:03:30.357558Z",
+  "started_at": "2026-10-04T07:03:30.358568Z",
+  "finished_at": "2026-10-04T07:03:30.451664Z",
+  "error": null,
+  "summary": {
+    "actions": 5890,
+    "evaluated": 5890,
+    "unchanged": 5422,
+    "changed": 453,
+    "rule_changed": 15,
+    "unknown": 0
+  },
+  "transitions": [
+    {
+      "from": "require_approval",
+      "to": "allow",
+      "count": 411,
+      "human_outcome": {
+        "approved": 397,
+        "denied": 1,
+        "expired": 5,
+        "cancelled": 0,
+        "pending": 8,
+        "not_requested": 0
+      },
+      "by_rule": [
+        {
+          "rule_id": "allow-order-status-updates",
+          "count": 411
+        }
+      ],
+      "by_tool": [
+        {
+          "tool": "postgres.execute",
+          "count": 411
+        }
+      ],
+      "samples": [
+        "act_01m42v9q4yxpvvk84fgd7t8shf",
+        "act_01m42v9q5mppyn3mxr17xdk5nj",
+        "act_01m42v9q6p44tzz1jw9pb0vy34",
+        "act_01m42v9q6vpmh7xjacc175683q",
+        "act_01m42v9q7rxg5x606jrazfn9xc",
+        "act_01m42v9q7yx47j06zrjx204gee",
+        "act_01m42v9q86yx2zdd9cbc8xjjz5",
+        "act_01m42v9q8gh58da8v7tb97ryxf",
+        "act_01m42v9q9mzg76b0nr897cm8y8",
+        "act_01m42v9qc5z1gq1pfkf3qmeqf9",
+        "act_01m42v9qcvq6znpknpqf78ptqn",
+        "act_01m42v9qdaqz5qa6vcjycksffa",
+        "act_01m42v9qezda2mq6e1atqaz5mf",
+        "act_01m42v9qfy5r322d93304k4236",
+        "act_01m42v9qgss31vkrtqc8zygyat",
+        "act_01m42v9qhajqd0h54capw296bd",
+        "act_01m42v9qjpqx2c50zyhvy7tz9e",
+        "act_01m42v9qk8b2azb5na23m041ve",
+        "act_01m42v9qn5zhct8ycapcfrqhsv",
+        "act_01m42v9qpc63w5z406se6evrck"
+      ]
+    },
+    {
+      "from": "allow",
+      "to": "deny",
+      "count": 42,
+      "by_rule": [
+        {
+          "rule_id": "refund-limit-strict",
+          "count": 42
+        }
+      ],
+      "by_tool": [
+        {
+          "tool": "stripe.create_refund",
+          "count": 42
+        }
+      ],
+      "samples": [
+        "act_01m42v9q8qcyh3wvjsc8b2hq80",
+        "act_01m42v9qdh2cc0fxhn9b1w3ad5",
+        "act_01m42v9qhhw604y6x7aqdvrccm",
+        "act_01m42v9r8fseeypjtcckw92sx8",
+        "act_01m42v9vnajeba69sxz8tmc89q",
+        "act_01m42v9vw5vgj11fbaj7dnzrfm",
+        "act_01m42v9w51s39n5dazak9aj845",
+        "act_01m42v9wf835th5arty8nmq5n1",
+        "act_01m42v9wm40nv0xmcpg5nr864r",
+        "act_01m42v9wxvb8ed9s5c791aaffs",
+        "act_01m42v9wzm5hpjpdf84xx90btt",
+        "act_01m42v9x8tbt1zrrpb87jz1kke",
+        "act_01m42v9xepef0zq7snnbkjvawz",
+        "act_01m42v9xhm5p3tzc0mczpjqbae",
+        "act_01m42v9y3dxfajstkdw4h8a3ts",
+        "act_01m42va1svp7mxfpe0jjrhbdsj",
+        "act_01m42va22xcn4ap0btg0cxnjaa",
+        "act_01m42va2jc935ksshzxbed6qp5",
+        "act_01m42va6840gtdzxbp473zktwc",
+        "act_01m42va6qy1s5c3aq8mpx1xb3a"
+      ]
+    }
+  ],
+  "rule_changes": [
+    {
+      "decision": "deny",
+      "from_rule": "refund-limit",
+      "to_rule": "refund-limit-strict",
+      "count": 15,
+      "samples": [
+        "act_01m42v9qthv2k3qsyq2a7z2vk6",
+        "act_01m42v9wgcnx5jpv5ffs4smtdv",
+        "act_01m42v9xhg704254e8e3e6672c",
+        "act_01m42v9xjtxw1zpmnqk10yph9a",
+        "act_01m42v9y2ke3cnt0mcaab9hbx3",
+        "act_01m42va6ke5tsc1kvr3zsnas7g",
+        "act_01m42va7e6x43t7vn82gtcwvfq",
+        "act_01m42va848hh418kd0wxykjf9h",
+        "act_01m42vabd4r08hz675dab6q9jv",
+        "act_01m42vac9z1r6704ppnxndh3vj",
+        "act_01m42vad7j9az2hp73mx6t3yda",
+        "act_01m42vahe7evy7ztwf31y37f8k",
+        "act_01m42vanctajktpb4dap94vrvw",
+        "act_01m42vary987awk6keq1s7pcth",
+        "act_01m42vavgb1rrwgtfs2fgge5w2"
+      ]
+    }
+  ],
+  "unknown": {
+    "input_pruned": 0,
+    "input_missing": 0,
+    "input_version_unsupported": 0,
+    "input_unreadable": 0,
+    "evaluation_time_limit": 0
+  },
+  "sqlguard": {
+    "recorded": [
+      "1"
+    ],
+    "current": "1"
+  },
+  "result_digest": "sha256:ce0bd3a41b998f0946c09986ef8f2948ce3cf7e7008a6910d7157762bfc55759",
+  "elapsed_ms": 90
+}
+

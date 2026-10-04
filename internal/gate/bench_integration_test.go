@@ -14,6 +14,9 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+
+	"github.com/deedglass/deedglass/internal/learn"
+	"github.com/deedglass/deedglass/internal/store/learnstore"
 )
 
 // budgetPolicy is a 50-rule policy whose rules all run CEL for fake.echo (S13 §6: the evaluation
@@ -33,11 +36,38 @@ func budgetPolicy() string {
 // (fake.echo, latency 0), 8 at a time, one org, on a local Postgres 18: p50 < 5 ms and p99 < 25 ms
 // for the whole pipeline (normalize, decide, record, execute, L0, seal). make bench-gate runs it
 // and keeps the raw output in bench/results/.
+//
+// S27: with DEEDGLASS_IT_BENCH_ANOMALIES=1 (make bench-insights) the org has opted in to anomaly
+// facts, the Gate reads them through the real FactsCache over learnstore (a recent detect run, one
+// active episode on another agent), and the same budget must hold.
 func TestGateBudget(t *testing.T) {
 	if os.Getenv("DEEDGLASS_IT_BENCH") != "1" {
 		t.Skip("a budget run: make bench-gate")
 	}
-	w := newWorld(t, worldOpts{agents: 8, maxConns: 32, policy: budgetPolicy()})
+	optIn := os.Getenv("DEEDGLASS_IT_BENCH_ANOMALIES") == "1"
+	facts := &learn.FactsCache{}
+	o := worldOpts{agents: 8, maxConns: 32, policy: budgetPolicy()}
+	if optIn {
+		o.anomalies = facts
+	}
+	w := newWorld(t, o)
+	if optIn {
+		facts.Store = learnstore.New(w.e.DB, w.led)
+		admin := w.e.Admin(t)
+		for _, q := range []string{
+			`UPDATE deedglass.orgs SET settings = jsonb_set(settings, '{insights}', '{"anomaly_facts": true}') WHERE id = $1`,
+			`INSERT INTO deedglass.learn_runs (org_id, kind, period_key, status, started_at, finished_at)
+			   VALUES ($1, 'detect', 'bench', 'succeeded', now(), now() + interval '1 hour')`,
+			`INSERT INTO deedglass.anomalies (id, org_id, agent_id, kind, severity, window_start, window_end, score, episode_key,
+			   active_until, detector_version)
+			 SELECT 'anm_' || substr(id, 5), org_id, id, 'volume_spike', 'warn', now() - interval '1 hour', now(), 3.5,
+			   id::text || '|volume_spike|', now() + interval '1 hour', '1' FROM deedglass.agents WHERE org_id = $1 ORDER BY id DESC LIMIT 1`,
+		} {
+			if _, err := admin.Exec(bg, q, w.org); err != nil {
+				t.Fatalf("%s: %v", q, err)
+			}
+		}
+	}
 	const warm, n = 200, 4000
 	conc := 8
 	if c := os.Getenv("DEEDGLASS_IT_CONC"); c != "" { // experiments only; the budget is at 8
@@ -69,9 +99,34 @@ func TestGateBudget(t *testing.T) {
 		return out
 	}
 	run(warm)
-	start := time.Now()
-	lat := run(n)
-	elapsed := time.Since(start)
+	// With the opt-in, the same world first runs with the seam off (the "before" in the same
+	// cluster and process), then on; the comparison is the S27 budget, since contract §12's absolute
+	// p50 is S13's known miss on a laptop (ADR-035).
+	var offP50, offP99 time.Duration
+	var lat []time.Duration
+	var elapsed time.Duration
+	if optIn {
+		// Off and on alternate in eight rounds each, so the table's growth and the machine's
+		// drift fall on both sides alike.
+		var off []time.Duration
+		for r := range 16 {
+			if r%2 == 0 {
+				w.p.o.Anomalies = nil
+				off = append(off, run(n/8)...)
+				continue
+			}
+			w.p.o.Anomalies = facts
+			t0 := time.Now()
+			lat = append(lat, run(n/8)...)
+			elapsed += time.Since(t0)
+		}
+		sort.Slice(off, func(i, j int) bool { return off[i] < off[j] })
+		offP50, offP99 = off[len(off)/2], off[len(off)*99/100]
+	} else {
+		start := time.Now()
+		lat = run(n)
+		elapsed = time.Since(start)
+	}
 	sort.Slice(lat, func(i, j int) bool { return lat[i] < lat[j] })
 	p50, p99 := lat[len(lat)/2], lat[len(lat)*99/100]
 	// The policy evaluation inside the pipeline, as the pipeline measured it (decision_detail.elapsed_us).
@@ -96,9 +151,23 @@ func TestGateBudget(t *testing.T) {
 	perf := map[string]any{"benchmark": "BenchmarkGateAllowNoWitness", "actions": len(lat), "concurrency": conc, "orgs": 1, "rules": 50,
 		"p50_ms": ms(p50), "p90_ms": ms(lat[len(lat)*90/100]), "p99_ms": ms(p99), "max_ms": ms(lat[len(lat)-1]),
 		"ops_per_s": float64(len(lat)) / elapsed.Seconds(), "eval_p99_us": evalP99, "target_p50_ms": 5, "target_p99_ms": 25,
-		"target_eval_p99_us": 1000, "race": raceEnabled}
+		"target_eval_p99_us": 1000, "race": raceEnabled, "anomaly_facts": optIn}
+	if optIn {
+		perf["benchmark"] = "BenchmarkGateAllowNoWitnessAnomalyFactsOn"
+		perf["facts_lookups"] = facts.Lookups()
+		perf["off_p50_ms"], perf["off_p99_ms"] = ms(offP50), ms(offP99)
+		if f, _ := facts.Facts(bg, w.org, w.agents[0].ID, time.Now()); f.Active && f.Kinds[0] == learn.KindDetectorStale {
+			t.Error("the facts failed closed during the run")
+		}
+	}
 	b, _ := json.Marshal(perf)
 	t.Logf("PERF %s", b)
+	if optIn {
+		if p50 > offP50*11/10+500*time.Microsecond || p99 > offP99*115/100+time.Millisecond || evalP99 > 1000 {
+			t.Errorf("the opt-in costs too much: p50 %s (off %s), p99 %s (off %s), eval p99 %d µs", p50, offP50, p99, offP99, evalP99)
+		}
+		return
+	}
 	if p50 > 5*time.Millisecond || p99 > 25*time.Millisecond || evalP99 > 1000 {
 		t.Errorf("over budget: p50 %s (5 ms), p99 %s (25 ms), eval p99 %d µs (1,000)", p50, p99, evalP99)
 	}

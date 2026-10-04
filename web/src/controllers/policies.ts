@@ -20,6 +20,8 @@ import type { Agent, ListResponse, Overview } from '../lib/types.ts';
 import type { Connector } from '../lib/models/connector.ts';
 import { segmented } from './components.ts';
 import { lineDiffView } from './linediffview.ts';
+import { mountReplay, type ReplayTab } from './replay.ts';
+import { announce } from './shell.ts';
 import { openSheet, type Overlay } from './overlay.ts';
 import { mountLintedEditor, type LintedEditor } from './policyeditor.ts';
 import { emptyState, errorState, notFound, skeleton } from './screens.ts';
@@ -515,41 +517,12 @@ export function mountPolicy(): void {
     }
   };
 
-  // ---------- replay (S27's API; S26 renders both states) ----------
+  // ---------- replay (S27 §3.4: controllers/replay.ts) ----------
+  let replayTab: ReplayTab | null = null;
   const drawReplay = () => {
-    const panel = panels.replay;
-    let win: '24h' | '7d' | 'custom' = '24h';
-    const from = h('input', { class: 'input', type: 'datetime-local', id: 'rp-from', name: 'from', autocomplete: 'off' });
-    const to = h('input', { class: 'input', type: 'datetime-local', id: 'rp-to', name: 'to', autocomplete: 'off' });
-    const custom = h('div', { class: 'field-row', hidden: true },
-      h('div', { class: 'field' }, h('label', { class: 'label', for: 'rp-from' }, c.replay.from), from),
-      h('div', { class: 'field' }, h('label', { class: 'label', for: 'rp-to' }, c.replay.to), to));
-    const seg = segmented(c.replay.window, [{ value: '24h' as const, label: c.replay.last24h }, { value: '7d' as const, label: c.replay.last7d }, { value: 'custom' as const, label: c.replay.custom }], win, (v) => { win = v; custom.hidden = v !== 'custom'; }, 'rp-window');
-    const out = h('div', { 'aria-live': 'polite' });
-    const run = h('button', { type: 'button', class: 'btn btn-primary' }, icon('play', 16), c.replay.run);
-    run.addEventListener('click', async () => {
-      const now = Date.now();
-      const f = win === 'custom' ? (from.value ? new Date(from.value).toISOString() : '') : new Date(now - (win === '24h' ? 86_400_000 : 7 * 86_400_000)).toISOString();
-      const t = win === 'custom' ? (to.value ? new Date(to.value).toISOString() : new Date(now).toISOString()) : new Date(now).toISOString();
-      run.disabled = true;
-      try {
-        let r = await api<ReplayJob>('POST', `/v1/policies/${id}/versions/${shown.version}/replay`, { body: { from: f, to: t } });
-        while (r.status !== 'succeeded' && r.status !== 'failed' && r.status !== 'cancelled') {
-          replace(out, h('p', { class: 'replay-progress', role: 'status' }, h('span', { class: 'apv-glyph', 'aria-hidden': 'true' }, '◐'), fill(c.replay.progress, { n: number(r.progress?.total ?? 0), p: Math.round(r.progress?.percent ?? 0) })));
-          await new Promise((ok) => setTimeout(ok, 1000));
-          r = await api<ReplayJob>('GET', `/v1/replays/${r.id}`);
-        }
-        replace(out, replayResult(r));
-      } catch (e) {
-        if (e instanceof ApiError && e.status === 404) replace(out, h('p', { class: 'banner banner-readonly', role: 'status' }, icon('info', 16), c.replay.unavailable));
-        else replace(out, h('p', { class: 'error', role: 'alert' }, icon('circle-alert', 16), e instanceof Error ? e.message : String(e)));
-      } finally {
-        run.disabled = false;
-      }
+    replayTab = mountReplay(panels.replay, {
+      policyId: p.id, name: () => p.name, version: () => shown.version, versions: () => versions.map((v) => v.version), admin: isAdmin, tz, announce,
     });
-    replace(panel, h('div', { class: 'grid gap-4' },
-      h('div', { class: 'card card-pad grid gap-3' }, h('p', { class: 't-2 m-0' }, c.replay.lede), h('div', { class: 'field' }, h('span', { class: 'label' }, c.replay.window), seg), custom, h('div', null, run)),
-      out));
   };
 
   // ---------- tabs and loading ----------
@@ -601,6 +574,7 @@ export function mountPolicy(): void {
     }
     await drawHead();
     if (panels.versions.childElementCount) drawVersions(); // data changed; the other tabs keep what you typed
+    replayTab?.update();
   };
 
   // dirty guard: in-app links and the browser's own navigation
@@ -639,6 +613,8 @@ export function mountPolicy(): void {
     for (const k of TABS) panels[k].hidden = k !== tab;
     replace(host, headHost, tabsEl, ...TABS.map((k) => panels[k]));
     host.setAttribute('aria-busy', 'false');
+    // on a phone the tab strip scrolls: bring a deep-linked tab (?tab=replay) into view
+    tabsEl.querySelector<HTMLElement>('[aria-selected="true"]')?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
     await drawHead();
     drawTab(tab);
     void Promise.all([
@@ -656,36 +632,6 @@ export function mountPolicy(): void {
     let tm = 0;
     stream().on('policy.*', () => { clearTimeout(tm); tm = window.setTimeout(() => void refresh(), 400); });
   }, { once: true });
-}
-
-// ---------- replay result ----------
-
-export interface ReplayJob {
-  object: 'replay';
-  id: string;
-  status: 'queued' | 'running' | 'succeeded' | 'failed' | 'cancelled' | string;
-  progress?: { percent: number; total?: number; done?: number };
-  result?: {
-    transitions?: { from: string; to: string; count: number; samples?: string[] }[];
-    rules?: { rule_id: string; count: number }[];
-    unknown?: { count: number; reason: string } | null;
-  } | null;
-  error?: string | null;
-}
-
-export function replayResult(r: ReplayJob): HTMLElement {
-  if (r.status !== 'succeeded') return h('p', { class: 'error', role: 'alert' }, icon('circle-alert', 16), r.error ?? r.status);
-  const tr = r.result?.transitions ?? [];
-  const rules = r.result?.rules ?? [];
-  const unk = r.result?.unknown;
-  return h('div', { class: 'grid gap-4' },
-    h('section', { class: 'card card-pad grid gap-2' }, h('h3', { class: 't-headline' }, c.replay.transitions),
-      tr.length ? h('ul', { class: 'replay-list' }, ...tr.map((t) => h('li', null,
-        h('span', { class: 'mono' }, `${t.from} → ${t.to}`), h('span', { class: 'num' }, number(t.count)),
-        t.samples?.length ? h('span', { class: 'replay-samples' }, ...t.samples.slice(0, 20).map((s) => h('a', { href: `/app/actions/${s}`, class: 'mono' }, s.slice(0, 12) + '…'))) : null))) : h('p', { class: 't-2' }, c.replay.noChange)),
-    rules.length ? h('section', { class: 'card card-pad grid gap-2' }, h('h3', { class: 't-headline' }, c.replay.perRule),
-      h('ul', { class: 'replay-list' }, ...rules.map((x) => h('li', null, h('span', { class: 'mono' }, x.rule_id), h('span', { class: 'num' }, number(x.count)))))) : null,
-    unk && unk.count ? h('p', { class: 't-2' }, `${c.replay.unknown} · ${number(unk.count)} · ${unk.reason}`) : null);
 }
 
 export { sourceBytes, MAX_SOURCE_BYTES };

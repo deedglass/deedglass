@@ -102,7 +102,30 @@ type Options struct {
 	Metrics *Metrics // nil: a private one
 	Config  Config
 	Logger  *slog.Logger
-	Clock   func() time.Time
+	// Clock is the pipeline clock (S27 §3.2): the decision time in policy_input.time, every
+	// timestamp the Gate writes on actions and action_events, and approval decisions. In
+	// production time.Now; deedglass dev simulate passes a virtual clock.
+	Clock func() time.Time
+	// Anomalies feeds anomaly.* to the policies (S27 §3.8, opt-in per org). Nil: anomaly.active is
+	// always false.
+	Anomalies AnomalySource
+	// Simulated (S27, dev only: deedglass dev simulate) scripts the verdicts. When set, the Gate asks
+	// it instead of running the Witness's checks; its outcomes come from witness.Decide with the
+	// method "simulated", so a simulated deed can never pass for real evidence.
+	Simulated SimulatedWitness
+}
+
+// AnomalySource is the anomaly facts a policy sees for one agent at decision time (S27 §3.8), and
+// the decision trace's line about them ("anomaly facts: volume_spike"; "" when inactive).
+// internal/learn's FactsCache implements it; it fails closed (detector_stale) on its own.
+type AnomalySource interface {
+	Facts(ctx context.Context, org ids.OrgID, agent ids.AgentID, at time.Time) (policy.AnomalyFacts, string)
+}
+
+// SimulatedWitness scripts verdicts for deedglass dev simulate (S27 §3.3). It is never wired by
+// serve.
+type SimulatedWitness interface {
+	Verdict(ctx context.Context, s Subject, e Execution, required witness.Level) (witness.Outcome, error)
 }
 
 // Pipeline is the Gate: every agent action, from every surface, enters through Submit and leaves
@@ -274,11 +297,19 @@ func (p *Pipeline) Submit(ctx context.Context, pr principal, req ActionRequest) 
 			n.HTTP, n.DefaultSchema, n.RaisedSideEffect = enrich(ctx, ex, spec, n.Args)
 		}
 	}
-	// The active policies, before any transaction: a cold load reads Postgres on its own.
-	var act *policy.Active
+	// The active policies, before any transaction: a cold load reads Postgres on its own. The
+	// anomaly facts too (S27 §3.8: an in-memory cache; a miss reads Postgres on its own).
+	var (
+		act   *policy.Active
+		anom  policy.AnomalyFacts
+		trace string
+	)
 	if !unknown {
 		if act, err = p.o.Policies.Active(ctx, pr.OrgID.String()); err != nil {
 			return nil, err
+		}
+		if p.o.Anomalies != nil && !console {
+			anom, trace = p.o.Anomalies.Facts(ctx, pr.OrgID, pr.AgentID, p.now())
 		}
 	}
 	// Idempotency: a cheap read before anything is reserved, so a replay never reserves.
@@ -302,7 +333,7 @@ func (p *Pipeline) Submit(ctx context.Context, pr principal, req ActionRequest) 
 		prep *PreparedApproval
 	)
 	for attempt := 0; ; attempt++ {
-		adm, err = p.admit(ctx, pr, n, req, act, spec, ex, unknown, release, prep)
+		adm, err = p.admit(ctx, pr, n, req, act, anomalyIn{anom, trace}, spec, ex, unknown, release, prep)
 		var np *needPrepare
 		if !errors.As(err, &np) {
 			break
@@ -396,7 +427,13 @@ func mustAction(id string) ids.ActionID {
 // admit is Tx A (S13 §3.4): the signed intent, the decision, the reservation, the action row and
 // its transitions up to denied → sealed, pending_approval, or executing. One transaction, retried
 // once on a chain conflict.
-func (p *Pipeline) admit(ctx context.Context, pr principal, n *Normalized, req ActionRequest, act *policy.Active,
+// anomalyIn is what the AnomalySource said before Tx A: the facts and the trace line.
+type anomalyIn struct {
+	facts policy.AnomalyFacts
+	trace string
+}
+
+func (p *Pipeline) admit(ctx context.Context, pr principal, n *Normalized, req ActionRequest, act *policy.Active, anom anomalyIn,
 	spec connector.ToolSpec, ex Executor, unknown bool, release *store.KeyedAction, prep *PreparedApproval) (*admission, error) {
 	org, agent := pr.OrgID, pr.AgentID
 	actor := agent.String()
@@ -438,6 +475,7 @@ func (p *Pipeline) admit(ctx context.Context, pr principal, n *Normalized, req A
 		if err != nil {
 			return err
 		}
+		in.Anomaly = anom.facts
 		if n.Mode == ModeGateway {
 			withSideEffect(&in, spec, n.RaisedSideEffect)
 		}
@@ -511,7 +549,7 @@ func (p *Pipeline) admit(ctx context.Context, pr principal, n *Normalized, req A
 		na := ledger.NewAction{Agent: agent, Mode: string(n.Mode), Tool: n.Tool, Request: n.Args, RequestDigest: n.Digest,
 			Actor: actor, RequestID: req.RequestID, Fingerprint: n.Fingerprint, Context: n.Context, Livemode: pr.Livemode,
 			ToolDigest: n.ToolDigest, OnBehalfOf: nonEmpty(ir.OBO.OnBehalfOf), Session: nonEmpty(ir.OBO.Session),
-			IntentSigned: ir.Signed, IdempotencyKey: nonEmpty(req.IdempotencyKey), UndoesActionID: nonEmpty(req.UndoesActionID)}
+			IntentSigned: ir.Signed, IdempotencyKey: nonEmpty(req.IdempotencyKey), UndoesActionID: nonEmpty(req.UndoesActionID), At: now}
 		if ir.Signed {
 			na.IntentHash = &ir.IntentHash
 		}
@@ -533,8 +571,8 @@ func (p *Pipeline) admit(ctx context.Context, pr principal, n *Normalized, req A
 		if err != nil {
 			return err
 		}
-		ev := ledger.EventData{Actor: actor, RequestID: req.RequestID}
-		patch, err := decisionPatch(in, d, sd, loaded, shadow, reserved)
+		ev := ledger.EventData{Actor: actor, RequestID: req.RequestID, At: now}
+		patch, err := decisionPatch(in, d, sd, loaded, shadow, reserved, anom.trace)
 		if err != nil {
 			return err
 		}
@@ -785,15 +823,18 @@ type decisionDetail struct {
 	ElapsedUS   int64                `json:"elapsed_us"`
 	PolicyName  string               `json:"policy_name,omitempty"`
 	Version     int                  `json:"policy_version_number,omitempty"`
+	// Anomaly is the decision trace's line about the anomaly facts the policy saw (S27 §3.8):
+	// "anomaly facts: volume_spike", or detector_stale with the last run's age. Absent when inactive.
+	Anomaly string `json:"anomaly,omitempty"`
 }
 
 // maxDetail keeps decision_detail under its 16 KiB column limit (facts are dropped first; they
 // can be recomputed from policy_input).
 const maxDetail = 15 << 10
 
-func detailJSON(d policy.Decision, l *policy.Loaded) (json.RawMessage, error) {
+func detailJSON(d policy.Decision, l *policy.Loaded, anomaly string) (json.RawMessage, error) {
 	dd := decisionDetail{RuleLine: d.RuleLine, Approval: d.Approval, Verify: d.Verify, Notify: d.Notify, Budget: d.Budget,
-		CostBudgets: d.CostBudgets, Errors: d.Errors, SQLGuard: d.SQLGuard, ElapsedUS: d.Elapsed.Microseconds()}
+		CostBudgets: d.CostBudgets, Errors: d.Errors, SQLGuard: d.SQLGuard, ElapsedUS: d.Elapsed.Microseconds(), Anomaly: clip(anomaly, 200)}
 	if d.Facts.SQL.Present || d.Facts.SQL.Kind != "" {
 		f := d.Facts
 		dd.Facts = &f
@@ -815,7 +856,7 @@ func detailJSON(d policy.Decision, l *policy.Loaded) (json.RawMessage, error) {
 
 // decisionPatch is what the edge into evaluated records: the input, the decision, the version
 // that made it, the shadow decision next to it (recorded, never enforced) and the reservations.
-func decisionPatch(in policy.Input, d policy.Decision, sd *policy.Decision, l, sl *policy.Loaded, reserved bool) (ledger.Patch, error) {
+func decisionPatch(in policy.Input, d policy.Decision, sd *policy.Decision, l, sl *policy.Loaded, reserved bool, anomaly string) (ledger.Patch, error) {
 	inJSON, err := json.Marshal(in)
 	if err != nil {
 		return ledger.Patch{}, err
@@ -824,7 +865,7 @@ func decisionPatch(in policy.Input, d policy.Decision, sd *policy.Decision, l, s
 	if err != nil {
 		return ledger.Patch{}, err
 	}
-	detail, err := detailJSON(d, l)
+	detail, err := detailJSON(d, l, anomaly)
 	if err != nil {
 		return ledger.Patch{}, err
 	}

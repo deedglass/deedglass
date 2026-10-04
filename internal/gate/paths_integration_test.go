@@ -28,7 +28,7 @@ func TestMorePaths(t *testing.T) {
 	a := w.must(0, req("fake.write", `{"rows":1,"table":"approvals"}`))
 	_ = w.e.DB.OrgTx(bg, w.org, func(ctx context.Context, tx pgx.Tx) error {
 		by := w.owner.String()
-		return store.DecideApproval(ctx, tx, w.org, a.Approval.ID, "denied", &by, nil)
+		return store.DecideApproval(ctx, tx, w.org, a.Approval.ID, "denied", &by, nil, time.Now())
 	})
 	r, err := w.p.Resume(bg, w.org, mustAction(a.ID))
 	if err != nil || r.Status != "denied" || r.State != "sealed" || w.fake.Calls() != 0 {
@@ -78,7 +78,7 @@ func TestMorePaths(t *testing.T) {
 	n.ConnectorType = "fake"
 	act, _ := w.reg.Active(bg, w.org.String())
 	ex, spec, _, _ := w.p.o.Resolver.Resolve(bg, w.org, "fake.echo")
-	adm, err := w.p.admit(bg, w.pr(0), n, req("fake.echo", `{}`), act, spec, ex, false, nil, nil)
+	adm, err := w.p.admit(bg, w.pr(0), n, req("fake.echo", `{}`), act, anomalyIn{}, spec, ex, false, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -96,7 +96,7 @@ func TestMorePaths(t *testing.T) {
 	}
 	w.deedOf(adm.view.ID)
 	// An action left in executed (a witness that crashed): Resume witnesses and seals it.
-	adm2, err := w.p.admit(bg, w.pr(1), n, req("fake.echo", `{}`), act, spec, ex, false, nil, nil)
+	adm2, err := w.p.admit(bg, w.pr(1), n, req("fake.echo", `{}`), act, anomalyIn{}, spec, ex, false, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -134,7 +134,7 @@ func TestMorePaths(t *testing.T) {
 	// A proxy action approved: authorized at the edge with a fresh deadline.
 	_ = w.e.DB.OrgTx(bg, w.org, func(ctx context.Context, tx pgx.Tx) error {
 		by := w.owner.String()
-		return store.DecideApproval(ctx, tx, w.org, pend.Approval.ID, "approved", &by, nil)
+		return store.DecideApproval(ctx, tx, w.org, pend.Approval.ID, "approved", &by, nil, time.Now())
 	})
 	if r, err := w.p.Resume(bg, w.org, mustAction(pend.ID)); err != nil || r.Status != "authorized" || r.NextAction == nil {
 		t.Fatalf("%v %s", err, mustJSON(r))

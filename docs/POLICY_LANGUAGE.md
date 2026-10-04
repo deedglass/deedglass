@@ -379,7 +379,7 @@ The Gate builds one `Input` per action (S13) and stores it canonically with the 
 | `request` | `mode`, `bytes`, `intent_signed`, `digest` |
 | `time` | the decision instant, set by the caller, in UTC |
 | `usage` | the counters for the current windows ([BUDGETS.md](BUDGETS.md)) |
-| `anomaly` | `active` (S27 fills it) |
+| `anomaly` | `active`, and `kinds` and `severity` when active ([the `anomaly` variable](#the-anomaly-variable)). Filled by Insights only when the org turns anomaly facts on; otherwise `{"active":false}` |
 
 **Only raw facts are stored.** The derived facts (every `sql.*` field and the time parts `hour`, `minute`, `weekday`, `date`) are recomputed at each evaluation, so a replay under a newer classifier reflects it, and the decision records `sqlguard_version`. `Input.Digest()` is `sha256:` plus the hex SHA-256 of the input's canonical JSON.
 
@@ -484,7 +484,33 @@ Every structured variable is declared field by field, so a typo like `sql.knid` 
 | `org` | object | `id`, `timezone` (IANA name) |
 | `time` | object | `now` (timestamp), `hour` (0 to 23), `minute` (0 to 59), `weekday` (`"mon"` … `"sun"`), `date` (`"2026-10-04"`), all in the org's time zone |
 | `usage` | object | `calls_minute`, `calls_hour`, `calls_today`, `spend_today` (int, minor units), `currency`, `budgets` (map from budget id to its value in the current window) |
-| `anomaly` | object | `active` (bool; always false until S27) |
+| `anomaly` | object | `active` (bool), `kinds` (list(string)), `severity` (string): what Insights says about this agent at decision time; below |
+
+#### The `anomaly` variable
+
+`anomaly` is what Insights' anomaly detection says about the acting agent at the decision instant ([INSIGHTS.md](INSIGHTS.md)).
+
+| Field | Type | Meaning |
+|---|---|---|
+| `active` | bool | the agent has at least one anomaly episode whose `active_until` is after the decision time |
+| `kinds` | list(string) | the kinds of those episodes, sorted, each once: `new_tool`, `volume_spike`, `off_hours`, `deny_spike`, `mismatch_spike`, `user_ref_burst`, or `detector_stale` alone when the facts fail closed. Empty when not active |
+| `severity` | string | the highest severity of those episodes: `info`, `warn` or `high`; `""` when not active |
+
+How they are filled:
+
+- **Opt-in, off by default.** Only an org that turns on anomaly facts (`PATCH /v1/insights/settings` with `"anomaly_facts": true`, or `deedglass insights settings --anomaly-facts on --reason "…"`) gets them. Otherwise every policy sees `active` false, `kinds` empty and `severity` `""` (unless the lookup itself fails, below).
+- **Fail closed.** For an org that opted in, when the last successful detection pass for the org is older than `anomaly_stale_after_minutes` (15 by default), every agent gets `active` true, `kinds` `["detector_stale"]` and `severity` `"warn"`. Unknown is not usual. A lookup that fails fails closed the same way, unless the org's last successful read showed the facts off, because the failed read is the one that would say whether the org opted in.
+- **Recorded.** The facts are part of the stored input (`"anomaly":{"active":true,"kinds":["volume_spike"],"severity":"warn"}`; `kinds` and `severity` are left out when empty), so a replay sees exactly what the decision saw ([REPLAY.md](REPLAY.md)). The action's `decision.anomaly` carries the trace line, like `anomaly facts: volume_spike` or `anomaly facts: detector_stale (last run 22 min ago)`, and is absent when the facts were inactive.
+
+```yaml
+- id: approve-while-anomalous
+  match: { side_effect: [write, destructive] }
+  when: anomaly.active && anomaly.severity in ["warn", "high"]
+  decision: require_approval
+  reason: "This agent is behaving unusually right now. A person approves writes until the anomaly is resolved."
+```
+
+The complete policy with its cases is recipe 19 in [POLICY_COOKBOOK.md](POLICY_COOKBOOK.md). When an enforced or shadow policy reads `anomaly` while the facts are off, `GET /v1/insights/settings` and `GET /v1/insights/anomalies` say so in `notice`.
 
 The `sql` fields:
 
@@ -678,6 +704,7 @@ Comments, key order, quoting, indentation and flow-versus-block style never reac
 - **No state beyond `usage`.** A rule can't remember the previous action; budgets and the `usage` counters are the only memory.
 - **No composition across files in v1.** One enforce policy is active per org (S12 explains why); there is no `include:`.
 - **CEL doesn't understand SQL.** The `sql` facts come from the S11 classifier, which is conservative and is not a full Postgres parser. When it isn't sure it says `ambiguous`, and good policies deny ambiguous SQL.
+- **No anomaly facts unless the org opts in.** `anomaly.*` stays inactive until an admin turns anomaly facts on, and what an anomaly means is whatever your rules say; Insights never blocks on its own ([INSIGHTS.md](INSIGHTS.md)).
 - **A policy decides; it doesn't execute.** Approvals (S22), notifications (S22, S29) and witness levels (S19) are carried out by other parts of Deedglass.
 - **The cost estimate is an estimate.** It uses the size hints in section 8; the runtime cost limit is the backstop.
 

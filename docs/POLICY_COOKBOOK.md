@@ -3,7 +3,7 @@
 **Status:** S12. Every policy and case on this page is checked in CI by `docs/cookbook_test.go`: each policy compiles with zero warnings under `--voice`, and each case passes.
 **Audience:** anyone writing a Deedglass policy who wants a starting point for a common need.
 
-Eighteen recipes. Each one has the problem in one sentence, a complete policy you can lint and test as it stands, one test case, and a note. The language itself is in [POLICY_LANGUAGE.md](POLICY_LANGUAGE.md); the workflow (lint, test, push, shadow, enforce) is in [POLICIES_GUIDE.md](POLICIES_GUIDE.md).
+Nineteen recipes. Each one has the problem in one sentence, a complete policy you can lint and test as it stands, one test case, and a note. The language itself is in [POLICY_LANGUAGE.md](POLICY_LANGUAGE.md); the workflow (lint, test, push, shadow, enforce) is in [POLICIES_GUIDE.md](POLICIES_GUIDE.md).
 
 **How to try a recipe.** Save the policy as `recipe.yaml` and the case as `recipe.cases.yaml` in the same folder, then run:
 
@@ -35,6 +35,7 @@ Recipes:
 16. Alert on every blocked destructive attempt
 17. Tighten rules while an anomaly is active
 18. Require two people to undo writes to billing tables
+19. Approve writes while an agent is anomalous
 
 ## 1. Block destructive SQL
 
@@ -678,7 +679,7 @@ cases:
     expect: { decision: require_approval, rule: anomaly-holds-writes, verify: L2 }
 ```
 
-**Note.** `anomaly.active` is live from S27, when Insights starts detecting anomalies. **Until then, `anomaly.active` is always false**, so this rule never decides an action on a server; the case sets it by hand. Put the rule above the allow rules it should tighten, because the first rule that matches decides.
+**Note.** `anomaly.active` is filled only when your org turns anomaly facts on (Console › Insights › Settings, or `deedglass insights settings --anomaly-facts on --reason "…"`). **With them off, the default, `anomaly.active` is always false**, so this rule never decides an action; the case sets it by hand. Put the rule above the allow rules it should tighten, because the first rule that matches decides. Recipe 19 holds every write, and only for warn and high anomalies ([INSIGHTS.md](INSIGHTS.md)).
 
 ## 18. Require two people to undo writes to billing tables
 
@@ -719,6 +720,51 @@ cases:
 ```
 
 **Note.** An undo ([UNDO.md](UNDO.md)) is an action of your org's `console` system agent on behalf of the person who asked for it, with the tool `<connector>.undo`. Its arguments name the action it undoes and the plan digest, not the tables, so scope by connector: give the billing database its own Postgres connector (here named `billing`), and its undos are `billing.undo`. The requester never counts toward the two: S22's self rule asks for two *other* admins or owners, so the org needs at least three. Keep the general `*.undo` rule below the billing one, because the first rule that matches decides; without any undo rule, the default denies every undo.
+
+## 19. Approve writes while an agent is anomalous
+
+**Problem.** When Insights flags an agent at warn or high, you want every write it makes to wait for a person until the anomaly ends, without touching its reads.
+
+```yaml
+deedglass: policy/v1
+name: approve-while-anomalous
+defaults:
+  decision: deny
+  reason: No rule allows this action. Add a rule in Console › Policies to allow it.
+rules:
+  - id: approve-while-anomalous
+    match: { side_effect: [write, destructive] }
+    when: anomaly.active && anomaly.severity in ["warn", "high"]
+    decision: require_approval
+    reason: "This agent is behaving unusually right now. A person approves writes until the anomaly is resolved."
+  - id: allow-support-writes
+    match: { tool: [gmail.create_draft, stripe.create_refund] }
+    decision: allow
+```
+
+```yaml
+cases:
+  - name: a write waits for a person during a warn anomaly
+    input:
+      tool: { name: gmail.create_draft, side_effect: write }
+      args: { thread: thr_48213 }
+      anomaly: { active: true, kinds: [volume_spike], severity: warn }
+    expect: { decision: require_approval, rule: approve-while-anomalous }
+  - name: an info anomaly falls through to the allow rule
+    input:
+      tool: { name: gmail.create_draft, side_effect: write }
+      args: { thread: thr_48213 }
+      anomaly: { active: true, kinds: [new_tool], severity: info }
+    expect: { decision: allow, rule: allow-support-writes }
+  - name: with no active anomaly the write runs
+    input:
+      tool: { name: stripe.create_refund, side_effect: write }
+      args: { amount: 2400, currency: usd }
+      anomaly: { active: false }
+    expect: { decision: allow, rule: allow-support-writes }
+```
+
+**Note.** This is the rule from [INSIGHTS.md](INSIGHTS.md). It only acts when your org turns anomaly facts on; with them off, `anomaly.active` is always false and the rule never matches. With them on, the facts fail closed: when detection is late or can't be read, every agent of the org reads `active: true`, kinds `[detector_stale]`, severity `warn`, so this rule holds writes until detection catches up. An anomaly stays active for 60 minutes after its last finding by default, or until an admin resolves it. Put the rule above the allow rules it should tighten, because the first rule that matches decides.
 
 ## See also
 

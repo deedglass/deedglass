@@ -180,6 +180,9 @@ type ActionDecision struct {
 	Policy        *string         `json:"policy"`
 	PolicyVersion *string         `json:"policy_version"`
 	Shadow        *ShadowDecision `json:"shadow"`
+	// Anomaly is the decision trace's line about the anomaly facts the policy saw (S27 §3.8,
+	// additive): "anomaly facts: volume_spike". Omitted when the facts were inactive.
+	Anomaly *string `json:"anomaly,omitempty"`
 }
 
 // ShadowDecision is what the shadow policy would have decided (recorded, never enforced).
@@ -374,7 +377,7 @@ const actionCols = `a.id, a.created_at, a.agent_id, g.name, a.tool, a.connector_
   a.executing_deadline, a.error_message,
   a.denied_at IS NOT NULL, a.expired_at IS NOT NULL, a.cancelled_at IS NOT NULL, a.failed_at IS NOT NULL,
   a.witness_detail_digest, a.witness_required,
-  CASE WHEN ap.status = 'denied' AND ap.decided_by LIKE 'usr\_%' THEN ap.decision_reason END`
+  CASE WHEN ap.status = 'denied' AND ap.decided_by LIKE 'usr\_%' THEN ap.decision_reason END, a.decision_detail->>'anomaly'`
 
 const actionFrom = ` FROM deedglass.actions AS a
 JOIN deedglass.agents AS g ON g.org_id = a.org_id AND g.id = a.agent_id
@@ -399,13 +402,13 @@ func scanAction(row pgx.Row, extra ...any) (Action, time.Time, error) {
 		wasDenied, wasExpired, wasCancelled    bool
 		wasFailed                              bool
 		wDigest, wRequired                     *string
-		apReason                               *string
+		apReason, dAnomaly                     *string
 	)
 	dest := []any{&a.ID, &created, &a.Agent.ID, &a.Agent.Name, &a.Tool, &a.Connector, &a.Mode, &a.State, &a.OnBehalfOf,
 		&a.Session, &polID, &pvID, &decision, &rID, &execStatus, &started, &finished, &latency, &errCode,
 		&wLevel, &wVerdict, &wMethod, &costAmount, &costCurrency, &a.RequestDigest, &a.ResultDigest, &pruned, &a.Deed,
 		&a.Livemode, &dCode, &dSource, &dReason, &dMsg, &polMode, &sDecision, &sRule, &sVersion, &apID, &apStatus, &apExpires,
-		&deadline, &errMsg, &wasDenied, &wasExpired, &wasCancelled, &wasFailed, &wDigest, &wRequired, &apReason}
+		&deadline, &errMsg, &wasDenied, &wasExpired, &wasCancelled, &wasFailed, &wDigest, &wRequired, &apReason, &dAnomaly}
 	if err := row.Scan(append(dest, extra...)...); err != nil {
 		return a, created, err
 	}
@@ -418,7 +421,7 @@ func scanAction(row pgx.Row, extra ...any) (Action, time.Time, error) {
 	a.Status = StatusOf(a.State, a.Mode, wasDenied, wasExpired, wasCancelled, wasFailed)
 	if decision != nil {
 		a.Decision = &ActionDecision{Outcome: *decision, Code: dCode, Source: dSource, RuleID: rID, Reason: dReason,
-			Message: dMsg, Policy: polID, PolicyVersion: pvID}
+			Message: dMsg, Policy: polID, PolicyVersion: pvID, Anomaly: dAnomaly}
 		if sDecision != nil {
 			a.Decision.Shadow = &ShadowDecision{Outcome: *sDecision, RuleID: sRule, PolicyVersion: sVersion}
 		}

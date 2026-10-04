@@ -60,6 +60,9 @@ var systemTxCallSites = []string{
 	"cmd/deedglass/devseed_demo.go: SystemTx(ctx, store.ReasonMaintenance",       // dev seed --demo: find the acme-demo org by slug (dev only, S15)
 	"cmd/deedglass/devseed_demo.go: SystemTx(ctx, store.ReasonMaintenance",       // dev seed --demo --approver: upsert the approver's user row (users is global; dev only, S22)
 	"internal/store/connectors.go: SystemTx(ctx, ReasonMaintenance",              // OrgIDs: deedglass vault status|rotate walk orgs, one org tx each (S16)
+	"cmd/deedglass/insights.go: SystemTx(ctx, store.ReasonMaintenance",           // insights detect --org: find the org by id or slug (operator, S27)
+	"internal/learn/sim/run.go: SystemTx(ctx, store.ReasonMaintenance",           // dev simulate: find an org by id or slug (dev only, S27)
+	"internal/learn/sim/run.go: SystemTx(ctx, store.ReasonMaintenance",           // dev simulate: upsert a simulated approver's user row (users is global; dev only, S27)
 }
 
 func TestSystemTxCallSites(t *testing.T) {

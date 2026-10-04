@@ -447,6 +447,37 @@ it refuses rather than guess:
   the decoder's own record and never connects on page load, so it can be up to one decoder poll
   behind.
 
+## Insights (S27)
+
+- **Insights never changes anything by itself.** It reads and reports. No policy is activated or
+  edited, and no action is blocked, unless a person does it; the only input into decisions is the
+  opt-in anomaly facts, and what they do is written in the org's own policy ([INSIGHTS.md](INSIGHTS.md)).
+- **No machine learning and no learning across orgs.** Anomaly checks are fixed thresholds over one
+  agent's own hourly counts in one org.
+- **Baselines need 72 hours.** A younger agent gets only the `new_tool` check.
+- **A slow ramp can move a baseline.** Growth a little at a time raises the mean and never reads as
+  a spike. Budgets and rate limits are the hard controls; anomalies are signals.
+- **No time-of-day seasonality.** `volume_spike` compares an hour with all of the agent's hours, so
+  a batch packed into one or two hours can read as a spike; spread it, or expect findings.
+- **Detection runs every 5 minutes per instance**, over orgs with actions in the last 2 hours or
+  with anomaly facts on. A finding can arrive up to 5 minutes late; with anomaly facts on, a
+  detector more than `anomaly_stale_after_minutes` (15) behind makes every agent anomalous
+  (`detector_stale`) until it catches up.
+- **Replay re-decides the past; it doesn't re-run it.** Inputs that were pruned, never stored,
+  in a newer format or unreadable are counted `unknown`, never guessed. SQL facts are recomputed
+  with the current classifier; the result names both versions ([REPLAY.md](REPLAY.md)).
+- **Replay limits:** a window of at most 90 days and 1,000,000 actions, 10 replays created per org
+  an hour, one running per org and two per instance. A replay whose runner dies restarts from zero.
+- **Replay replays stored versions only over the API.** Draft sources replay in the engine (S28's
+  suggestions); there is no HTTP route for them yet.
+- **Stats use the budgets enforced now.** `budgets` measures past days against the current
+  enforced version's day budgets; minute and hour budgets are left out. A `window=7d` answer can be
+  up to 60 s old: repeats within a minute share the first request's answer.
+- **Simulated history is dev only and labelled.** `deedglass dev simulate` refuses outside
+  `DEEDGLASS_ENV=dev`, writes only into orgs it flagged simulated, scripts the tools and the
+  Witness (`witness.method: simulated`), and runs actions one at a time, so it is no load test
+  ([SIMULATOR.md](SIMULATOR.md)).
+
 ## What this page does not do
 
 It does not list bugs or missing features on the schedule. It lists limits of the design that stay true after they ship.

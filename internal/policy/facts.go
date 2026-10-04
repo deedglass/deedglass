@@ -111,9 +111,15 @@ type UsageFacts struct {
 	Budgets     map[string]int64 `json:"budgets" cel:"budgets"`
 }
 
-// AnomalyFacts is filled by S27; until then Active is false.
+// AnomalyFacts are what Insights' anomaly detection says about the agent at decision time (S27
+// §3.8). They are filled only when the org opts in (anomaly facts in Insights settings); otherwise
+// Active is false and the rest empty. They are part of the stored input, so a replay sees exactly
+// what the decision saw. When detection is stale or unreadable for an opted-in org, Active is true
+// with the kind detector_stale (fail closed).
 type AnomalyFacts struct {
-	Active bool `json:"active" cel:"active"`
+	Active   bool     `json:"active" cel:"active"`
+	Kinds    []string `json:"kinds,omitempty" cel:"kinds"`       // the active kinds, sorted: ["volume_spike"], or ["detector_stale"]
+	Severity string   `json:"severity,omitempty" cel:"severity"` // "", info, warn or high: the highest of the active ones
 }
 
 // Variables lists the CEL variables of policy/v1 in documentation order.

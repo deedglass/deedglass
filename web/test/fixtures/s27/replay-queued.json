@@ -1,0 +1,36 @@
+{
+  "object": "replay",
+  "id": "rpl_01m42vk4snzxq7gnssmfc54bv6",
+  "status": "queued",
+  "purpose": "manual",
+  "candidate": {
+    "policy": "pol_01m42v9q4bjwfqmk8bd58vzkdh",
+    "name": "acme-sim",
+    "version": 3,
+    "version_id": "pv_01m42vcmkk193cy009pdzt4c6s",
+    "version_hash": "sha256:3d09f641a6d5f6962ef719d05a59c6cea0362d950ea6f920418b01125b6bbb7b"
+  },
+  "baseline": {
+    "type": "recorded",
+    "version": 0
+  },
+  "window": {
+    "from": "2026-09-26T07:03:30Z",
+    "to": "2026-10-04T07:03:30Z"
+  },
+  "progress": {
+    "processed": 0,
+    "total": 5890,
+    "percent": 0
+  },
+  "requested_by": {
+    "type": "api_key",
+    "id": "key_01m42vbv2s105agpkrzjpnhzpa"
+  },
+  "attempts": 0,
+  "created_at": "2026-10-04T07:03:30.357558Z",
+  "started_at": null,
+  "finished_at": null,
+  "error": null
+}
+

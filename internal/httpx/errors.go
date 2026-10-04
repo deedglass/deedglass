@@ -110,6 +110,9 @@ const (
 	CodeUndoPlanStale   Code = "undo_plan_stale"
 	CodeAlreadyUndone   Code = "already_undone"
 	CodeUndoConflict    Code = "undo_conflict"
+	// S27: Insights replay limits.
+	CodeReplayTooLarge      Code = "replay_too_large"
+	CodeReplayWindowInvalid Code = "replay_window_invalid"
 )
 
 // DocURLPrefix is where every code has a page (docs/api/errors.md, published by S33).
@@ -239,6 +242,10 @@ var catalog = []CatalogEntry{
 		"{act} was already undone by {undo} at {time}. / An undo of {act} is already waiting for approval: {undo}.", "S23"},
 	{CodeUndoConflict, 409, TypeInvalidRequest, "A row changed after the undo's plan was made, so Postgres rolled the undo back. Nothing was changed. Preview the undo again.",
 		"Row {table} {key} changed after the plan was made ({column} is now {value}). Nothing was changed. Preview the undo again.", "S23"},
+
+	{CodeReplayTooLarge, 400, TypeInvalidRequest, "This replay covers more than 1,000,000 actions. Narrow the window with from and to.",
+		"This replay covers {n} actions; the limit is 1,000,000. Narrow the window with from and to.", "S27"},
+	{CodeReplayWindowInvalid, 400, TypeInvalidRequest, "The window must start before it ends, and it can be at most 90 days long. Send from before to.", "", "S27"},
 }
 
 var byCode = func() map[Code]CatalogEntry {

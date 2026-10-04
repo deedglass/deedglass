@@ -295,7 +295,7 @@ func TestDeclaredFields(t *testing.T) {
 		"org: id timezone",
 		"time: now hour minute weekday date",
 		"usage: calls_minute calls_hour calls_today spend_today currency budgets",
-		"anomaly: active",
+		"anomaly: active kinds severity", // S27: kinds, severity
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("declared fields changed:\n got %q\nwant %q", got, want)

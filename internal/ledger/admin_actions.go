@@ -78,8 +78,14 @@ const (
 	AdminUserSignedIn  = "user.signed_in"
 	AdminUserSignedOut = "user.signed_out"
 
+	// S27: Insights. A person resolved an anomaly episode (target {anomaly, anm_…}; data: anomaly,
+	// agent, kind, tool, severity, occurrences; the reason in admin.reason), or changed Insights
+	// settings (target {org, org_…}; data: before and after, the settings' values only), which
+	// changes what policies that read anomaly.* see.
+	AdminAnomalyResolved         = "anomaly.resolved"
+	AdminInsightsSettingsChanged = "insights.settings_changed"
+
 	// Planned, each added by its session with the exact spelling below:
-	//   S27  anomaly.resolved insights.settings_changed
 	//   S28  suggestion.accepted suggestion.rejected
 )
 
@@ -97,6 +103,7 @@ var AdminActions = []string{
 	AdminConnectorCredentialsRemoved, AdminVaultRotated, AdminConnectorPostgresInitialized,
 	AdminDecoderSlotCreated, AdminDecoderSlotDropped,
 	AdminApprovalCountersigned, AdminApprovalDecided, AdminWebhookCreated, AdminWebhookDeleted, AdminWebhookDisabled,
+	AdminAnomalyResolved, AdminInsightsSettingsChanged,
 }
 
 // AdminEventActions are admin events recorded without a deed (AppendAdminEvent): security events

@@ -301,6 +301,9 @@ func TestEventData(t *testing.T) {
 	ty := reflect.TypeOf(EventData{})
 	for i := range ty.NumField() {
 		f := ty.Field(i)
+		if f.Name == "At" && f.Tag.Get("json") == "-" { // S27: the edge's time, a column, never data
+			continue
+		}
 		if f.Type.Kind() != reflect.Pointer && f.Type.Kind() != reflect.String {
 			t.Errorf("EventData.%s is %s; only short strings belong here", f.Name, f.Type)
 		}
@@ -332,7 +335,9 @@ func TestStateColumnsCoverEveryState(t *testing.T) {
 			continue // created_at
 		}
 		col, ok := stateColumn[s]
-		if !ok || col != string(s)+"_at" || !strings.Contains(transitionSQL[s], col+" = pg_catalog.clock_timestamp()") {
+		// S27 §3.2: the state's time is a bound parameter from the caller's clock, never SQL now().
+		if !ok || col != string(s)+"_at" || !strings.Contains(transitionSQL[s], col+" = $") ||
+			strings.Contains(transitionSQL[s], "now()") || strings.Contains(transitionSQL[s], "clock_timestamp") {
 			t.Errorf("%s: %q", s, col)
 		}
 	}

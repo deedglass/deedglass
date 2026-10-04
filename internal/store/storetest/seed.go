@@ -276,8 +276,8 @@ func Rows(sk ids.SealKeyID) []Row {
 			func(o *Org) []any { return []any{o.ID, o.Connector, "deedglass_" + o.Connector.String()[4:]} })},
 		{"replay_jobs", func(ctx context.Context, tx pgx.Tx, o *Org) error {
 			id := ids.New[ids.ReplayKind]()
-			_, err := tx.Exec(ctx, `INSERT INTO deedglass.replay_jobs (id, org_id, policy_id, version_id, from_ts, to_ts)
-			    VALUES ($1, $2, $3, $4, pg_catalog.now() - interval '1 day', pg_catalog.now())`, id, o.ID, o.Policy, o.Version)
+			_, err := tx.Exec(ctx, `INSERT INTO deedglass.replay_jobs (id, org_id, policy_id, version_id, from_ts, to_ts, requested_by_type, requested_by_id)
+			    VALUES ($1, $2, $3, $4, pg_catalog.now() - interval '1 day', pg_catalog.now(), 'system', 'deedglass')`, id, o.ID, o.Policy, o.Version)
 			if err == nil && o.Replay.IsZero() {
 				o.Replay = id
 			}
@@ -285,9 +285,17 @@ func Rows(sk ids.SealKeyID) []Row {
 		}},
 		{"suggestions", ex(`INSERT INTO deedglass.suggestions (id, org_id, kind, title, replay_job_id) VALUES ($1, $2, 'advisory', 'Look at this', $3)`,
 			func(o *Org) []any { return []any{ids.New[ids.SuggestionKind](), o.ID, o.Replay} })},
-		{"anomalies", ex(`INSERT INTO deedglass.anomalies (id, org_id, agent_id, kind, severity, window_start, window_end)
-		    VALUES ($1, $2, $3, 'call_spike', 'info', pg_catalog.now() - interval '1 hour', pg_catalog.now())`,
-			func(o *Org) []any { return []any{ids.New[ids.AnomalyKind](), o.ID, o.Agent} })},
+		{"anomalies", ex(`INSERT INTO deedglass.anomalies (id, org_id, agent_id, kind, severity, window_start, window_end, score, episode_key,
+		      active_until, detector_version)
+		    VALUES ($1, $2, $3, 'volume_spike', 'info', pg_catalog.now() - interval '1 hour', pg_catalog.now(), 3.5, $4,
+		      pg_catalog.now() + interval '1 hour', '1')`,
+			func(o *Org) []any {
+				id := ids.New[ids.AnomalyKind]()
+				return []any{id, o.ID, o.Agent, o.Agent.String() + "|volume_spike|" + id.String()}
+			})},
+		{"learn_runs", ex(`INSERT INTO deedglass.learn_runs (org_id, kind, period_key, status, started_at, finished_at)
+		    VALUES ($1, 'detect', $2, 'succeeded', pg_catalog.now(), pg_catalog.now())`,
+			func(o *Org) []any { return []any{o.ID, ids.New[ids.RequestKind]().String()[4:20]} })},
 		{"webhooks", func(ctx context.Context, tx pgx.Tx, o *Org) error {
 			id := ids.New[ids.WebhookKind]()
 			_, err := tx.Exec(ctx, `INSERT INTO deedglass.webhooks (id, org_id, url, events, secret_ciphertext, secret_nonce)

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -38,6 +39,18 @@ type EventData struct {
 	// request, when there is one. Both are columns, not data.
 	Actor     string `json:"-"`
 	RequestID string `json:"-"`
+	// At is when the edge happened, from the caller's clock (S27 §3.2: the Gate passes its pipeline
+	// clock, so actions.<state>_at and action_events.at are decision time, bound as a parameter).
+	// Zero means the Ledger's own clock (WithClock), never SQL now(). Not data.
+	At time.Time `json:"-"`
+}
+
+// at is the edge's timestamp: d.At, or the Ledger's clock.
+func (l *Ledger) at(d EventData) time.Time {
+	if !d.At.IsZero() {
+		return d.At.UTC()
+	}
+	return l.now().UTC()
 }
 
 func (d EventData) marshal() ([]byte, error) {
@@ -132,9 +145,13 @@ var transitionSQL, patchSQL = func() (map[gate.State]string, map[gate.State]stri
 		if s == gate.Sealed {
 			set = ", deed_id = $8" // the deed SealAction just sealed, in the same statement
 		}
-		m[s] = transitionStmt(col, set)
+		at := 8 // the edge's time follows the seven fixed arguments (and the deed id when sealing)
+		if s == gate.Sealed {
+			at = 9
+		}
+		m[s] = transitionStmt(col, set, at)
 		if s != gate.Sealed {
-			pm[s] = transitionStmt(col, patchSet)
+			pm[s] = transitionStmt(col, patchSet, 8+len(patchColumns))
 		}
 	}
 	return m, pm
@@ -145,9 +162,11 @@ var transitionSQL, patchSQL = func() (map[gate.State]string, map[gate.State]stri
 // index on state (actions_org_open, actions_open) over the primary key. Those indexes hold a dead
 // entry for every earlier transition until vacuum, and walking them made each CAS 5–10 times
 // slower under load (S13's overhead budget, measured with EXPLAIN ANALYZE).
-func transitionStmt(col, set string) string {
+//
+// The state's timestamp is the parameter $at: the caller's clock (S27 §3.2), never SQL now().
+func transitionStmt(col, set string, at int) string {
 	return `WITH u AS (
-  UPDATE deedglass.actions SET state = $3, ` + col + ` = pg_catalog.clock_timestamp()` + set + `
+  UPDATE deedglass.actions SET state = $3, ` + col + ` = $` + strconv.Itoa(at) + `::timestamptz` + set + `
   WHERE id = $1 AND (state = $2) IS TRUE
   RETURNING id, org_id, ` + col + ` AS at)
 INSERT INTO deedglass.action_events (id, org_id, action_id, seq, from_state, to_state, actor, request_id, data, at)
@@ -185,6 +204,10 @@ type NewAction struct {
 
 	// S23: the action this one undoes (a person's undo through the console system agent).
 	UndoesActionID *string
+
+	// At is the received event's time from the caller's clock (S27 §3.2); zero means created_at.
+	// actions.created_at stays the database's bookkeeping time.
+	At time.Time
 }
 
 // CreateAction inserts an action in received, appends its first event and publishes
@@ -233,6 +256,9 @@ func (l *Ledger) CreateAction(ctx context.Context, tx pgx.Tx, org ids.OrgID, a N
 	}
 	evt := ids.New[ids.ActionEventKind]()
 	actor := EventData{Actor: a.Actor}.actor()
+	if !a.At.IsZero() {
+		created = a.At.UTC()
+	}
 	if _, err := tx.Exec(ctx, `INSERT INTO deedglass.action_events (id, org_id, action_id, seq, from_state, to_state, actor, request_id, data, at)
 	    VALUES ($1, $2, $3, 1, NULL, 'received', $4, $5, '{}', $6)`, evt, org, id, actor, nullable(a.RequestID), created); err != nil {
 		return ids.ActionID{}, err
@@ -289,8 +315,9 @@ func advanceStmt(from gate.State, steps []Step) string {
 		return v.(string)
 	}
 	var cols strings.Builder
+	at := "$" + strconv.Itoa(11+len(patchColumns)) + "::timestamptz" // the edges' time, after the patch (S27 §3.2)
 	for _, s := range steps {
-		cols.WriteString(", " + stateColumn[s.To] + " = pg_catalog.clock_timestamp()")
+		cols.WriteString(", " + stateColumn[s.To] + " = " + at)
 	}
 	last := stateColumn[steps[len(steps)-1].To]
 	stmt := `WITH u AS (
@@ -367,6 +394,7 @@ func (l *Ledger) Advance(ctx context.Context, tx pgx.Tx, actionID string, from g
 	first := steps[0].Event
 	args := append([]any{actionID, string(from), string(prev), hops, first.actor(), nullable(first.RequestID), evtIDs, fs, ts, datas},
 		merged.args()...)
+	args = append(args, l.at(first))
 	var (
 		org string
 		at  time.Time
@@ -445,6 +473,7 @@ func (l *Ledger) transition(ctx context.Context, tx pgx.Tx, actionID string, fro
 		}
 		args = append(args, sd.id)
 	}
+	args = append(args, l.at(d))
 	if sd != nil {
 		// Sealing: the deed.sealed event is known in full before the statement runs, so the
 		// transition and its NOTIFY go in one round trip.
@@ -520,10 +549,10 @@ func (l *Ledger) AppendEvent(ctx context.Context, tx pgx.Tx, actionID string, d 
 	if err != nil {
 		return err
 	}
-	_, err = tx.Exec(ctx, `INSERT INTO deedglass.action_events (id, org_id, action_id, seq, from_state, to_state, actor, request_id, data)
-	    SELECT $1::text, $2::text, $3::text, COALESCE(pg_catalog.max(e.seq), 0) + 1, $4::text, $4::text, $5::text, $6::text, $7::jsonb
+	_, err = tx.Exec(ctx, `INSERT INTO deedglass.action_events (id, org_id, action_id, seq, from_state, to_state, actor, request_id, data, at)
+	    SELECT $1::text, $2::text, $3::text, COALESCE(pg_catalog.max(e.seq), 0) + 1, $4::text, $4::text, $5::text, $6::text, $7::jsonb, $8::timestamptz
 	    FROM deedglass.action_events AS e WHERE e.action_id = $3::text`,
-		ids.New[ids.ActionEventKind](), org, actionID, state, d.actor(), nullable(d.RequestID), string(data))
+		ids.New[ids.ActionEventKind](), org, actionID, state, d.actor(), nullable(d.RequestID), string(data), l.at(d))
 	return err
 }
 
@@ -625,6 +654,13 @@ func snapshot(ctx context.Context, tx pgx.Tx, actionID string) (deed.ActionSnaps
 // actions.deed_id set (one statement) and publishes deed.sealed. One call, one transaction, one deed. On
 // deed.ErrChainConflict the caller retries once in a new transaction.
 func (l *Ledger) SealAction(ctx context.Context, tx pgx.Tx, actionID string) (*deed.Envelope, error) {
+	return l.SealActionAt(ctx, tx, actionID, time.Time{})
+}
+
+// SealActionAt is SealAction with the time of the edge into sealed (actions.sealed_at and its
+// event) from the caller's clock (S27 §3.2). The deed's issued_at is still the database clock under
+// the chain lock: when Deedglass sealed, which for simulated history is later than the decision.
+func (l *Ledger) SealActionAt(ctx context.Context, tx pgx.Tx, actionID string, at time.Time) (*deed.Envelope, error) {
 	if l.sealer == nil {
 		return nil, ErrNoSigner
 	}
@@ -641,7 +677,7 @@ func (l *Ledger) SealAction(ctx context.Context, tx pgx.Tx, actionID string) (*d
 		return nil, err
 	}
 	sd := &sealedDeed{org: env.Body.Org, id: env.ID, seq: env.Body.Seq, at: env.Body.IssuedAt}
-	if _, err := l.transition(ctx, tx, actionID, st, gate.Sealed, EventData{}, sd, nil); err != nil {
+	if _, err := l.transition(ctx, tx, actionID, st, gate.Sealed, EventData{At: at}, sd, nil); err != nil {
 		return nil, err
 	}
 	// S23: an undo that ends without applying (denied, expired, cancelled or failed: nothing was

@@ -1557,6 +1557,40 @@ look again with `deedglass decoder status --connector <name>`.
 }
 ```
 
+## replay_too_large
+
+**400 · invalid_request_error**
+
+**When it happens.** `POST /v1/policies/{id}/versions/{v}/replay` counts the actions in the window before it queues anything, and the window holds more than 1,000,000 of them. Replay re-evaluates every stored decision input, so the limit keeps one job bounded. Nothing was queued, and the refusal doesn't count toward the 10 replays an hour. A queued replay can also end `failed` with this code in its `error` object, when the window holds more than the limit by the time a runner counts it again.
+
+**What to do.** Send a narrower window with `from` and `to` (RFC 3339). Split a long period into several replays if you need all of it.
+
+```json
+{
+  "type": "invalid_request_error",
+  "code": "replay_too_large",
+  "message": "This replay covers 1,240,512 actions; the limit is 1,000,000. Narrow the window with from and to.",
+  "param": null
+}
+```
+
+## replay_window_invalid
+
+**400 · invalid_request_error**
+
+**When it happens.** The window you sent can't be replayed or read: `from` is not before `to`, or the window is longer than 90 days. The replay route, `GET /v1/insights/stats` (with `from` and `to`) and `GET /v1/insights/shadow` check the same rule. `param` names the end at fault: `to` when both ends were sent and `from` isn't before it, otherwise `from`.
+
+**What to do.** Send `from` before `to`, at most 90 days apart, both in RFC 3339 like `2026-09-26T00:00:00Z`. Leave both out to use the last 7 days.
+
+```json
+{
+  "type": "invalid_request_error",
+  "code": "replay_window_invalid",
+  "message": "The window must start before it ends, and it can be at most 90 days long. Send from before to.",
+  "param": "from"
+}
+```
+
 ## What this doesn't do
 
 - Errors don't carry localized messages. The copy is English, and the `code` is the stable part.

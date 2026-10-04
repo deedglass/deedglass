@@ -285,8 +285,8 @@ func (s *Service) Request(ctx context.Context, tx pgx.Tx, in gate.ApprovalInput,
 		msg := MsgUnsatisfiable(spec.Required, can)
 		_, err := tx.Exec(ctx, `INSERT INTO deedglass.approvals (id, org_id, action_id, status, rule_id, reason, approvers_required,
 		    approver_spec, expires_at, context, context_digest, agent_id, tool, on_behalf_of, policy_version_id, decided_at, decision_reason)
-		    VALUES ($1, $2, $3, 'denied', $4, $5, $6, $7::jsonb, $8, $9::jsonb, $10, $11, $12, $13, $14, pg_catalog.now(), $15)`,
-			append(row, msg)...)
+		    VALUES ($1, $2, $3, 'denied', $4, $5, $6, $7::jsonb, $8, $9::jsonb, $10, $11, $12, $13, $14, $16::timestamptz, $15)`,
+			append(row, msg, now)...)
 		if err != nil {
 			return ids.ApprovalID{}, time.Time{}, err
 		}

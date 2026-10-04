@@ -92,6 +92,11 @@ make bench-overview # S25 §3.8: GET /v1/overview's read (cache bypassed) at 100
 DEEDGLASS_IT_PKGS="./internal/console/ ./internal/ledger/ ./internal/identity/" DEEDGLASS_IT_GOFLAGS="-v -run TestOverview|TestAgentsExpandUsage" make integration   # S25: the Overview (golden, windows, isolation, attention, live chain check) and ?expand[]=usage
 DEEDGLASS_IT_PKGS="./internal/ledger/ -args -update-overview" DEEDGLASS_IT_GOFLAGS="-run TestOverviewGolden" make integration   # S25: regenerate internal/ledger/testdata/overview_golden.json (review the diff)
 go test ./internal/identity -run TestAgentObjectGolden -args -update-agent-golden   # S25: the plain agent object's bytes (must not change)
+make bench-insights # S27: replay ≥ 10k actions/s, stats p99 < 300 ms (+ EXPLAIN), detect < 500 ms, backfill < 30 s, FactsCache hit < 2 µs at 100k actions / 20 agents, then the S13 gate budget with the anomaly opt-in on; JSON in bench/results/
+DEEDGLASS_IT_PKGS=./internal/learn/ make integration   # S27: TestSeed7 (honest sim, replay oracle, lost-lease reclaim, shadow, stats, backfill = 5 episodes, two orgs, repeatable) and TestAnomalyFacts
+DEEDGLASS_IT_PKGS="./internal/learn/ -args -update-learn" DEEDGLASS_IT_GOFLAGS="-run TestSeed7" make integration   # S27: regenerate internal/learn/testdata/*.golden.json (review the diff)
+go test ./internal/learn/... -cover   # S27: replay engine, jobs, detectors (100%), facts cache, service, API route × role, the sim scenario and generator
+deedglass dev simulate --days 7 --seed 7   # S27 (dev only): a week of honest simulated history in a new org flagged simulated (acme-sim, acme-sim-2, …)
 make bench-events   # S24 §3.12: the event hub, 1,000 events/s to 200 SSE streams (p99 enqueue→write < 50 ms), memory per stream (< 64 KiB); JSON in bench/results/
 go test ./internal/console -run 'TestIsolationProperty|TestResume|TestBackpressure|TestEvents' -v   # S24: the live stream (isolation, resume, backpressure, timers in synctest, limits, hydration)
 DEEDGLASS_IT_PKGS=./cmd/deedglass/ DEEDGLASS_IT_GOFLAGS="-v -run ^TestEventsLive$" make integration   # S24 on a real server: fake-action over /v1/events, two orgs, agent key, rollback, clean stop
@@ -257,8 +262,8 @@ and "open source" until the repo is public. Style bans: "revolutionary", "world-
   overflow tests, pattern-vs-parser agreement, `FuzzParse`.
 - `internal/config`: the key table, every prod refusal, `.deedglass/` safety, secret canaries across
   fmt, JSON, slog and panics, and the `docs/CONFIG.md` drift test.
-- `internal/store`: catalog shape (34 tables since S23, RLS on every org table, `system_scope` list pinned,
-  composite FKs, grants), RLS matrix on all 29 org tables, pooled-connection leak, privilege
+- `internal/store`: catalog shape (35 tables since S27, RLS on every org table, `system_scope` list pinned,
+  composite FKs, grants), RLS matrix on all 30 org tables, pooled-connection leak, privilege
   matrix, deed chain, domains = `ids.Registry()`, `set_config(…, true)` grep, `SystemTx` call
   sites; `internal/gate`: 225-pair trigger test; migrate runner refusals. Integration tag,
   PG 16/17/18.
@@ -569,6 +574,20 @@ and "open source" until the repo is public. Style bans: "revolutionary", "world-
   `secretfield` (the value is gone from every node after save or error), `checklist`, `countdown`, `settings`; the copy
   walk covers `copy-*.ts`. Playwright: `approvals`, `policies`, `connectors`, `settings`, `roles` (every row of the role
   matrix: the UI and the page's own API call), `demo-loop`, the S26 axe sweep (pages and sheets, both themes).
+- S27 (Insights): `internal/learn` unit tests: the replay engine (determinism over batch and worker counts,
+  unknown reasons, the time limit, `ResultDigest`), the job runner (lease lost, cancel, progress), the six
+  detectors (100% coverage, `anomaly_test.go`), `FactsCache` (hit does no store read, NOTIFY invalidation,
+  fail closed when stale or on a lookup error unless last known off), the service (window rules, rate limit,
+  reasons, settings deeds) and the API route × role matrix (agent keys 403); `internal/learn/sim` (scenario
+  validation, the generator's plan digest). `internal/policy` `TestReadsAnomaly`. Integration (`internal/learn`):
+  `TestSeed7` (every verdict `simulated`, `policy_input.time = evaluated_at`, deeds issued after their virtual
+  decision, the replay oracle equal to `policy.Evaluate` row by row, a killed runner's job reclaimed with the same
+  digest, the shadow report against SQL, the stats golden, a backfill of exactly 5 episodes and 5 NOTIFYs, two orgs
+  isolated, a second run with the same numbers) and `TestAnomalyFacts` (opt-in off/on, NOTIFY within 2 s,
+  `active_until`, resolve with a deed, `detector_stale`, recipe 17, an injected lookup error); `internal/gate`
+  `TestDecisionClock` and `TestAnomalyFactsDecide`. `TestPreAuthNamesStayInStore` keeps `claim_replay_jobs` and
+  `claim_learn_orgs` in `internal/store`; `TestOneWritePath` allows `store.NotifyLearn` as the door for
+  `deedglass_learn`. `attack/` `TestOrgIsolation` sweeps the replay and anomaly routes. The migration count is 24.
 - `cmd/deedglass verify` (S05): 80 golden cases in `testdata/verify/<case>/{args,stdout,stderr,exit}`
   (`go test ./cmd/deedglass -run TestVerifyGolden -update`), every vector's code and exit, `--keys`
   URL rules (same-host redirects, 1 MiB, timeout, loopback-only http), key-set merge conflicts, no
