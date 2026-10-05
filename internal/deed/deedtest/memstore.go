@@ -126,7 +126,7 @@ func (t *MemTx) Insert(_ context.Context, d deed.Stored) error {
 	if n := len(all); n > 0 {
 		want, prev = all[n-1].Envelope.Body.Seq+1, all[n-1].Envelope.BodyHash
 	}
-	if b.Seq != want || b.PrevHash != prev {
+	if b.Seq != want || b.PrevHash != prev { //deedglass:allow-compare a deed's public prev_hash
 		return fmt.Errorf("%w: seq %d, want %d", deed.ErrChainConflict, b.Seq, want)
 	}
 	t.pending = append(t.pending, d)

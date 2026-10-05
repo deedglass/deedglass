@@ -81,3 +81,165 @@ less exact than it should be, or a guard covers less than it could; nothing runs
 The full STRIDE model, the remaining V0 cases, MCP tool-description poisoning, approval-link
 replay, forged Slack interactions, YAML and CEL bombs, 30-minute fuzz runs, guards G6 to G10 and
 `SECURITY.md`.
+
+## Pass 2 · 2026-10-11 (run 2026-10-05, S34)
+
+### Scope
+
+Every feature built through S33, attacked as the threat model ([THREAT_MODEL.md](THREAT_MODEL.md)
+v2) describes them: the Gate and policies, the MCP wrapper and gateway, connectors, the vault and
+the egress door, the Witness and the decoder, deeds and keys, people and sessions, approvals in
+email and Slack, the Console and its event stream, Insights and its optional AI wording, the CLI,
+the SDKs and `deedglass init`. Pass 1's open lows owned by S34 (SR-005, SR-006, SR-008).
+
+### Method
+
+1. **The attack suite**, extended by 23 cases in groups P (people, sessions and the stream), Q
+   (hostile MCP servers and upstreams) and R (resources, records and output), declared in
+   `attack/attack_meta.json` and pinned under `expectedDigestS34` (ADR-065) at
+   2026-10-04T23:25:34Z, before any of their code existed. P01 and P09 of the session plan are
+   S22's L01 and S23's U01, already pinned, so they are referenced, not declared again. Every V0
+   case is accounted for: 19 run (the deed and verify suites, the decoder suite), 18 point to the
+   V7 case that runs their attack (`superseded_by`), and 29 no longer apply to the V7 architecture
+   and name the test that checks the V7 control instead (`retired`). Their expected outcomes are
+   unchanged.
+2. **The 20-row checklist below**, each row with its evidence (file:line) and test.
+3. **Static guards G6 to G10** (`internal/lint`), each with a planted violation, its fix and its
+   marker, run over the repo by `TestRepoClean`.
+4. **Fuzzing**: `make fuzz-all`, every parser that reads untrusted bytes for 5 to 30 minutes
+   (results below); `make fuzz-regress` replays every corpus in CI.
+5. **Supply chain**: `make audit`.
+
+Severity (unchanged; S34's wording for the same scale): **High** means an attacker in A1 to A7 can
+cause an unauthorized write, a cross-org read, a forged or silently dropped deed, a secret's
+disclosure or a false `VERIFIED`. **Medium** means the same with a realistic precondition (a
+viewer role, a revoked key inside the propagation window), a control weaker than documented, or a
+denial of service of the Gate under 100 requests a second. **Low** means defence in depth, an
+information leak without secrets, or hardening.
+
+### Results
+
+| Check | Result |
+|---|---|
+| Attack suite | 68 matched · 0 differ · 0 waiting · both chains intact · 0 secrets seen in 7,394 log lines (3 min 20 s on PostgreSQL 18.6) |
+| New cases P, Q, R | 23 of 23 matched; 5 differed on their first run and were fixed in the code or the case's observation, never in the expectation (below) |
+| Static guards | G1 to G10 clean; 9 files marked `allow-exec`, 1 `allow-unsafe`, 1 `allow-text-template`, 27 comparisons of public digests marked `allow-compare` |
+| Fuzzing | 21 targets, 6.5 hours, 300,617,223 inputs, 0 crashers |
+| Supply chain | Nothing reachable in Go; 0 advisories in what ships from npm and PyPI; build-time docs packages recorded (SR-018) |
+
+**First runs that differed.** Q04's 10,000-deep answer waited out the call's timeout (the SDK
+dropped it), and R07 found `actions list` printing a bidi override raw: both fixed in the code
+(SR-012, SR-014). P04 looked for a log line the self rule never writes (the
+refusal is the person's ephemeral Slack reply), R02's run time stop came from the evaluation
+deadline rather than the cost counter, R03's export was a tar.gz bundle where the case expected
+JSON lines, and R07 also counted a bidi character inside JSON answers, where it is data, as a raw control
+byte: each case's
+observation was corrected to what the control really does, with the expectation unchanged.
+
+### The checklist
+
+| # | Control | Evidence | Test | Result |
+|---|---|---|---|---|
+| 1 | Route auth: every route declares it; the public set is exact; `/v1/slack/interact` is signed | `internal/httpx/contract_routes.go`; `internal/httpx/routes.go:197` (`Mount`, now with `PublicReason` for public extensions) | `TestRouteAuthCoverage`, `TestServeRoutesUnauthenticated`, `TestPublicExtensionNeedsReason` | Pass; SR-006 fixed |
+| 2 | Authorization matrix: viewers never mutate outside a reasoned list; admins never reach owner routes; agent keys scoped per route | `internal/httpx/authz_s34_test.go` (`viewerMutations`) | `TestAuthzMatrix`, `TestAuthzMatrixServe`, `TestRoleMatrix`, `TestKeyRoutesDeclareScopes`, P06 | Pass |
+| 3 | Org isolation, every id-bearing route including the stream, exports, replays, insights, suggestions, webhooks, approvals and undo | `attack/isolation_test.go` | `TestOrgIsolation`, P08 | Pass |
+| 4 | RLS: on every org table; only the five global tables without it; the runtime role isn't superuser, has no BYPASSRLS and owns nothing (RLS is enabled, not forced, on purpose: ADR-066) | `internal/store/store_integration_test.go:88` | `TestSchemaShape`, `TestRLSMatrix`, `TestRuntimeRoleCannotBypassRLS` | Pass |
+| 5 | Cookies: `__Host-`, Secure, Path=/, no Domain; session HttpOnly and SameSite=Lax (links from email and Slack open the Console signed in; CSRF is closed by the token and Sec-Fetch-Site), CSRF cookie SameSite=Strict; double-submit compared in constant time | `internal/identity/session.go:91`, `:203` | `TestCookieFlags`, `TestProdCookies`, P07 | Pass |
+| 6 | CORS: no `Access-Control-*` on any `/v1` answer; `/mcp/*` refuses a foreign Origin | `internal/httpx/server.go:543` (no CORS headers); `identity.MCPAuth` | `TestCORSDenied`, the S15 Origin tests | Pass |
+| 7 | Security headers on the API and the Console: CSP with `frame-ancestors 'none'`, nosniff, no-referrer, COOP, Permissions-Policy; HSTS in prod over https only | `internal/httpx/server.go:546`; `internal/console/console.go:226` | `TestSecurityHeadersRoutes` (6 routes, dev and prod), `TestSecurityHeaders`, `TestPages` | Pass; SR-015 fixed |
+| 8 | Server limits: ReadHeaderTimeout 5 s, ReadTimeout 60 s, WriteTimeout per route, IdleTimeout 120 s, MaxHeaderBytes 64 KiB; 1 MiB bodies; args depth 32; route timeouts; stream limits | `cmd/deedglass/serve.go:425` | `TestLimits` (httpx), G10, R06, `TestEventsPerUserLimit` | Pass |
+| 9 | SSRF: every outbound path uses the egress door | `internal/connector/egress`; `internal/archtest/egress_test.go:69` | `TestSingleEgressDoor`, G2, K01, K02, Q08, L07 | Pass |
+| 10 | SQL: no string-built SQL; one statement per connector call; READ ONLY query transactions; undo parameterized | `internal/lint/guards.go` (G1); `internal/connector/postgres` | `TestRepoClean`, `TestAdmission`, `TestStatementsUseParameters`, H01–H07 | Pass |
+| 11 | Secrets: never logged, never returned, redacted, write-only in the Console; `.env` and `.deedglass/` ignored | `internal/vault/redact.go`; G3 | the sentinel sweep in every attack case (0 hits), K03, Q07, `TestDescriptionRefusesCredentials` | Pass; SR-013 fixed |
+| 12 | Crypto: stdlib Ed25519, small-order refusal, seal key files refused above 0600, `crypto/rand` only, constant-time compares for key hashes, CSRF, approval tokens, webhook and Slack signatures | `internal/deed/keyfile.go:163`; `internal/identity/token.go:112`; `internal/connector/slack/verify.go:83`; `pkg/deedglass/webhook/webhook.go:109` | A13, `TestKeyFiles`, G5, G8 | Pass |
+| 13 | Tokens: approval tokens and magic links hashed at rest, single use, bound to person and approval, expiring; logout ends the session server-side | `internal/approve/links.go:46` | L01, L02, P02, `FuzzApprovalToken`, `TestLinks` | Pass |
+| 14 | MCP: description scanning, catalog pinning, qualified names, size and depth limits, fail closed, server-to-client request policy | `internal/mcp/toolscan`; `internal/mcp/upstream/pool.go` (`screen`, `capped`); `internal/mcp/wrap/wrap.go` (`serverRequestKind`) | Q01–Q06, `TestScreenHidesAndPins`, `TestFlaggedDescription`, `TestSamplingRefused`, `TestDeepStreamFailsFast`, `TestHangIsTimeout` | Pass after SR-009 to SR-012 |
+| 15 | LLM channel: an allow-list of keys, output treated as untrusted (length, numbers, placeholders, words), never used to build the diff, a person accepts | `internal/learn/phrase_validate.go:48`; `internal/learn/privacy.go:29` | R05, `TestPrivacySentinels`, `TestNeverEnforceMethodSet` | Pass |
+| 16 | Denial of service: policy and CEL limits, request limits, login and link rate limits, slot lag alert, replay concurrency | `internal/policy/limits.go` | R01, R02, R06, `TestCostLimitFailsClosed`, `TestHugeArgsNeverAllow` | Pass |
+| 17 | Output encoding: CLI escaping, slog escaping, Console text nodes, html/template email | `cmd/deedglass/verify.go:722` (`clean`), `cmd/deedglass/ledgercmd.go` (`clip`) | R07, `TestClipCleans`, G9, the web sink grep | Pass; SR-014 fixed; SR-016 open (Low) |
+| 18 | Supply chain: `make vuln`, npm audit ×3, pip-audit, Actions pinned by SHA, base images by digest, `go.sum` committed, no `replace` | `.github/workflows/ci.yml` (the pin check), `Dockerfile:11`, `Dockerfile:27` | `make audit` (below) | Pass for what ships; SR-007 and SR-018 open (Low) |
+| 19 | Container: distroless nonroot, read-only root, `cap_drop: ALL`, `no-new-privileges`, no shell | `Dockerfile:27`; `deploy/docker-compose.yml:24` | the CI `docker-smoke` job | Pass |
+| 20 | CLI, SDKs and `init`: file modes, no secret echo, `--keys` https only, offline verify trusts only given keys, adapters fail closed | `internal/setup`; `cmd/deedglass/verify_keys.go` | `TestVerifyGolden`, `TestInitLive`, the SDK suites | Pass |
+
+### Findings
+
+| Id | Area | Finding | Severity | Status | Evidence |
+|---|---|---|---|---|---|
+| SR-005 | REST connector | A 3xx under `redirects: none` was worded as "The service failed". | Low | **Fixed.** "The service redirected the call (HTTP 302), and Deedglass doesn't follow redirects for this connector. The call may have run." | `internal/connector/errors.go` `FromStatus`; `TestFromStatusRedirect` |
+| SR-006 | Route table | A public extension route needed no reason. | Low | **Fixed.** `Mount` refuses a public extension route without `PublicReason`; the four existing ones carry theirs. | `internal/httpx/routes.go`; `TestPublicExtensionNeedsReason` |
+| SR-008 | Identity | `KeyAuth` without a database dereferenced nil on a well-formed key. | Low | **Fixed.** It answers `service_unavailable`. | `internal/identity/keyauth.go`; `TestKeyAuthWithoutDatabase` |
+| SR-009 | MCP | Tool descriptions carrying instructions for the model (plain phrases, Unicode tag characters, `<IMPORTANT>` blocks) reached MCP clients through the gateway and the wrapper. | Medium | **Fixed.** `internal/mcp/toolscan` flags them; the gateway and the wrapper hide them, refuse calls as an unknown tool and log the admin's sentence; the gateway seals `connector.tool_hidden`. A heuristic (LIMITATIONS). | Q01; `TestScan`, `TestScreenHidesAndPins`, `TestFlaggedDescription` |
+| SR-010 | MCP gateway | The HTTP gateway didn't pin tool definitions, though `docs/MCP.md` said it followed the wrapper's lists: a tool could change its description or schema after it was listed. | Medium | **Fixed.** The first definition's digest is pinned per connector; a changed tool is hidden and refused until Deedglass restarts, and sealed as `connector.tool_hidden` (`definition_changed`). | Q02; `TestScreenHidesAndPins` |
+| SR-011 | MCP wrapper | `mcp wrap` relayed `sampling/createMessage` and `elicitation/create` from the server to the client ungoverned (documented as a v1 limit). | Low | **Fixed.** Refused with a JSON-RPC error and logged unless `--allow-server-requests` names them; the gateway logs the requests its client refuses. | Q06; `TestSamplingRefused`, `TestSampling` |
+| SR-012 | MCP gateway | An upstream answer nested 10,000 deep was dropped by the SDK's decoder, so the call waited out its whole timeout; a hanging upstream was recorded as a lost answer, not a timeout. | Low | **Fixed.** Nesting is checked while reading (512) and after decoding (128): `upstream_error`, unknown, at once. A transport timeout is `timeout`. | Q04, Q05; `TestDeepStreamFailsFast`, `TestHangIsTimeout` |
+| SR-013 | Connectors | A connector description holding a credential (a live Stripe key) was accepted and stored, shown to every member and sealed in the admin deed's data. | Low | **Fixed.** A description the vault's scrubber recognizes as a credential is 400 `validation_failed`, and the message never echoes it. | Q07; `TestDescriptionRefusesCredentials` |
+| SR-014 | CLI | `actions list` and `actions show` printed names an agent supplied without escaping; a recorded unknown tool name with a bidi override reordered the terminal line. | Low | **Fixed.** The Ledger tables and headers pass names through `clean()`. | R07; `TestClipCleans` |
+| SR-015 | HTTP | API answers lacked `Cross-Origin-Opener-Policy` and `Permissions-Policy` (the Console's pages had them). | Low | **Fixed.** Every answer carries both; one constant (`httpx.PermissionsPolicy`) for both. | `TestSecurityHeadersRoutes` |
+| SR-016 | Console | Bidirectional characters in an agent-supplied name can reorder text in the Console's tables. | Low | Backlog (S35) | R07 evidence (`events` and API carry the character as data, as JSON allows) |
+| SR-017 | Egress | The metadata refusal told every caller to "point base_url at the service's public address", including webhook admins. | Low | **Fixed.** "Use the service's public address." | Q08 evidence; `internal/connector/egress/policy.go` |
+| SR-018 | docs-site | 6 high npm advisories in build-time packages (`braces`, `micromatch` under `starlight-llms-txt`; `form-data` under `httpsnippet` under `starlight-openapi`). The site ships static files; the packages run on our own sources at build time. | Low | Backlog (S35): move build packages to `devDependencies`, take upstream fixes. | `make audit` |
+
+**Open high or medium findings: 0.** Lows open with an owner: SR-007, SR-016, SR-018
+([SECURITY_BACKLOG.md](SECURITY_BACKLOG.md)).
+
+### Fuzzing
+
+`make fuzz-all` (`scripts/fuzz_all.sh`), 2026-10-05, Apple M1, Go 1.27.1, 2 workers per target and
+3 targets at a time (the laptop also ran the session's builds), the times S34 set: 6.5 hours of
+fuzzing over 21 targets, 300,617,223 inputs, **0 crashers**. Three targets are new in S34:
+`FuzzSlackVerify` over the whole `/v1/slack/interact` path (nothing is decided without a valid,
+fresh signature), `FuzzWebhookSignature` (a signature verifies only its own body and secret) and
+`FuzzApprovalToken` (the link token's shape check and hash). `make fuzz-regress` (CI job
+`fuzz-regress`) runs every target for 10 seconds, replaying any committed corpus under
+`testdata/fuzz/`. Raw results: `bench/results/2026-10-05-darwin-arm64-fuzz.json`.
+
+| Target | Package | Time | Inputs | New interesting | Crashers |
+|---|---|---|---|---|---|
+| `FuzzReader` | `internal/mcp/jsonrpc` | 30 min | 59,528,906 | 299 | 0 |
+| `FuzzFrontEnvelope` | `internal/mcp/front` | 30 min | 10,391,088 | 297 | 0 |
+| `FuzzCompile` | `internal/policy` | 30 min | 2,785,214 | 441 | 0 |
+| `FuzzYAMLReader` | `internal/policy` | 30 min | 4,707,692 | 173 | 0 |
+| `FuzzParseEnvelope` | `internal/deed` | 30 min | 34,687,715 | 121 | 0 |
+| `FuzzVerifyEnvelope` | `internal/deed` | 30 min | 30,687,640 | 110 | 0 |
+| `FuzzIntentHeader` | `internal/identity` | 30 min | 6,376,807 | 210 | 0 |
+| `FuzzTokenize` | `internal/sqlguard` | 30 min | 44,333,553 | 176 | 0 |
+| `FuzzAnalyze` | `internal/sqlguard` | 30 min | 42,848,683 | 114 | 0 |
+| `FuzzSafeParse` | `internal/decoder` | 15 min | 6,671,464 | 12 | 0 |
+| `FuzzArchiveOpen` | `internal/deed/archive` | 10 min | 3,372,068 | 132 | 0 |
+| `FuzzVerifyStream` | `internal/deed` | 10 min | 4,831 | 56 | 0 |
+| `FuzzCheckURL` | `internal/connector/egress` | 10 min | 6,709,539 | 306 | 0 |
+| `FuzzRedactor` | `internal/vault` | 10 min | 3,448,535 | 97 | 0 |
+| `FuzzTemplatePath` | `internal/connector/rest` | 10 min | 3,399,984 | 8 | 0 |
+| `FuzzSlackVerify` | `internal/notify/slack` | 10 min | 2,589,714 | 147 | 0 |
+| `FuzzWebhookSignature` | `pkg/deedglass/webhook` | 10 min | 30,742,996 | 5 | 0 |
+| `FuzzApprovalToken` | `internal/approve` | 10 min | 3,418,540 | 16 | 0 |
+| `FuzzParseAPIKey` | `internal/identity` | 5 min | 1,210,496 | 0 | 0 |
+| `FuzzNormalize` | `internal/gate` | 5 min | 1,117,143 | 287 | 0 |
+| `FuzzHeaderDecode` | `internal/mcp/httpgw` | 5 min | 1,584,615 | 8 | 0 |
+
+`FuzzVerifyStream` runs a whole stream verification per input, so it covers fewer inputs; its
+seeds hold the chain's failure cases. **Python:** Hypothesis 6.168.3, 50,000 examples each on the
+strict parser (bytes and text: it only ever raises `VerifyError`) and on JCS (canonical output
+parses back to the same value and canonicalizes to itself): 3 properties passed (6 minutes).
+
+### Supply chain (`make audit`, 2026-10-05)
+
+| Check | Result |
+|---|---|
+| `govulncheck` v1.8.0 | No vulnerabilities in code Deedglass calls. One in a required module, not reachable: GO-2026-5024 in `golang.org/x/sys` v0.41.0 (SR-007, S35) |
+| `npm audit --omit=dev`, `web/` | 0 (the Console ships no npm runtime code) |
+| `npm audit --omit=dev`, `sdk/typescript` | 0 (`@deedglass/sdk` has no runtime dependency) |
+| `npm audit --omit=dev`, `docs-site/` | 6 high in build-time packages (SR-018, S35); the site ships static files |
+| `pip-audit` 2.10.1, the Python SDK's runtime closure (`httpx` and 6 packages it pulls in) | 0 |
+| `pip-audit` 2.10.1, the SDK's dev venv (91 packages, not shipped) | 0 |
+| GitHub Actions | Every `uses:` pinned by a 40-character SHA (the CI pin check) |
+| Base images | `golang:1.27.1-trixie@sha256:…` and `distroless/static-debian13:nonroot@sha256:…` |
+| `go.mod` | No `replace` directives; `go.sum` committed and verified in CI |
+
+### Deferred
+
+- S35: the SBOM, container image scanning, signing, SR-007, SR-016, SR-018.
+- S36: `security.txt` on deedglass.com (the docs site serves it today) and the site's security page.
+- S37: GitHub private vulnerability reporting, secret scanning and Dependabot when the repository
+  goes public.
+- Post-launch: an external penetration test, a bug bounty, KMS- or HSM-backed seal keys.

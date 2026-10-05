@@ -44,7 +44,7 @@ func TestGenerateDeterministic(t *testing.T) {
 	}
 	page := string(a)
 	for _, want := range []string{"Don't edit it by hand", "45 matched · 0 differ · 0 waiting on a later session", "| H01 |", "| W01 |", "| L01 |", "✓ matched",
-		"What this suite doesn't cover", "| A01 |", "V0 suite", "expectedDigestV7"} {
+		"What this suite doesn't cover", "| A01 |", "runs as W05", "retired: V7 signs agent intents", "| P02 |", "| Q01 |", "| R07 |", "expectedDigestV7"} {
 		if !strings.Contains(page, want) {
 			t.Errorf("the page lacks %q", want)
 		}

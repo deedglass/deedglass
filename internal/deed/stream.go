@@ -442,7 +442,7 @@ func (v *Verifier) consume(o *lineOut, rec Record) {
 		switch {
 		case v.opt.Org != "" && r.Org != v.opt.Org:
 			ce = &VerifyError{Code: CodeChainOrgMismatch, Seq: r.Seq, DeedID: r.DeedID, Org: r.Org, WantOrg: v.opt.Org}
-		case r.Seq == 1 && r.Envelope.Body.PrevHash != Genesis(r.Org):
+		case r.Seq == 1 && r.Envelope.Body.PrevHash != Genesis(r.Org): //deedglass:allow-compare a deed's public prev_hash
 			ce = &VerifyError{Code: CodeChainGenesisMismatch, Seq: r.Seq, DeedID: r.DeedID}
 		}
 		if ce != nil {

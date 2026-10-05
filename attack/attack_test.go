@@ -34,6 +34,10 @@ var (
 func register(cs ...harness.Case) { allCases = append(allCases, cs...) }
 
 func TestMain(m *testing.M) {
+	if os.Getenv("ATTACK_STDIO_MCP") == "1" { // S34's Q06: this binary is the hostile stdio MCP server
+		hostileStdioMain()
+		os.Exit(0)
+	}
 	started = time.Now().UTC()
 	code := m.Run()
 	if env != nil {
@@ -70,7 +74,7 @@ func TestAttack(t *testing.T) {
 		byID[c.ID] = c
 	}
 	for _, mc := range meta.Cases {
-		if !strings.Contains("HJKLUW", mc.Group) {
+		if !strings.Contains(harness.V7Groups, mc.Group) {
 			continue // V0 groups run in their own suites (deed_test.go, deed_verify_test.go, S34)
 		}
 		c, ok := byID[mc.ID]

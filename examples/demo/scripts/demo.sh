@@ -10,7 +10,7 @@
 #   demo.sh snippet   make demo-snippet CLIENT=claude-desktop|claude-code|cursor|vscode|windsurf [KEYS=1]
 #   demo.sh psql      make demo-psql: psql on the orders database as acme_owner
 #   demo.sh follow    make demo-follow: deedglass actions list --follow --connector orders
-#   demo.sh verify    make demo-verify [SINCE=10m]: export recent deeds and verify the chain
+#   demo.sh verify    make demo-verify [SINCE=10m]: export the chain (or a window) and verify it
 #   demo.sh check     make demo-check: the Postgres connector's readiness report (S17)
 #   demo.sh trigger-on   make demo-trigger-on: the hero's legacy trigger (S21; orders-db only)
 #   demo.sh trigger-off  make demo-trigger-off: drop it
@@ -431,6 +431,12 @@ case "${1:-}" in
     host_env "$BIN" actions show "$id" --diff --org acme-demo ;;
   verify)
     build_cli >/dev/null; cd "$STATE"
-    host_env "$BIN" deeds export --org acme-demo --since "${SINCE:-10m}" --out - | host_env "$BIN" verify - ;;
+    # The whole chain by default (S34): a window that starts after deed 1 can't verify on its own
+    # without --anchor. SINCE=10m keeps the short window for a fresh stack.
+    if [ -n "${SINCE:-}" ]; then
+      host_env "$BIN" deeds export --org acme-demo --since "$SINCE" --out - | host_env "$BIN" verify -
+    else
+      host_env "$BIN" deeds export --org acme-demo --out - | host_env "$BIN" verify -
+    fi ;;
   *) awk 'NR > 1 && /^#/ { sub(/^# ?/, ""); print; next } NR > 1 { exit }' "$0"; exit 2 ;;
 esac

@@ -80,8 +80,8 @@ func (c *Console) Built() bool { return c.built }
 // envelope (S24 §3.10).
 func (c *Console) Routes() []httpx.Route {
 	return []httpx.Route{
-		{Method: "GET", Pattern: "/app", OperationID: "consoleIndex", Auth: httpx.Public, Extension: ADR, Handler: c.serve},
-		{Method: "GET", Pattern: "/app/{path...}", OperationID: "consolePage", Auth: httpx.Public, Extension: ADR, Handler: c.serve},
+		{Method: "GET", Pattern: "/app", OperationID: "consoleIndex", Auth: httpx.Public, Extension: ADR, PublicReason: "the Console's HTML shell and static files; every data call needs a session", Handler: c.serve},
+		{Method: "GET", Pattern: "/app/{path...}", OperationID: "consolePage", Auth: httpx.Public, Extension: ADR, PublicReason: "the Console's HTML shell and static files; every data call needs a session", Handler: c.serve},
 	}
 }
 
@@ -296,7 +296,7 @@ func (c *Console) asset(w http.ResponseWriter, r *http.Request, rest string) err
 func acceptsEncoding(header, token string) bool {
 	for _, part := range strings.Split(header, ",") {
 		name, params, _ := strings.Cut(strings.TrimSpace(part), ";")
-		if !strings.EqualFold(strings.TrimSpace(name), token) {
+		if !strings.EqualFold(strings.TrimSpace(name), token) { //deedglass:allow-compare an HTTP header token such as gzip, not a credential
 			continue
 		}
 		params = strings.ReplaceAll(params, " ", "")

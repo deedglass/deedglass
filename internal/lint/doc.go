@@ -1,4 +1,5 @@
-// Package lint holds Deedglass's static guards G1 to G5 (S18, security pass 1). Each guard reads
+// Package lint holds Deedglass's static guards G1 to G5 (S18, security pass 1) and G6 to G10 (S34,
+// security pass 2). Each guard reads
 // the source with go/parser and go/ast only, so the package imports nothing outside the standard
 // library and runs without type information. Check walks every non-test .go file under a root,
 // skipping vendor, .tmp, node_modules, web, testdata and hidden directories and generated files.
@@ -31,6 +32,24 @@
 //     never switched off in shipped code; tests use their own roots.
 //   - G5, no math/rand or math/rand/v2 import. Why: tokens, codes, nonces and jitter come from
 //     crypto/rand, so no secret ever depends on a predictable generator.
+//   - G6, no os/exec outside files marked //deedglass:allow-exec <reason>: init's Docker and serve,
+//     mcp wrap's supervisor, opening a browser, the attack harness. Why: every process Deedglass
+//     starts is a deliberate, reviewed choice.
+//   - G7, no unsafe import outside files marked //deedglass:allow-unsafe <reason> (one: the
+//     terminal-width ioctl), and no reflect.SliceHeader or reflect.StringHeader anywhere. Why:
+//     memory safety is the parsers' first defence.
+//   - G8, secrets compared in constant time. A ==, != , bytes.Equal or strings.EqualFold whose
+//     operand names match mac, signature, token, hash, secret or csrf (case-insensitive) is
+//     reported, unless the other side is a literal, nil or len(), the name is an imported package
+//     or a constant of the same package, or the line carries //deedglass:allow-compare <reason>
+//     (public digests: prev_hash, body_hash, version hashes). Why: a timing difference must not
+//     reveal a credential byte by byte; subtle.ConstantTimeCompare and hmac.Equal don't.
+//   - G9, no text/template outside files marked //deedglass:allow-text-template <reason> (one: an
+//     email's plain-text part). Why: text/template doesn't escape HTML, so anything a browser or
+//     mail client renders uses html/template.
+//   - G10, every http.Server composite literal sets ReadHeaderTimeout, and no http.ListenAndServe,
+//     ListenAndServeTLS, Serve or ServeTLS shortcut. Why: a server without a header deadline can
+//     be held open by slow clients.
 //
-// Filled by: S18
+// Filled by: S18 (G1 to G5) and S34 (G6 to G10)
 package lint

@@ -471,7 +471,7 @@ $ deedglass connector credentials set orders --from-env ORDERS_TOKEN
 $ deedglass connector test metadata-probe
 ✕ metadata-probe · destination blocked · 12 ms
   ✕ destination   metadata.attack.test → 169.254.169.254 · cloud metadata
-    Deedglass never connects to cloud metadata addresses, even in dev. Point base_url at the service's public address.
+    Deedglass never connects to cloud metadata addresses, even in dev. Use the service's public address.
     https://docs.deedglass.com/errors/destination_blocked
 ```
 

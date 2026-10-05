@@ -140,9 +140,9 @@ func (w *Writer) WriteDeed(canonicalEnvelope []byte) error {
 		return fail("org %s, want %s", b.Org, w.h.Org)
 	case b.Seq != want:
 		return fail("seq %d, want %d", b.Seq, want)
-	case w.lines > 0 && b.PrevHash != w.head.BodyHash:
+	case w.lines > 0 && b.PrevHash != w.head.BodyHash: //deedglass:allow-compare a deed's public prev_hash
 		return fail("prev_hash does not link to deed %d", w.head.Seq)
-	case w.lines == 0 && b.Seq == 1 && b.PrevHash != deed.Genesis(w.h.Org):
+	case w.lines == 0 && b.Seq == 1 && b.PrevHash != deed.Genesis(w.h.Org): //deedglass:allow-compare a deed's public prev_hash
 		return fail("deed 1 does not link to the org's genesis")
 	}
 	if _, ok := w.kinds[b.Kind]; !ok {

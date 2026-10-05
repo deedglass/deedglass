@@ -2,6 +2,7 @@ package connectorapi
 
 import (
 	"context"
+	"errors"
 	"io"
 	"log/slog"
 	"net/http"
@@ -119,5 +120,22 @@ func TestNames(t *testing.T) {
 	dev := connector.New(connector.Options{Env: connector.Env{Name: "dev"}})
 	if checkName("fake", dev) != nil {
 		t.Error("fake is a free name in dev without the built-in")
+	}
+}
+
+// TestDescriptionRefusesCredentials (S34, SR-013; attack case Q07): a description that carries a
+// credential the vault's scrubber recognizes is refused, and the message never echoes it.
+func TestDescriptionRefusesCredentials(t *testing.T) {
+	for _, d := range []string{"sk_live_" + strings.Repeat("a", 24), "token xoxb-1234567890-abcdefghij", "rk_test_" + strings.Repeat("b", 24) + " for refunds"} {
+		_, err := checkDescription(d)
+		var he *httpx.Error
+		if !errors.As(err, &he) || he.Code != httpx.CodeValidationFailed || he.Param != "description" || strings.Contains(he.Message, d[:8]) {
+			t.Fatalf("%q: %v", d, err)
+		}
+	}
+	for _, d := range []string{"", "Refunds under $20 for the support team.", "Reads sk_ prefixes? No: plain words."} {
+		if _, err := checkDescription(d); err != nil {
+			t.Fatalf("%q: %v", d, err)
+		}
 	}
 }

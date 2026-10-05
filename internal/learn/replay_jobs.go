@@ -308,7 +308,7 @@ func candidateOf(j *StoredReplay) (Candidate, Baseline, error) {
 	if c == nil {
 		return Candidate{}, Baseline{}, errors.New("the candidate no longer compiles: " + firstDiag(diags))
 	}
-	if j.Candidate.VersionHash != "" && c.VersionHash != j.Candidate.VersionHash {
+	if j.Candidate.VersionHash != "" && c.VersionHash != j.Candidate.VersionHash { //deedglass:allow-compare a policy version's public digest
 		return Candidate{}, Baseline{}, errors.New("the candidate's version hash changed; replay a stored version again")
 	}
 	cand := Candidate{Compiled: c, PolicyID: j.Candidate.PolicyID, VersionID: j.Candidate.VersionID, Version: j.Candidate.Version,
@@ -319,7 +319,7 @@ func candidateOf(j *StoredReplay) (Candidate, Baseline, error) {
 		if bc == nil {
 			return Candidate{}, Baseline{}, errors.New("the baseline version no longer compiles: " + firstDiag(bd))
 		}
-		if j.Baseline.VersionHash != "" && bc.VersionHash != j.Baseline.VersionHash {
+		if j.Baseline.VersionHash != "" && bc.VersionHash != j.Baseline.VersionHash { //deedglass:allow-compare a policy version's public digest
 			return Candidate{}, Baseline{}, errors.New("the baseline version's hash changed")
 		}
 		base.Compiled, base.VersionID, base.Version = bc, j.Baseline.VersionID, j.Baseline.Version

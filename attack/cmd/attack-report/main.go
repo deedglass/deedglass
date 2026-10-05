@@ -144,7 +144,7 @@ func clip(s string, n int) string {
 func printRun(w io.Writer, meta *harness.Meta, res *harness.Run, on bool) {
 	declared := 0
 	for _, c := range meta.Cases {
-		if strings.Contains("HJKLUW", c.Group) {
+		if strings.Contains(harness.V7Groups, c.Group) {
 			declared++
 		}
 	}

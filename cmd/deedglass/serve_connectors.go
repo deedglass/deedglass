@@ -34,7 +34,8 @@ type connectors struct {
 	vault   *vault.Store // nil when DEEDGLASS_VAULT_KEY isn't set
 	ring    *vault.Ring  // the key ring itself (S22: webhook signing secrets); nil without the key
 	reg     *connector.Registry
-	decoder *decoder.Supervisor // S20; nil when decoder.enabled is false
+	decoder *decoder.Supervisor   // S20; nil when decoder.enabled is false
+	breaker *connectorapi.Breaker // S30 trips; S34 seals connector.tool_hidden
 }
 
 // egressPolicy builds the process's one door from its config. self is Deedglass's own database,
@@ -104,6 +105,7 @@ func newConnectors(ctx context.Context, cfg *config.Config, db *store.DB, led *l
 	}
 	br := &connectorapi.Breaker{DB: db, Ledger: led, Log: log}
 	o.Env.Breaker = br
+	c.breaker = br
 	c.reg = connector.New(o)
 	br.Registry = c.reg
 	return c, nil

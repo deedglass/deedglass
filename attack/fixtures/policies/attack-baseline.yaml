@@ -84,6 +84,12 @@ rules:
     when: sql.ambiguous || sql.category == "unknown"
     decision: deny
     reason: Deedglass couldn't classify this statement, so it did not run. Send one plain statement.
+  - id: allow-hostile-upstreams
+    description: S34's group Q. The attacker's calls to the loopback MCP servers are allowed, so the Gate's own limits are what stop them.
+    match:
+      agent: attacker
+      tool: [qpoison.read_file, qpoison.cleanup, qpoison.notes, qpoison.audit, qrug.read_file, qrug.write_file, qshadow-a.read_file, qshadow-b.read_file, qresults.big, qresults.deep, qslow.hang, qdown.read_file]
+    decision: allow
   - id: allow-reads
     match: { tool: [postgres.query, postgres.describe, fake.echo, fs.read_file, secrets.get, pgsecret.query, orders.get, meta.get, rebind.get, redirect.meta, redirect.cross] }
     decision: allow

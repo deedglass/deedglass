@@ -110,6 +110,9 @@ type Route struct {
 	// Extension marks a route that isn't in the contract catalog, with the ADR that adds it
 	// ("ADR-0NN"), or "test" for test-only routes.
 	Extension string
+	// PublicReason says why an extension route needs no credential (S34, SR-006): the contract
+	// table carries a reason for every public route, and an extension route must too.
+	PublicReason string
 	// Guard, when set, admits the request before any other stage and shapes its auth challenges
 	// (S09: identity.MCPAuth on /mcp/*).
 	Guard   RouteGuard
@@ -199,6 +202,9 @@ func (rt Route) normalize(catalog map[string]ContractRoute) Route {
 	case rt.Extension != "":
 		if rt.Extension != "test" && !strings.HasPrefix(rt.Extension, "ADR-") {
 			fail("Extension must name an ADR (ADR-0NN) or be \"test\"")
+		}
+		if rt.Extension != "test" && rt.Auth == Public && strings.TrimSpace(rt.PublicReason) == "" {
+			fail("a public extension route needs PublicReason: why it needs no credential")
 		}
 	case !ok:
 		fail("isn't in the contract catalog (contract_routes.go); add it there, or set Extension to its ADR")

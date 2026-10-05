@@ -1,5 +1,7 @@
 package main
 
+//deedglass:allow-exec exec.LookPath resolves the MCP server command mcp snippet writes into client configs; nothing is started here
+
 import (
 	"context"
 	"errors"
@@ -28,6 +30,7 @@ import (
 
 type mcpWrapOpts struct {
 	connector, connectorType, resultMode, onBehalfOf, logFile string
+	allowServerRequests                                       string
 	hideDenied, failOpen, insecureHTTP, noLogFile             bool
 	callTimeout                                               time.Duration
 }
@@ -52,6 +55,8 @@ Policy
   --connector-type <t>    mcp (default), or postgres for servers whose tools take args.sql
   --hide-denied=false     list tools the policy always denies (calls are still refused)
   --fail-open             run calls when Deedglass is unreachable (DEEDGLASS_ENV=dev only)
+  --allow-server-requests sampling,elicitation: pass the server's requests for the client's
+                          model or for your input to the client (default: refused and logged)
 Limits
   --call-timeout <d>      give up on a call after d, for example 2m (default: no limit)
   --result-mode <m>       full (results up to 256 KiB) or digest
@@ -92,6 +97,7 @@ func mcpWrapFlags(fs *flag.FlagSet) {
 	fs.StringVar(&o.connectorType, "connector-type", "mcp", "the connector type policies match (mcp; postgres for servers whose tools take args.sql)")
 	fs.BoolVar(&o.hideDenied, "hide-denied", true, "hide tools the active policy always denies from tools/list")
 	fs.BoolVar(&o.failOpen, "fail-open", false, "run calls without a decision when Deedglass is unreachable (DEEDGLASS_ENV=dev only)")
+	fs.StringVar(&o.allowServerRequests, "allow-server-requests", "", "pass these server-to-client requests to the client: sampling, elicitation (default: refused and logged)")
 	// Limits
 	fs.DurationVar(&o.callTimeout, "call-timeout", 0, "give up on a tool call after this long, for example 2m (0: no limit)")
 	fs.StringVar(&o.resultMode, "result-mode", "full", "report results in full (up to 256 KiB) or as a digest only")
@@ -157,6 +163,11 @@ func runMCPWrap(ctx context.Context, e *Env, args []string) error {
 		HideDenied: o.hideDenied, FailOpen: o.failOpen, CallTimeout: o.callTimeout, ResultMode: o.resultMode,
 		ConnectorType: o.connectorType, OnBehalfOf: o.onBehalfOf, LogFile: logFile, Upstream: up, Env: os.Environ(),
 		Version: buildInfo().Version, DevEnv: e.Getenv("DEEDGLASS_ENV") == "dev", InsecureHTTP: o.insecureHTTP}
+	for _, r := range strings.Split(o.allowServerRequests, ",") {
+		if r = strings.TrimSpace(r); r != "" {
+			cfg.AllowServerRequests = append(cfg.AllowServerRequests, r)
+		}
+	}
 	w, err := wrap.New(cfg, e.Stderr)
 	switch {
 	case errors.Is(err, wrap.ErrFailOpenProd):

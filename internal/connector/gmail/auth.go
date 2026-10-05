@@ -49,8 +49,8 @@ func accessToken(ctx context.Context, inst *connector.Instance, st *state, sec *
 				return nil, time.Time{}, credError(inst, "The service account's private key can't be read.")
 			}
 			aud := st.cfg.TokenURL
-			if sa.TokenURI != "" && st.cfg.TokenURL == DefaultTokenURL {
-				if sa.TokenURI != DefaultTokenURL {
+			if sa.TokenURI != "" && st.cfg.TokenURL == DefaultTokenURL { //deedglass:allow-compare Google's OAuth endpoint URL, public
+				if sa.TokenURI != DefaultTokenURL { //deedglass:allow-compare Google's OAuth endpoint URL, public
 					return nil, time.Time{}, credError(inst, "The service account's token_uri isn't Google's token endpoint.")
 				}
 				aud = sa.TokenURI

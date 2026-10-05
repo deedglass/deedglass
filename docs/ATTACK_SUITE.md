@@ -6,11 +6,11 @@ These cases assume the model has already been manipulated. They test what Deedgl
 
 Every case's expected outcome was written in `attack/attack_meta.json` before its code existed, and `attack/meta_test.go` pins a digest of the expectations (ADR-040). A case that turns out different is shown as differs; its expectation is never edited to pass.
 
-**Last run:** 2026-10-05 · commit `f5e66f7+uncommitted` · PostgreSQL 18.6 · a real `deedglass serve` process, a real Postgres, loopback upstreams.
+**Last run:** 2026-10-05 · commit `5b8f0eb+uncommitted` · PostgreSQL 18.6 · a real `deedglass serve` process, a real Postgres, loopback upstreams.
 
-**45 matched · 0 differ · 0 waiting on a later session.** After every case: the deed chains of both orgs are intact, the target database is unchanged wherever nothing should have run, every action is sealed, and the planted credential was seen 0 times across the server's logs, every HTTP response, and the recorded actions, events, deeds, admin events, connector configs and credential hints.
+**68 matched · 0 differ · 0 waiting on a later session.** After every case: the deed chains of both orgs are intact, the target database is unchanged wherever nothing should have run, every action is sealed, and the planted credential was seen 0 times across the server's logs, every HTTP response, and the recorded actions, events, deeds, admin events, connector configs and credential hints.
 
-Run it: `make attack` (a throwaway PostgreSQL 18 cluster, about two minutes on a laptop: L05 waits out a real one-minute approval expiry), then `make attack-report`. One case: `DEEDGLASS_IT_ATTACK_RUN='TestAttack/H03' make attack`.
+Run it: `make attack` (a throwaway PostgreSQL 18 cluster, about three and a half minutes on a laptop: L05 waits out a real one-minute approval expiry and P10 runs ten Stop-all rounds), then `make attack-report`. One case: `DEEDGLASS_IT_ATTACK_RUN='TestAttack/H03' make attack`.
 
 ## Gate and SQL
 
@@ -106,78 +106,122 @@ S23's group U. An undo writes to the customer's database on a person's request, 
 | U04 | An agent calling the internal undo tool through POST /v1/actions | DENIED (tool_unknown, recorded and sealed; nothing reaches Postgres) | DENIED (tool_unknown, recorded and sealed; nothing reaches Postgres) | ✓ matched |
 | U05 | An undo of another org's action | REJECTED (not_found for preview and run, exactly as an unknown id; nothing is planned) | REJECTED (not_found for preview and run, exactly as an unknown id; nothing is planned) | ✓ matched |
 
+## People, sessions and the live stream
+
+S34's group P. Each case reaches for a decision or a view it shouldn't have: an approval link used against another approval, a forged or replayed Slack click, the person the action runs for approving it in Slack, a double vote, a viewer reaching for admin actions, a cross-site request, another org's event stream, and calls that race a Stop.
+
+| Case | Attack | Expected | Actual | Status |
+|---|---|---|---|---|
+| P02 | Approval X's emailed link used with approval Y's context digest, and a link voided when its approval was cancelled | REJECTED (context_changed for X's link carrying Y's digest; approval_link_invalid for the voided link); X stays pending and Y gets no vote | REJECTED (context_changed for X's link carrying Y's digest; approval_link_invalid for the voided link); X stays pending and Y gets no vote | ✓ matched |
+| P03 | Forged Slack interaction: a bad signature, a valid signature 6 min old, and a replay of a valid payload | REJECTED (a bare 401 for the bad and the stale signature; the replay answers 200 and changes nothing); the approval is decided once | REJECTED (a bare 401 for the bad and the stale signature; the replay answers 200 and changes nothing); the approval is decided once | ✓ matched |
+| P04 | Self-approval in Slack: the person the action runs for clicks Approve | REJECTED (self_approval; the approval stays pending and nothing runs) | REJECTED (self_approval; the approval stays pending and nothing runs) | ✓ matched |
+| P05 | Two concurrent approves by the same person on a four-eyes approval, 10 times | REJECTED (already_countersigned for the second vote every time); 1 of 2 remains and nothing runs | REJECTED (already_countersigned for the second vote every time); 1 of 2 remains and nothing runs | ✓ matched |
+| P06 | A viewer calls approve, activate policy, stop-all and create key | REJECTED (approver_not_eligible for approve; insufficient_role for the other three); nothing changes | REJECTED (approver_not_eligible for approve; insufficient_role for the other three); nothing changes | ✓ matched |
+| P07 | Cross-site POST to a Console mutation without the CSRF header, and with a CSRF token from another session | REJECTED (csrf_failed); no state change | REJECTED (csrf_failed); no state change | ✓ matched |
+| P08 | SSE /v1/events from org B with a Last-Event-ID taken from org A's stream | REJECTED (no org A event delivered; 0 ids leaked) | REJECTED (no org A event delivered; 0 ids leaked) | ✓ matched |
+| P10 | Stop-all mid-burst (S18's J05): 200 calls in flight | REJECTED (org_stopped) for every call that starts after stop + 2 s; none executes after | REJECTED (org_stopped) for every call that starts after stop + 2 s; none executes after | ✓ matched |
+
+## Hostile MCP servers and upstreams
+
+S34's group Q. The upstream is the attacker: tool descriptions that carry instructions, a tool that changes after it was listed, two servers with the same tool name, huge or deeply nested results, a server that is down or hangs, a server that asks the client's model for text, a live Stripe key, and a webhook host that turns into cloud metadata.
+
+| Case | Attack | Expected | Actual | Status |
+|---|---|---|---|---|
+| Q01 | Upstream MCP tools/list with instruction-bearing descriptions ("ignore previous instructions", hidden Unicode tag characters, an <IMPORTANT> block) | DETECTED (connector.tool_hidden, description_flagged, sealed for each tool); the tools are hidden from tools/list and a call is tool_unknown | DETECTED (connector.tool_hidden, description_flagged, sealed for each tool); the tools are hidden from tools/list and a call is tool_unknown | ✓ matched |
+| Q02 | Tool definition changes after the first listing (rug pull: same name, new schema or description) | DENIED (tool_unknown: the changed tool is hidden and refused until Deedglass restarts; nothing reaches the upstream); connector.tool_hidden (definition_changed) is sealed | DENIED (tool_unknown: the changed tool is hidden and refused until Deedglass restarts; nothing reaches the upstream); connector.tool_hidden (definition_changed) is sealed | ✓ matched |
+| Q03 | Tool-name shadowing: two upstreams expose read_file on the same Gate | REJECTED (validation_failed for the unqualified name read_file); each qualified name reaches only its own upstream | REJECTED (validation_failed for the unqualified name read_file); each qualified name reaches only its own upstream | ✓ matched |
+| Q04 | Upstream returns a 50 MiB result, and a result nested 10,000 deep | BLOCKED (too_large for the 50 MiB result, read no further than 4 MiB; upstream_error for the 10,000-deep result); reported as unknown, never as executed; the action is sealed; server memory grows < 64 MiB | BLOCKED (too_large for the 50 MiB result, read no further than 4 MiB; upstream_error for the 10,000-deep result); reported as unknown, never as executed; the action is sealed; server memory grows < 64 MiB | ✓ matched |
+| Q05 | Upstream down or hanging (fail-closed default) | BLOCKED (connector_unavailable for a server that is down; timeout for one that hangs); nothing reported as executed | BLOCKED (connector_unavailable for a server that is down; timeout for one that hangs); nothing reported as executed | ✓ matched |
+| Q06 | Upstream MCP server sends sampling/createMessage and elicitation/create through mcp wrap | BLOCKED (answered with a JSON-RPC error and never relayed to the client unless --allow-server-requests names the method; logged) | BLOCKED (answered with a JSON-RPC error and never relayed to the client unless --allow-server-requests names the method; logged) | ✓ matched |
+| Q07 | Stripe live key smuggled via PUT /v1/connectors/{id}/credentials and PATCH /v1/connectors/{id} | REJECTED (stripe_live_key_refused for the credential; validation_failed for a key in PATCH's config or description); the vault is unchanged | REJECTED (stripe_live_key_refused for the credential; validation_failed for a key in PATCH's config or description); the vault is unchanged | ✓ matched |
+| Q08 | Webhook to a host that resolves to cloud metadata at delivery (rebinding), and a webhook that redirects to loopback | BLOCKED (destination blocked at delivery, 0 dials; a redirect is never followed, 0 hits on its target) | BLOCKED (destination blocked at delivery, 0 dials; a redirect is never followed, 0 hits on its target) | ✓ matched |
+
+## Resources, records and output
+
+S34's group R. Inputs built to exhaust or mislead: policy and CEL bombs, a forked deed chain, a signed intent from the wrong time, injection through the optional AI wording of suggestions, oversized and deeply nested JSON, and control characters aimed at terminals and logs.
+
+| Case | Attack | Expected | Actual | Status |
+|---|---|---|---|---|
+| R01 | Policy YAML bomb (alias expansion, 60,000 nodes, 10^6 nodes, a 20 MiB file) | REJECTED (policy_invalid: yaml_alias and yaml_too_complex; request_too_large for 10^6 nodes and the 20 MiB file) in < 200 ms; server memory grows < 64 MiB | REJECTED (policy_invalid: yaml_alias and yaml_too_complex; request_too_large for 10^6 nodes and the 20 MiB file) in < 200 ms; server memory grows < 64 MiB | ✓ matched |
+| R02 | CEL cost bomb (nested comprehensions at lint; a 20,000-item list at run time) | REJECTED (policy_invalid: cel_nesting and cel_cost at lint); at run time the rule stops at its limit and the action is denied, never allowed | REJECTED (policy_invalid: cel_nesting and cel_cost at lint); at run time the rule stops at its limit and the action is denied, never allowed | ✓ matched |
+| R03 | Deed chain fork: a second deed after the same parent, and an exported chain with a spliced branch | DETECTED (the database refuses the second child through UNIQUE (org_id, prev_hash); deedglass verify reports chain_prev_hash_mismatch or chain_seq_out_of_order at seq N) | DETECTED (the database refuses the second child through UNIQUE (org_id, prev_hash); deedglass verify reports chain_prev_hash_mismatch or chain_seq_out_of_order at seq N) | ✓ matched |
+| R04 | Clock-skewed signed intent (iat 10 min in the future and 10 min in the past) | REJECTED (intent_invalid: clock window) | REJECTED (intent_invalid: clock window) | ✓ matched |
+| R05 | Prompt injection through the suggestion channel: tool names and rule ids crafted to steer the LLM phrasing | DETECTED (replies that break the phrasing rules are thrown away and the template stands; a reply that passes is marked as AI wording); the payload carries placeholders, never the org's names; the policy diff is never sent or changed | DETECTED (replies that break the phrasing rules are thrown away and the template stands; a reply that passes is marked as AI wording); the payload carries placeholders, never the org's names; the policy diff is never sent or changed | ✓ matched |
+| R06 | Oversized and deeply nested JSON on POST /v1/actions (1 MiB + 1, args 129 deep, a body 10,000 deep) | REJECTED (request_too_large for 1 MiB + 1; validation_failed for args 129 deep and the 10,000-deep body) in < 200 ms; server memory grows < 64 MiB | REJECTED (request_too_large for 1 MiB + 1; validation_failed for args 129 deep and the 10,000-deep body) in < 200 ms; server memory grows < 64 MiB | ✓ matched |
+| R07 | Log injection: tool names and args carrying ANSI escapes and newlines reach CLI output, logs and the Console | REDACTED (control characters escaped in every sink; 0 raw ESC bytes) | REDACTED (control characters escaped in every sink; 0 raw ESC bytes) | ✓ matched |
+
 ## V0 controlled-write cases (A to G)
 
-The 66 cases frozen on 2026-09-28 for the V0 controlled-function design. A13 and F01 to F04 run in `attack/deed_test.go` and `attack/deed_verify_test.go`. The decoder's half of D01 to D04, D17, E01 to E05, E07, E08, E10 and E11 (what is stored, bound, alerted or halted) runs in `internal/decoder`'s integration suite on PostgreSQL 16, 17 and 18 (S20); their L2 verdicts are the W group's (S21). The others are scheduled for S34. `make attack` doesn't run them.
+The 66 cases frozen on 2026-09-28 for the V0 controlled-function design. A13 and F01 to F04 run in `attack/deed_test.go` and `attack/deed_verify_test.go`. The decoder's half of D01 to D04, D17, E01 to E05, E07, E08, E10 and E11 (what is stored, bound, alerted or halted) runs in `internal/decoder`'s integration suite on PostgreSQL 16, 17 and 18 (S20); their L2 verdicts are the W group's (S21). S34 accounted for the rest: a case whose attack a V7 case runs points to it, and a case that no longer applies to the V7 architecture says why and names the test that checks the V7 control instead. Their expected outcomes are unchanged.
 
 | Case | Attack | Expected | Status |
 |---|---|---|---|
-| A01 | Valid transfer, end to end | VERIFIED | V0 suite |
-| A02 | Amount altered in intent bytes, original sig, submitted to executor | BLOCKED (executor SIG_INVALID) | V0 suite |
-| A03 | Same, but compromised executor calls function directly | DETECTED (MISMATCH SIG_INVALID) | V0 suite |
-| A04 | Intent signed by unregistered key | BLOCKED | V0 suite |
-| A05 | Revoked key (DB still active, verifier revoked) | DETECTED (KEY_REVOKED) | V0 suite |
-| A06 | Non-canonical bytes (whitespace/order) via compromised executor | DETECTED (NON_CANONICAL_INTENT) | V0 suite |
-| A07 | Duplicate-key JSON (parser differential) via executor bypass | DETECTED (NON_CANONICAL) | V0 suite |
-| A08 | Amount as number / float / negative / > 18 digits | BLOCKED | V0 suite |
-| A09 | Expired intent | BLOCKED (function) | V0 suite |
-| A10 | Wrong aud (other deployment) | BLOCKED | V0 suite |
-| A11 | Retired or unknown bundle hash | BLOCKED / DETECTED if bypassed | V0 suite |
-| A12 | Principal without mandate on source; amount > mandate | BLOCKED; DB-mandate widened by owner gives DETECTED (POLICY_VIOLATION) | V0 suite |
-| A13 | Small-order public key offered at registration | BLOCKED (registration refuses the key) | V0 suite |
-| B01 | Sequential replay | BLOCKED (23505 gives REPLAY) | V0 suite |
-| B02 | Concurrent replay (16 goroutines) | exactly 1 VERIFIED, 15 BLOCKED | V0 suite |
-| B03 | Same nonce, different params, new valid signature | BLOCKED | V0 suite |
-| B04 | Opposing transfers A<->B x200 concurrent | all VERIFIED, no deadlock, sum conserved | V0 suite |
-| B05 | Overdraft race | one VERIFIED, one BLOCKED, never negative | V0 suite |
-| B06 | Two function calls in one transaction | BLOCKED (entry guard) | V0 suite |
-| B07 | Superuser deletes ledger row, then replays nonce | DETECTED (REPLAY, verifier memory) | V0 suite |
-| C01 | App role direct INSERT/UPDATE/DELETE/TRUNCATE on bank.* | BLOCKED | V0 suite |
-| C02 | App role EXECUTE deedglass function | BLOCKED | V0 suite |
-| C03 | App role CREATE TRIGGER / ALTER on bank.accounts | BLOCKED | V0 suite |
-| C04 | pg_temp table/type/function shadowing | BLOCKED (no effect) | V0 suite |
-| C05 | public-schema operator/function shadowing | BLOCKED | V0 suite |
-| C06 | SQL-injection strings in ids | BLOCKED (regex CHECK, no dynamic SQL) | V0 suite |
-| C07 | session_replication_role=replica | BLOCKED (guard) | V0 suite |
-| C08 | Owner alters RLS so target row is filtered | BLOCKED (row-count abort) | V0 suite |
-| C09 | Executor role direct DML | BLOCKED | V0 suite |
-| C10 | Owner grants UPDATE to app role, then app updates | UNVERIFIABLE (drift) for subsequent ops; the update itself DETECTED (UNBOUND_MUTATION) | V0 suite |
+| A01 | Valid transfer, end to end | VERIFIED | runs as W05 |
+| A02 | Amount altered in intent bytes, original sig, submitted to executor | BLOCKED (executor SIG_INVALID) | retired: V7 signs agent intents (S09): changed args under the original signature are refused as intent_invalid; internal/identity TestIntentVectors. |
+| A03 | Same, but compromised executor calls function directly | DETECTED (MISMATCH SIG_INVALID) | runs as W13 |
+| A04 | Intent signed by unregistered key | BLOCKED | retired: V7 intents name a registered key id; an unknown key is intent_invalid; internal/identity TestIntentVectors. |
+| A05 | Revoked key (DB still active, verifier revoked) | DETECTED (KEY_REVOKED) | runs as J02 |
+| A06 | Non-canonical bytes (whitespace/order) via compromised executor | DETECTED (NON_CANONICAL_INTENT) | retired: V7's intent wire format is canonical JCS and the checker refuses other bytes; internal/identity TestIntentVectors and internal/intent's strict parser vectors. |
+| A07 | Duplicate-key JSON (parser differential) via executor bypass | DETECTED (NON_CANONICAL) | retired: The strict parser refuses duplicate keys before JCS (CLAUDE.md L2 invariant 6); internal/intent strict parser tests and FuzzParse. |
+| A08 | Amount as number / float / negative / > 18 digits | BLOCKED | retired: V7 has no transfer amount; args numbers are integers up to 2^53-1 or floats in the args profile; internal/intent TestArgs tables and FuzzArgsDigest. |
+| A09 | Expired intent | BLOCKED (function) | runs as R04 |
+| A10 | Wrong aud (other deployment) | BLOCKED | retired: V7 intents are bound to the org and agent of the key that sends them; a foreign one is intent_invalid; internal/identity TestIntentVectors. |
+| A11 | Retired or unknown bundle hash | BLOCKED / DETECTED if bypassed | retired: The V0 Operation Bundle is not on the V7 Gate path; internal/bundle keeps its own manifest tests. |
+| A12 | Principal without mandate on source; amount > mandate | BLOCKED; DB-mandate widened by owner gives DETECTED (POLICY_VIOLATION) | runs as J04 |
+| A13 | Small-order public key offered at registration | BLOCKED (registration refuses the key) | attack/deed tests (S04, S05) |
+| B01 | Sequential replay | BLOCKED (23505 gives REPLAY) | runs as J03 |
+| B02 | Concurrent replay (16 goroutines) | exactly 1 VERIFIED, 15 BLOCKED | runs as J03 |
+| B03 | Same nonce, different params, new valid signature | BLOCKED | runs as J03 |
+| B04 | Opposing transfers A<->B x200 concurrent | all VERIFIED, no deadlock, sum conserved | retired: V7 has no transfer function to deadlock; Gate concurrency is internal/gate TestLoad1000 and the 50-way Sealer test in internal/deed. |
+| B05 | Overdraft race | one VERIFIED, one BLOCKED, never negative | retired: An overdraft rule belongs to the customer's own schema in V7, not to Deedglass; the Gate's own limits are budgets (J04). |
+| B06 | Two function calls in one transaction | BLOCKED (entry guard) | runs as H03 |
+| B07 | Superuser deletes ledger row, then replays nonce | DETECTED (REPLAY, verifier memory) | retired: V7 intent nonces live in the control plane (intent_nonces), not in the customer's database; a control-plane superuser is a compromised host (out of scope). |
+| C01 | App role direct INSERT/UPDATE/DELETE/TRUNCATE on bank.* | BLOCKED | retired: V7 agents never hold the database credential; deedglass_agent's grants are S17's setup plan, checked by deedglass connector postgres check (internal/connector/postgres/setup TestPlannerGoldens). |
+| C02 | App role EXECUTE deedglass function | BLOCKED | retired: deedglass.begin_action is granted to deedglass_agent only (S17); internal/connector/postgres/setup TestPlannerGoldens and connector postgres check. |
+| C03 | App role CREATE TRIGGER / ALTER on bank.accounts | BLOCKED | runs as H01 |
+| C04 | pg_temp table/type/function shadowing | BLOCKED (no effect) | retired: Controlled functions pin search_path to pg_catalog, pg_temp (CLAUDE.md rule 4); agent DDL that could shadow is refused (H01, H04). |
+| C05 | public-schema operator/function shadowing | BLOCKED | retired: As C04: pinned search_path and schema-qualified objects in every controlled function; agent DDL refused (H01, H04). |
+| C06 | SQL-injection strings in ids | BLOCKED (regex CHECK, no dynamic SQL) | retired: No dynamic SQL is built from input (static guard G1) and ids are parsed strictly (internal/ids FuzzParse); agent SQL is the connector's, checked by sqlguard (H01 to H07). |
+| C07 | session_replication_role=replica | BLOCKED (guard) | retired: session_replication_role is superuser-only in Postgres and deedglass_agent is not a superuser; an unsafe role is database_role_unsafe (S17). |
+| C08 | Owner alters RLS so target row is filtered | BLOCKED (row-count abort) | retired: V0's bank schema RLS; V7 doesn't own the customer's RLS. A filtered row shows as an L1 or L2 mismatch (H08, W01). |
+| C09 | Executor role direct DML | BLOCKED | retired: V7 has no executor role; the Postgres connector is the only writer Deedglass runs (S17). |
+| C10 | Owner grants UPDATE to app role, then app updates | UNVERIFIABLE (drift) for subsequent ops; the update itself DETECTED (UNBOUND_MUTATION) | retired: An owner's grant lets writes bypass the Gate; the decoder sees them as unbound changes and no action's verdict changes; internal/decoder TestHugeTransaction. |
 | D01 | Forged transactional deedglass marker, no ledger | DETECTED (FORGED_MARKER) | decoder suite (S20) |
 | D02 | Forged non-transactional marker | DETECTED (FORGED_MARKER_NONTX) | decoder suite (S20) |
 | D03 | Marker inside rolled-back savepoint | no statement, no effect | decoder suite (S20) |
 | D04 | Compromised executor adds second marker after the function | DETECTED (MARKER_COUNT) | decoder suite (S20) |
-| D05 | Owner-installed BEFORE UPDATE trigger diverts credit to attacker (published table) | DETECTED (VALUE_MISMATCH + UNEXPECTED_CHANGE, BOUNDARY_DRIFT noted) | V0 suite |
-| D06 | AFTER trigger writes an unpublished permanent table | UNVERIFIABLE (BOUNDARY_DRIFT); the write itself is unseen | V0 suite |
-| D07 | Trigger writes an UNLOGGED table | UNVERIFIABLE (drift) | V0 suite |
-| D08 | Owner replaces function body (CREATE OR REPLACE) | UNVERIFIABLE (drift: prosrc hash) | V0 suite |
-| D09 | ALSO rule on accounts | UNVERIFIABLE; MISMATCH if it writes a published table | V0 suite |
-| D10 | FK changed to ON DELETE CASCADE | UNVERIFIABLE | V0 suite |
-| D11 | REPLICA IDENTITY set to DEFAULT | UNVERIFIABLE (RELATION_MISMATCH / OLD_TUPLE_MISSING) | V0 suite |
-| D12 | ALTER PUBLICATION ... DROP TABLE bank.journal | UNVERIFIABLE (drift; missing journal changes are a gap) | V0 suite |
-| D13 | Publication narrowed to publish='insert' | UNVERIFIABLE | V0 suite |
-| D14 | ALTER TABLE accounts ADD COLUMN | UNVERIFIABLE (RELATION_MISMATCH) until recommitted | V0 suite |
-| D15 | Superuser direct UPDATE outside function | DETECTED (UNBOUND_MUTATION) | V0 suite |
-| D16 | Owner TRUNCATE bank.accounts | DETECTED (TRUNCATE_PROTECTED) | V0 suite |
+| D05 | Owner-installed BEFORE UPDATE trigger diverts credit to attacker (published table) | DETECTED (VALUE_MISMATCH + UNEXPECTED_CHANGE, BOUNDARY_DRIFT noted) | runs as W03 |
+| D06 | AFTER trigger writes an unpublished permanent table | UNVERIFIABLE (BOUNDARY_DRIFT); the write itself is unseen | retired: Writes to tables outside witness.watched_tables are not seen; stated in docs/LIMITATIONS.md (the observation boundary). |
+| D07 | Trigger writes an UNLOGGED table | UNVERIFIABLE (drift) | retired: UNLOGGED tables are not in WAL, so logical decoding can't see them; stated in docs/LIMITATIONS.md. |
+| D08 | Owner replaces function body (CREATE OR REPLACE) | UNVERIFIABLE (drift: prosrc hash) | retired: V7 has no controlled transfer function body; deedglass.begin_action is checked by deedglass connector postgres check. |
+| D09 | ALSO rule on accounts | UNVERIFIABLE; MISMATCH if it writes a published table | runs as W01 |
+| D10 | FK changed to ON DELETE CASCADE | UNVERIFIABLE | runs as W04 |
+| D11 | REPLICA IDENTITY set to DEFAULT | UNVERIFIABLE (RELATION_MISMATCH / OLD_TUPLE_MISSING) | runs as W07 |
+| D12 | ALTER PUBLICATION ... DROP TABLE bank.journal | UNVERIFIABLE (drift; missing journal changes are a gap) | runs as W12 |
+| D13 | Publication narrowed to publish='insert' | UNVERIFIABLE | runs as W12 |
+| D14 | ALTER TABLE accounts ADD COLUMN | UNVERIFIABLE (RELATION_MISMATCH) until recommitted | retired: V7 compares row images by column name from each RELATION message, not V0's relation-hash drift rule; internal/witness/l2 tests. |
+| D15 | Superuser direct UPDATE outside function | DETECTED (UNBOUND_MUTATION) | retired: A superuser's write outside the Gate is decoded as unbound; no action's verdict changes; internal/decoder TestHugeTransaction. |
+| D16 | Owner TRUNCATE bank.accounts | DETECTED (TRUNCATE_PROTECTED) | runs as H01 |
 | D17 | Origin-tagged changes (pg_replication_origin_session_setup) | DETECTED (decoded with origin=any, UNBOUND) | decoder suite (S20) |
 | E01 | Verifier killed mid-batch, restarted | no duplicate or missing statements | decoder suite (S20) |
 | E02 | Slot rewind (re-delivery) | idempotent | decoder suite (S20) |
 | E03 | Verifier offline plus small max_slot_wal_keep_size, slot lost | UNVERIFIABLE (NO_EVIDENCE) for gap intents, alert | decoder suite (S20) |
 | E04 | Admin drops and recreates slot | UNVERIFIABLE (NO_EVIDENCE) for gap | decoder suite (S20) |
 | E05 | DB crash before commit | no statement; status NOT_COMMITTED after exp | decoder suite (S20) |
-| E06 | Client connection dropped after commit (the 504 case) | VERIFIED; status returns statement | V0 suite |
+| E06 | Client connection dropped after commit (the 504 case) | VERIFIED; status returns statement | retired: An action's outcome is read back with GET /v1/actions/{id}?wait (S13), so a dropped client connection loses nothing; internal/gate tests. |
 | E07 | PREPARE/ROLLBACK PREPARED, COMMIT PREPARED | none / VERIFIED at commit | decoder suite (S20) |
 | E08 | Unbound bulk UPDATE above logical_decoding_work_mem | DETECTED (UNBOUND, spilled but whole) | decoder suite (S20) |
-| E09 | Failover with/without failover slot | OUTSIDE V0 TEST SCOPE; documented expected UNVERIFIABLE | V0 suite |
+| E09 | Failover with/without failover slot | OUTSIDE V0 TEST SCOPE; documented expected UNVERIFIABLE | retired: Failover is outside the tested scope; docs/LIMITATIONS.md states that slots must be failover slots and that a lost slot gives UNVERIFIABLE (W11). |
 | E10 | Decoder stalled | heartbeat alert | decoder suite (S20) |
 | E11 | Verifier session with hostile TimeZone/DateStyle/bytea_output | byte-identical evidence and the same verdict (pinned settings) | decoder suite (S20) |
-| F01 | Statement signed by wrong key | DETECTED by statement verify | V0 suite |
-| F02 | Payload byte flipped | DETECTED | V0 suite |
-| F03 | Statement deleted from chain | DETECTED (prev break vs published head) | V0 suite |
-| F04 | Statement presented for another deployment | DETECTED (subject mismatch) | V0 suite |
-| G01 | Hijacked agent/approver signs in-mandate transfer to attacker-controlled account | OUTSIDE SCOPE (VERIFIED); asserted and documented | V0 suite |
-| G02 | Stolen principal key | OUTSIDE SCOPE (VERIFIED until revoked) | V0 suite |
-| G03 | pg_net / dblink call from a privileged path | OUTSIDE SCOPE | V0 suite |
-| G04 | Superuser edits WAL / engine | OUTSIDE SCOPE | V0 suite |
+| F01 | Statement signed by wrong key | DETECTED by statement verify | attack/deed tests (S04, S05) |
+| F02 | Payload byte flipped | DETECTED | attack/deed tests (S04, S05) |
+| F03 | Statement deleted from chain | DETECTED (prev break vs published head) | attack/deed tests (S04, S05) |
+| F04 | Statement presented for another deployment | DETECTED (subject mismatch) | attack/deed tests (S04, S05) |
+| G01 | Hijacked agent/approver signs in-mandate transfer to attacker-controlled account | OUTSIDE SCOPE (VERIFIED); asserted and documented | retired: V7 threat model A1: a manipulated model acting inside policy is limited by policies, budgets and approvals, not detected; docs/THREAT_MODEL.md residual risks. |
+| G02 | Stolen principal key | OUTSIDE SCOPE (VERIFIED until revoked) | runs as J02 |
+| G03 | pg_net / dblink call from a privileged path | OUTSIDE SCOPE | retired: sqlguard refuses dangerous functions such as dblink_exec (internal/sqlguard TestCorpus); pg_net is the same class. |
+| G04 | Superuser edits WAL / engine | OUTSIDE SCOPE | retired: A superuser who edits WAL or the engine is a compromised database host: outside the threat model (docs/THREAT_MODEL.md). |
 
 ## Outcome words
 
@@ -216,9 +260,9 @@ I, M, O, S, T, V, X, Y and Z are unassigned. A session that needs a group takes 
 
 - How often models fall for injections. These cases start after the model was fooled.
 - A compromised Deedglass host, database superuser or seal key.
-- Malicious upstream behaviour beyond tool naming: tool descriptions that carry instructions, poisoned results, slow-drip responses (S34).
+- Instructions in tool descriptions are found by a heuristic (phrases, hidden Unicode, instruction tags), not by understanding intent; a reworded instruction can pass (Q01). Poisoned tool results and slow-drip responses are not scanned.
 - Denial of service at scale. J04 checks one agent's budget, not a flood.
 - The supply chain beyond `govulncheck` (S35 adds the SBOM and container scanning).
-- The V0 cases not listed as running above.
+- The V0 cases marked retired: each names the V7 test that checks the control instead.
 - What L2 can't see: effects outside Postgres, writes to tables outside the publication, and proxy-mode SQL servers (no marker to bind). `docs/WITNESS.md` lists them.
 - Production network rules for private ranges: the suite runs in dev with the private-network override so it can reach its own loopback servers. Metadata, link-local and cross-host targets stay blocked even then (K01, K02); the prod-only rules are covered by the egress corpus (`internal/connector/egress`).

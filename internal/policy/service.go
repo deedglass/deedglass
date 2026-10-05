@@ -673,7 +673,7 @@ func activateTx(ctx context.Context, tx Tx, caller Caller, policyRef string, ref
 		v.Name = p.Name
 		// Compile again: the stored hash must still be what this build computes.
 		c, _ := Compile(v.Source, Options{})
-		if c == nil || c.VersionHash != v.VersionHash || c.SourceHash != v.SourceHash {
+		if c == nil || c.VersionHash != v.VersionHash || c.SourceHash != v.SourceHash { //deedglass:allow-compare a policy source's public digest
 			return errf(KindConflict, "", msgVersionTampered, p.Name, v.Version)
 		}
 		acked, e := checkAcks(c, req)

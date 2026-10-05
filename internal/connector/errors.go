@@ -92,6 +92,11 @@ func FromStatus(status int, retryAfter time.Duration) *Error {
 		if retryAfter > 0 {
 			e.AgentMessage = fmt.Sprintf("The service is limiting requests (HTTP 429). Wait %s, then send the call again.", retryAfter.Round(time.Second))
 		}
+	case status >= 300 && status < 400:
+		// S34 (SR-005): a redirect that wasn't followed. The outcome stays unknown (a write may
+		// have run before the service redirected), but the words say what happened.
+		e.Kind, e.Code = KindUpstream, CodeUpstreamError
+		e.AgentMessage = fmt.Sprintf("The service redirected the call (HTTP %d), and Deedglass doesn't follow redirects for this connector. The call may have run.", status)
 	case status >= 400 && status < 500:
 		e.Kind, e.Code = KindInvalidRequest, CodeUpstreamError
 		e.AgentMessage = fmt.Sprintf("The service refused the request (HTTP %d). Check the arguments.", status)

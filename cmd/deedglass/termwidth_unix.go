@@ -2,6 +2,8 @@
 
 package main
 
+//deedglass:allow-unsafe the TIOCGWINSZ ioctl needs a pointer to a local winsize struct; no header tricks
+
 import (
 	"os"
 	"syscall"

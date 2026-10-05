@@ -2,6 +2,8 @@
 
 package harness
 
+//deedglass:allow-exec test tooling: builds and runs the deedglass binary under attack
+
 //deedglass:allow-sql-build test harness: database and table names are generated here or fixed, and quoted with pgx.Identifier.Sanitize; every value is a $n parameter
 
 import (

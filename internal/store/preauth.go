@@ -22,6 +22,10 @@ type PreAuth struct{ db *DB }
 // PreAuth returns the pre-auth lookups.
 func (db *DB) PreAuth() PreAuth { return PreAuth{db: db} }
 
+// Ready reports whether the lookups have a database behind them (S34, SR-008: a KeyAuth built
+// without one fails closed).
+func (p PreAuth) Ready() bool { return p.db != nil }
+
 // PreAuthSession is the session behind a cookie.
 type PreAuthSession struct {
 	ID            ids.SessionID

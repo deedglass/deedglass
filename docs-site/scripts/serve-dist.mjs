@@ -11,9 +11,16 @@ export function headersFor(dist) {
   const p = join(dist, '_headers');
   const out = {};
   if (!existsSync(p)) return out;
+  // Only the "/*" block applies to every path (S34: path blocks such as /.well-known/security.txt
+  // or /_astro/* set their own headers on Cloudflare and are left out here).
+  let block = '';
   for (const line of readFileSync(p, 'utf8').split('\n')) {
+    if (/^\S/.test(line)) {
+      block = line.trim();
+      continue;
+    }
     const m = /^\s+([A-Za-z-]+):\s*(.+)$/.exec(line);
-    if (m && m[1] !== 'Strict-Transport-Security') out[m[1]] = m[2];
+    if (m && block === '/*' && m[1] !== 'Strict-Transport-Security') out[m[1]] = m[2];
   }
   return out;
 }

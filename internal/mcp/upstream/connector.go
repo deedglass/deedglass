@@ -264,7 +264,9 @@ func (t *Type) session(ctx context.Context, inst *connector.Instance) (*up, erro
 	}
 	cfg := Config{Slug: inst.Name, URL: st.url, Timeout: time.Duration(st.cfg.TimeoutMS) * time.Millisecond,
 		ToolsTTL: time.Duration(st.cfg.ToolsTTLMS) * time.Millisecond}
-	v, loaded := t.p.rows.LoadOrStore(key, newUp(cfg, hdr, pol, t.p.version))
+	nu := newUp(cfg, hdr, pol, t.p.version, t.p.log)
+	nu.scope, nu.org, nu.connectorID = "row:"+inst.ID.String(), inst.OrgID, inst.ID.String()
+	v, loaded := t.p.rows.LoadOrStore(key, nu)
 	if !loaded {
 		// Close the sessions of this connector's older configs and credentials.
 		t.p.rows.Range(func(k, old any) bool {

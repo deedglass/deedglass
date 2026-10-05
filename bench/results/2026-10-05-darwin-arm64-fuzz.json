@@ -1,0 +1,33 @@
+{
+  "object": "fuzz_run",
+  "started_at": "2026-10-04T23:15:34Z",
+  "finished_at": "2026-10-05T01:26:20Z",
+  "go": "go1.27.1",
+  "cpu": "Apple M1",
+  "parallel": 2,
+  "at_a_time": 3,
+  "scale": 1,
+  "targets": [
+    {"target": "FuzzReader", "pkg": "internal/mcp/jsonrpc", "fuzztime": "1800s", "execs": 59528906, "new_interesting": 299, "crashers": 0},
+    {"target": "FuzzFrontEnvelope", "pkg": "internal/mcp/front", "fuzztime": "1800s", "execs": 10391088, "new_interesting": 297, "crashers": 0},
+    {"target": "FuzzCompile", "pkg": "internal/policy", "fuzztime": "1800s", "execs": 2785214, "new_interesting": 441, "crashers": 0},
+    {"target": "FuzzYAMLReader", "pkg": "internal/policy", "fuzztime": "1800s", "execs": 4707692, "new_interesting": 173, "crashers": 0},
+    {"target": "FuzzParseEnvelope", "pkg": "internal/deed", "fuzztime": "1800s", "execs": 34687715, "new_interesting": 121, "crashers": 0},
+    {"target": "FuzzVerifyEnvelope", "pkg": "internal/deed", "fuzztime": "1800s", "execs": 30687640, "new_interesting": 110, "crashers": 0},
+    {"target": "FuzzIntentHeader", "pkg": "internal/identity", "fuzztime": "1800s", "execs": 6376807, "new_interesting": 210, "crashers": 0},
+    {"target": "FuzzTokenize", "pkg": "internal/sqlguard", "fuzztime": "1800s", "execs": 44333553, "new_interesting": 176, "crashers": 0},
+    {"target": "FuzzAnalyze", "pkg": "internal/sqlguard", "fuzztime": "1800s", "execs": 42848683, "new_interesting": 114, "crashers": 0},
+    {"target": "FuzzSafeParse", "pkg": "internal/decoder", "fuzztime": "900s", "execs": 6671464, "new_interesting": 12, "crashers": 0},
+    {"target": "FuzzArchiveOpen", "pkg": "internal/deed/archive", "fuzztime": "600s", "execs": 3372068, "new_interesting": 132, "crashers": 0},
+    {"target": "FuzzVerifyStream", "pkg": "internal/deed", "fuzztime": "600s", "execs": 4831, "new_interesting": 56, "crashers": 0},
+    {"target": "FuzzCheckURL", "pkg": "internal/connector/egress", "fuzztime": "600s", "execs": 6709539, "new_interesting": 306, "crashers": 0},
+    {"target": "FuzzRedactor", "pkg": "internal/vault", "fuzztime": "600s", "execs": 3448535, "new_interesting": 97, "crashers": 0},
+    {"target": "FuzzTemplatePath", "pkg": "internal/connector/rest", "fuzztime": "600s", "execs": 3399984, "new_interesting": 8, "crashers": 0},
+    {"target": "FuzzSlackVerify", "pkg": "internal/notify/slack", "fuzztime": "600s", "execs": 2589714, "new_interesting": 147, "crashers": 0},
+    {"target": "FuzzWebhookSignature", "pkg": "pkg/deedglass/webhook", "fuzztime": "600s", "execs": 30742996, "new_interesting": 5, "crashers": 0},
+    {"target": "FuzzApprovalToken", "pkg": "internal/approve", "fuzztime": "600s", "execs": 3418540, "new_interesting": 16, "crashers": 0},
+    {"target": "FuzzParseAPIKey", "pkg": "internal/identity", "fuzztime": "300s", "execs": 1210496, "new_interesting": 0, "crashers": 0},
+    {"target": "FuzzNormalize", "pkg": "internal/gate", "fuzztime": "300s", "execs": 1117143, "new_interesting": 287, "crashers": 0},
+    {"target": "FuzzHeaderDecode", "pkg": "internal/mcp/httpgw", "fuzztime": "300s", "execs": 1584615, "new_interesting": 8, "crashers": 0}
+  ]
+}

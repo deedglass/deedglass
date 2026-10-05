@@ -34,7 +34,7 @@ func (s *Service) pageRoutes() []httpx.Route {
 		{Method: "GET", Pattern: "/login", OperationID: "loginPage", Auth: httpx.Public, Handler: page("pages/login.html")},
 		{Method: "GET", Pattern: "/auth/confirm", OperationID: "confirmPage", Auth: httpx.Public, Handler: page("pages/confirm.html")},
 		// /app and everything under it is the Console's (internal/console, S24).
-		{Method: "GET", Pattern: "/auth/assets/{file}", OperationID: "authAsset", Auth: httpx.Public, Extension: AssetsADR, Handler: asset},
+		{Method: "GET", Pattern: "/auth/assets/{file}", OperationID: "authAsset", Auth: httpx.Public, Extension: AssetsADR, PublicReason: "the sign-in page's own static files (CSS, fonts, the mark); no data", Handler: asset},
 	}
 }
 

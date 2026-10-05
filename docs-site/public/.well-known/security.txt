@@ -1,0 +1,6 @@
+Contact: mailto:security@deedglass.com
+Expires: 2027-10-04T00:00:00.000Z
+Preferred-Languages: en
+Canonical: https://deedglass.com/.well-known/security.txt
+Canonical: https://docs.deedglass.com/.well-known/security.txt
+Policy: https://github.com/deedglass/deedglass/blob/main/SECURITY.md

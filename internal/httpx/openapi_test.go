@@ -52,7 +52,7 @@ func elsewhere() []Route {
 		ses("GET", "/v1/org/members", "listMembers", RoleViewer, 0), ses("POST", "/v1/org/members", "inviteMember", RoleAdmin, IdemOptional),
 		ses("PATCH", "/v1/org/members/{id}", "updateMember", RoleOwner, 0), ses("DELETE", "/v1/org/members/{id}", "removeMember", RoleAdmin, 0),
 		pub("GET", "/login", "loginPage"), pub("GET", "/auth/confirm", "confirmPage"), pub("GET", "/app", "consoleIndex"), pub("GET", "/app/{path...}", "consolePage"),
-		Route{Method: "GET", Pattern: "/auth/assets/{file}", OperationID: "authAsset", Auth: Public, Extension: "ADR-028", Handler: stub},
+		Route{Method: "GET", Pattern: "/auth/assets/{file}", OperationID: "authAsset", Auth: Public, Extension: "ADR-028", PublicReason: "static files", Handler: stub},
 	)
 	// S08: agents, keys and Stop.
 	adm := func(m, p, id string, role Role) Route {
@@ -146,7 +146,7 @@ func elsewhere() []Route {
 		Route{Method: "POST", Pattern: "/v1/approvals/{id}/deny", OperationID: "denyApproval", Auth: SessionOrKey, MinRole: RoleViewer, Scopes: actionsRead, Idempotency: IdemOptional, Handler: stub},
 		link("POST", "/v1/approval-links/preview", "previewApprovalLink"), link("POST", "/v1/approval-links/decide", "decideApprovalLink"),
 		link("POST", "/v1/approval-links/status", "approvalLinkStatus"), link("GET", "/approve", "approvePage"),
-		Route{Method: "GET", Pattern: "/approve/assets/{file}", OperationID: "approveAsset", Auth: Public, Extension: "ADR-048", Handler: stub},
+		Route{Method: "GET", Pattern: "/approve/assets/{file}", OperationID: "approveAsset", Auth: Public, Extension: "ADR-048", PublicReason: "static files", Handler: stub},
 		adm("GET", "/v1/webhooks", "listWebhooks", RoleAdmin), adm("POST", "/v1/webhooks", "createWebhook", RoleAdmin),
 		adm("GET", "/v1/webhooks/{id}", "getWebhook", RoleAdmin), adm("DELETE", "/v1/webhooks/{id}", "deleteWebhook", RoleAdmin),
 		adm("POST", "/v1/webhooks/{id}/test", "testWebhook", RoleAdmin), adm("GET", "/v1/webhooks/{id}/deliveries", "listWebhookDeliveries", RoleAdmin),

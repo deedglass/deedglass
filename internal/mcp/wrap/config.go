@@ -32,6 +32,10 @@ type Config struct {
 	Version       string        // for User-Agent
 	DevEnv        bool          // DEEDGLASS_ENV=dev
 	InsecureHTTP  bool          // dev only: allow http to a non-loopback host
+	// S34 (Q06): the server-to-client requests relayed to the client. Empty: sampling/createMessage
+	// and elicitation/create are answered with an error and never relayed; roots/list and ping
+	// always pass. Values: "sampling", "elicitation".
+	AllowServerRequests []string
 
 	// Tests.
 	RestartBase  time.Duration // first restart delay (250 ms)
@@ -88,6 +92,11 @@ func (c *Config) Validate() error {
 	}
 	if c.CallTimeout < 0 {
 		return errors.New("--call-timeout must not be negative")
+	}
+	for _, r := range c.AllowServerRequests {
+		if r != "sampling" && r != "elicitation" {
+			return fmt.Errorf("--allow-server-requests takes sampling and elicitation, not %q", r)
+		}
 	}
 	if c.RestartBase <= 0 {
 		c.RestartBase = 250 * time.Millisecond

@@ -532,7 +532,7 @@ func (s *Suggester) build(ctx context.Context, org ids.OrgID, ev *Evidence, p Pr
 	if err := policy.CheckPatch(ev.Base, cand, ops...); err != nil {
 		return nil, "the changed policy moved more than the edit", nil
 	}
-	if cand.VersionHash == ev.Base.VersionHash {
+	if cand.VersionHash == ev.Base.VersionHash { //deedglass:allow-compare a policy version's public digest
 		return nil, "the change doesn't change the policy", nil
 	}
 	if cand.Warnings != nil {

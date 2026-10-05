@@ -400,10 +400,61 @@ func (w *Wrapper) fromUpstream(gen int, e jsonrpc.Envelope, line []byte, err err
 		}
 		_ = w.out.Send(append([]byte(nil), line...))
 	case jsonrpc.Request:
-		// Legacy server-to-client requests (sampling, elicitation, roots): passed through
-		// ungoverned in v1 (docs/MCP.md); the client shows its own confirmation.
+		// Server-to-client requests. roots/list and ping pass through (the client shows its own
+		// confirmation). S34 (Q06): sampling/createMessage asks the client's model for text and
+		// elicitation/create asks the person for input, so an upstream could steer the model or
+		// phish the user; both are answered with an error and logged unless --allow-server-requests
+		// names them.
+		if kind, governed := serverRequestKind(e.Method()); governed && !w.allowsServerRequest(kind) {
+			w.log.sym(symDenied, "the MCP server sent "+clipMethod(e.Method())+"; refused and not passed to the client",
+				"allow it with --allow-server-requests "+kind)
+			_ = w.up.send(mustJSON(jsonrpc.NewError(e.ID(), jsonrpc.CodeMethodNotFound,
+				"Deedglass doesn't pass "+e.Method()+" from the MCP server to the client.")), nil)
+			return
+		}
 		_ = w.out.Send(append([]byte(nil), line...))
 	}
+}
+
+// serverRequestKind reports whether a server-to-client method is one --allow-server-requests governs.
+func serverRequestKind(method string) (string, bool) {
+	switch {
+	case method == "sampling/createMessage" || strings.HasPrefix(method, "sampling/"):
+		return "sampling", true
+	case method == "elicitation/create" || strings.HasPrefix(method, "elicitation/"):
+		return "elicitation", true
+	}
+	return "", false
+}
+
+func (w *Wrapper) allowsServerRequest(kind string) bool {
+	for _, k := range w.cfg.AllowServerRequests {
+		if k == kind {
+			return true
+		}
+	}
+	return false
+}
+
+// clipMethod shows a method name in a log line: at most 64 bytes, control characters replaced.
+func clipMethod(m string) string {
+	if len(m) > 64 {
+		m = m[:64]
+	}
+	return strings.Map(func(r rune) rune {
+		if r < 0x20 || r == 0x7f {
+			return '?'
+		}
+		return r
+	}, m)
+}
+
+func mustJSON(e jsonrpc.Envelope) []byte {
+	b, err := json.Marshal(e)
+	if err != nil {
+		panic(err)
+	}
+	return b
 }
 
 func jsonrpcErr(err error) string {

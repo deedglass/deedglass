@@ -8,6 +8,7 @@ import (
 
 	"github.com/deedglass/deedglass/internal/connector"
 	"github.com/deedglass/deedglass/internal/deed"
+	"github.com/deedglass/deedglass/internal/ids"
 	"github.com/deedglass/deedglass/internal/ledger"
 	"github.com/deedglass/deedglass/internal/store"
 )
@@ -46,5 +47,28 @@ func (b *Breaker) Trip(ctx context.Context, inst *connector.Instance, reason, de
 	}
 	log.ErrorContext(ctx, "connector: a safety breaker disabled the connector", "alert", "connector_disabled", "reason", reason,
 		"connector", inst.Name, "type", inst.Type, "connector_id", inst.ID.String(), "org_id", inst.OrgID.String(), "detail", detail, "recorded", err == nil)
+	return err
+}
+
+// ToolHidden seals connector.tool_hidden (S34) for one tool the MCP gateway hid: actor {system,
+// deedglass}, the connector as target, the admin's sentence as the reason (clipped to the deed's
+// limit) and data, which holds an excerpt of at most 40 characters, never the whole description.
+func (b *Breaker) ToolHidden(ctx context.Context, org ids.OrgID, connectorID, sentence string, data map[string]any) error {
+	if r := []rune(sentence); len(r) > deed.MaxReason {
+		sentence = string(r[:deed.MaxReason-1]) + "…"
+	}
+	err := b.DB.OrgTx(ctx, org, func(ctx context.Context, tx pgx.Tx) error {
+		_, err := b.Ledger.RecordAdmin(ctx, tx, ledger.AdminEvent{Action: ledger.AdminConnectorToolHidden,
+			Actor: deed.Ref{Type: "system", ID: "deedglass"}, Target: &deed.Ref{Type: "connector", ID: connectorID},
+			Reason: sentence, Data: data})
+		return err
+	})
+	if err != nil {
+		log := b.Log
+		if log == nil {
+			log = slog.Default()
+		}
+		log.WarnContext(ctx, "connector: recording a hidden tool failed", "connector_id", connectorID, "org_id", org.String(), "err", err.Error())
+	}
 	return err
 }

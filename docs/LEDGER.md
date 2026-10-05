@@ -184,6 +184,8 @@ Every administrative change is an admin deed, sealed through `ledger.RecordAdmin
 | `approval.decided`, `approval.countersigned`, `webhook.created`, `webhook.deleted`, `webhook.disabled` | S22 |
 | `anomaly.resolved`, `insights.settings_changed` | S27 |
 | `suggestion.accepted`, `suggestion.rejected` | S28 |
+| `connector.disabled` | S30 |
+| `connector.tool_hidden` (actor `{system, deedglass}`; data `connector`, `tool`, `reason` `description_flagged` or `definition_changed`, `kind`, `field`, `excerpt` of at most 40 characters, `digest`, `pinned`) | S34 |
 
 Only the digest of the event's data enters the deed; the data stays in `admin_events.data`.
 

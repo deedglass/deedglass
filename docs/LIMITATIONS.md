@@ -317,9 +317,12 @@ What the Gate doesn't do ([GATE.md](GATE.md)):
   K02); the prod-only rules for private ranges are covered by the egress corpus, not by the suite.
 - **The harness's DNS answers come from a file**, read only by a `-tags attackhooks` build in dev.
   The release binary has no such hook.
-- **Not covered:** a compromised Deedglass host, database superuser or seal key; malicious upstream
-  behaviour beyond tool naming (S34); denial of service at scale; the supply chain beyond
-  `govulncheck` (S35).
+- **Not covered:** a compromised Deedglass host, database superuser or seal key; poisoned tool
+  results and slow-drip responses from an upstream; denial of service at scale; the supply chain
+  beyond `make audit` (S35 adds the SBOM and image scanning).
+- **Some cases run in process** (S34): R05 drives the real suggestion phrasing code against an LLM
+  stub, because the Anthropic base URL is fixed in the binary; A13 and F01 to F04 run at the library
+  and CLI level.
 
 ## The Witness (S19)
 
@@ -557,6 +560,31 @@ it refuses rather than guess:
 - **Agent keys are secrets, so the client refuses to start in a browser page** unless told otherwise;
   short-lived browser tokens are a v2 item.
 - **Offline verification checks seals and the chain, not whether the action was wise.**
+
+## Security pass 2 (S34)
+
+- **MCP description scanning is a heuristic.** A tool is hidden when its title, description or a
+  parameter's description holds a phrase that tells a model to drop its instructions or hide
+  something from the user, an instruction tag such as `<IMPORTANT>`, or characters people can't see.
+  It flags; it doesn't understand intent. A reworded instruction passes, a harmless description can
+  be hidden, and tool results and resources are not scanned.
+- **The first definition of an MCP tool is trusted as listed.** The gateway pins it per connector
+  and the wrapper per process; a change is hidden until Deedglass (or the wrapper) restarts, and a
+  restart accepts the new definition as the first.
+- **Hidden-tool deeds are sealed once per server start** for each tool, definition and reason; a
+  restart records them again when the upstream still lists the tool.
+- **Allowed sampling and elicitation are ungoverned.** With `--allow-server-requests`, the wrapper
+  relays them unchanged; the client's own confirmation is the only check.
+- **The optional AI wording of suggestions is checked, not trusted.** Numbers, placeholders,
+  length, shape and words are validated, and a reply that passes is labelled as AI wording, but a
+  well-formed reply can still argue for the change. A person accepts or rejects every suggestion,
+  and the policy change itself is built from rules and checked by replay, never by the model.
+- **Credentials pasted into a connector's description are refused only when the vault's scrubber
+  knows their format** (Stripe, Slack, GitHub, Deedglass keys and the like).
+- **Bidirectional characters in names** (a tool name an agent sent, an agent's name) are escaped in
+  the CLI's human output but can reorder text in the Console (SR-016).
+- **Fuzzing finds bugs; it doesn't show there are none.** The October 2026 schedule ran each parser for 5
+  to 30 minutes on one laptop (`bench/results/*-fuzz.json`); CI replays the corpus for 10 s each.
 
 ## What this page does not do
 

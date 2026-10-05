@@ -1,10 +1,10 @@
 {
   "object": "attack_page",
   "day": "2026-10-05",
-  "commit": "f5e66f7+uncommitted",
+  "commit": "5b8f0eb+uncommitted",
   "postgres": "18.6",
   "summary": {
-    "matched": 45,
+    "matched": 68,
     "differs": 0,
     "waiting": 0
   },
@@ -367,15 +367,194 @@
           "status": "matched"
         }
       ]
+    },
+    {
+      "title": "People, sessions and the live stream",
+      "intro": "S34's group P. Each case reaches for a decision or a view it shouldn't have: an approval link used against another approval, a forged or replayed Slack click, the person the action runs for approving it in Slack, a double vote, a viewer reaching for admin actions, a cross-site request, another org's event stream, and calls that race a Stop.",
+      "cases": [
+        {
+          "id": "P02",
+          "title": "Approval X's emailed link used with approval Y's context digest, and a link voided when its approval was cancelled",
+          "expected": "REJECTED (context_changed for X's link carrying Y's digest; approval_link_invalid for the voided link); X stays pending and Y gets no vote",
+          "actual": "REJECTED (context_changed for X's link carrying Y's digest; approval_link_invalid for the voided link); X stays pending and Y gets no vote",
+          "status": "matched"
+        },
+        {
+          "id": "P03",
+          "title": "Forged Slack interaction: a bad signature, a valid signature 6 min old, and a replay of a valid payload",
+          "expected": "REJECTED (a bare 401 for the bad and the stale signature; the replay answers 200 and changes nothing); the approval is decided once",
+          "actual": "REJECTED (a bare 401 for the bad and the stale signature; the replay answers 200 and changes nothing); the approval is decided once",
+          "status": "matched"
+        },
+        {
+          "id": "P04",
+          "title": "Self-approval in Slack: the person the action runs for clicks Approve",
+          "expected": "REJECTED (self_approval; the approval stays pending and nothing runs)",
+          "actual": "REJECTED (self_approval; the approval stays pending and nothing runs)",
+          "status": "matched"
+        },
+        {
+          "id": "P05",
+          "title": "Two concurrent approves by the same person on a four-eyes approval, 10 times",
+          "expected": "REJECTED (already_countersigned for the second vote every time); 1 of 2 remains and nothing runs",
+          "actual": "REJECTED (already_countersigned for the second vote every time); 1 of 2 remains and nothing runs",
+          "status": "matched"
+        },
+        {
+          "id": "P06",
+          "title": "A viewer calls approve, activate policy, stop-all and create key",
+          "expected": "REJECTED (approver_not_eligible for approve; insufficient_role for the other three); nothing changes",
+          "actual": "REJECTED (approver_not_eligible for approve; insufficient_role for the other three); nothing changes",
+          "status": "matched"
+        },
+        {
+          "id": "P07",
+          "title": "Cross-site POST to a Console mutation without the CSRF header, and with a CSRF token from another session",
+          "expected": "REJECTED (csrf_failed); no state change",
+          "actual": "REJECTED (csrf_failed); no state change",
+          "status": "matched"
+        },
+        {
+          "id": "P08",
+          "title": "SSE /v1/events from org B with a Last-Event-ID taken from org A's stream",
+          "expected": "REJECTED (no org A event delivered; 0 ids leaked)",
+          "actual": "REJECTED (no org A event delivered; 0 ids leaked)",
+          "status": "matched"
+        },
+        {
+          "id": "P10",
+          "title": "Stop-all mid-burst (S18's J05): 200 calls in flight",
+          "expected": "REJECTED (org_stopped) for every call that starts after stop + 2 s; none executes after",
+          "actual": "REJECTED (org_stopped) for every call that starts after stop + 2 s; none executes after",
+          "status": "matched"
+        }
+      ]
+    },
+    {
+      "title": "Hostile MCP servers and upstreams",
+      "intro": "S34's group Q. The upstream is the attacker: tool descriptions that carry instructions, a tool that changes after it was listed, two servers with the same tool name, huge or deeply nested results, a server that is down or hangs, a server that asks the client's model for text, a live Stripe key, and a webhook host that turns into cloud metadata.",
+      "cases": [
+        {
+          "id": "Q01",
+          "title": "Upstream MCP tools/list with instruction-bearing descriptions (\"ignore previous instructions\", hidden Unicode tag characters, an \u003cIMPORTANT\u003e block)",
+          "expected": "DETECTED (connector.tool_hidden, description_flagged, sealed for each tool); the tools are hidden from tools/list and a call is tool_unknown",
+          "actual": "DETECTED (connector.tool_hidden, description_flagged, sealed for each tool); the tools are hidden from tools/list and a call is tool_unknown",
+          "status": "matched"
+        },
+        {
+          "id": "Q02",
+          "title": "Tool definition changes after the first listing (rug pull: same name, new schema or description)",
+          "expected": "DENIED (tool_unknown: the changed tool is hidden and refused until Deedglass restarts; nothing reaches the upstream); connector.tool_hidden (definition_changed) is sealed",
+          "actual": "DENIED (tool_unknown: the changed tool is hidden and refused until Deedglass restarts; nothing reaches the upstream); connector.tool_hidden (definition_changed) is sealed",
+          "status": "matched"
+        },
+        {
+          "id": "Q03",
+          "title": "Tool-name shadowing: two upstreams expose read_file on the same Gate",
+          "expected": "REJECTED (validation_failed for the unqualified name read_file); each qualified name reaches only its own upstream",
+          "actual": "REJECTED (validation_failed for the unqualified name read_file); each qualified name reaches only its own upstream",
+          "status": "matched"
+        },
+        {
+          "id": "Q04",
+          "title": "Upstream returns a 50 MiB result, and a result nested 10,000 deep",
+          "expected": "BLOCKED (too_large for the 50 MiB result, read no further than 4 MiB; upstream_error for the 10,000-deep result); reported as unknown, never as executed; the action is sealed; server memory grows \u003c 64 MiB",
+          "actual": "BLOCKED (too_large for the 50 MiB result, read no further than 4 MiB; upstream_error for the 10,000-deep result); reported as unknown, never as executed; the action is sealed; server memory grows \u003c 64 MiB",
+          "status": "matched"
+        },
+        {
+          "id": "Q05",
+          "title": "Upstream down or hanging (fail-closed default)",
+          "expected": "BLOCKED (connector_unavailable for a server that is down; timeout for one that hangs); nothing reported as executed",
+          "actual": "BLOCKED (connector_unavailable for a server that is down; timeout for one that hangs); nothing reported as executed",
+          "status": "matched"
+        },
+        {
+          "id": "Q06",
+          "title": "Upstream MCP server sends sampling/createMessage and elicitation/create through mcp wrap",
+          "expected": "BLOCKED (answered with a JSON-RPC error and never relayed to the client unless --allow-server-requests names the method; logged)",
+          "actual": "BLOCKED (answered with a JSON-RPC error and never relayed to the client unless --allow-server-requests names the method; logged)",
+          "status": "matched"
+        },
+        {
+          "id": "Q07",
+          "title": "Stripe live key smuggled via PUT /v1/connectors/{id}/credentials and PATCH /v1/connectors/{id}",
+          "expected": "REJECTED (stripe_live_key_refused for the credential; validation_failed for a key in PATCH's config or description); the vault is unchanged",
+          "actual": "REJECTED (stripe_live_key_refused for the credential; validation_failed for a key in PATCH's config or description); the vault is unchanged",
+          "status": "matched"
+        },
+        {
+          "id": "Q08",
+          "title": "Webhook to a host that resolves to cloud metadata at delivery (rebinding), and a webhook that redirects to loopback",
+          "expected": "BLOCKED (destination blocked at delivery, 0 dials; a redirect is never followed, 0 hits on its target)",
+          "actual": "BLOCKED (destination blocked at delivery, 0 dials; a redirect is never followed, 0 hits on its target)",
+          "status": "matched"
+        }
+      ]
+    },
+    {
+      "title": "Resources, records and output",
+      "intro": "S34's group R. Inputs built to exhaust or mislead: policy and CEL bombs, a forked deed chain, a signed intent from the wrong time, injection through the optional AI wording of suggestions, oversized and deeply nested JSON, and control characters aimed at terminals and logs.",
+      "cases": [
+        {
+          "id": "R01",
+          "title": "Policy YAML bomb (alias expansion, 60,000 nodes, 10^6 nodes, a 20 MiB file)",
+          "expected": "REJECTED (policy_invalid: yaml_alias and yaml_too_complex; request_too_large for 10^6 nodes and the 20 MiB file) in \u003c 200 ms; server memory grows \u003c 64 MiB",
+          "actual": "REJECTED (policy_invalid: yaml_alias and yaml_too_complex; request_too_large for 10^6 nodes and the 20 MiB file) in \u003c 200 ms; server memory grows \u003c 64 MiB",
+          "status": "matched"
+        },
+        {
+          "id": "R02",
+          "title": "CEL cost bomb (nested comprehensions at lint; a 20,000-item list at run time)",
+          "expected": "REJECTED (policy_invalid: cel_nesting and cel_cost at lint); at run time the rule stops at its limit and the action is denied, never allowed",
+          "actual": "REJECTED (policy_invalid: cel_nesting and cel_cost at lint); at run time the rule stops at its limit and the action is denied, never allowed",
+          "status": "matched"
+        },
+        {
+          "id": "R03",
+          "title": "Deed chain fork: a second deed after the same parent, and an exported chain with a spliced branch",
+          "expected": "DETECTED (the database refuses the second child through UNIQUE (org_id, prev_hash); deedglass verify reports chain_prev_hash_mismatch or chain_seq_out_of_order at seq N)",
+          "actual": "DETECTED (the database refuses the second child through UNIQUE (org_id, prev_hash); deedglass verify reports chain_prev_hash_mismatch or chain_seq_out_of_order at seq N)",
+          "status": "matched"
+        },
+        {
+          "id": "R04",
+          "title": "Clock-skewed signed intent (iat 10 min in the future and 10 min in the past)",
+          "expected": "REJECTED (intent_invalid: clock window)",
+          "actual": "REJECTED (intent_invalid: clock window)",
+          "status": "matched"
+        },
+        {
+          "id": "R05",
+          "title": "Prompt injection through the suggestion channel: tool names and rule ids crafted to steer the LLM phrasing",
+          "expected": "DETECTED (replies that break the phrasing rules are thrown away and the template stands; a reply that passes is marked as AI wording); the payload carries placeholders, never the org's names; the policy diff is never sent or changed",
+          "actual": "DETECTED (replies that break the phrasing rules are thrown away and the template stands; a reply that passes is marked as AI wording); the payload carries placeholders, never the org's names; the policy diff is never sent or changed",
+          "status": "matched"
+        },
+        {
+          "id": "R06",
+          "title": "Oversized and deeply nested JSON on POST /v1/actions (1 MiB + 1, args 129 deep, a body 10,000 deep)",
+          "expected": "REJECTED (request_too_large for 1 MiB + 1; validation_failed for args 129 deep and the 10,000-deep body) in \u003c 200 ms; server memory grows \u003c 64 MiB",
+          "actual": "REJECTED (request_too_large for 1 MiB + 1; validation_failed for args 129 deep and the 10,000-deep body) in \u003c 200 ms; server memory grows \u003c 64 MiB",
+          "status": "matched"
+        },
+        {
+          "id": "R07",
+          "title": "Log injection: tool names and args carrying ANSI escapes and newlines reach CLI output, logs and the Console",
+          "expected": "REDACTED (control characters escaped in every sink; 0 raw ESC bytes)",
+          "actual": "REDACTED (control characters escaped in every sink; 0 raw ESC bytes)",
+          "status": "matched"
+        }
+      ]
     }
   ],
   "not_covered": [
     "How often models fall for injections. These cases start after the model was fooled.",
     "A compromised Deedglass host, database superuser or seal key.",
-    "Malicious upstream behaviour beyond tool naming: tool descriptions that carry instructions, poisoned results, slow-drip responses (S34).",
+    "Instructions in tool descriptions are found by a heuristic (phrases, hidden Unicode, instruction tags), not by understanding intent; a reworded instruction can pass (Q01). Poisoned tool results and slow-drip responses are not scanned.",
     "Denial of service at scale. J04 checks one agent's budget, not a flood.",
     "The supply chain beyond `govulncheck` (S35 adds the SBOM and container scanning).",
-    "The V0 cases not listed as running above.",
+    "The V0 cases marked retired: each names the V7 test that checks the control instead.",
     "What L2 can't see: effects outside Postgres, writes to tables outside the publication, and proxy-mode SQL servers (no marker to bind). `docs/WITNESS.md` lists them.",
     "Production network rules for private ranges: the suite runs in dev with the private-network override so it can reach its own loopback servers. Metadata, link-local and cross-host targets stay blocked even then (K01, K02); the prod-only rules are covered by the egress corpus (`internal/connector/egress`)."
   ]

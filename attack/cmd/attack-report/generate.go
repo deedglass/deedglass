@@ -28,6 +28,12 @@ var layers = []struct {
 		func(c harness.MetaCase) bool { return c.Group == "L" }},
 	{"Undo", "S23's group U. An undo writes to the customer's database on a person's request, so each case tries to make it write something Postgres didn't record, or to reach it without a person: rows that change under it, values smuggled into the request, a forged marker naming the action, an agent calling the internal tool, another org's action.",
 		func(c harness.MetaCase) bool { return c.Group == "U" }},
+	{"People, sessions and the live stream", "S34's group P. Each case reaches for a decision or a view it shouldn't have: an approval link used against another approval, a forged or replayed Slack click, the person the action runs for approving it in Slack, a double vote, a viewer reaching for admin actions, a cross-site request, another org's event stream, and calls that race a Stop.",
+		func(c harness.MetaCase) bool { return c.Group == "P" }},
+	{"Hostile MCP servers and upstreams", "S34's group Q. The upstream is the attacker: tool descriptions that carry instructions, a tool that changes after it was listed, two servers with the same tool name, huge or deeply nested results, a server that is down or hangs, a server that asks the client's model for text, a live Stripe key, and a webhook host that turns into cloud metadata.",
+		func(c harness.MetaCase) bool { return c.Group == "Q" }},
+	{"Resources, records and output", "S34's group R. Inputs built to exhaust or mislead: policy and CEL bombs, a forked deed chain, a signed intent from the wrong time, injection through the optional AI wording of suggestions, oversized and deeply nested JSON, and control characters aimed at terminals and logs.",
+		func(c harness.MetaCase) bool { return c.Group == "R" }},
 }
 
 // notCovered is the honest list under "What this suite doesn't cover", shared by the page and the
@@ -35,10 +41,10 @@ var layers = []struct {
 var notCovered = []string{
 	"How often models fall for injections. These cases start after the model was fooled.",
 	"A compromised Deedglass host, database superuser or seal key.",
-	"Malicious upstream behaviour beyond tool naming: tool descriptions that carry instructions, poisoned results, slow-drip responses (S34).",
+	"Instructions in tool descriptions are found by a heuristic (phrases, hidden Unicode, instruction tags), not by understanding intent; a reworded instruction can pass (Q01). Poisoned tool results and slow-drip responses are not scanned.",
 	"Denial of service at scale. J04 checks one agent's budget, not a flood.",
 	"The supply chain beyond `govulncheck` (S35 adds the SBOM and container scanning).",
-	"The V0 cases not listed as running above.",
+	"The V0 cases marked retired: each names the V7 test that checks the control instead.",
 	"What L2 can't see: effects outside Postgres, writes to tables outside the publication, and proxy-mode SQL servers (no marker to bind). `docs/WITNESS.md` lists them.",
 	"Production network rules for private ranges: the suite runs in dev with the private-network override so it can reach its own loopback servers. Metadata, link-local and cross-host targets stay blocked even then (K01, K02); the prod-only rules are covered by the egress corpus (`internal/connector/egress`).",
 }
@@ -53,6 +59,21 @@ func statusText(r *harness.Result) string {
 		return "✕ differs"
 	}
 	return "○ waiting on " + r.Waiting
+}
+
+// v0Status is where a V0 case stands in V7 (S34).
+func v0Status(c harness.MetaCase) string {
+	switch {
+	case c.Status == "superseded":
+		return "runs as " + c.SupersededBy
+	case c.Status == "retired":
+		return "retired: " + c.Retired
+	case c.Status == "implemented" && strings.Contains("DE", c.Group):
+		return "decoder suite (S20)"
+	case c.Status == "implemented":
+		return "attack/deed tests (S04, S05)"
+	}
+	return "V0 suite"
 }
 
 func cell(s string) string { return strings.ReplaceAll(strings.ReplaceAll(s, "|", "\\|"), "\n", " ") }
@@ -81,7 +102,7 @@ func Generate(meta *harness.Meta, run *harness.Run) []byte {
 	s := run.Summary
 	w("**%d matched · %d differ · %d waiting on a later session.** After every case: the deed chains of both orgs are %s, the target database is unchanged wherever nothing should have run, every action is sealed, and the planted credential was seen %d times across the server's logs, every HTTP response, and the recorded actions, events, deeds, admin events, connector configs and credential hints.\n\n",
 		s.Matched, s.Differs, s.Waiting, run.Invariants.Chains, run.Invariants.SecretsSeen)
-	w("Run it: `make attack` (a throwaway PostgreSQL 18 cluster, about two minutes on a laptop: L05 waits out a real one-minute approval expiry), then `make attack-report`. One case: `DEEDGLASS_IT_ATTACK_RUN='TestAttack/H03' make attack`.\n\n")
+	w("Run it: `make attack` (a throwaway PostgreSQL 18 cluster, about three and a half minutes on a laptop: L05 waits out a real one-minute approval expiry and P10 runs ten Stop-all rounds), then `make attack-report`. One case: `DEEDGLASS_IT_ATTACK_RUN='TestAttack/H03' make attack`.\n\n")
 	for _, l := range layers {
 		w("## %s\n\n%s\n\n", l.title, l.intro)
 		w("| Case | Attack | Expected | Actual | Status |\n|---|---|---|---|---|\n")
@@ -99,15 +120,11 @@ func Generate(meta *harness.Meta, run *harness.Run) []byte {
 		w("\n")
 	}
 	w("## V0 controlled-write cases (A to G)\n\n")
-	w("The 66 cases frozen on 2026-09-28 for the V0 controlled-function design. A13 and F01 to F04 run in `attack/deed_test.go` and `attack/deed_verify_test.go`. The decoder's half of D01 to D04, D17, E01 to E05, E07, E08, E10 and E11 (what is stored, bound, alerted or halted) runs in `internal/decoder`'s integration suite on PostgreSQL 16, 17 and 18 (S20); their L2 verdicts are the W group's (S21). The others are scheduled for S34. `make attack` doesn't run them.\n\n")
+	w("The 66 cases frozen on 2026-09-28 for the V0 controlled-function design. A13 and F01 to F04 run in `attack/deed_test.go` and `attack/deed_verify_test.go`. The decoder's half of D01 to D04, D17, E01 to E05, E07, E08, E10 and E11 (what is stored, bound, alerted or halted) runs in `internal/decoder`'s integration suite on PostgreSQL 16, 17 and 18 (S20); their L2 verdicts are the W group's (S21). S34 accounted for the rest: a case whose attack a V7 case runs points to it, and a case that no longer applies to the V7 architecture says why and names the test that checks the V7 control instead. Their expected outcomes are unchanged.\n\n")
 	w("| Case | Attack | Expected | Status |\n|---|---|---|---|\n")
 	for _, c := range meta.Cases {
 		if strings.Contains("ABCDEFG", c.Group) {
-			where := "V0 suite"
-			if c.Status == "implemented" && strings.Contains("DE", c.Group) {
-				where = "decoder suite (S20)"
-			}
-			w("| %s | %s | %s | %s |\n", c.ID, cell(c.Title), cell(c.ExpectedDetail), where)
+			w("| %s | %s | %s | %s |\n", c.ID, cell(c.Title), cell(c.ExpectedDetail), cell(v0Status(c)))
 		}
 	}
 	w("\n## Outcome words\n\n")

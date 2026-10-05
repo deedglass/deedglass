@@ -535,6 +535,10 @@ func (s *Server) internal(r *http.Request, err error) *Error {
 	return E(CodeInternalError, Cause(err))
 }
 
+// PermissionsPolicy is the Permissions-Policy of every response, the Console's pages included
+// (console.PermissionsPolicy is this constant).
+const PermissionsPolicy = "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
+
 // securityHeaders are set on every response. No CORS headers at all: the API is server to server,
 // and the Console is same-origin (public metadata routes add their own, S04/S09).
 func (s *Server) securityHeaders(h http.Header) {
@@ -544,22 +548,26 @@ func (s *Server) securityHeaders(h http.Header) {
 	h["X-Frame-Options"] = hvDeny
 	h["Content-Security-Policy"] = hvCSP
 	h["Cross-Origin-Resource-Policy"] = hvCORP
-	h["Cache-Control"] = hvNoStore // a route may replace it
+	h["Cross-Origin-Opener-Policy"] = hvCOOP // S34 (SR-015): the Console's set on every response
+	h["Permissions-Policy"] = hvPermissions  // S34 (SR-015)
+	h["Cache-Control"] = hvNoStore           // a route may replace it
 	if s.o.Prod && s.o.BaseURL != nil && s.o.BaseURL.Scheme == "https" {
 		h["Strict-Transport-Security"] = hvHSTS
 	}
 }
 
 var (
-	hvNosniff    = []string{"nosniff"}
-	hvNoReferrer = []string{"no-referrer"}
-	hvDeny       = []string{"DENY"}
-	hvCSP        = []string{"default-src 'none'; frame-ancestors 'none'"}
-	hvCORP       = []string{"same-origin"}
-	hvNoStore    = []string{"no-store"}
-	hvHSTS       = []string{"max-age=63072000; includeSubDomains"}
-	hvJSON       = []string{ContentTypeJSON}
-	hvVersions   = func() map[string][]string {
+	hvNosniff     = []string{"nosniff"}
+	hvNoReferrer  = []string{"no-referrer"}
+	hvDeny        = []string{"DENY"}
+	hvCSP         = []string{"default-src 'none'; frame-ancestors 'none'"}
+	hvCORP        = []string{"same-origin"}
+	hvCOOP        = []string{"same-origin"}
+	hvPermissions = []string{PermissionsPolicy}
+	hvNoStore     = []string{"no-store"}
+	hvHSTS        = []string{"max-age=63072000; includeSubDomains"}
+	hvJSON        = []string{ContentTypeJSON}
+	hvVersions    = func() map[string][]string {
 		m := map[string][]string{}
 		for _, v := range buildinfo.APIVersions {
 			m[v] = []string{v}

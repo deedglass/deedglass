@@ -1,5 +1,7 @@
 package mailer
 
+//deedglass:allow-text-template the plain-text part of an email (*.txt.tmpl); every HTML part uses html/template
+
 import (
 	"bytes"
 	"embed"

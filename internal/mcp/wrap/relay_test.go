@@ -453,10 +453,10 @@ func TestInputRequired(t *testing.T) {
 	}
 }
 
-// TestSampling: a legacy server-to-client request passes to the client; the client's answer goes
-// back with the server's own id.
+// TestSampling: with --allow-server-requests sampling, a legacy server-to-client request passes to
+// the client and the client's answer goes back with the server's own id.
 func TestSampling(t *testing.T) {
-	h := start(t, "legacy")
+	h := start(t, "legacy", func(c *Config) { c.AllowServerRequests = []string{"sampling"} })
 	h.handshake()
 	h.sendRequest(70, "tools/call", `"name":"sample","arguments":{}`)
 	var srvReq jsonrpc.Envelope
@@ -476,6 +476,26 @@ func TestSampling(t *testing.T) {
 	h.send(`{"jsonrpc":"2.0","id":` + string(srvReq.ID()) + `,"result":{"role":"assistant","content":{"type":"text","text":"ok"}}}`)
 	if r := result(t, h.wait("70")); r.text() != "sampled" {
 		t.Fatal(r.text())
+	}
+}
+
+// TestSamplingRefused (S34, Q06): by default the wrapper answers sampling/createMessage itself with
+// a JSON-RPC error, logs it, and the client never sees the request.
+func TestSamplingRefused(t *testing.T) {
+	h := start(t, "legacy")
+	h.handshake()
+	h.sendRequest(71, "tools/call", `"name":"sample","arguments":{}`)
+	e := h.wait("71") // the fake server answers the call once its request is answered (here: refused)
+	if e == nil {
+		t.Fatal("no answer")
+	}
+	for _, o := range h.others {
+		if strings.HasPrefix(o.Method(), "sampling/") {
+			t.Fatal("the sampling request reached the client")
+		}
+	}
+	if !strings.Contains(h.stderr.String(), "sent sampling/createMessage; refused and not passed to the client") {
+		t.Fatal(h.stderr)
 	}
 }
 
@@ -679,4 +699,30 @@ func mustURL(s string) *url.URL {
 		panic(err)
 	}
 	return u
+}
+
+// TestFlaggedDescription (S34, Q01): a tool whose description carries instructions for the model
+// is left out of tools/list, logged with the admin's sentence, and a call to it is an unknown tool
+// that never reaches the server or the Gate.
+func TestFlaggedDescription(t *testing.T) {
+	h := start(t, "legacy", func(c *Config) { c.Env = append(c.Env, "FAKE_MCP_POISON=1") })
+	h.handshake()
+	h.sendRequest(80, "tools/list", "")
+	if s := string(h.wait("80").Marshal()); strings.Contains(s, "cleanup") || !strings.Contains(s, "read_text_file") {
+		t.Fatalf("%.400s", s)
+	}
+	if !strings.Contains(h.stderr.String(), `Hid tool "cleanup" from scratch: its description contains instructions aimed at the model`) {
+		t.Fatal(h.stderr)
+	}
+	e := h.call("cleanup", `{}`)
+	var er jsonrpc.ErrorObject
+	if json.Unmarshal(e["error"], &er) != nil || er.Code != jsonrpc.CodeInvalidParams || strings.Contains(er.Message, "instruction") {
+		t.Fatalf("%.300s", e.Marshal())
+	}
+	h.g.mu.Lock()
+	n := len(h.g.submits)
+	h.g.mu.Unlock()
+	if n != 0 {
+		t.Fatalf("the Gate saw %d submits", n)
+	}
 }

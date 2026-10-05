@@ -167,7 +167,7 @@ func (s *Service) loadVersion(ctx context.Context, caller Caller, policyRef stri
 			return err
 		}
 		c, _ := Compile(v.Source, Options{})
-		if c == nil || c.VersionHash != v.VersionHash {
+		if c == nil || c.VersionHash != v.VersionHash { //deedglass:allow-compare a policy version's public digest
 			return errf(KindConflict, "", msgVersionTampered, p.Name, v.Version)
 		}
 		l = &Loaded{Compiled: c, PolicyID: p.ID, Name: p.Name, VersionID: v.ID, VersionHash: v.VersionHash, Version: v.Version, Mode: ModeEnforce}

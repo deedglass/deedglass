@@ -36,6 +36,10 @@ const (
 	// expectedDigestU pins group U, the undo cases (S23; ADR-052, PROPOSED; the founder approves
 	// in chat). Declared before the cases were implemented.
 	expectedDigestU = "ece59deebe94a2d2fd70f1da3e9f0f70c55debfebbb0644620764cf84073bf58"
+	// expectedDigestS34 pins groups P, Q and R (S34; ADR-065, PROPOSED; the founder approves in
+	// chat). Declared before any of their case code existed. P01 and P09 were not declared: S22's
+	// L01 and S23's U01 already pin those attacks.
+	expectedDigestS34 = "4bfe69608375ef9023f35bed231e0a15489993b0a7dab497584a370e1965bd42"
 )
 
 // groupSets maps each pinned digest to its groups. A later session adds its own row (S19 N,
@@ -48,6 +52,7 @@ var groupSets = []struct {
 	{"W", expectedDigestW},
 	{"L", expectedDigestL},
 	{"U", expectedDigestU},
+	{"PQR", expectedDigestS34},
 }
 
 type meta struct {
@@ -76,6 +81,10 @@ type caseMeta struct {
 	Status          string   `json:"status"`
 	Note            string   `json:"note,omitempty"`
 	Needs           []string `json:"needs,omitempty"` // sessions whose feature the case waits on; outside the digest
+	// S34, outside the digest: a V0 case's V7 successor, or why it no longer applies as an attack
+	// case (with the test that checks the V7 control instead).
+	SupersededBy string `json:"superseded_by,omitempty"`
+	Retired      string `json:"retired,omitempty"`
 }
 
 // digest is sha256 over "id|expected|expected_detail|priority\n" for the cases whose group is in
@@ -119,6 +128,16 @@ func wantIDs() []string {
 			ids = append(ids, fmt.Sprintf("%s%02d", g.p, i))
 		}
 	}
+	// S34: P02–P08 and P10 (P01 is S22's L01 and P09 is S23's U01), Q01–Q08, R01–R07.
+	for _, n := range []int{2, 3, 4, 5, 6, 7, 8, 10} {
+		ids = append(ids, fmt.Sprintf("P%02d", n))
+	}
+	for i := 1; i <= 8; i++ {
+		ids = append(ids, fmt.Sprintf("Q%02d", i))
+	}
+	for i := 1; i <= 7; i++ {
+		ids = append(ids, fmt.Sprintf("R%02d", i))
+	}
 	return ids
 }
 
@@ -159,12 +178,39 @@ func TestAttackMeta(t *testing.T) {
 				t.Errorf("%s: owasp %q", c.ID, o)
 			}
 		}
-		if c.Status != "not implemented" && c.Status != "implemented" {
+		switch c.Status {
+		case "not implemented", "implemented":
+			if c.SupersededBy != "" || c.Retired != "" {
+				t.Errorf("%s: status %q with superseded_by %q retired %q", c.ID, c.Status, c.SupersededBy, c.Retired)
+			}
+		case "superseded":
+			// S34: a V0 case whose attack a V7 case runs; it must name that case.
+			if !strings.Contains("ABCDEFG", c.Group) || c.SupersededBy == "" || c.Retired != "" {
+				t.Errorf("%s: superseded needs a V0 case and superseded_by", c.ID)
+			}
+		case "retired":
+			// S34: a V0 case that no longer applies to the V7 architecture, with the reason and the
+			// test that checks the V7 control.
+			if !strings.Contains("ABCDEFG", c.Group) || c.SupersededBy != "" || len(strings.TrimSpace(c.Retired)) < 20 {
+				t.Errorf("%s: retired needs a V0 case and a reason", c.ID)
+			}
+		default:
 			t.Errorf("%s: status %q", c.ID, c.Status)
 		}
 		for _, n := range c.Needs {
 			if !reNeeds.MatchString(n) {
 				t.Errorf("%s: needs %q is not a session S19 to S37", c.ID, n)
+			}
+		}
+		if strings.Contains("PQR", c.Group) {
+			// S34: only the confirmed OWASP mappings (C-006), declared from the session file.
+			for _, o := range c.OWASP {
+				if !reS34OWASP.MatchString(o) {
+					t.Errorf("%s: owasp %q (S34 cases use only ASI01, ASI02, ASI03, ASI10 and LLM06)", c.ID, o)
+				}
+			}
+			if c.Source != "prompts-v7/S34.md" || len(c.OWASP) == 0 || len(c.V3Ref) != 0 || len(c.ExpectedReasons) != 0 {
+				t.Errorf("%s: source %q owasp %v v3_ref %v reasons %v", c.ID, c.Source, c.OWASP, c.V3Ref, c.ExpectedReasons)
 			}
 		}
 		if strings.Contains("HJK", c.Group) {
@@ -179,7 +225,16 @@ func TestAttackMeta(t *testing.T) {
 			}
 		}
 	}
+	for _, c := range m.Cases {
+		if c.SupersededBy != "" && !seen[c.SupersededBy] {
+			t.Errorf("%s: superseded_by %q isn't a declared case", c.ID, c.SupersededBy)
+		}
+		if c.SupersededBy != "" && strings.Contains("ABCDEFG", c.SupersededBy[:1]) {
+			t.Errorf("%s: superseded_by %q must be a V7 case", c.ID, c.SupersededBy)
+		}
+	}
 	want := wantIDs()
+	sort.Strings(want)
 	sort.Strings(got)
 	if strings.Join(got, ",") != strings.Join(want, ",") {
 		t.Errorf("case ids:\n got %v\nwant %v", got, want)
@@ -211,8 +266,9 @@ func TestAttackMeta(t *testing.T) {
 }
 
 var (
-	reNeeds   = regexp.MustCompile(`^S(19|2[0-9]|3[0-7])$`)
-	reV7OWASP = regexp.MustCompile(`^ASI(01|02|03|10)$`)
+	reNeeds    = regexp.MustCompile(`^S(19|2[0-9]|3[0-7])$`)
+	reV7OWASP  = regexp.MustCompile(`^ASI(01|02|03|10)$`)
+	reS34OWASP = regexp.MustCompile(`^(ASI(01|02|03|10)|LLM06)$`)
 )
 
 func TestExpectedOutcomesPinned(t *testing.T) {

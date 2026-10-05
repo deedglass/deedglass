@@ -97,7 +97,7 @@ func (db *DB) IdemBegin(ctx context.Context, k IdemKey, fp string, lockFor time.
 				k.OrgID, k.Principal, k.Key, id, k.Method, k.Route, fp, lock)
 			out = IdemStarted
 			return err
-		case hash != fp:
+		case hash != fp: //deedglass:allow-compare a digest of a request or config, not a secret
 			out = IdemMismatch
 		case status == "complete" && respStatus != nil:
 			r := &IdemResponse{Status: int(*respStatus), Body: respBody, Headers: map[string]string{}}

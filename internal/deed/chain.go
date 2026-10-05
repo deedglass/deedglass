@@ -81,7 +81,7 @@ func (c *ChainChecker) Next(r *Result) error {
 			e.Want = 1
 			return e
 		}
-		if b.PrevHash != Genesis(r.Org) {
+		if b.PrevHash != Genesis(r.Org) { //deedglass:allow-compare a deed's public prev_hash
 			return fail(CodeChainGenesisMismatch)
 		}
 	default:
@@ -96,7 +96,7 @@ func (c *ChainChecker) Next(r *Result) error {
 			e.Prev, e.Want = prevSeq, prevSeq+1
 			return e
 		}
-		if b.PrevHash != prevHash {
+		if b.PrevHash != prevHash { //deedglass:allow-compare a deed's public prev_hash
 			e := fail(CodeChainPrevHashMismatch)
 			e.Prev = prevSeq
 			return e

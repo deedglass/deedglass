@@ -75,7 +75,7 @@ func formatOnce(src []byte) ([]byte, error) {
 	_ = enc.Close()
 	out := spaceOut(wrapWhens(buf.Bytes()))
 	c2, diags := Compile(out, Options{})
-	if c2 == nil || c2.VersionHash != c.VersionHash {
+	if c2 == nil || c2.VersionHash != c.VersionHash { //deedglass:allow-compare a policy version's public digest
 		return nil, fmt.Errorf("policy: fmt changed the policy's meaning (an internal error; %d diagnostics)", len(diags))
 	}
 	return out, nil

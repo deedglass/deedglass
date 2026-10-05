@@ -59,6 +59,12 @@ func (w *Wrapper) handleCall(e jsonrpc.Envelope, modern bool, f *inflight) {
 		w.respondError(id, jsonrpc.CodeInvalidParams, gate.MCPUnknownToolText(cp.Name))
 		return
 	}
+	if entry.Visibility == visFlagged {
+		// S34 (Q01): never tell the agent why; to it the tool doesn't exist.
+		w.log.sym(symDenied, qualified, "refused: its description was flagged")
+		w.respondError(id, jsonrpc.CodeInvalidParams, gate.MCPUnknownToolText(cp.Name))
+		return
+	}
 	if entry.Visibility == visChanged {
 		w.log.sym(symDenied, qualified, "refused: its definition changed after it was first listed")
 		w.respond(id, present.Plain(gate.MCPToolChangedText(qualified), modern))

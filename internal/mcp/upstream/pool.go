@@ -30,6 +30,8 @@ import (
 	"github.com/deedglass/deedglass/internal/gate"
 	"github.com/deedglass/deedglass/internal/identity"
 	"github.com/deedglass/deedglass/internal/ids"
+	"github.com/deedglass/deedglass/internal/mcp/front"
+	"github.com/deedglass/deedglass/internal/mcp/toolscan"
 )
 
 // ConnectorType is the type an upstream MCP connector carries in policy facts and deeds.
@@ -37,6 +39,33 @@ const ConnectorType = "mcp_http"
 
 // MaxResponse caps an upstream response body (4 MiB); a larger answer is an unknown outcome.
 const MaxResponse = 4 << 20
+
+// MaxResultDepth bounds a tools/call result's nesting (S34; the same 128 as a request body).
+const MaxResultDepth = 128
+
+// jsonDepth is the deepest nesting of objects and arrays in b (strings skipped).
+func jsonDepth(b []byte) int {
+	depth, deepest, inStr, esc := 0, 0, false, false
+	for _, c := range b {
+		switch {
+		case inStr && esc:
+			esc = false
+		case inStr && c == '\\':
+			esc = true
+		case inStr && c == '"':
+			inStr = false
+		case inStr:
+		case c == '"':
+			inStr = true
+		case c == '{' || c == '[':
+			depth++
+			deepest = max(deepest, depth)
+		case c == '}' || c == ']':
+			depth--
+		}
+	}
+	return deepest
+}
 
 // maxPages bounds one tools/list walk.
 const maxPages = 20
@@ -71,7 +100,35 @@ type Pool struct {
 	rows    sync.Map // rowKey → *up
 	version string
 	stash   stash
+
+	// S34: the tool screen. pins holds each tool's first definition digest (scope + "\x00" + name);
+	// reported dedupes the admin deeds (one per scope, tool, digest and reason per process).
+	pins     sync.Map
+	reported sync.Map
+	onHidden HiddenRecorder
 }
+
+// HiddenTool is a tool the screen hid (S34, attack cases Q01 and Q02).
+type HiddenTool struct {
+	Org         ids.OrgID // zero for a file upstream (mcp.upstreams, dev only)
+	ConnectorID string    // "" for a file upstream
+	Connector   string    // the connector's name or the file upstream's slug
+	Tool        string
+	Reason      string // toolscan.ReasonDescription | toolscan.ReasonChanged
+	Kind        string // the finding's kind ("instruction", "tag", "hidden_characters") or "changed"
+	Field       string
+	Excerpt     string // ≤ 40 characters, hidden characters escaped
+	Digest      string // the definition's digest now
+	Pinned      string // the first digest (definition_changed only)
+	Sentence    string // the admin's line (toolscan.Sentence)
+}
+
+// HiddenRecorder records a hidden tool (serve seals connector.tool_hidden through it). It runs on
+// its own goroutine with its own deadline; a failure is logged by the recorder.
+type HiddenRecorder func(ctx context.Context, h HiddenTool)
+
+// SetHiddenRecorder installs the recorder (serve calls it once, before the pool serves).
+func (p *Pool) SetHiddenRecorder(r HiddenRecorder) { p.onHidden = r }
 
 type up struct {
 	cfg     Config
@@ -81,8 +138,15 @@ type up struct {
 	mu      sync.Mutex // guards session and the cache
 	session *mcp.ClientSession
 	tools   []*mcp.Tool
-	fresh   time.Time // the cache is good until then
-	down    bool      // the last connect or list failed
+	fresh   time.Time       // the cache is good until then
+	down    bool            // the last connect or list failed
+	hidden  map[string]bool // S34: tools the screen hid in the last listing (flagged or changed)
+
+	// S34: who this upstream is, for the pin and the admin deed. scope keys the pins ("file:<slug>"
+	// or "row:<con_ id>"), so a new credential or config keeps its connector's pins.
+	scope       string
+	org         ids.OrgID
+	connectorID string
 }
 
 // ErrDown is returned when an upstream can't be reached (front.ErrUpstreamDown wraps it).
@@ -136,15 +200,48 @@ func New(o Options) (*Pool, error) {
 		if _, blocked := egress.IsBlocked(err); blocked {
 			return nil, fmt.Errorf("upstream %s: %w", c.Slug, err)
 		}
-		p.ups[c.Slug] = newUp(c, hdr, pol, o.Version)
+		u := newUp(c, hdr, pol, o.Version, p.log)
+		u.scope = "file:" + c.Slug
+		p.ups[c.Slug] = u
 	}
 	return p, nil
 }
 
-func newUp(c Config, hdr http.Header, pol *egress.Policy, version string) *up {
+func newUp(c Config, hdr http.Header, pol *egress.Policy, version string, log *slog.Logger) *up {
 	u := &up{cfg: c, pol: pol, httpc: newHTTPClient(c.Timeout, hdr, pol, version)}
 	u.client = mcp.NewClient(&mcp.Implementation{Name: "deedglass-gate", Title: "Deedglass Gate", Version: version}, nil)
+	u.client.AddReceivingMiddleware(serverRequestGuard(log, c.Slug))
 	return u
+}
+
+// serverRequestGuard (S34, attack case Q06): the Gate's client declares no sampling, elicitation or
+// roots capability, so the SDK answers those server-to-client requests with an error and nothing
+// reaches an MCP client or a model. The guard logs each one, so an admin sees an upstream asking.
+func serverRequestGuard(log *slog.Logger, slug string) mcp.Middleware {
+	return func(next mcp.MethodHandler) mcp.MethodHandler {
+		return func(ctx context.Context, method string, req mcp.Request) (mcp.Result, error) {
+			switch {
+			case method == "ping", strings.HasPrefix(method, "notifications/"):
+			default:
+				if log != nil {
+					log.Warn("mcp: an upstream sent a server-to-client request; refused, nothing was relayed", "upstream", slug, "method", clipMethod(method))
+				}
+			}
+			return next(ctx, method, req)
+		}
+	}
+}
+
+func clipMethod(m string) string {
+	if len(m) > 64 {
+		m = m[:64]
+	}
+	return strings.Map(func(r rune) rune {
+		if r < 0x20 || r == 0x7f {
+			return '?'
+		}
+		return r
+	}, m)
 }
 
 // Slugs lists the upstreams, sorted.
@@ -229,8 +326,74 @@ func (p *Pool) listOn(ctx context.Context, u *up) ([]*mcp.Tool, error) {
 		u.down = true
 		return nil, fmt.Errorf("%w: %v", ErrDown, err)
 	}
-	u.tools, u.fresh = tools, p.now().Add(ttl)
-	return tools, nil
+	visible, events := p.screen(u, tools)
+	u.tools, u.fresh = visible, p.now().Add(ttl)
+	for _, ev := range events {
+		p.report(ev)
+	}
+	return visible, nil
+}
+
+// screen (S34) hides the tools a client must not see: a definition whose text carries
+// instructions aimed at the model or hidden characters (toolscan, Q01), and a definition that
+// changed after it was first listed (the pin, Q02; hidden until Deedglass restarts). u.mu is held.
+func (p *Pool) screen(u *up, tools []*mcp.Tool) ([]*mcp.Tool, []HiddenTool) {
+	out := make([]*mcp.Tool, 0, len(tools))
+	hidden := map[string]bool{}
+	var events []HiddenTool
+	for _, t := range tools {
+		if t == nil {
+			continue
+		}
+		def, err := json.Marshal(t)
+		if err != nil {
+			continue
+		}
+		digest := front.DefDigest(def)
+		ev := HiddenTool{Org: u.org, ConnectorID: u.connectorID, Connector: u.cfg.Slug, Tool: t.Name, Digest: digest}
+		if f, bad := toolscan.Flagged(def); bad {
+			ev.Reason, ev.Kind, ev.Field, ev.Excerpt = toolscan.ReasonDescription, f.Kind, f.Field, f.Excerpt
+			ev.Sentence = toolscan.Sentence(t.Name, u.cfg.Slug, f)
+			hidden[t.Name] = true
+			events = append(events, ev)
+			continue
+		}
+		key := u.scope + "\x00" + t.Name
+		if was, loaded := p.pins.LoadOrStore(key, digest); loaded && was.(string) != digest {
+			ev.Reason, ev.Kind, ev.Pinned = toolscan.ReasonChanged, "changed", was.(string)
+			ev.Sentence = toolscan.Sentence(t.Name, u.cfg.Slug, toolscan.Finding{Kind: "changed"})
+			hidden[t.Name] = true
+			events = append(events, ev)
+			continue
+		}
+		out = append(out, t)
+	}
+	u.hidden = hidden
+	return out, events
+}
+
+// report logs a hidden tool and records it once per scope, tool, digest and reason.
+func (p *Pool) report(ev HiddenTool) {
+	k := ev.Org.String() + "\x00" + ev.Connector + "\x00" + ev.Tool + "\x00" + ev.Digest + "\x00" + ev.Reason
+	if _, seen := p.reported.LoadOrStore(k, true); seen {
+		return
+	}
+	p.log.Warn(ev.Sentence, "upstream", ev.Connector, "tool", clipMethod(ev.Tool), "reason", ev.Reason, "alert", "tool_hidden")
+	if p.onHidden == nil || ev.ConnectorID == "" {
+		return
+	}
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		p.onHidden(ctx, ev)
+	}()
+}
+
+// isHidden reports whether the last listing hid name.
+func (u *up) isHidden(name string) bool {
+	u.mu.Lock()
+	defer u.mu.Unlock()
+	return u.hidden[name]
 }
 
 func (u *up) listLocked(ctx context.Context) ([]*mcp.Tool, time.Duration, error) {
@@ -289,6 +452,9 @@ func (p *Pool) Resolve(_ context.Context, _ ids.OrgID, qualified string) (gate.E
 	slug, name, ok := strings.Cut(qualified, ".")
 	if !ok || !p.Has(slug) || name == "" {
 		return nil, connector.ToolSpec{}, "", connector.ErrToolUnknown
+	}
+	if p.ups[slug].isHidden(name) {
+		return nil, connector.ToolSpec{}, "", connector.ErrToolUnknown // S34: flagged or changed (Q01, Q02)
 	}
 	spec := connector.ToolSpec{Name: name, SideEffect: connector.SideEffectUnknown}
 	if t := p.cachedTool(slug, name); t != nil {
@@ -360,6 +526,11 @@ func (p *Pool) execOn(ctx context.Context, u *up, slug string, call connector.Ca
 	if len(raw) > MaxResponse {
 		return connector.Result{}, &connector.Error{Kind: connector.KindUpstream, Code: "too_large", AgentMessage: gate.MCPTooLarge}
 	}
+	if jsonDepth(raw) > MaxResultDepth {
+		// S34 (Q04): a result nested deeper than any client should walk. It may have run.
+		return connector.Result{}, &connector.Error{Kind: connector.KindUpstream, Code: "upstream_error",
+			AgentMessage: "The MCP server's answer is nested too deeply to pass on. It may have run."}
+	}
 	p.stash.put(call.ActionID.String(), raw, nil, p.now())
 	if res.IsError {
 		return connector.Result{Output: raw}, &connector.Error{Kind: connector.KindToolError, Code: "tool_error",
@@ -384,7 +555,9 @@ func (p *Pool) callError(ctx context.Context, u *up, slug string, call connector
 		u.dropLocked()
 		u.mu.Unlock()
 		return connector.Result{}, unavailable(slug, err)
-	case ctx.Err() != nil && errors.Is(ctx.Err(), context.DeadlineExceeded):
+	case ctx.Err() != nil && errors.Is(ctx.Err(), context.DeadlineExceeded), timedOut(err):
+		// S34 (Q05): the upstream's own deadline (timeout_ms, the HTTP client's header timeout) is
+		// a timeout too, not a lost answer.
 		return connector.Result{}, &connector.Error{Kind: connector.KindTimeout, Code: "timeout",
 			AgentMessage: "The MCP server didn't answer in time. It may have run.", Err: err}
 	case ctx.Err() != nil:
@@ -399,6 +572,9 @@ func (p *Pool) callError(ctx context.Context, u *up, slug string, call connector
 		p.stash.put(call.ActionID.String(), nil, raw, p.now())
 		return connector.Result{}, &connector.Error{Kind: connector.KindToolError, Code: "upstream_error",
 			AgentMessage: "The MCP server refused the call.", Err: err}
+	case errors.Is(err, errTooDeep) || strings.Contains(err.Error(), errTooDeep.Error()):
+		return connector.Result{}, &connector.Error{Kind: connector.KindUpstream, Code: "upstream_error",
+			AgentMessage: "The MCP server's answer is nested too deeply to pass on. It may have run.", Err: err}
 	case errors.Is(err, errTooLarge) || strings.Contains(err.Error(), errTooLarge.Error()):
 		return connector.Result{}, &connector.Error{Kind: connector.KindUpstream, Code: "too_large", AgentMessage: gate.MCPTooLarge, Err: err}
 	}
@@ -411,6 +587,18 @@ func (p *Pool) callError(ctx context.Context, u *up, slug string, call connector
 }
 
 type mcpWireError = sdkjsonrpc.Error
+
+// timedOut reports a transport timeout: a net.Error that says so, or the text the HTTP client and
+// the SDK use when they flatten it.
+func timedOut(err error) bool {
+	var ne net.Error
+	if errors.As(err, &ne) && ne.Timeout() {
+		return true
+	}
+	m := err.Error()
+	return strings.Contains(m, "timeout awaiting response headers") || strings.Contains(m, "Client.Timeout exceeded") ||
+		strings.Contains(m, "context deadline exceeded")
+}
 
 // refused: the connection was refused or never dialed, so the request never reached the server.
 func refused(err error) bool {
@@ -468,6 +656,40 @@ func (t *roundTripper) RoundTrip(r *http.Request) (*http.Response, error) {
 type capped struct {
 	rc   io.ReadCloser
 	left int64
+	// S34 (Q04): the JSON nesting seen so far, across reads (strings skipped), so a deeply nested
+	// answer fails fast here instead of in the SDK's decoder, which drops it and waits out the timeout.
+	depth      int
+	inStr, esc bool
+}
+
+// MaxStreamDepth bounds the nesting of an upstream's answer as it is read (S34). A tools/call
+// result is refused at MaxResultDepth after decoding; this catches what can't be decoded at all.
+const MaxStreamDepth = 512
+
+var errTooDeep = errors.New("upstream: response nested deeper than 512 levels")
+
+func (c *capped) scan(b []byte) error {
+	for _, x := range b {
+		switch {
+		case c.inStr && c.esc:
+			c.esc = false
+		case c.inStr && x == '\\':
+			c.esc = true
+		case c.inStr && x == '"':
+			c.inStr = false
+		case c.inStr:
+		case x == '"':
+			c.inStr = true
+		case x == '{' || x == '[':
+			c.depth++
+			if c.depth > MaxStreamDepth {
+				return errTooDeep
+			}
+		case x == '}' || x == ']':
+			c.depth--
+		}
+	}
+	return nil
 }
 
 func (c *capped) Read(b []byte) (int, error) {
@@ -483,6 +705,9 @@ func (c *capped) Read(b []byte) (int, error) {
 	}
 	n, err := c.rc.Read(b)
 	c.left -= int64(n)
+	if serr := c.scan(b[:n]); serr != nil {
+		return 0, serr
+	}
 	return n, err
 }
 

@@ -7,6 +7,7 @@ generated from this directory.
 ```sh
 make attack                                          # a throwaway PostgreSQL 18 cluster, every V7 case, then the report
 make attack-report                                   # print the last run and regenerate docs/ATTACK_SUITE.md
+make attack-one CASE=Q01                             # one case (S34)
 DEEDGLASS_IT_ATTACK_RUN='TestAttack/H03' make attack    # one case (any go test -run pattern)
 DEEDGLASS_IT_ATTACK_RUN='TestOrgIsolation' make attack  # the org isolation sweep
 DEEDGLASS_IT_PG=17 make attack                       # another major version
@@ -25,7 +26,11 @@ DEEDGLASS_IT_PG=17 make attack                       # another major version
 | `cases_gate_test.go` | H01 to H07: SQL through the Gate and the Postgres connector. |
 | `cases_identity_test.go` | J01 to J04: suspension, revocation, intent replay, the budget burst. |
 | `cases_connectors_test.go` | K01 to K04: SSRF, redirects, credential echo, tool-name confusion. |
-| `cases_witness_test.go` | H08 to H11: declared, waiting on S21's L2 witness. |
+| `cases_witness_test.go` | H08 to H11 and W01 to W13: the L2 witness (S21). |
+| `cases_approvals_test.go`, `cases_undo_test.go` | L01 to L08 (S22) and U01 to U05 (S23). |
+| `cases_people_test.go` | P02 to P08 and P10 (S34): approval links, Slack callbacks, the self rule in Slack, double votes, viewers, CSRF, the event stream across orgs, Stop mid-burst. |
+| `cases_upstreams_test.go` | Q01 to Q08 (S34): poisoned tool descriptions, the rug pull, shadowed names, huge and deep results, down and hanging servers, sampling through `mcp wrap`, live Stripe keys, webhook rebinding and redirects. |
+| `cases_resources_test.go` | R01 to R07 (S34): YAML and CEL bombs, a forked chain, skewed intents, injection through the AI wording (in process, against an LLM stub), oversized JSON, control characters in every sink. |
 | `isolation_test.go` | `TestOrgIsolation`: every id-bearing route, across two orgs. |
 | `fixtures/` | The target database (`sql/target.sql`), the declared L2 fixtures, the policy (`policies/attack-baseline.yaml`). |
 | `results/latest.json` | The last run. `cmd/attack-report` turns it into the page. |
@@ -51,6 +56,20 @@ DEEDGLASS_IT_PG=17 make attack                       # another major version
    within 5 s; the planted credential (`dgSENTINEL…`) seen 0 times in the server's output, every
    HTTP response and the control-plane tables; 0 hits on the listeners the case marked forbidden.
    A broken invariant fails the case even if its headline matched.
+
+## S34's harness helpers (`harness/s34.go`, `harness/sse.go`)
+
+| Helper | What it does |
+|---|---|
+| `SlackSign`, `SlackForm`, `SlackClick`, `FakeSlack` | Slack's v0 signature (with any timestamp, for stale and replayed bodies), interaction bodies, and a loopback Web API the Slack connector is pointed at (`api_base_url`, dev only) |
+| `ParseSSE`, `Client.Peek` with headers | Read an event stream for a fixed window with a chosen `Last-Event-ID` |
+| `NewHostile("poison"/"rug"/"shadow"/"results")`, `RugPull`, `ClosedURL` | Hostile MCP servers: instruction-bearing descriptions, a tool that changes after listing, a second `read_file`, a 50 MiB result, a 10,000-deep result answered by hand, a tool that hangs, and a port nothing listens on |
+| `hostileStdioMain` (`ATTACK_STDIO_MCP=1`) | The test binary as a stdio MCP server that sends sampling, elicitation and roots requests through `mcp wrap` |
+| `NewLLMStub` | An httptest Messages API with attacker-chosen replies; records every request body |
+| `Env.Probe`, `Env.ServerRSS` | Wall time and the server's RSS growth around a request |
+| `Env.NewOrg`, `Env.Run`, `Env.Command`, `Env.CPExec`, `Client.CSRF` | Another org, the binary without panicking on exit codes, the binary over pipes, multi-statement superuser SQL, a session's CSRF token |
+
+The pure helpers have smoke tests in `harness/sse_test.go`, which run in `make ci`.
 
 ## Add a case
 

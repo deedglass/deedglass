@@ -189,6 +189,10 @@ func (k *KeyAuth) lookup(ctx context.Context, prefix string) (KeyEntry, AgentEnt
 		}
 	}
 	e0 := k.cache.Epoch()
+	if !k.pre.Ready() {
+		// S34 (SR-008): no database (route tests); fail closed instead of dereferencing nil.
+		return KeyEntry{}, AgentEntry{}, OrgEntry{}, httpx.E(httpx.CodeServiceUnavailable)
+	}
 	row, err := k.pre.APIKey(ctx, prefix)
 	if err != nil {
 		return KeyEntry{}, AgentEntry{}, OrgEntry{}, err

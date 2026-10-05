@@ -870,7 +870,7 @@ func (x *run) policy(ctx context.Context) StepResult {
 		} `json:"enforce"`
 	}
 	_ = x.api(ctx, x.admin, "/v1/policies/active", &active)
-	if e := active.Enforce; e != nil && e.Name == PolicyName && (want == "" || e.VersionHash == want) {
+	if e := active.Enforce; e != nil && e.Name == PolicyName && (want == "" || e.VersionHash == want) { //deedglass:allow-compare a policy version's public digest
 		x.state.Policies = []string{e.VersionID}
 		return StepResult{ID: id, Title: title, Status: Skipped, Detail: fmt.Sprintf("%s v%d · enforce", PolicyName, e.Version)}
 	}

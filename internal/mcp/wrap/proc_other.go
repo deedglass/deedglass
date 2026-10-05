@@ -2,6 +2,8 @@
 
 package wrap
 
+//deedglass:allow-exec the supervisor's process handling for the wrapped MCP server
+
 import "os/exec"
 
 func setProcessGroup(*exec.Cmd) {}

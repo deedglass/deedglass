@@ -154,7 +154,7 @@ func IsBlocked(err error) (*BlockedError, bool) {
 func reasonFor(c Class, dev bool) string {
 	switch c {
 	case ClassMetadata:
-		return "Deedglass never connects to cloud metadata addresses, even in dev. Point base_url at the service's public address."
+		return "Deedglass never connects to cloud metadata addresses, even in dev. Use the service's public address."
 	case ClassReserved:
 		return "Deedglass never connects to reserved, multicast or documentation addresses. Use the service's real address."
 	case ClassSelf:

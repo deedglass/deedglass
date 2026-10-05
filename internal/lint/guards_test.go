@@ -287,7 +287,80 @@ func TestG5(t *testing.T) {
 }
 
 func TestUnknownGuard(t *testing.T) {
-	if _, err := Check(t.TempDir(), "G9"); err == nil {
+	if _, err := Check(t.TempDir(), "G11"); err == nil {
 		t.Fatal("Check accepted an unknown guard")
 	}
+}
+
+// S34: G6–G10, each with a planted violation, its fix and its marker.
+
+func TestG6Exec(t *testing.T) {
+	want(t, G6, map[string]string{
+		"a/run.go":      "package a\n\nimport \"os/exec\"\n\nfunc Run() error { return exec.Command(\"sh\").Run() }\n",
+		"b/marked.go":   "package b\n\n//deedglass:allow-exec the supervisor starts the server it wraps\n\nimport \"os/exec\"\n\nvar _ = exec.Command\n",
+		"c/bare.go":     "package c\n\n//deedglass:allow-exec\n\nimport \"os/exec\"\n\nvar _ = exec.Command\n",
+		"d/run_test.go": "package d\n\nimport \"os/exec\"\n\nvar _ = exec.Command\n",
+	}, "a/run.go:3", "c/bare.go:3", "c/bare.go:5")
+}
+
+func TestG7Unsafe(t *testing.T) {
+	want(t, G7, map[string]string{
+		"a/u.go":  "package a\n\nimport \"unsafe\"\n\nvar _ = unsafe.Sizeof(0)\n",
+		"b/h.go":  "package b\n\nimport \"reflect\"\n\nvar _ reflect.SliceHeader\nvar _ reflect.StringHeader\n",
+		"c/ok.go": "package c\n\n//deedglass:allow-unsafe an ioctl needs a pointer to a local struct\n\nimport \"unsafe\"\n\nvar _ = unsafe.Sizeof(0)\n",
+	}, "a/u.go:3", "b/h.go:5", "b/h.go:6")
+}
+
+func TestG8ConstantTime(t *testing.T) {
+	want(t, G8, map[string]string{
+		"a/cmp.go": `package a
+
+import (
+	"bytes"
+	"crypto/subtle"
+	"strings"
+)
+
+const tokenKind = "app"
+
+func Check(mac, want []byte, csrfHeader, csrfCookie, kind string, signature string, prevHash string, a, b string) bool {
+	_ = bytes.Equal(mac, want)
+	_ = csrfHeader == csrfCookie
+	_ = strings.EqualFold(signature, "x")
+	_ = kind == tokenKind
+	_ = len(signature) == 0
+	_ = csrfHeader == ""
+	_ = subtle.ConstantTimeCompare(mac, want) == 1
+	_ = prevHash != a //deedglass:allow-compare a deed's public prev_hash
+	_ = a == b
+	return false
+}
+`,
+	}, "a/cmp.go:12", "a/cmp.go:13", "a/cmp.go:14")
+}
+
+func TestG9TextTemplate(t *testing.T) {
+	want(t, G9, map[string]string{
+		"a/mail.go": "package a\n\nimport \"text/template\"\n\nvar _ = template.New\n",
+		"b/html.go": "package b\n\nimport \"html/template\"\n\nvar _ = template.New\n",
+		"c/text.go": "package c\n\n//deedglass:allow-text-template the plain-text part of an email\n\nimport \"text/template\"\n\nvar _ = template.New\n",
+	}, "a/mail.go:3")
+}
+
+func TestG10ServerTimeouts(t *testing.T) {
+	want(t, G10, map[string]string{
+		"a/srv.go": `package a
+
+import (
+	"net/http"
+	"time"
+)
+
+func Start(h http.Handler) {
+	_ = &http.Server{Handler: h}
+	_ = &http.Server{Handler: h, ReadHeaderTimeout: 5 * time.Second}
+	_ = http.ListenAndServe(":0", h)
+}
+`,
+	}, "a/srv.go:9", "a/srv.go:11")
 }

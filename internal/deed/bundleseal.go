@@ -69,7 +69,7 @@ func VerifyBundleSeal(bs *BundleSeal, manifest []byte, ks *KeySet, createdAt tim
 	fail := func(detail string) error {
 		return &VerifyError{Code: CodeBundleSealInvalid, Key: bs.SealKeyID, Detail: detail}
 	}
-	if Digest(manifest) != bs.ManifestHash {
+	if Digest(manifest) != bs.ManifestHash { //deedglass:allow-compare a bundle's public manifest hash
 		return fail("manifest_hash does not match manifest.json")
 	}
 	_, pub, ok := ks.Lookup(bs.SealKeyID)

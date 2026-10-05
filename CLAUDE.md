@@ -118,7 +118,11 @@ make attack         # S18: the V7 attack suite on a throwaway PG 18 (real serve,
 make attack-report  # S18: print the last run and regenerate docs/ATTACK_SUITE.md (never edit that page by hand; -check in CI)
 DEEDGLASS_IT_ATTACK_RUN='TestAttack/H03' make attack   # one case; 'TestOrgIsolation' for the isolation sweep
 make vuln           # S18: govulncheck v1.8.0 (ADR-024); also the CI govulncheck job
-go test ./internal/lint/...   # S18: static guards G1-G5 (allow markers: //deedglass:allow-sql-build <reason>, //deedglass:allow-math-rand <reason>)
+go test ./internal/lint/...   # S18/S34: static guards G1-G10 (allow markers, each with a reason: //deedglass:allow-sql-build, allow-math-rand, allow-exec, allow-unsafe, allow-compare (per line), allow-text-template)
+make attack-one CASE=Q01  # S34: one attack case
+make audit          # S34: govulncheck, npm audit --omit=dev (web, docs-site, sdk/typescript), pip-audit 2.10.1 on the Python SDK's runtime closure (ADR-066); summaries in .tmp/audit
+make fuzz-all       # S34: the timed fuzz schedule (about 2 h, 3 targets at a time, FUZZ_SCALE=0.1 for a tenth); JSON in bench/results/<date>-<os>-<arch>-fuzz.json
+make fuzz-regress   # S34: every fuzz target for 10 s (the committed corpus replays); CI job fuzz-regress
 make demo-check     # S17: the Postgres connector's readiness report on the demo (make demo-up first; it runs init --apply)
 make demo-up        # S15: the Acme demo stack (examples/demo; HTTP=1 adds the everything upstream, DEMO_PORT=8091 if 8080 is taken)
 make demo-status | demo-snippet CLIENT=… | demo-follow | demo-verify | demo-psql | demo-reset [HARD=1] | demo-down
@@ -196,7 +200,7 @@ scripts/ci-local.sh # the CI jobs locally (docker-smoke and govulncheck skip whe
    `github.com/gowebpki/jcs` v1.0.2 (ADR-005); `go.yaml.in/yaml/v3` v3.0.5 (ADR-015);
    `github.com/jackc/pgx/v5` v5.11.0 (ADR-001, in go.mod since S02); `github.com/veraison/go-cose`
    v1.3.0 with `fxamacker/cbor/v2` v2.9.4 (ADR-026, in go.mod since S04). npm, dev only (`web/verify`,
-   ADR-027, accepted; `sdk/typescript`, ADR-062, proposed: `ai` 7.0.127, `@openai/agents` 0.18.0, `@langchain/core` 1.2.14, `@anthropic-ai/claude-agent-sdk` 0.3.289, `zod` 4.6.5, `publint` 0.3.25, `@arethetypeswrong/cli` 0.18.5, `@vitest/coverage-v8` 5.0.3; `@deedglass/sdk` itself has no runtime dependency); Python, `sdk/python` (ADR-063, proposed): runtime `httpx` >=0.28.1,<0.29 only, extras `cryptography`, `langchain`, `claude-agent-sdk` (`openai-agents` and `crewai` declared), dev tools exact pins in `sdk/python/requirements-dev.txt`: `typescript` 7.0.2, `vitest` 5.0.3, `vite` 8.3.1, `@types/node` 24.19.0; no runtime dependency. The Console (`web/`, ADR-053, accepted under DL-038), dev and build only: `astro` 7.3.5, `tailwindcss` and `@tailwindcss/vite` 4.3.3, `@fontsource-variable/inter` and `@fontsource/geist-mono` 5.3.0, `lucide-static` 1.49.0, `typescript` 7.0.2, `vitest` 5.0.3, `happy-dom` 20.14.5, `@playwright/test` 1.63.0, `@axe-core/playwright` 4.13.0, `lighthouse` 13.5.0; nothing from npm runs in the shipped Console. The docs site (`docs-site/`, ADR-064, proposed), build only: `astro` 7.3.5, `@astrojs/starlight` 0.42.5, `starlight-links-validator` 0.26.0, `starlight-openapi` 0.26.3, `starlight-llms-txt` 0.12.0, the same fontsource pins, `cspell` 10.3.6; Lighthouse and Playwright come from `web/`.
+   ADR-027, accepted; `sdk/typescript`, ADR-062, accepted under DL-047: `ai` 7.0.127, `@openai/agents` 0.18.0, `@langchain/core` 1.2.14, `@anthropic-ai/claude-agent-sdk` 0.3.289, `zod` 4.6.5, `publint` 0.3.25, `@arethetypeswrong/cli` 0.18.5, `@vitest/coverage-v8` 5.0.3; `@deedglass/sdk` itself has no runtime dependency); Python, `sdk/python` (ADR-063, accepted under DL-048): runtime `httpx` >=0.28.1,<0.29 only, extras `cryptography`, `langchain`, `claude-agent-sdk` (`openai-agents` and `crewai` declared), dev tools exact pins in `sdk/python/requirements-dev.txt`: `typescript` 7.0.2, `vitest` 5.0.3, `vite` 8.3.1, `@types/node` 24.19.0; no runtime dependency. The Console (`web/`, ADR-053, accepted under DL-038), dev and build only: `astro` 7.3.5, `tailwindcss` and `@tailwindcss/vite` 4.3.3, `@fontsource-variable/inter` and `@fontsource/geist-mono` 5.3.0, `lucide-static` 1.49.0, `typescript` 7.0.2, `vitest` 5.0.3, `happy-dom` 20.14.5, `@playwright/test` 1.63.0, `@axe-core/playwright` 4.13.0, `lighthouse` 13.5.0; nothing from npm runs in the shipped Console. The docs site (`docs-site/`, ADR-064, accepted under DL-049), build only: `astro` 7.3.5, `@astrojs/starlight` 0.42.5, `starlight-links-validator` 0.26.0, `starlight-openapi` 0.26.3, `starlight-llms-txt` 0.12.0, the same fontsource pins, `cspell` 10.3.6; Lighthouse and Playwright come from `web/`.
    `cel.dev/cel-go` v0.32.0 (ADR-017, in go.mod since S10; brings protobuf, antlr4-go, cel.dev/expr,
    genproto and x/exp; the binary-size budget is ADR-032, accepted under DL-024 and amended under DL-031: < 40 MB). The MCP Go SDK
    `github.com/modelcontextprotocol/go-sdk` v1.8.0 (ADR-018, in go.mod since S14; since S15 the
@@ -645,7 +649,7 @@ and "open source" until the repo is public. Style bans: "revolutionary", "world-
   network without a `--keys` URL, terminal sanitizing.
 - `web/verify` (S05): vectors, parity 500/500, strict, JCS, keys (A13, RFC 8032, Wycheproof), page
   safety (CSP, no HTML from strings, no storage, one fetch).
-- `attack/` (S18): 106 case ids (66 V0 + 19 V7: H01–H11, J01–J04, K01–K04 + S21's W01–W13 + S22's L01–L08 + S23's U01–U05), the outcome enum, the
+- `attack/` (S18): 129 case ids (66 V0 + 19 V7: H01–H11, J01–J04, K01–K04 + S21's W01–W13 + S22's L01–L08 + S23's U01–U05 + S34's P02–P08, P10, Q01–Q08, R01–R07), the outcome enum, the
   demo sets, one pinned digest per group set (`expectedDigest` A–G after ADR-021,
   `expectedDigestV7` H/J/K, ADR-040, `expectedDigestW` W, ADR-046, `expectedDigestL` L, ADR-049, `expectedDigestU` U, ADR-052; a group without a pin fails), `TestADR021WordsOnly`, `needs`
   names S19–S37 and stays outside the digest, V7 OWASP tags only ASI01/02/03/10. `make attack`
@@ -655,7 +659,10 @@ and "open source" until the repo is public. Style bans: "revolutionary", "world-
   (every id-bearing route answers another org's ids exactly as unknown ids; lists and exports leak
   nothing; no Acme row changes; a route without a fixture fails), and `attack-report -check` (the
   generated page matches the committed results). `internal/lint` (S18): G1–G5 with `TestRepoClean`
-  and a positive test per guard. `internal/httpx` `TestRouteAuthCoverage` and `cmd/deedglass`
+  and a positive test per guard. S34: groups P, Q, R (23 cases, `expectedDigestS34`, ADR-065), V0
+  cases `superseded` or `retired` outside every digest; G6–G10; `TestAuthzMatrix`,
+  `TestAuthzMatrixServe`, `TestSecurityHeadersRoutes`, `TestCORSDenied`, `TestLimits`, `TestCookieFlags`,
+  `TestRuntimeRoleCannotBypassRLS`; the MCP screen (`internal/mcp/toolscan`, `TestScreenHidesAndPins`). `internal/httpx` `TestRouteAuthCoverage` and `cmd/deedglass`
   `TestServeRoutesUnauthenticated`: the public route set is exact and every other route is 401
   without a credential.
 - `scripts/integration_smoke.sql`: live prosrc hash, roles, grants, RLS, replica identity, one real

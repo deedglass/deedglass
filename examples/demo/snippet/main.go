@@ -3,6 +3,8 @@
 // examples/demo/.demo-keys; otherwise the key is a placeholder you replace yourself.
 package main
 
+//deedglass:allow-exec the demo's snippet helper resolves commands with exec.LookPath; nothing is started
+
 import (
 	"bufio"
 	"flag"

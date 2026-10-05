@@ -217,7 +217,7 @@ Source of truth: `internal/gate/present.go` (the S15 block) and `internal/identi
 |---|---|
 | `credentials_missing` | The connector "orders" has no credentials yet. Run deedglass connector credentials set orders --from-env ORDERS_TOKEN. |
 | `destination_blocked` (agent) | The connector's destination is blocked by Deedglass's network rules. An admin can see why in Console › Connectors. |
-| `destination_blocked` (admin) | base_url resolves to 169.254.169.254, a cloud metadata address. Deedglass never connects to cloud metadata addresses, even in dev. Point base_url at the service's public address. |
+| `destination_blocked` (admin) | base_url resolves to 169.254.169.254, a cloud metadata address. Deedglass never connects to cloud metadata addresses, even in dev. Use the service's public address. |
 | `vault_unavailable` (agent) | Deedglass couldn't open this connector's credentials. An admin has been alerted. |
 | `vault_unavailable` (admin) | 2 credentials use kek:77c0e1a9b442, which isn't in DEEDGLASS_VAULT_KEY. Add it back as the second key, restart, then run deedglass vault rotate. |
 | `validation_failed` (side effect) | tools[2] is a DELETE, so its side effect can't be "read". Use "destructive", or leave side_effect out. |

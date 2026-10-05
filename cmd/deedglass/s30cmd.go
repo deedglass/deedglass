@@ -1,5 +1,7 @@
 package main
 
+//deedglass:allow-exec opens the Google consent page in the person's browser (open or xdg-open) for connector gmail authorize
+
 import (
 	"context"
 	"encoding/json"

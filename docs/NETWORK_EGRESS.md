@@ -86,7 +86,7 @@ and a fourth hop are refused, and every hop goes through the same dialer and its
 
 A refused destination is `destination_blocked`. The admin reads the address and its class:
 `base_url resolves to 169.254.169.254, a cloud metadata address. Deedglass never connects to cloud
-metadata addresses, even in dev. Point base_url at the service's public address.` The agent reads
+metadata addresses, even in dev. Use the service's public address.` The agent reads
 only: `The connector's destination is blocked by Deedglass's network rules. An admin can see why
 in Console › Connectors.`, so it can't map the network by probing.
 

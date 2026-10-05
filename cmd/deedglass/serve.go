@@ -250,6 +250,17 @@ func runServe(ctx context.Context, e *Env, args []string) error {
 	// S18 (S16 step 14): remote MCP servers as mcp_http connector rows, credentials in the vault.
 	mcpType := upstream.NewType(pool)
 	cw.reg.RegisterType(mcpType)
+	// S34 (Q01, Q02): a tool the gateway hides is sealed as connector.tool_hidden.
+	pool.SetHiddenRecorder(func(ctx context.Context, h upstream.HiddenTool) {
+		data := map[string]any{"connector": h.Connector, "tool": h.Tool, "reason": h.Reason, "kind": h.Kind, "digest": h.Digest}
+		if h.Field != "" {
+			data["field"], data["excerpt"] = h.Field, h.Excerpt
+		}
+		if h.Pinned != "" {
+			data["pinned"] = h.Pinned
+		}
+		_ = cw.breaker.ToolHidden(ctx, h.Org, h.ConnectorID, h.Sentence, data)
+	})
 	// 5e. Approvals (S22): the Gate pauses through them, and their notify job and links run beside it.
 	// S29: approvals in Slack (the card is posted and edited by the notifier; clicks arrive at
 	// POST /v1/slack/interact).

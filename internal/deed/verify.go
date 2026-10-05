@@ -53,7 +53,7 @@ func VerifyEnvelope(raw []byte, ks *KeySet, opt VerifyOptions) (*Result, error) 
 	fail := func(c Code) *VerifyError {
 		return &VerifyError{Code: c, Seq: b.Seq, DeedID: b.DeedID, Key: env.SealKeyID, IssuedAt: b.IssuedAt}
 	}
-	if Digest(p.bodyJCS) != env.BodyHash {
+	if Digest(p.bodyJCS) != env.BodyHash { //deedglass:allow-compare a deed's public body hash
 		return nil, fail(CodeBodyHashMismatch)
 	}
 	if env.SealKeyID != b.SealKeyID {

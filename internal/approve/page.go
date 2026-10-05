@@ -33,7 +33,7 @@ var assetTypes = map[string]string{
 func PageRoutes() []httpx.Route {
 	return []httpx.Route{
 		{Method: "GET", Pattern: "/approve", OperationID: "approvePage", Auth: httpx.Public, Handler: page},
-		{Method: "GET", Pattern: "/approve/assets/{file}", OperationID: "approveAsset", Auth: httpx.Public, Extension: AssetsADR, Handler: asset},
+		{Method: "GET", Pattern: "/approve/assets/{file}", OperationID: "approveAsset", Auth: httpx.Public, Extension: AssetsADR, PublicReason: "the approval page's own static files; the token travels in the fragment, never here", Handler: asset},
 	}
 }
 

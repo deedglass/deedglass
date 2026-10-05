@@ -353,10 +353,10 @@ func checkLoaded(org string, row *LoadedRow, keys *deed.KeySet) (*Loaded, error)
 		}
 		return nil, fail("compile", "the stored version %s no longer compiles (%s)", ver.ID, code)
 	}
-	if c.VersionHash != ver.VersionHash {
+	if c.VersionHash != ver.VersionHash { //deedglass:allow-compare a policy version's public digest
 		return nil, fail("version_hash", "version %s recompiles to %s, not the stored %s", ver.ID, ShortHash(c.VersionHash), ShortHash(ver.VersionHash))
 	}
-	if c.SourceHash != ver.SourceHash {
+	if c.SourceHash != ver.SourceHash { //deedglass:allow-compare a policy source's public digest
 		return nil, fail("source_hash", "version %s's source hashes to %s, not the stored %s", ver.ID, ShortHash(c.SourceHash), ShortHash(ver.SourceHash))
 	}
 	if keys == nil {
@@ -391,8 +391,8 @@ func checkLoaded(org string, row *LoadedRow, keys *deed.KeySet) (*Loaded, error)
 	if err := json.Unmarshal(row.DeedData, &data); err != nil {
 		return nil, fail("deed_data", "the event data isn't readable")
 	}
-	if data.PolicyID != act.PolicyID || data.VersionID != ver.ID || data.Version != ver.Version || data.VersionHash != ver.VersionHash ||
-		data.SourceHash != ver.SourceHash || data.Mode != act.Mode || data.ActivationID != act.ID {
+	if data.PolicyID != act.PolicyID || data.VersionID != ver.ID || data.Version != ver.Version || data.VersionHash != ver.VersionHash || //deedglass:allow-compare a policy version's public digest
+		data.SourceHash != ver.SourceHash || data.Mode != act.Mode || data.ActivationID != act.ID { //deedglass:allow-compare a policy source's public digest
 		return nil, fail("deed_data", "the deed's data names a different activation")
 	}
 	return &Loaded{Compiled: c, PolicyID: act.PolicyID, Name: c.Name, VersionID: ver.ID, VersionHash: ver.VersionHash,
@@ -471,7 +471,7 @@ func (r *Registry) poll(ctx context.Context) {
 			}
 			continue
 		}
-		if signature(ids) != a.signature || a.Enforce.Unavailable != nil {
+		if signature(ids) != a.signature || a.Enforce.Unavailable != nil { //deedglass:allow-compare a cache key of policy ids, not a cryptographic signature
 			r.changed(it.org)
 			r.reload(ctx, it.org)
 		}

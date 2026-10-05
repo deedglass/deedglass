@@ -35,6 +35,8 @@ type MetaCase struct {
 	OWASP          []string `json:"owasp"`
 	Status         string   `json:"status"`
 	Needs          []string `json:"needs,omitempty"`
+	SupersededBy   string   `json:"superseded_by,omitempty"` // S34: a V0 case's V7 successor
+	Retired        string   `json:"retired,omitempty"`       // S34: why a V0 case no longer applies
 }
 
 // LoadMeta reads the meta file.
@@ -49,6 +51,9 @@ func LoadMeta(path string) (*Meta, error) {
 	}
 	return &m, nil
 }
+
+// V7Groups are the groups make attack runs (S18 H, J, K; S21 W; S22 L; S23 U; S34 P, Q, R).
+const V7Groups = "HJKLUWPQR"
 
 // Case returns the declared case id, or nil.
 func (m *Meta) Case(id string) *MetaCase {

@@ -80,11 +80,12 @@ rules:
 |---|---|
 | `tools/call` | Asks the Gate first (proxy mode). Forwards only on `authorized`. |
 | `tools/call deedglass.check_approval` | Handled by the wrapper (below). |
-| `tools/list` | Forwarded; the answer is filtered (tools the policy always denies, tools whose definition changed, server tools named `deedglass.*`), and `deedglass.check_approval` is added to the first page. For 2026-07-28 requests, `cacheScope` becomes `"private"` and `ttlMs` at most 60,000. |
+| `tools/list` | Forwarded; the answer is filtered (tools the policy always denies, tools whose definition changed, tools whose description carries instructions aimed at the model or characters people can't see (S34), server tools named `deedglass.*`), and `deedglass.check_approval` is added to the first page. For 2026-07-28 requests, `cacheScope` becomes `"private"` and `ttlMs` at most 60,000. |
 | `initialize`, `server/discover` | Forwarded; one line is added to `instructions` and `capabilities.tools` is made present. |
 | `notifications/cancelled` | Mapped to the server's id and forwarded (below). |
 | Everything else | Passed through with only the request id rewritten: `ping`, `resources/*`, `prompts/*`, `completion/complete`, `subscriptions/listen`, `logging/setLevel`, notifications, unknown methods and extension fields. |
-| Server-to-client requests (2025 revisions: `sampling/createMessage`, `elicitation/create`, `roots/list`) | Passed through ungoverned in v1; the client shows its own confirmation. |
+| Server-to-client requests: `roots/list`, `ping` | Passed through; the client shows its own confirmation. |
+| Server-to-client requests: `sampling/createMessage`, `elicitation/create` (S34) | Refused: the wrapper answers the server with a JSON-RPC error (-32601) and logs it, and the client never sees the request. `--allow-server-requests sampling,elicitation` passes the named kinds through, for a server you trust to ask your model for text or you for input. The HTTP gateway never relays them: its MCP client declares neither capability, and logs each request it refuses. |
 
 **Governed methods:** `tools/call` (and the wrapper's own `deedglass.check_approval`).
 **Rewritten results:** `initialize`, `server/discover`, `tools/list`. **Passthrough:** everything
@@ -206,6 +207,7 @@ name still goes to the Gate and is sealed as a denial.
 | `--connector-type` | `mcp` | `postgres` for servers whose tools take `args.sql` (turns on the SQL guard's facts). |
 | `--hide-denied` | `true` | Hide tools the policy always denies. |
 | `--fail-open` | off | Development only (above). |
+| `--allow-server-requests` | none | `sampling`, `elicitation` (comma-separated): pass the server's requests for the client's model or for your input to the client. By default both are refused and logged (S34). |
 | `--call-timeout` | none | Give up on a call after this long. |
 | `--result-mode` | `full` | `full` reports results up to 256 KiB (larger ones as a digest); `digest` reports digests only. |
 | `--on-behalf-of` | none | `Deedglass-On-Behalf-Of` on every action. |
@@ -245,8 +247,17 @@ upstream directly p50 5.4 ms, p99 6.5 ms; header validation and envelope parsing
 
 ## What it doesn't do
 
-- **It doesn't govern resources, prompts, completion or legacy sampling and elicitation yet.**
-  They pass through. Governing `resources/read` and `prompts/get` is on the v2 roadmap.
+- **It doesn't govern resources, prompts or completion yet.** They pass through. Governing
+  `resources/read` and `prompts/get` is on the v2 roadmap. Sampling and elicitation are refused
+  unless `--allow-server-requests` names them (S34); once allowed, they pass through ungoverned.
+- **Description scanning is a heuristic (S34).** A tool is hidden when its title, description or
+  a parameter's description contains a phrase that tells a model to drop its instructions or hide
+  something from the user (`ignore previous instructions`, `do not tell the user`, …), an
+  instruction tag such as `<IMPORTANT>`, or characters people can't see (Unicode tag characters,
+  bidirectional overrides, zero-width characters). It doesn't understand intent: a reworded
+  instruction passes, and a harmless description can be hidden. The hidden tool is logged with the
+  admin's sentence, sealed as `connector.tool_hidden` on the HTTP gateway, and refused as an
+  unknown tool; the agent is never told why.
 - **It can't stop a server that acts outside MCP**, for example one that writes files on its own
   at startup or on a timer. It governs the calls the client makes.
 - **The result is the server's word.** An allowed call is sealed L0 VERIFIED with method

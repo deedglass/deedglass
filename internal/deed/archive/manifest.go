@@ -139,7 +139,7 @@ func (m *Manifest) Check(o Observed) error {
 		return mismatch("dates")
 	case m.Chain.Head != o.Head:
 		return mismatch("head")
-	case m.Chain.Anchor.BodyHash != o.FirstPrevHash:
+	case m.Chain.Anchor.BodyHash != o.FirstPrevHash: //deedglass:allow-compare a deed's public body hash
 		return mismatch("anchor")
 	}
 	for _, k := range []string{"action", "admin", "amendment"} {

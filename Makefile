@@ -12,7 +12,7 @@ LDFLAGS  := -s -w -X $(BI).Version=$(VERSION) -X $(BI).Commit=$(COMMIT) -X $(BI)
 	integration matrix fuzz bench bench-store bench-deed cover clean \
 	dev dev-down dev-reset dev-logs run docker bench-http bench-verify \
 	web-verify-install web-verify-test sdk-ts sdk-ts-it sdk-sync-verify sdk-runtime sdk-examples web-verify-build web-verify-serve gencopy genmark bench-mark bench-ledger bench-stop bench-intents bench-gate bench-witness policy-test \
-	fuzz-policy fuzz-policy-short bench-policy bench-eval mcp-it bench-mcp \
+	fuzz-policy fuzz-policy-short audit fuzz-all fuzz-regress attack-one bench-policy bench-eval mcp-it bench-mcp \
 	demo-up demo-down demo-reset demo-status demo-snippet demo-psql demo-follow demo-verify demo-check demo-smoke bench-gateway \
 	demo-trigger-on demo-trigger-off demo-order-reset demo-hero demo-hero-check demo-diff bench-l2 bench-approvals bench-slack \
 	mock-orders bench-connectors bench-postgres bench-decoder attack attack-report vuln undo-matrix
@@ -73,8 +73,21 @@ attack: ## S18: the V7 attack suite on a throwaway PG 18 (a real serve, real Pos
 	scripts/attack_local.sh
 	$(GO) run ./attack/cmd/attack-report
 
+attack-one: ## S34: one attack case on a throwaway PG 18: make attack-one CASE=Q01 (any TestAttack subtest name)
+	@test -n "$(CASE)" || { echo "make attack-one CASE=<id>, for example CASE=Q01"; exit 2; }
+	DEEDGLASS_IT_ATTACK_RUN='TestAttack/$(CASE)$$' scripts/attack_local.sh
+
 attack-report: ## S18: print the last attack run and regenerate docs/ATTACK_SUITE.md from the meta and attack/results/latest.json (-check in CI)
 	$(GO) run ./attack/cmd/attack-report
+
+audit: ## S34: the supply-chain baseline: govulncheck, npm audit --omit=dev (web, docs-site, sdk/typescript), pip-audit 2.10.1 (sdk/python runtime); summaries in .tmp/audit
+	scripts/audit.sh
+
+fuzz-all: ## S34: the fuzz schedule (S34 §3.6, about two hours, 3 targets at a time); JSON in bench/results/<date>-<os>-<arch>-fuzz.json
+	scripts/fuzz_all.sh
+
+fuzz-regress: ## S34: every fuzz target for 10 s: the committed corpus under testdata/fuzz replays, then a short burst (CI job fuzz-regress)
+	scripts/fuzz_all.sh regress
 
 vuln: ## S18: govulncheck, pinned (ADR-041); a dev tool, never linked into the binary
 	$(GO) run golang.org/x/vuln/cmd/govulncheck@v1.8.0 ./...

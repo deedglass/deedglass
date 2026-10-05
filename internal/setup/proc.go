@@ -1,5 +1,7 @@
 package setup
 
+//deedglass:allow-exec deedglass init runs Docker for its Postgres containers, starts deedglass serve detached and opens the Console
+
 import (
 	"context"
 	"fmt"

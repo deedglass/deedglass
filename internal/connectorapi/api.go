@@ -456,6 +456,12 @@ func checkDescription(d string) (string, error) {
 	if utf8.RuneCountInString(d) > MaxDescription || !utf8.ValidString(d) || strings.ContainsFunc(d, func(r rune) bool { return r < 0x20 && r != '\n' || r == 0x7f }) {
 		return "", httpx.ErrValidation("description", "The description must be at most 500 characters, without control characters.")
 	}
+	// S34 (SR-013): a description is shown to every member and sealed in admin deeds, so text the
+	// vault's scrubber recognizes as a credential (a Stripe, Slack, GitHub or Deedglass key, …) is
+	// refused instead of stored. The message never echoes it.
+	if vault.Scrub(d) != d {
+		return "", httpx.ErrValidation("description", "The description looks like it contains a credential. Remove it; store credentials with deedglass connector credentials set.")
+	}
 	return d, nil
 }
 
@@ -494,7 +500,7 @@ func (a *API) patch(w http.ResponseWriter, r *http.Request) error {
 		if err != nil {
 			return err
 		}
-		if in.ExpectedConfigHash != nil && *in.ExpectedConfigHash != c.ConfigHash {
+		if in.ExpectedConfigHash != nil && *in.ExpectedConfigHash != c.ConfigHash { //deedglass:allow-compare a config digest an admin already holds, not a secret
 			return httpx.E(httpx.CodeConflict, httpx.Param("expected_config_hash"),
 				httpx.Msgf("The config changed since you read it (it is %s now). Fetch the connector, apply your change to it, and send it again.", c.ConfigHash))
 		}
@@ -516,7 +522,7 @@ func (a *API) patch(w http.ResponseWriter, r *http.Request) error {
 			if err != nil {
 				return err
 			}
-			if hash != c.ConfigHash {
+			if hash != c.ConfigHash { //deedglass:allow-compare a digest of a request or config, not a secret
 				c.Config, c.ConfigHash = norm, hash
 				changed = append(changed, "config")
 			}

@@ -1,5 +1,7 @@
 package console
 
+import "github.com/deedglass/deedglass/internal/httpx"
+
 // CSP is the Console pages' Content-Security-Policy (S24 §3.10): nothing inline, nothing from
 // another origin, and Trusted Types 'none', so every string-to-HTML sink throws in Chromium. The
 // Console builds DOM only through web/src/lib/dom.ts (text nodes); a build that trips this fails
@@ -9,7 +11,7 @@ const CSP = "default-src 'none'; script-src 'self'; style-src 'self'; img-src 's
 	"object-src 'none'; require-trusted-types-for 'script'; trusted-types 'none'"
 
 // PermissionsPolicy turns off every powerful feature the Console never uses.
-const PermissionsPolicy = "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
+const PermissionsPolicy = httpx.PermissionsPolicy
 
 // ADR names the ADR that adds the Console page routes (GET /app, GET /app/{path...}).
 const ADR = "ADR-054"

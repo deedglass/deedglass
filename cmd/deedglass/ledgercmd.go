@@ -289,6 +289,7 @@ func runActionsList(ctx context.Context, e *Env, args []string) error {
 }
 
 func clip(s string, n int) string {
+	s = clean(s) // S34 (R07, SR-014): tool and agent names come from agents; never raw to a terminal
 	if ui.Width(s) <= n {
 		return s
 	}
@@ -418,9 +419,9 @@ func runActionsShow(ctx context.Context, e *Env, args []string) error {
 	if actionsShowDiff {
 		return printDiff(e, d)
 	}
-	head := d.Tool + " " + ui.Sep + " " + d.Agent.Name
+	head := clean(d.Tool) + " " + ui.Sep + " " + clean(d.Agent.Name)
 	if d.OnBehalfOf != nil {
-		head += " on behalf of " + *d.OnBehalfOf
+		head += " on behalf of " + clean(*d.OnBehalfOf)
 	}
 	head += " " + ui.Sep + " " + time.Time(d.CreatedAt).UTC().Format("2006-01-02 15:04:05") + " UTC"
 	fmt.Fprintln(e.Stdout, st.Bold(head))
@@ -561,7 +562,7 @@ func executionLine(d *ledger.ActionDetail) string {
 		}
 	}
 	if x.ErrorCode != nil {
-		status += " " + ui.Sep + " " + *x.ErrorCode
+		status += " " + ui.Sep + " " + clean(*x.ErrorCode)
 	}
 	if x.LatencyMS != nil {
 		status += fmt.Sprintf(" %s %d ms", ui.Sep, *x.LatencyMS)
@@ -716,7 +717,7 @@ func runDeedsShow(ctx context.Context, e *Env, args []string) error {
 		b := env.Body
 		switch {
 		case b.Action != nil:
-			about := b.Action.Tool + " " + ui.Sep + " " + b.Action.ID
+			about := clean(b.Action.Tool) + " " + ui.Sep + " " + b.Action.ID
 			row("action", about)
 			if b.Witness != nil {
 				row("witness", b.Witness.Level+" "+ui.Sep+" "+b.Witness.Verdict)

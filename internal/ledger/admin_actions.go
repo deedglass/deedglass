@@ -63,6 +63,15 @@ const (
 	// Stripe's request id goes in admin.reason; never a key or a prefix longer than 8 characters.
 	AdminConnectorDisabled = "connector.disabled"
 
+	// S34: the MCP gateway hid one of a connector's tools from clients: its definition's text
+	// carries instructions aimed at the model or characters people can't see (reason
+	// description_flagged, attack case Q01), or it changed after it was first listed (reason
+	// definition_changed, Q02; hidden until Deedglass restarts). Actor {system, deedglass}; target
+	// {connector, con_…}; data: connector (the name), tool, reason, kind, field, excerpt (≤ 40
+	// characters, hidden characters escaped), digest, pinned (definition_changed only). The admin's
+	// sentence goes in admin.reason. Never the whole description.
+	AdminConnectorToolHidden = "connector.tool_hidden"
+
 	// S20: the decoder created or dropped a connector's replication slot. Target {connector, con_…};
 	// data: connector (the name), slot, system_id, reason (created: start; dropped: dropped,
 	// connector_deleted, not_witnessed). A new slot is a new baseline.
@@ -112,6 +121,7 @@ var AdminActions = []string{
 	AdminPolicyActivated, AdminPolicyDeactivated,
 	AdminConnectorCreated, AdminConnectorUpdated, AdminConnectorDeleted, AdminConnectorCredentialsUpdated,
 	AdminConnectorCredentialsRemoved, AdminVaultRotated, AdminConnectorPostgresInitialized, AdminConnectorDisabled,
+	AdminConnectorToolHidden,
 	AdminDecoderSlotCreated, AdminDecoderSlotDropped,
 	AdminApprovalCountersigned, AdminApprovalDecided, AdminWebhookCreated, AdminWebhookDeleted, AdminWebhookDisabled,
 	AdminAnomalyResolved, AdminInsightsSettingsChanged,

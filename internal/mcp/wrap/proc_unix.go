@@ -2,6 +2,8 @@
 
 package wrap
 
+//deedglass:allow-exec the supervisor's process-group handling for the wrapped MCP server
+
 import (
 	"os/exec"
 	"syscall"

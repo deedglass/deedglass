@@ -12,6 +12,7 @@ import (
 	"github.com/deedglass/deedglass/internal/gate"
 	"github.com/deedglass/deedglass/internal/mcp/jsonrpc"
 	"github.com/deedglass/deedglass/internal/mcp/present"
+	"github.com/deedglass/deedglass/internal/mcp/toolscan"
 )
 
 // The tool catalog (S14 §3.5): every tool's definition digest is pinned the first time it is seen;
@@ -24,6 +25,7 @@ const (
 	visVisible = "visible"
 	visHidden  = "hidden"
 	visChanged = "changed"
+	visFlagged = "flagged" // S34 (Q01): the definition's text carries instructions or hidden characters
 )
 
 // maxTTL caps a modern tools/list's ttlMs: the list is filtered per caller.
@@ -116,14 +118,22 @@ func (c *catalog) process(ctx context.Context, result json.RawMessage, modern, f
 			continue
 		}
 		e := c.entries[name]
+		if e != nil && e.Visibility == visFlagged && e.Digest != d {
+			e = nil // a flagged definition was never pinned; its replacement is a first listing
+		}
+		f, flagged := toolscan.Flagged(raw)
 		switch {
+		case e == nil && flagged:
+			c.entries[name] = &CatalogEntry{Name: name, Digest: d, Visibility: visFlagged}
+			c.w.log.sym(symDenied, toolscan.Sentence(name, c.w.cfg.Connector, f), "hidden; calls are refused as an unknown tool")
 		case e == nil:
 			c.entries[name] = &CatalogEntry{Name: name, Digest: d, Visibility: visVisible}
+		case e.Visibility == visFlagged:
 		case e.Digest != d && e.Visibility != visChanged:
 			e.Visibility, e.RuleID, e.Reason = visChanged, "", "the definition changed after it was first listed"
 			c.w.log.sym(symDenied, c.w.cfg.Connector+"."+name+" changed its definition after it was first listed", "hidden until the MCP server restarts")
 		}
-		if c.entries[name].Visibility != visChanged && !strings.HasPrefix(name, "deedglass.") && reMCPName.MatchString(name) {
+		if v := c.entries[name].Visibility; v != visChanged && v != visFlagged && !strings.HasPrefix(name, "deedglass.") && reMCPName.MatchString(name) {
 			refs = append(refs, gate.ToolRef{Name: name, Digest: c.entries[name].Digest})
 		}
 	}
@@ -146,7 +156,7 @@ func (c *catalog) process(ctx context.Context, result json.RawMessage, modern, f
 			}
 			for _, v := range vis.Data {
 				e := c.entries[v.Name]
-				if e == nil || e.Visibility == visChanged {
+				if e == nil || e.Visibility == visChanged || e.Visibility == visFlagged {
 					continue
 				}
 				e.Visibility = visVisible
@@ -168,7 +178,7 @@ func (c *catalog) process(ctx context.Context, result json.RawMessage, modern, f
 		}
 		if it.ok {
 			e := c.entries[it.name]
-			if e.Visibility == visChanged {
+			if e.Visibility == visChanged || e.Visibility == visFlagged {
 				continue
 			}
 			if e.Visibility == visHidden {

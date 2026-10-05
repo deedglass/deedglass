@@ -186,3 +186,30 @@ test('inventory: every docs/*.md is imported, moved, a generator source or repo-
   const orphans = [...walk(join(repo, 'docs'))].map((f) => f.slice(repo.length + 1)).filter((f) => f.endsWith('.md') && !known.has(f));
   assert.deepEqual(orphans, []);
 });
+
+test('security.txt (S34, RFC 9116): the five fields, a mailto contact, an https policy and an Expires within a year', () => {
+  const txt = readFileSync(join(site, 'public/.well-known/security.txt'), 'utf8');
+  const fields = {};
+  for (const line of txt.split('\n').filter(Boolean)) {
+    const [k, ...v] = line.split(': ');
+    (fields[k] ??= []).push(v.join(': '));
+  }
+  assert.deepEqual(Object.keys(fields).sort(), ['Canonical', 'Contact', 'Expires', 'Policy', 'Preferred-Languages']);
+  assert.match(fields.Contact[0], /^mailto:security@deedglass\.com$/);
+  assert.ok(fields.Canonical.includes('https://docs.deedglass.com/.well-known/security.txt'));
+  assert.match(fields.Policy[0], /^https:\/\/github\.com\/deedglass\/deedglass\/blob\/main\/SECURITY\.md$/);
+  const expires = Date.parse(fields.Expires[0]);
+  assert.ok(expires > Date.now(), 'Expires is in the past: renew security.txt');
+  assert.ok(expires - Date.now() < 366 * 24 * 3600 * 1000, 'Expires is more than a year away (RFC 9116 §2.5.5 recommends less)');
+});
+
+test('disclosure page (S34): it carries SECURITY.md\'s commitments word for word', () => {
+  const page = readFileSync(join(site, 'src/content/docs/security/disclosure.mdx'), 'utf8').replace(/\s+/g, ' ');
+  const policy = readFileSync(join(repo, 'SECURITY.md'), 'utf8').replace(/\s+/g, ' ');
+  for (const s of ['within 3 business days', 'within 7 business days', 'within 30 days', 'There is **no bug bounty** at this stage.',
+    'The address is being set up.', 'We won\'t pursue or support legal action against research done in good faith within this policy.',
+    'The latest minor release gets security fixes.']) {
+    assert.ok(policy.includes(s), `SECURITY.md lacks "${s}"`);
+    assert.ok(page.includes(s), `the disclosure page lacks "${s}" (keep it equal to SECURITY.md)`);
+  }
+});

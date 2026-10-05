@@ -193,7 +193,7 @@ func TestBlockedErrorMessages(t *testing.T) {
 	if !ok {
 		t.Fatalf("err = %v", err)
 	}
-	want := "metadata.attack.test resolves to 169.254.169.254 (cloud metadata). Deedglass never connects to cloud metadata addresses, even in dev. Point base_url at the service's public address."
+	want := "metadata.attack.test resolves to 169.254.169.254 (cloud metadata). Deedglass never connects to cloud metadata addresses, even in dev. Use the service's public address."
 	if be.Error() != want {
 		t.Errorf("Error() = %q", be.Error())
 	}
@@ -201,7 +201,7 @@ func TestBlockedErrorMessages(t *testing.T) {
 		t.Errorf("the agent message names the network: %q", be.AgentMessage())
 	}
 	_, err = p.CheckURL(context.Background(), "https://169.254.169.254/")
-	if be, _ := IsBlocked(err); be == nil || be.Error() != "169.254.169.254 is a cloud metadata address. Deedglass never connects to cloud metadata addresses, even in dev. Point base_url at the service's public address." {
+	if be, _ := IsBlocked(err); be == nil || be.Error() != "169.254.169.254 is a cloud metadata address. Deedglass never connects to cloud metadata addresses, even in dev. Use the service's public address." {
 		t.Errorf("literal: %v", err)
 	}
 }

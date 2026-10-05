@@ -1,5 +1,7 @@
 package wrap
 
+//deedglass:allow-exec mcp wrap starts and supervises the MCP server named after --
+
 import (
 	"bufio"
 	"context"
