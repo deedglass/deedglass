@@ -9,6 +9,10 @@ import { Aside } from '@astrojs/starlight/components';
 
 By the end you'll have one Deedglass server in prod mode, behind TLS, with its own Postgres.
 
+<Aside type="tip" title="The cloud kit">
+The repository's `deploy/cloud/` is this guide as files: Caddy with automatic TLS, the image pinned by digest, Postgres reachable only over a Unix socket, encrypted nightly backups with a tested restore, health heartbeats and runbooks. Its `GO_LIVE.md` is the step-by-step list, one command per step.
+</Aside>
+
 **Before you start**
 
 - A VM with Docker, and a Postgres 16, 17 or 18 for Deedglass's own data (the control plane), separate from the databases it watches.
@@ -16,7 +20,7 @@ By the end you'll have one Deedglass server in prod mode, behind TLS, with its o
 
 ## 1. Build the image
 
-There is no published image yet. Build it from a checkout: `make docker`, or `docker build -t deedglass:0.1.0 .`. It is one static binary on a distroless base, running as a non-root user, under 40 MB.
+From the first release, use `ghcr.io/deedglass/deedglass:<version>@sha256:<digest>` ([Install Deedglass](/get-started/install-deedglass/)). Before that, build it from a checkout: `make docker`, or `docker build -t deedglass:0.1.0 .`. It is one static binary on a distroless base, running as a non-root user, under 40 MB.
 
 ## 2. Create the roles
 

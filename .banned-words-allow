@@ -70,3 +70,6 @@ DESIGN.md::world-class::the brand's 'words we never use' list, copied verbatim f
 sdk/typescript/LICENSE::compliance::the Apache-2.0 licence text, verbatim (a copy of the root LICENSE that npm pack ships)
 sdk/python/LICENSE::compliance::the Apache-2.0 licence text, verbatim (a copy of the root LICENSE that the wheel ships)
 npm/deedglass/LICENSE::compliance::the Apache-2.0 licence text, verbatim (a copy of the root LICENSE that npm pack ships)
+# S35: cosign's own flag names in the commands that check a signed release (third-party tool flag or feature name)
+docs/INSTALL.md::certificate::third-party tool flag or feature name (cosign verify-blob --certificate-identity-regexp / --certificate-oidc-issuer)
+scripts/release-notes.sh::certificate::third-party tool flag or feature name (cosign verify-blob --certificate-identity-regexp / --certificate-oidc-issuer)

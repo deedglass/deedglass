@@ -92,6 +92,7 @@ type Run struct {
 	Object     string     `json:"object"` // "attack_run"
 	StartedAt  string     `json:"started_at"`
 	Commit     string     `json:"commit"`
+	Version    string     `json:"version,omitempty"` // S35: the release tag the run belongs to (DEEDGLASS_IT_ATTACK_VERSION in release.yml)
 	Postgres   string     `json:"postgres"`
 	BootMS     int64      `json:"boot_ms"`
 	Cases      []Result   `json:"cases"`

@@ -22,8 +22,8 @@ await generateText({ model, tools: { ...tools, ...connectorTools }, prompt });
   `stripe__create_refund`, with their JSON Schema (`jsonSchema(...)`), run by Deedglass with the
   connector's credentials, which never leave it.
 - **Pending and denied:** by default the model reads the sentence (`Blocked by policy "no-deletes":
-  Agents never delete customers. Nothing was run.`, or `Waiting for approval under policy … Approval
-  apr_… expires at 10:42 UTC. Try again after a person approves it.`), and the run continues.
+  Agents never delete customers. Nothing was run.`, or `Waiting for approval in Console › Approvals
+  (apr_…). Try again after someone decides.`, the same sentence the Python SDK writes), and the run continues.
   `onDenied: 'throw'`, `onPending: 'throw' | 'wait'` change that. `onAction` sees every decided action.
 - **AI SDK's `toolApproval` and Deedglass's approvals are different people:** `toolApproval` asks the
   chat user in your UI; a Deedglass rule asks the org's approvers (Console, email, Slack) and seals

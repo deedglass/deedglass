@@ -1,0 +1,18 @@
+# The Deedglass cloud stack (S35): docker compose up on boot, down on stop.
+[Unit]
+Description=Deedglass cloud stack (Caddy, deedglass, Postgres)
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/opt/deedglass/deploy/cloud
+ExecStartPre=/opt/deedglass/deploy/cloud/scripts/preflight.sh --offline
+ExecStart=/usr/bin/docker compose -f /opt/deedglass/deploy/cloud/compose.yaml up -d --wait
+ExecStop=/usr/bin/docker compose -f /opt/deedglass/deploy/cloud/compose.yaml down
+TimeoutStartSec=300
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,39 @@
+# Caddy 2.11 for the cloud beta (S35). app. serves the Console and /v1 on one origin; api. serves
+# only the API, the MCP gateway, the published keys and the OpenAPI file. TLS is automatic. The first
+# boot uses Let's Encrypt's staging CA (ACME_CA in /opt/deedglass/.env) until the health check
+# passes, so a DNS mistake never spends the production rate limit (GO_LIVE.md step 8).
+{
+	email {$CADDY_EMAIL}
+	acme_ca {$ACME_CA}
+	servers {
+		protocols h1 h2 h3
+	}
+}
+
+(common) {
+	encode zstd gzip
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		-Server
+	}
+	log {
+		output stdout
+		format json
+	}
+}
+
+{$APP_HOST} {
+	import common
+	@mcp path /mcp /mcp/*
+	respond @mcp 404
+	reverse_proxy deedglass:8080
+}
+
+{$API_HOST} {
+	import common
+	@notapi not path /v1/* /mcp /mcp/* /.well-known/* /api/openapi.yaml
+	respond @notapi 404
+	reverse_proxy deedglass:8080 {
+		flush_interval -1
+	}
+}

@@ -9,7 +9,7 @@ BI       := github.com/deedglass/deedglass/internal/buildinfo
 LDFLAGS  := -s -w -X $(BI).Version=$(VERSION) -X $(BI).Commit=$(COMMIT) -X $(BI).Modified=$(MODIFIED) -X $(BI).Date=$(DATE)
 
 .PHONY: docs docs-dev docs-check docs-snippets docs-lighthouse py-ci py-build py-examples web-install web-tokens web-build web-test web-e2e web-lighthouse web-dev build-only bench-undo all help ci build test test-short vet fmt fmt-check tidy-check testdata-check rename-guard banned-words nocgo \
-	integration matrix fuzz bench bench-store bench-deed cover clean \
+	integration matrix fuzz bench workflows-check release-check cloud-smoke bench-micro bench-quick bench-soak bench-check bench-report bench-store bench-deed cover clean \
 	dev dev-down dev-reset dev-logs run docker bench-http bench-verify \
 	web-verify-install web-verify-test sdk-ts sdk-ts-it sdk-sync-verify sdk-runtime sdk-examples web-verify-build web-verify-serve gencopy genmark bench-mark bench-ledger bench-stop bench-intents bench-gate bench-witness policy-test \
 	fuzz-policy fuzz-policy-short audit fuzz-all fuzz-regress attack-one bench-policy bench-eval mcp-it bench-mcp \
@@ -22,7 +22,7 @@ all: ci
 help: ## list the targets
 	@grep -E '^[a-z][a-z-]*:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-15s %s\n", $$1, $$2}'
 
-ci: fmt-check tidy-check vet test fuzz-policy-short policy-test testdata-check rename-guard banned-words nocgo web-verify-test web-test sdk-ts py-ci ## everything the lint-unit, web-verify and web CI jobs run
+ci: fmt-check tidy-check vet test fuzz-policy-short policy-test testdata-check rename-guard banned-words nocgo workflows-check web-verify-test web-test sdk-ts py-ci ## everything the lint-unit, web-verify and web CI jobs run
 
 build: ## build bin/deedglass with version ldflags (with Node 24 present, the real Console first: make web-build)
 	@if command -v node >/dev/null 2>&1; then $(MAKE) --no-print-directory web-build; else echo "build: Node isn't installed, so the binary carries the Console placeholder (dev only; prod refuses it)"; fi
@@ -138,8 +138,37 @@ bench-connectors: ## S16: vault open, redaction, egress classification and REST 
 	$(GO) test -run '^$$' -bench . -benchmem -count 5 -json ./internal/vault ./internal/connector/egress ./internal/connector/rest > "$$out"; st=$$?; \
 	grep -o '"Output":"Benchmark[^"]*' "$$out" | sed 's/"Output":"//; s/\\t/ /g; s/\\n//' | sort | uniq | head -40; echo "raw: $$out"; exit $$st
 
-bench: ## benchmarks for ids and config
+workflows-check: ## (ci) S35: the release workflow's gates, environments, permissions and SHA pins, actionlint, and a self-test that a removed gate fails
+	scripts/check-workflows.sh && scripts/check-workflows.sh --self-test
+
+release-check: ## S35: the release dry run: the Console build, two GoReleaser snapshots (reproducible linux/amd64 binary), 5 archives with completions, checksums, an SBOM each, the two-platform image (size, user, labels); nothing is pushed or signed
+	@if command -v node >/dev/null 2>&1; then $(MAKE) -s web-build >/dev/null; fi
+	scripts/verify-snapshot.sh
+
+cloud-smoke: ## S35: the cloud kit end to end on this machine (prod mode, Caddy's internal CA on 127.0.0.1:8443): health and routing, two seeded orgs, backup, destroy, restore into a fresh volume, export identical, chains intact; needs Docker and age
+	DEEDGLASS_IT_THROWAWAY=1 deploy/cloud/scripts/smoke.sh
+
+bench-micro: ## Go microbenchmarks for ids and config
 	$(GO) test -run '^$$' -bench . -benchmem -cpu 1,8 ./internal/ids ./internal/config
+
+DGBENCH    := $(GO) run ./bench/cmd/dgbench
+DGBENCH_PG := scripts/bench_pg.sh $(GO) run -tags integration ./bench/cmd/dgbench
+
+bench: ## S35: every suite (about 45 min, the soak is bench-soak): policy, verify, quickstart, then gate, stop, deed, wal, mcp and witness on a throwaway PG 18; JSON in bench/results/<date>-<host>-bench-<suite>.json, then bench-report
+	$(DGBENCH) policy && $(DGBENCH) verify && DEEDGLASS_IT_THROWAWAY=1 $(DGBENCH) quickstart && \
+	for s in gate stop deed wal mcp witness; do $(DGBENCH_PG) $$s || exit 1; done && $(DGBENCH) report
+
+bench-quick: ## S35 (about 6 min, the release candidate): gate allow, policy 50, verify 100k, stop (5 trials); 15 s per scenario, one run; writes …-quick.json
+	$(DGBENCH) policy --quick && $(DGBENCH) verify --quick && $(DGBENCH_PG) gate --quick && $(DGBENCH_PG) stop --quick
+
+bench-soak: ## S35: 30 min at 50 calls/s (70% allow, 20% deny, 10% approval): RSS growth after minute 5, open files, connections (DEEDGLASS_BENCH_SOAK=10m shortens it)
+	$(DGBENCH_PG) soak
+
+bench-check: ## S35: the six contract §12 targets on the newest results (exit 1 on a miss, a battery or unknown-power run, or a stale file); BENCH_QUICK=1 also accepts quick files (the RC)
+	$(DGBENCH) check $(if $(BENCH_QUICK),--quick,)
+
+bench-report: ## S35: print the table, write bench/results/SUMMARY.json and regenerate the block in docs/BENCHMARKS.md (numbers are never typed)
+	$(DGBENCH) report
 
 bench-store: ## S02 store budget (OrgTx, insert, list) on a throwaway PG 18; raw go test -json in bench/results/
 	DEEDGLASS_IT_BENCH=1 DEEDGLASS_IT_BENCH_OUT="$(CURDIR)/bench/results/$$(date +%F)-$$(go env GOOS)-$$(go env GOARCH)-store.json" \

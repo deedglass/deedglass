@@ -107,7 +107,7 @@ func writeResults() {
 			chains = "broken"
 		}
 	}
-	run := harness.Run{Object: "attack_run", StartedAt: started.Format(time.RFC3339), Commit: commit(), Postgres: env.PGVersion,
+	run := harness.Run{Object: "attack_run", StartedAt: started.Format(time.RFC3339), Commit: commit(), Version: os.Getenv("DEEDGLASS_IT_ATTACK_VERSION"), Postgres: env.PGVersion,
 		BootMS: env.BootMS, Cases: results, Summary: harness.Summarize(results),
 		Invariants: harness.Invariants{Chains: chains, SecretsSeen: n, LogLines: env.Logs.Lines(), RowsScanned: env.RowsScanned(),
 			BodiesSeen: len(env.Bodies.Snapshot())}}

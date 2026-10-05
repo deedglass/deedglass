@@ -23,6 +23,7 @@ export const sidebar = clean([
     label: 'Get started',
     items: [
       p('quickstart', 'Quickstart (5 min)'),
+      p('get-started/install-deedglass', 'Install Deedglass'),
       p('get-started/scan', 'Scan in 60 seconds'),
       p('get-started/claude-code', 'Connect Claude Code'),
       p('get-started/claude-desktop', 'Connect Claude Desktop'),

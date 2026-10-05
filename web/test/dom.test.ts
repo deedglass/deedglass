@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { describe, expect, it } from 'vitest';
-import { h, safeHref, text } from '../src/lib/dom.ts';
+import { bidiSafe, h, safeHref, text } from '../src/lib/dom.ts';
 
 describe('dom', () => {
   it('renders agent strings as text, never markup', () => {
@@ -12,6 +12,18 @@ describe('dom', () => {
     const t = h('p');
     text(t, '<b>bold</b>');
     expect(t.querySelector('b')).toBeNull();
+  });
+  it('shows bidi overrides and isolates in agent strings as escapes (SR-016)', () => {
+    const rlo = String.fromCharCode(0x202e), lri = String.fromCharCode(0x2066), pdi = String.fromCharCode(0x2069);
+    const tool = `orders.${rlo}etelpmoc${lri}x${pdi}`;
+    const el = h('td', { title: tool }, tool);
+    expect(el.textContent).toBe('orders.\\u202eetelpmoc\\u2066x\\u2069');
+    expect(el.getAttribute('title')).toBe(el.textContent);
+    const t = h('p');
+    text(t, `a${rlo}b`);
+    expect(t.textContent).toBe('a\\u202eb');
+    expect(/[\u202a-\u202e\u2066-\u2069]/.test(el.textContent + t.textContent)).toBe(false);
+    expect(bidiSafe('Acme · ئەم · שלום')).toBe('Acme · ئەم · שלום');
   });
   it('refuses string event handlers and inline styles', () => {
     expect(() => h('div', { onclick: 'alert(1)' as never })).toThrow();

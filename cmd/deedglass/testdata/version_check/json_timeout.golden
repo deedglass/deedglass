@@ -1,0 +1,4 @@
+exit 2
+--- stdout
+--- stderr
+{"error":{"code":"update_check_failed","doc_url":"https://docs.deedglass.com/errors/update_check_failed","message":"Couldn't reach GitHub to check for updates. Nothing else was affected. Try again later, or see https://github.com/deedglass/deedglass/releases","type":"invalid_request_error"}}

@@ -37,7 +37,7 @@ func cliIn(t *testing.T, stdin []byte, env map[string]string, tty bool, args ...
 	t.Helper()
 	saved := buildInfo
 	buildInfo = func() buildinfo.Info {
-		return buildinfo.Info{Object: "version", Version: "0.1.0-dev", Commit: "5495f7e", Modified: true,
+		return buildinfo.Info{Object: "version", Version: testVersion, Commit: "5495f7e", Modified: true,
 			APIVersions: []string{"2026-10-01"}, Go: "go1.27.1", OS: "darwin", Arch: "arm64"}
 	}
 	t.Cleanup(func() { buildInfo = saved })
@@ -58,6 +58,17 @@ func cliIn(t *testing.T, stdin []byte, env map[string]string, tty bool, args ...
 	}
 	code := run(context.Background(), e, args)
 	return result{code, out.String(), errb.String()}
+}
+
+// testVersion is the version cli reports (TestVersionCheck changes it per case).
+var testVersion = "0.1.0-dev"
+
+func cliWithVersion(t *testing.T, v string, args ...string) result {
+	t.Helper()
+	saved := testVersion
+	testVersion = v
+	defer func() { testVersion = saved }()
+	return cli(t, nil, false, args...)
 }
 
 var reKEKID = regexp.MustCompile(`kek:[0-9a-f]{12}`)
@@ -112,8 +123,8 @@ func TestGoldens(t *testing.T) {
 		{"config_print_txv", map[string]string{"TXV_DATABASE_URL": "x"}, false, []string{"config", "print"}, 1},
 		{"unknown_command", nil, false, []string{"polcy", "lint"}, 2},
 		{"unknown_no_match", nil, false, []string{"frobnicate"}, 2},
-		{"unbuilt_command", nil, false, []string{"completion", "zsh", "--org", "org_x"}, 2},
-		{"json_error", nil, false, []string{"completion", "zsh", "--json"}, 2},
+		{"unbuilt_command", nil, false, []string{"dev", "agent-script", "--org", "org_x"}, 2},
+		{"json_error", nil, false, []string{"dev", "agent-script", "--json"}, 2},
 		{"json_config_error", prod, false, []string{"--json", "config", "print"}, 1},
 		{"global_flag_after_subcommand", nil, false, []string{"version", "--no-color", "--json"}, 0},
 	}
@@ -159,7 +170,7 @@ func TestExitCodes(t *testing.T) {
 		{[]string{"help", "--json"}, 0, "", `"object":"command_tree"`},
 		{[]string{"--json", "help"}, 0, "", `"path":["agent","keys","create"]`},
 		{[]string{"version", "extra"}, 2, "takes no arguments", ""},
-		{[]string{"version", "--check"}, 2, "deedglass version --check isn't in this build yet.", ""},
+		{[]string{"version", "--pre"}, 2, "--pre only works with --check.", ""},
 		{[]string{"version", "--bogus"}, 2, "flag provided but not defined: -bogus", ""},
 		{[]string{"version", "--server", "http://127.0.0.1:1"}, 1, "Can't reach the server at http://127.0.0.1:1", ""},
 		{[]string{"--server=ftp://x.example", "version"}, 2, "--server must be an http or https URL", ""},

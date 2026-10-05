@@ -55,7 +55,7 @@ describe('ai-sdk adapter (ai 7, MockLanguageModelV4, no network)', () => {
     const r = await generateText({ model: model('refund_customer', { customer: 'cus_123', amount: 12000 }), tools: governTools(refundTool(spy), { client: c, connector: 'billing' }), prompt: 'refund' });
     expect(spy).not.toHaveBeenCalled();
     expect(r.toolResults[0]?.output).toBe(
-      'Waiting for approval under policy "large-refunds-need-approval": Refunds over $50.00 wait for a human. Approval apr_01j9zv0000000000000000000a expires at 10:42 UTC. Try again after a person approves it.',
+      'Waiting for approval in Console › Approvals (apr_01j9zv0000000000000000000a). Try again after someone decides.',
     );
   });
 

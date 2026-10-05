@@ -1,0 +1,7 @@
+[Unit]
+Description=Deedglass weekly beta usage report (read-only)
+After=deedglass-stack.service
+
+[Service]
+Type=oneshot
+ExecStart=/bin/sh -c '/opt/deedglass/deploy/cloud/scripts/usage-report.sh > /var/lib/deedglass/usage-$(date -u +%%G-W%%V).txt'

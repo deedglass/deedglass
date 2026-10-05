@@ -98,7 +98,7 @@ var Keys = []Key{
 }
 
 // toolingPrefixes are DEEDGLASS_ names that scripts use and the binary ignores.
-var toolingPrefixes = []string{"DEEDGLASS_IT_", "DEEDGLASS_DEV_"}
+var toolingPrefixes = []string{"DEEDGLASS_IT_", "DEEDGLASS_DEV_", "DEEDGLASS_BENCH_"} // S35: DEEDGLASS_BENCH_HOST, DEEDGLASS_BENCH_PG_MODE (dgbench)
 
 var toolingNames = map[string]bool{"DEEDGLASS_REPO_PUBLIC": true}
 

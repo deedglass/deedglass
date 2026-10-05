@@ -1,0 +1,158 @@
+# The Deedglass cloud beta on one VM (S35, ADR-068): Caddy with automatic TLS in front, one
+# deedglass serve, PostgreSQL 18.6. deploy/cloud/GO_LIVE.md is the founder's ordered setup.
+#
+#   docker compose -f /opt/deedglass/compose.yaml up -d --wait     (deedglass-stack.service runs this)
+#
+# Rules this file keeps (preflight.sh and the cloud smoke test check them):
+#   - every image is pinned by digest; DEEDGLASS_IMAGE must be ghcr.io/deedglass/deedglass:<v>@sha256:…
+#   - Postgres has no TCP listener and no published port: deedglass reaches it over a Unix socket in
+#     the pgsocket volume, with scram-sha-256; the superuser exists only inside its own container
+#   - secrets come from /etc/deedglass/deedglass.env (root, 0600), never from the image or this file
+#   - the seal key is a read-only bind of /etc/deedglass/seal (the file is 0400, owned by 65532)
+#   - metrics are published on the host's loopback only and are never proxied
+#   - logs rotate at 20 MB × 5 per container
+name: deedglass
+
+x-logging: &logging
+  logging:
+    driver: json-file
+    options:
+      max-size: 20m
+      max-file: "5"
+
+x-hardening: &hardening
+  read_only: true
+  tmpfs:
+    - /tmp
+  cap_drop:
+    - ALL
+  security_opt:
+    - no-new-privileges:true
+  user: "65532:65532"
+
+x-deedglass: &deedglass
+  image: ${DEEDGLASS_IMAGE:?set DEEDGLASS_IMAGE in /opt/deedglass/.env to ghcr.io/deedglass/deedglass:<version>@sha256:<digest>}
+  env_file:
+    - ${DEEDGLASS_ENV_FILE:-/etc/deedglass/deedglass.env}
+  volumes:
+    - pgsocket:/run/postgresql
+    - ${DEEDGLASS_SEAL_DIR:-/etc/deedglass/seal}:/run/deedglass/seal:ro
+
+services:
+  postgres:
+    # postgres:18.6, the digest of its multi-arch index (ADR-024).
+    image: postgres:18.6@sha256:5a5a84b19854a9ffaa54082c166ff4ec27473a361e496e5ea167f298f2da9722
+    <<: *logging
+    command:
+      - postgres
+      - -c
+      - listen_addresses=
+      - -c
+      - unix_socket_directories=/run/postgresql
+      - -c
+      - hba_file=/etc/deedglass/pg_hba.conf
+      - -c
+      - ident_file=/etc/deedglass/pg_ident.conf
+      - -c
+      - wal_level=logical
+      - -c
+      - max_slot_wal_keep_size=2GB
+      - -c
+      - password_encryption=scram-sha-256
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD_FILE: /run/secrets/pg_admin_password
+      PGHOST: /run/postgresql
+    env_file:
+      - ${DEEDGLASS_PG_ENV_FILE:-/etc/deedglass/postgres.env}
+    volumes:
+      - pgdata:/var/lib/postgresql
+      - pgsocket:/run/postgresql
+      - ./postgres/pg_hba.conf:/etc/deedglass/pg_hba.conf:ro
+      - ./postgres/pg_ident.conf:/etc/deedglass/pg_ident.conf:ro
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+      - ../postgres/control-plane-roles.sql:/deedglass/control-plane-roles.sql:ro
+      - ./postgres/20-backup-role.sql:/deedglass/20-backup-role.sql:ro
+      - ${DEEDGLASS_PG_ADMIN_PASSWORD_FILE:-/etc/deedglass/pg_admin_password}:/run/secrets/pg_admin_password:ro
+    network_mode: none
+    shm_size: 256mb
+    healthcheck:
+      test: ["CMD", "pg_isready", "-h", "/run/postgresql", "-U", "postgres", "-d", "deedglass"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 10s
+    restart: unless-stopped
+
+  migrate:
+    <<: [*deedglass, *hardening, *logging]
+    command: ["migrate", "up"]
+    network_mode: none
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  deedglass:
+    <<: [*deedglass, *hardening, *logging]
+    command: ["serve"]
+    networks:
+      - edge
+    ports:
+      - "127.0.0.1:9464:9464"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "/deedglass", "version", "--server", "http://127.0.0.1:8080"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+    stop_grace_period: 25s
+    restart: unless-stopped
+
+  caddy:
+    # caddy:2.11.6, the digest of its multi-arch index (ADR-068).
+    image: caddy:2.11.6@sha256:3422ce6de165df66534f9b9ba50efaf457114ec961763cc52f5dbdaac2972d73
+    <<: *logging
+    read_only: true
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      ACME_CA: ${ACME_CA:-https://acme-staging-v02.api.letsencrypt.org/directory}
+      CADDY_EMAIL: ${CADDY_EMAIL:-hello@deedglass.com}
+      APP_HOST: ${APP_HOST:-app.deedglass.com}
+      API_HOST: ${API_HOST:-api.deedglass.com}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ${CADDYFILE:-./Caddyfile}:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    tmpfs:
+      - /tmp
+    networks:
+      - edge
+    depends_on:
+      deedglass:
+        condition: service_healthy
+    restart: unless-stopped
+
+networks:
+  edge:
+    ipam:
+      config:
+        - subnet: 172.30.0.0/24
+
+volumes:
+  pgdata:
+  pgsocket:
+  caddy-data:
+  caddy-config:

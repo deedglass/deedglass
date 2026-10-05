@@ -1,0 +1,5 @@
+exit 0
+--- stdout
+○ No public releases yet. You have deedglass 0.1.0.
+  next  See https://github.com/deedglass/deedglass/releases
+--- stderr

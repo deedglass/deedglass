@@ -1,0 +1,38 @@
+# The cloud smoke test's Caddyfile (make cloud-smoke): the same sites under *.deedglass.localhost with
+# Caddy's own internal CA instead of ACME. Never used on the VM.
+{
+	auto_https disable_redirects
+	servers {
+		protocols h1 h2
+	}
+}
+
+(common) {
+	encode zstd gzip
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		-Server
+	}
+	log {
+		output stdout
+		format json
+	}
+}
+
+{$APP_HOST}:8443 {
+	tls internal
+	import common
+	@mcp path /mcp /mcp/*
+	respond @mcp 404
+	reverse_proxy deedglass:8080
+}
+
+{$API_HOST}:8443 {
+	tls internal
+	import common
+	@notapi not path /v1/* /mcp /mcp/* /.well-known/* /api/openapi.yaml
+	respond @notapi 404
+	reverse_proxy deedglass:8080 {
+		flush_interval -1
+	}
+}

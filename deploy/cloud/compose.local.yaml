@@ -1,0 +1,12 @@
+# make cloud-smoke's overrides (S35): the snapshot image, throwaway secrets in .tmp/cloud-smoke,
+# Caddy's internal CA on 127.0.0.1:8443 for app.deedglass.localhost and api.deedglass.localhost,
+# nothing published on 80 or 443. Never used on the VM.
+services:
+  caddy:
+    ports: !override
+      - "127.0.0.1:${SMOKE_HTTPS_PORT:-8443}:8443"
+    environment:
+      APP_HOST: app.deedglass.localhost
+      API_HOST: api.deedglass.localhost
+  deedglass:
+    ports: !reset []

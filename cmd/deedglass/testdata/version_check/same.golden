@@ -1,0 +1,4 @@
+exit 0
+--- stdout
+✓ deedglass 0.1.0 is the latest release.
+--- stderr

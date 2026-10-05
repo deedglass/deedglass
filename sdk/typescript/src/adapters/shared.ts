@@ -5,7 +5,7 @@ import type { Deedglass } from '../client.js';
 import { copy } from '../copy.js';
 import { ApprovalPendingError, type DeedglassError, isDeedglassError } from '../errors.js';
 import type { Action, JsonObject, ToolInfo } from '../types.js';
-import { clock, wrapTool } from '../wrap.js';
+import { wrapTool } from '../wrap.js';
 
 export interface GovernOptions {
   client: Deedglass;
@@ -57,12 +57,9 @@ export function denialText(err: DeedglassError | { message: string; code?: strin
   return `${m.replace(/\.?$/, '.')} ${copy.nothingRan}`;
 }
 
-/** S14's MCP wording for a pending approval. */
+/** What a model reads while a person decides: where to look, and to try again later (the Python SDK's sentence, S35 parity). */
 export function pendingText(a: Pick<Action, 'decision' | 'approval' | 'next_action'>): string {
-  const msg = (a.decision?.message ?? 'Waiting for a person to approve this action.').replace(/\.?$/, '.');
-  const apr = a.approval?.id ?? a.next_action?.approval ?? 'apr_…';
-  const exp = a.approval?.expires_at ?? a.next_action?.expires_at ?? '';
-  return `${msg} Approval ${apr} expires at ${clock(exp)}. Try again after a person approves it.`;
+  return copy.approvalWaiting(a.approval?.id ?? a.next_action?.approval ?? 'apr_…');
 }
 
 /** What a gateway tool hands back to the model: the result, or the sentence about why there is none. */

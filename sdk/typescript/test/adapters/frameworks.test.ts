@@ -93,7 +93,7 @@ describe('claude-agent-sdk adapter (@anthropic-ai/claude-agent-sdk 0.3)', () => 
   it('pending → deny with the pending sentence (default)', async () => {
     const { c } = client(() => json(202, action(PENDING)));
     const out = (await deedglassHooks({ client: c }).PreToolUse![0]!.hooks[0]!({ ...base, hook_event_name: 'PreToolUse', tool_name: 'Write', tool_input: { file_path: '/etc/hosts' }, tool_use_id: 'tu_2' }, 'tu_2', { signal })) as never as { hookSpecificOutput: { permissionDecisionReason: string } };
-    expect(out.hookSpecificOutput.permissionDecisionReason).toContain('Try again after a person approves it.');
+    expect(out.hookSpecificOutput.permissionDecisionReason).toContain('Try again after someone decides.');
   });
 
   it('authorized → {} (defers to the host), then PostToolUse reports succeeded and clears the mapping', async () => {
@@ -125,7 +125,7 @@ describe('claude-agent-sdk adapter (@anthropic-ai/claude-agent-sdk 0.3)', () => 
   it('Deedglass unreachable → deny with the outage sentence; nothing thrown', async () => {
     const { c } = client(() => 'network');
     const out = await deedglassHooks({ client: c }).PreToolUse![0]!.hooks[0]!({ ...base, hook_event_name: 'PreToolUse', tool_name: 'Bash', tool_input: { command: 'ls' }, tool_use_id: 'tu_6' }, 'tu_6', { signal });
-    expect(out).toEqual({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'deny', permissionDecisionReason: "Deedglass couldn't be reached, so this tool call was not run." } });
+    expect(out).toEqual({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'deny', permissionDecisionReason: "Deedglass isn't reachable, so this tool was not run. Check that deedglass serve is running." } });
   });
 
   it("'wait' sets the matcher timeout from approvalTimeoutMs", () => {

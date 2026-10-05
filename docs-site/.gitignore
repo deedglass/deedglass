@@ -15,6 +15,7 @@ src/content/docs/reference/ids.md
 src/content/docs/reference/mcp-compatibility.md
 src/content/docs/reference/api-versions.md
 src/content/docs/reference/doctor-checks.md
+src/content/docs/get-started/install-deedglass.md
 src/content/docs/reference/connectors/overview.md
 src/content/docs/reference/connectors/postgres.md
 src/content/docs/reference/connectors/github.md
@@ -32,3 +33,5 @@ public/images/
 src/content/docs/reference/http/endpoints.md
 src/content/docs/policies/
 src/content/docs/sdks/adapters/
+src/data/openapi.docs.json
+public/api/

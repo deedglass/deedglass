@@ -60,3 +60,5 @@ npm/node_modules/
 npm/*.tgz
 npm/cli-*/deedglass
 npm/cli-*/deedglass.exe
+/completions/
+/dist/

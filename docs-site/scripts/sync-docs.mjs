@@ -25,6 +25,7 @@ const data = (f) => JSON.parse(readFileSync(join(site, 'src', 'data', f), 'utf8'
 // or repo-only (internal engineering notes nobody outside the repo needs). Nothing is orphaned:
 // check-inventory in scripts/test fails on a docs/*.md file missing from this table.
 export const IMPORTS = {
+  'docs/INSTALL.md': 'get-started/install-deedglass',
   'docs/DEED_SPEC.md': 'reference/deed-spec',
   'docs/INTENTS.md': 'reference/intents',
   'docs/POLICY_LANGUAGE.md': 'reference/policy-language',
@@ -68,7 +69,7 @@ export const MOVED = { 'docs/QUICKSTART.md': 'quickstart', 'docs/FAQ.md': 'faq' 
 export const SOURCES = { 'docs/api/errors.md': 'errors', 'docs/ATTACK_SUITE.md': 'security/attack-suite' };
 // Repo-only: build and process notes for people working in the repo.
 export const REPO_ONLY = [
-  'docs/AMENDMENTS.md', 'docs/COPY_CATALOG.md', 'docs/DESIGN_SYSTEM.md', 'docs/DEV_LOOP.md', 'docs/NAMING.md', 'docs/REPO_MAP.md',
+  'docs/RELEASING.md', 'docs/AMENDMENTS.md', 'docs/COPY_CATALOG.md', 'docs/DESIGN_SYSTEM.md', 'docs/DEV_LOOP.md', 'docs/NAMING.md', 'docs/REPO_MAP.md',
   'docs/SECURITY_BACKLOG.md', 'docs/README.md', 'docs/adr/README.md', 'docs/v0/EVALUATION_RUNBOOK.md', 'docs/v0/OBSERVATION_BOUNDARY.md',
   'docs/v0/OPERATION_BUNDLE.md', 'docs/v0/STATEMENT_SPEC.md', 'docs/v0/VERIFICATION_MODEL.md',
 ];
@@ -329,6 +330,47 @@ function attackPage() {
   write('security/attack-suite.md', page);
 }
 
+// S35 (DL-049 carry-over): the API reference renders a slimmed copy of api/openapi.yaml. Each
+// operation's request and response schemas are inlined to SLIM_DEPTH levels; a deeper object
+// becomes a one-line pointer to its schema in the full file, which /api/openapi.yaml serves
+// unchanged. Every operation, parameter, status and top-level field stays; only deep nesting goes.
+const SLIM_DEPTH = 2;
+function slimOpenAPI() {
+  const spec = yaml.load(readFileSync(join(repo, 'api', 'openapi.yaml'), 'utf8'));
+  const schemas = spec.components?.schemas ?? {};
+  const deref = (node, depth, seen) => {
+    if (Array.isArray(node)) return node.map((n) => deref(n, depth, seen));
+    if (!node || typeof node !== 'object') return node;
+    if (typeof node.$ref === 'string' && node.$ref.startsWith('#/components/schemas/')) {
+      const name = node.$ref.slice('#/components/schemas/'.length);
+      const target = schemas[name];
+      if (!target) return node;
+      if (depth >= SLIM_DEPTH || seen.has(name)) {
+        const kind = target.type === 'array' ? 'array' : target.enum ? target.type ?? 'string' : 'object';
+        if (target.enum || (target.type && target.type !== 'object' && target.type !== 'array')) return deref(target, depth, seen);
+        return { type: kind, description: `${target.description ? target.description.split('\n')[0] + ' ' : ''}The full \`${name}\` schema is in [openapi.yaml](/api/openapi.yaml).` };
+      }
+      return deref(target, depth, new Set([...seen, name]));
+    }
+    const out = {};
+    for (const [k, v] of Object.entries(node)) {
+      const nested = k === 'properties' || k === 'items' || k === 'additionalProperties';
+      out[k] = k === 'properties' ? Object.fromEntries(Object.entries(v).map(([pk, pv]) => [pk, deref(pv, depth + 1, seen)])) : deref(v, nested ? depth + 1 : depth, seen);
+    }
+    return out;
+  };
+  const out = { ...spec, paths: {} };
+  for (const [path, item] of Object.entries(spec.paths ?? {})) {
+    out.paths[path] = deref(item, 0, new Set());
+  }
+  out.components = { ...spec.components, schemas: {} };
+  for (const k of ['responses', 'requestBodies', 'parameters']) if (spec.components?.[k]) out.components[k] = deref(spec.components[k], 0, new Set());
+  writeFileSync(join(site, 'src', 'data', 'openapi.docs.json'), JSON.stringify(out));
+  mkdirSync(join(site, 'public', 'api'), { recursive: true });
+  cpSync(join(repo, 'api', 'openapi.yaml'), join(site, 'public', 'api', 'openapi.yaml'));
+  return out;
+}
+
 // The endpoint index: every operation in api/openapi.yaml, by tag, linked to the OpenAPI plugin's
 // page for it (one sidebar link instead of 121, which kept every page's HTML small).
 function endpointsPage() {
@@ -384,6 +426,7 @@ function main() {
   }
   if (existsSync(join(repo, 'docs', 'images'))) cpSync(join(repo, 'docs', 'images'), join(site, 'public', 'images'), { recursive: true });
   const n = errorPages();
+  slimOpenAPI();
   const ops = endpointsPage();
   const pol = policyErrorPages();
   engineeringIndex();

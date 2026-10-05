@@ -54,6 +54,8 @@ jobs:
         run: scripts/rename_guard.sh
       - name: banned words (files and commit messages)
         run: scripts/banned_words.sh --commits HEAD
+      - name: release workflow guards and actionlint (S35)
+        run: scripts/check-workflows.sh && scripts/check-workflows.sh --self-test
 
   # The browser verifier (S05): TypeScript typecheck and the Vitest suites against the same vectors
   # and the 500-case parity corpus Go writes. Dev tools only (ADR-027); npm ci with exact pins.

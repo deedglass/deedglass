@@ -1,5 +1,7 @@
 // The transport (S31 §3.3): headers, timeouts, retries and error envelopes. Retried: network
-// errors, 408, 429 rate_limited (never budget_exceeded), 500, 502, 503 and 504, with a backoff of
+// errors, 408, 409 idempotency_key_in_use, 429 rate_limited (never budget_exceeded), 502, 503 and
+// 504, as the Python SDK does (S35 parity). Never a 500: the server stores a 5xx answer under the
+// Idempotency-Key and replays it, so a retry can't change the outcome. A backoff of
 // 500 ms × 2^n ± 25%, honouring Retry-After up to 10 s, never beyond the caller's signal or timeout.
 // A POST is retried only with the same Idempotency-Key, so the server never runs a tool twice.
 
@@ -39,7 +41,7 @@ export interface Res<T> {
   headers: Headers;
 }
 
-const RETRY_STATUSES = new Set([408, 429, 500, 502, 503, 504]);
+const RETRY_STATUSES = new Set([408, 409, 429, 502, 503, 504]);
 const MAX_RETRY_AFTER_MS = 10_000;
 
 export function retryAfterMs(h: Headers): number {
@@ -164,7 +166,10 @@ export class Transport {
       }
       const err = this.#error(resp, parsed, requestId);
       const retryable =
-        RETRY_STATUSES.has(resp.status) && !(resp.status === 429 && err.code !== 'rate_limited') && attempt < this.#o.maxRetries;
+        RETRY_STATUSES.has(resp.status) &&
+        !(resp.status === 429 && err.code !== 'rate_limited') &&
+        !(resp.status === 409 && err.code !== 'idempotency_key_in_use') &&
+        attempt < this.#o.maxRetries;
       if (!retryable) throw err;
       let wait = backoffMs(attempt);
       const ra = retryAfterMs(resp.headers);

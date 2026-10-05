@@ -82,7 +82,7 @@ export default defineConfig({
       plugins: [
         starlightLinksValidator({ exclude: customPages, errorOnLocalLinks: true }),
         starlightOpenAPI([
-          { base: 'reference/api', schema: '../api/openapi.yaml', sidebar: { label: 'Endpoints', collapsed: true } },
+          { base: 'reference/api', schema: './src/data/openapi.docs.json', sidebar: { label: 'Endpoints', collapsed: true } },
         ]),
         starlightLlmsTxt({
           projectName: 'Deedglass',

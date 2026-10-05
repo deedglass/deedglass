@@ -1,0 +1,73 @@
+{
+  "schema": "deedglass.bench.summary/v1",
+  "version": "",
+  "host": {
+    "name": "",
+    "cpu": "",
+    "cores": 0,
+    "mem_gb": 0,
+    "os": "",
+    "power": ""
+  },
+  "go": "",
+  "rows": [
+    {
+      "suite": "gate",
+      "label": "Gate · allow, no witness",
+      "measured": "",
+      "target": "",
+      "targets": null,
+      "result": "missing",
+      "problem": "No results file for this suite. Run make bench."
+    },
+    {
+      "suite": "policy",
+      "label": "Policy · 50 rules",
+      "measured": "",
+      "target": "",
+      "targets": null,
+      "result": "missing",
+      "problem": "No results file for this suite. Run make bench."
+    },
+    {
+      "suite": "witness",
+      "label": "Witness · L2 at 100 writes/s",
+      "measured": "",
+      "target": "",
+      "targets": null,
+      "result": "missing",
+      "problem": "No results file for this suite. Run make bench."
+    },
+    {
+      "suite": "verify",
+      "label": "Verify · 100,000 deeds",
+      "measured": "",
+      "target": "",
+      "targets": null,
+      "result": "missing",
+      "problem": "No results file for this suite. Run make bench."
+    },
+    {
+      "suite": "stop",
+      "label": "Stop · across 2 instances",
+      "measured": "",
+      "target": "",
+      "targets": null,
+      "result": "missing",
+      "problem": "No results file for this suite. Run make bench."
+    },
+    {
+      "suite": "quickstart",
+      "label": "Quickstart · clean machine",
+      "measured": "",
+      "target": "",
+      "targets": null,
+      "result": "missing",
+      "problem": "No results file for this suite. Run make bench."
+    }
+  ],
+  "met": 0,
+  "missed": 6,
+  "files": [],
+  "reported": []
+}

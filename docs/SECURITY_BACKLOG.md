@@ -6,8 +6,7 @@ items leave this page; their record stays in the review that found them
 
 | Id | Finding | Owner | Next step |
 |---|---|---|---|
-| SR-007 | GO-2026-5024 in `golang.org/x/sys` v0.41.0 (Windows only, not reachable). | S35 | Raise `golang.org/x/sys` to v0.44.0 or later at the dependency review, with its ADR. |
-| SR-016 | Bidirectional characters in names an agent supplies (a recorded unknown tool name) can reorder text in the Console; the CLI already escapes them. | S35 | Isolate agent-supplied names in the Console (`unicode-bidi: isolate` on name cells, or the CLI's escaping), with a Playwright case. |
-| SR-018 | `docs-site` build dependencies carry 6 high npm advisories (`braces` and `micromatch` under `starlight-llms-txt`; `form-data` under `httpsnippet` under `starlight-openapi`). They run only at build time, on our own files; npm's suggested fix is a downgrade. | S35 | Move the build packages to `devDependencies`, take upstream releases that drop the vulnerable versions, and re-run `make audit`. |
+| SR-019 | Three high npm advisories stay in the docs site's build-time tree: `braces` (every version; no fixed release exists) under `micromatch` under `starlight-llms-txt`. Nothing ships from it: `npm audit --omit=dev` is 0. | S37 | Recheck at the release's dependency review; drop the plugin if a fix doesn't appear. |
 
 Fixed in Pass 2 (S34): SR-005, SR-006 and SR-008 from Pass 1, and SR-009 to SR-015 and SR-017.
+Fixed in S35 (ADR-070): SR-007 (`golang.org/x/sys` v0.48.0), SR-016 (the Console shows bidi overrides and isolates in every string it renders as `\uXXXX`, as the CLI does; `web/test/dom.test.ts`), SR-018 (docs-site packages are build-only `devDependencies`, `form-data` overridden to 4.0.6; the `braces` remainder is SR-019).

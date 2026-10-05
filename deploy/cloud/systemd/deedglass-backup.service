@@ -1,0 +1,9 @@
+[Unit]
+Description=Deedglass nightly backup (encrypted, to R2, heartbeat on success)
+Requires=deedglass-stack.service
+After=deedglass-stack.service
+
+[Service]
+Type=oneshot
+ExecStart=/opt/deedglass/deploy/cloud/scripts/backup.sh
+Nice=10

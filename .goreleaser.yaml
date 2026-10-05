@@ -1,0 +1,117 @@
+# GoReleaser v2 (pinned 2.18.2, ADR-067). One tag builds five binaries, five archives with
+# completions, checksums.txt, an SPDX SBOM per archive and a two-platform image on GHCR, into a
+# DRAFT GitHub release that only the founder publishes. Signing runs only when the repository is
+# public (release.yml passes --skip=sign,docker-sign while it is private): keyless signatures
+# write the repository and workflow identity into the public Sigstore log.
+#
+#   make release-check      # a local snapshot, twice, compared byte for byte (nothing is pushed)
+version: 2
+project_name: deedglass
+
+before:
+  hooks:
+    - go mod verify
+    - ./scripts/completions.sh
+
+builds:
+  - id: deedglass
+    main: ./cmd/deedglass
+    binary: deedglass
+    env: [CGO_ENABLED=0]
+    goos: [linux, darwin, windows]
+    goarch: [amd64, arm64]
+    ignore:
+      - goos: windows
+        goarch: arm64
+    flags: [-trimpath]
+    ldflags:
+      - -s -w
+      - -X github.com/deedglass/deedglass/internal/buildinfo.Version={{ .Version }}
+      - -X github.com/deedglass/deedglass/internal/buildinfo.Commit={{ .FullCommit }}
+      - -X github.com/deedglass/deedglass/internal/buildinfo.Date={{ .CommitDate }}
+      - -X github.com/deedglass/deedglass/internal/buildinfo.Modified={{ if .IsGitDirty }}true{{ else }}false{{ end }}
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
+archives:
+  - id: deedglass
+    formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    name_template: "deedglass_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - LICENSE
+      - README.md
+      - CHANGELOG.md
+      - completions/*
+    builds_info:
+      mtime: "{{ .CommitDate }}"
+
+checksum:
+  name_template: checksums.txt
+  algorithm: sha256
+
+sboms:
+  - id: archives
+    artifacts: archive
+
+signs:
+  - id: checksums
+    cmd: cosign
+    signature: "${artifact}.sigstore.json"
+    args: [sign-blob, "--bundle=${signature}", "${artifact}", "--yes"]
+    artifacts: checksum
+
+dockers_v2:
+  - id: deedglass
+    ids: [deedglass]
+    images: [ghcr.io/deedglass/deedglass]
+    tags:
+      - "{{ .Version }}"
+      - "{{ if not .Prerelease }}{{ .Major }}.{{ .Minor }}{{ end }}"
+      - "{{ if not .Prerelease }}latest{{ end }}"
+    platforms: [linux/amd64, linux/arm64]
+    dockerfile: Dockerfile.release
+    labels:
+      org.opencontainers.image.version: "{{ .Version }}"
+      org.opencontainers.image.revision: "{{ .FullCommit }}"
+      org.opencontainers.image.created: "{{ .CommitDate }}"
+
+docker_signs:
+  - id: images
+    cmd: cosign
+    artifacts: manifests
+    args: [sign, "${artifact}@${digest}", "--yes"]
+
+release:
+  draft: true
+  prerelease: auto
+  github:
+    owner: deedglass
+    name: deedglass
+  name_template: "Deedglass {{ .Version }}"
+
+changelog:
+  disable: true
+
+homebrew_casks:
+  - name: deedglass
+    ids: [deedglass]
+    repository:
+      owner: deedglass
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
+    skip_upload: '{{ if .Env.HOMEBREW_TAP_TOKEN }}false{{ else }}true{{ end }}'
+    homepage: https://deedglass.com
+    description: The execution and accountability layer for AI agents
+    license: Apache-2.0
+    completions:
+      bash: completions/deedglass.bash
+      zsh: completions/deedglass.zsh
+      fish: completions/deedglass.fish
+    hooks:
+      post:
+        install: |
+          if OS.mac?
+            system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/deedglass"]
+          end

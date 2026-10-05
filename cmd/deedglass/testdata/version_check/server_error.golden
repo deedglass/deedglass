@@ -1,0 +1,5 @@
+exit 2
+--- stdout
+--- stderr
+○ GitHub answered 502, so the update check didn't finish. Nothing else was affected.
+  next  Try again later, or see https://github.com/deedglass/deedglass/releases

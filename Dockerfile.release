@@ -1,0 +1,18 @@
+# The release image (S35): GoReleaser builds the binaries first (CGO_ENABLED=0, -trimpath, the
+# commit's timestamp) and passes a context laid out as linux/<arch>/deedglass; this file only copies
+# the one for the platform being built, so a multi-arch image needs no emulation. The base is the
+# same distroless static-debian13 digest the root Dockerfile pins (ADR-024). It runs as 65532.
+# The root Dockerfile stays for local compose builds from source.
+FROM gcr.io/distroless/static-debian13:nonroot@sha256:e2e927ec666bae08560abb3c55d0659eceabb657f56b6782ab500a9fc7f555e3
+ARG TARGETPLATFORM
+COPY $TARGETPLATFORM/deedglass /deedglass
+USER 65532:65532
+ENV DEEDGLASS_LISTEN=0.0.0.0:8080
+EXPOSE 8080
+ENTRYPOINT ["/deedglass"]
+CMD ["serve"]
+LABEL org.opencontainers.image.title="Deedglass" \
+      org.opencontainers.image.description="The execution and accountability layer for AI agents" \
+      org.opencontainers.image.source="https://github.com/deedglass/deedglass" \
+      org.opencontainers.image.licenses="Apache-2.0" \
+      io.modelcontextprotocol.server.name="com.deedglass/deedglass"

@@ -14,7 +14,7 @@ exit 0
   version             Show the client and server versions
   keys                Manage seal keys                            [2m    [0m   [2mgen · rotate · list[0m
   vault               Check or rotate the credential vault        [2m    [0m   [2mstatus · rotate[0m
-  completion          Print shell completion                      [2msoon[0m   [2mzsh · bash · fish[0m
+  completion          Print shell completion                      [2m    [0m   [2mzsh · bash · fish[0m
 [1mAgents[0m
   agent               Register and control agents                 [2m    [0m   [2mcreate · list · show · suspend · resume · stop · start[0m
   agent keys          Manage an agent's API keys                  [2m    [0m   [2mcreate · list · roll · revoke[0m

@@ -9,7 +9,7 @@ import { api, ApiError } from '../lib/api.ts';
 import { decisionChip, idChip, relTime, stateChip, verdictChip } from '../lib/chips.ts';
 import { copy, fill } from '../lib/copy.ts';
 import { diffModel, keyText, type DiffRow } from '../lib/diff.ts';
-import { h, icon, maybe, type Child } from '../lib/dom.ts';
+import { bidiSafe, h, icon, maybe, type Child } from '../lib/dom.ts';
 import { decisionOf } from '../lib/filters.ts';
 import { date, dateTime, duration, number, plural, shortId, time } from '../lib/format.ts';
 import { actionSentence, countersignedCount, minutesUntil } from '../lib/sentences.ts';
@@ -297,7 +297,7 @@ export function mountActionDetail(): void {
     const aside = h('aside', { class: 'detail-aside', 'aria-label': copy.deedPanel.title }, panel.el, approvalBlock(a, ap), undoBlock(a, () => openUndo(a)));
     const main = h('div', { class: 'detail-main' }, witnessSection(a), timeline(a.events?.data ?? [], tz), decisionSection(a), payloadSection(a), amendments(a));
     host.replaceChildren(head, h('div', { class: 'detail-grid' }, aside, main));
-    document.title = `${a.tool} · ${shortId(a.id)} · Deedglass`;
+    document.title = `${bidiSafe(a.tool)} · ${shortId(a.id)} · Deedglass`;
   };
   const load = async (quiet = false) => {
     try {

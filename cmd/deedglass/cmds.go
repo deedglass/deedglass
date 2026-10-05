@@ -24,13 +24,14 @@ var buildInfo = buildinfo.Get
 
 // --- version ---
 
-type versionOpts struct{ check, quiet bool }
+type versionOpts struct{ check, pre, quiet bool }
 
 var versionFlagValues versionOpts
 
 func versionFlags(fs *flag.FlagSet) {
 	versionFlagValues = versionOpts{}
-	fs.BoolVar(&versionFlagValues.check, "check", false, "check GitHub releases for a newer version (S35)")
+	fs.BoolVar(&versionFlagValues.check, "check", false, "ask GitHub's releases API whether a newer version exists (opt-in; sends only a User-Agent)")
+	fs.BoolVar(&versionFlagValues.pre, "pre", false, "with --check, count prereleases too")
 	fs.BoolVar(&versionFlagValues.quiet, "q", false, "no banner")
 	fs.BoolVar(&versionFlagValues.quiet, "quiet", false, "no banner")
 }
@@ -39,10 +40,11 @@ func runVersion(ctx context.Context, e *Env, args []string) error {
 	if len(args) > 0 {
 		return usageErr(fmt.Errorf("deedglass version takes no arguments (got %q)", args[0]), "Run deedglass help version.")
 	}
+	if versionFlagValues.pre && !versionFlagValues.check {
+		return usageErr(errors.New("--pre only works with --check"), "Run deedglass version --check --pre.")
+	}
 	if versionFlagValues.check {
-		return &ExitError{Code: ExitUsage, ErrCode: "not_built", Plain: true,
-			Err:  errors.New("deedglass version --check isn't in this build yet"),
-			Next: "Run deedglass help to see what this build can do."}
+		return runVersionCheck(ctx, e, buildInfo().Version)
 	}
 	in := buildInfo()
 	if e.Globals.ServerFlag && e.Globals.Server == "" {

@@ -14,7 +14,7 @@ Setup
   version             Show the client and server versions
   keys                Manage seal keys                                   gen · rotate · list
   vault               Check or rotate the credential vault               status · rotate
-  completion          Print shell completion                      soon   zsh · bash · fish
+  completion          Print shell completion                             zsh · bash · fish
 Agents
   agent               Register and control agents                        create · list · show · suspend · resume · stop · start
   agent keys          Manage an agent's API keys                         create · list · roll · revoke

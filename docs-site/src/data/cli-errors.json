@@ -414,9 +414,7 @@
     "exit": [
       2
     ],
-    "messages": [
-      "deedglass version --check isn't in this build yet."
-    ],
+    "messages": null,
     "next": [
       "Run deedglass help to see what this build can do."
     ]
@@ -694,6 +692,13 @@
     "next": [
       "Connect as deedglass_app (docs/DATABASE_SETUP.md)."
     ]
+  },
+  {
+    "code": "update_check_failed",
+    "exit": [
+      2
+    ],
+    "messages": null
   },
   {
     "code": "webhook_failed",

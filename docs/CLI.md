@@ -165,16 +165,16 @@ builds it. Hidden commands work but aren't in `deedglass help`.
 | `deedglass migrate status [--database-url <url>] [--json]` | Setup | Show applied and pending migrations | built |
 | `deedglass migrate verify [--database-url <url>] [--json]` | Setup | Check applied migrations against this build | built |
 | `deedglass config print [--json]` | Setup | Show the effective config, secrets hidden | built |
-| `deedglass version [--json] [--check]` | Setup | Show the client and server versions | built |
+| `deedglass version [--json] [--check [--pre]]` | Setup | Show the client and server versions | built |
 | `deedglass keys gen [--dir <dir>] [--json]` | Setup | Generate a seal key | built |
 | `deedglass keys rotate [--overlap 5m] [--dir <dir>] [--json]` | Setup | Rotate the active seal key | built |
 | `deedglass keys list [--server <url>] [--json]` | Setup | List seal keys | built |
 | `deedglass vault status [--json]` | Setup | Show the credential vault's keys | built |
 | `deedglass vault rotate [--json]` | Setup | Re-encrypt credentials with a new key | built |
 | `deedglass help [<command>] [--json]` | Setup | Show help for deedglass or one command | built, hidden |
-| `deedglass completion zsh` | Setup | Print zsh completion | soon (S35) |
-| `deedglass completion bash` | Setup | Print bash completion | soon (S35) |
-| `deedglass completion fish` | Setup | Print fish completion | soon (S35) |
+| `deedglass completion zsh` | Setup | Print zsh completion | built |
+| `deedglass completion bash` | Setup | Print bash completion | built |
+| `deedglass completion fish` | Setup | Print fish completion | built |
 | `deedglass agent create <name> [--description …] [--label env=prod]... [--calls-per-minute n] [--calls-per-day n] [--spend-per-day minor --currency usd] [--owner usr_…] [--json]` | Agents | Register an agent | built |
 | `deedglass agent list [--status active|suspended|stopped] [--label env:prod] [--json]` | Agents | List agents | built |
 | `deedglass agent show <name|agt_…> [--json]` | Agents | Show one agent | built |

@@ -164,7 +164,15 @@ node web/scripts/contrast.mjs   # S24: WCAG ratios for every token pair in both 
 go test ./internal/console -run 'TestPages|TestTokensMatchDesignMD' -v   # S24: the page handler (routes, redirect, CSP, assets, placeholder) and the tokens.json ⇄ DESIGN.md lockstep
 make rename-guard   # retired identifiers (rule 5)
 make banned-words   # the banned list over files and every commit message
-make bench | make cover
+make bench          # S35: every suite (gate, stop, deed, wal, mcp, witness on a throwaway PG 18 via scripts/bench_pg.sh; policy, verify, quickstart), then bench-report; JSON in bench/results/<date>-<host>-bench-<suite>.json (deedglass.bench/v1, bench/schema.json)
+make bench-quick    # S35 (the RC, about 6 min): gate allow, policy 50, verify 100k, stop ×5; …-quick.json
+make bench-soak     # S35: 30 min at 50 calls/s (DEEDGLASS_BENCH_SOAK=10m shortens it)
+make bench-check    # S35: the six §12 targets on the newest results; refuses battery, unknown power and stale files (BENCH_QUICK=1 accepts quick ones)
+make bench-report   # S35: the table, bench/results/SUMMARY.json and the generated block in docs/BENCHMARKS.md (a test fails on a hand edit)
+make release-check  # S35: two GoReleaser snapshots (reproducible linux/amd64), 5 archives with completions, checksums, SBOMs, the two-platform image (size, user, labels); nothing pushed
+make cloud-smoke    # S35: deploy/cloud end to end in prod mode with Caddy's internal CA: health, routing, two orgs, backup, destroy, restore, export identical, chains intact
+make workflows-check # (ci) S35: release.yml's gates, environments, permissions and SHA pins, actionlint, and the self-test
+make bench-micro | make cover
 make dev            # Docker: Postgres 18.6 + migrate + serve on 127.0.0.1:8080 (creates .env); dev-down, dev-reset, dev-logs
 make run            # serve --migrate from source against the compose Postgres (127.0.0.1:55432)
 make docker         # the deedglass:dev image (distroless, 65532); make bench-http: S03 HTTP budget
@@ -201,6 +209,7 @@ scripts/ci-local.sh # the CI jobs locally (docker-smoke and govulncheck skip whe
    `github.com/jackc/pgx/v5` v5.11.0 (ADR-001, in go.mod since S02); `github.com/veraison/go-cose`
    v1.3.0 with `fxamacker/cbor/v2` v2.9.4 (ADR-026, in go.mod since S04). npm, dev only (`web/verify`,
    ADR-027, accepted; `sdk/typescript`, ADR-062, accepted under DL-047: `ai` 7.0.127, `@openai/agents` 0.18.0, `@langchain/core` 1.2.14, `@anthropic-ai/claude-agent-sdk` 0.3.289, `zod` 4.6.5, `publint` 0.3.25, `@arethetypeswrong/cli` 0.18.5, `@vitest/coverage-v8` 5.0.3; `@deedglass/sdk` itself has no runtime dependency); Python, `sdk/python` (ADR-063, accepted under DL-048): runtime `httpx` >=0.28.1,<0.29 only, extras `cryptography`, `langchain`, `claude-agent-sdk` (`openai-agents` and `crewai` declared), dev tools exact pins in `sdk/python/requirements-dev.txt`: `typescript` 7.0.2, `vitest` 5.0.3, `vite` 8.3.1, `@types/node` 24.19.0; no runtime dependency. The Console (`web/`, ADR-053, accepted under DL-038), dev and build only: `astro` 7.3.5, `tailwindcss` and `@tailwindcss/vite` 4.3.3, `@fontsource-variable/inter` and `@fontsource/geist-mono` 5.3.0, `lucide-static` 1.49.0, `typescript` 7.0.2, `vitest` 5.0.3, `happy-dom` 20.14.5, `@playwright/test` 1.63.0, `@axe-core/playwright` 4.13.0, `lighthouse` 13.5.0; nothing from npm runs in the shipped Console. The docs site (`docs-site/`, ADR-064, accepted under DL-049), build only: `astro` 7.3.5, `@astrojs/starlight` 0.42.5, `starlight-links-validator` 0.26.0, `starlight-openapi` 0.26.3, `starlight-llms-txt` 0.12.0, the same fontsource pins, `cspell` 10.3.6; Lighthouse and Playwright come from `web/`.
+   `golang.org/x/sys` v0.48.0 (indirect, ADR-070, S35). Release and CI tools, never linked: GoReleaser 2.18.2, cosign v3.1.3, syft v1.54.0, grype v0.120.0, actionlint 1.7.12, shellcheck 0.11.0 (ADR-067); the cloud kit's Caddy 2.11.6, age 1.3.2 and rclone on the VM (ADR-068). The docs site's packages are all `devDependencies` (S35, ADR-070).
    `cel.dev/cel-go` v0.32.0 (ADR-017, in go.mod since S10; brings protobuf, antlr4-go, cel.dev/expr,
    genproto and x/exp; the binary-size budget is ADR-032, accepted under DL-024 and amended under DL-031: < 40 MB). The MCP Go SDK
    `github.com/modelcontextprotocol/go-sdk` v1.8.0 (ADR-018, in go.mod since S14; since S15 the
@@ -214,6 +223,8 @@ scripts/ci-local.sh # the CI jobs locally (docker-smoke and govulncheck skip whe
    (`path::phrase::reason`; exact quoted prior-art titles and explanatory negations only).
    "open source" stays banned until the founder makes the repo public.
 8. Benchmarks write raw output to `bench/results/<date>-<host>.json`; docs cite only those files.
+   Numbers in docs come only from `bench/results` (since S35 through `make bench-report`, never typed;
+   a run on battery, unknown power or stale code is refused by `make bench-check`).
 9. Every factual sentence in public docs or site copy needs a row in `~/txv/ops/CLAIMS_REGISTER.md`
    with a primary source and date.
 10. Never touch production or customer credentials, databases or environments. Throwaway databases
@@ -643,6 +654,15 @@ and "open source" until the repo is public. Style bans: "revolutionary", "world-
   handler's refusal, people and decide tables, bare 401s, replay, latency; the notifier's version rule) and
   (integration) `TestSlackApprovalLoop`; `internal/store` `TestSlackApprovalsStore`. `TestPreAuthNamesStayInStore`
   keeps `slack_route` and `maint_prune_inbound_replay` in `internal/store`. The migration count is 26.
+- S35 (benchmarks, releases, cloud kit): `bench/internal/load` `TestHistogramAccuracy` (10⁶ samples, ≤ 1%),
+  `TestStallShowsInTail` (coordinated omission corrected), `TestCheckRefusals` (a missed target, battery,
+  stale, missing power, quick files, errors), `TestReportDeterministic`, `TestRepoBenchmarksDocFresh`,
+  `TestRepoResultsValidate` (bench/schema.json); `cmd/deedglass` `TestCompletionGoldens`/`CoversTable`/`ScriptsRun`,
+  `TestVersionCheck` (12 rows on an httptest stand-in, no network), `TestSemverCompare`; `internal/store`
+  (integration) `TestPurgeOrg` (every org table emptied, the other org byte-identical, a wrong confirmation,
+  the app role refused, the trigger's opening closed outside purge_org) and `TestBackupRole`;
+  `scripts/check-workflows.sh --self-test`; `make release-check`; `make cloud-smoke`. `web/test/dom.test.ts`
+  checks the Console's bidi escaping (SR-016). The migration count is 27.
 - `cmd/deedglass verify` (S05): 80 golden cases in `testdata/verify/<case>/{args,stdout,stderr,exit}`
   (`go test ./cmd/deedglass -run TestVerifyGolden -update`), every vector's code and exit, `--keys`
   URL rules (same-host redirects, 1 MiB, timeout, loopback-only http), key-set merge conflicts, no

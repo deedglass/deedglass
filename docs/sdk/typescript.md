@@ -57,8 +57,10 @@ can be kept secret. Only the public seal keys answer cross-origin requests.
 
 ## Retries and timeouts
 
-Retried: network errors, 408, 429 `rate_limited`, 500, 502, 503, 504. Never retried: 429
-`budget_exceeded` (a policy limit with its own reset) and everything else. Backoff is
+Retried: network errors, 408, 409 `idempotency_key_in_use`, 429 `rate_limited`, 502, 503, 504,
+the same set as the Python SDK. Never retried: 429 `budget_exceeded` (a policy limit with its own
+reset), 500 (the server stores a 5xx answer under the Idempotency-Key and replays it, so a retry
+can't change the outcome) and everything else. Backoff is
 500 ms × 2^n ± 25%, or `Retry-After` up to 10 s, never past the caller's `signal` or `timeoutMs`
 (`AbortSignal.any`). Every retry of a POST reuses its Idempotency-Key, and the Gate never runs a
 tool twice for one key.

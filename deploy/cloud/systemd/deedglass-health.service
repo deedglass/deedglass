@@ -1,0 +1,7 @@
+[Unit]
+Description=Deedglass health checks (heartbeat only when every check passes)
+After=deedglass-stack.service
+
+[Service]
+Type=oneshot
+ExecStart=/opt/deedglass/deploy/cloud/scripts/health-cron.sh

@@ -1,0 +1,5 @@
+exit 0
+--- stdout
+○ deedglass 0.2.0-rc.10 is available. You have 0.1.0.
+  notes  https://github.com/deedglass/deedglass/releases/tag/v0.2.0-rc.10
+--- stderr

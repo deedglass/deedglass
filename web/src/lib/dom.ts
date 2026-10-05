@@ -10,11 +10,22 @@ export type Props = Record<string, PropValue>;
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
+// SR-016 (S35): the bidi overrides and isolates (U+202A–U+202E, U+2066–U+2069) in a string an
+// agent supplied (a tool name, an agent name, an error message) could reorder the text around it.
+// Every string the Console renders passes through bidiSafe, which shows them as \uXXXX escapes,
+// exactly as the CLI's clean() does. Nothing the Console's own copy holds contains them.
+const BIDI = /[\u202a-\u202e\u2066-\u2069]/g;
+
+/** bidiSafe shows bidi override and isolate characters as visible \uXXXX escapes. */
+export function bidiSafe(v: string): string {
+  return v.replace(BIDI, (c) => '\\u' + c.charCodeAt(0).toString(16).padStart(4, '0'));
+}
+
 /** Appends children: strings and numbers as Text nodes, falsy values skipped. */
 export function append(parent: Node, children: readonly Child[]): void {
   for (const c of children) {
     if (c === null || c === undefined || c === false) continue;
-    parent.appendChild(typeof c === 'string' || typeof c === 'number' ? document.createTextNode(String(c)) : c);
+    parent.appendChild(typeof c === 'string' || typeof c === 'number' ? document.createTextNode(bidiSafe(String(c))) : c);
   }
 }
 
@@ -37,7 +48,7 @@ function setProp(el: Element, key: string, v: PropValue): void {
     el.setAttribute('class', String(v));
     return;
   }
-  el.setAttribute(key, v === true ? '' : String(v));
+  el.setAttribute(key, v === true ? '' : bidiSafe(String(v)));
 }
 
 /** h builds an HTML element. Props become attributes (on* must be functions); children become nodes. */
@@ -58,7 +69,7 @@ export function s<K extends keyof SVGElementTagNameMap>(tag: K, props?: Record<s
 
 /** text replaces an element's content with one Text node. */
 export function text(el: Element, value: string): void {
-  el.textContent = value;
+  el.textContent = bidiSafe(value);
 }
 
 /** clear removes every child. */

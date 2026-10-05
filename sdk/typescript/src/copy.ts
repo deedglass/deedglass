@@ -24,6 +24,8 @@ export const copy = {
     `Couldn't report the result of ${actionId} to Deedglass after 5 attempts. Deedglass will seal it as UNVERIFIABLE (edge_lost).`,
   approvalPending: (approvalId: string, expires: string): string =>
     `Waiting for approval ${approvalId}. It expires at ${expires}. Nothing has run yet. Try again after a person approves it.`,
+  approvalWaiting: (approvalId: string): string =>
+    `Waiting for approval in Console › Approvals (${approvalId}). Try again after someone decides.`,
   approvalTimeout: (approvalId: string): string =>
     `Approval ${approvalId} wasn't decided in time. Nothing has run yet. It stays open in Console › Approvals until it expires.`,
   unreadable: (status: number): string => `Deedglass answered ${status} with something the SDK couldn't read. Check that DEEDGLASS_SERVER points at a Deedglass server.`,
@@ -32,7 +34,7 @@ export const copy = {
     'The arguments hold an integer larger than 2^53 − 1, which JSON numbers can\'t carry exactly. Send it as a string, like "9007199254740993".',
   stopped: 'This agent was stopped in Deedglass by an admin. Nothing was run.',
   nothingRan: 'Nothing was run.',
-  outage: "Deedglass couldn't be reached, so this tool call was not run.",
+  outage: "Deedglass isn't reachable, so this tool was not run. Check that deedglass serve is running.",
   noResultObserved: 'The tool was authorized but no result was observed before the agent stopped.',
   intentKeyBad: 'The intent key must be a PKCS#8 PEM Ed25519 private key, like the one deedglass agent intent keygen writes.',
   ed25519Missing: 'This runtime has no Ed25519 in WebCrypto. Use Node 22.12 or newer, Bun, Deno or a current browser.',

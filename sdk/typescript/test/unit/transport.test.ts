@@ -93,6 +93,22 @@ describe('transport and client (S31 §6)', () => {
     expect(await client(s2.fetch, { maxRetries: 0 }).act('billing.refund_customer', {}).catch((e) => e)).toBeInstanceOf(APIError);
   });
 
+  it('500 is never retried (the server replays a stored 5xx under the same key; Python parity, S35)', async () => {
+    const s = scriptedFetch(() => json(500, { error: { type: 'api_error', code: 'internal_error', message: 'Oops.' } }), () => json(200, executed));
+    expect(await client(s.fetch).act('billing.refund_customer', {}).catch((e) => e)).toBeInstanceOf(APIError);
+    expect(s.calls.length).toBe(1);
+  });
+
+  it('409 idempotency_key_in_use is retried with the same key; another 409 is not', async () => {
+    const busy = () => json(409, { error: { type: 'invalid_request_error', code: 'idempotency_key_in_use', message: 'Busy.' } });
+    const s = scriptedFetch(busy, () => json(200, executed));
+    await client(s.fetch).act('billing.refund_customer', {}, { idempotencyKey: 'mine-2' });
+    expect(s.calls.length).toBe(2);
+    const s2 = scriptedFetch(() => json(409, { error: { type: 'invalid_request_error', code: 'idempotency_key_reused', message: 'Reused.' } }), () => json(200, executed));
+    expect((await client(s2.fetch).act('billing.refund_customer', {}).catch((e) => e)).code).toBe('idempotency_key_reused');
+    expect(s2.calls.length).toBe(1);
+  });
+
   it('network errors × 3 → ConnectionError after maxRetries', async () => {
     const s = scriptedFetch(() => 'network');
     const err = await client(s.fetch).act('billing.refund_customer', {}).catch((e) => e);

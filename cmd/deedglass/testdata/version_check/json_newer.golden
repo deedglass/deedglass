@@ -1,0 +1,4 @@
+exit 0
+--- stdout
+{"object":"version_check","current":"0.1.0","latest":"0.1.1","update_available":true,"url":"https://github.com/deedglass/deedglass/releases/tag/v0.1.1"}
+--- stderr

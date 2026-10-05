@@ -1,0 +1,60 @@
+{
+  "title": "deedglass.bench/v1",
+  "description": "One benchmark results file in bench/results/ (S35). bench-check reads only files in this shape; docs cite only these files.",
+  "type": "object",
+  "required": ["schema", "suite", "started_at", "commit", "dirty", "source_hash", "version", "host", "go", "scenarios", "caveats"],
+  "properties": {
+    "schema": {"type": "string", "enum": ["deedglass.bench/v1"]},
+    "suite": {"type": "string", "enum": ["gate", "mcp", "policy", "deed", "witness", "wal", "verify", "stop", "quickstart", "soak"]},
+    "quick": {"type": "boolean"},
+    "started_at": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"},
+    "commit": {"type": "string"},
+    "dirty": {"type": "boolean"},
+    "source_hash": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "version": {"type": "string"},
+    "host": {
+      "type": "object",
+      "required": ["name", "cpu", "cores", "mem_gb", "os", "power"],
+      "properties": {
+        "name": {"type": "string", "pattern": "^[a-z0-9-]+$"},
+        "cpu": {"type": "string", "pattern": "."},
+        "cores": {"type": "integer", "minimum": 1},
+        "mem_gb": {"type": "integer", "minimum": 0},
+        "os": {"type": "string"},
+        "power": {"type": "string", "enum": ["ac", "battery", "unknown"]}
+      }
+    },
+    "go": {"type": "string"},
+    "postgres": {
+      "type": "object",
+      "required": ["version", "mode", "settings"],
+      "properties": {
+        "version": {"type": "string"},
+        "mode": {"type": "string", "enum": ["native", "docker"]},
+        "settings": {"type": "object"}
+      }
+    },
+    "scenarios": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "runs", "result"],
+        "properties": {
+          "name": {"type": "string", "pattern": "^[a-z0-9_.]+$"},
+          "rate": {"type": "number", "minimum": 0},
+          "runs": {"type": "array", "items": {"type": "object", "required": ["count", "errors", "p50_ms", "p99_ms", "max_ms"]}},
+          "targets": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["metric", "op", "value", "source", "label"],
+              "properties": {"op": {"type": "string", "enum": ["lt"]}, "value": {"type": "number"}}
+            }
+          },
+          "result": {"type": "string", "enum": ["pass", "fail", "reported"]}
+        }
+      }
+    },
+    "caveats": {"type": "array", "items": {"type": "string"}}
+  }
+}

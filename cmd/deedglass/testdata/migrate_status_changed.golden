@@ -27,5 +27,6 @@ VERSION  NAME                STATE    APPLIED               CHECKSUM
 0024     learn_v2            [35mpending[0m  —                     sha256:4f58…6f51
 0025     suggestions_v2      [35mpending[0m  —                     sha256:dd82…72e9
 0026     slack_approvals     [35mpending[0m  —                     sha256:a590…3ac3
-[31m✕[0m 8 applied · 17 pending · 1 doesn't match this build. Run deedglass migrate verify for details.
+0027     purge_org           [35mpending[0m  —                     sha256:6fc3…4696
+[31m✕[0m 8 applied · 18 pending · 1 doesn't match this build. Run deedglass migrate verify for details.
 --- stderr

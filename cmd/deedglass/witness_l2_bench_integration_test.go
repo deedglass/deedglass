@@ -141,7 +141,10 @@ func TestL2Budget(t *testing.T) {
 
 	// 100 writes/s for 60 s: single-row updates of public.bulk (1,204 rows), sent on schedule,
 	// without waiting on the answer (wait 0): the measurement is in the database.
-	const rate = 100
+	rate := 100
+	if n, err := strconv.Atoi(os.Getenv("DEEDGLASS_L2_BENCH_RATE")); err == nil && n > 0 {
+		rate = n // S35's witness suite runs 10, 100 and 500 writes/s; the contract target is at 100
+	}
 	seconds := 60
 	if n, err := strconv.Atoi(os.Getenv("DEEDGLASS_L2_BENCH_SECONDS")); err == nil && n > 0 {
 		seconds = n // a shorter run while tuning; the recorded benchmark is 60 s
@@ -151,7 +154,7 @@ func TestL2Budget(t *testing.T) {
 	var mu sync.Mutex
 	var fails []string
 	for i := 0; i < rate*seconds; i++ {
-		at := start.Add(time.Duration(i) * time.Second / rate)
+		at := start.Add(time.Duration(i) * time.Second / time.Duration(rate))
 		time.Sleep(time.Until(at))
 		wg.Add(1)
 		go func(i int) {
@@ -182,7 +185,10 @@ func TestL2Budget(t *testing.T) {
 		time.Sleep(500 * time.Millisecond)
 	}
 	if sealed < rate*seconds {
-		t.Fatalf("only %d of %d actions sealed", sealed, rate*seconds)
+		if rate <= 100 {
+			t.Fatalf("only %d of %d actions sealed", sealed, rate*seconds)
+		}
+		t.Errorf("only %d of %d actions sealed in 3 minutes at %d/s; the numbers below cover the sealed ones", sealed, rate*seconds, rate) // S35: 500/s is reported with its achieved rate
 	}
 	rows, err := ctl.Query(context.Background(), `SELECT a.witness_level, a.witness_verdict,
 	    EXTRACT(EPOCH FROM (d.issued_at - f.commit_time)) * 1000,
@@ -253,7 +259,7 @@ func TestL2Budget(t *testing.T) {
 			shown++
 		}
 	}
-	if p50 >= 1000 {
+	if p50 >= 1000 && rate <= 100 {
 		t.Errorf("L2 p50 %.1f ms ≥ 1 s (contract §12)", p50)
 	}
 	if verdicts["L2 VERIFIED"] != len(lat) {
