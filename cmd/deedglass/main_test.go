@@ -124,7 +124,7 @@ func TestGoldens(t *testing.T) {
 		{"unknown_command", nil, false, []string{"polcy", "lint"}, 2},
 		{"unknown_no_match", nil, false, []string{"frobnicate"}, 2},
 		{"unbuilt_command", nil, false, []string{"dev", "agent-script", "--org", "org_x"}, 2},
-		{"json_error", nil, false, []string{"dev", "agent-script", "--json"}, 2},
+		{"json_error", nil, false, []string{"dev", "agent-script", "testdata/no-such-script.yaml", "--json"}, 2},
 		{"json_config_error", prod, false, []string{"--json", "config", "print"}, 1},
 		{"global_flag_after_subcommand", nil, false, []string{"version", "--no-color", "--json"}, 0},
 	}
@@ -153,7 +153,7 @@ func TestExitCodes(t *testing.T) {
 		{[]string{"agent"}, 2, "deedglass agent needs a subcommand.", ""},
 		{[]string{"agent", "frob"}, 2, `Unknown command "agent frob".`, ""},
 		{[]string{"agent", "kyes", "list"}, 2, `Did you mean "agent keys"?`, ""},
-		{[]string{"dev", "agent-script", "--json"}, 2, `"code":"not_built"`, ""},
+		{[]string{"dev", "agent-script", "--json"}, 2, `"code":"usage_error"`, ""},
 		{[]string{"policy", "diff", "--json"}, 2, `"code":"usage_error"`, ""},
 		{[]string{"policy", "test", "--json"}, 2, `"code":"usage_error"`, ""},
 		{[]string{"policy", "lint", "--json"}, 2, `"code":"usage_error"`, ""},

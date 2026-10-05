@@ -394,11 +394,15 @@ func TestPolicyDecisions(t *testing.T) {
 	v1, v2, v3 := compile(simfiles.AcmeSimV1), compile(simfiles.AcmeSimV2), compile(simfiles.AcmeSimV3)
 	ctx := context.Background()
 	counts := map[string]int{}
+	// S37: the same 1 s backstop the generator uses (generate.go). The 50 ms default turned a slow
+	// scheduling slice under -race on a loaded machine into policy_unavailable; this test checks
+	// decisions, not timing (the CEL cost limit is the real bound).
+	eo := policy.EvalOptions{Deadline: time.Second}
 	for _, a := range p {
 		in := policyInput(sc, a)
-		d1 := policy.Evaluate(ctx, v1, in, policy.EvalOptions{})
-		d2 := policy.Evaluate(ctx, v2, in, policy.EvalOptions{})
-		d3 := policy.Evaluate(ctx, v3, in, policy.EvalOptions{})
+		d1 := policy.Evaluate(ctx, v1, in, eo)
+		d2 := policy.Evaluate(ctx, v2, in, eo)
+		d3 := policy.Evaluate(ctx, v3, in, eo)
 		sql := ""
 		var args map[string]any
 		_ = json.Unmarshal(a.Args, &args)

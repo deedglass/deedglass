@@ -73,3 +73,5 @@ npm/deedglass/LICENSE::compliance::the Apache-2.0 licence text, verbatim (a copy
 # S35: cosign's own flag names in the commands that check a signed release (third-party tool flag or feature name)
 docs/INSTALL.md::certificate::third-party tool flag or feature name (cosign verify-blob --certificate-identity-regexp / --certificate-oidc-issuer)
 scripts/release-notes.sh::certificate::third-party tool flag or feature name (cosign verify-blob --certificate-identity-regexp / --certificate-oidc-issuer)
+CONTRIBUTING.md::certificate::the exact title "Developer Certificate of Origin" (DCO 1.1)
+docs/PUBLIC_REPO_SWITCH.md::open source::the switch checklist names the phrase it unbans at the public switch

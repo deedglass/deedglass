@@ -1,0 +1,28 @@
+# Weekly, grouped updates with few open pull requests (S37). A new dependency still needs an ADR;
+# Dependabot only bumps the ones already approved.
+version: 2
+updates:
+  - package-ecosystem: gomod
+    directory: /
+    schedule: { interval: weekly }
+    open-pull-requests-limit: 3
+    groups: { go: { patterns: ["*"] } }
+  - package-ecosystem: npm
+    directories: [/web, /docs-site, /sdk/typescript, /web/verify]
+    schedule: { interval: weekly }
+    open-pull-requests-limit: 3
+    groups: { npm: { patterns: ["*"] } }
+  - package-ecosystem: pip
+    directory: /sdk/python
+    schedule: { interval: weekly }
+    open-pull-requests-limit: 2
+    groups: { python: { patterns: ["*"] } }
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: { interval: weekly }
+    open-pull-requests-limit: 2
+    groups: { actions: { patterns: ["*"] } }
+  - package-ecosystem: docker
+    directories: [/, /examples/demo]
+    schedule: { interval: weekly }
+    open-pull-requests-limit: 2

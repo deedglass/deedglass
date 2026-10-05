@@ -302,6 +302,17 @@
     ]
   },
   {
+    "code": "keys_missing",
+    "exit": [
+      2
+    ],
+    "messages": null,
+    "next": [
+      "Run make demo-up, which writes examples/demo/.demo-keys.",
+      "Run make demo-up (or make demo-reset HARD=1) to write the demo's keys again."
+    ]
+  },
+  {
     "code": "keys_unreachable",
     "exit": [
       2
@@ -575,6 +586,40 @@
     "messages": null,
     "next": [
       "Fix the scenario file; docs/SIMULATOR.md lists every key."
+    ]
+  },
+  {
+    "code": "script_expectation_failed",
+    "exit": [
+      1
+    ],
+    "messages": null
+  },
+  {
+    "code": "script_failed",
+    "exit": [
+      1
+    ],
+    "messages": null
+  },
+  {
+    "code": "script_invalid",
+    "exit": [
+      2
+    ],
+    "messages": null,
+    "next": [
+      "Fix that step, then run it again. docs/DEMO_SCRIPT.md lists every step kind."
+    ]
+  },
+  {
+    "code": "script_unreadable",
+    "exit": [
+      2
+    ],
+    "messages": null,
+    "next": [
+      "Check the path, for example examples/demo/launch.yaml."
     ]
   },
   {

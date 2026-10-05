@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Report a vulnerability
+    url: https://github.com/deedglass/deedglass/security/policy
+    about: Never in a public issue. SECURITY.md says how to report privately.
+  - name: Ask a question
+    url: https://github.com/deedglass/deedglass/discussions
+    about: Questions and "how do I" go to Discussions.

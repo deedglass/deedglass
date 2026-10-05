@@ -1,0 +1,34 @@
+name: Bug
+description: Something doesn't work the way the docs say.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: "Security issue? Don't file it here: follow SECURITY.md. Remove secrets (keys start with dg_, sk_, xox) from anything you paste."
+  - type: input
+    id: version
+    attributes: { label: Version, description: "Output of deedglass version", placeholder: "deedglass 0.1.0 · commit …" }
+    validations: { required: true }
+  - type: dropdown
+    id: install
+    attributes: { label: Install method, options: [npx, Docker image, Release binary, Homebrew, go install, Built from source] }
+    validations: { required: true }
+  - type: input
+    id: os
+    attributes: { label: Operating system, placeholder: "macOS 15.2 arm64, Ubuntu 24.04 …" }
+    validations: { required: true }
+  - type: textarea
+    id: steps
+    attributes: { label: Steps to reproduce, description: "The smallest sequence of commands that shows it." }
+    validations: { required: true }
+  - type: textarea
+    id: expected
+    attributes: { label: What you expected }
+    validations: { required: true }
+  - type: textarea
+    id: actual
+    attributes: { label: What happened }
+    validations: { required: true }
+  - type: textarea
+    id: logs
+    attributes: { label: Logs, description: "With secrets removed. deedglass doctor output helps too.", render: text }

@@ -1,0 +1,23 @@
+Deedglass demo · acme-demo · offline · 7 scenes
+── 1/7 A safe read ───────────────────────────────────────────
+✓ allowed · postgres.query · L0 · VERIFIED · deed 17
+── 2/7 A destructive request ─────────────────────────────────
+✕ denied · postgres.execute · Blocked by policy "block-destructive-sql": DROP is never allowed for agents.
+── 3/7 A normal write ────────────────────────────────────────
+✓ allowed · postgres.execute · L2 · VERIFIED · deed 19
+── 4/7 The trigger ───────────────────────────────────────────
+✕ L2 · MISMATCH · Postgres changed 301 rows in public.orders. The agent reported 1.
+    expected   UPDATE 1 row in public.orders where id = 42 · sets status
+    observed   UPDATE 301 rows in public.orders · 300 outside id = 42
+── 5/7 Put it back ───────────────────────────────────────────
+✓ Undo available · 301 rows in public.orders · 301 updates
+◐ pending approval · postgres.undo · a person countersigns first
+✓ countersigned by ops@example.test
+✓ executed · postgres.undo · L2 · VERIFIED · Restored 301 rows in public.orders exactly as planned.
+── 6/7 A refund over $50 ─────────────────────────────────────
+○ skipped · needs Stripe test mode · run make demo-live
+── 7/7 Check every deed ──────────────────────────────────────
+✓ 23 deeds · chain intact · 1 seal key · <date>
+· one byte changed in deed 17 · .tmp/demo/deeds-changed.jsonl
+✕ Deed 17 was changed after it was sealed.
+Demo complete · 6 scenes · 1 skipped · <duration>

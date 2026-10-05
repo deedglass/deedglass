@@ -1,4 +1,4 @@
 exit 2
 --- stdout
 --- stderr
-{"error":{"code":"not_built","doc_url":"https://docs.deedglass.com/errors/not_built","message":"deedglass dev agent-script isn't in this build yet. Run deedglass help to see what this build can do.","type":"invalid_request_error"}}
+{"error":{"code":"script_unreadable","doc_url":"https://docs.deedglass.com/errors/script_unreadable","message":"testdata/no-such-script.yaml couldn't be read: no such file or directory. Check the path, for example examples/demo/launch.yaml.","type":"invalid_request_error"}}

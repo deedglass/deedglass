@@ -13,7 +13,7 @@ LDFLAGS  := -s -w -X $(BI).Version=$(VERSION) -X $(BI).Commit=$(COMMIT) -X $(BI)
 	dev dev-down dev-reset dev-logs run docker bench-http bench-verify \
 	web-verify-install web-verify-test sdk-ts sdk-ts-it sdk-sync-verify sdk-runtime sdk-examples web-verify-build web-verify-serve gencopy genmark bench-mark bench-ledger bench-stop bench-intents bench-gate bench-witness policy-test \
 	fuzz-policy fuzz-policy-short audit fuzz-all fuzz-regress attack-one bench-policy bench-eval mcp-it bench-mcp \
-	demo-up demo-down demo-reset demo-status demo-snippet demo-psql demo-follow demo-verify demo-check demo-smoke bench-gateway \
+	demo demo-live demo-launch-check demo-up demo-down demo-reset demo-status demo-snippet demo-psql demo-follow demo-verify demo-check demo-smoke bench-gateway \
 	demo-trigger-on demo-trigger-off demo-order-reset demo-hero demo-hero-check demo-diff bench-l2 bench-approvals bench-slack \
 	mock-orders bench-connectors bench-postgres bench-decoder attack attack-report vuln undo-matrix
 
@@ -457,6 +457,15 @@ demo-lan-off: ## S22: back to 127.0.0.1 only
 
 demo-hero-check: ## S21: TestHeroScript, hero.sh twice with demo-reset between (make demo-up first)
 	DEEDGLASS_DEMO=1 $(GO) test -tags demo -count=1 -v -run TestHeroScript ./examples/demo/
+
+demo: ## S37: the launch demo offline: a fresh stack (demo-reset HARD=1), approvals off, examples/demo/launch.yaml (7 scenes); DEMO_PORT=8091 if 8080 is taken
+	@examples/demo/scripts/demo.sh demo
+
+demo-live: ## S37: the same script with Slack, Stripe test mode and a person (preflight first; --live --step)
+	@examples/demo/scripts/demo.sh live
+
+demo-launch-check: ## S37: TestLaunchDemo, make demo twice, normalized output against examples/demo/testdata/launch.golden (UPDATE=1 rewrites it)
+	DEEDGLASS_DEMO=1 $(GO) test -tags demo -count=1 -v -timeout 30m -run TestLaunchDemo ./examples/demo/
 
 demo-smoke: ## TestDemoScript against the running demo stack (make demo-up first)
 	DEEDGLASS_DEMO=1 $(GO) test -tags demo -count=1 -v -run TestDemoScript ./examples/demo/

@@ -26,6 +26,8 @@
 #   demo.sh lan       make demo-lan: serve on this Mac's Wi-Fi address so a phone can open approval
 #                     links (DEEDGLASS_BASE_URL follows); anyone on the network can reach it
 #   demo.sh lan-off   make demo-lan-off: back to 127.0.0.1 only, and approval emails back to the log
+#   demo.sh demo      make demo (S37): a fresh stack (HARD reset), approvals off, launch.yaml offline
+#   demo.sh live      make demo-live (S37): the preflight, then launch.yaml with --live --step
 #
 # Env: DEMO_PORT (default 8080, or what .env says), HTTP=1, HARD=1, CLIENT, KEYS=1, SINCE, ORDER, ID, NO_COLOR.
 set -euo pipefail
@@ -402,7 +404,63 @@ lan_off() {
   ok "Deedglass back on http://127.0.0.1:$PORT only · approval emails go to the server's log again"
 }
 
+# script runs the launch script (S37) from the demo's state folder (no .env of its own), against
+# the demo's database and server; .tmp/demo/ is under the repo root.
+script() {
+  mkdir -p "$ROOT/.tmp/demo"
+  rm -f "$ROOT/.tmp/demo/deeds.jsonl" "$ROOT/.tmp/demo/deeds-changed.jsonl"
+  curl -fsS -m 5 "http://127.0.0.1:$PORT/.well-known/deedglass/keys.json" -o "$ROOT/.tmp/demo/keys.json" ||
+    fail "The demo's keys.json couldn't be read from http://127.0.0.1:$PORT. Run make demo-status."
+  cd "$STATE"
+  host_env "$BIN" --server "http://127.0.0.1:$PORT" dev agent-script "$DEMO/launch.yaml" --root "$ROOT" --keys-file "$KEYS_FILE" "$@"
+}
+
+# demo is make demo (S37): a fresh stack, so every run seals the same deeds in the same order, then
+# approvals off (scene 3 must not pause) and the launch script offline.
+demo() {
+  need_docker
+  if [ -f "$ENV_FILE" ]; then HARD=1 reset >/dev/null; else up >/dev/null; fi
+  # A fresh stack already enforces acme-demo.yaml; activating it again is refused, which is fine.
+  approvals_off >/dev/null 2>&1 || true
+  script "$@"
+}
+
+# live_preflight refuses anything but a Stripe test key and names the next step for each missing
+# piece of make demo-live (S37 §3.3). It never prints a key.
+live_preflight() {
+  key="${STRIPE_TEST_KEY:-}"
+  if [ -z "$key" ] && [ -f "$ROOT/.env" ]; then key="$(grep -E '^STRIPE_TEST_KEY=' "$ROOT/.env" | head -1 | cut -d= -f2- || true)"; fi
+  case "$key" in
+    sk_test_*|rk_test_*) ok "Stripe · a test-mode key" ;;
+    "") fail "No Stripe test key. Put STRIPE_TEST_KEY=sk_test_… in the repo's .env yourself, then run make demo-live again." ;;
+    *) fail "The Stripe key isn't a test-mode key. make demo-live runs only with sk_test_ keys; put a test key in .env." ;;
+  esac
+  if [ -n "${DEMO_TUNNEL_URL:-}" ] || pgrep -f "cloudflared tunnel" >/dev/null 2>&1; then
+    ok "tunnel · running"
+  else
+    fail "No tunnel for Slack. Run cloudflared tunnel --url http://127.0.0.1:$PORT in another terminal, set the Slack app's interactivity URL to it, then run make demo-live again."
+  fi
+  [ -f "$ENV_FILE" ] || fail "The demo stack isn't set up. Run make demo-up first."
+  [ -s "$DEMO/.stripe-fixtures.json" ] || fail "No Stripe fixtures. Run bin/deedglass dev stripe-fixtures --from-env STRIPE_TEST_KEY first."
+  build_cli >/dev/null
+  (cd "$STATE" && api connector test slack >/dev/null 2>&1) || fail "The Slack connector doesn't answer. Run bin/deedglass connector test slack to see why (S29's setup)."
+  ok "Slack · connector test passed"
+  (cd "$STATE" && api connector test stripe >/dev/null 2>&1) || fail "The Stripe connector doesn't answer. Run bin/deedglass connector test stripe to see why (S30's setup)."
+  ok "Stripe · connector test passed"
+}
+
+live() {
+  live_preflight
+  approvals_off >/dev/null 2>&1 || true
+  charge="$(grep -o 'ch_[A-Za-z0-9]*' "$DEMO/.stripe-fixtures.json" | head -1)"
+  [ -n "$charge" ] || fail "No charge in examples/demo/.stripe-fixtures.json. Run bin/deedglass dev stripe-fixtures again."
+  script --live --step --var "stripe_charge=$charge" "$@"
+}
+
 case "${1:-}" in
+  demo) shift; demo "$@" ;;
+  live) shift; live "$@" ;;
+  live-preflight) live_preflight ;;
   approvals-on) approvals_on ;;
   approvals-off) approvals_off ;;
   approver) approver ;;

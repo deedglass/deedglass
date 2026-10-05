@@ -1,0 +1,108 @@
+# The launch demo (S37 §3.3): seven scenes through the real Gate on the Acme demo stack.
+#
+#   make demo        offline: a fresh stack (demo-reset HARD=1), approvals off, then this script
+#   make demo-live   the same script with --live --step: Slack, Stripe test mode and a person
+#                    countersigning on the phone
+#
+# Every step asserts what the product really did; the first unmet expectation stops the run.
+# Never change the product to fit this file: change the file, and say why in the commit.
+# Run steps are deedglass subcommands as argv (no shell); files change only under .tmp/demo/.
+deedglass: agent-script/v1
+title: Deedglass demo
+org: acme-demo
+agent: claude-code
+scenes:
+  - id: read
+    title: A safe read
+    say:
+      - First, a plain read. The Gate allows it and seals a deed.
+    steps:
+      - call:
+          tool: postgres.query
+          args: { sql: "SELECT id, status FROM public.orders WHERE id = 42" }
+        expect: { status: executed, decision: allow, rule: allow-order-reads, verdict: VERIFIED }
+        capture: { read: id, read_deed: deed }
+
+  - id: drop
+    title: A destructive request
+    say:
+      - Now something destructive. The policy says no, before anything touches the database.
+    steps:
+      - call:
+          tool: postgres.execute
+          args: { sql: "DROP TABLE public.refunds" }
+        expect: { status: denied, decision: deny, rule: block-destructive-sql, error: policy_denied }
+
+  - id: ship-17
+    title: A normal write
+    say:
+      - A normal write. Postgres committed one row, and the agent said one row.
+    steps:
+      - make: demo-trigger-off
+      - call:
+          tool: postgres.execute
+          args: { sql: "UPDATE public.orders SET status = 'shipped' WHERE id = 17" }
+        expect: { status: executed, rule: allow-order-status-updates, level: L2, verdict: VERIFIED }
+
+  - id: ship-42
+    title: The trigger
+    say:
+      - Same request, but a trigger touches 300 more orders.
+      - The agent says one row. Postgres says 301.
+    steps:
+      - make: demo-trigger-on
+      - call:
+          tool: postgres.execute
+          args: { sql: "UPDATE public.orders SET status = 'shipped' WHERE id = 42" }
+        expect: { status: executed, level: L2, verdict: MISMATCH, output: "Postgres changed 301 rows in public.orders. The agent reported 1." }
+        capture: { ship42: id }
+
+  - id: undo
+    title: Put it back
+    say:
+      - Undo is built from what Postgres committed.
+      - A person countersigns, and Postgres confirms the fix.
+    steps:
+      - make: demo-trigger-off
+      - run: [undo, preview, "${ship42}"]
+        as: admin
+        expect: { output: "Undo available" }
+      - run: [undo, preview, "${ship42}", --json]
+        as: admin
+        show: none
+        capture: { plan: '"plan_digest": "(sha256:[0-9a-f]{64})"' }
+      - run: [undo, run, "${ship42}", --plan, "${plan}", --reason, "Put the 300 extra orders back", --wait, 1s, --json]
+        as: admin
+        show: none
+        expect: { exit: 2, output: pending_approval }
+        capture: { undo: '"id": "(act_[0-9a-z]{26})"', undo_apr: '(apr_[0-9a-z]{26})' }
+        print: "◐ pending approval · postgres.undo · a person countersigns first"
+      - approve: { approval: "${undo_apr}", as: ops@example.test, reason: "Checked the 301 rows", action: "${undo}" }
+        expect: { status: executed, level: L2, verdict: VERIFIED }
+
+  - id: refund
+    title: A refund over $50
+    needs: [stripe, slack]
+    say:
+      - Refunds over $50 wait for a person. Stripe confirms the refund exists.
+    steps:
+      - call:
+          tool: stripe.create_refund
+          args: { charge: "${stripe_charge}", amount: 12000 }
+        expect: { status: pending_approval }
+        capture: { refund: id, refund_apr: approval }
+      - approve: { approval: "${refund_apr}", as: ops@example.test, action: "${refund}" }
+        expect: { status: executed, level: L1, verdict: VERIFIED }
+
+  - id: verify
+    title: Check every deed
+    say:
+      - Every step is a signed deed. Change one byte, and anyone can see it.
+    steps:
+      - run: [deeds, export, --org, acme-demo, --format, jsonl, --out, .tmp/demo/deeds.jsonl]
+        show: none
+      - run: [verify, .tmp/demo/deeds.jsonl, --keys, .tmp/demo/keys.json]
+        expect: { output: chain intact }
+      - tamper: { from: .tmp/demo/deeds.jsonl, to: .tmp/demo/deeds-changed.jsonl, deed: "${read_deed}" }
+      - run: [verify, .tmp/demo/deeds-changed.jsonl, --keys, .tmp/demo/keys.json]
+        expect: { exit: 1, output: was changed after it was sealed }

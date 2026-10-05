@@ -69,7 +69,7 @@ export const MOVED = { 'docs/QUICKSTART.md': 'quickstart', 'docs/FAQ.md': 'faq' 
 export const SOURCES = { 'docs/api/errors.md': 'errors', 'docs/ATTACK_SUITE.md': 'security/attack-suite' };
 // Repo-only: build and process notes for people working in the repo.
 export const REPO_ONLY = [
-  'docs/RELEASING.md', 'docs/AMENDMENTS.md', 'docs/COPY_CATALOG.md', 'docs/DESIGN_SYSTEM.md', 'docs/DEV_LOOP.md', 'docs/NAMING.md', 'docs/REPO_MAP.md',
+  'docs/RELEASING.md', 'docs/DEMO_SCRIPT.md', 'docs/PUBLIC_REPO_SWITCH.md', 'docs/AMENDMENTS.md', 'docs/COPY_CATALOG.md', 'docs/DESIGN_SYSTEM.md', 'docs/DEV_LOOP.md', 'docs/NAMING.md', 'docs/REPO_MAP.md',
   'docs/SECURITY_BACKLOG.md', 'docs/README.md', 'docs/adr/README.md', 'docs/v0/EVALUATION_RUNBOOK.md', 'docs/v0/OBSERVATION_BOUNDARY.md',
   'docs/v0/OPERATION_BUNDLE.md', 'docs/v0/STATEMENT_SPEC.md', 'docs/v0/VERIFICATION_MODEL.md',
 ];

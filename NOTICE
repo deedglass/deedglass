@@ -1,0 +1,18 @@
+Deedglass
+Copyright 2026 Arjun Prabhakaran
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+
+This product bundles the following third-party works in the Console (web/), the docs site
+(docs-site/), the in-browser verifier and the full scan report template (scripts/report/):
+
+- Inter (variable), Copyright 2016 The Inter Project Authors (https://github.com/rsms/inter).
+  Licensed under the SIL Open Font License, Version 1.1.
+- Geist Mono, Copyright 2024 The Geist Project Authors (https://github.com/vercel/geist-font).
+  Licensed under the SIL Open Font License, Version 1.1.
+- Lucide icons, Copyright (c) 2026 Lucide Icons and Contributors (https://lucide.dev).
+  Licensed under the ISC License. Portions derived from Feather, Copyright (c) 2013-2022 Cole Bemis,
+  licensed under the MIT License.
+
+Go module dependencies and their licences are listed in go.mod and in each release's SBOM
+(docs/INSTALL.md says where to find it). Each dependency's choice is recorded in an ADR (docs/adr/).

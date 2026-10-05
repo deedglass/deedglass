@@ -1,0 +1,7 @@
+# One maintainer today (GOVERNANCE.md): the deedglass/maintainers team (the founder creates it at the public switch). Security-sensitive paths are listed so a reviewer is always asked.
+*                         @deedglass/maintainers
+/internal/deed/           @deedglass/maintainers
+/internal/identity/       @deedglass/maintainers
+/internal/vault/          @deedglass/maintainers
+/attack/                  @deedglass/maintainers
+/.github/workflows/       @deedglass/maintainers

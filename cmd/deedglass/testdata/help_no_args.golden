@@ -44,7 +44,7 @@ MCP
 Insights
   insights            Suggestions, shadow results and anomalies          stats · shadow · anomalies · detect · settings · suggestions · digest
 Dev
-  dev                 Local helpers                               soon   seed · fake-action · simulate · agent-script · mail-preview · sign-intent · stripe-fixtures
+  dev                 Local helpers                                      seed · fake-action · simulate · agent-script · mail-preview · sign-intent · stripe-fixtures
 
 Global flags  --json · --server <url> · --api-key <key> · --org <id> · --no-color · -v
 Run deedglass help <command> for details · https://docs.deedglass.com

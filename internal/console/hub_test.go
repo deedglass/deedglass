@@ -404,8 +404,9 @@ func TestResumeExpiresByAge(t *testing.T) {
 // --- backpressure ---
 
 func TestBackpressure(t *testing.T) {
-	// A 32-event buffer: under -race on a loaded machine a fast reader can miss a few scheduling
-	// slices; the stalled reader still overflows it (200 events) and must be marked lagged (S25).
+	// A 32-event buffer. The producer never runs more than 16 events ahead of the slowest fast
+	// reader (S37: under -race on a loaded machine a fixed sleep let a descheduled reader overflow
+	// its buffer), so only the stalled reader overflows (200 events) and is marked lagged (S25).
 	h, in := startHub(t, HubOptions{Instance: "bp1", SubBuffer: 32, MaxPerUser: 100})
 	stalled, _, _, _ := mustSub(t, h, Filter{Org: "org_a", Owner: "usr_1"}, "")
 	var fast []*Sub
@@ -415,12 +416,14 @@ func TestBackpressure(t *testing.T) {
 	}
 	var wg sync.WaitGroup
 	lat := make([][]time.Duration, len(fast))
+	got := make([]atomic.Int64, len(fast))
 	for i, s := range fast {
 		wg.Go(func() {
 			for range 200 {
 				select {
 				case e := <-s.C():
 					lat[i] = append(lat[i], time.Since(e.queued))
+					got[i].Add(1)
 				case <-s.Lagged():
 					t.Errorf("fast subscriber %d lagged", i)
 					return
@@ -431,11 +434,19 @@ func TestBackpressure(t *testing.T) {
 			}
 		})
 	}
-	for n := range 200 {
-		in <- ledger.BusMsg{Event: evt(n, "org_a", ledger.EventActionCreated, fmt.Sprintf("act_%d", n))}
-		if n%4 == 3 {
-			time.Sleep(time.Millisecond) // a paced producer: the fast readers keep up, the stalled one doesn't
+	slowest := func() int64 {
+		m := int64(200)
+		for i := range got {
+			m = min(m, got[i].Load())
 		}
+		return m
+	}
+	for n := range 200 {
+		// A paced producer: the fast readers keep up, the stalled one doesn't.
+		for deadline := time.Now().Add(10 * time.Second); int64(n)-slowest() > 16 && time.Now().Before(deadline); {
+			time.Sleep(100 * time.Microsecond)
+		}
+		in <- ledger.BusMsg{Event: evt(n, "org_a", ledger.EventActionCreated, fmt.Sprintf("act_%d", n))}
 	}
 	select {
 	case <-stalled.Lagged():
@@ -444,6 +455,9 @@ func TestBackpressure(t *testing.T) {
 	}
 	wg.Wait()
 	for i := range fast {
+		if len(lat[i]) == 0 {
+			continue // already reported above
+		}
 		sort.Slice(lat[i], func(a, b int) bool { return lat[i][a] < lat[i][b] })
 		// Blocked behind the stalled one, they would wait seconds; the bound leaves room for a busy
 		// machine running -race (make bench-events measures the real p99).

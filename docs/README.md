@@ -1,5 +1,7 @@
 # Where the docs live
 
+Start with the repository's [README](../README.md): what Deedglass is, the quickstart and how it works.
+
 The public docs are **docs.deedglass.com**, built from `docs-site/` (Astro + Starlight, ADR-064).
 This directory, `docs/`, holds the repo's engineering notes and specs. Each file is one of:
 

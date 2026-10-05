@@ -9,7 +9,8 @@ this file by `scripts/release-notes.sh`.
 
 ## [0.1.0] - Unreleased
 
-The first release. A draft until the founder tags it.
+The first release. Release candidate `0.1.0-rc.1` (2026-10-05); the date is set when the founder
+tags `v0.1.0`.
 
 ### Added
 
@@ -34,6 +35,14 @@ The first release. A draft until the founder tags it.
 - **Setup.** `deedglass init`, `doctor`, `scan` and shell completions (`deedglass completion zsh|bash|fish`).
 - **Releases.** Five binaries, a two-platform image, checksums and an SBOM per archive;
   `deedglass version --check` asks GitHub for a newer release when you run it.
+- **The scripted demo.** `make demo` runs seven scenes through the real Gate offline (`deedglass dev
+  agent-script examples/demo/launch.yaml`) and `make demo-live` adds Slack and Stripe test mode.
+- **The full scan report.** `scripts/report/render.mjs` turns `deedglass scan --json` into one tagged
+  A4 page.
+
+### Known issues
+
+See [KNOWN_ISSUES.md](KNOWN_ISSUES.md): what happens, who is affected, the workaround and the fix target.
 
 ### What it doesn't do yet
 

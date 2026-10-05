@@ -256,7 +256,7 @@ builds it. Hidden commands work but aren't in `deedglass help`.
 | `deedglass dev seed [--demo [--keys-file <path>] [--approver <email>]] [--json]` | Dev | Load demo data into a dev database | built |
 | `deedglass dev fake-action [--n 20] [--seed 42] [--kinds allow,deny,…] [--agents 3] [--batch 1] [--pace 0s] [--org-slug demo] [--quiet] [--json]` | Dev | Seal realistic fake actions (dev only) | built |
 | `deedglass dev simulate [--scenario examples/sim/acme.yaml] [--days 7] [--end now|-2d] [--seed 7] [--org org_… | --org-slug acme-sim] [--append] [--pace 0s] [--quiet] [--json]` | Dev | Simulate a week of agent traffic (dev only) | built |
-| `deedglass dev agent-script` | Dev | Run a scripted agent | soon (S37) |
+| `deedglass dev agent-script <script.yaml> [--step] [--live] [--only <scene>] [--keys-file examples/demo/.demo-keys] [--root .] [--var name=value] [--json]` | Dev | Run a scripted agent | built |
 | `deedglass dev mail-preview login|invite|approval|approval-foureyes [--out /tmp/login.html] [--json]` | Dev | Preview emails in the browser | built |
 | `deedglass dev sign-intent --key <pem> --tool stripe.refund --args '{…}' [--org org_… --agent agt_…] [--obo …] [--session …] [--ttl 60s] [--explain] [--json]` | Dev | Sign an intent with a local key | built |
 | `deedglass dev stripe-fixtures [--from-env STRIPE_TEST_KEY] [--connector stripe] [--out examples/demo/.stripe-fixtures.json] [--json]` | Dev | Create Stripe sandbox fixtures | built |

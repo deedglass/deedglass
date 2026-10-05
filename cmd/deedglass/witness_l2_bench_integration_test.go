@@ -94,7 +94,12 @@ func TestL2Budget(t *testing.T) {
 	_ = os.WriteFile(pf, []byte(l2Policy), 0o600)
 	run("policy", "push", pf)
 	run("policy", "activate", "postgres-l2", "--version", "1", "--mode", "enforce", "--reason", "S21 benchmark", "--yes")
-	client := &http.Client{Timeout: 60 * time.Second, Transport: &http.Transport{MaxIdleConnsPerHost: 256}}
+	// S37: at most 256 connections. One org seals about 211 deeds a second on a laptop (S35), so at
+	// 500 writes/s the requests in flight grow without bound; with no cap the client opened a socket
+	// per request until this process (client and server share it) hit macOS's 10,240 open files,
+	// and accept and dial failed (the 9,442 "EOF" sends of S36). Capped, overload shows up as
+	// queueing in the measured latency, which is the honest number.
+	client := &http.Client{Timeout: 10 * time.Minute, Transport: &http.Transport{MaxIdleConnsPerHost: 256, MaxConnsPerHost: 256}}
 	call := func(key, method, path, body string) (int, string) {
 		req, _ := http.NewRequestWithContext(context.Background(), method, base+path, strings.NewReader(body))
 		req.Header.Set("Authorization", "Bearer "+key)
@@ -172,6 +177,13 @@ func TestL2Budget(t *testing.T) {
 	wg.Wait()
 	sendFor := time.Since(start)
 	if len(fails) > 0 {
+		shown := 0
+		for _, l := range strings.Split(s.err.String(), "\n") {
+			if (strings.Contains(l, "http:") || strings.Contains(l, "panic") || strings.Contains(l, "level=ERROR") || strings.Contains(l, `"level":"ERROR"`)) && shown < 8 {
+				t.Logf("serve: %s", clip(l, 400))
+				shown++
+			}
+		}
 		t.Fatalf("%d sends failed, first: %s", len(fails), fails[0])
 	}
 	ctl := e.Admin(t)

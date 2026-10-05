@@ -1,0 +1,52 @@
+---
+title: Try the demo
+description: Run the seven-scene Acme demo on your own machine with make demo, offline, through the real Gate, and see each outcome checked as it runs.
+lastVerified: "2026-10-05"
+---
+
+import Limits from '../../../components/Limits.astro';
+
+The launch demo runs on your own machine against a small Acme Store: an orders database in Docker
+and Deedglass in front of it. Every scene goes through the real Gate, and every outcome is checked as
+it runs: if the product says something else, the run stops and prints what it expected.
+
+**Before you start**
+
+- A clone of the repository, Go 1.27, Docker running and port 8091 free.
+
+## Run it
+
+```sh test=skip reason="make demo recreates the demo stack, which the snippet runner shares"
+make demo DEMO_PORT=8091
+```
+
+Seven scenes print in order:
+
+1. **A safe read** is allowed and sealed as a deed.
+2. **A destructive request** (`DROP TABLE public.refunds`) is denied by `block-destructive-sql` before anything touches the database.
+3. **A normal write** ships one order; Postgres committed one row, so the verdict is `L2 · VERIFIED`.
+4. **The trigger** ships order 42 while a legacy trigger ships 300 more: `L2 · MISMATCH · Postgres changed 301 rows in public.orders. The agent reported 1.`
+5. **Put it back:** an undo built from the 301 rows waits for a person, is countersigned, and Postgres confirms it: `L2 · VERIFIED`.
+6. **A refund over $50** needs Stripe test mode and Slack, so offline it says it was skipped.
+7. **Check every deed:** the org's deeds are exported and verified, then one byte is changed and the check fails on that deed.
+
+`make demo` starts from a fresh demo stack each time, so the output is the same on every run.
+
+## Run one scene, or step through
+
+```sh test=skip reason="needs the demo stack"
+bin/deedglass dev agent-script examples/demo/launch.yaml --only verify
+bin/deedglass dev agent-script examples/demo/launch.yaml --step
+```
+
+`--step` waits for Enter between scenes and prints each scene's narration. The script is
+`examples/demo/launch.yaml`: a list of scenes, each a tool call, a demo toggle, a `deedglass`
+command, an approval or a one-byte change, with the outcome it expects.
+
+## What it doesn't do
+
+<Limits>
+- The offline demo countersigns through a dev-only command (`deedglass approve --as`); in production an approval needs a person.
+- Scene 6 needs your own Stripe test-mode key and Slack app (`make demo-live`).
+- The script never runs a shell: only three demo toggles and allow-listed `deedglass` commands, and it writes files only under `.tmp/demo/`.
+</Limits>

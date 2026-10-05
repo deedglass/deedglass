@@ -1,0 +1,11 @@
+# prepublic_audit.sh triage (S37): secret-shaped strings that are documented examples, test
+# sentinels or published test vectors, never real credentials. One entry per line:
+#   <perl regex matched against the whole value or file path>::<reason>
+# value: entries match the found string; path: entries match the file it was found in.
+value:jJbEEMW|0IDw6L5O::the documented example keys (docs/AGENTS.md, internal/identity/apikey.go), never issued
+value:SENTINEL|CANARY|EXAMPLE::test sentinels and canaries (log-capture and scrub tests); AKIAIOSFODNN7EXAMPLE is AWS's documented example
+value:0000000000|1111111111|1234567890::placeholder digits in connector tests
+value:abcdefghij|abcd1234|AbCdEf12|ZZZZZZZZ|admin000|agent000|attackattack::placeholder letters in tests and lint fixtures
+path:^(testdata/intents/keys/|docs/INTENTS\.md$|pkg/deedglass/intent_test\.go$|sdk/typescript/src/intent\.ts$|internal/vault/vault_test\.go$|internal/connector/saas/client_test\.go$)::RFC 8032 test-vector keys and generated test keys (S09, S29); published, never used for a deployment
+value:abcdefgh_|Ab12Cd34|Zz99Yy88|ZZsecretvalue::placeholder key prefixes in SDK tests and the demo-live preflight test
+value:^re_3PqR8s2eZvKYlo2C0a1b2c3d$::a made-up Stripe refund id (re_…) in the stripe-refunds policy cases, not a Resend key

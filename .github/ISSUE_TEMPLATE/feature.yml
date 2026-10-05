@@ -1,0 +1,14 @@
+name: Feature
+description: A problem Deedglass could solve.
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes: { label: The problem, description: "What are you trying to do, and what gets in the way? Start here, before the idea." }
+    validations: { required: true }
+  - type: textarea
+    id: idea
+    attributes: { label: Your idea, description: "How you'd like it to work. Optional." }
+  - type: textarea
+    id: today
+    attributes: { label: What you do today, description: "Your workaround, if any." }
