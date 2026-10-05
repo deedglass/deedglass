@@ -1,0 +1,4 @@
+go test fuzz v1
+[]byte("00722A7120700X2$700902712$200000002+")
+bool(false)
+bool(false)

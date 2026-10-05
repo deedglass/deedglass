@@ -29,6 +29,7 @@ import (
 type verifyOpts struct {
 	keys, pins       multiFlag
 	anchor           string
+	file             string // S38: check this file against a file.sealed deed
 	strict, all, q   bool
 	maxBytes         int64
 	maxBytesExplicit bool
@@ -50,6 +51,7 @@ func bindVerifyFlags(fs *flag.FlagSet, o *verifyOpts) {
 	fs.Var(&o.keys, "keys", "seal key set: a keys.json file or an https URL (repeatable)")
 	fs.Var(&o.pins, "pin", "accept only seal keys with this thumbprint, sha256:… (repeatable)")
 	fs.StringVar(&o.anchor, "anchor", "", "<seq>:sha256:… the body_hash of the deed just before the first one given")
+	fs.StringVar(&o.file, "file", "", "also check this file against the deed (a deed from deedglass deeds seal-file)")
 	fs.BoolVar(&o.strict, "strict", false, "require canonical bytes and pinned keys")
 	fs.BoolVar(&o.all, "all", false, "list every failure (at most 100) instead of stopping at the first")
 	fs.BoolVar(&o.q, "q", false, "print nothing; the exit code is the answer")
@@ -81,6 +83,8 @@ func parseVerifyArgs(args []string) ([]string, error) {
 			switch f.Name {
 			case "anchor":
 				o.anchor = more.anchor
+			case "file":
+				o.file = more.file
 			case "strict":
 				o.strict = o.strict || more.strict
 			case "all":
@@ -204,6 +208,11 @@ func runVerify(ctx context.Context, e *Env, args []string) error {
 		}
 	}
 
+	if o.file != "" && (len(inputs) != 1 || inputs[0].kind != inJSON) {
+		return usageErr(errors.New("--file checks one deed: pass the .deed.json that deedglass deeds seal-file wrote"),
+			"For example: deedglass verify report.pdf.deed.json --file report.pdf --keys keys.json")
+	}
+
 	// Which keys: the operator's (pinned), else the bundles' own (not pinned), else none.
 	var (
 		ks      *deed.KeySet
@@ -264,20 +273,43 @@ func runVerify(ctx context.Context, e *Env, args []string) error {
 	}
 
 	code := rep.ExitCode()
+	var fc *fileCheck
+	if o.file != "" && code == 0 {
+		if fc, err = checkSealedFile(bytes.TrimRight(inputs[0].data, "\r\n"), o.file); err != nil {
+			return verifyErr(e, o, err)
+		}
+		if !fc.Matches {
+			code = ExitFailure
+		}
+	}
 	switch {
 	case o.q:
 	case e.Globals.JSON:
 		enc := json.NewEncoder(e.Stdout)
 		enc.SetEscapeHTML(false)
 		enc.SetIndent("", "  ")
-		if err := enc.Encode(rep); err != nil {
+		var v any = rep
+		if o.file != "" {
+			v = struct {
+				*deed.Report
+				File *fileCheck `json:"file"`
+			}{rep, fc}
+		}
+		if err := enc.Encode(v); err != nil {
 			return err
 		}
 	default:
 		printVerify(e, rep, o, len(inputs) > 1)
+		if fc != nil {
+			printFileCheck(e, fc)
+		}
 	}
 	if code == 0 {
 		return nil
+	}
+	if fc != nil && !fc.Matches {
+		return &ExitError{Code: ExitFailure, ErrCode: "file_mismatch", Err: errors.New("The file doesn't match the deed"),
+			Next: "Check that you have the file that was sealed. One changed byte gives a different sha256.", printed: true}
 	}
 	return &ExitError{Code: code, ErrCode: rep.Result, Err: errors.New(rep.Result), printed: true}
 }

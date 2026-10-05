@@ -186,6 +186,7 @@ Every administrative change is an admin deed, sealed through `ledger.RecordAdmin
 | `suggestion.accepted`, `suggestion.rejected` | S28 |
 | `connector.disabled` | S30 |
 | `connector.tool_hidden` (actor `{system, deedglass}`; data `connector`, `tool`, `reason` `description_flagged` or `definition_changed`, `kind`, `field`, `excerpt` of at most 40 characters, `digest`, `pinned`) | S34 |
+| `file.sealed` (target `{org, org_…}`; the label in `admin.reason`; data `sha256`, `bytes`, `media_type`, `label`; [SEALING_FILES.md](SEALING_FILES.md)) | S38 |
 
 Only the digest of the event's data enters the deed; the data stays in `admin_events.data`.
 

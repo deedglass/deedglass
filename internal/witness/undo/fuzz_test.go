@@ -101,6 +101,55 @@ func genChanges(data []byte, raw bool) (changes []RowChange, before, after map[s
 	return changes, before, state
 }
 
+// keyCycle reports whether a consistent sequence left rows in a circle of keys: the row at key a
+// came from key b, the row at b came from c, …, back to a. Undo can't put such rows back one at a
+// time. The planner follows a row by its key, so a row deleted at a key and a row inserted there
+// later are one row that was replaced (TestCollapse), even when other rows passed through that key
+// in between; a row inserted at a key nothing left breaks any circle, because undo deletes it.
+func keyCycle(changes []RowChange) bool {
+	origin := map[string]string{"1": "1", "2": "2", "3": "3"} // key now → key before ("" = inserted)
+	gone := map[string]string{}                               // key → origin of the row deleted there
+	for _, c := range changes {
+		switch c.Op {
+		case OpInsert:
+			k := *c.New["id"].T
+			o, replaced := gone[k]
+			if !replaced {
+				o = ""
+			}
+			origin[k] = o
+			delete(gone, k)
+		case OpUpdate:
+			from, to := *c.Old["id"].T, *c.New["id"].T
+			if from != to {
+				origin[to] = origin[from]
+				delete(origin, from)
+			}
+		case OpDelete:
+			k := *c.Old["id"].T
+			gone[k] = origin[k]
+			delete(origin, k)
+		}
+	}
+	for start, o := range origin {
+		if o == "" || o == start {
+			continue
+		}
+		at := start
+		for range len(origin) {
+			next, ok := origin[origin[at]]
+			if !ok || next == "" || origin[at] == at {
+				break
+			}
+			at = origin[at]
+			if at == start {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 // finalKey is the key a step leaves a row at: an insert's key, an update's key with its key
 // columns put back; a delete leaves none.
 func finalKey(s Step) (string, bool) {
@@ -244,7 +293,10 @@ func FuzzNetEffect(f *testing.F) {
 			t.Fatalf("plan %v with findings %v", p != nil, fs)
 		}
 		if p == nil {
-			if !raw {
+			// A consistent sequence may leave rows that swapped keys (three moves are enough:
+			// 1→4, 3→1, 4→3). That is refused by design (TestKeySwapCycle), and only then.
+			cycle := hasFinding(fs, CheckEvidence, ProblemCycle([]string{"public.orders"}).Text)
+			if !raw && !(cycle && len(fs) == 1 && keyCycle(changes)) {
 				t.Fatalf("a consistent sequence was refused: %v", fs)
 			}
 			return

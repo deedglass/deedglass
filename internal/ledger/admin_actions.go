@@ -107,6 +107,11 @@ const (
 	// generator, fingerprint, evidence_digest). Numbers and ids only, never the diff or the YAML.
 	AdminSuggestionAccepted = "suggestion.accepted"
 	AdminSuggestionRejected = "suggestion.rejected"
+
+	// S38: a person or an org admin key sealed a file they hold (deedglass deeds seal-file, POST
+	// /v1/deeds/files). Target {org, org_…}; the label in admin.reason; data: sha256, bytes,
+	// media_type, label. The file never reaches the server, only these four fields.
+	AdminFileSealed = "file.sealed"
 )
 
 // AdminActions lists every admin action this build records. Tests check each name against the
@@ -126,6 +131,7 @@ var AdminActions = []string{
 	AdminApprovalCountersigned, AdminApprovalDecided, AdminWebhookCreated, AdminWebhookDeleted, AdminWebhookDisabled,
 	AdminAnomalyResolved, AdminInsightsSettingsChanged,
 	AdminSuggestionAccepted, AdminSuggestionRejected,
+	AdminFileSealed,
 }
 
 // AdminEventActions are admin events recorded without a deed (AppendAdminEvent): security events

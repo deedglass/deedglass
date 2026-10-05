@@ -129,6 +129,7 @@ var contractRoutes = []ContractRoute{
 	cr("GET", "/v1/deeds", SessionOrKey, "deeds:read", "S06", "agent keys: own agent only (S08)"),
 	cr("GET", "/v1/deeds/{id}", SessionOrKey, "deeds:read", "S06", "agent keys: own agent only (S08)"),
 	cr("GET", "/v1/deeds/export", SessionOrKey, "viewer", "S06", "keys: admin (S08)"),
+	cr("POST", "/v1/deeds/files", SessionOrKey, "admin", "S38", "seals file.sealed from a file's sha256, size, media type and label; the file stays local"),
 	cr("GET", "/v1/ledger/check", SessionOrKey, "viewer", "S06", "keys: admin (S08)"),
 
 	// S16/S17/S20/S30: connectors.

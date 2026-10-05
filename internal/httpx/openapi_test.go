@@ -127,6 +127,8 @@ func elsewhere() []Route {
 	)
 	// S17: the Postgres setup record (internal/connectorapi).
 	out = append(out, adm("POST", "/v1/connectors/{id}/initialized", "recordConnectorInitialized", RoleAdmin))
+	// S38: sealed files (internal/ledger/files.go).
+	out = append(out, adm("POST", "/v1/deeds/files", "sealFile", RoleAdmin))
 	// S20: the decoder (internal/connectorapi/decoder.go).
 	out = append(out, adm("GET", "/v1/connectors/{id}/decoder", "getConnectorDecoder", RoleViewer),
 		adm("DELETE", "/v1/connectors/{id}/decoder", "dropConnectorDecoder", RoleAdmin))

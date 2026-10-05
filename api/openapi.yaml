@@ -1267,6 +1267,51 @@ paths:
           description: The copy named in `If-None-Match` is current.
         default:
           $ref: "#/components/responses/Error"
+  /v1/deeds/files:
+    post:
+      operationId: sealFile
+      summary: Seal a file you hold
+      description: >-
+        What `deedglass deeds seal-file` calls (S38): seals the admin deed `file.sealed` from a
+        file's sha256, size, media type and label. The file itself never reaches the server; the
+        CLI hashes it locally. The deed carries the label as `admin.reason` and `data_digest` over
+        these four fields, so `deedglass verify <deed.json> --file <path>` checks the file against
+        the deed offline. It seals the file's hash, size, type and label. It says nothing about
+        whether the file's contents are right. An admin+ Console session or an org admin key;
+        agent keys get 403 `insufficient_scope`.
+      tags: [Deeds]
+      security: [{bearerAuth: []}, {sessionCookie: []}]
+      x-deedglass-auth: session_or_key
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+        - $ref: "#/components/parameters/CSRFWithSession"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [sha256, bytes, media_type, label]
+              properties:
+                sha256: {type: string, pattern: "^sha256:[0-9a-f]{64}$"}
+                bytes: {type: integer, minimum: 0, maximum: 9007199254740991}
+                media_type: {type: string, enum: [application/pdf, text/markdown, application/json, text/plain]}
+                label: {type: string, minLength: 1, maxLength: 120, description: No line breaks or control characters.}
+      responses:
+        "201":
+          description: The sealed file and its deed.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SealedFile"
+        default:
+          $ref: "#/components/responses/Error"
   /v1/deeds/export:
     get:
       operationId: exportDeeds
@@ -8617,6 +8662,18 @@ components:
         dropped: {type: boolean, enum: [true]}
         deed: {type: string, description: "The decoder.slot_dropped admin deed."}
         status: {type: string, enum: [dropped]}
+    SealedFile:
+      type: object
+      additionalProperties: false
+      required: [object, sha256, bytes, media_type, label, deed]
+      properties:
+        object: {type: string, const: sealed_file}
+        sha256: {type: string, pattern: "^sha256:[0-9a-f]{64}$"}
+        bytes: {type: integer, minimum: 0}
+        media_type: {type: string}
+        label: {type: string}
+        deed:
+          $ref: "#/components/schemas/Deed"
     ConnectorSetup:
       type: object
       required: [object, connector, plan_sha256, changes, deed]

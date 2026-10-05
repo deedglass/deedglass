@@ -220,10 +220,11 @@ builds it. Hidden commands work but aren't in `deedglass help`.
 | `deedglass webhooks list [--json]` | Actions | List webhook endpoints | built |
 | `deedglass webhooks test <whk_…> [--json]` | Actions | Send a test event | built |
 | `deedglass webhooks delete <whk_…> [--json]` | Actions | Remove a webhook endpoint | built |
-| `deedglass verify <path|->... [--keys <file|url>] [--pin sha256:…] [--anchor <seq>:sha256:…] [--strict] [--all] [-q]` | Deeds | Check deeds offline | built |
+| `deedglass verify <path|->... [--keys <file|url>] [--pin sha256:…] [--anchor <seq>:sha256:…] [--file <path>] [--strict] [--all] [-q]` | Deeds | Check deeds offline | built |
 | `deedglass deeds list [--from-seq n] [--to-seq n] [--kind action,admin,amendment] [--action act_…] [--order asc|desc] [--limit 25] [--json]` | Deeds | List deeds | built |
 | `deedglass deeds show <deed_…|seq> [--json]` | Deeds | Show one deed | built |
 | `deedglass deeds export [--out <file>|-] [--format tar.gz|jsonl] [--from-seq n] [--to-seq n] [--since 1h] [--json]` | Deeds | Export deeds as a bundle | built |
+| `deedglass deeds seal-file <path> --label <text> [--media-type application/pdf|text/markdown|application/json|text/plain] [--out <path>.deed.json] [--json]` | Deeds | Seal a file's hash as a deed | built |
 | `deedglass ledger check [--from-seq n] [--to-seq n] [--json]` | Deeds | Check the deed chain | built |
 | `deedglass ledger prune [--older-than 90d] [--dry-run] [--yes] [--json]` | Deeds | Remove old payloads; deeds stay | built |
 | `deedglass connector create --config <file> [--type rest] [--name orders] [--description …] [--json]` | Connectors | Add a connector | built |
@@ -296,6 +297,11 @@ deedglass verify <path|->... [flags]
 | a directory | `stat` | every `*.json` / `*.jsonl` in it (no recursion, no symlinks, at most 100,000 files), sorted by org and seq, one chain per org |
 | `deed.cose` | the `.cose` name and CBOR tag 18 | the optional COSE_Sign1 encoding, checked on its own |
 
+`--file <path>` (S38) also checks a file against a `file.sealed` deed from `deeds seal-file`: one
+deed input only; after the deed verifies, the file's sha256 and size with the deed's label must give
+its `data_digest`. A mismatch exits 1 (`file_mismatch`); a deed of another kind exits 2
+(`not_a_sealed_file`). [SEALING_FILES.md](SEALING_FILES.md).
+
 Several `.jsonl` or bundle inputs are one chain, in the order given: the second must start where
 the first ended. Loose `.json` deeds are checked one by one, and the headline says
 `chain not checked`.
@@ -366,6 +372,7 @@ Full reference: [LEDGER.md](LEDGER.md), [RETENTION.md](RETENTION.md).
 | `deeds list [--from-seq] [--to-seq] [--kind] [--action] [--order asc|desc]` | deeds by seq | 0 |
 | `deeds show <deed_…|seq>` | a summary; `--json` prints the stored bytes verbatim | 0; 1 when not found |
 | `deeds export [--out <file>|-] [--format tar.gz|jsonl] [--from-seq] [--to-seq] [--since 1h]` | a sealed export bundle (or `.jsonl`), written to a temporary file and renamed at the end; `--out -` writes to stdout for `deedglass verify -`, with the summary on stderr; `--since` keeps the deeds issued in that window (S13) | 0; 1 for an empty range (nothing is written) |
+| `deeds seal-file <path> --label <text> [--media-type] [--out <path>.deed.json]` | S38, API mode (an org admin key): hashes the file here, sends only its sha256, size, media type and label, and writes the `file.sealed` deed next to it ([SEALING_FILES.md](SEALING_FILES.md)) | 0; 1 refused; 2 usage or an unreadable file; 3 no key |
 | `ledger check [--from-seq] [--to-seq]` | the chain check, with the head to keep elsewhere | 0 intact; 1 broken; 2 incomplete |
 | `ledger prune [--older-than 90d] [--dry-run] [--yes]` | removes payloads of old sealed actions and seals a `ledger.pruned` deed | 0; 1 not confirmed or another prune running; 2 without `--yes` off a terminal |
 | `dev fake-action [--n 20] [--seed 42] [--kinds …] [--agents 3] [--batch 1] [--pace 0s] [--org-slug demo] [--quiet]` | realistic actions through the real deed path (below) | 0; 1 outside `DEEDGLASS_ENV=dev` |

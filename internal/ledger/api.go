@@ -32,7 +32,7 @@ const (
 // end the wait early (a Stop).
 type Waiter func(ctx context.Context, org ids.OrgID, id, ownAgent string, wait time.Duration) error
 
-// Routes are the six Ledger routes (contract §9): GET /v1/actions, /v1/actions/{id}, /v1/deeds,
+// Routes are the six Ledger routes (contract §9) plus S38's POST /v1/deeds/files: GET /v1/actions, /v1/actions/{id}, /v1/deeds,
 // /v1/deeds/{id}, /v1/deeds/export and /v1/ledger/check. Every one is SessionOrKey, viewer and
 // up. Agent keys need actions:read or deeds:read and see only their own agent's rows; the export
 // and the chain check cover the whole org, so they take a Console session or an org admin key
@@ -52,6 +52,9 @@ func RoutesWith(l *Ledger, wait Waiter) []httpx.Route {
 			Scopes: []string{ScopeDeedsRead}, Handler: h.listDeeds},
 		{Method: "GET", Pattern: "/v1/deeds/{id}", OperationID: "getDeed", Auth: httpx.SessionOrKey, MinRole: httpx.RoleViewer,
 			Scopes: []string{ScopeDeedsRead}, Handler: h.getDeed},
+		{Method: "POST", Pattern: "/v1/deeds/files", OperationID: "sealFile", Auth: httpx.SessionOrKey, MinRole: httpx.RoleAdmin,
+			Scopes: []string{httpx.ScopeAdmin}, Idempotency: httpx.IdemOptional, MaxBody: 4 << 10, Purpose: "sealing files",
+			Handler: h.sealFile},
 		{Method: "GET", Pattern: "/v1/deeds/export", OperationID: "exportDeeds", Auth: httpx.SessionOrKey, MinRole: httpx.RoleViewer,
 			Scopes: []string{httpx.ScopeAdmin}, Timeout: exportTimeout, Handler: h.exportDeeds},
 		{Method: "GET", Pattern: "/v1/ledger/check", OperationID: "checkLedger", Auth: httpx.SessionOrKey, MinRole: httpx.RoleViewer,

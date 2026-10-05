@@ -199,7 +199,7 @@ var commands = []*Command{
 
 	// Deeds.
 	{Path: p("verify"), Group: Deeds, Summary: "Check deeds offline",
-		Usage: "<path|->... [--keys <file|url>] [--pin sha256:…] [--anchor <seq>:sha256:…] [--strict] [--all] [-q]",
+		Usage: "<path|->... [--keys <file|url>] [--pin sha256:…] [--anchor <seq>:sha256:…] [--file <path>] [--strict] [--all] [-q]",
 		Flags: verifyFlags, Run: runVerify, RawArgs: true},
 	{Path: p("deeds", "list"), Group: Deeds, Summary: "List deeds",
 		Usage: "[--from-seq n] [--to-seq n] [--kind action,admin,amendment] [--action act_…] [--order asc|desc] [--limit 25] [--json]",
@@ -209,6 +209,10 @@ var commands = []*Command{
 	{Path: p("deeds", "export"), Group: Deeds, Summary: "Export deeds as a bundle",
 		Usage: "[--out <file>|-] [--format tar.gz|jsonl] [--from-seq n] [--to-seq n] [--since 1h] [--json]",
 		Flags: deedsExportFlags, Needs: config.NeedDatabase, Run: runDeedsExport},
+	{Path: p("deeds", "seal-file"), Group: Deeds, Summary: "Seal a file's hash as a deed",
+		Usage: "<path> --label <text> [--media-type application/pdf|text/markdown|application/json|text/plain] [--out <path>.deed.json] [--json]",
+		Run:   runDeedsSealFile, RawArgs: true,
+		Detail: "Hashes the file here and sends only its sha256, size, media type and label to the server (an org admin key), which seals the admin deed file.sealed. The file never leaves this machine. The deed is written to <path>.deed.json; check both later, offline, with deedglass verify <path>.deed.json --file <path> --keys <keys.json>.\n\nIt seals the file's hash, size, type and label. It says nothing about whether the file's contents are right."},
 	{Path: p("ledger", "check"), Group: Deeds, Summary: "Check the deed chain",
 		Usage: "[--from-seq n] [--to-seq n] [--json]", Flags: ledgerCheckFlags, Needs: config.NeedDatabase, Run: runLedgerCheck},
 	{Path: p("ledger", "prune"), Group: Deeds, Summary: "Remove old payloads; deeds stay",
@@ -347,7 +351,7 @@ var lines = []Line{
 		Paths: ps("webhooks create", "webhooks list", "webhooks test", "webhooks delete")},
 
 	{Name: "verify", Group: Deeds, Summary: "Check deeds offline", Paths: ps("verify")},
-	{Name: "deeds", Group: Deeds, Summary: "Browse and export deeds", Subs: subs("list show export"), Paths: ps("deeds list", "deeds show", "deeds export")},
+	{Name: "deeds", Group: Deeds, Summary: "Browse and export deeds", Subs: subs("list show export seal-file"), Paths: ps("deeds list", "deeds show", "deeds export", "deeds seal-file")},
 	{Name: "ledger", Group: Deeds, Summary: "Check or prune the Ledger", Subs: subs("check prune"), Paths: ps("ledger check", "ledger prune")},
 
 	{Name: "connector", Group: Connectors, Summary: "Connect tools", Subs: subs("create list show test types credentials"),

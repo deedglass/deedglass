@@ -12,6 +12,11 @@ updates:
     schedule: { interval: weekly }
     open-pull-requests-limit: 3
     groups: { npm: { patterns: ["*"] } }
+    # @types/node follows the oldest Node each package supports (sdk/typescript >= 22.12, web >= 24),
+    # so a newer major would let tsc accept APIs those runtimes don't have (S38, PR #1).
+    ignore:
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: pip
     directory: /sdk/python
     schedule: { interval: weekly }

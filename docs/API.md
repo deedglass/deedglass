@@ -222,6 +222,25 @@ curl -s -b cookies.txt 'http://127.0.0.1:8080/v1/actions?verdict=FAILED'
   "param": "verdict", "request_id": "req_01j9zv…", "doc_url": "https://docs.deedglass.com/errors/validation_failed" } }
 ```
 
+## Sealing a file (S38)
+
+`POST /v1/deeds/files` seals the admin deed `file.sealed` from a file's `sha256`, `bytes`,
+`media_type` (`application/pdf`, `text/markdown`, `application/json` or `text/plain`) and `label`
+(1 to 120 characters, no line breaks). The file itself never reaches the server:
+`deedglass deeds seal-file` hashes it locally. An admin+ session or an org admin key; agent keys get
+403 `insufficient_scope`, viewers 403 `insufficient_role`. `Idempotency-Key` is optional; the body is
+at most 4 KiB. The answer is 201 with a `sealed_file` object: the four fields and `deed`, the deed
+envelope. The deed carries the label as `admin.reason` and `data_digest` over the four fields, so
+`deedglass verify <deed.json> --file <path>` checks the file offline. It seals the file's hash, size,
+type and label. It says nothing about whether the file's contents are right.
+[SEALING_FILES.md](SEALING_FILES.md).
+
+```sh
+curl -s -X POST http://127.0.0.1:8080/v1/deeds/files -H "Authorization: Bearer $DEEDGLASS_API_KEY" \
+  -H 'Content-Type: application/json' \
+  -d '{"sha256":"sha256:3f9a…","bytes":214388,"media_type":"application/pdf","label":"Full scan report · Acme"}'
+```
+
 ## Actions and the Gate (S13)
 
 Every tool call an agent makes goes through `POST /v1/actions`, and every action the Gate records

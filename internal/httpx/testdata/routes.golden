@@ -82,6 +82,7 @@ planned    GET     /v1/webhooks/{id}/deliveries                           sessio
 planned    GET     /v1/deeds                                              session_or_key  deeds:read       S06    agent keys: own agent only (S08)
 planned    GET     /v1/deeds/{id}                                         session_or_key  deeds:read       S06    agent keys: own agent only (S08)
 planned    GET     /v1/deeds/export                                       session_or_key  viewer           S06    keys: admin (S08)
+planned    POST    /v1/deeds/files                                        session_or_key  admin            S38    seals file.sealed from a file's sha256, size, media type and label; the file stays local
 planned    GET     /v1/ledger/check                                       session_or_key  viewer           S06    keys: admin (S08)
 planned    GET     /v1/connectors                                         session_or_key  viewer           S16
 planned    POST    /v1/connectors                                         session_or_key  admin            S16

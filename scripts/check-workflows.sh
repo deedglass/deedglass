@@ -17,7 +17,7 @@ if [ "${1:-}" = "--self-test" ]; then
   printf '\npermissions: write-all\n' >> "$tmp/release.yml"
   if NO_ACTIONLINT=1 "$0" "$tmp" >/dev/null 2>&1; then echo "✕ self-test: write-all wasn't caught" >&2; exit 1; fi
   cp .github/workflows/release.yml "$tmp/release.yml"
-  sed -i.bak 's|uses: actions/checkout@[0-9a-f]\{40\} # v6.1.0|uses: actions/checkout@v6|' "$tmp/release.yml" && rm -f "$tmp"/*.bak
+  sed -i.bak 's|uses: actions/checkout@[0-9a-f]\{40\} # v[0-9.]*|uses: actions/checkout@v6|' "$tmp/release.yml" && rm -f "$tmp"/*.bak
   if NO_ACTIONLINT=1 "$0" "$tmp" >/dev/null 2>&1; then echo "✕ self-test: an unpinned uses: wasn't caught" >&2; exit 1; fi
   echo "✓ check-workflows self-test · a removed gate, write-all and an unpinned action each fail"
   exit 0

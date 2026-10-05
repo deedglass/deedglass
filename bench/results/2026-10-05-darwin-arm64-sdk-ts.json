@@ -54,7 +54,7 @@
     },
     {
       "name": "act() overhead p50 (mock fetch)",
-      "value": 0.013,
+      "value": 0.014,
       "budget": 0.3,
       "unit": "ms",
       "pass": true
@@ -68,7 +68,7 @@
     },
     {
       "name": "cold import('@deedglass/sdk')",
-      "value": 9.2,
+      "value": 9.7,
       "budget": 30,
       "unit": "ms",
       "pass": true

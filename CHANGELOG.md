@@ -7,6 +7,18 @@ this file by `scripts/release-notes.sh`.
 
 ## [Unreleased]
 
+### Added
+
+- **Sealed files.** `deedglass deeds seal-file <path> --label …` seals a file's sha256, size, media
+  type and label as the admin deed `file.sealed` (`POST /v1/deeds/files`); the file never leaves
+  your machine. `deedglass verify <deed.json> --file <path>` checks the file against the deed,
+  offline. Resolves KI-009.
+
+### Fixed
+
+- The undo planner's fuzz test now expects a refusal when a transaction leaves rows in a circle of
+  keys (found by `make fuzz-regress`; the planner was right, the test's model was too narrow).
+
 ## [0.1.0] - Unreleased
 
 The first release. Release candidate `0.1.0-rc.1` (2026-10-05); the date is set when the founder
