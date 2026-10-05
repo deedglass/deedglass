@@ -1,0 +1,162 @@
+{
+  "schema": "deedglass.bench/v1",
+  "suite": "witness",
+  "started_at": "2026-10-05T04:13:46Z",
+  "commit": "911d46fdf2a99da9162e2d47a46bca9f50d7d8a7",
+  "dirty": true,
+  "source_hash": "sha256:5eb95250a73978d27abaed948dfc44096210319aabb6e386d07aefac5c7ceeeb",
+  "version": "0.1.0-dev",
+  "host": {
+    "name": "darwin-arm64",
+    "cpu": "Apple M1",
+    "cores": 8,
+    "mem_gb": 8,
+    "os": "Darwin 27.0.0",
+    "power": "ac"
+  },
+  "go": "go1.27.1",
+  "postgres": {
+    "version": "18.6 (Homebrew)",
+    "mode": "native",
+    "settings": {
+      "fsync": "on",
+      "max_connections": "300",
+      "shared_buffers": "128MB",
+      "synchronous_commit": "on",
+      "wal_level": "logical"
+    }
+  },
+  "scenarios": [
+    {
+      "name": "l2.100_per_s",
+      "rate": 100,
+      "duration_s": 60,
+      "runs": [
+        {
+          "count": 6000,
+          "errors": 0,
+          "achieved_rate": 100.009,
+          "p50_ms": 170.883,
+          "p90_ms": 269.346,
+          "p99_ms": 346.875,
+          "max_ms": 423.465,
+          "values": {
+            "segments_ms": {
+              "decode_p50": 99.297,
+              "decode_p99": 237.302,
+              "witness_p50": 66.655,
+              "witness_p99": 141.187
+            },
+            "sent_in_s": 59.99437125,
+            "verdicts": {
+              "L2 VERIFIED": 6000
+            }
+          }
+        },
+        {
+          "count": 6000,
+          "errors": 0,
+          "achieved_rate": 100.01,
+          "p50_ms": 81.441,
+          "p90_ms": 228.463,
+          "p99_ms": 316.51,
+          "max_ms": 367.719,
+          "values": {
+            "segments_ms": {
+              "decode_p50": 49.981,
+              "decode_p99": 222.163,
+              "witness_p50": 30.045,
+              "witness_p99": 106.847
+            },
+            "sent_in_s": 59.993919584,
+            "verdicts": {
+              "L2 VERIFIED": 6000
+            }
+          }
+        },
+        {
+          "count": 6000,
+          "errors": 0,
+          "achieved_rate": 100.011,
+          "p50_ms": 118.115,
+          "p90_ms": 228.253,
+          "p99_ms": 313.991,
+          "max_ms": 370.13,
+          "values": {
+            "segments_ms": {
+              "decode_p50": 69.646,
+              "decode_p99": 221.645,
+              "witness_p50": 45.06,
+              "witness_p99": 107.037
+            },
+            "sent_in_s": 59.993653334,
+            "verdicts": {
+              "L2 VERIFIED": 6000
+            }
+          }
+        }
+      ],
+      "targets": [
+        {
+          "metric": "p50_ms",
+          "op": "lt",
+          "value": 1000,
+          "source": "contract §12",
+          "label": "p50 \u003c 1 s"
+        }
+      ],
+      "result": "pass"
+    },
+    {
+      "name": "l2.10_per_s",
+      "rate": 10,
+      "duration_s": 60,
+      "runs": [
+        {
+          "count": 600,
+          "errors": 0,
+          "achieved_rate": 10.015,
+          "p50_ms": 17.967,
+          "p90_ms": 19.584,
+          "p99_ms": 21.498,
+          "max_ms": 25.042,
+          "values": {
+            "segments_ms": {
+              "decode_p50": 11.621,
+              "decode_p99": 13.217,
+              "witness_p50": 6.328,
+              "witness_p99": 8.573
+            },
+            "sent_in_s": 59.907583166,
+            "verdicts": {
+              "L2 VERIFIED": 600
+            }
+          }
+        }
+      ],
+      "result": "reported"
+    },
+    {
+      "name": "l2.500_per_s",
+      "rate": 500,
+      "duration_s": 60,
+      "runs": [
+        {
+          "count": 0,
+          "errors": 1,
+          "p50_ms": 0,
+          "p99_ms": 0,
+          "max_ms": 0
+        }
+      ],
+      "result": "reported",
+      "notes": [
+        "Did not complete at 500 writes/s on this host: 8335 sends failed, first: 0 Post \"http://127.0.0.1:56112/v1/actions\": read tcp 127.0.0.1:61250-\u003e127.0.0.1:56112: read: connection reset by peer"
+      ]
+    }
+  ],
+  "caveats": [
+    "Commit → verdict uses database timestamps, not client clocks: the decoded transaction's commit_time to the deed's issued_at, on one cluster with one clock.",
+    "Single-row UPDATEs sent on schedule through a real deedglass serve, the native Postgres connector and the decoder, with the Deedglass control plane and the watched database on the same Postgres server and machine."
+  ]
+}

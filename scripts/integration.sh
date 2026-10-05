@@ -100,7 +100,8 @@ if [ -n "${DEEDGLASS_IT_BENCH_OUT:-}" ]; then
   echo "== store budget (S02 §3.9) -> $DEEDGLASS_IT_BENCH_OUT"
   run="${DEEDGLASS_IT_BENCH_RUN:-TestPerfBudget|TestExplainShowsInitPlan}"
   pkg="${DEEDGLASS_IT_BENCH_PKG:-./internal/store/}"
-  DEEDGLASS_IT_BENCH=1 go test -tags integration -count=1 -timeout 30m -json -run "$run" "$pkg" > "$DEEDGLASS_IT_BENCH_OUT"
+  # DEEDGLASS_IT_BENCH_GOFLAGS: extra flags for the budget run only (S36: -cpuprofile for make bench-gate PROFILE=1).
+  DEEDGLASS_IT_BENCH=1 go test -tags integration -count=1 -timeout 30m -json ${DEEDGLASS_IT_BENCH_GOFLAGS:-} -run "$run" "$pkg" > "$DEEDGLASS_IT_BENCH_OUT"
   sed -n 's/.*PERF \({.*}\)\\n".*/\1/p' "$DEEDGLASS_IT_BENCH_OUT" | sed 's/\\"/"/g'
   first="${run%%|*}"
   grep -q '"Action":"pass","Package":"github.com/deedglass/deedglass/'"${pkg#./}"'","Test":"'"$first"'"' "$DEEDGLASS_IT_BENCH_OUT" ||

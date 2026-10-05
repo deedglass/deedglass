@@ -1,0 +1,225 @@
+{
+  "schema": "deedglass.bench/v1",
+  "suite": "policy",
+  "started_at": "2026-10-05T03:47:24Z",
+  "commit": "911d46fdf2a99da9162e2d47a46bca9f50d7d8a7",
+  "dirty": false,
+  "source_hash": "sha256:5eb95250a73978d27abaed948dfc44096210319aabb6e386d07aefac5c7ceeeb",
+  "version": "0.1.0-dev",
+  "host": {
+    "name": "darwin-arm64",
+    "cpu": "Apple M1",
+    "cores": 8,
+    "mem_gb": 8,
+    "os": "Darwin 27.0.0",
+    "power": "ac"
+  },
+  "go": "go1.27.1",
+  "scenarios": [
+    {
+      "name": "evaluate.10_rules",
+      "runs": [
+        {
+          "count": 20000,
+          "errors": 0,
+          "p50_ms": 0.012,
+          "p90_ms": 0.021,
+          "p95_ms": 0.029,
+          "p99_ms": 0.07,
+          "p999_ms": 0.127,
+          "max_ms": 0.252,
+          "mean_ms": 0.016,
+          "statuses": {
+            "deny": 20000
+          }
+        },
+        {
+          "count": 20000,
+          "errors": 0,
+          "p50_ms": 0.012,
+          "p90_ms": 0.021,
+          "p95_ms": 0.028,
+          "p99_ms": 0.067,
+          "p999_ms": 0.112,
+          "max_ms": 0.222,
+          "mean_ms": 0.015,
+          "statuses": {
+            "deny": 20000
+          }
+        },
+        {
+          "count": 20000,
+          "errors": 0,
+          "p50_ms": 0.012,
+          "p90_ms": 0.021,
+          "p95_ms": 0.028,
+          "p99_ms": 0.069,
+          "p999_ms": 0.138,
+          "max_ms": 0.226,
+          "mean_ms": 0.015,
+          "statuses": {
+            "deny": 20000
+          }
+        }
+      ],
+      "result": "reported"
+    },
+    {
+      "name": "evaluate.50_rules",
+      "runs": [
+        {
+          "count": 20000,
+          "errors": 0,
+          "p50_ms": 0.046,
+          "p90_ms": 0.055,
+          "p95_ms": 0.098,
+          "p99_ms": 0.166,
+          "p999_ms": 0.375,
+          "max_ms": 45.082,
+          "mean_ms": 0.056,
+          "statuses": {
+            "deny": 20000
+          }
+        },
+        {
+          "count": 20000,
+          "errors": 0,
+          "p50_ms": 0.045,
+          "p90_ms": 0.053,
+          "p95_ms": 0.094,
+          "p99_ms": 0.148,
+          "p999_ms": 0.24,
+          "max_ms": 0.379,
+          "mean_ms": 0.05,
+          "statuses": {
+            "deny": 20000
+          }
+        },
+        {
+          "count": 20000,
+          "errors": 0,
+          "p50_ms": 0.045,
+          "p90_ms": 0.054,
+          "p95_ms": 0.095,
+          "p99_ms": 0.148,
+          "p999_ms": 0.271,
+          "max_ms": 0.486,
+          "mean_ms": 0.051,
+          "statuses": {
+            "deny": 20000
+          }
+        }
+      ],
+      "targets": [
+        {
+          "metric": "p99_ms",
+          "op": "lt",
+          "value": 1,
+          "source": "contract §12",
+          "label": "p99 \u003c 1 ms"
+        }
+      ],
+      "result": "pass"
+    },
+    {
+      "name": "evaluate.200_rules",
+      "runs": [
+        {
+          "count": 20000,
+          "errors": 0,
+          "p50_ms": 0.168,
+          "p90_ms": 0.204,
+          "p95_ms": 0.327,
+          "p99_ms": 0.423,
+          "p999_ms": 0.586,
+          "max_ms": 0.991,
+          "mean_ms": 0.183,
+          "statuses": {
+            "deny": 20000
+          }
+        },
+        {
+          "count": 20000,
+          "errors": 0,
+          "p50_ms": 0.167,
+          "p90_ms": 0.202,
+          "p95_ms": 0.327,
+          "p99_ms": 0.441,
+          "p999_ms": 0.654,
+          "max_ms": 1.166,
+          "mean_ms": 0.183,
+          "statuses": {
+            "deny": 20000
+          }
+        },
+        {
+          "count": 20000,
+          "errors": 0,
+          "p50_ms": 0.167,
+          "p90_ms": 0.202,
+          "p95_ms": 0.323,
+          "p99_ms": 0.405,
+          "p999_ms": 0.562,
+          "max_ms": 0.947,
+          "mean_ms": 0.182,
+          "statuses": {
+            "deny": 20000
+          }
+        }
+      ],
+      "result": "reported"
+    },
+    {
+      "name": "evaluate.500_rules",
+      "runs": [
+        {
+          "count": 20000,
+          "errors": 0,
+          "p50_ms": 0.405,
+          "p90_ms": 0.546,
+          "p95_ms": 0.75,
+          "p99_ms": 0.906,
+          "p999_ms": 1.156,
+          "max_ms": 1.678,
+          "mean_ms": 0.441,
+          "statuses": {
+            "deny": 20000
+          }
+        },
+        {
+          "count": 20000,
+          "errors": 0,
+          "p50_ms": 0.409,
+          "p90_ms": 0.562,
+          "p95_ms": 0.758,
+          "p99_ms": 0.906,
+          "p999_ms": 1.228,
+          "max_ms": 2.681,
+          "mean_ms": 0.445,
+          "statuses": {
+            "deny": 20000
+          }
+        },
+        {
+          "count": 20000,
+          "errors": 0,
+          "p50_ms": 0.411,
+          "p90_ms": 0.566,
+          "p95_ms": 0.766,
+          "p99_ms": 0.926,
+          "p999_ms": 1.316,
+          "max_ms": 3.773,
+          "mean_ms": 0.449,
+          "statuses": {
+            "deny": 20000
+          }
+        }
+      ],
+      "result": "reported"
+    }
+  ],
+  "caveats": [
+    "In process, one goroutine, each evaluation timed on its own: no HTTP, no database. The worst case: every rule's CEL runs before the default decides.",
+    "S11's 500-rule size is included for comparison; the contract target is the 50-rule p99."
+  ]
+}

@@ -29,3 +29,10 @@ from the same checkout. `dist/_headers` sets the CSP (script hashes computed at 
 security headers; `dist/_redirects` maps the short paths the product prints (`/doctor`, `/scan`,
 `/connectors/postgres`, …) and the old `docs/*.md` names. The site sets no cookies and loads nothing
 from another origin.
+
+## The mark
+
+The header mark (`src/components/overrides/SiteTitle.astro`) uses the paths of the final Split Orb kit's
+`deedglass-flat.svg` (DL-018), and `public/favicon.svg` and `public/favicon.ico` are the kit's files byte for
+byte. The kit lives in `~/txv/site/brand/deedglass/final/`; after a kit rebuild, copy the two favicon files
+again and compare the paths in `SiteTitle.astro` with the new `deedglass-flat.svg` (S36).

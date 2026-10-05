@@ -1,0 +1,85 @@
+{
+  "schema": "deedglass.bench/v1",
+  "suite": "stop",
+  "started_at": "2026-10-05T03:59:41Z",
+  "commit": "911d46fdf2a99da9162e2d47a46bca9f50d7d8a7",
+  "dirty": true,
+  "source_hash": "sha256:5eb95250a73978d27abaed948dfc44096210319aabb6e386d07aefac5c7ceeeb",
+  "version": "0.1.0-dev",
+  "host": {
+    "name": "darwin-arm64",
+    "cpu": "Apple M1",
+    "cores": 8,
+    "mem_gb": 8,
+    "os": "Darwin 27.0.0",
+    "power": "ac"
+  },
+  "go": "go1.27.1",
+  "postgres": {
+    "version": "18.6 (Homebrew)",
+    "mode": "native",
+    "settings": {
+      "fsync": "on",
+      "max_connections": "300",
+      "shared_buffers": "128MB",
+      "synchronous_commit": "on",
+      "wal_level": "logical"
+    }
+  },
+  "scenarios": [
+    {
+      "name": "stop.across_instances",
+      "rate": 50,
+      "runs": [
+        {
+          "count": 20,
+          "errors": 0,
+          "p50_ms": 21.635,
+          "p99_ms": 23.504,
+          "max_ms": 23.504,
+          "values": {
+            "calls_after_t0_plus_2s": 1000,
+            "late_actions": 0,
+            "max_ms": 23.504,
+            "trial_ms": [
+              21.584,
+              13.79,
+              18.959,
+              21.472,
+              20.786,
+              23.125,
+              21.634,
+              21.822,
+              22.259,
+              15.376,
+              22.351,
+              22.076,
+              23.031,
+              15.029,
+              21.635,
+              21.988,
+              22.112,
+              14.419,
+              23.504,
+              14.732
+            ],
+            "trials": 20
+          }
+        }
+      ],
+      "targets": [
+        {
+          "metric": "max_ms",
+          "op": "lt",
+          "value": 2000,
+          "source": "contract §12",
+          "label": "\u003c 2 s"
+        }
+      ],
+      "result": "pass"
+    }
+  ],
+  "caveats": [
+    "Two deedglass serve processes on one database. T0 is when POST /v1/org/stop-all returns on A; the time is until B first answers org_stopped. B gets fake.echo calls every 20 ms throughout; any call B sends after T0 + 2 s that still runs (status executed) is counted as late."
+  ]
+}

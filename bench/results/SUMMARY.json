@@ -1,73 +1,263 @@
 {
   "schema": "deedglass.bench.summary/v1",
-  "version": "",
+  "version": "0.1.0-dev",
   "host": {
-    "name": "",
-    "cpu": "",
-    "cores": 0,
-    "mem_gb": 0,
-    "os": "",
-    "power": ""
+    "name": "darwin-arm64",
+    "cpu": "Apple M1",
+    "cores": 8,
+    "mem_gb": 8,
+    "os": "Darwin 27.0.0",
+    "power": "ac"
   },
-  "go": "",
+  "go": "go1.27.1",
+  "postgres": {
+    "version": "18.6 (Homebrew)",
+    "mode": "native",
+    "settings": {
+      "fsync": "on",
+      "max_connections": "300",
+      "shared_buffers": "128MB",
+      "synchronous_commit": "on",
+      "wal_level": "logical"
+    }
+  },
   "rows": [
     {
       "suite": "gate",
       "label": "Gate · allow, no witness",
-      "measured": "",
-      "target": "",
-      "targets": null,
-      "result": "missing",
-      "problem": "No results file for this suite. Run make bench."
+      "measured": "p50 5.81 ms · p99 19.4 ms",
+      "target": "p50 \u003c 5 ms · p99 \u003c 25 ms",
+      "targets": [
+        {
+          "metric": "p50_ms",
+          "op": "lt",
+          "value": 5,
+          "source": "contract §12",
+          "label": "p50 \u003c 5 ms"
+        },
+        {
+          "metric": "p99_ms",
+          "op": "lt",
+          "value": 25,
+          "source": "contract §12",
+          "label": "p99 \u003c 25 ms"
+        }
+      ],
+      "result": "missed",
+      "file": "2026-10-05-darwin-arm64-bench-gate.json"
     },
     {
       "suite": "policy",
       "label": "Policy · 50 rules",
-      "measured": "",
-      "target": "",
-      "targets": null,
-      "result": "missing",
-      "problem": "No results file for this suite. Run make bench."
+      "measured": "p99 148 µs",
+      "target": "p99 \u003c 1 ms",
+      "targets": [
+        {
+          "metric": "p99_ms",
+          "op": "lt",
+          "value": 1,
+          "source": "contract §12",
+          "label": "p99 \u003c 1 ms"
+        }
+      ],
+      "result": "met",
+      "file": "2026-10-05-darwin-arm64-bench-policy.json"
     },
     {
       "suite": "witness",
       "label": "Witness · L2 at 100 writes/s",
-      "measured": "",
-      "target": "",
-      "targets": null,
-      "result": "missing",
-      "problem": "No results file for this suite. Run make bench."
+      "measured": "p50 118 ms · p99 317 ms",
+      "target": "p50 \u003c 1 s",
+      "targets": [
+        {
+          "metric": "p50_ms",
+          "op": "lt",
+          "value": 1000,
+          "source": "contract §12",
+          "label": "p50 \u003c 1 s"
+        }
+      ],
+      "result": "met",
+      "file": "2026-10-05-darwin-arm64-bench-witness.json"
     },
     {
       "suite": "verify",
       "label": "Verify · 100,000 deeds",
-      "measured": "",
-      "target": "",
-      "targets": null,
-      "result": "missing",
-      "problem": "No results file for this suite. Run make bench."
+      "measured": "1.53 s · 80.9 MiB",
+      "target": "\u003c 5 s · \u003c 256 MiB",
+      "targets": [
+        {
+          "metric": "wall_s",
+          "op": "lt",
+          "value": 5,
+          "source": "contract §12",
+          "label": "\u003c 5 s"
+        },
+        {
+          "metric": "peak_rss_mib",
+          "op": "lt",
+          "value": 256,
+          "source": "S05 §3.9",
+          "label": "\u003c 256 MiB"
+        }
+      ],
+      "result": "met",
+      "file": "2026-10-05-darwin-arm64-bench-verify.json"
     },
     {
       "suite": "stop",
       "label": "Stop · across 2 instances",
-      "measured": "",
-      "target": "",
-      "targets": null,
-      "result": "missing",
-      "problem": "No results file for this suite. Run make bench."
+      "measured": "max 23.5 ms over 20 trials",
+      "target": "\u003c 2 s",
+      "targets": [
+        {
+          "metric": "max_ms",
+          "op": "lt",
+          "value": 2000,
+          "source": "contract §12",
+          "label": "\u003c 2 s"
+        }
+      ],
+      "result": "met",
+      "file": "2026-10-05-darwin-arm64-bench-stop.json"
     },
     {
       "suite": "quickstart",
       "label": "Quickstart · clean machine",
-      "measured": "",
-      "target": "",
-      "targets": null,
-      "result": "missing",
-      "problem": "No results file for this suite. Run make bench."
+      "measured": "0 min 6 s",
+      "target": "\u003c 5 min",
+      "targets": [
+        {
+          "metric": "wall_s",
+          "op": "lt",
+          "value": 300,
+          "source": "contract §12",
+          "label": "\u003c 5 min"
+        }
+      ],
+      "result": "met",
+      "file": "2026-10-05-darwin-arm64-bench-quickstart.json"
     }
   ],
-  "met": 0,
-  "missed": 6,
-  "files": [],
-  "reported": []
+  "met": 5,
+  "missed": 1,
+  "files": [
+    "2026-10-05-darwin-arm64-bench-deed.json",
+    "2026-10-05-darwin-arm64-bench-gate.json",
+    "2026-10-05-darwin-arm64-bench-mcp.json",
+    "2026-10-05-darwin-arm64-bench-policy.json",
+    "2026-10-05-darwin-arm64-bench-quickstart.json",
+    "2026-10-05-darwin-arm64-bench-soak.json",
+    "2026-10-05-darwin-arm64-bench-stop.json",
+    "2026-10-05-darwin-arm64-bench-verify.json",
+    "2026-10-05-darwin-arm64-bench-wal.json",
+    "2026-10-05-darwin-arm64-bench-witness.json"
+  ],
+  "reported": [
+    {
+      "suite": "deed",
+      "scenario": "seal.one_org",
+      "measured": "deeds_per_s 325 · orgs 1.00",
+      "result": "reported",
+      "file": "2026-10-05-darwin-arm64-bench-deed.json"
+    },
+    {
+      "suite": "deed",
+      "scenario": "seal.ten_orgs",
+      "measured": "deeds_per_s 669 · orgs 10.0",
+      "result": "reported",
+      "file": "2026-10-05-darwin-arm64-bench-deed.json"
+    },
+    {
+      "suite": "gate",
+      "scenario": "actions.deny",
+      "measured": "p50 4.11 ms · p99 11.6 ms",
+      "result": "reported",
+      "file": "2026-10-05-darwin-arm64-bench-gate.json"
+    },
+    {
+      "suite": "gate",
+      "scenario": "actions.approval_create",
+      "measured": "p50 6.42 ms · p99 21.8 ms",
+      "result": "reported",
+      "file": "2026-10-05-darwin-arm64-bench-gate.json"
+    },
+    {
+      "suite": "mcp",
+      "scenario": "mcp.wrap_added",
+      "measured": "relay_passthrough_p99_ms 0.03 · tools_call_added_p50_ms 3.18 · tools_call_added_p99_ms 4.30 · tools_list_added_p50_ms 0.72 · wrapper_peak_rss_mib 55.9",
+      "result": "reported",
+      "file": "2026-10-05-darwin-arm64-bench-mcp.json"
+    },
+    {
+      "suite": "policy",
+      "scenario": "evaluate.10_rules",
+      "measured": "p50 0.01 ms · p99 0.07 ms",
+      "result": "reported",
+      "file": "2026-10-05-darwin-arm64-bench-policy.json"
+    },
+    {
+      "suite": "policy",
+      "scenario": "evaluate.200_rules",
+      "measured": "p50 0.17 ms · p99 0.42 ms",
+      "result": "reported",
+      "file": "2026-10-05-darwin-arm64-bench-policy.json"
+    },
+    {
+      "suite": "policy",
+      "scenario": "evaluate.500_rules",
+      "measured": "p50 0.41 ms · p99 0.91 ms",
+      "result": "reported",
+      "file": "2026-10-05-darwin-arm64-bench-policy.json"
+    },
+    {
+      "suite": "soak",
+      "scenario": "soak.mixed",
+      "measured": "rss_growth_after_5min_pct 15.4",
+      "result": "fail",
+      "file": "2026-10-05-darwin-arm64-bench-soak.json"
+    },
+    {
+      "suite": "verify",
+      "scenario": "verify.100k_bundle",
+      "measured": "deeds 100,000 · peak_rss_mib 68.8 · wall_s 1.58",
+      "result": "reported",
+      "file": "2026-10-05-darwin-arm64-bench-verify.json"
+    },
+    {
+      "suite": "wal",
+      "scenario": "wal.update_identity_default",
+      "measured": "max_record_bytes 8,515 · overhead_vs_default_pct 0.00 · record_bytes_per_txn 226 · records_per_txn 3.00",
+      "result": "reported",
+      "file": "2026-10-05-darwin-arm64-bench-wal.json"
+    },
+    {
+      "suite": "wal",
+      "scenario": "wal.update_identity_full",
+      "measured": "max_record_bytes 8,577 · overhead_vs_default_pct 27.4 · record_bytes_per_txn 288 · records_per_txn 3.00",
+      "result": "reported",
+      "file": "2026-10-05-darwin-arm64-bench-wal.json"
+    },
+    {
+      "suite": "wal",
+      "scenario": "wal.full_plus_ledger_and_marker",
+      "measured": "max_record_bytes 644 · overhead_vs_default_pct 185 · record_bytes_per_txn 644 · records_per_txn 6.00",
+      "result": "reported",
+      "file": "2026-10-05-darwin-arm64-bench-wal.json"
+    },
+    {
+      "suite": "witness",
+      "scenario": "l2.10_per_s",
+      "measured": "sent_in_s 59.9",
+      "result": "reported",
+      "file": "2026-10-05-darwin-arm64-bench-witness.json"
+    },
+    {
+      "suite": "witness",
+      "scenario": "l2.500_per_s",
+      "measured": "p50 0.00 ms · p99 0.00 ms",
+      "result": "reported",
+      "file": "2026-10-05-darwin-arm64-bench-witness.json"
+    }
+  ]
 }

@@ -310,7 +310,11 @@ func (s *Summary) Text() string {
 		if r.Problem != "" {
 			fmt.Fprintf(&b, "  next  %s\n", r.Problem)
 		} else if r.Result == "missed" {
-			fmt.Fprintf(&b, "  next  Profile it with make bench-%s PROFILE=1; the report explains the cause before the target is discussed.\n", r.Suite)
+			if r.Suite == "gate" {
+				b.WriteString("  next  Profile it with make bench-gate PROFILE=1 (a CPU profile of the in-process Gate); explain the cause before the target is discussed.\n")
+			} else {
+				fmt.Fprintf(&b, "  next  Profile the %s suite's test with go test -cpuprofile; explain the cause before the target is discussed.\n", r.Suite)
+			}
 		}
 	}
 	fmt.Fprintf(&b, "%d targets met · %d missed · raw files in bench/results/\n", s.Met, s.Missed)

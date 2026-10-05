@@ -1,6 +1,7 @@
 // A tiny static server for dist/ (screenshots, Lighthouse, the dist link check): 127.0.0.1 only,
 // directory index.html, the 404 page for anything missing, and the headers from public/_headers.
 import { createServer } from 'node:http';
+import { gzipSync } from 'node:zlib';
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -38,8 +39,17 @@ export function serve(dist, port = 0) {
       file = join(dist, '404.html');
       status = 404;
     }
-    res.writeHead(status, { 'Content-Type': types[extname(file)] ?? 'application/octet-stream', ...(extname(file) === '.html' ? extra : {}) });
-    res.end(readFileSync(file));
+    // Text is gzipped, as Cloudflare compresses it, so Lighthouse sees realistic transfer sizes (S36).
+    const type = types[extname(file)] ?? 'application/octet-stream';
+    let body = readFileSync(file);
+    const enc = {};
+    if (/^(text\/|application\/(json|xml)|image\/svg)/.test(type) && /gzip/.test(req.headers['accept-encoding'] ?? '')) {
+      body = gzipSync(body);
+      enc['Content-Encoding'] = 'gzip';
+      enc.Vary = 'Accept-Encoding';
+    }
+    res.writeHead(status, { 'Content-Type': type, ...enc, ...(extname(file) === '.html' ? extra : {}) });
+    res.end(body);
   });
   return new Promise((r) => server.listen(port, '127.0.0.1', () => r(server)));
 }

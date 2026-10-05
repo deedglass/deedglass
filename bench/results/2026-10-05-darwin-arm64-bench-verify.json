@@ -1,0 +1,123 @@
+{
+  "schema": "deedglass.bench/v1",
+  "suite": "verify",
+  "started_at": "2026-10-05T03:48:11Z",
+  "commit": "911d46fdf2a99da9162e2d47a46bca9f50d7d8a7",
+  "dirty": true,
+  "source_hash": "sha256:5eb95250a73978d27abaed948dfc44096210319aabb6e386d07aefac5c7ceeeb",
+  "version": "0.1.0-dev",
+  "host": {
+    "name": "darwin-arm64",
+    "cpu": "Apple M1",
+    "cores": 8,
+    "mem_gb": 8,
+    "os": "Darwin 27.0.0",
+    "power": "ac"
+  },
+  "go": "go1.27.1",
+  "scenarios": [
+    {
+      "name": "verify.100k_jsonl",
+      "runs": [
+        {
+          "count": 100000,
+          "errors": 0,
+          "p50_ms": 1529.079,
+          "p99_ms": 1529.079,
+          "max_ms": 1529.079,
+          "values": {
+            "deeds": 100000,
+            "peak_rss_mib": 69.5,
+            "wall_s": 1.529
+          }
+        },
+        {
+          "count": 100000,
+          "errors": 0,
+          "p50_ms": 1551.195,
+          "p99_ms": 1551.195,
+          "max_ms": 1551.195,
+          "values": {
+            "deeds": 100000,
+            "peak_rss_mib": 80.922,
+            "wall_s": 1.551
+          }
+        },
+        {
+          "count": 100000,
+          "errors": 0,
+          "p50_ms": 1534.517,
+          "p99_ms": 1534.517,
+          "max_ms": 1534.517,
+          "values": {
+            "deeds": 100000,
+            "peak_rss_mib": 81.484,
+            "wall_s": 1.535
+          }
+        }
+      ],
+      "targets": [
+        {
+          "metric": "wall_s",
+          "op": "lt",
+          "value": 5,
+          "source": "contract §12",
+          "label": "\u003c 5 s"
+        },
+        {
+          "metric": "peak_rss_mib",
+          "op": "lt",
+          "value": 256,
+          "source": "S05 §3.9",
+          "label": "\u003c 256 MiB"
+        }
+      ],
+      "result": "pass"
+    },
+    {
+      "name": "verify.100k_bundle",
+      "runs": [
+        {
+          "count": 100000,
+          "errors": 0,
+          "p50_ms": 1561.146,
+          "p99_ms": 1561.146,
+          "max_ms": 1561.146,
+          "values": {
+            "deeds": 100000,
+            "peak_rss_mib": 65.531,
+            "wall_s": 1.561
+          }
+        },
+        {
+          "count": 100000,
+          "errors": 0,
+          "p50_ms": 1578.448,
+          "p99_ms": 1578.448,
+          "max_ms": 1578.448,
+          "values": {
+            "deeds": 100000,
+            "peak_rss_mib": 80.172,
+            "wall_s": 1.578
+          }
+        },
+        {
+          "count": 100000,
+          "errors": 0,
+          "p50_ms": 1599.286,
+          "p99_ms": 1599.286,
+          "max_ms": 1599.286,
+          "values": {
+            "deeds": 100000,
+            "peak_rss_mib": 68.844,
+            "wall_s": 1.599
+          }
+        }
+      ],
+      "result": "reported"
+    }
+  ],
+  "caveats": [
+    "Wall time of the whole process (start, read, check every seal and the chain, exit) with the file in the OS cache; peak RSS from getrusage."
+  ]
+}

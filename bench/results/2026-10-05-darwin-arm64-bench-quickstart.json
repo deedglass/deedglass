@@ -1,0 +1,74 @@
+{
+  "schema": "deedglass.bench/v1",
+  "suite": "quickstart",
+  "started_at": "2026-10-05T03:48:28Z",
+  "commit": "911d46fdf2a99da9162e2d47a46bca9f50d7d8a7",
+  "dirty": true,
+  "source_hash": "sha256:5eb95250a73978d27abaed948dfc44096210319aabb6e386d07aefac5c7ceeeb",
+  "version": "0.1.0-dev",
+  "host": {
+    "name": "darwin-arm64",
+    "cpu": "Apple M1",
+    "cores": 8,
+    "mem_gb": 8,
+    "os": "Darwin 27.0.0",
+    "power": "ac"
+  },
+  "go": "go1.27.1",
+  "scenarios": [
+    {
+      "name": "quickstart.clean_dir",
+      "runs": [
+        {
+          "count": 1,
+          "errors": 0,
+          "p50_ms": 9000,
+          "p99_ms": 9000,
+          "max_ms": 9000,
+          "values": {
+            "l2_verified": true,
+            "rerun_s": 1,
+            "wall_s": 9
+          }
+        },
+        {
+          "count": 1,
+          "errors": 0,
+          "p50_ms": 6000,
+          "p99_ms": 6000,
+          "max_ms": 6000,
+          "values": {
+            "l2_verified": true,
+            "rerun_s": 1,
+            "wall_s": 6
+          }
+        },
+        {
+          "count": 1,
+          "errors": 0,
+          "p50_ms": 6000,
+          "p99_ms": 6000,
+          "max_ms": 6000,
+          "values": {
+            "l2_verified": true,
+            "rerun_s": 1,
+            "wall_s": 6
+          }
+        }
+      ],
+      "targets": [
+        {
+          "metric": "wall_s",
+          "op": "lt",
+          "value": 300,
+          "source": "contract §12",
+          "label": "\u003c 5 min"
+        }
+      ],
+      "result": "pass"
+    }
+  ],
+  "caveats": [
+    "deedglass init --yes in a new directory each run (Postgres in Docker, serve, org, demo database, agent, policy, three smoke actions incl. an L2 VERIFIED update). Docker images were already pulled; a first pull adds its download time."
+  ]
+}

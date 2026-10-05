@@ -1,0 +1,435 @@
+{
+  "schema": "deedglass.bench/v1",
+  "suite": "soak",
+  "started_at": "2026-10-05T04:20:17Z",
+  "commit": "911d46fdf2a99da9162e2d47a46bca9f50d7d8a7",
+  "dirty": true,
+  "source_hash": "sha256:5eb95250a73978d27abaed948dfc44096210319aabb6e386d07aefac5c7ceeeb",
+  "version": "0.1.0-dev",
+  "host": {
+    "name": "darwin-arm64",
+    "cpu": "Apple M1",
+    "cores": 8,
+    "mem_gb": 8,
+    "os": "Darwin 27.0.0",
+    "power": "ac"
+  },
+  "go": "go1.27.1",
+  "postgres": {
+    "version": "18.6 (Homebrew)",
+    "mode": "native",
+    "settings": {
+      "fsync": "on",
+      "max_connections": "300",
+      "shared_buffers": "128MB",
+      "synchronous_commit": "on",
+      "wal_level": "logical"
+    }
+  },
+  "scenarios": [
+    {
+      "name": "soak.mixed",
+      "rate": 50,
+      "warmup_s": -1e-9,
+      "duration_s": 1800,
+      "max_in_flight": 256,
+      "runs": [
+        {
+          "count": 90000,
+          "errors": 0,
+          "achieved_rate": 50,
+          "p50_ms": 8.224,
+          "p90_ms": 9.632,
+          "p95_ms": 11.296,
+          "p99_ms": 49.536,
+          "p999_ms": 248.32,
+          "max_ms": 789.271,
+          "mean_ms": 9.784,
+          "statuses": {
+            "executed": 63000,
+            "pending_approval": 9000,
+            "policy_denied": 18000
+          },
+          "values": {
+            "rss_growth_after_5min_pct": 15.449,
+            "samples": [
+              {
+                "db_connections": 7,
+                "minute": 0,
+                "open_files": 21,
+                "rss_mib": 41.719
+              },
+              {
+                "db_connections": 7,
+                "minute": 0.5,
+                "open_files": 21,
+                "rss_mib": 49.688
+              },
+              {
+                "db_connections": 10,
+                "minute": 1,
+                "open_files": 32,
+                "rss_mib": 49.734
+              },
+              {
+                "db_connections": 10,
+                "minute": 1.5,
+                "open_files": 32,
+                "rss_mib": 49.656
+              },
+              {
+                "db_connections": 10,
+                "minute": 2,
+                "open_files": 32,
+                "rss_mib": 57.141
+              },
+              {
+                "db_connections": 10,
+                "minute": 2.5,
+                "open_files": 29,
+                "rss_mib": 50.875
+              },
+              {
+                "db_connections": 10,
+                "minute": 3,
+                "open_files": 29,
+                "rss_mib": 51.844
+              },
+              {
+                "db_connections": 10,
+                "minute": 3.5,
+                "open_files": 26,
+                "rss_mib": 52.422
+              },
+              {
+                "db_connections": 10,
+                "minute": 4,
+                "open_files": 29,
+                "rss_mib": 51.219
+              },
+              {
+                "db_connections": 10,
+                "minute": 4.5,
+                "open_files": 29,
+                "rss_mib": 51.219
+              },
+              {
+                "db_connections": 10,
+                "minute": 5,
+                "open_files": 37,
+                "rss_mib": 43.188
+              },
+              {
+                "db_connections": 10,
+                "minute": 5.5,
+                "open_files": 37,
+                "rss_mib": 43.813
+              },
+              {
+                "db_connections": 10,
+                "minute": 6,
+                "open_files": 37,
+                "rss_mib": 43.313
+              },
+              {
+                "db_connections": 10,
+                "minute": 6.5,
+                "open_files": 29,
+                "rss_mib": 42.469
+              },
+              {
+                "db_connections": 10,
+                "minute": 7,
+                "open_files": 38,
+                "rss_mib": 43.563
+              },
+              {
+                "db_connections": 10,
+                "minute": 7.5,
+                "open_files": 38,
+                "rss_mib": 44.219
+              },
+              {
+                "db_connections": 10,
+                "minute": 8,
+                "open_files": 38,
+                "rss_mib": 43.625
+              },
+              {
+                "db_connections": 10,
+                "minute": 8.5,
+                "open_files": 31,
+                "rss_mib": 44.375
+              },
+              {
+                "db_connections": 10,
+                "minute": 9,
+                "open_files": 31,
+                "rss_mib": 44.531
+              },
+              {
+                "db_connections": 10,
+                "minute": 9.5,
+                "open_files": 31,
+                "rss_mib": 44.172
+              },
+              {
+                "db_connections": 10,
+                "minute": 10,
+                "open_files": 29,
+                "rss_mib": 44.734
+              },
+              {
+                "db_connections": 10,
+                "minute": 10.5,
+                "open_files": 29,
+                "rss_mib": 43.875
+              },
+              {
+                "db_connections": 10,
+                "minute": 11,
+                "open_files": 27,
+                "rss_mib": 44.531
+              },
+              {
+                "db_connections": 10,
+                "minute": 11.5,
+                "open_files": 29,
+                "rss_mib": 44.828
+              },
+              {
+                "db_connections": 10,
+                "minute": 12,
+                "open_files": 29,
+                "rss_mib": 45.047
+              },
+              {
+                "db_connections": 10,
+                "minute": 12.5,
+                "open_files": 29,
+                "rss_mib": 45.078
+              },
+              {
+                "db_connections": 10,
+                "minute": 13,
+                "open_files": 40,
+                "rss_mib": 45.547
+              },
+              {
+                "db_connections": 10,
+                "minute": 13.5,
+                "open_files": 40,
+                "rss_mib": 45.703
+              },
+              {
+                "db_connections": 10,
+                "minute": 14,
+                "open_files": 40,
+                "rss_mib": 46.234
+              },
+              {
+                "db_connections": 10,
+                "minute": 14.5,
+                "open_files": 30,
+                "rss_mib": 46.484
+              },
+              {
+                "db_connections": 10,
+                "minute": 15,
+                "open_files": 30,
+                "rss_mib": 45.328
+              },
+              {
+                "db_connections": 10,
+                "minute": 15.5,
+                "open_files": 26,
+                "rss_mib": 46.25
+              },
+              {
+                "db_connections": 10,
+                "minute": 16,
+                "open_files": 26,
+                "rss_mib": 45.641
+              },
+              {
+                "db_connections": 10,
+                "minute": 16.5,
+                "open_files": 26,
+                "rss_mib": 46.109
+              },
+              {
+                "db_connections": 10,
+                "minute": 17,
+                "open_files": 26,
+                "rss_mib": 44.406
+              },
+              {
+                "db_connections": 10,
+                "minute": 17.5,
+                "open_files": 28,
+                "rss_mib": 45.063
+              },
+              {
+                "db_connections": 10,
+                "minute": 18,
+                "open_files": 30,
+                "rss_mib": 46.047
+              },
+              {
+                "db_connections": 10,
+                "minute": 18.5,
+                "open_files": 30,
+                "rss_mib": 44.953
+              },
+              {
+                "db_connections": 10,
+                "minute": 19,
+                "open_files": 30,
+                "rss_mib": 45.813
+              },
+              {
+                "db_connections": 10,
+                "minute": 19.5,
+                "open_files": 29,
+                "rss_mib": 44.609
+              },
+              {
+                "db_connections": 10,
+                "minute": 20,
+                "open_files": 29,
+                "rss_mib": 44.953
+              },
+              {
+                "db_connections": 10,
+                "minute": 20.5,
+                "open_files": 31,
+                "rss_mib": 46.188
+              },
+              {
+                "db_connections": 10,
+                "minute": 21,
+                "open_files": 31,
+                "rss_mib": 45.234
+              },
+              {
+                "db_connections": 10,
+                "minute": 21.5,
+                "open_files": 31,
+                "rss_mib": 45.391
+              },
+              {
+                "db_connections": 10,
+                "minute": 22,
+                "open_files": 29,
+                "rss_mib": 45.703
+              },
+              {
+                "db_connections": 10,
+                "minute": 22.5,
+                "open_files": 27,
+                "rss_mib": 46.328
+              },
+              {
+                "db_connections": 10,
+                "minute": 23,
+                "open_files": 27,
+                "rss_mib": 46.422
+              },
+              {
+                "db_connections": 10,
+                "minute": 23.5,
+                "open_files": 27,
+                "rss_mib": 45.969
+              },
+              {
+                "db_connections": 10,
+                "minute": 24,
+                "open_files": 27,
+                "rss_mib": 46.078
+              },
+              {
+                "db_connections": 10,
+                "minute": 24.5,
+                "open_files": 34,
+                "rss_mib": 46.047
+              },
+              {
+                "db_connections": 10,
+                "minute": 25,
+                "open_files": 34,
+                "rss_mib": 46.938
+              },
+              {
+                "db_connections": 10,
+                "minute": 25.5,
+                "open_files": 34,
+                "rss_mib": 46.531
+              },
+              {
+                "db_connections": 10,
+                "minute": 26,
+                "open_files": 32,
+                "rss_mib": 47.063
+              },
+              {
+                "db_connections": 10,
+                "minute": 26.5,
+                "open_files": 32,
+                "rss_mib": 47.016
+              },
+              {
+                "db_connections": 10,
+                "minute": 27,
+                "open_files": 55,
+                "rss_mib": 47.344
+              },
+              {
+                "db_connections": 10,
+                "minute": 27.5,
+                "open_files": 55,
+                "rss_mib": 48.063
+              },
+              {
+                "db_connections": 10,
+                "minute": 28,
+                "open_files": 55,
+                "rss_mib": 49.75
+              },
+              {
+                "db_connections": 10,
+                "minute": 28.5,
+                "open_files": 35,
+                "rss_mib": 49.781
+              },
+              {
+                "db_connections": 10,
+                "minute": 29,
+                "open_files": 28,
+                "rss_mib": 50.047
+              },
+              {
+                "db_connections": 10,
+                "minute": 29.5,
+                "open_files": 44,
+                "rss_mib": 49.859
+              }
+            ]
+          }
+        }
+      ],
+      "targets": [
+        {
+          "metric": "rss_growth_after_5min_pct",
+          "op": "lt",
+          "value": 10,
+          "source": "S35 §3.2",
+          "label": "RSS growth \u003c 10% after minute 5"
+        }
+      ],
+      "result": "fail"
+    }
+  ],
+  "caveats": [
+    "30m0s at 50 calls/s: 70% allowed (fake.echo), 20% denied, 10% waiting for approval. Sampled every 30 s: the server's RSS, its open files and the app role's database connections. The binary exposes no goroutine count, so connections and files stand in for leak detection. No L2 share in this run."
+  ]
+}

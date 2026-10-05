@@ -1,0 +1,216 @@
+{
+  "schema": "deedglass.bench/v1",
+  "suite": "gate",
+  "started_at": "2026-10-05T03:49:01Z",
+  "commit": "911d46fdf2a99da9162e2d47a46bca9f50d7d8a7",
+  "dirty": true,
+  "source_hash": "sha256:5eb95250a73978d27abaed948dfc44096210319aabb6e386d07aefac5c7ceeeb",
+  "version": "0.1.0-dev",
+  "host": {
+    "name": "darwin-arm64",
+    "cpu": "Apple M1",
+    "cores": 8,
+    "mem_gb": 8,
+    "os": "Darwin 27.0.0",
+    "power": "ac"
+  },
+  "go": "go1.27.1",
+  "postgres": {
+    "version": "18.6 (Homebrew)",
+    "mode": "native",
+    "settings": {
+      "fsync": "on",
+      "max_connections": "300",
+      "shared_buffers": "128MB",
+      "synchronous_commit": "on",
+      "wal_level": "logical"
+    }
+  },
+  "scenarios": [
+    {
+      "name": "actions.allow",
+      "rate": 200,
+      "warmup_s": 10,
+      "duration_s": 60,
+      "max_in_flight": 256,
+      "runs": [
+        {
+          "count": 12000,
+          "errors": 0,
+          "achieved_rate": 199.82,
+          "p50_ms": 7.696,
+          "p90_ms": 17.984,
+          "p95_ms": 34.432,
+          "p99_ms": 91.392,
+          "p999_ms": 154.112,
+          "max_ms": 194.977,
+          "mean_ms": 11.707,
+          "statuses": {
+            "executed": 12000
+          }
+        },
+        {
+          "count": 12000,
+          "errors": 0,
+          "achieved_rate": 200,
+          "p50_ms": 5.584,
+          "p90_ms": 6.288,
+          "p95_ms": 6.64,
+          "p99_ms": 19.392,
+          "p999_ms": 56.448,
+          "max_ms": 74.195,
+          "mean_ms": 6.002,
+          "statuses": {
+            "executed": 12000
+          }
+        },
+        {
+          "count": 12000,
+          "errors": 0,
+          "achieved_rate": 200,
+          "p50_ms": 5.808,
+          "p90_ms": 6.64,
+          "p95_ms": 6.928,
+          "p99_ms": 12.768,
+          "p999_ms": 174.592,
+          "max_ms": 208.473,
+          "mean_ms": 6.605,
+          "statuses": {
+            "executed": 12000
+          }
+        }
+      ],
+      "targets": [
+        {
+          "metric": "p50_ms",
+          "op": "lt",
+          "value": 5,
+          "source": "contract §12",
+          "label": "p50 \u003c 5 ms"
+        },
+        {
+          "metric": "p99_ms",
+          "op": "lt",
+          "value": 25,
+          "source": "contract §12",
+          "label": "p99 \u003c 25 ms"
+        }
+      ],
+      "result": "fail"
+    },
+    {
+      "name": "actions.deny",
+      "rate": 200,
+      "warmup_s": 10,
+      "duration_s": 60,
+      "max_in_flight": 256,
+      "runs": [
+        {
+          "count": 12000,
+          "errors": 0,
+          "achieved_rate": 200,
+          "p50_ms": 4.112,
+          "p90_ms": 4.368,
+          "p95_ms": 4.496,
+          "p99_ms": 5.552,
+          "p999_ms": 125.696,
+          "max_ms": 150.997,
+          "mean_ms": 4.54,
+          "statuses": {
+            "policy_denied": 12000
+          }
+        },
+        {
+          "count": 12000,
+          "errors": 0,
+          "achieved_rate": 200,
+          "p50_ms": 4.112,
+          "p90_ms": 4.432,
+          "p95_ms": 4.752,
+          "p99_ms": 42.368,
+          "p999_ms": 285.696,
+          "max_ms": 325.662,
+          "mean_ms": 5.791,
+          "statuses": {
+            "policy_denied": 12000
+          }
+        },
+        {
+          "count": 12000,
+          "errors": 0,
+          "achieved_rate": 200,
+          "p50_ms": 4.072,
+          "p90_ms": 4.432,
+          "p95_ms": 4.816,
+          "p99_ms": 11.552,
+          "p999_ms": 246.272,
+          "max_ms": 265.588,
+          "mean_ms": 5.231,
+          "statuses": {
+            "policy_denied": 12000
+          }
+        }
+      ],
+      "result": "reported"
+    },
+    {
+      "name": "actions.approval_create",
+      "rate": 200,
+      "warmup_s": 10,
+      "duration_s": 60,
+      "max_in_flight": 256,
+      "runs": [
+        {
+          "count": 12000,
+          "errors": 0,
+          "achieved_rate": 200,
+          "p50_ms": 6.16,
+          "p90_ms": 9.952,
+          "p95_ms": 11.04,
+          "p99_ms": 21.824,
+          "p999_ms": 125.696,
+          "max_ms": 152.087,
+          "mean_ms": 7.47,
+          "statuses": {
+            "pending_approval": 12000
+          }
+        },
+        {
+          "count": 12000,
+          "errors": 0,
+          "achieved_rate": 199.99,
+          "p50_ms": 6.416,
+          "p90_ms": 7.28,
+          "p95_ms": 7.6,
+          "p99_ms": 8.992,
+          "p999_ms": 13.728,
+          "max_ms": 43.706,
+          "mean_ms": 6.496,
+          "statuses": {
+            "pending_approval": 12000
+          }
+        },
+        {
+          "count": 12000,
+          "errors": 0,
+          "achieved_rate": 199.98,
+          "p50_ms": 7.888,
+          "p90_ms": 12.576,
+          "p95_ms": 13.792,
+          "p99_ms": 29.248,
+          "p999_ms": 83.712,
+          "max_ms": 121.475,
+          "mean_ms": 9.354,
+          "statuses": {
+            "pending_approval": 12000
+          }
+        }
+      ],
+      "result": "reported"
+    }
+  ],
+  "caveats": [
+    "Client-observed end-to-end latency of POST /v1/actions over loopback, measured from each request's intended send time: it includes HTTP, JSON, the policy, the connector call (fake.echo, 0 ms), the database writes and sealing the deed, so it is an upper bound on the Gate's own overhead.",
+    "Open loop at a fixed arrival rate, 8 agents in round robin, one org, one deedglass serve, Postgres on the same machine."
+  ]
+}

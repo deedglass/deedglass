@@ -235,11 +235,13 @@ bench-slack: ## S29: Slack signature check (4 KiB), the approval card, GitHub ex
 	  ./internal/connector/slack/ ./internal/connector/github/ ./internal/notify/slack/ > "$$out"; st=$$?; \
 	grep -o '"Output":"\(Benchmark[^"]*\|[^"]*handler [a-z]*: [^"]*\)' "$$out" | sed 's/"Output":"//; s/\\t/ /g; s/\\n//g'; echo "raw: $$out"; exit $$st
 
-bench-gate: ## S13: Gate overhead (allow, no witness, fake.echo, concurrency 8, 1 org, 50 rules) on a throwaway PG 18: p50 < 5 ms, p99 < 25 ms; raw go test -json in bench/results/
-	@out="$(CURDIR)/bench/results/$$(date +%F)-$$(go env GOOS)-$$(go env GOARCH)-gate.json"; \
+bench-gate: ## S13: Gate overhead (allow, no witness, fake.echo, concurrency 8, 1 org, 50 rules) on a throwaway PG 18: p50 < 5 ms, p99 < 25 ms; raw go test -json in bench/results/; PROFILE=1 also writes a CPU profile to .tmp/gate.cpu.pprof and prints its top (S36)
+	@out="$(CURDIR)/bench/results/$$(date +%F)-$$(go env GOOS)-$$(go env GOARCH)-gate.json"; prof="$(CURDIR)/.tmp/gate.cpu.pprof"; mkdir -p "$(CURDIR)/.tmp"; \
 	DEEDGLASS_IT_PKGS=./internal/gate/ DEEDGLASS_IT_GOFLAGS="-run TestAllowSealsL0Verified" \
+	DEEDGLASS_IT_BENCH_GOFLAGS="$(if $(PROFILE),-cpuprofile $$prof,)" \
 	DEEDGLASS_IT_BENCH_OUT="$$out" DEEDGLASS_IT_BENCH_RUN='TestGateBudget' DEEDGLASS_IT_BENCH_PKG=./internal/gate/ scripts/integration_local.sh >/dev/null; st=$$?; \
-	grep -o 'PERF {[^}]*}' "$$out" | sed 's/\\"/"/g'; echo "raw: $$out"; exit $$st
+	grep -o 'PERF {[^}]*}' "$$out" | sed 's/\\"/"/g'; echo "raw: $$out"; \
+	if [ -n "$(PROFILE)" ] && [ -f "$$prof" ]; then $(GO) tool pprof -top -nodecount=25 "$$prof" 2>/dev/null | head -35; echo "profile: $$prof"; fi; exit $$st
 
 bench-intents: ## S09: signed-intent checks without the database (p99, 4 KiB args) and with the nonce insert on a throwaway PG 18; JSON in bench/results/
 	@d="$(CURDIR)/bench/results/$$(date +%F)-$$(go env GOOS)-$$(go env GOARCH)"; \

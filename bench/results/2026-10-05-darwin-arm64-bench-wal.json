@@ -1,0 +1,91 @@
+{
+  "schema": "deedglass.bench/v1",
+  "suite": "wal",
+  "started_at": "2026-10-05T04:04:17Z",
+  "commit": "911d46fdf2a99da9162e2d47a46bca9f50d7d8a7",
+  "dirty": true,
+  "source_hash": "sha256:5eb95250a73978d27abaed948dfc44096210319aabb6e386d07aefac5c7ceeeb",
+  "version": "0.1.0-dev",
+  "host": {
+    "name": "darwin-arm64",
+    "cpu": "Apple M1",
+    "cores": 8,
+    "mem_gb": 8,
+    "os": "Darwin 27.0.0",
+    "power": "ac"
+  },
+  "go": "go1.27.1",
+  "postgres": {
+    "version": "18.6 (Homebrew)",
+    "mode": "native",
+    "settings": {
+      "fsync": "on",
+      "max_connections": "300",
+      "shared_buffers": "128MB",
+      "synchronous_commit": "on",
+      "wal_level": "logical"
+    }
+  },
+  "scenarios": [
+    {
+      "name": "wal.update_identity_default",
+      "runs": [
+        {
+          "count": 50,
+          "errors": 0,
+          "p50_ms": 0,
+          "p99_ms": 0,
+          "max_ms": 0,
+          "values": {
+            "max_record_bytes": 8515,
+            "overhead_vs_default_pct": 0,
+            "record_bytes_per_txn": 226,
+            "records_per_txn": 3
+          }
+        }
+      ],
+      "result": "reported"
+    },
+    {
+      "name": "wal.update_identity_full",
+      "runs": [
+        {
+          "count": 50,
+          "errors": 0,
+          "p50_ms": 0,
+          "p99_ms": 0,
+          "max_ms": 0,
+          "values": {
+            "max_record_bytes": 8577,
+            "overhead_vs_default_pct": 27.434,
+            "record_bytes_per_txn": 288,
+            "records_per_txn": 3
+          }
+        }
+      ],
+      "result": "reported"
+    },
+    {
+      "name": "wal.full_plus_ledger_and_marker",
+      "runs": [
+        {
+          "count": 50,
+          "errors": 0,
+          "p50_ms": 0,
+          "p99_ms": 0,
+          "max_ms": 0,
+          "values": {
+            "max_record_bytes": 644,
+            "overhead_vs_default_pct": 184.956,
+            "record_bytes_per_txn": 644,
+            "records_per_txn": 6
+          }
+        }
+      ],
+      "result": "reported"
+    }
+  ],
+  "caveats": [
+    "WAL per committed single-row UPDATE with warm pages (no full-page images), read with pg_walinspect between LSNs. The ledger table and the transactional logical message have the shapes the Postgres connector writes; this measures their WAL, not the connector's latency. The spike's laptop WAL figures are never quoted."
+  ]
+}

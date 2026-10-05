@@ -4,6 +4,7 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -358,6 +359,22 @@ func TestMCPBudget(t *testing.T) {
 		t.Skip("a budget run: make bench-mcp")
 	}
 	m := newMCPLive(t)
+	// The demo policy's agent-rate budget (30 calls a minute, S22) would refuse a 1,000-call run, so
+	// the benchmark enforces the same policy with only that number raised (S36).
+	src, err := os.ReadFile(filepath.Join("..", "..", "examples", "demo", "policies", "acme-demo.yaml"))
+	if err != nil || !bytes.Contains(src, []byte("max_calls: 30")) {
+		t.Fatalf("acme-demo.yaml: %v (expected the 30-call agent-rate budget)", err)
+	}
+	benchPolicy := filepath.Join(t.TempDir(), "acme-demo.yaml")
+	if err := os.WriteFile(benchPolicy, bytes.Replace(src, []byte("max_calls: 30"), []byte("max_calls: 100000"), 1), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if r := cli(t, m.env, false, "policy", "push", benchPolicy); r.code != 0 {
+		t.Fatalf("%+v", r)
+	}
+	if r := cli(t, m.env, false, "policy", "activate", "acme-demo", "--version", "2", "--mode", "enforce", "--reason", "MCP benchmark", "--yes"); r.code != 0 {
+		t.Fatalf("%+v", r)
+	}
 	u, _ := url.Parse(m.base)
 	env := append(os.Environ(), "FAKE_MCP_MODE=legacy")
 	// Straight to the server.

@@ -73,12 +73,11 @@ function verifyBlock() {
   return lines.join('\n');
 }
 
-// The favicon: the flat Split Orb (brand §5), colours from the primitives.
+// The favicon: the final Split Orb kit's favicon.svg (DL-018, ~/txv/site/brand/deedglass/final),
+// byte for byte (S36). It follows the browser's light or dark scheme; the kit is never redrawn here.
+const KIT_FAVICON = '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><title>Deedglass</title><style>.r{fill:#C3CADB}.p{fill:#0D0F14;fill-opacity:.7}@media (prefers-color-scheme:dark){.r{fill:#E6EAF5;fill-opacity:.9}.p{fill:#FFFFFF;fill-opacity:1}}</style><defs><linearGradient id="a" gradientUnits="userSpaceOnUse" x1="7.75" y1="1" x2="17.5" y2="31"><stop offset="0" stop-color="#7C6CFF"/><stop offset=".5" stop-color="#4F8CFF"/><stop offset="1" stop-color="#2FE6D1"/></linearGradient></defs><path d="M14 1.13A15 15 0 0 0 14 30.87Z" fill="url(#a)"/><path class="r" d="M18 1.13A15 15 0 0 1 18 30.87Z"/><rect class="p" x="15" y="1.13" width="2" height="29.74"/></svg>\n';
 function favicon() {
-  const p = t.primitives;
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120"><defs><linearGradient id="a" x1="0" y1="0" x2="1" y2="1">` +
-    `<stop offset="0" stop-color="${lower(p['aurora-violet'])}"/><stop offset=".5" stop-color="${lower(p['aurora-blue'])}"/><stop offset="1" stop-color="${lower(p['aurora-teal'])}"/></linearGradient></defs>` +
-    `<path d="M55.2 8.22A52 52 0 0 0 55.2 111.78Z" fill="url(#a)"/><path d="M64.8 8.22A52 52 0 0 1 64.8 111.78Z" fill="${lower(p['frost-dark'])}" fill-opacity=".85"/></svg>\n`;
+  return KIT_FAVICON;
 }
 
 const outputs = [

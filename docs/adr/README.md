@@ -75,7 +75,8 @@ ADR-000 to ADR-008 were written for the V0 verifier and keep their original text
 | 064 | docs.deedglass.com on Astro + Starlight, generated reference, tested snippets | Accepted (2026-10-05, DL-049) | Starlight 0.42.5 + three MIT plugins, cspell; generated errors/CLI/config/attack pages; snippet tests; CSP with script hashes; Ledger CLI reads the init stack; S33 |
 | 065 | The S34 attack cases P, Q and R and their pinned digest | Accepted (2026-10-05, DL-050) | 23 cases declared before code; `expectedDigestS34`; V0 `superseded`/`retired`; S34 |
 | 066 | Security pass 2: MCP tool screening, server-request policy, guards G6–G10 and the audit baseline | Accepted (2026-10-05, DL-050) | toolscan; gateway pins and `connector.tool_hidden`; `--allow-server-requests`; G6–G10; `make audit`, `fuzz-all`, `fuzz-regress`; S34 |
-| 067 | The signed release pipeline (GoReleaser, cosign, syft, grype, actionlint) | Proposed (2026-10-05, S35) | release.yml, .goreleaser.yaml, release-check, check-workflows.sh, version --check; S35 |
-| 068 | The cloud-beta kit and purge_org | Proposed (2026-10-05, S35) | deploy/cloud/, migration 0027, DG007, deedglass_backup, cloud-smoke; S35 |
-| 069 | The benchmark method (open loop, results schema, bench-check) | Proposed (2026-10-05, S35) | bench/internal/load, dgbench, deedglass.bench/v1; S35 |
-| 070 | Supply-chain lows: x/sys v0.48.0, docs-site build-only packages | Proposed (2026-10-05, S35) | SR-007, SR-018; S35 |
+| 067 | The signed release pipeline (GoReleaser, cosign, syft, grype, actionlint) | Accepted (2026-10-05, DL-051) | release.yml, .goreleaser.yaml, release-check, check-workflows.sh, version --check; S35 |
+| 068 | The cloud-beta kit and purge_org | Accepted (2026-10-05, DL-051) | deploy/cloud/, migration 0027, DG007, deedglass_backup, cloud-smoke; S35 |
+| 069 | The benchmark method (open loop, results schema, bench-check) | Accepted (2026-10-05, DL-051) | bench/internal/load, dgbench, deedglass.bench/v1; S35 |
+| 070 | Supply-chain lows: x/sys v0.48.0, docs-site build-only packages | Accepted (2026-10-05, DL-051) | SR-007, SR-018; S35 |
+| 071 | deedglass.com's build and test dependencies | Proposed (2026-10-05, S36) | resvg-js, wrangler, Vitest, Playwright, axe in ~/txv/site; Tailwind removed; S36 |

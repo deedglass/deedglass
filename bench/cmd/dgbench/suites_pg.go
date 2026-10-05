@@ -492,6 +492,13 @@ func witnessSuite(ctx context.Context, o Opts) (*load.File, error) {
 		sc := load.Scenario{Name: fmt.Sprintf("l2.%d_per_s", sp.rate), Rate: float64(sp.rate), DurationS: float64(seconds)}
 		for r := 0; r < sp.runs; r++ {
 			m, log, err := runL2(ctx, o.Root, sp.rate, seconds)
+			if m == nil && sp.rate != 100 {
+				// A stress point above the contract's rate that overloads this host is recorded as
+				// such (S36): the file keeps the target rate's runs, and the note says what failed.
+				sc.Runs = append(sc.Runs, load.RunJSON{Errors: 1})
+				sc.Notes = append(sc.Notes, fmt.Sprintf("Did not complete at %d writes/s on this host: %s", sp.rate, firstSendFailure(log)))
+				continue
+			}
 			if m == nil {
 				return nil, fmt.Errorf("%v\n%s", err, tailLines(log, 30))
 			}
@@ -524,6 +531,19 @@ func tailLines(s string, n int) string {
 		l = l[len(l)-n:]
 	}
 	return strings.Join(l, "\n")
+}
+
+// firstSendFailure is the test's own summary of refused sends, or the first failing line.
+func firstSendFailure(log string) string {
+	for _, l := range strings.Split(log, "\n") {
+		if strings.Contains(l, "sends failed") {
+			if i := strings.Index(l, ": "); i >= 0 && strings.Contains(l, ".go:") {
+				return strings.TrimSpace(l[i+2:])
+			}
+			return strings.TrimSpace(l)
+		}
+	}
+	return firstFail(log)
 }
 
 func firstFail(log string) string {

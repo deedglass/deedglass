@@ -14,7 +14,7 @@ That Deedglass compared what the agent reported with an independent observation 
 
 ## Does it slow my agent down?
 
-It adds a decision, a few database writes and a seal to every call. In a 15-second open-loop run at 200 calls a second on an M1 laptop (on battery, with Postgres on the same machine), an allowed call with no witness took 7.2 ms at the median and 18.6 ms at p99, end to end over loopback (`bench/results/2026-10-05-darwin-arm64-bench-gate-quick.json`). That includes HTTP, the database writes and the sealed deed, so the Gate's own share is smaller. The median is above the 5 ms target and the p99 is under the 25 ms one; a full run on a plugged-in machine and on a server comes before launch. Policy evaluation itself is under 1 ms at p99. An L2 verdict arrives after the change log is read, so it adds no time to the call when you don't wait for it.
+It adds a decision, two short database transactions and a seal to every call. In three 60-second open-loop runs at 200 calls a second on an M1 laptop (on AC power, with Postgres on the same machine), an allowed call with no witness took 5.8 ms at the median and 19.4 ms at p99, end to end over loopback (`bench/results/2026-10-05-darwin-arm64-bench-gate.json`, the median of the three runs). That includes HTTP, the database writes and the sealed deed. The median is just above the 5 ms target and the p99 is under the 25 ms one; a CPU profile shows the time going to the two Postgres round trips (admission, then the outcome and the seal), not to policy evaluation, which is under 1 ms at p99. A run on a server comes before launch. An L2 verdict arrives after the change log is read, so it adds no time to the call when you don't wait for it.
 
 ## Where does my data go?
 
