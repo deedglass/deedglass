@@ -39,7 +39,17 @@ type view struct {
 	Date               string
 	DSN                map[string]string // multipart/report: the delivery-status fields
 	BodyTruncatedBytes int
+	// S41: what the reply triager needs. The auto-reply headers (RFC 3834 and vendor ones),
+	// References and Delivered-To for matching our threads and mailto unsubscribes, and Gmail's
+	// historyId to reset the triager's history point.
+	Headers     map[string]string
+	References  string
+	DeliveredTo string
+	HistoryID   string
 }
+
+// AutoHeaders are the auto-reply headers get_message returns (lowercase names).
+var AutoHeaders = []string{"auto-submitted", "x-autoreply", "x-autorespond", "precedence", "x-auto-response-suppress"}
 
 func (v view) public() map[string]any {
 	out := map[string]any{"id": v.ID, "thread_id": v.ThreadID, "label_ids": v.Labels, "from": v.From, "to": v.To, "subject": v.Subject,
@@ -47,15 +57,28 @@ func (v view) public() map[string]any {
 	if len(v.DSN) > 0 {
 		out["dsn"] = v.DSN
 	}
+	if len(v.Headers) > 0 {
+		out["headers"] = v.Headers
+	}
+	if v.References != "" {
+		out["references"] = clipBytes(v.References, 998)
+	}
+	if v.DeliveredTo != "" {
+		out["delivered_to"] = v.DeliveredTo
+	}
+	if v.HistoryID != "" {
+		out["history_id"] = v.HistoryID
+	}
 	return out
 }
 
 func (s *session) getMessage(ctx context.Context, id string) (view, *saas.Response, error) {
 	var b struct {
-		ID       string   `json:"id"`
-		ThreadID string   `json:"threadId"`
-		LabelIDs []string `json:"labelIds"`
-		Raw      string   `json:"raw"`
+		ID        string   `json:"id"`
+		ThreadID  string   `json:"threadId"`
+		LabelIDs  []string `json:"labelIds"`
+		Raw       string   `json:"raw"`
+		HistoryID string   `json:"historyId"`
 	}
 	resp, err := s.call(ctx, http.MethodGet, url.Values{"format": {"raw"}}, nil, &b, "messages", id)
 	if err != nil {
@@ -73,6 +96,9 @@ func (s *session) getMessage(ctx context.Context, id string) (view, *saas.Respon
 		return view{}, resp, unreadable()
 	}
 	v.ID, v.ThreadID, v.Labels = b.ID, b.ThreadID, b.LabelIDs
+	if isDigits(b.HistoryID) {
+		v.HistoryID = b.HistoryID
+	}
 	return v, resp, nil
 }
 
@@ -114,6 +140,18 @@ func ParseRaw(raw []byte) (view, error) {
 	v.ListUnsub = strings.TrimSpace(m.Header.Get("List-Unsubscribe"))
 	v.ListUnsubPost = strings.TrimSpace(m.Header.Get("List-Unsubscribe-Post"))
 	v.Date = m.Header.Get("Date")
+	v.References = strings.Join(strings.Fields(m.Header.Get("References")), " ")
+	if a, err := mail.ParseAddress(m.Header.Get("Delivered-To")); err == nil {
+		v.DeliveredTo = strings.ToLower(a.Address)
+	}
+	for _, h := range AutoHeaders {
+		if val := strings.TrimSpace(m.Header.Get(h)); val != "" {
+			if v.Headers == nil {
+				v.Headers = map[string]string{}
+			}
+			v.Headers[h] = clipBytes(val, 200)
+		}
+	}
 	ct := m.Header.Get("Content-Type")
 	if mt, params, err := mime.ParseMediaType(ct); err == nil && mt == "multipart/report" {
 		v.DSN = dsn(m.Body, params["boundary"])
@@ -168,7 +206,15 @@ func dsn(r io.Reader, boundary string) map[string]string {
 		if err != nil {
 			return out
 		}
-		if !strings.HasPrefix(strings.ToLower(p.Header.Get("Content-Type")), "message/delivery-status") {
+		ct := strings.ToLower(p.Header.Get("Content-Type"))
+		if strings.HasPrefix(ct, "message/rfc822") || strings.HasPrefix(ct, "text/rfc822-headers") {
+			// S41: the original's Message-ID, so a bounce matches the exact send.
+			if id := originalMessageID(io.LimitReader(p, 16<<10)); id != "" && out["original_message_id"] == "" {
+				out["original_message_id"] = clipBytes(id, 300)
+			}
+			continue
+		}
+		if !strings.HasPrefix(ct, "message/delivery-status") {
 			continue
 		}
 		b, _ := io.ReadAll(io.LimitReader(p, 8<<10))
@@ -285,3 +331,29 @@ func sentLabel(ls []string) string {
 }
 
 var errNoProfile = errors.New("outbound: the profile has no email address")
+
+// originalMessageID reads the Message-ID header of an attached original (headers only).
+func originalMessageID(r io.Reader) string {
+	b, _ := io.ReadAll(r)
+	for _, l := range strings.Split(strings.ReplaceAll(string(b), "\r\n", "\n"), "\n") {
+		if l == "" {
+			break
+		}
+		if k, val, ok := strings.Cut(l, ":"); ok && strings.EqualFold(strings.TrimSpace(k), "message-id") {
+			return strings.TrimSpace(val)
+		}
+	}
+	return ""
+}
+
+func isDigits(s string) bool {
+	if s == "" || len(s) > 20 {
+		return false
+	}
+	for _, c := range s {
+		if c < '0' || c > '9' {
+			return false
+		}
+	}
+	return true
+}

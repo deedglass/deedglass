@@ -468,8 +468,15 @@ func TestEventsLaggedWriter(t *testing.T) {
 	go s.api.ServeHTTP(fast, s.request("/v1/events", evAdminKey).WithContext(ctx))
 	waitFor(t, func() bool { return strings.Contains(fast.String(), "event: hello") })
 	org := s.auth.org.String()
+	// The fast reader must never fall behind its own 64-event buffer, or it lags too: under CPU
+	// load (race detector, parallel packages) a 200-event burst outran it (S41 found the cause of
+	// the flake). Pace the burst at half the buffer; the stalled writer still fills its 64 and lags.
 	for n := range 200 {
 		s.in <- ledger.BusMsg{Event: evt(n, org, ledger.EventActionCreated, "act_"+strings.Repeat("3", 26))}
+		if n%32 == 31 {
+			want := n + 1
+			waitFor(t, func() bool { return strings.Count(fast.String(), "event: action.created") == want })
+		}
 	}
 	waitFor(t, func() bool { return strings.Count(fast.String(), "event: action.created") == 200 })
 	waitFor(t, func() bool { return s.hub.Stats().Lagged == 1 })

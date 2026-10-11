@@ -9,6 +9,10 @@ this file by `scripts/release-notes.sh`.
 
 ### Added
 
+- **`mail.get_message` reads what a reply triager needs** (ops build, `outboundmail` tag): the
+  auto-reply headers, `References`, `Delivered-To`, Gmail's `history_id`, and a bounce's
+  `original_message_id` from its attached original. Additive; no new tool, route or setting.
+
 - **Scheduled actions.** `POST /v1/actions` takes an optional `schedule {not_before, not_after}`
   (gateway mode): an approved action runs inside the window, a missed window is cancelled and
   sealed (`schedule_missed`), and an allowed action with a later window is refused

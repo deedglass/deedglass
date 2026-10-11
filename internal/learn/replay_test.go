@@ -196,7 +196,10 @@ func TestReplayOracleAndInvariants(t *testing.T) {
 			unknown++
 			continue
 		}
-		d := policy.Evaluate(bg, v3, in, policy.EvalOptions{Mode: policy.ModeShadow})
+		// The engine's own backstop (replayDeadline, 2 s), not the Gate's 50 ms default: under load
+		// one oracle evaluation passed 50 ms, became a deadline deny and counted one extra
+		// transition (the S40/S41 flake).
+		d := policy.Evaluate(bg, v3, in, policy.EvalOptions{Mode: policy.ModeShadow, Deadline: replayDeadline})
 		if string(d.Outcome) != r.Recorded.Decision {
 			want[[2]string{r.Recorded.Decision, string(d.Outcome)}]++
 		}

@@ -96,6 +96,28 @@ func TestParseRawBounce(t *testing.T) {
 	if _, ok := v.public()["dsn"]; !ok {
 		t.Fatal("public view drops the bounce")
 	}
+	// S41: the original's Message-ID from a text/rfc822-headers part, the auto-reply headers,
+	// References and Delivered-To.
+	withOrig := strings.Replace(raw, "--b1--", "--b1\r\nContent-Type: text/rfc822-headers\r\n\r\nFrom: arjun@trydeedglass.example\r\nMessage-ID: <m1@trydeedglass.example>\r\n\r\n--b1--", 1)
+	if v, err := ParseRaw([]byte(withOrig)); err != nil || v.DSN["original_message_id"] != "<m1@trydeedglass.example>" || v.DSN["status"] != "5.1.1" {
+		t.Fatalf("original id: %v %v", err, v.DSN)
+	}
+	auto := "From: sam@lumen.example\r\nTo: arjun@trydeedglass.example\r\nDelivered-To: U+abc@trydeedglass.example\r\nSubject: Re: x\r\n" +
+		"Auto-Submitted: auto-replied\r\nPrecedence: auto_reply\r\nReferences: <a@t.example>\r\n  <b@t.example>\r\n\r\nAway.\r\n"
+	av, err := ParseRaw([]byte(auto))
+	if err != nil || av.Headers["auto-submitted"] != "auto-replied" || av.Headers["precedence"] != "auto_reply" || av.References != "<a@t.example> <b@t.example>" || av.DeliveredTo != "u+abc@trydeedglass.example" {
+		t.Fatalf("headers: %v %+v", err, av)
+	}
+	pub := av.public()
+	if pub["headers"] == nil || pub["references"] == nil || pub["delivered_to"] == nil {
+		t.Fatalf("public view: %v", pub)
+	}
+	if _, ok := v.public()["headers"]; ok {
+		t.Fatal("no headers key when there are none")
+	}
+	if !isDigits("81431") || isDigits("8a") || isDigits("") {
+		t.Fatal("isDigits")
+	}
 	b64 := "From: a@b.example\r\nTo: c@d.example\r\nSubject: =?UTF-8?Q?caf=C3=A9?=\r\nContent-Type: multipart/alternative; boundary=x\r\n\r\n--x\r\n" +
 		"Content-Type: text/plain\r\nContent-Transfer-Encoding: base64\r\n\r\naGVs\r\nbG8K\r\n--x--\r\n"
 	v, err = ParseRaw([]byte(b64))

@@ -200,7 +200,7 @@ func TestSeed7(t *testing.T) {
 			if err := json.Unmarshal(r.Input, &in); err != nil {
 				t.Fatal(err)
 			}
-			d := policy.Evaluate(bg, v3, in, policy.EvalOptions{Mode: policy.ModeShadow})
+			d := policy.Evaluate(bg, v3, in, policy.EvalOptions{Mode: policy.ModeShadow, Deadline: 2 * time.Second}) // learn.replayDeadline, the engine's backstop (not the 50 ms default)
 			if string(d.Outcome) != r.Recorded.Decision {
 				oracle[[2]string{r.Recorded.Decision, string(d.Outcome)}]++
 			}
