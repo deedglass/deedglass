@@ -219,8 +219,8 @@ func TestWitnessL2Live(t *testing.T) {
 
 	// 1. The clean path: L2 · VERIFIED, witnessed by Postgres.
 	r = act(ship)
-	if r.code != 0 || !strings.Contains(r.stdout, "L2 · VERIFIED · Postgres committed 1 row in public.orders, as the statement said.") ||
-		!strings.Contains(r.stdout, "Witnessed by Postgres · commit ") {
+	if r.code != 0 || !strings.Contains(r.stdout, "Proven · Matches · Postgres committed 1 row in public.orders, as the statement said.") ||
+		!strings.Contains(r.stdout, "Proven by Postgres · commit ") {
 		t.Fatalf("clean act: %+v", r)
 	}
 
@@ -228,7 +228,7 @@ func TestWitnessL2Live(t *testing.T) {
 	adminSQL(l2Trigger)
 	adminSQL(`UPDATE public.orders SET status = 'paid' WHERE id = 42`)
 	r = act(ship)
-	if r.code != 1 || !strings.Contains(r.stdout, "L2 · MISMATCH · Postgres changed 51 rows in public.orders. The agent reported 1.") ||
+	if r.code != 1 || !strings.Contains(r.stdout, "Proven · Doesn't match · Postgres changed 51 rows in public.orders. The agent reported 1.") ||
 		!strings.Contains(r.stdout, "expected   UPDATE 1 row in public.orders where id = 42 · sets status") ||
 		!strings.Contains(r.stdout, "observed   UPDATE 51 rows in public.orders · 50 outside id = 42") ||
 		!strings.Contains(r.stdout, "✓ expected       42   paid → shipped") {
@@ -265,7 +265,7 @@ func TestWitnessL2Live(t *testing.T) {
 		t.Fatalf("detail: %d %s", code, clipOut(body))
 	}
 	r = run("actions", "show", hero, "--diff", "--org", "acme")
-	if r.code != 0 || !strings.Contains(r.stdout, "L2 · MISMATCH") || !strings.Contains(r.stdout, "✕ unexpected") ||
+	if r.code != 0 || !strings.Contains(r.stdout, "Proven · Doesn't match") || !strings.Contains(r.stdout, "✕ unexpected") ||
 		!strings.Contains(r.stdout, "first 20 of 51 rows") {
 		t.Fatalf("show --diff: %+v", r)
 	}
@@ -280,7 +280,7 @@ func TestWitnessL2Live(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	const line = "Deedglass witness · L2 · MISMATCH · Postgres changed 51 rows in public.orders. The agent reported 1."
+	const line = "Deedglass check · Proven · Doesn't match · Postgres changed 51 rows in public.orders. The agent reported 1."
 	meta, _ := json.Marshal(res.Meta["com.deedglass/witness"])
 	if !strings.Contains(text(res), line) || string(meta) != `{"level":"L2","verdict":"MISMATCH"}` || res.IsError {
 		t.Fatalf("MCP: %q meta %s isError %v", text(res), meta, res.IsError)
@@ -294,7 +294,7 @@ func TestWitnessL2Live(t *testing.T) {
 	adminSQL(`ALTER ROLE deedglass_witness NOLOGIN`)
 	adminSQL(`SELECT pg_catalog.pg_terminate_backend(pid) FROM pg_catalog.pg_stat_activity WHERE usename = 'deedglass_witness'`)
 	r = act(ship)
-	if r.code != 0 || !strings.Contains(r.stdout, "UNVERIFIABLE") || !strings.Contains(r.stdout, "Postgres's change log didn't show this action within 3s.") ||
+	if r.code != 0 || !strings.Contains(r.stdout, "Can't check") || !strings.Contains(r.stdout, "Postgres's change log didn't show this action within 3s.") ||
 		!strings.Contains(r.stdout, "Deedglass keeps watching.") {
 		t.Fatalf("timeout act: %+v", r)
 	}
@@ -323,7 +323,7 @@ func TestWitnessL2Live(t *testing.T) {
 		t.Fatalf("amends %q, want %s (%v)", amends, got.Witness.History[0].Deed, err)
 	}
 	r = run("actions", "show", late, "--org", "acme")
-	if r.code != 0 || !strings.Contains(r.stdout, "history") || !strings.Contains(r.stdout, "L2 timed out") || !strings.Contains(r.stdout, "amendment deed_") {
+	if r.code != 0 || !strings.Contains(r.stdout, "history") || !strings.Contains(r.stdout, "the Proven check timed out") || !strings.Contains(r.stdout, "amendment deed_") {
 		t.Fatalf("show: %+v", r)
 	}
 	t.Logf("deedglass actions show:\n%s", r.stdout)

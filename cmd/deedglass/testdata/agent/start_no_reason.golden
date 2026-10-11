@@ -1,4 +1,4 @@
 exit 2
 --- stdout
 --- stderr
-✕ Starting an agent needs a reason. Add --reason "why it's safe now"; it goes into the deed.
+✕ Starting an agent needs a reason. Add --reason "why it's safe now"; it goes into the record.

@@ -216,7 +216,7 @@ func TestDecoderLive(t *testing.T) {
 
 	// Drop: the slot goes, a new one comes on the next sync, and both deeds are in the chain.
 	r = run("decoder", "drop", "--connector", "postgres", "--confirm", "postgres")
-	if r.code != 0 || !strings.Contains(r.stdout, "✓ Slot dropped · deedglass_") || !strings.Contains(r.stdout, "admin deed deed_") {
+	if r.code != 0 || !strings.Contains(r.stdout, "✓ Slot dropped · deedglass_") || !strings.Contains(r.stdout, "admin record deed_") {
 		t.Fatalf("drop: %+v", r)
 	}
 	t.Logf("\n%s", r.stdout)

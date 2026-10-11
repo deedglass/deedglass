@@ -1,6 +1,7 @@
 // deedview.ts: what a deed says, in words, from its parsed body (S25 §3.6). Pure. The summary is
 // one line per deed for the list; sections() is contract §7's body as labelled rows for the view.
 
+import { plainLevel, plainVerdict } from './copy.ts';
 import { shortId } from './format.ts';
 import type { DeedBody } from './types.ts';
 
@@ -14,7 +15,7 @@ export function deedSummary(b: DeedBody): string {
   if (b.kind === 'amendment' && b.amends) parts.push(`Amends ${shortId(b.amends)}`);
   if (b.action) parts.push(b.action.tool);
   if (b.agent) parts.push(b.agent.name ?? b.agent.id);
-  if (b.witness) parts.push(`${b.witness.level} · ${b.witness.verdict}`);
+  if (b.witness) parts.push(`${plainLevel(b.witness.level)} · ${plainVerdict(b.witness.verdict)}`);
   else if (b.policy?.decision === 'deny') parts.push('Denied');
   else if (b.execution?.status) parts.push(b.execution.status);
   return parts.join(' · ');
@@ -59,7 +60,7 @@ export function sections(b: DeedBody): Section[] {
     ] });
   }
   if (b.witness) {
-    out.push({ key: 'witness', rows: [['Level', b.witness.level], ['Verdict', b.witness.verdict], ['Method', b.witness.method, 'mono'], ['Detail digest', b.witness.detail_digest, 'hash']] });
+    out.push({ key: 'witness', rows: [['Level', `${plainLevel(b.witness.level)} (${b.witness.level})`], ['Verdict', `${plainVerdict(b.witness.verdict)} (${b.witness.verdict})`], ['Method', b.witness.method, 'mono'], ['Detail digest', b.witness.detail_digest, 'hash']] });
   }
   if (b.cost) out.push({ key: 'cost', rows: [['Amount', `${b.cost.amount} ${b.cost.currency} (minor units)`]] });
   if (b.admin) {

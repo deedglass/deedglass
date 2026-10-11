@@ -8,7 +8,7 @@ provider's documentation (re-read on 2026-10-02) and nothing has run there yet.
 | Service | Label | Evidence | Notes |
 |---|---|---|---|
 | PostgreSQL 16, 17, 18 (self-hosted, local) | **Tested** | `make integration` and `make matrix` (16.15, 17.11, 18.6), S17 | the whole suite: init, check, every tool, the decode test |
-| Docker (`postgres:16.15`, `17.11`, `18.6`) | **Tested** | `make demo-up && make demo-check` (18.6), S17 | the Acme demo: `Ready for L2 · 14 passed · 3 notes · 0 failed` |
+| Docker (`postgres:16.15`, `17.11`, `18.6`) | **Tested** | `make demo-up && make demo-check` (18.6), S17 | the Acme demo: `Ready for Proven checks · 14 passed · 3 notes · 0 failed` |
 | Amazon RDS for PostgreSQL | Guidance only | AWS RDS User Guide | `rds.logical_replication = 1` (static, reboot); witness via `rds_replication` |
 | Amazon Aurora PostgreSQL | Guidance only | AWS Aurora User Guide | the same parameter in a DB cluster parameter group; reboot the writer |
 | Supabase | Guidance only | Supabase docs | direct connection, not the pooler; witness role on PG 17+, `postgres` before |

@@ -232,7 +232,7 @@ func TestUndoLive(t *testing.T) {
 	r = cli(t, agentEnv, false, "act", "postgres.execute", "--args", `{"sql":"UPDATE public.orders SET status = 'shipped' WHERE id = 42"}`)
 	outputs = append(outputs, r.stdout, r.stderr)
 	hero := reAct.FindString(r.stdout + r.stderr)
-	if r.code != 1 || hero == "" || !strings.Contains(r.stdout, "L2 · MISMATCH · Postgres changed 51 rows in public.orders.") {
+	if r.code != 1 || hero == "" || !strings.Contains(r.stdout, "Proven · Doesn't match · Postgres changed 51 rows in public.orders.") {
 		t.Fatalf("hero: %+v", r)
 	}
 	after := orders()
@@ -348,7 +348,7 @@ func TestUndoLive(t *testing.T) {
 		var r result
 		for i := 0; i < 8; i++ {
 			r = run("actions", "show", id, "--wait", "--org", "acme")
-			if r.code == 0 && strings.Contains(r.stdout, "deed ") {
+			if r.code == 0 && strings.Contains(r.stdout, "record ") {
 				return r.stdout
 			}
 			time.Sleep(500 * time.Millisecond)
@@ -362,7 +362,7 @@ func TestUndoLive(t *testing.T) {
 	}
 	out := waitSealed(undoID)
 	t.Logf("deedglass actions show (the undo):\n%s", out)
-	if !strings.Contains(out, "L2 · VERIFIED") || !strings.Contains(out, "Restored 51 rows in public.orders exactly as planned") {
+	if !strings.Contains(out, "Proven · Matches") || !strings.Contains(out, "Restored 51 rows in public.orders exactly as planned") {
 		t.Fatalf("the undo isn't L2 VERIFIED:\n%s", out)
 	}
 	if got := orders(); got != before {
@@ -384,7 +384,7 @@ func TestUndoLive(t *testing.T) {
 	if r = run("approve", apr, "--as", "omar@acme.test"); r.code != 0 {
 		t.Fatalf("approve redo: %+v", r)
 	}
-	if out := waitSealed(redo); !strings.Contains(out, "L2 · VERIFIED") {
+	if out := waitSealed(redo); !strings.Contains(out, "Proven · Matches") {
 		t.Fatalf("redo:\n%s", out)
 	}
 	if got := orders(); got != after {

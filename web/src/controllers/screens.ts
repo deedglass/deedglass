@@ -134,7 +134,7 @@ export const SCREENS: Record<string, Screen> = {
     columns: [
       { label: 'Seq', num: true, cell: (r) => number(Number((r.body as Row | undefined)?.seq ?? 0)), sort: (r) => Number((r.body as Row | undefined)?.seq ?? 0) },
       { label: 'Kind', cell: (r) => s((r.body as Row | undefined)?.kind) },
-      { label: 'Deed', card: 'hide', cell: (r) => idChip(s(r.id)) },
+      { label: 'Record', card: 'hide', cell: (r) => idChip(s(r.id)) },
       { label: 'Sealed', num: true, cell: (r, tz) => relTime(s((r.body as Row | undefined)?.issued_at), tz), sort: (r) => s((r.body as Row | undefined)?.issued_at) },
     ],
     href: (r) => `/app/deeds/${s(r.id)}`,

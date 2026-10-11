@@ -211,7 +211,7 @@
       "object": "connector_type",
       "type": "rest",
       "title": "REST API",
-      "description": "Any JSON API as governed tools: one method on one templated path per tool, with the credential added only when the Gate runs a call.",
+      "description": "Any JSON API as governed tools: one method on one templated path per tool, with the credential added only when Deedglass runs a call.",
       "levels": [
         "L0"
       ],

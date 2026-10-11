@@ -103,11 +103,11 @@ test('reject requires a reason', async ({ page }) => {
   const sheet = page.getByRole('dialog', { name: 'Reject this suggestion?' });
   await expect(sheet).toContainText("Deedglass won't suggest this again for 30 days unless the numbers double.");
   await sheet.getByRole('button', { name: 'Reject suggestion' }).click();
-  await expect(sheet.locator('#rej-reason-e')).toHaveText('A reason is required to reject a suggestion. It goes into the sealed deed.');
+  await expect(sheet.locator('#rej-reason-e')).toHaveText('A reason is required to reject a suggestion. It goes into the sealed record.');
   await expect(sheet.getByLabel(/Reason/)).toHaveAttribute('aria-invalid', 'true');
   await sheet.getByLabel(/Reason/).fill('Refund volume is seasonal this month');
   await sheet.getByRole('button', { name: 'Reject suggestion' }).click();
-  await expect(page.locator('.toast').last()).toContainText('Suggestion rejected · deed sealed');
+  await expect(page.locator('.toast').last()).toContainText('Suggestion rejected · record sealed');
   await expect(cardOf(page, 'budget')).toHaveCount(0);
   await check();
 });
@@ -124,7 +124,7 @@ test('accept → a toast with the deed → Shadow shows v3', async ({ page }) =>
   await sheet.getByRole('button', { name: 'Accept and run in shadow' }).click();
   const toast = page.locator('.toast').last();
   await expect(toast).toContainText(/acme-sim v3 is running in shadow · deed_\w{4}…\w{4} sealed/);
-  await expect(toast.getByRole('link', { name: 'View deed' })).toHaveAttribute('href', /^\/app\/deeds\/deed_/);
+  await expect(toast.getByRole('link', { name: 'View record' })).toHaveAttribute('href', /^\/app\/deeds\/deed_/);
   await expect(page.locator('.ins-shadow')).toContainText('acme-sim v3');
   await expect(cardOf(page, 'loosen')).toHaveCount(0);
   await check();
@@ -148,7 +148,7 @@ test('two more simulated days → Promote (typed) → Policies shows v3 enforced
   const ack = sheet.getByRole('checkbox');
   if (await ack.count()) await ack.check();
   await go.click();
-  await expect(page.locator('.toast').last()).toContainText('acme-sim v3 enforced · deed sealed');
+  await expect(page.locator('.toast').last()).toContainText('acme-sim v3 enforced · record sealed');
   await page.goto('/app/policies');
   const row = page.locator('tr', { hasText: 'acme-sim' });
   await expect(row).toContainText('Enforced');

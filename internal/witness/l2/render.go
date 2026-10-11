@@ -47,7 +47,7 @@ const (
 )
 
 // Render writes levels.L2 of a detail as S21 §0 prints it: the expected and observed pair, the row
-// table, the truncation line and the "Witnessed by Postgres" footer. It returns nil when the detail
+// table, the truncation line and the "Proven by Postgres" footer. It returns nil when the detail
 // has no L2 evidence. The claim line itself (L2 · MISMATCH · summary) is the caller's.
 func Render(d witness.Detail, o RenderOptions) []string {
 	l2 := d.Levels.L2
@@ -94,7 +94,7 @@ func Render(d witness.Detail, o RenderOptions) []string {
 	return out
 }
 
-// Footer is "Witnessed by Postgres · commit 0/3E65020 · 2026-10-07 13:12:09 UTC" (the Console's
+// Footer is "Proven by Postgres · commit 0/3E65020 · 2026-10-07 13:12:09 UTC" (the Console's
 // footer copy, CopyFooter).
 func Footer(t *witness.L2Transaction) string {
 	at := t.CommittedAt
@@ -332,10 +332,10 @@ func cellText(c witness.L2Cell, op string) string {
 }
 
 // AgentLine is the line an MCP tool result carries when the verdict isn't VERIFIED (S21 §3.9):
-// "Deedglass witness · L2 · MISMATCH · <summary>". The agent can repeat it word for word.
+// "Deedglass check · Proven · Doesn't match · <summary>" (plain names). The agent can repeat it word for word.
 func AgentLine(level witness.Level, verdict witness.Verdict, summary string) string {
-	return "Deedglass witness " + symSep + " " + string(level) + " " + symSep + " " + string(verdict) + " " + symSep + " " + summary
+	return "Deedglass check " + symSep + " " + level.Plain() + " " + symSep + " " + witness.PlainVerdict(string(verdict)) + " " + symSep + " " + summary
 }
 
 // AgentPending is the line when L2 is still waiting as the call's wait ends.
-const AgentPending = "Deedglass witness " + symSep + " pending " + symSep + " Postgres's change log hasn't shown this write yet. The verdict will appear in Console › Actions."
+const AgentPending = "Deedglass check " + symSep + " pending " + symSep + " Postgres's change log hasn't shown this write yet. The verdict will appear in Console › Actions."

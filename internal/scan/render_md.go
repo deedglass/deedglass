@@ -89,7 +89,7 @@ func RenderMarkdown(r *Report) string {
 		pg := r.Postgres
 		p("%s · role %s · wal_level %s · read-only session · %d %s read-only", pg.Database, pg.Role, pg.WALLevel, pg.TablesReadOnly, plural(pg.TablesReadOnly, "table", "tables"))
 		p("")
-		p("| Table | Can change | Est. rows | Cascades to | Triggers | Undo-ready | L2-ready |")
+		p("| Table | Can change | Est. rows | Cascades to | Triggers | Undo-ready | Proven-ready |")
 		p("|---|---|---:|---|---|---|---|")
 		for i, t := range pg.Tables {
 			if i == 25 {

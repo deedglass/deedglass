@@ -23,7 +23,7 @@ const pretty = JSON.stringify(JSON.parse(text).body, null, 2);
   <dl class="facts">
     <div><dt>Body hash</dt><dd><code title={env.body_hash}>{short(env.body_hash)}</code> <button type="button" class="copy" data-copy={env.body_hash} aria-label="Copy the body hash">Copy</button></dd></div>
     <div><dt>Tool</dt><dd><code>{env.body.action.tool}</code></dd></div>
-    <div><dt>Witness</dt><dd><code>{env.body.witness.level} · {env.body.witness.verdict}</code></dd></div>
+    <div><dt>Check</dt><dd><code>{env.body.witness.level} · {env.body.witness.verdict}</code></dd></div>
   </dl>
   <details>
     <summary>Deed body{sample === 'tampered' ? ' (one digit changed)' : ''}</summary>
@@ -52,14 +52,14 @@ const pretty = JSON.stringify(JSON.parse(text).body, null, 2);
         orb.dataset.state = 'sealed';
         orb.classList.add('animate');
         out.dataset.state = 'verified';
-        out.textContent = `VERIFIED · deed ${r.deedId}, seq ${r.seq}: the body hash is exact and the seal matches seal key ${r.sealKeyId}.`;
+        out.textContent = `Matches · deed ${r.deedId}, seq ${r.seq}: the body hash is exact and the seal matches seal key ${r.sealKeyId}.`;
       } catch (err) {
         orb.dataset.state = 'mismatch';
         orb.classList.remove('animate');
         out.dataset.state = 'mismatch';
         if (err instanceof VerifyError) {
           const m = message(err);
-          out.textContent = `MISMATCH · ${m.sentence} ${m.next}`;
+          out.textContent = `Doesn’t match · ${m.sentence} ${m.next}`;
         } else {
           out.textContent = 'This browser could not run the check. Use deedglass verify instead.';
         }

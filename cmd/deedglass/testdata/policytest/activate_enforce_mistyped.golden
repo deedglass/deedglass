@@ -1,7 +1,7 @@
 exit 1
 --- stdout
   From now on, every agent action in acme is decided by postgres-safe v1 (replacing default-deny v1).
-  The change is sealed as a deed.
+  The change is sealed as a record.
   Type the policy name to confirm: --- stderr
 [31m✕[0m Nothing changed: the confirmation didn't match.
   Run it again and type postgres-safe, or press Ctrl-C to leave the enforced policy as it is.

@@ -478,7 +478,7 @@ Results of `tools/call` through the gateway and `/mcp/native` carry
 `VERIFIED`, one text block is appended:
 
 ```text
-Deedglass witness · L1 · MISMATCH · orders.update_status reported success, but orders.get says status is "pending", not "shipped".
+Deedglass check · Checked · Doesn't match · orders.update_status reported success, but orders.get says status is "pending", not "shipped".
 ```
 
 `isError` stays `false`, because the tool did run. Proxy mode (`deedglass mcp wrap`) returns before
@@ -641,11 +641,11 @@ the expected footprint, the observed counts and up to `witness.diff_rows` rows. 
 gets one line the agent can repeat word for word:
 
 ```text
-Deedglass witness · L2 · MISMATCH · Postgres changed 301 rows in public.orders. The agent reported 1.
+Deedglass check · Proven · Doesn't match · Postgres changed 301 rows in public.orders. The agent reported 1.
 ```
 
 with `_meta["com.deedglass/witness"] = {"level": "L2", "verdict": "MISMATCH"}`. When the call's
-wait ends before Postgres's change log has shown the write, the line is `Deedglass witness ·
+wait ends before Postgres's change log has shown the write, the line is `Deedglass check ·
 pending · Postgres's change log hasn't shown this write yet. The verdict will appear in Console ›
 Actions.`
 

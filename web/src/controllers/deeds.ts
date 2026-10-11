@@ -150,7 +150,7 @@ export function mountDeeds(): void {
       cursor = page.has_more ? page.next_cursor : null;
       older.hidden = !cursor;
       if (!more) {
-        if (page.data.length === 0) host.replaceChildren(banner.el, kind ? emptyState(copy.feed.filteredEmpty.replace('actions', 'deeds'), 'search', h('button', { type: 'button', class: 'btn btn-secondary', onclick: () => setKind('') }, copy.feed.clear)) : emptyState(copy.pages.deeds.empty, 'deed'));
+        if (page.data.length === 0) host.replaceChildren(banner.el, kind ? emptyState(copy.feed.filteredEmpty.replace('actions', 'records'), 'search', h('button', { type: 'button', class: 'btn btn-secondary', onclick: () => setKind('') }, copy.feed.clear)) : emptyState(copy.pages.deeds.empty, 'deed'));
         else host.replaceChildren(banner.el, h('div', { class: 'table-frame' }, table), older);
       }
     } catch (e) {

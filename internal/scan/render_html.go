@@ -143,7 +143,7 @@ var reportTmpl = template.Must(template.New("report").Funcs(template.FuncMap{
 {{if .R.Postgres}}{{with .R.Postgres}}<p class="muted">{{.Database}} · role {{.Role}} · wal_level {{.WALLevel}} · read-only session · {{.TablesReadOnly}} {{plural .TablesReadOnly "table" "tables"}} read-only</p>
 <div class="frame" tabindex="0" role="region" aria-label="Tables the role can change">
 <table class="wide">
-<thead><tr><th scope="col">Table</th><th scope="col">Can change</th><th class="num" scope="col">Est. rows</th><th scope="col">Cascades to</th><th scope="col">Triggers</th><th scope="col">Undo-ready</th><th scope="col">L2-ready</th></tr></thead>
+<thead><tr><th scope="col">Table</th><th scope="col">Can change</th><th class="num" scope="col">Est. rows</th><th scope="col">Cascades to</th><th scope="col">Triggers</th><th scope="col">Undo-ready</th><th scope="col">Proven-ready</th></tr></thead>
 <tbody>
 {{range limit .Tables}}{{$c := cells .}}<tr><td class="nowrap"><code translate="no">{{index $c 0}}</code></td><td>{{index $c 1}}</td><td class="num">{{index $c 2}}</td><td>{{index $c 3}}</td><td>{{index $c 4}}</td><td>{{index $c 5}}</td><td>{{index $c 6}}</td></tr>
 {{end}}</tbody>

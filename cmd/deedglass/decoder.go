@@ -111,7 +111,7 @@ func runDecoderStatus(ctx context.Context, e *Env, args []string) error {
 		return nil
 	}
 	if len(views) == 0 {
-		fmt.Fprintln(e.Stdout, "No witnessed connectors yet. Turn on witness.enabled in a postgres connector's config to see what Postgres actually committed.")
+		fmt.Fprintln(e.Stdout, "No connectors with checks on yet. Turn on witness.enabled in a postgres connector's config to see what Postgres actually committed.")
 		fmt.Fprintln(e.Stdout, "  Next: deedglass connector postgres check --connector <name> walks you through it.")
 		return nil
 	}
@@ -201,7 +201,7 @@ func decoderWords(d decoder.View, now time.Time) decoderText {
 	case decoder.StatusHalted:
 		t := decoderText{kind: "fail", headline: "halted " + ui.Sep + " " + reason}
 		since := d.Since.UTC().Format("2006-01-02 15:04 UTC")
-		lost := "Actions waiting on L2 for " + name + " won't get that evidence (" + reason + ")."
+		lost := "Actions waiting on a Proven check for " + name + " won't get that evidence (" + reason + ")."
 		switch reason {
 		case decoder.ReasonSlotInvalidated:
 			ws := detailString(d, "wal_status")
@@ -245,7 +245,7 @@ func decoderWords(d decoder.View, now time.Time) decoderText {
 			t.explain = "The connector now points at a different Postgres cluster (a restore or a new server). The old slot's evidence doesn't apply."
 			t.next = "Next: deedglass decoder drop --connector " + name + " to start a new baseline."
 		case decoder.ReasonWALLevel:
-			t.explain = "The witness needs wal_level = logical"
+			t.explain = "Proven checks need wal_level = logical"
 			if w := detailString(d, "wal_level"); w != "" {
 				t.explain += " (it is " + w + ")"
 			}
@@ -293,7 +293,7 @@ func decoderWords(d decoder.View, now time.Time) decoderText {
 		t := decoderText{kind: "off", headline: "disabled " + ui.Sep + " " + reason}
 		if reason == decoder.ReasonSlotOrphaned {
 			t.kind = "unknown"
-			t.explain = "Deedglass couldn't drop slot " + detailString(d, "slot") + " when the connector stopped being witnessed. It still holds WAL."
+			t.explain = "Deedglass couldn't drop slot " + detailString(d, "slot") + " when the connector stopped being checked. It still holds WAL."
 			t.next = "Next: as a superuser on that database: " + detailString(d, "fix")
 		}
 		return t
@@ -524,7 +524,7 @@ func runDecoderDrop(ctx context.Context, e *Env, args []string) error {
 	confirm := v.confirm
 	if confirm == "" {
 		fmt.Fprintf(e.Stdout, "This drops slot %s on %q.\n", d.Slot, d.Name)
-		fmt.Fprintf(e.Stdout, "Actions still waiting for L2 evidence on this connector won't get it (slot_dropped).\n")
+		fmt.Fprintf(e.Stdout, "Actions still waiting for Proven evidence on this connector won't get it (slot_dropped).\n")
 		fmt.Fprintf(e.Stdout, "A new slot starts a new baseline. Type the connector name to confirm: ")
 		line, _ := bufio.NewReader(e.stdin()).ReadString('\n')
 		confirm = strings.TrimSpace(line)
@@ -540,7 +540,7 @@ func runDecoderDrop(ctx context.Context, e *Env, args []string) error {
 	if e.Globals.JSON {
 		return writeJSON(e, res)
 	}
-	fmt.Fprintln(e.Stdout, e.Style.OKLine(fmt.Sprintf("Slot dropped %s %s %s admin deed %s %s a new slot starts on the next sync",
+	fmt.Fprintln(e.Stdout, e.Style.OKLine(fmt.Sprintf("Slot dropped %s %s %s admin record %s %s a new slot starts on the next sync",
 		ui.Sep, clipID(res.Slot), ui.Sep, clipID(res.Deed), ui.Sep)))
 	return nil
 }

@@ -1326,7 +1326,7 @@ look again with `deedglass decoder status --connector <name>`.
 {
   "type": "invalid_request_error",
   "code": "witness_not_configured",
-  "message": "This connector isn't witnessed, so it has no decoder. Turn on witness.enabled in its config first.",
+  "message": "Checks aren't on for this connector, so it has no decoder. Turn on witness.enabled in its config first.",
   "param": null
 }
 ```

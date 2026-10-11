@@ -280,7 +280,7 @@ func runSuggestionsAccept(ctx context.Context, e *Env, args []string) error {
 		replace, jsonOut bool
 	)
 	pos, err := parseInterleaved("deedglass insights suggestions accept", args, func(fs *flag.FlagSet) {
-		fs.StringVar(&reason, "reason", reason, "why (optional, up to 280 characters; sealed in the deed)")
+		fs.StringVar(&reason, "reason", reason, "why (optional, up to 280 characters; sealed in the record)")
 		fs.BoolVar(&replace, "replace-shadow", replace, "replace the version running in shadow now")
 		fs.BoolVar(&jsonOut, "json", jsonOut, "print JSON")
 	})
@@ -315,7 +315,7 @@ func runSuggestionsAccept(ctx context.Context, e *Env, args []string) error {
 	if s.Note != nil {
 		fmt.Fprintln(w, "  "+clean(*s.Note))
 	}
-	fmt.Fprintln(w, e.Style.OKLine(fmt.Sprintf("%d %s sealed %s policy.activated (shadow) %s suggestion.accepted", len(s.Deeds), plural(len(s.Deeds), "deed", "deeds"), ui.Sep, ui.Sep)))
+	fmt.Fprintln(w, e.Style.OKLine(fmt.Sprintf("%d %s sealed %s policy.activated (shadow) %s suggestion.accepted", len(s.Deeds), plural(len(s.Deeds), "record", "records"), ui.Sep, ui.Sep)))
 	fmt.Fprintf(w, "  Nothing is enforced yet. Watch it: deedglass insights shadow %s promote: deedglass policy activate %s --version %d --mode enforce\n",
 		ui.Sep, s.Policy.Name, v)
 	return nil
@@ -327,7 +327,7 @@ func runSuggestionsReject(ctx context.Context, e *Env, args []string) error {
 		jsonOut bool
 	)
 	pos, err := parseInterleaved("deedglass insights suggestions reject", args, func(fs *flag.FlagSet) {
-		fs.StringVar(&reason, "reason", reason, "why (required, 3 to 280 characters; sealed in the deed)")
+		fs.StringVar(&reason, "reason", reason, "why (required, 3 to 280 characters; sealed in the record)")
 		fs.BoolVar(&jsonOut, "json", jsonOut, "print JSON")
 	})
 	if err != nil {
@@ -350,7 +350,7 @@ func runSuggestionsReject(ctx context.Context, e *Env, args []string) error {
 	}
 	d := ""
 	if len(s.Deeds) > 0 {
-		d = " " + ui.Sep + " deed " + shortID(s.Deeds[0]) + " sealed"
+		d = " " + ui.Sep + " record " + shortID(s.Deeds[0]) + " sealed"
 	}
 	fmt.Fprintln(e.Stdout, e.Style.OKLine("Rejected "+s.ID+d))
 	fmt.Fprintln(e.Stdout, "  "+learn.MsgRejectHint)

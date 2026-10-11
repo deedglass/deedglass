@@ -46,7 +46,7 @@ describe('approval model', () => {
     const notEligible = { ...approval, you: { eligible: false, can_decide: false, why_not: 'Only role:admin can countersign under orders-writes-need-approval.' } };
     expect(decideState(notEligible, { id: 'usr_v' }, now)).toEqual({ kind: 'not_eligible', text: 'Only role:admin can countersign under orders-writes-need-approval.' });
     expect(decideState({ ...approval, expires_at: '2026-10-04T03:39:00Z' }, null, now).kind).toBe('closed');
-    expect(decideState({ ...approval, status: 'denied' }, null, now)).toEqual({ kind: 'closed', text: 'Denied · deed sealed' });
+    expect(decideState({ ...approval, status: 'denied' }, null, now)).toEqual({ kind: 'closed', text: 'Denied · record sealed' });
   });
 
   it('writes four-eyes progress and the race sentence', () => {
@@ -116,7 +116,7 @@ describe('connector model', () => {
     expect(witnessState({ ...dec, health: 'pending' })).toBe('inactive');
     expect(witnessState(null)).toBe('not_created');
     const now = new Date(new Date(dec.last_commit!.at!).getTime() + 4000);
-    expect(witnessLine({ ...dec, lag: { ...dec.lag, bytes: 12 * 1024 * 1024 } }, now)).toBe('Witness · healthy · 12 MB behind · last commit 4s ago');
+    expect(witnessLine({ ...dec, lag: { ...dec.lag, bytes: 12 * 1024 * 1024 } }, now)).toBe('Check · healthy · 12 MB behind · last commit 4s ago');
     expect(bytes(432013312)).toBe('412 MB');
   });
 });

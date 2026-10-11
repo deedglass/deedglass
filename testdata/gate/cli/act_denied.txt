@@ -3,6 +3,6 @@ exit 1
 ✕ denied · fake.write
   Blocked by policy "no-bulk-writes": writes over 100 rows need a person, not an agent.
   action   act_…
-  deed     deed_… · seq N · sealed
+  record   deed_… · seq N · sealed
   Next: change the rule in Console › Policies, or ask an admin to run it by hand.
 --- stderr

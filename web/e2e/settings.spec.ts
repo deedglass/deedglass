@@ -68,7 +68,7 @@ test.describe('settings', () => {
       const dlg = page.getByRole('alertdialog', { name: `Delete the endpoint for ${host}?` });
       await dlg.getByLabel(`Type ${host} to confirm`).fill(host);
       await dlg.getByRole('button', { name: 'Delete endpoint' }).click();
-      await expect(page.locator('.toast').last()).toContainText('deleted · deed sealed');
+      await expect(page.locator('.toast').last()).toContainText('deleted · record sealed');
     } finally {
       server.close();
     }

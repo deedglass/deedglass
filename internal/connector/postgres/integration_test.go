@@ -168,7 +168,7 @@ func TestInitAndCheck(t *testing.T) {
 			t.Errorf("check %s failed: %s (%s)", ch.ID, ch.Detail, ch.Fix)
 		}
 	}
-	if !r.Ready || !strings.HasPrefix(r.Line, "Ready for L2 · ") {
+	if !r.Ready || !strings.HasPrefix(r.Line, "Ready for Proven checks · ") {
 		t.Fatalf("readiness: %s", r.Line)
 	}
 	t.Log(r.Line)

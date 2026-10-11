@@ -1,0 +1,16 @@
+---
+title: Glossary
+description: The plain names people read in the Console, the CLI and these docs, and the short names the API, JSON output and flags keep.
+lastVerified: "2026-10-11"
+---
+
+import Limits from '../../../components/Limits.astro';
+
+Deedglass says things in plain words wherever a person reads them, and keeps the short names everywhere a program reads them, so nothing that integrates with Deedglass changes. A level says how sure a check is: **Claimed** is `L0` (the tool's own answer), **Checked** is `L1` (Deedglass read the result back from the target), and **Proven** is `L2` (Deedglass saw the change in the system of record, Postgres's change log). A result says what the check found: **Matches** is `VERIFIED`, **Doesn't match** is `MISMATCH`, and **Can't check** is `UNVERIFIABLE`. **Rules** is the part that decides and runs every call (the Gate in older pages and in code), a **check** is the comparison of what was asked with what happened (the Witness, with `witness` fields in the API), and a **record** is the signed statement of one action or admin change (a deed: `deed_` ids, `/v1/deeds`, `deedglass deeds`, `.deed.json` files). API field names, JSON keys, enum values, database columns, CLI flags and `--json` output use the short names only, so `--verdict MISMATCH --level L2` and `"verdict": "MISMATCH"` stay exactly as they are.
+
+## What it doesn't do
+
+<Limits>
+- The plain names are labels, not new states. Each one maps to exactly one short name, and the mapping never changes a verdict.
+- Older reference pages, error codes and engineering notes still use the short names and the words Gate, Witness and deed.
+</Limits>

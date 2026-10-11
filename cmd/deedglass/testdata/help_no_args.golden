@@ -8,7 +8,7 @@ Setup
   init                Set up Deedglass in this directory
   doctor              Check config, database and keys
   scan                Show what your agent setup can change
-  serve               Run the API, the Gate and the Console
+  serve               Run the API, the rules and the Console
   migrate             Apply or check database migrations                 up · status · verify
   config print        Show the effective config, secrets hidden
   version             Show the client and server versions
@@ -23,15 +23,15 @@ Agents
 Policies
   policy              Write, test and activate policies                  lint · fmt · test · push · activate · evaluate · replay · diff
 Actions
-  act                 Send a test action through the Gate
+  act                 Send a test action through Deedglass
   actions             Inspect actions                                    list · show · cancel
   approve · deny      Decide a pending approval
   approvals           List pending approvals                             list · show
   undo                Preview or run an undo                             preview · run
   webhooks            Send events to your endpoints                      create · list · test · delete
-Deeds
-  verify              Check deeds offline
-  deeds               Browse and export deeds                            list · show · export · seal-file
+Records
+  verify              Check records offline
+  deeds               Browse and export records                          list · show · export · seal-file
   ledger              Check or prune the Ledger                          check · prune
 Connectors
   connector           Connect tools                                      create · list · show · test · types · credentials
@@ -40,7 +40,7 @@ Connectors
   decoder             Inspect Postgres change readers                    status · drop
   slack manifest      Print the Slack app manifest
 MCP
-  mcp                 Put the Gate in front of MCP servers               wrap · serve · snippet
+  mcp                 Put Deedglass in front of MCP servers              wrap · serve · snippet
 Insights
   insights            Suggestions, shadow results and anomalies          stats · shadow · anomalies · detect · settings · suggestions · digest
 Dev

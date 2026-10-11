@@ -1,6 +1,6 @@
 exit 0
 --- stdout
 This drops slot deedglass_01j9zq7c4m8x2v6t0r3n5k1h7d on "postgres".
-Actions still waiting for L2 evidence on this connector won't get it (slot_dropped).
-A new slot starts a new baseline. Type the connector name to confirm: ✓ Slot dropped · deedglass_01j9zq7c… · admin deed deed_01j9zv8k… · a new slot starts on the next sync
+Actions still waiting for Proven evidence on this connector won't get it (slot_dropped).
+A new slot starts a new baseline. Type the connector name to confirm: ✓ Slot dropped · deedglass_01j9zq7c… · admin record deed_01j9zv8k… · a new slot starts on the next sync
 --- stderr

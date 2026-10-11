@@ -6,6 +6,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"github.com/deedglass/deedglass/internal/witness"
 	"net/http"
 	"net/url"
 	"strings"
@@ -182,7 +183,7 @@ func printAct(ctx context.Context, e *Env, c *deedglass.Client, a *ledger.Action
 		if seq := deedSeq(ctx, c, *a.Deed); seq != "" {
 			line += " " + ui.Sep + " seq " + seq
 		}
-		row("deed", line+" "+ui.Sep+" sealed")
+		row("record", line+" "+ui.Sep+" sealed")
 	}
 	next := func() {
 		if n := gate.NextStep(ga); n != "" {
@@ -206,9 +207,9 @@ func printAct(ctx context.Context, e *Env, c *deedglass.Client, a *ledger.Action
 		}
 		claim := witnessClaim(s, w, false)
 		if w.Verdict == gate.VerdictUnverifiable && w.Cause() != "" {
-			claim = w.Level + " " + ui.Sep + " " + verdictWord(s, w.Verdict) + " " + ui.Sep + " " + unknownSentence(a)
+			claim = witness.PlainLevel(w.Level) + " " + ui.Sep + " " + verdictWord(s, w.Verdict) + " " + ui.Sep + " " + unknownSentence(a)
 		}
-		row("witness", claim)
+		row("check", claim)
 		for _, l := range witnessReasons(s, w, false, "           ") {
 			fmt.Fprintln(e.Stdout, l)
 		}
@@ -367,7 +368,7 @@ func runActionsCancel(ctx context.Context, e *Env, args []string) error {
 	}
 	fmt.Fprintln(e.Stdout, e.Style.OKLine("Cancelled "+ui.Sep+" "+clean(a.Tool)+" "+ui.Sep+" "+a.ID))
 	if a.Deed != nil {
-		fmt.Fprintf(e.Stdout, "  %s %s %s sealed\n", ui.Pad("deed", 8), shortID(*a.Deed), ui.Sep)
+		fmt.Fprintf(e.Stdout, "  %s %s %s sealed\n", ui.Pad("record", 8), shortID(*a.Deed), ui.Sep)
 	}
 	return nil
 }

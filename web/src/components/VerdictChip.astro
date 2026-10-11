@@ -1,9 +1,11 @@
 ---
-// [icon] L2 · VERIFIED (brand §12): caption type, small caps, icon and word always.
+// [icon] Proven · Matches (brand §12, plain names): caption type, small caps, icon and word always.
+// The wire values (L2, VERIFIED) stay in the API; the title names them for people who know them.
 import Icon from './Icon.astro';
+import { copy } from '../lib/copy.ts';
 interface Props { verdict: 'VERIFIED' | 'MISMATCH' | 'UNVERIFIABLE'; level?: 'L0' | 'L1' | 'L2' }
 const { verdict, level } = Astro.props;
-const m = { VERIFIED: ['chip-verified', 'check'], MISMATCH: ['chip-mismatch', 'x'], UNVERIFIABLE: ['chip-unverifiable', 'circle-dashed'] }[verdict];
-const names = { L0: 'Reported', L1: 'Confirmed', L2: 'Witnessed' } as const;
+const m = { VERIFIED: ['chip-verified', 'check', copy.chips.verified], MISMATCH: ['chip-mismatch', 'x', copy.chips.mismatch], UNVERIFIABLE: ['chip-unverifiable', 'circle-dashed', copy.chips.unverifiable] }[verdict];
+const lv = level ? copy.chips.level[level] : '';
 ---
-<span class:list={['chip', m[0]]} title={level ? `${level} ${names[level]} · ${verdict}` : verdict}><Icon name={m[1] as never} size={16} />{level ? <span>{level}<span class="sep"> · </span>{verdict}</span> : verdict}</span>
+<span class:list={['chip', m[0]]} title={level ? `${lv} · ${m[2]} (${level} · ${verdict})` : `${m[2]} (${verdict})`}><Icon name={m[1] as never} size={16} />{level ? <span>{lv}<span class="sep"> · </span>{m[2]}</span> : m[2]}</span>

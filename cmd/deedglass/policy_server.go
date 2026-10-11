@@ -129,7 +129,7 @@ func runPolicyActivate(ctx context.Context, e *Env, args []string) error {
 	pos, err := parseInterleaved("deedglass policy activate", args, func(fs *flag.FlagSet) {
 		fs.StringVar(&o.version, "version", o.version, "the version number or pv_ id (default: the latest)")
 		fs.StringVar(&o.mode, "mode", o.mode, "enforce or shadow")
-		fs.StringVar(&o.reason, "reason", o.reason, "why this change is safe; it goes into the deed")
+		fs.StringVar(&o.reason, "reason", o.reason, "why this change is safe; it goes into the record")
 		fs.BoolVar(&o.yes, "yes", o.yes, "skip the typed confirmation for enforce (scripts)")
 		fs.BoolVar(&o.clear, "clear", o.clear, "switch off this version's shadow instead")
 		fs.Var(&o.ack, "ack", "acknowledge a warning, like default_allow (repeatable)")
@@ -194,7 +194,7 @@ func runPolicyActivate(ctx context.Context, e *Env, args []string) error {
 			replacing = fmt.Sprintf(" (replacing %s v%d)", set.Enforce.Name, set.Enforce.Version)
 		}
 		fmt.Fprintf(e.Stdout, "  From now on, every agent action in %s is decided by %s v%s%s.\n", w.Org.Slug, p.Name, version, replacing)
-		fmt.Fprintln(e.Stdout, "  The change is sealed as a deed.")
+		fmt.Fprintln(e.Stdout, "  The change is sealed as a record.")
 		fmt.Fprint(e.Stdout, "  Type the policy name to confirm: ")
 		line, _ := bufio.NewReader(e.stdin()).ReadString('\n')
 		if strings.TrimSpace(line) != p.Name {

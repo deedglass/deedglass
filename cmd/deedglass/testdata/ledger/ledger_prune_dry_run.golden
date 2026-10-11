@@ -2,6 +2,6 @@ exit 0
 --- stdout
 ○ Dry run · nothing changes
   org_…   47 sealed actions before DATE · SIZE of payloads
-  kept            deeds, events, digests and ids
+  kept            records, events, digests and ids
   next            Run again without --dry-run. Deedglass seals a "ledger.pruned" deed when it's done.
 --- stderr

@@ -43,7 +43,7 @@ let agentPath = '';
 
 test('find a deed and an agent', async ({ page }) => {
   await page.goto('/app/deeds');
-  await page.locator('table a.rowlink', { hasText: 'MISMATCH' }).first().click();
+  await page.locator('table a.rowlink', { hasText: "Doesn't match" }).first().click();
   deedPath = new URL(page.url()).pathname;
   await page.goto('/app/agents');
   await page.getByRole('link', { name: 'support-bot' }).click();

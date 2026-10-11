@@ -2,7 +2,7 @@
 // jump, the theme, Stop all for each role, the bottom bar, the sign-in redirect and the 404.
 import { AUTH, EMAIL, expect, guard, loginLink, test } from './fixtures.ts';
 
-const NAV = ['Overview', 'Actions', 'Approvals', 'Agents', 'Policies', 'Connectors', 'Insights', 'Deeds', 'Settings'];
+const NAV = ['Overview', 'Actions', 'Approvals', 'Agents', 'Policies', 'Connectors', 'Insights', 'Records', 'Settings'];
 
 test.describe('signed out', () => {
   test('every page redirects to sign-in with next, and comes back after', async ({ page }) => {
@@ -44,7 +44,7 @@ test.describe('owner', () => {
           expect(info.ring, `focus ring on ${info.nav}`).not.toBe('none');
         }
       }
-      expect(reached).toEqual(NAV.map((n) => n.toLowerCase()));
+      expect(reached).toEqual(NAV.map((n) => (n === 'Records' ? 'deeds' : n.toLowerCase())));
       await page.keyboard.press('Enter');
       await expect(page).toHaveURL(/\/app\/settings$/);
       await done();
@@ -63,7 +63,7 @@ test.describe('owner', () => {
     await page.keyboard.press('Enter');
     const sheet = page.getByRole('dialog', { name: 'More' });
     await expect(sheet).toBeVisible();
-    for (const n of ['Policies', 'Connectors', 'Insights', 'Deeds', 'Settings']) await expect(sheet.getByRole('link', { name: n })).toBeVisible();
+    for (const n of ['Policies', 'Connectors', 'Insights', 'Records', 'Settings']) await expect(sheet.getByRole('link', { name: n })).toBeVisible();
     await page.keyboard.press('Escape');
     await expect(sheet).toBeHidden();
     // No horizontal page scroll at 360.
@@ -153,10 +153,10 @@ test.describe.serial('Stop all', () => {
     await expect(go).toBeDisabled();
     await sheet.getByLabel('Type acme to confirm').fill('acme');
     await expect(go).toBeEnabled();
-    await sheet.getByLabel('Reason (optional, recorded in the deed)').fill('Investigating unexpected refunds');
+    await sheet.getByLabel('Reason (optional, sealed in the record)').fill('Investigating unexpected refunds');
     await go.click();
     await expect(page.getByText(/All agents in Acme are stopped · since \d\d:\d\d · by Priya Raman/)).toBeVisible();
-    await expect(page.locator('.toast').filter({ hasText: 'All agents in Acme stopped · deed sealed' })).toBeVisible();
+    await expect(page.locator('.toast').filter({ hasText: 'All agents in Acme stopped · record sealed' })).toBeVisible();
     // Admins can't start them again: no Start all button.
     await expect(page.getByRole('button', { name: 'Start all agents' })).toHaveCount(0);
     await ctx.close();

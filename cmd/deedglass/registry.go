@@ -23,7 +23,7 @@ const (
 	Dev
 )
 
-var groupNames = [...]string{"Setup", "Agents", "Policies", "Actions", "Deeds", "Connectors", "MCP", "Insights", "Dev"}
+var groupNames = [...]string{"Setup", "Agents", "Policies", "Actions", "Records", "Connectors", "MCP", "Insights", "Dev"}
 
 func (g Group) String() string { return groupNames[g] }
 
@@ -61,7 +61,7 @@ var commands = []*Command{
 	{Path: p("init"), Group: Setup, Summary: "Set up Deedglass in this directory",
 		Usage: "[--yes] [--dir .] [--client claude-code|claude-desktop|cursor|vscode|windsurf|sdk-python|sdk-typescript|none] [--listen 127.0.0.1:8080] [--pg-port 55432] [--no-open] [--no-smoke] [--stop] [--json]",
 		Flags: initFlags, Run: runInit,
-		Detail: "Postgres 18.6 in Docker, deedglass serve, keys in .deedglass/ (0700, files 0600), an org Local, an agent quickstart-agent with a dg_test_ key (shown once, saved to .deedglass/quickstart.key), the Acme demo database with a Postgres connector ready for L2, the postgres-safe policy enforced, then three smoke actions: a read, a blocked DROP TABLE and an UPDATE witnessed at L2. Run it again: Nothing to change.\n\nExamples:\n  deedglass init\n  deedglass init --yes --client none\n  deedglass init --listen 127.0.0.1:8090 --pg-port 55440\n  deedglass init --stop"},
+		Detail: "Postgres 18.6 in Docker, deedglass serve, keys in .deedglass/ (0700, files 0600), an org Local, an agent quickstart-agent with a dg_test_ key (shown once, saved to .deedglass/quickstart.key), the Acme demo database with a Postgres connector ready for Proven checks, the postgres-safe policy enforced, then three smoke actions: a read, a blocked DROP TABLE and an UPDATE checked at Proven (L2). Run it again: Nothing to change.\n\nExamples:\n  deedglass init\n  deedglass init --yes --client none\n  deedglass init --listen 127.0.0.1:8090 --pg-port 55440\n  deedglass init --stop"},
 	{Path: p("doctor"), Group: Setup, Summary: "Check config, database and keys",
 		Usage: "[--only <ids>] [--json]", Flags: doctorFlags, Run: runDoctor,
 		Detail: "Sixteen read-only checks, each with what it saw and, when it isn't OK, the exact fix: config.valid, state.dir, db.reachable, db.role, db.migrations, seal.key, vault.key, server.health, clock.skew, ledger.chain, connectors.postgres, decoder.slots, wal.level, disk.space, version.drift, policy.active. In a directory where you ran deedglass init, it reads .deedglass/ to find the local stack.\n\nExit codes: 0 all OK (warnings allowed) · 1 a problem · 2 doctor itself couldn't run · 3 the server refused the API key."},
@@ -69,7 +69,7 @@ var commands = []*Command{
 		Usage: "[--dir .] [--postgres-dsn-env VAR] [--format md,html,json,sarif] [--score] [--badge] [--share] [--ci] [--fail-under A|B|C|D] [--json]",
 		Flags: scanFlags, Run: runScan,
 		Detail: "A local, read-only report: MCP client configs, agent and database dependencies, database URL variable names (never values) and tools that can write, then, with --postgres-dsn-env, the tables your agent's role can change, ranked. It opens with the Agent Blast-Radius Score (A to F). Nothing is sent anywhere.\n\nExit codes: 0 the report was written · 1 the grade is below --fail-under, or the Postgres part failed (the file part was written) · 2 usage, or the DSN variable is unset.\n\nExamples:\n  deedglass scan\n  deedglass scan --dir ~/code/my-agent --postgres-dsn-env DATABASE_URL\n  deedglass scan --ci --format sarif --fail-under C"},
-	{Path: p("serve"), Group: Setup, Summary: "Run the API, the Gate and the Console",
+	{Path: p("serve"), Group: Setup, Summary: "Run the API, the rules and the Console",
 		Usage: "[--migrate]", Flags: serveFlags, Run: runServe},
 	{Path: p("migrate", "up"), Group: Setup, Summary: "Apply database migrations",
 		Usage: "[--database-url <url>] [--dry-run] [--json]", Flags: migrateFlags(true), Run: runMigrateUp},
@@ -167,12 +167,12 @@ var commands = []*Command{
 		Usage: "<old.yaml> <new.yaml> | <policy> <vA> <vB> [--context 3] [--json]", Run: runPolicyDiff, RawArgs: true},
 
 	// Actions.
-	{Path: p("act"), Group: Actions, Summary: "Send a test action through the Gate",
+	{Path: p("act"), Group: Actions, Summary: "Send a test action through Deedglass",
 		Usage: `<tool> [--args '{"k":"v"}'] [--mode gateway|proxy] [--wait 60s] [--idempotency-key K] [--json]`, Run: runAct, RawArgs: true},
 	{Path: p("actions", "list"), Group: Actions, Summary: "List actions",
 		Usage: "[--agent agt_…] [--tool stripe.*] [--state …] [--decision …] [--verdict MISMATCH] [--level L2] [--since 1h] [--q text] [--limit 25] [--cursor …] [--json] [--follow] [--connector orders]",
 		Flags: actionsListFlags, Needs: config.NeedDatabase, Run: runActionsList},
-	{Path: p("actions", "show"), Group: Actions, Summary: "Show one action, its events and its L2 diff",
+	{Path: p("actions", "show"), Group: Actions, Summary: "Show one action, its events and its Proven diff",
 		Usage: "<act_…> [--wait] [--diff] [--json]", Needs: config.NeedDatabase, Run: runActionsShow, RawArgs: true},
 	{Path: p("actions", "cancel"), Group: Actions, Summary: "Cancel a pending action",
 		Usage: "<act_…> [--json]", Run: runActionsCancel},
@@ -190,7 +190,7 @@ var commands = []*Command{
 		Detail: "Plans the undo from what Postgres committed and runs the twelve checks without a lock. Writes nothing.\nExit 0 when the undo is available, 1 when a check fails (each with its fix)."},
 	{Path: p("undo", "run"), Group: Actions, Summary: "Undo an action",
 		Usage: `<act_…> --plan <sha256:…> --reason "…" [--allow-triggers] [--wait 25s] [--json]`, Run: runUndoRun, RawArgs: true,
-		Detail: "Sends the undo through the Gate as the console system agent, on your behalf: policy, approval, one transaction, an L2 witness and its own deed.\nExit 0 executed and VERIFIED, 1 refused, failed or MISMATCH, 2 waiting for a countersign."},
+		Detail: "Sends the undo through Deedglass as the console system agent, on your behalf: policy, approval, one transaction, a Proven check and its own record.\nExit 0 executed and Matches, 1 refused, failed or Doesn't match, 2 waiting for a countersign."},
 	{Path: p("webhooks", "create"), Group: Actions, Summary: "Add a webhook endpoint",
 		Usage: "--url <url> --events approval.requested,approval.decided [--description …] [--json]", Flags: webhookCreateFlags, Run: runWebhooksCreate},
 	{Path: p("webhooks", "list"), Group: Actions, Summary: "List webhook endpoints", Usage: "[--json]", Run: runWebhooksList},
@@ -198,24 +198,24 @@ var commands = []*Command{
 	{Path: p("webhooks", "delete"), Group: Actions, Summary: "Remove a webhook endpoint", Usage: "<whk_…> [--json]", Run: runWebhooksDelete},
 
 	// Deeds.
-	{Path: p("verify"), Group: Deeds, Summary: "Check deeds offline",
+	{Path: p("verify"), Group: Deeds, Summary: "Check records offline",
 		Usage: "<path|->... [--keys <file|url>] [--pin sha256:…] [--anchor <seq>:sha256:…] [--file <path>] [--strict] [--all] [-q]",
 		Flags: verifyFlags, Run: runVerify, RawArgs: true},
-	{Path: p("deeds", "list"), Group: Deeds, Summary: "List deeds",
+	{Path: p("deeds", "list"), Group: Deeds, Summary: "List records",
 		Usage: "[--from-seq n] [--to-seq n] [--kind action,admin,amendment] [--action act_…] [--order asc|desc] [--limit 25] [--json]",
 		Flags: deedsListFlags, Needs: config.NeedDatabase, Run: runDeedsList},
-	{Path: p("deeds", "show"), Group: Deeds, Summary: "Show one deed",
+	{Path: p("deeds", "show"), Group: Deeds, Summary: "Show one record",
 		Usage: "<deed_…|seq> [--json]", Needs: config.NeedDatabase, Run: runDeedsShow},
-	{Path: p("deeds", "export"), Group: Deeds, Summary: "Export deeds as a bundle",
+	{Path: p("deeds", "export"), Group: Deeds, Summary: "Export records as a bundle",
 		Usage: "[--out <file>|-] [--format tar.gz|jsonl] [--from-seq n] [--to-seq n] [--since 1h] [--json]",
 		Flags: deedsExportFlags, Needs: config.NeedDatabase, Run: runDeedsExport},
-	{Path: p("deeds", "seal-file"), Group: Deeds, Summary: "Seal a file's hash as a deed",
+	{Path: p("deeds", "seal-file"), Group: Deeds, Summary: "Seal a file's hash as a record",
 		Usage: "<path> --label <text> [--media-type application/pdf|text/markdown|application/json|text/plain] [--out <path>.deed.json] [--json]",
 		Run:   runDeedsSealFile, RawArgs: true,
-		Detail: "Hashes the file here and sends only its sha256, size, media type and label to the server (an org admin key), which seals the admin deed file.sealed. The file never leaves this machine. The deed is written to <path>.deed.json; check both later, offline, with deedglass verify <path>.deed.json --file <path> --keys <keys.json>.\n\nIt seals the file's hash, size, type and label. It says nothing about whether the file's contents are right."},
-	{Path: p("ledger", "check"), Group: Deeds, Summary: "Check the deed chain",
+		Detail: "Hashes the file here and sends only its sha256, size, media type and label to the server (an org admin key), which seals the admin record file.sealed. The file never leaves this machine. The record is written to <path>.deed.json; check both later, offline, with deedglass verify <path>.deed.json --file <path> --keys <keys.json>.\n\nIt seals the file's hash, size, type and label. It says nothing about whether the file's contents are right."},
+	{Path: p("ledger", "check"), Group: Deeds, Summary: "Check the record chain",
 		Usage: "[--from-seq n] [--to-seq n] [--json]", Flags: ledgerCheckFlags, Needs: config.NeedDatabase, Run: runLedgerCheck},
-	{Path: p("ledger", "prune"), Group: Deeds, Summary: "Remove old payloads; deeds stay",
+	{Path: p("ledger", "prune"), Group: Deeds, Summary: "Remove old payloads; records stay",
 		Usage: "[--older-than 90d] [--dry-run] [--yes] [--json]", Flags: ledgerPruneFlags, Needs: config.NeedDatabase, Run: runLedgerPrune},
 
 	// Connectors.
@@ -246,7 +246,7 @@ var commands = []*Command{
 		Detail: "Signs you in with Google through a loopback page on 127.0.0.1 (PKCE, 5 minutes) and stores the refresh token in the vault.\nDeedglass writes drafts only. Google apps in Testing need this again every 7 days."},
 	{Path: p("decoder", "status"), Group: Connectors, Summary: "Show what the decoder reads from Postgres",
 		Usage: "[--connector <name>] [--recent N] [--json]", Flags: decoderStatusFlags, Run: runDecoderStatus,
-		Detail: "One line per witnessed connector: healthy, degraded, halted or connecting, with the lag and the next step.\n--connector shows one in detail: the slot, positions, watched tables, frame counts and the newest frames."},
+		Detail: "One line per checked connector: healthy, degraded, halted or connecting, with the lag and the next step.\n--connector shows one in detail: the slot, positions, watched tables, frame counts and the newest frames."},
 	{Path: p("decoder", "drop"), Group: Connectors, Summary: "Drop a connector's replication slot",
 		Usage: "--connector <name> [--confirm <name>] [--json]", Flags: decoderDropFlags, Run: runDecoderDrop,
 		Detail: "Stops the decoder, drops the slot and seals decoder.slot_dropped. A new slot starts on the next sync: a new baseline,\nand actions in the gap are recorded as missing. Type the connector's name to confirm, or pass --confirm in scripts."},
@@ -255,10 +255,10 @@ var commands = []*Command{
 		Detail: "Prints the app manifest for Slack approvals with request_url set to <base-url>/v1/slack/interact.\nPaste it at api.slack.com/apps › Create New App › From a manifest. The docs say why each scope is needed."},
 
 	// MCP.
-	{Path: p("mcp", "wrap"), Group: MCP, Summary: "Run an MCP server behind the Gate",
+	{Path: p("mcp", "wrap"), Group: MCP, Summary: "Run an MCP server behind Deedglass",
 		Usage: "--connector <name> [--connector-type mcp] [--hide-denied=false] [--call-timeout 2m] [--result-mode full|digest] [--log-file <path>] -- <command> [args…]",
 		Run:   runMCPWrap, RawArgs: true, Detail: mcpWrapHelp},
-	{Path: p("mcp", "serve"), Group: MCP, Summary: "Serve the Gate's native MCP tools", Usage: "[--connector native|<name>]",
+	{Path: p("mcp", "serve"), Group: MCP, Summary: "Serve Deedglass's native MCP tools", Usage: "[--connector native|<name>]",
 		Flags: mcpServeFlags, Run: runMCPServe, Detail: mcpServeHelp},
 	{Path: p("mcp", "snippet"), Group: MCP, Summary: "Print client config for an MCP client",
 		Usage: "--client <claude-desktop|claude-code|cursor|windsurf|vscode> --connector <name> [--connector-type postgres] [--api-key-from-env] -- <command> [args…]  ·  --transport http --client <…> [--connector native|<name>]",
@@ -304,7 +304,7 @@ var commands = []*Command{
 	{Path: p("dev", "agent-script"), Group: Dev, Summary: "Run a scripted agent",
 		Usage: "<script.yaml> [--step] [--live] [--only <scene>] [--keys-file examples/demo/.demo-keys] [--root .] [--var name=value] [--json]",
 		Run:   runDevAgentScript, RawArgs: true,
-		Detail: "Runs the scenes of a script through the real Gate as the demo's agent and checks every outcome; the first unmet\nexpectation stops it (exit 1). No shell: allow-listed make targets and deedglass subcommands only; files change only under .tmp/demo/."},
+		Detail: "Runs the scenes of a script through the real rules as the demo's agent and checks every outcome; the first unmet\nexpectation stops it (exit 1). No shell: allow-listed make targets and deedglass subcommands only; files change only under .tmp/demo/."},
 	{Path: p("dev", "mail-preview"), Group: Dev, Summary: "Preview emails in the browser",
 		Usage: "login|invite|approval|approval-foureyes [--out /tmp/login.html] [--json]", Flags: mailPreviewFlags, Run: runMailPreview},
 	{Path: p("dev", "sign-intent"), Group: Dev, Summary: "Sign an intent with a local key",
@@ -322,7 +322,7 @@ var lines = []Line{
 	{Name: "init", Group: Setup, Summary: "Set up Deedglass in this directory", Paths: ps("init")},
 	{Name: "doctor", Group: Setup, Summary: "Check config, database and keys", Paths: ps("doctor")},
 	{Name: "scan", Group: Setup, Summary: "Show what your agent setup can change", Paths: ps("scan")},
-	{Name: "serve", Group: Setup, Summary: "Run the API, the Gate and the Console", Paths: ps("serve")},
+	{Name: "serve", Group: Setup, Summary: "Run the API, the rules and the Console", Paths: ps("serve")},
 	{Name: "migrate", Group: Setup, Summary: "Apply or check database migrations", Subs: subs("up status verify"), Paths: ps("migrate up", "migrate status", "migrate verify")},
 	{Name: "config print", Group: Setup, Summary: "Show the effective config, secrets hidden", Paths: ps("config print")},
 	{Name: "version", Group: Setup, Summary: "Show the client and server versions", Paths: ps("version")},
@@ -342,7 +342,7 @@ var lines = []Line{
 	{Name: "policy", Group: Policies, Summary: "Write, test and activate policies", Subs: subs("lint fmt test push activate evaluate replay diff"),
 		Paths: ps("policy lint", "policy fmt", "policy test", "policy push", "policy activate", "policy evaluate", "policy replay", "policy diff")},
 
-	{Name: "act", Group: Actions, Summary: "Send a test action through the Gate", Paths: ps("act")},
+	{Name: "act", Group: Actions, Summary: "Send a test action through Deedglass", Paths: ps("act")},
 	{Name: "actions", Group: Actions, Summary: "Inspect actions", Subs: subs("list show cancel"), Paths: ps("actions list", "actions show", "actions cancel")},
 	{Name: "approve · deny", Group: Actions, Summary: "Decide a pending approval", Paths: ps("approve", "deny")},
 	{Name: "approvals", Group: Actions, Summary: "List pending approvals", Subs: subs("list show"), Paths: ps("approvals list", "approvals show")},
@@ -350,8 +350,8 @@ var lines = []Line{
 	{Name: "webhooks", Group: Actions, Summary: "Send events to your endpoints", Subs: subs("create list test delete"),
 		Paths: ps("webhooks create", "webhooks list", "webhooks test", "webhooks delete")},
 
-	{Name: "verify", Group: Deeds, Summary: "Check deeds offline", Paths: ps("verify")},
-	{Name: "deeds", Group: Deeds, Summary: "Browse and export deeds", Subs: subs("list show export seal-file"), Paths: ps("deeds list", "deeds show", "deeds export", "deeds seal-file")},
+	{Name: "verify", Group: Deeds, Summary: "Check records offline", Paths: ps("verify")},
+	{Name: "deeds", Group: Deeds, Summary: "Browse and export records", Subs: subs("list show export seal-file"), Paths: ps("deeds list", "deeds show", "deeds export", "deeds seal-file")},
 	{Name: "ledger", Group: Deeds, Summary: "Check or prune the Ledger", Subs: subs("check prune"), Paths: ps("ledger check", "ledger prune")},
 
 	{Name: "connector", Group: Connectors, Summary: "Connect tools", Subs: subs("create list show test types credentials"),
@@ -362,7 +362,7 @@ var lines = []Line{
 	{Name: "decoder", Group: Connectors, Summary: "Inspect Postgres change readers", Subs: subs("status drop"), Paths: ps("decoder status", "decoder drop")},
 	{Name: "slack manifest", Group: Connectors, Summary: "Print the Slack app manifest", Paths: ps("slack manifest")},
 
-	{Name: "mcp", Group: MCP, Summary: "Put the Gate in front of MCP servers", Subs: subs("wrap serve snippet"), Paths: ps("mcp wrap", "mcp serve", "mcp snippet")},
+	{Name: "mcp", Group: MCP, Summary: "Put Deedglass in front of MCP servers", Subs: subs("wrap serve snippet"), Paths: ps("mcp wrap", "mcp serve", "mcp snippet")},
 
 	{Name: "insights", Group: Insights, Summary: "Suggestions, shadow results and anomalies", Subs: subs("stats shadow anomalies detect settings suggestions digest"),
 		Paths: ps("insights stats", "insights shadow", "insights anomalies", "insights detect", "insights settings",
@@ -378,7 +378,7 @@ var retired = map[string]string{
 	"sign":             "dev sign-intent (S09)",
 	"submit":           "act (S13)",
 	"executor serve":   "serve (S03)",
-	"verifier run":     "serve: the Witness runs inside it (S19 to S21)",
+	"verifier run":     "serve: checks run inside it (S19 to S21)",
 	"statement verify": "verify (S05)",
 	"evidence export":  "deeds export (S06)",
 	"evidence verify":  "verify (S05)",

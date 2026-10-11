@@ -97,7 +97,7 @@ export function model(scan) {
     today: ['no-approval', 'noApproval', 'Not routed'], add: ['wrap'] }));
   if (seen.length) {
     const servers = [...new Set(writes.filter((t) => t.routed).map((t) => t.server))];
-    toolRows.push({ name: `${plural(seen.length, 'tool', 'tools')} on ${servers.join(', ')}`, can: null, worst: null, undo: null, today: ['routed', 'routed', 'Through the Gate'], add: ['–'] });
+    toolRows.push({ name: `${plural(seen.length, 'tool', 'tools')} on ${servers.join(', ')}`, can: null, worst: null, undo: null, today: ['routed', 'routed', 'Through Deedglass'], add: ['–'] });
   }
   rows.unshift(...toolRows);
   const pols = (scan.policies ?? []).slice(0, 3).map((p, i) => {
@@ -147,7 +147,7 @@ export function fill(scan, { sample = false, template } = {}) {
     policies: m.pols.length ? m.pols.map((p) => `<div class="policy"><p><b>${p.n}</b> ${esc(p.why)}</p><pre translate="no">${esc(p.yaml)}</pre></div>`).join('') : `<div class="policy">${NC}</div>`,
     looked: m.looked.map((x) => `<li>${esc(x)}</li>`).join('') || `<li>${NC}</li>`,
     notlooked: m.notLooked.map((x) => `<li>${esc(x)}</li>`).join(''),
-    footer: `<span>Scan ${esc(short(digest))} · sealing as a deed: next release</span><span>deedglass scan --json reproduces this page</span>`,
+    footer: `<span>Scan ${esc(short(digest))} · sealing as a record: next release</span><span>deedglass scan --json reproduces this page</span>`,
   };
   return html.replace(/\{\{(\w+)\}\}/g, (_, k) => {
     if (!(k in slots)) throw new Error(`report.html has an unknown slot {{${k}}}`);

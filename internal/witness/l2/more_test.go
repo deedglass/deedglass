@@ -191,10 +191,10 @@ func TestValueTextAndOps(t *testing.T) {
 		t.Errorf("count %s", count(1204))
 	}
 	if AgentLine(witness.L2, witness.Mismatch, "Postgres changed 301 rows in public.orders. The agent reported 1.") !=
-		"Deedglass witness · L2 · MISMATCH · Postgres changed 301 rows in public.orders. The agent reported 1." {
+		"Deedglass check · Proven · Doesn't match · Postgres changed 301 rows in public.orders. The agent reported 1." {
 		t.Error("AgentLine")
 	}
-	if !strings.HasPrefix(AgentPending, "Deedglass witness · pending · ") {
+	if !strings.HasPrefix(AgentPending, "Deedglass check · pending · ") {
 		t.Error("AgentPending")
 	}
 }

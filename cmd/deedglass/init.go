@@ -154,7 +154,7 @@ func runInit(ctx context.Context, e *Env, args []string) error {
 	}
 	verified := false
 	for _, s := range res.Steps {
-		verified = verified || (s.ID == "smoke_update" && strings.Contains(s.Detail, "L2 · VERIFIED"))
+		verified = verified || (s.ID == "smoke_update" && strings.Contains(s.Detail, "Proven · Matches"))
 	}
 	fmt.Fprintln(e.Stdout)
 	if verified {

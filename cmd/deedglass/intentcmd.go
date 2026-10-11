@@ -242,7 +242,7 @@ func runIntentMode(ctx context.Context, e *Env, args []string) error {
 	if e.Globals.JSON {
 		return writeJSON(e, res)
 	}
-	sealed := " " + ui.Sep + " no change, no new deed"
+	sealed := " " + ui.Sep + " no change, no new record"
 	if res.Deed != nil {
 		sealed = fmt.Sprintf(" %s %s sealed", ui.Sep, *res.Deed)
 	}
@@ -257,7 +257,7 @@ func runIntentMode(ctx context.Context, e *Env, args []string) error {
 		fmt.Fprintln(e.Stdout, "  Calls without a Deedglass-Intent header are still accepted; an invalid one is refused.")
 	default:
 		fmt.Fprintln(e.Stdout, s.OKLine(a.Name+" no longer checks signed intents"+sealed))
-		fmt.Fprintf(e.Stdout, "  Deedglass-Intent headers from %s are ignored, and its deeds record intent_signed false.\n", a.Name)
+		fmt.Fprintf(e.Stdout, "  Deedglass-Intent headers from %s are ignored, and its records hold intent_signed false.\n", a.Name)
 	}
 	return nil
 }

@@ -95,7 +95,7 @@ function reasonsList(rs: WitnessReason[]): HTMLElement {
     const [ic, word] = REASON_ICON[r.class] ?? ['info', r.class];
     return h('li', { class: `reason is-${r.class}` },
       h('span', { class: 'reason-icon', 'aria-hidden': 'true' }, icon(ic, 16)),
-      h('span', { class: 'reason-level mono t-2' }, r.level),
+      h('span', { class: 'reason-level t-2', title: r.level }, copy.chips.level[r.level] ?? r.level),
       h('span', { class: 'reason-text' }, h('span', { class: 'sr-only' }, `${word}: `), visibleControls(r.message)));
   }));
 }
@@ -109,11 +109,11 @@ function witnessSection(a: ActionDetail): HTMLElement {
   const l1 = det?.levels?.L1?.readback;
   const right = h('span', { class: 'witness-meta' }, verdictChip(w.verdict, w.level));
   const body: Child[] = [];
-  if (w.required_level) body.push(h('p', { class: 't-footnote t-2' }, fill(copy.detail.required, { level: `${w.required_level} ${copy.chips.level[w.required_level] ?? ''}`.trim() })));
-  if (l1) body.push(h('p', { class: 't-footnote t-2' }, `L1 read-back · ${l1.tool} · ${l1.target}`));
+  if (w.required_level) body.push(h('p', { class: 't-footnote t-2' }, fill(copy.detail.required, { level: copy.chips.level[w.required_level] ?? w.required_level })));
+  if (l1) body.push(h('p', { class: 't-footnote t-2' }, `${copy.chips.level.L1} by a read-back · ${l1.tool} · ${l1.target}`));
   body.push(h('h3', { class: 'sub-title' }, copy.detail.reasons), reasonsList(reasons));
   if (model) body.push(diffTable(model, { rawJSON: () => JSON.stringify(det?.levels.L2 ?? {}, null, 2), fileName: `${a.id}-diff.json` }));
-  return cardSection('d-witness', h('span', null, copy.detail.witness, h('span', { class: 't-2 title-meta' }, ` · ${w.level} · ${w.method ?? ''}`)), right, h('div', { class: 'card-body' }, ...body));
+  return cardSection('d-witness', h('span', null, copy.detail.witness, h('span', { class: 't-2 title-meta' }, w.method ? ` · ${w.method}` : '')), right, h('div', { class: 'card-body' }, ...body));
 }
 
 function payloadSection(a: ActionDetail): HTMLElement {

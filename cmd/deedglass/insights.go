@@ -326,14 +326,14 @@ func printStats(e *Env, s *learn.StatsObject) {
 			deed.FormatCount(t.Approval.Requested), ui.Sep, deed.FormatCount(t.Approval.Approved), rate, ui.Sep,
 			deed.FormatCount(t.Approval.Expired), ui.Sep, secondsWords(t.Approval.MedianSeconds), ui.Sep, secondsWords(t.Approval.P95Seconds))
 	}
-	fmt.Fprintf(w, "  verdicts   %s VERIFIED %s %s MISMATCH %s %s UNVERIFIABLE %s %s not witnessed\n", deed.FormatCount(t.Verdicts.Verified), ui.Sep,
+	fmt.Fprintf(w, "  verdicts   %s matches %s %s doesn't match %s %s can't check %s %s not checked\n", deed.FormatCount(t.Verdicts.Verified), ui.Sep,
 		deed.FormatCount(t.Verdicts.Mismatch), ui.Sep, deed.FormatCount(t.Verdicts.Unverifiable), ui.Sep, deed.FormatCount(t.Verdicts.None))
 	if t.LatencyMS.P50 != nil {
 		fmt.Fprintf(w, "  latency    p50 %d ms %s p95 %d ms\n", *t.LatencyMS.P50, ui.Sep, derefI(t.LatencyMS.P95))
 	}
 	if len(s.Groups) > 0 {
 		head := map[string]string{learn.ByRule: "RULE", learn.ByTool: "TOOL", learn.ByAgent: "AGENT"}[s.By]
-		rows := [][]string{{head, "ACTIONS", "DENY", "APPROVED", "MEDIAN WAIT", "VERIFIED", "MISMATCH", "UNVERIFIABLE"}}
+		rows := [][]string{{head, "ACTIONS", "DENY", "APPROVED", "MEDIAN WAIT", "MATCHES", "DOESN'T MATCH", "CAN'T CHECK"}}
 		for _, g := range s.Groups {
 			key := ""
 			switch {
@@ -543,7 +543,7 @@ func runInsightsSettings(ctx context.Context, e *Env, args []string) error {
 		fs.StringVar(&phrasing, "llm-phrasing", phrasing, "on or off: let Claude reword suggestions (needs DEEDGLASS_ANTHROPIC_API_KEY on the server)")
 		fs.IntVar(&capCents, "llm-cap-cents", -1, "the month's phrasing spend cap in cents (0 to 10,000; 200 = $2.00)")
 		fs.StringVar(&digest, "digest", digest, "who gets the weekly digest: owners, admins or off")
-		fs.StringVar(&reason, "reason", reason, "why (required for a change; sealed in the deed)")
+		fs.StringVar(&reason, "reason", reason, "why (required for a change; sealed in the record)")
 		fs.BoolVar(&jsonOut, "json", jsonOut, "print JSON")
 	})
 	if err != nil {
@@ -620,7 +620,7 @@ func runInsightsSettings(ctx context.Context, e *Env, args []string) error {
 	fmt.Fprintf(w, "  phrasing       %s %s cap %s a month %s %s\n", ph, ui.Sep, policy.FormatMoney(int64(o.LLMMonthlyCapCents), "usd"), ui.Sep, avail)
 	fmt.Fprintf(w, "  digest         %s\n", o.Digest.Recipients)
 	if o.Deed != nil {
-		fmt.Fprintln(w, st.OKLine("Settings changed "+ui.Sep+" deed "+shortID(*o.Deed)+" sealed"))
+		fmt.Fprintln(w, st.OKLine("Settings changed "+ui.Sep+" record "+shortID(*o.Deed)+" sealed"))
 	}
 	return nil
 }

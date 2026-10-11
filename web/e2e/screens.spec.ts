@@ -34,11 +34,11 @@ test.describe('owner', () => {
     await page.locator('.feed-pill').click();
     await expect(page.locator('.feed-pill')).toBeHidden();
     // Filter by MISMATCH; the URL carries it and a reload keeps it.
-    await page.locator('[data-filter="verdict"] button', { hasText: 'Mismatch' }).click();
+    await page.locator('[data-filter="verdict"] button', { hasText: "Doesn't match" }).click();
     await expect(page).toHaveURL(/verdict=MISMATCH/);
-    await expect(page.locator('table.feed tbody tr').first()).toContainText('MISMATCH');
+    await expect(page.locator('table.feed tbody tr').first()).toContainText("Doesn't match");
     await page.reload();
-    await expect(page.locator('[data-filter="verdict"] button', { hasText: 'Mismatch' })).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.locator('[data-filter="verdict"] button', { hasText: "Doesn't match" })).toHaveAttribute('aria-pressed', 'true');
     const rows = page.locator('table.feed tbody tr');
     await expect(rows.first()).toBeVisible();
     expect(await rows.locator('.chip-verified').count()).toBe(0);
@@ -47,7 +47,7 @@ test.describe('owner', () => {
     await page.keyboard.press('j');
     await page.keyboard.press('Enter');
     await expect(page).toHaveURL(/\/app\/actions\/act_/);
-    await expect(page.locator('[data-sentence]')).toContainText('MISMATCH · ');
+    await expect(page.locator('[data-sentence]')).toContainText("Doesn't match · ");
     await done();
   });
 
@@ -55,7 +55,7 @@ test.describe('owner', () => {
     const done = await guard(page);
     const { mismatch } = hero();
     await page.goto(`/app/actions/${mismatch}`);
-    await expect(page.locator('[data-sentence]')).toHaveText('MISMATCH · Postgres changed 301 rows in public.orders. The agent reported 1.');
+    await expect(page.locator('[data-sentence]')).toHaveText("Doesn't match · Postgres changed 301 rows in public.orders. The agent reported 1.");
     await expect(page.locator('[data-diff-showing]')).toHaveText(/Showing 20 of 301 rows/);
     await expect(page.locator('table.diff tbody tr')).toHaveCount(20);
     await expect(page.locator('table.diff tr.diff-unexpected').first()).toHaveAttribute('aria-label', 'unexpected change');

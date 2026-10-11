@@ -1,5 +1,5 @@
 exit 1
 --- stdout
-Type the org id to remove payloads older than 0s (deeds are kept): --- stderr
+Type the org id to remove payloads older than 0s (records are kept): --- stderr
 ✕ That isn't the org id. Nothing changed.
   next  Type org_ID exactly, or pass --yes.

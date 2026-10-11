@@ -229,8 +229,8 @@ var catalog = []CatalogEntry{
 	{CodeDatabaseNotReady, 503, TypeAPI, "Deedglass isn't set up in this database yet. Run deedglass connector postgres init.",
 		"Deedglass isn't set up in this database yet. Run deedglass connector postgres init --connector {name}.", "S17"},
 
-	{CodeWitnessNotConfigured, 409, TypeInvalidRequest, "This connector isn't witnessed, so it has no decoder. Turn on witness.enabled in its config first.",
-		`The connector "{name}" isn't witnessed. Set witness.enabled to true in its config, then run deedglass connector postgres check {name}.`, "S20"},
+	{CodeWitnessNotConfigured, 409, TypeInvalidRequest, "Checks aren't on for this connector, so it has no decoder. Turn on witness.enabled in its config first.",
+		`Checks aren't on for the connector "{name}". Set witness.enabled to true in its config, then run deedglass connector postgres check {name}.`, "S20"},
 
 	{CodeApprovalDecided, 409, TypeInvalidRequest, "This approval was already decided. Console › Approvals shows who decided and when.",
 		"This approval was already decided: {outcome} by {name} at {time}.", "S22"},

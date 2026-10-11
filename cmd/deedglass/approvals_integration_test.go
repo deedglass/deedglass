@@ -96,7 +96,7 @@ func TestApprovalsLive(t *testing.T) {
 	}
 	r = cli(t, env, false, "approve", apr, "--as", "priya@acme.test", "--reason", "Looks right")
 	if r.code != 0 || !strings.Contains(r.stdout, "Countersigned · "+apr[:12]+"… · priya@acme.test · 1 of 1") ||
-		!strings.Contains(r.stdout, "Deed sealed · approval.decided") {
+		!strings.Contains(r.stdout, "Record sealed · approval.decided") {
 		t.Fatalf("approve: %+v", r)
 	}
 	ok := c.call("deedglass.check_approval", `{"approval_id":"`+apr+`","wait_seconds":10}`)

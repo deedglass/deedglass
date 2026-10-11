@@ -1,6 +1,6 @@
 exit 0
 --- stdout
-✓ 48 deeds · SIZE · seq 1 → 48
+✓ 48 records · SIZE · seq 1 → 48
   file       DIR/out.jsonl
   next       deedglass verify DIR/out.jsonl --keys http://HOST/.well-known/deedglass/keys.json
 --- stderr

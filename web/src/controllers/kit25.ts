@@ -49,7 +49,7 @@ export function mountKit25(): void {
     controls: [select('Agent', [{ value: '', label: copy.feed.agentAny }, { value: 'a', label: 'support-bot' }], '', () => {}, 'kit-agent')],
     segments: [
       segmented('Decision', [{ value: '', label: 'All' }, { value: 'allow', label: 'Allowed' }, { value: 'deny', label: 'Denied' }], '', () => {}, 'kit-decision'),
-      toggles('Verdict', [{ value: 'VERIFIED', label: 'Verified' }, { value: 'MISMATCH', label: 'Mismatch' }], ['MISMATCH'], () => {}, 'kit-verdict'),
+      toggles('Verdict', [{ value: 'VERIFIED', label: copy.chips.verified }, { value: 'MISMATCH', label: copy.chips.mismatch }], ['MISMATCH'], () => {}, 'kit-verdict'),
     ],
     end: [h('button', { type: 'button', class: 'btn btn-secondary btn-sm' }, icon('sliders-horizontal', 16), copy.feed.more)],
   });

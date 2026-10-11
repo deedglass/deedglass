@@ -148,7 +148,7 @@ func TestDeniedCall(t *testing.T) {
 		h := start(t, mode)
 		h.handshake()
 		r := result(t, h.call("write_file", `{"path":"/tmp/deedglass-demo/outside.txt","content":"x"}`))
-		want := denyMsg + " Nothing was run. Deedglass sealed a deed of this attempt (deed_01k6w4a3d5f7h9k1n3q5s7v9x1). If this should be allowed, a person can change the policy in Console › Policies."
+		want := denyMsg + " Nothing was run. Deedglass sealed a record of this attempt (deed_01k6w4a3d5f7h9k1n3q5s7v9x1). If this should be allowed, a person can change the policy in Console › Policies."
 		if !r.IsError || r.text() != want {
 			t.Fatalf("%q", r.text())
 		}

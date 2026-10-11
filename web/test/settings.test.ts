@@ -113,8 +113,8 @@ describe('settings: time zones', () => {
 
 describe('settings: values and copy', () => {
   it('retention help is S26 §5 verbatim with the number filled in', () => {
-    expect(retentionHelp(90)).toBe('After 90 days, request and result bodies are removed. Deeds hold digests only, so they keep verifying.');
-    expect(retentionHelp(1)).toBe('After 1 day, request and result bodies are removed. Deeds hold digests only, so they keep verifying.');
+    expect(retentionHelp(90)).toBe('After 90 days, request and result bodies are removed. Records hold digests only, so they keep verifying.');
+    expect(retentionHelp(1)).toBe('After 1 day, request and result bodies are removed. Records hold digests only, so they keep verifying.');
     expect(retentionHelp(3650)).toContain('After 3,650 days,');
   });
   it('retention is a whole number from 1 to 3650', () => {
@@ -131,7 +131,7 @@ describe('settings: values and copy', () => {
     expect(approvalsPatch(before, { ...before, self_countersign: 'allow', email_detail: 'full' })).toEqual({ self_countersign: 'allow', email_detail: 'full' });
   });
   it('saving says whether a deed was sealed', () => {
-    expect(savedToast({ deed: 'deed_01' })).toBe('Saved · deed sealed');
+    expect(savedToast({ deed: 'deed_01' })).toBe('Saved · record sealed');
     expect(savedToast({ deed: null })).toBe('Saved');
     expect(savedToast(undefined)).toBe('Saved');
   });

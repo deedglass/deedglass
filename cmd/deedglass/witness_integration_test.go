@@ -179,7 +179,7 @@ func TestWitnessLive(t *testing.T) {
 	// 1. Honest: L1 VERIFIED.
 	r = run(agentEnv, false, "act", "orders.update_status", "--args", args)
 	if r.code != 0 || !strings.Contains(r.stdout, "✓ executed · orders.update_status") ||
-		!strings.Contains(r.stdout, `witness  L1 · VERIFIED · Read back orders.get: status is "shipped".`) {
+		!strings.Contains(r.stdout, `check    Checked · Matches · Read back orders.get: status is "shipped".`) {
 		t.Fatalf("honest: %+v", r)
 	}
 	gateGolden(t, "witness-verified", r)
@@ -189,7 +189,7 @@ func TestWitnessLive(t *testing.T) {
 	lying = true
 	cancel := `{"id":"42","status":"cancelled"}`
 	r = run(agentEnv, false, "act", "orders.update_status", "--args", cancel)
-	want := `witness  L1 · MISMATCH · orders.update_status reported success, but orders.get says status is "shipped", not "cancelled".`
+	want := `check    Checked · Doesn't match · orders.update_status reported success, but orders.get says status is "shipped", not "cancelled".`
 	if r.code != 1 || !strings.Contains(r.stdout, "✕ executed · orders.update_status") || !strings.Contains(r.stdout, want) ||
 		!regexp.MustCompile(`body\.status\s+cancelled\s+shipped`).MatchString(r.stdout) {
 		t.Fatalf("lying: %+v", r)
@@ -238,8 +238,8 @@ func TestWitnessLive(t *testing.T) {
 		t.Errorf("WitnessDetail: %v", err)
 	}
 	r = run(env, false, "actions", "show", act.ID)
-	if r.code != 0 || !strings.Contains(r.stdout, "L1 · MISMATCH · readback.rest.get") || !strings.Contains(r.stdout, "✓ L0  The tool reported success.") ||
-		!strings.Contains(r.stdout, "✕ L1  orders.update_status reported success") {
+	if r.code != 0 || !strings.Contains(r.stdout, "Checked · Doesn't match · readback.rest.get") || !strings.Contains(r.stdout, "✓ Claimed  The tool reported success.") ||
+		!strings.Contains(r.stdout, "✕ Checked  orders.update_status reported success") {
 		t.Fatalf("show: %+v", r)
 	}
 	r.stdout = reShortPV.ReplaceAllString(reWhen.ReplaceAllString(r.stdout, "YYYY-MM-DD HH:MM:SS UTC"), "${1}_…")
@@ -250,8 +250,8 @@ func TestWitnessLive(t *testing.T) {
 	lying, readDown = false, true
 	r = run(agentEnv, false, "act", "orders.update_status", "--args", args)
 	if r.code != 0 || !strings.Contains(r.stdout, "○ executed · orders.update_status") ||
-		!strings.Contains(r.stdout, "witness  L0 · UNVERIFIABLE · The policy asks for L1. The strongest clean evidence was L0.") ||
-		!strings.Contains(r.stdout, "○ L1  The read-back orders.get failed (upstream_error), so the result couldn't be confirmed.") {
+		!strings.Contains(r.stdout, "check    Claimed · Can't check · The policy asks for L1. The strongest clean evidence was L0.") ||
+		!strings.Contains(r.stdout, "○ Checked  The read-back orders.get failed (upstream_error), so the result couldn't be confirmed.") {
 		t.Fatalf("read-back down: %+v", r)
 	}
 	gateGolden(t, "witness-unverifiable", r)

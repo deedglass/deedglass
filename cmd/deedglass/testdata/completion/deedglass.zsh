@@ -16,10 +16,10 @@ _deedglass() {
   esac
   case "$path" in
     '')
-      subs=( 'init:Set up Deedglass in this directory' 'doctor:Check config, database and keys' 'scan:Show what your agent setup can change' 'serve:Run the API, the Gate and the Console' 'migrate:Apply or check database migrations' 'config:Commands for config' 'version:Show the client and server versions' 'keys:Manage seal keys' 'vault:Check or rotate the credential vault' 'help:Show help for deedglass or one command' 'completion:Print shell completion' 'agent:Register and control agents' 'org:Create orgs and keys; stop or start all' 'policy:Write, test and activate policies' 'act:Send a test action through the Gate' 'actions:Inspect actions' 'approve:Approve a pending action' 'deny:Deny a pending action' 'approvals:List pending approvals' 'undo:Preview or run an undo' 'webhooks:Send events to your endpoints' 'verify:Check deeds offline' 'deeds:Browse and export deeds' 'ledger:Check or prune the Ledger' 'connector:Connect tools' 'decoder:Inspect Postgres change readers' 'slack:Commands for slack' 'mcp:Put the Gate in front of MCP servers' 'insights:Suggestions, shadow results and anomalies' 'dev:Local helpers' )
+      subs=( 'init:Set up Deedglass in this directory' 'doctor:Check config, database and keys' 'scan:Show what your agent setup can change' 'serve:Run the API, the rules and the Console' 'migrate:Apply or check database migrations' 'config:Commands for config' 'version:Show the client and server versions' 'keys:Manage seal keys' 'vault:Check or rotate the credential vault' 'help:Show help for deedglass or one command' 'completion:Print shell completion' 'agent:Register and control agents' 'org:Create orgs and keys; stop or start all' 'policy:Write, test and activate policies' 'act:Send a test action through Deedglass' 'actions:Inspect actions' 'approve:Approve a pending action' 'deny:Deny a pending action' 'approvals:List pending approvals' 'undo:Preview or run an undo' 'webhooks:Send events to your endpoints' 'verify:Check records offline' 'deeds:Browse and export records' 'ledger:Check or prune the Ledger' 'connector:Connect tools' 'decoder:Inspect Postgres change readers' 'slack:Commands for slack' 'mcp:Put Deedglass in front of MCP servers' 'insights:Suggestions, shadow results and anomalies' 'dev:Local helpers' )
       ;;
     'actions')
-      subs=( 'list:List actions' 'show:Show one action, its events and its L2 diff' 'cancel:Cancel a pending action' )
+      subs=( 'list:List actions' 'show:Show one action, its events and its Proven diff' 'cancel:Cancel a pending action' )
       ;;
     'actions list')
       flags=( '--agent:an agent id (agt_…)' '--connector:only this connector'\''s tools (<connector>.*)' '--cursor:next_cursor from the previous page' '--decision:comma list\: allow, deny, require_approval' '--follow:keep printing actions as they are decided and sealed (Ctrl-C to stop)' '--level:comma list\: L0, L1, L2' '--limit:page size, 1 to 100' '--on-behalf-of:an on-behalf-of reference' '-q:text in the tool name or error code' '--since:only actions newer than this (1h, 30m)' '--state:comma list of states' '--tool:a tool name, or a glob with * (stripe.*)' '--verdict:comma list\: VERIFIED, MISMATCH, UNVERIFIABLE' )
@@ -46,7 +46,7 @@ _deedglass() {
       flags=( '--mode:live or test (test keys are recorded as livemode false)' '--name:a name for the key, like prod runner' '--scope:a scope (repeatable); default actions\:execute, actions\:read, deeds\:read' )
       ;;
     'agent keys revoke')
-      flags=( '--reason:why; it goes into the deed (required for start)' )
+      flags=( '--reason:why; it goes into the record (required for start)' )
       ;;
     'agent keys roll')
       flags=( '--overlap:how long the old key keeps working\: 0s to 168h' )
@@ -55,16 +55,16 @@ _deedglass() {
       flags=( '--label:only agents with this label, key\:value (env\:prod)' '--status:active, suspended or stopped' )
       ;;
     'agent resume')
-      flags=( '--reason:why; it goes into the deed (required for start)' )
+      flags=( '--reason:why; it goes into the record (required for start)' )
       ;;
     'agent start')
-      flags=( '--reason:why; it goes into the deed (required for start)' )
+      flags=( '--reason:why; it goes into the record (required for start)' )
       ;;
     'agent stop')
-      flags=( '--reason:why; it goes into the deed (required for start)' )
+      flags=( '--reason:why; it goes into the record (required for start)' )
       ;;
     'agent suspend')
-      flags=( '--reason:why; it goes into the deed (required for start)' )
+      flags=( '--reason:why; it goes into the record (required for start)' )
       ;;
     'approvals')
       subs=( 'list:List approvals' 'show:Show one approval' )
@@ -118,13 +118,13 @@ _deedglass() {
       flags=( '--connector:one connector'\''s decoder, in detail' '--recent:show the newest N frames (0 to 50; with --connector)' )
       ;;
     'deeds')
-      subs=( 'list:List deeds' 'show:Show one deed' 'export:Export deeds as a bundle' 'seal-file:Seal a file'\''s hash as a deed' )
+      subs=( 'list:List records' 'show:Show one record' 'export:Export records as a bundle' 'seal-file:Seal a file'\''s hash as a record' )
       ;;
     'deeds export')
-      flags=( '--format:tar.gz (a sealed bundle) or jsonl (deeds only)' '--from-seq:first seq' '--out:file to write (default deedglass-<org>-<first>-<last>.tar.gz)' '--since:only deeds issued in the last 1h, 30m, … (S13)' '--to-seq:last seq' )
+      flags=( '--format:tar.gz (a sealed bundle) or jsonl (records only)' '--from-seq:first seq' '--out:file to write (default deedglass-<org>-<first>-<last>.tar.gz)' '--since:only records issued in the last 1h, 30m, … (S13)' '--to-seq:last seq' )
       ;;
     'deeds list')
-      flags=( '--action:an action id\: its deed and amendments' '--cursor:next_cursor from the previous page' '--from-seq:first seq' '--kind:comma list\: action, admin, amendment' '--limit:page size, 1 to 100' '--order:asc (default) or desc' '--to-seq:last seq' )
+      flags=( '--action:an action id\: its record and amendments' '--cursor:next_cursor from the previous page' '--from-seq:first seq' '--kind:comma list\: action, admin, amendment' '--limit:page size, 1 to 100' '--order:asc (default) or desc' '--to-seq:last seq' )
       ;;
     'deny')
       flags=( '--as:dev only\: the member who decides (their email)' '--reason:why (required to deny; the agent sees it)' )
@@ -172,7 +172,7 @@ _deedglass() {
       flags=( '--dir:directory for the new key file (default\: next to DEEDGLASS_SEAL_KEY_FILE, else .deedglass/keys)' '--overlap:how long the old key keeps sealing (1s to 168h)' )
       ;;
     'ledger')
-      subs=( 'check:Check the deed chain' 'prune:Remove old payloads; deeds stay' )
+      subs=( 'check:Check the record chain' 'prune:Remove old payloads; records stay' )
       ;;
     'ledger check')
       flags=( '--from-seq:first seq (default\: the whole chain)' '--to-seq:last seq' )
@@ -181,7 +181,7 @@ _deedglass() {
       flags=( '--dry-run:count only; nothing changes' '--older-than:payload age to remove (90d, 24h; default\: the org'\''s retention, 90 days)' '--yes:don'\''t ask for confirmation' )
       ;;
     'mcp')
-      subs=( 'wrap:Run an MCP server behind the Gate' 'serve:Serve the Gate'\''s native MCP tools' 'snippet:Print client config for an MCP client' )
+      subs=( 'wrap:Run an MCP server behind Deedglass' 'serve:Serve Deedglass'\''s native MCP tools' 'snippet:Print client config for an MCP client' )
       ;;
     'mcp serve')
       flags=( '--connector:native, or the name of an upstream MCP server (mcp.upstreams)' )
@@ -211,16 +211,16 @@ _deedglass() {
       flags=( '--mode:live or test' '--name:a name for the key, like ci' )
       ;;
     'org keys revoke')
-      flags=( '--reason:why; it goes into the deed (required for start)' )
+      flags=( '--reason:why; it goes into the record (required for start)' )
       ;;
     'org login-link')
       flags=( '--email:the member'\''s email address (required); --org picks the org' )
       ;;
     'org start-all')
-      flags=( '--reason:why; it goes into the deed (required for start)' )
+      flags=( '--reason:why; it goes into the record (required for start)' )
       ;;
     'org stop-all')
-      flags=( '--reason:why; it goes into the deed' '--yes:skip the typed confirmation (scripts)' )
+      flags=( '--reason:why; it goes into the record' '--yes:skip the typed confirmation (scripts)' )
       ;;
     'policy')
       subs=( 'lint:Check a policy file' 'fmt:Format a policy file' 'test:Run a policy'\''s test cases' 'push:Upload a new policy version' 'activate:Activate a policy version' 'evaluate:Evaluate one action against a policy' 'replay:Replay past actions against a version' 'diff:Compare two policy versions' )

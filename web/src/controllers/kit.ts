@@ -84,6 +84,6 @@ export function mountKit(): void {
     { label: 'Stop agent…', icon: 'stop', divider: true },
   ]);
   maybe('kit-toast-neutral')?.addEventListener('click', () => toast(copy.states.resync));
-  maybe('kit-toast-success')?.addEventListener('click', () => toast('Deed sealed. Chain intact.', { kind: 'success', action: { label: copy.stop.viewDeed, href: '/app/deeds' } }));
+  maybe('kit-toast-success')?.addEventListener('click', () => toast('Record sealed. Chain intact.', { kind: 'success', action: { label: copy.stop.viewDeed, href: '/app/deeds' } }));
   maybe('kit-toast-error')?.addEventListener('click', () => toast("The API key has been revoked. Create a new key in Console › Agents.", { kind: 'error', requestId: 'req_01k6h7s9t0u1v2w3x4y5z6a7b8' }));
 }

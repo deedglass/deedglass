@@ -25,6 +25,7 @@ import (
 	"github.com/deedglass/deedglass/internal/policy"
 	"github.com/deedglass/deedglass/internal/store"
 	"github.com/deedglass/deedglass/internal/store/policystore"
+	"github.com/deedglass/deedglass/internal/witness"
 )
 
 // deedglass approvals list|show (an org admin key, through the API) and deedglass approve|deny
@@ -346,7 +347,7 @@ func runDecide(ctx context.Context, e *Env, args []string, v approve.Vote) error
 		if d == "" {
 			d = cs[len(cs)-1].Deed
 		}
-		fmt.Fprintln(e.Stdout, s.OKLine(fmt.Sprintf("Deed sealed %s %s %s %s", ui.Sep, action, ui.Sep, shortID(d))))
+		fmt.Fprintln(e.Stdout, s.OKLine(fmt.Sprintf("Record sealed %s %s %s %s", ui.Sep, action, ui.Sep, shortID(d))))
 	}
 	switch a.Status {
 	case approve.StatusPending:
@@ -388,14 +389,14 @@ func printDecidedAction(e *Env, a *ledger.Action) {
 		fmt.Fprintln(e.Stdout, s.FailLine(line))
 	}
 	if w := a.Witness; w != nil {
-		t := w.Level + " " + ui.Sep + " " + w.Verdict
+		t := witness.PlainLevel(w.Level) + " " + ui.Sep + " " + witness.PlainVerdict(w.Verdict)
 		if w.Summary != nil && *w.Summary != "" {
 			t += " " + ui.Sep + " " + strings.TrimSuffix(*w.Summary, ".")
 		}
-		fmt.Fprintf(e.Stdout, "  witness  %s\n", t)
+		fmt.Fprintf(e.Stdout, "  check    %s\n", t)
 	}
 	if a.Deed != nil {
-		fmt.Fprintf(e.Stdout, "  deed     %s %s sealed\n", shortID(*a.Deed), ui.Sep)
+		fmt.Fprintf(e.Stdout, "  record   %s %s sealed\n", shortID(*a.Deed), ui.Sep)
 	}
 }
 

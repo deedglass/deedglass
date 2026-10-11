@@ -214,7 +214,7 @@ func runAgentCreate(ctx context.Context, e *Env, args []string) error {
 	s := e.Style
 	fmt.Fprintln(e.Stdout, s.OKLine(fmt.Sprintf("Agent created %s %s %s %s", ui.Sep, res.Name, ui.Sep, res.ID)))
 	if res.Deed != nil {
-		fmt.Fprintln(e.Stdout, s.OKLine(fmt.Sprintf("Deed sealed %s agent.created %s %s", ui.Sep, ui.Sep, *res.Deed)))
+		fmt.Fprintln(e.Stdout, s.OKLine(fmt.Sprintf("Record sealed %s agent.created %s %s", ui.Sep, ui.Sep, *res.Deed)))
 	}
 	fmt.Fprintf(e.Stdout, "  Next: create its key with `deedglass agent keys create %s`.\n", res.Name)
 	return nil
@@ -430,7 +430,7 @@ var statusReason string
 
 func reasonFlags(fs *flag.FlagSet) {
 	statusReason = ""
-	fs.StringVar(&statusReason, "reason", "", "why; it goes into the deed (required for start)")
+	fs.StringVar(&statusReason, "reason", "", "why; it goes into the record (required for start)")
 }
 
 func statusCmd(op identity.StatusOp) func(context.Context, *Env, []string) error {
@@ -445,7 +445,7 @@ func statusCmd(op identity.StatusOp) func(context.Context, *Env, []string) error
 			return err
 		}
 		if op == identity.OpStart && strings.TrimSpace(statusReason) == "" {
-			return usageErr(errors.New(`Starting an agent needs a reason. Add --reason "why it's safe now"; it goes into the deed`), "")
+			return usageErr(errors.New(`Starting an agent needs a reason. Add --reason "why it's safe now"; it goes into the record`), "")
 		}
 		c, err := apiClient(e)
 		if err != nil {
@@ -474,7 +474,7 @@ func statusCmd(op identity.StatusOp) func(context.Context, *Env, []string) error
 func printStatusResult(e *Env, op identity.StatusOp, res identity.AgentResult) {
 	s := e.Style
 	if res.Deed == nil {
-		fmt.Fprintln(e.Stdout, s.OKLine(fmt.Sprintf("%s is already %s %s no new deed", res.Name, res.Status, ui.Sep)))
+		fmt.Fprintln(e.Stdout, s.OKLine(fmt.Sprintf("%s is already %s %s no new record", res.Name, res.Status, ui.Sep)))
 		return
 	}
 	verb := map[identity.StatusOp]string{identity.OpSuspend: "Suspended", identity.OpResume: "Resumed", identity.OpStop: "Stopped", identity.OpStart: "Started"}[op]
@@ -693,7 +693,7 @@ func runAgentKeysRevoke(ctx context.Context, e *Env, args []string) error {
 
 func printRevoked(e *Env, res identity.KeyResult) {
 	if res.Deed == nil {
-		fmt.Fprintln(e.Stdout, e.Style.OKLine(fmt.Sprintf("Key %s was already revoked %s no new deed", res.Prefix, ui.Sep)))
+		fmt.Fprintln(e.Stdout, e.Style.OKLine(fmt.Sprintf("Key %s was already revoked %s no new record", res.Prefix, ui.Sep)))
 		return
 	}
 	fmt.Fprintln(e.Stdout, e.Style.OKLine(fmt.Sprintf("Key revoked %s %s %s %s sealed", ui.Sep, res.Prefix, ui.Sep, *res.Deed)))
@@ -709,7 +709,7 @@ var stopAllValues struct {
 
 func stopAllFlags(fs *flag.FlagSet) {
 	stopAllValues.reason, stopAllValues.yes = "", false
-	fs.StringVar(&stopAllValues.reason, "reason", "", "why; it goes into the deed")
+	fs.StringVar(&stopAllValues.reason, "reason", "", "why; it goes into the record")
 	fs.BoolVar(&stopAllValues.yes, "yes", false, "skip the typed confirmation (scripts)")
 }
 
@@ -733,7 +733,7 @@ func runOrgStopAll(ctx context.Context, e *Env, args []string) error {
 		if e.Globals.JSON {
 			return writeJSON(e, map[string]any{"object": "org_stop", "org": w.Org.ID, "stopped": true, "deed": nil})
 		}
-		fmt.Fprintln(e.Stdout, e.Style.OKLine(fmt.Sprintf("All agents in %s are already stopped %s no new deed", w.Org.Name, ui.Sep)))
+		fmt.Fprintln(e.Stdout, e.Style.OKLine(fmt.Sprintf("All agents in %s are already stopped %s no new record", w.Org.Name, ui.Sep)))
 		fmt.Fprintln(e.Stdout, "  To start them again: an owner in Console › Settings, or `deedglass org start-all` on the server.")
 		return nil
 	}
@@ -768,7 +768,7 @@ func runOrgStopAll(ctx context.Context, e *Env, args []string) error {
 	if e.Globals.JSON {
 		return writeJSON(e, res)
 	}
-	deedText := "no new deed"
+	deedText := "no new record"
 	if res.Deed != nil {
 		deedText = *res.Deed + " sealed"
 	}
@@ -789,7 +789,7 @@ func runOrgStartAll(ctx context.Context, e *Env, args []string) error {
 		return usageErr(fmt.Errorf("deedglass org start-all takes flags only (got %q)", pos[0]), `deedglass org start-all --org acme --reason "…"`)
 	}
 	if strings.TrimSpace(statusReason) == "" {
-		return usageErr(errors.New(`Starting all agents needs a reason. Add --reason "why it's safe now"; it goes into the deed`), "")
+		return usageErr(errors.New(`Starting all agents needs a reason. Add --reason "why it's safe now"; it goes into the record`), "")
 	}
 	_, db, _, people, done, err := openPeople(ctx, e)
 	if err != nil {
@@ -820,7 +820,7 @@ func runOrgStartAll(ctx context.Context, e *Env, args []string) error {
 			"deed": res.Deed, "still_stopped": names})
 	}
 	if res.Deed == nil {
-		fmt.Fprintln(e.Stdout, e.Style.OKLine(fmt.Sprintf("%s wasn't stopped %s no new deed", org.Name, ui.Sep)))
+		fmt.Fprintln(e.Stdout, e.Style.OKLine(fmt.Sprintf("%s wasn't stopped %s no new record", org.Name, ui.Sep)))
 	} else {
 		fmt.Fprintln(e.Stdout, e.Style.OKLine(fmt.Sprintf("All agents started %s %s %s %s sealed", ui.Sep, org.Name, ui.Sep, *res.Deed)))
 	}
@@ -872,7 +872,7 @@ func runOrgKeysCreate(ctx context.Context, e *Env, args []string) error {
 func printAdminKey(e *Env, orgName string, res identity.KeyResult) {
 	printNewKey(e, fmt.Sprintf("Admin key created %s %s %s %s %s %s", ui.Sep, orgName, ui.Sep, res.Mode, ui.Sep, res.ID), res)
 	if res.Deed != nil {
-		fmt.Fprintf(e.Stdout, "  Deed sealed %s api_key.created %s %s\n", ui.Sep, ui.Sep, *res.Deed)
+		fmt.Fprintf(e.Stdout, "  Record sealed %s api_key.created %s %s\n", ui.Sep, ui.Sep, *res.Deed)
 	}
 	fmt.Fprintf(e.Stdout, "  It acts as Admin in %s: it manages agents and keys, and can't start all agents or create admin keys.\n", orgName)
 	fmt.Fprintln(e.Stdout, "  Use it with the CLI by setting DEEDGLASS_API_KEY.")

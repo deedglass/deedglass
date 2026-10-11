@@ -360,7 +360,7 @@ func runPostgresInit(ctx context.Context, e *Env, args []string) error {
 					fmt.Fprintf(e.Stdout, "  %s\n", s.Dim("Sealed connector.postgres_initialized "+ui.Sep+" "+res.Deed))
 				}
 			} else if text {
-				fmt.Fprintf(e.Stdout, "  %s The setup wasn't recorded as a deed: %s\n", s.Amber(ui.Unknown), lastPart(err))
+				fmt.Fprintf(e.Stdout, "  %s The setup wasn't sealed as a record: %s\n", s.Amber(ui.Unknown), lastPart(err))
 			}
 		}
 	}
@@ -524,12 +524,12 @@ func renderPGCheck(e *Env, checks []connector.Check, line, status string) error 
 	fail := status == string(connector.CheckFail)
 	if e.Globals.JSON {
 		ready := !fail
-		if err := writeJSON(e, map[string]any{"object": "postgres_check", "status": status, "ready_for_l2": ready && strings.HasPrefix(line, "Ready for L2"),
+		if err := writeJSON(e, map[string]any{"object": "postgres_check", "status": status, "ready_for_l2": ready && strings.HasPrefix(line, "Ready for Proven checks"),
 			"summary": line, "checks": checks}); err != nil {
 			return err
 		}
 		if fail {
-			return &ExitError{Code: ExitFailure, ErrCode: "connector_test_failed", Err: errors.New("not ready for L2"), printed: true}
+			return &ExitError{Code: ExitFailure, ErrCode: "connector_test_failed", Err: errors.New("not ready for Proven checks"), printed: true}
 		}
 		return nil
 	}
@@ -589,7 +589,7 @@ func renderPGCheck(e *Env, checks []connector.Check, line, status string) error 
 	}
 	fmt.Fprintln(e.Stdout, line)
 	if fail {
-		return &ExitError{Code: ExitFailure, ErrCode: "connector_test_failed", Err: errors.New("not ready for L2"), printed: true}
+		return &ExitError{Code: ExitFailure, ErrCode: "connector_test_failed", Err: errors.New("not ready for Proven checks"), printed: true}
 	}
 	return nil
 }

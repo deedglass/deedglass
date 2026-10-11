@@ -92,7 +92,7 @@ test.describe('policies', () => {
     const sh = page.getByRole('dialog', { name: `Run acme-demo v${vText} in shadow?` });
     await sh.getByLabel(/Reason/).fill('Try the comment change next to the enforced version');
     await sh.getByRole('button', { name: `Run v${vText} in shadow` }).click();
-    await expect(page.locator('.toast').last()).toContainText(`acme-demo v${vText} running in shadow · deed sealed`);
+    await expect(page.locator('.toast').last()).toContainText(`acme-demo v${vText} running in shadow · record sealed`);
     // enforce: the button stays disabled until the name is typed exactly
     await page.getByRole('button', { name: 'Enforce', exact: true }).click();
     const en = page.getByRole('alertdialog', { name: `Enforce acme-demo v${vText}?` });
@@ -104,8 +104,8 @@ test.describe('policies', () => {
     await expect(go).toBeEnabled();
     await go.click();
     const toast = page.locator('.toast').last();
-    await expect(toast).toContainText(`acme-demo v${vText} enforced · deed sealed`);
-    await toast.getByRole('link', { name: 'View deed' }).click();
+    await expect(toast).toContainText(`acme-demo v${vText} enforced · record sealed`);
+    await toast.getByRole('link', { name: 'View record' }).click();
     await expect(page).toHaveURL(/\/app\/deeds\/deed_/);
     await expect(page.locator('main')).toContainText('policy.activated');
     // export the chain and verify it offline

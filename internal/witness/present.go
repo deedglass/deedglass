@@ -3,9 +3,9 @@ package witness
 // Console and CLI copy for the Witness (S25 renders it; brand §3, §12). One catalog, so the
 // Console, the CLI and the docs say the same words.
 const (
-	TooltipL0 = "L0 Reported: the tool's own answer."
-	TooltipL1 = "L1 Confirmed: Deedglass read the result back from the target."
-	TooltipL2 = "L2 Witnessed: Deedglass saw the change in the system of record."
+	TooltipL0 = "Claimed (L0): the tool's own answer."
+	TooltipL1 = "Checked (L1): Deedglass read the result back from the target."
+	TooltipL2 = "Proven (L2): Deedglass saw the change in the system of record."
 
 	// PanelNoReadBack is the Witness panel for a write tool without a read-back; %s are the
 	// connector and the tool.

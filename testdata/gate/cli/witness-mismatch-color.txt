@@ -1,9 +1,9 @@
 exit 1
 --- stdout
 [31m✕[0m executed · orders.update_status · N ms
-  witness  L1 · [31mMISMATCH[0m · orders.update_status reported success, but orders.get says status is "shipped", not "cancelled".
+  check    Checked · [31mDoesn't match[0m · orders.update_status reported success, but orders.get says status is "shipped", not "cancelled".
            [2mfield          expected     observed[0m
            body.status    cancelled    shipped
-  deed     deed_… · seq N · sealed
+  record   deed_… · seq N · sealed
   Next: deedglass actions show act_… · https://docs.deedglass.com/witness/mismatch
 --- stderr

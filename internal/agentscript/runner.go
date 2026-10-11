@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/deedglass/deedglass/internal/witness"
 	"io"
 	"os"
 	"path/filepath"
@@ -493,15 +494,15 @@ func (r *runner) callLines(res Result) {
 	switch res.Status {
 	case "executed":
 		if res.Verdict == "MISMATCH" {
-			r.line(r.st.Red("✕") + " " + res.Level + " · " + r.st.Red("MISMATCH") + " · " + res.Summary)
+			r.line(r.st.Red("✕") + " " + witness.PlainLevel(res.Level) + " · " + r.st.Red(witness.PlainMismatch) + " · " + res.Summary)
 			for _, d := range res.Diff {
 				r.line("    " + d)
 			}
 			return
 		}
-		line := r.verdictSym(res.Verdict) + " allowed · " + res.Tool + " · " + res.Level + " · " + res.Verdict
+		line := r.verdictSym(res.Verdict) + " allowed · " + res.Tool + " · " + witness.PlainLevel(res.Level) + " · " + witness.PlainVerdict(res.Verdict)
 		if res.DeedSeq != "" {
-			line += " · deed " + res.DeedSeq
+			line += " · record " + res.DeedSeq
 		}
 		r.line(line)
 	case "denied":
@@ -520,7 +521,7 @@ func (r *runner) executedLine(res Result) {
 		r.callLines(res)
 		return
 	}
-	line := r.verdictSym(res.Verdict) + " executed · " + res.Tool + " · " + res.Level + " · " + res.Verdict
+	line := r.verdictSym(res.Verdict) + " executed · " + res.Tool + " · " + witness.PlainLevel(res.Level) + " · " + witness.PlainVerdict(res.Verdict)
 	if res.Summary != "" {
 		line += " · " + res.Summary
 	}

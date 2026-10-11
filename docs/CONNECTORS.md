@@ -42,7 +42,7 @@ $ deedglass connector create --config examples/connectors/orders.yaml
 
 $ deedglass connector credentials set orders --from-env ORDERS_TOKEN
 ✓ Credentials stored · orders · bearer · …9f2c · encrypted with kek:3f9a1c2b7d8e
-  Agents never see this value. Deedglass adds it only when the Gate runs a call.
+  Agents never see this value. Deedglass adds it only when it runs a call.
 
 $ deedglass connector test orders
 ✓ orders · 5 checks passed · 184 ms

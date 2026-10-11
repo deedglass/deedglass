@@ -43,7 +43,7 @@ undone`, because undo is built from row images and a TRUNCATE has none.
 
 ## Sealing (next release)
 
-The footer says `sealing as a deed: next release`. `deedglass deeds seal-file` and
+The footer says `sealing as a record: next release`. `deedglass deeds seal-file` and
 `deedglass verify --file` moved to S38 under S37's time box. Then the footer becomes
 `Sealed as deed_… · sha256:… · check it with deedglass verify`.
 

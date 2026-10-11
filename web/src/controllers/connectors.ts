@@ -31,7 +31,7 @@ const tz = () => get()?.org.timezone ?? 'UTC';
 const isAdmin = () => atLeast(get()?.me.membership.role, 'admin');
 
 function levelBadges(levels: string[]): HTMLElement {
-  return h('span', { class: 'lvl-badges' }, ...levels.map((l) => h('span', { class: 'lvl-badge', title: `${l} ${copy.chips.level[l as 'L0'] ?? ''}`.trim() }, l)));
+  return h('span', { class: 'lvl-badges' }, ...levels.map((l) => h('span', { class: 'lvl-badge', title: l }, copy.chips.level[l as 'L0'] ?? l)));
 }
 
 function healthCell(x: Connector, id?: string): HTMLElement {

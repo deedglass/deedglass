@@ -3,10 +3,10 @@ exit 0
 postgres.execute · support-bot on behalf of u_5780 · TIME UTC
   decision   allow · rule allow-order-updates
   execution  executed · 55 ms
-  witness    L2 · MISMATCH · postgres.pgoutput
-             ✓ L0  The tool reported success.
-             ✕ L2  Postgres changed 301 rows in public.orders. The agent reported 1.
-  deed       seq 28 · deed_… · sealed with sk_…
+  check      Proven · Doesn't match · postgres.pgoutput
+             ✓ Claimed  The tool reported success.
+             ✕ Proven   Postgres changed 301 rows in public.orders. The agent reported 1.
+  record     seq 28 · deed_… · sealed with sk_…
   events     received → authenticated → evaluated → executing → executed → witnessing → mismatch → sealed
   next       deedglass deeds show deed_ID
 --- stderr

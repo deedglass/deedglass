@@ -9,6 +9,7 @@ import (
 	"github.com/deedglass/deedglass/internal/httpx"
 	"github.com/deedglass/deedglass/internal/intent"
 	"github.com/deedglass/deedglass/internal/ledger"
+	"github.com/deedglass/deedglass/internal/witness"
 )
 
 // present.go is the Gate's one catalog of user-facing strings (S13 §5). API error codes live in
@@ -86,11 +87,11 @@ const (
 	MsgCancelApproved      = "A person already approved this action, so it can't be cancelled. It runs now."
 	MsgCancelDone          = "This action has already finished, so there is nothing to cancel."
 	MsgResultReported      = "A result was already reported for this action."
-	MsgResultLate          = "This action was already sealed as UNVERIFIABLE because its result arrived after the deadline."
+	MsgResultLate          = "This action was already sealed as Can't check because its result arrived after the deadline."
 	MsgResultNotProxy      = "This action runs in gateway mode, so Deedglass reported its result itself. Only proxy-mode actions take a result."
 	MsgResultNotAuthorized = "This action hasn't been authorized to run yet, so it has no result to report. Wait for its approval: GET /v1/actions/{id}?wait=25."
 	MsgResultDigest        = "result_digest doesn't match result. Send the digest of the exact result (sha256 of its RFC 8785 form), or leave it out."
-	MsgResultMissing       = "Send result or result_digest, so the deed can name what the tool returned."
+	MsgResultMissing       = "Send result or result_digest, so the record can name what the tool returned."
 	MsgResultStatus        = "status must be succeeded, failed or unknown."
 	MsgResultTimes         = "finished_at must not be before started_at, and both must be RFC 3339 times near now."
 	MsgResultTooLarge      = "result is larger than the limit. Send result_digest alone, with the digest of the full result."
@@ -181,7 +182,7 @@ func WitnessPhrase(level, verdict, method string, reasons []string) string {
 			case ReasonEdgeLost:
 				return "the edge never reported"
 			case ReasonWitnessGaveUp:
-				return "the witness gave up"
+				return "the check gave up"
 			}
 		}
 		return "the outcome is unknown"
@@ -271,7 +272,7 @@ func MCPDenyText(a *ledger.Action, fallback string) string {
 	}
 	if src == "rule" || src == "default" || src == "builtin" {
 		if a.Deed != nil {
-			msg += " Deedglass sealed a deed of this attempt (" + *a.Deed + ")."
+			msg += " Deedglass sealed a record of this attempt (" + *a.Deed + ")."
 		}
 		msg += " If this should be allowed, a person can change the policy in Console › Policies."
 	}
@@ -305,14 +306,14 @@ func MCPPendingText(a *ledger.Action, approvalID string, expires time.Time) stri
 }
 
 // MCPWitnessText is the one line a tools/call result gets when its verdict isn't VERIFIED (S19):
-// "Deedglass witness · L1 · MISMATCH · orders.update_status reported success, but …". "" for a
+// "Deedglass check · Checked · Doesn't match · orders.update_status reported success, but …". "" for a
 // VERIFIED verdict or none.
 func MCPWitnessText(a *ledger.Action) string {
 	w := a.Witness
 	if w == nil || w.Verdict == VerdictVerified {
 		return ""
 	}
-	line := "Deedglass witness · " + w.Level + " · " + w.Verdict
+	line := "Deedglass check · " + witness.PlainLevel(w.Level) + " · " + witness.PlainVerdict(w.Verdict)
 	if w.Summary != nil && *w.Summary != "" {
 		line += " · " + *w.Summary
 	}
@@ -321,7 +322,7 @@ func MCPWitnessText(a *ledger.Action) string {
 
 // MCPWitnessPendingText is a tools/call result whose tool ran while its L2 verdict still waits for
 // Postgres's change log when the call's wait ends (S21 §3.9).
-const MCPWitnessPendingText = "Deedglass witness · pending · Postgres's change log hasn't shown this write yet. The verdict will appear in Console › Actions."
+const MCPWitnessPendingText = "Deedglass check · pending · Postgres's change log hasn't shown this write yet. The verdict will appear in Console › Actions."
 
 // MCPStillPendingText answers deedglass.check_approval while a person hasn't decided.
 func MCPStillPendingText(approvalID string, expires time.Time) string {
@@ -405,12 +406,12 @@ func MCPUnknownToolText(tool string) string {
 
 // MCPCrashedText is a call the server died running: Deedglass can't know whether it applied.
 func MCPCrashedText(tool, actionID string) string {
-	return fmt.Sprintf("The MCP server stopped while running %s. It may have run. Deedglass recorded it as UNVERIFIABLE (%s).", clip(tool, 160), actionID)
+	return fmt.Sprintf("The MCP server stopped while running %s. It may have run. Deedglass recorded it as Can't check (%s).", clip(tool, 160), actionID)
 }
 
 // MCPTimeoutText is a call the server didn't answer within the wrapper's --call-timeout.
 func MCPTimeoutText(tool string, d time.Duration, actionID string) string {
-	return fmt.Sprintf("The MCP server didn't answer %s within %s. It may have run. Deedglass recorded it as UNVERIFIABLE (%s).", clip(tool, 160), humanSeconds(d), actionID)
+	return fmt.Sprintf("The MCP server didn't answer %s within %s. It may have run. Deedglass recorded it as Can't check (%s).", clip(tool, 160), humanSeconds(d), actionID)
 }
 
 // clock is HH:MM UTC.

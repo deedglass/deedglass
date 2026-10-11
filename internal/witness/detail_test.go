@@ -343,9 +343,19 @@ func TestPresent(t *testing.T) {
 			t.Errorf("Tooltip(%q)", l)
 		}
 	}
-	for l, want := range map[Level]string{L0: "L0 Reported", L1: "L1 Confirmed", L2: "L2 Witnessed", "L7": "L7"} {
+	for l, want := range map[Level]string{L0: "Claimed (L0)", L1: "Checked (L1)", L2: "Proven (L2)", "L7": "L7"} {
 		if l.Title() != want {
 			t.Errorf("Title(%q) = %q", l, l.Title())
+		}
+	}
+	for l, want := range map[Level]string{L0: "Claimed", L1: "Checked", L2: "Proven", "L7": "L7"} {
+		if l.Plain() != want || PlainLevel(string(l)) != want {
+			t.Errorf("Plain(%q) = %q", l, l.Plain())
+		}
+	}
+	for v, want := range map[string]string{"VERIFIED": "Matches", "MISMATCH": "Doesn't match", "UNVERIFIABLE": "Can't check", "simulated": "simulated"} {
+		if got := PlainVerdict(v); got != want {
+			t.Errorf("PlainVerdict(%q) = %q", v, got)
 		}
 	}
 	for in, want := range map[string]Level{"": L0, "L0": L0, "L1": L1, "L2": L2} {

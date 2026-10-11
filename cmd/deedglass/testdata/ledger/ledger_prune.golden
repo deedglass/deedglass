@@ -1,6 +1,6 @@
 exit 0
 --- stdout
 ✓ Removed payloads from 47 actions · SIZE (space returns after autovacuum)
-✓ Deed sealed · seq 49 · ledger.pruned
-  Every deed still verifies. Payloads are gone; their digests stay.
+✓ Record sealed · seq 49 · ledger.pruned
+  Every record still verifies. Payloads are gone; their digests stay.
 --- stderr

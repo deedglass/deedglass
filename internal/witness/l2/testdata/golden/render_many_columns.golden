@@ -6,4 +6,4 @@ witness  L2 · MISMATCH · Postgres changed customer_id on 1 row in public.order
   ✓ expected       42   7 → 9         paid → shipped   1200 → 0      2026-10-01 09:00:00+00 → 2026-10-07…
                    2 more changed columns in Console › Actions
 
-  Witnessed by Postgres · commit 0/3E65020 · 2026-10-07 13:12:09 UTC
+  Proven by Postgres · commit 0/3E65020 · 2026-10-07 13:12:09 UTC

@@ -45,7 +45,7 @@ const configSchema = `{"type":"object","required":["base_url","allowed_methods",
 // Info implements connector.Connector.
 func (c *Connector) Info() connector.TypeInfo {
 	return connector.TypeInfo{Object: "connector_type", Type: Type, Title: "REST API",
-		Description: "Any JSON API as governed tools: one method on one templated path per tool, with the credential added only when the Gate runs a call.",
+		Description: "Any JSON API as governed tools: one method on one templated path per tool, with the credential added only when Deedglass runs a call.",
 		Levels:      []string{"L0", "L1"},
 		CredentialKinds: []connector.CredentialKind{
 			{Kind: "bearer", Fields: []connector.CredentialField{{Name: "token", Secret: true}}},

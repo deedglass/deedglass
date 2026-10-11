@@ -14,11 +14,11 @@ const action: DeedBody = {
 
 describe('deedview', () => {
   it('summaries', () => {
-    expect(deedSummary(action)).toBe('postgres.execute · support-bot · L2 · MISMATCH');
+    expect(deedSummary(action)).toBe("postgres.execute · support-bot · Proven · Doesn't match");
     const admin: DeedBody = { ...action, kind: 'admin', action: null, agent: null, policy: null, witness: null, execution: null,
       admin: { action: 'policy.activated', actor: { id: 'usr_x', type: 'user', name: 'Priya Raman' }, target: { id: 'pol_01m427zszefdzm8a8qf4zxmjwv', type: 'policy' }, data_digest: null, event: 'adm_x', reason: null } };
     expect(deedSummary(admin)).toBe('policy.activated · pol_01m4…mjwv · by Priya Raman');
-    expect(deedSummary({ ...action, kind: 'amendment', amends: 'deed_01m427zt7h344praz6npt12dbz' })).toBe('Amends deed_01m4…2dbz · postgres.execute · support-bot · L2 · MISMATCH');
+    expect(deedSummary({ ...action, kind: 'amendment', amends: 'deed_01m427zt7h344praz6npt12dbz' })).toBe("Amends deed_01m4…2dbz · postgres.execute · support-bot · Proven · Doesn't match");
   });
   it('sections follow contract §7 and drop empty rows', () => {
     const s = sections(action);

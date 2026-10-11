@@ -86,7 +86,7 @@ func fakeDecoderAPI(t *testing.T, degraded bool) *httptest.Server {
 			v, ok := byRef[ref]
 			if !ok {
 				w.WriteHeader(409)
-				io.WriteString(w, `{"error":{"type":"invalid_request_error","code":"witness_not_configured","message":"This connector isn't witnessed, so it has no decoder. Turn on witness.enabled in its config first.","param":null,"request_id":"req_1","doc_url":"https://docs.deedglass.com/errors/witness_not_configured"}}`)
+				io.WriteString(w, `{"error":{"type":"invalid_request_error","code":"witness_not_configured","message":"Checks aren't on for this connector, so it has no decoder. Turn on witness.enabled in its config first.","param":null,"request_id":"req_1","doc_url":"https://docs.deedglass.com/errors/witness_not_configured"}}`)
 				return
 			}
 			if r.Method == "DELETE" {

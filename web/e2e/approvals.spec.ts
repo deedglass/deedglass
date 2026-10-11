@@ -35,10 +35,10 @@ test.describe('approvals', () => {
     await approve.click();
     const sheet = page.getByRole('dialog', { name: 'Approve postgres.execute?' });
     await expect(sheet).toBeVisible();
-    await sheet.getByLabel('Why is this safe? (optional, recorded in the deed)').fill('Customer confirmed by phone');
+    await sheet.getByLabel('Why is this safe? (optional, sealed in the record)').fill('Customer confirmed by phone');
     const t0 = Date.now();
     await sheet.getByRole('button', { name: 'Approve' }).click();
-    await expect(page.locator('.apv-bar-note')).toContainText(/Executed · .*L2.*VERIFIED.*deed sealed/, { timeout: 15_000 });
+    await expect(page.locator('.apv-bar-note')).toContainText(/Executed · .*Proven.*Matches.*record sealed/, { timeout: 15_000 });
     test.info().annotations.push({ type: 'approve→verified ms (360)', description: String(Date.now() - t0) });
     const a = await apiAs<{ approval: { status: string } }>(seeds().adminKey, 'GET', `/v1/actions/${ap.action}`);
     expect(a.body.approval.status).toBe('approved');
@@ -63,7 +63,7 @@ test.describe('approvals', () => {
     await expect(sheet).toBeHidden();
     await page.locator('.apv-bar').getByRole('button', { name: 'Approve' }).click();
     await page.getByRole('dialog', { name: 'Approve postgres.execute?' }).getByLabel(/Why is this safe/).press('ControlOrMeta+Enter');
-    await expect(page.locator('.apv-bar-note')).toContainText(/Executed · .*L2.*VERIFIED/, { timeout: 15_000 });
+    await expect(page.locator('.apv-bar-note')).toContainText(/Executed · .*Proven.*Matches/, { timeout: 15_000 });
     st = await apiAs<{ status: string }>(seeds().adminKey, 'GET', `/v1/approvals/${ap.approval}`);
     expect(st.body.status).toBe('approved');
     await done();
@@ -104,7 +104,7 @@ test.describe('approvals', () => {
     await pb.goto(`/app/approvals/${ap.approval}`);
     await pb.locator('.apv-bar').getByRole('button', { name: 'Approve' }).click();
     await pb.getByRole('dialog', { name: /Approve/ }).getByRole('button', { name: 'Approve' }).click();
-    await expect(pb.locator('.apv-bar-note')).toContainText(/Executed · .*L2/, { timeout: 15_000 });
+    await expect(pb.locator('.apv-bar-note')).toContainText(/Executed · .*Proven/, { timeout: 15_000 });
     await b.close();
     await done();
   });

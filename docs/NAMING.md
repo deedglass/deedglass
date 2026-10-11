@@ -10,6 +10,20 @@ Sources: `~/txv/ops/brand/DEEDGLASS_BRAND.md` §1 and §3, `~/txv/ops/plan/promp
 - `deedglass`, all lowercase, in the CLI, the wordmark, the Go module, env var prefixes (`DEEDGLASS_` is the one uppercase form), SQL names and type strings.
 - Ids are lowercase everywhere, including examples: `agt_01j9…`, `deed_01j9…`.
 
+## Plain names (what people read)
+
+Since 2026-10-11 (founder decision, ADR-078 proposed), everything a person reads (the Console, CLI
+text and help, the README, the docs landing and Quickstart, the scan report, error messages) uses
+plain names, and everything a program reads keeps the short names. A level is **Claimed** (`L0`),
+**Checked** (`L1`) or **Proven** (`L2`); a result is **Matches** (`VERIFIED`), **Doesn't match**
+(`MISMATCH`) or **Can't check** (`UNVERIFIABLE`); the Gate reads as **rules** (or simply
+"Deedglass" where it means routing a call), the Witness as a **check**, and a deed as a **record**
+(the record card and the `.deed.json` file keep the Deed name). API field names, JSON keys, enum wire
+values, database columns, Go identifiers, CLI command names and flags, `--json` output, deed
+contents, the verifier's messages and the attack suite's outcome words are unchanged. One catalog
+each: `internal/witness/plain.go` (Go) and `plainVerdict`/`plainLevel` in `web/src/lib/copy.ts`
+(the Console). The public glossary is `docs-site/src/content/docs/concepts/glossary.mdx`.
+
 ## Product vocabulary
 
 | Concept | Deedglass word | Notes |

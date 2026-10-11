@@ -1,13 +1,13 @@
 exit 0
 --- stdout
 ◐ 50 fake actions for org_… (demo) · seed 42 · database HOST
-  ✓ 30 verified       L0 13 · L1 6 · L2 11
+  ✓ 30 matches        L0 13 · L1 6 · L2 11
   ✕  4 denied         block-destructive-sql 3 · refund-limit 1
-  ✕  4 mismatch       L2 · postgres.execute
-  ○  5 unverifiable   timeout
+  ✕  4 doesn't match  Proven · postgres.execute
+  ○  5 can't check    timeout
   ·  3 failed         upstream_error 1 · timeout 2
   ◐  3 pending        waiting for approval
-  ✓  1 amended        UNVERIFIABLE → VERIFIED, sealed as amendments
-✓ 48 deeds sealed · seq 1 → 48 · chain intact
+  ✓  1 amended        Can't check → Matches, sealed as amendments
+✓ 48 records sealed · seq 1 → 48 · chain intact
   next       deedglass actions list   ·   deedglass deeds export --out demo.tar.gz
 --- stderr

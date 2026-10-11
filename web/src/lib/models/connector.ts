@@ -8,7 +8,7 @@
 //   `witness` block was added to the connector object, and nothing is read live from the customer
 //   database on page load.
 // - The Postgres readiness panel is S17's connector_test for a postgres connector (POST …/test);
-//   "Ready for L2" when no check fails.
+//   "Ready for Proven checks" when no check fails.
 // - The connector's `health` is {status: unknown|pass|warn|fail, tested_at}.
 
 import { connectorsCopy as c } from '../copy-connectors.ts';

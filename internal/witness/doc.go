@@ -1,6 +1,6 @@
 // Package witness decides what actually happened (contract §6): it compares what a tool reported
-// with what the target shows, and returns a verdict with a level and a method. L0 Reported is the
-// tool's own response, L1 Confirmed is a read-back from the target, and L2 Witnessed is the system
+// with what the target shows, and returns a verdict with a level and a method. L0 (Claimed) is the
+// tool's own response, L1 (Checked) is a read-back from the target, and L2 (Proven) is the system
 // of record itself (the Postgres change stream, S21).
 //
 // The package is pure: it never does I/O (internal/archtest). Read-backs go through an Observer

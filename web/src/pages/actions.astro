@@ -25,8 +25,8 @@ const c = copy.chips;
       </div>
       <div class="filterbar-row filterbar-segs">
         <div class="segmented">{[f.decisionAll, c.allowed, c.denied, c.approval].map((l) => <button type="button" tabindex="-1" disabled>{l}</button>)}</div>
-        <div class="segmented">{['Verified', 'Mismatch', 'Unverifiable'].map((l) => <button type="button" tabindex="-1" disabled>{l}</button>)}</div>
-        <div class="segmented">{['L0', 'L1', 'L2'].map((l) => <button type="button" tabindex="-1" disabled>{l}</button>)}</div>
+        <div class="segmented">{[copy.chips.verified, copy.chips.mismatch, copy.chips.unverifiable].map((l) => <button type="button" tabindex="-1" disabled>{l}</button>)}</div>
+        <div class="segmented">{[copy.chips.level.L0, copy.chips.level.L1, copy.chips.level.L2].map((l) => <button type="button" tabindex="-1" disabled>{l}</button>)}</div>
       </div>
     </div>
   </div>

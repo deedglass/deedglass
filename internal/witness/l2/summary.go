@@ -245,10 +245,10 @@ const (
 	CopyBadgeExpected = "expected"
 	CopyBadgeUnexpect = "unexpected"
 	// CopyFooter: %s is the commit LSN, %s the time ("2026-10-07 13:12:09 UTC").
-	CopyFooter = "Witnessed by Postgres · commit %s · %s"
+	CopyFooter = "Proven by Postgres · commit %s · %s"
 	// CopyTruncated: %s shown, %s total ("Showing the first 20 of 301 changed rows.").
 	CopyTruncated       = "Showing the first %s of %s changed rows."
-	CopyAmendmentBanner = "This action has a later verdict. The original deed is unchanged; the amendment deed records what Postgres showed afterwards."
-	CopyWitnessOff      = "Turn on Witness to compare what the agent reported with what Postgres committed."
-	CopyKeepsWatching   = "Deedglass keeps watching. If Postgres's change log shows it later, an amendment deed records the result."
+	CopyAmendmentBanner = "This action has a later verdict. The original record is unchanged; the amendment shows what Postgres showed afterwards."
+	CopyWitnessOff      = "Turn on checks to compare what the agent reported with what Postgres committed."
+	CopyKeepsWatching   = "Deedglass keeps watching. If Postgres's change log shows it later, an amendment record holds the result."
 )

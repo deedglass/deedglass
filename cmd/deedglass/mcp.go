@@ -204,7 +204,7 @@ func mcpSnippetFlags(fs *flag.FlagSet) {
 	fs.StringVar(&o.connector, "connector", "", "the connector name, for example scratch")
 	fs.StringVar(&o.connectorType, "connector-type", "", "copied to the wrap command (postgres for servers whose tools take args.sql)")
 	fs.BoolVar(&o.fromEnv, "api-key-from-env", false, "put DEEDGLASS_API_KEY from this shell into the snippet, instead of a placeholder")
-	fs.StringVar(&o.transport, "transport", "stdio", "stdio (deedglass mcp wrap around a server command) or http (the Gate's /mcp endpoints)")
+	fs.StringVar(&o.transport, "transport", "stdio", "stdio (deedglass mcp wrap around a server command) or http (Deedglass's /mcp endpoints)")
 }
 
 // lookPath is replaced in tests.

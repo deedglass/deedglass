@@ -2,7 +2,7 @@
   "content": [
     {
       "type": "text",
-      "text": "The MCP server stopped while running scratch.write_file. It may have run. Deedglass recorded it as UNVERIFIABLE (act_01j9zt0000000000000000000a)."
+      "text": "The MCP server stopped while running scratch.write_file. It may have run. Deedglass recorded it as Can't check (act_01j9zt0000000000000000000a)."
     }
   ],
   "isError": true,

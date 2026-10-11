@@ -43,7 +43,7 @@ const (
 	Tagline    = "See what your agents actually did."
 	DocsHost   = "docs.deedglass.com"
 	NextInit   = "Run `deedglass init` to connect your first agent."
-	SealedLine = "Sealed. Your first deed is in the ledger."
+	SealedLine = "Sealed. Your first record is in the ledger."
 )
 
 const (

@@ -179,11 +179,11 @@ func TestRunOffline(t *testing.T) {
 	for _, want := range []string{
 		"Deedglass demo · acme-demo · offline · 3 scenes",
 		"── 2/3 Put it back ───",
-		"✕ L2 · MISMATCH · Postgres changed 301 rows in public.orders. The agent reported 1.",
+		"✕ Proven · Doesn't match · Postgres changed 301 rows in public.orders. The agent reported 1.",
 		"    expected  UPDATE 1 row",
 		"◐ pending approval · postgres.undo · a person countersigns first",
 		"✓ countersigned by ops@example.test",
-		"✓ executed · postgres.undo · L2 · VERIFIED · 301 rows restored",
+		"✓ executed · postgres.undo · Proven · Matches · 301 rows restored",
 		"○ skipped · needs Stripe test mode · run make demo-live",
 		"Demo complete · 2 scenes · 1 skipped · 0 s",
 	} {

@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/deedglass/deedglass/internal/witness"
 	"io"
 	"os"
 	"os/signal"
@@ -147,7 +148,7 @@ func writeFollowLine(w io.Writer, st ui.Style, a ledger.Action) {
 		}
 		verdict := ""
 		if a.Witness != nil {
-			verdict = a.Witness.Level + " " + ui.Sep + " " + a.Witness.Verdict
+			verdict = witness.PlainLevel(a.Witness.Level) + " " + ui.Sep + " " + witness.PlainVerdict(a.Witness.Verdict)
 			switch a.Witness.Verdict {
 			case "MISMATCH":
 				sym, color = ui.Fail, st.Red
@@ -157,6 +158,6 @@ func writeFollowLine(w io.Writer, st ui.Style, a ledger.Action) {
 		}
 		middle = ui.Pad(lat, 9) + verdict
 	}
-	line := at + "  " + color(sym) + " " + ui.Pad(clip(a.Tool, 20), 21) + ui.Pad(word, 10) + ui.Pad(clip(middle, 29), 30) + st.Dim(shortRef(ref))
+	line := at + "  " + color(sym) + " " + ui.Pad(clip(a.Tool, 20), 21) + ui.Pad(word, 10) + ui.Pad(clip(middle, 31), 32) + st.Dim(shortRef(ref))
 	fmt.Fprintln(w, strings.TrimRight(line, " "))
 }

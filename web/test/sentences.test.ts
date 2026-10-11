@@ -16,20 +16,20 @@ const w = (level: 'L0' | 'L1' | 'L2', verdict: 'VERIFIED' | 'MISMATCH' | 'UNVERI
 describe('actionSentence', () => {
   it('MISMATCH is the summary, verbatim, after the word', () => {
     const s = actionSentence(fx('action-mismatch-l2'), now);
-    expect(s).toMatchObject({ tone: 'mismatch', text: 'MISMATCH · Postgres changed 301 rows in public.orders. The agent reported 1.' });
+    expect(s).toMatchObject({ tone: 'mismatch', text: "Doesn't match · Postgres changed 301 rows in public.orders. The agent reported 1." });
   });
   it.each([
-    ['L2', 'Postgres committed 1 row in public.orders, as the statement said.', 'postgres.pgoutput', 'Witnessed by Postgres · Postgres committed 1 row in public.orders, as the statement said.'],
-    ['L2', 'Committed.', 'other.log', 'Witnessed by the system of record · Committed.'],
-    ['L1', 'Read back orders.get: status is "shipped".', 'readback.rest', 'Confirmed by a read-back · Read back orders.get: status is "shipped".'],
-    ['L0', 'The tool reported success.', 'reported', "Reported by the tool. Deedglass didn't read it back."],
+    ['L2', 'Postgres committed 1 row in public.orders, as the statement said.', 'postgres.pgoutput', 'Proven by Postgres · Postgres committed 1 row in public.orders, as the statement said.'],
+    ['L2', 'Committed.', 'other.log', 'Proven by the system of record · Committed.'],
+    ['L1', 'Read back orders.get: status is "shipped".', 'readback.rest', 'Checked by a read-back · Read back orders.get: status is "shipped".'],
+    ['L0', 'The tool reported success.', 'reported', "Claimed by the tool. Deedglass didn't read it back."],
   ] as const)('VERIFIED %s', (level, summary, method, text) => {
     expect(actionSentence(w(level, 'VERIFIED', summary, method), now)).toMatchObject({ tone: 'verified', text });
   });
   it('UNVERIFIABLE lists the gaps under it', () => {
     const s = actionSentence(fx('action-unverifiable'), now);
     expect(s.tone).toBe('unverifiable');
-    expect(s.text.startsWith('UNVERIFIABLE · ')).toBe(true);
+    expect(s.text.startsWith("Can't check · ")).toBe(true);
     expect(s.gaps.length).toBeGreaterThan(0);
   });
   it('a denial uses the Gate message when there is one, else the rule', () => {
@@ -49,7 +49,7 @@ describe('actionSentence', () => {
     expect(actionSentence(a, now).text).toBe('Waiting for approval · expires in 12 min');
   });
   it('failed names the error code and says nothing was witnessed', () => {
-    expect(actionSentence(fx('action-failed'), now)).toMatchObject({ tone: 'failed', text: 'The tool returned an error: upstream_error. Nothing was witnessed.' });
+    expect(actionSentence(fx('action-failed'), now)).toMatchObject({ tone: 'failed', text: 'The tool returned an error: upstream_error. Nothing was checked.' });
   });
   it('minutesUntil', () => {
     expect(minutesUntil('2026-10-09T14:06:00Z', now)).toBe('6 min');

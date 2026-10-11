@@ -59,7 +59,7 @@ func Checks() []Check {
 		{"vault.key", "Vault key", checkVault},
 		{"server.health", "Server", checkServer},
 		{"clock.skew", "Clock", checkClock},
-		{"ledger.chain", "Deed chain", checkChain},
+		{"ledger.chain", "Record chain", checkChain},
 		{"connectors.postgres", "Postgres connectors", checkConnectors},
 		{"decoder.slots", "Decoder slots", checkSlots},
 		{"wal.level", "WAL level", checkWAL},
@@ -415,7 +415,7 @@ func checkClock(ctx context.Context, env *Env) Result {
 	d := fmt.Sprintf("%.1f s from the server", skew.Seconds())
 	switch {
 	case skew > 30*time.Second:
-		return fail(d, "Fix this machine's clock (System Settings › Date & Time). Signed intents allow ±60 s; deeds use the database's clock.")
+		return fail(d, "Fix this machine's clock (System Settings › Date & Time). Signed intents allow ±60 s; records use the database's clock.")
 	case skew > 2*time.Second:
 		return warn(d, "Sync this machine's clock. Signed intents allow ±60 s of skew.")
 	}
@@ -434,10 +434,10 @@ func checkChain(ctx context.Context, env *Env) Result {
 		} `json:"data"`
 	}
 	if _, err := getJSON(ctx, env, "/v1/deeds?order=desc&limit=1", true, &list); err != nil {
-		return apiFail(err, "couldn't read the newest deed")
+		return apiFail(err, "couldn't read the newest record")
 	}
 	if len(list.Data) == 0 {
-		return ok("no deeds yet")
+		return ok("no records yet")
 	}
 	from := list.Data[0].Body.Seq - 999
 	if from < 1 {
@@ -450,7 +450,7 @@ func checkChain(ctx context.Context, env *Env) Result {
 	if _, err := getJSON(ctx, env, "/v1/ledger/check?from_seq="+strconv.FormatInt(from, 10), true, &c); err != nil {
 		return apiFail(err, "the chain check didn't answer")
 	}
-	d := fmt.Sprintf("last %s %s · chain %s", thousands(c.Checked), plural(c.Checked, "deed", "deeds"), c.Status)
+	d := fmt.Sprintf("last %s %s · chain %s", thousands(c.Checked), plural(c.Checked, "record", "records"), c.Status)
 	if c.Status != "intact" {
 		return fail(d, "Run deedglass ledger check to see where it breaks, and keep your last good export.")
 	}
@@ -604,7 +604,7 @@ func checkWAL(ctx context.Context, env *Env) Result {
 		return apiFail(err, "couldn't read the decoders")
 	}
 	if len(ds) == 0 {
-		return skip("no L2 targets", "Add a Postgres connector with witness.enabled to witness at L2.")
+		return skip("no Proven targets", "Add a Postgres connector with witness.enabled to check at Proven (L2).")
 	}
 	var bad []string
 	for _, d := range ds {
@@ -613,10 +613,10 @@ func checkWAL(ctx context.Context, env *Env) Result {
 		}
 	}
 	if len(bad) > 0 {
-		return fail(strings.Join(bad, ", ")+" has wal_level below logical; L2 witnessing needs logical",
+		return fail(strings.Join(bad, ", ")+" has wal_level below logical; Proven checks need logical",
 			"Set wal_level=logical and restart Postgres (docs.deedglass.com/doctor#wal-level).")
 	}
-	return ok(fmt.Sprintf("logical on %d L2 %s", len(ds), plural(len(ds), "target", "targets")))
+	return ok(fmt.Sprintf("logical on %d Proven %s", len(ds), plural(len(ds), "target", "targets")))
 }
 
 func checkDisk(_ context.Context, env *Env) Result {

@@ -1,4 +1,4 @@
 exit 1
 --- stdout
 --- stderr
-✕ This connector isn't witnessed, so it has no decoder. Turn on witness.enabled in its config first.
+✕ Checks aren't on for this connector, so it has no decoder. Turn on witness.enabled in its config first.

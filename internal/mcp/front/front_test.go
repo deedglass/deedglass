@@ -259,7 +259,7 @@ func TestCallOutcomes(t *testing.T) {
 			return a, nil
 		}, nil, func(t *testing.T, r Response) {
 			m := result(t, r)
-			want := `Updated.Deedglass witness · L1 · MISMATCH · orders.update_status reported success, but orders.get says status is "pending", not "shipped".`
+			want := `Updated.Deedglass check · Checked · Doesn't match · orders.update_status reported success, but orders.get says status is "pending", not "shipped".`
 			if !strings.Contains(string(m["_meta"]), `"com.deedglass/witness":{"level":"L1","verdict":"MISMATCH"}`) || textOf(t, r) != want ||
 				string(m["isError"]) == "true" {
 				t.Fatalf("%s", r.Env.Marshal())

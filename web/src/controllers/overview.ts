@@ -68,7 +68,7 @@ export function mountOverview(): void {
     const verifTile = h('section', { class: 'tile tile-wide', 'aria-labelledby': 'tile-v-l' },
       h('h2', { class: 'tile-label', id: 'tile-v-l' }, copy.overview.tiles.verification),
       witnessed + v.not_witnessed > 0 ? verificationBar(segments(o), copy.overview.tiles.verification) : h('p', { class: 'tile-sub' }, copy.overview.verificationNone),
-      h('p', { class: 'tile-sub levels num' }, `L0 ${number(v.by_level.L0 ?? 0)} · L1 ${number(v.by_level.L1 ?? 0)} · L2 ${number(v.by_level.L2 ?? 0)}`));
+      h('p', { class: 'tile-sub levels num' }, `${copy.chips.level.L0} ${number(v.by_level.L0 ?? 0)} · ${copy.chips.level.L1} ${number(v.by_level.L1 ?? 0)} · ${copy.chips.level.L2} ${number(v.by_level.L2 ?? 0)}`));
     return h('div', { class: 'tiles' },
       metricTile({ id: 'tile-a', label: copy.overview.tiles.actions, value: number(o.actions.total), sub: delta(o.actions.total, o.actions.previous, win),
         spark: { values: o.actions.series, label: sparkLabel(copy.overview.sparkActions, o.actions.series, win) }, href: `/app/actions?time=${win}` }),

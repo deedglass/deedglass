@@ -1,5 +1,5 @@
 exit 0
 --- stdout
-✓ Chain intact · 48 deeds · seq 1 → 48 · 1 seal key · N s
+✓ Chain intact · 48 records · seq 1 → 48 · 1 seal key · N s
   head       seq 48 · sha256:… · keep this somewhere outside Deedglass
 --- stderr

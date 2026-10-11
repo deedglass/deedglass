@@ -245,9 +245,9 @@ func check(ok bool) string {
 }
 
 // TableLines is the aligned table: Table · Can change · Est. rows · Cascades to · Triggers ·
-// Undo-ready · L2-ready, at most max rows.
+// Undo-ready · Proven-ready, at most max rows.
 func TableLines(ts []Table, max int, indent string) []string {
-	head := []string{"Table", "Can change", "Est. rows", "Cascades to", "Triggers", "Undo-ready", "L2-ready"}
+	head := []string{"Table", "Can change", "Est. rows", "Cascades to", "Triggers", "Undo-ready", "Proven-ready"}
 	rows := [][]string{head}
 	for i, t := range ts {
 		if i == max {

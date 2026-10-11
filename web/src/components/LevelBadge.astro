@@ -1,6 +1,7 @@
 ---
+// A level's plain name (Claimed, Checked, Proven); the wire value (L0, L1, L2) is in the title.
+import { copy } from '../lib/copy.ts';
 interface Props { level: 'L0' | 'L1' | 'L2' }
 const { level } = Astro.props;
-const names = { L0: 'Reported', L1: 'Confirmed', L2: 'Witnessed' } as const;
 ---
-<span class="level"><b>{level}</b>{names[level]}</span>
+<span class="level" title={level}><b>{copy.chips.level[level]}</b></span>

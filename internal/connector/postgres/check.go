@@ -34,7 +34,7 @@ type CheckReport struct {
 	Provider setup.Provider
 	DSN      *DSN
 	Ready    bool
-	Line     string // "Ready for L2 · 8 passed · 2 notes · 0 failed"
+	Line     string // "Ready for Proven checks · 8 passed · 2 notes · 0 failed"
 }
 
 // RunChecks connects with the agent DSN (and the witness DSN), reads the catalogs and runs the

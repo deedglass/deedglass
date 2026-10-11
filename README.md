@@ -8,8 +8,8 @@
 **See what your AI agents actually did.**
 
 Deedglass sits between your AI agents and the tools they use. It decides what each agent may do,
-runs it under control, checks the result against the system of record, and seals a deed that anyone
-with the public key can check offline.
+runs it under control, checks the result against the system of record, and seals a record that
+anyone with the public key can check offline.
 
 [Try it in your browser](https://deedglass.com/play) · [Quickstart](https://docs.deedglass.com/quickstart/) ·
 [Docs](https://docs.deedglass.com) · [Security](SECURITY.md) · [deedglass.com](https://deedglass.com)
@@ -25,7 +25,7 @@ npx deedglass scan    # grades your own agent setup; sends nothing
 An agent was asked to mark order 42 as shipped. It ran one `UPDATE` and reported 1 row.
 A legacy trigger shipped 300 more orders in the same transaction, so Postgres committed 301.
 Agent logs record what the agent asked for; Deedglass reads Postgres's own change log, compares, and
-seals `L2 · MISMATCH · Postgres changed 301 rows in public.orders. The agent reported 1.` Then a
+seals `Proven · Doesn't match · Postgres changed 301 rows in public.orders. The agent reported 1.` Then a
 person countersigns an undo built from those 301 rows.
 
 ## Quickstart
@@ -41,7 +41,7 @@ npx -y deedglass doctor
 <!-- quickstart:end -->
 
 `deedglass init` starts Postgres and Deedglass in Docker on their own ports, creates an org, an agent
-and the `postgres-safe` policy, and ends with a blocked `DROP TABLE` and an `UPDATE` witnessed at L2.
+and the `postgres-safe` policy, and ends with a blocked `DROP TABLE` and an `UPDATE` checked at Proven.
 `deedglass doctor` runs sixteen read-only checks, each with its fix.
 
 ## How it works
@@ -50,37 +50,40 @@ and the `postgres-safe` policy, and ends with a blocked `DROP TABLE` and an `UPD
 flowchart LR
   A["AI agents<br/>Claude · OpenAI · Cursor · any MCP client"] -->|tool call + agent key| G
   subgraph D["Deedglass · one binary + Postgres"]
-    I[Identity] --> P[Policies] --> G[Gate]
-    G --> W[Witness] --> S[Deeds] --> L[Ledger] --> N[Insights]
+    I[Identity] --> P[Policies] --> G[Rules]
+    G --> W[Check] --> S[Records] --> L[Ledger] --> N[Insights]
   end
   G -->|credentials from the vault| T["Tools<br/>Postgres · GitHub · Slack · Stripe · MCP servers"]
   T -->|what actually happened| W
   H[People] -->|approve · stop| G
 ```
 
-Every tool call passes through the Gate with the agent's key. Policies decide `allow`, `deny` or
-`require_approval`; the Gate runs the call with credentials the agent never holds; the Witness
-compares what happened with what was asked; and the outcome is sealed as a deed in the org's chain.
+Every tool call passes through Deedglass with the agent's key. Your rules (policies) decide `allow`,
+`deny` or `require_approval`; Deedglass runs the call with credentials the agent never holds; the
+check compares what happened with what was asked; and the outcome is sealed as a record in the org's
+chain.
 
-## Verification levels
+## How sure each check is
 
 | Level | What it checks | What it can't see |
 |---|---|---|
-| **L0 Reported** | The tool's own answer, against a schema and your postconditions | Whether the answer is true |
-| **L1 Confirmed** | A read-back from the target (GitHub, Slack, Stripe, Notion, REST, Postgres rows) | Side effects the read-back doesn't cover |
-| **L2 Witnessed** | Postgres's change log (logical decoding): every row the transaction committed | DDL, sequences, unlogged tables and anything outside that database's WAL |
+| **Claimed** | The tool's own answer, against a schema and your postconditions | Whether the answer is true |
+| **Checked** | A read-back from the target (GitHub, Slack, Stripe, Notion, REST, Postgres rows) | Side effects the read-back doesn't cover |
+| **Proven** | Postgres's change log (logical decoding): every row the transaction committed | DDL, sequences, unlogged tables and anything outside that database's WAL |
 
-Each deed claims one level and one verdict: `VERIFIED`, `MISMATCH` or `UNVERIFIABLE`. When
-Deedglass can't tell whether a tool ran, the verdict is `UNVERIFIABLE`, never `VERIFIED`.
+Each record claims one level and one result: **Matches**, **Doesn't match** or **Can't check**. When
+Deedglass can't tell whether a tool ran, the result is Can't check, never Matches. The API keeps
+the short names (`L0`/`L1`/`L2`, `VERIFIED`/`MISMATCH`/`UNVERIFIABLE`); the
+[glossary](https://docs.deedglass.com/concepts/glossary/) maps them.
 
 ## What it doesn't do
 
-- L2 covers Postgres only, and needs `wal_level=logical` and `REPLICA IDENTITY FULL` on watched tables.
+- Proven checks cover Postgres only, and need `wal_level=logical` and `REPLICA IDENTITY FULL` on watched tables.
 - A hijacked agent with a valid key and an in-policy action is allowed. Policies, budgets and
   approvals narrow this; they don't close it.
 - Deedglass trusts the Postgres server, its superusers, the host it runs on and its seal key. It
   can't protect you from a compromised host.
-- Deeds hold digests, not payloads. One set of seal keys signs every org on an instance.
+- Records hold digests, not payloads. One set of seal keys signs every org on an instance.
 
 The whole list, with workarounds: [`docs/LIMITATIONS.md`](docs/LIMITATIONS.md) and [`KNOWN_ISSUES.md`](KNOWN_ISSUES.md).
 
@@ -105,7 +108,7 @@ Checksums, signatures and SBOMs: [`docs/INSTALL.md`](docs/INSTALL.md).
 
 ## Connectors
 
-Postgres (L2), REST, GitHub, Slack, Stripe (test mode only), Gmail drafts, Notion and remote MCP
+Postgres (Proven), REST, GitHub, Slack, Stripe (test mode only), Gmail drafts, Notion and remote MCP
 servers. Credentials live in an encrypted vault; every outbound call goes through one egress door.
 See [`docs/CONNECTORS.md`](docs/CONNECTORS.md).
 

@@ -81,3 +81,4 @@ ADR-000 to ADR-008 were written for the V0 verifier and keep their original text
 | 070 | Supply-chain lows: x/sys v0.48.0, docs-site build-only packages | Accepted (2026-10-05, DL-051) | SR-007, SR-018; S35 |
 | 071 | deedglass.com's build and test dependencies | Proposed (2026-10-05, S36) | resvg-js, wrangler, Vitest, Playwright, axe in ~/txv/site; Tailwind removed; S36 |
 | 073 | Sealed files: deeds seal-file, verify --file, POST /v1/deeds/files | Proposed (2026-10-05, S38) | admin deed file.sealed; the file stays local; no new dependency; S38 |
+| 078 | Plain names for people, short names for programs | Proposed (2026-10-11, PLAIN-NAMING) | Claimed/Checked/Proven, Matches/Doesn't match/Can't check, rules/check/record; wire values unchanged |

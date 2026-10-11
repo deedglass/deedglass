@@ -3,13 +3,13 @@ exit 0
 orders.update_status · support-bot · YYYY-MM-DD HH:MM:SS UTC
   decision   allow · rule order-status · pv_…
   execution  executed · N ms
-  witness    L1 · MISMATCH · readback.rest.get
-             ✓ L0  The tool reported success.
-             ✕ L1  orders.update_status reported success, but orders.get says status is "shipped", not "cancelled".
-                   field          expected     observed
-                   body.status    cancelled    shipped
-             ✓ L1  Postcondition held: observation.status == 200 && observation.body.id == int(args.id).
-  deed       seq N · deed_… · sealed with sk_…
+  check      Checked · Doesn't match · readback.rest.get
+             ✓ Claimed  The tool reported success.
+             ✕ Checked  orders.update_status reported success, but orders.get says status is "shipped", not "cancelled".
+                        field          expected     observed
+                        body.status    cancelled    shipped
+             ✓ Checked  Postcondition held: observation.status == 200 && observation.body.id == int(args.id).
+  record     seq N · deed_… · sealed with sk_…
   events     received → authenticated → evaluated → executing → executed → witnessing → mismatch → sealed
   next       deedglass deeds show deed_…
 --- stderr

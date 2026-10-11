@@ -783,7 +783,7 @@ func (x *run) demoDB(ctx context.Context) StepResult {
 		}
 	}
 	n, _ := x.psqlIn(ctx, dc, "demo", "SELECT count(*) FROM public.orders")
-	detail := fmt.Sprintf("%s orders · connector %s ready for L2", thousands(strings.TrimSpace(n)), ConnectorName)
+	detail := fmt.Sprintf("%s orders · connector %s ready for Proven checks", thousands(strings.TrimSpace(n)), ConnectorName)
 	if !running {
 		detail = fmt.Sprintf("%s orders · connector %s · decoder not running yet (deedglass decoder status says why)", thousands(strings.TrimSpace(n)), ConnectorName)
 	}

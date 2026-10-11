@@ -1,10 +1,10 @@
 ---
 // One of the 15 lifecycle states (contract §5).
 import Icon from './Icon.astro';
-import { STATE_STYLES } from '../lib/states.ts';
+import { STATE_STYLES, stateLabel } from '../lib/states.ts';
 interface Props { state: string }
 const { state } = Astro.props;
-const label = (state.charAt(0).toUpperCase() + state.slice(1)).replace(/_/g, ' ');
+const label = stateLabel(state);
 const m = STATE_STYLES[state] ?? { cls: 'chip-outline', icon: 'circle-dashed' };
 ---
 <span class:list={['chip', m.cls]}><Icon name={m.icon as never} size={16} />{label}</span>

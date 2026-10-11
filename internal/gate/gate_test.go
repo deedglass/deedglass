@@ -425,7 +425,7 @@ func TestFraming(t *testing.T) {
 			t.Errorf("%s/%s: %q", c.v, c.m, got)
 		}
 	}
-	for r, want := range map[string]string{ReasonTimeout: "the tool did not answer in time", ReasonEdgeLost: "the edge never reported", ReasonWitnessGaveUp: "the witness gave up"} {
+	for r, want := range map[string]string{ReasonTimeout: "the tool did not answer in time", ReasonEdgeLost: "the edge never reported", ReasonWitnessGaveUp: "the check gave up"} {
 		if got := WitnessPhrase(LevelL0, VerdictUnverifiable, MethodReported, []string{r}); got != want {
 			t.Errorf("%s: %q", r, got)
 		}
@@ -668,7 +668,7 @@ func TestMCPCopy(t *testing.T) {
 	msg := `Blocked by policy "scratch-writes-only-in-allowed": Agents may only write inside /tmp/deedglass-demo/allowed.`
 	src, deed, rule := "rule", "deed_x", "scratch-writes-only-in-allowed"
 	a := &ledger.Action{ID: "act_x", Deed: &deed, Decision: &ledger.ActionDecision{Message: &msg, Source: &src, RuleID: &rule}}
-	want := msg + " Nothing was run. Deedglass sealed a deed of this attempt (deed_x). If this should be allowed, a person can change the policy in Console › Policies."
+	want := msg + " Nothing was run. Deedglass sealed a record of this attempt (deed_x). If this should be allowed, a person can change the policy in Console › Policies."
 	if got := MCPDenyText(a, ""); got != want {
 		t.Fatal(got)
 	}
@@ -691,8 +691,8 @@ func TestMCPCopy(t *testing.T) {
 		MCPRejectedText("args has a key that appears twice"): "args has a key that appears twice. Nothing was run.",
 		MCPRejectedText(""):                                  "Deedglass refused this call. Nothing was run.",
 		UnreachableMessage("http://127.0.0.1:8080"):          `Deedglass could not be reached at http://127.0.0.1:8080, so this was not run. Start it with "deedglass serve", then try again.`,
-		MCPCrashedText("scratch.x", "act_x"):                 "The MCP server stopped while running scratch.x. It may have run. Deedglass recorded it as UNVERIFIABLE (act_x).",
-		MCPTimeoutText("scratch.x", 30*time.Second, "act_x"): "The MCP server didn't answer scratch.x within 30 s. It may have run. Deedglass recorded it as UNVERIFIABLE (act_x).",
+		MCPCrashedText("scratch.x", "act_x"):                 "The MCP server stopped while running scratch.x. It may have run. Deedglass recorded it as Can't check (act_x).",
+		MCPTimeoutText("scratch.x", 30*time.Second, "act_x"): "The MCP server didn't answer scratch.x within 30 s. It may have run. Deedglass recorded it as Can't check (act_x).",
 		MCPApprovalFinishedText("apr_x", "executed"):         "The action behind approval apr_x has already finished (executed). Nothing new was run.",
 	}
 	for got, want := range cases {

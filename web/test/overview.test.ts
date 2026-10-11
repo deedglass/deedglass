@@ -42,12 +42,12 @@ describe('tiles', () => {
 
 describe('attention', () => {
   it.each([
-    [item('mismatch', { tool: 'postgres.execute', agent: 'support-bot', summary: 'Postgres changed 301 rows in public.orders. The agent reported 1.' }, 'act_01k633rrmh3bcz2p39gg4vp46q'), 'MISMATCH · postgres.execute · support-bot', 'Postgres changed 301 rows in public.orders. The agent reported 1.'],
+    [item('mismatch', { tool: 'postgres.execute', agent: 'support-bot', summary: 'Postgres changed 301 rows in public.orders. The agent reported 1.' }, 'act_01k633rrmh3bcz2p39gg4vp46q'), "Doesn't match · postgres.execute · support-bot", 'Postgres changed 301 rows in public.orders. The agent reported 1.'],
     [item('approval_expiring', { tool: 'stripe.create_refund', agent: 'support-bot', expires_at: '2026-10-09T14:06:00Z' }, 'apr_01k633rrmh3bcz2p39gg4vp46q'), 'Approval for stripe.create_refund expires in 6 min', 'support-bot'],
-    [item('slot_lagging', { connector: 'postgres', lag_bytes: 412 * 1024 * 1024 }), 'The witness for postgres is 412 MB behind. L2 verdicts will arrive late.', ''],
+    [item('slot_lagging', { connector: 'postgres', lag_bytes: 412 * 1024 * 1024 }), 'Checks for postgres are 412 MB behind. Proven verdicts will arrive late.', ''],
     [item('budget_near', { agent: 'support-bot', budget: 'calls_per_day', used: 4210, limit: 5000 }), 'support-bot used 4,210 of 5,000 calls today.', ''],
     [item('org_stopped', { since: '2026-10-09T14:05:00Z', by: 'Priya Raman', reason: 'Investigating' }), 'All agents in Acme are stopped · since 14:05 · by Priya Raman', '“Investigating”'],
-    [item('chain_broken', { seq: 812, message: 'Deed 812 was changed after it was sealed.' }), 'Chain broken at deed 812', 'Deed 812 was changed after it was sealed.'],
+    [item('chain_broken', { seq: 812, message: 'Deed 812 was changed after it was sealed.' }), 'Chain broken at record 812', 'Deed 812 was changed after it was sealed.'],
   ])('%#', (it_, title, detail) => {
     const l = attentionLine(it_, 'Acme', now, 'UTC', t);
     expect(l.title).toBe(title);

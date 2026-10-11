@@ -1,8 +1,8 @@
 exit 0
 --- stdout
 ○ executed · orders.update_status · N ms
-  witness  L0 · UNVERIFIABLE · The policy asks for L1. The strongest clean evidence was L0.
-           ○ L1  The read-back orders.get failed (upstream_error), so the result couldn't be confirmed.
-  deed     deed_… · seq N · sealed
+  check    Claimed · Can't check · The policy asks for L1. The strongest clean evidence was L0.
+           ○ Checked  The read-back orders.get failed (upstream_error), so the result couldn't be confirmed.
+  record   deed_… · seq N · sealed
   Next: check the orders connector (deedglass connector test orders), then deedglass actions show act_…
 --- stderr

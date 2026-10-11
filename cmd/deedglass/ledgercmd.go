@@ -24,6 +24,7 @@ import (
 	"github.com/deedglass/deedglass/internal/httpx"
 	"github.com/deedglass/deedglass/internal/ledger"
 	"github.com/deedglass/deedglass/internal/store"
+	"github.com/deedglass/deedglass/internal/witness"
 )
 
 // The Ledger commands run in direct database mode (DEEDGLASS_DATABASE_URL): actions list|show,
@@ -375,7 +376,7 @@ var actionsShowDiff bool
 func actionsShowFlags(fs *flag.FlagSet) {
 	actionsShowWait, actionsShowDiff = false, false
 	fs.BoolVar(&actionsShowWait, "wait", false, "wait (up to 25 s) until the action is sealed or waits for a person")
-	fs.BoolVar(&actionsShowDiff, "diff", false, "show what Postgres committed next to what the statement named (L2)")
+	fs.BoolVar(&actionsShowDiff, "diff", false, "show what Postgres committed next to what the statement named (Proven)")
 }
 
 // showWaitPoll is how often actions show --wait re-reads the action (a DB-direct command has no
@@ -409,7 +410,7 @@ func runActionsShow(ctx context.Context, e *Env, args []string) error {
 	if e.Globals.JSON {
 		if actionsShowDiff {
 			if d.Witness == nil || len(d.Witness.Detail) == 0 {
-				return failNext(e, ExitFailure, "not_found", fmt.Sprintf("Action %s has no witness detail yet.", clean(id)), "deedglass actions show "+clean(id)+" --wait")
+				return failNext(e, ExitFailure, "not_found", fmt.Sprintf("Action %s has no check detail yet.", clean(id)), "deedglass actions show "+clean(id)+" --wait")
 			}
 			return writeAPIJSON(e, d.Witness.Detail)
 		}
@@ -451,7 +452,7 @@ func runActionsShow(ctx context.Context, e *Env, args []string) error {
 	}
 	if w := d.Witness; w != nil {
 		// S19: the claim and its method, then every reason with its level, and field tables.
-		row("witness", witnessClaim(st, w, true))
+		row("check", witnessClaim(st, w, true))
 		for _, l := range witnessReasons(st, w, true, "             ") {
 			fmt.Fprintln(e.Stdout, l)
 		}
@@ -471,7 +472,7 @@ func runActionsShow(ctx context.Context, e *Env, args []string) error {
 		}
 	} else {
 		chip, _ := witnessChip(st, ledger.Action{State: d.State, Policy: d.Policy, Execution: d.Execution})
-		row("witness", chip)
+		row("check", chip)
 	}
 	for _, dr := range d.Deeds {
 		line := fmt.Sprintf("seq %s %s %s", deed.FormatCount(dr.Seq), ui.Sep, shortID(dr.ID))
@@ -483,7 +484,7 @@ func runActionsShow(ctx context.Context, e *Env, args []string) error {
 		if dr.Kind == "amendment" {
 			line += " " + ui.Sep + " amendment"
 		}
-		row("deed", line)
+		row("record", line)
 	}
 	if d.PayloadPrunedAt != nil {
 		row("payloads", "removed "+time.Time(*d.PayloadPrunedAt).UTC().Format("2006-01-02")+" by retention "+ui.Sep+" digests kept")
@@ -506,15 +507,15 @@ func printDiff(e *Env, d *ledger.ActionDetail) error {
 	st := e.Style
 	w := d.Witness
 	if w == nil {
-		return failNext(e, ExitFailure, "not_found", fmt.Sprintf("Action %s hasn't been witnessed yet.", clean(d.ID)),
+		return failNext(e, ExitFailure, "not_found", fmt.Sprintf("Action %s hasn't been checked yet.", clean(d.ID)),
 			"deedglass actions show "+clean(d.ID)+" --wait")
 	}
 	head := verdictSymbol(st, w.Verdict) + " " + clean(d.Tool) + " " + ui.Sep + " " + d.ID
 	fmt.Fprintln(e.Stdout, head)
-	fmt.Fprintf(e.Stdout, "  %s %s\n", ui.Pad("witness", 8), witnessClaim(st, w, false))
+	fmt.Fprintf(e.Stdout, "  %s %s\n", ui.Pad("check", 8), witnessClaim(st, w, false))
 	lines := l2Lines(e, w.Detail, "  ", false)
 	if len(lines) == 0 {
-		fmt.Fprintln(e.Stdout, "  "+st.Dim("No L2 diff: this action wasn't witnessed by Postgres's change log."))
+		fmt.Fprintln(e.Stdout, "  "+st.Dim("No Proven diff: Postgres's change log didn't check this action."))
 		return nil
 	}
 	fmt.Fprintln(e.Stdout)
@@ -522,7 +523,7 @@ func printDiff(e *Env, d *ledger.ActionDetail) error {
 		fmt.Fprintln(e.Stdout, l)
 	}
 	if d.Deed != nil {
-		fmt.Fprintf(e.Stdout, "  %s %s\n", ui.Pad("deed", 8), shortID(*d.Deed)+" "+ui.Sep+" sealed")
+		fmt.Fprintf(e.Stdout, "  %s %s\n", ui.Pad("record", 8), shortID(*d.Deed)+" "+ui.Sep+" sealed")
 	}
 	return nil
 }
@@ -586,7 +587,7 @@ func exportToStdout(ctx context.Context, e *Env, s *ledgerSession, r ledger.Rang
 	}
 	var empty *ledger.EmptyRangeError
 	if errors.As(err, &empty) {
-		return &ExitError{Code: ExitFailure, ErrCode: "not_found", Err: errors.New("No deeds in this range"), Next: "Widen --since, or leave it out."}
+		return &ExitError{Code: ExitFailure, ErrCode: "not_found", Err: errors.New("No records in this range"), Next: "Widen --since, or leave it out."}
 	}
 	if err != nil {
 		return ledgerErr(e, err)
@@ -614,7 +615,7 @@ func deedsListFlags(fs *flag.FlagSet) {
 	fs.Int64Var(&o.from, "from-seq", 0, "first seq")
 	fs.Int64Var(&o.to, "to-seq", 0, "last seq")
 	fs.StringVar(&o.kind, "kind", "", "comma list: action, admin, amendment")
-	fs.StringVar(&o.action, "action", "", "an action id: its deed and amendments")
+	fs.StringVar(&o.action, "action", "", "an action id: its record and amendments")
 	fs.StringVar(&o.order, "order", "", "asc (default) or desc")
 	fs.IntVar(&o.limit, "limit", 25, "page size, 1 to 100")
 	fs.StringVar(&o.cursor, "cursor", "", "next_cursor from the previous page")
@@ -654,7 +655,7 @@ func runDeedsList(ctx context.Context, e *Env, args []string) error {
 		return writeAPIJSON(e, list)
 	}
 	if len(list.Data) == 0 {
-		fmt.Fprintln(e.Stdout, e.Style.UnknownLine("No deeds match."))
+		fmt.Fprintln(e.Stdout, e.Style.UnknownLine("No records match."))
 		return nil
 	}
 	now := time.Now()
@@ -662,7 +663,7 @@ func runDeedsList(ctx context.Context, e *Env, args []string) error {
 	for _, raw := range list.Data {
 		env, err := deed.ParseEnvelope(raw)
 		if err != nil {
-			fmt.Fprintln(e.Stdout, e.Style.Red(ui.Fail+" a stored deed doesn't parse; run deedglass ledger check"))
+			fmt.Fprintln(e.Stdout, e.Style.Red(ui.Fail+" a stored record doesn't parse; run deedglass ledger check"))
 			continue
 		}
 		b := env.Body
@@ -720,7 +721,7 @@ func runDeedsShow(ctx context.Context, e *Env, args []string) error {
 			about := clean(b.Action.Tool) + " " + ui.Sep + " " + b.Action.ID
 			row("action", about)
 			if b.Witness != nil {
-				row("witness", b.Witness.Level+" "+ui.Sep+" "+b.Witness.Verdict)
+				row("check", witness.PlainLevel(b.Witness.Level)+" "+ui.Sep+" "+witness.PlainVerdict(b.Witness.Verdict))
 			}
 			if b.Amends != nil {
 				row("amends", *b.Amends)
@@ -729,7 +730,7 @@ func runDeedsShow(ctx context.Context, e *Env, args []string) error {
 			row("admin", b.Admin.Action+" "+ui.Sep+" by "+b.Admin.Actor.Type+"/"+b.Admin.Actor.ID)
 		}
 	} else {
-		row("check", st.Red(ui.Fail+" this deed does not parse ("+string(deed.CodeOf(err))+")"))
+		row("check", st.Red(ui.Fail+" this record does not parse ("+string(deed.CodeOf(err))+")"))
 	}
 	row("next", "deedglass deeds show "+d.ID+" --json | deedglass verify - --keys <issuer>/.well-known/deedglass/keys.json")
 	return nil
@@ -749,10 +750,10 @@ func deedsExportFlags(fs *flag.FlagSet) {
 	o := &exportValues
 	*o = exportOpts{}
 	fs.StringVar(&o.out, "out", "", "file to write (default deedglass-<org>-<first>-<last>.tar.gz)")
-	fs.StringVar(&o.format, "format", "tar.gz", "tar.gz (a sealed bundle) or jsonl (deeds only)")
+	fs.StringVar(&o.format, "format", "tar.gz", "tar.gz (a sealed bundle) or jsonl (records only)")
 	fs.Int64Var(&o.from, "from-seq", 0, "first seq")
 	fs.Int64Var(&o.to, "to-seq", 0, "last seq")
-	fs.DurationVar(&o.since, "since", 0, "only deeds issued in the last 1h, 30m, … (S13)")
+	fs.DurationVar(&o.since, "since", 0, "only records issued in the last 1h, 30m, … (S13)")
 }
 
 // exportTarget counts what Export writes and prints the progress line once the range is known.
@@ -770,7 +771,7 @@ func (x *exportTarget) Write(p []byte) (int, error) {
 
 func (x *exportTarget) ExportStarting(org string, first, last, _ int64) {
 	if !x.e.Globals.JSON {
-		fmt.Fprintln(x.e.Stdout, x.e.Style.Violet(ui.Pending)+fmt.Sprintf(" Exporting deeds %s → %s for %s",
+		fmt.Fprintln(x.e.Stdout, x.e.Style.Violet(ui.Pending)+fmt.Sprintf(" Exporting records %s → %s for %s",
 			deed.FormatCount(first), deed.FormatCount(last), shortID(org)))
 	}
 }
@@ -835,9 +836,9 @@ func runDeedsExport(ctx context.Context, e *Env, args []string) error {
 	}
 	var empty *ledger.EmptyRangeError
 	if errors.As(err, &empty) {
-		msg := "No deeds in this org yet."
+		msg := "No records in this org yet."
 		if empty.Head > 0 {
-			msg = fmt.Sprintf("No deeds between seq %s and %s in %s. The chain ends at %s.", seqOr(empty.From, "1"), seqOr(empty.To, "the end"),
+			msg = fmt.Sprintf("No records between seq %s and %s in %s. The chain ends at %s.", seqOr(empty.From, "1"), seqOr(empty.To, "the end"),
 				shortID(s.org.ID.String()), deed.FormatCount(empty.Head))
 		}
 		if e.Globals.JSON {
@@ -891,7 +892,7 @@ func seqOr(n int64, def string) string {
 }
 
 func deedsWord(n int64) string {
-	return deed.FormatCount(n) + " " + plural(int(n), "deed", "deeds")
+	return deed.FormatCount(n) + " " + plural(int(n), "record", "records")
 }
 
 // sizeWords is a decimal size for people: 2.7 MB.
@@ -943,10 +944,10 @@ func runLedgerCheck(ctx context.Context, e *Env, args []string) error {
 	switch {
 	case errors.Is(err, ledger.ErrEmptyRange):
 		head, _ := s.led.HeadSeq(ctx, s.org.ID)
-		return failNext(e, ExitFailure, "not_found", fmt.Sprintf("No deeds in that range. The chain ends at %s.", deed.FormatCount(head)),
+		return failNext(e, ExitFailure, "not_found", fmt.Sprintf("No records in that range. The chain ends at %s.", deed.FormatCount(head)),
 			"deedglass ledger check (the whole chain)")
 	case errors.Is(err, ledger.ErrNotFound):
-		return failNext(e, ExitFailure, "anchor_missing", fmt.Sprintf("Deed %s, just before this range, is missing.", deed.FormatCount(r.FromSeq-1)),
+		return failNext(e, ExitFailure, "anchor_missing", fmt.Sprintf("Record %s, just before this range, is missing.", deed.FormatCount(r.FromSeq-1)),
 			"deedglass ledger check (the whole chain names the first break)")
 	case err != nil:
 		return ledgerErr(e, err)
@@ -989,7 +990,7 @@ func renderCheck(ctx context.Context, e *Env, s *ledgerSession, res *ledger.Chai
 		b := res.Break
 		at := "the chain"
 		if b.Seq != nil {
-			at = "deed " + deed.FormatCount(*b.Seq)
+			at = "record " + deed.FormatCount(*b.Seq)
 		}
 		fmt.Fprintln(e.Stdout, st.FailLine(fmt.Sprintf("Chain broken at %s %s %s", at, ui.Sep, b.Code)))
 		if b.Deed != nil {
@@ -999,7 +1000,7 @@ func renderCheck(ctx context.Context, e *Env, s *ledgerSession, res *ledger.Chai
 					line += " " + ui.Sep + " sealed " + d.IssuedAt.UTC().Format("2006-01-02 15:04") + " UTC"
 				}
 			}
-			row("deed", line)
+			row("record", line)
 		}
 		row("what", b.Message)
 		next, link, _ := strings.Cut(b.Next, ": ")
@@ -1013,7 +1014,7 @@ func renderCheck(ctx context.Context, e *Env, s *ledgerSession, res *ledger.Chai
 		row("next", fmt.Sprintf("deedglass ledger check --from-seq %d", *res.NextFromSeq))
 	default:
 		if res.Checked == 0 {
-			fmt.Fprintln(e.Stdout, st.UnknownLine("No deeds yet in "+s.org.Slug+". Nothing to check."))
+			fmt.Fprintln(e.Stdout, st.UnknownLine("No records yet in "+s.org.Slug+". Nothing to check."))
 			return
 		}
 		fmt.Fprintln(e.Stdout, st.OKLine(fmt.Sprintf("Chain intact %s %s%s %s %s %s %s", ui.Sep, deedsWord(res.Checked), span, ui.Sep, keys, ui.Sep, secs)))
@@ -1088,7 +1089,7 @@ func runLedgerPrune(ctx context.Context, e *Env, args []string) error {
 		if !e.IsTTY || e.Globals.JSON {
 			return usageErr(errors.New("ledger prune changes data and needs confirmation"), "Add --yes, or run it in a terminal to confirm.")
 		}
-		fmt.Fprintf(e.Stdout, "Type the org id to remove payloads older than %s (deeds are kept): ", ageWords(age))
+		fmt.Fprintf(e.Stdout, "Type the org id to remove payloads older than %s (records are kept): ", ageWords(age))
 		line, _ := bufio.NewReader(e.stdin()).ReadString('\n')
 		if strings.TrimSpace(line) != s.org.ID.String() {
 			return failNext(e, ExitFailure, "not_confirmed", "That isn't the org id. Nothing changed.", "Type "+s.org.ID.String()+" exactly, or pass --yes.")
@@ -1112,7 +1113,7 @@ func runLedgerPrune(ctx context.Context, e *Env, args []string) error {
 		fmt.Fprintln(e.Stdout, st.UnknownLine("Dry run "+ui.Sep+" nothing changes"))
 		row(shortID(s.org.ID.String()), fmt.Sprintf("%s sealed %s before %s %s %s of payloads", deed.FormatCount(res.Actions),
 			plural(int(res.Actions), "action", "actions"), before, ui.Sep, sizeWords(res.Bytes)))
-		row("kept", "deeds, events, digests and ids")
+		row("kept", "records, events, digests and ids")
 		row("next", `Run again without --dry-run. Deedglass seals a "ledger.pruned" deed when it's done.`)
 		return nil
 	}
@@ -1122,8 +1123,8 @@ func runLedgerPrune(ctx context.Context, e *Env, args []string) error {
 	}
 	fmt.Fprintln(e.Stdout, st.OKLine(fmt.Sprintf("Removed payloads from %s %s %s %s (space returns after autovacuum)",
 		deed.FormatCount(res.Actions), plural(int(res.Actions), "action", "actions"), ui.Sep, sizeWords(res.Bytes))))
-	fmt.Fprintln(e.Stdout, st.OKLine(fmt.Sprintf("Deed sealed %s seq %s %s %s", ui.Sep, deed.FormatCount(*res.Seq), ui.Sep, ledger.AdminLedgerPruned)))
-	fmt.Fprintln(e.Stdout, "  Every deed still verifies. Payloads are gone; their digests stay.")
+	fmt.Fprintln(e.Stdout, st.OKLine(fmt.Sprintf("Record sealed %s seq %s %s %s", ui.Sep, deed.FormatCount(*res.Seq), ui.Sep, ledger.AdminLedgerPruned)))
+	fmt.Fprintln(e.Stdout, "  Every record still verifies. Payloads are gone; their digests stay.")
 	return nil
 }
 

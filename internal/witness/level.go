@@ -1,8 +1,8 @@
 package witness
 
 // Level is how close to the system of record a piece of evidence came (contract §6):
-// L0 Reported (the tool's own answer), L1 Confirmed (a read-back from the target),
-// L2 Witnessed (the system of record's change stream, S21).
+// L0 Claimed (the tool's own answer), L1 Checked (a read-back from the target),
+// L2 Proven (the system of record's change stream, S21). Plain names: plain.go.
 type Level string
 
 // The three levels.
@@ -40,15 +40,11 @@ func ParseLevel(s string) (Level, bool) {
 	return l, l.Valid()
 }
 
-// Title is the level with its name, as the docs and the Console show it: "L1 Confirmed".
+// Title is the level's plain name with its wire value, as the docs and the Console show it:
+// "Checked (L1)".
 func (l Level) Title() string {
-	switch l {
-	case L0:
-		return "L0 Reported"
-	case L1:
-		return "L1 Confirmed"
-	case L2:
-		return "L2 Witnessed"
+	if !l.Valid() {
+		return string(l)
 	}
-	return string(l)
+	return l.Plain() + " (" + string(l) + ")"
 }

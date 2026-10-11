@@ -541,7 +541,7 @@ func runConnectorCredentialsSet(ctx context.Context, e *Env, args []string) erro
 		parts = append(parts, m.Hint)
 	}
 	fmt.Fprintln(e.Stdout, s.OKLine(fmt.Sprintf("Credentials stored %s %s %s encrypted with %s", ui.Sep, strings.Join(parts, " "+ui.Sep+" "), ui.Sep, m.KEKID)))
-	fmt.Fprintln(e.Stdout, "  Agents never see this value. Deedglass adds it only when the Gate runs a call.")
+	fmt.Fprintln(e.Stdout, "  Agents never see this value. Deedglass adds it only when it runs a call.")
 	return nil
 }
 

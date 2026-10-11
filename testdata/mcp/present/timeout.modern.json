@@ -2,7 +2,7 @@
   "content": [
     {
       "type": "text",
-      "text": "The MCP server didn't answer scratch.slow within 30 s. It may have run. Deedglass recorded it as UNVERIFIABLE (act_01j9zt0000000000000000000b)."
+      "text": "The MCP server didn't answer scratch.slow within 30 s. It may have run. Deedglass recorded it as Can't check (act_01j9zt0000000000000000000b)."
     }
   ],
   "isError": true,

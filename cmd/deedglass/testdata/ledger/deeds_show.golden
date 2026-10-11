@@ -5,6 +5,6 @@ Deed 3 · action · deed_ID
   body_hash  sha256:…
   seal key   sk_ID
   action     postgres.query · act_ID
-  witness    L2 · VERIFIED
+  check      Proven · Matches
   next       deedglass deeds show deed_ID --json | deedglass verify - --keys <issuer>/.well-known/deedglass/keys.json
 --- stderr

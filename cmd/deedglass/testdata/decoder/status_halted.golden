@@ -2,7 +2,7 @@ exit 1
 --- stdout
 ✕ analytics · halted · slot deedglass_01j9zq7c4m8x2v6t0r3n5k1h7f · PG 18.6
   slot invalidated at 2026-10-07 07:40 UTC (wal_status lost)
-  Actions waiting on L2 for analytics won't get that evidence (slot_invalidated).
+  Actions waiting on a Proven check for analytics won't get that evidence (slot_invalidated).
   Next: deedglass decoder drop --connector analytics, then check max_slot_wal_keep_size (docs.deedglass.com/decoder#sizing)
   lag         —                             checkpoint  —
   watching    public.orders · public.order_items · public.refunds  (+ deedglass.ledger)

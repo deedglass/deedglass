@@ -47,7 +47,7 @@ func fakeActionFlags(fs *flag.FlagSet) {
 }
 
 const (
-	msgFakeGuard  = "dev fake-action only runs with DEEDGLASS_ENV=dev. This database may hold real deeds."
+	msgFakeGuard  = "dev fake-action only runs with DEEDGLASS_ENV=dev. This database may hold real records."
 	nextFakeGuard = "Use a throwaway database: make dev, then DEEDGLASS_ENV=dev deedglass dev fake-action"
 	demoOwner     = "demo@example.test"
 )
@@ -152,7 +152,7 @@ func runFakeAction(ctx context.Context, e *Env, args []string) error {
 		fakeSummary(e, res)
 	}
 	if res.Deeds == 0 {
-		fmt.Fprintln(e.Stdout, st.UnknownLine("No deeds sealed "+ui.Sep+" every action is waiting for approval"))
+		fmt.Fprintln(e.Stdout, st.UnknownLine("No records sealed "+ui.Sep+" every action is waiting for approval"))
 		return nil
 	}
 	line := fmt.Sprintf("%s sealed %s seq %s → %s %s %s", deedsWord(int64(res.Deeds)), ui.Sep, deed.FormatCount(res.FirstSeq),
@@ -199,13 +199,13 @@ func fakeSummary(e *Env, res *fake.Result) {
 		parts = append(parts, rest...)
 		return strings.Join(parts, " "+ui.Sep+" ")
 	}
-	row(st.Teal(ui.OK), res.Counts[fake.Allow], "verified", counts(res.Levels, "L0", "L1", "L2"))
+	row(st.Teal(ui.OK), res.Counts[fake.Allow], "matches", counts(res.Levels, "L0", "L1", "L2"))
 	row(st.Red(ui.Fail), res.Counts[fake.Deny], "denied", counts(res.Rules, "block-destructive-sql", "refund-limit", "budget"))
-	row(st.Bold(st.Red(ui.Fail)), res.Counts[fake.Mismatch], "mismatch", "L2 "+ui.Sep+" postgres.execute")
-	row(st.Amber(ui.Unknown), res.Counts[fake.Unverifiable], "unverifiable", "timeout")
+	row(st.Bold(st.Red(ui.Fail)), res.Counts[fake.Mismatch], "doesn't match", "Proven "+ui.Sep+" postgres.execute")
+	row(st.Amber(ui.Unknown), res.Counts[fake.Unverifiable], "can't check", "timeout")
 	row(ui.Sep, res.Counts[fake.Failed], "failed", counts(res.Errors, "upstream_error", "timeout"))
 	row(st.Violet(ui.Pending), res.Counts[fake.Pending], "pending", "waiting for approval")
-	row(st.Teal(ui.OK), res.Counts[fake.Amend], "amended", "UNVERIFIABLE → VERIFIED, sealed as amendments")
+	row(st.Teal(ui.OK), res.Counts[fake.Amend], "amended", "Can't check → Matches, sealed as amendments")
 }
 
 // fakeOrg picks --org, or finds or creates the demo org by slug.

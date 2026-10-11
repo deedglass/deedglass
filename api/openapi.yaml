@@ -5529,7 +5529,7 @@ paths:
                 error:
                   type: invalid_request_error
                   code: validation_failed
-                  message: A reason is required to resolve an anomaly. It goes into the sealed deed.
+                  message: A reason is required to resolve an anomaly. It goes into the sealed record.
                   param: reason
                   request_id: req_01m42vmg7h9k1n3q5s7v9x1z3b
                   doc_url: https://docs.deedglass.com/errors/validation_failed

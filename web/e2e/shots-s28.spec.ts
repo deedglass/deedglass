@@ -173,7 +173,7 @@ test('the flow: accept → shadow → promote → enforced', async ({ page }) =>
       const ack = pr.getByRole('checkbox');
       if (await ack.count()) await ack.check();
       await pr.getByRole('button', { name: 'Enforce v3' }).click();
-      await expect(page.locator('.toast').last()).toContainText('acme-sim v3 enforced · deed sealed');
+      await expect(page.locator('.toast').last()).toContainText('acme-sim v3 enforced · record sealed');
       await page.locator('.toast').last().hover();
       await settle(page, 300);
       await shot(page, `enforced-${w}-${theme}`);

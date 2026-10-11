@@ -6,7 +6,7 @@ import "fmt"
 // docs and this package say the same words.
 const (
 	// PanelNotWitnessed is the empty state of a Postgres connector's decoder panel.
-	PanelNotWitnessed = "This connector isn't witnessed yet. Turn on Witness to see what Postgres actually committed for every agent write. It needs wal_level=logical and a publication; the check below walks you through it."
+	PanelNotWitnessed = "Checks aren't on for this connector yet. Turn them on to see what Postgres actually committed for every agent write. It needs wal_level=logical and a publication; the check below walks you through it."
 	// toastForgedMarker is the alert toast for a forged marker; %s is the connector's name.
 	toastForgedMarker = "Forged marker on %s: a transaction claimed to be a Deedglass action without a ledger row. Nothing was bound to it."
 	// toastForgedNonTx is the toast for a forged non-transactional marker or heartbeat.

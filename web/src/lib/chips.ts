@@ -5,7 +5,7 @@
 import { copy } from './copy.ts';
 import { h, icon } from './dom.ts';
 import { dateTime, relative, shortHash, shortId } from './format.ts';
-import { STATE_STYLES } from './states.ts';
+import { STATE_STYLES, stateLabel } from './states.ts';
 import type { Level, Verdict } from './types.ts';
 
 const VERDICT: Record<Verdict, { cls: string; icon: string; word: string }> = {
@@ -14,11 +14,12 @@ const VERDICT: Record<Verdict, { cls: string; icon: string; word: string }> = {
   UNVERIFIABLE: { cls: 'chip-unverifiable', icon: 'circle-dashed', word: copy.chips.unverifiable },
 };
 
-/** verdictChip: [icon] L2 · VERIFIED. */
+/** verdictChip: [icon] Proven · Matches (plain names; the wire values L2 · VERIFIED are in the title). */
 export function verdictChip(verdict: Verdict, level?: Level | null): HTMLSpanElement {
   const v = VERDICT[verdict] ?? VERDICT.UNVERIFIABLE;
-  return h('span', { class: `chip ${v.cls}`, title: level ? `${level} ${copy.chips.level[level] ?? ''} · ${v.word}` : v.word },
-    icon(v.icon, 16), level ? h('span', null, level, h('span', { class: 'sep' }, ' · '), v.word) : v.word);
+  const lv = level ? (copy.chips.level[level] ?? level) : '';
+  return h('span', { class: `chip ${v.cls}`, title: level ? `${lv} · ${v.word} (${level} · ${verdict})` : `${v.word} (${verdict})` },
+    icon(v.icon, 16), level ? h('span', null, lv, h('span', { class: 'sep' }, ' · '), v.word) : v.word);
 }
 
 export type Decision = 'allow' | 'deny' | 'require_approval';
@@ -40,7 +41,7 @@ export const STATES = STATE_STYLES;
 
 export function stateChip(state: string): HTMLSpanElement {
   const s = STATES[state] ?? { cls: 'chip-outline', icon: 'circle-dashed' };
-  return h('span', { class: `chip ${s.cls}` }, icon(s.icon, 16), (state.charAt(0).toUpperCase() + state.slice(1)).replace(/_/g, ' '));
+  return h('span', { class: `chip ${s.cls}` }, icon(s.icon, 16), stateLabel(state));
 }
 
 /** statusChip: an agent's or key's lifecycle status (not a verdict). */

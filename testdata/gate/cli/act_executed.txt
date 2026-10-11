@@ -2,6 +2,6 @@ exit 0
 --- stdout
 ✓ executed · fake.echo · N ms
   action   act_…
-  witness  L0 · VERIFIED · The tool reported success.
-  deed     deed_… · seq N · sealed
+  check    Claimed · Matches · The tool reported success.
+  record   deed_… · seq N · sealed
 --- stderr

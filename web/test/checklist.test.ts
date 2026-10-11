@@ -20,11 +20,11 @@ describe('summaries', () => {
     expect(testSummary(t([]))).toBe('No checks ran.');
   });
   it('readinessSummary: ready with notes, or the items to fix', () => {
-    expect(readinessSummary(t(['pass', 'pass', 'pass', 'pass', 'pass', 'pass', 'pass', 'pass', 'warn', 'warn']))).toBe('Ready for L2 · 8 passed · 2 notes · 0 failed');
-    expect(readinessSummary(t(['pass', 'warn']))).toBe('Ready for L2 · 1 passed · 1 note · 0 failed');
-    expect(readinessSummary(t(['pass', 'fail', 'warn', 'fail']))).toBe('Not ready for L2 · 2 items to fix');
-    expect(readinessSummary(t(['fail']))).toBe('Not ready for L2 · 1 item to fix');
-    expect(readinessSummary(pg)).toBe('Ready for L2 · 14 passed · 3 notes · 0 failed');
+    expect(readinessSummary(t(['pass', 'pass', 'pass', 'pass', 'pass', 'pass', 'pass', 'pass', 'warn', 'warn']))).toBe('Ready for Proven checks · 8 passed · 2 notes · 0 failed');
+    expect(readinessSummary(t(['pass', 'warn']))).toBe('Ready for Proven checks · 1 passed · 1 note · 0 failed');
+    expect(readinessSummary(t(['pass', 'fail', 'warn', 'fail']))).toBe('Not ready for Proven checks · 2 items to fix');
+    expect(readinessSummary(t(['fail']))).toBe('Not ready for Proven checks · 1 item to fix');
+    expect(readinessSummary(pg)).toBe('Ready for Proven checks · 14 passed · 3 notes · 0 failed');
   });
   it('the SQL to copy always starts with the review header', () => {
     expect(sqlFor('ALTER SYSTEM SET wal_level = logical;', 'acme')).toBe('-- Review before running. Run as a superuser on acme.\nALTER SYSTEM SET wal_level = logical;');
@@ -81,7 +81,7 @@ describe('checkList', () => {
     expect(el.querySelector('.cl-mark')!.textContent).toBe('−');
     expect(el.querySelector('.cl-word')!.textContent).toBe('Skipped');
     const line = readinessLine(t(['fail']));
-    expect(line.textContent).toBe('✕Not ready for L2 · 1 item to fix');
+    expect(line.textContent).toBe('✕Not ready for Proven checks · 1 item to fix');
     expect(line.classList.contains('readiness-fail')).toBe(true);
   });
 });

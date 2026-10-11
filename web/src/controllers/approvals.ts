@@ -10,7 +10,7 @@
 
 import { api, ApiError } from '../lib/api.ts';
 import { relTime, verdictChip } from '../lib/chips.ts';
-import { copy, fill } from '../lib/copy.ts';
+import { copy, fill, plainLevel, plainVerdict } from '../lib/copy.ts';
 import { approvalsCopy as c } from '../lib/copy-approvals.ts';
 import { h, icon, maybe, replace, type Child } from '../lib/dom.ts';
 import { dateTime, number, plural, time } from '../lib/format.ts';
@@ -394,7 +394,7 @@ export function mountApprovals(): void {
           played = true;
           return [mark, `${c.executed} · `, verdictChip(w.verdict, w.level), ` · ${c.sealed}`, h('a', { class: 'apv-view', href: `/app/actions/${actId}` }, c.detail.viewAction)];
         }, true);
-        announce(`${c.executed} · ${a.witness.level} · ${a.witness.verdict} · ${c.sealed}`);
+        announce(`${c.executed} · ${plainLevel(a.witness.level)} · ${plainVerdict(a.witness.verdict)} · ${c.sealed}`);
         settle(ap.id);
         return;
       }

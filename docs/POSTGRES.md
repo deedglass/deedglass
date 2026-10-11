@@ -18,7 +18,7 @@ PostgreSQL 18.6 · acme · 127.0.0.1 · local
 ✓ watched tables     3 of 3 · primary keys · replica identity full
 ✓ publication        deedglass_pub · 4 tables · insert, update, delete, truncate
 ○ slot               not created yet · the witness creates deedglass_01k67c04kxevyex3pjyqe0t45d on first start
-Ready for L2 · 14 passed · 3 notes · 0 failed
+Ready for Proven checks · 14 passed · 3 notes · 0 failed
 ```
 
 ## Set it up
@@ -357,7 +357,7 @@ second runs the same code on your machine. Both are read-only, except `--probe`,
 | `probe` (`--probe`) | ledger and marker work; the agent's direct insert gets 42501 | | otherwise |
 
 A failing line prints one sentence to fix it, and SQL where it helps (`fix_sql` in `--json`). The
-summary is `Ready for L2 · 14 passed · 3 notes · 0 failed`, or `Not ready for L2 · 2 items to fix · …`.
+summary is `Ready for Proven checks · 14 passed · 3 notes · 0 failed`, or `Not ready for Proven checks · 2 items to fix · …`.
 
 **Through a transaction pooler** (port 6543, or `pgbouncer=true`): statements use pgx's
 `QueryExecModeExec` (the extended protocol, one round trip, parameter types inferred by the

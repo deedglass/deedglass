@@ -47,6 +47,7 @@ export const sidebar = clean([
       p('concepts/approvals', 'Approvals'),
       p('concepts/verification-levels', 'Verification levels'),
       p('concepts/what-verified-means', 'What VERIFIED means'),
+      p('concepts/glossary', 'Glossary'),
       p('concepts/deeds', 'Deeds and the deed chain'),
       p('concepts/ledger', 'The Ledger'),
       p('concepts/stop', 'Stop'),

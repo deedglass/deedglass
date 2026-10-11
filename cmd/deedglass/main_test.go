@@ -158,7 +158,7 @@ func TestExitCodes(t *testing.T) {
 		{[]string{"policy", "test", "--json"}, 2, `"code":"usage_error"`, ""},
 		{[]string{"policy", "lint", "--json"}, 2, `"code":"usage_error"`, ""},
 		{[]string{"agent", "keys", "create", "--json"}, 2, `"code":"usage_error"`, ""},
-		{[]string{"agent", "start", "support-bot"}, 2, `Starting an agent needs a reason. Add --reason "why it's safe now"; it goes into the deed.`, ""},
+		{[]string{"agent", "start", "support-bot"}, 2, `Starting an agent needs a reason. Add --reason "why it's safe now"; it goes into the record.`, ""},
 		{[]string{"agent", "list"}, 3, "This command needs an admin API key.", ""},
 		{[]string{"org", "stop-all"}, 2, "needs a typed confirmation", ""},
 		{[]string{"undo", "run", "act_x"}, 2, "--plan is the preview's plan digest", ""},

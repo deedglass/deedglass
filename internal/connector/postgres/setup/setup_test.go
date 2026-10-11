@@ -341,7 +341,7 @@ func TestChecksMatrix(t *testing.T) {
 			t.Errorf("healthy: %s failed: %s", c.ID, c.Detail)
 		}
 	}
-	if ready, line := Readiness(healthy, true); !ready || !strings.HasPrefix(line, "Ready for L2 · ") {
+	if ready, line := Readiness(healthy, true); !ready || !strings.HasPrefix(line, "Ready for Proven checks · ") {
 		t.Errorf("healthy readiness: %s", line)
 	}
 	cases := []struct {

@@ -15,9 +15,9 @@ import (
 // Messages of the API's refusals (internal/httpx carries the codes; these are the sentences).
 const (
 	MsgWindowInvalid      = "The window must start before it ends, and it can be at most 90 days long. Send from before to."
-	MsgResolveReason      = "A reason is required to resolve an anomaly. It goes into the sealed deed."
+	MsgResolveReason      = "A reason is required to resolve an anomaly. It goes into the sealed record."
 	MsgReasonLength       = "The reason must be 3 to 280 characters."
-	MsgSettingsReason     = "A reason is required to change Insights settings. It goes into the sealed deed."
+	MsgSettingsReason     = "A reason is required to change Insights settings. It goes into the sealed record."
 	MsgReplayFinished     = "This replay already finished, so it can't be cancelled. Start a new one to replay again."
 	MsgAnomalyResolved    = "This anomaly is already resolved. Resolved anomalies stay in the history; a new finding opens a new one."
 	MsgAgentKey           = "Agent keys can't read Insights. Use the Console or an org admin key."
@@ -62,7 +62,7 @@ func DetectorStaleNotice(minutes int) string {
 const DetectorNeverRanNotice = "Anomaly detection hasn't run for this org yet. Until it does, policies that read anomaly.active treat every agent as anomalous."
 
 // SimulatedBanner is the text S28 shows on every Console screen for a simulated org.
-const SimulatedBanner = "Simulated history. These actions came from deedglass dev simulate. Their deeds were sealed when the simulation ran, and their witness method is simulated."
+const SimulatedBanner = "Simulated history. These actions came from deedglass dev simulate. Their records were sealed when the simulation ran, and their check method is simulated."
 
 // AnomalyTrace is the decision trace's line about the anomaly facts a policy saw.
 func AnomalyTrace(kinds []string) string {

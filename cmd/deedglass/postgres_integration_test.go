@@ -171,7 +171,7 @@ func TestPostgresLive(t *testing.T) {
 	}
 	// 2. check, through the server
 	r = run(env, "connector", "postgres", "check", "--connector", "postgres")
-	if r.code != 0 || !regexp.MustCompile(`Ready for L2 · \d+ passed · \d+ notes · 0 failed`).MatchString(r.stdout) {
+	if r.code != 0 || !regexp.MustCompile(`Ready for Proven checks · \d+ passed · \d+ notes · 0 failed`).MatchString(r.stdout) {
 		t.Fatalf("check: %+v", r)
 	}
 	t.Logf("\n%s", r.stdout)

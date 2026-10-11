@@ -159,7 +159,7 @@ describe('insights helpers', () => {
 
   it('reads the tighten and budget evidence too', () => {
     const t = Object.fromEntries(evidenceRows(tighten.evidence).map((r) => [r.label, r.value]));
-    expect(t['MISMATCH verdicts']).toBe('3');
+    expect(t["Doesn't match verdicts"]).toBe('3');
     expect(t.Rule).toBe('allow-db-writes');
     const b = Object.fromEntries(evidenceRows(budget.evidence).map((r) => [r.label, r.value]));
     expect(b.Budget).toBe('refunds-per-day');
@@ -320,7 +320,7 @@ describe('insights views', () => {
     expect(el.querySelectorAll('details > summary')).toHaveLength(3);
     expect(el.querySelectorAll('rect.bar-mismatch').length).toBeGreaterThan(0);
     expect(el.querySelector('[class*="aurora"]')).toBeNull();
-    expect([...el.querySelectorAll('.ins-legend li')].map((x) => [...x.querySelectorAll('span')].map((y) => y.textContent).join(' '))[0]).toBe('VERIFIED 5,763');
+    expect([...el.querySelectorAll('.ins-legend li')].map((x) => [...x.querySelectorAll('span')].map((y) => y.textContent).join(' '))[0]).toBe('Matches 5,763');
   });
 });
 

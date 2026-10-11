@@ -16,3 +16,10 @@ export const STATE_STYLES: Record<string, { cls: string; icon: string }> = {
   expired: { cls: 'chip-outline', icon: 'clock' },
   cancelled: { cls: 'chip-outline', icon: 'x' },
 };
+
+/** stateLabel is how a lifecycle state reads in a chip. The verdict states use their plain names
+ *  (Checking, Matches, Doesn't match, Can't check); the wire value stays in the API. */
+const PLAIN_STATE: Record<string, string> = { witnessing: 'Checking', verified: 'Matches', mismatch: "Doesn't match", unverifiable: "Can't check" };
+export function stateLabel(state: string): string {
+  return PLAIN_STATE[state] ?? (state.charAt(0).toUpperCase() + state.slice(1)).replace(/_/g, ' ');
+}

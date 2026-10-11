@@ -247,8 +247,8 @@ disables what a role can't do and says why.
 - **Test:** each check as ✓ (quiet), ○ or ✕ with its detail, the fix and `Copy SQL`, which copies
   the SQL behind the header `-- Review before running. Run as a superuser on <db>.` Nothing runs
   from the Console. The button rests 6 s after a run (the server allows 10 a minute).
-- **Postgres:** the test is the readiness report (`Ready for L2 · 14 passed · 3 notes · 0 failed`,
-  or `Not ready for L2 · 1 item to fix`), with the provider's note when it applies and the CLI
+- **Postgres:** the test is the readiness report (`Ready for Proven checks · 14 passed · 3 notes · 0 failed`,
+  or `Not ready for Proven checks · 1 item to fix`), with the provider's note when it applies and the CLI
   equivalent. The Witness card reads the decoder S20 already records (`GET …/decoder`):
   `Witness · healthy · 12 MB behind · last commit 4s ago`; lagging adds
   `L2 verdicts will arrive late.`, an invalidated slot gives the recovery steps. It never connects

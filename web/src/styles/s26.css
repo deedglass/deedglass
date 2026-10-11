@@ -99,7 +99,7 @@
 }
 
 /* ===================== Connectors (S26 §3.3) ===================== */
-.lvl-badges { display: inline-flex; gap: var(--space-1); }
+.lvl-badges { display: inline-flex; flex-wrap: wrap; gap: var(--space-1); }
 .lvl-badge { display: inline-flex; align-items: center; height: 20px; padding: 0 6px; border: 1px solid var(--border-strong); border-radius: var(--radius-chip); font-size: 11px; font-weight: 600; letter-spacing: .04em; color: var(--text-2); font-variant-numeric: tabular-nums; }
 .con-type { display: inline-flex; align-items: center; gap: var(--space-2); margin: 0; }
 .con-type .icon { color: var(--text-2); }
@@ -128,6 +128,9 @@
 .cn-form { max-width: 720px; }
 .con-grid { display: grid; gap: var(--space-4); grid-template-columns: minmax(0, 1fr); margin-top: var(--space-4); }
 @media (min-width: 1200px) { .con-grid { grid-template-columns: minmax(0, 1fr) 380px; align-items: start; } }
+/* Each column's cards stay inside the track: the plain level names (Claimed, Checked, Proven) make the tools table wider than L0 L1 L2 did, so it scrolls in its card instead of sliding under the side column. */
+.con-grid > .grid { grid-template-columns: minmax(0, 1fr); }
+#tools-host { overflow-x: auto; }
 .cred-row { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-3); }
 .cred-set, .cred-unset { display: inline-flex; align-items: center; gap: var(--space-2); overflow-wrap: anywhere; }
 .cred-set .icon, .cred-unset .icon { color: var(--text-2); }

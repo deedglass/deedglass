@@ -184,7 +184,7 @@ func runKeysRotate(ctx context.Context, e *Env, args []string) error {
 		printRows(e, [][2]string{{"next", next + " and restart every instance."}})
 		return nil
 	}
-	printRows(e, [][2]string{{"next", next}, {"", "and restart every instance before " + retireBy + ". Deeds sealed with either key keep verifying."}})
+	printRows(e, [][2]string{{"next", next}, {"", "and restart every instance before " + retireBy + ". Records sealed with either key keep verifying."}})
 	return nil
 }
 

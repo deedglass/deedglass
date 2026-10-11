@@ -160,7 +160,7 @@ builds it. Hidden commands work but aren't in `deedglass help`.
 | `deedglass init [--yes] [--dir .] [--client claude-code|claude-desktop|cursor|vscode|windsurf|sdk-python|sdk-typescript|none] [--listen 127.0.0.1:8080] [--pg-port 55432] [--no-open] [--no-smoke] [--stop] [--json]` | Setup | Set up Deedglass in this directory | built |
 | `deedglass doctor [--only <ids>] [--json]` | Setup | Check config, database and keys | built |
 | `deedglass scan [--dir .] [--postgres-dsn-env VAR] [--format md,html,json,sarif] [--score] [--badge] [--share] [--ci] [--fail-under A|B|C|D] [--json]` | Setup | Show what your agent setup can change | built |
-| `deedglass serve [--migrate]` | Setup | Run the API, the Gate and the Console | built |
+| `deedglass serve [--migrate]` | Setup | Run the API, the rules and the Console | built |
 | `deedglass migrate up [--database-url <url>] [--dry-run] [--json]` | Setup | Apply database migrations | built |
 | `deedglass migrate status [--database-url <url>] [--json]` | Setup | Show applied and pending migrations | built |
 | `deedglass migrate verify [--database-url <url>] [--json]` | Setup | Check applied migrations against this build | built |
@@ -206,9 +206,9 @@ builds it. Hidden commands work but aren't in `deedglass help`.
 | `deedglass policy evaluate --policy <file> | --server [--policy <name> --version <n>] --tool <name> [--sql …] [--args <json>] [--input <file>] [--agent …] [--label k=v] [--user …] [--time …] [--tz …] [--usage k=v] [--explain] [--json]` | Policies | Evaluate one action against a policy | built |
 | `deedglass policy replay <name|pol_…> --version <n> [--from 7d] [--to now] [--baseline recorded|vN] [--wait] [--quiet] [--json]` | Policies | Replay past actions against a version | built |
 | `deedglass policy diff <old.yaml> <new.yaml> | <policy> <vA> <vB> [--context 3] [--json]` | Policies | Compare two policy versions | built |
-| `deedglass act <tool> [--args '{"k":"v"}'] [--mode gateway|proxy] [--wait 60s] [--idempotency-key K] [--json]` | Actions | Send a test action through the Gate | built |
+| `deedglass act <tool> [--args '{"k":"v"}'] [--mode gateway|proxy] [--wait 60s] [--idempotency-key K] [--json]` | Actions | Send a test action through Deedglass | built |
 | `deedglass actions list [--agent agt_…] [--tool stripe.*] [--state …] [--decision …] [--verdict MISMATCH] [--level L2] [--since 1h] [--q text] [--limit 25] [--cursor …] [--json] [--follow] [--connector orders]` | Actions | List actions | built |
-| `deedglass actions show <act_…> [--wait] [--diff] [--json]` | Actions | Show one action, its events and its L2 diff | built |
+| `deedglass actions show <act_…> [--wait] [--diff] [--json]` | Actions | Show one action, its events and its Proven diff | built |
 | `deedglass actions cancel <act_…> [--json]` | Actions | Cancel a pending action | built |
 | `deedglass approve <apr_…> --as <email> [--reason …] [--json]` | Actions | Approve a pending action | built |
 | `deedglass deny <apr_…> --as <email> --reason "…" [--json]` | Actions | Deny a pending action | built |
@@ -220,13 +220,13 @@ builds it. Hidden commands work but aren't in `deedglass help`.
 | `deedglass webhooks list [--json]` | Actions | List webhook endpoints | built |
 | `deedglass webhooks test <whk_…> [--json]` | Actions | Send a test event | built |
 | `deedglass webhooks delete <whk_…> [--json]` | Actions | Remove a webhook endpoint | built |
-| `deedglass verify <path|->... [--keys <file|url>] [--pin sha256:…] [--anchor <seq>:sha256:…] [--file <path>] [--strict] [--all] [-q]` | Deeds | Check deeds offline | built |
-| `deedglass deeds list [--from-seq n] [--to-seq n] [--kind action,admin,amendment] [--action act_…] [--order asc|desc] [--limit 25] [--json]` | Deeds | List deeds | built |
-| `deedglass deeds show <deed_…|seq> [--json]` | Deeds | Show one deed | built |
-| `deedglass deeds export [--out <file>|-] [--format tar.gz|jsonl] [--from-seq n] [--to-seq n] [--since 1h] [--json]` | Deeds | Export deeds as a bundle | built |
-| `deedglass deeds seal-file <path> --label <text> [--media-type application/pdf|text/markdown|application/json|text/plain] [--out <path>.deed.json] [--json]` | Deeds | Seal a file's hash as a deed | built |
-| `deedglass ledger check [--from-seq n] [--to-seq n] [--json]` | Deeds | Check the deed chain | built |
-| `deedglass ledger prune [--older-than 90d] [--dry-run] [--yes] [--json]` | Deeds | Remove old payloads; deeds stay | built |
+| `deedglass verify <path|->... [--keys <file|url>] [--pin sha256:…] [--anchor <seq>:sha256:…] [--file <path>] [--strict] [--all] [-q]` | Records | Check records offline | built |
+| `deedglass deeds list [--from-seq n] [--to-seq n] [--kind action,admin,amendment] [--action act_…] [--order asc|desc] [--limit 25] [--json]` | Records | List records | built |
+| `deedglass deeds show <deed_…|seq> [--json]` | Records | Show one record | built |
+| `deedglass deeds export [--out <file>|-] [--format tar.gz|jsonl] [--from-seq n] [--to-seq n] [--since 1h] [--json]` | Records | Export records as a bundle | built |
+| `deedglass deeds seal-file <path> --label <text> [--media-type application/pdf|text/markdown|application/json|text/plain] [--out <path>.deed.json] [--json]` | Records | Seal a file's hash as a record | built |
+| `deedglass ledger check [--from-seq n] [--to-seq n] [--json]` | Records | Check the record chain | built |
+| `deedglass ledger prune [--older-than 90d] [--dry-run] [--yes] [--json]` | Records | Remove old payloads; records stay | built |
 | `deedglass connector create --config <file> [--type rest] [--name orders] [--description …] [--json]` | Connectors | Add a connector | built |
 | `deedglass connector list [--json]` | Connectors | List connectors | built |
 | `deedglass connector show <name|con_…> [--json]` | Connectors | Show one connector | built |
@@ -240,8 +240,8 @@ builds it. Hidden commands work but aren't in `deedglass help`.
 | `deedglass decoder status [--connector <name>] [--recent N] [--json]` | Connectors | Show what the decoder reads from Postgres | built |
 | `deedglass decoder drop --connector <name> [--confirm <name>] [--json]` | Connectors | Drop a connector's replication slot | built |
 | `deedglass slack manifest --base-url <https://host> [--name Deedglass] [--json]` | Connectors | Print the Slack app manifest | built |
-| `deedglass mcp wrap --connector <name> [--connector-type mcp] [--hide-denied=false] [--call-timeout 2m] [--result-mode full|digest] [--log-file <path>] -- <command> [args…]` | MCP | Run an MCP server behind the Gate | built |
-| `deedglass mcp serve [--connector native|<name>]` | MCP | Serve the Gate's native MCP tools | built |
+| `deedglass mcp wrap --connector <name> [--connector-type mcp] [--hide-denied=false] [--call-timeout 2m] [--result-mode full|digest] [--log-file <path>] -- <command> [args…]` | MCP | Run an MCP server behind Deedglass | built |
+| `deedglass mcp serve [--connector native|<name>]` | MCP | Serve Deedglass's native MCP tools | built |
 | `deedglass mcp snippet --client <claude-desktop|claude-code|cursor|windsurf|vscode> --connector <name> [--connector-type postgres] [--api-key-from-env] -- <command> [args…]  ·  --transport http --client <…> [--connector native|<name>]` | MCP | Print client config for an MCP client | built |
 | `deedglass insights stats [--window 7d|30d | --from … --to …] [--by rule|tool|agent|none] [--agent agt_…] [--tool stripe.*] [--compare] [--json]` | Insights | Show decisions, approvals and verdicts by rule | built |
 | `deedglass insights shadow [--shadow-version pv_…] [--from …] [--to …] [--json]` | Insights | Show where the shadow policy disagrees | built |
@@ -473,7 +473,7 @@ $ deedglass connector create --config examples/connectors/orders.yaml
 
 $ deedglass connector credentials set orders --from-env ORDERS_TOKEN
 ✓ Credentials stored · orders · bearer · …9f2c · encrypted with kek:3f9a1c2b7d8e
-  Agents never see this value. Deedglass adds it only when the Gate runs a call.
+  Agents never see this value. Deedglass adds it only when it runs a call.
 
 $ deedglass connector test metadata-probe
 ✕ metadata-probe · destination blocked · 12 ms
@@ -548,7 +548,7 @@ PostgreSQL 18.6 · acme · orders-db · self-hosted
 ✓ begin_action       security definer · search_path pinned · body sha256:2f3f…7bd4
 ✓ agent role         least privilege · 2 writable tables · no ledger access
 ○ slot               not created yet · the witness creates deedglass_01m3wnr88j9d4gbs3fxm0ypb66 on first start
-Ready for L2 · 14 passed · 3 notes · 0 failed
+Ready for Proven checks · 14 passed · 3 notes · 0 failed
 ```
 
 ## The decoder: `decoder status` and `decoder drop` (S20)

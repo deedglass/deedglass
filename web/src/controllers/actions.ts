@@ -3,7 +3,7 @@
 // in the URL with the API's names. Text search pauses live insertion (it is the server's).
 
 import { api, ApiError } from '../lib/api.ts';
-import { copy, fill } from '../lib/copy.ts';
+import { copy, fill, plainVerdict } from '../lib/copy.ts';
 import { h, icon, maybe } from '../lib/dom.ts';
 import { anchorAfterResync, FeedModel } from '../lib/feed.ts';
 import { emptyFilters, filtersToSearch, isFiltered, LEVELS, parseFilters, STATES, toApiQuery, VERDICTS, type Decision, type Filters, type TimeRange } from '../lib/filters.ts';
@@ -226,8 +226,8 @@ export function mountActions(): void {
         segmented<Decision | ''>(copy.feed.decision, [
           { value: '', label: copy.feed.decisionAll }, { value: 'allow', label: copy.chips.allowed }, { value: 'deny', label: copy.chips.denied }, { value: 'require_approval', label: copy.chips.approval },
         ], filters.decision, (v) => applyFilters({ ...filters, decision: v }), 'decision'),
-        toggles<Verdict>(copy.feed.verdict, VERDICTS.map((v) => ({ value: v, label: v.charAt(0) + v.slice(1).toLowerCase() })), filters.verdict, (v) => applyFilters({ ...filters, verdict: v }), 'verdict'),
-        toggles<Level>(copy.feed.level, LEVELS.map((v) => ({ value: v, label: v })), filters.level, (v) => applyFilters({ ...filters, level: v }), 'level'),
+        toggles<Verdict>(copy.feed.verdict, VERDICTS.map((v) => ({ value: v, label: plainVerdict(v) })), filters.verdict, (v) => applyFilters({ ...filters, verdict: v }), 'verdict'),
+        toggles<Level>(copy.feed.level, LEVELS.map((v) => ({ value: v, label: copy.chips.level[v] ?? v })), filters.level, (v) => applyFilters({ ...filters, level: v }), 'level'),
       ],
       end: [moreBtn, clearBtn],
     }));

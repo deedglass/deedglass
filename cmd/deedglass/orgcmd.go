@@ -178,7 +178,7 @@ func runOrgCreate(ctx context.Context, e *Env, args []string) error {
 	s := e.Style
 	fmt.Fprintln(e.Stdout, s.OKLine(fmt.Sprintf("Org created %s %s %s %s", ui.Sep, c.Org.Name, ui.Sep, c.Org.ID)))
 	fmt.Fprintln(e.Stdout, s.OKLine(fmt.Sprintf("Owner %s %s %s %s", ui.Sep, c.Owner.Email, ui.Sep, c.Owner.ID)))
-	fmt.Fprintln(e.Stdout, s.OKLine(fmt.Sprintf("Deed sealed %s org.created %s %s", ui.Sep, ui.Sep, c.Deed)))
+	fmt.Fprintln(e.Stdout, s.OKLine(fmt.Sprintf("Record sealed %s org.created %s %s", ui.Sep, ui.Sep, c.Deed)))
 	fmt.Fprintln(e.Stdout)
 	switch mode {
 	case "print":
@@ -254,7 +254,7 @@ func runOrgLoginLink(ctx context.Context, e *Env, args []string) error {
 		what = "Invite link issued"
 	}
 	fmt.Fprintln(e.Stdout, s.OKLine(fmt.Sprintf("%s %s %s %s %s", what, ui.Sep, email, ui.Sep, l.OrgName)))
-	fmt.Fprintln(e.Stdout, s.OKLine(fmt.Sprintf("Deed sealed %s login_link.issued %s %s", ui.Sep, ui.Sep, l.Deed)))
+	fmt.Fprintln(e.Stdout, s.OKLine(fmt.Sprintf("Record sealed %s login_link.issued %s %s", ui.Sep, ui.Sep, l.Deed)))
 	fmt.Fprintf(e.Stdout, "  %s\n", l.Link)
 	fmt.Fprintf(e.Stdout, "  Anyone with this link can sign in as %s for %s. Send it privately.\n", email, ttlWords(time.Until(l.ExpiresAt)))
 	return nil

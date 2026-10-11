@@ -85,7 +85,7 @@ export function mountDeedView(): void {
         h('nav', { class: 'crumbs', 'aria-label': 'Breadcrumb' }, h('a', { href: '/app/deeds' }, copy.nav.deeds), h('span', { 'aria-hidden': 'true' }, '/'), idChip(env.id)),
         h('div', { class: 'agent-head' }, h('h1', { class: 't-title-2', id: 'page-title' }, fill(copy.deeds.title, { seq: number(b.seq) })), kindChip(b.kind)),
         h('p', { class: 'detail-meta' }, visibleControls(deedSummary(b)), ' · ', relTime(b.issued_at, tz)),
-        h('nav', { class: 'deed-nav', 'aria-label': 'Deeds by seq' }, prev, next)),
+        h('nav', { class: 'deed-nav', 'aria-label': 'Records by seq' }, prev, next)),
       h('div', { class: 'detail-grid' },
         h('aside', { class: 'detail-aside', 'aria-label': copy.deedPanel.title }, panel.el),
         h('div', { class: 'detail-main' },

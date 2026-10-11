@@ -1,7 +1,7 @@
 exit 0
 --- stdout
 [33m○[0m executed · fake.slow · N ms
-  witness  L0 · [33mUNVERIFIABLE[0m · The tool did not answer within N ms. It may have run.
-  deed     deed_… · seq N · sealed
+  check    Claimed · [33mCan't check[0m · The tool did not answer within N ms. It may have run.
+  record   deed_… · seq N · sealed
   Next: check the target system by hand, or raise gate.execute_timeout.
 --- stderr

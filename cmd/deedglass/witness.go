@@ -13,7 +13,8 @@ import (
 	"github.com/deedglass/deedglass/internal/witness/l2"
 )
 
-// The witness block (S19 §5): the claim on one line, "<level> · <VERDICT> · <summary>", then the
+// The check block (S19 §5): the claim on one line, "<level> · <verdict> · <summary>" in plain names
+// ("Checked · Doesn't match · …"; witness.PlainLevel and witness.PlainVerdict), then the
 // reasons that matter, each with its symbol and level, and a field/expected/observed table under a
 // reason that compared fields. Symbols and words carry the meaning; colour only repeats it.
 
@@ -41,21 +42,22 @@ func classSymbol(st ui.Style, c witness.Class) string {
 	return st.Dim(ui.Sep)
 }
 
-// verdictWord is the verdict in its colour (red only for a MISMATCH).
+// verdictWord is the verdict's plain name in its colour (red only for a MISMATCH).
 func verdictWord(st ui.Style, v string) string {
+	w := witness.PlainVerdict(v)
 	switch v {
 	case gate.VerdictVerified:
-		return st.Teal(v)
+		return st.Teal(w)
 	case gate.VerdictMismatch:
-		return st.Red(v)
+		return st.Red(w)
 	}
-	return st.Amber(v)
+	return st.Amber(w)
 }
 
-// witnessClaim is the claim line's value: "L1 · MISMATCH · <summary>" (or the method when there is
+// witnessClaim is the claim line's value: "Checked · Doesn't match · <summary>" (or the method when there is
 // no summary, as in lists).
 func witnessClaim(st ui.Style, w *ledger.ActionWitness, method bool) string {
-	line := w.Level + " " + ui.Sep + " " + verdictWord(st, w.Verdict)
+	line := witness.PlainLevel(w.Level) + " " + ui.Sep + " " + verdictWord(st, w.Verdict)
 	switch {
 	case method && w.Method != nil:
 		line += " " + ui.Sep + " " + clean(*w.Method)
@@ -93,12 +95,12 @@ func witnessReasons(st ui.Style, w *ledger.ActionWitness, all bool, pad string) 
 		seen[r.Message] = true
 		said := !all && r.Message == summary
 		if !said {
-			out = append(out, pad+classSymbol(st, r.Class)+" "+string(r.Level)+"  "+clean(r.Message))
+			out = append(out, pad+classSymbol(st, r.Class)+" "+ui.Pad(r.Level.Plain(), 7)+"  "+clean(r.Message))
 		}
 		if len(r.Diff) > 0 {
 			inner := pad
 			if !said {
-				inner += "      "
+				inner += "           " // the symbol, the level padded to 7 and two spaces
 			}
 			out = append(out, diffTable(st, r.Diff, inner)...)
 		}
@@ -137,7 +139,7 @@ func cellValue(v any) string {
 	return witness.ShowValue(v)
 }
 
-// witnessNext is the next step after a verdict that isn't VERIFIED, or "".
+// witnessNext is the next step after a verdict that isn't VERIFIED (Matches), or "".
 func witnessNext(a *ledger.Action) string {
 	w := a.Witness
 	if w == nil {
@@ -161,7 +163,7 @@ func witnessNext(a *ledger.Action) string {
 }
 
 // l2Lines is the L2 diff under a witness claim (S21 §0): the expected and observed pair, the
-// rows and the "Witnessed by Postgres" footer, from a stored witness_detail. nil when the detail
+// rows and the "Proven by Postgres" footer, from a stored witness_detail. nil when the detail
 // has no L2 evidence. With footerOnly, only the footer (a VERIFIED claim needs no diff).
 func l2Lines(e *Env, detail json.RawMessage, pad string, footerOnly bool) []string {
 	d, ok := witness.ParseDetail(detail)
@@ -182,7 +184,7 @@ func l2Lines(e *Env, detail json.RawMessage, pad string, footerOnly bool) []stri
 }
 
 // historyLines are the witness sections sealed about an action, oldest first (S21 §5):
-// "L1 · UNVERIFIABLE · sealed 13:20:11 · l2_timeout", then each amendment.
+// "Checked · Can't check · sealed 13:20:11 · l2_timeout", then each amendment.
 func historyLines(st ui.Style, w *ledger.ActionWitness, summary string) []string {
 	if w == nil || len(w.History) < 2 {
 		return nil
@@ -193,7 +195,7 @@ func historyLines(st ui.Style, w *ledger.ActionWitness, summary string) []string
 		if t, err := time.Parse("2006-01-02T15:04:05.000Z", h.At); err == nil {
 			at = t.UTC().Format("15:04:05")
 		}
-		line := h.Level + " " + ui.Sep + " " + verdictWord(st, h.Verdict) + " " + ui.Sep
+		line := witness.PlainLevel(h.Level) + " " + ui.Sep + " " + verdictWord(st, h.Verdict) + " " + ui.Sep
 		if h.Kind == "amendment" {
 			line += " amendment " + shortID(h.Deed) + " " + ui.Sep + " " + at
 		} else {
@@ -214,7 +216,7 @@ func historyLines(st ui.Style, w *ledger.ActionWitness, summary string) []string
 func reasonWords(code string) string {
 	switch witness.Code(code) {
 	case witness.CodeL2Timeout:
-		return "L2 timed out"
+		return "the Proven check timed out"
 	case witness.CodeSlotDropped:
 		return "the slot was dropped"
 	case witness.CodeDecoderHalted:

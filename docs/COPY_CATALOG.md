@@ -24,9 +24,9 @@ error, no exclamation marks, no emoji).
 | Agents, empty | `No agents yet. Connect your first agent in about two minutes.` · button `Create agent` |
 | Chips | `Active` (neutral) · `Suspended` (neutral, pause icon) · `Stopped` (red outline, Stop icon) · `Test` (outline badge on test keys) |
 | New key sheet | title `Copy your new key` · `This is the only time Deedglass shows it. Deedglass stores only a hash, so it can't show it again.` · checkbox `I've stored this key in a secret manager` · `Done` (disabled until the box is checked) |
-| Stop sheet | title `Stop support-bot?` · `Deedglass will refuse every call from support-bot, on every instance, within 2 seconds. Calls already running at a tool finish; nothing new starts.` · `Type support-bot to confirm` · `Reason (optional, recorded in the deed)` · red `Stop agent` · `Cancel` |
+| Stop sheet | title `Stop support-bot?` · `Deedglass will refuse every call from support-bot, on every instance, within 2 seconds. Calls already running at a tool finish; nothing new starts.` · `Type support-bot to confirm` · `Reason (optional, sealed in the record)` · red `Stop agent` · `Cancel` |
 | After a stop | toast `support-bot stopped · deed sealed` · link `View deed` |
-| Stop all sheet | title `Stop all agents in Acme?` · `Deedglass will refuse every agent call in Acme within 2 seconds. Only an owner can start them again.` · `Type acme to confirm` · `Reason (optional, recorded in the deed)` · red `Stop all agents` · `Cancel` |
+| Stop all sheet | title `Stop all agents in Acme?` · `Deedglass will refuse every agent call in Acme within 2 seconds. Only an owner can start them again.` · `Type acme to confirm` · `Reason (optional, sealed in the record)` · red `Stop all agents` · `Cancel` |
 | Org stopped banner | `All agents in Acme are stopped · since 14:05 · by Priya Raman · "Investigating unexpected refunds"` · `Start all agents` (owners only) |
 | Start all sheet | title `Start all agents in Acme?` · `Agents that were stopped one by one stay stopped. Everything else can act again as soon as you confirm.` · required `Why is it safe to start again?` · primary (not red) `Start all agents` · `Cancel` |
 | Roll sheet | `The old key keeps working for` [`Now` · `1 hour` · `24 hours` · `7 days`] `so you can deploy the new one first.` · primary `Roll key` · `Cancel` |
@@ -43,7 +43,7 @@ colour):
 - The typed-confirmation field must match exactly (case-sensitive) before the red button enables;
   `Cancel` has the initial focus, and Escape closes the sheet without acting.
 - The body says what happens, how fast, and what it doesn't touch, in at most two sentences.
-- The reason field says where it goes (`recorded in the deed`) so people know it's permanent.
+- The reason field says where it goes (`sealed in the record`) so people know it's permanent.
 - Chips and the banner always pair the colour with a word and an icon (brand §6.3).
 - **Kept as written:** the empty state's `Connect your first agent` and its button `Create agent`
   use two verbs; the sentence is the brand doc's binding example (§4), so it stays.
@@ -208,7 +208,7 @@ Source of truth: `internal/gate/present.go` (the S15 block) and `internal/identi
 | Empty state | No connectors yet. Add your first API in about two minutes: a base URL, one tool, one credential. |
 | Credential row | Set · bearer · …9f2c · updated 2h ago, with **Replace** and **Remove** |
 | Credential row, none | No credentials yet. Agents' calls fail as credentials_missing until you store one. |
-| Under the credential form | Agents never see this value. Deedglass adds it only when the Gate runs a call. |
+| Under the credential form | Agents never see this value. Deedglass adds it only when it runs a call. |
 | Health | Passed · 4 checks · tested 5m ago / Failed · destination blocked |
 
 ### API errors, as rendered
@@ -229,7 +229,7 @@ Source of truth: `internal/gate/present.go` (the S15 block) and `internal/identi
 |---|---|
 | Empty `--from-env` | ORDERS_TOKEN is empty or unset. Export it in this shell and run the command again. Deedglass never reads secrets from flags. |
 | Created | ✓ Connector created · orders · con_… / 2 tools · orders.get (read) · orders.update_status (write) / ○ No credentials yet. Next: deedglass connector credentials set orders --from-env ORDERS_TOKEN |
-| Stored | ✓ Credentials stored · orders · bearer · …9f2c · encrypted with kek:3f9a1c2b7d8e / Agents never see this value. Deedglass adds it only when the Gate runs a call. |
+| Stored | ✓ Credentials stored · orders · bearer · …9f2c · encrypted with kek:3f9a1c2b7d8e / Agents never see this value. Deedglass adds it only when it runs a call. |
 | Rotation | ◐ Rewrapping data keys · 2 of 2 / ✓ All 42 credentials use kek:3f9a1c2b7d8e. You can remove kek:77c0e1a9b442 from DEEDGLASS_VAULT_KEY. |
 
 ## Postgres readiness (S17; S26 builds the panel)
@@ -238,11 +238,11 @@ Source of truth: `internal/gate/present.go` (the S15 block) and `internal/identi
 
 | Where | String |
 |---|---|
-| Panel title, ready | Ready for L2 |
-| Panel title, not ready | Not ready for L2 · 2 items to fix |
+| Panel title, ready | Ready for Proven checks |
+| Panel title, not ready | Not ready for Proven checks · 2 items to fix |
 | Empty state | Connect a Postgres database to see what your agents actually changed. |
 | A check with `fix_sql` | **Copy SQL** button under the fix sentence |
-| Vocabulary | the **witness** role · **Ready for L2** · **watched tables** |
+| Vocabulary | the **witness** role · **Ready for Proven checks** · **watched tables** |
 
 Each warning says what breaks and what to do next, as `check` prints it (`internal/connector/postgres/setup/check.go` is the one source).
 
@@ -279,7 +279,7 @@ words: the decoder doesn't decide.
 | Surface | Copy |
 |---|---|
 | Decoder row | `Witness · healthy · 3.9 kB behind · last commit 4s ago` |
-| Empty state | `This connector isn't witnessed yet. Turn on Witness to see what Postgres actually committed for every agent write. It needs wal_level=logical and a publication; the check below walks you through it.` |
+| Empty state | `Checks aren't on for this connector yet. Turn them on to see what Postgres actually committed for every agent write. It needs wal_level=logical and a publication; the check below walks you through it.` |
 | Alert toast (forged marker) | `Forged marker on postgres: a transaction claimed to be a Deedglass action without a ledger row. Nothing was bound to it.` |
 | Alert toast (forged message) | `Forged message on postgres: a message outside any transaction claimed to come from Deedglass. Nothing was bound to it.` |
 | Alert toast (foreign ledger) | `Ledger row from another org on postgres: a transaction named an action of a different org. Nothing was bound to it.` |
@@ -295,7 +295,7 @@ words: the decoder doesn't decide.
 | `lag_high` | `lag 611 MB, above the 512 MB alert` / `The slot is holding WAL on the watched database. Deedglass is still reading; it is behind.` / `Next: check deedglass serve is running and healthy, or raise DEEDGLASS_SLOT_LAG_ALERT_MB if this is expected.` |
 | `slot_invalidated` | `slot invalidated at 2026-10-07 07:40 UTC (wal_status lost)` / `Actions waiting on L2 for analytics won't get that evidence (slot_invalidated).` / `Next: deedglass decoder drop --connector analytics, then check max_slot_wal_keep_size (docs.deedglass.com/decoder#sizing)` |
 | Drop | `✓ Slot dropped · deedglass_01j9zq7c… · admin deed deed_01j9zv8k… · a new slot starts on the next sync` |
-| API, not witnessed | `This connector isn't witnessed, so it has no decoder. Turn on witness.enabled in its config first.` |
+| API, not witnessed | `Checks aren't on for this connector, so it has no decoder. Turn on witness.enabled in its config first.` |
 
 ## L2: expected and observed (S21; S25 builds the Witness panel)
 
@@ -386,7 +386,7 @@ never "revert". Status symbols: ✓ pass (teal), ✕ fail (red), ○ warn (amber
 | `ConsoleCopyFix` | `Copy fix` (the button beside fix SQL) |
 | `ConsoleUndoneChip` | `Undone · %s · %s` (on the original: the undo's short id and its time, `Undone · act_01j9zx8… · 10:14 IST`) |
 | `ConsoleUndoesLine` | `This undoes %s.` (on the undo action, a link to the original) |
-| `ConsoleNotEligible` | `Undo works for Postgres writes Deedglass witnessed at L2.` |
+| `ConsoleNotEligible` | `Undo works for Postgres writes with a Proven check.` |
 | `ConsoleAllowTriggers` | `Fire triggers again (admins only)` |
 | `ConsoleAllowTriggersOn` | `Triggers on these tables will fire again. The witness shows what they did.` |
 

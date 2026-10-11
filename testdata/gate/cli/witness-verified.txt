@@ -2,6 +2,6 @@ exit 0
 --- stdout
 ✓ executed · orders.update_status · N ms
   action   act_…
-  witness  L1 · VERIFIED · Read back orders.get: status is "shipped".
-  deed     deed_… · seq N · sealed
+  check    Checked · Matches · Read back orders.get: status is "shipped".
+  record   deed_… · seq N · sealed
 --- stderr

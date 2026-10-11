@@ -6,6 +6,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"github.com/deedglass/deedglass/internal/witness"
 	"io"
 	"net/url"
 	"strconv"
@@ -338,14 +339,14 @@ func printUndoAction(w io.Writer, st ui.Style, a *ledger.Action, undoes string) 
 		}
 		fmt.Fprintf(w, "  %s %s\n", ui.Pad("undo", 8), undoResultText(a, undoes))
 		if wt := a.Witness; wt != nil {
-			t := wt.Level + " " + ui.Sep + " " + wt.Verdict
+			t := witness.PlainLevel(wt.Level) + " " + ui.Sep + " " + witness.PlainVerdict(wt.Verdict)
 			if wt.Summary != nil && *wt.Summary != "" {
 				t += " " + ui.Sep + " " + clean(strings.TrimSuffix(*wt.Summary, "."))
 			}
 			fmt.Fprintf(w, "  %s %s\n", ui.Pad("witness", 8), t)
 		}
 		if a.Deed != nil {
-			fmt.Fprintf(w, "  %s %s %s sealed\n", ui.Pad("deed", 8), undo.ShortID(*a.Deed), ui.Sep)
+			fmt.Fprintf(w, "  %s %s %s sealed\n", ui.Pad("record", 8), undo.ShortID(*a.Deed), ui.Sep)
 		}
 	default:
 		fmt.Fprintln(w, st.FailLine(string(a.Status)+" "+ui.Sep+" "+clean(a.Tool)))
@@ -355,7 +356,7 @@ func printUndoAction(w io.Writer, st ui.Style, a *ledger.Action, undoes string) 
 			fmt.Fprintln(w, "  "+clean(*d.Message))
 		}
 		if a.Deed != nil {
-			fmt.Fprintf(w, "  %s %s %s sealed\n", ui.Pad("deed", 8), undo.ShortID(*a.Deed), ui.Sep)
+			fmt.Fprintf(w, "  %s %s %s sealed\n", ui.Pad("record", 8), undo.ShortID(*a.Deed), ui.Sep)
 		}
 		fmt.Fprintln(w, "  Next: preview the undo again: deedglass undo preview "+clean(undoes))
 	}

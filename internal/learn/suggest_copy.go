@@ -16,7 +16,7 @@ import (
 
 // Messages.
 const (
-	MsgRejectReason      = "A reason is required to reject a suggestion. It goes into the sealed deed."
+	MsgRejectReason      = "A reason is required to reject a suggestion. It goes into the sealed record."
 	MsgAcceptAdvisory    = "This is advice, not a policy change, so there is nothing to accept. Dismiss it with reject and a reason."
 	MsgViewerAccept      = "Only admins can accept suggestions. Ask an admin of your org, or view it in Console › Insights."
 	MsgPhrasingNeedsKey  = "Claude phrasing needs DEEDGLASS_ANTHROPIC_API_KEY on the server. Deedglass keeps using its own wording until then."

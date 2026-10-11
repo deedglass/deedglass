@@ -49,7 +49,7 @@ export function sqlFor(fixSql: string, db?: string): string {
 
 const count = (t: ConnectorTest, s: CheckStatus) => t.checks.filter((c) => c.status === s).length;
 
-/** readinessSummary: `Ready for L2 · 8 passed · 2 notes · 0 failed` or `Not ready for L2 · 2 items to fix`. */
+/** readinessSummary: `Ready for Proven checks · 8 passed · 2 notes · 0 failed` or `Not ready for Proven checks · 2 items to fix`. */
 export function readinessSummary(t: ConnectorTest): string {
   const failed = count(t, 'fail');
   if (failed > 0) return failed === 1 ? C.notReadyOne : fill(C.notReady, { n: number(failed) });

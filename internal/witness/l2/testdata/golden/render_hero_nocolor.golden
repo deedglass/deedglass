@@ -25,4 +25,4 @@ witness  L2 · MISMATCH · Postgres changed 301 rows in public.orders. The agent
   ✕ unexpected     19   paid → shipped
   …                first 20 of 301 rows · the rest in Console › Actions
 
-  Witnessed by Postgres · commit 0/3E65020 · 2026-10-07 13:12:09 UTC
+  Proven by Postgres · commit 0/3E65020 · 2026-10-07 13:12:09 UTC

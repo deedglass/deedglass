@@ -110,13 +110,13 @@ func findings(r *Report, o Options) []Finding {
 		if len(nopk) > 0 {
 			out = append(out, Finding{ID: "no_primary_key_on_writable_table", Severity: "low",
 				Title:  "Writable tables without a primary key",
-				Detail: "Undo and L2 witnessing can't anchor rows in " + strings.Join(nopk, ", ") + ".",
+				Detail: "Undo and Proven checks can't anchor rows in " + strings.Join(nopk, ", ") + ".",
 				Fix:    []string{"Add a primary key, or set REPLICA IDENTITY FULL."}, Paths: []string{}, Sources: []string{}})
 		}
 		if pg.WALLevel != "logical" {
 			out = append(out, Finding{ID: "wal_level_not_logical", Severity: "info",
 				Title:  "wal_level isn't logical",
-				Detail: fmt.Sprintf("This database has wal_level=%s; L2 witnessing needs logical.", pg.WALLevel),
+				Detail: fmt.Sprintf("This database has wal_level=%s; Proven checks need logical.", pg.WALLevel),
 				Fix:    []string{"Set wal_level=logical and restart Postgres."}, Paths: []string{}, Sources: []string{}})
 		}
 	}

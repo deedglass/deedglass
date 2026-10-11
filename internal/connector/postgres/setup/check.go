@@ -43,7 +43,7 @@ const docBase = "https://docs.deedglass.com/connectors/postgres"
 
 func doc(anchor string) string { return docBase + "#" + anchor }
 
-// Readiness is the summary line: "Ready for L2 · 8 passed · 2 notes · 0 failed".
+// Readiness is the summary line: "Ready for Proven checks · 8 passed · 2 notes · 0 failed".
 func Readiness(checks []connector.Check, witness bool) (ready bool, line string) {
 	pass, notes, fail := 0, 0, 0
 	for _, c := range checks {
@@ -59,11 +59,11 @@ func Readiness(checks []connector.Check, witness bool) (ready bool, line string)
 	counts := fmt.Sprintf("%d passed · %d %s · %d failed", pass, notes, plural(notes, "note", "notes"), fail)
 	switch {
 	case fail > 0:
-		return false, fmt.Sprintf("Not ready for L2 · %d %s to fix · %s", fail, plural(fail, "item", "items"), counts)
+		return false, fmt.Sprintf("Not ready for Proven checks · %d %s to fix · %s", fail, plural(fail, "item", "items"), counts)
 	case !witness:
 		return false, "Ready for L0 · the witness is off in this connector's config · " + counts
 	}
-	return true, "Ready for L2 · " + counts
+	return true, "Ready for Proven checks · " + counts
 }
 
 // Checks runs the readiness table (S17 §3.10) over in. It reads only in; nothing is written.

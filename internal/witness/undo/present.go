@@ -200,7 +200,7 @@ const (
 	MsgConnectorDeleted   = "The %q connector was deleted. Undo runs through the connector that made the change."
 	MsgConnectorInactive  = "The %q connector is %s. Undo runs through the connector that made the change; turn it back on first."
 	MsgConnectorNoCreds   = "The %q connector has no credentials. Set them in Console › Connectors, then preview again."
-	MsgConnectorNotPG     = "Undo works for Postgres writes Deedglass witnessed at L2. This action ran through %s."
+	MsgConnectorNotPG     = "Undo works for Postgres writes with a Proven check. This action ran through %s."
 	MsgConnectorProxy     = "This action ran at the edge (proxy mode), so no Deedglass marker sits in its transaction. Undo works for actions the Gate ran."
 	MsgConnectorNoWitness = "Witness is off for the %q connector, so the undo itself couldn't be witnessed. Turn on witness in the connector's config."
 	MsgConnectorOK        = "%s (native Postgres) · active"
@@ -399,7 +399,7 @@ const (
 	ConsoleCopyFix         = "Copy fix"
 	ConsoleUndoneChip      = "Undone · %s · %s" // the undo action's short id, its time
 	ConsoleUndoesLine      = "This undoes %s."  // the original's short id
-	ConsoleNotEligible     = "Undo works for Postgres writes Deedglass witnessed at L2."
+	ConsoleNotEligible     = "Undo works for Postgres writes with a Proven check."
 	ConsoleAllowTriggers   = "Fire triggers again (admins only)"
 	ConsoleAllowTriggersOn = "Triggers on these tables will fire again. The witness shows what they did."
 )

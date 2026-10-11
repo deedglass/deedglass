@@ -133,7 +133,7 @@ func runDevSimulate(ctx context.Context, e *Env, args []string) error {
 	}
 	printSimulation(e, res, o.quiet)
 	if !res.ChainIntact {
-		return &ExitError{Code: ExitFailure, Err: errors.New("the deed chain didn't check out"), printed: true}
+		return &ExitError{Code: ExitFailure, Err: errors.New("the record chain didn't check out"), printed: true}
 	}
 	return nil
 }
@@ -188,7 +188,7 @@ func printSimulation(e *Env, r *sim.Result, quiet bool) {
 	if !r.ChainIntact {
 		chain = "chain " + r.ChainStatus
 	}
-	head := fmt.Sprintf("%s actions through the Gate %s %s deeds sealed %s %s", deed.FormatCount(int64(r.Submitted)), ui.Sep,
+	head := fmt.Sprintf("%s actions through Deedglass %s %s records sealed %s %s", deed.FormatCount(int64(r.Submitted)), ui.Sep,
 		deed.FormatCount(r.Deeds), ui.Sep, chain)
 	if quiet {
 		fmt.Fprintln(w, st.OKLine(head))
@@ -210,10 +210,10 @@ func printSimulation(e *Env, r *sim.Result, quiet bool) {
 	}
 	c := r.Counts
 	n := func(v int64) string { return fmt.Sprintf("%5s", deed.FormatCount(v)) }
-	fmt.Fprintf(w, "  %s %s verified      %s   (simulated witness)\n", st.Teal(ui.OK), n(c.Verified), kvLine(c.ByLevel, 3))
+	fmt.Fprintf(w, "  %s %s matches       %s   (simulated check)\n", st.Teal(ui.OK), n(c.Verified), kvLine(c.ByLevel, 3))
 	fmt.Fprintf(w, "  %s %s denied        %s\n", st.Red(ui.Fail), n(c.Denied), kvLine(c.DeniedBy, 3))
-	fmt.Fprintf(w, "  %s %s mismatch      %s\n", st.Red(ui.Fail), n(c.Mismatch), kvLine(c.MismatchBy, 2))
-	fmt.Fprintf(w, "  %s %s unverifiable  %s\n", st.Amber(ui.Unknown), n(c.Unverifiable), kvLine(c.UnverBy, 2))
+	fmt.Fprintf(w, "  %s %s doesn't match %s\n", st.Red(ui.Fail), n(c.Mismatch), kvLine(c.MismatchBy, 2))
+	fmt.Fprintf(w, "  %s %s can't check   %s\n", st.Amber(ui.Unknown), n(c.Unverifiable), kvLine(c.UnverBy, 2))
 	fmt.Fprintf(w, "  %s %s failed        %s\n", ui.Sep, n(c.Failed), kvLine(c.FailedBy, 2))
 	fmt.Fprintf(w, "  %s %s pending       waiting for approval\n", st.Violet(ui.Pending), n(c.Pending))
 	a := r.Approvals

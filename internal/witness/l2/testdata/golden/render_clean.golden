@@ -5,4 +5,4 @@ witness  L2 · VERIFIED · Postgres committed 1 row in public.orders, as the sta
   public.orders    id   status
   ✓ expected       42   paid → shipped
 
-  Witnessed by Postgres · commit 0/3E65020 · 2026-10-07 13:12:09 UTC
+  Proven by Postgres · commit 0/3E65020 · 2026-10-07 13:12:09 UTC

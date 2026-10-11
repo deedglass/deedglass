@@ -54,7 +54,7 @@ func witnessed(c store.Connector) bool {
 
 func notWitnessed(c store.Connector) *httpx.Error {
 	return httpx.E(httpx.CodeWitnessNotConfigured, httpx.Msgf(
-		"The connector %q isn't witnessed, so it has no decoder. Set witness.enabled to true in its config, then run deedglass connector postgres check %s.", c.Name, c.Name))
+		"Checks aren't on for the connector %q, so it has no decoder. Set witness.enabled to true in its config, then run deedglass connector postgres check %s.", c.Name, c.Name))
 }
 
 func (a *API) getDecoder(w http.ResponseWriter, r *http.Request) error {

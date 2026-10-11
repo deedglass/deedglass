@@ -2,7 +2,7 @@
 //  1. add a REST connector against S16's mock orders API: type → configure → credential → test ✓;
 //     the credential value is nowhere in the DOM after save (a walk over every node and attribute)
 //  2. remove the credential → Not set
-//  3. the demo Postgres connector: Ready for L2 · … · 0 failed, and the Witness card is healthy
+//  3. the demo Postgres connector: Ready for Proven checks · … · 0 failed, and the Witness card is healthy
 //  4. a viewer reads connectors but gets no Add, Replace or Remove, and the API refuses a create
 import { AUTH, apiAs, expect, guard, seeds, test } from './fixtures.ts';
 
@@ -72,14 +72,14 @@ test.describe('connectors', () => {
     await done();
   });
 
-  test('3 · the demo Postgres connector is Ready for L2 and its Witness is healthy', async ({ page }) => {
+  test('3 · the demo Postgres connector is Ready for Proven checks and its Witness is healthy', async ({ page }) => {
     const done = await guard(page);
     const list = await apiAs<{ data: { id: string; name: string }[] }>(seeds().adminKey, 'GET', '/v1/connectors');
     const pg = list.body.data.find((x) => x.name === 'postgres')!;
     await page.goto(`/app/connectors/${pg.id}`);
-    await expect(page.locator('.wit-line')).toContainText('Witness · healthy');
+    await expect(page.locator('.wit-line')).toContainText('Check · healthy');
     await page.getByRole('button', { name: /Run (test|check again)/ }).click();
-    await expect(page.locator('.readiness')).toContainText(/Ready for L2 · \d+ passed · .* 0 failed/, { timeout: 15_000 });
+    await expect(page.locator('.readiness')).toContainText(/Ready for Proven checks · \d+ passed · .* 0 failed/, { timeout: 15_000 });
     await expect(page.getByText('deedglass connector postgres check --connector postgres')).toBeVisible();
     await done();
   });

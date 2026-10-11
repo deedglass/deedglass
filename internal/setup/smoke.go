@@ -8,10 +8,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/deedglass/deedglass/internal/witness"
 	"github.com/deedglass/deedglass/pkg/deedglass"
 )
 
-// The three smoke actions (S32 §3.9 step 11), as the quickstart agent: a read (L0 VERIFIED), a
+// The three smoke actions (S32 §3.9 step 11), as the quickstart agent: a read (Claimed · Matches), a
 // DROP TABLE (denied by block-destructive-sql before Postgres sees it) and an UPDATE of order 42
 // (postgres-safe sends it to approval; init countersigns it as the local owner through the dev-only
 // approve --as, then waits for L2 VERIFIED).
@@ -30,7 +31,7 @@ func witnessLine(a *deedglass.Action) string {
 	if a == nil || a.Witness == nil || a.Witness.Verdict == nil {
 		return "no verdict yet"
 	}
-	return a.Witness.Level + " · " + *a.Witness.Verdict
+	return witness.PlainLevel(a.Witness.Level) + " · " + witness.PlainVerdict(*a.Witness.Verdict)
 }
 
 func deedOf(a *deedglass.Action) string {
