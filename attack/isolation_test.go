@@ -56,6 +56,17 @@ func acmeDigest(e *harness.Env, org string) map[string]string {
 	return out
 }
 
+// credSummary lists an org's credential rows without secrets: connector, version, key id, the
+// three timestamps and who last wrote it.
+func credSummary(e *harness.Env, org string) string {
+	var b strings.Builder
+	for _, r := range e.CPQuery(`SELECT connector_id, version::text, kek_id, updated_at::text, coalesce(rotated_at::text, '-'), coalesce(updated_by, '-')
+	  FROM deedglass.credentials WHERE org_id = $1 ORDER BY connector_id`, org) {
+		b.WriteString("  " + strings.Join(r, " ") + "\n")
+	}
+	return b.String()
+}
+
 func TestOrgIsolation(t *testing.T) {
 	e := boot(t)
 	acme, globex := e.Orgs["acme"], e.Orgs["globex"]
@@ -160,6 +171,7 @@ func TestOrgIsolation(t *testing.T) {
 		t.Fatal(err)
 	}
 	before := acmeDigest(e, acme.ID)
+	credBefore := credSummary(e, acme.ID)
 	var paths []string
 	for p := range sp.Paths {
 		paths = append(paths, p)
@@ -279,6 +291,10 @@ func TestOrgIsolation(t *testing.T) {
 	for k, v := range before {
 		if after[k] != v {
 			t.Errorf("Acme's %s rows changed during globex's sweep", k)
+			if k == "credentials" {
+				// The flake watched since S48 (DL-078): say which row and which columns moved.
+				t.Errorf("credentials before:\n%s\nafter:\n%s", credBefore, credSummary(e, acme.ID))
+			}
 		}
 	}
 	t.Logf("org isolation: %d id-bearing routes swept with each credential kind they accept (%d answers 404 not_found, %d refused by validation before the lookup, the same as for an unknown id), %d list routes, %d Acme ids watched, %d Acme tables digested",
