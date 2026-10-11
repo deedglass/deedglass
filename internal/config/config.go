@@ -531,7 +531,16 @@ func (l *loader) parse(c *Config, k Key) {
 			return
 		}
 		c.APIKey = NewSecret(v)
-	case "DEEDGLASS_NO_BANNER", "DEEDGLASS_NO_ANIM":
+	case "DEEDGLASS_LICENCE_FILE", "DEEDGLASS_LICENCE_SERVER":
+		// Read by cmd/deedglass's licence commands straight from the environment (S48).
+		if k.Name == "DEEDGLASS_LICENCE_SERVER" && !strings.HasPrefix(v, "https://") && !strings.HasPrefix(v, "http://localhost") && !strings.HasPrefix(v, "http://127.0.0.1") {
+			bad(fmt.Sprintf("must be an https:// URL, or http://localhost in development (got %q).", v), "Unset it to use https://deedglass.com.")
+		}
+	case "DEEDGLASS_LICENCE_MODE":
+		if v != "live" && v != "test" {
+			bad(fmt.Sprintf("must be live or test (got %q).", v), "Unset it for live licence keys.")
+		}
+	case "DEEDGLASS_NO_BANNER", "DEEDGLASS_NO_ANIM", "DEEDGLASS_NO_NETWORK":
 		// Read by the CLI's terminal mark (internal/cli/mark) straight from the environment;
 		// checked here so config print and doctor flag a typo.
 		switch strings.ToLower(v) {

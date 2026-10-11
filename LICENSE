@@ -200,3 +200,9 @@
    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
    See the License for the specific language governing permissions and
    limitations under the License.
+
+   ----------------------------------------------------------------------
+
+   Files under ee/ are licensed under ee/LICENSE (FSL-1.1-ALv2), not under
+   the Apache License above. Each release of them becomes available under
+   the Apache License, Version 2.0 two years after it is made available.

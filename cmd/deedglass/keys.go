@@ -54,6 +54,7 @@ var keysFlagValues keysOpts
 func keysGenFlags(fs *flag.FlagSet) {
 	keysFlagValues = keysOpts{}
 	fs.StringVar(&keysFlagValues.dir, "dir", "", "directory for the key file (default .deedglass/keys)")
+	keysGenPurposeFlag(fs)
 }
 
 func keysRotateFlags(fs *flag.FlagSet) {
@@ -84,6 +85,13 @@ func keyDir(e *Env, flagDir, sealKeyFile string) (shown, real string) {
 func runKeysGen(_ context.Context, e *Env, args []string) error {
 	if len(args) > 0 {
 		return usageErr(fmt.Errorf("deedglass keys gen takes no arguments (got %q)", args[0]), "Run deedglass help keys gen.")
+	}
+	switch keysGenPurpose {
+	case "seal", "":
+	case "licence":
+		return runKeysGenLicence(e, keysFlagValues.dir)
+	default:
+		return usageErr(fmt.Errorf("--purpose takes seal or licence (got %q)", clean(keysGenPurpose)), "For a licence signing key: deedglass keys gen --purpose licence.")
 	}
 	shown, dir := keyDir(e, keysFlagValues.dir, "")
 	path, kf, err := writeNewKey(dir, shown)

@@ -28,6 +28,10 @@ DEEDGLASS_INIT_DSN                —                                           
 DEEDGLASS_NO_BANNER               false                                                        default
 DEEDGLASS_THEME                   auto                                                         default
 DEEDGLASS_NO_ANIM                 false                                                        default
+DEEDGLASS_LICENCE_FILE            —                                                            not set
+DEEDGLASS_NO_NETWORK              false                                                        default
+DEEDGLASS_LICENCE_MODE            live                                                         default
+DEEDGLASS_LICENCE_SERVER          —                                                            not set
 
 ✓ Valid for dev · 2 local secrets generated in .deedglass/ (never used in prod)
 --- stderr

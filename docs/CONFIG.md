@@ -50,6 +50,10 @@ The first source that sets a key wins:
 | `DEEDGLASS_NO_BANNER` | `no_banner` | `false` | no | CLI | Client key; `serve` ignores it. Never show the terminal banner or the inline mark (bare deedglass, version, help). Scripts, pipes and CI never see them anyway. | S05X |
 | `DEEDGLASS_THEME` | `theme` | `auto` | no | CLI | Client key; `serve` ignores it. Draw the terminal mark for a light or dark terminal. auto: COLORFGBG decides, else dark. | S05X |
 | `DEEDGLASS_NO_ANIM` | `no_anim` | `false` | no | CLI | Client key; `serve` ignores it. Turn off the Sealed animation at the end of deedglass init; only its final frame shows. | S05X |
+| `DEEDGLASS_LICENCE_FILE` | `licence_file` | — | no | licence, scan --full | Client key; `serve` ignores it. Where the Pro licence token lives (default .deedglass/licence.json); the key sits next to it as licence.key. Both are 0600. Free commands never read it. | S48 |
+| `DEEDGLASS_NO_NETWORK` | `no_network` | `false` | no | licence, scan --full | Client key; `serve` ignores it. Never call Dodo Payments or deedglass.com. Pro keeps working on the cached licence inside its 14-day offline window. | S48 |
+| `DEEDGLASS_LICENCE_MODE` | `licence_mode` | `live` | no | licence, scan --full | Client key; `serve` ignores it. Which Dodo Payments mode licence keys come from: live, or test for test-mode keys while setting up checkout. | S48 |
+| `DEEDGLASS_LICENCE_SERVER` | `licence_server` | — | no | licence | Client key; `serve` ignores it. Where licence tokens are signed (default https://deedglass.com); a local site in development. | S48 |
 <!-- keys:end -->
 
 Client keys are read by the CLI, the MCP commands and the SDKs. `serve` ignores them.

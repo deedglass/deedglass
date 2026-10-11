@@ -28,7 +28,7 @@ $ deedglass verify sample-blast-radius-report.pdf.deed.json --file edited.pdf --
 1. The CLI reads the file and computes its SHA-256 and size. **The file never leaves your machine.**
 2. It sends four fields to `POST /v1/deeds/files` with an org admin key: `sha256`, `bytes`,
    `media_type` (from the extension, or `--media-type`: `application/pdf`, `text/markdown`,
-   `application/json`, `text/plain`) and `label` (1 to 120 characters, no line breaks).
+   `application/json`, `text/plain`, `text/html`) and `label` (1 to 120 characters, no line breaks).
 3. The server seals the admin deed `file.sealed` in your org's deed chain. The label is the deed's
    `admin.reason`; `admin.data_digest` is the SHA-256 of the JCS of the four fields
    (`{"bytes":…,"label":…,"media_type":…,"sha256":"sha256:…"}`). The target is your org.

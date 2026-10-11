@@ -335,6 +335,118 @@
     ]
   },
   {
+    "code": "licence_ended",
+    "exit": [
+      1
+    ],
+    "messages": null
+  },
+  {
+    "code": "licence_file_unsafe",
+    "exit": [
+      1
+    ],
+    "messages": null
+  },
+  {
+    "code": "licence_key_inactive",
+    "exit": [
+      1
+    ],
+    "messages": [
+      "This key is no longer active. It may have been refunded or cancelled."
+    ],
+    "next": [
+      "See billing at deedglass.com/licence#billing, or ask at deedglass.com/support."
+    ]
+  },
+  {
+    "code": "licence_key_limit",
+    "exit": [
+      1
+    ],
+    "messages": [
+      "This key is active on 3 machines already."
+    ],
+    "next": [
+      "Run deedglass licence deactivate on one of them first."
+    ]
+  },
+  {
+    "code": "licence_key_unknown",
+    "exit": [
+      1
+    ],
+    "messages": [
+      "Dodo Payments doesn't know this key."
+    ],
+    "next": [
+      "Check it against the email from Dodo, or ask at deedglass.com/support."
+    ]
+  },
+  {
+    "code": "licence_keys_invalid",
+    "exit": [
+      1
+    ],
+    "messages": null,
+    "next": [
+      "Reinstall deedglass; this build's licence keys can't be read."
+    ]
+  },
+  {
+    "code": "licence_missing",
+    "exit": [
+      1
+    ],
+    "messages": [
+      "No licence on this machine. Everything free works without one."
+    ]
+  },
+  {
+    "code": "licence_mode",
+    "exit": [
+      1
+    ],
+    "messages": [
+      "This licence is from Dodo's other mode (test or live)."
+    ],
+    "next": [
+      "Set DEEDGLASS_LICENCE_MODE=test for test-mode keys, or activate a live key."
+    ]
+  },
+  {
+    "code": "licence_paused",
+    "exit": [
+      1
+    ],
+    "messages": null
+  },
+  {
+    "code": "licence_signature",
+    "exit": [
+      1
+    ],
+    "messages": [
+      "The licence file was changed after it was signed, or wasn't signed by Deedglass."
+    ],
+    "next": [
+      "Run deedglass licence refresh."
+    ]
+  },
+  {
+    "code": "licence_unreachable",
+    "exit": [
+      1
+    ],
+    "messages": [
+      "Couldn't reach Dodo Payments or deedglass.com."
+    ],
+    "next": [
+      "Try again in a minute."
+    ]
+  },
+  {
     "code": "link_failed",
     "exit": [
       1
@@ -418,6 +530,15 @@
     "messages": null,
     "next": [
       "Run deedglass migrate up first."
+    ]
+  },
+  {
+    "code": "network_off",
+    "exit": [
+      1
+    ],
+    "messages": [
+      "Network is off (DEEDGLASS_NO_NETWORK), so nothing was checked."
     ]
   },
   {
@@ -551,6 +672,13 @@
     "messages": [
       "the Postgres part failed; the file part was written."
     ]
+  },
+  {
+    "code": "pro_required",
+    "exit": [
+      1
+    ],
+    "messages": null
   },
   {
     "code": "prune_running",

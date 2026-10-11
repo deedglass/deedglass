@@ -1,0 +1,409 @@
+{
+  "object": "scan_report",
+  "version": 1,
+  "scanned_at": "2026-10-05T07:46:13Z",
+  "deedglass_version": "0.1.0-dev",
+  "dir": "~/acme-store",
+  "offline": false,
+  "score": {
+    "grade": "C",
+    "points": 72,
+    "deductions": [
+      {
+        "id": "medium_finding",
+        "points": 8,
+        "subject": "security_definer_executable",
+        "detail": "The role can run SECURITY DEFINER functions"
+      },
+      {
+        "id": "unchecked_write_path",
+        "points": 4,
+        "subject": "public.customers",
+        "detail": "INSERT, UPDATE, DELETE, TRUNCATE"
+      },
+      {
+        "id": "unchecked_write_path",
+        "points": 4,
+        "subject": "public.order_items",
+        "detail": "INSERT, UPDATE, DELETE, TRUNCATE"
+      },
+      {
+        "id": "unchecked_write_path",
+        "points": 4,
+        "subject": "public.orders",
+        "detail": "INSERT, UPDATE, DELETE, TRUNCATE · trigger orders_ship_open_batch"
+      },
+      {
+        "id": "unchecked_write_path",
+        "points": 4,
+        "subject": "public.products",
+        "detail": "INSERT, UPDATE, DELETE, TRUNCATE"
+      },
+      {
+        "id": "unchecked_write_path",
+        "points": 4,
+        "subject": "public.refunds",
+        "detail": "INSERT, UPDATE, DELETE, TRUNCATE"
+      },
+      {
+        "id": "unchecked_write_path",
+        "points": 0,
+        "subject": "orders-direct.execute_sql",
+        "detail": "write · .cursor/mcp.json (over the cap)"
+      }
+    ],
+    "formula_version": 1,
+    "unchecked_write_paths": 6,
+    "database_checked": true,
+    "fix_first": "The role can run SECURITY DEFINER functions"
+  },
+  "summary": {
+    "configs": 1,
+    "mcp_servers": 4,
+    "write_capable_tools": 5,
+    "tables_can_change": 5,
+    "findings": {
+      "high": 0,
+      "info": 0,
+      "low": 0,
+      "medium": 1
+    }
+  },
+  "configs": [
+    {
+      "path": ".cursor/mcp.json",
+      "client": "cursor",
+      "user": false,
+      "servers": [
+        {
+          "name": "deedglass",
+          "package": "deedglass",
+          "transport": "stdio",
+          "command": "deedglass",
+          "env_names": [
+            "DEEDGLASS_API_KEY",
+            "DEEDGLASS_SERVER"
+          ],
+          "database_url_in_args": false,
+          "routed": true,
+          "catalog_id": "mcp.deedglass"
+        },
+        {
+          "name": "orders",
+          "package": "crystaldba/postgres-mcp",
+          "version": "0.3.0",
+          "transport": "stdio",
+          "command": "docker",
+          "env_names": [
+            "DATABASE_URI",
+            "DEEDGLASS_API_KEY",
+            "DEEDGLASS_SERVER",
+            "PATH"
+          ],
+          "database_url_in_args": false,
+          "routed": true,
+          "catalog_id": "mcp.postgres-mcp"
+        },
+        {
+          "name": "orders-direct",
+          "package": "crystaldba/postgres-mcp",
+          "version": "0.3.0",
+          "transport": "stdio",
+          "command": "docker",
+          "env_names": [
+            "DATABASE_URI",
+            "PATH"
+          ],
+          "database_url_in_args": false,
+          "routed": false,
+          "catalog_id": "mcp.postgres-mcp"
+        },
+        {
+          "name": "scratch",
+          "package": "@modelcontextprotocol/server-filesystem",
+          "version": "2026.8.31",
+          "transport": "stdio",
+          "command": "npx",
+          "env_names": [
+            "DEEDGLASS_API_KEY",
+            "DEEDGLASS_SERVER",
+            "PATH"
+          ],
+          "database_url_in_args": false,
+          "routed": true,
+          "catalog_id": "mcp.filesystem"
+        }
+      ]
+    }
+  ],
+  "dependencies": null,
+  "env_names": null,
+  "tools": [
+    {
+      "server": "deedglass",
+      "tool": "*",
+      "side_effect": "governed",
+      "source": "catalog",
+      "routed": true,
+      "where": ".cursor/mcp.json"
+    },
+    {
+      "server": "orders",
+      "tool": "execute_sql",
+      "side_effect": "write",
+      "source": "catalog",
+      "routed": true,
+      "where": ".cursor/mcp.json"
+    },
+    {
+      "server": "orders",
+      "tool": "list_schemas",
+      "side_effect": "read",
+      "source": "catalog",
+      "routed": true,
+      "where": ".cursor/mcp.json"
+    },
+    {
+      "server": "orders",
+      "tool": "explain_query",
+      "side_effect": "read",
+      "source": "catalog",
+      "routed": true,
+      "where": ".cursor/mcp.json"
+    },
+    {
+      "server": "orders",
+      "tool": "analyze_db_health",
+      "side_effect": "read",
+      "source": "catalog",
+      "routed": true,
+      "where": ".cursor/mcp.json"
+    },
+    {
+      "server": "orders-direct",
+      "tool": "execute_sql",
+      "side_effect": "write",
+      "source": "catalog",
+      "routed": false,
+      "where": ".cursor/mcp.json"
+    },
+    {
+      "server": "orders-direct",
+      "tool": "list_schemas",
+      "side_effect": "read",
+      "source": "catalog",
+      "routed": false,
+      "where": ".cursor/mcp.json"
+    },
+    {
+      "server": "orders-direct",
+      "tool": "explain_query",
+      "side_effect": "read",
+      "source": "catalog",
+      "routed": false,
+      "where": ".cursor/mcp.json"
+    },
+    {
+      "server": "orders-direct",
+      "tool": "analyze_db_health",
+      "side_effect": "read",
+      "source": "catalog",
+      "routed": false,
+      "where": ".cursor/mcp.json"
+    },
+    {
+      "server": "scratch",
+      "tool": "write_file",
+      "side_effect": "write",
+      "source": "catalog",
+      "routed": true,
+      "where": ".cursor/mcp.json"
+    },
+    {
+      "server": "scratch",
+      "tool": "edit_file",
+      "side_effect": "write",
+      "source": "catalog",
+      "routed": true,
+      "where": ".cursor/mcp.json"
+    },
+    {
+      "server": "scratch",
+      "tool": "move_file",
+      "side_effect": "destructive",
+      "source": "catalog",
+      "routed": true,
+      "where": ".cursor/mcp.json"
+    },
+    {
+      "server": "scratch",
+      "tool": "read_text_file",
+      "side_effect": "read",
+      "source": "catalog",
+      "routed": true,
+      "where": ".cursor/mcp.json"
+    }
+  ],
+  "findings": [
+    {
+      "id": "security_definer_executable",
+      "severity": "medium",
+      "title": "The role can run SECURITY DEFINER functions",
+      "detail": "1 SECURITY DEFINER function runs with the owner's rights when acme_owner calls it: ship_order(bigint).",
+      "fix": [
+        "Revoke EXECUTE from the agent's role on the ones it doesn't need."
+      ],
+      "paths": [],
+      "sources": []
+    }
+  ],
+  "postgres": {
+    "role": "acme_owner",
+    "database": "acme",
+    "server_version": "18.6 (Debian 18.6-1.pgdg13+2)",
+    "wal_level": "logical",
+    "env_var": "DEMO_DSN",
+    "role_attributes": {
+      "superuser": false,
+      "bypassrls": false,
+      "replication": false,
+      "createrole": false,
+      "createdb": false
+    },
+    "tables": [
+      {
+        "schema": "public",
+        "table": "orders",
+        "can": [
+          "INSERT",
+          "UPDATE",
+          "DELETE",
+          "TRUNCATE"
+        ],
+        "est_rows": 500,
+        "cascades_to": [],
+        "triggers": [
+          {
+            "name": "orders_ship_open_batch",
+            "enabled": true,
+            "names_tables": [
+              "public.orders"
+            ]
+          }
+        ],
+        "rls": false,
+        "undo_ready": true,
+        "l2_ready": true,
+        "score": 72.5,
+        "has_pk": true
+      },
+      {
+        "schema": "public",
+        "table": "order_items",
+        "can": [
+          "INSERT",
+          "UPDATE",
+          "DELETE",
+          "TRUNCATE"
+        ],
+        "est_rows": 1250,
+        "cascades_to": [],
+        "triggers": [],
+        "rls": false,
+        "undo_ready": true,
+        "l2_ready": true,
+        "score": 64.4,
+        "has_pk": true
+      },
+      {
+        "schema": "public",
+        "table": "customers",
+        "can": [
+          "INSERT",
+          "UPDATE",
+          "DELETE",
+          "TRUNCATE"
+        ],
+        "est_rows": 120,
+        "cascades_to": [],
+        "triggers": [],
+        "rls": false,
+        "undo_ready": true,
+        "l2_ready": true,
+        "score": 57.3,
+        "has_pk": true
+      },
+      {
+        "schema": "public",
+        "table": "refunds",
+        "can": [
+          "INSERT",
+          "UPDATE",
+          "DELETE",
+          "TRUNCATE"
+        ],
+        "est_rows": 60,
+        "cascades_to": [],
+        "triggers": [],
+        "rls": false,
+        "undo_ready": true,
+        "l2_ready": true,
+        "score": 55.1,
+        "has_pk": true
+      },
+      {
+        "schema": "public",
+        "table": "products",
+        "can": [
+          "INSERT",
+          "UPDATE",
+          "DELETE",
+          "TRUNCATE"
+        ],
+        "est_rows": 40,
+        "cascades_to": [],
+        "triggers": [],
+        "rls": false,
+        "undo_ready": true,
+        "l2_ready": true,
+        "score": 47.6,
+        "has_pk": true
+      }
+    ],
+    "tables_read_only": 1,
+    "security_definer": [
+      {
+        "signature": "ship_order(bigint)",
+        "owner": "acme_owner"
+      }
+    ]
+  },
+  "policies": [
+    {
+      "starter": "postgres-safe",
+      "rule": "block-destructive-sql",
+      "why": "DROP and TRUNCATE never run, whatever the agent sends.",
+      "yaml": "deedglass: policy/v1\nname: scan-block-destructive-sql\ndescription: Suggested by deedglass scan from the postgres-safe starter.\n\ndefaults:\n  decision: deny\n  reason: No rule allows this action. Add a rule in Console › Policies to allow it.\n\nrules:\n  - id: block-destructive-sql\n    match: { connector_type: postgres }\n    when: sql.kind in [\"drop\", \"truncate\"]\n    decision: deny\n    reason: DROP and TRUNCATE are never allowed for agents.\n    notify: [slack]\n"
+    },
+    {
+      "starter": "postgres-safe",
+      "rule": "writes-need-approval",
+      "why": "Writes to public.orders wait for a person.",
+      "yaml": "deedglass: policy/v1\nname: scan-writes-need-approval\ndescription: Suggested by deedglass scan from the postgres-safe starter.\n\ndefaults:\n  decision: deny\n  reason: No rule allows this action. Add a rule in Console › Policies to allow it.\n\nrules:\n  - id: writes-need-approval\n    match: { tool: postgres.execute }\n    when: sql.category == \"write\" && \"public.orders\" in sql.tables\n    decision: require_approval\n    reason: Writes to this database wait for a human. An admin can approve in Console › Approvals.\n    approval: { approvers: [role:admin], required: 1, expires_in: 30m }\n    notify: [email, slack]\n    verify: L2\n"
+    },
+    {
+      "starter": "postgres-safe",
+      "rule": "agent-rate",
+      "why": "More than 60 calls a minute from one agent waits for the next minute.",
+      "yaml": "deedglass: policy/v1\nname: scan-agent-rate\ndescription: Suggested by deedglass scan from the postgres-safe starter.\n\ndefaults:\n  decision: deny\n  reason: No rule allows this action. Add a rule in Console › Policies to allow it.\n\nbudgets:\n  - id: agent-rate\n    window: minute\n    max_calls: 60\n"
+    }
+  ],
+  "notes": [],
+  "footer": "Full report with fixes: deedglass.com/pro ($29 once).",
+  "took_ms": 16,
+  "walk": {
+    "files": 15,
+    "skipped_big": 0,
+    "stopped": false
+  }
+}

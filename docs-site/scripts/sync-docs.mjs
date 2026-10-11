@@ -57,7 +57,7 @@ export const IMPORTS = {
       'MCP', 'MCP_AUTHORIZATION', 'MIGRATIONS', 'NETWORK_EGRESS', 'OBSERVABILITY', 'OBSERVATION_BOUNDARY', 'OVERVIEW_METRICS',
       'POLICIES_GUIDE', 'POLICY_COOKBOOK', 'POLICY_EDITOR', 'POLICY_ERRORS', 'POSTGRES_DEPLOYMENT', 'REPLAY', 'RETENTION', 'SCAN',
       'SEAL_KEYS', 'SEALING_FILES', 'SELF_HOSTING', 'SIMULATOR', 'SQLGUARD', 'STOP', 'SUGGESTIONS', 'UNDO', 'VAULT', 'VERIFICATION_MODEL',
-      'VERIFYING_DEEDS', 'WEBHOOKS', 'WITNESS', 'BENCHMARKS',
+      'VERIFYING_DEEDS', 'WEBHOOKS', 'WITNESS', 'BENCHMARKS', 'LICENSING',
     ].map((n) => [`docs/${n}.md`, `reference/engineering/${n.toLowerCase().replace(/_/g, '-')}`]),
   ),
   'docs/witness/REASONS.md': 'reference/engineering/witness-reasons',

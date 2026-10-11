@@ -159,6 +159,15 @@
     const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60);
     return m ? fmt(COPY.inHour, { h, m }) : fmt(COPY.inHourExact, { h });
   }
+  // Plain names (DL-075; the same words as internal/witness/plain.go and web/src/lib/copy.ts). Wire
+  // values stay in the data; only the text a person reads changes.
+  function plainLevel(l) {
+    return { L0: 'Claimed', L1: 'Checked', L2: 'Proven' }[l] || l;
+  }
+  function plainVerdict(v) {
+    return { VERIFIED: 'Matches', MISMATCH: "Doesn't match", UNVERIFIABLE: "Can't check" }[v] || v;
+  }
+
   function ago(iso) {
     const s = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 1000));
     if (s < 60) return COPY.agoNow;
@@ -254,7 +263,7 @@
       const c = document.createElement('span');
       const v = r.verdict || '';
       c.className = 'chip chip-' + (v === 'VERIFIED' ? 'verified' : v === 'MISMATCH' ? 'mismatch' : v === 'UNVERIFIABLE' ? 'unverifiable' : r.status === 'denied' ? 'denied' : 'neutral');
-      c.textContent = v ? (r.level ? r.level + ' · ' + v : v) : r.status;
+      c.textContent = v ? (r.level ? plainLevel(r.level) + ' · ' + plainVerdict(v) : plainVerdict(v)) : r.status;
       li.append(tool, c, when);
       list.append(li);
     }
@@ -444,7 +453,7 @@
       const verdict = w ? w.verdict : '';
       const kind = verdict === 'VERIFIED' ? 'verified' : verdict === 'MISMATCH' ? 'mismatch' : verdict ? 'unverifiable' : 'neutral';
       const line = (w && w.summary) || COPY.sealedFallback; // the chip already names the level and verdict
-      setChip(kind, w ? w.level + ' · ' + w.verdict : 'sealed');
+      setChip(kind, w ? plainLevel(w.level) + ' · ' + plainVerdict(w.verdict) : 'sealed');
       setTitle(kind === 'mismatch' ? COPY.sealedMismatchTitle : COPY.sealedTitle, line, true);
       if (act.deed) {
         $('deed-id').textContent = act.deed;

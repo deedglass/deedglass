@@ -1,0 +1,80 @@
+{
+  "$comment": "Licence token goldens (S48). Go signs these; the site's WebCrypto signer must produce the same body_hash and sig. Test key only.",
+  "key_id": "lk_01jdtestkey00000000000000a",
+  "seed_hex": "0707070707070707070707070707070707070707070707070707070707070707",
+  "key_set": {
+    "object": "licence_key_set",
+    "keys": [
+      {
+        "id": "lk_01jdtestkey00000000000000a",
+        "alg": "Ed25519",
+        "public_key": "6kpsY-KcUgq-9VB7Ey7F-ZVHdq6-vnuSQh7qaRRG0iw",
+        "thumbprint": "sha256:fe812c12f3ab4ce6ac5db69ac352f906cb1b11ef43fb33e252ef7ff552263889"
+      }
+    ]
+  },
+  "tokens": [
+    {
+      "object": "licence_token",
+      "v": 1,
+      "id": "lic_01jdaaaaaaaaaaaaaaaaaaaaaa",
+      "plan": "report",
+      "features": [
+        "scan_full",
+        "scan_fix",
+        "packs_pro"
+      ],
+      "key_sha256": "sha256:78b99f0a558422760b5c9677610acbe2a3e12860a71717532f3b98bd3fbb88f3",
+      "instance": "lki_test_0001",
+      "validated_at": "2026-10-21T04:12:09.000Z",
+      "grace_days": 14,
+      "period_end": "2026-11-20T04:12:09.000Z",
+      "key_id": "lk_01jdtestkey00000000000000a",
+      "livemode": false,
+      "body_hash": "sha256:7f6853b42c0d1407d3a7797cea24aca966c17786e1ddb0ab166ef78d8d3a620e",
+      "sig": "ed25519:LfFDoHbjo9HJhnNIZXKhE94HcvNlbRE0rJ1a5BjMYx3B5QWWCkFXpuGfOGN1Yb_Me-M_gtlzs-eDcRSIW8QYBg"
+    },
+    {
+      "object": "licence_token",
+      "v": 1,
+      "id": "lic_01jdbbbbbbbbbbbbbbbbbbbbbb",
+      "plan": "founding",
+      "features": [
+        "action_private",
+        "scan_full",
+        "scan_fix",
+        "packs_pro"
+      ],
+      "key_sha256": "sha256:1bb18355e1359a31d4fc069c8871862b24998a334ebafd81bb1851507d0f3bbe",
+      "instance": "lki_test_0002",
+      "validated_at": "2026-10-21T04:12:09.000Z",
+      "grace_days": 14,
+      "period_end": "2027-04-21T04:12:09.000Z",
+      "key_id": "lk_01jdtestkey00000000000000a",
+      "livemode": true,
+      "body_hash": "sha256:26ea57196b5e670024bc38814ace46c17889d8a5f08674f5d810dcd62f6a3237",
+      "sig": "ed25519:RyDik-qrskaMFbahLIUn2mZuYK6JtA1p_oHVKaGuB0yqsF6YK4sYcUj9WgcW1se38tlo0yVDWnQ9EYYrl0t7Bw"
+    },
+    {
+      "object": "licence_token",
+      "v": 1,
+      "id": "lic_01jdcccccccccccccccccccccc",
+      "plan": "pro",
+      "features": [
+        "action_private",
+        "scan_full",
+        "scan_fix",
+        "packs_pro"
+      ],
+      "key_sha256": "sha256:8bc011b7d5d163dcdaf56f52290b395b10c3fe4120fa2fe9e193f43fccb0b701",
+      "instance": "lki_test_0003",
+      "validated_at": "2026-10-21T04:12:09.000Z",
+      "grace_days": 14,
+      "period_end": null,
+      "key_id": "lk_01jdtestkey00000000000000a",
+      "livemode": false,
+      "body_hash": "sha256:1bda317f58b04be79a7850b3bd001b0c7b77d7b4a2ad141eb0ff07368a74a9b7",
+      "sig": "ed25519:QJw_tC4fTElQTmqEmyswAC5I0l6N_xU3vwcJbElzqOmd71Mb3PqRQ56JEN4cUS_8ky38i--zVojXvnl9W8a8CA"
+    }
+  ]
+}

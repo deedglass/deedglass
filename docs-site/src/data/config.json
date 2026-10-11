@@ -329,5 +329,57 @@
     "commands": "CLI",
     "doc": "Turn off the Sealed animation at the end of deedglass init; only its final frame shows.",
     "owner": "S05X"
+  },
+  {
+    "env": "DEEDGLASS_LICENCE_FILE",
+    "yaml": "licence_file",
+    "type": "path",
+    "default": "",
+    "secret": false,
+    "client": true,
+    "dev_only": false,
+    "commands": "licence, scan --full",
+    "doc": "Where the Pro licence token lives (default .deedglass/licence.json); the key sits next to it as licence.key. Both are 0600. Free commands never read it.",
+    "owner": "S48"
+  },
+  {
+    "env": "DEEDGLASS_NO_NETWORK",
+    "yaml": "no_network",
+    "type": "boolean",
+    "default": "false",
+    "secret": false,
+    "client": true,
+    "dev_only": false,
+    "commands": "licence, scan --full",
+    "doc": "Never call Dodo Payments or deedglass.com. Pro keeps working on the cached licence inside its 14-day offline window.",
+    "owner": "S48"
+  },
+  {
+    "env": "DEEDGLASS_LICENCE_MODE",
+    "yaml": "licence_mode",
+    "type": "enum",
+    "default": "live",
+    "values": [
+      "live",
+      "test"
+    ],
+    "secret": false,
+    "client": true,
+    "dev_only": false,
+    "commands": "licence, scan --full",
+    "doc": "Which Dodo Payments mode licence keys come from: live, or test for test-mode keys while setting up checkout.",
+    "owner": "S48"
+  },
+  {
+    "env": "DEEDGLASS_LICENCE_SERVER",
+    "yaml": "licence_server",
+    "type": "URL",
+    "default": "",
+    "secret": false,
+    "client": true,
+    "dev_only": false,
+    "commands": "licence",
+    "doc": "Where licence tokens are signed (default https://deedglass.com); a local site in development.",
+    "owner": "S48"
   }
 ]

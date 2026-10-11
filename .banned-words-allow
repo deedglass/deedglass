@@ -75,3 +75,4 @@ docs/INSTALL.md::certificate::third-party tool flag or feature name (cosign veri
 scripts/release-notes.sh::certificate::third-party tool flag or feature name (cosign verify-blob --certificate-identity-regexp / --certificate-oidc-issuer)
 CONTRIBUTING.md::certificate::the exact title "Developer Certificate of Origin" (DCO 1.1)
 docs/PUBLIC_REPO_SWITCH.md::open source::the switch checklist names the phrase it unbans at the public switch
+ee/LICENSE::compliance::the FSL-1.1-ALv2 licence text, verbatim (Pro code under ee/, DL-039 F1)

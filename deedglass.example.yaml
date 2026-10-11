@@ -69,6 +69,13 @@
 # theme: auto   # auto, light or dark
 # no_anim: false
 
+# Pro licence (docs/LICENSING.md). Only deedglass licence and scan --full read these; free
+# commands never open the licence. Usually set in the shell, not here.
+# licence_file: .deedglass/licence.json
+# no_network: false        # never call Dodo Payments or deedglass.com
+# licence_mode: live       # live, or test for Dodo test-mode keys
+# licence_server: https://deedglass.com
+
 # The Gate (docs/GATE.md). These settings live only in this file, never in the environment;
 # docs/CONFIG.md has the ranges. Uncomment the section line and the lines you change.
 # gate:

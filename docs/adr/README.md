@@ -82,3 +82,7 @@ ADR-000 to ADR-008 were written for the V0 verifier and keep their original text
 | 071 | deedglass.com's build and test dependencies | Proposed (2026-10-05, S36) | resvg-js, wrangler, Vitest, Playwright, axe in ~/txv/site; Tailwind removed; S36 |
 | 073 | Sealed files: deeds seal-file, verify --file, POST /v1/deeds/files | Proposed (2026-10-05, S38) | admin deed file.sealed; the file stays local; no new dependency; S38 |
 | 078 | Plain names for people, short names for programs | Proposed (2026-10-11, PLAIN-NAMING) | Claimed/Checked/Proven, Matches/Doesn't match/Can't check, rules/check/record; wire values unchanged |
+| 079 | Licence tokens signed by a separate lk_ key family | Proposed (2026-10-11, S48) | offline grace 14 days; free never reads the licence |
+| 080 | Pro code in ee/ under FSL-1.1-ALv2, in the one binary | Proposed (2026-10-11, S48) | `ee/scanfull` first |
+| 081 | Site commerce: Dodo payment links, D1 state, a quote for the setup service | Proposed (2026-10-11, S48) | sealed files accept `text/html` |
+| 082 | Go 1.27.2 and golang.org/x/text v0.41.0 | Proposed (2026-10-11, S48) | govulncheck green |

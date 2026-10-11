@@ -34,7 +34,7 @@ for i in $(seq 1 "$RUNS"); do
   grep -q "Nothing to change." "$ROOT/.tmp/quickstart/rerun-$i.txt" || { echo "✕ run $i: the rerun changed something" >&2; cat "$ROOT/.tmp/quickstart/rerun-$i.txt" >&2; exit 1; }
   (cd "$dir" && env -u DEEDGLASS_API_KEY NO_COLOR=1 "$BIN" doctor) > "$ROOT/.tmp/quickstart/doctor-$i.txt" || true
   steps="$(python3 -c "import json,sys; d=json.load(open('$ROOT/.tmp/quickstart/run-$i.json')); print(','.join('\"%s\":%d' % (s['id'], s['took_ms']) for s in d['steps']))")"
-  verified="$(python3 -c "import json; d=json.load(open('$ROOT/.tmp/quickstart/run-$i.json')); print('true' if any('L2 · VERIFIED' in s['detail'] for s in d['steps']) else 'false')")"
+  verified="$(python3 -c "import json; d=json.load(open('$ROOT/.tmp/quickstart/run-$i.json')); print('true' if any('Proven · Matches' in s['detail'] for s in d['steps']) else 'false')")"
   echo "run $i: init $((t1 - t0)) s · rerun $((t2 - t1)) s · L2 verified: $verified"
   runs_json="$runs_json${runs_json:+,}{\"init_s\":$((t1 - t0)),\"rerun_s\":$((t2 - t1)),\"l2_verified\":$verified,\"steps_ms\":{$steps}}"
   cleanup

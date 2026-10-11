@@ -21,6 +21,7 @@ import (
 var scanValues struct {
 	dir, dsnEnv, outDir, format, failUnder        string
 	userConfigs, noWrite, score, badge, share, ci bool
+	full, noSeal                                  bool
 	maxFiles                                      int
 }
 
@@ -29,6 +30,7 @@ func scanFlags(fs *flag.FlagSet) {
 	*v = struct {
 		dir, dsnEnv, outDir, format, failUnder        string
 		userConfigs, noWrite, score, badge, share, ci bool
+		full, noSeal                                  bool
 		maxFiles                                      int
 	}{}
 	fs.StringVar(&v.dir, "dir", ".", "the directory to scan")
@@ -43,6 +45,8 @@ func scanFlags(fs *flag.FlagSet) {
 	fs.BoolVar(&v.share, "share", false, "print a share link that holds the grade, counts and finding ids only")
 	fs.BoolVar(&v.ci, "ci", false, "for CI: no user configs, no colour, no mark, never a prompt")
 	fs.StringVar(&v.failUnder, "fail-under", "", "exit 1 when the grade is below this one: A, B, C or D")
+	fs.BoolVar(&v.full, "full", false, "also write deedglass-full-report.html, the full scan report (Pro or the $29 report; checks the licence)")
+	fs.BoolVar(&v.noSeal, "no-seal", false, "with --full: don't seal the report on your Deedglass server")
 }
 
 // scanFormats are the values --format accepts (help --json lists them for completions).
@@ -184,6 +188,14 @@ func runScan(ctx context.Context, e *Env, args []string) error {
 		}
 		for _, l := range append(badgeLines, shareLines...) {
 			fmt.Fprintln(e.Stdout, l)
+		}
+	}
+	if v.full {
+		if v.noWrite {
+			return usageErr(errors.New("--full writes a report file, so it can't be used with --no-write"), "Drop --no-write.")
+		}
+		if err := scanFull(ctx, e, r, v.outDir, v.noSeal); err != nil {
+			return err
 		}
 	}
 	if below {

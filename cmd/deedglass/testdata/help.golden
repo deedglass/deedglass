@@ -9,42 +9,43 @@ Setup
   doctor              Check config, database and keys
   scan                Show what your agent setup can change
   serve               Run the API, the rules and the Console
-  migrate             Apply or check database migrations                 up · status · verify
+  migrate             Apply or check database migrations                    up · status · verify
   config print        Show the effective config, secrets hidden
   version             Show the client and server versions
-  keys                Manage seal keys                                   gen · rotate · list
-  vault               Check or rotate the credential vault               status · rotate
-  completion          Print shell completion                             zsh · bash · fish
+  keys                Manage seal keys                                      gen · rotate · list
+  licence             Turn on Pro, or check this machine's licence          activate · show · refresh · deactivate
+  vault               Check or rotate the credential vault                  status · rotate
+  completion          Print shell completion                                zsh · bash · fish
 Agents
-  agent               Register and control agents                        create · list · show · suspend · resume · stop · start
-  agent keys          Manage an agent's API keys                         create · list · roll · revoke
-  agent intent        Manage an agent's signed-intent keys               keygen · add · list · remove · mode
-  org                 Create orgs and keys; stop or start all            create · login-link · keys · stop-all · start-all
+  agent               Register and control agents                           create · list · show · suspend · resume · stop · start
+  agent keys          Manage an agent's API keys                            create · list · roll · revoke
+  agent intent        Manage an agent's signed-intent keys                  keygen · add · list · remove · mode
+  org                 Create orgs and keys; stop or start all               create · login-link · keys · stop-all · start-all
 Policies
-  policy              Write, test and activate policies                  lint · fmt · test · push · activate · evaluate · replay · diff
+  policy              Write, test and activate policies                     lint · fmt · test · push · activate · evaluate · replay · diff
 Actions
   act                 Send a test action through Deedglass
-  actions             Inspect actions                                    list · show · cancel
+  actions             Inspect actions                                       list · show · cancel
   approve · deny      Decide a pending approval
-  approvals           List pending approvals                             list · show
-  undo                Preview or run an undo                             preview · run
-  webhooks            Send events to your endpoints                      create · list · test · delete
+  approvals           List pending approvals                                list · show
+  undo                Preview or run an undo                                preview · run
+  webhooks            Send events to your endpoints                         create · list · test · delete
 Records
   verify              Check records offline
-  deeds               Browse and export records                          list · show · export · seal-file
-  ledger              Check or prune the Ledger                          check · prune
+  deeds               Browse and export records                             list · show · export · seal-file
+  ledger              Check or prune the Ledger                             check · prune
 Connectors
-  connector           Connect tools                                      create · list · show · test · types · credentials
-  connector postgres  Prepare a Postgres database                        init · check
-  connector gmail     Authorize the Gmail connector                      authorize
-  decoder             Inspect Postgres change readers                    status · drop
+  connector           Connect tools                                         create · list · show · test · types · credentials
+  connector postgres  Prepare a Postgres database                           init · check
+  connector gmail     Authorize the Gmail connector                         authorize
+  decoder             Inspect Postgres change readers                       status · drop
   slack manifest      Print the Slack app manifest
 MCP
-  mcp                 Put Deedglass in front of MCP servers              wrap · serve · snippet
+  mcp                 Put Deedglass in front of MCP servers                 wrap · serve · snippet
 Insights
-  insights            Suggestions, shadow results and anomalies          stats · shadow · anomalies · detect · settings · suggestions · digest
+  insights            Suggestions, shadow results and anomalies             stats · shadow · anomalies · detect · settings · suggestions · digest
 Dev
-  dev                 Local helpers                                      seed · fake-action · simulate · agent-script · mail-preview · sign-intent · stripe-fixtures
+  dev                 Local helpers                                         seed · fake-action · simulate · agent-script · mail-preview · sign-intent · stripe-fixtures
 
 Global flags  --json · --server <url> · --api-key <key> · --org <id> · --no-color · -v
 Run deedglass help <command> for details · https://docs.deedglass.com

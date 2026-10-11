@@ -67,7 +67,7 @@ func TestInitLive(t *testing.T) {
 		detail = append(detail, s.ID+": "+s.Detail)
 	}
 	all := strings.Join(detail, "\n")
-	for _, want := range []string{"smoke_read: L0 · VERIFIED", "smoke_drop: Blocked by policy \"block-destructive-sql\"", "smoke_update: L2 · VERIFIED"} {
+	for _, want := range []string{"smoke_read: Claimed · Matches", "smoke_drop: Blocked by policy \"block-destructive-sql\"", "smoke_update: Proven · Matches"} {
 		if !strings.Contains(all, want) {
 			t.Fatalf("missing %q:\n%s", want, all)
 		}

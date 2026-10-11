@@ -225,7 +225,7 @@ curl -s -b cookies.txt 'http://127.0.0.1:8080/v1/actions?verdict=FAILED'
 ## Sealing a file (S38)
 
 `POST /v1/deeds/files` seals the admin deed `file.sealed` from a file's `sha256`, `bytes`,
-`media_type` (`application/pdf`, `text/markdown`, `application/json` or `text/plain`) and `label`
+`media_type` (`application/pdf`, `text/markdown`, `application/json`, `text/plain` or `text/html`) and `label`
 (1 to 120 characters, no line breaks). The file itself never reaches the server:
 `deedglass deeds seal-file` hashes it locally. An admin+ session or an org admin key; agent keys get
 403 `insufficient_scope`, viewers 403 `insufficient_role`. `Idempotency-Key` is optional; the body is

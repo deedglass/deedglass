@@ -159,16 +159,20 @@ builds it. Hidden commands work but aren't in `deedglass help`.
 |---|---|---|---|
 | `deedglass init [--yes] [--dir .] [--client claude-code|claude-desktop|cursor|vscode|windsurf|sdk-python|sdk-typescript|none] [--listen 127.0.0.1:8080] [--pg-port 55432] [--no-open] [--no-smoke] [--stop] [--json]` | Setup | Set up Deedglass in this directory | built |
 | `deedglass doctor [--only <ids>] [--json]` | Setup | Check config, database and keys | built |
-| `deedglass scan [--dir .] [--postgres-dsn-env VAR] [--format md,html,json,sarif] [--score] [--badge] [--share] [--ci] [--fail-under A|B|C|D] [--json]` | Setup | Show what your agent setup can change | built |
+| `deedglass scan [--dir .] [--postgres-dsn-env VAR] [--format md,html,json,sarif] [--score] [--badge] [--share] [--ci] [--fail-under A|B|C|D] [--full [--no-seal]] [--json]` | Setup | Show what your agent setup can change | built |
 | `deedglass serve [--migrate]` | Setup | Run the API, the rules and the Console | built |
 | `deedglass migrate up [--database-url <url>] [--dry-run] [--json]` | Setup | Apply database migrations | built |
 | `deedglass migrate status [--database-url <url>] [--json]` | Setup | Show applied and pending migrations | built |
 | `deedglass migrate verify [--database-url <url>] [--json]` | Setup | Check applied migrations against this build | built |
 | `deedglass config print [--json]` | Setup | Show the effective config, secrets hidden | built |
 | `deedglass version [--json] [--check [--pre]]` | Setup | Show the client and server versions | built |
-| `deedglass keys gen [--dir <dir>] [--json]` | Setup | Generate a seal key | built |
+| `deedglass keys gen [--dir <dir>] [--purpose seal|licence] [--json]` | Setup | Generate a seal key | built |
 | `deedglass keys rotate [--overlap 5m] [--dir <dir>] [--json]` | Setup | Rotate the active seal key | built |
 | `deedglass keys list [--server <url>] [--json]` | Setup | List seal keys | built |
+| `deedglass licence activate <key> [--json]` | Setup | Turn on Pro with the key from Dodo | built |
+| `deedglass licence show [--json]` | Setup | Show this machine's licence, offline | built |
+| `deedglass licence refresh [--json]` | Setup | Check the licence with Dodo now | built |
+| `deedglass licence deactivate [--json]` | Setup | Remove the licence from this machine | built |
 | `deedglass vault status [--json]` | Setup | Show the credential vault's keys | built |
 | `deedglass vault rotate [--json]` | Setup | Re-encrypt credentials with a new key | built |
 | `deedglass help [<command>] [--json]` | Setup | Show help for deedglass or one command | built, hidden |
@@ -224,7 +228,7 @@ builds it. Hidden commands work but aren't in `deedglass help`.
 | `deedglass deeds list [--from-seq n] [--to-seq n] [--kind action,admin,amendment] [--action act_…] [--order asc|desc] [--limit 25] [--json]` | Records | List records | built |
 | `deedglass deeds show <deed_…|seq> [--json]` | Records | Show one record | built |
 | `deedglass deeds export [--out <file>|-] [--format tar.gz|jsonl] [--from-seq n] [--to-seq n] [--since 1h] [--json]` | Records | Export records as a bundle | built |
-| `deedglass deeds seal-file <path> --label <text> [--media-type application/pdf|text/markdown|application/json|text/plain] [--out <path>.deed.json] [--json]` | Records | Seal a file's hash as a record | built |
+| `deedglass deeds seal-file <path> --label <text> [--media-type application/pdf|text/markdown|application/json|text/plain|text/html] [--out <path>.deed.json] [--json]` | Records | Seal a file's hash as a record | built |
 | `deedglass ledger check [--from-seq n] [--to-seq n] [--json]` | Records | Check the record chain | built |
 | `deedglass ledger prune [--older-than 90d] [--dry-run] [--yes] [--json]` | Records | Remove old payloads; records stay | built |
 | `deedglass connector create --config <file> [--type rest] [--name orders] [--description …] [--json]` | Connectors | Add a connector | built |

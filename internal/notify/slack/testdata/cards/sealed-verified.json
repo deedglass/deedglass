@@ -20,7 +20,7 @@
       "type": "section",
       "text": {
         "type": "mrkdwn",
-        "text": "✓ Approved by Arjun · <!date^1791606000^{date_short_pretty} at {time}|2026-10-10 04:20 UTC>\n✓ Deed sealed · L1 · VERIFIED"
+        "text": "✓ Approved by Arjun · <!date^1791606000^{date_short_pretty} at {time}|2026-10-10 04:20 UTC>\n✓ Deed sealed · Checked · Matches"
       }
     },
     {

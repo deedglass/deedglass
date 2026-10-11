@@ -27,7 +27,7 @@ const MaxFileLabel = 120
 const MaxFileBytes int64 = 1<<53 - 1
 
 // FileMediaTypes are the media types a sealed file may have, in the order verify --file tries them.
-var FileMediaTypes = []string{"application/pdf", "text/markdown", "application/json", "text/plain"}
+var FileMediaTypes = []string{"application/pdf", "text/markdown", "application/json", "text/plain", "text/html"}
 
 var reFileSHA256 = regexp.MustCompile(`^sha256:[0-9a-f]{64}$`)
 

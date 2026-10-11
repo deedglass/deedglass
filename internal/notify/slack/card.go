@@ -11,6 +11,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/deedglass/deedglass/internal/connector"
+	"github.com/deedglass/deedglass/internal/witness"
 )
 
 // Action ids on the card's buttons. POST /v1/slack/interact routes on them.
@@ -493,7 +494,7 @@ func (c cardBuilder) sealLine() string {
 	v := c.v
 	level := ""
 	if l := cardText(v.Level, 4); l != "" {
-		level = l + " · "
+		level = witness.PlainLevel(l) + " · "
 	}
 	sentence := ""
 	if s := cardText(v.Sentence, cardCapSentence); s != "" {
@@ -503,11 +504,11 @@ func (c cardBuilder) sealLine() string {
 	case v.Failed:
 		return "✕ The tool failed. Nothing was applied."
 	case v.Verdict == "VERIFIED":
-		return "✓ Deed sealed · " + level + "VERIFIED"
+		return "✓ Deed sealed · " + level + witness.PlainVerified
 	case v.Verdict == "MISMATCH":
-		return "✕ " + level + "MISMATCH" + sentence
+		return "✕ " + level + witness.PlainMismatch + sentence
 	case v.Verdict == "UNVERIFIABLE":
-		return "○ " + level + "UNVERIFIABLE" + sentence
+		return "○ " + level + witness.PlainUnverifiable + sentence
 	}
 	return "Deed sealed."
 }
@@ -599,7 +600,7 @@ func (c cardBuilder) fallback() string {
 		case v.Failed:
 			head = "The tool failed"
 		case v.Verdict == "MISMATCH" || v.Verdict == "UNVERIFIABLE":
-			head = "Deed sealed, " + v.Verdict
+			head = "Deed sealed, " + strings.ToLower(witness.PlainVerdict(v.Verdict))
 		}
 	case StateDenied:
 		head = "Denied"
