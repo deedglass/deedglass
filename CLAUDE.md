@@ -179,7 +179,7 @@ make docker         # the deedglass:dev image (distroless, 65532); make bench-ht
 scripts/ci-local.sh # the CI jobs locally (docker-smoke and govulncheck skip when Docker or network is missing)
 ```
 
-- Go 1.27.1 at `/opt/homebrew/bin/go`. Node 24 (`/opt/homebrew/bin/node`) for `web/verify` and the Console (`web/`); their dev
+- Go 1.27.2 at `/opt/homebrew/bin/go`. Node 24 (`/opt/homebrew/bin/node`) for `web/verify` and the Console (`web/`); their dev
   tools are exact pins in `web/verify/package-lock.json` (ADR-027) and `web/package-lock.json` (ADR-053), installed with `npm ci --ignore-scripts`. PostgreSQL 16, 17 and 18 are installed at
   `/opt/homebrew/opt/postgresql@{16,17,18}/bin` (keg-only; never `brew services`). Docker images
   `postgres:16.15`, `17.11` and `18.6` work too (`DEEDGLASS_IT_MODE=docker`).
