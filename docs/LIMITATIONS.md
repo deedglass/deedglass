@@ -16,6 +16,17 @@ What Deedglass does not do, stated plainly. **Owner: S37**, which finalizes this
 - **Authorized is not the same as wise.** A hijacked agent with a valid key and an in-policy action is allowed. Policies, budgets and approvals narrow this; they do not close it.
 - **Trust assumptions.** Deedglass trusts the Postgres server and its superusers, the host it runs on, and its seal key. A REPLICATION role can decode every row change in its database.
 
+## Scheduled actions and outbound mail (S40)
+
+- A schedule is one window per action: no recurrence, no proxy mode, at most 72 hours ahead.
+- A missed window is cancelled and sealed, never caught up. If the server is down for the whole
+  window, the action is cancelled when it comes back.
+- `outbound_mail` exists only in the ops build and only for listed orgs. It sends plain text from
+  one mailbox, one recipient at a time, and never retries; a lost answer is UNVERIFIABLE unless the
+  read-back finds the message by its Message-ID.
+- Whether Gmail's DKIM signature covers the two unsubscribe headers depends on the Workspace's DKIM
+  setup; Deedglass sets the headers but can't sign them.
+
 ## Database limits (S02)
 
 - **A Postgres superuser or the schema owner can change anything.** They can disable triggers, turn off row-level security and rewrite deeds. The database can't stop its own superuser; offline deed verification (S05) detects a rewritten or broken chain, it doesn't prevent one.

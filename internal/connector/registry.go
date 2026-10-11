@@ -74,7 +74,8 @@ type Registry struct {
 	opener   vault.Opener
 	env      Env
 	log      *slog.Logger
-	cache    sync.Map // instKey → *Instance
+	cache    sync.Map            // instKey → *Instance
+	orgTypes map[string][]string // S40: type → the only org ids that may use it
 }
 
 type instKey struct{ id, hash string }
@@ -87,11 +88,20 @@ type Options struct {
 	Opener   vault.Opener // the execute path's decrypt; nil: every credential is missing
 	Env      Env
 	Logger   *slog.Logger
+	// OrgTypes (S40) limits a type to the org ids listed for it (connectors.outbound_mail.orgs).
+	// For any other org the type doesn't exist: create answers connector_type_unknown, the
+	// catalog leaves it out, and a stored row resolves as unknown. A type not named here is
+	// served to every org.
+	OrgTypes map[string][]string
 }
 
 // New returns a registry.
 func New(o Options) *Registry {
-	r := &Registry{builtins: map[string]Static{}, types: map[string]Connector{}, loader: o.Loader, opener: o.Opener, env: o.Env, log: o.Logger}
+	r := &Registry{builtins: map[string]Static{}, types: map[string]Connector{}, loader: o.Loader, opener: o.Opener, env: o.Env, log: o.Logger,
+		orgTypes: map[string][]string{}}
+	for t, orgs := range o.OrgTypes {
+		r.orgTypes[t] = slices.Clone(orgs)
+	}
 	if r.log == nil {
 		r.log = slog.Default()
 	}
@@ -174,6 +184,39 @@ func (r *Registry) Type(t string) (Connector, bool) {
 	return c, ok
 }
 
+// TypeFor is Type for one org: a type limited to other orgs (Options.OrgTypes) isn't there.
+func (r *Registry) TypeFor(org, t string) (Connector, bool) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	c, ok := r.types[t]
+	if !ok {
+		return nil, false
+	}
+	if orgs, gated := r.orgTypes[t]; gated && !slices.Contains(orgs, org) {
+		return nil, false
+	}
+	return c, true
+}
+
+// Gated reports whether type t is limited to some orgs (Options.OrgTypes).
+func (r *Registry) Gated(t string) bool {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	_, ok := r.orgTypes[t]
+	return ok
+}
+
+// TypesFor lists the types org may use, sorted.
+func (r *Registry) TypesFor(org string) []Connector {
+	out := []Connector{}
+	for _, c := range r.Types() {
+		if _, ok := r.TypeFor(org, c.Type()); ok {
+			out = append(out, c)
+		}
+	}
+	return out
+}
+
 // Types lists the registered types, sorted.
 func (r *Registry) Types() []Connector {
 	r.mu.RLock()
@@ -244,7 +287,7 @@ func (r *Registry) Resolve(ctx context.Context, org ids.OrgID, qualified string)
 	if err != nil {
 		return nil, ToolSpec{}, "", err
 	}
-	impl, ok := r.Type(head.Type)
+	impl, ok := r.TypeFor(org.String(), head.Type)
 	if !ok || !ValidToolName(head.Type, tool) {
 		if !ok {
 			return nil, ToolSpec{}, "", fmt.Errorf("%w: type %s isn't served by this build", ErrConnectorUnavailable, head.Type)
@@ -292,7 +335,7 @@ func (r *Registry) ResolveInternal(ctx context.Context, org ids.OrgID, qualified
 	if err != nil {
 		return nil, ToolSpec{}, "", err
 	}
-	impl, ok := r.Type(head.Type)
+	impl, ok := r.TypeFor(org.String(), head.Type)
 	if !ok || !ValidToolName(head.Type, tool) {
 		return nil, ToolSpec{}, "", ErrToolUnknown
 	}
@@ -370,7 +413,7 @@ func (r *Registry) NativeRows(ctx context.Context, org ids.OrgID) ([]RowTools, e
 		if row.Status != "active" || row.Type == "fake" || !slices.Contains(NativeTypes, row.Type) {
 			continue
 		}
-		impl, ok := r.Type(row.Type)
+		impl, ok := r.TypeFor(org.String(), row.Type)
 		if !ok {
 			continue
 		}
@@ -402,7 +445,7 @@ func (r *Registry) Named(ctx context.Context, org ids.OrgID, name string) (*Inst
 	if err != nil {
 		return nil, nil, err
 	}
-	impl, ok := r.Type(head.Type)
+	impl, ok := r.TypeFor(org.String(), head.Type)
 	if !ok {
 		return nil, nil, fmt.Errorf("%w: type %s isn't served by this build", ErrConnectorUnavailable, head.Type)
 	}

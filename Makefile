@@ -8,7 +8,7 @@ DATE     := $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
 BI       := github.com/deedglass/deedglass/internal/buildinfo
 LDFLAGS  := -s -w -X $(BI).Version=$(VERSION) -X $(BI).Commit=$(COMMIT) -X $(BI).Modified=$(MODIFIED) -X $(BI).Date=$(DATE)
 
-.PHONY: docs docs-dev docs-check docs-snippets docs-lighthouse py-ci py-build py-examples web-install web-tokens web-build web-test web-e2e web-lighthouse web-dev build-only bench-undo all help ci build test test-short vet fmt fmt-check tidy-check testdata-check rename-guard banned-words nocgo \
+.PHONY: docs docs-dev docs-check docs-snippets docs-lighthouse py-ci py-build py-examples web-install web-tokens web-build web-test web-e2e web-lighthouse web-dev build-only ops-build bench-undo all help ci build test test-short vet fmt fmt-check tidy-check testdata-check rename-guard banned-words nocgo \
 	integration matrix fuzz bench workflows-check release-check cloud-smoke bench-micro bench-quick bench-soak bench-check bench-report bench-store bench-deed cover clean \
 	dev dev-down dev-reset dev-logs run docker bench-http bench-verify \
 	web-verify-install web-verify-test sdk-ts sdk-ts-it sdk-sync-verify sdk-runtime sdk-examples web-verify-build web-verify-serve gencopy genmark bench-mark bench-ledger bench-stop bench-intents bench-gate bench-witness policy-test \
@@ -28,14 +28,17 @@ build: ## build bin/deedglass with version ldflags (with Node 24 present, the re
 	@if command -v node >/dev/null 2>&1; then $(MAKE) --no-print-directory web-build; else echo "build: Node isn't installed, so the binary carries the Console placeholder (dev only; prod refuses it)"; fi
 	$(GO) build -trimpath -ldflags '$(LDFLAGS)' -o bin/deedglass ./cmd/deedglass
 
-test: ## (ci) unit tests with the race detector
+test: ## (ci) unit tests with the race detector; then the ops build's outbound_mail connector and cmd guards (S40)
 	$(GO) test -race -count=1 ./...
+	$(GO) test -race -count=1 -tags outboundmail ./internal/connector/outbound/... ./internal/connector/googleauth/
+	$(GO) test -race -count=1 -tags outboundmail ./cmd/deedglass/ -run Outbound
 
 test-short: ## unit tests without -race, in short mode
 	$(GO) test -short -count=1 ./...
 
-vet: ## (ci) go vet
+vet: ## (ci) go vet, in both build modes (the default and the ops build's outboundmail tag, S40)
 	$(GO) vet ./...
+	$(GO) vet -tags outboundmail ./...
 
 fmt: ## rewrite Go files with gofmt
 	gofmt -w $$(git ls-files -co --exclude-standard '*.go')
@@ -337,6 +340,9 @@ web-lighthouse: web-build build-only ## Lighthouse 13 (accessibility and best pr
 
 web-dev: $(WEB)/node_modules/.package-lock.json ## astro dev on :4321, proxying /v1, /login, /auth and /.well-known to :8080 (start serve with DEEDGLASS_BASE_URL=http://localhost:4321)
 	cd $(WEB) && ASTRO_TELEMETRY_DISABLED=1 npx astro dev --port 4321
+
+ops-build: ## (S40) bin/deedglass-ops: the ops build with the outbound_mail connector (-tags outboundmail); never released
+	$(GO) build -trimpath -tags outboundmail -ldflags '$(LDFLAGS)' -o bin/deedglass-ops ./cmd/deedglass
 
 build-only: ## bin/deedglass from the current internal/console/dist (no web build)
 	$(GO) build -trimpath -ldflags '$(LDFLAGS)' -o bin/deedglass ./cmd/deedglass

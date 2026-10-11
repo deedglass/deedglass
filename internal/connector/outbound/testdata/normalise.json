@@ -1,0 +1,32 @@
+[
+  {
+    "In": "Hi Maya,\r\n\r\nline  \n",
+    "Normalised": "Hi Maya,\n\nline\n",
+    "SHA256": "sha256:f9165c5c51d4613a4a0627bc91329c3903da7f9eeedc23a81d63bdcfdb7d7a30"
+  },
+  {
+    "In": "a\rb\r\n",
+    "Normalised": "a\nb\n",
+    "SHA256": "sha256:911169ddaaf146aff539f58c26c489af3b892dff0fe283c1c264c65ae5aa59a2"
+  },
+  {
+    "In": "no final newline",
+    "Normalised": "no final newline\n",
+    "SHA256": "sha256:51eae89097206245111f9f40c70d05d57fe90b8f32c2b67c46a7df411d7af03b"
+  },
+  {
+    "In": "trailing\n\n\n",
+    "Normalised": "trailing\n",
+    "SHA256": "sha256:fa69d7a9c4b0f5ac5b26fd00856f613febaae22857f7f337f3fc156a8360f858"
+  },
+  {
+    "In": "tabs\t\t\nx",
+    "Normalised": "tabs\nx\n",
+    "SHA256": "sha256:88691c89160afe8693518aa45c66cf8cdb674dd554d77143f7db2ccfde889309"
+  },
+  {
+    "In": "café",
+    "Normalised": "café\n",
+    "SHA256": "sha256:7b49b9e063bd91a4f9252b413261f5557b9c570aa61516989499f64a62dbcdd6"
+  }
+]

@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"net"
 	"net/netip"
@@ -94,6 +95,14 @@ func newConnectors(ctx context.Context, cfg *config.Config, db *store.DB, led *l
 	o := connector.Options{Builtins: natives, Types: []connector.Connector{rest.New(), postgres.New(log), github.New(), slackconn.New(), stripeconn.New(), gmailconn.New(), notionconn.New()},
 		Loader: connector.DBLoader{DB: db},
 		Env:    connector.Env{Name: string(cfg.Env), Egress: c.egress}, Logger: log}
+	// S40: the outbound_mail type exists only in the ops build, and only for the listed orgs.
+	switch {
+	case outboundTypes == nil && cfg.Connectors.OutboundMail.Set:
+		return nil, errors.New(MsgNoOutboundBuild)
+	case outboundTypes != nil:
+		o.Types = append(o.Types, outboundTypes(cfg, log)...)
+		o.OrgTypes = map[string][]string{"outbound_mail": cfg.Connectors.OutboundMail.Orgs}
+	}
 	if cfg.VaultKey.IsSet() {
 		ring, err := vault.NewRing(cfg.VaultKey.Reveal())
 		if err != nil {

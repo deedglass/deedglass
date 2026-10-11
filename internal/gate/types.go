@@ -80,7 +80,24 @@ type ActionRequest struct {
 	// UndoesActionID (S23): the action a person's undo undoes; sets actions.undoes_action_id. Only
 	// the console principal sends it, and only with an internal <connector>.undo tool.
 	UndoesActionID string
+	// Schedule (S40): gateway only. With require_approval the approved action runs inside
+	// [NotBefore, NotAfter]; with allow it runs now when NotBefore is at most 60 s away, and is
+	// denied (schedule_needs_approval) otherwise. Stored once, never changed.
+	Schedule *Schedule
 }
+
+// Schedule is a request's run window (S40).
+type Schedule struct {
+	NotBefore time.Time
+	NotAfter  time.Time
+}
+
+// Schedule limits (S40 §3.4).
+const (
+	ScheduleMinSpan   = 5 * time.Minute
+	ScheduleMaxAhead  = 72 * time.Hour
+	ScheduleNowWindow = 60 * time.Second // an allowed action may run at once when not_before is this close
+)
 
 // EdgeResult is the body of POST /v1/actions/{id}/result (proxy mode).
 type EdgeResult struct {
@@ -185,6 +202,19 @@ type ApprovalInput struct {
 	// mode), for the connector's estimate. Call has no action id yet.
 	Exec Executor
 	Call connector.Call
+	// Schedule (S40) is the run window and its sentence in the org's time zone; the context
+	// snapshot carries it, so context_digest binds it.
+	Schedule *ApprovalSchedule
+	// Request (S40) is the connector's enrichment as the policy saw it (request.mail's From for
+	// the email_preview section). Never stored as is.
+	Request policy.RequestFacts
+}
+
+// ApprovalSchedule is the schedule as the approval context shows it.
+type ApprovalSchedule struct {
+	NotBefore time.Time `json:"not_before"`
+	NotAfter  time.Time `json:"not_after"`
+	Summary   string    `json:"summary"`
 }
 
 // PreparedApproval is Prepare's partial snapshot. RuleID is the rule it was prepared for: when Tx A

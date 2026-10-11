@@ -1,0 +1,31 @@
+{
+  "body_text": "Hi Maya,\n\nYour jobs post says the support agent updates order records in Postgres.\n\nOne question: would anyone see it?\n\nArjun Prabhakaran\nFounder, Deedglass\n",
+  "from": "arjun@trydeedglass.example",
+  "links": 0,
+  "questions": 0,
+  "review": {
+    "arm": "A",
+    "company": "Acme Robotics",
+    "cta": "scan_command",
+    "judge_summary": "flag only · 6 of 6",
+    "lint_summary": "14 of 14",
+    "signal_date": "2026-10-12",
+    "signal_summary": "HN jobs post: support agent updates order records in Postgres.",
+    "signal_url": "https://news.ycombinator.com/item?id=1"
+  },
+  "step": 2,
+  "subject": "your agent and Postgres",
+  "summary": "Email to Acme Robotics: your agent and Postgres · sends 21:00 to 23:00 IST",
+  "threaded": true,
+  "to": "maya@acme-robotics.example",
+  "unsubscribe": {
+    "mailto": true,
+    "one_click": true
+  },
+  "v": 1,
+  "window": {
+    "ist": "21:00 to 23:00 IST",
+    "local": "Wed 21 Oct, 08:30 to 10:30 PDT"
+  },
+  "words": 9
+}

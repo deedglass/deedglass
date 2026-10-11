@@ -1056,6 +1056,7 @@ func (v *validator) rule(n *yaml.Node, i int, p *draft) *draftRule {
 			r.ignored = append(r.ignored, keyValue{notifyKey, notifyNode})
 		} else {
 			r.r.Notify = ns
+			r.r.NotifyNone = dec == RequireApproval && notifyNode.Kind == yaml.SequenceNode && len(notifyNode.Content) == 0
 		}
 	}
 	if verifyNode != nil {

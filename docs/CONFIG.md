@@ -178,6 +178,24 @@ their settings, so it is validated on its own; an unknown key is a problem like 
 | `mcp.upstreams.<name>.timeout` | `30s` | Each HTTP request to the upstream (100ms to 10m). |
 | `mcp.upstreams.<name>.tools_ttl` | `30s` | How long its `tools/list` is cached (100ms to 10m; a shorter upstream `ttlMs` wins). |
 
+### The `connectors` section (S40)
+
+File-only. It matters only to the ops build (`make ops-build`, `-tags outboundmail`), the one build
+that contains the `outbound_mail` connector. A release build (`make build`, the Docker image, the
+npm and PyPI wrappers) refuses to start when this section is set: *This build has no outbound_mail
+connector. Build the ops binary with make ops-build.*
+
+| Setting | Default | Meaning |
+|---|---|---|
+| `connectors.outbound_mail.orgs` | `[]` | Org ids (`org_…`) that may create and use `outbound_mail` connectors. Never a slug or `*`. For every other org the type doesn't exist: create answers 404 `connector_type_unknown`, and the type is never in `GET /v1/connector-types`. Empty means no org may use it. |
+| `connectors.outbound_mail.api_base` | `https://gmail.googleapis.com` | The Gmail API base. Prod accepts only Gmail's; dev may point at a fake mailbox (`deedglass-ops dev fake-gmail`), whose own `/token` is then used. |
+
+```yaml
+connectors:
+  outbound_mail:
+    orgs: [org_01m45qnz7jvqfzb3fhh50pr6yg]
+```
+
 ## Examples
 
 ```sh

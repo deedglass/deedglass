@@ -426,7 +426,7 @@ func (e *evaluator) decideRule(r *Rule, errShort string) {
 		}
 		e.d.Approval = &a
 		e.d.Verify = e.verify(r.Verify)
-		e.d.Notify = r.Notify
+		e.d.Notify, e.d.NotifyNone = r.Notify, r.NotifyNone
 		e.d.Message = fmt.Sprintf(msgApproval, r.ID, reason)
 	default:
 		e.deny(CodePolicyDenied, SourceRule, r.ID, r.Pos.Line, reason, fmt.Sprintf(msgDenyRule, r.ID, reason))

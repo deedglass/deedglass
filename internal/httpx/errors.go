@@ -111,6 +111,11 @@ const (
 	CodeStripeLivemodeDetected  Code = "stripe_livemode_detected"
 	CodeUpstreamApprovalPending Code = "upstream_approval_pending"
 
+	// S40: scheduled execution after approval, and the ops build's outbound-mail connector.
+	CodeScheduleNeedsApproval Code = "schedule_needs_approval"
+	CodeActionExecuting       Code = "action_executing"
+	CodeFromDenied            Code = "from_denied"
+
 	// S23: undo.
 	CodeUndoUnavailable Code = "undo_unavailable"
 	CodeUndoPlanStale   Code = "undo_plan_stale"
@@ -251,6 +256,10 @@ var catalog = []CatalogEntry{
 		"Stripe answered in live mode for request {req}. Deedglass disabled the {name} connector. Check the request in your Stripe dashboard, then replace the key with a sandbox key.", "S30"},
 	{CodeUpstreamApprovalPending, 502, TypeAPI, "Stripe is holding this for its own approval. Deedglass can't see whether a Stripe reviewer approves it. Check Settings › Approvals in Stripe.",
 		"Stripe is holding this refund for its own approval ({apreq}). Deedglass can't see whether a Stripe reviewer approves it. Check Settings › Approvals in Stripe.", "S30"},
+
+	{CodeScheduleNeedsApproval, 403, TypePolicy, "A scheduled action must wait for an approval. This policy allows it now, so it would run early. Add require_approval to the rule, or drop the schedule.", "", "S40"},
+	{CodeActionExecuting, 409, TypeInvalidRequest, "It's running now and can't be cancelled. Its deed will show what happened.", "", "S40"},
+	{CodeFromDenied, 400, TypeInvalidRequest, "From on deedglass.com is never allowed for outbound mail. Use the sending-domain mailbox.", "", "S40"},
 
 	{CodeUndoUnavailable, 409, TypeInvalidRequest, "Undo isn't available for this action. The checks field lists each failing check with its fix.",
 		"Undo isn't available for {act}: {n} check failed ({ids}). Run deedglass undo preview {act} for the fix.", "S23"},

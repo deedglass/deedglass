@@ -263,6 +263,9 @@ func (p *Pipeline) Submit(ctx context.Context, pr principal, req ActionRequest) 
 	if err != nil {
 		return nil, err
 	}
+	if err := checkSchedule(req, n, p.now()); err != nil {
+		return nil, err
+	}
 	wait := p.cfg.WaitTimeout
 	if req.WaitSet {
 		wait = min(max(req.Wait, 0), MaxWait)
@@ -296,7 +299,7 @@ func (p *Pipeline) Submit(ctx context.Context, pr principal, req ActionRequest) 
 			n.ConnectorType = ctype
 			e := enrichAll(ctx, ex, spec, n.Args)
 			n.HTTP, n.GitHub, n.Slack, n.DefaultSchema, n.RaisedSideEffect = e.HTTP, e.GitHub, e.Slack, e.DefaultSchema, e.Side
-			n.Stripe, n.Email = e.Stripe, e.Email
+			n.Stripe, n.Email, n.Mail = e.Stripe, e.Email, e.Mail
 		}
 	}
 	// The active policies, before any transaction: a cold load reads Postgres on its own. The
@@ -510,10 +513,16 @@ func (p *Pipeline) admit(ctx context.Context, pr principal, n *Normalized, req A
 			}
 			p.watchTimeLimit(org, agent, d, sd)
 		}
+		// 3a. S40: an allowed action runs now, so a schedule whose window opens later can't be
+		// allowed: it is denied and sealed (schedule_needs_approval).
+		if req.Schedule != nil && d.Outcome == policy.Allow && req.Schedule.NotBefore.After(now.Add(ScheduleNowWindow)) {
+			d = scheduleNeedsApprovalDecision()
+		}
 		// 3b. A person must countersign: what they will see is prepared outside this transaction.
 		var ain ApprovalInput
 		if d.Outcome == policy.RequireApproval {
 			ain = approvalInput(pr, n, subj, in, ir, loaded, spec, ex)
+			ain.Schedule = approvalSchedule(req.Schedule, subj.Timezone)
 			if prep == nil || prep.RuleID != d.RuleID {
 				return &needPrepare{in: ain, d: d}
 			}
@@ -551,7 +560,8 @@ func (p *Pipeline) admit(ctx context.Context, pr principal, n *Normalized, req A
 		na := ledger.NewAction{Agent: agent, Mode: string(n.Mode), Tool: n.Tool, Request: n.Args, RequestDigest: n.Digest,
 			Actor: actor, RequestID: req.RequestID, Fingerprint: n.Fingerprint, Context: n.Context, Livemode: pr.Livemode,
 			ToolDigest: n.ToolDigest, OnBehalfOf: nonEmpty(ir.OBO.OnBehalfOf), Session: nonEmpty(ir.OBO.Session),
-			IntentSigned: ir.Signed, IdempotencyKey: nonEmpty(req.IdempotencyKey), UndoesActionID: nonEmpty(req.UndoesActionID), At: now}
+			IntentSigned: ir.Signed, IdempotencyKey: nonEmpty(req.IdempotencyKey), UndoesActionID: nonEmpty(req.UndoesActionID), At: now,
+			Schedule: scheduleJSON(req.Schedule)}
 		if ir.Signed {
 			na.IntentHash = &ir.IntentHash
 		}
@@ -705,7 +715,7 @@ func approvalInput(pr principal, n *Normalized, subj store.GateSubject, in polic
 	a := ApprovalInput{
 		Subject:   Subject{Org: pr.OrgID, Agent: pr.AgentID, Mode: n.Mode, Tool: n.Tool, ConnectorType: n.ConnectorType},
 		AgentName: subj.AgentName, Connector: n.Connector, SideEffect: in.Tool.SideEffect, RequestDigest: n.Digest,
-		Args: n.Args, OnBehalfOf: ir.OBO.OnBehalfOf, Livemode: pr.Livemode,
+		Args: n.Args, OnBehalfOf: ir.OBO.OnBehalfOf, Livemode: pr.Livemode, Request: in.Request,
 	}
 	if loaded != nil && !loaded.Builtin {
 		a.PolicyID, a.PolicyName, a.PolicyVersionID, a.PolicyVersion = loaded.PolicyID, loaded.Name, loaded.VersionID, loaded.Version
@@ -750,7 +760,7 @@ func buildInput(org ids.OrgID, agent ids.AgentID, subj store.GateSubject, n *Nor
 			Type: ctype, Op: n.ToolName}, DefaultSchema: n.DefaultSchema},
 		Args: n.Args,
 		Request: policy.RequestFacts{Mode: string(n.Mode), Bytes: n.ArgsBytes, IntentSigned: ir.Signed, Digest: n.Digest, HTTP: n.HTTP,
-			GitHub: n.GitHub, Slack: n.Slack, Stripe: n.Stripe, Email: n.Email},
+			GitHub: n.GitHub, Slack: n.Slack, Stripe: n.Stripe, Email: n.Email, Mail: n.Mail},
 		Time: now.UTC(),
 	}
 	return in, loc, nil
@@ -772,6 +782,7 @@ type enriched struct {
 	Slack         policy.SlackFacts  // S29
 	Stripe        policy.StripeFacts // S30
 	Email         policy.EmailFacts  // S30
+	Mail          policy.MailFacts   // S40
 	DefaultSchema string
 	Side          string
 }
@@ -813,6 +824,11 @@ func enrichAll(ctx context.Context, ex Executor, spec connector.ToolSpec, args j
 			e.Email = policy.EmailFacts{}
 		}
 	}
+	if s, ok := m["mail"]; ok {
+		if b, err := json.Marshal(s); err == nil && json.Unmarshal(b, &e.Mail) != nil {
+			e.Mail = policy.MailFacts{}
+		}
+	}
 	return e
 }
 
@@ -841,6 +857,70 @@ func stopDecision(s store.GateSubject) policy.Decision {
 		d.Code, d.Message = policy.CodeAgentStopped, stopped
 	}
 	return d
+}
+
+// checkSchedule applies S40's schedule rules before anything is recorded (400 validation_failed).
+func checkSchedule(req ActionRequest, n *Normalized, now time.Time) error {
+	s := req.Schedule
+	if s == nil {
+		return nil
+	}
+	switch {
+	case n.Mode != ModeGateway:
+		return httpx.ErrValidation("schedule", MsgScheduleProxy)
+	case s.NotAfter.Sub(s.NotBefore) < ScheduleMinSpan:
+		return httpx.ErrValidation("schedule", MsgScheduleOrder)
+	case s.NotAfter.After(now.Add(ScheduleMaxAhead)):
+		return httpx.ErrValidation("schedule", MsgScheduleTooFar)
+	case !s.NotAfter.After(now):
+		return httpx.ErrValidation("schedule", MsgSchedulePast)
+	}
+	return nil
+}
+
+// scheduleJSON is actions.schedule (≤ 256 bytes), nil without a schedule.
+func scheduleJSON(s *Schedule) json.RawMessage {
+	if s == nil {
+		return nil
+	}
+	b, _ := json.Marshal(map[string]string{"not_before": s.NotBefore.UTC().Format(time.RFC3339), "not_after": s.NotAfter.UTC().Format(time.RFC3339)})
+	return b
+}
+
+// ParseSchedule reads actions.schedule back; ok false when there is none.
+func ParseSchedule(raw json.RawMessage) (Schedule, bool) {
+	if len(raw) == 0 {
+		return Schedule{}, false
+	}
+	var v struct {
+		NotBefore time.Time `json:"not_before"`
+		NotAfter  time.Time `json:"not_after"`
+	}
+	if json.Unmarshal(raw, &v) != nil || v.NotBefore.IsZero() || v.NotAfter.IsZero() {
+		return Schedule{}, false
+	}
+	return Schedule{NotBefore: v.NotBefore, NotAfter: v.NotAfter}, true
+}
+
+// approvalSchedule is the schedule as the approval context shows it, in the org's time zone.
+func approvalSchedule(s *Schedule, tz string) *ApprovalSchedule {
+	if s == nil {
+		return nil
+	}
+	loc, err := time.LoadLocation(tz)
+	if err != nil || tz == "" {
+		loc = time.UTC
+	}
+	nb, na := s.NotBefore.In(loc), s.NotAfter.In(loc)
+	zone := nb.Format("MST")
+	return &ApprovalSchedule{NotBefore: s.NotBefore, NotAfter: s.NotAfter,
+		Summary: fmt.Sprintf("Runs %s between %s and %s %s.", nb.Format("Mon 2 Jan"), nb.Format("15:04"), na.Format("15:04"), zone)}
+}
+
+// scheduleNeedsApprovalDecision is the builtin deny of an allowed action with a later window.
+func scheduleNeedsApprovalDecision() policy.Decision {
+	return policy.Decision{Outcome: policy.Deny, Code: policy.Code(httpx.CodeScheduleNeedsApproval), Source: policy.SourceBuiltin,
+		RuleID: RuleScheduleNeedsApproval, Reason: MsgScheduleNeedsTap, Message: MsgScheduleNeedsTap}
 }
 
 // RuleToolUnknown is the builtin rule id of a recorded tool_unknown denial.

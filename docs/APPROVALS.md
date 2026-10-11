@@ -32,7 +32,23 @@ rules:
 - `expires_in` is how long the approval waits. After it, the approval is `expired`, the action is
   sealed as expired, and the agent is told nothing ran.
 - `notify` is accepted. In S22 every approval emails its approvers (`email`); `slack` arrives with
-  S29.
+  S29. **`notify: []`** (S40) on a `require_approval` rule sends no email and no Slack card: the
+  approval waits in Console › Approvals and the API only. A rule without `notify` keeps S22's
+  behaviour. The policy's source hash binds the difference.
+
+## Email approvals (S40)
+
+When the action is an email, `outbound_mail`'s `mail.send` (ops build only) or Gmail's
+`gmail.create_draft`, the context carries an `email_preview` section: From, To, the recipient's
+send window (their time and IST), the public signal it answers, the subject and the **whole
+plain-text body**, with its words, links and questions counted by the connector. `/approve` and
+Console › Approvals render the body as prose with its line breaks, and the button says
+**Approve**. There is one button per email and no batch control anywhere; one changed byte of
+the body changes the context, so `context_digest` binds what the person read.
+
+A scheduled action (`schedule` on `POST /v1/actions`, see `docs/SCHEDULED_ACTIONS.md`) also
+carries `context.schedule` with a sentence such as *Runs Wed 21 Oct between 21:00 and 23:00 IST.*
+After the countersign it runs inside that window, not at once.
 
 The policy is evaluated once, when the action arrives. Approving doesn't evaluate it again.
 

@@ -225,6 +225,9 @@ func excerpt(w io.Writer, s *source, d Diagnostic, p Painter) {
 // bidirectional characters visible so the terminal shows the line as it is.
 func window(text []rune, off int) string {
 	var b strings.Builder
+	// A context line above the diagnostic may be shorter than the diagnostic line's window offset
+	// (S40 found it with a long case input): show its end instead of slicing past it.
+	off = min(off, len(text))
 	if off > 0 {
 		b.WriteString("…")
 	}

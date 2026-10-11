@@ -73,13 +73,14 @@ type Config struct {
 	Server *url.URL
 
 	// File-only settings (deedglass.yaml sections; settings.go).
-	Gate      GateSettings
-	MCP       MCPSettings      // mcp.* (S15)
-	Witness   WitnessSettings  // witness.* (S19)
-	Decoder   DecoderSettings  // decoder.* (S20)
-	Approvals ApprovalSettings // approvals.* (S22)
-	Undo      UndoSettings     // undo.* (S23)
-	Webhooks  WebhookSettings  // webhooks.* (S22)
+	Gate       GateSettings
+	MCP        MCPSettings       // mcp.* (S15)
+	Connectors ConnectorSettings // connectors.* (S40, file-only)
+	Witness    WitnessSettings   // witness.* (S19)
+	Decoder    DecoderSettings   // decoder.* (S20)
+	Approvals  ApprovalSettings  // approvals.* (S22)
+	Undo       UndoSettings      // undo.* (S23)
+	Webhooks   WebhookSettings   // webhooks.* (S22)
 
 	raw        map[string]string // resolved raw values, for printing
 	sources    map[string]Source
@@ -175,16 +176,17 @@ func Load(o LoadOptions) (*Config, []Warning, error) {
 }
 
 type loader struct {
-	o        LoadOptions
-	env      Env
-	dotenv   map[string]string
-	dotLines map[string]int
-	yaml     map[string]yamlValue
-	raw      map[string]string
-	src      map[string]Source
-	problems []Problem
-	warnings []Warning
-	mcp      *MCPSettings
+	o          LoadOptions
+	env        Env
+	dotenv     map[string]string
+	dotLines   map[string]int
+	yaml       map[string]yamlValue
+	raw        map[string]string
+	src        map[string]Source
+	problems   []Problem
+	warnings   []Warning
+	mcp        *MCPSettings
+	connectors *ConnectorSettings
 }
 
 func (l *loader) problem(key, msg, next string) {
@@ -228,6 +230,7 @@ func (l *loader) load() (*Config, []Warning, error) {
 			}
 		}
 	}
+	l.checkConnectors(c)
 	l.prodChecks(c)
 	if c.ResendAPIKey.IsSet() && c.MailFrom == "" {
 		if _, set := l.raw["DEEDGLASS_MAIL_FROM"]; !set {

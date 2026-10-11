@@ -286,6 +286,13 @@ textarea[aria-invalid="true"] { border-color: var(--danger); }
 /* S23: the undo section. A compact diff (DESIGN.md table-row: 36px rows, hairlines between rows,
    tabular numerals, values in mono); the After undo column is tinted with the pending state at 12%,
    because nothing changes until a person countersigns. */
+/* S40: email_preview. The body reads like a letter: prose type, line breaks kept, about 70 characters
+   a line; never mono. */
+.email { margin: 12px 0 4px; }
+.email-subject { margin: 14px 0 8px; color: var(--text); font-size: 17px; line-height: 24px; font-weight: 600; letter-spacing: -.01em; overflow-wrap: anywhere; }
+.email-body { max-width: 70ch; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--text); font: 400 15px/24px var(--font);
+  padding: 14px 16px; border: 1px solid var(--line); border-radius: 10px; }
+.email-chips { margin: 10px 0 0; color: var(--muted); font-size: 13px; }
 .undo { margin: 12px 0 4px; }
 .undo-title { margin: 0 0 8px; color: var(--text); font-size: 14px; font-weight: 500; overflow-wrap: anywhere; }
 .undo-label { color: var(--muted); font-size: 13px; font-weight: 600; }

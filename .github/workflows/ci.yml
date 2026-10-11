@@ -43,6 +43,11 @@ jobs:
         run: go vet ./...
       - name: go test
         run: go test -race -count=1 ./...
+      - name: ops build (S40, -tags outboundmail; never released)
+        run: |
+          go vet -tags outboundmail ./...
+          go test -race -count=1 -tags outboundmail ./internal/connector/outbound/... ./internal/connector/googleauth/
+          go test -race -count=1 -tags outboundmail ./cmd/deedglass/ -run Outbound
       - name: starter policies (S12)
         run: go run ./cmd/deedglass policy test --dir examples/policies --require-coverage --voice
       - name: no-cgo build of the binary

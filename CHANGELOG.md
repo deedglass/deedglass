@@ -9,6 +9,22 @@ this file by `scripts/release-notes.sh`.
 
 ### Added
 
+- **Scheduled actions.** `POST /v1/actions` takes an optional `schedule {not_before, not_after}`
+  (gateway mode): an approved action runs inside the window, a missed window is cancelled and
+  sealed (`schedule_missed`), and an allowed action with a later window is refused
+  (`schedule_needs_approval`). An approved scheduled action can be cancelled until its run starts
+  (`action_executing` after). Migration 0028. See `docs/SCHEDULED_ACTIONS.md`.
+- **`notify: []`** on a `require_approval` rule sends no email or Slack card; the approval waits in
+  the Console and API only.
+- **Email approvals.** The approval context's `email_preview` section shows an email's From, To,
+  window, signal, subject and whole body on `/approve` and in Console › Approvals, with one
+  Approve button per email.
+- **`request.mail` policy facts** for the ops build's outbound-mail connector.
+- **The ops build** (`make ops-build`, `-tags outboundmail`): the `outbound_mail` connector, only for
+  the org ids in `connectors.outbound_mail.orgs`. Release builds contain no sending code and refuse
+  to start with that setting. The Gmail connector stays drafts only; its OAuth sign-in moved to
+  `internal/connector/googleauth` with no change in behaviour.
+
 - **Sealed files.** `deedglass deeds seal-file <path> --label …` seals a file's sha256, size, media
   type and label as the admin deed `file.sealed` (`POST /v1/deeds/files`); the file never leaves
   your machine. `deedglass verify <deed.json> --file <path>` checks the file against the deed,

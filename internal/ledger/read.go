@@ -212,6 +212,17 @@ type NextAction struct {
 	PollURL   *string `json:"poll_url,omitempty"`
 	ReportURL *string `json:"report_url,omitempty"`
 	Deadline  *Time   `json:"deadline,omitempty"`
+	// NotBefore and NotAfter (S40): an approved scheduled action runs inside this window
+	// (type scheduled); past not_after it is cancelled and sealed with schedule_missed.
+	NotBefore *Time `json:"not_before,omitempty"`
+	NotAfter  *Time `json:"not_after,omitempty"`
+}
+
+// ActionSchedule is the action's schedule (S40): when an approved action may run. Set once at
+// creation, never changed.
+type ActionSchedule struct {
+	NotBefore Time `json:"not_before"`
+	NotAfter  Time `json:"not_after"`
 }
 
 // Action statuses (S13): the one field an agent needs. state is the exact lifecycle state.
@@ -303,6 +314,8 @@ type Action struct {
 	// Undo (S23) is set on a single read and on an undo's own answers: what this action undoes, the
 	// undo that put it back, and whether the Console offers Preview undo.
 	Undo *ActionUndo `json:"undo,omitempty"`
+	// Schedule (S40) is the window an approved action runs in; absent when none was asked for.
+	Schedule *ActionSchedule `json:"schedule,omitempty"`
 }
 
 // ActionUndo is the action's undo object (S23). Eligible is cheap (L2 evidence from a bound
@@ -365,6 +378,7 @@ type ActionDetail struct {
 	Events          *List[ActionEvent] `json:"events"`
 	Deeds           []DeedRef          `json:"deeds"`
 	Undo            *ActionUndo        `json:"undo"`
+	Schedule        *ActionSchedule    `json:"schedule,omitempty"`
 }
 
 const actionCols = `a.id, a.created_at, a.agent_id, g.name, a.tool, a.connector_id, a.mode, a.state, a.on_behalf_of,
@@ -377,7 +391,8 @@ const actionCols = `a.id, a.created_at, a.agent_id, g.name, a.tool, a.connector_
   a.executing_deadline, a.error_message,
   a.denied_at IS NOT NULL, a.expired_at IS NOT NULL, a.cancelled_at IS NOT NULL, a.failed_at IS NOT NULL,
   a.witness_detail_digest, a.witness_required,
-  CASE WHEN ap.status = 'denied' AND ap.decided_by LIKE 'usr\_%' THEN ap.decision_reason END, a.decision_detail->>'anomaly'`
+  CASE WHEN ap.status = 'denied' AND ap.decided_by LIKE 'usr\_%' THEN ap.decision_reason END, a.decision_detail->>'anomaly',
+  a.schedule`
 
 const actionFrom = ` FROM deedglass.actions AS a
 JOIN deedglass.agents AS g ON g.org_id = a.org_id AND g.id = a.agent_id
@@ -403,12 +418,13 @@ func scanAction(row pgx.Row, extra ...any) (Action, time.Time, error) {
 		wasFailed                              bool
 		wDigest, wRequired                     *string
 		apReason, dAnomaly                     *string
+		schedule                               []byte
 	)
 	dest := []any{&a.ID, &created, &a.Agent.ID, &a.Agent.Name, &a.Tool, &a.Connector, &a.Mode, &a.State, &a.OnBehalfOf,
 		&a.Session, &polID, &pvID, &decision, &rID, &execStatus, &started, &finished, &latency, &errCode,
 		&wLevel, &wVerdict, &wMethod, &costAmount, &costCurrency, &a.RequestDigest, &a.ResultDigest, &pruned, &a.Deed,
 		&a.Livemode, &dCode, &dSource, &dReason, &dMsg, &polMode, &sDecision, &sRule, &sVersion, &apID, &apStatus, &apExpires,
-		&deadline, &errMsg, &wasDenied, &wasExpired, &wasCancelled, &wasFailed, &wDigest, &wRequired, &apReason, &dAnomaly}
+		&deadline, &errMsg, &wasDenied, &wasExpired, &wasCancelled, &wasFailed, &wDigest, &wRequired, &apReason, &dAnomaly, &schedule}
 	if err := row.Scan(append(dest, extra...)...); err != nil {
 		return a, created, err
 	}
@@ -428,6 +444,12 @@ func scanAction(row pgx.Row, extra ...any) (Action, time.Time, error) {
 	}
 	if apID != nil && apStatus != nil && apExpires != nil {
 		a.Approval = &ActionApproval{ID: *apID, Status: *apStatus, ExpiresAt: Time(*apExpires), DecisionReason: apReason}
+	}
+	if len(schedule) > 0 {
+		var sc ActionSchedule
+		if json.Unmarshal(schedule, &sc) == nil {
+			a.Schedule = &sc
+		}
 	}
 	a.NextAction = nextAction(&a, deadline)
 	if started != nil {
@@ -455,6 +477,9 @@ const PollWait = 25
 // nextAction is what the caller does next: wait for a person, or run the tool at the edge.
 func nextAction(a *Action, deadline *time.Time) *NextAction {
 	switch {
+	case a.State == string(gate.PendingApproval) && a.Approval != nil && a.Approval.Status == "approved" && a.Schedule != nil:
+		nb, na := a.Schedule.NotBefore, a.Schedule.NotAfter
+		return &NextAction{Type: "scheduled", NotBefore: &nb, NotAfter: &na}
 	case a.State == string(gate.PendingApproval) && a.Approval != nil:
 		poll := fmt.Sprintf("/v1/actions/%s?wait=%d", a.ID, PollWait)
 		exp := a.Approval.ExpiresAt
@@ -812,7 +837,7 @@ func detailOf(a Action, req, res, detail []byte) *ActionDetail {
 		Connector: a.Connector, Mode: a.Mode, State: a.State, Status: a.Status, OnBehalfOf: a.OnBehalfOf, Session: a.Session,
 		Decision: a.Decision, Policy: a.Policy, Approval: a.Approval, Execution: a.Execution,
 		Cost: a.Cost, RequestDigest: a.RequestDigest, ResultDigest: a.ResultDigest, PayloadPrunedAt: a.PayloadPrunedAt,
-		Deed: a.Deed, NextAction: a.NextAction, Request: rawOrNull(req), Result: rawOrNull(res)}
+		Deed: a.Deed, NextAction: a.NextAction, Request: rawOrNull(req), Result: rawOrNull(res), Schedule: a.Schedule}
 	if w := a.Witness; w != nil {
 		c := *w
 		c.fill(detail, true)

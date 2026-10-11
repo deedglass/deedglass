@@ -85,6 +85,11 @@ type Rule struct {
 	Approval        *ApprovalSpec // require_approval only, with defaults merged in
 	Verify          Level         // allow and require_approval; "" for deny
 	Notify          []string      // deny and require_approval
+	// NotifyNone (S40) is an explicit `notify: []` on a require_approval rule: no per-approval
+	// email or Slack, the approval waits in the Console and API only. Absent notify keeps S22's
+	// behaviour. The source hash binds it; the normalized form (version_hash) doesn't carry it,
+	// so versions stored before S40 still load.
+	NotifyNone bool
 }
 
 // Matcher is a precompiled `match`. An empty field matches everything; Match allocates nothing.

@@ -64,6 +64,7 @@ export const REDIRECTS = [
   ['/connectors/slack', '/reference/connectors/slack/'],
   ['/connectors/stripe', '/reference/connectors/stripe/'],
   ['/connectors/gmail', '/reference/connectors/gmail/'],
+  ['/connectors/outbound_mail', '/reference/connectors/outbound-mail/'],
   ['/connectors/notion', '/reference/connectors/notion/'],
   ['/connectors/mcp-http', '/reference/connectors/mcp-http/'],
   ['/connectors/fake', '/reference/connectors/fake/'],

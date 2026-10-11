@@ -89,6 +89,7 @@ type worldOpts struct {
 	agents    int
 	clock     func() time.Time // nil: time.Now (S27: a virtual pipeline clock)
 	anomalies AnomalySource    // S27: the opt-in anomaly facts
+	resolver  Resolver         // S40: nil means the fake connector's registry
 }
 
 func newWorld(t testing.TB, o worldOpts) *world {
@@ -125,8 +126,12 @@ func newWorld(t testing.TB, o worldOpts) *world {
 	w.reg = policy.NewRegistry(policystore.NewRepo(e.DB, nil), ch, policy.WithRegistryLogger(log))
 	w.svc = policy.NewService(policystore.NewRepo(e.DB, w.led), policy.WithRegistry(w.reg))
 	w.fake = fake.New()
+	var res Resolver = connector.NewRegistry(w.fake)
+	if o.resolver != nil {
+		res = o.resolver
+	}
 	w.p, err = New(Options{DB: e.DB, Ledger: w.led, Policies: w.reg, Usage: policystore.NewUsage(e.DB),
-		Intents: identity.NewIntents(e.DB, w.keys, nil), Guard: w.keys, Resolver: connector.NewRegistry(w.fake),
+		Intents: identity.NewIntents(e.DB, w.keys, nil), Guard: w.keys, Resolver: res,
 		Config: o.cfg, Logger: log, Clock: o.clock, Anomalies: o.anomalies})
 	if err != nil {
 		t.Fatal(err)

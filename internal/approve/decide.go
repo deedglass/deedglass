@@ -202,7 +202,17 @@ func (s *Service) Decide(ctx context.Context, in DecideInput) (*Approval, error)
 		deedID := env.ID
 		switch final {
 		case StatusApproved:
-			if err := store.EnqueueJob(ctx, tx, in.Org, x.Action, gate.JobApprovalResume, now, 8); err != nil {
+			// S40: a scheduled action runs at greatest(now, not_before); Resume seals it as
+			// schedule_missed if the worker wakes after not_after.
+			runAt := now
+			var sched []byte
+			if err := tx.QueryRow(ctx, `SELECT schedule FROM deedglass.actions WHERE org_id = $1 AND id = $2`, in.Org, x.Action).Scan(&sched); err != nil {
+				return err
+			}
+			if sc, ok := gate.ParseSchedule(sched); ok && sc.NotBefore.After(runAt) {
+				runAt = sc.NotBefore
+			}
+			if err := store.EnqueueJob(ctx, tx, in.Org, x.Action, gate.JobApprovalResume, runAt, 8); err != nil {
 				return err
 			}
 			if err := voidTokens(ctx, tx, in.Org, aid); err != nil {

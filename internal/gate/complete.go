@@ -471,11 +471,23 @@ func (p *Pipeline) Cancel(ctx context.Context, pr principal, id string) (*Action
 		default:
 			return httpx.E(httpx.CodeConflict, httpx.Msg(MsgCancelExecuting))
 		}
+		approvedScheduled := false
 		if a.ApprovalStatus != nil && *a.ApprovalStatus == "approved" {
-			// A person approved it first (S22): the resume job runs it, so it can't be cancelled.
-			return httpx.E(httpx.CodeConflict, httpx.Msg(MsgCancelApproved))
+			// A person approved it first (S22): the resume job runs it, so it can't be cancelled,
+			// unless it is scheduled (S40) and its job is still waiting for the window.
+			if _, ok := ParseSchedule(a.Schedule); !ok {
+				return httpx.E(httpx.CodeConflict, httpx.Msg(MsgCancelApproved))
+			}
+			gone, err := store.DeleteUnclaimedJob(ctx, tx, pr.OrgID, aid, JobApprovalResume)
+			if err != nil {
+				return err
+			}
+			if !gone {
+				return httpx.E(httpx.CodeActionExecuting, httpx.Msg(MsgCancelInFlightRun))
+			}
+			approvedScheduled = true
 		}
-		if a.ApprovalID != nil {
+		if a.ApprovalID != nil && !approvedScheduled {
 			err := store.DecideApproval(ctx, tx, pr.OrgID, *a.ApprovalID, "cancelled", deciderOf(pr), nil, p.now())
 			if errors.Is(err, store.ErrNoRow) {
 				// The approval was decided while this request waited for the action's lock (the
@@ -619,6 +631,31 @@ func (p *Pipeline) step(ctx context.Context, org ids.OrgID, id ids.ActionID) (a 
 						}
 						done = true
 						break
+					}
+					// S40: a scheduled action runs only inside its window. Too early: wait (the
+					// approval_resume job runs at not_before). Too late: cancelled and sealed,
+					// schedule_missed, nothing run; the approval stays approved.
+					if sc, ok := ParseSchedule(ga.Schedule); ok {
+						if now.Before(sc.NotBefore) {
+							done = true
+							break
+						}
+						if now.After(sc.NotAfter) {
+							ev := ledger.EventData{Reason: strp(ReasonScheduleMissed), ApprovalID: ga.ApprovalID, At: now}
+							if err := p.o.Ledger.Transition(ctx, tx, sid, PendingApproval, Cancelled, ev); err != nil {
+								return err
+							}
+							if err := p.o.Usage.ReleaseTx(ctx, tx, org.String(), rs); err != nil {
+								return err
+							}
+							if seal {
+								if err := p.seal(ctx, tx, id); err != nil {
+									return err
+								}
+							}
+							done = true
+							break
+						}
 					}
 					deadline := now.Add(p.cfg.ExecuteTimeout + sweepGrace)
 					if sub.Mode == ModeProxy {

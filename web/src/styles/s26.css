@@ -39,6 +39,10 @@
 .apv-summary { margin: 0; text-wrap: pretty; }
 .apv-facts { margin: 0; }
 .apv-sec { display: grid; gap: var(--space-2); min-width: 0; }
+/* S40: email_preview reads like a letter: prose type, line breaks kept, about 70 characters a line. */
+.apv-email-subject { margin: var(--space-2) 0 0; font-size: 17px; line-height: 24px; font-weight: 600; letter-spacing: -0.01em; overflow-wrap: anywhere; }
+.apv-email-body { max-width: 70ch; white-space: pre-wrap; overflow-wrap: anywhere; font-family: var(--font-sans); font-size: 15px; line-height: 24px; color: var(--text); border: 1px solid var(--hairline); border-radius: var(--radius-button); padding: var(--space-3) var(--space-4); background: var(--surface); }
+.apv-email-chips { margin: 0; }
 .apv-sec-t { margin: 0; font-size: var(--type-caption-size, 12px); font-weight: 600; letter-spacing: .04em; font-variant-caps: all-small-caps; color: var(--text-2); }
 .apv-rule { margin: 0; overflow-wrap: anywhere; }
 .apv-reason { margin: 0; padding: var(--space-2) var(--space-3); border-left: 2px solid var(--border-strong); color: var(--text); }

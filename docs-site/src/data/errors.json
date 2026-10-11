@@ -628,6 +628,33 @@
     "doc_url": "https://docs.deedglass.com/errors/upstream_approval_pending"
   },
   {
+    "code": "schedule_needs_approval",
+    "status": 403,
+    "type": "policy_error",
+    "default_message": "A scheduled action must wait for an approval. This policy allows it now, so it would run early. Add require_approval to the rule, or drop the schedule.",
+    "owner": "S40",
+    "retryable": false,
+    "doc_url": "https://docs.deedglass.com/errors/schedule_needs_approval"
+  },
+  {
+    "code": "action_executing",
+    "status": 409,
+    "type": "invalid_request_error",
+    "default_message": "It's running now and can't be cancelled. Its deed will show what happened.",
+    "owner": "S40",
+    "retryable": false,
+    "doc_url": "https://docs.deedglass.com/errors/action_executing"
+  },
+  {
+    "code": "from_denied",
+    "status": 400,
+    "type": "invalid_request_error",
+    "default_message": "From on deedglass.com is never allowed for outbound mail. Use the sending-domain mailbox.",
+    "owner": "S40",
+    "retryable": false,
+    "doc_url": "https://docs.deedglass.com/errors/from_denied"
+  },
+  {
     "code": "undo_unavailable",
     "status": 409,
     "type": "invalid_request_error",

@@ -68,6 +68,15 @@
     inMin: 'in {n} min',
     inHour: 'in {h} h {m} min',
     inHourExact: 'in {h} h',
+    // S40: the email_preview section.
+    emailWindow: '{local} ({ist})',
+    emailChips: '{words} words · {links} · {questions} · lints {lint} · judge {judge}',
+    emailLinksNone: '0 links',
+    emailLinksOne: '1 link',
+    emailLinksMany: '{n} links',
+    emailQOne: '1 question',
+    emailQMany: '{n} questions',
+    approveEmail: 'Approve',
     // S23: the undo section (internal/witness/undo/present.go holds the CLI and API strings).
     undoHead: '{rows} in {tables}',
     undoUpdates: '{n}\u00a0updates',
@@ -244,6 +253,7 @@
       $('f-four').textContent = fmt(COPY.fourEyes, { done: cs.length, need: a.required, who: who || '-' }).replace(/ · -$/, '');
     }
     renderUndo(ctx.sections && ctx.sections.undo);
+    renderEmail(ctx.sections && ctx.sections.email_preview);
     $('sql-text').textContent = p.sql || '';
     show($('sql'), Boolean(p.sql));
     $('args-note').textContent = ctx.args_note || '';
@@ -269,6 +279,44 @@
     }
     show($('recent-wrap'), recent.length > 0);
     show($('context'), true);
+  }
+
+  // S40: an email exactly as it will leave: From, To, the recipient's window, the signal it answers,
+  // the subject and the whole plain-text body (text only, line breaks kept), then the checks. The
+  // primary button is just "Approve": one tap per email, no batch control anywhere on this page.
+  function renderEmail(e) {
+    const on = Boolean(e && typeof e === 'object');
+    show($('email'), on);
+    show($('sql'), !on && Boolean($('sql-text').textContent));
+    if (!on) return;
+    $('e-from').textContent = e.from || '';
+    $('e-to').textContent = e.to || '';
+    const w = e.window;
+    show($('e-window-label'), Boolean(w));
+    show($('e-window'), Boolean(w));
+    if (w) $('e-window').textContent = fmt(COPY.emailWindow, { local: w.local, ist: w.ist });
+    const r = e.review || {};
+    const sig = r.signal_summary || '';
+    show($('e-signal-label'), Boolean(sig));
+    show($('e-signal'), Boolean(sig));
+    $('e-signal').textContent = '';
+    if (sig) {
+      $('e-signal').append(document.createTextNode(sig + (r.signal_date ? ' · ' + r.signal_date : '')));
+      if (r.signal_url && r.signal_url.indexOf('https://') === 0) {
+        const a = document.createElement('a');
+        a.href = r.signal_url;
+        a.rel = 'noopener noreferrer';
+        a.target = '_blank';
+        a.textContent = ' ' + r.signal_url.replace(/^https:\/\//, '');
+        $('e-signal').append(a);
+      }
+    }
+    $('email-subject').textContent = e.subject || '';
+    $('email-body').textContent = e.body_text || '';
+    const links = e.links === 0 ? COPY.emailLinksNone : e.links === 1 ? COPY.emailLinksOne : fmt(COPY.emailLinksMany, { n: e.links });
+    const qs = e.questions === 1 ? COPY.emailQOne : fmt(COPY.emailQMany, { n: e.questions || 0 });
+    $('email-chips').textContent = fmt(COPY.emailChips, { words: e.words || 0, links, questions: qs, lint: r.lint_summary || '-', judge: r.judge_summary || '-' });
+    $('approve').textContent = COPY.approveEmail;
   }
 
   // S23: an undo's plan, as the person who countersigns it reads it: what is put back, and the first

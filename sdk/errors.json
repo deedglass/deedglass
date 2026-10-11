@@ -463,6 +463,27 @@
       "doc_url": "https://docs.deedglass.com/errors/upstream_approval_pending"
     },
     {
+      "code": "schedule_needs_approval",
+      "status": 403,
+      "type": "policy_error",
+      "class": "PolicyDeniedError",
+      "doc_url": "https://docs.deedglass.com/errors/schedule_needs_approval"
+    },
+    {
+      "code": "action_executing",
+      "status": 409,
+      "type": "invalid_request_error",
+      "class": "InvalidRequestError",
+      "doc_url": "https://docs.deedglass.com/errors/action_executing"
+    },
+    {
+      "code": "from_denied",
+      "status": 400,
+      "type": "invalid_request_error",
+      "class": "InvalidRequestError",
+      "doc_url": "https://docs.deedglass.com/errors/from_denied"
+    },
+    {
       "code": "undo_unavailable",
       "status": 409,
       "type": "invalid_request_error",

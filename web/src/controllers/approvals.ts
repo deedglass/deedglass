@@ -15,7 +15,7 @@ import { approvalsCopy as c } from '../lib/copy-approvals.ts';
 import { h, icon, maybe, replace, type Child } from '../lib/dom.ts';
 import { dateTime, number, plural, time } from '../lib/format.ts';
 import {
-  clockOf, decideState, effectLine, fourEyes, raceSentence, sortPending, sqlOf, voteCount, votes, whereOf,
+  clockOf, decideState, effectLine, emailChips, emailOf, fourEyes, raceSentence, sortPending, sqlOf, voteCount, votes, whereOf,
   type ApprovalFull, type DecideState,
 } from '../lib/models/approval.ts';
 import { get } from '../lib/state.ts';
@@ -159,6 +159,18 @@ function detailView(a: ApprovalFull, m: Model, act: { decide: (v: Vote) => void;
       h('dt', null, c.detail.tables), h('dd', { class: 'mono', translate: 'no' }, sql.tables.join(', ') || '·'),
       h('dt', null, c.detail.where), h('dd', { class: 'mono', translate: 'no' }, (sql.hasWhere && whereOf(sql.statement)) || c.detail.noWhere),
       ...(sql.estimate ? [h('dt', null, 'Estimate'), h('dd', { class: 'num' }, sql.estimate)] : []))) : null;
+  const email = emailOf(a);
+  const emailSec = email ? section(c.detail.email,
+    h('dl', { class: 'kv apv-emailkv' },
+      h('dt', null, c.detail.emailFrom), h('dd', { translate: 'no' }, email.from || '·'),
+      h('dt', null, c.detail.emailTo), h('dd', { translate: 'no' }, email.to),
+      ...(email.window ? [h('dt', null, c.detail.emailWindow), h('dd', { class: 'num' }, fill(c.detail.emailWindowText, { local: email.window.local, ist: email.window.ist }))] : []),
+      ...(email.review?.signal_summary ? [h('dt', null, c.detail.emailSignal), h('dd', null, email.review.signal_summary,
+        email.review.signal_date ? ` · ${email.review.signal_date}` : '',
+        email.review.signal_url?.startsWith('https://') ? h('a', { href: email.review.signal_url, rel: 'noopener noreferrer', target: '_blank', class: 'apv-email-src' }, ' ', email.review.signal_url.replace(/^https:\/\//, '')) : null)] : [])),
+    h('h4', { class: 'apv-email-subject' }, email.subject),
+    h('div', { class: 'apv-email-body', role: 'document', 'aria-label': c.detail.email }, email.body_text),
+    h('p', { class: 'apv-email-chips t-2 num' }, emailChips(email))) : null;
   const args = section(c.detail.arguments,
     h('div', { class: 'apv-args', role: 'region', 'aria-label': c.detail.arguments, tabindex: 0 }, jsonView(ctx?.args ?? {})),
     h('p', { class: 't-footnote t-2' }, ctx?.args_note ?? c.detail.argsNote));
@@ -170,7 +182,7 @@ function detailView(a: ApprovalFull, m: Model, act: { decide: (v: Vote) => void;
     h('a', { class: 'btn btn-quiet btn-sm apv-back', href: '/app/approvals' }, icon('chevron-left', 16), c.detail.back),
     head,
     h('dl', { class: 'kv apv-facts' }, ...facts.flatMap(([k, v]) => [h('dt', null, k), h('dd', null, v)])),
-    rule, sqlSec, args,
+    rule, emailSec, sqlSec, args,
     section(fill(c.detail.recent, { agent: a.agent.name }), recentList(a)),
     section(c.detail.decisions, decisionsList(a)),
     exp, bar);

@@ -92,6 +92,23 @@ type EmailFacts struct {
 	Enriched        bool     `json:"enriched" cel:"enriched"`
 }
 
+// MailFacts is what the ops build's outbound-mail connector counts in a message before the
+// decision (S40): request.mail. The policy reads these, never the sender's own counts.
+type MailFacts struct {
+	From             string `json:"from" cel:"from"`
+	FromDomain       string `json:"from_domain" cel:"from_domain"`
+	ToDomain         string `json:"to_domain" cel:"to_domain"`
+	Words            int64  `json:"words" cel:"words"`
+	Links            int64  `json:"links" cel:"links"`
+	BareDomains      int64  `json:"bare_domains" cel:"bare_domains"`
+	Questions        int64  `json:"questions" cel:"questions"`
+	HasHTML          bool   `json:"has_html" cel:"has_html"`
+	Step             int64  `json:"step" cel:"step"`
+	Threaded         bool   `json:"threaded" cel:"threaded"`
+	UnsubscribeHTTPS bool   `json:"unsubscribe_https" cel:"unsubscribe_https"`
+	Enriched         bool   `json:"enriched" cel:"enriched"`
+}
+
 // RequestFacts describes the request that carried the action.
 type RequestFacts struct {
 	Mode         string `json:"mode" cel:"mode"`
@@ -106,6 +123,8 @@ type RequestFacts struct {
 	// Stripe and Email are those connectors' facts (S30); zero for every other tool.
 	Stripe StripeFacts `json:"stripe,omitzero" cel:"stripe"`
 	Email  EmailFacts  `json:"email,omitzero" cel:"email"`
+	// Mail is the outbound-mail connector's facts (S40); zero for every other tool.
+	Mail MailFacts `json:"mail,omitzero" cel:"mail"`
 }
 
 // SQLFacts is what the S11 classifier reports about args.sql.

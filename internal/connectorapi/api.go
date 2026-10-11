@@ -244,7 +244,7 @@ func (a *API) object(ctx context.Context, tx pgx.Tx, org ids.OrgID, c store.Conn
 	if out.Health.Status == "" {
 		out.Health.Status = "unknown"
 	}
-	if impl, ok := a.Registry.Type(c.Type); ok {
+	if impl, ok := a.Registry.TypeFor(org.String(), c.Type); ok {
 		inst, err := a.Registry.Instance(org, c)
 		if err == nil {
 			specs, err := impl.Tools(ctx, inst)
@@ -368,6 +368,9 @@ func (a *API) validate(ctx context.Context, impl connector.Connector, cfg json.R
 			if e.Code == connector.CodeDestinationBlocked {
 				return nil, "", httpx.E(httpx.CodeDestinationBlocked, httpx.Param(e.Param), httpx.Msg(e.Message))
 			}
+			if e.Code == string(httpx.CodeFromDenied) { // S40: the outbound-mail connector's From guard
+				return nil, "", httpx.E(httpx.CodeFromDenied, httpx.Param(e.Param), httpx.Msg(e.Message))
+			}
 		}
 		return nil, "", httpx.ErrValidation(first.Param, msg)
 	}
@@ -387,10 +390,10 @@ func (a *API) create(w http.ResponseWriter, r *http.Request) error {
 	if err := httpx.DecodeJSON(r, &in); err != nil {
 		return err
 	}
-	impl, ok := a.Registry.Type(in.Type)
+	impl, ok := a.Registry.TypeFor(p.OrgID.String(), in.Type)
 	if !ok {
 		names := []string{}
-		for _, t := range a.Registry.Types() {
+		for _, t := range a.Registry.TypesFor(p.OrgID.String()) {
 			names = append(names, t.Type())
 		}
 		return httpx.ErrValidation("type", fmt.Sprintf("type must be one of %s. More types arrive in later releases.", strings.Join(names, ", ")))
@@ -514,7 +517,7 @@ func (a *API) patch(w http.ResponseWriter, r *http.Request) error {
 			changed = append(changed, "status")
 		}
 		if len(in.Config) > 0 {
-			impl, ok := a.Registry.Type(c.Type)
+			impl, ok := a.Registry.TypeFor(p.OrgID.String(), c.Type)
 			if !ok {
 				return httpx.ErrValidation("config", fmt.Sprintf("This build doesn't serve connectors of type %s, so their config can't be checked.", c.Type))
 			}
@@ -656,7 +659,7 @@ func (a *API) putCredentials(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	impl, ok := a.Registry.Type(c.Type)
+	impl, ok := a.Registry.TypeFor(p.OrgID.String(), c.Type)
 	if ok {
 		kinds := impl.Info().CredentialKinds
 		allowed := false
@@ -770,7 +773,7 @@ func (a *API) test(w http.ResponseWriter, r *http.Request) error {
 	if ok, retry := a.tests.Allow(c.ID); !ok {
 		return httpx.ErrRateLimited(int(retry.Seconds() + 1))
 	}
-	impl, ok := a.Registry.Type(c.Type)
+	impl, ok := a.Registry.TypeFor(p.OrgID.String(), c.Type)
 	if !ok {
 		return httpx.E(httpx.CodeConnectorUnavailable, httpx.Msgf("This build doesn't serve connectors of type %s.", c.Type))
 	}
@@ -844,6 +847,9 @@ type catalogCache struct {
 func Catalog(reg *connector.Registry) []connector.TypeInfo {
 	out := []connector.TypeInfo{}
 	for _, t := range reg.Types() {
+		if reg.Gated(t.Type()) {
+			continue // S40: an org-limited type (outbound_mail) is never in the public catalog
+		}
 		out = append(out, t.Info())
 	}
 	sort.SliceStable(out, func(i, j int) bool {

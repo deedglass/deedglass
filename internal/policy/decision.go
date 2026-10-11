@@ -64,6 +64,7 @@ type Decision struct {
 	Approval     *ApprovalSpec `json:"approval,omitempty"`
 	Verify       Level         `json:"verify,omitempty"`
 	Notify       []string      `json:"notify,omitempty"`
+	NotifyNone   bool          `json:"notify_none,omitempty"` // S40: `notify: []`, the approval sends nothing
 	Budget       *BudgetHit    `json:"budget,omitempty"`
 	Reservations []Reservation `json:"reservations,omitempty"`
 	CostBudgets  []CostTarget  `json:"cost_budgets,omitempty"`

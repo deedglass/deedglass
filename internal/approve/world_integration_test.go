@@ -69,6 +69,13 @@ rules:
     decision: require_approval
     reason: Two owners must agree.
     approval: { approvers: [role:owner], required: 2, expires_in: 1h }
+  - id: silent
+    match: { tool: [fake.write] }
+    when: has(args.table) && args.table == "silent"
+    decision: require_approval
+    reason: This one waits in the Console only.
+    notify: []
+    approval: { approvers: [role:admin], required: 1, expires_in: 1h }
   - id: allow-fake
     match: { tool: ["fake.*"] }
     decision: allow

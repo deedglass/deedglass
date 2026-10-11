@@ -97,6 +97,8 @@ function rowsWord(n: number | null | undefined): string {
 export function effectLine(a: Pick<ApprovalFull, 'tool' | 'context'>): string {
   const ctx = a.context;
   const type = ctx?.action.connector_type ?? a.tool.split('.')[0] ?? '';
+  const email = emailOf(a);
+  if (email) return fill(c.effect.email, { to: email.review?.company || email.to, subject: email.subject });
   const stripe = ctx?.sections?.stripe;
   if (stripe && (stripe.amount_display || stripe.customer)) {
     const amt = str(stripe.amount_display);
@@ -116,6 +118,27 @@ export function effectLine(a: Pick<ApprovalFull, 'tool' | 'context'>): string {
   }
   const side = ctx?.action.side_effect;
   return side ? fill(c.effect.generic, { side, tool: a.tool }) : a.tool;
+}
+
+/** EmailPreview is S40's email_preview section, as the server computed it. */
+export interface EmailPreview {
+  from: string; to: string; subject: string; body_text: string; words: number; links: number; questions: number;
+  step: number; threaded: boolean;
+  window?: { local: string; ist: string };
+  review?: { company?: string; signal_summary?: string; signal_url?: string; signal_date?: string; lint_summary?: string; judge_summary?: string; cta?: string };
+}
+
+/** emailOf returns the email_preview section (outbound mail and Gmail drafts), or null. */
+export function emailOf(a: Pick<ApprovalFull, 'context'>): EmailPreview | null {
+  const e = a.context?.sections?.email_preview as unknown as EmailPreview | undefined;
+  return e && typeof e === 'object' && typeof e.subject === 'string' ? e : null;
+}
+
+/** emailChips is the one line of checks under the body. */
+export function emailChips(e: EmailPreview): string {
+  const links = e.links === 1 ? '1 link' : `${number(e.links || 0)} links`;
+  const qs = e.questions === 1 ? '1 question' : `${number(e.questions || 0)} questions`;
+  return fill(c.detail.emailChips, { words: number(e.words || 0), links, questions: qs, lint: e.review?.lint_summary || '·', judge: e.review?.judge_summary || '·' });
 }
 
 /** sqlOf returns the statement to show (context.args.sql) and the estimate line, for Postgres. */

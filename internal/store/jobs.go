@@ -151,3 +151,14 @@ func ReleaseJobLease(ctx context.Context, tx pgx.Tx, org ids.OrgID, id int64, wo
 	    WHERE org_id = $1 AND id = $2 AND locked_by = $3`, org, id, worker)
 	return err
 }
+
+// DeleteUnclaimedJob removes an action's job of one kind only while no worker holds it (S40: the
+// cancel of an approved scheduled action). It reports whether a row went.
+func DeleteUnclaimedJob(ctx context.Context, tx pgx.Tx, org ids.OrgID, action ids.ActionID, kind string) (bool, error) {
+	tag, err := tx.Exec(ctx, `DELETE FROM deedglass.witness_jobs WHERE org_id = $1 AND action_id = $2 AND kind = $3
+	    AND (locked_until IS NULL OR locked_until < pg_catalog.now())`, org, action, kind)
+	if err != nil {
+		return false, err
+	}
+	return tag.RowsAffected() == 1, nil
+}

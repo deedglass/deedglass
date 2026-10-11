@@ -7368,6 +7368,9 @@ components:
                 - stripe_live_key_refused
                 - stripe_livemode_detected
                 - upstream_approval_pending
+                - schedule_needs_approval
+                - action_executing
+                - from_denied
                 - undo_unavailable
                 - undo_plan_stale
                 - already_undone
@@ -7746,6 +7749,8 @@ components:
         session: {type: [string, "null"]}
         undo:
           $ref: "#/components/schemas/ActionUndo"
+        schedule:
+          $ref: "#/components/schemas/ActionSchedule"
         decision:
           $ref: "#/components/schemas/ActionDecision"
         policy:
@@ -8066,14 +8071,26 @@ components:
       description: >-
         What the caller does next. `await_approval`: wait for a person (`poll_url` long-polls the
         action). `execute_at_edge`: proxy mode, run the tool at the edge and report the result to
-        `report_url` before `deadline`. `null` otherwise.
+        `report_url` before `deadline`. `scheduled` (S40): approved, it runs between `not_before` and
+        `not_after`. `null` otherwise.
       properties:
-        type: {type: string, enum: [await_approval, execute_at_edge]}
+        type: {type: string, enum: [await_approval, execute_at_edge, scheduled]}
         approval: {type: string, description: '`await_approval` only: the approval id.'}
+        not_before: {type: string, format: date-time, description: '`scheduled` only (S40): an approved action runs from this time.'}
+        not_after: {type: string, format: date-time, description: '`scheduled` only (S40): past it the action is cancelled and sealed with `schedule_missed`; nothing runs.'}
         expires_at: {type: string, format: date-time, description: '`await_approval` only.'}
         poll_url: {type: string, description: '`await_approval` only: `/v1/actions/{id}?wait=25`.'}
         report_url: {type: string, description: '`execute_at_edge` only: `/v1/actions/{id}/result`.'}
         deadline: {type: string, format: date-time, description: '`execute_at_edge` only: after it, the action is sealed UNVERIFIABLE (`edge_lost`).'}
+    ActionSchedule:
+      type: object
+      required: [not_before, not_after]
+      description: >-
+        S40, additive: the window an approved action runs in, stored once at creation and never changed.
+        Absent when the request carried no schedule.
+      properties:
+        not_before: {type: string, format: date-time}
+        not_after: {type: string, format: date-time}
     ActionRequest:
       type: object
       additionalProperties: false
@@ -8140,6 +8157,20 @@ components:
           type: string
           pattern: "^sha256:[0-9a-f]{64}$"
           description: The digest of the tool's definition, sent by MCP edges. Part of `request_digest`.
+        schedule:
+          type: object
+          additionalProperties: false
+          required: [not_before, not_after]
+          description: >-
+            S40, additive. Gateway mode only (proxy: 400 `validation_failed`, `param: schedule`). With
+            `require_approval`, the approved action runs inside the window: the countersign schedules
+            the run at `not_before`, and past `not_after` it is cancelled and sealed with
+            `schedule_missed`. With `allow`, it runs now when `not_before` is at most 60 seconds away
+            and is denied (`schedule_needs_approval`) otherwise. At least 5 minutes long, `not_after`
+            within 72 hours and still ahead. Bound into the approval's `context_digest`.
+          properties:
+            not_before: {type: string, format: date-time}
+            not_after: {type: string, format: date-time}
     EdgeResult:
       type: object
       additionalProperties: false

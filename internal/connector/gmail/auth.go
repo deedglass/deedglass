@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"strings"
 	"time"
 
 	"github.com/deedglass/deedglass/internal/connector"
+	"github.com/deedglass/deedglass/internal/connector/googleauth"
 	"github.com/deedglass/deedglass/internal/connector/saas"
 	"github.com/deedglass/deedglass/internal/vault"
 )
@@ -21,7 +21,7 @@ const TokenMargin = 5 * time.Minute
 const (
 	MsgReauth = "Google revoked or expired this connection. Apps in Testing get 7-day refresh tokens. Run deedglass connector gmail authorize gmail again."
 	// ReasonNeedsReauth is health.reason when Google refused the refresh token.
-	ReasonNeedsReauth = "needs_reauth"
+	ReasonNeedsReauth = googleauth.ReasonNeedsReauth
 )
 
 // serviceAccount is the parts of a service-account JSON key Deedglass uses.
@@ -81,58 +81,17 @@ func accessToken(ctx context.Context, inst *connector.Instance, st *state, sec *
 }
 
 // TokenAnswer is Google's token endpoint answer.
-type TokenAnswer struct {
-	AccessToken  string `json:"access_token"`
-	ExpiresIn    int64  `json:"expires_in"`
-	RefreshToken string `json:"refresh_token"`
-	Scope        string `json:"scope"`
-	Error        string `json:"error"`
-}
+type TokenAnswer = googleauth.TokenAnswer
 
 // PostToken posts form to the token endpoint and returns Google's answer. invalid_grant is
 // upstream_auth_failed with MsgReauth.
 func PostToken(ctx context.Context, hc *http.Client, tokenURL *url.URL, form url.Values) (TokenAnswer, error) {
-	cli := saas.Client{Base: &url.URL{Scheme: tokenURL.Scheme, Host: tokenURL.Host}, HTTP: hc, Headers: http.Header{"Accept": {"application/json"}},
-		Classify: func(r *saas.Response) *connector.Error {
-			if r.Status < 400 {
-				return nil
-			}
-			var b TokenAnswer
-			_ = json.Unmarshal(r.Body, &b)
-			if b.Error == "invalid_grant" || r.Status == http.StatusUnauthorized {
-				return &connector.Error{Kind: connector.KindAuth, Code: connector.CodeUpstreamAuthFailed, AgentMessage: MsgReauth,
-					AdminDetail: "Google answered invalid_grant. health.reason " + ReasonNeedsReauth + ". " + MsgReauth}
-			}
-			return connector.FromStatus(r.Status, r.RetryAfter(time.Minute))
-		}}
-	segs := strings.Split(strings.Trim(tokenURL.Path, "/"), "/")
-	path, err := saas.Segments(segs...)
-	if err != nil {
-		return TokenAnswer{}, err
-	}
-	resp, err := cli.Do(ctx, saas.Request{Method: http.MethodPost, Path: path, Form: form})
-	if err != nil {
-		return TokenAnswer{}, err
-	}
-	var b TokenAnswer
-	if err := json.Unmarshal(resp.Body, &b); err != nil || b.AccessToken == "" {
-		return TokenAnswer{}, &connector.Error{Kind: connector.KindAuth, Code: connector.CodeUpstreamAuthFailed,
-			AgentMessage: "Google answered the token request with something Deedglass couldn't use. An admin can run deedglass connector test gmail."}
-	}
-	return b, nil
+	return googleauth.PostToken(ctx, hc, tokenURL, form, MsgReauth)
 }
 
 // ExchangeToken is PostToken returning the access token and its expiry.
 func ExchangeToken(ctx context.Context, hc *http.Client, tokenURL *url.URL, form url.Values) (string, time.Time, error) {
-	b, err := PostToken(ctx, hc, tokenURL, form)
-	if err != nil {
-		return "", time.Time{}, err
-	}
-	exp := b.ExpiresIn
-	if exp <= 0 || exp > 86400 {
-		exp = 3600
-	}
-	return b.AccessToken, now().Add(time.Duration(exp) * time.Second), nil
+	return googleauth.ExchangeToken(ctx, hc, tokenURL, form, MsgReauth, now())
 }
 
 func credError(inst *connector.Instance, why string) *connector.Error {

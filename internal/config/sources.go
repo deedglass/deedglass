@@ -161,6 +161,10 @@ func (l *loader) readYAML() {
 			l.readMCP(name, v)
 			continue
 		}
+		if key == "connectors" {
+			l.readConnectors(name, v)
+			continue
+		}
 		if secs[key] {
 			l.readSection(name, key, v)
 			continue

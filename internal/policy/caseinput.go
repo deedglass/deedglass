@@ -60,7 +60,7 @@ var (
 	orgKeys         = []string{"id", "timezone", "stopped"}
 	userKeys        = []string{"ref", "sub", "iss"}
 	sessionKeys     = []string{"ref"}
-	requestKeys     = []string{"mode", "intent_signed", "bytes", "digest", "http", "github", "slack", "stripe", "email"}
+	requestKeys     = []string{"mode", "intent_signed", "bytes", "digest", "http", "github", "slack", "stripe", "email", "mail"}
 	httpKeys        = []string{"method", "path", "host"}
 	githubKeys      = []string{"repo", "owner", "name", "default_branch", "branch", "base", "head", "path", "protected_branch",
 		"is_default_branch", "touches_workflows", "enriched"}
@@ -405,6 +405,11 @@ func BuildInput(v any) (Input, *InputProblem) {
 		}
 		if v, set := rm["email"]; set {
 			if p := factsFrom("request.email", v, jsonKeys[EmailFacts](), &in.Request.Email); p != nil {
+				return in, p
+			}
+		}
+		if v, set := rm["mail"]; set {
+			if p := factsFrom("request.mail", v, jsonKeys[MailFacts](), &in.Request.Mail); p != nil {
 				return in, p
 			}
 		}

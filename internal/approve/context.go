@@ -32,18 +32,20 @@ const (
 
 // Snapshot is the context snapshot, v1.
 type Snapshot struct {
-	V           int                        `json:"v"`
-	Summary     string                     `json:"summary"`
-	Action      SnapAction                 `json:"action"`
-	Agent       SnapAgent                  `json:"agent"`
-	OnBehalfOf  *string                    `json:"on_behalf_of"`
-	Policy      SnapPolicy                 `json:"policy"`
-	Args        json.RawMessage            `json:"args"`
-	ArgsNote    *string                    `json:"args_note"`
-	SQL         *SnapSQL                   `json:"sql"`
-	Sections    map[string]json.RawMessage `json:"sections"`
-	RequestedAt string                     `json:"requested_at"`
-	ExpiresAt   string                     `json:"expires_at"`
+	V          int                        `json:"v"`
+	Summary    string                     `json:"summary"`
+	Action     SnapAction                 `json:"action"`
+	Agent      SnapAgent                  `json:"agent"`
+	OnBehalfOf *string                    `json:"on_behalf_of"`
+	Policy     SnapPolicy                 `json:"policy"`
+	Args       json.RawMessage            `json:"args"`
+	ArgsNote   *string                    `json:"args_note"`
+	SQL        *SnapSQL                   `json:"sql"`
+	Sections   map[string]json.RawMessage `json:"sections"`
+	// Schedule (S40): the window an approved action runs in, and its sentence; context_digest binds it.
+	Schedule    *gate.ApprovalSchedule `json:"schedule,omitempty"`
+	RequestedAt string                 `json:"requested_at"`
+	ExpiresAt   string                 `json:"expires_at"`
 }
 
 // SnapAction is the action being paused.

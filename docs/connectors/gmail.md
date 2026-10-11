@@ -8,6 +8,10 @@ Facts on this page were checked on 2026-10-04 (rows C-078 and C-079 in `CLAIMS_R
 
 ## Drafts only, and how it's enforced
 
+Deedglass's Gmail connector can only draft. It never sends. (Sending exists only in the separate
+`outbound_mail` connector of the ops build, which release builds don't contain; see
+`docs/connectors/outbound_mail.md`.)
+
 Google's `gmail.compose` scope permits creating drafts **and sending**. So drafts only is a
 property of Deedglass's code, not of Google's scope:
 

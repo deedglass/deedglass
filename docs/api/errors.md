@@ -1552,6 +1552,54 @@ look again with `deedglass decoder status --connector <name>`.
   "param": null
 }
 ```
+## schedule_needs_approval
+
+**403 · policy_error**
+
+**When it happens.** `POST /v1/actions` carried a `schedule` whose `not_before` is more than 60 seconds away, and the policy decided `allow`. An allowed action runs at once, so it would run before its window: Deedglass denies it and seals the deed instead (S40). A scheduled action must go through `require_approval`; an automatic sender submits each action at its slot instead, with `not_before` at most 60 seconds ahead.
+
+**What to do.** Add `require_approval` to the rule that matches, or drop the schedule, or submit the action when its window opens.
+
+```json
+{
+  "type": "policy_error",
+  "code": "schedule_needs_approval",
+  "message": "A scheduled action must wait for an approval. This policy allows it now, so it would run early. Add require_approval to the rule, or drop the schedule.",
+  "param": null
+}
+```
+## action_executing
+
+**409 · invalid_request_error**
+
+**When it happens.** `POST /v1/actions/{id}/cancel` on an approved scheduled action whose run has already started: the worker claimed its `approval_resume` job, so the call may be reaching the connector now (S40). Cancelling an approved scheduled action works only while its job is still waiting for the window.
+
+**What to do.** Wait for the action to finish and read its deed (`deedglass actions show <id> --wait`).
+
+```json
+{
+  "type": "invalid_request_error",
+  "code": "action_executing",
+  "message": "It's running now and can't be cancelled. Its deed will show what happened.",
+  "param": null
+}
+```
+## from_denied
+
+**400 · invalid_request_error**
+
+**When it happens.** An `outbound_mail` connector (ops build only) was created or changed with a `mailbox` or `sending_domain` on `deedglass.com`, a subdomain of it, or a domain in `deny_from_domains`. Cold email never leaves from deedglass.com, so nothing was stored. The same rule runs at authorize, before every send and in the read-back, where a refused From disables the connector.
+
+**What to do.** Use the mailbox on the sending domain, like `arjun@trydeedglass.com`.
+
+```json
+{
+  "type": "invalid_request_error",
+  "code": "from_denied",
+  "message": "From on deedglass.com is never allowed for outbound mail. Use the sending-domain mailbox.",
+  "param": "config.mailbox"
+}
+```
 ## undo_unavailable
 
 **409 · invalid_request_error**

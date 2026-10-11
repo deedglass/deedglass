@@ -22,6 +22,13 @@ type actionBody struct {
 	Context       *RequestContext `json:"context"`
 	ConnectorType string          `json:"connector_type"`
 	ToolDigest    string          `json:"tool_digest"`
+	Schedule      *scheduleBody   `json:"schedule"`
+}
+
+// scheduleBody is POST /v1/actions' schedule (S40): two RFC 3339 times.
+type scheduleBody struct {
+	NotBefore *string `json:"not_before"`
+	NotAfter  *string `json:"not_after"`
 }
 
 // postTimeout bounds POST /v1/actions: the longest wait plus room to record the outcome.
@@ -80,6 +87,17 @@ func (h handlers) create(w http.ResponseWriter, r *http.Request) error {
 		RequestID: httpx.RequestID(r.Context())}
 	if req.IdempotencyKey != "" && !validKey(req.IdempotencyKey) {
 		return httpx.E(httpx.CodeIdempotencyKeyInvalid, httpx.Param("Idempotency-Key"))
+	}
+	if b.Schedule != nil {
+		if b.Schedule.NotBefore == nil || b.Schedule.NotAfter == nil {
+			return httpx.ErrValidation("schedule", MsgScheduleShape)
+		}
+		nb, err1 := time.Parse(time.RFC3339, *b.Schedule.NotBefore)
+		na, err2 := time.Parse(time.RFC3339, *b.Schedule.NotAfter)
+		if err1 != nil || err2 != nil {
+			return httpx.ErrValidation("schedule", MsgScheduleShape)
+		}
+		req.Schedule = &Schedule{NotBefore: nb.UTC(), NotAfter: na.UTC()}
 	}
 	if b.Wait != nil {
 		if *b.Wait < 0 || *b.Wait > MaxWait.Seconds() {

@@ -150,6 +150,7 @@ func (s *Service) Prepare(ctx context.Context, in gate.ApprovalInput, d policy.D
 			Mode: string(in.Mode), RequestDigest: in.RequestDigest},
 		Agent:    SnapAgent{ID: in.Agent.String(), Name: in.AgentName, Labels: map[string]string{}, Recent: []SnapRecent{}},
 		Sections: buildSections(in),
+		Schedule: in.Schedule,
 	}
 	if in.OnBehalfOf != "" {
 		o := in.OnBehalfOf
@@ -300,8 +301,10 @@ func (s *Service) Request(ctx context.Context, tx pgx.Tx, in gate.ApprovalInput,
 	    VALUES ($1, $2, $3, 'pending', $4, $5, $6, $7::jsonb, $8, $9::jsonb, $10, $11, $12, $13, $14)`, row...); err != nil {
 		return ids.ApprovalID{}, time.Time{}, err
 	}
-	if err := store.EnqueueJob(ctx, tx, in.Org, in.ID, gate.JobApprovalNotify, now, 5); err != nil {
-		return ids.ApprovalID{}, time.Time{}, err
+	if !d.NotifyNone { // S40: `notify: []` sends no email or Slack; the approval waits in the Console
+		if err := store.EnqueueJob(ctx, tx, in.Org, in.ID, gate.JobApprovalNotify, now, 5); err != nil {
+			return ids.ApprovalID{}, time.Time{}, err
+		}
 	}
 	if err := s.publish(ctx, tx, in.Org, id, ledger.EventApprovalRequested, StatusPending, nil); err != nil {
 		return ids.ApprovalID{}, time.Time{}, err

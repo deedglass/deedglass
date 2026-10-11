@@ -31,7 +31,23 @@ const (
 	msgClient               = "context.client.name and context.client.version must be text of at most 64 characters each."
 	msgCallID               = "context.call_id must be 1 to 128 printable ASCII characters with no spaces, such as your framework's tool call id."
 	msgWait                 = "wait must be a number of seconds from 0 to 25."
+
+	// S40: the schedule.
+	MsgScheduleShape     = `schedule must be {"not_before": "<RFC 3339 time>", "not_after": "<RFC 3339 time>"}, both set.`
+	MsgScheduleProxy     = "A schedule needs gateway mode. In proxy mode the edge decides when to run."
+	MsgScheduleOrder     = "schedule.not_before must be at least 5 minutes before schedule.not_after."
+	MsgScheduleTooFar    = "schedule.not_after must be within 72 hours from now."
+	MsgSchedulePast      = "schedule.not_after has already passed. Send a window that is still open or ahead."
+	MsgScheduleNeedsTap  = "A scheduled action must wait for an approval. This policy allows it now, so it would run early. Add require_approval to the rule, or drop the schedule."
+	MsgScheduleMissed    = "The approved window closed before Deedglass could run it. Nothing ran."
+	MsgCancelInFlightRun = "It's running now and can't be cancelled. Its deed will show what happened."
 )
+
+// ReasonScheduleMissed is the cancel reason of an approved action whose window closed (S40).
+const ReasonScheduleMissed = "schedule_missed"
+
+// RuleScheduleNeedsApproval is the builtin rule id of a schedule_needs_approval denial.
+const RuleScheduleNeedsApproval = "schedule-needs-approval"
 
 func msgMode(got string) string {
 	return fmt.Sprintf("mode must be gateway or proxy (got %q). Leave it out for gateway, where Deedglass runs the tool.", clip(got, 40))

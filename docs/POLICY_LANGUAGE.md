@@ -541,6 +541,22 @@ read fails, `enriched` is `false`: the starter `stripe-refunds` sends those refu
 | `request.email.has_external`, `has_bcc`, `is_reply` | bool | |
 | `request.email.enriched` | bool | the recipients could be read |
 
+#### `request.mail` (S40, ops build only)
+
+The outbound-mail connector exists only in the ops build (`make ops-build`) and only for the org
+ids in `connectors.outbound_mail.orgs`. For `mail.send` it counts these in the message itself, so a
+rule never depends on the sender's own counts. Zero (`enriched` false) for every other tool.
+
+| Fact | Type | Meaning |
+|---|---|---|
+| `request.mail.from`, `from_domain` | string | the authorised mailbox and its domain |
+| `request.mail.to_domain` | string | the recipient's domain, lowercase |
+| `request.mail.words`, `links`, `bare_domains`, `questions` | int | words above the signature, `http(s)://` links, domains Gmail would turn into links, `?` |
+| `request.mail.has_html` | bool | the body holds `<html` (the connector refuses it anyway) |
+| `request.mail.step`, `threaded` | int, bool | the sequence step; a reply in a thread |
+| `request.mail.unsubscribe_https` | bool | the one-click unsubscribe URL is https |
+| `request.mail.enriched` | bool | the message could be read |
+
 A budget's `measure` sees the same variables as `when`, `request` included (S30 confirmed it with
 the starter's `refunds-per-day`):
 

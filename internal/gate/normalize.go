@@ -58,6 +58,8 @@ type Normalized struct {
 	// Stripe and Email are S30's request.stripe and request.email.
 	Stripe policy.StripeFacts
 	Email  policy.EmailFacts
+	// Mail is S40's request.mail (the ops build's outbound-mail connector).
+	Mail policy.MailFacts
 	// DefaultSchema and RaisedSideEffect come from the Postgres connector's enrichment (S17): the
 	// schema unqualified names resolve to, and a per-call side effect above the tool's declared one.
 	DefaultSchema    string

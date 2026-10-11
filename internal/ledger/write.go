@@ -205,6 +205,9 @@ type NewAction struct {
 	// S23: the action this one undoes (a person's undo through the console system agent).
 	UndoesActionID *string
 
+	// S40: the window an approved action runs in ({"not_before","not_after"}); nil when none.
+	Schedule json.RawMessage
+
 	// At is the received event's time from the caller's clock (S27 §3.2); zero means created_at.
 	// actions.created_at stays the database's bookkeeping time.
 	At time.Time
@@ -245,12 +248,17 @@ func (l *Ledger) CreateAction(ctx context.Context, tx pgx.Tx, org ids.OrgID, a N
 	if a.Fingerprint != "" {
 		fp = &a.Fingerprint
 	}
+	var sched *string
+	if len(a.Schedule) > 0 {
+		s := string(a.Schedule)
+		sched = &s
+	}
 	err := tx.QueryRow(ctx, `INSERT INTO deedglass.actions (id, org_id, agent_id, on_behalf_of, session_ref, idempotency_key,
 	    mode, tool, connector_id, request, request_digest, intent_hash, intent_signed,
-	    api_key_id, connector, tool_digest, request_fingerprint, context, livemode, undoes_action_id)
-	  VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb, $11, $12, $13, $14, $15, $16, $17, $18::jsonb, $19, $20) RETURNING created_at`,
+	    api_key_id, connector, tool_digest, request_fingerprint, context, livemode, undoes_action_id, schedule)
+	  VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb, $11, $12, $13, $14, $15, $16, $17, $18::jsonb, $19, $20, $21::jsonb) RETURNING created_at`,
 		id, org, a.Agent, a.OnBehalfOf, a.Session, a.IdempotencyKey, a.Mode, a.Tool, a.Connector, req, digest,
-		a.IntentHash, a.IntentSigned, a.APIKeyID, a.ConnectorSlug, a.ToolDigest, fp, cx, a.Livemode, a.UndoesActionID).Scan(&created)
+		a.IntentHash, a.IntentSigned, a.APIKeyID, a.ConnectorSlug, a.ToolDigest, fp, cx, a.Livemode, a.UndoesActionID, sched).Scan(&created)
 	if err != nil {
 		return ids.ActionID{}, err
 	}

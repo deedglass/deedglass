@@ -21,6 +21,7 @@ import (
 	"github.com/deedglass/deedglass/api"
 	"github.com/deedglass/deedglass/cmd/deedglass/internal/ui"
 	"github.com/deedglass/deedglass/internal/approve"
+	"github.com/deedglass/deedglass/internal/approve/sections"
 	"github.com/deedglass/deedglass/internal/buildinfo"
 	"github.com/deedglass/deedglass/internal/config"
 	"github.com/deedglass/deedglass/internal/connector"
@@ -273,6 +274,7 @@ func runServe(ctx context.Context, e *Env, args []string) error {
 	// the approval context section.
 	planner := undoapi.NewPlanner(db, cw.reg, undoConfig(cfg), log)
 	undoapi.RegisterSection()
+	sections.RegisterEmail() // S40: email_preview on /approve and in Console › Approvals
 	// 5g. Insights (S27): the store, the opt-in anomaly facts the Gate reads (dropped on NOTIFY
 	// deedglass_learn), replay jobs and anomaly detection.
 	ins := newInsights(db, led, log)

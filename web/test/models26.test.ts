@@ -2,7 +2,7 @@
 // the seeded stack (test/fixtures/s26).
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { decideState, effectLine, fourEyes, raceSentence, sortPending, sqlOf, validDenyReason, whereOf, type ApprovalFull } from '../src/lib/models/approval.ts';
+import { decideState, effectLine, emailChips, emailOf, fourEyes, raceSentence, sortPending, sqlOf, validDenyReason, whereOf, type ApprovalContext, type ApprovalFull } from '../src/lib/models/approval.ts';
 import { dirty, dryRunInput, hasDefaultAllow, headerLine, shadowEvidence, statusOf, strictJSON, testSummary } from '../src/lib/models/policy.ts';
 import { bytes, credentialLine, healthOf, levelsOf, witnessLine, witnessState, type DecoderView } from '../src/lib/models/connector.ts';
 
@@ -127,5 +127,37 @@ describe('default_allow detection', () => {
     expect(hasDefaultAllow({ warnings: [] }, deny)).toBe(false);
     expect(hasDefaultAllow({ warnings: [] }, 'defaults:\n  reason: Yes.\n  decision: allow\nrules: []\n')).toBe(true);
     expect(hasDefaultAllow({ warnings: [] }, 'defaults: { decision: allow }\n')).toBe(true);
+  });
+});
+
+describe('S40 email_preview', () => {
+  const ctx = {
+    v: 1, action: { id: 'act_1', tool: 'mail.send', connector: 'mail', connector_type: 'outbound_mail', side_effect: 'write', mode: 'gateway', request_digest: 'sha256:x' },
+    agent: { id: 'agt_1', name: 'sender-m1' }, on_behalf_of: null, policy: { name: 'growth-outreach', version: 2, rule_id: 'send-needs-countersign', required: 1 },
+    args: null, args_note: null, sql: null,
+    sections: { email_preview: { from: 'arjun@trydeedglass.example', to: 'maya@acme-robotics.example', subject: 'your agent and Postgres',
+      body_text: 'Hi Maya,\n\nOne question?\n', words: 96, links: 0, questions: 1, step: 1, threaded: false,
+      window: { local: 'Wed 21 Oct, 08:30 to 10:30 PDT', ist: '21:00 to 23:00 IST' },
+      review: { company: 'Acme Robotics', lint_summary: '14 of 14', judge_summary: 'flag only · 6 of 6' } } },
+  } as unknown as ApprovalContext;
+  it('reads the section and words the effect line', () => {
+    const a = { tool: 'mail.send', context: ctx };
+    expect(emailOf(a)?.subject).toBe('your agent and Postgres');
+    expect(effectLine(a)).toBe('Email to Acme Robotics · your agent and Postgres');
+    expect(emailChips(emailOf(a)!)).toBe('96 words · 0 links · 1 question · lints 14 of 14 · judge flag only · 6 of 6');
+  });
+  it('ignores actions without the section', () => {
+    expect(emailOf({ context: { ...ctx, sections: {} } })).toBeNull();
+  });
+});
+
+describe('S40 one tap per email', () => {
+  it('the Approvals screen and /approve have no bulk-approve control', () => {
+    for (const f of ['../src/controllers/approvals.ts', '../../internal/approve/pages/approve.html', '../../internal/approve/pages/approve.js']) {
+      const src = readFileSync(new URL(f, import.meta.url), 'utf8').toLowerCase();
+      for (const bad of ['approve all', 'approve selected', 'select all', "type: 'checkbox'", 'type="checkbox"', 'bulk']) {
+        expect(src.includes(bad), `${f} holds "${bad}"`).toBe(false);
+      }
+    }
   });
 });
