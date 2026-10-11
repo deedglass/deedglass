@@ -36,7 +36,9 @@ type spec struct {
 	} `yaml:"paths"`
 }
 
-// acmeRows are the Acme rows whose digests must not change, and how to read them stably.
+// acmeRows are the Acme rows whose digests must not change, and how to read them stably. Rows
+// without an id (credentials, memberships) are ordered by their own text, so a tuple moved by an
+// unrelated update cannot reorder the aggregate (the TestOrgIsolation flake, DL-078).
 var acmeRows = []string{"agents", "api_keys", "connectors", "credentials", "policies", "policy_versions",
 	"policy_activations", "actions", "memberships", "orgs"}
 
@@ -47,7 +49,7 @@ func acmeDigest(e *harness.Env, org string) map[string]string {
 		if t == "orgs" {
 			col = "id"
 		}
-		q := fmt.Sprintf(`SELECT coalesce(md5(string_agg((to_jsonb(t) - 'last_used_at')::text, ',' ORDER BY (to_jsonb(t)->>'id'))), '') FROM deedglass.%s AS t WHERE %s = $1`, t, col)
+		q := fmt.Sprintf(`SELECT coalesce(md5(string_agg((to_jsonb(t) - 'last_used_at')::text, ',' ORDER BY (to_jsonb(t)->>'id'), (to_jsonb(t) - 'last_used_at')::text)), '') FROM deedglass.%s AS t WHERE %s = $1`, t, col)
 		r := e.CPQuery(q, org)
 		if len(r) == 1 {
 			out[t] = r[0][0]

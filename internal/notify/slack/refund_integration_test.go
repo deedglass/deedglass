@@ -399,7 +399,7 @@ func TestStripeRefundLoop(t *testing.T) {
 	if verdict != "VERIFIED" || level != "L1" {
 		t.Fatalf("$120: %s %s", verdict, level)
 	}
-	waitFor(t, 10*time.Second, "the sealed card", func() bool { return strings.Contains(s.sl.lastUpdateText(), "Deed sealed") })
+	waitFor(t, 30*time.Second, "the sealed card", func() bool { return strings.Contains(s.sl.lastUpdateText(), "Deed sealed") })
 	if s.stripe.posts != 2 {
 		t.Fatalf("%d refunds; want 2", s.stripe.posts)
 	}

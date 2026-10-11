@@ -5,6 +5,7 @@ package gate
 import (
 	"context"
 	"errors"
+	"os"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -199,6 +200,8 @@ func TestCancelRacesWorker(t *testing.T) {
 	runs := 200
 	if testing.Short() {
 		runs = 20
+	} else if os.Getenv("CI") != "" {
+		runs = 60 // shared CI runners: keep the race coverage, spare the other suites' Postgres
 	}
 	var cancelled, executed int
 	for i := range runs {

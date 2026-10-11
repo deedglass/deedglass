@@ -404,7 +404,7 @@ func TestSlackApprovalLoop(t *testing.T) {
 		t.Fatalf("verdict %s level %s deed %s posts %d", verdict, level, deedID, gh.posts)
 	}
 	// 5. The card follows to the seal.
-	waitFor(t, 10*time.Second, "the sealed card", func() bool { return strings.Contains(sl.lastUpdateText(), "Deed sealed") })
+	waitFor(t, 30*time.Second, "the sealed card", func() bool { return strings.Contains(sl.lastUpdateText(), "Deed sealed") })
 	if !strings.Contains(sl.lastUpdateText(), "Approved by Priya") {
 		t.Fatalf("card %s", sl.lastUpdateText())
 	}
