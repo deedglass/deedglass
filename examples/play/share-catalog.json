@@ -1,0 +1,76 @@
+{
+  "deductions": [
+    {
+      "id": "role_superuser_or_bypassrls",
+      "title": "Superuser or BYPASSRLS database role"
+    },
+    {
+      "id": "high_finding",
+      "title": "High findings"
+    },
+    {
+      "id": "medium_finding",
+      "title": "Medium findings"
+    },
+    {
+      "id": "unchecked_write_path",
+      "title": "Write paths with no check"
+    }
+  ],
+  "findings": [
+    {
+      "id": "archived_postgres_mcp",
+      "severity": "high",
+      "title": "Archived Postgres MCP server"
+    },
+    {
+      "id": "role_superuser",
+      "severity": "high",
+      "title": "The database role is a superuser"
+    },
+    {
+      "id": "role_bypassrls",
+      "severity": "high",
+      "title": "The database role bypasses row-level security"
+    },
+    {
+      "id": "database_url_in_client_args",
+      "severity": "medium",
+      "title": "A database URL sits in a client config"
+    },
+    {
+      "id": "role_replication",
+      "severity": "medium",
+      "title": "The database role can replicate"
+    },
+    {
+      "id": "role_createrole",
+      "severity": "medium",
+      "title": "The database role can create roles"
+    },
+    {
+      "id": "security_definer_executable",
+      "severity": "medium",
+      "title": "The role can run SECURITY DEFINER functions"
+    },
+    {
+      "id": "role_createdb",
+      "severity": "low",
+      "title": "The database role can create databases"
+    },
+    {
+      "id": "no_primary_key_on_writable_table",
+      "severity": "low",
+      "title": "Writable tables without a primary key"
+    },
+    {
+      "id": "wal_level_not_logical",
+      "severity": "info",
+      "title": "wal_level isn't logical"
+    }
+  ],
+  "footnote": "A means a small blast radius, not a safe agent.",
+  "formula_version": 1,
+  "object": "share_catalog",
+  "v": 1
+}

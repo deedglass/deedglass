@@ -264,3 +264,16 @@ func (l *Ledger) HeadSeq(ctx context.Context, org ids.OrgID) (int64, error) {
 	})
 	return n, err
 }
+
+// SealKeySet is the server's registered seal keys as keys.json publishes them, limited to ids when
+// it is non-empty (S47 deeds share carries the one key that sealed the deed).
+func (l *Ledger) SealKeySet(ctx context.Context, ids ...string) (*deed.KeySet, error) {
+	var want map[string]bool
+	if len(ids) > 0 {
+		want = map[string]bool{}
+		for _, id := range ids {
+			want[id] = true
+		}
+	}
+	return l.keySet(ctx, want)
+}

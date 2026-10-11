@@ -32,7 +32,7 @@ exit 0
   webhooks            Send events to your endpoints                  [2m    [0m   [2mcreate · list · test · delete[0m
 [1mRecords[0m
   verify              Check records offline
-  deeds               Browse and export records                      [2m    [0m   [2mlist · show · export · seal-file[0m
+  deeds               Browse and export records                      [2m    [0m   [2mlist · show · share · export · seal-file[0m
   ledger              Check or prune the Ledger                      [2m    [0m   [2mcheck · prune[0m
 [1mConnectors[0m
   connector           Connect tools                                  [2m    [0m   [2mcreate · list · show · test · types · credentials[0m
@@ -41,7 +41,7 @@ exit 0
   decoder             Inspect Postgres change readers                [2m    [0m   [2mstatus · drop[0m
   slack manifest      Print the Slack app manifest
 [1mMCP[0m
-  mcp                 Put Deedglass in front of MCP servers          [2m    [0m   [2mwrap · serve · snippet[0m
+  mcp                 Put Deedglass in front of MCP servers          [2m    [0m   [2mwrap · serve · snippet · install-links[0m
 [1mInsights[0m
   insights            Suggestions, shadow results and anomalies      [2m    [0m   [2mstats · shadow · anomalies · detect · settings · suggestions · digest[0m
 [1mDev[0m

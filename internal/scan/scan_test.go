@@ -527,13 +527,13 @@ func TestCatalogSources(t *testing.T) {
 
 func TestBadge(t *testing.T) {
 	dir := t.TempDir()
-	if r := ReadRemote(dir); r.OK || !strings.Contains(BadgeMarkdown(r), "<owner>/<repo>/<branch>") {
+	if r := ReadRemote(dir); r.OK || !strings.Contains(BadgeMarkdown(r), "<owner>%2F<repo>%2F<branch>") {
 		t.Fatal("placeholders without a remote")
 	}
 	write(t, dir, ".git/config", "[core]\n\tbare = false\n[remote \"origin\"]\n\turl = git@github.com:acme/agents.git\n\tfetch = +refs/heads/*:refs/remotes/origin/*\n")
 	write(t, dir, ".git/HEAD", "ref: refs/heads/trunk\n")
 	r := ReadRemote(dir)
-	if BadgeMarkdown(r) != "[![Blast radius](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/acme/agents/trunk/.deedglass/score.json)](https://deedglass.com/score)" {
+	if BadgeMarkdown(r) != "[![agent blast radius](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Facme%2Fagents%2Ftrunk%2F.deedglass%2Fscore.json)](https://deedglass.com/score)" {
 		t.Fatal(BadgeMarkdown(r))
 	}
 	p, err := WriteBadge(dir, "D")
@@ -542,16 +542,32 @@ func TestBadge(t *testing.T) {
 	}
 	b, _ := os.ReadFile(p)
 	var m map[string]any
-	if err := json.Unmarshal(b, &m); err != nil || m["schemaVersion"] != 1.0 || m["label"] != "blast radius" || m["message"] != "D" || m["color"] != "orange" || len(m) != 4 {
+	if err := json.Unmarshal(b, &m); err != nil || m["schemaVersion"] != 1.0 || m["label"] != "agent blast radius" || m["message"] != "D" || m["color"] != "9A5B00" || m["cacheSeconds"] != 3600.0 || len(m) != 5 {
 		t.Fatalf("%s", b)
 	}
 	if fi, _ := os.Stat(p); fi.Mode().Perm() != 0o644 {
 		t.Fatalf("mode %o", fi.Mode().Perm())
 	}
-	for g, c := range map[string]string{"A": "brightgreen", "B": "green", "C": "yellow", "D": "orange", "F": "red"} {
+	for g, c := range map[string]string{"A": "0F766E", "B": "0F766E", "C": "3F4453", "D": "9A5B00", "F": "9A5B00"} {
 		if NewBadge(g).Color != c {
 			t.Errorf("%s", g)
 		}
+	}
+	for _, c := range badgeColors {
+		if strings.EqualFold(c, "red") || strings.HasPrefix(strings.ToUpper(c), "C8") || strings.HasPrefix(strings.ToUpper(c), "FF") {
+			t.Errorf("a badge colour reads as red: %s", c)
+		}
+	}
+	if GitignoreHidesBadge(dir) {
+		t.Fatal("no .gitignore")
+	}
+	write(t, dir, ".gitignore", "node_modules/\n.deedglass/\n")
+	if !GitignoreHidesBadge(dir) {
+		t.Fatal("directory pattern hides score.json")
+	}
+	write(t, dir, ".gitignore", ".deedglass/*\n!.deedglass/score.json\n")
+	if GitignoreHidesBadge(dir) {
+		t.Fatal("the S47 block keeps score.json")
 	}
 }
 
@@ -618,5 +634,35 @@ func TestJSONGolden(t *testing.T) {
 	want, err := os.ReadFile(p)
 	if err != nil || string(want) != string(b) {
 		t.Fatalf("the scan_report golden drifted (go test ./internal/scan -run TestJSONGolden -update, then review):\n%s", b)
+	}
+}
+
+// TestRoleCountsOnce: a superuser + BYPASSRLS role costs 35 once; neither finding is a high deduction.
+func TestRoleCountsOnce(t *testing.T) {
+	r := &Report{Postgres: &Postgres{Role: "app", RoleAttributes: RoleAttributes{Superuser: true, BypassRLS: true}}}
+	r.Findings = []Finding{{ID: "role_superuser", Severity: "high", Title: "s"}, {ID: "role_bypassrls", Severity: "high", Title: "b"}}
+	s := score(r, false)
+	if s.Points != 65 {
+		t.Fatalf("points = %d, want 65 (100 - 35)", s.Points)
+	}
+	for _, d := range s.Deductions {
+		if d.ID == "high_finding" {
+			t.Fatalf("role finding counted as high: %+v", d)
+		}
+	}
+}
+
+// TestShareCatalogClosed: every finding id the scan can produce is in the share catalog.
+func TestShareCatalogClosed(t *testing.T) {
+	src, _ := os.ReadFile("findings.go")
+	ids := regexp.MustCompile(`(?:ID: |role\()"([a-z_]{3,})"`).FindAllStringSubmatch(string(src), -1)
+	have := map[string]bool{}
+	for _, e := range ShareCatalog()["findings"].([]ShareEntry) {
+		have[e.ID] = true
+	}
+	for _, m := range ids {
+		if !have[m[1]] {
+			t.Errorf("finding %s is missing from ShareCatalog", m[1])
+		}
 	}
 }

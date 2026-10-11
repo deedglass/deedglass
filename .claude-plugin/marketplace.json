@@ -1,0 +1,11 @@
+{
+  "name": "deedglass",
+  "owner": { "name": "Deedglass", "url": "https://deedglass.com" },
+  "plugins": [
+    {
+      "name": "deedglass",
+      "source": "./integrations/claude-code",
+      "description": "See what your agents actually did. Policies, approvals and sealed deeds for every tool call."
+    }
+  ]
+}

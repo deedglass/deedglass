@@ -117,6 +117,15 @@
     ]
   },
   {
+    "code": "deed_unreadable",
+    "exit": [
+      1
+    ],
+    "messages": [
+      "This record does not parse, so it can't be shared."
+    ]
+  },
+  {
     "code": "dev_only",
     "exit": [
       1
@@ -821,6 +830,13 @@
       "Check --server or DEEDGLASS_SERVER, and that deedglass serve is running.",
       "Check the URL, and that deedglass serve is running (make dev)."
     ]
+  },
+  {
+    "code": "share_too_long",
+    "exit": [
+      1
+    ],
+    "messages": null
   },
   {
     "code": "sign_failed",

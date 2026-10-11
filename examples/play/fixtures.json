@@ -1,0 +1,490 @@
+{
+  "agent": "claude-code",
+  "object": "play_fixtures",
+  "sqlguard_version": "1",
+  "statements": [
+    {
+      "id": "drop",
+      "label": "Drop the orders table",
+      "tool": "postgres.execute",
+      "sql": "DROP TABLE public.orders",
+      "agent_says": "Dropped the old table.",
+      "target": {
+        "table": "public.orders",
+        "ids": []
+      },
+      "facts": {
+        "tool": {
+          "name": "postgres.execute",
+          "connector": "postgres",
+          "connector_type": "postgres",
+          "side_effect": "write",
+          "type": "postgres",
+          "op": "execute"
+        },
+        "sql": {
+          "present": true,
+          "kind": "drop",
+          "category": "ddl",
+          "kinds": [
+            "drop"
+          ],
+          "statements": 1,
+          "multi": false,
+          "writes": true,
+          "write_kinds": [],
+          "has_where": false,
+          "unbounded_write": false,
+          "where_trivial": false,
+          "has_returning": false,
+          "cte_write": false,
+          "select_into": false,
+          "copy_program": false,
+          "explain_analyze": false,
+          "locks_rows": false,
+          "tables": [
+            "public.orders"
+          ],
+          "tables_complete": true,
+          "functions": [],
+          "dangerous_functions": [],
+          "write_functions": [],
+          "unknown_functions": [],
+          "ambiguous": false,
+          "reasons": [],
+          "bytes": 24
+        }
+      }
+    },
+    {
+      "id": "ship42",
+      "label": "Ship order 42",
+      "tool": "postgres.execute",
+      "sql": "UPDATE orders SET status = 'shipped' WHERE id = 42",
+      "agent_says": "Done, 1 row.",
+      "target": {
+        "table": "public.orders",
+        "ids": [
+          42
+        ]
+      },
+      "facts": {
+        "tool": {
+          "name": "postgres.execute",
+          "connector": "postgres",
+          "connector_type": "postgres",
+          "side_effect": "write",
+          "type": "postgres",
+          "op": "execute"
+        },
+        "sql": {
+          "present": true,
+          "kind": "update",
+          "category": "write",
+          "kinds": [
+            "update"
+          ],
+          "statements": 1,
+          "multi": false,
+          "writes": true,
+          "write_kinds": [
+            "update"
+          ],
+          "has_where": true,
+          "unbounded_write": false,
+          "where_trivial": false,
+          "has_returning": false,
+          "cte_write": false,
+          "select_into": false,
+          "copy_program": false,
+          "explain_analyze": false,
+          "locks_rows": false,
+          "tables": [
+            "public.orders"
+          ],
+          "tables_complete": true,
+          "functions": [],
+          "dangerous_functions": [],
+          "write_functions": [],
+          "unknown_functions": [],
+          "ambiguous": false,
+          "reasons": [],
+          "bytes": 50
+        }
+      }
+    },
+    {
+      "id": "read42",
+      "label": "Read order 42",
+      "tool": "postgres.query",
+      "sql": "SELECT id, status, total_cents FROM orders WHERE id = 42",
+      "agent_says": "Order 42 is paid.",
+      "target": {
+        "table": "public.orders",
+        "ids": []
+      },
+      "facts": {
+        "tool": {
+          "name": "postgres.query",
+          "connector": "postgres",
+          "connector_type": "postgres",
+          "side_effect": "read",
+          "type": "postgres",
+          "op": "query"
+        },
+        "sql": {
+          "present": true,
+          "kind": "select",
+          "category": "read",
+          "kinds": [
+            "select"
+          ],
+          "statements": 1,
+          "multi": false,
+          "writes": false,
+          "write_kinds": [],
+          "has_where": false,
+          "unbounded_write": false,
+          "where_trivial": false,
+          "has_returning": false,
+          "cte_write": false,
+          "select_into": false,
+          "copy_program": false,
+          "explain_analyze": false,
+          "locks_rows": false,
+          "tables": [
+            "public.orders"
+          ],
+          "tables_complete": true,
+          "functions": [],
+          "dangerous_functions": [],
+          "write_functions": [],
+          "unknown_functions": [],
+          "ambiguous": false,
+          "reasons": [],
+          "bytes": 56
+        }
+      }
+    },
+    {
+      "id": "cancel7",
+      "label": "Cancel order 7",
+      "tool": "postgres.execute",
+      "sql": "UPDATE orders SET status = 'cancelled' WHERE id = 7",
+      "agent_says": "Cancelled order 7, 1 row.",
+      "target": {
+        "table": "public.orders",
+        "ids": [
+          7
+        ]
+      },
+      "facts": {
+        "tool": {
+          "name": "postgres.execute",
+          "connector": "postgres",
+          "connector_type": "postgres",
+          "side_effect": "write",
+          "type": "postgres",
+          "op": "execute"
+        },
+        "sql": {
+          "present": true,
+          "kind": "update",
+          "category": "write",
+          "kinds": [
+            "update"
+          ],
+          "statements": 1,
+          "multi": false,
+          "writes": true,
+          "write_kinds": [
+            "update"
+          ],
+          "has_where": true,
+          "unbounded_write": false,
+          "where_trivial": false,
+          "has_returning": false,
+          "cte_write": false,
+          "select_into": false,
+          "copy_program": false,
+          "explain_analyze": false,
+          "locks_rows": false,
+          "tables": [
+            "public.orders"
+          ],
+          "tables_complete": true,
+          "functions": [],
+          "dangerous_functions": [],
+          "write_functions": [],
+          "unknown_functions": [],
+          "ambiguous": false,
+          "reasons": [],
+          "bytes": 51
+        }
+      }
+    },
+    {
+      "id": "unbounded",
+      "label": "Mark every order shipped",
+      "tool": "postgres.execute",
+      "sql": "UPDATE orders SET status = 'shipped'",
+      "agent_says": "Marked the orders shipped.",
+      "target": {
+        "table": "public.orders",
+        "ids": []
+      },
+      "facts": {
+        "tool": {
+          "name": "postgres.execute",
+          "connector": "postgres",
+          "connector_type": "postgres",
+          "side_effect": "write",
+          "type": "postgres",
+          "op": "execute"
+        },
+        "sql": {
+          "present": true,
+          "kind": "update",
+          "category": "write",
+          "kinds": [
+            "update"
+          ],
+          "statements": 1,
+          "multi": false,
+          "writes": true,
+          "write_kinds": [
+            "update"
+          ],
+          "has_where": false,
+          "unbounded_write": true,
+          "where_trivial": false,
+          "has_returning": false,
+          "cte_write": false,
+          "select_into": false,
+          "copy_program": false,
+          "explain_analyze": false,
+          "locks_rows": false,
+          "tables": [
+            "public.orders"
+          ],
+          "tables_complete": true,
+          "functions": [],
+          "dangerous_functions": [],
+          "write_functions": [],
+          "unknown_functions": [],
+          "ambiguous": false,
+          "reasons": [],
+          "bytes": 36
+        }
+      }
+    },
+    {
+      "id": "delete42",
+      "label": "Delete order 42",
+      "tool": "postgres.execute",
+      "sql": "DELETE FROM orders WHERE id = 42",
+      "agent_says": "Removed order 42, 1 row.",
+      "target": {
+        "table": "public.orders",
+        "ids": [
+          42
+        ]
+      },
+      "facts": {
+        "tool": {
+          "name": "postgres.execute",
+          "connector": "postgres",
+          "connector_type": "postgres",
+          "side_effect": "write",
+          "type": "postgres",
+          "op": "execute"
+        },
+        "sql": {
+          "present": true,
+          "kind": "delete",
+          "category": "write",
+          "kinds": [
+            "delete"
+          ],
+          "statements": 1,
+          "multi": false,
+          "writes": true,
+          "write_kinds": [
+            "delete"
+          ],
+          "has_where": true,
+          "unbounded_write": false,
+          "where_trivial": false,
+          "has_returning": false,
+          "cte_write": false,
+          "select_into": false,
+          "copy_program": false,
+          "explain_analyze": false,
+          "locks_rows": false,
+          "tables": [
+            "public.orders"
+          ],
+          "tables_complete": true,
+          "functions": [],
+          "dangerous_functions": [],
+          "write_functions": [],
+          "unknown_functions": [],
+          "ambiguous": false,
+          "reasons": [],
+          "bytes": 32
+        }
+      }
+    },
+    {
+      "id": "truncate",
+      "label": "Empty the refunds table",
+      "tool": "postgres.execute",
+      "sql": "TRUNCATE public.refunds",
+      "agent_says": "Cleared the refunds table.",
+      "target": {
+        "table": "public.refunds",
+        "ids": []
+      },
+      "facts": {
+        "tool": {
+          "name": "postgres.execute",
+          "connector": "postgres",
+          "connector_type": "postgres",
+          "side_effect": "write",
+          "type": "postgres",
+          "op": "execute"
+        },
+        "sql": {
+          "present": true,
+          "kind": "truncate",
+          "category": "ddl",
+          "kinds": [
+            "truncate"
+          ],
+          "statements": 1,
+          "multi": false,
+          "writes": true,
+          "write_kinds": [],
+          "has_where": false,
+          "unbounded_write": false,
+          "where_trivial": false,
+          "has_returning": false,
+          "cte_write": false,
+          "select_into": false,
+          "copy_program": false,
+          "explain_analyze": false,
+          "locks_rows": false,
+          "tables": [
+            "public.refunds"
+          ],
+          "tables_complete": true,
+          "functions": [],
+          "dangerous_functions": [],
+          "write_functions": [],
+          "unknown_functions": [],
+          "ambiguous": false,
+          "reasons": [],
+          "bytes": 23
+        }
+      }
+    },
+    {
+      "id": "refund",
+      "label": "Refund $5.00 on order 42",
+      "tool": "postgres.execute",
+      "sql": "INSERT INTO refunds (id, order_id, amount_cents, reason, created_at) VALUES (61, 42, 500, 'Late delivery', now())",
+      "agent_says": "Refunded $5.00 on order 42, 1 row.",
+      "target": {
+        "table": "public.refunds",
+        "ids": [
+          61
+        ]
+      },
+      "facts": {
+        "tool": {
+          "name": "postgres.execute",
+          "connector": "postgres",
+          "connector_type": "postgres",
+          "side_effect": "write",
+          "type": "postgres",
+          "op": "execute"
+        },
+        "sql": {
+          "present": true,
+          "kind": "insert",
+          "category": "write",
+          "kinds": [
+            "insert"
+          ],
+          "statements": 1,
+          "multi": false,
+          "writes": true,
+          "write_kinds": [
+            "insert"
+          ],
+          "has_where": false,
+          "unbounded_write": false,
+          "where_trivial": false,
+          "has_returning": false,
+          "cte_write": false,
+          "select_into": false,
+          "copy_program": false,
+          "explain_analyze": false,
+          "locks_rows": false,
+          "tables": [
+            "public.refunds"
+          ],
+          "tables_complete": true,
+          "functions": [
+            "now"
+          ],
+          "dangerous_functions": [],
+          "write_functions": [],
+          "unknown_functions": [],
+          "ambiguous": false,
+          "reasons": [],
+          "bytes": 113
+        }
+      }
+    }
+  ],
+  "undo": {
+    "tool": {
+      "name": "postgres.undo",
+      "connector": "postgres",
+      "connector_type": "postgres",
+      "side_effect": "write",
+      "type": "postgres",
+      "op": "undo"
+    },
+    "sql": {
+      "present": false,
+      "kind": "none",
+      "category": "none",
+      "kinds": [],
+      "statements": 0,
+      "multi": false,
+      "writes": false,
+      "write_kinds": [],
+      "has_where": false,
+      "unbounded_write": false,
+      "where_trivial": false,
+      "has_returning": false,
+      "cte_write": false,
+      "select_into": false,
+      "copy_program": false,
+      "explain_analyze": false,
+      "locks_rows": false,
+      "tables": [],
+      "tables_complete": true,
+      "functions": [],
+      "dangerous_functions": [],
+      "write_functions": [],
+      "unknown_functions": [],
+      "ambiguous": false,
+      "reasons": [],
+      "bytes": 0
+    }
+  },
+  "v": 1
+}

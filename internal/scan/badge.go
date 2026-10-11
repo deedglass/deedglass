@@ -14,13 +14,32 @@ type Badge struct {
 	Label         string `json:"label"`
 	Message       string `json:"message"`
 	Color         string `json:"color"`
+	CacheSeconds  int    `json:"cacheSeconds"`
 }
 
-var badgeColors = map[string]string{"A": "brightgreen", "B": "green", "C": "yellow", "D": "orange", "F": "red"}
+// badgeColors never use red: red means deny and doesn't match (brand §6.3, S47 §3.3). A and B are
+// the matches teal, C neutral, D and F the can't-check amber.
+var badgeColors = map[string]string{"A": "0F766E", "B": "0F766E", "C": "3F4453", "D": "9A5B00", "F": "9A5B00"}
 
-// NewBadge is the badge for a grade.
+// NewBadge is the badge for a grade. shields.io caches an endpoint for at least 300 s anyway.
 func NewBadge(grade string) Badge {
-	return Badge{SchemaVersion: 1, Label: "blast radius", Message: grade, Color: badgeColors[grade]}
+	return Badge{SchemaVersion: 1, Label: "agent blast radius", Message: grade, Color: badgeColors[grade], CacheSeconds: 3600}
+}
+
+// GitignoreHidesBadge reports whether dir's .gitignore ignores the whole .deedglass directory with a
+// directory pattern, which git can't re-include a file from (read as text; no git process).
+func GitignoreHidesBadge(dir string) bool {
+	b, err := os.ReadFile(filepath.Join(dir, ".gitignore"))
+	if err != nil {
+		return false
+	}
+	for _, l := range strings.Split(string(b), "\n") {
+		switch strings.TrimSpace(l) {
+		case ".deedglass/", ".deedglass", "/.deedglass/", "/.deedglass":
+			return true
+		}
+	}
+	return false
 }
 
 // Remote is the GitHub owner, repo and branch of the checkout at dir, read from .git/config and
@@ -70,7 +89,7 @@ func BadgeMarkdown(r Remote) string {
 	if r.OK {
 		owner, repo, branch = r.Owner, r.Repo, r.Branch
 	}
-	return "[![Blast radius](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/" + owner + "/" + repo + "/" + branch + "/.deedglass/score.json)](https://deedglass.com/score)"
+	return "[![agent blast radius](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2F" + owner + "%2F" + repo + "%2F" + branch + "%2F.deedglass%2Fscore.json)](https://deedglass.com/score)"
 }
 
 // WriteBadge writes .deedglass/score.json under dir (mode 0644; the directory 0700 if new).

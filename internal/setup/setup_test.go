@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -112,8 +113,20 @@ func TestGitignore(t *testing.T) {
 		t.Fatal("adds once")
 	}
 	b, _ := os.ReadFile(filepath.Join(dir, ".gitignore"))
-	if string(b) != "node_modules/\n# Deedglass local keys and secrets (deedglass init)\n.deedglass/\n" {
+	if string(b) != "node_modules/\n# Deedglass local keys and secrets (deedglass init); the badge file may be committed\n.deedglass/*\n!.deedglass/score.json\n" {
 		t.Fatalf("%q", b)
+	}
+	// git agrees: every key file and licence.json stays ignored, score.json doesn't.
+	if _, err := exec.LookPath("git"); err == nil {
+		if out, err := exec.Command("git", "-C", dir, "init", "-q").CombinedOutput(); err != nil {
+			t.Fatalf("%s", out)
+		}
+		for f, ignored := range map[string]bool{".deedglass/score.json": false, ".deedglass/secrets.json": true, ".deedglass/licence.json": true, ".deedglass/seal.key": true, ".deedglass/quickstart.key": true} {
+			err := exec.Command("git", "-C", dir, "check-ignore", "-q", f).Run()
+			if (err == nil) != ignored {
+				t.Errorf("git check-ignore %s: ignored=%v, want %v", f, err == nil, ignored)
+			}
+		}
 	}
 }
 

@@ -107,7 +107,7 @@ func TestScanBadgeCLI(t *testing.T) {
 	_ = os.WriteFile(filepath.Join(dir, ".git", "config"), []byte("[remote \"origin\"]\n\turl = https://github.com/acme/agents.git\n"), 0o644)
 	_ = os.WriteFile(filepath.Join(dir, ".git", "HEAD"), []byte("ref: refs/heads/main\n"), 0o644)
 	r := cli(t, map[string]string{"HOME": t.TempDir()}, false, "scan", "--dir", dir, "--no-write", "--badge")
-	if r.code != ExitOK || !strings.Contains(r.stdout, "✓ Wrote .deedglass/score.json. Add it with git add -f .deedglass/score.json, then paste this line into your README:\n[![Blast radius](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/acme/agents/main/.deedglass/score.json)](https://deedglass.com/score)") {
+	if r.code != ExitOK || !strings.Contains(r.stdout, "). Add this line to your README:\n[![agent blast radius](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Facme%2Fagents%2Fmain%2F.deedglass%2Fscore.json)](https://deedglass.com/score)\nCommit it if you want it in your README. Nothing was committed.") {
 		t.Fatalf("%d %s %s", r.code, r.stdout, r.stderr)
 	}
 	var files []string

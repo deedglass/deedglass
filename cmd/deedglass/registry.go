@@ -216,6 +216,9 @@ var commands = []*Command{
 		Flags: deedsListFlags, Needs: config.NeedDatabase, Run: runDeedsList},
 	{Path: p("deeds", "show"), Group: Deeds, Summary: "Show one record",
 		Usage: "<deed_…|seq> [--json]", Needs: config.NeedDatabase, Run: runDeedsShow},
+	{Path: p("deeds", "share"), Group: Deeds, Summary: "Make a link that checks one record",
+		Usage: "<deed_…|seq> [--yes] [--json]", Flags: deedsShareFlags, Needs: config.NeedDatabase, Run: runDeedsShare,
+		Detail: "Prints https://deedglass.com/verify#d=…&k=…: the record and the key that sealed it, in the part after #, which never\nreaches a server. The link holds ids, the agent name, the tool, the decision, the verdict and digests; never arguments or results.\nAsks first ([y/N]) unless --yes."},
 	{Path: p("deeds", "export"), Group: Deeds, Summary: "Export records as a bundle",
 		Usage: "[--out <file>|-] [--format tar.gz|jsonl] [--from-seq n] [--to-seq n] [--since 1h] [--json]",
 		Flags: deedsExportFlags, Needs: config.NeedDatabase, Run: runDeedsExport},
@@ -273,6 +276,8 @@ var commands = []*Command{
 	{Path: p("mcp", "snippet"), Group: MCP, Summary: "Print client config for an MCP client",
 		Usage: "--client <claude-desktop|claude-code|cursor|windsurf|vscode> --connector <name> [--connector-type postgres] [--api-key-from-env] -- <command> [args…]  ·  --transport http --client <…> [--connector native|<name>]",
 		Run:   runMCPSnippet, RawArgs: true, Detail: mcpSnippetHelp},
+	{Path: p("mcp", "install-links"), Group: MCP, Summary: "Print every one-click install link", Usage: "[--json]",
+		Run: runMCPInstallLinks, Detail: "Cursor, VS Code, LM Studio and Goose deeplinks, the Claude Code command, the Claude Desktop .mcpb downloads and the\nWindsurf config. Every one installs npx -y deedglass mcp serve; no link holds a key."},
 
 	// Insights.
 	{Path: p("insights", "stats"), Group: Insights, Summary: "Show decisions, approvals and verdicts by rule",
@@ -362,7 +367,7 @@ var lines = []Line{
 		Paths: ps("webhooks create", "webhooks list", "webhooks test", "webhooks delete")},
 
 	{Name: "verify", Group: Deeds, Summary: "Check records offline", Paths: ps("verify")},
-	{Name: "deeds", Group: Deeds, Summary: "Browse and export records", Subs: subs("list show export seal-file"), Paths: ps("deeds list", "deeds show", "deeds export", "deeds seal-file")},
+	{Name: "deeds", Group: Deeds, Summary: "Browse and export records", Subs: subs("list show share export seal-file"), Paths: ps("deeds list", "deeds show", "deeds share", "deeds export", "deeds seal-file")},
 	{Name: "ledger", Group: Deeds, Summary: "Check or prune the Ledger", Subs: subs("check prune"), Paths: ps("ledger check", "ledger prune")},
 
 	{Name: "connector", Group: Connectors, Summary: "Connect tools", Subs: subs("create list show test types credentials"),
@@ -373,7 +378,7 @@ var lines = []Line{
 	{Name: "decoder", Group: Connectors, Summary: "Inspect Postgres change readers", Subs: subs("status drop"), Paths: ps("decoder status", "decoder drop")},
 	{Name: "slack manifest", Group: Connectors, Summary: "Print the Slack app manifest", Paths: ps("slack manifest")},
 
-	{Name: "mcp", Group: MCP, Summary: "Put Deedglass in front of MCP servers", Subs: subs("wrap serve snippet"), Paths: ps("mcp wrap", "mcp serve", "mcp snippet")},
+	{Name: "mcp", Group: MCP, Summary: "Put Deedglass in front of MCP servers", Subs: subs("wrap serve snippet install-links"), Paths: ps("mcp wrap", "mcp serve", "mcp snippet", "mcp install-links")},
 
 	{Name: "insights", Group: Insights, Summary: "Suggestions, shadow results and anomalies", Subs: subs("stats shadow anomalies detect settings suggestions digest"),
 		Paths: ps("insights stats", "insights shadow", "insights anomalies", "insights detect", "insights settings",

@@ -130,11 +130,16 @@ func runScan(ctx context.Context, e *Env, args []string) error {
 		}
 		rem := scan.ReadRemote(abs)
 		if rem.OK {
-			badgeLines = append(badgeLines, e.Style.OKLine("Wrote .deedglass/score.json. Add it with git add -f .deedglass/score.json, then paste this line into your README:"))
+			badgeLines = append(badgeLines, e.Style.OKLine("Wrote .deedglass/score.json (agent blast radius: "+r.Score.Grade+"). Add this line to your README:"))
 		} else {
 			badgeLines = append(badgeLines, e.Style.UnknownLine("No GitHub remote found, so the line below has placeholders. Replace <owner>, <repo> and <branch>."))
 		}
 		badgeLines = append(badgeLines, scan.BadgeMarkdown(rem))
+		if scan.GitignoreHidesBadge(abs) {
+			badgeLines = append(badgeLines, "Your .gitignore ignores all of .deedglass/. To commit only the badge file, replace that line with these two:",
+				"  .deedglass/*", "  !.deedglass/score.json")
+		}
+		badgeLines = append(badgeLines, "Commit it if you want it in your README. Nothing was committed.")
 	}
 	if v.share {
 		link, err := scan.ShareLink(scan.NewShare(r))

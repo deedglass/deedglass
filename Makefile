@@ -22,7 +22,7 @@ all: ci
 help: ## list the targets
 	@grep -E '^[a-z][a-z-]*:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-15s %s\n", $$1, $$2}'
 
-ci: fmt-check tidy-check vet test fuzz-policy-short policy-test testdata-check rename-guard banned-words nocgo workflows-check web-verify-test web-test sdk-ts py-ci ## everything the lint-unit, web-verify and web CI jobs run
+ci: fmt-check tidy-check vet test fuzz-policy-short policy-test testdata-check rename-guard banned-words nocgo workflows-check listings-check web-verify-test web-test sdk-ts py-ci ## everything the lint-unit, web-verify and web CI jobs run
 
 build: ## build bin/deedglass with version ldflags (with Node 24 present, the real Console first: make web-build)
 	@if command -v node >/dev/null 2>&1; then $(MAKE) --no-print-directory web-build; else echo "build: Node isn't installed, so the binary carries the Console placeholder (dev only; prod refuses it)"; fi
@@ -141,9 +141,15 @@ bench-connectors: ## S16: vault open, redaction, egress classification and REST 
 workflows-check: ## (ci) S35: the release workflow's gates, environments, permissions and SHA pins, actionlint, and a self-test that a removed gate fails
 	scripts/check-workflows.sh && scripts/check-workflows.sh --self-test
 
+listings-check: ## (ci) S47: every listing kit (Claude Code plugin, Cursor, Supabase, Neon) installs the one server object, fits its limits and holds no secret; the generated install links and playground data are current
+	node scripts/check-listings.mjs
+	go run ./internal/installlinks/cmd/geninstall -check
+	go run ./cmd/playgen -check
+
 release-check: ## S35: the release dry run: the Console build, two GoReleaser snapshots (reproducible linux/amd64 binary), 5 archives with completions, checksums, an SBOM each, the two-platform image (size, user, labels); nothing is pushed or signed
 	@if command -v node >/dev/null 2>&1; then $(MAKE) -s web-build >/dev/null; fi
 	scripts/verify-snapshot.sh
+	node scripts/check-listings.mjs
 
 cloud-smoke: ## S35: the cloud kit end to end on this machine (prod mode, Caddy's internal CA on 127.0.0.1:8443): health and routing, two seeded orgs, backup, destroy, restore into a fresh volume, export identical, chains intact; needs Docker and age
 	DEEDGLASS_IT_THROWAWAY=1 deploy/cloud/scripts/smoke.sh

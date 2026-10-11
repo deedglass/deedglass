@@ -227,6 +227,7 @@ builds it. Hidden commands work but aren't in `deedglass help`.
 | `deedglass verify <path|->... [--keys <file|url>] [--pin sha256:…] [--anchor <seq>:sha256:…] [--file <path>] [--strict] [--all] [-q]` | Records | Check records offline | built |
 | `deedglass deeds list [--from-seq n] [--to-seq n] [--kind action,admin,amendment] [--action act_…] [--order asc|desc] [--limit 25] [--json]` | Records | List records | built |
 | `deedglass deeds show <deed_…|seq> [--json]` | Records | Show one record | built |
+| `deedglass deeds share <deed_…|seq> [--yes] [--json]` | Records | Make a link that checks one record | built |
 | `deedglass deeds export [--out <file>|-] [--format tar.gz|jsonl] [--from-seq n] [--to-seq n] [--since 1h] [--json]` | Records | Export records as a bundle | built |
 | `deedglass deeds seal-file <path> --label <text> [--media-type application/pdf|text/markdown|application/json|text/plain|text/html] [--out <path>.deed.json] [--json]` | Records | Seal a file's hash as a record | built |
 | `deedglass ledger check [--from-seq n] [--to-seq n] [--json]` | Records | Check the record chain | built |
@@ -247,6 +248,7 @@ builds it. Hidden commands work but aren't in `deedglass help`.
 | `deedglass mcp wrap --connector <name> [--connector-type mcp] [--hide-denied=false] [--call-timeout 2m] [--result-mode full|digest] [--log-file <path>] -- <command> [args…]` | MCP | Run an MCP server behind Deedglass | built |
 | `deedglass mcp serve [--connector native|<name>]` | MCP | Serve Deedglass's native MCP tools | built |
 | `deedglass mcp snippet --client <claude-desktop|claude-code|cursor|windsurf|vscode> --connector <name> [--connector-type postgres] [--api-key-from-env] -- <command> [args…]  ·  --transport http --client <…> [--connector native|<name>]` | MCP | Print client config for an MCP client | built |
+| `deedglass mcp install-links [--json]` | MCP | Print every one-click install link | built |
 | `deedglass insights stats [--window 7d|30d | --from … --to …] [--by rule|tool|agent|none] [--agent agt_…] [--tool stripe.*] [--compare] [--json]` | Insights | Show decisions, approvals and verdicts by rule | built |
 | `deedglass insights shadow [--shadow-version pv_…] [--from …] [--to …] [--json]` | Insights | Show where the shadow policy disagrees | built |
 | `deedglass insights anomalies [--status open|acknowledged|resolved|all] [--agent agt_…] [--kind volume_spike] [--days 14] [--limit 50] [--json]` | Insights | List anomalies | built |

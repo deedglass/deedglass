@@ -152,11 +152,14 @@ found).
 ## The badge
 
 `--badge` writes `.deedglass/score.json`, a shields.io endpoint file
-(`{"schemaVersion":1,"label":"blast radius","message":"C","color":"yellow"}`), and prints the
-Markdown line to paste into your README. Commit the file yourself (`git add -f
-.deedglass/score.json`: `deedglass init` puts `.deedglass/` in `.gitignore`). The scan never runs
-git, never opens a pull request, issue or comment anywhere, and no Deedglass server is involved:
-shields.io reads your own file.
+(`{"schemaVersion":1,"label":"agent blast radius","message":"C","color":"3F4453","cacheSeconds":3600}`),
+and prints the Markdown line to paste into your README. The colours are teal for A and B, neutral
+for C and amber for D and F; never red, which means deny and doesn't match. Commit the file
+yourself. Since S47, `deedglass init` writes `.deedglass/*` and `!.deedglass/score.json` to
+`.gitignore`, so every key file stays ignored and the badge file doesn't. On an older `.gitignore`
+that ignores the whole `.deedglass/` directory, the command prints the two-line change and edits
+nothing. The scan never runs git, never opens a pull request, issue or comment anywhere, and no
+Deedglass server is involved: shields.io reads your own file (it caches for at least 300 seconds).
 
 ## The share link
 

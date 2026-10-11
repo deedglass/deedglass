@@ -1,0 +1,120 @@
+{
+  "links": [
+    {
+      "id": "cursor",
+      "client": "Cursor",
+      "kind": "deeplink",
+      "url": "cursor://anysphere.cursor-deeplink/mcp/install?name=deedglass&config=eyJjb21tYW5kIjoibnB4IiwiYXJncyI6WyIteSIsImRlZWRnbGFzcyIsIm1jcCIsInNlcnZlIl19",
+      "command": "",
+      "note": "Opens Cursor's install dialog."
+    },
+    {
+      "id": "cursor-web",
+      "client": "Cursor (web link)",
+      "kind": "web",
+      "url": "https://cursor.com/en/install-mcp?name=deedglass&config=eyJjb21tYW5kIjoibnB4IiwiYXJncyI6WyIteSIsImRlZWRnbGFzcyIsIm1jcCIsInNlcnZlIl19",
+      "command": "",
+      "note": "The https form, for READMEs."
+    },
+    {
+      "id": "vs-code",
+      "client": "VS Code",
+      "kind": "deeplink",
+      "url": "vscode:mcp/install?%7B%22name%22%3A%22deedglass%22%2C%22command%22%3A%22npx%22%2C%22args%22%3A%5B%22-y%22%2C%22deedglass%22%2C%22mcp%22%2C%22serve%22%5D%7D",
+      "command": "",
+      "note": "Opens VS Code's install dialog."
+    },
+    {
+      "id": "vs-code-web",
+      "client": "VS Code (web link)",
+      "kind": "web",
+      "url": "https://vscode.dev/redirect/mcp/install?config=%7B%22command%22%3A%22npx%22%2C%22args%22%3A%5B%22-y%22%2C%22deedglass%22%2C%22mcp%22%2C%22serve%22%5D%7D&name=deedglass",
+      "command": "",
+      "note": "The https form, for READMEs."
+    },
+    {
+      "id": "vs-code-cli",
+      "client": "VS Code (command)",
+      "kind": "command",
+      "url": "",
+      "command": "code --add-mcp '{\"name\":\"deedglass\",\"command\":\"npx\",\"args\":[\"-y\",\"deedglass\",\"mcp\",\"serve\"]}'",
+      "note": ""
+    },
+    {
+      "id": "lm-studio",
+      "client": "LM Studio",
+      "kind": "deeplink",
+      "url": "lmstudio://add_mcp?name=deedglass&config=eyJjb21tYW5kIjoibnB4IiwiYXJncyI6WyIteSIsImRlZWRnbGFzcyIsIm1jcCIsInNlcnZlIl19",
+      "command": "",
+      "note": ""
+    },
+    {
+      "id": "goose",
+      "client": "Goose",
+      "kind": "deeplink",
+      "url": "goose://extension?cmd=npx&arg=-y&arg=deedglass&arg=mcp&arg=serve&id=deedglass&name=Deedglass&description=See%20what%20your%20agents%20actually%20did.",
+      "command": "",
+      "note": ""
+    },
+    {
+      "id": "claude-code",
+      "client": "Claude Code",
+      "kind": "command",
+      "url": "",
+      "command": "claude mcp add deedglass -- npx -y deedglass mcp serve",
+      "note": "Add --scope project to write .mcp.json for your team."
+    },
+    {
+      "id": "claude-desktop",
+      "client": "Claude Desktop (macOS, Apple silicon)",
+      "kind": "download",
+      "url": "https://github.com/deedglass/deedglass/releases/download/v0.1.0/deedglass-0.1.0-darwin-arm64.mcpb",
+      "command": "",
+      "note": "Open the .mcpb file to install it."
+    },
+    {
+      "id": "claude-desktop-intel",
+      "client": "Claude Desktop (macOS, Intel)",
+      "kind": "download",
+      "url": "https://github.com/deedglass/deedglass/releases/download/v0.1.0/deedglass-0.1.0-darwin-x64.mcpb",
+      "command": "",
+      "note": ""
+    },
+    {
+      "id": "claude-desktop-windows",
+      "client": "Claude Desktop (Windows)",
+      "kind": "download",
+      "url": "https://github.com/deedglass/deedglass/releases/download/v0.1.0/deedglass-0.1.0-win32-x64.mcpb",
+      "command": "",
+      "note": ""
+    },
+    {
+      "id": "windsurf",
+      "client": "Windsurf",
+      "kind": "config",
+      "url": "",
+      "command": "{\"mcpServers\":{\"deedglass\":{\"command\":\"npx\",\"args\":[\"-y\",\"deedglass\",\"mcp\",\"serve\"]}}}",
+      "note": "Add to ~/.codeium/windsurf/mcp_config.json."
+    },
+    {
+      "id": "docker",
+      "client": "Docker MCP Catalog",
+      "kind": "command",
+      "url": "",
+      "command": "docker mcp server enable deedglass",
+      "note": "After the catalog lists Deedglass."
+    }
+  ],
+  "object": "install_links",
+  "server": {
+    "command": "npx",
+    "args": [
+      "-y",
+      "deedglass",
+      "mcp",
+      "serve"
+    ]
+  },
+  "v": 1,
+  "version": "0.1.0"
+}

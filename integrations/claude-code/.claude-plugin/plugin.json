@@ -1,0 +1,10 @@
+{
+  "name": "deedglass",
+  "description": "See what your agents actually did. Policies, approvals and sealed deeds for every tool call.",
+  "version": "0.1.0",
+  "author": { "name": "Deedglass", "url": "https://deedglass.com" },
+  "homepage": "https://deedglass.com",
+  "repository": "https://github.com/deedglass/deedglass",
+  "license": "Apache-2.0",
+  "keywords": ["mcp", "agents", "postgres", "policy", "audit"]
+}

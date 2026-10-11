@@ -1,0 +1,16 @@
+{
+  "name": "Deedglass",
+  "tagline": "See what your agents actually did, and undo what they shouldn't have.",
+  "description": "Deedglass sits between your agent and its tools. Policies decide each call, risky ones wait for a person, and every action is checked against the database and sealed as a record you can verify. Self-hosted; no telemetry; no key in the install link.",
+  "category": "Developer Tools",
+  "install": "cursor://anysphere.cursor-deeplink/mcp/install?name=deedglass&config=eyJjb21tYW5kIjoibnB4IiwiYXJncyI6WyIteSIsImRlZWRnbGFzcyIsIm1jcCIsInNlcnZlIl19",
+  "docs": "https://docs.deedglass.com",
+  "privacy": "https://deedglass.com/legal/privacy",
+  "website": "https://deedglass.com",
+  "repository": "https://github.com/deedglass/deedglass",
+  "license": "Apache-2.0",
+  "icon": "icon-512.png",
+  "icon_source": { "path": "site/public/icon-512.png", "sha256": "c1b2fda25c4f4c44c33d33ed2833ae6fe821984cf1574ef5bfe6f717da5fd9c1" },
+  "screenshots": ["screenshot-1-play.png"],
+  "screenshots_pending": ["a scan result in Cursor's terminal", "a Gate deny in Cursor's MCP panel"]
+}

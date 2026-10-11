@@ -350,7 +350,7 @@ func gitignore(dir string) bool {
 	p := filepath.Join(dir, ".gitignore")
 	b, _ := os.ReadFile(p)
 	for _, l := range strings.Split(string(b), "\n") {
-		if t := strings.TrimSpace(l); t == ".deedglass/" || t == ".deedglass" || t == "/.deedglass/" || t == "/.deedglass" {
+		if t := strings.TrimSpace(l); t == ".deedglass/" || t == ".deedglass" || t == "/.deedglass/" || t == "/.deedglass" || t == ".deedglass/*" || t == "/.deedglass/*" {
 			return false
 		}
 	}
@@ -358,7 +358,8 @@ func gitignore(dir string) bool {
 	if s != "" && !strings.HasSuffix(s, "\n") {
 		s += "\n"
 	}
-	s += "# Deedglass local keys and secrets (deedglass init)\n.deedglass/\n"
+	// Everything under .deedglass/ stays out of git except the badge file scan --badge writes (S47).
+	s += "# Deedglass local keys and secrets (deedglass init); the badge file may be committed\n.deedglass/*\n!.deedglass/score.json\n"
 	return os.WriteFile(p, []byte(s), 0o644) == nil
 }
 

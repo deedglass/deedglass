@@ -98,6 +98,21 @@ The whole list, with workarounds: [`docs/LIMITATIONS.md`](docs/LIMITATIONS.md) a
 
 Checksums, signatures and SBOMs: [`docs/INSTALL.md`](docs/INSTALL.md).
 
+### Add it to your agent client
+
+<!-- install-links:start -->
+[![Add to Cursor](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/en/install-mcp?name=deedglass&config=eyJjb21tYW5kIjoibnB4IiwiYXJncyI6WyIteSIsImRlZWRnbGFzcyIsIm1jcCIsInNlcnZlIl19)
+[Install in VS Code](https://vscode.dev/redirect/mcp/install?config=%7B%22command%22%3A%22npx%22%2C%22args%22%3A%5B%22-y%22%2C%22deedglass%22%2C%22mcp%22%2C%22serve%22%5D%7D&name=deedglass) · [LM Studio](https://deedglass.com/install#lm-studio) · [Goose](https://deedglass.com/install#goose) · [Claude Desktop](https://deedglass.com/install#claude-desktop) · [Every client](https://deedglass.com/install)
+
+```sh
+claude mcp add deedglass -- npx -y deedglass mcp serve
+```
+
+No link holds a key. Run `npx deedglass init` first; each client asks Deedglass for the key it wrote.
+<!-- install-links:end -->
+
+Every format, with its source: [`docs/INSTALL_CLIENTS.md`](docs/INSTALL_CLIENTS.md).
+
 ## SDKs and clients
 
 - **TypeScript:** `@deedglass/sdk`, with adapters for the AI SDK, the OpenAI Agents SDK, LangChain and the Claude Agent SDK.

@@ -18,17 +18,17 @@ Show your grade in your README. You add it; we never do.
 ```sh test title="Terminal"
 $ npx -y deedglass scan --badge --no-write
 …
-[![Blast radius](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/…/.deedglass/score.json)](https://deedglass.com/score)
+[![agent blast radius](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2F…%2F.deedglass%2Fscore.json)](https://deedglass.com/score)
 ```
 
-`--badge` writes `.deedglass/score.json`, a shields.io endpoint file such as `{"schemaVersion":1,"label":"blast radius","message":"C","color":"yellow"}`, and prints the Markdown line for your README. With a GitHub remote, the line has your owner, repo and branch filled in; without one, it has placeholders to replace.
+`--badge` writes `.deedglass/score.json`, a shields.io endpoint file such as `{"schemaVersion":1,"label":"agent blast radius","message":"C","color":"3F4453","cacheSeconds":3600}`, and prints the Markdown line for your README. With a GitHub remote, the line has your owner, repo and branch filled in; without one, it has placeholders to replace.
 
 ## 2. Commit it yourself
 
-`deedglass init` puts `.deedglass/` in `.gitignore`, so add the one file by name:
+`deedglass init` writes `.deedglass/*` and `!.deedglass/score.json` to `.gitignore`: keys stay out of git and the badge file may go in. If your `.gitignore` has an older `.deedglass/` line, the scan prints the two lines to use instead.
 
 ```sh test=skip reason="writes to your git history"
-git add -f .deedglass/score.json
+git add .deedglass/score.json
 git commit -m "Add the Deedglass blast-radius badge"
 ```
 

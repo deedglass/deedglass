@@ -29,6 +29,8 @@ src/content/docs/security/threat-model.md
 src/content/docs/security/limitations.md
 src/content/docs/security/review.md
 src/content/docs/security/attack-suite.md
+src/content/docs/guides/supabase.md
+src/content/docs/guides/neon.md
 public/images/
 src/content/docs/reference/http/endpoints.md
 src/content/docs/policies/

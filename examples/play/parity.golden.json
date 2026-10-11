@@ -1,0 +1,430 @@
+{
+  "cases": [
+    {
+      "id": "acme-demo/drop",
+      "policy": "acme-demo",
+      "fixture": "drop",
+      "agent": "claude-code",
+      "expect": {
+        "decision": "deny",
+        "rule_id": "block-destructive-sql"
+      }
+    },
+    {
+      "id": "acme-demo/ship42",
+      "policy": "acme-demo",
+      "fixture": "ship42",
+      "agent": "claude-code",
+      "expect": {
+        "decision": "allow",
+        "rule_id": "allow-order-status-updates"
+      }
+    },
+    {
+      "id": "acme-demo/read42",
+      "policy": "acme-demo",
+      "fixture": "read42",
+      "agent": "claude-code",
+      "expect": {
+        "decision": "allow",
+        "rule_id": "allow-order-reads"
+      }
+    },
+    {
+      "id": "acme-demo/cancel7",
+      "policy": "acme-demo",
+      "fixture": "cancel7",
+      "agent": "claude-code",
+      "expect": {
+        "decision": "allow",
+        "rule_id": "allow-order-status-updates"
+      }
+    },
+    {
+      "id": "acme-demo/unbounded",
+      "policy": "acme-demo",
+      "fixture": "unbounded",
+      "agent": "claude-code",
+      "expect": {
+        "decision": "deny",
+        "rule_id": "block-unscoped-writes"
+      }
+    },
+    {
+      "id": "acme-demo/delete42",
+      "policy": "acme-demo",
+      "fixture": "delete42",
+      "agent": "claude-code",
+      "expect": {
+        "decision": "deny",
+        "rule_id": "no-deletes-on-orders"
+      }
+    },
+    {
+      "id": "acme-demo/truncate",
+      "policy": "acme-demo",
+      "fixture": "truncate",
+      "agent": "claude-code",
+      "expect": {
+        "decision": "deny",
+        "rule_id": "block-schema-changes"
+      }
+    },
+    {
+      "id": "acme-demo/refund",
+      "policy": "acme-demo",
+      "fixture": "refund",
+      "agent": "claude-code",
+      "expect": {
+        "decision": "require_approval",
+        "rule_id": "orders-writes-need-approval"
+      }
+    },
+    {
+      "id": "postgres-safe/drop",
+      "policy": "postgres-safe",
+      "fixture": "drop",
+      "agent": "claude-code",
+      "expect": {
+        "decision": "deny",
+        "rule_id": "block-destructive-sql"
+      }
+    },
+    {
+      "id": "postgres-safe/ship42",
+      "policy": "postgres-safe",
+      "fixture": "ship42",
+      "agent": "claude-code",
+      "expect": {
+        "decision": "require_approval",
+        "rule_id": "writes-need-approval"
+      }
+    },
+    {
+      "id": "postgres-safe/read42",
+      "policy": "postgres-safe",
+      "fixture": "read42",
+      "agent": "claude-code",
+      "expect": {
+        "decision": "allow",
+        "rule_id": "allow-reads"
+      }
+    },
+    {
+      "id": "postgres-safe/cancel7",
+      "policy": "postgres-safe",
+      "fixture": "cancel7",
+      "agent": "claude-code",
+      "expect": {
+        "decision": "require_approval",
+        "rule_id": "writes-need-approval"
+      }
+    },
+    {
+      "id": "postgres-safe/unbounded",
+      "policy": "postgres-safe",
+      "fixture": "unbounded",
+      "agent": "claude-code",
+      "expect": {
+        "decision": "deny",
+        "rule_id": "block-unbounded-writes"
+      }
+    },
+    {
+      "id": "postgres-safe/delete42",
+      "policy": "postgres-safe",
+      "fixture": "delete42",
+      "agent": "claude-code",
+      "expect": {
+        "decision": "require_approval",
+        "rule_id": "writes-need-approval"
+      }
+    },
+    {
+      "id": "postgres-safe/truncate",
+      "policy": "postgres-safe",
+      "fixture": "truncate",
+      "agent": "claude-code",
+      "expect": {
+        "decision": "deny",
+        "rule_id": "block-destructive-sql"
+      }
+    },
+    {
+      "id": "postgres-safe/refund",
+      "policy": "postgres-safe",
+      "fixture": "refund",
+      "agent": "claude-code",
+      "expect": {
+        "decision": "require_approval",
+        "rule_id": "writes-need-approval"
+      }
+    },
+    {
+      "id": "edit-approval/ship42",
+      "policy": "acme-demo",
+      "editor": "rules:\n  - id: writes-need-approval\n    match: { tool: postgres.execute }\n    when: 'sql.kind in [\"update\", \"delete\"]'\n    decision: require_approval\n    reason: Writes to orders need a person.\n",
+      "fixture": "ship42",
+      "agent": "claude-code",
+      "expect": {
+        "decision": "require_approval",
+        "rule_id": "writes-need-approval"
+      }
+    },
+    {
+      "id": "edit-approval/cancel7",
+      "policy": "acme-demo",
+      "editor": "rules:\n  - id: writes-need-approval\n    match: { tool: postgres.execute }\n    when: 'sql.kind in [\"update\", \"delete\"]'\n    decision: require_approval\n    reason: Writes to orders need a person.\n",
+      "fixture": "cancel7",
+      "agent": "claude-code",
+      "expect": {
+        "decision": "require_approval",
+        "rule_id": "writes-need-approval"
+      }
+    },
+    {
+      "id": "edit-approval/read42",
+      "policy": "acme-demo",
+      "editor": "rules:\n  - id: writes-need-approval\n    match: { tool: postgres.execute }\n    when: 'sql.kind in [\"update\", \"delete\"]'\n    decision: require_approval\n    reason: Writes to orders need a person.\n",
+      "fixture": "read42",
+      "agent": "claude-code",
+      "expect": {
+        "decision": "allow",
+        "rule_id": "allow-order-reads"
+      }
+    },
+    {
+      "id": "edit-approval/delete42",
+      "policy": "acme-demo",
+      "editor": "rules:\n  - id: writes-need-approval\n    match: { tool: postgres.execute }\n    when: 'sql.kind in [\"update\", \"delete\"]'\n    decision: require_approval\n    reason: Writes to orders need a person.\n",
+      "fixture": "delete42",
+      "agent": "claude-code",
+      "expect": {
+        "decision": "require_approval",
+        "rule_id": "writes-need-approval"
+      }
+    },
+    {
+      "id": "edit-agent-reads/read42/claude-code",
+      "policy": "acme-demo",
+      "editor": "rules:\n  - id: claude-code-reads\n    match: { tool: postgres.query, agent: claude-code }\n    decision: allow\n",
+      "fixture": "read42",
+      "agent": "claude-code",
+      "expect": {
+        "decision": "allow",
+        "rule_id": "claude-code-reads"
+      }
+    },
+    {
+      "id": "edit-agent-reads/read42/cursor",
+      "policy": "acme-demo",
+      "editor": "rules:\n  - id: claude-code-reads\n    match: { tool: postgres.query, agent: claude-code }\n    decision: allow\n",
+      "fixture": "read42",
+      "agent": "cursor",
+      "expect": {
+        "decision": "allow",
+        "rule_id": "allow-order-reads"
+      }
+    },
+    {
+      "id": "edit-refunds/refund",
+      "policy": "acme-demo",
+      "editor": "rules:\n  - id: refunds-locked\n    match: { tool: postgres.execute }\n    when: '\"public.refunds\" in sql.tables'\n    decision: deny\n    reason: The refunds table is closed to agents.\n",
+      "fixture": "refund",
+      "agent": "claude-code",
+      "expect": {
+        "decision": "deny",
+        "rule_id": "refunds-locked"
+      }
+    },
+    {
+      "id": "edit-refunds/truncate",
+      "policy": "acme-demo",
+      "editor": "rules:\n  - id: refunds-locked\n    match: { tool: postgres.execute }\n    when: '\"public.refunds\" in sql.tables'\n    decision: deny\n    reason: The refunds table is closed to agents.\n",
+      "fixture": "truncate",
+      "agent": "claude-code",
+      "expect": {
+        "decision": "deny",
+        "rule_id": "refunds-locked"
+      }
+    },
+    {
+      "id": "edit-glob-writes/ship42",
+      "policy": "acme-demo",
+      "editor": "rules:\n  - id: all-writes-wait\n    match: { tool: \"postgres.*\" }\n    when: 'sql.writes'\n    decision: require_approval\n    reason: Every write waits for a person.\n",
+      "fixture": "ship42",
+      "agent": "claude-code",
+      "expect": {
+        "decision": "require_approval",
+        "rule_id": "all-writes-wait"
+      }
+    },
+    {
+      "id": "edit-glob-writes/drop",
+      "policy": "acme-demo",
+      "editor": "rules:\n  - id: all-writes-wait\n    match: { tool: \"postgres.*\" }\n    when: 'sql.writes'\n    decision: require_approval\n    reason: Every write waits for a person.\n",
+      "fixture": "drop",
+      "agent": "claude-code",
+      "expect": {
+        "decision": "require_approval",
+        "rule_id": "all-writes-wait"
+      }
+    },
+    {
+      "id": "edit-allow-all/drop",
+      "policy": "acme-demo",
+      "editor": "rules:\n  - id: allow-everything\n    match: { tool: \"*\" }\n    decision: allow\n",
+      "fixture": "drop",
+      "agent": "claude-code",
+      "expect": {
+        "decision": "allow",
+        "rule_id": "allow-everything"
+      }
+    },
+    {
+      "id": "edit-allow-all/unbounded",
+      "policy": "acme-demo",
+      "editor": "rules:\n  - id: allow-everything\n    match: { tool: \"*\" }\n    decision: allow\n",
+      "fixture": "unbounded",
+      "agent": "claude-code",
+      "expect": {
+        "decision": "allow",
+        "rule_id": "allow-everything"
+      }
+    },
+    {
+      "id": "edit-cursor/ship42/cursor",
+      "policy": "acme-demo",
+      "editor": "rules:\n  - id: cursor-read-only\n    match: { agent: cursor }\n    when: 'sql.writes'\n    decision: deny\n    reason: Cursor is read-only here.\n",
+      "fixture": "ship42",
+      "agent": "cursor",
+      "expect": {
+        "decision": "deny",
+        "rule_id": "cursor-read-only"
+      }
+    },
+    {
+      "id": "edit-cursor/ship42/claude-code",
+      "policy": "acme-demo",
+      "editor": "rules:\n  - id: cursor-read-only\n    match: { agent: cursor }\n    when: 'sql.writes'\n    decision: deny\n    reason: Cursor is read-only here.\n",
+      "fixture": "ship42",
+      "agent": "claude-code",
+      "expect": {
+        "decision": "allow",
+        "rule_id": "allow-order-status-updates"
+      }
+    },
+    {
+      "id": "edit-statements/ship42",
+      "policy": "acme-demo",
+      "editor": "rules:\n  - id: one-scoped-statement\n    match: { tool: postgres.execute }\n    when: 'sql.has_where && sql.statements == 1'\n    decision: allow\n",
+      "fixture": "ship42",
+      "agent": "claude-code",
+      "expect": {
+        "decision": "allow",
+        "rule_id": "one-scoped-statement"
+      }
+    },
+    {
+      "id": "edit-statements/unbounded",
+      "policy": "acme-demo",
+      "editor": "rules:\n  - id: one-scoped-statement\n    match: { tool: postgres.execute }\n    when: 'sql.has_where && sql.statements == 1'\n    decision: allow\n",
+      "fixture": "unbounded",
+      "agent": "claude-code",
+      "expect": {
+        "decision": "deny",
+        "rule_id": "block-unscoped-writes"
+      }
+    },
+    {
+      "id": "edit-two-tables/refund",
+      "policy": "acme-demo",
+      "editor": "rules:\n  - id: joins-wait\n    match: { tool: postgres.query }\n    when: 'size(sql.tables) > 1'\n    decision: require_approval\n    reason: Reads across tables wait for a person.\n",
+      "fixture": "refund",
+      "agent": "claude-code",
+      "expect": {
+        "decision": "require_approval",
+        "rule_id": "orders-writes-need-approval"
+      }
+    },
+    {
+      "id": "edit-all-public/cancel7",
+      "policy": "acme-demo",
+      "editor": "rules:\n  - id: public-writes-wait\n    match: { tool: postgres.execute }\n    when: 'sql.tables.all(t, t.startsWith(\"public.\"))'\n    decision: require_approval\n    reason: Writes to public tables wait.\n",
+      "fixture": "cancel7",
+      "agent": "claude-code",
+      "expect": {
+        "decision": "require_approval",
+        "rule_id": "public-writes-wait"
+      }
+    },
+    {
+      "id": "edge-glob-prefix/read42",
+      "policy": "acme-demo",
+      "editor": "rules:\n  - id: edge\n    match: { tool: \"post*\" }\n    when: 'glob(tool.name, \"postgres.*\")'\n    decision: deny\n    reason: Edge case.\n",
+      "fixture": "read42",
+      "agent": "claude-code",
+      "expect": {
+        "decision": "deny",
+        "rule_id": "edge"
+      }
+    },
+    {
+      "id": "edge-glob-question/read42",
+      "policy": "acme-demo",
+      "editor": "rules:\n  - id: edge\n    match: { tool: \"postgres.?uery\" }\n    decision: deny\n    reason: Edge case.\n",
+      "fixture": "read42",
+      "agent": "claude-code",
+      "expect": {
+        "decision": "deny",
+        "rule_id": "edge"
+      }
+    },
+    {
+      "id": "edge-glob-suffix/read42",
+      "policy": "acme-demo",
+      "editor": "rules:\n  - id: edge\n    match: { tool: \"*.execute\" }\n    decision: deny\n    reason: Edge case.\n",
+      "fixture": "read42",
+      "agent": "claude-code",
+      "expect": {
+        "decision": "allow",
+        "rule_id": "allow-order-reads"
+      }
+    },
+    {
+      "id": "edge-minor-usd/read42",
+      "policy": "acme-demo",
+      "editor": "rules:\n  - id: edge\n    match: { tool: postgres.query }\n    when: 'minor(\"120.00 usd\") == 12000'\n    decision: deny\n    reason: Edge case.\n",
+      "fixture": "read42",
+      "agent": "claude-code",
+      "expect": {
+        "decision": "deny",
+        "rule_id": "edge"
+      }
+    },
+    {
+      "id": "edge-minor-jpy/read42",
+      "policy": "acme-demo",
+      "editor": "rules:\n  - id: edge\n    match: { tool: postgres.query }\n    when: 'minor(\"500 jpy\") == 501'\n    decision: deny\n    reason: Edge case.\n",
+      "fixture": "read42",
+      "agent": "claude-code",
+      "expect": {
+        "decision": "allow",
+        "rule_id": "allow-order-reads"
+      }
+    },
+    {
+      "id": "edge-minor-kwd/read42",
+      "policy": "acme-demo",
+      "editor": "rules:\n  - id: edge\n    match: { tool: postgres.query }\n    when: 'minor(\"1.5 kwd\") == 1500'\n    decision: deny\n    reason: Edge case.\n",
+      "fixture": "read42",
+      "agent": "claude-code",
+      "expect": {
+        "decision": "deny",
+        "rule_id": "edge"
+      }
+    }
+  ],
+  "object": "play_parity",
+  "v": 1
+}

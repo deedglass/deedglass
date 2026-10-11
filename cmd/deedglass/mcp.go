@@ -23,6 +23,7 @@ import (
 	"github.com/deedglass/deedglass/internal/mcp/bridge"
 	"github.com/deedglass/deedglass/internal/mcp/snippet"
 	"github.com/deedglass/deedglass/internal/mcp/wrap"
+	"github.com/deedglass/deedglass/internal/setup"
 )
 
 // deedglass mcp wrap and deedglass mcp snippet (S14). wrap's stdout belongs to the MCP client: it
@@ -315,7 +316,8 @@ func runMCPServe(ctx context.Context, e *Env, args []string) error {
 	if len(args) > 0 {
 		return usageErr(fmt.Errorf("deedglass mcp serve takes no arguments (got %q)", args[0]), "Run deedglass help mcp serve.")
 	}
-	server := firstNonEmpty(e.Globals.Server, e.Getenv("DEEDGLASS_SERVER"), e.Getenv("DEEDGLASS_BASE_URL"), defaultServer)
+	initKey, initServer := initFiles()
+	server := firstNonEmpty(e.Globals.Server, e.Getenv("DEEDGLASS_SERVER"), e.Getenv("DEEDGLASS_BASE_URL"), initServer, defaultServer)
 	u, err := url.Parse(strings.TrimSuffix(server, "/"))
 	if err != nil || u.Host == "" || (u.Scheme != "http" && u.Scheme != "https") {
 		return usageErr(fmt.Errorf("the server %q isn't a URL", server), "Use --server http://127.0.0.1:8080 or set DEEDGLASS_SERVER.")
@@ -324,9 +326,9 @@ func runMCPServe(ctx context.Context, e *Env, args []string) error {
 	if c != "native" && !reServeConnector.MatchString(c) {
 		return usageErr(fmt.Errorf("--connector %q isn't a connector name", c), "Use native, or an upstream's name such as everything.")
 	}
-	key := firstNonEmpty(e.Globals.APIKey, e.Getenv("DEEDGLASS_API_KEY"))
+	key := firstNonEmpty(e.Globals.APIKey, e.Getenv("DEEDGLASS_API_KEY"), initKey)
 	if key == "" {
-		fmt.Fprintln(e.Stderr, "✕ no API key: set DEEDGLASS_API_KEY in your MCP client config. Every call is refused until then.")
+		fmt.Fprintln(e.Stderr, "✕ No Deedglass key found. Run npx deedglass init in a terminal, then restart your MCP client. Every call is refused until then.")
 	}
 	b, err := bridge.New(bridge.Config{Server: u, Connector: c, APIKey: key, Version: buildInfo().Version})
 	if err != nil {
@@ -383,4 +385,31 @@ func runMCPSnippetHTTP(e *Env, args []string) error {
 	}
 	_, err = e.Stdout.Write(b)
 	return err
+}
+
+// initFiles finds the agent key and local server that deedglass init wrote, in .deedglass/ of the
+// working directory or its nearest parent that has one (S47: one-click install links carry no key).
+// Environment and flags always win; a missing or unreadable file gives "".
+func initFiles() (key, server string) {
+	dir, err := os.Getwd()
+	if err != nil {
+		return "", ""
+	}
+	for i := 0; i < 32; i++ {
+		if fi, err := os.Stat(filepath.Join(dir, setup.DirName)); err == nil && fi.IsDir() {
+			if b, err := os.ReadFile(setup.Path(dir, setup.AgentKeyFile)); err == nil {
+				key = strings.TrimSpace(string(b))
+			}
+			if st, err := setup.ReadStack(dir); err == nil && st != nil && st.Listen != "" {
+				server = st.Server()
+			}
+			return key, server
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			break
+		}
+		dir = parent
+	}
+	return "", ""
 }

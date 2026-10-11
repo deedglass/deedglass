@@ -86,3 +86,6 @@ ADR-000 to ADR-008 were written for the V0 verifier and keep their original text
 | 080 | Pro code in ee/ under FSL-1.1-ALv2, in the one binary | Proposed (2026-10-11, S48) | `ee/scanfull` first |
 | 081 | Site commerce: Dodo payment links, D1 state, a quote for the setup service | Proposed (2026-10-11, S48) | sealed files accept `text/html` |
 | 082 | Go 1.27.2 and golang.org/x/text v0.41.0 | Proposed (2026-10-11, S48) | govulncheck green |
+| 083 | /play runs PGlite and cel-js in the browser, with its own CSP | Proposed (2026-10-11, S47) | `@electric-sql/pglite` 0.5.8, `@marcbachmann/cel-js` 8.0.0, site only (site/src/play); parity 40/40 |
+| 084 | deedglass/scan-action: pull_request + workflow_run, one sticky comment | Proposed (2026-10-11, S47) | separate repo; no npm dependency |
+| 085 | One server object for every install link, listing and registry entry | Proposed (2026-10-11, S47) | `internal/installlinks`; registry name io.github.deedglass/deedglass |

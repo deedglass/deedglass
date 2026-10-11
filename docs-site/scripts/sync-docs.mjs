@@ -49,6 +49,8 @@ export const IMPORTS = {
   'docs/THREAT_MODEL.md': 'security/threat-model',
   'docs/LIMITATIONS.md': 'security/limitations',
   'docs/SECURITY_REVIEW_2026-10.md': 'security/review',
+  'docs/guides/supabase.md': 'guides/supabase',
+  'docs/guides/neon.md': 'guides/neon',
   // engineering notes: imported as they are, under Reference › Engineering notes
   ...Object.fromEntries(
     [
@@ -57,7 +59,7 @@ export const IMPORTS = {
       'MCP', 'MCP_AUTHORIZATION', 'MIGRATIONS', 'NETWORK_EGRESS', 'OBSERVABILITY', 'OBSERVATION_BOUNDARY', 'OVERVIEW_METRICS',
       'POLICIES_GUIDE', 'POLICY_COOKBOOK', 'POLICY_EDITOR', 'POLICY_ERRORS', 'POSTGRES_DEPLOYMENT', 'REPLAY', 'RETENTION', 'SCAN',
       'SEAL_KEYS', 'SEALING_FILES', 'SELF_HOSTING', 'SIMULATOR', 'SQLGUARD', 'STOP', 'SUGGESTIONS', 'UNDO', 'VAULT', 'VERIFICATION_MODEL',
-      'VERIFYING_DEEDS', 'WEBHOOKS', 'WITNESS', 'BENCHMARKS', 'LICENSING',
+      'VERIFYING_DEEDS', 'WEBHOOKS', 'WITNESS', 'BENCHMARKS', 'LICENSING', 'PLAYGROUND', 'SHARING', 'INSTALL_CLIENTS',
     ].map((n) => [`docs/${n}.md`, `reference/engineering/${n.toLowerCase().replace(/_/g, '-')}`]),
   ),
   'docs/witness/REASONS.md': 'reference/engineering/witness-reasons',

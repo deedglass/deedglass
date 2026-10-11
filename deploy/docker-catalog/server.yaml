@@ -1,0 +1,37 @@
+# docker/mcp-registry entry for Deedglass (servers/deedglass/server.yaml). The founder opens the PR;
+# re-check the template in docker/mcp-registry's CONTRIBUTING.md on the day (checked 2026-10-02).
+name: deedglass
+image: mcp/deedglass
+type: server
+meta:
+  category: devops
+  tags:
+    - agents
+    - postgres
+    - policy
+    - audit
+about:
+  title: Deedglass
+  description: Policies, approvals and sealed deeds for every tool call your agents make.
+  icon: https://deedglass.com/icon-512.png
+source:
+  project: https://github.com/deedglass/deedglass
+  dockerfile: deploy/mcp/Dockerfile
+config:
+  description: Point it at your Deedglass server and give it an agent key from deedglass init.
+  secrets:
+    - name: deedglass.api_key
+      env: DEEDGLASS_API_KEY
+      example: <agent key from deedglass init>
+  env:
+    - name: DEEDGLASS_SERVER
+      example: http://host.docker.internal:8080
+      value: '{{deedglass.server}}'
+  parameters:
+    type: object
+    properties:
+      server:
+        type: string
+        description: Your Deedglass server
+    required:
+      - server

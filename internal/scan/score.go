@@ -108,6 +108,11 @@ func score(r *Report, policyFound bool) Score {
 	}
 	high, med := 0, 0
 	for _, f := range r.Findings {
+		// S47 §3.2: the role's superuser and BYPASSRLS facts count once, toward the 35 above,
+		// never again as high findings.
+		if f.ID == "role_superuser" || f.ID == "role_bypassrls" {
+			continue
+		}
 		switch f.Severity {
 		case "high":
 			add("high_finding", 20, f.ID, f.Title, high >= 2)
@@ -154,4 +159,39 @@ func ScoreLine(s Score) string {
 		line += " · database not checked"
 	}
 	return line
+}
+
+// ShareEntry is one finding or deduction id as the /s page shows it.
+type ShareEntry struct {
+	ID       string `json:"id"`
+	Severity string `json:"severity,omitempty"`
+	Title    string `json:"title"`
+}
+
+// ShareCatalog is the closed list of ids a share link may carry, with the words /s shows for each
+// (cmd/playgen writes it to examples/play/share-catalog.json). A test keeps it equal to the ids
+// the scan can produce.
+func ShareCatalog() map[string]any {
+	return map[string]any{
+		"object": "share_catalog", "v": 1, "formula_version": FormulaVersion,
+		"findings": []ShareEntry{
+			{"archived_postgres_mcp", "high", ArchivedTitle},
+			{"role_superuser", "high", "The database role is a superuser"},
+			{"role_bypassrls", "high", "The database role bypasses row-level security"},
+			{"database_url_in_client_args", "medium", "A database URL sits in a client config"},
+			{"role_replication", "medium", "The database role can replicate"},
+			{"role_createrole", "medium", "The database role can create roles"},
+			{"security_definer_executable", "medium", "The role can run SECURITY DEFINER functions"},
+			{"role_createdb", "low", "The database role can create databases"},
+			{"no_primary_key_on_writable_table", "low", "Writable tables without a primary key"},
+			{"wal_level_not_logical", "info", "wal_level isn't logical"},
+		},
+		"deductions": []ShareEntry{
+			{ID: "role_superuser_or_bypassrls", Title: "Superuser or BYPASSRLS database role"},
+			{ID: "high_finding", Title: "High findings"},
+			{ID: "medium_finding", Title: "Medium findings"},
+			{ID: "unchecked_write_path", Title: "Write paths with no check"},
+		},
+		"footnote": "A means a small blast radius, not a safe agent.",
+	}
 }

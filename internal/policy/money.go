@@ -253,3 +253,13 @@ func moneyLetters(s string) bool {
 // FormatMoney writes minor units for people: "$4,000.00", "¥500", "1,250.00 chf" (S28's
 // suggestion copy uses the same form as the budget messages).
 func FormatMoney(amount int64, currency string) string { return formatMoney(amount, currency) }
+
+// CurrencyExponents returns a copy of the ISO 4217 minor-unit table (S47: the playground's
+// minor() uses the same table, written out by cmd/playgen).
+func CurrencyExponents() map[string]int {
+	out := make(map[string]int, len(currencyExponents))
+	for k, v := range currencyExponents {
+		out[k] = v
+	}
+	return out
+}
