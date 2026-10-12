@@ -1,0 +1,89 @@
+# github-agent · a Deedglass policy pack (from the github-read-mostly starter)
+#
+# Reads run freely. Agents can open issues, comment, create branches, commit to
+# feature branches and open pull requests. Commits and pull requests that target
+# a protected branch wait for a human, and so do changes to workflow files and
+# closing an issue. Merging, deleting branches and other destructive actions
+# never run.
+#
+# The GitHub connector fills request.github before the decision: the branch a
+# commit writes to (or a pull request's base), whether it matches the connector's
+# protected_branches (main, master and release/* by default), and whether a path
+# is under .github/workflows/ or .github/actions/. When it can't look the
+# repository up (request.github.enriched is false), the branch counts as
+# protected. To protect another branch, add it to protected_branches in the
+# connector's config. Then check your change:
+#   deedglass policy test policies/github-agent.yaml
+deedglass: policy/v1
+name: github-agent
+description: Reads, issues and feature branches run. Protected branches wait for a human. Merges never run.
+
+defaults:
+  decision: deny
+  reason: No rule allows this action. Add a rule in Console › Policies to allow it.
+  verify: L0
+
+rules:
+  - id: github-reads
+    match: { tool: ["github.get_*", "github.list_*"] }
+    decision: allow
+  - id: issues-and-comments
+    description: Opening and commenting on issues. Closing one is handled below.
+    match: { tool: [github.create_issue, github.comment] }
+    decision: allow
+    verify: L1
+  - id: branches
+    match: { tool: github.create_branch }
+    decision: allow
+    verify: L1
+  - id: protected-branch-writes-need-approval
+    description: A commit to a protected branch, or to a branch the connector couldn't look up.
+    match: { tool: github.create_or_update_file }
+    when: '!request.github.enriched || request.github.protected_branch'
+    decision: require_approval
+    reason: Commits to main, master or a release branch wait for a human. Commit to a feature branch instead, or ask an admin to approve in Console › Approvals.
+    approval: { approvers: [role:admin], required: 1, expires_in: 2h }
+    notify: [slack]
+    verify: L1
+  - id: workflow-files-need-approval
+    description: Workflow files run with repository secrets.
+    match: { tool: github.create_or_update_file }
+    when: request.github.touches_workflows
+    decision: require_approval
+    reason: Changes under .github/workflows run with your repository's secrets, so a person approves them.
+    approval: { approvers: [role:admin], required: 1, expires_in: 2h }
+    notify: [slack]
+    verify: L1
+  - id: feature-branch-writes
+    match: { tool: github.create_or_update_file }
+    decision: allow
+    verify: L1
+  - id: pull-requests-to-main-need-approval
+    description: A pull request into a protected branch, or into a branch the connector couldn't look up.
+    match: { tool: github.create_pr }
+    when: '!request.github.enriched || request.github.protected_branch'
+    decision: require_approval
+    reason: Pull requests into main, master or a release branch wait for a human. An admin can approve in Console › Approvals.
+    approval: { approvers: [role:admin], required: 1, expires_in: 2h }
+    notify: [slack]
+    verify: L1
+  - id: pull-requests
+    match: { tool: github.create_pr }
+    decision: allow
+    verify: L1
+  - id: no-merges-or-branch-deletes
+    match: { tool: [github.merge_pr, github.delete_branch] }
+    decision: deny
+    reason: Merging and deleting branches stay with humans on GitHub.
+  - id: closing-issues-needs-approval
+    match: { tool: github.close_issue }
+    decision: require_approval
+    reason: Closing an issue waits for a human. An admin can approve in Console › Approvals.
+    approval: { approvers: [role:admin], required: 1, expires_in: 24h }
+    notify: [slack]
+    verify: L1
+  - id: block-other-destructive
+    match: { side_effect: destructive }
+    decision: deny
+    reason: Destructive changes stay with people. Make this change on GitHub, or ask an admin to add a rule in Console › Policies.
+    notify: [slack]

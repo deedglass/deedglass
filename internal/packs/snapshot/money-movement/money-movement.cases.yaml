@@ -1,0 +1,92 @@
+# Test cases for money-movement.yaml. Run them with:
+#   deedglass policy test policies/money-movement.yaml
+policy: money-movement.yaml
+defaults:
+  agent: { name: finance-bot, labels: { env: prod } }
+  org: { timezone: Asia/Kolkata }
+  time: 2026-10-12T10:00:00+05:30
+cases:
+  # Reads
+  - name: reading a charge runs freely
+    input: { tool: stripe.get_charge, args: { charge: ch_3QxZ8f2LdemoA1 } }
+    expect: { decision: allow, rule: stripe-reads, verify: L0 }
+
+  # Amounts
+  - name: a refund with no amount is refused
+    input: { tool: stripe.create_refund, args: { charge: ch_3QxZ8f2LdemoA1 } }
+    expect: { decision: deny, rule: amounts-are-whole-minor-units, code: policy_denied, reason_contains: "like 2000 for $20.00" }
+  - name: a payout written as a string is refused
+    input: { tool: stripe.create_payout, args: { amount: "500.00", currency: usd } }
+    expect: { decision: deny, rule: amounts-are-whole-minor-units }
+
+  # Refunds
+  - name: when Stripe can't be read, a small refund waits for a person
+    input: { tool: stripe.create_refund, args: { charge: ch_3QxZ8f2LdemoA1, amount: 2000 }, request: { stripe: { enriched: false } } }
+    expect: { decision: require_approval, rule: refunds-need-context, notify: [slack] }
+  - name: a refund over what is left never runs
+    input:
+      tool: stripe.create_refund
+      args: { charge: ch_3QxZ8f2LdemoA1, amount: 5000 }
+      request: { stripe: { enriched: true, currency: usd, charge_amount: 14900, amount_refunded: 12000, refundable: 2900 } }
+    expect: { decision: deny, rule: refund-within-charge }
+  - name: a refund on a disputed charge waits for a person
+    input:
+      tool: stripe.create_refund
+      args: { charge: ch_3QxZ8f2LdemoA1, amount: 1000 }
+      request: { stripe: { enriched: true, currency: usd, charge_amount: 14900, refundable: 14900, disputed: true } }
+    expect: { decision: require_approval, rule: disputed-or-foreign-refunds-need-approval }
+  - name: a euro refund waits for a person
+    input:
+      tool: stripe.create_refund
+      args: { charge: ch_3QxZ8f2LdemoA1, amount: 1000 }
+      request: { stripe: { enriched: true, currency: eur, charge_amount: 14900, refundable: 14900, disputed: false } }
+    expect: { decision: require_approval, rule: disputed-or-foreign-refunds-need-approval }
+  - name: a $20.00 refund runs
+    input:
+      tool: stripe.create_refund
+      args: { charge: ch_3QxZ8f2LdemoA1, amount: 2000 }
+      request: { stripe: { enriched: true, currency: usd, charge_amount: 14900, refundable: 14900, disputed: false } }
+    expect: { decision: allow, rule: small-refunds, verify: L1 }
+  - name: a $50.00 refund still runs
+    input:
+      tool: stripe.create_refund
+      args: { charge: ch_3QxZ8f2LdemoA1, amount: 5000 }
+      request: { stripe: { enriched: true, currency: usd, charge_amount: 14900, refundable: 14900, disputed: false } }
+    expect: { decision: allow, rule: small-refunds }
+  - name: a $120.00 refund needs one admin
+    input:
+      tool: stripe.create_refund
+      args: { charge: ch_3QxZ8f2LdemoA1, amount: 12000 }
+      request: { stripe: { enriched: true, currency: usd, charge_amount: 14900, refundable: 14900, disputed: false } }
+    expect: { decision: require_approval, rule: medium-refunds-need-one, approval: { required: 1, approvers: [role:admin] } }
+  - name: a $1,500.00 refund needs two admins
+    input:
+      tool: stripe.create_refund
+      args: { charge: ch_3QxZ8f2LdemoB2, amount: 150000 }
+      request: { stripe: { enriched: true, currency: usd, charge_amount: 300000, refundable: 300000, disputed: false } }
+    expect: { decision: require_approval, rule: large-refunds-need-two, approval: { required: 2, approvers: [role:admin] } }
+
+  # Payouts and transfers
+  - name: a $500.00 payout needs two admins
+    input: { tool: stripe.create_payout, args: { amount: 50000, currency: usd } }
+    expect: { decision: require_approval, rule: payouts-need-two, approval: { required: 2, approvers: [role:admin] }, notify: [slack] }
+  - name: a transfer to a connected account needs two admins
+    input: { tool: stripe.create_transfer, args: { amount: 120000, currency: usd, destination: acct_1Qdemo } }
+    expect: { decision: require_approval, rule: payouts-need-two }
+  - name: a payout over $10,000.00 never runs
+    input: { tool: stripe.create_payout, args: { amount: 1000001, currency: usd } }
+    expect: { decision: deny, rule: payouts-over-cap-never-run, reason_contains: "over $10,000.00" }
+  - name: a payout in another currency never runs from an agent
+    input: { tool: stripe.create_payout, args: { amount: 5000, currency: gbp } }
+    expect: { decision: deny, rule: payouts-over-cap-never-run }
+  - name: a payout with no currency never runs
+    input: { tool: stripe.create_payout, args: { amount: 5000 } }
+    expect: { decision: deny, rule: payouts-over-cap-never-run }
+
+  # Everything else
+  - name: deleting a customer never runs
+    input: { tool: { name: stripe.delete_customer, side_effect: destructive }, args: { customer: cus_QhR8s2eZvKYlo2 } }
+    expect: { decision: deny, rule: block-other-destructive }
+  - name: a tool this pack doesn't name is refused
+    input: { tool: stripe.create_payment_intent, args: { amount: 2000, currency: usd } }
+    expect: { decision: deny }

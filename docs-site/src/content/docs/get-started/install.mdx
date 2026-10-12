@@ -1,8 +1,7 @@
 ---
 title: Install in any client
-description: Add Deedglass to Cursor, VS Code, LM Studio, Goose, Claude Code or Claude Desktop in one step.
-lastVerified: "2026-10-05"
-draft: true
+description: Add Deedglass to Cursor, VS Code, LM Studio, Goose, Claude Code, Claude Desktop or Windsurf in one step.
+lastVerified: "2026-10-12"
 owner: S47
 claims: [C-091]
 ---
@@ -10,22 +9,28 @@ claims: [C-091]
 import InstallTable from '../../../components/InstallTable.astro';
 import Limits from '../../../components/Limits.astro';
 
-Add Deedglass to Cursor, VS Code, LM Studio, Goose, Claude Code or Claude Desktop in one step.
+Add Deedglass to Cursor, VS Code, LM Studio, Goose, Claude Code, Claude Desktop or Windsurf in one step.
 
 **Before you start**
 
-- Node 22.12 or later: every client runs the server with `npx -y deedglass mcp serve`.
-- An agent key in `DEEDGLASS_API_KEY`, and `DEEDGLASS_SERVER` if your server isn't on `127.0.0.1:8080`.
+- Run `npx deedglass init` in a terminal once. It starts a local Deedglass server and writes the agent key every client below uses, so no link holds a key.
+- Node 22.12 or later for the `npx` installs. The Claude Desktop bundle carries its own binary and needs no Node.
 
 ## One step per client
 
-Every link and command below adds the same server object, `{"command":"npx","args":["-y","deedglass","mcp","serve"]}`. They are generated at build time, never typed by hand.
+Every link and command below adds the same server, `{"command":"npx","args":["-y","deedglass","mcp","serve"]}`. They are generated from one Go package at build time, never typed by hand, and a test decodes each one back to that server and checks that it holds no key.
 
 <InstallTable />
 
+`deedglass mcp install-links` prints the same list in your terminal.
+
+## Claude Desktop
+
+Claude Desktop installs a `.mcpb` bundle: download the one for your machine from the release (macOS Apple silicon, macOS Intel or Windows) and open it. Claude Desktop asks for two optional settings: an agent key (kept as a secret) and the server address, which defaults to `http://127.0.0.1:8080`. Leave the key empty to use the one `deedglass init` wrote. The bundles are not code-signed yet, so Claude Desktop says so when you open one.
+
 ## Registries
 
-Deedglass is listed in the Official MCP Registry as `io.github.deedglass/deedglass`, on Glama, and in the Docker MCP Catalog.
+The server's registry name is `io.github.deedglass/deedglass`, the same in the npm package and the container image label.
 
 ## Prefer the HTTP gateway?
 
@@ -33,11 +38,11 @@ These installs run the stdio bridge. To connect a client straight to the server'
 
 ## Check it
 
-```sh test=skip reason="install links ship in S47"
+```sh test=skip reason="needs Claude Code on your machine"
 claude mcp list
 ```
 
-`deedglass` is listed and connected.
+`deedglass` is listed and connected. With no key found, its log says what to run: `No Deedglass key found. Run npx deedglass init in a terminal, then restart your MCP client.`
 
 ## What it doesn't do
 

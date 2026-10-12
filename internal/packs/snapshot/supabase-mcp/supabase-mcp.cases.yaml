@@ -1,0 +1,77 @@
+# Test cases for supabase-mcp.yaml. Run them with:
+#   deedglass policy test policies/supabase-mcp.yaml
+policy: supabase-mcp.yaml
+defaults:
+  agent: { name: build-bot, labels: { env: dev } }
+  org: { timezone: Asia/Kolkata }
+  time: 2026-10-12T10:00:00+05:30
+cases:
+  # Reads
+  - name: listing tables runs freely
+    input: { tool: supabase.list_tables, args: { schemas: [public] } }
+    expect: { decision: allow, rule: supabase-reads, verify: L0 }
+  - name: reading a project's URL runs freely
+    input: { tool: supabase.get_project_url, args: {} }
+    expect: { decision: allow, rule: supabase-reads }
+  - name: docs search runs freely
+    input: { tool: supabase.search_docs, args: { graphql_query: "{ searchDocs(query: \"rls\") { nodes { title } } }" } }
+    expect: { decision: allow, rule: supabase-reads }
+  - name: reading logs runs freely
+    input: { tool: supabase.query_logs, args: { service: postgres } }
+    expect: { decision: allow, rule: supabase-reads }
+  - name: generating types runs freely
+    input: { tool: supabase.generate_typescript_types, args: {} }
+    expect: { decision: allow, rule: supabase-reads }
+
+  # Project changes
+  - name: creating a project never runs
+    input: { tool: supabase.create_project, args: { name: scratch } }
+    expect: { decision: deny, rule: project-changes-stay-with-people, code: policy_denied, reason_contains: "Supabase dashboard", notify: [slack] }
+  - name: pausing a project never runs
+    input: { tool: supabase.pause_project, args: { project_id: abcdefghijklmnopqrst } }
+    expect: { decision: deny, rule: project-changes-stay-with-people }
+  - name: confirming a cost never runs
+    input: { tool: supabase.confirm_cost, args: { type: branch, amount: 10, recurrence: monthly } }
+    expect: { decision: deny, rule: project-changes-stay-with-people }
+
+  # Branches
+  - name: deleting a branch never runs
+    input: { tool: supabase.delete_branch, args: { branch_id: br_1 } }
+    expect: { decision: deny, rule: branch-deletes-never-run, reason_contains: "loses its data" }
+  - name: resetting a branch never runs
+    input: { tool: supabase.reset_branch, args: { branch_id: br_1 } }
+    expect: { decision: deny, rule: branch-deletes-never-run }
+  - name: creating a branch waits for a person
+    input: { tool: supabase.create_branch, args: { name: feature-x } }
+    expect: { decision: require_approval, rule: branch-changes-need-approval, approval: { required: 1, approvers: [role:admin] } }
+  - name: merging a branch waits for a person
+    input: { tool: supabase.merge_branch, args: { branch_id: br_1 } }
+    expect: { decision: require_approval, rule: branch-changes-need-approval }
+
+  # Writes that wait
+  - name: running SQL waits for a person
+    input: { tool: supabase.execute_sql, args: { query: "UPDATE public.orders SET status = 'shipped' WHERE id = 42" } }
+    expect: { decision: require_approval, rule: sql-needs-approval, reason_contains: "SQL from an agent", notify: [slack] }
+  - name: even a read through execute_sql waits, because the tool can write
+    input: { tool: supabase.execute_sql, args: { query: "SELECT 1" } }
+    expect: { decision: require_approval, rule: sql-needs-approval }
+  - name: applying a migration waits for a person
+    input: { tool: supabase.apply_migration, args: { name: add_index, query: "CREATE INDEX ON public.orders (status)" } }
+    expect: { decision: require_approval, rule: migrations-need-approval }
+  - name: deploying an Edge Function waits for a person
+    input: { tool: supabase.deploy_edge_function, args: { name: hello } }
+    expect: { decision: require_approval, rule: deploys-and-secrets-need-approval }
+  - name: setting a secret waits for a person
+    input: { tool: supabase.create_edge_function_secret, args: { name: API_TOKEN } }
+    expect: { decision: require_approval, rule: deploys-and-secrets-need-approval }
+  - name: changing storage settings waits for a person
+    input: { tool: supabase.update_storage_config, args: {} }
+    expect: { decision: require_approval, rule: deploys-and-secrets-need-approval }
+
+  # Anything else
+  - name: a tool this pack doesn't name is refused
+    input: { tool: supabase.drop_everything, args: {} }
+    expect: { decision: deny, reason_contains: "No rule allows this Supabase tool" }
+  - name: another connector's tool is refused
+    input: { tool: postgres.execute, sql: "DELETE FROM public.orders" }
+    expect: { decision: deny }

@@ -1,10 +1,8 @@
 ---
 title: Scan every pull request
 description: Get one comment on each pull request that changes agent config, in your own repos only, with a workflow that never gives fork code a write token.
-lastVerified: "2026-10-05"
-draft: true
+lastVerified: "2026-10-12"
 owner: S47
-claims: [C-092, C-093]
 ---
 
 import Limits from '../../../components/Limits.astro';
@@ -14,29 +12,17 @@ Get one comment on each pull request that changes agent config, in your own repo
 **Before you start**
 
 - A GitHub repository you own or administer.
-- On a private repo, a Pro licence in the secret `DEEDGLASS_LICENCE`. Public repos need nothing.
+- On a private repository, comments need a Pro licence in the secret `DEEDGLASS_LICENCE`. The scan and the job summary are free everywhere; public repositories need nothing.
 
 ## Why two workflows
 
-A pull request from a fork must never get a write token next to its own code. So the scan runs with read-only rights and saves its report as an artifact, and a second workflow, started by the first one finishing, posts the comment. The second workflow never checks out the pull request's code. `pull_request_target` is never used: it runs with a write token in the base repository's context, which is how fork code gets one.
+A pull request from a fork must never get a write token next to its own code. So the scan runs on `pull_request` with a read-only token and saves its result as an artifact, and a second workflow, started when the first one finishes, posts the comment. The second workflow never checks out the pull request's code, and neither workflow uses `pull_request_target`.
 
 ## 1. The scan
 
-```yaml workflow title=".github/workflows/scan.yml"
-name: deedglass scan
-on:
-  pull_request:
-    paths:
-      - ".mcp.json"
-      - ".cursor/mcp.json"
-      - ".vscode/mcp.json"
-      - "**/claude_desktop_config.json"
-      - "**/mcp_config.json"
-      - "package.json"
-      - "pyproject.toml"
-      - "requirements*.txt"
-      - "deedglass.yaml"
-      - "policies/**"
+```yaml workflow title=".github/workflows/deedglass-scan.yml"
+name: Deedglass scan
+on: [pull_request]
 permissions:
   contents: read
 jobs:
@@ -45,60 +31,47 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@<full-commit-sha> # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          fetch-depth: 0
           persist-credentials: false
       - uses: deedglass/scan-action@<full-commit-sha> # v1
         with:
-          licence: ${{ secrets.DEEDGLASS_LICENCE }} # private repos only; leave out on public repos
-      - name: Save the PR number for the comment workflow
-        env:
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-        run: echo "$PR_NUMBER" > deedglass-scan/pr_number
-      - uses: actions/upload-artifact@<full-commit-sha> # v4
-        with:
-          name: deedglass-scan
-          path: deedglass-scan/
-          retention-days: 7
+          licence: ${{ secrets.DEEDGLASS_LICENCE }} # only needed for comments on private repos
 ```
+
+The action scans the pull request's head and its base, writes the grade and its deductions to the job summary, uploads SARIF where the token allows, and uploads `result.json` as an artifact kept for 3 days. Inputs: `fail-under` (fail the job below a grade, A to D), `sarif` (`auto`, `always` or `never`), `dir` and `version`. It runs only a `deedglass` binary whose sha256 is committed in the action's repository, and it refuses Windows runners.
 
 ## 2. The comment
 
-```yaml workflow title=".github/workflows/comment.yml"
-name: deedglass comment
-on: # zizmor: ignore[dangerous-triggers] this job never checks out or runs the pull request's code; it reads the artifact as data
-  workflow_run:
-    workflows: ["deedglass scan"]
+```yaml workflow title=".github/workflows/deedglass-comment.yml"
+name: Deedglass comment
+on:
+  workflow_run: # zizmor: ignore[dangerous-triggers] never checks out PR code; the artifact is validated
+    workflows: ["Deedglass scan"]
     types: [completed]
 permissions: {}
 jobs:
   comment:
-    if: github.event.workflow_run.event == 'pull_request' && github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     permissions:
-      actions: read          # download the artifact from the scan run
-      pull-requests: write   # one sticky comment, edited in place
+      pull-requests: write
+      actions: read
     steps:
-      # No actions/checkout here: this workflow never runs the PR's code.
-      - uses: actions/download-artifact@<full-commit-sha> # v4
-        with:
-          name: deedglass-scan
-          path: deedglass-scan/
-          run-id: ${{ github.event.workflow_run.id }}
-          github-token: ${{ github.token }}
       - uses: deedglass/scan-action/comment@<full-commit-sha> # v1
-        with:
-          report: deedglass-scan/
 ```
+
+Pin both actions to a full commit sha in your repository; the tag goes in the comment.
 
 ## What the comment step trusts
 
-Nothing from the artifact is run. That is why the `on:` line tells zizmor, the workflow auditor, that this `workflow_run` trigger was reviewed: the job has no checkout and treats everything it downloads as data. It accepts a `pr_number` only when it matches `^[0-9]+$` and appears in `github.event.workflow_run.pull_requests`, and it renders the report as text. The comment is one sticky comment marked `<!-- deedglass-scan -->`, edited on each push. The SARIF file stays in the artifact.
+Nothing from the artifact is run. That is why the `on:` line tells zizmor, the workflow auditor, that this `workflow_run` trigger was reviewed. The job reads `result.json` as data: at most 256 KiB, known keys only, typed fields, ids checked by pattern and strings escaped. The pull request number and the changed files come from GitHub's API, never from the artifact. It comments only when the pull request changes agent config: `.mcp.json`, `.cursor/mcp.json`, `.vscode/mcp.json`, `**/claude_desktop_config.json`, `**/mcp_config.json`, `package.json`, `pyproject.toml`, `requirements*.txt`, `deedglass.yaml` or `policies/**`. The comment is one sticky comment marked `<!-- deedglass-scan -->`, edited on each push, with a link to how the grade is worked out.
 
 ## What it doesn't do
 
 <Limits>
-- It comments only in repos where you installed it, only when agent config or policy files change, and it never comments on anyone else's repo.
-- It doesn't block a merge unless you make the scan job a required check.
-- It never uses `pull_request_target`.
+- It comments only in the repository where you installed it, only when agent config or policy files change, and never in anyone else's repository.
+- It doesn't block a merge unless you set `fail-under` and make the scan a required check.
+- It never uses `pull_request_target`, and it sends no telemetry or scan data anywhere.
+- A forged result could get a private repository one comment without a licence; that is a known, accepted risk.
 </Limits>

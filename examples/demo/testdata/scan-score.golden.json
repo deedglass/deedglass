@@ -1,0 +1,46 @@
+{
+  "grade": "C",
+  "points": 72,
+  "deductions": [
+    {
+      "id": "medium_finding",
+      "points": 8,
+      "subject": "security_definer_executable",
+      "detail": "The role can run SECURITY DEFINER functions"
+    },
+    {
+      "id": "unchecked_write_path",
+      "points": 4,
+      "subject": "public.customers",
+      "detail": "INSERT, UPDATE, DELETE, TRUNCATE · not shown to be routed"
+    },
+    {
+      "id": "unchecked_write_path",
+      "points": 4,
+      "subject": "public.order_items",
+      "detail": "INSERT, UPDATE, DELETE, TRUNCATE · not shown to be routed"
+    },
+    {
+      "id": "unchecked_write_path",
+      "points": 4,
+      "subject": "public.orders",
+      "detail": "INSERT, UPDATE, DELETE, TRUNCATE · trigger orders_ship_open_batch · not shown to be routed"
+    },
+    {
+      "id": "unchecked_write_path",
+      "points": 4,
+      "subject": "public.products",
+      "detail": "INSERT, UPDATE, DELETE, TRUNCATE · not shown to be routed"
+    },
+    {
+      "id": "unchecked_write_path",
+      "points": 4,
+      "subject": "public.refunds",
+      "detail": "INSERT, UPDATE, DELETE, TRUNCATE · not shown to be routed"
+    }
+  ],
+  "formula_version": 1,
+  "unchecked_write_paths": 5,
+  "database_checked": true,
+  "fix_first": "The role can run SECURITY DEFINER functions"
+}

@@ -175,6 +175,15 @@ var commands = []*Command{
 		Usage: `<name|pol_…> --version <n> [--from 7d] [--to now] [--baseline recorded|vN] [--wait] [--quiet] [--json]`, Run: runPolicyReplay, RawArgs: true},
 	{Path: p("policy", "diff"), Group: Policies, Summary: "Compare two policy versions",
 		Usage: "<old.yaml> <new.yaml> | <policy> <vA> <vB> [--context 3] [--json]", Run: runPolicyDiff, RawArgs: true},
+	{Path: p("policy", "install"), Group: Policies, Summary: "Install a policy pack as files",
+		Usage: "<pack>[@version] [--dir policies] [--from <dir|tar.gz>] [--latest] [--yes] [--json]", Run: runPolicyInstall, RawArgs: true,
+		Detail: "Checks the pack against its signed index, compiles it, runs its cases, then shows the files and the diff and asks\n[y/N] before writing <dir>/<pack>.yaml and <pack>.cases.yaml. It never pushes or activates. By default it reads the copy\nbuilt into deedglass (offline); --from reads a local copy; --latest downloads the newest release over HTTPS.\nPro packs need a Pro licence; an installed pack keeps enforcing if the licence lapses."},
+	{Path: p("policy", "packs", "list"), Group: Policies, Summary: "List the policy packs",
+		Usage: "[--from <dir|tar.gz>] [--latest] [--json]", Run: runPolicyPacksList, RawArgs: true},
+	{Path: p("policy", "packs", "verify"), Group: Policies, Summary: "Check the packs against their signed index",
+		Usage: "[--from <dir|tar.gz>] [--latest] [--json]", Run: runPolicyPacksVerify, RawArgs: true},
+	{Path: p("policy", "packs", "sign"), Group: Policies, Summary: "Sign a policy-packs index",
+		Usage: "--key <pack key file> [--dir .]", Run: runPolicyPacksSign, RawArgs: true, Hidden: true},
 
 	// Actions.
 	{Path: p("act"), Group: Actions, Summary: "Send a test action through Deedglass",
@@ -355,8 +364,10 @@ var lines = []Line{
 	{Name: "org", Group: Agents, Summary: "Create orgs and keys; stop or start all", Subs: subs("create login-link keys stop-all start-all"),
 		Paths: ps("org create", "org login-link", "org keys create", "org keys list", "org keys revoke", "org stop-all", "org start-all")},
 
-	{Name: "policy", Group: Policies, Summary: "Write, test and activate policies", Subs: subs("lint fmt test push activate evaluate replay diff"),
-		Paths: ps("policy lint", "policy fmt", "policy test", "policy push", "policy activate", "policy evaluate", "policy replay", "policy diff")},
+	{Name: "policy", Group: Policies, Summary: "Write, test and activate policies", Subs: subs("lint fmt test push activate evaluate replay diff install"),
+		Paths: ps("policy lint", "policy fmt", "policy test", "policy push", "policy activate", "policy evaluate", "policy replay", "policy diff", "policy install")},
+	{Name: "policy packs", Group: Policies, Summary: "List or check the policy packs", Subs: subs("list verify"),
+		Paths: ps("policy packs list", "policy packs verify")},
 
 	{Name: "act", Group: Actions, Summary: "Send a test action through Deedglass", Paths: ps("act")},
 	{Name: "actions", Group: Actions, Summary: "Inspect actions", Subs: subs("list show cancel"), Paths: ps("actions list", "actions show", "actions cancel")},

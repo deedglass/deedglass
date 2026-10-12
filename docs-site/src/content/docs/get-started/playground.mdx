@@ -1,8 +1,7 @@
 ---
 title: The playground
 description: See an agent say 1 row while 301 changed, block it, and undo it, in your browser.
-lastVerified: "2026-10-05"
-draft: true
+lastVerified: "2026-10-12"
 owner: S47
 ---
 
@@ -12,34 +11,34 @@ See an agent say 1 row while 301 changed, block it, and undo it, in your browser
 
 **Before you start**
 
-- A browser. Nothing to install, no account.
+- A browser with `DecompressionStream` (Safari 16.4 or later, current Chrome, Edge or Firefox). Nothing to install, no account.
 
 ## Open it
 
-Go to `deedglass.com/play`. Everything runs in your browser: Postgres (PGlite) and the policy engine (cel-js) are served from deedglass.com, and the page makes no third-party requests.
+Go to `deedglass.com/play`. Everything runs in the tab: Postgres (PGlite) with the demo's Acme Store schema and trigger, and the rules engine (cel-js). Both are served from deedglass.com, and the page makes no third-party requests.
 
 ## The three scenes
 
-1. **A blocked `DROP`.** The agent sends `DROP TABLE public.orders`. The policy denies it before Postgres sees it, and a deed records the attempt.
-2. **1 row reported, 301 changed.** The agent updates one order. A trigger on the table changes 300 more. The verdict is `L2 · MISMATCH`, with the diff.
-3. **Approve, then Undo.** You countersign the write as a person would, then undo it and watch the table go back.
+1. **A blocked `DROP`.** The agent sends `DROP TABLE public.orders`. The rules refuse it before Postgres sees it: `✕ Blocked by policy "block-destructive-sql"`, and all 500 rows stay as they were.
+2. **1 row reported, 301 changed.** The agent ships order 42 and reports one row. A trigger on the table ships 300 more. The check says `✕ Doesn't match · said 1 row · changed 301` and names the trigger. Press **Undo** and all 301 rows go back: `✓ 301 rows restored`.
+3. **Edit the policy, then approve.** Change the 6-line policy so writes wait for a person and run the scene again. It waits (`◐ Waiting for you to approve`); approve it, then undo it.
 
-## Edit the policy
+## Check the records
 
-A 6-line policy sits beside the scenes. Change a rule and run the scene again; the decision and the deed change with it. Each deed can be checked in the page.
+Every step is sealed as a record in the tab. **Check these deeds** runs the same offline check as `/verify`. Change one byte and the check fails.
 
-The playground compares table snapshots in your browser. The real Witness reads Postgres's own change log.
+**Share this scene** appears after a scene has run. The link holds the scene and your policy in the part after `#`, which never reaches a server.
 
-## Next: open this in your terminal
+## Next: scan your own setup
 
-```sh test=skip reason="the playground ships in S47"
+```sh test=skip reason="scans the folder you run it in"
 npx deedglass scan
 ```
 
 ## What it doesn't do
 
 <Limits>
-- The playground's policy engine is cel-js running compiled policies. The product compiles and runs them in Go.
-- Its verdicts come from comparing snapshots, not from a change log.
+- The playground compares table snapshots in your browser. Deedglass itself reads Postgres's own change log.
+- Its rules engine is cel-js running rules exported from the Go engine; the two agree on all 40 test cases in the parity suite.
 - Nothing you do there reaches a server. Close the tab and it's gone.
 </Limits>

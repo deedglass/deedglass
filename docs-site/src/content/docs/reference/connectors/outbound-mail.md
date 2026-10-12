@@ -54,7 +54,7 @@ loopback page; exactly `gmail.send` and `gmail.readonly`).
 | Tool | Side effect | Gmail call | Notes |
 |---|---|---|---|
 | `mail.send` | write | `POST …/messages/send` | read back (L1); never retried |
-| `mail.get_message` | read | `GET …/messages/{id}?format=raw` | body ≤ 16 KiB; bounce fields from `multipart/report` |
+| `mail.get_message` | read | `GET …/messages/{id}?format=raw` | body ≤ 16 KiB; bounce fields from `multipart/report` (with `original_message_id` from an attached original); the auto-reply `headers` (`auto-submitted`, `x-autoreply`, `x-autorespond`, `precedence`, `x-auto-response-suppress`), `references`, `delivered_to` and Gmail's `history_id` when present |
 | `mail.list_history` | read | `GET …/history` | ≤ 100; a 404 is `history_expired` |
 | `mail.list_messages` | read | `GET …/messages?q=` | ≤ 50; only `in:inbox newer_than:<1..14>d`, `in:sent after:YYYY/MM/DD before:YYYY/MM/DD`, `rfc822msgid:<id>` |
 | `mail.get_thread` | read | `GET …/threads/{id}?format=metadata` | ≤ 20 messages, headers only |

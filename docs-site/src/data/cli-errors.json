@@ -647,6 +647,109 @@
     "messages": null
   },
   {
+    "code": "pack_cases_failed",
+    "exit": [
+      1
+    ],
+    "messages": null,
+    "next": [
+      "Run deedglass policy test on the pack's policy to see which case.",
+      "Fix the pack, then sign again."
+    ]
+  },
+  {
+    "code": "pack_key_unusable",
+    "exit": [
+      1
+    ],
+    "messages": null,
+    "next": [
+      "Make it a regular file with chmod 600, or generate one with deedglass keys gen --purpose packs."
+    ]
+  },
+  {
+    "code": "pack_keys_invalid",
+    "exit": [
+      1
+    ],
+    "messages": null,
+    "next": [
+      "Reinstall deedglass; this build's pack keys can't be read."
+    ]
+  },
+  {
+    "code": "pack_mismatch",
+    "exit": [
+      1
+    ],
+    "messages": [
+      "This copy's index doesn't match its seal. Nothing was written."
+    ]
+  },
+  {
+    "code": "pack_not_found",
+    "exit": [
+      1
+    ],
+    "messages": null,
+    "next": [
+      "deedglass policy packs list"
+    ]
+  },
+  {
+    "code": "pack_target_unsafe",
+    "exit": [
+      1
+    ],
+    "messages": null,
+    "next": [
+      "Move it away, or choose another directory with --dir."
+    ]
+  },
+  {
+    "code": "pack_unreadable",
+    "exit": [
+      1
+    ],
+    "messages": [
+      "This copy has no index.json, so it isn't a policy-packs copy. Nothing was written."
+    ],
+    "next": [
+      "Point --from at the repo's root, or at its release .tar.gz."
+    ]
+  },
+  {
+    "code": "pack_unsigned",
+    "exit": [
+      1
+    ],
+    "messages": [
+      "This copy of the policy packs isn't signed by a key this build knows. Nothing was written."
+    ]
+  },
+  {
+    "code": "pack_write_failed",
+    "exit": [
+      1
+    ],
+    "messages": null,
+    "next": [
+      "Check the directory's permissions, or choose another with --dir."
+    ]
+  },
+  {
+    "code": "packs_unreachable",
+    "exit": [
+      1
+    ],
+    "messages": [
+      "Couldn't download the newest policy packs. Nothing was written."
+    ],
+    "next": [
+      "Try again later, or leave out --latest to use the copy built into deedglass."
+    ]
+  },
+  {
     "code": "pending",
     "exit": [
       2

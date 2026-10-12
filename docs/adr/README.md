@@ -89,3 +89,5 @@ ADR-000 to ADR-008 were written for the V0 verifier and keep their original text
 | 083 | /play runs PGlite and cel-js in the browser, with its own CSP | Proposed (2026-10-11, S47) | `@electric-sql/pglite` 0.5.8, `@marcbachmann/cel-js` 8.0.0, site only (site/src/play); parity 40/40 |
 | 084 | deedglass/scan-action: pull_request + workflow_run, one sticky comment | Proposed (2026-10-11, S47) | separate repo; no npm dependency |
 | 085 | One server object for every install link, listing and registry entry | Proposed (2026-10-11, S47) | `internal/installlinks`; registry name io.github.deedglass/deedglass |
+| 090 | Claude Desktop bundles (.mcpb) built in Go, checked by a pinned mcpb CLI | Proposed (2026-10-12, S47B) | `@anthropic-ai/mcpb` 2.1.2, dev only (deploy/mcpb) |
+| 091 | Policy packs: a signed index, an embedded snapshot, Pro checked at install only | Proposed (2026-10-12, S47B) | `internal/packs`; domain tag `deedglass/packs/v1\n` |

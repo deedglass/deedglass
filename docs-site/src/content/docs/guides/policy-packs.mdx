@@ -1,43 +1,68 @@
 ---
 title: Policy packs
-description: Install a tested set of policies, checked and shown to you before anything is written.
-lastVerified: "2026-10-05"
-draft: true
+description: Install a tested set of policies as files, checked against a signed index and shown to you before anything is written.
+lastVerified: "2026-10-12"
 owner: S47
 ---
 
 import Limits from '../../../components/Limits.astro';
 
-Install a tested set of policies, checked and shown to you before anything is written.
+Install a tested set of policies as files, checked against a signed index and shown to you before anything is written.
 
 **Before you start**
 
-- The `deedglass` CLI. Installing a pack writes a policy file; pushing it needs an org admin key.
+- The `deedglass` CLI. Installing a pack only writes files; pushing the policy to your server needs an org admin key.
 
 ## 1. List the packs
 
-```sh test=skip reason="policy packs ship in S47"
+```sh test=skip reason="writes nothing, but prints the build's own pack list; covered by the CLI tests"
 deedglass policy packs list
 deedglass policy packs verify
 ```
 
-`verify` checks the signature on the pack index against the release key.
+- `postgres-safe` (free): the Postgres connector.
+- `supabase-mcp` (free): Supabase's MCP server, wrapped as the connector `supabase`.
+- `stripe-refunds` (free): the Stripe connector (sandbox).
+- `github-agent` (free): the GitHub connector.
+- `money-movement` (Pro): Stripe refunds, payouts and transfers, with amount caps and two admins for large ones.
+
+`verify` checks every file of every pack against its sha256 in the index and runs each pack's own test cases. Each pack carries at least 12.
 
 ## 2. Install one
 
-```sh test=skip reason="policy packs ship in S47"
+```sh test=skip reason="asks before writing; covered by the CLI tests"
 deedglass policy install postgres-safe
 ```
 
-Install checks the index signature, runs the pack's cases, and shows you the diff before it writes anything. Pin a version with `postgres-safe@<version>`.
+In order, install:
 
-## Free and Pro packs
+1. Reads the packs. By default it uses the copy built into `deedglass`, so it works offline. `--from <dir|.tar.gz>` reads a local copy of the policy-packs repo, and `--latest` downloads the newest release over HTTPS. That is the only time it uses the network.
+2. Checks the index. A copy from outside the binary must be sealed by a pack key this build knows, and then every file must match its sha256. If one doesn't: `✕ This pack doesn't match its signed index (postgres-safe.yaml). Nothing was written.`
+3. Checks the tier. A Pro pack asks for a Pro licence; without one it prints `Pro packs need a Pro licence: deedglass.com/pro. Nothing was written.` Free packs never open the licence file.
+4. Compiles the policy and runs its cases. A failure writes nothing.
+5. Shows the plan: each file, new or changed, with a diff for changes. Then it asks `Write 2 files? [y/N]`. Pass `--yes` to skip the question.
+6. Writes `policies/<pack>.yaml` and `policies/<pack>.cases.yaml` (`--dir` changes the folder) and prints the next step.
 
-Free: `postgres-safe`, `supabase-mcp`, `stripe-refunds`, `github-agent`. Pro packs carry `tier: pro` (money movement, multi-tenant SaaS, agency handover). A Pro pack without a licence prints where to get one and writes nothing.
+Pin a version with `postgres-safe@1.0.0`. Running install again on unchanged files writes nothing.
+
+## 3. Push it in shadow first
+
+```sh test=skip reason="needs a server and an admin key"
+deedglass policy test policies/postgres-safe.yaml
+deedglass policy push policies/postgres-safe.yaml
+deedglass policy activate postgres-safe --version 1 --mode shadow --reason "trying the pack"
+```
+
+Compare it with what you run today using `deedglass policy replay`, then activate it with `--mode enforce`.
+
+## Pro packs and your licence
+
+A Pro licence is checked only when you install a Pro pack. A policy you installed keeps enforcing if the licence ends, because rules never read the licence.
 
 ## What it doesn't do
 
 <Limits>
-- A pack is a starting point. Read its cases before you enforce it.
-- It never activates a policy. You push and activate it, in shadow first.
+- A pack is a starting point, not a review of your setup. Read its cases before you enforce it.
+- It never pushes or activates a policy. You do that, in shadow first.
+- Until the pack signing key is published, only the copy built into `deedglass` installs; `--from` and `--latest` refuse an index they can't check.
 </Limits>

@@ -301,16 +301,7 @@ func scanFull(ctx context.Context, e *Env, r *scan.Report, outDir string, noSeal
 	}
 	d := m.Require(ctx, licence.FeatureScanFull)
 	if !d.Allowed {
-		switch {
-		case errors.Is(d.Err, licence.ErrKeyInactive), errors.Is(d.Err, licence.ErrSignature), errors.Is(d.Err, licence.ErrMode):
-			return licenceErr(d.Err, time.Time{})
-		case d.Err == nil && d.Local.State.Expired:
-			return &ExitError{Code: ExitFailure, ErrCode: "licence_ended", Plain: true,
-				Err: fmt.Errorf("Your %s plan ended on %s. Everything free still works", planName(d.Local.Token.Plan), licDate(d.Local.State.PeriodEnd)), Next: "Pro: " + licProURL}
-		case d.Local.Token.ID != "" && !d.Local.State.Active && !errors.Is(d.Err, licence.ErrFeature):
-			return &ExitError{Code: ExitFailure, ErrCode: "licence_paused", Plain: true, Err: errors.New(strings.TrimSuffix(pausedLine(d.Local.State.DaysSince), "."))}
-		}
-		return &ExitError{Code: ExitFailure, ErrCode: "pro_required", Plain: true, Err: errors.New(strings.TrimSuffix(licFullNeedsPro, "."))}
+		return proRefusal(d, licFullNeedsPro, "")
 	}
 	raw, err := json.Marshal(r)
 	if err != nil {
@@ -366,6 +357,46 @@ func scanFull(ctx context.Context, e *Env, r *scan.Report, outDir string, noSeal
 		fmt.Fprintln(e.Stdout, l)
 	}
 	_ = res
+	return nil
+}
+
+// proRefusal is the line a person reads when a Pro feature can't run: an ended, paused or broken
+// licence says so; otherwise needsPro. tail is added to each sentence (" Nothing was written.").
+func proRefusal(d licence.Decision, needsPro, tail string) error {
+	var e *ExitError
+	switch {
+	case errors.Is(d.Err, licence.ErrKeyInactive), errors.Is(d.Err, licence.ErrSignature), errors.Is(d.Err, licence.ErrMode):
+		return licenceErr(d.Err, time.Time{})
+	case d.Err == nil && d.Local.State.Expired:
+		e = &ExitError{Code: ExitFailure, ErrCode: "licence_ended", Plain: true,
+			Err: fmt.Errorf("Your %s plan ended on %s. Everything free still works", planName(d.Local.Token.Plan), licDate(d.Local.State.PeriodEnd)), Next: "Pro: " + licProURL}
+	case d.Local.Token.ID != "" && !d.Local.State.Active && !errors.Is(d.Err, licence.ErrFeature):
+		e = &ExitError{Code: ExitFailure, ErrCode: "licence_paused", Plain: true, Err: errors.New(strings.TrimSuffix(pausedLine(d.Local.State.DaysSince), "."))}
+	default:
+		e = &ExitError{Code: ExitFailure, ErrCode: "pro_required", Plain: true, Err: errors.New(strings.TrimSuffix(needsPro, "."))}
+	}
+	if tail != "" {
+		e.Err = fmt.Errorf("%s.%s", e.Err.Error(), strings.TrimSuffix(tail, "."))
+	}
+	return e
+}
+
+// --- policy install: Pro packs (S47 §3.8) ---
+
+// licPacksNeedPro is the refusal for a Pro pack without the feature.
+const licPacksNeedPro = "Pro packs need a Pro licence: " + licProURL + "."
+
+// packsProCheck answers whether this machine may install a Pro pack. It is called only for a pack
+// whose tier is pro, so free packs never open the licence. An installed pack never asks again:
+// enforcement never reads the licence.
+func packsProCheck(ctx context.Context, e *Env) error {
+	m, err := licenceManager(e)
+	if err != nil {
+		return err
+	}
+	if d := m.Require(ctx, licence.FeaturePacksPro); !d.Allowed {
+		return proRefusal(d, licPacksNeedPro, " Nothing was written.")
+	}
 	return nil
 }
 
@@ -425,5 +456,5 @@ func runKeysGenLicence(e *Env, flagDir string) error {
 var keysGenPurpose string
 
 func keysGenPurposeFlag(fs *flag.FlagSet) {
-	fs.StringVar(&keysGenPurpose, "purpose", "seal", "seal (a deed seal key) or licence (an lk_ key that signs licence tokens, never deeds)")
+	fs.StringVar(&keysGenPurpose, "purpose", "seal", "seal (a deed seal key), licence (an lk_ key that signs licence tokens, never deeds) or packs (the key that signs the policy-packs index)")
 }

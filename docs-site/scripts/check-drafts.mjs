@@ -9,7 +9,7 @@ const cli = JSON.parse(readFileSync(join(site, 'src/data/cli.json'), 'utf8'));
 const built = new Set();
 const unbuilt = new Set();
 for (const g of cli.groups) for (const c of g.commands) (c.built ? built : unbuilt).add(c.path.join(' '));
-const planned = ['licence', 'policy packs', 'policy install', 'mcp install-links', 'deeds share'];
+const planned = ['licence']; // S47B built policy packs, policy install, mcp install-links and deeds share
 export function draftProblems(list) {
 const fails = [];
 const owners = {};

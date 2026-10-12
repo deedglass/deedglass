@@ -90,8 +90,10 @@ func runKeysGen(_ context.Context, e *Env, args []string) error {
 	case "seal", "":
 	case "licence":
 		return runKeysGenLicence(e, keysFlagValues.dir)
+	case "packs":
+		return runKeysGenPacks(e, keysFlagValues.dir)
 	default:
-		return usageErr(fmt.Errorf("--purpose takes seal or licence (got %q)", clean(keysGenPurpose)), "For a licence signing key: deedglass keys gen --purpose licence.")
+		return usageErr(fmt.Errorf("--purpose takes seal, licence or packs (got %q)", clean(keysGenPurpose)), "For a licence signing key: deedglass keys gen --purpose licence.")
 	}
 	shown, dir := keyDir(e, keysFlagValues.dir, "")
 	path, kf, err := writeNewKey(dir, shown)

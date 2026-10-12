@@ -1,7 +1,7 @@
 {
   "object": "attack_page",
-  "day": "2026-10-11",
-  "commit": "f01823f+uncommitted",
+  "day": "2026-10-12",
+  "commit": "ecfcaba+uncommitted",
   "postgres": "18.6",
   "summary": {
     "matched": 68,

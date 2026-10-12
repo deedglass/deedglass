@@ -1,0 +1,9 @@
+{
+  "name": "deedglass-mcpb-tools",
+  "private": true,
+  "description": "Pinned dev tool for checking the Claude Desktop bundles (scripts/mcpb.sh). Nothing here ships.",
+  "license": "Apache-2.0",
+  "devDependencies": {
+    "@anthropic-ai/mcpb": "2.1.2"
+  }
+}

@@ -1,0 +1,7 @@
+id: pck_01m4ppb8d5fkph9mevbjc6cv8f
+name: github-agent
+version: 1.0.0
+tier: free
+summary: Reads, issues and feature branches run. Protected branches wait for a human. Merges never run.
+for: the GitHub connector
+source_starter: github-read-mostly

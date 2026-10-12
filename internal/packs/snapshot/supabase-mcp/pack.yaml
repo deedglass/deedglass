@@ -1,0 +1,7 @@
+id: pck_01m4ppb8d5fkph9mevbjc6cv8g
+name: supabase-mcp
+version: 1.0.0
+tier: free
+summary: Reads run. SQL, migrations, deploys, secrets and branch changes wait for a human. Project changes and branch deletes never run.
+for: Supabase's MCP server, wrapped as connector supabase
+source_starter: 

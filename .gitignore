@@ -62,3 +62,4 @@ npm/cli-*/deedglass
 npm/cli-*/deedglass.exe
 /completions/
 /dist/
+deploy/mcpb/node_modules/

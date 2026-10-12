@@ -22,7 +22,8 @@ exit 0
   agent intent        Manage an agent's signed-intent keys           [2m    [0m   [2mkeygen · add · list · remove · mode[0m
   org                 Create orgs and keys; stop or start all        [2m    [0m   [2mcreate · login-link · keys · stop-all · start-all[0m
 [1mPolicies[0m
-  policy              Write, test and activate policies              [2m    [0m   [2mlint · fmt · test · push · activate · evaluate · replay · diff[0m
+  policy              Write, test and activate policies              [2m    [0m   [2mlint · fmt · test · push · activate · evaluate · replay · diff · install[0m
+  policy packs        List or check the policy packs                 [2m    [0m   [2mlist · verify[0m
 [1mActions[0m
   act                 Send a test action through Deedglass
   actions             Inspect actions                                [2m    [0m   [2mlist · show · cancel[0m

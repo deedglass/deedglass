@@ -1,0 +1,7 @@
+id: pck_01m4ppb8d5fkph9mevbjc6cv8h
+name: money-movement
+version: 1.0.0
+tier: pro
+summary: Small refunds run. Larger refunds need one or two admins. Payouts and transfers always need two admins and have a hard cap.
+for: Stripe refunds, payouts and transfers
+source_starter: stripe-refunds

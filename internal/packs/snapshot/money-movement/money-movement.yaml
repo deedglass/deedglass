@@ -1,0 +1,107 @@
+# money-movement · a Deedglass Pro policy pack
+#
+# For agents that refund customers or send money out (payouts and transfers).
+# Refunds are read from Stripe before the decision (request.stripe), the same
+# way the stripe-refunds starter does. Payouts and transfers are judged on
+# their own arguments: a whole-number amount in minor units and a currency.
+#
+#   Refunds up to $50.00 run. Up to $1,000.00, one admin approves. Larger
+#   refunds need two admins (four eyes). Refunds over what is left on the
+#   charge, in other currencies, on disputed charges, or on charges Deedglass
+#   couldn't read never run on their own.
+#   Every payout and transfer needs two admins. Over $10,000.00 they never run
+#   from an agent. All agents together can refund at most $2,000.00 a day.
+#
+# A pack you installed keeps enforcing if your licence lapses: rules never read
+# the licence. To adapt it, change the amounts in the rule names below. Then
+# check your change:
+#   deedglass policy test policies/money-movement.yaml
+deedglass: policy/v1
+name: money-movement
+description: Small refunds run. Larger refunds need one or two admins. Payouts and transfers always need two admins and have a hard cap.
+
+defaults:
+  decision: deny
+  reason: No rule allows this action. Add a rule in Console › Policies to allow it.
+  verify: L0
+
+budgets:
+  - id: refunds-per-day
+    description: At most $2,000.00 of USD refunds a day, across every agent in the org.
+    match: { tool: stripe.create_refund }
+    per: org
+    window: day
+    max_spend: "2000.00 usd"
+    measure: 'request.stripe.enriched && request.stripe.currency == "usd" && has(args.amount) && type(args.amount) == int ? args.amount : 0'
+
+rules:   # order matters
+  - id: stripe-reads
+    match: { tool: ["stripe.get_*", "stripe.list_*"] }
+    decision: allow
+  - id: amounts-are-whole-minor-units
+    description: A refund, payout or transfer without a whole, positive amount in minor units is refused.
+    match: { tool: [stripe.create_refund, stripe.create_payout, stripe.create_transfer] }
+    when: '!has(args.amount) || type(args.amount) != int || args.amount <= 0'
+    decision: deny
+    reason: Money movements need an explicit amount in minor units, like 2000 for $20.00.
+  - id: payouts-over-cap-never-run
+    match: { tool: [stripe.create_payout, stripe.create_transfer] }
+    when: '!has(args.currency) || args.currency != "usd" || args.amount > minor("10000.00 usd")'
+    decision: deny
+    reason: Payouts and transfers over $10,000.00, or not in USD, never run from an agent. Send them from the Stripe Dashboard.
+    notify: [slack]
+  - id: payouts-need-two
+    description: Four eyes on every payout and transfer.
+    match: { tool: [stripe.create_payout, stripe.create_transfer] }
+    decision: require_approval
+    reason: Payouts and transfers need two admins. Two admins can approve in Console › Approvals.
+    approval: { approvers: [role:admin], required: 2, expires_in: 4h }
+    notify: [slack]
+    verify: L1
+  - id: refunds-need-context
+    match: { tool: stripe.create_refund }
+    when: '!request.stripe.enriched'
+    decision: require_approval
+    reason: Deedglass couldn't read the charge, so a person checks this refund.
+    approval: { approvers: [role:admin], required: 1, expires_in: 2h }
+    notify: [slack]
+    verify: L1
+  - id: refund-within-charge
+    match: { tool: stripe.create_refund }
+    when: args.amount > request.stripe.refundable
+    decision: deny
+    reason: This refund is larger than what is left to refund on the charge.
+  - id: disputed-or-foreign-refunds-need-approval
+    match: { tool: stripe.create_refund }
+    when: request.stripe.disputed || request.stripe.currency != "usd"
+    decision: require_approval
+    reason: Refunds on disputed charges or in other currencies wait for a human. An admin can approve in Console › Approvals.
+    approval: { approvers: [role:admin], required: 1, expires_in: 2h }
+    notify: [slack]
+    verify: L1
+  - id: small-refunds
+    match: { tool: stripe.create_refund }
+    when: args.amount <= minor("50.00 usd")
+    decision: allow
+    verify: L1
+  - id: medium-refunds-need-one
+    match: { tool: stripe.create_refund }
+    when: args.amount <= minor("1000.00 usd")
+    decision: require_approval
+    reason: Refunds over $50.00 wait for a human. An admin can approve in Console › Approvals.
+    approval: { approvers: [role:admin], required: 1, expires_in: 2h }
+    notify: [slack]
+    verify: L1
+  - id: large-refunds-need-two
+    description: Four eyes on refunds over $1,000.00.
+    match: { tool: stripe.create_refund }
+    decision: require_approval
+    reason: Refunds over $1,000.00 need two admins. Two admins can approve in Console › Approvals.
+    approval: { approvers: [role:admin], required: 2, expires_in: 4h }
+    notify: [slack]
+    verify: L1
+  - id: block-other-destructive
+    match: { side_effect: destructive }
+    decision: deny
+    reason: Deletes stay with people. Make this change in the Stripe Dashboard.
+    notify: [slack]

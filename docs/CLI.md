@@ -210,6 +210,10 @@ builds it. Hidden commands work but aren't in `deedglass help`.
 | `deedglass policy evaluate --policy <file> | --server [--policy <name> --version <n>] --tool <name> [--sql …] [--args <json>] [--input <file>] [--agent …] [--label k=v] [--user …] [--time …] [--tz …] [--usage k=v] [--explain] [--json]` | Policies | Evaluate one action against a policy | built |
 | `deedglass policy replay <name|pol_…> --version <n> [--from 7d] [--to now] [--baseline recorded|vN] [--wait] [--quiet] [--json]` | Policies | Replay past actions against a version | built |
 | `deedglass policy diff <old.yaml> <new.yaml> | <policy> <vA> <vB> [--context 3] [--json]` | Policies | Compare two policy versions | built |
+| `deedglass policy install <pack>[@version] [--dir policies] [--from <dir|tar.gz>] [--latest] [--yes] [--json]` | Policies | Install a policy pack as files | built |
+| `deedglass policy packs list [--from <dir|tar.gz>] [--latest] [--json]` | Policies | List the policy packs | built |
+| `deedglass policy packs verify [--from <dir|tar.gz>] [--latest] [--json]` | Policies | Check the packs against their signed index | built |
+| `deedglass policy packs sign --key <pack key file> [--dir .]` | Policies | Sign a policy-packs index | built, hidden |
 | `deedglass act <tool> [--args '{"k":"v"}'] [--mode gateway|proxy] [--wait 60s] [--idempotency-key K] [--json]` | Actions | Send a test action through Deedglass | built |
 | `deedglass actions list [--agent agt_…] [--tool stripe.*] [--state …] [--decision …] [--verdict MISMATCH] [--level L2] [--since 1h] [--q text] [--limit 25] [--cursor …] [--json] [--follow] [--connector orders]` | Actions | List actions | built |
 | `deedglass actions show <act_…> [--wait] [--diff] [--json]` | Actions | Show one action, its events and its Proven diff | built |

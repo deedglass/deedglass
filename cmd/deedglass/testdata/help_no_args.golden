@@ -22,7 +22,8 @@ Agents
   agent intent        Manage an agent's signed-intent keys                  keygen · add · list · remove · mode
   org                 Create orgs and keys; stop or start all               create · login-link · keys · stop-all · start-all
 Policies
-  policy              Write, test and activate policies                     lint · fmt · test · push · activate · evaluate · replay · diff
+  policy              Write, test and activate policies                     lint · fmt · test · push · activate · evaluate · replay · diff · install
+  policy packs        List or check the policy packs                        list · verify
 Actions
   act                 Send a test action through Deedglass
   actions             Inspect actions                                       list · show · cancel

@@ -1,0 +1,79 @@
+# supabase-mcp · a Deedglass policy pack
+#
+# For Supabase's MCP server (@supabase/mcp-server-supabase), wrapped with
+#   deedglass mcp wrap --connector supabase -- npx -y @supabase/mcp-server-supabase ...
+# so its tools reach these rules as supabase.<tool>. Tool names are the ones
+# listed at supabase.com/mcp (checked 2026-10-12).
+#
+# Reads, docs search, logs, advisors and type generation run freely. Running
+# SQL, applying a migration, deploying an Edge Function, setting a secret,
+# creating, merging or rebasing a branch and changing storage settings wait for
+# a human. Deleting or resetting a branch, and creating, pausing or restoring a
+# project, never run: those stay in the Supabase dashboard. Any tool this pack
+# doesn't name is refused.
+#
+# Supabase also offers read_only=true on its server. Use both: read-only mode
+# limits what the server can do, and this pack records and gates each call.
+# To adapt it, move a tool between rules. Then check your change:
+#   deedglass policy test policies/supabase-mcp.yaml
+deedglass: policy/v1
+name: supabase-mcp
+description: Reads run. SQL, migrations, deploys, secrets and branch changes wait for a human. Project changes and branch deletes never run.
+
+defaults:
+  decision: deny
+  reason: No rule allows this Supabase tool. Add a rule in Console › Policies to allow it.
+  verify: L0
+
+rules:   # order matters
+  - id: supabase-reads
+    description: Listing, reading, docs search, logs, advisors and generated types.
+    match:
+      tool:
+        - "supabase.list_*"
+        - "supabase.get_*"
+        - supabase.search_docs
+        - supabase.query_logs
+        - supabase.generate_typescript_types
+    decision: allow
+  - id: project-changes-stay-with-people
+    description: Creating, pausing or restoring a project, and confirming its cost, change billing and uptime.
+    match: { tool: [supabase.create_project, supabase.pause_project, supabase.restore_project, supabase.confirm_cost] }
+    decision: deny
+    reason: Project changes stay with people. Make this change in the Supabase dashboard.
+    notify: [slack]
+  - id: branch-deletes-never-run
+    description: Deleting or resetting a branch throws away its data.
+    match: { tool: [supabase.delete_branch, supabase.reset_branch] }
+    decision: deny
+    reason: Deleting or resetting a branch loses its data, so agents never do it. Use the Supabase dashboard.
+    notify: [slack]
+  - id: sql-needs-approval
+    description: execute_sql can write as well as read, so a person sees each statement first.
+    match: { tool: supabase.execute_sql }
+    decision: require_approval
+    reason: SQL from an agent waits for a human. An admin can approve in Console › Approvals.
+    approval: { approvers: [role:admin], required: 1, expires_in: 1h }
+    notify: [slack]
+    verify: L0
+  - id: migrations-need-approval
+    match: { tool: supabase.apply_migration }
+    decision: require_approval
+    reason: Migrations change the schema, so a human approves each one. An admin can approve in Console › Approvals.
+    approval: { approvers: [role:admin], required: 1, expires_in: 2h }
+    notify: [slack]
+    verify: L0
+  - id: deploys-and-secrets-need-approval
+    match: { tool: [supabase.deploy_edge_function, supabase.create_edge_function_secret, supabase.update_storage_config] }
+    decision: require_approval
+    reason: Deploys, secrets and storage settings wait for a human. An admin can approve in Console › Approvals.
+    approval: { approvers: [role:admin], required: 1, expires_in: 2h }
+    notify: [slack]
+    verify: L0
+  - id: branch-changes-need-approval
+    description: Branches cost money on paid plans, and merging or rebasing changes the main schema.
+    match: { tool: [supabase.create_branch, supabase.merge_branch, supabase.rebase_branch] }
+    decision: require_approval
+    reason: Branch changes wait for a human. An admin can approve in Console › Approvals.
+    approval: { approvers: [role:admin], required: 1, expires_in: 2h }
+    verify: L0

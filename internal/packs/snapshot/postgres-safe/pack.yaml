@@ -1,0 +1,7 @@
+id: pck_01m4ppb8d5fkph9mevbjc6cv8d
+name: postgres-safe
+version: 1.0.0
+tier: free
+summary: Reads run freely. Writes wait for a human. Schema changes never run.
+for: the Postgres connector (postgres.query, postgres.execute)
+source_starter: postgres-safe

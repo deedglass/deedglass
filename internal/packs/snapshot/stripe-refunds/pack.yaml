@@ -1,0 +1,7 @@
+id: pck_01m4ppb8d5fkph9mevbjc6cv8e
+name: stripe-refunds
+version: 1.0.0
+tier: free
+summary: Small refunds run. Large, foreign-currency, disputed and unchecked refunds and cancellations wait for a human. Deletes never run.
+for: the Stripe connector (sandbox)
+source_starter: stripe-refunds

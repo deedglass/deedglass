@@ -55,7 +55,7 @@ for (const [rel, , s] of pages) {
   else if (content && total > 60 * 1024) fails.push(`js: content page ${rel} loads ${Math.round(total / 1024)} KB of JS (limit 60 KB)`);
 }
 
-const drafts = ['/get-started/install/', '/get-started/playground/', '/guides/scan-every-pull-request/', '/guides/policy-packs/', '/reference/pro-and-licences/'];
+const drafts = ['/reference/pro-and-licences/']; // S47B published the four S47 pages
 for (const d of drafts) if (ids.has(d)) fails.push(`drafts: ${d} is in dist`);
 
 if (fails.length) {

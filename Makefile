@@ -8,7 +8,7 @@ DATE     := $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
 BI       := github.com/deedglass/deedglass/internal/buildinfo
 LDFLAGS  := -s -w -X $(BI).Version=$(VERSION) -X $(BI).Commit=$(COMMIT) -X $(BI).Modified=$(MODIFIED) -X $(BI).Date=$(DATE)
 
-.PHONY: docs docs-dev docs-check docs-snippets docs-lighthouse py-ci py-build py-examples web-install web-tokens web-build web-test web-e2e web-lighthouse web-dev build-only ops-build bench-undo all help ci build test test-short vet fmt fmt-check tidy-check testdata-check rename-guard banned-words nocgo \
+.PHONY: mcpb demo-scan-golden packs-check docs docs-dev docs-check docs-snippets docs-lighthouse py-ci py-build py-examples web-install web-tokens web-build web-test web-e2e web-lighthouse web-dev build-only ops-build bench-undo all help ci build test test-short vet fmt fmt-check tidy-check testdata-check rename-guard banned-words nocgo \
 	integration matrix fuzz bench workflows-check release-check cloud-smoke bench-micro bench-quick bench-soak bench-check bench-report bench-store bench-deed cover clean \
 	dev dev-down dev-reset dev-logs run docker bench-http bench-verify \
 	web-verify-install web-verify-test sdk-ts sdk-ts-it sdk-sync-verify sdk-runtime sdk-examples web-verify-build web-verify-serve gencopy genmark bench-mark bench-ledger bench-stop bench-intents bench-gate bench-witness policy-test \
@@ -148,6 +148,12 @@ listings-check: ## (ci) S47: every listing kit (Claude Code plugin, Cursor, Supa
 	node scripts/check-listings.mjs
 	go run ./internal/installlinks/cmd/geninstall -check
 	go run ./cmd/playgen -check
+
+mcpb: ## S47B: the three Claude Desktop bundles in .tmp/mcpb, each manifest checked by the pinned @anthropic-ai/mcpb 2.1.2 (deploy/mcpb, ADR-090); nothing is published
+	scripts/mcpb.sh
+
+packs-check: ## S47B: the embedded policy-pack index is current and every pack passes its cases (in ci via go test ./internal/packs)
+	$(GO) run ./cmd/packgen -check
 
 release-check: ## S35: the release dry run: the Console build, two GoReleaser snapshots (reproducible linux/amd64 binary), 5 archives with completions, checksums, an SBOM each, the two-platform image (size, user, labels); nothing is pushed or signed
 	@if command -v node >/dev/null 2>&1; then $(MAKE) -s web-build >/dev/null; fi
@@ -448,6 +454,9 @@ demo-order-reset: ## S21: ORDER=42 sets one order back to paid; no ORDER puts ev
 
 demo-hero: ## S21: the L2 hero in one command (VERIFIED, then MISMATCH with 301 rows, the diff, verify); HERO_PACE=2 for recording
 	@examples/demo/scripts/demo.sh hero
+
+demo-scan-golden: build-only ## S47B: the demo's blast-radius score golden (scan as acme_owner, trigger on) against the running stack (make demo-up first)
+	DEEDGLASS_DEMO=1 $(GO) test -tags demo -count=1 -run TestDemoScanScore ./examples/demo/
 
 demo-diff: ## S21: deedglass actions show --diff for ID=act_… (default: the newest postgres.execute action)
 	@examples/demo/scripts/demo.sh diff
