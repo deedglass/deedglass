@@ -43,6 +43,14 @@ const (
 	FeatureActionPrivate = "action_private"
 )
 
+// knownFeatures is every feature this build understands. A token may name others (forward
+// compatibility, ADR-079): they are kept so the signature still verifies, and never granted.
+var knownFeatures = []string{FeatureScanFull, FeatureScanFix, FeaturePacksPro, FeatureActionPrivate}
+
+// maxFeatures bounds the features list. Generous on purpose: a later plan can carry more features
+// than this build knows without old installs refusing the token.
+const maxFeatures = 32
+
 // PlanFeatures is what each plan unlocks; the site signs the same lists (functions/_lib/commerce).
 var PlanFeatures = map[string][]string{
 	PlanReport:   {FeatureScanFull, FeatureScanFix, FeaturePacksPro},
@@ -56,6 +64,7 @@ var (
 	reHash  = regexp.MustCompile(`^sha256:[0-9a-f]{64}$`)
 	reSig   = regexp.MustCompile(`^ed25519:[A-Za-z0-9_-]{86}$`)
 	reInst  = regexp.MustCompile(`^[A-Za-z0-9_-]{1,64}$`)
+	reFeat  = regexp.MustCompile(`^[a-z][a-z0-9_]{2,31}$`)
 	b64     = base64.RawURLEncoding.Strict()
 	errBody = errors.New("licence: the token is not a valid licence_token")
 )
@@ -147,12 +156,14 @@ func (b Body) check() error {
 			return bad("period_end", "must be null or YYYY-MM-DDTHH:MM:SS.mmmZ")
 		}
 	}
-	if len(b.Features) == 0 || len(b.Features) > 8 {
-		return bad("features", "must list 1 to 8 features")
+	if len(b.Features) == 0 || len(b.Features) > maxFeatures {
+		return bad("features", "must list 1 to 32 features")
 	}
+	// Unknown names are accepted when well formed (a newer site may sign features this build
+	// predates); Has and Granted never grant them. A malformed name is still refused.
 	for _, f := range b.Features {
-		if !slices.Contains([]string{FeatureScanFull, FeatureScanFix, FeaturePacksPro, FeatureActionPrivate}, f) {
-			return bad("features", "names an unknown feature")
+		if !reFeat.MatchString(f) {
+			return bad("features", "must be lowercase names (a-z, 0-9, _; 3 to 32 characters)")
 		}
 	}
 	return nil
@@ -203,8 +214,22 @@ func (t Token) Verify(ks KeySet) error {
 	return nil
 }
 
-// Has reports whether the token carries feature f.
-func (t Token) Has(f string) bool { return slices.Contains(t.Features, f) }
+// Has reports whether the token grants feature f: it must be a feature this build knows and the
+// token must name it. Unknown names in the token never grant anything.
+func (t Token) Has(f string) bool {
+	return slices.Contains(knownFeatures, f) && slices.Contains(t.Features, f)
+}
+
+// Granted lists the features the token grants in this build, in token order: the known ones only.
+func (t Token) Granted() []string {
+	out := []string{}
+	for _, f := range t.Features {
+		if slices.Contains(knownFeatures, f) && !slices.Contains(out, f) {
+			out = append(out, f)
+		}
+	}
+	return out
+}
 
 // Marshal is the token's file form: JCS, so it is stable byte for byte.
 func (t Token) Marshal() ([]byte, error) {

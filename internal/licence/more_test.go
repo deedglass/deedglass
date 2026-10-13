@@ -45,7 +45,7 @@ func TestCheckRefusals(t *testing.T) {
 		"grace":    func(b *Body) { b.GraceDays = 31 },
 		"time":     func(b *Body) { b.ValidatedAt = "yesterday" },
 		"period":   func(b *Body) { b.PeriodEnd = ptr("soon") },
-		"features": func(b *Body) { b.Features = []string{"undo_everything"} },
+		"features": func(b *Body) { b.Features = []string{"Undo Everything"} },
 		"empty":    func(b *Body) { b.Features = nil },
 	} {
 		b := good

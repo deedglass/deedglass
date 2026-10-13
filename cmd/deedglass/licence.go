@@ -186,7 +186,7 @@ func activeLine(l licence.Local) string {
 func licenceJSON(l licence.Local, status string) map[string]any {
 	st := l.State
 	out := map[string]any{"object": "licence_status", "status": status, "id": l.Token.ID, "plan": l.Token.Plan,
-		"features": l.Token.Features, "active": st.Active, "checked_days_ago": st.DaysSince,
+		"features": l.Token.Granted(), "active": st.Active, "checked_days_ago": st.DaysSince,
 		"offline_until": st.OfflineUntil.UTC().Format(licence.TimeLayout), "livemode": l.Token.Livemode, "period_end": nil}
 	if !st.PeriodEnd.IsZero() {
 		out["period_end"] = st.PeriodEnd.UTC().Format(licence.TimeLayout)
