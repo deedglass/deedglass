@@ -2,7 +2,7 @@
 // jump, the theme, Stop all for each role, the bottom bar, the sign-in redirect and the 404.
 import { AUTH, EMAIL, expect, guard, loginLink, test } from './fixtures.ts';
 
-const NAV = ['Overview', 'Actions', 'Approvals', 'Agents', 'Policies', 'Connectors', 'Insights', 'Records', 'Settings'];
+const NAV = ['Overview', 'Actions', 'Approvals', 'Sessions', 'Agents', 'Policies', 'Connectors', 'Insights', 'Records', 'Settings'];
 
 test.describe('signed out', () => {
   test('every page redirects to sign-in with next, and comes back after', async ({ page }) => {
@@ -63,7 +63,7 @@ test.describe('owner', () => {
     await page.keyboard.press('Enter');
     const sheet = page.getByRole('dialog', { name: 'More' });
     await expect(sheet).toBeVisible();
-    for (const n of ['Policies', 'Connectors', 'Insights', 'Records', 'Settings']) await expect(sheet.getByRole('link', { name: n })).toBeVisible();
+    for (const n of ['Sessions', 'Policies', 'Connectors', 'Insights', 'Records', 'Settings']) await expect(sheet.getByRole('link', { name: n })).toBeVisible();
     await page.keyboard.press('Escape');
     await expect(sheet).toBeHidden();
     // No horizontal page scroll at 360.

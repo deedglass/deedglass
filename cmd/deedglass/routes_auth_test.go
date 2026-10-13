@@ -192,7 +192,8 @@ var rauthPublicExtensions = map[string]string{
 }
 
 var rauthIDPrefix = map[string]string{
-	"agents": ids.Agent, "keys": ids.APIKey, "members": ids.Membership, "policies": ids.Policy,
+	"sessions": ids.ObserveSession,
+	"agents":   ids.Agent, "keys": ids.APIKey, "members": ids.Membership, "policies": ids.Policy,
 	"actions": ids.Action, "approvals": ids.Approval, "webhooks": ids.Webhook, "deeds": ids.Deed,
 	"connectors": ids.Connector, "anomalies": ids.Anomaly, "replays": ids.Replay, "suggestions": ids.Suggestion,
 }
@@ -217,6 +218,8 @@ func rauthPath(t *testing.T, pattern string) string {
 			v = "postgres"
 		case "connector":
 			v = ids.New[ids.ConnectorKind]().String()
+		case "dtx":
+			v = ids.New[ids.DecodedTxKind]().String()
 		case "id":
 			if p, ok := rauthIDPrefix[prev]; ok {
 				s, err := ids.NewString(p)

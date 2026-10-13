@@ -151,10 +151,18 @@ func (c *Client) Deactivate(ctx context.Context, key, instance string) error {
 	return nil
 }
 
+// tokenRequest is POST /api/licence/token's body. features_known (S50 §3.8) lists the features
+// this build understands; the site signs only those (a request without it gets the v1 list).
+type tokenRequest struct {
+	LicenseKey    string   `json:"license_key"`
+	Instance      string   `json:"instance"`
+	FeaturesKnown []string `json:"features_known"`
+}
+
 // FetchToken asks our site to re-validate the key with Dodo and sign a licence token.
 func (c *Client) FetchToken(ctx context.Context, key, instance string) (Token, error) {
 	var raw json.RawMessage
-	st, err := c.post(ctx, strings.TrimRight(c.Server, "/")+"/api/licence/token", map[string]string{"license_key": key, "instance": instance}, &raw)
+	st, err := c.post(ctx, strings.TrimRight(c.Server, "/")+"/api/licence/token", tokenRequest{LicenseKey: key, Instance: instance, FeaturesKnown: KnownFeatures()}, &raw)
 	if err != nil {
 		return Token{}, err
 	}

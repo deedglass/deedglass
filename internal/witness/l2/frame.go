@@ -14,6 +14,8 @@ const (
 	ClassMarkerMismatch = "marker_mismatch"
 	ClassPublicationGap = "publication_gap"
 	ClassMissing        = "missing"
+	// ClassUnattributed is a transaction no action claimed: S50's watched sessions undo these.
+	ClassUnattributed = "unattributed"
 )
 
 // LedgerTable is deedglass.ledger; it is never part of a footprint (S21 §3.3).

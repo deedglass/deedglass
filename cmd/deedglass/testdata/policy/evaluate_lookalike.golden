@@ -7,6 +7,6 @@ exit 0
   stop    ✓ agent active · org running
   budget  agent-rate ✓ 0 of 60 this minute · agent-daily ✓ 0 of 5,000 today
   rules   block-unclassified-sql   match      when → true      line 33
-          … 11 more rules not evaluated
-  policy  postgres-safe · sha256:01ae…76f6 · sqlguard 1
+          … 12 more rules not evaluated
+  policy  postgres-safe · sha256:60da…4f47 · sqlguard 1
 --- stderr

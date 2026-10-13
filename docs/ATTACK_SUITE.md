@@ -8,7 +8,7 @@ Every case's expected outcome was written in `attack/attack_meta.json` before it
 
 **Last run:** 2026-10-13 · commit `4e88bd5+uncommitted` · PostgreSQL 18.6 · a real `deedglass serve` process, a real Postgres, loopback upstreams.
 
-**68 matched · 0 differ · 0 waiting on a later session.** After every case: the deed chains of both orgs are intact, the target database is unchanged wherever nothing should have run, every action is sealed, and the planted credential was seen 0 times across the server's logs, every HTTP response, and the recorded actions, events, deeds, admin events, connector configs and credential hints.
+**70 matched · 0 differ · 0 waiting on a later session.** After every case: the deed chains of both orgs are intact, the target database is unchanged wherever nothing should have run, every action is sealed, and the planted credential was seen 0 times across the server's logs, every HTTP response, and the recorded actions, events, deeds, admin events, connector configs and credential hints.
 
 Run it: `make attack` (a throwaway PostgreSQL 18 cluster, about three and a half minutes on a laptop: L05 waits out a real one-minute approval expiry and P10 runs ten Stop-all rounds), then `make attack-report`. One case: `DEEDGLASS_IT_ATTACK_RUN='TestAttack/H03' make attack`.
 
@@ -105,6 +105,15 @@ S23's group U. An undo writes to the customer's database on a person's request, 
 | U03 | An undo of an action after a forged marker names it in another transaction | REJECTED (the forged transaction never becomes evidence: the plan holds only the action's own bound transaction, and the forged rows stay as they are) | REJECTED (the forged transaction never becomes evidence: the plan holds only the action's own bound transaction, and the forged rows stay as they are) | ✓ matched |
 | U04 | An agent calling the internal undo tool through POST /v1/actions | DENIED (tool_unknown, recorded and sealed; nothing reaches Postgres) | DENIED (tool_unknown, recorded and sealed; nothing reaches Postgres) | ✓ matched |
 | U05 | An undo of another org's action | REJECTED (not_found for preview and run, exactly as an unknown id; nothing is planned) | REJECTED (not_found for preview and run, exactly as an unknown id; nothing is planned) | ✓ matched |
+
+## Observe mode
+
+S50's group O. A watched session records what Postgres committed, so each case tries to reach another org's recording or to let an agent hide its own: every session route aimed at another org's session, and an agent's key opening, closing, editing or undoing a session while a person's exclude stays on the record.
+
+| Case | Attack | Expected | Actual | Status |
+|---|---|---|---|---|
+| O01 | Another org closes, excludes from, previews and undoes a watched session | REJECTED (not_found for close, exclude, preview and undo, exactly as an unknown id; the session stays open with nothing excluded) | REJECTED (not_found for close, exclude, preview and undo, exactly as an unknown id; the session stays open with nothing excluded) | ✓ matched |
+| O02 | An agent hides from its own recording: opens, closes, excludes and undoes a session with its key; a person's exclude is recorded | DENIED (403 insufficient_scope for every agent-key call; the person's exclude is sealed as observe.frame_excluded and the undo preview and its SQL list the transaction left out) | DENIED (403 insufficient_scope for every agent-key call; the person's exclude is sealed as observe.frame_excluded and the undo preview and its SQL list the transaction left out) | ✓ matched |
 
 ## People, sessions and the live stream
 
@@ -253,6 +262,7 @@ Each group set has its own pinned digest, so declaring new cases never changes a
 | L | S22 (approvals, links, webhooks) | `expectedDigestL` |
 | U | S23 (undo) | `expectedDigestU` |
 | P, Q, R | S34 | `expectedDigestS34` |
+| O | S50 (observe mode) | `expectedDigestO` |
 
 I, M, O, S, T, V, X, Y and Z are unassigned. A session that needs a group takes the next free letter and adds a row here.
 

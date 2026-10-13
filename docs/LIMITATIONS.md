@@ -604,6 +604,13 @@ it refuses rather than guess:
   knows their format** (Stripe, Slack, GitHub, Deedglass keys and the like).
 - **Bidirectional characters in names** (a tool name an agent sent, an agent's name) are escaped in
   the CLI's human output but can reorder text in the Console (SR-016).
+- **Observe mode can't tell writers apart.** A watched session holds every transaction Postgres
+  committed on the watched tables during its window, whoever wrote it; the change log doesn't carry
+  the role or the program. A person leaves out what wasn't the agent before an undo, and the record
+  lists what was left out. A watched session gets no level and no Matches or Doesn't match verdict.
+- **A session's close waits for the decoder by time.** It seals when the decoder has decoded a
+  transaction committed after the close, or a heartbeat two periods after it; a decoder more than
+  10 minutes behind seals the session with `decoder_behind`, and later transactions are not in it.
 - **Fuzzing finds bugs; it doesn't show there are none.** The October 2026 schedule ran each parser for 5
   to 30 minutes on one laptop (`bench/results/*-fuzz.json`); CI replays the corpus for 10 s each.
 

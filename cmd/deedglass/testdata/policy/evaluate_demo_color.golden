@@ -9,6 +9,6 @@ exit 0
   [2mrules  [0m block-unclassified-sql   no match   when → false
   [2m       [0m one-statement-only       no match   when → false
   [2m       [0m block-destructive-sql    match      when → true      line 45
-  [2m       [0m … 9 more rules not evaluated
-  [2mpolicy [0m postgres-safe · sha256:01ae…76f6 · sqlguard 1
+  [2m       [0m … 10 more rules not evaluated
+  [2mpolicy [0m postgres-safe · sha256:60da…4f47 · sqlguard 1
 --- stderr

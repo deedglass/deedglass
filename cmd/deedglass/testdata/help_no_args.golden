@@ -30,6 +30,7 @@ Actions
   approve · deny      Decide a pending approval
   approvals           List pending approvals                                list · show
   undo                Preview or run an undo                                preview · run
+  observe             Watch what changed while an agent ran                 run · start · stop · list · show · undo · exclude
   webhooks            Send events to your endpoints                         create · list · test · delete
 Records
   verify              Check records offline

@@ -290,6 +290,38 @@ Re-checked 2026-10-02 against the PostgreSQL 16, 17 and 18 manuals.
 - **Lock waits.** `lock_timeout` ends any statement that waits longer than the limit for a lock, so
   an undo never queues behind your traffic for more than 2 seconds.
 
+## Undoing a watched session
+
+Observe mode (docs/OBSERVE.md) groups the transactions Postgres committed on a connector's watched
+tables while a session was open. The same planner undoes all of them at once: their changes are
+read in commit order, each row's net effect is collapsed across transactions, and the plan puts
+every row back newest change first. The twelve checks run on it like on an action's undo, with
+"Observed evidence" in place of the L2 evidence check (a watched session has no level).
+
+**Free: the undo SQL you run yourself.** `deedglass observe show obs_01k… --undo-sql` (or
+`GET /v1/observe/sessions/{id}/undo_preview`, field `sql`) prints:
+
+- one transaction, `BEGIN` … `COMMIT`, with the decoder's output settings set locally;
+- each UPDATE or DELETE in its own `DO` block, naming its row by primary key and, in the WHERE
+  clause, every value the session left there (compared through the type's output function,
+  `format('%s', column)`, the way the decoder stored it). If the row changed since, nothing matches,
+  the block raises `Deedglass undo stopped: … Nothing was undone.`, and Postgres rolls everything
+  back;
+- each INSERT putting back a deleted row; if the key exists again, the unique index refuses it and
+  everything rolls back.
+
+Run it with `psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f undo.sql`. Running it twice changes nothing
+the second time. Where there is no SQL, the reason prints instead (exit 1): a TRUNCATE, rows past
+the image cap, a sensitive column the plan would write, expired transactions.
+
+**Pro: one step.** `deedglass observe undo obs_01k… --reason "…"` previews again and sends the plan
+through the Gate as the `console` system agent's action `<connector>.undo_session`: the starter rule
+`undo-session-needs-approval` asks for a countersign, the plan runs in one transaction with S23's
+re-checked catalog and locked guards, and the undo gets its own record, checked at L2 against the
+plan's exact footprint. Any row that changed after the session blocks it (`undo_conflict`); leave
+out the transaction that touched it, or undo those rows by hand. Without Pro the route answers
+`pro_required` and names the free path.
+
 ## What you'll see in the deeds
 
 - **The original action's deed is unchanged.** Its bytes are identical before and after the undo,

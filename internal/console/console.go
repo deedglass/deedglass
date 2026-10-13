@@ -89,7 +89,7 @@ func (c *Console) Routes() []httpx.Route {
 // and the id's prefix must match the screen.
 var screens = map[string]string{
 	"actions": "act_", "approvals": "apr_", "agents": "agt_", "policies": "pol_", "connectors": "con_",
-	"deeds": "deed_", "insights": "", "settings": "",
+	"deeds": "deed_", "insights": "", "settings": "", "sessions": "obs_",
 }
 
 var (

@@ -11,6 +11,7 @@ repos. Pro adds new features on top. It never takes a free one away.
 | `deedglass scan --full`: the full scan report, rendered on your machine | the full scan report, founding partner, Pro |
 | Pro policy packs and the fix writer (as they ship) | the full scan report, founding partner, Pro |
 | The scan Action on private repos (as it ships) | founding partner, Pro |
+| Undo a whole watched session in one step (`deedglass observe undo`, S50) | founding partner, Pro |
 
 The full scan report plan lasts 30 days, a founding partner place six months; Pro renews until you
 cancel. Prices are on deedglass.com/pricing. Dodo Payments is the reseller and handles sales tax.
@@ -57,6 +58,22 @@ sig       = "ed25519:" + base64url(Ed25519(lk_ key, "deedglass/licence/v1\n" + b
 Licence keys (`lk_…`) never seal records, and seal keys (`sk_…`) never sign licences; both sides
 refuse the other. The public keys are built into the binary and published at
 `https://deedglass.com/.well-known/deedglass/licence-keys.json`.
+
+## Features old installs can read
+
+A newer site may sign features an older build doesn't know. Since v0.1.0 a build accepts any
+well-formed feature name in a token (lowercase letters, digits and `_`, 3 to 32 characters; at most
+32 of them), keeps it so the signature still verifies, and grants only the features it knows.
+
+The token request also names what the build knows: `features_known` (for this build:
+`scan_full`, `scan_fix`, `packs_pro`, `action_private`, `undo_session`). The site signs the plan's
+features that the request lists, in plan order. A request without the field (v0.1.0) gets the list
+those builds knew (`action_private`, `scan_full`, `scan_fix`, `packs_pro`), so a new feature never
+reaches a client that predates it. A list with nothing in common with the plan gets that list too.
+
+`deedglass serve` asks the licence once at start and then once a day; the answer turns the one-step
+session undo on or off for the next request. An undo already started completes even if the licence
+lapses before its countersign.
 
 ## When Pro works
 

@@ -49,14 +49,14 @@ cp examples/policies/postgres-safe.yaml examples/policies/postgres-safe.cases.ya
 
 ```
 $ deedglass policy lint policies/postgres-safe.yaml --voice
-✓ postgres-safe · 12 rules · 2 budgets · sha256:2c4c…04fd
+✓ postgres-safe · 13 rules · 2 budgets · sha256:2c4c…04fd
 ```
 
 **Test.** Add a case for each table you put in the list (section 3), then run the cases:
 
 ```
 $ deedglass policy test policies/postgres-safe.yaml --require-coverage
-✓ postgres-safe   28 cases · 12 of 12 rules
+✓ postgres-safe   30 cases · 13 of 13 rules
 ✓ 28 cases passed · 1 policy · every rule covered · 0.0 s
 ```
 
@@ -64,7 +64,7 @@ $ deedglass policy test policies/postgres-safe.yaml --require-coverage
 
 ```
 $ deedglass policy push policies/postgres-safe.yaml --notes "Orders DB, first cut"
-✓ postgres-safe v1 saved · pv_01jb8m3c0d2f4g6h8j0k2m4n6p · sha256:2c4c…04fd · 12 rules · 2 budgets
+✓ postgres-safe v1 saved · pv_01jb8m3c0d2f4g6h8j0k2m4n6p · sha256:2c4c…04fd · 13 rules · 2 budgets
   Next: deedglass policy test policies/postgres-safe.yaml
 ```
 

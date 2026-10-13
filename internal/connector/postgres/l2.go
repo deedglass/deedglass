@@ -50,7 +50,7 @@ func (c *Connector) L2Target(inst *connector.Instance, call connector.Call) (*co
 		for _, wr := range f.Writes {
 			t.Writes = append(t.Writes, connector.L2Write{Table: wr.Table, Ops: wr.Ops, MaxRows: wr.MaxRows, Columns: wr.Columns})
 		}
-	case ToolUndo:
+	case ToolUndo, ToolUndoSession:
 		// S23: the ledger row's sql_digest is the plan digest; the footprint is the plan's exact
 		// one (actions.witness_expect), which the Gate reads itself.
 		var a undoArgs

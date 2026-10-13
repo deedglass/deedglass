@@ -1,0 +1,45 @@
+/* S50: observe mode (controllers/sessions.ts; DESIGN.md "Session row", "Caught banner", "Undo area").
+   Amber for caught (the unverifiable role colours), red only for conflicts and refusals, teal for
+   undone. No new token: role variables only. The diff scrolls inside its own box at 360 px. */
+
+.chip-caught { color: var(--unverifiable-fg); background: var(--unverifiable-bg); }
+.obs-chips { display: inline-flex; gap: var(--space-2); flex-wrap: wrap; align-items: center; }
+.obs-tables { color: var(--text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-block; max-width: 28ch; vertical-align: bottom; }
+
+.obs-head { display: grid; gap: var(--space-1); margin-bottom: var(--space-4); }
+.obs-headline { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1); margin: 0; font-weight: 600; }
+.obs-counts { margin: 0; color: var(--text-2); font-variant-numeric: tabular-nums; }
+.obs-note { display: flex; gap: var(--space-2); align-items: flex-start; color: var(--text-2); margin: var(--space-3) 0; }
+.obs-note .icon { flex: none; margin-top: 2px; }
+
+.obs-caught { display: grid; gap: var(--space-3); padding: var(--space-4) var(--space-5); margin: var(--space-4) 0; border-left: 3px solid var(--unverifiable-fg); }
+.obs-caught-head { display: flex; align-items: center; gap: var(--space-2); margin: 0; color: var(--unverifiable-fg); font-weight: 600; }
+.obs-caught-lines { display: grid; gap: var(--space-1); }
+.obs-caught-line { display: flex; gap: var(--space-2); align-items: flex-start; margin: 0; }
+.obs-caught-line .icon { flex: none; margin-top: 2px; color: var(--unverifiable-fg); }
+.obs-caught-list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-3); }
+.obs-caught-item { display: grid; gap: var(--space-2); }
+.obs-caught-label { font-weight: 600; }
+.ov .obs-caught-home { margin: 0; }
+
+.obs-undo-actions { display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: center; }
+.pro-tag { margin-left: var(--space-1); font-weight: 500; }
+.obs-undo { display: grid; gap: var(--space-3); margin-top: var(--space-4); }
+.obs-undone { display: flex; gap: var(--space-2); align-items: center; color: var(--verified-fg); margin: 0; }
+.obs-conflict { display: flex; gap: var(--space-2); align-items: flex-start; color: var(--mismatch-fg); margin: 0; }
+.obs-conflict .icon { flex: none; margin-top: 2px; }
+.obs-record { display: flex; gap: var(--space-2); align-items: center; color: var(--text-2); margin: var(--space-4) 0 0; font-variant-numeric: tabular-nums; }
+
+.obs-frames { list-style: none; margin: var(--space-3) 0 0; padding: 0; display: grid; gap: var(--space-4); }
+.obs-frame { display: grid; gap: var(--space-2); min-width: 0; padding-top: var(--space-3); border-top: 1px solid var(--hairline); }
+.obs-frame:first-child { border-top: 0; padding-top: 0; }
+.obs-frame-out .obs-frame-tables { text-decoration: line-through; }
+.obs-frame-head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); min-width: 0; }
+.obs-frame-tables { color: var(--text-2); min-width: 0; overflow-wrap: anywhere; }
+.obs-frame-id { margin-left: auto; }
+.obs-diff-scroll { overflow-x: auto; max-width: 100%; border: 1px solid var(--hairline); border-radius: var(--radius-button); }
+.obs-diff { font-variant-numeric: tabular-nums; min-width: 100%; }
+.obs-diff caption { text-align: left; padding: var(--space-2) var(--space-3); color: var(--text-2); font-size: var(--type-footnote-size); }
+.obs-diff td, .obs-diff th { white-space: nowrap; }
+.obs-changed { background: var(--unverifiable-bg); }
+@media (prefers-reduced-motion: reduce) { .obs-frame, .obs-caught { transition: none; } }

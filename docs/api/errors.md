@@ -1758,6 +1758,40 @@ look again with `deedglass decoder status --connector <name>`.
 }
 ```
 
+## observe_not_enabled
+
+**409 · invalid_request_error**
+
+**When it happens.** You opened a watched session (`POST /v1/observe/sessions`, `deedglass observe start` or `observe run`) on a Postgres connector whose observe mode is off. Observe mode reads the same change log as the Witness, so it needs `witness.enabled: true` and `witness.observe.enabled: true` in the connector's config. Nothing was opened.
+
+**What to do.** Turn it on in Console › Connectors › your connector, or add `observe: {enabled: true}` under `witness` in the connector's config and update it. Then open the session again.
+
+```json
+{
+  "type": "invalid_request_error",
+  "code": "observe_not_enabled",
+  "message": "Observe mode is off for pg-demo. Turn it on in Console › Connectors › pg-demo, or set witness.observe.enabled: true in its config.",
+  "param": "connector"
+}
+```
+
+## pro_required
+
+**403 · permission_error**
+
+**When it happens.** You asked for something that is part of Pro without a Pro licence on the machine that runs Deedglass: today, undoing a whole watched session in one step (`POST /v1/observe/sessions/{id}/undo`, `deedglass observe undo`). Nothing ran, and nothing free changed: the session, its preview, per-action undo and the undo SQL all keep working.
+
+**What to do.** Print the undo SQL and run it yourself, free: `deedglass observe show <id> --undo-sql`. Or add Pro (deedglass.com/pricing) and run `deedglass licence activate` on the machine that runs `deedglass serve`.
+
+```json
+{
+  "type": "permission_error",
+  "code": "pro_required",
+  "message": "Undoing a whole session in one step is part of Pro. Per-action undo and the undo SQL stay free: deedglass observe show obs_01k8x2… --undo-sql.",
+  "param": null
+}
+```
+
 ## What this doesn't do
 
 - Errors don't carry localized messages. The copy is English, and the `code` is the stable part.

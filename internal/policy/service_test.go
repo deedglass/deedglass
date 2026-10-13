@@ -109,7 +109,7 @@ func TestCreateAndPush(t *testing.T) {
 		p.Description != "Reads run freely. Writes wait for a human. Schema changes never run." {
 		t.Fatalf("%+v", p)
 	}
-	if v.Version != 1 || v.Rules != 12 || v.Budgets != 2 || v.Origin != OriginManual || v.Author.Object != "user" || *v.Notes != "Orders DB, first cut" ||
+	if v.Version != 1 || v.Rules != 13 || v.Budgets != 2 || v.Origin != OriginManual || v.Author.Object != "user" || *v.Notes != "Orders DB, first cut" ||
 		!strings.HasPrefix(v.ID, "pv_") || !strings.HasPrefix(v.VersionHash, "sha256:") || v.Source != nil || v.Lang != "deedglass.policy/v1" {
 		t.Fatalf("%+v", v)
 	}
@@ -415,7 +415,7 @@ func TestDryRunAndTest(t *testing.T) {
 	// The server test runner.
 	cases, _ := policies.Cases("postgres-safe")
 	tr, err := w.svc.Test(bg, w.who, TestRequest{PolicyRef: "postgres-safe", Version: VersionRef{Number: 1}, Cases: string(cases)})
-	if err != nil || !tr.OK || tr.Passed != 29 || tr.Coverage.Covered != 12 {
+	if err != nil || !tr.OK || tr.Passed != 30 || tr.Coverage.Covered != 13 {
 		t.Fatalf("%v %+v", err, tr)
 	}
 	_, err = w.svc.Test(bg, w.who, TestRequest{Source: string(starter(t, "postgres-safe")), Cases: []any{map[string]any{"name": "x", "input": map[string]any{"tool": "a.b"}}}})

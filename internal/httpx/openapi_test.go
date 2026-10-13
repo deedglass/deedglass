@@ -177,6 +177,15 @@ func elsewhere() []Route {
 		adm("POST", "/v1/suggestions/generate", "generateSuggestions", RoleAdmin),
 		adm("POST", "/v1/suggestions/{id}/accept", "acceptSuggestion", RoleAdmin), adm("POST", "/v1/suggestions/{id}/reject", "rejectSuggestion", RoleAdmin),
 	)
+	// S50: observe mode (internal/observeapi).
+	out = append(out,
+		adm("POST", "/v1/observe/sessions", "openObserveSession", RoleAdmin), adm("GET", "/v1/observe/sessions", "listObserveSessions", RoleViewer),
+		adm("GET", "/v1/observe/sessions/{id}", "getObserveSession", RoleViewer),
+		adm("POST", "/v1/observe/sessions/{id}/close", "closeObserveSession", RoleAdmin),
+		adm("POST", "/v1/observe/sessions/{id}/frames/{dtx}/exclude", "excludeObserveFrame", RoleAdmin),
+		adm("GET", "/v1/observe/sessions/{id}/undo_preview", "previewObserveUndo", RoleViewer),
+		adm("POST", "/v1/observe/sessions/{id}/undo", "createObserveUndo", RoleAdmin),
+	)
 	// S29: Slack interactivity (internal/notify/slack): public, a form body, Slack's signature.
 	out = append(out, Route{Method: "POST", Pattern: "/v1/slack/interact", OperationID: "slackInteract", Auth: Public, Idempotency: IdemNever,
 		BodyType: "application/x-www-form-urlencoded", MaxBody: 256 << 10, Handler: stub})

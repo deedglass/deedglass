@@ -72,6 +72,7 @@ The CLI trims and lowercases what you type (`ids.Normalize`) before parsing; not
 | `adm_` | `ids.AdminEventID` | An administrative change in an org. | yes | ADR-014 |
 | `wl_` | `ids.WaitlistID` | A waitlist entry (shared shape with the site waitlist). | no | ADR-014 |
 | `idk_` | `ids.IdempotencyID` | A stored Idempotency-Key response. | no | ADR-014 |
+| `obs_` | `ids.ObserveSessionID` | A watched session: every change Postgres committed on the watched tables while it was open (S50). | yes | ADR-094 |
 <!-- prefixes:end -->
 
 Not in the table on purpose: `witness_jobs` rows use a bigint identity id (S13). The site

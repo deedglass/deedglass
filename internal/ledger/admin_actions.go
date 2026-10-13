@@ -112,6 +112,15 @@ const (
 	// /v1/deeds/files). Target {org, org_…}; the label in admin.reason; data: sha256, bytes,
 	// media_type, label. The file never reaches the server, only these four fields.
 	AdminFileSealed = "file.sealed"
+
+	// S50: observe mode. A watched session was sealed after it closed (actor: the person or key
+	// that closed it, or {system, deedglass} for max_session; target {observe_session, obs_…}; data:
+	// observe.SealedData: session, connector, opened_at, closed_at, frame_count, frames (up to 100
+	// dtx ids), frames_digest, excluded, tables (counts), changes_digest, flags). A person left a
+	// transaction out of the session's undo, or put it back (data: session, frame, excluded). Ids,
+	// counts and digests only, never a row value.
+	AdminObserveSessionSealed = "observe.session_sealed"
+	AdminObserveFrameExcluded = "observe.frame_excluded"
 )
 
 // AdminActions lists every admin action this build records. Tests check each name against the
@@ -132,6 +141,7 @@ var AdminActions = []string{
 	AdminAnomalyResolved, AdminInsightsSettingsChanged,
 	AdminSuggestionAccepted, AdminSuggestionRejected,
 	AdminFileSealed,
+	AdminObserveSessionSealed, AdminObserveFrameExcluded,
 }
 
 // AdminEventActions are admin events recorded without a deed (AppendAdminEvent): security events

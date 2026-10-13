@@ -285,7 +285,7 @@ func TestServiceOnPostgres(t *testing.T) {
 	w := newPWorld(t)
 	org, caller := w.org(t, "Acme")
 	p, v1, err := w.svc.Create(ctx, caller, policy.PushRequest{Source: source(t, "postgres-safe"), Notes: "Orders DB, first cut"})
-	if err != nil || p.Status != policy.StatusInactive || v1.Version != 1 || v1.Rules != 12 || v1.Author.Object != "user" {
+	if err != nil || p.Status != policy.StatusInactive || v1.Version != 1 || v1.Rules != 13 || v1.Author.Object != "user" {
 		t.Fatalf("%v %+v %+v", err, p, v1)
 	}
 	var deedsBefore int64

@@ -172,7 +172,7 @@
       "object": "play_policy",
       "v": 1,
       "name": "acme-demo",
-      "version_hash": "sha256:23e1ae1de718fca29abeb6f3caa943295c277762f35482d8fbfb62f8a1985284",
+      "version_hash": "sha256:ba3749af9365d6c850213c6cc8e64483cf79a94b4142011c458bb47969ab53cc",
       "default": {
         "decision": "deny",
         "reason": "No rule allows this action. Add a rule in Console › Policies to allow it."
@@ -211,6 +211,13 @@
           "decision": "require_approval",
           "reason": "Undoing a write changes data again, so a human confirms it first.",
           "match_cel": "glob(tool.name, \"*.undo\") && glob(tool.connector_type, \"postgres\")",
+          "when_cel": "true"
+        },
+        {
+          "id": "undo-session-needs-approval",
+          "decision": "require_approval",
+          "reason": "Undoing a whole session changes data again, so a human confirms it first.",
+          "match_cel": "glob(tool.name, \"*.undo_session\") && glob(tool.connector_type, \"postgres\")",
           "when_cel": "true"
         },
         {
@@ -296,7 +303,7 @@
       "object": "play_policy",
       "v": 1,
       "name": "postgres-safe",
-      "version_hash": "sha256:01aeae9dbb518cf6d5ead7ed0b042bc0ed4700856c123694954de3b8369a76f6",
+      "version_hash": "sha256:60dacb12ffcad375f12600678763913bd15e3e7251aeb69e6bddbbfa83434f47",
       "default": {
         "decision": "deny",
         "reason": "No rule allows this action. Add a rule in Console › Policies to allow it."
@@ -384,6 +391,13 @@
           "decision": "require_approval",
           "reason": "Undoing a write changes data again, so a human confirms it first.",
           "match_cel": "glob(tool.name, \"*.undo\") && glob(tool.connector_type, \"postgres\")",
+          "when_cel": "true"
+        },
+        {
+          "id": "undo-session-needs-approval",
+          "decision": "require_approval",
+          "reason": "Undoing a whole session changes data again, so a human confirms it first.",
+          "match_cel": "glob(tool.name, \"*.undo_session\") && glob(tool.connector_type, \"postgres\")",
           "when_cel": "true"
         }
       ]

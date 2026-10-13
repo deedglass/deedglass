@@ -61,6 +61,13 @@ rules:
     reason: Undoing a write changes data again, so a human confirms it first.
     approval: { approvers: [role:admin], required: 1, expires_in: 30m }
     verify: L2
+  - id: undo-session-needs-approval
+    description: Undoing a watched session (S50) puts back every row it changed, so a person countersigns it first.
+    match: { tool: "*.undo_session", connector_type: postgres }
+    decision: require_approval
+    reason: Undoing a whole session changes data again, so a human confirms it first.
+    approval: { approvers: [role:admin], required: 1, expires_in: 30m }
+    verify: L2
   - id: allow-order-status-updates
     description: Single-order status changes run; Postgres witnesses every one (S21).
     match: { tool: postgres.execute }

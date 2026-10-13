@@ -29,5 +29,6 @@ VERSION  NAME                STATE    APPLIED               CHECKSUM
 0026     slack_approvals     [35mpending[0m  —                     sha256:a590…3ac3
 0027     purge_org           [35mpending[0m  —                     sha256:6fc3…4696
 0028     action_schedule     [35mpending[0m  —                     sha256:ceef…7547
-[31m✕[0m 8 applied · 19 pending · 1 doesn't match this build. Run deedglass migrate verify for details.
+0029     observe             [35mpending[0m  —                     sha256:c0f3…a29e
+[31m✕[0m 8 applied · 20 pending · 1 doesn't match this build. Run deedglass migrate verify for details.
 --- stderr

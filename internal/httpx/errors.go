@@ -129,6 +129,10 @@ const (
 	CodeSuggestionStale   Code = "suggestion_stale"
 	CodeShadowSlotTaken   Code = "shadow_slot_taken"
 	CodeSuggestionDecided Code = "suggestion_decided"
+
+	// S50: observe mode, and the shared Pro refusal (S50–S52).
+	CodeObserveNotEnabled Code = "observe_not_enabled"
+	CodeProRequired       Code = "pro_required"
 )
 
 // DocURLPrefix is where every code has a page (docs/api/errors.md, published by S33).
@@ -279,6 +283,11 @@ var catalog = []CatalogEntry{
 		"{policy} v{n} is already running in shadow. Promote or clear it first, or accept with replace_shadow: true to replace it.", "S28"},
 	{CodeSuggestionDecided, 409, TypeInvalidRequest, "This suggestion was already decided. Look at its status, or generate suggestions again.",
 		"This suggestion was already accepted on {date} by {who}. It created {policy} v{n}.", "S28"},
+
+	{CodeObserveNotEnabled, 409, TypeInvalidRequest, "Observe mode is off for this connector. Turn it on in Console › Connectors, or set witness.observe.enabled: true in its config.",
+		"Observe mode is off for {connector}. Turn it on in Console › Connectors › {connector}, or set witness.observe.enabled: true in its config.", "S50"},
+	{CodeProRequired, 403, TypePermission, "This is part of Pro. Everything free still works; see deedglass.com/pricing.",
+		"Undoing a whole session in one step is part of Pro. Per-action undo and the undo SQL stay free: deedglass observe show {session} --undo-sql.", "S50"},
 }
 
 var byCode = func() map[Code]CatalogEntry {

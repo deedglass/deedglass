@@ -40,6 +40,9 @@ const (
 	// chat). Declared before any of their case code existed. P01 and P09 were not declared: S22's
 	// L01 and S23's U01 already pin those attacks.
 	expectedDigestS34 = "4bfe69608375ef9023f35bed231e0a15489993b0a7dab497584a370e1965bd42"
+	// expectedDigestO pins group O, observe mode (S50; ADR-094, PROPOSED; the orchestrator accepts
+	// under DL-089). Declared before the case code ran.
+	expectedDigestO = "9381eebc213562073fa5cbafb57edaae2a7a9a5950cc4de0123434e0c0f61550"
 )
 
 // groupSets maps each pinned digest to its groups. A later session adds its own row (S19 N,
@@ -53,6 +56,7 @@ var groupSets = []struct {
 	{"L", expectedDigestL},
 	{"U", expectedDigestU},
 	{"PQR", expectedDigestS34},
+	{"O", expectedDigestO},
 }
 
 type meta struct {
@@ -123,7 +127,7 @@ func wantIDs() []string {
 	for _, g := range []struct {
 		p string
 		n int
-	}{{"A", 13}, {"B", 7}, {"C", 10}, {"D", 17}, {"E", 11}, {"F", 4}, {"G", 4}, {"H", 11}, {"J", 4}, {"K", 4}, {"L", 8}, {"U", 5}, {"W", 13}} {
+	}{{"A", 13}, {"B", 7}, {"C", 10}, {"D", 17}, {"E", 11}, {"F", 4}, {"G", 4}, {"H", 11}, {"J", 4}, {"K", 4}, {"L", 8}, {"O", 2}, {"U", 5}, {"W", 13}} {
 		for i := 1; i <= g.n; i++ {
 			ids = append(ids, fmt.Sprintf("%s%02d", g.p, i))
 		}

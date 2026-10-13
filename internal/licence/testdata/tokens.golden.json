@@ -1,5 +1,5 @@
 {
-  "$comment": "Licence token goldens (S48). Go signs these; the site's WebCrypto signer must produce the same body_hash and sig. Test key only.",
+  "$comment": "Licence token goldens (S48; S50 adds two negotiated tokens). Go signs these; the site's WebCrypto signer must produce the same body_hash and sig. Tokens 1-3 carry the v1 lists (a request without features_known), 4-5 the lists a client that sends features_known gets. Test key only.",
   "key_id": "lk_01jdtestkey00000000000000a",
   "seed_hex": "0707070707070707070707070707070707070707070707070707070707070707",
   "key_set": {
@@ -75,6 +75,50 @@
       "livemode": false,
       "body_hash": "sha256:1bda317f58b04be79a7850b3bd001b0c7b77d7b4a2ad141eb0ff07368a74a9b7",
       "sig": "ed25519:QJw_tC4fTElQTmqEmyswAC5I0l6N_xU3vwcJbElzqOmd71Mb3PqRQ56JEN4cUS_8ky38i--zVojXvnl9W8a8CA"
+    },
+    {
+      "object": "licence_token",
+      "v": 1,
+      "id": "lic_01jdddddddddddddddddddddda",
+      "plan": "founding",
+      "features": [
+        "action_private",
+        "scan_full",
+        "scan_fix",
+        "packs_pro",
+        "undo_session"
+      ],
+      "key_sha256": "sha256:9dac02f7e5c0f0ffb4857435557959e94ab45010afefeb47d5bbfdeed86bfaf1",
+      "instance": "lki_test_0004",
+      "validated_at": "2026-10-21T04:12:09.000Z",
+      "grace_days": 14,
+      "period_end": "2027-04-21T04:12:09.000Z",
+      "key_id": "lk_01jdtestkey00000000000000a",
+      "livemode": true,
+      "body_hash": "sha256:ce9cf29d216bb5928d0ea48881a1338289e433c1e5cab9e1bd9c71a6aae91c31",
+      "sig": "ed25519:8mt99ap56ib1tuP0RT4MmEQMrzl9SNhetVe3PmtkmpgRSfBOWRyl6hnwvdvrpSfj6PYTlniGPOKhab-0TRMBDQ"
+    },
+    {
+      "object": "licence_token",
+      "v": 1,
+      "id": "lic_01jdeeeeeeeeeeeeeeeeeeeeee",
+      "plan": "pro",
+      "features": [
+        "action_private",
+        "scan_full",
+        "scan_fix",
+        "packs_pro",
+        "undo_session"
+      ],
+      "key_sha256": "sha256:95bfb5543da6ea37109b9d32e2f7696e2e3eea8deb74f07ef1cb822db71469bb",
+      "instance": "lki_test_0005",
+      "validated_at": "2026-10-21T04:12:09.000Z",
+      "grace_days": 14,
+      "period_end": null,
+      "key_id": "lk_01jdtestkey00000000000000a",
+      "livemode": false,
+      "body_hash": "sha256:1892935ea511e68fb7bbe584d390a4e633771481e670d8453331a796f7c0622b",
+      "sig": "ed25519:JLRRIWX2BiM_MeP_TuGOkStapOmMMr-o_19dLTitCbQY6MZPK9gxB9CzXss_wGBCX1W0FdvVoFiywjSZLxQeBw"
     }
   ]
 }

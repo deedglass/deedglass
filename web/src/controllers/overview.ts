@@ -19,6 +19,7 @@ import { apiErrorToast, toast } from './toast.ts';
 import { showKeySheet } from './keysheet.ts';
 import { announce } from './shell.ts';
 import { mountMirror } from '@verify/ui/mirror.ts';
+import { mountCaughtBanner } from './sessions.ts';
 
 const REFRESH_MS = 60_000;
 const LIVE_ROWS = 10;
@@ -130,8 +131,12 @@ export function mountOverview(): void {
   };
 
   // ---------- render ----------
+  // S50: the caught banner (at most 3 watched sessions, each with the free path beside it).
+  const caughtHost = h('div', { class: 'ov-caught' });
+  void mountCaughtBanner(caughtHost);
   const render = (o: Overview) => {
     body.replaceChildren(h('div', { class: 'ov' },
+      caughtHost,
       tiles(o),
       h('div', { class: 'ov-grid' },
         h('div', { class: 'ov-main' }, attention(o), liveCard),

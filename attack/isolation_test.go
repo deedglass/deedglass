@@ -106,8 +106,12 @@ func TestOrgIsolation(t *testing.T) {
 	  SELECT $1::text, $2::text, 'advisory', 'fixture', 'advisory.deny_heavy', '1', 'sha256:' || repeat('a', 64), v.policy_id, v.id, v.version_hash,
 	    'sha256:' || repeat('b', 64), now() - interval '14 days', now()
 	  FROM deedglass.policy_versions AS v WHERE v.org_id = $2::text AND v.id = $3::text RETURNING id`, ids.New[ids.SuggestionKind]().String(), acme.ID, acme.PolicyV)[0][0]
+	// S50: a watched session (written as the superuser: observe mode is off on the harness's connector).
+	obs := e.CPQuery(`INSERT INTO deedglass.observe_sessions (id, org_id, connector_id, label, opened_by_type)
+	  VALUES ($1, $2, $3, 'fixture', 'system') RETURNING id`, ids.New[ids.ObserveSessionKind]().String(), acme.ID, acme.Conns["postgres"])[0][0]
+	dtx := ids.New[ids.DecodedTxKind]().String()
 	acmeIDs := []string{acme.ID, attacker.ID, attacker.KeyID, act, deed, acme.Policy, acme.PolicyV, acme.Conns["orders"], acme.Conns["fs"], member, kid,
-		apr, wh, rpl, anm, sug}
+		apr, wh, rpl, anm, sug, obs}
 	for _, id := range acmeIDs {
 		if id == "" {
 			t.Fatalf("an Acme fixture is missing: %v", acmeIDs)
@@ -157,6 +161,11 @@ func TestOrgIsolation(t *testing.T) {
 		"/v1/suggestions/{id}":                                  {"id": sug},
 		"/v1/suggestions/{id}/accept":                           {"id": sug},
 		"/v1/suggestions/{id}/reject":                           {"id": sug},
+		"/v1/observe/sessions/{id}":                             {"id": obs},
+		"/v1/observe/sessions/{id}/close":                       {"id": obs},
+		"/v1/observe/sessions/{id}/undo":                        {"id": obs},
+		"/v1/observe/sessions/{id}/undo_preview":                {"id": obs},
+		"/v1/observe/sessions/{id}/frames/{dtx}/exclude":        {"id": obs, "dtx": dtx},
 		"/mcp/{connector}":                                      {"connector": "fs"},
 		"/.well-known/oauth-protected-resource/mcp/{connector}": nil, // public metadata: no org data
 		"/auth/assets/{file}":                                   nil, // public static file

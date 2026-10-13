@@ -42,6 +42,8 @@ const (
 	AdminEvent       = "adm"
 	Waitlist         = "wl"
 	Idempotency      = "idk"
+	// S50 (contract §14.2): a watched session of observe mode.
+	ObserveSession = "obs"
 	// Not here on purpose: witness_jobs use a bigint identity id (S13). S36's site waitlist
 	// (Cloudflare D1) reuses wl_.
 )
@@ -86,6 +88,7 @@ var registry = []PrefixInfo{
 	{AdminEvent, "AdminEvent", "admin event", "An administrative change in an org.", true, "ADR-014"},
 	{Waitlist, "Waitlist", "waitlist entry", "A waitlist entry (shared shape with the site waitlist).", false, "ADR-014"},
 	{Idempotency, "Idempotency", "idempotency key", "A stored Idempotency-Key response.", false, "ADR-014"},
+	{ObserveSession, "ObserveSession", "watched session", "A watched session: every change Postgres committed on the watched tables while it was open (S50).", true, "ADR-094"},
 }
 
 var byPrefix = func() map[string]PrefixInfo {
@@ -135,6 +138,7 @@ type (
 	AdminEventKind       struct{}
 	WaitlistKind         struct{}
 	IdempotencyKind      struct{}
+	ObserveSessionKind   struct{}
 )
 
 func (OrgKind) prefix() string              { return Org }
@@ -165,6 +169,7 @@ func (WebhookDeliveryKind) prefix() string  { return WebhookDelivery }
 func (AdminEventKind) prefix() string       { return AdminEvent }
 func (WaitlistKind) prefix() string         { return Waitlist }
 func (IdempotencyKind) prefix() string      { return Idempotency }
+func (ObserveSessionKind) prefix() string   { return ObserveSession }
 
 // Typed ids, one alias per prefix.
 type (
@@ -196,6 +201,7 @@ type (
 	AdminEventID       = ID[AdminEventKind]
 	WaitlistID         = ID[WaitlistKind]
 	IdempotencyID      = ID[IdempotencyKind]
+	ObserveSessionID   = ID[ObserveSessionKind]
 )
 
 // ID is a prefixed ULID of kind K. The zero value means "no id".

@@ -11,6 +11,7 @@
 @import './s26-settings.css';
 @import './s27-replay.css';
 @import './s28-insights.css';
+@import './s50-sessions.css';
 
 /* Inter Variable with the optical-size axis and Geist Mono 400, Latin, self-hosted (the site's faces). */
 @font-face {

@@ -224,6 +224,13 @@ builds it. Hidden commands work but aren't in `deedglass help`.
 | `deedglass approvals show <apr_…> [--json]` | Actions | Show one approval | built |
 | `deedglass undo preview <act_…> [--allow-triggers] [--steps N] [--json]` | Actions | Show what an undo would change | built |
 | `deedglass undo run <act_…> --plan <sha256:…> --reason "…" [--allow-triggers] [--wait 25s] [--json]` | Actions | Undo an action | built |
+| `deedglass observe run --connector <name> [--label "…"] [--agent <name>] -- <command …>` | Actions | Watch a database while a command runs | built |
+| `deedglass observe start --connector <name> [--label "…"] [--agent <name>] [--json]` | Actions | Open a watched session | built |
+| `deedglass observe stop <obs_…> [--wait=false] [--json]` | Actions | Close a watched session | built |
+| `deedglass observe list [--connector <name>] [--state sealed] [--caught] [--limit 20] [--json]` | Actions | List watched sessions | built |
+| `deedglass observe show <obs_…> [--undo-sql] [--json]` | Actions | Show a session or print its undo SQL | built |
+| `deedglass observe undo <obs_…> --reason "…" [--allow-triggers] [--wait 25s] [--json]` | Actions | Undo a whole session in one step (Pro) | built |
+| `deedglass observe exclude <obs_…> <dtx_…> [--include] [--json]` | Actions | Leave a transaction out of an undo | built |
 | `deedglass webhooks create --url <url> --events approval.requested,approval.decided [--description …] [--json]` | Actions | Add a webhook endpoint | built |
 | `deedglass webhooks list [--json]` | Actions | List webhook endpoints | built |
 | `deedglass webhooks test <whk_…> [--json]` | Actions | Send a test event | built |
@@ -887,7 +894,7 @@ $ deedglass policy evaluate --policy examples/policies/postgres-safe.yaml \
   rules   block-unclassified-sql   no match   when → false
           one-statement-only       no match   when → false
           block-destructive-sql    match      when → true      line 45
-          … 9 more rules not evaluated
+          … 10 more rules not evaluated
   policy  postgres-safe · sha256:2c4c…04fd · sqlguard 1
 ```
 
@@ -917,7 +924,7 @@ $ deedglass policy test --dir examples/policies --require-coverage --voice
 ✓ github-read-mostly         23 cases · 11 of 11 rules
 ✓ gmail-drafts-only          18 cases · 4 of 4 rules
 ✓ notion-pages               7 cases · 3 of 3 rules
-✓ postgres-safe              29 cases · 12 of 12 rules
+✓ postgres-safe              30 cases · 13 of 13 rules
 ✓ sdk-demo                   8 cases · 5 of 5 rules
 ✓ slack-post-with-approval   16 cases · 5 of 5 rules
 ✓ stripe-refunds             27 cases · 12 of 12 rules
@@ -928,7 +935,7 @@ $ deedglass policy test cmd/deedglass/testdata/policytest/fail.cases.yaml
     expected  deny · block-destructive-sql
     got       allow · allow-reads
     verify: expected L2, got L0
-✕ postgres-safe   3 cases · 1 failed · 2 of 12 rules
+✕ postgres-safe   3 cases · 1 failed · 2 of 13 rules
 ```
 
 A cases-file problem is shown like a lint error, with the line and a did-you-mean
@@ -944,7 +951,7 @@ existing version saves nothing. It uses an org admin key (`--api-key` or `DEEDGL
 
 ```
 $ deedglass policy push examples/policies/postgres-safe.yaml --notes "Orders DB, first cut"
-✓ postgres-safe v1 saved · pv_01jb8m3c0d2f4g6h8j0k2m4n6p · sha256:2c4c…04fd · 12 rules · 2 budgets
+✓ postgres-safe v1 saved · pv_01jb8m3c0d2f4g6h8j0k2m4n6p · sha256:2c4c…04fd · 13 rules · 2 budgets
   Next: deedglass policy test examples/policies/postgres-safe.yaml
 
 $ deedglass policy push examples/policies/postgres-safe.yaml

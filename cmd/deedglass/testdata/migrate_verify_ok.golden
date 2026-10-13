@@ -1,4 +1,4 @@
 exit 0
 --- stdout
-✓ 9 applied migrations match this build · 19 pending
+✓ 9 applied migrations match this build · 20 pending
 --- stderr

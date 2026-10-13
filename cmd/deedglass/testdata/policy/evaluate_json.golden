@@ -121,13 +121,13 @@ exit 0
     {
       "step": "rule",
       "result": "not_evaluated",
-      "detail": "6 more rules not evaluated"
+      "detail": "7 more rules not evaluated"
     }
   ],
   "sqlguard_version": "1",
   "policy": {
     "name": "postgres-safe",
-    "version_hash": "sha256:01aeae9dbb518cf6d5ead7ed0b042bc0ed4700856c123694954de3b8369a76f6"
+    "version_hash": "sha256:60dacb12ffcad375f12600678763913bd15e3e7251aeb69e6bddbbfa83434f47"
   },
   "evaluated_in_us": N
 }

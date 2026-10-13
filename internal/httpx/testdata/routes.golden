@@ -117,6 +117,13 @@ planned    GET     /v1/suggestions/{id}                                   sessio
 planned    POST    /v1/suggestions/{id}/accept                            session_or_key  admin            S28
 planned    POST    /v1/suggestions/{id}/reject                            session_or_key  admin            S28
 planned    POST    /v1/suggestions/generate                               session_or_key  admin            S28
+planned    POST    /v1/observe/sessions                                   session_or_key  admin            S50    keys: admin; 409 observe_not_enabled when the connector's observe mode is off
+planned    POST    /v1/observe/sessions/{id}/close                        session_or_key  admin            S50    moves to closing; the serve job seals it
+planned    GET     /v1/observe/sessions                                   session_or_key  viewer           S50    keys: admin; ?connector ?state ?caught, cursor pagination
+planned    GET     /v1/observe/sessions/{id}                              session_or_key  viewer           S50    keys: admin; transactions with 20 diff rows each
+planned    POST    /v1/observe/sessions/{id}/frames/{dtx}/exclude         session_or_key  admin            S50    sealed sessions only; seals observe.frame_excluded
+planned    GET     /v1/observe/sessions/{id}/undo_preview                 session_or_key  viewer           S50    free; never executes; carries the undo SQL
+planned    POST    /v1/observe/sessions/{id}/undo                         session_or_key  admin            S50    Pro: 403 pro_required without undo_session; the console system agent acts
 planned    POST    /mcp/{connector}                                       agent_key       actions:execute  S15
 planned    POST    /mcp/native                                            agent_key       actions:execute  S15
 planned    POST    /v1/slack/interact                                     public          -                S29    Slack signature; form body

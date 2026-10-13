@@ -22,6 +22,10 @@ type Resolver struct {
 	Planner *Planner
 	DB      *store.DB
 	Log     *slog.Logger
+	// S50: "<connector>.undo_session". Sessions loads a watched session; Sessions nil refuses the
+	// tool. SessionUndo is the Pro engine (ee/undosession), nil without the licence feature.
+	Sessions    SessionSource
+	SessionUndo SessionUndo
 }
 
 // Resolve implements gate.Resolver for "<connector>.undo".
@@ -34,12 +38,15 @@ func (r Resolver) Resolve(ctx context.Context, org ids.OrgID, qualified string) 
 		return nil, connector.ToolSpec{}, "", err
 	}
 	b, ok := ex.(connector.Bound)
-	if !ok || spec.Name != undoTool {
+	if !ok || (spec.Name != undoTool && spec.Name != SessionTool) {
 		return nil, connector.ToolSpec{}, "", connector.ErrToolUnknown
 	}
 	run, ok := b.Impl().(Runner)
 	if !ok {
 		return nil, connector.ToolSpec{}, "", connector.ErrToolUnknown
+	}
+	if spec.Name == SessionTool {
+		return &SessionExecutor{b: b, run: run, planner: r.Planner, db: r.DB, source: r.Sessions, engine: r.SessionUndo}, spec, ctype, nil
 	}
 	log := r.Log
 	if log == nil {

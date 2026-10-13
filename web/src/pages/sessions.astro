@@ -1,0 +1,19 @@
+---
+// Sessions (S50 §5): every watched session, newest first. src/controllers/sessions.ts.
+import AppShell from '../layouts/AppShell.astro';
+import PageHead from '../components/PageHead.astro';
+import Skeleton from '../components/Skeleton.astro';
+import { sessionsCopy as c } from '../lib/copy-sessions.ts';
+---
+<AppShell title={c.title} screen="sessions">
+  <PageHead title={c.title} lede={c.lede}><span slot="actions" class="flex items-center gap-2" id="sessions-actions"></span></PageHead>
+  <section id="screen-body" aria-labelledby="page-title" aria-busy="true" data-screen-body="sessions">
+    <Skeleton />
+  </section>
+</AppShell>
+<script>
+  import { bootShell } from '../controllers/shell.ts';
+  import { mountSessions } from '../controllers/sessions.ts';
+  bootShell({ title: 'Sessions' });
+  mountSessions();
+</script>

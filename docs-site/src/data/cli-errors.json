@@ -1,5 +1,12 @@
 [
   {
+    "code": "agent_exit",
+    "exit": [
+      1
+    ],
+    "messages": null
+  },
+  {
     "code": "anchor_missing",
     "exit": [
       1
@@ -25,6 +32,16 @@
       "Cancelled.",
       "Nothing was changed.",
       "Nothing applied: the name didn't match."
+    ]
+  },
+  {
+    "code": "command_failed",
+    "exit": [
+      1
+    ],
+    "messages": null,
+    "next": [
+      "Check the command after --. The session was closed and holds nothing the command didn't do."
     ]
   },
   {
@@ -786,13 +803,6 @@
     ]
   },
   {
-    "code": "pro_required",
-    "exit": [
-      1
-    ],
-    "messages": null
-  },
-  {
     "code": "prune_running",
     "exit": [
       1
@@ -904,6 +914,15 @@
     "messages": null,
     "next": [
       "Nothing changed. Check the database connection and run deedglass keys rotate again."
+    ]
+  },
+  {
+    "code": "seal_pending",
+    "exit": [
+      2
+    ],
+    "messages": [
+      "the session is still closing."
     ]
   },
   {

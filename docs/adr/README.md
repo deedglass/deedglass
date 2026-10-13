@@ -91,3 +91,6 @@ ADR-000 to ADR-008 were written for the V0 verifier and keep their original text
 | 085 | One server object for every install link, listing and registry entry | Proposed (2026-10-11, S47) | `internal/installlinks`; registry name io.github.deedglass/deedglass |
 | 090 | Claude Desktop bundles (.mcpb) built in Go, checked by a pinned mcpb CLI | Proposed (2026-10-12, S47B) | `@anthropic-ai/mcpb` 2.1.2, dev only (deploy/mcpb) |
 | 091 | Policy packs: a signed index, an embedded snapshot, Pro checked at install only | Proposed (2026-10-12, S47B) | `internal/packs`; domain tag `deedglass/packs/v1\n` |
+| 094 | Observe mode: watched sessions over the change log, attributed by time window only | Proposed (2026-10-13, S50) | migration 0029; `internal/observe` |
+| 095 | Session undo: one plan over many transactions; the SQL free, one step Pro | Proposed (2026-10-13, S50) | `witness/undo`, `ee/undosession` |
+| 096 | Licence feature negotiation (features_known) | Proposed (2026-10-13, S50) | `internal/licence`; site `licence_features.ts` |

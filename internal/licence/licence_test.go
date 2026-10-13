@@ -11,6 +11,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -42,14 +43,21 @@ func ptr(s string) *string { return &s }
 
 func bodies() []Body {
 	return []Body{
-		{Object: ObjectToken, V: 1, ID: "lic_01jdaaaaaaaaaaaaaaaaaaaaaa", Plan: PlanReport, Features: PlanFeatures[PlanReport],
+		{Object: ObjectToken, V: 1, ID: "lic_01jdaaaaaaaaaaaaaaaaaaaaaa", Plan: PlanReport, Features: V1PlanFeatures[PlanReport],
 			KeySHA256: KeyHash("DG-7Q2M-TEST-0001"), Instance: "lki_test_0001", ValidatedAt: "2026-10-21T04:12:09.000Z",
 			GraceDays: 14, PeriodEnd: ptr("2026-11-20T04:12:09.000Z"), Livemode: false},
-		{Object: ObjectToken, V: 1, ID: "lic_01jdbbbbbbbbbbbbbbbbbbbbbb", Plan: PlanFounding, Features: PlanFeatures[PlanFounding],
+		{Object: ObjectToken, V: 1, ID: "lic_01jdbbbbbbbbbbbbbbbbbbbbbb", Plan: PlanFounding, Features: V1PlanFeatures[PlanFounding],
 			KeySHA256: KeyHash("DG-FOUND-TEST-0002"), Instance: "lki_test_0002", ValidatedAt: "2026-10-21T04:12:09.000Z",
 			GraceDays: 14, PeriodEnd: ptr("2027-04-21T04:12:09.000Z"), Livemode: true},
-		{Object: ObjectToken, V: 1, ID: "lic_01jdcccccccccccccccccccccc", Plan: PlanPro, Features: PlanFeatures[PlanPro],
+		{Object: ObjectToken, V: 1, ID: "lic_01jdcccccccccccccccccccccc", Plan: PlanPro, Features: V1PlanFeatures[PlanPro],
 			KeySHA256: KeyHash("DG-PRO-TEST-0003 é"), Instance: "lki_test_0003", ValidatedAt: "2026-10-21T04:12:09.000Z",
+			GraceDays: 14, PeriodEnd: nil, Livemode: false},
+		// S50: a client that sends features_known gets the plan's full list, undo_session included.
+		{Object: ObjectToken, V: 1, ID: "lic_01jdddddddddddddddddddddda", Plan: PlanFounding, Features: NegotiateFeatures(PlanFounding, KnownFeatures(), true),
+			KeySHA256: KeyHash("DG-FOUND-TEST-0004"), Instance: "lki_test_0004", ValidatedAt: "2026-10-21T04:12:09.000Z",
+			GraceDays: 14, PeriodEnd: ptr("2027-04-21T04:12:09.000Z"), Livemode: true},
+		{Object: ObjectToken, V: 1, ID: "lic_01jdeeeeeeeeeeeeeeeeeeeeee", Plan: PlanPro, Features: NegotiateFeatures(PlanPro, KnownFeatures(), true),
+			KeySHA256: KeyHash("DG-PRO-TEST-0005"), Instance: "lki_test_0005", ValidatedAt: "2026-10-21T04:12:09.000Z",
 			GraceDays: 14, PeriodEnd: nil, Livemode: false},
 	}
 }
@@ -65,7 +73,7 @@ type golden struct {
 func TestGoldenTokens(t *testing.T) {
 	priv, _ := testSigner(t)
 	var g golden
-	g.Comment = "Licence token goldens (S48). Go signs these; the site's WebCrypto signer must produce the same body_hash and sig. Test key only."
+	g.Comment = "Licence token goldens (S48; S50 adds two negotiated tokens). Go signs these; the site's WebCrypto signer must produce the same body_hash and sig. Tokens 1-3 carry the v1 lists (a request without features_known), 4-5 the lists a client that sends features_known gets. Test key only."
 	g.KeyID, g.SeedHex = testKeyID, strings.Repeat("07", 32)
 	ksj, _ := KeySetJSON([]KeyRecord{Record(testKeyID, priv.Public().(ed25519.PublicKey))})
 	g.KeySet = json.RawMessage(bytes.TrimSpace(ksj))
@@ -287,8 +295,15 @@ func (f *fakeServices) handler() http.Handler {
 	mux.HandleFunc("POST /licenses/deactivate", func(w http.ResponseWriter, r *http.Request) { f.calls.Add(1) })
 	mux.HandleFunc("POST /api/licence/token", func(w http.ResponseWriter, r *http.Request) {
 		f.calls.Add(1)
-		var in struct{ License_key, Instance string }
+		var in struct {
+			License_key, Instance string
+			FeaturesKnown         *[]string `json:"features_known"`
+		}
 		json.NewDecoder(r.Body).Decode(&in)
+		if in.FeaturesKnown == nil || !slices.Equal(*in.FeaturesKnown, KnownFeatures()) {
+			w.WriteHeader(http.StatusBadRequest) // S50: every request names the features this build knows
+			return
+		}
 		if !f.valid.Load() {
 			w.WriteHeader(http.StatusForbidden)
 			return

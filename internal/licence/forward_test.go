@@ -37,9 +37,9 @@ func TestForwardCompatibleFeatures(t *testing.T) {
 		wantErr  error // nil: accepted; errBody: refused shape; ErrSignature
 		granted  []string
 	}{
-		{name: "known and unknown", features: []string{FeatureScanFull, "undo_session", FeaturePacksPro, "security_pack", "agency"},
+		{name: "known and unknown", features: []string{FeatureScanFull, "future_one", FeaturePacksPro, "security_pack", "agency"},
 			granted: []string{FeatureScanFull, FeaturePacksPro}},
-		{name: "unknown only", features: []string{"undo_session", "security_pack", "agency"}, granted: []string{}},
+		{name: "unknown only", features: []string{"future_one", "security_pack", "agency"}, granted: []string{}},
 		{name: "known only", features: PlanFeatures[PlanPro], granted: PlanFeatures[PlanPro]},
 		{name: "duplicate known", features: []string{FeatureScanFix, FeatureScanFix, "agency"}, granted: []string{FeatureScanFix}},
 		{name: "at the cap", features: many[:maxFeatures], granted: []string{}},
@@ -52,7 +52,7 @@ func TestForwardCompatibleFeatures(t *testing.T) {
 		{name: "malformed: dash", features: []string{"security-pack"}, wantErr: errBody},
 		{name: "malformed: empty list", features: []string{}, wantErr: errBody},
 		{name: "malformed: over the cap", features: many, wantErr: errBody},
-		{name: "bad signature", features: []string{FeatureScanFull, "undo_session"},
+		{name: "bad signature", features: []string{FeatureScanFull, "future_one"},
 			tamper: func(x *Token) { x.Sig = x.Sig[:20] + flip(x.Sig[20]) + x.Sig[21:] }, wantErr: ErrSignature},
 		{name: "unknown feature added after signing", features: []string{FeatureScanFull},
 			tamper: func(x *Token) { x.Features = append(x.Features, "agency") }, wantErr: ErrSignature},
@@ -118,7 +118,7 @@ func TestForwardCompatibleFeatures(t *testing.T) {
 func TestUnknownFeatureNeverRuns(t *testing.T) {
 	priv, ks := testSigner(t)
 	b := bodies()[0] // report: 30 days, test mode
-	b.Features = append(append([]string(nil), b.Features...), "undo_session")
+	b.Features = append(append([]string(nil), b.Features...), "future_one")
 	tok, err := Sign(testKeyID, priv, b)
 	if err != nil {
 		t.Fatal(err)
@@ -126,7 +126,7 @@ func TestUnknownFeatureNeverRuns(t *testing.T) {
 	if err := tok.Verify(ks); err != nil {
 		t.Fatal(err)
 	}
-	if tok.Has("undo_session") {
+	if tok.Has("future_one") {
 		t.Fatal("an unknown feature was granted")
 	}
 	v, _ := time.Parse(TimeLayout, b.ValidatedAt)

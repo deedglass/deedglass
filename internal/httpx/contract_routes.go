@@ -171,6 +171,15 @@ var contractRoutes = []ContractRoute{
 	cr("POST", "/v1/suggestions/{id}/reject", SessionOrKey, "admin", "S28"),
 	cr("POST", "/v1/suggestions/generate", SessionOrKey, "admin", "S28"),
 
+	// S50: observe mode (watched sessions). Agent keys get 403 on every route.
+	cr("POST", "/v1/observe/sessions", SessionOrKey, "admin", "S50", "keys: admin; 409 observe_not_enabled when the connector's observe mode is off"),
+	cr("POST", "/v1/observe/sessions/{id}/close", SessionOrKey, "admin", "S50", "moves to closing; the serve job seals it"),
+	cr("GET", "/v1/observe/sessions", SessionOrKey, "viewer", "S50", "keys: admin; ?connector ?state ?caught, cursor pagination"),
+	cr("GET", "/v1/observe/sessions/{id}", SessionOrKey, "viewer", "S50", "keys: admin; transactions with 20 diff rows each"),
+	cr("POST", "/v1/observe/sessions/{id}/frames/{dtx}/exclude", SessionOrKey, "admin", "S50", "sealed sessions only; seals observe.frame_excluded"),
+	cr("GET", "/v1/observe/sessions/{id}/undo_preview", SessionOrKey, "viewer", "S50", "free; never executes; carries the undo SQL"),
+	cr("POST", "/v1/observe/sessions/{id}/undo", SessionOrKey, "admin", "S50", "Pro: 403 pro_required without undo_session; the console system agent acts"),
+
 	// S15: MCP (GET and DELETE answer 405; sessionless).
 	cr("POST", "/mcp/{connector}", AgentKey, "actions:execute", "S15"),
 	cr("POST", "/mcp/native", AgentKey, "actions:execute", "S15"),

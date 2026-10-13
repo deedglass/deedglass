@@ -52,6 +52,10 @@ tags:
     description: >-
       Sending actions through the Gate, cancelling one that waits for approval, and reporting the
       result of a proxy-mode action (docs/GATE.md).
+  - name: Observe
+    description: >-
+      Observe mode (S50): watched sessions over a Postgres connector's change log, their seal, the
+      free undo SQL and the one-step session undo (Pro) (docs/OBSERVE.md).
   - name: Deeds
     description: >-
       Signed records of what agents did, and the public seal keys that check them offline
@@ -4522,6 +4526,289 @@ paths:
                 $ref: "#/components/schemas/DecoderDropped"
         default:
           $ref: "#/components/responses/Error"
+  /v1/observe/sessions:
+    post:
+      operationId: openObserveSession
+      summary: Open a watched session
+      description: >-
+        Observe mode (S50). Opens a watched session on a Postgres connector whose
+        `witness.observe.enabled` is true: every transaction Postgres commits on the connector's
+        watched tables while the session is open, and that no Deedglass action claimed, belongs to
+        it. Nothing about the agent changes; only the database's change log is read. `agent` links
+        an agent record for display only and attributes nothing. 409 `observe_not_enabled` when the
+        connector's observe mode is off. A signed-in admin or owner (with `Deedglass-CSRF`) or an
+        org admin key; agent keys get 403 `insufficient_scope`.
+      tags: [Observe]
+      security: [{bearerAuth: []}, {sessionCookie: []}]
+      x-deedglass-auth: session_or_key
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+        - $ref: "#/components/parameters/CSRFWithSession"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [connector]
+              properties:
+                connector: {type: string, description: The connector's name or `con_` id.}
+                label: {type: string, minLength: 1, maxLength: 80, description: A name for the session (one line).}
+                agent: {type: string, description: An agent's name or `agt_` id, shown beside the session; it attributes nothing.}
+      responses:
+        "201":
+          description: The open session.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+            Deedglass-Version:
+              $ref: "#/components/headers/DeedglassVersion"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ObserveSession"
+        default:
+          $ref: "#/components/responses/Error"
+    get:
+      operationId: listObserveSessions
+      summary: List watched sessions
+      description: >-
+        This org's watched sessions, newest first, without their transactions. Filter by
+        `connector` (name or id), `state` and `caught`. A Console session (viewer and up) or an org
+        admin key; agent keys get 403 `insufficient_scope`.
+      tags: [Observe]
+      security: [{bearerAuth: []}, {sessionCookie: []}]
+      x-deedglass-auth: session_or_key
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+        - {name: connector, in: query, required: false, description: The connector's name or `con_` id., schema: {type: string}}
+        - {name: state, in: query, required: false, description: Only this state., schema: {type: string, enum: [open, closing, sealed, undoing, undone]}}
+        - {name: caught, in: query, required: false, description: Only sessions with (true) or without (false) a caught item., schema: {type: boolean}}
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+      responses:
+        "200":
+          description: A page of sessions.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+            Deedglass-Version:
+              $ref: "#/components/headers/DeedglassVersion"
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [object, data, has_more, next_cursor]
+                properties:
+                  object: {type: string, const: list}
+                  data: {type: array, items: {$ref: "#/components/schemas/ObserveSession"}}
+                  has_more: {type: boolean}
+                  next_cursor: {type: [string, "null"]}
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/observe/sessions/{id}:
+    get:
+      operationId: getObserveSession
+      summary: Get a watched session
+      description: >-
+        One session with its transactions, newest first; the newest `diff_frames` (default 20,
+        at most 100) carry their first 20 changed rows. A watched session has no level and no
+        Matches or Doesn't match verdict: `observed` says so. Another org's session is 404.
+      tags: [Observe]
+      security: [{bearerAuth: []}, {sessionCookie: []}]
+      x-deedglass-auth: session_or_key
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+        - {name: id, in: path, required: true, description: The session (`obs_…`)., schema: {type: string}}
+        - {name: diff_frames, in: query, required: false, description: How many transactions carry a diff (0 to 100; default 20)., schema: {type: integer, minimum: 0, maximum: 100}}
+      responses:
+        "200":
+          description: The session.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+            Deedglass-Version:
+              $ref: "#/components/headers/DeedglassVersion"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ObserveSession"
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/observe/sessions/{id}/close:
+    post:
+      operationId: closeObserveSession
+      summary: Close a watched session
+      description: >-
+        Moves an open session to `closing`. Deedglass seals it (the admin deed
+        `observe.session_sealed`: ids, counts and digests only) once the decoder has passed the
+        close time, at most 30 seconds later, or flags `decoder_behind` and keeps attaching late
+        transactions for up to 10 minutes. Closing a session that is already closing or sealed
+        answers it as it is.
+      tags: [Observe]
+      security: [{bearerAuth: []}, {sessionCookie: []}]
+      x-deedglass-auth: session_or_key
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+        - $ref: "#/components/parameters/CSRFWithSession"
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - {name: id, in: path, required: true, description: The session (`obs_…`)., schema: {type: string}}
+      responses:
+        "200":
+          description: The session.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+            Deedglass-Version:
+              $ref: "#/components/headers/DeedglassVersion"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ObserveSession"
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/observe/sessions/{id}/frames/{dtx}/exclude:
+    post:
+      operationId: excludeObserveFrame
+      summary: Leave a transaction out of a session's undo
+      description: >-
+        `{"excluded": true}` leaves one transaction out of the session's undo (another writer's,
+        for example); `false` puts it back. Only while the session is sealed and before an undo
+        starts (409 `conflict` otherwise). Each change seals `observe.frame_excluded`, and the
+        undo's record lists what was left out.
+      tags: [Observe]
+      security: [{bearerAuth: []}, {sessionCookie: []}]
+      x-deedglass-auth: session_or_key
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+        - $ref: "#/components/parameters/CSRFWithSession"
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - {name: id, in: path, required: true, description: The session (`obs_…`)., schema: {type: string}}
+        - {name: dtx, in: path, required: true, description: The transaction (`dtx_…`)., schema: {type: string}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [excluded]
+              properties:
+                excluded: {type: boolean}
+      responses:
+        "200":
+          description: The session.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+            Deedglass-Version:
+              $ref: "#/components/headers/DeedglassVersion"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ObserveSession"
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/observe/sessions/{id}/undo_preview:
+    get:
+      operationId: previewObserveUndo
+      summary: Preview a session's undo
+      description: >-
+        Free. Plans the undo of every included transaction, newest first, from the row images
+        Postgres committed, and runs S23's checks without a lock; it never executes. `conflicts`
+        counts rows that changed again after the session (any conflict blocks the run). `sql` is
+        the same plan as SQL you review and run yourself, in one transaction, each statement
+        guarded by the values the session left; `refusals` say why there is no SQL (a TRUNCATE,
+        images past the cap, sensitive columns, expired frames).
+      tags: [Observe]
+      security: [{bearerAuth: []}, {sessionCookie: []}]
+      x-deedglass-auth: session_or_key
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+        - {name: id, in: path, required: true, description: The session (`obs_…`)., schema: {type: string}}
+        - {name: allow_triggers, in: query, required: false, description: Let triggers fire again (the triggers check is then a warning)., schema: {type: boolean}}
+        - {name: steps_limit, in: query, required: false, description: Steps to list, 1 to 1000 (default undo.preview_steps, 20)., schema: {type: integer, minimum: 1, maximum: 1000}}
+      responses:
+        "200":
+          description: The preview.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+            Deedglass-Version:
+              $ref: "#/components/headers/DeedglassVersion"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ObserveUndoPreview"
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/observe/sessions/{id}/undo:
+    post:
+      operationId: createObserveUndo
+      summary: Undo a watched session in one step (Pro)
+      description: >-
+        Pro (`undo_session`): 403 `pro_required` without it, naming the free path. Previews again,
+        refuses `undo_conflict` (rows changed after the session), `undo_unavailable` (with
+        `error.checks`), `undo_plan_stale` (the plan changed since the preview) or `already_undone`,
+        then sends the undo through the Gate as an action of the org's `console` system agent:
+        tool `<connector>.undo_session`, policy (the starter rule asks for a countersign), one
+        transaction in Postgres, an L2 witness against the plan's exact footprint, and its own
+        deed. The answer is the action object (202 `pending_approval`, or 200 once sealed).
+      tags: [Observe]
+      security: [{bearerAuth: []}, {sessionCookie: []}]
+      x-deedglass-auth: session_or_key
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+        - $ref: "#/components/parameters/CSRFWithSession"
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - {name: id, in: path, required: true, description: The session (`obs_…`)., schema: {type: string}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [plan_digest, reason]
+              properties:
+                plan_digest: {type: string, pattern: "^sha256:[0-9a-f]{64}$", description: The preview's plan_digest.}
+                reason: {type: string, minLength: 1, maxLength: 280}
+                allow_triggers: {type: boolean}
+                wait: {type: number, minimum: 0, maximum: 25, description: Seconds to wait for the outcome.}
+      responses:
+        "200":
+          description: The undo action, sealed.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+            Deedglass-Version:
+              $ref: "#/components/headers/DeedglassVersion"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Action"
+        "202":
+          description: The undo action, waiting (usually for a countersign).
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+            Deedglass-Version:
+              $ref: "#/components/headers/DeedglassVersion"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Action"
+        default:
+          $ref: "#/components/responses/Error"
   /v1/connector-types:
     get:
       operationId: listConnectorTypes
@@ -7380,6 +7667,8 @@ components:
                 - suggestion_stale
                 - shadow_slot_taken
                 - suggestion_decided
+                - observe_not_enabled
+                - pro_required
             message:
               type: string
               description: One or more calm sentences with the next step.
@@ -8342,6 +8631,135 @@ components:
         key: {type: object, additionalProperties: {type: string}}
         set: {type: object, additionalProperties: {type: [string, "null"]}}
         expect: {type: object, additionalProperties: {type: [string, "null"]}}
+    ObserveSession:
+      type: object
+      required: [object, id, connector, label, agent, state, opened_at, closed_at, opened_by, closed_by, flags, watched_tables, summary, caught, seal, undo, notes, observed, attribution]
+      properties:
+        object: {type: string, const: observe_session}
+        id: {type: string, description: '`obs_…`'}
+        connector:
+          type: object
+          required: [id, name]
+          properties:
+            id: {type: string}
+            name: {type: string}
+        label: {type: [string, "null"]}
+        agent: {type: [string, "null"], description: An agent shown beside the session; it attributes nothing.}
+        state: {type: string, enum: [open, closing, sealed, undoing, undone]}
+        opened_at: {type: string, format: date-time}
+        closed_at: {type: [string, "null"], format: date-time}
+        opened_by: {$ref: "#/components/schemas/ObserveActor"}
+        closed_by:
+          oneOf:
+            - {$ref: "#/components/schemas/ObserveActor"}
+            - {type: "null"}
+        flags: {type: array, items: {type: string, enum: [overlap, max_session, decoder_behind, caught, frames_expired]}}
+        watched_tables: {type: array, items: {type: string}}
+        summary:
+          type: object
+          required: [transactions, excluded, expired, rows, tables, first_commit, last_commit]
+          properties:
+            transactions: {type: integer}
+            excluded: {type: integer}
+            expired: {type: integer}
+            rows: {type: integer}
+            tables: {type: object, additionalProperties: {$ref: "#/components/schemas/ObserveCounts"}}
+            first_commit: {type: [string, "null"], format: date-time}
+            last_commit: {type: [string, "null"], format: date-time}
+        caught: {type: array, items: {$ref: "#/components/schemas/CaughtItem"}}
+        seal:
+          type: [object, "null"]
+          properties:
+            deed: {type: string, description: 'The observe.session_sealed deed (`deed_…`).'}
+        undo:
+          type: object
+          required: [action, possible, free_path]
+          properties:
+            action: {type: [string, "null"], description: The session undo action, once one started.}
+            possible: {type: boolean}
+            free_path: {type: string, description: The free way back (the undo SQL you run).}
+        notes: {type: array, items: {type: string}}
+        observed: {type: string, description: '"Observed: what Postgres committed. Nothing was compared with what the agent said."'}
+        attribution: {type: string}
+        transactions:
+          type: object
+          description: On the single read only, newest first.
+          properties:
+            object: {type: string, const: list}
+            total: {type: integer}
+            data:
+              type: array
+              items:
+                type: object
+                required: [id, commit_time, commit_lsn, xid, tables, changes, excluded, expired, flags, diff]
+                properties:
+                  id: {type: string, description: '`dtx_…`'}
+                  commit_time: {type: [string, "null"], format: date-time}
+                  commit_lsn: {type: string}
+                  xid: {type: integer}
+                  tables: {type: object, additionalProperties: {$ref: "#/components/schemas/ObserveCounts"}}
+                  changes: {type: integer}
+                  excluded: {type: boolean}
+                  expired: {type: boolean}
+                  flags: {type: array, items: {type: string}}
+                  diff:
+                    type: [object, "null"]
+                    properties:
+                      rows: {type: array, items: {type: object}}
+                      total: {type: integer}
+                      truncated: {type: boolean}
+    ObserveActor:
+      type: object
+      required: [type, id]
+      properties:
+        type: {type: string, enum: [user, api_key, system]}
+        id: {type: [string, "null"]}
+    ObserveCounts:
+      type: object
+      required: [insert, update, delete, truncate]
+      properties:
+        insert: {type: integer}
+        update: {type: integer}
+        delete: {type: integer}
+        truncate: {type: integer}
+    CaughtItem:
+      type: object
+      required: [kind, line, undo_possible, undo_free_path]
+      properties:
+        kind: {type: string, enum: [truncate, many_rows, delete_rows, doesnt_match, destructive_ran, more_rows, retry_after_deny, undone_later]}
+        session: {type: string}
+        actions: {type: array, items: {type: string}}
+        frames: {type: array, items: {type: string}}
+        table: {type: string}
+        rows: {type: integer}
+        line: {type: string, description: '"Deedglass caught this: …", built from the record.'}
+        undo_possible: {type: boolean}
+        undo_free_path: {type: string, description: The free way back; every view that shows the item shows it.}
+    ObserveUndoPreview:
+      type: object
+      required: [object, session, available, summary, headline, plan_digest, connector, counts, rows, tables, steps, checks, conflicts, excluded, notes, redacted, sql, refusals, pro, free_path, observed]
+      properties:
+        object: {type: string, const: observe_undo_preview}
+        session: {type: string}
+        available: {type: boolean}
+        summary: {type: string}
+        headline: {type: string}
+        plan_digest: {type: [string, "null"]}
+        connector: {type: [object, "null"]}
+        counts: {type: object}
+        rows: {type: integer}
+        tables: {type: array, items: {type: string}}
+        steps: {type: object}
+        checks: {type: array, items: {type: object}}
+        conflicts: {type: integer, description: Rows that changed again after the session.}
+        excluded: {type: array, items: {type: string}}
+        notes: {type: array, items: {type: string}}
+        redacted: {type: array, items: {type: string}}
+        sql: {type: [string, "null"], description: The undo SQL to review and run yourself (free).}
+        refusals: {type: array, items: {type: string}}
+        pro: {type: boolean, description: Whether this server may run the undo in one step.}
+        free_path: {type: string}
+        observed: {type: string}
     UndoPreview:
       type: object
       required: [object, action, tool, available, summary, headline, plan_digest, connector, evidence, counts, rows, tables, steps, checks, notes, redacted, policy, undone_by]

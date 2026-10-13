@@ -263,6 +263,7 @@ var sweepIDPrefix = map[string]string{
 	"agents": ids.Agent, "keys": ids.APIKey, "members": ids.Membership, "policies": ids.Policy,
 	"actions": ids.Action, "approvals": ids.Approval, "webhooks": ids.Webhook, "deeds": ids.Deed,
 	"connectors": ids.Connector, "anomalies": ids.Anomaly, "replays": ids.Replay, "suggestions": ids.Suggestion,
+	"sessions": ids.ObserveSession,
 }
 
 func sweepPlaceholder(t *testing.T, pattern, name, prev string) string {
@@ -283,6 +284,8 @@ func sweepPlaceholder(t *testing.T, pattern, name, prev string) string {
 		return "postgres"
 	case "connector":
 		return newID(ids.Connector)
+	case "dtx":
+		return newID(ids.DecodedTx)
 	case "id":
 		if p, ok := sweepIDPrefix[prev]; ok {
 			return newID(p)

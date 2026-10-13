@@ -1,0 +1,77 @@
+{
+  "suite": "sdk-ts",
+  "node": "v24.9.0",
+  "date": "2026-10-13",
+  "lines": [
+    {
+      "name": "core gzip (without verify)",
+      "value": 12.29,
+      "budget": 16,
+      "unit": "KiB",
+      "pass": true
+    },
+    {
+      "name": "verify gzip",
+      "value": 18.07,
+      "budget": 19,
+      "unit": "KiB",
+      "pass": true
+    },
+    {
+      "name": "adapter ai-sdk gzip",
+      "value": 0.59,
+      "budget": 3,
+      "unit": "KiB",
+      "pass": true
+    },
+    {
+      "name": "adapter openai-agents gzip",
+      "value": 0.54,
+      "budget": 3,
+      "unit": "KiB",
+      "pass": true
+    },
+    {
+      "name": "adapter langchain gzip",
+      "value": 0.42,
+      "budget": 3,
+      "unit": "KiB",
+      "pass": true
+    },
+    {
+      "name": "adapter claude-agent-sdk gzip",
+      "value": 1.65,
+      "budget": 3,
+      "unit": "KiB",
+      "pass": true
+    },
+    {
+      "name": "adapters/shared gzip (once)",
+      "value": 1.38,
+      "budget": 3,
+      "unit": "KiB",
+      "pass": true
+    },
+    {
+      "name": "act() overhead p50 (mock fetch)",
+      "value": 0.017,
+      "budget": 0.3,
+      "unit": "ms",
+      "pass": true
+    },
+    {
+      "name": "verifyDeeds 1,000 deeds",
+      "value": 114,
+      "budget": 1500,
+      "unit": "ms",
+      "pass": true
+    },
+    {
+      "name": "cold import('@deedglass/sdk')",
+      "value": 14,
+      "budget": 30,
+      "unit": "ms",
+      "pass": true
+    }
+  ]
+}

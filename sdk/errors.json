@@ -545,6 +545,20 @@
       "type": "invalid_request_error",
       "class": "InvalidRequestError",
       "doc_url": "https://docs.deedglass.com/errors/suggestion_decided"
+    },
+    {
+      "code": "observe_not_enabled",
+      "status": 409,
+      "type": "invalid_request_error",
+      "class": "InvalidRequestError",
+      "doc_url": "https://docs.deedglass.com/errors/observe_not_enabled"
+    },
+    {
+      "code": "pro_required",
+      "status": 403,
+      "type": "permission_error",
+      "class": "PermissionDeniedError",
+      "doc_url": "https://docs.deedglass.com/errors/pro_required"
     }
   ],
   "generated_from": "internal/httpx/errors.go (go run ./internal/httpx/cmd/gensdkerrors)",

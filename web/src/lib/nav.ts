@@ -13,6 +13,7 @@ export const DESTS: readonly Dest[] = [
   { key: 'overview', href: '/app', label: copy.nav.overview, icon: 'layout-grid', go: 'g o' },
   { key: 'actions', href: '/app/actions', label: copy.nav.actions, icon: 'activity', go: 'g a' },
   { key: 'approvals', href: '/app/approvals', label: copy.nav.approvals, icon: 'stamp', go: 'g p' },
+  { key: 'sessions', href: '/app/sessions', label: copy.nav.sessions, icon: 'eye', go: 'g w' },
   { key: 'agents', href: '/app/agents', label: copy.nav.agents, icon: 'bot', go: 'g g' },
   { key: 'policies', href: '/app/policies', label: copy.nav.policies, icon: 'scroll-text', go: 'g l' },
   { key: 'connectors', href: '/app/connectors', label: copy.nav.connectors, icon: 'plug', go: 'g c' },

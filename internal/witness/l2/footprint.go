@@ -90,6 +90,8 @@ const (
 	ToolExecute = "execute"
 	ToolCall    = "call"
 	ToolUndo    = "undo"
+	// ToolUndoSession is S50's session undo: an exact footprint like undo.
+	ToolUndoSession = "undo_session"
 )
 
 // DeriveInput is everything Derive reads.
@@ -160,7 +162,7 @@ func unknown(why string) Footprint {
 func Derive(in DeriveInput) (Footprint, []witness.Reason) {
 	var fp Footprint
 	switch in.Tool {
-	case ToolUndo:
+	case ToolUndo, ToolUndoSession:
 		if in.Explicit == nil {
 			fp = unknown(WhyNoExplicit)
 		} else {

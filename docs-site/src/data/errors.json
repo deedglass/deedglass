@@ -741,5 +741,25 @@
     "owner": "S28",
     "retryable": false,
     "doc_url": "https://docs.deedglass.com/errors/suggestion_decided"
+  },
+  {
+    "code": "observe_not_enabled",
+    "status": 409,
+    "type": "invalid_request_error",
+    "default_message": "Observe mode is off for this connector. Turn it on in Console › Connectors, or set witness.observe.enabled: true in its config.",
+    "template": "Observe mode is off for {connector}. Turn it on in Console › Connectors › {connector}, or set witness.observe.enabled: true in its config.",
+    "owner": "S50",
+    "retryable": false,
+    "doc_url": "https://docs.deedglass.com/errors/observe_not_enabled"
+  },
+  {
+    "code": "pro_required",
+    "status": 403,
+    "type": "permission_error",
+    "default_message": "This is part of Pro. Everything free still works; see deedglass.com/pricing.",
+    "template": "Undoing a whole session in one step is part of Pro. Per-action undo and the undo SQL stay free: deedglass observe show {session} --undo-sql.",
+    "owner": "S50",
+    "retryable": false,
+    "doc_url": "https://docs.deedglass.com/errors/pro_required"
   }
 ]

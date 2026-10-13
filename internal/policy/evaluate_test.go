@@ -506,7 +506,7 @@ func TestPostgresSafeDemo(t *testing.T) {
 	}
 	want := []string{"stop::pass:agent active · org running", "budget:agent-rate:pass:0 of 60 calls this minute",
 		"budget:agent-daily:pass:0 of 5,000 calls today", "rule:block-unclassified-sql:no_match:when → false",
-		"rule:one-statement-only:no_match:when → false", "rule:block-destructive-sql:match:when → true", "rule::not_evaluated:9 more rules not evaluated"}
+		"rule:one-statement-only:no_match:when → false", "rule:block-destructive-sql:match:when → true", "rule::not_evaluated:10 more rules not evaluated"}
 	if !reflect.DeepEqual(rules, want) {
 		t.Fatalf("trace:\n%s", strings.Join(rules, "\n"))
 	}

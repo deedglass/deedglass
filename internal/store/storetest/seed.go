@@ -273,6 +273,19 @@ func Rows(sk ids.SealKeyID) []Row {
 				b := rnd(3)
 				return []any{ids.New[ids.DecodedTxKind](), o.ID, o.Connector, fmt.Sprintf("0/%X", int(b[0])<<16|int(b[1])<<8|int(b[2]))}
 			})},
+		// S50: a watched session, and a session holding one frame (each insert opens a fresh session).
+		{"observe_sessions", ex(`INSERT INTO deedglass.observe_sessions (id, org_id, connector_id, opened_by_type) VALUES ($1, $2, $3, 'system')`,
+			func(o *Org) []any { return []any{ids.New[ids.ObserveSessionKind](), o.ID, o.Connector} })},
+		{"observe_frames", func(ctx context.Context, tx pgx.Tx, o *Org) error {
+			obs := ids.New[ids.ObserveSessionKind]()
+			if _, err := tx.Exec(ctx, `INSERT INTO deedglass.observe_sessions (id, org_id, connector_id, opened_by_type) VALUES ($1, $2, $3, 'system')`,
+				obs, o.ID, o.Connector); err != nil {
+				return err
+			}
+			_, err := tx.Exec(ctx, `INSERT INTO deedglass.observe_frames (org_id, session_id, frame_id) VALUES ($1, $2, $3)`,
+				o.ID, obs, ids.New[ids.DecodedTxKind]())
+			return err
+		}},
 		{"decoder_slots", ex(`INSERT INTO deedglass.decoder_slots (org_id, connector_id, slot_name) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING`,
 			func(o *Org) []any { return []any{o.ID, o.Connector, "deedglass_" + o.Connector.String()[4:]} })},
 		{"replay_jobs", func(ctx context.Context, tx pgx.Tx, o *Org) error {

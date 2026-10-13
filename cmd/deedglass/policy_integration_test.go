@@ -108,7 +108,7 @@ func TestPolicyAPILive(t *testing.T) {
 			}
 		}
 	}
-	expectOut(cli(t, env, false, "policy", "push", ps, "--notes", "Orders DB, first cut"), 0, "✓ postgres-safe v1 saved · pv_", "12 rules · 2 budgets")
+	expectOut(cli(t, env, false, "policy", "push", ps, "--notes", "Orders DB, first cut"), 0, "✓ postgres-safe v1 saved · pv_", "13 rules · 2 budgets")
 	expectOut(cli(t, env, false, "policy", "push", ps), 0, "○ postgres-safe v1 already has this content · nothing saved")
 	expectOut(cli(t, env, false, "policy", "activate", "postgres-safe", "--version", "1", "--mode", "shadow", "--reason", "Watch first"), 0,
 		"◐ postgres-safe v1 is now the shadow policy · deed_", "next to default-deny v1")
@@ -123,7 +123,7 @@ func TestPolicyAPILive(t *testing.T) {
 		} `json:"enforce"`
 	}
 	_ = json.Unmarshal([]byte(body), &set)
-	if code != 200 || set.Enforce.VersionHash != "sha256:01aeae9dbb518cf6d5ead7ed0b042bc0ed4700856c123694954de3b8369a76f6" || set.Enforce.Deed != deedID {
+	if code != 200 || set.Enforce.VersionHash != "sha256:60dacb12ffcad375f12600678763913bd15e3e7251aeb69e6bddbbfa83434f47" || set.Enforce.Deed != deedID {
 		t.Fatalf("%d %s", code, body)
 	}
 	// The activation deed verifies offline against the server's keys; the chain is intact.

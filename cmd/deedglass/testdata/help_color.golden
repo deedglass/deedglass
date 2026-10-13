@@ -30,6 +30,7 @@ exit 0
   approve · deny      Decide a pending approval
   approvals           List pending approvals                         [2m    [0m   [2mlist · show[0m
   undo                Preview or run an undo                         [2m    [0m   [2mpreview · run[0m
+  observe             Watch what changed while an agent ran          [2m    [0m   [2mrun · start · stop · list · show · undo · exclude[0m
   webhooks            Send events to your endpoints                  [2m    [0m   [2mcreate · list · test · delete[0m
 [1mRecords[0m
   verify              Check records offline

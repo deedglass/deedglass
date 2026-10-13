@@ -86,6 +86,47 @@ type Witness struct {
 	StrictTriggers bool                `json:"strict_triggers,omitempty"` // triggers that may write unwatched tables are a gap
 	L2Timeout      string              `json:"l2_timeout,omitempty"`      // how long an action waits for its frame (1s to 60s; 10s)
 	DiffRows       int                 `json:"diff_rows,omitempty"`       // rows the diff shows (1 to 100; 20)
+	// S50: observe mode (watched sessions). Left out when unset, so older configs keep their
+	// config_hash.
+	Observe *Observe `json:"observe,omitempty"`
+}
+
+// Observe is witness.observe.* (S50 §3.1): group the unattributed frames of this connector into
+// watched sessions. Nothing about the agent changes; only the database is read.
+type Observe struct {
+	Enabled    bool   `json:"enabled"`
+	MaxSession string `json:"max_session,omitempty"` // an open session closes itself after this (1m to 168h; 12h)
+	CaughtRows int    `json:"caught_rows,omitempty"` // one transaction changing this many rows in one table is "caught" (1 to 1,000,000; 100)
+}
+
+// Observe defaults and limits (S50 §3.1).
+const (
+	DefaultObserveMaxSession = 12 * time.Hour
+	MinObserveMaxSession     = time.Minute
+	MaxObserveMaxSession     = 168 * time.Hour
+	DefaultObserveCaughtRows = 100
+	MaxObserveCaughtRows     = 1_000_000
+)
+
+// ObserveEnabled reports whether witness and witness.observe are both on.
+func (w Witness) ObserveEnabled() bool { return w.Enabled && w.Observe != nil && w.Observe.Enabled }
+
+// ObserveMaxSession is witness.observe.max_session, parsed (the default when unset).
+func (w Witness) ObserveMaxSession() time.Duration {
+	if w.Observe != nil {
+		if d, err := time.ParseDuration(w.Observe.MaxSession); err == nil && d >= MinObserveMaxSession && d <= MaxObserveMaxSession {
+			return d
+		}
+	}
+	return DefaultObserveMaxSession
+}
+
+// ObserveCaughtRows is witness.observe.caught_rows (the default when unset).
+func (w Witness) ObserveCaughtRows() int {
+	if w.Observe != nil && w.Observe.CaughtRows >= 1 && w.Observe.CaughtRows <= MaxObserveCaughtRows {
+		return w.Observe.CaughtRows
+	}
+	return DefaultObserveCaughtRows
 }
 
 // L2 defaults and limits (S21 §3.12).
@@ -304,6 +345,19 @@ func ParseConfig(raw json.RawMessage) (Config, []connector.FieldError) {
 	}
 	if c.Witness.DiffRows != 0 && (c.Witness.DiffRows < 1 || c.Witness.DiffRows > MaxDiffRows) {
 		bad("witness.diff_rows", fmt.Sprintf("must be between 1 and %d.", MaxDiffRows))
+	}
+	if o := c.Witness.Observe; o != nil {
+		if o.MaxSession != "" {
+			if d, err := time.ParseDuration(o.MaxSession); err != nil || d < MinObserveMaxSession || d > MaxObserveMaxSession {
+				bad("witness.observe.max_session", "must be a duration between 1m and 168h, like 12h.")
+			}
+		}
+		if o.CaughtRows != 0 && (o.CaughtRows < 1 || o.CaughtRows > MaxObserveCaughtRows) {
+			bad("witness.observe.caught_rows", "must be between 1 and 1000000.")
+		}
+		if o.Enabled && !c.Witness.Enabled {
+			bad("witness.observe.enabled", "needs witness.enabled: true. Observe mode reads the same change log the Witness does.")
+		}
 	}
 	if !c.Witness.Enabled && (len(c.Witness.AutoColumns) > 0 || len(c.Witness.MaxRows) > 0 || c.Witness.StrictTriggers || c.Witness.L2Timeout != "" || c.Witness.DiffRows != 0) {
 		bad("witness.enabled", "must be true for the L2 settings to apply. Turn the witness on, or remove them.")

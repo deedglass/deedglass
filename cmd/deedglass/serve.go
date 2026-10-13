@@ -31,6 +31,7 @@ import (
 	"github.com/deedglass/deedglass/internal/gate"
 	"github.com/deedglass/deedglass/internal/httpx"
 	"github.com/deedglass/deedglass/internal/identity"
+	"github.com/deedglass/deedglass/internal/ids"
 	"github.com/deedglass/deedglass/internal/learn"
 	"github.com/deedglass/deedglass/internal/ledger"
 	"github.com/deedglass/deedglass/internal/mailer"
@@ -39,6 +40,8 @@ import (
 	slacknotify "github.com/deedglass/deedglass/internal/notify/slack"
 	"github.com/deedglass/deedglass/internal/notify/slack/slackstore"
 	"github.com/deedglass/deedglass/internal/notify/webhook"
+	"github.com/deedglass/deedglass/internal/observe"
+	"github.com/deedglass/deedglass/internal/observeapi"
 	"github.com/deedglass/deedglass/internal/policy"
 	"github.com/deedglass/deedglass/internal/policyapi"
 	"github.com/deedglass/deedglass/internal/store"
@@ -280,11 +283,24 @@ func runServe(ctx context.Context, e *Env, args []string) error {
 	ins := newInsights(db, led, log)
 	ins.wireSuggestions(cfg, pol, queue, log) // S28: suggestions, the digest and their schedule
 	keys.Listener().Listen(store.LearnChannel, ins.facts.Invalidate, func() { ins.facts.Invalidate("") })
-	gp, err := newGate(cfg, db, led, pol, keys, log, cw.reg, pool, aps, undoapi.Resolver{Reg: cw.reg, Planner: planner, DB: db, Log: log}, ins.facts)
+	// 5f'. Observe mode (S50): watched sessions, their serve job, and the session undo (its
+	// preview and SQL free; one-step undo Pro, checked by licence.go once at start and daily).
+	obs := observe.New(db, led, cfg.Decoder.HeartbeatInterval, log)
+	sessionSource := func(ctx context.Context, org ids.OrgID, id string) (undoapi.SessionSubject, error) {
+		x, frames, err := obs.Evidence(ctx, org, id)
+		if err != nil {
+			return undoapi.SessionSubject{}, err
+		}
+		return observeapi.SubjectOf(x, frames), nil
+	}
+	pro := undoSessionPro(ctx, e, log)
+	gp, err := newGate(cfg, db, led, pol, keys, log, cw.reg, pool, aps, undoapi.Resolver{Reg: cw.reg, Planner: planner, DB: db, Log: log,
+		Sessions: sessionSource, SessionUndo: sessionUndoEngine()}, ins.facts)
 	if err != nil {
 		return err
 	}
 	ua := &undoapi.API{Planner: planner, DB: db, Policies: pol.svc, Agents: people, Gate: gp}
+	oa := &observeapi.API{Service: obs, Planner: planner, DB: db, Agents: people, Gate: gp, Pro: pro.Allowed}
 	aps.Attach(gp)
 	gp.SetJobHandler(gate.JobApprovalNotify, aps.NotifyJob)
 	gp.SetJobHandler(slacknotify.JobNotifyUpdate, slackN.UpdateJob)
@@ -343,6 +359,10 @@ func runServe(ctx context.Context, e *Env, args []string) error {
 	go func() { _ = ins.detector.Run(ictx); insDone <- struct{}{} }()
 	go func() { _ = ins.schedule.Run(ictx); insDone <- struct{}{} }()
 	defer func() { stopIns(); <-insDone; <-insDone; <-insDone; ins.sugSvc.Suggester.WaitPhrasing() }()
+	octx, stopObs := context.WithCancel(context.WithoutCancel(ctx))
+	obsDone := make(chan struct{})
+	go func() { defer close(obsDone); _ = obs.Run(octx) }()
+	defer func() { stopObs(); <-obsDone }()
 	defer func() {
 		stopWorker()
 		<-workerDone
@@ -364,7 +384,7 @@ func runServe(ctx context.Context, e *Env, args []string) error {
 	// S25: GET /v1/overview, with S11's usage counters and the decoder's lag threshold.
 	ov := console.NewOverview(console.OverviewOptions{Ledger: led, Usage: console.UsageFromStore(policystore.NewUsage(db)),
 		SlotLagAlertBytes: int64(cfg.SlotLagAlertMB) << 20, Log: log})
-	api.Mount(serveRoutes(api, db, ms, sk, led, people, keys, pol, gp, mw, cw, aps, whs, ua, &liveWiring{hub: hub, con: con, ov: ov, ins: ins,
+	api.Mount(serveRoutes(api, db, ms, sk, led, people, keys, pol, gp, mw, cw, aps, whs, ua, &liveWiring{hub: hub, con: con, ov: ov, ins: ins, obs: oa,
 		slack: &slacknotify.Handler{Store: slackstore.DB{DB: db}, Conns: cw.reg, Approvals: aps, Log: log}})...)
 	ln, err := net.Listen("tcp", cfg.Listen)
 	if err != nil {
@@ -508,6 +528,8 @@ func serveRoutes(api *httpx.Server, db *store.DB, ms []migrate.Migration, sk *se
 	if lw == nil {
 		lw = &liveWiring{}
 	}
+	// S50: observe mode (a nil API answers 503 in route-table tests).
+	routes = append(routes, observeapi.Routes(lw.obs)...)
 	if lw.con == nil {
 		c, err := console.New(console.Options{Sessions: people})
 		if err != nil {
@@ -552,6 +574,7 @@ type liveWiring struct {
 	ov    *console.Overview
 	ins   *insights
 	slack *slacknotify.Handler // S29
+	obs   *observeapi.API      // S50
 }
 
 // insights is S27's wiring.

@@ -1,0 +1,20 @@
+---
+// One watched session (S50 §5): the header line, the attribution note, the transactions with their
+// diffs, the record line and the undo area. src/controllers/sessions.ts.
+import AppShell from '../../layouts/AppShell.astro';
+import PageHead from '../../components/PageHead.astro';
+import Skeleton from '../../components/Skeleton.astro';
+import { sessionsCopy as c } from '../../lib/copy-sessions.ts';
+---
+<AppShell title={c.title} screen="sessions">
+  <PageHead title={c.title} lede={c.attribution} />
+  <section id="screen-body" aria-labelledby="page-title" aria-busy="true" data-screen-body="session">
+    <Skeleton />
+  </section>
+</AppShell>
+<script>
+  import { bootShell } from '../../controllers/shell.ts';
+  import { mountSession } from '../../controllers/sessions.ts';
+  bootShell({ title: 'Session' });
+  mountSession();
+</script>

@@ -52,6 +52,8 @@ export const IMPORTS = {
   'docs/SECURITY_REVIEW_2026-10.md': 'security/review',
   'docs/guides/supabase.md': 'guides/supabase',
   'docs/guides/neon.md': 'guides/neon',
+  'docs/guides/observe-beside-another-gate.md': 'guides/observe-beside-another-gate',
+  'docs/OBSERVE.md': 'reference/observe',
   // engineering notes: imported as they are, under Reference › Engineering notes
   ...Object.fromEntries(
     [

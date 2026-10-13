@@ -9,6 +9,17 @@ this file by `scripts/release-notes.sh`.
 
 ### Added
 
+- **Observe mode (watched sessions).** `deedglass observe run --connector <name> -- <command>` (and
+  `observe start|stop|list|show|exclude`, the `/v1/observe/sessions` routes, Console › Sessions)
+  groups every transaction Postgres committed on a connector's watched tables while a session was
+  open, seals it (`observe.session_sealed`: ids, counts, digests), and flags what Deedglass caught (a
+  TRUNCATE, or one transaction over `witness.observe.caught_rows`). `observe show --undo-sql` prints
+  the undo as SQL you run yourself (free); `observe undo` undoes the whole session in one step
+  (Pro, `undo_session`). Agent keys get 403 on every observe route. Migration 0029. Errors
+  `observe_not_enabled`, `pro_required`. See `docs/OBSERVE.md`.
+- **Licence features old installs can read.** The token request names the features this build knows
+  (`features_known`); `undo_session` joins founding and Pro.
+
 - **`mail.get_message` reads what a reply triager needs** (ops build, `outboundmail` tag): the
   auto-reply headers, `References`, `Delivered-To`, Gmail's `history_id`, and a bounce's
   `original_message_id` from its attached original. Additive; no new tool, route or setting.

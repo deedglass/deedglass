@@ -22,6 +22,7 @@ export const copy = {
     overview: 'Overview',
     actions: 'Actions',
     approvals: 'Approvals',
+    sessions: 'Sessions',
     agents: 'Agents',
     policies: 'Policies',
     connectors: 'Connectors',

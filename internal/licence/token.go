@@ -41,21 +41,57 @@ const (
 	FeatureScanFix       = "scan_fix"
 	FeaturePacksPro      = "packs_pro"
 	FeatureActionPrivate = "action_private"
+	// FeatureUndoSession is S50's one-step undo of a whole watched session (ee/undosession).
+	// Per-action undo and the undo SQL a person runs themselves stay free.
+	FeatureUndoSession = "undo_session"
 )
 
 // knownFeatures is every feature this build understands. A token may name others (forward
 // compatibility, ADR-079): they are kept so the signature still verifies, and never granted.
-var knownFeatures = []string{FeatureScanFull, FeatureScanFix, FeaturePacksPro, FeatureActionPrivate}
+var knownFeatures = []string{FeatureScanFull, FeatureScanFix, FeaturePacksPro, FeatureActionPrivate, FeatureUndoSession}
+
+// KnownFeatures is this build's feature list, in a stable order: the token request's
+// features_known (S50 §3.8), so the site signs only names this build understands.
+func KnownFeatures() []string { return append([]string(nil), knownFeatures...) }
 
 // maxFeatures bounds the features list. Generous on purpose: a later plan can carry more features
 // than this build knows without old installs refusing the token.
 const maxFeatures = 32
 
-// PlanFeatures is what each plan unlocks; the site signs the same lists (functions/_lib/commerce).
+// PlanFeatures is what each plan unlocks; the site signs the same lists (functions/_lib/commerce),
+// intersected with the request's features_known (S50 §3.8).
 var PlanFeatures = map[string][]string{
+	PlanReport:   {FeatureScanFull, FeatureScanFix, FeaturePacksPro},
+	PlanFounding: {FeatureActionPrivate, FeatureScanFull, FeatureScanFix, FeaturePacksPro, FeatureUndoSession},
+	PlanPro:      {FeatureActionPrivate, FeatureScanFull, FeatureScanFix, FeaturePacksPro, FeatureUndoSession},
+}
+
+// V1PlanFeatures are the lists the site signed before feature negotiation (v0.1.0): what it still
+// signs when a request carries no features_known, so a v0.1.0 install gets exactly what it knew.
+var V1PlanFeatures = map[string][]string{
 	PlanReport:   {FeatureScanFull, FeatureScanFix, FeaturePacksPro},
 	PlanFounding: {FeatureActionPrivate, FeatureScanFull, FeatureScanFix, FeaturePacksPro},
 	PlanPro:      {FeatureActionPrivate, FeatureScanFull, FeatureScanFix, FeaturePacksPro},
+}
+
+// NegotiateFeatures is the site's rule (functions/_lib/commerce/licence_features.ts), kept here so
+// both sides are tested against one table: the plan's features this client lists, in plan order;
+// the v1 list when the client sent none (an older install); and the v1 list again when nothing
+// the client lists overlaps (a token always carries at least one feature).
+func NegotiateFeatures(plan string, known []string, present bool) []string {
+	if !present {
+		return append([]string(nil), V1PlanFeatures[plan]...)
+	}
+	out := []string{}
+	for _, f := range PlanFeatures[plan] {
+		if slices.Contains(known, f) {
+			out = append(out, f)
+		}
+	}
+	if len(out) == 0 {
+		return append([]string(nil), V1PlanFeatures[plan]...)
+	}
+	return out
 }
 
 var (

@@ -8,20 +8,24 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/deedglass/deedglass/cmd/deedglass/internal/ui"
 	"github.com/deedglass/deedglass/ee/scanfull"
+	"github.com/deedglass/deedglass/ee/undosession"
 	"github.com/deedglass/deedglass/internal/connector/egress"
 	"github.com/deedglass/deedglass/internal/deed"
 	"github.com/deedglass/deedglass/internal/ids"
 	"github.com/deedglass/deedglass/internal/ledger"
 	"github.com/deedglass/deedglass/internal/licence"
 	"github.com/deedglass/deedglass/internal/scan"
+	"github.com/deedglass/deedglass/internal/undoapi"
 )
 
 // deedglass licence activate|show|refresh|deactivate and scan --full (S48, DL-039). This file and
@@ -476,4 +480,66 @@ var keysGenPurpose string
 
 func keysGenPurposeFlag(fs *flag.FlagSet) {
 	fs.StringVar(&keysGenPurpose, "purpose", "seal", "seal (a deed seal key), licence (an lk_ key that signs licence tokens, never deeds) or packs (the key that signs the policy-packs index)")
+}
+
+// --- serve: Pro ports (S50 §3.6) ---
+
+// licenceAllows reports whether this machine's licence grants feature f now. Only Pro features
+// ask, and only through this file (TestLicenceReaders): serve passes the answer on as a port.
+func licenceAllows(ctx context.Context, e *Env, f string) bool {
+	m, err := licenceManager(e)
+	if err != nil {
+		return false
+	}
+	return m.Require(ctx, f).Allowed
+}
+
+// proFeature is serve's view of one Pro feature: asked once at start and then at most once a day.
+// A licence that lapses never stops an undo already started; it only changes the next request.
+type proFeature struct {
+	allowed atomic.Bool
+}
+
+// Allowed is the last answer.
+func (p *proFeature) Allowed() bool { return p != nil && p.allowed.Load() }
+
+// licenceRecheck is how often serve asks again (at most daily, S50 §3.6).
+const licenceRecheck = 24 * time.Hour
+
+// undoSessionPro is serve's undo_session check (S50).
+func undoSessionPro(ctx context.Context, e *Env, log *slog.Logger) *proFeature {
+	return newProFeature(ctx, e, licence.FeatureUndoSession, log)
+}
+
+// sessionUndoEngine is ee/undosession's engine for the Gate executor. The entitlement is checked
+// where a person starts the undo (POST /v1/observe/sessions/{id}/undo answers pro_required without
+// it); an undo already started completes even if the licence lapses before its countersign.
+func sessionUndoEngine() undoapi.SessionUndo { return undosession.New() }
+
+// newProFeature asks now, then once a day until ctx ends.
+func newProFeature(ctx context.Context, e *Env, f string, log *slog.Logger) *proFeature {
+	p := &proFeature{}
+	ask := func() {
+		cctx, cancel := context.WithTimeout(ctx, 2*licence.RequestTimeout)
+		defer cancel()
+		ok := licenceAllows(cctx, e, f)
+		p.allowed.Store(ok)
+		if log != nil {
+			log.Info("licence: pro feature checked", "feature", f, "allowed", ok)
+		}
+	}
+	ask()
+	go func() {
+		t := time.NewTicker(licenceRecheck)
+		defer t.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-t.C:
+				ask()
+			}
+		}
+	}()
+	return p
 }

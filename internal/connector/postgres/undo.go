@@ -32,6 +32,25 @@ const undoInput = `{"type":"object","additionalProperties":false,"required":["un
 "allow_triggers":{"type":"boolean","description":"Let triggers on the tables fire again (admins only)."},
 "reason":{"type":"string","maxLength":280,"description":"Why the undo runs; the approver and the Ledger read it."}}}`
 
+// ToolUndoSession is S50's internal tool: one step that undoes every transaction of a watched
+// session (Pro, ee/undosession). Like undo, only a person's request reaches it, and its plan comes
+// only from Postgres's own row images.
+const ToolUndoSession = "undo_session"
+
+const undoSessionInput = `{"type":"object","additionalProperties":false,"required":["session","plan_digest","reason"],"properties":{
+"session":{"type":"string","maxLength":64,"description":"The watched session to undo."},
+"plan_digest":{"type":"string","maxLength":71,"description":"The previewed plan's digest."},
+"allow_triggers":{"type":"boolean","description":"Let triggers on the tables fire again (admins only)."},
+"reason":{"type":"string","maxLength":280,"description":"Why the undo runs; the approver and the Ledger read it."},
+"excluded":{"type":"array","items":{"type":"string","maxLength":32},"description":"The transactions a person left out of the undo."}}}`
+
+// undoSessionSpec is the session undo's internal tool (S50 §3.6).
+func undoSessionSpec() connector.ToolSpec {
+	return connector.ToolSpec{Name: ToolUndoSession, SideEffect: connector.SideEffectWrite, Internal: true,
+		Description: "Put back every row a watched session changed, from the values Postgres recorded before it.",
+		InputSchema: json.RawMessage(undoSessionInput)}
+}
+
 // undoSpec is the internal tool every Postgres connector declares (S23 §2).
 func undoSpec() connector.ToolSpec {
 	return connector.ToolSpec{Name: ToolUndo, SideEffect: connector.SideEffectWrite, Internal: true,

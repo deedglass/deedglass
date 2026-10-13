@@ -98,6 +98,12 @@ cases:
   - name: calling a function waits for a human
     input: { tool: postgres.call, args: { function: public.refund_order, params: [42] } }
     expect: { decision: require_approval, rule: functions-need-approval, verify: L2 }
+  - name: a session undo waits for a human
+    input:
+      tool: postgres.undo_session
+      agent: { name: console }
+      args: { session: obs_01jb8m2x7k4q9r3t5v6w8y0z1a, plan_digest: "sha256:c0a4", allow_triggers: false, reason: The agent's run went wrong. }
+    expect: { decision: require_approval, rule: undo-session-needs-approval, approval: { required: 1 }, verify: L2 }
   - name: an undo waits for a human
     input:
       tool: postgres.undo

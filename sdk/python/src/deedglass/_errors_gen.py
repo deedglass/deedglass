@@ -82,4 +82,6 @@ CODES: dict[str, tuple[int, str, str]] = {
     "suggestion_stale": (409, "invalid_request_error", "InvalidRequestError"),
     "shadow_slot_taken": (409, "invalid_request_error", "InvalidRequestError"),
     "suggestion_decided": (409, "invalid_request_error", "InvalidRequestError"),
+    "observe_not_enabled": (409, "invalid_request_error", "InvalidRequestError"),
+    "pro_required": (403, "permission_error", "PermissionDeniedError"),
 }

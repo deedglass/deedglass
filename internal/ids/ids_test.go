@@ -366,12 +366,12 @@ func TestRegistry(t *testing.T) {
 		if !regexp.MustCompile(`^[a-z]{2,4}$`).MatchString(p.Prefix) || p.Name == "" || p.Noun == "" || p.Description == "" {
 			t.Errorf("incomplete entry %+v", p)
 		}
-		if p.Source != "contract §3" && p.Source != "ADR-014" {
+		if p.Source != "contract §3" && p.Source != "ADR-014" && p.Source != "ADR-094" {
 			t.Errorf("%s: source %q", p.Prefix, p.Source)
 		}
 	}
-	if len(seen) != 28 {
-		t.Errorf("want 28 prefixes (18 contract + 10 additive), got %d", len(seen))
+	if len(seen) != 29 {
+		t.Errorf("want 29 prefixes (18 contract + 10 additive + S50's obs), got %d", len(seen))
 	}
 	// Every kind maps to a registered prefix.
 	kinds := []string{Prefix[OrgKind](), Prefix[UserKind](), Prefix[MembershipKind](), Prefix[SessionKind](),
@@ -381,7 +381,7 @@ func TestRegistry(t *testing.T) {
 		Prefix[ReplayKind](), Prefix[WebhookKind](), Prefix[RequestKind](), Prefix[LoginTokenKind](),
 		Prefix[PolicyActivationKind](), Prefix[CredentialKind](), Prefix[ApprovalTokenKind](),
 		Prefix[DecodedTxKind](), Prefix[WebhookDeliveryKind](), Prefix[AdminEventKind](),
-		Prefix[WaitlistKind](), Prefix[IdempotencyKind]()}
+		Prefix[WaitlistKind](), Prefix[IdempotencyKind](), Prefix[ObserveSessionKind]()}
 	for _, k := range kinds {
 		if !seen[k] {
 			t.Errorf("kind prefix %q is not registered", k)

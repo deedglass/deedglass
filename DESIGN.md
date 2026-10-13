@@ -849,6 +849,13 @@ The Insights screen (`/app/insights`; `web/src/controllers/insights.ts`, `insigh
 ○ Witness not configured for connector pg-main · run deedglass witness add pg-main
 ```
 
+### Console: Sessions (S50)
+Observe mode (`/app/sessions`, `/app/sessions/<obs_…>`; `web/src/controllers/sessions.ts`, `web/src/styles/s50-sessions.css`; copy in `copy-sessions.ts`). A colleague with the change log open: counts, tables, times, no alarm. No new token: amber (`unverifiable-fg`/`unverifiable-bg`) for caught, red (`mismatch-fg`) only for conflicts and refusals, teal (`verified-fg`/`verified-bg`) for undone, no aurora, no gradients.
+- **Session row:** Linear-style, one line each (cards under 640px): label (or the id) as the row link, the connector in Geist Mono, the window (`14:02–14:03`, tabular), `3 transactions`, the tables in mono `text-2` truncated at 28ch (hidden in card view), then the chips at the end: `Caught` (amber, `triangle-alert`) and the state (`Watching`, `Closing` and `Undoing` violet pending; `Sealed` neutral; `Undone` teal). Empty state teaches: `No sessions yet. Run deedglass observe run --connector <name> -- <your agent command>, or press Start a session.`
+- **Session page:** the page head (title = label, lede = the attribution note), the header line `obs_… · 14:02–14:03 · pg-demo · [Sealed]`, the counts line in tabular `text-2`, the observed note in footnote. Then the caught banner, flag notes (info icon, `text-2`), the Transactions card (newest first: relative time, tables in mono, the dtx id chip, `Leave out` / `Put back` quiet buttons while sealed, `Expired` outline chip), each with its diff as a captioned `<table>` (20 rows, changed cells tinted `unverifiable-bg`, scrolling inside its own hairline box at 360px), the record line (`Sealed · deed_… · chain intact`), then the undo area. `aria-live` announces state changes; open, closing and undoing sessions refresh every 3 s.
+- **Caught banner:** one card with a 3px amber left rule: one sentence of fact per item (`Deedglass caught this: one transaction changed 301 rows in public.orders.`), and on Overview the two actions beside each (`Open the session`, `Copy undo SQL`); at most 3, newest first. Never shown without the free path.
+- **Undo area:** a card: the plan's sentence, `Undone by act_…` in teal, conflicts in red with the next step, then `Undo this session · Pro` (primary) and `Copy undo SQL` (secondary, free) side by side. Without Pro the primary opens the **Pro sheet**: `Undo a whole session in one step with Pro ($49 a month). Or copy the undo SQL and run it yourself; that's free and always will be.` with `See Pro` and `Copy undo SQL`. No countdown, no blur, no locked diff.
+
 ## Motion
 
 | Token | Value | Use |

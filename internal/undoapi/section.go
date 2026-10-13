@@ -82,8 +82,39 @@ func RegisterSection() {
 		approve.RegisterSection("undo", func(tool, connectorType string) bool {
 			return strings.HasSuffix(tool, "."+undoTool) && connectorType == "postgres"
 		}, sectionFor)
+		// S50: a session undo's approval lists the same things, naming the session.
+		approve.RegisterSection("undo_session", func(tool, connectorType string) bool {
+			return isSessionTool(tool) && connectorType == "postgres"
+		}, sessionSectionFor)
 	})
 }
+
+// sessionSectionFor is sectionFor for "<connector>.undo_session".
+func sessionSectionFor(in gate.ApprovalInput) (json.RawMessage, error) {
+	var a SessionArgs
+	if err := json.Unmarshal(in.Args, &a); err != nil {
+		return nil, err
+	}
+	s, ok := recall(a.PlanDigest)
+	if !ok {
+		s = Section{Undoes: a.Session, Tables: []string{}, Steps: []PreviewStep{}, PlanDigest: a.PlanDigest}
+	}
+	s.AllowTriggers, s.Reason = a.AllowTriggers, a.Reason
+	if s.Summary != "" {
+		s.Summary = strings.Replace(s.Summary, "{agent}", in.AgentName, 1)
+	}
+	return json.Marshal(s)
+}
+
+// RememberSession leaves a session plan's section for the approval that follows (S50).
+func RememberSession(p *undo.Plan, session, person string) {
+	s := sectionOf(p, session, person)
+	s.Summary = undo.ApprovalSummary("{agent}", person, p, session)
+	remember(p.Digest, s)
+}
+
+// PreviewStepsOf is the first limit steps as a person reads them, and how many more there are.
+func PreviewStepsOf(p *undo.Plan, limit int) ([]PreviewStep, int) { return previewSteps(p, limit) }
 
 // sectionFor builds the section from the action's arguments and the remembered plan; without one
 // (another instance, or a restart in between) it lists what the arguments say.

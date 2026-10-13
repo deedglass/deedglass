@@ -52,8 +52,8 @@ func LoadMeta(path string) (*Meta, error) {
 	return &m, nil
 }
 
-// V7Groups are the groups make attack runs (S18 H, J, K; S21 W; S22 L; S23 U; S34 P, Q, R).
-const V7Groups = "HJKLUWPQR"
+// V7Groups are the groups make attack runs (S18 H, J, K; S21 W; S22 L; S23 U; S34 P, Q, R; S50 O).
+const V7Groups = "HJKLUWPQRO"
 
 // Case returns the declared case id, or nil.
 func (m *Meta) Case(id string) *MetaCase {
