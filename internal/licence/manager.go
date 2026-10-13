@@ -35,11 +35,12 @@ func (m *Manager) Load() (Local, error) {
 	if err := t.Verify(m.Keys); err != nil {
 		return Local{}, err
 	}
-	st := Evaluate(t, m.Now(), m.Live)
+	now := m.Now()
+	st := Evaluate(t, now, m.Live)
 	if st.ModeMismatch {
 		return Local{Token: t, State: st}, ErrMode
 	}
-	return Local{Token: t, State: st}, nil
+	return Local{Token: t, State: m.checkClock(t, now, st)}, nil
 }
 
 // Activate registers the key on this machine, fetches a signed token, verifies it and writes the
@@ -69,7 +70,10 @@ func (m *Manager) fetchAndSave(ctx context.Context, key, inst string) (Local, er
 	if err := t.Verify(m.Keys); err != nil {
 		return Local{}, fmt.Errorf("%w: %v", ErrBadTokenAnswer, err)
 	}
-	st := Evaluate(t, m.Now(), m.Live)
+	// A successful online check: the site's clock (validated_at) is trusted over a local clock
+	// that runs behind it, and the latest-time-seen mark restarts from here.
+	now := trusted(t, m.Now())
+	st := Evaluate(t, now, m.Live)
 	if st.ModeMismatch {
 		return Local{}, ErrMode
 	}
@@ -77,6 +81,9 @@ func (m *Manager) fetchAndSave(ctx context.Context, key, inst string) (Local, er
 		return Local{}, err
 	}
 	if err := SaveToken(m.Path, t); err != nil {
+		return Local{}, err
+	}
+	if err := saveClock(m.Path, key, t, now); err != nil {
 		return Local{}, err
 	}
 	return Local{Token: t, State: st}, nil

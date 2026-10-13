@@ -33,7 +33,7 @@ import (
 var (
 	licenceNow      = time.Now
 	licenceHostname = os.Hostname
-	licenceKeys     = licence.Embedded
+	licenceKeys     = licence.EmbeddedFor // live → the live set; test → the test set (empty in a release)
 	licenceHTTP     = func() *http.Client {
 		return egress.FirstParty(egress.FirstPartyOptions{Timeout: licence.RequestTimeout, Proxy: true, Redirects: egress.RedirectSameHost})
 	}
@@ -41,9 +41,10 @@ var (
 
 // licenceTestModeBuild is true only in a development build made with -tags licencetest
 // (licence_testmode.go). A release binary refuses DEEDGLASS_LICENCE_MODE=test: a test-mode
-// purchase costs nothing (Dodo's published test cards) and the site signs its token with the same
-// lk_ key, so a release that let the person at the terminal pick test mode would turn any free
-// test-mode token into Pro. With the variable refused, a release only ever accepts livemode tokens.
+// purchase costs nothing (Dodo's published test cards), so a release that let the person at the
+// terminal pick test mode would turn any free test-mode token into Pro. With the variable refused,
+// a release only ever accepts livemode tokens. As a second wall, test tokens are signed by their
+// own lk_ key (LICENCE_SIGNING_JWK_TEST on the site), which only a licencetest build embeds.
 var licenceTestModeBuild = false
 
 // licDodoOverride replaces Dodo's host in tests only (never an environment variable: a licence
@@ -57,6 +58,7 @@ const (
 	licCheckInLine  = "The licence checks in at most once a day, only when a Pro feature runs, and keeps working 14 days offline."
 	licFullNeedsPro = "The full report is part of Pro or the $29 full scan report. Get one at deedglass.com/pro. Everything in deedglass scan stays free."
 	licDateLayout   = "2 Jan 2006"
+	licClockBehind  = "Pro paused: this computer's clock is behind the last time the licence was checked. Run deedglass licence refresh with the network on. Everything free still works."
 )
 
 func planName(plan string) string {
@@ -73,10 +75,6 @@ func licDate(t time.Time) string { return t.UTC().Format(licDateLayout) }
 
 // licenceManager builds the manager from the client-side settings.
 func licenceManager(e *Env) (*licence.Manager, error) {
-	ks, err := licenceKeys()
-	if err != nil {
-		return nil, &ExitError{Code: ExitFailure, ErrCode: "licence_keys_invalid", Err: err, Next: "Reinstall deedglass; this build's licence keys can't be read."}
-	}
 	path := e.Getenv("DEEDGLASS_LICENCE_FILE")
 	if path == "" {
 		path = filepath.Join(e.LoadOptions().Dir, licence.DefaultTokenFile)
@@ -88,6 +86,10 @@ func licenceManager(e *Env) (*licence.Manager, error) {
 	if mode == "test" && !licenceTestModeBuild {
 		return nil, usageErr(errors.New("DEEDGLASS_LICENCE_MODE=test works only in a development build; this build accepts live licences only"),
 			"Unset it. To try Dodo test-mode keys, build with: go build -tags licencetest ./cmd/deedglass")
+	}
+	ks, err := licenceKeys(mode == "live")
+	if err != nil {
+		return nil, &ExitError{Code: ExitFailure, ErrCode: "licence_keys_invalid", Err: err, Next: "Reinstall deedglass; this build's licence keys can't be read."}
 	}
 	dodo := licence.DodoLiveBase
 	if mode == "test" {
@@ -248,6 +250,10 @@ func runLicenceShow(_ context.Context, e *Env, args []string) error {
 		fmt.Fprintln(e.Stdout, e.Style.UnknownLine(fmt.Sprintf("Your %s plan ended on %s. Everything free still works. Pro: %s",
 			planName(l.Token.Plan), licDate(st.PeriodEnd), licProURL)))
 	default:
+		if st.ClockBack {
+			fmt.Fprintln(e.Stdout, e.Style.UnknownLine(licClockBehind))
+			break
+		}
 		fmt.Fprintln(e.Stdout, e.Style.UnknownLine(pausedLine(st.DaysSince)))
 	}
 	return nil
@@ -381,6 +387,8 @@ func proRefusal(d licence.Decision, needsPro, tail string) error {
 	case d.Err == nil && d.Local.State.Expired:
 		e = &ExitError{Code: ExitFailure, ErrCode: "licence_ended", Plain: true,
 			Err: fmt.Errorf("Your %s plan ended on %s. Everything free still works", planName(d.Local.Token.Plan), licDate(d.Local.State.PeriodEnd)), Next: "Pro: " + licProURL}
+	case d.Local.Token.ID != "" && d.Local.State.ClockBack && !errors.Is(d.Err, licence.ErrFeature):
+		e = &ExitError{Code: ExitFailure, ErrCode: "licence_paused", Plain: true, Err: errors.New(strings.TrimSuffix(licClockBehind, "."))}
 	case d.Local.Token.ID != "" && !d.Local.State.Active && !errors.Is(d.Err, licence.ErrFeature):
 		e = &ExitError{Code: ExitFailure, ErrCode: "licence_paused", Plain: true, Err: errors.New(strings.TrimSuffix(pausedLine(d.Local.State.DaysSince), "."))}
 	default:

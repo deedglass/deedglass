@@ -30,7 +30,13 @@ Two files are written, both mode 0600: `.deedglass/licence.json` (the signed tok
 only the key's sha256) and `.deedglass/licence.key` (the key, so the CLI can check it again).
 `DEEDGLASS_LICENCE_FILE` moves them. `DEEDGLASS_LICENCE_MODE=test` accepts Dodo test-mode keys only in a
 development build (`go build -tags licencetest ./cmd/deedglass`); release binaries refuse it, because a
-test-mode purchase costs nothing.
+test-mode purchase costs nothing. Test-mode tokens are also signed by their own key, which only a
+`licencetest` build carries, so a release trusts live tokens only.
+
+A third file, `.deedglass/licence.clock` (0600), keeps the latest time this machine has seen for the
+licence. If the computer's clock runs more than 5 minutes behind it, or behind the last check, Pro
+pauses until `deedglass licence refresh` (or the next Pro feature) checks the licence online. A
+missing or edited `licence.clock` counts the same way. Everything free keeps working.
 
 ## Does Pro phone home?
 

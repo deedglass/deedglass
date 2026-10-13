@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/ed25519"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -80,7 +81,7 @@ func licenceSeams(t *testing.T) (*licFake, map[string]string, *time.Time) {
 	f.valid.Store(true)
 	srv := f.serve(t)
 	sk, sh, sn, shost := licenceKeys, licenceHTTP, licenceNow, licenceHostname
-	licenceKeys = func() (licence.KeySet, error) { return licence.ParseKeySet(set) }
+	licenceKeys = func(bool) (licence.KeySet, error) { return licence.ParseKeySet(set) }
 	licenceHTTP = func() *http.Client { return srv.Client() }
 	licenceNow = func() time.Time { return now }
 	licenceHostname = func() (string, error) { return "arjuns-laptop.local", nil }
@@ -288,5 +289,36 @@ func TestKeysGenLicence(t *testing.T) {
 	}
 	if r := cli(t, nil, false, "keys", "gen", "--purpose", "nope"); r.code != 2 {
 		t.Fatalf("bad purpose: exit %d", r.code)
+	}
+}
+
+// TestLicenceClockBehind: a clock set back after use pauses Pro offline, and both show and the
+// Pro refusal say why (security pre-launch M1).
+func TestLicenceClockBehind(t *testing.T) {
+	_, env, now := licenceSeams(t)
+	if r := cli(t, env, false, "licence", "activate", "DG-7Q2M-TEST-0001"); r.code != 0 {
+		t.Fatalf("activate: %d\n%s%s", r.code, r.stdout, r.stderr)
+	}
+	*now = now.Add(48 * time.Hour)
+	if r := cli(t, env, false, "licence", "show"); r.code != 0 || !strings.Contains(r.stdout, "checked 2 days ago") {
+		t.Fatalf("show two days later: %d\n%s%s", r.code, r.stdout, r.stderr)
+	}
+	*now = now.Add(-36 * time.Hour)
+	env["DEEDGLASS_NO_NETWORK"] = "1"
+	r := cli(t, env, false, "licence", "show")
+	if !strings.Contains(r.stdout, "this computer's clock is behind the last time the licence was checked") {
+		t.Fatalf("show with the clock behind: %d\n%s%s", r.code, r.stdout, r.stderr)
+	}
+	m, err := licenceManager(&Env{Getenv: func(k string) string { return env[k] }})
+	if err != nil {
+		t.Fatal(err)
+	}
+	d := m.Require(context.Background(), licence.FeatureScanFull)
+	if d.Allowed {
+		t.Fatal("Pro ran offline with the clock set back")
+	}
+	var ee *ExitError
+	if err := proRefusal(d, licFullNeedsPro, ""); !errors.As(err, &ee) || ee.ErrCode != "licence_paused" || !strings.Contains(ee.Err.Error(), "Run deedglass licence refresh") {
+		t.Fatalf("refusal: %v", err)
 	}
 }

@@ -81,8 +81,30 @@ func ParseKeySet(raw []byte) (KeySet, error) {
 	return ks, nil
 }
 
-// Embedded returns the key set built into this binary.
+// Embedded returns the live key set built into this binary: the only keys a release trusts.
 func Embedded() (KeySet, error) { return ParseKeySet(embeddedKeys) }
+
+// EmbeddedTest returns the test-mode key set (licence-keys-test.json). It is empty in a release
+// build; only a -tags licencetest build embeds it (security pre-launch M5: test-mode purchases are
+// free, so their tokens are signed by a separate key that a release never trusts).
+func EmbeddedTest() (KeySet, error) {
+	if len(embeddedTestKeys) == 0 {
+		return KeySet{keys: map[string]ed25519.PublicKey{}}, nil
+	}
+	return ParseKeySet(embeddedTestKeys)
+}
+
+// TestKeysBuiltIn reports whether this build embeds the test-mode key set.
+func TestKeysBuiltIn() bool { return len(embeddedTestKeys) > 0 }
+
+// EmbeddedFor returns the key set for a mode: live tokens verify only against the live set, test
+// tokens only against the test set.
+func EmbeddedFor(live bool) (KeySet, error) {
+	if live {
+		return Embedded()
+	}
+	return EmbeddedTest()
+}
 
 // EmbeddedJSON is licence-keys.json as built in (served by the site at the well-known path).
 func EmbeddedJSON() []byte { return bytes.Clone(embeddedKeys) }

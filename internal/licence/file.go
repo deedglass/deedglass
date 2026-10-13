@@ -116,10 +116,10 @@ func SaveKey(tokenPath, key string) error {
 	return writePrivate(KeyFileFor(tokenPath), []byte(key+"\n"))
 }
 
-// Remove deletes the token and the key. Missing files are fine.
+// Remove deletes the token, the key and the clock mark. Missing files are fine.
 func Remove(tokenPath string) error {
 	var errs []error
-	for _, p := range []string{tokenPath, KeyFileFor(tokenPath)} {
+	for _, p := range []string{tokenPath, KeyFileFor(tokenPath), ClockFileFor(tokenPath)} {
 		if err := os.Remove(p); err != nil && !errors.Is(err, fs.ErrNotExist) {
 			errs = append(errs, err)
 		}

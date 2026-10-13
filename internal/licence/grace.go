@@ -16,6 +16,7 @@ type State struct {
 	Expired      bool      // the paid period plus its grace is over (not only a missed check)
 	ModeMismatch bool      // a test-mode token on a live build, or the reverse
 	DueRefresh   bool      // the last check is older than RefreshEvery
+	ClockBack    bool      // the clock runs behind the last check or the latest time seen: Pro waits for an online check
 }
 
 // Evaluate applies the grace formula (S48 §3.6), pure and clock-injected:
@@ -23,8 +24,10 @@ type State struct {
 //	ok_validation = now ≤ validated_at + grace_days
 //	ok_period     = period_end == null || now ≤ period_end + grace_days
 //	pro_active    = sig_valid && livemode matches && ok_validation && ok_period
+//	              && now ≥ validated_at − ClockSkew
 //
-// The caller has already verified the signature.
+// A clock behind validated_at by more than ClockSkew can't be trusted (clock.go): the state is
+// ClockBack, not active, and a refresh is due. The caller has already verified the signature.
 func Evaluate(t Token, now time.Time, live bool) State {
 	v, _ := time.Parse(TimeLayout, t.ValidatedAt)
 	grace := time.Duration(t.GraceDays) * 24 * time.Hour
@@ -45,5 +48,5 @@ func Evaluate(t Token, now time.Time, live bool) State {
 	}
 	okValidation := !now.After(v.Add(grace))
 	s.Active = !s.ModeMismatch && okValidation && okPeriod
-	return s
+	return behind(s, now, v)
 }

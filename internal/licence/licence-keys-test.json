@@ -1,0 +1,11 @@
+{
+  "object": "licence_key_set",
+  "keys": [
+    {
+      "id": "lk_01m4txt5h4k6r7tm176aav4afm",
+      "alg": "Ed25519",
+      "public_key": "3xa4h3cIBnVodElEhSiHnGlH4Crpz1LmDfJ8c5AaSLc",
+      "thumbprint": "sha256:14b57f0307e1aaf2af2039b3f5112973d32e3146a37100fc0650dc1cfc582050"
+    }
+  ]
+}
