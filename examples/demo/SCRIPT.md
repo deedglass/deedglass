@@ -219,3 +219,17 @@ make demo-reset                                    # the whole orders database, 
   `make demo-trigger-on` again.
 - **Claude asks for confirmation**: say "yes". **Claude uses another tool**: turn the other servers
   off and retake.
+
+## H4. The Short (S43)
+
+A vertical Short of this hero is made from a real run, never from a mock. With the demo stack up
+(`make demo-up DEMO_PORT=8091`), the private video package captures `make demo-hero` line by line with
+the time each line appeared, then replays those lines in a 1080×1920 frame with phrase captions and the
+end card (`deedglass.com/play`, `npx deedglass scan`):
+
+    cd ~/txv/growth/deploy/content && npm run capture && npm run short -- --site
+
+The capture refuses a dirty product tree, so the commit stamped in the video's metadata is the code that
+ran. Each kept take gets a row in `RECORDINGS.md`. What it doesn't do: it doesn't edit or cut the run, it
+speeds it up only uniformly (never past 1.6×), and a verdict line printed just before a long diff stays in
+view for 2.5 s instead of scrolling away; no line is removed or reordered.
