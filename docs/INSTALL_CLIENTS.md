@@ -21,7 +21,7 @@ parent. The server is `--server`, `DEEDGLASS_SERVER`, `DEEDGLASS_BASE_URL`, then
 | Cursor | `cursor://anysphere.cursor-deeplink/mcp/install?name=deedglass&config=<base64 JSON>`; web form `https://cursor.com/en/install-mcp?…`; URLs at most 10,000 characters | cursor.com/docs/context/mcp/install-links |
 | VS Code | `vscode:mcp/install?<urlencoded JSON with name>`; `https://vscode.dev/redirect/mcp/install?name=…&config=…`; `code --add-mcp '<json>'` | code.visualstudio.com/api/extension-guides/ai/mcp |
 | LM Studio | `lmstudio://add_mcp?name=deedglass&config=<base64 JSON>` | lmstudio.ai/docs/app/mcp/deeplink |
-| Goose | `goose://extension?cmd=npx&arg=-y&arg=deedglass&arg=mcp&arg=serve&id=deedglass&name=Deedglass&description=…` | block.github.io/goose/docs/getting-started/using-extensions |
+| Goose | `goose://extension?cmd=npx&arg=-y&arg=deedglass&arg=mcp&arg=serve&id=deedglass&name=Deedglass&description=…` | goose-docs.ai/docs/getting-started/using-extensions |
 | Claude Code | `claude mcp add deedglass -- npx -y deedglass mcp serve` (`--scope project` writes `.mcp.json`) | code.claude.com/docs/en/mcp |
 | Claude Code plugin | `/plugin marketplace add deedglass/deedglass`, then `/plugin install deedglass@deedglass` (after 10-15) | `integrations/claude-code/`, root `.claude-plugin/marketplace.json` |
 | Claude Desktop | the `.mcpb` bundle on each release (not built yet; see the S47 report) | github.com/modelcontextprotocol/mcpb |

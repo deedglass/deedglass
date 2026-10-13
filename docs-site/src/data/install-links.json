@@ -32,7 +32,7 @@
     {
       "client": "Goose",
       "link": "goose://extension?cmd=npx&arg=-y&arg=deedglass&arg=mcp&arg=serve&id=deedglass&name=Deedglass&description=Put%20a%20policy%2C%20a%20witness%20and%20a%20signed%20deed%20on%20every%20agent%20tool%20call.",
-      "source": "https://block.github.io/goose/docs/getting-started/using-extensions"
+      "source": "https://goose-docs.ai/docs/getting-started/using-extensions/"
     },
     {
       "client": "Claude Code",
