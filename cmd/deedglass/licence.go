@@ -39,6 +39,13 @@ var (
 	}
 )
 
+// licenceTestModeBuild is true only in a development build made with -tags licencetest
+// (licence_testmode.go). A release binary refuses DEEDGLASS_LICENCE_MODE=test: a test-mode
+// purchase costs nothing (Dodo's published test cards) and the site signs its token with the same
+// lk_ key, so a release that let the person at the terminal pick test mode would turn any free
+// test-mode token into Pro. With the variable refused, a release only ever accepts livemode tokens.
+var licenceTestModeBuild = false
+
 // licDodoOverride replaces Dodo's host in tests only (never an environment variable: a licence
 // must be checked against Dodo itself).
 var licDodoOverride string
@@ -77,6 +84,10 @@ func licenceManager(e *Env) (*licence.Manager, error) {
 	mode := strings.ToLower(firstNonEmpty(e.Getenv("DEEDGLASS_LICENCE_MODE"), "live"))
 	if mode != "live" && mode != "test" {
 		return nil, usageErr(fmt.Errorf("DEEDGLASS_LICENCE_MODE is %q; it takes live or test", clean(mode)), "Unset it, or set it to test for Dodo test-mode keys.")
+	}
+	if mode == "test" && !licenceTestModeBuild {
+		return nil, usageErr(errors.New("DEEDGLASS_LICENCE_MODE=test works only in a development build; this build accepts live licences only"),
+			"Unset it. To try Dodo test-mode keys, build with: go build -tags licencetest ./cmd/deedglass")
 	}
 	dodo := licence.DodoLiveBase
 	if mode == "test" {
@@ -126,7 +137,7 @@ func licenceErr(err error, offlineUntil time.Time) error {
 			Err: errors.New("The licence file was changed after it was signed, or wasn't signed by Deedglass"), Next: "Run deedglass licence refresh."}
 	case errors.Is(err, licence.ErrMode):
 		return &ExitError{Code: ExitFailure, ErrCode: "licence_mode",
-			Err: errors.New("This licence is from Dodo's other mode (test or live)"), Next: "Set DEEDGLASS_LICENCE_MODE=test for test-mode keys, or activate a live key."}
+			Err: errors.New("This licence is from Dodo's other mode (test or live)"), Next: "Activate a live key. Test-mode keys work only in a development build (go build -tags licencetest)."}
 	case errors.As(err, &ue):
 		return &ExitError{Code: ExitFailure, ErrCode: "licence_file_unsafe", Err: fmt.Errorf("%s %s", clean(ue.Path), ue.Why),
 			Next: "Make it a regular file with chmod 600 " + clean(ue.Path) + ", or run deedglass licence activate again."}

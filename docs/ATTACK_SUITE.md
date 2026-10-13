@@ -6,7 +6,7 @@ These cases assume the model has already been manipulated. They test what Deedgl
 
 Every case's expected outcome was written in `attack/attack_meta.json` before its code existed, and `attack/meta_test.go` pins a digest of the expectations (ADR-040). A case that turns out different is shown as differs; its expectation is never edited to pass.
 
-**Last run:** 2026-10-13 · commit `049a701+uncommitted` · PostgreSQL 18.6 · a real `deedglass serve` process, a real Postgres, loopback upstreams.
+**Last run:** 2026-10-13 · commit `578563d+uncommitted` · PostgreSQL 18.6 · a real `deedglass serve` process, a real Postgres, loopback upstreams.
 
 **68 matched · 0 differ · 0 waiting on a later session.** After every case: the deed chains of both orgs are intact, the target database is unchanged wherever nothing should have run, every action is sealed, and the planted credential was seen 0 times across the server's logs, every HTTP response, and the recorded actions, events, deeds, admin events, connector configs and credential hints.
 

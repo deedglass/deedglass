@@ -421,7 +421,7 @@
       "This licence is from Dodo's other mode (test or live)."
     ],
     "next": [
-      "Set DEEDGLASS_LICENCE_MODE=test for test-mode keys, or activate a live key."
+      "Activate a live key. Test-mode keys work only in a development build (go build -tags licencetest)."
     ]
   },
   {

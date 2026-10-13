@@ -28,7 +28,9 @@ deedglass licence deactivate         # free this machine's activation
 never the hostname, then asks deedglass.com to re-check the key with Dodo and sign a licence token.
 Two files are written, both mode 0600: `.deedglass/licence.json` (the signed token, which holds
 only the key's sha256) and `.deedglass/licence.key` (the key, so the CLI can check it again).
-`DEEDGLASS_LICENCE_FILE` moves them; `DEEDGLASS_LICENCE_MODE=test` accepts Dodo test-mode keys.
+`DEEDGLASS_LICENCE_FILE` moves them. `DEEDGLASS_LICENCE_MODE=test` accepts Dodo test-mode keys only in a
+development build (`go build -tags licencetest ./cmd/deedglass`); release binaries refuse it, because a
+test-mode purchase costs nothing.
 
 ## Does Pro phone home?
 

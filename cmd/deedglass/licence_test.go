@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"crypto/ed25519"
 	"encoding/json"
 	"net/http"
@@ -87,10 +88,40 @@ func licenceSeams(t *testing.T) (*licFake, map[string]string, *time.Time) {
 	path := filepath.Join(t.TempDir(), "state", "licence.json")
 	env := map[string]string{"NO_COLOR": "1", "DEEDGLASS_LICENCE_FILE": path, "DEEDGLASS_LICENCE_MODE": "test", "DEEDGLASS_LICENCE_SERVER": srv.URL}
 	// The fake serves Dodo's routes too: point the Dodo base at it.
-	saved := licDodoOverride
-	licDodoOverride = srv.URL
-	t.Cleanup(func() { licDodoOverride = saved })
+	saved, savedTM := licDodoOverride, licenceTestModeBuild
+	licDodoOverride, licenceTestModeBuild = srv.URL, true // these tests stand in for a -tags licencetest build
+	t.Cleanup(func() { licDodoOverride, licenceTestModeBuild = saved, savedTM })
 	return f, env, &now
+}
+
+// TestLicenceTestModeReleaseBuild: a release binary (no licencetest tag) refuses
+// DEEDGLASS_LICENCE_MODE=test, and a test-mode token signed by the real lk_ key (a free Dodo
+// test-card purchase) never turns Pro on. Security pre-launch review.
+func TestLicenceTestModeReleaseBuild(t *testing.T) {
+	_, env, _ := licenceSeams(t)
+	if r := cli(t, env, false, "licence", "activate", "DG-7Q2M-TEST-0001"); r.code != 0 {
+		t.Fatalf("activate in a licencetest build: %d\n%s%s", r.code, r.stdout, r.stderr)
+	}
+	licenceTestModeBuild = false // from here on: the release binary
+	for _, args := range [][]string{{"licence", "show"}, {"licence", "activate", "DG-7Q2M-TEST-0001"}, {"licence", "refresh"}} {
+		r := cli(t, env, false, args...)
+		if r.code != ExitUsage || !strings.Contains(r.stderr, "works only in a development build") {
+			t.Fatalf("%v with DEEDGLASS_LICENCE_MODE=test in a release build: %d\n%s%s", args, r.code, r.stdout, r.stderr)
+		}
+	}
+	delete(env, "DEEDGLASS_LICENCE_MODE")
+	env["DEEDGLASS_NO_NETWORK"] = "1"
+	r := cli(t, env, false, "licence", "show", "--json")
+	if r.code == 0 || !strings.Contains(r.stdout+r.stderr, "licence_mode") {
+		t.Fatalf("a test-mode token on a release build must be refused: %d\n%s%s", r.code, r.stdout, r.stderr)
+	}
+	m, err := licenceManager(&Env{Getenv: func(k string) string { return env[k] }})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if d := m.Require(context.Background(), licence.FeatureScanFull); d.Allowed {
+		t.Fatal("a test-mode token unlocked scan_full on a release build")
+	}
 }
 
 func TestLicenceCommands(t *testing.T) {
