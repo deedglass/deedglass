@@ -16,6 +16,16 @@ What Deedglass does not do, stated plainly. **Owner: S37**, which finalizes this
 - **Authorized is not the same as wise.** A hijacked agent with a valid key and an in-policy action is allowed. Policies, budgets and approvals narrow this; they do not close it.
 - **Trust assumptions.** Deedglass trusts the Postgres server and its superusers, the host it runs on, and its seal key. A REPLICATION role can decode every row change in its database.
 
+## Already running another gate?
+
+If an MCP gateway, an approval tool or a proxy already sits in front of your agent, Deedglass can sit beside it, but it does not replace or read it:
+
+- **Deedglass only sees the calls that go through it.** A call your other gateway sends straight to the tool is not checked, recorded or stopped by Deedglass. Route the writes you care about through one of them, and make that the only path with the write credential.
+- **Two gates mean two decisions.** Each applies its own rules. Deedglass doesn't import another tool's policies or approvals, and its records don't include the other tool's decision.
+- **Stop all stops what goes through Deedglass.** Deedglass's Stop refuses every agent key it issued, so nothing runs through it. It can't revoke a credential the other gateway holds.
+- **The check covers Deedglass's own actions.** For Postgres, L2 compares what Deedglass's connector ran with what the database committed. Writes made through the other gateway with another credential are not in its records.
+- **Latency adds up.** Each hop adds its own time; measure the pair on your setup before you put both on a hot path.
+
 ## Scheduled actions and outbound mail (S40)
 
 - A schedule is one window per action: no recurrence, no proxy mode, at most 72 hours ahead.

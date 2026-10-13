@@ -27,8 +27,9 @@ const L1Send = "Gmail's Sent copy has the same recipient, subject, body, From an
 
 const patID = `^[A-Za-z0-9_-]{1,128}$`
 
-// sendSchema: the top level is closed; recipient, signal, checks and review are open objects the
-// connector ignores and the policy reads.
+// sendSchema: the top level is closed; recipient, signal, checks, review and footer are open
+// objects the connector ignores and the policy reads (footer.postal_address_digest is the growth
+// policy's postal-address-on-file fact; S45's rehearsal found every send refused without it here).
 const sendSchema = `{"type":"object","additionalProperties":false,
 "required":["to","subject","body_text","body_sha256","step","unsubscribe","window","message_ref"],
 "properties":{
@@ -51,7 +52,8 @@ const sendSchema = `{"type":"object","additionalProperties":false,
 "recipient":{"type":"object"},
 "signal":{"type":"object"},
 "checks":{"type":"object"},
-"review":{"type":"object"}}}`
+"review":{"type":"object"},
+"footer":{"type":"object"}}}`
 
 func toolSpecs() []connector.ToolSpec {
 	return []connector.ToolSpec{

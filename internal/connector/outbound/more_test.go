@@ -12,6 +12,7 @@ import (
 
 	"github.com/deedglass/deedglass/internal/connector"
 	"github.com/deedglass/deedglass/internal/connector/saas"
+	"github.com/deedglass/deedglass/internal/connector/schema"
 )
 
 func TestInfoAndTools(t *testing.T) {
@@ -242,5 +243,27 @@ func TestTestReportFailures(t *testing.T) {
 	}
 	if !auth {
 		t.Fatalf("%+v", rep.Checks)
+	}
+}
+
+// TestSendSchemaTakesGrowthArgs (S45): the growth sender's full mail.send arguments, footer
+// included, pass the tool's schema. The rehearsal found every send failing validation on
+// args.footer, which the growth policy's postal-address-on-file rule reads.
+func TestSendSchemaTakesGrowthArgs(t *testing.T) {
+	s, err := schema.Compile(json.RawMessage(sendSchema))
+	if err != nil {
+		t.Fatal(err)
+	}
+	args := `{"to":"lin@acme.example","subject":"your agent and Postgres","body_text":"Hi","body_sha256":"sha256:` + strings.Repeat("a", 64) + `",
+"step":1,"kind":"cold","thread":null,"unsubscribe":{"token":"` + strings.Repeat("a", 32) + `"},
+"window":{"not_before":"2026-10-21T15:30:00Z","not_after":"2026-10-21T17:30:00Z","tz":"America/Los_Angeles","local_start_hour":8,"local_end_hour":10,"local_weekday":"wed","ist_date":"2026-10-21"},
+"footer":{"postal_address_digest":"sha256:` + strings.Repeat("b", 64) + `"},
+"message_ref":"msg_01","template_hash":"sha256:x","arm":"A","exp":"","unit_ref":"u_1","w_ppm":[],"snapshot_digest":"",
+"recipient":{"country":"US"},"signal":{"code":"A"},"checks":{"suppressed":false},"review":{"company":"Acme"}}`
+	if err := s.Validate(json.RawMessage(args)); err != nil {
+		t.Fatalf("growth's mail.send arguments must pass the schema: %v", err)
+	}
+	if err := s.Validate(json.RawMessage(`{"to":"a@b.example","nope":1}`)); err == nil {
+		t.Fatal("the top level must stay closed")
 	}
 }

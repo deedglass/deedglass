@@ -5,6 +5,10 @@
 // request (method and path, never a body), and can be told to misbehave: answer 500 after storing
 // (an unknown outcome), 429, change the stored body (MISMATCH), or store the Sent copy with
 // another From. It sends nothing anywhere.
+//
+// S45 (the growth rehearsal): POST /_fake/inbound adds a message to the inbox (a reply, a bounce
+// or an unrelated mail, as raw RFC 5322 text), so history, threads and in:inbox listings answer
+// the way Gmail's do; GET /_fake/sent lists the Sent copies' headers so a test can reply to one.
 package fakegmail
 
 import (
@@ -41,6 +45,7 @@ type Message struct {
 	ID, ThreadID string
 	Raw          []byte
 	Labels       []string
+	HistoryID    uint64
 }
 
 // Server is the fake.
@@ -51,6 +56,7 @@ type Server struct {
 	log      []Request
 	messages []Message
 	n        int
+	history  uint64
 }
 
 // New returns a fake whose profile is email.
@@ -126,6 +132,10 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, 200, map[string]any{"mode": r.URL.Query().Get("mode")})
 	case r.Method == http.MethodGet && p == "/_fake/log":
 		writeJSON(w, 200, map[string]any{"requests": s.Log(), "sends": s.Sends(), "writes": s.Writes()})
+	case r.Method == http.MethodPost && p == "/_fake/inbound":
+		s.inbound(w, r)
+	case r.Method == http.MethodGet && p == "/_fake/sent":
+		s.sentList(w)
 	case r.Header.Get("Authorization") != "Bearer fake-access-token":
 		writeJSON(w, 401, map[string]any{"error": map[string]any{"status": "UNAUTHENTICATED"}})
 	case r.Method == http.MethodGet && p == "/gmail/v1/users/me/profile":
@@ -137,9 +147,9 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case r.Method == http.MethodGet && strings.HasPrefix(p, "/gmail/v1/users/me/messages/"):
 		s.get(w, strings.TrimPrefix(p, "/gmail/v1/users/me/messages/"))
 	case r.Method == http.MethodGet && p == "/gmail/v1/users/me/history":
-		writeJSON(w, 200, map[string]any{"history": []any{}, "historyId": "1"})
+		s.historyList(w, r)
 	case r.Method == http.MethodGet && strings.HasPrefix(p, "/gmail/v1/users/me/threads/"):
-		writeJSON(w, 200, map[string]any{"id": strings.TrimPrefix(p, "/gmail/v1/users/me/threads/"), "messages": []any{}})
+		s.thread(w, strings.TrimPrefix(p, "/gmail/v1/users/me/threads/"))
 	default:
 		writeJSON(w, 404, map[string]any{"error": map[string]any{"status": "NOT_FOUND"}})
 	}
@@ -187,7 +197,8 @@ func (s *Server) send(w http.ResponseWriter, r *http.Request) {
 	if tid == "" {
 		tid = fmt.Sprintf("thr%06d", s.n)
 	}
-	s.messages = append(s.messages, Message{ID: id, ThreadID: tid, Raw: raw, Labels: []string{"SENT"}})
+	s.history++
+	s.messages = append(s.messages, Message{ID: id, ThreadID: tid, Raw: raw, Labels: []string{"SENT"}, HistoryID: s.history})
 	s.mu.Unlock()
 	if mode == ModeFailAfter {
 		writeJSON(w, 500, map[string]any{"error": map[string]any{"status": "INTERNAL"}})
@@ -208,7 +219,11 @@ func (s *Server) list(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	} else {
+		inbox := strings.Contains(q, "in:inbox")
 		for _, m := range s.Messages() {
+			if inbox && !hasLabel(m, "INBOX") {
+				continue
+			}
 			out = append(out, map[string]string{"id": m.ID, "threadId": m.ThreadID})
 		}
 	}
@@ -219,9 +234,103 @@ func (s *Server) get(w http.ResponseWriter, id string) {
 	for _, m := range s.Messages() {
 		if m.ID == id {
 			writeJSON(w, 200, map[string]any{"id": m.ID, "threadId": m.ThreadID, "labelIds": m.Labels,
-				"raw": base64.URLEncoding.EncodeToString(m.Raw)})
+				"raw": base64.URLEncoding.EncodeToString(m.Raw), "historyId": fmt.Sprint(m.HistoryID)})
 			return
 		}
 	}
 	writeJSON(w, 404, map[string]any{"error": map[string]any{"status": "NOT_FOUND"}})
+}
+
+func hasLabel(m Message, l string) bool {
+	for _, x := range m.Labels {
+		if x == l {
+			return true
+		}
+	}
+	return false
+}
+
+// Inbound adds one message to the inbox and returns its id. threadID "" starts a new thread.
+func (s *Server) Inbound(raw []byte, threadID string) Message {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.n++
+	s.history++
+	m := Message{ID: fmt.Sprintf("msg%06d", s.n), ThreadID: threadID, Raw: append([]byte(nil), raw...), Labels: []string{"INBOX", "UNREAD"}, HistoryID: s.history}
+	if m.ThreadID == "" {
+		m.ThreadID = fmt.Sprintf("thr%06d", s.n)
+	}
+	s.messages = append(s.messages, m)
+	return m
+}
+
+func (s *Server) inbound(w http.ResponseWriter, r *http.Request) {
+	var b struct {
+		Raw      string `json:"raw"`
+		ThreadID string `json:"thread_id"`
+	}
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20)).Decode(&b); err != nil || b.Raw == "" {
+		writeJSON(w, 400, map[string]any{"error": "send {\"raw\": \"<RFC 5322 text>\", \"thread_id\": \"thr…\"}"})
+		return
+	}
+	if _, err := mail.ReadMessage(strings.NewReader(b.Raw)); err != nil {
+		writeJSON(w, 400, map[string]any{"error": "raw isn't an RFC 5322 message"})
+		return
+	}
+	m := s.Inbound([]byte(b.Raw), b.ThreadID)
+	writeJSON(w, 200, map[string]any{"id": m.ID, "thread_id": m.ThreadID, "history_id": fmt.Sprint(m.HistoryID)})
+}
+
+// sentList answers the Sent copies' routing headers (never a body), oldest first.
+func (s *Server) sentList(w http.ResponseWriter) {
+	out := []map[string]string{}
+	for _, m := range s.Messages() {
+		if !hasLabel(m, "SENT") {
+			continue
+		}
+		e := map[string]string{"id": m.ID, "thread_id": m.ThreadID}
+		if mm, err := mail.ReadMessage(bytes.NewReader(m.Raw)); err == nil {
+			e["to"], e["subject"], e["message_id"] = mm.Header.Get("To"), mm.Header.Get("Subject"), strings.TrimSpace(mm.Header.Get("Message-Id"))
+			e["references"] = mm.Header.Get("References")
+			e["list_unsubscribe"] = mm.Header.Get("List-Unsubscribe")
+		}
+		out = append(out, e)
+	}
+	writeJSON(w, 200, map[string]any{"sent": out})
+}
+
+func (s *Server) historyList(w http.ResponseWriter, r *http.Request) {
+	var start uint64
+	_, _ = fmt.Sscan(r.URL.Query().Get("startHistoryId"), &start)
+	label := r.URL.Query().Get("labelId")
+	s.mu.Lock()
+	cur := s.history
+	s.mu.Unlock()
+	added := []map[string]any{}
+	for _, m := range s.Messages() {
+		if m.HistoryID <= start || (label != "" && !hasLabel(m, label)) {
+			continue
+		}
+		added = append(added, map[string]any{"id": fmt.Sprint(m.HistoryID), "messagesAdded": []any{map[string]any{"message": map[string]string{"id": m.ID, "threadId": m.ThreadID}}}})
+	}
+	writeJSON(w, 200, map[string]any{"history": added, "historyId": fmt.Sprint(max(cur, 1))})
+}
+
+func (s *Server) thread(w http.ResponseWriter, id string) {
+	msgs := []map[string]any{}
+	for _, m := range s.Messages() {
+		if m.ThreadID != id {
+			continue
+		}
+		var hs []map[string]string
+		if mm, err := mail.ReadMessage(bytes.NewReader(m.Raw)); err == nil {
+			for k, vs := range mm.Header {
+				for _, v := range vs {
+					hs = append(hs, map[string]string{"name": k, "value": v})
+				}
+			}
+		}
+		msgs = append(msgs, map[string]any{"id": m.ID, "labelIds": m.Labels, "payload": map[string]any{"headers": hs}})
+	}
+	writeJSON(w, 200, map[string]any{"id": id, "messages": msgs})
 }
