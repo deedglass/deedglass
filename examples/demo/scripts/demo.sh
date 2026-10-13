@@ -342,7 +342,14 @@ activate_policy() {
   out="$(api --json policy push "$file" 2>&1)" || { echo "$out" >&2; fail "The policy couldn't be pushed. The error is above."; }
   v="$(printf '%s' "$out" | sed -n 's/.*"version": *\([0-9][0-9]*\).*/\1/p' | head -1)"
   [ -n "$v" ] || fail "The pushed version couldn't be read. Run bin/deedglass policy push $file to see why."
-  out="$(api policy activate acme-demo --version "$v" --mode enforce --reason "$2" --yes 2>&1)" || { echo "$out" >&2; fail "The policy couldn't be activated."; }
+  # Activating the version that is already enforced answers a conflict ("already the enforced policy.
+  # Nothing changed."): for a demo toggle that is the wanted state, so it counts as done.
+  if ! out="$(api policy activate acme-demo --version "$v" --mode enforce --reason "$2" --yes 2>&1)"; then
+    case "$out" in
+      *"is already the enforced policy"*) ;;
+      *) echo "$out" >&2; fail "The policy couldn't be activated." ;;
+    esac
+  fi
   echo "$v"
 }
 
