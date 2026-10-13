@@ -48,10 +48,16 @@ func TestDoctorReadOnly(t *testing.T) {
 	var role string
 	_ = conn.QueryRow(ctx, "SELECT current_user").Scan(&role)
 	conn.Close(ctx)
-	if _, err := admin.Exec(ctx, "ALTER ROLE "+pgx.Identifier{role}.Sanitize()+" SET log_statement = 'all'"); err != nil {
+	// Scoped to this test's own database (S49). A bare ALTER ROLE … SET log_statement made the
+	// shared runtime role log every statement of every package running in parallel on the cluster;
+	// the server then wrote the whole suite's queries to its log for the length of this test, which
+	// slowed every backend, this test's three doctor connections included, past doctor's 3 s check
+	// budget whenever the machine was busy (the S44/S45 "load flake").
+	scope := "ALTER ROLE " + pgx.Identifier{role}.Sanitize() + " IN DATABASE " + pgx.Identifier{e.Name}.Sanitize()
+	if _, err := admin.Exec(ctx, scope+" SET log_statement = 'all'"); err != nil {
 		t.Fatal(err)
 	}
-	defer admin.Exec(context.Background(), "ALTER ROLE "+pgx.Identifier{role}.Sanitize()+" RESET log_statement") //nolint:errcheck
+	defer admin.Exec(context.Background(), scope+" RESET log_statement") //nolint:errcheck
 	rs := byID(Run(ctx, env, Filter(Checks(), "db.*")))
 	for _, id := range []string{"db.reachable", "db.role", "db.migrations"} {
 		if rs[id].Status != OK && !(id == "db.role" && rs[id].Status == Warn) {
