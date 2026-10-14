@@ -9,3 +9,4 @@ value:abcdefghij|abcd1234|AbCdEf12|ZZZZZZZZ|admin000|agent000|attackattack::plac
 path:^(testdata/intents/keys/|docs/INTENTS\.md$|pkg/deedglass/intent_test\.go$|sdk/typescript/src/intent\.ts$|internal/vault/vault_test\.go$|internal/connector/saas/client_test\.go$)::RFC 8032 test-vector keys and generated test keys (S09, S29); published, never used for a deployment
 value:abcdefgh_|Ab12Cd34|Zz99Yy88|ZZsecretvalue::placeholder key prefixes in SDK tests and the demo-live preflight test
 value:^re_3PqR8s2eZvKYlo2C0a1b2c3d$::a made-up Stripe refund id (re_…) in the stripe-refunds policy cases, not a Resend key
+value:^dg_live_never_for_the_child$::a sentinel in the S50 observe integration test (checks the child process never sees DEEDGLASS_*), never issued
