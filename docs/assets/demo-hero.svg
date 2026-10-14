@@ -1,0 +1,217 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="846" height="498" viewBox="0 0 846 498" role="img" aria-labelledby="t d">
+<title id="t">Recording of make demo-hero (product 97a524c, 2026-10-14)</title>
+<desc id="d">A real run, replayed line by line at the times it printed. An agent ships order 42: Postgres committed 1 row, Proven, Matches. A legacy trigger is turned on and the same UPDATE runs again: Proven, Doesn't match, Postgres changed 301 rows in public.orders, the agent reported 1. The diff lists the rows, then every record verifies offline. Log sha256 c081566f892f.</desc>
+<style>
+text{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;font-size:13px;white-space:pre;fill:#C9CCD6}
+.ok{fill:#34E3C9}.bad{fill:#FF7A70}.wait{fill:#A99CFF}.cmd{fill:#F5F6FA}.step{fill:#F5F6FA;font-weight:600}.dim{fill:#8B90A0}.strong{font-weight:700}
+.bar{font-family:ui-sans-serif,-apple-system,"Segoe UI",Inter,sans-serif;font-size:12px;fill:#8B90A0}
+#scroll{transform:translateY(-216px)}
+.l{opacity:1}
+@media (prefers-reduced-motion:no-preference){
+#scroll{animation:scroll 20258ms steps(1,end) infinite}
+.l{animation-duration:20258ms;animation-iteration-count:infinite;animation-timing-function:steps(1,end)}
+@keyframes scroll{0%{transform:translateY(0px)}41.465%{transform:translateY(-18px)}41.811%{transform:translateY(-36px)}42.156%{transform:translateY(-54px)}42.502%{transform:translateY(-72px)}42.847%{transform:translateY(-90px)}43.193%{transform:translateY(-108px)}43.538%{transform:translateY(-126px)}43.884%{transform:translateY(-144px)}44.229%{transform:translateY(-162px)}44.575%{transform:translateY(-180px)}44.921%{transform:translateY(-198px)}45.266%{transform:translateY(-216px)}45.612%{transform:translateY(-234px)}45.957%{transform:translateY(-252px)}46.303%{transform:translateY(-270px)}46.648%{transform:translateY(-288px)}46.994%{transform:translateY(-306px)}47.339%{transform:translateY(-324px)}47.685%{transform:translateY(-342px)}48.030%{transform:translateY(-360px)}48.376%{transform:translateY(-378px)}48.721%{transform:translateY(-396px)}49.067%{transform:translateY(-414px)}49.413%{transform:translateY(-432px)}49.758%{transform:translateY(-450px)}50.104%{transform:translateY(-468px)}50.449%{transform:translateY(-486px)}50.795%{transform:translateY(-504px)}51.140%{transform:translateY(-522px)}51.486%{transform:translateY(-540px)}51.831%{transform:translateY(-558px)}52.177%{transform:translateY(-576px)}52.522%{transform:translateY(-594px)}52.868%{transform:translateY(-612px)}53.214%{transform:translateY(-630px)}53.559%{transform:translateY(-648px)}53.905%{transform:translateY(-666px)}54.250%{transform:translateY(-684px)}54.596%{transform:translateY(-702px)}54.941%{transform:translateY(-720px)}55.287%{transform:translateY(-738px)}55.632%{transform:translateY(-756px)}55.978%{transform:translateY(-774px)}56.323%{transform:translateY(-792px)}56.669%{transform:translateY(-810px)}57.015%{transform:translateY(-828px)}57.360%{transform:translateY(-846px)}57.706%{transform:translateY(-864px)}58.051%{transform:translateY(-882px)}58.397%{transform:translateY(-900px)}58.742%{transform:translateY(-918px)}59.088%{transform:translateY(-936px)}59.433%{transform:translateY(-954px)}59.779%{transform:translateY(-972px)}60.124%{transform:translateY(-990px)}60.470%{transform:translateY(-1008px)}60.815%{transform:translateY(-1026px)}61.161%{transform:translateY(-1044px)}61.507%{transform:translateY(-1062px)}61.852%{transform:translateY(-1080px)}62.198%{transform:translateY(-1098px)}62.543%{transform:translateY(-1116px)}62.889%{transform:translateY(-1134px)}63.234%{transform:translateY(-1152px)}63.580%{transform:translateY(-1170px)}63.925%{transform:translateY(-1188px)}64.271%{transform:translateY(-1206px)}64.616%{transform:translateY(-1224px)}65.308%{transform:translateY(-1242px)}65.653%{transform:translateY(-1260px)}75.328%{transform:translateY(-1278px)}75.674%{transform:translateY(-1296px)}100%{transform:translateY(-1296px)}}
+.l0{animation-name:a0}@keyframes a0{0%{opacity:0}1.975%{opacity:1}100%{opacity:1}}
+.l1{animation-name:a1}@keyframes a1{0%{opacity:0}1.984%{opacity:1}100%{opacity:1}}
+.l2{animation-name:a2}@keyframes a2{0%{opacity:0}1.984%{opacity:1}100%{opacity:1}}
+.l3{animation-name:a3}@keyframes a3{0%{opacity:0}10.203%{opacity:1}100%{opacity:1}}
+.l4{animation-name:a4}@keyframes a4{0%{opacity:0}12.459%{opacity:1}100%{opacity:1}}
+.l5{animation-name:a5}@keyframes a5{0%{opacity:0}19.908%{opacity:1}100%{opacity:1}}
+.l6{animation-name:a6}@keyframes a6{0%{opacity:0}20.792%{opacity:1}100%{opacity:1}}
+.l7{animation-name:a7}@keyframes a7{0%{opacity:0}20.792%{opacity:1}100%{opacity:1}}
+.l8{animation-name:a8}@keyframes a8{0%{opacity:0}20.792%{opacity:1}100%{opacity:1}}
+.l9{animation-name:a9}@keyframes a9{0%{opacity:0}20.831%{opacity:1}100%{opacity:1}}
+.l10{animation-name:a10}@keyframes a10{0%{opacity:0}20.846%{opacity:1}100%{opacity:1}}
+.l11{animation-name:a11}@keyframes a11{0%{opacity:0}21.118%{opacity:1}100%{opacity:1}}
+.l12{animation-name:a12}@keyframes a12{0%{opacity:0}28.566%{opacity:1}100%{opacity:1}}
+.l13{animation-name:a13}@keyframes a13{0%{opacity:0}28.566%{opacity:1}100%{opacity:1}}
+.l14{animation-name:a14}@keyframes a14{0%{opacity:0}31.306%{opacity:1}100%{opacity:1}}
+.l15{animation-name:a15}@keyframes a15{0%{opacity:0}33.103%{opacity:1}100%{opacity:1}}
+.l16{animation-name:a16}@keyframes a16{0%{opacity:0}40.532%{opacity:1}100%{opacity:1}}
+.l17{animation-name:a17}@keyframes a17{0%{opacity:0}41.248%{opacity:1}100%{opacity:1}}
+.l18{animation-name:a18}@keyframes a18{0%{opacity:0}41.248%{opacity:1}100%{opacity:1}}
+.l19{animation-name:a19}@keyframes a19{0%{opacity:0}41.248%{opacity:1}100%{opacity:1}}
+.l20{animation-name:a20}@keyframes a20{0%{opacity:0}41.282%{opacity:1}100%{opacity:1}}
+.l21{animation-name:a21}@keyframes a21{0%{opacity:0}41.282%{opacity:1}100%{opacity:1}}
+.l22{animation-name:a22}@keyframes a22{0%{opacity:0}41.282%{opacity:1}100%{opacity:1}}
+.l23{animation-name:a23}@keyframes a23{0%{opacity:0}41.282%{opacity:1}100%{opacity:1}}
+.l24{animation-name:a24}@keyframes a24{0%{opacity:0}41.282%{opacity:1}100%{opacity:1}}
+.l25{animation-name:a25}@keyframes a25{0%{opacity:0}41.282%{opacity:1}100%{opacity:1}}
+.l26{animation-name:a26}@keyframes a26{0%{opacity:0}41.282%{opacity:1}100%{opacity:1}}
+.l27{animation-name:a27}@keyframes a27{0%{opacity:0}41.282%{opacity:1}100%{opacity:1}}
+.l28{animation-name:a28}@keyframes a28{0%{opacity:0}41.282%{opacity:1}100%{opacity:1}}
+.l29{animation-name:a29}@keyframes a29{0%{opacity:0}41.282%{opacity:1}100%{opacity:1}}
+.l30{animation-name:a30}@keyframes a30{0%{opacity:0}41.282%{opacity:1}100%{opacity:1}}
+.l31{animation-name:a31}@keyframes a31{0%{opacity:0}41.282%{opacity:1}100%{opacity:1}}
+.l32{animation-name:a32}@keyframes a32{0%{opacity:0}41.282%{opacity:1}100%{opacity:1}}
+.l33{animation-name:a33}@keyframes a33{0%{opacity:0}41.282%{opacity:1}100%{opacity:1}}
+.l34{animation-name:a34}@keyframes a34{0%{opacity:0}41.282%{opacity:1}100%{opacity:1}}
+.l35{animation-name:a35}@keyframes a35{0%{opacity:0}41.282%{opacity:1}100%{opacity:1}}
+.l36{animation-name:a36}@keyframes a36{0%{opacity:0}41.282%{opacity:1}100%{opacity:1}}
+.l37{animation-name:a37}@keyframes a37{0%{opacity:0}41.282%{opacity:1}100%{opacity:1}}
+.l38{animation-name:a38}@keyframes a38{0%{opacity:0}41.282%{opacity:1}100%{opacity:1}}
+.l39{animation-name:a39}@keyframes a39{0%{opacity:0}41.282%{opacity:1}100%{opacity:1}}
+.l40{animation-name:a40}@keyframes a40{0%{opacity:0}41.282%{opacity:1}100%{opacity:1}}
+.l41{animation-name:a41}@keyframes a41{0%{opacity:0}41.282%{opacity:1}100%{opacity:1}}
+.l42{animation-name:a42}@keyframes a42{0%{opacity:0}41.282%{opacity:1}100%{opacity:1}}
+.l43{animation-name:a43}@keyframes a43{0%{opacity:0}41.282%{opacity:1}100%{opacity:1}}
+.l44{animation-name:a44}@keyframes a44{0%{opacity:0}41.282%{opacity:1}100%{opacity:1}}
+.l45{animation-name:a45}@keyframes a45{0%{opacity:0}41.282%{opacity:1}100%{opacity:1}}
+.l46{animation-name:a46}@keyframes a46{0%{opacity:0}41.282%{opacity:1}100%{opacity:1}}
+.l47{animation-name:a47}@keyframes a47{0%{opacity:0}41.282%{opacity:1}100%{opacity:1}}
+.l48{animation-name:a48}@keyframes a48{0%{opacity:0}41.287%{opacity:1}100%{opacity:1}}
+.l49{animation-name:a49}@keyframes a49{0%{opacity:0}41.287%{opacity:1}100%{opacity:1}}
+.l50{animation-name:a50}@keyframes a50{0%{opacity:0}41.885%{opacity:1}100%{opacity:1}}
+.l51{animation-name:a51}@keyframes a51{0%{opacity:0}49.334%{opacity:1}100%{opacity:1}}
+.l52{animation-name:a52}@keyframes a52{0%{opacity:0}49.334%{opacity:1}100%{opacity:1}}
+.l53{animation-name:a53}@keyframes a53{0%{opacity:0}49.334%{opacity:1}100%{opacity:1}}
+.l54{animation-name:a54}@keyframes a54{0%{opacity:0}49.783%{opacity:1}100%{opacity:1}}
+.l55{animation-name:a55}@keyframes a55{0%{opacity:0}49.783%{opacity:1}100%{opacity:1}}
+.l56{animation-name:a56}@keyframes a56{0%{opacity:0}49.788%{opacity:1}100%{opacity:1}}
+.l57{animation-name:a57}@keyframes a57{0%{opacity:0}49.788%{opacity:1}100%{opacity:1}}
+.l58{animation-name:a58}@keyframes a58{0%{opacity:0}49.788%{opacity:1}100%{opacity:1}}
+.l59{animation-name:a59}@keyframes a59{0%{opacity:0}49.788%{opacity:1}100%{opacity:1}}
+.l60{animation-name:a60}@keyframes a60{0%{opacity:0}49.788%{opacity:1}100%{opacity:1}}
+.l61{animation-name:a61}@keyframes a61{0%{opacity:0}49.788%{opacity:1}100%{opacity:1}}
+.l62{animation-name:a62}@keyframes a62{0%{opacity:0}49.788%{opacity:1}100%{opacity:1}}
+.l63{animation-name:a63}@keyframes a63{0%{opacity:0}49.788%{opacity:1}100%{opacity:1}}
+.l64{animation-name:a64}@keyframes a64{0%{opacity:0}49.788%{opacity:1}100%{opacity:1}}
+.l65{animation-name:a65}@keyframes a65{0%{opacity:0}49.788%{opacity:1}100%{opacity:1}}
+.l66{animation-name:a66}@keyframes a66{0%{opacity:0}49.788%{opacity:1}100%{opacity:1}}
+.l67{animation-name:a67}@keyframes a67{0%{opacity:0}49.788%{opacity:1}100%{opacity:1}}
+.l68{animation-name:a68}@keyframes a68{0%{opacity:0}49.788%{opacity:1}100%{opacity:1}}
+.l69{animation-name:a69}@keyframes a69{0%{opacity:0}49.788%{opacity:1}100%{opacity:1}}
+.l70{animation-name:a70}@keyframes a70{0%{opacity:0}49.788%{opacity:1}100%{opacity:1}}
+.l71{animation-name:a71}@keyframes a71{0%{opacity:0}49.788%{opacity:1}100%{opacity:1}}
+.l72{animation-name:a72}@keyframes a72{0%{opacity:0}49.788%{opacity:1}100%{opacity:1}}
+.l73{animation-name:a73}@keyframes a73{0%{opacity:0}49.788%{opacity:1}100%{opacity:1}}
+.l74{animation-name:a74}@keyframes a74{0%{opacity:0}49.788%{opacity:1}100%{opacity:1}}
+.l75{animation-name:a75}@keyframes a75{0%{opacity:0}49.788%{opacity:1}100%{opacity:1}}
+.l76{animation-name:a76}@keyframes a76{0%{opacity:0}49.788%{opacity:1}100%{opacity:1}}
+.l77{animation-name:a77}@keyframes a77{0%{opacity:0}49.788%{opacity:1}100%{opacity:1}}
+.l78{animation-name:a78}@keyframes a78{0%{opacity:0}49.788%{opacity:1}100%{opacity:1}}
+.l79{animation-name:a79}@keyframes a79{0%{opacity:0}49.788%{opacity:1}100%{opacity:1}}
+.l80{animation-name:a80}@keyframes a80{0%{opacity:0}49.788%{opacity:1}100%{opacity:1}}
+.l81{animation-name:a81}@keyframes a81{0%{opacity:0}49.788%{opacity:1}100%{opacity:1}}
+.l82{animation-name:a82}@keyframes a82{0%{opacity:0}49.788%{opacity:1}100%{opacity:1}}
+.l83{animation-name:a83}@keyframes a83{0%{opacity:0}49.788%{opacity:1}100%{opacity:1}}
+.l84{animation-name:a84}@keyframes a84{0%{opacity:0}49.788%{opacity:1}100%{opacity:1}}
+.l85{animation-name:a85}@keyframes a85{0%{opacity:0}57.251%{opacity:1}100%{opacity:1}}
+.l86{animation-name:a86}@keyframes a86{0%{opacity:0}57.251%{opacity:1}100%{opacity:1}}
+.l87{animation-name:a87}@keyframes a87{0%{opacity:0}57.251%{opacity:1}100%{opacity:1}}
+.l88{animation-name:a88}@keyframes a88{0%{opacity:0}57.755%{opacity:1}100%{opacity:1}}
+.l89{animation-name:a89}@keyframes a89{0%{opacity:0}57.785%{opacity:1}100%{opacity:1}}
+.l90{animation-name:a90}@keyframes a90{0%{opacity:0}57.819%{opacity:1}100%{opacity:1}}
+.l91{animation-name:a91}@keyframes a91{0%{opacity:0}57.819%{opacity:1}100%{opacity:1}}
+.l92{animation-name:a92}@keyframes a92{0%{opacity:0}65.273%{opacity:1}100%{opacity:1}}
+.l93{animation-name:a93}@keyframes a93{0%{opacity:0}65.273%{opacity:1}100%{opacity:1}}
+.l94{animation-name:a94}@keyframes a94{0%{opacity:0}75.318%{opacity:1}100%{opacity:1}}
+.l95{animation-name:a95}@keyframes a95{0%{opacity:0}75.318%{opacity:1}100%{opacity:1}}
+}
+</style>
+<rect width="846" height="498" rx="10" fill="#07080C"/>
+<rect x="0.5" y="0.5" width="845" height="497" rx="10" fill="none" stroke="#1C1F2A"/>
+<circle cx="18" cy="17" r="5" fill="#2A2E3B"/><circle cx="34" cy="17" r="5" fill="#2A2E3B"/><circle cx="50" cy="17" r="5" fill="#2A2E3B"/>
+<text class="bar" x="66" y="21">make demo-hero · a real run · product 97a524c · 2026-10-14 · lines at their recorded times · 8.1 s of start-up skipped</text>
+<line x1="0" y1="34" x2="846" y2="34" stroke="#1C1F2A"/>
+<svg x="0" y="50" width="846" height="432" overflow="hidden">
+<g id="scroll">
+<text class="l l0 ok" x="16" y="13" xml:space="preserve">✓ Approvals off · acme-demo v3 (acme-demo.yaml)</text>
+<text class="l l1 " x="16" y="31" xml:space="preserve"></text>
+<text class="l l2 step" x="16" y="49" xml:space="preserve">1. Trigger off. Ship order 42.</text>
+<text class="l l3 ok" x="16" y="67" xml:space="preserve">✓ Trigger off · orders_ship_open_batch dropped</text>
+<text class="l l4 ok" x="16" y="85" xml:space="preserve">✓ Orders reset · 339 open besides 42 · order 42 paid</text>
+<text class="l l5 cmd" x="16" y="103" xml:space="preserve">$ deedglass act postgres.execute --args '{"sql":"UPDATE public.orders SET status = 'shipped' WHERE id = 42"}'</text>
+<text class="l l6 ok" x="16" y="121" xml:space="preserve">✓ executed · postgres.execute · 17 ms</text>
+<text class="l l7 " x="16" y="139" xml:space="preserve">  action   act_01m4x8kqmn6xmkfcbz0j1e1wvz</text>
+<text class="l l8 " x="16" y="157" xml:space="preserve">  check    Proven · Matches · Postgres committed 1 row in public.orders, as the statement said.</text>
+<text class="l l9 dim" x="16" y="175" xml:space="preserve">           Proven by Postgres · commit 0/209AE18 · 2026-10-14 13:11:16 UTC</text>
+<text class="l l10 dim" x="16" y="193" xml:space="preserve">  record   deed_01m4x8kq… · seq 40 · sealed</text>
+<text class="l l11 ok" x="16" y="211" xml:space="preserve">✓ L2 · VERIFIED · act_01m4x8kqmn6xmkfcbz0j1e1wvz</text>
+<text class="l l12 " x="16" y="229" xml:space="preserve"></text>
+<text class="l l13 step" x="16" y="247" xml:space="preserve">2. A legacy trigger is on. Ship order 42 again.</text>
+<text class="l l14 ok" x="16" y="265" xml:space="preserve">✓ Trigger on · orders_ship_open_batch · 339 open orders besides 42</text>
+<text class="l l15 ok" x="16" y="283" xml:space="preserve">✓ Order 42 · paid</text>
+<text class="l l16 cmd" x="16" y="301" xml:space="preserve">$ deedglass act postgres.execute --args '{"sql":"UPDATE public.orders SET status = 'shipped' WHERE id = 42"}'</text>
+<text class="l l17 bad" x="16" y="319" xml:space="preserve">✕ executed · postgres.execute · 11 ms</text>
+<text class="l l18 bad strong" x="16" y="337" xml:space="preserve">  check    Proven · Doesn't match · Postgres changed 301 rows in public.orders. The agent reported 1.</text>
+<text class="l l19 bad" x="16" y="355" xml:space="preserve">           ✕ Proven   300 changed rows in public.orders are outside the rows the statement named (id = 42).</text>
+<text class="l l20 " x="16" y="373" xml:space="preserve"></text>
+<text class="l l21 " x="16" y="391" xml:space="preserve">  expected   UPDATE 1 row in public.orders where id = 42 · sets status</text>
+<text class="l l22 " x="16" y="409" xml:space="preserve">  observed   UPDATE 301 rows in public.orders · 300 outside id = 42</text>
+<text class="l l23 " x="16" y="427" xml:space="preserve"></text>
+<text class="l l24 " x="16" y="445" xml:space="preserve">  public.orders    id    status</text>
+<text class="l l25 ok" x="16" y="463" xml:space="preserve">  ✓ expected       42    paid → shipped</text>
+<text class="l l26 bad" x="16" y="481" xml:space="preserve">  ✕ unexpected     218   pending → shipped</text>
+<text class="l l27 bad" x="16" y="499" xml:space="preserve">  ✕ unexpected     201   paid → shipped</text>
+<text class="l l28 bad" x="16" y="517" xml:space="preserve">  ✕ unexpected     217   paid → shipped</text>
+<text class="l l29 bad" x="16" y="535" xml:space="preserve">  ✕ unexpected     227   paid → shipped</text>
+<text class="l l30 bad" x="16" y="553" xml:space="preserve">  ✕ unexpected     130   paid → shipped</text>
+<text class="l l31 bad" x="16" y="571" xml:space="preserve">  ✕ unexpected     143   paid → shipped</text>
+<text class="l l32 bad" x="16" y="589" xml:space="preserve">  ✕ unexpected     386   paid → shipped</text>
+<text class="l l33 bad" x="16" y="607" xml:space="preserve">  ✕ unexpected     85    paid → shipped</text>
+<text class="l l34 bad" x="16" y="625" xml:space="preserve">  ✕ unexpected     129   paid → shipped</text>
+<text class="l l35 bad" x="16" y="643" xml:space="preserve">  ✕ unexpected     109   paid → shipped</text>
+<text class="l l36 bad" x="16" y="661" xml:space="preserve">  ✕ unexpected     15    paid → shipped</text>
+<text class="l l37 bad" x="16" y="679" xml:space="preserve">  ✕ unexpected     403   paid → shipped</text>
+<text class="l l38 bad" x="16" y="697" xml:space="preserve">  ✕ unexpected     16    paid → shipped</text>
+<text class="l l39 bad" x="16" y="715" xml:space="preserve">  ✕ unexpected     349   paid → shipped</text>
+<text class="l l40 bad" x="16" y="733" xml:space="preserve">  ✕ unexpected     247   paid → shipped</text>
+<text class="l l41 bad" x="16" y="751" xml:space="preserve">  ✕ unexpected     36    paid → shipped</text>
+<text class="l l42 bad" x="16" y="769" xml:space="preserve">  ✕ unexpected     228   paid → shipped</text>
+<text class="l l43 bad" x="16" y="787" xml:space="preserve">  ✕ unexpected     47    paid → shipped</text>
+<text class="l l44 bad" x="16" y="805" xml:space="preserve">  ✕ unexpected     220   paid → shipped</text>
+<text class="l l45 dim" x="16" y="823" xml:space="preserve">  …                first 20 of 301 rows · the rest in Console › Actions</text>
+<text class="l l46 " x="16" y="841" xml:space="preserve"></text>
+<text class="l l47 dim" x="16" y="859" xml:space="preserve">  Proven by Postgres · commit 0/20CA6E8 · 2026-10-14 13:11:20 UTC</text>
+<text class="l l48 dim" x="16" y="877" xml:space="preserve">  record   deed_01m4x8kv… · seq 41 · sealed</text>
+<text class="l l49 dim" x="16" y="895" xml:space="preserve">  Next: deedglass actions show act_01m4x8kvnx0y0qdgbjm6gbbq7a · https://docs.deedglass.com/witness/mismatch</text>
+<text class="l l50 ok" x="16" y="913" xml:space="preserve">✓ L2 · MISMATCH · 301 rows · act_01m4x8kvnx0y0qdgbjm6gbbq7a</text>
+<text class="l l51 " x="16" y="931" xml:space="preserve"></text>
+<text class="l l52 step" x="16" y="949" xml:space="preserve">3. What Postgres committed.</text>
+<text class="l l53 cmd" x="16" y="967" xml:space="preserve">$ deedglass actions show act_01m4x8kvnx0y0qdgbjm6gbbq7a --diff</text>
+<text class="l l54 bad" x="16" y="985" xml:space="preserve">✕ postgres.execute · act_01m4x8kvnx0y0qdgbjm6gbbq7a</text>
+<text class="l l55 bad strong" x="16" y="1003" xml:space="preserve">  check    Proven · Doesn't match · Postgres changed 301 rows in public.orders. The agent reported 1.</text>
+<text class="l l56 " x="16" y="1021" xml:space="preserve"></text>
+<text class="l l57 " x="16" y="1039" xml:space="preserve">  expected   UPDATE 1 row in public.orders where id = 42 · sets status</text>
+<text class="l l58 " x="16" y="1057" xml:space="preserve">  observed   UPDATE 301 rows in public.orders · 300 outside id = 42</text>
+<text class="l l59 " x="16" y="1075" xml:space="preserve"></text>
+<text class="l l60 " x="16" y="1093" xml:space="preserve">  public.orders    id    status</text>
+<text class="l l61 ok" x="16" y="1111" xml:space="preserve">  ✓ expected       42    paid → shipped</text>
+<text class="l l62 bad" x="16" y="1129" xml:space="preserve">  ✕ unexpected     218   pending → shipped</text>
+<text class="l l63 bad" x="16" y="1147" xml:space="preserve">  ✕ unexpected     201   paid → shipped</text>
+<text class="l l64 bad" x="16" y="1165" xml:space="preserve">  ✕ unexpected     217   paid → shipped</text>
+<text class="l l65 bad" x="16" y="1183" xml:space="preserve">  ✕ unexpected     227   paid → shipped</text>
+<text class="l l66 bad" x="16" y="1201" xml:space="preserve">  ✕ unexpected     130   paid → shipped</text>
+<text class="l l67 bad" x="16" y="1219" xml:space="preserve">  ✕ unexpected     143   paid → shipped</text>
+<text class="l l68 bad" x="16" y="1237" xml:space="preserve">  ✕ unexpected     386   paid → shipped</text>
+<text class="l l69 bad" x="16" y="1255" xml:space="preserve">  ✕ unexpected     85    paid → shipped</text>
+<text class="l l70 bad" x="16" y="1273" xml:space="preserve">  ✕ unexpected     129   paid → shipped</text>
+<text class="l l71 bad" x="16" y="1291" xml:space="preserve">  ✕ unexpected     109   paid → shipped</text>
+<text class="l l72 bad" x="16" y="1309" xml:space="preserve">  ✕ unexpected     15    paid → shipped</text>
+<text class="l l73 bad" x="16" y="1327" xml:space="preserve">  ✕ unexpected     403   paid → shipped</text>
+<text class="l l74 bad" x="16" y="1345" xml:space="preserve">  ✕ unexpected     16    paid → shipped</text>
+<text class="l l75 bad" x="16" y="1363" xml:space="preserve">  ✕ unexpected     349   paid → shipped</text>
+<text class="l l76 bad" x="16" y="1381" xml:space="preserve">  ✕ unexpected     247   paid → shipped</text>
+<text class="l l77 bad" x="16" y="1399" xml:space="preserve">  ✕ unexpected     36    paid → shipped</text>
+<text class="l l78 bad" x="16" y="1417" xml:space="preserve">  ✕ unexpected     228   paid → shipped</text>
+<text class="l l79 bad" x="16" y="1435" xml:space="preserve">  ✕ unexpected     47    paid → shipped</text>
+<text class="l l80 bad" x="16" y="1453" xml:space="preserve">  ✕ unexpected     220   paid → shipped</text>
+<text class="l l81 dim" x="16" y="1471" xml:space="preserve">  …                first 20 of 301 rows · the rest in Console › Actions</text>
+<text class="l l82 " x="16" y="1489" xml:space="preserve"></text>
+<text class="l l83 dim" x="16" y="1507" xml:space="preserve">  Proven by Postgres · commit 0/20CA6E8 · 2026-10-14 13:11:20 UTC</text>
+<text class="l l84 dim" x="16" y="1525" xml:space="preserve">  record   deed_01m4x8kv… · sealed</text>
+<text class="l l85 " x="16" y="1543" xml:space="preserve"></text>
+<text class="l l86 step" x="16" y="1561" xml:space="preserve">4. Every deed checks out offline.</text>
+<text class="l l87 cmd" x="16" y="1579" xml:space="preserve">$ deedglass deeds export --out - | deedglass verify - --keys http://127.0.0.1:8091/.well-known/deedglass/keys.json</text>
+<text class="l l88 wait" x="16" y="1597" xml:space="preserve">◐ Exporting records 1 → 41 for org_01m45g49…</text>
+<text class="l l89 ok" x="16" y="1615" xml:space="preserve">✓ 41 records · 12.7 kB to stdout</text>
+<text class="l l90 ok" x="16" y="1633" xml:space="preserve">✓ 41 deeds · chain intact · 1 seal key · 2026-10-05 → 2026-10-14</text>
+<text class="l l91 ok" x="16" y="1651" xml:space="preserve">✓ Bundle manifest matches · sealed by sk_01m448at…</text>
+<text class="l l92 " x="16" y="1669" xml:space="preserve"></text>
+<text class="l l93 step" x="16" y="1687" xml:space="preserve">5. Trigger off.</text>
+<text class="l l94 ok" x="16" y="1705" xml:space="preserve">✓ Trigger off · orders_ship_open_batch dropped</text>
+<text class="l l95 ok" x="16" y="1723" xml:space="preserve">✓ Hero done · VERIFIED act_01m4x8kqmn6xmkfcbz0j1e1wvz · MISMATCH act_01m4x8kvnx0y0qdgbjm6gbbq7a</text>
+</g>
+</svg>
+</svg>

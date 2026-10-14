@@ -36,8 +36,8 @@ func TestReadme(t *testing.T) {
 			t.Fatalf("README quickstart line %q isn't a command of quickstart.mdx (in this order): %q", c, docs)
 		}
 	}
-	if len(cmds) != 3 {
-		t.Fatalf("the README quickstart has %d commands, want 3", len(cmds))
+	if len(cmds) != 4 {
+		t.Fatalf("the README quickstart has %d commands, want 4", len(cmds))
 	}
 	var sum struct {
 		Rows []struct{ Label, Measured string } `json:"rows"`

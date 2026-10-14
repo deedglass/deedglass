@@ -72,6 +72,31 @@ func TestInitLive(t *testing.T) {
 			t.Fatalf("missing %q:\n%s", want, all)
 		}
 	}
+	// The quickstart's last step: init --trigger shows the 301-row mismatch and the undo preview, and
+	// leaves the trigger off.
+	t2 := time.Now()
+	tr, err := Trigger(ctx, Options{Dir: dir, Runner: r, NoOpen: true, Yes: true})
+	if err != nil {
+		t.Fatalf("%v %+v", err, tr)
+	}
+	var tdetail []string
+	for _, s := range tr.Steps {
+		tdetail = append(tdetail, s.ID+": "+s.Detail+"\n  "+strings.Join(s.Lines, "\n  "))
+	}
+	tall := strings.Join(tdetail, "\n")
+	t.Logf("init --trigger (%s):\n%s\nnext: %v", time.Since(t2), tall, tr.Next)
+	for _, want := range []string{"trigger_update: Proven · Doesn't match · Postgres changed 301 rows in public.orders. The agent reported 1.",
+		"observed   UPDATE 301 rows in public.orders · 300 outside id = 42", "trigger_off: orders_ship_open_batch dropped", "trigger_undo: Undo available"} {
+		if !strings.Contains(tall, want) {
+			t.Fatalf("init --trigger: missing %q:\n%s", want, tall)
+		}
+	}
+	if !strings.Contains(strings.Join(tr.Next, "\n"), "--plan sha256:") {
+		t.Fatalf("init --trigger: Next has no plan digest: %v", tr.Next)
+	}
+	if n, _ := (&run{r: r}).psqlIn(ctx, mustStack(t, dir).DemoContainer, "demo", "SELECT count(*) FROM pg_catalog.pg_trigger WHERE tgname = 'orders_ship_open_batch'"); strings.TrimSpace(n) != "0" {
+		t.Fatalf("the trigger is still there (%q)", n)
+	}
 	if a, _ := ReadSecretFile(dir, AdminKeyFile); a != adminBefore {
 		t.Fatal("a second run made a new admin key")
 	}
@@ -106,4 +131,13 @@ func TestInitLive(t *testing.T) {
 		t.Fatalf("%+v", st)
 	}
 	t.Logf("rerun: %s", time.Since(t1))
+}
+
+func mustStack(t *testing.T, dir string) *Stack {
+	t.Helper()
+	st, err := ReadStack(dir)
+	if err != nil || st == nil {
+		t.Fatalf("stack: %v", err)
+	}
+	return st
 }

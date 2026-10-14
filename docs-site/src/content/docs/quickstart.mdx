@@ -1,7 +1,7 @@
 ---
 title: Quickstart
-description: Five minutes from an empty directory to a blocked DROP TABLE and an UPDATE that Postgres's own change log confirms.
-lastVerified: "2026-10-05"
+description: Five minutes from an empty directory to a blocked DROP TABLE, an UPDATE that Postgres's own change log confirms, and the same UPDATE where the agent says 1 row and Postgres changed 301.
+lastVerified: "2026-10-14"
 claims: [C-089]
 testEnv: init
 ---
@@ -9,7 +9,7 @@ testEnv: init
 import { Aside } from '@astrojs/starlight/components';
 import VerdictChip from '../../components/VerdictChip.astro';
 
-Five minutes from an empty directory to a blocked `DROP TABLE` and an `UPDATE` that Postgres's own change log confirms.
+Five minutes from an empty directory to a blocked `DROP TABLE`, an `UPDATE` that Postgres's own change log confirms, and then the case Deedglass is for: the same `UPDATE`, the agent reports 1 row, and Postgres changed 301. It ends on the undo preview built from those rows.
 
 **Before you start**
 
@@ -82,7 +82,32 @@ $ npx -y deedglass actions list --limit 3
 
 The `DROP TABLE` is sealed as denied: its record names the rule and says that nothing ran. The `UPDATE` waited for a person, ran once approved, and was checked at Proven: Postgres's change log shows exactly one row of `public.orders` changed.
 
-## 5. Connect your agent
+## 5. One reported row, 301 changed
+
+The demo database has a legacy trigger written for it: when one order ships, it ships the next 300 open ones too. `init --trigger` turns it on, sends the same one-row `UPDATE` of order 42 as the quickstart agent (in dev, `init` countersigns as you again), and shows the Proven check:
+
+```sh test title="Terminal"
+$ npx -y deedglass init --trigger
+deedglass init --trigger · one UPDATE, a legacy trigger, and what Postgres really committed
+…
+✕ UPDATE order 42         Proven · Doesn't match · Postgres changed 301 rows in public.orders. The agent reported 1.
+  expected   UPDATE 1 row in public.orders where id = 42 · sets status
+  observed   UPDATE 301 rows in public.orders · 300 outside id = 42
+…
+✓ Trigger off             orders_ship_open_batch dropped
+✓ Undo preview            Undo available · 301 rows in public.orders · 301 updates
+…
+The agent said 1 row. Postgres's change log says 301. Nothing was undone yet.
+…
+```
+
+The agent's tool answer said 1 row, and that is all an agent log would show. Deedglass read Postgres's change log for the same transaction and found 300 more. The diff lists them (the first 20 here; all of them in the Console).
+
+Then it turns the trigger off and previews the undo: 301 updates, planned from the rows Postgres recorded, each putting a status back. Nothing runs yet. `Next` prints the `deedglass undo run` line with the plan's digest; the undo waits until a person countersigns it in the Console (Approvals), and Postgres's change log checks the undo too.
+
+Run `init --trigger` again any time: it puts the order statuses back to the seed's first.
+
+## 6. Connect your agent
 
 Pick your client. Each page shows the exact config, generated from the CLI's own snippets.
 
@@ -90,7 +115,7 @@ Pick your client. Each page shows the exact config, generated from the CLI's own
 - [Claude Desktop](/get-started/claude-desktop/), or [Cursor, VS Code and Windsurf](/get-started/cursor-vscode-windsurf/).
 - Your own code: the [Python SDK](/get-started/python-sdk/) or the [TypeScript SDK](/get-started/typescript-sdk/).
 
-## 6. Look in the Console
+## 7. Look in the Console
 
 Open `http://127.0.0.1:8080/app` and sign in as `you@localhost.test`. In dev, Deedglass writes mail to its log instead of sending it, so the sign-in link is in `.deedglass/serve.log`.
 
@@ -108,6 +133,7 @@ Open `http://127.0.0.1:8080/app` and sign in as `you@localhost.test`. In dev, De
 - The local stack is for a laptop: `127.0.0.1` only, dev mode, throwaway data. [Run in production on one VM](/guides/production/) is the next step.
 - `init` doesn't edit your MCP client's config file. It prints what to paste.
 - It doesn't use an existing database yet. [Put Deedglass in front of Postgres](/get-started/postgres/) covers your own database.
+- `init --trigger` changes only the demo database `init` made; the trigger exists for the length of the step.
 - `deedglass init --stop` stops the stack. It keeps `.deedglass/` and the Docker volumes, so a later `init` picks up where you left off.
 
 ## Next

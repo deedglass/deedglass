@@ -5,44 +5,97 @@
   </picture>
 </p>
 
-**See what your AI agents actually did.**
+<h3 align="center">An agent said it updated 1 row. Postgres changed 301.</h3>
 
-Deedglass sits between your AI agents and the tools they use. It decides what each agent may do,
-runs it under control, checks the result against the system of record, and seals a record that
-anyone with the public key can check offline.
+<p align="center">
+Deedglass sits between AI agents and the systems they change. It enforces your rules, checks what
+really happened against the system of record, keeps signed records anyone can check offline, and
+has undo.
+</p>
 
-[Try it in your browser](https://deedglass.com/play) · [Quickstart](https://docs.deedglass.com/quickstart/) ·
-[Docs](https://docs.deedglass.com) · [Security](SECURITY.md) · [deedglass.com](https://deedglass.com)
+<p align="center">
+  <a href="https://github.com/deedglass/deedglass/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/deedglass/deedglass/actions/workflows/ci.yml/badge.svg?branch=main"></a>
+  <a href="https://github.com/deedglass/deedglass/releases"><img alt="Release" src="https://img.shields.io/github/v/release/deedglass/deedglass?sort=semver&label=release"></a>
+  <a href="https://www.npmjs.com/package/deedglass"><img alt="npm" src="https://img.shields.io/npm/v/deedglass?label=npm"></a>
+  <a href="LICENSE"><img alt="Licence: Apache-2.0" src="https://img.shields.io/badge/licence-Apache--2.0-0F766E"></a>
+  <a href="docs/ATTACK_SUITE.md"><img alt="Attack suite" src="https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Fdeedglass%2Fdeedglass%2Fmain%2Fattack%2Fresults%2Fbadge.json"></a>
+</p>
 
-```sh
-npx deedglass scan    # grades your own agent setup; sends nothing
+<p align="center">
+<a href="https://deedglass.com/play">Try it in your browser</a> · <a href="https://docs.deedglass.com/quickstart/">Quickstart</a> ·
+<a href="https://docs.deedglass.com">Docs</a> · <a href="SECURITY.md">Security</a> · <a href="https://deedglass.com">deedglass.com</a>
+</p>
+
+An agent was asked to mark order 42 as shipped. It ran one `UPDATE` and its tool reported 1 row. A
+legacy trigger shipped 300 more orders in the same transaction. This is the real output of the
+Quickstart's last step on 2026-10-14 (shortened where you see `…`):
+
+```text
+$ npx -y deedglass init --trigger
+…
+✕ UPDATE order 42         Proven · Doesn't match · Postgres changed 301 rows in public.orders. The agent reported 1.
+  expected   UPDATE 1 row in public.orders where id = 42 · sets status
+  observed   UPDATE 301 rows in public.orders · 300 outside id = 42
+…
+✓ Trigger off             orders_ship_open_batch dropped
+✓ Undo preview            Undo available · 301 rows in public.orders · 301 updates
+    policy   undo-needs-approval · a person countersigns first
 ```
 
-<!-- 60-second demo: docs/assets/demo-60s.gif (recorded 10-13 from a real run; see docs/DEMO_SCRIPT.md) -->
+The agent's log says 1 row. Deedglass read Postgres's own change log for that transaction, found
+301, sealed the difference as a record, and planned an undo from those rows that runs only after a
+person countersigns.
 
-## Why
+<p align="center">
+  <img src="docs/assets/demo-hero.svg" width="846" alt="Terminal recording of a real make demo-hero run. Order 42 ships: Proven, Matches, 1 row. A legacy trigger is turned on and the same UPDATE runs: Proven, Doesn't match, Postgres changed 301 rows in public.orders, the agent reported 1, with the row diff. Then every record verifies offline.">
+</p>
+<p align="center"><sub>A real run of <code>make demo-hero</code> (commit 97a524c, 2026-10-14), each line shown at the time it printed.
+Source: <a href="docs/assets/demo-hero.cast.json"><code>docs/assets/demo-hero.cast.json</code></a>, drawn by <a href="scripts/demo/cast2svg.mjs"><code>scripts/demo/cast2svg.mjs</code></a>.</sub></p>
 
-An agent was asked to mark order 42 as shipped. It ran one `UPDATE` and reported 1 row.
-A legacy trigger shipped 300 more orders in the same transaction, so Postgres committed 301.
-Agent logs record what the agent asked for; Deedglass reads Postgres's own change log, compares, and
-seals `Proven · Doesn't match · Postgres changed 301 rows in public.orders. The agent reported 1.` Then a
-person countersigns an undo built from those 301 rows.
+## Three ways in
+
+| | Command | What it needs | What leaves your machine |
+|---|---|---|---|
+| **In your browser** | [deedglass.com/play](https://deedglass.com/play) | A browser tab. Postgres runs in the page; it opens on the "said 1, changed 301" scene. | Nothing |
+| **Scan your setup** | `npx deedglass scan` | Node. Reads your MCP configs and, if you name one, a database catalog, read-only. Grades what your agents could change, A to F. | Nothing |
+| **Observe mode** | `deedglass observe run --connector pg-demo -- ./agent.sh` | A Postgres connector with `observe` on. Nothing to rewire: it reads Postgres's change log beside whatever gate you already use. | Nothing |
+
+When a scan finds a trigger or a cascade on a table your agent can write, it says so and points to
+the 301 scene. Observe mode is [below](#observe-mode-nothing-to-rewire).
 
 ## Quickstart
 
-Docker running, Node 18 or newer, then (from the [tested Quickstart](https://docs.deedglass.com/quickstart/)):
+Docker running, Node 22.12 or newer, then (from the [tested Quickstart](https://docs.deedglass.com/quickstart/)):
 
 <!-- quickstart:begin (scripted copy of docs-site/src/content/docs/quickstart.mdx; docs/readme_test.go compares them) -->
 ```sh
 mkdir acme-agents && cd acme-agents
 npx -y deedglass init --yes
 npx -y deedglass doctor
+npx -y deedglass init --trigger
 ```
 <!-- quickstart:end -->
 
 `deedglass init` starts Postgres and Deedglass in Docker on their own ports, creates an org, an agent
 and the `postgres-safe` policy, and ends with a blocked `DROP TABLE` and an `UPDATE` checked at Proven.
-`deedglass doctor` runs sixteen read-only checks, each with its fix.
+`deedglass doctor` runs sixteen read-only checks, each with its fix. `deedglass init --trigger` turns
+on the demo database's legacy trigger, sends the same one-row `UPDATE`, and ends on the 301-row
+mismatch and the undo preview shown above.
+
+## Observe mode: nothing to rewire
+
+```sh
+deedglass observe run --connector pg-demo -- ./agent.sh   # open a watched session, run the agent, close it
+deedglass observe show obs_01k… --undo-sql                # the undo as SQL you review and run (free)
+```
+
+Turn it on with `witness.observe.enabled: true` in the connector's config. Observe mode reads only
+Postgres's change log, through the role and replication slot that `deedglass connector postgres init`
+creates, so it works beside any gate you already use, or none.
+It shows every row committed on the watched tables while the session was open and seals the session
+as a record. It can't tell which program wrote a row, so a session gets no Matches or Doesn't match
+verdict; row images are kept 30 days; a `TRUNCATE` can't be undone from the record. Undo SQL is free;
+a one-step undo through Deedglass is Pro. Details: [`docs/OBSERVE.md`](docs/OBSERVE.md).
 
 ## How it works
 
@@ -84,6 +137,8 @@ the short names (`L0`/`L1`/`L2`, `VERIFIED`/`MISMATCH`/`UNVERIFIABLE`); the
 - Deedglass trusts the Postgres server, its superusers, the host it runs on and its seal key. It
   can't protect you from a compromised host.
 - Records hold digests, not payloads. One set of seal keys signs every org on an instance.
+- It doesn't replace a least-privilege database role. Use both: the role limits what the agent can
+  do; Deedglass checks what it did with that.
 
 The whole list, with workarounds: [`docs/LIMITATIONS.md`](docs/LIMITATIONS.md) and [`KNOWN_ISSUES.md`](KNOWN_ISSUES.md).
 

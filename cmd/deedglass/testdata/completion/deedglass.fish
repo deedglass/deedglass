@@ -233,6 +233,7 @@ complete -c deedglass -n '__deedglass_is \'init\'' -l project -r -d 'the Docker 
 complete -c deedglass -n '__deedglass_is \'init\'' -l reset-secrets -d 'replace the vault key and pepper (asks you to type reset; every API key stops working)'
 complete -c deedglass -n '__deedglass_is \'init\'' -l smoke -d 'run the smoke actions even when nothing changed'
 complete -c deedglass -n '__deedglass_is \'init\'' -l stop -d 'stop the local stack this directory runs (the data is kept)'
+complete -c deedglass -n '__deedglass_is \'init\'' -l trigger -d 'on the stack init made: turn on the demo\'s legacy trigger, ship order 42 (1 row reported, 301 changed), then show the undo preview'
 complete -c deedglass -n '__deedglass_is \'init\'' -l yes -d 'don\'t ask; run every step'
 complete -c deedglass -n '__deedglass_is \'insights\'' -a 'stats' -d 'Show decisions, approvals and verdicts by rule'
 complete -c deedglass -n '__deedglass_is \'insights\'' -a 'shadow' -d 'Show where the shadow policy disagrees'

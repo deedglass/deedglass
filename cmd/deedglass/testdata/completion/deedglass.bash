@@ -57,7 +57,7 @@ _deedglass() {
     'dev simulate') subs=''; flags='--append --days --end --org --org-slug --pace --quiet --scenario --seed' ;;
     'dev stripe-fixtures') subs=''; flags='--connector --from-env --out' ;;
     'doctor') subs=''; flags='--only' ;;
-    'init') subs=''; flags='--client --dir --listen --no-open --no-smoke --owner-email --pg-port --postgres --project --reset-secrets --smoke --stop --yes' ;;
+    'init') subs=''; flags='--client --dir --listen --no-open --no-smoke --owner-email --pg-port --postgres --project --reset-secrets --smoke --stop --trigger --yes' ;;
     'insights') subs='stats shadow anomalies detect settings suggestions digest'; flags='' ;;
     'insights suggestions') subs='list show accept reject generate'; flags='' ;;
     'keys') subs='gen rotate list'; flags='' ;;

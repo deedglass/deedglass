@@ -119,3 +119,13 @@ func TestDocsData(t *testing.T) {
 		}
 	}
 }
+
+func TestBadge(t *testing.T) {
+	b := string(Badge(&harness.Run{Summary: harness.Summary{Matched: 70}}))
+	if b != `{"color":"0F766E","label":"attack suite","message":"70/70 matched","schemaVersion":1}`+"\n" {
+		t.Fatalf("%s", b)
+	}
+	if b := string(Badge(&harness.Run{Summary: harness.Summary{Matched: 68, Differs: 2}})); !strings.Contains(b, `"68/70 matched · 2 differ"`) || !strings.Contains(b, "C8322B") {
+		t.Fatalf("%s", b)
+	}
+}

@@ -16,3 +16,6 @@ coverage.*
 .DS_Store
 .idea/
 .vscode/
+# Dev tool trees (about 1.7 GB on a working copy): the image builds Go only, so they never enter the context.
+**/node_modules/
+**/.venv/

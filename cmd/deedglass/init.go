@@ -20,6 +20,7 @@ import (
 
 var initValues struct {
 	yes, noOpen, noSmoke, smoke, resetSecrets, stop    bool
+	trigger                                            bool
 	dir, client, listen, postgres, ownerEmail, project string
 	pgPort                                             int
 }
@@ -30,6 +31,7 @@ func initFlags(fs *flag.FlagSet) {
 	v := &initValues
 	*v = struct {
 		yes, noOpen, noSmoke, smoke, resetSecrets, stop    bool
+		trigger                                            bool
 		dir, client, listen, postgres, ownerEmail, project string
 		pgPort                                             int
 	}{}
@@ -46,6 +48,7 @@ func initFlags(fs *flag.FlagSet) {
 	fs.BoolVar(&v.smoke, "smoke", false, "run the smoke actions even when nothing changed")
 	fs.BoolVar(&v.resetSecrets, "reset-secrets", false, "replace the vault key and pepper (asks you to type reset; every API key stops working)")
 	fs.BoolVar(&v.stop, "stop", false, "stop the local stack this directory runs (the data is kept)")
+	fs.BoolVar(&v.trigger, "trigger", false, "on the stack init made: turn on the demo's legacy trigger, ship order 42 (1 row reported, 301 changed), then show the undo preview")
 }
 
 func runInit(ctx context.Context, e *Env, args []string) error {
@@ -72,6 +75,9 @@ func runInit(ctx context.Context, e *Env, args []string) error {
 	r := &setup.ProcRunner{Dir: dir}
 	if v.stop {
 		return stopStack(ctx, e, r, dir)
+	}
+	if v.trigger {
+		return runInitTrigger(ctx, e, r, dir)
 	}
 	if v.resetSecrets {
 		if v.yes || !e.IsTTY {
@@ -232,5 +238,36 @@ func stopStack(ctx context.Context, e *Env, r *setup.ProcRunner, dir string) err
 	}
 	_, _ = r.Docker(ctx, nil, "stop", stack.Container, stack.DemoContainer)
 	fmt.Fprintln(e.Stdout, e.Style.OKLine("Stopped deedglass serve, "+stack.Container+" and "+stack.DemoContainer+". The data is kept; deedglass init starts them again."))
+	return nil
+}
+
+// runInitTrigger is deedglass init --trigger: the quickstart's last step (setup.Trigger does the work).
+// It exits 0 when the check said Doesn't match, because that is what the step is there to show.
+func runInitTrigger(ctx context.Context, e *Env, r *setup.ProcRunner, dir string) error {
+	o := setup.Options{Dir: dir, Runner: r, Yes: true, NoOpen: true, TTY: e.IsTTY}
+	text := !e.Globals.JSON
+	if text {
+		fmt.Fprintln(e.Stdout, "deedglass init --trigger · one UPDATE, a legacy trigger, and what Postgres really committed")
+		fmt.Fprintln(e.Stdout)
+		o.Progress = func(s setup.StepResult) { renderStep(e, s) }
+	}
+	res, err := setup.Trigger(ctx, o)
+	if e.Globals.JSON {
+		enc := json.NewEncoder(e.Stdout)
+		enc.SetEscapeHTML(false)
+		enc.SetIndent("", "  ")
+		_ = enc.Encode(res)
+	}
+	if err != nil {
+		return &ExitError{Code: ExitFailure, ErrCode: "init_failed", printed: true, Err: err}
+	}
+	if text {
+		fmt.Fprintln(e.Stdout)
+		fmt.Fprintln(e.Stdout, "The agent said 1 row. Postgres's change log says 301. Nothing was undone yet.")
+		fmt.Fprintln(e.Stdout, "Next")
+		for _, n := range res.Next {
+			fmt.Fprintln(e.Stdout, "  "+n)
+		}
+	}
 	return nil
 }

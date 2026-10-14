@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -217,4 +218,22 @@ func DocsData(meta *harness.Meta, run *harness.Run) DocsPage {
 		p.Layers = append(p.Layers, dl)
 	}
 	return p
+}
+
+// Badge is the shields.io endpoint JSON for the README's badge: "attack suite · N/N matched" from the
+// run's own summary (teal when nothing differs, red otherwise; a run with waiting cases says so).
+func Badge(run *harness.Run) []byte {
+	s := run.Summary
+	total := s.Matched + s.Differs + s.Waiting
+	msg := fmt.Sprintf("%d/%d matched", s.Matched, total)
+	color := "0F766E"
+	if s.Differs > 0 {
+		msg += fmt.Sprintf(" · %d differ", s.Differs)
+		color = "C8322B"
+	} else if s.Waiting > 0 {
+		msg += fmt.Sprintf(" · %d waiting", s.Waiting)
+		color = "9A5B00"
+	}
+	b, _ := json.Marshal(map[string]any{"schemaVersion": 1, "label": "attack suite", "message": msg, "color": color})
+	return append(b, '\n')
 }

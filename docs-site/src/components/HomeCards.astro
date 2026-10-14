@@ -1,11 +1,12 @@
 ---
-// The home page below the hero: four calm cards and "Works with" as plain text labels (S33 §3.3).
+// The home page below the hero: five calm cards (Observe added by VIRAL-1, 10-14) and "Works with" as plain text labels (S33 §3.3).
 import VerdictChip from './VerdictChip.astro';
 const cards = [
   { title: 'Rules', href: '/concepts/how-it-works/', body: 'Every tool call passes through Deedglass. Your rules decide: allow, deny, or wait for a person to approve.' },
   { title: 'Check', href: '/concepts/verification-levels/', body: 'After the call, Deedglass compares what the tool reported with an independent observation, up to the change Postgres committed.' },
   { title: 'Records', href: '/concepts/deeds/', body: 'Each action is sealed as a signed record in a hash-linked chain. Anyone with the public key can check it offline.' },
   { title: 'Stop', href: '/concepts/stop/', body: 'Stop one agent, or every agent in the org, in under two seconds. Stopped calls are refused and still recorded.' },
+  { title: 'Observe', href: '/reference/observe/', body: 'Nothing to rewire. Open a watched session, let the agent work, and see every row Postgres committed, beside any gate you already use. The undo SQL is free.' },
 ];
 const works = ['Claude', 'OpenAI', 'Gemini', 'Cursor', 'any MCP client', 'Postgres', 'GitHub', 'Slack', 'Stripe test mode'];
 ---
@@ -24,7 +25,7 @@ const works = ['Claude', 'OpenAI', 'Gemini', 'Cursor', 'any MCP client', 'Postgr
     <h2>Works with</h2>
     <p>{works.map((w, i) => (<><span>{w}</span>{i < works.length - 1 && <span class="sep" aria-hidden="true"> · </span>}</>))}</p>
   </div>
-  <p class="next">New here? Start with the <a href="/quickstart/">Quickstart</a>, then read <a href="/concepts/what-verified-means/">what Matches means</a> and the <a href="/concepts/glossary/">glossary</a>. Already running agents? <a href="/get-started/scan/">Scan your setup in 60 seconds</a>.</p>
+  <p class="next">New here? Start with the <a href="/quickstart/">Quickstart</a>; it ends on this 301-row case and its undo preview. Then read <a href="/concepts/what-verified-means/">what Matches means</a> and the <a href="/concepts/glossary/">glossary</a>. Already running agents? <a href="/get-started/scan/">Scan your setup in 60 seconds</a>.</p>
 </section>
 <style>
   .dg-home { display: grid; gap: 3rem; margin-top: 0.5rem; }

@@ -27,6 +27,10 @@ import (
 
 const docPath = "docs/ATTACK_SUITE.md"
 
+// badgePath is the shields.io endpoint file the README's attack-suite badge reads (VIRAL-1): written
+// next to latest.json from the same run, and checked with the page.
+const badgePath = "attack/results/badge.json"
+
 func main() {
 	check := flag.Bool("check", false, "fail when docs/ATTACK_SUITE.md differs from the generated page")
 	quiet := flag.Bool("quiet", false, "don't print the run")
@@ -77,16 +81,23 @@ func run(root string, check, quiet bool, stdout, stderr io.Writer) int {
 	}
 	page := Generate(meta, res)
 	path := filepath.Join(root, docPath)
+	badge := Badge(res)
 	if check {
-		cur, _ := os.ReadFile(path)
-		if !bytes.Equal(cur, page) {
-			fmt.Fprintf(stderr, "✕ %s is stale: it differs from what attack-report generates.\n  Next: run make attack-report and commit the page.\n", docPath)
-			return 1
+		for p, want := range map[string][]byte{docPath: page, badgePath: badge} {
+			cur, _ := os.ReadFile(filepath.Join(root, p))
+			if !bytes.Equal(cur, want) {
+				fmt.Fprintf(stderr, "✕ %s is stale: it differs from what attack-report generates.\n  Next: run make attack-report and commit it.\n", p)
+				return 1
+			}
 		}
 		return 0
 	}
 	if err := os.WriteFile(path, page, 0o644); err != nil {
 		fmt.Fprintf(stderr, "✕ Can't write %s: %v\n", docPath, err)
+		return 1
+	}
+	if err := os.WriteFile(filepath.Join(root, badgePath), badge, 0o644); err != nil {
+		fmt.Fprintf(stderr, "✕ Can't write %s: %v\n", badgePath, err)
 		return 1
 	}
 	if res.Summary.Differs > 0 {
