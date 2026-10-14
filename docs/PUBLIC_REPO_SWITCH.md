@@ -40,9 +40,11 @@ README badges if you want them. Approve CLAIMS row P-007 before any copy says "o
 
 In github.com/deedglass/deedglass › Settings:
 
-1. **General:** visibility public; description `See what your AI agents actually did.`; website
-   `https://deedglass.com`; topics `ai-agents`, `mcp`, `model-context-protocol`, `postgres`,
-   `agent-security`, `audit-log`, `policy-engine`, `golang`; social preview: the site's
+1. **General:** visibility public; description `An agent said it updated 1 row. Postgres changed
+   301. Deedglass checks what AI agents really did, enforces your rules, keeps signed records and has
+   undo.` (set 10-14); website `https://deedglass.com`; topics `ai-agents`, `mcp`,
+   `model-context-protocol`, `postgres`, `postgresql`, `logical-decoding`, `agent-security`,
+   `ai-safety`, `audit-log`, `policy-engine`, `golang`; social preview: the site's
    `github-social-1280x640.png`; Discussions on, with an **I ran it** category and **Q&A**.
 2. **Code security:** private vulnerability reporting on; secret scanning and push protection on;
    Dependabot alerts and security updates on; CodeQL default setup on.
