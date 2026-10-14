@@ -44,6 +44,10 @@ grade  = A ≥ 90 · B 80–89 · C 65–79 · D 50–64 · F < 50
 - Low and info findings never deduct.
 - Items past a cap are listed with 0 points and `(over the cap)`, so the list explains the whole grade.
 - A table's deduction names its enabled triggers: a trigger is how one reported row becomes 301.
+- When a table the role can change has an enabled trigger, or its changes cascade to other tables,
+  the text report adds one line above the footer that points to the playground's "said 1, changed
+  301" scene: `A trigger on public.orders (orders_ship_open_batch) can turn one reported row into
+  many. See it happen in 20 s: https://deedglass.com/play`.
 
 `A means a small blast radius, not a safe agent.` The grade measures what the setup could change,
 not what your agent will do.

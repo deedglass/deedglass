@@ -666,3 +666,25 @@ func TestShareCatalogClosed(t *testing.T) {
 		}
 	}
 }
+
+// TestPlayLine: a writable table with an enabled trigger (or a cascade) points to the 301 scene;
+// a disabled trigger alone doesn't; the line sits above the footer in the text report.
+func TestPlayLine(t *testing.T) {
+	trig := Table{Schema: "public", Table: "orders", Can: []string{"UPDATE"}, Triggers: []Trigger{{Name: "orders_ship_open_batch", Enabled: true}}}
+	off := Table{Schema: "public", Table: "notes", Can: []string{"UPDATE"}, Triggers: []Trigger{{Name: "old", Enabled: false}}}
+	casc := Table{Schema: "public", Table: "customers", Can: []string{"DELETE"}, CascadesTo: []string{"public.orders"}}
+	if l := PlayLine([]Table{off, casc, trig}); !strings.Contains(l, "A trigger on public.orders (orders_ship_open_batch)") || !strings.HasSuffix(l, PlayURL) {
+		t.Fatalf("trigger line: %q", l)
+	}
+	if l := PlayLine([]Table{off, casc}); !strings.Contains(l, "Changes to public.customers cascade to public.orders") {
+		t.Fatalf("cascade line: %q", l)
+	}
+	if l := PlayLine([]Table{off}); l != "" {
+		t.Fatalf("a disabled trigger made a line: %q", l)
+	}
+	text := RenderText(demoReport(), Style{}, 100, "deedglass scan · x", "")
+	i, j := strings.Index(text, PlayURL), strings.Index(text, FooterLine)
+	if i < 0 || j < i {
+		t.Fatalf("the play line is missing or below the footer:\n%s", text)
+	}
+}

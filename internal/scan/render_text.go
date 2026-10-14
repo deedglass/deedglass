@@ -205,6 +205,9 @@ func RenderText(r *Report, st Style, width int, header string, wrote string) str
 			w(TableLines(pg.Tables, 25, "  ")...)
 		}
 		w("")
+		if l := PlayLine(pg.Tables); l != "" {
+			w(st.apply(st.Amber, "○")+" "+l, "")
+		}
 	case r.PostgresError != nil:
 		e := r.PostgresError
 		w(st.apply(st.Red, "✕")+fmt.Sprintf(" Couldn't connect with the URL in %s (%s %s). The file scan was written. Run again when the database is reachable.", e.EnvVar, e.SQLState, e.Class), "")
@@ -223,6 +226,29 @@ func RenderText(r *Report, st Style, width int, header string, wrote string) str
 	}
 	w(FooterLine)
 	return b.String()
+}
+
+// PlayURL is the browser playground. It opens on the "said 1, changed 301" scene.
+const PlayURL = "https://deedglass.com/play"
+
+// PlayLine points to the playground's 301 scene when the role can change a table with an enabled
+// trigger, or one whose deletes or updates cascade to other tables: on such a table one reported row
+// can become many in the same transaction. It names the first such table in the ranked order, and is
+// empty when there is none.
+func PlayLine(tables []Table) string {
+	for _, t := range tables {
+		for _, tr := range t.Triggers {
+			if tr.Enabled {
+				return fmt.Sprintf("A trigger on %s (%s) can turn one reported row into many. See it happen in 20 s: %s", t.Name(), tr.Name, PlayURL)
+			}
+		}
+	}
+	for _, t := range tables {
+		if len(t.CascadesTo) > 0 {
+			return fmt.Sprintf("Changes to %s cascade to %s, so one reported row can become many. See it happen in 20 s: %s", t.Name(), strings.Join(t.CascadesTo, ", "), PlayURL)
+		}
+	}
+	return ""
 }
 
 func numberWord(n int) string {
