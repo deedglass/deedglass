@@ -6,9 +6,10 @@ COMMIT   := $(shell git rev-parse --short HEAD 2>/dev/null || echo unknown)
 MODIFIED := $(shell if [ -n "$$(git status --porcelain 2>/dev/null)" ]; then echo true; else echo false; fi)
 DATE     := $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
 BI       := github.com/deedglass/deedglass/internal/buildinfo
+GCFLAGS  := $(shell scripts/gcflags.sh)
 LDFLAGS  := -s -w -X $(BI).Version=$(VERSION) -X $(BI).Commit=$(COMMIT) -X $(BI).Modified=$(MODIFIED) -X $(BI).Date=$(DATE)
 
-.PHONY: mcpb demo-scan-golden packs-check docs docs-dev docs-check docs-snippets docs-lighthouse py-ci py-build py-examples web-install web-tokens web-build web-test web-e2e web-lighthouse web-dev build-only ops-build bench-undo all help ci build test test-short vet fmt fmt-check tidy-check testdata-check rename-guard banned-words nocgo \
+.PHONY: api-gz mcpb demo-scan-golden packs-check docs docs-dev docs-check docs-snippets docs-lighthouse py-ci py-build py-examples web-install web-tokens web-build web-test web-e2e web-lighthouse web-dev build-only ops-build bench-undo all help ci build test test-short vet fmt fmt-check tidy-check testdata-check rename-guard banned-words nocgo \
 	integration matrix fuzz bench workflows-check release-check cloud-smoke bench-micro bench-quick bench-soak bench-check bench-report bench-store bench-deed cover clean \
 	dev dev-down dev-reset dev-logs run docker bench-http bench-verify \
 	web-verify-install web-verify-test sdk-ts sdk-ts-it sdk-sync-verify sdk-runtime sdk-examples web-verify-build web-verify-serve gencopy genmark bench-mark bench-ledger bench-stop bench-intents bench-gate bench-witness policy-test \
@@ -26,7 +27,7 @@ ci: fmt-check tidy-check vet test fuzz-policy-short policy-test testdata-check r
 
 build: ## build bin/deedglass with version ldflags (with Node 24 present, the real Console first: make web-build)
 	@if command -v node >/dev/null 2>&1; then $(MAKE) --no-print-directory web-build; else echo "build: Node isn't installed, so the binary carries the Console placeholder (dev only; prod refuses it)"; fi
-	$(GO) build -trimpath -ldflags '$(LDFLAGS)' -o bin/deedglass ./cmd/deedglass
+	$(GO) build -trimpath $(GCFLAGS) -ldflags '$(LDFLAGS)' -o bin/deedglass ./cmd/deedglass
 
 test: ## (ci) unit tests with the race detector; then the ops build's outbound_mail connector and cmd guards (S40)
 	$(GO) test -race -count=1 ./...
@@ -48,6 +49,9 @@ fmt-check: ## (ci) fail if gofmt would change anything
 
 tidy-check: ## (ci) fail if go.mod/go.sum are not tidy
 	$(GO) mod tidy -diff
+
+api-gz: ## rewrite api/openapi.yaml.gz from api/openapi.yaml (the binary embeds the gzip; TestSpecGzipCurrent checks it)
+	gzip -9n -c api/openapi.yaml > api/openapi.yaml.gz
 
 testdata-check: ## (ci) verify the offline test vectors
 	cd testdata && shasum -a 256 -c --quiet SHA256SUMS
@@ -351,7 +355,7 @@ ops-build: ## (S40) bin/deedglass-ops: the ops build with the outbound_mail conn
 	$(GO) build -trimpath -tags outboundmail -ldflags '$(LDFLAGS)' -o bin/deedglass-ops ./cmd/deedglass
 
 build-only: ## bin/deedglass from the current internal/console/dist (no web build)
-	$(GO) build -trimpath -ldflags '$(LDFLAGS)' -o bin/deedglass ./cmd/deedglass
+	$(GO) build -trimpath $(GCFLAGS) -ldflags '$(LDFLAGS)' -o bin/deedglass ./cmd/deedglass
 
 web-verify-install: ## npm ci for web/verify (exact pins from package-lock.json, no install scripts)
 	cd $(WEB_VERIFY) && npm ci --ignore-scripts --no-audit --no-fund

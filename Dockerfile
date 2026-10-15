@@ -15,7 +15,7 @@ RUN --mount=type=cache,target=/go/pkg/mod go mod download && go mod verify
 COPY . .
 ARG VERSION=0.1.0-dev COMMIT=unknown DATE=unknown
 RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build \
-    CGO_ENABLED=0 go build -trimpath -ldflags "-s -w \
+    CGO_ENABLED=0 go build -trimpath $(sh scripts/gcflags.sh) -ldflags "-s -w \
       -X github.com/deedglass/deedglass/internal/buildinfo.Version=${VERSION} \
       -X github.com/deedglass/deedglass/internal/buildinfo.Commit=${COMMIT} \
       -X github.com/deedglass/deedglass/internal/buildinfo.Date=${DATE}" -o /out/deedglass ./cmd/deedglass

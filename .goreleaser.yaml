@@ -23,7 +23,21 @@ builds:
     ignore:
       - goos: windows
         goarch: arm64
-    flags: [-trimpath]
+    # -trimpath, then scripts/gcflags.sh's flags, in its order (TestReleaseGcflags checks it).
+    flags:
+      - -trimpath
+      - -gcflags=github.com/deedglass/deedglass/cmd/deedglass/...=-l
+      - -gcflags=github.com/deedglass/deedglass/internal/scan=-l
+      - -gcflags=github.com/deedglass/deedglass/ee/scanfull=-l
+      - -gcflags=github.com/deedglass/deedglass/internal/setup=-l
+      - -gcflags=github.com/deedglass/deedglass/internal/doctor=-l
+      - -gcflags=github.com/deedglass/deedglass/internal/connector/postgres/setup=-l
+      - -gcflags=github.com/deedglass/deedglass/internal/learn/sim=-l
+      - -gcflags=github.com/deedglass/deedglass/internal/ledger/fake=-l
+      - -gcflags=github.com/deedglass/deedglass/internal/installlinks=-l
+      - -gcflags=github.com/deedglass/deedglass/internal/cli/...=-l
+      - -gcflags=github.com/deedglass/deedglass/internal/store/migrate=-l
+      - -gcflags=github.com/deedglass/deedglass/internal/mcp/snippet=-l
     ldflags:
       - -s -w
       - -X github.com/deedglass/deedglass/internal/buildinfo.Version={{ .Version }}
