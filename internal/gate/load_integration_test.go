@@ -454,11 +454,7 @@ func TestLoad1000(t *testing.T) {
 			} else {
 				if err == nil && a != nil && a.State != "sealed" {
 					// The 10 s wait ended first (a slow runner): wait for the seal, load-scaled.
-					if werr := w.p.Wait(bg, w.org, a.ID, "", settle); werr != nil {
-						t.Errorf("%s not settled in %s: %v", a.ID, settle, werr)
-						return
-					}
-					a, err = w.p.Get(bg, w.pr(j.agent), a.ID, 0)
+					a, err = waitSealed(w, j.agent, a, settle)
 				}
 				if err != nil || a.State != "sealed" || a.Status != "executed" {
 					t.Errorf("%v %v", err, a)
@@ -525,6 +521,28 @@ func TestLoad1000(t *testing.T) {
 }
 
 func ms(d time.Duration) float64 { return float64(d) / float64(time.Millisecond) }
+
+// waitSealed waits up to d for a to be sealed and returns it as last read. Pipeline.Wait returns at
+// the action's next state change and holds for at most MaxWait, so one call isn't a wait for the
+// seal: an action still authorized when the submit's wait ended returns from it at executing.
+func waitSealed(w *world, agent int, a *Action, d time.Duration) (*Action, error) {
+	deadline := time.Now().Add(d)
+	for a.State != "sealed" {
+		left := time.Until(deadline)
+		if left <= 0 {
+			return a, fmt.Errorf("%s not sealed in %s (state %s)", a.ID, d, a.State)
+		}
+		if err := w.p.Wait(bg, w.org, a.ID, "", left); err != nil {
+			return a, err
+		}
+		v, err := w.p.Get(bg, w.pr(agent), a.ID, 0)
+		if err != nil {
+			return a, err
+		}
+		a = v
+	}
+	return a, nil
+}
 
 // maxLoadFactor is how much slower than the reference a runner may be before TestLoad1000 skips.
 const maxLoadFactor = 8.0
