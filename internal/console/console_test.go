@@ -70,7 +70,7 @@ func TestPages(t *testing.T) {
 		{"/app", "index"}, {"/app/", "index"},
 		{"/app/actions", "actions"}, {"/app/approvals", "approvals"}, {"/app/agents", "agents"}, {"/app/policies", "policies"},
 		{"/app/connectors", "connectors"}, {"/app/insights", "insights"}, {"/app/deeds", "deeds"}, {"/app/settings", "settings"},
-		{"/app/settings/members", "settings"}, {"/app/settings/seal-keys", "settings"},
+		{"/app/settings/members", "settings"}, {"/app/settings/seal-keys", "settings"}, {"/app/settings/security", "settings"},
 		{"/app/actions/act_01k6h7mz3c9d8e7f6g5h4jq3m8", "actions-detail"},
 		{"/app/approvals/apr_01k6h7mz3c9d8e7f6g5h4jq3m8", "approvals-detail"},
 		{"/app/agents/agt_01k6h7mz3c9d8e7f6g5h4jq3m8", "agents-detail"},

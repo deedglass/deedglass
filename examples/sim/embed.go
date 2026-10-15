@@ -11,22 +11,23 @@ import "embed"
 //go:embed acme.yaml acme-sim.v1.yaml acme-sim.v2.yaml acme-sim.v3.yaml
 var FS embed.FS
 
-// AcmeScenario is examples/sim/acme.yaml, the default scenario.
-//
-//go:embed acme.yaml
-var AcmeScenario []byte
+// The named files are read from FS once, so the binary carries each file once (S51: the image
+// size budget, ADR-032).
+var (
+	// AcmeScenario is examples/sim/acme.yaml, the default scenario.
+	AcmeScenario = mustRead("acme.yaml")
+	// AcmeSimV1 is examples/sim/acme-sim.v1.yaml, the enforced policy (version 1 of acme-sim).
+	AcmeSimV1 = mustRead("acme-sim.v1.yaml")
+	// AcmeSimV2 is examples/sim/acme-sim.v2.yaml, the shadow policy from day 3 (version 2).
+	AcmeSimV2 = mustRead("acme-sim.v2.yaml")
+	// AcmeSimV3 is examples/sim/acme-sim.v3.yaml, the replay demo (version 3).
+	AcmeSimV3 = mustRead("acme-sim.v3.yaml")
+)
 
-// AcmeSimV1 is examples/sim/acme-sim.v1.yaml, the enforced policy (version 1 of acme-sim).
-//
-//go:embed acme-sim.v1.yaml
-var AcmeSimV1 []byte
-
-// AcmeSimV2 is examples/sim/acme-sim.v2.yaml, the shadow policy from day 3 (version 2).
-//
-//go:embed acme-sim.v2.yaml
-var AcmeSimV2 []byte
-
-// AcmeSimV3 is examples/sim/acme-sim.v3.yaml, the replay demo (version 3).
-//
-//go:embed acme-sim.v3.yaml
-var AcmeSimV3 []byte
+func mustRead(name string) []byte {
+	b, err := FS.ReadFile(name)
+	if err != nil {
+		panic("simfiles: " + err.Error())
+	}
+	return b
+}

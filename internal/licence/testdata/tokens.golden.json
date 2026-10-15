@@ -86,7 +86,8 @@
         "scan_full",
         "scan_fix",
         "packs_pro",
-        "undo_session"
+        "undo_session",
+        "security_pack"
       ],
       "key_sha256": "sha256:9dac02f7e5c0f0ffb4857435557959e94ab45010afefeb47d5bbfdeed86bfaf1",
       "instance": "lki_test_0004",
@@ -95,8 +96,8 @@
       "period_end": "2027-04-21T04:12:09.000Z",
       "key_id": "lk_01jdtestkey00000000000000a",
       "livemode": true,
-      "body_hash": "sha256:ce9cf29d216bb5928d0ea48881a1338289e433c1e5cab9e1bd9c71a6aae91c31",
-      "sig": "ed25519:8mt99ap56ib1tuP0RT4MmEQMrzl9SNhetVe3PmtkmpgRSfBOWRyl6hnwvdvrpSfj6PYTlniGPOKhab-0TRMBDQ"
+      "body_hash": "sha256:c23c0d4bf2a1e96a8cd952c37b804f4b853c903875d82671167c989d0c08569e",
+      "sig": "ed25519:Y441nSsgGMjnu_dOUS5URGRMg-_YoXKXrBbSzxBZUM-IW22-lawmkZ69pyE0nWtWDvWTmxSH3SOL0GUSGCO4AQ"
     },
     {
       "object": "licence_token",
@@ -108,7 +109,8 @@
         "scan_full",
         "scan_fix",
         "packs_pro",
-        "undo_session"
+        "undo_session",
+        "security_pack"
       ],
       "key_sha256": "sha256:95bfb5543da6ea37109b9d32e2f7696e2e3eea8deb74f07ef1cb822db71469bb",
       "instance": "lki_test_0005",
@@ -117,8 +119,8 @@
       "period_end": null,
       "key_id": "lk_01jdtestkey00000000000000a",
       "livemode": false,
-      "body_hash": "sha256:1892935ea511e68fb7bbe584d390a4e633771481e670d8453331a796f7c0622b",
-      "sig": "ed25519:JLRRIWX2BiM_MeP_TuGOkStapOmMMr-o_19dLTitCbQY6MZPK9gxB9CzXss_wGBCX1W0FdvVoFiywjSZLxQeBw"
+      "body_hash": "sha256:eb20817bc08eb2897282193176543cb8508b674e39fe90a46a9f538c8005c708",
+      "sig": "ed25519:VgIZ0IYvZi4sdT7Wp4Fd3NvStFHfqSpaIpmZouY0LnrVgJswZFbODoH0tMsWXQ-BjgnxwzlssstSaEHX9yocBA"
     }
   ]
 }

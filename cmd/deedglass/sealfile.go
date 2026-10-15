@@ -39,7 +39,7 @@ func parseSealFileArgs(args []string) (sealFileOpts, []string, error) {
 		fs.SetOutput(io.Discard)
 		var more sealFileOpts
 		fs.StringVar(&more.label, "label", "", "what the file is, 1 to 120 characters (it goes into the deed)")
-		fs.StringVar(&more.mediaType, "media-type", "", "application/pdf, text/markdown, application/json, text/plain or text/html (default: from the extension)")
+		fs.StringVar(&more.mediaType, "media-type", "", "application/pdf, text/markdown, application/json, text/plain, text/html or application/gzip (default: from the extension)")
 		fs.StringVar(&more.out, "out", "", "where to write the deed (default <path>.deed.json)")
 		if err := fs.Parse(args); err != nil {
 			return o, nil, usageErr(fmt.Errorf("deedglass deeds seal-file: %v", err), "Run deedglass help deeds seal-file for its flags.")
@@ -76,6 +76,8 @@ func mediaTypeOf(path string) string {
 		return "text/plain"
 	case ".html", ".htm":
 		return "text/html"
+	case ".gz", ".tgz":
+		return "application/gzip"
 	}
 	return ""
 }
@@ -129,7 +131,7 @@ func runDeedsSealFile(ctx context.Context, e *Env, args []string) error {
 		if mt == "" {
 			what = fmt.Sprintf("%s has no extension that names its media type", clean(filepath.Base(path)))
 		}
-		return usageErr(errors.New(what), "Pass --media-type application/pdf, text/markdown, application/json, text/plain or text/html.")
+		return usageErr(errors.New(what), "Pass --media-type application/pdf, text/markdown, application/json, text/plain, text/html or application/gzip.")
 	}
 	out := o.out
 	if out == "" {

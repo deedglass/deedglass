@@ -9,7 +9,7 @@ BI       := github.com/deedglass/deedglass/internal/buildinfo
 GCFLAGS  := $(shell scripts/gcflags.sh)
 LDFLAGS  := -s -w -X $(BI).Version=$(VERSION) -X $(BI).Commit=$(COMMIT) -X $(BI).Modified=$(MODIFIED) -X $(BI).Date=$(DATE)
 
-.PHONY: api-gz mcpb demo-scan-golden packs-check docs docs-dev docs-check docs-snippets docs-lighthouse py-ci py-build py-examples web-install web-tokens web-build web-test web-e2e web-lighthouse web-dev build-only ops-build bench-undo all help ci build test test-short vet fmt fmt-check tidy-check testdata-check rename-guard banned-words nocgo \
+.PHONY: api-gz embed-gz mcpb demo-scan-golden packs-check docs docs-dev docs-check docs-snippets docs-lighthouse py-ci py-build py-examples web-install web-tokens web-build web-test web-e2e web-lighthouse web-dev build-only ops-build bench-undo all help ci build test test-short vet fmt fmt-check tidy-check testdata-check rename-guard banned-words nocgo \
 	integration matrix fuzz bench workflows-check release-check cloud-smoke bench-micro bench-quick bench-soak bench-check bench-report bench-store bench-deed cover clean \
 	dev dev-down dev-reset dev-logs run docker bench-http bench-verify \
 	web-verify-install web-verify-test sdk-ts sdk-ts-it sdk-sync-verify sdk-runtime sdk-examples web-verify-build web-verify-serve gencopy genmark bench-mark bench-ledger bench-stop bench-intents bench-gate bench-witness policy-test \
@@ -52,6 +52,9 @@ tidy-check: ## (ci) fail if go.mod/go.sum are not tidy
 
 api-gz: ## rewrite api/openapi.yaml.gz from api/openapi.yaml (the binary embeds the gzip; TestSpecGzipCurrent checks it)
 	gzip -9n -c api/openapi.yaml > api/openapi.yaml.gz
+
+embed-gz: ## rewrite the gzip archives the binary embeds (internal/store/migrations/sql.tar.gz) from the files beside them; each package's TestArchiveCurrent checks it
+	$(GO) run ./internal/embedgz/cmd/embedgz
 
 testdata-check: ## (ci) verify the offline test vectors
 	cd testdata && shasum -a 256 -c --quiet SHA256SUMS

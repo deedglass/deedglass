@@ -856,6 +856,16 @@ Observe mode (`/app/sessions`, `/app/sessions/<obs_…>`; `web/src/controllers/s
 - **Caught banner:** one card with a 3px amber left rule: one sentence of fact per item (`Deedglass caught this: one transaction changed 301 rows in public.orders.`), and on Overview the two actions beside each (`Open the session`, `Copy undo SQL`); at most 3, newest first. Never shown without the free path.
 - **Undo area:** a card: the plan's sentence, `Undone by act_…` in teal, conflicts in red with the next step, then `Undo this session · Pro` (primary) and `Copy undo SQL` (secondary, free) side by side. Without Pro the primary opens the **Pro sheet**: `Undo a whole session in one step with Pro ($49 a month). Or copy the undo SQL and run it yourself; that's free and always will be.` with `See Pro` and `Copy undo SQL`. No countdown, no blur, no locked diff.
 
+### Console: Security review (S51)
+Settings › Security review (`/app/settings/security`; the `security` renderer in `web/src/controllers/settings.ts`, `web/src/lib/securitypack.ts`, `web/src/styles/s51-security.css`; copy in `copy-settings.ts`). Vercel's checks list: the status word, one line, the fix. No new token: teal (`verified`) In place, amber (`unverifiable`) Partly, red (`mismatch`) Not set up, neutral Not applicable, violet (`pending`) Can't tell. The word carries the meaning; colour only repeats it.
+- **Readiness row:** a three-column grid (status chip at 8rem, the question with its fix under it in footnote `text-2`, the question id in Geist Mono `text-2` at the end); hairline between rows; one column under 768px with the id wrapping under the text. Rows sit in `set-group` cards: **To fix** first (Not set up, then Partly, then Can't tell), then one card per group in bank order. With nothing to fix, the To fix card says so in teal with a check.
+- **Head:** the lede, then `Build the pack · Pro` (primary, downloads the tar) and `Copy the readiness list` (secondary, plain text the CLI's way). Viewers see the build disabled with its reason. `pro_required` opens the **Pro sheet**: `The reviewer-ready document, sealed with your records, is part of Pro ($49 a month). The readiness list stays free.`, what the pack holds, the CLI line, `See Pro`. The summary line (`16 in place · 4 partly · 3 not set up · 1 not applicable`) in tabular semibold.
+
+### Security review pack document (S51)
+`ee/securitypack/pack.html`: a printed document first, a web page second. Self-contained (inline CSS, no script, no font or image request); system font stack led by Inter and Geist Mono; light tokens for print, the dark ramp only on screens that ask for it. 52rem measure, generous margins; one claim per row, evidence underneath.
+- **Evidence line:** under each answer, a `code-bg` box in Geist Mono 12px `text-2`: `label value · label value` (labels `text-3`), the evidence fields in bank order, dates as `3 Oct 2026`. Then `How to check` (bold label) and `Related: OWASP LLM06 Excessive Agency · NIST AI RMF MANAGE 2.4` in caption `text-3`.
+- **Status chip:** outline pill in the status pair, the word always present. **Print:** A4 (Letter works), 18/16/20mm margins, each group starts a page, rows never split, a fixed running footer in mono 8pt: org · period · answers.json digest.
+
 ## Motion
 
 | Token | Value | Use |

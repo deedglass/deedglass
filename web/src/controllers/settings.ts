@@ -4,7 +4,7 @@
 // only hides or disables what a role can't do, with the reason. Server messages (last_owner,
 // destination_blocked, validation) are shown verbatim under their field or in a toast.
 
-import { api, ApiError, list } from '../lib/api.ts';
+import { api, ApiError, API_VERSION, list } from '../lib/api.ts';
 import { hashChip, idChip, relTime } from '../lib/chips.ts';
 import { copy, fill } from '../lib/copy.ts';
 import { settingsCopy } from '../lib/copy-settings.ts';
@@ -16,6 +16,7 @@ import {
   memberActions, parseRetention, parseSection, retentionHelp, roleChangeNeedsConfirm, savedToast, sectionNeeds,
   sectionPath, testLine, WEBHOOK_EVENTS, zoneList, type ApprovalSettings, type SectionKey, type WebhookTestResult,
 } from '../lib/settings.ts';
+import { chipClass, gaps, groups, plainText, summaryParts, type Readiness, type ReadinessRow } from '../lib/securitypack.ts';
 import { atLeast, get, onChange, refreshOrg } from '../lib/state.ts';
 import type { ApiKey, ListResponse, Org, Role } from '../lib/types.ts';
 import { showKeySheet } from './keysheet.ts';
@@ -825,6 +826,86 @@ async function sealKeys(ctx: Ctx): Promise<void> {
       : emptyState(sk.empty, 'key-round'));
 }
 
+// ---------- Security review (S51) ----------
+
+/** buildPack downloads POST /v1/security_pack's tar; pro_required opens the Pro sheet. */
+async function buildPack(btn: HTMLButtonElement): Promise<void> {
+  const sc = c.security;
+  btn.disabled = true;
+  btn.setAttribute('aria-busy', 'true');
+  try {
+    const headers: Record<string, string> = { 'Deedglass-Version': API_VERSION, Accept: 'application/x-tar, application/json', 'Content-Type': 'application/json' };
+    const csrf = get()?.me.csrf_token;
+    if (csrf) headers['Deedglass-CSRF'] = csrf;
+    const res = await fetch('/v1/security_pack', { method: 'POST', headers, body: JSON.stringify({ period_days: 90 }), credentials: 'same-origin', redirect: 'error', cache: 'no-store' });
+    if (!res.ok) {
+      const body = await res.json().catch(() => null) as { error?: { code?: string; message?: string } } | null;
+      if (body?.error?.code === 'pro_required') {
+        proPackSheet();
+        return;
+      }
+      throw new Error(body?.error?.message ?? `The server answered ${res.status}.`);
+    }
+    const name = `security-pack-${new Date().toISOString().slice(0, 10)}.tar`;
+    const url = URL.createObjectURL(await res.blob());
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = name;
+    document.body.append(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 30_000);
+    toast(fill(sc.built, { name }));
+  } catch (e) {
+    toast((e as Error).message);
+  } finally {
+    btn.disabled = false;
+    btn.removeAttribute('aria-busy');
+  }
+}
+
+function proPackSheet(): void {
+  const sc = c.security;
+  openSheet({ title: sc.proTitle, body: [h('p', null, sc.proSheet), h('p', { class: 't-2' }, sc.proBody), h('p', { class: 'sp-cli' }, h('code', null, sc.cliHint))],
+    foot: [h('a', { class: 'btn btn-primary', href: sc.proURL }, sc.seePro, icon('arrow-up-right', 16))] });
+}
+
+function packRow(r: ReadinessRow): HTMLElement {
+  const sc = c.security;
+  return h('li', { class: 'sp-row', 'data-status': r.status },
+    h('span', { class: chipClass(r.status) }, sc.status[r.status]),
+    h('div', { class: 'sp-text' },
+      h('p', { class: 'sp-q' }, r.question),
+      r.fix ? h('p', { class: 'sp-fix' }, h('span', { class: 'sr-only' }, `${sc.fix}: `), r.fix) : null),
+    h('code', { class: 'sp-id' }, r.id));
+}
+
+async function security(ctx: Ctx): Promise<void> {
+  const rd = await api<Readiness>('GET', '/v1/security_pack/readiness');
+  if (!ctx.alive()) return;
+  const sc = c.security;
+  const org = rd.org_name || orgName();
+  const build = h('button', { type: 'button', class: 'btn btn-primary' }, icon('download', 16), sc.build, h('span', { class: 'pro-tag' }, `· ${sc.buildPro}`)) as HTMLButtonElement;
+  const copyBtn = h('button', { type: 'button', class: 'btn btn-secondary' }, icon('copy', 16), sc.copyList) as HTMLButtonElement;
+  build.addEventListener('click', () => void buildPack(build));
+  copyBtn.addEventListener('click', () => {
+    navigator.clipboard.writeText(plainText(rd, fill(sc.listHeader, { org }), sc.status)).then(() => toast(sc.copied), () => toast(sc.copyFailed));
+  });
+  const why = !atLeast(myRole(), 'admin') ? disabledWhy(build, sc.viewerBuild, 'sp-build-why') : null;
+  const todo = gaps(rd.rows);
+  replace(ctx.body,
+    head(c.sections.security.lede, build, copyBtn),
+    why ? h('p', { class: 'set-why-line' }, why) : null,
+    h('p', { class: 'sp-summary', 'aria-label': sc.summaryLabel }, summaryParts(rd.summary, sc.status).join(' · ')),
+    h('p', { class: 'sp-period t-2' }, fill(sc.period, { org })),
+    h('section', { class: 'card set-group', 'aria-labelledby': 'sp-todo-h' },
+      h('h3', { class: 'set-group-title', id: 'sp-todo-h' }, sc.gapsTitle),
+      todo.length ? h('ul', { class: 'sp-list' }, ...todo.map(packRow)) : h('p', { class: 'sp-none' }, icon('check', 16), sc.nothing)),
+    ...groups(rd.rows).map((g) => h('section', { class: 'card set-group', 'aria-labelledby': `sp-g-${g.id}` },
+      h('h3', { class: 'set-group-title', id: `sp-g-${g.id}` }, g.title),
+      h('ul', { class: 'sp-list' }, ...g.rows.map(packRow)))));
+}
+
 // ---------- Notifications ----------
 
 async function notifications(ctx: Ctx): Promise<void> {
@@ -880,11 +961,11 @@ function danger(ctx: Ctx): void {
 // ---------- the page ----------
 
 const RENDER: Record<SectionKey, (ctx: Ctx) => Promise<void> | void> = {
-  general, members, keys, approvals, webhooks, 'seal-keys': sealKeys, notifications, danger,
+  general, members, keys, approvals, webhooks, 'seal-keys': sealKeys, security, notifications, danger,
 };
 
 function loadingFor(k: SectionKey): HTMLElement {
-  if (k === 'members' || k === 'keys' || k === 'seal-keys') return h('div', null, h('div', { class: 'set-head', 'aria-hidden': 'true' }, h('span', { class: 'skel skel-line set-skel-help' })), skeleton(4));
+  if (k === 'members' || k === 'keys' || k === 'seal-keys' || k === 'security') return h('div', null, h('div', { class: 'set-head', 'aria-hidden': 'true' }, h('span', { class: 'skel skel-line set-skel-help' })), skeleton(4));
   if (k === 'webhooks') return h('div', null, h('div', { class: 'set-head', 'aria-hidden': 'true' }, h('span', { class: 'skel skel-line set-skel-help' })), skeleton(3));
   return setSkeleton(k === 'general' ? 6 : k === 'danger' ? 3 : 4);
 }

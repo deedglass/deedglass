@@ -1,0 +1,367 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="generator" content="Deedglass 0.1.0-dev">
+<title>How Acme controls its AI agents</title>
+<style>
+ 
+:root {
+  --canvas: #F7F7F4; --surface: #FFFFFF; --text: #0D0F14; --text-2: #4A4F5E; --text-3: #6B7080;
+  --line: #E4E5EA; --line-strong: #B9BDC8; --code-bg: #EDEEF2; --accent: #2F5BEA;
+  --ok-t: #0F766E; --ok-b: #E6F6F3; --part-t: #9A5B00; --part-b: #FFF4E0;
+  --no-t: #C8322B; --no-b: #FDECEA; --na-t: #3F4453; --na-b: #EDEEF2; --ct-t: #5B4BDB; --ct-b: #EFEDFF;
+  --sans: "Inter", "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+@media screen and (prefers-color-scheme: dark) {
+  :root {
+    --canvas: #07080C; --surface: #0E1017; --text: #F5F6FA; --text-2: #8B90A0; --text-3: #7D8293;
+    --line: #1C1F2A; --line-strong: #2A2E3B; --code-bg: #141722; --accent: #6F8DFF;
+    --ok-t: #34E3C9; --ok-b: #0F2A28; --part-t: #F7B955; --part-b: #352407;
+    --no-t: #FF7A70; --no-b: #3A1512; --na-t: #C9CCD6; --na-b: #1C1F2A; --ct-t: #A99CFF; --ct-b: #211C45;
+  }
+}
+* { box-sizing: border-box; }
+html { background: var(--canvas); color: var(--text); -webkit-text-size-adjust: 100%; }
+body { margin: 0; font: 15px/1.6 var(--sans); font-feature-settings: "tnum" 1, "cv11" 1; }
+.doc { max-width: 52rem; margin: 0 auto; padding: 4rem 1.5rem 6rem; }
+.eyebrow { margin: 0 0 1rem; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--text-3); }
+h1 { margin: 0; font-size: 2.25rem; line-height: 1.15; letter-spacing: -.02em; font-weight: 600; text-wrap: balance; }
+.sub { margin: 1rem 0 0; max-width: 40rem; font-size: 17px; color: var(--text-2); text-wrap: pretty; }
+.summary { display: flex; flex-wrap: wrap; gap: .5rem 1.25rem; margin: 2rem 0 0; padding: 1rem 1.25rem; list-style: none;
+  border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.summary li { font-size: 15px; }
+.summary b { font-weight: 600; font-variant-numeric: tabular-nums; }
+.meta { display: grid; grid-template-columns: max-content 1fr; gap: .25rem 1.25rem; margin: 1.5rem 0 0; font-size: 13px; color: var(--text-2); }
+.meta dt { color: var(--text-3); }
+.meta dd { margin: 0; overflow-wrap: anywhere; }
+code, .mono { font-family: var(--mono); font-size: 12.5px; }
+.toc { margin: 2.5rem 0 0; padding: 0; list-style: none; columns: 2; column-gap: 2rem; font-size: 14px; }
+.toc a { color: var(--accent); text-decoration: none; }
+.toc a:hover, .toc a:focus-visible { text-decoration: underline; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+.group { margin: 4rem 0 0; }
+.group h2 { display: flex; align-items: baseline; gap: .75rem; margin: 0 0 .5rem; padding-bottom: .75rem; border-bottom: 1px solid var(--line-strong);
+  font-size: 1.375rem; letter-spacing: -.01em; font-weight: 600; }
+.group h2 .n { font-family: var(--mono); font-size: 13px; font-weight: 500; color: var(--text-3); }
+.q { padding: 1.5rem 0; border-bottom: 1px solid var(--line); break-inside: avoid; }
+.qhead { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; }
+.q h3 { margin: 0; font-size: 16px; line-height: 1.45; font-weight: 600; text-wrap: pretty; }
+.st { flex: none; padding: .125rem .625rem; border: 1px solid currentColor; border-radius: 999px; font-size: 12.5px; font-weight: 600; white-space: nowrap; }
+.st-in_place { color: var(--ok-t); background: var(--ok-b); }
+.st-partly { color: var(--part-t); background: var(--part-b); }
+.st-not_set_up { color: var(--no-t); background: var(--no-b); }
+.st-not_applicable { color: var(--na-t); background: var(--na-b); }
+.st-cant_tell { color: var(--ct-t); background: var(--ct-b); }
+.answer { margin: .625rem 0 0; color: var(--text); text-wrap: pretty; }
+.evidence { margin: .75rem 0 0; padding: .5rem .75rem; border-radius: 8px; background: var(--code-bg); color: var(--text-2);
+  font-family: var(--mono); font-size: 12px; line-height: 1.7; overflow-wrap: anywhere; }
+.evidence span + span::before { content: " · "; color: var(--text-3); }
+.evidence i { font-style: normal; color: var(--text-3); }
+.check, .refs { margin: .5rem 0 0; font-size: 13px; color: var(--text-2); }
+.check b { font-weight: 600; color: var(--text); }
+.refs { color: var(--text-3); font-size: 12.5px; }
+.plain { margin: 4rem 0 0; }
+.plain h2 { margin: 0 0 1rem; font-size: 1.375rem; font-weight: 600; letter-spacing: -.01em; }
+.plain ul, .plain ol { margin: 0; padding-left: 1.25rem; }
+.plain li { margin: .5rem 0; text-wrap: pretty; }
+.plain pre { margin: .5rem 0 0; padding: .75rem 1rem; border-radius: 8px; background: var(--code-bg); overflow-x: auto; }
+.runfoot { display: none; }
+.note { margin: 0 0 2rem; padding: .625rem 1rem; border: 1px solid var(--part-t); border-radius: 8px; color: var(--part-t); background: var(--part-b); font-size: 14px; font-weight: 600; }
+@media (max-width: 40rem) {
+  .doc { padding: 2.5rem 1rem 4rem; }
+  h1 { font-size: 1.75rem; }
+  .toc { columns: 1; }
+  .qhead { flex-direction: column; gap: .5rem; }
+}
+@page { size: A4; margin: 18mm 16mm 20mm; }
+@media print {
+  html, body { background: #FFFFFF; }
+  body { font-size: 10.5pt; }
+  .doc { max-width: none; padding: 0; }
+  .toc { display: none; }
+  .group { margin-top: 0; break-before: page; }
+  .plain { break-before: page; margin-top: 0; }
+  .q { padding: 10pt 0; }
+  .evidence { background: #F4F5F7; }
+  a { color: inherit; text-decoration: none; }
+  .runfoot { display: block; position: fixed; bottom: -12mm; left: 0; right: 0; font-size: 8pt; color: #6B7080;
+    border-top: 1px solid #E4E5EA; padding-top: 3pt; font-family: var(--mono); }
+}
+</style>
+</head>
+<body>
+<main class="doc">
+  <header>
+    <p class="note" role="note">Sample built from the Acme demo data</p>
+    <p class="eyebrow">Security review · Deedglass</p>
+    <h1>How Acme controls its AI agents</h1>
+    <p class="sub">Answers built from Acme's own Deedglass records, 17 July to 15 October 2026. Every number below is counted from those records; the last page shows how to check them.</p>
+    <ul class="summary" aria-label="Summary"><li><b>16</b> in place</li><li><b>4</b> partly</li><li><b>3</b> not set up</li><li><b>1</b> not applicable</li></ul>
+    <dl class="meta">
+      <dt>Org</dt><dd class="mono">org_01m50d5zr94ahs13tkv9txwz2q</dd>
+      <dt>Period</dt><dd>2026-07-17 to 2026-10-15</dd>
+      <dt>Built</dt><dd>15 October 2026 by Deedglass 0.1.0-dev</dd>
+      <dt>Records</dt><dd>626 sealed records in records.tar.gz, sha256 faa2ad6644f8</dd>
+      <dt>Chain</dt><dd>Intact, head 6724ff3c769a</dd>
+    </dl>
+    <ol class="toc" aria-label="Groups"><li><a href="#inventory">1. Inventory</a></li><li><a href="#rules">2. Rules</a></li><li><a href="#people">3. People in the loop</a></li><li><a href="#stop">4. Stop</a></li><li><a href="#checking">5. Checking results</a></li><li><a href="#undo">6. Undo</a></li><li><a href="#secrets">7. Secrets and network</a></li><li><a href="#records">8. Records</a></li></ol>
+  </header>
+  
+  <section class="group" id="inventory" aria-labelledby="inventory-h">
+    <h2 id="inventory-h"><span class="n">1</span> Inventory</h2>
+    
+    <article class="q" id="agents_listed">
+      <div class="qhead"><h3>Does every AI agent that acts have its own record, with a person responsible for it?</h3><span class="st st-partly">Partly</span></div>
+      <p class="answer">4 agents are registered and an agent without a record can&#39;t call any tool, but 4 agents have no named owner.</p>
+      <p class="evidence" aria-label="Evidence"><span><i>agents</i> 4</span><span><i>active</i> 4</span><span><i>stopped</i> 0</span><span><i>without owner</i> 4</span></p>
+      <p class="check"><b>How to check</b> deedglass agent list, or Console › Agents</p>
+      <p class="refs">Related: NIST AI RMF GOVERN 1.6 · OWASP LLM06 Excessive Agency</p>
+    </article>
+    
+    <article class="q" id="keys_scoped">
+      <div class="qhead"><h3>Does each agent use its own scoped key, and are unused keys cleaned up?</h3><span class="st st-in_place">In place</span></div>
+      <p class="answer">1 live agent key belongs to exactly one agent with action scopes only; agent keys can never hold admin rights. Every key has been used.</p>
+      <p class="evidence" aria-label="Evidence"><span><i>agent keys</i> 1</span><span><i>admin keys</i> 1</span><span><i>unused keys</i> 0</span></p>
+      <p class="check"><b>How to check</b> deedglass agent keys list &lt;agent&gt;, or Console › Agents › Keys</p>
+      <p class="refs">Related: OWASP LLM06 Excessive Agency · NIST AI RMF MEASURE 2.7</p>
+    </article>
+    
+    <article class="q" id="keys_rotated">
+      <div class="qhead"><h3>Are API keys replaced at least every 90 days?</h3><span class="st st-in_place">In place</span></div>
+      <p class="answer">No live API key is older than 90 days (2 live keys).</p>
+      <p class="evidence" aria-label="Evidence"><span><i>live keys</i> 2</span><span><i>older than 90 days</i> 0</span><span><i>oldest</i> 15 Oct 2026</span></p>
+      <p class="check"><b>How to check</b> deedglass agent keys list &lt;agent&gt; and deedglass org keys list (created dates)</p>
+      <p class="refs">Related: NIST AI RMF MEASURE 2.7</p>
+    </article>
+    
+    <article class="q" id="connectors_listed">
+      <div class="qhead"><h3>Is every system an agent can reach listed as a connector?</h3><span class="st st-in_place">In place</span></div>
+      <p class="answer">1 system is listed as a connector. Every action in the period went through one of them.</p>
+      <p class="evidence" aria-label="Evidence"><span><i>connectors</i> 1</span><span><i>active connectors</i> 1</span><span><i>proxy actions</i> 0</span></p>
+      <p class="check"><b>How to check</b> deedglass connector list, or Console › Connectors</p>
+      <p class="refs">Related: NIST AI RMF GOVERN 1.6 · OWASP LLM06 Excessive Agency</p>
+    </article>
+    
+  </section>
+  
+  <section class="group" id="rules" aria-labelledby="rules-h">
+    <h2 id="rules-h"><span class="n">2</span> Rules</h2>
+    
+    <article class="q" id="rules_active">
+      <div class="qhead"><h3>Does a rule version you chose decide every agent action?</h3><span class="st st-in_place">In place</span></div>
+      <p class="answer">acme-demo version 2 (18 rules) decides every action. It was activated by key_01m50d8maknvw5wvx6ejcw5zkr on 15 Oct 2026, sealed in deed_01m50d8mzyza8a62bdejtc5fm6.</p>
+      <p class="evidence" aria-label="Evidence"><span><i>enforced</i> acme-demo</span><span><i>version</i> 2</span><span><i>version id</i> pv_01m50d8mz5d48c3gezv1g3v0dy</span><span><i>version hash</i> sha256:6f9139ab353170c9d93c274c0d86c721b897fd21a48cdf741c25d3c0045fe668</span><span><i>activated by</i> key_01m50d8maknvw5wvx6ejcw5zkr</span><span><i>activated</i> 15 Oct 2026</span><span><i>activation deed</i> deed_01m50d8mzyza8a62bdejtc5fm6</span><span><i>rules</i> 18</span></p>
+      <p class="check"><b>How to check</b> Console › Policies shows the enforced version; deedglass verify checks its activation record</p>
+      <p class="refs">Related: OWASP LLM06 Excessive Agency · NIST AI RMF GOVERN 1.4</p>
+    </article>
+    
+    <article class="q" id="default_deny">
+      <div class="qhead"><h3>Are destructive SQL and large money moves refused or held for a person by default?</h3><span class="st st-in_place">In place</span></div>
+      <p class="answer">The enforced rules were run on 4 fixed inputs (DROP TABLE, TRUNCATE, DELETE with no WHERE, a $5,000 refund): 4 refused, 0 held for a person, none allowed.</p>
+      <p class="evidence" aria-label="Evidence"><span><i>probes</i> 4</span><span><i>refused</i> 4</span><span><i>held</i> 0</span><span><i>allowed</i> 0</span></p>
+      <p class="check"><b>How to check</b> deedglass policy evaluate --server --tool &lt;connector&gt;.execute --sql &#39;DROP TABLE public.orders&#39;</p>
+      <p class="refs">Related: OWASP LLM06 Excessive Agency · NIST AI RMF MANAGE 1.3</p>
+    </article>
+    
+    <article class="q" id="limits_set">
+      <div class="qhead"><h3>Are agents limited in how often they act and how much they can spend?</h3><span class="st st-in_place">In place</span></div>
+      <p class="answer">The enforced rules set 1 budget on calls or spend, and 0 of 4 active agents have their own budget, so a looping agent stops at its limit.</p>
+      <p class="evidence" aria-label="Evidence"><span><i>rule budgets</i> 1</span><span><i>agents with budgets</i> 0</span><span><i>active agents</i> 4</span></p>
+      <p class="check"><b>How to check</b> deedglass agent list --json shows each agent&#39;s budgets; Console › Policies shows the enforced version&#39;s</p>
+      <p class="refs">Related: OWASP LLM10 Unbounded Consumption · NIST AI RMF MANAGE 1.3</p>
+    </article>
+    
+    <article class="q" id="rules_changes_recorded">
+      <div class="qhead"><h3>Is every change to the rules sealed with who made it and when?</h3><span class="st st-in_place">In place</span></div>
+      <p class="answer">5 rule changes (the live activations and the period&#39;s changes), each sealed with who made it and when; 5 changes happened in the period.</p>
+      <p class="evidence" aria-label="Evidence"><span><i>changes</i> 5</span><span><i>sealed</i> 5</span><span><i>with who</i> 5</span><span><i>changes in period</i> 5</span></p>
+      <p class="check"><b>How to check</b> deedglass deeds list --kind admin lists each policy.activated record; deedglass verify checks them</p>
+      <p class="refs">Related: NIST AI RMF GOVERN 1.4 · NIST AI RMF MEASURE 2.8</p>
+    </article>
+    
+  </section>
+  
+  <section class="group" id="people" aria-labelledby="people-h">
+    <h2 id="people-h"><span class="n">3</span> People in the loop</h2>
+    
+    <article class="q" id="approvals_required">
+      <div class="qhead"><h3>Do risky actions wait for a person before they run?</h3><span class="st st-in_place">In place</span></div>
+      <p class="answer">4 enforced rules hold actions for a person. In the period 1 action waited: 0 approved, 0 denied.</p>
+      <p class="evidence" aria-label="Evidence"><span><i>approval rules</i> 4</span><span><i>approvals</i> 1</span><span><i>approved</i> 0</span><span><i>denied</i> 0</span></p>
+      <p class="check"><b>How to check</b> deedglass approvals list, or Console › Approvals</p>
+      <p class="refs">Related: OWASP LLM06 Excessive Agency · NIST AI RMF MAP 3.5</p>
+    </article>
+    
+    <article class="q" id="four_eyes">
+      <div class="qhead"><h3>Is the person who asked kept from approving their own request, with two approvers where it matters?</h3><span class="st st-in_place">In place</span></div>
+      <p class="answer">Deedglass refuses an approval from the person who asked, on every approval. 1 rule asks for two or more people; 0 approvals in the period needed two.</p>
+      <p class="evidence" aria-label="Evidence"><span><i>approval rules</i> 4</span><span><i>two person rules</i> 1</span><span><i>two person approvals</i> 0</span></p>
+      <p class="check"><b>How to check</b> Console › Approvals shows each approver; the approval&#39;s record lists who decided</p>
+      <p class="refs">Related: NIST AI RMF MAP 3.5</p>
+    </article>
+    
+    <article class="q" id="approvals_expire">
+      <div class="qhead"><h3>Do actions waiting for approval expire instead of waiting forever?</h3><span class="st st-in_place">In place</span></div>
+      <p class="answer">Every waiting action has an expiry. In the period 0 approvals expired, and none is waiting past its expiry.</p>
+      <p class="evidence" aria-label="Evidence"><span><i>approvals</i> 1</span><span><i>expired</i> 0</span><span><i>overdue</i> 0</span><span><i>median minutes</i> 0</span></p>
+      <p class="check"><b>How to check</b> deedglass approvals list --status expired</p>
+      <p class="refs">Related: NIST AI RMF MAP 3.5</p>
+    </article>
+    
+  </section>
+  
+  <section class="group" id="stop" aria-labelledby="stop-h">
+    <h2 id="stop-h"><span class="n">4</span> Stop</h2>
+    
+    <article class="q" id="stop_all">
+      <div class="qhead"><h3>Can more than one person stop every agent at once?</h3><span class="st st-in_place">In place</span></div>
+      <p class="answer">2 people (owners and admins) can stop every agent at once with deedglass org stop-all or Console › Stop all.</p>
+      <p class="evidence" aria-label="Evidence"><span><i>people</i> 2</span><span><i>admin keys</i> 1</span></p>
+      <p class="check"><b>How to check</b> Console › Settings › Members; deedglass org stop-all --help</p>
+      <p class="refs">Related: NIST AI RMF MANAGE 2.4 · OWASP LLM06 Excessive Agency</p>
+    </article>
+    
+    <article class="q" id="stop_used">
+      <div class="qhead"><h3>Has Stop been used or tried recently?</h3><span class="st st-not_set_up">Not set up</span></div>
+      <p class="answer">Stop has never been used or tried in this org.</p>
+      <p class="evidence" aria-label="Evidence"><span><i>stops in period</i> 0</span></p>
+      <p class="check"><b>How to check</b> deedglass deeds list --kind admin lists the agent.stopped and org.stopped_all records</p>
+      <p class="refs">Related: NIST AI RMF MANAGE 2.4</p>
+    </article>
+    
+  </section>
+  
+  <section class="group" id="checking" aria-labelledby="checking-h">
+    <h2 id="checking-h"><span class="n">5</span> Checking results</h2>
+    
+    <article class="q" id="results_checked">
+      <div class="qhead"><h3>Are agents&#39; write actions checked against the system they changed?</h3><span class="st st-partly">Partly</span></div>
+      <p class="answer">67% of the period&#39;s 419 write actions were checked against the system of record (151 Checked, 132 Proven); 136 rest on the tool&#39;s own answer (aim for 80%).</p>
+      <p class="evidence" aria-label="Evidence"><span><i>writes</i> 419</span><span><i>checked</i> 151</span><span><i>proven</i> 132</span><span><i>claimed</i> 136</span><span><i>share percent</i> 67</span></p>
+      <p class="check"><b>How to check</b> deedglass actions list --level L0 lists the actions that rest on the tool&#39;s own answer</p>
+      <p class="refs">Related: NIST AI RMF MEASURE 2.4</p>
+    </article>
+    
+    <article class="q" id="mismatches_handled">
+      <div class="qhead"><h3>When a check finds the result doesn&#39;t match, is there a follow-up?</h3><span class="st st-not_set_up">Not set up</span></div>
+      <p class="answer">38 actions ended in Doesn&#39;t match in the period and none has a follow-up: act_01m50d8j5r9cv4fn30nqserq4x, act_01m50d8jah53j1hj5j3c9xkkas, act_01m50d8jb80zgpyqtvxx65mpzc, act_01m50d8jm25481w9e1hnyby0he, act_01m50d8jnkpx1psehmet50fvtg and 33 more.</p>
+      <p class="evidence" aria-label="Evidence"><span><i>mismatches</i> 38</span><span><i>followed up</i> 0</span><span><i>open</i> act_01m50d8j5r9cv4fn30nqserq4x, act_01m50d8jah53j1hj5j3c9xkkas, act_01m50d8jb80zgpyqtvxx65mpzc, act_01m50d8jm25481w9e1hnyby0he, act_01m50d8jnkpx1psehmet50fvtg and 33 more</span></p>
+      <p class="check"><b>How to check</b> deedglass actions list --verdict MISMATCH</p>
+      <p class="refs">Related: NIST AI RMF MANAGE 4.3</p>
+    </article>
+    
+    <article class="q" id="watched_sessions">
+      <div class="qhead"><h3>Are changes made to your databases outside Deedglass recorded too?</h3><span class="st st-not_set_up">Not set up</span></div>
+      <p class="answer">Observe mode is off, so changes made outside Deedglass aren&#39;t recorded.</p>
+      <p class="evidence" aria-label="Evidence"><span><i>postgres connectors</i> 1</span><span><i>watched</i> 0</span><span><i>sessions</i> 0</span><span><i>caught</i> 0</span></p>
+      <p class="check"><b>How to check</b> deedglass observe list</p>
+      <p class="refs">Related: NIST AI RMF MEASURE 2.4</p>
+    </article>
+    
+  </section>
+  
+  <section class="group" id="undo" aria-labelledby="undo-h">
+    <h2 id="undo-h"><span class="n">6</span> Undo</h2>
+    
+    <article class="q" id="undo_available">
+      <div class="qhead"><h3>Can agents&#39; database writes be undone from the record?</h3><span class="st st-in_place">In place</span></div>
+      <p class="answer">Every connector that writes (1) is Postgres, where Deedglass can undo a write from what Postgres committed.</p>
+      <p class="evidence" aria-label="Evidence"><span><i>write connectors</i> 1</span><span><i>undo connectors</i> 1</span></p>
+      <p class="check"><b>How to check</b> deedglass undo preview &lt;act_…&gt; on any write</p>
+      <p class="refs">Related: NIST AI RMF MANAGE 2.3</p>
+    </article>
+    
+    <article class="q" id="undos_done">
+      <div class="qhead"><h3>When something was undone, was the undo itself checked?</h3><span class="st st-not_applicable">Not applicable</span></div>
+      <p class="answer">Nothing was undone in the period.</p>
+      <p class="evidence" aria-label="Evidence"><span><i>undos</i> 0</span><span><i>matched</i> 0</span><span><i>session undos</i> 0</span></p>
+      <p class="check"><b>How to check</b> deedglass actions show &lt;act_…&gt; on the undo</p>
+      <p class="refs">Related: NIST AI RMF MANAGE 2.3</p>
+    </article>
+    
+  </section>
+  
+  <section class="group" id="secrets" aria-labelledby="secrets-h">
+    <h2 id="secrets-h"><span class="n">7</span> Secrets and network</h2>
+    
+    <article class="q" id="secrets_encrypted">
+      <div class="qhead"><h3>Are connector credentials encrypted at rest and never shown again?</h3><span class="st st-in_place">In place</span></div>
+      <p class="answer">1 credential is stored with A256GCM-ENV-1 envelope encryption and never returned by the API or Console. Each was set or rotated in the last year.</p>
+      <p class="evidence" aria-label="Evidence"><span><i>credentials</i> 1</span><span><i>alg</i> A256GCM-ENV-1</span><span><i>stale</i> 0</span></p>
+      <p class="check"><b>How to check</b> deedglass connector show &lt;connector&gt; shows the credential&#39;s version and dates, never its value</p>
+      <p class="refs">Related: OWASP LLM02 Sensitive Information Disclosure · NIST AI RMF MEASURE 2.7</p>
+    </article>
+    
+    <article class="q" id="agents_never_see_secrets">
+      <div class="qhead"><h3>Do agents act without ever holding database passwords or API keys?</h3><span class="st st-in_place">In place</span></div>
+      <p class="answer">All 469 actions in the period ran through Deedglass connectors, which hold the credentials; the agent sent only the tool and its arguments.</p>
+      <p class="evidence" aria-label="Evidence"><span><i>gateway actions</i> 469</span><span><i>proxy actions</i> 0</span></p>
+      <p class="check"><b>How to check</b> deedglass actions list shows each action&#39;s mode (gateway or proxy)</p>
+      <p class="refs">Related: OWASP LLM02 Sensitive Information Disclosure · OWASP LLM06 Excessive Agency · NIST AI RMF MEASURE 2.7</p>
+    </article>
+    
+    <article class="q" id="egress_limited">
+      <div class="qhead"><h3>Do connectors&#39; outbound calls go through one door that refuses private networks?</h3><span class="st st-partly">Partly</span></div>
+      <p class="answer">Every connector call leaves through one outbound door, but private networks are reachable (allowed in dev, 0 ranges listed).</p>
+      <p class="evidence" aria-label="Evidence"><span><i>env</i> dev</span><span><i>private networks</i> allowed in dev</span><span><i>allowed ranges</i> 0</span></p>
+      <p class="check"><b>How to check</b> deedglass config print (egress keys)</p>
+      <p class="refs">Related: OWASP LLM06 Excessive Agency · NIST AI RMF MEASURE 2.7</p>
+    </article>
+    
+  </section>
+  
+  <section class="group" id="records" aria-labelledby="records-h">
+    <h2 id="records-h"><span class="n">8</span> Records</h2>
+    
+    <article class="q" id="records_sealed">
+      <div class="qhead"><h3>Does every action have a sealed record in an unbroken chain?</h3><span class="st st-in_place">In place</span></div>
+      <p class="answer">571 finished actions in the period each have a sealed record. The chain of 626 records is unbroken.</p>
+      <p class="evidence" aria-label="Evidence"><span><i>deeds checked</i> 626</span><span><i>chain</i> intact</span><span><i>chain head</i> sha256:6724ff3c769af6d2d7216889e44146d08ef159796631119afff65a24cdcc6873</span><span><i>finished</i> 571</span><span><i>unsealed</i> 0</span></p>
+      <p class="check"><b>How to check</b> deedglass ledger check; deedglass verify records.tar.gz</p>
+      <p class="refs">Related: NIST AI RMF MEASURE 2.8</p>
+    </article>
+    
+    <article class="q" id="records_verifiable">
+      <div class="qhead"><h3>Can a reviewer check the records offline, without an account?</h3><span class="st st-in_place">In place</span></div>
+      <p class="answer">Records are sealed with Ed25519 seal key sk_01m50d5zr4txnqpj78yszjexmm; the public keys ship with the records, and deedglass verify checks them offline.</p>
+      <p class="evidence" aria-label="Evidence"><span><i>seal keys</i> sk_01m50d5zr4txnqpj78yszjexmm</span><span><i>signer</i> sk_01m50d5zr4txnqpj78yszjexmm</span><span><i>revoked</i> 0</span></p>
+      <p class="check"><b>How to check</b> deedglass security-pack verify &lt;folder&gt;</p>
+      <p class="refs">Related: NIST AI RMF MEASURE 2.8 · NIST AI RMF MEASURE 1.3</p>
+    </article>
+    
+    <article class="q" id="product_tested">
+      <div class="qhead"><h3>Has this version of the control layer been attacked on purpose, and with what result?</h3><span class="st st-partly">Partly</span></div>
+      <p class="answer">The attack suite ran against Deedglass 0.1.0 on 15 Oct 2026: 70 cases matched, 0 differed. This server runs 0.1.0-dev.</p>
+      <p class="evidence" aria-label="Evidence"><span><i>running</i> 0.1.0-dev</span><span><i>tested version</i> 0.1.0</span><span><i>matched</i> 70</span><span><i>differs</i> 0</span><span><i>run</i> 15 Oct 2026</span></p>
+      <p class="check"><b>How to check</b> docs/ATTACK_SUITE.md, or make attack in the Deedglass repo</p>
+      <p class="refs">Related: NIST AI RMF MEASURE 2.6 · NIST AI RMF MEASURE 2.7</p>
+    </article>
+    
+  </section>
+  
+  <section class="plain" aria-labelledby="limits-h">
+    <h2 id="limits-h">What this pack doesn't show</h2>
+    <ul>
+      <li>Agents or tools that never go through Deedglass. An agent that holds its own credentials to a system Deedglass doesn't front leaves no record here.</li>
+      <li>Changes on databases or tables Deedglass doesn't watch: observe mode off, or tables outside the connector's publication.</li>
+      <li>Whether the rules suit your business. The pack shows what the enforced rules do on four fixed inputs, not on every input.</li>
+      <li>Anything before 17 July 2026 or outside this org, and anything about models or prompts: Deedglass records actions, not reasoning.</li>
+      <li>An outside opinion. Deedglass wrote this pack from the org's own records; no third party reviewed it.</li>
+    </ul>
+  </section>
+  <section class="plain" aria-labelledby="check-h">
+    <h2 id="check-h">How to check this pack</h2>
+    <ol>
+      <li>Install the Deedglass CLI, version 0.1.0-dev or later (<code>npx -y deedglass@latest version</code> runs it without installing). No account is needed.</li>
+      <li>In the folder that holds this file, run:<pre><code>deedglass security-pack verify .</code></pre>It checks every file against its sealed record (pack.seal.json) and checks every record in <code>records.tar.gz</code>: seals, hashes and the unbroken chain. One changed byte in any file fails the check and names the file.</li>
+      <li>To make sure the records were sealed by Acme's own server and not by someone else's, ask Acme for its public keys and pin them:<pre><code>deedglass security-pack verify . --keys keys.json</code></pre></li>
+      <li>Every <code>deed_</code> id in the evidence above is a record in <code>records.tar.gz</code>; <code>deedglass verify records.tar.gz</code> checks them on their own.</li>
+    </ol>
+  </section>
+  <p class="runfoot">Acme · 2026-07-17 to 2026-10-15 · answers.json 7686d9016bb5</p>
+</main>
+</body>
+</html>

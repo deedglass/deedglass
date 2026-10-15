@@ -9,6 +9,15 @@ this file by `scripts/release-notes.sh`.
 
 ### Added
 
+- **The security review pack.** `deedglass security-pack readiness` (free; also
+  `GET /v1/security_pack/readiness` and Console › Settings › Security review) answers 24 questions a
+  security reviewer asks about AI agents, in eight groups, each with a status computed from your own
+  records (In place, Partly, Not set up, Not applicable, Can't tell) and the fix for a gap.
+  `deedglass security-pack build` (Pro, `security_pack`; `POST /v1/security_pack`) writes a folder
+  with a print-ready `index.html`, `answers.md`, `answers.json` (security_pack v1), the period's
+  records and `pack.seal.json`, a sealed record over each file; `--aliases` replaces agent,
+  connector and rule names. `deedglass security-pack verify` (free) checks a folder offline.
+  `deeds seal-file` accepts `application/gzip`. See `docs/SECURITY_PACK.md`.
 - **`deedglass play`.** The 301 scene in a terminal, offline, with no Docker (`npx deedglass play`).
   The rules decide each call live (the Acme demo policy, `policy.Evaluate`), and four records are
   sealed with a key made for the run, checked, changed by one byte and checked again. Postgres's

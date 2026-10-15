@@ -1,0 +1,422 @@
+# The security review question bank (S51). Our own words: no question is copied from a licensed
+# questionnaire. Every answer is a template filled only from the evidence the question's rule
+# computes ({field}; {field:one|many} writes the number and the word, or only the forms when
+# they name {field} themselves; {field?one|many} picks the word without the number; *_on fields
+# are dates).
+# Status rules live in rules.go, keyed by id. refs name public framework items by id only,
+# re-read on 2026-10-15 (sources in docs/SECURITY_PACK.md and CLAIMS_REGISTER.md).
+v: 1
+groups:
+  - id: inventory
+    title: Inventory
+  - id: rules
+    title: Rules
+  - id: people
+    title: People in the loop
+  - id: stop
+    title: Stop
+  - id: checking
+    title: Checking results
+  - id: undo
+    title: Undo
+  - id: secrets
+    title: Secrets and network
+  - id: records
+    title: Records
+
+questions:
+  - id: agents_listed
+    group: inventory
+    question: Does every AI agent that acts have its own record, with a person responsible for it?
+    needs: [agents]
+    evidence: [agents, active, stopped, without_owner]
+    answer:
+      in_place: "{agents:agent is|agents are} registered, each with its own id and a named owner. An agent without a record can't call any tool."
+      partly: "{agents:agent is|agents are} registered and an agent without a record can't call any tool, but {without_owner:agent has|agents have} no named owner."
+      not_set_up: No agents are registered yet, so no agent can act through Deedglass.
+    fix:
+      partly: "Set an owner on {without_owner:the agent|each of the {without_owner} agents} without one: PATCH /v1/agents/<agt_…> with owner usr_…, or deedglass agent create <name> --owner usr_… for new agents."
+      not_set_up: "Register each agent: deedglass agent create <name> --owner usr_…"
+    check: "deedglass agent list, or Console › Agents"
+    refs:
+      - {framework: NIST AI RMF 1.0, id: GOVERN 1.6}
+      - {framework: OWASP LLM 2025, id: LLM06, title: Excessive Agency}
+
+  - id: keys_scoped
+    group: inventory
+    question: Does each agent use its own scoped key, and are unused keys cleaned up?
+    needs: [keys]
+    evidence: [agent_keys, admin_keys, unused_keys]
+    answer:
+      in_place: "{agent_keys:live agent key belongs|live agent keys each belong} to exactly one agent with action scopes only; agent keys can never hold admin rights. Every key has been used."
+      partly: "{agent_keys:live agent key belongs|live agent keys each belong} to exactly one agent with action scopes only, but {unused_keys:key older than 30 days has|keys older than 30 days have} never been used."
+      not_set_up: No agent has a live key, so no agent can call tools.
+    fix:
+      partly: "Revoke the {unused_keys:key|{unused_keys} keys} that were never used: deedglass agent keys revoke <key_…>"
+      not_set_up: "Create a key for each agent: deedglass agent keys create <agent>"
+    check: "deedglass agent keys list <agent>, or Console › Agents › Keys"
+    refs:
+      - {framework: OWASP LLM 2025, id: LLM06, title: Excessive Agency}
+      - {framework: NIST AI RMF 1.0, id: MEASURE 2.7}
+
+  - id: keys_rotated
+    group: inventory
+    question: Are API keys replaced at least every 90 days?
+    needs: [keys]
+    evidence: [live_keys, older_than_90_days, oldest_on]
+    answer:
+      in_place: "No live API key is older than 90 days ({live_keys:live key|live keys})."
+      partly: "{older_than_90_days:key of|keys of} {live_keys} live keys {older_than_90_days?is|are} older than 90 days; the oldest was created on {oldest_on}."
+      not_set_up: "Every live key is older than 90 days; the oldest was created on {oldest_on}."
+      not_applicable: There are no live API keys.
+    fix:
+      partly: "Roll the {older_than_90_days:key|{older_than_90_days} keys} older than 90 days: deedglass agent keys roll <key_…> (the old key keeps working for the overlap)."
+      not_set_up: "Roll every key: deedglass agent keys roll <key_…>, and deedglass org keys create for a new admin key, then revoke the old one."
+    check: "deedglass agent keys list <agent> and deedglass org keys list (created dates)"
+    refs:
+      - {framework: NIST AI RMF 1.0, id: MEASURE 2.7}
+
+  - id: connectors_listed
+    group: inventory
+    question: Is every system an agent can reach listed as a connector?
+    needs: [connectors, actions]
+    evidence: [connectors, active_connectors, proxy_actions]
+    answer:
+      in_place: "{connectors:system is listed as a connector|systems are listed as connectors}. Every action in the period went through one of them."
+      partly: "{connectors:system is listed as a connector|systems are listed as connectors}, but {proxy_actions:action|actions} in the period reached a tool through an MCP server wrapped by Deedglass rather than a connector; that server's own reach isn't listed here."
+      not_set_up: No connectors are set up, so Deedglass doesn't list any system an agent can reach.
+    fix:
+      partly: "Move the tools agents call through wrapped MCP servers to connectors where one exists: deedglass connector types"
+      not_set_up: "Add a connector for each system agents use: deedglass connector create"
+    check: "deedglass connector list, or Console › Connectors"
+    refs:
+      - {framework: NIST AI RMF 1.0, id: GOVERN 1.6}
+      - {framework: OWASP LLM 2025, id: LLM06, title: Excessive Agency}
+
+  - id: rules_active
+    group: rules
+    question: Does a rule version you chose decide every agent action?
+    needs: [rules]
+    evidence: [enforced, version, version_id, version_hash, activated_by, activated_on, activation_deed, rules, shadow]
+    answer:
+      in_place: "{enforced} version {version} ({rules:rule|rules}) decides every action. It was activated by {activated_by} on {activated_on}, sealed in {activation_deed}."
+      partly: "Only {enforced}, the starting rules, is enforced: every action is refused until a person activates rules of their own."
+      not_set_up: No rule version is enforced.
+    fix:
+      partly: "Activate rules of your own, starting from a starter: deedglass policy install postgres-safe, deedglass policy push, then deedglass policy activate <name> --version <n> --mode enforce"
+      not_set_up: "Activate a rule version: deedglass policy push <file>, then deedglass policy activate <name> --version <n> --mode enforce"
+    check: "Console › Policies shows the enforced version; deedglass verify checks its activation record"
+    refs:
+      - {framework: OWASP LLM 2025, id: LLM06, title: Excessive Agency}
+      - {framework: NIST AI RMF 1.0, id: GOVERN 1.4}
+
+  - id: default_deny
+    group: rules
+    question: Are destructive SQL and large money moves refused or held for a person by default?
+    needs: [rules]
+    evidence: [probes, refused, held, allowed, allowed_probes]
+    answer:
+      in_place: "The enforced rules were run on {probes} fixed inputs (DROP TABLE, TRUNCATE, DELETE with no WHERE, a $5,000 refund): {refused} refused, {held} held for a person, none allowed."
+      partly: "The enforced rules were run on {probes} fixed inputs: {refused} refused, {held} held, {allowed} allowed ({allowed_probes})."
+      not_set_up: "The enforced rules allowed every one of the {probes} fixed inputs ({allowed_probes})."
+    fix:
+      partly: "Add deny or require_approval rules for: {allowed_probes}. The postgres-safe and stripe-refunds starters have them."
+      not_set_up: "Add deny or require_approval rules for destructive SQL and money moves. The postgres-safe and stripe-refunds starters have them."
+    check: "deedglass policy evaluate --server --tool <connector>.execute --sql 'DROP TABLE public.orders'"
+    refs:
+      - {framework: OWASP LLM 2025, id: LLM06, title: Excessive Agency}
+      - {framework: NIST AI RMF 1.0, id: MANAGE 1.3}
+
+  - id: limits_set
+    group: rules
+    question: Are agents limited in how often they act and how much they can spend?
+    needs: [rules, agents]
+    evidence: [rule_budgets, agents_with_budgets, active_agents]
+    answer:
+      in_place: "The enforced rules set {rule_budgets:budget|budgets} on calls or spend, and {agents_with_budgets} of {active_agents} active agents have their own budget, so a looping agent stops at its limit."
+      partly: "The enforced rules set no budget; {agents_with_budgets} of {active_agents} active agents have their own budget, the rest have no limit."
+      not_set_up: Neither the enforced rules nor any agent sets a limit on calls or spend.
+    fix:
+      partly: "Add a budget to the enforced rules (budgets: max_calls or max_spend per agent), or give each agent its own budget."
+      not_set_up: "Add a budget to the enforced rules (budgets: max_calls or max_spend per agent), or give each agent its own budget."
+    check: "deedglass agent list --json shows each agent's budgets; Console › Policies shows the enforced version's"
+    refs:
+      - {framework: OWASP LLM 2025, id: LLM10, title: Unbounded Consumption}
+      - {framework: NIST AI RMF 1.0, id: MANAGE 1.3}
+
+  - id: rules_changes_recorded
+    group: rules
+    question: Is every change to the rules sealed with who made it and when?
+    needs: [rules]
+    evidence: [changes, sealed, with_who, changes_in_period]
+    answer:
+      in_place: "{changes:rule change|rule changes} (the live activations and the period's changes), each sealed with who made it and when; {changes_in_period:change happened|changes happened} in the period."
+      partly: "{sealed} of {changes} rule changes are sealed and {with_who} name who made them."
+      not_set_up: "{changes:rule change|rule changes}, and none is sealed."
+    fix:
+      partly: "Make rule changes only through deedglass policy activate or the Console, which seal each change."
+      not_set_up: "Make rule changes only through deedglass policy activate or the Console, which seal each change."
+    check: "deedglass deeds list --kind admin lists each policy.activated record; deedglass verify checks them"
+    refs:
+      - {framework: NIST AI RMF 1.0, id: GOVERN 1.4}
+      - {framework: NIST AI RMF 1.0, id: MEASURE 2.8}
+
+  - id: approvals_required
+    group: people
+    question: Do risky actions wait for a person before they run?
+    needs: [rules, approvals]
+    evidence: [approval_rules, approvals, approved, denied]
+    answer:
+      in_place: "{approval_rules:enforced rule holds|enforced rules hold} actions for a person. In the period {approvals:action waited|actions waited}: {approved} approved, {denied} denied."
+      not_set_up: No enforced rule holds an action for a person; every action is either allowed or refused on its own.
+    fix:
+      not_set_up: "Add require_approval rules for risky actions, like the undo and large-refund rules in the starters."
+    check: "deedglass approvals list, or Console › Approvals"
+    refs:
+      - {framework: OWASP LLM 2025, id: LLM06, title: Excessive Agency}
+      - {framework: NIST AI RMF 1.0, id: MAP 3.5}
+
+  - id: four_eyes
+    group: people
+    question: Is the person who asked kept from approving their own request, with two approvers where it matters?
+    needs: [rules, approvals]
+    evidence: [approval_rules, two_person_rules, two_person_approvals]
+    answer:
+      in_place: "Deedglass refuses an approval from the person who asked, on every approval. {two_person_rules:rule asks|rules ask} for two or more people; {two_person_approvals:approval|approvals} in the period needed two."
+      partly: "Deedglass refuses an approval from the person who asked, on every approval, but no rule asks for a second approver."
+      not_applicable: No enforced rule holds an action for a person, so there is nothing to approve.
+    fix:
+      partly: "Set required: 2 in the approval of the rules for the riskiest actions."
+    check: "Console › Approvals shows each approver; the approval's record lists who decided"
+    refs:
+      - {framework: NIST AI RMF 1.0, id: MAP 3.5}
+
+  - id: approvals_expire
+    group: people
+    question: Do actions waiting for approval expire instead of waiting forever?
+    needs: [rules, approvals]
+    evidence: [approvals, expired, overdue, median_minutes]
+    answer:
+      in_place: "Every waiting action has an expiry. In the period {expired:approval|approvals} expired, and none is waiting past its expiry."
+      partly: "Every waiting action has an expiry, but {overdue:approval is|approvals are} still waiting past it."
+      not_applicable: No enforced rule holds an action for a person, so nothing waits.
+    fix:
+      partly: "Check that deedglass serve is running: it expires waiting actions. Then deedglass approvals list --status pending"
+    check: "deedglass approvals list --status expired"
+    refs:
+      - {framework: NIST AI RMF 1.0, id: MAP 3.5}
+
+  - id: stop_all
+    group: stop
+    question: Can more than one person stop every agent at once?
+    needs: [members]
+    evidence: [people, admin_keys]
+    answer:
+      in_place: "{people:person|people} (owners and admins) can stop every agent at once with deedglass org stop-all or Console › Stop all."
+      partly: Only one person (an owner or admin) can stop every agent at once. If they are away, nobody can.
+      not_set_up: No owner or admin can stop every agent at once from the Console.
+    fix:
+      partly: "Invite a second admin: Console › Settings › Members."
+      not_set_up: "Invite an owner or admin: Console › Settings › Members."
+    check: "Console › Settings › Members; deedglass org stop-all --help"
+    refs:
+      - {framework: NIST AI RMF 1.0, id: MANAGE 2.4}
+      - {framework: OWASP LLM 2025, id: LLM06, title: Excessive Agency}
+
+  - id: stop_used
+    group: stop
+    question: Has Stop been used or tried recently?
+    needs: [stop]
+    evidence: [stops_in_period, last_on, last_deed]
+    answer:
+      in_place: "Stop was used {stops_in_period:time|times} in the period, last on {last_on} ({last_deed})."
+      partly: "Stop wasn't used in the period; it was last used on {last_on}."
+      not_set_up: Stop has never been used or tried in this org.
+    fix:
+      partly: "Try Stop on a test agent: deedglass agent stop <agent> --reason \"Stop drill\", then deedglass agent start <agent> --reason \"Drill over\"."
+      not_set_up: "Try Stop on a test agent: deedglass agent stop <agent> --reason \"Stop drill\", then deedglass agent start <agent> --reason \"Drill over\"."
+    check: "deedglass deeds list --kind admin lists the agent.stopped and org.stopped_all records"
+    refs:
+      - {framework: NIST AI RMF 1.0, id: MANAGE 2.4}
+
+  - id: results_checked
+    group: checking
+    question: Are agents' write actions checked against the system they changed?
+    needs: [actions]
+    evidence: [writes, checked, proven, claimed, share_percent]
+    answer:
+      in_place: "{share_percent}% of the period's {writes:write action was|{writes} write actions were} checked against the system of record: {checked} Checked (read back), {proven} Proven (from Postgres' own change log)."
+      partly: "{share_percent}% of the period's {writes:write action was|{writes} write actions were} checked against the system of record ({checked} Checked, {proven} Proven); {claimed} rest on the tool's own answer (aim for 80%)."
+      not_set_up: "{share_percent}% of the period's {writes:write action was|{writes} write actions were} checked against the system of record; {claimed} rest on the tool's own answer."
+      not_applicable: No agent wrote anything in the period.
+    fix:
+      partly: "Set verify: L1 or L2 on the rules that allow writes, and connect Postgres with deedglass connector postgres init for Proven checks."
+      not_set_up: "Set verify: L1 or L2 on the rules that allow writes, and connect Postgres with deedglass connector postgres init for Proven checks."
+    check: "deedglass actions list --level L0 lists the actions that rest on the tool's own answer"
+    refs:
+      - {framework: NIST AI RMF 1.0, id: MEASURE 2.4}
+
+  - id: mismatches_handled
+    group: checking
+    question: When a check finds the result doesn't match, is there a follow-up?
+    needs: [actions]
+    evidence: [mismatches, followed_up, open]
+    answer:
+      in_place: "{mismatches:action|actions} ended in Doesn't match in the period, and each has an undo started for it."
+      partly: "{followed_up} of {mismatches} actions that ended in Doesn't match have an undo started; these have none: {open}."
+      not_set_up: "{mismatches:action|actions} ended in Doesn't match in the period and none has a follow-up: {open}."
+      not_applicable: No action ended in Doesn't match in the period.
+    fix:
+      partly: "Review each one and undo it if needed: deedglass undo preview <act_…>"
+      not_set_up: "Review each one and undo it if needed: deedglass undo preview <act_…>"
+    check: "deedglass actions list --verdict MISMATCH"
+    refs:
+      - {framework: NIST AI RMF 1.0, id: MANAGE 4.3}
+
+  - id: watched_sessions
+    group: checking
+    question: Are changes made to your databases outside Deedglass recorded too?
+    needs: [connectors, sessions]
+    evidence: [postgres_connectors, watched, sessions, caught]
+    answer:
+      in_place: "Observe mode is on for {watched:Postgres connector|all {watched} Postgres connectors}: {sessions:watched session|watched sessions} in the period, {caught} with something caught."
+      partly: "Observe mode is on for {watched} of {postgres_connectors} Postgres connectors."
+      not_set_up: Observe mode is off, so changes made outside Deedglass aren't recorded.
+      not_applicable: There is no Postgres connector to watch.
+    fix:
+      partly: "Turn on observe mode for the rest: witness.observe.enabled on each Postgres connector."
+      not_set_up: "Turn on observe mode to record changes made outside Deedglass: witness.observe.enabled on the Postgres connector."
+    check: "deedglass observe list"
+    refs:
+      - {framework: NIST AI RMF 1.0, id: MEASURE 2.4}
+
+  - id: undo_available
+    group: undo
+    question: Can agents' database writes be undone from the record?
+    needs: [connectors]
+    evidence: [write_connectors, undo_connectors, without_undo]
+    answer:
+      in_place: "Every connector that writes ({write_connectors}) is Postgres, where Deedglass can undo a write from what Postgres committed."
+      partly: "{undo_connectors} of {write_connectors} connectors that write can be undone (Postgres); these can't: {without_undo}."
+      not_set_up: "None of the {write_connectors} connectors that write can be undone by Deedglass ({without_undo})."
+      not_applicable: No connector writes anything.
+    fix:
+      partly: "For the connectors without undo, hold risky writes for a person with require_approval rules."
+      not_set_up: "Hold risky writes for a person with require_approval rules; undo needs a Postgres connector."
+    check: "deedglass undo preview <act_…> on any write"
+    refs:
+      - {framework: NIST AI RMF 1.0, id: MANAGE 2.3}
+
+  - id: undos_done
+    group: undo
+    question: When something was undone, was the undo itself checked?
+    needs: [undos]
+    evidence: [undos, matched, session_undos]
+    answer:
+      in_place: "{undos:undo|undos} ran in the period and every one ended in Matches; {session_undos:watched session was|watched sessions were} undone."
+      partly: "{undos:undo|undos} ran in the period; {matched} ended in Matches."
+      not_applicable: Nothing was undone in the period.
+    fix:
+      partly: "Look at each undo that didn't end in Matches: deedglass actions show <act_…>"
+    check: "deedglass actions show <act_…> on the undo"
+    refs:
+      - {framework: NIST AI RMF 1.0, id: MANAGE 2.3}
+
+  - id: secrets_encrypted
+    group: secrets
+    question: Are connector credentials encrypted at rest and never shown again?
+    needs: [connectors]
+    evidence: [credentials, alg, stale]
+    answer:
+      in_place: "{credentials:credential is|credentials are} stored with {alg} envelope encryption and never returned by the API or Console. Each was set or rotated in the last year."
+      partly: "{credentials:credential is|credentials are} stored with {alg} envelope encryption and never returned, but {stale?has|have} not been changed in over a year."
+      not_applicable: No connector holds a credential.
+    fix:
+      partly: "Rotate the old credentials at their source, then deedglass connector credentials set <connector>."
+    check: "deedglass connector show <connector> shows the credential's version and dates, never its value"
+    refs:
+      - {framework: OWASP LLM 2025, id: LLM02, title: Sensitive Information Disclosure}
+      - {framework: NIST AI RMF 1.0, id: MEASURE 2.7}
+
+  - id: agents_never_see_secrets
+    group: secrets
+    question: Do agents act without ever holding database passwords or API keys?
+    needs: [actions]
+    evidence: [gateway_actions, proxy_actions]
+    answer:
+      in_place: "All {gateway_actions:action|{gateway_actions} actions} in the period ran through Deedglass connectors, which hold the credentials; the agent sent only the tool and its arguments."
+      partly: "{gateway_actions} actions ran through Deedglass connectors, but {proxy_actions} reached tools through wrapped MCP servers that hold their own credentials outside Deedglass."
+      not_set_up: "Every action in the period ({proxy_actions}) reached tools through wrapped MCP servers that hold their own credentials outside Deedglass."
+      not_applicable: No agent acted in the period.
+    fix:
+      partly: "Move those tools to connectors so the credential lives in the vault: deedglass connector create"
+      not_set_up: "Move those tools to connectors so the credential lives in the vault: deedglass connector create"
+    check: "deedglass actions list shows each action's mode (gateway or proxy)"
+    refs:
+      - {framework: OWASP LLM 2025, id: LLM02, title: Sensitive Information Disclosure}
+      - {framework: OWASP LLM 2025, id: LLM06, title: Excessive Agency}
+      - {framework: NIST AI RMF 1.0, id: MEASURE 2.7}
+
+  - id: egress_limited
+    group: secrets
+    question: Do connectors' outbound calls go through one door that refuses private networks?
+    needs: [egress]
+    evidence: [env, private_networks, allowed_ranges]
+    answer:
+      in_place: "Every connector call leaves through one outbound door that refuses private, loopback and metadata addresses (env {env}, no private range allowed)."
+      partly: "Every connector call leaves through one outbound door, but private networks are reachable ({private_networks}, {allowed_ranges:range|ranges} listed)."
+    fix:
+      partly: "Remove DEEDGLASS_ALLOW_PRIVATE_NETWORKS and keep DEEDGLASS_EGRESS_ALLOW_CIDRS to the exact ranges your connectors need."
+    check: "deedglass config print (egress keys)"
+    refs:
+      - {framework: OWASP LLM 2025, id: LLM06, title: Excessive Agency}
+      - {framework: NIST AI RMF 1.0, id: MEASURE 2.7}
+
+  - id: records_sealed
+    group: records
+    question: Does every action have a sealed record in an unbroken chain?
+    needs: [records, actions]
+    evidence: [deeds_checked, chain, chain_head, finished, unsealed]
+    answer:
+      in_place: "{finished:finished action has|finished actions in the period each have} a sealed record. The chain of {deeds_checked:record|records} is unbroken."
+      partly: "The chain of {deeds_checked:record|records} is intact, but {unsealed:finished action has|finished actions have} no sealed record yet."
+      not_set_up: "The chain is broken at {chain}. Records after that point can't be trusted until it is looked at."
+    fix:
+      partly: "Check that deedglass serve is running (it seals finished actions), then deedglass ledger check."
+      not_set_up: "Run deedglass ledger check and see docs/VERIFYING_DEEDS.md for what the break means."
+    check: "deedglass ledger check; deedglass verify records.tar.gz"
+    refs:
+      - {framework: NIST AI RMF 1.0, id: MEASURE 2.8}
+
+  - id: records_verifiable
+    group: records
+    question: Can a reviewer check the records offline, without an account?
+    needs: [records]
+    evidence: [seal_keys, signer, revoked]
+    answer:
+      in_place: "Records are sealed with Ed25519 seal key {signer}; the public keys ship with the records, and deedglass verify checks them offline."
+      partly: "Records are sealed with Ed25519 seal key {signer}, but {revoked:seal key was|seal keys were} revoked; records sealed by {revoked?it|them} fail the check."
+      not_set_up: This server has no seal key, so nothing can be checked.
+    fix:
+      partly: "deedglass keys list shows which key was revoked and when; docs/VERIFYING_DEEDS.md says what that means for its records."
+      not_set_up: "Create a seal key: deedglass keys gen, then restart deedglass serve."
+    check: "deedglass security-pack verify <folder>"
+    refs:
+      - {framework: NIST AI RMF 1.0, id: MEASURE 2.8}
+      - {framework: NIST AI RMF 1.0, id: MEASURE 1.3}
+
+  - id: product_tested
+    group: records
+    question: Has this version of the control layer been attacked on purpose, and with what result?
+    needs: [build]
+    evidence: [running, tested_version, matched, differs, run_on]
+    answer:
+      in_place: "The attack suite ran against Deedglass {running} on {run_on}: {matched} cases matched their expected outcome, {differs} differed."
+      partly: "The attack suite ran against Deedglass {tested_version} on {run_on}: {matched} cases matched, {differs} differed. This server runs {running}."
+      not_applicable: This build carries no attack suite result.
+    fix:
+      partly: "Upgrade to a released version, whose attack suite result ships with it."
+    check: "docs/ATTACK_SUITE.md, or make attack in the Deedglass repo"
+    refs:
+      - {framework: NIST AI RMF 1.0, id: MEASURE 2.6}
+      - {framework: NIST AI RMF 1.0, id: MEASURE 2.7}

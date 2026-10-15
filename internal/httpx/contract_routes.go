@@ -179,6 +179,9 @@ var contractRoutes = []ContractRoute{
 	cr("POST", "/v1/observe/sessions/{id}/frames/{dtx}/exclude", SessionOrKey, "admin", "S50", "sealed sessions only; seals observe.frame_excluded"),
 	cr("GET", "/v1/observe/sessions/{id}/undo_preview", SessionOrKey, "viewer", "S50", "free; never executes; carries the undo SQL"),
 	cr("POST", "/v1/observe/sessions/{id}/undo", SessionOrKey, "admin", "S50", "Pro: 403 pro_required without undo_session; the console system agent acts"),
+	// S51: the security review pack. Agent keys get 403 on both routes.
+	cr("GET", "/v1/security_pack/readiness", SessionOrKey, "viewer", "S51", "keys: admin; free: statuses and fixes, no evidence; ?period_days 7..365"),
+	cr("POST", "/v1/security_pack", SessionOrKey, "admin", "S51", "Pro: 403 pro_required without security_pack; answers a tar stream of the sealed folder"),
 
 	// S15: MCP (GET and DELETE answer 405; sessionless).
 	cr("POST", "/mcp/{connector}", AgentKey, "actions:execute", "S15"),

@@ -611,6 +611,12 @@ it refuses rather than guess:
 - **A session's close waits for the decoder by time.** It seals when the decoder has decoded a
   transaction committed after the close, or a heartbeat two periods after it; a decoder more than
   10 minutes behind seals the session with `decoder_behind`, and later transactions are not in it.
+- **The security review pack answers from Deedglass's records only (S51).** An agent that reaches a
+  system without going through Deedglass leaves nothing to count, so the pack can read In place for a
+  setup with a side door. `default_deny` judges the enforced rules on four fixed inputs, not on every
+  input. A write is recognised by the tool's name (an unknown tool counts as a write). Without
+  `--keys`, `security-pack verify` shows that a folder is whole and consistent, not who sealed it.
+  The readiness view's chain check covers the last day; the pack checks the whole period.
 - **Fuzzing finds bugs; it doesn't show there are none.** The October 2026 schedule ran each parser for 5
   to 30 minutes on one laptop (`bench/results/*-fuzz.json`); CI replays the corpus for 10 s each.
 

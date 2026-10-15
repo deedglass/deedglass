@@ -76,12 +76,38 @@ func WithIdempotencyKey(k string) Option {
 // not nil, is sent as the JSON body (a json.RawMessage as is). POSTs get an Idempotency-Key unless one is set. A non-2xx
 // response is an *Error.
 func (c *Client) Do(ctx context.Context, method, path string, in, out any, opts ...Option) (*Response, error) {
+	var resp *Response
+	err := c.do(ctx, method, path, in, opts, func(hr *http.Response, r *Response) error {
+		resp = r
+		raw, err := io.ReadAll(io.LimitReader(hr.Body, 32<<20))
+		if err != nil {
+			return err
+		}
+		if out != nil && len(bytes.TrimSpace(raw)) > 0 {
+			if err := json.Unmarshal(raw, out); err != nil {
+				return fmt.Errorf("deedglass: the response isn't the JSON this client expects: %w", err)
+			}
+		}
+		return nil
+	})
+	if resp == nil && err != nil {
+		var de *Error
+		if errors.As(err, &de) {
+			return &Response{Status: de.Status, ID: de.RequestID}, err
+		}
+	}
+	return resp, err
+}
+
+// do sends the request; ok handles a 2xx answer (its body is closed afterwards unless ok returns
+// errKeepBody). A non-2xx answer is an *Error.
+func (c *Client) do(ctx context.Context, method, path string, in any, opts []Option, ok func(*http.Response, *Response) error) error {
 	if c == nil || c.BaseURL == "" {
-		return nil, errors.New("deedglass: the client has no server URL")
+		return errors.New("deedglass: the client has no server URL")
 	}
 	base, err := url.Parse(strings.TrimSuffix(c.BaseURL, "/"))
 	if err != nil || (base.Scheme != "http" && base.Scheme != "https") || base.Host == "" {
-		return nil, errors.New("deedglass: the server URL must be http(s)://host[:port]")
+		return errors.New("deedglass: the server URL must be http(s)://host[:port]")
 	}
 	var body io.Reader
 	switch v := in.(type) {
@@ -91,13 +117,13 @@ func (c *Client) Do(ctx context.Context, method, path string, in, out any, opts 
 	default:
 		b, err := json.Marshal(in)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		body = bytes.NewReader(b)
 	}
 	req, err := http.NewRequestWithContext(ctx, method, base.String()+path, body)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	h := req.Header
 	h.Set("Accept", "application/json")
@@ -125,16 +151,16 @@ func (c *Client) Do(ctx context.Context, method, path string, in, out any, opts 
 	}
 	resp, err := hc.Do(req)
 	if err != nil {
-		return nil, redactKey(err, c.APIKey)
-	}
-	defer resp.Body.Close()
-	raw, err := io.ReadAll(io.LimitReader(resp.Body, 32<<20))
-	if err != nil {
-		return nil, err
+		return redactKey(err, c.APIKey)
 	}
 	r := &Response{Status: resp.StatusCode, Replayed: resp.Header.Get("Deedglass-Idempotent-Replayed") == "true",
 		ID: resp.Header.Get("Deedglass-Request-Id")}
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
+		defer resp.Body.Close()
+		raw, err := io.ReadAll(io.LimitReader(resp.Body, 32<<20))
+		if err != nil {
+			return err
+		}
 		var env struct {
 			Error *Error `json:"error"`
 		}
@@ -146,15 +172,34 @@ func (c *Client) Do(ctx context.Context, method, path string, in, out any, opts 
 		if e.RequestID == "" {
 			e.RequestID = r.ID
 		}
-		return r, e
+		return e
 	}
-	if out != nil && len(bytes.TrimSpace(raw)) > 0 {
-		if err := json.Unmarshal(raw, out); err != nil {
-			return r, fmt.Errorf("deedglass: the response isn't the JSON this client expects: %w", err)
-		}
+	err = ok(resp, r)
+	if !errors.Is(err, errKeepBody) {
+		resp.Body.Close()
 	}
-	return r, nil
+	return err
 }
+
+// Stream sends method path like Do but hands back the response body unread when the answer is
+// 2xx (the caller closes it): for downloads such as POST /v1/security_pack's tar stream. A non-2xx
+// answer is an *Error, as with Do. Set HTTP to a client with a long enough timeout.
+func (c *Client) Stream(ctx context.Context, method, path string, in any, opts ...Option) (io.ReadCloser, *Response, error) {
+	var body io.ReadCloser
+	var resp *Response
+	accept := func(r *http.Request) { r.Header.Set("Accept", "*/*") }
+	err := c.do(ctx, method, path, in, append([]Option{accept}, opts...), func(hr *http.Response, r *Response) error {
+		body, resp = hr.Body, r
+		return errKeepBody
+	})
+	if errors.Is(err, errKeepBody) {
+		return body, resp, nil
+	}
+	return nil, resp, err
+}
+
+// errKeepBody tells do to leave a 2xx body open for Stream.
+var errKeepBody = errors.New("deedglass: keep the body")
 
 // newIdempotencyKey is 128 random bits, hex.
 func newIdempotencyKey() string {

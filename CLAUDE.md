@@ -148,6 +148,8 @@ go test ./cmd/deedglass -run TestHelpJSONGolden -update   # S32: testdata/help-j
 DEEDGLASS_IT_PKGS="./internal/scan/ ./internal/doctor/" make integration   # S32: scan and doctor are read-only under log_statement=all (BEGIN READ ONLY, six SELECTs, ROLLBACK; a write is 25006)
 DEEDGLASS_IT_INIT=1 go test -tags integration ./internal/setup -run TestInitLive -v   # S32: deedglass init end to end in Docker on its own ports (two postgres:18.6 containers, removed after)
 scripts/quickstart_timed.sh | scripts/npx_cold.sh   # S32: the timed quickstart and the cold npx run against a local registry; JSON in bench/results/
+make embed-gz       # S51: rewrite the gzip archives the binary embeds (internal/store/migrations/sql.tar.gz); TestArchiveCurrent fails while stale
+DEEDGLASS_IT_PKGS=./cmd/deedglass/ DEEDGLASS_IT_GOFLAGS="-v -run TestSecurityPackLive" make integration   # S51: readiness, pro_required, build → verify, one changed byte, pinned keys, aliases, the canary sweep
 make web-verify-test  # (in ci) the browser verifier: npm ci once, tsc --noEmit, vitest (vectors, parity 500/500)
 make web-verify-serve # build and serve the verify page on http://127.0.0.1:5178
 make web-build      # S24: the Console (web/): tokens → icons → astro build → .br/.gz → check-dist; writes internal/console/dist (make build runs it when Node is present; make build-only skips it)
@@ -200,7 +202,8 @@ scripts/ci-local.sh # the CI jobs locally (docker-smoke and govulncheck skip whe
 4. SQL: no dynamic SQL built from user input; no EXCEPTION blocks in controlled functions; every
    object schema-qualified; REVOKE and GRANT in the same transaction as CREATE; `search_path`
    pinned to `pg_catalog, pg_temp`. Migrations are forward-only files
-   `internal/store/migrations/NNNN_name.sql`; an applied file is never edited.
+   `internal/store/migrations/NNNN_name.sql`; an applied file is never edited. The binary embeds them
+   as `internal/store/migrations/sql.tar.gz` (S51, the image budget): run `make embed-gz` after adding one.
 5. Permanent identifiers use `deedglass` (module, binary, `DEEDGLASS_`, schema, `deedglass_*` roles,
    message prefix). `txv` and `testamur` are retired; `scripts/rename_guard.sh` enforces this. The
    old codename stays banned.

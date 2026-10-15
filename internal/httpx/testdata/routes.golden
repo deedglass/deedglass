@@ -124,6 +124,8 @@ planned    GET     /v1/observe/sessions/{id}                              sessio
 planned    POST    /v1/observe/sessions/{id}/frames/{dtx}/exclude         session_or_key  admin            S50    sealed sessions only; seals observe.frame_excluded
 planned    GET     /v1/observe/sessions/{id}/undo_preview                 session_or_key  viewer           S50    free; never executes; carries the undo SQL
 planned    POST    /v1/observe/sessions/{id}/undo                         session_or_key  admin            S50    Pro: 403 pro_required without undo_session; the console system agent acts
+planned    GET     /v1/security_pack/readiness                            session_or_key  viewer           S51    keys: admin; free: statuses and fixes, no evidence; ?period_days 7..365
+planned    POST    /v1/security_pack                                      session_or_key  admin            S51    Pro: 403 pro_required without security_pack; answers a tar stream of the sealed folder
 planned    POST    /mcp/{connector}                                       agent_key       actions:execute  S15
 planned    POST    /mcp/native                                            agent_key       actions:execute  S15
 planned    POST    /v1/slack/interact                                     public          -                S29    Slack signature; form body

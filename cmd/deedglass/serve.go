@@ -44,6 +44,7 @@ import (
 	"github.com/deedglass/deedglass/internal/observeapi"
 	"github.com/deedglass/deedglass/internal/policy"
 	"github.com/deedglass/deedglass/internal/policyapi"
+	"github.com/deedglass/deedglass/internal/securitypackapi"
 	"github.com/deedglass/deedglass/internal/store"
 	"github.com/deedglass/deedglass/internal/store/learnstore"
 	"github.com/deedglass/deedglass/internal/store/migrate"
@@ -301,6 +302,8 @@ func runServe(ctx context.Context, e *Env, args []string) error {
 	}
 	ua := &undoapi.API{Planner: planner, DB: db, Policies: pol.svc, Agents: people, Gate: gp}
 	oa := &observeapi.API{Service: obs, Planner: planner, DB: db, Agents: people, Gate: gp, Pro: pro.Allowed}
+	// 5h. Security review pack (S51): readiness free; the document Pro (licence.go, at start and daily).
+	spa := newSecurityPackAPI(ctx, e, cfg, db, led, cw, log)
 	aps.Attach(gp)
 	gp.SetJobHandler(gate.JobApprovalNotify, aps.NotifyJob)
 	gp.SetJobHandler(slacknotify.JobNotifyUpdate, slackN.UpdateJob)
@@ -384,7 +387,7 @@ func runServe(ctx context.Context, e *Env, args []string) error {
 	// S25: GET /v1/overview, with S11's usage counters and the decoder's lag threshold.
 	ov := console.NewOverview(console.OverviewOptions{Ledger: led, Usage: console.UsageFromStore(policystore.NewUsage(db)),
 		SlotLagAlertBytes: int64(cfg.SlotLagAlertMB) << 20, Log: log})
-	api.Mount(serveRoutes(api, db, ms, sk, led, people, keys, pol, gp, mw, cw, aps, whs, ua, &liveWiring{hub: hub, con: con, ov: ov, ins: ins, obs: oa,
+	api.Mount(serveRoutes(api, db, ms, sk, led, people, keys, pol, gp, mw, cw, aps, whs, ua, &liveWiring{hub: hub, con: con, ov: ov, ins: ins, obs: oa, spa: spa,
 		slack: &slacknotify.Handler{Store: slackstore.DB{DB: db}, Conns: cw.reg, Approvals: aps, Log: log}})...)
 	ln, err := net.Listen("tcp", cfg.Listen)
 	if err != nil {
@@ -530,6 +533,8 @@ func serveRoutes(api *httpx.Server, db *store.DB, ms []migrate.Migration, sk *se
 	}
 	// S50: observe mode (a nil API answers 503 in route-table tests).
 	routes = append(routes, observeapi.Routes(lw.obs)...)
+	// S51: the security review pack (a nil API answers 503 in route-table tests).
+	routes = append(routes, securitypackapi.Routes(lw.spa)...)
 	if lw.con == nil {
 		c, err := console.New(console.Options{Sessions: people})
 		if err != nil {
@@ -575,6 +580,7 @@ type liveWiring struct {
 	ins   *insights
 	slack *slacknotify.Handler // S29
 	obs   *observeapi.API      // S50
+	spa   *securitypackapi.API // S51
 }
 
 // insights is S27's wiring.

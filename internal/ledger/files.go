@@ -10,6 +10,7 @@ import (
 
 	"github.com/deedglass/deedglass/internal/deed"
 	"github.com/deedglass/deedglass/internal/httpx"
+	"github.com/deedglass/deedglass/internal/ids"
 )
 
 // POST /v1/deeds/files (S38, carried over from S37 §3.9): seal a file's sha256, size, media type
@@ -27,7 +28,8 @@ const MaxFileLabel = 120
 const MaxFileBytes int64 = 1<<53 - 1
 
 // FileMediaTypes are the media types a sealed file may have, in the order verify --file tries them.
-var FileMediaTypes = []string{"application/pdf", "text/markdown", "application/json", "text/plain", "text/html"}
+// application/gzip (S51) seals a security pack's records.tar.gz.
+var FileMediaTypes = []string{"application/pdf", "text/markdown", "application/json", "text/plain", "text/html", "application/gzip"}
 
 var reFileSHA256 = regexp.MustCompile(`^sha256:[0-9a-f]{64}$`)
 
@@ -94,7 +96,7 @@ func CheckSealFile(in SealFileBody) error {
 	case in.Bytes == nil || *in.Bytes < 0 || *in.Bytes > MaxFileBytes:
 		return httpx.ErrValidation("bytes", "bytes must be the file's size, a whole number from 0 to 9007199254740991.")
 	case !ValidFileMediaType(in.MediaType):
-		return httpx.ErrValidation("media_type", "media_type must be application/pdf, text/markdown, application/json or text/plain.")
+		return httpx.ErrValidation("media_type", "media_type must be application/pdf, text/markdown, application/json, text/plain, text/html or application/gzip.")
 	case !ValidFileLabel(in.Label):
 		return httpx.ErrValidation("label", "label must be 1 to 120 characters with no line breaks or control characters, like \"Full scan report · Acme\".")
 	}
@@ -124,17 +126,27 @@ func (h handlers) sealFile(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	data := FileSealedData{Bytes: *in.Bytes, Label: in.Label, MediaType: in.MediaType, SHA256: in.SHA256}
-	var env *deed.Envelope
-	err = h.l.db.OrgTx(r.Context(), o, func(ctx context.Context, tx pgx.Tx) error {
-		var err error
-		env, err = h.l.RecordAdmin(ctx, tx, AdminEvent{Action: AdminFileSealed, Actor: actor,
-			Target: &deed.Ref{Type: "org", ID: o.String()}, Reason: in.Label, RequestID: httpx.RequestID(ctx),
-			Data: data})
-		return err
-	})
+	env, err := h.l.SealFile(r.Context(), o, actor, data)
 	if err != nil {
 		return err
 	}
 	return httpx.WriteJSON(w, http.StatusCreated, SealedFile{Object: "sealed_file", SHA256: data.SHA256, Bytes: data.Bytes,
 		MediaType: data.MediaType, Label: data.Label, Deed: env})
+}
+
+// SealFile seals a file's sha256, size, media type and label as the admin deed file.sealed on
+// behalf of actor, in its own transaction (POST /v1/deeds/files and S51's security pack).
+func (l *Ledger) SealFile(ctx context.Context, org ids.OrgID, actor deed.Ref, data FileSealedData) (*deed.Envelope, error) {
+	if err := CheckSealFile(SealFileBody{SHA256: data.SHA256, Bytes: &data.Bytes, MediaType: data.MediaType, Label: data.Label}); err != nil {
+		return nil, err
+	}
+	var env *deed.Envelope
+	err := l.db.OrgTx(ctx, org, func(ctx context.Context, tx pgx.Tx) error {
+		var err error
+		env, err = l.RecordAdmin(ctx, tx, AdminEvent{Action: AdminFileSealed, Actor: actor,
+			Target: &deed.Ref{Type: "org", ID: org.String()}, Reason: data.Label, RequestID: httpx.RequestID(ctx),
+			Data: data})
+		return err
+	})
+	return env, err
 }

@@ -77,12 +77,14 @@ func TestNegotiateFeatures(t *testing.T) {
 		{"old client, report", PlanReport, nil, false, []string{FeatureScanFull, FeatureScanFix, FeaturePacksPro}},
 		{"old client, founding", PlanFounding, nil, false, []string{FeatureActionPrivate, FeatureScanFull, FeatureScanFix, FeaturePacksPro}},
 		{"old client, pro", PlanPro, nil, false, []string{FeatureActionPrivate, FeatureScanFull, FeatureScanFix, FeaturePacksPro}},
-		{"this build, pro", PlanPro, KnownFeatures(), true, []string{FeatureActionPrivate, FeatureScanFull, FeatureScanFix, FeaturePacksPro, FeatureUndoSession}},
-		{"this build, founding", PlanFounding, KnownFeatures(), true, []string{FeatureActionPrivate, FeatureScanFull, FeatureScanFix, FeaturePacksPro, FeatureUndoSession}},
-		{"this build, report: no undo_session", PlanReport, KnownFeatures(), true, []string{FeatureScanFull, FeatureScanFix, FeaturePacksPro}},
+		{"this build, pro", PlanPro, KnownFeatures(), true, []string{FeatureActionPrivate, FeatureScanFull, FeatureScanFix, FeaturePacksPro, FeatureUndoSession, FeatureSecurityPack}},
+		{"this build, founding", PlanFounding, KnownFeatures(), true, []string{FeatureActionPrivate, FeatureScanFull, FeatureScanFix, FeaturePacksPro, FeatureUndoSession, FeatureSecurityPack}},
+		{"this build, report: no undo_session or security_pack", PlanReport, KnownFeatures(), true, []string{FeatureScanFull, FeatureScanFix, FeaturePacksPro}},
+		{"an S50 build (no security_pack)", PlanPro, []string{FeatureScanFull, FeatureScanFix, FeaturePacksPro, FeatureActionPrivate, FeatureUndoSession}, true,
+			[]string{FeatureActionPrivate, FeatureScanFull, FeatureScanFix, FeaturePacksPro, FeatureUndoSession}},
 		{"a client that knows only undo_session", PlanPro, []string{FeatureUndoSession}, true, []string{FeatureUndoSession}},
 		{"names in the client's order don't reorder", PlanPro, []string{FeatureUndoSession, FeatureScanFull}, true, []string{FeatureScanFull, FeatureUndoSession}},
-		{"unknown names only: the v1 list", PlanPro, []string{"agency", "security_pack"}, true, V1PlanFeatures[PlanPro]},
+		{"unknown names only: the v1 list", PlanPro, []string{"agency", "client_report"}, true, V1PlanFeatures[PlanPro]},
 		{"an empty list: the v1 list", PlanPro, []string{}, true, V1PlanFeatures[PlanPro]},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -112,7 +114,7 @@ func TestV010AcceptsNegotiatedTokens(t *testing.T) {
 		{"absent", nil, false},
 		{"this build", KnownFeatures(), true},
 		{"v0.1.0's names", v010Known, true},
-		{"a later build", append(KnownFeatures(), "security_pack", "agency"), true},
+		{"a later build", append(KnownFeatures(), "client_report", "agency"), true},
 		{"unknown only", []string{"agency"}, true},
 	}
 	for _, plan := range []string{PlanReport, PlanFounding, PlanPro} {
