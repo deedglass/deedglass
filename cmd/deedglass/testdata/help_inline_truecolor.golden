@@ -35,6 +35,7 @@ exit 0
   webhooks            Send events to your endpoints                  [2m    [0m   [2mcreate · list · test · delete[0m
 [1mRecords[0m
   verify              Check records offline
+  security-pack       Answer a security review from your records     [2m    [0m   [2mreadiness · build · verify[0m
   deeds               Browse and export records                      [2m    [0m   [2mlist · show · share · export · seal-file[0m
   ledger              Check or prune the Ledger                      [2m    [0m   [2mcheck · prune[0m
 [1mConnectors[0m

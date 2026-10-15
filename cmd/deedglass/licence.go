@@ -8,6 +8,8 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	eesecuritypack "github.com/deedglass/deedglass/ee/securitypack"
+	"github.com/deedglass/deedglass/internal/securitypack"
 	"log/slog"
 	"net/http"
 	"os"
@@ -515,6 +517,24 @@ func undoSessionPro(ctx context.Context, e *Env, log *slog.Logger) *proFeature {
 // where a person starts the undo (POST /v1/observe/sessions/{id}/undo answers pro_required without
 // it); an undo already started completes even if the licence lapses before its countersign.
 func sessionUndoEngine() undoapi.SessionUndo { return undosession.New() }
+
+// securityPackPro is serve's security_pack check (S51).
+func securityPackPro(ctx context.Context, e *Env, log *slog.Logger) *proFeature {
+	return newProFeature(ctx, e, licence.FeatureSecurityPack, log)
+}
+
+// securityPackBuilder is ee/securitypack's builder while the licence grants security_pack, else
+// nil (POST /v1/security_pack then answers pro_required). The readiness view never asks.
+func securityPackBuilder(ctx context.Context, e *Env, log *slog.Logger) func() securitypack.Builder {
+	pro := securityPackPro(ctx, e, log)
+	b := eesecuritypack.New()
+	return func() securitypack.Builder {
+		if pro.Allowed() {
+			return b
+		}
+		return nil
+	}
+}
 
 // newProFeature asks now, then once a day until ctx ends.
 func newProFeature(ctx context.Context, e *Env, f string, log *slog.Logger) *proFeature {

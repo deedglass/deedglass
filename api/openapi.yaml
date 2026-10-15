@@ -56,6 +56,10 @@ tags:
     description: >-
       Observe mode (S50): watched sessions over a Postgres connector's change log, their seal, the
       free undo SQL and the one-step session undo (Pro) (docs/OBSERVE.md).
+  - name: Security pack
+    description: >-
+      The security review pack (S51): the free readiness view of 24 questions about how the org
+      controls its agents, and the sealed document for a reviewer (Pro) (docs/SECURITY_PACK.md).
   - name: Deeds
     description: >-
       Signed records of what agents did, and the public seal keys that check them offline
@@ -1351,6 +1355,89 @@ paths:
               schema:
                 type: string
                 contentMediaType: application/gzip
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/security_pack/readiness:
+    get:
+      operationId: getSecurityPackReadiness
+      summary: Read the security review readiness
+      description: >-
+        Free. The 24 questions of the security review pack with each one's status (`in_place`,
+        `partly`, `not_set_up`, `not_applicable`, `cant_tell`) and, for a gap, the fix. No evidence
+        and no document: those are the pack's (POST /v1/security_pack, Pro). Every status is
+        computed from this org's own records; a question whose evidence can't be read is
+        `cant_tell`, never `in_place`. The chain check here covers the last day (the pack checks the
+        whole period). Agent keys get 403.
+      tags: [Security pack]
+      security: [{bearerAuth: []}, {sessionCookie: []}]
+      x-deedglass-auth: session_or_key
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+        - {name: period_days, in: query, required: false, description: The window to count, 7 to 365 days (default 90)., schema: {type: integer, minimum: 7, maximum: 365}}
+      responses:
+        "200":
+          description: The readiness view.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+            Deedglass-Version:
+              $ref: "#/components/headers/DeedglassVersion"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SecurityPackReadiness"
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/security_pack:
+    post:
+      operationId: createSecurityPack
+      summary: Build the security review pack (Pro)
+      description: >-
+        Pro (`security_pack`): 403 `pro_required` without it, naming the free readiness view. Builds
+        the pack from this org's own records for the period and answers the folder as a tar stream:
+        `index.html` (print-ready, no script, no external request), `answers.md`, `answers.json`
+        (security_pack v1), `records.tar.gz` (export bundle v1 for the period, unless `records` is
+        false), `README.txt` and `pack.seal.json`, which holds a `file.sealed` deed over each of
+        those files and the public seal keys, so `deedglass security-pack verify` checks the folder
+        offline. With `aliases`, agent, connector and rule names become stable aliases and the
+        mapping is written only to `aliases.private.json`. Each build seals new records, so an
+        Idempotency-Key is ignored. Owners and admins only; agent keys get 403.
+      tags: [Security pack]
+      security: [{bearerAuth: []}, {sessionCookie: []}]
+      x-deedglass-auth: session_or_key
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+        - $ref: "#/components/parameters/CSRFWithSession"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                period_days: {type: integer, minimum: 7, maximum: 365, description: The window to count (default 90).}
+                aliases: {type: boolean, description: Replace agent, connector and rule names with aliases (default false).}
+                records: {type: boolean, description: Include the period's records as records.tar.gz (default true).}
+      responses:
+        "200":
+          description: The pack folder as a tar stream (one directory, security-pack-<org>-<date>/).
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+            Deedglass-Version:
+              $ref: "#/components/headers/DeedglassVersion"
+            Content-Disposition:
+              description: attachment; filename="security-pack.tar"
+              schema:
+                type: string
+          content:
+            application/x-tar:
+              schema:
+                type: string
+                contentMediaType: application/x-tar
         default:
           $ref: "#/components/responses/Error"
   /v1/ledger/check:
@@ -8735,6 +8822,44 @@ components:
         line: {type: string, description: '"Deedglass caught this: …", built from the record.'}
         undo_possible: {type: boolean}
         undo_free_path: {type: string, description: The free way back; every view that shows the item shows it.}
+    SecurityPackReadiness:
+      type: object
+      additionalProperties: false
+      required: [object, org, org_name, period, summary, rows]
+      properties:
+        object: {type: string, const: security_pack_readiness}
+        org: {type: string}
+        org_name: {type: string}
+        period:
+          type: object
+          additionalProperties: false
+          required: [from, to]
+          properties:
+            from: {type: string, format: date-time}
+            to: {type: string, format: date-time}
+        summary:
+          type: object
+          additionalProperties: false
+          required: [in_place, partly, not_set_up, not_applicable, cant_tell]
+          properties:
+            in_place: {type: integer}
+            partly: {type: integer}
+            not_set_up: {type: integer}
+            not_applicable: {type: integer}
+            cant_tell: {type: integer}
+        rows:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [id, group, group_title, question, status, fix]
+            properties:
+              id: {type: string}
+              group: {type: string}
+              group_title: {type: string}
+              question: {type: string}
+              status: {type: string, enum: [in_place, partly, not_set_up, not_applicable, cant_tell]}
+              fix: {type: string, description: What to do about a gap ("" when there is nothing to do).}
     ObserveUndoPreview:
       type: object
       required: [object, session, available, summary, headline, plan_digest, connector, counts, rows, tables, steps, checks, conflicts, excluded, notes, redacted, sql, refusals, pro, free_path, observed]

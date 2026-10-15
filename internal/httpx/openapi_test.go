@@ -186,6 +186,11 @@ func elsewhere() []Route {
 		adm("GET", "/v1/observe/sessions/{id}/undo_preview", "previewObserveUndo", RoleViewer),
 		adm("POST", "/v1/observe/sessions/{id}/undo", "createObserveUndo", RoleAdmin),
 	)
+	// S51: the security review pack (internal/securitypackapi). The build seals new records, so a
+	// replayed key must not hand back an old folder (IdemNever).
+	pack := adm("POST", "/v1/security_pack", "createSecurityPack", RoleAdmin)
+	pack.Idempotency = IdemNever
+	out = append(out, adm("GET", "/v1/security_pack/readiness", "getSecurityPackReadiness", RoleViewer), pack)
 	// S29: Slack interactivity (internal/notify/slack): public, a form body, Slack's signature.
 	out = append(out, Route{Method: "POST", Pattern: "/v1/slack/interact", OperationID: "slackInteract", Auth: Public, Idempotency: IdemNever,
 		BodyType: "application/x-www-form-urlencoded", MaxBody: 256 << 10, Handler: stub})

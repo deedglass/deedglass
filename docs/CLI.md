@@ -241,7 +241,10 @@ builds it. Hidden commands work but aren't in `deedglass help`.
 | `deedglass deeds show <deed_…|seq> [--json]` | Records | Show one record | built |
 | `deedglass deeds share <deed_…|seq> [--yes] [--json]` | Records | Make a link that checks one record | built |
 | `deedglass deeds export [--out <file>|-] [--format tar.gz|jsonl] [--from-seq n] [--to-seq n] [--since 1h] [--json]` | Records | Export records as a bundle | built |
-| `deedglass deeds seal-file <path> --label <text> [--media-type application/pdf|text/markdown|application/json|text/plain|text/html] [--out <path>.deed.json] [--json]` | Records | Seal a file's hash as a record | built |
+| `deedglass deeds seal-file <path> --label <text> [--media-type application/pdf|text/markdown|application/json|text/plain|text/html|application/gzip] [--out <path>.deed.json] [--json]` | Records | Seal a file's hash as a record | built |
+| `deedglass security-pack readiness [--period 90d] [--all] [--json]` | Records | Check how a security review would see your setup | built |
+| `deedglass security-pack build [--period 90d] [--out dir] [--aliases] [--no-records] [--records] [--json]` | Records | Build the sealed security review pack (Pro) | built |
+| `deedglass security-pack verify <folder> [--keys <file|url>] [--json]` | Records | Check a security review pack offline | built |
 | `deedglass ledger check [--from-seq n] [--to-seq n] [--json]` | Records | Check the record chain | built |
 | `deedglass ledger prune [--older-than 90d] [--dry-run] [--yes] [--json]` | Records | Remove old payloads; records stay | built |
 | `deedglass connector create --config <file> [--type rest] [--name orders] [--description …] [--json]` | Connectors | Add a connector | built |

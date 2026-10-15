@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="generator" content="Deedglass {{.Version}}">
+<title>How {{.Org}} controls its AI agents</title>
+<style>
+/* Security review pack (S51). Self-contained: no script, no font or image request. A printed
+   document first, a web page second. Colours are DESIGN.md tokens (light for print; the dark
+   ramp only on screens that ask for it). Status words carry the meaning; colour only repeats it. */
+:root {
+  --canvas: #F7F7F4; --surface: #FFFFFF; --text: #0D0F14; --text-2: #4A4F5E; --text-3: #6B7080;
+  --line: #E4E5EA; --line-strong: #B9BDC8; --code-bg: #EDEEF2; --accent: #2F5BEA;
+  --ok-t: #0F766E; --ok-b: #E6F6F3; --part-t: #9A5B00; --part-b: #FFF4E0;
+  --no-t: #C8322B; --no-b: #FDECEA; --na-t: #3F4453; --na-b: #EDEEF2; --ct-t: #5B4BDB; --ct-b: #EFEDFF;
+  --sans: "Inter", "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+@media screen and (prefers-color-scheme: dark) {
+  :root {
+    --canvas: #07080C; --surface: #0E1017; --text: #F5F6FA; --text-2: #8B90A0; --text-3: #7D8293;
+    --line: #1C1F2A; --line-strong: #2A2E3B; --code-bg: #141722; --accent: #6F8DFF;
+    --ok-t: #34E3C9; --ok-b: #0F2A28; --part-t: #F7B955; --part-b: #352407;
+    --no-t: #FF7A70; --no-b: #3A1512; --na-t: #C9CCD6; --na-b: #1C1F2A; --ct-t: #A99CFF; --ct-b: #211C45;
+  }
+}
+* { box-sizing: border-box; }
+html { background: var(--canvas); color: var(--text); -webkit-text-size-adjust: 100%; }
+body { margin: 0; font: 15px/1.6 var(--sans); font-feature-settings: "tnum" 1, "cv11" 1; }
+.doc { max-width: 52rem; margin: 0 auto; padding: 4rem 1.5rem 6rem; }
+.eyebrow { margin: 0 0 1rem; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--text-3); }
+h1 { margin: 0; font-size: 2.25rem; line-height: 1.15; letter-spacing: -.02em; font-weight: 600; text-wrap: balance; }
+.sub { margin: 1rem 0 0; max-width: 40rem; font-size: 17px; color: var(--text-2); text-wrap: pretty; }
+.summary { display: flex; flex-wrap: wrap; gap: .5rem 1.25rem; margin: 2rem 0 0; padding: 1rem 1.25rem; list-style: none;
+  border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.summary li { font-size: 15px; }
+.summary b { font-weight: 600; font-variant-numeric: tabular-nums; }
+.meta { display: grid; grid-template-columns: max-content 1fr; gap: .25rem 1.25rem; margin: 1.5rem 0 0; font-size: 13px; color: var(--text-2); }
+.meta dt { color: var(--text-3); }
+.meta dd { margin: 0; overflow-wrap: anywhere; }
+code, .mono { font-family: var(--mono); font-size: 12.5px; }
+.toc { margin: 2.5rem 0 0; padding: 0; list-style: none; columns: 2; column-gap: 2rem; font-size: 14px; }
+.toc a { color: var(--accent); text-decoration: none; }
+.toc a:hover, .toc a:focus-visible { text-decoration: underline; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+.group { margin: 4rem 0 0; }
+.group h2 { display: flex; align-items: baseline; gap: .75rem; margin: 0 0 .5rem; padding-bottom: .75rem; border-bottom: 1px solid var(--line-strong);
+  font-size: 1.375rem; letter-spacing: -.01em; font-weight: 600; }
+.group h2 .n { font-family: var(--mono); font-size: 13px; font-weight: 500; color: var(--text-3); }
+.q { padding: 1.5rem 0; border-bottom: 1px solid var(--line); break-inside: avoid; }
+.qhead { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; }
+.q h3 { margin: 0; font-size: 16px; line-height: 1.45; font-weight: 600; text-wrap: pretty; }
+.st { flex: none; padding: .125rem .625rem; border: 1px solid currentColor; border-radius: 999px; font-size: 12.5px; font-weight: 600; white-space: nowrap; }
+.st-in_place { color: var(--ok-t); background: var(--ok-b); }
+.st-partly { color: var(--part-t); background: var(--part-b); }
+.st-not_set_up { color: var(--no-t); background: var(--no-b); }
+.st-not_applicable { color: var(--na-t); background: var(--na-b); }
+.st-cant_tell { color: var(--ct-t); background: var(--ct-b); }
+.answer { margin: .625rem 0 0; color: var(--text); text-wrap: pretty; }
+.evidence { margin: .75rem 0 0; padding: .5rem .75rem; border-radius: 8px; background: var(--code-bg); color: var(--text-2);
+  font-family: var(--mono); font-size: 12px; line-height: 1.7; overflow-wrap: anywhere; }
+.evidence span + span::before { content: " · "; color: var(--text-3); }
+.evidence i { font-style: normal; color: var(--text-3); }
+.check, .refs { margin: .5rem 0 0; font-size: 13px; color: var(--text-2); }
+.check b { font-weight: 600; color: var(--text); }
+.refs { color: var(--text-3); font-size: 12.5px; }
+.plain { margin: 4rem 0 0; }
+.plain h2 { margin: 0 0 1rem; font-size: 1.375rem; font-weight: 600; letter-spacing: -.01em; }
+.plain ul, .plain ol { margin: 0; padding-left: 1.25rem; }
+.plain li { margin: .5rem 0; text-wrap: pretty; }
+.plain pre { margin: .5rem 0 0; padding: .75rem 1rem; border-radius: 8px; background: var(--code-bg); overflow-x: auto; }
+.runfoot { display: none; }
+@media (max-width: 40rem) {
+  .doc { padding: 2.5rem 1rem 4rem; }
+  h1 { font-size: 1.75rem; }
+  .toc { columns: 1; }
+  .qhead { flex-direction: column; gap: .5rem; }
+}
+@page { size: A4; margin: 18mm 16mm 20mm; }
+@media print {
+  html, body { background: #FFFFFF; }
+  body { font-size: 10.5pt; }
+  .doc { max-width: none; padding: 0; }
+  .toc { display: none; }
+  .group { margin-top: 0; break-before: page; }
+  .plain { break-before: page; margin-top: 0; }
+  .q { padding: 10pt 0; }
+  .evidence { background: #F4F5F7; }
+  a { color: inherit; text-decoration: none; }
+  .runfoot { display: block; position: fixed; bottom: -12mm; left: 0; right: 0; font-size: 8pt; color: #6B7080;
+    border-top: 1px solid #E4E5EA; padding-top: 3pt; font-family: var(--mono); }
+}
+</style>
+</head>
+<body>
+<main class="doc">
+  <header>
+    <p class="eyebrow">Security review · Deedglass</p>
+    <h1>How {{.Org}} controls its AI agents</h1>
+    <p class="sub">Answers built from {{.Org}}'s own Deedglass records, {{.Period}}. Every number below is counted from those records; the last page shows how to check them.</p>
+    <ul class="summary" aria-label="Summary">{{range .Summary}}<li><b>{{.N}}</b> {{.Word}}</li>{{end}}</ul>
+    <dl class="meta">
+      <dt>Org</dt><dd class="mono">{{.OrgID}}</dd>
+      <dt>Period</dt><dd>{{.PeriodISO}}</dd>
+      <dt>Built</dt><dd>{{.Built}} by Deedglass {{.Version}}</dd>
+      <dt>Records</dt><dd>{{.RecordsLine}}</dd>
+      <dt>Chain</dt><dd>{{.ChainLine}}</dd>
+    </dl>
+    <ol class="toc" aria-label="Groups">{{range .Groups}}<li><a href="#{{.ID}}">{{.Number}}. {{.Title}}</a></li>{{end}}</ol>
+  </header>
+  {{range .Groups}}
+  <section class="group" id="{{.ID}}" aria-labelledby="{{.ID}}-h">
+    <h2 id="{{.ID}}-h"><span class="n">{{.Number}}</span> {{.Title}}</h2>
+    {{range .Rows}}
+    <article class="q" id="{{.ID}}">
+      <div class="qhead"><h3>{{.Question}}</h3><span class="st st-{{.Status}}">{{.Word}}</span></div>
+      <p class="answer">{{.Answer}}</p>
+      {{if .Evidence}}<p class="evidence" aria-label="Evidence">{{range .Evidence}}<span><i>{{.Label}}</i> {{.Value}}</span>{{end}}</p>{{end}}
+      <p class="check"><b>How to check</b> {{.Check}}</p>
+      {{if .Refs}}<p class="refs">Related: {{.Refs}}</p>{{end}}
+    </article>
+    {{end}}
+  </section>
+  {{end}}
+  <section class="plain" aria-labelledby="limits-h">
+    <h2 id="limits-h">What this pack doesn't show</h2>
+    <ul>
+      <li>Agents or tools that never go through Deedglass. An agent that holds its own credentials to a system Deedglass doesn't front leaves no record here.</li>
+      <li>Changes on databases or tables Deedglass doesn't watch: observe mode off, or tables outside the connector's publication.</li>
+      <li>Whether the rules suit your business. The pack shows what the enforced rules do on four fixed inputs, not on every input.</li>
+      <li>Anything before {{.FromWords}} or outside this org, and anything about models or prompts: Deedglass records actions, not reasoning.</li>
+      <li>An outside opinion. Deedglass wrote this pack from the org's own records; no third party reviewed it.</li>
+    </ul>
+  </section>
+  <section class="plain" aria-labelledby="check-h">
+    <h2 id="check-h">How to check this pack</h2>
+    <ol>
+      <li>Install the Deedglass CLI, version {{.Version}} or later (<code>npx -y deedglass@latest version</code> runs it without installing). No account is needed.</li>
+      <li>In the folder that holds this file, run:<pre><code>deedglass security-pack verify .</code></pre>It checks every file against its sealed record ({{.SealedLine}}) and checks every record in <code>records.tar.gz</code>: seals, hashes and the unbroken chain. One changed byte in any file fails the check and names the file.</li>
+      <li>To make sure the records were sealed by {{.Org}}'s own server and not by someone else's, ask {{.Org}} for its public keys and pin them:<pre><code>deedglass security-pack verify . --keys keys.json</code></pre></li>
+      <li>Every <code>deed_</code> id in the evidence above is a record in <code>records.tar.gz</code>; <code>deedglass verify records.tar.gz</code> checks them on their own.</li>
+    </ol>
+  </section>
+  <p class="runfoot">{{.Org}} · {{.PeriodISO}} · answers.json {{.AnswersShort}}</p>
+</main>
+</body>
+</html>

@@ -35,6 +35,7 @@ Actions
   webhooks            Send events to your endpoints                         create · list · test · delete
 Records
   verify              Check records offline
+  security-pack       Answer a security review from your records            readiness · build · verify
   deeds               Browse and export records                             list · show · share · export · seal-file
   ledger              Check or prune the Ledger                             check · prune
 Connectors

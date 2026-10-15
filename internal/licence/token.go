@@ -44,11 +44,14 @@ const (
 	// FeatureUndoSession is S50's one-step undo of a whole watched session (ee/undosession).
 	// Per-action undo and the undo SQL a person runs themselves stay free.
 	FeatureUndoSession = "undo_session"
+	// FeatureSecurityPack is S51's security review document (ee/securitypack). The readiness view
+	// stays free and never asks.
+	FeatureSecurityPack = "security_pack"
 )
 
 // knownFeatures is every feature this build understands. A token may name others (forward
 // compatibility, ADR-079): they are kept so the signature still verifies, and never granted.
-var knownFeatures = []string{FeatureScanFull, FeatureScanFix, FeaturePacksPro, FeatureActionPrivate, FeatureUndoSession}
+var knownFeatures = []string{FeatureScanFull, FeatureScanFix, FeaturePacksPro, FeatureActionPrivate, FeatureUndoSession, FeatureSecurityPack}
 
 // KnownFeatures is this build's feature list, in a stable order: the token request's
 // features_known (S50 §3.8), so the site signs only names this build understands.
@@ -62,8 +65,8 @@ const maxFeatures = 32
 // intersected with the request's features_known (S50 §3.8).
 var PlanFeatures = map[string][]string{
 	PlanReport:   {FeatureScanFull, FeatureScanFix, FeaturePacksPro},
-	PlanFounding: {FeatureActionPrivate, FeatureScanFull, FeatureScanFix, FeaturePacksPro, FeatureUndoSession},
-	PlanPro:      {FeatureActionPrivate, FeatureScanFull, FeatureScanFix, FeaturePacksPro, FeatureUndoSession},
+	PlanFounding: {FeatureActionPrivate, FeatureScanFull, FeatureScanFix, FeaturePacksPro, FeatureUndoSession, FeatureSecurityPack},
+	PlanPro:      {FeatureActionPrivate, FeatureScanFull, FeatureScanFix, FeaturePacksPro, FeatureUndoSession, FeatureSecurityPack},
 }
 
 // V1PlanFeatures are the lists the site signed before feature negotiation (v0.1.0): what it still

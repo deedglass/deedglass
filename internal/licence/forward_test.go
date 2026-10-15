@@ -37,9 +37,9 @@ func TestForwardCompatibleFeatures(t *testing.T) {
 		wantErr  error // nil: accepted; errBody: refused shape; ErrSignature
 		granted  []string
 	}{
-		{name: "known and unknown", features: []string{FeatureScanFull, "future_one", FeaturePacksPro, "security_pack", "agency"},
+		{name: "known and unknown", features: []string{FeatureScanFull, "future_one", FeaturePacksPro, "client_report", "agency"},
 			granted: []string{FeatureScanFull, FeaturePacksPro}},
-		{name: "unknown only", features: []string{"future_one", "security_pack", "agency"}, granted: []string{}},
+		{name: "unknown only", features: []string{"future_one", "client_report", "agency"}, granted: []string{}},
 		{name: "known only", features: PlanFeatures[PlanPro], granted: PlanFeatures[PlanPro]},
 		{name: "duplicate known", features: []string{FeatureScanFix, FeatureScanFix, "agency"}, granted: []string{FeatureScanFix}},
 		{name: "at the cap", features: many[:maxFeatures], granted: []string{}},
