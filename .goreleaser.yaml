@@ -38,6 +38,9 @@ builds:
       - -gcflags=github.com/deedglass/deedglass/internal/cli/...=-l
       - -gcflags=github.com/deedglass/deedglass/internal/store/migrate=-l
       - -gcflags=github.com/deedglass/deedglass/internal/mcp/snippet=-l
+      - -gcflags=github.com/deedglass/deedglass/internal/securitypack/...=-l
+      - -gcflags=github.com/deedglass/deedglass/ee/securitypack=-l
+      - -gcflags=github.com/deedglass/deedglass/internal/securitypackapi=-l
     ldflags:
       - -s -w
       - -X github.com/deedglass/deedglass/internal/buildinfo.Version={{ .Version }}

@@ -22,11 +22,11 @@ import (
 
 // Input is one collection.
 type Input struct {
-	Org     ids.OrgID
-	Period  securitypack.Period
-	Now     time.Time
-	Build   securitypack.BuildFacts
-	Egress  *securitypack.Egress // nil: Can't tell
+	Org    ids.OrgID
+	Period securitypack.Period
+	Now    time.Time
+	Build  securitypack.BuildFacts
+	Egress *securitypack.Egress // nil: Can't tell
 	// ChainFrom is where the chain check starts (the period's start for a pack; the readiness view
 	// checks the last day, like the Overview). ChainBudget bounds it (0: the Ledger's default); a
 	// check that runs out is Can't tell.

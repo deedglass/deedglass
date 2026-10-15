@@ -110,7 +110,9 @@ func (p *ports) seal(ctx context.Context, d sp.FileData) (json.RawMessage, error
 	return env.MarshalCanonical()
 }
 
-func (p *ports) keys(context.Context) (json.RawMessage, error) { return json.Marshal(deedtest.KeySet()) }
+func (p *ports) keys(context.Context) (json.RawMessage, error) {
+	return json.Marshal(deedtest.KeySet())
+}
 
 func (p *ports) export(_ context.Context, _, _ time.Time, w io.Writer) (int64, error) {
 	if p.empty {
