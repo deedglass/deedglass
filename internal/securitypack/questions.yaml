@@ -48,7 +48,7 @@ questions:
     needs: [keys]
     evidence: [agent_keys, admin_keys, unused_keys]
     answer:
-      in_place: "{agent_keys:live agent key belongs|live agent keys each belong} to exactly one agent and carry only action scopes; agent keys can never hold admin rights. Every key has been used."
+      in_place: "{agent_keys:live agent key belongs|live agent keys each belong} to exactly one agent with action scopes only; agent keys can never hold admin rights. Every key has been used."
       partly: "{agent_keys:live agent key belongs|live agent keys each belong} to exactly one agent with action scopes only, but {unused_keys:key older than 30 days has|keys older than 30 days have} never been used."
       not_set_up: No agent has a live key, so no agent can call tools.
     fix:
@@ -82,8 +82,8 @@ questions:
     needs: [connectors, actions]
     evidence: [connectors, active_connectors, proxy_actions]
     answer:
-      in_place: "{connectors:system is|systems are} listed as connectors. Every action in the period went through one of them."
-      partly: "{connectors:system is|systems are} listed as connectors, but {proxy_actions:action|actions} in the period reached a tool through an MCP server wrapped by Deedglass rather than a connector; that server's own reach isn't listed here."
+      in_place: "{connectors:system is listed as a connector|systems are listed as connectors}. Every action in the period went through one of them."
+      partly: "{connectors:system is listed as a connector|systems are listed as connectors}, but {proxy_actions:action|actions} in the period reached a tool through an MCP server wrapped by Deedglass rather than a connector; that server's own reach isn't listed here."
       not_set_up: No connectors are set up, so Deedglass doesn't list any system an agent can reach.
     fix:
       partly: "Move the tools agents call through wrapped MCP servers to connectors where one exists: deedglass connector types"
@@ -197,7 +197,7 @@ questions:
     needs: [rules, approvals]
     evidence: [approvals, expired, overdue, median_minutes]
     answer:
-      in_place: "Every waiting action has an expiry. In the period {expired:approval|approvals} expired and none is past its expiry; the median decision took {median_minutes} minutes."
+      in_place: "Every waiting action has an expiry. In the period {expired:approval|approvals} expired, and none is waiting past its expiry."
       partly: "Every waiting action has an expiry, but {overdue:approval is|approvals are} still waiting past it."
       not_applicable: No enforced rule holds an action for a person, so nothing waits.
     fix:
@@ -378,7 +378,7 @@ questions:
     needs: [records, actions]
     evidence: [deeds_checked, chain, chain_head, finished, unsealed]
     answer:
-      in_place: "{finished:finished action has|finished actions in the period each have} a sealed record. The chain of {deeds_checked:record|records} is intact up to {chain_head}."
+      in_place: "{finished:finished action has|finished actions in the period each have} a sealed record. The chain of {deeds_checked:record|records} is unbroken."
       partly: "The chain of {deeds_checked:record|records} is intact, but {unsealed:finished action has|finished actions have} no sealed record yet."
       not_set_up: "The chain is broken at {chain}. Records after that point can't be trusted until it is looked at."
     fix:
@@ -411,7 +411,7 @@ questions:
     needs: [build]
     evidence: [running, tested_version, matched, differs, run_on]
     answer:
-      in_place: "Deedglass {running} ran its attack suite on {run_on}: {matched} cases matched their expected outcome, {differs} differed."
+      in_place: "The attack suite ran against Deedglass {running} on {run_on}: {matched} cases matched their expected outcome, {differs} differed."
       partly: "The attack suite ran against Deedglass {tested_version} on {run_on}: {matched} cases matched, {differs} differed. This server runs {running}."
       not_applicable: This build carries no attack suite result.
     fix:

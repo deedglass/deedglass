@@ -1,0 +1,30 @@
+/* S51: Settings › Security review (controllers/settings.ts; DESIGN.md "Readiness row"). Vercel's
+   checks list: the status word, one line, the fix. The existing state colours only (teal in place,
+   amber partly, red not set up, neutral not applicable, violet can't tell); the word carries the
+   meaning. No new token. At 360 px the id drops under the text. */
+
+.sp-summary { margin: 0 0 var(--space-1); font-weight: 600; font-variant-numeric: tabular-nums; }
+.sp-period { margin: 0 0 var(--space-5); font-size: var(--type-footnote-size); line-height: var(--type-footnote-line); }
+.sp-list { list-style: none; margin: 0; padding: var(--space-2) 0; }
+.sp-row {
+  display: grid;
+  grid-template-columns: 8rem minmax(0, 1fr) auto;
+  gap: var(--space-2) var(--space-4);
+  align-items: start;
+  padding: var(--space-3) var(--space-5);
+  min-width: 0;
+}
+.sp-row + .sp-row { border-top: 1px solid var(--hairline); }
+.sp-row > .chip { justify-self: start; white-space: nowrap; }
+.sp-text { display: grid; gap: 2px; min-width: 0; }
+.sp-q { margin: 0; color: var(--text); text-wrap: pretty; }
+.sp-fix { margin: 0; color: var(--text-2); font-size: var(--type-footnote-size); line-height: var(--type-footnote-line); text-wrap: pretty; overflow-wrap: anywhere; }
+.sp-id { color: var(--text-2); font-family: var(--font-mono); font-size: var(--type-mono-s-size); line-height: var(--type-mono-s-line); white-space: nowrap; }
+.sp-none { display: flex; gap: var(--space-2); align-items: center; margin: 0; padding: var(--space-4) var(--space-5); color: var(--verified-fg); }
+.sp-cli code { font-family: var(--font-mono); font-size: var(--type-mono-s-size); color: var(--text-2); overflow-wrap: anywhere; }
+#settings-body .set-group + .set-group { margin-top: var(--space-4); }
+
+@media (max-width: 767.98px) {
+  .sp-row { grid-template-columns: minmax(0, 1fr); padding: var(--space-3) var(--space-4); }
+  .sp-id { white-space: normal; overflow-wrap: anywhere; }
+}

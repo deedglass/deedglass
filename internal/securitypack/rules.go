@@ -1,6 +1,7 @@
 package securitypack
 
 import (
+	"fmt"
 	"sort"
 	"strings"
 	"time"
@@ -335,7 +336,11 @@ func ruleMismatches(e *env) (Status, Evidence) {
 	a := e.f.Actions
 	open := append([]string(nil), a.MismatchOpen...)
 	sort.Strings(open)
-	ev := Evidence{"mismatches": a.Mismatch, "followed_up": a.MismatchFollowed, "open": strings.Join(open, ", ")}
+	list := strings.Join(open, ", ")
+	if rest := a.Mismatch - a.MismatchFollowed - len(open); rest > 0 && len(open) > 0 {
+		list += fmt.Sprintf(" and %s more", formatCount(int64(rest)))
+	}
+	ev := Evidence{"mismatches": a.Mismatch, "followed_up": a.MismatchFollowed, "open": list}
 	if a.Mismatch == 0 {
 		return NotApplicable, ev
 	}

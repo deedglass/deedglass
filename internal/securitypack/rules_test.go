@@ -3,6 +3,7 @@ package securitypack
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"os"
 	"regexp"
 	"strings"
@@ -590,5 +591,108 @@ func TestForbiddenWords(t *testing.T) {
 	}
 	if m := forbidden.FindString(CantTellAnswer("rules", "x")); m != "" {
 		t.Fatal(m)
+	}
+}
+
+func TestAliasesAndPresent(t *testing.T) {
+	f := goodFacts()
+	f.Rules.Shadow = active("acme-next", goodPolicy)
+	f.Rules.Shadow.PolicyID = "pol_01k0000000000000000000000b"
+	a := NewAliases(f)
+	if a.Name("agent", "support-bot") != "agent-1" || a.Name("agent", "billing-bot") != "agent-2" || a.Name("connector", "orders") != "connector-1" ||
+		a.Name("rules", "acme-review") != "rules-1" || a.Name("rules", "acme-next") != "rules-2" || a.Name("agent", "unknown") != "unknown" {
+		t.Fatalf("%+v", a.Entries)
+	}
+	var none *Aliases
+	if none.Name("agent", "x") != "x" {
+		t.Fatal("nil aliases")
+	}
+	// default-deny is Deedglass's name: never aliased, so rules_active still reads it.
+	f2 := goodFacts()
+	f2.Rules.Enforce = active(DefaultDenyName, strings.Replace(allowAllPolicy, "allow-all\ndefaults", "default-deny\ndefaults", 1))
+	p, err := Build(context.Background(), f2, Options{Aliases: NewAliases(f2)})
+	if err != nil || find(p, "rules_active").Status != Partly || f2.Agents[0].Name != "agent-1" {
+		t.Fatalf("%v %s", err, find(p, "rules_active").Status)
+	}
+	p = build(t, goodFacts())
+	gs := p.Groups()
+	if len(gs) != 8 || gs[0].Number != 1 || gs[0].Title != "Inventory" || len(gs[0].Answers) != 4 {
+		t.Fatalf("%+v", gs[0])
+	}
+	if l := EvidenceLine(find(p, "keys_rotated")); l != "live keys 3 · older than 90 days 0 · oldest 28 Sep 2026" {
+		t.Fatal(l)
+	}
+	ct := goodFacts()
+	ct.Fail(CollectorKeys, "x")
+	if l := EvidenceLine(find(build(t, ct), "keys_rotated")); l != "unreadable keys" {
+		t.Fatal(l)
+	}
+	if r := RefLine([]Ref{{Framework: "OWASP LLM 2025", ID: "LLM06", Title: "Excessive Agency"}, {Framework: "NIST AI RMF 1.0", ID: "MANAGE 2.4"}, {Framework: "X", ID: "1"}}); r != "OWASP LLM06 Excessive Agency · NIST AI RMF MANAGE 2.4 · X 1" {
+		t.Fatal(r)
+	}
+	items := Summary{InPlace: 3, NotSetUp: 1}.Items()
+	if len(items) != 2 || items[1].Status != NotSetUp || Count(1234) != "1,234" || Short("sha256:"+strings.Repeat("ab", 32)) != "abababababab" {
+		t.Fatalf("%+v", items)
+	}
+	for in, want := range map[PeriodJSON]string{
+		{From: "2026-07-20T00:00:00Z", To: "2026-10-18T00:00:00Z"}: "20 July to 18 October 2026",
+		{From: "2025-12-01T00:00:00Z", To: "2026-01-05T00:00:00Z"}: "1 December 2025 to 5 January 2026",
+		{From: "x", To: "y"}: "x to y",
+	} {
+		if got := PeriodWords(in); got != want {
+			t.Errorf("%v: %q", in, got)
+		}
+	}
+	if FileLabel("index.html", "org_x") != "Security review pack · index.html · org_x" || ErrNoRecords.Error() == "" || Status("x").Word() != "x" {
+		t.Fatal("labels")
+	}
+	b, _ := Questions()
+	if b.GroupTitle("rules") != "Rules" || b.GroupTitle("nope") != "" {
+		t.Fatal("group titles")
+	}
+	if probeLabel("other") != "other" {
+		t.Fatal("probe label")
+	}
+	if _, err := Fix(Answer{ID: "nope", Status: Partly}); err == nil {
+		t.Fatal("fix for an unknown question")
+	}
+}
+
+func TestRuleEdges(t *testing.T) {
+	f := goodFacts()
+	f.Agents = append(f.Agents, Agent{ID: "agt_01k0000000000000000000000c", Name: "old-bot", Status: "stopped"})
+	if a := find(build(t, f), "agents_listed"); a.Status != InPlace || a.Evidence["stopped"] != 1 {
+		t.Fatalf("a stopped agent without an owner: %s %v", a.Status, a.Evidence)
+	}
+	f = goodFacts()
+	f.Actions.Mismatch, f.Actions.MismatchFollowed = 9, 0
+	f.Actions.MismatchOpen = []string{"act_b", "act_a"}
+	if a := find(build(t, f), "mismatches_handled"); !strings.Contains(a.Answer, "act_a, act_b and 7 more") {
+		t.Fatal(a.Answer)
+	}
+	if got, err := fill("{n:one {x}|many {x}}", Evidence{"n": 2, "x": "y"}); err != nil || got != "many y" {
+		t.Fatal(got, err)
+	}
+	if _, err := fill("{n:a", Evidence{"n": 1}); err == nil {
+		t.Fatal("unclosed")
+	}
+}
+
+func TestFolderReadErrors(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(dir+"/"+FileSeal, []byte(strings.Repeat(" ", MaxSealBytes+1)), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if r := VerifyFolder(dir, nil); r.OK || !strings.Contains(r.Problems[0], "larger than") {
+		t.Fatal(r.Problems)
+	}
+	if _, _, err := HashFile(dir + "/missing"); err == nil || reasonOf(err) != "it doesn't exist" {
+		t.Fatal(err)
+	}
+	if reasonOf(os.ErrPermission) != "permission denied" || reasonOf(errors.New("odd.")) != "odd" {
+		t.Fatal("reasons")
+	}
+	if _, err := readPack(dir + "/missing.json"); err == nil {
+		t.Fatal("read a missing pack")
 	}
 }

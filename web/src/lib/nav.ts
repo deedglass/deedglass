@@ -33,6 +33,7 @@ export const SETTINGS_SECTIONS: readonly { key: string; label: string }[] = [
   { key: 'approvals', label: 'Approvals' },
   { key: 'webhooks', label: 'Webhooks' },
   { key: 'seal-keys', label: 'Seal keys' },
+  { key: 'security', label: 'Security review' },
   { key: 'notifications', label: 'Notifications' },
   { key: 'danger', label: 'Danger zone' },
 ];

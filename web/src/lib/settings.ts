@@ -6,11 +6,11 @@ import { fill } from './copy.ts';
 import { settingsCopy as c } from './copy-settings.ts';
 import type { Role } from './types.ts';
 
-export const SECTION_KEYS = ['general', 'members', 'keys', 'approvals', 'webhooks', 'seal-keys', 'notifications', 'danger'] as const;
+export const SECTION_KEYS = ['general', 'members', 'keys', 'approvals', 'webhooks', 'seal-keys', 'security', 'notifications', 'danger'] as const;
 export type SectionKey = (typeof SECTION_KEYS)[number];
 
 /** Old or friendly names for a section. `org` was S24's key for General. */
-export const SECTION_ALIASES: Readonly<Record<string, SectionKey>> = { org: 'general', people: 'members', 'api-keys': 'keys', 'admin-keys': 'keys' };
+export const SECTION_ALIASES: Readonly<Record<string, SectionKey>> = { org: 'general', people: 'members', 'api-keys': 'keys', 'admin-keys': 'keys', 'security-review': 'security' };
 
 const BASE = '/app/settings';
 const SEGMENT = /^[a-z][a-z0-9-]{0,31}$/; // the server's rule for /app/settings/<section>

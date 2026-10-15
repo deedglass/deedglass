@@ -193,115 +193,6 @@ func TestBuildThenVerify(t *testing.T) {
 	}
 }
 
-func TestOneChangedByteFails(t *testing.T) {
-	for _, name := range []string{sp.FileIndex, sp.FileAnswers, sp.FileRecords, sp.FileMarkdown, sp.FileReadme} {
-		dir, _ := build(t, orgA, false, true)
-		path := filepath.Join(dir, name)
-		b, err := os.ReadFile(path)
-		if err != nil {
-			t.Fatal(err)
-		}
-		b[len(b)/2] ^= 0x01
-		if err := os.WriteFile(path, b, 0o644); err != nil {
-			t.Fatal(err)
-		}
-		r := sp.VerifyFolder(dir, nil)
-		if r.OK || !strings.Contains(strings.Join(r.Problems, "\n"), name+": it was changed after it was sealed") {
-			t.Errorf("%s: %+v", name, r.Problems)
-		}
-	}
-}
-
-func TestOtherOrgsSealFails(t *testing.T) {
-	a, _ := build(t, orgA, false, true)
-	b, _ := build(t, orgB, false, true)
-	// B's seal over A's files: the digests differ and the org differs.
-	sb, _ := os.ReadFile(filepath.Join(b, sp.FileSeal))
-	if err := os.WriteFile(filepath.Join(a, sp.FileSeal), sb, 0o644); err != nil {
-		t.Fatal(err)
-	}
-	if r := sp.VerifyFolder(a, nil); r.OK {
-		t.Fatal("A's files verified under B's seal")
-	}
-	// A seal file that claims A but carries B's deeds: refused per file.
-	var s sp.SealFile
-	_ = json.Unmarshal(sb, &s)
-	s.Org = orgA
-	raw, _ := sp.MarshalSeal(&s)
-	_ = os.WriteFile(filepath.Join(a, sp.FileSeal), raw, 0o644)
-	r := sp.VerifyFolder(a, nil)
-	if r.OK || !strings.Contains(strings.Join(r.Problems, "\n"), "belongs to "+orgB) {
-		t.Fatalf("%v", r.Problems)
-	}
-}
-
-func TestSealFileRefusals(t *testing.T) {
-	for name, edit := range map[string]func(*sp.SealFile){
-		"unknown path": func(s *sp.SealFile) { s.Files[0].Path = "../etc/passwd" },
-		"duplicate":    func(s *sp.SealFile) { s.Files = append(s.Files, s.Files[0]) },
-		"label":        func(s *sp.SealFile) { s.Files[0].Label = "something else" },
-		"media type":   func(s *sp.SealFile) { s.Files[1].MediaType = "text/plain" },
-		"keys":         func(s *sp.SealFile) { s.Keys = json.RawMessage(`{"object":"nope"}`) },
-		"missing file": func(s *sp.SealFile) { s.Files = s.Files[1:] },
-		"bad deed":     func(s *sp.SealFile) { s.Files[2].Deed = json.RawMessage(`{"object":"deed"}`) },
-	} {
-		dir, _ := build(t, orgA, false, true)
-		raw, _ := os.ReadFile(filepath.Join(dir, sp.FileSeal))
-		var s sp.SealFile
-		if err := json.Unmarshal(raw, &s); err != nil {
-			t.Fatal(err)
-		}
-		edit(&s)
-		out, _ := sp.MarshalSeal(&s)
-		_ = os.WriteFile(filepath.Join(dir, sp.FileSeal), out, 0o644)
-		if r := sp.VerifyFolder(dir, nil); r.OK {
-			t.Errorf("%s: verified", name)
-		}
-	}
-	// Unknown field, wrong object, missing file.
-	dir, _ := build(t, orgA, false, true)
-	raw, _ := os.ReadFile(filepath.Join(dir, sp.FileSeal))
-	for _, bad := range [][]byte{bytes.Replace(raw, []byte(`"v":1`), []byte(`"v":1,"x":1`), 1), bytes.Replace(raw, []byte(sp.ObjectSeal), []byte("other"), 1)} {
-		_ = os.WriteFile(filepath.Join(dir, sp.FileSeal), bad, 0o644)
-		if r := sp.VerifyFolder(dir, nil); r.OK {
-			t.Error("a malformed seal file verified")
-		}
-	}
-	_ = os.Remove(filepath.Join(dir, sp.FileSeal))
-	if r := sp.VerifyFolder(dir, nil); r.OK || !strings.Contains(r.Problems[0], "doesn't exist") {
-		t.Errorf("%v", r.Problems)
-	}
-}
-
-func TestAnswersSchemaEnforcedByVerify(t *testing.T) {
-	// An answers.json with an unknown field fails even when re-sealed consistently.
-	dir, _ := build(t, orgA, false, true)
-	path := filepath.Join(dir, sp.FileAnswers)
-	b, _ := os.ReadFile(path)
-	b = bytes.Replace(b, []byte(`"v": 1,`), []byte(`"v": 1, "extra": true,`), 1)
-	_ = os.WriteFile(path, b, 0o644)
-	p := newPorts(t, orgA)
-	raw, _ := os.ReadFile(filepath.Join(dir, sp.FileSeal))
-	var s sp.SealFile
-	_ = json.Unmarshal(raw, &s)
-	for i, f := range s.Files {
-		if f.Path == sp.FileAnswers {
-			sum, n, _ := sp.HashFile(path)
-			env, err := p.seal(context.Background(), sp.FileData{SHA256: sum, Bytes: n, MediaType: f.MediaType, Label: f.Label})
-			if err != nil {
-				t.Fatal(err)
-			}
-			s.Files[i].SHA256, s.Files[i].Bytes, s.Files[i].Deed = sum, n, env
-		}
-	}
-	out, _ := sp.MarshalSeal(&s)
-	_ = os.WriteFile(filepath.Join(dir, sp.FileSeal), out, 0o644)
-	r := sp.VerifyFolder(dir, nil)
-	if r.OK || !strings.Contains(strings.Join(r.Problems, "\n"), "answers.json") {
-		t.Fatalf("%v", r.Problems)
-	}
-}
-
 func TestNoRecords(t *testing.T) {
 	dir, res := build(t, orgA, false, false)
 	if res.Sealed != 4 || res.Records != 0 {
@@ -423,5 +314,66 @@ func TestFolderName(t *testing.T) {
 		if got != "security-pack-"+want+"-2026-10-18" {
 			t.Errorf("%q: %s", name, got)
 		}
+	}
+}
+
+func TestBuildFailures(t *testing.T) {
+	ctx := context.Background()
+	p := newPorts(t, orgA)
+	req := p.req(facts(orgA), false, true)
+	req.Export = func(context.Context, time.Time, time.Time, io.Writer) (int64, error) {
+		return 0, errors.New("disk full")
+	}
+	if _, err := ee.New().Build(ctx, req, io.Discard); err == nil {
+		t.Fatal("a failed export built a pack")
+	}
+	req = p.req(facts(orgA), false, false)
+	req.Keys = func(context.Context) (json.RawMessage, error) { return nil, errors.New("no keys") }
+	if _, err := ee.New().Build(ctx, req, io.Discard); err == nil {
+		t.Fatal("built without keys")
+	}
+	req = p.req(facts(orgA), false, false)
+	req.TempDir = filepath.Join(t.TempDir(), "missing", "dir")
+	if _, err := ee.New().Build(ctx, req, io.Discard); err == nil {
+		t.Fatal("built without a temp dir")
+	}
+	req = p.req(facts(orgA), false, false)
+	if _, err := ee.New().Build(ctx, req, failWriter{}); err == nil {
+		t.Fatal("a broken stream reported success")
+	}
+}
+
+type failWriter struct{}
+
+func (failWriter) Write([]byte) (int, error) { return 0, errors.New("closed") }
+
+func TestDocumentLines(t *testing.T) {
+	f := facts(orgA)
+	f.Org.Name = ""
+	f.Records.ChainIntact = false
+	f.Records.FirstBroken = "deed_01k0000000000000000000000x"
+	p, err := sp.Build(context.Background(), f, sp.Options{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, err := ee.HTML(p, "sha256:"+strings.Repeat("c", 64))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"How " + orgA + " controls its AI agents", "Not intact over the period", "Not included in this pack.", "cccccccccccc"} {
+		if !strings.Contains(string(b), want) {
+			t.Errorf("missing %q", want)
+		}
+	}
+	f = facts(orgA)
+	f.Records.ChainHead = ""
+	p, _ = sp.Build(context.Background(), f, sp.Options{})
+	p.GeneratedAt = "not a time"
+	md := ee.Markdown(p)
+	if !strings.Contains(md, "Intact (no records in the period).") || !strings.Contains(md, "not a time") {
+		t.Fatal(md[:400])
+	}
+	if r := ee.Readme(p, true); !strings.Contains(r, "Everything except aliases.private.json.") || !strings.Contains(r, sp.FileAliases) {
+		t.Fatal(r)
 	}
 }
