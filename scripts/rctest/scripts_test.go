@@ -140,6 +140,12 @@ func TestPublicSwitchPatch(t *testing.T) {
 		t.Fatal(out)
 	}
 	defer run(t, root, nil, "git", "worktree", "remove", "--force", wt)
+	if _, code := run(t, wt, nil, "git", "apply", "--reverse", "--check", patch); code == 0 {
+		// The switch has happened (go-public.sh, DL-090): HEAD already holds the patch, so only the
+		// result is checked.
+		checkPublicSwitched(t, wt)
+		return
+	}
 	if out, code := run(t, wt, nil, "git", "apply", patch); code != 0 {
 		t.Fatalf("git apply: %s", out)
 	}
@@ -148,8 +154,14 @@ func TestPublicSwitchPatch(t *testing.T) {
 	if stat != want {
 		t.Fatalf("the patch touches:\n%s", stat)
 	}
+	checkPublicSwitched(t, wt)
+}
+
+// checkPublicSwitched fails when either banned list in dir still bans the until-public phrase.
+func checkPublicSwitched(t *testing.T, dir string) {
+	t.Helper()
 	for _, f := range []string{"scripts/banned_words.txt", "internal/policy/bannedwords.txt"} {
-		b, _ := os.ReadFile(filepath.Join(wt, f))
+		b, _ := os.ReadFile(filepath.Join(dir, f))
 		phrase := "open" + " source" // spelled in two parts: the phrase stays banned in this repo until the switch
 		if strings.Contains(strings.ToLower(string(b)), phrase) || strings.Contains(string(b), "open"+"-source") {
 			t.Fatalf("%s still bans the until-public phrase", f)
