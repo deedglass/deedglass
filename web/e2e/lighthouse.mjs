@@ -31,7 +31,7 @@ const hero = JSON.parse(readFileSync(join(process.env.WEB_E2E_WORK ?? '.', 'fixt
 const plan = [['/login', false], ['/app', true], ['/app/_kit', true], ['/app/actions', true], [`/app/actions/${hero.mismatch}`, true], ['/app/deeds', true], ['DEED', true], ['/app/agents', true], ['AGENT', true],
   // S26: the seven control pages (a pending approval, the acme-demo policy, the demo Postgres connector);
   // S27: the policy's Replay tab (it opens on the latest replay)
-  ['/app/approvals', true], ['APPROVAL', true], ['/app/policies', true], ['POLICY', true], ['POLICY_REPLAY', true], ['/app/connectors', true], ['CONNECTOR', true], ['/app/settings/members', true]];
+  ['/app/approvals', true], ['APPROVAL', true], ['/app/policies', true], ['POLICY', true], ['POLICY_REPLAY', true], ['/app/connectors', true], ['CONNECTOR', true], ['/app/settings/members', true], ['/app/settings/security', true]];
 const rows = [];
 let failed = 0;
 let signedIn = false;

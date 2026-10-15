@@ -67,7 +67,7 @@ for (const theme of ['dark', 'light'] as const) {
       const pages = ['/app/approvals', `/app/approvals/${ap.approval}`, `/app/approvals/${four.approval}`, '/app/approvals?tab=history', '/app/policies',
         `/app/policies/${pol}?v=2`, `/app/policies/${pol}?tab=dry-run&v=2`, `/app/policies/${pol}?tab=tests&v=2`, `/app/policies/${pol}?tab=versions`, `/app/policies/${pol}?tab=replay`,
         '/app/connectors', '/app/connectors/new', '/app/connectors/new?step=configure&type=rest', `/app/connectors/${con}`,
-        ...['general', 'members', 'keys', 'approvals', 'webhooks', 'seal-keys', 'notifications', 'danger'].map((s) => `/app/settings/${s}`)];
+        ...['general', 'members', 'keys', 'approvals', 'webhooks', 'seal-keys', 'security', 'notifications', 'danger'].map((s) => `/app/settings/${s}`)];
       for (const p of pages) {
         await page.goto(p);
         await page.waitForLoadState('networkidle');

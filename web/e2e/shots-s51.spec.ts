@@ -7,6 +7,7 @@
 import { mkdirSync, readFileSync } from 'node:fs';
 import type { Page, Route } from '@playwright/test';
 import { expect } from '@playwright/test';
+import AxeBuilder from '@axe-core/playwright';
 import { AUTH, apiAs, seeds, test } from './fixtures.ts';
 
 const DIR = process.env.SHOTS_DIR ?? `${process.cwd()}/test-results/screens-s51`;
@@ -127,3 +128,25 @@ test('the sample pack document', async ({ page }) => {
   await page.pdf({ path: `${DIR}/pack-print-letter.pdf`, format: 'Letter', printBackground: true });
   expect(requests).toEqual([]);
 });
+
+async function axe(page: Page): Promise<string[]> {
+  const r = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze();
+  return r.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical').map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`);
+}
+
+for (const theme of ['dark', 'light'] as const) {
+  test.describe(`axe ${theme}`, () => {
+    test.use({ storageState: AUTH('owner'), colorScheme: theme });
+    test(`security review and the Pro sheet · ${theme}`, async ({ page }) => {
+      await page.addInitScript((t) => { try { localStorage.setItem('deedglass.theme', t); } catch { /* */ } }, theme);
+      await page.goto('/app/settings/security');
+      await expect(page.locator('.sp-row').first()).toBeVisible();
+      expect(await axe(page)).toEqual([]);
+      await page.getByRole('button', { name: /Build the pack/ }).click();
+      await expect(page.getByRole('dialog')).toBeVisible();
+      await page.waitForFunction(() => document.getAnimations().every((a) => a.playState !== 'running'));
+      await page.waitForTimeout(600);
+      expect(await axe(page)).toEqual([]);
+    });
+  });
+}
