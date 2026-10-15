@@ -39,8 +39,6 @@ attestation
 we testify
 # The old internal codename: never anywhere (CLAUDE.md rule 5).
 alloy
-@until-public open source
-@until-public open-source
 # Brand style words (DEEDGLASS_BRAND.md §3): hype we never write.
 revolutionary
 world-class

@@ -147,7 +147,7 @@ test('pricing: a retired offer or the licence-category phrase fails', async () =
   assert.equal(pricingProblems('Pro is $29 a month.').length, 0);
   assert.ok(pricingProblems('The $199 Check').length > 0);
   assert.ok(pricingProblems('see deedglass.com/check').length > 0);
-  if (process.env.DEEDGLASS_REPO_PUBLIC !== '1') assert.ok(pricingProblems('an ' + 'open' + ' source core').length > 0);
+  assert.equal(pricingProblems('an ' + 'open' + ' source core').length, 0); // public since the switch
   assert.notEqual(FAQ_FREE.replace('.', ''), FAQ_FREE);
 });
 
