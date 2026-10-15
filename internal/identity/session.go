@@ -368,3 +368,18 @@ func userAgent(ctx context.Context) string {
 	ua, _ := ctx.Value(uaKey{}).(string)
 	return ua
 }
+
+// Memberships lists the signed-in person's memberships in every org (S52's Clients view): the same
+// narrow lookup GET /v1/me and switch-org use. It returns ids, roles and statuses only; whoever
+// reads an org's data opens that org's own transaction.
+func (s *Service) Memberships(ctx context.Context, org ids.OrgID, user ids.UserID) ([]store.PreAuthMembership, error) {
+	email, err := s.userEmail(ctx, org, user)
+	if err != nil {
+		return nil, err
+	}
+	u, err := s.pre.UserByEmail(ctx, email)
+	if err != nil {
+		return nil, err
+	}
+	return u.Memberships, nil
+}

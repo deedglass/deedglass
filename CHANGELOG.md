@@ -9,6 +9,24 @@ this file by `scripts/release-notes.sh`.
 
 ### Added
 
+- **What your agents did this week.** Every Monday from 08:00 in the org's time zone, the server
+  emails the org's owners the week that just ended: actions by decision, Check results, the rules
+  that blocked most, approvals, undos, Stop, watched sessions, what Deedglass caught with each free
+  way back, and the record chain. Through the mailer the server already uses; nothing goes to
+  deedglass.com; one click turns it off. The same summary is Console › Overview's This week card,
+  `GET /v1/weekly` and `deedglass report [--week|--month] [--format md|html|json]` (free). Migration
+  0030 adds `memberships.weekly_email`. See `docs/WEEKLY.md`.
+- **The Agency plan** (licence feature `agency`, sku `agency_monthly`): `deedglass clients`,
+  `GET /v1/clients` and Console › Clients list every org you look after, each read in its own org
+  transaction; `deedglass report --all-clients --brand brand.yaml` writes every client's report with
+  your name on it. See `docs/AGENCIES.md`.
+
+### Changed
+
+- More embedded text is kept gzip-compressed in the binary (the full scan report template, the
+  security pack's questions and document, the sign-in and approval pages, the starter policies, the
+  email templates, the play cast), and more cold paths skip inlining, so S52 fits the image budget.
+
 - **The security review pack.** `deedglass security-pack readiness` (free; also
   `GET /v1/security_pack/readiness` and Console › Settings › Security review) answers 24 questions a
   security reviewer asks about AI agents, in eight groups, each with a status computed from your own

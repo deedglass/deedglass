@@ -36,7 +36,7 @@ func TestTemplateIsS37s(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if string(src) != template {
+	if string(src) != template() {
 		t.Fatal("ee/scanfull/report.html differs from scripts/report/report.html; copy it over")
 	}
 }

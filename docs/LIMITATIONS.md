@@ -617,6 +617,13 @@ it refuses rather than guess:
   input. A write is recognised by the tool's name (an unknown tool counts as a write). Without
   `--keys`, `security-pack verify` shows that a folder is whole and consistent, not who sealed it.
   The readiness view's chain check covers the last day; the pack checks the whole period.
+- **The weekly summary and client reports count what Deedglass recorded (S52).** Actions count in the
+  week they were created; an agent outside Deedglass leaves nothing to count. The Monday email goes
+  only to owners, only when the server has a mailer, and only from Monday 08:00 org-local; a server
+  that is down all Monday sends the week when it comes back that day, and skips it otherwise.
+- **The Clients view is one read per client (S52).** It reads each org in its own transaction, so a
+  person with 200 clients waits for 200 short reads (and a bounded chain check each); it shows one
+  page of at most 200.
 - **Fuzzing finds bugs; it doesn't show there are none.** The October 2026 schedule ran each parser for 5
   to 30 minutes on one laptop (`bench/results/*-fuzz.json`); CI replays the corpus for 10 s each.
 

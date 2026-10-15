@@ -42,6 +42,7 @@ export const copy = {
     searchLabel: 'Search or jump to an id',
     org: 'Org',
     switchOrg: 'Switch org',
+    allClients: 'All clients',
     theme: 'Theme',
     themeDark: 'Dark',
     themeLight: 'Light',

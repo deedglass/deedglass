@@ -427,7 +427,7 @@ var nistIDs = map[string]bool{"GOVERN 1.4": true, "GOVERN 1.6": true, "MAP 3.5":
 	"MEASURE 2.6": true, "MEASURE 2.7": true, "MEASURE 2.8": true, "MANAGE 1.3": true, "MANAGE 2.3": true, "MANAGE 2.4": true, "MANAGE 4.3": true}
 
 func TestParseBankRefusals(t *testing.T) {
-	ok := string(questionsYAML)
+	ok := questionsYAMLOnce()
 	for name, src := range map[string]string{
 		"unknown field": strings.Replace(ok, "v: 1\n", "v: 1\nextra: 2\n", 1),
 		"version":       strings.Replace(ok, "v: 1\n", "v: 2\n", 1),
@@ -576,7 +576,7 @@ func TestAttackSummaryCurrent(t *testing.T) {
 var forbidden = regexp.MustCompile(`(?i)complian|certif|audit-ready|guarante|\bproves?\b|\bproof\b|soc ?2|attest|rec[e]ipt|tamper-pro[o]f|—`)
 
 func TestForbiddenWords(t *testing.T) {
-	if m := forbidden.FindString(string(questionsYAML)); m != "" {
+	if m := forbidden.FindString(questionsYAMLOnce()); m != "" {
 		t.Fatalf("questions.yaml says %q", m)
 	}
 	for i, fx := range fixtures {

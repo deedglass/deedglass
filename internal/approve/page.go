@@ -1,10 +1,11 @@
 package approve
 
 import (
-	"embed"
+	_ "embed"
 	"net/http"
 	"strconv"
 
+	"github.com/deedglass/deedglass/internal/embedgz"
 	"github.com/deedglass/deedglass/internal/httpx"
 )
 
@@ -14,8 +15,12 @@ import (
 // script reads only the fragment. S24 may re-skin it, but /approve and #t= stay: links already sit
 // in inboxes.
 //
-//go:embed pages/approve.html pages/approve.css pages/approve.js
-var pagesFS embed.FS
+// The pages are embedded gzip-compressed (pages.tar.gz, make embed-gz; the image budget).
+//
+//go:embed pages.tar.gz
+var pagesGz []byte
+
+var pagesFS = embedgz.NewFiles(pagesGz)
 
 // PageCSP is the page's Content-Security-Policy: nothing inline, nothing from another origin, no framing.
 const PageCSP = "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; " +

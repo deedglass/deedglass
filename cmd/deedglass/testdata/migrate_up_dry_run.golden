@@ -1,6 +1,6 @@
 exit 0
 --- stdout
-◐ Dry run on 127.0.0.1:55432 as deedglass_migrator · schema at 0006 · 23 pending
+◐ Dry run on 127.0.0.1:55432 as deedglass_migrator · schema at 0006 · 24 pending
   0007 witness             sha256:4908…c982
   0008 learn               sha256:1139…c18f
   0009 webhooks_ops        sha256:e2b3…9542
@@ -24,5 +24,6 @@ exit 0
   0027 purge_org           sha256:6fc3…4696
   0028 action_schedule     sha256:ceef…7547
   0029 observe             sha256:c0f3…a29e
+  0030 weekly              sha256:5b35…e588
 ○ Nothing was applied. Run deedglass migrate up to apply them.
 --- stderr

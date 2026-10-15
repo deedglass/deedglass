@@ -9,10 +9,16 @@ import (
 	"sync"
 
 	"go.yaml.in/yaml/v3"
+
+	"github.com/deedglass/deedglass/internal/embedgz"
 )
 
-//go:embed questions.yaml
-var questionsYAML []byte
+// questions.yaml is embedded gzip-compressed (questions.tar.gz, make embed-gz; the image budget).
+//
+//go:embed questions.tar.gz
+var questionsGz []byte
+
+var questionsYAMLOnce = embedgz.MustString(embedgz.NewFiles(questionsGz), "questions.yaml")
 
 // Status is a question's computed answer. The wire values never change; Word is what people read.
 type Status string
@@ -97,7 +103,7 @@ var (
 
 // Questions is the embedded bank, parsed and checked once.
 func Questions() (*Bank, error) {
-	bankOnce.Do(func() { bank, bankErr = ParseBank(questionsYAML) })
+	bankOnce.Do(func() { bank, bankErr = ParseBank([]byte(questionsYAMLOnce())) })
 	return bank, bankErr
 }
 

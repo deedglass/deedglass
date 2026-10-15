@@ -55,6 +55,8 @@ export const IMPORTS = {
   'docs/guides/observe-beside-another-gate.md': 'guides/observe-beside-another-gate',
   'docs/OBSERVE.md': 'reference/observe',
   'docs/SECURITY_PACK.md': 'reference/security-pack',
+  'docs/WEEKLY.md': 'reference/weekly',
+  'docs/AGENCIES.md': 'reference/agencies',
   // engineering notes: imported as they are, under Reference › Engineering notes
   ...Object.fromEntries(
     [

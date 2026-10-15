@@ -67,13 +67,19 @@ well-formed feature name in a token (lowercase letters, digits and `_`, 3 to 32 
 32 of them), keeps it so the signature still verifies, and grants only the features it knows.
 
 The token request also names what the build knows: `features_known` (for this build:
-`scan_full`, `scan_fix`, `packs_pro`, `action_private`, `undo_session`, `security_pack`). The site signs the plan's
+`scan_full`, `scan_fix`, `packs_pro`, `action_private`, `undo_session`, `security_pack`, `agency`). The site signs the plan's
 features that the request lists, in plan order. A request without the field (v0.1.0) gets the list
 those builds knew (`action_private`, `scan_full`, `scan_fix`, `packs_pro`), so a new feature never
 reaches a client that predates it. A list with nothing in common with the plan gets that list too.
 
+A sku can add features to its plan: `agency_monthly` (the Agency plan, S52) is plan `pro` with Pro's
+features plus `agency`, and the site signs `agency` only when `features_known` lists it. A Pro or
+founding token never carries `agency`. `agency` turns on the Clients view (`GET /v1/clients`,
+`deedglass clients`) and `deedglass report --all-clients` and `--brand` ([AGENCIES.md](AGENCIES.md));
+each org's own report and its Monday email never read the licence.
+
 `deedglass serve` asks the licence once at start and then once a day; the answer turns the one-step
-session undo and the security review pack's build on or off for the next request. An undo already
+session undo, the security review pack's build and the Clients view on or off for the next request. An undo already
 started completes even if the licence lapses before its countersign.
 
 ## When Pro works

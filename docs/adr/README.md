@@ -95,3 +95,5 @@ ADR-000 to ADR-008 were written for the V0 verifier and keep their original text
 | 095 | Session undo: one plan over many transactions; the SQL free, one step Pro | Proposed (2026-10-13, S50) | `witness/undo`, `ee/undosession` |
 | 096 | Licence feature negotiation (features_known) | Proposed (2026-10-13, S50) | `internal/licence`; site `licence_features.ts` |
 | 100 | The security review pack: format, question bank and reference policy | Proposed (2026-10-16, S51) | `internal/securitypack`, `ee/securitypack`; licence feature `security_pack`; `internal/embedgz` |
+| 101 | The weekly summary, the Monday email and the agency view | Proposed (2026-10-16, S52) | `internal/weekly`, `ee/agency`; migration 0030; licence feature `agency` |
+| 102 | Partner attribution without cookies, and monthly statements | Proposed (2026-10-16, S52) | site D1 0010, `functions/_lib/partners`, `scripts/partners-statements.mjs` |

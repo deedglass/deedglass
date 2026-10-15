@@ -25,11 +25,16 @@ import (
 	"strings"
 	"time"
 
+	"github.com/deedglass/deedglass/internal/embedgz"
 	"github.com/deedglass/deedglass/internal/securitypack"
 )
 
-//go:embed pack.html
-var packHTML string
+// pack.html is embedded gzip-compressed (pack.tar.gz, make embed-gz; the image budget).
+//
+//go:embed pack.tar.gz
+var packGz []byte
+
+var packHTML = embedgz.MustString(embedgz.NewFiles(packGz), "pack.html")()
 
 var pageTmpl = template.Must(template.New("pack").Parse(packHTML))
 

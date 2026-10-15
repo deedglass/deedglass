@@ -16,6 +16,7 @@ var viewerMutations = map[string]string{
 	"POST /v1/policies/test":          "no side effects (IdemNever)",
 	"POST /v1/approvals/{id}/approve": "eligibility decides, not the role: a viewer the rule doesn't name gets approver_not_eligible (attack case P06)",
 	"POST /v1/approvals/{id}/deny":    "eligibility decides, not the role",
+	"POST /v1/weekly/email":           "the caller's own weekly_email setting, nothing else (S52)",
 }
 
 // TestAuthzMatrix: every route people can call, by method and role. A viewer never reaches a

@@ -4,7 +4,7 @@ package mailer
 
 import (
 	"bytes"
-	"embed"
+	_ "embed"
 	"errors"
 	htmltemplate "html/template"
 	"net/url"
@@ -14,17 +14,23 @@ import (
 	"time"
 	"unicode"
 	"unicode/utf8"
+
+	"github.com/deedglass/deedglass/internal/embedgz"
 )
 
 // templateFS holds the email templates: one HTML and one text file per kind, and the shared HTML
 // layout (head and footer).
 //
-//go:embed templates/*
-var templateFS embed.FS
+//go:embed templates.tar.gz
+var templatesGz []byte
+
+// templateFS is templates/ unpacked (embedded gzip-compressed: templates.tar.gz, make embed-gz; the
+// image budget).
+var templateFS = embedgz.FS(templatesGz)
 
 var (
-	htmlTemplates = htmltemplate.Must(htmltemplate.New("mail").Option("missingkey=error").Funcs(htmltemplate.FuncMap{"button": newButton}).ParseFS(templateFS, "templates/*.html.tmpl"))
-	textTemplates = texttemplate.Must(texttemplate.New("mail").Option("missingkey=error").ParseFS(templateFS, "templates/*.txt.tmpl"))
+	htmlTemplates = htmltemplate.Must(htmltemplate.New("mail").Option("missingkey=error").Funcs(htmltemplate.FuncMap{"button": newButton}).ParseFS(templateFS, "*.html.tmpl"))
+	textTemplates = texttemplate.Must(texttemplate.New("mail").Option("missingkey=error").ParseFS(templateFS, "*.txt.tmpl"))
 )
 
 // Subjects.

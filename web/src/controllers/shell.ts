@@ -208,7 +208,9 @@ async function refreshBadge(): Promise<void> {
 
 // ---------- org switcher and account ----------
 function orgItems(s: State): MenuItem[] {
-  return s.me.orgs.map((o, i) => ({
+  // S52: every org you look after, in one view (the Agency plan), below the list.
+  const all: MenuItem[] = s.me.orgs.length > 1 ? [{ label: copy.topbar.allClients, icon: 'building-2', href: '/app/clients', divider: true }] : [];
+  return [...s.me.orgs.map((o, i) => ({
     label: o.name, meta: copy.topbar.role[o.role] ?? o.role, checked: o.id === s.org.id, section: i === 0 ? copy.topbar.switchOrg : undefined,
     run: async () => {
       if (o.id === s.org.id) return;
@@ -219,7 +221,7 @@ function orgItems(s: State): MenuItem[] {
         apiErrorToast(e);
       }
     },
-  }));
+  })), ...all];
 }
 
 function accountItems(s: State): MenuItem[] {

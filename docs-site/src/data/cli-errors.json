@@ -103,10 +103,12 @@
       1
     ],
     "messages": [
-      "Can't read the orgs in this database."
+      "Can't read the orgs in this database.",
+      "Can't read this org's records for the report."
     ],
     "next": [
-      "Run deedglass migrate up, and use the runtime role deedglass_app (docs/DATABASE_SETUP.md)."
+      "Run deedglass migrate up, and use the runtime role deedglass_app (docs/DATABASE_SETUP.md).",
+      "Run deedglass doctor, then try again."
     ]
   },
   {
@@ -565,6 +567,18 @@
     ],
     "messages": [
       "Network is off (DEEDGLASS_NO_NETWORK), so nothing was checked."
+    ]
+  },
+  {
+    "code": "no_clients",
+    "exit": [
+      1
+    ],
+    "messages": [
+      "You look after no client orgs on this server."
+    ],
+    "next": [
+      "Create one with deedglass org create, then invite yourself."
     ]
   },
   {

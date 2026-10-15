@@ -84,7 +84,7 @@ func TestNegotiateFeatures(t *testing.T) {
 			[]string{FeatureActionPrivate, FeatureScanFull, FeatureScanFix, FeaturePacksPro, FeatureUndoSession}},
 		{"a client that knows only undo_session", PlanPro, []string{FeatureUndoSession}, true, []string{FeatureUndoSession}},
 		{"names in the client's order don't reorder", PlanPro, []string{FeatureUndoSession, FeatureScanFull}, true, []string{FeatureScanFull, FeatureUndoSession}},
-		{"unknown names only: the v1 list", PlanPro, []string{"agency", "client_report"}, true, V1PlanFeatures[PlanPro]},
+		{"unknown names only: the v1 list", PlanPro, []string{"fleet_view", "client_report"}, true, V1PlanFeatures[PlanPro]},
 		{"an empty list: the v1 list", PlanPro, []string{}, true, V1PlanFeatures[PlanPro]},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -102,6 +102,31 @@ func TestNegotiateFeatures(t *testing.T) {
 	}
 }
 
+func TestNegotiateSkuFeatures(t *testing.T) {
+	pro := NegotiateFeatures(PlanPro, KnownFeatures(), true)
+	for _, tc := range []struct {
+		name, sku string
+		known     []string
+		present   bool
+		want      []string
+	}{
+		{"agency, this build", SkuAgencyMonthly, KnownFeatures(), true, append(append([]string(nil), pro...), FeatureAgency)},
+		{"agency, an S51 build: no agency", SkuAgencyMonthly, []string{FeatureScanFull, FeatureScanFix, FeaturePacksPro, FeatureActionPrivate, FeatureUndoSession, FeatureSecurityPack}, true, pro},
+		{"agency, an old client: the v1 list", SkuAgencyMonthly, nil, false, V1PlanFeatures[PlanPro]},
+		{"pro never carries agency", "pro_monthly", KnownFeatures(), true, pro},
+		{"agency only: the v1 list plus agency", SkuAgencyMonthly, []string{FeatureAgency}, true, append(append([]string(nil), V1PlanFeatures[PlanPro]...), FeatureAgency)},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := NegotiateSkuFeatures(tc.sku, PlanPro, tc.known, tc.present); !slices.Equal(got, tc.want) {
+				t.Fatalf("got %v, want %v", got, tc.want)
+			}
+		})
+	}
+	if slices.Contains(PlanFeatures[PlanPro], FeatureAgency) || slices.Contains(PlanFeatures[PlanFounding], FeatureAgency) {
+		t.Fatal("agency belongs to the agency_monthly sku only")
+	}
+}
+
 // TestV010AcceptsNegotiatedTokens signs every shape the site can sign and reads it with v0.1.0's
 // check: accepted, the signature verifies, and v0.1.0 grants exactly the v1 features it knew.
 func TestV010AcceptsNegotiatedTokens(t *testing.T) {
@@ -114,8 +139,8 @@ func TestV010AcceptsNegotiatedTokens(t *testing.T) {
 		{"absent", nil, false},
 		{"this build", KnownFeatures(), true},
 		{"v0.1.0's names", v010Known, true},
-		{"a later build", append(KnownFeatures(), "client_report", "agency"), true},
-		{"unknown only", []string{"agency"}, true},
+		{"a later build", append(KnownFeatures(), "client_report", "fleet_view"), true},
+		{"unknown only", []string{"fleet_view"}, true},
 	}
 	for _, plan := range []string{PlanReport, PlanFounding, PlanPro} {
 		for _, sh := range shapes {

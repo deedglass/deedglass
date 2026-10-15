@@ -29,12 +29,17 @@ import (
 
 	demopolicies "github.com/deedglass/deedglass/examples/demo/policies"
 	"github.com/deedglass/deedglass/internal/deed"
+	"github.com/deedglass/deedglass/internal/embedgz"
 	"github.com/deedglass/deedglass/internal/ids"
 	"github.com/deedglass/deedglass/internal/policy"
 )
 
-//go:embed hero.cast.json
-var castJSON []byte
+// hero.cast.json is embedded gzip-compressed (cast.tar.gz, make embed-gz; the image budget).
+//
+//go:embed cast.tar.gz
+var castGz []byte
+
+var castJSON = []byte(embedgz.MustString(embedgz.NewFiles(castGz), "hero.cast.json")())
 
 // Cast is a recorded terminal run (the deedglass_cast object the growth capture tool writes).
 type Cast struct {

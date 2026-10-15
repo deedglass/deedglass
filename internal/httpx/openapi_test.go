@@ -191,6 +191,12 @@ func elsewhere() []Route {
 	pack := adm("POST", "/v1/security_pack", "createSecurityPack", RoleAdmin)
 	pack.Idempotency = IdemNever
 	out = append(out, adm("GET", "/v1/security_pack/readiness", "getSecurityPackReadiness", RoleViewer), pack)
+	// S52: the weekly summary (internal/weeklyapi) and the Clients view (ee/agency).
+	out = append(out, Route{Method: "GET", Pattern: "/v1/weekly", OperationID: "getWeekly", Auth: SessionOrKey, MinRole: RoleViewer, Scopes: []string{ScopeAdmin}, Handler: stub},
+		Route{Method: "POST", Pattern: "/v1/weekly/email", OperationID: "setWeeklyEmail", Auth: Session, MinRole: RoleViewer, Idempotency: IdemNever, Handler: stub},
+		Route{Method: "GET", Pattern: "/weekly/off", OperationID: "weeklyOffPage", Auth: Public, Handler: stub},
+		Route{Method: "POST", Pattern: "/weekly/off", OperationID: "weeklyOff", Auth: Public, Idempotency: IdemNever, BodyType: "application/x-www-form-urlencoded", Handler: stub},
+		Route{Method: "GET", Pattern: "/v1/clients", OperationID: "listClients", Auth: Session, MinRole: RoleViewer, Handler: stub})
 	// S29: Slack interactivity (internal/notify/slack): public, a form body, Slack's signature.
 	out = append(out, Route{Method: "POST", Pattern: "/v1/slack/interact", OperationID: "slackInteract", Auth: Public, Idempotency: IdemNever,
 		BodyType: "application/x-www-form-urlencoded", MaxBody: 256 << 10, Handler: stub})

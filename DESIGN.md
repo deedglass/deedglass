@@ -866,6 +866,18 @@ Settings › Security review (`/app/settings/security`; the `security` renderer 
 - **Evidence line:** under each answer, a `code-bg` box in Geist Mono 12px `text-2`: `label value · label value` (labels `text-3`), the evidence fields in bank order, dates as `3 Oct 2026`. Then `How to check` (bold label) and `Related: OWASP LLM06 Excessive Agency · NIST AI RMF MANAGE 2.4` in caption `text-3`.
 - **Status chip:** outline pill in the status pair, the word always present. **Print:** A4 (Letter works), 18/16/20mm margins, each group starts a page, rows never split, a fixed running footer in mono 8pt: org · period · answers.json digest.
 
+### Console: Clients and This week (S52)
+Clients (`/app/clients`, the Agency plan; reached from the org switcher's **All clients**): Linear's team list.
+- **Client row**: a real `<table>` row per client: the org name (body) and its slug (mono, tertiary) as the row header, then actions, Doesn't match and waiting in right-aligned tabular numerals, then the chips at the end: `N caught` (`chip-caught`), `Stopped` (`chip-denied`), the chain (`chip-verified` intact, `chip-mismatch` broken, `chip-neutral` not checked or no records) and the last activity as relative time; an **Open** quiet button (switches org) last. A client with no actions reads `No activity this week` in secondary text instead of zeros. Under 768 px the table becomes cards (`.dt.cards`). Below the table: the separation sentence and the bulk report command in mono.
+- **Without the Agency plan**: one card, the explanation, the free single-org line in mono and **See the Agency plan**; nothing locked or blurred.
+- **This week card** (Overview's side column, above the agents): the period in footnote, the numbers line in semibold tabular numerals, the Check line in secondary, then the caught block (amber `triangle-alert` heading, at most three items, each with its free path in mono and, only on a caught session without `undo_session`, the one Pro line), the chain line, the `deedglass report` line, and the person's Monday email state with **Turn it off** / **Turn it on**.
+
+### Client report document (S52)
+`deedglass report --format html` (and every client report): S51's document style. The agency's line small at the top when a brand file is given (logo at most 32 px tall, `Prepared by <b>name</b> with Deedglass · contact`), the eyebrow `Agent report · <period>`, the H1, a lead card with the numbers and Check lines, then sections with hairline-underlined H2s: Caught (amber left rule, each sentence with its free path in mono), Actions by agent and by tool (two real tables side by side, one column under 40 rem), Blocked most by, Approvals, Undo and Stop, Watched sessions, Records; Deedglass's name only in the footer. Self-contained: no script, no font or image request; A4/Letter print CSS.
+
+### Website: Terms list (S52)
+`/partners` and `/agencies` (site v4 tokens): Raycast's plan terms. A real `<dl>`: one row per term, the term in `--text-2` at 15 px in a 13 rem column, the value in `--text` at 16 px, hairlines (`--line`) between rows; under 560 px the term sits above its value. Prices on `/agencies` follow the pricing page rhythm: the amount at 28 px semibold tabular, the per-line in secondary. No earnings examples, no countdowns, one primary button per view.
+
 ## Motion
 
 | Token | Value | Use |

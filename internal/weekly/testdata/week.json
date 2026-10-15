@@ -1,0 +1,128 @@
+{
+  "object": "weekly_summary",
+  "version": 1,
+  "org": {
+    "id": "org_01k7acme0000000000000000000",
+    "name": "Acme",
+    "slug": "acme"
+  },
+  "period": {
+    "kind": "week",
+    "key": "2026-W42",
+    "from": "2026-10-12T00:00:00Z",
+    "to": "2026-10-19T00:00:00Z",
+    "timezone": "UTC",
+    "label": "12 to 18 Oct 2026"
+  },
+  "actions": {
+    "total": 412,
+    "allowed": 371,
+    "waited_for_a_person": 22,
+    "blocked_by_rules": 19,
+    "other": 0,
+    "by_agent": [
+      {
+        "id": "agt_01k7ops0000000000000000000",
+        "name": "ops-agent",
+        "count": 334
+      },
+      {
+        "id": "agt_01k7sup0000000000000000000",
+        "name": "support-agent",
+        "count": 78
+      }
+    ],
+    "by_tool": [
+      {
+        "name": "postgres.execute",
+        "count": 250
+      },
+      {
+        "name": "postgres.query",
+        "count": 110
+      },
+      {
+        "name": "stripe.refund",
+        "count": 52
+      }
+    ],
+    "agents": 2,
+    "previous": 380
+  },
+  "check": {
+    "matches": 387,
+    "doesnt_match": 1,
+    "cant_check": 24,
+    "not_checked": 0
+  },
+  "denials": [
+    {
+      "rule": "block-destructive-sql",
+      "reason": "DROP is never allowed for agents.",
+      "count": 12
+    },
+    {
+      "rule": "refund-limit",
+      "reason": "Refunds over $200 need a person.",
+      "count": 5
+    },
+    {
+      "rule": "@default",
+      "reason": "",
+      "count": 2
+    }
+  ],
+  "approvals": {
+    "requested": 22,
+    "approved": 20,
+    "denied": 1,
+    "expired": 1,
+    "pending": 0,
+    "median_seconds_to_decide": 260
+  },
+  "undos": {
+    "actions": 1,
+    "sessions": 0
+  },
+  "stops": {
+    "agent": 0,
+    "all": 0
+  },
+  "sessions": {
+    "watched": 3,
+    "caught": 1
+  },
+  "caught": [
+    {
+      "kind": "many_rows",
+      "session": "obs_01k7ses0000000000000000000",
+      "frames": [
+        "dtx_01k7f00000000000000000000"
+      ],
+      "table": "public.orders",
+      "rows": 301,
+      "line": "Deedglass caught this: one transaction changed 301 rows in public.orders.",
+      "undo_possible": true,
+      "undo_free_path": "deedglass observe show obs_01k7ses0000000000000000000 --undo-sql"
+    },
+    {
+      "kind": "doesnt_match",
+      "actions": [
+        "act_01k7mis0000000000000000000"
+      ],
+      "line": "Deedglass caught this: the L2 check of postgres.execute doesn't match what ops-agent said.",
+      "undo_possible": true,
+      "undo_free_path": "deedglass undo preview act_01k7mis0000000000000000000"
+    }
+  ],
+  "caught_total": 2,
+  "chain": {
+    "status": "intact",
+    "checked": 640
+  },
+  "security_pack": {
+    "built_at": "2026-10-16T11:00:00Z",
+    "folder": "security-pack-acme-2026-10-16"
+  },
+  "generated_at": "2026-10-19T08:00:00Z"
+}

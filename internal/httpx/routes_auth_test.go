@@ -34,6 +34,8 @@ import (
 // may. A public route missing here fails TestRouteAuthCoverage; so does a row here that the
 // contract table no longer marks public.
 var publicRoutes = map[string]string{
+	"GET /weekly/off":  "the page a Monday email links to (S52): shows one button and changes nothing on load",
+	"POST /weekly/off": "its button (S52): a signed single-purpose token turns that one person's weekly email off, nothing else",
 	// S18 §3.7's list.
 	"GET /v1/health":                            "liveness and readiness for load balancers; no org data",
 	"GET /v1/version":                           "build and API versions, for clients checking compatibility",
