@@ -52,11 +52,12 @@ person countersigns.
 <p align="center"><sub>A real run of <code>make demo-hero</code> (commit 97a524c, 2026-10-14), each line shown at the time it printed.
 Source: <a href="docs/assets/demo-hero.cast.json"><code>docs/assets/demo-hero.cast.json</code></a>, drawn by <a href="scripts/demo/cast2svg.mjs"><code>scripts/demo/cast2svg.mjs</code></a>.</sub></p>
 
-## Three ways in
+## Four ways in
 
 | | Command | What it needs | What leaves your machine |
 |---|---|---|---|
 | **In your browser** | [deedglass.com/play](https://deedglass.com/play) | A browser tab. Postgres runs in the page; it opens on the "said 1, changed 301" scene. | Nothing |
+| **In your terminal** | `npx deedglass play` | Node. No Docker. The rules decide each call live and the records are sealed and checked on your machine; Postgres's lines are replayed from a recorded real run, and labelled as such. | Nothing |
 | **Scan your setup** | `npx deedglass scan` | Node. Reads your MCP configs and, if you name one, a database catalog, read-only. Grades what your agents could change, A to F. | Nothing |
 | **Observe mode** | `deedglass observe run --connector pg-demo -- ./agent.sh` | A Postgres connector with `observe` on. Nothing to rewire: it reads Postgres's change log beside whatever gate you already use. | Nothing |
 
@@ -166,6 +167,14 @@ claude mcp add deedglass -- npx -y deedglass mcp serve
 No link holds a key. Run `npx deedglass init` first; each client asks Deedglass for the key it wrote.
 <!-- install-links:end -->
 
+**Claude Code plugin** (the MCP server, a `/deedglass:scan` command, and skills for reading a
+scan and for giving an agent Postgres access safely), from this repo's own marketplace:
+
+```text
+/plugin marketplace add deedglass/deedglass
+/plugin install deedglass@deedglass
+```
+
 Every format, with its source: [`docs/INSTALL_CLIENTS.md`](docs/INSTALL_CLIENTS.md).
 
 ## SDKs and clients
@@ -207,6 +216,8 @@ Report a vulnerability privately: [`SECURITY.md`](SECURITY.md).
 Read [`CONTRIBUTING.md`](CONTRIBUTING.md): `make dev`, `make ci`, the tests a change needs, and DCO
 sign-off (`git commit -s`). Questions go to Discussions ([`SUPPORT.md`](SUPPORT.md)); how decisions
 are made is in [`GOVERNANCE.md`](GOVERNANCE.md).
+
+If Deedglass showed you something your logs didn't, a GitHub star helps other people find it.
 
 ## License
 

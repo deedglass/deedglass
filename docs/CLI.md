@@ -160,6 +160,7 @@ builds it. Hidden commands work but aren't in `deedglass help`.
 | `deedglass init [--yes] [--dir .] [--client claude-code|claude-desktop|cursor|vscode|windsurf|sdk-python|sdk-typescript|none] [--listen 127.0.0.1:8080] [--pg-port 55432] [--no-open] [--no-smoke] [--stop] [--trigger] [--json]` | Setup | Set up Deedglass in this directory | built |
 | `deedglass doctor [--only <ids>] [--json]` | Setup | Check config, database and keys | built |
 | `deedglass scan [--dir .] [--postgres-dsn-env VAR] [--format md,html,json,sarif] [--score] [--badge] [--share] [--ci] [--fail-under A|B|C|D] [--full [--no-seal]] [--json]` | Setup | Show what your agent setup can change | built |
+| `deedglass play [--fast] [--json]` | Setup | Watch the 301 scene offline, no Docker | built |
 | `deedglass serve [--migrate]` | Setup | Run the API, the rules and the Console | built |
 | `deedglass migrate up [--database-url <url>] [--dry-run] [--json]` | Setup | Apply database migrations | built |
 | `deedglass migrate status [--database-url <url>] [--json]` | Setup | Show applied and pending migrations | built |

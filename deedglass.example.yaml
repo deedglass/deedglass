@@ -68,6 +68,7 @@
 # no_banner: false
 # theme: auto   # auto, light or dark
 # no_anim: false
+# no_star: false   # the GitHub star note after a scan (at most once per machine)
 
 # Pro licence (docs/LICENSING.md). Only deedglass licence and scan --full read these; free
 # commands never open the licence. Usually set in the shell, not here.

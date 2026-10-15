@@ -319,6 +319,18 @@
     "owner": "S05X"
   },
   {
+    "env": "DEEDGLASS_NO_STAR",
+    "yaml": "no_star",
+    "type": "boolean",
+    "default": "false",
+    "secret": false,
+    "client": true,
+    "dev_only": false,
+    "commands": "scan",
+    "doc": "Never show the one-line GitHub star note after a scan. It shows at most once per machine, only in a terminal, and never in CI or with --json; scan --no-star hides it for one run.",
+    "owner": "VIRAL2"
+  },
+  {
     "env": "DEEDGLASS_NO_ANIM",
     "yaml": "no_anim",
     "type": "boolean",

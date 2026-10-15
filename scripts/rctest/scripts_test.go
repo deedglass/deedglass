@@ -87,8 +87,8 @@ func TestPrepublicAudit(t *testing.T) {
 func TestIssueForms(t *testing.T) {
 	root, _ := filepath.Abs("../..")
 	files, _ := filepath.Glob(filepath.Join(root, ".github/ISSUE_TEMPLATE/*.yml"))
-	if len(files) != 4 {
-		t.Fatalf("%d issue form files, want bug, feature, i-ran-it and config", len(files))
+	if len(files) != 5 {
+		t.Fatalf("%d issue form files, want bug, feature, connector, i-ran-it and config", len(files))
 	}
 	for _, f := range files {
 		b, _ := os.ReadFile(f)

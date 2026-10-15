@@ -1,0 +1,28 @@
+name: Connector request
+description: A tool or system you want agents to reach through Deedglass, with its checks.
+labels: ["connector request"]
+body:
+  - type: markdown
+    attributes:
+      value: "Today's connectors: Postgres, REST, GitHub, Slack, Stripe (test mode), Gmail drafts, Notion and remote MCP servers (docs/CONNECTORS.md). Any stdio MCP server already works through deedglass mcp wrap; ask here when you want first-class rules or checks for a system."
+  - type: input
+    id: system
+    attributes: { label: System, description: "The product or protocol, with a link to its API docs.", placeholder: "MySQL 8.4, Linear, Jira Cloud, an internal REST API …" }
+    validations: { required: true }
+  - type: textarea
+    id: actions
+    attributes: { label: "What your agents do there", description: "The calls they make, and which ones change data or move money." }
+    validations: { required: true }
+  - type: textarea
+    id: check
+    attributes: { label: "How could Deedglass check the result?", description: "A read-back endpoint, a change feed, an audit log. Optional, and very useful." }
+  - type: dropdown
+    id: today
+    attributes: { label: "How you reach it today", options: [An MCP server, The vendor's SDK, Direct HTTP, Not yet] }
+    validations: { required: true }
+  - type: checkboxes
+    id: help
+    attributes:
+      label: Helping
+      options:
+        - label: I could test a first version against a sandbox account.

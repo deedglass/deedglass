@@ -6,6 +6,24 @@ Acme demo tables and trigger, a scripted agent, a 6-line policy, Undo and record
 **Honesty line, shown on the page:** "The playground compares table snapshots in your browser. The
 real Witness reads Postgres's own change log."
 
+## In your terminal: `deedglass play`
+
+`npx deedglass play` tells the same story offline, with no Docker and nothing sent anywhere. Every
+line says where it comes from:
+
+- **live:** the policy decisions come from `policy.Evaluate` on the Acme demo policy
+  (`examples/demo/policies/acme-demo.yaml`), the engine `deedglass serve` runs. The records are
+  sealed with a key made for the run and checked by the code behind `deedglass verify`; then one
+  byte is changed and the check fails.
+- **replay:** Postgres can't run inside the binary, so its lines are replayed from
+  `docs/assets/demo-hero.cast.json` (a recorded `make demo-hero`, commit and date printed) and the
+  undo from `examples/demo/testdata/launch.golden`. Some diff rows are skipped, and the output says
+  how many. `internal/play`'s tests keep both copies equal to their sources and check that every
+  replayed line is in the recording.
+
+`--fast` prints everything at once; off a terminal there are no pauses. To see the scene live on
+your own machine: `npx deedglass init --yes`, then `npx deedglass init --trigger`.
+
 ## How it's built
 
 - `go run ./cmd/playgen` writes `examples/play/`: `acme.sql` (`examples/demo/sql` 01, 02 and 10,

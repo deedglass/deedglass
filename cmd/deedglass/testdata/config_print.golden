@@ -27,6 +27,7 @@ DEEDGLASS_SERVER                  —                                           
 DEEDGLASS_INIT_DSN                —                                                            not set
 DEEDGLASS_NO_BANNER               false                                                        default
 DEEDGLASS_THEME                   auto                                                         default
+DEEDGLASS_NO_STAR                 false                                                        default
 DEEDGLASS_NO_ANIM                 false                                                        default
 DEEDGLASS_LICENCE_FILE            —                                                            not set
 DEEDGLASS_NO_NETWORK              false                                                        default

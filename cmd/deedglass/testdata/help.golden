@@ -8,6 +8,7 @@ Setup
   init                Set up Deedglass in this directory
   doctor              Check config, database and keys
   scan                Show what your agent setup can change
+  play                Watch the 301 scene offline, no Docker
   serve               Run the API, the rules and the Console
   migrate             Apply or check database migrations                    up · status · verify
   config print        Show the effective config, secrets hidden

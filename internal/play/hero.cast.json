@@ -1,0 +1,397 @@
+{
+ "object": "deedglass_cast",
+ "v": 1,
+ "slug": "readme-hero",
+ "command": "make demo-hero",
+ "pace": 1.5,
+ "commit": "97a524c",
+ "recorded_at": "2026-10-14T13:11:27.517Z",
+ "duration_ms": 22947,
+ "log_sha256": "c081566f892faa48a7d0acb1c9053c7a62171e2e47dbde3a74ffb4fcae0c947e",
+ "lines": [
+  {
+   "t": 8089,
+   "text": "✓ Approvals off · acme-demo v3 (acme-demo.yaml)"
+  },
+  {
+   "t": 8091,
+   "text": ""
+  },
+  {
+   "t": 8091,
+   "text": "1. Trigger off. Ship order 42."
+  },
+  {
+   "t": 9756,
+   "text": "✓ Trigger off · orders_ship_open_batch dropped"
+  },
+  {
+   "t": 10213,
+   "text": "✓ Orders reset · 339 open besides 42 · order 42 paid"
+  },
+  {
+   "t": 11722,
+   "text": "$ deedglass act postgres.execute --args '{\"sql\":\"UPDATE public.orders SET status = 'shipped' WHERE id = 42\"}'"
+  },
+  {
+   "t": 11901,
+   "text": "✓ executed · postgres.execute · 17 ms"
+  },
+  {
+   "t": 11901,
+   "text": "  action   act_01m4x8kqmn6xmkfcbz0j1e1wvz"
+  },
+  {
+   "t": 11901,
+   "text": "  check    Proven · Matches · Postgres committed 1 row in public.orders, as the statement said."
+  },
+  {
+   "t": 11909,
+   "text": "           Proven by Postgres · commit 0/209AE18 · 2026-10-14 13:11:16 UTC"
+  },
+  {
+   "t": 11912,
+   "text": "  record   deed_01m4x8kq… · seq 40 · sealed"
+  },
+  {
+   "t": 11967,
+   "text": "✓ L2 · VERIFIED · act_01m4x8kqmn6xmkfcbz0j1e1wvz"
+  },
+  {
+   "t": 13476,
+   "text": ""
+  },
+  {
+   "t": 13476,
+   "text": "2. A legacy trigger is on. Ship order 42 again."
+  },
+  {
+   "t": 14031,
+   "text": "✓ Trigger on · orders_ship_open_batch · 339 open orders besides 42"
+  },
+  {
+   "t": 14395,
+   "text": "✓ Order 42 · paid"
+  },
+  {
+   "t": 15900,
+   "text": "$ deedglass act postgres.execute --args '{\"sql\":\"UPDATE public.orders SET status = 'shipped' WHERE id = 42\"}'"
+  },
+  {
+   "t": 16045,
+   "text": "✕ executed · postgres.execute · 11 ms"
+  },
+  {
+   "t": 16045,
+   "text": "  check    Proven · Doesn't match · Postgres changed 301 rows in public.orders. The agent reported 1."
+  },
+  {
+   "t": 16045,
+   "text": "           ✕ Proven   300 changed rows in public.orders are outside the rows the statement named (id = 42)."
+  },
+  {
+   "t": 16052,
+   "text": ""
+  },
+  {
+   "t": 16052,
+   "text": "  expected   UPDATE 1 row in public.orders where id = 42 · sets status"
+  },
+  {
+   "t": 16052,
+   "text": "  observed   UPDATE 301 rows in public.orders · 300 outside id = 42"
+  },
+  {
+   "t": 16052,
+   "text": ""
+  },
+  {
+   "t": 16052,
+   "text": "  public.orders    id    status"
+  },
+  {
+   "t": 16052,
+   "text": "  ✓ expected       42    paid → shipped"
+  },
+  {
+   "t": 16052,
+   "text": "  ✕ unexpected     218   pending → shipped"
+  },
+  {
+   "t": 16052,
+   "text": "  ✕ unexpected     201   paid → shipped"
+  },
+  {
+   "t": 16052,
+   "text": "  ✕ unexpected     217   paid → shipped"
+  },
+  {
+   "t": 16052,
+   "text": "  ✕ unexpected     227   paid → shipped"
+  },
+  {
+   "t": 16052,
+   "text": "  ✕ unexpected     130   paid → shipped"
+  },
+  {
+   "t": 16052,
+   "text": "  ✕ unexpected     143   paid → shipped"
+  },
+  {
+   "t": 16052,
+   "text": "  ✕ unexpected     386   paid → shipped"
+  },
+  {
+   "t": 16052,
+   "text": "  ✕ unexpected     85    paid → shipped"
+  },
+  {
+   "t": 16052,
+   "text": "  ✕ unexpected     129   paid → shipped"
+  },
+  {
+   "t": 16052,
+   "text": "  ✕ unexpected     109   paid → shipped"
+  },
+  {
+   "t": 16052,
+   "text": "  ✕ unexpected     15    paid → shipped"
+  },
+  {
+   "t": 16052,
+   "text": "  ✕ unexpected     403   paid → shipped"
+  },
+  {
+   "t": 16052,
+   "text": "  ✕ unexpected     16    paid → shipped"
+  },
+  {
+   "t": 16052,
+   "text": "  ✕ unexpected     349   paid → shipped"
+  },
+  {
+   "t": 16052,
+   "text": "  ✕ unexpected     247   paid → shipped"
+  },
+  {
+   "t": 16052,
+   "text": "  ✕ unexpected     36    paid → shipped"
+  },
+  {
+   "t": 16052,
+   "text": "  ✕ unexpected     228   paid → shipped"
+  },
+  {
+   "t": 16052,
+   "text": "  ✕ unexpected     47    paid → shipped"
+  },
+  {
+   "t": 16052,
+   "text": "  ✕ unexpected     220   paid → shipped"
+  },
+  {
+   "t": 16052,
+   "text": "  …                first 20 of 301 rows · the rest in Console › Actions"
+  },
+  {
+   "t": 16052,
+   "text": ""
+  },
+  {
+   "t": 16052,
+   "text": "  Proven by Postgres · commit 0/20CA6E8 · 2026-10-14 13:11:20 UTC"
+  },
+  {
+   "t": 16053,
+   "text": "  record   deed_01m4x8kv… · seq 41 · sealed"
+  },
+  {
+   "t": 16053,
+   "text": "  Next: deedglass actions show act_01m4x8kvnx0y0qdgbjm6gbbq7a · https://docs.deedglass.com/witness/mismatch"
+  },
+  {
+   "t": 16174,
+   "text": "✓ L2 · MISMATCH · 301 rows · act_01m4x8kvnx0y0qdgbjm6gbbq7a"
+  },
+  {
+   "t": 17683,
+   "text": ""
+  },
+  {
+   "t": 17683,
+   "text": "3. What Postgres committed."
+  },
+  {
+   "t": 17683,
+   "text": "$ deedglass actions show act_01m4x8kvnx0y0qdgbjm6gbbq7a --diff"
+  },
+  {
+   "t": 17774,
+   "text": "✕ postgres.execute · act_01m4x8kvnx0y0qdgbjm6gbbq7a"
+  },
+  {
+   "t": 17774,
+   "text": "  check    Proven · Doesn't match · Postgres changed 301 rows in public.orders. The agent reported 1."
+  },
+  {
+   "t": 17775,
+   "text": ""
+  },
+  {
+   "t": 17775,
+   "text": "  expected   UPDATE 1 row in public.orders where id = 42 · sets status"
+  },
+  {
+   "t": 17775,
+   "text": "  observed   UPDATE 301 rows in public.orders · 300 outside id = 42"
+  },
+  {
+   "t": 17775,
+   "text": ""
+  },
+  {
+   "t": 17775,
+   "text": "  public.orders    id    status"
+  },
+  {
+   "t": 17775,
+   "text": "  ✓ expected       42    paid → shipped"
+  },
+  {
+   "t": 17775,
+   "text": "  ✕ unexpected     218   pending → shipped"
+  },
+  {
+   "t": 17775,
+   "text": "  ✕ unexpected     201   paid → shipped"
+  },
+  {
+   "t": 17775,
+   "text": "  ✕ unexpected     217   paid → shipped"
+  },
+  {
+   "t": 17775,
+   "text": "  ✕ unexpected     227   paid → shipped"
+  },
+  {
+   "t": 17775,
+   "text": "  ✕ unexpected     130   paid → shipped"
+  },
+  {
+   "t": 17775,
+   "text": "  ✕ unexpected     143   paid → shipped"
+  },
+  {
+   "t": 17775,
+   "text": "  ✕ unexpected     386   paid → shipped"
+  },
+  {
+   "t": 17775,
+   "text": "  ✕ unexpected     85    paid → shipped"
+  },
+  {
+   "t": 17775,
+   "text": "  ✕ unexpected     129   paid → shipped"
+  },
+  {
+   "t": 17775,
+   "text": "  ✕ unexpected     109   paid → shipped"
+  },
+  {
+   "t": 17775,
+   "text": "  ✕ unexpected     15    paid → shipped"
+  },
+  {
+   "t": 17775,
+   "text": "  ✕ unexpected     403   paid → shipped"
+  },
+  {
+   "t": 17775,
+   "text": "  ✕ unexpected     16    paid → shipped"
+  },
+  {
+   "t": 17775,
+   "text": "  ✕ unexpected     349   paid → shipped"
+  },
+  {
+   "t": 17775,
+   "text": "  ✕ unexpected     247   paid → shipped"
+  },
+  {
+   "t": 17775,
+   "text": "  ✕ unexpected     36    paid → shipped"
+  },
+  {
+   "t": 17775,
+   "text": "  ✕ unexpected     228   paid → shipped"
+  },
+  {
+   "t": 17775,
+   "text": "  ✕ unexpected     47    paid → shipped"
+  },
+  {
+   "t": 17775,
+   "text": "  ✕ unexpected     220   paid → shipped"
+  },
+  {
+   "t": 17775,
+   "text": "  …                first 20 of 301 rows · the rest in Console › Actions"
+  },
+  {
+   "t": 17775,
+   "text": ""
+  },
+  {
+   "t": 17775,
+   "text": "  Proven by Postgres · commit 0/20CA6E8 · 2026-10-14 13:11:20 UTC"
+  },
+  {
+   "t": 17775,
+   "text": "  record   deed_01m4x8kv… · sealed"
+  },
+  {
+   "t": 19287,
+   "text": ""
+  },
+  {
+   "t": 19287,
+   "text": "4. Every deed checks out offline."
+  },
+  {
+   "t": 19287,
+   "text": "$ deedglass deeds export --out - | deedglass verify - --keys http://127.0.0.1:8091/.well-known/deedglass/keys.json"
+  },
+  {
+   "t": 19389,
+   "text": "◐ Exporting records 1 → 41 for org_01m45g49…"
+  },
+  {
+   "t": 19395,
+   "text": "✓ 41 records · 12.7 kB to stdout"
+  },
+  {
+   "t": 19402,
+   "text": "✓ 41 deeds · chain intact · 1 seal key · 2026-10-05 → 2026-10-14"
+  },
+  {
+   "t": 19402,
+   "text": "✓ Bundle manifest matches · sealed by sk_01m448at…"
+  },
+  {
+   "t": 20912,
+   "text": ""
+  },
+  {
+   "t": 20912,
+   "text": "5. Trigger off."
+  },
+  {
+   "t": 22947,
+   "text": "✓ Trigger off · orders_ship_open_batch dropped"
+  },
+  {
+   "t": 22947,
+   "text": "✓ Hero done · VERIFIED act_01m4x8kqmn6xmkfcbz0j1e1wvz · MISMATCH act_01m4x8kvnx0y0qdgbjm6gbbq7a"
+  }
+ ]
+}

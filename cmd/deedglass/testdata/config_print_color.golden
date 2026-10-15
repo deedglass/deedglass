@@ -27,6 +27,7 @@ DEEDGLASS_SERVER                  —                                           
 DEEDGLASS_INIT_DSN                —                                                            [2mnot set[0m
 DEEDGLASS_NO_BANNER               false                                                        [2mdefault[0m
 DEEDGLASS_THEME                   auto                                                         [2mdefault[0m
+DEEDGLASS_NO_STAR                 false                                                        [2mdefault[0m
 DEEDGLASS_NO_ANIM                 false                                                        [2mdefault[0m
 DEEDGLASS_LICENCE_FILE            —                                                            [2mnot set[0m
 DEEDGLASS_NO_NETWORK              false                                                        [2mdefault[0m

@@ -122,3 +122,60 @@ func TestScanBadgeCLI(t *testing.T) {
 		t.Fatalf("%v", files)
 	}
 }
+
+// TestScanStarNote: the GitHub star note shows once per machine, only in a terminal, and never
+// in CI, with --json, --ci, --no-star or DEEDGLASS_NO_STAR.
+func TestScanStarNote(t *testing.T) {
+	fix := scanFixture(t)
+	const note = "If this helped, a GitHub star helps others find it: https://github.com/deedglass/deedglass"
+	scanArgs := func(extra ...string) []string {
+		return append([]string{"scan", "--dir", fix, "--no-write", "--user-configs=false"}, extra...)
+	}
+	home := t.TempDir()
+	env := map[string]string{"HOME": home}
+	r := cli(t, env, true, scanArgs()...)
+	if r.code != ExitOK || !strings.Contains(r.stdout, note) || !strings.Contains(r.stdout, "DEEDGLASS_NO_STAR=1") {
+		t.Fatalf("first run: %d\n%s%s", r.code, r.stdout, r.stderr)
+	}
+	marker := filepath.Join(home, ".config", "deedglass", "star-note-shown")
+	if fi, err := os.Stat(marker); err != nil || fi.Mode().Perm() != 0o600 {
+		t.Fatalf("marker %v %v", fi, err)
+	}
+	if r = cli(t, env, true, scanArgs()...); strings.Contains(r.stdout, note) {
+		t.Fatal("shown twice on one machine")
+	}
+	xdg := t.TempDir()
+	if r = cli(t, map[string]string{"HOME": home, "XDG_CONFIG_HOME": xdg}, true, scanArgs()...); !strings.Contains(r.stdout, note) {
+		t.Fatal("XDG_CONFIG_HOME is a different machine state; expected the note")
+	}
+	if _, err := os.Stat(filepath.Join(xdg, "deedglass", "star-note-shown")); err != nil {
+		t.Fatal(err)
+	}
+	for name, c := range map[string]struct {
+		env  map[string]string
+		tty  bool
+		args []string
+	}{
+		"no tty":            {map[string]string{}, false, scanArgs()},
+		"CI":                {map[string]string{"CI": "true"}, true, scanArgs()},
+		"DEEDGLASS_NO_STAR": {map[string]string{"DEEDGLASS_NO_STAR": "1"}, true, scanArgs()},
+		"--no-star":         {map[string]string{}, true, scanArgs("--no-star")},
+		"--ci":              {map[string]string{}, true, scanArgs("--ci")},
+		"--json":            {map[string]string{}, true, []string{"--json", "scan", "--dir", fix, "--user-configs=false"}},
+		"no home":           {map[string]string{"HOME": ""}, true, scanArgs()},
+		"below fail-under":  {map[string]string{}, true, scanArgs("--fail-under", "A")},
+	} {
+		h := t.TempDir()
+		e := map[string]string{"HOME": h}
+		for k, v := range c.env {
+			e[k] = v
+		}
+		r := cli(t, e, c.tty, c.args...)
+		if strings.Contains(r.stdout, note) {
+			t.Errorf("%s: the note showed", name)
+		}
+		if _, err := os.Stat(filepath.Join(h, ".config", "deedglass", "star-note-shown")); err == nil {
+			t.Errorf("%s: the marker was written", name)
+		}
+	}
+}

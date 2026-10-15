@@ -9,6 +9,18 @@ this file by `scripts/release-notes.sh`.
 
 ### Added
 
+- **`deedglass play`.** The 301 scene in a terminal, offline, with no Docker (`npx deedglass play`).
+  The rules decide each call live (the Acme demo policy, `policy.Evaluate`), and four records are
+  sealed with a key made for the run, checked, changed by one byte and checked again. Postgres's
+  lines are a labelled replay of a recorded real run (`docs/assets/demo-hero.cast.json`, with its
+  commit and date) and of `make demo`'s compared undo output. `--fast` skips the pauses; `--json`
+  prints what the run found. See `docs/PLAYGROUND.md`.
+- **The Claude Code plugin** gains `/deedglass:wrap` (prints the `claude mcp add` line that runs one
+  of your MCP servers through `deedglass mcp wrap`) and the `safe-postgres-agents` skill. The
+  repo's marketplace (`/plugin marketplace add deedglass/deedglass`) now has a description.
+- **A GitHub star note after a scan**: one dim line, at most once per machine, only in a terminal,
+  never in CI, with `--ci` or `--json`. `scan --no-star` or `DEEDGLASS_NO_STAR=1` hides it.
+
 - **Observe mode (watched sessions).** `deedglass observe run --connector <name> -- <command>` (and
   `observe start|stop|list|show|exclude`, the `/v1/observe/sessions` routes, Console › Sessions)
   groups every transaction Postgres committed on a connector's watched tables while a session was

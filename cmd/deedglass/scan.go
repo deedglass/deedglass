@@ -21,7 +21,7 @@ import (
 var scanValues struct {
 	dir, dsnEnv, outDir, format, failUnder        string
 	userConfigs, noWrite, score, badge, share, ci bool
-	full, noSeal                                  bool
+	full, noSeal, noStar                          bool
 	maxFiles                                      int
 }
 
@@ -30,7 +30,7 @@ func scanFlags(fs *flag.FlagSet) {
 	*v = struct {
 		dir, dsnEnv, outDir, format, failUnder        string
 		userConfigs, noWrite, score, badge, share, ci bool
-		full, noSeal                                  bool
+		full, noSeal, noStar                          bool
 		maxFiles                                      int
 	}{}
 	fs.StringVar(&v.dir, "dir", ".", "the directory to scan")
@@ -47,6 +47,7 @@ func scanFlags(fs *flag.FlagSet) {
 	fs.StringVar(&v.failUnder, "fail-under", "", "exit 1 when the grade is below this one: A, B, C or D")
 	fs.BoolVar(&v.full, "full", false, "also write deedglass-full-report.html, the full scan report (Pro or the $29 report; checks the licence)")
 	fs.BoolVar(&v.noSeal, "no-seal", false, "with --full: don't seal the report on your Deedglass server")
+	fs.BoolVar(&v.noStar, "no-star", false, "don't show the one-line GitHub star note (it shows at most once per machine; DEEDGLASS_NO_STAR=1 hides it for good)")
 }
 
 // scanFormats are the values --format accepts (help --json lists them for completions).
@@ -211,7 +212,55 @@ func runScan(ctx context.Context, e *Env, args []string) error {
 		return &ExitError{Code: ExitFailure, ErrCode: "postgres_unreachable", printed: !e.Globals.JSON,
 			Err: errors.New("the Postgres part failed; the file part was written")}
 	}
+	if !e.Globals.JSON && !v.ci && !v.noStar {
+		starNote(e)
+	}
 	return nil
+}
+
+// starURL is the repository the star note points to.
+const starURL = "https://github.com/deedglass/deedglass"
+
+// starNote prints a dim two-line note asking for a GitHub star, at most once per machine: only in a
+// terminal, never in CI, never with DEEDGLASS_NO_STAR set. It writes a marker file before printing,
+// so a machine where the marker can't be written never sees the line at all (rather than every run).
+func starNote(e *Env) {
+	if !e.IsTTY || e.Getenv("CI") != "" || truthy(e.Getenv("DEEDGLASS_NO_STAR")) {
+		return
+	}
+	marker := starMarker(e.Getenv)
+	if marker == "" {
+		return
+	}
+	if _, err := os.Stat(marker); err == nil {
+		return
+	}
+	if err := os.MkdirAll(filepath.Dir(marker), 0o700); err != nil {
+		return
+	}
+	if err := os.WriteFile(marker, []byte("The GitHub star note was shown once on this machine. Delete this file to see it again.\n"), 0o600); err != nil {
+		return
+	}
+	fmt.Fprintln(e.Stdout)
+	fmt.Fprintln(e.Stdout, e.Style.Dim("If this helped, a GitHub star helps others find it: "+starURL))
+	fmt.Fprintln(e.Stdout, e.Style.Dim("(shown once on this machine; DEEDGLASS_NO_STAR=1 or --no-star hides it)"))
+}
+
+// starMarker is where the star note remembers it was shown: $XDG_CONFIG_HOME/deedglass, else
+// ~/.config/deedglass (%USERPROFILE%\.config\deedglass on Windows). "" when there is no home.
+func starMarker(getenv func(string) string) string {
+	dir := getenv("XDG_CONFIG_HOME")
+	if dir == "" {
+		home := getenv("HOME")
+		if home == "" {
+			home = getenv("USERPROFILE")
+		}
+		if home == "" {
+			return ""
+		}
+		dir = filepath.Join(home, ".config")
+	}
+	return filepath.Join(dir, "deedglass", "star-note-shown")
 }
 
 func writeScanFile(dir, format string, r *scan.Report) (string, error) {

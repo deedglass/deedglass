@@ -1,6 +1,12 @@
 {
   "name": "deedglass",
-  "owner": { "name": "Deedglass", "url": "https://deedglass.com" },
+  "owner": {
+    "name": "Deedglass",
+    "url": "https://deedglass.com"
+  },
+  "metadata": {
+    "description": "The Deedglass plugin for Claude Code: put agent tool calls behind rules, check what really changed, and read scan results."
+  },
   "plugins": [
     {
       "name": "deedglass",

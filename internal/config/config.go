@@ -543,7 +543,7 @@ func (l *loader) parse(c *Config, k Key) {
 		if v != "live" && v != "test" {
 			bad(fmt.Sprintf("must be live or test (got %q).", v), "Unset it for live licence keys.")
 		}
-	case "DEEDGLASS_NO_BANNER", "DEEDGLASS_NO_ANIM", "DEEDGLASS_NO_NETWORK":
+	case "DEEDGLASS_NO_BANNER", "DEEDGLASS_NO_ANIM", "DEEDGLASS_NO_NETWORK", "DEEDGLASS_NO_STAR":
 		// Read by the CLI's terminal mark (internal/cli/mark) straight from the environment;
 		// checked here so config print and doctor flag a typo.
 		switch strings.ToLower(v) {

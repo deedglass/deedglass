@@ -93,6 +93,8 @@ var Keys = []Key{
 		Commands: "CLI", Doc: "Never show the terminal banner or the inline mark (bare deedglass, version, help). Scripts, pipes and CI never see them anyway.", Owner: "S05X"},
 	{Name: "DEEDGLASS_THEME", Kind: KindEnum, Default: "auto", Enum: []string{"auto", "light", "dark"}, Client: true,
 		Commands: "CLI", Doc: "Draw the terminal mark for a light or dark terminal. auto: COLORFGBG decides, else dark.", Owner: "S05X"},
+	{Name: "DEEDGLASS_NO_STAR", Kind: KindBool, Default: "false", Client: true,
+		Commands: "scan", Doc: "Never show the one-line GitHub star note after a scan. It shows at most once per machine, only in a terminal, and never in CI or with --json; scan --no-star hides it for one run.", Owner: "VIRAL2"},
 	{Name: "DEEDGLASS_NO_ANIM", Kind: KindBool, Default: "false", Client: true,
 		Commands: "CLI", Doc: "Turn off the Sealed animation at the end of deedglass init; only its final frame shows.", Owner: "S05X"},
 	{Name: "DEEDGLASS_LICENCE_FILE", Kind: KindPath, Client: true,
