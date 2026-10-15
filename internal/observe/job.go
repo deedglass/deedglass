@@ -60,6 +60,14 @@ func (s *Service) TickOrg(ctx context.Context, org ids.OrgID) error {
 		if err != nil {
 			return err
 		}
+		// The decoder's progress is read before any frame: the tick runs at READ COMMITTED, and the
+		// decoder commits frames and progress together, so progress read first never runs ahead of
+		// the frames the attach reads next. Read after, it could show a commit past the close
+		// whose earlier frames the attach missed, and the seal would leave them out.
+		slots, err := s.decoderFacts(ctx, tx, live)
+		if err != nil {
+			return err
+		}
 		conns := map[string]ConnectorFacts{}
 		fact := func(id string) (ConnectorFacts, error) {
 			if cf, ok := conns[id]; ok {
@@ -119,7 +127,7 @@ func (s *Service) TickOrg(ctx context.Context, org ids.OrgID) error {
 			cf := conns[row.ConnectorID]
 			switch row.State {
 			case StateOpen, StateClosing:
-				if err := s.refresh(ctx, tx, row, cf, now); err != nil {
+				if err := s.refresh(ctx, tx, row, cf, slots[row.ConnectorID], now); err != nil {
 					return err
 				}
 			case StateUndoing:
@@ -149,8 +157,31 @@ func (s *Service) attach(ctx context.Context, tx pgx.Tx, row *store.ObserveSessi
 	return err
 }
 
-// refresh writes the running summary, and for a closing session flags or seals it.
-func (s *Service) refresh(ctx context.Context, tx pgx.Tx, row *store.ObserveSession, cf ConnectorFacts, now time.Time) error {
+// decoderFacts reads the decoder slot row of every connector with an open or closing session.
+func (s *Service) decoderFacts(ctx context.Context, tx pgx.Tx, live []store.ObserveSession) (map[string]DecoderFacts, error) {
+	out := map[string]DecoderFacts{}
+	for i := range live {
+		row := &live[i]
+		if row.State != StateOpen && row.State != StateClosing {
+			continue
+		}
+		if _, ok := out[row.ConnectorID]; ok {
+			continue
+		}
+		d := DecoderFacts{Heartbeat: s.Heartbeat}
+		if ds, err := store.GetDecoderSlot(ctx, tx, row.ConnectorID, false); err == nil {
+			d.LastCommitAt, d.LastHeartbeatAt = ds.LastCommitAt, ds.LastHeartbeatAt
+		} else if !errors.Is(err, store.ErrNotFound) {
+			return nil, err
+		}
+		out[row.ConnectorID] = d
+	}
+	return out, nil
+}
+
+// refresh writes the running summary, and for a closing session flags or seals it. slot is the
+// decoder's progress as read before this tick attached any frame.
+func (s *Service) refresh(ctx context.Context, tx pgx.Tx, row *store.ObserveSession, cf ConnectorFacts, slot DecoderFacts, now time.Time) error {
 	fr, err := store.ObserveFrames(ctx, tx, row.ID, false)
 	if err != nil {
 		return err
@@ -159,12 +190,6 @@ func (s *Service) refresh(ctx context.Context, tx pgx.Tx, row *store.ObserveSess
 	sum := Summarize(row.ID, facts, cf.CaughtRows, false)
 	if row.State == StateOpen {
 		return writeSummary(ctx, tx, row.ID, sum)
-	}
-	slot := DecoderFacts{Heartbeat: s.Heartbeat}
-	if ds, err := store.GetDecoderSlot(ctx, tx, row.ConnectorID, false); err == nil {
-		slot.LastCommitAt, slot.LastHeartbeatAt = ds.LastCommitAt, ds.LastHeartbeatAt
-	} else if !errors.Is(err, store.ErrNotFound) {
-		return err
 	}
 	switch NextCloseStep(*row.ClosedAt, now, slot, slices.Contains(row.Flags, FlagDecoderBehind)) {
 	case StepFlagBehind:

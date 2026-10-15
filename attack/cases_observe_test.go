@@ -57,7 +57,7 @@ func sealedSession(h *harness.H) (string, string) {
 			if len(tx) > 1 {
 				return id, harness.Str(tx[0], "id")
 			}
-			panic(fmt.Sprintf("the sealed session holds no transaction: %v", s))
+			panic(fmt.Sprintf("the sealed session holds %d transactions, want 2: %v", len(tx), s))
 		}
 		time.Sleep(500 * time.Millisecond)
 	}
