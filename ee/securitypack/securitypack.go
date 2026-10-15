@@ -84,9 +84,9 @@ func (*Builder) Build(ctx context.Context, req securitypack.BuildRequest, w io.W
 		return nil, err
 	}
 	files := map[string][]byte{securitypack.FileAnswers: answers}
-	files[securitypack.FileMarkdown] = []byte(Markdown(p))
-	files[securitypack.FileReadme] = []byte(Readme(p, req.Aliases))
-	page, err := HTML(p, securitypack.HashBytes(answers))
+	files[securitypack.FileMarkdown] = []byte(noteMD(req.Note) + Markdown(p))
+	files[securitypack.FileReadme] = []byte(noteText(req.Note) + Readme(p, req.Aliases))
+	page, err := htmlPage(p, securitypack.HashBytes(answers), req.Note)
 	if err != nil {
 		return nil, err
 	}
@@ -236,9 +236,9 @@ type pageGroup struct {
 }
 
 type pageData struct {
-	Org, OrgID, Version, Period, PeriodISO, FromWords, Built string
-	RecordsLine, ChainLine, SealedLine, AnswersShort         string
-	Summary                                                  []struct {
+	Org, OrgID, Version, Period, PeriodISO, FromWords, Built, Note string
+	RecordsLine, ChainLine, SealedLine, AnswersShort               string
+	Summary                                                        []struct {
 		N    string
 		Word string
 	}
@@ -279,7 +279,25 @@ func chainLine(p *securitypack.Pack) string {
 
 // HTML renders index.html. answersDigest is answers.json's sha256, printed in the running footer.
 func HTML(p *securitypack.Pack, answersDigest string) ([]byte, error) {
-	d := pageData{Org: orgName(p), OrgID: p.Org, Version: p.DeedglassVersion, Period: securitypack.PeriodWords(p.Period),
+	return htmlPage(p, answersDigest, "")
+}
+
+func noteMD(n string) string {
+	if strings.TrimSpace(n) == "" {
+		return ""
+	}
+	return "> " + mdEscape(strings.TrimSpace(n)) + "\n\n"
+}
+
+func noteText(n string) string {
+	if strings.TrimSpace(n) == "" {
+		return ""
+	}
+	return strings.TrimSpace(n) + "\n\n"
+}
+
+func htmlPage(p *securitypack.Pack, answersDigest, note string) ([]byte, error) {
+	d := pageData{Note: strings.TrimSpace(note), Org: orgName(p), OrgID: p.Org, Version: p.DeedglassVersion, Period: securitypack.PeriodWords(p.Period),
 		PeriodISO: p.Period.From[:min(10, len(p.Period.From))] + " to " + p.Period.To[:min(10, len(p.Period.To))],
 		FromWords: day(p.Period.From), Built: day(p.GeneratedAt), RecordsLine: recordsLine(p), ChainLine: chainLine(p),
 		AnswersShort: securitypack.Short(answersDigest),

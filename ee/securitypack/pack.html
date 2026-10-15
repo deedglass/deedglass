@@ -71,6 +71,7 @@ a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-
 .plain li { margin: .5rem 0; text-wrap: pretty; }
 .plain pre { margin: .5rem 0 0; padding: .75rem 1rem; border-radius: 8px; background: var(--code-bg); overflow-x: auto; }
 .runfoot { display: none; }
+.note { margin: 0 0 2rem; padding: .625rem 1rem; border: 1px solid var(--part-t); border-radius: 8px; color: var(--part-t); background: var(--part-b); font-size: 14px; font-weight: 600; }
 @media (max-width: 40rem) {
   .doc { padding: 2.5rem 1rem 4rem; }
   h1 { font-size: 1.75rem; }
@@ -96,6 +97,7 @@ a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-
 <body>
 <main class="doc">
   <header>
+    {{if .Note}}<p class="note" role="note">{{.Note}}</p>{{end}}
     <p class="eyebrow">Security review · Deedglass</p>
     <h1>How {{.Org}} controls its AI agents</h1>
     <p class="sub">Answers built from {{.Org}}'s own Deedglass records, {{.Period}}. Every number below is counted from those records; the last page shows how to check them.</p>

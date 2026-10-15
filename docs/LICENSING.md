@@ -12,6 +12,7 @@ repos. Pro adds new features on top. It never takes a free one away.
 | Pro policy packs and the fix writer (as they ship) | the full scan report, founding partner, Pro |
 | The scan Action on private repos (as it ships) | founding partner, Pro |
 | Undo a whole watched session in one step (`deedglass observe undo`, S50) | founding partner, Pro |
+| The security review pack: the sealed document for a reviewer (`deedglass security-pack build`, S51; the readiness list and the offline check stay free) | founding partner, Pro |
 
 The full scan report plan lasts 30 days, a founding partner place six months; Pro renews until you
 cancel. Prices are on deedglass.com/pricing. Dodo Payments is the reseller and handles sales tax.
@@ -66,14 +67,14 @@ well-formed feature name in a token (lowercase letters, digits and `_`, 3 to 32 
 32 of them), keeps it so the signature still verifies, and grants only the features it knows.
 
 The token request also names what the build knows: `features_known` (for this build:
-`scan_full`, `scan_fix`, `packs_pro`, `action_private`, `undo_session`). The site signs the plan's
+`scan_full`, `scan_fix`, `packs_pro`, `action_private`, `undo_session`, `security_pack`). The site signs the plan's
 features that the request lists, in plan order. A request without the field (v0.1.0) gets the list
 those builds knew (`action_private`, `scan_full`, `scan_fix`, `packs_pro`), so a new feature never
 reaches a client that predates it. A list with nothing in common with the plan gets that list too.
 
 `deedglass serve` asks the licence once at start and then once a day; the answer turns the one-step
-session undo on or off for the next request. An undo already started completes even if the licence
-lapses before its countersign.
+session undo and the security review pack's build on or off for the next request. An undo already
+started completes even if the licence lapses before its countersign.
 
 ## When Pro works
 

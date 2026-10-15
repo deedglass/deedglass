@@ -1,0 +1,572 @@
+{
+  "object": "security_pack",
+  "v": 1,
+  "org": "org_01m50d5zr94ahs13tkv9txwz2q",
+  "org_name": "Acme",
+  "period": {
+    "from": "2026-07-17T18:37:09Z",
+    "to": "2026-10-15T18:37:09Z"
+  },
+  "generated_at": "2026-10-15T18:37:09Z",
+  "deedglass_version": "0.1.0-dev",
+  "summary": {
+    "in_place": 16,
+    "partly": 4,
+    "not_set_up": 3,
+    "not_applicable": 1,
+    "cant_tell": 0
+  },
+  "answers": [
+    {
+      "id": "agents_listed",
+      "group": "inventory",
+      "question": "Does every AI agent that acts have its own record, with a person responsible for it?",
+      "status": "partly",
+      "answer": "4 agents are registered and an agent without a record can't call any tool, but 4 agents have no named owner.",
+      "evidence": {
+        "active": 4,
+        "agents": 4,
+        "stopped": 0,
+        "without_owner": 4
+      },
+      "check": "deedglass agent list, or Console › Agents",
+      "refs": [
+        {
+          "framework": "NIST AI RMF 1.0",
+          "id": "GOVERN 1.6"
+        },
+        {
+          "framework": "OWASP LLM 2025",
+          "id": "LLM06",
+          "title": "Excessive Agency"
+        }
+      ]
+    },
+    {
+      "id": "keys_scoped",
+      "group": "inventory",
+      "question": "Does each agent use its own scoped key, and are unused keys cleaned up?",
+      "status": "in_place",
+      "answer": "1 live agent key belongs to exactly one agent with action scopes only; agent keys can never hold admin rights. Every key has been used.",
+      "evidence": {
+        "admin_keys": 1,
+        "agent_keys": 1,
+        "unused_keys": 0
+      },
+      "check": "deedglass agent keys list <agent>, or Console › Agents › Keys",
+      "refs": [
+        {
+          "framework": "OWASP LLM 2025",
+          "id": "LLM06",
+          "title": "Excessive Agency"
+        },
+        {
+          "framework": "NIST AI RMF 1.0",
+          "id": "MEASURE 2.7"
+        }
+      ]
+    },
+    {
+      "id": "keys_rotated",
+      "group": "inventory",
+      "question": "Are API keys replaced at least every 90 days?",
+      "status": "in_place",
+      "answer": "No live API key is older than 90 days (2 live keys).",
+      "evidence": {
+        "live_keys": 2,
+        "older_than_90_days": 0,
+        "oldest_on": "2026-10-15"
+      },
+      "check": "deedglass agent keys list <agent> and deedglass org keys list (created dates)",
+      "refs": [
+        {
+          "framework": "NIST AI RMF 1.0",
+          "id": "MEASURE 2.7"
+        }
+      ]
+    },
+    {
+      "id": "connectors_listed",
+      "group": "inventory",
+      "question": "Is every system an agent can reach listed as a connector?",
+      "status": "in_place",
+      "answer": "1 system is listed as a connector. Every action in the period went through one of them.",
+      "evidence": {
+        "active_connectors": 1,
+        "connectors": 1,
+        "proxy_actions": 0
+      },
+      "check": "deedglass connector list, or Console › Connectors",
+      "refs": [
+        {
+          "framework": "NIST AI RMF 1.0",
+          "id": "GOVERN 1.6"
+        },
+        {
+          "framework": "OWASP LLM 2025",
+          "id": "LLM06",
+          "title": "Excessive Agency"
+        }
+      ]
+    },
+    {
+      "id": "rules_active",
+      "group": "rules",
+      "question": "Does a rule version you chose decide every agent action?",
+      "status": "in_place",
+      "answer": "acme-demo version 2 (18 rules) decides every action. It was activated by key_01m50d8maknvw5wvx6ejcw5zkr on 15 Oct 2026, sealed in deed_01m50d8mzyza8a62bdejtc5fm6.",
+      "evidence": {
+        "activated_by": "key_01m50d8maknvw5wvx6ejcw5zkr",
+        "activated_on": "2026-10-15",
+        "activation_deed": "deed_01m50d8mzyza8a62bdejtc5fm6",
+        "enforced": "acme-demo",
+        "rules": 18,
+        "version": 2,
+        "version_hash": "sha256:6f9139ab353170c9d93c274c0d86c721b897fd21a48cdf741c25d3c0045fe668",
+        "version_id": "pv_01m50d8mz5d48c3gezv1g3v0dy"
+      },
+      "check": "Console › Policies shows the enforced version; deedglass verify checks its activation record",
+      "refs": [
+        {
+          "framework": "OWASP LLM 2025",
+          "id": "LLM06",
+          "title": "Excessive Agency"
+        },
+        {
+          "framework": "NIST AI RMF 1.0",
+          "id": "GOVERN 1.4"
+        }
+      ]
+    },
+    {
+      "id": "default_deny",
+      "group": "rules",
+      "question": "Are destructive SQL and large money moves refused or held for a person by default?",
+      "status": "in_place",
+      "answer": "The enforced rules were run on 4 fixed inputs (DROP TABLE, TRUNCATE, DELETE with no WHERE, a $5,000 refund): 4 refused, 0 held for a person, none allowed.",
+      "evidence": {
+        "allowed": 0,
+        "allowed_probes": "",
+        "held": 0,
+        "probes": 4,
+        "refused": 4
+      },
+      "check": "deedglass policy evaluate --server --tool <connector>.execute --sql 'DROP TABLE public.orders'",
+      "refs": [
+        {
+          "framework": "OWASP LLM 2025",
+          "id": "LLM06",
+          "title": "Excessive Agency"
+        },
+        {
+          "framework": "NIST AI RMF 1.0",
+          "id": "MANAGE 1.3"
+        }
+      ]
+    },
+    {
+      "id": "limits_set",
+      "group": "rules",
+      "question": "Are agents limited in how often they act and how much they can spend?",
+      "status": "in_place",
+      "answer": "The enforced rules set 1 budget on calls or spend, and 0 of 4 active agents have their own budget, so a looping agent stops at its limit.",
+      "evidence": {
+        "active_agents": 4,
+        "agents_with_budgets": 0,
+        "rule_budgets": 1
+      },
+      "check": "deedglass agent list --json shows each agent's budgets; Console › Policies shows the enforced version's",
+      "refs": [
+        {
+          "framework": "OWASP LLM 2025",
+          "id": "LLM10",
+          "title": "Unbounded Consumption"
+        },
+        {
+          "framework": "NIST AI RMF 1.0",
+          "id": "MANAGE 1.3"
+        }
+      ]
+    },
+    {
+      "id": "rules_changes_recorded",
+      "group": "rules",
+      "question": "Is every change to the rules sealed with who made it and when?",
+      "status": "in_place",
+      "answer": "5 rule changes (the live activations and the period's changes), each sealed with who made it and when; 5 changes happened in the period.",
+      "evidence": {
+        "changes": 5,
+        "changes_in_period": 5,
+        "sealed": 5,
+        "with_who": 5
+      },
+      "check": "deedglass deeds list --kind admin lists each policy.activated record; deedglass verify checks them",
+      "refs": [
+        {
+          "framework": "NIST AI RMF 1.0",
+          "id": "GOVERN 1.4"
+        },
+        {
+          "framework": "NIST AI RMF 1.0",
+          "id": "MEASURE 2.8"
+        }
+      ]
+    },
+    {
+      "id": "approvals_required",
+      "group": "people",
+      "question": "Do risky actions wait for a person before they run?",
+      "status": "in_place",
+      "answer": "4 enforced rules hold actions for a person. In the period 1 action waited: 0 approved, 0 denied.",
+      "evidence": {
+        "approval_rules": 4,
+        "approvals": 1,
+        "approved": 0,
+        "denied": 0
+      },
+      "check": "deedglass approvals list, or Console › Approvals",
+      "refs": [
+        {
+          "framework": "OWASP LLM 2025",
+          "id": "LLM06",
+          "title": "Excessive Agency"
+        },
+        {
+          "framework": "NIST AI RMF 1.0",
+          "id": "MAP 3.5"
+        }
+      ]
+    },
+    {
+      "id": "four_eyes",
+      "group": "people",
+      "question": "Is the person who asked kept from approving their own request, with two approvers where it matters?",
+      "status": "in_place",
+      "answer": "Deedglass refuses an approval from the person who asked, on every approval. 1 rule asks for two or more people; 0 approvals in the period needed two.",
+      "evidence": {
+        "approval_rules": 4,
+        "two_person_approvals": 0,
+        "two_person_rules": 1
+      },
+      "check": "Console › Approvals shows each approver; the approval's record lists who decided",
+      "refs": [
+        {
+          "framework": "NIST AI RMF 1.0",
+          "id": "MAP 3.5"
+        }
+      ]
+    },
+    {
+      "id": "approvals_expire",
+      "group": "people",
+      "question": "Do actions waiting for approval expire instead of waiting forever?",
+      "status": "in_place",
+      "answer": "Every waiting action has an expiry. In the period 0 approvals expired, and none is waiting past its expiry.",
+      "evidence": {
+        "approvals": 1,
+        "expired": 0,
+        "median_minutes": 0,
+        "overdue": 0
+      },
+      "check": "deedglass approvals list --status expired",
+      "refs": [
+        {
+          "framework": "NIST AI RMF 1.0",
+          "id": "MAP 3.5"
+        }
+      ]
+    },
+    {
+      "id": "stop_all",
+      "group": "stop",
+      "question": "Can more than one person stop every agent at once?",
+      "status": "in_place",
+      "answer": "2 people (owners and admins) can stop every agent at once with deedglass org stop-all or Console › Stop all.",
+      "evidence": {
+        "admin_keys": 1,
+        "people": 2
+      },
+      "check": "Console › Settings › Members; deedglass org stop-all --help",
+      "refs": [
+        {
+          "framework": "NIST AI RMF 1.0",
+          "id": "MANAGE 2.4"
+        },
+        {
+          "framework": "OWASP LLM 2025",
+          "id": "LLM06",
+          "title": "Excessive Agency"
+        }
+      ]
+    },
+    {
+      "id": "stop_used",
+      "group": "stop",
+      "question": "Has Stop been used or tried recently?",
+      "status": "not_set_up",
+      "answer": "Stop has never been used or tried in this org.",
+      "evidence": {
+        "stops_in_period": 0
+      },
+      "check": "deedglass deeds list --kind admin lists the agent.stopped and org.stopped_all records",
+      "refs": [
+        {
+          "framework": "NIST AI RMF 1.0",
+          "id": "MANAGE 2.4"
+        }
+      ]
+    },
+    {
+      "id": "results_checked",
+      "group": "checking",
+      "question": "Are agents' write actions checked against the system they changed?",
+      "status": "partly",
+      "answer": "67% of the period's 419 write actions were checked against the system of record (151 Checked, 132 Proven); 136 rest on the tool's own answer (aim for 80%).",
+      "evidence": {
+        "checked": 151,
+        "claimed": 136,
+        "proven": 132,
+        "share_percent": 67,
+        "writes": 419
+      },
+      "check": "deedglass actions list --level L0 lists the actions that rest on the tool's own answer",
+      "refs": [
+        {
+          "framework": "NIST AI RMF 1.0",
+          "id": "MEASURE 2.4"
+        }
+      ]
+    },
+    {
+      "id": "mismatches_handled",
+      "group": "checking",
+      "question": "When a check finds the result doesn't match, is there a follow-up?",
+      "status": "not_set_up",
+      "answer": "38 actions ended in Doesn't match in the period and none has a follow-up: act_01m50d8j5r9cv4fn30nqserq4x, act_01m50d8jah53j1hj5j3c9xkkas, act_01m50d8jb80zgpyqtvxx65mpzc, act_01m50d8jm25481w9e1hnyby0he, act_01m50d8jnkpx1psehmet50fvtg and 33 more.",
+      "evidence": {
+        "followed_up": 0,
+        "mismatches": 38,
+        "open": "act_01m50d8j5r9cv4fn30nqserq4x, act_01m50d8jah53j1hj5j3c9xkkas, act_01m50d8jb80zgpyqtvxx65mpzc, act_01m50d8jm25481w9e1hnyby0he, act_01m50d8jnkpx1psehmet50fvtg and 33 more"
+      },
+      "check": "deedglass actions list --verdict MISMATCH",
+      "refs": [
+        {
+          "framework": "NIST AI RMF 1.0",
+          "id": "MANAGE 4.3"
+        }
+      ]
+    },
+    {
+      "id": "watched_sessions",
+      "group": "checking",
+      "question": "Are changes made to your databases outside Deedglass recorded too?",
+      "status": "not_set_up",
+      "answer": "Observe mode is off, so changes made outside Deedglass aren't recorded.",
+      "evidence": {
+        "caught": 0,
+        "postgres_connectors": 1,
+        "sessions": 0,
+        "watched": 0
+      },
+      "check": "deedglass observe list",
+      "refs": [
+        {
+          "framework": "NIST AI RMF 1.0",
+          "id": "MEASURE 2.4"
+        }
+      ]
+    },
+    {
+      "id": "undo_available",
+      "group": "undo",
+      "question": "Can agents' database writes be undone from the record?",
+      "status": "in_place",
+      "answer": "Every connector that writes (1) is Postgres, where Deedglass can undo a write from what Postgres committed.",
+      "evidence": {
+        "undo_connectors": 1,
+        "without_undo": "",
+        "write_connectors": 1
+      },
+      "check": "deedglass undo preview <act_…> on any write",
+      "refs": [
+        {
+          "framework": "NIST AI RMF 1.0",
+          "id": "MANAGE 2.3"
+        }
+      ]
+    },
+    {
+      "id": "undos_done",
+      "group": "undo",
+      "question": "When something was undone, was the undo itself checked?",
+      "status": "not_applicable",
+      "answer": "Nothing was undone in the period.",
+      "evidence": {
+        "matched": 0,
+        "session_undos": 0,
+        "undos": 0
+      },
+      "check": "deedglass actions show <act_…> on the undo",
+      "refs": [
+        {
+          "framework": "NIST AI RMF 1.0",
+          "id": "MANAGE 2.3"
+        }
+      ]
+    },
+    {
+      "id": "secrets_encrypted",
+      "group": "secrets",
+      "question": "Are connector credentials encrypted at rest and never shown again?",
+      "status": "in_place",
+      "answer": "1 credential is stored with A256GCM-ENV-1 envelope encryption and never returned by the API or Console. Each was set or rotated in the last year.",
+      "evidence": {
+        "alg": "A256GCM-ENV-1",
+        "credentials": 1,
+        "stale": 0
+      },
+      "check": "deedglass connector show <connector> shows the credential's version and dates, never its value",
+      "refs": [
+        {
+          "framework": "OWASP LLM 2025",
+          "id": "LLM02",
+          "title": "Sensitive Information Disclosure"
+        },
+        {
+          "framework": "NIST AI RMF 1.0",
+          "id": "MEASURE 2.7"
+        }
+      ]
+    },
+    {
+      "id": "agents_never_see_secrets",
+      "group": "secrets",
+      "question": "Do agents act without ever holding database passwords or API keys?",
+      "status": "in_place",
+      "answer": "All 469 actions in the period ran through Deedglass connectors, which hold the credentials; the agent sent only the tool and its arguments.",
+      "evidence": {
+        "gateway_actions": 469,
+        "proxy_actions": 0
+      },
+      "check": "deedglass actions list shows each action's mode (gateway or proxy)",
+      "refs": [
+        {
+          "framework": "OWASP LLM 2025",
+          "id": "LLM02",
+          "title": "Sensitive Information Disclosure"
+        },
+        {
+          "framework": "OWASP LLM 2025",
+          "id": "LLM06",
+          "title": "Excessive Agency"
+        },
+        {
+          "framework": "NIST AI RMF 1.0",
+          "id": "MEASURE 2.7"
+        }
+      ]
+    },
+    {
+      "id": "egress_limited",
+      "group": "secrets",
+      "question": "Do connectors' outbound calls go through one door that refuses private networks?",
+      "status": "partly",
+      "answer": "Every connector call leaves through one outbound door, but private networks are reachable (allowed in dev, 0 ranges listed).",
+      "evidence": {
+        "allowed_ranges": 0,
+        "env": "dev",
+        "private_networks": "allowed in dev"
+      },
+      "check": "deedglass config print (egress keys)",
+      "refs": [
+        {
+          "framework": "OWASP LLM 2025",
+          "id": "LLM06",
+          "title": "Excessive Agency"
+        },
+        {
+          "framework": "NIST AI RMF 1.0",
+          "id": "MEASURE 2.7"
+        }
+      ]
+    },
+    {
+      "id": "records_sealed",
+      "group": "records",
+      "question": "Does every action have a sealed record in an unbroken chain?",
+      "status": "in_place",
+      "answer": "571 finished actions in the period each have a sealed record. The chain of 626 records is unbroken.",
+      "evidence": {
+        "chain": "intact",
+        "chain_head": "sha256:6724ff3c769af6d2d7216889e44146d08ef159796631119afff65a24cdcc6873",
+        "deeds_checked": 626,
+        "finished": 571,
+        "unsealed": 0
+      },
+      "check": "deedglass ledger check; deedglass verify records.tar.gz",
+      "refs": [
+        {
+          "framework": "NIST AI RMF 1.0",
+          "id": "MEASURE 2.8"
+        }
+      ]
+    },
+    {
+      "id": "records_verifiable",
+      "group": "records",
+      "question": "Can a reviewer check the records offline, without an account?",
+      "status": "in_place",
+      "answer": "Records are sealed with Ed25519 seal key sk_01m50d5zr4txnqpj78yszjexmm; the public keys ship with the records, and deedglass verify checks them offline.",
+      "evidence": {
+        "revoked": 0,
+        "seal_keys": "sk_01m50d5zr4txnqpj78yszjexmm",
+        "signer": "sk_01m50d5zr4txnqpj78yszjexmm"
+      },
+      "check": "deedglass security-pack verify <folder>",
+      "refs": [
+        {
+          "framework": "NIST AI RMF 1.0",
+          "id": "MEASURE 2.8"
+        },
+        {
+          "framework": "NIST AI RMF 1.0",
+          "id": "MEASURE 1.3"
+        }
+      ]
+    },
+    {
+      "id": "product_tested",
+      "group": "records",
+      "question": "Has this version of the control layer been attacked on purpose, and with what result?",
+      "status": "partly",
+      "answer": "The attack suite ran against Deedglass 0.1.0 on 15 Oct 2026: 70 cases matched, 0 differed. This server runs 0.1.0-dev.",
+      "evidence": {
+        "differs": 0,
+        "matched": 70,
+        "run_on": "2026-10-15",
+        "running": "0.1.0-dev",
+        "tested_version": "0.1.0"
+      },
+      "check": "docs/ATTACK_SUITE.md, or make attack in the Deedglass repo",
+      "refs": [
+        {
+          "framework": "NIST AI RMF 1.0",
+          "id": "MEASURE 2.6"
+        },
+        {
+          "framework": "NIST AI RMF 1.0",
+          "id": "MEASURE 2.7"
+        }
+      ]
+    }
+  ],
+  "chain": {
+    "intact": true,
+    "head": "sha256:6724ff3c769af6d2d7216889e44146d08ef159796631119afff65a24cdcc6873"
+  },
+  "records": {
+    "file": "records.tar.gz",
+    "deeds": 626,
+    "sha256": "sha256:faa2ad6644f8653f410c9da4675b3080d1d50c06106bd544bd511a8e9a79beee"
+  }
+}

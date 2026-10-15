@@ -675,6 +675,25 @@
     ]
   },
   {
+    "code": "pack_incomplete",
+    "exit": [
+      1
+    ],
+    "messages": null,
+    "next": [
+      "Run deedglass security-pack build again; nothing was left behind."
+    ]
+  },
+  {
+    "code": "pack_invalid",
+    "exit": [
+      1
+    ],
+    "messages": [
+      "the pack doesn't check."
+    ]
+  },
+  {
     "code": "pack_key_unusable",
     "exit": [
       1
@@ -1032,6 +1051,16 @@
       2
     ],
     "messages": null
+  },
+  {
+    "code": "usage_error",
+    "exit": [
+      2
+    ],
+    "messages": null,
+    "next": [
+      "Pass an existing directory to --out."
+    ]
   },
   {
     "code": "webhook_failed",

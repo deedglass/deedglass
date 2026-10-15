@@ -36,6 +36,9 @@ type BuildRequest struct {
 	Keys    KeysFunc
 	// TempDir is where the records bundle is staged while it is hashed ("" for the system's).
 	TempDir string
+	// Note, when set, is printed at the top of index.html, answers.md and README.txt before they
+	// are sealed ("Sample built from the Acme demo data"). It never reaches answers.json.
+	Note string
 }
 
 // BuildResult says what the folder holds.

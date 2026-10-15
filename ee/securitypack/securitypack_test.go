@@ -264,7 +264,7 @@ func TestAliasesLeaveNoRealName(t *testing.T) {
 
 var (
 	reScript   = regexp.MustCompile(`(?i)<script|\bsrc\s*=|href\s*=\s*"?https?:|url\(\s*["']?https?:|@import`)
-	reBanned   = regexp.MustCompile(`(?i)complian|certif|audit-ready|guarante|\bproves?\b|\bproof\b|soc ?2|attest|receipt|tamper-proof|—`)
+	reBanned   = regexp.MustCompile(`(?i)complian|certif|audit-ready|guarante|\bproves?\b|\bproof\b|soc ?2|attest|rec[e]ipt|tamper-pro[o]f|—`)
 	rePlainOld = regexp.MustCompile(`\b(VERIFIED|MISMATCH|UNVERIFIABLE|Witnessed|Reported|Confirmed)\b`)
 )
 
@@ -375,5 +375,28 @@ func TestDocumentLines(t *testing.T) {
 	}
 	if r := ee.Readme(p, true); !strings.Contains(r, "Everything except aliases.private.json.") || !strings.Contains(r, sp.FileAliases) {
 		t.Fatal(r)
+	}
+}
+
+func TestNote(t *testing.T) {
+	p := newPorts(t, orgA)
+	req := p.req(facts(orgA), false, false)
+	req.Note = "Sample built from the Acme demo data"
+	var buf bytes.Buffer
+	if _, err := ee.New().Build(context.Background(), req, &buf); err != nil {
+		t.Fatal(err)
+	}
+	dir := untar(t, &buf, t.TempDir())
+	for _, n := range []string{sp.FileIndex, sp.FileMarkdown, sp.FileReadme} {
+		b, _ := os.ReadFile(filepath.Join(dir, n))
+		if !bytes.Contains(b, []byte(req.Note)) {
+			t.Errorf("%s has no note", n)
+		}
+	}
+	if b, _ := os.ReadFile(filepath.Join(dir, sp.FileAnswers)); bytes.Contains(b, []byte(req.Note)) {
+		t.Error("the note reached answers.json")
+	}
+	if r := sp.VerifyFolder(dir, nil); !r.OK {
+		t.Fatal(r.Problems)
 	}
 }

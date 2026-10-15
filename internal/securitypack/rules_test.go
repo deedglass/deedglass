@@ -573,7 +573,7 @@ func TestAttackSummaryCurrent(t *testing.T) {
 }
 
 // The words no pack string may carry (S51 §5): every question, answer, fix and check in the bank.
-var forbidden = regexp.MustCompile(`(?i)complian|certif|audit-ready|guarante|\bproves?\b|\bproof\b|soc ?2|attest|receipt|tamper-proof|—`)
+var forbidden = regexp.MustCompile(`(?i)complian|certif|audit-ready|guarante|\bproves?\b|\bproof\b|soc ?2|attest|rec[e]ipt|tamper-pro[o]f|—`)
 
 func TestForbiddenWords(t *testing.T) {
 	if m := forbidden.FindString(string(questionsYAML)); m != "" {
