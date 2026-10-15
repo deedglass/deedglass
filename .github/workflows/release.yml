@@ -164,7 +164,7 @@ jobs:
           python-version: "3.13"
       - name: npm pack @deedglass/sdk
         working-directory: sdk/typescript
-        run: npm ci --ignore-scripts --no-audit --no-fund && npm run build && npm pack --pack-destination "$RUNNER_TEMP/sdk"
+        run: mkdir -p "$RUNNER_TEMP/sdk" && npm ci --ignore-scripts --no-audit --no-fund && npm run build && npm pack --pack-destination "$RUNNER_TEMP/sdk"
       - name: wheel and sdist
         run: make py-build PY=python3 && cp sdk/python/dist/* "$RUNNER_TEMP/sdk/"
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
