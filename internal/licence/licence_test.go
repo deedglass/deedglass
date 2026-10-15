@@ -59,6 +59,10 @@ func bodies() []Body {
 		{Object: ObjectToken, V: 1, ID: "lic_01jdeeeeeeeeeeeeeeeeeeeeee", Plan: PlanPro, Features: NegotiateFeatures(PlanPro, KnownFeatures(), true),
 			KeySHA256: KeyHash("DG-PRO-TEST-0005"), Instance: "lki_test_0005", ValidatedAt: "2026-10-21T04:12:09.000Z",
 			GraceDays: 14, PeriodEnd: nil, Livemode: false},
+		// S52: the agency_monthly sku is plan pro plus agency, for a client that lists agency.
+		{Object: ObjectToken, V: 1, ID: "lic_01jdffffffffffffffffffffff", Plan: PlanPro, Features: NegotiateSkuFeatures(SkuAgencyMonthly, PlanPro, KnownFeatures(), true),
+			KeySHA256: KeyHash("DG-AGENCY-TEST-0006"), Instance: "lki_test_0006", ValidatedAt: "2026-10-21T04:12:09.000Z",
+			GraceDays: 14, PeriodEnd: ptr("2026-11-21T04:12:09.000Z"), Livemode: false},
 	}
 }
 
@@ -73,7 +77,7 @@ type golden struct {
 func TestGoldenTokens(t *testing.T) {
 	priv, _ := testSigner(t)
 	var g golden
-	g.Comment = "Licence token goldens (S48; S50 adds two negotiated tokens). Go signs these; the site's WebCrypto signer must produce the same body_hash and sig. Tokens 1-3 carry the v1 lists (a request without features_known), 4-5 the lists a client that sends features_known gets. Test key only."
+	g.Comment = "Licence token goldens (S48; S50 adds two negotiated tokens; S52 one agency_monthly token). Go signs these; the site's WebCrypto signer must produce the same body_hash and sig. Tokens 1-3 carry the v1 lists (a request without features_known), 4-5 the lists a client that sends features_known gets, 6 the agency_monthly sku (plan pro plus agency). Test key only."
 	g.KeyID, g.SeedHex = testKeyID, strings.Repeat("07", 32)
 	ksj, _ := KeySetJSON([]KeyRecord{Record(testKeyID, priv.Public().(ed25519.PublicKey))})
 	g.KeySet = json.RawMessage(bytes.TrimSpace(ksj))

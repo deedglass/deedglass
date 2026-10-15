@@ -6,6 +6,7 @@
 #   scripts/web_e2e.sh lighthouse   Lighthouse 13 on /app, /app/_kit and /login (desktop and mobile)
 #   scripts/web_e2e.sh shots        the screenshot pass (writes ~/txv/ops/plan/prompts-v7/reports/screens/S24)
 #   scripts/web_e2e.sh shots28      the S28 Insights screenshot pass (reports/screens/S28)
+#   scripts/web_e2e.sh shots52      the S52 This week and Clients pass (reports/screens/S52)
 #   scripts/web_e2e.sh serve        keep the stack up until Ctrl-C (for playwright-cli and manual looks)
 #
 # The cluster lives in .tmp/web-e2e-pg (port 5546x, never the founder's 55432); the server's working
@@ -218,6 +219,7 @@ case "$MODE" in
   lighthouse) node e2e/lighthouse.mjs || st=$? ;;
   shots) npx playwright test --project=shots || st=$? ;;
   shots28) SHOTS_DIR="${SHOTS28_DIR:-$HOME/txv/ops/plan/prompts-v7/reports/screens/S28}" npx playwright test --project=shots28 || st=$? ;;
+  shots52) SHOTS_DIR="${SHOTS52_DIR:-$HOME/txv/ops/plan/prompts-v7/reports/screens/S52}" npx playwright test --project=shots52 || st=$? ;;
   serve) echo "web-e2e: up. Sign-in links: $DG org login-link --email owner@acme.example --org acme (cwd $WORK). Ctrl-C to stop."; wait "$SERVE_PID" || st=$? ;;
   *) echo "unknown mode $MODE" >&2; st=2 ;;
 esac

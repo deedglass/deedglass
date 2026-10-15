@@ -34,7 +34,7 @@ func (s roleSessions) AuthenticateSession(_ context.Context, r *http.Request) (h
 func TestAuthzMatrixServe(t *testing.T) {
 	allowed := map[string]bool{"POST /v1/auth/logout": true, "POST /v1/auth/switch-org": true, "PATCH /v1/me": true,
 		"POST /v1/policies/lint": true, "POST /v1/policies/evaluate": true, "POST /v1/policies/test": true,
-		"POST /v1/approvals/{id}/approve": true, "POST /v1/approvals/{id}/deny": true}
+		"POST /v1/approvals/{id}/approve": true, "POST /v1/approvals/{id}/deny": true, "POST /v1/weekly/email": true}
 	api := httpx.New(httpx.Options{Logger: slog.New(slog.DiscardHandler), Sessions: roleSessions{org: ids.New[ids.OrgKind]()}})
 	api.Mount(serveRoutes(api, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)...)
 	checked := 0

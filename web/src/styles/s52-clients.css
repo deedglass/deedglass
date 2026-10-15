@@ -1,0 +1,32 @@
+/* S52: the This week card on Overview and the Clients page (controllers/weekly.ts; DESIGN.md "Client
+   row"). Linear's team list: one dense row per client, numbers right-aligned in tabular figures, the
+   chips at the end. Existing chips and tokens only; no new token. At 360 px the table turns into
+   cards (.dt.cards) and the Open button sits under the chips. */
+
+.wk { display: grid; gap: var(--space-2); padding: var(--space-4) var(--space-5) var(--space-5); }
+.wk p { margin: 0; text-wrap: pretty; }
+.wk-numbers { font-weight: 600; font-variant-numeric: tabular-nums; }
+.wk-check, .wk-chain { font-variant-numeric: tabular-nums; }
+.wk-caught-head { display: flex; gap: var(--space-1); align-items: center; margin: var(--space-2) 0 0; color: var(--unverifiable-fg); }
+.wk-caught { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-2); }
+.wk-caught li { display: grid; gap: 2px; padding-left: var(--space-3); border-left: 2px solid var(--hairline); }
+.wk-free, .wk-report { font-family: var(--font-mono); font-size: var(--type-mono-s-size); line-height: var(--type-mono-s-line); overflow-wrap: anywhere; }
+.wk-email { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-2); }
+.wk-toggle { min-height: 32px; }
+
+@media (min-width: 640px) { .table-frame > table.dt.cl-list { display: table; width: 100%; } }
+.cl-name { font-weight: 500; }
+.cl-name { color: var(--text); }
+.cl-slug { margin-left: var(--space-1); }
+.cl-chips { display: inline-flex; flex-wrap: wrap; gap: var(--space-1) var(--space-2); align-items: center; }
+.cl-chips time { color: var(--text-2); font-size: var(--type-footnote-size); }
+.cl-open { text-align: right; white-space: nowrap; }
+.cl-foot { display: grid; gap: var(--space-1); margin-top: var(--space-5); }
+.cl-foot p, .cl-foot h2 { margin: 0; }
+.cl-foot .mono { overflow-wrap: anywhere; }
+.cl-pro { display: grid; gap: var(--space-3); justify-items: start; padding: var(--space-5); max-width: 40rem; }
+.cl-pro p { margin: 0; text-wrap: pretty; }
+
+@media (max-width: 767.98px) {
+  .cl-open { text-align: left; }
+}

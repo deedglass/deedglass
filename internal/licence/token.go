@@ -47,11 +47,22 @@ const (
 	// FeatureSecurityPack is S51's security review document (ee/securitypack). The readiness view
 	// stays free and never asks.
 	FeatureSecurityPack = "security_pack"
+	// FeatureAgency is S52's agency view (ee/agency): the Clients overview, bulk client reports and
+	// the brand file. Only the agency_monthly sku carries it (plan pro plus agency); each org's own
+	// report and the Monday email stay free and never ask.
+	FeatureAgency = "agency"
 )
+
+// SkuAgencyMonthly is the Agency plan's sku (S52 §3.2): plan pro, features pro plus agency.
+const SkuAgencyMonthly = "agency_monthly"
+
+// SkuExtraFeatures are features a sku adds to its plan's list (the site's catalog carries the same
+// table: functions/_lib/commerce/licence_features.ts SKU_EXTRA_FEATURES).
+var SkuExtraFeatures = map[string][]string{SkuAgencyMonthly: {FeatureAgency}}
 
 // knownFeatures is every feature this build understands. A token may name others (forward
 // compatibility, ADR-079): they are kept so the signature still verifies, and never granted.
-var knownFeatures = []string{FeatureScanFull, FeatureScanFix, FeaturePacksPro, FeatureActionPrivate, FeatureUndoSession, FeatureSecurityPack}
+var knownFeatures = []string{FeatureScanFull, FeatureScanFix, FeaturePacksPro, FeatureActionPrivate, FeatureUndoSession, FeatureSecurityPack, FeatureAgency}
 
 // KnownFeatures is this build's feature list, in a stable order: the token request's
 // features_known (S50 §3.8), so the site signs only names this build understands.
@@ -93,6 +104,22 @@ func NegotiateFeatures(plan string, known []string, present bool) []string {
 	}
 	if len(out) == 0 {
 		return append([]string(nil), V1PlanFeatures[plan]...)
+	}
+	return out
+}
+
+// NegotiateSkuFeatures is NegotiateFeatures for a sku: the plan's negotiated list, then the sku's
+// extra features the client lists. A client that sends no features_known gets only the v1 list, so
+// a feature never reaches a build that predates it.
+func NegotiateSkuFeatures(sku, plan string, known []string, present bool) []string {
+	out := NegotiateFeatures(plan, known, present)
+	if !present {
+		return out
+	}
+	for _, f := range SkuExtraFeatures[sku] {
+		if slices.Contains(known, f) && !slices.Contains(out, f) {
+			out = append(out, f)
+		}
 	}
 	return out
 }

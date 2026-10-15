@@ -1,5 +1,5 @@
 {
-  "$comment": "Licence token goldens (S48; S50 adds two negotiated tokens). Go signs these; the site's WebCrypto signer must produce the same body_hash and sig. Tokens 1-3 carry the v1 lists (a request without features_known), 4-5 the lists a client that sends features_known gets. Test key only.",
+  "$comment": "Licence token goldens (S48; S50 adds two negotiated tokens; S52 one agency_monthly token). Go signs these; the site's WebCrypto signer must produce the same body_hash and sig. Tokens 1-3 carry the v1 lists (a request without features_known), 4-5 the lists a client that sends features_known gets, 6 the agency_monthly sku (plan pro plus agency). Test key only.",
   "key_id": "lk_01jdtestkey00000000000000a",
   "seed_hex": "0707070707070707070707070707070707070707070707070707070707070707",
   "key_set": {
@@ -121,6 +121,30 @@
       "livemode": false,
       "body_hash": "sha256:eb20817bc08eb2897282193176543cb8508b674e39fe90a46a9f538c8005c708",
       "sig": "ed25519:VgIZ0IYvZi4sdT7Wp4Fd3NvStFHfqSpaIpmZouY0LnrVgJswZFbODoH0tMsWXQ-BjgnxwzlssstSaEHX9yocBA"
+    },
+    {
+      "object": "licence_token",
+      "v": 1,
+      "id": "lic_01jdffffffffffffffffffffff",
+      "plan": "pro",
+      "features": [
+        "action_private",
+        "scan_full",
+        "scan_fix",
+        "packs_pro",
+        "undo_session",
+        "security_pack",
+        "agency"
+      ],
+      "key_sha256": "sha256:bb27dd1b958c9786f65a6520d05337e2f396006f6ef0089dd4c14ac02c7b0a03",
+      "instance": "lki_test_0006",
+      "validated_at": "2026-10-21T04:12:09.000Z",
+      "grace_days": 14,
+      "period_end": "2026-11-21T04:12:09.000Z",
+      "key_id": "lk_01jdtestkey00000000000000a",
+      "livemode": false,
+      "body_hash": "sha256:2acf3a53c9bfc3ab3a19f4153751bbc019b5f1fc2317eba927d65fa13b187c7b",
+      "sig": "ed25519:aj9BJVkQAUs-NElLVLcUE7yOFcRHXZx3Edd-u5HPhAjIxyGpjPzN0wnBxa7kS-Ks53MHvwBwYR7IPGnNeg0hAA"
     }
   ]
 }

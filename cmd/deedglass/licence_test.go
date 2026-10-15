@@ -26,6 +26,7 @@ type licFake struct {
 	valid    atomic.Bool
 	activate int
 	plan     string
+	sku      string // S52: agency_monthly signs plan pro plus agency
 	calls    atomic.Int32
 	now      time.Time
 }
@@ -57,7 +58,7 @@ func (f *licFake) serve(t *testing.T) *httptest.Server {
 			return
 		}
 		pe := f.now.Add(30 * 24 * time.Hour).Format(licence.TimeLayout)
-		b := licence.Body{Object: licence.ObjectToken, V: 1, ID: "lic_01jdcccccccccccccccccccccc", Plan: f.plan, Features: licence.PlanFeatures[f.plan],
+		b := licence.Body{Object: licence.ObjectToken, V: 1, ID: "lic_01jdcccccccccccccccccccccc", Plan: f.plan, Features: licence.NegotiateSkuFeatures(f.sku, f.plan, licence.KnownFeatures(), true),
 			KeySHA256: licence.KeyHash(in.Key), Instance: in.Instance, ValidatedAt: f.now.Format(licence.TimeLayout), GraceDays: 14, PeriodEnd: &pe}
 		tok, err := licence.Sign(cliLicKeyID, f.priv, b)
 		if err != nil {

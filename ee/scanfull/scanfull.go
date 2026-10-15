@@ -19,10 +19,16 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+
+	"github.com/deedglass/deedglass/internal/embedgz"
 )
 
-//go:embed report.html
-var template string
+// report.html is embedded gzip-compressed (report.tar.gz, make embed-gz; the image budget).
+//
+//go:embed report.tar.gz
+var reportGz []byte
+
+var template = embedgz.MustString(embedgz.NewFiles(reportGz), "report.html")
 
 // FileName is the report's file name.
 const FileName = "deedglass-full-report.html"
@@ -434,7 +440,7 @@ func Render(raw []byte, o Options) (string, error) {
 	slots := map[string]string{"title": esc(title), "label": label, "meta": strings.Join(meta, " · "), "summary": summary, "grade": grade,
 		"rows": rows, "policies": pols, "looked": looked, "notlooked": li(m.notLkd), "footer": footer}
 	var bad error
-	out := reSlot.ReplaceAllStringFunc(template, func(s string) string {
+	out := reSlot.ReplaceAllStringFunc(template(), func(s string) string {
 		k := s[2 : len(s)-2]
 		v, ok := slots[k]
 		if !ok {

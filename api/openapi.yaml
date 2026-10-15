@@ -60,6 +60,10 @@ tags:
     description: >-
       The security review pack (S51): the free readiness view of 24 questions about how the org
       controls its agents, and the sealed document for a reviewer (Pro) (docs/SECURITY_PACK.md).
+  - name: Weekly
+    description: >-
+      The weekly summary (S52): what an org's agents did in a week or a month, the Monday email's
+      setting and off page, and the Agency plan's Clients view (docs/WEEKLY.md, docs/AGENCIES.md).
   - name: Deeds
     description: >-
       Signed records of what agents did, and the public seal keys that check them offline
@@ -1438,6 +1442,110 @@ paths:
               schema:
                 type: string
                 contentMediaType: application/x-tar
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/weekly:
+    get:
+      operationId: getWeekly
+      summary: Read the weekly summary
+      description: >-
+        Free. "What your agents did this week": the org's actions by decision, agent and tool,
+        Check results, the top three rules that blocked, approvals, undos, Stop, watched sessions,
+        what Deedglass caught (each with its free way back) and the record chain check, counted from
+        this org's own records. Integers, ids and the org's own agent, tool and rule names only;
+        never arguments, results or row values. `email` is the signed-in person's Monday email
+        setting (null for an org admin key). Agent keys get 403.
+      tags: [Weekly]
+      security: [{bearerAuth: []}, {sessionCookie: []}]
+      x-deedglass-auth: session_or_key
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+        - {name: period, in: query, required: false, description: "A week like 2026-W43, a month like 2026-10, or current for this week so far (default: the last complete week, in the org's time zone).", schema: {type: string, maxLength: 16}}
+      responses:
+        "200":
+          description: The weekly view.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+            Deedglass-Version:
+              $ref: "#/components/headers/DeedglassVersion"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WeeklyView"
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/weekly/email:
+    post:
+      operationId: setWeeklyEmail
+      summary: Turn your Monday email on or off
+      description: >-
+        The signed-in person's own `weekly_email` setting in this org (on by default). Only owners
+        receive the email, and only when the server has a mailer. Sessions only.
+      tags: [Weekly]
+      security: [{sessionCookie: []}]
+      x-deedglass-auth: session
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+        - $ref: "#/components/parameters/CSRFWithSession"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [weekly_email]
+              properties:
+                weekly_email: {type: boolean}
+      responses:
+        "200":
+          description: The setting now.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+            Deedglass-Version:
+              $ref: "#/components/headers/DeedglassVersion"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WeeklyEmailState"
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/clients:
+    get:
+      operationId: listClients
+      summary: List your client orgs (Agency plan)
+      description: >-
+        Pro (`agency`): 403 `pro_required` without it, naming the free single-org report. One row per
+        org the signed-in person belongs to as owner or admin, with this period's actions, Doesn't
+        match count, caught count, waiting approvals, Stop state, chain check and last activity.
+        Each row is read in that org's own read-only transaction under its own row-level security,
+        after the membership is checked there again; no query spans orgs. At most 200 a page.
+      tags: [Weekly]
+      security: [{sessionCookie: []}]
+      x-deedglass-auth: session
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+        - {name: period, in: query, required: false, description: "current (default: this week so far, UTC), a week like 2026-W43 or a month like 2026-10.", schema: {type: string, maxLength: 16}}
+        - {name: exclude, in: query, required: false, description: An org slug or id to leave out (repeat it); usually the agency's own org., schema: {type: string, maxLength: 64}}
+        - {name: limit, in: query, required: false, description: Rows per page, 1 to 200 (default 100)., schema: {type: integer, minimum: 1, maximum: 200}}
+        - {name: cursor, in: query, required: false, description: next_cursor from the previous page., schema: {type: string, maxLength: 40}}
+      responses:
+        "200":
+          description: The client orgs.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+            Deedglass-Version:
+              $ref: "#/components/headers/DeedglassVersion"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientList"
         default:
           $ref: "#/components/responses/Error"
   /v1/ledger/check:
@@ -3039,6 +3147,64 @@ paths:
       responses:
         "200":
           description: HTML, with a strict Content-Security-Policy.
+          content:
+            text/html:
+              schema: {type: string}
+        default:
+          $ref: "#/components/responses/Error"
+  /weekly/off:
+    get:
+      operationId: weeklyOffPage
+      summary: The page a Monday email's "Stop these emails" link opens
+      description: >-
+        Shows one button. Opening the page changes nothing (a link scanner can't turn the email
+        off); only the button's POST does. The token is signed by the server for this one purpose.
+        `Cache-Control: no-store`, `Referrer-Policy: no-referrer` and a strict
+        Content-Security-Policy.
+      tags: [Pages]
+      security: []
+      x-deedglass-auth: public
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - {name: t, in: query, required: true, description: The signed token from the email., schema: {type: string, maxLength: 256}}
+      responses:
+        "200":
+          description: HTML, with a strict Content-Security-Policy.
+          content:
+            text/html:
+              schema: {type: string}
+        "400":
+          description: HTML; the link doesn't check.
+          content:
+            text/html:
+              schema: {type: string}
+        default:
+          $ref: "#/components/responses/Error"
+    post:
+      operationId: weeklyOff
+      summary: Turn one person's Monday email off
+      description: The page's button. The form's `t` turns that person's weekly email off in that org and changes nothing else.
+      tags: [Pages]
+      security: []
+      x-deedglass-auth: public
+      x-deedglass-since: "2026-10-01"
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required: [t]
+              properties:
+                t: {type: string, maxLength: 256}
+      responses:
+        "200":
+          description: HTML; the email is off.
+          content:
+            text/html:
+              schema: {type: string}
+        "400":
+          description: HTML; the link doesn't check.
           content:
             text/html:
               schema: {type: string}
@@ -8822,6 +8988,86 @@ components:
         line: {type: string, description: '"Deedglass caught this: …", built from the record.'}
         undo_possible: {type: boolean}
         undo_free_path: {type: string, description: The free way back; every view that shows the item shows it.}
+    WeeklyView:
+      type: object
+      additionalProperties: false
+      required: [object, summary, email, pro_undo_line]
+      properties:
+        object: {type: string, const: weekly_view}
+        summary: {$ref: "#/components/schemas/WeeklySummary"}
+        email:
+          oneOf:
+            - {type: "null"}
+            - {$ref: "#/components/schemas/WeeklyEmailState"}
+        pro_undo_line: {type: boolean, description: The server has no undo_session, so a caught session shows the one Pro line.}
+    WeeklyEmailState:
+      type: object
+      additionalProperties: false
+      required: [on, receives, owner, mailer]
+      properties:
+        "on": {type: boolean}
+        receives: {type: boolean, description: On, an owner, and the server can send email.}
+        owner: {type: boolean}
+        mailer: {type: boolean}
+    WeeklySummary:
+      type: object
+      description: The weekly_summary object (version 1); docs/WEEKLY.md describes every field.
+      required: [object, version, org, period, actions, check, denials, approvals, undos, stops, sessions, caught, caught_total, chain, security_pack, generated_at]
+      properties:
+        object: {type: string, const: weekly_summary}
+        version: {type: integer, const: 1}
+        org: {type: object}
+        period: {type: object}
+        actions: {type: object}
+        check: {type: object}
+        denials: {type: array, items: {type: object}}
+        approvals: {type: object}
+        undos: {type: object}
+        stops: {type: object}
+        sessions: {type: object}
+        caught: {type: array, items: {type: object}}
+        caught_total: {type: integer}
+        chain: {type: object}
+        security_pack:
+          oneOf:
+            - {type: "null"}
+            - {type: object}
+        generated_at: {type: string, format: date-time}
+    ClientList:
+      type: object
+      additionalProperties: false
+      required: [object, period, data, has_more, next_cursor, total]
+      properties:
+        object: {type: string, const: list}
+        period: {type: object}
+        data:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [object, org, name, slug, role, actions, doesnt_match, caught, waiting, stopped, chain, last_activity]
+            properties:
+              object: {type: string, const: client}
+              org: {type: string}
+              name: {type: string}
+              slug: {type: string}
+              role: {type: string, enum: [owner, admin]}
+              actions: {type: integer}
+              doesnt_match: {type: integer}
+              caught: {type: integer}
+              waiting: {type: integer}
+              stopped: {type: boolean}
+              chain: {type: string, enum: [intact, broken, not_checked, no_records]}
+              last_activity:
+                oneOf:
+                  - {type: "null"}
+                  - {type: string, format: date-time}
+        has_more: {type: boolean}
+        next_cursor:
+          oneOf:
+            - {type: "null"}
+            - {type: string}
+        total: {type: integer}
     SecurityPackReadiness:
       type: object
       additionalProperties: false

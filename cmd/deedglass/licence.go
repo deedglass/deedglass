@@ -563,3 +563,27 @@ func newProFeature(ctx context.Context, e *Env, f string, log *slog.Logger) *pro
 	}()
 	return p
 }
+
+// --- the Agency plan (S52 §3.2) ---
+
+// agencyPro is serve's agency check: GET /v1/clients answers pro_required without it. Each org's
+// own report and the Monday email never ask.
+func agencyPro(ctx context.Context, e *Env, log *slog.Logger) *proFeature {
+	return newProFeature(ctx, e, licence.FeatureAgency, log)
+}
+
+// agencyAllowed is the CLI's agency check for clients, report --all-clients and --brand: nil when
+// this machine's licence grants agency, else the refusal with the free single-org line.
+func agencyAllowed(ctx context.Context, e *Env) error {
+	m, err := licenceManager(e)
+	if err != nil {
+		return err
+	}
+	if d := m.Require(ctx, licence.FeatureAgency); !d.Allowed {
+		return proRefusal(d, agencyNeedsPro, "")
+	}
+	return nil
+}
+
+// agencyNeedsPro is the CLI's refusal (S52 §5): the agency feature, and the free path beside it.
+const agencyNeedsPro = "Agency reports for every client are part of the Agency plan (deedglass.com/agencies). Each client's own report stays free: deedglass report --org <client>."

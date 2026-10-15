@@ -13,6 +13,7 @@
 @import './s28-insights.css';
 @import './s50-sessions.css';
 @import './s51-security.css';
+@import './s52-clients.css';
 
 /* Inter Variable with the optical-size axis and Geist Mono 400, Latin, self-hosted (the site's faces). */
 @font-face {

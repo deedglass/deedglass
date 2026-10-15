@@ -1,0 +1,9 @@
+What your agents did this week · acme · 12 to 18 Oct
+412 actions · 371 allowed · 22 waited for a person · 19 blocked by rules
+Check: 387 match · 1 don't match · 24 can't check
+Deedglass caught 2 things:
+  One transaction changed 301 rows in public.orders.
+    Undo it yourself, free: deedglass observe show obs_01k7ses0000000000000000000 --undo-sql   ·   Undo the whole session in one step (Pro)
+  The L2 check of postgres.execute doesn't match what ops-agent said.
+    Undo it yourself, free: deedglass undo preview act_01k7mis0000000000000000000
+Records chain intact.

@@ -30,5 +30,6 @@ VERSION  NAME                STATE    APPLIED               CHECKSUM
 0027     purge_org           pending  —                     sha256:6fc3…4696
 0028     action_schedule     pending  —                     sha256:ceef…7547
 0029     observe             pending  —                     sha256:c0f3…a29e
-✓ 9 applied · 20 pending. Run deedglass migrate up to apply them.
+0030     weekly              pending  —                     sha256:5b35…e588
+✓ 9 applied · 21 pending. Run deedglass migrate up to apply them.
 --- stderr

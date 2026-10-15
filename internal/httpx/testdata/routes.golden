@@ -126,6 +126,11 @@ planned    GET     /v1/observe/sessions/{id}/undo_preview                 sessio
 planned    POST    /v1/observe/sessions/{id}/undo                         session_or_key  admin            S50    Pro: 403 pro_required without undo_session; the console system agent acts
 planned    GET     /v1/security_pack/readiness                            session_or_key  viewer           S51    keys: admin; free: statuses and fixes, no evidence; ?period_days 7..365
 planned    POST    /v1/security_pack                                      session_or_key  admin            S51    Pro: 403 pro_required without security_pack; answers a tar stream of the sealed folder
+planned    GET     /v1/weekly                                             session_or_key  viewer           S52    keys: admin; free; ?period 2026-W43 | 2026-10 | current (default: the last complete week)
+planned    POST    /v1/weekly/email                                       session         viewer           S52    IdemNever; the person's own weekly_email (only owners receive it)
+planned    GET     /weekly/off                                            public          -                S52    page; ?t= a signed single-purpose token
+planned    POST    /weekly/off                                            public          -                S52    form; IdemNever; the token turns that person's weekly email off and nothing else
+planned    GET     /v1/clients                                            session         viewer           S52    Pro: 403 pro_required without agency; one org-scoped read per membership (owner or admin)
 planned    POST    /mcp/{connector}                                       agent_key       actions:execute  S15
 planned    POST    /mcp/native                                            agent_key       actions:execute  S15
 planned    POST    /v1/slack/interact                                     public          -                S29    Slack signature; form body

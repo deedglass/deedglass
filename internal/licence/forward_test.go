@@ -37,11 +37,11 @@ func TestForwardCompatibleFeatures(t *testing.T) {
 		wantErr  error // nil: accepted; errBody: refused shape; ErrSignature
 		granted  []string
 	}{
-		{name: "known and unknown", features: []string{FeatureScanFull, "future_one", FeaturePacksPro, "client_report", "agency"},
+		{name: "known and unknown", features: []string{FeatureScanFull, "future_one", FeaturePacksPro, "client_report", "fleet_view"},
 			granted: []string{FeatureScanFull, FeaturePacksPro}},
-		{name: "unknown only", features: []string{"future_one", "client_report", "agency"}, granted: []string{}},
+		{name: "unknown only", features: []string{"future_one", "client_report", "fleet_view"}, granted: []string{}},
 		{name: "known only", features: PlanFeatures[PlanPro], granted: PlanFeatures[PlanPro]},
-		{name: "duplicate known", features: []string{FeatureScanFix, FeatureScanFix, "agency"}, granted: []string{FeatureScanFix}},
+		{name: "duplicate known", features: []string{FeatureScanFix, FeatureScanFix, "fleet_view"}, granted: []string{FeatureScanFix}},
 		{name: "at the cap", features: many[:maxFeatures], granted: []string{}},
 		{name: "malformed: uppercase", features: []string{FeatureScanFull, "Undo_Session"}, wantErr: errBody},
 		{name: "malformed: space", features: []string{"undo session"}, wantErr: errBody},
@@ -55,10 +55,10 @@ func TestForwardCompatibleFeatures(t *testing.T) {
 		{name: "bad signature", features: []string{FeatureScanFull, "future_one"},
 			tamper: func(x *Token) { x.Sig = x.Sig[:20] + flip(x.Sig[20]) + x.Sig[21:] }, wantErr: ErrSignature},
 		{name: "unknown feature added after signing", features: []string{FeatureScanFull},
-			tamper: func(x *Token) { x.Features = append(x.Features, "agency") }, wantErr: ErrSignature},
-		{name: "known feature added after signing", features: []string{FeatureScanFull, "agency"},
+			tamper: func(x *Token) { x.Features = append(x.Features, "fleet_view") }, wantErr: ErrSignature},
+		{name: "known feature added after signing", features: []string{FeatureScanFull, "fleet_view"},
 			tamper: func(x *Token) { x.Features = append(x.Features, FeatureActionPrivate) }, wantErr: ErrSignature},
-		{name: "unknown key id", features: []string{FeatureScanFull, "agency"},
+		{name: "unknown key id", features: []string{FeatureScanFull, "fleet_view"},
 			tamper: func(x *Token) { x.KeyID = "lk_01jdtestkey00000000000000b" }, wantErr: ErrSignature},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

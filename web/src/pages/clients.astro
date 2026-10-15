@@ -1,0 +1,20 @@
+---
+// Clients (S52 §5, the Agency plan): every org the person looks after, this week, one dense row
+// each. src/controllers/weekly.ts. The server reads each client in that client's own org.
+import AppShell from '../layouts/AppShell.astro';
+import PageHead from '../components/PageHead.astro';
+import Skeleton from '../components/Skeleton.astro';
+import { clientsCopy as c } from '../lib/copy-clients.ts';
+---
+<AppShell title={c.title} screen="clients">
+  <PageHead title={c.title} lede={c.lede} />
+  <section id="screen-body" aria-labelledby="page-title" aria-busy="true" data-screen-body="clients">
+    <Skeleton />
+  </section>
+</AppShell>
+<script>
+  import { bootShell } from '../controllers/shell.ts';
+  import { mountClients } from '../controllers/weekly.ts';
+  bootShell({ title: 'Clients' });
+  mountClients();
+</script>

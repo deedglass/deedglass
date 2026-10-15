@@ -1,10 +1,11 @@
 package identity
 
 import (
-	"embed"
+	_ "embed"
 	"net/http"
 	"strconv"
 
+	"github.com/deedglass/deedglass/internal/embedgz"
 	"github.com/deedglass/deedglass/internal/httpx"
 )
 
@@ -12,8 +13,12 @@ import (
 // S24 may re-skin them, but /auth/confirm and its #t= fragment stay: emails already in inboxes
 // point there.
 //
-//go:embed pages/login.html pages/confirm.html pages/tokens.css pages/auth.css pages/auth.js
-var pagesFS embed.FS
+// The pages are embedded gzip-compressed (pages.tar.gz, make embed-gz; the image budget).
+//
+//go:embed pages.tar.gz
+var pagesGz []byte
+
+var pagesFS = embedgz.NewFiles(pagesGz)
 
 // PageCSP is the Content-Security-Policy of every sign-in page: no inline code, nothing from
 // another origin, no framing.

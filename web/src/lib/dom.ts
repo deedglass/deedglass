@@ -119,7 +119,7 @@ export function safeHref(u: string): string | null {
   if (u.startsWith('#')) return u;
   try {
     const url = new URL(u);
-    if (url.protocol === 'https:' && url.hostname === 'docs.deedglass.com' && !url.username && !url.password && (url.port === '' || url.port === '443')) {
+    if (url.protocol === 'https:' && (url.hostname === 'docs.deedglass.com' || url.hostname === 'deedglass.com') && !url.username && !url.password && (url.port === '' || url.port === '443')) {
       return url.toString();
     }
   } catch {

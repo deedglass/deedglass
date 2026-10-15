@@ -4,14 +4,23 @@
 package policies
 
 import (
-	"embed"
+	_ "embed"
 	"io/fs"
 	"sort"
 	"strings"
+
+	"github.com/deedglass/deedglass/internal/embedgz"
 )
 
-//go:embed *.yaml hashes.json
-var files embed.FS
+// The files are embedded gzip-compressed (policies.tar.gz, make embed-gz; the image budget).
+//
+//go:embed policies.tar.gz
+var archive []byte
+
+var files = embedgz.FS(archive).(interface {
+	fs.ReadDirFS
+	fs.ReadFileFS
+})
 
 // FS is every starter policy (<name>.yaml), its cases (<name>.cases.yaml) and hashes.json.
 var FS fs.FS = files

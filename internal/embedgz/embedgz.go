@@ -16,6 +16,7 @@ import (
 	"path"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -220,4 +221,39 @@ func (d *dir) ReadDir(n int) ([]fs.DirEntry, error) {
 	}
 	d.off += n
 	return rest[:n], nil
+}
+
+// Files is an archive unpacked at its first read, for packages that read a few files by name (the
+// sign-in and approval pages, single templates). ReadFile ignores a leading directory, so a call
+// site that read "pages/auth.js" from an embed.FS keeps its name.
+type Files struct {
+	gz   []byte
+	once sync.Once
+	fs   memFS
+}
+
+// NewFiles wraps an embedded archive.
+func NewFiles(gz []byte) *Files { return &Files{gz: gz} }
+
+// ReadFile returns one file's bytes (a shared copy-free slice: callers must not change it).
+func (f *Files) ReadFile(name string) ([]byte, error) {
+	f.once.Do(func() {
+		m, err := Unpack(f.gz)
+		if err != nil {
+			panic("embedgz: " + err.Error())
+		}
+		f.fs = memFS(m)
+	})
+	return f.fs.ReadFile(path.Base(name))
+}
+
+// MustString is one file of an archive as a string, unpacked once at first use.
+func MustString(f *Files, name string) func() string {
+	return sync.OnceValue(func() string {
+		b, err := f.ReadFile(name)
+		if err != nil {
+			panic("embedgz: " + name + ": " + err.Error())
+		}
+		return string(b)
+	})
 }

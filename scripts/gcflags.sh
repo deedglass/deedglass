@@ -12,6 +12,7 @@ P=github.com/deedglass/deedglass
 for p in cmd/deedglass/... internal/scan ee/scanfull internal/setup internal/doctor \
   internal/connector/postgres/setup internal/learn/sim internal/ledger/fake internal/installlinks \
   internal/cli/... internal/store/migrate internal/mcp/snippet internal/securitypack/... ee/securitypack \
-  internal/securitypackapi; do
+  internal/securitypackapi internal/weekly/... internal/weeklyapi ee/agency \
+  internal/mailer internal/caught internal/observe internal/observeapi ee/undosession internal/undoapi internal/witness/undo; do
   printf -- '-gcflags=%s/%s=-l\n' "$P" "$p"
 done

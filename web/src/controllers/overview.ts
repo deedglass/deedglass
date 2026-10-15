@@ -20,6 +20,7 @@ import { showKeySheet } from './keysheet.ts';
 import { announce } from './shell.ts';
 import { mountMirror } from '@verify/ui/mirror.ts';
 import { mountCaughtBanner } from './sessions.ts';
+import { mountThisWeek } from './weekly.ts';
 
 const REFRESH_MS = 60_000;
 const LIVE_ROWS = 10;
@@ -134,13 +135,16 @@ export function mountOverview(): void {
   // S50: the caught banner (at most 3 watched sessions, each with the free path beside it).
   const caughtHost = h('div', { class: 'ov-caught' });
   void mountCaughtBanner(caughtHost);
+  // S52: the This week card (last week's summary, the same one the Monday email sends).
+  const weekHost = h('div', { class: 'ov-week' });
+  void mountThisWeek(weekHost);
   const render = (o: Overview) => {
     body.replaceChildren(h('div', { class: 'ov' },
       caughtHost,
       tiles(o),
       h('div', { class: 'ov-grid' },
         h('div', { class: 'ov-main' }, attention(o), liveCard),
-        h('div', { class: 'ov-side' }, agents(o), chainCard))));
+        h('div', { class: 'ov-side' }, weekHost, agents(o), chainCard))));
     body.setAttribute('aria-busy', 'false');
   };
   const refreshTiles = () => {

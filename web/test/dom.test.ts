@@ -37,10 +37,10 @@ describe('dom', () => {
     expect(h('a', { href: '/app/actions' }).getAttribute('href')).toBe('/app/actions');
   });
   it('safeHref allows only the Console, the API and the docs', () => {
-    for (const ok of ['/app', '/app/actions', '/app/actions?verdict=MISMATCH', '/v1/deeds/export', '/login?next=%2Fapp', '#main', 'https://docs.deedglass.com/errors/rate_limited']) {
+    for (const ok of ['/app', '/app/actions', '/app/actions?verdict=MISMATCH', '/v1/deeds/export', '/login?next=%2Fapp', '#main', 'https://docs.deedglass.com/errors/rate_limited', 'https://deedglass.com/agencies', 'https://deedglass.com/pricing']) {
       expect(safeHref(ok), ok).not.toBeNull();
     }
-    for (const bad of ['javascript:alert(1)', 'JavaScript:alert(1)', '//evil.com', '/\\evil.com', 'data:text/html,x', 'https://evil.com', 'https://docs.deedglass.com.evil.com/',
+    for (const bad of ['javascript:alert(1)', 'JavaScript:alert(1)', '//evil.com', '/\\evil.com', 'data:text/html,x', 'https://evil.com', 'https://docs.deedglass.com.evil.com/', 'https://deedglass.com.evil.com/', 'http://deedglass.com/',
       'https://user@docs.deedglass.com/', 'http://docs.deedglass.com/', '/app/../v1/me', '/apps', '/etc/passwd', ' /app', '/app\n', '']) {
       expect(safeHref(bad), bad).toBeNull();
     }

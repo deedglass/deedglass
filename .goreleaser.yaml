@@ -41,6 +41,16 @@ builds:
       - -gcflags=github.com/deedglass/deedglass/internal/securitypack/...=-l
       - -gcflags=github.com/deedglass/deedglass/ee/securitypack=-l
       - -gcflags=github.com/deedglass/deedglass/internal/securitypackapi=-l
+      - -gcflags=github.com/deedglass/deedglass/internal/weekly/...=-l
+      - -gcflags=github.com/deedglass/deedglass/internal/weeklyapi=-l
+      - -gcflags=github.com/deedglass/deedglass/ee/agency=-l
+      - -gcflags=github.com/deedglass/deedglass/internal/mailer=-l
+      - -gcflags=github.com/deedglass/deedglass/internal/caught=-l
+      - -gcflags=github.com/deedglass/deedglass/internal/observe=-l
+      - -gcflags=github.com/deedglass/deedglass/internal/observeapi=-l
+      - -gcflags=github.com/deedglass/deedglass/ee/undosession=-l
+      - -gcflags=github.com/deedglass/deedglass/internal/undoapi=-l
+      - -gcflags=github.com/deedglass/deedglass/internal/witness/undo=-l
     ldflags:
       - -s -w
       - -X github.com/deedglass/deedglass/internal/buildinfo.Version={{ .Version }}

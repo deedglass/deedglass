@@ -1,0 +1,11 @@
+{{.Headline}}
+{{.Numbers}}
+{{.Check}}
+{{if .CaughtHead}}{{if .Single}}{{.CaughtHead}}: {{(index .Items 0).Line}}
+{{with index .Items 0}}{{if .Free}}  {{.Free}}{{if .Pro}}   ·   {{$.ProLine}}{{end}}
+{{end}}{{end}}{{else}}{{.CaughtHead}}:
+{{range .Items}}  {{.Line}}
+{{if .Free}}    {{.Free}}{{if .Pro}}   ·   {{$.ProLine}}{{end}}
+{{end}}{{end}}{{end}}{{else}}{{.Nothing}}
+{{end}}{{.Chain}} Open the Console: {{.Console}}
+Stop these emails: {{.Off}}

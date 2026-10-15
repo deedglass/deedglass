@@ -20,6 +20,7 @@ export default defineConfig({
     { name: 'shots', testMatch: /shots-s26\.spec\.ts/, dependencies: ['setup'] },
     { name: 'shots28', testMatch: /shots-s28\.spec\.ts/ },
     { name: 'shots51', testMatch: /shots-s51\.spec\.ts/, dependencies: ['setup'] },
+    { name: 'shots52', testMatch: /shots-s52\.spec\.ts/, dependencies: ['setup'] },
     { name: 'shots25', testMatch: /(screenshots|shots-s25)\.spec\.ts/, dependencies: ['setup'] },
   ],
 });

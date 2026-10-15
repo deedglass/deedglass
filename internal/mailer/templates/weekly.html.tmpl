@@ -1,0 +1,12 @@
+{{template "head" .}}<h1 class="dg-text" style="text-wrap:balance;margin:0 0 16px 0;font-size:20px;line-height:28px;font-weight:600;letter-spacing:-0.02em;color:#0D0F14;">{{.Headline}}</h1>
+<table role="presentation" class="dg-panel" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#F7F7F4" style="margin:0 0 20px 0;background-color:#F7F7F4;border:1px solid #E4E5EA;border-radius:10px;">
+<tr><td class="dg-text" style="padding:14px 18px 4px 18px;font-size:15px;line-height:24px;font-weight:600;color:#0D0F14;font-variant-numeric:tabular-nums;">{{.Numbers}}</td></tr>
+<tr><td class="dg-muted" style="padding:0 18px 14px 18px;font-size:14px;line-height:22px;color:#6B7080;font-variant-numeric:tabular-nums;">{{.Check}}</td></tr>
+</table>
+{{if .CaughtHead}}<h2 class="dg-amber" style="margin:0 0 6px 0;font-size:15px;line-height:22px;font-weight:600;color:#9A5B00;">{{.CaughtHead}}</h2>
+{{range .Items}}<p style="margin:0 0 4px 0;">{{.Line}}</p>
+{{if .Free}}<p class="dg-muted" style="margin:0 0 14px 0;font-size:13px;line-height:20px;color:#6B7080;"><span translate="no" style="font-family:'Geist Mono',ui-monospace,Menlo,monospace;font-size:12.5px;">{{.Free}}</span>{{if .Pro}}<br>{{$.ProLine}}{{end}}</p>
+{{end}}{{end}}{{else}}<p style="margin:0 0 16px 0;">{{.Nothing}}</p>
+{{end}}<p style="margin:0 0 20px 0;">{{.Chain}}</p>
+{{template "button" button .Console "Open the Console"}}<p class="dg-muted" style="margin:0;font-size:13px;line-height:20px;color:#6B7080;">Your own Deedglass server sent this to the org&rsquo;s owners. Nothing in it went to deedglass.com. <a href="{{.Off}}" style="color:#6B7080;text-decoration:underline;">Stop these emails</a>.</p>
+{{template "foot" .}}

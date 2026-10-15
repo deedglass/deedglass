@@ -5,6 +5,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"github.com/deedglass/deedglass/ee/agency"
 	"io"
 	"log/slog"
 	"net"
@@ -52,6 +53,7 @@ import (
 	"github.com/deedglass/deedglass/internal/store/policystore"
 	"github.com/deedglass/deedglass/internal/undoapi"
 	"github.com/deedglass/deedglass/internal/vault"
+	"github.com/deedglass/deedglass/internal/weeklyapi"
 )
 
 // --- flags ---
@@ -304,6 +306,11 @@ func runServe(ctx context.Context, e *Env, args []string) error {
 	oa := &observeapi.API{Service: obs, Planner: planner, DB: db, Agents: people, Gate: gp, Pro: pro.Allowed}
 	// 5h. Security review pack (S51): readiness free; the document Pro (licence.go, at start and daily).
 	spa := newSecurityPackAPI(ctx, e, cfg, db, led, cw, log)
+	// 5i. The weekly summary, the Monday email and the Clients view (S52).
+	wk, err := newWeekly(ctx, e, cfg, db, led, queue, people, pro, log)
+	if err != nil {
+		return err
+	}
 	aps.Attach(gp)
 	gp.SetJobHandler(gate.JobApprovalNotify, aps.NotifyJob)
 	gp.SetJobHandler(slacknotify.JobNotifyUpdate, slackN.UpdateJob)
@@ -366,6 +373,10 @@ func runServe(ctx context.Context, e *Env, args []string) error {
 	obsDone := make(chan struct{})
 	go func() { defer close(obsDone); _ = obs.Run(octx) }()
 	defer func() { stopObs(); <-obsDone }()
+	wkctx, stopWk := context.WithCancel(context.WithoutCancel(ctx))
+	wkDone := make(chan struct{})
+	go func() { defer close(wkDone); _ = wk.job.Run(wkctx) }()
+	defer func() { stopWk(); <-wkDone }()
 	defer func() {
 		stopWorker()
 		<-workerDone
@@ -387,7 +398,7 @@ func runServe(ctx context.Context, e *Env, args []string) error {
 	// S25: GET /v1/overview, with S11's usage counters and the decoder's lag threshold.
 	ov := console.NewOverview(console.OverviewOptions{Ledger: led, Usage: console.UsageFromStore(policystore.NewUsage(db)),
 		SlotLagAlertBytes: int64(cfg.SlotLagAlertMB) << 20, Log: log})
-	api.Mount(serveRoutes(api, db, ms, sk, led, people, keys, pol, gp, mw, cw, aps, whs, ua, &liveWiring{hub: hub, con: con, ov: ov, ins: ins, obs: oa, spa: spa,
+	api.Mount(serveRoutes(api, db, ms, sk, led, people, keys, pol, gp, mw, cw, aps, whs, ua, &liveWiring{hub: hub, con: con, ov: ov, ins: ins, obs: oa, spa: spa, wk: wk,
 		slack: &slacknotify.Handler{Store: slackstore.DB{DB: db}, Conns: cw.reg, Approvals: aps, Log: log}})...)
 	ln, err := net.Listen("tcp", cfg.Listen)
 	if err != nil {
@@ -535,6 +546,12 @@ func serveRoutes(api *httpx.Server, db *store.DB, ms []migrate.Migration, sk *se
 	routes = append(routes, observeapi.Routes(lw.obs)...)
 	// S51: the security review pack (a nil API answers 503 in route-table tests).
 	routes = append(routes, securitypackapi.Routes(lw.spa)...)
+	// S52: the weekly summary, its email setting and off page, and the Clients view (nil answers 503).
+	if lw.wk == nil {
+		lw.wk = &weeklyWiring{}
+	}
+	routes = append(routes, weeklyapi.Routes(lw.wk.api)...)
+	routes = append(routes, agency.Routes(lw.wk.agency)...)
 	if lw.con == nil {
 		c, err := console.New(console.Options{Sessions: people})
 		if err != nil {
@@ -581,6 +598,7 @@ type liveWiring struct {
 	slack *slacknotify.Handler // S29
 	obs   *observeapi.API      // S50
 	spa   *securitypackapi.API // S51
+	wk    *weeklyWiring        // S52
 }
 
 // insights is S27's wiring.

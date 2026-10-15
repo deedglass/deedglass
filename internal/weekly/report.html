@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="generator" content="Deedglass">
+<title>{{.Title}}</title>
+<style>
+/* Client report (S52). Self-contained: no script, no font or image request (a brand logo is a data
+   URI). A printed page first, a web page second, in S51's document style. Colours are DESIGN.md
+   tokens; words carry the meaning, colour only repeats it. */
+:root {
+  --canvas: #F7F7F4; --surface: #FFFFFF; --text: #0D0F14; --text-2: #4A4F5E; --text-3: #6B7080;
+  --line: #E4E5EA; --line-strong: #B9BDC8; --code-bg: #EDEEF2; --accent: #2F5BEA;
+  --part-t: #9A5B00; --part-b: #FFF4E0;
+  --sans: "Inter", "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+@media screen and (prefers-color-scheme: dark) {
+  :root {
+    --canvas: #07080C; --surface: #0E1017; --text: #F5F6FA; --text-2: #8B90A0; --text-3: #7D8293;
+    --line: #1C1F2A; --line-strong: #2A2E3B; --code-bg: #141722; --accent: #6F8DFF;
+    --part-t: #F7B955; --part-b: #352407;
+  }
+}
+* { box-sizing: border-box; }
+html { background: var(--canvas); color: var(--text); -webkit-text-size-adjust: 100%; }
+body { margin: 0; font: 15px/1.6 var(--sans); font-feature-settings: "tnum" 1, "cv11" 1; }
+.doc { max-width: 52rem; margin: 0 auto; padding: 3.5rem 1.5rem 5rem; }
+.brand { display: flex; align-items: center; gap: .75rem; margin: 0 0 2.25rem; font-size: 13px; color: var(--text-2); }
+.brand img { display: block; max-height: 32px; max-width: 160px; }
+.brand b { color: var(--text); font-weight: 600; }
+.eyebrow { margin: 0 0 1rem; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--text-3); }
+h1 { margin: 0; font-size: 2rem; line-height: 1.2; letter-spacing: -.02em; font-weight: 600; text-wrap: balance; }
+.lead { margin: 1.5rem 0 0; padding: 1rem 1.25rem; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.lead p { margin: 0; font-variant-numeric: tabular-nums; }
+.lead p + p { margin-top: .25rem; color: var(--text-2); }
+section { margin: 2.75rem 0 0; break-inside: avoid; }
+h2 { margin: 0 0 .75rem; padding-bottom: .5rem; border-bottom: 1px solid var(--line-strong); font-size: 1.125rem; font-weight: 600; letter-spacing: -.01em; }
+.caught { border-left: 3px solid var(--part-t); padding-left: 1rem; }
+.caught h2 { color: var(--part-t); border-bottom-color: var(--line); }
+.caught ul { margin: 0; padding: 0; list-style: none; }
+.caught li { padding: .5rem 0; border-bottom: 1px solid var(--line); }
+.caught li:last-child { border-bottom: 0; }
+.free, .pro { margin: .25rem 0 0; font-size: 13px; color: var(--text-2); }
+code, .mono { font-family: var(--mono); font-size: 12.5px; overflow-wrap: anywhere; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+caption { text-align: left; font-size: 13px; color: var(--text-3); padding-bottom: .375rem; }
+th, td { text-align: left; padding: .4rem .5rem .4rem 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-weight: 600; font-size: 12.5px; color: var(--text-3); }
+td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; padding-right: 0; }
+.cols { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; }
+p.line { margin: 0; text-wrap: pretty; }
+.foot { margin: 3.5rem 0 0; padding-top: 1rem; border-top: 1px solid var(--line); font-size: 12.5px; color: var(--text-3); }
+.foot p { margin: .25rem 0 0; }
+a { color: var(--accent); }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+@media (max-width: 40rem) {
+  .doc { padding: 2.25rem 1rem 4rem; }
+  h1 { font-size: 1.625rem; }
+  .cols { grid-template-columns: 1fr; gap: 0; }
+}
+@page { size: A4; margin: 18mm 16mm 20mm; }
+@media print {
+  html, body { background: #FFFFFF; }
+  body { font-size: 10.5pt; }
+  .doc { max-width: none; padding: 0; }
+  .lead { border-color: #E4E5EA; }
+  a { color: inherit; text-decoration: none; }
+}
+</style>
+</head>
+<body>
+<main class="doc">
+  <header>
+    {{if .Brand}}<p class="brand">{{if .Logo}}<img src="{{.Logo}}" alt="{{.Brand.Name}}">{{end}}<span>Prepared by <b>{{.Brand.Name}}</b> with Deedglass{{if .Brand.ContactLine}} · {{.Brand.ContactLine}}{{end}}</span></p>
+    {{end}}<p class="eyebrow">Agent report · {{.Label}}</p>
+    <h1>What {{.Org}}'s agents did</h1>
+    <div class="lead"><p>{{.Numbers}}</p><p>{{.Check}}</p></div>
+  </header>
+  {{if .CaughtHead}}
+  <section class="caught" aria-labelledby="caught-h">
+    <h2 id="caught-h">{{.CaughtHead}}</h2>
+    <ul>{{range .Items}}<li><p class="line">{{.Line}}</p>{{if .Free}}<p class="free"><code>{{.Free}}</code></p>{{end}}{{if .Pro}}<p class="pro">{{$.ProLine}}</p>{{end}}</li>{{end}}</ul>
+    {{if .More}}<p class="free">{{.More}}</p>{{end}}
+  </section>
+  {{else}}
+  <section aria-labelledby="caught-h"><h2 id="caught-h">Caught</h2><p class="line">Nothing caught {{.When}}.</p></section>
+  {{end}}
+  {{if or .Agents .Tools}}
+  <section class="cols" aria-label="Actions">
+    {{if .Agents}}<table><caption>Actions by agent</caption><thead><tr><th scope="col">Agent</th><th scope="col" class="n">Actions</th></tr></thead>
+      <tbody>{{range .Agents}}<tr><td>{{.Name}}</td><td class="n">{{n .Count}}</td></tr>{{end}}</tbody></table>{{end}}
+    {{if .Tools}}<table><caption>Actions by tool</caption><thead><tr><th scope="col">Tool</th><th scope="col" class="n">Actions</th></tr></thead>
+      <tbody>{{range .Tools}}<tr><td class="mono">{{.Name}}</td><td class="n">{{n .Count}}</td></tr>{{end}}</tbody></table>{{end}}
+  </section>
+  {{end}}
+  {{if .Denials}}
+  <section aria-labelledby="den-h">
+    <h2 id="den-h">Blocked most by</h2>
+    <table><thead><tr><th scope="col">Rule</th><th scope="col">Reason</th><th scope="col" class="n">Times</th></tr></thead>
+      <tbody>{{range .Denials}}<tr><td class="mono">{{.Rule}}</td><td>{{.Reason}}</td><td class="n">{{n .Count}}</td></tr>{{end}}</tbody></table>
+  </section>
+  {{end}}
+  <section aria-labelledby="apr-h"><h2 id="apr-h">Approvals</h2><p class="line">{{.Approvals}}</p></section>
+  <section aria-labelledby="undo-h"><h2 id="undo-h">Undo and Stop</h2><p class="line">{{.UndoStop}}</p></section>
+  <section aria-labelledby="ses-h"><h2 id="ses-h">Watched sessions</h2><p class="line">{{.Sessions}}</p></section>
+  <section aria-labelledby="rec-h"><h2 id="rec-h">Records</h2><p class="line">{{.Chain}}</p>{{if .Pack}}<p class="line">{{.Pack}}</p>{{end}}</section>
+  <footer class="foot">
+    <p>{{.Footer}}</p>
+    <p>Org <span class="mono">{{.OrgID}}</span> · period <span class="mono">{{.PeriodKey}}</span>{{if .Console}} · <a href="{{.Console}}">Open the Console</a>{{end}}</p>
+    <p>Deedglass · deedglass.com</p>
+  </footer>
+</main>
+</body>
+</html>

@@ -182,6 +182,12 @@ var contractRoutes = []ContractRoute{
 	// S51: the security review pack. Agent keys get 403 on both routes.
 	cr("GET", "/v1/security_pack/readiness", SessionOrKey, "viewer", "S51", "keys: admin; free: statuses and fixes, no evidence; ?period_days 7..365"),
 	cr("POST", "/v1/security_pack", SessionOrKey, "admin", "S51", "Pro: 403 pro_required without security_pack; answers a tar stream of the sealed folder"),
+	// S52: the weekly summary, its email, and the agency view.
+	cr("GET", "/v1/weekly", SessionOrKey, "viewer", "S52", "keys: admin; free; ?period 2026-W43 | 2026-10 | current (default: the last complete week)"),
+	cr("POST", "/v1/weekly/email", Session, "viewer", "S52", "IdemNever; the person's own weekly_email (only owners receive it)"),
+	cr("GET", "/weekly/off", Public, "", "S52", "page; ?t= a signed single-purpose token"),
+	cr("POST", "/weekly/off", Public, "", "S52", "form; IdemNever; the token turns that person's weekly email off and nothing else"),
+	cr("GET", "/v1/clients", Session, "viewer", "S52", "Pro: 403 pro_required without agency; one org-scoped read per membership (owner or admin)"),
 
 	// S15: MCP (GET and DELETE answer 405; sessionless).
 	cr("POST", "/mcp/{connector}", AgentKey, "actions:execute", "S15"),

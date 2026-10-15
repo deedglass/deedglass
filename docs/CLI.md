@@ -245,6 +245,8 @@ builds it. Hidden commands work but aren't in `deedglass help`.
 | `deedglass security-pack readiness [--period 90d] [--all] [--json]` | Records | Check how a security review would see your setup | built |
 | `deedglass security-pack build [--period 90d] [--out dir] [--aliases] [--no-records] [--records] [--json]` | Records | Build the sealed security review pack (Pro) | built |
 | `deedglass security-pack verify <folder> [--keys <file|url>] [--json]` | Records | Check a security review pack offline | built |
+| `deedglass report [--week 2026-W43 | --month 2026-10] [--format md|html|json] [--out file] [--all-clients] [--brand brand.yaml] [--exclude slugs] [--as email]` | Records | Report what your agents did in a week or month | built |
+| `deedglass clients [--week 2026-W43] [--exclude slugs] [--as email] [--json]` | Records | List every org you look after (Agency plan) | built |
 | `deedglass ledger check [--from-seq n] [--to-seq n] [--json]` | Records | Check the record chain | built |
 | `deedglass ledger prune [--older-than 90d] [--dry-run] [--yes] [--json]` | Records | Remove old payloads; records stay | built |
 | `deedglass connector create --config <file> [--type rest] [--name orders] [--description …] [--json]` | Connectors | Add a connector | built |
