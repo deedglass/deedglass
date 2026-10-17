@@ -1,7 +1,7 @@
 ---
 title: Install in any client
 description: Add Deedglass to Cursor, VS Code, LM Studio, Goose, Claude Code, Claude Desktop or Windsurf in one step.
-lastVerified: "2026-10-12"
+lastVerified: "2026-10-17"
 owner: S47
 claims: [C-091]
 ---
@@ -42,7 +42,7 @@ These installs run the stdio bridge. To connect a client straight to the server'
 claude mcp list
 ```
 
-`deedglass` is listed and connected. With no key found, its log says what to run: `No Deedglass key found. Run npx deedglass init in a terminal, then restart your MCP client.`
+`deedglass` is listed and connected, even before `init`: with no key found it lists its tools, sends nothing, and answers every call with what to run. Its log says the same: `No Deedglass key found. Run npx deedglass init in a terminal, then restart your MCP client.`
 
 ## What it doesn't do
 

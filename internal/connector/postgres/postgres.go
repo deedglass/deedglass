@@ -105,6 +105,17 @@ func (c *Connector) Info() connector.TypeInfo {
 		}}
 }
 
+// ToolsFor are the tools a connector with config raw serves, the internal ones included, exactly as
+// Tools gives them for a stored instance: deedglass mcp serve lists the quickstart's connector this
+// way before init (PRD-03), from the config init creates it with.
+func ToolsFor(raw json.RawMessage) ([]connector.ToolSpec, error) {
+	cfg, errs := ParseConfig(raw)
+	if len(errs) > 0 {
+		return nil, fmt.Errorf("postgres: the config is invalid: %s", errs[0].Error())
+	}
+	return toolSpecs(cfg), nil
+}
+
 // catalogTools is the catalog's tool list: the default config's tools, with L2 on the writes.
 func catalogTools() []connector.ToolInfo {
 	cfg, _ := ParseConfig(json.RawMessage(`{"mode":"sql"}`))

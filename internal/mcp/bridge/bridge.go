@@ -2,7 +2,8 @@
 // stdio-only MCP client (Claude Desktop's local servers) can use the Gate's HTTP endpoints. Each
 // JSON-RPC line from stdin becomes one POST to /mcp/native (or /mcp/<connector>) with the headers
 // a conforming HTTP client sends; each answer becomes one line on stdout. It holds no upstream
-// credentials and spawns nothing; the agent's key travels only in the Authorization header.
+// credentials and spawns nothing; the agent's key travels only in the Authorization header. With
+// no key (before deedglass init), Offline answers here and nothing is sent (PRD-03).
 package bridge
 
 import (
@@ -20,8 +21,10 @@ import (
 
 	"github.com/deedglass/deedglass/internal/connector/egress"
 	"github.com/deedglass/deedglass/internal/gate"
+	"github.com/deedglass/deedglass/internal/mcp/front"
 	"github.com/deedglass/deedglass/internal/mcp/httpgw"
 	"github.com/deedglass/deedglass/internal/mcp/jsonrpc"
+	"github.com/deedglass/deedglass/internal/mcp/present"
 )
 
 // MaxInFlight is how many requests the bridge sends at once.
@@ -37,6 +40,10 @@ type Config struct {
 	APIKey    string
 	Version   string
 	Client    *http.Client // nil: a default with a 5 s dial timeout and no overall timeout
+	// Offline, when set, answers every message in this process from its catalog and sends nothing
+	// (mcp serve with no key, PRD-03): initialize, server/discover, ping and tools/list as the
+	// gateway would, each carrying gate.MCPNoKey; every tools/call gets gate.MCPNoKey and runs nothing.
+	Offline *front.Front
 }
 
 // Bridge relays one stdio session.
@@ -90,6 +97,13 @@ func (b *Bridge) Run(ctx context.Context, in io.Reader, out io.Writer) error {
 			continue
 		case err != nil:
 			return nil // stdin closed or broken: the client went away
+		}
+		switch {
+		case b.cfg.Offline != nil && e.Kind() == jsonrpc.Request:
+			b.local(ctx, e, w)
+			continue
+		case b.cfg.Offline != nil:
+			continue // offline: notifications and responses need no answer
 		}
 		switch e.Kind() {
 		case jsonrpc.Response:
@@ -316,6 +330,37 @@ func (b *Bridge) fail(w *jsonrpc.Writer, e jsonrpc.Envelope) {
 		return
 	}
 	_ = w.SendEnvelope(jsonrpc.NewError(e.ID(), jsonrpc.CodeInternal, msg))
+}
+
+// local answers one request offline: the headers a POST would carry pass the gateway's own
+// validation, then the gateway's front answers from the catalog; tool calls get the notice.
+func (b *Bridge) local(ctx context.Context, e jsonrpc.Envelope, w *jsonrpc.Writer) {
+	h := http.Header{}
+	b.headers(h, e)
+	v := httpgw.Validate(h, e, nil)
+	if v.Err != nil {
+		_ = w.SendEnvelope(v.Err)
+		return
+	}
+	if e.Method() == front.MToolsCall {
+		_ = w.SendEnvelope(jsonrpc.NewResponse(e.ID(), present.Plain(gate.MCPNoKey, v.Modern)))
+		return
+	}
+	res := b.cfg.Offline.Handle(ctx, front.Request{Env: e, Version: v.Version, Modern: v.Modern, Transport: gate.TransportMCPStdio})
+	if res.Env == nil {
+		return
+	}
+	var m map[string]json.RawMessage
+	if json.Unmarshal(res.Env["result"], &m) == nil && m != nil {
+		switch e.Method() {
+		case front.MInitialize, front.MDiscover:
+			m["instructions"] = jsonrpc.String(gate.MCPNoKey + " " + gate.MCPInstructions)
+		case front.MToolsList:
+			m["_meta"] = jsonrpc.MarshalObject(map[string]json.RawMessage{present.MetaNotice: jsonrpc.String(gate.MCPNoKey)})
+		}
+		res.Env["result"] = jsonrpc.MarshalObject(m)
+	}
+	b.answer(res.Env.Marshal(), e, w)
 }
 
 // Endpoint is the URL the bridge posts to.

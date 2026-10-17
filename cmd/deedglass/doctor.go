@@ -23,11 +23,15 @@ import (
 // deedglass doctor (S32 §3.10): sixteen read-only checks. Exit 0 all OK (warnings allowed), 1 any
 // problem, 2 doctor itself couldn't run, 3 the server refused the API key.
 
-var doctorValues struct{ only string }
+var doctorValues struct {
+	only  string
+	quiet bool
+}
 
 func doctorFlags(fs *flag.FlagSet) {
-	doctorValues.only = ""
+	doctorValues.only, doctorValues.quiet = "", false
 	fs.StringVar(&doctorValues.only, "only", "", "run only these checks: ids or prefixes, like db.* or seal.key,clock.skew")
+	fs.BoolVar(&doctorValues.quiet, "quiet", false, "don't print the quickstart step line")
 }
 
 // withInitStack fills what deedglass init wrote in .deedglass/stack.json into the settings, under
@@ -153,6 +157,14 @@ func runDoctor(ctx context.Context, e *Env, args []string) error {
 			fmt.Fprintln(e.Stdout, il)
 		}
 		fmt.Fprint(e.Stdout, renderDoctor(e.Style, rs, sum, took))
+	}
+	if sum.Fail == 0 && !env.Unauthenticated.Load() {
+		// A clean full run is the quickstart's step 2; a run with --only doesn't count as one.
+		printProgress(e, doctorValues.quiet, func() setup.Facts {
+			f := setup.ReadFacts(ctx, env.Dir)
+			f.Checked = doctorValues.only == ""
+			return f
+		})
 	}
 	switch {
 	case env.Unauthenticated.Load():

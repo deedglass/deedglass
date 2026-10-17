@@ -125,7 +125,7 @@ func pretty(t *testing.T, raw json.RawMessage) []byte {
 func TestCopy(t *testing.T) {
 	exp := time.Date(2026, 10, 5, 10, 42, 0, 0, time.UTC)
 	a := &ledger.Action{ID: "act_x"}
-	msgs := []string{gate.MCPInstructions, gate.MCPBadKey, gate.MCPServerStopped, gate.MCPKeepsCrashing, gate.MCPTooLarge,
+	msgs := []string{gate.MCPInstructions, gate.MCPBadKey, gate.MCPNoKey, gate.MCPServerStopped, gate.MCPKeepsCrashing, gate.MCPTooLarge,
 		gate.MCPApprovalDenied, gate.MCPApprovalIDBad, gate.MCPCheckApprovalDescription, gate.UnreachableMessage("http://127.0.0.1:8080"),
 		gate.MCPDenyText(a, "Blocked."), gate.MCPRejectedText("x"), gate.MCPPendingText(a, "apr_x", exp), gate.MCPStillPendingText("apr_x", exp),
 		gate.MCPApprovedRanText("scratch.x"), gate.MCPAlreadyRanText("deed_x"), gate.MCPApprovalExpiredText("apr_x"),
@@ -139,7 +139,7 @@ func TestCopy(t *testing.T) {
 		}
 	}
 	for _, m := range []string{gate.MCPDenyText(a, "Blocked."), gate.MCPRejectedText("x"), gate.MCPPendingText(a, "apr_x", exp),
-		gate.MCPBadKey, gate.UnreachableMessage("x"), gate.MCPToolChangedText("x"), gate.MCPKeepsCrashing} {
+		gate.MCPBadKey, gate.MCPNoKey, gate.UnreachableMessage("x"), gate.MCPToolChangedText("x"), gate.MCPKeepsCrashing} {
 		if !strings.Contains(m, "run") && !strings.Contains(m, "ran") {
 			t.Errorf("doesn't say whether anything ran: %q", m)
 		}

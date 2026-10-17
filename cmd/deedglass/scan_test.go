@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -120,6 +121,23 @@ func TestScanBadgeCLI(t *testing.T) {
 	})
 	if strings.Join(files, ",") != ".deedglass/score.json,.git/HEAD,.git/config" {
 		t.Fatalf("%v", files)
+	}
+	if strings.Contains(r.stdout, "deedglass.com/s#") || strings.Contains(r.stdout, "share page") {
+		t.Fatalf("--badge mentioned the share page: %s", r.stdout)
+	}
+	// PRD-09: only --badge-share links the badge to the owner's /s page, with the warning, and the
+	// link holds the grade, points and counts: no finding or deduction id.
+	r = cli(t, map[string]string{"HOME": t.TempDir()}, false, "scan", "--dir", dir, "--no-write", "--badge-share")
+	const pre = "[![agent blast radius](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Facme%2Fagents%2Fmain%2F.deedglass%2Fscore.json)](https://deedglass.com/s#v1."
+	i := strings.Index(r.stdout, pre)
+	if r.code != ExitOK || i < 0 || !strings.Contains(r.stdout, "○ This badge links to your share page, not deedglass.com/score. Anyone who reads your README can open it.") {
+		t.Fatalf("%d %s %s", r.code, r.stdout, r.stderr)
+	}
+	enc, _, _ := strings.Cut(r.stdout[i+len(pre):], ")")
+	raw, err := base64.RawURLEncoding.DecodeString(enc)
+	var p map[string]json.RawMessage
+	if err != nil || json.Unmarshal(raw, &p) != nil || string(p["f"]) != "[]" || string(p["d"]) != "[]" || len(p) != 7 || p["g"] == nil || p["p"] == nil || p["c"] == nil {
+		t.Fatalf("badge payload %s %v", raw, err)
 	}
 }
 

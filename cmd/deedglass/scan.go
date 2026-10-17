@@ -21,7 +21,7 @@ import (
 var scanValues struct {
 	dir, dsnEnv, outDir, format, failUnder        string
 	userConfigs, noWrite, score, badge, share, ci bool
-	full, noSeal, noStar                          bool
+	full, noSeal, noStar, badgeShare              bool
 	maxFiles                                      int
 }
 
@@ -30,7 +30,7 @@ func scanFlags(fs *flag.FlagSet) {
 	*v = struct {
 		dir, dsnEnv, outDir, format, failUnder        string
 		userConfigs, noWrite, score, badge, share, ci bool
-		full, noSeal, noStar                          bool
+		full, noSeal, noStar, badgeShare              bool
 		maxFiles                                      int
 	}{}
 	fs.StringVar(&v.dir, "dir", ".", "the directory to scan")
@@ -41,7 +41,8 @@ func scanFlags(fs *flag.FlagSet) {
 	fs.IntVar(&v.maxFiles, "max-files", 20000, "stop the file walk after this many files")
 	fs.BoolVar(&v.noWrite, "no-write", false, "print only; write no report files")
 	fs.BoolVar(&v.score, "score", false, "print the score line, the small print and the deductions only")
-	fs.BoolVar(&v.badge, "badge", false, "write .deedglass/score.json (a shields.io endpoint) and print the README line")
+	fs.BoolVar(&v.badge, "badge", false, "write .deedglass/score.json (a shields.io endpoint) and print the README line; the badge links to deedglass.com/score")
+	fs.BoolVar(&v.badgeShare, "badge-share", false, "--badge, but the badge links to your /s share page (grade, points and counts only; anyone who reads the README can open it)")
 	fs.BoolVar(&v.share, "share", false, "print a share link that holds the grade, counts and finding ids only")
 	fs.BoolVar(&v.ci, "ci", false, "for CI: no user configs, no colour, no mark, never a prompt")
 	fs.StringVar(&v.failUnder, "fail-under", "", "exit 1 when the grade is below this one: A, B, C or D")
@@ -125,6 +126,9 @@ func runScan(ctx context.Context, e *Env, args []string) error {
 		}
 	}
 	var badgeLines, shareLines []string
+	if v.badgeShare {
+		v.badge = true
+	}
 	if v.badge {
 		if _, err := scan.WriteBadge(abs, r.Score.Grade); err != nil {
 			return fmt.Errorf("couldn't write .deedglass/score.json: %w", err)
@@ -135,7 +139,19 @@ func runScan(ctx context.Context, e *Env, args []string) error {
 		} else {
 			badgeLines = append(badgeLines, e.Style.UnknownLine("No GitHub remote found, so the line below has placeholders. Replace <owner>, <repo> and <branch>."))
 		}
-		badgeLines = append(badgeLines, scan.BadgeMarkdown(rem))
+		link := ""
+		if v.badgeShare {
+			if link, err = scan.ShareLink(scan.BadgeShare(r)); err != nil {
+				return err
+			}
+		}
+		badgeLines = append(badgeLines, scan.BadgeMarkdown(rem, link))
+		if v.badgeShare {
+			badgeLines = append(badgeLines,
+				e.Style.UnknownLine("This badge links to your share page, not deedglass.com/score. Anyone who reads your README can open it."),
+				"  It shows the grade, the points and how many findings of each severity: no finding names, paths or tables.",
+				"  The link keeps today's result. Run deedglass scan --badge-share again when the grade changes, or --badge to link deedglass.com/score.")
+		}
 		if scan.GitignoreHidesBadge(abs) {
 			badgeLines = append(badgeLines, "Your .gitignore ignores all of .deedglass/. To commit only the badge file, replace that line with these two:",
 				"  .deedglass/*", "  !.deedglass/score.json")

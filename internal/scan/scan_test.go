@@ -332,6 +332,34 @@ func demoReport() *Report {
 	return r
 }
 
+// TestBadgeShare (PRD-09): the payload a README badge may link to has the seven keys the /s page
+// reads, with the grade, points and counts, and no finding or deduction id.
+func TestBadgeShare(t *testing.T) {
+	r := demoReport()
+	full := NewShare(r)
+	if len(full.F) == 0 || len(full.D) == 0 {
+		t.Fatalf("the demo report needs findings and deductions: %+v", full)
+	}
+	link, err := ShareLink(BadgeShare(r))
+	if err != nil {
+		t.Fatal(err)
+	}
+	raw, err := base64.RawURLEncoding.DecodeString(strings.TrimPrefix(link, ShareBase))
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := fmt.Sprintf(`{"c":{"high":%d,"info":%d,"low":%d,"medium":%d},"d":[],"f":[],"fv":%d,"g":%q,"p":%d,"v":1}`,
+		full.C["high"], full.C["info"], full.C["low"], full.C["medium"], full.FV, full.G, full.P)
+	if string(raw) != want {
+		t.Fatalf("%s, want %s", raw, want)
+	}
+	for _, id := range append(append([]string{}, full.F...), full.D[0].ID) {
+		if strings.Contains(string(raw), id) {
+			t.Errorf("the badge payload holds %q", id)
+		}
+	}
+}
+
 func TestShareCanary(t *testing.T) {
 	r := demoReport()
 	link, err := ShareLink(NewShare(r))
@@ -527,14 +555,14 @@ func TestCatalogSources(t *testing.T) {
 
 func TestBadge(t *testing.T) {
 	dir := t.TempDir()
-	if r := ReadRemote(dir); r.OK || !strings.Contains(BadgeMarkdown(r), "<owner>%2F<repo>%2F<branch>") {
+	if r := ReadRemote(dir); r.OK || !strings.Contains(BadgeMarkdown(r, ""), "<owner>%2F<repo>%2F<branch>") {
 		t.Fatal("placeholders without a remote")
 	}
 	write(t, dir, ".git/config", "[core]\n\tbare = false\n[remote \"origin\"]\n\turl = git@github.com:acme/agents.git\n\tfetch = +refs/heads/*:refs/remotes/origin/*\n")
 	write(t, dir, ".git/HEAD", "ref: refs/heads/trunk\n")
 	r := ReadRemote(dir)
-	if BadgeMarkdown(r) != "[![agent blast radius](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Facme%2Fagents%2Ftrunk%2F.deedglass%2Fscore.json)](https://deedglass.com/score)" {
-		t.Fatal(BadgeMarkdown(r))
+	if BadgeMarkdown(r, "") != "[![agent blast radius](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Facme%2Fagents%2Ftrunk%2F.deedglass%2Fscore.json)](https://deedglass.com/score)" {
+		t.Fatal(BadgeMarkdown(r, ""))
 	}
 	p, err := WriteBadge(dir, "D")
 	if err != nil {

@@ -83,13 +83,30 @@ func ReadRemote(dir string) Remote {
 	return Remote{Owner: m[1], Repo: m[2], Branch: branch, OK: true}
 }
 
-// BadgeMarkdown is the one line the user pastes into their README.
-func BadgeMarkdown(r Remote) string {
+// BadgeTarget is where the README badge links by default: the page that explains the grade, never
+// one about this repository (PRD-09).
+const BadgeTarget = "https://deedglass.com/score"
+
+// BadgeMarkdown is the one line the user pastes into their README. link is where the badge goes:
+// "" is BadgeTarget; scan --badge-share passes the owner's /s link (BadgeShare).
+func BadgeMarkdown(r Remote, link string) string {
 	owner, repo, branch := "<owner>", "<repo>", "<branch>"
 	if r.OK {
 		owner, repo, branch = r.Owner, r.Repo, r.Branch
 	}
-	return "[![agent blast radius](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2F" + owner + "%2F" + repo + "%2F" + branch + "%2F.deedglass%2Fscore.json)](https://deedglass.com/score)"
+	if link == "" {
+		link = BadgeTarget
+	}
+	return "[![agent blast radius](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2F" + owner + "%2F" + repo + "%2F" + branch + "%2F.deedglass%2Fscore.json)](" + link + ")"
+}
+
+// BadgeShare is the share payload a README badge may link to (scan --badge-share): the grade, the
+// points and the finding counts only. A README is public, so no finding or deduction id goes in:
+// those come from the configs and the database, and would tell anyone where to look (PRD-09).
+func BadgeShare(r *Report) SharePayload {
+	p := NewShare(r)
+	p.F, p.D = []string{}, []ShareDed{}
+	return p
 }
 
 // WriteBadge writes .deedglass/score.json under dir (mode 0644; the directory 0700 if new).

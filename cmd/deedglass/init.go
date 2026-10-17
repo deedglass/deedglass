@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/deedglass/deedglass/cmd/deedglass/internal/ui"
 	"github.com/deedglass/deedglass/internal/cli/mark"
 	"github.com/deedglass/deedglass/internal/setup"
 )
@@ -20,7 +21,7 @@ import (
 
 var initValues struct {
 	yes, noOpen, noSmoke, smoke, resetSecrets, stop    bool
-	trigger                                            bool
+	trigger, quiet                                     bool
 	dir, client, listen, postgres, ownerEmail, project string
 	pgPort                                             int
 }
@@ -31,7 +32,7 @@ func initFlags(fs *flag.FlagSet) {
 	v := &initValues
 	*v = struct {
 		yes, noOpen, noSmoke, smoke, resetSecrets, stop    bool
-		trigger                                            bool
+		trigger, quiet                                     bool
 		dir, client, listen, postgres, ownerEmail, project string
 		pgPort                                             int
 	}{}
@@ -48,6 +49,7 @@ func initFlags(fs *flag.FlagSet) {
 	fs.BoolVar(&v.smoke, "smoke", false, "run the smoke actions even when nothing changed")
 	fs.BoolVar(&v.resetSecrets, "reset-secrets", false, "replace the vault key and pepper (asks you to type reset; every API key stops working)")
 	fs.BoolVar(&v.stop, "stop", false, "stop the local stack this directory runs (the data is kept)")
+	fs.BoolVar(&v.quiet, "quiet", false, "don't print the quickstart step line")
 	fs.BoolVar(&v.trigger, "trigger", false, "on the stack init made: turn on the demo's legacy trigger, ship order 42 (1 row reported, 301 changed), then show the undo preview")
 }
 
@@ -156,6 +158,7 @@ func runInit(ctx context.Context, e *Env, args []string) error {
 	if !res.Changed {
 		fmt.Fprintln(e.Stdout)
 		fmt.Fprintln(e.Stdout, e.Style.OKLine(fmt.Sprintf("Nothing to change. Deedglass is set up in %s (org %s, agent %s).", label, setup.OrgName, setup.AgentName)))
+		printProgress(e, v.quiet, func() setup.Facts { return setup.ReadFacts(ctx, dir) })
 		return nil
 	}
 	verified := false
@@ -172,7 +175,34 @@ func runInit(ctx context.Context, e *Env, args []string) error {
 	for _, n := range res.Next {
 		fmt.Fprintln(e.Stdout, "  "+n)
 	}
+	printProgress(e, v.quiet, func() setup.Facts { return setup.ReadFacts(ctx, dir) })
 	return nil
+}
+
+// printProgress is the quickstart step line under init and doctor (PRD-06): the step of five this
+// directory is on, read from its files and its Ledger, and the command for it. Nothing with --quiet
+// or --json (and then read isn't called, so the Ledger isn't asked), in a directory init didn't set
+// up, or once all five are done.
+func printProgress(e *Env, quiet bool, read func() setup.Facts) {
+	if quiet || e.Globals.JSON {
+		return
+	}
+	f := read()
+	if !f.SetUp {
+		return
+	}
+	if l := progressLine(f); l != "" {
+		fmt.Fprintln(e.Stdout)
+		fmt.Fprintln(e.Stdout, l)
+	}
+}
+
+func progressLine(f setup.Facts) string {
+	n, next := f.Progress()
+	if n == 0 {
+		return ""
+	}
+	return fmt.Sprintf("Quickstart step %d of %d %s next: %s", n, setup.ProgressSteps, ui.Sep, next)
 }
 
 func wrapJoin(items []string, indent int) string {

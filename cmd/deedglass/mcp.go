@@ -20,7 +20,11 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/deedglass/deedglass/internal/connector"
+	"github.com/deedglass/deedglass/internal/connector/postgres"
+	"github.com/deedglass/deedglass/internal/identity"
 	"github.com/deedglass/deedglass/internal/mcp/bridge"
+	"github.com/deedglass/deedglass/internal/mcp/front"
 	"github.com/deedglass/deedglass/internal/mcp/snippet"
 	"github.com/deedglass/deedglass/internal/mcp/wrap"
 	"github.com/deedglass/deedglass/internal/setup"
@@ -295,6 +299,8 @@ What it does
   Lets a stdio MCP client (Claude Desktop's local servers) use Deedglass as an MCP server. Each
   message from stdin goes to the Gate's HTTP endpoint, /mcp/native by default, and each answer
   comes back on stdout. It holds no credentials but the agent's key, and runs no tools itself.
+  With no key (before deedglass init) it sends nothing: it lists the tools a quickstart serves,
+  says to run deedglass init, and answers every call with that sentence.
 
 Connection
   --connector <name>      native (the Gate's own tools, default) or an upstream's name
@@ -327,20 +333,53 @@ func runMCPServe(ctx context.Context, e *Env, args []string) error {
 		return usageErr(fmt.Errorf("--connector %q isn't a connector name", c), "Use native, or an upstream's name such as everything.")
 	}
 	key := firstNonEmpty(e.Globals.APIKey, e.Getenv("DEEDGLASS_API_KEY"), initKey)
+	cfg := bridge.Config{Server: u, Connector: c, APIKey: key, Version: buildInfo().Version}
 	if key == "" {
 		fmt.Fprintln(e.Stderr, "✕ No Deedglass key found. Run npx deedglass init in a terminal, then restart your MCP client. Every call is refused until then.")
+		cfg.Offline = offlineFront(c)
 	}
-	b, err := bridge.New(bridge.Config{Server: u, Connector: c, APIKey: key, Version: buildInfo().Version})
+	b, err := bridge.New(cfg)
 	if err != nil {
 		return usageErr(err, "Run deedglass help mcp serve.")
 	}
-	fmt.Fprintln(e.Stderr, "deedglass mcp serve · "+b.Endpoint())
+	if cfg.Offline != nil {
+		fmt.Fprintln(e.Stderr, "deedglass mcp serve · offline (no key) · nothing is sent")
+	} else {
+		fmt.Fprintln(e.Stderr, "deedglass mcp serve · "+b.Endpoint())
+	}
 	ctx, stop := signal.NotifyContext(ctx, syscall.SIGTERM)
 	defer stop()
 	return b.Run(ctx, e.stdin(), e.Stdout)
 }
 
 var reServeConnector = regexp.MustCompile(`^[a-z][a-z0-9-]{1,31}$`)
+
+// offlineFront is mcp serve before init (PRD-03): /mcp/native's catalog as a quickstart serves it,
+// built from the config init creates the postgres connector with (setup.ConnectorYAML), so it lists
+// postgres.call and the writable tables just as the real one does. An upstream's tools aren't known
+// without the server, so other connectors list none.
+func offlineFront(conn string) *front.Front {
+	ns := &front.NativeSource{}
+	if conn == "native" {
+		ns.Rows = func(context.Context, identity.Principal) ([]connector.RowTools, error) {
+			ts, err := quickstartTools()
+			if err != nil {
+				return nil, err
+			}
+			return []connector.RowTools{{Name: setup.ConnectorName, Type: postgres.Type, Tools: ts}}, nil
+		}
+	}
+	return &front.Front{Version: buildInfo().Version, Tools: ns}
+}
+
+// quickstartTools are the tools of the postgres connector deedglass init creates.
+func quickstartTools() ([]connector.ToolSpec, error) {
+	raw, err := setup.ConnectorConfig()
+	if err != nil {
+		return nil, err
+	}
+	return postgres.ToolsFor(raw)
+}
 
 // runMCPSnippetHTTP is mcp snippet --transport http (S15): config that reaches /mcp/native or
 // /mcp/<connector> over HTTP; Claude Desktop gets the stdio bridge.

@@ -700,7 +700,7 @@ func TestMCPCopy(t *testing.T) {
 			t.Errorf("%q, want %q", got, want)
 		}
 	}
-	for _, m := range []string{MCPInstructions, MCPBadKey, MCPServerStopped, MCPKeepsCrashing, MCPTooLarge, MCPApprovalDenied, MCPApprovalIDBad,
+	for _, m := range []string{MCPInstructions, MCPBadKey, MCPNoKey, MCPServerStopped, MCPKeepsCrashing, MCPTooLarge, MCPApprovalDenied, MCPApprovalIDBad,
 		MCPApprovalExpiredText("apr_x"), MCPApprovalCancelledText("apr_x"), MCPApprovalNotHereText("apr_x"), MCPToolChangedText("scratch.x"),
 		MCPUnknownToolText("x"), MCPCheckApprovalDescription} {
 		if reBadCopy.MatchString(m) || !strings.HasSuffix(m, ".") {
