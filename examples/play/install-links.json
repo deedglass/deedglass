@@ -52,7 +52,7 @@
       "id": "goose",
       "client": "Goose",
       "kind": "deeplink",
-      "url": "goose://extension?cmd=npx&arg=-y&arg=deedglass&arg=mcp&arg=serve&id=deedglass&name=Deedglass&description=See%20what%20your%20agents%20actually%20did.",
+      "url": "goose://extension?cmd=npx&arg=-y&arg=deedglass&arg=mcp&arg=serve&id=deedglass&name=Deedglass&description=Rules%20decide%20each%20AI%20agent%20tool%20call%3B%20Deedglass%20checks%20what%20really%20changed%20and%20seals%20a%20record.",
       "command": "",
       "note": ""
     },
@@ -67,24 +67,24 @@
     {
       "id": "claude-desktop",
       "client": "Claude Desktop (macOS, Apple silicon)",
-      "kind": "download",
-      "url": "https://github.com/deedglass/deedglass/releases/download/v0.1.0/deedglass-0.1.0-darwin-arm64.mcpb",
+      "kind": "web",
+      "url": "https://docs.deedglass.com/get-started/claude-desktop/",
       "command": "",
-      "note": "Open the .mcpb file to install it."
+      "note": "The .mcpb bundles aren't attached to a release yet; this page connects Claude Desktop by hand."
     },
     {
       "id": "claude-desktop-intel",
       "client": "Claude Desktop (macOS, Intel)",
-      "kind": "download",
-      "url": "https://github.com/deedglass/deedglass/releases/download/v0.1.0/deedglass-0.1.0-darwin-x64.mcpb",
+      "kind": "web",
+      "url": "https://docs.deedglass.com/get-started/claude-desktop/",
       "command": "",
       "note": ""
     },
     {
       "id": "claude-desktop-windows",
       "client": "Claude Desktop (Windows)",
-      "kind": "download",
-      "url": "https://github.com/deedglass/deedglass/releases/download/v0.1.0/deedglass-0.1.0-win32-x64.mcpb",
+      "kind": "web",
+      "url": "https://docs.deedglass.com/get-started/claude-desktop/",
       "command": "",
       "note": ""
     },

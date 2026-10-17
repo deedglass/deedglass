@@ -43,7 +43,9 @@ this file by `scripts/release-notes.sh`.
   most 60 characters.
 - The install docs no longer point at the ghcr.io image, which isn't public yet: npx, the install
   script, the release archives, or `make web-build docker`.
-
+- `deedglass mcp install-links` and the generated install links point the Claude Desktop entries at
+  the docs page that connects it by hand until a release carries the `.mcpb` bundles (the download
+  URLs answered 404), and the bundle and the Goose link carry the one description.
 - More embedded text is kept gzip-compressed in the binary (the full scan report template, the
   security pack's questions and document, the sign-in and approval pages, the starter policies, the
   email templates, the play cast), and more cold paths skip inlining, so S52 fits the image budget.

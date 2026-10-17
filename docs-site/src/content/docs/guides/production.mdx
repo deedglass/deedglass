@@ -10,7 +10,7 @@ import { Aside } from '@astrojs/starlight/components';
 By the end you'll have one Deedglass server in prod mode, behind TLS, with its own Postgres.
 
 <Aside type="tip" title="The cloud kit">
-The repository's `deploy/cloud/` is this guide as files: Caddy with automatic TLS, the image pinned by digest, Postgres reachable only over a Unix socket, encrypted nightly backups with a tested restore, health heartbeats and runbooks. Its `GO_LIVE.md` is the step-by-step list, one command per step.
+The repository's `deploy/cloud/` is this guide as files: Caddy with automatic TLS, the image pinned by digest, Postgres reachable only over a Unix socket, encrypted nightly backups with a tested restore, health heartbeats and runbooks. Its `GO_LIVE.md` is the step-by-step list, one command per step. The kit's scripts take only the image on ghcr.io, pinned by digest, and that image is private for now, so the kit needs a registry login with read access to it until the public image ships. Without one, follow this guide with the image you build in step 1.
 </Aside>
 
 **Before you start**

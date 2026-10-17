@@ -82,15 +82,18 @@ func TestBundles(t *testing.T) {
 		if bytes.Contains(raw, []byte("dg_live_")) || bytes.Contains(raw, []byte("dg_test_")) {
 			t.Errorf("%s: the manifest holds a key", p.ID)
 		}
-		// The asset name matches what the install links point at.
+		// The asset name matches where the install links look for it (once a release carries it).
+		if !strings.HasSuffix(installlinks.BundleURL(p.ID), "/"+p.FileName(installlinks.Version)) {
+			t.Errorf("%s: installlinks.BundleURL is %s, not …/%s", p.ID, installlinks.BundleURL(p.ID), p.FileName(installlinks.Version))
+		}
 		found := false
 		for _, l := range installlinks.Links() {
 			if strings.HasSuffix(l.URL, "/"+p.FileName(installlinks.Version)) {
 				found = true
 			}
 		}
-		if !found {
-			t.Errorf("%s: no install link points at %s", p.ID, p.FileName(installlinks.Version))
+		if found != installlinks.MCPBOnRelease {
+			t.Errorf("%s: an install link points at %s is %v; want %v (installlinks.MCPBOnRelease)", p.ID, p.FileName(installlinks.Version), found, installlinks.MCPBOnRelease)
 		}
 	}
 	if err := Write(io.Discard, Platforms[0], "0.1.0", nil, nil); err == nil {

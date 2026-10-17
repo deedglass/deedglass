@@ -9,11 +9,14 @@ import (
 	"slices"
 	"strings"
 	"testing"
+
+	"github.com/deedglass/deedglass/internal/installlinks"
 )
 
 // description is docs/description.json, the one description of Deedglass (VIRAL-3 PRD-04).
 type description struct {
 	Tagline  string   `json:"tagline"`
+	Short    string   `json:"short"`
 	Summary  string   `json:"summary"`
 	Licence  string   `json:"licence"`
 	Network  string   `json:"network"`
@@ -73,6 +76,22 @@ func TestDescription(t *testing.T) {
 	}
 	if m := regexp.MustCompile(`(?m)^  description: "(.*)"$`).FindStringSubmatch(read(t, "../deploy/docker-catalog/server.yaml")); m == nil || m[1] != d.Tagline {
 		t.Errorf("deploy/docker-catalog/server.yaml about.description is %v, want the tagline", m)
+	}
+	// The Claude Desktop bundle's manifest and the Goose install link carry installlinks.Description.
+	if installlinks.Description != d.Tagline {
+		t.Errorf("internal/installlinks.Description is %q, want the tagline %q", installlinks.Description, d.Tagline)
+	}
+	// Cursor caps a listing's tagline at 80 characters: there, the tagline cut at its last clause.
+	if want := strings.TrimSuffix(d.Tagline, " and seals a record.") + "."; d.Short != want || len([]rune(d.Short)) > 80 {
+		t.Errorf("short is %q; want %q, at most 80 characters", d.Short, want)
+	}
+	if got := jsonField("../integrations/cursor/listing.json", str("tagline")); got != d.Short {
+		t.Errorf("integrations/cursor/listing.json tagline is %q, want short %q", got, d.Short)
+	}
+	// The docs home page: its description is the tagline; its <title> is the site's name.
+	home := read(t, "../docs-site/src/content/docs/index.mdx")
+	if !strings.Contains(home, "\ntitle: Deedglass Docs\n") || !strings.Contains(home, "\ndescription: "+d.Tagline+"\n") {
+		t.Error("docs-site/src/content/docs/index.mdx: want title Deedglass Docs and the tagline as its description")
 	}
 	var pkg struct{ Keywords []string }
 	if err := json.Unmarshal([]byte(read(t, "../npm/deedglass/package.json")), &pkg); err != nil {
@@ -205,6 +224,17 @@ func TestNoPrivateImageInstructions(t *testing.T) {
 				t.Errorf("%s:%d names ghcr.io/deedglass/deedglass, which is private (anonymous pulls fail). Point to npx, the install script, a release binary or make web-build docker; flip ghcrImagePublic when the founder makes it public", f, i+1)
 			}
 		}
+	}
+	// The cloud kit's scripts take only the ghcr.io image by digest: each kit page that names it says
+	// it is private for now, and the production guide says the kit needs registry access.
+	kit, _ := filepath.Glob("../deploy/cloud/*.md")
+	for _, f := range kit {
+		if text := flat(read(t, f)); image.MatchString(text) && !strings.Contains(text, "private for now") {
+			t.Errorf("%s names ghcr.io/deedglass/deedglass without saying it is private for now (anonymous pulls fail)", f)
+		}
+	}
+	if !strings.Contains(flat(read(t, "../docs-site/src/content/docs/guides/production.mdx")), "private for now, so the kit needs a registry login") {
+		t.Error("docs-site guides/production.mdx must say deploy/cloud needs registry access to the private image")
 	}
 	if !strings.Contains(flat(read(t, "../README.md")), "A public container image is coming") ||
 		!strings.Contains(flat(read(t, "INSTALL.md")), "a public one is coming") {

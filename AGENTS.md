@@ -15,9 +15,11 @@ release of them becomes Apache-2.0 two years after it ships. The release binary,
 `@deedglass/cli-*` npm packages and the container image include `ee/`, so their licence is
 `Apache-2.0 AND FSL-1.1-ALv2`.
 
-There's no telemetry. With Pro, the licence check contacts Dodo Payments and deedglass.com at most
-once a day, and only when a Pro feature runs; `deedglass version --check` contacts GitHub only when
-you run it.
+Free features send nothing to deedglass.com. Only a machine with a Pro licence checks it, through
+Dodo Payments and deedglass.com: `deedglass serve` when it starts and then daily, and Pro commands
+when you run them; a request goes out only when the last successful check is a day old.
+`deedglass version --check` and the `--latest` option of `deedglass policy install` and
+`policy packs` contact GitHub only when you use them.
 
 ## Setting Deedglass up for a user
 
@@ -27,9 +29,10 @@ config are each the user's call. The steps, with what each one changes, are in
 [`llms-install.md`](llms-install.md). For giving an agent Postgres access carefully, read
 [`integrations/claude-code/skills/safe-postgres-agents/SKILL.md`](integrations/claude-code/skills/safe-postgres-agents/SKILL.md).
 
-Two commands send nothing anywhere and need no Docker: `npx -y deedglass scan --no-write` (a
-read-only grade of the project's agent setup, printed only; without `--no-write` it also writes
-`deedglass-scan.md` and `deedglass-scan.html`) and `npx -y deedglass play` (the demo, offline).
+Two commands send nothing and need no Docker (npx itself downloads the package from npm the first
+time): `npx -y deedglass scan --no-write` (a read-only grade of the project's agent setup, printed
+only; without `--no-write` it also writes `deedglass-scan.md` and `deedglass-scan.html`) and
+`npx -y deedglass play` (the demo, offline).
 
 ## Working on this repo
 
@@ -78,8 +81,10 @@ A test that prints an `-update` command has a golden file: run it, read the diff
   result is Can't check. Never change an expected outcome in `attack/attack_meta.json` to make a
   test pass.
 - **Network.** Every outbound HTTP call goes through `internal/connector/egress`
-  (`TestSingleEgressDoor`). `deedglass scan` opens no connection except to the one database the
-  user names. Free code never imports `internal/licence`.
+  (`TestSingleEgressDoor`). The free `deedglass scan` opens no connection except to the one
+  database the user names with `--postgres-dsn-env`; `scan --full` (Pro) also checks the licence
+  and, when a Deedglass server is configured, seals the report on the user's own server. Free code
+  never imports `internal/licence`.
 - **Dependencies.** Prefer the standard library. A new dependency needs an ADR (index:
   `docs/adr/README.md`) with its pinned version, licence and alternatives, so open an issue before
   adding one. No cgo in the main binary.

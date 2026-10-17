@@ -1,6 +1,6 @@
 name: Scan rule request
 description: Something deedglass scan should recognise or report, such as an MCP server, a package or a risky setting.
-labels: ["scan rule"]
+labels: ["area: scan"]
 body:
   - type: markdown
     attributes:

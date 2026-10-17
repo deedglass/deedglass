@@ -1,5 +1,8 @@
 # Upgrade
 
+The image on ghcr.io is private for now, so an upgrade needs a registry login with read access to
+it (as in [GO_LIVE.md](GO_LIVE.md) step 7); a public image is coming.
+
 ```sh
 sudo /opt/deedglass/deploy/cloud/scripts/upgrade.sh ghcr.io/deedglass/deedglass:0.1.1@sha256:<digest>
 ```

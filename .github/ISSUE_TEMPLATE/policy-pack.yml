@@ -1,6 +1,6 @@
 name: Policy pack request
 description: A tested set of rules for a tool, a connector or a kind of agent.
-labels: ["policy pack"]
+labels: ["area: policies"]
 body:
   - type: markdown
     attributes:

@@ -156,7 +156,7 @@ sources and the date each was checked, at [deedglass.com/compare](https://deedgl
 | If you need | Use this | Where Deedglass fits |
 |---|---|---|
 | An agent that only reads | A Postgres role with `SELECT` and nothing else. It can't change data whatever the agent sends, and there's nothing to install. | You don't need it. It's for agents that must write. ([compare](https://deedglass.com/compare/read-only-postgres-role)) |
-| A place for an agent to try changes | A database branch: a Neon branch is a copy-on-write clone of your data; Supabase branches start without production data. | For the writes that must reach production: rules first, then the check and the record. ([compare](https://deedglass.com/compare/database-branches)) |
+| A place for an agent to try changes | A database branch: a Neon branch is a copy-on-write clone of your data; Supabase branches start without production data by default. | For the writes that must reach production: rules first, then the check and the record. ([compare](https://deedglass.com/compare/database-branches)) |
 | Routing, isolation and credentials for many MCP servers | An MCP gateway, such as Docker's, which runs each server in an isolated container and injects credentials. | Behind the gateway, for the servers that write to Postgres. ([compare](https://deedglass.com/compare/mcp-gateways)) |
 | Traces of each step, and evaluations | Langfuse or LangSmith. | Next to them: a trace is the agent's side of the story; the check reads what Postgres committed. ([compare](https://deedglass.com/compare/langfuse-langsmith)) |
 | Rules at the wire for Postgres, Kubernetes and HTTP | Claw Patrol, which gates each action against rules over the parsed traffic. | It also decides first; it adds the check of what Postgres committed, records anyone can check offline, and undo. ([compare](https://deedglass.com/compare/claw-patrol)) |
@@ -182,7 +182,7 @@ published, build the image locally as above. Checksums, signatures and SBOMs:
 
 <!-- install-links:start -->
 [![Add to Cursor](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/en/install-mcp?name=deedglass&config=eyJjb21tYW5kIjoibnB4IiwiYXJncyI6WyIteSIsImRlZWRnbGFzcyIsIm1jcCIsInNlcnZlIl19)
-[Install in VS Code](https://vscode.dev/redirect/mcp/install?config=%7B%22command%22%3A%22npx%22%2C%22args%22%3A%5B%22-y%22%2C%22deedglass%22%2C%22mcp%22%2C%22serve%22%5D%7D&name=deedglass) · [LM Studio](https://deedglass.com/install#lm-studio) · [Goose](https://deedglass.com/install#goose) · [Claude Desktop](https://deedglass.com/install#claude-desktop) · [Every client](https://deedglass.com/install)
+[Install in VS Code](https://vscode.dev/redirect/mcp/install?config=%7B%22command%22%3A%22npx%22%2C%22args%22%3A%5B%22-y%22%2C%22deedglass%22%2C%22mcp%22%2C%22serve%22%5D%7D&name=deedglass) · [LM Studio](https://deedglass.com/install#lm-studio) · [Goose](https://deedglass.com/install#goose) · [Claude Desktop](https://docs.deedglass.com/get-started/claude-desktop/) · [Every client](https://deedglass.com/install)
 
 ```sh
 claude mcp add deedglass -- npx -y deedglass mcp serve
@@ -236,9 +236,11 @@ The attack suite runs 70 cases against a real server and real Postgres on every 
 Report a vulnerability privately: [`SECURITY.md`](SECURITY.md).
 
 <!-- description:network -->
-There's no telemetry. With Pro, the licence check contacts Dodo Payments and deedglass.com at most
-once a day, and only when a Pro feature runs; `deedglass version --check` contacts GitHub only when
-you run it.
+Free features send nothing to deedglass.com. Only a machine with a Pro licence checks it, through
+Dodo Payments and deedglass.com: `deedglass serve` when it starts and then daily, and Pro commands
+when you run them; a request goes out only when the last successful check is a day old.
+`deedglass version --check` and the `--latest` option of `deedglass policy install` and
+`policy packs` contact GitHub only when you use them.
 `DEEDGLASS_NO_NETWORK=1` stops the licence check; Pro then runs on its cached token for up to 14 days.
 
 ## Contributing

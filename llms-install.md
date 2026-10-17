@@ -77,7 +77,8 @@ The output has a placeholder key; the user replaces it with an agent key.
 
 ## Nothing to install? Try it first
 
-Neither of these sends anything anywhere or needs Docker:
+Neither of these sends anything or needs Docker (npx itself downloads the package from npm the first
+time):
 
 - `npx -y deedglass play`: the demo's story in the terminal, offline.
 - `npx -y deedglass scan --no-write`: a read-only grade of the project's agent setup, printed only.
