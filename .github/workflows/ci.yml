@@ -61,6 +61,11 @@ jobs:
         run: scripts/banned_words.sh --commits HEAD
       - name: release workflow guards and actionlint (S35)
         run: scripts/check-workflows.sh && scripts/check-workflows.sh --self-test
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+      - name: the npm publish script on fixtures (stage, checksums, binaries, order, skips; no network)
+        run: node --test scripts/npm-publish.test.mjs
 
   # The browser verifier (S05): TypeScript typecheck and the Vitest suites against the same vectors
   # and the 500-case parity corpus Go writes. Dev tools only (ADR-027); npm ci with exact pins.

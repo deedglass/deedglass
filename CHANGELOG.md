@@ -26,6 +26,11 @@ this file by `scripts/release-notes.sh`.
 - More embedded text is kept gzip-compressed in the binary (the full scan report template, the
   security pack's questions and document, the sign-in and approval pages, the starter policies, the
   email templates, the play cast), and more cold paths skip inlining, so S52 fits the image budget.
+- **npm packages come from the release workflow.** `deedglass`, its five platform packages and
+  `@deedglass/sdk` are published by GitHub Actions from the same run that builds the release
+  archives, over npm trusted publishing with npm provenance; each binary is checked against
+  `checksums.txt` first, and a release candidate goes to the `next` dist-tag. See
+  `docs/RELEASING.md`.
 
 - **The security review pack.** `deedglass security-pack readiness` (free; also
   `GET /v1/security_pack/readiness` and Console › Settings › Security review) answers 24 questions a

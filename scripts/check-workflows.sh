@@ -3,9 +3,12 @@
 #   - publish-npm, publish-pypi and deploy-docs run only behind their repository variables and in
 #     their GitHub environments (npm, pypi, docs)
 #   - release.yml's default is permissions: {} and no workflow anywhere grants write-all
+#   - in release.yml only release, publish-npm and publish-pypi may mint an OIDC token (id-token: write);
+#     npm-stage, which stages the npm packages, stays read-only, and publish-npm publishes only what it staged
 #   - every uses: is pinned to a full commit SHA with a # vX.Y.Z comment
 #   - actionlint 1.7.12 passes (the Homebrew binary, else go run at that pin)
-# --self-test removes one gate from a copy and checks that this script then fails.
+# --self-test removes one gate from a copy (and grants an extra OIDC token, write-all, an unpinned
+# action) and checks that this script then fails.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 if [ "${1:-}" = "--self-test" ]; then
@@ -19,7 +22,11 @@ if [ "${1:-}" = "--self-test" ]; then
   cp .github/workflows/release.yml "$tmp/release.yml"
   sed -i.bak 's|uses: actions/checkout@[0-9a-f]\{40\} # v[0-9.]*|uses: actions/checkout@v6|' "$tmp/release.yml" && rm -f "$tmp"/*.bak
   if NO_ACTIONLINT=1 "$0" "$tmp" >/dev/null 2>&1; then echo "✕ self-test: an unpinned uses: wasn't caught" >&2; exit 1; fi
-  echo "✓ check-workflows self-test · a removed gate, write-all and an unpinned action each fail"
+  cp .github/workflows/release.yml "$tmp/release.yml"
+  awk '{print} $0 == "  npm-stage:" {on=1} on && $0 == "      contents: read" {print "      id-token: write"; on=0}' \
+    .github/workflows/release.yml > "$tmp/release.yml"
+  if NO_ACTIONLINT=1 "$0" "$tmp" >/dev/null 2>&1; then echo "✕ self-test: an OIDC token in npm-stage wasn't caught" >&2; exit 1; fi
+  echo "✓ check-workflows self-test · a removed gate, write-all, an unpinned action and an extra OIDC token each fail"
   exit 0
 fi
 dir="${1:-.github/workflows}"
@@ -40,6 +47,14 @@ gate publish-npm DEEDGLASS_PUBLISH_NPM npm
 gate publish-pypi DEEDGLASS_PUBLISH_PYPI pypi
 gate deploy-docs DEEDGLASS_DEPLOY_DOCS docs
 grep -q '^permissions: {}$' "$rel" || bad "release.yml's default permissions aren't {}"
+# Every job of release.yml that asks for id-token: write (the job names are the two-space keys under jobs:).
+oidc="$(awk '/^jobs:$/ {on=1; next} on && /^[^ ]/ {on=0} on && /^  [a-z][a-z-]*:$/ {j=$1; sub(":", "", j)} on && /^ +id-token: write$/ {print j}' "$rel")"
+for j in $oidc; do
+  case "$j" in release|publish-npm|publish-pypi) ;; *) bad "$j asks for id-token: write; only release, publish-npm and publish-pypi may" ;; esac
+done
+job npm-stage | grep -q 'scripts/npm-publish.mjs stage ' || bad "npm-stage doesn't stage the npm packages with scripts/npm-publish.mjs"
+job publish-npm | grep -q 'needs: \[release, npm-stage\]' || bad "publish-npm doesn't need npm-stage (it publishes only what npm-stage staged)"
+if job publish-npm | grep -qE '^ +run: .*npm publish '; then bad "publish-npm runs npm publish itself; scripts/npm-publish.mjs publish keeps the order and the skips"; fi
 grep -q 'draft: true' .goreleaser.yaml 2>/dev/null || [ "$dir" != ".github/workflows" ] || bad ".goreleaser.yaml doesn't make a draft release"
 if grep -nE '^[[:space:]]*permissions:[[:space:]]*write-all' "$dir"/*.yml; then bad "write-all is granted above"; fi
 unpinned="$(grep -nE '^[[:space:]]*(-[[:space:]]*)?uses:' "$dir"/*.yml | grep -vE 'uses: [^ ]+@[0-9a-f]{40} # v[0-9]+[.][0-9]+[.][0-9]+$' || true)"
