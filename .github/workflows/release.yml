@@ -1,7 +1,8 @@
 # Release (S35, ADR-067). Runs only when the founder pushes a tag vX.Y.Z or vX.Y.Z-rc.N.
 #
-#   verify       make ci, integration on PG 18.6, the attack suite (its result records the tag),
-#                fuzz-regress, audit and the docs build. No secret is available to this job.
+#   verify       the tagged commit is on main, then make ci, integration on PG 18.6, the attack suite
+#                (its result records the tag), fuzz-regress, audit and the docs build. No secret is
+#                available to this job.
 #   release      GoReleaser: 5 binaries, 5 archives, checksums.txt, an SPDX SBOM per archive and a
 #                linux/amd64 + linux/arm64 image on GHCR, into a DRAFT GitHub release. Prereleases
 #                never move latest or X.Y. While the repository is private nothing is signed:
@@ -12,16 +13,20 @@
 #   npm-stage    every release: scripts/npm-publish.mjs stages the seven npm packages from this run's
 #                GoReleaser archives (checked against checksums.txt) and the SDK tarball, packs them
 #                and prints the publish plan. Read-only; nothing reaches npm.
-#   publish-npm  OFF unless the repository variable DEEDGLASS_PUBLISH_NPM is 'true'; environment npm.
-#                Publishes the staged packages in order (the five platform packages, the deedglass
-#                wrapper, @deedglass/sdk) over npm trusted publishing (GitHub OIDC, no token), with
-#                provenance when the repository is public; skips any package@version npm already has;
-#                a prerelease goes to the next dist-tag.
-#   publish-pypi OFF unless DEEDGLASS_PUBLISH_PYPI is 'true'; environment pypi (trusted publishing).
+#   publish-npm  OFF unless the repository variable DEEDGLASS_PUBLISH_NPM is 'true'; environment npm,
+#                whose deployment policy allows v* tags only (npm checks the repository, workflow and
+#                environment, never the ref; see docs/RELEASING.md). Publishes the staged packages in
+#                order (the five platform packages, the deedglass wrapper, @deedglass/sdk) over npm
+#                trusted publishing (GitHub OIDC, no token), with provenance when the repository is
+#                public; skips a package@version npm already has (a platform package only when it holds
+#                this run's binary); a prerelease goes to the next dist-tag.
+#   publish-pypi OFF unless DEEDGLASS_PUBLISH_PYPI is 'true'; environment pypi (trusted publishing,
+#                v* tags only, like npm).
 #   deploy-docs  OFF unless DEEDGLASS_DEPLOY_DOCS is 'true'; needs the CLOUDFLARE_API_TOKEN secret.
 #
-# scripts/check-workflows.sh (in make ci) fails if a gate or an environment disappears, if any job
-# gets write-all, or if a uses: line isn't pinned to a full commit SHA.
+# scripts/check-workflows.sh (in make ci) fails if a gate, an environment or the on-main check
+# disappears, if a job outside release, publish-npm and publish-pypi asks for id-token: write, if any
+# job gets write-all, or if a uses: line isn't pinned to a full commit SHA.
 name: release
 
 on:
@@ -45,6 +50,13 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
+      - name: the tagged commit is on main (a tag on an unmerged branch publishes nothing)
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          git rev-parse -q --verify refs/remotes/origin/main >/dev/null || git fetch --no-tags origin main:refs/remotes/origin/main
+          git merge-base --is-ancestor HEAD refs/remotes/origin/main || {
+            echo "✕ $TAG ($(git rev-parse --short HEAD)) isn't on main. Next: merge it after green CI, then tag main."; exit 1; }
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: go.mod

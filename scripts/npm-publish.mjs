@@ -16,13 +16,15 @@
 // binary's header names the right OS and CPU (ELF, Mach-O or PE), then npm pack and a check of each
 // tarball's files and modes. It writes DIR/plan.json and DIR/tgz/*.tgz. --archive-version takes a
 // snapshot's archives (make npm-dry-run); in CI the archives must carry the release version.
-// publish works through plan.json in order and stops at the first failure, so the wrapper never
-// reaches npm before all five binaries. It skips a package@version npm already has (a stopped run
-// can simply be re-run) and publishes the rest over trusted publishing (GitHub OIDC, no token) with
-// --provenance (release.yml passes --provenance=false only while the repository is private, where
-// npm can't record provenance): a prerelease goes to the "next" dist-tag and never moves "latest".
-// --dry-run prints the commands and touches nothing, the registry included. A real publish runs
-// only in GitHub Actions, with npm 11.5.1 or later (the first with trusted publishing).
+// publish checks each tarball against plan.json, then asks npm which of the seven it already has: a
+// platform package npm has must hold this run's binary (same tarball, or the same sha256 for the
+// binary inside npm's tarball), else nothing is published and the version must be bumped, so the
+// wrapper never pins binaries of two builds. It then publishes the rest in order over trusted
+// publishing (GitHub OIDC, no token) with --provenance (release.yml passes --provenance=false only
+// while the repository is private) and stops at the first failure, so the wrapper never reaches npm
+// before all five binaries; a stopped run can simply be re-run. A prerelease goes to the "next"
+// dist-tag and never moves "latest". --dry-run prints the commands and touches neither npm nor the
+// registry. A real publish runs only in GitHub Actions, with npm 11.5.1 or later.
 // The unit tests are scripts/npm-publish.test.mjs (node --test; in make workflows-check and CI);
 // make npm-dry-run stages a local GoReleaser snapshot (make release-check) the same way.
 import { spawnSync } from 'node:child_process';
@@ -58,6 +60,8 @@ export const distTag = (version) => (version.includes('-') ? 'next' : 'latest');
 export const archiveName = (p, archiveVersion) => `deedglass_${archiveVersion}_${p.goos}_${p.goarch}.${p.ext}`;
 const sha256 = (file) => createHash('sha256').update(readFileSync(file)).digest('hex');
 const sha512 = (file) => 'sha512-' + createHash('sha512').update(readFileSync(file)).digest('base64');
+const sha256Of = (buf) => createHash('sha256').update(buf).digest('hex');
+const sha512Of = (buf) => 'sha512-' + createHash('sha512').update(buf).digest('base64');
 const readJSON = (file) => JSON.parse(readFileSync(file, 'utf8'));
 const say = (s) => console.log(s);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -97,6 +101,15 @@ function header(file) {
   } finally {
     closeSync(fd);
   }
+}
+
+// The sha256 of one file inside a gzipped tarball (a path, or its bytes), or null when it isn't there.
+export function tarEntrySha256(tgz, entry) {
+  const r = Buffer.isBuffer(tgz)
+    ? spawnSync('tar', ['-xzOf', '-', entry], { input: tgz, maxBuffer: 1 << 30 })
+    : spawnSync('tar', ['-xzOf', tgz, entry], { maxBuffer: 1 << 30 });
+  if (r.error) throw new Error(`tar didn't start: ${r.error.message}`);
+  return r.status === 0 && r.stdout.length ? sha256Of(r.stdout) : null;
 }
 
 // package/package.json from a packed tarball.
@@ -225,8 +238,13 @@ export function stage({ root, version, archives, sdk, out, archiveVersion = vers
     expectFiles(info, ['package.json', p.exe]);
     const f = info.files.find((x) => x.path === p.exe);
     if ((f.mode & 0o111) !== 0o111) throw new Error(`${info.filename}: ${p.exe} isn't executable (mode ${f.mode.toString(8)})`);
-    if (f.size !== lstatSync(exe).size) throw new Error(`${info.filename}: ${p.exe} isn't the archive's binary`);
-    packages.push({ name: info.name, version: info.version, file: `tgz/${info.filename}`, integrity: info.integrity });
+    const bin = sha256(exe);
+    if (tarEntrySha256(join(tgz, info.filename), `package/${p.exe}`) !== bin) {
+      throw new Error(`${info.filename}: ${p.exe} isn't the archive's binary`);
+    }
+    packages.push({
+      name: info.name, version: info.version, file: `tgz/${info.filename}`, integrity: info.integrity, bin: p.exe, binSha256: bin,
+    });
     say(`✓ ${info.name}: ${p.goos}/${p.goarch} binary, executable`);
   }
   const wdir = join(out, 'stage', 'deedglass');
@@ -254,23 +272,64 @@ export function versionAtLeast(a, b) {
   return true;
 }
 
-// The registry's document for name@version, or null when npm doesn't have it; throws on anything else.
-export async function registryVersion(registry, name, version, tries = 3) {
-  const url = `${registry}/${name.replace('/', '%2f')}/${encodeURIComponent(version)}`;
+// GET url with a few tries: the response, or null on 404; throws on anything else.
+async function fetchTries(url, what, tries, accept) {
   for (let i = 1; ; i++) {
     let why;
     try {
-      const r = await fetch(url, { headers: { accept: 'application/json' } });
-      if (r.status === 200) return await r.json();
+      const r = await fetch(url, { headers: { accept } });
+      if (r.status === 200) return r;
       await r.arrayBuffer();
       if (r.status === 404) return null;
       why = `HTTP ${r.status}`;
     } catch (e) {
       why = e.message;
     }
-    if (i >= tries) throw new Error(`the registry didn't answer for ${name}@${version} (${why})`);
+    if (i >= tries) throw new Error(`the registry didn't answer for ${what} (${why})`);
     await sleep(1000 * i);
   }
+}
+
+// The registry's document for name@version, or null when npm doesn't have it; throws on anything else.
+export async function registryVersion(registry, name, version, tries = 3) {
+  const url = `${registry}/${name.replace('/', '%2f')}/${encodeURIComponent(version)}`;
+  const r = await fetchTries(url, `${name}@${version}`, tries, 'application/json');
+  return r && r.json();
+}
+
+// npm already has p's name@version (its document is have). A platform package must hold this run's
+// binary: the same tarball, or (when npm pack's bytes differ) the same sha256 for the binary inside
+// npm's tarball. Anything else throws: npm versions can't be replaced, and the wrapper would pin
+// binaries of two builds, one never checked against this run's checksums.txt. For the wrapper and the
+// SDK another tarball is only a warning (their content comes from the same tagged commit's files).
+export async function checkPublished(p, have, { registry, tries }) {
+  const id = `${p.name}@${p.version}`;
+  const integrity = have?.dist?.integrity;
+  if (integrity && integrity === p.integrity) return `✓ ${id} is already on npm (this run's tarball)`;
+  if (!p.binSha256) {
+    return `✓ ${id} is already on npm\n::warning::${id} on npm isn't this run's tarball (npm versions can't be replaced; it stays as it is)`;
+  }
+  const url = have?.dist?.tarball;
+  let ok = false;
+  try {
+    ok = Boolean(url) && new URL(url).origin === new URL(registry).origin;
+  } catch {
+    ok = false;
+  }
+  if (!ok) throw new Error(`npm's document for ${id} names its tarball at ${url || 'nowhere'}, not on ${registry}; can't check its binary`);
+  const r = await fetchTries(url, `${id}'s tarball`, tries, 'application/octet-stream');
+  if (!r) throw new Error(`npm lists ${id} but its tarball ${url} is missing; can't check its binary`);
+  const buf = Buffer.from(await r.arrayBuffer());
+  if (integrity?.startsWith('sha512-') && sha512Of(buf) !== integrity) {
+    throw new Error(`${id}'s tarball from ${url} doesn't match npm's own integrity; can't check its binary`);
+  }
+  const got = tarEntrySha256(buf, `package/${p.bin}`);
+  if (got !== p.binSha256) {
+    throw new Error(`npm already has ${id} with another build's ${p.bin} (${got ? `sha256 ${got.slice(0, 12)}…` : 'none'}; this run's `
+      + `is ${p.binSha256.slice(0, 12)}…). npm versions can't be replaced and the deedglass wrapper would pin binaries of two `
+      + 'builds, so nothing more is published: bump the version (every package.json, CHANGELOG.md) and tag again');
+  }
+  return `✓ ${id} is already on npm (another pack of this run's binary)`;
 }
 
 export async function publish({
@@ -279,10 +338,28 @@ export async function publish({
   const plan = readJSON(join(out, 'plan.json'));
   const { version, dist } = plan;
   if (plan.packages.length !== 7) throw new Error(`plan.json lists ${plan.packages.length} packages, not 7`);
+  const platforms = new Set(PLATFORMS.map((p) => p.name));
+  for (const p of plan.packages) {
+    const file = join(out, p.file);
+    if (!existsSync(file) || sha512(file) !== p.integrity) throw new Error(`${p.file} doesn't match plan.json; stage again`);
+    if (p.version !== version) throw new Error(`plan.json lists ${p.name}@${p.version}, not ${version}`);
+    if (platforms.has(p.name) && !(p.bin && /^[0-9a-f]{64}$/.test(p.binSha256 || ''))) {
+      throw new Error(`plan.json has no binary sha256 for ${p.name}; stage again`);
+    }
+  }
   if (!dryRun) {
     const v = run(npm, ['--version']);
     if (v.status !== 0 || !versionAtLeast(v.stdout, MIN_NPM)) {
       throw new Error(`trusted publishing needs npm ${MIN_NPM} or later; this is npm ${(v.stdout || '').trim() || 'unknown'}`);
+    }
+  }
+  // Before anything goes out: what npm already has, and whether each platform package it has holds
+  // this run's binary. A mismatch stops here, with nothing published.
+  const existing = new Map();
+  if (!dryRun) {
+    for (const p of plan.packages) {
+      const have = await registryVersion(registry, p.name, version, tries);
+      if (have) existing.set(p.name, await checkPublished(p, have, { registry, tries }));
     }
   }
   const done = [];
@@ -293,12 +370,8 @@ export async function publish({
       say(`○ [dry-run] npm ${args.join(' ').replace(file, p.file)}`);
       continue;
     }
-    const have = await registryVersion(registry, p.name, version, tries);
-    if (have) {
-      say(`✓ ${p.name}@${version} is already on npm`);
-      if (have.dist?.integrity && have.dist.integrity !== p.integrity) {
-        say(`::warning::${p.name}@${version} on npm isn't this run's tarball (npm versions can't be replaced; it stays as it is)`);
-      }
+    if (existing.has(p.name)) {
+      say(existing.get(p.name));
       done.push(p);
       continue;
     }
@@ -306,15 +379,19 @@ export async function publish({
     process.stdout.write(r.stdout || '');
     process.stderr.write(r.stderr || '');
     if (r.status !== 0) {
-      // Another run got there first, or the registry's 404 was a cached one: npm has it, so skip it.
-      if (/cannot publish over|previously published version/i.test(`${r.stdout}${r.stderr}`)
-        && (await registryVersion(registry, p.name, version, tries))) {
-        say(`✓ ${p.name}@${version} is already on npm`);
-        done.push(p);
-        continue;
+      // Another run got there first, or the registry's 404 was a cached one: npm has it now, so it
+      // gets the same check as one npm had before.
+      if (/cannot publish over|previously published version/i.test(`${r.stdout}${r.stderr}`)) {
+        const have = await registryVersion(registry, p.name, version, tries);
+        if (have) {
+          say((await checkPublished(p, have, { registry, tries })).replace('is already on npm', 'went to npm from another run'));
+          done.push(p);
+          continue;
+        }
       }
       const auth = /E401|E403|E404|ENEEDAUTH|OIDC|trusted publish/i.test(`${r.stdout}${r.stderr}`)
-        ? `. If npm refused the login: on npmjs.com, ${p.name} › Settings › Trusted publishing needs GitHub Actions with repository ${REPOSITORY}, workflow release.yml and environment npm`
+        ? `. If npm refused the login: on npmjs.com, ${p.name} › Settings › Trusted publishing needs GitHub Actions with repository `
+          + `${REPOSITORY}, workflow release.yml, environment npm and the allowed action npm publish`
         : '';
       throw new Error(`npm publish failed for ${p.name}@${version}; nothing after it was published${auth}`);
     }
@@ -355,7 +432,7 @@ async function main() {
   const { cmd, o } = parseArgs(process.argv.slice(2));
   const known = { stage: ['version', 'archives', 'sdk', 'out', 'archive-version', 'root'], publish: ['out', 'dry-run', 'provenance'] };
   if (!known[cmd]) {
-    console.error(readFileSync(fileURLToPath(import.meta.url), 'utf8').split('\n').slice(1, 27).map((l) => l.replace(/^\/\/ ?/, '')).join('\n'));
+    console.error(readFileSync(fileURLToPath(import.meta.url), 'utf8').split('\n').slice(1, 29).map((l) => l.replace(/^\/\/ ?/, '')).join('\n'));
     process.exit(2);
   }
   for (const k of Object.keys(o)) if (!known[cmd].includes(k)) throw new Error(`${cmd} doesn't take --${k}`);

@@ -1,7 +1,10 @@
 # Releasing Deedglass
 
-The founder cuts every release. Claude prepares and checks; nothing becomes public without the
-founder's hand on it. The workflow is `.github/workflows/release.yml`, the config `.goreleaser.yaml`.
+Pushing a `v*` tag on `main` is the decision to release: the founder's hand, or Claude's acting for
+him. Claude prepares and checks first. With npm publishing on, that tag push alone puts the seven
+npm packages on npm (a stable version moves `latest`) before anyone looks at the draft GitHub
+release, so tag only a commit you would ship. The workflow is `.github/workflows/release.yml`, the
+config `.goreleaser.yaml`.
 
 ## Cut a release candidate
 
@@ -12,7 +15,8 @@ founder's hand on it. The workflow is `.github/workflows/release.yml`, the confi
 3. `make ci && make integration && make attack && make release-check` → all green, ending with
    `✓ 5 binaries · 5 archives · checksums · 5 SBOMs · image linux/amd64 + linux/arm64 · reproducible`.
 4. `make bench-quick && BENCH_QUICK=1 make bench-check` → `6 targets met · 0 missed`.
-5. Commit, then tag and push the tag:
+5. Merge to `main` after green CI, then tag `main` and push the tag (`verify` refuses a tag whose
+   commit isn't on `main`):
 
    ```sh
    git tag -a v0.1.0-rc.1 -m "Deedglass 0.1.0-rc.1" && git push origin v0.1.0-rc.1
@@ -25,7 +29,9 @@ founder's hand on it. The workflow is `.github/workflows/release.yml`, the confi
    plan. With npm publishing on (below), `publish-npm` then puts them on npm; a release candidate
    goes to the `next` dist-tag, so `npx deedglass` keeps the last release.
 7. Review the draft on GitHub: notes, five archives, `checksums.txt`, five SBOMs, and (public repo
-   only) `checksums.txt.sigstore.json`. Publish it as a prerelease, or delete it.
+   only) `checksums.txt.sigstore.json`. Publish it as a prerelease. With npm publishing on,
+   deleting the draft does **not** undo npm: the packages are already there and npm versions can't
+   be replaced. To back out, see [Rollback](#rollback-npm).
 
 ## Cut 0.1.0
 
@@ -58,8 +64,10 @@ the seven tarballs and prints the plan. `publish-npm` publishes exactly those ta
 `npm login` and no two-factor prompt per package. While the repository is public each package gets
 npm provenance, linking it to this workflow run. A version npm already has is skipped, so
 **Re-run failed jobs** after a fix publishes only what is missing; it stops at the first failure, so
-the wrapper never reaches npm before its five binaries. npm packages go out when the run reaches
-`publish-npm`, before you publish the draft GitHub release.
+the wrapper never reaches npm before its five binaries. A platform package npm already has must
+hold this run's binary (the same sha256 inside npm's tarball); if it holds another build's (a tag
+deleted and pushed again on a new commit), nothing is published and the version has to be bumped.
+npm packages go out when the run reaches `publish-npm`, before you publish the draft GitHub release.
 
 To try the packaging on your machine: `make release-check`, then `make npm-dry-run` stages the
 snapshot's binaries the same way and prints the plan (nothing reaches npm).
@@ -69,26 +77,78 @@ snapshot's binaries the same way and prints the plan (nothing reaches npm).
 
 npm and PyPI jobs exist and are off. Both use OIDC trusted publishing, never a stored token.
 
+npm and PyPI check only the repository owner, the repository, the workflow filename and the
+environment name, never the git ref, and GitHub creates a missing environment, unprotected, the
+first time a job names it. So the environments themselves must allow `v*` tags only; otherwise a
+pushed branch that rewrites `release.yml` (keeping `environment: npm`, dropping the gate) could
+publish all seven packages with real-looking provenance.
+
+**Once, before the first variable is set:**
+
+1. The environments `npm` and `pypi`, each limited to `v*` tags: GitHub › Settings › Environments ›
+   New environment › `npm` › Deployment branches and tags › Selected branches and tags › Add
+   deployment branch or tag rule › Ref type **Tag** › `v*`; the same for `pypi`. Or:
+
+   ```sh
+   for e in npm pypi; do
+     gh api -X PUT repos/deedglass/deedglass/environments/$e --input - >/dev/null \
+       <<<'{"deployment_branch_policy":{"protected_branches":false,"custom_branch_policies":true}}'
+     gh api -X POST repos/deedglass/deedglass/environments/$e/deployment-branch-policies \
+       -f name='v*' -f type=tag >/dev/null
+   done
+   ```
+
+   Check, for `npm` and `pypi`:
+   `gh api repos/deedglass/deedglass/environments/npm --jq .deployment_branch_policy` →
+   `{"custom_branch_policies":true,"protected_branches":false}`, and
+   `gh api repos/deedglass/deedglass/environments/npm/deployment-branch-policies --jq '.branch_policies[] | [.name, .type]'`
+   → `["v*","tag"]` and nothing else. Leave required reviewers off: one would pause every release
+   for your approval. Optional: a tag ruleset (Settings › Rules › Rulesets › New tag ruleset,
+   target `v*`, restrict creations, bypass for repository admins) so only admins can push a
+   release tag.
+
 **npm, once:**
 
-1. On npmjs.com, for each of the seven packages above: the package › Settings › Trusted
-   publishing › GitHub Actions, with organization or user `deedglass`, repository `deedglass`,
-   workflow filename `release.yml` and environment `npm`. A trusted publisher can only be added to a
-   package that exists; all seven were published at 0.1.0 by hand.
+1. On npmjs.com, for each of the seven packages above, `https://www.npmjs.com/package/<name>/access`
+   › Trusted Publisher › GitHub Actions: organization or user `deedglass`, repository `deedglass`,
+   workflow filename `release.yml`, environment name `npm`, and under Allowed actions tick
+   **npm publish** (leave npm dist-tag off). Since 3 September 2026 a new trusted publisher allows
+   only `npm stage publish` unless npm publish is ticked, and a staged package waits for a
+   maintainer's two-factor approval. The command-line equivalent, after `npm login`, is
+   `npm trust github <name> --file release.yml --repo deedglass/deedglass --env npm --allow-publish`
+   (npm 11.15.0 or later). A trusted publisher can only be added to a package that exists; all seven
+   were published at 0.1.0 by hand. A new trusted publisher expires unless it publishes within two
+   days, so tag a release within two days of adding them.
 2. GitHub › Settings › Secrets and variables › Actions › Variables › New repository variable
-   `DEEDGLASS_PUBLISH_NPM` = `true`.
+   `DEEDGLASS_PUBLISH_NPM` = `true` (only after the environment check above passes).
 
 From then on a tag is the whole release step. Once one CI publish has worked, npm suggests setting
 each package's Publishing access to require two-factor authentication and disallow tokens; trusted
 publishing keeps working with that setting. If `publish-npm` stops with npm refusing the login,
-the package named in the error is missing its trusted publisher (step 1).
+the package named in the error is missing its trusted publisher, or npm publish isn't among its
+allowed actions (step 1).
 
 **PyPI:** the repository variable `DEEDGLASS_PUBLISH_PYPI` = `true`, with a trusted publisher for
-`release.yml` and environment `pypi` on PyPI.
+`release.yml` and environment `pypi` on PyPI (the `pypi` environment limited to `v*` tags first).
 
-Each job runs in its own environment (`npm`, `pypi`). A required reviewer on an environment pauses
-that job for your approval on every release; leave it off to keep releases to a tag push. The docs
-deploy job waits for `DEEDGLASS_DEPLOY_DOCS` and the `CLOUDFLARE_API_TOKEN` secret.
+The docs deploy job waits for `DEEDGLASS_DEPLOY_DOCS` and the `CLOUDFLARE_API_TOKEN` secret.
+
+## Rollback (npm)
+
+npm never lets a version be replaced, and deleting the draft GitHub release leaves npm as it is.
+A release candidate only moved `next`; leave it, and fix forward with `-rc.N+1`. For a bad stable
+version, point `latest` back at the previous one and deprecate the bad one (an npm login with
+two-factor; trusted publishing can't do this while npm dist-tag isn't an allowed action):
+
+```sh
+npm dist-tag add deedglass@0.1.0 latest
+npm dist-tag add @deedglass/sdk@0.1.0 latest
+npm deprecate deedglass@0.1.1 "0.1.1 is broken; use 0.1.0 or 0.1.2"
+npm deprecate @deedglass/sdk@0.1.1 "0.1.1 is broken; use 0.1.0 or 0.1.2"
+```
+
+The five platform packages need nothing: the wrapper pins exact versions. Then fix forward with
+the next patch version.
 
 ## MCP Registry
 

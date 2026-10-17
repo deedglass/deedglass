@@ -316,25 +316,37 @@ describe('publish', () => {
   let registry;
   let hits = 0;
   let fail500 = false;
-  const published = fresh('registry'); // one file per name@version npm "has"
-  const has = (name, v) => existsSync(join(published, encodeURIComponent(`${name}@${v}`)));
-  const give = (name, v) => writeFileSync(join(published, encodeURIComponent(`${name}@${v}`)), '');
+  const published = fresh('registry'); // one tarball per name@version npm "has"
+  const key = (name, v) => encodeURIComponent(`${name}@${v}`);
+  const has = (name, v) => existsSync(join(published, key(name, v)));
+  // npm "has" name@version, as the tarball file (a staged one, or another build's).
+  const give = (name, v, file) => cpSync(file, join(published, key(name, v)));
+  const lie = new Map(); // key → fields the registry's dist answers with instead of the real ones
   const npmLog = fresh('npm-log');
   const fakeNpm = join(tmp, 'fake-npm.cjs');
 
   before(async () => {
     mkdirSync(published);
-    // GET /<name with %2f>/<version>: 200 when published, else 404. Every answer closes its
-    // connection: a kept-alive socket the server times out between two tests made fetch flaky.
+    // GET /<name with %2f>/<version>: 200 with dist.integrity and dist.tarball when published, else
+    // 404; GET /-/<key> serves the tarball. Every answer closes its connection: a kept-alive socket
+    // the server times out between two tests made fetch flaky.
     srv = createServer((req, res) => {
       hits++;
       res.setHeader('connection', 'close');
       if (fail500) { res.writeHead(500); return res.end(); }
+      const t = /^\/-\/([^/]+)$/.exec(req.url);
+      if (t && existsSync(join(published, t[1]))) {
+        res.writeHead(200, { 'content-type': 'application/octet-stream' });
+        return res.end(readFileSync(join(published, t[1])));
+      }
       const [, name, v] = /^\/(.+)\/([^/]+)$/.exec(req.url) || [];
       const nm = decodeURIComponent(name || '');
-      if (name && has(nm, decodeURIComponent(v))) {
+      if (name && !t && has(nm, decodeURIComponent(v))) {
+        const k = key(nm, decodeURIComponent(v));
+        const integrity = 'sha512-' + createHash('sha512').update(readFileSync(join(published, k))).digest('base64');
+        const dist = { integrity, tarball: `${registry}/-/${k}`, ...lie.get(k) };
         res.writeHead(200, { 'content-type': 'application/json' });
-        return res.end(JSON.stringify({ name: nm, version: decodeURIComponent(v), dist: {} }));
+        return res.end(JSON.stringify({ name: nm, version: decodeURIComponent(v), dist }));
       }
       res.writeHead(404, { 'content-type': 'application/json' });
       res.end('{"error":"not found"}');
@@ -342,19 +354,24 @@ describe('publish', () => {
     await new Promise((r) => srv.listen(0, '127.0.0.1', r));
     registry = `http://127.0.0.1:${srv.address().port}`;
     // The stand-in npm (CommonJS, so require works whatever the package type): answers --version
-    // with FAKE_NPM_VERSION and records each publish; FAKE_NPM_RACE=<name> answers E403 as if
-    // another run won, FAKE_NPM_FAIL=<name> fails as npm does without a trusted publisher.
+    // with FAKE_NPM_VERSION and records each publish (the tarball lands in the stand-in registry);
+    // FAKE_NPM_RACE=<name> answers E403 as if another run won (with FAKE_NPM_RACE_FILE's tarball,
+    // when set), FAKE_NPM_FAIL=<name> fails as npm does without a trusted publisher.
     writeFileSync(fakeNpm, `#!/usr/bin/env node
-const { appendFileSync, writeFileSync } = require('node:fs');
+const { appendFileSync, copyFileSync } = require('node:fs');
 const { execFileSync } = require('node:child_process');
 const args = process.argv.slice(2);
 if (args[0] === '--version') { console.log(process.env.FAKE_NPM_VERSION || '11.21.0'); process.exit(0); }
 const m = JSON.parse(execFileSync('tar', ['-xzOf', args[1], 'package/package.json'], { encoding: 'utf8' }));
 appendFileSync(process.env.FAKE_NPM_LOG, JSON.stringify({ name: m.name, args }) + '\\n');
-const mark = () => writeFileSync(process.env.FAKE_NPM_REGISTRY + '/' + encodeURIComponent(m.name + '@' + m.version), '');
-if (process.env.FAKE_NPM_RACE === m.name) { mark(); console.error('npm error 403 You cannot publish over the previously published versions: ' + m.version + '.'); process.exit(1); }
+const dest = process.env.FAKE_NPM_REGISTRY + '/' + encodeURIComponent(m.name + '@' + m.version);
+if (process.env.FAKE_NPM_RACE === m.name) {
+  copyFileSync(process.env.FAKE_NPM_RACE_FILE || args[1], dest);
+  console.error('npm error 403 You cannot publish over the previously published versions: ' + m.version + '.');
+  process.exit(1);
+}
 if (process.env.FAKE_NPM_FAIL === m.name) { console.error('npm error code E404\\nnpm error 404 Not Found - PUT ' + m.name); process.exit(1); }
-mark();
+copyFileSync(args[1], dest);
 console.log('+ ' + m.name + '@' + m.version);
 `.replace("#!/usr/bin/env node\n", `#!${process.execPath}\n`));
     chmodSync(fakeNpm, 0o755);
@@ -364,7 +381,9 @@ console.log('+ ' + m.name + '@' + m.version);
   const runPublish = async (out, env = {}, o = {}) => {
     rmSync(npmLog, { force: true });
     writeFileSync(npmLog, '');
-    const set = { FAKE_NPM_LOG: npmLog, FAKE_NPM_REGISTRY: published, FAKE_NPM_RACE: '', FAKE_NPM_FAIL: '', FAKE_NPM_VERSION: '', ...env };
+    const set = {
+      FAKE_NPM_LOG: npmLog, FAKE_NPM_REGISTRY: published, FAKE_NPM_RACE: '', FAKE_NPM_RACE_FILE: '', FAKE_NPM_FAIL: '', FAKE_NPM_VERSION: '', ...env,
+    };
     const saved = Object.fromEntries(Object.keys(set).map((k) => [k, process.env[k]]));
     Object.assign(process.env, set);
     try {
@@ -375,11 +394,23 @@ console.log('+ ' + m.name + '@' + m.version);
     return readFileSync(npmLog, 'utf8').trim().split('\n').filter(Boolean).map((l) => JSON.parse(l));
   };
   const names = (calls) => calls.map((c) => c.name);
+  const stageAt = (v, binaries) => {
+    const out = fresh('out');
+    const plan = quiet(() => stage({ root: fakeRoot(v), version: v, archives: fakeArchives(v, binaries), sdk: fakeSDK(v), out }));
+    const file = (name) => join(out, plan.packages.find((p) => p.name === name).file);
+    return { out, plan, file };
+  };
+  // The same platform, rebuilt: same OS and CPU, other bytes.
+  const rebuilt = (id) => {
+    const p = PLATFORMS.find((x) => x.id === id);
+    const b = fakeBinary(p.goos, p.goarch);
+    b.write('rebuilt from another commit', 320, 'latin1');
+    return b;
+  };
 
   test('publishes in order with provenance and the next dist-tag, skipping what npm has', async () => {
-    const out = fresh('out');
-    stageWith({ out });
-    give('@deedglass/cli-darwin-arm64', V);
+    const { out, file } = stageAt(V);
+    give('@deedglass/cli-darwin-arm64', V, file('@deedglass/cli-darwin-arm64'));
     const calls = await runPublish(out);
     assert.deepEqual(names(calls), [
       '@deedglass/cli-darwin-x64', '@deedglass/cli-linux-arm64', '@deedglass/cli-linux-x64', '@deedglass/cli-win32-x64',
@@ -395,27 +426,24 @@ console.log('+ ' + m.name + '@' + m.version);
   });
 
   test('a release goes to latest', async () => {
-    const out = fresh('out');
-    quiet(() => stage({ root: fakeRoot('0.9.0'), version: '0.9.0', archives: fakeArchives('0.9.0'), sdk: fakeSDK('0.9.0'), out }));
+    const { out } = stageAt('0.9.0');
     const calls = await runPublish(out);
     assert.equal(calls.length, 7);
     for (const c of calls) assert.equal(c.args[c.args.indexOf('--tag') + 1], 'latest');
   });
 
   test('a version another run published first counts as published', async () => {
-    const out = fresh('out');
-    quiet(() => stage({ root: fakeRoot('0.9.1'), version: '0.9.1', archives: fakeArchives('0.9.1'), sdk: fakeSDK('0.9.1'), out }));
+    const { out } = stageAt('0.9.1');
     const calls = await runPublish(out, { FAKE_NPM_RACE: '@deedglass/cli-linux-x64' });
     assert.equal(calls.length, 7);
     assert.ok(has('@deedglass/sdk', '0.9.1'));
   });
 
   test('stops at the first failure, so the wrapper never goes out before its binaries', async () => {
-    const out = fresh('out');
-    quiet(() => stage({ root: fakeRoot('0.9.2'), version: '0.9.2', archives: fakeArchives('0.9.2'), sdk: fakeSDK('0.9.2'), out }));
+    const { out } = stageAt('0.9.2');
     await assert.rejects(
       runPublish(out, { FAKE_NPM_FAIL: '@deedglass/cli-win32-x64' }),
-      /npm publish failed for @deedglass\/cli-win32-x64@0\.9\.2; nothing after it was published\. If npm refused the login: .*Trusted publishing .*workflow release\.yml and environment npm/,
+      /npm publish failed for @deedglass\/cli-win32-x64@0\.9\.2; nothing after it was published\. If npm refused the login: .*Trusted publishing .*workflow release\.yml, environment npm and the allowed action npm publish/,
     );
     assert.ok(has('@deedglass/cli-linux-x64', '0.9.2'));
     assert.ok(!has('deedglass', '0.9.2'));
@@ -424,9 +452,67 @@ console.log('+ ' + m.name + '@' + m.version);
     assert.deepEqual(names(await runPublish(out)), ['@deedglass/cli-win32-x64', 'deedglass', '@deedglass/sdk']);
   });
 
+  test("publishes nothing when npm already has a platform package with another build's binary", async () => {
+    // A run of an earlier commit published linux-x64 at this version and stopped; the tag moved.
+    const earlier = stageAt('0.9.7', { 'linux-x64': rebuilt('linux-x64') });
+    const { out } = stageAt('0.9.7');
+    give('@deedglass/cli-linux-x64', '0.9.7', earlier.file('@deedglass/cli-linux-x64'));
+    await assert.rejects(
+      runPublish(out),
+      /npm already has @deedglass\/cli-linux-x64@0\.9\.7 with another build's deedglass \(sha256 [0-9a-f]{12}…; this run's is [0-9a-f]{12}…\)\. .*bump the version/,
+    );
+    for (const p of PLATFORMS) if (p.id !== 'linux-x64') assert.ok(!has(p.name, '0.9.7'), p.name);
+    assert.ok(!has('deedglass', '0.9.7'));
+  });
+
+  test('a platform package npm has from another pack of the same binary counts as published', async () => {
+    const { out, plan, file } = stageAt('0.9.8');
+    // Another pack of the same files: npm's integrity differs, the binary inside is this run's.
+    const d = fresh('repack');
+    mkdirSync(d);
+    sh('tar', ['-xzf', file('@deedglass/cli-darwin-x64'), '-C', d]);
+    sh('tar', ['-czf', join(d, 'repacked.tgz'), '-C', d, 'package']);
+    const integrity = 'sha512-' + createHash('sha512').update(readFileSync(join(d, 'repacked.tgz'))).digest('base64');
+    assert.notEqual(integrity, plan.packages.find((p) => p.name === '@deedglass/cli-darwin-x64').integrity);
+    give('@deedglass/cli-darwin-x64', '0.9.8', join(d, 'repacked.tgz'));
+    const calls = await runPublish(out);
+    assert.equal(calls.length, 6);
+    assert.ok(!names(calls).includes('@deedglass/cli-darwin-x64'));
+  });
+
+  test("a race lost to another build's binary stops before the wrapper", async () => {
+    const earlier = stageAt('0.9.9', { 'win32-x64': rebuilt('win32-x64') });
+    const { out } = stageAt('0.9.9');
+    await assert.rejects(
+      runPublish(out, { FAKE_NPM_RACE: '@deedglass/cli-win32-x64', FAKE_NPM_RACE_FILE: earlier.file('@deedglass/cli-win32-x64') }),
+      /npm already has @deedglass\/cli-win32-x64@0\.9\.9 with another build's deedglass\.exe/,
+    );
+    assert.ok(has('@deedglass/cli-linux-x64', '0.9.9'));
+    assert.ok(!has('deedglass', '0.9.9'));
+  });
+
+  test("won't fetch a tarball from anywhere but the registry", async () => {
+    const earlier = stageAt('0.9.10', { 'darwin-arm64': rebuilt('darwin-arm64') });
+    const { out } = stageAt('0.9.10');
+    give('@deedglass/cli-darwin-arm64', '0.9.10', earlier.file('@deedglass/cli-darwin-arm64'));
+    lie.set(key('@deedglass/cli-darwin-arm64', '0.9.10'), { tarball: 'https://example.invalid/x.tgz' });
+    try {
+      await assert.rejects(runPublish(out), /names its tarball at https:\/\/example\.invalid\/x\.tgz, not on http:\/\/127\.0\.0\.1/);
+    } finally {
+      lie.clear();
+    }
+  });
+
+  test("refuses a staged tarball that doesn't match plan.json, before npm or the registry", async () => {
+    const { out, file } = stageAt('0.9.11');
+    appendFileSync(file('deedglass'), 'x');
+    const before = hits;
+    await assert.rejects(runPublish(out), /tgz\/deedglass-0\.9\.11\.tgz doesn't match plan\.json/);
+    assert.equal(hits, before);
+  });
+
   test("doesn't publish when the registry can't say what it has", async () => {
-    const out = fresh('out');
-    quiet(() => stage({ root: fakeRoot('0.9.3'), version: '0.9.3', archives: fakeArchives('0.9.3'), sdk: fakeSDK('0.9.3'), out }));
+    const { out } = stageAt('0.9.3');
     fail500 = true;
     try {
       await assert.rejects(runPublish(out), /the registry didn't answer for @deedglass\/cli-darwin-arm64@0\.9\.3 \(HTTP 500\)/);
@@ -437,23 +523,20 @@ console.log('+ ' + m.name + '@' + m.version);
   });
 
   test('--provenance=false while the repository is private', async () => {
-    const out = fresh('out');
-    quiet(() => stage({ root: fakeRoot('0.9.5'), version: '0.9.5', archives: fakeArchives('0.9.5'), sdk: fakeSDK('0.9.5'), out }));
+    const { out } = stageAt('0.9.5');
     const calls = await runPublish(out, {}, { provenance: false });
     assert.equal(calls.length, 7);
     for (const c of calls) assert.ok(c.args.includes('--provenance=false'), c.args.join(' '));
   });
 
   test('refuses an npm older than trusted publishing, before any publish', async () => {
-    const out = fresh('out');
-    quiet(() => stage({ root: fakeRoot('0.9.6'), version: '0.9.6', archives: fakeArchives('0.9.6'), sdk: fakeSDK('0.9.6'), out }));
+    const { out } = stageAt('0.9.6');
     await assert.rejects(runPublish(out, { FAKE_NPM_VERSION: '10.9.3' }), /trusted publishing needs npm 11\.5\.1 or later; this is npm 10\.9\.3/);
     assert.ok(!has('@deedglass/cli-darwin-arm64', '0.9.6'));
   });
 
   test('a dry run calls neither npm nor the registry', async () => {
-    const out = fresh('out');
-    quiet(() => stage({ root: fakeRoot('0.9.4'), version: '0.9.4', archives: fakeArchives('0.9.4'), sdk: fakeSDK('0.9.4'), out }));
+    const { out } = stageAt('0.9.4');
     const before = hits;
     assert.deepEqual(await runPublish(out, {}, { dryRun: true }), []);
     assert.equal(hits, before);
