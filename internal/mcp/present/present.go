@@ -21,6 +21,8 @@ const (
 	MetaApproval = "com.deedglass/approval"
 	// MetaWitness (S19) is {"level":"L1","verdict":"MISMATCH"} on a witnessed tools/call result.
 	MetaWitness = "com.deedglass/witness"
+	// MetaNotice is on a tools/list answered without a key (mcp serve before init, PRD-03).
+	MetaNotice = "com.deedglass/notice"
 )
 
 // WitnessMeta is the com.deedglass/witness value for an action's verdict, or nil before one.

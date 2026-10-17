@@ -16,7 +16,7 @@ LDFLAGS  := -s -w -X $(BI).Version=$(VERSION) -X $(BI).Commit=$(COMMIT) -X $(BI)
 	fuzz-policy fuzz-policy-short audit fuzz-all fuzz-regress attack-one bench-policy bench-eval mcp-it bench-mcp \
 	demo demo-live demo-launch-check demo-up demo-down demo-reset demo-status demo-snippet demo-psql demo-follow demo-verify demo-check demo-smoke bench-gateway \
 	demo-trigger-on demo-trigger-off demo-order-reset demo-hero demo-hero-check demo-diff bench-l2 bench-approvals bench-slack \
-	mock-orders bench-connectors bench-postgres bench-decoder attack attack-report vuln undo-matrix
+	mock-orders bench-connectors bench-postgres bench-decoder attack attack-report vuln undo-matrix quickstart-it
 
 all: ci
 
@@ -70,6 +70,9 @@ nocgo: ## (ci) the binary builds without cgo
 
 integration: ## throwaway PG cluster (Homebrew, else Docker): sql/ smoke, control-plane migrations, Go integration suites (S31: with sdk-ts-it's TestSDKTypeScriptLive when sdk/typescript is installed); DEEDGLASS_IT_PG=18|17|16 DEEDGLASS_IT_MODE=brew|docker
 	DEEDGLASS_IT_SDK_TS=1 scripts/integration_local.sh
+
+quickstart-it: ## S32/PRD-05: TestInitLive, deedglass init then init --trigger end to end in Docker on its own ports (two postgres:18.6 containers, removed after): smoke actions, the 301-row Doesn't match, the undo preview, the step line
+	DEEDGLASS_IT_INIT=1 $(GO) test -tags integration -count=1 -v -timeout 15m ./internal/setup -run TestInitLive
 
 mcp-it: ## S14: the real @modelcontextprotocol/server-filesystem via npx behind deedglass mcp wrap, on a throwaway PG 18 (needs Node.js; skips without it)
 	DEEDGLASS_IT_NODE=1 DEEDGLASS_IT_PKGS=./cmd/deedglass/ DEEDGLASS_IT_GOFLAGS="-v -run TestMCPWrap" scripts/integration_local.sh

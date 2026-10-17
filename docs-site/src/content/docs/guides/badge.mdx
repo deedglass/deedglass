@@ -1,7 +1,7 @@
 ---
 title: Add the badge
 description: Show your grade in your README. You add it; we never do.
-lastVerified: "2026-10-05"
+lastVerified: "2026-10-17"
 ---
 
 import Limits from '../../../components/Limits.astro';
@@ -33,6 +33,10 @@ git commit -m "Add the Deedglass blast-radius badge"
 ```
 
 Paste the printed line into your README and push. shields.io reads your own file, and caches it, so a new grade can take a few minutes to show. The badge links to `deedglass.com/score`, which explains what the grade means.
+
+## Link the badge to your own result (optional)
+
+`--badge-share` does the same, but the badge links to your `/s` share page instead of `deedglass.com/score`, and the scan prints a warning: anyone who reads your README can open that page. Its link holds the grade, the points and how many findings of each severity, and nothing else: no finding ids or deduction ids, because a README is public and those would tell a reader where to look. The link keeps the result of that run, so run `--badge-share` again when the grade changes.
 
 ## Share a result without a badge
 

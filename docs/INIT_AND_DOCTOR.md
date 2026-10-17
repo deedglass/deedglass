@@ -44,6 +44,18 @@ by their files.
 A second `deedglass init` in the same directory while one runs is refused (`.deedglass/init.lock`).
 Stopping init between steps leaves a consistent state; the next run resumes.
 
+### The quickstart step line
+
+After a successful run, `init` (and `doctor`, when no check has a problem) ends with one line such as
+`Quickstart step 2 of 5 · next: deedglass doctor`. The five steps are `init`, a clean `doctor`,
+`init --trigger`, the undo of what it caught (`deedglass undo preview`, then `undo run`), and a person
+countersigning that undo in the Console. The line names the step after the furthest one done, read
+from `.deedglass/state.json` and `stack.json` and from the local Ledger with `.deedglass/admin.key`
+(two GET `/v1/actions` reads on the local server: an action that doesn't match, an undo and whether
+it ran). Only `doctor` knows that `doctor` passed; a later step counts for it. There are no points
+or streaks, nothing is stored, and the line is absent with `--quiet` or `--json`, outside a
+directory `init` set up, and once all five are done.
+
 ### Files
 
 | File | Holds |

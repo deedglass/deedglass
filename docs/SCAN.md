@@ -165,6 +165,13 @@ that ignores the whole `.deedglass/` directory, the command prints the two-line 
 nothing. The scan never runs git, never opens a pull request, issue or comment anywhere, and no
 Deedglass server is involved: shields.io reads your own file (it caches for at least 300 seconds).
 
+The README line links the badge to `https://deedglass.com/score`, the page that explains the grade.
+`--badge-share` (which implies `--badge`) links it to the owner's own `/s` share page instead and
+prints a warning: anyone who reads the README can open that page. That link holds the grade, the
+points and the finding counts by severity only (`"f":[]`, `"d":[]`): no finding id and no deduction
+id, since those come from the configs and the database and a README is public. It keeps the result
+of that run; run `--badge-share` again when the grade changes.
+
 ## The share link
 
 `--share` prints `https://deedglass.com/s#v1.…`. Everything after `#` stays in the browser; the

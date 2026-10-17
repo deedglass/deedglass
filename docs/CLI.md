@@ -61,14 +61,18 @@ error: `--json` prints the `verification_report` on stdout whatever the result.
 
 ## Setup: `init`, `doctor`, `scan` and `help --json` (S32)
 
-- `deedglass init [--yes] [--client …] [--listen …] [--pg-port …] [--no-smoke] [--stop] [--json]` sets
+- `deedglass init [--yes] [--client …] [--listen …] [--pg-port …] [--no-smoke] [--stop] [--quiet] [--json]` sets
   up a local Deedglass in Docker and runs three smoke actions; run it again and it says `Nothing to
   change.` [INIT_AND_DOCTOR.md](INIT_AND_DOCTOR.md) has every step.
-- `deedglass doctor [--only db.*] [--json]`: sixteen read-only checks, each with a fix. Exit 1 on a
-  problem, 3 when the server refused the API key.
+- `deedglass doctor [--only db.*] [--quiet] [--json]`: sixteen read-only checks, each with a fix. Exit 1 on a
+  problem, 3 when the server refused the API key. In a directory `init` set up, `init` and a clean
+  `doctor` end with `Quickstart step N of 5 · next: …`, read from `.deedglass/` and the local Ledger
+  (`--quiet` leaves it out).
 - `deedglass scan [--dir .] [--postgres-dsn-env VAR] [--format md,html,json,sarif] [--score]
-  [--badge] [--share] [--ci] [--fail-under A|B|C|D] [--json]`: what your agent setup can change,
-  graded A to F, read-only and local. Exit 1 also means below `--fail-under`. [SCAN.md](SCAN.md).
+  [--badge] [--badge-share] [--share] [--ci] [--fail-under A|B|C|D] [--json]`: what your agent setup can change,
+  graded A to F, read-only and local. Exit 1 also means below `--fail-under`. The `--badge` line
+  links to deedglass.com/score; `--badge-share` links your own share page instead, with a warning.
+  [SCAN.md](SCAN.md).
 - `deedglass help --json` prints the whole tree as one `command_tree` object: `groups` (the nine
   of contract §10) of `commands`, each with `path`, `summary`, `usage`, `built` and `flags` (`name`,
   `type`, `default`, `usage`, and `values` for closed lists such as `scan --format`), plus
@@ -157,9 +161,9 @@ builds it. Hidden commands work but aren't in `deedglass help`.
 <!-- commands:begin (generated from cmd/deedglass/registry.go; go test ./cmd/deedglass -run TestDocsTree -update) -->
 | Command | Group | What it does | Status |
 |---|---|---|---|
-| `deedglass init [--yes] [--dir .] [--client claude-code|claude-desktop|cursor|vscode|windsurf|sdk-python|sdk-typescript|none] [--listen 127.0.0.1:8080] [--pg-port 55432] [--no-open] [--no-smoke] [--stop] [--trigger] [--json]` | Setup | Set up Deedglass in this directory | built |
-| `deedglass doctor [--only <ids>] [--json]` | Setup | Check config, database and keys | built |
-| `deedglass scan [--dir .] [--postgres-dsn-env VAR] [--format md,html,json,sarif] [--score] [--badge] [--share] [--ci] [--fail-under A|B|C|D] [--full [--no-seal]] [--json]` | Setup | Show what your agent setup can change | built |
+| `deedglass init [--yes] [--dir .] [--client claude-code|claude-desktop|cursor|vscode|windsurf|sdk-python|sdk-typescript|none] [--listen 127.0.0.1:8080] [--pg-port 55432] [--no-open] [--no-smoke] [--stop] [--trigger] [--quiet] [--json]` | Setup | Set up Deedglass in this directory | built |
+| `deedglass doctor [--only <ids>] [--quiet] [--json]` | Setup | Check config, database and keys | built |
+| `deedglass scan [--dir .] [--postgres-dsn-env VAR] [--format md,html,json,sarif] [--score] [--badge] [--badge-share] [--share] [--ci] [--fail-under A|B|C|D] [--full [--no-seal]] [--json]` | Setup | Show what your agent setup can change | built |
 | `deedglass play [--fast] [--json]` | Setup | Watch the 301 scene offline, no Docker | built |
 | `deedglass serve [--migrate]` | Setup | Run the API, the rules and the Console | built |
 | `deedglass migrate up [--database-url <url>] [--dry-run] [--json]` | Setup | Apply database migrations | built |
@@ -619,7 +623,13 @@ Gate's HTTP endpoints: every line from stdin is one POST to `/mcp/native` (or `/
 the agent's key (`DEEDGLASS_API_KEY`) and the MCP headers; every answer is one line on stdout. It
 runs no tools and holds no credentials but the key; stdin EOF exits 0. With the server down, a tool
 call answers `Deedglass could not be reached at http://127.0.0.1:8080, so this was not run. Start
-it with "deedglass serve", then try again.`
+it with "deedglass serve", then try again.` With no key found (no `--api-key`, no
+`DEEDGLASS_API_KEY`, no `.deedglass/quickstart.key`), it sends nothing: `initialize`,
+`server/discover`, `ping` and `tools/list` are answered in the process, `tools/list` with the tools a
+quickstart's `postgres` connector serves (`postgres.describe`, `postgres.execute`, `postgres.query`)
+and `deedglass.check_approval`, and every tool call answers `No Deedglass key found, so no tool can
+run yet. Run npx deedglass init in a terminal, then restart your MCP client.` So a client or a
+directory that inspects the server before `init` sees what it offers.
 
 `deedglass mcp snippet --transport http --client <client> [--connector native|<name>]` prints config
 for the HTTP endpoints instead of a wrapped server: `claude mcp add --transport http …` for Claude

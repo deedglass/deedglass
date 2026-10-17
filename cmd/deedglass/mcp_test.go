@@ -3,9 +3,12 @@ package main
 import (
 	"encoding/json"
 	"errors"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"testing"
 
 	"github.com/deedglass/deedglass/internal/mcp/mcptest"
@@ -96,5 +99,48 @@ func TestMCPWrapRefusals(t *testing.T) {
 	r = cli(t, nil, false, "mcp", "wrap", "--help")
 	if r.code != 0 || !strings.Contains(r.stdout, "What it does") || !strings.Contains(r.stdout, "Learn more: https://docs.deedglass.com/mcp") {
 		t.Fatalf("%+v", r)
+	}
+}
+
+// TestMCPServeNoKey (PRD-03): mcp serve with no key anywhere answers initialize and tools/list with
+// the quickstart's catalog and the run-init notice, refuses the call, exits 0 at EOF and sends
+// nothing, even with a server configured (testdata/mcp_serve_no_key.golden).
+func TestMCPServeNoKey(t *testing.T) {
+	wd, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	serve := func(stdin string, env map[string]string, args ...string) result {
+		// mcp serve reads .deedglass/ from the working directory up: run it where there is none.
+		if err := os.Chdir(t.TempDir()); err != nil {
+			t.Fatal(err)
+		}
+		defer func() { _ = os.Chdir(wd) }()
+		return cliIn(t, []byte(stdin), env, false, append([]string{"mcp", "serve"}, args...)...)
+	}
+	var hits atomic.Int32
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { hits.Add(1) }))
+	defer ts.Close()
+	in := strings.Join([]string{
+		`{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"inspector","version":"1"}}}`,
+		`{"jsonrpc":"2.0","method":"notifications/initialized"}`,
+		`{"jsonrpc":"2.0","id":2,"method":"tools/list"}`,
+		`{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"postgres.query","arguments":{"sql":"SELECT 1"}}}`,
+		`{"jsonrpc":"2.0","id":4,"method":"ping"}`,
+	}, "\n") + "\n"
+	for _, env := range []map[string]string{nil, {"DEEDGLASS_SERVER": ts.URL}} {
+		r := serve(in, env)
+		if r.code != 0 {
+			t.Fatalf("exit %d\n%s%s", r.code, r.stdout, r.stderr)
+		}
+		golden(t, "mcp_serve_no_key", r)
+	}
+	if n := hits.Load(); n != 0 {
+		t.Fatalf("mcp serve with no key sent %d requests", n)
+	}
+	// An upstream's tools aren't known without the server: only the approval tool is listed.
+	r := serve(`{"jsonrpc":"2.0","id":1,"method":"tools/list"}`+"\n", nil, "--connector", "everything")
+	if r.code != 0 || strings.Contains(r.stdout, "postgres.") || !strings.Contains(r.stdout, `"name":"deedglass.check_approval"`) {
+		t.Fatalf("exit %d\n%s%s", r.code, r.stdout, r.stderr)
 	}
 }

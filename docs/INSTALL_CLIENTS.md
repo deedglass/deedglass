@@ -13,8 +13,11 @@ from the same package, and a test decodes every link back to this object.
 **No link holds a key.** Run `npx deedglass init` first. `mcp serve` uses, in order: `--api-key`,
 `DEEDGLASS_API_KEY`, then `.deedglass/quickstart.key` in the working directory or its nearest
 parent. The server is `--server`, `DEEDGLASS_SERVER`, `DEEDGLASS_BASE_URL`, then the local stack
-`init` started, then `http://127.0.0.1:8080`. Without a key it answers every call with
-`No Deedglass key found. Run npx deedglass init in a terminal, then restart your MCP client.`
+`init` started, then `http://127.0.0.1:8080`. Without a key it sends nothing: it lists the tools a
+quickstart serves, so the client shows it as connected, and answers every call with `No Deedglass
+key found, so no tool can run yet. Run npx deedglass init in a terminal, then restart your MCP
+client.` Its log says `No Deedglass key found. Run npx deedglass init in a terminal, then restart
+your MCP client.`
 
 | Client | How | Format source (checked 2026-10-02, re-checked 2026-10-11 where noted) |
 |---|---|---|

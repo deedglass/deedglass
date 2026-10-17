@@ -105,6 +105,13 @@ func (c *Connector) Info() connector.TypeInfo {
 		}}
 }
 
+// DefaultTools are the tools of a connector with the default config (allowed_schemas [public], mode
+// sql), the internal ones included: what deedglass mcp serve lists before init (PRD-03).
+func DefaultTools() []connector.ToolSpec {
+	cfg, _ := ParseConfig(json.RawMessage(`{"allowed_schemas":["public"]}`))
+	return toolSpecs(cfg)
+}
+
 // catalogTools is the catalog's tool list: the default config's tools, with L2 on the writes.
 func catalogTools() []connector.ToolInfo {
 	cfg, _ := ParseConfig(json.RawMessage(`{"mode":"sql"}`))

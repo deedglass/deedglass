@@ -72,6 +72,10 @@ func TestInitLive(t *testing.T) {
 			t.Fatalf("missing %q:\n%s", want, all)
 		}
 	}
+	// PRD-06: the step line reads the files and the Ledger: doctor is next.
+	if step, next := ReadFacts(ctx, dir).Progress(); step != 2 || next != "deedglass doctor" {
+		t.Fatalf("after init: step %d %q", step, next)
+	}
 	// The quickstart's last step: init --trigger shows the 301-row mismatch and the undo preview, and
 	// leaves the trigger off.
 	t2 := time.Now()
@@ -93,6 +97,9 @@ func TestInitLive(t *testing.T) {
 	}
 	if !strings.Contains(strings.Join(tr.Next, "\n"), "--plan sha256:") {
 		t.Fatalf("init --trigger: Next has no plan digest: %v", tr.Next)
+	}
+	if step, next := ReadFacts(ctx, dir).Progress(); step != 4 || !strings.HasPrefix(next, "deedglass undo preview act_") {
+		t.Fatalf("after init --trigger: step %d %q", step, next)
 	}
 	if n, _ := (&run{r: r}).psqlIn(ctx, mustStack(t, dir).DemoContainer, "demo", "SELECT count(*) FROM pg_catalog.pg_trigger WHERE tgname = 'orders_ship_open_batch'"); strings.TrimSpace(n) != "0" {
 		t.Fatalf("the trigger is still there (%q)", n)

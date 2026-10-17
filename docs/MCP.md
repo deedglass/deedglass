@@ -395,7 +395,10 @@ modern requests; the negotiated version for legacy ones). It holds no credential
 runs no tools, keeps up to 32 requests in flight, turns `notifications/cancelled` into closing the
 matching request, and exits 0 when stdin ends. When the server can't be reached, a tool call gets
 the calm "could not be reached" result and nothing runs. `--connector <name>` bridges to an
-upstream behind the gateway instead.
+upstream behind the gateway instead. With no key found it makes no network call at all: it answers
+`initialize` and `tools/list` itself from the quickstart's catalog (an upstream's list is empty but
+for `deedglass.check_approval`), puts the run-`init` sentence in `instructions`, in `tools/list`'s
+`_meta` (`com.deedglass/notice`) and in every tool call's result, and runs nothing.
 
 ## MCP versions
 

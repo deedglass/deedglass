@@ -1,9 +1,19 @@
 package main
 
 import (
+	"bytes"
+	"context"
 	"encoding/json"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
+	"testing/fstest"
+
+	"github.com/deedglass/deedglass/internal/config"
+	"github.com/deedglass/deedglass/internal/setup"
 )
 
 func TestInitUsage(t *testing.T) {
@@ -54,5 +64,65 @@ func TestDoctorCLI(t *testing.T) {
 	}
 	if r = cli(t, env, false, "doctor", "--only", "nope.*"); r.code != ExitUsage {
 		t.Fatalf("%d", r.code)
+	}
+}
+
+// TestDoctorProgress (PRD-06): in a directory init set up, a doctor run with no problem ends with the
+// quickstart step line, read from the files and the Ledger; --quiet and --json print none, and a run
+// with --only isn't the doctor step.
+func TestDoctorProgress(t *testing.T) {
+	mismatch := ""
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		data := "[]"
+		if r.URL.Path == "/v1/actions" && r.URL.Query().Get("verdict") == "MISMATCH" && mismatch != "" {
+			data = `[{"id":"` + mismatch + `","status":"executed"}]`
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"object":"list","data":` + data + `,"has_more":false}`))
+	}))
+	defer ts.Close()
+	dir := t.TempDir()
+	_ = os.MkdirAll(filepath.Join(dir, setup.DirName), 0o700)
+	files := map[string]string{
+		setup.StateFile:    `{"object":"init_state","version":1,"org":"org_x","agent":"agt_x"}`,
+		setup.StackFile:    `{"object":"init_stack","listen":"` + strings.TrimPrefix(ts.URL, "http://") + `","pg_port":1}`,
+		setup.AdminKeyFile: "dg_test_admin\n",
+	}
+	for name, body := range files {
+		if err := os.WriteFile(setup.Path(dir, name), []byte(body), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	doctor := func(args ...string) result {
+		var out, errb bytes.Buffer
+		e := &Env{Stdout: &out, Stderr: &errb, Getenv: func(string) string { return "" },
+			LoadOptions: func() config.LoadOptions {
+				return config.LoadOptions{Env: map[string]string{}, FS: fstest.MapFS{}, Dir: dir}
+			}}
+		code := run(context.Background(), e, append([]string{"doctor", "--only", "disk.space"}, args...))
+		return result{code, out.String(), errb.String()}
+	}
+	r := doctor()
+	if r.code != ExitOK || !strings.HasSuffix(r.stdout, "\n\nQuickstart step 2 of 5 · next: deedglass doctor\n") {
+		t.Fatalf("%d\n%s%s", r.code, r.stdout, r.stderr)
+	}
+	mismatch = "act_01k6h7kp6msmzrhdzwtcr3jnkp"
+	if r = doctor(); !strings.HasSuffix(r.stdout, "Quickstart step 4 of 5 · next: deedglass undo preview act_01k6h7kp6msmzrhdzwtcr3jnkp (it prints the undo run line)\n") {
+		t.Fatalf("%s", r.stdout)
+	}
+	for _, args := range [][]string{{"--quiet"}, {"--json"}} {
+		if r = doctor(args...); r.code != ExitOK || strings.Contains(r.stdout, "Quickstart step") {
+			t.Fatalf("%v: %d %s", args, r.code, r.stdout)
+		}
+	}
+	if l := progressLine(setup.Facts{SetUp: true, Checked: true}); l != "Quickstart step 3 of 5 · next: deedglass init --trigger" {
+		t.Fatal(l)
+	}
+	if l := progressLine(setup.Facts{SetUp: true, Undo: true, Undone: true}); l != "" {
+		t.Fatalf("all five done: %q", l)
+	}
+	// Outside an init directory doctor prints no step line.
+	if r := cli(t, map[string]string{"DEEDGLASS_ENV": "dev"}, false, "doctor", "--only", "disk.space"); strings.Contains(r.stdout, "Quickstart") {
+		t.Fatalf("%s", r.stdout)
 	}
 }

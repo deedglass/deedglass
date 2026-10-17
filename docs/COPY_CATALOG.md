@@ -172,6 +172,7 @@ MCP eras, in `testdata/mcp/present/`.
 | Agent stopped, budget | S08's and S11's sentences, then `Nothing was run.` |
 | Gate unreachable | `Deedglass could not be reached at <url>, so this was not run. Start it with "deedglass serve", then try again.` |
 | Bad key | `Deedglass did not accept the API key for this MCP server, so nothing was run. Create a key in Console › Agents and update your MCP client config.` |
+| No key yet (`mcp serve` before `init`; also the `instructions` prefix and `tools/list` `_meta`) | `No Deedglass key found, so no tool can run yet. Run npx deedglass init in a terminal, then restart your MCP client.` |
 | Definition changed | `The server changed the definition of <tool> after it was first listed, so Deedglass hid it. Nothing was run. Restart the MCP server to accept the new definition after a person reviews it.` |
 | Server stopped mid-call | `The MCP server stopped while running <tool>. It may have run. Deedglass recorded it as UNVERIFIABLE (act_…).` |
 | Server keeps crashing | `The MCP server stopped 5 times in a minute, so Deedglass stopped restarting it. Nothing was run. Check the server's log, then restart your MCP client.` |

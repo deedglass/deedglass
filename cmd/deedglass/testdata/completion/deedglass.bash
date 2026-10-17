@@ -56,8 +56,8 @@ _deedglass() {
     'dev sign-intent') subs=''; flags='--agent --args --explain --key --nonce --now --obo --session --tool --ttl' ;;
     'dev simulate') subs=''; flags='--append --days --end --org --org-slug --pace --quiet --scenario --seed' ;;
     'dev stripe-fixtures') subs=''; flags='--connector --from-env --out' ;;
-    'doctor') subs=''; flags='--only' ;;
-    'init') subs=''; flags='--client --dir --listen --no-open --no-smoke --owner-email --pg-port --postgres --project --reset-secrets --smoke --stop --trigger --yes' ;;
+    'doctor') subs=''; flags='--only --quiet' ;;
+    'init') subs=''; flags='--client --dir --listen --no-open --no-smoke --owner-email --pg-port --postgres --project --quiet --reset-secrets --smoke --stop --trigger --yes' ;;
     'insights') subs='stats shadow anomalies detect settings suggestions digest'; flags='' ;;
     'insights suggestions') subs='list show accept reject generate'; flags='' ;;
     'keys') subs='gen rotate list'; flags='' ;;
@@ -85,7 +85,7 @@ _deedglass() {
     'play') subs=''; flags='--fast' ;;
     'policy') subs='lint fmt test push activate evaluate replay diff install packs'; flags='' ;;
     'policy packs') subs='list verify'; flags='' ;;
-    'scan') subs=''; flags='--badge --ci --dir --fail-under --format --full --max-files --no-seal --no-star --no-write --out-dir --postgres-dsn-env --score --share --user-configs' ;;
+    'scan') subs=''; flags='--badge --badge-share --ci --dir --fail-under --format --full --max-files --no-seal --no-star --no-write --out-dir --postgres-dsn-env --score --share --user-configs' ;;
     'security-pack') subs='readiness build verify'; flags='' ;;
     'serve') subs=''; flags='--migrate' ;;
     'slack') subs='manifest'; flags='' ;;
