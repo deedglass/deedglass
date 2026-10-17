@@ -26,7 +26,7 @@ Every link and command below adds the same server, `{"command":"npx","args":["-y
 
 ## Claude Desktop
 
-Claude Desktop installs a `.mcpb` bundle: download the one for your machine from the release (macOS Apple silicon, macOS Intel or Windows) and open it. Claude Desktop asks for two optional settings: an agent key (kept as a secret) and the server address, which defaults to `http://127.0.0.1:8080`. Leave the key empty to use the one `deedglass init` wrote. The bundles are not code-signed yet, so Claude Desktop says so when you open one.
+Claude Desktop can install a `.mcpb` bundle, but the bundles aren't attached to a release yet. Until they are, add the bridge by hand: [Connect Claude Desktop](/get-started/claude-desktop/). From a checkout, `make mcpb` builds the three bundles (macOS Apple silicon, macOS Intel and Windows) into `.tmp/mcpb`; opening one, Claude Desktop asks for two optional settings: an agent key (kept as a secret) and the server address, which defaults to `http://127.0.0.1:8080`. Leave the key empty to use the one `deedglass init` wrote. The bundles are not code-signed yet, so Claude Desktop says so when you open one.
 
 ## Registries
 
