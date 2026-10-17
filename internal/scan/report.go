@@ -15,9 +15,9 @@ import (
 	"time"
 )
 
-// FooterLine is the one footer every output carries (S32 §3.13.4). S48 may change its wording
-// (the 30-day Pro pass); the link stays deedglass.com/pro.
-const FooterLine = "Full report with fixes: deedglass.com/pro ($29 once)."
+// FooterLine is the one footer every output carries (S32 §3.13.4). Since VIRAL-3 (PRD-02) it points
+// at the page that explains the grade, not at an offer: the $29 report's buy button is off (P-044).
+const FooterLine = "What your grade means: deedglass.com/score"
 
 // SmallPrint always follows the grade (§3.13.6).
 const SmallPrint = "A means a small blast radius, not a safe agent."

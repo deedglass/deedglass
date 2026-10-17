@@ -162,7 +162,7 @@ var reportTmpl = template.Must(template.New("report").Funcs(template.FuncMap{
 <h2>What it doesn't do</h2>
 <p>It reads your configuration and catalog. It doesn't run your agent, test your tools or connect anywhere you didn't name.</p>
 
-<footer>{{.FooterHead}}<a href="https://deedglass.com/pro" rel="noreferrer">deedglass.com/pro</a>{{.FooterTail}}</footer>
+<footer>{{.FooterHead}}<a href="https://deedglass.com/score" rel="noreferrer">deedglass.com/score</a>{{.FooterTail}}</footer>
 </main>
 </body>
 </html>
@@ -171,7 +171,7 @@ var reportTmpl = template.Must(template.New("report").Funcs(template.FuncMap{
 // RenderHTML is deedglass-scan.html: self-contained, no script, no resource from another origin.
 func RenderHTML(r *Report) (string, error) {
 	var b bytes.Buffer
-	head, tail, _ := strings.Cut(FooterLine, "deedglass.com/pro")
+	head, tail, _ := strings.Cut(FooterLine, "deedglass.com/score")
 	err := reportTmpl.Execute(&b, map[string]any{"R": r, "Score": r.Score, "SmallPrint": SmallPrint, "FooterHead": head, "FooterTail": tail,
 		"CSS": template.CSS(reportCSS)})
 	return b.String(), err
