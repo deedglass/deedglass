@@ -355,16 +355,30 @@ func runMCPServe(ctx context.Context, e *Env, args []string) error {
 var reServeConnector = regexp.MustCompile(`^[a-z][a-z0-9-]{1,31}$`)
 
 // offlineFront is mcp serve before init (PRD-03): /mcp/native's catalog as a quickstart serves it,
-// the Postgres connector init creates with its default config. An upstream's tools aren't known
+// built from the config init creates the postgres connector with (setup.ConnectorYAML), so it lists
+// postgres.call and the writable tables just as the real one does. An upstream's tools aren't known
 // without the server, so other connectors list none.
 func offlineFront(conn string) *front.Front {
 	ns := &front.NativeSource{}
 	if conn == "native" {
 		ns.Rows = func(context.Context, identity.Principal) ([]connector.RowTools, error) {
-			return []connector.RowTools{{Name: setup.ConnectorName, Type: postgres.Type, Tools: postgres.DefaultTools()}}, nil
+			ts, err := quickstartTools()
+			if err != nil {
+				return nil, err
+			}
+			return []connector.RowTools{{Name: setup.ConnectorName, Type: postgres.Type, Tools: ts}}, nil
 		}
 	}
 	return &front.Front{Version: buildInfo().Version, Tools: ns}
+}
+
+// quickstartTools are the tools of the postgres connector deedglass init creates.
+func quickstartTools() ([]connector.ToolSpec, error) {
+	raw, err := setup.ConnectorConfig()
+	if err != nil {
+		return nil, err
+	}
+	return postgres.ToolsFor(raw)
 }
 
 // runMCPSnippetHTTP is mcp snippet --transport http (S15): config that reaches /mcp/native or

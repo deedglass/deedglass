@@ -158,7 +158,7 @@ func runInit(ctx context.Context, e *Env, args []string) error {
 	if !res.Changed {
 		fmt.Fprintln(e.Stdout)
 		fmt.Fprintln(e.Stdout, e.Style.OKLine(fmt.Sprintf("Nothing to change. Deedglass is set up in %s (org %s, agent %s).", label, setup.OrgName, setup.AgentName)))
-		printProgress(e, v.quiet, setup.ReadFacts(ctx, dir))
+		printProgress(e, v.quiet, func() setup.Facts { return setup.ReadFacts(ctx, dir) })
 		return nil
 	}
 	verified := false
@@ -175,15 +175,20 @@ func runInit(ctx context.Context, e *Env, args []string) error {
 	for _, n := range res.Next {
 		fmt.Fprintln(e.Stdout, "  "+n)
 	}
-	printProgress(e, v.quiet, setup.ReadFacts(ctx, dir))
+	printProgress(e, v.quiet, func() setup.Facts { return setup.ReadFacts(ctx, dir) })
 	return nil
 }
 
 // printProgress is the quickstart step line under init and doctor (PRD-06): the step of five this
 // directory is on, read from its files and its Ledger, and the command for it. Nothing with --quiet
-// or --json, in a directory init didn't set up, or once all five are done.
-func printProgress(e *Env, quiet bool, f setup.Facts) {
-	if quiet || e.Globals.JSON || !f.SetUp {
+// or --json (and then read isn't called, so the Ledger isn't asked), in a directory init didn't set
+// up, or once all five are done.
+func printProgress(e *Env, quiet bool, read func() setup.Facts) {
+	if quiet || e.Globals.JSON {
+		return
+	}
+	f := read()
+	if !f.SetUp {
 		return
 	}
 	if l := progressLine(f); l != "" {

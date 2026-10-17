@@ -160,9 +160,11 @@ func runDoctor(ctx context.Context, e *Env, args []string) error {
 	}
 	if sum.Fail == 0 && !env.Unauthenticated.Load() {
 		// A clean full run is the quickstart's step 2; a run with --only doesn't count as one.
-		f := setup.ReadFacts(ctx, env.Dir)
-		f.Checked = doctorValues.only == ""
-		printProgress(e, doctorValues.quiet, f)
+		printProgress(e, doctorValues.quiet, func() setup.Facts {
+			f := setup.ReadFacts(ctx, env.Dir)
+			f.Checked = doctorValues.only == ""
+			return f
+		})
 	}
 	switch {
 	case env.Unauthenticated.Load():

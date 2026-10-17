@@ -17,7 +17,7 @@ type Facts struct {
 	SetUp    bool   // 1 · .deedglass/state.json names an org and an agent, and stack.json exists
 	Checked  bool   // 2 · doctor just passed every check (only doctor knows; a later step implies it)
 	Mismatch string // 3 · the newest action checked Doesn't match (init --trigger), "" when none
-	Undo     bool   // 4 · an undo was asked for (deedglass undo run)
+	Undo     bool   // 4 · an undo is live (deedglass undo run): waiting for a person, running or run
 	Undone   bool   // 5 · an undo ran: a person countersigned it
 	Server   string // the local server init started
 }
@@ -41,7 +41,9 @@ func (f Facts) Progress() (step int, next string) {
 }
 
 // ReadFacts reads dir's facts: init's files, then the local Ledger through the admin key init saved
-// (two reads from the local server, 3 s at most). What can't be read stays unset.
+// (two reads from the local server, 3 s at most). What can't be read stays unset, and when the first
+// read fails the second isn't tried. Any undo in the Ledger counts, not only one of Mismatch: the
+// list doesn't say what an undo undoes, and the quickstart's is the only one.
 func ReadFacts(ctx context.Context, dir string) Facts {
 	var f Facts
 	st, _ := ReadState(dir)
@@ -63,14 +65,23 @@ func ReadFacts(ctx context.Context, dir string) Facts {
 			Status string `json:"status"`
 		} `json:"data"`
 	}
-	if _, err := c.Do(ctx, "GET", "/v1/actions?limit=1&verdict=MISMATCH", nil, &page); err == nil && len(page.Data) > 0 {
+	if _, err := c.Do(ctx, "GET", "/v1/actions?limit=1&verdict=MISMATCH", nil, &page); err != nil {
+		return f
+	}
+	if len(page.Data) > 0 {
 		f.Mismatch = page.Data[0].ID
 	}
 	page.Data = nil
 	if _, err := c.Do(ctx, "GET", "/v1/actions?limit=20&tool=%2A.undo", nil, &page); err == nil {
 		for _, a := range page.Data {
-			f.Undo = true
-			f.Undone = f.Undone || a.Status == "executed"
+			switch a.Status {
+			case "executed":
+				f.Undo, f.Undone = true, true
+			case "pending_approval", "authorized", "processing":
+				f.Undo = true
+			}
+			// denied, expired, cancelled or failed: that undo is over and nothing is left to
+			// countersign, so the line goes back to undo preview.
 		}
 	}
 	return f

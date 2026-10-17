@@ -19,6 +19,8 @@ import (
 	"strings"
 	"time"
 
+	"go.yaml.in/yaml/v3"
+
 	cpsql "github.com/deedglass/deedglass/deploy/postgres"
 	demosql "github.com/deedglass/deedglass/examples/demo/sql"
 	"github.com/deedglass/deedglass/examples/policies"
@@ -687,8 +689,9 @@ func firstNonEmpty(vs ...string) string {
 
 // --- 7 · the demo database and its connector ---
 
-// connectorYAML is the demo connector, on the local demo database (S15's, with the same rules).
-const connectorYAML = `type: postgres
+// ConnectorYAML is the demo connector, on the local demo database (S15's, with the same rules):
+// the file init writes to .deedglass/connector-postgres.yaml and creates the connector from.
+const ConnectorYAML = `type: postgres
 name: postgres
 description: The Acme demo orders database (deedglass init, local and throwaway).
 config:
@@ -710,6 +713,18 @@ config:
       description: Mark a paid order shipped.
   throwaway: true
 `
+
+// ConnectorConfig is ConnectorYAML's config block as JSON, as connector create sends it: mcp serve
+// lists the quickstart's tools from it before init (PRD-03), so the two lists can't drift apart.
+func ConnectorConfig() (json.RawMessage, error) {
+	var doc struct {
+		Config map[string]any `yaml:"config"`
+	}
+	if err := yaml.Unmarshal([]byte(ConnectorYAML), &doc); err != nil {
+		return nil, err
+	}
+	return json.Marshal(doc.Config)
+}
 
 // demoRoles replaces 03_roles.sql: the owner role without a login (no password to keep).
 const demoRoles = `\set ON_ERROR_STOP on
@@ -751,7 +766,7 @@ func (x *run) demoDB(ctx context.Context) StepResult {
 	cenv := x.clientEnv()
 	if _, _, err := x.r.Self(ctx, cenv, "--json", "connector", "show", ConnectorName); err != nil {
 		p := Path(x.o.Dir, "connector-postgres.yaml")
-		if err := os.WriteFile(p, []byte(connectorYAML), 0o600); err != nil {
+		if err := os.WriteFile(p, []byte(ConnectorYAML), 0o600); err != nil {
 			return fail(id, title, err.Error(), "Check .deedglass.")
 		}
 		if _, e2, err := x.r.Self(ctx, cenv, "connector", "create", "--config", p); err != nil {

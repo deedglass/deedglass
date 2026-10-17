@@ -105,11 +105,15 @@ func (c *Connector) Info() connector.TypeInfo {
 		}}
 }
 
-// DefaultTools are the tools of a connector with the default config (allowed_schemas [public], mode
-// sql), the internal ones included: what deedglass mcp serve lists before init (PRD-03).
-func DefaultTools() []connector.ToolSpec {
-	cfg, _ := ParseConfig(json.RawMessage(`{"allowed_schemas":["public"]}`))
-	return toolSpecs(cfg)
+// ToolsFor are the tools a connector with config raw serves, the internal ones included, exactly as
+// Tools gives them for a stored instance: deedglass mcp serve lists the quickstart's connector this
+// way before init (PRD-03), from the config init creates it with.
+func ToolsFor(raw json.RawMessage) ([]connector.ToolSpec, error) {
+	cfg, errs := ParseConfig(raw)
+	if len(errs) > 0 {
+		return nil, fmt.Errorf("postgres: the config is invalid: %s", errs[0].Error())
+	}
+	return toolSpecs(cfg), nil
 }
 
 // catalogTools is the catalog's tool list: the default config's tools, with L2 on the writes.

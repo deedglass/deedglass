@@ -626,8 +626,9 @@ call answers `Deedglass could not be reached at http://127.0.0.1:8080, so this w
 it with "deedglass serve", then try again.` With no key found (no `--api-key`, no
 `DEEDGLASS_API_KEY`, no `.deedglass/quickstart.key`), it sends nothing: `initialize`,
 `server/discover`, `ping` and `tools/list` are answered in the process, `tools/list` with the tools a
-quickstart's `postgres` connector serves (`postgres.describe`, `postgres.execute`, `postgres.query`)
-and `deedglass.check_approval`, and every tool call answers `No Deedglass key found, so no tool can
+quickstart's `postgres` connector serves (`postgres.call`, `postgres.describe`, `postgres.execute`,
+`postgres.query`, built from the config `init` creates that connector with) and
+`deedglass.check_approval`, and every tool call answers `No Deedglass key found, so no tool can
 run yet. Run npx deedglass init in a terminal, then restart your MCP client.` So a client or a
 directory that inspects the server before `init` sees what it offers.
 

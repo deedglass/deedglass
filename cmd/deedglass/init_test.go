@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"testing/fstest"
 
@@ -72,7 +73,11 @@ func TestDoctorCLI(t *testing.T) {
 // with --only isn't the doctor step.
 func TestDoctorProgress(t *testing.T) {
 	mismatch := ""
+	var ledgerReads atomic.Int32
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/v1/actions" {
+			ledgerReads.Add(1)
+		}
 		data := "[]"
 		if r.URL.Path == "/v1/actions" && r.URL.Query().Get("verdict") == "MISMATCH" && mismatch != "" {
 			data = `[{"id":"` + mismatch + `","status":"executed"}]`
@@ -93,13 +98,15 @@ func TestDoctorProgress(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
+	// state.dir reads only the test's own .deedglass/, so the result doesn't hang on this machine's
+	// free disk space or its servers.
 	doctor := func(args ...string) result {
 		var out, errb bytes.Buffer
 		e := &Env{Stdout: &out, Stderr: &errb, Getenv: func(string) string { return "" },
 			LoadOptions: func() config.LoadOptions {
 				return config.LoadOptions{Env: map[string]string{}, FS: fstest.MapFS{}, Dir: dir}
 			}}
-		code := run(context.Background(), e, append([]string{"doctor", "--only", "disk.space"}, args...))
+		code := run(context.Background(), e, append([]string{"doctor", "--only", "state.dir"}, args...))
 		return result{code, out.String(), errb.String()}
 	}
 	r := doctor()
@@ -110,10 +117,15 @@ func TestDoctorProgress(t *testing.T) {
 	if r = doctor(); !strings.HasSuffix(r.stdout, "Quickstart step 4 of 5 · next: deedglass undo preview act_01k6h7kp6msmzrhdzwtcr3jnkp (it prints the undo run line)\n") {
 		t.Fatalf("%s", r.stdout)
 	}
+	// --quiet and --json print no line and don't ask the Ledger either.
+	ledgerReads.Store(0)
 	for _, args := range [][]string{{"--quiet"}, {"--json"}} {
 		if r = doctor(args...); r.code != ExitOK || strings.Contains(r.stdout, "Quickstart step") {
 			t.Fatalf("%v: %d %s", args, r.code, r.stdout)
 		}
+	}
+	if n := ledgerReads.Load(); n != 0 {
+		t.Fatalf("--quiet and --json read the Ledger %d times", n)
 	}
 	if l := progressLine(setup.Facts{SetUp: true, Checked: true}); l != "Quickstart step 3 of 5 · next: deedglass init --trigger" {
 		t.Fatal(l)
@@ -122,7 +134,7 @@ func TestDoctorProgress(t *testing.T) {
 		t.Fatalf("all five done: %q", l)
 	}
 	// Outside an init directory doctor prints no step line.
-	if r := cli(t, map[string]string{"DEEDGLASS_ENV": "dev"}, false, "doctor", "--only", "disk.space"); strings.Contains(r.stdout, "Quickstart") {
+	if r := cli(t, map[string]string{"DEEDGLASS_ENV": "dev"}, false, "doctor", "--only", "state.dir"); r.code != ExitOK || strings.Contains(r.stdout, "Quickstart") {
 		t.Fatalf("%s", r.stdout)
 	}
 }

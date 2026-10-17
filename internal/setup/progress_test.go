@@ -102,10 +102,39 @@ func TestReadFacts(t *testing.T) {
 	if f := ReadFacts(ctx, initDir(t, ts3.URL)); !f.Undo || !f.Undone {
 		t.Fatalf("executed undo: %+v", f)
 	}
+	// An undo that is waiting or running is step 5; one that is over without running (its approval
+	// denied or expired, cancelled, failed) leaves nothing to countersign: back to undo preview.
+	for _, st := range []string{"authorized", "processing"} {
+		ts, _ := fakeLedger(t, "act_x", st)
+		if f := ReadFacts(ctx, initDir(t, ts.URL)); !f.Undo || f.Undone {
+			t.Fatalf("%s undo: %+v", st, f)
+		}
+	}
+	for _, st := range []string{"denied", "expired", "cancelled", "failed"} {
+		ts, _ := fakeLedger(t, "act_x", st)
+		f := ReadFacts(ctx, initDir(t, ts.URL))
+		if step, next := f.Progress(); f.Undo || f.Undone || step != 4 || next != "deedglass undo preview act_x (it prints the undo run line)" {
+			t.Fatalf("%s undo: %+v, step %d %q", st, f, step, next)
+		}
+	}
+	ts5, _ := fakeLedger(t, "act_x", "expired", "pending_approval")
+	if f := ReadFacts(ctx, initDir(t, ts5.URL)); !f.Undo || f.Undone {
+		t.Fatalf("expired, then asked again: %+v", f)
+	}
 	// The server is down: the files still say step 1 is done.
 	down := initDir(t, "http://127.0.0.1:1")
 	if f := ReadFacts(ctx, down); !f.SetUp || f.Mismatch != "" || f.Undo {
 		t.Fatalf("server down: %+v", f)
+	}
+	// The first read fails: the second isn't tried.
+	var bad atomic.Int32
+	ts6 := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		bad.Add(1)
+		w.WriteHeader(500)
+	}))
+	t.Cleanup(ts6.Close)
+	if f := ReadFacts(ctx, initDir(t, ts6.URL)); !f.SetUp || f.Mismatch != "" || f.Undo || bad.Load() != 1 {
+		t.Fatalf("first read fails: %+v, %d reads", f, bad.Load())
 	}
 	// No admin key: no Ledger read at all.
 	ts4, hits4 := fakeLedger(t, "act_x")
