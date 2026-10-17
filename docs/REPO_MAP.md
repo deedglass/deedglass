@@ -100,7 +100,7 @@ Last checked: S28, 2026-10-04 (S01 wrote it). Each session that changes the layo
 | `sdk/typescript`, `sdk/python` | no | planned | S31 | The `@deedglass/sdk` and `deedglass` client libraries |
 | `docs-site/` | no | planned | S33 | The docs site for `docs.deedglass.com` |
 
-Root files: `CLAUDE.md` (builder rules), `README.md`, `Makefile` (`make help` lists targets), `LICENSE` (Apache-2.0), `go.mod`, `deedglass.example.yaml` (every config key, commented), `.rename-allow`, `.banned-words-allow`, `.editorconfig`.
+Root files: `CLAUDE.md` (builder rules), `AGENTS.md` (for coding agents and contributors working from a clone), `README.md`, `Makefile` (`make help` lists targets), `LICENSE` (Apache-2.0; `ee/LICENSE` covers `ee/`), `context7.json` (Context7's index settings), `llms-install.md` (setup steps for an agent, asking before each change), `server.json` (the MCP Registry entry), `go.mod`, `deedglass.example.yaml` (every config key, commented), `.rename-allow`, `.banned-words-allow`, `.editorconfig`.
 
 Git-ignored: `bin/` (build output), `.deedglass/` (local keys and dev secrets), `.tmp/` (throwaway clusters), `.env`.
 

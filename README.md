@@ -8,16 +8,19 @@
 <h3 align="center">An agent said it updated 1 row. Postgres changed 301.</h3>
 
 <p align="center">
-Deedglass sits between AI agents and the systems they change. It enforces your rules, checks what
-really happened against the system of record, keeps signed records anyone can check offline, and
-has undo.
+<!-- description:summary (docs/description.json; docs/description_test.go checks it) -->
+Deedglass sits between AI agents and the systems they change. Rules decide each tool call, a check
+compares what the system really changed with what the agent reported (Claimed, Checked or Proven;
+Matches, Doesn't match or Can't check), and each result is sealed as a signed record anyone can
+check offline. It can undo the rows an action changed.
 </p>
 
 <p align="center">
   <a href="https://github.com/deedglass/deedglass/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/deedglass/deedglass/actions/workflows/ci.yml/badge.svg?branch=main"></a>
   <a href="https://github.com/deedglass/deedglass/releases"><img alt="Release" src="https://img.shields.io/github/v/release/deedglass/deedglass?sort=semver&label=release"></a>
   <a href="https://www.npmjs.com/package/deedglass"><img alt="npm" src="https://img.shields.io/npm/v/deedglass?label=npm"></a>
-  <a href="LICENSE"><img alt="Licence: Apache-2.0" src="https://img.shields.io/badge/licence-Apache--2.0-0F766E"></a>
+  <a href="#license"><img alt="Licence: Apache-2.0, with ee/ under FSL-1.1-ALv2" src="https://img.shields.io/badge/licence-Apache--2.0%20%2B%20ee%2F%20FSL--1.1--ALv2-0F766E"></a>
+  <a href="https://pkg.go.dev/github.com/deedglass/deedglass/pkg/deedglass"><img alt="Go reference" src="https://pkg.go.dev/badge/github.com/deedglass/deedglass/pkg/deedglass.svg"></a>
   <a href="docs/ATTACK_SUITE.md"><img alt="Attack suite" src="https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Fdeedglass%2Fdeedglass%2Fmain%2Fattack%2Fresults%2Fbadge.json"></a>
 </p>
 
@@ -77,8 +80,9 @@ npx -y deedglass init --trigger
 ```
 <!-- quickstart:end -->
 
-`deedglass init` starts Postgres and Deedglass in Docker on their own ports, creates an org, an agent
-and the `postgres-safe` policy, and ends with a blocked `DROP TABLE` and an `UPDATE` checked at Proven.
+`deedglass init` starts two Postgres 18.6 containers in Docker (Deedglass's own database and a demo
+database), runs `deedglass serve` on `127.0.0.1:8080`, creates an org, an agent and the
+`postgres-safe` policy, and ends with a blocked `DROP TABLE` and an `UPDATE` checked at Proven.
 `deedglass doctor` runs sixteen read-only checks, each with its fix. `deedglass init --trigger` turns
 on the demo database's legacy trigger, sends the same one-row `UPDATE`, and ends on the 301-row
 mismatch and the undo preview shown above.
@@ -143,22 +147,42 @@ the short names (`L0`/`L1`/`L2`, `VERIFIED`/`MISMATCH`/`UNVERIFIABLE`); the
 
 The whole list, with workarounds: [`docs/LIMITATIONS.md`](docs/LIMITATIONS.md) and [`KNOWN_ISSUES.md`](KNOWN_ISSUES.md).
 
+## Alternatives
+
+You may not need Deedglass, or you may want it next to one of these. Each has a longer page, with
+sources and the date each was checked, at [deedglass.com/compare](https://deedglass.com/compare).
+<!-- claims: C-109 (role), C-114 and C-116 (branches), C-117 (Docker's gateway), C-122 and C-123 (traces), C-110 (Claw Patrol), C-119 (Pipelock) -->
+
+| If you need | Use this | Where Deedglass fits |
+|---|---|---|
+| An agent that only reads | A Postgres role with `SELECT` and nothing else. It can't change data whatever the agent sends, and there's nothing to install. | You don't need it. It's for agents that must write. ([compare](https://deedglass.com/compare/read-only-postgres-role)) |
+| A place for an agent to try changes | A database branch: a Neon branch is a copy-on-write clone of your data; Supabase branches start without production data by default. | For the writes that must reach production: rules first, then the check and the record. ([compare](https://deedglass.com/compare/database-branches)) |
+| Routing, isolation and credentials for many MCP servers | An MCP gateway, such as Docker's, which runs each server in an isolated container and injects credentials. | Behind the gateway, for the servers that write to Postgres. ([compare](https://deedglass.com/compare/mcp-gateways)) |
+| Traces of each step, and evaluations | Langfuse or LangSmith. | Next to them: a trace is the agent's side of the story; the check reads what Postgres committed. ([compare](https://deedglass.com/compare/langfuse-langsmith)) |
+| Rules at the wire for Postgres, Kubernetes and HTTP | Claw Patrol, which gates each action against rules over the parsed traffic. | It also decides first; it adds the check of what Postgres committed, records anyone can check offline, and undo. ([compare](https://deedglass.com/compare/claw-patrol)) |
+| Scanning what an agent sends out and what its tools return | Pipelock, an agent firewall that scans MCP traffic in both directions. | It adds the check of what Postgres committed after each call, and undo for the rows. ([compare](https://deedglass.com/compare/pipelock)) |
+
 ## Install
 
 | How | Command |
 |---|---|
 | npx (no install) | `npx -y deedglass help` |
-| Docker | `docker pull ghcr.io/deedglass/deedglass:0.1.0` |
-| Binaries | signed archives for macOS, Linux and Windows on the GitHub release |
-| Go | `go install github.com/deedglass/deedglass/cmd/deedglass@latest` |
+| Install script (macOS, Linux) | `curl -fsSL https://raw.githubusercontent.com/deedglass/deedglass/main/scripts/install.sh \| sh` |
+| Binaries | archives for macOS, Linux and Windows on the [latest release](https://github.com/deedglass/deedglass/releases/latest), with `checksums.txt` |
+| Go | `go install github.com/deedglass/deedglass/cmd/deedglass@latest` (the CLI, without the Console) |
+| Docker | build the image from a checkout: `make web-build docker` (tags `deedglass:dev`; Node 24 builds the Console) |
 
-Checksums, signatures and SBOMs: [`docs/INSTALL.md`](docs/INSTALL.md).
+The install script downloads the release archive for your platform, checks its sha256 against the
+release's `checksums.txt`, and copies `deedglass` into `~/.local/bin`; read it first:
+[`scripts/install.sh`](scripts/install.sh). A public container image is coming; until it's
+published, build the image locally as above. Checksums, signatures and SBOMs:
+[`docs/INSTALL.md`](docs/INSTALL.md).
 
 ### Add it to your agent client
 
 <!-- install-links:start -->
 [![Add to Cursor](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/en/install-mcp?name=deedglass&config=eyJjb21tYW5kIjoibnB4IiwiYXJncyI6WyIteSIsImRlZWRnbGFzcyIsIm1jcCIsInNlcnZlIl19)
-[Install in VS Code](https://vscode.dev/redirect/mcp/install?config=%7B%22command%22%3A%22npx%22%2C%22args%22%3A%5B%22-y%22%2C%22deedglass%22%2C%22mcp%22%2C%22serve%22%5D%7D&name=deedglass) · [LM Studio](https://deedglass.com/install#lm-studio) · [Goose](https://deedglass.com/install#goose) · [Claude Desktop](https://deedglass.com/install#claude-desktop) · [Every client](https://deedglass.com/install)
+[Install in VS Code](https://vscode.dev/redirect/mcp/install?config=%7B%22command%22%3A%22npx%22%2C%22args%22%3A%5B%22-y%22%2C%22deedglass%22%2C%22mcp%22%2C%22serve%22%5D%7D&name=deedglass) · [LM Studio](https://deedglass.com/install#lm-studio) · [Goose](https://deedglass.com/install#goose) · [Claude Desktop](https://docs.deedglass.com/get-started/claude-desktop/) · [Every client](https://deedglass.com/install)
 
 ```sh
 claude mcp add deedglass -- npx -y deedglass mcp serve
@@ -211,6 +235,14 @@ The attack suite runs 70 cases against a real server and real Postgres on every 
 70 matched, 0 differ (`attack/results/latest.json`, [`docs/ATTACK_SUITE.md`](docs/ATTACK_SUITE.md)).
 Report a vulnerability privately: [`SECURITY.md`](SECURITY.md).
 
+<!-- description:network -->
+Free features send nothing to deedglass.com. Only a machine with a Pro licence checks it, through
+Dodo Payments and deedglass.com: `deedglass serve` when it starts and then daily, and Pro commands
+when you run them; a request goes out only when the last successful check is a day old.
+`deedglass version --check` and the `--latest` option of `deedglass policy install` and
+`policy packs` contact GitHub only when you use them.
+`DEEDGLASS_NO_NETWORK=1` stops the licence check; Pro then runs on its cached token for up to 14 days.
+
 ## Contributing
 
 Read [`CONTRIBUTING.md`](CONTRIBUTING.md): `make dev`, `make ci`, the tests a change needs, and DCO
@@ -221,6 +253,13 @@ If Deedglass showed you something your logs didn't, a GitHub star helps other pe
 
 ## License
 
-Apache-2.0 for the core, the SDKs and the CLI ([`LICENSE`](LICENSE)). Pro features, when they ship,
-will live in `ee/` under FSL-1.1-ALv2, which becomes Apache-2.0 two years after each release.
-Third-party notices: [`NOTICE`](NOTICE).
+<!-- description:licence -->
+The core, the SDKs and the CLI are Apache-2.0. The Pro features in `ee/` are FSL-1.1-ALv2, and each
+release of them becomes Apache-2.0 two years after it ships. The release binary, the
+`@deedglass/cli-*` npm packages and the container image include `ee/`, so their licence is
+`Apache-2.0 AND FSL-1.1-ALv2`.
+
+FSL-1.1-ALv2 lets you read, run and change `ee/` for anything except offering a competing product
+([`ee/LICENSE`](ee/LICENSE)); everything Deedglass does for safety is free and outside `ee/`
+([`docs/LICENSING.md`](docs/LICENSING.md)). The rest is [`LICENSE`](LICENSE); third-party notices
+are in [`NOTICE`](NOTICE).

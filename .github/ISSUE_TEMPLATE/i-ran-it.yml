@@ -2,6 +2,9 @@ name: I ran it
 description: Tell us how a first run went. The most useful issue you can file.
 labels: ["i-ran-it"]
 body:
+  - type: markdown
+    attributes:
+      value: "**Security problem? Don't file it here.** Report it privately: https://github.com/deedglass/deedglass/security/advisories/new ([SECURITY.md](https://github.com/deedglass/deedglass/blob/main/SECURITY.md)). Remove secrets (keys start with dg_, sk_, xox) from anything you paste."
   - type: dropdown
     id: what
     attributes: { label: What you ran, multiple: true, options: [Quickstart (deedglass init), Claude Code, Cursor, Claude Desktop, TypeScript SDK, Python SDK, deedglass scan, The browser playground, Other] }
@@ -12,7 +15,7 @@ body:
     validations: { required: true }
   - type: dropdown
     id: install
-    attributes: { label: Install method, options: [npx, Docker image, Release binary, Homebrew, go install, Built from source] }
+    attributes: { label: Install method, options: [npx, Install script, Release binary, Docker image built locally, go install, Built from source] }
     validations: { required: true }
   - type: input
     id: blocked

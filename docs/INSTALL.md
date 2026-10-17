@@ -1,25 +1,53 @@
 # Install Deedglass
 
 Deedglass is one binary, `deedglass`: the server, the CLI and the MCP bridge. Pick the way that suits
-the machine. Releases start at 0.1.0; until the first one is published, build from source
-(`make build`) or use `deedglass init` from a checkout.
+the machine. The releases are on the
+[release page](https://github.com/deedglass/deedglass/releases); 0.1.0 is the first.
 
-## Docker
+## npx (nothing to install)
 
 ```sh
-docker run --rm ghcr.io/deedglass/deedglass:0.1.0 version
+npx -y deedglass version
 ```
 
-The image is distroless, runs as user 65532, and is built for linux/amd64 and linux/arm64. In
-production, pin it by digest: `ghcr.io/deedglass/deedglass:0.1.0@sha256:<digest>` (the release
-notes list the digest). Prereleases (`0.1.0-rc.1`) never move the `latest` or `0.1` tags.
+npm installs one platform package (`@deedglass/cli-<os>-<arch>`) that carries the release binary,
+with no install script. Node 18 or newer runs it; the Quickstart (`deedglass init`) needs Node 22.12
+or newer and Docker.
+
+## The install script (macOS, Linux)
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/deedglass/deedglass/main/scripts/install.sh | sh
+```
+
+It downloads two files from the latest release, the archive for this machine and `checksums.txt`,
+checks the archive's sha256 against `checksums.txt`, and copies the one binary into `~/.local/bin`.
+It runs nothing it downloads, asks for no password and never edits your shell profile; if the
+directory isn't on your PATH it prints the line to add. `sh -s -- --version 0.1.0 --dir /usr/local/bin`
+picks a version and a directory. Read it first: [`scripts/install.sh`](../scripts/install.sh).
 
 ## A binary
 
 Download the archive for your platform from the release page:
 `deedglass_<version>_<os>_<arch>.tar.gz` for linux and darwin on amd64 and arm64, or
-`deedglass_<version>_windows_amd64.zip`. Check it (next section), unpack it, and put `deedglass` on
-your PATH. Each archive holds the binary, LICENSE, README.md, CHANGELOG.md and shell completions.
+`deedglass_<version>_windows_amd64.zip`. Check it (below), unpack it, and put `deedglass` on
+your PATH. Each archive holds the binary, LICENSE, README.md, CHANGELOG.md and shell completions;
+from 0.1.1 it also holds `ee/LICENSE`, the licence of the Pro code the binary includes.
+
+## Docker
+
+There's no public image yet: the image on ghcr.io is private for now, and a public one is coming.
+Until it's published, build the image from a checkout:
+
+```sh
+git clone https://github.com/deedglass/deedglass && cd deedglass
+make web-build docker        # deedglass:dev; make web-build needs Node 24 and embeds the Console
+docker run --rm deedglass:dev version
+```
+
+The image is distroless and runs as user 65532. Without `make web-build` the binary carries the
+Console's placeholder page, which is fine for `deedglass init` and dev mode, but a prod server
+(`DEEDGLASS_ENV=prod`) refuses to start with it.
 
 ## Homebrew
 
@@ -37,15 +65,15 @@ server needs a release binary or image, which carry the Console.
 
 ## Check what you downloaded
 
-Each release lists sha256 checksums. From 0.1.0 on, once the repository is public, the checksum file
-is also signed in the open Sigstore log by this repository's release workflow. Here is how to check
+Each release lists sha256 checksums, and the checksum file is signed in the open Sigstore log by this
+repository's release workflow (`checksums.txt.sigstore.json` on the release). Here is how to check
 both before you run the binary.
 
 ```sh
 shasum -a 256 --ignore-missing -c checksums.txt
 ```
 
-Expected: `deedglass_<version>_<os>_<arch>.tar.gz: OK`. Then, for a signed release, with
+Expected: `deedglass_<version>_<os>_<arch>.tar.gz: OK`. Then, with
 [cosign](https://docs.sigstore.dev/cosign/system_config/installation/) 3.x:
 
 ```sh
@@ -84,5 +112,6 @@ Linux or macOS, or in Docker.
 
 ## What it doesn't do
 
-- Releases aren't signed while the repository is private, and macOS binaries aren't notarized.
-- There are no OS packages (deb, rpm) or a Windows installer yet.
+- There's no public container image yet (above), and macOS binaries aren't notarized.
+- There are no OS packages (deb, rpm), Homebrew tap or Windows installer yet; the install script
+  covers macOS and Linux only.

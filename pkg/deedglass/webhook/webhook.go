@@ -1,4 +1,4 @@
-// Package webhook signs and verifies Deedglass webhook deliveries (contract §8, S22).
+// Package webhook signs and verifies Deedglass webhook deliveries.
 //
 // Every delivery carries
 //

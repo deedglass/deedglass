@@ -25,7 +25,7 @@ $ npx -y deedglass scan --no-write
 Blast radius: …
   A means a small blast radius, not a safe agent.
 …
-Full report with fixes: deedglass.com/pro ($29 once).
+What your grade means: deedglass.com/score
 ```
 
 The scan reads your files and the MCP configs in your home directory, finds the MCP servers and agent frameworks you use, and works out what they can change. It sends nothing anywhere. Without `--no-write` it also writes `deedglass-scan.md` and `deedglass-scan.html`.
@@ -80,7 +80,8 @@ Each finding has an id. SARIF output and the HTML report link to these anchors.
 ## 5. Next
 
 - [Add the badge](/guides/badge/) to show your grade in your README.
-- The full report with fixes for every finding: `deedglass.com/pro` ($29 once).
+- What your grade means: `deedglass.com/score`.
+- `deedglass scan --full` renders the full report, with a fix for every finding, on your machine; it needs a licence ([Licensing](/reference/engineering/licensing/)).
 
 <Aside>
 `deedglass scan --ci --fail-under C` exits 1 below a C, for your own CI. `--format sarif` writes a SARIF file for code scanning.

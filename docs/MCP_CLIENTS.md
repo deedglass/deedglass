@@ -1,4 +1,4 @@
-# MCP clients: config for `deedglass mcp wrap` and the HTTP endpoints
+# MCP client configs: `mcp wrap` and the HTTP endpoints
 
 `deedglass mcp snippet` prints a ready config for each client below. It resolves `deedglass` and
 the server's command to absolute paths and sets `PATH` in `env`, because GUI apps on macOS start

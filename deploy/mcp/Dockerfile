@@ -17,5 +17,5 @@ USER 65532:65532
 ENTRYPOINT ["deedglass", "mcp", "serve"]
 LABEL org.opencontainers.image.title="Deedglass MCP server" \
       org.opencontainers.image.source="https://github.com/deedglass/deedglass" \
-      org.opencontainers.image.licenses="Apache-2.0" \
+      org.opencontainers.image.licenses="Apache-2.0 AND FSL-1.1-ALv2" \
       io.modelcontextprotocol.server.name="io.github.deedglass/deedglass"

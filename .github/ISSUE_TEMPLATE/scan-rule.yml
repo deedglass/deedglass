@@ -1,0 +1,44 @@
+name: Scan rule request
+description: Something deedglass scan should recognise or report, such as an MCP server, a package or a risky setting.
+labels: ["area: scan"]
+body:
+  - type: markdown
+    attributes:
+      value: "**Security problem? Don't file it here.** Report it privately: https://github.com/deedglass/deedglass/security/advisories/new ([SECURITY.md](https://github.com/deedglass/deedglass/blob/main/SECURITY.md)). A way past a rule, a check or a record counts, even a small one. Remove secrets (keys start with dg_, sk_, xox) and database URLs from anything you paste."
+  - type: markdown
+    attributes:
+      value: "The scan matches MCP servers and packages by name from its catalog (internal/scan/catalog.yaml) and reports findings with an id and a severity (docs/SCAN.md). It reads your files and, if you name one, a database catalog; it never starts a server."
+  - type: dropdown
+    id: kind
+    attributes:
+      label: What kind of rule
+      options:
+        - A catalog entry (an MCP server or package the scan doesn't recognise)
+        - A new finding (a setting or pattern the scan should report)
+        - A change to an existing finding (wrong severity, false positive, missed case)
+    validations: { required: true }
+  - type: input
+    id: subject
+    attributes: { label: "Server, package or setting", description: "With a link to its source or docs.", placeholder: "npm:@acme/mcp-server-mysql, an env var name, a role attribute …" }
+    validations: { required: true }
+  - type: textarea
+    id: risk
+    attributes: { label: "What an agent could change through it", description: "The tools or permissions involved, and which ones write, delete or move money." }
+    validations: { required: true }
+  - type: textarea
+    id: evidence
+    attributes: { label: "Where the scan would see it", description: "The file, config key or catalog query, with a redacted example.", render: text }
+    validations: { required: true }
+  - type: dropdown
+    id: severity
+    attributes: { label: Suggested severity, options: [High, Medium, Low, Info, Not sure] }
+    validations: { required: true }
+  - type: textarea
+    id: false-positives
+    attributes: { label: "When it would be wrong", description: "Setups where this rule would fire but nothing is at risk. Optional, and very useful." }
+  - type: checkboxes
+    id: help
+    attributes:
+      label: Helping
+      options:
+        - label: I could send a pull request with the catalog entry or the finding and its test.

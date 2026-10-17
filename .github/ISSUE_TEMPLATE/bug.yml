@@ -4,14 +4,14 @@ labels: ["bug"]
 body:
   - type: markdown
     attributes:
-      value: "Security issue? Don't file it here: follow SECURITY.md. Remove secrets (keys start with dg_, sk_, xox) from anything you paste."
+      value: "**Security problem? Don't file it here.** Report it privately: https://github.com/deedglass/deedglass/security/advisories/new ([SECURITY.md](https://github.com/deedglass/deedglass/blob/main/SECURITY.md)). Remove secrets (keys start with dg_, sk_, xox) from anything you paste."
   - type: input
     id: version
     attributes: { label: Version, description: "Output of deedglass version", placeholder: "deedglass 0.1.0 · commit …" }
     validations: { required: true }
   - type: dropdown
     id: install
-    attributes: { label: Install method, options: [npx, Docker image, Release binary, Homebrew, go install, Built from source] }
+    attributes: { label: Install method, options: [npx, Install script, Release binary, Docker image built locally, go install, Built from source] }
     validations: { required: true }
   - type: input
     id: os

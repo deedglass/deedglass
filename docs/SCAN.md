@@ -11,7 +11,7 @@ npx -y deedglass scan                            # the same CLI from npm
 ```
 
 It writes `deedglass-scan.md` and `deedglass-scan.html` (change with `--format`, or `--no-write` to
-print only) and ends with one line: `Full report with fixes: deedglass.com/pro ($29 once).`
+print only) and ends with one line: `What your grade means: deedglass.com/score`
 
 ## The score
 
@@ -191,6 +191,8 @@ anywhere you didn't name. It doesn't check databases other than Postgres, and it
 setup on the machine it runs on: it has no mode that takes someone else's repository. A good grade
 means a small blast radius, not a safe agent.
 
-## Full report with fixes
+## What the grade means, and the full report
 
-`deedglass.com/pro`, $29 once.
+`deedglass.com/score` explains the grade: what it measures, how points come off and what it doesn't
+measure. `deedglass scan --full` renders the full report, with a fix for every finding, on your machine; it needs a licence
+([LICENSING.md](LICENSING.md)).

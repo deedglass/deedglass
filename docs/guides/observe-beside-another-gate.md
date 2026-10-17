@@ -17,3 +17,6 @@ the record, with the undo SQL to put it back (free) or a one-step undo (Pro).
 What you don't get: Deedglass's own decisions. Observe mode doesn't allow or deny anything, doesn't
 see the tool calls, and can't tell your agent's writes from another program's in the same window.
 For decisions before a write, route the tools through the Gate.
+
+What an MCP gateway does and what Deedglass adds beside it, side by side:
+[MCP gateways and Deedglass](https://deedglass.com/compare/mcp-gateways).

@@ -1,7 +1,11 @@
 # CLAUDE.md: builder rules for the Deedglass product repo
 
 This is the Deedglass product repo: Go module `github.com/deedglass/deedglass`, binary `deedglass`.
-**Status: private, pre-release.** Deedglass is the execution and accountability layer for AI agents.
+**Status: public repository, early releases (see `CHANGELOG.md`).** Deedglass is the execution and
+accountability layer for AI agents.
+
+This file holds the maintainer's build rules and cites planning files that live outside this repo
+(`~/txv/ops/…`). Contributors and coding agents working from a clone: start with `AGENTS.md`.
 
 **Sources of truth** (read what a task needs; don't re-derive it):
 1. `~/txv/ops/plan/prompts-v7/00_CONTRACT.md`: names, packages, ids, schema, lifecycle, deed format,

@@ -584,7 +584,7 @@ func TestNoRetiredOffer(t *testing.T) {
 			return nil
 		})
 	}
-	if FooterLine != "Full report with fixes: deedglass.com/pro ($29 once)." {
+	if FooterLine != "What your grade means: deedglass.com/score" {
 		t.Fatal(FooterLine)
 	}
 }

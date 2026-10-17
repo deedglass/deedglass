@@ -1,15 +1,16 @@
 ---
-// Pagination, then one quiet line (S33 §4 step 3). The GitHub link joins after S37 makes the
-// repo public; until then the footer names no repository.
+// Pagination, then one quiet line (S33 §4 step 3). The licence names both parts: the Pro code in
+// ee/ ships in the same binary (P-086).
 import Pagination from 'virtual:starlight/components/Pagination';
 ---
 <footer class="dg-footer">
   <Pagination />
-  <p class="line"><span>© 2026 Deedglass</span><span aria-hidden="true"> · </span><span>Apache-2.0</span><span aria-hidden="true"> · </span><a href="/security/overview/">Security</a><span aria-hidden="true"> · </span><a href="/llms.txt">llms.txt</a></p>
+  <p class="line"><span>© 2026 Deedglass</span><span aria-hidden="true"> · </span><a href="/reference/engineering/licensing/">Apache-2.0, with <code>ee/</code> under FSL-1.1-ALv2</a><span aria-hidden="true"> · </span><a href="/security/overview/">Security</a><span aria-hidden="true"> · </span><a href="/llms.txt">llms.txt</a></p>
 </footer>
 <style>
   .dg-footer { display: flex; flex-direction: column; gap: 1.5rem; margin-top: 3rem; }
   .line { margin: 0; padding-top: 1.25rem; border-top: 1px solid var(--dg-hairline); font-size: 0.8125rem; color: var(--dg-text-2); }
   .line a { color: var(--dg-text-2); text-underline-offset: 0.2em; }
+  .line code { font-size: inherit; background: none; padding: 0; color: inherit; }
   .line a:hover { color: var(--sl-color-white); }
 </style>

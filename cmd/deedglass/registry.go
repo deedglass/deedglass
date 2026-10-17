@@ -325,7 +325,7 @@ var commands = []*Command{
 		Usage: "--client <claude-desktop|claude-code|cursor|windsurf|vscode> --connector <name> [--connector-type postgres] [--api-key-from-env] -- <command> [args…]  ·  --transport http --client <…> [--connector native|<name>]",
 		Run:   runMCPSnippet, RawArgs: true, Detail: mcpSnippetHelp},
 	{Path: p("mcp", "install-links"), Group: MCP, Summary: "Print every one-click install link", Usage: "[--json]",
-		Run: runMCPInstallLinks, Detail: "Cursor, VS Code, LM Studio and Goose deeplinks, the Claude Code command, the Claude Desktop .mcpb downloads and the\nWindsurf config. Every one installs npx -y deedglass mcp serve; no link holds a key."},
+		Run: runMCPInstallLinks, Detail: "Cursor, VS Code, LM Studio and Goose deeplinks, the Claude Code command, the Claude Desktop guide (the .mcpb\ndownloads once a release carries them) and the Windsurf config. Every one installs npx -y deedglass mcp serve; no\nlink holds a key."},
 
 	// Insights.
 	{Path: p("insights", "stats"), Group: Insights, Summary: "Show decisions, approvals and verdicts by rule",

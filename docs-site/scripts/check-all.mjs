@@ -27,6 +27,8 @@ const gates = [
   ['workflows', ...node('check-workflows.mjs', ...(offline ? ['--offline'] : []))],
   ['errors', ...node('check-errors.mjs')],
   ['links and dist', ...node('check-dist.mjs')],
+  ['seo', ...node('check-seo.mjs')],
+  ['llms', ...node('check-llms.mjs')],
   ['external links', ...node('check-external.mjs', ...(offline ? ['--offline'] : []))],
 ];
 let failed = 0;
@@ -46,4 +48,4 @@ if (failed) {
   console.error(`✕ ${failed} gate${failed > 1 ? 's' : ''} failed`);
   process.exit(1);
 }
-console.log(`✓ links · ✓ spelling · ✓ banned words · ✓ claims · ✓ errors · ✓ generated data fresh${offline ? ' (offline)' : ''}`);
+console.log(`✓ links · ✓ spelling · ✓ banned words · ✓ claims · ✓ errors · ✓ seo · ✓ llms · ✓ generated data fresh${offline ? ' (offline)' : ''}`);

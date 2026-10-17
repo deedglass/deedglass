@@ -69,7 +69,7 @@ func TestScanCLI(t *testing.T) {
 		t.Fatalf("%d %s", r.code, r.stderr)
 	}
 	sc := rep["score"].(map[string]any)
-	if rep["object"] != "scan_report" || rep["version"] != 1.0 || rep["footer"] != "Full report with fixes: deedglass.com/pro ($29 once)." ||
+	if rep["object"] != "scan_report" || rep["version"] != 1.0 || rep["footer"] != "What your grade means: deedglass.com/score" ||
 		sc["grade"] != "D" || sc["formula_version"] != 1.0 || sc["points"] != 56.0 {
 		t.Fatalf("%v", rep)
 	}
@@ -95,7 +95,7 @@ func TestScanCLI(t *testing.T) {
 		t.Fatalf("%s", r.stdout)
 	}
 	b, _ := os.ReadFile(filepath.Join(out, "deedglass-scan.md"))
-	if !strings.Contains(string(b), "Full report with fixes: deedglass.com/pro ($29 once).") || strings.Contains(string(b), "canary-pass-7f3") {
+	if !strings.Contains(string(b), "What your grade means: deedglass.com/score") || strings.Contains(string(b), "canary-pass-7f3") {
 		t.Fatal("the md report")
 	}
 }

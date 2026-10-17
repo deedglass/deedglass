@@ -20,9 +20,32 @@ this file by `scripts/release-notes.sh`.
   `GET /v1/clients` and Console › Clients list every org you look after, each read in its own org
   transaction; `deedglass report --all-clients --brand brand.yaml` writes every client's report with
   your name on it. See `docs/AGENCIES.md`.
+- **An install script** for macOS and Linux (`scripts/install.sh`): it downloads the release archive
+  for the machine and `checksums.txt`, checks the sha256, and copies `deedglass` into `~/.local/bin`
+  (`--version`, `--dir`). It runs nothing it downloads and never edits a shell profile.
+- `AGENTS.md` for coding agents working from a clone, `context7.json`, and the scan-rule and
+  policy-pack issue forms. Every issue form opens with the private vulnerability reporting link.
 
 ### Changed
 
+- The scan's last line is now `What your grade means: deedglass.com/score` (text, Markdown, HTML and
+  the `--json` `footer`), instead of an offer whose buy button is off.
+- Licence metadata: the release binary includes the Pro code in `ee/`, so the `@deedglass/cli-*`
+  npm packages, the Homebrew cask, the image labels and the Claude Desktop bundle
+  say `Apache-2.0 AND FSL-1.1-ALv2`, and the archives and npm packages carry `ee/LICENSE`. The core,
+  the SDKs and the CLI's source stay Apache-2.0.
+- One description of Deedglass (`docs/description.json`) in the README, `AGENTS.md`, `server.json`,
+  the npm package, the plugin listings and the docs' `llms.txt`; a test keeps them equal.
+- docs.deedglass.com: `llms-full.txt` and `llms-small.txt` fit 750 KB and 150 KB (the per-code and
+  generated reference pages stay on the site), a new `llms-postgres.txt`, `llms.txt` asks agents to
+  ask before each change, robots.txt names crawler groups, the sitemap leaves out the per-code pages
+  (now noindex) and dates every URL, and each page carries TechArticle JSON-LD and a title of at
+  most 60 characters.
+- The install docs no longer point at the ghcr.io image, which isn't public yet: npx, the install
+  script, the release archives, or `make web-build docker`.
+- `deedglass mcp install-links` and the generated install links point the Claude Desktop entries at
+  the docs page that connects it by hand until a release carries the `.mcpb` bundles (the download
+  URLs answered 404), and the bundle and the Goose link carry the one description.
 - More embedded text is kept gzip-compressed in the binary (the full scan report template, the
   security pack's questions and document, the sign-in and approval pages, the starter policies, the
   email templates, the play cast), and more cold paths skip inlining, so S52 fits the image budget.

@@ -12,7 +12,7 @@ meta:
     - audit
 about:
   title: Deedglass
-  description: Policies, approvals and sealed deeds for every tool call your agents make.
+  description: "Rules decide each AI agent tool call; Deedglass checks what really changed and seals a record."
   icon: https://deedglass.com/icon-512.png
 source:
   project: https://github.com/deedglass/deedglass

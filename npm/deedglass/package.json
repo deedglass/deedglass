@@ -1,9 +1,11 @@
 {
   "name": "deedglass",
   "version": "0.1.0",
-  "description": "The deedglass CLI: see what your AI agents actually did. Runs deedglass scan, init, doctor and verify.",
+  "description": "Rules decide each AI agent tool call; Deedglass checks what really changed and seals a record.",
+  "keywords": ["ai-agents", "agent-security", "mcp", "mcp-server", "mcp-gateway", "model-context-protocol", "postgres", "change-data-capture", "logical-decoding", "audit-log", "policy", "approvals", "undo", "claude-code", "cursor"],
   "license": "Apache-2.0",
   "homepage": "https://deedglass.com",
+  "bugs": { "url": "https://github.com/deedglass/deedglass/issues" },
   "repository": { "type": "git", "url": "git+https://github.com/deedglass/deedglass.git", "directory": "npm/deedglass" },
   "bin": { "deedglass": "bin/deedglass.js" },
   "files": ["bin/deedglass.js", "README.md", "LICENSE"],

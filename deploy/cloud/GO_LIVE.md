@@ -71,7 +71,8 @@ Follow [SEAL_KEYS.md](SEAL_KEYS.md) steps 1 to 3. Put the exact file name in `DE
 
 ## 7. The image
 
-From the release page, copy the image line with its digest into `.env`:
+The image on ghcr.io is private for now, so this step needs a registry login with read access to it;
+a public image is coming. From the release page, copy the image line with its digest into `.env`:
 
 ```sh
 DEEDGLASS_IMAGE=ghcr.io/deedglass/deedglass:0.1.0@sha256:<digest>

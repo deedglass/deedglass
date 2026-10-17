@@ -15,7 +15,7 @@ func TestEveryLinkDecodes(t *testing.T) {
 	want := Server()
 	n := 0
 	for _, l := range Links() {
-		if l.Kind == "download" || l.ID == "docker" {
+		if strings.HasPrefix(l.ID, "claude-desktop") || l.ID == "docker" {
 			continue
 		}
 		got, ok := Decode(l)
@@ -26,6 +26,42 @@ func TestEveryLinkDecodes(t *testing.T) {
 	}
 	if n != 9 {
 		t.Errorf("decoded %d links, want 9", n)
+	}
+}
+
+// TestClaudeDesktopLinks: no link points at a .mcpb file the release doesn't carry (it would answer
+// 404); until MCPBOnRelease the three Claude Desktop entries, and the README, point at the docs page.
+func TestClaudeDesktopLinks(t *testing.T) {
+	platform := map[string]string{"claude-desktop": "darwin-arm64", "claude-desktop-intel": "darwin-x64", "claude-desktop-windows": "win32-x64"}
+	n := 0
+	for _, l := range Links() {
+		if !MCPBOnRelease && (strings.Contains(l.URL, ".mcpb") || l.Kind == "download") {
+			t.Errorf("%s points at %s, but MCPBOnRelease is false (the release carries no bundles)", l.ID, l.URL)
+		}
+		p, ok := platform[l.ID]
+		if !ok {
+			continue
+		}
+		n++
+		want := Link{ID: l.ID, Client: l.Client, Kind: "web", URL: ClaudeDesktopGuide, Note: l.Note}
+		if MCPBOnRelease {
+			want.Kind, want.URL = "download", BundleURL(p)
+		}
+		if l != want {
+			t.Errorf("%s is %+v, want %+v", l.ID, l, want)
+		}
+	}
+	if n != 3 {
+		t.Errorf("%d Claude Desktop entries, want 3 (deedglass.com/install renders all three)", n)
+	}
+	if !strings.HasSuffix(BundleURL("win32-x64"), "/v"+Version+"/deedglass-"+Version+"-win32-x64.mcpb") {
+		t.Errorf("BundleURL is %s", BundleURL("win32-x64"))
+	}
+	if _, err := os.Stat(filepath.Join("..", "..", "docs-site", "src", "content", "docs", "get-started", "claude-desktop.mdx")); err != nil {
+		t.Errorf("ClaudeDesktopGuide's page is missing: %v", err)
+	}
+	if !MCPBOnRelease && (!strings.Contains(ReadmeBlock(), "[Claude Desktop]("+ClaudeDesktopGuide+")") || strings.Contains(ReadmeBlock(), "#claude-desktop")) {
+		t.Error("README's Claude Desktop link must point at the docs page until a release carries the bundles")
 	}
 }
 

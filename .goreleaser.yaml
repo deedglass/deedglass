@@ -68,6 +68,7 @@ archives:
     name_template: "deedglass_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     files:
       - LICENSE
+      - ee/LICENSE # the binary includes ee/ (FSL-1.1-ALv2); docs/description_test.go keeps it listed
       - README.md
       - CHANGELOG.md
       - completions/*
@@ -131,7 +132,7 @@ homebrew_casks:
     skip_upload: '{{ if .Env.HOMEBREW_TAP_TOKEN }}false{{ else }}true{{ end }}'
     homepage: https://deedglass.com
     description: The execution and accountability layer for AI agents
-    license: Apache-2.0
+    license: Apache-2.0 AND FSL-1.1-ALv2
     completions:
       bash: completions/deedglass.bash
       zsh: completions/deedglass.zsh

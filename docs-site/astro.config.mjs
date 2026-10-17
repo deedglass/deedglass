@@ -5,7 +5,21 @@ import starlightLinksValidator from 'starlight-links-validator';
 import starlightOpenAPI from 'starlight-openapi';
 import starlightLlmsTxt from 'starlight-llms-txt';
 import { readFileSync } from 'node:fs';
+import { join, relative } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { sidebar } from './sidebar.mjs';
+import { PAGE_MARK, POSTGRES_SET, description, inSmall, llmsDetails, walkFiles } from './scripts/seo.mjs';
+
+// The one description (docs/description.json; docs/description_test.go checks that this file reads it).
+const desc = description();
+
+// llms-small.txt gets the pages inSmall() picks (scripts/seo.mjs); the plugin takes the rest as page ids to
+// exclude. sync-docs has written the imported and generated pages by the time this runs.
+const contentDir = fileURLToPath(new URL('./src/content/docs/', import.meta.url));
+const pageIds = walkFiles(contentDir)
+  .filter((f) => /\.mdx?$/.test(f))
+  .map((f) => relative(contentDir, f).replace(/\\/g, '/').replace(/\.mdx?$/, '').replace(/(^|\/)index$/, ''));
+const notSmall = pageIds.filter((id) => !inSmall(id)).flatMap((id) => [id, `${id}/index`]);
 
 const inkTheme = JSON.parse(readFileSync(new URL('./src/styles/deedglass-ink.json', import.meta.url), 'utf8'));
 
@@ -22,8 +36,7 @@ export default defineConfig({
   integrations: [
     starlight({
       title: 'Deedglass Docs',
-      description:
-        'Deedglass sits between your AI agents and the tools they use. It decides what each agent may do, runs it under control, checks the result against the system of record, and seals a deed.',
+      description: desc.tagline,
       favicon: '/favicon.svg',
       head: [
         { tag: 'link', attrs: { rel: 'icon', href: '/favicon.ico', sizes: 'any' } },
@@ -84,13 +97,16 @@ export default defineConfig({
         starlightOpenAPI([
           { base: 'reference/api', schema: './src/data/openapi.docs.json', sidebar: { label: 'Endpoints', collapsed: true } },
         ]),
+        // DOC-01, DOC-02, DOC-06: postbuild.mjs drops the error pages, the API reference and the engineering
+        // notes from llms-full.txt (the plugin's exclude covers llms-small.txt only), copies the Postgres
+        // set to /llms-postgres.txt, and check-llms.mjs holds the budgets and the wording.
         starlightLlmsTxt({
           projectName: 'Deedglass',
-          description:
-            'Deedglass is the execution and accountability layer for AI agents. It sits between your agents and the tools they use: it decides what each agent may do, runs the action under control, checks the result against the system of record (L0 Reported, L1 Confirmed, L2 Witnessed by Postgres), and seals a signed deed anyone can verify offline. It is self-hosted, runs anywhere Postgres runs, and works with Claude, OpenAI, Gemini, Cursor and any MCP client.',
-          details:
-            '- Start with the Quickstart, then "What VERIFIED means" for the exact meaning of a verdict.\n- Every API error has its own page under /errors/<code>/.\n- Every feature page ends with "What it doesn\'t do".',
-          exclude: ['_kit', 'reference/engineering/**'],
+          description: desc.summary,
+          details: llmsDetails(desc.licence),
+          exclude: ['_kit', ...notSmall],
+          customSets: [POSTGRES_SET],
+          pageSeparator: PAGE_MARK,
           promote: ['quickstart', 'concepts/what-verified-means', 'concepts/how-it-works'],
         }),
       ],

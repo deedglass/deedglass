@@ -37,7 +37,11 @@ func ReadmeBlock() string {
 	b.WriteString("[![Add to Cursor](https://cursor.com/deeplink/mcp-install-dark.svg)](" + by["cursor-web"].URL + ")\n")
 	b.WriteString("[Install in VS Code](" + by["vs-code-web"].URL + ") · ")
 	b.WriteString("[LM Studio](https://deedglass.com/install#lm-studio) · [Goose](https://deedglass.com/install#goose) · ")
-	b.WriteString("[Claude Desktop](https://deedglass.com/install#claude-desktop) · [Every client](https://deedglass.com/install)\n\n")
+	claudeDesktop := "https://deedglass.com/install#claude-desktop"
+	if !MCPBOnRelease {
+		claudeDesktop = ClaudeDesktopGuide // deedglass.com/install shows no Claude Desktop row until a release carries the bundles
+	}
+	b.WriteString("[Claude Desktop](" + claudeDesktop + ") · [Every client](https://deedglass.com/install)\n\n")
 	b.WriteString("```sh\n" + by["claude-code"].Command + "\n```\n\n")
 	b.WriteString("No link holds a key. Run `npx deedglass init` first; each client asks Deedglass for the key it wrote.\n")
 	b.WriteString(ReadmeEnd)

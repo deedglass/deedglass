@@ -1,6 +1,6 @@
 {
   "name": "deedglass",
-  "description": "See what your agents actually did. Policies, approvals and sealed deeds for every tool call.",
+  "description": "Rules decide each AI agent tool call; Deedglass checks what really changed and seals a record.",
   "version": "0.1.0",
   "author": { "name": "Deedglass", "url": "https://deedglass.com" },
   "homepage": "https://deedglass.com",

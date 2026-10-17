@@ -213,3 +213,96 @@ test('disclosure page (S34): it carries SECURITY.md\'s commitments word for word
     assert.ok(page.includes(s), `the disclosure page lacks "${s}" (keep it equal to SECURITY.md)`);
   }
 });
+
+test('sitemap (DOC-05): thin per-code pages and /_kit/ leave, each kept URL gets its lastmod', async () => {
+  const { sitemap } = await import('../postbuild.mjs');
+  const S = 'https://docs.deedglass.com';
+  const xml = `<urlset><url><loc>${S}/</loc></url><url><loc>${S}/errors/</loc><lastmod>x</lastmod></url><url><loc>${S}/errors/budget_exceeded/</loc></url>` +
+    `<url><loc>${S}/reference/api/operations/getorg/</loc></url><url><loc>${S}/policies/errors/cel_cost/</loc></url><url><loc>${S}/_kit/</loc></url><url><loc>${S}/faq/</loc></url></urlset>`;
+  const out = sitemap(xml, { '/': '2026-10-11', '/errors/': '2026-10-12' });
+  assert.equal(out, `<urlset><url><loc>${S}/</loc><lastmod>2026-10-11</lastmod></url><url><loc>${S}/errors/</loc><lastmod>2026-10-12</lastmod></url><url><loc>${S}/faq/</loc></url></urlset>`);
+  const { sitemapProblems } = await import('../check-seo.mjs');
+  assert.deepEqual(sitemapProblems(out).problems, ['sitemap: only 2 of 3 URLs have a lastmod']);
+  assert.match(sitemapProblems(xml).problems.join('\n'), /sitemap lists \/errors\/budget_exceeded\//);
+  // Every URL on one date: the dates came from one commit (a shallow clone), not from each page's source.
+  const urls = (d) => `<urlset>${Array.from({ length: 25 }, (_, i) => `<url><loc>${S}/p${i}/</loc><lastmod>${d(i)}</lastmod></url>`).join('')}</urlset>`;
+  assert.match(sitemapProblems(urls(() => '2026-10-17')).problems.join('\n'), /all 25 lastmod dates are 2026-10-17/);
+  assert.deepEqual(sitemapProblems(urls((i) => (i ? '2026-10-17' : '2026-10-01'))).problems, []);
+});
+
+test('lastmod (DOC-05): a shallow clone gives no dates rather than one commit\'s date for every page', async () => {
+  const { gitDates, isShallow } = await import('../seo.mjs');
+  const dir = mkdtempSync(join(tmpdir(), 'dg-shallow-'));
+  const who = { GIT_AUTHOR_NAME: 't', GIT_AUTHOR_EMAIL: 't@t', GIT_COMMITTER_NAME: 't', GIT_COMMITTER_EMAIL: 't@t' };
+  const git = (cwd, args, at) => execFileSync('git', args, { cwd, encoding: 'utf8', env: { ...process.env, ...who, ...(at && { GIT_AUTHOR_DATE: at, GIT_COMMITTER_DATE: at }) } });
+  try {
+    const full = join(dir, 'full');
+    mkdirSync(join(full, 'docs'), { recursive: true });
+    git(full, ['init', '-q', '-b', 'main']);
+    for (const [f, at] of [['a.md', '2026-01-02T00:00:00Z'], ['b.md', '2026-03-04T00:00:00Z']]) {
+      writeFileSync(join(full, 'docs', f), `${f}\n`);
+      git(full, ['add', '.']);
+      git(full, ['-c', 'commit.gpgsign=false', 'commit', '-q', '-m', f], at);
+    }
+    assert.equal(isShallow(full), false);
+    assert.deepEqual(Object.fromEntries(gitDates(['docs'], { cwd: full })), { 'docs/b.md': '2026-03-04', 'docs/a.md': '2026-01-02' });
+    const shallow = join(dir, 'shallow');
+    git(dir, ['clone', '-q', '--depth', '1', `file://${full}`, shallow]);
+    assert.equal(isShallow(shallow), true);
+    assert.throws(() => gitDates(['docs'], { cwd: shallow, env: {} }), /this checkout is shallow.*fetch-depth: 0/);
+    assert.equal(gitDates(['docs'], { cwd: shallow, env: { DOCS_UNDATED: '1' } }).size, 0);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('seo pages (DOC-05): a thin page needs noindex; an indexed page needs a short title and one TechArticle', async () => {
+  const { pageProblems } = await import('../check-seo.mjs');
+  const { jsonLd, ldScript, pageTitle } = await import('../seo.mjs');
+  assert.equal(pageTitle('Quickstart'), 'Quickstart | Deedglass Docs');
+  assert.equal(pageTitle('A title that is long enough to push the suffix past sixty'), 'A title that is long enough to push the suffix past sixty');
+  assert.equal(pageTitle('Deedglass Docs'), 'Deedglass Docs');
+  const ld = (o) => `<script type="application/ld+json">${ldScript(o)}</script>`;
+  const good = `<title>Quickstart | Deedglass Docs</title>${ld(jsonLd({ path: '/quickstart/', title: 'Quickstart', description: 'd' }))}`;
+  assert.deepEqual(pageProblems('/quickstart/', good), []);
+  assert.deepEqual(pageProblems('/errors/x/', '<title>x</title>'), ['/errors/x/: a thin page without noindex']);
+  assert.match(pageProblems('/faq/', '<title>FAQ</title><meta name="robots" content="noindex, follow">').join('\n'), /noindex on a page that should be indexed/);
+  assert.match(pageProblems('/faq/', `<title>${'x'.repeat(61)}</title>`).join('\n'), /61 characters/);
+  assert.match(pageProblems('/', good).join('\n'), /not WebSite/);
+  assert.ok(!ldScript({ headline: '</script><script>alert(1)</script>' }).includes('<'), 'JSON-LD escapes <');
+});
+
+test('robots.txt (DOC-03): named groups, each repeating Disallow: /_kit/, plus * and the sitemap', async () => {
+  const { robotsProblems } = await import('../check-seo.mjs');
+  assert.deepEqual(robotsProblems(readFileSync(join(site, 'public/robots.txt'), 'utf8')), []);
+  const bad = 'User-agent: Googlebot\nAllow: /\n\nUser-agent: *\nAllow: /\nDisallow: /_kit/\n';
+  const p = robotsProblems(bad);
+  assert.ok(p.includes("the group for Googlebot doesn't repeat Disallow: /_kit/"), p.join('\n'));
+  assert.ok(p.includes('no group names GPTBot') && p.includes('no Sitemap line'), p.join('\n'));
+});
+
+test('llms (DOC-02): a page outside the file\'s set is dropped, an unknown page throws, and the gate sees leftovers', async () => {
+  const { filterLlms } = await import('../postbuild.mjs');
+  const { PAGE_MARK, inFull, inSmall } = await import('../seo.mjs');
+  const heads = new Map([
+    ['# Quickstart\n\n> Five minutes.', ['quickstart']],
+    ['# budget_exceeded\n\n> A budget ran out.', ['errors/budget_exceeded']],
+    ['# Engineering notes\n\n> The notes.', ['reference/engineering']],
+  ]);
+  const text = ['<SYSTEM>x</SYSTEM>', '# Quickstart\n\n> Five minutes.\n\nbody', '# budget_exceeded\n\n> A budget ran out.\n\nbody', '# Engineering notes\n\n> The notes.\n\nbody'].join(PAGE_MARK);
+  const r = filterLlms(text, heads, inFull);
+  assert.equal(r.text, '<SYSTEM>x</SYSTEM>\n\n# Quickstart\n\n> Five minutes.\n\nbody');
+  assert.deepEqual([r.kept, r.dropped], [1, 2]);
+  assert.throws(() => filterLlms(text + PAGE_MARK + '# Nobody\n\nbody', heads, inFull), /doesn't start with any page/);
+  const { setProblems, indexProblems, ASK } = await import('../check-llms.mjs');
+  assert.deepEqual(setProblems('llms-full.txt', r.text, heads, inFull), []);
+  assert.match(setProblems('llms-full.txt', text.replaceAll(PAGE_MARK, '\n\n'), heads, inFull).join('\n'), /errors\/budget_exceeded, which is outside its set/);
+  assert.equal(inSmall('reference/connectors/postgres'), false);
+  assert.equal(inSmall('quickstart'), true);
+  const desc = { summary: 'Deedglass sits between AI agents and the systems they change.' };
+  const S = 'https://docs.deedglass.com';
+  const ok = `# Deedglass\n\n> ${desc.summary}\n\n- ${ASK} llms-install.md skills/safe-postgres-agents/SKILL.md\n\n${S}/llms-small.txt ${S}/llms-full.txt ${S}/llms-postgres.txt\n`;
+  assert.deepEqual(indexProblems(ok, desc), []);
+  const p = indexProblems(ok.replace(ASK, 'Run deedglass init --yes.') + 'L0 Reported', desc);
+  assert.ok(p.some((x) => /missing "If the user asked you/.test(x)) && p.includes('llms.txt: mentions --yes') && p.includes('llms.txt: uses the retired level names'), p.join('\n'));
+});

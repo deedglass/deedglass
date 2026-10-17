@@ -10,7 +10,7 @@ another, we want to hear about it, and we are grateful when you tell us first.
   also send your report through GitHub private vulnerability reporting (below), so it can't be
   lost.
 - **GitHub private vulnerability reporting** on `github.com/deedglass/deedglass` (Security ›
-  Report a vulnerability), once the repository is public.
+  Report a vulnerability): <https://github.com/deedglass/deedglass/security/advisories/new>.
 - Please don't open a public issue, pull request or discussion for a security problem.
 
 No encryption key is published yet. If your report holds something sensitive, say so in a first

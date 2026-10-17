@@ -10,7 +10,7 @@ import { Aside } from '@astrojs/starlight/components';
 By the end you'll have one Deedglass server in prod mode, behind TLS, with its own Postgres.
 
 <Aside type="tip" title="The cloud kit">
-The repository's `deploy/cloud/` is this guide as files: Caddy with automatic TLS, the image pinned by digest, Postgres reachable only over a Unix socket, encrypted nightly backups with a tested restore, health heartbeats and runbooks. Its `GO_LIVE.md` is the step-by-step list, one command per step.
+The repository's `deploy/cloud/` is this guide as files: Caddy with automatic TLS, the image pinned by digest, Postgres reachable only over a Unix socket, encrypted nightly backups with a tested restore, health heartbeats and runbooks. Its `GO_LIVE.md` is the step-by-step list, one command per step. The kit's scripts take only the image on ghcr.io, pinned by digest, and that image is private for now, so the kit needs a registry login with read access to it until the public image ships. Without one, follow this guide with the image you build in step 1.
 </Aside>
 
 **Before you start**
@@ -20,7 +20,7 @@ The repository's `deploy/cloud/` is this guide as files: Caddy with automatic TL
 
 ## 1. Build the image
 
-From the first release, use `ghcr.io/deedglass/deedglass:<version>@sha256:<digest>` ([Install Deedglass](/get-started/install-deedglass/)). Before that, build it from a checkout: `make docker`, or `docker build -t deedglass:0.1.0 .`. It is one static binary on a distroless base, running as a non-root user, under 40 MB.
+There's no public image yet (a public one is coming), so build it from a checkout with the Console embedded: `make web-build docker`, then tag the result for your registry, for example `docker tag deedglass:dev deedglass:0.1.0` ([Install Deedglass](/get-started/install-deedglass/#docker)). A prod server refuses an image built without `make web-build`. It is one static binary on a distroless base, running as a non-root user, under 40 MB.
 
 ## 2. Create the roles
 

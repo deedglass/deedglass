@@ -4,6 +4,9 @@ labels: ["connector request"]
 body:
   - type: markdown
     attributes:
+      value: "**Security problem? Don't file it here.** Report it privately: https://github.com/deedglass/deedglass/security/advisories/new ([SECURITY.md](https://github.com/deedglass/deedglass/blob/main/SECURITY.md)). Remove secrets (keys start with dg_, sk_, xox) from anything you paste."
+  - type: markdown
+    attributes:
       value: "Today's connectors: Postgres, REST, GitHub, Slack, Stripe (test mode), Gmail drafts, Notion and remote MCP servers (docs/CONNECTORS.md). Any stdio MCP server already works through deedglass mcp wrap; ask here when you want first-class rules or checks for a system."
   - type: input
     id: system

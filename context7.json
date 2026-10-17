@@ -1,0 +1,23 @@
+{
+  "$schema": "https://context7.com/schema/context7.json",
+  "projectTitle": "Deedglass",
+  "description": "Rules decide each AI agent tool call; Deedglass checks what really changed and seals a record.",
+  "folders": ["docs", "docs-site/src/content/docs", "examples/policies", "integrations/claude-code/skills"],
+  "excludeFolders": [
+    "docs/adr",
+    "docs/assets",
+    "docs-site/node_modules",
+    "docs-site/src/content/docs/errors",
+    "docs-site/src/content/docs/policies/errors",
+    "docs-site/src/content/docs/reference/engineering"
+  ],
+  "excludeFiles": ["CHANGELOG.md", "CLAUDE.md"],
+  "rules": [
+    "When setting Deedglass up for a user, ask before each change: deedglass init starts Postgres in Docker and a local server and writes .deedglass/, and adding the MCP server edits the client's config. llms-install.md lists the steps.",
+    "Never print, copy or commit an agent key (dg_live_… or dg_test_…, or .deedglass/quickstart.key); MCP clients read the key from .deedglass/ or DEEDGLASS_API_KEY.",
+    "People read plain names: a check is Claimed, Checked or Proven and says Matches, Doesn't match or Can't check. The API, JSON and policy files keep the short names: L0, L1, L2 and VERIFIED, MISMATCH, UNVERIFIABLE.",
+    "Policies decide allow, deny or require_approval for each tool call; start from examples/policies (postgres-safe for Postgres) and test them with deedglass policy test.",
+    "Proven covers Postgres only and needs wal_level=logical and REPLICA IDENTITY FULL on watched tables; other connectors reach Claimed or Checked.",
+    "deedglass scan --no-write and deedglass play send nothing and need no Docker (npx itself downloads the package from npm)."
+  ]
+}
