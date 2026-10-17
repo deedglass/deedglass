@@ -7,12 +7,17 @@
 //      colours tokens with style attributes).
 //   3. dist/_redirects: /errors → /errors/, the docs.deedglass.com paths the product already prints
 //      (doctor, scan, connectors, undo, …), and the old docs/*.md names.
-//   4. Strips the sitemap's lastmod, so two builds are byte-identical.
+//   4. The sitemap (DOC-05): the thin per-code pages and /_kit/ left out, and each URL's lastmod is its
+//      source's last commit date (src/data/.page-dates.json), so two builds of one commit are byte-identical.
+//   5. The llms files (DOC-02): pages outside each file's set dropped (scripts/seo.mjs), the page marks
+//      removed, the Postgres set copied to /llms-postgres.txt, and llms.txt's links and notes made true.
 import { createHash } from 'node:crypto';
-import { readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import yaml from 'js-yaml';
 import { IMPORTS, MOVED } from './sync-docs.mjs';
+import { PAGE_MARK, SITE, fullNote, inFull, inSmall, notInSitemap, walkFiles } from './seo.mjs';
 
 const site = join(fileURLToPath(new URL('.', import.meta.url)), '..');
 const dist = join(site, 'dist');
@@ -121,7 +126,81 @@ function preloads() {
     .join('');
 }
 
+/** The sitemap with the thin pages dropped and a lastmod on every URL that has a date. */
+export function sitemap(xml, dates) {
+  return xml.replace(/<lastmod>[^<]*<\/lastmod>/g, '').replace(/<url>([\s\S]*?)<\/url>/g, (all, inner) => {
+    const loc = /<loc>([^<]*)<\/loc>/.exec(inner)?.[1];
+    if (!loc) return all;
+    const path = loc.startsWith(SITE) ? loc.slice(SITE.length) || '/' : loc;
+    if (notInSitemap(path)) return '';
+    const d = dates[path];
+    return d ? `<url><loc>${loc}</loc><lastmod>${d}</lastmod></url>` : `<url><loc>${loc}</loc></url>`;
+  });
+}
+
+/** "# title\n\n> description" (how the plugin starts each page) → the page ids with that head. */
+export function pageHeads(contentDir) {
+  const heads = new Map();
+  for (const f of walkFiles(contentDir)) {
+    if (!/\.mdx?$/.test(f)) continue;
+    const text = readFileSync(f, 'utf8');
+    const m = /^---\n([\s\S]*?)\n---\n/.exec(text);
+    const fm = (m && yaml.load(m[1])) || {};
+    if (fm.draft) continue;
+    const id = relative(contentDir, f).replace(/\\/g, '/').replace(/\.mdx?$/, '').replace(/(^|\/)index$/, '');
+    const d = fm.hero?.tagline || fm.description;
+    const head = `# ${fm.hero?.title || fm.title}` + (d ? `\n\n> ${d}` : '');
+    heads.set(head, [...(heads.get(head) ?? []), id]);
+  }
+  return heads;
+}
+
+/** One llms file with the pages keep() refuses dropped and the page marks removed. Throws on a page it
+ *  can't name, or a head shared by pages keep() treats differently, so nothing slips through unseen. */
+export function filterLlms(text, heads, keep) {
+  const [system, ...pages] = text.split(PAGE_MARK);
+  const out = [system];
+  let dropped = 0;
+  for (const p of pages) {
+    const head = [...heads.keys()].filter((h) => p === h || p.startsWith(h + '\n')).sort((a, b) => b.length - a.length)[0];
+    if (!head) throw new Error(`an llms page doesn't start with any page's title and description: ${JSON.stringify(p.slice(0, 80))}`);
+    const ids = heads.get(head);
+    const verdicts = new Set(ids.map(keep));
+    if (verdicts.size > 1) throw new Error(`pages ${ids.join(', ')} share a title and description but not an llms set`);
+    if (verdicts.has(true)) out.push(p);
+    else dropped++;
+  }
+  return { text: out.join('\n\n'), kept: out.length - 1, dropped };
+}
+
+const LLMS_NOTE_OLD = '- The complete documentation includes all content from the official documentation';
+
+function llms() {
+  const heads = pageHeads(join(site, 'src', 'content', 'docs'));
+  const files = [
+    ['llms-full.txt', inFull],
+    ['llms-small.txt', inSmall],
+    ['_llms-txt/postgres.txt', () => true],
+  ];
+  const report = [];
+  for (const [name, keep] of files) {
+    const p = join(dist, name);
+    if (!existsSync(p)) throw new Error(`dist/${name} is missing`);
+    const r = filterLlms(readFileSync(p, 'utf8'), heads, keep);
+    writeFileSync(p, r.text.endsWith('\n') ? r.text : r.text + '\n');
+    report.push(`${name} ${r.kept} pages`);
+  }
+  writeFileSync(join(dist, 'llms-postgres.txt'), readFileSync(join(dist, '_llms-txt/postgres.txt')));
+  rmSync(join(dist, '_llms-txt'), { recursive: true });
+  let index = readFileSync(join(dist, 'llms.txt'), 'utf8');
+  if (!index.includes(LLMS_NOTE_OLD) || !index.includes(`${SITE}/_llms-txt/postgres.txt`)) throw new Error("llms.txt changed shape: update postbuild's llms()");
+  index = index.replace(LLMS_NOTE_OLD, fullNote()).replace(`${SITE}/_llms-txt/postgres.txt`, `${SITE}/llms-postgres.txt`);
+  writeFileSync(join(dist, 'llms.txt'), index);
+  return report.join(' · ');
+}
+
 function main() {
+  const dates = existsSync(join(site, 'src', 'data', '.page-dates.json')) ? JSON.parse(readFileSync(join(site, 'src', 'data', '.page-dates.json'), 'utf8')) : {};
   const hashes = new Set();
   const preload = preloads();
   let copies = 0;
@@ -143,14 +222,15 @@ function main() {
     }
     if (f.endsWith('.xml') && f.includes('sitemap')) {
       const s = readFileSync(f, 'utf8');
-      const t = s.replace(/<lastmod>[^<]*<\/lastmod>/g, '').replace(/<url><loc>[^<]*\/_kit\/<\/loc><\/url>/g, '');
+      const t = sitemap(s, dates);
       if (t !== s) writeFileSync(f, t);
     }
   }
   const sorted = [...hashes].sort();
   writeFileSync(join(dist, '_headers'), headersFile(sorted));
   writeFileSync(join(dist, '_redirects'), redirectsFile());
-  console.log(`✓ postbuild · ${copies} copy buttons copy commands only · ${sorted.length} inline script hashes in the CSP · ${REDIRECTS.length} redirects + old doc names`);
+  const l = llms();
+  console.log(`✓ postbuild · ${copies} copy buttons copy commands only · ${sorted.length} inline script hashes in the CSP · ${REDIRECTS.length} redirects + old doc names · ${l}`);
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) main();

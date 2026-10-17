@@ -1,7 +1,15 @@
-// Per-section Open Graph images (public/og/*.png, made by scripts/og.mjs; brand §13.7).
+// Per-page head entries:
+//   - Open Graph images per section (public/og/*.png, made by scripts/og.mjs; brand §13.7).
+//   - DOC-05 (scripts/seo.mjs): noindex on the thin per-code pages, a <title> of at most 60
+//     characters, and TechArticle JSON-LD (WebSite on the home page) with the source's last commit
+//     date (src/data/.page-dates.json, written by sync-docs).
 import { defineRouteMiddleware } from '@astrojs/starlight/route-data';
+import { isThin, jsonLd, ldScript, pageTitle } from '../scripts/seo.mjs';
+import dates from './data/.page-dates.json';
+import desc from '../../docs/description.json';
 
 const sections = new Set(['get-started', 'concepts', 'guides', 'reference', 'errors', 'security']);
+const pageDates: Record<string, string> = dates;
 
 export const onRequest = defineRouteMiddleware((context) => {
   const route = context.locals.starlightRoute;
@@ -15,4 +23,15 @@ export const onRequest = defineRouteMiddleware((context) => {
     { tag: 'meta', attrs: { name: 'twitter:card', content: 'summary_large_image' } },
     { tag: 'meta', attrs: { name: 'twitter:image', content: url } },
   );
+
+  const path = context.url.pathname.endsWith('/') ? context.url.pathname : context.url.pathname + '/';
+  const data = route.entry.data;
+  const title = route.head.find((h) => h.tag === 'title');
+  if (title) title.content = pageTitle(data.title);
+  if (isThin(path)) {
+    route.head.push({ tag: 'meta', attrs: { name: 'robots', content: 'noindex, follow' } });
+    return;
+  }
+  const ld = jsonLd({ path, title: data.hero?.title || data.title, description: data.description ?? '', dateModified: pageDates[path], tagline: desc.tagline });
+  route.head.push({ tag: 'script', attrs: { type: 'application/ld+json' }, content: ldScript(ld) });
 });

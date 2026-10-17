@@ -213,3 +213,65 @@ test('disclosure page (S34): it carries SECURITY.md\'s commitments word for word
     assert.ok(page.includes(s), `the disclosure page lacks "${s}" (keep it equal to SECURITY.md)`);
   }
 });
+
+test('sitemap (DOC-05): thin per-code pages and /_kit/ leave, each kept URL gets its lastmod', async () => {
+  const { sitemap } = await import('../postbuild.mjs');
+  const S = 'https://docs.deedglass.com';
+  const xml = `<urlset><url><loc>${S}/</loc></url><url><loc>${S}/errors/</loc><lastmod>x</lastmod></url><url><loc>${S}/errors/budget_exceeded/</loc></url>` +
+    `<url><loc>${S}/reference/api/operations/getorg/</loc></url><url><loc>${S}/policies/errors/cel_cost/</loc></url><url><loc>${S}/_kit/</loc></url><url><loc>${S}/faq/</loc></url></urlset>`;
+  const out = sitemap(xml, { '/': '2026-10-11', '/errors/': '2026-10-12' });
+  assert.equal(out, `<urlset><url><loc>${S}/</loc><lastmod>2026-10-11</lastmod></url><url><loc>${S}/errors/</loc><lastmod>2026-10-12</lastmod></url><url><loc>${S}/faq/</loc></url></urlset>`);
+  const { sitemapProblems } = await import('../check-seo.mjs');
+  assert.deepEqual(sitemapProblems(out).problems, ['sitemap: only 2 of 3 URLs have a lastmod']);
+  assert.match(sitemapProblems(xml).problems.join('\n'), /sitemap lists \/errors\/budget_exceeded\//);
+});
+
+test('seo pages (DOC-05): a thin page needs noindex; an indexed page needs a short title and one TechArticle', async () => {
+  const { pageProblems } = await import('../check-seo.mjs');
+  const { jsonLd, ldScript, pageTitle } = await import('../seo.mjs');
+  assert.equal(pageTitle('Quickstart'), 'Quickstart | Deedglass Docs');
+  assert.equal(pageTitle('A title that is long enough to push the suffix past sixty'), 'A title that is long enough to push the suffix past sixty');
+  const ld = (o) => `<script type="application/ld+json">${ldScript(o)}</script>`;
+  const good = `<title>Quickstart | Deedglass Docs</title>${ld(jsonLd({ path: '/quickstart/', title: 'Quickstart', description: 'd' }))}`;
+  assert.deepEqual(pageProblems('/quickstart/', good), []);
+  assert.deepEqual(pageProblems('/errors/x/', '<title>x</title>'), ['/errors/x/: a thin page without noindex']);
+  assert.match(pageProblems('/faq/', '<title>FAQ</title><meta name="robots" content="noindex, follow">').join('\n'), /noindex on a page that should be indexed/);
+  assert.match(pageProblems('/faq/', `<title>${'x'.repeat(61)}</title>`).join('\n'), /61 characters/);
+  assert.match(pageProblems('/', good).join('\n'), /not WebSite/);
+  assert.ok(!ldScript({ headline: '</script><script>alert(1)</script>' }).includes('<'), 'JSON-LD escapes <');
+});
+
+test('robots.txt (DOC-03): named groups, each repeating Disallow: /_kit/, plus * and the sitemap', async () => {
+  const { robotsProblems } = await import('../check-seo.mjs');
+  assert.deepEqual(robotsProblems(readFileSync(join(site, 'public/robots.txt'), 'utf8')), []);
+  const bad = 'User-agent: Googlebot\nAllow: /\n\nUser-agent: *\nAllow: /\nDisallow: /_kit/\n';
+  const p = robotsProblems(bad);
+  assert.ok(p.includes("the group for Googlebot doesn't repeat Disallow: /_kit/"), p.join('\n'));
+  assert.ok(p.includes('no group names GPTBot') && p.includes('no Sitemap line'), p.join('\n'));
+});
+
+test('llms (DOC-02): a page outside the file\'s set is dropped, an unknown page throws, and the gate sees leftovers', async () => {
+  const { filterLlms } = await import('../postbuild.mjs');
+  const { PAGE_MARK, inFull, inSmall } = await import('../seo.mjs');
+  const heads = new Map([
+    ['# Quickstart\n\n> Five minutes.', ['quickstart']],
+    ['# budget_exceeded\n\n> A budget ran out.', ['errors/budget_exceeded']],
+    ['# Engineering notes\n\n> The notes.', ['reference/engineering']],
+  ]);
+  const text = ['<SYSTEM>x</SYSTEM>', '# Quickstart\n\n> Five minutes.\n\nbody', '# budget_exceeded\n\n> A budget ran out.\n\nbody', '# Engineering notes\n\n> The notes.\n\nbody'].join(PAGE_MARK);
+  const r = filterLlms(text, heads, inFull);
+  assert.equal(r.text, '<SYSTEM>x</SYSTEM>\n\n# Quickstart\n\n> Five minutes.\n\nbody');
+  assert.deepEqual([r.kept, r.dropped], [1, 2]);
+  assert.throws(() => filterLlms(text + PAGE_MARK + '# Nobody\n\nbody', heads, inFull), /doesn't start with any page/);
+  const { setProblems, indexProblems, ASK } = await import('../check-llms.mjs');
+  assert.deepEqual(setProblems('llms-full.txt', r.text, heads, inFull), []);
+  assert.match(setProblems('llms-full.txt', text.replaceAll(PAGE_MARK, '\n\n'), heads, inFull).join('\n'), /errors\/budget_exceeded, which is outside its set/);
+  assert.equal(inSmall('reference/connectors/postgres'), false);
+  assert.equal(inSmall('quickstart'), true);
+  const desc = { summary: 'Deedglass sits between AI agents and the systems they change.' };
+  const S = 'https://docs.deedglass.com';
+  const ok = `# Deedglass\n\n> ${desc.summary}\n\n- ${ASK} llms-install.md skills/safe-postgres-agents/SKILL.md\n\n${S}/llms-small.txt ${S}/llms-full.txt ${S}/llms-postgres.txt\n`;
+  assert.deepEqual(indexProblems(ok, desc), []);
+  const p = indexProblems(ok.replace(ASK, 'Run deedglass init --yes.') + 'L0 Reported', desc);
+  assert.ok(p.some((x) => /missing "If the user asked you/.test(x)) && p.includes('llms.txt: mentions --yes') && p.includes('llms.txt: uses the retired level names'), p.join('\n'));
+});

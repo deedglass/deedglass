@@ -4,6 +4,7 @@ dist/
 .cache/
 # written by scripts/sync-docs.mjs at every build (imported repo docs and generated reference)
 src/data/.generated-pages.json
+src/data/.page-dates.json
 src/content/docs/errors/
 src/content/docs/reference/cli/
 src/content/docs/reference/engineering/

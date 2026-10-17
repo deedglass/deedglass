@@ -14,6 +14,7 @@ import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } fr
 import { dirname, join, normalize, posix, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import yaml from 'js-yaml';
+import { gitDates, walkFiles } from './seo.mjs';
 
 const site = join(dirname(fileURLToPath(import.meta.url)), '..');
 const repo = join(site, '..');
@@ -418,6 +419,42 @@ function engineeringIndex() {
   write('reference/engineering/index.md', page);
 }
 
+// The last commit date of each page's source, for the sitemap's lastmod and the JSON-LD dateModified
+// (DOC-05): the hand-written page, the imported docs/*.md, or a generated page's data. One git call;
+// without git (or for a file with no commit yet) a page simply has no date.
+const GENERATED_SOURCES = [
+  [/^errors(\/|$)/, 'docs-site/src/data/errors.json'],
+  [/^policies\//, 'docs/POLICY_ERRORS.md'],
+  [/^reference\/cli(\/|$)/, 'docs-site/src/data/cli.json'],
+  [/^reference\/config$/, 'docs-site/src/data/config.json'],
+  [/^security\/attack-suite$/, 'docs-site/src/data/attack.json'],
+  [/^reference\/http\/endpoints$/, 'api/openapi.yaml'],
+];
+function pageDates() {
+  const dates = gitDates(['docs', 'docs-site/src/content/docs', 'docs-site/src/data', 'api/openapi.yaml']);
+  const imported = Object.fromEntries(Object.entries({ ...IMPORTS, ...SOURCES }).map(([src, slug]) => [slug, src]));
+  const generated = new Set(written);
+  const out = {};
+  for (const f of walkFiles(content)) {
+    if (!/\.mdx?$/.test(f)) continue;
+    const rel = relative(content, f).replace(/\\/g, '/');
+    const slug = rel.replace(/\.mdx?$/, '').replace(/(^|\/)index$/, '');
+    let src;
+    if (generated.has(rel)) src = GENERATED_SOURCES.find(([re]) => re.test(slug))?.[1] ?? imported[slug];
+    else src = imported[slug] ?? `docs-site/src/content/docs/${rel}`;
+    const d = src && dates.get(src);
+    if (d) out[slug ? `/${slug}/` : '/'] = d;
+  }
+  const api = dates.get('api/openapi.yaml');
+  if (api) out['/reference/api/'] = api;
+  // The engineering index lists the notes: it changes when the newest of them does.
+  const notes = Object.entries(IMPORTS).filter(([, slug]) => slug.startsWith('reference/engineering/')).map(([src]) => dates.get(src)).filter(Boolean).sort();
+  if (notes.length) out['/reference/engineering/'] = notes[notes.length - 1];
+  const sorted = Object.fromEntries(Object.entries(out).sort(([a], [b]) => (a < b ? -1 : 1)));
+  writeFileSync(join(site, 'src', 'data', '.page-dates.json'), JSON.stringify(sorted, null, 1) + '\n');
+  return Object.keys(sorted).length;
+}
+
 function main() {
   const list = process.argv.includes('--list');
   if (list) {
@@ -442,7 +479,8 @@ function main() {
   const k = configPage();
   attackPage();
   writeFileSync(join(site, 'src', 'data', '.generated-pages.json'), JSON.stringify(written.sort(), null, 1) + '\n');
-  console.log(`✓ sync-docs · ${Object.keys(IMPORTS).length} imported · ${n} error pages · ${g} CLI groups · ${k} settings · attack page · ${ops} endpoints · ${pol} policy diagnostics`);
+  const dated = pageDates();
+  console.log(`✓ sync-docs · ${Object.keys(IMPORTS).length} imported · ${n} error pages · ${g} CLI groups · ${k} settings · attack page · ${ops} endpoints · ${pol} policy diagnostics · ${dated} pages dated`);
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {

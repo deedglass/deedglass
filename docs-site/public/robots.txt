@@ -1,3 +1,38 @@
+# docs.deedglass.com: every crawler may read every page except the design kit (/_kit/). Search,
+# AI search and retrieval, and AI training crawlers are named in groups of their own, and each
+# group repeats the one Disallow, because a crawler obeys only the most specific group naming it.
+# The per-code error and API pages carry noindex and stay out of the sitemap instead.
+
+# Search engines
+User-agent: Googlebot
+User-agent: Bingbot
+User-agent: DuckDuckBot
+User-agent: Applebot
+User-agent: YandexBot
+Allow: /
+Disallow: /_kit/
+
+# AI search and retrieval (answers that cite and link the page)
+User-agent: OAI-SearchBot
+User-agent: ChatGPT-User
+User-agent: Claude-SearchBot
+User-agent: Claude-User
+User-agent: PerplexityBot
+User-agent: Perplexity-User
+User-agent: DuckAssistBot
+Allow: /
+Disallow: /_kit/
+
+# AI training
+User-agent: GPTBot
+User-agent: ClaudeBot
+User-agent: Google-Extended
+User-agent: Applebot-Extended
+User-agent: CCBot
+Allow: /
+Disallow: /_kit/
+
+# Everyone else
 User-agent: *
 Allow: /
 Disallow: /_kit/
