@@ -201,7 +201,8 @@ describe('stage', () => {
       const listing = sh('tar', ['-tvzf', tgz]).trim().split('\n');
       const exe = listing.find((l) => l.endsWith(`package/${p.exe}`));
       assert.match(exe, /^-rwxr-xr-x/, `${p.name}: ${exe}`);
-      assert.equal(listing.length, 2, listing.join('\n'));
+      assert.equal(listing.length, 4, listing.join('\n'));
+      for (const f of ['package.json', 'LICENSE', 'ee/LICENSE']) assert.ok(listing.some((l) => l.endsWith(`package/${f}`)), `${p.name} holds no ${f}`);
       const bin = spawnSync('tar', ['-xzOf', tgz, `package/${p.exe}`]).stdout;
       assert.deepEqual(binaryTarget(bin), { os: p.goos, arch: p.goarch });
       assert.equal(tarballManifest(tgz).version, V);
@@ -285,6 +286,15 @@ describe('stage', () => {
   test('refuses an install script in a platform package', () => {
     const root = fakeRoot(V, (r) => editJSON(join(r, 'npm/cli-linux-arm64/package.json'), (m) => ({ ...m, scripts: { postinstall: 'node x.js' } })));
     assert.throws(() => stageWith({ root }), /npm\/cli-linux-arm64 has an install script \(postinstall\)/);
+  });
+
+  test('refuses a platform package without the combined licence or a licence file', () => {
+    let root = fakeRoot(V, (r) => editJSON(join(r, 'npm/cli-linux-x64/package.json'), (m) => ({ ...m, license: 'Apache-2.0' })));
+    assert.throws(() => stageWith({ root }), /npm\/cli-linux-x64's license is Apache-2\.0, not Apache-2\.0 AND FSL-1\.1-ALv2/);
+    root = fakeRoot(V, (r) => editJSON(join(r, 'npm/cli-darwin-arm64/package.json'), (m) => ({ ...m, files: ['deedglass', 'LICENSE'] })));
+    assert.throws(() => stageWith({ root }), /npm\/cli-darwin-arm64 doesn't list ee\/LICENSE in files/);
+    root = fakeRoot(V, (r) => rmSync(join(r, 'npm/cli-win32-x64/ee/LICENSE')));
+    assert.throws(() => stageWith({ root }), /npm\/cli-win32-x64 lists ee\/LICENSE in files but has no ee\/LICENSE/);
   });
 
   test('refuses a platform package with the wrong os or cpu', () => {

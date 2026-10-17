@@ -2,7 +2,7 @@
 // scripts/npm-publish.mjs: the seven npm packages of one release, staged, checked and published in
 // dependency order by release.yml (npm-stage, then publish-npm; it replaces the founder's local
 // publish script of DL-090, so a release needs no npm login and no per-package two-factor prompt):
-//   1. @deedglass/cli-{darwin-arm64,darwin-x64,linux-arm64,linux-x64,win32-x64}  one binary each
+//   1. @deedglass/cli-{darwin-arm64,darwin-x64,linux-arm64,linux-x64,win32-x64}  one binary each, with LICENSE and ee/LICENSE
 //   2. deedglass        the wrapper: its optionalDependencies pin the five at the same version
 //   3. @deedglass/sdk   the tarball sdk-build packed from the tagged commit
 //
@@ -55,6 +55,10 @@ export const PLATFORMS = [
   ext: p.os === 'win32' ? 'zip' : 'tar.gz',
 }));
 const INSTALL_SCRIPTS = ['preinstall', 'install', 'postinstall'];
+// Each platform package holds its binary and both licences: the binary includes the Pro code in ee/
+// (FSL-1.1-ALv2), so its licence is the combined one (docs/description_test.go checks the same).
+export const PLATFORM_LICENSE = 'Apache-2.0 AND FSL-1.1-ALv2';
+export const PLATFORM_FILES = (p) => ['package.json', p.exe, 'LICENSE', 'ee/LICENSE'];
 
 export const distTag = (version) => (version.includes('-') ? 'next' : 'latest');
 export const archiveName = (p, archiveVersion) => `deedglass_${archiveVersion}_${p.goos}_${p.goarch}.${p.ext}`;
@@ -137,7 +141,12 @@ export function checkManifests(root, version, sdk, repo = REPOSITORY) {
     common(where, m, p.name);
     if (JSON.stringify(m.os) !== JSON.stringify([p.os])) bad.push(`${where} has os ${JSON.stringify(m.os)}, not ["${p.os}"]`);
     if (JSON.stringify(m.cpu) !== JSON.stringify([p.cpu])) bad.push(`${where} has cpu ${JSON.stringify(m.cpu)}, not ["${p.cpu}"]`);
-    if (!(m.files || []).includes(p.exe)) bad.push(`${where} doesn't list ${p.exe} in files`);
+    for (const f of PLATFORM_FILES(p)) {
+      if (f === 'package.json') continue;
+      if (!(m.files || []).includes(f)) bad.push(`${where} doesn't list ${f} in files`);
+      else if (f !== p.exe && !existsSync(join(root, where, f))) bad.push(`${where} lists ${f} in files but has no ${f}`);
+    }
+    if (m.license !== PLATFORM_LICENSE) bad.push(`${where}'s license is ${m.license || 'missing'}, not ${PLATFORM_LICENSE} (the binary includes ee/)`);
   }
   const w = readJSON(join(root, 'npm/deedglass/package.json'));
   common('npm/deedglass', w, 'deedglass');
@@ -235,7 +244,7 @@ export function stage({ root, version, archives, sdk, out, archiveVersion = vers
     copyFileSync(exe, join(dir, p.exe));
     chmodSync(join(dir, p.exe), 0o755);
     const info = npmPack(dir, tgz);
-    expectFiles(info, ['package.json', p.exe]);
+    expectFiles(info, PLATFORM_FILES(p));
     const f = info.files.find((x) => x.path === p.exe);
     if ((f.mode & 0o111) !== 0o111) throw new Error(`${info.filename}: ${p.exe} isn't executable (mode ${f.mode.toString(8)})`);
     const bin = sha256(exe);
