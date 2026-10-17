@@ -146,7 +146,7 @@ func NewManifest(p Platform, version string, icon bool) Manifest {
 		}},
 		ToolsGenerated: true,
 		Keywords:       []string{"agents", "policies", "approvals", "audit", "postgres", "mcp"},
-		License:        "Apache-2.0",
+		License:        "Apache-2.0 AND FSL-1.1-ALv2",
 		Compatibility:  Compatibility{Platforms: []string{p.OS}},
 		UserConfig: map[string]UserConfig{
 			"api_key": {Type: "string", Title: "Agent key", Sensitive: true,

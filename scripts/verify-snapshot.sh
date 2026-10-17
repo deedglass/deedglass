@@ -2,7 +2,7 @@
 # scripts/verify-snapshot.sh (S35, make release-check): builds a GoReleaser snapshot twice from the
 # same tree and checks what a release would ship, without pushing or signing anything:
 #   - the linux_amd64 binary is byte-identical across the two builds (reproducible)
-#   - five archives, each with LICENSE, README.md, CHANGELOG.md and three completions
+#   - five archives, each with LICENSE, ee/LICENSE, README.md, CHANGELOG.md and three completions
 #   - checksums.txt covers every archive, and every archive has an SPDX SBOM
 #   - the release image builds for linux/amd64 and linux/arm64 from Dockerfile.release (an OCI
 #     tarball, no push, no emulation), is under 30 MB per platform, runs as 65532:65532 and
@@ -41,7 +41,7 @@ for a in "${archives[@]}"; do
     *.zip) list="$(unzip -Z1 "$R/$a")" ;;
     *) list="$(tar -tzf "$R/$a")" ;;
   esac
-  for f in LICENSE README.md CHANGELOG.md completions/deedglass.bash completions/deedglass.zsh completions/deedglass.fish; do
+  for f in LICENSE ee/LICENSE README.md CHANGELOG.md completions/deedglass.bash completions/deedglass.zsh completions/deedglass.fish; do
     grep -qx "$f" <<<"$list" || bad "$a has no $f"
   done
   grep -q "  $a\$" "$R/checksums.txt" || bad "checksums.txt doesn't list $a"
