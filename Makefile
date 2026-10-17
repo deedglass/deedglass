@@ -10,7 +10,7 @@ GCFLAGS  := $(shell scripts/gcflags.sh)
 LDFLAGS  := -s -w -X $(BI).Version=$(VERSION) -X $(BI).Commit=$(COMMIT) -X $(BI).Modified=$(MODIFIED) -X $(BI).Date=$(DATE)
 
 .PHONY: api-gz embed-gz mcpb demo-scan-golden packs-check docs docs-dev docs-check docs-snippets docs-lighthouse py-ci py-build py-examples web-install web-tokens web-build web-test web-e2e web-lighthouse web-dev build-only ops-build bench-undo all help ci build test test-short vet fmt fmt-check tidy-check testdata-check rename-guard banned-words nocgo \
-	integration matrix fuzz bench workflows-check release-check cloud-smoke bench-micro bench-quick bench-soak bench-check bench-report bench-store bench-deed cover clean \
+	integration matrix fuzz bench workflows-check npm-dry-run release-check cloud-smoke bench-micro bench-quick bench-soak bench-check bench-report bench-store bench-deed cover clean \
 	dev dev-down dev-reset dev-logs run docker bench-http bench-verify \
 	web-verify-install web-verify-test sdk-ts sdk-ts-it sdk-sync-verify sdk-runtime sdk-examples web-verify-build web-verify-serve gencopy genmark bench-mark bench-ledger bench-stop bench-intents bench-gate bench-witness policy-test \
 	fuzz-policy fuzz-policy-short audit fuzz-all fuzz-regress attack-one bench-policy bench-eval mcp-it bench-mcp \
@@ -148,8 +148,21 @@ bench-connectors: ## S16: vault open, redaction, egress classification and REST 
 	$(GO) test -run '^$$' -bench . -benchmem -count 5 -json ./internal/vault ./internal/connector/egress ./internal/connector/rest > "$$out"; st=$$?; \
 	grep -o '"Output":"Benchmark[^"]*' "$$out" | sed 's/"Output":"//; s/\\t/ /g; s/\\n//' | sort | uniq | head -40; echo "raw: $$out"; exit $$st
 
-workflows-check: ## (ci) S35: the release workflow's gates, environments, permissions and SHA pins, actionlint, and a self-test that a removed gate fails
+workflows-check: ## (ci) S35: the release workflow's gates, environments, permissions and SHA pins, actionlint, a self-test that a removed gate fails, and the npm publish script's tests (fixtures, no network)
 	scripts/check-workflows.sh && scripts/check-workflows.sh --self-test
+	node --test scripts/npm-publish.test.mjs
+
+NPM_SNAPSHOT ?= .tmp/release/run1
+npm-dry-run: ## release.yml's npm-stage on this machine: the seven npm packages staged from the GoReleaser snapshot in NPM_SNAPSHOT (make release-check) and the SDK packed from this tree, then the publish plan; nothing reaches npm
+	@test -f "$(NPM_SNAPSHOT)/checksums.txt" || { echo "✕ no GoReleaser snapshot in $(NPM_SNAPSHOT). Next: make release-check (or NPM_SNAPSHOT=<dir>)"; exit 1; }
+	@test -d $(SDK_TS)/node_modules || { echo "✕ $(SDK_TS) has no node_modules. Next: make sdk-ts"; exit 1; }
+	@set -e; v="$$(node -p 'require("./npm/deedglass/package.json").version')"; \
+	av="$$(node -p 'require(process.argv[1]).version' "$(abspath $(NPM_SNAPSHOT))/metadata.json")"; \
+	out="$(CURDIR)/.tmp/npm-dry-run"; rm -rf "$$out"; mkdir -p "$$out/sdk"; \
+	(cd $(SDK_TS) && npm run --silent build >/dev/null && npm pack --silent --pack-destination "$$out/sdk" >/dev/null); \
+	node scripts/npm-publish.mjs stage --version="$$v" --archives="$(NPM_SNAPSHOT)" --archive-version="$$av" \
+	  --sdk="$$out/sdk/deedglass-sdk-$$v.tgz" --out="$$out/staged"; \
+	node scripts/npm-publish.mjs publish --out="$$out/staged" --dry-run
 
 listings-check: ## (ci) S47: every listing kit (Claude Code plugin, Cursor, Supabase, Neon) installs the one server object, fits its limits and holds no secret; the generated install links and playground data are current
 	node scripts/check-listings.mjs

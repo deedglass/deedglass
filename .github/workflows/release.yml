@@ -1,7 +1,8 @@
 # Release (S35, ADR-067). Runs only when the founder pushes a tag vX.Y.Z or vX.Y.Z-rc.N.
 #
-#   verify       make ci, integration on PG 18.6, the attack suite (its result records the tag),
-#                fuzz-regress, audit and the docs build. No secret is available to this job.
+#   verify       the tagged commit is on main, then make ci, integration on PG 18.6, the attack suite
+#                (its result records the tag), fuzz-regress, audit and the docs build. No secret is
+#                available to this job.
 #   release      GoReleaser: 5 binaries, 5 archives, checksums.txt, an SPDX SBOM per archive and a
 #                linux/amd64 + linux/arm64 image on GHCR, into a DRAFT GitHub release. Prereleases
 #                never move latest or X.Y. While the repository is private nothing is signed:
@@ -9,12 +10,23 @@
 #                identity into a public log (and attestations need a public repo on the Free plan).
 #                grype scans the image SBOM and fails on fixable high or critical findings.
 #   sdk-build    npm pack and the Python wheel and sdist, attached to the draft release.
-#   publish-npm  OFF unless the repository variable DEEDGLASS_PUBLISH_NPM is 'true'; environment npm.
-#   publish-pypi OFF unless DEEDGLASS_PUBLISH_PYPI is 'true'; environment pypi (trusted publishing).
+#   npm-stage    every release: scripts/npm-publish.mjs stages the seven npm packages from this run's
+#                GoReleaser archives (checked against checksums.txt) and the SDK tarball, packs them
+#                and prints the publish plan. Read-only; nothing reaches npm.
+#   publish-npm  OFF unless the repository variable DEEDGLASS_PUBLISH_NPM is 'true'; environment npm,
+#                whose deployment policy allows v* tags only (npm checks the repository, workflow and
+#                environment, never the ref; see docs/RELEASING.md). Publishes the staged packages in
+#                order (the five platform packages, the deedglass wrapper, @deedglass/sdk) over npm
+#                trusted publishing (GitHub OIDC, no token), with provenance when the repository is
+#                public; skips a package@version npm already has (a platform package only when it holds
+#                this run's binary); a prerelease goes to the next dist-tag.
+#   publish-pypi OFF unless DEEDGLASS_PUBLISH_PYPI is 'true'; environment pypi (trusted publishing,
+#                v* tags only, like npm).
 #   deploy-docs  OFF unless DEEDGLASS_DEPLOY_DOCS is 'true'; needs the CLOUDFLARE_API_TOKEN secret.
 #
-# scripts/check-workflows.sh (in make ci) fails if a gate or an environment disappears, if any job
-# gets write-all, or if a uses: line isn't pinned to a full commit SHA.
+# scripts/check-workflows.sh (in make ci) fails if a gate, an environment or the on-main check
+# disappears, if a job outside release, publish-npm and publish-pypi asks for id-token: write, if any
+# job gets write-all, or if a uses: line isn't pinned to a full commit SHA.
 name: release
 
 on:
@@ -38,6 +50,13 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
+      - name: the tagged commit is on main (a tag on an unmerged branch publishes nothing)
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          git rev-parse -q --verify refs/remotes/origin/main >/dev/null || git fetch --no-tags origin main:refs/remotes/origin/main
+          git merge-base --is-ancestor HEAD refs/remotes/origin/main || {
+            echo "✕ $TAG ($(git rev-parse --short HEAD)) isn't on main. Next: merge it after green CI, then tag main."; exit 1; }
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: go.mod
@@ -127,6 +146,15 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+      - name: the archives and checksums.txt, for npm-stage
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release-archives
+          if-no-files-found: error
+          path: |
+            dist/checksums.txt
+            dist/deedglass_*.tar.gz
+            dist/deedglass_*.zip
       - name: image SBOM
         env:
           TAG: ${{ github.ref_name }}
@@ -177,33 +205,71 @@ jobs:
           TAG: ${{ github.ref_name }}
         run: gh release upload "$TAG" "$RUNNER_TEMP"/sdk/* --repo "$GITHUB_REPOSITORY" --clobber
 
-  publish-npm:
-    needs: sdk-build
-    if: vars.DEEDGLASS_PUBLISH_NPM == 'true'
+  npm-stage:
+    needs: [release, sdk-build]
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: release-archives
+          path: ${{ runner.temp }}/archives
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: sdk-packages
+          path: ${{ runner.temp }}/pkgs
+      - name: stage the seven packages (versions agree, archives match checksums.txt, binaries, npm pack)
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          v="${TAG#v}"
+          node scripts/npm-publish.mjs stage --version="$v" --archives="$RUNNER_TEMP/archives" \
+            --sdk="$RUNNER_TEMP/pkgs/deedglass-sdk-$v.tgz" --out="$RUNNER_TEMP/npm"
+      - name: the publish plan (a dry run; no npm, no registry)
+        run: node scripts/npm-publish.mjs publish --out="$RUNNER_TEMP/npm" --dry-run
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: npm-packages
+          if-no-files-found: error
+          path: |
+            ${{ runner.temp }}/npm/plan.json
+            ${{ runner.temp }}/npm/tgz/
+
+  publish-npm:
+    needs: [release, npm-stage]
+    if: vars.DEEDGLASS_PUBLISH_NPM == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
     environment: npm
     permissions:
       contents: read
       id-token: write
     steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 24
           registry-url: https://registry.npmjs.org
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
-          name: sdk-packages
-          path: pkgs
+          name: npm-packages
+          path: ${{ runner.temp }}/npm
       - name: npm 11.5.1 or later (trusted publishing over OIDC; no token)
         run: npm install -g npm@11.21.0
-      - name: publish (a prerelease goes to the next tag, never latest)
+      - name: publish in order, skipping what npm has (a prerelease goes to the next tag, never latest)
         env:
-          TAG: ${{ github.ref_name }}
-        run: |
-          dist=latest
-          case "$TAG" in *-rc.*) dist=next ;; esac
-          npm publish pkgs/deedglass-sdk-*.tgz --access public --tag "$dist"
+          PROVENANCE: ${{ needs.release.outputs.private == 'false' }}
+        run: node scripts/npm-publish.mjs publish --out="$RUNNER_TEMP/npm" --provenance="$PROVENANCE"
 
   publish-pypi:
     needs: sdk-build
