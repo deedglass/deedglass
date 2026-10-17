@@ -1,5 +1,5 @@
 # MCP Registry (VIRAL-3). Publishes server.json to registry.modelcontextprotocol.io as
-# io.github.deedglass/deedglass. GitHub OIDC proves the deedglass org owns the namespace, so no
+# io.github.deedglass/deedglass. GitHub OIDC shows the deedglass org owns the namespace, so no
 # login or secret is needed. The registry checks that the npm package named in server.json
 # (deedglass@<version>) carries the same mcpName. Run by hand after a release is on npm.
 name: mcp-registry
