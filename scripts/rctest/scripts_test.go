@@ -83,12 +83,13 @@ func TestPrepublicAudit(t *testing.T) {
 }
 
 // TestIssueForms: every issue form parses, has a name, a description and a body of known field
-// types, and the I ran it form carries its label (S37 §6).
+// types, and the I ran it form carries its label (S37 §6). Every form opens with a markdown banner
+// that sends security problems to private vulnerability reporting (VIRAL-3 GH-02).
 func TestIssueForms(t *testing.T) {
 	root, _ := filepath.Abs("../..")
 	files, _ := filepath.Glob(filepath.Join(root, ".github/ISSUE_TEMPLATE/*.yml"))
-	if len(files) != 5 {
-		t.Fatalf("%d issue form files, want bug, feature, connector, i-ran-it and config", len(files))
+	if len(files) != 7 {
+		t.Fatalf("%d issue form files, want bug, feature, connector, i-ran-it, scan-rule, policy-pack and config", len(files))
 	}
 	for _, f := range files {
 		b, _ := os.ReadFile(f)
@@ -96,8 +97,9 @@ func TestIssueForms(t *testing.T) {
 			Name, Description string
 			Labels            []string
 			Body              []struct {
-				Type string
-				ID   string
+				Type       string
+				ID         string
+				Attributes struct{ Value string }
 			}
 			BlankIssuesEnabled *bool `yaml:"blank_issues_enabled"`
 		}
@@ -119,6 +121,16 @@ func TestIssueForms(t *testing.T) {
 			default:
 				t.Fatalf("%s: unknown field type %q", f, x.Type)
 			}
+		}
+		if form.Body[0].Type != "markdown" || !strings.Contains(form.Body[0].Attributes.Value, "https://github.com/deedglass/deedglass/security/advisories/new") {
+			t.Fatalf("%s: the first block must be the markdown banner linking private vulnerability reporting", f)
+		}
+		ids := map[string]bool{}
+		for _, x := range form.Body {
+			if x.ID != "" && ids[x.ID] {
+				t.Fatalf("%s: duplicate id %q", f, x.ID)
+			}
+			ids[x.ID] = true
 		}
 		if filepath.Base(f) == "i-ran-it.yml" && (len(form.Labels) != 1 || form.Labels[0] != "i-ran-it") {
 			t.Fatalf("i-ran-it.yml labels %v", form.Labels)

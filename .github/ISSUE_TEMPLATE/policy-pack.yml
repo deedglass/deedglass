@@ -1,0 +1,35 @@
+name: Policy pack request
+description: A tested set of rules for a tool, a connector or a kind of agent.
+labels: ["policy pack"]
+body:
+  - type: markdown
+    attributes:
+      value: "**Security problem? Don't file it here.** Report it privately: https://github.com/deedglass/deedglass/security/advisories/new ([SECURITY.md](https://github.com/deedglass/deedglass/blob/main/SECURITY.md)). A way past a rule, a check or a record counts, even a small one. Remove secrets (keys start with dg_, sk_, xox) from anything you paste."
+  - type: markdown
+    attributes:
+      value: "A pack is a set of policy files with their test cases (at least 12), installed with deedglass policy install and checked against a signed index (docs: guides/policy-packs). Today's packs: postgres-safe, supabase-mcp, stripe-refunds, github-agent (free) and money-movement (Pro)."
+  - type: input
+    id: target
+    attributes: { label: "Tool, connector or agent", description: "What the pack is for, with a link.", placeholder: "Linear's MCP server, the Postgres connector for a billing agent, a support agent …" }
+    validations: { required: true }
+  - type: textarea
+    id: allow
+    attributes: { label: "Calls that should run", description: "The tool calls or statements an agent should be able to make without asking." }
+    validations: { required: true }
+  - type: textarea
+    id: deny
+    attributes: { label: "Calls that should never run", description: "What the pack must refuse, and why." }
+    validations: { required: true }
+  - type: textarea
+    id: approve
+    attributes: { label: "Calls that should wait for a person", description: "Risky but sometimes needed: refunds over an amount, deletes, schema changes. Optional." }
+  - type: textarea
+    id: cases
+    attributes: { label: "Test cases", description: "A few example calls with the decision each should get. YAML in the shape of examples/policies/*.cases.yaml is ideal; plain sentences are fine.", render: yaml }
+  - type: checkboxes
+    id: help
+    attributes:
+      label: Helping
+      options:
+        - label: I could send a pull request with the policy and its cases.
+        - label: I could test a first version against a sandbox account.
