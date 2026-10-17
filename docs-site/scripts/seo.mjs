@@ -27,8 +27,10 @@ export const notInSitemap = (path) => isThin(path) || path.startsWith('/_kit/');
 /** The longest <title> an indexed page may have, " | Deedglass Docs" included. */
 export const TITLE_MAX = 60;
 export const SITE_TITLE = 'Deedglass Docs';
-/** The <title> for a page: "Title | Deedglass Docs", or the title alone when that is too long. */
+/** The <title> for a page: "Title | Deedglass Docs", or the title alone when that is too long or is
+ *  the site's name (the home page). */
 export function pageTitle(title) {
+  if (title === SITE_TITLE) return title;
   const full = `${title} | ${SITE_TITLE}`;
   return full.length <= TITLE_MAX ? full : title;
 }
@@ -99,17 +101,32 @@ export const PAGE_MARK = '\n\n<!-- deedglass:llms-page -->\n\n';
 /** The llms.txt "details" block (DOC-06): what an agent setting Deedglass up must do, and where to read. */
 export const llmsDetails = (licence) => [
   "- If the user asked you to set up Deedglass: ask before each change. Starting Postgres in Docker, starting a local server, writing `.deedglass/` and editing an MCP client's config are each the user's call. [llms-install.md](https://github.com/deedglass/deedglass/blob/main/llms-install.md) lists the steps and what each one changes; [SKILL.md](https://github.com/deedglass/deedglass/blob/main/integrations/claude-code/skills/safe-postgres-agents/SKILL.md) covers giving an agent Postgres access carefully.",
-  '- `npx -y deedglass scan --no-write` and `npx -y deedglass play` send nothing anywhere and need no Docker.',
+  '- `npx -y deedglass scan --no-write` and `npx -y deedglass play` send nothing and need no Docker (npx itself downloads the package from npm).',
   "- People read plain names: a check is Claimed, Checked or Proven, and its result is Matches, Doesn't match or Can't check. The API, JSON and policy files keep the short names (L0, L1, L2; VERIFIED, MISMATCH, UNVERIFIABLE).",
   '- Start with the Quickstart, then "What VERIFIED means" for exactly what a result rests on. Every feature page ends with "What it doesn\'t do".',
   `- ${licence}`,
 ].join('\n');
 
 // ---- lastmod (DOC-05) ----
+/** True when the checkout is shallow (actions/checkout's default fetch-depth of 1). */
+export function isShallow(cwd = repo) {
+  const r = spawnSync('git', ['rev-parse', '--is-shallow-repository'], { cwd, encoding: 'utf8' });
+  return r.status === 0 && r.stdout.trim() === 'true';
+}
+
 /** The last commit date (YYYY-MM-DD) of each path under the given repo paths, newest first wins. One git call;
- *  an empty map without git or history. Deterministic for a given checkout. */
-export function gitDates(paths) {
-  const r = spawnSync('git', ['log', '--format=%x00%cs', '--name-only', '--no-renames', '--', ...paths], { cwd: repo, encoding: 'utf8', maxBuffer: 256 * 1024 * 1024 });
+ *  an empty map without git or history. Deterministic for a given checkout. A shallow clone's oldest
+ *  commit lists every file, so git log there would give every page that commit's date: it throws instead
+ *  (CI and the deploy check out with fetch-depth: 0), unless DOCS_UNDATED=1 asks for a build without dates. */
+export function gitDates(paths, { cwd = repo, env = process.env } = {}) {
+  if (isShallow(cwd)) {
+    if (env.DOCS_UNDATED === '1') return new Map();
+    throw new Error(
+      'this checkout is shallow, so git log would date every page with one commit. Fetch the history (git fetch --unshallow, ' +
+        'or actions/checkout with fetch-depth: 0), or set DOCS_UNDATED=1 to build without lastmod and dateModified',
+    );
+  }
+  const r = spawnSync('git', ['log', '--format=%x00%cs', '--name-only', '--no-renames', '--', ...paths], { cwd, encoding: 'utf8', maxBuffer: 256 * 1024 * 1024 });
   const out = new Map();
   if (r.status !== 0) return out;
   let date = '';

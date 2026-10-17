@@ -224,6 +224,36 @@ test('sitemap (DOC-05): thin per-code pages and /_kit/ leave, each kept URL gets
   const { sitemapProblems } = await import('../check-seo.mjs');
   assert.deepEqual(sitemapProblems(out).problems, ['sitemap: only 2 of 3 URLs have a lastmod']);
   assert.match(sitemapProblems(xml).problems.join('\n'), /sitemap lists \/errors\/budget_exceeded\//);
+  // Every URL on one date: the dates came from one commit (a shallow clone), not from each page's source.
+  const urls = (d) => `<urlset>${Array.from({ length: 25 }, (_, i) => `<url><loc>${S}/p${i}/</loc><lastmod>${d(i)}</lastmod></url>`).join('')}</urlset>`;
+  assert.match(sitemapProblems(urls(() => '2026-10-17')).problems.join('\n'), /all 25 lastmod dates are 2026-10-17/);
+  assert.deepEqual(sitemapProblems(urls((i) => (i ? '2026-10-17' : '2026-10-01'))).problems, []);
+});
+
+test('lastmod (DOC-05): a shallow clone gives no dates rather than one commit\'s date for every page', async () => {
+  const { gitDates, isShallow } = await import('../seo.mjs');
+  const dir = mkdtempSync(join(tmpdir(), 'dg-shallow-'));
+  const who = { GIT_AUTHOR_NAME: 't', GIT_AUTHOR_EMAIL: 't@t', GIT_COMMITTER_NAME: 't', GIT_COMMITTER_EMAIL: 't@t' };
+  const git = (cwd, args, at) => execFileSync('git', args, { cwd, encoding: 'utf8', env: { ...process.env, ...who, ...(at && { GIT_AUTHOR_DATE: at, GIT_COMMITTER_DATE: at }) } });
+  try {
+    const full = join(dir, 'full');
+    mkdirSync(join(full, 'docs'), { recursive: true });
+    git(full, ['init', '-q', '-b', 'main']);
+    for (const [f, at] of [['a.md', '2026-01-02T00:00:00Z'], ['b.md', '2026-03-04T00:00:00Z']]) {
+      writeFileSync(join(full, 'docs', f), `${f}\n`);
+      git(full, ['add', '.']);
+      git(full, ['-c', 'commit.gpgsign=false', 'commit', '-q', '-m', f], at);
+    }
+    assert.equal(isShallow(full), false);
+    assert.deepEqual(Object.fromEntries(gitDates(['docs'], { cwd: full })), { 'docs/b.md': '2026-03-04', 'docs/a.md': '2026-01-02' });
+    const shallow = join(dir, 'shallow');
+    git(dir, ['clone', '-q', '--depth', '1', `file://${full}`, shallow]);
+    assert.equal(isShallow(shallow), true);
+    assert.throws(() => gitDates(['docs'], { cwd: shallow, env: {} }), /this checkout is shallow.*fetch-depth: 0/);
+    assert.equal(gitDates(['docs'], { cwd: shallow, env: { DOCS_UNDATED: '1' } }).size, 0);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });
 
 test('seo pages (DOC-05): a thin page needs noindex; an indexed page needs a short title and one TechArticle', async () => {
@@ -231,6 +261,7 @@ test('seo pages (DOC-05): a thin page needs noindex; an indexed page needs a sho
   const { jsonLd, ldScript, pageTitle } = await import('../seo.mjs');
   assert.equal(pageTitle('Quickstart'), 'Quickstart | Deedglass Docs');
   assert.equal(pageTitle('A title that is long enough to push the suffix past sixty'), 'A title that is long enough to push the suffix past sixty');
+  assert.equal(pageTitle('Deedglass Docs'), 'Deedglass Docs');
   const ld = (o) => `<script type="application/ld+json">${ldScript(o)}</script>`;
   const good = `<title>Quickstart | Deedglass Docs</title>${ld(jsonLd({ path: '/quickstart/', title: 'Quickstart', description: 'd' }))}`;
   assert.deepEqual(pageProblems('/quickstart/', good), []);

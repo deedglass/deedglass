@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // check-seo.mjs (VIRAL-3 DOC-03, DOC-05): gates over the built site for search engines.
-//   sitemap   no thin per-code page and no /_kit/ in it; lastmod on (almost) every URL
+//   sitemap   no thin per-code page and no /_kit/ in it; lastmod on (almost) every URL, not all one date
 //   noindex   every thin page says noindex; no other page does
 //   titles    every indexed page's <title> is at most 60 characters
 //   json-ld   every indexed page has one JSON-LD block: TechArticle (WebSite on the home page)
@@ -71,14 +71,20 @@ export function sitemapProblems(xml) {
   const out = [];
   const urls = [...xml.matchAll(/<url>([\s\S]*?)<\/url>/g)].map((m) => m[1]);
   let dated = 0;
+  const seen = new Set();
   for (const u of urls) {
     const loc = /<loc>([^<]*)<\/loc>/.exec(u)?.[1] ?? '';
     const path = loc.startsWith(SITE) ? loc.slice(SITE.length) || '/' : loc;
     if (isThin(path) || path.startsWith('/_kit/')) out.push(`sitemap lists ${path}`);
     const lm = /<lastmod>([^<]*)<\/lastmod>/.exec(u)?.[1];
     if (lm && !/^\d{4}-\d{2}-\d{2}$/.test(lm)) out.push(`sitemap: ${path} has lastmod ${lm}`);
-    if (lm) dated++;
+    if (lm) {
+      dated++;
+      seen.add(lm);
+    }
   }
+  // Every URL on one day means the dates came from one commit (a shallow clone), not from each source.
+  if (dated >= 20 && seen.size === 1) out.push(`sitemap: all ${dated} lastmod dates are ${[...seen][0]}; each should be its source's last commit (a shallow checkout?)`);
   // A page added since the last commit has no date yet; more than a few missing means lastmod broke.
   if (urls.length && dated < urls.length * 0.95) out.push(`sitemap: only ${dated} of ${urls.length} URLs have a lastmod`);
   return { problems: out, urls: urls.length, dated };

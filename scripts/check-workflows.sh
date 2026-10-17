@@ -6,12 +6,12 @@
 #   - in release.yml only release, publish-npm and publish-pypi may mint an OIDC token (id-token: write,
 #     block or flow style, any job name); npm-stage, which stages the npm packages, stays read-only,
 #     and publish-npm publishes only what it staged; no YAML anchors or aliases hide a job's keys
-#   - verify refuses a tag whose commit isn't on main
+#   - verify refuses a tag whose commit isn't on main; deploy-docs checks out the full history (lastmod)
 #   - every uses: is pinned to a full commit SHA with a # vX.Y.Z comment
 #   - actionlint 1.7.12 passes (the Homebrew binary, else go run at that pin)
 # --self-test breaks a copy one way at a time (a removed gate, write-all, an unpinned action, an extra
 # OIDC token in npm-stage, in a job named with a digit and an underscore, in flow style, after a
-# column-0 comment, a removed on-main check) and checks that this script then fails.
+# column-0 comment, a removed on-main check, a shallow docs checkout) and checks that this script then fails.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 if [ "${1:-}" = "--self-test" ]; then
@@ -40,7 +40,8 @@ if [ "${1:-}" = "--self-test" ]; then
   broken "an OIDC token after a column-0 comment" \
     '$0 == "  npm-stage:" {print "# staging"; on=1} {print} on && $0 == "      contents: read" {print "      id-token: write"; on=0}'
   broken "a removed on-main check" '!/merge-base --is-ancestor/'
-  echo "✓ check-workflows self-test · a removed gate, write-all, an unpinned action, extra OIDC tokens (any name, flow style, after a comment) and a removed on-main check each fail"
+  broken "a shallow docs checkout" '$0 == "  deploy-docs:" {on=1} on && /fetch-depth: 0/ {on=0; next} {print}'
+  echo "✓ check-workflows self-test · a removed gate, write-all, an unpinned action, extra OIDC tokens (any name, flow style, after a comment), a removed on-main check and a shallow docs checkout each fail"
   exit 0
 fi
 dir="${1:-.github/workflows}"
@@ -79,6 +80,7 @@ if grep -nE '^[[:space:]]*(-[[:space:]]+)?[^#[:space:]][^:]*:[[:space:]]+[&*][A-
   bad "release.yml uses a YAML anchor, alias or merge key above; spell each job's keys out (this check reads them line by line)"
 fi
 job verify | grep -q 'merge-base --is-ancestor HEAD refs/remotes/origin/main' || bad "verify doesn't refuse a tag whose commit isn't on main"
+job deploy-docs | grep -qE '^ +fetch-depth: 0( |$)' || bad "deploy-docs checks out without fetch-depth: 0 (each page's lastmod comes from git history; a shallow clone can't give it)"
 job npm-stage | grep -q 'scripts/npm-publish.mjs stage ' || bad "npm-stage doesn't stage the npm packages with scripts/npm-publish.mjs"
 job publish-npm | grep -q 'needs: \[release, npm-stage\]' || bad "publish-npm doesn't need npm-stage (it publishes only what npm-stage staged)"
 if job publish-npm | grep -qE '^ +run: .*npm publish '; then bad "publish-npm runs npm publish itself; scripts/npm-publish.mjs publish keeps the order and the skips"; fi
