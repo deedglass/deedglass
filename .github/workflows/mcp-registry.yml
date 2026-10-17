@@ -1,0 +1,32 @@
+# MCP Registry (VIRAL-3). Publishes server.json to registry.modelcontextprotocol.io as
+# io.github.deedglass/deedglass. GitHub OIDC proves the deedglass org owns the namespace, so no
+# login or secret is needed. The registry checks that the npm package named in server.json
+# (deedglass@<version>) carries the same mcpName. Run by hand after a release is on npm.
+name: mcp-registry
+
+on:
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install mcp-publisher v1.8.1 (checksum pinned)
+        run: |
+          curl -fsSLo mcp-publisher.tar.gz https://github.com/modelcontextprotocol/registry/releases/download/v1.8.1/mcp-publisher_linux_amd64.tar.gz
+          echo "a06c9096dcb9727c13555b6be26c7effa707b01f06a4c561ba7a3635443cf2cc  mcp-publisher.tar.gz" | sha256sum -c -
+          tar xzf mcp-publisher.tar.gz mcp-publisher
+      - name: Check that npm has the version server.json names
+        run: |
+          v="$(jq -r .version server.json)"
+          test "$(npm view "deedglass@$v" mcpName)" = "$(jq -r .name server.json)"
+      - name: Log in with GitHub OIDC
+        run: ./mcp-publisher login github-oidc
+      - name: Publish
+        run: ./mcp-publisher publish
