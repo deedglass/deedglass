@@ -1,5 +1,8 @@
-// Command deedglass is the Deedglass CLI and server binary (contract §10). Every contract command
-// is in the registry (registry.go); commands that aren't built yet say so and name no dates.
+// Command deedglass is Deedglass in one binary: the server (deedglass serve), the CLI, and the MCP
+// bridge (deedglass mcp serve and mcp wrap). Rules decide each AI agent tool call; Deedglass checks
+// what really changed and seals a record. deedglass init starts a local stack, deedglass scan grades
+// an agent setup A to F, and deedglass verify checks records offline. deedglass help lists every
+// command; commands that aren't built yet say so.
 //
 // Exit codes: 0 ok · 1 failure or invalid · 2 usage, unknown, not built, or cannot determine ·
 // 3 not authenticated.

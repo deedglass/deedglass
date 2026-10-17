@@ -1,20 +1,14 @@
-// Package deedglass is a small public Go client for Deedglass: send actions, sign intents, and
-// check deeds offline.
+// Package deedglass is the Go client for a Deedglass server. Rules decide each AI agent tool call;
+// Deedglass checks what really changed and seals a record.
 //
-// Invariants:
-//   - The API key comes from the caller or DEEDGLASS_API_KEY and is never logged.
-//   - Every request has a timeout and an Idempotency-Key on POST.
-//   - Offline verification needs only the deed and the public keys.
+// Client.Act sends one tool call through the server's rules and returns the action (allowed,
+// denied, or waiting for a person); GetAction waits for its outcome and ReportResult reports the
+// result of a call the agent ran itself. Tools lists the tools an agent may call, EventStream
+// follows the live event stream, and IntentSigner signs intents for orgs that require them.
 //
-// Built in S08 (the CLI uses it):
+// The API key is set by the caller (NewClient or Client.APIKey) and is never logged or included in
+// an error. A nil Client.HTTP gets a 30 s timeout, and every POST gets an Idempotency-Key unless the
+// caller sets one. Records are checked offline with the CLI (deedglass verify), not with this package.
 //
-//	type Client struct{ BaseURL, APIKey string; HTTP *http.Client; UserAgent string }
-//	func NewClient(apiKey, server string) *Client
-//	func (c *Client) Do(ctx context.Context, method, path string, in, out any, opts ...Option) (*Response, error)
-//	type Error struct{ Status int; Type, Code, Message, Param, RequestID, DocURL, RetryAfter string }
-//
-// Planned (S09, S31):
-//
-//	func (c *Client) Act(ctx context.Context, req ActionRequest) (*Action, error)
-//	func SignIntent(key ed25519.PrivateKey, in Intent) (header string, err error)
+// Documentation: https://docs.deedglass.com/sdks/go/
 package deedglass

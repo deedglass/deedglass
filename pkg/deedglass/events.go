@@ -16,7 +16,7 @@ import (
 	"github.com/deedglass/deedglass/internal/connector/egress"
 )
 
-// The live event stream (GET /v1/events, S24): an EventSource-like client. It resumes with
+// The live event stream (GET /v1/events): an EventSource-like client. It resumes with
 // Last-Event-ID after a dropped connection, reconnects with backoff (1, 2, 4, 8, 16, 30 s, ±20%),
 // and hands every message to the caller, the control messages included: hello says whether a
 // resume replayed what was missed, resync says it couldn't (refetch your lists), session_ended

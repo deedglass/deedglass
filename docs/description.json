@@ -1,0 +1,24 @@
+{
+  "about": "The one description of Deedglass (VIRAL-3 PRD-04). docs/description_test.go checks README.md, AGENTS.md, server.json, context7.json, npm/deedglass/package.json (description and keywords) and the docs site's llms.txt (docs-site/astro.config.mjs reads this file) against it. Change the wording here first, then in each file. Plain names per docs/NAMING.md. Claims: P-057, P-060, P-069 (tagline, summary), P-086 (licence), P-087 and P-052 (network).",
+  "tagline": "Rules decide each AI agent tool call; Deedglass checks what really changed and seals a record.",
+  "summary": "Deedglass sits between AI agents and the systems they change. Rules decide each tool call, a check compares what the system really changed with what the agent reported (Claimed, Checked or Proven; Matches, Doesn't match or Can't check), and each result is sealed as a signed record anyone can check offline. It can undo the rows an action changed.",
+  "licence": "The core, the SDKs and the CLI are Apache-2.0. The Pro features in `ee/` are FSL-1.1-ALv2, and each release of them becomes Apache-2.0 two years after it ships. The release binary, the `@deedglass/cli-*` npm packages and the container image include `ee/`, so their licence is `Apache-2.0 AND FSL-1.1-ALv2`.",
+  "network": "There's no telemetry. With Pro, the licence check contacts Dodo Payments and deedglass.com at most once a day, and only when a Pro feature runs; `deedglass version --check` contacts GitHub only when you run it.",
+  "keywords": [
+    "ai-agents",
+    "agent-security",
+    "mcp",
+    "mcp-server",
+    "mcp-gateway",
+    "model-context-protocol",
+    "postgres",
+    "change-data-capture",
+    "logical-decoding",
+    "audit-log",
+    "policy",
+    "approvals",
+    "undo",
+    "claude-code",
+    "cursor"
+  ]
+}

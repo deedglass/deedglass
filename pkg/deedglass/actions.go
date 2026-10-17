@@ -11,9 +11,9 @@ import (
 	"time"
 )
 
-// The S31 parity surface with @deedglass/sdk: Act (gateway or proxy), GetAction (a long poll),
-// ReportResult (proxy mode) and Tools (GET /v1/tools, every page). The shapes follow contract §8;
-// Raw keeps the whole answer for fields this struct doesn't name.
+// The same surface as @deedglass/sdk: Act (gateway or proxy), GetAction (a long poll),
+// ReportResult (proxy mode) and Tools (GET /v1/tools, every page). The shapes follow the API's
+// action object (docs/API.md); Raw keeps the whole answer for fields this struct doesn't name.
 
 // MaxWait is the longest server-side wait on POST /v1/actions and GET /v1/actions/{id}.
 const MaxWait = 25 * time.Second
@@ -27,7 +27,7 @@ type ActRequest struct {
 	Mode string
 	// Wait is the server-side wait for the outcome (0 to 25 s). Nil uses the server's default.
 	Wait *time.Duration
-	// ConnectorType is the edge's declared type in proxy mode ("sdk" for SDK edges, S31).
+	// ConnectorType is the edge's declared type in proxy mode ("sdk" for SDK edges).
 	ConnectorType string
 	// Client names the calling software in the action's context.
 	Client string
@@ -35,7 +35,7 @@ type ActRequest struct {
 	Version string
 }
 
-// Action is the action object (contract §8), with the fields most callers read.
+// Action is the API's action object, with the fields most callers read.
 type Action struct {
 	Object     string          `json:"object"`
 	ID         string          `json:"id"`
