@@ -60,9 +60,16 @@ if (existsSync(join(root, hooksDir))) {
     cmds[0].type !== 'command' || cmds[0].command !== 'sh "${CLAUDE_PLUGIN_ROOT}/hooks/shell-guard.sh"') {
     bad('claude-code/hooks/hooks.json: must be the one PreToolUse hook on Bash that runs shell-guard.sh');
   }
+  // A failed hook must never block a Bash command: on Windows without Git Bash, Claude Code runs a
+  // shell-form hook in PowerShell (no sh) and counts its failure as a block unless onFailure says
+  // continue. No shell or args either: shell form, so Git Bash, sh and PowerShell all read it the same.
+  if (cmds[0]?.onFailure !== 'continue' || 'shell' in (cmds[0] ?? {}) || 'args' in (cmds[0] ?? {})) {
+    bad('claude-code/hooks/hooks.json: the hook must set "onFailure": "continue" and no shell or args');
+  }
   const sg = rd(`${hooksDir}/shell-guard.sh`);
   if (!/case "\$\{DEEDGLASS_SHELL_GUARD:-off\}" in/.test(sg) || !/\*\)\n\tcat >\/dev\/null\n\texit 0/.test(sg)) bad('claude-code/hooks/shell-guard.sh: must be off unless DEEDGLASS_SHELL_GUARD is set');
   if (/npx|curl|wget|https?:/.test(sg)) bad('claude-code/hooks/shell-guard.sh: must not fetch anything');
+  if (/exit\s+2|exec\s/.test(sg)) bad('claude-code/hooks/shell-guard.sh: must never exit 2 or exec (exit 2 blocks the command)');
   textChecks(`${hooksDir}/hooks.json`, rd(`${hooksDir}/hooks.json`));
   textChecks(`${hooksDir}/shell-guard.sh`, sg);
 }

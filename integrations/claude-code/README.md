@@ -50,6 +50,17 @@ binary with the `guard shell` command on your `PATH`; it runs that binary locall
 network. It never answers allow, and your own permission rules still apply. What it reads, the
 catalog and what it can't see: [docs/SHELL_GUARD.md](../../docs/SHELL_GUARD.md).
 
+If it is on but can't check (no `deedglass` on your `PATH`, or an older one without `guard shell`),
+it never blocks the command: with `ask` it answers nothing and shows you a note saying it checked
+nothing; with `deny` it exits 1, which Claude Code shows as a non-blocking error.
+
+**On Windows**, the hook runs `sh`, which Git for Windows provides. The hook sets
+`"onFailure": "continue"`, so where it can't start (no Git Bash, so Claude Code would run it in
+PowerShell) or times out, your Bash commands still run, unchecked. Without Git Bash, Claude Code
+has no Bash tool, so the hook never runs and the guard checks nothing. To use the guard on Windows,
+install Git for Windows and a `deedglass` binary on your `PATH`. `onFailure` needs Claude Code
+v2.1.295 or later.
+
 ## What it doesn't do
 
 - One hook, off by default (above). It never approves a tool call. Putting MCP tools behind

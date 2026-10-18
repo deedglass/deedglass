@@ -45,9 +45,25 @@ setting in `.claude/settings.json` (this project) or `~/.claude/settings.json` (
 - `ask`: a matching command waits for your yes in the permission prompt.
 - `deny`: a matching command doesn't run, and Claude reads the reason, which ends "if it is
   intended, ask the user to run it themselves."
-- unset, or anything else: the hook reads its input and answers nothing.
+- unset, or anything else: the hook reads its input and answers nothing. It doesn't run
+  `deedglass` at all.
 
 Restart Claude Code after changing it. To turn it off, remove the setting.
+
+If the guard is on but can't check, because `deedglass` isn't on your `PATH` or is an older one
+without `guard shell`, it never blocks the command. With `ask` it exits 0 with no decision and a
+note to you that it checked nothing; with `deny` it prints why on stderr and exits 1, which Claude
+Code shows as a non-blocking error. The plugin's hook also sets `"onFailure": "continue"` (Claude
+Code v2.1.295 or later), so a hook that can't start or times out lets the command go ahead.
+
+### On Windows
+
+The plugin's hook is `sh "${CLAUDE_PLUGIN_ROOT}/hooks/shell-guard.sh"`, which Claude Code runs with
+Git Bash on Windows; Git for Windows provides `sh`. Without Git Bash, Claude Code registers no Bash
+tool, so a hook on `Bash` never runs and the guard checks nothing. If it did run there, in
+PowerShell, it would fail to find `sh`, and `"onFailure": "continue"` lets the command go ahead
+instead of blocking it. To use the guard on Windows, install Git for Windows and put a `deedglass`
+binary on your `PATH`.
 
 ### Without the plugin
 
@@ -67,6 +83,9 @@ Add the hook to a settings file yourself:
 ```
 
 Add `--deny` to the command to deny instead of ask, or `--no-files` to read only the command.
+If `deedglass` isn't on your `PATH`, the shell can't start it, and Claude Code shows a non-blocking
+error before each Bash command. Add `"onFailure": "continue"` to the hook if it should never block
+a command when it fails, including on Windows without Git Bash.
 
 ### Try it first
 

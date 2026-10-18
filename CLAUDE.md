@@ -320,7 +320,9 @@ and "open source" until the repo is public. Style bans: "revolutionary", "world-
   each ask), `TestAsks` (every catalog row has a case), `TestOrdinary` (200+ ordinary commands, 0 asks),
   `TestLimits` (what it doesn't see, kept equal to docs/SHELL_GUARD.md), `TestOnlyAdds`, `TestDocListsCatalog`,
   `FuzzCheck`; `cmd/deedglass` `TestGuardShell*` (the hook never answers allow and never exits 2);
-  `scripts/check-listings.mjs` keeps the plugin's one hook off unless `DEEDGLASS_SHELL_GUARD` is set.
+  `scripts/check-listings.mjs` keeps the plugin's one hook off unless `DEEDGLASS_SHELL_GUARD` is set, with
+  `"onFailure": "continue"` and a script that never exits 2; `cmd/deedglass` `TestPluginHook*` runs that script
+  (off: no output, exit 0; can't check: ask fails open, deny exits 1; on: the real CLI's answer).
 - `internal/ids`: strict parser, spec vector, monotonic and concurrency tests, clock-back and
   overflow tests, pattern-vs-parser agreement, `FuzzParse`.
 - `internal/config`: the key table, every prod refusal, `.deedglass/` safety, secret canaries across

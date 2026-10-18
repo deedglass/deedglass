@@ -7,6 +7,17 @@ this file by `scripts/release-notes.sh`.
 
 ## [Unreleased]
 
+### Fixed
+
+- **The Claude Code plugin's shell guard never blocks a Bash command when it can't check.** The
+  hook now sets `"onFailure": "continue"`, so a hook that can't start (for example in PowerShell on
+  Windows without Git Bash, where there is no `sh`) or times out lets the command go ahead. With
+  `DEEDGLASS_SHELL_GUARD=ask` and no usable `deedglass` on `PATH` it exits 0 with no decision and a
+  note that it checked nothing (it exited 1 before); `deny` keeps the documented exit 1. An older
+  `deedglass` without `guard shell` exits 2 on the unknown command, which Claude Code read as a
+  block of every Bash command; the hook script now never passes on that exit code. Off (the
+  default), it still reads its input and exits 0 with no output, without running `deedglass`.
+
 ## [0.2.0] - 2026-10-18
 
 Three ways to see what a coding agent can do to a database from its shell, where an MCP gate can't
