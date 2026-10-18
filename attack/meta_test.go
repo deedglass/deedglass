@@ -43,6 +43,10 @@ const (
 	// expectedDigestO pins group O, observe mode (S50; ADR-094, PROPOSED; the orchestrator accepts
 	// under DL-089). Declared before the case code ran.
 	expectedDigestO = "9381eebc213562073fa5cbafb57edaae2a7a9a5950cc4de0123434e0c0f61550"
+	// expectedDigestI pins group I, the FHIR connector cases (healthcare phase 1; ADR-105, PROPOSED;
+	// the orchestrator accepts under DL-107). Declared before any FHIR connector code exists; the
+	// healthcare tickets call them F01-F12.
+	expectedDigestI = "5916b959bccd6e860e3246f0534e7c29107ef93d9668649ca94d04908ba2a0dd"
 )
 
 // groupSets maps each pinned digest to its groups. A later session adds its own row (S19 N,
@@ -57,6 +61,7 @@ var groupSets = []struct {
 	{"U", expectedDigestU},
 	{"PQR", expectedDigestS34},
 	{"O", expectedDigestO},
+	{"I", expectedDigestI},
 }
 
 type meta struct {
@@ -127,7 +132,7 @@ func wantIDs() []string {
 	for _, g := range []struct {
 		p string
 		n int
-	}{{"A", 13}, {"B", 7}, {"C", 10}, {"D", 17}, {"E", 11}, {"F", 4}, {"G", 4}, {"H", 11}, {"J", 4}, {"K", 4}, {"L", 8}, {"O", 2}, {"U", 5}, {"W", 13}} {
+	}{{"A", 13}, {"B", 7}, {"C", 10}, {"D", 17}, {"E", 11}, {"F", 4}, {"G", 4}, {"H", 11}, {"I", 12}, {"J", 4}, {"K", 4}, {"L", 8}, {"O", 2}, {"U", 5}, {"W", 13}} {
 		for i := 1; i <= g.n; i++ {
 			ids = append(ids, fmt.Sprintf("%s%02d", g.p, i))
 		}

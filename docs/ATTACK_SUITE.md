@@ -115,6 +115,25 @@ S50's group O. A watched session records what Postgres committed, so each case t
 | O01 | Another org closes, excludes from, previews and undoes a watched session | REJECTED (not_found for close, exclude, preview and undo, exactly as an unknown id; the session stays open with nothing excluded) | REJECTED (not_found for close, exclude, preview and undo, exactly as an unknown id; the session stays open with nothing excluded) | ✓ matched |
 | O02 | An agent hides from its own recording: opens, closes, excludes and undoes a session with its key; a person's exclude is recorded | DENIED (403 insufficient_scope for every agent-key call; the person's exclude is sealed as observe.frame_excluded and the undo preview and its SQL list the transaction left out) | DENIED (403 insufficient_scope for every agent-key call; the person's exclude is sealed as observe.frame_excluded and the undo preview and its SQL list the transaction left out) | ✓ matched |
 
+## FHIR servers (declared)
+
+Healthcare phase 1's group I, declared in ADR-105 before any FHIR connector code exists. A FHIR server answers success in ways that don't mean what the agent says: a conditional create that matched an existing resource, an update the server kept as the old version, a field the server changed, a 5xx after it committed, a version another writer or a forged request id made, a transaction that committed more than it reported, and PHI that must never reach a stored record. They run once the native FHIR connector is built.
+
+| Case | Attack | Expected | Actual | Status |
+|---|---|---|---|---|
+| I01 | A conditional create (If-None-Exist) is answered 200 with an existing resource while the agent reports it created one | MISMATCH at L1 (fhir_conditional_matched: the server returned an existing resource version and this action created none; never VERIFIED) | not run | ○ not run |
+| I02 | An update with no change: the server keeps the version and answers 200 | VERIFIED at L1 (the fields match) with the note fhir_no_new_version naming the unchanged version; the record never shows a new version | not run | ○ not run |
+| I03 | The server stores a different value in a field the agent set and answers success | MISMATCH at L1 (fhir_field_changed with the field's path; server-added meta and generated narrative don't count) | not run | ○ not run |
+| I04 | A 5xx after the server committed, and no version in _history carries the action's token | UNVERIFIABLE (the action is unknown; fhir_history_no_match names the gap); never VERIFIED and never MISMATCH | not run | ○ not run |
+| I05 | Another writer changes the same resource while the action's call is open | DETECTED (the other writer's version is reported as out_of_band and isn't bound to the action; the action's verdict comes from its own transaction only) | not run | ○ not run |
+| I06 | Another client sends a write carrying the action's X-Request-ID token | DETECTED (the version is reported as request_id_reused and is never bound: binding needs the version the server reported to this action, so the forged version never makes the action VERIFIED) | not run | ○ not run |
+| I07 | One create commits two resource versions in one transaction (a placeholder reference target) while the call reports one | MISMATCH at L2 (fhir_extra_versions: the action's transaction committed 2 resource versions, the call reported 1; the extra resource is named) | not run | ○ not run |
+| I08 | A HAPI version row stored as JSONC in a large object (pre-7.0 storage) | UNVERIFIABLE (L2 gap large_object_not_replicated); never MISMATCH and never VERIFIED | not run | ○ not run |
+| I09 | An update with a stale If-Match: the server answers 412 (409 on HAPI) | NO EFFECT (fhir_version_conflict: the action is sealed as failed, isn't retried, and no version is created or claimed) | not run | ○ not run |
+| I10 | A write to a resource type outside the connector's allowed_resource_types | DENIED (no request leaves; a deed with decision deny is sealed; the server's history is unchanged) | not run | ○ not run |
+| I11 | A planted patient identifier or clinical value in the request or result of a PHI-mode org's action | REDACTED (once the action is sealed the planted values appear in no action row, deed, event, export or log line of the org; only ids and digests remain) | not run | ○ not run |
+| I12 | A delete of a clinical resource under the healthcare-fhir pack | DENIED (the pack's no-delete-clinical rule; no request leaves; the deed names the rule) | not run | ○ not run |
+
 ## People, sessions and the live stream
 
 S34's group P. Each case reaches for a decision or a view it shouldn't have: an approval link used against another approval, a forged or replayed Slack click, the person the action runs for approving it in Slack, a double vote, a viewer reaching for admin actions, a cross-site request, another org's event stream, and calls that race a Stop.
@@ -263,8 +282,9 @@ Each group set has its own pinned digest, so declaring new cases never changes a
 | U | S23 (undo) | `expectedDigestU` |
 | P, Q, R | S34 | `expectedDigestS34` |
 | O | S50 (observe mode) | `expectedDigestO` |
+| I | Healthcare phase 1 (the FHIR connector, ADR-105; the tickets' F01 to F12) | `expectedDigestI` |
 
-I, M, O, S, T, V, X, Y and Z are unassigned. A session that needs a group takes the next free letter and adds a row here.
+M, S, T, V, X, Y and Z are unassigned. A session that needs a group takes the next free letter and adds a row here.
 
 ## What this suite doesn't cover
 

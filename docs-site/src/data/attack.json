@@ -389,6 +389,96 @@
       ]
     },
     {
+      "title": "FHIR servers (declared)",
+      "intro": "Healthcare phase 1's group I, declared in ADR-105 before any FHIR connector code exists. A FHIR server answers success in ways that don't mean what the agent says: a conditional create that matched an existing resource, an update the server kept as the old version, a field the server changed, a 5xx after it committed, a version another writer or a forged request id made, a transaction that committed more than it reported, and PHI that must never reach a stored record. They run once the native FHIR connector is built.",
+      "cases": [
+        {
+          "id": "I01",
+          "title": "A conditional create (If-None-Exist) is answered 200 with an existing resource while the agent reports it created one",
+          "expected": "MISMATCH at L1 (fhir_conditional_matched: the server returned an existing resource version and this action created none; never VERIFIED)",
+          "actual": "not run",
+          "status": "not_run"
+        },
+        {
+          "id": "I02",
+          "title": "An update with no change: the server keeps the version and answers 200",
+          "expected": "VERIFIED at L1 (the fields match) with the note fhir_no_new_version naming the unchanged version; the record never shows a new version",
+          "actual": "not run",
+          "status": "not_run"
+        },
+        {
+          "id": "I03",
+          "title": "The server stores a different value in a field the agent set and answers success",
+          "expected": "MISMATCH at L1 (fhir_field_changed with the field's path; server-added meta and generated narrative don't count)",
+          "actual": "not run",
+          "status": "not_run"
+        },
+        {
+          "id": "I04",
+          "title": "A 5xx after the server committed, and no version in _history carries the action's token",
+          "expected": "UNVERIFIABLE (the action is unknown; fhir_history_no_match names the gap); never VERIFIED and never MISMATCH",
+          "actual": "not run",
+          "status": "not_run"
+        },
+        {
+          "id": "I05",
+          "title": "Another writer changes the same resource while the action's call is open",
+          "expected": "DETECTED (the other writer's version is reported as out_of_band and isn't bound to the action; the action's verdict comes from its own transaction only)",
+          "actual": "not run",
+          "status": "not_run"
+        },
+        {
+          "id": "I06",
+          "title": "Another client sends a write carrying the action's X-Request-ID token",
+          "expected": "DETECTED (the version is reported as request_id_reused and is never bound: binding needs the version the server reported to this action, so the forged version never makes the action VERIFIED)",
+          "actual": "not run",
+          "status": "not_run"
+        },
+        {
+          "id": "I07",
+          "title": "One create commits two resource versions in one transaction (a placeholder reference target) while the call reports one",
+          "expected": "MISMATCH at L2 (fhir_extra_versions: the action's transaction committed 2 resource versions, the call reported 1; the extra resource is named)",
+          "actual": "not run",
+          "status": "not_run"
+        },
+        {
+          "id": "I08",
+          "title": "A HAPI version row stored as JSONC in a large object (pre-7.0 storage)",
+          "expected": "UNVERIFIABLE (L2 gap large_object_not_replicated); never MISMATCH and never VERIFIED",
+          "actual": "not run",
+          "status": "not_run"
+        },
+        {
+          "id": "I09",
+          "title": "An update with a stale If-Match: the server answers 412 (409 on HAPI)",
+          "expected": "NO EFFECT (fhir_version_conflict: the action is sealed as failed, isn't retried, and no version is created or claimed)",
+          "actual": "not run",
+          "status": "not_run"
+        },
+        {
+          "id": "I10",
+          "title": "A write to a resource type outside the connector's allowed_resource_types",
+          "expected": "DENIED (no request leaves; a deed with decision deny is sealed; the server's history is unchanged)",
+          "actual": "not run",
+          "status": "not_run"
+        },
+        {
+          "id": "I11",
+          "title": "A planted patient identifier or clinical value in the request or result of a PHI-mode org's action",
+          "expected": "REDACTED (once the action is sealed the planted values appear in no action row, deed, event, export or log line of the org; only ids and digests remain)",
+          "actual": "not run",
+          "status": "not_run"
+        },
+        {
+          "id": "I12",
+          "title": "A delete of a clinical resource under the healthcare-fhir pack",
+          "expected": "DENIED (the pack's no-delete-clinical rule; no request leaves; the deed names the rule)",
+          "actual": "not run",
+          "status": "not_run"
+        }
+      ]
+    },
+    {
       "title": "People, sessions and the live stream",
       "intro": "S34's group P. Each case reaches for a decision or a view it shouldn't have: an approval link used against another approval, a forged or replayed Slack click, the person the action runs for approving it in Slack, a double vote, a viewer reaching for admin actions, a cross-site request, another org's event stream, and calls that race a Stop.",
       "cases": [

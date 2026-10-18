@@ -98,3 +98,4 @@ ADR-000 to ADR-008 were written for the V0 verifier and keep their original text
 | 101 | The weekly summary, the Monday email and the agency view | Proposed (2026-10-16, S52) | `internal/weekly`, `ee/agency`; migration 0030; licence feature `agency` |
 | 102 | Partner attribution without cookies, and monthly statements | Proposed (2026-10-16, S52) | site D1 0010, `functions/_lib/partners`, `scripts/partners-statements.mjs` |
 | 104 | The shell guard reads commands with a hand-written reader | Accepted (2026-10-18, DL-107) | `internal/shellguard`, `deedglass guard shell`, `integrations/claude-code/hooks` |
+| 105 | A native FHIR connector, and binding a FHIR server's own writes to an action | Proposed (2026-10-19, healthcare phase 1) | planned `internal/connector/fhir`, `smart_backend` credentials, attack group I (I01–I12, declared); no new dependency |
