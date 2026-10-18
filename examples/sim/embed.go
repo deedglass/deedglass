@@ -4,15 +4,22 @@
 // exists.
 package simfiles
 
-import "embed"
+import (
+	_ "embed"
+	"io/fs"
+
+	"github.com/deedglass/deedglass/internal/embedgz"
+)
+
+// The files are embedded gzip-compressed (sim.tar.gz, make embed-gz; the image budget).
+//
+//go:embed sim.tar.gz
+var archive []byte
 
 // FS holds acme.yaml and the three policy versions it names, under their file names.
-//
-//go:embed acme.yaml acme-sim.v1.yaml acme-sim.v2.yaml acme-sim.v3.yaml
-var FS embed.FS
+var FS = embedgz.FS(archive).(fs.ReadFileFS)
 
-// The named files are read from FS once, so the binary carries each file once (S51: the image
-// size budget, ADR-032).
+// The named files are read from FS once.
 var (
 	// AcmeScenario is examples/sim/acme.yaml, the default scenario.
 	AcmeScenario = mustRead("acme.yaml")

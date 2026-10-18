@@ -95,3 +95,36 @@ func TestUnpackRefusals(t *testing.T) {
 	}()
 	FS([]byte("plain"))
 }
+
+// TestUnpackTree: names in subdirectories round-trip; dot elements, unclean paths, absolute paths
+// and directories are refused, and the flat Unpack still refuses a nested name.
+func TestUnpackTree(t *testing.T) {
+	files := map[string][]byte{"index.json": []byte("{}"), "a/pack.yaml": []byte("id: a\n"), "a/b/c.yaml": []byte("x\n")}
+	gz, err := Pack(files)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := UnpackTree(gz)
+	if err != nil || len(got) != 3 || string(got["a/b/c.yaml"]) != "x\n" {
+		t.Fatalf("UnpackTree = %v, %v", got, err)
+	}
+	if d := Diff(gz, files); d != "" {
+		t.Fatalf("Diff = %q", d)
+	}
+	if _, err := Unpack(gz); err == nil {
+		t.Error("Unpack accepted a nested name")
+	}
+	for name, gz := range map[string][]byte{
+		"dot dir":   raw(t, []tar.Header{{Typeflag: tar.TypeReg, Name: ".git/x", Mode: 0o644}}, []string{"x"}),
+		"dot file":  raw(t, []tar.Header{{Typeflag: tar.TypeReg, Name: "a/.x", Mode: 0o644}}, []string{"x"}),
+		"dot dot":   raw(t, []tar.Header{{Typeflag: tar.TypeReg, Name: "a/../x", Mode: 0o644}}, []string{"x"}),
+		"absolute":  raw(t, []tar.Header{{Typeflag: tar.TypeReg, Name: "/x", Mode: 0o644}}, []string{"x"}),
+		"backslash": raw(t, []tar.Header{{Typeflag: tar.TypeReg, Name: `a\x`, Mode: 0o644}}, []string{"x"}),
+		"empty el":  raw(t, []tar.Header{{Typeflag: tar.TypeReg, Name: "a//x", Mode: 0o644}}, []string{"x"}),
+		"directory": raw(t, []tar.Header{{Typeflag: tar.TypeDir, Name: "d/", Mode: 0o755}}, []string{""}),
+	} {
+		if _, err := UnpackTree(gz); err == nil {
+			t.Errorf("%s: unpacked", name)
+		}
+	}
+}

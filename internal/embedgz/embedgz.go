@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"os"
 	"path"
 	"sort"
 	"strings"
@@ -36,8 +37,29 @@ func FS(gz []byte) fs.FS {
 	return memFS(files)
 }
 
-// Unpack reads the archive into name → bytes.
-func Unpack(gz []byte) (map[string][]byte, error) {
+// Unpack reads the archive into name → bytes. Every name is a plain file name (no directory).
+func Unpack(gz []byte) (map[string][]byte, error) { return unpack(gz, false) }
+
+// UnpackTree is Unpack for an archive whose names may sit in subdirectories ("pack/pack.yaml"):
+// each name must be a valid, clean fs path, and no element of it may start with a dot.
+func UnpackTree(gz []byte) (map[string][]byte, error) { return unpack(gz, true) }
+
+func validName(name string, tree bool) bool {
+	if !tree {
+		return name != "" && name[0] != '.' && !strings.ContainsAny(name, `/\`)
+	}
+	if !fs.ValidPath(name) || name == "." || strings.Contains(name, `\`) {
+		return false
+	}
+	for _, el := range strings.Split(name, "/") {
+		if el[0] == '.' {
+			return false
+		}
+	}
+	return true
+}
+
+func unpack(gz []byte, tree bool) (map[string][]byte, error) {
 	zr, err := gzip.NewReader(bytes.NewReader(gz))
 	if err != nil {
 		return nil, err
@@ -53,7 +75,7 @@ func Unpack(gz []byte) (map[string][]byte, error) {
 		if err != nil {
 			return nil, err
 		}
-		if h.Typeflag != tar.TypeReg || strings.ContainsAny(h.Name, `/\`) || h.Name == "" || h.Name[0] == '.' || h.Size > MaxFile {
+		if h.Typeflag != tar.TypeReg || !validName(h.Name, tree) || h.Size > MaxFile {
 			return nil, fmt.Errorf("%q isn't a plain file of the archive", h.Name)
 		}
 		if total += h.Size; total > MaxTotal {
@@ -100,9 +122,42 @@ func Pack(files map[string][]byte) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-// Diff says how an archive differs from the files it should hold ("" when it matches).
+// ReadTree reads every regular file under dir into slash-separated path → bytes, the input Pack
+// takes for an archive UnpackTree reads. Directories and files whose name starts with a dot are
+// skipped, as the packs reader skips them; anything that isn't a regular file is an error.
+func ReadTree(dir string) (map[string][]byte, error) {
+	files := map[string][]byte{}
+	fsys := os.DirFS(dir)
+	err := fs.WalkDir(fsys, ".", func(p string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if p != "." && strings.HasPrefix(d.Name(), ".") {
+			if d.IsDir() {
+				return fs.SkipDir
+			}
+			return nil
+		}
+		if d.IsDir() {
+			return nil
+		}
+		if !d.Type().IsRegular() {
+			return fmt.Errorf("%s isn't a regular file", p)
+		}
+		b, err := fs.ReadFile(fsys, p)
+		if err != nil {
+			return err
+		}
+		files[p] = b
+		return nil
+	})
+	return files, err
+}
+
+// Diff says how an archive differs from the files it should hold ("" when it matches). Names may
+// sit in subdirectories (UnpackTree).
 func Diff(gz []byte, want map[string][]byte) string {
-	got, err := Unpack(gz)
+	got, err := UnpackTree(gz)
 	if err != nil {
 		return err.Error()
 	}

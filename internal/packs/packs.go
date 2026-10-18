@@ -15,7 +15,7 @@ package packs
 import (
 	"bytes"
 	"crypto/ed25519"
-	"embed"
+	_ "embed"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -28,6 +28,7 @@ import (
 	"strings"
 
 	"github.com/deedglass/deedglass/internal/deed"
+	"github.com/deedglass/deedglass/internal/embedgz"
 	"github.com/deedglass/deedglass/internal/keys"
 	"go.yaml.in/yaml/v3"
 )
@@ -155,21 +156,32 @@ type FormatError struct{ File, Why string }
 
 func (e *FormatError) Error() string { return "packs: " + e.File + ": " + e.Why }
 
-//go:embed all:snapshot
-var snapshot embed.FS
+// The snapshot directory is embedded gzip-compressed (snapshot.tar.gz, make embed-gz; the image
+// budget, ADR-032 as amended by DL-031).
+//
+//go:embed snapshot.tar.gz
+var snapshotArchive []byte
 
 //go:embed pack-keys.json
 var embeddedKeys []byte
 
-// Embedded is the snapshot this binary carries.
+// Embedded is the snapshot this binary carries, read within the same limits as FromFS.
 func Embedded() *Source {
-	sub, err := fs.Sub(snapshot, "snapshot")
+	files, err := embedgz.UnpackTree(snapshotArchive)
 	if err != nil {
-		panic(err)
+		panic("packs: " + err.Error())
 	}
-	src, err := FromFS(sub, "embedded")
-	if err != nil {
-		panic(err)
+	names := make([]string, 0, len(files))
+	for n := range files {
+		names = append(names, n)
+	}
+	sort.Strings(names)
+	src := &Source{Origin: "embedded", Files: map[string][]byte{}}
+	total := 0
+	for _, n := range names {
+		if err := src.add(n, files[n], &total); err != nil {
+			panic(err)
+		}
 	}
 	return src
 }

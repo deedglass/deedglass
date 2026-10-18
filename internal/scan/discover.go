@@ -12,11 +12,14 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/deedglass/deedglass/internal/embedgz"
 	"go.yaml.in/yaml/v3"
 )
 
-//go:embed catalog.yaml
-var catalogYAML []byte
+// catalog.yaml is embedded gzip-compressed (catalog.tar.gz, make embed-gz; the image budget).
+//
+//go:embed catalog.tar.gz
+var catalogArchive []byte
 
 // CatalogEntry is one known server or package (catalog.yaml).
 type CatalogEntry struct {
@@ -43,7 +46,11 @@ func Catalog() ([]CatalogEntry, error) {
 	var c struct {
 		Entries []CatalogEntry `yaml:"entries"`
 	}
-	if err := yaml.Unmarshal(catalogYAML, &c); err != nil {
+	b, err := fs.ReadFile(embedgz.FS(catalogArchive), "catalog.yaml")
+	if err != nil {
+		return nil, err
+	}
+	if err := yaml.Unmarshal(b, &c); err != nil {
 		return nil, err
 	}
 	return c.Entries, nil
