@@ -41,7 +41,7 @@ pass (tar headers need the size) and hashes it while writing.
   "org": "org_…",
   "issuer": "https://api.deedglass.com",
   "created_at": "2026-10-02T18:30:00.000Z",
-  "generator": { "name": "deedglass", "version": "0.2.1", "commit": "4f2c1a9" },
+  "generator": { "name": "deedglass", "version": "0.1.0-dev", "commit": "4f2c1a9" },
   "range": { "first_seq": 1, "last_seq": 1204, "count": 1204, "from": "…", "to": "…" },
   "chain": {
     "anchor": { "kind": "genesis", "seq": 0, "body_hash": "sha256:<64 hex>" },
@@ -193,7 +193,7 @@ Spec: https://docs.deedglass.com/deeds/spec
   "generator": {
     "commit": "4f2c1a9",
     "name": "deedglass",
-    "version": "0.2.1"
+    "version": "0.1.0-dev"
   },
   "issuer": "https://api.deedglass.example",
   "kinds": {
