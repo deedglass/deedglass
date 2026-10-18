@@ -290,6 +290,24 @@ jobs:
           path: attack/results/latest.json
           if-no-files-found: warn
 
+  # HC-P00: a FHIR R4 server (HAPI FHIR JPA, image pinned by digest in scripts/fhir.sh) behind the
+  # REST connector, a real serve on a throwaway PostgreSQL 18.6 (Docker), the policy-gated create and
+  # update of an Observation and the read-back checks (TestFHIRRestLive). Synthetic data only.
+  fhir-hapi:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+      - name: TestFHIRRestLive against HAPI FHIR JPA
+        env:
+          DEEDGLASS_IT_MODE: docker
+        run: scripts/fhir.sh it
+
   # The image as make dev runs it: built with buildx (GitHub Actions cache), loaded into the local
   # Docker only, then started through deploy/docker-compose.yml (Postgres with the init scripts, the
   # one-shot migrate, then serve). No push.

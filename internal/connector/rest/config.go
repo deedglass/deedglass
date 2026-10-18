@@ -103,6 +103,17 @@ type Arg struct {
 	MaxLength   *int     `json:"max_length,omitempty"`
 	Required    bool     `json:"required,omitempty"`
 	Sensitive   bool     `json:"sensitive,omitempty"`
+	// Field is a body arg's key in the JSON body when it differs from the arg's name (HC-P00):
+	// arg names are lowercase (resource_type), while some APIs use other keys (FHIR's resourceType).
+	Field string `json:"field,omitempty"`
+}
+
+// bodyKey is the key a body arg is sent under: field when set, else the arg's name.
+func (a Arg) bodyKey(name string) string {
+	if a.Field != "" {
+		return a.Field
+	}
+	return name
 }
 
 var (
@@ -110,6 +121,7 @@ var (
 	reHeaderName  = regexp.MustCompile(`^[A-Za-z0-9-]{1,64}$`)
 	reQueryParam  = regexp.MustCompile(`^[A-Za-z0-9_.-]{1,64}$`)
 	reArgName     = regexp.MustCompile(`^[a-z][a-z0-9_]{0,63}$`)
+	reBodyField   = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]{0,63}$`)
 	rePlaceholder = regexp.MustCompile(`\{([^{}]*)\}`)
 	rePathLiteral = regexp.MustCompile(`^[A-Za-z0-9._~!$&'()*+,;=:@%/-]*$`)
 	argIns        = []string{"path", "query", "body", "header"}
@@ -426,6 +438,21 @@ func (c *Connector) normalizeTool(cfg *Config, i int, v *validator) {
 		v.add(at+".args", "At most %d args.", MaxArgs)
 	}
 	pathArgs := map[string]bool{}
+	bodyKeys := map[string]string{} // body key → the arg that sends it
+	argNames := make([]string, 0, len(t.Args))
+	for name := range t.Args {
+		argNames = append(argNames, name)
+	}
+	sort.Strings(argNames)
+	for _, name := range argNames {
+		if a := t.Args[name]; a.In == "body" {
+			k := a.bodyKey(name)
+			if other, dup := bodyKeys[k]; dup {
+				v.add(at+".args."+clip(name)+".field", "The body key %s is already sent by the arg %s.", clip(k), other)
+			}
+			bodyKeys[k] = name
+		}
+	}
 	for name, a := range t.Args {
 		ap := at + ".args." + clip(name)
 		if !reArgName.MatchString(name) {
@@ -464,6 +491,14 @@ func (c *Connector) normalizeTool(cfg *Config, i int, v *validator) {
 		}
 		if a.In != "header" && a.Header != "" {
 			v.add(ap+".header", "header applies only to in: header.")
+		}
+		switch {
+		case a.Field != "" && a.In != "body":
+			v.add(ap+".field", "field applies only to in: body.")
+		case a.Field != "" && !reBodyField.MatchString(a.Field):
+			v.add(ap+".field", "field must be a JSON key of letters, digits and underscores, like resourceType.")
+		case a.Field == name:
+			a.Field = "" // the default, normalized away
 		}
 		if a.Pattern != "" {
 			if _, err := regexp.Compile(a.Pattern); err != nil {

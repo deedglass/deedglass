@@ -12,10 +12,12 @@ import (
 )
 
 // Templates are whole values only: "{{args.<path>}}" or "{{result.body.<path>}}". Anything else is
-// a literal. There is no string interpolation, so a template can't build a path or a query.
+// a literal. There is no string interpolation, so a template can't build a path or a query. An
+// expect path's root (body, status, meta) is lowercase; later segments may use any case (FHIR's
+// body.valueQuantity.value, HC-P00).
 var (
 	reTemplate   = regexp.MustCompile(`^\{\{\s*((?:args|result\.body)(?:\.[A-Za-z0-9_]+|\[[0-9]+\])*)\s*\}\}$`)
-	reExpectPath = regexp.MustCompile(`^[a-z_][a-z0-9_]*(\.[a-z0-9_]+|\[[0-9]+\])*$`)
+	reExpectPath = regexp.MustCompile(`^[a-z_][a-z0-9_]*(\.[A-Za-z0-9_]+|\[[0-9]+\])*$`)
 	reDigits     = regexp.MustCompile(`^[0-9]+$`)
 )
 

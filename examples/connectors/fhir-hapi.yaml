@@ -1,0 +1,62 @@
+# A FHIR R4 server behind the REST connector (HC-P00). The tools are written by hand: one per
+# resource type and interaction. docs/guides/fhir-server.md says what this can and can't check.
+#   make fhir-up                      # HAPI FHIR JPA in Docker on a free port (synthetic data only)
+#   deedglass connector create --config examples/connectors/fhir-hapi.yaml   # base_url = the URL it prints
+#   deedglass connector test fhir
+# Use synthetic data only. Real patient data needs the limits in docs/guides/fhir-server.md read first.
+type: rest
+name: fhir
+description: A FHIR R4 server (HAPI FHIR JPA) through the REST connector. Observations only.
+config:
+  base_url: http://127.0.0.1:18093          # dev only (DEEDGLASS_ALLOW_PRIVATE_NETWORKS=1); prod needs https
+  auth: { kind: none }                      # local HAPI has no auth; a real server takes bearer
+  allowed_methods: [GET, POST, PUT]         # no DELETE: a clinical record is corrected, not deleted
+  allowed_path_prefixes: [/fhir/Observation]
+  send_action_id: true                      # Deedglass-Action-Id: act_… on every call
+  test: { method: GET, path: /fhir/metadata }
+  tools:
+    - name: get_observation
+      description: Read one Observation by its id.
+      method: GET
+      path: /fhir/Observation/{id}
+      args:
+        id: { in: path, type: string, pattern: "^[A-Za-z0-9.-]{1,64}$", required: true }
+    - name: create_observation
+      description: >-
+        Create an Observation. Send resource_type Observation, a status, a code, a subject (a
+        reference such as Patient/123) and value_quantity.
+      method: POST
+      path: /fhir/Observation
+      args:
+        resource_type:  { in: body, field: resourceType, type: string, enum: [Observation], required: true }
+        status:         { in: body, type: string, enum: [registered, preliminary, final, amended], required: true }
+        code:           { in: body, type: object, required: true }
+        subject:        { in: body, type: object, required: true }
+        value_quantity: { in: body, field: valueQuantity, type: object, required: true }
+      readback:                                       # read the new Observation back (L1, Checked)
+        tool: get_observation
+        args: { id: "{{result.body.id}}" }            # the id the server assigned
+        expect:
+          body.status: "{{args.status}}"
+          body.valueQuantity.value: "{{args.value_quantity.value}}"
+    - name: update_observation
+      description: >-
+        Replace an Observation. A FHIR update is a whole-resource PUT: send every field you want
+        kept, and send the id twice (id in the path and resource_id in the body; the server
+        refuses a mismatch).
+      method: PUT
+      path: /fhir/Observation/{id}
+      args:
+        id:             { in: path, type: string, pattern: "^[A-Za-z0-9.-]{1,64}$", required: true }
+        resource_id:    { in: body, field: id, type: string, pattern: "^[A-Za-z0-9.-]{1,64}$", required: true }
+        resource_type:  { in: body, field: resourceType, type: string, enum: [Observation], required: true }
+        status:         { in: body, type: string, enum: [preliminary, final, amended, corrected, cancelled, entered-in-error], required: true }
+        code:           { in: body, type: object, required: true }
+        subject:        { in: body, type: object, required: true }
+        value_quantity: { in: body, field: valueQuantity, type: object, required: true }
+      readback:
+        tool: get_observation
+        args: { id: "{{args.id}}" }
+        expect:
+          body.status: "{{args.status}}"
+          body.valueQuantity.value: "{{args.value_quantity.value}}"
