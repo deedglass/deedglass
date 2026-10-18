@@ -1,6 +1,6 @@
 {
   "name": "@deedglass/cli-darwin-arm64",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "The deedglass binary for darwin/arm64 (installed by the deedglass package).",
   "license": "Apache-2.0 AND FSL-1.1-ALv2",
   "repository": { "type": "git", "url": "git+https://github.com/deedglass/deedglass.git", "directory": "npm/cli-darwin-arm64" },

@@ -7,6 +7,12 @@ this file by `scripts/release-notes.sh`.
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-10-19
+
+A patch for the shell guard: the hook no longer blocks Bash on Windows without Git Bash or with an
+older `deedglass` binary, and off means no output. No new dependency, no schema migration, and
+`formula_version` stays 1.
+
 ### Fixed
 
 - **The Claude Code plugin's shell guard never blocks a Bash command when it can't check.** The
@@ -229,7 +235,8 @@ See [KNOWN_ISSUES.md](KNOWN_ISSUES.md): what happens, who is affected, the worka
 See [docs/LIMITATIONS.md](docs/LIMITATIONS.md). In short: L2 covers Postgres only, seal keys are per
 deployment, and Deedglass trusts the Postgres server and the host it runs on.
 
-[Unreleased]: https://github.com/deedglass/deedglass/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/deedglass/deedglass/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/deedglass/deedglass/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/deedglass/deedglass/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/deedglass/deedglass/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/deedglass/deedglass/releases/tag/v0.1.0

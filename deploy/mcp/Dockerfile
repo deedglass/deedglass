@@ -8,7 +8,7 @@ WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download && go mod verify
 COPY . .
-ARG VERSION=0.2.0
+ARG VERSION=0.2.1
 RUN CGO_ENABLED=0 go build -trimpath -ldflags "-s -w -X github.com/deedglass/deedglass/internal/buildinfo.Version=${VERSION}" -o /out/deedglass ./cmd/deedglass
 
 FROM gcr.io/distroless/static-debian13:nonroot@sha256:e2e927ec666bae08560abb3c55d0659eceabb657f56b6782ab500a9fc7f555e3
