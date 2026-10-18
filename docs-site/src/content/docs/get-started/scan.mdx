@@ -1,7 +1,7 @@
 ---
 title: Scan in 60 seconds
 description: Grade your own agent setup from A to F with one command. Nothing leaves your machine unless you name a database.
-lastVerified: "2026-10-05"
+lastVerified: "2026-10-18"
 claims: [C-086, C-088]
 ---
 
@@ -14,7 +14,7 @@ Grade your own agent setup from A to F with one command. Nothing leaves your mac
 **Before you start**
 
 - Node 18 or later, for `npx`. No account, no key, no server.
-- A project with agent configs: `.mcp.json`, `.cursor/mcp.json`, `.vscode/mcp.json`, `claude_desktop_config.json`, `package.json` or `pyproject.toml`.
+- A project with agent configs: `.mcp.json`, `.cursor/mcp.json`, `.vscode/mcp.json`, `claude_desktop_config.json`, `.claude/settings.json`, `package.json`, `pyproject.toml` or `Gemfile`.
 
 ## 1. Run it
 
@@ -28,7 +28,7 @@ Blast radius: …
 What your grade means: deedglass.com/score
 ```
 
-The scan reads your files and the MCP configs in your home directory, finds the MCP servers and agent frameworks you use, and works out what they can change. It connects only to a database you name with `--postgres-dsn-env`, read-only, and sends nothing anywhere else. Without `--no-write` it also writes `deedglass-scan.md` and `deedglass-scan.html`.
+The scan reads your files and the MCP configs in your home directory, finds the MCP servers and agent frameworks you use, and works out what they can change. It also reads your Claude Code permission rules and says which destructive database commands, such as `prisma migrate reset --force`, an agent could run in a shell without a prompt. It connects only to a database you name with `--postgres-dsn-env`, read-only, and sends nothing anywhere else. Without `--no-write` it also writes `deedglass-scan.md` and `deedglass-scan.html`.
 
 ## 2. Read the score
 
@@ -65,6 +65,15 @@ Each finding has an id. SARIF output and the HTML report link to these anchors.
 <a id="archived_postgres_mcp"></a>
 **archived_postgres_mcp** · high when its role can write. Anthropic archived its reference Postgres MCP server (`@modelcontextprotocol/server-postgres`) on 2025-05-28. Its read-only mode runs each query in a read-only transaction that a stacked `COMMIT;` can end (Datadog Security Labs), after which the role's full rights apply. Fix: move to a maintained server, and put it behind `deedglass mcp wrap`.
 
+<a id="shell_destructive_unprompted"></a>
+**shell_destructive_unprompted** · high. A database tool in your dependencies has a destructive command, such as `prisma migrate reset --force`, and an allow rule in your Claude Code settings runs one spelling of it without a prompt. A rule matches the text of a command, so `npx prisma …` and `pnpm prisma …` are different spellings. Fix: add an ask rule with a leading `*`, such as `Bash(*prisma migrate reset*)`, so Claude Code asks first whatever runner the agent uses.
+
+<a id="shell_destructive_no_rule"></a>
+**shell_destructive_no_rule** · medium when your user settings start Claude Code in auto mode, low otherwise. No ask or deny rule covers some spelling of a destructive command, so the permission mode decides: Manual mode asks, and auto mode lets a classifier decide instead of you. Fix: the same ask rule.
+
+<a id="env_database_url_readable"></a>
+**env_database_url_readable** · medium. A `.env` file holds a database URL variable and no `Read` deny rule covers it, so an agent can read the URL without a prompt. The scan reads variable names, never values. Fix: add `Read(.env)` and `Read(.env.*)` to `permissions.deny`. A program that opens the file itself, such as `prisma`, still reads it.
+
 <a id="database_url_in_client_args"></a>
 **database_url_in_client_args** · medium. A database URL with a password sits in a client config's arguments, where every process listing can read it. Fix: pass it through an environment variable.
 
@@ -94,4 +103,5 @@ Each finding has an id. SARIF output and the HTML report link to these anchors.
 - It grades only your own setup. It doesn't run your agent, call your tools or test a model.
 - It reads environment variable names, never their values, except the one database URL you name with `--postgres-dsn-env`.
 - A server it doesn't recognise counts as a write path. When the scan can't tell, the deduction says `not shown to be routed`.
+- The shell checks read Claude Code's settings only, not managed settings or command-line flags. A permission rule is a second check on the text of a command, not a sandbox.
 </Limits>

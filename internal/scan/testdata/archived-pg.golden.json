@@ -172,6 +172,7 @@
     }
   ],
   "env_names": null,
+  "claude_settings": [],
   "tools": [
     {
       "server": "files",

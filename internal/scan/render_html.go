@@ -77,7 +77,7 @@ var reportTmpl = template.Must(template.New("report").Funcs(template.FuncMap{
 		}
 		return fmt.Sprintf("%s%d", Minus, n)
 	},
-	"plural": plural, "word": numberWord,
+	"plural": plural, "word": numberWord, "counts": settingsCounts,
 	"limit": func(ts []Table) []Table {
 		if len(ts) > 25 {
 			return ts[:25]
@@ -127,6 +127,7 @@ var reportTmpl = template.Must(template.New("report").Funcs(template.FuncMap{
 {{range .R.Configs}}<li><code translate="no">{{.Path}}</code> <span class="muted">({{.Client}})</span>{{range .Servers}} · {{.Name}}{{if .Package}} <code translate="no">{{.Package}}</code>{{end}}{{if .Routed}} <span class="ok">routed through Deedglass</span>{{end}}{{end}}</li>
 {{end}}{{range .R.Dependencies}}<li><code translate="no">{{.File}}</code>: {{.Name}} <code translate="no">{{.Spec}}</code></li>
 {{end}}{{range .R.EnvNames}}<li><code translate="no">{{.File}}</code>: database URL variables (names only): <code translate="no">{{join .Names ", "}}</code></li>
+{{end}}{{range .R.ClaudeSettings}}<li><code translate="no">{{.Path}}</code>: Claude Code settings <span class="muted">({{.Scope}})</span> · {{counts .}}</li>
 {{end}}</ul>
 
 {{if .R.Findings}}<h2>Findings</h2>

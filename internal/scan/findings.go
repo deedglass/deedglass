@@ -120,6 +120,12 @@ func findings(r *Report, o Options) []Finding {
 				Fix:    []string{"Set wal_level=logical and restart Postgres."}, Paths: []string{}, Sources: []string{}})
 		}
 	}
+	_ = o
+	return sortFindings(out)
+}
+
+// sortFindings orders findings by severity, then id, then path, and never returns nil.
+func sortFindings(out []Finding) []Finding {
 	rankSev := map[string]int{"high": 0, "medium": 1, "low": 2, "info": 3}
 	sort.SliceStable(out, func(i, j int) bool {
 		a, b := out[i], out[j]
@@ -134,7 +140,6 @@ func findings(r *Report, o Options) []Finding {
 	if out == nil {
 		out = []Finding{}
 	}
-	_ = o
 	return out
 }
 

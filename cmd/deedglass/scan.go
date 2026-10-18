@@ -35,7 +35,7 @@ func scanFlags(fs *flag.FlagSet) {
 	}{}
 	fs.StringVar(&v.dir, "dir", ".", "the directory to scan")
 	fs.StringVar(&v.dsnEnv, "postgres-dsn-env", "", "the environment variable holding a Postgres URL to check read-only (never a URL itself)")
-	fs.BoolVar(&v.userConfigs, "user-configs", true, "also read your user-level MCP client configs (Claude Desktop, Cursor, Windsurf)")
+	fs.BoolVar(&v.userConfigs, "user-configs", true, "also read your user-level MCP client configs (Claude Desktop, Cursor, Windsurf) and Claude Code settings")
 	fs.StringVar(&v.outDir, "out-dir", ".", "where the report files go")
 	fs.StringVar(&v.format, "format", "md,html", "report files to write: md, html, json, sarif (comma-separated)")
 	fs.IntVar(&v.maxFiles, "max-files", 20000, "stop the file walk after this many files")

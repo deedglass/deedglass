@@ -344,7 +344,7 @@ complete -c deedglass -n '__deedglass_is \'scan\'' -l out-dir -r -d 'where the r
 complete -c deedglass -n '__deedglass_is \'scan\'' -l postgres-dsn-env -r -d 'the environment variable holding a Postgres URL to check read-only (never a URL itself)'
 complete -c deedglass -n '__deedglass_is \'scan\'' -l score -d 'print the score line, the small print and the deductions only'
 complete -c deedglass -n '__deedglass_is \'scan\'' -l share -d 'print a share link that holds the grade, counts and finding ids only'
-complete -c deedglass -n '__deedglass_is \'scan\'' -l user-configs -d 'also read your user-level MCP client configs (Claude Desktop, Cursor, Windsurf)'
+complete -c deedglass -n '__deedglass_is \'scan\'' -l user-configs -d 'also read your user-level MCP client configs (Claude Desktop, Cursor, Windsurf) and Claude Code settings'
 complete -c deedglass -n '__deedglass_is \'security-pack\'' -a 'readiness' -d 'Check how a security review would see your setup'
 complete -c deedglass -n '__deedglass_is \'security-pack\'' -a 'build' -d 'Build the sealed security review pack (Pro)'
 complete -c deedglass -n '__deedglass_is \'security-pack\'' -a 'verify' -d 'Check a security review pack offline'

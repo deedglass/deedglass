@@ -1,6 +1,8 @@
 // Package scan is `deedglass scan` (S32 §3.13): a local, offline, read-only report of what an agent
 // setup can change. It finds MCP client configs, agent and database dependencies, database URL
-// variable names and write-capable tools; it flags the archived Postgres MCP server; with a DSN it
+// variable names and write-capable tools; it flags the archived Postgres MCP server; it reads Claude
+// Code's permission rules and says which destructive database commands would run without a prompt
+// and which .env database URLs an agent can read (FEAT-05, shell.go); with a DSN it
 // reads the Postgres catalog in a read-only transaction and ranks the tables the role can change;
 // and it grades the setup with the Agent Blast-Radius Score (A to F).
 //
@@ -30,26 +32,27 @@ const FormulaVersion = 1
 
 // Report is the scan_report object (`--json`, deedglass-scan.json).
 type Report struct {
-	Object           string        `json:"object"`
-	Version          int           `json:"version"`
-	ScannedAt        string        `json:"scanned_at"`
-	DeedglassVersion string        `json:"deedglass_version"`
-	Dir              string        `json:"dir"`
-	Offline          bool          `json:"offline"`
-	Score            Score         `json:"score"`
-	Summary          Summary       `json:"summary"`
-	Configs          []Config      `json:"configs"`
-	Dependencies     []Dependency  `json:"dependencies"`
-	EnvNames         []EnvNames    `json:"env_names"`
-	Tools            []Tool        `json:"tools"`
-	Findings         []Finding     `json:"findings"`
-	Postgres         *Postgres     `json:"postgres"`
-	Policies         []Suggestion  `json:"policies"`
-	Notes            []string      `json:"notes"`
-	Footer           string        `json:"footer"`
-	TookMS           int64         `json:"took_ms"`
-	Walk             WalkStats     `json:"walk"`
-	PostgresError    *PostgresFail `json:"postgres_error,omitempty"`
+	Object           string           `json:"object"`
+	Version          int              `json:"version"`
+	ScannedAt        string           `json:"scanned_at"`
+	DeedglassVersion string           `json:"deedglass_version"`
+	Dir              string           `json:"dir"`
+	Offline          bool             `json:"offline"`
+	Score            Score            `json:"score"`
+	Summary          Summary          `json:"summary"`
+	Configs          []Config         `json:"configs"`
+	Dependencies     []Dependency     `json:"dependencies"`
+	EnvNames         []EnvNames       `json:"env_names"`
+	ClaudeSettings   []ClaudeSettings `json:"claude_settings"`
+	Tools            []Tool           `json:"tools"`
+	Findings         []Finding        `json:"findings"`
+	Postgres         *Postgres        `json:"postgres"`
+	Policies         []Suggestion     `json:"policies"`
+	Notes            []string         `json:"notes"`
+	Footer           string           `json:"footer"`
+	TookMS           int64            `json:"took_ms"`
+	Walk             WalkStats        `json:"walk"`
+	PostgresError    *PostgresFail    `json:"postgres_error,omitempty"`
 }
 
 // Score is the Agent Blast-Radius Score.
@@ -134,7 +137,7 @@ type Finding struct {
 	Severity string   `json:"severity"` // high · medium · low · info
 	Title    string   `json:"title"`
 	Detail   string   `json:"detail"`
-	Checked  string   `json:"checked,omitempty"` // which role the database part checked
+	Checked  string   `json:"checked,omitempty"` // which role the database part checked, or which settings files a shell finding read
 	Fix      []string `json:"fix"`
 	Paths    []string `json:"paths"`
 	Sources  []string `json:"sources"`
@@ -260,13 +263,16 @@ func Scan(ctx context.Context, o Options) (*Report, error) {
 	}
 	r := &Report{Object: "scan_report", Version: Version, ScannedAt: start.UTC().Format(time.RFC3339),
 		DeedglassVersion: o.Version, Dir: o.DirLabel, Offline: o.DSN == "", Footer: FooterLine,
-		Configs: []Config{}, Dependencies: []Dependency{}, EnvNames: []EnvNames{}, Tools: []Tool{},
+		Configs: []Config{}, Dependencies: []Dependency{}, EnvNames: []EnvNames{}, ClaudeSettings: []ClaudeSettings{}, Tools: []Tool{},
 		Findings: []Finding{}, Policies: []Suggestion{}, Notes: []string{}}
 	d, err := discover(o)
 	if err != nil {
 		return nil, err
 	}
 	r.Configs, r.Dependencies, r.EnvNames, r.Walk = d.configs, d.deps, d.env, d.walk
+	if d.settings != nil {
+		r.ClaudeSettings = d.settings
+	}
 	r.Tools = toolsFor(r.Configs, r.Dependencies)
 	if o.DSN != "" {
 		pg, fail := readPostgres(ctx, o)
@@ -276,7 +282,7 @@ func Scan(ctx context.Context, o Options) (*Report, error) {
 			rank(pg.Tables)
 		}
 	}
-	r.Findings = findings(r, o)
+	r.Findings = sortFindings(append(findings(r, o), shellFindings(r, d, o)...))
 	r.Score = score(r, d.policyFiles > 0)
 	r.Policies = suggest(r)
 	r.Summary = summarize(r)
