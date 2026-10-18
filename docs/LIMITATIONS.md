@@ -1,6 +1,6 @@
 # Limitations
 
-What Deedglass does not do, stated plainly. **Owner: S37**, which finalizes this page before launch. Until then, each session adds the limits it decides. This list already holds the ones the contract fixes.
+What Deedglass does not do, stated plainly. Start with the known limits in v1; the rest are grouped by the part of Deedglass they belong to.
 
 ## Known limits in v1
 

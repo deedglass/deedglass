@@ -83,6 +83,93 @@ export const REPO_ONLY = [
   'docs/v0/OPERATION_BUNDLE.md', 'docs/v0/STATEMENT_SPEC.md', 'docs/v0/VERIFICATION_MODEL.md',
 ];
 
+// docs/LIMITATIONS.md is one file in the repo (release notes read its first section) and, on the site,
+// a short index at /security/limitations/ plus one page per part (DOC-05: the single page was over 8,000
+// words). Every "## " section of the file belongs to exactly one part; a new section that isn't listed
+// here fails the build, so nothing is dropped. Each section keeps its heading, so its anchor is the same
+// on the part's page as it was on the single page, and the index keeps an element with the old id.
+export const LIMITS_FILE = 'docs/LIMITATIONS.md';
+export const LIMITS_SLUG = 'security/limitations';
+/** Sections that stay on the index page. */
+export const LIMITS_INDEX = ['Known limits in v1', 'Already running another gate?', 'What this page does not do'];
+export const LIMITS_PARTS = [
+  {
+    slug: 'postgres',
+    label: 'Postgres, the check and undo',
+    title: 'Limits: Postgres, the check and undo',
+    description: "What Deedglass can't see or do in Postgres: the database, the Postgres connector, the check against the change log, the decoder and undo.",
+    sections: ['Database limits', 'The Postgres connector', 'The Witness', 'The decoder', 'The L2 witness', 'Undo'],
+  },
+  {
+    slug: 'records',
+    label: 'Records, verify and the Ledger',
+    title: 'Limits: records, verify and the Ledger',
+    description: 'What a sealed record, deedglass verify and the Ledger chain check show, and what they leave out.',
+    sections: ['Deed limits', 'Verifier limits', 'Ledger limits'],
+  },
+  {
+    slug: 'identity',
+    label: 'Sign-in, agent keys, Stop and intents',
+    title: 'Limits: sign-in, agent keys, Stop and intents',
+    description: 'The limits of sign-in, agent and admin keys, Stop and signed intents, including where rate limits live and what Stop cannot undo.',
+    sections: ['Identity limits', 'Agents, keys and Stop limits', 'Signed intents, on-behalf-of and MCP limits'],
+  },
+  {
+    slug: 'policies',
+    label: 'Policies, rules and approvals',
+    title: 'Limits: policies, rules and approvals',
+    description: 'The limits of policies, sqlguard, budgets, policy versions, the rules that run each call, approvals, webhooks and scheduled actions.',
+    sections: [
+      'Policy limits',
+      'Policy evaluation, sqlguard and budgets',
+      'Policy versions, activation and the registry',
+      'Gate limits',
+      'Approvals and webhooks',
+      'Scheduled actions and outbound mail',
+    ],
+  },
+  {
+    slug: 'mcp',
+    label: 'The MCP wrapper, gateway and demo',
+    title: 'Limits: the MCP wrapper, gateway and demo',
+    description: 'The limits of deedglass mcp wrap, the MCP HTTP gateway, /mcp/native, mcp serve and the Acme demo stack.',
+    sections: ['The MCP stdio wrapper', 'The MCP gateway, /mcp/native and mcp serve', 'The Acme demo stack'],
+  },
+  {
+    slug: 'connectors',
+    label: 'Connectors, the vault and egress',
+    title: 'Limits: connectors, the vault and egress',
+    description: 'The limits of connectors, the credential vault and network egress, and of the GitHub, Slack, Stripe and Gmail connectors.',
+    sections: ['Connectors, the vault and egress', 'GitHub, Slack and approvals in Slack', 'Stripe and Gmail'],
+  },
+  {
+    slug: 'console-and-insights',
+    label: 'The Console, Insights and the SDK',
+    title: 'Limits: the Console, Insights and the SDK',
+    description: "The limits of the Console's control screens, Insights and its suggestions, the weekly digest and the TypeScript SDK.",
+    sections: ["The Console's control screens", 'Insights', 'Suggestions, phrasing and the digest', 'The TypeScript SDK'],
+  },
+  {
+    slug: 'testing',
+    label: 'The attack suite and security pass',
+    title: 'Limits: the attack suite and security pass',
+    description: "What the attack suite and the October 2026 security pass cover, and what they don't.",
+    sections: ['The attack suite', 'Security pass 2'],
+  },
+];
+/** A section heading without its session tag: "Undo (S23)" → "Undo"; curly apostrophes made straight. */
+export const sectionName = (h) => h.replace(/\s*\(S\d+[A-Z]?\)\s*$/, '').replace(/’/g, "'").trim();
+/** The id Astro gives a heading (github-slugger's rule for these headings). */
+export const headingId = (h) => h.toLowerCase().replace(/[^\p{L}\p{N}\s_-]/gu, '').replace(/\s/g, '-');
+/** The part slug for a heading id of docs/LIMITATIONS.md, or null (an index section or unknown). */
+export function limitsPartFor(anchor, md = readFileSync(join(repo, LIMITS_FILE), 'utf8')) {
+  for (const m of md.matchAll(/^## (.+)$/gm)) {
+    if (headingId(m[1]) !== anchor) continue;
+    return LIMITS_PARTS.find((p) => p.sections.includes(sectionName(m[1])))?.slug ?? null;
+  }
+  return null;
+}
+
 /** The site path for a repo docs file, or null. */
 export function sitePath(repoRel) {
   const r = repoRel.replace(/\\/g, '/');
@@ -105,6 +192,8 @@ export function rewriteLinks(md, srcRel) {
       return text;
     }
     if (target === 'docs/api/errors.md' && anchor && /^[a-z][a-z0-9_]*$/.test(anchor)) return `[${text}](/errors/${anchor}/${title ?? ''})`;
+    const part = target === LIMITS_FILE && anchor ? limitsPartFor(anchor.toLowerCase()) : null;
+    if (part) return `[${text}](/${LIMITS_SLUG}/${part}/#${anchor.toLowerCase()}${title ?? ''})`;
     const sp = sitePath(target);
     if (sp) return `[${text}](${sp}${anchor ? '#' + anchor.toLowerCase() : ''}${title ?? ''})`;
     // a source file or a repo-only note: keep the words, drop the link (the repo isn't public yet)
@@ -154,6 +243,7 @@ const written = [];
 function importDoc(src, slug) {
   let md = readFileSync(join(repo, src), 'utf8').replace(/\r\n/g, '\n');
   md = md.replace(/^<!--[\s\S]*?-->\s*/, '');
+  if (src === LIMITS_FILE) return importLimits(md);
   const h1 = /^# (.+)\n/m.exec(md);
   const title = h1 ? stripMd(h1[1]) : slug;
   if (h1) md = md.slice(0, h1.index) + md.slice(h1.index + h1[0].length);
@@ -161,6 +251,70 @@ function importDoc(src, slug) {
   md = rewriteLinks(md, src);
   const fm = frontmatter({ title, description: describe(firstPara), imported: src, editUrl: false });
   write(`${slug}.md`, fm + `:::note[Source]\nThis page is \`${src}\` in the Deedglass repo, imported at build time.\n:::\n\n` + md.trimStart());
+}
+
+/** Splits a Markdown file at its "## " headings: { head, sections: [{ heading, body }] }. */
+export function splitSections(md) {
+  const parts = md.split(/^(?=## )/m);
+  const head = parts[0].startsWith('## ') ? '' : parts.shift();
+  return { head, sections: parts.map((p) => ({ heading: /^## (.+)$/m.exec(p)[1].trim(), body: p })) };
+}
+
+/** docs/LIMITATIONS.md → the index at /security/limitations/ and one page per part (LIMITS_PARTS). */
+function importLimits(md) {
+  const h1 = /^# (.+)\n/m.exec(md);
+  if (h1) md = md.slice(0, h1.index) + md.slice(h1.index + h1[0].length);
+  const { head, sections } = splitSections(md);
+  const byPart = new Map(LIMITS_PARTS.map((p) => [p.slug, []]));
+  const index = [];
+  for (const sec of sections) {
+    const name = sectionName(sec.heading);
+    const part = LIMITS_PARTS.find((p) => p.sections.includes(name));
+    if (part) byPart.get(part.slug).push(sec);
+    else if (LIMITS_INDEX.includes(name)) index.push(sec);
+    else throw new Error(`${LIMITS_FILE} has a section "${sec.heading}" that no page holds. Add "${name}" to LIMITS_PARTS (or LIMITS_INDEX) in docs-site/scripts/sync-docs.mjs.`);
+  }
+  for (const p of LIMITS_PARTS) {
+    const missing = p.sections.filter((n) => !byPart.get(p.slug).some((s) => sectionName(s.heading) === n));
+    if (missing.length) throw new Error(`LIMITS_PARTS lists "${missing.join('", "')}" under ${p.slug}, but ${LIMITS_FILE} has no such section.`);
+  }
+  const intro = rewriteLinks(head, LIMITS_FILE).trim();
+  const keep = (name) => index.find((s) => sectionName(s.heading) === name);
+  // The index: the intro, the limits everyone should read, then every part with its sections. Each
+  // section keeps an element with its old id here, and a short script sends an old #anchor link on to
+  // the part's page (without script, the link still lands on the right line of this list).
+  const moved = {};
+  let list = '## The limits by part\n\nEach part of Deedglass has its own page. The sections keep the names and anchors they had on this page.\n';
+  for (const p of LIMITS_PARTS) {
+    list += `\n### ${p.label}\n\n[${p.title.replace(/^Limits: /, 'Limits of ')}](/${LIMITS_SLUG}/${p.slug}/): ${p.description.charAt(0).toLowerCase() + p.description.slice(1)}\n\n`;
+    for (const s of byPart.get(p.slug)) {
+      const id = headingId(s.heading);
+      moved[id] = p.slug;
+      list += `- <a id="${id}"></a>[${sectionName(s.heading)}](/${LIMITS_SLUG}/${p.slug}/#${id})\n`;
+    }
+  }
+  const script = `<script>{const m=${JSON.stringify(moved)};const h=decodeURIComponent(location.hash.slice(1));if(m[h])location.replace("/${LIMITS_SLUG}/"+m[h]+"/#"+h)}</script>`;
+  const body = [
+    `:::note[Source]\nThis page and the ${LIMITS_PARTS.length} pages below it are \`${LIMITS_FILE}\` in the Deedglass repo, split by part and imported at build time.\n:::\n`,
+    intro,
+    ...['Known limits in v1', 'Already running another gate?'].map((n) => rewriteLinks(keep(n).body, LIMITS_FILE).trim()),
+    list.trim(),
+    rewriteLinks(keep('What this page does not do').body, LIMITS_FILE).trim(),
+    script,
+  ].join('\n\n');
+  const title = h1 ? stripMd(h1[1]) : 'Limitations';
+  const firstPara = intro.split(/\n\s*\n/)[0] ?? title;
+  write(`${LIMITS_SLUG}.md`, frontmatter({ title, description: describe(firstPara), imported: LIMITS_FILE, editUrl: false }) + body + '\n');
+  LIMITS_PARTS.forEach((p, i) => {
+    const prev = i > 0 ? LIMITS_PARTS[i - 1] : null;
+    const next = LIMITS_PARTS[i + 1] ?? null;
+    let page = frontmatter({ title: p.title, description: p.description, imported: LIMITS_FILE, editUrl: false });
+    page += `:::note[Source]\nThis page is part of \`${LIMITS_FILE}\` in the Deedglass repo, imported at build time. [Every limit, by part](/${LIMITS_SLUG}/).\n:::\n\n`;
+    page += byPart.get(p.slug).map((s) => rewriteLinks(s.body, LIMITS_FILE).trim()).join('\n\n') + '\n\n';
+    page += `## More limits\n\n- [Limitations](/${LIMITS_SLUG}/): the known limits in v1, and every part\n`;
+    for (const o of [prev, next].filter(Boolean)) page += `- [${o.title.replace(/^Limits: /, 'Limits of ')}](/${LIMITS_SLUG}/${o.slug}/)\n`;
+    write(`${LIMITS_SLUG}/${p.slug}.md`, page);
+  });
 }
 
 // ---- 2. generated reference pages ----
@@ -429,6 +583,7 @@ const GENERATED_SOURCES = [
   [/^reference\/config$/, 'docs-site/src/data/config.json'],
   [/^security\/attack-suite$/, 'docs-site/src/data/attack.json'],
   [/^reference\/http\/endpoints$/, 'api/openapi.yaml'],
+  [/^security\/limitations(\/|$)/, LIMITS_FILE],
 ];
 function pageDates() {
   const dates = gitDates(['docs', 'docs-site/src/content/docs', 'docs-site/src/data', 'api/openapi.yaml']);
@@ -464,7 +619,7 @@ function main() {
     for (const s of REPO_ONLY) console.log(`repo only ${s}`);
     return;
   }
-  for (const d of ['errors', 'policies', 'reference/cli', 'reference/engineering']) rmSync(join(content, d), { recursive: true, force: true });
+  for (const d of ['errors', 'policies', 'reference/cli', 'reference/engineering', LIMITS_SLUG]) rmSync(join(content, d), { recursive: true, force: true });
   for (const [src, slug] of Object.entries(IMPORTS)) {
     if (!existsSync(join(repo, src))) throw new Error(`${src} is listed in IMPORTS but doesn't exist`);
     importDoc(src, slug);

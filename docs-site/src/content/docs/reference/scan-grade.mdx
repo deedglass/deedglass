@@ -1,0 +1,107 @@
+---
+title: How the scan grade is calculated
+description: "The formula behind the A to F grade of deedglass scan: what takes points off, the caps, what an unchecked write path is, and worked examples."
+lastVerified: "2026-10-18"
+---
+
+import { Code } from '@astrojs/starlight/components';
+import Updated from '../../../components/Updated.astro';
+import formula from '../../../data/score-formula.txt?raw';
+
+<Updated />
+
+`deedglass scan` grades an agent setup from A to F by what it could change: its blast radius. Every setup starts at 100 points; four kinds of deduction take points off, each with a cap; the points left give the grade. This page is formula v1, the one in `internal/scan/score.go`. `--json` reports it as `"formula_version": 1`.
+
+`A means a small blast radius, not a safe agent.` The grade measures what the setup could change, not what the agent will do.
+
+## The formula
+
+<Code code={formula} lang="txt" title="Score formula v1" />
+
+| Deduction | Points each | Counted at most | Most it can take |
+|---|---|---|---|
+| The database role is a superuser or has `BYPASSRLS` | 35 | once | 35 |
+| A high finding | 20 | 2 | 40 |
+| A medium finding | 8 | 3 | 24 |
+| An unchecked write path | 4 | 5 | 20 |
+
+The deductions can add up to 119, so the floor of 0 matters: a setup can't go below 0 points. Low and info findings never take points off.
+
+| Points | Grade |
+|---|---|
+| 90 to 100 | A |
+| 80 to 89 | B |
+| 65 to 79 | C |
+| 50 to 64 | D |
+| below 50 | F |
+
+## What counts
+
+**The role.** With `--postgres-dsn-env`, the scan connects as the agent's database role in one read-only session. A superuser or `BYPASSRLS` role costs 35 points once, even when it is both. The findings for those two facts (`role_superuser`, `role_bypassrls`) don't count again as high findings.
+
+**Findings.** Each finding has a severity. Every instance counts: the archived Postgres MCP server found in two config files is two findings.
+
+| Finding | Severity |
+|---|---|
+| [`archived_postgres_mcp`](/get-started/scan/#archived_postgres_mcp) | high when the role can write, low when it can't, medium when no database was checked |
+| `role_superuser`, `role_bypassrls` | high (counted in the 35 above) |
+| [`database_url_in_client_args`](/get-started/scan/#database_url_in_client_args), `role_replication`, `role_createrole`, [`security_definer_executable`](/get-started/scan/#security_definer_executable) | medium |
+| `role_createdb`, [`no_primary_key_on_writable_table`](/get-started/scan/#no_primary_key_on_writable_table) | low |
+| [`wal_level_not_logical`](/get-started/scan/#wal_level_not_logical) | info |
+
+A role "can write" when it is a superuser, has `BYPASSRLS`, or holds `INSERT`, `UPDATE`, `DELETE` or `TRUNCATE` on any table.
+
+**Unchecked write paths.** A write path is either:
+
+- a tool that can write, delete or move money, according to the scan's catalog of known MCP servers and SDKs; or
+- a table the role can `DELETE` or `TRUNCATE`.
+
+It is unchecked unless it goes through `deedglass mcp wrap` and the scanned directory holds a Deedglass policy file (a YAML file with `deedglass: policy/v1`). Tables count as routed only when every MCP server the scan found that reaches a database is wrapped. When the scan can't tell, the path counts, and its line says `not shown to be routed`. A wrapped tool with no policy file says `wrapped, but no active policy was found`. Tables come first in the list, then tools by name.
+
+## Caps and the order of lines
+
+Items past a cap are still listed, with 0 points and `(over the cap)`, so the lines always explain the whole grade. The lines are sorted by points, then by subject. Every output starts with the score line, and the deductions follow it every time:
+
+```
+Blast radius: C · 5 write paths with no check · fix this first: The role can run SECURITY DEFINER functions
+  A means a small blast radius, not a safe agent.
+```
+
+The number is every unchecked write path, the capped ones included. "Fix this first" names the first high or medium finding; with none, the first unchecked write path; with neither, the first low or info finding. Without `--postgres-dsn-env` the line ends `database not checked`.
+
+## Worked examples
+
+**A superuser and an archived server.** The agent's role is a superuser, the archived Postgres MCP server is in one config (high, because the role can write), the role can run `SECURITY DEFINER` functions (medium), and there are 7 unchecked write paths.
+
+```
+100 − 35 − 20 − 8 − (5 × 4) = 17      grade F
+```
+
+The 6th and 7th write paths are listed at 0 points, `(over the cap)`.
+
+**Delete rights and a URL in a config.** A role without special attributes can `DELETE` from 3 tables, nothing is wrapped, and a database URL sits in a client config's arguments (medium).
+
+```
+100 − 8 − (3 × 4) = 80                grade B
+```
+
+Wrap the database server with `deedglass mcp wrap` and add a policy file: the 3 tables are no longer unchecked, and the grade is 92, an A. The medium finding still costs 8 until the URL moves to an environment variable.
+
+**A narrow role.** The role can `SELECT` and `UPDATE` two tables, has no `DELETE` or `TRUNCATE`, and no tool on the catalog can write. `wal_level` isn't `logical` (info). Nothing takes points off: 100, an A.
+
+## Using the grade in CI
+
+`deedglass scan --ci --fail-under C` exits 1 when the grade is below C, after writing every report file. `--fail-under` takes A, B, C or D. `--json` has the whole score under `score`: `grade`, `points`, `deductions` (each with `id`, `points`, `subject` and `detail`), `unchecked_write_paths`, `database_checked`, `fix_first` and `formula_version`. [Scan every pull request](/guides/scan-every-pull-request/) sets it up as a GitHub Action.
+
+## What the grade doesn't say
+
+- It doesn't say the agent is safe. It grades what the setup could change, not what the agent will do.
+- It covers only the setup on the machine it runs on, and only Postgres among databases.
+- It reads environment variable names, never their values, except the one database URL you name with `--postgres-dsn-env`.
+- A server the catalog doesn't know counts as a write path until it is shown to be routed.
+
+## Next
+
+- [Scan in 60 seconds](/get-started/scan/): run it, and every finding with its fix.
+- [Add the badge](/guides/badge/) to show the grade in your README.
+- On deedglass.com: [what your grade means](https://deedglass.com/score) and [blast radius of an AI agent](https://deedglass.com/glossary/blast-radius).

@@ -487,3 +487,10 @@ starlight-toc nav a[aria-current='true'] {
 .dg-st.gap > span {
   color: var(--dg-unverifiable-text);
 }
+
+/* ---------- the "Updated" date under a task page's title (Updated.astro, DOC-04) ---------- */
+.sl-markdown-content .dg-updated {
+  margin-top: 0;
+  font-size: 0.8125rem;
+  color: var(--dg-text-2);
+}

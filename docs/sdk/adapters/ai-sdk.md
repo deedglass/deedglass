@@ -1,6 +1,6 @@
-# The Vercel AI SDK adapter (`@deedglass/sdk/ai-sdk`)
+# Vercel AI SDK adapter for Deedglass
 
-Tested with `ai` 7.0.127 (2026-10-04) using AI SDK's own `MockLanguageModelV4`; the peer range is
+Import it from `@deedglass/sdk/ai-sdk`. Tested with `ai` 7.0.127 (2026-10-04) using AI SDK's own `MockLanguageModelV4`; the peer range is
 `ai >=7 <8`.
 
 ```ts

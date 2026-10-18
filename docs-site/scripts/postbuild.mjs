@@ -10,7 +10,8 @@
 //   4. The sitemap (DOC-05): the thin per-code pages and /_kit/ left out, and each URL's lastmod is its
 //      source's last commit date (src/data/.page-dates.json), so two builds of one commit are byte-identical.
 //   5. The llms files (DOC-02): pages outside each file's set dropped (scripts/seo.mjs), the page marks
-//      removed, the Postgres set copied to /llms-postgres.txt, and llms.txt's links and notes made true.
+//      removed, the Markdown tidied (tidyLlms), the Postgres set copied to /llms-postgres.txt, and llms.txt's
+//      links and notes made true.
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
@@ -73,6 +74,9 @@ export const REDIRECTS = [
   ['/connectors/notion', '/reference/connectors/notion/'],
   ['/connectors/mcp-http', '/reference/connectors/mcp-http/'],
   ['/connectors/fake', '/reference/connectors/fake/'],
+  // DOC-04: the page "What VERIFIED means" became "What Matches means" (plain names, P-069).
+  ['/concepts/what-verified-means', '/concepts/what-matches-means/'],
+  ['/concepts/what-verified-means/', '/concepts/what-matches-means/'],
 ];
 
 export function redirectsFile() {
@@ -115,12 +119,15 @@ export function headersFile(hashes) {
   ].join('\n');
 }
 
-// Preload the two faces every page shows first (Inter latin, Geist Mono latin 400), so text paints
-// in its final face sooner and doesn't shift (Lighthouse CLS and mobile LCP).
+// Preload only the face the largest text on first paint uses (Inter latin: the title and the first
+// paragraph, Lighthouse's LCP element on every docs page measured). Geist Mono is for code, which is
+// never the LCP element; preloading it took bandwidth from the stylesheets that block first paint
+// (DOC-LCP, measured before and after with Lighthouse). Every @font-face keeps font-display: swap.
+export const PRELOAD_FONTS = [/^inter-latin-wght-normal\..*\.woff2$/];
 function preloads() {
   const files = readdirSync(join(dist, '_astro'));
   const pick = (re) => files.find((f) => re.test(f));
-  return [pick(/^inter-latin-wght-normal\..*\.woff2$/), pick(/^geist-mono-latin-400-normal\..*\.woff2$/)]
+  return PRELOAD_FONTS.map(pick)
     .filter(Boolean)
     .map((f) => `<link rel="preload" href="/_astro/${f}" as="font" type="font/woff2" crossorigin>`)
     .join('');
@@ -173,6 +180,44 @@ export function filterLlms(text, heads, keep) {
   return { text: out.join('\n\n'), kept: out.length - 1, dropped };
 }
 
+/** The plugin's Markdown made smaller without losing a word (llms-full.txt has a budget): Starlight's
+ *  "Section titled" heading links and the empty links left by <a id> anchors dropped, and the padding
+ *  in table rows collapsed. Fenced code is left exactly as it is. */
+export function tidyLlms(text) {
+  const out = [];
+  let fence = null;
+  let skipBlank = false;
+  for (const line of text.split('\n')) {
+    const f = /^\s*(`{3,}|~{3,})/.exec(line);
+    if (fence) {
+      if (f && f[1][0] === fence[0] && f[1].length >= fence.length) fence = null;
+      out.push(line);
+      continue;
+    }
+    if (f) {
+      fence = f[1];
+      skipBlank = false;
+      out.push(line);
+      continue;
+    }
+    if (skipBlank && line === '') {
+      skipBlank = false;
+      continue;
+    }
+    skipBlank = false;
+    if (/^\[Section titled “[^”]*”\]\(#[^)]*\)$/.test(line)) {
+      skipBlank = true;
+      continue;
+    }
+    let l = line.replace(/\[\]\(\)/g, '');
+    if (l.startsWith('|')) {
+      l = /^\|(\s*:?-+:?\s*\|)+\s*$/.test(l) ? l.replace(/\s*(:?)-+(:?)\s*\|/g, ' $1---$2 |').replace(/^\|\s*/, '| ') : l.replace(/ {2,}\|/g, ' |');
+    }
+    out.push(l);
+  }
+  return out.join('\n');
+}
+
 const LLMS_NOTE_OLD = '- The complete documentation includes all content from the official documentation';
 
 function llms() {
@@ -187,7 +232,8 @@ function llms() {
     const p = join(dist, name);
     if (!existsSync(p)) throw new Error(`dist/${name} is missing`);
     const r = filterLlms(readFileSync(p, 'utf8'), heads, keep);
-    writeFileSync(p, r.text.endsWith('\n') ? r.text : r.text + '\n');
+    const text = tidyLlms(r.text);
+    writeFileSync(p, text.endsWith('\n') ? text : text + '\n');
     report.push(`${name} ${r.kept} pages`);
   }
   writeFileSync(join(dist, 'llms-postgres.txt'), readFileSync(join(dist, '_llms-txt/postgres.txt')));

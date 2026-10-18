@@ -301,8 +301,50 @@ test('llms (DOC-02): a page outside the file\'s set is dropped, an unknown page 
   assert.equal(inSmall('quickstart'), true);
   const desc = { summary: 'Deedglass sits between AI agents and the systems they change.' };
   const S = 'https://docs.deedglass.com';
-  const ok = `# Deedglass\n\n> ${desc.summary}\n\n- ${ASK} llms-install.md skills/safe-postgres-agents/SKILL.md\n\n${S}/llms-small.txt ${S}/llms-full.txt ${S}/llms-postgres.txt\n`;
+  const { LLMS_PAGES } = await import('../seo.mjs');
+  const pagesLines = LLMS_PAGES.map((x) => `- [${x.title}](${S}${x.path}): ${x.what}.`).join('\n');
+  const ok = `# Deedglass\n\n> ${desc.summary}\n\n- ${ASK} llms-install.md skills/safe-postgres-agents/SKILL.md\n${pagesLines}\n\n${S}/llms-small.txt ${S}/llms-full.txt ${S}/llms-postgres.txt\n`;
   assert.deepEqual(indexProblems(ok, desc), []);
+  assert.ok(indexProblems(ok.replace(pagesLines.split('\n')[0], ''), desc).includes(`llms.txt: no link to ${LLMS_PAGES[0].path}`));
   const p = indexProblems(ok.replace(ASK, 'Run deedglass init --yes.') + 'L0 Reported', desc);
   assert.ok(p.some((x) => /missing "If the user asked you/.test(x)) && p.includes('llms.txt: mentions --yes') && p.includes('llms.txt: uses the retired level names'), p.join('\n'));
+});
+
+test('llms (DOC-04): a task page llms.txt names must be built with a visible Updated date', async () => {
+  const { taskPageProblems } = await import('../check-llms.mjs');
+  const p = '/guides/x/';
+  assert.deepEqual(taskPageProblems(p, '<h1>X</h1><p class="dg-updated" data-astro-cid-1>Updated <time datetime="2026-10-18">18 October 2026</time></p>'), []);
+  assert.match(taskPageProblems(p, '<h1>X</h1><p>Updated recently</p>').join(), /no visible Updated date/);
+  assert.match(taskPageProblems(p, null).join(), /isn't built/);
+});
+
+test('llms (tidy): heading links, empty anchor links and table padding go; fenced code stays byte for byte', async () => {
+  const { tidyLlms } = await import('../postbuild.mjs');
+  const code = '```\n| keep    |  x |\n[Section titled “A”](#a)\n```';
+  const t = `## A\n\n[Section titled “A”](#a)\n\nText []()[x](/y)\n\n| Aaa    | B  |\n| ------ | -- |\n| 1      | 2  |\n\n${code}\n`;
+  assert.equal(tidyLlms(t), `## A\n\nText [x](/y)\n\n| Aaa | B |\n| --- | --- |\n| 1 | 2 |\n\n${code}\n`);
+});
+
+test('limitations (DOC-05): every section of docs/LIMITATIONS.md has one page, and old anchors find their part', async () => {
+  const { LIMITS_FILE, LIMITS_INDEX, LIMITS_PARTS, headingId, limitsPartFor, rewriteLinks, sectionName, splitSections } = await import('../sync-docs.mjs');
+  const md = readFileSync(join(repo, LIMITS_FILE), 'utf8');
+  const { sections } = splitSections(md);
+  const names = sections.map((x) => sectionName(x.heading));
+  const listed = [...LIMITS_INDEX, ...LIMITS_PARTS.flatMap((x) => x.sections)];
+  assert.deepEqual([...names].sort(), [...listed].sort(), 'each ## section is listed exactly once');
+  assert.equal(sectionName('Undo (S23)'), 'Undo');
+  assert.equal(headingId('Undo (S23)'), 'undo-s23');
+  const undo = sections.find((x) => sectionName(x.heading) === 'Undo');
+  assert.equal(limitsPartFor(headingId(undo.heading), md), 'postgres');
+  assert.equal(limitsPartFor('known-limits-in-v1', md), null);
+  assert.match(rewriteLinks(`[u](LIMITATIONS.md#${headingId(undo.heading)})`, 'docs/OBSERVE.md'), new RegExp(`\\(/security/limitations/postgres/#${headingId(undo.heading)}\\)`));
+});
+
+test('lcp (DOC-LCP): only small CSS and JS inline, never a font; one font preload', async () => {
+  const { inlineSmallCode } = await import('../seo.mjs');
+  assert.equal(inlineSmallCode('a.css', Buffer.alloc(100)), true);
+  assert.equal(inlineSmallCode('a.js', Buffer.alloc(5000)), false);
+  assert.equal(inlineSmallCode('inter.woff2', Buffer.alloc(10)), false);
+  const { PRELOAD_FONTS } = await import('../postbuild.mjs');
+  assert.equal(PRELOAD_FONTS.length, 1);
 });

@@ -1,6 +1,6 @@
-# Claude Agent SDK adapter (`@deedglass/sdk/claude-agent-sdk`)
+# Claude Agent SDK adapter for Deedglass
 
-Tested with `@anthropic-ai/claude-agent-sdk` 0.3.289 (2026-10-04) by calling the hook callbacks with
+Import it from `@deedglass/sdk/claude-agent-sdk`. Tested with `@anthropic-ai/claude-agent-sdk` 0.3.289 (2026-10-04) by calling the hook callbacks with
 the SDK's own input types, and with `createSdkMcpServer` holding a governed tool; no model call. The
 peer range is `>=0.3 <0.4`.
 

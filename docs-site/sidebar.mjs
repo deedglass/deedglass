@@ -2,6 +2,8 @@
 // S47/S48) stay listed here: Starlight hides drafts from production builds, and `npm run dev`
 // shows them.
 import { existsSync, readFileSync } from 'node:fs';
+// DOC-05: /security/limitations/ is a short index and one page per part, split from docs/LIMITATIONS.md.
+import { LIMITS_PARTS } from './scripts/sync-docs.mjs';
 
 // Drafts (draft: true, owner S47/S48) are left out of production builds, so their sidebar entries
 // go too; `astro dev` keeps them.
@@ -46,7 +48,7 @@ export const sidebar = clean([
       p('concepts/policies', 'Policies'),
       p('concepts/approvals', 'Approvals'),
       p('concepts/verification-levels', 'Verification levels'),
-      p('concepts/what-verified-means', 'What VERIFIED means'),
+      p('concepts/what-matches-means', 'What Matches means'),
       p('concepts/glossary', 'Glossary'),
       p('concepts/deeds', 'Deeds and the deed chain'),
       p('concepts/ledger', 'The Ledger'),
@@ -58,6 +60,7 @@ export const sidebar = clean([
   {
     label: 'Guides',
     items: [
+      p('guides/check-what-an-agent-changed-in-postgres', 'Check what an agent changed in Postgres'),
       p('guides/block-destructive-sql', 'Block destructive SQL'),
       p('guides/catch-a-mismatch', 'Catch "1 row reported, 301 committed"'),
       p('guides/undo', 'Undo a bad write'),
@@ -94,6 +97,7 @@ export const sidebar = clean([
         ],
       },
       { label: 'Errors', link: '/errors/' },
+      p('reference/scan-grade', 'How the scan grade is calculated'),
       p('reference/policy-language', 'Policy language'),
       p('reference/deed-spec', 'Deed spec'),
       p('reference/intents', 'Signed intents spec'),
@@ -136,7 +140,11 @@ export const sidebar = clean([
     items: [
       p('security/overview', 'Overview'),
       p('security/threat-model', 'Threat model'),
-      p('security/limitations', 'Limitations'),
+      {
+        label: 'Limitations',
+        collapsed: true,
+        items: [p('security/limitations', 'Known limits, by part'), ...LIMITS_PARTS.map((x) => p(`security/limitations/${x.slug}`, x.label))],
+      },
       { label: 'Attack suite results', link: '/security/attack-suite/' },
       p('security/review', 'Security review'),
       p('security/data-handling', 'Data handling and privacy'),

@@ -1,0 +1,127 @@
+---
+title: How to check what an AI agent changed in Postgres
+description: The commands that show what an AI agent changed in Postgres, row by row, from Postgres's own change log, whether or not the agent goes through Deedglass.
+lastVerified: "2026-10-18"
+---
+
+import { Aside } from '@astrojs/starlight/components';
+import Limits from '../../../components/Limits.astro';
+import Updated from '../../../components/Updated.astro';
+
+<Updated />
+
+An agent's own answer ("updated 1 row") is a claim. To see what it actually changed, read what Postgres committed: its change log holds every row each transaction wrote, triggers and cascades included. Deedglass reads that log and shows it to you in two ways, depending on how the agent reaches the database.
+
+| How the agent connects | What to run | What you get |
+|---|---|---|
+| Straight to Postgres, or through another MCP server or gateway | `deedglass observe run` around the agent's run | Every row committed on the watched tables during the run, sealed, with the undo SQL |
+| Through Deedglass (`deedglass mcp wrap`, the gateway or an SDK) | `deedglass actions list`, then `deedglass actions show --diff` | Each action's reported change compared with what Postgres committed: Matches or Doesn't match |
+
+**Before you start**
+
+- PostgreSQL 16, 17 or 18 with `wal_level = logical`. `SHOW wal_level;` tells you.
+- A Deedglass server with a Postgres connector for the database, prepared with `deedglass connector postgres init` and checked with `deedglass connector postgres check`. [Put Deedglass in front of Postgres](/get-started/postgres/) covers both; on a laptop, `npx -y deedglass init` sets up a local stack with a demo database.
+- `DEEDGLASS_API_KEY` set to an org admin key, never the agent's key.
+
+## 1. See what the agent could change
+
+Before the run, list what the agent's database role can change. The scan opens one read-only session as that role and lists every table it can write, with the enabled triggers:
+
+```sh test=skip reason="needs your agent's database URL in an environment variable"
+npx -y deedglass scan --no-write --postgres-dsn-env DATABASE_URL
+```
+
+Pass the name of the variable that holds the URL, never the URL. A trigger on a writable table is how one reported row becomes 301.
+
+## 2. Turn on watched sessions
+
+Watched sessions read only Postgres's change log, so the agent keeps connecting exactly as it does now. In the connector's config, under `witness`:
+
+```yaml title="postgres.yaml (part)"
+witness:
+  enabled: true
+  watched_tables: [public.orders, public.refunds]
+  observe:
+    enabled: true
+    max_session: 12h
+    caught_rows: 100
+```
+
+Add it when you create the connector (`deedglass connector create --config postgres.yaml`). Only the watched tables are read.
+
+## 3. Wrap the agent's run
+
+```sh test=skip reason="needs your own database and agent"
+deedglass observe run --connector orders --label "nightly agent" -- ./agent.sh
+```
+
+It opens a session, runs the command with your terminal, closes the session when the command ends (Ctrl-C included) and prints what was sealed. The agent's command never sees a `DEEDGLASS_*` variable, so it can't close or edit its own recording.
+
+If you start the agent some other way, open and close the session yourself:
+
+```sh test=skip reason="needs your own database"
+deedglass observe start --connector orders --label "migration agent"
+# … the agent runs …
+deedglass observe stop obs_01k…
+```
+
+## 4. Read what Postgres committed
+
+```sh test=skip reason="needs a sealed session"
+deedglass observe list --connector orders --caught
+deedglass observe show obs_01k…
+```
+
+`observe show` prints the exact counts per table and every transaction in the window with its number of changes. A session is flagged caught when one transaction truncated a watched table or changed at least `caught_rows` rows of one table, and says so: `Deedglass caught this: one transaction changed 301 rows in public.orders.` The Console's **Sessions** page shows each transaction's row diffs.
+
+The change log doesn't say which program wrote a row. If anything else wrote to the watched tables during the window, its transactions are in the session too. Leave them out before you undo:
+
+```sh test=skip reason="needs a sealed session"
+deedglass observe exclude obs_01k… dtx_01k…
+```
+
+## 5. Put it back
+
+```sh test=skip reason="needs a sealed session"
+deedglass observe show obs_01k… --undo-sql > undo.sql
+```
+
+That prints the undo as SQL for you to review and run yourself, free. Deedglass never runs it. With Pro, `deedglass observe undo obs_01k… --reason "…"` runs one undo of every included transaction through Deedglass, with conflict checks, and checks the undo against Postgres's change log too.
+
+## When the agent goes through Deedglass
+
+Each call is an action with its own record, checked against the same change log:
+
+```sh test=skip reason="needs your own server"
+deedglass actions list --connector orders --since 24h --verdict MISMATCH
+deedglass actions show act_01k… --diff
+```
+
+`--diff` prints the Proven diff: what the agent's statement was expected to change and what Postgres committed, row by row. A result of `Proven · Doesn't match` means they differ; `Proven · Matches` means Postgres committed exactly the expected rows. `deedglass actions list --follow` prints each action as it is checked.
+
+To put one action back, preview the undo, then run it with the plan's digest:
+
+```sh test=skip reason="needs your own server"
+deedglass undo preview act_01k…
+deedglass undo run act_01k… --plan sha256:… --reason "the trigger shipped 300 extra orders"
+```
+
+<Aside>
+Want to see one first? `npx -y deedglass init --trigger` runs a one-row `UPDATE` on the demo database with a legacy trigger on, and shows the 301 rows Postgres changed. Or try it in your browser at [deedglass.com/play](https://deedglass.com/play), with nothing to install.
+</Aside>
+
+## What it doesn't do
+
+<Limits>
+- It sees only the watched tables. Effects outside Postgres, unlogged and temporary tables and other databases are outside the change log Deedglass reads.
+- A watched session can't tell the agent's writes from another program's in the same window, and has no claim to compare, so it never says Matches or Doesn't match.
+- Undo has limits: a `TRUNCATE`, schema changes in the window, a transaction past the image cap or rows older than `undo.max_age` (7 days by default) can't be undone from the record.
+- MySQL and other databases aren't covered yet.
+</Limits>
+
+## Next
+
+- [Observe mode: watched sessions](/reference/observe/): retention, flags and every limit.
+- [Catch "1 row reported, 301 committed"](/guides/catch-a-mismatch/) and [Undo a bad write](/guides/undo/).
+- [What Matches means](/concepts/what-matches-means/), and what it doesn't.
+- On deedglass.com: [Your AI agent said 1 row. Postgres changed 301.](https://deedglass.com/blog/agent-said-1-row-postgres-changed-301), [Undo for AI agent sessions in Postgres](https://deedglass.com/blog/undo-for-agent-sessions), and [logical decoding for agent audits](https://deedglass.com/glossary/logical-decoding-agent-audit).
