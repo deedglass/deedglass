@@ -24,7 +24,7 @@ var catalogArchive []byte
 // CatalogEntry is one known server or package (catalog.yaml).
 type CatalogEntry struct {
 	ID       string        `yaml:"id"`
-	Kind     string        `yaml:"kind"` // mcp_server · sdk · framework
+	Kind     string        `yaml:"kind"` // mcp_server · sdk · framework · database_cli
 	Database bool          `yaml:"database"`
 	Archived bool          `yaml:"archived"`
 	Governed bool          `yaml:"governed"`
@@ -33,6 +33,21 @@ type CatalogEntry struct {
 	Note     string        `yaml:"note"`
 	Source   string        `yaml:"source"`
 	Checked  string        `yaml:"checked"`
+	// A database_cli entry (FEAT-05): the destructive commands, the other names its program takes
+	// and public reports of an agent running one.
+	Commands  []CatalogCommand `yaml:"commands"`
+	Programs  []string         `yaml:"programs"`
+	Incidents []string         `yaml:"incidents"`
+}
+
+// CatalogCommand is one destructive command of a database CLI.
+type CatalogCommand struct {
+	Run       string `yaml:"run"`
+	Args      string `yaml:"args"`
+	NeedsArgs bool   `yaml:"needs_args"`
+	Does      string `yaml:"does"`
+	Note      string `yaml:"note"`
+	Source    string `yaml:"source"`
 }
 
 // CatalogTool is one tool and what it can do.
@@ -90,6 +105,10 @@ type discovered struct {
 	env         []EnvNames
 	walk        WalkStats
 	policyFiles int
+	settings    []ClaudeSettings
+	sources     []*permSource
+	roots       map[string]bool // project directories that hold Claude Code settings
+	scripts     []script
 }
 
 // reDBVar names a database URL variable (§3.13.1).
@@ -99,7 +118,7 @@ var (
 )
 
 func discover(o Options) (*discovered, error) {
-	d := &discovered{}
+	d := &discovered{roots: map[string]bool{}}
 	root := o.Dir
 	fi, err := os.Stat(root)
 	if err != nil {
@@ -151,6 +170,17 @@ func discover(o Options) (*discovered, error) {
 			}
 		case "package.json":
 			d.deps = append(d.deps, packageJSON(rel, b)...)
+			d.scripts = append(d.scripts, pkgScripts(rel, b)...)
+		case "gemfile":
+			d.deps = append(d.deps, gemfile(rel, b)...)
+		case "claude-settings", "claude-settings-local":
+			proj := path.Dir(path.Dir(rel))
+			scope := "project"
+			if kind == "claude-settings-local" {
+				scope = "local"
+			}
+			src, cs := readSettings(rel, scope, proj, filepath.Join(root, filepath.FromSlash(proj)), b)
+			d.sources, d.settings, d.roots[proj] = append(d.sources, src), append(d.settings, cs), true
 		case "pyproject.toml":
 			d.deps = append(d.deps, pyproject(rel, b)...)
 		case "requirements":
@@ -176,6 +206,15 @@ func discover(o Options) (*discovered, error) {
 			label := "~" + strings.TrimPrefix(filepath.ToSlash(uc.path), filepath.ToSlash(o.Home))
 			c := parseConfig(label, uc.client, b, true)
 			d.configs = append(d.configs, c)
+		}
+		// Claude Code's user settings apply to every project (skipped when --dir is home itself:
+		// the walk read the file already).
+		us := filepath.Join(o.Home, ".claude", "settings.json")
+		if r, err := filepath.Rel(root, us); err != nil || strings.HasPrefix(r, "..") {
+			if b, err := readSmall(us); err == nil {
+				src, cs := readSettings("~/.claude/settings.json", "user", "", filepath.Join(o.Home, ".claude"), b)
+				d.sources, d.settings = append(d.sources, src), append(d.settings, cs)
+			}
 		}
 	}
 	sort.SliceStable(d.configs, func(i, j int) bool {
@@ -216,6 +255,12 @@ func classify(rel string) string {
 		return "package.json"
 	case base == "pyproject.toml":
 		return "pyproject.toml"
+	case base == "Gemfile":
+		return "gemfile"
+	case base == "settings.json" && dir == ".claude":
+		return "claude-settings"
+	case base == "settings.local.json" && dir == ".claude":
+		return "claude-settings-local"
 	case strings.HasPrefix(base, "requirements") && strings.HasSuffix(base, ".txt"):
 		return "requirements"
 	case base == "mcp.json" && dir == ".cursor":
@@ -553,6 +598,38 @@ func pyproject(rel string, b []byte) []Dependency {
 					d.Spec = strings.Trim(strings.TrimSpace(m[2]), `"'`)
 					out = append(out, *d)
 				}
+			}
+		}
+	}
+	return out
+}
+
+// pkgScripts keeps package.json's scripts in memory: the scan matches database CLI commands in their
+// bodies and only ever prints a script's name.
+func pkgScripts(rel string, b []byte) []script {
+	var p struct {
+		Scripts map[string]string `json:"scripts"`
+	}
+	if json.Unmarshal(b, &p) != nil {
+		return nil
+	}
+	var out []script
+	for n, body := range p.Scripts {
+		out = append(out, script{file: rel, name: n, body: body})
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].name < out[j].name })
+	return out
+}
+
+var reGem = regexp.MustCompile(`^\s*gem\s+["']([A-Za-z0-9_.-]+)["']\s*(?:,\s*["']([^"']+)["'])?`)
+
+// gemfile reads `gem "name", "spec"` lines.
+func gemfile(rel string, b []byte) []Dependency {
+	var out []Dependency
+	for _, line := range strings.Split(string(b), "\n") {
+		if m := reGem.FindStringSubmatch(line); m != nil {
+			if e := lookup("gem:" + m[1]); e != nil {
+				out = append(out, Dependency{File: rel, Name: m[1], Spec: m[2], CatalogID: e.ID})
 			}
 		}
 	}

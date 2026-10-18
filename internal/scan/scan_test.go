@@ -682,8 +682,15 @@ func TestRoleCountsOnce(t *testing.T) {
 
 // TestShareCatalogClosed: every finding id the scan can produce is in the share catalog.
 func TestShareCatalogClosed(t *testing.T) {
-	src, _ := os.ReadFile("findings.go")
+	var src []byte
+	for _, f := range []string{"findings.go", "shell.go"} {
+		b, _ := os.ReadFile(f)
+		src = append(src, b...)
+	}
 	ids := regexp.MustCompile(`(?:ID: |role\()"([a-z_]{3,})"`).FindAllStringSubmatch(string(src), -1)
+	if len(ids) < 13 {
+		t.Fatalf("found %d finding ids; the pattern no longer matches the code", len(ids))
+	}
 	have := map[string]bool{}
 	for _, e := range ShareCatalog()["findings"].([]ShareEntry) {
 		have[e.ID] = true

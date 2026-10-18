@@ -99,3 +99,81 @@ entries:
   - {id: framework.ai-sdk, kind: framework, match: [npm:ai], source: https://github.com/vercel/ai, checked: "2026-10-05"}
   - {id: framework.mastra, kind: framework, match: [npm:@mastra/core], source: https://github.com/mastra-ai/mastra, checked: "2026-10-05"}
   - {id: sdk.deedglass, kind: framework, governed: true, match: [pypi:deedglass, npm:@deedglass/sdk], source: https://docs.deedglass.com/sdk, checked: "2026-10-05"}
+  # Database CLIs (FEAT-05): ORMs and migration tools whose command line can wipe or rewrite a
+  # database. The scan never runs them; it reads the dependency files and Claude Code's permission
+  # rules and says which spellings of each command would run without a prompt. programs: other
+  # names the first word can take. needs_args: the command is destructive only with its args.
+  # incidents: public reports of an agent running one of these commands.
+  - id: cli.prisma
+    kind: database_cli
+    match: [npm:prisma]
+    commands:
+      - {run: prisma db push, args: --force-reset, needs_args: true, does: resets the database before it pushes the schema, source: "https://www.prisma.io/docs/cli/db/push"}
+      - run: prisma migrate reset
+        args: --force
+        does: drops the database, creates it again and applies every migration
+        note: Prisma's docs say it stops migrate reset --force when an AI agent runs it, until you consent; they name no other command with that check.
+        source: https://www.prisma.io/docs/cli/migrate/reset
+      - run: prisma migrate diff
+        args: --shadow-database-url
+        needs_args: true
+        does: resets the database it is given as the shadow database
+        note: Prisma 6 and earlier take this flag; Prisma 7 removed it.
+        source: https://www.prisma.io/docs/orm/prisma-migrate/understanding-prisma-migrate/shadow-database
+    incidents:
+      - https://github.com/anthropics/claude-code/issues/36183
+      - https://github.com/anthropics/claude-code/issues/33183
+      - https://github.com/anthropics/claude-code/issues/80868
+    source: https://www.prisma.io/docs/cli/migrate/reset
+    checked: "2026-10-18"
+  - id: cli.drizzle-kit
+    kind: database_cli
+    match: [npm:drizzle-kit]
+    commands:
+      - {run: drizzle-kit push, args: --force, does: applies schema changes straight to the database; --force accepts every data-loss statement, source: "https://orm.drizzle.team/docs/drizzle-kit-push"}
+    source: https://orm.drizzle.team/docs/drizzle-kit-push
+    checked: "2026-10-18"
+  - id: cli.alembic
+    kind: database_cli
+    match: [pypi:alembic]
+    commands:
+      - {run: alembic downgrade, args: base, does: "reverts every migration, back to an empty schema", source: "https://alembic.sqlalchemy.org/en/latest/tutorial.html"}
+    incidents:
+      - https://github.com/anthropics/claude-code/issues/26913
+    source: https://alembic.sqlalchemy.org/en/latest/tutorial.html
+    checked: "2026-10-18"
+  - id: cli.rails
+    kind: database_cli
+    match: [gem:rails, gem:activerecord]
+    programs: [rails, bin/rails, rake, bin/rake]
+    commands:
+      - {run: rails db:drop, does: deletes the database, source: "https://guides.rubyonrails.org/command_line.html"}
+      - {run: rails db:reset, does: drops and recreates the database from its schema, source: "https://guides.rubyonrails.org/command_line.html"}
+      - {run: rails db:schema:load, does: drops and recreates the schema from db/schema.rb, source: "https://guides.rubyonrails.org/command_line.html"}
+    source: https://guides.rubyonrails.org/command_line.html
+    checked: "2026-10-18"
+  - id: cli.knex
+    kind: database_cli
+    match: [npm:knex]
+    commands:
+      - {run: knex migrate:rollback, args: --all, does: reverts every completed migration, source: "https://knexjs.org/guide/migrations.html"}
+    source: https://knexjs.org/guide/migrations.html
+    checked: "2026-10-18"
+  - id: cli.typeorm
+    kind: database_cli
+    match: [npm:typeorm]
+    programs: [typeorm, typeorm-ts-node-commonjs, typeorm-ts-node-esm]
+    commands:
+      - {run: typeorm schema:drop, does: removes every table and its data, source: "https://github.com/typeorm/typeorm/blob/master/docs/docs/using-cli.md"}
+      - {run: typeorm schema:sync, does: changes the schema to match the entities and can lose data, source: "https://github.com/typeorm/typeorm/blob/master/docs/docs/using-cli.md"}
+    source: https://github.com/typeorm/typeorm/blob/master/docs/docs/using-cli.md
+    checked: "2026-10-18"
+  - id: cli.sequelize
+    kind: database_cli
+    match: [npm:sequelize-cli]
+    programs: [sequelize, sequelize-cli]
+    commands:
+      - {run: sequelize db:drop, does: drops the database, source: "https://github.com/sequelize/cli"}
+      - {run: sequelize db:migrate:undo:all, does: reverts every migration, source: "https://sequelize.org/docs/v6/other-topics/migrations/"}
+    source: https://github.com/sequelize/cli
+    checked: "2026-10-18"

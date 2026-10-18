@@ -5,6 +5,21 @@ import (
 	"strings"
 )
 
+// settingsCounts is how a settings file reads in the Found list: rule counts, never the rules.
+func settingsCounts(c ClaudeSettings) string {
+	if c.Error != "" && c.Allow+c.Ask+c.Deny == 0 && c.DefaultMode == "" {
+		return c.Error
+	}
+	s := fmt.Sprintf("%d allow, %d ask, %d deny", c.Allow, c.Ask, c.Deny)
+	if c.DefaultMode != "" {
+		s += " · defaultMode " + c.DefaultMode
+	}
+	if c.Error != "" {
+		s += " · " + c.Error
+	}
+	return s
+}
+
 func mdEscape(s string) string {
 	return strings.NewReplacer("|", `\|`, "<", "&lt;", ">", "&gt;").Replace(s)
 }
@@ -55,6 +70,9 @@ func RenderMarkdown(r *Report) string {
 	}
 	for _, e := range r.EnvNames {
 		p("- `%s`: database URL variables (names only): %s", e.File, strings.Join(e.Names, ", "))
+	}
+	for _, c := range r.ClaudeSettings {
+		p("- `%s`: Claude Code settings (%s) · %s", c.Path, c.Scope, settingsCounts(c))
 	}
 	p("")
 	if len(r.Findings) > 0 {

@@ -141,8 +141,8 @@ func RenderText(r *Report, st Style, width int, header string, wrote string) str
 	w(header, "")
 	w(ScoreBlock(st, r.Score)...)
 	w("")
-	if r.Summary.Configs == 0 && len(r.Dependencies) == 0 && len(r.EnvNames) == 0 {
-		w(st.apply(st.Teal, "✓")+" No MCP client configs, agent dependencies or database URL variables found under "+r.Dir+".", "")
+	if r.Summary.Configs == 0 && len(r.Dependencies) == 0 && len(r.EnvNames) == 0 && len(r.ClaudeSettings) == 0 {
+		w(st.apply(st.Teal, "✓")+" No MCP client configs, agent settings, agent dependencies or database URL variables found under "+r.Dir+".", "")
 	} else {
 		w("Found")
 		w(fmt.Sprintf("  %d MCP client %s · %d %s · %d %s that can write", r.Summary.Configs, plural(r.Summary.Configs, "config", "configs"),
@@ -161,6 +161,13 @@ func RenderText(r *Report, st Style, width int, header string, wrote string) str
 		if len(vars) > 0 {
 			vars = uniq(vars)
 			w(fmt.Sprintf("  %d database URL %s (names only): %s", len(vars), plural(len(vars), "variable", "variables"), strings.Join(vars, ", ")))
+		}
+		if n := len(r.ClaudeSettings); n > 0 {
+			var paths []string
+			for _, c := range r.ClaudeSettings {
+				paths = append(paths, c.Path)
+			}
+			w(fmt.Sprintf("  %d Claude Code settings %s: %s", n, plural(n, "file", "files"), strings.Join(paths, ", ")))
 		}
 		w("")
 	}

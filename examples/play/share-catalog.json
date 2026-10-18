@@ -34,6 +34,21 @@
       "title": "The database role bypasses row-level security"
     },
     {
+      "id": "shell_destructive_unprompted",
+      "severity": "high",
+      "title": "An agent can run a destructive database command without a prompt"
+    },
+    {
+      "id": "env_database_url_readable",
+      "severity": "medium",
+      "title": "An agent can read a database URL in .env without a prompt"
+    },
+    {
+      "id": "shell_destructive_no_rule",
+      "severity": "medium",
+      "title": "No ask or deny rule covers a destructive database command"
+    },
+    {
       "id": "database_url_in_client_args",
       "severity": "medium",
       "title": "A database URL sits in a client config"

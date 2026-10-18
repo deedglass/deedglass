@@ -19,6 +19,16 @@ this file by `scripts/release-notes.sh`.
   answers `allow`. No server, no network: a second check, not a sandbox. The Claude Code plugin
   carries it off by default; `DEEDGLASS_SHELL_GUARD=ask` in Claude Code's settings turns it on. See
   `docs/SHELL_GUARD.md`.
+- **Scan: what an agent can run in a shell.** `deedglass scan` now reads Claude Code's
+  `.claude/settings.json`, `.claude/settings.local.json` and (with `--user-configs`)
+  `~/.claude/settings.json`, finds database tools with destructive commands in `package.json`,
+  Python dependency files and `Gemfile` (Prisma, Drizzle Kit, Alembic, Rails, Knex, TypeORM,
+  Sequelize), and says which spellings of those commands would run without a prompt, for example
+  "An agent can run `npm run db:diff` here without a prompt". It also flags database URL variable
+  names in `.env` files that no `Read` deny rule covers; it never reads a value. Three new finding
+  ids (`shell_destructive_unprompted`, `shell_destructive_no_rule`, `env_database_url_readable`)
+  count under formula v1 like any other finding, and `scan_report` gains `claude_settings` (rule
+  counts only). It runs no command. See `docs/SCAN.md`.
 
 ## [0.1.1] - 2026-10-18
 

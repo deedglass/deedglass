@@ -45,9 +45,14 @@ The deductions can add up to 119, so the floor of 0 matters: a setup can't go be
 |---|---|
 | [`archived_postgres_mcp`](/get-started/scan/#archived_postgres_mcp) | high when the role can write, low when it can't, medium when no database was checked |
 | `role_superuser`, `role_bypassrls` | high (counted in the 35 above) |
+| [`shell_destructive_unprompted`](/get-started/scan/#shell_destructive_unprompted) | high |
+| [`env_database_url_readable`](/get-started/scan/#env_database_url_readable) | medium |
+| [`shell_destructive_no_rule`](/get-started/scan/#shell_destructive_no_rule) | medium when `defaultMode` is `auto` in your user settings, low otherwise |
 | [`database_url_in_client_args`](/get-started/scan/#database_url_in_client_args), `role_replication`, `role_createrole`, [`security_definer_executable`](/get-started/scan/#security_definer_executable) | medium |
 | `role_createdb`, [`no_primary_key_on_writable_table`](/get-started/scan/#no_primary_key_on_writable_table) | low |
 | [`wal_level_not_logical`](/get-started/scan/#wal_level_not_logical) | info |
+
+The three shell findings come from Claude Code's permission rules (`.claude/settings.json`, `.claude/settings.local.json` and `~/.claude/settings.json`) and the database tools in your dependency files, such as Prisma, Drizzle Kit, Alembic, Rails, Knex, TypeORM and Sequelize. They take points off like any other finding and share the same caps, so the formula stays v1. A rule matches the text of a command, so each way an agent might type a destructive command (`prisma migrate reset --force`, `npx prisma migrate reset --force`, `npm run db:reset`) is checked on its own. The scan runs none of them and never reads a `.env` value.
 
 A role "can write" when it is a superuser, has `BYPASSRLS`, or holds `INSERT`, `UPDATE`, `DELETE` or `TRUNCATE` on any table.
 
@@ -87,6 +92,14 @@ The 6th and 7th write paths are listed at 0 points, `(over the cap)`.
 
 Wrap the database server with `deedglass mcp wrap` and add a policy file: the 3 tables are no longer unchecked, and the grade is 92, an A. The medium finding still costs 8 until the URL moves to an environment variable.
 
+**An ask rule that names one spelling.** This is the shape of a public report (claude-code#80868). `package.json` lists Prisma and has a `db:diff` script that runs `prisma migrate diff --shadow-database-url`. `.claude/settings.local.json` allows `Bash(npm run *)`. Your user settings ask before `npx prisma migrate:*` and start sessions in auto mode. `.env` holds `DATABASE_URL` and no `Read` deny rule covers it. No database was checked and no MCP tool can write.
+
+```
+100 − 20 − 8 − 8 = 64                 grade D
+```
+
+The 20 is `shell_destructive_unprompted`: `npm run db:diff` matches the allow rule, and the ask rule names `npx prisma …`, not the script. One 8 is `env_database_url_readable`. The other is `shell_destructive_no_rule`, medium because auto mode lets a classifier decide `prisma db push --force-reset` instead of you. Add the ask rules the findings suggest, such as `Bash(*prisma migrate diff*)` and `Bash(* db:diff*)`, and `Read(.env)` to `permissions.deny`: the grade is 100, an A.
+
 **A narrow role.** The role can `SELECT` and `UPDATE` two tables, has no `DELETE` or `TRUNCATE`, and no tool on the catalog can write. `wal_level` isn't `logical` (info). Nothing takes points off: 100, an A.
 
 ## Using the grade in CI
@@ -99,6 +112,7 @@ Wrap the database server with `deedglass mcp wrap` and add a policy file: the 3 
 - It covers only the setup on the machine it runs on, and only Postgres among databases.
 - It reads environment variable names, never their values, except the one database URL you name with `--postgres-dsn-env`.
 - A server the catalog doesn't know counts as a write path until it is shown to be routed.
+- The shell findings read Claude Code's settings files only, not managed settings or command-line flags, and check the text of a command the way Claude Code's permission rules do. A permission rule is a second check, not a sandbox.
 
 ## Next
 

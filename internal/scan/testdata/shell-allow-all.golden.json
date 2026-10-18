@@ -1,0 +1,179 @@
+{
+  "object": "scan_report",
+  "version": 1,
+  "scanned_at": "2026-10-18T09:00:00Z",
+  "deedglass_version": "0.1.0",
+  "dir": "shell-allow-all",
+  "offline": true,
+  "score": {
+    "grade": "D",
+    "points": 52,
+    "deductions": [
+      {
+        "id": "high_finding",
+        "points": 20,
+        "subject": "shell_destructive_unprompted",
+        "detail": "An agent can run `drizzle-kit push --force` here without a prompt"
+      },
+      {
+        "id": "high_finding",
+        "points": 20,
+        "subject": "shell_destructive_unprompted",
+        "detail": "An agent can run `prisma db push --force-reset` here without a prompt"
+      },
+      {
+        "id": "medium_finding",
+        "points": 8,
+        "subject": "env_database_url_readable",
+        "detail": "An agent can read DATABASE_URL in .env without a prompt"
+      }
+    ],
+    "formula_version": 1,
+    "unchecked_write_paths": 0,
+    "database_checked": false,
+    "fix_first": "An agent can run `drizzle-kit push --force` here without a prompt"
+  },
+  "summary": {
+    "configs": 0,
+    "mcp_servers": 0,
+    "write_capable_tools": 0,
+    "tables_can_change": 0,
+    "findings": {
+      "high": 2,
+      "info": 0,
+      "low": 0,
+      "medium": 1
+    }
+  },
+  "configs": null,
+  "dependencies": [
+    {
+      "file": "package.json",
+      "name": "drizzle-kit",
+      "spec": "^0.31.0",
+      "catalog_id": "cli.drizzle-kit"
+    },
+    {
+      "file": "package.json",
+      "name": "prisma",
+      "spec": "^6.19.0",
+      "catalog_id": "cli.prisma"
+    }
+  ],
+  "env_names": [
+    {
+      "file": ".env",
+      "names": [
+        "DATABASE_URL"
+      ]
+    },
+    {
+      "file": ".env.example",
+      "names": [
+        "DATABASE_URL"
+      ]
+    }
+  ],
+  "claude_settings": [
+    {
+      "path": ".claude/settings.json",
+      "scope": "project",
+      "allow": 3,
+      "ask": 0,
+      "deny": 0
+    }
+  ],
+  "tools": null,
+  "findings": [
+    {
+      "id": "shell_destructive_unprompted",
+      "severity": "high",
+      "title": "An agent can run `drizzle-kit push --force` here without a prompt",
+      "detail": "The allow rule `Bash` in .claude/settings.json matches it, and no ask or deny rule does. `drizzle-kit push --force` applies schema changes straight to the database; --force accepts every data-loss statement. In auto mode, Claude Code drops broad allow rules like this one and a classifier reviews the command instead. Also without a prompt: `npx drizzle-kit push --force`, `pnpm drizzle-kit push --force`, `pnpm exec drizzle-kit push --force` and 2 more.",
+      "checked": "Read .claude/settings.json. Managed settings and command-line flags weren't read and can change this.",
+      "fix": [
+        "Add \"Bash(*drizzle-kit push*)\" to permissions.ask. The leading * matches any runner, such as npx, pnpm or uv run, and an ask rule makes Claude Code ask first, even in auto mode.",
+        "Or narrow the allow rule so it no longer matches."
+      ],
+      "paths": [
+        "package.json",
+        ".claude/settings.json"
+      ],
+      "sources": [
+        "https://orm.drizzle.team/docs/drizzle-kit-push",
+        "https://code.claude.com/docs/en/permissions"
+      ]
+    },
+    {
+      "id": "shell_destructive_unprompted",
+      "severity": "high",
+      "title": "An agent can run `prisma db push --force-reset` here without a prompt",
+      "detail": "The allow rule `Bash` in .claude/settings.json matches it, and no ask or deny rule does. `prisma db push --force-reset` resets the database before it pushes the schema. In auto mode, Claude Code drops broad allow rules like this one and a classifier reviews the command instead. Also without a prompt: `npx prisma db push --force-reset`, `pnpm prisma db push --force-reset`, `pnpm exec prisma db push --force-reset` and 14 more.",
+      "checked": "Read .claude/settings.json. Managed settings and command-line flags weren't read and can change this.",
+      "fix": [
+        "Add \"Bash(*prisma db push*)\", \"Bash(*prisma migrate reset*)\" and \"Bash(*prisma migrate diff*)\" to permissions.ask. The leading * matches any runner, such as npx, pnpm or uv run, and an ask rule makes Claude Code ask first, even in auto mode.",
+        "Or narrow the allow rule so it no longer matches."
+      ],
+      "paths": [
+        "package.json",
+        ".claude/settings.json"
+      ],
+      "sources": [
+        "https://www.prisma.io/docs/cli/db/push",
+        "https://www.prisma.io/docs/cli/migrate/reset",
+        "https://www.prisma.io/docs/orm/prisma-migrate/understanding-prisma-migrate/shadow-database",
+        "https://github.com/anthropics/claude-code/issues/36183",
+        "https://github.com/anthropics/claude-code/issues/33183",
+        "https://github.com/anthropics/claude-code/issues/80868",
+        "https://code.claude.com/docs/en/permissions"
+      ]
+    },
+    {
+      "id": "env_database_url_readable",
+      "severity": "medium",
+      "title": "An agent can read DATABASE_URL in .env without a prompt",
+      "detail": "Claude Code reads project files without a prompt, and no deny rule the scan read covers `.env` (DATABASE_URL). With the URL, an agent can point any command at that database.",
+      "checked": "Read .claude/settings.json. Managed settings and command-line flags weren't read and can change this.",
+      "fix": [
+        "Add \"Read(.env)\" and \"Read(.env.*)\" to permissions.deny in .claude/settings.json: a bare file name matches at any depth.",
+        "That stops Claude Code's file tools and commands such as cat or head that name the file. A program that opens the file itself, such as prisma, still reads it."
+      ],
+      "paths": [
+        ".env"
+      ],
+      "sources": [
+        "https://code.claude.com/docs/en/permissions",
+        "https://github.com/anthropics/claude-code/issues/80868"
+      ]
+    }
+  ],
+  "postgres": null,
+  "policies": [
+    {
+      "starter": "postgres-safe",
+      "rule": "block-destructive-sql",
+      "why": "DROP and TRUNCATE never run, whatever the agent sends.",
+      "yaml": "deedglass: policy/v1\nname: scan-block-destructive-sql\ndescription: Suggested by deedglass scan from the postgres-safe starter.\n\ndefaults:\n  decision: deny\n  reason: No rule allows this action. Add a rule in Console › Policies to allow it.\n\nrules:\n  - id: block-destructive-sql\n    match: { connector_type: postgres }\n    when: sql.kind in [\"drop\", \"truncate\"]\n    decision: deny\n    reason: DROP and TRUNCATE are never allowed for agents.\n    notify: [slack]\n"
+    },
+    {
+      "starter": "postgres-safe",
+      "rule": "writes-need-approval",
+      "why": "Writes wait for a person in Console › Approvals.",
+      "yaml": "deedglass: policy/v1\nname: scan-writes-need-approval\ndescription: Suggested by deedglass scan from the postgres-safe starter.\n\ndefaults:\n  decision: deny\n  reason: No rule allows this action. Add a rule in Console › Policies to allow it.\n\nrules:\n  - id: writes-need-approval\n    match: { tool: postgres.execute }\n    when: sql.category == \"write\"\n    decision: require_approval\n    reason: Writes to this database wait for a human. An admin can approve in Console › Approvals.\n    approval: { approvers: [role:admin], required: 1, expires_in: 30m }\n    notify: [email, slack]\n    verify: L2\n"
+    },
+    {
+      "starter": "postgres-safe",
+      "rule": "agent-rate",
+      "why": "More than 60 calls a minute from one agent waits for the next minute.",
+      "yaml": "deedglass: policy/v1\nname: scan-agent-rate\ndescription: Suggested by deedglass scan from the postgres-safe starter.\n\ndefaults:\n  decision: deny\n  reason: No rule allows this action. Add a rule in Console › Policies to allow it.\n\nbudgets:\n  - id: agent-rate\n    window: minute\n    max_calls: 60\n"
+    }
+  ],
+  "notes": [],
+  "footer": "What your grade means: deedglass.com/score",
+  "took_ms": 0,
+  "walk": {
+    "files": 0,
+    "skipped_big": 0,
+    "stopped": false
+  }
+}
