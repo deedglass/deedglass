@@ -29,6 +29,16 @@ this file by `scripts/release-notes.sh`.
   ids (`shell_destructive_unprompted`, `shell_destructive_no_rule`, `env_database_url_readable`)
   count under formula v1 like any other finding, and `scan_report` gains `claude_settings` (rule
   counts only). It runs no command. See `docs/SCAN.md`.
+- **Watch a coding agent.** `deedglass observe run --connector <name> --undo-sql ~/deedglass-undo -- claude`
+  starts Claude Code (or any agent command) inside a watched session. When it exits, the run prints
+  the row changes Postgres committed on the watched tables (shell commands such as `psql`
+  included), what Deedglass caught, the any-writer note, and saves the free undo SQL for you to
+  review and run (to `undo-<session id>.sql` when given a folder); Deedglass never runs it. It names
+  an `admin.key` the agent could read, and says when the decoder stopped (a dropped watched table
+  leaves the publication). `observe stop` prints the any-writer note too, and `observe run` now
+  closes the session when the terminal closes (SIGHUP). The Claude Code plugin gains
+  `/deedglass:watch`, which prints that line; you run it with your own key. See `docs/OBSERVE.md`
+  and docs.deedglass.com/guides/watch-a-coding-agent.
 
 ## [0.1.1] - 2026-10-18
 

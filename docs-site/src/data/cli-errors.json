@@ -1050,6 +1050,15 @@
     ]
   },
   {
+    "code": "undo_sql_not_saved",
+    "exit": [
+      1
+    ],
+    "messages": [
+      "the undo SQL wasn't saved."
+    ]
+  },
+  {
     "code": "unsafe_database_role",
     "exit": [
       1

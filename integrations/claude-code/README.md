@@ -8,6 +8,10 @@ A Claude Code plugin that adds:
 - `/deedglass:wrap`, which prints the `claude mcp add` line that runs one of your MCP servers (for
   example a Postgres MCP server) through `deedglass mcp wrap`, so its tool calls meet your rules
   first. It prints; you run it, with your own key;
+- `/deedglass:watch`, which prints the `deedglass observe run … -- claude --continue` line that
+  restarts your session inside a watched session: when you quit, you see the row changes Postgres
+  committed on the watched tables (shell commands included), what Deedglass caught, and the undo
+  SQL saved for you to review and run. It prints; you run it, with your own key;
 - the `read-a-scan` skill, which explains a scan result or a Deedglass block message;
 - the `safe-postgres-agents` skill: how to give an agent Postgres access in layers (a
   least-privilege role, a scan, rules before each call, a check of what Postgres committed, undo
@@ -51,6 +55,12 @@ catalog and what it can't see: [docs/SHELL_GUARD.md](../../docs/SHELL_GUARD.md).
 - One hook, off by default (above). It never approves a tool call. Putting MCP tools behind
   Deedglass stays your explicit `deedglass mcp wrap` step (`/deedglass:wrap` prints it; it never
   runs it).
+- It doesn't open watched sessions for you: you run `observe run` with your admin key, and it keeps
+  every `DEEDGLASS_*` variable out of Claude Code's environment. Claude Code can still read files
+  you can, so keep the admin key out of the project: `init` saves it in `.deedglass/admin.key`.
+  Inside a watched session this plugin's MCP server finds no key in its environment, so its tools
+  refuse calls until you quit, unless it finds the agent key `init` wrote in `.deedglass/` above
+  the folder.
 - It doesn't start a wrapped server for you: that needs your database URL and an agent key, which
   stay in your own `claude mcp add` line, never in this plugin.
 - No telemetry, and no key in any file here.

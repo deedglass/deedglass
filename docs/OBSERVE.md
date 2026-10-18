@@ -74,6 +74,62 @@ recording.
 In the Console, **Sessions** lists them; a session's page shows the transactions with their diffs
 (20 rows each), the record line and the undo area. Overview shows up to three caught sessions.
 
+## Watch a coding agent
+
+Many reported incidents with coding agents came through the shell: `psql -c "UPDATE …"`, a script
+the agent wrote, an ORM's command. A gate on tool calls never sees those. Observe mode reads the row
+changes Postgres committed on the watched tables, whichever program wrote them. Start the agent
+inside a session, from the project's folder:
+
+```sh
+mkdir -p ~/deedglass-undo
+deedglass observe run --connector dev --label "claude code" --undo-sql ~/deedglass-undo -- claude
+```
+
+`--undo-sql` saves the session's undo SQL (free) once the session is sealed, so the end of the run
+has everything in one place. Given a folder, the file is `undo-<session id>.sql` in it; given a
+file name, an earlier file there is replaced and the line says so. Keep it outside the project: it
+holds row values. With `caught_rows: 50` (the default is 100), quitting the agent after an
+unbounded 60-row `UPDATE` prints:
+
+```text
+✓ Session sealed · 1 transaction · 14:05:12–14:05:12
+  public.orders  60 updated
+Deedglass caught this: one transaction changed 60 rows in public.orders.
+  Undo SQL saved to /home/you/deedglass-undo/undo-obs_01k7….sql (free). Deedglass doesn't run it: review it, then run it yourself:
+    psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f /home/you/deedglass-undo/undo-obs_01k7….sql
+  It holds row values: keep it out of version control and out of the agent's folder.
+  Changes from any writer during this window appear here. Leave out anything that wasn't the agent before you undo.
+Observed: what Postgres committed. Nothing was compared with what the agent said.
+```
+
+- **Keep the admin key out of the agent's reach.** You open the session in your own terminal with
+  your admin key; `observe run` removes every `DEEDGLASS_*` variable from the agent's environment,
+  and agent keys can't open, close or edit a session. A file is another matter: the agent runs as
+  you. `deedglass init` saves the admin key in `.deedglass/admin.key`, so run it outside the
+  project, and keep the key out of a shell profile, `.env` or agent settings the agent can read.
+  `observe run` names an `admin.key` it finds in the working folder or a parent before the agent
+  starts. Start the agent from inside the run, not the other way round: `claude --continue` picks
+  up your most recent conversation in that folder. If `type claude` shows an alias, put its full
+  path after `--`.
+- **Tools that need a Deedglass key go quiet.** The Claude Code plugin's MCP server finds no key in
+  its environment inside the session, so its tools refuse calls until you quit, unless it finds the
+  agent key `init` wrote in `.deedglass/` above the folder (next to `admin.key`).
+- **Any writer shows up.** The change log doesn't say which program wrote a row. If a migration, a
+  cron job or a teammate wrote to the same tables during the session, their rows are in it too. Leave
+  them out with `observe exclude` and print the SQL again with `observe show <id> --undo-sql`.
+- **A second check, not a sandbox.** Nothing is blocked or asked first; the session shows what
+  committed and how to put it back.
+- **Row changes only.** A `DROP TABLE`, `DROP SCHEMA` or an ORM's reset (`prisma migrate reset`,
+  `alembic downgrade base`) writes no row changes, so it leaves nothing in the session, which can
+  read 0 transactions right after one. Dropping a watched table also takes it out of the
+  publication, which stops the decoder; the run says so and names `deedglass decoder status`. A
+  TRUNCATE, rows past the image cap and sensitive columns can't be undone from the record: the run
+  prints why instead of saving a file, and offers no one-step undo. Sequences don't move back.
+- Without `--undo-sql`, the caught line names the command that prints the SQL instead.
+
+The Claude Code plugin's `/deedglass:watch` prints this line for your project; you run it.
+
 ## Deedglass caught this
 
 A session is flagged `caught` when one of its transactions truncated a watched table, or changed (or

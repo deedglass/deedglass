@@ -313,6 +313,9 @@ every row back newest change first. The twelve checks run on it like on an actio
 Run it with `psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f undo.sql`. Running it twice changes nothing
 the second time. Where there is no SQL, the reason prints instead (exit 1): a TRUNCATE, rows past
 the image cap, a sensitive column the plan would write, expired transactions.
+`deedglass observe run --undo-sql <file or folder> -- <command>` saves the same SQL as soon as the
+session is sealed (docs/OBSERVE.md, "Watch a coding agent"); where there is none, it prints the
+reason and exits with the command's code.
 
 **Pro: one step.** `deedglass observe undo obs_01k… --reason "…"` previews again and sends the plan
 through the Gate as the `console` system agent's action `<connector>.undo_session`: the starter rule

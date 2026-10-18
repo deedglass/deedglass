@@ -26,8 +26,8 @@ import (
 // Postgres connector's change log, through the API with an org admin key. observe run is in
 // observe_run.go (it starts the agent's command).
 
-// sealWait is how long observe run and observe stop --wait wait for the seal.
-const sealWait = 45 * time.Second
+// sealWait is how long observe run and observe stop --wait wait for the seal (a var for tests).
+var sealWait = 45 * time.Second
 
 // --- observe start ---
 
@@ -125,7 +125,7 @@ func runObserveStop(ctx context.Context, e *Env, args []string) error {
 		_, err := e.Stdout.Write(append(raw, '\n'))
 		return err
 	}
-	printSealed(e.Stdout, e.Style, x)
+	printSealed(e.Stdout, e.Style, x, runEnd{})
 	return nil
 }
 
@@ -157,8 +157,11 @@ func closeSession(ctx context.Context, c *deedglass.Client, id string, wait bool
 }
 
 // printSealed writes the closed session (S50 §5): the sealed line, a line per table, the caught
-// lines with both ways back, and the observed note.
-func printSealed(w io.Writer, st ui.Style, x *observeapi.SessionJSON) {
+// lines with both ways back, the any-writer note when anything was committed, and the observed
+// note. end.undoLine, when set, is the free way back observe run --undo-sql already took (the file
+// it saved, or why it saved none); it replaces the generic free path. end.notes print with the
+// session's own notes.
+func printSealed(w io.Writer, st ui.Style, x *observeapi.SessionJSON, end runEnd) {
 	sum := observe.Summary{Transactions: x.Summary.Transactions, Tables: x.Summary.Tables}
 	window := observe.WindowText(x.OpenedAt, x.ClosedAt, nil)
 	if x.Summary.FirstCommit != nil && x.Summary.LastCommit != nil {
@@ -172,9 +175,19 @@ func printSealed(w io.Writer, st ui.Style, x *observeapi.SessionJSON) {
 		fmt.Fprintln(w, st.OKLine("Session "+clean(x.State)+" "+ui.Sep+" "+obsPlural(x.Summary.Transactions, "transaction")+" "+ui.Sep+" "+window))
 	}
 	printTables(w, sum)
-	printCaught(w, st, x)
+	printCaught(w, st, x, end.undoLine, end.refused)
+	if len(x.Caught) == 0 && end.undoLine != "" {
+		fmt.Fprintln(w, end.undoLine)
+	}
+	if x.Summary.Transactions > 0 {
+		// Postgres's change log doesn't say who wrote a row: say so wherever the rows are counted.
+		fmt.Fprintln(w, "  "+observe.NoteAttribution)
+	}
 	for _, n := range x.Notes {
 		fmt.Fprintln(w, "  "+clean(n))
+	}
+	for _, n := range end.notes {
+		fmt.Fprintln(w, n)
 	}
 	fmt.Fprintln(w, observe.NoteObserved)
 }
@@ -191,18 +204,23 @@ func printTables(w io.Writer, sum observe.Summary) {
 }
 
 // printCaught writes every caught line with the Pro path and the free path beside it (a caught
-// line is never shown without the free path: S50 §7).
-func printCaught(w io.Writer, st ui.Style, x *observeapi.SessionJSON) {
+// line is never shown without the free path: S50 §7). freeLine, when set, is the free path already
+// taken (observe run --undo-sql); otherwise it is the command that prints the undo SQL. refused
+// (the undo preview refused the plan) leaves out the one-step undo, which would refuse too.
+func printCaught(w io.Writer, st ui.Style, x *observeapi.SessionJSON, freeLine string, refused bool) {
 	if len(x.Caught) == 0 {
 		return
 	}
 	for _, it := range x.Caught {
 		fmt.Fprintln(w, st.Amber(clean(it.Line)))
 	}
-	if x.State == observe.StateSealed && x.Undo.Possible {
+	if x.State == observe.StateSealed && x.Undo.Possible && !refused {
 		fmt.Fprintln(w, "  Undo this session in one step (Pro): deedglass observe undo "+clean(x.ID))
 	}
-	fmt.Fprintln(w, "  Or print the undo SQL and run it yourself (free): "+clean(caught.FreeSessionPath(x.ID)))
+	if freeLine == "" {
+		freeLine = "  Or print the undo SQL and run it yourself (free): " + clean(caught.FreeSessionPath(x.ID))
+	}
+	fmt.Fprintln(w, freeLine)
 }
 
 // --- observe list ---
@@ -339,7 +357,7 @@ func runObserveShow(ctx context.Context, e *Env, args []string) error {
 			fmt.Fprintf(w, "  %s %s %s%s\n", clean(f.ID), ui.Sep, obsPlural(f.Changes, "change"), state)
 		}
 	}
-	printCaught(w, e.Style, &x)
+	printCaught(w, e.Style, &x, "", false)
 	fmt.Fprintln(w, "  "+observe.NoteAttribution)
 	for _, n := range x.Notes {
 		fmt.Fprintln(w, "  "+clean(n))
@@ -352,30 +370,44 @@ func rowOf(x *observeapi.SessionJSON) store.ObserveSession {
 	return store.ObserveSession{ID: x.ID, Label: x.Label, OpenedAt: x.OpenedAt, ClosedAt: x.ClosedAt, State: x.State}
 }
 
-// printUndoSQL prints the session's undo SQL (S50 §3.5): the planner's statements, one transaction,
-// each guarded by the values the session left. Refusals print instead of SQL, exit 1.
-func printUndoSQL(ctx context.Context, e *Env, c *deedglass.Client, id string) error {
+// undoPreview reads the session's undo preview, which carries the free undo SQL (or the refusals).
+func undoPreview(ctx context.Context, c *deedglass.Client, id string) (*observeapi.PreviewJSON, json.RawMessage, error) {
 	var raw json.RawMessage
 	if _, err := c.Do(ctx, "GET", "/v1/observe/sessions/"+url.PathEscape(id)+"/undo_preview?allow_triggers=true", nil, &raw); err != nil {
-		return apiErr(e, c, err)
+		return nil, nil, err
 	}
 	var pv observeapi.PreviewJSON
 	if err := json.Unmarshal(raw, &pv); err != nil {
-		return err
+		return nil, nil, err
+	}
+	return &pv, raw, nil
+}
+
+// undoRefusals is why a preview holds no SQL, never empty.
+func undoRefusals(pv *observeapi.PreviewJSON) []string {
+	if len(pv.Refusals) == 0 {
+		return []string{"Nothing in this session can be put back from the record."}
+	}
+	return pv.Refusals
+}
+
+// printUndoSQL prints the session's undo SQL (S50 §3.5): the planner's statements, one transaction,
+// each guarded by the values the session left. Refusals print instead of SQL, exit 1.
+func printUndoSQL(ctx context.Context, e *Env, c *deedglass.Client, id string) error {
+	pv, raw, err := undoPreview(ctx, c, id)
+	if err != nil {
+		return apiErr(e, c, err)
 	}
 	if e.Globals.JSON {
 		_, err := e.Stdout.Write(append(raw, '\n'))
 		return err
 	}
 	if pv.SQL == nil {
-		reasons := pv.Refusals
-		if len(reasons) == 0 {
-			reasons = []string{"Nothing in this session can be put back from the record."}
-		}
+		reasons := undoRefusals(pv)
 		return &ExitError{Code: ExitFailure, ErrCode: "undo_unavailable", Err: errors.New(strings.TrimSuffix(clean(reasons[0]), ".")),
 			Detail: cleanAll(reasons[1:]), Next: "Undo those rows by hand, or leave out the transaction: deedglass observe exclude " + clean(id) + " dtx_…"}
 	}
-	_, err := io.WriteString(e.Stdout, *pv.SQL)
+	_, err = io.WriteString(e.Stdout, *pv.SQL)
 	return err
 }
 

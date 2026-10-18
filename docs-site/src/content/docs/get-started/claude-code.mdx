@@ -51,7 +51,7 @@ $ deedglass actions list --limit 5
 
 <Limits>
 - It doesn't change what Claude Code decides to do. It decides what Claude Code's tool calls may do.
-- Tools Claude Code runs on its own (its shell, file edits) don't pass through MCP, so the Gate never sees them. Use Claude Code's permission settings for those.
+- Tools Claude Code runs on its own (its shell, file edits) don't pass through MCP, so the Gate never sees them. Use Claude Code's permission settings for those, and [watch the session](/guides/watch-a-coding-agent/) to see what its shell commands committed to Postgres.
 - The key in the config is an agent key. It can't change policies or approve anything.
 </Limits>
 
@@ -59,3 +59,4 @@ $ deedglass actions list --limit 5
 
 - [Your first policy](/get-started/first-policy/)
 - [Govern an MCP server](/get-started/govern-an-mcp-server/): stdio wrap and the HTTP gateway in detail.
+- [Watch a Claude Code session's database writes](/guides/watch-a-coding-agent/): what Postgres committed while it worked, shell commands included, and the undo SQL.
