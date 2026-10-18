@@ -113,7 +113,7 @@ and Datadog Security Labs' write-up of the SQL injection in that server.
 ## What an agent can run in a shell
 
 Many public reports of an agent wiping a database came through the shell, not through a database
-tool: a schema push with a reset (claude-code#36183), a migration downgrade to the first revision
+tool: a schema push with a reset (claude-code#36183), a migration downgrade that reverts every revision
 (claude-code#26913), a migration diff pointed at production (claude-code#80868). The scan finds the tools that
 have such commands in your dependency files and reads Claude Code's permission rules, then works out,
 for each way an agent might type a destructive command, whether Claude Code would run it without

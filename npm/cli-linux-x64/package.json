@@ -1,6 +1,6 @@
 {
   "name": "@deedglass/cli-linux-x64",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "The deedglass binary for linux/x64 (installed by the deedglass package).",
   "license": "Apache-2.0 AND FSL-1.1-ALv2",
   "repository": { "type": "git", "url": "git+https://github.com/deedglass/deedglass.git", "directory": "npm/cli-linux-x64" },

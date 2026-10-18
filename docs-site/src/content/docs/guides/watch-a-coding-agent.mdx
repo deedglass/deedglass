@@ -8,7 +8,7 @@ import Limits from '../../../components/Limits.astro';
 
 By the end, Claude Code runs inside a watched session. When you quit it, you see the rows Postgres committed on your watched tables while it worked, what Deedglass caught, and the undo SQL saved to a file for you to review and run.
 
-Many reported incidents with coding agents came through the shell: `psql -c "UPDATE …"`, a script the agent wrote, an ORM's command. A gate on MCP tool calls never sees those. Observe mode reads the row changes Postgres committed, whichever program wrote them, so there is nothing to rewire in the agent.
+Many reported incidents with coding agents came through the shell: an ORM's command such as `prisma db push --force-reset` or `alembic downgrade base`, or SQL sent over SSH. A gate on MCP tool calls never sees those. Observe mode reads the row changes Postgres committed, whichever program wrote them, so there is nothing to rewire in the agent.
 
 **Before you start**
 
