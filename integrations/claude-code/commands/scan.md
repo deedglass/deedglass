@@ -3,9 +3,9 @@ description: Grade this project's agent setup with deedglass scan. Read-only, ru
 allowed-tools: Bash(npx -y deedglass scan:*)
 ---
 
-Run `npx -y deedglass scan` in the project root. It reads the MCP client configs, the agent
-packages and, if a database URL is set, the Postgres role's permissions. It changes nothing and
-sends nothing anywhere.
+Run `npx -y deedglass scan` in the project root. It reads the MCP client configs and the agent
+packages and, with `--postgres-dsn-env DATABASE_URL`, the Postgres role's permissions, read-only.
+It changes nothing and sends nothing anywhere else.
 
 Then tell the user, in plain words:
 

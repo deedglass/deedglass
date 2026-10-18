@@ -111,6 +111,13 @@ func TestDescription(t *testing.T) {
 		}
 	}
 
+	// The network sentence, word for word, where people read how the licence check works (P-087).
+	for _, path := range []string{"LICENSING.md", "../docs-site/src/content/docs/reference/pro-and-licences.mdx"} {
+		if !strings.Contains(flat(read(t, path)), flat(d.Network)) {
+			t.Errorf("%s doesn't carry the network sentence of docs/description.json word for word", path)
+		}
+	}
+
 	// The docs site reads the file: the site description is the tagline and llms.txt's is the summary
 	// (docs-site/scripts/check-llms.mjs checks the built llms.txt).
 	cfg := read(t, "../docs-site/astro.config.mjs")

@@ -61,7 +61,7 @@ var licDodoOverride string
 const (
 	licProURL       = "deedglass.com/pro"
 	licBillingLine  = "Billing and cancel: deedglass.com/licence#billing"
-	licCheckInLine  = "The licence checks in at most once a day, only when a Pro feature runs, and keeps working 14 days offline."
+	licCheckInLine  = "Pro features check it online when the last successful check is a day old, and at once when the clock runs behind it or licence.clock is missing, unreadable or altered; never with DEEDGLASS_NO_NETWORK=1. Offline, Pro keeps working up to 14 days after the last successful check."
 	licFullNeedsPro = "The full report is part of Pro or the $29 full scan report. Get one at deedglass.com/pro. Everything in deedglass scan stays free."
 	licDateLayout   = "2 Jan 2006"
 	licClockBehind  = "Pro paused: this computer's clock is behind the last time the licence was checked. Run deedglass licence refresh with the network on. Everything free still works."

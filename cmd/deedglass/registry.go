@@ -94,7 +94,7 @@ var commands = []*Command{
 		Usage: "[--server <url>] [--json]", Run: runKeysList},
 	{Path: p("licence", "activate"), Group: Setup, Summary: "Turn on Pro with the key from Dodo",
 		Usage: "<key> [--json]", Run: runLicenceActivate,
-		Detail: "Registers this machine with Dodo Payments (under a hash of its name, never the name), then asks deedglass.com for a signed licence. Writes .deedglass/licence.json and .deedglass/licence.key (both 0600; DEEDGLASS_LICENCE_FILE moves them). The licence checks in at most once a day, only when a Pro feature runs, and keeps working 14 days offline. Free commands never read it.\n\nExample:\n  deedglass licence activate DG-7Q2M-…"},
+		Detail: "Registers this machine with Dodo Payments (under a hash of its name, never the name), then asks deedglass.com for a signed licence. Writes .deedglass/licence.json and .deedglass/licence.key (both 0600; DEEDGLASS_LICENCE_FILE moves them). Pro features check it online when the last successful check is a day old, and at once when the clock runs behind it or licence.clock is missing, unreadable or altered; never with DEEDGLASS_NO_NETWORK=1. Offline, Pro keeps working up to 14 days after the last successful check. Free commands never read it.\n\nExample:\n  deedglass licence activate DG-7Q2M-…"},
 	{Path: p("licence", "show"), Group: Setup, Summary: "Show this machine's licence, offline",
 		Usage: "[--json]", Run: runLicenceShow},
 	{Path: p("licence", "refresh"), Group: Setup, Summary: "Check the licence with Dodo now",

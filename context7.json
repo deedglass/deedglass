@@ -18,6 +18,6 @@
     "People read plain names: a check is Claimed, Checked or Proven and says Matches, Doesn't match or Can't check. The API, JSON and policy files keep the short names: L0, L1, L2 and VERIFIED, MISMATCH, UNVERIFIABLE.",
     "Policies decide allow, deny or require_approval for each tool call; start from examples/policies (postgres-safe for Postgres) and test them with deedglass policy test.",
     "Proven covers Postgres only and needs wal_level=logical and REPLICA IDENTITY FULL on watched tables; other connectors reach Claimed or Checked.",
-    "deedglass scan --no-write and deedglass play send nothing and need no Docker (npx itself downloads the package from npm)."
+    "deedglass scan --no-write and deedglass play (deedglass 0.1.1 or newer) send nothing and need no Docker (npx itself downloads the package from npm)."
   ]
 }

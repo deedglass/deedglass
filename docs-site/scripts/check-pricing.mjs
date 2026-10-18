@@ -7,8 +7,9 @@ import { join } from 'node:path';
 import { walk } from './postbuild.mjs';
 import { pages, site } from './lib-pages.mjs';
 
-// P-044 (Pro is $49 a month, DL-086) and P-086 (the ee/ licence).
-export const FAQ_FREE = 'The core is free and Apache-2.0; the Pro features in `ee/` are FSL-1.1-ALv2. Pro is $49 a month and adds the Action on private repos, the full report and Pro packs.';
+// P-044 (Pro is $49 a month, DL-086), P-086 (the ee/ licence) and P-101 (Pro adds the Action's
+// comment on private repos; scan-action v1.0.0 runs the scan, job summary and SARIF free everywhere).
+export const FAQ_FREE = "The core is free and Apache-2.0; the Pro features in `ee/` are FSL-1.1-ALv2. Pro is $49 a month and adds the Action's pull request comment on private repos, the full report and Pro packs. The Action's scan, job summary and SARIF are free on every repo.";
 export const banned = [/\$199/, /\$390/, /deedglass\.com\/check/, /[Ff]ounding band/]; // the $99 founding partner place is the master plan's (DL-077); the retired $390 band stays banned
 // The repo is public (docs/PUBLIC_REPO_SWITCH.md): "open source" is allowed now.
 export const pricingProblems = (text) => banned.filter((re) => re.test(text)).map(String);

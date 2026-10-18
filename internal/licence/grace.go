@@ -4,7 +4,8 @@ import (
 	"time"
 )
 
-// RefreshEvery is how often a Pro feature may check the licence again (at most once a day).
+// RefreshEvery is how old the last check may be before a Pro feature checks the licence again. A
+// clock that can't be trusted makes a check due sooner (clock.go).
 const RefreshEvery = 24 * time.Hour
 
 // State is what a token allows at a moment.
@@ -15,7 +16,7 @@ type State struct {
 	PeriodEnd    time.Time // zero when the plan has no end date
 	Expired      bool      // the paid period plus its grace is over (not only a missed check)
 	ModeMismatch bool      // a test-mode token on a live build, or the reverse
-	DueRefresh   bool      // the last check is older than RefreshEvery
+	DueRefresh   bool      // a check is due: the last one is older than RefreshEvery, or the clock can't be trusted (clock.go)
 	ClockBack    bool      // the clock runs behind the last check or the latest time seen: Pro waits for an online check
 }
 

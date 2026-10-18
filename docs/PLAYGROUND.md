@@ -8,8 +8,8 @@ real Witness reads Postgres's own change log."
 
 ## In your terminal: `deedglass play`
 
-`npx deedglass play` tells the same story offline, with no Docker and nothing sent anywhere. Every
-line says where it comes from:
+`npx deedglass play` (deedglass 0.1.1 or newer) tells the same story offline, with no Docker and
+nothing sent anywhere. Every line says where it comes from:
 
 - **live:** the policy decisions come from `policy.Evaluate` on the Acme demo policy
   (`examples/demo/policies/acme-demo.yaml`), the engine `deedglass serve` runs. The records are

@@ -1,7 +1,8 @@
 # deedglass
 
 The Deedglass CLI on npm. `npx -y deedglass scan` grades what your agent setup can change (A to F),
-locally and read-only; nothing is sent anywhere.
+locally and read-only. It connects only to a database you name with `--postgres-dsn-env`, and sends
+nothing anywhere else.
 
 ```sh
 npx -y deedglass scan
