@@ -8,7 +8,8 @@
           {
             "type": "command",
             "command": "sh \"${CLAUDE_PLUGIN_ROOT}/hooks/shell-guard.sh\"",
-            "timeout": 10
+            "timeout": 10,
+            "onFailure": "continue"
           }
         ]
       }
