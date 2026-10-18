@@ -1,0 +1,82 @@
+---
+title: Watch a Claude Code session's database writes
+description: See the rows Postgres committed on your watched tables while Claude Code worked, shell commands included, what Deedglass caught, and the undo SQL to run.
+lastVerified: "2026-10-18"
+---
+
+import Limits from '../../../components/Limits.astro';
+
+By the end, Claude Code runs inside a watched session. When you quit it, you see the rows Postgres committed on your watched tables while it worked, what Deedglass caught, and the undo SQL saved to a file for you to review and run.
+
+Many reported incidents with coding agents came through the shell: `psql -c "UPDATE …"`, a script the agent wrote, an ORM's command. A gate on MCP tool calls never sees those. Observe mode reads the row changes Postgres committed, whichever program wrote them, so there is nothing to rewire in the agent.
+
+**Before you start**
+
+- A running Deedglass server and an org admin key in `DEEDGLASS_API_KEY`, in your own terminal. The [Quickstart](/quickstart/) gives you both.
+- A dev database with `wal_level=logical`, and a Postgres connector set up on it with `deedglass connector postgres init` ([Put Deedglass in front of Postgres](/get-started/postgres/)).
+- `deedglass` on your `PATH` (`npx -y deedglass …` works too).
+
+## 1. Turn on observe mode
+
+In the connector's config:
+
+```yaml
+witness:
+  enabled: true
+  watched_tables: [public.orders, public.order_items]
+  observe:
+    enabled: true
+    caught_rows: 50   # one transaction changing this many rows in one table is "caught" (default 100)
+```
+
+## 2. Start Claude Code inside a session
+
+Keep the undo SQL out of the project: it holds row values. Make a folder for it once, then start Claude Code from your project folder:
+
+```sh test=skip reason="starts Claude Code against your own connector, with your admin key"
+mkdir -p ~/deedglass-undo
+deedglass observe run --connector dev --label "claude code" --undo-sql ~/deedglass-undo -- claude
+```
+
+Given a folder, the file is `undo-<session id>.sql` in it, so two sessions never share a file. Already in a conversation? Quit it and run the same line ending in `-- claude --continue`, which picks up your most recent conversation in that folder. If `type claude` says it's an alias, put its full path after `--`. With the Claude Code plugin, `/deedglass:watch` prints the line for your connector; you run it.
+
+**Keep the admin key out of the agent's reach.** `observe run` removes every `DEEDGLASS_*` variable from Claude Code's environment, and agent keys can't open, close or edit a session. A file is another matter: Claude Code runs as you and can read what you can. `deedglass init` saves the admin key in `.deedglass/admin.key`, so run it outside the project, and keep the key out of a shell profile, `.env` or Claude Code settings the agent can read. `observe run` names an `admin.key` it finds in the folder or a parent before the agent starts.
+
+Inside the watched session, the plugin's Deedglass tools find no key in their environment either, so they refuse calls until you quit, unless they find the agent key `init` wrote in `.deedglass/` above the folder (where `admin.key` sits too).
+
+## 3. Quit, and read the end of the run
+
+Say the agent "fixed" order statuses with `psql` and left out the `WHERE`:
+
+```text
+✓ Session sealed · 1 transaction · 14:05:12–14:05:12
+  public.orders  60 updated
+Deedglass caught this: one transaction changed 60 rows in public.orders.
+  Undo SQL saved to /home/you/deedglass-undo/undo-obs_01k7….sql (free). Deedglass doesn't run it: review it, then run it yourself:
+    psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f /home/you/deedglass-undo/undo-obs_01k7….sql
+  It holds row values: keep it out of version control and out of the agent's folder.
+  Changes from any writer during this window appear here. Leave out anything that wasn't the agent before you undo.
+Observed: what Postgres committed. Nothing was compared with what the agent said.
+```
+
+Review the file, then run the `psql` line. Each statement checks that its row still holds what the session left. If any row changed since, Postgres rolls the whole file back: nothing is half undone.
+
+Did something else write to those tables during the session? Leave its transaction out, then print the SQL again:
+
+```sh test=skip reason="needs a sealed session from your own stack"
+deedglass observe show obs_01k…
+deedglass observe exclude obs_01k… dtx_01k…
+(umask 077; deedglass observe show obs_01k… --undo-sql > ~/deedglass-undo/undo-obs_01k….sql)
+```
+
+The session stays in the record, sealed: Console › Sessions lists it, and `deedglass observe list --caught` shows the ones Deedglass caught.
+
+## What it doesn't do
+
+<Limits>
+- It's a second check, not a sandbox: nothing is blocked or asked first. It shows what committed and how to put it back.
+- It can't tell Claude Code's writes from another writer's in the same window. Leave those out before you undo.
+- There is no Matches or Doesn't match verdict: the agent made no claim to compare.
+- Row changes on watched tables only. A `DROP TABLE`, `DROP SCHEMA` or an ORM's reset (`prisma migrate reset`, `alembic downgrade base`) writes no row changes, so it leaves nothing in the session, which can read 0 transactions right after one. It also takes the table out of the publication, which stops the decoder; the run says so. A TRUNCATE, sequences and rows past the image cap can't be put back from the record.
+- The undo SQL holds row values. Keep the file out of version control and out of the agent's folder.
+</Limits>

@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -22,6 +23,7 @@ import (
 	"github.com/deedglass/deedglass/internal/decoder"
 	"github.com/deedglass/deedglass/internal/ids"
 	"github.com/deedglass/deedglass/internal/licence"
+	"github.com/deedglass/deedglass/internal/observe"
 	"github.com/deedglass/deedglass/internal/observeapi"
 	"github.com/deedglass/deedglass/internal/store/storetest"
 )
@@ -73,8 +75,10 @@ func TestObserveChildHelper(t *testing.T) {
 // watched session sealed with what Postgres committed (301 rows caught), the seal holding no row
 // values, the free undo SQL restoring the tables exactly, a second preview blocked by conflicts,
 // observe run passing exit codes through with DEEDGLASS_* kept from the child, pro_required without
-// a licence, then (with a test Pro licence) an excluded transaction, a one-step undo countersigned by
-// another person, its Check reading Matches and the session undone, and agent keys refused.
+// a licence, a coding agent's unbounded UPDATE through psql caught by observe run --undo-sql with the
+// saved SQL putting the table back (FEAT-04), then (with a test Pro licence) an excluded
+// transaction, a one-step undo countersigned by another person, its Check reading Matches and the
+// session undone, and agent keys refused.
 func TestObserveLive(t *testing.T) {
 	admin := pgtest.AdminURL(t)
 	unlock, err := pgtest.Lock(context.Background(), admin)
@@ -255,7 +259,7 @@ func TestObserveLive(t *testing.T) {
 		t.Fatalf("observe off: %+v", r)
 	}
 	// Turn it on (PATCH the connector's config).
-	cfgOn := strings.Replace(cfgOff, `"sensitive_columns":["public.customers.email"]}`, `"sensitive_columns":["public.customers.email"],"observe":{"enabled":true,"caught_rows":100}}`, 1)
+	cfgOn := strings.Replace(cfgOff, `"sensitive_columns":["public.customers.email"]}`, `"sensitive_columns":["public.customers.email"],"observe":{"enabled":true,"caught_rows":50}}`, 1)
 	if cfgOn == cfgOff {
 		t.Fatal("the config replacement didn't apply")
 	}
@@ -401,6 +405,51 @@ func TestObserveLive(t *testing.T) {
 		t.Fatalf("no Pro (API): %d %s", code, b)
 	}
 
+	// 4b. FEAT-04, watching a coding agent: the agent "fixes" order statuses with psql and forgets the
+	// WHERE, so every order changes. observe run --undo-sql ends with the caught line, the undo SQL
+	// saved for the person (free), and the any-writer note; the saved file, run with the psql line
+	// the run printed, puts public.orders back exactly.
+	if psql := psqlPath(t); psql != "" {
+		beforeAgent := snapshot()
+		// A folder outside the agent's working folder, as the docs suggest: the file is undo-<session>.sql.
+		undoDir := t.TempDir()
+		r = run("observe", "run", "--connector", "postgres", "--label", "coding agent", "--undo-sql", undoDir, "--",
+			psql, "-X", "-q", "-v", "ON_ERROR_STOP=1", "-d", cust.AdminURL, "-c", "UPDATE public.orders SET status = 'cancelled'")
+		t.Logf("deedglass observe run -- psql:\n%s%s", r.stdout, r.stderr)
+		files, _ := filepath.Glob(filepath.Join(undoDir, "undo-obs_*.sql"))
+		if len(files) != 1 {
+			t.Fatalf("observe run -- psql: want one undo-<session>.sql in the folder, got %v: %+v", files, r)
+		}
+		undoFile := files[0]
+		for _, want := range []string{"✓ Session sealed · 1 transaction", "  public.orders  60 updated",
+			"Deedglass caught this: one transaction changed 60 rows in public.orders.",
+			"  Undo SQL saved to " + undoFile + " (free). Deedglass doesn't run it: review it, then run it yourself:",
+			`    psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f ` + undoFile,
+			"  It holds row values: keep it out of version control and out of the agent's folder.",
+			"  " + observe.NoteAttribution, observe.NoteObserved} {
+			if !strings.Contains(r.stderr, want) {
+				t.Fatalf("observe run -- psql: missing %q: %+v", want, r)
+			}
+		}
+		if r.code != 0 || snapshot() == beforeAgent {
+			t.Fatalf("observe run -- psql: exit %d, the agent's UPDATE changed nothing or failed", r.code)
+		}
+		b, err := os.ReadFile(undoFile)
+		if err != nil || !strings.HasPrefix(string(b), "-- Deedglass undo SQL for watched session obs_") || !strings.Contains(string(b), "COMMIT;") {
+			t.Fatalf("the saved undo SQL: %v\n%s", err, b)
+		}
+		if fi, err := os.Stat(undoFile); err != nil || fi.Mode().Perm() != 0o600 {
+			t.Fatalf("the saved undo SQL's mode: %v %v", fi, err)
+		}
+		out, err := exec.Command(psql, "-X", "-q", "-v", "ON_ERROR_STOP=1", "-d", cust.AdminURL, "-f", undoFile).CombinedOutput()
+		if err != nil {
+			t.Fatalf("running the saved undo SQL with psql: %v\n%s", err, out)
+		}
+		if got := snapshot(); got != beforeAgent {
+			t.Fatalf("the saved undo SQL didn't put public.orders back")
+		}
+	}
+
 	// 5. With a test Pro licence (restart serve so it asks at start).
 	stop()
 	f, lenv, _ := licenceSeams(t)
@@ -533,6 +582,25 @@ func TestObserveLive(t *testing.T) {
 			t.Fatalf("a credential or row value reached an output: %s", clipOut(o))
 		}
 	}
+}
+
+// psqlPath is the psql FEAT-04's step drives as the agent: PATH first, then the Homebrew kegs. CI
+// (GitHub's Ubuntu runner ships the client) must have one; a laptop without it skips the step.
+func psqlPath(t *testing.T) string {
+	t.Helper()
+	if p, err := exec.LookPath("psql"); err == nil {
+		return p
+	}
+	for _, v := range []string{"18", "17", "16"} {
+		if p := "/opt/homebrew/opt/postgresql@" + v + "/bin/psql"; fileExists(p) {
+			return p
+		}
+	}
+	if os.Getenv("CI") != "" {
+		t.Fatal("psql isn't installed; FEAT-04's step drives it as the agent")
+	}
+	t.Log("psql isn't installed: skipping FEAT-04's psql step")
+	return ""
 }
 
 func obsContains(xs []string, s string) bool {

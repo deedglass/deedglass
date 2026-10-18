@@ -230,7 +230,7 @@ builds it. Hidden commands work but aren't in `deedglass help`.
 | `deedglass approvals show <apr_…> [--json]` | Actions | Show one approval | built |
 | `deedglass undo preview <act_…> [--allow-triggers] [--steps N] [--json]` | Actions | Show what an undo would change | built |
 | `deedglass undo run <act_…> --plan <sha256:…> --reason "…" [--allow-triggers] [--wait 25s] [--json]` | Actions | Undo an action | built |
-| `deedglass observe run --connector <name> [--label "…"] [--agent <name>] -- <command …>` | Actions | Watch a database while a command runs | built |
+| `deedglass observe run --connector <name> [--label "…"] [--agent <name>] [--undo-sql <file or folder>] -- <command …>` | Actions | Watch a database while a command runs | built |
 | `deedglass observe start --connector <name> [--label "…"] [--agent <name>] [--json]` | Actions | Open a watched session | built |
 | `deedglass observe stop <obs_…> [--wait=false] [--json]` | Actions | Close a watched session | built |
 | `deedglass observe list [--connector <name>] [--state sealed] [--caught] [--limit 20] [--json]` | Actions | List watched sessions | built |

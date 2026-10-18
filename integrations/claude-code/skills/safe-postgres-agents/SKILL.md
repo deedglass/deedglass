@@ -53,6 +53,8 @@ and `REPLICA IDENTITY FULL` on watched tables (`deedglass connector postgres ini
 Already using another gate, or none? Observe mode (`deedglass observe run --connector <name> --
 ./agent.sh`) records every row committed on watched tables while the agent ran, with nothing to
 rewire. It can't tell which program wrote a row, so it gives no Matches or Doesn't match verdict.
+For a coding agent, it covers the shell too: `/deedglass:watch` prints the line that restarts
+Claude Code inside a watched session, with the undo SQL saved when it ends.
 
 ## 5. Undo, with a person in the loop
 

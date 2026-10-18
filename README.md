@@ -93,6 +93,7 @@ mismatch and the undo preview shown above.
 ```sh
 deedglass observe run --connector pg-demo -- ./agent.sh   # open a watched session, run the agent, close it
 deedglass observe show obs_01k… --undo-sql                # the undo as SQL you review and run (free)
+deedglass observe run --connector dev --undo-sql ~/deedglass-undo -- claude   # watch a Claude Code session, shell included
 ```
 
 Turn it on with `witness.observe.enabled: true` in the connector's config. Observe mode reads only
@@ -192,8 +193,9 @@ claude mcp add deedglass -- npx -y deedglass mcp serve
 No link holds a key. Run `npx deedglass init` first; each client asks Deedglass for the key it wrote.
 <!-- install-links:end -->
 
-**Claude Code plugin** (the MCP server, a `/deedglass:scan` command, and skills for reading a
-scan and for giving an agent Postgres access safely), from this repo's own marketplace:
+**Claude Code plugin** (the MCP server, the `/deedglass:scan`, `/deedglass:wrap` and
+`/deedglass:watch` commands, and skills for reading a scan and for giving an agent Postgres access
+safely), from this repo's own marketplace:
 
 ```text
 /plugin marketplace add deedglass/deedglass
