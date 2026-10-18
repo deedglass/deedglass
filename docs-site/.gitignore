@@ -35,6 +35,7 @@ src/content/docs/guides/supabase.md
 src/content/docs/guides/neon.md
 src/content/docs/guides/observe-beside-another-gate.md
 src/content/docs/reference/observe.md
+src/content/docs/reference/shell-guard.md
 public/images/
 src/content/docs/reference/http/endpoints.md
 src/content/docs/policies/

@@ -1,0 +1,17 @@
+{
+  "description": "Deedglass shell guard: off unless DEEDGLASS_SHELL_GUARD is ask or deny. Before a Bash command runs, it asks first when the command would destroy database data. A second check, not a sandbox.",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/hooks/shell-guard.sh\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -25,6 +25,7 @@ exit 0
 [1mPolicies[0m
   policy              Write, test and activate policies                [2m    [0m   [2mlint · fmt · test · push · activate · evaluate · replay · diff · install[0m
   policy packs        List or check the policy packs                   [2m    [0m   [2mlist · verify[0m
+  guard shell         Check a shell command before an agent runs it
 [1mActions[0m
   act                 Send a test action through Deedglass
   actions             Inspect actions                                  [2m    [0m   [2mlist · show · cancel[0m

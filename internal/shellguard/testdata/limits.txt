@@ -1,0 +1,35 @@
+# What the shell guard does not see: each command here would destroy data and passes untouched.
+# docs/SHELL_GUARD.md "What it doesn't see" lists the same cases. A change that starts catching one
+# moves it to asks.txt and updates that page.
+
+# A value known only at run time.
+CMD="prisma migrate reset --force"; npx $CMD
+
+# A word built from a variable.
+npx prisma migrate "$ACTION" --force
+
+# SQL produced by another command.
+psql -c "$(printf 'DROP TABLE %s' users)"
+
+# Encoded text.
+echo ZHJvcGRiIGFwcA== | base64 -d | sh
+
+# An interpreter running its own code.
+python -c "import os; os.system('dropdb app')"
+
+# A file the guard isn't given (no working directory), or a Makefile target.
+make db-reset
+
+# An alias or shell function defined earlier in the session.
+resetdb
+
+# An unquoted heredoc's command substitution (bash runs it; the guard reads the body as text).
+cat <<EOF
+$(dropdb app)
+EOF
+
+# An ORM call made from application code.
+node -e "require('./db').sequelize.drop()"
+
+# A database the command reaches over HTTP.
+curl -X DELETE https://api.example.com/v1/databases/prod

@@ -1,0 +1,562 @@
+# Ordinary development commands the guard must pass untouched: the false-positive budget is 0.
+# One command per entry, entries separated by a blank line; a line starting "# " outside an entry is
+# a comment. Many are near misses: the same tools as the catalog, used safely, and destructive words
+# that are only text (a commit message, a grep pattern, a heredoc into a file).
+
+git status
+
+git diff --stat
+
+git add -A && git commit -m "Add the users table migration"
+
+git commit -m "Stop running prisma migrate reset in CI"
+
+git commit -m 'docs: never run `dropdb` on staging'
+
+git log --oneline -20 --grep="DROP TABLE"
+
+git push origin feature/login
+
+git checkout -b fix/session-timeout
+
+git stash && git pull --rebase && git stash pop
+
+git rebase -i HEAD~3
+
+git reset --soft HEAD~1
+
+gh pr create --title "Add orders index" --body "Adds an index; no DROP or TRUNCATE."
+
+gh pr view 42 --comments
+
+ls -la
+
+cd apps/api && ls
+
+pwd
+
+cat package.json
+
+cat prisma/schema.prisma | head -50
+
+head -n 40 db/schema.rb
+
+tail -f log/development.log
+
+grep -rn "DROP TABLE" migrations/
+
+rg "prisma migrate reset" docs/
+
+rg -l "TRUNCATE" --type sql
+
+find . -name "*.sql" -newer prisma/schema.prisma
+
+wc -l src/**/*.ts
+
+sed -n '1,80p' alembic/env.py
+
+awk '/DROP/ {print FILENAME}' migrations/*.sql
+
+echo "DROP TABLE users" > notes.txt
+
+echo "Run: prisma migrate reset --force (only on your laptop)"
+
+printf '%s\n' "dropdb is dangerous"
+
+cat > README.md <<'EOF'
+# Resetting your local database
+Run `npx prisma migrate reset` only against a local database.
+DROP TABLE is never run in CI.
+EOF
+
+tee docs/db.md <<'EOF'
+psql -c 'DROP TABLE users' is an example of what not to run.
+EOF
+
+mkdir -p prisma/migrations/20261018_add_orders
+
+touch .env.local
+
+cp .env.example .env
+
+mv old.sql archive/old.sql
+
+rm -rf node_modules dist .next
+
+rm -f prisma/dev.db-journal
+
+chmod +x scripts/dev.sh
+
+npm install
+
+npm ci
+
+npm install prisma@latest --save-dev
+
+npm i -D drizzle-kit
+
+npm run build
+
+npm run dev
+
+npm test
+
+npm run lint -- --fix
+
+npm view prisma version
+
+npm outdated
+
+npm audit --omit=dev
+
+pnpm install
+
+pnpm add -D knex
+
+pnpm --filter web dev
+
+pnpm -r build
+
+yarn
+
+yarn add typeorm reflect-metadata
+
+yarn test --watch=false
+
+bun install
+
+bun run dev
+
+bunx tsc --noEmit
+
+npx tsc -p . --noEmit
+
+npx eslint . --ext .ts
+
+npx prettier --write src
+
+npx vitest run
+
+npx jest --coverage
+
+npx playwright test
+
+npx prisma generate
+
+npx prisma migrate dev --name add_orders
+
+npx prisma migrate deploy
+
+npx prisma migrate status
+
+npx prisma migrate resolve --applied 20261018_add_orders
+
+npx prisma db push
+
+npx prisma db push --skip-generate
+
+npx prisma db pull
+
+npx prisma db seed
+
+npx prisma studio
+
+npx prisma format
+
+npx prisma validate
+
+npx prisma migrate diff --from-empty --to-schema-datamodel prisma/schema.prisma --script
+
+npx prisma migrate reset --help
+
+npx prisma db execute --file prisma/seed.sql
+
+npx drizzle-kit generate
+
+npx drizzle-kit migrate
+
+npx drizzle-kit push
+
+npx drizzle-kit studio
+
+npx drizzle-kit check
+
+npx knex migrate:latest
+
+npx knex migrate:rollback
+
+npx knex migrate:make add_orders
+
+npx knex seed:run
+
+npx typeorm migration:run -d src/data-source.ts
+
+npx typeorm migration:revert -d src/data-source.ts
+
+npx typeorm migration:generate src/migrations/AddOrders -d src/data-source.ts
+
+npx typeorm schema:log -d src/data-source.ts
+
+npx sequelize-cli db:migrate
+
+npx sequelize-cli db:migrate:undo
+
+npx sequelize-cli db:seed:all
+
+npx sequelize-cli db:create
+
+alembic upgrade head
+
+alembic downgrade -1
+
+alembic downgrade base --sql > downgrade.sql
+
+alembic revision --autogenerate -m "add orders"
+
+alembic history --verbose
+
+alembic current
+
+alembic stamp head
+
+uv run alembic upgrade head
+
+poetry run alembic upgrade head
+
+.venv/bin/python -m alembic upgrade head
+
+flask db upgrade
+
+flask db migrate -m "add orders"
+
+flask db downgrade
+
+python manage.py migrate
+
+python manage.py makemigrations billing
+
+python manage.py migrate billing 0003
+
+python manage.py migrate billing zero --plan
+
+python manage.py showmigrations
+
+python manage.py runserver 0.0.0.0:8000
+
+python manage.py test
+
+python manage.py createsuperuser
+
+python manage.py shell -c "from django.db import connection; print(connection.vendor)"
+
+python -m pytest -q
+
+python3 -m venv .venv && . .venv/bin/activate && pip install -r requirements.txt
+
+pip install alembic psycopg[binary]
+
+uv add sqlalchemy alembic
+
+uv run pytest tests/test_orders.py -k refund
+
+ruff check . --fix
+
+mypy src
+
+bin/rails db:migrate
+
+bin/rails db:rollback
+
+bin/rails db:rollback STEP=2
+
+bin/rails db:migrate:status
+
+bin/rails db:seed
+
+bin/rails db:create
+
+bin/rails db:prepare
+
+bin/rails db:migrate VERSION=20261018120000
+
+bin/rails -T db:drop
+
+bin/rails db:drop --help
+
+bin/rails console
+
+bin/rails test
+
+bundle install
+
+bundle exec rspec spec/models
+
+bundle exec rake -T db
+
+php artisan migrate
+
+php artisan migrate --force
+
+php artisan migrate:rollback
+
+php artisan migrate:status
+
+php artisan migrate:refresh --step=1
+
+php artisan make:migration add_orders_table
+
+php artisan tinker
+
+php artisan help migrate:fresh
+
+composer install
+
+mix deps.get
+
+mix ecto.create
+
+mix ecto.migrate
+
+mix ecto.rollback
+
+mix ecto.rollback --step 2
+
+mix help ecto.drop
+
+mix test
+
+mix phx.server
+
+supabase start
+
+supabase db reset
+
+supabase db reset --local
+
+supabase db push
+
+supabase db diff -f add_orders
+
+supabase migration new add_orders
+
+heroku pg:info --app my-app
+
+heroku logs --tail --app my-app
+
+heroku run rails db:migrate --app my-app
+
+createdb app_test
+
+dropdb --help
+
+dropdb --version
+
+pg_dump app > backup.sql
+
+pg_dump --clean --if-exists app > dump.sql
+
+pg_dump -Fc app -f app.dump
+
+pg_restore -l app.dump
+
+pg_restore -f - app.dump | less
+
+pg_restore --clean -f restore.sql app.dump
+
+pg_isready -h localhost -p 5432
+
+psql --version
+
+psql -l
+
+psql -c "SELECT count(*) FROM users"
+
+psql "$DATABASE_URL" -c '\dt'
+
+psql -d app -c "\d+ orders"
+
+psql -c "SELECT pg_size_pretty(pg_database_size(current_database()))"
+
+psql -c "UPDATE users SET name = 'Ada' WHERE id = 1"
+
+psql -c "DELETE FROM sessions WHERE expires_at < now()"
+
+psql -c "UPDATE orders SET status = 'shipped' WHERE id IN (SELECT id FROM orders WHERE paid LIMIT 10)"
+
+psql -c "CREATE TABLE IF NOT EXISTS events (id bigserial primary key, body jsonb)"
+
+psql -c "CREATE INDEX CONCURRENTLY orders_created_at ON orders (created_at)"
+
+psql -c "DROP INDEX IF EXISTS orders_created_at"
+
+psql -c "DROP VIEW IF EXISTS daily_totals"
+
+psql -c "DROP FUNCTION IF EXISTS touch_updated_at()"
+
+psql -c "DROP TYPE order_status"
+
+psql -c "ALTER TABLE users ADD COLUMN last_seen timestamptz"
+
+psql -c "ALTER TABLE users DROP CONSTRAINT users_email_key"
+
+psql -c "ALTER TABLE users ALTER COLUMN name DROP NOT NULL"
+
+psql -c "ALTER TABLE users ALTER COLUMN status DROP DEFAULT"
+
+psql -c "EXPLAIN ANALYZE SELECT * FROM orders WHERE customer_id = 42"
+
+psql -c "INSERT INTO flags (name, enabled) VALUES ('beta', true)"
+
+psql -c "BEGIN; UPDATE accounts SET balance = balance - 10 WHERE id = 7; COMMIT;"
+
+psql app <<'SQL'
+SELECT id, email FROM users ORDER BY id DESC LIMIT 5;
+SQL
+
+echo "SELECT 1" | psql -At
+
+psql -h localhost -U postgres -d app -f queries/report.sql
+
+mysql -u root -e "SHOW DATABASES"
+
+mysql -e "SELECT COUNT(*) FROM orders" shop
+
+mysqladmin -u root status
+
+sqlite3 app.db ".tables"
+
+sqlite3 app.db "SELECT * FROM users LIMIT 5"
+
+sqlite3 app.db .schema
+
+docker compose up -d
+
+docker compose ps
+
+docker compose logs -f api
+
+docker compose exec db psql -U postgres -c "select now()"
+
+docker compose run --rm api npx prisma migrate deploy
+
+docker ps -a
+
+docker build -t app:dev .
+
+docker run --rm -p 5432:5432 -e POSTGRES_PASSWORD=dev postgres:17
+
+docker exec -it db psql -U postgres app -c "select count(*) from orders"
+
+kubectl get pods -n api
+
+kubectl logs deploy/api --tail=100
+
+kubectl exec -it deploy/api -- python manage.py migrate
+
+terraform plan
+
+terraform fmt -recursive
+
+go test ./...
+
+go build -o bin/app ./cmd/app
+
+go vet ./...
+
+go mod tidy
+
+cargo build --release
+
+cargo test
+
+make test
+
+make build
+
+curl -s http://localhost:3000/health | jq .
+
+curl -X POST localhost:8080/api/orders -d '{"qty":1}' -H 'content-type: application/json'
+
+jq '.scripts' package.json
+
+which prisma
+
+command -v dropdb
+
+type psql
+
+man pg_restore
+
+brew install postgresql@17
+
+brew services list
+
+env | grep DATABASE
+
+export DATABASE_URL=postgres://localhost/app_dev
+
+source .venv/bin/activate
+
+DATABASE_URL=postgres://localhost/app_test npm test
+
+NODE_ENV=test npx prisma migrate deploy
+
+sleep 2 && curl -sf localhost:3000
+
+for f in migrations/*.sql; do echo "$f"; done
+
+while read -r line; do echo "$line"; done < tables.txt
+
+if [ -f .env ]; then echo "has env"; fi
+
+case "$1" in reset) echo "use the README";; *) echo ok;; esac
+
+(cd web && npm run build)
+
+{ echo start; npm test; echo end; } > test.log 2>&1
+
+echo $(date +%s) > .last-run
+
+echo "`whoami`"
+
+ssh deploy@app1 'tail -n 100 /var/log/app.log'
+
+ssh db1 "psql -d app -c 'SELECT count(*) FROM orders'"
+
+scp backup.sql deploy@db1:/tmp/
+
+tar -czf backup.tgz db/
+
+open http://localhost:3000
+
+code .
+
+npx create-next-app@latest web --ts
+
+npx shadcn@latest add button
+
+python -c "print('drop table')"
+
+node -e "console.log('prisma migrate reset')"
+
+xargs -n1 echo < list.txt
+
+watch -n 5 'psql -c "select count(*) from jobs"'
+
+time npm run build
+
+nohup npm run worker > worker.log 2>&1 &
+
+timeout 30 npx prisma migrate deploy
+
+sudo systemctl restart nginx
+
+nice -n 10 pg_dump app > nightly.sql
+
+find . -name "*.go" -exec gofmt -l {} +
+
+find migrations -name "*.sql" -exec wc -l {} \;
+
+watch -n 2 docker ps
+
+watch -d 'psql -c "SELECT count(*) FROM jobs"'

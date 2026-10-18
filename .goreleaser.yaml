@@ -51,6 +51,10 @@ builds:
       - -gcflags=github.com/deedglass/deedglass/ee/undosession=-l
       - -gcflags=github.com/deedglass/deedglass/internal/undoapi=-l
       - -gcflags=github.com/deedglass/deedglass/internal/witness/undo=-l
+      - -gcflags=github.com/deedglass/deedglass/internal/shellguard=-l
+      - -gcflags=github.com/deedglass/deedglass/internal/play=-l
+      - -gcflags=github.com/deedglass/deedglass/internal/packs=-l
+      - -gcflags=github.com/deedglass/deedglass/internal/agentscript=-l
     ldflags:
       - -s -w
       - -X github.com/deedglass/deedglass/internal/buildinfo.Version={{ .Version }}
