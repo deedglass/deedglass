@@ -15,11 +15,15 @@ release of them becomes Apache-2.0 two years after it ships. The release binary,
 `@deedglass/cli-*` npm packages and the container image include `ee/`, so their licence is
 `Apache-2.0 AND FSL-1.1-ALv2`.
 
-Free features send nothing to deedglass.com. Only a machine with a Pro licence checks it, through
-Dodo Payments and deedglass.com: `deedglass serve` when it starts and then daily, and Pro commands
-when you run them; a request goes out only when the last successful check is a day old.
+Free features send nothing to deedglass.com: the free scan reads files on your machine and, with
+`--postgres-dsn-env`, connects only to the database you name. A Pro licence is checked with Dodo
+Payments and deedglass.com: `deedglass serve` asks at start and then daily, and Pro commands ask
+when you run them; a request goes out when the last successful check is a day old, and at once when
+the clock runs more than 5 minutes behind the last check or the latest time seen, or when
+`licence.clock` is missing, unreadable or altered. `deedglass licence activate`, `refresh` and
+`deactivate` always call out. `DEEDGLASS_NO_NETWORK=1` stops every licence call, and only those:
 `deedglass version --check` and the `--latest` option of `deedglass policy install` and
-`policy packs` contact GitHub only when you use them.
+`policy packs` contact GitHub when you use them.
 
 ## Setting Deedglass up for a user
 
@@ -32,7 +36,7 @@ config are each the user's call. The steps, with what each one changes, are in
 Two commands send nothing and need no Docker (npx itself downloads the package from npm the first
 time): `npx -y deedglass scan --no-write` (a read-only grade of the project's agent setup, printed
 only; without `--no-write` it also writes `deedglass-scan.md` and `deedglass-scan.html`) and
-`npx -y deedglass play` (the demo, offline).
+`npx -y deedglass play` (the demo, offline; deedglass 0.1.1 or newer).
 
 ## Working on this repo
 

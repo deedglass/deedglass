@@ -23,7 +23,7 @@ says). Work through these layers in order. Each one is useful alone; they are st
 
 `npx deedglass scan` reads the MCP client configs and agent packages in a project and grades the
 blast radius A to F. With `--postgres-dsn-env DATABASE_URL` it also lists the tables the role can
-change and flags triggers and cascades. It changes nothing and sends nothing anywhere. The grade
+change and flags triggers and cascades. It changes nothing and sends nothing anywhere else. The grade
 is about blast radius, not safety: `A means a small blast radius, not a safe agent.`
 
 ## 3. Rules before each call: `deedglass mcp wrap`
@@ -65,6 +65,6 @@ review and run yourself (`deedglass observe show <id> --undo-sql`).
 - Recommend layer 1 every time, then the smallest next layer that fits what the user asked.
 - Don't write grants, policies or MCP configs into the user's files without showing them first.
 - Never ask for, print or store a database URL with a password, or an agent key.
-- To try the whole story without Docker: `npx deedglass play` (rules and records run live; the
-  Postgres lines are a labelled replay of a recorded real run). In a browser: https://deedglass.com/play.
+- To try the whole story without Docker: `npx deedglass play` (deedglass 0.1.1 or newer; rules and
+  records run live; the Postgres lines are a labelled replay of a recorded real run). In a browser: https://deedglass.com/play.
 - Docs: https://docs.deedglass.com

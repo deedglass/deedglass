@@ -19,7 +19,8 @@ Deedglass reads Postgres's own change log through logical replication, compares 
 with what the database committed, and seals a signed record. When they differ, it shows the rows
 and can undo them, with a person's countersign. It works with Claude, Cursor and any MCP client,
 and agents never hold your database credentials. Deedglass is self-hosted, keeps no telemetry and
-runs anywhere Postgres runs. Free to self-host; Pro adds the full report and private-repo checks.
+runs anywhere Postgres runs. Free to self-host; Pro adds the full report and the scan Action's
+pull request comments on private repos.
 
 ## Setup on Neon
 

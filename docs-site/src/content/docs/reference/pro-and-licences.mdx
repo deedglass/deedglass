@@ -12,11 +12,11 @@ What Pro adds, how the licence works offline, and everything that stays free.
 
 ## What stays free, always
 
-Gate, Witness, deeds, Stop, Undo, Insights, `scan`, the Action on public repos, and the free policy packs. Nothing free today becomes paid.
+Gate, Witness, deeds, Stop, Undo, Insights, `scan`, the scan Action's scan, job summary and SARIF on every repo (and its pull request comment on public repos), and the free policy packs. Nothing free today becomes paid.
 
 ## What Pro adds
 
-The Action on private repos, `scan --full` (the full report), Pro policy packs, `scan --fix`, and priority email.
+The scan Action's pull request comment on private repos, `scan --full` (the full report), Pro policy packs and the fix writer (as they ship), one-step session undo, and the security review pack.
 
 ## Prices
 
@@ -33,11 +33,15 @@ The key arrives by email from Dodo, our payment provider and reseller, and on th
 
 ## Offline and grace
 
-Pro checks in at most once a day, and only when a Pro feature runs. `DEEDGLASS_NO_NETWORK=1` stops every check. Pro keeps working **14 days** offline. After that, Pro is read-only: existing full reports open, installed Pro packs keep enforcing, `scan --full` and `--fix` refuse, and the private-repo Action posts a summary line. The exact line:
+Free features send nothing to deedglass.com: the free scan reads files on your machine and, with `--postgres-dsn-env`, connects only to the database you name. A Pro licence is checked with Dodo Payments and deedglass.com: `deedglass serve` asks at start and then daily, and Pro commands ask when you run them; a request goes out when the last successful check is a day old, and at once when the clock runs more than 5 minutes behind the last check or the latest time seen, or when `licence.clock` is missing, unreadable or altered. `deedglass licence activate`, `refresh` and `deactivate` always call out. `DEEDGLASS_NO_NETWORK=1` stops every licence call, and only those: `deedglass version --check` and the `--latest` option of `deedglass policy install` and `policy packs` contact GitHub when you use them.
+
+`licence.clock` sits next to `.deedglass/licence.json`. Offline, Pro keeps working for up to **14 days** after the last successful check. After that, Pro is read-only: existing full reports open, installed Pro packs keep enforcing, and `scan --full` refuses. The exact line:
 
 ```text
 Pro paused: your licence was last checked 15 days ago. Run deedglass licence refresh. Everything free still works.
 ```
+
+On a private repo with a licence set, the scan Action checks it online on every run: it activates the key with Dodo Payments and deedglass.com, reads it back offline, and frees the activation with Dodo Payments at the end. Without a licence that includes the comment, it adds no new comment and its job summary says why.
 
 ## Free features never read the licence
 

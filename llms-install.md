@@ -11,7 +11,7 @@ earlier one was answered.
 
 ## Requirements
 
-- Node.js 22.12 or newer (`node --version`).
+- Node.js 18 or newer (`node --version`).
 - Docker, running (`docker info` succeeds).
 
 Checking these changes nothing.
@@ -80,7 +80,7 @@ The output has a placeholder key; the user replaces it with an agent key.
 Neither of these sends anything or needs Docker (npx itself downloads the package from npm the first
 time):
 
-- `npx -y deedglass play`: the demo's story in the terminal, offline.
+- `npx -y deedglass play`: the demo's story in the terminal, offline (deedglass 0.1.1 or newer).
 - `npx -y deedglass scan --no-write`: a read-only grade of the project's agent setup, printed only.
   Without `--no-write` it also writes `deedglass-scan.md` and `deedglass-scan.html`, so ask first.
 

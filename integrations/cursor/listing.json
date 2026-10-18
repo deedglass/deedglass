@@ -1,7 +1,7 @@
 {
   "name": "Deedglass",
   "tagline": "Rules decide each AI agent tool call; Deedglass checks what really changed.",
-  "description": "Deedglass sits between your agent and its tools. Policies decide each call, risky ones wait for a person, and every action is checked against the database and sealed as a record you can verify. Self-hosted; no telemetry (Pro checks its licence at most once a day); no key in the install link.",
+  "description": "Deedglass sits between your agent and its tools. Policies decide each call, risky ones wait for a person, and every action is checked against the database and sealed as a record you can verify. Self-hosted; no telemetry (a Pro licence is checked online); no key in the install link.",
   "category": "Developer Tools",
   "install": "cursor://anysphere.cursor-deeplink/mcp/install?name=deedglass&config=eyJjb21tYW5kIjoibnB4IiwiYXJncyI6WyIteSIsImRlZWRnbGFzcyIsIm1jcCIsInNlcnZlIl19",
   "docs": "https://docs.deedglass.com",

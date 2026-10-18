@@ -60,8 +60,8 @@ Source: <a href="docs/assets/demo-hero.cast.json"><code>docs/assets/demo-hero.ca
 | | Command | What it needs | What leaves your machine |
 |---|---|---|---|
 | **In your browser** | [deedglass.com/play](https://deedglass.com/play) | A browser tab. Postgres runs in the page; it opens on the "said 1, changed 301" scene. | Nothing |
-| **In your terminal** | `npx deedglass play` | Node. No Docker. The rules decide each call live and the records are sealed and checked on your machine; Postgres's lines are replayed from a recorded real run, and labelled as such. | Nothing |
-| **Scan your setup** | `npx deedglass scan` | Node. Reads your MCP configs and, if you name one, a database catalog, read-only. Grades what your agents could change, A to F. | Nothing |
+| **In your terminal** | `npx deedglass play` | Node, and deedglass 0.1.1 or newer from npm. No Docker. The rules decide each call live and the records are sealed and checked on your machine; Postgres's lines are replayed from a recorded real run, and labelled as such. | Nothing |
+| **Scan your setup** | `npx deedglass scan` | Node. Reads your MCP configs and, if you name one, a database catalog, read-only. Grades what your agents could change, A to F. | Nothing, apart from read-only catalog queries to a database you name |
 | **Observe mode** | `deedglass observe run --connector pg-demo -- ./agent.sh` | A Postgres connector with `observe` on. Nothing to rewire: it reads Postgres's change log beside whatever gate you already use. | Nothing |
 
 When a scan finds a trigger or a cascade on a table your agent can write, it says so and points to
@@ -69,7 +69,8 @@ the 301 scene. Observe mode is [below](#observe-mode-nothing-to-rewire).
 
 ## Quickstart
 
-Docker running, Node 22.12 or newer, then (from the [tested Quickstart](https://docs.deedglass.com/quickstart/)):
+Docker running with about 2 GiB of free disk, Node 18 or newer, and macOS or Linux (WSL 2 on
+Windows), then (from the [tested Quickstart](https://docs.deedglass.com/quickstart/)):
 
 <!-- quickstart:begin (scripted copy of docs-site/src/content/docs/quickstart.mdx; docs/readme_test.go compares them) -->
 ```sh
@@ -236,12 +237,17 @@ The attack suite runs 70 cases against a real server and real Postgres on every 
 Report a vulnerability privately: [`SECURITY.md`](SECURITY.md).
 
 <!-- description:network -->
-Free features send nothing to deedglass.com. Only a machine with a Pro licence checks it, through
-Dodo Payments and deedglass.com: `deedglass serve` when it starts and then daily, and Pro commands
-when you run them; a request goes out only when the last successful check is a day old.
+Free features send nothing to deedglass.com: the free scan reads files on your machine and, with
+`--postgres-dsn-env`, connects only to the database you name. A Pro licence is checked with Dodo
+Payments and deedglass.com: `deedglass serve` asks at start and then daily, and Pro commands ask
+when you run them; a request goes out when the last successful check is a day old, and at once when
+the clock runs more than 5 minutes behind the last check or the latest time seen, or when
+`licence.clock` is missing, unreadable or altered. `deedglass licence activate`, `refresh` and
+`deactivate` always call out. `DEEDGLASS_NO_NETWORK=1` stops every licence call, and only those:
 `deedglass version --check` and the `--latest` option of `deedglass policy install` and
-`policy packs` contact GitHub only when you use them.
-`DEEDGLASS_NO_NETWORK=1` stops the licence check; Pro then runs on its cached token for up to 14 days.
+`policy packs` contact GitHub when you use them. With the network off, Pro runs on its cached token
+for up to 14 days after the last successful check. What each request carries:
+[`docs/LICENSING.md`](docs/LICENSING.md#does-pro-phone-home).
 
 ## Contributing
 

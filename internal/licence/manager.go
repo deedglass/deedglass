@@ -142,8 +142,9 @@ type Decision struct {
 	Err       error // why not, or the refresh problem that was tolerated
 }
 
-// Require answers whether feature may run. It refreshes at most once a day and only here, when a
-// Pro feature is about to run; a failed refresh inside the grace period still allows it.
+// Require answers whether feature may run. It refreshes only here, when a Pro feature is about to
+// run and the state says a refresh is due (the last check is a day old, or the clock can't be
+// trusted); a failed refresh inside the grace period still allows it.
 func (m *Manager) Require(ctx context.Context, feature string) Decision {
 	l, err := m.Load()
 	if err != nil {

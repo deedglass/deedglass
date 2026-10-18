@@ -1,8 +1,9 @@
 # Licensing and Pro
 
 Everything Deedglass does for safety is free and stays free: the rules, the checks, records and
-their offline verification, Stop, Undo, Insights, `deedglass scan` and the scan Action on public
-repos. Pro adds new features on top. It never takes a free one away.
+their offline verification, Stop, Undo, Insights, `deedglass scan`, and the scan Action's scan, job
+summary and SARIF on every repo, with its pull request comment on public repos. Pro adds new
+features on top. It never takes a free one away.
 
 ## What Pro adds
 
@@ -10,7 +11,7 @@ repos. Pro adds new features on top. It never takes a free one away.
 |---|---|
 | `deedglass scan --full`: the full scan report, rendered on your machine | the full scan report, founding partner, Pro |
 | Pro policy packs and the fix writer (as they ship) | the full scan report, founding partner, Pro |
-| The scan Action on private repos (as it ships) | founding partner, Pro |
+| The scan Action's pull request comment on private repos (its scan, job summary and SARIF stay free) | founding partner, Pro |
 | Undo a whole watched session in one step (`deedglass observe undo`, S50) | founding partner, Pro |
 | The security review pack: the sealed document for a reviewer (`deedglass security-pack build`, S51; the readiness list and the offline check stay free) | founding partner, Pro |
 
@@ -42,10 +43,23 @@ missing or edited `licence.clock` counts the same way. Everything free keeps wor
 
 ## Does Pro phone home?
 
-At most once a day, only when a Pro feature runs, and it keeps working 14 days offline.
-`DEEDGLASS_NO_NETWORK=1` stops every call; Pro then runs on the cached token inside those 14 days.
-Free commands never open the licence (a test fails the build if any free code imports it). There is
-no telemetry.
+Free features send nothing to deedglass.com: the free scan reads files on your machine and, with
+`--postgres-dsn-env`, connects only to the database you name. A Pro licence is checked with Dodo
+Payments and deedglass.com: `deedglass serve` asks at start and then daily, and Pro commands ask
+when you run them; a request goes out when the last successful check is a day old, and at once when
+the clock runs more than 5 minutes behind the last check or the latest time seen, or when
+`licence.clock` is missing, unreadable or altered. `deedglass licence activate`, `refresh` and
+`deactivate` always call out. `DEEDGLASS_NO_NETWORK=1` stops every licence call, and only those:
+`deedglass version --check` and the `--latest` option of `deedglass policy install` and
+`policy packs` contact GitHub when you use them.
+
+If a check can't reach Dodo Payments or deedglass.com, the next Pro feature that asks tries again.
+`refresh` asks Dodo, then deedglass.com; `activate` first registers the machine with Dodo;
+`deactivate` asks only Dodo. Each request carries the licence key and this machine's activation (at
+`activate`, the hostname hash above), and the request to deedglass.com also lists the features this
+build knows. Nothing about your files, agents or data goes with them. With the network off, Pro runs
+on its cached token for up to 14 days after the last successful check. Free commands never open the
+licence (a test fails the build if any free code imports it).
 
 ## The token and how to check it
 

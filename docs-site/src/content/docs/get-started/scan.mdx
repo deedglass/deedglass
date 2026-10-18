@@ -1,6 +1,6 @@
 ---
 title: Scan in 60 seconds
-description: Grade your own agent setup from A to F with one command. Nothing leaves your machine.
+description: Grade your own agent setup from A to F with one command. Nothing leaves your machine unless you name a database.
 lastVerified: "2026-10-05"
 claims: [C-086, C-088]
 ---
@@ -9,11 +9,11 @@ import { Aside } from '@astrojs/starlight/components';
 import Limits from '../../../components/Limits.astro';
 import formula from '../../../data/score-formula.txt?raw';
 
-Grade your own agent setup from A to F with one command. Nothing leaves your machine.
+Grade your own agent setup from A to F with one command. Nothing leaves your machine unless you name a database.
 
 **Before you start**
 
-- Node 22.12 or later, for `npx`. No account, no key, no server.
+- Node 18 or later, for `npx`. No account, no key, no server.
 - A project with agent configs: `.mcp.json`, `.cursor/mcp.json`, `.vscode/mcp.json`, `claude_desktop_config.json`, `package.json` or `pyproject.toml`.
 
 ## 1. Run it
@@ -28,7 +28,7 @@ Blast radius: …
 What your grade means: deedglass.com/score
 ```
 
-The scan reads your files and the MCP configs in your home directory, finds the MCP servers and agent frameworks you use, and works out what they can change. It sends nothing anywhere. Without `--no-write` it also writes `deedglass-scan.md` and `deedglass-scan.html`.
+The scan reads your files and the MCP configs in your home directory, finds the MCP servers and agent frameworks you use, and works out what they can change. It connects only to a database you name with `--postgres-dsn-env`, read-only, and sends nothing anywhere else. Without `--no-write` it also writes `deedglass-scan.md` and `deedglass-scan.html`.
 
 ## 2. Read the score
 

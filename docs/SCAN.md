@@ -2,7 +2,7 @@
 
 `deedglass scan` tells you, in a few seconds and without changing anything, what your agent setup
 can change, and grades it A to F. It runs on your machine, reads your files and, if you ask, one
-database's catalog in a read-only transaction. It sends nothing anywhere.
+database's catalog in a read-only transaction. It sends nothing anywhere else.
 
 ```sh
 deedglass scan                                   # this directory, plus your user-level MCP configs

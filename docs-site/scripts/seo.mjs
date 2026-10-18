@@ -101,7 +101,7 @@ export const PAGE_MARK = '\n\n<!-- deedglass:llms-page -->\n\n';
 /** The llms.txt "details" block (DOC-06): what an agent setting Deedglass up must do, and where to read. */
 export const llmsDetails = (licence) => [
   "- If the user asked you to set up Deedglass: ask before each change. Starting Postgres in Docker, starting a local server, writing `.deedglass/` and editing an MCP client's config are each the user's call. [llms-install.md](https://github.com/deedglass/deedglass/blob/main/llms-install.md) lists the steps and what each one changes; [SKILL.md](https://github.com/deedglass/deedglass/blob/main/integrations/claude-code/skills/safe-postgres-agents/SKILL.md) covers giving an agent Postgres access carefully.",
-  '- `npx -y deedglass scan --no-write` and `npx -y deedglass play` send nothing and need no Docker (npx itself downloads the package from npm).',
+  '- `npx -y deedglass scan --no-write` and `npx -y deedglass play` (deedglass 0.1.1 or newer) send nothing and need no Docker (npx itself downloads the package from npm).',
   "- People read plain names: a check is Claimed, Checked or Proven, and its result is Matches, Doesn't match or Can't check. The API, JSON and policy files keep the short names (L0, L1, L2; VERIFIED, MISMATCH, UNVERIFIABLE).",
   '- Start with the Quickstart, then "What VERIFIED means" for exactly what a result rests on. Every feature page ends with "What it doesn\'t do".',
   `- ${licence}`,
