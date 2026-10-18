@@ -7,8 +7,13 @@ this file by `scripts/release-notes.sh`.
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-10-18
+
 ### Added
 
+- **Listed on the official MCP Registry** as `io.github.deedglass/deedglass`. A manual workflow
+  (`mcp-registry.yml`) publishes `server.json` with GitHub OIDC, after checking that the npm package
+  of the same version carries the same `mcpName`.
 - **What your agents did this week.** Every Monday from 08:00 in the org's time zone, the server
   emails the org's owners the week that just ended: actions by decision, Check results, the rules
   that blocked most, approvals, undos, Stop, watched sessions, what Deedglass caught with each free
@@ -117,7 +122,7 @@ this file by `scripts/release-notes.sh`.
 - The undo planner's fuzz test now expects a refusal when a transaction leaves rows in a circle of
   keys (found by `make fuzz-regress`; the planner was right, the test's model was too narrow).
 
-## [0.1.0] - Unreleased
+## [0.1.0] - 2026-10-15
 
 The first release. Release candidate `0.1.0-rc.1` (2026-10-05); the date is set when the founder
 tags `v0.1.0`.
@@ -159,5 +164,6 @@ See [KNOWN_ISSUES.md](KNOWN_ISSUES.md): what happens, who is affected, the worka
 See [docs/LIMITATIONS.md](docs/LIMITATIONS.md). In short: L2 covers Postgres only, seal keys are per
 deployment, and Deedglass trusts the Postgres server and the host it runs on.
 
-[Unreleased]: https://github.com/deedglass/deedglass/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/deedglass/deedglass/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/deedglass/deedglass/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/deedglass/deedglass/releases/tag/v0.1.0
