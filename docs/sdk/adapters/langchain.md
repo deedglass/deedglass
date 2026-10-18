@@ -1,6 +1,6 @@
-# The LangChain.js adapter (`@deedglass/sdk/langchain`)
+# LangChain.js adapter for Deedglass
 
-Tested with `@langchain/core` 1.2.14 (2026-10-04), including a `ToolMessage` round trip; the peer
+Import it from `@deedglass/sdk/langchain`. Tested with `@langchain/core` 1.2.14 (2026-10-04), including a `ToolMessage` round trip; the peer
 range is `>=1.2 <2`.
 
 ```ts

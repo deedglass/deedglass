@@ -1,6 +1,6 @@
-# The OpenAI Agents SDK adapter (`@deedglass/sdk/openai-agents`)
+# OpenAI Agents SDK adapter for Deedglass
 
-Tested with `@openai/agents` 0.18.0 (2026-10-04), invoking tools the way the runner does
+Import it from `@deedglass/sdk/openai-agents`. Tested with `@openai/agents` 0.18.0 (2026-10-04), invoking tools the way the runner does
 (`invoke(runContext, inputJson)`); the peer range is `>=0.18 <1`.
 
 ```ts

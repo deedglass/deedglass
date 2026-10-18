@@ -57,6 +57,14 @@ export function jsonLd({ path, title, description, dateModified, tagline }) {
 /** JSON for an inline <script type="application/ld+json">: "<" escaped so no string can end the tag. */
 export const ldScript = (obj) => JSON.stringify(obj).replace(/</g, '\\u003c');
 
+// ---- first paint (DOC-LCP) ----
+/** Vite's assetsInlineLimit as a function (astro.config.mjs): true inlines. Stylesheets and scripts under
+ *  4 KB go inline, so first paint waits on fewer requests; postbuild hashes every inline script into the
+ *  CSP. Nothing else is ever inlined: a font or image as a data: URL would break font-src 'self'. */
+export function inlineSmallCode(file, content) {
+  return /\.(css|js)$/.test(file) && content.length < 4096;
+}
+
 // ---- llms files (DOC-02) ----
 // Page ids are content slugs without a trailing slash ('' or 'index' is the home page).
 // llms-full.txt: every page except generated reference, dated reports and engineering notes, each of
@@ -83,9 +91,10 @@ export const POSTGRES_SET = {
   label: 'Postgres',
   description: 'checking what an AI agent changed in Postgres, from setup to undo',
   paths: [
-    'quickstart', 'get-started/postgres', 'concepts/verification-levels', 'concepts/what-verified-means', 'guides/catch-a-mismatch',
-    'guides/block-destructive-sql', 'guides/undo', 'guides/supabase', 'guides/neon', 'guides/observe-beside-another-gate',
-    'reference/connectors/postgres', 'reference/observe', 'security/limitations',
+    'guides/check-what-an-agent-changed-in-postgres', 'quickstart', 'get-started/postgres', 'concepts/verification-levels',
+    'concepts/what-matches-means', 'guides/catch-a-mismatch', 'guides/block-destructive-sql', 'guides/undo', 'guides/supabase', 'guides/neon',
+    'guides/observe-beside-another-gate', 'reference/connectors/postgres', 'reference/observe', 'security/limitations',
+    'security/limitations/postgres',
   ],
 };
 export const inFull = (id) => !FULL_OUT.some((x) => x.re.test(id));
@@ -98,12 +107,20 @@ export const LLMS_BUDGET = { 'llms-small.txt': 150 * 1024, 'llms-full.txt': 750 
 /** The plugin joins pages with this; postbuild splits on it, drops pages and removes it. */
 export const PAGE_MARK = '\n\n<!-- deedglass:llms-page -->\n\n';
 
+/** Task pages llms.txt names by URL (DOC-04), so an agent can open the one it needs without the full set.
+ *  check-llms.mjs fails when llms.txt leaves one out or its page isn't built. */
+export const LLMS_PAGES = [
+  { path: '/guides/check-what-an-agent-changed-in-postgres/', title: 'How to check what an AI agent changed in Postgres', what: 'the commands, whether or not the agent goes through Deedglass' },
+  { path: '/reference/scan-grade/', title: 'How the scan grade is calculated', what: 'the formula behind the A to F grade of `deedglass scan`, with worked examples' },
+];
+
 /** The llms.txt "details" block (DOC-06): what an agent setting Deedglass up must do, and where to read. */
 export const llmsDetails = (licence) => [
   "- If the user asked you to set up Deedglass: ask before each change. Starting Postgres in Docker, starting a local server, writing `.deedglass/` and editing an MCP client's config are each the user's call. [llms-install.md](https://github.com/deedglass/deedglass/blob/main/llms-install.md) lists the steps and what each one changes; [SKILL.md](https://github.com/deedglass/deedglass/blob/main/integrations/claude-code/skills/safe-postgres-agents/SKILL.md) covers giving an agent Postgres access carefully.",
   '- `npx -y deedglass scan --no-write` and `npx -y deedglass play` (deedglass 0.1.1 or newer) send nothing and need no Docker (npx itself downloads the package from npm).',
   "- People read plain names: a check is Claimed, Checked or Proven, and its result is Matches, Doesn't match or Can't check. The API, JSON and policy files keep the short names (L0, L1, L2; VERIFIED, MISMATCH, UNVERIFIABLE).",
-  '- Start with the Quickstart, then "What VERIFIED means" for exactly what a result rests on. Every feature page ends with "What it doesn\'t do".',
+  '- Start with the Quickstart, then "What Matches means" for exactly what a result rests on. Every feature page ends with "What it doesn\'t do".',
+  ...LLMS_PAGES.map((p) => `- [${p.title}](${SITE}${p.path}): ${p.what}.`),
   `- ${licence}`,
 ].join('\n');
 

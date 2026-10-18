@@ -28,6 +28,7 @@ src/content/docs/sdks/typescript.md
 src/content/docs/sdks/python.md
 src/content/docs/security/threat-model.md
 src/content/docs/security/limitations.md
+src/content/docs/security/limitations/
 src/content/docs/security/review.md
 src/content/docs/security/attack-suite.md
 src/content/docs/guides/supabase.md

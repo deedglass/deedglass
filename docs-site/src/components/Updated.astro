@@ -1,0 +1,18 @@
+---
+// DOC-04: the visible "Updated" date under a task page's title. The date is the page source's last
+// commit (src/data/.page-dates.json, written by sync-docs; the same date as the sitemap's lastmod and
+// the JSON-LD dateModified), or the page's lastVerified before its first commit.
+// scripts/check-llms.mjs reads this markup on every page llms.txt names. Its style is in deedglass.css.
+import dates from '../data/.page-dates.json';
+// starlight-llms-txt renders pages outside a Starlight route, where reading starlightRoute throws.
+let lastVerified: string | undefined;
+try {
+  lastVerified = Astro.locals.starlightRoute?.entry?.data?.lastVerified;
+} catch {
+  lastVerified = undefined;
+}
+const path = Astro.url.pathname.endsWith('/') ? Astro.url.pathname : Astro.url.pathname + '/';
+const d: string | undefined = (dates as Record<string, string>)[path] ?? lastVerified;
+const shown = d ? new Date(`${d}T00:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }) : '';
+---
+{d && <p class="dg-updated">Updated <time datetime={d}>{shown}</time></p>}

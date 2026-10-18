@@ -8,7 +8,7 @@ import { readFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { sidebar } from './sidebar.mjs';
-import { PAGE_MARK, POSTGRES_SET, description, inSmall, llmsDetails, walkFiles } from './scripts/seo.mjs';
+import { PAGE_MARK, POSTGRES_SET, description, inSmall, inlineSmallCode, llmsDetails, walkFiles } from './scripts/seo.mjs';
 
 // The one description (docs/description.json; docs/description_test.go checks that this file reads it).
 const desc = description();
@@ -32,7 +32,10 @@ export default defineConfig({
   trailingSlash: 'always',
   image: { service: passthroughImageService() },
   // DeedCard bundles web/verify/src (S05's verifier) from outside docs-site/.
-  vite: { server: { fs: { allow: ['..'] } }, build: { assetsInlineLimit: 0 } },
+  // DOC-LCP: stylesheets and scripts under 4 KB go inline (fewer requests before first paint; postbuild
+  // hashes every inline script into the CSP). Nothing else is ever inlined: a font or image as a data:
+  // URL would break the CSP's font-src 'self'.
+  vite: { server: { fs: { allow: ['..'] } }, build: { assetsInlineLimit: inlineSmallCode } },
   integrations: [
     starlight({
       title: 'Deedglass Docs',
@@ -54,6 +57,7 @@ export default defineConfig({
         SiteTitle: './src/components/overrides/SiteTitle.astro',
         Footer: './src/components/overrides/Footer.astro',
         Hero: './src/components/overrides/Hero.astro',
+        SocialIcons: './src/components/overrides/SocialIcons.astro',
       },
       disable404Route: true,
       routeMiddleware: './src/routeData.ts',
@@ -107,7 +111,7 @@ export default defineConfig({
           exclude: ['_kit', ...notSmall],
           customSets: [POSTGRES_SET],
           pageSeparator: PAGE_MARK,
-          promote: ['quickstart', 'concepts/what-verified-means', 'concepts/how-it-works'],
+          promote: ['quickstart', 'concepts/what-matches-means', 'guides/check-what-an-agent-changed-in-postgres', 'concepts/how-it-works'],
         }),
       ],
     }),

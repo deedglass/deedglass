@@ -1,0 +1,17 @@
+{
+  "_comment": "Links from the docs to deedglass.com and GitHub (RES-03: the docs linked the site 0 times). The header (SocialIcons.astro) shows `header`; the footer shows `footer`. deedglass.com uses paths without a trailing slash.",
+  "header": [
+    { "label": "deedglass.com", "href": "https://deedglass.com" },
+    { "label": "Play", "href": "https://deedglass.com/play" },
+    { "label": "GitHub", "href": "https://github.com/deedglass/deedglass" }
+  ],
+  "footer": [
+    { "label": "deedglass.com", "href": "https://deedglass.com" },
+    { "label": "Play in your browser", "href": "https://deedglass.com/play" },
+    { "label": "What your grade means", "href": "https://deedglass.com/score" },
+    { "label": "Blog", "href": "https://deedglass.com/blog" },
+    { "label": "Compare", "href": "https://deedglass.com/compare" },
+    { "label": "Glossary", "href": "https://deedglass.com/glossary" },
+    { "label": "GitHub", "href": "https://github.com/deedglass/deedglass" }
+  ]
+}

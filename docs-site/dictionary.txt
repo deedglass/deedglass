@@ -17,3 +17,5 @@ vgap
 waitlist
 wordmark
 zizmor
+lastmod
+Rubrik

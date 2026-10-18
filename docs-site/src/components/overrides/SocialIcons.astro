@@ -1,0 +1,11 @@
+---
+// The header's right-hand links (RES-03, DOC-05: the docs were an island). Starlight shows this in the
+// header from 50rem up and in the mobile menu's footer below that. Text links, not icons: each one
+// says where it goes. The list is src/components/site-links.json, shared with the footer.
+import links from '../site-links.json';
+---
+{links.header.map(({ label, href }) => <a {href} class="dg-out">{label}</a>)}
+<style>
+  .dg-out { color: var(--dg-text-2); font-size: 0.875rem; font-weight: 500; text-decoration: none; white-space: nowrap; padding: 0.25em 0; }
+  .dg-out:hover { color: var(--sl-color-white); }
+</style>

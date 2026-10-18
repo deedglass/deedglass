@@ -1,0 +1,55 @@
+---
+title: What Matches means, and what it doesn't
+description: "What a Matches result means when a check is Claimed, Checked or Proven, what it rests on, what a record never claims, and when the answer is Can't check."
+lastVerified: "2026-10-18"
+---
+
+import Limits from '../../../components/Limits.astro';
+import VerdictChip from '../../../components/VerdictChip.astro';
+
+**Matches** means Deedglass compared what the agent reported with an independent observation and found no difference. The level says which observation: **Claimed** is the tool's own response; **Checked** is a read-back from the target after the action; **Proven** is the change Postgres actually committed, read from its change log. Matches does not mean the action was a good idea, that nothing else changed outside what Deedglass watches, or that a compromised host could not lie. When Deedglass can't observe enough, the result is **Can't check**, never Matches.
+
+The API, JSON output and policy files keep the short names: a level is `L0`, `L1` or `L2`, and a result is `VERIFIED` (Matches), `MISMATCH` (Doesn't match) or `UNVERIFIABLE` (Can't check). This page used to be called "What VERIFIED means".
+
+## At each level
+
+- <VerdictChip verdict="VERIFIED" level="L0" /> The connector Deedglass called returned success, and its output matched the tool's schema when the tool has one. In proxy mode, the edge that ran the call reported success: Deedglass did not run it and can't tell a truthful edge from one that lies.
+- <VerdictChip verdict="VERIFIED" level="L1" /> After the tool returned success, a read of the same target, with arguments taken from the request or the result, returned the values the action implied. For a Postgres row: the row named by its primary key was last written by the action's own transaction, and each compared column holds the value the statement set.
+- <VerdictChip verdict="VERIFIED" level="L2" /> The row changes Postgres committed in the action's transaction, read from Postgres's own change stream, equal the changes the action was expected to make: the same rows, the same counts, the same compared values.
+
+## When it doesn't match
+
+<VerdictChip verdict="MISMATCH" level="L2" /> means some level found a difference: for example, Postgres committed 301 row changes where the agent reported 1. A difference at any level gives Doesn't match, at the highest level that found one. [Catch "1 row reported, 301 committed"](/guides/catch-a-mismatch/) walks through one.
+
+## What it rests on
+
+- **An honest target for Checked.** A read-back sees what the target chooses to answer.
+- **An honest Postgres for Proven.** Deedglass trusts the Postgres server, its owners and superusers, and an unmodified decoding path.
+- **An uncompromised Deedglass host and seal key.** The Witness runs inside Deedglass. A result is only as good as the process that decided it and the key that sealed it.
+- **Sound primitives:** Ed25519 and SHA-256.
+
+## What a record never claims
+
+- **That the action was wise.** An in-policy action by a hijacked agent can match. Policies, budgets and approvals narrow this; they don't close it.
+- **Anything outside the watched system.** Checked sees only the fields read back; Proven sees only the watched tables. Emails sent, files written and calls to other systems are outside both.
+- **The state of the target now.** A later change doesn't alter the record.
+- **More than its level.** `Checked · Matches` (`L1 · VERIFIED`) says nothing about what Postgres committed. Gaps at other levels are listed in the detail, never folded into the claim.
+
+## When the answer is Can't check
+
+<VerdictChip verdict="UNVERIFIABLE" level="L0" /> means Deedglass could not observe enough: the tool timed out and may have run, a read-back failed, the change log was behind or lost, or the statement was too complex to predict. The reasons on the action name the gap. Unknown stays unknown.
+
+## What it doesn't do
+
+<Limits>
+- A result is not a judgement of the agent, the model or the person who approved.
+- Records hold digests of the request and result, not the payloads. You need the original request to match a record to it.
+- COSE output is a signed statement from your Deedglass instance, not a transparency-log entry. Records aren't anchored in any external log in v1.
+</Limits>
+
+## Next
+
+- [Verification levels](/concepts/verification-levels/): which connectors reach Claimed, Checked and Proven, and how one result is chosen.
+- [How to check what an AI agent changed in Postgres](/guides/check-what-an-agent-changed-in-postgres/): the commands.
+- [Limitations](/security/limitations/): every known limit, by part.
+- On deedglass.com: [Claimed, Checked, Proven: evidence for agent actions](https://deedglass.com/blog/claimed-checked-proven), [Agent action record](https://deedglass.com/glossary/agent-action-record), and [see a Doesn't match result in your browser](https://deedglass.com/play).

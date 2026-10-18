@@ -1,15 +1,21 @@
 ---
-// Pagination, then one quiet line (S33 §4 step 3). The licence names both parts: the Pro code in
+// Pagination, the links to deedglass.com and GitHub (RES-03: the docs linked the site 0 times), then
+// one quiet line (S33 §4 step 3). The licence names both parts: the Pro code in
 // ee/ ships in the same binary (P-086).
 import Pagination from 'virtual:starlight/components/Pagination';
+import links from '../site-links.json';
 ---
 <footer class="dg-footer">
   <Pagination />
+  <nav class="site" aria-label="deedglass.com">{links.footer.map(({ label, href }) => <a {href}>{label}</a>)}</nav>
   <p class="line"><span>© 2026 Deedglass</span><span aria-hidden="true"> · </span><a href="/reference/engineering/licensing/">Apache-2.0, with <code>ee/</code> under FSL-1.1-ALv2</a><span aria-hidden="true"> · </span><a href="/security/overview/">Security</a><span aria-hidden="true"> · </span><a href="/llms.txt">llms.txt</a></p>
 </footer>
 <style>
-  .dg-footer { display: flex; flex-direction: column; gap: 1.5rem; margin-top: 3rem; }
-  .line { margin: 0; padding-top: 1.25rem; border-top: 1px solid var(--dg-hairline); font-size: 0.8125rem; color: var(--dg-text-2); }
+  .dg-footer { display: flex; flex-direction: column; gap: 1rem; margin-top: 3rem; }
+  .site { display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; padding-top: 1.25rem; border-top: 1px solid var(--dg-hairline); font-size: 0.875rem; }
+  .site a { color: var(--dg-text-2); text-decoration: none; }
+  .site a:hover { color: var(--sl-color-white); text-decoration: underline; text-underline-offset: 0.2em; }
+  .line { margin: 0; font-size: 0.8125rem; color: var(--dg-text-2); }
   .line a { color: var(--dg-text-2); text-underline-offset: 0.2em; }
   .line code { font-size: inherit; background: none; padding: 0; color: inherit; }
   .line a:hover { color: var(--sl-color-white); }
