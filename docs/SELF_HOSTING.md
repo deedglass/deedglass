@@ -8,7 +8,7 @@ There is no published image yet. Build it from a checkout:
 
 ```sh
 make docker                                   # tags deedglass:dev
-docker build --build-arg VERSION=0.1.0 --build-arg COMMIT="$(git rev-parse --short HEAD)" -t deedglass:0.1.0 .
+docker build --build-arg VERSION=0.2.1 --build-arg COMMIT="$(git rev-parse --short HEAD)" -t deedglass:0.2.1 .
 ```
 
 What the root `Dockerfile` produces:
@@ -68,7 +68,7 @@ Run migrations before you start or upgrade the server, as the migrator:
 docker run --rm \
   -e DEEDGLASS_ENV=prod \
   -e DEEDGLASS_MIGRATE_DATABASE_URL \
-  deedglass:0.1.0 migrate up
+  deedglass:0.2.1 migrate up
 ```
 
 The server never migrates in prod. If migrations are pending, it refuses to start:
@@ -88,7 +88,7 @@ docker run -d --name deedglass \
   --stop-timeout 30 \
   -p 127.0.0.1:8080:8080 \
   --env-file /etc/deedglass/server.env \
-  deedglass:0.1.0
+  deedglass:0.2.1
 ```
 
 - `--read-only`, `--tmpfs /tmp`, `--cap-drop ALL` and `no-new-privileges` match the local compose file. The server needs no writable path other than `/tmp`.
@@ -100,7 +100,7 @@ With Docker Compose, the same service looks like this. The healthcheck must use 
 ```yaml
 services:
   deedglass:
-    image: deedglass:0.1.0
+    image: deedglass:0.2.1
     command: ["serve"]
     environment:
       DEEDGLASS_ENV: prod

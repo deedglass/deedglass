@@ -29,8 +29,15 @@ export const TITLE_MAX = 60;
 export const SITE_TITLE = 'Deedglass Docs';
 /** The <title> for a page: "Title | Deedglass Docs", or the title alone when that is too long or is
  *  the site's name (the home page). */
-export function pageTitle(title) {
+export function pageTitle(title, path = '') {
   if (title === SITE_TITLE) return title;
+  // freshness-1019: an engineering note often shares its name with the guide page on the same subject
+  // (Stop, Insights, The Ledger …), so its <title> says which one it is, when that still fits.
+  if (/^\/reference\/engineering\/[^/]+\/$/.test(path)) {
+    const named = `${title} (engineering notes)`;
+    if (`${named} | ${SITE_TITLE}`.length <= TITLE_MAX) return `${named} | ${SITE_TITLE}`;
+    if (named.length <= TITLE_MAX) return named;
+  }
   const full = `${title} | ${SITE_TITLE}`;
   return full.length <= TITLE_MAX ? full : title;
 }

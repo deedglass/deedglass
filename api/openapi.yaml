@@ -449,7 +449,7 @@ paths:
                   args: {message: hello}
                   mode: gateway
                   wait: 10
-                  context: {client: {name: deedglass-cli, version: 0.1.0}, transport: rest}
+                  context: {client: {name: deedglass-cli, version: 0.2.1}, transport: rest}
               proxy:
                 summary: The edge runs the tool and reports back
                 value:
@@ -458,7 +458,7 @@ paths:
                   mode: proxy
                   connector_type: mcp
                   tool_digest: sha256:7c675408077d30b6ef05421be9370eb9c75c661f7cd6966c1b73454db1cc8018
-                  context: {client: {name: deedglass-mcp, version: 0.1.0}, transport: mcp_stdio}
+                  context: {client: {name: deedglass-mcp, version: 0.2.1}, transport: mcp_stdio}
       responses:
         "200":
           description: >-
@@ -8025,7 +8025,7 @@ components:
       examples:
         - object: health
           status: ok
-          version: 0.1.0-dev
+          version: 0.2.1
           api_version: "2026-10-01"
           checks:
             database: {status: ok, latency_ms: 1}
@@ -9664,7 +9664,7 @@ components:
           type: string
       examples:
         - object: version
-          version: 0.1.0-dev
+          version: 0.2.1
           commit: 5495f7e
           built_at: "2026-10-01T10:00:00Z"
           go: go1.27.1

@@ -20,7 +20,7 @@ The repository's `deploy/cloud/` is this guide as files: Caddy with automatic TL
 
 ## 1. Build the image
 
-There's no public image yet (a public one is coming), so build it from a checkout with the Console embedded: `make web-build docker`, then tag the result for your registry, for example `docker tag deedglass:dev deedglass:0.1.0` ([Install Deedglass](/get-started/install-deedglass/#docker)). A prod server refuses an image built without `make web-build`. It is one static binary on a distroless base, running as a non-root user, under 40 MB.
+There's no public image yet (a public one is coming), so build it from a checkout with the Console embedded: `make web-build docker`, then tag the result for your registry, for example `docker tag deedglass:dev deedglass:0.2.1` ([Install Deedglass](/get-started/install-deedglass/#docker)). A prod server refuses an image built without `make web-build`. It is one static binary on a distroless base, running as a non-root user, under 40 MB.
 
 ## 2. Create the roles
 
@@ -33,8 +33,8 @@ The control plane needs `deedglass_migrator` (owns the schema, runs migrations) 
 ## 4. Migrate, then serve
 
 ```sh test=skip reason="runs against your production database"
-docker run --rm --env-file migrate.env deedglass:0.1.0 migrate up
-docker run -d --name deedglass --env-file deedglass.env -p 127.0.0.1:8080:8080 deedglass:0.1.0
+docker run --rm --env-file migrate.env deedglass:0.2.1 migrate up
+docker run -d --name deedglass --env-file deedglass.env -p 127.0.0.1:8080:8080 deedglass:0.2.1
 ```
 
 Migrations are a separate step with the migrator's URL; the server never holds it.

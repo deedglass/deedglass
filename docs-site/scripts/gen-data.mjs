@@ -116,7 +116,10 @@ function generate() {
   files['src/data/errors-prose.json'] = json(parseErrorsProse(read('docs/api/errors.md')));
   files['src/data/cli-errors.json'] = run(['run', './internal/httpx/cmd/gendocs', 'cli-errors']);
   files['src/data/sdk-errors.json'] = read('sdk/errors.json');
-  files['src/data/cli.json'] = run(['run', './cmd/deedglass', 'help', '--json'], { env: { ...process.env, NO_COLOR: '1', DEEDGLASS_NO_BANNER: '1' } });
+  // freshness-1019: stamped with the released version (npm/deedglass/package.json, bumped by release prep), so
+  // the CLI reference says 0.2.1 rather than the dev build's 0.1.0-dev.
+  const released = JSON.parse(read('npm/deedglass/package.json')).version;
+  files['src/data/cli.json'] = run(['run', '-ldflags', `-X github.com/deedglass/deedglass/internal/buildinfo.Version=${released}`, './cmd/deedglass', 'help', '--json'], { env: { ...process.env, NO_COLOR: '1', DEEDGLASS_NO_BANNER: '1' } });
   files['src/data/config.json'] = run(['run', './internal/config/cmd/genconfigdoc']);
   try {
     files['src/data/attack.json'] = run(['run', './attack/cmd/attack-report', '-docs-json']);

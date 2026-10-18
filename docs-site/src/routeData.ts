@@ -27,7 +27,13 @@ export const onRequest = defineRouteMiddleware((context) => {
   const path = context.url.pathname.endsWith('/') ? context.url.pathname : context.url.pathname + '/';
   const data = route.entry.data;
   const title = route.head.find((h) => h.tag === 'title');
-  if (title) title.content = pageTitle(data.title);
+  if (title) title.content = pageTitle(data.title, path);
+  // freshness-1019: the OpenAPI overview has no description of its own and took the home page's.
+  if (path === '/reference/api/') {
+    const d = route.head.find((h) => h.tag === 'meta' && h.attrs?.name === 'description');
+    if (title) title.content = pageTitle('HTTP API reference');
+    if (d?.attrs) d.attrs.content = 'Every Deedglass HTTP API endpoint, generated from the OpenAPI spec: requests, responses, errors and examples for API version 2026-10-01.';
+  }
   if (isThin(path)) {
     route.head.push({ tag: 'meta', attrs: { name: 'robots', content: 'noindex, follow' } });
     return;
