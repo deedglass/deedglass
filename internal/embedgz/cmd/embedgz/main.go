@@ -13,7 +13,8 @@ import (
 	"github.com/deedglass/deedglass/internal/embedgz"
 )
 
-// Targets are the embedded directories (paths from the repo root); Glob may list several patterns.
+// Targets are the embedded directories (paths from the repo root); Glob may list several patterns,
+// or be "**" for every file under Dir, kept at its path below Dir (embedgz.UnpackTree reads it).
 var Targets = []struct{ Dir, Glob, Out string }{
 	{"internal/store/migrations", "*.sql", "internal/store/migrations/sql.tar.gz"},
 	{"ee/scanfull", "report.html", "ee/scanfull/report.tar.gz"},
@@ -25,10 +26,24 @@ var Targets = []struct{ Dir, Glob, Out string }{
 	{"internal/mailer/templates", "*.tmpl", "internal/mailer/templates.tar.gz"},
 	{"ee/securitypack", "pack.html", "ee/securitypack/pack.tar.gz"},
 	{"internal/play", "hero.cast.json", "internal/play/cast.tar.gz"},
+	{"internal/packs/snapshot", "**", "internal/packs/snapshot.tar.gz"},
+	{"examples/sim", "acme.yaml acme-sim.v1.yaml acme-sim.v2.yaml acme-sim.v3.yaml", "examples/sim/sim.tar.gz"},
+	{"examples/demo/sql", "*.sql", "examples/demo/sql/sql.tar.gz"},
+	{"examples/demo/policies", "acme-demo.yaml", "examples/demo/policies/policies.tar.gz"},
+	{"internal/scan", "catalog.yaml", "internal/scan/catalog.tar.gz"},
 }
 
 func main() {
 	for _, t := range Targets {
+		if t.Glob == "**" {
+			files, err := embedgz.ReadTree(t.Dir)
+			if err != nil || len(files) == 0 {
+				fmt.Fprintf(os.Stderr, "embedgz: no files under %s (%v)\n", t.Dir, err)
+				os.Exit(1)
+			}
+			write(t.Out, files)
+			continue
+		}
 		var paths []string
 		var err error
 		for _, g := range strings.Fields(t.Glob) {
@@ -52,15 +67,19 @@ func main() {
 			}
 			files[filepath.Base(p)] = b
 		}
-		gz, err := embedgz.Pack(files)
-		if err != nil {
-			fmt.Fprintln(os.Stderr, "embedgz:", err)
-			os.Exit(1)
-		}
-		if err := os.WriteFile(t.Out, gz, 0o644); err != nil {
-			fmt.Fprintln(os.Stderr, "embedgz:", err)
-			os.Exit(1)
-		}
-		fmt.Printf("%s · %d files · %d bytes\n", t.Out, len(files), len(gz))
+		write(t.Out, files)
 	}
+}
+
+func write(out string, files map[string][]byte) {
+	gz, err := embedgz.Pack(files)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "embedgz:", err)
+		os.Exit(1)
+	}
+	if err := os.WriteFile(out, gz, 0o644); err != nil {
+		fmt.Fprintln(os.Stderr, "embedgz:", err)
+		os.Exit(1)
+	}
+	fmt.Printf("%s · %d files · %d bytes\n", out, len(files), len(gz))
 }
