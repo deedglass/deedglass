@@ -7,6 +7,14 @@ this file by `scripts/release-notes.sh`.
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-18
+
+Three ways to see what a coding agent can do to a database from its shell, where an MCP gate can't
+look: a hook that asks you first, a scan of what would run without a prompt, and a watched session
+that shows what Postgres committed and saves the SQL to put it back. Each is a second check next to
+Claude Code's own permission rules, not a sandbox. No new dependency, no schema migration, and
+`formula_version` stays 1.
+
 ### Added
 
 - **The shell guard** (`deedglass guard shell`, FEAT-07, ADR-104): a Claude Code `PreToolUse` hook
@@ -30,15 +38,28 @@ this file by `scripts/release-notes.sh`.
   count under formula v1 like any other finding, and `scan_report` gains `claude_settings` (rule
   counts only). It runs no command. See `docs/SCAN.md`.
 - **Watch a coding agent.** `deedglass observe run --connector <name> --undo-sql ~/deedglass-undo -- claude`
-  starts Claude Code (or any agent command) inside a watched session. When it exits, the run prints
-  the row changes Postgres committed on the watched tables (shell commands such as `psql`
+  starts Claude Code (or any agent command) inside a watched session. When it exits, the run prints,
+  per watched table, a count of the row changes Postgres committed (shell commands such as `psql`
   included), what Deedglass caught, the any-writer note, and saves the free undo SQL for you to
   review and run (to `undo-<session id>.sql` when given a folder); Deedglass never runs it. It names
-  an `admin.key` the agent could read, and says when the decoder stopped (a dropped watched table
+  a `.deedglass/admin.key` the agent could read, and says when the decoder stopped (a dropped watched table
   leaves the publication). `observe stop` prints the any-writer note too, and `observe run` now
   closes the session when the terminal closes (SIGHUP). The Claude Code plugin gains
   `/deedglass:watch`, which prints that line; you run it with your own key. See `docs/OBSERVE.md`
   and docs.deedglass.com/guides/watch-a-coding-agent.
+
+### Changed
+
+- The server binary embeds the policy pack snapshot, the simulation scenario, the demo SQL and
+  policy and the scan catalog gzip-compressed, and the SaaS connectors, the connector admin API and
+  the `mcp serve` bridge are built without inlining (each call there waits on the network or the
+  database). This keeps the server image under its 40 MB budget with the three features above; no
+  behaviour changes.
+
+### Fixed
+
+- `docs/SCAN.md` and the observe docs describe the cited incidents as their issues do:
+  `alembic downgrade base` reverts every revision, and none of the cited reports shows `psql -c`.
 
 ## [0.1.1] - 2026-10-18
 
@@ -197,6 +218,7 @@ See [KNOWN_ISSUES.md](KNOWN_ISSUES.md): what happens, who is affected, the worka
 See [docs/LIMITATIONS.md](docs/LIMITATIONS.md). In short: L2 covers Postgres only, seal keys are per
 deployment, and Deedglass trusts the Postgres server and the host it runs on.
 
-[Unreleased]: https://github.com/deedglass/deedglass/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/deedglass/deedglass/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/deedglass/deedglass/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/deedglass/deedglass/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/deedglass/deedglass/releases/tag/v0.1.0

@@ -76,8 +76,9 @@ In the Console, **Sessions** lists them; a session's page shows the transactions
 
 ## Watch a coding agent
 
-Many reported incidents with coding agents came through the shell: `psql -c "UPDATE …"`, a script
-the agent wrote, an ORM's command. A gate on tool calls never sees those. Observe mode reads the row
+Many reported incidents with coding agents came through the shell: an ORM's command such as
+`prisma db push --force-reset` or `alembic downgrade base`, or SQL sent over SSH. A gate on tool
+calls never sees those. Observe mode reads the row
 changes Postgres committed on the watched tables, whichever program wrote them. Start the agent
 inside a session, from the project's folder:
 
