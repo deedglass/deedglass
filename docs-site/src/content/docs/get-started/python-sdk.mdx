@@ -69,7 +69,7 @@ if action.witness and action.witness.verdict == "MISMATCH":
 <Limits>
 - The SDK asks before your function runs and reports what happened. It doesn't sandbox your function.
 - It doesn't retry a 500: the server stores that answer under the request's Idempotency-Key and would replay it.
-- The OpenAI Agents and CrewAI adapters come in the next release. Importing them today raises `ImportError` saying so.
+- The Python OpenAI Agents and CrewAI adapters aren't built yet (0.2.1). Importing them raises `ImportError` saying so. The TypeScript SDK has an OpenAI Agents adapter.
 </Limits>
 
 ## Next

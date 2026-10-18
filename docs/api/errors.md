@@ -745,7 +745,7 @@ no session cookie, a cookie for a session that doesn't exist, or no `Authorizati
 route that takes API keys (step 1 of the bearer check, [AGENTS.md](../AGENTS.md) §5). An API key on
 a route only a signed-in person may call is `insufficient_role` instead. Every 401 carries
 `WWW-Authenticate: Bearer realm="deedglass"`. For a Console route the message names the
-sign-in page: "You're not signed in. Sign in at https://app.deedglass.com/login."
+sign-in page: `You're not signed in. Sign in at https://app.deedglass.com/login.`
 
 **What to do.** Send `Authorization: Bearer dg_live_…`, or call the endpoint from a signed-in
 Console session.

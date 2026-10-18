@@ -8,7 +8,9 @@ const cards = [
   { title: 'Stop', href: '/concepts/stop/', body: 'Stop one agent, or every agent in the org, in under two seconds. Stopped calls are refused and still recorded.' },
   { title: 'Observe', href: '/reference/observe/', body: 'Nothing to rewire. Open a watched session, let the agent work, and see every row Postgres committed, beside any gate you already use. The undo SQL is free.' },
 ];
-const works = ['Claude', 'OpenAI', 'Gemini', 'Cursor', 'any MCP client', 'Postgres', 'GitHub', 'Slack', 'Stripe test mode'];
+// freshness-1019: the same two rows as deedglass.com's "Works with" / "Connects to" (site src/data/brands.ts).
+const works = ['Claude Code', 'Cursor', 'Windsurf', 'VS Code', 'Goose', 'OpenAI Agents SDK', 'LangChain', 'any MCP client'];
+const connects = ['Postgres', 'GitHub', 'Stripe sandbox', 'Slack', 'Notion', 'Gmail drafts'];
 ---
 <section class="dg-home" aria-label="What Deedglass does">
   <div class="example">
@@ -24,6 +26,8 @@ const works = ['Claude', 'OpenAI', 'Gemini', 'Cursor', 'any MCP client', 'Postgr
   <div class="works">
     <h2>Works with</h2>
     <p>{works.map((w, i) => (<><span>{w}</span>{i < works.length - 1 && <span class="sep" aria-hidden="true"> · </span>}</>))}</p>
+    <h2 class="connects">Connects to</h2>
+    <p>{connects.map((w, i) => (<><span>{w}</span>{i < connects.length - 1 && <span class="sep" aria-hidden="true"> · </span>}</>))}</p>
   </div>
   <p class="next">New here? Start with the <a href="/quickstart/">Quickstart</a>; it ends on this 301-row case and its undo preview. Then read <a href="/concepts/what-matches-means/">what Matches means</a> and the <a href="/concepts/glossary/">glossary</a>. Already running agents? <a href="/get-started/scan/">Scan your setup in 60 seconds</a>.</p>
 </section>
@@ -41,6 +45,7 @@ const works = ['Claude', 'OpenAI', 'Gemini', 'Cursor', 'any MCP client', 'Postgr
   .works { text-align: center; }
   .works h2 { margin: 0 0 0.5rem; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.04em; font-variant: small-caps; text-transform: lowercase; color: var(--dg-text-2); }
   .works p { margin: 0; color: var(--sl-color-white); font-size: 0.9375rem; }
+  .works .connects { margin-top: 1.25rem; }
   .sep { color: var(--dg-text-3); }
   .next { text-align: center; margin: 0; color: var(--dg-text-2); }
 </style>

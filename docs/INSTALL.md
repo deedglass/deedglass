@@ -23,7 +23,7 @@ curl -fsSL https://raw.githubusercontent.com/deedglass/deedglass/main/scripts/in
 It downloads two files from the latest release, the archive for this machine and `checksums.txt`,
 checks the archive's sha256 against `checksums.txt`, and copies the one binary into `~/.local/bin`.
 It runs nothing it downloads, asks for no password and never edits your shell profile; if the
-directory isn't on your PATH it prints the line to add. `sh -s -- --version 0.1.0 --dir /usr/local/bin`
+directory isn't on your PATH it prints the line to add. `sh -s -- --version 0.2.1 --dir /usr/local/bin`
 picks a version and a directory. Read it first: [`scripts/install.sh`](../scripts/install.sh).
 
 ## A binary

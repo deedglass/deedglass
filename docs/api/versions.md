@@ -38,7 +38,7 @@ error, not `api_version_invalid`.
 ```json
 {
   "object": "version",
-  "version": "0.1.0-dev",
+  "version": "0.2.1",
   "commit": "5495f7e",
   "built_at": "2026-10-01T10:00:00Z",
   "go": "go1.27.1",

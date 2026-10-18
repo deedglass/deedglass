@@ -37,7 +37,7 @@ new Deedglass({
 | `whoami()` | `GET /v1/whoami` | cached 5 minutes |
 
 Every request sends `Authorization: Bearer …`, `Deedglass-Version: 2026-10-01`, `Accept`, a
-`User-Agent` of `deedglass-sdk-typescript/0.1.0 (<runtime>)` where the runtime allows one, an
+`User-Agent` of `deedglass-sdk-typescript/0.2.1 (<runtime>)` where the runtime allows one, an
 `Idempotency-Key` on every POST, and `Deedglass-On-Behalf-Of`, `Deedglass-Session` and
 `Deedglass-Intent` when set. The body's `context` is `{ client: { name: "@deedglass/sdk", version },
 transport: "sdk", call_id? }`: since S32 (DL-047, PROPOSED as C1 of ADR-063) the API accepts an optional

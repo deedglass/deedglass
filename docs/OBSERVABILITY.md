@@ -157,7 +157,7 @@ A sample:
 ```
 # HELP deedglass_build_info The version and commit of this build.
 # TYPE deedglass_build_info gauge
-deedglass_build_info{version="0.1.0-dev",commit="5495f7e"} 1
+deedglass_build_info{version="0.2.1",commit="5495f7e"} 1
 # HELP deedglass_http_in_flight Requests being served now.
 # TYPE deedglass_http_in_flight gauge
 deedglass_http_in_flight 0

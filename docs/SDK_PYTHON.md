@@ -16,8 +16,8 @@ pip install "deedglass[claude-agent-sdk]"   # deedglass.claude_agent_sdk
 Python 3.10 to 3.14 (tested on 3.11, 3.13 and 3.14; 3.10 in Docker). Python 3.10 reaches its end of
 life in October 2026; a release after that drops it. `import deedglass` imports no agent framework
 (a test checks it); each adapter imports its framework when you import the adapter.
-`deedglass.openai_agents` and `deedglass.crewai` land in the next release: importing them today
-raises `ImportError` with that sentence, and their extras are declared so the layout doesn't change.
+`deedglass.openai_agents` and `deedglass.crewai` aren't built yet (0.2.1): importing them
+raises `ImportError` saying so (the TypeScript SDK has an OpenAI Agents adapter), and their extras are declared so the layout doesn't change.
 
 ## Configure
 
@@ -34,7 +34,7 @@ shaped fails before any request. The key never appears in `repr()`, an exception
 `Deedglass(base_url='http://127.0.0.1:8080', api_key='dg_test_ab12cd34_••••')`.
 
 Every request sends `Authorization`, `Deedglass-Version: 2026-10-01`, `User-Agent:
-deedglass-python/0.1.0 (python 3.13.x; httpx 0.28.1)` and, on every POST, an `Idempotency-Key`
+deedglass-python/0.2.1 (python 3.13.x; httpx 0.28.1)` and, on every POST, an `Idempotency-Key`
 made once per call and reused by its retries. `on_behalf_of=` and `session=` on the client (or per
 call) send `Deedglass-On-Behalf-Of` and `Deedglass-Session`.
 
@@ -190,7 +190,7 @@ own permission prompts still apply. PostToolUse and PostToolUseFailure report th
 
 ## Versioning
 
-`0.1.0`, API `2026-10-01`. Objects keep the server's JSON in `.raw`, so a newer server never breaks
+`0.2.1`, API `2026-10-01`. Objects keep the server's JSON in `.raw`, so a newer server never breaks
 an older SDK.
 
 ## What it doesn't do

@@ -262,6 +262,8 @@ test('seo pages (DOC-05): a thin page needs noindex; an indexed page needs a sho
   assert.equal(pageTitle('Quickstart'), 'Quickstart | Deedglass Docs');
   assert.equal(pageTitle('A title that is long enough to push the suffix past sixty'), 'A title that is long enough to push the suffix past sixty');
   assert.equal(pageTitle('Deedglass Docs'), 'Deedglass Docs');
+  assert.equal(pageTitle('Stop', '/reference/engineering/stop/'), 'Stop (engineering notes) | Deedglass Docs');
+  assert.equal(pageTitle('Stop', '/concepts/stop/'), 'Stop | Deedglass Docs');
   const ld = (o) => `<script type="application/ld+json">${ldScript(o)}</script>`;
   const good = `<title>Quickstart | Deedglass Docs</title>${ld(jsonLd({ path: '/quickstart/', title: 'Quickstart', description: 'd' }))}`;
   assert.deepEqual(pageProblems('/quickstart/', good), []);
