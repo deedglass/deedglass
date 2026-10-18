@@ -55,6 +55,7 @@ export const IMPORTS = {
   'docs/guides/neon.md': 'guides/neon',
   'docs/guides/observe-beside-another-gate.md': 'guides/observe-beside-another-gate',
   'docs/OBSERVE.md': 'reference/observe',
+  'docs/SHELL_GUARD.md': 'reference/shell-guard',
   'docs/SECURITY_PACK.md': 'reference/security-pack',
   'docs/WEEKLY.md': 'reference/weekly',
   'docs/AGENCIES.md': 'reference/agencies',

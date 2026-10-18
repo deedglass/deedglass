@@ -35,6 +35,7 @@ FuzzSafeParse ./internal/decoder 15
 FuzzArchiveOpen ./internal/deed/archive 10
 FuzzVerifyStream ./internal/deed 10
 FuzzCheckURL ./internal/connector/egress 10
+FuzzCheck ./internal/shellguard 10
 FuzzRedactor ./internal/vault 10
 FuzzTemplatePath ./internal/connector/rest 10
 FuzzSlackVerify ./internal/notify/slack 10

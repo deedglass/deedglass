@@ -147,6 +147,7 @@ make py-ci           # (in ci) S32: the Python SDK (sdk/python): ruff, format ch
 make py-build        # S32: wheel and sdist, twine check, the wheel holds py.typed and no tests (never publish)
 make py-examples     # S32: examples/python against DEEDGLASS_SERVER with an agent key (scripts/py_examples.sh)
 go run ./internal/httpx/cmd/gensdkerrors   # S32: sdk/errors.json and the Python _errors_gen.py from internal/httpx/errors.go (TestSDKErrorsFresh fails when stale; make gencopy also writes the Python verify copy)
+go test ./internal/shellguard ./cmd/deedglass -run 'Incidents|Asks|Ordinary|Limits|GuardShell' -v   # FEAT-07: the shell guard's incident, asks, ordinary (0 false positives) and limits corpora, and the hook contract
 go test ./internal/scan -run TestJSONGolden -update   # S32: internal/scan/testdata/archived-pg.golden.json (review the diff)
 go test ./cmd/deedglass -run TestHelpJSONGolden -update   # S32: testdata/help-json.golden (the help --json command_tree)
 DEEDGLASS_IT_PKGS="./internal/scan/ ./internal/doctor/" make integration   # S32: scan and doctor are read-only under log_statement=all (BEGIN READ ONLY, six SELECTs, ROLLBACK; a write is 25006)
@@ -315,6 +316,11 @@ and "open source" until the repo is public. Style bans: "revolutionary", "world-
 
 ## Guards in place (keep them green; extend, never weaken)
 
+- `internal/shellguard` (FEAT-07, ADR-104): `TestIncidents` (claude-code #80868, #36183, #33183, #26913, #46684
+  each ask), `TestAsks` (every catalog row has a case), `TestOrdinary` (200+ ordinary commands, 0 asks),
+  `TestLimits` (what it doesn't see, kept equal to docs/SHELL_GUARD.md), `TestOnlyAdds`, `TestDocListsCatalog`,
+  `FuzzCheck`; `cmd/deedglass` `TestGuardShell*` (the hook never answers allow and never exits 2);
+  `scripts/check-listings.mjs` keeps the plugin's one hook off unless `DEEDGLASS_SHELL_GUARD` is set.
 - `internal/ids`: strict parser, spec vector, monotonic and concurrency tests, clock-back and
   overflow tests, pattern-vs-parser agreement, `FuzzParse`.
 - `internal/config`: the key table, every prod refusal, `.deedglass/` safety, secret canaries across

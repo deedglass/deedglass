@@ -25,6 +25,7 @@ Agents
 Policies
   policy              Write, test and activate policies                       lint · fmt · test · push · activate · evaluate · replay · diff · install
   policy packs        List or check the policy packs                          list · verify
+  guard shell         Check a shell command before an agent runs it
 Actions
   act                 Send a test action through Deedglass
   actions             Inspect actions                                         list · show · cancel

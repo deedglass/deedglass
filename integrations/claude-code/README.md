@@ -12,6 +12,9 @@ A Claude Code plugin that adds:
 - the `safe-postgres-agents` skill: how to give an agent Postgres access in layers (a
   least-privilege role, a scan, rules before each call, a check of what Postgres committed, undo
   with a person in the loop).
+- the shell guard, off until you turn it on: a `PreToolUse` hook that asks you first when a Bash
+  command would destroy database data (`prisma migrate reset`, `alembic downgrade base`, `dropdb`,
+  a `psql -c` with `DROP TABLE`). A second check, not a sandbox.
 
 ## Install
 
@@ -23,10 +26,31 @@ A Claude Code plugin that adds:
 Run `npx deedglass init` in a terminal first. `mcp serve` reads the key it wrote
 (`.deedglass/quickstart.key`) or `DEEDGLASS_API_KEY`.
 
+## The shell guard (off by default)
+
+`hooks/hooks.json` registers one hook: before each Bash command, `hooks/shell-guard.sh` runs. Until
+you set `DEEDGLASS_SHELL_GUARD`, it reads its input and answers nothing, so Claude Code behaves as if
+the hook weren't there. To turn it on, put this in `.claude/settings.json` or
+`~/.claude/settings.json` and restart Claude Code:
+
+```json
+{
+  "env": { "DEEDGLASS_SHELL_GUARD": "ask" }
+}
+```
+
+With `ask`, a command that would destroy database data waits for your yes, with one sentence such as
+"Deedglass asks first: prisma db push --force-reset resets the database before it pushes the schema,
+which deletes every row." With `deny`, it doesn't run and Claude reads why. It needs a `deedglass`
+binary with the `guard shell` command on your `PATH`; it runs that binary locally and uses no
+network. It never answers allow, and your own permission rules still apply. What it reads, the
+catalog and what it can't see: [docs/SHELL_GUARD.md](../../docs/SHELL_GUARD.md).
+
 ## What it doesn't do
 
-- No hooks: it never changes how Claude Code runs a tool. Putting tools behind Deedglass stays
-  your explicit `deedglass mcp wrap` step (`/deedglass:wrap` prints it; it never runs it).
+- One hook, off by default (above). It never approves a tool call. Putting MCP tools behind
+  Deedglass stays your explicit `deedglass mcp wrap` step (`/deedglass:wrap` prints it; it never
+  runs it).
 - It doesn't start a wrapped server for you: that needs your database URL and an agent key, which
   stay in your own `claude mcp add` line, never in this plugin.
 - No telemetry, and no key in any file here.

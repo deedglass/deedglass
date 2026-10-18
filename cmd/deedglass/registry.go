@@ -187,6 +187,9 @@ var commands = []*Command{
 		Usage: "[--from <dir|tar.gz>] [--latest] [--json]", Run: runPolicyPacksVerify, RawArgs: true},
 	{Path: p("policy", "packs", "sign"), Group: Policies, Summary: "Sign a policy-packs index",
 		Usage: "--key <pack key file> [--dir .]", Run: runPolicyPacksSign, RawArgs: true, Hidden: true},
+	{Path: p("guard", "shell"), Group: Policies, Summary: "Check a shell command before an agent runs it",
+		Usage: `[--deny] [--no-files] [--command "<cmd>"] [--list] [--json]`, Flags: guardShellFlags, Run: runGuardShell,
+		Detail: "A Claude Code PreToolUse hook, off until you turn it on (docs/SHELL_GUARD.md). It reads the hook's JSON on stdin, splits the Bash command into every command it runs (&&, ||, ;, pipes, subshells, substitutions, VAR=value prefixes, sh -c and bash -c strings, heredocs and here-strings), and compares each with a dated, sourced catalog of commands that destroy database data: prisma migrate reset, prisma db push --force-reset, alembic downgrade base, rails db:drop, dropdb, and SQL that psql, mysql or sqlite3 would run with DROP, TRUNCATE, or an UPDATE or DELETE with no WHERE. When one matches it answers ask, with one sentence that names Deedglass and the reason; --deny answers deny instead. When nothing matches it writes nothing and Claude Code's own permission rules decide. It never answers allow.\n\nIt also reads, from the hook's working directory, the package.json script an npm, pnpm, yarn or bun command runs, a shell script run by path or by sh or bash, and the SQL files psql reads; --no-files reads only the command.\n\nIt reads the command as written and never runs it: a second check, not a sandbox. No server, no network, no config.\n\nExit codes: 0 the hook input was read (whatever it answered) · 1 the input wasn't a hook's JSON (Claude Code shows the error and goes on). With --command: 0 nothing to ask about · 1 it would ask or deny.\n\nExamples:\n  deedglass guard shell --command \"npx prisma migrate reset --force\"\n  deedglass guard shell --list\n  echo '{\"hook_event_name\":\"PreToolUse\",\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"dropdb app\"}}' | deedglass guard shell"},
 
 	// Actions.
 	{Path: p("act"), Group: Actions, Summary: "Send a test action through Deedglass",
@@ -408,6 +411,7 @@ var lines = []Line{
 		Paths: ps("policy lint", "policy fmt", "policy test", "policy push", "policy activate", "policy evaluate", "policy replay", "policy diff", "policy install")},
 	{Name: "policy packs", Group: Policies, Summary: "List or check the policy packs", Subs: subs("list verify"),
 		Paths: ps("policy packs list", "policy packs verify")},
+	{Name: "guard shell", Group: Policies, Summary: "Check a shell command before an agent runs it", Paths: ps("guard shell")},
 
 	{Name: "act", Group: Actions, Summary: "Send a test action through Deedglass", Paths: ps("act")},
 	{Name: "actions", Group: Actions, Summary: "Inspect actions", Subs: subs("list show cancel"), Paths: ps("actions list", "actions show", "actions cancel")},

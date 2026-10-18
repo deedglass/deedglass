@@ -97,3 +97,4 @@ ADR-000 to ADR-008 were written for the V0 verifier and keep their original text
 | 100 | The security review pack: format, question bank and reference policy | Proposed (2026-10-16, S51) | `internal/securitypack`, `ee/securitypack`; licence feature `security_pack`; `internal/embedgz` |
 | 101 | The weekly summary, the Monday email and the agency view | Proposed (2026-10-16, S52) | `internal/weekly`, `ee/agency`; migration 0030; licence feature `agency` |
 | 102 | Partner attribution without cookies, and monthly statements | Proposed (2026-10-16, S52) | site D1 0010, `functions/_lib/partners`, `scripts/partners-statements.mjs` |
+| 104 | The shell guard reads commands with a hand-written reader | Proposed (2026-10-18, FEAT-07) | `internal/shellguard`, `deedglass guard shell`, `integrations/claude-code/hooks` |

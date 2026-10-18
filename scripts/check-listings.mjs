@@ -46,7 +46,26 @@ for (const k of ['name', 'description', 'version', 'author', 'homepage', 'reposi
 if (plugin.name !== 'deedglass' || plugin.version !== gen.version) bad('plugin.json: name or version drifted');
 const pmcp = json('integrations/claude-code/.mcp.json');
 if (JSON.stringify(pmcp.mcpServers?.deedglass) !== server) bad('claude-code/.mcp.json: not the one server object');
-if (existsSync(join(root, 'integrations/claude-code/hooks'))) bad('claude-code: has a hooks/ directory');
+// FEAT-07: the one hook is the shell guard, off unless DEEDGLASS_SHELL_GUARD is ask or deny. Nothing else
+// may go in hooks/, the hook only sees Bash, and the script answers nothing (exit 0) when the variable is unset.
+const hooksDir = 'integrations/claude-code/hooks';
+if (existsSync(join(root, hooksDir))) {
+  const files = readdirSync(join(root, hooksDir)).sort().join(',');
+  if (files !== 'hooks.json,shell-guard.sh') bad(`claude-code/hooks: only hooks.json and shell-guard.sh belong here (found ${files})`);
+  const hk = json(`${hooksDir}/hooks.json`);
+  const events = Object.keys(hk.hooks ?? {});
+  const groups = hk.hooks?.PreToolUse ?? [];
+  const cmds = groups.flatMap((g) => g.hooks ?? []);
+  if (events.join() !== 'PreToolUse' || groups.length !== 1 || groups[0].matcher !== 'Bash' || cmds.length !== 1 ||
+    cmds[0].type !== 'command' || cmds[0].command !== 'sh "${CLAUDE_PLUGIN_ROOT}/hooks/shell-guard.sh"') {
+    bad('claude-code/hooks/hooks.json: must be the one PreToolUse hook on Bash that runs shell-guard.sh');
+  }
+  const sg = rd(`${hooksDir}/shell-guard.sh`);
+  if (!/case "\$\{DEEDGLASS_SHELL_GUARD:-off\}" in/.test(sg) || !/\*\)\n\tcat >\/dev\/null\n\texit 0/.test(sg)) bad('claude-code/hooks/shell-guard.sh: must be off unless DEEDGLASS_SHELL_GUARD is set');
+  if (/npx|curl|wget|https?:/.test(sg)) bad('claude-code/hooks/shell-guard.sh: must not fetch anything');
+  textChecks(`${hooksDir}/hooks.json`, rd(`${hooksDir}/hooks.json`));
+  textChecks(`${hooksDir}/shell-guard.sh`, sg);
+}
 if (existsSync(join(root, 'integrations/claude-code/settings.json'))) bad('claude-code: has settings that could change permissions');
 if (!/uploads nothing/.test(rd('integrations/claude-code/commands/scan.md'))) bad('commands/scan.md: must say it uploads nothing');
 const mk = json('.claude-plugin/marketplace.json');

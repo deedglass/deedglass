@@ -219,6 +219,7 @@ builds it. Hidden commands work but aren't in `deedglass help`.
 | `deedglass policy packs list [--from <dir|tar.gz>] [--latest] [--json]` | Policies | List the policy packs | built |
 | `deedglass policy packs verify [--from <dir|tar.gz>] [--latest] [--json]` | Policies | Check the packs against their signed index | built |
 | `deedglass policy packs sign --key <pack key file> [--dir .]` | Policies | Sign a policy-packs index | built, hidden |
+| `deedglass guard shell [--deny] [--no-files] [--command "<cmd>"] [--list] [--json]` | Policies | Check a shell command before an agent runs it | built |
 | `deedglass act <tool> [--args '{"k":"v"}'] [--mode gateway|proxy] [--wait 60s] [--idempotency-key K] [--json]` | Actions | Send a test action through Deedglass | built |
 | `deedglass actions list [--agent agt_…] [--tool stripe.*] [--state …] [--decision …] [--verdict MISMATCH] [--level L2] [--since 1h] [--q text] [--limit 25] [--cursor …] [--json] [--follow] [--connector orders]` | Actions | List actions | built |
 | `deedglass actions show <act_…> [--wait] [--diff] [--json]` | Actions | Show one action, its events and its Proven diff | built |

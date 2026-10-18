@@ -1,0 +1,417 @@
+# Commands the guard must ask about: each catalog shape, through the wrappers and compound forms
+# agents use. Each entry: "# want: <catalog id>", the command, a blank line.
+
+# want: prisma-migrate-reset
+prisma migrate reset
+
+# want: prisma-migrate-reset
+npx --yes prisma@5.22.0 migrate reset --force --skip-seed
+
+# want: prisma-migrate-reset
+PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION="yes" npx prisma migrate reset --force
+
+# want: prisma-migrate-reset
+pnpm exec prisma migrate reset --force
+
+# want: prisma-migrate-reset
+pnpm --filter api exec prisma migrate reset -f
+
+# want: prisma-migrate-reset
+yarn prisma migrate reset --force
+
+# want: prisma-migrate-reset
+bunx prisma migrate reset --force
+
+# want: prisma-migrate-reset
+npm exec -- prisma migrate reset --force
+
+# want: prisma-migrate-reset
+./node_modules/.bin/prisma migrate reset --force
+
+# want: prisma-migrate-reset
+dotenv -e .env.production -- npx prisma migrate reset --force
+
+# want: prisma-migrate-reset
+cd apps/api && DATABASE_URL=$(grep DATABASE_URL .env | cut -d= -f2) npx prisma migrate reset --force; echo done
+
+# want: prisma-migrate-reset
+npm run build || npx prisma migrate reset --force
+
+# want: prisma-migrate-reset
+(cd packages/db && npx prisma migrate reset --force)
+
+# want: prisma-migrate-reset
+echo "resetting" && bash -c "npx prisma migrate reset --force"
+
+# want: prisma-migrate-reset
+sh -lc 'cd /app && npx prisma migrate reset --force'
+
+# want: prisma-migrate-reset
+docker compose exec -T api npx prisma migrate reset --force
+
+# want: prisma-migrate-reset
+railway run npx prisma migrate reset --force
+
+# want: prisma-migrate-reset
+echo "$(npx prisma migrate reset --force 2>&1)"
+
+# want: prisma-migrate-reset
+result=`npx prisma migrate reset --force`
+
+# want: prisma-migrate-reset
+if npx prisma migrate reset --force; then echo ok; fi
+
+# want: prisma-migrate-reset
+npx prisma migrate reset --force | tee reset.log
+
+# want: prisma-migrate-reset
+npx prisma \
+  migrate \
+  reset \
+  --force
+
+# want: prisma-db-push-force-reset
+npx prisma db push --force-reset --skip-generate
+
+# want: prisma-db-push-accept-data-loss
+npx prisma db push --accept-data-loss --schema=./prisma/schema.prisma
+
+# want: prisma-shadow-database-url
+npx prisma migrate diff --from-migrations ./prisma/migrations --to-schema-datamodel ./prisma/schema.prisma --shadow-database-url=$DATABASE_URL --script
+
+# want: drizzle-kit-push-force
+npx drizzle-kit push --force
+
+# want: drizzle-kit-push-force
+pnpm drizzle-kit push --config=drizzle.config.ts --force
+
+# want: alembic-downgrade-base
+alembic downgrade base
+
+# want: alembic-downgrade-base
+alembic -c alembic.ini downgrade base
+
+# want: alembic-downgrade-base
+uv run alembic downgrade base
+
+# want: alembic-downgrade-base
+poetry run python -m alembic downgrade base
+
+# want: alembic-downgrade-base
+docker compose run --rm backend alembic downgrade base
+
+# want: flask-db-downgrade-base
+flask db downgrade base
+
+# want: rails-db-drop
+bin/rails db:drop
+
+# want: rails-db-drop
+RAILS_ENV=production DISABLE_DATABASE_ENVIRONMENT_CHECK=1 bundle exec rails db:drop
+
+# want: rails-db-drop
+bundle exec rake db:drop:all
+
+# want: rails-db-reset
+./bin/rails db:reset
+
+# want: rails-db-reset
+bin/rails db:migrate:reset
+
+# want: rails-db-schema-load
+bin/rails db:schema:load
+
+# want: rails-db-schema-load
+bin/rails db:setup
+
+# want: rails-db-truncate
+bin/rails db:truncate_all
+
+# want: rails-db-truncate
+bin/rails db:seed:replant
+
+# want: rails-migrate-version-0
+bin/rails db:migrate VERSION=0
+
+# want: rails-migrate-version-0
+VERSION=0 bin/rails db:migrate
+
+# want: knex-rollback-all
+npx knex migrate:rollback --all
+
+# want: typeorm-schema-drop
+npx typeorm schema:drop -d ./src/data-source.ts
+
+# want: typeorm-schema-drop
+npx typeorm-ts-node-commonjs schema:drop -d src/data-source.ts
+
+# want: sequelize-db-drop
+npx sequelize-cli db:drop
+
+# want: sequelize-undo-all
+npx sequelize-cli db:migrate:undo:all
+
+# want: django-flush
+python manage.py flush --no-input
+
+# want: django-flush
+./manage.py flush --noinput
+
+# want: django-flush
+kubectl exec -it deploy/api -- python manage.py flush --no-input
+
+# want: django-migrate-zero
+python3 manage.py migrate billing zero
+
+# want: django-reset-db
+python manage.py reset_db --noinput
+
+# want: laravel-migrate-fresh
+php artisan migrate:fresh --seed
+
+# want: laravel-migrate-fresh
+./vendor/bin/sail artisan migrate:fresh
+
+# want: laravel-db-wipe
+php artisan db:wipe --force
+
+# want: laravel-rollback-all
+php artisan migrate:reset
+
+# want: laravel-rollback-all
+php artisan migrate:refresh --seed
+
+# want: ecto-drop
+mix ecto.drop
+
+# want: ecto-drop
+MIX_ENV=prod mix ecto.reset
+
+# want: ecto-rollback-all
+mix ecto.rollback --all
+
+# want: supabase-db-reset-remote
+supabase db reset --linked
+
+# want: supabase-db-reset-remote
+npx supabase db reset --db-url "$PROD_DB_URL"
+
+# want: heroku-pg-reset
+heroku pg:reset DATABASE_URL --confirm my-app
+
+# want: dropdb
+dropdb myapp_production
+
+# want: dropdb
+sudo -u postgres dropdb --if-exists app
+
+# want: dropdb
+docker exec db dropdb -U postgres app
+
+# want: dropdb
+/opt/homebrew/opt/postgresql@17/bin/dropdb -h localhost app_dev
+
+# want: pg-restore-clean
+pg_restore --clean --if-exists -d app backup.dump
+
+# want: pg-restore-clean
+pg_restore -c -d "$DATABASE_URL" latest.dump
+
+# want: pg-dump-clean-pipe
+pg_dump --clean "$STAGING_URL" | psql "$PROD_URL"
+
+# want: mysqladmin-drop
+mysqladmin -u root -f drop shop
+
+# want: sql-drop
+psql -c "DROP TABLE users"
+
+# want: sql-drop
+psql "$DATABASE_URL" -c 'DROP SCHEMA public CASCADE; CREATE SCHEMA public;'
+
+# want: sql-drop
+psql -Atc "drop database app"
+
+# want: sql-drop
+psql -h localhost -U postgres -d app --command="DROP TABLE IF EXISTS orders"
+
+# want: sql-drop
+psql -U postgres -c '\c app' -c 'DROP TABLE sessions'
+
+# want: sql-drop
+psql "$DATABASE_URL" <<'SQL'
+\set ON_ERROR_STOP on
+DROP TABLE legacy_orders;
+SQL
+
+# want: sql-drop
+psql "$DATABASE_URL" <<< "DROP TABLE tmp_import"
+
+# want: sql-drop
+echo "DROP TABLE users;" | psql "$DATABASE_URL"
+
+# want: sql-drop
+printf 'DROP TABLE %s;\n' users | psql app
+
+# want: sql-drop
+cat <<'EOF' | psql -d app
+-- clean up
+DROP MATERIALIZED VIEW daily_totals;
+EOF
+
+# want: sql-drop
+psql app -c 'DROP TYPE order_status CASCADE'
+
+# want: sql-drop
+ssh deploy@db1 "psql -d app -c 'DROP SCHEMA reporting CASCADE'"
+
+# want: sql-drop
+mysql -u root -p"$MYSQL_PWD" shop -e "DROP TABLE orders"
+
+# want: sql-drop
+mariadb --execute="DROP DATABASE shop"
+
+# want: sql-drop
+sqlite3 dev.sqlite3 "DROP TABLE users;"
+
+# want: sql-drop
+echo 'DROP TABLE users;' | npx prisma db execute --stdin
+
+# want: sql-drop
+kubectl exec -it postgres-0 -- psql -U postgres -c "DROP DATABASE app"
+
+# want: sql-drop
+docker compose exec -T db psql -U postgres app -c 'DROP TABLE IF EXISTS events CASCADE'
+
+# want: sql-drop
+psql -c "DROP OWNED BY app_user"
+
+# want: sql-truncate
+psql "$DATABASE_URL" -c "TRUNCATE TABLE events"
+
+# want: sql-truncate
+psql -c 'truncate users, orders restart identity cascade'
+
+# want: sql-truncate
+psql app <<SQL
+BEGIN;
+TRUNCATE audit_log;
+COMMIT;
+SQL
+
+# want: sql-delete-all
+psql -c "DELETE FROM users"
+
+# want: sql-delete-all
+psql "$DATABASE_URL" -c "delete from sessions;"
+
+# want: sql-delete-all
+psql -c "DELETE FROM orders WHERE true"
+
+# want: sql-delete-all
+psql -c "DELETE FROM orders WHERE 1 = 1"
+
+# want: sql-delete-all
+mysql -e "DELETE FROM carts" shop
+
+# want: sql-update-all
+psql -c "UPDATE users SET email_verified = false"
+
+# want: sql-update-all
+psql -X -q -v ON_ERROR_STOP=1 -c "UPDATE orders SET status = 'cancelled';"
+
+# want: sql-update-all
+psql -c "WITH x AS (SELECT 1) UPDATE accounts SET balance = 0"
+
+# want: sql-update-all
+sqlite3 app.db "UPDATE products SET price = 0"
+
+# want: sql-drop-column
+psql -c "ALTER TABLE users DROP COLUMN legacy_id"
+
+# want: sql-drop-column
+psql -c 'alter table orders drop total_cents'
+
+# want: sql-do-drop
+psql -c "DO \$\$ BEGIN EXECUTE 'DROP TABLE ' || 'tmp'; END \$\$"
+
+# want: sql-drop
+eval "psql -c 'DROP TABLE users'"
+
+# want: dropdb
+time dropdb app_test
+
+# want: dropdb
+nohup dropdb staging &
+
+# want: dropdb
+env PGPASSWORD=secret dropdb -h db.internal app
+
+# want: dropdb
+echo app_dev | xargs dropdb
+
+# want: prisma-migrate-reset
+op run --env-file=.env -- npx prisma migrate reset --force
+
+# want: prisma-migrate-reset
+until npx prisma migrate reset --force; do sleep 1; done
+
+# want: prisma-migrate-reset
+for d in api worker; do (cd "$d" && npx prisma migrate reset --force); done
+
+# want: prisma-migrate-reset
+true && { npx prisma migrate reset --force; }
+
+# want: prisma-migrate-reset
+x=$(echo ok) npx prisma migrate reset --force
+
+# want: prisma-migrate-reset
+npx prisma migrate reset --force >/dev/null 2>&1 &
+
+# want: prisma-migrate-reset
+bash <<'SH'
+set -e
+npx prisma migrate reset --force
+SH
+
+# want: alembic-downgrade-base
+bash -c 'source .venv/bin/activate && alembic downgrade base'
+
+# want: alembic-downgrade-base
+pipenv run alembic downgrade base
+
+# want: rails-db-reset
+docker compose run --rm web bin/rails db:reset
+
+# want: rails-db-drop
+bundle exec rails db:drop db:create db:migrate
+
+# want: knex-rollback-all
+yarn knex migrate:rollback --all --env production
+
+# want: typeorm-schema-drop
+pnpm typeorm schema:drop -d dist/data-source.js
+
+# want: laravel-migrate-fresh
+sail artisan migrate:fresh --seed
+
+# want: django-flush
+docker compose exec web python manage.py flush --no-input
+
+# want: django-migrate-zero
+uv run python manage.py migrate accounts zero
+
+# want: ecto-drop
+MIX_ENV=test mix ecto.drop
+
+# want: heroku-pg-reset
+heroku pg:reset --app my-app --confirm my-app
+
+# want: dropdb
+find /backups -name "*.flag" -exec dropdb app_restore \;
+
+# want: sql-truncate
+watch -n 60 'psql -c "TRUNCATE jobs"'
+
+# want: prisma-migrate-reset
+sudo find . -maxdepth 0 -execdir npx prisma migrate reset --force {} +

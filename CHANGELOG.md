@@ -7,6 +7,19 @@ this file by `scripts/release-notes.sh`.
 
 ## [Unreleased]
 
+### Added
+
+- **The shell guard** (`deedglass guard shell`, FEAT-07, ADR-104): a Claude Code `PreToolUse` hook
+  that reads each Bash command before it runs and, when part of it would destroy database data
+  (`prisma migrate reset`, `prisma db push --force-reset`, `alembic downgrade base`, `rails db:drop`,
+  `dropdb`, a `psql -c` with `DROP TABLE`, `TRUNCATE`, or an `UPDATE` or `DELETE` with no `WHERE`),
+  answers `ask` with one sentence that names Deedglass and the reason (`--deny` to deny instead). It
+  splits compound commands, subshells, substitutions, `VAR=value` prefixes and `sh -c` strings with
+  a small reader of its own (no new dependency), reads SQL through `internal/sqlguard`, and never
+  answers `allow`. No server, no network: a second check, not a sandbox. The Claude Code plugin
+  carries it off by default; `DEEDGLASS_SHELL_GUARD=ask` in Claude Code's settings turns it on. See
+  `docs/SHELL_GUARD.md`.
+
 ## [0.1.1] - 2026-10-18
 
 ### Added
