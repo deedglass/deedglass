@@ -234,8 +234,9 @@ How they were measured, and the misses: [`docs/BENCHMARKS.md`](docs/BENCHMARKS.m
 
 ## Security
 
-The attack suite runs 70 cases against a real server and real Postgres on every release candidate:
-70 matched, 0 differ (`attack/results/latest.json`, [`docs/ATTACK_SUITE.md`](docs/ATTACK_SUITE.md)).
+The attack suite runs 78 cases against a real server and real Postgres on every release candidate:
+78 matched, 0 differ, and 4 more declared FHIR cases wait on a later release
+(`attack/results/latest.json`, [`docs/ATTACK_SUITE.md`](docs/ATTACK_SUITE.md)).
 Report a vulnerability privately: [`SECURITY.md`](SECURITY.md).
 
 <!-- description:network -->
