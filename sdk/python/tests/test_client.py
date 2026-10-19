@@ -83,10 +83,10 @@ async def test_executed(kind: str) -> None:
     assert h["authorization"] == "Bearer " + KEY
     assert h["deedglass-version"] == "2026-10-01"
     assert h["idempotency-key"].startswith("idk_") and len(h["idempotency-key"]) == 30
-    assert h["user-agent"].startswith("deedglass-python/0.3.0 (python ")
+    assert h["user-agent"].startswith("deedglass-python/0.4.0 (python ")
     b = s.body(0)
     assert b["mode"] == "gateway" and b["wait"] == 10.0
-    assert b["context"] == {"client": {"name": "deedglass-python", "version": "0.3.0"}, "transport": "sdk"}
+    assert b["context"] == {"client": {"name": "deedglass-python", "version": "0.4.0"}, "transport": "sdk"}
 
 
 async def test_policy_denied(kind: str) -> None:

@@ -7,9 +7,20 @@ this file by `scripts/release-notes.sh`.
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-19
+
+Healthcare, phase 1 complete: Proven (L2) checks for FHIR servers that store resources in Postgres
+(HAPI FHIR JPA 8.x and Medplum 5.x). Deedglass reads the FHIR server's own change log and binds a
+transaction to an action by the version the server reported to its write, never by a request id
+alone (ADR-108). Writes no action made are stored and flagged `out_of_band`, and resource content is
+kept only as keyed per-field digests. Attack cases I05-I08 now run and match, so all twelve FHIR
+cases do. Still Checked (L1), not Proven: HAPI FHIR 7.x and older (its table layout isn't mapped)
+and deletes on Medplum (Medplum's answer names no version to bind). No new dependency, one schema
+migration (0032), and `formula_version` stays 1.
+
 ### Added
 
-- **Proven (L2) for FHIR servers that store resources in Postgres** (HC-P05, ADR-108, Proposed): a
+- **Proven (L2) for FHIR servers that store resources in Postgres** (HC-P05, ADR-108): a
   `fhir` connector with `witness.enabled` and `witness.server` (`hapi` for HAPI FHIR JPA 8.x,
   `medplum` for Medplum 5.x) and `witness_dsn` in its credential has the decoder read the FHIR
   server's own change log. A transaction is bound to an action by the version the server reported to
@@ -324,7 +335,8 @@ See [KNOWN_ISSUES.md](KNOWN_ISSUES.md): what happens, who is affected, the worka
 See [docs/LIMITATIONS.md](docs/LIMITATIONS.md). In short: L2 covers Postgres only, seal keys are per
 deployment, and Deedglass trusts the Postgres server and the host it runs on.
 
-[Unreleased]: https://github.com/deedglass/deedglass/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/deedglass/deedglass/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/deedglass/deedglass/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/deedglass/deedglass/compare/v0.2.1...v0.3.0
 [0.2.1]: https://github.com/deedglass/deedglass/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/deedglass/deedglass/compare/v0.1.1...v0.2.0

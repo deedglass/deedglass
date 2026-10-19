@@ -314,7 +314,7 @@ and "open source" until the repo is public. Style bans: "revolutionary", "world-
 10. A frame is bound only with exactly one `deedglass.ledger` insert and one transactional
    `deedglass` marker naming the same action, of the connector's org, with low32(xid8) = BEGIN.xid
    (ADR-003). The decoder never decides a verdict. The one other path is a FHIR server's own
-   database (ADR-108, Proposed): bound only when the frame holds the version the action's execution
+   database (ADR-108, accepted under DL-115): bound only when the frame holds the version the action's execution
    evidence names (`version_key`), exactly one action names a version in it, and the row's own mark
    agrees; a token alone never binds (`request_id_reused`). Its frames hold resource content only as
    keyed leaf digests (`internal/jsonleaf`), and a frame no action names yet is held, never advanced
