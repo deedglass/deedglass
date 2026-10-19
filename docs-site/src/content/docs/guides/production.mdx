@@ -20,7 +20,7 @@ The repository's `deploy/cloud/` is this guide as files: Caddy with automatic TL
 
 ## 1. Build the image
 
-There's no public image yet (a public one is coming), so build it from a checkout with the Console embedded: `make web-build docker`, then tag the result for your registry, for example `docker tag deedglass:dev deedglass:0.2.1` ([Install Deedglass](/get-started/install-deedglass/#docker)). A prod server refuses an image built without `make web-build`. It is one static binary on a distroless base, running as a non-root user, under 40 MB.
+There's no public image yet (a public one is coming), so build it from a checkout with the Console embedded: `make web-build docker`, then tag the result for your registry, for example `docker tag deedglass:dev deedglass:0.2.1` ([Install Deedglass](/get-started/install-deedglass/#docker)). A prod server refuses an image built without `make web-build`. It is one static binary on a distroless base, running as a non-root user, under 45 MB.
 
 ## 2. Create the roles
 

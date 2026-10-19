@@ -86,7 +86,8 @@ func TestEmbeddedSnapshot(t *testing.T) {
 			t.Errorf("%s leaves rules uncovered: %v", e.Name, r.Test.Coverage.Uncovered)
 		}
 	}
-	want := map[string]string{"postgres-safe": "free", "supabase-mcp": "free", "stripe-refunds": "free", "github-agent": "free", "money-movement": "pro"}
+	want := map[string]string{"postgres-safe": "free", "supabase-mcp": "free", "stripe-refunds": "free", "github-agent": "free", "money-movement": "pro",
+		"healthcare-fhir": "free"}
 	if len(names) != len(want) {
 		t.Fatalf("packs %v, want %v", names, want)
 	}

@@ -236,9 +236,10 @@ fuzz-policy: ## S10-S11: the policy compiler, the safe YAML reader, the evaluato
 	$(GO) test ./internal/sqlguard -run '^$$' -fuzz '^FuzzAnalyze$$' -fuzztime 60s
 	$(GO) test ./internal/sqlguard -run '^$$' -fuzz '^FuzzTokenize$$' -fuzztime 60s
 
-policy-test: ## (ci) S12: every starter policy's cases pass, every rule covered, no voice warnings
+policy-test: ## (ci) S12: every starter policy's and every policy pack's cases pass, every rule covered, no voice warnings
 	$(GO) run ./cmd/deedglass policy test --dir examples/policies --require-coverage --voice
 	$(GO) run ./cmd/deedglass policy test --dir examples/demo/policies --require-coverage --voice
+	$(GO) run ./cmd/deedglass policy test $(foreach d,$(wildcard internal/packs/snapshot/*/pack.yaml),$(dir $(d))$(notdir $(patsubst %/,%,$(dir $(d)))).yaml) --require-coverage --voice
 
 fuzz-policy-short: ## (ci) the same policy and sqlguard fuzz targets, 10 s each (5 s for the tokenizer)
 	$(GO) test ./internal/policy -run '^$$' -fuzz '^FuzzCompile$$' -fuzztime 10s

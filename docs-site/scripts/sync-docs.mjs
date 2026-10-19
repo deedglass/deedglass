@@ -56,6 +56,7 @@ export const IMPORTS = {
   'docs/guides/neon.md': 'guides/neon',
   'docs/guides/observe-beside-another-gate.md': 'guides/observe-beside-another-gate',
   'docs/guides/fhir-server.md': 'guides/fhir-server',
+  'docs/guides/healthcare-fhir-pack.md': 'guides/healthcare-fhir-pack',
   'docs/OBSERVE.md': 'reference/observe',
   'docs/PHI_MODE.md': 'reference/phi-mode',
   'docs/SHELL_GUARD.md': 'reference/shell-guard',

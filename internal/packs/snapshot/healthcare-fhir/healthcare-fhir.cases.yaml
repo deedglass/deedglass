@@ -1,0 +1,263 @@
+# Test cases for healthcare-fhir.yaml. Run them with:
+#   deedglass policy test policies/healthcare-fhir.yaml
+# request.fhir is what the FHIR connector fills before the decision (docs/connectors/fhir.md).
+# Every value here is synthetic.
+policy: healthcare-fhir.yaml
+defaults:
+  agent: { name: clinic-bot, labels: { env: prod } }
+  org: { timezone: Asia/Kolkata }
+  time: 2026-10-19T10:00:00+05:30
+cases:
+  # A call that builds no request
+  - name: a type outside the connector's list never runs
+    input:
+      tool: fhir.create
+      args: { resource_type: Encounter, resource: { resourceType: Encounter, status: finished } }
+      request: { fhir: { enriched: false } }
+    expect: { decision: deny, rule: fhir-needs-a-request, code: policy_denied, reason_contains: "didn't build a request" }
+
+  # Deletes
+  - name: deleting an Observation is refused (attack case I12)
+    input:
+      tool: { name: fhir.delete, side_effect: destructive }
+      args: { resource_type: Observation, id: obs-1001 }
+      request: { fhir: { enriched: true, interaction: delete, resource_type: Observation, id: obs-1001 } }
+    expect: { decision: deny, rule: no-delete-clinical, reason_contains: "corrected with a new version" }
+  - name: deleting a MedicationRequest is refused
+    input:
+      tool: { name: fhir.delete, side_effect: destructive }
+      args: { resource_type: MedicationRequest, id: mr-77 }
+      request: { fhir: { enriched: true, interaction: delete, resource_type: MedicationRequest, id: mr-77 } }
+    expect: { decision: deny, rule: no-delete-clinical }
+  - name: deleting the patient record is refused
+    input:
+      tool: { name: ehr.delete, connector_type: fhir, side_effect: destructive }
+      args: { resource_type: Patient, id: pat-synthetic-1 }
+      request: { fhir: { enriched: true, interaction: delete, resource_type: Patient, id: pat-synthetic-1 } }
+    expect: { decision: deny, rule: no-delete-clinical }
+  - name: deleting a Task waits for an admin
+    input:
+      tool: { name: fhir.delete, side_effect: destructive }
+      args: { resource_type: Task, id: task-9 }
+      request: { fhir: { enriched: true, interaction: delete, resource_type: Task, id: task-9 } }
+    expect:
+      decision: require_approval
+      rule: other-deletes-need-approval
+      verify: L1
+      approval: { required: 1, approvers: [role:admin], expires_in: 2h }
+
+  # History rewrites through the REST connector
+  - name: $expunge through the REST connector is refused
+    input:
+      tool: { name: hapi.expunge, connector_type: rest, side_effect: destructive }
+      args: { id: obs-1001 }
+      request: { http: { method: POST, path: "/fhir/Observation/obs-1001/$expunge", host: fhir.example.org } }
+    expect: { decision: deny, rule: no-history-rewrite, reason_contains: "Erasing a FHIR server's history" }
+  - name: a plain REST read is not this pack's business
+    input:
+      tool: { name: hapi.get_observation, connector_type: rest, side_effect: read }
+      args: { id: obs-1001 }
+      request: { http: { method: GET, path: /fhir/Observation/obs-1001, host: fhir.example.org } }
+    expect: { decision: deny, rule: default }
+
+  # Coverage
+  - name: changing coverage is refused
+    input:
+      tool: fhir.update
+      args: { resource_type: Coverage, id: cov-1, resource: { resourceType: Coverage, status: cancelled } }
+      request: { fhir: { enriched: true, interaction: update, resource_type: Coverage, id: cov-1 } }
+    expect: { decision: deny, rule: coverage-read-only, reason_contains: "read-only for agents" }
+  - name: reading coverage runs
+    input:
+      tool: fhir.read
+      args: { resource_type: Coverage, id: cov-1 }
+      request: { fhir: { enriched: true, interaction: read, resource_type: Coverage, id: cov-1 } }
+    expect: { decision: allow, rule: fhir-reads, verify: L0 }
+  - name: an eligibility request runs, checked at L1
+    input:
+      tool: fhir.create
+      args: { resource_type: CoverageEligibilityRequest, resource: { resourceType: CoverageEligibilityRequest, status: active, purpose: [validation] } }
+      request: { fhir: { enriched: true, interaction: create, resource_type: CoverageEligibilityRequest } }
+    expect: { decision: allow, rule: verify-levels, verify: L1 }
+
+  # Reads
+  - name: reading an Observation runs
+    input:
+      tool: fhir.read
+      args: { resource_type: Observation, id: obs-1001 }
+      request: { fhir: { enriched: true, interaction: read, resource_type: Observation, id: obs-1001 } }
+    expect: { decision: allow, rule: fhir-reads, verify: L0 }
+  - name: a search for one patient's heart rate runs
+    input:
+      tool: fhir.search
+      args: { resource_type: Observation, params: { patient: pat-synthetic-1, code: "http://loinc.org|8867-4", _count: "20" } }
+      request: { fhir: { enriched: true, interaction: search, resource_type: Observation } }
+    expect: { decision: allow, rule: fhir-reads }
+  - name: a resource's own history runs
+    input:
+      tool: fhir.history
+      args: { resource_type: Observation, id: obs-1001 }
+      request: { fhir: { enriched: true, interaction: history, resource_type: Observation, id: obs-1001 } }
+    expect: { decision: allow, rule: fhir-reads }
+  - name: a search that names nothing is refused
+    input:
+      tool: fhir.search
+      args: { resource_type: Patient }
+      request: { fhir: { enriched: true, interaction: search, resource_type: Patient } }
+    expect: { decision: deny, rule: phi-minimum-read, reason_contains: "at most 100 results" }
+  - name: a search for 1,000 results is refused
+    input:
+      tool: fhir.search
+      args: { resource_type: Observation, params: { code: "http://loinc.org|8867-4", _count: "1000" } }
+      request: { fhir: { enriched: true, interaction: search, resource_type: Observation } }
+    expect: { decision: deny, rule: phi-minimum-read }
+  - name: a search for 101 results is refused
+    input:
+      tool: fhir.search
+      args: { resource_type: Observation, params: { patient: pat-synthetic-1, _count: "101" } }
+      request: { fhir: { enriched: true, interaction: search, resource_type: Observation } }
+    expect: { decision: deny, rule: phi-minimum-read }
+  - name: a search for exactly 100 results runs
+    input:
+      tool: fhir.search
+      args: { resource_type: Observation, params: { patient: pat-synthetic-1, _count: "100" } }
+      request: { fhir: { enriched: true, interaction: search, resource_type: Observation } }
+    expect: { decision: allow, rule: fhir-reads }
+  - name: a type's whole history is refused
+    input:
+      tool: fhir.history
+      args: { resource_type: Observation }
+      request: { fhir: { enriched: true, interaction: history, resource_type: Observation } }
+    expect: { decision: deny, rule: phi-minimum-read }
+
+  # Claims and billing: four-eyes
+  - name: submitting a claim needs two admins
+    input:
+      tool: fhir.create
+      args: { resource_type: Claim, resource: { resourceType: Claim, status: active, use: preauthorization } }
+      request: { fhir: { enriched: true, interaction: create, resource_type: Claim } }
+    expect:
+      decision: require_approval
+      rule: claims-four-eyes
+      code: approval_required
+      verify: L1
+      approval: { required: 2, approvers: [role:admin], expires_in: 24h }
+      notify: [email]
+  - name: deleting an invoice needs two admins too
+    input:
+      tool: { name: fhir.delete, side_effect: destructive }
+      args: { resource_type: Invoice, id: inv-3 }
+      request: { fhir: { enriched: true, interaction: delete, resource_type: Invoice, id: inv-3 } }
+    expect: { decision: require_approval, rule: claims-four-eyes }
+  - name: the emergency agent still needs two people for a claim
+    input:
+      tool: fhir.update
+      agent: { name: er-bot, labels: { break-glass: "on" } }
+      args: { resource_type: Claim, id: clm-5, resource: { resourceType: Claim, id: clm-5, status: active } }
+      request: { fhir: { enriched: true, interaction: update, resource_type: Claim, id: clm-5 } }
+    expect: { decision: require_approval, rule: claims-four-eyes }
+
+  # Orders and medication changes
+  - name: a medication order waits for a clinician
+    input:
+      tool: fhir.create
+      args: { resource_type: MedicationRequest, resource: { resourceType: MedicationRequest, status: draft, intent: order } }
+      request: { fhir: { enriched: true, interaction: create, resource_type: MedicationRequest } }
+    expect:
+      decision: require_approval
+      rule: orders-need-clinician
+      verify: L1
+      approval: { required: 1, approvers: [user:clinician-1@example.org, user:clinician-2@example.org], expires_in: 4h }
+      notify: [email]
+  - name: activating a lab order waits for a clinician
+    input:
+      tool: fhir.patch
+      args: { resource_type: ServiceRequest, id: sr-12, json_patch: [{ op: replace, path: /status, value: active }] }
+      request: { fhir: { enriched: true, interaction: patch, resource_type: ServiceRequest, id: sr-12 } }
+    expect: { decision: require_approval, rule: orders-need-clinician }
+  - name: the emergency agent's medication order runs, recorded under break-glass
+    input:
+      tool: fhir.create
+      agent: { name: er-bot, labels: { break-glass: "on" } }
+      args: { resource_type: MedicationRequest, resource: { resourceType: MedicationRequest, status: active, intent: order } }
+      request: { fhir: { enriched: true, interaction: create, resource_type: MedicationRequest } }
+    expect: { decision: allow, rule: break-glass, verify: L1 }
+  - name: the emergency agent still can't delete a clinical record
+    input:
+      tool: { name: fhir.delete, side_effect: destructive }
+      agent: { name: er-bot, labels: { break-glass: "on" } }
+      args: { resource_type: MedicationRequest, id: mr-77 }
+      request: { fhir: { enriched: true, interaction: delete, resource_type: MedicationRequest, id: mr-77 } }
+    expect: { decision: deny, rule: no-delete-clinical }
+  - name: a label other than on is not break-glass
+    input:
+      tool: fhir.create
+      agent: { name: er-bot, labels: { break-glass: "off" } }
+      args: { resource_type: MedicationRequest, resource: { resourceType: MedicationRequest, status: active, intent: order } }
+      request: { fhir: { enriched: true, interaction: create, resource_type: MedicationRequest } }
+    expect: { decision: require_approval, rule: orders-need-clinician }
+
+  # Allergies and the problem list
+  - name: adding an allergy waits for a clinician
+    input:
+      tool: fhir.create
+      args: { resource_type: AllergyIntolerance, resource: { resourceType: AllergyIntolerance, patient: { reference: Patient/pat-synthetic-1 } } }
+      request: { fhir: { enriched: true, interaction: create, resource_type: AllergyIntolerance } }
+    expect: { decision: require_approval, rule: allergy-problem-list-review, verify: L1, notify: [email] }
+  - name: updating a problem-list entry waits for a clinician
+    input:
+      tool: fhir.update
+      args: { resource_type: Condition, id: cond-4, resource: { resourceType: Condition, id: cond-4 } }
+      request: { fhir: { enriched: true, interaction: update, resource_type: Condition, id: cond-4 } }
+    expect: { decision: require_approval, rule: allergy-problem-list-review }
+
+  # Notes
+  - name: a draft note runs, checked at L1
+    input:
+      tool: fhir.create
+      args: { resource_type: DocumentReference, resource: { resourceType: DocumentReference, status: current, docStatus: preliminary } }
+      request: { fhir: { enriched: true, interaction: create, resource_type: DocumentReference } }
+    expect: { decision: allow, rule: notes-draft-only, verify: L1 }
+  - name: a preliminary Composition runs
+    input:
+      tool: fhir.create
+      args: { resource_type: Composition, resource: { resourceType: Composition, status: preliminary } }
+      request: { fhir: { enriched: true, interaction: create, resource_type: Composition } }
+    expect: { decision: allow, rule: notes-draft-only }
+  - name: a final note waits for a clinician
+    input:
+      tool: fhir.create
+      args: { resource_type: DocumentReference, resource: { resourceType: DocumentReference, status: current, docStatus: final } }
+      request: { fhir: { enriched: true, interaction: create, resource_type: DocumentReference } }
+    expect: { decision: require_approval, rule: final-notes-need-clinician, reason_contains: "as drafts" }
+  - name: a note with no docStatus waits for a clinician
+    input:
+      tool: fhir.update
+      args: { resource_type: DocumentReference, id: doc-2, resource: { resourceType: DocumentReference, id: doc-2, status: current } }
+      request: { fhir: { enriched: true, interaction: update, resource_type: DocumentReference, id: doc-2 } }
+    expect: { decision: require_approval, rule: final-notes-need-clinician }
+  - name: a patch to a note waits for a clinician
+    input:
+      tool: fhir.patch
+      args: { resource_type: Composition, id: comp-8, json_patch: [{ op: replace, path: /status, value: final }] }
+      request: { fhir: { enriched: true, interaction: patch, resource_type: Composition, id: comp-8 } }
+    expect: { decision: require_approval, rule: final-notes-need-clinician }
+
+  # Other writes
+  - name: recording a heart rate runs, checked at L1
+    input:
+      tool: fhir.create
+      args: { resource_type: Observation, resource: { resourceType: Observation, status: final, code: { coding: [{ system: "http://loinc.org", code: 8867-4 }] } } }
+      request: { fhir: { enriched: true, interaction: create, resource_type: Observation, codes: ["http://loinc.org|8867-4"] } }
+    expect: { decision: allow, rule: verify-levels, verify: L1 }
+  - name: correcting an Observation to entered-in-error runs
+    input:
+      tool: fhir.patch
+      args: { resource_type: Observation, id: obs-1001, json_patch: [{ op: replace, path: /status, value: entered-in-error }] }
+      request: { fhir: { enriched: true, interaction: patch, resource_type: Observation, id: obs-1001 } }
+    expect: { decision: allow, rule: verify-levels }
+
+  # Not this pack's business
+  - name: a tool on another connector falls to the default
+    input: { tool: stripe.create_refund, args: { charge: ch_3QxZ8f2LdemoA1, amount: 2000 } }
+    expect: { decision: deny, rule: default, reason_contains: "No rule in healthcare-fhir" }
