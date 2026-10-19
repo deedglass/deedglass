@@ -9,6 +9,8 @@ the Witness and the deed format know nothing about FHIR.
 Status: beta. Built and tested against HAPI FHIR JPA `v8.12.0-2` and a stand-in server
 (`internal/connector/fhir/fhirtest`); see [what it doesn't do](#what-it-doesnt-do-yet). Use
 synthetic data while you try it. The [guide](../guides/fhir-server.md) walks through a run.
+Attack cases I01 to I04 and I09 to I11 run in `make attack` against the stand-in server
+([results](../ATTACK_SUITE.md)); I05 to I08 and I12 wait on later tickets.
 
 ## The boundary
 
