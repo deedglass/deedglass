@@ -7,8 +7,30 @@ this file by `scripts/release-notes.sh`.
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-19
+
+Healthcare, phase 1: an agent's writes to a FHIR R4 server, decided by rules and checked against
+what the server stored. FHIR works through the REST connector with no FHIR code, and the new `fhir`
+connector (beta) adds SMART Backend Services credentials and read-back at the version the server
+reported. Also new: the `healthcare-fhir` policy pack, PHI mode, records exported as FHIR R4
+AuditEvent and Provenance, and twelve attack cases for FHIR servers (group I; eight run and match,
+four wait). Not in this release: the Proven (L2) path for Postgres-backed FHIR servers such as HAPI
+FHIR JPA or Medplum, so FHIR writes are Checked (L1), not Proven; attack cases I05-I08 wait on it.
+No new dependency, one schema migration (0031, PHI mode), and `formula_version` stays 1. The server
+image budget is 45,000,000 bytes (ADR-106).
+
 ### Added
 
+- **A FHIR R4 server through the REST connector**, with no FHIR-specific code: REST body args take
+  an optional `field` (the JSON key the arg is sent under, so `resourceType` and `valueQuantity` can
+  be sent; existing config hashes don't change), and read-back expect paths may use mixed case after
+  the root (`body.valueQuantity.value`). `examples/connectors/fhir-hapi.yaml`, a live test against
+  HAPI FHIR (`make fhir-it`), and `docs/guides/fhir-server.md`.
+- **Attack group I**: twelve cases for FHIR servers (I01-I12), declared before any FHIR connector
+  code. Eight run and match (I01-I04, I09-I12); I05-I08 need the Proven path for Postgres-backed
+  FHIR servers and wait.
+- `make fhir-spike`: a repeatable probe of what HAPI FHIR JPA on Postgres stores to tie its rows to
+  an action (when it stores request ids, it keeps 16 characters of `X-Request-ID`).
 - **PHI mode** (`settings.phi_mode` on `PATCH /v1/org`, owner only, sealed in `org.updated`). Once an
   action is sealed and its checks are done, its stored request, result, error message and witness
   detail keep ids and digests only, and its policy input is removed; turning it on covers the org's
@@ -25,8 +47,7 @@ this file by `scripts/release-notes.sh`.
   `fhir_history_no_match`. A stale `If-Match` (409 or 412) fails as the new error code
   `fhir_version_conflict`. Credentials are SMART Backend Services (client credentials with an
   RS384 or ES384 JWT assertion, tokens kept at most 300 s) or a bearer token. New policy facts
-  `request.fhir`. Proven (L2) for FHIR servers and AuditEvent or Provenance export are not built
-  yet. See `docs/connectors/fhir.md`.
+  `request.fhir`. Proven (L2) for FHIR servers is not built yet. See `docs/connectors/fhir.md`.
 - A native read-back can name a reason code from the Witness catalog for a finding, and can look
   for a write after an unknown outcome when its connector says it can (the FHIR connector's
   history lookup); the catalog decides the class, so such a finding is never a pass on its own.
@@ -55,11 +76,10 @@ this file by `scripts/release-notes.sh`.
 
 ### Changed
 
-- The server image budget is 45,000,000 bytes (it was 40,000,000; ADR-106, proposed). The
+- The server image budget is 45,000,000 bytes (it was 40,000,000; ADR-106). The
   `docker-smoke` job and `scripts/ci-local.sh` print how far under it the image is.
 - The release build no longer inlines the Insights store, approvals and the notifiers, which wait on
-  Postgres or the network, to keep the server image under its 40,000,000-byte budget with the FHIR
-  connector added.
+  Postgres or the network, to make room in the server image for the FHIR connector.
 
 ## [0.2.1] - 2026-10-19
 
@@ -289,7 +309,8 @@ See [KNOWN_ISSUES.md](KNOWN_ISSUES.md): what happens, who is affected, the worka
 See [docs/LIMITATIONS.md](docs/LIMITATIONS.md). In short: L2 covers Postgres only, seal keys are per
 deployment, and Deedglass trusts the Postgres server and the host it runs on.
 
-[Unreleased]: https://github.com/deedglass/deedglass/compare/v0.2.1...HEAD
+[Unreleased]: https://github.com/deedglass/deedglass/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/deedglass/deedglass/compare/v0.2.1...v0.3.0
 [0.2.1]: https://github.com/deedglass/deedglass/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/deedglass/deedglass/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/deedglass/deedglass/compare/v0.1.0...v0.1.1
