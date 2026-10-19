@@ -53,6 +53,8 @@ var Keys = []Key{
 		Commands: "serve, org login-link", Doc: "The URL people and agents use to reach this server. Prod needs https.", Owner: "S01"},
 	{Name: "DEEDGLASS_SEAL_KEY_FILE", Kind: KindPath,
 		Commands: "serve, keys", Doc: "Path to the seal key file used to seal deeds.", Owner: "S01"},
+	{Name: "DEEDGLASS_SEAL_PQ_KEY_FILE", Kind: KindPath,
+		Commands: "serve, keys", Doc: "Path to an ML-DSA-65 seal key file (keys rotate --alg ML-DSA-65). With it, deeds carry a second, post-quantum seal beside Ed25519 (deed v2, ADR-109).", Owner: "TY-02"},
 	{Name: "DEEDGLASS_VAULT_KEY", Kind: KindSecret, Secret: true,
 		Commands: "serve, vault, connector credentials", Doc: "A key ring of 1 to 4 comma-separated base64 keys of exactly 32 bytes; the first encrypts connector credentials, the rest only decrypt during a rotation (S16). config print shows only the key ids (kek:…). Dev generates one in .deedglass/.", Owner: "S01"},
 	{Name: "DEEDGLASS_API_KEY_PEPPER", Kind: KindSecret, Secret: true,

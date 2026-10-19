@@ -1,0 +1,7 @@
+exit 0
+--- stdout
+◐ Adding an ML-DSA-65 seal key · overlap 5m
+✓ ML-DSA-65 seal key sk_01m3xxf0n96kjy9wga01e6btwv seals beside Ed25519 from 09:22:14 UTC
+  next  Point DEEDGLASS_SEAL_PQ_KEY_FILE at .deedglass/keys/sk_01m3xxf0n96kjy9wga01e6btwv.json
+        and restart every instance before 09:22 UTC. From then on every deed carries both seals.
+--- stderr

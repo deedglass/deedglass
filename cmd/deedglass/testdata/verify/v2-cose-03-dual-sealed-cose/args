@@ -1,0 +1,4 @@
+verify
+../../testdata/deeds/v2/cose/03-dual-sealed.cose
+--keys
+../../testdata/deeds/v2/keys.json

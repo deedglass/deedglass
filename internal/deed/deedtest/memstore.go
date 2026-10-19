@@ -93,6 +93,10 @@ func (t *MemTx) ReadState(_ context.Context, org, sealKeyID string) (deed.ChainS
 	t.m.mu.Lock()
 	defer t.m.mu.Unlock()
 	st := deed.ChainState{Now: t.m.clock(), Key: t.m.keys[sealKeyID]}
+	for id, k := range t.m.keys {
+		k.ID = id
+		st.Keys = append(st.Keys, k)
+	}
 	all := t.visible(org)
 	if n := len(all); n > 0 {
 		last := all[n-1]

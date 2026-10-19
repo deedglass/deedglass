@@ -39,6 +39,7 @@ var (
 type keyStore interface {
 	SealKeys(ctx context.Context) ([]store.SealKeyRow, error)
 	RotateSealKey(ctx context.Context, id string, pub []byte, overlap time.Duration) (store.SealKeyRow, []store.SealKeyRow, error)
+	AddPQSealKey(ctx context.Context, id string, pub []byte, overlap time.Duration) (store.SealKeyRow, []store.SealKeyRow, error)
 	Close()
 }
 
@@ -47,6 +48,7 @@ type keyStore interface {
 type keysOpts struct {
 	dir     string
 	overlap time.Duration
+	alg     string
 }
 
 var keysFlagValues keysOpts
@@ -61,6 +63,7 @@ func keysRotateFlags(fs *flag.FlagSet) {
 	keysFlagValues = keysOpts{}
 	fs.StringVar(&keysFlagValues.dir, "dir", "", "directory for the new key file (default: next to DEEDGLASS_SEAL_KEY_FILE, else .deedglass/keys)")
 	fs.DurationVar(&keysFlagValues.overlap, "overlap", 5*time.Minute, "how long the old key keeps sealing (1s to 168h)")
+	fs.StringVar(&keysFlagValues.alg, "alg", deed.AlgEd25519, "Ed25519 (replace the seal key) or ML-DSA-65 (add a post-quantum key beside it)")
 }
 
 // keyDir resolves where key files go. shown is the path as the person should see and type it;
@@ -145,6 +148,13 @@ func runKeysRotate(ctx context.Context, e *Env, args []string) error {
 	if overlap < time.Second || overlap > 168*time.Hour {
 		return usageErr(fmt.Errorf("--overlap must be from 1s to 168h (got %s)", overlap), "For example --overlap 5m.")
 	}
+	switch keysFlagValues.alg {
+	case deed.AlgEd25519, "":
+	case deed.AlgMLDSA65:
+		return runKeysAddPQ(ctx, e, overlap)
+	default:
+		return usageErr(fmt.Errorf("--alg takes Ed25519 or ML-DSA-65 (got %q)", clean(keysFlagValues.alg)), "For a post-quantum key beside Ed25519: deedglass keys rotate --alg ML-DSA-65.")
+	}
 	cfg, err := loadFor(e, config.NeedDatabase)
 	if err != nil {
 		return err
@@ -195,6 +205,76 @@ func runKeysRotate(ctx context.Context, e *Env, args []string) error {
 		return nil
 	}
 	printRows(e, [][2]string{{"next", next}, {"", "and restart every instance before " + retireBy + ". Records sealed with either key keep verifying."}})
+	return nil
+}
+
+// runKeysAddPQ is keys rotate --alg ML-DSA-65 (ADR-109): it writes an ML-DSA-65 key file and
+// registers the key beside the Ed25519 key. The first such key activates after the overlap, so every
+// instance can be restarted with DEEDGLASS_SEAL_PQ_KEY_FILE first; a later one replaces the
+// previous ML-DSA-65 key with the overlap, as an Ed25519 rotation does.
+func runKeysAddPQ(ctx context.Context, e *Env, overlap time.Duration) error {
+	cfg, err := loadFor(e, config.NeedDatabase)
+	if err != nil {
+		return err
+	}
+	ks, err := openKeys(ctx, cfg)
+	if err != nil {
+		return err
+	}
+	defer ks.Close()
+	base := cfg.SealPQKeyFile
+	if base == "" {
+		base = cfg.SealKeyFile
+	}
+	shown, dir := keyDir(e, keysFlagValues.dir, base)
+	s := e.Style
+	if !e.Globals.JSON {
+		fmt.Fprintln(e.Stdout, s.Violet(ui.Pending)+" Adding an ML-DSA-65 seal key "+ui.Sep+" overlap "+humanDur(overlap))
+	}
+	seed, err := deed.NewSeed(keysRand)
+	if err != nil {
+		return err
+	}
+	kf, signer, err := deed.NewMLDSAKeyFile(newSealKeyID(), seed, keysNow())
+	if err != nil {
+		return err
+	}
+	if _, err := deed.WriteKeyFile(dir, kf); err != nil {
+		return &ExitError{Code: ExitFailure, ErrCode: "key_file_write_failed",
+			Err:  fmt.Errorf("Can't write the seal key file in %s: %s", shown, lastPart(errors.Unwrap(err))),
+			Next: "Check the directory's permissions, or choose another with --dir."}
+	}
+	path := filepath.Join(shown, kf.ID+".json")
+	newRow, retired, err := ks.AddPQSealKey(ctx, kf.ID, signer.PublicKeyBytes(), overlap)
+	if err != nil {
+		_ = os.Remove(filepath.Join(dir, kf.ID+".json")) // never leave a key file that isn't registered
+		return &ExitError{Code: ExitFailure, ErrCode: "seal_key_rotation_failed",
+			Err:  fmt.Errorf("The ML-DSA-65 seal key was not added: %s", lastPart(err)),
+			Next: "Nothing changed. Check the database connection and run deedglass keys rotate --alg ML-DSA-65 again."}
+	}
+	if e.Globals.JSON {
+		out := map[string]any{"object": "seal_key_rotation", "file": path, "overlap_ms": overlap.Milliseconds(),
+			"new_key": deed.NewSealKey(newRow.Record()), "retired": []deed.SealKey{}}
+		var rs []deed.SealKey
+		for _, r := range retired {
+			rs = append(rs, deed.NewSealKey(r.Record()))
+		}
+		if rs != nil {
+			out["retired"] = rs
+		}
+		return writeJSON(e, out)
+	}
+	at := newRow.ActivatedAt.UTC().Format("15:04:05")
+	fmt.Fprintln(e.Stdout, s.OKLine(fmt.Sprintf("ML-DSA-65 seal key %s seals beside Ed25519 from %s UTC", newRow.ID, at)))
+	for _, r := range retired {
+		fmt.Fprintln(e.Stdout, s.OKLine(fmt.Sprintf("%s retires at %s UTC (in %s)", r.ID, r.RetiredAt.UTC().Format("15:04:05"), humanDur(overlap))))
+	}
+	by := newRow.ActivatedAt
+	if len(retired) > 0 && retired[0].RetiredAt != nil {
+		by = *retired[0].RetiredAt
+	}
+	printRows(e, [][2]string{{"next", "Point DEEDGLASS_SEAL_PQ_KEY_FILE at " + path},
+		{"", "and restart every instance before " + by.UTC().Format("15:04") + " UTC. From then on every deed carries both seals."}})
 	return nil
 }
 
@@ -268,7 +348,11 @@ func printKeyTable(e *Env, ks *deed.KeySet, url string) {
 		} else if k.RetiredAt != nil {
 			end = minuteUTC(*k.RetiredAt)
 		}
-		rows = append(rows, []string{k.ID, status, minuteUTC(k.ActivatedAt), end, shortHash(k.Thumbprint), plain})
+		id := k.ID
+		if k.Alg != deed.AlgEd25519 {
+			id += " " + k.Alg // ADR-109: a key of another algorithm says which
+		}
+		rows = append(rows, []string{id, status, minuteUTC(k.ActivatedAt), end, shortHash(k.Thumbprint), plain})
 	}
 	w := make([]int, len(head))
 	for i, h := range head {

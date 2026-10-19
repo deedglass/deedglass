@@ -14,6 +14,10 @@ mkdir -p .tmp bench/results
 if [ ! -s .tmp/deeds-100k.jsonl ] || [ ! -s .tmp/deeds-100k.tar.gz ]; then
   $GO run ./internal/deed/deedtest/cmd/genchain -n 100000 -keys 2 -out .tmp/deeds-100k.jsonl -bundle .tmp/deeds-100k.tar.gz
 fi
+# TY-02 (ADR-109): the same chain dual-sealed (Ed25519 + ML-DSA-65) from seq 21, deed v2.
+if [ ! -s .tmp/deeds-100k-dual.jsonl ]; then
+  $GO run ./internal/deed/deedtest/cmd/genchain -n 100000 -dual -out .tmp/deeds-100k-dual.jsonl
+fi
 make -s build >/dev/null
 
 # run <label> <args…>: prints "wall_s rss_bytes user_s sys_s exit" for one run (macOS /usr/bin/time -l).
@@ -45,6 +49,7 @@ measure() { # measure <name> <args…> → a JSON object
 
 jsonl="$(measure verify_100k_jsonl .tmp/deeds-100k.jsonl --keys "$KEYS")"
 bundle="$(measure verify_100k_bundle .tmp/deeds-100k.tar.gz --keys "$KEYS")"
+dual="$(measure verify_100k_dual_jsonl .tmp/deeds-100k-dual.jsonl --keys testdata/deeds/v2/keys.json)"
 single="$(measure verify_one_deed_cold testdata/deeds/valid/01-action-verified-l2.json --keys "$KEYS")"
 
 out="bench/results/$(date +%F)-$($GO env GOOS)-$($GO env GOARCH)-verify.json"
@@ -59,10 +64,11 @@ cat > "$out" <<JSON
   "os": "$(uname -sr)",
   "load_average_before": "$(sysctl -n vm.loadavg 2>/dev/null | tr -d '{}' | xargs)",
   "input": {"deeds": 100000, "jsonl_bytes": $(wc -c < .tmp/deeds-100k.jsonl | tr -d ' '), "bundle_bytes": $(wc -c < .tmp/deeds-100k.tar.gz | tr -d ' '), "seal_keys": 2},
-  "budget": {"verify_100k_jsonl_wall_s": 5, "verify_100k_bundle_wall_s": 6, "peak_rss_bytes": 268435456, "verify_one_deed_cold_wall_s": 0.06},
+  "budget": {"verify_100k_jsonl_wall_s": 5, "verify_100k_bundle_wall_s": 6, "verify_100k_dual_jsonl_wall_s": 5, "peak_rss_bytes": 268435456, "verify_one_deed_cold_wall_s": 0.06},
   "results": [
     $jsonl,
     $bundle,
+    $dual,
     $single
   ]
 }

@@ -15,14 +15,21 @@ import (
 )
 
 func TestTestKeyThumbprintsDerive(t *testing.T) {
-	if len(testKeyThumbprints) != 3 {
-		t.Fatal("three test keys")
+	if len(testKeyThumbprints) != 4 {
+		t.Fatal("four test keys")
 	}
 	for tp, name := range testKeyThumbprints {
 		seed := sha256.Sum256([]byte(TestKeySeedLabel + name))
-		pub := ed25519.NewKeyFromSeed(seed[:]).Public().(ed25519.PublicKey)
-		if Thumbprint(pub) != tp {
-			t.Errorf("test key %s: thumbprint %s, derived %s", name, tp, Thumbprint(pub))
+		var pub []byte = ed25519.NewKeyFromSeed(seed[:]).Public().(ed25519.PublicKey)
+		if name == "q" { // ML-DSA-65 (ADR-109)
+			s, err := NewMLDSASigner(ids.New[ids.SealKeyKind]().String(), seed[:])
+			if err != nil {
+				t.Fatal(err)
+			}
+			pub = s.PublicKeyBytes()
+		}
+		if Digest(pub) != tp {
+			t.Errorf("test key %s: thumbprint %s, derived %s", name, tp, Digest(pub))
 		}
 	}
 }

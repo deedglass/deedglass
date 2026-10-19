@@ -1,0 +1,18 @@
+{
+  "object": "benchmark",
+  "suite": "S05 deedglass verify",
+  "date": "2026-10-19T17:16:13Z",
+  "commit": "ca3f497-modified",
+  "go": "go1.27.2",
+  "machine": "Apple M1, 8 cores, 8 GiB",
+  "os": "Darwin 27.0.0",
+  "load_average_before": "11.81 13.85 17.28",
+  "input": {"deeds": 100000, "jsonl_bytes": 156172152, "bundle_bytes": 20418664, "seal_keys": 2},
+  "budget": {"verify_100k_jsonl_wall_s": 5, "verify_100k_bundle_wall_s": 6, "verify_100k_dual_jsonl_wall_s": 5, "peak_rss_bytes": 268435456, "verify_one_deed_cold_wall_s": 0.06},
+  "results": [
+    {"name":"verify_100k_jsonl","args":".tmp/deeds-100k.jsonl --keys testdata/deeds/keys/test-keys.json","runs_wall_s":[2.78,2.64,2.47],"median_wall_s":2.64,"peak_rss_bytes":91602944,"user_s":[16.61,16.63,16.51],"sys_s":[0.38,0.35,0.36],"exit":[0,0,0]},
+    {"name":"verify_100k_bundle","args":".tmp/deeds-100k.tar.gz --keys testdata/deeds/keys/test-keys.json","runs_wall_s":[2.89,3.02,3.91],"median_wall_s":3.02,"peak_rss_bytes":92995584,"user_s":[17.08,17.12,17.50],"sys_s":[0.36,0.39,0.47],"exit":[0,0,0]},
+    {"name":"verify_100k_dual_jsonl","args":".tmp/deeds-100k-dual.jsonl --keys testdata/deeds/v2/keys.json","runs_wall_s":[9.53,9.04,8.33],"median_wall_s":9.04,"peak_rss_bytes":131317760,"user_s":[53.47,52.93,52.71],"sys_s":[1.07,0.93,0.87],"exit":[0,0,0]},
+    {"name":"verify_one_deed_cold","args":"testdata/deeds/valid/01-action-verified-l2.json --keys testdata/deeds/keys/test-keys.json","runs_wall_s":[0.02,0.02,0.02],"median_wall_s":0.02,"peak_rss_bytes":36323328,"user_s":[0.02,0.02,0.02],"sys_s":[0.00,0.00,0.00],"exit":[0,0,0]}
+  ]
+}

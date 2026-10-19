@@ -62,6 +62,10 @@ If an MCP gateway, an approval tool or a proxy already sits in front of your age
 - **`verify` checks seals and the chain, not the truth of a verdict.** A `VERIFIED` written in a deed is what the Witness recorded then; `verify` does not re-run it.
 - **Browsers verify Ed25519 with their own engines.** The page checks key safety and `s < L` itself first and agrees with Go on every published vector and the 500-case parity corpus, but a browser engine could still differ on an input nobody has tried. The CLI is the reference verifier. Browsers without WebCrypto Ed25519 (before Safari 17, Firefox 129, Chrome 137) get "use the CLI", never a verdict.
 - **The browser verifier reads `.json` and `.jsonl`, not bundles, in v1.**
+- **Dual-sealed deeds (Ed25519 + ML-DSA-65, deed v2) are about 3.4 times slower to verify than Ed25519-only deeds.** In one run on a busy 8-core laptop (load average 12), 100,000 dual-sealed deeds took 9.0 s (median of 3, peak memory 125 MiB) against 2.6 s for 100,000 v1 deeds (`bench/results/2026-10-19-darwin-arm64-verify.json`). The 5 s budget for 100,000 deeds is not met for dual-sealed deeds; from the v1/dual ratio we expect about 5 s on an idle machine, to be confirmed by `make bench-verify`. Every seal is checked, and Go's `crypto/mldsa` expands the public matrix on every check.
+- **The browser verifier checks ML-DSA-65 with its own code** (`web/verify/src/mldsa.ts`, no dependency). It agrees with Go's `crypto/mldsa` on every v2 vector and the 200-case v2 parity corpus, and its SHAKE output with Node's on every length tested; it is not a FIPS 140 validated module. The CLI is the reference verifier.
+- **The Python SDK reports v2 deeds as "cannot decide"** (`unsupported_version`). It keeps key sets that list ML-DSA-65 keys and applies the accept policy to v1 deeds.
+- **The export bundle's manifest seal stays Ed25519** when the deeds are dual-sealed (ADR-109 §9, a follow-up).
 
 ## Ledger limits (S06)
 

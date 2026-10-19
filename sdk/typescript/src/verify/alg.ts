@@ -6,12 +6,14 @@
 // needs one is unsupported_algorithm (the verifier cannot decide).
 
 export const ALG_ED25519 = 'Ed25519';
+export const ALG_MLDSA65 = 'ML-DSA-65';
 
 /** Ed25519 alone is accepted only for deeds issued before this instant (NIST IR 8547 ipd). */
 export const ED25519_ALONE_UNTIL: number = Date.UTC(2035, 0, 1);
 export const ED25519_ALONE_UNTIL_TEXT = '2035-01-01T00:00:00.000Z';
 
 export const TAG_DEED_V2_ED25519 = 'deedglass/deed/v2/ed25519\n';
+export const TAG_DEED_V2_MLDSA65 = 'deedglass/deed/v2/ml-dsa-65\n';
 export const MAX_SEALS = 4;
 
 export const reAlg: RegExp = /^[A-Za-z0-9][A-Za-z0-9-]{0,31}$/;
@@ -30,6 +32,8 @@ export interface AlgSpec {
 
 export const ALGS: Record<string, AlgSpec> = {
   [ALG_ED25519]: { name: ALG_ED25519, prefix: 'ed25519:', tag: TAG_DEED_V2_ED25519, keySize: 32, sigSize: 64, aloneUntil: ED25519_ALONE_UNTIL },
+  // FIPS 204 ML-DSA-65, pure, empty context (RFC 9964); checked by mldsa.ts, no dependency.
+  [ALG_MLDSA65]: { name: ALG_MLDSA65, prefix: 'ml-dsa-65:', tag: TAG_DEED_V2_MLDSA65, keySize: 1952, sigSize: 3309, aloneUntil: null },
 };
 
 export function algSupported(alg: string): boolean {

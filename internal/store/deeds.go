@@ -66,7 +66,8 @@ func (d *deedTx) ReadState(ctx context.Context, org, sealKeyID string) (deed.Cha
 	}
 	b.Queue(`SELECT seq, body_hash, issued_at FROM deedglass.deeds WHERE org_id = $1 ORDER BY seq DESC LIMIT 1`, org)
 	b.Queue(`SELECT pg_catalog.clock_timestamp()`)
-	b.Queue(`SELECT status, activated_at, retired_at, revoked_at FROM deedglass.seal_keys WHERE id = $1`, sealKeyID)
+	// Every seal key (a handful of rows): the Sealer's own, its extra keys and the key-set rule.
+	b.Queue(`SELECT id, alg, status, activated_at, retired_at, revoked_at FROM deedglass.seal_keys ORDER BY activated_at, id`)
 	br := d.tx.SendBatch(ctx, b)
 	defer br.Close()
 	if locked {
@@ -81,12 +82,23 @@ func (d *deedTx) ReadState(ctx context.Context, org, sealKeyID string) (deed.Cha
 	if err := br.QueryRow().Scan(&st.Now); err != nil {
 		return st, err
 	}
-	k := &st.Key
-	err = br.QueryRow().Scan(&k.Status, &k.ActivatedAt, &k.RetiredAt, &k.RevokedAt)
-	switch {
-	case err == nil:
-		k.Found = true
-	case !errors.Is(err, pgx.ErrNoRows):
+	rows, err := br.Query()
+	if err != nil {
+		return st, err
+	}
+	for rows.Next() {
+		k := deed.KeyStatus{Found: true}
+		if err := rows.Scan(&k.ID, &k.Alg, &k.Status, &k.ActivatedAt, &k.RetiredAt, &k.RevokedAt); err != nil {
+			rows.Close()
+			return st, err
+		}
+		st.Keys = append(st.Keys, k)
+		if k.ID == sealKeyID {
+			st.Key = k
+		}
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
 		return st, err
 	}
 	return st, br.Close()
@@ -122,6 +134,7 @@ func (d *deedTx) Insert(ctx context.Context, s deed.Stored) error {
 // SealKeyRow is one row of deedglass.seal_keys.
 type SealKeyRow struct {
 	ID          string
+	Alg         string // Ed25519 | ML-DSA-65 (ADR-109)
 	PublicKey   []byte
 	Thumbprint  string
 	Status      string
@@ -133,17 +146,17 @@ type SealKeyRow struct {
 
 // Record converts the row for deed.NewKeySet.
 func (r SealKeyRow) Record() deed.KeyRecord {
-	return deed.KeyRecord{ID: r.ID, PublicKey: r.PublicKey, Status: r.Status, ActivatedAt: r.ActivatedAt, RetiredAt: r.RetiredAt, RevokedAt: r.RevokedAt}
+	return deed.KeyRecord{ID: r.ID, Alg: r.Alg, PublicKey: r.PublicKey, Status: r.Status, ActivatedAt: r.ActivatedAt, RetiredAt: r.RetiredAt, RevokedAt: r.RevokedAt}
 }
 
 // ErrSealKeyConflict: the public key is already registered under another id.
 var ErrSealKeyConflict = errors.New("store: this public key is registered under another seal key id")
 
-const sealKeyCols = `id, public_key, thumbprint, status, activated_at, retired_at, revoked_at, created_at`
+const sealKeyCols = `id, alg, public_key, thumbprint, status, activated_at, retired_at, revoked_at, created_at`
 
 func scanSealKey(row pgx.Row) (SealKeyRow, error) {
 	var r SealKeyRow
-	err := row.Scan(&r.ID, &r.PublicKey, &r.Thumbprint, &r.Status, &r.ActivatedAt, &r.RetiredAt, &r.RevokedAt, &r.CreatedAt)
+	err := row.Scan(&r.ID, &r.Alg, &r.PublicKey, &r.Thumbprint, &r.Status, &r.ActivatedAt, &r.RetiredAt, &r.RevokedAt, &r.CreatedAt)
 	return r, err
 }
 
@@ -172,14 +185,20 @@ func (db *DB) SealKeys(ctx context.Context) ([]SealKeyRow, error) {
 // RegisterSealKey inserts the key as active (activated now) unless its id is already registered,
 // and returns the row either way. The caller checks the returned status and public key.
 func (db *DB) RegisterSealKey(ctx context.Context, id string, pub []byte) (SealKeyRow, bool, error) {
+	return db.RegisterSealKeyAlg(ctx, id, deed.AlgEd25519, pub)
+}
+
+// RegisterSealKeyAlg is RegisterSealKey for a key of any algorithm the table accepts (Ed25519,
+// ML-DSA-65; migration 0033, ADR-109).
+func (db *DB) RegisterSealKeyAlg(ctx context.Context, id, alg string, pub []byte) (SealKeyRow, bool, error) {
 	var created bool
 	var row SealKeyRow
 	err := pgx.BeginTxFunc(ctx, db.pool, pgx.TxOptions{}, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(ctx, `SELECT pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended('deedglass/seal-keys', 0))`); err != nil {
 			return err
 		}
-		tag, err := tx.Exec(ctx, `INSERT INTO deedglass.seal_keys (id, public_key, thumbprint, activated_at)
-		    VALUES ($1, $2, $3, `+activatedNow+`) ON CONFLICT (id) DO NOTHING`, id, pub, deed.Thumbprint(pub))
+		tag, err := tx.Exec(ctx, `INSERT INTO deedglass.seal_keys (id, alg, public_key, thumbprint, activated_at)
+		    VALUES ($1, $2, $3, $4, `+activatedNow+`) ON CONFLICT (id) DO NOTHING`, id, alg, pub, deed.Digest(pub))
 		if SQLState(err) == CodeUniqueViolation {
 			return ErrSealKeyConflict
 		}
@@ -206,7 +225,7 @@ func (db *DB) RotateSealKey(ctx context.Context, id string, pub []byte, overlap 
 		}
 		rows, err := tx.Query(ctx, `UPDATE deedglass.seal_keys
 		    SET status = 'retired', retired_at = pg_catalog.date_trunc('milliseconds', pg_catalog.clock_timestamp() + $1::bigint * interval '1 millisecond')
-		    WHERE status = 'active' AND id <> $2
+		    WHERE status = 'active' AND id <> $2 AND alg = 'Ed25519'
 		    RETURNING `+sealKeyCols, overlap.Milliseconds(), id)
 		if err != nil {
 			return err
@@ -214,8 +233,51 @@ func (db *DB) RotateSealKey(ctx context.Context, id string, pub []byte, overlap 
 		if retired, err = pgx.CollectRows(rows, func(r pgx.CollectableRow) (SealKeyRow, error) { return scanSealKey(r) }); err != nil {
 			return err
 		}
-		_, err = tx.Exec(ctx, `INSERT INTO deedglass.seal_keys (id, public_key, thumbprint, activated_at) VALUES ($1, $2, $3, `+activatedNow+`)`,
+		_, err = tx.Exec(ctx, `INSERT INTO deedglass.seal_keys (id, alg, public_key, thumbprint, activated_at) VALUES ($1, 'Ed25519', $2, $3, `+activatedNow+`)`,
 			id, pub, deed.Thumbprint(pub))
+		if SQLState(err) == CodeUniqueViolation {
+			return ErrSealKeyConflict
+		}
+		if err != nil {
+			return err
+		}
+		newRow, err = scanSealKey(tx.QueryRow(ctx, `SELECT `+sealKeyCols+` FROM deedglass.seal_keys WHERE id = $1`, id))
+		return err
+	})
+	return newRow, retired, err
+}
+
+// AddPQSealKey registers an ML-DSA-65 seal key beside the Ed25519 key (ADR-109, keys rotate --alg
+// ML-DSA-65), in one transaction. The first one activates at now + overlap, so every instance can be
+// restarted with it before the key-set rule wants its seal (an instance holding it earlier keeps
+// sealing v1 until then). A later one activates now and retires the active ML-DSA-65 keys at now +
+// overlap, as an Ed25519 rotation does. The Ed25519 key is never touched.
+func (db *DB) AddPQSealKey(ctx context.Context, id string, pub []byte, overlap time.Duration) (SealKeyRow, []SealKeyRow, error) {
+	var (
+		newRow  SealKeyRow
+		retired []SealKeyRow
+	)
+	err := pgx.BeginTxFunc(ctx, db.pool, pgx.TxOptions{}, func(tx pgx.Tx) error {
+		if _, err := tx.Exec(ctx, `SELECT pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended('deedglass/seal-keys', 0))`); err != nil {
+			return err
+		}
+		rows, err := tx.Query(ctx, `UPDATE deedglass.seal_keys
+		    SET status = 'retired', retired_at = pg_catalog.date_trunc('milliseconds', pg_catalog.clock_timestamp() + $1::bigint * interval '1 millisecond')
+		    WHERE status = 'active' AND id <> $2 AND alg = 'ML-DSA-65'
+		    RETURNING `+sealKeyCols, overlap.Milliseconds(), id)
+		if err != nil {
+			return err
+		}
+		if retired, err = pgx.CollectRows(rows, func(r pgx.CollectableRow) (SealKeyRow, error) { return scanSealKey(r) }); err != nil {
+			return err
+		}
+		var delay int64
+		if len(retired) == 0 {
+			delay = overlap.Milliseconds()
+		}
+		_, err = tx.Exec(ctx, `INSERT INTO deedglass.seal_keys (id, alg, public_key, thumbprint, activated_at)
+		    VALUES ($1, 'ML-DSA-65', $2, $3, pg_catalog.date_trunc('milliseconds', pg_catalog.clock_timestamp() + $4::bigint * interval '1 millisecond'))`,
+			id, pub, deed.Digest(pub), delay)
 		if SQLState(err) == CodeUniqueViolation {
 			return ErrSealKeyConflict
 		}

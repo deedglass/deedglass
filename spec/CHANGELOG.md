@@ -5,6 +5,12 @@ Every change to the text in `spec/`, newest first. Dates are UTC. "Edition" is a
 
 ## Unreleased
 
+- **The dual seal** (TY-02, ADR-109), in `v2/DEED_SPEC.md`: ML-DSA-65 (FIPS 204, pure, empty context)
+  in the algorithm table (§7.4), RFC 9964 AKP keys in `keys.json` (§10.1), adding an ML-DSA-65 key
+  beside Ed25519 (§10.4), and COSE −49 for v2 records (§12). Vectors: dual-sealed records, a chain
+  across the rotation that adds the key, and every ML-DSA-65 failure in `testdata/deeds/v2/`. This
+  completes edition 2.
+
 ## Edition 2 · 2026-10-19 · Deed v2 (ADR-109, TY-01)
 
 - **`v2/DEED_SPEC.md`**: Deed v2. The body names every seal it carries (`seal_keys`), the envelope

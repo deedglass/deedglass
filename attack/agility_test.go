@@ -163,3 +163,110 @@ func TestY10ReleaseBundles(t *testing.T) {
 	}
 	t.Logf("Y10: VERIFIED (%d release bundles)", n)
 }
+
+// --- TY-02: the ML-DSA-65 dual seal ---
+
+// dualBase is a v2 deed dual-sealed by Ed25519 key b and ML-DSA-65 key q, issued after q activated.
+func dualBase(t *testing.T) *deed.Envelope {
+	t.Helper()
+	single, _ := v2Base(t)
+	return deedtest.ResealV2(single, []deed.AlgSigner{deedtest.TestKey("b").Signer, deedtest.KeyQ()}, func(b *deed.Body) {
+		b.IssuedAt = deed.FormatTime(deedtest.QActivated.Add(10 * time.Second))
+	})
+}
+
+func wantCode(t *testing.T, id, name string, raw []byte, ks *deed.KeySet, code deed.Code) {
+	t.Helper()
+	if _, err := deed.VerifyEnvelope(raw, ks, deed.VerifyOptions{}); deed.CodeOf(err) != code {
+		t.Errorf("%s %s: got %v, want %s", id, name, err, code)
+	}
+}
+
+// Y01 · Downgrade to v1 with the stolen Ed25519 key, after the ML-DSA-65 key's activation →
+// DETECTED (seal_missing).
+func TestY01DowngradeToV1(t *testing.T) {
+	dual := dualBase(t)
+	ks := deedtest.KeySetV2()
+	if _, err := deed.VerifyEnvelope(deedtest.Canonical(dual), ks, deed.VerifyOptions{Strict: true}); err != nil {
+		t.Fatalf("the dual-sealed original: %v", err)
+	}
+	v1 := deedtest.Reseal(dual, deedtest.TestKey("b"), func(b *deed.Body) { b.V, b.SealKeys = deed.Version, nil })
+	wantCode(t, "Y01", "v1 re-seal", deedtest.Canonical(v1), ks, deed.CodeSealMissing)
+	r := verifyCLI(t, "../testdata/deeds/v2/invalid/pq-downgrade-to-v1/deed.json", "--keys", "../testdata/deeds/v2/keys.json")
+	if f := r.rep.FirstFailure(); r.exit != 1 || f == nil || f.Code != string(deed.CodeSealMissing) {
+		t.Fatalf("CLI: exit %d %+v\n%s", r.exit, f, r.text)
+	}
+	t.Log("Y01: DETECTED (seal_missing)")
+}
+
+// Y02 · Stripped PQ seal → DETECTED (seal_missing).
+func TestY02StrippedPQSeal(t *testing.T) {
+	raw := editEnvelope(t, deedtest.Canonical(dualBase(t)), func(m map[string]any) { m["seals"] = m["seals"].([]any)[:1] })
+	wantCode(t, "Y02", "stripped", raw, deedtest.KeySetV2(), deed.CodeSealMissing)
+	t.Log("Y02: DETECTED (seal_missing)")
+}
+
+// Y03 · The seal set rewritten and re-sealed with the stolen Ed25519 key → DETECTED (seal_missing;
+// without the key, body_hash_mismatch).
+func TestY03SealSetRewritten(t *testing.T) {
+	dual := dualBase(t)
+	ks := deedtest.KeySetV2()
+	resealed := deedtest.ResealV2(dual, []deed.AlgSigner{deedtest.TestKey("b").Signer}, nil)
+	wantCode(t, "Y03", "re-sealed", deedtest.Canonical(resealed), ks, deed.CodeSealMissing)
+	edited := editEnvelope(t, deedtest.Canonical(dual), func(m map[string]any) {
+		body := m["body"].(map[string]any)
+		body["seal_keys"] = body["seal_keys"].([]any)[:1]
+		m["seals"] = m["seals"].([]any)[:1]
+	})
+	wantCode(t, "Y03", "edited without the key", edited, ks, deed.CodeBodyHashMismatch)
+	t.Log("Y03: DETECTED (seal_missing; body_hash_mismatch without the key)")
+}
+
+// Y04 · Algorithm confusion against the key set → DETECTED (seal_invalid).
+func TestY04KeySetAlgConfusion(t *testing.T) {
+	ks := deedtest.KeySetV2()
+	for _, d := range []string{"pq-alg-confusion-ed25519-names-pq-key", "pq-alg-confusion-pq-names-ed25519-key", "alg-confusion-key-set"} {
+		raw, err := os.ReadFile("../testdata/deeds/v2/invalid/" + d + "/deed.json")
+		if err != nil {
+			t.Fatal(err)
+		}
+		wantCode(t, "Y04", d, raw, ks, deed.CodeSealInvalid)
+	}
+	t.Log("Y04: DETECTED (seal_invalid)")
+}
+
+// Y08 · A chain across the rotation that adds the ML-DSA-65 key → VERIFIED; an Ed25519-only deed
+// spliced in after the activation → seal_missing.
+func TestY08MixedKeyChain(t *testing.T) {
+	r := verifyCLI(t, "../testdata/deeds/v2/valid/chain-across-pq-rotation.jsonl", "--keys", "../testdata/deeds/v2/keys.json", "--strict")
+	if r.exit != 0 || r.rep.Result != deed.ResultValid || r.rep.Chain.Status != "intact" {
+		t.Fatalf("exit %d\n%s", r.exit, r.text)
+	}
+	r = verifyCLI(t, "../testdata/deeds/v2/invalid/pq-chain-spliced-ed25519-only/deeds.jsonl", "--keys", "../testdata/deeds/v2/keys.json")
+	if f := r.rep.FirstFailure(); r.exit != 1 || f == nil || f.Code != string(deed.CodeSealMissing) {
+		t.Fatalf("spliced: exit %d %+v\n%s", r.exit, f, r.text)
+	}
+	t.Log("Y08: VERIFIED (and the spliced Ed25519-only deed is seal_missing)")
+}
+
+// Y11 · Cross-protocol replay of an ML-DSA-65 signature → DETECTED (seal_invalid).
+func TestY11CrossProtocolReplay(t *testing.T) {
+	ks := deedtest.KeySetV2()
+	for _, d := range []string{"pq-wrong-tag-ed25519", "pq-wrong-tag-bundle", "pq-wrong-tag-bare-hash"} {
+		raw, err := os.ReadFile("../testdata/deeds/v2/invalid/" + d + "/deed.json")
+		if err != nil {
+			t.Fatal(err)
+		}
+		wantCode(t, "Y11", d, raw, ks, deed.CodeSealInvalid)
+	}
+	t.Log("Y11: DETECTED (seal_invalid)")
+}
+
+// Y12 · A revoked ML-DSA-65 key beside a good Ed25519 seal → DETECTED (seal_key_revoked).
+func TestY12RevokedPQKey(t *testing.T) {
+	r := verifyCLI(t, "../testdata/deeds/v2/invalid/pq-key-revoked/deed.json", "--keys", "../testdata/deeds/v2/invalid/pq-key-revoked/keys.json")
+	if f := r.rep.FirstFailure(); r.exit != 1 || f == nil || f.Code != string(deed.CodeSealKeyRevoked) {
+		t.Fatalf("exit %d %+v\n%s", r.exit, f, r.text)
+	}
+	t.Log("Y12: DETECTED (seal_key_revoked)")
+}

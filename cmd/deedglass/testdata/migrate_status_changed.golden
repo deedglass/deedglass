@@ -33,5 +33,6 @@ VERSION  NAME                STATE    APPLIED               CHECKSUM
 0030     weekly              [35mpending[0m  —                     sha256:5b35…e588
 0031     phi_mode            [35mpending[0m  —                     sha256:6651…54b7
 0032     version_bound_l2    [35mpending[0m  —                     sha256:69d1…5a23
-[31m✕[0m 8 applied · 23 pending · 1 doesn't match this build. Run deedglass migrate verify for details.
+0033     seal_keys_v2        [35mpending[0m  —                     sha256:8cf6…1dbc
+[31m✕[0m 8 applied · 24 pending · 1 doesn't match this build. Run deedglass migrate verify for details.
 --- stderr

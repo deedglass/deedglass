@@ -60,7 +60,7 @@ Step by step:
 
 1. Run `deedglass keys rotate` where the server's database URL is set (`DEEDGLASS_DATABASE_URL`).
    It writes the new key file next to the current one (or in `--dir`), then, in one transaction,
-   registers the new key as active and sets every active key's `retired_at` to now + `--overlap`
+   registers the new key as active and sets every active Ed25519 key's `retired_at` to now + `--overlap`
    (default 5m, from 1s to 168h). If the database refuses, the new file is removed and nothing
    changes.
 2. Copy the new key file to every server, with mode 0600.
@@ -74,6 +74,33 @@ refuses to start.
 
 New keys reach `keys.json` within 60 seconds (the server caches it that long; clients may cache it
 for 300 seconds).
+
+## Add a post-quantum key (ML-DSA-65)
+
+NIST's draft IR 8547 lists EdDSA, which covers Ed25519, as disallowed after 2035. Deeds can carry a
+second seal made with ML-DSA-65 (FIPS 204) beside the Ed25519 one: the **dual seal** (deed v2,
+`docs/DEED_SPEC.md` §7.4, ADR-109). The Ed25519 key stays as it is.
+
+```
+$ deedglass keys rotate --alg ML-DSA-65
+◐ Adding an ML-DSA-65 seal key · overlap 5m
+✓ ML-DSA-65 seal key sk_01j9zt1q3s5u7w9y1a3c5e7g9j seals beside Ed25519 from 09:22:14 UTC
+  next  Point DEEDGLASS_SEAL_PQ_KEY_FILE at .deedglass/keys/sk_01j9zt1q3s5u7w9y1a3c5e7g9j.json
+        and restart every instance before 09:22 UTC. From then on every deed carries both seals.
+```
+
+1. Run `deedglass keys rotate --alg ML-DSA-65` where the server's database URL is set. It writes an
+   ML-DSA-65 key file (the 32-byte FIPS 204 seed; mode 0600) and registers the key. The **first**
+   ML-DSA-65 key activates at now + `--overlap`; a later one activates at once and retires the
+   previous ML-DSA-65 key after the overlap, like an Ed25519 rotation.
+2. Copy the file to every server and set `DEEDGLASS_SEAL_PQ_KEY_FILE` beside
+   `DEEDGLASS_SEAL_KEY_FILE`; restart each instance before the time shown.
+3. From the activation on, every deed is v2 and dual-sealed. An instance restarted earlier keeps
+   sealing v1 until then. An instance without the key refuses to seal once the key is active (it
+   never seals a deed with fewer seals than the key set asks for); restart it with the key.
+
+Verifiers from deedglass 0.4.0 and older report v2 deeds as "cannot decide" (`unsupported_version`,
+exit 2); update them. The browser verifier checks both seals in the page, with no dependency.
 
 ## What verifiers see
 

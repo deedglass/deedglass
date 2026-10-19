@@ -521,15 +521,24 @@ func (v *Verifier) intact(r *Result) {
 		verdict = b.Witness.Verdict
 	}
 	rep.Recorded[verdict]++
-	tp := ""
-	if k, _, ok := v.opt.Keys.Lookup(r.SealKeyID); ok {
-		tp = k.Thumbprint
+	ids := []string{r.SealKeyID}
+	if r.Envelope != nil && len(r.Envelope.Seals) > 1 {
+		ids = ids[:0]
+		for _, s := range r.Envelope.Seals { // a v2 deed counts for every key that sealed it
+			ids = append(ids, s.SealKeyID)
+		}
 	}
-	src := ""
-	if v.opt.KeySource != nil {
-		src = v.opt.KeySource(r.SealKeyID)
+	for _, id := range ids {
+		tp := ""
+		if k, _, ok := v.opt.Keys.Lookup(id); ok {
+			tp = k.Thumbprint
+		}
+		src := ""
+		if v.opt.KeySource != nil {
+			src = v.opt.KeySource(id)
+		}
+		v.tally.add(id, tp, src, r.Seq)
 	}
-	v.tally.add(r.SealKeyID, tp, src, r.Seq)
 }
 
 // Report finishes the verification and returns the report.

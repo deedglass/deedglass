@@ -1,0 +1,4 @@
+verify
+../../testdata/deeds/v2/valid/chain-across-pq-rotation.jsonl
+--keys
+../../testdata/deeds/v2/keys.json

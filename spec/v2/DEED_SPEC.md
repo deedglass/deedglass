@@ -242,6 +242,13 @@ whitespace or member order have the same digest.
 | `alg` | Seal prefix | v2 domain tag | Public key | Signature | Accepted alone for `issued_at` |
 |---|---|---|---|---|---|
 | `Ed25519` | `ed25519:` (then 86 characters) | `deedglass/deed/v2/ed25519\n` | 32 bytes | 64 bytes, pure Ed25519 (RFC 8032 §5.1) | before `2035-01-01T00:00:00.000Z` |
+| `ML-DSA-65` | `ml-dsa-65:` (then 4,412 characters) | `deedglass/deed/v2/ml-dsa-65\n` | 1,952 bytes (FIPS 204 encoding) | 3,309 bytes, ML-DSA.Sign of FIPS 204 (pure, not HashML-DSA) with the empty context string | always |
+
+The ML-DSA-65 seal signs the same kind of tagged string as Ed25519 with the empty context, as RFC 9964
+requires for COSE and JOSE, so any FIPS 204 library checks it. The issuer signs hedged (FIPS 204's
+default); the test vectors use the deterministic variant so they are reproducible. Both verify the
+same way. An issuer that holds an Ed25519 key and an ML-DSA-65 key writes v2 deeds with
+`seal_keys` = `[{Ed25519}, {ML-DSA-65}]`: the **dual seal**.
 
 A tag per algorithm and per version means a signature made for one algorithm, one version or one
 purpose is never accepted as another. The date in the last column is the accept policy of section
@@ -353,7 +360,10 @@ An issuer publishes every seal key it ever registered at
 }
 ```
 
-`alg` names the key's algorithm (section 7.4). Keys are listed oldest activation first and are never removed. `jwk` is the same key as an RFC 8037
+`alg` names the key's algorithm (section 7.4). An ML-DSA-65 key's `public_key` is base64url of its
+1,952-byte FIPS 204 encoding, its `thumbprint` the SHA-256 of those bytes, and its `jwk` an RFC 9964
+AKP key, in which `alg` is required: `{"kty": "AKP", "alg": "ML-DSA-65", "pub": <= public_key>,
+"kid": <= id, "use": "sig"}`. Keys are listed oldest activation first and are never removed. `jwk` is the same key as an RFC 8037
 JWK; it omits `alg` because RFC 9864 deprecates `EdDSA` in favour of `Ed25519`, and many JOSE
 libraries don't know the new name yet. The response is public, cacheable for 300 s, carries a strong
 `ETag`, and may be fetched cross-origin.
@@ -393,6 +403,14 @@ can write any `issued_at` they like. The issuer re-seals what it still trusts wi
 `retired_at` to now + overlap, in one transaction. Both stay published. The issuer refuses to seal
 with a key that retires within 30 seconds of `issued_at`, so an instance that missed the rotation
 errors instead of sealing at the edge of the window. docs/SEAL_KEYS.md has the procedure.
+
+**Adding an ML-DSA-65 key** (ADR-109): `deedglass keys rotate --alg ML-DSA-65 --overlap 5m` writes
+an ML-DSA-65 key file and registers the key **beside** the Ed25519 key, which it never touches. The
+first one activates at now + overlap, so every instance can be restarted with
+`DEEDGLASS_SEAL_PQ_KEY_FILE` before the key-set rule (section 11.4) wants its seal; an instance that
+holds it earlier keeps sealing v1 until then. A later one activates at once and retires the previous
+ML-DSA-65 key after the overlap, as an Ed25519 rotation does. Once the key is active, the issuer
+refuses to seal (an error, never a weaker deed) on an instance that doesn't hold it.
 
 Seal keys are deployment-wide in v1: one set per Deedglass instance, shared by all orgs. Per-org
 keys are planned for v2.
@@ -522,6 +540,13 @@ tag, `alg`, `content_type`, that `kid` is in the key set and valid at `iat`, the
 and `sub` are present and `sub` names the payload's org and deed id, and that the payload is
 canonical and a valid Deed v1 body.
 
+**v2 deeds** (ADR-109): an issuer with an ML-DSA-65 key signs the COSE export of a v2 deed with it:
+protected alg **−49** (ML-DSA-65, RFC 9964), content type `"application/vnd.deedglass.deed.v2+json"`,
+the same kid and CWT claims, and the signature is ML-DSA-65 (pure, empty context) over the
+`Sig_structure`. A COSE verifier also checks that the key's `alg` is the COSE alg's algorithm and that
+the content type names the payload's version. An issuer without an ML-DSA-65 key signs v2 exports with
+Ed25519 (−8) and the v2 content type.
+
 It follows the shape of a Signed Statement in RFC 9943: CWT Claims with `iss` and `sub` in the
 protected header. It is not registered with any transparency service, and it is not one of the
 objects defined in RFC 9942, "CBOR Object Signing and Encryption (COSE) Receipts": no transparency
@@ -638,6 +663,9 @@ Checked 2026-10-01 at rfc-editor.org and proxy.golang.org.
 - RFC 9052, CBOR Object Signing and Encryption (COSE): Structures and Process, August 2022.
 - RFC 9597, CBOR Web Token (CWT) Claims in COSE Headers, June 2024.
 - RFC 9864, Fully-Specified Algorithms for JOSE and COSE, 2025 (Ed25519 = −19).
+- FIPS 204, Module-Lattice-Based Digital Signature Standard (ML-DSA), August 2024.
+- RFC 9964, ML-DSA for JOSE and COSE, May 2026 (ML-DSA-65 = −49; key type AKP; empty context).
+- Go 1.27 `crypto/mldsa` (the product's Go is 1.27.2).
 - RFC 9943, An Architecture for Trustworthy and Transparent Digital Supply Chains, June 2026
   (Proposed Standard): Signed Statements carry CWT Claims with `iss` and `sub`.
 - RFC 9942, "CBOR Object Signing and Encryption (COSE) Receipts", June 2026: not produced by Deedglass.
@@ -650,4 +678,5 @@ Checked 2026-10-01 at rfc-editor.org and proxy.golang.org.
 | Date | Change | Record |
 |---|---|---|
 | 2026-10-01 | Deed v1. | ADR-025 |
+| 2026-10-19 | The dual seal (TY-02): ML-DSA-65 in section 7.4, AKP keys in `keys.json` (section 10.1), `keys rotate --alg ML-DSA-65` (section 10.4), COSE −49 for v2 deeds (section 12). Vectors: the dual-sealed deeds, the chain across the rotation and every ML-DSA-65 failure in `testdata/deeds/v2/`. | ADR-109, TY-02 |
 | 2026-10-19 | Deed v2: `seal_keys` in the body, `seals` in the envelope, one domain tag per algorithm (section 7.4), the v2 size limit (24 KiB). Verification order for v2 and the accept policy (section 11.4), applied to v1 deeds too: Ed25519 alone only before 2035-01-01, and the key-set rule. New codes `unsupported_algorithm` (exit 2) and `seal_missing`; the `unsupported_version` sentence no longer says "reads v1". Key sets keep keys of algorithms the verifier doesn't implement instead of refusing the whole set. Every v1 deed ever written verifies as before. Vectors: `testdata/deeds/v2/`; the v1 vector `invalid/version-2` is now `invalid/version-3`. | ADR-109, TY-01 |

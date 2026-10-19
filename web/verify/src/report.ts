@@ -309,14 +309,18 @@ export class Verifier {
     rep.kinds[b.kind] = (rep.kinds[b.kind] ?? 0) + 1;
     const verdict = b.witness ? b.witness.verdict : 'none';
     rep.verdicts_recorded[verdict] = (rep.verdicts_recorded[verdict] ?? 0) + 1;
-    let k = this.tally.get(r.sealKeyId);
-    if (!k) {
-      k = { id: r.sealKeyId, thumbprint: this.keys?.lookup(r.sealKeyId)?.key.thumbprint ?? '', deeds: 0, first_seq: r.seq, last_seq: r.seq, source: this.opts.keySource ?? '' };
-      this.tally.set(r.sealKeyId, k);
+    const seals = r.envelope.seals;
+    const ids = seals && seals.length > 1 ? seals.map((x) => x.seal_key_id) : [r.sealKeyId]; // a v2 deed counts for every key
+    for (const id of ids) {
+      let k = this.tally.get(id);
+      if (!k) {
+        k = { id, thumbprint: this.keys?.lookup(id)?.key.thumbprint ?? '', deeds: 0, first_seq: r.seq, last_seq: r.seq, source: this.opts.keySource ?? '' };
+        this.tally.set(id, k);
+      }
+      k.deeds++;
+      k.first_seq = Math.min(k.first_seq, r.seq);
+      k.last_seq = Math.max(k.last_seq, r.seq);
     }
-    k.deeds++;
-    k.first_seq = Math.min(k.first_seq, r.seq);
-    k.last_seq = Math.max(k.last_seq, r.seq);
   }
 
   /** Finishes the verification and returns the report. */

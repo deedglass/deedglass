@@ -76,7 +76,11 @@ func runDeedsShare(ctx context.Context, e *Env, args []string) error {
 	if err != nil {
 		return failNext(e, ExitFailure, "deed_unreadable", "This record does not parse, so it can't be shared.", "deedglass deeds show "+d.ID)
 	}
-	ks, err := s.led.SealKeySet(ctx, env.SealKeyID)
+	ids := []string{env.SealKeyID}
+	for _, sv := range env.Seals { // a v2 deed names one key per seal (ADR-109)
+		ids = append(ids, sv.SealKeyID)
+	}
+	ks, err := s.led.SealKeySet(ctx, ids...)
 	if err != nil {
 		return err
 	}

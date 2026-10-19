@@ -1,4 +1,12 @@
 {
+  "v2/cose/03-dual-sealed.cose": {
+    "valid": true,
+    "code": null,
+    "seq": null,
+    "field": null,
+    "strict_code": null,
+    "exit": 0
+  },
   "v2/lenient/whitespace.json": {
     "valid": true,
     "code": null,
@@ -16,6 +24,31 @@
     "exit": 0
   },
   "v2/valid/02-ed25519-last-millisecond.json": {
+    "valid": true,
+    "code": null,
+    "seq": null,
+    "field": null,
+    "strict_code": null,
+    "exit": 0,
+    "keys": "keys/test-keys.json"
+  },
+  "v2/valid/03-dual-sealed.json": {
+    "valid": true,
+    "code": null,
+    "seq": null,
+    "field": null,
+    "strict_code": null,
+    "exit": 0
+  },
+  "v2/valid/04-dual-sealed-2046.json": {
+    "valid": true,
+    "code": null,
+    "seq": null,
+    "field": null,
+    "strict_code": null,
+    "exit": 0
+  },
+  "v2/valid/chain-across-pq-rotation.jsonl": {
     "valid": true,
     "code": null,
     "seq": null,

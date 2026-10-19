@@ -65,7 +65,7 @@ _deedglass() {
     'insights suggestions') subs='list show accept reject generate'; flags='' ;;
     'keys') subs='gen rotate list'; flags='' ;;
     'keys gen') subs=''; flags='--dir --purpose' ;;
-    'keys rotate') subs=''; flags='--dir --overlap' ;;
+    'keys rotate') subs=''; flags='--alg --dir --overlap' ;;
     'ledger') subs='check prune'; flags='' ;;
     'ledger check') subs=''; flags='--from-seq --to-seq' ;;
     'ledger prune') subs=''; flags='--dry-run --older-than --yes' ;;

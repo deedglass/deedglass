@@ -188,6 +188,11 @@ type body struct {
 	} `json:"admin"`
 	Amends    *string `json:"amends"`
 	SealKeyID string  `json:"seal_key_id"`
+	// SealKeys is a v2 record's (ADR-109): every key it carries a seal of, the primary first.
+	SealKeys []struct {
+		Alg string `json:"alg"`
+		ID  string `json:"id"`
+	} `json:"seal_keys"`
 }
 
 type envelope struct {
@@ -196,6 +201,12 @@ type envelope struct {
 	BodyHash  string `json:"body_hash"`
 	Seal      string `json:"seal"`
 	SealKeyID string `json:"seal_key_id"`
+	// Seals is a v2 record's (ADR-109); the exports name its primary (first) seal, as for v1.
+	Seals []struct {
+		Alg       string `json:"alg"`
+		Seal      string `json:"seal"`
+		SealKeyID string `json:"seal_key_id"`
+	} `json:"seals"`
 }
 
 // parse reads one envelope. It checks only what the export relies on: the record's shape is the
@@ -206,6 +217,12 @@ func parse(raw []byte) (envelope, error) {
 		return e, fmt.Errorf("recordexport: a line isn't a record envelope: %w", err)
 	}
 	b := &e.Body
+	if e.Seal == "" && len(e.Seals) > 0 {
+		e.Seal, e.SealKeyID = e.Seals[0].Seal, e.Seals[0].SealKeyID
+	}
+	if b.SealKeyID == "" && len(b.SealKeys) > 0 {
+		b.SealKeyID = b.SealKeys[0].ID
+	}
 	if b.DeedID == "" || b.Org == "" || b.Seq < 1 {
 		return e, errors.New("recordexport: a record has no deed_id, org or seq")
 	}

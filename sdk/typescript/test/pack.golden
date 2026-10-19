@@ -67,6 +67,8 @@ dist/verify/keys.gen.js
 dist/verify/keys.js
 dist/verify/messages.gen.d.ts
 dist/verify/messages.gen.js
+dist/verify/mldsa.d.ts
+dist/verify/mldsa.js
 dist/verify/report.d.ts
 dist/verify/report.js
 dist/verify/schema.d.ts
