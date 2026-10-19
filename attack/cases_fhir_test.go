@@ -21,7 +21,7 @@ import (
 // v8.12 did in HC-P05's spike) and the agent clinic-bot, whose calls the attack-baseline rule
 // fhir-clinic allows when they build a request (request.fhir.enriched), checked at L1. The server
 // is the attacker: it answers success in ways that don't mean what the agent says. I05 to I08 are
-// Proven (L2) cases for Postgres-backed FHIR servers (HC-P05): they wait on that ticket. I12 runs the
+// Proven (L2) cases for Postgres-backed FHIR servers (HC-P05, cases_fhir_proven_test.go). I12 runs the
 // healthcare-fhir pack (HC-P06) exactly as the binary embeds it.
 
 func init() {
@@ -30,10 +30,10 @@ func init() {
 		harness.Case{ID: "I02", Run: i02},
 		harness.Case{ID: "I03", Run: i03},
 		harness.Case{ID: "I04", Run: i04},
-		harness.Case{ID: "I05", Run: func(h *harness.H) harness.Observed { h.Waiting("HC-P05"); return harness.Observed{} }},
-		harness.Case{ID: "I06", Run: func(h *harness.H) harness.Observed { h.Waiting("HC-P05"); return harness.Observed{} }},
-		harness.Case{ID: "I07", Run: func(h *harness.H) harness.Observed { h.Waiting("HC-P05"); return harness.Observed{} }},
-		harness.Case{ID: "I08", Run: func(h *harness.H) harness.Observed { h.Waiting("HC-P05"); return harness.Observed{} }},
+		harness.Case{ID: "I05", Run: i05, Cap: 60 * time.Second},
+		harness.Case{ID: "I06", Run: i06, Cap: 60 * time.Second},
+		harness.Case{ID: "I07", Run: i07, Cap: 60 * time.Second},
+		harness.Case{ID: "I08", Run: i08, Cap: 60 * time.Second},
 		harness.Case{ID: "I09", Run: i09},
 		harness.Case{ID: "I10", Run: i10},
 		harness.Case{ID: "I11", Run: i11, Cap: 60 * time.Second},

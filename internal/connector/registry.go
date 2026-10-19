@@ -540,6 +540,13 @@ type L2Target struct {
 	StrictTriggers bool
 	Timeout        time.Duration
 	DiffRows       int
+	// Versions: the write is version-bound (ADR-108): the decoder binds the server's own
+	// transaction by the version in the execution evidence, and the connector judges it
+	// (L2VersionJudge). The SQL fields above are unused.
+	Versions bool
+	// Method is the witness method for an L2 result with no frame (a timeout, a lost slot); ""
+	// means the Postgres connector's.
+	Method string
 }
 
 // L2Write is one table a controlled function declares it writes.

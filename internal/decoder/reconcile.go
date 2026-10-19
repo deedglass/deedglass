@@ -25,6 +25,9 @@ import (
 const reconcileOverlap = 5 * time.Minute
 
 func (r *Runner) reconcileTick(ctx context.Context) error {
+	if r.target != nil && r.target.Versions != nil {
+		return nil // a FHIR server's database holds no ledger rows to reconcile (ADR-108)
+	}
 	now := r.d.Now()
 	asked := false
 	select {

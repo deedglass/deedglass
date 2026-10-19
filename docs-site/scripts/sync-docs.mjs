@@ -103,8 +103,8 @@ export const LIMITS_PARTS = [
     slug: 'postgres',
     label: 'Postgres, the check and undo',
     title: 'Limits: Postgres, the check and undo',
-    description: "What Deedglass can't see or do in Postgres: the database, the Postgres connector, the check against the change log, the decoder and undo.",
-    sections: ['Database limits', 'The Postgres connector', 'The Witness', 'The decoder', 'The L2 witness', 'Undo'],
+    description: "What Deedglass can't see or do in Postgres: the database, the Postgres connector, the check against the change log, the decoder, FHIR servers and undo.",
+    sections: ['Database limits', 'The Postgres connector', 'The Witness', 'The decoder', 'The L2 witness', 'Proven for FHIR servers', 'Undo'],
   },
   {
     slug: 'records',

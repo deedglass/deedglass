@@ -19,6 +19,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/jackc/pgx/v5"
 )
 
 // Server is the in-memory server. Its fields may be set before or between requests.
@@ -40,6 +42,25 @@ type Server struct {
 	StoreRequestID bool
 	// Requests records every request's method, path and headers.
 	Requests []Request
+
+	// With UsePostgres (postgres.go): HAPI's tables in a database, and the knobs that make the
+	// server commit more than the call asked for.
+	db     *pgx.Conn
+	resIDs map[string]int64
+	tx     []pending
+	// PlaceholderRefs: a create whose subject names an unknown Patient commits that Patient too,
+	// in the same transaction (HAPI's auto_create_placeholder_reference_targets; I07).
+	PlaceholderRefs bool
+	// LegacyText stores the text in a large object (JSONC), as HAPI did before 7.0 (I08).
+	LegacyText bool
+	// InterleaveNext: the next update first commits another writer's version of the same resource
+	// in its own transaction, while the call is open (I05).
+	InterleaveNext bool
+	// ForgeNext: the next write that carries an X-Request-ID first commits another client's create
+	// carrying the same request id, in its own transaction, while the call is open (I06).
+	ForgeNext bool
+	// DBErr is the last error writing the Postgres store.
+	DBErr error
 }
 
 // Request is one request the server saw.
@@ -75,7 +96,9 @@ func (s *Server) Put(res map[string]any) string {
 		s.nextID++
 		id = strconv.Itoa(s.nextID)
 	}
-	return s.store(typ, id, clone(res), "").(string)
+	out := s.store(typ, id, clone(res), "").(string)
+	s.commit()
+	return out
 }
 
 // Current returns a resource's current version, or nil.
@@ -123,7 +146,34 @@ func (s *Server) store(typ, id string, res map[string]any, reqID string) any {
 	}
 	s.versions[key] = append(s.versions[key], res)
 	s.writes++
+	if s.db != nil {
+		if reqID == "" || len(reqID) > 16 || strings.ContainsAny(reqID, "/.;") {
+			reqID = newRequestID() // HAPI makes its own when the header is missing or unusable
+		}
+		s.tx = append(s.tx, pending{typ: typ, id: id, vid: vid, res: clone(res), reqID: reqID})
+	}
 	return id
+}
+
+// commit writes the versions stored since the last commit in one transaction (postgres.go).
+func (s *Server) commit() {
+	if len(s.tx) == 0 {
+		return
+	}
+	if err := s.persist(s.tx...); err != nil {
+		s.DBErr = err
+	}
+	s.tx = nil
+}
+
+// another commits a write by another client before the call's own (InterleaveNext, ForgeNext).
+func (s *Server) another(typ, id string, res map[string]any, reqID string) {
+	if id == "" {
+		s.nextID++
+		id = strconv.Itoa(s.nextID)
+	}
+	s.store(typ, id, res, reqID)
+	s.commit()
 }
 
 func (s *Server) serve(w http.ResponseWriter, r *http.Request) {
@@ -167,9 +217,18 @@ func (s *Server) serve(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		}
+		if s.ForgeNext && reqID != "" {
+			s.ForgeNext = false
+			s.another(typ, "", map[string]any{"resourceType": typ, "status": "final", "code": map[string]any{"text": "forged"}}, reqID)
+		}
 		s.nextID++
 		id := strconv.Itoa(s.nextID)
+		if pid, ok := s.placeholder(res); ok {
+			s.store("Patient", pid, map[string]any{"resourceType": "Patient", "extension": []any{map[string]any{
+				"url": "http://hapifhir.io/fhir/StructureDefinition/resource-placeholder", "valueBoolean": true}}}, reqID)
+		}
 		s.store(typ, id, res, reqID)
+		s.commit()
 		if fail(201) {
 			return
 		}
@@ -219,7 +278,18 @@ func (s *Server) serve(w http.ResponseWriter, r *http.Request) {
 		if cur == nil {
 			status = 201
 		}
+		if s.InterleaveNext && cur != nil {
+			s.InterleaveNext = false
+			o := clone(cur)
+			o["status"] = "registered"
+			s.another(typ, id, o, "")
+		}
+		if s.ForgeNext && reqID != "" {
+			s.ForgeNext = false
+			s.another(typ, "", map[string]any{"resourceType": typ, "status": "final", "code": map[string]any{"text": "forged"}}, reqID)
+		}
 		s.store(typ, id, res, reqID)
+		s.commit()
 		if fail(status) {
 			return
 		}
@@ -228,9 +298,12 @@ func (s *Server) serve(w http.ResponseWriter, r *http.Request) {
 		key := typ + "/" + parts[1]
 		if vs := s.versions[key]; len(vs) > 0 && vs[len(vs)-1] != nil {
 			s.store(typ, parts[1], nil, reqID)
+			s.commit()
 			if fail(200) {
 				return
 			}
+			// HAPI names the deleted version in Content-Location.
+			w.Header().Set("Content-Location", s.Base()+"/"+key+"/_history/"+strconv.Itoa(len(s.versions[key])))
 		}
 		outcome(w, 200, "informational", "Deleted.")
 	case r.Method == http.MethodGet && len(parts) == 2:

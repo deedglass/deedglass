@@ -9475,7 +9475,7 @@ components:
             properties:
               commit_lsn: {type: [string, "null"]}
               class: {type: string, enum: [bound, unattributed, forged_marker, forged_marker_nontx, marker_count, marker_mismatch,
-                foreign_ledger, publication_gap, missing]}
+                foreign_ledger, publication_gap, missing, request_id_reused, version_tag_mismatch]}
               action: {type: [string, "null"]}
               counts:
                 type: object

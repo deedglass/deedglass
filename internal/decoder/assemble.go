@@ -4,11 +4,14 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"maps"
 	"strconv"
 	"strings"
 	"unicode/utf8"
 
 	"github.com/jackc/pglogrepl"
+
+	"github.com/deedglass/deedglass/internal/jsonleaf"
 )
 
 // DefaultMaxImages is decoder.max_images_per_tx: S23's undo row limit.
@@ -21,6 +24,14 @@ type AssembleOptions struct {
 	Sensitive map[string]bool
 	// MaxImages is how many changes per frame keep their images (counts and the digest cover all).
 	MaxImages int
+	// Keyed columns (ADR-108: a FHIR server's resource content) hold JSON documents that are kept
+	// only as keyed digests of their leaves (internal/jsonleaf, with Key); a value that isn't a JSON
+	// object or array becomes a digest. An empty text stays as it is.
+	Keyed func(table, column string) bool
+	Key   []byte
+	// CountOnly tables (ADR-108: a FHIR server's search-index and lookup tables) are counted and
+	// digested like every change, but their images are never kept.
+	CountOnly func(table string) bool
 	// Shapes is the persistent relation shape map (relid → shape key), kept by the runner across
 	// peeks: a relation that arrives with a new shape flags relation_changed:<table>, the only
 	// trace DDL leaves in the stream. Updated in place; nil means no memory.
@@ -265,6 +276,9 @@ func (a *Assembler) change(op byte, relID uint32, oldType uint8, old, nw *pglogr
 	a.table(f, t, rel)
 	opS := string(rune(op))
 	a.dig.add(a.seq, opS, t, oldImg, newImg)
+	if a.o.CountOnly != nil && a.o.CountOnly(t) {
+		return nil
+	}
 	if len(f.Changes) < a.o.MaxImages {
 		f.Changes = append(f.Changes, Change{Seq: a.seq, Op: opS, Table: t, Old: oldImg, New: newImg, Changed: changed, relID: relID})
 	} else {
@@ -293,6 +307,13 @@ func (a *Assembler) image(rel *pglogrepl.RelationMessage, t string, td *pglogrep
 			v.Unchanged = true
 		default: // 't' (SafeParse refused everything else)
 			switch {
+			case a.o.Keyed != nil && len(col.Data) > 0 && a.o.Keyed(t, rc.Name):
+				if l, err := jsonleaf.Parse(a.o.Key, col.Data); err == nil && len(col.Data) > 0 && (col.Data[0] == '{' || col.Data[0] == '[') {
+					v.Leaves = l
+				} else {
+					sum := sha256.Sum256(col.Data)
+					v.Digest = "sha256:" + hex.EncodeToString(sum[:])
+				}
 			case a.o.Sensitive[t+"."+rc.Name]:
 				sum := sha256.Sum256(col.Data)
 				v.Digest = "sha256:" + hex.EncodeToString(sum[:])
@@ -325,7 +346,7 @@ func changedColumns(rel *pglogrepl.RelationMessage, old, nw map[string]Value) []
 }
 
 func sameValue(a, b Value) bool {
-	if a.Null != b.Null || a.Digest != b.Digest || a.Hex != b.Hex || (a.Text == nil) != (b.Text == nil) {
+	if a.Null != b.Null || a.Digest != b.Digest || a.Hex != b.Hex || (a.Text == nil) != (b.Text == nil) || !maps.Equal(a.Leaves, b.Leaves) {
 		return false
 	}
 	return a.Text == nil || *a.Text == *b.Text

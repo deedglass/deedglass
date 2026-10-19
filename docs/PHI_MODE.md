@@ -61,7 +61,9 @@ seconds.
 - **Short or common values can be found from their digests.** A status like `final` or a small
   number can be guessed by trying values. Digests aren't salted per org yet.
 - **Row images the decoder keeps** for the Postgres connector's Proven check and observe mode are not
-  changed by PHI mode. Mark sensitive columns with `witness.sensitive_columns`.
+  changed by PHI mode. Mark sensitive columns with `witness.sensitive_columns`. A FHIR server's
+  frames (the `fhir` connector's Proven check) never hold a resource's values in any mode: its
+  content is kept as keyed digests of each field, and search-index and lookup tables only as counts.
 - **The agent and the target see everything**: PHI mode only changes what Deedglass stores.
 - **Logs and backups made before PHI mode was on**, and copies you exported, keep what they hold.
 - **The deed's digests stay** (that is what makes a deed checkable); they are digests, not values.

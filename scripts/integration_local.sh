@@ -70,7 +70,7 @@ EOF
     docker run -d --name "$NAME" -e POSTGRES_PASSWORD=deedglass-it-throwaway -p "127.0.0.1:$PORT:5432" \
       "postgres:$TAG" postgres -c wal_level=logical -c max_slot_wal_keep_size=2GB -c max_connections=300 >/dev/null
     for _ in $(seq 1 60); do
-      docker exec "$NAME" pg_isready -U postgres -q && break
+      docker exec "$NAME" pg_isready -h 127.0.0.1 -U postgres -q && break  # TCP: the image's first-boot server listens on the socket only, then restarts
       sleep 1
     done
     PSQL="docker exec -i $NAME psql" PGUSER=postgres \

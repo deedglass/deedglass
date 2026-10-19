@@ -7,6 +7,7 @@ import (
 
 	"github.com/deedglass/deedglass/internal/config"
 	"github.com/deedglass/deedglass/internal/connector"
+	"github.com/deedglass/deedglass/internal/connector/fhir"
 	"github.com/deedglass/deedglass/internal/connector/postgres"
 	"github.com/deedglass/deedglass/internal/decoder"
 	"github.com/deedglass/deedglass/internal/gate"
@@ -31,7 +32,8 @@ func decoderConfig(cfg *config.Config) decoder.Config {
 }
 
 // newDecoder is S20's wiring: one supervisor per server, reading every witnessed Postgres
-// connector whose lease this instance holds. The witness DSN comes through the registry's
+// connector (and, ADR-108, every witnessed FHIR connector's server database) whose lease this
+// instance holds. The witness DSN comes through the registry's
 // instance and the Postgres connector (Instance.Secret), never the vault directly.
 func newDecoder(cfg *config.Config, db *store.DB, led *ledger.Ledger, cw *connectors, log *slog.Logger, hooks decoder.Hooks) *decoder.Supervisor {
 	if !cfg.Decoder.Enabled || db == nil || cw == nil {
@@ -46,6 +48,11 @@ func newDecoder(cfg *config.Config, db *store.DB, led *ledger.Ledger, cw *connec
 		inst, err := cw.reg.Instance(org, row)
 		if err != nil {
 			return nil, row.Name, err
+		}
+		if row.Type == fhir.Type {
+			// ADR-108: a FHIR server's own database, bound by the version the server reported.
+			t, err := fhir.WitnessTargetOf(ctx, inst)
+			return t, row.Name, err
 		}
 		t, err := postgres.WitnessTargetOf(ctx, inst)
 		return t, row.Name, err

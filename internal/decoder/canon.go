@@ -80,8 +80,8 @@ func appendImageJCS(b []byte, img map[string]Value) []byte {
 	return append(b, '}')
 }
 
-// appendValueJCS writes a Value with its keys in order d, n, t, u, x (omitted when empty, as the
-// JSON tags do).
+// appendValueJCS writes a Value with its keys in order d, k, n, t, u, x (omitted when empty, as
+// the JSON tags do).
 func appendValueJCS(b []byte, v Value) []byte {
 	b = append(b, '{')
 	n := 0
@@ -95,6 +95,24 @@ func appendValueJCS(b []byte, v Value) []byte {
 		sep()
 		b = append(b, `"d":`...)
 		b = appendJCSString(b, v.Digest)
+	}
+	if len(v.Leaves) > 0 {
+		sep()
+		b = append(b, `"k":{`...)
+		keys := make([]string, 0, len(v.Leaves))
+		for k := range v.Leaves {
+			keys = append(keys, k)
+		}
+		slices.SortFunc(keys, compareUTF16)
+		for i, k := range keys {
+			if i > 0 {
+				b = append(b, ',')
+			}
+			b = appendJCSString(b, k)
+			b = append(b, ':')
+			b = appendJCSString(b, v.Leaves[k])
+		}
+		b = append(b, '}')
 	}
 	if v.Null {
 		sep()

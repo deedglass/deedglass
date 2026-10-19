@@ -7,6 +7,21 @@ this file by `scripts/release-notes.sh`.
 
 ## [Unreleased]
 
+### Added
+
+- **Proven (L2) for FHIR servers that store resources in Postgres** (HC-P05, ADR-108, Proposed): a
+  `fhir` connector with `witness.enabled` and `witness.server` (`hapi` for HAPI FHIR JPA 8.x,
+  `medplum` for Medplum 5.x) and `witness_dsn` in its credential has the decoder read the FHIR
+  server's own change log. A transaction is bound to an action by the version the server reported to
+  its write (never by a request id alone), and judged: the reported version against what the agent
+  sent (`version_matched`, `version_field_changed`), any other version in that transaction
+  (`fhir_extra_versions`), content the change log can't carry (`large_object_not_replicated`), an
+  unknown table layout (`fhir_schema_unknown`). Writes no action made are stored unattributed and
+  flagged `out_of_band`; a reused request id is `request_id_reused` (a decoder alert, never bound).
+  Resource content in frames is kept only as keyed field digests. Methods `l2.fhir.hapi.8` and
+  `l2.fhir.medplum.5`. Attack cases I05-I08 now run and match; `make fhir-proven-it` runs HAPI and
+  Medplum in Docker. Migration 0032.
+
 ## [0.3.0] - 2026-10-19
 
 Healthcare, phase 1: an agent's writes to a FHIR R4 server, decided by rules and checked against

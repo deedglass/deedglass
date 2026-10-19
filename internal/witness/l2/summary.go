@@ -39,6 +39,9 @@ type Result struct {
 	Reasons   []witness.Reason
 	Evidence  *witness.L2Evidence
 	Footprint Footprint
+	// Method is the witness method when it isn't the Postgres connector's (ADR-108:
+	// "l2.fhir.hapi.8"); "" means Method.
+	Method string
 }
 
 // HasFrame reports whether the result read a frame (and so is evidence, not a timeout or a lost
@@ -214,6 +217,7 @@ const (
 	lostSlotMissing     = "slot_missing"
 	lostDropped         = "dropped"
 	lostDeleted         = "connector_deleted"
+	lostSchemaUnknown   = "schema_unknown" // a version-bound runner (ADR-108) read a layout it doesn't know
 )
 
 // Lost maps a decoder's SlotLost reason (or a halted status at plan time) to L2's gap:
@@ -224,6 +228,8 @@ func Lost(reason string) Result {
 		return Gap(witness.CodeSlotInvalidated, map[string]any{"why": reason})
 	case lostSlotMissing, lostDropped, lostDeleted:
 		return Gap(witness.CodeSlotDropped, nil).withEvidence(map[string]any{"reason": reason})
+	case lostSchemaUnknown:
+		return Gap(witness.CodeFHIRSchemaUnknown, map[string]any{"table": "the server's version tables"})
 	}
 	return Gap(witness.CodeDecoderHalted, map[string]any{"why": reason})
 }

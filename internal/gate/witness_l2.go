@@ -77,6 +77,9 @@ func planL2(s Subject, e Execution, ex Executor, call connector.Call, side strin
 	if err != nil || t == nil || t.ConnectorID == "" {
 		return nil
 	}
+	if t.Versions && e.Result.Evidence[connector.EvidenceVersionKey] == "" {
+		return nil // ADR-108: the server reported no new version, so no transaction can be bound to it
+	}
 	return &l2Plan{target: t}
 }
 
@@ -433,36 +436,68 @@ func (p *Pipeline) finalizeL2(ctx context.Context, org ids.OrgID, id ids.ActionI
 		return err
 	}
 	var res l2.Result
-	switch {
-	case len(frames) > 0:
+	judged := false
+	if len(frames) > 0 || namesVersioned(r.frames) {
 		wc, t, err := p.l2Case(ctx, r)
-		if err != nil {
-			if state == Witnessing && trigger == l2Timeout {
-				res = l2.Gap(witness.CodeInternalError, nil)
-				break
+		switch {
+		case err != nil:
+			if state != Witnessing || trigger != l2Timeout {
+				return err
 			}
-			return err
+			res, judged = l2.Gap(witness.CodeInternalError, nil), true
+		case t.Versions:
+			// ADR-108: the connector judges its server's own transaction.
+			if res, err = p.evaluateVersions(ctx, wc, t, org, r.frames); err != nil {
+				if state != Witnessing || trigger != l2Timeout {
+					return err
+				}
+				res = l2.Gap(witness.CodeInternalError, nil)
+			}
+			judged = len(res.Reasons) > 0
+			if !judged {
+				res.Method = t.Method
+			}
+		case len(frames) > 0:
+			res = p.evaluateL2(ctx, wc, t, frames)
+			if len(res.Reasons) == 0 {
+				return nil // frames of no class L2 reads
+			}
+			judged = true
 		}
-		res = p.evaluateL2(ctx, wc, t, frames)
-		if len(res.Reasons) == 0 {
-			return nil // frames of no class L2 reads
+	}
+	if !judged {
+		method := res.Method
+		switch {
+		case state == Sealed:
+			return nil // a late gap never amends
+		case trigger == l2Timeout:
+			d := wcTimeout(r)
+			res = l2.Timeout(d)
+		case trigger == l2Lost:
+			res = l2.Lost(reason)
+		case trigger == l2Missing:
+			res = l2.NoEvidence()
+		default:
+			return nil // keep waiting
 		}
-	case state == Sealed:
-		return nil // a late gap never amends
-	case trigger == l2Timeout:
-		d := wcTimeout(r)
-		res = l2.Timeout(d)
-	case trigger == l2Lost:
-		res = l2.Lost(reason)
-	case trigger == l2Missing:
-		res = l2.NoEvidence()
-	default:
-		return nil // keep waiting
+		if method == "" {
+			method = p.l2Method(ctx, r)
+		}
+		res.Method = method
 	}
 	if state == Sealed {
 		return p.amendL2(ctx, org, id, r, res)
 	}
 	return p.sealL2(ctx, org, id, r, res)
+}
+
+// l2Method is the method of an L2 result with no frame: the target's (a version-bound connector
+// names its server), else the Postgres connector's.
+func (p *Pipeline) l2Method(ctx context.Context, r *l2Read) string {
+	if _, t, err := p.l2Case(ctx, r); err == nil && t.Method != "" {
+		return t.Method
+	}
+	return ""
 }
 
 // wcTimeout is the wait's length, for l2_timeout's message.
@@ -494,6 +529,9 @@ func (p *Pipeline) decideL2(ctx context.Context, r *l2Read, res l2.Result) (witn
 	}
 	by[witness.L2] = res.Reasons
 	methods[witness.L2] = l2.Method
+	if res.Method != "" {
+		methods[witness.L2] = res.Method // a version-bound connector names its server (ADR-108)
+	}
 	d := witness.Decide(requiredOf(r.ga), by, methods)
 	return witness.FinishWith(d, methods, witness.Extras{Readback: rb, L2: res.Evidence}, p.now(), p.wcfg.MaxDetailBytes)
 }

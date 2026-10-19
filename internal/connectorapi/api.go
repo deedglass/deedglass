@@ -561,7 +561,7 @@ func (a *API) patch(w http.ResponseWriter, r *http.Request) error {
 	}
 	if forget != "" {
 		a.Registry.Forget(forget)
-		if c := (store.Connector{ID: out.ID, Type: out.Type, Config: out.Config}); c.Type == "postgres" && (!witnessed(c) || out.Status != "active") {
+		if c := (store.Connector{ID: out.ID, Type: out.Type, Config: out.Config}); (c.Type == "postgres" || c.Type == "fhir") && (!witnessed(c) || out.Status != "active") {
 			a.retireDecoder(r.Context(), p.OrgID, c, "not_witnessed")
 		}
 		a.syncDecoder(r.Context())

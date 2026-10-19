@@ -153,6 +153,7 @@ go test ./cmd/deedglass -run TestHelpJSONGolden -update   # S32: testdata/help-j
 DEEDGLASS_IT_PKGS="./internal/scan/ ./internal/doctor/" make integration   # S32: scan and doctor are read-only under log_statement=all (BEGIN READ ONLY, six SELECTs, ROLLBACK; a write is 25006)
 DEEDGLASS_IT_INIT=1 go test -tags integration ./internal/setup -run TestInitLive -v   # S32: deedglass init end to end in Docker on its own ports (two postgres:18.6 containers, removed after)
 scripts/quickstart_timed.sh | scripts/npx_cold.sh   # S32: the timed quickstart and the cold npx run against a local registry; JSON in bench/results/
+make fhir-proven-it # HC-P05: Proven (L2) against HAPI FHIR JPA and Medplum on PG 18 in Docker (free ports; KEEP=1 keeps the containers)
 make embed-gz       # S51: rewrite the gzip archives the binary embeds (internal/store/migrations/sql.tar.gz); TestArchiveCurrent fails while stale
 DEEDGLASS_IT_PKGS=./cmd/deedglass/ DEEDGLASS_IT_GOFLAGS="-v -run TestSecurityPackLive" make integration   # S51: readiness, pro_required, build → verify, one changed byte, pinned keys, aliases, the canary sweep
 make web-verify-test  # (in ci) the browser verifier: npm ci once, tsc --noEmit, vitest (vectors, parity 500/500)
@@ -312,7 +313,12 @@ and "open source" until the repo is public. Style bans: "revolutionary", "world-
    2). Frames are persisted before the slot advances.
 10. A frame is bound only with exactly one `deedglass.ledger` insert and one transactional
    `deedglass` marker naming the same action, of the connector's org, with low32(xid8) = BEGIN.xid
-   (ADR-003). The decoder never decides a verdict.
+   (ADR-003). The decoder never decides a verdict. The one other path is a FHIR server's own
+   database (ADR-108, Proposed): bound only when the frame holds the version the action's execution
+   evidence names (`version_key`), exactly one action names a version in it, and the row's own mark
+   agrees; a token alone never binds (`request_id_reused`). Its frames hold resource content only as
+   keyed leaf digests (`internal/jsonleaf`), and a frame no action names yet is held, never advanced
+   past, while an action of the connector is executing (at most `witness.bind_grace`).
 
 ## Guards in place (keep them green; extend, never weaken)
 
@@ -700,6 +706,15 @@ and "open source" until the repo is public. Style bans: "revolutionary", "world-
   `TestRuntimeRoleCannotBypassRLS`; the MCP screen (`internal/mcp/toolscan`, `TestScreenHidesAndPins`). `internal/httpx` `TestRouteAuthCoverage` and `cmd/deedglass`
   `TestServeRoutesUnauthenticated`: the public route set is exact and every other route is 401
   without a credential.
+- HC-P05 (Proven for FHIR servers, ADR-108): `internal/jsonleaf` (canonical numbers, the key, `Diff`'s
+  read-back rules, limits); `internal/connector/fhir/pgmap` `TestHAPI8`/`TestMedplum5` on frames recorded
+  from the real servers through the decoder's own code (`testdata/*.json`, `TestCaptureFixtures` with
+  `-tags integration -capture-dsn …`; no clinical value in the fixtures), `TestHAPILargeObject`,
+  `TestSchemaUnknown`; `internal/decoder` `TestClassifyVersions` (B1–B5), `TestClassifyMedplumAuthor`,
+  `TestHold` (B6, B7); `internal/connector/fhir` `TestL2Judge`, `TestL2JudgeCreateMetaPatchDelete`,
+  `TestWitnessConfigAndTarget`; `attack/` I05–I08 against `fhirtest.UsePostgres`; `cmd/deedglass`
+  `TestFHIRProvenLive` (`make fhir-proven-it`: HAPI FHIR JPA v8.12.0-2 and Medplum 5.2.6 on PG 18.6 in
+  Docker, free ports, containers and volumes removed after). The migration count is 32.
 - `scripts/integration_smoke.sql`: live prosrc hash, roles, grants, RLS, replica identity, one real
   transfer, refusals with exact SQLSTATEs, decode checks through pgoutput and test_decoding.
 - `scripts/rename_guard.sh` and `scripts/banned_words.sh`; `testdata/SHA256SUMS`. Test strings with
