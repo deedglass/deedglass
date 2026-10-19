@@ -388,3 +388,46 @@ func TestSealerBudget(t *testing.T) {
 		t.Fatalf("%+v", s)
 	}
 }
+
+// TestSealDualOnPostgres (ADR-109, TY-02): an ML-DSA-65 key added beside Ed25519 with an overlap;
+// v1 deeds until it activates, v2 dual-sealed after, the chain verifies against the published key
+// set, an instance without the key refuses to seal once it is active, and migration 0033 takes the
+// 1,952-byte key and the larger envelope.
+func TestSealDualOnPostgres(t *testing.T) {
+	se := newSealEnv(t, 1, 4)
+	org := se.orgs[0]
+	seed := randomSeed(t)
+	pq, err := deed.NewMLDSASigner(ids.New[ids.SealKeyKind]().String(), seed)
+	if err != nil {
+		t.Fatal(err)
+	}
+	row, retired, err := se.e.DB.AddPQSealKey(ctx, pq.KeyID(), pq.PublicKeyBytes(), 2*time.Second)
+	if err != nil || len(retired) != 0 || row.Alg != deed.AlgMLDSA65 || !row.ActivatedAt.After(time.Now().Add(-time.Second)) {
+		t.Fatalf("add: %v %+v %+v", err, row, retired)
+	}
+	se.sealer = deed.NewSealer(se.signer, deed.WithExtraSigners(pq))
+	before, err := se.seal(org)
+	if err != nil || before.Body.V != deed.Version {
+		t.Fatalf("before activation: %v %+v", err, before)
+	}
+	time.Sleep(2500 * time.Millisecond)
+	after, err := se.seal(org)
+	if err != nil || after.Body.V != deed.VersionV2 || len(after.Seals) != 2 {
+		t.Fatalf("after activation: %v %+v", err, after)
+	}
+	plain := deed.NewSealer(se.signer)
+	se.sealer, plain = plain, se.sealer
+	if _, err := se.seal(org); !errors.Is(err, deed.ErrSealKeyNotHeld) {
+		t.Fatalf("instance without the PQ key: %v", err)
+	}
+	se.sealer = plain
+	if s := se.chainOf(t, org); s.Deeds != 2 {
+		t.Fatalf("%+v", s)
+	}
+	// A second ML-DSA-65 key activates at once and retires the first after the overlap.
+	pq2, _ := deed.NewMLDSASigner(ids.New[ids.SealKeyKind]().String(), randomSeed(t))
+	row2, retired2, err := se.e.DB.AddPQSealKey(ctx, pq2.KeyID(), pq2.PublicKeyBytes(), time.Minute)
+	if err != nil || len(retired2) != 1 || retired2[0].ID != pq.KeyID() || row2.ActivatedAt.After(time.Now().Add(time.Second)) {
+		t.Fatalf("second: %v %+v %+v", err, row2, retired2)
+	}
+}
