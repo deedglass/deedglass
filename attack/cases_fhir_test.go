@@ -13,6 +13,7 @@ import (
 
 	"github.com/deedglass/deedglass/attack/harness"
 	"github.com/deedglass/deedglass/internal/connector/fhir/fhirtest"
+	"github.com/deedglass/deedglass/internal/packs"
 )
 
 // FHIR servers: healthcare phase 1's group I (HC-P02, ADR-105). Acme gets a fhir connector on an
@@ -20,8 +21,8 @@ import (
 // v8.12 did in HC-P05's spike) and the agent clinic-bot, whose calls the attack-baseline rule
 // fhir-clinic allows when they build a request (request.fhir.enriched), checked at L1. The server
 // is the attacker: it answers success in ways that don't mean what the agent says. I05 to I08 are
-// Proven (L2) cases for Postgres-backed FHIR servers (HC-P05) and I12 needs the healthcare-fhir
-// pack (HC-P06): they wait on those tickets.
+// Proven (L2) cases for Postgres-backed FHIR servers (HC-P05): they wait on that ticket. I12 runs the
+// healthcare-fhir pack (HC-P06) exactly as the binary embeds it.
 
 func init() {
 	register(
@@ -36,7 +37,7 @@ func init() {
 		harness.Case{ID: "I09", Run: i09},
 		harness.Case{ID: "I10", Run: i10},
 		harness.Case{ID: "I11", Run: i11, Cap: 60 * time.Second},
-		harness.Case{ID: "I12", Run: func(h *harness.H) harness.Observed { h.Waiting("HC-P06"); return harness.Observed{} }},
+		harness.Case{ID: "I12", Run: i12},
 	)
 }
 
@@ -101,6 +102,7 @@ var iDetail = map[string]string{
 	"I04": "UNVERIFIABLE (the action is unknown; fhir_history_no_match names the gap); never VERIFIED and never MISMATCH",
 	"I09": "NO EFFECT (fhir_version_conflict: the action is sealed as failed, isn't retried, and no version is created or claimed)",
 	"I10": "DENIED (no request leaves; a deed with decision deny is sealed; the server's history is unchanged)",
+	"I12": "DENIED (the pack's no-delete-clinical rule; no request leaves; the deed names the rule)",
 	"I11": "REDACTED (once the action is sealed the planted values appear in no action row, deed, event, export or log line of the org; only ids and digests remain)",
 }
 
@@ -406,6 +408,43 @@ func i11(h *harness.H) harness.Observed {
 		obs.Line = fmt.Sprintf("3 planted values · 0 hits in %d tables, the export and the log", tables)
 	} else {
 		obs.Outcome, obs.Detail = "REDACTED?", fmt.Sprintf("verdicts %s/%s, %s actions still hold payloads, found %v, export exit %d, digests shown %v", v1, v2, left, found, code, digest)
+	}
+	return obs
+}
+
+// I12: an org enforces the healthcare-fhir pack as the binary embeds it, with a fhir connector that
+// allows delete. The agent deletes an Observation the server holds. The pack's no-delete-clinical
+// rule denies it before any request is built: the server sees no request and still has the
+// resource, and the sealed deed names the rule.
+func i12(h *harness.H) harness.Observed {
+	obs := harness.Observed{Evidence: map[string]any{}, Forbidden: iForbidden}
+	fhirAgent(h)
+	src := packs.Embedded()
+	pol, ok := src.Files["healthcare-fhir/healthcare-fhir.yaml"]
+	if !ok {
+		panic("the binary embeds no healthcare-fhir pack")
+	}
+	org := h.Env.NewOrg("Clinic Pack", "clinic-pack")
+	h.Env.PushPolicy(org, pol)
+	ag := h.Env.AddAgent(org, "clinic-bot", nil)
+	cfg := fhirConfig()
+	cfg["allowed_interactions"] = []string{"read", "vread", "search", "history", "create", "update", "patch", "delete"}
+	if r := h.Env.AddConnector(org, "fhir", "ehr", cfg, "", nil); r.Status != 201 {
+		panic(fmt.Sprintf("create the fhir connector: HTTP %d %s", r.Status, r.Body))
+	}
+	res, _ := observation("final", 64)
+	id := fhirSrv.Put(res)
+	hits, writes, versions := fhirSrv.Hits(), fhirSrv.Writes(), fhirSrv.Versions("Observation", id)
+	r, act := h.Act(ag, "ehr.delete", map[string]any{"resource_type": "Observation", "id": id})
+	obs.ActionIDs = []string{act}
+	why := h.DeniedBy(org, act, "no-delete-clinical")
+	still := fhirSrv.Versions("Observation", id) == versions && fhirSrv.Current("Observation", id) != nil
+	obs.Evidence["status"], obs.Evidence["denied"], obs.Evidence["hits"], obs.Evidence["still_there"] = r.Status, why, []int{hits, fhirSrv.Hits()}, still
+	if why == "" && fhirSrv.Hits() == hits && fhirSrv.Writes() == writes && still {
+		obs.Outcome, obs.Detail = "DENIED", iDetail["I12"]
+		obs.Line = "no-delete-clinical · 0 requests to the server · the Observation is still there"
+	} else {
+		obs.Outcome, obs.Detail = "DENIED?", fmt.Sprintf("deny check %q, server hits %d → %d, still there %v", why, hits, fhirSrv.Hits(), still)
 	}
 	return obs
 }

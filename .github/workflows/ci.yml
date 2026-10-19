@@ -340,13 +340,13 @@ jobs:
             COMMIT=${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-      - name: image runs as 65532:65532 and is under 40 MB
+      - name: image runs as 65532:65532 and is under 45 MB
         run: |
           user="$(docker image inspect deedglass:dev -f '{{.Config.User}}')"
           size="$(docker image inspect deedglass:dev -f '{{.Size}}')"
-          echo "user=$user size=$size bytes"
+          echo "user=$user size=$size bytes, $((45000000 - size)) bytes under the budget"
           [ "$user" = "65532:65532" ] || { echo "FAIL: .Config.User is '$user', want 65532:65532"; exit 1; }
-          [ "$size" -lt 40000000 ] || { echo "FAIL: image is $size bytes, want < 40000000 (ADR-032 as amended by DL-031)"; exit 1; }
+          [ "$size" -lt 45000000 ] || { echo "FAIL: image is $size bytes, want < 45000000 (ADR-106, amending ADR-032)"; exit 1; }
       - name: .env with fresh throwaway secrets
         run: scripts/dev.sh env
       - name: start Postgres (init scripts), migrate, then serve

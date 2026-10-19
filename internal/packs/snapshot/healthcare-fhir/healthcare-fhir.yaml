@@ -1,0 +1,175 @@
+# healthcare-fhir · a Deedglass policy pack for the FHIR connector
+#
+# Reads that name what they look for run. Clinical records are never deleted:
+# they are corrected with a new version. Orders and medication changes,
+# allergies and the problem list, and notes that aren't drafts wait for a
+# clinician. Claims and other billing records need two people. Coverage is
+# read-only. Every other write runs and is read back at the version the server
+# reported (Checked, L1).
+#
+# These rules decide who may change what, and when a person has to look first.
+# None of them judges whether a clinical change is right: that stays with the
+# clinician who approves it.
+#
+# The FHIR connector fills request.fhir before the decision: the interaction,
+# the resource type, the id, and the coded fields. A call that doesn't build a
+# request (a type outside the connector's allowed_resource_types) has no facts
+# and never runs.
+#
+# Before you push it:
+#   1. Replace the clinician approvers (user:clinician-1@example.org and
+#      user:clinician-2@example.org) with the people who review agent changes.
+#      Approver groups (group:clinicians) replace this list in a later release.
+#   2. Turn PHI mode on for the org (docs/PHI_MODE.md), so stored actions keep
+#      ids and digests instead of clinical content.
+#   3. Check your change: deedglass policy test policies/healthcare-fhir.yaml
+#
+# Break-glass: keep a separate agent for emergencies, labelled break-glass=on
+# (deedglass agent create er-bot --label break-glass=on) and stopped until it is
+# needed. Starting and stopping it are admin actions with their own sealed
+# records (deedglass agent start er-bot, deedglass agent stop er-bot). While it
+# runs, its creates and updates go ahead without waiting, and each record names
+# the rule break-glass, so they can be reviewed afterwards (deedglass actions
+# list --agent er-bot). Deletes of clinical records and claims don't change.
+deedglass: policy/v1
+name: healthcare-fhir
+description: Reads run. Clinical records are never deleted. Orders, allergies, problems and final notes wait for a clinician. Claims need two people.
+
+defaults:
+  decision: deny
+  reason: No rule in healthcare-fhir allows this call. Ask an admin to add a rule in Console › Policies.
+  verify: L1
+
+rules:   # order matters: the first rule that matches decides
+  - id: fhir-needs-a-request
+    description: The connector couldn't build a request (a type outside its list, or arguments that don't fit), so there is nothing to decide on.
+    match: { connector_type: fhir }
+    when: '!request.fhir.enriched'
+    decision: deny
+    reason: This FHIR call didn't build a request, for example a resource type the connector doesn't allow. Nothing was sent.
+
+  - id: no-delete-clinical
+    description: Clinical records, the patient record and the audit trail are corrected with a new version, never deleted.
+    match: { connector_type: fhir }
+    when: >-
+      request.fhir.interaction == "delete" && request.fhir.resource_type in [
+        "AdverseEvent", "AllergyIntolerance", "AuditEvent", "CarePlan", "CareTeam", "ClinicalImpression",
+        "Communication", "Composition", "Condition", "Consent", "DetectedIssue", "DeviceRequest",
+        "DeviceUseStatement", "DiagnosticReport", "DocumentReference", "Encounter", "EpisodeOfCare",
+        "FamilyMemberHistory", "Flag", "Goal", "ImagingStudy", "Immunization", "ImmunizationEvaluation",
+        "ImmunizationRecommendation", "MedicationAdministration", "MedicationDispense", "MedicationRequest",
+        "MedicationStatement", "NutritionOrder", "Observation", "Patient", "Procedure", "Provenance",
+        "QuestionnaireResponse", "RiskAssessment", "ServiceRequest", "Specimen"]
+    decision: deny
+    reason: Clinical records are corrected with a new version, not deleted. Update the resource instead, for example with status entered-in-error.
+
+  - id: no-history-rewrite
+    description: A FHIR server behind the REST connector. $expunge and $meta-delete erase history or security labels.
+    match: { connector_type: rest }
+    when: request.http.path.contains("$expunge") || request.http.path.contains("$meta-delete")
+    decision: deny
+    reason: Erasing a FHIR server's history or security labels stays with people. Nothing was sent.
+
+  - id: coverage-read-only
+    description: Agents read coverage; a person changes it in the payer or billing system. Eligibility requests are allowed further down.
+    match: { connector_type: fhir }
+    when: request.fhir.resource_type in ["Coverage", "CoverageEligibilityResponse"] && request.fhir.interaction in ["create", "update", "patch", "delete"]
+    decision: deny
+    reason: Coverage is read-only for agents. A person changes it in the payer or billing system.
+
+  - id: phi-minimum-read
+    description: A search must name what it looks for and ask for at most 100 results; a type-wide search or history reads every patient's records.
+    match: { connector_type: fhir }
+    when: >-
+      (request.fhir.interaction == "search" && (!has(args.params) || size(args.params) == 0 ||
+        ("_count" in args.params && (size(args.params["_count"]) > 3 || (size(args.params["_count"]) == 3 && args.params["_count"] != "100")))))
+      || (request.fhir.interaction == "history" && request.fhir.id == "")
+    decision: deny
+    reason: Searches name what they look for (for example patient or code) and ask for at most 100 results. Reading a whole resource type isn't allowed.
+
+  - id: claims-four-eyes
+    description: Claims and other billing records move money; two different people approve every change.
+    match: { connector_type: fhir }
+    when: >-
+      request.fhir.resource_type in ["Account", "ChargeItem", "Claim", "ClaimResponse", "ExplanationOfBenefit",
+        "Invoice", "PaymentNotice", "PaymentReconciliation"]
+      && request.fhir.interaction in ["create", "update", "patch", "delete"]
+    decision: require_approval
+    reason: Claims and billing changes need two people. Two admins approve in Console › Approvals.
+    approval: { approvers: [role:admin], required: 2, expires_in: 24h }
+    notify: [email]
+    verify: L1
+
+  - id: break-glass
+    description: The emergency agent, labelled break-glass=on and started only during an emergency. Its creates and updates run without waiting, and each record names this rule for review afterwards.
+    match: { connector_type: fhir, labels: { break-glass: "on" } }
+    when: request.fhir.interaction in ["create", "update", "patch"]
+    decision: allow
+    verify: L1
+
+  - id: orders-need-clinician
+    description: Orders and medication changes, including status changes to active or completed.
+    match: { connector_type: fhir }
+    when: >-
+      request.fhir.resource_type in ["DeviceRequest", "ImmunizationRecommendation", "MedicationAdministration",
+        "MedicationRequest", "NutritionOrder", "ServiceRequest"]
+      && request.fhir.interaction in ["create", "update", "patch"]
+    decision: require_approval
+    reason: Orders and medication changes wait for a clinician. A clinician on this rule's list approves in Console › Approvals.
+    # Replace with your clinicians. group:clinicians replaces this list when approver groups ship.
+    approval: { approvers: [user:clinician-1@example.org, user:clinician-2@example.org], required: 1, expires_in: 4h }
+    notify: [email]
+    verify: L1
+
+  - id: allergy-problem-list-review
+    description: Allergies and the problem list are reconciled by a clinician, like an EHR's own review queue.
+    match: { connector_type: fhir }
+    when: request.fhir.resource_type in ["AllergyIntolerance", "Condition"] && request.fhir.interaction in ["create", "update", "patch"]
+    decision: require_approval
+    reason: Changes to allergies and the problem list wait for a clinician. A clinician on this rule's list approves in Console › Approvals.
+    approval: { approvers: [user:clinician-1@example.org, user:clinician-2@example.org], required: 1, expires_in: 4h }
+    notify: [email]
+    verify: L1
+
+  - id: notes-draft-only
+    description: An agent writes notes as drafts (docStatus preliminary, or a preliminary Composition); a clinician finalises them.
+    match: { connector_type: fhir }
+    when: >-
+      request.fhir.resource_type in ["DocumentReference", "Composition"] && request.fhir.interaction in ["create", "update"]
+      && has(args.resource) && ((has(args.resource.docStatus) && args.resource.docStatus == "preliminary")
+        || (request.fhir.resource_type == "Composition" && has(args.resource.status) && args.resource.status == "preliminary"))
+    decision: allow
+    verify: L1
+
+  - id: final-notes-need-clinician
+    description: A note that isn't a draft, or a patch to one.
+    match: { connector_type: fhir }
+    when: request.fhir.resource_type in ["DocumentReference", "Composition"] && request.fhir.interaction in ["create", "update", "patch"]
+    decision: require_approval
+    reason: Agents write notes as drafts (preliminary). A final note, or a change to one, waits for a clinician in Console › Approvals.
+    approval: { approvers: [user:clinician-1@example.org, user:clinician-2@example.org], required: 1, expires_in: 4h }
+    notify: [email]
+    verify: L1
+
+  - id: fhir-reads
+    match: { connector_type: fhir }
+    when: request.fhir.interaction in ["read", "vread", "search", "history"]
+    decision: allow
+    verify: L0
+
+  - id: other-deletes-need-approval
+    description: Deletes of non-clinical records, like a Task or an Appointment.
+    match: { connector_type: fhir }
+    when: request.fhir.interaction == "delete"
+    decision: require_approval
+    reason: Deletes wait for a human. An admin can approve in Console › Approvals.
+    approval: { approvers: [role:admin], required: 1, expires_in: 2h }
+    notify: [email]
+    verify: L1
+
+  - id: verify-levels
+    description: Every other write runs and is read back at the version the server reported (Checked).
+    match: { connector_type: fhir }
+    when: request.fhir.interaction in ["create", "update", "patch"]
+    decision: allow
+    verify: L1

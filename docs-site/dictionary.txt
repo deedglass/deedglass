@@ -19,3 +19,5 @@ wordmark
 zizmor
 lastmod
 Rubrik
+FHIR
+fhir

@@ -31,8 +31,19 @@ this file by `scripts/release-notes.sh`.
   for a write after an unknown outcome when its connector says it can (the FHIR connector's
   history lookup); the catalog decides the class, so such a finding is never a pass on its own.
 
+- **The `healthcare-fhir` policy pack** (free; `deedglass policy install healthcare-fhir`) for the
+  FHIR connector: deletes of clinical records are denied (they are corrected with a new version),
+  orders and medication changes, allergies, the problem list and final notes wait for a clinician,
+  claims and other billing records need two admins, coverage is read-only, searches name what they
+  look for and ask for at most 100 results, and every other write is read back (Checked). An agent
+  labelled `break-glass=on` runs creates and updates without waiting, each record naming the rule
+  `break-glass`. 36 cases; `make policy-test` now runs every pack's cases. Attack case I12 runs. See
+  `docs/guides/healthcare-fhir-pack.md`.
+
 ### Changed
 
+- The server image budget is 45,000,000 bytes (it was 40,000,000; ADR-106, proposed). The
+  `docker-smoke` job and `scripts/ci-local.sh` print how far under it the image is.
 - The release build no longer inlines the Insights store, approvals and the notifiers, which wait on
   Postgres or the network, to keep the server image under its 40,000,000-byte budget with the FHIR
   connector added.

@@ -68,6 +68,7 @@ export const sidebar = clean([
       p('guides/stripe-refunds', 'Stripe refunds with approval'),
       p('guides/github', 'GitHub agent guardrails'),
       p('guides/fhir-server', 'Use a FHIR server today'),
+      p('guides/healthcare-fhir-pack', 'The healthcare-fhir pack'),
       p('guides/slack-approvals', 'Slack approvals'),
       p('guides/phone-approvals', 'Approvals on your phone'),
       p('guides/verify-as-an-auditor', 'Verify deeds as an auditor'),

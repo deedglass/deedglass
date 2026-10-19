@@ -24,6 +24,7 @@ deedglass policy packs verify
 - `supabase-mcp` (free): Supabase's MCP server, wrapped as the connector `supabase`.
 - `stripe-refunds` (free): the Stripe connector (sandbox).
 - `github-agent` (free): the GitHub connector.
+- `healthcare-fhir` (free): the FHIR connector. Clinical records are never deleted; orders, allergies, problems and final notes wait for a clinician; claims need two people ([the healthcare-fhir pack](/guides/healthcare-fhir-pack/)).
 - `money-movement` (Pro): Stripe refunds, payouts and transfers, with amount caps and two admins for large ones.
 
 `verify` checks every file of every pack against its sha256 in the index and runs each pack's own test cases. Each pack carries at least 12.
