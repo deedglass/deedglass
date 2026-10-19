@@ -9,7 +9,7 @@ BI       := github.com/deedglass/deedglass/internal/buildinfo
 GCFLAGS  := $(shell scripts/gcflags.sh)
 LDFLAGS  := -s -w -X $(BI).Version=$(VERSION) -X $(BI).Commit=$(COMMIT) -X $(BI).Modified=$(MODIFIED) -X $(BI).Date=$(DATE)
 
-.PHONY: api-gz embed-gz mcpb demo-scan-golden packs-check docs docs-dev docs-check docs-snippets docs-lighthouse py-ci py-build py-examples web-install web-tokens web-build web-test web-e2e web-lighthouse web-dev build-only ops-build bench-undo all help ci build test test-short vet fmt fmt-check tidy-check testdata-check rename-guard banned-words nocgo \
+.PHONY: api-gz embed-gz mcpb demo-scan-golden packs-check docs docs-dev docs-check docs-snippets docs-lighthouse py-ci py-build py-examples web-install web-tokens web-build web-test web-e2e web-lighthouse web-dev build-only ops-build bench-undo all help ci build test test-short vet fmt fmt-check tidy-check testdata-check release-bundles rename-guard banned-words nocgo \
 	integration matrix fuzz bench workflows-check npm-dry-run release-check cloud-smoke bench-micro bench-quick bench-soak bench-check bench-report bench-store bench-deed cover clean \
 	dev dev-down dev-reset dev-logs run docker bench-http bench-verify \
 	web-verify-install web-verify-test sdk-ts sdk-ts-it sdk-sync-verify sdk-runtime sdk-examples web-verify-build web-verify-serve gencopy genmark bench-mark bench-ledger bench-stop bench-intents bench-gate bench-witness policy-test \
@@ -23,7 +23,7 @@ all: ci
 help: ## list the targets
 	@grep -E '^[a-z][a-z-]*:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-15s %s\n", $$1, $$2}'
 
-ci: fmt-check tidy-check vet test fuzz-policy-short policy-test testdata-check rename-guard banned-words nocgo workflows-check listings-check web-verify-test web-test sdk-ts py-ci ## everything the lint-unit, web-verify and web CI jobs run
+ci: fmt-check tidy-check vet test fuzz-policy-short policy-test testdata-check release-bundles rename-guard banned-words nocgo workflows-check listings-check web-verify-test web-test sdk-ts py-ci ## everything the lint-unit, web-verify, release-bundles and web CI jobs run
 
 build: ## build bin/deedglass with version ldflags (with Node 24 present, the real Console first: make web-build)
 	@if command -v node >/dev/null 2>&1; then $(MAKE) --no-print-directory web-build; else echo "build: Node isn't installed, so the binary carries the Console placeholder (dev only; prod refuses it)"; fi
@@ -58,6 +58,9 @@ embed-gz: ## rewrite the gzip archives the binary embeds (internal/store/migrati
 
 testdata-check: ## (ci) verify the offline test vectors
 	cd testdata && shasum -a 256 -c --quiet SHA256SUMS
+
+release-bundles: ## (ci) TY-11, the 2046 test: every release's bundle in testdata/release-bundles verifies with this tree's CLI (the browser half runs in web-verify-test); a new release adds its own: scripts/release-bundles.sh add vX.Y.Z
+	scripts/release-bundles.sh verify
 
 rename-guard: ## (ci) fail on any retired identifier (docs/NAMING.md, ADR-012)
 	@scripts/rename_guard.sh

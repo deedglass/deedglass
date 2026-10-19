@@ -89,6 +89,33 @@ jobs:
         working-directory: web/verify
         run: npx vitest run
 
+  # TY-11, the 2046 test: one sealed bundle from every release (testdata/release-bundles) verifies
+  # with this tree's CLI (deedglass verify --strict, manifest seal included) and with the browser
+  # verifier, on every PR; every release tag in the history must have its bundle (the full history
+  # is fetched for the tags). Required on main (.github/required-checks.txt).
+  release-bundles:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+      - name: every release's bundle verifies with this CLI
+        run: scripts/release-bundles.sh verify
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+      - name: npm ci (exact pins, no install scripts)
+        working-directory: web/verify
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: every release's bundle verifies with the browser verifier
+        working-directory: web/verify
+        run: npx vitest run test/release-bundles.test.ts
+
   # The TypeScript SDK (S31): the verify copy is current, typecheck, Vitest (transport, wrapTool,
   # intent and deed vectors, parity 500/500, the four adapters on their real frameworks, coverage),
   # then the build, zero runtime dependencies, the pack golden, publint, attw and the size budgets.

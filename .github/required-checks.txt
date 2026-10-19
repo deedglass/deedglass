@@ -1,0 +1,18 @@
+# The status checks the ruleset on main requires: every job of .github/workflows/ci.yml, one per
+# line (scripts/check-workflows.sh keeps this list equal to ci.yml's jobs and refuses one without
+# release-bundles, the 2046 test, TY-11). Branch protection is set in GitHub › Settings › Rules
+# (docs/PUBLIC_REPO_SWITCH.md step 3); a job added here must be added there too.
+lint-unit
+web-verify
+release-bundles
+sdk-ts
+sdk-python
+web
+docs
+integration-pg18
+attack
+fhir-hapi
+fhir-proven
+docker-smoke
+govulncheck
+fuzz-regress

@@ -9,9 +9,12 @@
 #   - verify refuses a tag whose commit isn't on main; deploy-docs checks out the full history (lastmod)
 #   - every uses: is pinned to a full commit SHA with a # vX.Y.Z comment
 #   - actionlint 1.7.12 passes (the Homebrew binary, else go run at that pin)
+#   - .github/required-checks.txt (REQUIRED_CHECKS) names exactly ci.yml's jobs, release-bundles (TY-11,
+#     the 2046 test) among them, and that job runs scripts/release-bundles.sh verify on every PR
 # --self-test breaks a copy one way at a time (a removed gate, write-all, an unpinned action, an extra
 # OIDC token in npm-stage, in a job named with a digit and an underscore, in flow style, after a
-# column-0 comment, a removed on-main check, a shallow docs checkout) and checks that this script then fails.
+# column-0 comment, a removed on-main check, a shallow docs checkout, release-bundles dropped from the
+# required checks or from ci.yml) and checks that this script then fails.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 if [ "${1:-}" = "--self-test" ]; then
@@ -41,7 +44,14 @@ if [ "${1:-}" = "--self-test" ]; then
     '$0 == "  npm-stage:" {print "# staging"; on=1} {print} on && $0 == "      contents: read" {print "      id-token: write"; on=0}'
   broken "a removed on-main check" '!/merge-base --is-ancestor/'
   broken "a shallow docs checkout" '$0 == "  deploy-docs:" {on=1} on && /fetch-depth: 0/ {on=0; next} {print}'
-  echo "✓ check-workflows self-test · a removed gate, write-all, an unpinned action, extra OIDC tokens (any name, flow style, after a comment), a removed on-main check and a shallow docs checkout each fail"
+  cp .github/workflows/release.yml "$tmp/release.yml"
+  grep -vx 'release-bundles' .github/required-checks.txt > "$tmp/required-checks.txt"
+  if REQUIRED_CHECKS="$tmp/required-checks.txt" NO_ACTIONLINT=1 "$0" "$tmp" >/dev/null 2>&1; then
+    echo "✕ self-test: release-bundles dropped from the required checks wasn't caught" >&2; exit 1; fi
+  awk '$0 == "  release-bundles:" {skip=1; next} skip && /^  [^ #]/ {skip=0} !skip {print}' .github/workflows/ci.yml > "$tmp/ci.yml"
+  if REQUIRED_CHECKS=.github/required-checks.txt NO_ACTIONLINT=1 "$0" "$tmp" >/dev/null 2>&1; then
+    echo "✕ self-test: the release-bundles job removed from ci.yml wasn't caught" >&2; exit 1; fi
+  echo "✓ check-workflows self-test · a removed gate, write-all, an unpinned action, extra OIDC tokens (any name, flow style, after a comment), a removed on-main check, a shallow docs checkout and a dropped 2046 test each fail"
   exit 0
 fi
 dir="${1:-.github/workflows}"
@@ -88,6 +98,22 @@ grep -q 'draft: true' .goreleaser.yaml 2>/dev/null || [ "$dir" != ".github/workf
 if grep -nE '^[[:space:]]*permissions:[[:space:]]*write-all' "$dir"/*.yml; then bad "write-all is granted above"; fi
 unpinned="$(grep -nE '^[[:space:]]*(-[[:space:]]*)?uses:' "$dir"/*.yml | grep -vE 'uses: [^ ]+@[0-9a-f]{40} # v[0-9]+[.][0-9]+[.][0-9]+$' || true)"
 [ -z "$unpinned" ] || bad "not pinned to a commit SHA with its version:"$'\n'"$unpinned"
+# The required checks (TY-11): the list names exactly ci.yml's jobs, release-bundles among them, and
+# that job runs on pull requests and verifies the release bundles.
+req="${REQUIRED_CHECKS:-.github/required-checks.txt}"
+ci="$dir/ci.yml"
+if [ ! -f "$req" ] || [ ! -f "$ci" ]; then
+  bad "$req or $ci is missing"
+else
+  want="$(grep -vE '^[[:space:]]*(#|$)' "$req" | sort)"
+  have="$(awk '/^jobs:/ {on=1; next} on && /^[^ #]/ {on=0} on && /^  [A-Za-z0-9_-]+:[[:space:]]*(#.*)?$/ {j=$1; sub(/:$/, "", j); print j}' "$ci" | sort)"
+  [ "$want" = "$have" ] || bad "$req doesn't name exactly ci.yml's jobs:"$'\n'"$(diff <(echo "$want") <(echo "$have") || true)"
+  grep -qx 'release-bundles' <<<"$want" || bad "$req doesn't require release-bundles (TY-11, the 2046 test)"
+  rb="$(awk '$0 == "  release-bundles:" {on=1; print; next} on && /^  [^ #]/ {exit} on {print}' "$ci")"
+  grep -q 'scripts/release-bundles.sh verify' <<<"$rb" || bad "ci.yml's release-bundles job doesn't run scripts/release-bundles.sh verify"
+  grep -q 'test/release-bundles.test.ts' <<<"$rb" || bad "ci.yml's release-bundles job doesn't run the browser verifier's release-bundles test"
+  grep -qE '^  pull_request:' "$ci" || bad "ci.yml doesn't run on pull requests"
+fi
 if [ -z "${NO_ACTIONLINT:-}" ]; then
   # GitHub's service containers accept command: (ci.yml uses it); actionlint 1.7.12 doesn't know it yet.
   ignore='unexpected key "command" for "services" section'
@@ -101,4 +127,4 @@ if [ "$fail" = 1 ]; then
   echo "  next  Put the gate, environment, permission or pin back; see the header of .github/workflows/release.yml."
   exit 1
 fi
-echo "✓ workflows · publish jobs gated · permissions {} by default · every action pinned · actionlint clean"
+echo "✓ workflows · publish jobs gated · permissions {} by default · every action pinned · required checks match ci.yml with the 2046 test · actionlint clean"

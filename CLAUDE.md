@@ -138,6 +138,8 @@ DEEDGLASS_IT_PKGS=./internal/identity/ make integration   # one suite (DEEDGLASS
 scripts/dev-pg.sh up  # a Docker-free dev Postgres on 127.0.0.1:55432 (writes .tmp/dev-pg.env); down | reset
 scripts/demo/tamper-clip.sh  # S06's recording: 1,000 real deeds, export, verify ✓, flip one digit, verify ✕
 make gencopy        # regenerate testdata/deeds/messages.json and web/verify/src/*.gen.ts from Go
+make release-bundles # (in ci) TY-11, the 2046 test: every testdata/release-bundles/<version>/ bundle verifies with this tree's CLI (--strict), a tampered copy fails, every release tag has its bundle; the browser half is web/verify/test/release-bundles.test.ts
+scripts/release-bundles.sh add vX.Y.Z   # TY-11: a new release's bundle from the tag's own code (throwaway worktree, genrelease copied in, the tag's CLI verifies it); commit it in the first PR after the tag (docs/RELEASING.md)
 make sdk-ts          # (in ci) S31: @deedglass/sdk: the verify copy is current, tsc, Vitest (transport, wrapTool, intent and deed vectors, parity 500/500, the four adapters on their real frameworks, coverage ≥ 90%), build, deps, pack golden, publint, attw, size budgets
 make sdk-ts-it       # S31: TestSDKTypeScriptLive: the SDK and every examples/ts example against a real serve on a throwaway PG 18 (also inside make integration when sdk/typescript is installed)
 make sdk-runtime     # S31: the packed SDK on Node 22.12, 24 and 26 (Docker node:<v>-alpine when not local), Bun and Deno when installed
@@ -692,6 +694,11 @@ and "open source" until the repo is public. Style bans: "revolutionary", "world-
   network without a `--keys` URL, terminal sanitizing.
 - `web/verify` (S05): vectors, parity 500/500, strict, JCS, keys (A13, RFC 8032, Wycheproof), page
   safety (CSP, no HTML from strings, no storage, one fetch).
+- TY-11, the 2046 test: `testdata/release-bundles/<version>/` (one bundle per release since v0.1.0, never
+  made again; pinned in its `SHA256SUMS` and `testdata/SHA256SUMS`) verifies on every PR in the required
+  CI job `release-bundles` (`scripts/release-bundles.sh verify` and `web/verify/test/release-bundles.test.ts`);
+  `scripts/check-workflows.sh` keeps `.github/required-checks.txt` equal to ci.yml's jobs with
+  `release-bundles` in it (self-test included).
 - `attack/` (S18): 129 case ids (66 V0 + 19 V7: H01–H11, J01–J04, K01–K04 + S21's W01–W13 + S22's L01–L08 + S23's U01–U05 + S34's P02–P08, P10, Q01–Q08, R01–R07), the outcome enum, the
   demo sets, one pinned digest per group set (`expectedDigest` A–G after ADR-021,
   `expectedDigestV7` H/J/K, ADR-040, `expectedDigestW` W, ADR-046, `expectedDigestL` L, ADR-049, `expectedDigestU` U, ADR-052; a group without a pin fails), `TestADR021WordsOnly`, `needs`
