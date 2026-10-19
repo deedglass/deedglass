@@ -46,7 +46,7 @@ describe('Ed25519 public keys (attack case A13)', () => {
       ['wrong thumbprint', (ks) => (ks.keys[0].thumbprint = ks.keys[1].thumbprint), 'seal_key_rejected'],
       ['jwk differs', (ks) => (ks.keys[0].jwk.x = ks.keys[1].public_key), 'seal_key_rejected'],
       ['status does not match', (ks) => (ks.keys[2].status = 'retired'), 'seal_key_rejected'],
-      ['unknown alg', (ks) => (ks.keys[0].alg = 'EdDSA'), 'seal_key_rejected'],
+      ['malformed alg', (ks) => (ks.keys[0].alg = 'Ed 25519'), 'seal_key_rejected'],
       ['extra field', (ks) => (ks.note = 'x'), 'schema_invalid'],
       ['bad time', (ks) => (ks.keys[0].activated_at = '2026-02-30T00:00:00.000Z'), 'schema_invalid'],
       ['not an object', (ks) => (ks.keys = 1), 'schema_invalid'],

@@ -103,7 +103,7 @@ func TestVerifyTable(t *testing.T) {
 		{"bad enum", edit(t, raw, func(m map[string]any) { body(m)["witness"].(map[string]any)["verdict"] = "OK" }), deed.CodeSchemaInvalid, "body.witness.verdict"},
 		{"bad time", edit(t, raw, func(m map[string]any) { body(m)["issued_at"] = "2026-10-02T09:00:00Z" }), deed.CodeSchemaInvalid, "body.issued_at"},
 		{"object not deed", edit(t, raw, func(m map[string]any) { m["object"] = "statement" }), deed.CodeSchemaInvalid, "object"},
-		{"version 2", edit(t, raw, func(m map[string]any) { body(m)["v"] = sNum("2"); body(m)["new_field"] = 1 }), deed.CodeUnsupportedVersion, ""},
+		{"version 3", edit(t, raw, func(m map[string]any) { body(m)["v"] = sNum("3"); body(m)["new_field"] = 1 }), deed.CodeUnsupportedVersion, ""},
 		{"bad seal format", edit(t, raw, func(m map[string]any) { m["seal"] = "ed25519:abc" }), deed.CodeSchemaInvalid, "seal"},
 		{"oversized tool", edit(t, raw, func(m map[string]any) { body(m)["action"].(map[string]any)["tool"] = strings.Repeat("x", 201) }), deed.CodeSchemaInvalid, "body.action.tool"},
 	}
@@ -246,7 +246,7 @@ func TestVerifyFirstFailureWins(t *testing.T) {
 	if _, err := deed.VerifyEnvelope(both, ks, deed.VerifyOptions{}); deed.CodeOf(err) != deed.CodeBodyHashMismatch {
 		t.Fatalf("got %v", err)
 	}
-	idAndVersion := edit(t, raw, func(m map[string]any) { m["id"] = deedtest.ID("deed", 3); body(m)["v"] = 2 })
+	idAndVersion := edit(t, raw, func(m map[string]any) { m["id"] = deedtest.ID("deed", 3); body(m)["v"] = 3 })
 	if _, err := deed.VerifyEnvelope(idAndVersion, ks, deed.VerifyOptions{}); deed.CodeOf(err) != deed.CodeIDMismatch {
 		t.Fatalf("got %v", err)
 	}

@@ -10,7 +10,7 @@ const from = here + '../../web/verify/src/';
 const to = here + 'src/verify/';
 // index.ts is copied as core.ts: src/verify/index.ts adds fetchKeys around it.
 export const FILES = {
-  'b64url.ts': 'b64url.ts', 'chain.ts': 'chain.ts', 'deed.ts': 'deed.ts', 'errors.ts': 'errors.ts', 'hex.ts': 'hex.ts',
+  'alg.ts': 'alg.ts', 'b64url.ts': 'b64url.ts', 'chain.ts': 'chain.ts', 'deed.ts': 'deed.ts', 'errors.ts': 'errors.ts', 'hex.ts': 'hex.ts',
   'jcs.ts': 'jcs.ts', 'keys.ts': 'keys.ts', 'keys.gen.ts': 'keys.gen.ts', 'messages.gen.ts': 'messages.gen.ts',
   'report.ts': 'report.ts', 'schema.ts': 'schema.ts', 'sha256.ts': 'sha256.ts', 'strict.ts': 'strict.ts', 'index.ts': 'core.ts',
 };

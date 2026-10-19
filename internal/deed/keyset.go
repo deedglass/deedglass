@@ -3,11 +3,11 @@ package deed
 import (
 	"crypto/ed25519"
 	"fmt"
+	"slices"
 	"sort"
 	"time"
 
 	"github.com/deedglass/deedglass/internal/intent"
-	"github.com/deedglass/deedglass/internal/keys"
 )
 
 // Seal key statuses.
@@ -17,15 +17,12 @@ const (
 	KeyRevoked = "revoked" // every deed it sealed fails verification
 )
 
-// AlgEd25519 is the only seal key algorithm in v1.
-const AlgEd25519 = "Ed25519"
-
 // SealKey is one public seal key as keys.json publishes it (contract §7).
 type SealKey struct {
 	Object      string  `json:"object"` // "seal_key"
 	ID          string  `json:"id"`
-	Alg         string  `json:"alg"`        // "Ed25519"
-	PublicKey   string  `json:"public_key"` // base64url, 32 bytes
+	Alg         string  `json:"alg"`        // "Ed25519" (alg.go lists the others)
+	PublicKey   string  `json:"public_key"` // base64url of the raw key (Ed25519: 32 bytes)
 	Thumbprint  string  `json:"thumbprint"` // sha256:<hex of the raw key>
 	Status      string  `json:"status"`
 	ActivatedAt string  `json:"activated_at"`
@@ -34,14 +31,31 @@ type SealKey struct {
 	JWK         JWK     `json:"jwk"`
 }
 
-// JWK is the key as an RFC 8037 OKP JSON Web Key. It omits alg: RFC 9864 deprecates "EdDSA" for
-// "Ed25519", and many JOSE libraries don't know the new name yet.
+// JWK is the key as a JSON Web Key. An Ed25519 key is an RFC 8037 OKP key {kty, crv, x, kid, use};
+// it omits alg because RFC 9864 deprecates "EdDSA" for "Ed25519" and many JOSE libraries don't know
+// the new name yet. An ML-DSA key is an RFC 9964 AKP key {kty, alg, pub, kid, use}, where alg is
+// required.
 type JWK struct {
-	Kty string `json:"kty"` // "OKP"
-	Crv string `json:"crv"` // "Ed25519"
-	X   string `json:"x"`   // = public_key
-	Kid string `json:"kid"` // = id
-	Use string `json:"use"` // "sig"
+	Kty string `json:"kty"`           // "OKP" | "AKP"
+	Crv string `json:"crv,omitempty"` // OKP: "Ed25519"
+	X   string `json:"x,omitempty"`   // OKP: = public_key
+	Alg string `json:"alg,omitempty"` // AKP: = the key's alg
+	Pub string `json:"pub,omitempty"` // AKP: = public_key
+	Kid string `json:"kid"`           // = id
+	Use string `json:"use"`           // "sig"
+}
+
+// jwkKeys is the closed member list of a key's jwk, by algorithm: OKP for Ed25519, AKP for the
+// RFC 9964 algorithms, and for an algorithm this verifier doesn't implement any of the known
+// members with kty, kid and use present.
+func jwkKeys(alg string) (required, optional []string) {
+	switch {
+	case alg == AlgEd25519:
+		return []string{"kty", "crv", "x", "kid", "use"}, nil
+	case AlgSupported(alg):
+		return []string{"kty", "alg", "pub", "kid", "use"}, nil
+	}
+	return []string{"kty", "kid", "use"}, []string{"crv", "x", "alg", "pub"}
 }
 
 // KeySet is GET /.well-known/deedglass/keys.json: every seal key ever registered, sorted by
@@ -57,7 +71,8 @@ type KeySet struct {
 
 type keyEntry struct {
 	key       *SealKey
-	pub       ed25519.PublicKey
+	alg       *algSpec // nil: an algorithm this verifier doesn't implement (kept, never used)
+	pub       any      // what alg.verify takes (Ed25519: ed25519.PublicKey)
 	activated time.Time
 	retired   *time.Time
 	revoked   *time.Time
@@ -66,7 +81,8 @@ type keyEntry struct {
 // KeyRecord is a seal key as the server stores it; NewKeySet turns records into a KeySet.
 type KeyRecord struct {
 	ID          string
-	PublicKey   ed25519.PublicKey
+	Alg         string            // "" means Ed25519
+	PublicKey   ed25519.PublicKey // the raw key bytes (Ed25519: 32 bytes)
 	Status      string
 	ActivatedAt time.Time
 	RetiredAt   *time.Time
@@ -76,10 +92,17 @@ type KeyRecord struct {
 // NewSealKey renders one record in the published shape.
 func NewSealKey(r KeyRecord) SealKey {
 	x := b64.EncodeToString(r.PublicKey)
+	alg := r.Alg
+	if alg == "" {
+		alg = AlgEd25519
+	}
 	k := SealKey{
-		Object: "seal_key", ID: r.ID, Alg: AlgEd25519, PublicKey: x, Thumbprint: Thumbprint(r.PublicKey),
+		Object: "seal_key", ID: r.ID, Alg: alg, PublicKey: x, Thumbprint: Thumbprint(r.PublicKey),
 		Status: r.Status, ActivatedAt: FormatTime(r.ActivatedAt),
 		JWK: JWK{Kty: "OKP", Crv: "Ed25519", X: x, Kid: r.ID, Use: "sig"},
+	}
+	if alg != AlgEd25519 {
+		k.JWK = JWK{Kty: "AKP", Alg: alg, Pub: x, Kid: r.ID, Use: "sig"}
 	}
 	if r.RetiredAt != nil {
 		s := FormatTime(*r.RetiredAt)
@@ -153,8 +176,29 @@ func ParseKeySet(raw []byte) (*KeySet, error) {
 		k := SealKey{Object: d.s(o, "object"), ID: d.s(o, "id"), Alg: d.s(o, "alg"), PublicKey: d.s(o, "public_key"),
 			Thumbprint: d.s(o, "thumbprint"), Status: d.s(o, "status"), ActivatedAt: d.s(o, "activated_at"),
 			RetiredAt: d.ns(o, "retired_at"), RevokedAt: d.ns(o, "revoked_at")}
-		if j, ok := d.obj(o, "jwk", []string{"kty", "crv", "x", "kid", "use"}); ok {
-			k.JWK = JWK{Kty: d.s(j, "kty"), Crv: d.s(j, "crv"), X: d.s(j, "x"), Kid: d.s(j, "kid"), Use: d.s(j, "use")}
+		req, opt := jwkKeys(k.Alg)
+		jkeys := req
+		if jm, ok := o.m["jwk"].(map[string]any); ok {
+			for _, f := range opt {
+				if _, present := jm[f]; present {
+					jkeys = append(jkeys, f)
+				}
+			}
+		}
+		if j, ok := d.obj(o, "jwk", jkeys); ok {
+			k.JWK = JWK{Kty: d.s(j, "kty"), Kid: d.s(j, "kid"), Use: d.s(j, "use")}
+			for _, f := range jkeys {
+				switch f {
+				case "crv":
+					k.JWK.Crv = d.s(j, f)
+				case "x":
+					k.JWK.X = d.s(j, f)
+				case "alg":
+					k.JWK.Alg = d.s(j, f)
+				case "pub":
+					k.JWK.Pub = d.s(j, f)
+				}
+			}
 		} else if d.err == nil {
 			d.err = errSchemaField(o.at("jwk"), "must be an object")
 		}
@@ -183,24 +227,34 @@ func (ks *KeySet) index() error {
 		if _, dup := ks.byID[k.ID]; dup {
 			return errKeyRejected(k.ID, "listed twice")
 		}
-		if k.Alg != AlgEd25519 {
+		if !reAlg.MatchString(k.Alg) {
 			return errKeyRejected(k.ID, "unknown alg "+k.Alg)
 		}
+		e := &keyEntry{key: k, alg: algs[k.Alg]}
 		raw, err := b64.DecodeString(k.PublicKey)
-		if err != nil || len(raw) != ed25519.PublicKeySize {
-			return errKeyRejected(k.ID, "public_key is not 32 bytes of base64url")
+		if e.alg != nil {
+			if err != nil || len(raw) != e.alg.keySize {
+				return errKeyRejected(k.ID, fmt.Sprintf("public_key is not %d bytes of base64url", e.alg.keySize))
+			}
+			if e.pub, err = e.alg.parseKey(raw); err != nil {
+				return errKeyRejected(k.ID, err.Error())
+			}
+			if !e.alg.jwkOK(k.JWK, k) {
+				return errKeyRejected(k.ID, "jwk does not match the key")
+			}
+		} else {
+			// An algorithm this verifier doesn't implement: kept so deeds of the set's other keys
+			// verify, checked for what can be checked without the algorithm, and never used.
+			if err != nil || len(raw) == 0 || len(raw) > maxUnknownKeyBytes {
+				return errKeyRejected(k.ID, "public_key is not base64url")
+			}
+			if k.JWK.Kid != k.ID || k.JWK.Use != "sig" || k.JWK.Kty == "" {
+				return errKeyRejected(k.ID, "jwk does not match the key")
+			}
 		}
-		pub, err := keys.ParsePublicKey(raw)
-		if err != nil {
-			return errKeyRejected(k.ID, err.Error())
-		}
-		if k.Thumbprint != Thumbprint(pub) {
+		if k.Thumbprint != Digest(raw) {
 			return errKeyRejected(k.ID, "thumbprint does not match public_key")
 		}
-		if k.JWK.Kty != "OKP" || k.JWK.Crv != "Ed25519" || k.JWK.X != k.PublicKey || k.JWK.Kid != k.ID || k.JWK.Use != "sig" {
-			return errKeyRejected(k.ID, "jwk does not match the key")
-		}
-		e := &keyEntry{key: k, pub: pub}
 		if e.activated, err = ParseTime(k.ActivatedAt); err != nil {
 			return errSchemaField(fmt.Sprintf("keys[%d].activated_at", i), "must be YYYY-MM-DDTHH:MM:SS.mmmZ")
 		}
@@ -235,7 +289,10 @@ func (ks *KeySet) index() error {
 	return nil
 }
 
-// Lookup returns the key with this id.
+// maxUnknownKeyBytes bounds the public key of an algorithm this verifier doesn't implement.
+const maxUnknownKeyBytes = 8 << 10
+
+// Lookup returns the key with this id. The public key is set for Ed25519 keys only.
 func (ks *KeySet) Lookup(id string) (*SealKey, ed25519.PublicKey, bool) {
 	if ks == nil {
 		return nil, nil, false
@@ -244,7 +301,34 @@ func (ks *KeySet) Lookup(id string) (*SealKey, ed25519.PublicKey, bool) {
 	if !ok {
 		return nil, nil, false
 	}
-	return e.key, e.pub, true
+	pub, _ := e.pub.(ed25519.PublicKey)
+	return e.key, pub, true
+}
+
+// entry returns the indexed key with this id.
+func (ks *KeySet) entry(id string) (*keyEntry, bool) {
+	if ks == nil {
+		return nil, false
+	}
+	e, ok := ks.byID[id]
+	return e, ok
+}
+
+// activeAlgs lists the implemented algorithms of the keys that are not revoked and were active at t
+// (activated_at ≤ t < retired_at): the key-set rule says a deed issued at t carries a seal of each
+// (DEED_SPEC.md §11.4).
+func (ks *KeySet) activeAlgs(t time.Time) []string {
+	var out []string
+	for i := range ks.Keys {
+		e := ks.byID[ks.Keys[i].ID]
+		if e.alg == nil || e.revoked != nil || t.Before(e.activated) || (e.retired != nil && !t.Before(*e.retired)) {
+			continue // an algorithm this verifier doesn't implement can't be required of a deed it can't check
+		}
+		if !slices.Contains(out, e.key.Alg) {
+			out = append(out, e.key.Alg)
+		}
+	}
+	return out
 }
 
 // validAt applies the validity rule: activated_at ≤ t < retired_at (open-ended when null), and

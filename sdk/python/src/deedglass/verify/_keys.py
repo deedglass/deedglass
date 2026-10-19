@@ -7,6 +7,7 @@ the whole set with ``seal_key_rejected``: a verifier never picks and chooses.
 from __future__ import annotations
 
 import hashlib
+import re
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -15,6 +16,17 @@ from ._keys_gen import SMALL_ORDER_KEYS
 from ._schema import Decoder, as_obj, closed, is_id, parse_time
 from ._strict import StrictError, malformed_from, parse_strict_value
 from ._verror import VerifyError, key_rejected, malformed, schema_field
+
+# Deed v2 (ADR-109): every key names its algorithm. This verifier checks Ed25519 seals; a key of
+# another algorithm is kept (checked for what can be checked without the algorithm) and never used,
+# so a key set that also lists the issuer's ML-DSA-65 key still verifies its Ed25519 deeds.
+ALG_ED25519 = "Ed25519"
+# The algorithms the deed v2 spec registers: the key-set rule (DEED_SPEC.md §11.4) requires a seal of
+# each that is active at a deed's issued_at, even one this verifier can't check, so a v1 deed sealed
+# after the issuer added an ML-DSA-65 key is refused (seal_missing), never verified.
+SPEC_ALGS = ("Ed25519", "ML-DSA-65")
+_RE_ALG = re.compile(r"^[A-Za-z0-9][A-Za-z0-9-]{0,31}$")
+_MAX_UNKNOWN_KEY_BYTES = 8 << 10
 
 _KEY_FIELDS = (
     "object",
@@ -94,6 +106,19 @@ class KeySet:
             return "seal_key_not_valid_at"
         return ""
 
+    def active_algs(self, t: int) -> list[str]:
+        """The spec-registered algorithms of the keys not revoked and active at t (the key-set rule)."""
+        out: list[str] = []
+        for k in self.keys:
+            e = self._by_id[k.id]
+            if k.alg not in SPEC_ALGS or e.revoked is not None or t < e.activated:
+                continue
+            if e.retired is not None and t >= e.retired:
+                continue
+            if k.alg not in out:
+                out.append(k.alg)
+        return out
+
     def thumbprints(self) -> list[str]:
         return [k.thumbprint for k in self.keys]
 
@@ -135,9 +160,15 @@ def parse_key_set(data: bytes | str) -> KeySet:
             revoked_at=d.ns(o, "revoked_at"),
             jwk={},
         )
-        j = d.obj(o, "jwk", ("kty", "crv", "x", "kid", "use"))
+        if k.alg == ALG_ED25519:
+            jkeys: tuple[str, ...] = ("kty", "crv", "x", "kid", "use")
+        else:
+            jm = o.m.get("jwk")
+            present = jm if isinstance(jm, dict) else {}
+            jkeys = ("kty", "kid", "use", *(f for f in ("crv", "x", "alg", "pub") if f in present))
+        j = d.obj(o, "jwk", jkeys)
         if j is not None:
-            k.jwk = {n: d.s(j, n) for n in ("kty", "crv", "x", "kid", "use")}
+            k.jwk = {n: d.s(j, n) for n in jkeys}
         elif d.err is None:
             d.err = schema_field(f"{o.path}.jwk", "must be an object")
         d.check()
@@ -155,25 +186,31 @@ def _index(ks: KeySet, objects: list[str]) -> None:
             raise schema_field(f"keys[{i}].id", "must be an sk_ id")
         if k.id in ks._by_id:
             raise key_rejected(k.id, "listed twice")
-        if k.alg != "Ed25519":
+        if not _RE_ALG.match(k.alg):
             raise key_rejected(k.id, "unknown alg " + k.alg)
         raw = decode_b64url(k.public_key)
-        if raw is None or len(raw) != 32:
-            raise key_rejected(k.id, "public_key is not 32 bytes of base64url")
-        why = unsafe_key(raw)
-        if why is not None:
-            raise key_rejected(k.id, why)
+        j = k.jwk
+        if k.alg == ALG_ED25519:
+            if raw is None or len(raw) != 32:
+                raise key_rejected(k.id, "public_key is not 32 bytes of base64url")
+            why = unsafe_key(raw)
+            if why is not None:
+                raise key_rejected(k.id, why)
+            if (
+                j.get("kty") != "OKP"
+                or j.get("crv") != "Ed25519"
+                or j.get("x") != k.public_key
+                or j.get("kid") != k.id
+                or j.get("use") != "sig"
+            ):
+                raise key_rejected(k.id, "jwk does not match the key")
+        else:
+            if raw is None or len(raw) == 0 or len(raw) > _MAX_UNKNOWN_KEY_BYTES:
+                raise key_rejected(k.id, "public_key is not base64url")
+            if j.get("kid") != k.id or j.get("use") != "sig" or not j.get("kty"):
+                raise key_rejected(k.id, "jwk does not match the key")
         if k.thumbprint != sha256_digest(raw):
             raise key_rejected(k.id, "thumbprint does not match public_key")
-        j = k.jwk
-        if (
-            j.get("kty") != "OKP"
-            or j.get("crv") != "Ed25519"
-            or j.get("x") != k.public_key
-            or j.get("kid") != k.id
-            or j.get("use") != "sig"
-        ):
-            raise key_rejected(k.id, "jwk does not match the key")
         activated = parse_time(k.activated_at)
         if activated is None:
             raise schema_field(f"keys[{i}].activated_at", "must be YYYY-MM-DDTHH:MM:SS.mmmZ")

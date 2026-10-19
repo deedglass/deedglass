@@ -5,8 +5,24 @@ Every change to the text in `spec/`, newest first. Dates are UTC. "Edition" is a
 
 ## Unreleased
 
-- **Deed v2 (placeholder).** Seal algorithm agility and ML-DSA-65 seals beside Ed25519 (ADR-109,
-  TY-01/TY-02). That work fills this entry, the `v2` row of `README.md`, and the text.
+## Edition 2 · 2026-10-19 · Deed v2 (ADR-109, TY-01)
+
+- **`v2/DEED_SPEC.md`**: Deed v2. The body names every seal it carries (`seal_keys`), the envelope
+  carries one seal per key (`seals`), every seal names its algorithm, and every algorithm has its own
+  domain tag (§7.4). v1 and v2 records sit in one chain.
+- **Verification** (§11): the v2 order, and an accept policy decided by `issued_at` only, applied to
+  v1 and v2 records: Ed25519 alone only before 2035-01-01 (NIST IR 8547 draft), and the key-set rule
+  (an algorithm with a key active at `issued_at` must have a seal). New codes `unsupported_algorithm`
+  (exit 2) and `seal_missing`; none renamed.
+- **Key sets** (§10.2): a key of an algorithm the verifier doesn't implement is kept and never used,
+  instead of refusing the whole set. This changes edition 1's rule; no record that verified under
+  edition 1 fails under edition 2 (every v1 record so far was issued before 2035 and before any
+  second key).
+- **`v2/BUNDLE_FORMAT.md`**: the bundle format is unchanged; bundles may hold v2 lines and keys of
+  several algorithms.
+- Vectors: `testdata/deeds/v2/` (with a 200-case parity corpus). The v1 vector `invalid/version-2`
+  is now `invalid/version-3`, since v2 is a known version; its expected answer is unchanged.
+- `v1/` is not rewritten and stays the text for `v: 1` records under edition 1.
 
 ## Edition 1 · 2026-10-19 · published under CC-BY-4.0
 

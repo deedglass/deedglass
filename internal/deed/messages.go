@@ -24,7 +24,7 @@ type MessageTemplate struct {
 var Messages = map[string]MessageTemplate{
 	string(CodeMalformed): {"{Deed} is not valid strict JSON ({detail}).",
 		"Export it again from the issuer; do not edit deeds by hand."},
-	string(CodeUnsupportedVersion): {"{Deed} uses deed format v{v}. This verifier reads v1.", "Update deedglass."},
+	string(CodeUnsupportedVersion): {"{Deed} uses deed format v{v}, which this verifier can't read.", "Update deedglass."},
 	string(CodeSchemaInvalid):      {"{Deed} has an invalid field: {field}.", "Export it again from the issuer."},
 	string(CodeIDMismatch):         {"{Deed}'s id does not match its body.", "Export it again from the issuer."},
 	string(CodeBodyHashMismatch): {"{Deed} was changed after it was sealed.",
@@ -59,6 +59,10 @@ var Messages = map[string]MessageTemplate{
 	string(CodeChainOrgMismatch): {"{Deed} belongs to {org}, not {want_org}.", "Verify each org's deeds separately."},
 	string(CodeChainTimeRegression): {"{Deed} was sealed before deed {prev}.",
 		"Treat the chain as altered from {deed}."},
+	string(CodeUnsupportedAlgorithm): {"{Deed} is sealed with an algorithm this verifier can't check ({detail}).",
+		"Update deedglass, or check it with a verifier that supports that algorithm."},
+	string(CodeSealMissing): {"{Deed} is missing a seal it must carry ({detail}).",
+		"Treat this deed as altered, or ask the issuer for the deed as it was sealed."},
 	"unknown": {"{Deed} failed verification ({code}).", "Export it again from the issuer."},
 
 	// Warnings: the report is still valid, but the reader should know.

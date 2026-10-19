@@ -1,0 +1,4 @@
+verify
+../../testdata/deeds/v2/invalid/seal-stripped/deed.json
+--keys
+../../testdata/deeds/v2/keys.json

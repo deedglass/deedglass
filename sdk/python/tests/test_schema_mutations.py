@@ -160,7 +160,7 @@ def test_key_set_refusals() -> None:
     assert refused(lambda d: d.update(object="x")) == "schema_invalid"
     assert refused(lambda d: d.update(updated_at="x")) == "schema_invalid"
     assert refused(lambda d: d.update(keys={})) == "schema_invalid"
-    assert refused(lambda d: d["keys"][0].update(alg="RS256")) == "seal_key_rejected"
+    assert refused(lambda d: d["keys"][0].update(alg="RS 256")) == "seal_key_rejected"
     assert refused(lambda d: d["keys"][0].update(public_key="AAAA")) == "seal_key_rejected"
     assert refused(lambda d: d["keys"][0].update(thumbprint=X)) == "seal_key_rejected"
     assert refused(lambda d: d["keys"][0]["jwk"].update(use="enc")) == "seal_key_rejected"

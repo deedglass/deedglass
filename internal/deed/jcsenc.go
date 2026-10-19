@@ -247,8 +247,27 @@ func (w *jcsWriter) body(b *Body) {
 	}
 	w.key("prev_hash", false)
 	w.str(b.PrevHash, "prev_hash")
-	w.key("seal_key_id", false)
-	w.str(b.SealKeyID, "seal_key_id")
+	if b.V == VersionV2 {
+		// "seal_keys" sorts after "seal_key_id" ('_' < 's'), so a v2 body keeps every other
+		// member's place.
+		w.key("seal_keys", false)
+		w.b = append(w.b, '[')
+		for i, k := range b.SealKeys {
+			if i > 0 {
+				w.b = append(w.b, ',')
+			}
+			w.b = append(w.b, '{')
+			w.key("alg", true)
+			w.str(k.Alg, "seal_keys.alg")
+			w.key("id", false)
+			w.str(k.ID, "seal_keys.id")
+			w.b = append(w.b, '}')
+		}
+		w.b = append(w.b, ']')
+	} else {
+		w.key("seal_key_id", false)
+		w.str(b.SealKeyID, "seal_key_id")
+	}
 	w.key("seq", false)
 	w.int(b.Seq, "seq")
 	w.key("session", false)

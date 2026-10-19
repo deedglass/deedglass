@@ -1,6 +1,7 @@
 package deed
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/deedglass/deedglass/internal/intent"
@@ -15,17 +16,50 @@ const ObjectDeed = "deed"
 const MaxInputBytes = 64 << 10
 
 // Envelope is what is stored, exported and served. Its canonical bytes are JCS(Envelope).
+//
+// A v2 envelope (ADR-109) has seals instead of seal and seal_key_id; Seal and SealKeyID then hold
+// the primary seal (Seals[0]) for code that reads one seal, and are not serialized.
 type Envelope struct {
-	Object    string `json:"object"`      // "deed"
-	ID        string `json:"id"`          // = Body.DeedID (unsigned convenience; checked equal)
-	Body      Body   `json:"body"`        //
-	BodyHash  string `json:"body_hash"`   // sha256:<hex of sha256(JCS(body))>
-	Seal      string `json:"seal"`        // ed25519:<base64url, no padding, 64 bytes>
-	SealKeyID string `json:"seal_key_id"` // sk_…
+	Object    string      `json:"object"`          // "deed"
+	ID        string      `json:"id"`              // = Body.DeedID (unsigned convenience; checked equal)
+	Body      Body        `json:"body"`            //
+	BodyHash  string      `json:"body_hash"`       // sha256:<hex of sha256(JCS(body))>
+	Seal      string      `json:"seal"`            // ed25519:<base64url, no padding, 64 bytes>
+	SealKeyID string      `json:"seal_key_id"`     // sk_…
+	Seals     []SealValue `json:"seals,omitempty"` // v2 only: one per Body.SealKeys entry, same order
+}
+
+// SealValue is one seal of a v2 deed: its algorithm, the seal string and the key that made it.
+type SealValue struct {
+	Alg       string `json:"alg"`
+	Seal      string `json:"seal"`
+	SealKeyID string `json:"seal_key_id"`
 }
 
 // MarshalCanonical returns JCS(envelope): the stored, exported and served bytes.
 func (e *Envelope) MarshalCanonical() ([]byte, error) { return StrictCanonical(e) }
+
+// MarshalJSON writes a v2 envelope in its own shape (seals, no seal or seal_key_id), canonical. A
+// v1 envelope marshals field by field as always.
+func (e Envelope) MarshalJSON() ([]byte, error) {
+	if e.Body.V == VersionV2 {
+		bodyJCS, err := canonicalBody(&e.Body)
+		if err != nil {
+			return nil, err
+		}
+		return canonicalEnvelope(&e, bodyJCS), nil
+	}
+	type plain Envelope
+	return json.Marshal(plain(e))
+}
+
+// maxEnvelopeBytes is the canonical size limit of a deed of version v.
+func maxEnvelopeBytes(v int64) int {
+	if v == VersionV2 {
+		return MaxEnvelopeBytesV2
+	}
+	return MaxEnvelopeBytes
+}
 
 // parsed is an envelope read from bytes, with the canonical body bytes a verifier hashes.
 type parsed struct {
@@ -68,16 +102,31 @@ func parseEnvelope(raw []byte) (*parsed, *VerifyError) {
 			return nil, withRefs(&VerifyError{Code: CodeIDMismatch, Detail: "envelope id " + id + ", body deed_id " + did}, bodyTree)
 		}
 	}
+	var ver int64 = Version
 	if bodyTree != nil {
-		if n, ok := bodyTree["v"].(int64); ok && n != Version {
-			return nil, withRefs(errUnsupported(n), bodyTree)
+		if n, ok := bodyTree["v"].(int64); ok {
+			if n != Version && n != VersionV2 {
+				return nil, withRefs(errUnsupported(n), bodyTree)
+			}
+			ver = n
 		}
 	}
-	if err := o.closed(envelopeKeys); err != nil {
+	keys := envelopeKeys
+	if ver == VersionV2 {
+		keys = envelopeKeysV2
+	}
+	if err := o.closed(keys); err != nil {
 		return nil, withRefs(err, bodyTree)
 	}
 	d := &decoder{}
-	env := &Envelope{Object: ObjectDeed, ID: d.s(o, "id"), BodyHash: d.s(o, "body_hash"), Seal: d.s(o, "seal"), SealKeyID: d.s(o, "seal_key_id")}
+	env := &Envelope{Object: ObjectDeed, ID: d.s(o, "id"), BodyHash: d.s(o, "body_hash")}
+	if ver == VersionV2 {
+		if d.err == nil {
+			env.Seals, d.err = sealValues(top["seals"])
+		}
+	} else {
+		env.Seal, env.SealKeyID = d.s(o, "seal"), d.s(o, "seal_key_id")
+	}
 	if d.err != nil {
 		return nil, withRefs(d.err, bodyTree)
 	}
@@ -99,11 +148,15 @@ func parseEnvelope(raw []byte) (*parsed, *VerifyError) {
 	if !reDigest.MatchString(env.BodyHash) {
 		return nil, withRefs(errSchemaField("body_hash", "must be sha256:<64 hex>"), bodyTree)
 	}
-	if !reSeal.MatchString(env.Seal) {
-		return nil, withRefs(errSchemaField("seal", "must be ed25519:<86 base64url characters>"), bodyTree)
-	}
-	if !isID("sk", env.SealKeyID) {
-		return nil, withRefs(errSchemaField("seal_key_id", "must be an sk_ id"), bodyTree)
+	if ver == VersionV2 {
+		env.Seal, env.SealKeyID = env.Seals[0].Seal, env.Seals[0].SealKeyID
+	} else {
+		if !reSeal.MatchString(env.Seal) {
+			return nil, withRefs(errSchemaField("seal", "must be ed25519:<86 base64url characters>"), bodyTree)
+		}
+		if !isID("sk", env.SealKeyID) {
+			return nil, withRefs(errSchemaField("seal_key_id", "must be an sk_ id"), bodyTree)
+		}
 	}
 	// The body is hashed from the parsed tree, so whitespace and key order in transit don't matter
 	// while every value does.
@@ -113,8 +166,8 @@ func parseEnvelope(raw []byte) (*parsed, *VerifyError) {
 	}
 	p := &parsed{env: env, bodyJCS: c}
 	p.envJCS = canonicalEnvelope(env, c)
-	if len(p.envJCS) > MaxEnvelopeBytes {
-		return nil, withRefs(errMalformed(fmt.Sprintf("its canonical form is larger than %d KiB", MaxEnvelopeBytes>>10)), bodyTree)
+	if limit := maxEnvelopeBytes(ver); len(p.envJCS) > limit {
+		return nil, withRefs(errMalformed(fmt.Sprintf("its canonical form is larger than %d KiB", limit>>10)), bodyTree)
 	}
 	return p, nil
 }
@@ -122,6 +175,8 @@ func parseEnvelope(raw []byte) (*parsed, *VerifyError) {
 // canonicalEnvelope assembles JCS(envelope) from JCS(body). Every other member is an ASCII string
 // the schema has already checked (no escaping), and RFC 8785 orders the members
 // body, body_hash, id, object, seal, seal_key_id. A test keeps it equal to StrictCanonical.
+//
+// A v2 envelope orders body, body_hash, id, object, seals; each seal is alg, seal, seal_key_id.
 func canonicalEnvelope(e *Envelope, bodyJCS []byte) []byte {
 	b := make([]byte, 0, len(bodyJCS)+320)
 	b = append(b, `{"body":`...)
@@ -130,6 +185,22 @@ func canonicalEnvelope(e *Envelope, bodyJCS []byte) []byte {
 	b = append(b, e.BodyHash...)
 	b = append(b, `","id":"`...)
 	b = append(b, e.ID...)
+	if e.Body.V == VersionV2 {
+		b = append(b, `","object":"deed","seals":[`...)
+		for i, s := range e.Seals {
+			if i > 0 {
+				b = append(b, ',')
+			}
+			b = append(b, `{"alg":"`...)
+			b = append(b, s.Alg...)
+			b = append(b, `","seal":"`...)
+			b = append(b, s.Seal...)
+			b = append(b, `","seal_key_id":"`...)
+			b = append(b, s.SealKeyID...)
+			b = append(b, `"}`...)
+		}
+		return append(b, `]}`...)
+	}
 	b = append(b, `","object":"deed","seal":"`...)
 	b = append(b, e.Seal...)
 	b = append(b, `","seal_key_id":"`...)

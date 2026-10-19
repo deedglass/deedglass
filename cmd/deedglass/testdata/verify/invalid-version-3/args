@@ -1,4 +1,4 @@
 verify
-../../testdata/deeds/invalid/version-2/deed.json
+../../testdata/deeds/invalid/version-3/deed.json
 --keys
 ../../testdata/deeds/keys/test-keys.json

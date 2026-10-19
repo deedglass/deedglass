@@ -79,7 +79,7 @@ func TestValidateFieldRules(t *testing.T) {
 		}
 	}
 	v2 := action
-	v2.V = 2
+	v2.V = 3
 	if err := v2.Validate(); deed.CodeOf(err) != deed.CodeUnsupportedVersion {
 		t.Errorf("v2: %v", err)
 	}

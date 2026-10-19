@@ -136,7 +136,7 @@ redirects, reads at most 1 MiB and returns `{ keys, pinned: true, source }`.
 | Measure | Budget | Result |
 |---|---|---|
 | core `dist` gzip, without verify | ≤ 16 KiB | 12.2 KiB |
-| `/verify` gzip | ≤ 19 KiB (ADR-062) | 18.07 KiB |
+| `/verify` gzip | ≤ 28 KiB (ADR-062, raised by ADR-109 for deed v2) | 18.07 KiB |
 | each adapter gzip | ≤ 3 KiB | 0.45 to 1.65 KiB |
 | `act()` client overhead, mock fetch, p50 | < 0.3 ms | 0.014 ms |
 | `verifyDeeds`, 1,000 deeds | < 1.5 s | 88 ms |

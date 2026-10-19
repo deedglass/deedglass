@@ -22,7 +22,7 @@ VERIFIER = "deedglass-verify-python 0.1.0"
 
 def cannot_determine(code: str) -> bool:
     """Codes that mean 'cannot decide' (exit 2 in the CLI), not 'failed'."""
-    return code in ("keys_missing", "unsupported_version")
+    return code in ("keys_missing", "unsupported_version", "unsupported_algorithm")
 
 
 def _message_key(e: VerifyError) -> str:

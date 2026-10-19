@@ -12,17 +12,21 @@ import (
 
 // Key lists, in spec order. Missing keys are reported in this order; unknown keys alphabetically.
 var (
-	envelopeKeys  = []string{"object", "id", "body", "body_hash", "seal", "seal_key_id"}
-	bodyKeys      = []string{"v", "kind", "deed_id", "org", "seq", "prev_hash", "issued_at", "agent", "on_behalf_of", "session", "action", "policy", "approval", "execution", "witness", "cost", "admin", "amends", "seal_key_id"}
-	agentKeys     = []string{"id", "name"}
-	actionKeys    = []string{"id", "tool", "connector", "mode", "request_digest", "intent_hash", "intent_signed"}
-	policyKeys    = []string{"id", "version_id", "version_hash", "mode", "decision", "rule_id"}
-	approvalKeys  = []string{"id", "outcome", "decided_by", "decided_at", "deed"}
-	executionKeys = []string{"status", "started_at", "finished_at", "latency_ms", "result_digest", "error_code"}
-	witnessKeys   = []string{"level", "verdict", "method", "detail_digest"}
-	costKeys      = []string{"amount", "currency"}
-	adminKeys     = []string{"event", "action", "actor", "target", "reason", "data_digest"}
-	refKeys       = []string{"type", "id"}
+	envelopeKeys   = []string{"object", "id", "body", "body_hash", "seal", "seal_key_id"}
+	envelopeKeysV2 = []string{"object", "id", "body", "body_hash", "seals"}
+	bodyKeys       = []string{"v", "kind", "deed_id", "org", "seq", "prev_hash", "issued_at", "agent", "on_behalf_of", "session", "action", "policy", "approval", "execution", "witness", "cost", "admin", "amends", "seal_key_id"}
+	bodyKeysV2     = []string{"v", "kind", "deed_id", "org", "seq", "prev_hash", "issued_at", "agent", "on_behalf_of", "session", "action", "policy", "approval", "execution", "witness", "cost", "admin", "amends", "seal_keys"}
+	sealKeyRefKeys = []string{"alg", "id"}
+	sealValueKeys  = []string{"alg", "seal", "seal_key_id"}
+	agentKeys      = []string{"id", "name"}
+	actionKeys     = []string{"id", "tool", "connector", "mode", "request_digest", "intent_hash", "intent_signed"}
+	policyKeys     = []string{"id", "version_id", "version_hash", "mode", "decision", "rule_id"}
+	approvalKeys   = []string{"id", "outcome", "decided_by", "decided_at", "deed"}
+	executionKeys  = []string{"status", "started_at", "finished_at", "latency_ms", "result_digest", "error_code"}
+	witnessKeys    = []string{"level", "verdict", "method", "detail_digest"}
+	costKeys       = []string{"amount", "currency"}
+	adminKeys      = []string{"event", "action", "actor", "target", "reason", "data_digest"}
+	refKeys        = []string{"type", "id"}
 )
 
 // obj is one JSON object of the tree with its dotted path.
@@ -198,10 +202,15 @@ func bodyFromTree(v any) (*Body, *VerifyError) {
 	o.path = ""
 	// The version is checked before the schema, so a v2 deed with new fields reads as
 	// unsupported_version rather than schema_invalid.
-	if n, ok := o.m["v"].(int64); ok && n != Version {
+	n, _ := o.m["v"].(int64)
+	if _, ok := o.m["v"].(int64); ok && n != Version && n != VersionV2 {
 		return nil, errUnsupported(n)
 	}
-	if err := o.closed(bodyKeys); err != nil {
+	keys := bodyKeys
+	if n == VersionV2 {
+		keys = bodyKeysV2
+	}
+	if err := o.closed(keys); err != nil {
 		return nil, err
 	}
 	d := &decoder{}
@@ -216,7 +225,16 @@ func bodyFromTree(v any) (*Body, *VerifyError) {
 		OnBehalfOf: d.ns(o, "on_behalf_of"),
 		Session:    d.ns(o, "session"),
 		Amends:     d.ns(o, "amends"),
-		SealKeyID:  d.s(o, "seal_key_id"),
+	}
+	if n == VersionV2 {
+		if d.err == nil {
+			b.SealKeys, d.err = sealKeyRefs(o.m["seal_keys"])
+		}
+		if len(b.SealKeys) > 0 {
+			b.SealKeyID = b.SealKeys[0].ID
+		}
+	} else {
+		b.SealKeyID = d.s(o, "seal_key_id")
 	}
 	if a, ok := d.obj(o, "agent", agentKeys); ok {
 		b.Agent = &AgentRef{ID: d.s(a, "id"), Name: d.s(a, "name")}
@@ -263,4 +281,70 @@ func bodyFromTree(v any) (*Body, *VerifyError) {
 		return nil, d.err
 	}
 	return b, nil
+}
+
+// sealKeyRefs reads a v2 body's seal_keys: an array of 1 to MaxSeals closed {alg, id} objects.
+// Body.Validate checks the values.
+func sealKeyRefs(v any) ([]SealKeyRef, *VerifyError) {
+	list, ok := v.([]any)
+	if !ok {
+		return nil, errSchemaField("seal_keys", "must be an array")
+	}
+	if len(list) < 1 || len(list) > MaxSeals {
+		return nil, errSchemaField("seal_keys", fmt.Sprintf("must hold 1 to %d keys", MaxSeals))
+	}
+	out := make([]SealKeyRef, 0, len(list))
+	d := &decoder{}
+	for i, e := range list {
+		o, err := asObj(e, fmt.Sprintf("seal_keys[%d]", i))
+		if err != nil {
+			return nil, err
+		}
+		if err := o.closed(sealKeyRefKeys); err != nil {
+			return nil, err
+		}
+		out = append(out, SealKeyRef{Alg: d.s(o, "alg"), ID: d.s(o, "id")})
+	}
+	if d.err != nil {
+		return nil, d.err
+	}
+	return out, nil
+}
+
+// sealValues reads a v2 envelope's seals: an array of 1 to MaxSeals closed {alg, seal,
+// seal_key_id} objects, each with a well-formed alg, an sk_ id and a seal of the shape its
+// algorithm needs.
+func sealValues(v any) ([]SealValue, *VerifyError) {
+	list, ok := v.([]any)
+	if !ok {
+		return nil, errSchemaField("seals", "must be an array")
+	}
+	if len(list) < 1 || len(list) > MaxSeals {
+		return nil, errSchemaField("seals", fmt.Sprintf("must hold 1 to %d seals", MaxSeals))
+	}
+	out := make([]SealValue, 0, len(list))
+	d := &decoder{}
+	for i, e := range list {
+		o, err := asObj(e, fmt.Sprintf("seals[%d]", i))
+		if err != nil {
+			return nil, err
+		}
+		if err := o.closed(sealValueKeys); err != nil {
+			return nil, err
+		}
+		sv := SealValue{Alg: d.s(o, "alg"), Seal: d.s(o, "seal"), SealKeyID: d.s(o, "seal_key_id")}
+		if d.err != nil {
+			return nil, d.err
+		}
+		switch {
+		case !reAlg.MatchString(sv.Alg):
+			return nil, errSchemaField(o.at("alg"), "must match ^[A-Za-z0-9][A-Za-z0-9-]{0,31}$")
+		case !sealShapeOK(sv.Alg, sv.Seal):
+			return nil, errSchemaField(o.at("seal"), "must be a "+sv.Alg+" seal")
+		case !isID(pSealKey, sv.SealKeyID):
+			return nil, errSchemaField(o.at("seal_key_id"), "must be an sk_ id")
+		}
+		out = append(out, sv)
+	}
+	return out, nil
 }
