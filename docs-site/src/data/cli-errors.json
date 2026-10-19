@@ -24,6 +24,13 @@
     "messages": null
   },
   {
+    "code": "bundle_invalid",
+    "exit": [
+      1
+    ],
+    "messages": null
+  },
+  {
     "code": "cancelled",
     "exit": [
       1
@@ -186,12 +193,13 @@
   {
     "code": "export_failed",
     "exit": [
-      1
+      1,
+      2
     ],
     "messages": null,
     "next": [
-      "Choose another directory with --out.",
-      "Choose another path with --out."
+      "Check the path, or export a bundle first: deedglass deeds export.",
+      "Choose another directory with --out."
     ]
   },
   {

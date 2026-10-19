@@ -21,6 +21,7 @@ import (
 	"github.com/deedglass/deedglass/internal/config"
 	"github.com/deedglass/deedglass/internal/deed"
 	"github.com/deedglass/deedglass/internal/deed/archive"
+	"github.com/deedglass/deedglass/internal/fhirexport"
 	"github.com/deedglass/deedglass/internal/httpx"
 	"github.com/deedglass/deedglass/internal/ledger"
 	"github.com/deedglass/deedglass/internal/store"
@@ -739,9 +740,9 @@ func runDeedsShow(ctx context.Context, e *Env, args []string) error {
 // --- deeds export ---
 
 type exportOpts struct {
-	out, format string
-	from, to    int64
-	since       time.Duration
+	out, format, src string
+	from, to         int64
+	since            time.Duration
 }
 
 var exportValues exportOpts
@@ -750,7 +751,8 @@ func deedsExportFlags(fs *flag.FlagSet) {
 	o := &exportValues
 	*o = exportOpts{}
 	fs.StringVar(&o.out, "out", "", "file to write (default deedglass-<org>-<first>-<last>.tar.gz)")
-	fs.StringVar(&o.format, "format", "tar.gz", "tar.gz (a sealed bundle) or jsonl (records only)")
+	fs.StringVar(&o.format, "format", "tar.gz", "tar.gz (a sealed bundle), jsonl (records only), fhir-auditevent or fhir-provenance (FHIR R4 NDJSON, HC-P10)")
+	fs.StringVar(&o.src, "from", "", "fhir-* only: read records from a bundle or .jsonl file instead of the database (offline; resource ids unknown)")
 	fs.Int64Var(&o.from, "from-seq", 0, "first seq")
 	fs.Int64Var(&o.to, "to-seq", 0, "last seq")
 	fs.DurationVar(&o.since, "since", 0, "only records issued in the last 1h, 30m, … (S13)")
@@ -781,8 +783,15 @@ func runDeedsExport(ctx context.Context, e *Env, args []string) error {
 		return usageErr(fmt.Errorf("deedglass deeds export takes no arguments (got %q)", args[0]), "Use --out <file>.")
 	}
 	o := exportValues
-	if o.format != "tar.gz" && o.format != "jsonl" {
-		return usageErr(fmt.Errorf("--format must be tar.gz or jsonl (got %q)", o.format), "deedglass deeds export --format tar.gz")
+	fhir := o.format == fhirexport.FormatAuditEvent || o.format == fhirexport.FormatProvenance
+	if o.format != "tar.gz" && o.format != "jsonl" && !fhir {
+		return usageErr(fmt.Errorf("--format must be tar.gz, jsonl, fhir-auditevent or fhir-provenance (got %q)", o.format), "deedglass deeds export --format tar.gz")
+	}
+	if o.src != "" {
+		if !fhir {
+			return usageErr(errors.New("--from works with --format fhir-auditevent or fhir-provenance"), "deedglass deeds export --from deeds.tar.gz --format fhir-auditevent")
+		}
+		return exportFHIROffline(e, o)
 	}
 	v := url.Values{}
 	if o.from > 0 {
@@ -806,6 +815,9 @@ func runDeedsExport(ctx context.Context, e *Env, args []string) error {
 		return err
 	}
 	defer s.Close()
+	if fhir {
+		return exportFHIR(ctx, e, s, r, o)
+	}
 	if o.out == "-" {
 		return exportToStdout(ctx, e, s, r, o.format)
 	}

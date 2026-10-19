@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/deedglass/deedglass/internal/deed"
+	"github.com/deedglass/deedglass/internal/fhirexport"
 	"github.com/deedglass/deedglass/internal/httpx"
 	"github.com/deedglass/deedglass/internal/ids"
 )
@@ -298,19 +299,47 @@ func (e exportWriter) ExportStarting(org string, first, last, _ int64) {
 
 func (e exportWriter) Write(p []byte) (int, error) { return e.w.Write(p) }
 
+// fhirWriter sets the NDJSON headers before the first byte of a FHIR export.
+type fhirWriter struct {
+	w      http.ResponseWriter
+	format string
+}
+
+func (f fhirWriter) ExportStarting(org string, _, _, _ int64) {
+	h := f.w.Header()
+	h.Set("Content-Type", fhirexport.ContentType)
+	h.Set("Content-Disposition", fmt.Sprintf(`attachment; filename="deedglass-%s-%s.ndjson"`, org, f.format))
+	h.Set("Cache-Control", "no-store")
+}
+
+func (f fhirWriter) Write(p []byte) (int, error) { return f.w.Write(p) }
+
 func (h handlers) exportDeeds(w http.ResponseWriter, r *http.Request) error {
 	o, err := org(r)
 	if err != nil {
 		return err
 	}
-	rg, err := ParseRangeQuery(r.URL.Query())
+	q := r.URL.Query()
+	format := q.Get("format")
+	if len(q["format"]) > 1 {
+		return httpx.ErrValidation("format", "Send format once.")
+	}
+	q.Del("format")
+	rg, err := ParseRangeQuery(q)
 	if err != nil {
 		return apiError(err)
 	}
 	p, _ := httpx.PrincipalFrom(r.Context())
 	h.l.log.InfoContext(r.Context(), "export requested", "org_id", o.String(), "request_id", httpx.RequestID(r.Context()),
-		"principal", p.Ref(), "from_seq", rg.FromSeq, "to_seq", rg.ToSeq)
-	_, err = h.l.Export(r.Context(), o, rg, exportWriter{w})
+		"principal", p.Ref(), "from_seq", rg.FromSeq, "to_seq", rg.ToSeq, "format", format)
+	switch format {
+	case "", "tar.gz":
+		_, err = h.l.Export(r.Context(), o, rg, exportWriter{w})
+	case fhirexport.FormatAuditEvent, fhirexport.FormatProvenance:
+		_, err = h.l.ExportFHIR(r.Context(), o, rg, format, fhirWriter{w: w, format: format})
+	default:
+		return httpx.ErrValidation("format", "format must be tar.gz, fhir-auditevent or fhir-provenance.")
+	}
 	var empty *EmptyRangeError
 	if errors.As(err, &empty) {
 		return httpx.E(httpx.CodeNotFound, httpx.Msg(emptyRangeMessage(empty)))

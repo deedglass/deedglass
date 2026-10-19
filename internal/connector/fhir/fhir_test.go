@@ -467,7 +467,7 @@ func TestEnrichAndPHI(t *testing.T) {
 		t.Fatal("a type outside the list enriched")
 	}
 	k := c.PHIKeep(inst, create)
-	if strings.Join(k.Args, ",") != "id,resource_type,version_id" || len(k.Result) != 7 {
+	if strings.Join(k.Args, ",") != "id,resource_type,version_id" || len(k.Result) != 8 {
 		t.Fatalf("PHIKeep: %+v", k)
 	}
 }
@@ -570,6 +570,11 @@ func TestSMARTBackend(t *testing.T) {
 			}
 			if mints.Load() != 1 || fhirCalls.Load() != 2 {
 				t.Fatalf("mints %d, FHIR calls %d; want 1 and 2 (the token is cached)", mints.Load(), fhirCalls.Load())
+			}
+			// The tool's output names the SMART client the server saw (the AuditEvent export reads it).
+			res, _ := c.Execute(ctx(), inst, callOf(t, c, inst, "read", map[string]any{"resource_type": "Observation", "id": "o1"}))
+			if !strings.Contains(string(res.Output), `"client_id":"dg-client"`) {
+				t.Fatalf("output without the client id: %s", res.Output)
 			}
 		})
 	}

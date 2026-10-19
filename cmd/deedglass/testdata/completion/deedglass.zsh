@@ -121,7 +121,7 @@ _deedglass() {
       subs=( 'list:List records' 'show:Show one record' 'share:Make a link that checks one record' 'export:Export records as a bundle' 'seal-file:Seal a file'\''s hash as a record' )
       ;;
     'deeds export')
-      flags=( '--format:tar.gz (a sealed bundle) or jsonl (records only)' '--from-seq:first seq' '--out:file to write (default deedglass-<org>-<first>-<last>.tar.gz)' '--since:only records issued in the last 1h, 30m, … (S13)' '--to-seq:last seq' )
+      flags=( '--format:tar.gz (a sealed bundle), jsonl (records only), fhir-auditevent or fhir-provenance (FHIR R4 NDJSON, HC-P10)' '--from:fhir-* only\: read records from a bundle or .jsonl file instead of the database (offline; resource ids unknown)' '--from-seq:first seq' '--out:file to write (default deedglass-<org>-<first>-<last>.tar.gz)' '--since:only records issued in the last 1h, 30m, … (S13)' '--to-seq:last seq' )
       ;;
     'deeds list')
       flags=( '--action:an action id\: its record and amendments' '--cursor:next_cursor from the previous page' '--from-seq:first seq' '--kind:comma list\: action, admin, amendment' '--limit:page size, 1 to 100' '--order:asc (default) or desc' '--to-seq:last seq' )

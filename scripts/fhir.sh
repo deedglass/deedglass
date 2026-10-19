@@ -4,7 +4,8 @@
 #
 #   scripts/fhir.sh up     start it (or reuse it), wait for /fhir/metadata, print the base URL
 #   scripts/fhir.sh down   remove the container
-#   scripts/fhir.sh it     start it, run cmd/deedglass TestFHIRRestLive and TestFHIRConnectorLive (HC-P02) on a throwaway Postgres
+#   scripts/fhir.sh it     start it, run cmd/deedglass TestFHIRRestLive and TestFHIRConnectorLive (HC-P02; since HC-P10 it also
+#                          exports the records as AuditEvent and Provenance and validates each with HAPI's $validate) on a throwaway Postgres
 #                          (scripts/integration_local.sh), then remove the container
 #
 # The image is pinned by the digest of its multi-arch index (ADR-024).

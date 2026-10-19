@@ -275,4 +275,62 @@ func TestFHIRConnectorLive(t *testing.T) {
 	if vr := run(env, "verify", bundle); vr.code != 0 || !strings.Contains(vr.stdout, "chain intact") {
 		t.Fatalf("verify: %+v", vr)
 	}
+
+	// HC-P10: the records as FHIR R4 AuditEvent and Provenance, from the database (CLI), the API
+	// and the bundle alone, each resource valid against HAPI's R4 StructureDefinitions.
+	ae := filepath.Join(t.TempDir(), "ae.ndjson")
+	if xr := run(env, "deeds", "export", "--format", "fhir-auditevent", "--out", ae); xr.code != 0 {
+		t.Fatalf("export AuditEvents: %+v", xr)
+	} else {
+		t.Logf("\n$ deedglass deeds export --format fhir-auditevent\n%s", xr.stdout)
+	}
+	aeBytes, _ := os.ReadFile(ae)
+	code, prov := call(admin, "GET", "/v1/deeds/export?format=fhir-provenance", "")
+	if code != 200 {
+		t.Fatalf("API provenance export: %d %s", code, prov)
+	}
+	off := filepath.Join(t.TempDir(), "offline.ndjson")
+	if xr := run(env, "deeds", "export", "--from", bundle, "--format", "fhir-auditevent", "--out", off); xr.code != 0 {
+		t.Fatalf("offline export: %+v", xr)
+	}
+	offBytes, _ := os.ReadFile(off)
+	lines := func(b []byte) []string { return strings.Split(strings.TrimSpace(string(b)), "\n") }
+	aes, provs, offs := lines(aeBytes), lines([]byte(prov)), lines(offBytes)
+	if len(aes) != 10 || len(provs) != 6 || len(offs) != 10 {
+		t.Fatalf("exported %d AuditEvents, %d Provenances, %d offline; want 10, 6, 10", len(aes), len(provs), len(offs))
+	}
+	if !strings.Contains(aes[0], "IHE.BasicAudit.PatientCreate") || !strings.Contains(aes[0], `"reference":"Observation/`+id+`/_history/1"`) ||
+		!strings.Contains(aes[0], `"reference":"Patient/dg-synthetic-2"`) {
+		t.Fatalf("the first AuditEvent: %s", aes[0])
+	}
+	if strings.Contains(string(aeBytes)+prov, "Heart rate") {
+		t.Fatal("an export carries a clinical value")
+	}
+	validate := func(typ, line string) {
+		t.Helper()
+		var res map[string]any
+		if err := json.Unmarshal([]byte(line), &res); err != nil {
+			t.Fatal(err)
+		}
+		// HAPI holds the R4 core StructureDefinitions, not the BALP or AI Transparency packages, so the
+		// profile claims are checked offline (internal/fhirexport) and left out here.
+		delete(res, "meta")
+		cs, _ := res["contained"].([]any)
+		for _, c := range cs {
+			delete(c.(map[string]any), "meta")
+		}
+		b, _ := json.Marshal(res)
+		_, out := direct("POST", "/"+typ+"/$validate", string(b))
+		for _, i := range out["issue"].([]any) {
+			if m := i.(map[string]any); m["severity"] == "error" || m["severity"] == "fatal" {
+				t.Errorf("%s %v: %v %v", typ, res["id"], m["diagnostics"], m["expression"])
+			}
+		}
+	}
+	for _, l := range append(aes, offs...) {
+		validate("AuditEvent", l)
+	}
+	for _, l := range provs {
+		validate("Provenance", l)
+	}
 }

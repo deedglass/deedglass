@@ -370,7 +370,11 @@ func (c *Connector) Execute(ctx context.Context, inst *connector.Instance, call 
 		}
 	}
 	resp, err := cl.Do(ctx, r.send(st, call))
-	res := result(resp, r)
+	clientID := ""
+	if st.cfg.Auth.Kind == AuthSMART {
+		clientID, _ = st.clientID.Load().(string)
+	}
+	res := result(resp, r, clientID)
 	if res.Evidence != nil && prior != "" {
 		res.Evidence["fhir_prior_version"] = prior
 	}
@@ -431,9 +435,10 @@ func versionOf(resp *saas.Response, r *req) (id, vid string) {
 
 var keptHeaders = []string{"content-type", "etag", "last-modified", "location", "x-request-id", "retry-after"}
 
-// result is the tool's output, {"status", "headers", "body"} as the REST connector shapes it, and
-// the evidence the read-back needs (the witness only).
-func result(resp *saas.Response, r *req) connector.Result {
+// result is the tool's output, {"status", "headers", "body"} as the REST connector shapes it, plus
+// "client_id" (the SMART client the FHIR server saw, when auth.kind is smart_backend; the FHIR
+// AuditEvent export names it), and the evidence the read-back needs (the witness only).
+func result(resp *saas.Response, r *req, clientID string) connector.Result {
 	ev := map[string]string{"fhir_interaction": r.inter}
 	if r.ifNoneExist != "" {
 		ev["fhir_conditional"] = "true"
@@ -459,6 +464,9 @@ func result(resp *saas.Response, r *req) connector.Result {
 		}
 	}
 	out := map[string]any{"status": resp.Status, "headers": hs, "body": nil}
+	if clientID != "" {
+		out["client_id"] = clip(clientID, 256)
+	}
 	mt, _, _ := mime.ParseMediaType(resp.Header.Get("Content-Type"))
 	switch {
 	case len(resp.Body) == 0:
@@ -531,5 +539,5 @@ func profiles(res map[string]any) []string {
 // bundles, search parameters and codes become digests.
 func (c *Connector) PHIKeep(*connector.Instance, connector.ToolSpec) connector.PHIKeep {
 	return connector.PHIKeep{Args: []string{"id", "resource_type", "version_id"},
-		Result: []string{"status", "headers.etag", "headers.location", "headers.last-modified", "body.resourceType", "body.id", "body.meta.versionId"}}
+		Result: []string{"status", "client_id", "headers.etag", "headers.location", "headers.last-modified", "body.resourceType", "body.id", "body.meta.versionId"}}
 }
