@@ -47,6 +47,10 @@ const (
 	// the orchestrator accepts under DL-107). Declared before any FHIR connector code exists; the
 	// healthcare tickets call them F01-F12.
 	expectedDigestI = "5916b959bccd6e860e3246f0534e7c29107ef93d9668649ca94d04908ba2a0dd"
+	// expectedDigestY pins group Y, crypto agility: seal algorithm versioning and the ML-DSA-65
+	// dual seal (TY-01, TY-02; ADR-109, PROPOSED; the orchestrator accepts under DL-107). Declared
+	// before any deed v2 code existed.
+	expectedDigestY = "206311510fa9be60f424a0f4c1e38f0322442a9c7303c1541b7efd107122f7e1"
 )
 
 // groupSets maps each pinned digest to its groups. A later session adds its own row (S19 N,
@@ -62,6 +66,7 @@ var groupSets = []struct {
 	{"PQR", expectedDigestS34},
 	{"O", expectedDigestO},
 	{"I", expectedDigestI},
+	{"Y", expectedDigestY},
 }
 
 type meta struct {
@@ -132,7 +137,7 @@ func wantIDs() []string {
 	for _, g := range []struct {
 		p string
 		n int
-	}{{"A", 13}, {"B", 7}, {"C", 10}, {"D", 17}, {"E", 11}, {"F", 4}, {"G", 4}, {"H", 11}, {"I", 12}, {"J", 4}, {"K", 4}, {"L", 8}, {"O", 2}, {"U", 5}, {"W", 13}} {
+	}{{"A", 13}, {"B", 7}, {"C", 10}, {"D", 17}, {"E", 11}, {"F", 4}, {"G", 4}, {"H", 11}, {"I", 12}, {"J", 4}, {"K", 4}, {"L", 8}, {"O", 2}, {"U", 5}, {"W", 13}, {"Y", 12}} {
 		for i := 1; i <= g.n; i++ {
 			ids = append(ids, fmt.Sprintf("%s%02d", g.p, i))
 		}
