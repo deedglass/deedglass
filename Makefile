@@ -141,6 +141,10 @@ fuzz: ## 30 s each: the strict intent parser, the id parser, and the deed envelo
 mock-orders: ## S16: the mock orders API on 127.0.0.1:8090 (MOCK_ORDERS_TOKEN required; MOCK_ORDERS_MODE=lying for S19)
 	$(GO) run ./examples/mock-orders
 
+.PHONY: fhir-spike
+fhir-spike: ## HC-P05: the spike as a probe (ADR-105): HAPI FHIR JPA on PostgreSQL in Docker (pinned images, free port), checks what the server stores to tie its rows to an action; fails when a finding stops holding
+	scripts/fhir_spike.sh
+
 bench-postgres: ## S17: the Postgres connector's extra latency over raw pgx (p50 ≤ 1.5 ms) and 100 writes/s for 30 s (p99 < 50 ms) on a throwaway PG 18; JSON in bench/results/
 	@out="$(CURDIR)/bench/results/$$(date +%F)-$$(go env GOOS)-$$(go env GOARCH)-postgres.json"; log="$(CURDIR)/.tmp/bench-postgres.log"; mkdir -p "$(CURDIR)/.tmp" "$(CURDIR)/bench/results"; \
 	DEEDGLASS_IT_BENCH=1 DEEDGLASS_PG_BENCH_OUT="$$out" DEEDGLASS_IT_PKGS=./internal/connector/postgres/ DEEDGLASS_IT_GOFLAGS="-run TestPostgresBudget -v" \
