@@ -133,7 +133,7 @@ func TestMessagesCoverEveryCode(t *testing.T) {
 			}
 		}
 	}
-	if len(seen) != 21 {
+	if len(seen) != 23 {
 		t.Fatalf("%d codes", len(seen))
 	}
 	s, _ := Message(&VerifyError{Code: "nope"})

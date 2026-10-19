@@ -41,6 +41,8 @@ dist/scrub.d.ts
 dist/scrub.js
 dist/types.d.ts
 dist/types.js
+dist/verify/alg.d.ts
+dist/verify/alg.js
 dist/verify/b64url.d.ts
 dist/verify/b64url.js
 dist/verify/chain.d.ts

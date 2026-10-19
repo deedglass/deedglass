@@ -86,7 +86,7 @@ these.
 | Code | You see | Next step | Exit |
 |---|---|---|---|
 | `malformed` | {Deed} is not valid strict JSON ({detail}). | Export it again from the issuer; do not edit deeds by hand. | 1 |
-| `unsupported_version` | {Deed} uses deed format v{v}. This verifier reads v1. | Update deedglass. | 2 |
+| `unsupported_version` | {Deed} uses deed format v{v}, which this verifier can't read. | Update deedglass. | 2 |
 | `schema_invalid` | {Deed} has an invalid field: {field}. | Export it again from the issuer. | 1 |
 | `id_mismatch` | {Deed}'s id does not match its body. | Export it again from the issuer. | 1 |
 | `body_hash_mismatch` | {Deed} was changed after it was sealed. | Get a fresh export from the issuer and compare {deed}. | 1 |
@@ -106,6 +106,8 @@ these.
 | `chain_prev_hash_mismatch` | {Deed} does not link to deed {prev}. | A deed before it was changed or replaced. Get a fresh export. | 1 |
 | `chain_org_mismatch` | {Deed} belongs to {org}, not {want_org}. | Verify each org's deeds separately. | 1 |
 | `chain_time_regression` | {Deed} was sealed before deed {prev}. | Treat the chain as altered from {deed}. | 1 |
+| `unsupported_algorithm` | {Deed} is sealed with an algorithm this verifier can't check ({detail}). | Update deedglass, or check it with a verifier that supports that algorithm. | 2 |
+| `seal_missing` | {Deed} is missing a seal it must carry ({detail}). | Treat this deed as altered, or ask the issuer for the deed as it was sealed. | 1 |
 
 `{Deed}` reads "Deed 812", or "The deed" when the deed is too damaged to read its seq. A missing
 first deed reads: "The deeds start at deed {seq}, not deed 1."

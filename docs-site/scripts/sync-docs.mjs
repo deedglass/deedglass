@@ -28,7 +28,7 @@ const data = (f) => JSON.parse(readFileSync(join(site, 'src', 'data', f), 'utf8'
 export const IMPORTS = {
   'docs/INSTALL.md': 'get-started/install-deedglass',
   // the record spec (TY-12): its own versioned directory, CC-BY-4.0
-  'spec/v1/DEED_SPEC.md': 'reference/deed-spec',
+  'spec/v2/DEED_SPEC.md': 'reference/deed-spec',
   'spec/v1/BUNDLE_FORMAT.md': 'reference/engineering/bundle-format',
   'docs/INTENTS.md': 'reference/intents',
   'docs/POLICY_LANGUAGE.md': 'reference/policy-language',

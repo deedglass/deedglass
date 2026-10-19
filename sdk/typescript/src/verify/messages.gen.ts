@@ -25,6 +25,8 @@ export const CODES = [
   "chain_prev_hash_mismatch",
   "chain_org_mismatch",
   "chain_time_regression",
+  "unsupported_algorithm",
+  "seal_missing",
 ] as const;
 
 export type VerifyCode = (typeof CODES)[number];
@@ -120,12 +122,20 @@ export const MESSAGES: Readonly<Record<string, MessageTemplate>> = {
     sentence: "{Deed} names seal key {key}, which is not in the key set.",
     next: "Fetch the issuer's keys: --keys <issuer>/.well-known/deedglass/keys.json",
   },
+  "seal_missing": {
+    sentence: "{Deed} is missing a seal it must carry ({detail}).",
+    next: "Treat this deed as altered, or ask the issuer for the deed as it was sealed.",
+  },
   "unknown": {
     sentence: "{Deed} failed verification ({code}).",
     next: "Export it again from the issuer.",
   },
+  "unsupported_algorithm": {
+    sentence: "{Deed} is sealed with an algorithm this verifier can't check ({detail}).",
+    next: "Update deedglass, or check it with a verifier that supports that algorithm.",
+  },
   "unsupported_version": {
-    sentence: "{Deed} uses deed format v{v}. This verifier reads v1.",
+    sentence: "{Deed} uses deed format v{v}, which this verifier can't read.",
     next: "Update deedglass.",
   },
   "warning.keys_not_pinned": {

@@ -311,6 +311,8 @@ func TestParityCorpusCoversEveryDeedCode(t *testing.T) {
 		switch c {
 		case deed.CodeSealKeyRejected, deed.CodeKeysMissing, deed.CodeBundleInvalid, deed.CodeBundleSealInvalid, deed.CodeChainTimeRegression, deed.CodeChainGenesisMismatch:
 			continue // key sets, missing keys and bundles are not deed cases; the last two are in the vectors
+		case deed.CodeUnsupportedAlgorithm, deed.CodeSealMissing:
+			continue // v2 codes: the v2 parity corpus covers them (TestParityV2CoversV2Codes)
 		}
 		if seen[string(c)] == 0 {
 			t.Errorf("no parity case produces %s", c)

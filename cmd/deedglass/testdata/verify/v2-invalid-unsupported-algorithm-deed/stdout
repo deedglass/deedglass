@@ -1,0 +1,2 @@
+○ Deed 1 is sealed with an algorithm this verifier can't check (SLH-DSA-SHA2-128s).
+  next       Update deedglass, or check it with a verifier that supports that algorithm.

@@ -2,6 +2,7 @@
 // deed.VerifyEnvelope (DEED_SPEC.md §11). The first failure wins, and every path that is not a
 // clean pass is a VerifyError.
 
+import { acceptedAlone, ALG_ED25519, ALGS, algSupported, ED25519_ALONE_UNTIL_TEXT, MAX_SEALS, reAlg, sealShapeOK } from './alg.js';
 import { decodeB64url } from './b64url.js';
 import { malformed, schemaField, unsupported, VerifyError } from './errors.js';
 import { canonicalize } from './jcs.js';
@@ -30,6 +31,7 @@ import { decodeUTF8, type JsonObject, type JsonValue, malformedFrom, parseStrict
 
 export const MAX_INPUT_BYTES: number = 64 * 1024;
 export const MAX_ENVELOPE_BYTES: number = 16 * 1024;
+export const MAX_ENVELOPE_BYTES_V2: number = 24 * 1024;
 export const TAG_DEED: string = 'deedglass/deed/v1\n';
 export const TAG_GENESIS: string = 'deedglass/genesis\n';
 
@@ -87,6 +89,20 @@ export interface Body {
     data_digest: string | null;
   } | null;
   amends: string | null;
+  /** v1: the seal key. v2: seal_keys[0].id (the primary seal key; not a v2 member). */
+  seal_key_id: string;
+  /** v2 only: every key the deed carries a seal of, the primary first. */
+  seal_keys?: SealKeyRef[];
+}
+
+export interface SealKeyRef {
+  alg: string;
+  id: string;
+}
+
+export interface SealValue {
+  alg: string;
+  seal: string;
   seal_key_id: string;
 }
 
@@ -95,8 +111,11 @@ export interface Envelope {
   id: string;
   body: Body;
   body_hash: string;
+  /** v1: the seal. v2: seals[0].seal (the primary seal; not a v2 member). */
   seal: string;
   seal_key_id: string;
+  /** v2 only: one seal per body.seal_keys entry, same order. */
+  seals?: SealValue[];
 }
 
 /** A deed that passed every check. */
@@ -112,10 +131,14 @@ export interface DeedResult {
 }
 
 const envelopeKeys = ['object', 'id', 'body', 'body_hash', 'seal', 'seal_key_id'];
+const envelopeKeysV2 = ['object', 'id', 'body', 'body_hash', 'seals'];
 const bodyKeys = [
   'v', 'kind', 'deed_id', 'org', 'seq', 'prev_hash', 'issued_at', 'agent', 'on_behalf_of', 'session', 'action', 'policy',
   'approval', 'execution', 'witness', 'cost', 'admin', 'amends', 'seal_key_id',
 ];
+const bodyKeysV2 = [...bodyKeys.slice(0, -1), 'seal_keys'];
+const sealKeyRefKeys = ['alg', 'id'];
+const sealValueKeys = ['alg', 'seal', 'seal_key_id'];
 const agentKeys = ['id', 'name'];
 const actionKeys = ['id', 'tool', 'connector', 'mode', 'request_digest', 'intent_hash', 'intent_signed'];
 const policyKeys = ['id', 'version_id', 'version_hash', 'mode', 'decision', 'rule_id'];
@@ -154,8 +177,9 @@ function bodyFromTree(v: JsonValue | undefined): Body {
     throw schemaField('body', 'must be an object');
   }
   const ver = o.m['v'];
-  if (typeof ver === 'number' && ver !== 1) throw unsupported(ver);
-  closed(o, bodyKeys);
+  if (typeof ver === 'number' && ver !== 1 && ver !== 2) throw unsupported(ver);
+  const v2 = ver === 2;
+  closed(o, v2 ? bodyKeysV2 : bodyKeys);
   const d = new Decoder();
   const b = {
     v: d.i(o, 'v'),
@@ -168,7 +192,7 @@ function bodyFromTree(v: JsonValue | undefined): Body {
     on_behalf_of: d.ns(o, 'on_behalf_of'),
     session: d.ns(o, 'session'),
     amends: d.ns(o, 'amends'),
-    seal_key_id: d.s(o, 'seal_key_id'),
+    seal_key_id: v2 ? '' : d.s(o, 'seal_key_id'),
     agent: null,
     action: null,
     policy: null,
@@ -178,6 +202,14 @@ function bodyFromTree(v: JsonValue | undefined): Body {
     cost: null,
     admin: null,
   } as Body;
+  if (v2 && d.err === null) {
+    try {
+      b.seal_keys = sealKeyRefs(o.m['seal_keys']);
+      if (b.seal_keys.length > 0) b.seal_key_id = b.seal_keys[0]!.id;
+    } catch (err) {
+      d.err = err as VerifyError;
+    }
+  }
   let a = d.obj(o, 'agent', agentKeys);
   if (a) b.agent = { id: d.s(a, 'id'), name: d.s(a, 'name') };
   a = d.obj(o, 'action', actionKeys);
@@ -250,9 +282,54 @@ function bodyFromTree(v: JsonValue | undefined): Body {
   return b;
 }
 
+/** A v2 body's seal_keys: an array of 1 to MAX_SEALS closed {alg, id} objects (port of sealKeyRefs). */
+function sealKeyRefs(v: JsonValue | undefined): SealKeyRef[] {
+  if (!Array.isArray(v)) throw schemaField('seal_keys', 'must be an array');
+  if (v.length < 1 || v.length > MAX_SEALS) throw schemaField('seal_keys', `must hold 1 to ${MAX_SEALS} keys`);
+  const d = new Decoder();
+  const out = v.map((e, i) => {
+    const o = asObj(e, `seal_keys[${i}]`);
+    closed(o, sealKeyRefKeys);
+    return { alg: d.s(o, 'alg'), id: d.s(o, 'id') };
+  });
+  d.check();
+  return out;
+}
+
+/** A v2 envelope's seals (port of sealValues). */
+function sealValues(v: JsonValue | undefined): SealValue[] {
+  if (!Array.isArray(v)) throw schemaField('seals', 'must be an array');
+  if (v.length < 1 || v.length > MAX_SEALS) throw schemaField('seals', `must hold 1 to ${MAX_SEALS} seals`);
+  const d = new Decoder();
+  return v.map((e, i) => {
+    const o = asObj(e, `seals[${i}]`);
+    closed(o, sealValueKeys);
+    const sv = { alg: d.s(o, 'alg'), seal: d.s(o, 'seal'), seal_key_id: d.s(o, 'seal_key_id') };
+    d.check();
+    if (!reAlg.test(sv.alg)) throw schemaField(`seals[${i}].alg`, 'must match ^[A-Za-z0-9][A-Za-z0-9-]{0,31}$');
+    if (!sealShapeOK(sv.alg, sv.seal)) throw schemaField(`seals[${i}].seal`, `must be a ${sv.alg} seal`);
+    if (!isID('sk', sv.seal_key_id)) throw schemaField(`seals[${i}].seal_key_id`, 'must be an sk_ id');
+    return sv;
+  });
+}
+
+/** A v2 body's seal_keys values (port of validateSealKeys). */
+function validateSealKeys(sk: SealKeyRef[], primary: string): void {
+  if (sk.length < 1 || sk.length > MAX_SEALS) throw schemaField('seal_keys', `must hold 1 to ${MAX_SEALS} keys`);
+  sk.forEach((k, i) => {
+    if (!reAlg.test(k.alg)) throw schemaField(`seal_keys[${i}].alg`, 'must match ^[A-Za-z0-9][A-Za-z0-9-]{0,31}$');
+    if (!isID('sk', k.id)) throw schemaField(`seal_keys[${i}].id`, 'must be an sk_ id');
+    for (const p of sk.slice(0, i)) {
+      if (p.alg === k.alg) throw schemaField(`seal_keys[${i}].alg`, 'names an algorithm twice');
+      if (p.id === k.id) throw schemaField(`seal_keys[${i}].id`, 'names a key twice');
+    }
+  });
+  if (primary !== sk[0]!.id) throw schemaField('seal_keys', 'the first key must be the primary seal key');
+}
+
 /** The closed schema by kind: enums, patterns, lengths and which sections must be null (Body.Validate). */
 function validate(b: Body): void {
-  if (b.v !== 1) throw unsupported(b.v);
+  if (b.v !== 1 && b.v !== 2) throw unsupported(b.v);
   if (b.kind !== 'action' && b.kind !== 'admin' && b.kind !== 'amendment') {
     throw schemaField('kind', 'must be action, admin or amendment');
   }
@@ -260,7 +337,11 @@ function validate(b: Body): void {
   if (b.seq < 1 || b.seq > 9007199254740991) throw schemaField('seq', 'must be 1 to 2^53-1');
   if (!reDigest.test(b.prev_hash)) throw schemaField('prev_hash', 'must be sha256:<64 hex>');
   if (parseTime(b.issued_at) === null) throw schemaField('issued_at', 'must be YYYY-MM-DDTHH:MM:SS.mmmZ');
-  if (!isID('sk', b.seal_key_id)) throw schemaField('seal_key_id', 'must be an sk_ id');
+  if (b.v === 1) {
+    if (!isID('sk', b.seal_key_id)) throw schemaField('seal_key_id', 'must be an sk_ id');
+  } else {
+    validateSealKeys(b.seal_keys ?? [], b.seal_key_id);
+  }
   if (!isID('org', b.org)) throw schemaField('org', 'must be an org_ id');
 
   const action = b.kind === 'action';
@@ -400,18 +481,34 @@ export function parseEnvelope(raw: string | Uint8Array): Parsed {
       throw withRefs(new VerifyError('id_mismatch', { detail: `envelope id ${id}, body deed_id ${did}` }), bodyTree);
     }
   }
+  let ver = 1;
   if (bodyTree) {
     const n = bodyTree['v'];
-    if (typeof n === 'number' && n !== 1) throw withRefs(unsupported(n), bodyTree);
+    if (typeof n === 'number') {
+      if (n !== 1 && n !== 2) throw withRefs(unsupported(n), bodyTree);
+      ver = n;
+    }
   }
   const o: Obj = { m: top, path: '' };
   try {
-    closed(o, envelopeKeys);
+    closed(o, ver === 2 ? envelopeKeysV2 : envelopeKeys);
   } catch (e) {
     throw withRefs(e as VerifyError, bodyTree);
   }
   const d = new Decoder();
-  const env = { object: 'deed', id: d.s(o, 'id'), body_hash: d.s(o, 'body_hash'), seal: d.s(o, 'seal'), seal_key_id: d.s(o, 'seal_key_id') } as Envelope;
+  const env = { object: 'deed', id: d.s(o, 'id'), body_hash: d.s(o, 'body_hash') } as Envelope;
+  if (ver === 2) {
+    if (d.err === null) {
+      try {
+        env.seals = sealValues(top['seals']);
+      } catch (e) {
+        d.err = e as VerifyError;
+      }
+    }
+  } else {
+    env.seal = d.s(o, 'seal');
+    env.seal_key_id = d.s(o, 'seal_key_id');
+  }
   if (d.err) throw withRefs(d.err, bodyTree);
   let body: Body;
   try {
@@ -430,14 +527,24 @@ export function parseEnvelope(raw: string | Uint8Array): Parsed {
     throw withRefs(ve, bodyTree);
   }
   if (!reDigest.test(env.body_hash)) throw withRefs(schemaField('body_hash', 'must be sha256:<64 hex>'), bodyTree);
-  if (!reSeal.test(env.seal)) throw withRefs(schemaField('seal', 'must be ed25519:<86 base64url characters>'), bodyTree);
-  if (!isID('sk', env.seal_key_id)) throw withRefs(schemaField('seal_key_id', 'must be an sk_ id'), bodyTree);
+  let envJCS: string;
   const bodyJCS = canonicalize(top['body']!);
-  const envJCS =
-    '{"body":' + bodyJCS + ',"body_hash":"' + env.body_hash + '","id":"' + env.id + '","object":"deed","seal":"' + env.seal +
-    '","seal_key_id":"' + env.seal_key_id + '"}';
-  if (utf8Length(envJCS) > MAX_ENVELOPE_BYTES) {
-    throw withRefs(malformed(`its canonical form is larger than ${MAX_ENVELOPE_BYTES >> 10} KiB`), bodyTree);
+  if (ver === 2) {
+    env.seal = env.seals![0]!.seal;
+    env.seal_key_id = env.seals![0]!.seal_key_id;
+    envJCS =
+      '{"body":' + bodyJCS + ',"body_hash":"' + env.body_hash + '","id":"' + env.id + '","object":"deed","seals":[' +
+      env.seals!.map((x) => '{"alg":"' + x.alg + '","seal":"' + x.seal + '","seal_key_id":"' + x.seal_key_id + '"}').join(',') + ']}';
+  } else {
+    if (!reSeal.test(env.seal)) throw withRefs(schemaField('seal', 'must be ed25519:<86 base64url characters>'), bodyTree);
+    if (!isID('sk', env.seal_key_id)) throw withRefs(schemaField('seal_key_id', 'must be an sk_ id'), bodyTree);
+    envJCS =
+      '{"body":' + bodyJCS + ',"body_hash":"' + env.body_hash + '","id":"' + env.id + '","object":"deed","seal":"' + env.seal +
+      '","seal_key_id":"' + env.seal_key_id + '"}';
+  }
+  const limit = ver === 2 ? MAX_ENVELOPE_BYTES_V2 : MAX_ENVELOPE_BYTES;
+  if (utf8Length(envJCS) > limit) {
+    throw withRefs(malformed(`its canonical form is larger than ${limit >> 10} KiB`), bodyTree);
   }
   return { env, bodyJCS, envJCS };
 }
@@ -468,25 +575,95 @@ export async function ed25519Verify(key: CryptoKey, msg: Uint8Array, sig: Uint8A
 }
 
 /**
- * Checks one deed against a key set, in Go's order: strict JSON, object, id, version, schema,
- * body_hash, seal key id, key known, not revoked, active at issued_at, Ed25519 seal, and with strict
- * canonical bytes. Throws VerifyError on the first failure.
+ * Checks one deed against a key set, in Go's order (DEED_SPEC.md §11, ADR-109): strict JSON,
+ * object, id, version, schema, body_hash, the seal set (v2), then per seal: algorithm implemented,
+ * key known, key of the seal's algorithm, not revoked, active at issued_at, the seal; then the
+ * accept policy, and with strict canonical bytes. Every seal must pass. Throws VerifyError on the
+ * first failure.
  */
 export async function verifyEnvelope(raw: string | Uint8Array, keys: SealKeySet, opts: { strict?: boolean } = {}): Promise<DeedResult> {
   const p = parseEnvelope(raw);
   const { env } = p;
   const b = env.body;
-  const fail = (code: VerifyError['code']) => new VerifyError(code, { seq: b.seq, deedId: b.deed_id, key: env.seal_key_id, issuedAt: b.issued_at });
+  const fail = (code: VerifyError['code'], key = env.seal_key_id, detail = '') =>
+    new VerifyError(code, { seq: b.seq, deedId: b.deed_id, key, issuedAt: b.issued_at, detail });
   if ((await digest(p.bodyJCS)) !== env.body_hash) throw fail('body_hash_mismatch');
-  if (env.seal_key_id !== b.seal_key_id) throw fail('seal_key_mismatch');
-  if (!keys.lookup(env.seal_key_id)) throw fail('seal_key_unknown');
+  let seals: SealValue[];
+  let v1 = false;
+  if (b.v === 1) {
+    if (env.seal_key_id !== b.seal_key_id) throw fail('seal_key_mismatch');
+    seals = [{ alg: ALG_ED25519, seal: env.seal, seal_key_id: env.seal_key_id }];
+    v1 = true;
+  } else {
+    seals = env.seals!;
+    const m = matchSeals(b.seal_keys!, seals);
+    if (m) throw fail(m.code, m.key, m.detail);
+  }
   const issued = parseTime(b.issued_at)!;
-  const c = keys.validAt(env.seal_key_id, issued);
-  if (c !== '') throw fail(c);
-  if (!(await openSeal(keys, env.seal_key_id, TAG_DEED + env.body_hash, env.seal))) throw fail('seal_invalid');
+  for (const sv of seals) {
+    if (!algSupported(sv.alg)) throw fail('unsupported_algorithm', sv.seal_key_id, sv.alg);
+    const e = keys.lookup(sv.seal_key_id);
+    if (!e) throw fail('seal_key_unknown', sv.seal_key_id);
+    if (e.alg === null || e.alg.name !== sv.alg) {
+      throw fail('seal_invalid', sv.seal_key_id, `the key set lists ${sv.seal_key_id} as ${e.key.alg}, not ${sv.alg}`);
+    }
+    const c = keys.validAt(sv.seal_key_id, issued);
+    if (c !== '') throw fail(c, sv.seal_key_id);
+    const tag = v1 ? TAG_DEED : ALGS[sv.alg]!.tag;
+    if (!(await openAlgSeal(keys, sv, tag + env.body_hash))) throw fail('seal_invalid', sv.seal_key_id);
+  }
+  const why = acceptPolicy(seals, keys, issued);
+  if (why !== '') throw fail('seal_missing', env.seal_key_id, why);
   const canonical = typeof raw === 'string' ? raw === p.envJCS : equalBytes(raw, utf8Bytes(p.envJCS));
   if (opts.strict && !canonical) throw fail('non_canonical');
   return { envelope: env, bodyHash: env.body_hash, seq: b.seq, deedId: b.deed_id, org: b.org, issuedAt: issued, sealKeyId: env.seal_key_id, canonical };
+}
+
+/** One seal of an implemented algorithm over msg. */
+async function openAlgSeal(keys: SealKeySet, sv: SealValue, msg: string): Promise<boolean> {
+  if (!sealShapeOK(sv.alg, sv.seal)) return false;
+  if (sv.alg === ALG_ED25519) return openSeal(keys, sv.seal_key_id, msg, sv.seal);
+  return false;
+}
+
+/** A v2 envelope's seals against the body's seal_keys (port of matchSeals). */
+function matchSeals(keys: SealKeyRef[], seals: SealValue[]): { code: VerifyError['code']; key: string; detail: string } | null {
+  for (const k of keys) {
+    if (!seals.some((s) => s.seal_key_id === k.id)) return { code: 'seal_missing', key: k.id, detail: `no ${k.alg} seal by ${k.id}` };
+  }
+  if (seals.length !== keys.length) {
+    for (const s of seals) {
+      if (!keys.some((k) => k.id === s.seal_key_id)) {
+        return { code: 'seal_key_mismatch', key: s.seal_key_id, detail: `a seal by ${s.seal_key_id}, which the body does not name` };
+      }
+    }
+    return { code: 'seal_key_mismatch', key: seals[seals.length - 1]!.seal_key_id, detail: 'two seals by the same key' };
+  }
+  for (let i = 0; i < keys.length; i++) {
+    const s = seals[i]!;
+    const k = keys[i]!;
+    if (s.seal_key_id !== k.id || s.alg !== k.alg) {
+      return { code: 'seal_key_mismatch', key: s.seal_key_id, detail: `seal ${i} is ${s.alg} by ${s.seal_key_id}; the body names ${k.alg} by ${k.id}` };
+    }
+  }
+  return null;
+}
+
+/** The accept policy (DEED_SPEC.md §11.4), by issued_at only. Returns why the deed fails, or ''. */
+function acceptPolicy(seals: SealValue[], keys: SealKeySet, issued: number): string {
+  if (!seals.some((s) => acceptedAlone(s.alg, issued))) {
+    return `Ed25519 alone is accepted only for deeds issued before ${ED25519_ALONE_UNTIL_TEXT}`;
+  }
+  for (const alg of keys.activeAlgs(issued)) {
+    if (!seals.some((s) => s.alg === alg)) {
+      return `the key set has a ${alg} key active at ${formatTime(issued)}, and this deed has no ${alg} seal`;
+    }
+  }
+  return '';
+}
+
+function formatTime(t: number): string {
+  return new Date(t).toISOString();
 }
 
 /** The hash of the body as received (for body_hash_mismatch: expected vs computed). */

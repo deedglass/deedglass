@@ -52,10 +52,21 @@ func NewFileSigner(id string, seed []byte) (*FileSigner, error) {
 }
 
 func (s *FileSigner) KeyID() string                   { return s.id }
+func (s *FileSigner) Alg() string                     { return AlgEd25519 }
+func (s *FileSigner) PublicKeyBytes() []byte          { return s.pub }
 func (s *FileSigner) PublicKey() ed25519.PublicKey    { return s.pub }
 func (s *FileSigner) Sign(msg []byte) ([]byte, error) { return ed25519.Sign(s.priv, msg), nil }
 func (s *FileSigner) String() string                  { return "seal key " + s.id }
 func (s *FileSigner) GoString() string                { return "deed.FileSigner{" + s.id + "}" }
+
+// AlgSigner seals with one algorithm of the registry (alg.go). FileSigner is the Ed25519 one;
+// the deed v2 path (SealBodyV2, the Sealer with extra keys) takes one AlgSigner per seal.
+type AlgSigner interface {
+	KeyID() string
+	Alg() string
+	PublicKeyBytes() []byte
+	Sign(msg []byte) ([]byte, error)
+}
 
 // Thumbprint returns "sha256:" + hex(SHA-256(raw 32-byte public key)).
 func Thumbprint(pub ed25519.PublicKey) string { return Digest(pub) }
@@ -108,6 +119,76 @@ func sealBody(s Signer, b Body) (*sealed, error) {
 		return nil, fmt.Errorf("%w: the deed would be %d bytes; the limit is %d", ErrDraft, len(envJCS), MaxEnvelopeBytes)
 	}
 	return &sealed{env: env, bodyJCS: bodyJCS, envJCS: envJCS}, nil
+}
+
+// SealBodyV2 seals a complete body as deed v2 (ADR-109): v is set to 2, seal_keys lists the
+// signers in order (the first is the primary seal key), and each signer seals its algorithm's
+// tagged input. No chain logic and no clock; tests, vectors and the Sealer use it.
+func SealBodyV2(signers []AlgSigner, b Body) (*Envelope, error) {
+	r, err := sealBodyV2(signers, b)
+	if err != nil {
+		return nil, err
+	}
+	return r.env, nil
+}
+
+func sealBodyV2(signers []AlgSigner, b Body) (*sealed, error) {
+	if len(signers) < 1 || len(signers) > MaxSeals {
+		return nil, fmt.Errorf("%w: a v2 deed needs 1 to %d seal keys", ErrDraft, MaxSeals)
+	}
+	b.V = VersionV2
+	b.SealKeys = make([]SealKeyRef, len(signers))
+	for i, s := range signers {
+		b.SealKeys[i] = SealKeyRef{Alg: s.Alg(), ID: s.KeyID()}
+	}
+	b.SealKeyID = signers[0].KeyID()
+	if err := b.Validate(); err != nil {
+		return nil, fmt.Errorf("%w: %w", ErrDraft, err)
+	}
+	bodyJCS, err := canonicalBody(&b)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %w", ErrDraft, err)
+	}
+	hash := Digest(bodyJCS)
+	env := &Envelope{Object: ObjectDeed, ID: b.DeedID, Body: b, BodyHash: hash, Seals: make([]SealValue, len(signers))}
+	for i, s := range signers {
+		tag, prefix, size := sealParams(s)
+		if tag == "" {
+			return nil, fmt.Errorf("%w: seal algorithm %q is not implemented", ErrDraft, s.Alg())
+		}
+		sig, err := s.Sign([]byte(tag + hash))
+		if err != nil {
+			return nil, fmt.Errorf("deed: sign (%s): %w", s.Alg(), err)
+		}
+		if size > 0 && len(sig) != size {
+			return nil, fmt.Errorf("deed: the %s signer returned %d bytes, not %d", s.Alg(), len(sig), size)
+		}
+		env.Seals[i] = SealValue{Alg: s.Alg(), Seal: prefix + b64.EncodeToString(sig), SealKeyID: s.KeyID()}
+	}
+	env.Seal, env.SealKeyID = env.Seals[0].Seal, env.Seals[0].SealKeyID
+	envJCS := canonicalEnvelope(env, bodyJCS)
+	if len(envJCS) > MaxEnvelopeBytesV2 {
+		return nil, fmt.Errorf("%w: the deed would be %d bytes; the limit is %d", ErrDraft, len(envJCS), MaxEnvelopeBytesV2)
+	}
+	return &sealed{env: env, bodyJCS: bodyJCS, envJCS: envJCS}, nil
+}
+
+// TestSealTagger lets a test signer seal with an algorithm the registry doesn't implement (the
+// unsupported_algorithm vectors). Production signers never implement it.
+type TestSealTagger interface {
+	SealTag() string
+	SealPrefix() string
+}
+
+// sealParams returns the domain tag, seal prefix and signature size for s's algorithm.
+func sealParams(s AlgSigner) (tag, prefix string, size int) {
+	if a, ok := algs[s.Alg()]; ok {
+		return a.tag, a.prefix, a.sigSize
+	}
+	if t, ok := s.(TestSealTagger); ok {
+		return t.SealTag(), t.SealPrefix(), 0
+	}
+	return "", "", 0
 }
 
 // openSeal checks seal over body_hash with pub. crypto/ed25519 refuses s ≥ L and non-canonical

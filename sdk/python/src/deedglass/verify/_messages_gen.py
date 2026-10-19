@@ -25,6 +25,8 @@ CODES: tuple[str, ...] = (
     "chain_prev_hash_mismatch",
     "chain_org_mismatch",
     "chain_time_regression",
+    "unsupported_algorithm",
+    "seal_missing",
 )
 
 MESSAGES: dict[str, tuple[str, str]] = {
@@ -112,12 +114,20 @@ MESSAGES: dict[str, tuple[str, str]] = {
         "{Deed} names seal key {key}, which is not in the key set.",
         "Fetch the issuer's keys: --keys <issuer>/.well-known/deedglass/keys.json",
     ),
+    "seal_missing": (
+        "{Deed} is missing a seal it must carry ({detail}).",
+        "Treat this deed as altered, or ask the issuer for the deed as it was sealed.",
+    ),
     "unknown": (
         "{Deed} failed verification ({code}).",
         "Export it again from the issuer.",
     ),
+    "unsupported_algorithm": (
+        "{Deed} is sealed with an algorithm this verifier can't check ({detail}).",
+        "Update deedglass, or check it with a verifier that supports that algorithm.",
+    ),
     "unsupported_version": (
-        "{Deed} uses deed format v{v}. This verifier reads v1.",
+        "{Deed} uses deed format v{v}, which this verifier can't read.",
         "Update deedglass.",
     ),
     "warning.keys_not_pinned": (

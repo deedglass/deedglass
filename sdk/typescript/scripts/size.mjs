@@ -25,8 +25,9 @@ const check = (name, value, budget, unit) => {
 const kib = (n) => Math.round((n / 1024) * 100) / 100;
 check('core gzip (without verify)', kib(gz([...js(''), ...js('resources')])), 16, 'KiB');
 // S31 §3.9 said 14 KiB; tsc-only output (no minifier, by design) of S05's verifier is ~18 KiB, so the
-// budget is 19 KiB (a PROPOSED change in the S31 report, ADR-062).
-check('verify gzip', kib(gz(js('verify'))), 19, 'KiB');
+// budget was 19 KiB (a PROPOSED change in the S31 report, ADR-062). Deed v2 and the dependency-free
+// ML-DSA-65 check raise it to 28 KiB (ADR-109, amending ADR-062).
+check('verify gzip', kib(gz(js('verify'))), 28, 'KiB');
 for (const a of ['ai-sdk', 'openai-agents', 'langchain', 'claude-agent-sdk']) check(`adapter ${a} gzip`, kib(gz([`adapters/${a}.js`])), 3, 'KiB');
 check('adapters/shared gzip (once)', kib(gz(['adapters/shared.js'])), 3, 'KiB');
 

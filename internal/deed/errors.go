@@ -12,7 +12,7 @@ type Code string
 
 const (
 	CodeMalformed          Code = "malformed"           // not strict JSON, too large, or not canonical-able
-	CodeUnsupportedVersion Code = "unsupported_version" // body.v is not 1
+	CodeUnsupportedVersion Code = "unsupported_version" // body.v is not 1 or 2
 	CodeSchemaInvalid      Code = "schema_invalid"      // closed schema, enums, patterns, lengths
 	CodeIDMismatch         Code = "id_mismatch"         // envelope.id != body.deed_id
 	CodeBodyHashMismatch   Code = "body_hash_mismatch"  // sha256(JCS(body)) != body_hash
@@ -29,6 +29,10 @@ const (
 	CodeBundleInvalid     Code = "bundle_invalid"      // an export bundle breaks a reader rule (BUNDLE_FORMAT.md)
 	CodeBundleSealInvalid Code = "bundle_seal_invalid" // manifest.seal.json does not verify
 
+	// Added by ADR-109 (deed v2, crypto agility).
+	CodeUnsupportedAlgorithm Code = "unsupported_algorithm" // a seal or its key uses an algorithm this verifier doesn't implement
+	CodeSealMissing          Code = "seal_missing"          // a seal the body or the accept policy requires is absent
+
 	CodeChainGenesisMismatch  Code = "chain_genesis_mismatch"
 	CodeChainSeqGap           Code = "chain_seq_gap"
 	CodeChainSeqOutOfOrder    Code = "chain_seq_out_of_order"
@@ -43,7 +47,7 @@ var Codes = []Code{
 	CodeSealKeyMismatch, CodeSealKeyUnknown, CodeSealKeyRejected, CodeSealKeyNotValidAt, CodeSealKeyRevoked,
 	CodeSealInvalid, CodeNonCanonical, CodeKeysMissing, CodeBundleInvalid, CodeBundleSealInvalid,
 	CodeChainGenesisMismatch, CodeChainSeqGap, CodeChainSeqOutOfOrder, CodeChainPrevHashMismatch,
-	CodeChainOrgMismatch, CodeChainTimeRegression,
+	CodeChainOrgMismatch, CodeChainTimeRegression, CodeUnsupportedAlgorithm, CodeSealMissing,
 }
 
 // VerifyError is every verification failure. Only Code is always set; the other fields give the
@@ -115,6 +119,8 @@ var (
 	ErrChainPrevHashMismatch = &VerifyError{Code: CodeChainPrevHashMismatch}
 	ErrChainOrgMismatch      = &VerifyError{Code: CodeChainOrgMismatch}
 	ErrChainTimeRegression   = &VerifyError{Code: CodeChainTimeRegression}
+	ErrUnsupportedAlgorithm  = &VerifyError{Code: CodeUnsupportedAlgorithm}
+	ErrSealMissing           = &VerifyError{Code: CodeSealMissing}
 )
 
 func errSchemaField(field, detail string) *VerifyError {

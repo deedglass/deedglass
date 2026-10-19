@@ -1,7 +1,10 @@
 // Seal key sets (keys.json): a port of deed.ParseKeySet and keys.ParsePublicKey. Any unsafe key
 // (small-order or non-canonical Ed25519, attack case A13) or inconsistent key refuses the whole set
-// with seal_key_rejected: a verifier never picks and chooses.
+// with seal_key_rejected: a verifier never picks and chooses. A key of an algorithm this verifier
+// doesn't implement is kept and never used (ADR-109): only a deed that names it is
+// unsupported_algorithm.
 
+import { ALG_ED25519, ALGS, algSupported, type AlgSpec, reAlg } from './alg.js';
 import { decodeB64url } from './b64url.js';
 import { keyRejected, malformed, schemaField, UnsupportedError, VerifyError } from './errors.js';
 import { toHex } from './hex.js';
@@ -21,11 +24,22 @@ export interface SealKey {
   activated_at: string;
   retired_at: string | null;
   revoked_at: string | null;
-  jwk: { kty: string; crv: string; x: string; kid: string; use: string };
+  jwk: { kty: string; crv?: string; x?: string; alg?: string; pub?: string; kid: string; use: string };
 }
 
-interface KeyEntry {
+/** The closed jwk members by algorithm: OKP for Ed25519, AKP for the RFC 9964 algorithms. */
+function jwkKeys(alg: string): { required: string[]; optional: string[] } {
+  if (alg === ALG_ED25519) return { required: ['kty', 'crv', 'x', 'kid', 'use'], optional: [] };
+  if (algSupported(alg)) return { required: ['kty', 'alg', 'pub', 'kid', 'use'], optional: [] };
+  return { required: ['kty', 'kid', 'use'], optional: ['crv', 'x', 'alg', 'pub'] };
+}
+
+const MAX_UNKNOWN_KEY_BYTES = 8 << 10;
+
+export interface KeyEntry {
   key: SealKey;
+  /** null: an algorithm this verifier doesn't implement. */
+  alg: AlgSpec | null;
   pub: Uint8Array;
   activated: number;
   retired: number | null;
@@ -51,6 +65,17 @@ export class SealKeySet {
     if (e.revoked !== null) return 'seal_key_revoked';
     if (t < e.activated || (e.retired !== null && t >= e.retired)) return 'seal_key_not_valid_at';
     return '';
+  }
+
+  /** The implemented algorithms of the keys not revoked and active at t: the key-set rule (§11.4). */
+  activeAlgs(t: number): string[] {
+    const out: string[] = [];
+    for (const k of this.keys) {
+      const e = this.byId.get(k.id)!;
+      if (e.alg === null || e.revoked !== null || t < e.activated || (e.retired !== null && t >= e.retired)) continue;
+      if (!out.includes(k.alg)) out.push(k.alg);
+    }
+    return out;
   }
 
   /** The key as a WebCrypto key (imported once). Throws UnsupportedError when Ed25519 is missing. */
@@ -147,9 +172,19 @@ export async function parseKeySet(input: string | Uint8Array): Promise<SealKeySe
       retired_at: d.ns(o, 'retired_at'),
       revoked_at: d.ns(o, 'revoked_at'),
     } as SealKey;
-    const j = d.obj(o, 'jwk', ['kty', 'crv', 'x', 'kid', 'use']);
+    const { required, optional } = jwkKeys(k.alg);
+    const jkeys = [...required];
+    const jm = o.m['jwk'];
+    if (typeof jm === 'object' && jm !== null && !Array.isArray(jm)) {
+      for (const f of optional) if (Object.prototype.hasOwnProperty.call(jm, f)) jkeys.push(f);
+    }
+    const j = d.obj(o, 'jwk', jkeys);
     if (j) {
-      k.jwk = { kty: d.s(j, 'kty'), crv: d.s(j, 'crv'), x: d.s(j, 'x'), kid: d.s(j, 'kid'), use: d.s(j, 'use') };
+      const jwk: SealKey['jwk'] = { kty: d.s(j, 'kty'), kid: d.s(j, 'kid'), use: d.s(j, 'use') };
+      for (const f of jkeys) {
+        if (f === 'crv' || f === 'x' || f === 'alg' || f === 'pub') jwk[f] = d.s(j, f);
+      }
+      k.jwk = jwk;
     } else if (d.err === null) {
       d.err = schemaField(`${o.path}.jwk`, 'must be an object');
     }
@@ -169,16 +204,26 @@ async function index(ks: SealKeySet): Promise<void> {
     if (k.object !== 'seal_key') throw schemaField(`keys[${i}].object`, 'must be "seal_key"');
     if (!isID('sk', k.id)) throw schemaField(`keys[${i}].id`, 'must be an sk_ id');
     if (ks.byId.has(k.id)) throw keyRejected(k.id, 'listed twice');
-    if (k.alg !== 'Ed25519') throw keyRejected(k.id, 'unknown alg ' + k.alg);
+    if (!reAlg.test(k.alg)) throw keyRejected(k.id, 'unknown alg ' + k.alg);
+    const alg = algSupported(k.alg) ? ALGS[k.alg]! : null;
     const raw = decodeB64url(k.public_key);
-    if (raw === null || raw.length !== 32) throw keyRejected(k.id, 'public_key is not 32 bytes of base64url');
-    const why = unsafeKey(raw);
-    if (why !== null) throw keyRejected(k.id, why);
-    if (k.thumbprint !== (await digest(raw))) throw keyRejected(k.id, 'thumbprint does not match public_key');
     const j = k.jwk;
-    if (j.kty !== 'OKP' || j.crv !== 'Ed25519' || j.x !== k.public_key || j.kid !== k.id || j.use !== 'sig') {
-      throw keyRejected(k.id, 'jwk does not match the key');
+    if (alg !== null) {
+      if (raw === null || raw.length !== alg.keySize) throw keyRejected(k.id, `public_key is not ${alg.keySize} bytes of base64url`);
+      if (alg.name === ALG_ED25519) {
+        const why = unsafeKey(raw);
+        if (why !== null) throw keyRejected(k.id, why);
+        if (j.kty !== 'OKP' || j.crv !== 'Ed25519' || j.x !== k.public_key || j.alg !== undefined || j.pub !== undefined || j.kid !== k.id || j.use !== 'sig') {
+          throw keyRejected(k.id, 'jwk does not match the key');
+        }
+      } else if (j.kty !== 'AKP' || j.alg !== k.alg || j.pub !== k.public_key || j.crv !== undefined || j.x !== undefined || j.kid !== k.id || j.use !== 'sig') {
+        throw keyRejected(k.id, 'jwk does not match the key');
+      }
+    } else {
+      if (raw === null || raw.length === 0 || raw.length > MAX_UNKNOWN_KEY_BYTES) throw keyRejected(k.id, 'public_key is not base64url');
+      if (j.kid !== k.id || j.use !== 'sig' || j.kty === '') throw keyRejected(k.id, 'jwk does not match the key');
     }
+    if (k.thumbprint !== (await digest(raw))) throw keyRejected(k.id, 'thumbprint does not match public_key');
     const activated = parseTime(k.activated_at);
     if (activated === null) throw schemaField(`keys[${i}].activated_at`, 'must be YYYY-MM-DDTHH:MM:SS.mmmZ');
     let retired: number | null = null;
@@ -196,7 +241,7 @@ async function index(ks: SealKeySet): Promise<void> {
       (k.status === 'retired' && retired !== null && revoked === null) ||
       (k.status === 'revoked' && revoked !== null);
     if (!ok) throw keyRejected(k.id, `status ${k.status} does not match retired_at and revoked_at`);
-    ks.byId.set(k.id, { key: k, pub: raw, activated, retired, revoked });
+    ks.byId.set(k.id, { key: k, alg, pub: raw, activated, retired, revoked });
   }
   // Stable sort by activated_at, as Go does.
   ks.keys = ks.keys

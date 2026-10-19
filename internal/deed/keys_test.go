@@ -97,7 +97,7 @@ func TestKeySetRefusals(t *testing.T) {
 		code deed.Code
 	}{
 		"duplicate id":       {dup, deed.CodeSealKeyRejected},
-		"unknown alg":        {strings.Replace(raw, `"alg":"Ed25519"`, `"alg":"EdDSA"`, 1), deed.CodeSealKeyRejected},
+		"malformed alg":      {strings.Replace(raw, `"alg":"Ed25519"`, `"alg":"Ed 25519"`, 1), deed.CodeSealKeyRejected},
 		"thumbprint":         {strings.Replace(raw, k0.Thumbprint, deed.Digest([]byte("x")), 1), deed.CodeSealKeyRejected},
 		"jwk x":              {strings.Replace(raw, `"x":"`+k0.PublicKey, `"x":"`+ks.Keys[1].PublicKey, 1), deed.CodeSealKeyRejected},
 		"status vs times":    {strings.Replace(raw, `"status":"revoked"`, `"status":"active"`, 1), deed.CodeSealKeyRejected},

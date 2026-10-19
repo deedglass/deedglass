@@ -1,0 +1,4 @@
+verify
+../../testdata/deeds/v2/valid/01-ed25519-only.json
+--keys
+../../testdata/deeds/v2/keys.json

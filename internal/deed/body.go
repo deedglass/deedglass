@@ -1,6 +1,7 @@
 package deed
 
 import (
+	"encoding/json"
 	"fmt"
 	"regexp"
 	"slices"
@@ -17,19 +18,25 @@ const (
 	KindAmendment Kind = "amendment" // a later witness verdict about an earlier action deed
 )
 
-// Version is the deed format this package reads and writes.
-const Version = 1
+// Version is deed format v1, which every builder writes and every issuer without a second seal
+// key keeps sealing. VersionV2 (ADR-109) names its seals in the body (seal_keys) and carries one seal
+// per key; the Sealer writes it only when it holds more than one key.
+const (
+	Version   = 1
+	VersionV2 = 2
+)
 
 // Limits (DEED_SPEC.md §4). A deed holds digests, never payloads; these are the only free text.
 const (
-	MaxEnvelopeBytes = 16 << 10 // JCS(envelope)
-	MaxAgentName     = 64       // characters
-	MaxToolBytes     = 200      // bytes (S13's qualified-name limit)
-	MaxRefBytes      = 256      // on_behalf_of, session
-	MaxMethod        = 64
-	MaxErrorCode     = 64
-	MaxRuleID        = 128
-	MaxReason        = 280 // characters
+	MaxEnvelopeBytes   = 16 << 10 // JCS(envelope) of a v1 deed
+	MaxEnvelopeBytesV2 = 24 << 10 // JCS(envelope) of a v2 deed (an ML-DSA-65 seal is 4,412 characters)
+	MaxAgentName       = 64       // characters
+	MaxToolBytes       = 200      // bytes (S13's qualified-name limit)
+	MaxRefBytes        = 256      // on_behalf_of, session
+	MaxMethod          = 64
+	MaxErrorCode       = 64
+	MaxRuleID          = 128
+	MaxReason          = 280 // characters
 )
 
 // Body is Deed v1. Every key is always present (nil pointers encode as null). Never add omitempty:
@@ -53,7 +60,31 @@ type Body struct {
 	Cost       *Cost             `json:"cost"`         //
 	Admin      *AdminSection     `json:"admin"`        //
 	Amends     *string           `json:"amends"`       // deed_<ulid>, amendment only
-	SealKeyID  string            `json:"seal_key_id"`  // sk_<ulid>; must equal Envelope.SealKeyID
+	SealKeyID  string            `json:"seal_key_id"`  // sk_<ulid>; must equal Envelope.SealKeyID. v2: = SealKeys[0].ID, not serialized
+	// SealKeys is v2 only: every key the deed carries a seal of, the primary first. A v1 body has
+	// none (nil), and its JSON has no seal_keys member; a v2 body's JSON has seal_keys and no
+	// seal_key_id (MarshalJSON).
+	SealKeys []SealKeyRef `json:"seal_keys,omitempty"`
+}
+
+// SealKeyRef is one entry of a v2 body's seal_keys: an algorithm and the key that seals with it.
+type SealKeyRef struct {
+	Alg string `json:"alg"`
+	ID  string `json:"id"`
+}
+
+// MarshalJSON writes a v2 body in its own shape (seal_keys, no seal_key_id), canonical. A v1 body
+// marshals field by field as always.
+func (b Body) MarshalJSON() ([]byte, error) {
+	if b.V == VersionV2 {
+		c, err := canonicalBody(&b)
+		if err != nil {
+			return nil, err
+		}
+		return c, nil
+	}
+	type plain Body
+	return json.Marshal(plain(b))
 }
 
 // AgentRef names the agent. Name is informational; ID is what counts.
@@ -196,7 +227,7 @@ func (b *Body) Validate() error { return b.validate(false) }
 // validate with draft=true requires the Sealer-owned fields (deed_id, seq, prev_hash, issued_at,
 // seal_key_id) to be unset instead of valid.
 func (b *Body) validate(draft bool) error {
-	if b.V != Version {
+	if b.V != Version && b.V != VersionV2 {
 		return errUnsupported(b.V)
 	}
 	switch b.Kind {
@@ -216,6 +247,8 @@ func (b *Body) validate(draft bool) error {
 			return errSchemaField("issued_at", "is set by the Sealer")
 		case b.SealKeyID != "":
 			return errSchemaField("seal_key_id", "is set by the Sealer")
+		case b.SealKeys != nil:
+			return errSchemaField("seal_keys", "is set by the Sealer")
 		}
 	} else {
 		if !isID(pDeed, b.DeedID) {
@@ -230,8 +263,15 @@ func (b *Body) validate(draft bool) error {
 		if _, err := ParseTime(b.IssuedAt); err != nil {
 			return errSchemaField("issued_at", "must be YYYY-MM-DDTHH:MM:SS.mmmZ")
 		}
-		if !isID(pSealKey, b.SealKeyID) {
-			return errSchemaField("seal_key_id", "must be an sk_ id")
+		if b.V == Version {
+			if !isID(pSealKey, b.SealKeyID) {
+				return errSchemaField("seal_key_id", "must be an sk_ id")
+			}
+			if b.SealKeys != nil {
+				return errSchemaField("seal_keys", "is not a v1 field")
+			}
+		} else if err := validateSealKeys(b.SealKeys, b.SealKeyID); err != nil {
+			return err
 		}
 	}
 	if !isID(pOrg, b.Org) {
@@ -536,4 +576,32 @@ func plainText(s string, minChars, maxChars int, newline bool) bool {
 		}
 	}
 	return n >= minChars && n <= maxChars
+}
+
+// validateSealKeys checks a v2 body's seal_keys: 1 to MaxSeals entries, each a well-formed alg
+// name and an sk_ id, no alg and no key twice. primary (Body.SealKeyID) must be the first id.
+func validateSealKeys(sk []SealKeyRef, primary string) error {
+	if len(sk) < 1 || len(sk) > MaxSeals {
+		return errSchemaField("seal_keys", fmt.Sprintf("must hold 1 to %d keys", MaxSeals))
+	}
+	for i, k := range sk {
+		if !reAlg.MatchString(k.Alg) {
+			return errSchemaField(fmt.Sprintf("seal_keys[%d].alg", i), "must match ^[A-Za-z0-9][A-Za-z0-9-]{0,31}$")
+		}
+		if !isID(pSealKey, k.ID) {
+			return errSchemaField(fmt.Sprintf("seal_keys[%d].id", i), "must be an sk_ id")
+		}
+		for _, p := range sk[:i] {
+			if p.Alg == k.Alg {
+				return errSchemaField(fmt.Sprintf("seal_keys[%d].alg", i), "names an algorithm twice")
+			}
+			if p.ID == k.ID {
+				return errSchemaField(fmt.Sprintf("seal_keys[%d].id", i), "names a key twice")
+			}
+		}
+	}
+	if primary != sk[0].ID {
+		return errSchemaField("seal_keys", "the first key must be the primary seal key")
+	}
+	return nil
 }

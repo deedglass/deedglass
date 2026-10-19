@@ -17,8 +17,11 @@ import (
 const (
 	// DigestPrefix starts every digest: "sha256:" + 64 lowercase hex characters.
 	DigestPrefix = "sha256:"
-	// TagDeed is prepended to body_hash to form the seal input.
+	// TagDeed is prepended to body_hash to form a v1 deed's seal input.
 	TagDeed = "deedglass/deed/v1\n"
+	// TagDeedV2Ed25519 is a v2 deed's Ed25519 seal input tag. Every v2 algorithm has its own tag
+	// (alg.go), so a signature made for one algorithm or version is never accepted as another.
+	TagDeedV2Ed25519 = "deedglass/deed/v2/ed25519\n"
 	// TagBundle is the export-bundle manifest's domain tag (S05).
 	TagBundle = "deedglass/bundle/v1\n"
 	// TagIntent is the signed-intent domain tag (S09).

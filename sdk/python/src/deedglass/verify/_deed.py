@@ -11,7 +11,7 @@ from typing import Any
 from .._copy import CRYPTO_MISSING
 from ._b64 import decode_b64url
 from ._jcs import canonicalize
-from ._keys import KeySet, sha256_digest
+from ._keys import ALG_ED25519, KeySet, sha256_digest
 from ._schema import (
     RE_ADMIN_ACT,
     RE_CURRENCY,
@@ -37,6 +37,9 @@ from ._verror import VerifyError, malformed, schema_field, unsupported
 MAX_INPUT_BYTES = 64 * 1024
 MAX_ENVELOPE_BYTES = 16 * 1024
 TAG_DEED = "deedglass/deed/v1\n"
+# The accept policy's date (DEED_SPEC.md §11.4): Ed25519 alone only for deeds issued before
+# 2035-01-01T00:00:00.000Z (NIST IR 8547 ipd), in milliseconds since the epoch.
+ED25519_ALONE_UNTIL = 2051222400000
 TAG_GENESIS = "deedglass/genesis\n"
 MAX = 9007199254740991
 
@@ -522,8 +525,11 @@ def verify_envelope(raw: bytes | str, keys: KeySet, *, strict: bool = False) -> 
         raise fail("body_hash_mismatch")
     if env["seal_key_id"] != b["seal_key_id"]:
         raise fail("seal_key_mismatch")
-    if keys.lookup(env["seal_key_id"]) is None:
+    e = keys.lookup(env["seal_key_id"])
+    if e is None:
         raise fail("seal_key_unknown")
+    if e.key.alg != ALG_ED25519:
+        raise fail("seal_invalid")  # a seal is checked only with a key of its own algorithm (ADR-109)
     issued = parse_time(b["issued_at"])
     assert issued is not None
     c = keys.valid_at(env["seal_key_id"], issued)
@@ -531,6 +537,11 @@ def verify_envelope(raw: bytes | str, keys: KeySet, *, strict: bool = False) -> 
         raise fail(c)
     if not open_seal(keys, env["seal_key_id"], TAG_DEED + env["body_hash"], env["seal"]):
         raise fail("seal_invalid")
+    # The accept policy (DEED_SPEC.md §11.4), by issued_at only.
+    if issued >= ED25519_ALONE_UNTIL:
+        raise fail("seal_missing")
+    if any(a != ALG_ED25519 for a in keys.active_algs(issued)):
+        raise fail("seal_missing")
     raw_b = raw.encode("utf-8") if isinstance(raw, str) else raw
     canonical = raw_b == p.env_jcs.encode("utf-8")
     if strict and not canonical:

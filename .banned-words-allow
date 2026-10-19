@@ -42,6 +42,7 @@ CLAUDE.md::military-grade::explanatory negation: CLAUDE.md lists the brand style
 CLAUDE.md::bank-grade::explanatory negation: CLAUDE.md lists the brand style words that must never be written
 CLAUDE.md::unhackable::explanatory negation: CLAUDE.md lists the brand style words that must never be written
 spec/v1/DEED_SPEC.md::receipts::quoted prior-art title: RFC 9942 "CBOR Object Signing and Encryption (COSE) Receipts", named to say Deedglass does not produce it
+spec/v2/DEED_SPEC.md::receipts::quoted prior-art title: RFC 9942 "CBOR Object Signing and Encryption (COSE) Receipts", named to say Deedglass does not produce it
 DESIGN.md::alloy::the brand's 'words we never use' list, copied verbatim from ops/brand/DESIGN.md (explanatory negation)
 DESIGN.md::attestation::the brand's 'words we never use' list, copied verbatim from ops/brand/DESIGN.md (explanatory negation)
 DESIGN.md::attests::the brand's 'words we never use' list, copied verbatim from ops/brand/DESIGN.md (explanatory negation)

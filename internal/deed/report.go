@@ -110,7 +110,7 @@ const (
 // CannotDetermine reports whether code means "cannot decide" rather than "failed": the verifier
 // had no keys, or the deed uses a newer format. Exit 2 instead of 1.
 func CannotDetermine(code string) bool {
-	return code == string(CodeKeysMissing) || code == string(CodeUnsupportedVersion)
+	return code == string(CodeKeysMissing) || code == string(CodeUnsupportedVersion) || code == string(CodeUnsupportedAlgorithm)
 }
 
 // NewReport returns an empty report with every list and map non-nil (JSON shows [] and {}).
