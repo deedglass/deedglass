@@ -35,8 +35,8 @@ func TestConnectorDocsFresh(t *testing.T) {
 // every write or destructive tool a native read-back covers names what it checks.
 func TestCatalogComplete(t *testing.T) {
 	infos := catalogdocs.Infos()
-	if len(infos) != 9 {
-		t.Fatalf("%d types; want 9", len(infos))
+	if len(infos) != 10 {
+		t.Fatalf("%d types; want 10", len(infos))
 	}
 	for typ, info := range infos {
 		if info.Summary == "" || info.Status == "" || info.Icon == "" || info.Modes == nil || len(info.Limits) == 0 || len(info.Setup) == 0 || info.Tools == nil {

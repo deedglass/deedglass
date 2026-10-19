@@ -41,6 +41,7 @@ export const IMPORTS = {
   'docs/connectors/stripe.md': 'reference/connectors/stripe',
   'docs/connectors/gmail.md': 'reference/connectors/gmail',
   'docs/connectors/notion.md': 'reference/connectors/notion',
+  'docs/connectors/fhir.md': 'reference/connectors/fhir',
   'docs/connectors/outbound_mail.md': 'reference/connectors/outbound-mail',
   'docs/sdk/typescript.md': 'sdks/typescript',
   'docs/sdk/adapters/ai-sdk.md': 'sdks/adapters/ai-sdk',

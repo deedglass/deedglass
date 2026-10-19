@@ -72,6 +72,7 @@ export const REDIRECTS = [
   ['/connectors/gmail', '/reference/connectors/gmail/'],
   ['/connectors/outbound_mail', '/reference/connectors/outbound-mail/'],
   ['/connectors/notion', '/reference/connectors/notion/'],
+  ['/connectors/fhir', '/reference/connectors/fhir/'],
   ['/connectors/mcp-http', '/reference/connectors/mcp-http/'],
   ['/connectors/fake', '/reference/connectors/fake/'],
   // DOC-04: the page "What VERIFIED means" became "What Matches means" (plain names, P-069).

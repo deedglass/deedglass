@@ -6,6 +6,10 @@ Every Witness verdict lists its reasons: what each check found, or what it could
 |---|---|---|---|---|
 | `decoder_halted` | gap | L2 | `The decoder for this connector has stopped (publication_missing), so Postgres's change log wasn't read.` | Run deedglass decoder status; it names the cause and the fix. |
 | `edge_reported_success` | pass | L0 | `The edge reported success. Deedglass did not run this call itself.` | Nothing. Proxy-mode calls stay at L0 unless the system of record is witnessed (L2). |
+| `fhir_conditional_matched` | violation | L1 | `fhir.create reported success, but the conditional create matched an existing resource ("Observation/1001 version 1"), so this action created nothing.` | Read the existing resource. The agent's report of a new one is wrong; check what it did next with that id. |
+| `fhir_field_changed` | violation | L1 | `fhir.update reported success, but Observation/1001 version 2 shows status as "preliminary", not "final".` | Read the diff, then check the server: a profile, a default or an interceptor stored something else. |
+| `fhir_history_no_match` | gap | L1 | `The server's history since the call shows 0 versions carrying this action's token, not exactly one, so Deedglass can't tell whether the write happened.` | Check the resource's history on the server. Turn on request ids (HAPI: store_meta_source_information) so the next one can be found. |
+| `fhir_no_new_version` | note | L1 | `The server kept version "2": the update changed nothing, so it wrote no new version.` | Nothing. The record shows the version that was already there. |
 | `footprint_matched` | pass | L2 | `Postgres committed 1 row in public.orders, as the statement said.` | Nothing. |
 | `footprint_unknown` | gap | L2 | `The statement is too complex for Deedglass to predict which rows it touches (UPDATE … FROM), so L2 can't compare.` | Use a single-table statement with a key in WHERE, or a controlled function that declares what it writes. |
 | `internal_error` | gap | any | `The witness hit an internal error, so the action isn't marked verified.` | Report it with the action id; it is a bug in Deedglass. |

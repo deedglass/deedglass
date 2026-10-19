@@ -16,6 +16,7 @@ import (
 
 	"github.com/deedglass/deedglass/internal/connector"
 	"github.com/deedglass/deedglass/internal/connector/fake"
+	"github.com/deedglass/deedglass/internal/connector/fhir"
 	"github.com/deedglass/deedglass/internal/connector/github"
 	"github.com/deedglass/deedglass/internal/connector/gmail"
 	"github.com/deedglass/deedglass/internal/connector/notion"
@@ -33,13 +34,13 @@ const (
 )
 
 // Paged are the types that must have a page under docs/connectors.
-var Paged = []string{"github", "gmail", "notion", "slack", "stripe"}
+var Paged = []string{"fhir", "github", "gmail", "notion", "slack", "stripe"}
 
 // Types returns every connector type this build serves, the way serve registers them.
 func Types() []connector.Connector {
 	p, _ := upstream.New(upstream.Options{})
 	return []connector.Connector{fake.New(), rest.New(), postgres.New(slog.New(slog.NewTextHandler(io.Discard, nil))), upstream.NewType(p),
-		github.New(), slack.New(), stripe.New(), gmail.New(), notion.New()}
+		github.New(), slack.New(), stripe.New(), gmail.New(), notion.New(), fhir.New()}
 }
 
 // Infos is the catalog, by type.

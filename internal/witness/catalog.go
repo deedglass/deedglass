@@ -61,6 +61,14 @@ const (
 	CodeTriggersUnwatched    Code = "triggers_unwatched"
 )
 
+// L1 for FHIR servers (HC-P02, ADR-105 §6): the traps a FHIR write's read-back names.
+const (
+	CodeFHIRConditionalMatched Code = "fhir_conditional_matched"
+	CodeFHIRFieldChanged       Code = "fhir_field_changed"
+	CodeFHIRNoNewVersion       Code = "fhir_no_new_version"
+	CodeFHIRHistoryNoMatch     Code = "fhir_history_no_match"
+)
+
 // L2 for an undo (S23): the exact footprint of a plan, row by row.
 const (
 	CodeUndoRestored Code = "undo_restored"
@@ -201,6 +209,17 @@ var entries = []Entry{
 	{CodeTriggersPresent, Note, "L2", `{table} has triggers ({names}). Their writes to watched tables are checked; writes elsewhere aren't visible.`,
 		"Nothing. Set witness.strict_triggers to treat unwatched trigger writes as a gap.",
 		map[string]any{"table": "public.orders", "names": "orders_ship_open_batch"}},
+	{CodeFHIRConditionalMatched, Violation, "L1", `{tool} reported success, but the conditional create matched an existing resource ({observed}), so this action created nothing.`,
+		"Read the existing resource. The agent's report of a new one is wrong; check what it did next with that id.",
+		map[string]any{"tool": "fhir.create", "observed": "Observation/1001 version 1"}},
+	{CodeFHIRFieldChanged, Violation, "L1", `{tool} reported success, but {readback} shows {path} as {observed}, not {expected}.`,
+		"Read the diff, then check the server: a profile, a default or an interceptor stored something else.",
+		map[string]any{"tool": "fhir.update", "readback": "Observation/1001 version 2", "path": "status", "observed": "preliminary", "expected": "final"}},
+	{CodeFHIRNoNewVersion, Note, "L1", `The server kept version {observed}: the update changed nothing, so it wrote no new version.`,
+		"Nothing. The record shows the version that was already there.", map[string]any{"observed": "2"}},
+	{CodeFHIRHistoryNoMatch, Gap, "L1", `The server's history since the call shows {n} versions carrying this action's token, not exactly one, so Deedglass can't tell whether the write happened.`,
+		"Check the resource's history on the server. Turn on request ids (HAPI: store_meta_source_information) so the next one can be found.",
+		map[string]any{"n": "0"}},
 	{CodeTriggersUnwatched, Gap, "L2", `{table} has triggers that may write tables Deedglass doesn't watch.`,
 		"Watch every table the triggers write, or turn off witness.strict_triggers.", map[string]any{"table": "public.orders"}},
 }

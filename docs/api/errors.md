@@ -1600,6 +1600,22 @@ look again with `deedglass decoder status --connector <name>`.
   "param": "config.mailbox"
 }
 ```
+## fhir_version_conflict
+
+**409 · invalid_request_error**
+
+**When it happens.** A `fhir` connector sent an update, patch or delete with `If-Match` (the version id the agent sent as `if_match`), and the FHIR server answered that the resource has moved on: HTTP 412 Precondition Failed, or 409 Conflict on HAPI FHIR. The server wrote nothing. The action is recorded as failed, sealed, and never retried: retrying with the same version can't succeed, and a retry without it would overwrite the other writer's change.
+
+**What to do.** Read the resource again (`fhir.read`), check what changed, and send the write with the new version id. If two agents write the same resource, give one of them the job.
+
+```json
+{
+  "type": "invalid_request_error",
+  "code": "fhir_version_conflict",
+  "message": "The FHIR server refused the write because the resource changed since the version sent. Nothing was written. Read it again and send the new version id.",
+  "param": null
+}
+```
 ## undo_unavailable
 
 **409 · invalid_request_error**

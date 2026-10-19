@@ -122,6 +122,9 @@ func (p *Pipeline) newWitnessCase(s Subject, e Execution, ex Executor, call conn
 		}
 		if nr, ok := ex.(connector.NativeReadBacking); ok && nr.CanNativeReadBack(t) {
 			ws.Spec.Native, ws.Spec.NativeL1 = true, t.L1
+			if u, ok := ex.(interface{ CanNativeReadBackUnknown(connector.ToolSpec) bool }); ok {
+				ws.Spec.NativeUnknown = u.CanNativeReadBackUnknown(t)
+			}
 		}
 	}
 	if e.Status == ExecUnknown && ws.Result.Cause == "" {
@@ -232,7 +235,7 @@ func (o *observer) native(ctx context.Context, call connector.Call, ex Executor)
 	co, fs, err := nr.NativeReadBack(ctx, call, o.wc.res)
 	w := witness.Observation{Status: co.Status, Meta: co.Meta, At: at, Source: call.Qualified, Target: co.Target, LatencyMS: co.LatencyMS}
 	for _, f := range fs {
-		w.Findings = append(w.Findings, witness.Finding{Field: f.Field, Expected: f.Expected, Observed: f.Observed, Match: f.Match})
+		w.Findings = append(w.Findings, witness.Finding{Field: f.Field, Expected: f.Expected, Observed: f.Observed, Match: f.Match, Code: witness.Code(f.Code)})
 	}
 	if err == nil {
 		return w, nil

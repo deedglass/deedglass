@@ -29,8 +29,8 @@ replaces its stored payloads:
 
 | Stored field | In PHI mode |
 |---|---|
-| Request (`args`) | Each argument's name, and a digest of its value. Arguments the connector names as identifiers keep their value: for the REST connector, the path arguments (`/fhir/Observation/{id}` keeps `id`). |
-| Result | The paths the connector names as identifiers, everything else as one digest per subtree. For the REST connector: the HTTP status and the `etag`, `location`, `last-modified`, `content-type`, `request-id` and `x-request-id` headers. The body is a digest. |
+| Request (`args`) | Each argument's name, and a digest of its value. Arguments the connector names as identifiers keep their value: for the REST connector, the path arguments (`/fhir/Observation/{id}` keeps `id`); for the FHIR connector, `resource_type`, `id` and `version_id`. |
+| Result | The paths the connector names as identifiers, everything else as one digest per subtree. For the REST connector: the HTTP status and the `etag`, `location`, `last-modified`, `content-type`, `request-id` and `x-request-id` headers. The body is a digest. For the FHIR connector: the status, the `etag`, `location` and `last-modified` headers, and the body's `resourceType`, `id` and `meta.versionId`; the resource itself is a digest. |
 | Error message | Its digest. The error code stays. |
 | Witness detail | Verdicts, levels, methods, reason codes and classes, the compared field paths, the read-back's digests and counts. Summaries, messages and compared values become digests. |
 | Policy input | Removed (it holds the arguments). |

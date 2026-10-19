@@ -24,7 +24,7 @@ const MaxQualified = 200
 var ReservedNames = []string{"deedglass", "mcp", "native"}
 
 // NativeTypes are the connector types whose tools use the native charset.
-var NativeTypes = []string{"rest", "postgres", "github", "slack", "stripe", "gmail", "notion", "fake"}
+var NativeTypes = []string{"rest", "postgres", "github", "slack", "stripe", "gmail", "notion", "fhir", "fake"}
 
 // Reserved reports whether name is reserved in this env.
 func Reserved(name string, dev bool) bool {

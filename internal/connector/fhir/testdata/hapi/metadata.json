@@ -1,0 +1,33 @@
+{
+ "body": {
+  "fhirVersion": "4.0.1",
+  "resourceType": "CapabilityStatement",
+  "rest": [
+   {
+    "resource": [
+     {
+      "type": "AllergyIntolerance"
+     },
+     {
+      "type": "Condition"
+     },
+     {
+      "type": "Encounter"
+     },
+     {
+      "type": "Observation"
+     },
+     {
+      "type": "Patient"
+     }
+    ]
+   }
+  ]
+ },
+ "headers": {
+  "content-location": "https://fhir.test/fhir/CapabilityStatement/553ddbfe-cf43-47d5-b86d-60625a81e5f8",
+  "content-type": "application/fhir+json;charset=UTF-8",
+  "x-request-id": "3NlXb6I6Ah6gy4lX"
+ },
+ "status": 200
+}

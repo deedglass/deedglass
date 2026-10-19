@@ -24,6 +24,9 @@ src/content/docs/reference/connectors/slack.md
 src/content/docs/reference/connectors/stripe.md
 src/content/docs/reference/connectors/gmail.md
 src/content/docs/reference/connectors/notion.md
+src/content/docs/reference/connectors/fhir.md
+src/content/docs/guides/fhir-server.md
+src/content/docs/reference/phi-mode.md
 src/content/docs/sdks/typescript.md
 src/content/docs/sdks/python.md
 src/content/docs/security/threat-model.md

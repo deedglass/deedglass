@@ -1,0 +1,158 @@
+{
+ "body": {
+  "entry": [
+   {
+    "fullUrl": "https://fhir.test/fhir/Observation/1001",
+    "request": {
+     "method": "PUT",
+     "url": "Observation/1001/_history/3"
+    },
+    "resource": {
+     "code": {
+      "coding": [
+       {
+        "code": "8867-4",
+        "display": "Heart rate",
+        "system": "http://loinc.org"
+       }
+      ]
+     },
+     "id": "1001",
+     "identifier": [
+      {
+       "system": "urn:deedglass:test",
+       "value": "rec-1792372435"
+      }
+     ],
+     "meta": {
+      "lastUpdated": "2026-10-19T01:13:55.469+00:00",
+      "versionId": "3"
+     },
+     "resourceType": "Observation",
+     "status": "amended",
+     "subject": {
+      "reference": "Patient/dg-synthetic-1"
+     },
+     "valueQuantity": {
+      "code": "/min",
+      "system": "http://unitsofmeasure.org",
+      "unit": "beats/minute",
+      "value": 72
+     }
+    },
+    "response": {
+     "etag": "W/\"3\"",
+     "status": "200 OK"
+    }
+   },
+   {
+    "fullUrl": "https://fhir.test/fhir/Observation/1001",
+    "request": {
+     "method": "PUT",
+     "url": "Observation/1001/_history/2"
+    },
+    "resource": {
+     "code": {
+      "coding": [
+       {
+        "code": "8867-4",
+        "display": "Heart rate",
+        "system": "http://loinc.org"
+       }
+      ]
+     },
+     "id": "1001",
+     "identifier": [
+      {
+       "system": "urn:deedglass:test",
+       "value": "rec-1792372435"
+      }
+     ],
+     "meta": {
+      "lastUpdated": "2026-10-19T01:13:55.286+00:00",
+      "versionId": "2"
+     },
+     "resourceType": "Observation",
+     "status": "final",
+     "subject": {
+      "reference": "Patient/dg-synthetic-1"
+     },
+     "valueQuantity": {
+      "code": "/min",
+      "system": "http://unitsofmeasure.org",
+      "unit": "beats/minute",
+      "value": 72
+     }
+    },
+    "response": {
+     "etag": "W/\"2\"",
+     "status": "200 OK"
+    }
+   },
+   {
+    "fullUrl": "https://fhir.test/fhir/Observation/1001",
+    "request": {
+     "method": "POST",
+     "url": "Observation/1001/_history/1"
+    },
+    "resource": {
+     "code": {
+      "coding": [
+       {
+        "code": "8867-4",
+        "display": "Heart rate",
+        "system": "http://loinc.org"
+       }
+      ]
+     },
+     "id": "1001",
+     "identifier": [
+      {
+       "system": "urn:deedglass:test",
+       "value": "rec-1792372435"
+      }
+     ],
+     "meta": {
+      "lastUpdated": "2026-10-19T01:13:55.157+00:00",
+      "versionId": "1"
+     },
+     "resourceType": "Observation",
+     "status": "preliminary",
+     "subject": {
+      "reference": "Patient/dg-synthetic-1"
+     },
+     "valueQuantity": {
+      "code": "/min",
+      "system": "http://unitsofmeasure.org",
+      "unit": "beats/minute",
+      "value": 72
+     }
+    },
+    "response": {
+     "etag": "W/\"1\"",
+     "status": "201 Created"
+    }
+   }
+  ],
+  "id": "13e711bf-1107-47c4-af08-5f7dd85c485e",
+  "link": [
+   {
+    "relation": "self",
+    "url": "https://fhir.test/fhir/Observation/1001/_history"
+   }
+  ],
+  "meta": {
+   "lastUpdated": "2026-10-19T01:13:55.590+00:00"
+  },
+  "resourceType": "Bundle",
+  "total": 3,
+  "type": "history"
+ },
+ "headers": {
+  "content-location": "https://fhir.test/fhir/Bundle/13e711bf-1107-47c4-af08-5f7dd85c485e",
+  "content-type": "application/fhir+json;charset=UTF-8",
+  "last-modified": "Mon, 19 Oct 2026 01:13:55 GMT",
+  "x-request-id": "c5rRQOg8oKqUUBNK"
+ },
+ "status": 200
+}

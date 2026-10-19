@@ -4,7 +4,9 @@ You can put a FHIR R4 server behind Deedglass's REST connector now, with no FHIR
 write the tools by hand (one per resource type and interaction), your policy decides each call, and
 after each write a read-back reads the resource again and compares the fields you name (Checked).
 This page shows the setup, real output from a run against HAPI FHIR JPA, and what this setup can't
-check. A native FHIR connector is in design (ADR-105); nothing on this page depends on it.
+check. The native [FHIR connector](../connectors/fhir.md) (beta) removes most of the limits below:
+generated tools, conditional headers, version-aware checks and SMART Backend Services. Nothing on
+this page depends on it.
 
 Use synthetic data while you try this. The limits below say why.
 
@@ -111,6 +113,36 @@ runs the whole test above and removes the container.
   token exchange.
 - **The action history stores arguments and results as sent**, including clinical values, until
   you prune them (`deedglass ledger prune`). Sealed records hold digests only.
+
+## With the native connector
+
+The [`fhir` connector](../connectors/fhir.md) replaces the hand-written tools with one tool per
+interaction on the types you list (`examples/connectors/fhir.yaml`), sends `If-None-Exist` and
+`If-Match`, and reads each write back at the version the server reported. From `make fhir-it`
+(`TestFHIRConnectorLive`, the same HAPI image, 2026-10-19), after a create of the same Observation:
+
+```text
+$ deedglass act fhir.create --args '{… "if_none_exist":"identifier=urn:deedglass:test|…" …}'
+✕ executed · fhir.create · 6 ms
+  check    Checked · Doesn't match · fhir.create reported success, but the conditional create matched an existing resource ("Observation/1006 version 3"), so this action created nothing.
+           field      expected             observed
+           created    a new Observation    Observation/1006 version 3
+  record   deed_01m58wpp… · seq 16 · sealed
+  Next: deedglass actions show act_01m58wppma44zg9541a9n65v97 · https://docs.deedglass.com/witness/mismatch
+
+$ deedglass act fhir.update --args '{… "if_match":"1" …}'
+✕ failed · fhir.update · 4 ms
+  fhir_version_conflict · The server refused the write because the resource changed since the version you sent (HTTP 409). Nothing was written. Read it again and send the new version id.
+  action   act_01m58wppmy8p3097pq3m5x46rp
+  record   deed_01m58wpp… · seq 17 · sealed
+  Next: fix the cause in the error, then send the action again with a new Idempotency-Key.
+```
+
+HAPI answered the conditional create with 200 and the existing resource, and wrote nothing; the
+REST connector's field-only read-back would have called that Matches. The same run shows an update
+that changed nothing kept at HAPI's version with the note `fhir_no_new_version`, a create of an
+Encounter (not in `allowed_resource_types`) denied before any request left, and HAPI's history
+holding exactly the versions Deedglass let through.
 
 ## Sources (checked 2026-10-19)
 

@@ -19,6 +19,10 @@ type L1Finding struct {
 	Expected any
 	Observed any
 	Match    bool
+	// Code names the Witness catalog reason this finding becomes when it isn't the plain field
+	// comparison (HC-P02: fhir_conditional_matched, fhir_no_new_version). The catalog, not the
+	// connector, gives it its class. Empty for a plain comparison.
+	Code string
 }
 
 // NativeReadBacker is a connector type that reads its own writes back and compares them in code
@@ -37,6 +41,19 @@ type NativeReadBacker interface {
 type NativeReadBacking interface {
 	CanNativeReadBack(t ToolSpec) bool
 	NativeReadBack(ctx context.Context, call Call, res Result) (Observation, []L1Finding, error)
+}
+
+// UnknownReadBacker is a NativeReadBacker that also looks for a write after an unknown outcome
+// (HC-P02: a FHIR server's history since the call, for the action's token).
+type UnknownReadBacker interface {
+	CanReadBackUnknown(t ToolSpec) bool
+}
+
+// CanNativeReadBackUnknown reports whether the bound type looks for t's write after an unknown
+// outcome.
+func (b *bound) CanNativeReadBackUnknown(t ToolSpec) bool {
+	u, ok := b.impl.(UnknownReadBacker)
+	return ok && b.CanNativeReadBack(t) && u.CanReadBackUnknown(t)
 }
 
 // CanNativeReadBack reports whether the bound type reads t back natively.

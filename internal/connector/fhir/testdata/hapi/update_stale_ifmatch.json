@@ -1,0 +1,17 @@
+{
+ "body": {
+  "issue": [
+   {
+    "code": "processing",
+    "diagnostics": "HAPI-0550: HAPI-0989: Trying to update Observation/1001/_history/1 but this is not the current version",
+    "severity": "error"
+   }
+  ],
+  "resourceType": "OperationOutcome"
+ },
+ "headers": {
+  "content-type": "application/fhir+json;charset=UTF-8",
+  "x-request-id": "9FQY60JnkaSBUvnz"
+ },
+ "status": 409
+}

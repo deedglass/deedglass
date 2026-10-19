@@ -1,0 +1,27 @@
+{
+ "body": {
+  "issue": [
+   {
+    "code": "informational",
+    "details": {
+     "coding": [
+      {
+       "code": "SUCCESSFUL_DELETE",
+       "display": "Delete succeeded.",
+       "system": "https://hapifhir.io/fhir/CodeSystem/hapi-fhir-storage-response-code"
+      }
+     ]
+    },
+    "diagnostics": "Successfully deleted 1 resource(s). Took 27ms.",
+    "severity": "information"
+   }
+  ],
+  "resourceType": "OperationOutcome"
+ },
+ "headers": {
+  "content-location": "https://fhir.test/fhir/Observation/1001/_history/4",
+  "content-type": "application/fhir+json;charset=UTF-8",
+  "x-request-id": "rM4zzQ07Ie81xy2l"
+ },
+ "status": 200
+}

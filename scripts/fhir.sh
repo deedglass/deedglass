@@ -4,7 +4,7 @@
 #
 #   scripts/fhir.sh up     start it (or reuse it), wait for /fhir/metadata, print the base URL
 #   scripts/fhir.sh down   remove the container
-#   scripts/fhir.sh it     start it, run cmd/deedglass TestFHIRRestLive on a throwaway Postgres
+#   scripts/fhir.sh it     start it, run cmd/deedglass TestFHIRRestLive and TestFHIRConnectorLive (HC-P02) on a throwaway Postgres
 #                          (scripts/integration_local.sh), then remove the container
 #
 # The image is pinned by the digest of its multi-arch index (ADR-024).
@@ -75,7 +75,7 @@ case "${1:-}" in
     STATE="$ROOT/.tmp/fhir-it-$$.port"
     trap down EXIT
     url="$(up | tail -1)"
-    DEEDGLASS_IT_FHIR_URL="$url" DEEDGLASS_IT_PKGS=./cmd/deedglass/ DEEDGLASS_IT_GOFLAGS="-v -run ^TestFHIRRestLive$" \
+    DEEDGLASS_IT_FHIR_URL="$url" DEEDGLASS_IT_PKGS=./cmd/deedglass/ DEEDGLASS_IT_GOFLAGS="-v -run ^(TestFHIRRestLive|TestFHIRConnectorLive)$" \
       "$ROOT/scripts/integration_local.sh"
     ;;
   *) echo "usage: scripts/fhir.sh up|down|it" >&2; exit 2 ;;

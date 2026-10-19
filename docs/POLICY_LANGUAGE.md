@@ -171,7 +171,7 @@ The compiler checks every row. "Slug" means `^[a-z][a-z0-9-]{1,62}$` (ASCII lowe
 | Field | Matches | Values |
 |---|---|---|
 | `tool` | the full tool name `<connector>.<tool>` | globs |
-| `connector_type` | the connector's type | globs; a value that isn't a known type gets the warning `unknown_connector_type`. Known: `postgres`, `rest`, `mcp`, `mcp_http`, `sdk`, `github`, `slack`, `stripe`, `gmail`, `notion`, `fake` (`sdk` is what S31's SDK edges declare in proxy mode) |
+| `connector_type` | the connector's type | globs; a value that isn't a known type gets the warning `unknown_connector_type`. Known: `postgres`, `rest`, `mcp`, `mcp_http`, `sdk`, `github`, `slack`, `stripe`, `gmail`, `notion`, `fhir`, `fake` (`sdk` is what S31's SDK edges declare in proxy mode) |
 | `side_effect` | what the tool declares | `read`, `write`, `destructive`, `unknown` (no globs) |
 | `agent` | the agent's name (glob), or its id (an exact `agt_…`) | globs or ids |
 | `labels` | the agent's labels | a mapping; every pair must be equal. Keys as in S08 (`^[a-z0-9][a-z0-9._/-]{0,62}$`), values at most 128 printable characters. YAML values are read as text, so `tier: 1` matches the label value `"1"` |
@@ -556,6 +556,22 @@ rule never depends on the sender's own counts. Zero (`enriched` false) for every
 | `request.mail.step`, `threaded` | int, bool | the sequence step; a reply in a thread |
 | `request.mail.unsubscribe_https` | bool | the one-click unsubscribe URL is https |
 | `request.mail.enriched` | bool | the message could be read |
+
+#### `request.fhir` (HC-P02)
+
+The FHIR connector adds what the call will send ([docs/connectors/fhir.md](connectors/fhir.md)).
+Arguments that don't build a request (a type outside `allowed_resource_types`, a malformed id) add
+nothing: `enriched` stays false, so a rule that allows on these facts doesn't match.
+
+| Fact | Type | Notes |
+|---|---|---|
+| `request.fhir.interaction` | string | `read`, `vread`, `search`, `history`, `create`, `update`, `patch` or `delete` |
+| `request.fhir.resource_type` | string | one of the connector's allowed types |
+| `request.fhir.id` | string | `""` for create, search and a type's history |
+| `request.fhir.conditional`, `if_match` | bool | a create with `if_none_exist`; a write with `if_match` |
+| `request.fhir.codes` | list(string) | `system|code` from the resource's `code` and `category`, never free text |
+| `request.fhir.profiles` | list(string) | `meta.profile` URLs |
+| `request.fhir.enriched` | bool | the call built a request |
 
 A budget's `measure` sees the same variables as `when`, `request` included (S30 confirmed it with
 the starter's `refunds-per-day`):

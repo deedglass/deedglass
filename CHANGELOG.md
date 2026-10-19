@@ -16,6 +16,26 @@ this file by `scripts/release-notes.sh`.
   HTTP status and the identifier headers). Approval requests in a PHI-mode org show argument names
   and digests from the start. Migration 0031 adds `actions.phi` and `actions.payload_minimized_at`.
   See `docs/PHI_MODE.md` for what it keeps and what it doesn't cover.
+- **The `fhir` connector type** (beta, ADR-105): a FHIR R4 server's REST API as governed tools, one
+  per interaction (`read`, `vread`, `search`, `history`, `create`, `update`, `patch`, `delete`) on
+  the resource types in `allowed_resource_types`. Writes carry `If-Match` and `If-None-Exist` when
+  the agent sends them and a 16-character binding token in `X-Request-ID`; each write is read back
+  at the version the server reported and compared after normalising what the server adds, with the
+  new reasons `fhir_conditional_matched`, `fhir_field_changed`, `fhir_no_new_version` and
+  `fhir_history_no_match`. A stale `If-Match` (409 or 412) fails as the new error code
+  `fhir_version_conflict`. Credentials are SMART Backend Services (client credentials with an
+  RS384 or ES384 JWT assertion, tokens kept at most 300 s) or a bearer token. New policy facts
+  `request.fhir`. Proven (L2) for FHIR servers and AuditEvent or Provenance export are not built
+  yet. See `docs/connectors/fhir.md`.
+- A native read-back can name a reason code from the Witness catalog for a finding, and can look
+  for a write after an unknown outcome when its connector says it can (the FHIR connector's
+  history lookup); the catalog decides the class, so such a finding is never a pass on its own.
+
+### Changed
+
+- The release build no longer inlines the Insights store, approvals and the notifiers, which wait on
+  Postgres or the network, to keep the server image under its 40,000,000-byte budget with the FHIR
+  connector added.
 
 ## [0.2.1] - 2026-10-19
 
