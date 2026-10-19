@@ -1,0 +1,133 @@
+{
+ "semconv_version": "1.41.0",
+ "released": "2026-04-28",
+ "status": "Development",
+ "source": "gen_ai attribute names from @opentelemetry/semantic-conventions 1.43.0 (npm; its gen_ai docs link semantic-conventions v1.41.0); the execute_tool span from https://github.com/open-telemetry/semantic-conventions/blob/v1.41.0/docs/gen-ai/gen-ai-spans.md#execute-tool-span. Retrieved 2026-10-19. Later releases moved GenAI to open-telemetry/semantic-conventions-genai (no release on 2026-10-19).",
+ "attributes": [
+  "gen_ai.agent.description",
+  "gen_ai.agent.id",
+  "gen_ai.agent.name",
+  "gen_ai.agent.version",
+  "gen_ai.completion",
+  "gen_ai.conversation.id",
+  "gen_ai.data_source.id",
+  "gen_ai.embeddings.dimension.count",
+  "gen_ai.evaluation.explanation",
+  "gen_ai.evaluation.name",
+  "gen_ai.evaluation.score.label",
+  "gen_ai.evaluation.score.value",
+  "gen_ai.input.messages",
+  "gen_ai.openai.request.response_format",
+  "gen_ai.openai.request.seed",
+  "gen_ai.openai.request.service_tier",
+  "gen_ai.openai.response.service_tier",
+  "gen_ai.openai.response.system_fingerprint",
+  "gen_ai.operation.name",
+  "gen_ai.output.messages",
+  "gen_ai.output.type",
+  "gen_ai.prompt",
+  "gen_ai.prompt.name",
+  "gen_ai.provider.name",
+  "gen_ai.request.choice.count",
+  "gen_ai.request.encoding_formats",
+  "gen_ai.request.frequency_penalty",
+  "gen_ai.request.max_tokens",
+  "gen_ai.request.model",
+  "gen_ai.request.presence_penalty",
+  "gen_ai.request.seed",
+  "gen_ai.request.stop_sequences",
+  "gen_ai.request.stream",
+  "gen_ai.request.temperature",
+  "gen_ai.request.top_k",
+  "gen_ai.request.top_p",
+  "gen_ai.response.finish_reasons",
+  "gen_ai.response.id",
+  "gen_ai.response.model",
+  "gen_ai.response.time_to_first_chunk",
+  "gen_ai.retrieval.documents",
+  "gen_ai.retrieval.query.text",
+  "gen_ai.system",
+  "gen_ai.system_instructions",
+  "gen_ai.token.type",
+  "gen_ai.tool.call.arguments",
+  "gen_ai.tool.call.id",
+  "gen_ai.tool.call.result",
+  "gen_ai.tool.definitions",
+  "gen_ai.tool.description",
+  "gen_ai.tool.name",
+  "gen_ai.tool.type",
+  "gen_ai.usage.cache_creation.input_tokens",
+  "gen_ai.usage.cache_read.input_tokens",
+  "gen_ai.usage.completion_tokens",
+  "gen_ai.usage.input_tokens",
+  "gen_ai.usage.output_tokens",
+  "gen_ai.usage.prompt_tokens",
+  "gen_ai.usage.reasoning.output_tokens",
+  "gen_ai.workflow.name"
+ ],
+ "deprecated": {
+  "gen_ai.completion": "Removed, no replacement at this time.",
+  "gen_ai.openai.request.response_format": "Replaced by `gen_ai.output.type`.",
+  "gen_ai.openai.request.seed": "Replaced by `gen_ai.request.seed`.",
+  "gen_ai.openai.request.service_tier": "Replaced by `openai.request.service_tier`.",
+  "gen_ai.openai.response.service_tier": "Replaced by `openai.response.service_tier`.",
+  "gen_ai.openai.response.system_fingerprint": "Replaced by `openai.response.system_fingerprint`.",
+  "gen_ai.prompt": "Removed, no replacement at this time.",
+  "gen_ai.system": "Replaced by `gen_ai.provider.name`.",
+  "gen_ai.usage.completion_tokens": "Replaced by `gen_ai.usage.output_tokens`.",
+  "gen_ai.usage.prompt_tokens": "Replaced by `gen_ai.usage.input_tokens`."
+ },
+ "stable_attributes": [
+  "error.type",
+  "service.name"
+ ],
+ "operation_names": [
+  "chat",
+  "create_agent",
+  "embeddings",
+  "execute_tool",
+  "generate_content",
+  "invoke_agent",
+  "invoke_workflow",
+  "retrieval",
+  "text_completion"
+ ],
+ "tool_types": [
+  "datastore",
+  "extension",
+  "function"
+ ],
+ "error_type_other": "_OTHER",
+ "execute_tool": {
+  "span_name": "execute_tool {gen_ai.tool.name}",
+  "span_kind": "INTERNAL",
+  "required": [
+   "gen_ai.operation.name",
+   "gen_ai.tool.name"
+  ],
+  "conditionally_required": {
+   "error.type": "if the operation ended in an error"
+  },
+  "recommended": [
+   "gen_ai.tool.call.id",
+   "gen_ai.tool.description",
+   "gen_ai.tool.type"
+  ],
+  "opt_in": [
+   "gen_ai.tool.call.arguments",
+   "gen_ai.tool.call.result"
+  ]
+ },
+ "string_attributes": [
+  "error.type",
+  "gen_ai.agent.id",
+  "gen_ai.agent.name",
+  "gen_ai.conversation.id",
+  "gen_ai.operation.name",
+  "gen_ai.tool.call.id",
+  "gen_ai.tool.description",
+  "gen_ai.tool.name",
+  "gen_ai.tool.type",
+  "service.name"
+ ]
+}

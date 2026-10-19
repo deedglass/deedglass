@@ -2,6 +2,8 @@ Deedglass
 Copyright 2026 Arjun Prabhakaran
 
 This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+The record spec in spec/ and the corpus in corpus/ are licensed under the Creative Commons
+Attribution 4.0 International licence (CC-BY-4.0; see spec/LICENSE and corpus/LICENSE).
 
 This product bundles the following third-party works in the Console (web/), the docs site
 (docs-site/), the in-browser verifier and the full scan report template (scripts/report/):

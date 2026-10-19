@@ -1,0 +1,117 @@
+{
+ "category_name": "Application Activity",
+ "category_uid": 6,
+ "class_name": "API Activity",
+ "class_profiles": [
+  "ai_operation",
+  "cloud",
+  "container",
+  "data_classification",
+  "datetime",
+  "host",
+  "linux/linux_users",
+  "macos/macos_users",
+  "osint",
+  "record_integrity",
+  "security_control",
+  "trace"
+ ],
+ "class_uid": 6003,
+ "enum_captions": {
+  "action_id": {
+   "0": "Unknown",
+   "1": "Allowed",
+   "2": "Denied",
+   "3": "Observed",
+   "4": "Modified",
+   "99": "Other"
+  },
+  "activity_id": {
+   "0": "Unknown",
+   "1": "Create",
+   "2": "Read",
+   "3": "Update",
+   "4": "Delete",
+   "99": "Other"
+  },
+  "ai_agent.type_id": {
+   "0": "Unknown",
+   "1": "Native",
+   "2": "LangChain",
+   "3": "AutoGen",
+   "4": "CrewAI",
+   "99": "Other"
+  },
+  "disposition_id": {
+   "0": "Unknown",
+   "1": "Allowed",
+   "10": "Exonerated",
+   "11": "Corrected",
+   "12": "Partially Corrected",
+   "13": "Uncorrected",
+   "14": "Delayed",
+   "15": "Detected",
+   "16": "No Action",
+   "17": "Logged",
+   "18": "Tagged",
+   "19": "Alert",
+   "2": "Blocked",
+   "20": "Count",
+   "21": "Reset",
+   "22": "Captcha",
+   "23": "Challenge",
+   "24": "Access Revoked",
+   "25": "Rejected",
+   "26": "Unauthorized",
+   "27": "Error",
+   "3": "Quarantined",
+   "4": "Isolated",
+   "5": "Deleted",
+   "6": "Dropped",
+   "7": "Custom Action",
+   "8": "Approved",
+   "9": "Restored",
+   "99": "Other"
+  },
+  "severity_id": {
+   "0": "Unknown",
+   "1": "Informational",
+   "2": "Low",
+   "3": "Medium",
+   "4": "High",
+   "5": "Critical",
+   "6": "Fatal",
+   "99": "Other"
+  },
+  "status_id": {
+   "0": "Unknown",
+   "1": "Success",
+   "2": "Failure",
+   "99": "Other"
+  },
+  "user.type_id": {
+   "0": "Unknown",
+   "1": "User",
+   "2": "Admin",
+   "3": "System",
+   "4": "Service",
+   "99": "Other"
+  }
+ },
+ "ocsf_version": "1.9.0",
+ "released": "2026-08-03",
+ "rules": [
+  "type_uid = class_uid * 100 + activity_id",
+  "type_name = 'API Activity: ' + activity_name",
+  "an enum _id of 99 carries the source's own label in its string sibling; any other value carries the caption",
+  "start_time, end_time and duration only when count > 1",
+  "metadata.product and metadata.version are required"
+ ],
+ "sibling_strings": {
+  "action_id": "action",
+  "activity_id": "activity_name",
+  "disposition_id": "disposition",
+  "severity_id": "severity",
+  "status_id": "status"
+ }
+}

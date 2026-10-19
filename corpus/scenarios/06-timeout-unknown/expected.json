@@ -1,0 +1,81 @@
+{
+  "agent_reports": {
+    "summary": "Credited 100 to account 1. The first attempt timed out, so I retried once.",
+    "changes": {
+      "public.accounts": {
+        "update": 1
+      }
+    }
+  },
+  "agent_saw": [
+    [
+      "no reply (client timeout)"
+    ],
+    [
+      "UPDATE 1"
+    ]
+  ],
+  "database_commits": {
+    "transactions": [
+      {
+        "session": "agent",
+        "changes": {
+          "public.accounts": {
+            "update": 1
+          }
+        }
+      },
+      {
+        "session": "agent",
+        "changes": {
+          "public.accounts": {
+            "update": 1
+          }
+        }
+      }
+    ],
+    "state": {
+      "public.accounts": {
+        "before": 1,
+        "after": 1
+      }
+    },
+    "probes": [
+      {
+        "sql": "SELECT balance FROM public.accounts WHERE id = 1",
+        "value": "700"
+      }
+    ]
+  },
+  "deedglass": {
+    "assumes": "Both attempts go through the Gate to a Postgres connector witnessed at L2, without an Idempotency-Key.",
+    "actions": [
+      {
+        "statement": "attempt 1",
+        "decision": "allow",
+        "execution": "unknown",
+        "verdict": "VERIFIED",
+        "level": "L2",
+        "reasons": [
+          "outcome_unknown",
+          "footprint_matched"
+        ]
+      },
+      {
+        "statement": "attempt 2",
+        "decision": "allow",
+        "execution": "succeeded",
+        "verdict": "VERIFIED",
+        "level": "L2",
+        "reasons": [
+          "footprint_matched"
+        ]
+      }
+    ],
+    "note": "Each attempt did what its statement said, so each is VERIFIED; the double credit shows as two actions with two committed transactions, not as a MISMATCH. With the same Idempotency-Key on both, the Gate returns the first action and the retry never runs.",
+    "basis": [
+      "internal/gate TestL2UnknownExecution: an unknown execution whose transaction is in the change log is L2 VERIFIED, with outcome_unknown at L0",
+      "internal/gate idempotency tests (duplicates with one key run once)"
+    ]
+  }
+}

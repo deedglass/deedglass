@@ -107,9 +107,10 @@ func TestLayering(t *testing.T) {
 		}
 	}
 
-	// The pure packages. Vacuous while they are empty, and never failing on an empty package.
+	// The pure packages. Vacuous while they are empty, and never failing on an empty package. The
+	// record exporters (TY-06) are here too: an export runs offline, from the records alone.
 	forbidden := []string{"net/http", "database/sql", "github.com/jackc/", module + "/internal/store", module + "/internal/httpx"}
-	for _, rel := range []string{"internal/deed", "internal/sqlguard", "internal/policy", "internal/witness", "internal/witness/l2"} {
+	for _, rel := range []string{"internal/deed", "internal/sqlguard", "internal/policy", "internal/witness", "internal/witness/l2", "internal/fhirexport", "internal/recordexport"} {
 		p, ok := get(rel)
 		if !ok {
 			continue

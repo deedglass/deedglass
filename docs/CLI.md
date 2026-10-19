@@ -246,6 +246,7 @@ builds it. Hidden commands work but aren't in `deedglass help`.
 | `deedglass deeds show <deed_…|seq> [--json]` | Records | Show one record | built |
 | `deedglass deeds share <deed_…|seq> [--yes] [--json]` | Records | Make a link that checks one record | built |
 | `deedglass deeds export [--out <file>|-] [--format tar.gz|jsonl|fhir-auditevent|fhir-provenance] [--from <bundle>] [--from-seq n] [--to-seq n] [--since 1h] [--json]` | Records | Export records as a bundle | built |
+| `deedglass export <bundle|jsonl|-> --format otel-genai|ocsf|prov-json|fhir [--out <file>|-] [--json]` | Records | Write records as OTel, OCSF, PROV or FHIR | built |
 | `deedglass deeds seal-file <path> --label <text> [--media-type application/pdf|text/markdown|application/json|text/plain|text/html|application/gzip] [--out <path>.deed.json] [--json]` | Records | Seal a file's hash as a record | built |
 | `deedglass security-pack readiness [--period 90d] [--all] [--json]` | Records | Check how a security review would see your setup | built |
 | `deedglass security-pack build [--period 90d] [--out dir] [--aliases] [--no-records] [--records] [--json]` | Records | Build the sealed security review pack (Pro) | built |
@@ -319,7 +320,7 @@ deedglass verify <path|->... [flags]
 | Input | Detected by | Handling |
 |---|---|---|
 | `-` | the argument | stdin: a bundle by its gzip magic bytes, else one deed or JSONL |
-| `bundle.tar.gz` | gzip magic bytes, not the name | export bundle v1 (`docs/BUNDLE_FORMAT.md`), streamed, nothing written to disk |
+| `bundle.tar.gz` | gzip magic bytes, not the name | export bundle v1 (`spec/v1/BUNDLE_FORMAT.md`), streamed, nothing written to disk |
 | `deeds.jsonl` | the `.jsonl` name, or several lines of compact deeds | one envelope per line, checked as one chain; a blank line is `malformed` |
 | `deed.json` | one top-level value | one deed, checked on its own (its seal, and the genesis link at seq 1); pretty-printed is fine |
 | a directory | `stat` | every `*.json` / `*.jsonl` in it (no recursion, no symlinks, at most 100,000 files), sorted by org and seq, one chain per org |
@@ -400,6 +401,7 @@ Full reference: [LEDGER.md](LEDGER.md), [RETENTION.md](RETENTION.md).
 | `deeds list [--from-seq] [--to-seq] [--kind] [--action] [--order asc|desc]` | deeds by seq | 0 |
 | `deeds show <deed_…|seq>` | a summary; `--json` prints the stored bytes verbatim | 0; 1 when not found |
 | `deeds export [--out <file>|-] [--format tar.gz|jsonl] [--from-seq] [--to-seq] [--since 1h]` | a sealed export bundle (or `.jsonl`), written to a temporary file and renamed at the end; `--out -` writes to stdout for `deedglass verify -`, with the summary on stderr; `--since` keeps the deeds issued in that window (S13) | 0; 1 for an empty range (nothing is written) |
+| `export <bundle|jsonl|-> --format otel-genai|ocsf|prov-json|fhir [--out <file>|-]` | TY-06, offline (no config, database or network): the records as OTLP/JSON `execute_tool` spans, OCSF 1.9.0 API Activity events, one W3C PROV-JSON document, or FHIR R4 AuditEvent and Provenance ([EXPORTS.md](EXPORTS.md)); seals aren't checked (run `deedglass verify` first), a bundle that doesn't match its manifest is refused, and nothing is written on a failure | 0; 1 an unreadable record or bundle; 2 usage or a missing file |
 | `deeds seal-file <path> --label <text> [--media-type] [--out <path>.deed.json]` | S38, API mode (an org admin key): hashes the file here, sends only its sha256, size, media type and label, and writes the `file.sealed` deed next to it ([SEALING_FILES.md](SEALING_FILES.md)) | 0; 1 refused; 2 usage or an unreadable file; 3 no key |
 | `ledger check [--from-seq] [--to-seq]` | the chain check, with the head to keep elsewhere | 0 intact; 1 broken; 2 incomplete |
 | `ledger prune [--older-than 90d] [--dry-run] [--yes]` | removes payloads of old sealed actions and seals a `ledger.pruned` deed | 0; 1 not confirmed or another prune running; 2 without `--yes` off a terminal |

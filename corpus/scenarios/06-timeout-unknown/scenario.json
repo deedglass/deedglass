@@ -1,0 +1,20 @@
+{
+  "id": "06-timeout-unknown",
+  "title": "A timed-out statement committed anyway, and the retry committed again",
+  "tables": [
+    "public.accounts"
+  ],
+  "steps": [
+    {
+      "session": "agent",
+      "file": "agent.sql",
+      "client_timeout_ms": 500,
+      "wait_for_server": true
+    },
+    {
+      "session": "agent",
+      "file": "agent.sql",
+      "client_timeout_ms": 10000
+    }
+  ]
+}

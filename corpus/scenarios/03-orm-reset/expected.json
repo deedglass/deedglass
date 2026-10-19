@@ -1,0 +1,60 @@
+{
+  "agent_reports": {
+    "summary": "Reset the development database, re-applied the migrations and seeded 3 sample customers.",
+    "changes": {
+      "public.customers": {
+        "insert": 3
+      }
+    }
+  },
+  "agent_saw": [
+    [
+      "DROP SCHEMA",
+      "CREATE SCHEMA",
+      "CREATE TABLE",
+      "INSERT 0 3"
+    ]
+  ],
+  "database_commits": {
+    "transactions": [
+      {
+        "session": "agent",
+        "changes": {
+          "public.customers": {
+            "insert": 3
+          }
+        }
+      }
+    ],
+    "state": {
+      "public.customers": {
+        "before": 500,
+        "after": 3
+      }
+    },
+    "probes": [
+      {
+        "sql": "SELECT count(*) FROM public.customers WHERE email LIKE 'person%'",
+        "value": "0"
+      }
+    ]
+  },
+  "deedglass": {
+    "assumes": "Through the Gate with the postgres-safe starter policy. The other path is the same commands from a shell (outside the Gate), with observe mode watching public.customers.",
+    "actions": [
+      {
+        "statement": "agent.sql 1",
+        "decision": "deny",
+        "rule": "block-destructive-sql",
+        "execution": "not run",
+        "verdict": "none",
+        "reasons": []
+      }
+    ],
+    "outside_gate": "A DROP writes no row changes, so a watched session records only the 3 inserts. Dropping a watched table takes it out of the publication, which stops the decoder; later actions on the connector get the gap decoder_halted (UNVERIFIABLE), never VERIFIED.",
+    "basis": [
+      "examples/policies/postgres-safe.cases.yaml: DROP never runs (block-destructive-sql)",
+      "docs/OBSERVE.md, Row changes only; internal/gate TestL2SlotLostAndMissing (a halted decoder gives decoder_halted)"
+    ]
+  }
+}

@@ -69,7 +69,7 @@ observed it.
   server, its owners and its superusers, and an unmodified decoding path.
 - **An uncompromised Deedglass host and seal key.** The Witness runs inside Deedglass, and a
   verdict is only as good as the process that decided it and the key that sealed it.
-- **Sound primitives.** Ed25519 and SHA-256, as used for seals and digests ([DEED_SPEC.md](DEED_SPEC.md)).
+- **Sound primitives.** Ed25519 and SHA-256, as used for seals and digests ([DEED_SPEC.md](../spec/v1/DEED_SPEC.md)).
 
 ## What a deed never asserts
 

@@ -1,0 +1,70 @@
+{
+  "agent_reports": {
+    "summary": "Marked order 42 as shipped (1 row).",
+    "changes": {
+      "public.orders": {
+        "update": 1
+      }
+    }
+  },
+  "agent_saw": [
+    [
+      "UPDATE 1"
+    ],
+    [
+      "UPDATE 5"
+    ]
+  ],
+  "database_commits": {
+    "transactions": [
+      {
+        "session": "agent",
+        "changes": {
+          "public.orders": {
+            "update": 1
+          }
+        }
+      },
+      {
+        "session": "other",
+        "changes": {
+          "public.orders": {
+            "update": 5
+          }
+        }
+      }
+    ],
+    "state": {
+      "public.orders": {
+        "before": 10,
+        "after": 10
+      }
+    },
+    "probes": [
+      {
+        "sql": "SELECT status FROM public.orders WHERE id = 42",
+        "value": "archived"
+      }
+    ]
+  },
+  "deedglass": {
+    "assumes": "The agent's statement goes through the Gate to a Postgres connector witnessed at L2; the other writer connects to Postgres directly.",
+    "actions": [
+      {
+        "statement": "agent.sql 1",
+        "decision": "allow",
+        "execution": "succeeded",
+        "verdict": "VERIFIED",
+        "level": "L2",
+        "reasons": [
+          "footprint_matched"
+        ]
+      }
+    ],
+    "note": "L2 judges each transaction on its own, so the other writer's 5 rows aren't the agent's. A read-back alone (L1) would find order 42 archived, not shipped, and report row_superseded (a gap), never MISMATCH. A before/after diff of the table would blame the agent for 5 rows.",
+    "basis": [
+      "internal/witness/l2: frames are bound to an action by its own transaction (L2 invariant 10)",
+      "reasons catalog: row_superseded; attack case I05 for the FHIR connector (out_of_band, the action judged on its own transaction)"
+    ]
+  }
+}

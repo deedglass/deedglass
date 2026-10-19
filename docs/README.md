@@ -6,11 +6,12 @@ The public docs are **docs.deedglass.com**, built from `docs-site/` (Astro + Sta
 This directory, `docs/`, holds the repo's engineering notes and specs. Each file is one of:
 
 - **Imported:** the file here is the one source, and the site renders it at build time
-  (`docs-site/scripts/sync-docs.mjs`, the `IMPORTS` table): the specs (`DEED_SPEC.md`, `INTENTS.md`,
+  (`docs-site/scripts/sync-docs.mjs`, the `IMPORTS` table): the specs (`INTENTS.md`,
   `THREAT_MODEL.md`, `LIMITATIONS.md`, `SECURITY_REVIEW_*.md`), the references (`POLICY_LANGUAGE.md`,
   `IDS.md`, `MCP_CLIENTS.md`, `api/versions.md`, `INIT_AND_DOCTOR.md`, `CONNECTORS.md`, `POSTGRES.md`,
   `connectors/*.md`, `SDK_PYTHON.md`, `sdk/typescript.md`) and every other engineering note, under
-  Reference › Engineering notes. Edit them here.
+  Reference › Engineering notes. Edit them here. The record spec (`DEED_SPEC.md`,
+  `BUNDLE_FORMAT.md`) lives in `../spec/v1/` under CC-BY-4.0 and is imported the same way.
 - **Moved:** the page is hand-written in `docs-site/src/content/docs/`, and the file here is a
   one-line pointer: `QUICKSTART.md`, `FAQ.md`.
 - **A generator's source:** `api/errors.md` (one page per code at `/errors/<code>/`),

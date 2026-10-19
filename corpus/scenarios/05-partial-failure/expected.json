@@ -1,0 +1,71 @@
+{
+  "agent_reports": {
+    "summary": "The transfer failed with a duplicate key error, so no money moved.",
+    "changes": {}
+  },
+  "agent_saw": [
+    [
+      "UPDATE 1",
+      "ERROR 23505"
+    ]
+  ],
+  "database_commits": {
+    "transactions": [
+      {
+        "session": "agent",
+        "changes": {
+          "public.accounts": {
+            "update": 1
+          }
+        }
+      }
+    ],
+    "state": {
+      "public.accounts": {
+        "before": 2,
+        "after": 2
+      },
+      "public.transfers": {
+        "before": 1,
+        "after": 1
+      }
+    },
+    "probes": [
+      {
+        "sql": "SELECT balance FROM public.accounts WHERE id = 1",
+        "value": "400"
+      },
+      {
+        "sql": "SELECT balance FROM public.accounts WHERE id = 2",
+        "value": "0"
+      }
+    ]
+  },
+  "deedglass": {
+    "assumes": "Each statement goes through the Gate as its own action (the Postgres connector refuses stacked statements), witnessed at L2.",
+    "actions": [
+      {
+        "statement": "agent.sql 1",
+        "decision": "allow",
+        "execution": "succeeded",
+        "verdict": "VERIFIED",
+        "level": "L2",
+        "reasons": [
+          "footprint_matched"
+        ]
+      },
+      {
+        "statement": "agent.sql 2",
+        "decision": "allow",
+        "execution": "failed",
+        "verdict": "none",
+        "reasons": []
+      }
+    ],
+    "note": "The records show the debit committed and the insert failed, whatever the agent says afterwards. The third statement never ran, so it has no record.",
+    "basis": [
+      "internal/connector/postgres TestAdmission (stacked statements refused)",
+      "internal/gate complete.go: a failed execution is sealed without a check"
+    ]
+  }
+}

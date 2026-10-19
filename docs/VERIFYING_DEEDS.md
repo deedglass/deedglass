@@ -9,7 +9,7 @@ account, a database or a network connection, except to fetch the keys.
 A deed is the signed record of one thing that happened: an agent's action, a person's change, or a
 later witness verdict. It names the agent, who it acted for, the tool, the policy decision, the
 execution and what the Witness saw, as digests rather than payloads. Each deed is sealed with
-Ed25519 and linked to the one before it, per org (`docs/DEED_SPEC.md`).
+Ed25519 and linked to the one before it, per org (`spec/v1/DEED_SPEC.md`).
 
 Checking a deed shows that **nothing changed after it was sealed** and, with the issuer's pinned
 keys, **which Deedglass deployment sealed it**. It does not show that the action was wise, that the
@@ -40,7 +40,7 @@ $ deedglass verify deeds.jsonl --keys https://api.deedglass.com/.well-known/deed
 ```
 
 `deedglass verify` reads one deed (`deed.json`), one deed per line (`deeds.jsonl`), stdin (`-`), a
-directory of deed files, or an export bundle (`.tar.gz`, `docs/BUNDLE_FORMAT.md`). The exit code
+directory of deed files, or an export bundle (`.tar.gz`, `spec/v1/BUNDLE_FORMAT.md`). The exit code
 is the answer: **0** every check passed, **1** something failed, **2** it could not decide (no
 keys, a newer deed format, an unreadable file). Add `-v` for the details, `--json` for the full
 `verification_report`, `--all` to list every break instead of stopping at the first. `docs/CLI.md`

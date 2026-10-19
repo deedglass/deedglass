@@ -3,7 +3,7 @@
 A seal key is the Ed25519 key pair your Deedglass instance seals deeds with. The private half (a
 32-byte seed) lives in one file on the server. The public half is published at
 `/.well-known/deedglass/keys.json`, so anyone can check your deeds offline. The format and the
-rules a verifier applies are in `docs/DEED_SPEC.md` §10.
+rules a verifier applies are in `spec/v1/DEED_SPEC.md` §10.
 
 ## Generate a key
 

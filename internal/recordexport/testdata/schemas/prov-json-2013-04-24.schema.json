@@ -1,0 +1,624 @@
+{
+ "$defs": {
+  "activity": {
+   "additionalProperties": {
+    "$ref": "#/$defs/attributeValues"
+   },
+   "properties": {
+    "prov:endTime": {
+     "$ref": "#/$defs/time"
+    },
+    "prov:startTime": {
+     "$ref": "#/$defs/time"
+    }
+   },
+   "type": "object"
+  },
+  "agent": {
+   "additionalProperties": {
+    "$ref": "#/$defs/attributeValues"
+   },
+   "properties": {},
+   "type": "object"
+  },
+  "alternate": {
+   "additionalProperties": {
+    "$ref": "#/$defs/attributeValues"
+   },
+   "properties": {
+    "prov:alternate1": {
+     "$ref": "#/$defs/qname"
+    },
+    "prov:alternate2": {
+     "$ref": "#/$defs/qname"
+    }
+   },
+   "required": [
+    "prov:alternate1",
+    "prov:alternate2"
+   ],
+   "type": "object"
+  },
+  "association": {
+   "additionalProperties": {
+    "$ref": "#/$defs/attributeValues"
+   },
+   "properties": {
+    "prov:activity": {
+     "$ref": "#/$defs/qname"
+    },
+    "prov:agent": {
+     "$ref": "#/$defs/qname"
+    },
+    "prov:plan": {
+     "$ref": "#/$defs/qname"
+    }
+   },
+   "required": [
+    "prov:activity"
+   ],
+   "type": "object"
+  },
+  "attributeValues": {
+   "anyOf": [
+    {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "number"
+      },
+      {
+       "type": "boolean"
+      },
+      {
+       "$ref": "#/$defs/typedLiteral"
+      }
+     ]
+    },
+    {
+     "items": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "number"
+       },
+       {
+        "type": "boolean"
+       },
+       {
+        "$ref": "#/$defs/typedLiteral"
+       }
+      ]
+     },
+     "minItems": 1,
+     "type": "array"
+    }
+   ]
+  },
+  "attribution": {
+   "additionalProperties": {
+    "$ref": "#/$defs/attributeValues"
+   },
+   "properties": {
+    "prov:agent": {
+     "$ref": "#/$defs/qname"
+    },
+    "prov:entity": {
+     "$ref": "#/$defs/qname"
+    }
+   },
+   "required": [
+    "prov:entity",
+    "prov:agent"
+   ],
+   "type": "object"
+  },
+  "bundle": {
+   "additionalProperties": false,
+   "properties": {
+    "actedOnBehalfOf": {
+     "additionalProperties": {
+      "$ref": "#/$defs/delegation"
+     },
+     "type": "object"
+    },
+    "activity": {
+     "additionalProperties": {
+      "$ref": "#/$defs/activity"
+     },
+     "type": "object"
+    },
+    "agent": {
+     "additionalProperties": {
+      "$ref": "#/$defs/agent"
+     },
+     "type": "object"
+    },
+    "alternateOf": {
+     "additionalProperties": {
+      "$ref": "#/$defs/alternate"
+     },
+     "type": "object"
+    },
+    "entity": {
+     "additionalProperties": {
+      "$ref": "#/$defs/entity"
+     },
+     "type": "object"
+    },
+    "hadMember": {
+     "additionalProperties": {
+      "$ref": "#/$defs/membership"
+     },
+     "type": "object"
+    },
+    "prefix": {
+     "additionalProperties": {
+      "format": "uri",
+      "type": "string"
+     },
+     "propertyNames": {
+      "pattern": "^[a-zA-Z0-9_\\-]+$"
+     },
+     "type": "object"
+    },
+    "specializationOf": {
+     "additionalProperties": {
+      "$ref": "#/$defs/specialization"
+     },
+     "type": "object"
+    },
+    "used": {
+     "additionalProperties": {
+      "$ref": "#/$defs/usage"
+     },
+     "type": "object"
+    },
+    "wasAssociatedWith": {
+     "additionalProperties": {
+      "$ref": "#/$defs/association"
+     },
+     "type": "object"
+    },
+    "wasAttributedTo": {
+     "additionalProperties": {
+      "$ref": "#/$defs/attribution"
+     },
+     "type": "object"
+    },
+    "wasDerivedFrom": {
+     "additionalProperties": {
+      "$ref": "#/$defs/derivation"
+     },
+     "type": "object"
+    },
+    "wasEndedBy": {
+     "additionalProperties": {
+      "$ref": "#/$defs/end"
+     },
+     "type": "object"
+    },
+    "wasGeneratedBy": {
+     "additionalProperties": {
+      "$ref": "#/$defs/generation"
+     },
+     "type": "object"
+    },
+    "wasInfluencedBy": {
+     "additionalProperties": {
+      "$ref": "#/$defs/influence"
+     },
+     "type": "object"
+    },
+    "wasInformedBy": {
+     "additionalProperties": {
+      "$ref": "#/$defs/communication"
+     },
+     "type": "object"
+    },
+    "wasInvalidatedBy": {
+     "additionalProperties": {
+      "$ref": "#/$defs/invalidation"
+     },
+     "type": "object"
+    },
+    "wasStartedBy": {
+     "additionalProperties": {
+      "$ref": "#/$defs/start"
+     },
+     "type": "object"
+    }
+   },
+   "type": "object"
+  },
+  "communication": {
+   "additionalProperties": {
+    "$ref": "#/$defs/attributeValues"
+   },
+   "properties": {
+    "prov:informant": {
+     "$ref": "#/$defs/qname"
+    },
+    "prov:informed": {
+     "$ref": "#/$defs/qname"
+    }
+   },
+   "required": [
+    "prov:informant",
+    "prov:informed"
+   ],
+   "type": "object"
+  },
+  "delegation": {
+   "additionalProperties": {
+    "$ref": "#/$defs/attributeValues"
+   },
+   "properties": {
+    "prov:activity": {
+     "$ref": "#/$defs/qname"
+    },
+    "prov:delegate": {
+     "$ref": "#/$defs/qname"
+    },
+    "prov:responsible": {
+     "$ref": "#/$defs/qname"
+    }
+   },
+   "required": [
+    "prov:delegate",
+    "prov:responsible"
+   ],
+   "type": "object"
+  },
+  "derivation": {
+   "additionalProperties": {
+    "$ref": "#/$defs/attributeValues"
+   },
+   "properties": {
+    "prov:activity": {
+     "$ref": "#/$defs/qname"
+    },
+    "prov:generatedEntity": {
+     "$ref": "#/$defs/qname"
+    },
+    "prov:generation": {
+     "$ref": "#/$defs/qname"
+    },
+    "prov:usage": {
+     "$ref": "#/$defs/qname"
+    },
+    "prov:usedEntity": {
+     "$ref": "#/$defs/qname"
+    }
+   },
+   "required": [
+    "prov:generatedEntity",
+    "prov:usedEntity"
+   ],
+   "type": "object"
+  },
+  "end": {
+   "additionalProperties": {
+    "$ref": "#/$defs/attributeValues"
+   },
+   "properties": {
+    "prov:activity": {
+     "$ref": "#/$defs/qname"
+    },
+    "prov:ender": {
+     "$ref": "#/$defs/qname"
+    },
+    "prov:time": {
+     "$ref": "#/$defs/time"
+    },
+    "prov:trigger": {
+     "$ref": "#/$defs/qname"
+    }
+   },
+   "required": [
+    "prov:activity"
+   ],
+   "type": "object"
+  },
+  "entity": {
+   "additionalProperties": {
+    "$ref": "#/$defs/attributeValues"
+   },
+   "properties": {},
+   "type": "object"
+  },
+  "generation": {
+   "additionalProperties": {
+    "$ref": "#/$defs/attributeValues"
+   },
+   "properties": {
+    "prov:activity": {
+     "$ref": "#/$defs/qname"
+    },
+    "prov:entity": {
+     "$ref": "#/$defs/qname"
+    },
+    "prov:time": {
+     "$ref": "#/$defs/time"
+    }
+   },
+   "required": [
+    "prov:entity"
+   ],
+   "type": "object"
+  },
+  "influence": {
+   "additionalProperties": {
+    "$ref": "#/$defs/attributeValues"
+   },
+   "properties": {
+    "prov:influencee": {
+     "$ref": "#/$defs/qname"
+    },
+    "prov:influencer": {
+     "$ref": "#/$defs/qname"
+    }
+   },
+   "required": [
+    "prov:influencee",
+    "prov:influencer"
+   ],
+   "type": "object"
+  },
+  "invalidation": {
+   "additionalProperties": {
+    "$ref": "#/$defs/attributeValues"
+   },
+   "properties": {
+    "prov:activity": {
+     "$ref": "#/$defs/qname"
+    },
+    "prov:entity": {
+     "$ref": "#/$defs/qname"
+    },
+    "prov:time": {
+     "$ref": "#/$defs/time"
+    }
+   },
+   "required": [
+    "prov:entity"
+   ],
+   "type": "object"
+  },
+  "membership": {
+   "additionalProperties": {
+    "$ref": "#/$defs/attributeValues"
+   },
+   "properties": {
+    "prov:collection": {
+     "$ref": "#/$defs/qname"
+    },
+    "prov:entity": {
+     "$ref": "#/$defs/qname"
+    }
+   },
+   "required": [
+    "prov:collection",
+    "prov:entity"
+   ],
+   "type": "object"
+  },
+  "qname": {
+   "minLength": 1,
+   "type": "string"
+  },
+  "specialization": {
+   "additionalProperties": {
+    "$ref": "#/$defs/attributeValues"
+   },
+   "properties": {
+    "prov:generalEntity": {
+     "$ref": "#/$defs/qname"
+    },
+    "prov:specificEntity": {
+     "$ref": "#/$defs/qname"
+    }
+   },
+   "required": [
+    "prov:generalEntity",
+    "prov:specificEntity"
+   ],
+   "type": "object"
+  },
+  "start": {
+   "additionalProperties": {
+    "$ref": "#/$defs/attributeValues"
+   },
+   "properties": {
+    "prov:activity": {
+     "$ref": "#/$defs/qname"
+    },
+    "prov:starter": {
+     "$ref": "#/$defs/qname"
+    },
+    "prov:time": {
+     "$ref": "#/$defs/time"
+    },
+    "prov:trigger": {
+     "$ref": "#/$defs/qname"
+    }
+   },
+   "required": [
+    "prov:activity"
+   ],
+   "type": "object"
+  },
+  "time": {
+   "format": "date-time",
+   "type": "string"
+  },
+  "typedLiteral": {
+   "additionalProperties": false,
+   "properties": {
+    "$": {
+     "type": "string"
+    },
+    "lang": {
+     "type": "string"
+    },
+    "type": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "$"
+   ],
+   "type": "object"
+  },
+  "usage": {
+   "additionalProperties": {
+    "$ref": "#/$defs/attributeValues"
+   },
+   "properties": {
+    "prov:activity": {
+     "$ref": "#/$defs/qname"
+    },
+    "prov:entity": {
+     "$ref": "#/$defs/qname"
+    },
+    "prov:time": {
+     "$ref": "#/$defs/time"
+    }
+   },
+   "required": [
+    "prov:activity"
+   ],
+   "type": "object"
+  }
+ },
+ "$id": "urn:deedglass:testdata:prov-json-2013-04-24",
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "additionalProperties": false,
+ "description": "Transcribed from the schema linked from https://www.w3.org/submissions/prov-json/ (https://www.w3.org/Submission/prov-json/schema, retrieved 2026-10-19), rewritten for JSON Schema 2020-12; see README.md. Sections, required members, references, literals and the prefix pattern. The original spells one key wasEndedby; the submission's text and this transcription use wasEndedBy.",
+ "properties": {
+  "actedOnBehalfOf": {
+   "additionalProperties": {
+    "$ref": "#/$defs/delegation"
+   },
+   "type": "object"
+  },
+  "activity": {
+   "additionalProperties": {
+    "$ref": "#/$defs/activity"
+   },
+   "type": "object"
+  },
+  "agent": {
+   "additionalProperties": {
+    "$ref": "#/$defs/agent"
+   },
+   "type": "object"
+  },
+  "alternateOf": {
+   "additionalProperties": {
+    "$ref": "#/$defs/alternate"
+   },
+   "type": "object"
+  },
+  "bundle": {
+   "additionalProperties": {
+    "$ref": "#/$defs/bundle"
+   },
+   "type": "object"
+  },
+  "entity": {
+   "additionalProperties": {
+    "$ref": "#/$defs/entity"
+   },
+   "type": "object"
+  },
+  "hadMember": {
+   "additionalProperties": {
+    "$ref": "#/$defs/membership"
+   },
+   "type": "object"
+  },
+  "prefix": {
+   "additionalProperties": {
+    "format": "uri",
+    "type": "string"
+   },
+   "propertyNames": {
+    "pattern": "^[a-zA-Z0-9_\\-]+$"
+   },
+   "type": "object"
+  },
+  "specializationOf": {
+   "additionalProperties": {
+    "$ref": "#/$defs/specialization"
+   },
+   "type": "object"
+  },
+  "used": {
+   "additionalProperties": {
+    "$ref": "#/$defs/usage"
+   },
+   "type": "object"
+  },
+  "wasAssociatedWith": {
+   "additionalProperties": {
+    "$ref": "#/$defs/association"
+   },
+   "type": "object"
+  },
+  "wasAttributedTo": {
+   "additionalProperties": {
+    "$ref": "#/$defs/attribution"
+   },
+   "type": "object"
+  },
+  "wasDerivedFrom": {
+   "additionalProperties": {
+    "$ref": "#/$defs/derivation"
+   },
+   "type": "object"
+  },
+  "wasEndedBy": {
+   "additionalProperties": {
+    "$ref": "#/$defs/end"
+   },
+   "type": "object"
+  },
+  "wasGeneratedBy": {
+   "additionalProperties": {
+    "$ref": "#/$defs/generation"
+   },
+   "type": "object"
+  },
+  "wasInfluencedBy": {
+   "additionalProperties": {
+    "$ref": "#/$defs/influence"
+   },
+   "type": "object"
+  },
+  "wasInformedBy": {
+   "additionalProperties": {
+    "$ref": "#/$defs/communication"
+   },
+   "type": "object"
+  },
+  "wasInvalidatedBy": {
+   "additionalProperties": {
+    "$ref": "#/$defs/invalidation"
+   },
+   "type": "object"
+  },
+  "wasStartedBy": {
+   "additionalProperties": {
+    "$ref": "#/$defs/start"
+   },
+   "type": "object"
+  }
+ },
+ "title": "PROV-JSON (W3C Member Submission, 24 April 2013), transcribed",
+ "type": "object"
+}

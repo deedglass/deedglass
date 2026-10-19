@@ -9,6 +9,7 @@ import (
 
 	"github.com/deedglass/deedglass/cmd/deedglass/internal/ui"
 	"github.com/deedglass/deedglass/internal/cli/mark"
+	"github.com/deedglass/deedglass/internal/recordexport"
 )
 
 const tagline = "the execution and accountability layer for AI agents"
@@ -148,6 +149,7 @@ var flagValues = map[string][]string{
 	"init --postgres":   {"docker"},
 	"scan --format":     scanFormats,
 	"scan --fail-under": {"A", "B", "C", "D"},
+	"export --format":   recordexport.Formats,
 }
 
 // helpJSON is the registry as data (S32 §3.11): S33 renders the CLI reference from it and S35

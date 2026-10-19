@@ -9,8 +9,9 @@ roadmap. That will change as people contribute; this file will say how when it d
 
 - **Architecture and dependencies** are decided in writing as ADRs in [`docs/adr/`](docs/adr/): the
   problem, the options, the choice and why. An ADR starts as Proposed and becomes Accepted or Rejected.
-- **The deed format** is a public spec ([`docs/DEED_SPEC.md`](docs/DEED_SPEC.md)). Changing it needs
-  an ADR and a new version tag in the format, so old deeds keep verifying.
+- **The deed format** is a public spec ([`spec/v1/DEED_SPEC.md`](spec/v1/DEED_SPEC.md), with
+  [`spec/v1/BUNDLE_FORMAT.md`](spec/v1/BUNDLE_FORMAT.md), under CC-BY-4.0: [`spec/README.md`](spec/README.md)).
+  Changing it needs an ADR and a new version tag in the format, so old deeds keep verifying.
 - **Security** reports follow [`SECURITY.md`](SECURITY.md).
 
 ## Continuity

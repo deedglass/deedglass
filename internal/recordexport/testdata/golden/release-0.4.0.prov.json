@@ -1,0 +1,916 @@
+{
+  "actedOnBehalfOf": {
+    "_:obo1": {
+      "prov:activity": "dg:act_01m3xxf0m1s0xcra979g0jfa5y",
+      "prov:delegate": "dg:agt_01m3xxf0m1v4emq98a0jp8qj9z",
+      "prov:responsible": "dg:obo-usr_ref%3Apriya"
+    },
+    "_:obo2": {
+      "prov:activity": "dg:act_01m3xxf0m2vedzp4he4j4t8t7n",
+      "prov:delegate": "dg:agt_01m3xxf0m1v4emq98a0jp8qj9z",
+      "prov:responsible": "dg:obo-usr_ref%3Apriya"
+    },
+    "_:obo3": {
+      "prov:activity": "dg:act_01m3xxf0m3vjy4rynd0h6g10h7",
+      "prov:delegate": "dg:agt_01m3xxf0m1v4emq98a0jp8qj9z",
+      "prov:responsible": "dg:obo-usr_ref%3Apriya"
+    },
+    "_:obo4": {
+      "prov:activity": "dg:act_01m3xxf0m4afxda0b40rm3qp0z",
+      "prov:delegate": "dg:agt_01m3xxf0m1v4emq98a0jp8qj9z",
+      "prov:responsible": "dg:obo-usr_ref%3Apriya"
+    },
+    "_:obo5": {
+      "prov:activity": "dg:act_01m3xxf0m7f5jmw6sm2f8zs9gm",
+      "prov:delegate": "dg:agt_01m3xxf0m1v4emq98a0jp8qj9z",
+      "prov:responsible": "dg:obo-usr_ref%3Apriya"
+    },
+    "_:obo6": {
+      "prov:activity": "dg:act_01m3xxf0m8af8fxf8cpcx7mjqc",
+      "prov:delegate": "dg:agt_01m3xxf0m1v4emq98a0jp8qj9z",
+      "prov:responsible": "dg:obo-usr_ref%3Apriya"
+    },
+    "_:obo7": {
+      "prov:activity": "dg:act_01m3xxf0m9avktcvjv3pz5bpkf",
+      "prov:delegate": "dg:agt_01m3xxf0m1v4emq98a0jp8qj9z",
+      "prov:responsible": "dg:obo-usr_ref%3Apriya"
+    },
+    "_:obo8": {
+      "prov:activity": "dg:act_01m3xxf0ma333rjsgjq4p7at9w",
+      "prov:delegate": "dg:agt_01m3xxf0m1v4emq98a0jp8qj9z",
+      "prov:responsible": "dg:obo-usr_ref%3Apriya"
+    },
+    "_:obo9": {
+      "prov:activity": "dg:act_01m3xxf0mbzgjxdj7fwsnm6tqh",
+      "prov:delegate": "dg:agt_01m3xxf0m1v4emq98a0jp8qj9z",
+      "prov:responsible": "dg:obo-usr_ref%3Apriya"
+    }
+  },
+  "activity": {
+    "dg:act_01m3xxf0m1s0xcra979g0jfa5y": {
+      "dg:connector": "con_01m3xxf0m1brgcvtgpf81k7skv",
+      "dg:costAmount": 120,
+      "dg:costCurrency": "usd",
+      "dg:executionStatus": "succeeded",
+      "dg:intentSigned": false,
+      "dg:mode": "gateway",
+      "dg:policyDecision": "allow",
+      "dg:policyMode": "enforce",
+      "dg:policyRule": "allow-billing-updates",
+      "dg:session": "ses-7f3a",
+      "dg:tool": "postgres.execute",
+      "prov:endTime": "2026-10-02T08:59:59.841Z",
+      "prov:label": "postgres.execute",
+      "prov:startTime": "2026-10-02T08:59:59.800Z",
+      "prov:type": {
+        "$": "dg:ToolCall",
+        "type": "xsd:QName"
+      }
+    },
+    "dg:act_01m3xxf0m2vedzp4he4j4t8t7n": {
+      "dg:approval": "apr_01m3xxf0m2fkw6h9149yjheg9j",
+      "dg:approvalOutcome": "approved",
+      "dg:connector": "con_01m3xxf0m22ybvybmxn7e2cpca",
+      "dg:costAmount": 12000,
+      "dg:costCurrency": "usd",
+      "dg:executionStatus": "succeeded",
+      "dg:intentSigned": true,
+      "dg:mode": "gateway",
+      "dg:policyDecision": "require_approval",
+      "dg:policyMode": "enforce",
+      "dg:policyRule": "refunds-over-100",
+      "dg:session": "ses-7f3a",
+      "dg:tool": "stripe.refunds.create",
+      "prov:endTime": "2026-10-02T09:00:00.841Z",
+      "prov:label": "stripe.refunds.create",
+      "prov:startTime": "2026-10-02T09:00:00.800Z",
+      "prov:type": {
+        "$": "dg:ToolCall",
+        "type": "xsd:QName"
+      }
+    },
+    "dg:act_01m3xxf0m3vjy4rynd0h6g10h7": {
+      "dg:connector": "con_01m3xxf0m1brgcvtgpf81k7skv",
+      "dg:executionStatus": "not_run",
+      "dg:intentSigned": false,
+      "dg:mode": "gateway",
+      "dg:policyDecision": "deny",
+      "dg:policyMode": "enforce",
+      "dg:policyRule": "block-destructive-sql",
+      "dg:session": "ses-7f3a",
+      "dg:tool": "postgres.execute",
+      "prov:label": "postgres.execute",
+      "prov:type": {
+        "$": "dg:ToolCall",
+        "type": "xsd:QName"
+      }
+    },
+    "dg:act_01m3xxf0m4afxda0b40rm3qp0z": {
+      "dg:connector": "con_01m3xxf0m1brgcvtgpf81k7skv",
+      "dg:costAmount": 120,
+      "dg:costCurrency": "usd",
+      "dg:executionStatus": "succeeded",
+      "dg:intentSigned": false,
+      "dg:mode": "gateway",
+      "dg:policyDecision": "allow",
+      "dg:policyMode": "enforce",
+      "dg:policyRule": "allow-billing-updates",
+      "dg:session": "ses-7f3a",
+      "dg:tool": "postgres.execute",
+      "prov:endTime": "2026-10-02T09:00:02.841Z",
+      "prov:label": "postgres.execute",
+      "prov:startTime": "2026-10-02T09:00:02.800Z",
+      "prov:type": {
+        "$": "dg:ToolCall",
+        "type": "xsd:QName"
+      }
+    },
+    "dg:act_01m3xxf0m7f5jmw6sm2f8zs9gm": {
+      "dg:connector": "con_01m3xxf0m1brgcvtgpf81k7skv",
+      "dg:costAmount": 120,
+      "dg:costCurrency": "usd",
+      "dg:executionStatus": "succeeded",
+      "dg:intentSigned": false,
+      "dg:mode": "gateway",
+      "dg:policyDecision": "allow",
+      "dg:policyMode": "enforce",
+      "dg:policyRule": "allow-billing-updates",
+      "dg:session": "ses-7f3a",
+      "dg:tool": "postgres.execute",
+      "prov:endTime": "2026-10-02T09:00:05.841Z",
+      "prov:label": "postgres.execute",
+      "prov:startTime": "2026-10-02T09:00:05.800Z",
+      "prov:type": {
+        "$": "dg:ToolCall",
+        "type": "xsd:QName"
+      }
+    },
+    "dg:act_01m3xxf0m8af8fxf8cpcx7mjqc": {
+      "dg:connector": "con_01m3xxf0m1brgcvtgpf81k7skv",
+      "dg:costAmount": 120,
+      "dg:costCurrency": "usd",
+      "dg:executionStatus": "succeeded",
+      "dg:intentSigned": false,
+      "dg:mode": "gateway",
+      "dg:policyDecision": "allow",
+      "dg:policyMode": "enforce",
+      "dg:policyRule": "allow-billing-updates",
+      "dg:session": "ses-7f3a",
+      "dg:tool": "postgres.execute",
+      "prov:endTime": "2026-10-02T09:00:06.841Z",
+      "prov:label": "postgres.execute",
+      "prov:startTime": "2026-10-02T09:00:06.800Z",
+      "prov:type": {
+        "$": "dg:ToolCall",
+        "type": "xsd:QName"
+      }
+    },
+    "dg:act_01m3xxf0m9avktcvjv3pz5bpkf": {
+      "dg:connector": "con_01m3xxf0m1brgcvtgpf81k7skv",
+      "dg:costAmount": 120,
+      "dg:costCurrency": "usd",
+      "dg:executionStatus": "succeeded",
+      "dg:intentSigned": false,
+      "dg:mode": "gateway",
+      "dg:policyDecision": "allow",
+      "dg:policyMode": "enforce",
+      "dg:policyRule": "allow-billing-updates",
+      "dg:session": "ses-7f3a",
+      "dg:tool": "postgres.execute",
+      "prov:endTime": "2026-10-02T09:00:07.841Z",
+      "prov:label": "postgres.execute",
+      "prov:startTime": "2026-10-02T09:00:07.800Z",
+      "prov:type": {
+        "$": "dg:ToolCall",
+        "type": "xsd:QName"
+      }
+    },
+    "dg:act_01m3xxf0ma333rjsgjq4p7at9w": {
+      "dg:connector": "con_01m3xxf0m1brgcvtgpf81k7skv",
+      "dg:costAmount": 120,
+      "dg:costCurrency": "usd",
+      "dg:executionStatus": "succeeded",
+      "dg:intentSigned": false,
+      "dg:mode": "gateway",
+      "dg:policyDecision": "allow",
+      "dg:policyMode": "enforce",
+      "dg:policyRule": "allow-billing-updates",
+      "dg:session": "ses-7f3a",
+      "dg:tool": "postgres.execute",
+      "prov:endTime": "2026-10-02T09:00:08.841Z",
+      "prov:label": "postgres.execute",
+      "prov:startTime": "2026-10-02T09:00:08.800Z",
+      "prov:type": {
+        "$": "dg:ToolCall",
+        "type": "xsd:QName"
+      }
+    },
+    "dg:act_01m3xxf0mbzgjxdj7fwsnm6tqh": {
+      "dg:connector": "con_01m3xxf0m1brgcvtgpf81k7skv",
+      "dg:costAmount": 120,
+      "dg:costCurrency": "usd",
+      "dg:executionStatus": "succeeded",
+      "dg:intentSigned": false,
+      "dg:mode": "gateway",
+      "dg:policyDecision": "allow",
+      "dg:policyMode": "enforce",
+      "dg:policyRule": "allow-billing-updates",
+      "dg:session": "ses-7f3a",
+      "dg:tool": "postgres.execute",
+      "prov:endTime": "2026-10-02T09:00:09.841Z",
+      "prov:label": "postgres.execute",
+      "prov:startTime": "2026-10-02T09:00:09.800Z",
+      "prov:type": {
+        "$": "dg:ToolCall",
+        "type": "xsd:QName"
+      }
+    },
+    "dg:adm_01m3xxf0m5ybdsv93apq4bq8q4": {
+      "dg:action": "agent.stopped",
+      "dg:target": "agt_01m3xxf0m1v4emq98a0jp8qj9z",
+      "dg:targetType": "agent",
+      "prov:endTime": "2026-10-02T09:00:04.000Z",
+      "prov:label": "agent.stopped",
+      "prov:startTime": "2026-10-02T09:00:04.000Z",
+      "prov:type": {
+        "$": "dg:AdminChange",
+        "type": "xsd:QName"
+      }
+    }
+  },
+  "agent": {
+    "dg:agt_01m3xxf0m1v4emq98a0jp8qj9z": {
+      "prov:label": "billing-agent",
+      "prov:type": {
+        "$": "prov:SoftwareAgent",
+        "type": "xsd:QName"
+      }
+    },
+    "dg:deedglass": {
+      "prov:label": "Deedglass",
+      "prov:type": {
+        "$": "prov:SoftwareAgent",
+        "type": "xsd:QName"
+      }
+    },
+    "dg:obo-usr_ref%3Apriya": {
+      "dg:reference": "usr_ref:priya",
+      "prov:type": {
+        "$": "prov:Person",
+        "type": "xsd:QName"
+      }
+    },
+    "dg:user-usr_01m3xxf0m1pnp5fyeq1qsptbw6": {
+      "dg:refType": "user",
+      "prov:type": {
+        "$": "prov:Person",
+        "type": "xsd:QName"
+      }
+    },
+    "dg:usr_01m3xxf0m1pnp5fyeq1qsptbw6": {
+      "prov:type": {
+        "$": "prov:Person",
+        "type": "xsd:QName"
+      }
+    },
+    "dg:usr_01m3xxf0m276xcfhpmhjmnmmvh": {
+      "prov:type": {
+        "$": "prov:Person",
+        "type": "xsd:QName"
+      }
+    }
+  },
+  "entity": {
+    "dg:deed_01m3xxv781rq8hzkcf9py9aq5w": {
+      "dg:bodyHash": "sha256:f39c4b650f14c1b56e9327bffe052298575087d9d6a7bbecedd436716dd8bc80",
+      "dg:checkDetailDigest": "sha256:7254304143e36a4e106c525e35b74e30961135caf01c192641c9e6322a741d37",
+      "dg:checkLevel": "L2",
+      "dg:checkMethod": "postgres.pgoutput",
+      "dg:checkVerdict": "VERIFIED",
+      "dg:issuedAt": {
+        "$": "2026-10-02T09:00:00.000Z",
+        "type": "xsd:dateTime"
+      },
+      "dg:kind": "action",
+      "dg:org": "org_01m3xxf0m4zb10tf1ggne90aej",
+      "dg:prevHash": "sha256:17da21e601d6245919bd03cd2eee98827c9bc988e23269fa078eaff75e78bd77",
+      "dg:seal": "ed25519:8wLG7EBcdlzpHFbYl92RkwJzbHBHC6CgtLIgiNmjAOHBEKcJenaLG_ZSc_PnV5qyy8Vg0goU8vUhJaZH_ZaXCQ",
+      "dg:sealKeyId": "sk_01m3xxf0m1crvjtd24mgqnmgah",
+      "dg:seq": 1,
+      "dg:specVersion": 1,
+      "prov:type": {
+        "$": "dg:Record",
+        "type": "xsd:QName"
+      }
+    },
+    "dg:deed_01m3xxv782kh2xjrcgz7yfymbj": {
+      "dg:bodyHash": "sha256:6328e909708e25f71725936a9f51512bdf111a14c4b6d98a09017a82d4a2d2ae",
+      "dg:checkLevel": "L1",
+      "dg:checkMethod": "readback.stripe.get_refund",
+      "dg:checkVerdict": "VERIFIED",
+      "dg:issuedAt": {
+        "$": "2026-10-02T09:00:01.000Z",
+        "type": "xsd:dateTime"
+      },
+      "dg:kind": "action",
+      "dg:org": "org_01m3xxf0m4zb10tf1ggne90aej",
+      "dg:prevHash": "sha256:f39c4b650f14c1b56e9327bffe052298575087d9d6a7bbecedd436716dd8bc80",
+      "dg:seal": "ed25519:9tS85crnY2Qt3cuAjg854ywr_AOJSWIP2EbQVLTbZ_kZ17anlvFQ8pG9CqqniIQhSJ309PR294rc809CIjNlAw",
+      "dg:sealKeyId": "sk_01m3xxf0m1crvjtd24mgqnmgah",
+      "dg:seq": 2,
+      "dg:specVersion": 1,
+      "prov:type": {
+        "$": "dg:Record",
+        "type": "xsd:QName"
+      }
+    },
+    "dg:deed_01m3xxv7834btqz71ygxcxw7mr": {
+      "dg:bodyHash": "sha256:6db23a639cdc18db1d15ee25063685fe679043f30268fa3a32befb4b828b815a",
+      "dg:issuedAt": {
+        "$": "2026-10-02T09:00:02.000Z",
+        "type": "xsd:dateTime"
+      },
+      "dg:kind": "action",
+      "dg:org": "org_01m3xxf0m4zb10tf1ggne90aej",
+      "dg:prevHash": "sha256:6328e909708e25f71725936a9f51512bdf111a14c4b6d98a09017a82d4a2d2ae",
+      "dg:seal": "ed25519:m2G8vOSaVre078EmAXsyp6OGTgX8V8gQ71a2bkBoh-d5yQ14X2pp1_jaqbr1_rvXnKmjPSBoJpwbUEZNZ4_FBA",
+      "dg:sealKeyId": "sk_01m3xxf0m1crvjtd24mgqnmgah",
+      "dg:seq": 3,
+      "dg:specVersion": 1,
+      "prov:type": {
+        "$": "dg:Record",
+        "type": "xsd:QName"
+      }
+    },
+    "dg:deed_01m3xxv784d0v32wyrh7hd91s1": {
+      "dg:bodyHash": "sha256:b73b0bd191660861dbeaacd4210d066c362a37e8f9b6656962c3c721c3115fa5",
+      "dg:checkDetailDigest": "sha256:7254304143e36a4e106c525e35b74e30961135caf01c192641c9e6322a741d37",
+      "dg:checkLevel": "L2",
+      "dg:checkMethod": "postgres.pgoutput",
+      "dg:checkVerdict": "VERIFIED",
+      "dg:issuedAt": {
+        "$": "2026-10-02T09:00:03.000Z",
+        "type": "xsd:dateTime"
+      },
+      "dg:kind": "action",
+      "dg:org": "org_01m3xxf0m4zb10tf1ggne90aej",
+      "dg:prevHash": "sha256:6db23a639cdc18db1d15ee25063685fe679043f30268fa3a32befb4b828b815a",
+      "dg:seal": "ed25519:zTqdxrqaLFQ-bFluBkh4Jy2runuGKi7ItEsbSys6CjgHfeZ2xtp6s1HlfKDZGERmqEFyMaoXJrj_tQO1hElzDQ",
+      "dg:sealKeyId": "sk_01m3xxf0m1crvjtd24mgqnmgah",
+      "dg:seq": 4,
+      "dg:specVersion": 1,
+      "prov:type": {
+        "$": "dg:Record",
+        "type": "xsd:QName"
+      }
+    },
+    "dg:deed_01m3xxv78502djwc4ssxkb9t6e": {
+      "dg:bodyHash": "sha256:40b1a837d897e1df3d46f328679e50282ecb244fa3126d3f6093a65cdabfb946",
+      "dg:issuedAt": {
+        "$": "2026-10-02T09:00:04.000Z",
+        "type": "xsd:dateTime"
+      },
+      "dg:kind": "admin",
+      "dg:org": "org_01m3xxf0m4zb10tf1ggne90aej",
+      "dg:prevHash": "sha256:b73b0bd191660861dbeaacd4210d066c362a37e8f9b6656962c3c721c3115fa5",
+      "dg:seal": "ed25519:ogCy9sXqcaj5YOyzlt0X9KohxsH3Z5eKf-TQoZQ8-10DbkRyfASktowSquNwpVuFYmsFBrAyKegkFw68wUr7Dg",
+      "dg:sealKeyId": "sk_01m3xxf0m1crvjtd24mgqnmgah",
+      "dg:seq": 5,
+      "dg:specVersion": 1,
+      "prov:type": {
+        "$": "dg:Record",
+        "type": "xsd:QName"
+      }
+    },
+    "dg:deed_01m3xxv786tf5vghdk5cndrf1e": {
+      "dg:bodyHash": "sha256:35b233af78d22324815b6ef37b97e4d77b584521cca70070c4519633675565c2",
+      "dg:checkDetailDigest": "sha256:4e91dbb152538c21a3b1025ee14e4abcd3c2a9fb472c9318b6bdaa2327309b51",
+      "dg:checkLevel": "L2",
+      "dg:checkMethod": "postgres.pgoutput",
+      "dg:checkVerdict": "MISMATCH",
+      "dg:issuedAt": {
+        "$": "2026-10-02T09:00:05.000Z",
+        "type": "xsd:dateTime"
+      },
+      "dg:kind": "amendment",
+      "dg:org": "org_01m3xxf0m4zb10tf1ggne90aej",
+      "dg:prevHash": "sha256:40b1a837d897e1df3d46f328679e50282ecb244fa3126d3f6093a65cdabfb946",
+      "dg:seal": "ed25519:KybKAuj71ILKFD61FSEQ8edplSDVn9g-QF-Loby0EuerzqfxzVC1z_JCSaNalpQ_DWvOAiGPhLVE4wLckY9dBA",
+      "dg:sealKeyId": "sk_01m3xxf0m1crvjtd24mgqnmgah",
+      "dg:seq": 6,
+      "dg:specVersion": 1,
+      "prov:type": {
+        "$": "dg:Record",
+        "type": "xsd:QName"
+      }
+    },
+    "dg:deed_01m3xxv787nfacznxprw8jfm12": {
+      "dg:bodyHash": "sha256:c05202f7a68e2c4008e4515dc75d3ecd2c3cae36b88fea266be95c7824b45b63",
+      "dg:checkDetailDigest": "sha256:7254304143e36a4e106c525e35b74e30961135caf01c192641c9e6322a741d37",
+      "dg:checkLevel": "L2",
+      "dg:checkMethod": "postgres.pgoutput",
+      "dg:checkVerdict": "VERIFIED",
+      "dg:issuedAt": {
+        "$": "2026-10-02T09:00:06.000Z",
+        "type": "xsd:dateTime"
+      },
+      "dg:kind": "action",
+      "dg:org": "org_01m3xxf0m4zb10tf1ggne90aej",
+      "dg:prevHash": "sha256:35b233af78d22324815b6ef37b97e4d77b584521cca70070c4519633675565c2",
+      "dg:seal": "ed25519:rFXK0wCZqyOqMfHtqZX8CSLRe79XGcVOhhLlu1g7W1inGwlUbL1FNgEJGigJXw-g7eVqhvU1t_OiuJuyxsE9DA",
+      "dg:sealKeyId": "sk_01m3xxf0m1crvjtd24mgqnmgah",
+      "dg:seq": 7,
+      "dg:specVersion": 1,
+      "prov:type": {
+        "$": "dg:Record",
+        "type": "xsd:QName"
+      }
+    },
+    "dg:deed_01m3xxv78868a2k4n2mw008he2": {
+      "dg:bodyHash": "sha256:66e209df4873a273cdad26614483e03a9096e386b0567903fd5332a56f46cbc9",
+      "dg:checkDetailDigest": "sha256:7254304143e36a4e106c525e35b74e30961135caf01c192641c9e6322a741d37",
+      "dg:checkLevel": "L2",
+      "dg:checkMethod": "postgres.pgoutput",
+      "dg:checkVerdict": "VERIFIED",
+      "dg:issuedAt": {
+        "$": "2026-10-02T09:00:07.000Z",
+        "type": "xsd:dateTime"
+      },
+      "dg:kind": "action",
+      "dg:org": "org_01m3xxf0m4zb10tf1ggne90aej",
+      "dg:prevHash": "sha256:c05202f7a68e2c4008e4515dc75d3ecd2c3cae36b88fea266be95c7824b45b63",
+      "dg:seal": "ed25519:C1ErwQ1osyq_iKAJTE6Rv8sOHWKyutt-qQ7MtzpVbVVtqV0A3p7hBetgSSPIsvLjt75TsSqbiNrUy3DHG0LtAQ",
+      "dg:sealKeyId": "sk_01m3xxf0m1crvjtd24mgqnmgah",
+      "dg:seq": 8,
+      "dg:specVersion": 1,
+      "prov:type": {
+        "$": "dg:Record",
+        "type": "xsd:QName"
+      }
+    },
+    "dg:deed_01m3xxv7899f1rmhe5te5b51zq": {
+      "dg:bodyHash": "sha256:4784cf5923cbd44a2f6ca949d949804e0ab6dafd9da1a44a3a097c183b46b85d",
+      "dg:checkDetailDigest": "sha256:7254304143e36a4e106c525e35b74e30961135caf01c192641c9e6322a741d37",
+      "dg:checkLevel": "L2",
+      "dg:checkMethod": "postgres.pgoutput",
+      "dg:checkVerdict": "VERIFIED",
+      "dg:issuedAt": {
+        "$": "2026-10-02T09:00:08.000Z",
+        "type": "xsd:dateTime"
+      },
+      "dg:kind": "action",
+      "dg:org": "org_01m3xxf0m4zb10tf1ggne90aej",
+      "dg:prevHash": "sha256:66e209df4873a273cdad26614483e03a9096e386b0567903fd5332a56f46cbc9",
+      "dg:seal": "ed25519:NJ8q3yM9dHe2sdjO4GODkQA0KmvMldvhIC7TwUyrRRNXPfC4IX9IBAbE1lZ0JyRRAnbIzuPZv-PFtXBgvAhzCw",
+      "dg:sealKeyId": "sk_01m3xxf0m1crvjtd24mgqnmgah",
+      "dg:seq": 9,
+      "dg:specVersion": 1,
+      "prov:type": {
+        "$": "dg:Record",
+        "type": "xsd:QName"
+      }
+    },
+    "dg:deed_01m3xxv78amrc8t3vxk2dpcn77": {
+      "dg:bodyHash": "sha256:5837fcdced9cc355a35a7d24bad2bee4377fefadf1e18d18de14a0776d5664db",
+      "dg:checkDetailDigest": "sha256:7254304143e36a4e106c525e35b74e30961135caf01c192641c9e6322a741d37",
+      "dg:checkLevel": "L2",
+      "dg:checkMethod": "postgres.pgoutput",
+      "dg:checkVerdict": "VERIFIED",
+      "dg:issuedAt": {
+        "$": "2026-10-02T09:00:09.000Z",
+        "type": "xsd:dateTime"
+      },
+      "dg:kind": "action",
+      "dg:org": "org_01m3xxf0m4zb10tf1ggne90aej",
+      "dg:prevHash": "sha256:4784cf5923cbd44a2f6ca949d949804e0ab6dafd9da1a44a3a097c183b46b85d",
+      "dg:seal": "ed25519:HFAciFxeEveO0o8zHYLzqNGVqdE8kji7DDMZJ-cj6FGRxChYScCIVazCGea6N78qdnOxEKM39_Rlt5kVUqUcBg",
+      "dg:sealKeyId": "sk_01m3xxf0m1crvjtd24mgqnmgah",
+      "dg:seq": 10,
+      "dg:specVersion": 1,
+      "prov:type": {
+        "$": "dg:Record",
+        "type": "xsd:QName"
+      }
+    },
+    "dg:deed_01m3xxv78b7r0qzt34ns9dxgfp": {
+      "dg:bodyHash": "sha256:7995335fc82a4f49aa96b1bbd24b1f055cecc63859e2cd26db46e7d6c2f8b855",
+      "dg:checkDetailDigest": "sha256:7254304143e36a4e106c525e35b74e30961135caf01c192641c9e6322a741d37",
+      "dg:checkLevel": "L2",
+      "dg:checkMethod": "postgres.pgoutput",
+      "dg:checkVerdict": "VERIFIED",
+      "dg:issuedAt": {
+        "$": "2026-10-02T09:00:10.000Z",
+        "type": "xsd:dateTime"
+      },
+      "dg:kind": "action",
+      "dg:org": "org_01m3xxf0m4zb10tf1ggne90aej",
+      "dg:prevHash": "sha256:5837fcdced9cc355a35a7d24bad2bee4377fefadf1e18d18de14a0776d5664db",
+      "dg:seal": "ed25519:ywSygSeKiG2H7W6gyl-8N-lwJGtZ6FrtgOxp_Z81wZyLDKpGMqqc4-rxBHSIm05h7du3Y9702Wo-Br1ybkSHCQ",
+      "dg:sealKeyId": "sk_01m3xxf0m2b2bf0pn7ssc7whbb",
+      "dg:seq": 11,
+      "dg:specVersion": 1,
+      "prov:type": {
+        "$": "dg:Record",
+        "type": "xsd:QName"
+      }
+    },
+    "dg:deed_01m3xxv78ceajhfj7wgevz5xdd": {
+      "dg:bodyHash": "sha256:27433278c4b4555742ebb2daa9c677020c263d5a92ee46ed802ce1b1c134299d",
+      "dg:checkDetailDigest": "sha256:4e91dbb152538c21a3b1025ee14e4abcd3c2a9fb472c9318b6bdaa2327309b51",
+      "dg:checkLevel": "L2",
+      "dg:checkMethod": "postgres.pgoutput",
+      "dg:checkVerdict": "MISMATCH",
+      "dg:issuedAt": {
+        "$": "2026-10-02T09:00:11.000Z",
+        "type": "xsd:dateTime"
+      },
+      "dg:kind": "amendment",
+      "dg:org": "org_01m3xxf0m4zb10tf1ggne90aej",
+      "dg:prevHash": "sha256:7995335fc82a4f49aa96b1bbd24b1f055cecc63859e2cd26db46e7d6c2f8b855",
+      "dg:seal": "ed25519:smN0hS3oYtN49GOob3B3f-lm8FGa5FE7Ax0dfq8x3pOFHomOeM6uIJQPp_lEBAf95-xKnIRyPUeNx7de9V63AQ",
+      "dg:sealKeyId": "sk_01m3xxf0m2b2bf0pn7ssc7whbb",
+      "dg:seq": 12,
+      "dg:specVersion": 1,
+      "prov:type": {
+        "$": "dg:Record",
+        "type": "xsd:QName"
+      }
+    },
+    "dg:pv_01m3xxf0m1e81mgsvsfcj3shx3": {
+      "dg:policy": "pol_01m3xxf0m13yc5js9w392rsx8r",
+      "dg:versionHash": "sha256:18b4687da8d05494dcc0adc5a8f18efe6900f6a5f8faa4b519accdd01e15b3b5",
+      "prov:type": {
+        "$": "prov:Plan",
+        "type": "xsd:QName"
+      }
+    },
+    "dg:sha256-0b737ed05374297b548958906e1077dac1ab37b6df4a1c262b54b84e9bda9376": {
+      "dg:digest": "sha256:0b737ed05374297b548958906e1077dac1ab37b6df4a1c262b54b84e9bda9376",
+      "prov:type": {
+        "$": "dg:Request",
+        "type": "xsd:QName"
+      }
+    },
+    "dg:sha256-303c0a73a2e32018f08bee5db76e67733497802e2fee707b38aac2a8607f376b": {
+      "dg:digest": "sha256:303c0a73a2e32018f08bee5db76e67733497802e2fee707b38aac2a8607f376b",
+      "prov:type": {
+        "$": "dg:Request",
+        "type": "xsd:QName"
+      }
+    },
+    "dg:sha256-4feffdfd9d063a37f8f8c70bc59404d906ab8082907d3558cb4cbe0e251d84d4": {
+      "dg:digest": "sha256:4feffdfd9d063a37f8f8c70bc59404d906ab8082907d3558cb4cbe0e251d84d4",
+      "prov:type": {
+        "$": "dg:Request",
+        "type": "xsd:QName"
+      }
+    },
+    "dg:sha256-80008374da74025b383fd9c021d84991594ffb55fe3b13146e55055a2aff46b5": {
+      "dg:digest": "sha256:80008374da74025b383fd9c021d84991594ffb55fe3b13146e55055a2aff46b5",
+      "prov:type": {
+        "$": "dg:Request",
+        "type": "xsd:QName"
+      }
+    },
+    "dg:sha256-85180cbdd966a5bdc3b35bb2c27939902f563c0476b5f38b0b6623250b17b803": {
+      "dg:digest": "sha256:85180cbdd966a5bdc3b35bb2c27939902f563c0476b5f38b0b6623250b17b803",
+      "prov:type": {
+        "$": "dg:Request",
+        "type": "xsd:QName"
+      }
+    },
+    "dg:sha256-8b8808243de0b66ff885ef7902186fc4b37bfe2dbb62907e0301c5f7753434ba": {
+      "dg:digest": "sha256:8b8808243de0b66ff885ef7902186fc4b37bfe2dbb62907e0301c5f7753434ba",
+      "prov:type": {
+        "$": "dg:Result",
+        "type": "xsd:QName"
+      }
+    },
+    "dg:sha256-ab1c95b68372d8135782654adebedaabe28742ff4a3698693b1ab37956c85088": {
+      "dg:digest": "sha256:ab1c95b68372d8135782654adebedaabe28742ff4a3698693b1ab37956c85088",
+      "prov:type": {
+        "$": "dg:Request",
+        "type": "xsd:QName"
+      }
+    },
+    "dg:sha256-c158ad32d703f402bf8a5afcfaede0d6a3931c9644856c351820a6cf2126196c": {
+      "dg:digest": "sha256:c158ad32d703f402bf8a5afcfaede0d6a3931c9644856c351820a6cf2126196c",
+      "prov:type": {
+        "$": "dg:Request",
+        "type": "xsd:QName"
+      }
+    },
+    "dg:sha256-f4c7adea4ea59e8eb457587eb8ace166e6a81e79a769bf5b5ea61addbffb298e": {
+      "dg:digest": "sha256:f4c7adea4ea59e8eb457587eb8ace166e6a81e79a769bf5b5ea61addbffb298e",
+      "prov:type": {
+        "$": "dg:Request",
+        "type": "xsd:QName"
+      }
+    },
+    "dg:sha256-f9a265a627598090eda73f296064b1db59c7295a4367f7c9780808af2137b1d7": {
+      "dg:digest": "sha256:f9a265a627598090eda73f296064b1db59c7295a4367f7c9780808af2137b1d7",
+      "prov:type": {
+        "$": "dg:Request",
+        "type": "xsd:QName"
+      }
+    }
+  },
+  "prefix": {
+    "dg": "urn:deedglass:"
+  },
+  "used": {
+    "_:u1": {
+      "prov:activity": "dg:act_01m3xxf0m1s0xcra979g0jfa5y",
+      "prov:entity": "dg:sha256-f9a265a627598090eda73f296064b1db59c7295a4367f7c9780808af2137b1d7",
+      "prov:role": {
+        "$": "dg:request",
+        "type": "xsd:QName"
+      }
+    },
+    "_:u2": {
+      "prov:activity": "dg:act_01m3xxf0m2vedzp4he4j4t8t7n",
+      "prov:entity": "dg:sha256-85180cbdd966a5bdc3b35bb2c27939902f563c0476b5f38b0b6623250b17b803",
+      "prov:role": {
+        "$": "dg:request",
+        "type": "xsd:QName"
+      }
+    },
+    "_:u3": {
+      "prov:activity": "dg:act_01m3xxf0m3vjy4rynd0h6g10h7",
+      "prov:entity": "dg:sha256-0b737ed05374297b548958906e1077dac1ab37b6df4a1c262b54b84e9bda9376",
+      "prov:role": {
+        "$": "dg:request",
+        "type": "xsd:QName"
+      }
+    },
+    "_:u4": {
+      "prov:activity": "dg:act_01m3xxf0m4afxda0b40rm3qp0z",
+      "prov:entity": "dg:sha256-4feffdfd9d063a37f8f8c70bc59404d906ab8082907d3558cb4cbe0e251d84d4",
+      "prov:role": {
+        "$": "dg:request",
+        "type": "xsd:QName"
+      }
+    },
+    "_:u5": {
+      "prov:activity": "dg:act_01m3xxf0m7f5jmw6sm2f8zs9gm",
+      "prov:entity": "dg:sha256-303c0a73a2e32018f08bee5db76e67733497802e2fee707b38aac2a8607f376b",
+      "prov:role": {
+        "$": "dg:request",
+        "type": "xsd:QName"
+      }
+    },
+    "_:u6": {
+      "prov:activity": "dg:act_01m3xxf0m8af8fxf8cpcx7mjqc",
+      "prov:entity": "dg:sha256-f4c7adea4ea59e8eb457587eb8ace166e6a81e79a769bf5b5ea61addbffb298e",
+      "prov:role": {
+        "$": "dg:request",
+        "type": "xsd:QName"
+      }
+    },
+    "_:u7": {
+      "prov:activity": "dg:act_01m3xxf0m9avktcvjv3pz5bpkf",
+      "prov:entity": "dg:sha256-ab1c95b68372d8135782654adebedaabe28742ff4a3698693b1ab37956c85088",
+      "prov:role": {
+        "$": "dg:request",
+        "type": "xsd:QName"
+      }
+    },
+    "_:u8": {
+      "prov:activity": "dg:act_01m3xxf0ma333rjsgjq4p7at9w",
+      "prov:entity": "dg:sha256-80008374da74025b383fd9c021d84991594ffb55fe3b13146e55055a2aff46b5",
+      "prov:role": {
+        "$": "dg:request",
+        "type": "xsd:QName"
+      }
+    },
+    "_:u9": {
+      "prov:activity": "dg:act_01m3xxf0mbzgjxdj7fwsnm6tqh",
+      "prov:entity": "dg:sha256-c158ad32d703f402bf8a5afcfaede0d6a3931c9644856c351820a6cf2126196c",
+      "prov:role": {
+        "$": "dg:request",
+        "type": "xsd:QName"
+      }
+    }
+  },
+  "wasAssociatedWith": {
+    "_:assoc1": {
+      "prov:activity": "dg:act_01m3xxf0m1s0xcra979g0jfa5y",
+      "prov:agent": "dg:agt_01m3xxf0m1v4emq98a0jp8qj9z",
+      "prov:plan": "dg:pv_01m3xxf0m1e81mgsvsfcj3shx3"
+    },
+    "_:assoc10": {
+      "prov:activity": "dg:act_01m3xxf0mbzgjxdj7fwsnm6tqh",
+      "prov:agent": "dg:agt_01m3xxf0m1v4emq98a0jp8qj9z",
+      "prov:plan": "dg:pv_01m3xxf0m1e81mgsvsfcj3shx3"
+    },
+    "_:assoc2": {
+      "prov:activity": "dg:act_01m3xxf0m2vedzp4he4j4t8t7n",
+      "prov:agent": "dg:agt_01m3xxf0m1v4emq98a0jp8qj9z",
+      "prov:plan": "dg:pv_01m3xxf0m1e81mgsvsfcj3shx3"
+    },
+    "_:assoc3": {
+      "prov:activity": "dg:act_01m3xxf0m3vjy4rynd0h6g10h7",
+      "prov:agent": "dg:agt_01m3xxf0m1v4emq98a0jp8qj9z",
+      "prov:plan": "dg:pv_01m3xxf0m1e81mgsvsfcj3shx3"
+    },
+    "_:assoc4": {
+      "prov:activity": "dg:act_01m3xxf0m4afxda0b40rm3qp0z",
+      "prov:agent": "dg:agt_01m3xxf0m1v4emq98a0jp8qj9z",
+      "prov:plan": "dg:pv_01m3xxf0m1e81mgsvsfcj3shx3"
+    },
+    "_:assoc5": {
+      "prov:activity": "dg:adm_01m3xxf0m5ybdsv93apq4bq8q4",
+      "prov:agent": "dg:user-usr_01m3xxf0m1pnp5fyeq1qsptbw6"
+    },
+    "_:assoc6": {
+      "prov:activity": "dg:act_01m3xxf0m7f5jmw6sm2f8zs9gm",
+      "prov:agent": "dg:agt_01m3xxf0m1v4emq98a0jp8qj9z",
+      "prov:plan": "dg:pv_01m3xxf0m1e81mgsvsfcj3shx3"
+    },
+    "_:assoc7": {
+      "prov:activity": "dg:act_01m3xxf0m8af8fxf8cpcx7mjqc",
+      "prov:agent": "dg:agt_01m3xxf0m1v4emq98a0jp8qj9z",
+      "prov:plan": "dg:pv_01m3xxf0m1e81mgsvsfcj3shx3"
+    },
+    "_:assoc8": {
+      "prov:activity": "dg:act_01m3xxf0m9avktcvjv3pz5bpkf",
+      "prov:agent": "dg:agt_01m3xxf0m1v4emq98a0jp8qj9z",
+      "prov:plan": "dg:pv_01m3xxf0m1e81mgsvsfcj3shx3"
+    },
+    "_:assoc9": {
+      "prov:activity": "dg:act_01m3xxf0ma333rjsgjq4p7at9w",
+      "prov:agent": "dg:agt_01m3xxf0m1v4emq98a0jp8qj9z",
+      "prov:plan": "dg:pv_01m3xxf0m1e81mgsvsfcj3shx3"
+    }
+  },
+  "wasAttributedTo": {
+    "_:att1": {
+      "prov:agent": "dg:deedglass",
+      "prov:entity": "dg:deed_01m3xxv781rq8hzkcf9py9aq5w"
+    },
+    "_:att10": {
+      "prov:agent": "dg:deedglass",
+      "prov:entity": "dg:deed_01m3xxv78amrc8t3vxk2dpcn77"
+    },
+    "_:att11": {
+      "prov:agent": "dg:deedglass",
+      "prov:entity": "dg:deed_01m3xxv78b7r0qzt34ns9dxgfp"
+    },
+    "_:att12": {
+      "prov:agent": "dg:deedglass",
+      "prov:entity": "dg:deed_01m3xxv78ceajhfj7wgevz5xdd"
+    },
+    "_:att2": {
+      "prov:agent": "dg:deedglass",
+      "prov:entity": "dg:deed_01m3xxv782kh2xjrcgz7yfymbj"
+    },
+    "_:att3": {
+      "prov:agent": "dg:deedglass",
+      "prov:entity": "dg:deed_01m3xxv7834btqz71ygxcxw7mr"
+    },
+    "_:att4": {
+      "prov:agent": "dg:deedglass",
+      "prov:entity": "dg:deed_01m3xxv784d0v32wyrh7hd91s1"
+    },
+    "_:att5": {
+      "prov:agent": "dg:deedglass",
+      "prov:entity": "dg:deed_01m3xxv78502djwc4ssxkb9t6e"
+    },
+    "_:att6": {
+      "prov:agent": "dg:deedglass",
+      "prov:entity": "dg:deed_01m3xxv786tf5vghdk5cndrf1e"
+    },
+    "_:att7": {
+      "prov:agent": "dg:deedglass",
+      "prov:entity": "dg:deed_01m3xxv787nfacznxprw8jfm12"
+    },
+    "_:att8": {
+      "prov:agent": "dg:deedglass",
+      "prov:entity": "dg:deed_01m3xxv78868a2k4n2mw008he2"
+    },
+    "_:att9": {
+      "prov:agent": "dg:deedglass",
+      "prov:entity": "dg:deed_01m3xxv7899f1rmhe5te5b51zq"
+    }
+  },
+  "wasDerivedFrom": {
+    "_:der1": {
+      "prov:generatedEntity": "dg:deed_01m3xxv786tf5vghdk5cndrf1e",
+      "prov:type": {
+        "$": "prov:Revision",
+        "type": "xsd:QName"
+      },
+      "prov:usedEntity": "dg:deed_01m3xxv781rq8hzkcf9py9aq5w"
+    },
+    "_:der2": {
+      "prov:generatedEntity": "dg:deed_01m3xxv78ceajhfj7wgevz5xdd",
+      "prov:type": {
+        "$": "prov:Revision",
+        "type": "xsd:QName"
+      },
+      "prov:usedEntity": "dg:deed_01m3xxv78b7r0qzt34ns9dxgfp"
+    }
+  },
+  "wasGeneratedBy": {
+    "_:g1": {
+      "prov:activity": "dg:act_01m3xxf0m1s0xcra979g0jfa5y",
+      "prov:entity": "dg:sha256-8b8808243de0b66ff885ef7902186fc4b37bfe2dbb62907e0301c5f7753434ba",
+      "prov:time": "2026-10-02T08:59:59.841Z"
+    },
+    "_:g2": {
+      "prov:activity": "dg:act_01m3xxf0m2vedzp4he4j4t8t7n",
+      "prov:entity": "dg:sha256-8b8808243de0b66ff885ef7902186fc4b37bfe2dbb62907e0301c5f7753434ba",
+      "prov:time": "2026-10-02T09:00:00.841Z"
+    },
+    "_:g3": {
+      "prov:activity": "dg:act_01m3xxf0m4afxda0b40rm3qp0z",
+      "prov:entity": "dg:sha256-8b8808243de0b66ff885ef7902186fc4b37bfe2dbb62907e0301c5f7753434ba",
+      "prov:time": "2026-10-02T09:00:02.841Z"
+    },
+    "_:g4": {
+      "prov:activity": "dg:act_01m3xxf0m7f5jmw6sm2f8zs9gm",
+      "prov:entity": "dg:sha256-8b8808243de0b66ff885ef7902186fc4b37bfe2dbb62907e0301c5f7753434ba",
+      "prov:time": "2026-10-02T09:00:05.841Z"
+    },
+    "_:g5": {
+      "prov:activity": "dg:act_01m3xxf0m8af8fxf8cpcx7mjqc",
+      "prov:entity": "dg:sha256-8b8808243de0b66ff885ef7902186fc4b37bfe2dbb62907e0301c5f7753434ba",
+      "prov:time": "2026-10-02T09:00:06.841Z"
+    },
+    "_:g6": {
+      "prov:activity": "dg:act_01m3xxf0m9avktcvjv3pz5bpkf",
+      "prov:entity": "dg:sha256-8b8808243de0b66ff885ef7902186fc4b37bfe2dbb62907e0301c5f7753434ba",
+      "prov:time": "2026-10-02T09:00:07.841Z"
+    },
+    "_:g7": {
+      "prov:activity": "dg:act_01m3xxf0ma333rjsgjq4p7at9w",
+      "prov:entity": "dg:sha256-8b8808243de0b66ff885ef7902186fc4b37bfe2dbb62907e0301c5f7753434ba",
+      "prov:time": "2026-10-02T09:00:08.841Z"
+    },
+    "_:g8": {
+      "prov:activity": "dg:act_01m3xxf0mbzgjxdj7fwsnm6tqh",
+      "prov:entity": "dg:sha256-8b8808243de0b66ff885ef7902186fc4b37bfe2dbb62907e0301c5f7753434ba",
+      "prov:time": "2026-10-02T09:00:09.841Z"
+    }
+  },
+  "wasInfluencedBy": {
+    "_:inf1": {
+      "prov:influencee": "dg:deed_01m3xxv781rq8hzkcf9py9aq5w",
+      "prov:influencer": "dg:act_01m3xxf0m1s0xcra979g0jfa5y"
+    },
+    "_:inf10": {
+      "prov:influencee": "dg:deed_01m3xxv78868a2k4n2mw008he2",
+      "prov:influencer": "dg:act_01m3xxf0m8af8fxf8cpcx7mjqc"
+    },
+    "_:inf11": {
+      "prov:influencee": "dg:deed_01m3xxv7899f1rmhe5te5b51zq",
+      "prov:influencer": "dg:act_01m3xxf0m9avktcvjv3pz5bpkf"
+    },
+    "_:inf12": {
+      "prov:influencee": "dg:deed_01m3xxv78amrc8t3vxk2dpcn77",
+      "prov:influencer": "dg:act_01m3xxf0ma333rjsgjq4p7at9w"
+    },
+    "_:inf13": {
+      "prov:influencee": "dg:deed_01m3xxv78b7r0qzt34ns9dxgfp",
+      "prov:influencer": "dg:act_01m3xxf0mbzgjxdj7fwsnm6tqh"
+    },
+    "_:inf14": {
+      "prov:influencee": "dg:deed_01m3xxv78ceajhfj7wgevz5xdd",
+      "prov:influencer": "dg:act_01m3xxf0mbzgjxdj7fwsnm6tqh"
+    },
+    "_:inf2": {
+      "dg:role": "approver",
+      "prov:influencee": "dg:act_01m3xxf0m2vedzp4he4j4t8t7n",
+      "prov:influencer": "dg:usr_01m3xxf0m1pnp5fyeq1qsptbw6"
+    },
+    "_:inf3": {
+      "dg:role": "approver",
+      "prov:influencee": "dg:act_01m3xxf0m2vedzp4he4j4t8t7n",
+      "prov:influencer": "dg:usr_01m3xxf0m276xcfhpmhjmnmmvh"
+    },
+    "_:inf4": {
+      "prov:influencee": "dg:deed_01m3xxv782kh2xjrcgz7yfymbj",
+      "prov:influencer": "dg:act_01m3xxf0m2vedzp4he4j4t8t7n"
+    },
+    "_:inf5": {
+      "prov:influencee": "dg:deed_01m3xxv7834btqz71ygxcxw7mr",
+      "prov:influencer": "dg:act_01m3xxf0m3vjy4rynd0h6g10h7"
+    },
+    "_:inf6": {
+      "prov:influencee": "dg:deed_01m3xxv784d0v32wyrh7hd91s1",
+      "prov:influencer": "dg:act_01m3xxf0m4afxda0b40rm3qp0z"
+    },
+    "_:inf7": {
+      "prov:influencee": "dg:deed_01m3xxv78502djwc4ssxkb9t6e",
+      "prov:influencer": "dg:adm_01m3xxf0m5ybdsv93apq4bq8q4"
+    },
+    "_:inf8": {
+      "prov:influencee": "dg:deed_01m3xxv786tf5vghdk5cndrf1e",
+      "prov:influencer": "dg:act_01m3xxf0m1s0xcra979g0jfa5y"
+    },
+    "_:inf9": {
+      "prov:influencee": "dg:deed_01m3xxv787nfacznxprw8jfm12",
+      "prov:influencer": "dg:act_01m3xxf0m7f5jmw6sm2f8zs9gm"
+    }
+  }
+}

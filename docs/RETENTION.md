@@ -29,7 +29,7 @@ Everything else, always:
 
 ## Why every deed still verifies
 
-A deed holds digests of payloads, never the payloads themselves ([DEED_SPEC.md](DEED_SPEC.md)).
+A deed holds digests of payloads, never the payloads themselves ([DEED_SPEC.md](../spec/v1/DEED_SPEC.md)).
 Removing a payload changes nothing that was hashed or sealed, so `deedglass ledger check` and
 `deedglass verify` of a fresh export give the same answer before and after pruning. What you lose
 is the ability to show the original arguments; the digest still shows whether a copy you kept

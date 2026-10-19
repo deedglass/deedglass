@@ -1,18 +1,42 @@
-# Exports: records as FHIR AuditEvent and Provenance
+# Exports: records in OpenTelemetry, OCSF, W3C PROV and FHIR
 
-Deedglass can write its sealed records as FHIR R4 resources, so a hospital's audit tooling can read
-them next to its EHR's own audit log:
+Deedglass can write its sealed records in four open formats, so the tools people already use (a
+trace backend, a SIEM, a provenance store, a hospital's audit tooling) can read them:
 
-- **AuditEvent**: one per FHIR interaction an agent asked for (allowed, denied, failed or unknown),
-  shaped to the IHE Basic Audit Log Patterns (BALP) 1.1.4 profiles.
-- **Provenance**: one per FHIR write that ran and succeeded, shaped to the AI Provenance profile of
-  the HL7 AI Transparency on FHIR ballot (1.0.0-ballot, January 2026).
+| `--format` | Standard, pinned version | What you get | Mapping and what is lost |
+|---|---|---|---|
+| `otel-genai` | OpenTelemetry semantic conventions **v1.41.0** (2026-04-28), GenAI attributes (status Development); OTLP/JSON from opentelemetry-proto **v1.11.1** (2026-09-29) | one `execute_tool` span per action, a child span per later check, as OTLP/JSON lines | [exports/otel-genai.md](exports/otel-genai.md) |
+| `ocsf` | OCSF schema **1.9.0** (2026-08-03): API Activity (6003), profiles `ai_operation` and `security_control` | one event per action or later check, NDJSON, with `ai_agent` and `delegation` | [exports/ocsf.md](exports/ocsf.md) |
+| `prov-json` | W3C PROV-JSON, Member Submission of **2013-04-24** (PROV-DM, Recommendation 2013-04-30) | one document: agents, tool calls, records, who acted for whom, revisions | [exports/prov-json.md](exports/prov-json.md) |
+| `fhir` (and `fhir-auditevent`, `fhir-provenance`) | FHIR **R4** AuditEvent (IHE BALP **1.1.4**) and Provenance (HL7 AI Transparency **1.0.0-ballot**) | AuditEvent and Provenance for FHIR connector calls, FHIR NDJSON | below |
 
-An export is a view. The sealed record stays the primary form; its format knows nothing about FHIR
-(DL-109), and `deedglass verify` checks the record, not the export. Exports hold ids and digests,
-never resources, search values or notes.
+An export is a view. The sealed record stays the primary form; its format knows nothing about any
+of these standards (DL-109, the record spec in [`spec/v1/`](../spec/v1/DEED_SPEC.md)), and
+`deedglass verify` checks the record, not the export. Exports hold ids and digests, never payloads,
+resources, search values or notes. The same records always give the same bytes, so an export can be
+compared or regenerated at any time.
 
 ## Run it
+
+```sh
+deedglass export deeds.tar.gz --format otel-genai        # → deeds.otlp.jsonl
+deedglass export deeds.tar.gz --format ocsf --out -      # NDJSON to stdout
+deedglass export deeds.jsonl --format prov-json --out records.prov.json
+deedglass export deeds.tar.gz --format fhir              # AuditEvent, then Provenance, per record
+```
+
+`deedglass export` works offline on an export bundle (`deedglass deeds export`) or a `.jsonl` file of
+records: it reads no config, database, key or network. It doesn't check seals, so run
+`deedglass verify` on the file first; a bundle whose files don't match its manifest is refused, and a
+failed export writes nothing. Each format's checks run in CI against the pinned schema files in
+`internal/recordexport/testdata/schemas/` (what they are and where they come from is in that
+directory's README), with golden files for a sealed bundle from a real release.
+
+Sending spans to a collector (OTLP push) isn't built: the export writes a file, which an
+OpenTelemetry Collector's `otlpjsonfile` receiver can read. A push, when it comes, goes through the
+same egress door as every other outbound call and only when configured.
+
+### FHIR from the database
 
 ```sh
 deedglass deeds export --format fhir-auditevent --out audit.ndjson
@@ -24,15 +48,14 @@ deedglass deeds export --from deedglass-org_…-1-500.tar.gz --format fhir-audit
 GET /v1/deeds/export?format=fhir-auditevent&from_seq=1&to_seq=500
 ```
 
-The output is FHIR NDJSON (`application/fhir+ndjson`): one resource per line, as FHIR Bulk Data
-writes it. The range flags (`--from-seq`, `--to-seq`, `--since`) and limits are those of
+The FHIR output is FHIR NDJSON (`application/fhir+ndjson`): one resource per line, as FHIR Bulk
+Data writes it. The range flags (`--from-seq`, `--to-seq`, `--since`) and limits are those of
 `deeds export`. The API route needs a Console session or an org admin key, like every export.
 
 From the database (the CLI) or the API, each FHIR connector call is joined to its action row and
 its connector, so the export names the resource and version, the FHIR server and the SMART client
-id. `--from` reads a bundle or a `.jsonl` file with no database: each record alone, so those three
-are unknown and the action id stands in for the resource. It doesn't check seals; run
-`deedglass verify` on the file first.
+id. `--from` and `deedglass export --format fhir` read a bundle or a `.jsonl` file with no database:
+each record alone, so those three are unknown and the action id stands in for the resource.
 
 ## AuditEvent
 
@@ -77,7 +100,7 @@ ISO 27789's minimum fields are always present: the user (the agent), the functio
 | `entity` (role `source`) | `request_digest` | what the agent sent, as a digest |
 | `signature` | the record's seal | `data` is the Ed25519 signature over the record's canonical body; `deedglass verify` checks it with the seal key the record names |
 
-## What is lost
+## What the FHIR export loses
 
 - **Content.** No resource, field value, search value, note or narrative: digests only.
 - **The patient in PHI mode.** Its reference is a digest in the stored request, so the export uses
