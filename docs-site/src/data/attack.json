@@ -389,8 +389,8 @@
       ]
     },
     {
-      "title": "FHIR servers (declared)",
-      "intro": "Healthcare phase 1's group I, declared in ADR-105 before any FHIR connector code exists. A FHIR server answers success in ways that don't mean what the agent says: a conditional create that matched an existing resource, an update the server kept as the old version, a field the server changed, a 5xx after it committed, a version another writer or a forged request id made, a transaction that committed more than it reported, and PHI that must never reach a stored record. They run once the native FHIR connector is built.",
+      "title": "FHIR servers",
+      "intro": "Healthcare phase 1's group I, declared in ADR-105 before the FHIR connector's code existed (HC-P02 built it). A FHIR server answers success in ways that don't mean what the agent says: a conditional create that matched an existing resource, an update the server kept as the old version, a field the server changed, a 5xx after it committed, a stale If-Match, a type outside the connector's list, and PHI that must never reach a stored record. The cases run against an in-process FHIR R4 server that answers the way HAPI FHIR JPA did in HC-P05's spike. A version another writer or a forged request id made, a transaction that committed more than it reported and HAPI's large-object rows are Proven (L2) cases that wait on HC-P05; the delete rule waits on the healthcare-fhir pack (HC-P06).",
       "cases": [
         {
           "id": "I01",

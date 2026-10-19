@@ -49,6 +49,13 @@ func (h *H) checkInvariants(obs Observed) []string {
 		org := h.Acme
 		if a := h.Action(org, id); Str(a, "id") == "" {
 			org = h.Globex
+			// HC-P02's I11 acts in an org of its own (PHI mode on): look the action up in every org.
+			for _, o := range h.Env.Orgs {
+				if o != h.Acme && Str(h.Action(o, id), "id") != "" {
+					org = o
+					break
+				}
+			}
 		}
 		deadline := time.Now().Add(5 * time.Second)
 		for {

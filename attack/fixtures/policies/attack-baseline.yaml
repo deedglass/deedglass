@@ -39,6 +39,12 @@ rules:
     decision: require_approval
     reason: One admin countersigns expiry-bot's calls within a minute.
     approval: { approvers: [role:admin], required: 1, expires_in: 1m }
+  - id: fhir-clinic
+    description: clinic-bot's FHIR calls that build a request run, checked at L1 (HC-P02's group I). A type outside the connector's allowed_resource_types builds none, so the default denies it (I10).
+    match: { agent: clinic-bot, connector_type: fhir }
+    when: request.fhir.enriched
+    decision: allow
+    verify: L1
   - id: witness-writes
     description: witness-bot's single statements run and are witnessed at L2 by Postgres (S21's W cases and H08 to H11).
     match: { agent: witness-bot, tool: "postgres.*" }
