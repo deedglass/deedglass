@@ -32,5 +32,6 @@ VERSION  NAME                STATE    APPLIED               CHECKSUM
 0029     observe             pending  —                     sha256:c0f3…a29e
 0030     weekly              pending  —                     sha256:5b35…e588
 0031     phi_mode            pending  —                     sha256:6651…54b7
-✓ 8 applied · 23 pending. Run deedglass migrate up to apply them.
+0032     version_bound_l2    pending  —                     sha256:69d1…5a23
+✓ 8 applied · 24 pending. Run deedglass migrate up to apply them.
 --- stderr

@@ -146,7 +146,9 @@ var required = map[string][]string{
 }
 
 // optional fields a kind accepts besides its required ones.
-var optional = map[string][]string{KindDSN: {"witness_dsn"}}
+// A bearer credential may hold a witness_dsn too: a FHIR server's own database, read for Proven
+// (ADR-108).
+var optional = map[string][]string{KindDSN: {"witness_dsn"}, KindBearer: {"witness_dsn"}}
 
 // secretField reports whether a field's value is secret (the username of basic auth isn't).
 func secretField(kind, name string) bool { return !(kind == KindBasic && name == "username") }

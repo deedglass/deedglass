@@ -1,0 +1,2784 @@
+[
+ {
+  "tables": {
+   "public.hfj_history_tag": {
+    "relid": 16522,
+    "pk": [],
+    "identity": "d",
+    "columns": [
+     "pid",
+     "partition_id",
+     "partition_date",
+     "tag_id",
+     "res_ver_pid",
+     "res_id",
+     "res_type",
+     "res_type_id"
+    ],
+    "type_oids": [
+     20,
+     23,
+     1082,
+     20,
+     20,
+     20,
+     1043,
+     21
+    ]
+   },
+   "public.hfj_res_link": {
+    "relid": 16566,
+    "pk": [],
+    "identity": "d",
+    "columns": [
+     "pid",
+     "partition_id",
+     "partition_date",
+     "src_path",
+     "src_resource_id",
+     "source_resource_type",
+     "src_res_type_id",
+     "target_res_partition_date",
+     "target_res_partition_id",
+     "target_resource_id",
+     "target_resource_type",
+     "target_res_type_id",
+     "target_resource_url",
+     "target_resource_version",
+     "sp_updated"
+    ],
+    "type_oids": [
+     20,
+     23,
+     1082,
+     1043,
+     20,
+     1043,
+     21,
+     1082,
+     23,
+     20,
+     1043,
+     21,
+     1043,
+     20,
+     1114
+    ]
+   },
+   "public.hfj_res_tag": {
+    "relid": 16614,
+    "pk": [],
+    "identity": "d",
+    "columns": [
+     "pid",
+     "partition_id",
+     "partition_date",
+     "tag_id",
+     "res_id",
+     "res_type",
+     "res_type_id"
+    ],
+    "type_oids": [
+     20,
+     23,
+     1082,
+     20,
+     20,
+     1043,
+     21
+    ]
+   },
+   "public.hfj_res_ver": {
+    "relid": 16621,
+    "pk": [],
+    "identity": "d",
+    "columns": [
+     "partition_id",
+     "pid",
+     "res_deleted_at",
+     "res_version",
+     "has_tags",
+     "res_published",
+     "res_updated",
+     "res_encoding",
+     "partition_date",
+     "request_id",
+     "res_text",
+     "res_id",
+     "res_text_vc",
+     "res_type",
+     "res_type_id",
+     "res_ver",
+     "source_uri"
+    ],
+    "type_oids": [
+     23,
+     20,
+     1114,
+     1043,
+     16,
+     1114,
+     1114,
+     1043,
+     1082,
+     1043,
+     26,
+     20,
+     25,
+     1043,
+     21,
+     20,
+     1043
+    ]
+   },
+   "public.hfj_resource": {
+    "relid": 16645,
+    "pk": [],
+    "identity": "d",
+    "columns": [
+     "res_id",
+     "partition_id",
+     "res_deleted_at",
+     "res_version",
+     "has_tags",
+     "res_published",
+     "res_updated",
+     "fhir_id",
+     "sp_has_links",
+     "hash_sha256",
+     "sp_index_status",
+     "res_language",
+     "sp_cmpstr_uniq_present",
+     "sp_cmptoks_present",
+     "sp_coords_present",
+     "sp_date_present",
+     "sp_number_present",
+     "sp_quantity_nrml_present",
+     "sp_quantity_present",
+     "sp_string_present",
+     "sp_token_present",
+     "sp_uri_present",
+     "partition_date",
+     "res_type",
+     "res_type_id",
+     "search_url_present",
+     "res_ver"
+    ],
+    "type_oids": [
+     20,
+     23,
+     1114,
+     1043,
+     16,
+     1114,
+     1114,
+     1043,
+     16,
+     1043,
+     21,
+     1043,
+     16,
+     16,
+     16,
+     16,
+     16,
+     16,
+     16,
+     16,
+     16,
+     16,
+     1082,
+     1043,
+     21,
+     16,
+     20
+    ]
+   },
+   "public.hfj_spidx_quantity": {
+    "relid": 16755,
+    "pk": [],
+    "identity": "d",
+    "columns": [
+     "sp_id",
+     "partition_id",
+     "partition_date",
+     "hash_identity",
+     "sp_missing",
+     "sp_name",
+     "res_id",
+     "res_type",
+     "sp_updated",
+     "hash_identity_and_units",
+     "hash_identity_sys_units",
+     "sp_system",
+     "sp_units",
+     "sp_value"
+    ],
+    "type_oids": [
+     20,
+     23,
+     1082,
+     20,
+     16,
+     1043,
+     20,
+     1043,
+     1114,
+     20,
+     20,
+     1043,
+     1043,
+     701
+    ]
+   },
+   "public.hfj_spidx_token": {
+    "relid": 16785,
+    "pk": [],
+    "identity": "d",
+    "columns": [
+     "sp_id",
+     "partition_id",
+     "partition_date",
+     "hash_identity",
+     "sp_missing",
+     "sp_name",
+     "res_id",
+     "res_type",
+     "sp_updated",
+     "hash_sys",
+     "hash_sys_and_value",
+     "hash_value",
+     "sp_system",
+     "sp_value"
+    ],
+    "type_oids": [
+     20,
+     23,
+     1082,
+     20,
+     16,
+     1043,
+     20,
+     1043,
+     1114,
+     20,
+     20,
+     20,
+     1043,
+     1043
+    ]
+   },
+   "public.hfj_tag_def": {
+    "relid": 16812,
+    "pk": [],
+    "identity": "d",
+    "columns": [
+     "tag_id",
+     "tag_code",
+     "tag_display",
+     "tag_system",
+     "tag_type",
+     "tag_user_selected",
+     "tag_version"
+    ],
+    "type_oids": [
+     20,
+     1043,
+     1043,
+     1043,
+     23,
+     16,
+     1043
+    ]
+   }
+  },
+  "changes": [
+   {
+    "seq": 1,
+    "op": "I",
+    "table": "public.hfj_resource",
+    "key": null,
+    "new": {
+     "fhir_id": {
+      "t": "ghost-cap"
+     },
+     "has_tags": {
+      "t": "f"
+     },
+     "hash_sha256": {
+      "t": "b628b335f3724f4a9c763518396aeaa80ec54db3f7e20be2e71b7b9c44978b4c"
+     },
+     "partition_date": {
+      "n": true
+     },
+     "partition_id": {
+      "n": true
+     },
+     "res_deleted_at": {
+      "n": true
+     },
+     "res_id": {
+      "t": "1002"
+     },
+     "res_language": {
+      "n": true
+     },
+     "res_published": {
+      "t": "2026-10-19 06:42:35.355"
+     },
+     "res_type": {
+      "t": "Patient"
+     },
+     "res_type_id": {
+      "t": "140"
+     },
+     "res_updated": {
+      "t": "2026-10-19 06:42:35.355"
+     },
+     "res_ver": {
+      "t": "1"
+     },
+     "res_version": {
+      "t": "R4"
+     },
+     "search_url_present": {
+      "t": "f"
+     },
+     "sp_cmpstr_uniq_present": {
+      "t": "f"
+     },
+     "sp_cmptoks_present": {
+      "t": "f"
+     },
+     "sp_coords_present": {
+      "t": "f"
+     },
+     "sp_date_present": {
+      "t": "f"
+     },
+     "sp_has_links": {
+      "t": "f"
+     },
+     "sp_index_status": {
+      "t": "0"
+     },
+     "sp_number_present": {
+      "t": "f"
+     },
+     "sp_quantity_nrml_present": {
+      "t": "f"
+     },
+     "sp_quantity_present": {
+      "t": "f"
+     },
+     "sp_string_present": {
+      "t": "f"
+     },
+     "sp_token_present": {
+      "t": "t"
+     },
+     "sp_uri_present": {
+      "t": "f"
+     }
+    }
+   },
+   {
+    "seq": 2,
+    "op": "I",
+    "table": "public.hfj_res_ver",
+    "key": null,
+    "new": {
+     "has_tags": {
+      "t": "f"
+     },
+     "partition_date": {
+      "n": true
+     },
+     "partition_id": {
+      "n": true
+     },
+     "pid": {
+      "t": "1004"
+     },
+     "request_id": {
+      "n": true
+     },
+     "res_deleted_at": {
+      "n": true
+     },
+     "res_encoding": {
+      "t": "JSON"
+     },
+     "res_id": {
+      "t": "1002"
+     },
+     "res_published": {
+      "t": "2026-10-19 06:42:35.355"
+     },
+     "res_text": {
+      "n": true
+     },
+     "res_text_vc": {
+      "k": {
+       "/extension/#len": "TE_h728HSC9i-2LB",
+       "/extension/0/url": "nSTiLGzmvuWa3YS6",
+       "/extension/0/valueBoolean": "jtXdjXqFiOyByYO9",
+       "/resourceType": "DkcZTSfAqU4XGYbg"
+      }
+     },
+     "res_type": {
+      "t": "Patient"
+     },
+     "res_type_id": {
+      "t": "140"
+     },
+     "res_updated": {
+      "t": "2026-10-19 06:42:35.355"
+     },
+     "res_ver": {
+      "t": "1"
+     },
+     "res_version": {
+      "t": "R4"
+     },
+     "source_uri": {
+      "n": true
+     }
+    }
+   },
+   {
+    "seq": 4,
+    "op": "I",
+    "table": "public.hfj_tag_def",
+    "key": null,
+    "new": {
+     "tag_code": {
+      "t": "y"
+     },
+     "tag_display": {
+      "n": true
+     },
+     "tag_id": {
+      "t": "3"
+     },
+     "tag_system": {
+      "t": "urn:t"
+     },
+     "tag_type": {
+      "t": "0"
+     },
+     "tag_user_selected": {
+      "n": true
+     },
+     "tag_version": {
+      "n": true
+     }
+    }
+   },
+   {
+    "seq": 5,
+    "op": "U",
+    "table": "public.hfj_res_ver",
+    "key": null,
+    "new": {
+     "has_tags": {
+      "t": "f"
+     },
+     "partition_date": {
+      "n": true
+     },
+     "partition_id": {
+      "n": true
+     },
+     "pid": {
+      "t": "1004"
+     },
+     "request_id": {
+      "t": "tok0000000000001"
+     },
+     "res_deleted_at": {
+      "n": true
+     },
+     "res_encoding": {
+      "t": "JSON"
+     },
+     "res_id": {
+      "t": "1002"
+     },
+     "res_published": {
+      "t": "2026-10-19 06:42:35.355"
+     },
+     "res_text": {
+      "n": true
+     },
+     "res_text_vc": {
+      "k": {
+       "/extension/#len": "TE_h728HSC9i-2LB",
+       "/extension/0/url": "nSTiLGzmvuWa3YS6",
+       "/extension/0/valueBoolean": "jtXdjXqFiOyByYO9",
+       "/resourceType": "DkcZTSfAqU4XGYbg"
+      }
+     },
+     "res_type": {
+      "t": "Patient"
+     },
+     "res_type_id": {
+      "t": "140"
+     },
+     "res_updated": {
+      "t": "2026-10-19 06:42:35.355"
+     },
+     "res_ver": {
+      "t": "1"
+     },
+     "res_version": {
+      "t": "R4"
+     },
+     "source_uri": {
+      "n": true
+     }
+    }
+   },
+   {
+    "seq": 6,
+    "op": "I",
+    "table": "public.hfj_tag_def",
+    "key": null,
+    "new": {
+     "tag_code": {
+      "t": "http://example.org/p2"
+     },
+     "tag_display": {
+      "n": true
+     },
+     "tag_id": {
+      "t": "4"
+     },
+     "tag_system": {
+      "t": "https://github.com/hapifhir/hapi-fhir/ns/jpa/profile"
+     },
+     "tag_type": {
+      "t": "1"
+     },
+     "tag_user_selected": {
+      "n": true
+     },
+     "tag_version": {
+      "n": true
+     }
+    }
+   },
+   {
+    "seq": 7,
+    "op": "I",
+    "table": "public.hfj_resource",
+    "key": null,
+    "new": {
+     "fhir_id": {
+      "t": "1003"
+     },
+     "has_tags": {
+      "t": "t"
+     },
+     "hash_sha256": {
+      "t": "6842d46c88a797ec3ae6104e0486a89574c8ec950e53c1fa42f34ac45634b568"
+     },
+     "partition_date": {
+      "n": true
+     },
+     "partition_id": {
+      "n": true
+     },
+     "res_deleted_at": {
+      "n": true
+     },
+     "res_id": {
+      "t": "1003"
+     },
+     "res_language": {
+      "n": true
+     },
+     "res_published": {
+      "t": "2026-10-19 06:42:35.355"
+     },
+     "res_type": {
+      "t": "Observation"
+     },
+     "res_type_id": {
+      "t": "130"
+     },
+     "res_updated": {
+      "t": "2026-10-19 06:42:35.355"
+     },
+     "res_ver": {
+      "t": "1"
+     },
+     "res_version": {
+      "t": "R4"
+     },
+     "search_url_present": {
+      "t": "f"
+     },
+     "sp_cmpstr_uniq_present": {
+      "t": "f"
+     },
+     "sp_cmptoks_present": {
+      "t": "f"
+     },
+     "sp_coords_present": {
+      "t": "f"
+     },
+     "sp_date_present": {
+      "t": "f"
+     },
+     "sp_has_links": {
+      "t": "t"
+     },
+     "sp_index_status": {
+      "t": "0"
+     },
+     "sp_number_present": {
+      "t": "f"
+     },
+     "sp_quantity_nrml_present": {
+      "t": "f"
+     },
+     "sp_quantity_present": {
+      "t": "t"
+     },
+     "sp_string_present": {
+      "t": "f"
+     },
+     "sp_token_present": {
+      "t": "t"
+     },
+     "sp_uri_present": {
+      "t": "f"
+     }
+    }
+   },
+   {
+    "seq": 10,
+    "op": "I",
+    "table": "public.hfj_res_ver",
+    "key": null,
+    "new": {
+     "has_tags": {
+      "t": "t"
+     },
+     "partition_date": {
+      "n": true
+     },
+     "partition_id": {
+      "n": true
+     },
+     "pid": {
+      "t": "1005"
+     },
+     "request_id": {
+      "n": true
+     },
+     "res_deleted_at": {
+      "n": true
+     },
+     "res_encoding": {
+      "t": "JSON"
+     },
+     "res_id": {
+      "t": "1003"
+     },
+     "res_published": {
+      "t": "2026-10-19 06:42:35.355"
+     },
+     "res_text": {
+      "n": true
+     },
+     "res_text_vc": {
+      "k": {
+       "/code/coding/#len": "zLMPsKleCMEDbqAE",
+       "/code/coding/0/code": "6Vnms3Fv2zO0k-CE",
+       "/code/coding/0/system": "JaC5LVdiUVRzGKPr",
+       "/resourceType": "01R0GE8tIHIRP3oZ",
+       "/status": "wDJCv3ojstMnlat7",
+       "/subject/reference": "i76-RXkOS-2CUlhS",
+       "/valueQuantity/unit": "4ayUHelCR6gFT4hK",
+       "/valueQuantity/value": "r8saG7bI6TgffOPL"
+      }
+     },
+     "res_type": {
+      "t": "Observation"
+     },
+     "res_type_id": {
+      "t": "130"
+     },
+     "res_updated": {
+      "t": "2026-10-19 06:42:35.355"
+     },
+     "res_ver": {
+      "t": "1"
+     },
+     "res_version": {
+      "t": "R4"
+     },
+     "source_uri": {
+      "n": true
+     }
+    }
+   },
+   {
+    "seq": 11,
+    "op": "I",
+    "table": "public.hfj_history_tag",
+    "key": null,
+    "new": {
+     "partition_date": {
+      "n": true
+     },
+     "partition_id": {
+      "n": true
+     },
+     "pid": {
+      "t": "1003"
+     },
+     "res_id": {
+      "t": "1003"
+     },
+     "res_type": {
+      "t": "Observation"
+     },
+     "res_type_id": {
+      "t": "130"
+     },
+     "res_ver_pid": {
+      "t": "1005"
+     },
+     "tag_id": {
+      "t": "4"
+     }
+    }
+   },
+   {
+    "seq": 12,
+    "op": "I",
+    "table": "public.hfj_history_tag",
+    "key": null,
+    "new": {
+     "partition_date": {
+      "n": true
+     },
+     "partition_id": {
+      "n": true
+     },
+     "pid": {
+      "t": "1004"
+     },
+     "res_id": {
+      "t": "1003"
+     },
+     "res_type": {
+      "t": "Observation"
+     },
+     "res_type_id": {
+      "t": "130"
+     },
+     "res_ver_pid": {
+      "t": "1005"
+     },
+     "tag_id": {
+      "t": "3"
+     }
+    }
+   },
+   {
+    "seq": 20,
+    "op": "U",
+    "table": "public.hfj_res_ver",
+    "key": null,
+    "new": {
+     "has_tags": {
+      "t": "t"
+     },
+     "partition_date": {
+      "n": true
+     },
+     "partition_id": {
+      "n": true
+     },
+     "pid": {
+      "t": "1005"
+     },
+     "request_id": {
+      "t": "tok0000000000001"
+     },
+     "res_deleted_at": {
+      "n": true
+     },
+     "res_encoding": {
+      "t": "JSON"
+     },
+     "res_id": {
+      "t": "1003"
+     },
+     "res_published": {
+      "t": "2026-10-19 06:42:35.355"
+     },
+     "res_text": {
+      "n": true
+     },
+     "res_text_vc": {
+      "k": {
+       "/code/coding/#len": "zLMPsKleCMEDbqAE",
+       "/code/coding/0/code": "6Vnms3Fv2zO0k-CE",
+       "/code/coding/0/system": "JaC5LVdiUVRzGKPr",
+       "/resourceType": "01R0GE8tIHIRP3oZ",
+       "/status": "wDJCv3ojstMnlat7",
+       "/subject/reference": "i76-RXkOS-2CUlhS",
+       "/valueQuantity/unit": "4ayUHelCR6gFT4hK",
+       "/valueQuantity/value": "r8saG7bI6TgffOPL"
+      }
+     },
+     "res_type": {
+      "t": "Observation"
+     },
+     "res_type_id": {
+      "t": "130"
+     },
+     "res_updated": {
+      "t": "2026-10-19 06:42:35.355"
+     },
+     "res_ver": {
+      "t": "1"
+     },
+     "res_version": {
+      "t": "R4"
+     },
+     "source_uri": {
+      "n": true
+     }
+    }
+   }
+  ],
+  "flags": [
+   "old_image_missing:public.hfj_res_ver"
+  ],
+  "total": 20
+ },
+ {
+  "tables": {
+   "public.hfj_history_tag": {
+    "relid": 16522,
+    "pk": [],
+    "identity": "d",
+    "columns": [
+     "pid",
+     "partition_id",
+     "partition_date",
+     "tag_id",
+     "res_ver_pid",
+     "res_id",
+     "res_type",
+     "res_type_id"
+    ],
+    "type_oids": [
+     20,
+     23,
+     1082,
+     20,
+     20,
+     20,
+     1043,
+     21
+    ]
+   },
+   "public.hfj_res_link": {
+    "relid": 16566,
+    "pk": [],
+    "identity": "d",
+    "columns": [
+     "pid",
+     "partition_id",
+     "partition_date",
+     "src_path",
+     "src_resource_id",
+     "source_resource_type",
+     "src_res_type_id",
+     "target_res_partition_date",
+     "target_res_partition_id",
+     "target_resource_id",
+     "target_resource_type",
+     "target_res_type_id",
+     "target_resource_url",
+     "target_resource_version",
+     "sp_updated"
+    ],
+    "type_oids": [
+     20,
+     23,
+     1082,
+     1043,
+     20,
+     1043,
+     21,
+     1082,
+     23,
+     20,
+     1043,
+     21,
+     1043,
+     20,
+     1114
+    ]
+   },
+   "public.hfj_res_tag": {
+    "relid": 16614,
+    "pk": [],
+    "identity": "d",
+    "columns": [
+     "pid",
+     "partition_id",
+     "partition_date",
+     "tag_id",
+     "res_id",
+     "res_type",
+     "res_type_id"
+    ],
+    "type_oids": [
+     20,
+     23,
+     1082,
+     20,
+     20,
+     1043,
+     21
+    ]
+   },
+   "public.hfj_res_ver": {
+    "relid": 16621,
+    "pk": [],
+    "identity": "d",
+    "columns": [
+     "partition_id",
+     "pid",
+     "res_deleted_at",
+     "res_version",
+     "has_tags",
+     "res_published",
+     "res_updated",
+     "res_encoding",
+     "partition_date",
+     "request_id",
+     "res_text",
+     "res_id",
+     "res_text_vc",
+     "res_type",
+     "res_type_id",
+     "res_ver",
+     "source_uri"
+    ],
+    "type_oids": [
+     23,
+     20,
+     1114,
+     1043,
+     16,
+     1114,
+     1114,
+     1043,
+     1082,
+     1043,
+     26,
+     20,
+     25,
+     1043,
+     21,
+     20,
+     1043
+    ]
+   },
+   "public.hfj_resource": {
+    "relid": 16645,
+    "pk": [],
+    "identity": "d",
+    "columns": [
+     "res_id",
+     "partition_id",
+     "res_deleted_at",
+     "res_version",
+     "has_tags",
+     "res_published",
+     "res_updated",
+     "fhir_id",
+     "sp_has_links",
+     "hash_sha256",
+     "sp_index_status",
+     "res_language",
+     "sp_cmpstr_uniq_present",
+     "sp_cmptoks_present",
+     "sp_coords_present",
+     "sp_date_present",
+     "sp_number_present",
+     "sp_quantity_nrml_present",
+     "sp_quantity_present",
+     "sp_string_present",
+     "sp_token_present",
+     "sp_uri_present",
+     "partition_date",
+     "res_type",
+     "res_type_id",
+     "search_url_present",
+     "res_ver"
+    ],
+    "type_oids": [
+     20,
+     23,
+     1114,
+     1043,
+     16,
+     1114,
+     1114,
+     1043,
+     16,
+     1043,
+     21,
+     1043,
+     16,
+     16,
+     16,
+     16,
+     16,
+     16,
+     16,
+     16,
+     16,
+     16,
+     1082,
+     1043,
+     21,
+     16,
+     20
+    ]
+   },
+   "public.hfj_spidx_quantity": {
+    "relid": 16755,
+    "pk": [],
+    "identity": "d",
+    "columns": [
+     "sp_id",
+     "partition_id",
+     "partition_date",
+     "hash_identity",
+     "sp_missing",
+     "sp_name",
+     "res_id",
+     "res_type",
+     "sp_updated",
+     "hash_identity_and_units",
+     "hash_identity_sys_units",
+     "sp_system",
+     "sp_units",
+     "sp_value"
+    ],
+    "type_oids": [
+     20,
+     23,
+     1082,
+     20,
+     16,
+     1043,
+     20,
+     1043,
+     1114,
+     20,
+     20,
+     1043,
+     1043,
+     701
+    ]
+   },
+   "public.hfj_spidx_token": {
+    "relid": 16785,
+    "pk": [],
+    "identity": "d",
+    "columns": [
+     "sp_id",
+     "partition_id",
+     "partition_date",
+     "hash_identity",
+     "sp_missing",
+     "sp_name",
+     "res_id",
+     "res_type",
+     "sp_updated",
+     "hash_sys",
+     "hash_sys_and_value",
+     "hash_value",
+     "sp_system",
+     "sp_value"
+    ],
+    "type_oids": [
+     20,
+     23,
+     1082,
+     20,
+     16,
+     1043,
+     20,
+     1043,
+     1114,
+     20,
+     20,
+     20,
+     1043,
+     1043
+    ]
+   }
+  },
+  "changes": [
+   {
+    "seq": 1,
+    "op": "I",
+    "table": "public.hfj_resource",
+    "key": null,
+    "new": {
+     "fhir_id": {
+      "t": "1004"
+     },
+     "has_tags": {
+      "t": "t"
+     },
+     "hash_sha256": {
+      "t": "f65313a9204ad1d7d7bb63a68769bbeb6a5ed39754d0419f30f2572f2a974e10"
+     },
+     "partition_date": {
+      "n": true
+     },
+     "partition_id": {
+      "n": true
+     },
+     "res_deleted_at": {
+      "n": true
+     },
+     "res_id": {
+      "t": "1004"
+     },
+     "res_language": {
+      "n": true
+     },
+     "res_published": {
+      "t": "2026-10-19 06:42:35.477"
+     },
+     "res_type": {
+      "t": "Observation"
+     },
+     "res_type_id": {
+      "t": "130"
+     },
+     "res_updated": {
+      "t": "2026-10-19 06:42:35.477"
+     },
+     "res_ver": {
+      "t": "1"
+     },
+     "res_version": {
+      "t": "R4"
+     },
+     "search_url_present": {
+      "t": "f"
+     },
+     "sp_cmpstr_uniq_present": {
+      "t": "f"
+     },
+     "sp_cmptoks_present": {
+      "t": "f"
+     },
+     "sp_coords_present": {
+      "t": "f"
+     },
+     "sp_date_present": {
+      "t": "f"
+     },
+     "sp_has_links": {
+      "t": "t"
+     },
+     "sp_index_status": {
+      "t": "0"
+     },
+     "sp_number_present": {
+      "t": "f"
+     },
+     "sp_quantity_nrml_present": {
+      "t": "f"
+     },
+     "sp_quantity_present": {
+      "t": "t"
+     },
+     "sp_string_present": {
+      "t": "f"
+     },
+     "sp_token_present": {
+      "t": "t"
+     },
+     "sp_uri_present": {
+      "t": "f"
+     }
+    }
+   },
+   {
+    "seq": 3,
+    "op": "I",
+    "table": "public.hfj_res_ver",
+    "key": null,
+    "new": {
+     "has_tags": {
+      "t": "t"
+     },
+     "partition_date": {
+      "n": true
+     },
+     "partition_id": {
+      "n": true
+     },
+     "pid": {
+      "t": "1006"
+     },
+     "request_id": {
+      "n": true
+     },
+     "res_deleted_at": {
+      "n": true
+     },
+     "res_encoding": {
+      "t": "JSON"
+     },
+     "res_id": {
+      "t": "1004"
+     },
+     "res_published": {
+      "t": "2026-10-19 06:42:35.477"
+     },
+     "res_text": {
+      "n": true
+     },
+     "res_text_vc": {
+      "k": {
+       "/code/coding/#len": "zLMPsKleCMEDbqAE",
+       "/code/coding/0/code": "6Vnms3Fv2zO0k-CE",
+       "/code/coding/0/system": "JaC5LVdiUVRzGKPr",
+       "/resourceType": "01R0GE8tIHIRP3oZ",
+       "/status": "wEe-FeOyFY3EMoT1",
+       "/subject/reference": "i76-RXkOS-2CUlhS",
+       "/valueQuantity/value": "TemrlReLI4-uQwWg"
+      }
+     },
+     "res_type": {
+      "t": "Observation"
+     },
+     "res_type_id": {
+      "t": "130"
+     },
+     "res_updated": {
+      "t": "2026-10-19 06:42:35.477"
+     },
+     "res_ver": {
+      "t": "1"
+     },
+     "res_version": {
+      "t": "R4"
+     },
+     "source_uri": {
+      "n": true
+     }
+    }
+   },
+   {
+    "seq": 4,
+    "op": "I",
+    "table": "public.hfj_history_tag",
+    "key": null,
+    "new": {
+     "partition_date": {
+      "n": true
+     },
+     "partition_id": {
+      "n": true
+     },
+     "pid": {
+      "t": "1005"
+     },
+     "res_id": {
+      "t": "1004"
+     },
+     "res_type": {
+      "t": "Observation"
+     },
+     "res_type_id": {
+      "t": "130"
+     },
+     "res_ver_pid": {
+      "t": "1006"
+     },
+     "tag_id": {
+      "t": "3"
+     }
+    }
+   },
+   {
+    "seq": 12,
+    "op": "U",
+    "table": "public.hfj_res_ver",
+    "key": null,
+    "new": {
+     "has_tags": {
+      "t": "t"
+     },
+     "partition_date": {
+      "n": true
+     },
+     "partition_id": {
+      "n": true
+     },
+     "pid": {
+      "t": "1006"
+     },
+     "request_id": {
+      "t": "tok0000000000002"
+     },
+     "res_deleted_at": {
+      "n": true
+     },
+     "res_encoding": {
+      "t": "JSON"
+     },
+     "res_id": {
+      "t": "1004"
+     },
+     "res_published": {
+      "t": "2026-10-19 06:42:35.477"
+     },
+     "res_text": {
+      "n": true
+     },
+     "res_text_vc": {
+      "k": {
+       "/code/coding/#len": "zLMPsKleCMEDbqAE",
+       "/code/coding/0/code": "6Vnms3Fv2zO0k-CE",
+       "/code/coding/0/system": "JaC5LVdiUVRzGKPr",
+       "/resourceType": "01R0GE8tIHIRP3oZ",
+       "/status": "wEe-FeOyFY3EMoT1",
+       "/subject/reference": "i76-RXkOS-2CUlhS",
+       "/valueQuantity/value": "TemrlReLI4-uQwWg"
+      }
+     },
+     "res_type": {
+      "t": "Observation"
+     },
+     "res_type_id": {
+      "t": "130"
+     },
+     "res_updated": {
+      "t": "2026-10-19 06:42:35.477"
+     },
+     "res_ver": {
+      "t": "1"
+     },
+     "res_version": {
+      "t": "R4"
+     },
+     "source_uri": {
+      "n": true
+     }
+    }
+   }
+  ],
+  "flags": [
+   "old_image_missing:public.hfj_res_ver"
+  ],
+  "total": 12
+ },
+ {
+  "tables": {
+   "public.hfj_history_tag": {
+    "relid": 16522,
+    "pk": [],
+    "identity": "d",
+    "columns": [
+     "pid",
+     "partition_id",
+     "partition_date",
+     "tag_id",
+     "res_ver_pid",
+     "res_id",
+     "res_type",
+     "res_type_id"
+    ],
+    "type_oids": [
+     20,
+     23,
+     1082,
+     20,
+     20,
+     20,
+     1043,
+     21
+    ]
+   },
+   "public.hfj_res_ver": {
+    "relid": 16621,
+    "pk": [],
+    "identity": "d",
+    "columns": [
+     "partition_id",
+     "pid",
+     "res_deleted_at",
+     "res_version",
+     "has_tags",
+     "res_published",
+     "res_updated",
+     "res_encoding",
+     "partition_date",
+     "request_id",
+     "res_text",
+     "res_id",
+     "res_text_vc",
+     "res_type",
+     "res_type_id",
+     "res_ver",
+     "source_uri"
+    ],
+    "type_oids": [
+     23,
+     20,
+     1114,
+     1043,
+     16,
+     1114,
+     1114,
+     1043,
+     1082,
+     1043,
+     26,
+     20,
+     25,
+     1043,
+     21,
+     20,
+     1043
+    ]
+   },
+   "public.hfj_resource": {
+    "relid": 16645,
+    "pk": [],
+    "identity": "d",
+    "columns": [
+     "res_id",
+     "partition_id",
+     "res_deleted_at",
+     "res_version",
+     "has_tags",
+     "res_published",
+     "res_updated",
+     "fhir_id",
+     "sp_has_links",
+     "hash_sha256",
+     "sp_index_status",
+     "res_language",
+     "sp_cmpstr_uniq_present",
+     "sp_cmptoks_present",
+     "sp_coords_present",
+     "sp_date_present",
+     "sp_number_present",
+     "sp_quantity_nrml_present",
+     "sp_quantity_present",
+     "sp_string_present",
+     "sp_token_present",
+     "sp_uri_present",
+     "partition_date",
+     "res_type",
+     "res_type_id",
+     "search_url_present",
+     "res_ver"
+    ],
+    "type_oids": [
+     20,
+     23,
+     1114,
+     1043,
+     16,
+     1114,
+     1114,
+     1043,
+     16,
+     1043,
+     21,
+     1043,
+     16,
+     16,
+     16,
+     16,
+     16,
+     16,
+     16,
+     16,
+     16,
+     16,
+     1082,
+     1043,
+     21,
+     16,
+     20
+    ]
+   },
+   "public.hfj_spidx_quantity": {
+    "relid": 16755,
+    "pk": [],
+    "identity": "d",
+    "columns": [
+     "sp_id",
+     "partition_id",
+     "partition_date",
+     "hash_identity",
+     "sp_missing",
+     "sp_name",
+     "res_id",
+     "res_type",
+     "sp_updated",
+     "hash_identity_and_units",
+     "hash_identity_sys_units",
+     "sp_system",
+     "sp_units",
+     "sp_value"
+    ],
+    "type_oids": [
+     20,
+     23,
+     1082,
+     20,
+     16,
+     1043,
+     20,
+     1043,
+     1114,
+     20,
+     20,
+     1043,
+     1043,
+     701
+    ]
+   },
+   "public.hfj_spidx_token": {
+    "relid": 16785,
+    "pk": [],
+    "identity": "d",
+    "columns": [
+     "sp_id",
+     "partition_id",
+     "partition_date",
+     "hash_identity",
+     "sp_missing",
+     "sp_name",
+     "res_id",
+     "res_type",
+     "sp_updated",
+     "hash_sys",
+     "hash_sys_and_value",
+     "hash_value",
+     "sp_system",
+     "sp_value"
+    ],
+    "type_oids": [
+     20,
+     23,
+     1082,
+     20,
+     16,
+     1043,
+     20,
+     1043,
+     1114,
+     20,
+     20,
+     20,
+     1043,
+     1043
+    ]
+   }
+  },
+  "changes": [
+   {
+    "seq": 1,
+    "op": "I",
+    "table": "public.hfj_res_ver",
+    "key": null,
+    "new": {
+     "has_tags": {
+      "t": "t"
+     },
+     "partition_date": {
+      "n": true
+     },
+     "partition_id": {
+      "n": true
+     },
+     "pid": {
+      "t": "1007"
+     },
+     "request_id": {
+      "n": true
+     },
+     "res_deleted_at": {
+      "n": true
+     },
+     "res_encoding": {
+      "t": "JSON"
+     },
+     "res_id": {
+      "t": "1004"
+     },
+     "res_published": {
+      "t": "2026-10-19 06:42:35.477"
+     },
+     "res_text": {
+      "n": true
+     },
+     "res_text_vc": {
+      "k": {
+       "/code/coding/#len": "zLMPsKleCMEDbqAE",
+       "/code/coding/0/code": "6Vnms3Fv2zO0k-CE",
+       "/code/coding/0/system": "JaC5LVdiUVRzGKPr",
+       "/resourceType": "01R0GE8tIHIRP3oZ",
+       "/status": "wDJCv3ojstMnlat7",
+       "/subject/reference": "i76-RXkOS-2CUlhS",
+       "/valueQuantity/value": "Sn0mZaShhm80UHK6"
+      }
+     },
+     "res_type": {
+      "t": "Observation"
+     },
+     "res_type_id": {
+      "t": "130"
+     },
+     "res_updated": {
+      "t": "2026-10-19 06:42:35.574"
+     },
+     "res_ver": {
+      "t": "2"
+     },
+     "res_version": {
+      "t": "R4"
+     },
+     "source_uri": {
+      "n": true
+     }
+    }
+   },
+   {
+    "seq": 2,
+    "op": "I",
+    "table": "public.hfj_history_tag",
+    "key": null,
+    "new": {
+     "partition_date": {
+      "n": true
+     },
+     "partition_id": {
+      "n": true
+     },
+     "pid": {
+      "t": "1006"
+     },
+     "res_id": {
+      "t": "1004"
+     },
+     "res_type": {
+      "t": "Observation"
+     },
+     "res_type_id": {
+      "t": "130"
+     },
+     "res_ver_pid": {
+      "t": "1007"
+     },
+     "tag_id": {
+      "t": "3"
+     }
+    }
+   },
+   {
+    "seq": 3,
+    "op": "U",
+    "table": "public.hfj_res_ver",
+    "key": null,
+    "new": {
+     "has_tags": {
+      "t": "t"
+     },
+     "partition_date": {
+      "n": true
+     },
+     "partition_id": {
+      "n": true
+     },
+     "pid": {
+      "t": "1007"
+     },
+     "request_id": {
+      "t": "tok0000000000003"
+     },
+     "res_deleted_at": {
+      "n": true
+     },
+     "res_encoding": {
+      "t": "JSON"
+     },
+     "res_id": {
+      "t": "1004"
+     },
+     "res_published": {
+      "t": "2026-10-19 06:42:35.477"
+     },
+     "res_text": {
+      "n": true
+     },
+     "res_text_vc": {
+      "k": {
+       "/code/coding/#len": "zLMPsKleCMEDbqAE",
+       "/code/coding/0/code": "6Vnms3Fv2zO0k-CE",
+       "/code/coding/0/system": "JaC5LVdiUVRzGKPr",
+       "/resourceType": "01R0GE8tIHIRP3oZ",
+       "/status": "wDJCv3ojstMnlat7",
+       "/subject/reference": "i76-RXkOS-2CUlhS",
+       "/valueQuantity/value": "Sn0mZaShhm80UHK6"
+      }
+     },
+     "res_type": {
+      "t": "Observation"
+     },
+     "res_type_id": {
+      "t": "130"
+     },
+     "res_updated": {
+      "t": "2026-10-19 06:42:35.574"
+     },
+     "res_ver": {
+      "t": "2"
+     },
+     "res_version": {
+      "t": "R4"
+     },
+     "source_uri": {
+      "n": true
+     }
+    }
+   },
+   {
+    "seq": 7,
+    "op": "U",
+    "table": "public.hfj_resource",
+    "key": null,
+    "new": {
+     "fhir_id": {
+      "t": "1004"
+     },
+     "has_tags": {
+      "t": "t"
+     },
+     "hash_sha256": {
+      "t": "0f8817a02b1d88deb610fe5ec961d972ae39f492fe481888f3a1f5d9b0978d3b"
+     },
+     "partition_date": {
+      "n": true
+     },
+     "partition_id": {
+      "n": true
+     },
+     "res_deleted_at": {
+      "n": true
+     },
+     "res_id": {
+      "t": "1004"
+     },
+     "res_language": {
+      "n": true
+     },
+     "res_published": {
+      "t": "2026-10-19 06:42:35.477"
+     },
+     "res_type": {
+      "t": "Observation"
+     },
+     "res_type_id": {
+      "t": "130"
+     },
+     "res_updated": {
+      "t": "2026-10-19 06:42:35.574"
+     },
+     "res_ver": {
+      "t": "2"
+     },
+     "res_version": {
+      "t": "R4"
+     },
+     "search_url_present": {
+      "t": "f"
+     },
+     "sp_cmpstr_uniq_present": {
+      "t": "f"
+     },
+     "sp_cmptoks_present": {
+      "t": "f"
+     },
+     "sp_coords_present": {
+      "t": "f"
+     },
+     "sp_date_present": {
+      "t": "f"
+     },
+     "sp_has_links": {
+      "t": "t"
+     },
+     "sp_index_status": {
+      "t": "0"
+     },
+     "sp_number_present": {
+      "t": "f"
+     },
+     "sp_quantity_nrml_present": {
+      "t": "f"
+     },
+     "sp_quantity_present": {
+      "t": "t"
+     },
+     "sp_string_present": {
+      "t": "f"
+     },
+     "sp_token_present": {
+      "t": "t"
+     },
+     "sp_uri_present": {
+      "t": "f"
+     }
+    }
+   }
+  ],
+  "flags": [
+   "old_image_missing:public.hfj_res_ver",
+   "old_image_missing:public.hfj_spidx_quantity",
+   "old_image_missing:public.hfj_spidx_token",
+   "old_image_missing:public.hfj_resource"
+  ],
+  "total": 7
+ },
+ {
+  "tables": {
+   "public.hfj_history_tag": {
+    "relid": 16522,
+    "pk": [],
+    "identity": "d",
+    "columns": [
+     "pid",
+     "partition_id",
+     "partition_date",
+     "tag_id",
+     "res_ver_pid",
+     "res_id",
+     "res_type",
+     "res_type_id"
+    ],
+    "type_oids": [
+     20,
+     23,
+     1082,
+     20,
+     20,
+     20,
+     1043,
+     21
+    ]
+   },
+   "public.hfj_res_ver": {
+    "relid": 16621,
+    "pk": [],
+    "identity": "d",
+    "columns": [
+     "partition_id",
+     "pid",
+     "res_deleted_at",
+     "res_version",
+     "has_tags",
+     "res_published",
+     "res_updated",
+     "res_encoding",
+     "partition_date",
+     "request_id",
+     "res_text",
+     "res_id",
+     "res_text_vc",
+     "res_type",
+     "res_type_id",
+     "res_ver",
+     "source_uri"
+    ],
+    "type_oids": [
+     23,
+     20,
+     1114,
+     1043,
+     16,
+     1114,
+     1114,
+     1043,
+     1082,
+     1043,
+     26,
+     20,
+     25,
+     1043,
+     21,
+     20,
+     1043
+    ]
+   },
+   "public.hfj_resource": {
+    "relid": 16645,
+    "pk": [],
+    "identity": "d",
+    "columns": [
+     "res_id",
+     "partition_id",
+     "res_deleted_at",
+     "res_version",
+     "has_tags",
+     "res_published",
+     "res_updated",
+     "fhir_id",
+     "sp_has_links",
+     "hash_sha256",
+     "sp_index_status",
+     "res_language",
+     "sp_cmpstr_uniq_present",
+     "sp_cmptoks_present",
+     "sp_coords_present",
+     "sp_date_present",
+     "sp_number_present",
+     "sp_quantity_nrml_present",
+     "sp_quantity_present",
+     "sp_string_present",
+     "sp_token_present",
+     "sp_uri_present",
+     "partition_date",
+     "res_type",
+     "res_type_id",
+     "search_url_present",
+     "res_ver"
+    ],
+    "type_oids": [
+     20,
+     23,
+     1114,
+     1043,
+     16,
+     1114,
+     1114,
+     1043,
+     16,
+     1043,
+     21,
+     1043,
+     16,
+     16,
+     16,
+     16,
+     16,
+     16,
+     16,
+     16,
+     16,
+     16,
+     1082,
+     1043,
+     21,
+     16,
+     20
+    ]
+   },
+   "public.hfj_spidx_quantity": {
+    "relid": 16755,
+    "pk": [],
+    "identity": "d",
+    "columns": [
+     "sp_id",
+     "partition_id",
+     "partition_date",
+     "hash_identity",
+     "sp_missing",
+     "sp_name",
+     "res_id",
+     "res_type",
+     "sp_updated",
+     "hash_identity_and_units",
+     "hash_identity_sys_units",
+     "sp_system",
+     "sp_units",
+     "sp_value"
+    ],
+    "type_oids": [
+     20,
+     23,
+     1082,
+     20,
+     16,
+     1043,
+     20,
+     1043,
+     1114,
+     20,
+     20,
+     1043,
+     1043,
+     701
+    ]
+   },
+   "public.hfj_spidx_token": {
+    "relid": 16785,
+    "pk": [],
+    "identity": "d",
+    "columns": [
+     "sp_id",
+     "partition_id",
+     "partition_date",
+     "hash_identity",
+     "sp_missing",
+     "sp_name",
+     "res_id",
+     "res_type",
+     "sp_updated",
+     "hash_sys",
+     "hash_sys_and_value",
+     "hash_value",
+     "sp_system",
+     "sp_value"
+    ],
+    "type_oids": [
+     20,
+     23,
+     1082,
+     20,
+     16,
+     1043,
+     20,
+     1043,
+     1114,
+     20,
+     20,
+     20,
+     1043,
+     1043
+    ]
+   }
+  },
+  "changes": [
+   {
+    "seq": 1,
+    "op": "I",
+    "table": "public.hfj_res_ver",
+    "key": null,
+    "new": {
+     "has_tags": {
+      "t": "t"
+     },
+     "partition_date": {
+      "n": true
+     },
+     "partition_id": {
+      "n": true
+     },
+     "pid": {
+      "t": "1008"
+     },
+     "request_id": {
+      "n": true
+     },
+     "res_deleted_at": {
+      "n": true
+     },
+     "res_encoding": {
+      "t": "JSON"
+     },
+     "res_id": {
+      "t": "1004"
+     },
+     "res_published": {
+      "t": "2026-10-19 06:42:35.477"
+     },
+     "res_text": {
+      "n": true
+     },
+     "res_text_vc": {
+      "k": {
+       "/code/coding/#len": "zLMPsKleCMEDbqAE",
+       "/code/coding/0/code": "6Vnms3Fv2zO0k-CE",
+       "/code/coding/0/system": "JaC5LVdiUVRzGKPr",
+       "/resourceType": "01R0GE8tIHIRP3oZ",
+       "/status": "3Yk6qjErdgQCmEtR",
+       "/subject/reference": "i76-RXkOS-2CUlhS",
+       "/valueQuantity/value": "kf2_63vyzDfmUJOs"
+      }
+     },
+     "res_type": {
+      "t": "Observation"
+     },
+     "res_type_id": {
+      "t": "130"
+     },
+     "res_updated": {
+      "t": "2026-10-19 06:42:35.603"
+     },
+     "res_ver": {
+      "t": "3"
+     },
+     "res_version": {
+      "t": "R4"
+     },
+     "source_uri": {
+      "n": true
+     }
+    }
+   },
+   {
+    "seq": 2,
+    "op": "I",
+    "table": "public.hfj_history_tag",
+    "key": null,
+    "new": {
+     "partition_date": {
+      "n": true
+     },
+     "partition_id": {
+      "n": true
+     },
+     "pid": {
+      "t": "1007"
+     },
+     "res_id": {
+      "t": "1004"
+     },
+     "res_type": {
+      "t": "Observation"
+     },
+     "res_type_id": {
+      "t": "130"
+     },
+     "res_ver_pid": {
+      "t": "1008"
+     },
+     "tag_id": {
+      "t": "3"
+     }
+    }
+   },
+   {
+    "seq": 3,
+    "op": "U",
+    "table": "public.hfj_res_ver",
+    "key": null,
+    "new": {
+     "has_tags": {
+      "t": "t"
+     },
+     "partition_date": {
+      "n": true
+     },
+     "partition_id": {
+      "n": true
+     },
+     "pid": {
+      "t": "1008"
+     },
+     "request_id": {
+      "t": "jRXidMesex5l4UxS"
+     },
+     "res_deleted_at": {
+      "n": true
+     },
+     "res_encoding": {
+      "t": "JSON"
+     },
+     "res_id": {
+      "t": "1004"
+     },
+     "res_published": {
+      "t": "2026-10-19 06:42:35.477"
+     },
+     "res_text": {
+      "n": true
+     },
+     "res_text_vc": {
+      "k": {
+       "/code/coding/#len": "zLMPsKleCMEDbqAE",
+       "/code/coding/0/code": "6Vnms3Fv2zO0k-CE",
+       "/code/coding/0/system": "JaC5LVdiUVRzGKPr",
+       "/resourceType": "01R0GE8tIHIRP3oZ",
+       "/status": "3Yk6qjErdgQCmEtR",
+       "/subject/reference": "i76-RXkOS-2CUlhS",
+       "/valueQuantity/value": "kf2_63vyzDfmUJOs"
+      }
+     },
+     "res_type": {
+      "t": "Observation"
+     },
+     "res_type_id": {
+      "t": "130"
+     },
+     "res_updated": {
+      "t": "2026-10-19 06:42:35.603"
+     },
+     "res_ver": {
+      "t": "3"
+     },
+     "res_version": {
+      "t": "R4"
+     },
+     "source_uri": {
+      "n": true
+     }
+    }
+   },
+   {
+    "seq": 7,
+    "op": "U",
+    "table": "public.hfj_resource",
+    "key": null,
+    "new": {
+     "fhir_id": {
+      "t": "1004"
+     },
+     "has_tags": {
+      "t": "t"
+     },
+     "hash_sha256": {
+      "t": "af610afcec4ad74f527b3f2b6063de962bbde25c2633dc9f95da677729b3fdda"
+     },
+     "partition_date": {
+      "n": true
+     },
+     "partition_id": {
+      "n": true
+     },
+     "res_deleted_at": {
+      "n": true
+     },
+     "res_id": {
+      "t": "1004"
+     },
+     "res_language": {
+      "n": true
+     },
+     "res_published": {
+      "t": "2026-10-19 06:42:35.477"
+     },
+     "res_type": {
+      "t": "Observation"
+     },
+     "res_type_id": {
+      "t": "130"
+     },
+     "res_updated": {
+      "t": "2026-10-19 06:42:35.603"
+     },
+     "res_ver": {
+      "t": "3"
+     },
+     "res_version": {
+      "t": "R4"
+     },
+     "search_url_present": {
+      "t": "f"
+     },
+     "sp_cmpstr_uniq_present": {
+      "t": "f"
+     },
+     "sp_cmptoks_present": {
+      "t": "f"
+     },
+     "sp_coords_present": {
+      "t": "f"
+     },
+     "sp_date_present": {
+      "t": "f"
+     },
+     "sp_has_links": {
+      "t": "t"
+     },
+     "sp_index_status": {
+      "t": "0"
+     },
+     "sp_number_present": {
+      "t": "f"
+     },
+     "sp_quantity_nrml_present": {
+      "t": "f"
+     },
+     "sp_quantity_present": {
+      "t": "t"
+     },
+     "sp_string_present": {
+      "t": "f"
+     },
+     "sp_token_present": {
+      "t": "t"
+     },
+     "sp_uri_present": {
+      "t": "f"
+     }
+    }
+   }
+  ],
+  "flags": [
+   "old_image_missing:public.hfj_res_ver",
+   "old_image_missing:public.hfj_spidx_quantity",
+   "old_image_missing:public.hfj_spidx_token",
+   "old_image_missing:public.hfj_resource"
+  ],
+  "total": 7
+ },
+ {
+  "tables": {
+   "public.hfj_res_link": {
+    "relid": 16566,
+    "pk": [],
+    "identity": "d",
+    "columns": [
+     "pid",
+     "partition_id",
+     "partition_date",
+     "src_path",
+     "src_resource_id",
+     "source_resource_type",
+     "src_res_type_id",
+     "target_res_partition_date",
+     "target_res_partition_id",
+     "target_resource_id",
+     "target_resource_type",
+     "target_res_type_id",
+     "target_resource_url",
+     "target_resource_version",
+     "sp_updated"
+    ],
+    "type_oids": [
+     20,
+     23,
+     1082,
+     1043,
+     20,
+     1043,
+     21,
+     1082,
+     23,
+     20,
+     1043,
+     21,
+     1043,
+     20,
+     1114
+    ]
+   },
+   "public.hfj_res_ver": {
+    "relid": 16621,
+    "pk": [],
+    "identity": "d",
+    "columns": [
+     "partition_id",
+     "pid",
+     "res_deleted_at",
+     "res_version",
+     "has_tags",
+     "res_published",
+     "res_updated",
+     "res_encoding",
+     "partition_date",
+     "request_id",
+     "res_text",
+     "res_id",
+     "res_text_vc",
+     "res_type",
+     "res_type_id",
+     "res_ver",
+     "source_uri"
+    ],
+    "type_oids": [
+     23,
+     20,
+     1114,
+     1043,
+     16,
+     1114,
+     1114,
+     1043,
+     1082,
+     1043,
+     26,
+     20,
+     25,
+     1043,
+     21,
+     20,
+     1043
+    ]
+   },
+   "public.hfj_resource": {
+    "relid": 16645,
+    "pk": [],
+    "identity": "d",
+    "columns": [
+     "res_id",
+     "partition_id",
+     "res_deleted_at",
+     "res_version",
+     "has_tags",
+     "res_published",
+     "res_updated",
+     "fhir_id",
+     "sp_has_links",
+     "hash_sha256",
+     "sp_index_status",
+     "res_language",
+     "sp_cmpstr_uniq_present",
+     "sp_cmptoks_present",
+     "sp_coords_present",
+     "sp_date_present",
+     "sp_number_present",
+     "sp_quantity_nrml_present",
+     "sp_quantity_present",
+     "sp_string_present",
+     "sp_token_present",
+     "sp_uri_present",
+     "partition_date",
+     "res_type",
+     "res_type_id",
+     "search_url_present",
+     "res_ver"
+    ],
+    "type_oids": [
+     20,
+     23,
+     1114,
+     1043,
+     16,
+     1114,
+     1114,
+     1043,
+     16,
+     1043,
+     21,
+     1043,
+     16,
+     16,
+     16,
+     16,
+     16,
+     16,
+     16,
+     16,
+     16,
+     16,
+     1082,
+     1043,
+     21,
+     16,
+     20
+    ]
+   },
+   "public.hfj_spidx_quantity": {
+    "relid": 16755,
+    "pk": [],
+    "identity": "d",
+    "columns": [
+     "sp_id",
+     "partition_id",
+     "partition_date",
+     "hash_identity",
+     "sp_missing",
+     "sp_name",
+     "res_id",
+     "res_type",
+     "sp_updated",
+     "hash_identity_and_units",
+     "hash_identity_sys_units",
+     "sp_system",
+     "sp_units",
+     "sp_value"
+    ],
+    "type_oids": [
+     20,
+     23,
+     1082,
+     20,
+     16,
+     1043,
+     20,
+     1043,
+     1114,
+     20,
+     20,
+     1043,
+     1043,
+     701
+    ]
+   },
+   "public.hfj_spidx_token": {
+    "relid": 16785,
+    "pk": [],
+    "identity": "d",
+    "columns": [
+     "sp_id",
+     "partition_id",
+     "partition_date",
+     "hash_identity",
+     "sp_missing",
+     "sp_name",
+     "res_id",
+     "res_type",
+     "sp_updated",
+     "hash_sys",
+     "hash_sys_and_value",
+     "hash_value",
+     "sp_system",
+     "sp_value"
+    ],
+    "type_oids": [
+     20,
+     23,
+     1082,
+     20,
+     16,
+     1043,
+     20,
+     1043,
+     1114,
+     20,
+     20,
+     20,
+     1043,
+     1043
+    ]
+   }
+  },
+  "changes": [
+   {
+    "seq": 8,
+    "op": "I",
+    "table": "public.hfj_res_ver",
+    "key": null,
+    "new": {
+     "has_tags": {
+      "t": "t"
+     },
+     "partition_date": {
+      "n": true
+     },
+     "partition_id": {
+      "n": true
+     },
+     "pid": {
+      "t": "1009"
+     },
+     "request_id": {
+      "n": true
+     },
+     "res_deleted_at": {
+      "t": "2026-10-19 06:42:35.632"
+     },
+     "res_encoding": {
+      "t": "DEL"
+     },
+     "res_id": {
+      "t": "1004"
+     },
+     "res_published": {
+      "t": "2026-10-19 06:42:35.477"
+     },
+     "res_text": {
+      "n": true
+     },
+     "res_text_vc": {
+      "n": true
+     },
+     "res_type": {
+      "t": "Observation"
+     },
+     "res_type_id": {
+      "t": "130"
+     },
+     "res_updated": {
+      "t": "2026-10-19 06:42:35.632"
+     },
+     "res_ver": {
+      "t": "4"
+     },
+     "res_version": {
+      "t": "R4"
+     },
+     "source_uri": {
+      "n": true
+     }
+    }
+   },
+   {
+    "seq": 9,
+    "op": "U",
+    "table": "public.hfj_res_ver",
+    "key": null,
+    "new": {
+     "has_tags": {
+      "t": "t"
+     },
+     "partition_date": {
+      "n": true
+     },
+     "partition_id": {
+      "n": true
+     },
+     "pid": {
+      "t": "1009"
+     },
+     "request_id": {
+      "t": "tok0000000000005"
+     },
+     "res_deleted_at": {
+      "t": "2026-10-19 06:42:35.632"
+     },
+     "res_encoding": {
+      "t": "DEL"
+     },
+     "res_id": {
+      "t": "1004"
+     },
+     "res_published": {
+      "t": "2026-10-19 06:42:35.477"
+     },
+     "res_text": {
+      "n": true
+     },
+     "res_text_vc": {
+      "n": true
+     },
+     "res_type": {
+      "t": "Observation"
+     },
+     "res_type_id": {
+      "t": "130"
+     },
+     "res_updated": {
+      "t": "2026-10-19 06:42:35.632"
+     },
+     "res_ver": {
+      "t": "4"
+     },
+     "res_version": {
+      "t": "R4"
+     },
+     "source_uri": {
+      "n": true
+     }
+    }
+   },
+   {
+    "seq": 10,
+    "op": "U",
+    "table": "public.hfj_resource",
+    "key": null,
+    "new": {
+     "fhir_id": {
+      "t": "1004"
+     },
+     "has_tags": {
+      "t": "t"
+     },
+     "hash_sha256": {
+      "n": true
+     },
+     "partition_date": {
+      "n": true
+     },
+     "partition_id": {
+      "n": true
+     },
+     "res_deleted_at": {
+      "t": "2026-10-19 06:42:35.632"
+     },
+     "res_id": {
+      "t": "1004"
+     },
+     "res_language": {
+      "n": true
+     },
+     "res_published": {
+      "t": "2026-10-19 06:42:35.477"
+     },
+     "res_type": {
+      "t": "Observation"
+     },
+     "res_type_id": {
+      "t": "130"
+     },
+     "res_updated": {
+      "t": "2026-10-19 06:42:35.632"
+     },
+     "res_ver": {
+      "t": "4"
+     },
+     "res_version": {
+      "t": "R4"
+     },
+     "search_url_present": {
+      "t": "f"
+     },
+     "sp_cmpstr_uniq_present": {
+      "t": "f"
+     },
+     "sp_cmptoks_present": {
+      "t": "f"
+     },
+     "sp_coords_present": {
+      "t": "f"
+     },
+     "sp_date_present": {
+      "t": "f"
+     },
+     "sp_has_links": {
+      "t": "f"
+     },
+     "sp_index_status": {
+      "t": "0"
+     },
+     "sp_number_present": {
+      "t": "f"
+     },
+     "sp_quantity_nrml_present": {
+      "t": "f"
+     },
+     "sp_quantity_present": {
+      "t": "f"
+     },
+     "sp_string_present": {
+      "t": "f"
+     },
+     "sp_token_present": {
+      "t": "f"
+     },
+     "sp_uri_present": {
+      "t": "f"
+     }
+    }
+   }
+  ],
+  "flags": [
+   "old_image_missing:public.hfj_spidx_quantity",
+   "old_image_missing:public.hfj_spidx_token",
+   "old_image_missing:public.hfj_res_link",
+   "old_image_missing:public.hfj_res_ver",
+   "old_image_missing:public.hfj_resource"
+  ],
+  "total": 10
+ }
+]

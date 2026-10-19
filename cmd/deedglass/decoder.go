@@ -84,7 +84,7 @@ func runDecoderStatus(ctx context.Context, e *Env, args []string) error {
 	}
 	var views []decoder.View
 	for _, x := range list.Data {
-		if x.Type != "postgres" {
+		if x.Type != "postgres" && x.Type != "fhir" {
 			continue
 		}
 		d, err := getDecoder(ctx, c, x.ID, 0)

@@ -359,7 +359,9 @@ func TestCanonMatchesJCS(t *testing.T) {
 		m := map[string]Value{}
 		for range r.IntN(5) {
 			var v Value
-			switch r.IntN(5) {
+			switch r.IntN(6) {
+			case 5:
+				v.Leaves = map[string]string{"/" + str(): str(), "/" + str() + "/#len": str()}
 			case 0:
 				v.Null = true
 			case 1:

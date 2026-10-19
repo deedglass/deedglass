@@ -34,7 +34,7 @@ const (
 
 // Classes lists every stored class, in a stable order (counters, status).
 var Classes = []Class{ClassBound, ClassUnattributed, ClassForgedMarker, ClassForgedMarkerNonTx, ClassMarkerCount,
-	ClassMarkerMismatch, ClassForeignLedger, ClassPublicationGap, ClassMissing}
+	ClassMarkerMismatch, ClassForeignLedger, ClassPublicationGap, ClassMissing, ClassRequestIDReused, ClassVersionTagMismatch}
 
 // Value is one column's value in a stored image. Exactly one field is set, except that Text may
 // be an empty string.
@@ -44,6 +44,9 @@ type Value struct {
 	Unchanged bool    `json:"u,omitempty"` // unchanged external TOAST ('u'): the value wasn't sent; it didn't change
 	Digest    string  `json:"d,omitempty"` // a sensitive column: "sha256:" of the text; the text is never stored
 	Hex       string  `json:"x,omitempty"` // text output that isn't valid UTF-8 (a SQL_ASCII database), as hex
+	// Leaves is a keyed column (ADR-108: a FHIR server's resource content): the JSON text kept as
+	// keyed digests of its leaves (internal/jsonleaf); the text is never stored.
+	Leaves map[string]string `json:"k,omitempty"`
 }
 
 // Change is one row change, with its images.

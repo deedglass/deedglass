@@ -378,6 +378,11 @@ func (c *Connector) Execute(ctx context.Context, inst *connector.Instance, call 
 	if res.Evidence != nil && prior != "" {
 		res.Evidence["fhir_prior_version"] = prior
 	}
+	if !call.ActionID.IsZero() && st.cfg.RequestIDHeader != "none" {
+		versionEvidence(res.Evidence, r, prior, token(call.ActionID))
+	} else {
+		versionEvidence(res.Evidence, r, prior, "")
+	}
 	if resp != nil && resp.Status == 401 && st.cfg.Auth.Kind == AuthSMART {
 		c.forget(st)
 	}
@@ -395,7 +400,11 @@ func versionOf(resp *saas.Response, r *req) (id, vid string) {
 	if resp == nil {
 		return "", ""
 	}
-	if loc := resp.Header.Get("Location"); loc != "" {
+	loc := resp.Header.Get("Location")
+	if loc == "" && r.inter == "delete" {
+		loc = resp.Header.Get("Content-Location") // HAPI names the deleted version here
+	}
+	if loc != "" {
 		if u, err := url.Parse(loc); err == nil {
 			seg := strings.Split(strings.Trim(u.Path, "/"), "/")
 			for i := len(seg) - 4; i >= 0; i-- {

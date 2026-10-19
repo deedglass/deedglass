@@ -88,7 +88,9 @@ func Render(d witness.Detail, o RenderOptions) []string {
 		line(st.Dim(pad("", 17) + "••• hides " + strings.Join(ev.Redacted, ", ") + " (witness.sensitive_columns)"))
 	}
 	if t := ev.Transaction; t != nil {
-		line("")
+		if len(out) > 0 {
+			line("")
+		}
 		line(Footer(t))
 	}
 	return out

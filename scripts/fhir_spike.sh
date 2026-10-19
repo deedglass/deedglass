@@ -26,7 +26,7 @@ docker info >/dev/null 2>&1 || fail "The Docker daemon isn't running. Start Dock
 command -v curl >/dev/null || fail "curl not found."
 
 cleanup() {
-  docker rm -f "$TAG-hapi" "$TAG-pg" >/dev/null 2>&1 || true
+  docker rm -f -v "$TAG-hapi" "$TAG-pg" >/dev/null 2>&1 || true
   docker network rm "$NET" >/dev/null 2>&1 || true
 }
 trap cleanup EXIT

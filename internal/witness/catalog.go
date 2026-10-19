@@ -69,6 +69,19 @@ const (
 	CodeFHIRHistoryNoMatch     Code = "fhir_history_no_match"
 )
 
+// L2 for FHIR servers on Postgres (HC-P05, ADR-108): the server's own transaction, bound by the
+// version it reported to the action.
+const (
+	CodeVersionMatched           Code = "version_matched"
+	CodeVersionFieldChanged      Code = "version_field_changed"
+	CodeFHIRExtraVersions        Code = "fhir_extra_versions"
+	CodeOutOfBand                Code = "out_of_band"
+	CodeRequestIDReused          Code = "request_id_reused"
+	CodeVersionTagMismatch       Code = "version_tag_mismatch"
+	CodeLargeObjectNotReplicated Code = "large_object_not_replicated"
+	CodeFHIRSchemaUnknown        Code = "fhir_schema_unknown"
+)
+
 // L2 for an undo (S23): the exact footprint of a plan, row by row.
 const (
 	CodeUndoRestored Code = "undo_restored"
@@ -220,6 +233,30 @@ var entries = []Entry{
 	{CodeFHIRHistoryNoMatch, Gap, "L1", `The server's history since the call shows {n} versions carrying this action's token, not exactly one, so Deedglass can't tell whether the write happened.`,
 		"Check the resource's history on the server. Turn on request ids (HAPI: store_meta_source_information) so the next one can be found.",
 		map[string]any{"n": "0"}},
+	// L2 for FHIR servers on Postgres (HC-P05, ADR-108).
+	{CodeVersionMatched, Pass, "L2", `The server's database committed {resource} version {version} in this action's transaction, as {tool} sent it.`,
+		"Nothing.", map[string]any{"resource": "Observation/1001", "version": "2", "tool": "fhir.update"}},
+	{CodeVersionFieldChanged, Violation, "L2", `The server's database committed {resource} version {version} with {path} different from what {tool} sent.`,
+		"Read the paths, then check the server: a profile, a default or an interceptor stored something else.",
+		map[string]any{"resource": "Observation/1001", "version": "2", "path": "status", "tool": "fhir.update"}},
+	{CodeFHIRExtraVersions, Violation, "L2", `This action's transaction committed {n} resource versions, and the call reported 1. Also written: {resources}.`,
+		"Read the resources it names: the server created or changed them on its own (a placeholder reference target, an interceptor).",
+		map[string]any{"n": 2, "resources": "Patient/ghost-3 version 1"}},
+	{CodeOutOfBand, Note, "L2", `Another writer changed {resource} while this action's call was open (version {version}). That change isn't counted as this action's.`,
+		"Nothing for this action. Check who else writes this resource; the decoder counts these as unattributed.",
+		map[string]any{"resource": "Observation/1001", "version": "3"}},
+	{CodeRequestIDReused, Note, "L2", `Another transaction carried this action's request token ({resource} version {version}). It isn't counted as this action's.`,
+		"Treat it as a forged or replayed request id: find the client that sent it. The action is judged on its own transaction only.",
+		map[string]any{"resource": "Observation/1002", "version": "1"}},
+	{CodeVersionTagMismatch, Gap, "L2", `The version the server reported ({resource} version {version}) carries another request's mark, so Deedglass can't tie that transaction to this action.`,
+		"Check that nothing between Deedglass and the server rewrites X-Request-ID, and that witness.author names this connector's client.",
+		map[string]any{"resource": "Observation/1001", "version": "2"}},
+	{CodeLargeObjectNotReplicated, Gap, "L2", `The server stored {resource} version {version} outside the row ({why}), and Postgres's change log doesn't carry it, so its content can't be compared.`,
+		"Nothing to fix for this action; the read-back (L1) still checks it. Rows written by HAPI before 7.0 keep their text in a large object.",
+		map[string]any{"resource": "Observation/1001", "version": "1", "why": "a large object"}},
+	{CodeFHIRSchemaUnknown, Gap, "L2", `The FHIR server's tables have a layout Deedglass doesn't know ({table}), so its change log isn't read. The read-back (L1) still runs.`,
+		"Check deedglass decoder status. Upgrade Deedglass for this server version, or turn witness off for this connector.",
+		map[string]any{"table": "public.hfj_res_ver"}},
 	{CodeTriggersUnwatched, Gap, "L2", `{table} has triggers that may write tables Deedglass doesn't watch.`,
 		"Watch every table the triggers write, or turn off witness.strict_triggers.", map[string]any{"table": "public.orders"}},
 }

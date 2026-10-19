@@ -2,7 +2,7 @@ exit 0
 --- stdout
 TYPE       TITLE               LEVELS     TOOLS         MODE
 fake       Fake (dev only)     L0         4             dev only
-fhir       FHIR                L0 L1      8
+fhir       FHIR                L0 L1 L2   8
 github     GitHub              L0 L1      14
 gmail      Gmail               L0 L1      5             drafts only
 mcp_http   Remote MCP server   L0         from server

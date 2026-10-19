@@ -74,6 +74,21 @@ xid. A marker on its own says nothing about who sent it: `pg_logical_emit_messag
 every role by default. The ledger row is the authentication; only `begin_action`, whose body's
 sha256 the runner checks at start, writes it.
 
+**A FHIR server's database (ADR-108).** A `fhir` connector with `witness.enabled` points the
+decoder at the FHIR server's own Postgres (HAPI FHIR JPA 8.x or Medplum 5.x). The server runs its
+own SQL, so its transactions can't hold a ledger row or a marker. There a frame is bound to an
+action when it holds the resource version the server reported to that action's write (the action's
+execution evidence, `version_key`), exactly one action names a version in it, and the row's own mark
+agrees where the server stores one (HAPI's `request_id` equals the action's token; Medplum's
+`meta.author` equals `witness.author`). The start checks skip `begin_action` and the ledger (they
+don't exist there), the publication must hold the server's version tables, and there is no
+reconcile. Because the server commits before it answers, a frame no action names yet is held (not
+stored, the slot not advanced past it) while an action of the connector is executing, at most
+`witness.bind_grace`; frames are stored in commit order. Resource content is stored only as keyed
+leaf digests (`{"k": {pointer: digest}}`), and search-index and lookup tables are counted, never
+imaged. [The fhir connector](connectors/fhir.md#proven-l2-on-hapi-fhir-jpa-and-medplum) has the
+details.
+
 Classification looks only at what is inside the transaction and each message's transactional
 flag. It never uses the peek's xid column or the order of peek LSNs, and the marker's LSN is
 stored as evidence and never compared with the commit LSN (a build test checks every Go file).
@@ -97,6 +112,12 @@ with their images, a digest over every change, the ledger rows, the markers and 
 | `foreign_ledger` | A ledger row of another org | yes | no | `decoder.alert` |
 | `bound` | Exactly one ledger row and one marker naming the same action, same org, same xid | yes | yes | NOTIFY + the Witness |
 | `missing` | Reconcile found a ledger row with no frame (no commit LSN) | yes | yes, as an evidence gap | the Witness: `no_evidence` |
+| `request_id_reused` | FHIR server (ADR-108): no action named a version, but a version carries an action's binding token | yes | the token's action, never bound | `decoder.alert` + the note `request_id_reused` |
+| `version_tag_mismatch` | FHIR server: the version an action reported is there, but its row carries another request's mark | yes | the action, as an evidence gap | the Witness: `version_tag_mismatch` |
+
+On a FHIR server's database, `unattributed` means a resource version no Deedglass action wrote (flag
+`out_of_band`), and a transaction that wrote no resource version (the server's search cache, a
+reindex) isn't kept.
 
 Flags add detail: `truncate:<table>`, `relation_changed:<table>` (the only trace DDL leaves in the
 stream), `old_image_missing:<table>` (replica identity isn't full), `no_primary_key:<table>`,
@@ -113,7 +134,9 @@ A change looks like this (`decoded_txs.changes`; S23 plans undo from it):
 ```
 
 A value is `{"t": text}`, `{"n": true}` (NULL), `{"u": true}` (an unchanged TOAST value Postgres
-didn't send), `{"d": "sha256:…"}` (a sensitive column) or `{"x": hex}` (text that isn't UTF-8).
+didn't send), `{"d": "sha256:…"}` (a sensitive column), `{"x": hex}` (text that isn't UTF-8) or
+`{"k": {pointer: digest}}` (a FHIR server's resource content: each field's HMAC-SHA-256, keyed from
+the connector's `witness_dsn`).
 The frame's `changes_digest` is `sha256` over `JCS({new, old, op, seq, table}) + "\n"` for every
 change in order, including those past the image cap.
 

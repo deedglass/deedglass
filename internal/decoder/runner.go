@@ -196,6 +196,7 @@ type Runner struct {
 	caughtUpAt    time.Time // when the last drained peek started: the decoder had read everything flushed then
 	lastTarget    LSN       // the last checkpoint persisted and advanced to
 	recon         *pendingReconcile
+	held          map[LSN]time.Time // version-bound (ADR-108): when each held frame was first read
 }
 
 type pkEntry struct {
@@ -431,6 +432,7 @@ func (r *Runner) session(ctx context.Context) error {
 		}
 	}
 	r.pk = map[uint32]pkEntry{}
+	r.held = map[LSN]time.Time{}
 	r.counters = map[string]int64{}
 	for k, v := range row.Frames {
 		r.counters[k] = v
@@ -471,12 +473,16 @@ func (r *Runner) startChecks(ctx context.Context, row store.DecoderSlot) error {
 	if !pf.Replication {
 		return halt(ReasonNotReplication, false)
 	}
-	if pf.BeginActionBody == nil {
+	if r.target.Versions != nil {
+		// A FHIR server's own database (ADR-108): no Deedglass schema, so no begin_action to check.
+	} else if pf.BeginActionBody == nil {
 		return halt(ReasonLedgerFunctionChanged, true, "message", "deedglass.begin_action is missing")
 	}
-	sum := sha256.Sum256([]byte(*pf.BeginActionBody))
-	if got := "sha256:" + hex.EncodeToString(sum[:]); got != setup.BeginActionBodySHA256 {
-		return halt(ReasonLedgerFunctionChanged, true, "body_sha256", got)
+	if r.target.Versions == nil {
+		sum := sha256.Sum256([]byte(*pf.BeginActionBody))
+		if got := "sha256:" + hex.EncodeToString(sum[:]); got != setup.BeginActionBodySHA256 {
+			return halt(ReasonLedgerFunctionChanged, true, "body_sha256", got)
+		}
 	}
 	sn, err := s.Snapshot(ctx, r.pub)
 	if err != nil {
@@ -545,7 +551,11 @@ func (r *Runner) checkPublication(p PubSnapshot) error {
 		return halt(ReasonPublicationInvalid, false, "publication", r.pub, "message", "it must publish insert, update, delete and truncate, with no row filter or column list")
 	}
 	var missing []string
-	for _, t := range append([]string{ledgerName}, r.target.Watched...) {
+	need := append([]string{ledgerName}, r.target.Watched...)
+	if r.target.Versions != nil {
+		need = r.target.Watched // a FHIR server's tables (ADR-108); there is no ledger there
+	}
+	for _, t := range need {
 		if !p.AllTables && !slices.Contains(p.Tables, t) {
 			missing = append(missing, t)
 		}
@@ -644,7 +654,11 @@ func (r *Runner) poll(ctx context.Context) (bool, error) {
 	if p := SettingsProblem(a.Settings); p != "" {
 		return false, halt(ReasonSessionSettingsChanged, true, "setting", p)
 	}
-	asm := NewAssembler(AssembleOptions{Sensitive: r.sens, MaxImages: r.cfg.MaxImages, Shapes: r.shapes})
+	ao := AssembleOptions{Sensitive: r.sens, MaxImages: r.cfg.MaxImages, Shapes: r.shapes}
+	if vm := r.target.Versions; vm != nil {
+		ao.Keyed, ao.Key, ao.CountOnly = vm.Keyed, r.target.Key, vm.Derived
+	}
+	asm := NewAssembler(ao)
 	start := r.d.Now()
 	var bad *haltError
 	stats, err := r.src.Peek(ctx, r.cfg.BatchChanges, func(raw Raw) error {
@@ -697,9 +711,17 @@ func (r *Runner) poll(ctx context.Context) (bool, error) {
 	}
 	// Classify (pure), then the non-transactional messages: heartbeats and forgeries.
 	var keep []*Frame
-	for _, f := range batch.Frames {
-		if Classify(f, r.org.String(), pubChanged) {
-			keep = append(keep, f)
+	holding, upto := false, LSN(0)
+	if r.target.Versions != nil {
+		var err error
+		if keep, holding, upto, err = r.classifyVersioned(ctx, batch.Frames, pubChanged); err != nil {
+			return false, err
+		}
+	} else {
+		for _, f := range batch.Frames {
+			if Classify(f, r.org.String(), pubChanged) {
+				keep = append(keep, f)
+			}
 		}
 	}
 	var hbAt *time.Time
@@ -729,7 +751,11 @@ func (r *Runner) poll(ctx context.Context) (bool, error) {
 	if drained && a.FlushLSN > target {
 		target = a.FlushLSN
 	}
-	if drained {
+	if holding {
+		// ADR-108 §5: never past a frame that waits for its action's record; it is read again.
+		target, drained = upto, true
+	}
+	if drained && !holding {
 		r.caughtUpAt = start
 	}
 	if len(keep) == 0 && hbAt == nil && target <= r.lastTarget {
@@ -910,7 +936,7 @@ func (r *Runner) persist(ctx context.Context, fs []*Frame, target LSN, hbAt *tim
 
 func alertKind(c Class) string {
 	switch c {
-	case ClassForgedMarker, ClassForgedMarkerNonTx, ClassForeignLedger:
+	case ClassForgedMarker, ClassForgedMarkerNonTx, ClassForeignLedger, ClassRequestIDReused:
 		return string(c)
 	}
 	return ""

@@ -274,7 +274,7 @@ jobs:
           go-version-file: go.mod
       - name: docs/ATTACK_SUITE.md matches the committed results
         run: go run ./attack/cmd/attack-report -check -quiet
-      - name: the attack suite (15 cases run, 4 wait on S21)
+      - name: the attack suite
         env:
           DEEDGLASS_IT_THROWAWAY: "1"
           DEEDGLASS_IT_ADMIN_URL: postgres://postgres:deedglass-ci-throwaway@127.0.0.1:5432/postgres?sslmode=disable
@@ -307,6 +307,25 @@ jobs:
         env:
           DEEDGLASS_IT_MODE: docker
         run: scripts/fhir.sh it
+
+  # HC-P05 (ADR-108): Proven (L2) against HAPI FHIR JPA and Medplum, each on PostgreSQL 18.6 with a
+  # witness role and a publication, all in Docker (images pinned by digest in scripts/fhir_proven.sh),
+  # behind two witnessed fhir connectors on a real serve and decoder (TestFHIRProvenLive). Synthetic
+  # data only; the containers and their volumes are removed after.
+  fhir-proven:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+      - name: TestFHIRProvenLive against HAPI FHIR JPA and Medplum
+        env:
+          DEEDGLASS_IT_MODE: docker
+        run: scripts/fhir_proven.sh
 
   # The image as make dev runs it: built with buildx (GitHub Actions cache), loaded into the local
   # Docker only, then started through deploy/docker-compose.yml (Postgres with the init scripts, the

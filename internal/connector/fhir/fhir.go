@@ -78,6 +78,7 @@ type Config struct {
 	TimeoutMS            int      `json:"timeout_ms"`
 	MaxResponseBytes     int64    `json:"max_response_bytes"`
 	Redirects            string   `json:"redirects"`
+	Witness              Witness  `json:"witness"`
 }
 
 // Auth says how the connector gets its access token.
@@ -101,6 +102,8 @@ var (
 	_ connector.Enricher         = (*Connector)(nil)
 	_ connector.NativeReadBacker = (*Connector)(nil)
 	_ connector.PHIKeeper        = (*Connector)(nil)
+	_ connector.L2Witnesser      = (*Connector)(nil)
+	_ connector.L2VersionJudge   = (*Connector)(nil)
 )
 
 func (c *Connector) clock() time.Time {
@@ -124,7 +127,8 @@ const configSchema = `{"type":"object","required":["base_url","auth","allowed_re
 "server_tag_systems":{"type":"array","items":{"type":"string"},"description":"meta.tag and meta.security systems the server adds; the read-back ignores them."},
 "timeout_ms":{"type":"integer","minimum":100,"maximum":60000},
 "max_response_bytes":{"type":"integer","minimum":1024,"maximum":16777216},
-"redirects":{"type":"string","enum":["none","same_host"]}}}`
+"redirects":{"type":"string","enum":["none","same_host"]},
+"witness":{"type":"object","description":"Proven (L2) for a FHIR server on Postgres: Deedglass reads the server's own change log through witness_dsn in the credential.","properties":{"enabled":{"type":"boolean"},"server":{"type":"string","enum":["hapi","medplum"]},"l2_timeout":{"type":"string","description":"Default 30s."},"bind_grace":{"type":"string","description":"Default 5s."},"author":{"type":"string","description":"Medplum: the meta.author reference of this connector's client, like ClientApplication/<id>."}}}}}`
 
 // Info implements connector.Connector.
 func (c *Connector) Info() connector.TypeInfo {
@@ -132,12 +136,14 @@ func (c *Connector) Info() connector.TypeInfo {
 		Description: "A FHIR R4 server's REST API as governed tools: one tool per interaction on the resource types you list, with every write read back at the version the server reported.",
 		Summary:     "FHIR R4 reads and writes on the resource types you list, each write checked at the version the server reported.",
 		Status:      "beta", Icon: "heart-pulse", Modes: []string{},
-		Levels: []string{"L0", "L1"},
+		Levels: []string{"L0", "L1", "L2"},
 		CredentialKinds: []connector.CredentialKind{
 			{Kind: "fields", Fields: []connector.CredentialField{
 				{Name: "client_id", Secret: false, Help: "The client id the FHIR server's authorization server registered for this backend service."},
-				{Name: "private_jwk", Secret: true, Help: "The client's private key as a JWK (RS384 or ES384) or a JWK Set of one or two keys, on one line; the first key signs."}}},
-			{Kind: "bearer", Fields: []connector.CredentialField{{Name: "token", Secret: true, Help: "A static access token (auth.kind bearer)."}}},
+				{Name: "private_jwk", Secret: true, Help: "The client's private key as a JWK (RS384 or ES384) or a JWK Set of one or two keys, on one line; the first key signs."},
+				{Name: "witness_dsn", Secret: true, Help: "Optional, for Proven (witness.enabled): a postgres:// DSN to the FHIR server's database as a role with REPLICATION."}}},
+			{Kind: "bearer", Fields: []connector.CredentialField{{Name: "token", Secret: true, Help: "A static access token (auth.kind bearer)."},
+				{Name: "witness_dsn", Secret: true, Help: "Optional, for Proven (witness.enabled): a postgres:// DSN to the FHIR server's database as a role with REPLICATION."}}},
 		},
 		ConfigSchema: json.RawMessage(configSchema), DocsURL: DocsURL,
 		Setup: []connector.SetupStep{
@@ -149,7 +155,9 @@ func (c *Connector) Info() connector.TypeInfo {
 		Limits: []string{
 			"FHIR R4 (4.0.1) only, JSON only.",
 			"No transaction or batch Bundles yet; one resource per call.",
-			"Checked (L1) only: Proven (L2) for Postgres-backed FHIR servers and AuditEvent or Provenance export aren't built yet.",
+			"Proven (L2) only for HAPI FHIR JPA 8.x and Medplum 5.x on Postgres (witness.server), from the server's own change log; other servers, including managed EHRs, are Checked (L1).",
+			"Proven binds a transaction by the version the server reported, which is weaker than the Postgres connector's marker: a server that lies in both its answer and its tables isn't caught.",
+			"A Medplum delete reports no version, so it stays Checked; resource content is kept only as keyed digests, so an L2 difference names the field, never its value.",
 			"A patch is read back for the version and the JSON Patch add, replace and remove paths; a FHIRPath Patch only for the version.",
 			"After a 5xx or a timeout the write is found only when the server stores request ids (meta.source); otherwise the action stays UNVERIFIABLE.",
 		},
@@ -371,6 +379,7 @@ func (c *Connector) Validate(ctx context.Context, env connector.Env, raw json.Ra
 	if cfg.Redirects != string(egress.RedirectNone) && cfg.Redirects != string(egress.RedirectSameHost) {
 		add("config.redirects", "redirects must be none or same_host.")
 	}
+	validateWitness(&cfg.Witness, add)
 	if len(errs) > 0 {
 		return nil, errs
 	}

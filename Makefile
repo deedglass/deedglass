@@ -141,6 +141,10 @@ fuzz: ## 30 s each: the strict intent parser, the id parser, and the deed envelo
 mock-orders: ## S16: the mock orders API on 127.0.0.1:8090 (MOCK_ORDERS_TOKEN required; MOCK_ORDERS_MODE=lying for S19)
 	$(GO) run ./examples/mock-orders
 
+.PHONY: fhir-proven-it
+fhir-proven-it: ## HC-P05: TestFHIRProvenLive, Proven (L2) against HAPI FHIR JPA and Medplum, each on PostgreSQL 18 in Docker (pinned images, free ports, witness roles and publications), on a throwaway control-plane PG; containers removed after (KEEP=1 keeps them)
+	scripts/fhir_proven.sh
+
 .PHONY: fhir-spike
 fhir-spike: ## HC-P05: the spike as a probe (ADR-105): HAPI FHIR JPA on PostgreSQL in Docker (pinned images, free port), checks what the server stores to tie its rows to an action; fails when a finding stops holding
 	scripts/fhir_spike.sh

@@ -108,7 +108,7 @@ runs the whole test above and removes the container.
   (in the path and in the body); the server refuses a mismatch.
 - **No transaction or batch Bundles**, no `_history` lookup after a 5xx (a 5xx leaves the action
   unknown, Can't check), and no Proven checks: the FHIR server writes its own database, not
-  Deedglass.
+  Deedglass. The native connector adds Proven on HAPI FHIR JPA and Medplum (below).
 - **Static credentials only.** `bearer`, `header`, `basic` or `query`; no SMART Backend Services
   token exchange.
 - **The action history stores arguments and results as sent**, including clinical values, until
@@ -143,6 +143,30 @@ REST connector's field-only read-back would have called that Matches. The same r
 that changed nothing kept at HAPI's version with the note `fhir_no_new_version`, a create of an
 Encounter (not in `allowed_resource_types`) denied before any request left, and HAPI's history
 holding exactly the versions Deedglass let through.
+
+## Checked or Proven: which one you get
+
+**Checked** (L1) is the read-back: after a write, Deedglass reads the version the server reported
+and compares it with what the agent sent. It works with any FHIR R4 server, including managed EHRs.
+**Proven** (L2) also reads the FHIR server's own Postgres change log and checks the transaction that
+wrote that version: what the agent sent, and nothing else besides. It needs a server whose tables
+Deedglass knows, and access to its database:
+
+| Server | Checked | Proven |
+|---|---|---|
+| HAPI FHIR JPA 8.x on Postgres | yes | creates, updates, patches and deletes, with `witness.server: hapi` |
+| Medplum 5.x on Postgres | yes | creates, updates and patches, with `witness.server: medplum` (a Medplum delete names no version, so it stays Checked) |
+| HAPI 7.x or older, other servers on Postgres | yes | no: Checked, with the gap `fhir_schema_unknown` where L2 was asked for |
+| Managed EHRs and cloud FHIR services (Epic, Oracle Health, Azure, Google, AWS) | yes | no: Deedglass can't read their databases |
+
+Even on a supported server, a write gets Checked only when it made no new version (a conditional
+create the server answered 200, an update the server kept) or the server didn't answer (a 5xx or a
+timeout). What Proven adds is what a read-back can't see: a second resource written in the same
+transaction (HAPI's placeholder reference targets), another writer changing the same resource while
+the call was open, and another client reusing the action's request id. The connector reference has
+the setup (a witness role and a publication on the FHIR server's database):
+[Proven on HAPI FHIR JPA and Medplum](../connectors/fhir.md#proven-l2-on-hapi-fhir-jpa-and-medplum).
+`make fhir-proven-it` runs both servers in Docker and checks each case.
 
 ## Sources (checked 2026-10-19)
 

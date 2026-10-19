@@ -2,6 +2,7 @@ package connectorapi
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"strconv"
@@ -43,16 +44,29 @@ func DecoderRoutes(a *API) []httpx.Route {
 	}
 }
 
-// witnessed reports whether c is a postgres connector with witness.enabled.
+// witnessed reports whether c is a postgres connector, or (ADR-108) a fhir connector, with
+// witness.enabled.
 func witnessed(c store.Connector) bool {
-	if c.Type != postgres.Type {
-		return false
+	switch c.Type {
+	case postgres.Type:
+		cfg, errs := postgres.ParseConfig(c.Config)
+		return len(errs) == 0 && cfg.Witness.Enabled
+	case "fhir":
+		var cfg struct {
+			Witness struct {
+				Enabled bool `json:"enabled"`
+			} `json:"witness"`
+		}
+		return json.Unmarshal(c.Config, &cfg) == nil && cfg.Witness.Enabled
 	}
-	cfg, errs := postgres.ParseConfig(c.Config)
-	return len(errs) == 0 && cfg.Witness.Enabled
+	return false
 }
 
 func notWitnessed(c store.Connector) *httpx.Error {
+	if c.Type == "fhir" {
+		return httpx.E(httpx.CodeWitnessNotConfigured, httpx.Msgf(
+			"Proven checks aren't on for the connector %q, so it has no decoder. Set witness.enabled and witness.server in its config and witness_dsn in its credential (docs/connectors/fhir.md).", c.Name))
+	}
 	return httpx.E(httpx.CodeWitnessNotConfigured, httpx.Msgf(
 		"Checks aren't on for the connector %q, so it has no decoder. Set witness.enabled to true in its config, then run deedglass connector postgres check %s.", c.Name, c.Name))
 }

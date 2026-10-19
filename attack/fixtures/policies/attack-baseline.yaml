@@ -39,6 +39,12 @@ rules:
     decision: require_approval
     reason: One admin countersigns expiry-bot's calls within a minute.
     approval: { approvers: [role:admin], required: 1, expires_in: 1m }
+  - id: fhir-proven
+    description: proven-bot's FHIR calls that build a request run, witnessed at L2 from the FHIR server's own change log (HC-P05's I05 to I08).
+    match: { agent: proven-bot, connector_type: fhir }
+    when: request.fhir.enriched
+    decision: allow
+    verify: L2
   - id: fhir-clinic
     description: clinic-bot's FHIR calls that build a request run, checked at L1 (HC-P02's group I). A type outside the connector's allowed_resource_types builds none, so the default denies it (I10).
     match: { agent: clinic-bot, connector_type: fhir }

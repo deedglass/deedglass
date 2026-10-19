@@ -627,6 +627,20 @@ it refuses rather than guess:
 - **Fuzzing finds bugs; it doesn't show there are none.** The October 2026 schedule ran each parser for 5
   to 30 minutes on one laptop (`bench/results/*-fuzz.json`); CI replays the corpus for 10 s each.
 
+## Proven for FHIR servers
+
+- **The binding rests on the FHIR server's own answer.** A transaction is bound by the version the
+  server reported (ADR-108), not by a marker Deedglass writes, so a server that lies in both its
+  answer and its tables isn't caught. The method (`l2.fhir.hapi.8`, `l2.fhir.medplum.5`) says which
+  kind of Proven a record has.
+- **Two layouts are mapped**: HAPI FHIR JPA 8.x and Medplum 5.x. Another layout is Checked with
+  `fhir_schema_unknown`, never guessed.
+- **A REPLICATION role can decode every published row** of the FHIR server's database: keep
+  `deedglass_pub` to the version tables.
+- **What the decoder holds back**: a transaction no action names waits up to `witness.bind_grace`
+  while a call is running; one whose action is recorded later than that is stored unattributed, and
+  that action ends Can't check (`l2_timeout`).
+
 ## PHI mode
 
 - **Payloads are held until the action is sealed and checked.** An action waiting for approval, a

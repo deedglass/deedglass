@@ -151,7 +151,7 @@ func TestToolsAndCatalog(t *testing.T) {
 		t.Errorf("if_match: required isn't in delete's schema: %s", specs[2].InputSchema)
 	}
 	info := c.Info()
-	if len(info.Tools) != len(Interactions) || info.ToolsDynamic || info.Levels[len(info.Levels)-1] != "L1" {
+	if len(info.Tools) != len(Interactions) || info.ToolsDynamic || info.Levels[len(info.Levels)-1] != "L2" {
 		t.Fatalf("catalog: %+v", info)
 	}
 }

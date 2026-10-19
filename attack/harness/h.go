@@ -174,7 +174,13 @@ func (h *H) Action(o *Org, id string) map[string]any {
 
 // WaitSealed polls until the action is sealed (5 s) and returns it.
 func (h *H) WaitSealed(o *Org, id string) map[string]any {
-	deadline := time.Now().Add(5 * time.Second)
+	return h.WaitSealedWithin(o, id, 5*time.Second)
+}
+
+// WaitSealedWithin polls until the action is sealed or d has passed, and returns it (HC-P05: an L2
+// wait on a FHIR server's change log ends within its l2_timeout).
+func (h *H) WaitSealedWithin(o *Org, id string, d time.Duration) map[string]any {
+	deadline := time.Now().Add(d)
 	for {
 		a := h.Action(o, id)
 		if Str(a, "state") == "sealed" || time.Now().After(deadline) {

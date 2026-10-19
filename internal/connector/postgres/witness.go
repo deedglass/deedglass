@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -22,6 +23,19 @@ type WitnessTarget struct {
 	Watched   []string        // witness.watched_tables, schema.table
 	Sensitive []string        // witness.sensitive_columns, schema.table.column
 	Warning   string          // a DSN warning (sslmode=require in prod)
+
+	// Versions is set when the watched database is another server's own (ADR-108: a FHIR server
+	// on Postgres): its transactions are bound by the version the server reported, not by a ledger
+	// row and marker; Watched lists the tables its publication must hold.
+	Versions connector.VersionMap
+	// Key keys the leaf digests of resource content (internal/jsonleaf), so a frame never holds a
+	// clinical value; derived from the connector's witness credential.
+	Key []byte
+	// Author is the tag a bound version must carry when the server stores the writer (Medplum's
+	// meta.author.reference); "" leaves that cross-check out.
+	Author string
+	// BindGrace is how long an unbound frame waits for the action that wrote it to be recorded.
+	BindGrace time.Duration
 }
 
 // ErrWitnessDSNMissing is a postgres connector whose credential has no witness_dsn.
