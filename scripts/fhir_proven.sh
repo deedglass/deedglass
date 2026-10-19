@@ -49,7 +49,7 @@ port() {
   fail "No free port found."
 }
 secret() { python3 -c 'import secrets; print(secrets.token_hex(16))'; }
-wait_pg() { for _ in $(seq 1 60); do docker exec "$1" pg_isready -U postgres -q && return; sleep 1; done; fail "$1 didn't start."; }
+wait_pg() { for _ in $(seq 1 60); do docker exec "$1" pg_isready -h 127.0.0.1 -U postgres -q && return; sleep 1; done; fail "$1 didn't start."; }  # TCP: the first-boot server listens on the socket only
 wait_http() {
   for _ in $(seq 1 240); do
     curl -fsS -o /dev/null "$2" 2>/dev/null && return
