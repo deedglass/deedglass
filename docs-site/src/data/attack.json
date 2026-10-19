@@ -1,12 +1,12 @@
 {
   "object": "attack_page",
   "day": "2026-10-19",
-  "commit": "6e517b6",
+  "commit": "8b8a162",
   "postgres": "18.6",
   "summary": {
-    "matched": 78,
+    "matched": 82,
     "differs": 0,
-    "waiting": 4
+    "waiting": 0
   },
   "chains": "intact",
   "secrets_seen": 0,
@@ -424,29 +424,29 @@
           "id": "I05",
           "title": "Another writer changes the same resource while the action's call is open",
           "expected": "DETECTED (the other writer's version is reported as out_of_band and isn't bound to the action; the action's verdict comes from its own transaction only)",
-          "actual": "waiting on HC-P05",
-          "status": "waiting"
+          "actual": "DETECTED (the other writer's version is reported as out_of_band and isn't bound to the action; the action's verdict comes from its own transaction only)",
+          "status": "matched"
         },
         {
           "id": "I06",
           "title": "Another client sends a write carrying the action's X-Request-ID token",
           "expected": "DETECTED (the version is reported as request_id_reused and is never bound: binding needs the version the server reported to this action, so the forged version never makes the action VERIFIED)",
-          "actual": "waiting on HC-P05",
-          "status": "waiting"
+          "actual": "DETECTED (the version is reported as request_id_reused and is never bound: binding needs the version the server reported to this action, so the forged version never makes the action VERIFIED)",
+          "status": "matched"
         },
         {
           "id": "I07",
           "title": "One create commits two resource versions in one transaction (a placeholder reference target) while the call reports one",
           "expected": "MISMATCH at L2 (fhir_extra_versions: the action's transaction committed 2 resource versions, the call reported 1; the extra resource is named)",
-          "actual": "waiting on HC-P05",
-          "status": "waiting"
+          "actual": "MISMATCH at L2 (fhir_extra_versions: the action's transaction committed 2 resource versions, the call reported 1; the extra resource is named)",
+          "status": "matched"
         },
         {
           "id": "I08",
           "title": "A HAPI version row stored as JSONC in a large object (pre-7.0 storage)",
           "expected": "UNVERIFIABLE (L2 gap large_object_not_replicated); never MISMATCH and never VERIFIED",
-          "actual": "waiting on HC-P05",
-          "status": "waiting"
+          "actual": "UNVERIFIABLE (L2 gap large_object_not_replicated); never MISMATCH and never VERIFIED",
+          "status": "matched"
         },
         {
           "id": "I09",
