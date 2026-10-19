@@ -1334,6 +1334,10 @@ paths:
         database snapshot. Choose deeds by seq or by issued_at, at most 1,000,000 at a time; an
         empty range is 404 with where the chain ends. Check the file with `deedglass verify
         <file> --keys <this server>/.well-known/deedglass/keys.json`. Requires `deeds:read`.
+        With `format=fhir-auditevent` or `format=fhir-provenance` (HC-P10) the same range is
+        written as FHIR R4 NDJSON instead: one AuditEvent (IHE BALP profiles) per FHIR interaction,
+        or one Provenance (HL7 AI Transparency AI Provenance) per successful FHIR write, with ids and
+        digests only (docs/EXPORTS.md).
       tags: [Deeds]
       security: [{bearerAuth: []}, {sessionCookie: []}]
       x-deedglass-auth: session_or_key
@@ -1344,9 +1348,10 @@ paths:
         - $ref: "#/components/parameters/ToSeq"
         - {name: "issued_at[gte]", in: query, required: false, description: RFC 3339; inclusive. Not with from_seq or to_seq., schema: {type: string, format: date-time}}
         - {name: "issued_at[lt]", in: query, required: false, description: RFC 3339; exclusive., schema: {type: string, format: date-time}}
+        - {name: format, in: query, required: false, description: "tar.gz (the default, a sealed bundle), fhir-auditevent or fhir-provenance (FHIR R4 NDJSON).", schema: {type: string, enum: [tar.gz, fhir-auditevent, fhir-provenance]}}
       responses:
         "200":
-          description: The bundle, streamed.
+          description: The bundle, streamed; or FHIR R4 NDJSON for a fhir-* format.
           headers:
             Deedglass-Request-Id:
               $ref: "#/components/headers/DeedglassRequestId"
@@ -1359,6 +1364,10 @@ paths:
               schema:
                 type: string
                 contentMediaType: application/gzip
+            application/fhir+ndjson:
+              schema:
+                type: string
+                contentMediaType: application/fhir+ndjson
         default:
           $ref: "#/components/responses/Error"
   /v1/security_pack/readiness:

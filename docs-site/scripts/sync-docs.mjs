@@ -59,6 +59,7 @@ export const IMPORTS = {
   'docs/guides/healthcare-fhir-pack.md': 'guides/healthcare-fhir-pack',
   'docs/OBSERVE.md': 'reference/observe',
   'docs/PHI_MODE.md': 'reference/phi-mode',
+  'docs/EXPORTS.md': 'reference/exports',
   'docs/SHELL_GUARD.md': 'reference/shell-guard',
   'docs/SECURITY_PACK.md': 'reference/security-pack',
   'docs/WEEKLY.md': 'reference/weekly',

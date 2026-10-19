@@ -168,6 +168,7 @@ type state struct {
 	clientOnce  sync.Once
 	read, write *http.Client
 	tokenKey    atomic.Value // the token cache key last used (string)
+	clientID    atomic.Value // the SMART client_id last used (string): the identity the FHIR server sees
 }
 
 func parse(inst *connector.Instance) (*state, error) {

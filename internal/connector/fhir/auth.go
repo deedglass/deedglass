@@ -225,6 +225,7 @@ func (c *Connector) smartToken(ctx context.Context, inst *connector.Instance, st
 	}
 	key := c.cacheKey(inst) + ":" + fingerprint(sec)
 	st.tokenKey.Store(key)
+	st.clientID.Store(sec.Field("client_id"))
 	return c.tokens.Get(ctx, key, 30*time.Second, func(ctx context.Context) (*vault.Secret, time.Time, error) {
 		k, err := parseJWK(sec.Field("private_jwk"))
 		if err != nil {

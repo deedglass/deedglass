@@ -40,6 +40,19 @@ this file by `scripts/release-notes.sh`.
   `break-glass`. 36 cases; `make policy-test` now runs every pack's cases. Attack case I12 runs. See
   `docs/guides/healthcare-fhir-pack.md`.
 
+- **Records as FHIR R4 AuditEvent and Provenance** (HC-P10): `deedglass deeds export --format
+  fhir-auditevent|fhir-provenance` (from the database, or `--from <bundle>` offline) and
+  `GET /v1/deeds/export?format=…` write FHIR NDJSON. One AuditEvent per FHIR interaction, shaped to
+  the IHE BALP profiles (the Patient variants when the call names a patient in the clear), with the
+  FHIR server, the connector's OAuth client id, the agent as the user and Deedglass as the observer;
+  one Provenance per successful FHIR write, shaped to the HL7 AI Transparency ballot's AI Provenance,
+  with the agent as an AI Device author, Deedglass as assembler and (when the check passed)
+  verifier, the request digest as the entity and the record's seal as the signature. Ids and
+  digests only. CI validates every resource against HAPI FHIR's R4 StructureDefinitions. The record
+  format doesn't change. See `docs/EXPORTS.md`.
+- The FHIR connector's result carries `client_id` (the SMART client the server saw) when it uses
+  SMART Backend Services; PHI mode keeps it.
+
 ### Changed
 
 - The server image budget is 45,000,000 bytes (it was 40,000,000; ADR-106, proposed). The

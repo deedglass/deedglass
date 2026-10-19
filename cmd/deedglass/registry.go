@@ -255,7 +255,7 @@ var commands = []*Command{
 		Usage: "<deed_…|seq> [--yes] [--json]", Flags: deedsShareFlags, Needs: config.NeedDatabase, Run: runDeedsShare,
 		Detail: "Prints https://deedglass.com/verify#d=…&k=…: the record and the key that sealed it, in the part after #, which never\nreaches a server. The link holds ids, the agent name, the tool, the decision, the verdict and digests; never arguments or results.\nAsks first ([y/N]) unless --yes."},
 	{Path: p("deeds", "export"), Group: Deeds, Summary: "Export records as a bundle",
-		Usage: "[--out <file>|-] [--format tar.gz|jsonl] [--from-seq n] [--to-seq n] [--since 1h] [--json]",
+		Usage: "[--out <file>|-] [--format tar.gz|jsonl|fhir-auditevent|fhir-provenance] [--from <bundle>] [--from-seq n] [--to-seq n] [--since 1h] [--json]",
 		Flags: deedsExportFlags, Needs: config.NeedDatabase, Run: runDeedsExport},
 	{Path: p("deeds", "seal-file"), Group: Deeds, Summary: "Seal a file's hash as a record",
 		Usage: "<path> --label <text> [--media-type application/pdf|text/markdown|application/json|text/plain|text/html|application/gzip] [--out <path>.deed.json] [--json]",

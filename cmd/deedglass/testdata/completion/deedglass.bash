@@ -45,7 +45,7 @@ _deedglass() {
     'decoder drop') subs=''; flags='--confirm --connector' ;;
     'decoder status') subs=''; flags='--connector --recent' ;;
     'deeds') subs='list show share export seal-file'; flags='' ;;
-    'deeds export') subs=''; flags='--format --from-seq --out --since --to-seq' ;;
+    'deeds export') subs=''; flags='--format --from --from-seq --out --since --to-seq' ;;
     'deeds list') subs=''; flags='--action --cursor --from-seq --kind --limit --order --to-seq' ;;
     'deeds share') subs=''; flags='--yes' ;;
     'deny') subs=''; flags='--as --reason' ;;

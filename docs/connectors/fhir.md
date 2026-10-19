@@ -159,10 +159,18 @@ rules:
     verify: L1
 ```
 
+## Export as AuditEvent and Provenance
+
+`deedglass deeds export --format fhir-auditevent` (or `fhir-provenance`, or
+`GET /v1/deeds/export?format=…`) writes this connector's records as FHIR R4 AuditEvent (IHE BALP)
+and Provenance (HL7 AI Transparency) resources, ids and digests only: [Exports](../EXPORTS.md). With
+SMART Backend Services, each write's result carries `client_id`, the client the FHIR server saw, so
+the AuditEvent names it.
+
 ## PHI mode
 
 With [PHI mode](../PHI_MODE.md) on, a `fhir` action keeps the arguments `resource_type`, `id` and
-`version_id`, and the result's `status`, `headers.etag`, `headers.location`,
+`version_id`, and the result's `status`, `client_id`, `headers.etag`, `headers.location`,
 `headers.last-modified`, `body.resourceType`, `body.id` and `body.meta.versionId`. Resources,
 search parameters, patches and codes become digests once the action is sealed and checked.
 
@@ -170,7 +178,6 @@ search parameters, patches and codes become digests once the action is sealed an
 
 - **Proven (L2)** for Postgres-backed FHIR servers (HAPI, Medplum) and the `out_of_band`,
   `request_id_reused` and `fhir_extra_versions` findings: ticket HC-P05 (attack cases I05 to I08).
-- **AuditEvent and Provenance export** (IHE BALP): ticket HC-P10.
 - **Transaction and batch Bundles**: one resource per call.
 - **A Medplum test matrix**: HAPI FHIR JPA only so far.
 - **Patient references as salted digests** in `request.fhir`: needs the per-org salt (HC-P09's
