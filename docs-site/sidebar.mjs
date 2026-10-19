@@ -115,6 +115,7 @@ export const sidebar = clean([
           p('reference/connectors/stripe', 'Stripe (test mode)'),
           p('reference/connectors/gmail', 'Gmail drafts'),
           p('reference/connectors/notion', 'Notion'),
+          p('reference/connectors/fhir', 'FHIR servers'),
           p('reference/connectors/mcp-http', 'Remote MCP servers'),
           p('reference/connectors/fake', 'fake (dev only)'),
         ],

@@ -40,7 +40,7 @@ const (
 )
 
 // KnownConnectorTypes are inferred from a tool name's prefix (docs/POLICY_LANGUAGE.md §4.4).
-var KnownConnectorTypes = map[string]bool{"postgres": true, "rest": true, "mcp": true, "mcp_http": true, "sdk": true,
+var KnownConnectorTypes = map[string]bool{"postgres": true, "rest": true, "mcp": true, "mcp_http": true, "sdk": true, "fhir": true,
 	"github": true, "slack": true, "stripe": true, "gmail": true, "notion": true, "fake": true}
 
 // InputProblem is one thing wrong with a case input. Path is relative to the input ("agent.lables").
@@ -60,7 +60,7 @@ var (
 	orgKeys         = []string{"id", "timezone", "stopped"}
 	userKeys        = []string{"ref", "sub", "iss"}
 	sessionKeys     = []string{"ref"}
-	requestKeys     = []string{"mode", "intent_signed", "bytes", "digest", "http", "github", "slack", "stripe", "email", "mail"}
+	requestKeys     = []string{"mode", "intent_signed", "bytes", "digest", "http", "github", "slack", "stripe", "email", "mail", "fhir"}
 	httpKeys        = []string{"method", "path", "host"}
 	githubKeys      = []string{"repo", "owner", "name", "default_branch", "branch", "base", "head", "path", "protected_branch",
 		"is_default_branch", "touches_workflows", "enriched"}
@@ -410,6 +410,11 @@ func BuildInput(v any) (Input, *InputProblem) {
 		}
 		if v, set := rm["mail"]; set {
 			if p := factsFrom("request.mail", v, jsonKeys[MailFacts](), &in.Request.Mail); p != nil {
+				return in, p
+			}
+		}
+		if v, set := rm["fhir"]; set {
+			if p := factsFrom("request.fhir", v, jsonKeys[FHIRFacts](), &in.Request.FHIR); p != nil {
 				return in, p
 			}
 		}

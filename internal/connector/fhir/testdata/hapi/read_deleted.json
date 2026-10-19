@@ -1,0 +1,18 @@
+{
+ "body": {
+  "issue": [
+   {
+    "code": "processing",
+    "diagnostics": "Resource was deleted at 2026-10-19T01:13:55.667+00:00",
+    "severity": "error"
+   }
+  ],
+  "resourceType": "OperationOutcome"
+ },
+ "headers": {
+  "content-type": "application/fhir+json;charset=UTF-8",
+  "location": "https://fhir.test/fhir/Observation/1001/_history/4",
+  "x-request-id": "2TXq6nQJ9hiSCkXl"
+ },
+ "status": 410
+}

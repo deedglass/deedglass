@@ -7919,6 +7919,7 @@ components:
                 - schedule_needs_approval
                 - action_executing
                 - from_denied
+                - fhir_version_conflict
                 - undo_unavailable
                 - undo_plan_stale
                 - already_undone

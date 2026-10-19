@@ -154,7 +154,7 @@ func (r *Refs) Resolve(s string) string {
 // productConnectors are the connector types Deedglass ships: a tool named after one of them is a
 // product name, not an org's choice.
 var productConnectors = map[string]bool{"postgres": true, "stripe": true, "gmail": true, "notion": true, "slack": true,
-	"github": true, "rest": true, "fake": true, "mcp_http": true}
+	"github": true, "rest": true, "fake": true, "mcp_http": true, "fhir": true}
 
 // toolRef is the tool's own name when it is a product tool, else a placeholder.
 func (r *Refs) toolRef(tool string) string {

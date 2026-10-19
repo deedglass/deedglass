@@ -116,6 +116,9 @@ const (
 	CodeActionExecuting       Code = "action_executing"
 	CodeFromDenied            Code = "from_denied"
 
+	// HC-P02: the FHIR connector. It appears as an action's execution.error_code.
+	CodeFHIRVersionConflict Code = "fhir_version_conflict"
+
 	// S23: undo.
 	CodeUndoUnavailable Code = "undo_unavailable"
 	CodeUndoPlanStale   Code = "undo_plan_stale"
@@ -264,6 +267,9 @@ var catalog = []CatalogEntry{
 	{CodeScheduleNeedsApproval, 403, TypePolicy, "A scheduled action must wait for an approval. This policy allows it now, so it would run early. Add require_approval to the rule, or drop the schedule.", "", "S40"},
 	{CodeActionExecuting, 409, TypeInvalidRequest, "It's running now and can't be cancelled. Its deed will show what happened.", "", "S40"},
 	{CodeFromDenied, 400, TypeInvalidRequest, "From on deedglass.com is never allowed for outbound mail. Use the sending-domain mailbox.", "", "S40"},
+
+	{CodeFHIRVersionConflict, 409, TypeInvalidRequest, "The FHIR server refused the write because the resource changed since the version sent. Nothing was written. Read it again and send the new version id.",
+		"The FHIR server refused the write to {resource} (HTTP {status}): the version sent ({version}) isn't the current one. Nothing was written. Read it again and send the new version id.", "HC-P02"},
 
 	{CodeUndoUnavailable, 409, TypeInvalidRequest, "Undo isn't available for this action. The checks field lists each failing check with its fix.",
 		"Undo isn't available for {act}: {n} check failed ({ids}). Run deedglass undo preview {act} for the fix.", "S23"},

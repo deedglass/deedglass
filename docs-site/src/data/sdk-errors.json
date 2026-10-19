@@ -484,6 +484,13 @@
       "doc_url": "https://docs.deedglass.com/errors/from_denied"
     },
     {
+      "code": "fhir_version_conflict",
+      "status": 409,
+      "type": "invalid_request_error",
+      "class": "InvalidRequestError",
+      "doc_url": "https://docs.deedglass.com/errors/fhir_version_conflict"
+    },
+    {
       "code": "undo_unavailable",
       "status": 409,
       "type": "invalid_request_error",

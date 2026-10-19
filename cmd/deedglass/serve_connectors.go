@@ -13,6 +13,7 @@ import (
 	"github.com/deedglass/deedglass/internal/config"
 	"github.com/deedglass/deedglass/internal/connector"
 	"github.com/deedglass/deedglass/internal/connector/egress"
+	fhirconn "github.com/deedglass/deedglass/internal/connector/fhir"
 	"github.com/deedglass/deedglass/internal/connector/github"
 	gmailconn "github.com/deedglass/deedglass/internal/connector/gmail"
 	notionconn "github.com/deedglass/deedglass/internal/connector/notion"
@@ -92,7 +93,7 @@ func selfAddrs(ctx context.Context, dsn string) []netip.AddrPort {
 // REST and Postgres types everywhere.
 func newConnectors(ctx context.Context, cfg *config.Config, db *store.DB, led *ledger.Ledger, natives []connector.Connector, log *slog.Logger) (*connectors, error) {
 	c := &connectors{egress: egressPolicy(ctx, cfg, log)}
-	o := connector.Options{Builtins: natives, Types: []connector.Connector{rest.New(), postgres.New(log), github.New(), slackconn.New(), stripeconn.New(), gmailconn.New(), notionconn.New()},
+	o := connector.Options{Builtins: natives, Types: []connector.Connector{rest.New(), postgres.New(log), github.New(), slackconn.New(), stripeconn.New(), gmailconn.New(), notionconn.New(), fhirconn.New()},
 		Loader: connector.DBLoader{DB: db},
 		Env:    connector.Env{Name: string(cfg.Env), Egress: c.egress}, Logger: log}
 	// S40: the outbound_mail type exists only in the ops build, and only for the listed orgs.
@@ -126,7 +127,7 @@ func connectorRoutes(db *store.DB, led *ledger.Ledger, cw *connectors, log *slog
 	if cw == nil {
 		p, _ := upstream.New(upstream.Options{})
 		a.Registry = connector.New(connector.Options{Types: []connector.Connector{rest.New(), postgres.New(nil), upstream.NewType(p),
-			github.New(), slackconn.New(), stripeconn.New(), gmailconn.New(), notionconn.New()}})
+			github.New(), slackconn.New(), stripeconn.New(), gmailconn.New(), notionconn.New(), fhirconn.New()}})
 	} else {
 		a.Registry = cw.reg
 		if cw.vault != nil {

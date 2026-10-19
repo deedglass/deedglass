@@ -65,7 +65,7 @@ func TestCatalogRoutes(t *testing.T) {
 	for _, x := range l.Data {
 		order = append(order, x.Title)
 	}
-	if strings.Join(order, ",") != "GitHub,Gmail,Notion,PostgreSQL,REST API,Remote MCP server,Slack,Stripe" {
+	if strings.Join(order, ",") != "FHIR,GitHub,Gmail,Notion,PostgreSQL,REST API,Remote MCP server,Slack,Stripe" {
 		t.Errorf("order %v", order)
 	}
 	// A second server (a restart) gives the same ETag; If-None-Match answers 304.

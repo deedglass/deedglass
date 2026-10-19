@@ -73,6 +73,7 @@ CODES: dict[str, tuple[int, str, str]] = {
     "schedule_needs_approval": (403, "policy_error", "PolicyDeniedError"),
     "action_executing": (409, "invalid_request_error", "InvalidRequestError"),
     "from_denied": (400, "invalid_request_error", "InvalidRequestError"),
+    "fhir_version_conflict": (409, "invalid_request_error", "InvalidRequestError"),
     "undo_unavailable": (409, "invalid_request_error", "InvalidRequestError"),
     "undo_plan_stale": (409, "invalid_request_error", "InvalidRequestError"),
     "already_undone": (409, "invalid_request_error", "InvalidRequestError"),

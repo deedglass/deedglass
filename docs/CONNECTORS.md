@@ -302,6 +302,7 @@ pages, the CLI and the SDKs. Each `connector_type` keeps S16's fields and adds `
 $ deedglass connector types
 TYPE       TITLE               LEVELS     TOOLS         MODE
 fake       Fake (dev only)     L0         4             dev only
+fhir       FHIR                L0 L1      8
 github     GitHub              L0 L1      14
 gmail      Gmail               L0 L1      5             drafts only
 mcp_http   Remote MCP server   L0         from server
@@ -320,7 +321,8 @@ and the setup steps.
 
 Connector pages: [GitHub](connectors/github.md), [Slack](connectors/slack.md),
 [Stripe](connectors/stripe.md) (sandbox only), [Gmail](connectors/gmail.md) (drafts only),
-[Notion](connectors/notion.md) (under the parent pages you list).
+[Notion](connectors/notion.md) (under the parent pages you list), [FHIR](connectors/fhir.md) (FHIR R4
+servers, on the resource types you list).
 
 ## What connectors don't do
 

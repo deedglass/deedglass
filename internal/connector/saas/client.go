@@ -64,6 +64,8 @@ type Request struct {
 	Idempotent     bool
 	IdempotencyKey string
 	Header         http.Header // per-call headers (never auth)
+	// ContentType replaces the body's media type (HC-P02: application/fhir+json).
+	ContentType string
 }
 
 // Response is an answer. Body is at most MaxBody bytes; a larger body is an error, never a
@@ -264,6 +266,9 @@ func (c *Client) build(ctx context.Context, r Request) (*http.Request, error) {
 		for _, v := range vs {
 			req.Header.Add(k, v)
 		}
+	}
+	if ctype != "" && r.ContentType != "" {
+		ctype = r.ContentType
 	}
 	if ctype != "" {
 		req.Header.Set("Content-Type", ctype)

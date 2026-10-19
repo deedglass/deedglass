@@ -63,22 +63,48 @@ func nativeReadBack(ctx context.Context, s Subject, obs Observer, final bool) L1
 	return res
 }
 
-// nativeFindings turns findings into one reason: a violation naming the first field that
-// disagrees (with every diff), or a pass naming what matched. retry: a field disagreed.
+// nativeFindings turns findings into reasons: a violation naming the first field that disagrees
+// (with every diff), or a pass naming what matched. A finding with a catalog code (a connector's
+// own trap, HC-P02) becomes that reason, and the catalog decides its class: a gap stays a gap and is
+// never retried, a note rides along with the pass. retry: a field disagreed in a plain comparison.
 func nativeFindings(s Subject, target string, fs []Finding) ([]Reason, bool) {
 	var diffs []FieldDiff
 	var matched []string
+	var notes, gaps []Reason
+	var code Code
 	for _, f := range fs {
+		if f.Code != "" {
+			vars := map[string]any{"tool": s.Tool, "readback": target, "path": f.Field, "observed": f.Observed, "expected": f.Expected, "n": f.Observed}
+			switch classOf(f.Code) {
+			case Note:
+				notes = append(notes, R(L1, f.Code, "readback.native", vars))
+				continue
+			case Gap:
+				gaps = append(gaps, R(L1, f.Code, "readback.native", vars))
+				continue
+			}
+		}
 		if f.Match {
 			matched = append(matched, f.Field)
 			continue
 		}
+		if code == "" {
+			code = f.Code
+		}
 		diffs = append(diffs, FieldDiff{Path: f.Field, Expected: f.Expected, Observed: f.Observed})
 	}
 	if len(diffs) > 0 {
+		if code == "" || classOf(code) != Violation {
+			code = CodePostconditionFailed
+		}
 		d := diffs[0]
-		return []Reason{R(L1, CodePostconditionFailed, "readback.native", map[string]any{"tool": s.Tool, "readback": target,
-			"path": d.Path, "observed": d.Observed, "expected": d.Expected}).WithDiff(diffs)}, true
+		// A plain comparison may still catch up (a service that shows a write late); a connector's
+		// own trap read something that doesn't change (a FHIR version), so it isn't asked again.
+		return append([]Reason{R(L1, code, "readback.native", map[string]any{"tool": s.Tool, "readback": target,
+			"path": d.Path, "observed": d.Observed, "expected": d.Expected}).WithDiff(diffs)}, notes...), code == CodePostconditionFailed
+	}
+	if len(gaps) > 0 {
+		return append(gaps, notes...), false
 	}
 	fields := "the write is there"
 	if len(matched) > 0 {
@@ -87,7 +113,15 @@ func nativeFindings(s Subject, target string, fs []Finding) ([]Reason, bool) {
 			fields = matched[0] + " matches"
 		}
 	}
-	return []Reason{R(L1, CodeReadbackMatched, "readback.native", map[string]any{"readback": target, "fields": fields})}, false
+	return append([]Reason{R(L1, CodeReadbackMatched, "readback.native", map[string]any{"readback": target, "fields": fields})}, notes...), false
+}
+
+// classOf is a code's catalog class; an unknown code is a gap (the witness fails closed).
+func classOf(c Code) Class {
+	if e, ok := catalog[c]; ok {
+		return e.Class
+	}
+	return Gap
 }
 
 // joinAnd is "a", "a and b", "a, b and c".

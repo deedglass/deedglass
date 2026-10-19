@@ -130,6 +130,33 @@ func TestLayering(t *testing.T) {
 		}
 	}
 
+	// HC-P02 (ADR-105, DL-109): the FHIR connector is an adapter. The core (Gate, Witness, deeds,
+	// policy) imports nothing from it, and it imports no third-party package (no vendor SDK).
+	fhirPkg := module + "/internal/connector/fhir"
+	for path, p := range all {
+		core := false
+		for _, c := range []string{"internal/gate", "internal/witness", "internal/deed", "internal/policy"} {
+			core = core || path == module+"/"+c || strings.HasPrefix(path, module+"/"+c+"/")
+		}
+		if !core {
+			continue
+		}
+		for _, d := range p.Deps {
+			if d == fhirPkg || strings.HasPrefix(d, fhirPkg+"/") {
+				t.Errorf("%s imports %s; the core never imports a protocol adapter", path, d)
+			}
+		}
+	}
+	if p, ok := get("internal/connector/fhir"); !ok {
+		t.Fatal("internal/connector/fhir not found")
+	} else {
+		for _, d := range p.Imports {
+			if strings.Contains(strings.SplitN(d, "/", 2)[0], ".") && !strings.HasPrefix(d, module+"/") {
+				t.Errorf("internal/connector/fhir may import only the standard library and this module, got %s", d)
+			}
+		}
+	}
+
 	// Nothing in internal/ imports cmd/.
 	for path, p := range all {
 		if !strings.HasPrefix(path, module+"/internal/") {

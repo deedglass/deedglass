@@ -60,8 +60,12 @@ builds:
       - -gcflags=github.com/deedglass/deedglass/internal/connector/slack=-l
       - -gcflags=github.com/deedglass/deedglass/internal/connector/gmail=-l
       - -gcflags=github.com/deedglass/deedglass/internal/connector/notion=-l
+      - -gcflags=github.com/deedglass/deedglass/internal/connector/fhir=-l
       - -gcflags=github.com/deedglass/deedglass/internal/connectorapi=-l
       - -gcflags=github.com/deedglass/deedglass/internal/mcp/bridge=-l
+      - -gcflags=github.com/deedglass/deedglass/internal/store/learnstore=-l
+      - -gcflags=github.com/deedglass/deedglass/internal/approve/...=-l
+      - -gcflags=github.com/deedglass/deedglass/internal/notify/...=-l
     ldflags:
       - -s -w
       - -X github.com/deedglass/deedglass/internal/buildinfo.Version={{ .Version }}

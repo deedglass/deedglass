@@ -1,0 +1,43 @@
+{
+ "body": {
+  "code": {
+   "coding": [
+    {
+     "code": "8867-4",
+     "display": "Heart rate",
+     "system": "http://loinc.org"
+    }
+   ]
+  },
+  "id": "1001",
+  "identifier": [
+   {
+    "system": "urn:deedglass:test",
+    "value": "rec-1792372435"
+   }
+  ],
+  "meta": {
+   "lastUpdated": "2026-10-19T01:13:55.286+00:00",
+   "versionId": "2"
+  },
+  "resourceType": "Observation",
+  "status": "final",
+  "subject": {
+   "reference": "Patient/dg-synthetic-1"
+  },
+  "valueQuantity": {
+   "code": "/min",
+   "system": "http://unitsofmeasure.org",
+   "unit": "beats/minute",
+   "value": 72
+  }
+ },
+ "headers": {
+  "content-location": "https://fhir.test/fhir/Observation/1001/_history/2",
+  "content-type": "application/fhir+json;charset=UTF-8",
+  "etag": "W/\"2\"",
+  "last-modified": "Mon, 19 Oct 2026 01:13:55 GMT",
+  "x-request-id": "dB157nREbA0TiTzV"
+ },
+ "status": 200
+}

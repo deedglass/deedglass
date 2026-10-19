@@ -1,0 +1,17 @@
+{
+ "body": {
+  "issue": [
+   {
+    "code": "processing",
+    "diagnostics": "HAPI-0450: Failed to parse request body as JSON resource. Error was: HAPI-1821: [element=\"status\"] Invalid attribute value \"not-a-status\": Unknown ObservationStatus code 'not-a-status'",
+    "severity": "error"
+   }
+  ],
+  "resourceType": "OperationOutcome"
+ },
+ "headers": {
+  "content-type": "application/fhir+json;charset=UTF-8",
+  "x-request-id": "vYjqT7Qu1I2KCxCY"
+ },
+ "status": 400
+}

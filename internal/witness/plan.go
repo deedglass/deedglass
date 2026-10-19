@@ -88,8 +88,12 @@ type ToolWitnessSpec struct {
 	PostgresRow   bool            // postgres.execute: the row read-back applies to a simple single-row update
 	// Native: the connector reads this tool's writes back and compares them in code (S29: github,
 	// slack); NativeL1 is the tool's sentence for what that check shows.
-	Native        bool
-	NativeL1      string
+	Native   bool
+	NativeL1 string
+	// NativeUnknown: the connector also looks for the write after an unknown outcome (HC-P02: a FHIR
+	// server's history since the call). Its findings can't turn the missing claim into a pass on
+	// their own: a found write is compared, and anything else is a gap.
+	NativeUnknown bool
 	DefaultSchema string // postgres: the schema unqualified tables resolve to
 }
 
@@ -124,6 +128,7 @@ type Finding struct {
 	Expected any
 	Observed any
 	Match    bool
+	Code     Code // a catalog code for a connector's own trap (fhir_conditional_matched); "" for a plain comparison
 }
 
 // ReadRequest is one read-back to run: the read tool and its resolved arguments. Postgres row
@@ -182,9 +187,16 @@ type Plan struct {
 
 // PlanFor decides the levels: L0 always; L1 for a gateway call that succeeded and has a read-back
 // (or is a simple single-row Postgres update); L2 when S21 says so. An unknown outcome is never
-// read back: a read-back can't contradict a tool that made no claim.
+// read back: a read-back can't contradict a tool that made no claim, unless the connector looks
+// for the write itself (NativeUnknown, HC-P02).
 func PlanFor(s Subject) Plan {
-	if s.Mode == ModeProxy || s.Result.Status != StatusSucceeded {
+	if s.Mode == ModeProxy {
+		return Plan{}
+	}
+	if s.Result.Status == StatusUnknown && s.Spec.Native && s.Spec.NativeUnknown {
+		return Plan{L1: true, Kind: KindNative}
+	}
+	if s.Result.Status != StatusSucceeded {
 		return Plan{}
 	}
 	if s.Spec.Native {

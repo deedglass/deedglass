@@ -60,6 +60,7 @@ type Normalized struct {
 	Email  policy.EmailFacts
 	// Mail is S40's request.mail (the ops build's outbound-mail connector).
 	Mail policy.MailFacts
+	FHIR policy.FHIRFacts // HC-P02
 	// DefaultSchema and RaisedSideEffect come from the Postgres connector's enrichment (S17): the
 	// schema unqualified names resolve to, and a per-call side effect above the tool's declared one.
 	DefaultSchema    string

@@ -144,3 +144,69 @@ func TestJoinAnd(t *testing.T) {
 		}
 	}
 }
+
+// TestNativeFindingCodes is HC-P02's extension: a finding naming a catalog code becomes that
+// reason, with the class the catalog gives it (a violation, a note beside the pass, a gap that is
+// never retried), and an unknown outcome is read back only when the connector says it looks for
+// the write itself.
+func TestNativeFindingCodes(t *testing.T) {
+	ctx := context.Background()
+	s := nativeSubject()
+	s.Tool, s.ConnectorType = "fhir.create", "fhir"
+	t.Run("violation", func(t *testing.T) {
+		obs := &fakeObserver{fn: findings(Finding{Field: "created", Expected: "a new Observation", Observed: "Observation/1001 version 1", Code: CodeFHIRConditionalMatched})}
+		cctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+		defer cancel()
+		r := EvaluateL1(cctx, s, obs, true)
+		if r.Reasons[0].Code != CodeFHIRConditionalMatched || r.Reasons[0].Class != Violation ||
+			r.Reasons[0].Message != `fhir.create reported success, but the conditional create matched an existing resource ("Observation/1001 version 1"), so this action created nothing.` {
+			t.Fatalf("%+v", r.Reasons)
+		}
+		if d := Decide(L1, map[Level][]Reason{L1: r.Reasons}, nil); d.Verdict != Mismatch || d.Level != L1 {
+			t.Fatalf("decide %+v", d)
+		}
+	})
+	t.Run("note rides with the pass", func(t *testing.T) {
+		r := EvaluateL1(ctx, s, &fakeObserver{fn: findings(Finding{Field: "status", Match: true},
+			Finding{Field: "meta.versionId", Expected: "a new version", Observed: "2", Match: true, Code: CodeFHIRNoNewVersion})}, true)
+		if len(r.Reasons) != 2 || r.Reasons[0].Code != CodeReadbackMatched || r.Reasons[1].Code != CodeFHIRNoNewVersion || r.Reasons[1].Class != Note {
+			t.Fatalf("%+v", r.Reasons)
+		}
+		if !strings.HasSuffix(r.Reasons[0].Message, "status matches.") {
+			t.Fatal(r.Reasons[0].Message)
+		}
+		if d := Decide(L1, map[Level][]Reason{L1: r.Reasons}, nil); d.Verdict != Verified {
+			t.Fatalf("decide %+v", d)
+		}
+	})
+	t.Run("gap, never retried, never a mismatch", func(t *testing.T) {
+		obs := &fakeObserver{fn: findings(Finding{Field: "history", Observed: "0", Code: CodeFHIRHistoryNoMatch})}
+		r := EvaluateL1(ctx, s, obs, true)
+		if obs.calls() != 1 || len(r.Reasons) != 1 || r.Reasons[0].Class != Gap || !strings.Contains(r.Reasons[0].Message, "shows 0 versions") {
+			t.Fatalf("calls %d %+v", obs.calls(), r.Reasons)
+		}
+	})
+	t.Run("a code that isn't a violation can't make one", func(t *testing.T) {
+		cctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+		defer cancel()
+		r := EvaluateL1(cctx, s, &fakeObserver{fn: findings(Finding{Field: "x", Expected: "a", Observed: "b", Code: CodeReadbackMatched})}, true)
+		if r.Reasons[0].Code != CodePostconditionFailed {
+			t.Fatalf("%+v", r.Reasons)
+		}
+	})
+	t.Run("unknown outcome", func(t *testing.T) {
+		u := s
+		u.Result.Status = StatusUnknown
+		if p := PlanFor(u); p.L1 {
+			t.Fatalf("an unknown outcome is read back without NativeUnknown: %+v", p)
+		}
+		u.Spec.NativeUnknown = true
+		if p := PlanFor(u); !p.L1 || p.Kind != KindNative {
+			t.Fatalf("plan %+v", p)
+		}
+		u.Mode = ModeProxy
+		if p := PlanFor(u); p.L1 {
+			t.Fatalf("proxy: %+v", p)
+		}
+	})
+}

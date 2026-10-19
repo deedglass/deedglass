@@ -1,0 +1,15 @@
+# The native FHIR R4 connector (HC-P02, ADR-105) on a local HAPI FHIR JPA server. One tool per
+# interaction on the types below; every write is read back at the version the server reported.
+#   make fhir-up                     # HAPI FHIR JPA in Docker on a free port (synthetic data only)
+#   deedglass connector create --config examples/connectors/fhir.yaml   # base_url = the URL it prints
+#   deedglass connector test fhir
+# A real server takes auth: { kind: smart_backend } (docs/connectors/fhir.md has the setup).
+type: fhir
+name: fhir
+description: A FHIR R4 server (HAPI FHIR JPA). Observations and Conditions; no deletes.
+config:
+  base_url: http://127.0.0.1:18093/fhir    # dev only (DEEDGLASS_ALLOW_PRIVATE_NETWORKS=1); prod needs https
+  auth: { kind: none }                     # dev only; a real server takes smart_backend or bearer
+  allowed_resource_types: [Observation, Condition]
+  allowed_interactions: [read, vread, search, history, create, update, patch]   # no delete
+  if_match: when_known                     # required: every update and patch must carry the version read

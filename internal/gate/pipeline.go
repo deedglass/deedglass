@@ -299,7 +299,7 @@ func (p *Pipeline) Submit(ctx context.Context, pr principal, req ActionRequest) 
 			n.ConnectorType = ctype
 			e := enrichAll(ctx, ex, spec, n.Args)
 			n.HTTP, n.GitHub, n.Slack, n.DefaultSchema, n.RaisedSideEffect = e.HTTP, e.GitHub, e.Slack, e.DefaultSchema, e.Side
-			n.Stripe, n.Email, n.Mail = e.Stripe, e.Email, e.Mail
+			n.Stripe, n.Email, n.Mail, n.FHIR = e.Stripe, e.Email, e.Mail, e.FHIR
 		}
 	}
 	// The active policies, before any transaction: a cold load reads Postgres on its own. The
@@ -760,7 +760,7 @@ func buildInput(org ids.OrgID, agent ids.AgentID, subj store.GateSubject, n *Nor
 			Type: ctype, Op: n.ToolName}, DefaultSchema: n.DefaultSchema},
 		Args: n.Args,
 		Request: policy.RequestFacts{Mode: string(n.Mode), Bytes: n.ArgsBytes, IntentSigned: ir.Signed, Digest: n.Digest, HTTP: n.HTTP,
-			GitHub: n.GitHub, Slack: n.Slack, Stripe: n.Stripe, Email: n.Email, Mail: n.Mail},
+			GitHub: n.GitHub, Slack: n.Slack, Stripe: n.Stripe, Email: n.Email, Mail: n.Mail, FHIR: n.FHIR},
 		Time: now.UTC(),
 	}
 	return in, loc, nil
@@ -783,6 +783,7 @@ type enriched struct {
 	Stripe        policy.StripeFacts // S30
 	Email         policy.EmailFacts  // S30
 	Mail          policy.MailFacts   // S40
+	FHIR          policy.FHIRFacts   // HC-P02
 	DefaultSchema string
 	Side          string
 }
@@ -827,6 +828,11 @@ func enrichAll(ctx context.Context, ex Executor, spec connector.ToolSpec, args j
 	if s, ok := m["mail"]; ok {
 		if b, err := json.Marshal(s); err == nil && json.Unmarshal(b, &e.Mail) != nil {
 			e.Mail = policy.MailFacts{}
+		}
+	}
+	if s, ok := m["fhir"]; ok {
+		if b, err := json.Marshal(s); err == nil && json.Unmarshal(b, &e.FHIR) != nil {
+			e.FHIR = policy.FHIRFacts{}
 		}
 	}
 	return e

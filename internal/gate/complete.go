@@ -241,7 +241,7 @@ func (p *Pipeline) recordExecution(ctx context.Context, tx pgx.Tx, s Subject, e 
 		if err := p.enqueueL2(ctx, tx, s, wc); err != nil {
 			return nil, err
 		}
-		if wc.readBack && e.Status == ExecSucceeded {
+		if wc.readBack && (e.Status == ExecSucceeded || e.Status == ExecUnknown) {
 			due := p.now().Add(p.wcfg.InlineBudget + readBackGrace)
 			if err := store.EnqueueJobPayload(ctx, tx, s.Org, s.ID, JobL1ReadBack, due, p.cfg.WorkerMaxAttempts, payloadOf(wc)); err != nil {
 				return nil, err
@@ -249,7 +249,7 @@ func (p *Pipeline) recordExecution(ctx context.Context, tx pgx.Tx, s Subject, e 
 		}
 		return ledger.ReadAction(ctx, tx, s.Org, id)
 	}
-	if wc.readBack && e.Status == ExecSucceeded {
+	if wc.readBack && (e.Status == ExecSucceeded || e.Status == ExecUnknown) {
 		// B1: the read-back runs after this commits, with no transaction open. The job is the
 		// durable promise: if this instance stops, the worker reads back when it falls due.
 		if err := p.o.Ledger.Advance(ctx, tx, id, Executing, steps...); err != nil {

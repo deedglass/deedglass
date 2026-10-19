@@ -109,6 +109,21 @@ type MailFacts struct {
 	Enriched         bool   `json:"enriched" cel:"enriched"`
 }
 
+// FHIRFacts is the FHIR request the fhir connector will send (HC-P02, ADR-105 §4): request.fhir.
+// Codes are system|code pairs from the resource's code and category only, never free text.
+// Enriched is false when the arguments don't build a request; rules that allow on request.fhir
+// then don't match.
+type FHIRFacts struct {
+	Interaction  string   `json:"interaction" cel:"interaction"`     // read, vread, search, history, create, update, patch, delete
+	ResourceType string   `json:"resource_type" cel:"resource_type"` // one of the connector's allowed types
+	ID           string   `json:"id" cel:"id"`                       // "" for create, search and a type's history
+	Conditional  bool     `json:"conditional" cel:"conditional"`     // a create with If-None-Exist
+	IfMatch      bool     `json:"if_match" cel:"if_match"`           // an update, patch or delete with If-Match
+	Codes        []string `json:"codes" cel:"codes"`
+	Profiles     []string `json:"profiles" cel:"profiles"` // meta.profile URLs
+	Enriched     bool     `json:"enriched" cel:"enriched"`
+}
+
 // RequestFacts describes the request that carried the action.
 type RequestFacts struct {
 	Mode         string `json:"mode" cel:"mode"`
@@ -125,6 +140,8 @@ type RequestFacts struct {
 	Email  EmailFacts  `json:"email,omitzero" cel:"email"`
 	// Mail is the outbound-mail connector's facts (S40); zero for every other tool.
 	Mail MailFacts `json:"mail,omitzero" cel:"mail"`
+	// FHIR is the fhir connector's facts (HC-P02); zero for every other tool.
+	FHIR FHIRFacts `json:"fhir,omitzero" cel:"fhir"`
 }
 
 // SQLFacts is what the S11 classifier reports about args.sql.
