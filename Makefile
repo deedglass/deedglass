@@ -74,6 +74,16 @@ integration: ## throwaway PG cluster (Homebrew, else Docker): sql/ smoke, contro
 quickstart-it: ## S32/PRD-05: TestInitLive, deedglass init then init --trigger end to end in Docker on its own ports (two postgres:18.6 containers, removed after): smoke actions, the 301-row Doesn't match, the undo preview, the step line
 	DEEDGLASS_IT_INIT=1 $(GO) test -tags integration -count=1 -v -timeout 15m ./internal/setup -run TestInitLive
 
+.PHONY: fhir-up fhir-down fhir-it
+fhir-up: ## HC-P00: a throwaway FHIR R4 server (HAPI FHIR JPA, pinned image) in Docker on a free localhost port; prints the base URL (synthetic data only)
+	scripts/fhir.sh up
+
+fhir-down: ## HC-P00: remove the fhir-up container
+	scripts/fhir.sh down
+
+fhir-it: ## HC-P00: TestFHIRRestLive, the REST connector against HAPI FHIR JPA in Docker on a throwaway PG 18 (policy-gated create and update, read-back checks); the container is removed after
+	scripts/fhir.sh it
+
 mcp-it: ## S14: the real @modelcontextprotocol/server-filesystem via npx behind deedglass mcp wrap, on a throwaway PG 18 (needs Node.js; skips without it)
 	DEEDGLASS_IT_NODE=1 DEEDGLASS_IT_PKGS=./cmd/deedglass/ DEEDGLASS_IT_GOFLAGS="-v -run TestMCPWrap" scripts/integration_local.sh
 

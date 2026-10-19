@@ -118,7 +118,7 @@ A tool:
 | `method`, `path` | One method from `allowed_methods`; a path under an allowed prefix whose `{placeholders}` are whole segments and equal the `in: path` args. |
 | `side_effect` | Optional; only higher than the method's default. `tools[2] is a DELETE, so its side effect can't be "read". Use "destructive", or leave side_effect out.` |
 | `idempotent`, `idempotency_header` | Mark a write safe to retry. With `idempotency_header: Idempotency-Key` the header carries the action id, the same on every retry. |
-| `args` | Each arg: `in` (`path`, `query`, `body` or `header`), `type` (`string`, `integer`, `number`, `boolean`, `object`, `array`), and optionally `enum`, `pattern` (RE2), `min`, `max`, `max_length`, `required`, `sensitive`, `description`. A header arg names its header with `header: X-…` (`^X-[A-Za-z0-9-]{1,64}$`). At most 32. |
+| `args` | Each arg: `in` (`path`, `query`, `body` or `header`), `type` (`string`, `integer`, `number`, `boolean`, `object`, `array`), and optionally `enum`, `pattern` (RE2), `min`, `max`, `max_length`, `required`, `sensitive`, `description`. A header arg names its header with `header: X-…` (`^X-[A-Za-z0-9-]{1,64}$`). A body arg can be sent under another JSON key with `field` (`^[A-Za-z_][A-Za-z0-9_]{0,63}$`, unique among the tool's body keys), like `resource_type` sent as `resourceType` ([FHIR guide](guides/fhir-server.md)). At most 32. |
 | `readback`, `postcondition` | The L1 read-back after a write, and an optional CEL condition over what it reads (S19). See [Read-backs](#read-backs). |
 
 The tool's input schema is generated from its args (`additionalProperties: false`), and

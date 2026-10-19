@@ -20,7 +20,8 @@ func compileSpec(rb *ReadBackSpec, post string) []FieldError {
 }
 
 func TestCompileToolSpecValid(t *testing.T) {
-	rb := &ReadBackSpec{Tool: "get", Args: map[string]string{"id": "{{args.id}}"}, Expect: map[string]any{"body.status": "{{args.status}}", "body.id": "{{result.body.id}}", "body.items[0].qty": 1},
+	rb := &ReadBackSpec{Tool: "get", Args: map[string]string{"id": "{{args.id}}"}, Expect: map[string]any{"body.status": "{{args.status}}", "body.id": "{{result.body.id}}", "body.items[0].qty": 1,
+		"body.valueQuantity.value": "{{args.status}}"},
 		Consistency: ConsistencyEventual, Attempts: 3, IntervalMS: 300, OnNotFound: OnNotFoundViolation}
 	if errs := compileSpec(rb, `observation.body.status == args.status`); len(errs) != 0 {
 		t.Fatalf("errors %+v", errs)

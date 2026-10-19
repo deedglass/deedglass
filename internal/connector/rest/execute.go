@@ -140,7 +140,7 @@ func (st *state) build(t Tool, args map[string]any) (*built, error) {
 			}
 			b.query.Set(name, s)
 		case "body":
-			body[name] = v
+			body[a.bodyKey(name)] = v
 		case "header":
 			s, ok := scalar(v)
 			if !ok || strings.ContainsAny(s, "\r\n\x00") || len(s) > maxHeaderValueBytes || !utf8.ValidString(s) {

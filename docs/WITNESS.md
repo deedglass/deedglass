@@ -175,7 +175,7 @@ A read-back is set per write tool in the connector config (admin only). The REST
 |---|---|---|---|
 | `readback.tool` | required | a tool of the same connector with `side_effect: read` that is idempotent, and not the tool itself | The read tool the read-back calls. A tool that writes is refused when the config is saved. |
 | `readback.args` | none | each key an argument of the read tool | The read tool's arguments: literals, or whole-value templates `{{args.<path>}}` (the write's arguments) or `{{result.body.<path>}}` (the write's response body). |
-| `readback.expect` | none | at most 32 paths, each matching `^[a-z_][a-z0-9_]*(\.[a-z0-9_]+\|\[[0-9]+\])*$` | Path to expected value. Paths start at the observation: `body.<field>`, `status` (the HTTP status) or `meta.<key>`. Values are literals or whole-value templates. |
+| `readback.expect` | none | at most 32 paths, each matching `^[a-z_][a-z0-9_]*(\.[A-Za-z0-9_]+\|\[[0-9]+\])*$` (the root is lowercase; later segments may use any case, like `body.valueQuantity.value`) | Path to expected value. Paths start at the observation: `body.<field>`, `status` (the HTTP status) or `meta.<key>`. Values are literals or whole-value templates. |
 | `readback.consistency` | `strong` | `strong` or `eventual` | `strong` reads once. `eventual` retries a disagreeing or missing answer. |
 | `readback.attempts` | 1 (`eventual`: 3) | 1 to 5; above 1 needs `eventual` | How many reads `eventual` may make. |
 | `readback.interval_ms` | 300 | 100 to 2000 | The wait between `eventual` attempts. |
