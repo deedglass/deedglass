@@ -43,6 +43,7 @@ import (
 	"github.com/deedglass/deedglass/internal/notify/webhook"
 	"github.com/deedglass/deedglass/internal/observe"
 	"github.com/deedglass/deedglass/internal/observeapi"
+	"github.com/deedglass/deedglass/internal/phimode"
 	"github.com/deedglass/deedglass/internal/policy"
 	"github.com/deedglass/deedglass/internal/policyapi"
 	"github.com/deedglass/deedglass/internal/securitypackapi"
@@ -373,6 +374,12 @@ func runServe(ctx context.Context, e *Env, args []string) error {
 	obsDone := make(chan struct{})
 	go func() { defer close(obsDone); _ = obs.Run(octx) }()
 	defer func() { stopObs(); <-obsDone }()
+	// HC-P09: PHI mode replaces sealed actions' payloads with ids and digests.
+	phiJob := &phimode.Job{DB: db, Keep: phimode.KeepFrom(cw.reg), Log: log}
+	pctx, stopPHI := context.WithCancel(context.WithoutCancel(ctx))
+	phiDone := make(chan struct{})
+	go func() { defer close(phiDone); _ = phiJob.Run(pctx) }()
+	defer func() { stopPHI(); <-phiDone }()
 	wkctx, stopWk := context.WithCancel(context.WithoutCancel(ctx))
 	wkDone := make(chan struct{})
 	go func() { defer close(wkDone); _ = wk.job.Run(wkctx) }()

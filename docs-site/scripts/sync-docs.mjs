@@ -56,6 +56,7 @@ export const IMPORTS = {
   'docs/guides/observe-beside-another-gate.md': 'guides/observe-beside-another-gate',
   'docs/guides/fhir-server.md': 'guides/fhir-server',
   'docs/OBSERVE.md': 'reference/observe',
+  'docs/PHI_MODE.md': 'reference/phi-mode',
   'docs/SHELL_GUARD.md': 'reference/shell-guard',
   'docs/SECURITY_PACK.md': 'reference/security-pack',
   'docs/WEEKLY.md': 'reference/weekly',
@@ -107,7 +108,7 @@ export const LIMITS_PARTS = [
     label: 'Records, verify and the Ledger',
     title: 'Limits: records, verify and the Ledger',
     description: 'What a sealed record, deedglass verify and the Ledger chain check show, and what they leave out.',
-    sections: ['Deed limits', 'Verifier limits', 'Ledger limits'],
+    sections: ['Deed limits', 'Verifier limits', 'Ledger limits', 'PHI mode'],
   },
   {
     slug: 'identity',

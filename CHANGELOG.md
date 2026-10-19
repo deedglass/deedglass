@@ -7,6 +7,16 @@ this file by `scripts/release-notes.sh`.
 
 ## [Unreleased]
 
+### Added
+
+- **PHI mode** (`settings.phi_mode` on `PATCH /v1/org`, owner only, sealed in `org.updated`). Once an
+  action is sealed and its checks are done, its stored request, result, error message and witness
+  detail keep ids and digests only, and its policy input is removed; turning it on covers the org's
+  earlier actions too. Connectors name their identifiers (the REST connector: path arguments, the
+  HTTP status and the identifier headers). Approval requests in a PHI-mode org show argument names
+  and digests from the start. Migration 0031 adds `actions.phi` and `actions.payload_minimized_at`.
+  See `docs/PHI_MODE.md` for what it keeps and what it doesn't cover.
+
 ## [0.2.1] - 2026-10-19
 
 A patch for the shell guard: the hook no longer blocks Bash on Windows without Git Bash or with an

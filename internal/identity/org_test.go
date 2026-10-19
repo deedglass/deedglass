@@ -104,9 +104,9 @@ func TestUpdateOrgRefusals(t *testing.T) {
 			"`settings.approvals.email_detail` must be summary or full."},
 		{owner, `{"settings":{"approvals":{"self_countersign":""}}}`, "validation_failed", "settings.approvals.self_countersign",
 			"`settings.approvals.self_countersign` must be deny or allow."},
-		{owner, `{}`, "validation_failed", "", "Send at least one of name, timezone, retention_days or settings.approvals."},
-		{owner, `{"settings":{}}`, "validation_failed", "", "Send at least one of name, timezone, retention_days or settings.approvals."},
-		{owner, `{"settings":{"approvals":{}}}`, "validation_failed", "", "Send at least one of name, timezone, retention_days or settings.approvals."},
+		{owner, `{}`, "validation_failed", "", "Send at least one of name, timezone, retention_days, settings.approvals or settings.phi_mode."},
+		{owner, `{"settings":{}}`, "validation_failed", "", "Send at least one of name, timezone, retention_days, settings.approvals or settings.phi_mode."},
+		{owner, `{"settings":{"approvals":{}}}`, "validation_failed", "", "Send at least one of name, timezone, retention_days, settings.approvals or settings.phi_mode."},
 	}
 	for _, c := range cases {
 		in, err := decodePatch(t, c.body)
