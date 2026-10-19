@@ -48,7 +48,8 @@ In github.com/deedglass/deedglass › Settings:
    `github-social-1280x640.png`; Discussions on, with an **I ran it** category and **Q&A**.
 2. **Code security:** private vulnerability reporting on; secret scanning and push protection on;
    Dependabot alerts and security updates on; CodeQL default setup on.
-3. **Rules:** a ruleset on `main` (required status checks: the CI jobs; no force push; no deletion)
+3. **Rules:** a ruleset on `main` (required status checks: the CI jobs listed in
+   `.github/required-checks.txt`, `release-bundles` among them; no force push; no deletion)
    and one on tags `v*` (only you can create them).
 4. **Environments:** `npm` and `pypi`, each with you as the required reviewer.
 5. **Packages:** GHCR package `deedglass` public and linked to the repo.

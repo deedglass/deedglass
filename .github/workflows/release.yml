@@ -88,6 +88,21 @@ jobs:
         with:
           name: attack-results
           path: attack/results/latest.json
+      # TY-11, the 2046 test: make ci above verified every earlier release's bundle with this tag's
+      # code; this makes the tag's own bundle (from the tag's code, checked by the tag's CLI). The
+      # first PR merged after the tag commits it to testdata/release-bundles (docs/RELEASING.md);
+      # until then the release-bundles job fails on any other PR. A prerelease keeps no bundle.
+      - name: this release's bundle for the 2046 test
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          case "$TAG" in *-*) echo "○ $TAG is a prerelease; it keeps no release bundle"; exit 0 ;; esac
+          scripts/release-bundles.sh add "$TAG" --out ".tmp/release-bundle/${TAG#v}"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release-bundle
+          path: .tmp/release-bundle/
+          if-no-files-found: ignore
 
   release:
     needs: verify

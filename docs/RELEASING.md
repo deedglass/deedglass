@@ -40,9 +40,29 @@ image gets `0.1.0`, `0.1` and `latest`.
 
 ## After publishing
 
+- **Add the release's bundle (the 2046 test, TY-11)** in the first PR after the tag, for a stable
+  release (a prerelease keeps none): `git fetch --tags && scripts/release-bundles.sh add v0.1.0`
+  → `✓ v0.1.0 · testdata/release-bundles/0.1.0 · sealed by v0.1.0's code, verified by deedglass
+  0.1.0 …`. Its `bundle.tar.gz` has the same SHA-256 as the one in the release run's
+  `release-bundle` artifact (the bundle is byte-identical wherever it is made). Commit
+  `testdata/release-bundles/0.1.0/` and the lines it added to `testdata/SHA256SUMS`. Until that PR
+  merges, the required `release-bundles` job fails on every other PR (`✕ no release bundle for:
+  v0.1.0`). See [The 2046 test](#the-2046-test).
 - `docker run --rm ghcr.io/deedglass/deedglass:0.1.0 version` → `0.1.0`, and the commit.
 - `deedglass version --check` from an older build → `○ deedglass 0.1.0 is available.`
 - Set the GHCR package to public (GitHub › Packages › deedglass › Package settings) when the repo is.
+
+## The 2046 test
+
+Every release leaves one sealed export bundle in `testdata/release-bundles/<version>/`, made from
+that release's own code and kept forever (`testdata/release-bundles/README.md`). On every PR the
+required CI job `release-bundles` verifies all of them with the CLI built from the PR
+(`deedglass verify --strict`, manifest seal included) and with the browser verifier, so a change
+that would stop an old release's records from verifying can't merge. `make ci` runs the CLI half
+(`make release-bundles`) and `make web-verify-test` the browser half. The release run's `verify` job
+runs the same check against the tag, then makes the tag's bundle and uploads it as the
+`release-bundle` artifact. A committed bundle is never made again or edited; if a format change
+means an old bundle no longer verifies, the change is wrong, not the bundle.
 
 ## npm: seven packages from one tag
 
