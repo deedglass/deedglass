@@ -1,9 +1,9 @@
 {
-  "version": "v0.3.0",
-  "commit": "6e517b6",
+  "version": "v0.4.0",
+  "commit": "8b8a162",
   "run_on": "2026-10-19",
   "postgres": "18.6 (Homebrew)",
-  "matched": 78,
+  "matched": 82,
   "differs": 0,
-  "waiting": 4
+  "waiting": 0
 }
