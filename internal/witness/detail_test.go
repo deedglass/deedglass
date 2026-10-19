@@ -174,7 +174,7 @@ func TestRunDeferredAndSkipped(t *testing.T) {
 	}
 
 	// A Postgres statement the row read-back can't check: L0 with the note, the default time.
-	s := pgSubject(`UPDATE public.orders SET status = 'x' WHERE id IN (1, 2)`)
+	s := pgSubject(&RowSpec{Why: whyNotRow})
 	s.Required = L0
 	out, _, err := Run(context.Background(), Input{Subject: s})
 	if err != nil {

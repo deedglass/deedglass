@@ -81,7 +81,10 @@ func writeAndReadBack(t *testing.T, c *Connector, in *connector.Instance, sql st
 	}
 	sub := witness.Subject{Tool: "postgres.execute", ConnectorType: "postgres", Mode: witness.ModeGateway, Args: args, Required: witness.L1,
 		Result: witness.ResultView{Status: witness.StatusSucceeded, Output: res.Output, OutputBytes: len(res.Output), Evidence: res.Evidence},
-		Spec:   witness.ToolWitnessSpec{Connector: "postgres", Tool: "execute", PostgresRow: true, DefaultSchema: "public"}}
+		Spec:   witness.ToolWitnessSpec{Connector: "postgres", Tool: "execute"}}
+	if row, ok := c.RowTarget(call, "public"); ok {
+		sub.Spec.Row = &witness.RowSpec{Table: row.Table, Key: row.Key, Why: row.Why}
+	}
 	rctx, rcancel := witness.WithBudget(context.Background(), 5*time.Second)
 	defer rcancel()
 	out, _, err := witness.Run(rctx, witness.Input{Subject: sub, Observer: rbObserver{c: c, in: in, call: call, res: res}, Final: true})
@@ -119,7 +122,7 @@ func TestPostgresReadBack(t *testing.T) {
 		}
 		defer func() { readBackConnHook = nil }()
 		out, _ := writeAndReadBack(t, c, in, "UPDATE public.orders SET status = 'shipped' WHERE id = 42")
-		if out.Decision.Level != witness.L1 || out.Decision.Verdict != witness.Verified || out.Decision.Method != witness.MethodPostgresRow ||
+		if out.Decision.Level != witness.L1 || out.Decision.Verdict != witness.Verified || out.Decision.Method != MethodRow ||
 			len(l1Codes(out)) != 1 || l1Codes(out)[0] != "row_written" {
 			t.Fatalf("%+v", out.Decision)
 		}

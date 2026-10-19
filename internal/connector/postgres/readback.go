@@ -57,7 +57,7 @@ func (c *Connector) ReadBack(ctx context.Context, inst *connector.Instance, call
 	if err != nil {
 		return connector.Observation{}, err
 	}
-	t, why := witness.PostgresTarget(a.SQL, st.cfg.AllowedSchemas[0])
+	t, why := TargetOf(a.SQL, st.cfg.AllowedSchemas[0])
 	if why != "" {
 		return connector.Observation{}, &connector.ErrReadBackSkipped{Why: why}
 	}
@@ -93,7 +93,7 @@ type pgColumn struct {
 }
 
 // readRow runs the read-back in one READ ONLY transaction and always rolls it back.
-func readRow(ctx context.Context, pc *pgxpool.Conn, cfg Config, t witness.PostgresRowTarget, params []any, xmin32 uint32) (witness.RowObservation, error) {
+func readRow(ctx context.Context, pc *pgxpool.Conn, cfg Config, t RowTargetOf, params []any, xmin32 uint32) (witness.RowObservation, error) {
 	conn := pc.Conn()
 	defer rollback(pc)
 	b := &pgx.Batch{}

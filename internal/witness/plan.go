@@ -85,7 +85,9 @@ type ToolWitnessSpec struct {
 	ReadBack      *ReadBackSpec   // L1
 	Postcondition string          // CEL, evaluated over the read-back's observation
 	ConfigHash    string          // the connector config's hash: the compiled-postcondition cache key
-	PostgresRow   bool            // postgres.execute: the row read-back applies to a simple single-row update
+	// Row: the connector offers the row read-back for this write (postgres.execute); the connector,
+	// not the Witness, says which row (TY-04). Nil when the tool has no row read-back.
+	Row *RowSpec
 	// Native: the connector reads this tool's writes back and compares them in code (S29: github,
 	// slack); NativeL1 is the tool's sentence for what that check shows.
 	Native   bool
@@ -94,7 +96,6 @@ type ToolWitnessSpec struct {
 	// server's history since the call). Its findings can't turn the missing claim into a pass on
 	// their own: a found write is compared, and anything else is a gap.
 	NativeUnknown bool
-	DefaultSchema string // postgres: the schema unqualified tables resolve to
 }
 
 // Subject is one action, as plain data the Gate fills: no storage types.
@@ -173,22 +174,22 @@ func (e *SkipError) Error() string { return "witness: no read-back: " + e.Why }
 
 // L1 kinds.
 const (
-	KindReadBack    = "readback"
-	KindPostgresRow = "postgres_row"
-	KindNative      = "native" // S29
+	KindReadBack = "readback"
+	KindRow      = "row"    // the row read-back a connector offers (RowSpec)
+	KindNative   = "native" // S29
 )
 
 // Plan is what the Witness will check for one execution.
 type Plan struct {
 	L1   bool   // a read-back runs
-	Kind string // KindReadBack | KindPostgresRow
+	Kind string // KindReadBack | KindRow | KindNative
 	Why  string // when L1 is false for a write that has no read-back: the readback_skipped note's text
 }
 
 // PlanFor decides the levels: L0 always; L1 for a gateway call that succeeded and has a read-back
-// (or is a simple single-row Postgres update); L2 when S21 says so. An unknown outcome is never
-// read back: a read-back can't contradict a tool that made no claim, unless the connector looks
-// for the write itself (NativeUnknown, HC-P02).
+// (or a row read-back its connector offers, like a simple single-row Postgres update); L2 when
+// S21 says so. An unknown outcome is never read back: a read-back can't contradict a tool that
+// made no claim, unless the connector looks for the write itself (NativeUnknown, HC-P02).
 func PlanFor(s Subject) Plan {
 	if s.Mode == ModeProxy {
 		return Plan{}
@@ -205,11 +206,11 @@ func PlanFor(s Subject) Plan {
 	if s.Spec.ReadBack != nil {
 		return Plan{L1: true, Kind: KindReadBack}
 	}
-	if s.Spec.PostgresRow {
-		if _, why := postgresTarget(s); why != "" {
-			return Plan{Why: why}
+	if s.Spec.Row != nil {
+		if s.Spec.Row.Why != "" {
+			return Plan{Why: s.Spec.Row.Why}
 		}
-		return Plan{L1: true, Kind: KindPostgresRow}
+		return Plan{L1: true, Kind: KindRow}
 	}
 	return Plan{}
 }
