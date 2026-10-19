@@ -67,6 +67,10 @@ type OrgSettings struct {
 	// omitzero (not omitempty: the API encodes with json/v2, where omitempty keeps false) leaves it
 	// out when false, so a real org's object is unchanged; PATCH /v1/org refuses the key.
 	Simulated bool `json:"simulated,omitzero"`
+	// PHIMode is orgs.settings.phi_mode (HC-P09, additive, owner only): once an action is sealed
+	// and its checks are done, its stored request, result, error message and witness detail keep
+	// ids and digests only (internal/phimode). omitzero: an org without it is unchanged.
+	PHIMode bool `json:"phi_mode,omitzero"`
 }
 
 // ApprovalSettings are orgs.settings.approvals. internal/approve reads the same keys with the same
@@ -309,13 +313,15 @@ func getOrg(ctx context.Context, tx pgx.Tx, id ids.OrgID) (Org, error) {
 // PATCH /v1/org).
 func withSettings(ctx context.Context, tx pgx.Tx, o *Org) error {
 	var (
-		days      *int
-		raw       []byte
-		simulated bool
+		days           *int
+		raw            []byte
+		simulated, phi bool
 	)
-	// simulated is the same test internal/learn makes (settings ->> 'simulated' = 'true').
-	if err := tx.QueryRow(ctx, `SELECT retention_days, settings, COALESCE((settings ->> 'simulated') = 'true', false)
-	    FROM deedglass.orgs WHERE id = $1`, o.ID).Scan(&days, &raw, &simulated); err != nil {
+	// simulated is the same test internal/learn makes (settings ->> 'simulated' = 'true'); phi_mode
+	// the same test migration 0031's actions_phi trigger makes.
+	if err := tx.QueryRow(ctx, `SELECT retention_days, settings, COALESCE((settings ->> 'simulated') = 'true', false),
+	      COALESCE((settings ->> 'phi_mode') = 'true', false)
+	    FROM deedglass.orgs WHERE id = $1`, o.ID).Scan(&days, &raw, &simulated, &phi); err != nil {
 		return err
 	}
 	d := ledger.DefaultRetentionDays
@@ -323,7 +329,7 @@ func withSettings(ctx context.Context, tx pgx.Tx, o *Org) error {
 		d = *days
 	}
 	a := approvalSettings(raw)
-	o.RetentionDays, o.Settings = &d, &OrgSettings{Approvals: a, Simulated: simulated}
+	o.RetentionDays, o.Settings = &d, &OrgSettings{Approvals: a, Simulated: simulated, PHIMode: phi}
 	return nil
 }
 
@@ -388,6 +394,7 @@ type OrgPatch struct {
 // by the strict decoder with their path as param (settings.approvals.foo).
 type OrgSettingsPatch struct {
 	Approvals *ApprovalSettingsPatch `json:"approvals"`
+	PHIMode   *bool                  `json:"phi_mode"` // HC-P09
 }
 
 // ApprovalSettingsPatch is settings.approvals in PATCH /v1/org.
@@ -446,7 +453,11 @@ func (s *Service) UpdateOrg(ctx context.Context, p *Principal, in OrgPatch) (Org
 		return Org{}, nil, httpx.ErrInsufficientRole(p.OrgName, p.Role, RoleOwner, "changing payload retention")
 	}
 	if in.Settings != nil && !p.Role.AtLeast(RoleOwner) {
-		return Org{}, nil, httpx.ErrInsufficientRole(p.OrgName, p.Role, RoleOwner, "changing approval settings")
+		what := "changing approval settings"
+		if in.Settings.Approvals == nil && in.Settings.PHIMode != nil {
+			what = "changing PHI mode"
+		}
+		return Org{}, nil, httpx.ErrInsufficientRole(p.OrgName, p.Role, RoleOwner, what)
 	}
 	if in.Name != nil {
 		n, err := CheckOrgName(*in.Name)
@@ -481,8 +492,13 @@ func (s *Service) UpdateOrg(ctx context.Context, p *Principal, in OrgPatch) (Org
 		}
 		fields = append(fields, "settings.approvals."+f.key)
 	}
+	var phiMode *bool
+	if in.Settings != nil && in.Settings.PHIMode != nil {
+		phiMode = in.Settings.PHIMode
+		fields = append(fields, "settings.phi_mode")
+	}
 	if len(fields) == 0 {
-		return Org{}, nil, httpx.ErrValidation("", "Send at least one of name, timezone, retention_days or settings.approvals.")
+		return Org{}, nil, httpx.ErrValidation("", "Send at least one of name, timezone, retention_days, settings.approvals or settings.phi_mode.")
 	}
 	var patch []byte
 	if len(approvals) > 0 {
@@ -521,6 +537,19 @@ func (s *Service) UpdateOrg(ctx context.Context, p *Principal, in OrgPatch) (Org
 			p.OrgID, in.Name, in.Timezone, days, patch); err != nil {
 			return err
 		}
+		// HC-P09: settings.phi_mode. Turning it on also marks the org's actions that still hold
+		// payloads, so the serve job replaces theirs too; turning it off never brings any back.
+		if phiMode != nil {
+			if _, err := tx.Exec(ctx, `UPDATE deedglass.orgs SET settings = pg_catalog.jsonb_set(settings, '{phi_mode}', pg_catalog.to_jsonb($2::boolean))
+			    WHERE id = $1`, p.OrgID, *phiMode); err != nil {
+				return err
+			}
+			if *phiMode && !cur.Settings.PHIMode {
+				if _, err := store.MarkPHI(ctx, tx, p.OrgID); err != nil {
+					return err
+				}
+			}
+		}
 		if o, err = getOrg(ctx, tx, p.OrgID); err != nil {
 			return err
 		}
@@ -540,6 +569,9 @@ func (s *Service) UpdateOrg(ctx context.Context, p *Principal, in OrgPatch) (Org
 		if len(approvals) > 0 {
 			a := o.Settings.Approvals
 			data["approvals"] = map[string]any{"email_links": a.EmailLinks, "email_detail": a.EmailDetail, "self_countersign": a.SelfCountersign}
+		}
+		if phiMode != nil {
+			data["phi_mode"] = o.Settings.PHIMode
 		}
 		d, err = s.recordAdmin(ctx, tx, ledger.AdminEvent{Action: ledger.AdminOrgUpdated, Actor: userRef(p.UserID), Target: orgRef(p.OrgID),
 			Data: data})

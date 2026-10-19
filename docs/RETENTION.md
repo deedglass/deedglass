@@ -14,6 +14,10 @@ For actions in state `sealed` created before the cutoff:
 | `actions.witness_detail` (the expected-vs-observed diff) | `NULL` |
 | `actions.payload_pruned_at` | the time it was pruned |
 
+An org in [PHI mode](PHI_MODE.md) doesn't wait for pruning: once an action is sealed and its checks
+are done, its request, result, error message and witness detail are replaced by ids and digests,
+and its policy input is removed. Pruning later removes what is left as usual.
+
 ## What is kept
 
 Everything else, always:

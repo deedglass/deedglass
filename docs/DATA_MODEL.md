@@ -162,7 +162,7 @@ Payloads are prunable; digests and deeds stay ([RETENTION.md](RETENTION.md), `de
 
 | What | Kept |
 |---|---|
-| `actions.request`, `actions.result`, `actions.witness_detail` | Until the org's retention (90 days by default, `orgs.retention_days`). S06 sets them to NULL and records `payload_pruned_at`. |
+| `actions.request`, `actions.result`, `actions.witness_detail` | Until the org's retention (90 days by default, `orgs.retention_days`). S06 sets them to NULL and records `payload_pruned_at`. In a PHI-mode org they are replaced by ids and digests once the action is sealed and checked (`actions.phi`, `payload_minimized_at`; [PHI_MODE.md](PHI_MODE.md)). |
 | Digests (`request_digest`, `result_digest`, `witness_detail_digest`) | Always. |
 | `deeds`, `action_events`, `admin_events`, `policy_versions` | Always (append-only). |
 | `idempotency_keys` | 24 hours (S03's pruning job). |

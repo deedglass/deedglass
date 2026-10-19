@@ -116,7 +116,7 @@ If an MCP gateway, an approval tool or a proxy already sits in front of your age
 - **Egress sees addresses, not intent.** Misuse of an allowed API is policy's job ([NETWORK_EGRESS.md](NETWORK_EGRESS.md)).
 - **No HTTP proxy support** for connector traffic, and no per-connector trust roots for private APIs (v2).
 - **A REST write without a read-back stays at L0:** a service that answers 200 without saving is `L0 · VERIFIED`. Add a `readback` to the tool to reach L1 ([WITNESS.md](WITNESS.md)).
-- **`sensitive` args are redacted from outputs and logs, not digested** in the action row (S22).
+- **`sensitive` args are redacted from outputs and logs, not digested** in the action row (S22). An org in [PHI mode](PHI_MODE.md) stores ids and digests of every argument once the action is sealed.
 - **Credentials aren't cached.** Every call reads its credential row (one indexed read); a 30 s cache is a stretch item, taken only if the benchmark asks for it.
 - **The MCP HTTP gateway's upstreams still take their headers from the environment** (S15's `mcp.upstreams`), not from the vault; their connections already go through egress. Moving them to `mcp_http` connector rows is S18 carry-over.
 - **`/mcp/native` serves the built-in tools only.** An org's REST connectors are called through `POST /v1/actions`; listing them as MCP tools comes later.
@@ -626,6 +626,17 @@ it refuses rather than guess:
   page of at most 200.
 - **Fuzzing finds bugs; it doesn't show there are none.** The October 2026 schedule ran each parser for 5
   to 30 minutes on one laptop (`bench/results/*-fuzz.json`); CI replays the corpus for 10 s each.
+
+## PHI mode
+
+- **Payloads are held until the action is sealed and checked.** An action waiting for approval, a
+  read-back or a Proven check keeps its request and result as sent; the serve job replaces them a few
+  seconds after ([PHI_MODE.md](PHI_MODE.md)).
+- **Digests of short values can be guessed.** They aren't salted per org yet.
+- **The decoder's row images aren't covered.** Use `witness.sensitive_columns` for the Postgres
+  connector's Proven check and observe mode.
+- **Turning it off doesn't bring payloads back**, and the setting is API-only (`PATCH /v1/org`) for
+  now; the Console doesn't show it.
 
 ## What this page does not do
 

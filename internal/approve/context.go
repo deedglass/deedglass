@@ -10,8 +10,10 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/deedglass/deedglass/internal/connector"
 	"github.com/deedglass/deedglass/internal/deed"
 	"github.com/deedglass/deedglass/internal/gate"
+	"github.com/deedglass/deedglass/internal/phi"
 	"github.com/deedglass/deedglass/internal/vault"
 )
 
@@ -216,6 +218,27 @@ func scrubValue(v any) any {
 		return x
 	}
 	return v
+}
+
+// PHINote is the args note in a PHI-mode org's approval snapshot.
+const PHINote = "PHI mode is on, so argument values are shown as digests. Ids the connector names are shown as they are."
+
+// phiSnapshot makes a snapshot fit for a PHI-mode org (HC-P09): the arguments keep their names
+// and the connector's identifier arguments, every other value is a digest, and the connector's
+// sections (which can quote the request) are left out. The snapshot never changes once stored
+// (DG006), so this happens before it is written.
+func phiSnapshot(snap *Snapshot, in gate.ApprovalInput) {
+	var ids []string
+	if k, ok := in.Exec.(connector.PHIKeeping); ok {
+		ids = k.PHIKeep(in.Call.Tool).Args
+	}
+	snap.Args = phi.MinimizeArgs(in.Args, ids)
+	if len(snap.Args) == 0 {
+		snap.Args = json.RawMessage(`null`)
+	}
+	note := PHINote
+	snap.ArgsNote = &note
+	snap.Sections = map[string]json.RawMessage{}
 }
 
 // digestOf is sha256 of the snapshot's JCS form.

@@ -1884,6 +1884,13 @@ paths:
                         email_links: {type: string, enum: [decide, review]}
                         email_detail: {type: string, enum: [summary, full]}
                         self_countersign: {type: string, enum: [deny, allow]}
+                    phi_mode:
+                      type: boolean
+                      description: >-
+                        HC-P09. true: once an action is sealed and its checks are done, its stored request, result,
+                        error message and witness detail keep ids and digests only; turning it on covers the org's
+                        earlier actions that still hold payloads. false stops it for new actions and never brings
+                        payloads back. Sealed in the org.updated deed.
             example: {timezone: Asia/Kolkata}
       responses:
         "200":
@@ -6755,6 +6762,7 @@ components:
                 email_detail: {type: string, enum: [summary, full], description: How much of the request approval emails show (default summary).}
                 self_countersign: {type: string, enum: [deny, allow], description: Whether the person an action runs on behalf of may countersign it (default deny).}
             simulated: {type: boolean, const: true, description: "Read only (S29, additive): present and true when the org was made by deedglass dev simulate; omitted otherwise. PATCH /v1/org refuses it."}
+            phi_mode: {type: boolean, const: true, description: "HC-P09, additive: present and true when PHI mode is on (docs/PHI_MODE.md); omitted otherwise."}
         stop:
           type: object
           description: >-

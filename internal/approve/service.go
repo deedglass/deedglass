@@ -167,8 +167,14 @@ func (s *Service) Prepare(ctx context.Context, in gate.ApprovalInput, d policy.D
 		tables := append([]string{}, f.Tables...)
 		snap.SQL = &SnapSQL{Kind: f.Kind, Tables: tables, Writes: f.Writes, HasWhere: f.HasWhere}
 	}
-	// The agent: its status and labels now, and its last sealed actions.
+	// The agent: its status and labels now, and its last sealed actions; and whether the org is in
+	// PHI mode (HC-P09), which changes what the snapshot may hold.
+	var phiMode bool
 	err := s.o.DB.OrgReadTx(ctx, in.Org, func(ctx context.Context, tx pgx.Tx) error {
+		if err := tx.QueryRow(ctx, `SELECT COALESCE((settings ->> 'phi_mode') = 'true', false) FROM deedglass.orgs WHERE id = $1`,
+			in.Org).Scan(&phiMode); err != nil {
+			return err
+		}
 		var labels []byte
 		if err := tx.QueryRow(ctx, `SELECT status, labels FROM deedglass.agents WHERE org_id = $1 AND id = $2`, in.Org, in.Agent).
 			Scan(&snap.Agent.Status, &labels); err != nil {
@@ -182,6 +188,9 @@ func (s *Service) Prepare(ctx context.Context, in gate.ApprovalInput, d policy.D
 	})
 	if err != nil {
 		return gate.PreparedApproval{}, err
+	}
+	if phiMode {
+		phiSnapshot(&snap, in)
 	}
 	if list, err := s.o.Ledger.ListActions(ctx, in.Org, ledger.ActionFilter{Agent: in.Agent.String(), States: []string{"sealed"}},
 		ledger.Page{Limit: MaxRecent}); err == nil {
