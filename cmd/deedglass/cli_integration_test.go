@@ -31,7 +31,7 @@ func TestMigrateAndSeedLive(t *testing.T) {
 		}
 	}
 	r := cli(t, env, false, "migrate", "up", "--dry-run")
-	expect(r, 0, "schema at 0000 · 30 pending", "Nothing was applied")
+	expect(r, 0, "schema at 0000 · 31 pending", "Nothing was applied")
 	r = cli(t, env, false, "migrate", "up")
 	expect(r, 0, "as deedglass_migrator · 31 pending", "✓ 0001 foundation", "✓ Schema at 0031 · 31 applied in")
 	t.Logf("\n%s", r.stdout)
