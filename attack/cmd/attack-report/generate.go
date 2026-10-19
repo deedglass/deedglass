@@ -31,6 +31,8 @@ var layers = []struct {
 		func(c harness.MetaCase) bool { return c.Group == "U" }},
 	{"Observe mode", "S50's group O. A watched session records what Postgres committed, so each case tries to reach another org's recording or to let an agent hide its own: every session route aimed at another org's session, and an agent's key opening, closing, editing or undoing a session while a person's exclude stays on the record.",
 		func(c harness.MetaCase) bool { return c.Group == "O" }},
+	{"FHIR servers (declared)", "Healthcare phase 1's group I, declared in ADR-105 before any FHIR connector code exists. A FHIR server answers success in ways that don't mean what the agent says: a conditional create that matched an existing resource, an update the server kept as the old version, a field the server changed, a 5xx after it committed, a version another writer or a forged request id made, a transaction that committed more than it reported, and PHI that must never reach a stored record. They run once the native FHIR connector is built.",
+		func(c harness.MetaCase) bool { return c.Group == "I" }},
 	{"People, sessions and the live stream", "S34's group P. Each case reaches for a decision or a view it shouldn't have: an approval link used against another approval, a forged or replayed Slack click, the person the action runs for approving it in Slack, a double vote, a viewer reaching for admin actions, a cross-site request, another org's event stream, and calls that race a Stop.",
 		func(c harness.MetaCase) bool { return c.Group == "P" }},
 	{"Hostile MCP servers and upstreams", "S34's group Q. The upstream is the attacker: tool descriptions that carry instructions, a tool that changes after it was listed, two servers with the same tool name, huge or deeply nested results, a server that is down or hangs, a server that asks the client's model for text, a live Stripe key, and a webhook host that turns into cloud metadata.",
@@ -141,8 +143,8 @@ func Generate(meta *harness.Meta, run *harness.Run) []byte {
 	w("## Group letters\n\nEach group set has its own pinned digest, so declaring new cases never changes an earlier pin.\n\n")
 	w("| Letters | Owner | Constant |\n|---|---|---|\n")
 	w("| A to G | V0 | `expectedDigest` |\n| H, J, K | S18 | `expectedDigestV7` |\n| N | S19 (L0 and L1 read-back), if it declares any | `expectedDigestN` |\n")
-	w("| W | S21 (the L2 witness, W01 to W13) | `expectedDigestW` |\n| L | S22 (approvals, links, webhooks) | `expectedDigestL` |\n| U | S23 (undo) | `expectedDigestU` |\n| P, Q, R | S34 | `expectedDigestS34` |\n| O | S50 (observe mode) | `expectedDigestO` |\n\n")
-	w("I, M, O, S, T, V, X, Y and Z are unassigned. A session that needs a group takes the next free letter and adds a row here.\n\n")
+	w("| W | S21 (the L2 witness, W01 to W13) | `expectedDigestW` |\n| L | S22 (approvals, links, webhooks) | `expectedDigestL` |\n| U | S23 (undo) | `expectedDigestU` |\n| P, Q, R | S34 | `expectedDigestS34` |\n| O | S50 (observe mode) | `expectedDigestO` |\n| I | Healthcare phase 1 (the FHIR connector, ADR-105; the tickets' F01 to F12) | `expectedDigestI` |\n\n")
+	w("M, S, T, V, X, Y and Z are unassigned. A session that needs a group takes the next free letter and adds a row here.\n\n")
 	w("## What this suite doesn't cover\n\n")
 	for _, line := range notCovered {
 		w("- %s\n", line)
