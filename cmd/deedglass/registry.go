@@ -257,6 +257,10 @@ var commands = []*Command{
 	{Path: p("deeds", "export"), Group: Deeds, Summary: "Export records as a bundle",
 		Usage: "[--out <file>|-] [--format tar.gz|jsonl|fhir-auditevent|fhir-provenance] [--from <bundle>] [--from-seq n] [--to-seq n] [--since 1h] [--json]",
 		Flags: deedsExportFlags, Needs: config.NeedDatabase, Run: runDeedsExport},
+	{Path: p("export"), Group: Deeds, Summary: "Write records as OTel, OCSF, PROV or FHIR",
+		Usage: "<bundle|jsonl|-> --format otel-genai|ocsf|prov-json|fhir [--out <file>|-] [--json]",
+		Flags: recordExportFlags, Run: runRecordExport, RawArgs: true,
+		Detail: "Reads sealed records from an export bundle (deedglass deeds export) or a .jsonl file and writes them in another format, offline: nothing is read from a server or database and nothing is sent.\n\n  otel-genai  OTLP/JSON lines, one execute_tool span per action (OpenTelemetry GenAI semantic conventions 1.41.0); an amendment is a child span\n  ocsf        OCSF 1.9.0 API Activity events (6003) with ai_agent and delegation, one per line\n  prov-json   one W3C PROV-JSON document: agents, tool calls, records and who acted for whom\n  fhir        FHIR R4 AuditEvent and Provenance for FHIR connector calls (as deeds export --format fhir-auditevent)\n\nAn export is a view of the records, not the records: it doesn't check seals, so run deedglass verify on the file first. A bundle whose files don't match its manifest is refused. docs/EXPORTS.md lists what each format loses.\n\nExamples:\n  deedglass export deeds.tar.gz --format otel-genai\n  deedglass export deeds.tar.gz --format ocsf --out - | jq .\n  deedglass deeds export --out - | deedglass export - --format prov-json --out records.prov.json"},
 	{Path: p("deeds", "seal-file"), Group: Deeds, Summary: "Seal a file's hash as a record",
 		Usage: "<path> --label <text> [--media-type application/pdf|text/markdown|application/json|text/plain|text/html|application/gzip] [--out <path>.deed.json] [--json]",
 		Run:   runDeedsSealFile, RawArgs: true,
@@ -424,6 +428,7 @@ var lines = []Line{
 		Paths: ps("webhooks create", "webhooks list", "webhooks test", "webhooks delete")},
 
 	{Name: "verify", Group: Deeds, Summary: "Check records offline", Paths: ps("verify")},
+	{Name: "export", Group: Deeds, Summary: "Write records as OTel, OCSF, PROV or FHIR", Paths: ps("export")},
 	{Name: "security-pack", Group: Deeds, Summary: "Answer a security review from your records", Subs: subs("readiness build verify"),
 		Paths: ps("security-pack readiness", "security-pack build", "security-pack verify")},
 	{Name: "report", Group: Deeds, Summary: "Report what your agents did in a week or month", Paths: ps("report")},

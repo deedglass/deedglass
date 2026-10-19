@@ -1,0 +1,17 @@
+{
+  "id": "04-another-writer",
+  "title": "Another writer changes the same row right after the agent",
+  "tables": [
+    "public.orders"
+  ],
+  "steps": [
+    {
+      "session": "agent",
+      "file": "agent.sql"
+    },
+    {
+      "session": "other",
+      "file": "other-writer.sql"
+    }
+  ]
+}

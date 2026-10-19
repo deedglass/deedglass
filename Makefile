@@ -77,7 +77,10 @@ integration: ## throwaway PG cluster (Homebrew, else Docker): sql/ smoke, contro
 quickstart-it: ## S32/PRD-05: TestInitLive, deedglass init then init --trigger end to end in Docker on its own ports (two postgres:18.6 containers, removed after): smoke actions, the 301-row Doesn't match, the undo preview, the step line
 	DEEDGLASS_IT_INIT=1 $(GO) test -tags integration -count=1 -v -timeout 15m ./internal/setup -run TestInitLive
 
-.PHONY: fhir-up fhir-down fhir-it
+.PHONY: fhir-up fhir-down fhir-it corpus
+corpus: ## TY-13: the intent-vs-effect corpus (corpus/) on a throwaway PostgreSQL 18.6 in Docker (free localhost port, removed after): what each agent reports, what Postgres commits (its change log, per transaction) and the expected Deedglass verdict; RUN=<id> one scenario, KEEP=1 keeps the container, CORPUS_TOOL=<cmd> runs your tool around each scenario
+	scripts/corpus.sh
+
 fhir-up: ## HC-P00: a throwaway FHIR R4 server (HAPI FHIR JPA, pinned image) in Docker on a free localhost port; prints the base URL (synthetic data only)
 	scripts/fhir.sh up
 

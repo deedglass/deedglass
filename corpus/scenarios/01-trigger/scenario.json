@@ -1,0 +1,13 @@
+{
+  "id": "01-trigger",
+  "title": "A trigger changes 300 more rows than the statement names",
+  "tables": [
+    "public.orders"
+  ],
+  "steps": [
+    {
+      "session": "agent",
+      "file": "agent.sql"
+    }
+  ]
+}

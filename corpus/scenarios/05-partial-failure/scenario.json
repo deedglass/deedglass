@@ -1,0 +1,15 @@
+{
+  "id": "05-partial-failure",
+  "title": "A three-statement transfer fails halfway and the debit stays",
+  "tables": [
+    "public.accounts",
+    "public.transfers"
+  ],
+  "steps": [
+    {
+      "session": "agent",
+      "file": "agent.sql",
+      "stop_on_error": true
+    }
+  ]
+}

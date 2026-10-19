@@ -1,5 +1,8 @@
 # Export bundle v1
 
+> Licence: [CC-BY-4.0](../LICENSE) (the code that implements it is Apache-2.0). Part of the record
+> spec, edition 1: see [spec/README.md](../README.md) for versions, the change log and how to cite it.
+
 **Status:** normative for `deedglass deeds export` (S06), `GET /v1/deeds/export` (S06) and
 `deedglass verify` (S05). The writer and reader are `internal/deed/archive`; nothing else writes
 bundles. The words MUST, MUST NOT and SHOULD are used as in RFC 2119.

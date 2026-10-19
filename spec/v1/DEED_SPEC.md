@@ -1,5 +1,8 @@
 # Deed v1 specification
 
+> Licence: [CC-BY-4.0](../LICENSE) (the code that implements it is Apache-2.0). Part of the record
+> spec, edition 1: see [spec/README.md](../README.md) for versions, the change log and how to cite it.
+
 **Status:** normative for Deed v1 · **Owner:** `internal/deed` · **Vectors:** `testdata/deeds/` ·
 **Replaces:** `docs/v0/STATEMENT_SPEC.md` (the V0 verification statement) · **Checked:** 2026-10-01
 

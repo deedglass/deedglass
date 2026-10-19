@@ -1,0 +1,13 @@
+{
+  "id": "03-orm-reset",
+  "title": "An ORM reset drops 500 rows and the change log shows 3 inserts",
+  "tables": [
+    "public.customers"
+  ],
+  "steps": [
+    {
+      "session": "agent",
+      "file": "agent.sql"
+    }
+  ]
+}

@@ -8,7 +8,7 @@ verifying fails the job, which is required on `main` (`.github/required-checks.t
 
 | Path | What it is |
 |---|---|
-| `<version>/bundle.tar.gz` | 12 deeds of one test org (actions verified, approved and denied, a Unicode agent name, an admin stop, two amendments; key a seals 1–10, key b 11–12 after the rotation; key b seals the manifest), in the export bundle format of `docs/BUNDLE_FORMAT.md` |
+| `<version>/bundle.tar.gz` | 12 deeds of one test org (actions verified, approved and denied, a Unicode agent name, an admin stop, two amendments; key a seals 1–10, key b 11–12 after the rotation; key b seals the manifest), in the export bundle format of `spec/v1/BUNDLE_FORMAT.md` |
 | `<version>/keys.json` | the key set a reader trusts out of band (the published test keys) |
 | `<version>/origin.json` | the release tag and commit, and the release's own CLI that verified the bundle when it was made |
 | `<version>/SHA256SUMS` | the three files' SHA-256 (also in `testdata/SHA256SUMS`) |

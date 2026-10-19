@@ -78,6 +78,9 @@ export const REDIRECTS = [
   // DOC-04: the page "What VERIFIED means" became "What Matches means" (plain names, P-069).
   ['/concepts/what-verified-means', '/concepts/what-matches-means/'],
   ['/concepts/what-verified-means/', '/concepts/what-matches-means/'],
+  // TY-12: the record spec moved from docs/ to spec/v1/.
+  ['/docs/DEED_SPEC.md', '/reference/deed-spec/'],
+  ['/docs/BUNDLE_FORMAT.md', '/reference/engineering/bundle-format/'],
 ];
 
 export function redirectsFile() {

@@ -1,0 +1,357 @@
+{
+ "$defs": {
+  "anyValue": {
+   "additionalProperties": false,
+   "maxProperties": 1,
+   "minProperties": 1,
+   "properties": {
+    "arrayValue": {
+     "additionalProperties": false,
+     "properties": {
+      "values": {
+       "items": {
+        "$ref": "#/$defs/anyValue"
+       },
+       "type": "array"
+      }
+     },
+     "type": "object"
+    },
+    "boolValue": {
+     "type": "boolean"
+    },
+    "bytesValue": {
+     "type": "string"
+    },
+    "doubleValue": {
+     "type": "number"
+    },
+    "intValue": {
+     "anyOf": [
+      {
+       "pattern": "^-?[0-9]{1,19}$",
+       "type": "string"
+      },
+      {
+       "type": "integer"
+      }
+     ]
+    },
+    "kvlistValue": {
+     "additionalProperties": false,
+     "properties": {
+      "values": {
+       "items": {
+        "$ref": "#/$defs/keyValue"
+       },
+       "type": "array"
+      }
+     },
+     "type": "object"
+    },
+    "stringValue": {
+     "type": "string"
+    }
+   },
+   "type": "object"
+  },
+  "event": {
+   "additionalProperties": false,
+   "properties": {
+    "attributes": {
+     "items": {
+      "$ref": "#/$defs/keyValue"
+     },
+     "type": "array"
+    },
+    "droppedAttributesCount": {
+     "type": "integer"
+    },
+    "name": {
+     "type": "string"
+    },
+    "timeUnixNano": {
+     "anyOf": [
+      {
+       "pattern": "^[0-9]{1,20}$",
+       "type": "string"
+      },
+      {
+       "minimum": 0,
+       "type": "integer"
+      }
+     ]
+    }
+   },
+   "type": "object"
+  },
+  "keyValue": {
+   "additionalProperties": false,
+   "properties": {
+    "key": {
+     "minLength": 1,
+     "type": "string"
+    },
+    "value": {
+     "$ref": "#/$defs/anyValue"
+    }
+   },
+   "required": [
+    "key",
+    "value"
+   ],
+   "type": "object"
+  },
+  "link": {
+   "additionalProperties": false,
+   "properties": {
+    "attributes": {
+     "items": {
+      "$ref": "#/$defs/keyValue"
+     },
+     "type": "array"
+    },
+    "droppedAttributesCount": {
+     "type": "integer"
+    },
+    "flags": {
+     "type": "integer"
+    },
+    "spanId": {
+     "pattern": "^[0-9a-fA-F]{16}$",
+     "type": "string"
+    },
+    "traceId": {
+     "pattern": "^[0-9a-fA-F]{32}$",
+     "type": "string"
+    },
+    "traceState": {
+     "type": "string"
+    }
+   },
+   "type": "object"
+  },
+  "resource": {
+   "additionalProperties": false,
+   "properties": {
+    "attributes": {
+     "items": {
+      "$ref": "#/$defs/keyValue"
+     },
+     "type": "array"
+    },
+    "droppedAttributesCount": {
+     "minimum": 0,
+     "type": "integer"
+    },
+    "entityRefs": {
+     "type": "array"
+    }
+   },
+   "type": "object"
+  },
+  "resourceSpans": {
+   "additionalProperties": false,
+   "properties": {
+    "resource": {
+     "$ref": "#/$defs/resource"
+    },
+    "schemaUrl": {
+     "type": "string"
+    },
+    "scopeSpans": {
+     "items": {
+      "$ref": "#/$defs/scopeSpans"
+     },
+     "type": "array"
+    }
+   },
+   "required": [
+    "scopeSpans"
+   ],
+   "type": "object"
+  },
+  "scope": {
+   "additionalProperties": false,
+   "properties": {
+    "attributes": {
+     "items": {
+      "$ref": "#/$defs/keyValue"
+     },
+     "type": "array"
+    },
+    "droppedAttributesCount": {
+     "minimum": 0,
+     "type": "integer"
+    },
+    "name": {
+     "type": "string"
+    },
+    "version": {
+     "type": "string"
+    }
+   },
+   "type": "object"
+  },
+  "scopeSpans": {
+   "additionalProperties": false,
+   "properties": {
+    "schemaUrl": {
+     "type": "string"
+    },
+    "scope": {
+     "$ref": "#/$defs/scope"
+    },
+    "spans": {
+     "items": {
+      "$ref": "#/$defs/span"
+     },
+     "type": "array"
+    }
+   },
+   "required": [
+    "spans"
+   ],
+   "type": "object"
+  },
+  "span": {
+   "additionalProperties": false,
+   "properties": {
+    "attributes": {
+     "items": {
+      "$ref": "#/$defs/keyValue"
+     },
+     "type": "array"
+    },
+    "droppedAttributesCount": {
+     "type": "integer"
+    },
+    "droppedEventsCount": {
+     "type": "integer"
+    },
+    "droppedLinksCount": {
+     "type": "integer"
+    },
+    "endTimeUnixNano": {
+     "anyOf": [
+      {
+       "pattern": "^[0-9]{1,20}$",
+       "type": "string"
+      },
+      {
+       "minimum": 0,
+       "type": "integer"
+      }
+     ]
+    },
+    "events": {
+     "items": {
+      "$ref": "#/$defs/event"
+     },
+     "type": "array"
+    },
+    "flags": {
+     "type": "integer"
+    },
+    "kind": {
+     "enum": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+     ]
+    },
+    "links": {
+     "items": {
+      "$ref": "#/$defs/link"
+     },
+     "type": "array"
+    },
+    "name": {
+     "minLength": 1,
+     "type": "string"
+    },
+    "parentSpanId": {
+     "pattern": "^([0-9a-fA-F]{16})?$",
+     "type": "string"
+    },
+    "spanId": {
+     "not": {
+      "const": "0000000000000000"
+     },
+     "pattern": "^[0-9a-fA-F]{16}$",
+     "type": "string"
+    },
+    "startTimeUnixNano": {
+     "anyOf": [
+      {
+       "pattern": "^[0-9]{1,20}$",
+       "type": "string"
+      },
+      {
+       "minimum": 0,
+       "type": "integer"
+      }
+     ]
+    },
+    "status": {
+     "$ref": "#/$defs/status"
+    },
+    "traceId": {
+     "not": {
+      "const": "00000000000000000000000000000000"
+     },
+     "pattern": "^[0-9a-fA-F]{32}$",
+     "type": "string"
+    },
+    "traceState": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "traceId",
+    "spanId",
+    "name",
+    "kind",
+    "startTimeUnixNano",
+    "endTimeUnixNano"
+   ],
+   "type": "object"
+  },
+  "status": {
+   "additionalProperties": false,
+   "properties": {
+    "code": {
+     "enum": [
+      0,
+      1,
+      2
+     ]
+    },
+    "message": {
+     "type": "string"
+    }
+   },
+   "type": "object"
+  }
+ },
+ "$id": "urn:deedglass:testdata:otlp-1.11.1-trace-json",
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "additionalProperties": false,
+ "description": "Written from opentelemetry-proto v1.11.1 (2026-09-29) trace.proto, common.proto and resource.proto under the OTLP/JSON rules: lowerCamelCase names, trace and span ids as hex, enums as integers, 64-bit integers as decimal strings or numbers. See README.md.",
+ "properties": {
+  "resourceSpans": {
+   "items": {
+    "$ref": "#/$defs/resourceSpans"
+   },
+   "type": "array"
+  }
+ },
+ "required": [
+  "resourceSpans"
+ ],
+ "title": "OTLP/JSON ExportTraceServiceRequest (opentelemetry-proto v1.11.1, trace/v1), transcribed",
+ "type": "object"
+}

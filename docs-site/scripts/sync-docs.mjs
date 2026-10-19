@@ -27,7 +27,9 @@ const data = (f) => JSON.parse(readFileSync(join(site, 'src', 'data', f), 'utf8'
 // check-inventory in scripts/test fails on a docs/*.md file missing from this table.
 export const IMPORTS = {
   'docs/INSTALL.md': 'get-started/install-deedglass',
-  'docs/DEED_SPEC.md': 'reference/deed-spec',
+  // the record spec (TY-12): its own versioned directory, CC-BY-4.0
+  'spec/v1/DEED_SPEC.md': 'reference/deed-spec',
+  'spec/v1/BUNDLE_FORMAT.md': 'reference/engineering/bundle-format',
   'docs/INTENTS.md': 'reference/intents',
   'docs/POLICY_LANGUAGE.md': 'reference/policy-language',
   'docs/IDS.md': 'reference/ids',
@@ -60,6 +62,9 @@ export const IMPORTS = {
   'docs/OBSERVE.md': 'reference/observe',
   'docs/PHI_MODE.md': 'reference/phi-mode',
   'docs/EXPORTS.md': 'reference/exports',
+  'docs/exports/otel-genai.md': 'reference/exports/otel-genai',
+  'docs/exports/ocsf.md': 'reference/exports/ocsf',
+  'docs/exports/prov-json.md': 'reference/exports/prov-json',
   'docs/SHELL_GUARD.md': 'reference/shell-guard',
   'docs/SECURITY_PACK.md': 'reference/security-pack',
   'docs/WEEKLY.md': 'reference/weekly',
@@ -67,7 +72,7 @@ export const IMPORTS = {
   // engineering notes: imported as they are, under Reference › Engineering notes
   ...Object.fromEntries(
     [
-      'AGENTS', 'API', 'APPROVALS', 'ARCHITECTURE', 'BUDGETS', 'BUNDLE_FORMAT', 'CLI', 'CLOUD_COMPATIBILITY', 'CONFIG', 'CONSOLE',
+      'AGENTS', 'API', 'APPROVALS', 'ARCHITECTURE', 'BUDGETS', 'CLI', 'CLOUD_COMPATIBILITY', 'CONFIG', 'CONSOLE',
       'DATABASE_SETUP', 'DATA_MODEL', 'DECODER', 'EMAIL', 'EVENTS', 'GATE', 'IDENTITY', 'INSIGHTS', 'INSIGHTS_PRIVACY', 'LEDGER',
       'MCP', 'MCP_AUTHORIZATION', 'MIGRATIONS', 'NETWORK_EGRESS', 'OBSERVABILITY', 'OBSERVATION_BOUNDARY', 'OVERVIEW_METRICS',
       'POLICIES_GUIDE', 'POLICY_COOKBOOK', 'POLICY_EDITOR', 'POLICY_ERRORS', 'POSTGRES_DEPLOYMENT', 'REPLAY', 'RETENTION', 'SCAN',

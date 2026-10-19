@@ -54,7 +54,7 @@ per level:
 "witness": {"detail_digest": "sha256:7254304143e36a4e106c525e35b74e30961135caf01c192641c9e6322a741d37", "level": "L2", "method": "postgres.pgoutput", "verdict": "VERIFIED"}
 ```
 
-The L2 line is the deed from [DEED_SPEC.md](DEED_SPEC.md)'s worked example; the L0 and L1 digests
+The L2 line is the deed from [DEED_SPEC.md](../spec/v1/DEED_SPEC.md)'s worked example; the L0 and L1 digests
 are shortened here. `detail_digest` is `sha256:` of the RFC 8785 form of the action's full
 `witness_detail` (below), so the detail can be checked against the sealed deed.
 

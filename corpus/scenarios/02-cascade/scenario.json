@@ -1,0 +1,14 @@
+{
+  "id": "02-cascade",
+  "title": "A foreign key cascade deletes 12 rows in another table",
+  "tables": [
+    "public.customers",
+    "public.orders"
+  ],
+  "steps": [
+    {
+      "session": "agent",
+      "file": "agent.sql"
+    }
+  ]
+}

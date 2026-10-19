@@ -14,7 +14,7 @@ in a customer's database for L2 witnessing.
 |---|---|---|---|
 | Action | `actions` | its state moves along the lifecycle; payloads can be pruned | who, which tool, the decision, the execution, the verdict, digests, and the payloads (`request`, `result`, `witness_detail`) until retention removes them |
 | Action event | `action_events` | append-only | one row per state change (`seq`, `from`, `to`, `at`, `actor`) plus short codes (`reason`, `rule_id`, `error_code`, `level`, `verdict`, `approval_id`, `detail_digest`), at most 2 KiB, never payloads |
-| Deed | `deeds` | append-only | the sealed record ([DEED_SPEC.md](DEED_SPEC.md)): digests, never payloads, hash-chained per org |
+| Deed | `deeds` | append-only | the sealed record ([DEED_SPEC.md](../spec/v1/DEED_SPEC.md)): digests, never payloads, hash-chained per org |
 | Admin event | `admin_events` | append-only | one administrative change (who, what, which object, why, at most 280 characters of reason, a 16 KiB data object), and the admin deed that seals it |
 
 One write path: nothing in Deedglass writes `action_events`, `admin_events` or `deeds` except
@@ -108,7 +108,7 @@ S06's loopback-only dev principal (`Deedglass-Dev-Org`) was removed in S07.
 
 Every org has one chain: deed `seq` 1, 2, 3… with no gaps, each deed's `prev_hash` the `body_hash`
 of the one before (seq 1 links to the org's genesis value). The database refuses a fork, a gap and
-any UPDATE or DELETE. [DEED_SPEC.md](DEED_SPEC.md) has the format.
+any UPDATE or DELETE. [DEED_SPEC.md](../spec/v1/DEED_SPEC.md) has the format.
 
 - `GET /v1/deeds?from_seq=&to_seq=&kind=&action=&order=asc|desc` lists envelopes, oldest first.
 - `GET /v1/deeds/{id}` returns the stored canonical bytes verbatim, with `ETag` = the
@@ -142,7 +142,7 @@ Exit codes: 0 intact, 1 broken, 2 incomplete.
 ## 6. Exports
 
 `GET /v1/deeds/export` and `deedglass deeds export` write an export bundle v1
-([BUNDLE_FORMAT.md](BUNDLE_FORMAT.md)): `README.txt`, `keys.json`, `deeds.jsonl`, `manifest.json`
+([BUNDLE_FORMAT.md](../spec/v1/BUNDLE_FORMAT.md)): `README.txt`, `keys.json`, `deeds.jsonl`, `manifest.json`
 and `manifest.seal.json`, as a deterministic tar.gz.
 
 - One `REPEATABLE READ READ ONLY` snapshot for the whole export: pass 1 counts the deeds and

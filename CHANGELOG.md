@@ -7,6 +7,31 @@ this file by `scripts/release-notes.sh`.
 
 ## [Unreleased]
 
+### Added
+
+- **`deedglass export`: records as OpenTelemetry GenAI spans, OCSF events, W3C PROV-JSON or FHIR**
+  (TY-06): `--format otel-genai` (OTLP/JSON lines, one `execute_tool` span per action under the
+  GenAI semantic conventions v1.41.0, a later check as a child span), `ocsf` (OCSF 1.9.0 API
+  Activity events with `ai_agent` and `delegation`), `prov-json` (one W3C PROV-JSON document: agents,
+  tool calls, records, who acted for whom, revisions) and `fhir` (the existing AuditEvent and
+  Provenance export). Offline, from an export bundle or a `.jsonl` file; a bundle that doesn't match
+  its manifest is refused. Each format has a mapping page that lists what it loses
+  (`docs/exports/`, `docs/EXPORTS.md`), and CI validates every format against pinned schema files
+  with golden output for a real release's bundle (`internal/recordexport`). A view of the records:
+  the record format doesn't change.
+- **The intent-vs-effect corpus** (TY-13): six scenarios in `corpus/` (a trigger, a cascade, an ORM
+  reset, another writer, a partial failure, a timeout with an unknown outcome) as SQL, each with what
+  the agent reports, what Postgres commits and the expected Deedglass outcome. `make corpus` runs
+  them on a throwaway PostgreSQL 18.6 in Docker and checks every database fact; `CORPUS_TOOL` runs
+  another tool around each scenario. Published under CC-BY-4.0.
+
+### Changed
+
+- **The record spec has its own home** (TY-12): `docs/DEED_SPEC.md` and `docs/BUNDLE_FORMAT.md`
+  moved to `spec/v1/` and are published under CC-BY-4.0, with `spec/README.md` (editions,
+  implementations, how to credit it) and `spec/CHANGELOG.md`. No normative change; the code stays
+  Apache-2.0. The docs site pages keep their addresses.
+
 ## [0.4.0] - 2026-10-19
 
 Healthcare, phase 1 complete: Proven (L2) checks for FHIR servers that store resources in Postgres

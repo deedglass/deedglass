@@ -366,7 +366,7 @@ and "open source" until the repo is public. Style bans: "revolutionary", "world-
   cancellation with no goroutine leak, blank and 64 KiB lines, anchors, per-org directories),
   `FuzzVerifyStream`; the message templates (every placeholder known, every code covered);
   `testdata/deeds/messages.json` and `parity/corpus-500.*` are generated with the vectors.
-  `docs/VERIFYING_DEEDS.md`'s code table and `docs/BUNDLE_FORMAT.md`'s worked example are generated
+  `docs/VERIFYING_DEEDS.md`'s code table and `spec/v1/BUNDLE_FORMAT.md`'s worked example are generated
   (`-run 'TestVerifyingDocs|TestBundleFormatDoc' -update`).
 - `internal/deed/archive` (S05): round trip, byte-identical writes (golden SHA-256), every reader rule,
   gzip bomb, seals, `FuzzArchiveOpen`; the reader never writes to disk.
