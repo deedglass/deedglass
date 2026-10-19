@@ -339,7 +339,9 @@ and "open source" until the repo is public. Style bans: "revolutionary", "world-
   sites; `internal/gate`: 225-pair trigger test; migrate runner refusals. Integration tag,
   PG 16/17/18.
 - `internal/archtest`: import layering (pure `deed`, `policy`, `sqlguard`, `witness`; `httpx` and
-  `store` never import each other).
+  `store` never import each other); TY-04 `TestCoreIsolation` (`gate`, `witness`, `deed` reach no
+  MCP, connector-vendor or coding-agent hook package; the row read-back's target comes from the
+  connector through `connector.RowTargeter`) with `TestCoreIsolationCatchesPlanted` (`testdata/planted`).
 - `internal/httpx`: `Mount` panics on a route with no auth, a POST with no idempotency rule, or a
   route missing from `contract_routes.go` (contract §9 as data; `testdata/routes.golden`); the
   41-code error catalog (copy rules, banned words, `docs/api/errors.md` headings; S11 added

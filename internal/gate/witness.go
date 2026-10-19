@@ -80,6 +80,9 @@ type witnessCase struct {
 	l2       *l2Plan          // S21: the connector is witnessed at L2 (shared by copies: Tx B sets wait)
 	extra    []witness.Reason // reasons decided before any check ran (S21: decoder_halted at plan time)
 	expect   *l2.Footprint    // S21: actions.witness_expect (S23's undo)
+	// defaultSchema is the schema unqualified names resolve to (Postgres), kept for the job payload
+	// so the worker asks the connector for the same row read-back target after a restart.
+	defaultSchema string
 }
 
 // requiredLevel is the level the decision's verify: asks for: it applies to anything that may
@@ -116,7 +119,13 @@ func (p *Pipeline) newWitnessCase(s Subject, e Execution, ex Executor, call conn
 	if s.Mode == ModeGateway {
 		t := call.Tool
 		ws.Spec = witness.ToolWitnessSpec{Connector: conn, Tool: t.Name, OutputSchema: t.OutputSchema, ReadBack: readBackSpec(t.ReadBack),
-			Postcondition: t.Postcondition, PostgresRow: s.ConnectorType == "postgres" && t.Name == "execute", DefaultSchema: defaultSchema}
+			Postcondition: t.Postcondition}
+		// TY-04: the connector, not the Witness, recognises the one row a write changed.
+		if rt, ok := ex.(connector.RowTargeting); ok {
+			if row, applies := rt.RowTarget(call, defaultSchema); applies {
+				ws.Spec.Row = &witness.RowSpec{Table: row.Table, Key: row.Key, Why: row.Why}
+			}
+		}
 		if b, ok := ex.(interface{ Instance() *connector.Instance }); ok && b.Instance() != nil {
 			ws.Spec.ConfigHash = b.Instance().ConfigHash
 		}
@@ -136,7 +145,7 @@ func (p *Pipeline) newWitnessCase(s Subject, e Execution, ex Executor, call conn
 		canRead = true // the NativeReadBacking check above
 	}
 	return witnessCase{sub: ws, ex: ex, call: call, res: e.Result, readBack: witness.PlanFor(ws).L1 && canRead,
-		l2: planL2(s, e, ex, call, side)}
+		l2: planL2(s, e, ex, call, side), defaultSchema: defaultSchema}
 }
 
 // decide runs the Witness with no read-back (L0, and the readback_skipped note where one applies).
@@ -144,7 +153,7 @@ func (p *Pipeline) decide(wc witnessCase, extra ...witness.Reason) (witness.Outc
 	sub := wc.sub
 	if witness.PlanFor(sub).L1 {
 		// No read-back runs here: drop it from the plan, so L0 (and extra) decide.
-		sub.Spec.ReadBack, sub.Spec.PostgresRow = nil, false
+		sub.Spec.ReadBack, sub.Spec.Row = nil, nil
 	}
 	out, _, err := witness.Run(context.Background(), witness.Input{Subject: sub, Extra: append(wc.reasons(), extra...),
 		Final: true, Now: p.now(), MaxDetailBytes: p.wcfg.MaxDetailBytes})
@@ -322,7 +331,7 @@ type jobPayload struct {
 }
 
 func payloadOf(wc witnessCase) json.RawMessage {
-	pl := jobPayload{Required: string(wc.sub.Required), SideEffect: wc.sub.SideEffect, DefaultSchema: wc.sub.Spec.DefaultSchema,
+	pl := jobPayload{Required: string(wc.sub.Required), SideEffect: wc.sub.SideEffect, DefaultSchema: wc.defaultSchema,
 		Status: wc.sub.Result.Status, Cause: wc.sub.Result.Cause, OutputBytes: wc.sub.Result.OutputBytes,
 		Meta: wc.sub.Result.Meta, Evidence: wc.sub.Result.Evidence, Extra: wc.reasons()}
 	b, err := json.Marshal(pl)

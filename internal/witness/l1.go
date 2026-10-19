@@ -10,8 +10,8 @@ import (
 	"time"
 )
 
-// L1 methods: readback.<connector type>.<read tool>, readback.postgres.row, postcondition.<type>.
-const MethodPostgresRow = "readback.postgres.row"
+// L1 methods: readback.<connector type>.<read tool>, readback.<connector type>.row (the row
+// read-back: readback.postgres.row), postcondition.<type>.
 
 // ReadbackDetail is witness_detail.levels.L1.readback: what the read-back did, never what it read
 // (the body is kept only as a digest).
@@ -48,8 +48,8 @@ func EvaluateL1(ctx context.Context, s Subject, obs Observer, final bool) L1Resu
 		return L1Result{Reasons: []Reason{R(L1, CodeInternalError, "readback", nil)}}
 	}
 	switch p.Kind {
-	case KindPostgresRow:
-		return postgresRow(ctx, s, obs, final)
+	case KindRow:
+		return rowReadBack(ctx, s, obs, final)
 	case KindNative:
 		return nativeReadBack(ctx, s, obs, final)
 	}

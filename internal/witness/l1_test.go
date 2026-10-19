@@ -9,8 +9,6 @@ import (
 	"sync"
 	"testing"
 	"time"
-
-	"github.com/deedglass/deedglass/internal/sqlguard"
 )
 
 // fakeObserver answers read-backs from fn and records every request.
@@ -359,22 +357,28 @@ func TestL1Helpers(t *testing.T) {
 	}
 }
 
-// Postgres row read-back.
+// The row read-back (S19 §3.5). The connector says which row (TY-04: internal/connector/postgres
+// RowTarget); the Witness only reads it back and compares.
 
-func pgSubject(sql string) Subject {
-	args, _ := json.Marshal(map[string]string{"sql": sql})
+// whyNotRow is the connector's readback_skipped text for a write it can't check.
+const whyNotRow = "the statement isn't a single-row update by primary key; L2 covers it when the connector is witnessed"
+
+func pgSubject(row *RowSpec) Subject {
+	args, _ := json.Marshal(map[string]string{"sql": pgUpdate})
 	return Subject{ActionID: "act_2", Tool: "pg.execute", ConnectorType: "postgres", Mode: ModeGateway, SideEffect: "write",
 		Args: args, Result: ResultView{Status: StatusSucceeded, Evidence: map[string]string{"xid8": "777"}},
-		Spec: ToolWitnessSpec{Connector: "pg", Tool: "execute", PostgresRow: true}, Required: L1}
+		Spec: ToolWitnessSpec{Connector: "pg", Tool: "execute", Row: row}, Required: L1}
 }
 
 const pgUpdate = `UPDATE public.orders SET status = 'shipped' WHERE id = 42`
+
+var orderRow = &RowSpec{Table: "public.orders", Key: "id = 42"}
 
 func rowAnswer(row any) func(context.Context, int) (Observation, error) {
 	return func(context.Context, int) (Observation, error) { return Observation{Body: row, LatencyMS: 4}, nil }
 }
 
-func TestEvaluateL1PostgresRow(t *testing.T) {
+func TestEvaluateL1RowReadBack(t *testing.T) {
 	ctx := context.Background()
 	col := func(match bool, observed any) []ColumnResult {
 		return []ColumnResult{{Column: "status", Compared: true, Match: match, Expected: "shipped", Observed: observed},
@@ -383,9 +387,9 @@ func TestEvaluateL1PostgresRow(t *testing.T) {
 	written := RowObservation{RowFound: true, XminMatches: true, Table: "public.orders", Key: "id = 42", Columns: col(true, "shipped")}
 	t.Run("row_written", func(t *testing.T) {
 		obs := &fakeObserver{fn: rowAnswer(written)}
-		r := EvaluateL1(ctx, pgSubject(pgUpdate), obs, true)
+		r := EvaluateL1(ctx, pgSubject(orderRow), obs, true)
 		one(t, r.Reasons, CodeRowWritten, "Postgres shows row id = 42 in public.orders was last written by this action's transaction.")
-		if r.Method != MethodPostgresRow || r.Readback.Tool != "postgres.row" || r.Readback.Target != "id = 42 in public.orders" || r.Readback.LatencyMS != 4 {
+		if r.Method != "readback.postgres.row" || r.Readback.Tool != "postgres.row" || r.Readback.Target != "id = 42 in public.orders" || r.Readback.LatencyMS != 4 {
 			t.Errorf("result %+v %+v", r, r.Readback)
 		}
 		if r.Reasons[0].Evidence["compared"] != "1 of 2 columns" || r.Reasons[0].Class != Pass {
@@ -400,16 +404,16 @@ func TestEvaluateL1PostgresRow(t *testing.T) {
 		b, _ := json.Marshal(written)
 		_ = json.Unmarshal(b, &m)
 		for _, body := range []any{&written, m} {
-			r := EvaluateL1(ctx, pgSubject(pgUpdate), &fakeObserver{fn: rowAnswer(body)}, true)
+			r := EvaluateL1(ctx, pgSubject(orderRow), &fakeObserver{fn: rowAnswer(body)}, true)
 			one(t, r.Reasons, CodeRowWritten, "")
 		}
-		r := EvaluateL1(ctx, pgSubject(pgUpdate), &fakeObserver{fn: rowAnswer("not a row")}, true)
+		r := EvaluateL1(ctx, pgSubject(orderRow), &fakeObserver{fn: rowAnswer("not a row")}, true)
 		one(t, r.Reasons, CodeInternalError, "")
 	})
 	t.Run("value_mismatch", func(t *testing.T) {
 		row := written
 		row.Columns = col(false, "cancelled")
-		r := EvaluateL1(ctx, pgSubject(pgUpdate), &fakeObserver{fn: rowAnswer(row)}, true)
+		r := EvaluateL1(ctx, pgSubject(orderRow), &fakeObserver{fn: rowAnswer(row)}, true)
 		one(t, r.Reasons, CodeValueMismatch, `Postgres has status = "cancelled" on row id = 42 in public.orders. The statement set "shipped".`)
 		want := []FieldDiff{{Path: "status", Expected: "shipped", Observed: "cancelled"}}
 		if r.Reasons[0].Class != Violation || !reflect.DeepEqual(r.Reasons[0].Diff, want) {
@@ -420,74 +424,65 @@ func TestEvaluateL1PostgresRow(t *testing.T) {
 		row := written
 		row.XminMatches = false
 		row.Columns = col(false, "cancelled") // another transaction's value is never a violation
-		r := EvaluateL1(ctx, pgSubject(pgUpdate), &fakeObserver{fn: rowAnswer(row)}, true)
+		r := EvaluateL1(ctx, pgSubject(orderRow), &fakeObserver{fn: rowAnswer(row)}, true)
 		one(t, r.Reasons, CodeRowSuperseded, "Another transaction changed row id = 42 in public.orders after this action")
 		if r.Reasons[0].Class != Gap {
 			t.Errorf("class %s", r.Reasons[0].Class)
 		}
 	})
 	t.Run("row_missing", func(t *testing.T) {
-		r := EvaluateL1(ctx, pgSubject(pgUpdate), &fakeObserver{fn: rowAnswer(RowObservation{})}, true)
+		r := EvaluateL1(ctx, pgSubject(orderRow), &fakeObserver{fn: rowAnswer(RowObservation{})}, true)
 		one(t, r.Reasons, CodeRowMissing, "Row id = 42 in public.orders isn't there any more")
-		r = EvaluateL1(ctx, pgSubject(pgUpdate), &fakeObserver{fn: fail(ErrNotFound)}, true)
+		r = EvaluateL1(ctx, pgSubject(orderRow), &fakeObserver{fn: fail(ErrNotFound)}, true)
 		one(t, r.Reasons, CodeRowMissing, "")
 	})
 	t.Run("skip", func(t *testing.T) {
-		r := EvaluateL1(ctx, pgSubject(pgUpdate), &fakeObserver{fn: fail(&SkipError{Why: WhyNotRowReadBack})}, true)
+		r := EvaluateL1(ctx, pgSubject(orderRow), &fakeObserver{fn: fail(&SkipError{Why: whyNotRow})}, true)
 		one(t, r.Reasons, CodeReadbackSkipped, "No read-back: the statement isn't a single-row update by primary key")
 		if r.Reasons[0].Class != Note {
 			t.Errorf("class %s", r.Reasons[0].Class)
 		}
 	})
 	t.Run("errors", func(t *testing.T) {
-		r := EvaluateL1(ctx, pgSubject(pgUpdate), &fakeObserver{fn: fail(&ReadError{Code: "statement_timeout"})}, true)
+		r := EvaluateL1(ctx, pgSubject(orderRow), &fakeObserver{fn: fail(&ReadError{Code: "statement_timeout"})}, true)
 		one(t, r.Reasons, CodeReadbackFailed, "The read-back the row read-back failed (statement_timeout)")
-		r = EvaluateL1(ctx, pgSubject(pgUpdate), &fakeObserver{fn: fail(errors.New("x"))}, true)
+		r = EvaluateL1(ctx, pgSubject(orderRow), &fakeObserver{fn: fail(errors.New("x"))}, true)
 		one(t, r.Reasons, CodeReadbackFailed, "(upstream_error)")
 		bctx, cancel := WithBudget(ctx, time.Millisecond)
 		defer cancel()
 		<-bctx.Done()
-		r = EvaluateL1(bctx, pgSubject(pgUpdate), &fakeObserver{fn: fail(bctx.Err())}, true)
+		r = EvaluateL1(bctx, pgSubject(orderRow), &fakeObserver{fn: fail(bctx.Err())}, true)
 		one(t, r.Reasons, CodeReadbackTimeout, "took longer than 1 ms.")
-		r = EvaluateL1(bctx, pgSubject(pgUpdate), &fakeObserver{fn: fail(bctx.Err())}, false)
-		if !r.Deferred || r.Method != MethodPostgresRow {
+		r = EvaluateL1(bctx, pgSubject(orderRow), &fakeObserver{fn: fail(bctx.Err())}, false)
+		if !r.Deferred || r.Method != "readback.postgres.row" {
 			t.Errorf("not deferred: %+v", r)
 		}
 	})
-	t.Run("not a simple single-row update", func(t *testing.T) {
-		for _, sql := range []string{
-			`UPDATE public.orders SET status = 'x' WHERE id IN (1, 2, 3)`,
-			`WITH x AS (SELECT 1) UPDATE public.orders SET status = 'x' WHERE id = 1`,
-			`DELETE FROM public.orders WHERE id = 1`,
-			`INSERT INTO public.orders (id) VALUES (1)`,
-			`UPDATE public.orders SET status = 'x'`,
-			`SELECT 1`,
-		} {
-			s := pgSubject(sql)
-			p := PlanFor(s)
-			if p.L1 || p.Why != WhyNotRowReadBack {
-				t.Errorf("%s: plan %+v", sql, p)
-			}
-			obs := &fakeObserver{fn: rowAnswer(written)}
-			r := EvaluateL1(ctx, s, obs, true)
-			one(t, r.Reasons, CodeReadbackSkipped, "L2 covers it when the connector is witnessed")
-			if obs.calls() != 0 {
-				t.Errorf("%s: the observer ran", sql)
-			}
+	t.Run("a write the connector can't check", func(t *testing.T) {
+		s := pgSubject(&RowSpec{Why: whyNotRow})
+		if p := PlanFor(s); p.L1 || p.Why != whyNotRow {
+			t.Errorf("plan %+v", p)
 		}
-		s := pgSubject(pgUpdate)
-		s.Spec.Tool = "query"
-		if p := PlanFor(s); p.L1 || p.Why == "" {
-			t.Errorf("another tool: %+v", p)
+		obs := &fakeObserver{fn: rowAnswer(written)}
+		r := EvaluateL1(ctx, s, obs, true)
+		one(t, r.Reasons, CodeReadbackSkipped, "L2 covers it when the connector is witnessed")
+		if obs.calls() != 0 {
+			t.Error("the observer ran")
 		}
-		s = pgSubject(pgUpdate)
-		s.Args = json.RawMessage(`{`)
-		if p := PlanFor(s); p.L1 || p.Why == "" {
-			t.Errorf("bad args: %+v", p)
+		if p := PlanFor(pgSubject(nil)); p.L1 || p.Why != "" {
+			t.Errorf("no row read-back offered: %+v", p)
+		}
+	})
+	t.Run("method names the connector type", func(t *testing.T) {
+		s := pgSubject(orderRow)
+		s.ConnectorType = "mysql"
+		r := EvaluateL1(ctx, s, &fakeObserver{fn: rowAnswer(written)}, true)
+		if r.Method != "readback.mysql.row" || r.Readback.Tool != "mysql.row" {
+			t.Errorf("result %+v %+v", r, r.Readback)
 		}
 	})
 	t.Run("plan", func(t *testing.T) {
-		if p := PlanFor(pgSubject(pgUpdate)); !p.L1 || p.Kind != KindPostgresRow {
+		if p := PlanFor(pgSubject(orderRow)); !p.L1 || p.Kind != KindRow {
 			t.Errorf("plan %+v", p)
 		}
 		if p := PlanFor(restSubject(shippedArgs, ordersReadBack(), "")); !p.L1 || p.Kind != KindReadBack {
@@ -495,24 +490,3 @@ func TestEvaluateL1PostgresRow(t *testing.T) {
 		}
 	})
 }
-
-func TestPostgresTarget(t *testing.T) {
-	cases := []struct {
-		sql, key, table string
-	}{
-		{pgUpdate, "id = 42", "public.orders"},
-		{`UPDATE orders SET status = 'x' WHERE code = 'a''b'`, "code = 'a''b'", "app.orders"},
-		{`UPDATE public.orders SET total = total + 1 WHERE id = 7`, "id = 7", "public.orders"},
-	}
-	for _, c := range cases {
-		tg, why := PostgresTarget(c.sql, "app")
-		if why != "" || tg.Key != c.key || tg.Shape.Table != c.table {
-			t.Errorf("%s: %+v %q", c.sql, tg, why)
-		}
-	}
-	if got := valueText(sqlguardNull()); got != "NULL" {
-		t.Errorf("valueText(null) = %q", got)
-	}
-}
-
-func sqlguardNull() sqlguard.Value { return sqlguard.Value{Kind: sqlguard.ShapeValueNull} }

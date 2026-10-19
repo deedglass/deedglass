@@ -6,6 +6,10 @@
 //   - deed, sqlguard, policy and witness import none of net/http, database/sql,
 //     github.com/jackc/*, internal/store or internal/httpx.
 //   - Nothing in internal/ imports cmd/.
+//   - TY-04 (core_test.go): gate, witness and deed (and every package below them) depend on no MCP
+//     package, no internal/connector/<vendor> package (only internal/connector and its schema and
+//     egress leaves) and no coding-agent hook package; a fixture module in testdata/planted shows
+//     the rule catching planted imports.
 //
 // rename_guard_test.go also runs scripts/rename_guard.sh in a throwaway git repo (ADR-012).
 //

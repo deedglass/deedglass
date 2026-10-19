@@ -5,57 +5,22 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strings"
-
-	"github.com/deedglass/deedglass/internal/sqlguard"
 )
 
-// WhyNotRowReadBack is the readback_skipped note for a Postgres write the row read-back can't check.
-const WhyNotRowReadBack = "the statement isn't a single-row update by primary key; L2 covers it when the connector is witnessed"
-
-// PostgresRowTarget is what the Postgres row read-back reads: one table, one key, and the SET list.
-type PostgresRowTarget struct {
-	Shape sqlguard.Shape
+// RowSpec is the row read-back a connector offers for one write (TY-04, DL-109): the one row the
+// write changed, worked out by the connector from its own query language (Postgres: a single-row
+// UPDATE by key). The Witness never parses a vendor's language; it reads the row back through the
+// Observer and compares what comes back.
+type RowSpec struct {
+	Table string // "public.orders"
 	Key   string // "id = 42"
+	// Why is set when the write isn't one the row read-back can check; it is the readback_skipped
+	// note's text.
+	Why string
 }
 
-// PostgresTarget recognises a statement the row read-back can check: one UPDATE of one table whose
-// WHERE names exactly one row (S19 §3.5). The primary-key check needs the catalog, so the observer
-// makes it and answers SkipError when the WHERE isn't the primary key.
-func PostgresTarget(sql string, defaultSchema string) (PostgresRowTarget, string) {
-	sh := sqlguard.ShapeOf(sql, sqlguard.ShapeOptions{DefaultSchema: defaultSchema})
-	if !sh.Simple || sh.Kind != "update" || sh.Where == nil || len(sh.Where.Rows) != 1 || len(sh.Set) == 0 {
-		return PostgresRowTarget{}, WhyNotRowReadBack
-	}
-	parts := make([]string, len(sh.Where.Columns))
-	for i, c := range sh.Where.Columns {
-		parts[i] = c + " = " + valueText(sh.Where.Rows[0][i])
-	}
-	return PostgresRowTarget{Shape: sh, Key: strings.Join(parts, " AND ")}, ""
-}
-
-func valueText(v sqlguard.Value) string {
-	if v.Kind == sqlguard.ShapeValueString {
-		return "'" + strings.ReplaceAll(v.Text, "'", "''") + "'"
-	}
-	if v.Kind == sqlguard.ShapeValueNull {
-		return "NULL"
-	}
-	return v.Text
-}
-
-// postgresTarget is PostgresTarget over the subject's arguments.
-func postgresTarget(s Subject) (PostgresRowTarget, string) {
-	var a struct {
-		SQL string `json:"sql"`
-	}
-	if json.Unmarshal(s.Args, &a) != nil || a.SQL == "" || s.Spec.Tool != "execute" {
-		return PostgresRowTarget{}, WhyNotRowReadBack
-	}
-	return PostgresTarget(a.SQL, s.Spec.DefaultSchema)
-}
-
-// RowObservation is the Postgres row read-back's observation body.
+// RowObservation is the row read-back's observation body. XminMatches says the row's version
+// marker still names the action's transaction (Postgres: xmin against low32(xid8)).
 type RowObservation struct {
 	RowFound    bool           `json:"row_found"`
 	XminMatches bool           `json:"xmin_matches"`
@@ -74,22 +39,34 @@ type ColumnResult struct {
 	Observed any    `json:"observed"`
 }
 
-func postgresRow(ctx context.Context, s Subject, obs Observer, final bool) L1Result {
-	t, why := postgresTarget(s)
-	if why != "" {
+// rowMethod is the row read-back's method, readback.<connector type>.row, and its tool,
+// <connector type>.row.
+func rowMethod(s Subject) (method, tool string) {
+	ct := nonEmptyOr(s.ConnectorType, "connector")
+	return clipMethod("readback." + ct + ".row"), ct + ".row"
+}
+
+func rowReadBack(ctx context.Context, s Subject, obs Observer, final bool) L1Result {
+	t := s.Spec.Row
+	if t == nil || t.Why != "" {
+		why := ""
+		if t != nil {
+			why = t.Why
+		}
 		return L1Result{Reasons: []Reason{R(L1, CodeReadbackSkipped, "readback", map[string]any{"why": why})}}
 	}
-	res := L1Result{Method: MethodPostgresRow, Readback: &ReadbackDetail{Tool: "postgres.row", Target: t.Key + " in " + t.Shape.Table, Attempts: 1}}
+	method, tool := rowMethod(s)
+	res := L1Result{Method: method, Readback: &ReadbackDetail{Tool: tool, Target: t.Key + " in " + t.Table, Attempts: 1}}
 	o, err := obs.ReadBack(ctx, s, ReadRequest{Target: res.Readback.Target}, 1)
 	res.Readback.LatencyMS = o.LatencyMS
-	vars := map[string]any{"key": t.Key, "table": t.Shape.Table}
+	vars := map[string]any{"key": t.Key, "table": t.Table}
 	var se *SkipError
 	var re *ReadError
 	switch {
 	case err == nil:
 	case ctx.Err() != nil || errors.Is(err, context.DeadlineExceeded):
 		if !final {
-			return L1Result{Deferred: true, Method: MethodPostgresRow, Readback: res.Readback}
+			return L1Result{Deferred: true, Method: method, Readback: res.Readback}
 		}
 		res.Reasons = []Reason{R(L1, CodeReadbackTimeout, "row.read", map[string]any{"readback": "the row read-back", "budget": budgetText(ctx)})}
 		return res
@@ -126,7 +103,7 @@ func postgresRow(ctx context.Context, s Subject, obs Observer, final bool) L1Res
 			continue
 		}
 		res.Reasons = append(res.Reasons, R(L1, CodeValueMismatch, "row.value", map[string]any{"column": c.Column, "observed": c.Observed,
-			"key": t.Key, "table": t.Shape.Table, "expected": c.Expected}).WithDiff([]FieldDiff{{Path: c.Column, Expected: c.Expected, Observed: c.Observed}}))
+			"key": t.Key, "table": t.Table, "expected": c.Expected}).WithDiff([]FieldDiff{{Path: c.Column, Expected: c.Expected, Observed: c.Observed}}))
 	}
 	if len(res.Reasons) == 0 {
 		res.Reasons = []Reason{R(L1, CodeRowWritten, "row.xmin", vars).WithEvidence(map[string]any{"compared": comparedCount(row.Columns)})}

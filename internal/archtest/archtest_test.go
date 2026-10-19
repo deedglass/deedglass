@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"io"
+	"os"
 	"os/exec"
 	"strings"
 	"testing"
@@ -19,14 +20,18 @@ type pkg struct {
 }
 
 // listDeps runs go list -deps -json over the module and returns every non-test package it reports.
-func listDeps(t *testing.T) map[string]pkg {
+func listDeps(t *testing.T) map[string]pkg { return listDepsIn(t, "../..") }
+
+// listDepsIn is listDeps for the module rooted at dir (a fixture module in testdata, too).
+func listDepsIn(t *testing.T, dir string) map[string]pkg {
 	t.Helper()
 	gobin, err := exec.LookPath("go")
 	if err != nil {
 		t.Skip("go is not on PATH")
 	}
 	cmd := exec.Command(gobin, "list", "-deps", "-json", module+"/...")
-	cmd.Dir = "../.."
+	cmd.Dir = dir
+	cmd.Env = append(os.Environ(), "GOWORK=off")
 	var out, errb bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &out, &errb
 	if err := cmd.Run(); err != nil {
