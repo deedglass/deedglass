@@ -1071,7 +1071,7 @@ func (p *Pipeline) run(ctx context.Context, pl *plan) (*ledger.Action, time.Dura
 	e := p.execute(ectx, pl.exec, pl.call)
 	tool := e.FinishedAt.Sub(e.StartedAt)
 	wc := p.newWitnessCase(pl.subject, e, pl.exec, pl.call, pl.required, pl.side, pl.defaultSchema)
-	v, err := p.complete(ctx, pl.subject, e, wc, pl.costTargets, pl.reservations, pl.actor, pl.requestID)
+	v, err := p.complete(ctx, pl.subject, e, wc, pl.costTargets, pl.reservations, pl.actor, pl.requestID, pl.call.Deadline)
 	if wc.l2 != nil && wc.l2.wait {
 		pl.l2.Store(wc.l2)
 	}

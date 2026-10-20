@@ -32,6 +32,15 @@ this file by `scripts/release-notes.sh`.
   implementations, how to credit it) and `spec/CHANGELOG.md`. No normative change; the code stays
   Apache-2.0. The docs site pages keep their addresses.
 
+### Fixed
+
+- **A result that came back is no longer left to crash recovery when recording it meets
+  contention.** Under load (many writes in one org at once) the transaction that records a gateway
+  call's outcome and seals its deed could hit Postgres's `lock_timeout` or `statement_timeout`; the
+  action then stayed `executing` until the sweeper claimed it, and the real outcome was lost. The Gate
+  now runs that transaction again, with backoff, up to the call's deadline (`TestRecordContention`;
+  `TestLoad1000` failed this way on CI runners).
+
 ## [0.4.0] - 2026-10-19
 
 Healthcare, phase 1 complete: Proven (L2) checks for FHIR servers that store resources in Postgres

@@ -252,12 +252,29 @@ func SQLState(err error) string {
 	return ""
 }
 
+// Transient reports whether err is a refusal that a new transaction may not meet: the session's
+// lock_timeout (55P03) or statement_timeout (57014) under contention, a serialization failure
+// (40001) or a deadlock victim (40P01). Nothing was committed; the caller may run the whole
+// transaction again. A context cancelled by the caller also surfaces as 57014, so a caller that
+// retries checks its own context first.
+func Transient(err error) bool {
+	switch SQLState(err) {
+	case CodeLockNotAvailable, CodeQueryCanceled, CodeSerialization, CodeDeadlock:
+		return true
+	}
+	return false
+}
+
 // Postgres error codes the store and its callers act on.
 const (
 	CodeUniqueViolation   = "23505"
 	CodeCheckViolation    = "23514"
 	CodeForeignKey        = "23503"
 	CodeInsufficientPriv  = "42501"
+	CodeLockNotAvailable  = "55P03"
+	CodeQueryCanceled     = "57014"
+	CodeSerialization     = "40001"
+	CodeDeadlock          = "40P01"
 	CodeAppendOnly        = "DG001"
 	CodeNoPredecessor     = "DG002"
 	CodeChainBroken       = "DG003"
