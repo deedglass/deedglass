@@ -97,6 +97,30 @@
       "note": "Add to ~/.codeium/windsurf/mcp_config.json."
     },
     {
+      "id": "codex",
+      "client": "Codex CLI",
+      "kind": "command",
+      "url": "",
+      "command": "codex mcp add deedglass -- npx -y deedglass mcp serve",
+      "note": "Writes ~/.codex/config.toml."
+    },
+    {
+      "id": "gemini",
+      "client": "Gemini CLI",
+      "kind": "config",
+      "url": "",
+      "command": "{\"mcpServers\":{\"deedglass\":{\"command\":\"npx\",\"args\":[\"-y\",\"deedglass\",\"mcp\",\"serve\"]}}}",
+      "note": "Add to .gemini/settings.json, or ~/.gemini/settings.json for every project."
+    },
+    {
+      "id": "copilot",
+      "client": "GitHub Copilot CLI",
+      "kind": "command",
+      "url": "",
+      "command": "copilot mcp add deedglass -- npx -y deedglass mcp serve",
+      "note": "Writes ~/.copilot/mcp-config.json."
+    },
+    {
       "id": "docker",
       "client": "Docker MCP Catalog",
       "kind": "command",
