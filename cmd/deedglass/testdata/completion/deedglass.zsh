@@ -10,7 +10,7 @@ _deedglass() {
   done
   case "$path ${words[CURRENT-1]}" in
     'export --format') compadd -- otel-genai ocsf prov-json fhir; return ;;
-    'init --client') compadd -- claude-code claude-desktop cursor vscode windsurf sdk-python sdk-typescript none; return ;;
+    'init --client') compadd -- claude-code claude-desktop cursor vscode windsurf codex gemini copilot sdk-python sdk-typescript none; return ;;
     'init --postgres') compadd -- docker; return ;;
     'scan --fail-under') compadd -- A B C D; return ;;
     'scan --format') compadd -- md html json sarif; return ;;
@@ -167,10 +167,10 @@ _deedglass() {
       subs=( 'shell:Check a shell command before an agent runs it' )
       ;;
     'guard shell')
-      flags=( '--command:check this command and print what was found, instead of reading a hook input on stdin' '--deny:deny instead of ask\: the command doesn'\''t run and Claude reads the reason' '--list:print the catalog\: every command shape it asks about, with its source and the date it was checked' '--no-files:read only the command\: no package.json scripts, shell scripts or SQL files from the working directory' )
+      flags=( '--client:the coding agent running the hook, which sets the input it reads and the answer it writes\: claude-code, codex, gemini, copilot, cursor, vscode' '--command:check this command and print what was found, instead of reading a hook input on stdin' '--deny:deny instead of ask\: the command doesn'\''t run and Claude reads the reason' '--list:print the catalog\: every command shape it asks about, with its source and the date it was checked' '--no-files:read only the command\: no package.json scripts, shell scripts or SQL files from the working directory' '--print-config:print the hook config for --client and where it goes, instead of reading a hook input (it writes no file)' )
       ;;
     'init')
-      flags=( '--client:the agent client to connect\: claude-code, claude-desktop, cursor, vscode, windsurf, sdk-python, sdk-typescript, none' '--dir:the directory to set up (.deedglass/ goes here)' '--listen:where deedglass serve listens' '--no-open:don'\''t open the Console' '--no-smoke:skip the three smoke actions' '--owner-email:the local org'\''s owner' '--pg-port:the local Postgres port (127.0.0.1)' '--postgres:where Postgres runs\: docker' '--project:the Docker name prefix (default\: from the directory)' '--quiet:don'\''t print the quickstart step line' '--reset-secrets:replace the vault key and pepper (asks you to type reset; every API key stops working)' '--smoke:run the smoke actions even when nothing changed' '--stop:stop the local stack this directory runs (the data is kept)' '--trigger:on the stack init made\: turn on the demo'\''s legacy trigger, ship order 42 (1 row reported, 301 changed), then show the undo preview' '--yes:don'\''t ask; run every step' )
+      flags=( '--client:the agent client to connect\: claude-code, claude-desktop, cursor, vscode, windsurf, codex, gemini, copilot, sdk-python, sdk-typescript, none' '--dir:the directory to set up (.deedglass/ goes here)' '--listen:where deedglass serve listens' '--no-open:don'\''t open the Console' '--no-smoke:skip the three smoke actions' '--owner-email:the local org'\''s owner' '--pg-port:the local Postgres port (127.0.0.1)' '--postgres:where Postgres runs\: docker' '--project:the Docker name prefix (default\: from the directory)' '--quiet:don'\''t print the quickstart step line' '--reset-secrets:replace the vault key and pepper (asks you to type reset; every API key stops working)' '--smoke:run the smoke actions even when nothing changed' '--stop:stop the local stack this directory runs (the data is kept)' '--trigger:on the stack init made\: turn on the demo'\''s legacy trigger, ship order 42 (1 row reported, 301 changed), then show the undo preview' '--yes:don'\''t ask; run every step' )
       ;;
     'insights')
       subs=( 'stats:Show decisions, approvals and verdicts by rule' 'shadow:Show where the shadow policy disagrees' 'anomalies:List anomalies' 'detect:Run anomaly detection now' 'settings:Show or change Insights settings' 'suggestions:Commands for insights suggestions' 'digest:Preview the weekly digest' )

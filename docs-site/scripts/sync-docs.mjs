@@ -145,7 +145,7 @@ export const LIMITS_PARTS = [
     label: 'The MCP wrapper, gateway and demo',
     title: 'Limits: the MCP wrapper, gateway and demo',
     description: 'The limits of deedglass mcp wrap, the MCP HTTP gateway, /mcp/native, mcp serve and the Acme demo stack.',
-    sections: ['The MCP stdio wrapper', 'The MCP gateway, /mcp/native and mcp serve', 'The Acme demo stack'],
+    sections: ['The MCP stdio wrapper', 'The MCP gateway, /mcp/native and mcp serve', 'The Acme demo stack', 'The shell guard in other coding agents'],
   },
   {
     slug: 'connectors',

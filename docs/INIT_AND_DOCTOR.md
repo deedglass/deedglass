@@ -33,7 +33,7 @@ Each step is idempotent: run init again and every step says it is already set up
 | 7 | Demo database | The Acme orders schema and seed (the same SQL as `make demo-up`), the Postgres connector `postgres` with `connector postgres init --apply`, the decoder slot | `connector postgres init` says `Nothing to change.` |
 | 8 | Agent | `quickstart-agent` and one `dg_test_` key, written once to `.deedglass/quickstart.key` and shown once | A key is made only when the file is missing |
 | 9 | Policies | `postgres-safe` pushed and enforced (it replaces `default-deny`, the policy every new org starts with; one policy is enforced at a time) | Skipped when that exact version hash is enforced |
-| 10 | Client | `--client claude-code` prints the `claude mcp add` line; `claude-desktop`, `cursor`, `vscode` and `windsurf` print their config snippet; init never writes a client's config file | Printed again |
+| 10 | Client | `--client claude-code` prints the `claude mcp add` line; `claude-desktop`, `cursor`, `vscode` and `windsurf` print their config snippet; `codex`, `gemini` and `copilot` print their MCP line and the shell guard hook config ([INSTALL_CLIENTS.md](INSTALL_CLIENTS.md)); init never writes a client's config file | Printed again |
 | 11 | Smoke | As `quickstart-agent`: `postgres.query` (L0 VERIFIED), `DROP TABLE public.orders` (denied by `block-destructive-sql`), `UPDATE public.orders SET status = 'shipped' WHERE id = 42` (`postgres-safe` asks for approval; init countersigns as the local owner through the dev-only `approve --as`, says so, then waits for L2 VERIFIED) | Runs only when something changed, or with `--smoke` |
 | 12 | Console | Opens `/app` on a terminal (not with `--no-open`) | Only when something changed |
 

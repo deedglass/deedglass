@@ -26,7 +26,7 @@ var initValues struct {
 	pgPort                                             int
 }
 
-var initClients = []string{"claude-code", "claude-desktop", "cursor", "vscode", "windsurf", "sdk-python", "sdk-typescript", "none"}
+var initClients = []string{"claude-code", "claude-desktop", "cursor", "vscode", "windsurf", "codex", "gemini", "copilot", "sdk-python", "sdk-typescript", "none"}
 
 func initFlags(fs *flag.FlagSet) {
 	v := &initValues

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 
 	"github.com/deedglass/deedglass/internal/shellguard"
 )
@@ -22,8 +23,8 @@ import (
 // block, and a guard that can't read its input must not block every command.
 
 type guardShellOpts struct {
-	deny, list, noFiles bool
-	command             string
+	deny, list, noFiles, printConfig bool
+	command, client                  string
 }
 
 var guardShellFlagValues guardShellOpts
@@ -34,6 +35,8 @@ func guardShellFlags(fs *flag.FlagSet) {
 	fs.StringVar(&guardShellFlagValues.command, "command", "", "check this command and print what was found, instead of reading a hook input on stdin")
 	fs.BoolVar(&guardShellFlagValues.list, "list", false, "print the catalog: every command shape it asks about, with its source and the date it was checked")
 	fs.BoolVar(&guardShellFlagValues.noFiles, "no-files", false, "read only the command: no package.json scripts, shell scripts or SQL files from the working directory")
+	fs.StringVar(&guardShellFlagValues.client, "client", "claude-code", "the coding agent running the hook, which sets the input it reads and the answer it writes: "+shellguard.ClientNames())
+	fs.BoolVar(&guardShellFlagValues.printConfig, "print-config", false, "print the hook config for --client and where it goes, instead of reading a hook input (it writes no file)")
 }
 
 func runGuardShell(_ context.Context, e *Env, args []string) error {
@@ -43,6 +46,13 @@ func runGuardShell(_ context.Context, e *Env, args []string) error {
 	}
 	if o.list {
 		return guardShellList(e)
+	}
+	client, ok := shellguard.LookupClient(o.client)
+	if !ok {
+		return usageErr(fmt.Errorf("--client takes %s (got %q)", shellguard.ClientNames(), o.client), "For example: deedglass guard shell --print-config --client codex.")
+	}
+	if o.printConfig {
+		return guardShellPrintConfig(e, client)
 	}
 	opts := shellguard.Options{ReadFile: readGuardFile}
 	if o.noFiles {
@@ -54,9 +64,17 @@ func runGuardShell(_ context.Context, e *Env, args []string) error {
 		}
 		return guardShellCommand(e, o, shellguard.Check(o.command, opts))
 	}
-	if _, err := shellguard.Hook(e.stdin(), e.Stdout, o.deny, opts); err != nil {
+	if client.Unsupported != "" {
+		return usageErr(fmt.Errorf("the shell guard has no hook for %s", client.Title), client.Unsupported)
+	}
+	if _, err := client.Hook(e.stdin(), e.Stdout, o.deny, opts); err != nil {
+		if client.ErrorBlocks {
+			// This client denies the tool call when the hook exits non-zero; never block on our own failure.
+			fmt.Fprintf(e.Stderr, "Deedglass couldn't read the hook input (%v), so it checked nothing.\n", err)
+			return nil
+		}
 		return &ExitError{Code: ExitFailure, ErrCode: "validation_failed", Err: fmt.Errorf("Deedglass couldn't read the hook input: %w", err),
-			Next: "Claude Code runs this command as a PreToolUse hook and sends one JSON object on stdin; to check a command by hand, use --command."}
+			Next: client.Title + " runs this command as a hook and sends one JSON object on stdin; to check a command by hand, use --command."}
 	}
 	return nil
 }
@@ -93,6 +111,31 @@ func guardShellCommand(e *Env, o guardShellOpts, fs []shellguard.Finding) error 
 	if len(fs) > 0 {
 		return &ExitError{Code: ExitFailure, Err: errors.New("the shell guard would " + decision), printed: true}
 	}
+	return nil
+}
+
+// guardShellPrintConfig prints one client's hook config from the table in internal/shellguard on
+// stdout, and where it goes and what the client can't do on stderr. It writes no file.
+func guardShellPrintConfig(e *Env, c shellguard.ClientHook) error {
+	if e.Globals.JSON {
+		limits := c.Limits
+		if limits == nil {
+			limits = []string{}
+		}
+		return writeJSON(e, map[string]any{"client": c.Name, "title": c.Title, "supported": c.Unsupported == "", "file": c.File,
+			"config": c.Config, "limits": limits, "unsupported": c.Unsupported, "docs": c.Docs, "checked": c.Checked})
+	}
+	if c.Unsupported != "" {
+		fmt.Fprintf(e.Stdout, "No shell guard hook for %s yet. %s\n", c.Title, c.Unsupported)
+		return nil
+	}
+	// The config alone on stdout, so it can go straight into a new file; the rest on stderr.
+	fmt.Fprint(e.Stdout, c.Config)
+	fmt.Fprintf(e.Stderr, "%s goes in %s. Merge it with any hooks already there.\n", c.Title, c.File)
+	for _, l := range c.Limits {
+		fmt.Fprintf(e.Stderr, "Note: %s\n", l)
+	}
+	fmt.Fprintf(e.Stderr, "Format checked %s against %s\n", c.Checked, strings.Join(c.Docs, ", "))
 	return nil
 }
 

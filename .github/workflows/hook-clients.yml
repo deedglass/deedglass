@@ -1,0 +1,46 @@
+# TY-08: the shell guard runs in five coding agents (internal/shellguard/clients.go, one table).
+# Their hook formats change between minor releases, so once a week this installs the latest release
+# of each agent published on npm (Codex CLI, Gemini CLI, Copilot CLI), records the versions in the
+# job summary, and runs the shell-guard goldens: each client's snippet and its answer to the
+# claude-code#80868 command (internal/shellguard/testdata/clients). It doesn't drive the agents,
+# which needs each vendor's account; a new version is the cue to re-check the pages each row cites.
+# Cursor ships no npm package and isn't installed here. Not a required check (it isn't in ci.yml).
+name: hook-clients
+
+on:
+  schedule:
+    - cron: "17 4 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  hook-clients:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+      - name: install each client's latest release and record its version
+        run: |
+          {
+            echo "| Client | npm package | Version |"
+            echo "|---|---|---|"
+          } >> "$GITHUB_STEP_SUMMARY"
+          for row in "Codex CLI:@openai/codex:codex" "Gemini CLI:@google/gemini-cli:gemini" "Copilot CLI:@github/copilot:copilot"; do
+            IFS=: read -r name pkg bin <<<"$row"
+            npm install --global --ignore-scripts "$pkg@latest"
+            v="$(npm view "$pkg" version)"
+            command -v "$bin"
+            echo "| $name | \`$pkg\` | $v |" >> "$GITHUB_STEP_SUMMARY"
+          done
+      - name: the shell-guard goldens for every client
+        run: go test ./internal/shellguard ./cmd/deedglass -run 'Client|GuardShell' -count=1

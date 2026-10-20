@@ -1,0 +1,17 @@
+{
+  "hooks": {
+    "BeforeTool": [
+      {
+        "matcher": "^run_shell_command$",
+        "hooks": [
+          {
+            "name": "deedglass-shell-guard",
+            "type": "command",
+            "command": "deedglass guard shell --client gemini",
+            "timeout": 10000
+          }
+        ]
+      }
+    ]
+  }
+}

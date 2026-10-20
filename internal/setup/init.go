@@ -24,6 +24,7 @@ import (
 	cpsql "github.com/deedglass/deedglass/deploy/postgres"
 	demosql "github.com/deedglass/deedglass/examples/demo/sql"
 	"github.com/deedglass/deedglass/examples/policies"
+	"github.com/deedglass/deedglass/internal/shellguard"
 	"github.com/deedglass/deedglass/pkg/deedglass"
 )
 
@@ -87,7 +88,7 @@ type Runner interface {
 type Options struct {
 	Dir          string
 	Yes          bool
-	Client       string // claude-code · claude-desktop · cursor · vscode · windsurf · sdk-python · sdk-typescript · none
+	Client       string // claude-code · claude-desktop · cursor · vscode · windsurf · codex · gemini · copilot · sdk-python · sdk-typescript · none
 	Listen       string // default 127.0.0.1:8080
 	PGPort       int    // default 55432
 	DemoPort     int    // default PGPort + 10
@@ -938,6 +939,30 @@ func (x *run) client(ctx context.Context) StepResult {
 		}
 		return StepResult{ID: id, Title: title, Status: Skipped, Detail: x.o.Client + " · paste this into its MCP config (init never writes it for you)",
 			Lines: strings.Split(strings.TrimRight(out, "\n"), "\n")}
+	case "codex", "gemini", "copilot":
+		return AgentClientStep(x.o.Client)
 	}
-	return fail(id, title, "unknown --client "+x.o.Client, "Use claude-code, claude-desktop, cursor, vscode, windsurf, sdk-python, sdk-typescript or none.")
+	return fail(id, title, "unknown --client "+x.o.Client, "Use claude-code, claude-desktop, cursor, vscode, windsurf, codex, gemini, copilot, sdk-python, sdk-typescript or none.")
+}
+
+// agentMCPLines is how each coding agent adds the Deedglass MCP server (the same server object as
+// every install link, internal/installlinks), from its own docs (checked 2026-10-20):
+// learn.chatgpt.com/docs/extend/mcp (codex mcp add), geminicli.com/docs/tools/mcp-server
+// (settings.json mcpServers), docs.github.com …/copilot-cli/customize-copilot/add-mcp-servers
+// (copilot mcp add). The key stays in .deedglass/quickstart.key, which mcp serve reads.
+var agentMCPLines = map[string][]string{
+	"codex":   {"codex mcp add deedglass -- npx -y deedglass mcp serve"},
+	"gemini":  {`In .gemini/settings.json: "mcpServers": {"deedglass": {"command": "npx", "args": ["-y", "deedglass", "mcp", "serve"]}}`},
+	"copilot": {"copilot mcp add deedglass -- npx -y deedglass mcp serve"},
+}
+
+// AgentClientStep prints the MCP line for a coding agent and its optional shell guard hook config
+// (TY-08), both from tables; init never writes either file.
+func AgentClientStep(client string) StepResult {
+	const id, title = "client", "Client"
+	c, _ := shellguard.LookupClient(client)
+	lines := append([]string{}, agentMCPLines[client]...)
+	lines = append(lines, "Optional shell guard, in "+c.File+":")
+	lines = append(lines, strings.Split(strings.TrimRight(c.Config, "\n"), "\n")...)
+	return StepResult{ID: id, Title: title, Status: Skipped, Detail: c.Title + " · run or paste these (init never writes them for you)", Lines: lines}
 }

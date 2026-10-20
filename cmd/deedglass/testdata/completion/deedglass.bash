@@ -60,7 +60,7 @@ _deedglass() {
     'doctor') subs=''; flags='--only --quiet' ;;
     'export') subs=''; flags='--format --out' ;;
     'guard') subs='shell'; flags='' ;;
-    'guard shell') subs=''; flags='--command --deny --list --no-files' ;;
+    'guard shell') subs=''; flags='--client --command --deny --list --no-files --print-config' ;;
     'init') subs=''; flags='--client --dir --listen --no-open --no-smoke --owner-email --pg-port --postgres --project --quiet --reset-secrets --smoke --stop --trigger --yes' ;;
     'insights') subs='stats shadow anomalies detect settings suggestions digest'; flags='' ;;
     'insights suggestions') subs='list show accept reject generate'; flags='' ;;
@@ -103,7 +103,7 @@ _deedglass() {
   esac
   case "$path $prev" in
     'export --format') COMPREPLY=($(compgen -W 'otel-genai ocsf prov-json fhir' -- "$cur")); return ;;
-    'init --client') COMPREPLY=($(compgen -W 'claude-code claude-desktop cursor vscode windsurf sdk-python sdk-typescript none' -- "$cur")); return ;;
+    'init --client') COMPREPLY=($(compgen -W 'claude-code claude-desktop cursor vscode windsurf codex gemini copilot sdk-python sdk-typescript none' -- "$cur")); return ;;
     'init --postgres') COMPREPLY=($(compgen -W 'docker' -- "$cur")); return ;;
     'scan --fail-under') COMPREPLY=($(compgen -W 'A B C D' -- "$cur")); return ;;
     'scan --format') COMPREPLY=($(compgen -W 'md html json sarif' -- "$cur")); return ;;

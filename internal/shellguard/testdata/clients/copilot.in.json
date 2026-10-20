@@ -1,0 +1,7 @@
+{
+  "sessionId": "sess_01",
+  "timestamp": 1792486800000,
+  "cwd": "/home/dev/app",
+  "toolName": "bash",
+  "toolArgs": "{\"command\":\"cd \\\"<repo>\\\" && MIG=\\\"prisma/migrations/$(date +%Y%m%d%H%M%S)_<name>\\\" && mkdir -p \\\"$MIG\\\" && \\\\\\n  npx prisma migrate diff --from-migrations prisma/migrations \\\\\\n  --to-schema-datamodel prisma/schema.prisma \\\\\\n  --shadow-database-url \\\"$(grep -E '^DATABASE_URL=' <path>/.env | cut -d= -f2- | tr -d '\\\\\\\"')\\\" \\\\\\n  --script > \\\"$MIG/migration.sql\\\"\"}"
+}
