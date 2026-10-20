@@ -1,0 +1,13 @@
+{
+  "id": "12-upsert-overwrite",
+  "title": "An upsert adds 7 products and overwrites 5",
+  "tables": [
+    "public.products"
+  ],
+  "steps": [
+    {
+      "session": "agent",
+      "file": "agent.sql"
+    }
+  ]
+}

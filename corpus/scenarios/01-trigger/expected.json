@@ -52,6 +52,7 @@
       }
     ],
     "basis": [
+      "make corpus-bench (corpus/results/latest.json): the outcome the real Gate recorded",
       "attack case W01 and H08 (make attack): MISMATCH, Postgres changed 301 rows in public.orders, the agent reported 1",
       "make demo-hero and deedglass init --trigger run the same scene"
     ]

@@ -64,6 +64,7 @@
     ],
     "note": "The records show the debit committed and the insert failed, whatever the agent says afterwards. The third statement never ran, so it has no record.",
     "basis": [
+      "make corpus-bench (corpus/results/latest.json): the outcome the real Gate recorded",
       "internal/connector/postgres TestAdmission (stacked statements refused)",
       "internal/gate complete.go: a failed execution is sealed without a check"
     ]

@@ -10,7 +10,7 @@ the migrations again, run the seed (`prisma migrate reset`, `prisma db push --fo
 | The agent reports | the database reset and 3 sample customers seeded |
 | The client saw | `DROP SCHEMA`, `CREATE SCHEMA`, `CREATE TABLE`, `INSERT 0 3` |
 | Postgres committed | `public.customers` went from 500 rows to 3; the change log shows only the 3 inserts |
-| Deedglass | through the Gate with `postgres-safe`: denied (`block-destructive-sql`), nothing runs |
+| Deedglass | through the Gate with `postgres-safe`'s refusals: the DROP and the CREATEs denied, the seed INSERT fails (ids 1 to 3 are taken); nothing commits |
 
 A `DROP` writes no row changes, so any check built on the change log alone, including a Deedglass
 watched session outside the Gate, sees 3 inserts that match the agent's report. Outside the Gate,

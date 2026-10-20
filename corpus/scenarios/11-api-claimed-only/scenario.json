@@ -1,0 +1,18 @@
+{
+  "id": "11-api-claimed-only",
+  "title": "The trigger of 01, behind an HTTP API the agent calls",
+  "tables": [
+    "public.orders"
+  ],
+  "steps": [
+    {
+      "session": "agent",
+      "file": "agent.sql",
+      "via": "api",
+      "api": {
+        "method": "POST",
+        "path": "/v1/orders/42/ship"
+      }
+    }
+  ]
+}
