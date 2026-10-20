@@ -7,8 +7,44 @@ this file by `scripts/release-notes.sh`.
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-10-20
+
+Records built to be read in twenty years. Every seal now names its algorithm (deed v2), and a
+record can carry a post-quantum ML-DSA-65 seal beside its Ed25519 seal, so a reader decades from now
+doesn't have to trust Ed25519 alone (ADR-109). One sealed bundle from every release since 0.1.0 is
+verified on every pull request by today's CLI and browser verifier, so a change that stops an old
+record from verifying can't merge. Records can also be exported as OpenTelemetry GenAI spans, OCSF
+events, W3C PROV-JSON or FHIR, and the record spec moves to `spec/` under CC-BY-4.0. Nothing changes
+for existing records: issuers keep writing v1 deeds until they hold a second key, and every v1 deed
+verifies as before. Proven, Checked and Claimed mean what they meant in 0.4.0. Attack group Y
+(Y01-Y12, the seal algorithms) runs and matches. Known limits: 100,000 dual-sealed deeds take about
+5.5 s to verify on a laptop, over the 5 s budget (memory stays under 256 MiB); the Python SDK
+reports v2 deeds as "cannot decide". No new dependency, one schema migration (0033), and
+`formula_version` stays 1.
+
 ### Added
 
+- **Deed v2: every seal names its algorithm** (TY-01, ADR-109). The record body lists its seal
+  keys (`seal_keys`, algorithm and id, the primary first) and the envelope carries one seal per key
+  (`seals`), each under its own domain tag, so a stripped seal is caught (`seal_missing`). Key sets
+  carry `alg` per key and keep keys of an algorithm the verifier doesn't know instead of refusing
+  the set. Verification applies a date-based accept policy that reads the record's `issued_at`,
+  never the verifier's clock: Ed25519 alone is accepted only for records issued before 2035-01-01,
+  and an algorithm with a key active at `issued_at` must have a seal. New codes
+  `unsupported_algorithm` (cannot decide, exit 2) and `seal_missing`; no code renamed. The spec's
+  Edition 2 is `spec/v2/DEED_SPEC.md`; `spec/v1/` is unchanged.
+- **The ML-DSA-65 dual seal** (TY-02, ADR-109): ML-DSA-65 (FIPS 204) seals beside Ed25519.
+  `deedglass keys rotate --alg ML-DSA-65` writes and registers the key; `serve` loads it from
+  `DEEDGLASS_SEAL_PQ_KEY_FILE` and seals dual-sealed v2 deeds once it is active, and refuses to seal
+  (an error, never a record with fewer seals) when the key set has an active key the instance
+  doesn't hold. COSE exports of a v2 deed use alg -49. The browser verifier checks ML-DSA-65 with
+  its own code and matches Go on every v2 vector. Migration 0033 (larger seal keys and envelopes).
+  Attack group Y (Y01-Y12: downgrade, a stripped seal, a rewritten seal set, algorithm confusion,
+  the mixed-key chain, cross-protocol replay, a revoked key) runs and matches.
+- **The 2046 test** (TY-11): `testdata/release-bundles/` keeps one sealed export bundle from every
+  release, made from that release's own code. The required CI job `release-bundles` verifies all
+  of them with the CLI and the browser verifier on every pull request, and checks that a tampered
+  copy fails.
 - **`deedglass export`: records as OpenTelemetry GenAI spans, OCSF events, W3C PROV-JSON or FHIR**
   (TY-06): `--format otel-genai` (OTLP/JSON lines, one `execute_tool` span per action under the
   GenAI semantic conventions v1.41.0, a later check as a child span), `ocsf` (OCSF 1.9.0 API
@@ -31,6 +67,13 @@ this file by `scripts/release-notes.sh`.
   moved to `spec/v1/` and are published under CC-BY-4.0, with `spec/README.md` (editions,
   implementations, how to credit it) and `spec/CHANGELOG.md`. No normative change; the code stays
   Apache-2.0. The docs site pages keep their addresses.
+- **The core knows no protocol** (TY-04): the Gate, the Witness and the deed code no longer import
+  any connector, MCP or coding-agent hook package, and a test (`internal/archtest`) fails any change
+  that adds one. The Postgres row read-back moved behind a connector interface; it records the same
+  method (`readback.postgres.row`) and the same reasons as before.
+- Dependency updates from Dependabot: `golang.org/x/text` 0.43.0, the Go base image, and package
+  versions in the TypeScript SDK, the Python SDK, the Console, the browser verifier and the CI
+  workflows.
 
 ### Fixed
 
@@ -369,7 +412,8 @@ See [KNOWN_ISSUES.md](KNOWN_ISSUES.md): what happens, who is affected, the worka
 See [docs/LIMITATIONS.md](docs/LIMITATIONS.md). In short: L2 covers Postgres only, seal keys are per
 deployment, and Deedglass trusts the Postgres server and the host it runs on.
 
-[Unreleased]: https://github.com/deedglass/deedglass/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/deedglass/deedglass/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/deedglass/deedglass/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/deedglass/deedglass/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/deedglass/deedglass/compare/v0.2.1...v0.3.0
 [0.2.1]: https://github.com/deedglass/deedglass/compare/v0.2.0...v0.2.1
