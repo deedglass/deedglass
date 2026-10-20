@@ -44,8 +44,8 @@ func (p *Pipeline) seal(ctx context.Context, tx pgx.Tx, id ids.ActionID) error {
 func (p *Pipeline) sealEnv(ctx context.Context, tx pgx.Tx, id ids.ActionID) (*deed.Envelope, error) {
 	env, err := p.o.Ledger.SealActionAt(ctx, tx, id.String(), p.now())
 	if err != nil {
-		if errors.Is(err, deed.ErrChainConflict) || errors.Is(err, ledger.ErrStateConflict) {
-			return nil, err
+		if errors.Is(err, deed.ErrChainConflict) || errors.Is(err, ledger.ErrStateConflict) || store.Transient(err) {
+			return nil, err // a lock or statement timeout on the chain lock is contention, not a sealing problem
 		}
 		return nil, fmt.Errorf("%w: %w", errSeal, err)
 	}
@@ -70,14 +70,34 @@ func (p *Pipeline) sealView(ctx context.Context, tx pgx.Tx, id ids.ActionID, vie
 // due when the inline budget ends), reads back with no transaction open, and commits B2 (the
 // verdict and the deed); a read-back that outlasts the inline budget is left to the worker.
 func (p *Pipeline) complete(ctx context.Context, s Subject, e Execution, wc witnessCase, costTargets []policy.CostTarget, reservations []policy.Reservation,
-	actor, requestID string) (*ledger.Action, error) {
+	actor, requestID string, until time.Time) (*ledger.Action, error) {
 	var view *ledger.Action
+	// Under contention (one org's chain lock, a hot usage counter) Tx B can meet the session's
+	// lock_timeout or statement_timeout. That is no reason to drop an outcome that came back and
+	// leave the action to crash recovery: Tx B runs again in a new transaction, with backoff, up to
+	// the call's deadline (until), which falls before the sweeper may claim the action. A retry
+	// that still loses the race to the sweeper ends in ErrStateConflict, never a second outcome.
+	budget := until.Sub(p.now())
+	stop := time.Now().Add(budget) // the wall clock: a test's frozen Clock must not stall the loop
 	run := func(seal bool) error {
-		return p.o.Ledger.OrgTxRetry(ctx, s.Org, func(ctx context.Context, tx pgx.Tx) error {
-			v, err := p.recordExecution(ctx, tx, s, e, wc, costTargets, reservations, actor, requestID, seal)
-			view = v
-			return err
-		})
+		for wait := recordRetryFirst; ; wait = min(2*wait, recordRetryMax) {
+			err := p.o.Ledger.OrgTxRetry(ctx, s.Org, func(ctx context.Context, tx pgx.Tx) error {
+				v, err := p.recordExecution(ctx, tx, s, e, wc, costTargets, reservations, actor, requestID, seal)
+				view = v
+				return err
+			})
+			d := jitter(wait)
+			if !store.Transient(err) || ctx.Err() != nil || time.Now().Add(d).After(stop) {
+				return err
+			}
+			p.log.Warn("gate: recording an execution met contention; retrying", "org_id", s.Org.String(),
+				"action_id", s.ID.String(), "err", err, "retry_in", d)
+			select {
+			case <-ctx.Done():
+				return err
+			case <-time.After(d):
+			}
+		}
 	}
 	err := run(true)
 	if errors.Is(err, errSeal) {
@@ -277,6 +297,12 @@ func (p *Pipeline) recordExecution(ctx context.Context, tx pgx.Tx, s Subject, e 
 	}
 	return finish()
 }
+
+// recordRetryFirst and recordRetryMax bound the backoff between Tx B attempts that met contention.
+const (
+	recordRetryFirst = 50 * time.Millisecond
+	recordRetryMax   = time.Second
+)
 
 // readBackGrace is added to the inline budget before the worker may claim a read-back the request
 // path is still finishing.

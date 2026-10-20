@@ -481,7 +481,8 @@ and "open source" until the repo is public. Style bans: "revolutionary", "world-
   five events in order, no pooled connection held while a tool runs, crash between Tx A and Tx B and
   between the outcome and the seal), the worker with a deferring witness (retry, then
   `witness_gave_up`), two instances sweeping 200 stale actions (each sealed once, chain intact),
-  `TestLoad1000`, and `cmd/deedglass`'s `TestGateLive` (S13 §9 on a real server; CLI goldens in
+  `TestLoad1000`, `TestRecordContention` (Tx B meets lock_timeout: retried, never left to the
+  sweeper), and `cmd/deedglass`'s `TestGateLive` (S13 §9 on a real server; CLI goldens in
   `testdata/gate/cli`). `TestPreAuthNamesStayInStore` also keeps `claim_*` and
   `maint_release_action_keys` inside `internal/store`; `TestOneWritePath` allows `store.NotifyJobs`
   as the door for `deedglass_jobs`.

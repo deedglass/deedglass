@@ -458,6 +458,9 @@ func TestLoad1000(t *testing.T) {
 				}
 				if err != nil || a.State != "sealed" || a.Status != "executed" {
 					t.Errorf("%v %v", err, a)
+					if a != nil {
+						w.explain(a.ID)
+					}
 					return
 				}
 			}
@@ -590,4 +593,73 @@ func calibrate() {
 		var v map[string]any
 		_ = json.Unmarshal(b, &v)
 	}
+}
+
+// explain logs an action's events and every Gate log line that names it, so a failure on a CI
+// runner says why the action stopped where it did (the world's log otherwise stays in memory).
+func (w *world) explain(id string) {
+	w.t.Helper()
+	w.t.Logf("%s events: %v", id, w.events(id))
+	logMu.Lock()
+	text := w.logs.String()
+	logMu.Unlock()
+	for l := range strings.SplitSeq(text, "\n") {
+		if strings.Contains(l, id) {
+			w.t.Logf("%s log: %s", id, l)
+		}
+	}
+}
+
+// TestRecordContention: Tx B meets the session's lock_timeout (a person holds the org's spend
+// counter row past it, as 50 concurrent fake.write calls do on a slow runner). The outcome that came
+// back is recorded on a retry, not dropped to crash recovery: sealed, executed, one deed, the cost
+// counted once.
+func TestRecordContention(t *testing.T) {
+	w := newWorld(t, worldOpts{})
+	// The first write creates the day's spend:usd row.
+	if a := w.must(0, req("fake.write", `{"rows":2,"table":"orders"}`)); a.State != "sealed" {
+		t.Fatalf("%s", mustJSON(a))
+	}
+	hold := w.e.Admin(t)
+	tx, err := hold.Begin(bg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var n int
+	if err := tx.QueryRow(bg, `SELECT count(*) FROM (SELECT 1 FROM deedglass.usage_counters WHERE org_id = $1 AND counter = 'spend:usd' FOR UPDATE) l`, w.org).Scan(&n); err != nil || n == 0 {
+		t.Fatalf("%d spend rows locked: %v", n, err)
+	}
+	type res struct {
+		a   *Action
+		err error
+	}
+	got := make(chan res, 1)
+	go func() {
+		r := req("fake.write", `{"rows":3,"table":"orders"}`)
+		r.Wait = MaxWait
+		a, err := w.submit(0, r)
+		got <- res{a, err}
+	}()
+	time.Sleep(6 * time.Second) // past lock_timeout (5 s): Tx B's first attempt is refused
+	if err := tx.Commit(bg); err != nil {
+		t.Fatal(err)
+	}
+	r := <-got
+	if r.err != nil || r.a.State != "sealed" || r.a.Status != "executed" {
+		t.Fatalf("%v %v", r.err, r.a)
+	}
+	logMu.Lock()
+	logs := w.logs.String()
+	logMu.Unlock()
+	if !strings.Contains(logs, "met contention; retrying") || strings.Contains(logs, "the sweeper will finish it") {
+		w.explain(r.a.ID)
+		t.Fatal("Tx B was not retried after the lock timeout")
+	}
+	var deeds, spent int64
+	w.adminRow(`SELECT count(*) FROM deedglass.deeds WHERE action_id = $1`, []any{r.a.ID}, &deeds)
+	w.adminRow(`SELECT COALESCE(sum(value), 0) FROM deedglass.usage_counters WHERE org_id = $1 AND counter = 'spend:usd' AND window_kind = 'day'`, []any{w.org}, &spent)
+	if deeds != 1 || spent != 5 {
+		t.Fatalf("deeds %d, spend %d (want 1, 5)", deeds, spent)
+	}
+	checkChain(t, w)
 }
