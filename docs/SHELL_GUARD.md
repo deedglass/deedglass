@@ -89,7 +89,7 @@ a command when it fails, including on Windows without Git Bash.
 
 ### In Codex, Gemini CLI, GitHub Copilot and Cursor
 
-The same guard runs as each of these agents' before-a-command hook: `deedglass guard shell
+The same guard can be installed as each of these agents' before-a-command hook: `deedglass guard shell
 --client codex` (or `gemini`, `copilot`, `cursor`) reads that agent's input and answers in its
 format. `deedglass guard shell --print-config --client <name>` prints the hook config for it.
 Codex and Gemini CLI can't ask, so there it denies; VS Code has no snippet yet. Each client's file,
