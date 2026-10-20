@@ -22,7 +22,7 @@ var (
 )
 
 // ConnectorTypes are the known connector types (contract §2; `sdk` is S31's proxy-mode edge).
-var ConnectorTypes = []string{"postgres", "rest", "mcp", "mcp_http", "sdk", "github", "slack", "stripe", "gmail", "notion", "fhir", "fake"}
+var ConnectorTypes = []string{"postgres", "rest", "mcp", "mcp_http", "sdk", "a2a", "github", "slack", "stripe", "gmail", "notion", "fhir", "fake"}
 
 // SideEffects are the declared side effects of a tool.
 var SideEffects = []string{"read", "write", "destructive", "unknown"}

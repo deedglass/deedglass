@@ -1,0 +1,87 @@
+== call 1: HTTP 200
+{
+  "error": {
+    "code": -31002,
+    "data": [
+      {
+        "@type": "type.googleapis.com/google.rpc.ErrorInfo",
+        "reason": "DEEDGLASS_PENDING_APPROVAL",
+        "domain": "deedglass.com",
+        "metadata": {
+          "action": "act_01k6w4a3d5f7h9k1n3q5s7v001",
+          "approval": "apr_01k6w4a3d5f7h9k1n3q5s7v001"
+        }
+      }
+    ],
+    "message": "Waiting for approval under policy \"refunds-need-a-person\": Refunds wait for a person. Send the same request again to run it once approved."
+  },
+  "id": 1,
+  "jsonrpc": "2.0"
+}
+== call 2: HTTP 200
+{
+  "error": {
+    "code": -31002,
+    "data": [
+      {
+        "@type": "type.googleapis.com/google.rpc.ErrorInfo",
+        "reason": "DEEDGLASS_PENDING_APPROVAL",
+        "domain": "deedglass.com",
+        "metadata": {
+          "action": "act_01k6w4a3d5f7h9k1n3q5s7v001",
+          "approval": "apr_01k6w4a3d5f7h9k1n3q5s7v001"
+        }
+      }
+    ],
+    "message": "Waiting for approval under policy \"refunds-need-a-person\": Refunds wait for a person. Send the same request again to run it once approved."
+  },
+  "id": 1,
+  "jsonrpc": "2.0"
+}
+== call 3: HTTP 200
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "task": {
+      "id": "task-1",
+      "contextId": "ctx-1",
+      "status": {
+        "state": "TASK_STATE_COMPLETED",
+        "timestamp": "2026-10-20T10:00:00.000Z"
+      },
+      "artifacts": [
+        {
+          "artifactId": "art-1",
+          "name": "Answer",
+          "parts": [
+            {
+              "text": "The answer is 42."
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
+== call 4: HTTP 200
+{
+  "error": {
+    "code": -31002,
+    "data": [
+      {
+        "@type": "type.googleapis.com/google.rpc.ErrorInfo",
+        "reason": "DEEDGLASS_PENDING_APPROVAL",
+        "domain": "deedglass.com",
+        "metadata": {
+          "action": "act_01k6w4a3d5f7h9k1n3q5s7v002",
+          "approval": "apr_01k6w4a3d5f7h9k1n3q5s7v001"
+        }
+      }
+    ],
+    "message": "Waiting for approval under policy \"refunds-need-a-person\": Refunds wait for a person. Send the same request again to run it once approved."
+  },
+  "id": 1,
+  "jsonrpc": "2.0"
+}
+== submits 2 · peer calls 1

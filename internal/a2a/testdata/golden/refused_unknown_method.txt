@@ -1,0 +1,18 @@
+== caller → proxy
+{
+  "jsonrpc": "2.0",
+  "id": 11,
+  "method": "message/send",
+  "params": {}
+}
+== gate: no action
+== peer: nothing received
+== proxy → caller: HTTP 200 application/json
+{
+  "error": {
+    "code": -32601,
+    "message": "Method not found: Deedglass doesn't forward \"message/send\"."
+  },
+  "id": 11,
+  "jsonrpc": "2.0"
+}

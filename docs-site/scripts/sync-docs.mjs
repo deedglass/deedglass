@@ -67,6 +67,7 @@ export const IMPORTS = {
   'docs/exports/ocsf.md': 'reference/exports/ocsf',
   'docs/exports/prov-json.md': 'reference/exports/prov-json',
   'docs/SHELL_GUARD.md': 'reference/shell-guard',
+  'docs/A2A.md': 'reference/a2a',
   'docs/SECURITY_PACK.md': 'reference/security-pack',
   'docs/WEEKLY.md': 'reference/weekly',
   'docs/AGENCIES.md': 'reference/agencies',
@@ -142,10 +143,10 @@ export const LIMITS_PARTS = [
   },
   {
     slug: 'mcp',
-    label: 'The MCP wrapper, gateway and demo',
-    title: 'Limits: the MCP wrapper, gateway and demo',
-    description: 'The limits of deedglass mcp wrap, the MCP HTTP gateway, /mcp/native, mcp serve and the Acme demo stack.',
-    sections: ['The MCP stdio wrapper', 'The MCP gateway, /mcp/native and mcp serve', 'The Acme demo stack', 'The shell guard in other coding agents'],
+    label: 'The MCP wrapper, gateway, A2A and demo',
+    title: 'Limits: the MCP wrapper, gateway, A2A and demo',
+    description: 'The limits of deedglass mcp wrap, the MCP HTTP gateway, /mcp/native, mcp serve, deedglass a2a proxy and the Acme demo stack.',
+    sections: ['The MCP stdio wrapper', 'The MCP gateway, /mcp/native and mcp serve', 'The Acme demo stack', 'The shell guard in other coding agents', 'A2A delegations'],
   },
   {
     slug: 'connectors',

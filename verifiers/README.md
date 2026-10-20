@@ -8,7 +8,7 @@ that shares no code with it.
 | | Python | JavaScript |
 |---|---|---|
 | Where | [`python/deedglass_verify/`](python/deedglass_verify/) | [`js/deedglass-verify.mjs`](js/deedglass-verify.mjs), one file |
-| Runs on | Python 3.10+ | Node 20+ and current browsers |
+| Runs on | Python 3.10+ | Node 20+, and browsers (tested in Chromium on /verify-offline) |
 | Dependencies | none (standard library) | none |
 | Ed25519 | pure Python (RFC 8032) | WebCrypto, with a BigInt fallback where a browser lacks Ed25519 |
 | ML-DSA-65 | pure Python (FIPS 204), on `hashlib`'s SHAKE | in the file (FIPS 204), with its own Keccak |

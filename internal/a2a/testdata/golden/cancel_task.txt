@@ -1,0 +1,66 @@
+== caller → proxy
+{
+  "jsonrpc": "2.0",
+  "id": 9,
+  "method": "CancelTask",
+  "params": {
+    "id": "task-1"
+  }
+}
+== gate submit 1: tool researcher.CancelTask · connector_type a2a · transport a2a_jsonrpc · on_behalf_of "u_5780"
+{
+  "delegation": [
+    {
+      "kind": "person",
+      "ref": "u_5780"
+    },
+    {
+      "kind": "agent",
+      "ref": "agt_01k6w4a3d5f7h9k1n3q5s70007",
+      "name": "planner"
+    },
+    {
+      "kind": "agent",
+      "ref": "http://127.0.0.1:PORT/rpc",
+      "name": "Researcher"
+    }
+  ],
+  "peer": {
+    "url": "http://127.0.0.1:PORT/rpc",
+    "name": "Researcher"
+  },
+  "request": {
+    "id": "task-1"
+  }
+}
+== peer received CancelTask · A2A-Version "1.0" · A2A-Extensions "" · Authorization "Bearer peer-token-from-the-operator"
+{
+  "jsonrpc": "2.0",
+  "id": 9,
+  "method": "CancelTask",
+  "params": {
+    "id": "task-1"
+  }
+}
+== proxy → caller: HTTP 200 application/json
+{
+  "jsonrpc": "2.0",
+  "id": 9,
+  "result": {
+    "id": "task-1",
+    "contextId": "ctx-1",
+    "status": {
+      "state": "TASK_STATE_CANCELED",
+      "timestamp": "2026-10-20T10:00:00.000Z"
+    }
+  }
+}
+== report act_01k6w4a3d5f7h9k1n3q5s7v001: succeeded · error_code "" · result_digest sha256:59b42664bf149113953e88fd55f33ea9fc297c62d2f2f901124338c121828dd4
+{
+  "id": "task-1",
+  "contextId": "ctx-1",
+  "status": {
+    "state": "TASK_STATE_CANCELED",
+    "timestamp": "2026-10-20T10:00:00.000Z"
+  }
+}

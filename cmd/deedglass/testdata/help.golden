@@ -48,8 +48,9 @@ Connectors
   connector gmail     Authorize the Gmail connector                           authorize
   decoder             Inspect Postgres change readers                         status · drop
   slack manifest      Print the Slack app manifest
-MCP
+MCP and A2A
   mcp                 Put Deedglass in front of MCP servers                   wrap · serve · snippet · install-links
+  a2a                 Put Deedglass in front of a remote A2A agent            proxy
 Insights
   insights            Suggestions, shadow results and anomalies               stats · shadow · anomalies · detect · settings · suggestions · digest
 Dev

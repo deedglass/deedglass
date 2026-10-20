@@ -1,0 +1,12 @@
+exit 0
+--- stdout
+analyst.SendMessage · researcher on behalf of u_5780 · TIME UTC
+  chain      u_5780 → planner → researcher → Analyst
+  decision   allow · rule allow-a2a-delegation · pv_…
+  execution  executed · N ms
+  check      Claimed · Matches · edge_reported
+             ✓ Claimed  The edge reported success. Deedglass did not run this call itself.
+  record     seq N · deed_… · sealed with sk_…
+  events     received → authenticated → evaluated → executing → executed → witnessing → verified → sealed
+  next       deedglass deeds show deed_ID
+--- stderr

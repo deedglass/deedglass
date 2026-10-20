@@ -1,0 +1,118 @@
+== caller → proxy
+{
+  "jsonrpc": "2.0",
+  "id": 6,
+  "method": "SendMessage",
+  "params": {
+    "message": {
+      "messageId": "msg-6",
+      "role": "ROLE_USER",
+      "parts": [
+        {
+          "text": "refuse politely"
+        }
+      ]
+    }
+  }
+}
+== gate submit 1: tool researcher.SendMessage · connector_type a2a · transport a2a_jsonrpc · on_behalf_of "u_5780"
+{
+  "delegation": [
+    {
+      "kind": "person",
+      "ref": "u_5780"
+    },
+    {
+      "kind": "agent",
+      "ref": "agt_01k6w4a3d5f7h9k1n3q5s70007",
+      "name": "planner"
+    },
+    {
+      "kind": "agent",
+      "ref": "http://127.0.0.1:PORT/rpc",
+      "name": "Researcher"
+    }
+  ],
+  "peer": {
+    "url": "http://127.0.0.1:PORT/rpc",
+    "name": "Researcher"
+  },
+  "request": {
+    "message": {
+      "extensions": [
+        "https://deedglass.com/a2a/delegation/v1"
+      ],
+      "messageId": "msg-6",
+      "metadata": {
+        "https://deedglass.com/a2a/delegation/v1": {
+          "chain": [
+            {
+              "kind": "person",
+              "ref": "u_5780"
+            },
+            {
+              "kind": "agent",
+              "ref": "agt_01k6w4a3d5f7h9k1n3q5s70007",
+              "name": "planner"
+            }
+          ]
+        }
+      },
+      "parts": [
+        {
+          "text": "refuse politely"
+        }
+      ],
+      "role": "ROLE_USER"
+    }
+  }
+}
+== peer received SendMessage · A2A-Version "1.0" · A2A-Extensions "https://deedglass.com/a2a/delegation/v1" · Authorization "Bearer peer-token-from-the-operator"
+{
+  "jsonrpc": "2.0",
+  "id": 6,
+  "method": "SendMessage",
+  "params": {
+    "message": {
+      "extensions": [
+        "https://deedglass.com/a2a/delegation/v1"
+      ],
+      "messageId": "msg-6",
+      "metadata": {
+        "https://deedglass.com/a2a/delegation/v1": {
+          "chain": [
+            {
+              "kind": "person",
+              "ref": "u_5780"
+            },
+            {
+              "kind": "agent",
+              "ref": "agt_01k6w4a3d5f7h9k1n3q5s70007",
+              "name": "planner"
+            }
+          ]
+        }
+      },
+      "parts": [
+        {
+          "text": "refuse politely"
+        }
+      ],
+      "role": "ROLE_USER"
+    }
+  }
+}
+== proxy → caller: HTTP 200 application/json
+{
+  "jsonrpc": "2.0",
+  "id": 6,
+  "error": {
+    "code": -32004,
+    "message": "This operation is not supported"
+  }
+}
+== report act_01k6w4a3d5f7h9k1n3q5s7v001: failed · error_code "unsupported_operation" · result_digest sha256:06c6386c08993e629a88cf1a6ac42f82fc865907014448e81dfae2fd0e52a82c
+{
+  "code": -32004,
+  "message": "This operation is not supported"
+}

@@ -1,0 +1,31 @@
+{
+  "capabilities": {
+    "streaming": true
+  },
+  "defaultInputModes": [
+    "text/plain"
+  ],
+  "defaultOutputModes": [
+    "text/plain"
+  ],
+  "description": "A fake agent for tests.",
+  "name": "Researcher",
+  "skills": [
+    {
+      "id": "research",
+      "name": "Research",
+      "description": "Looks things up.",
+      "tags": [
+        "research"
+      ]
+    }
+  ],
+  "supportedInterfaces": [
+    {
+      "protocolBinding": "JSONRPC",
+      "protocolVersion": "1.0",
+      "url": "http://127.0.0.1:PORT/"
+    }
+  ],
+  "version": "1.0.0"
+}

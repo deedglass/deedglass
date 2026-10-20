@@ -48,7 +48,7 @@ config below; init never writes either file.
 ## The shell guard in each coding agent
 
 The shell guard (`deedglass guard shell`, [SHELL_GUARD.md](SHELL_GUARD.md)) asks you first when an
-agent's shell command would destroy database data. It runs as each agent's before-a-command hook,
+agent's shell command would destroy database data. It can be installed as each agent's before-a-command hook,
 with the same catalog and the same sentence everywhere. One table in
 `internal/shellguard/clients.go` holds each client's file, event, answer format and snippet;
 `deedglass guard shell --print-config --client <name>` prints the snippet on stdout (where it goes

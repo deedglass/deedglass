@@ -23,7 +23,7 @@ const (
 	Dev
 )
 
-var groupNames = [...]string{"Setup", "Agents", "Policies", "Actions", "Records", "Connectors", "MCP", "Insights", "Dev"}
+var groupNames = [...]string{"Setup", "Agents", "Policies", "Actions", "Records", "Connectors", "MCP and A2A", "Insights", "Dev"}
 
 func (g Group) String() string { return groupNames[g] }
 
@@ -338,6 +338,10 @@ var commands = []*Command{
 	{Path: p("mcp", "install-links"), Group: MCP, Summary: "Print every one-click install link", Usage: "[--json]",
 		Run: runMCPInstallLinks, Detail: "Cursor, VS Code, LM Studio and Goose deeplinks, the Claude Code command, the Claude Desktop guide (the .mcpb\ndownloads once a release carries them) and the Windsurf config. Every one installs npx -y deedglass mcp serve; no\nlink holds a key."},
 
+	{Path: p("a2a", "proxy"), Group: MCP, Summary: "Run a remote A2A agent behind Deedglass",
+		Usage: "--connector <name> --peer <url> [--card-url <url>] [--listen 127.0.0.1:7420] [--peer-header-env H=VAR] [--on-behalf-of <ref>] [--approval-wait 10s] [--call-timeout 5m] [--result-mode full|digest]",
+		Flags: a2aProxyFlags, Run: runA2AProxy, Detail: a2aProxyHelp},
+
 	// Insights.
 	{Path: p("insights", "stats"), Group: Insights, Summary: "Show decisions, approvals and verdicts by rule",
 		Usage: "[--window 7d|30d | --from … --to …] [--by rule|tool|agent|none] [--agent agt_…] [--tool stripe.*] [--compare] [--json]",
@@ -449,6 +453,7 @@ var lines = []Line{
 	{Name: "slack manifest", Group: Connectors, Summary: "Print the Slack app manifest", Paths: ps("slack manifest")},
 
 	{Name: "mcp", Group: MCP, Summary: "Put Deedglass in front of MCP servers", Subs: subs("wrap serve snippet install-links"), Paths: ps("mcp wrap", "mcp serve", "mcp snippet", "mcp install-links")},
+	{Name: "a2a", Group: MCP, Summary: "Put Deedglass in front of a remote A2A agent", Subs: subs("proxy"), Paths: ps("a2a proxy")},
 
 	{Name: "insights", Group: Insights, Summary: "Suggestions, shadow results and anomalies", Subs: subs("stats shadow anomalies detect settings suggestions digest"),
 		Paths: ps("insights stats", "insights shadow", "insights anomalies", "insights detect", "insights settings",

@@ -21,7 +21,7 @@ import (
 // evaluation ran (whatever the decision), 1 when the policy doesn't compile, 2 on a usage error.
 
 // knownConnectorTypes are inferred from a tool's prefix (docs/POLICY_LANGUAGE.md §4.4).
-var knownConnectorTypes = map[string]bool{"postgres": true, "rest": true, "mcp": true, "mcp_http": true, "sdk": true, "fhir": true,
+var knownConnectorTypes = map[string]bool{"postgres": true, "rest": true, "mcp": true, "mcp_http": true, "sdk": true, "fhir": true, "a2a": true,
 	"github": true, "slack": true, "stripe": true, "gmail": true, "notion": true, "fake": true}
 
 // cliAgentID is the agent id local evaluation uses when --agent names no id.

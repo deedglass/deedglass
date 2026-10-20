@@ -40,7 +40,7 @@ const (
 )
 
 // KnownConnectorTypes are inferred from a tool name's prefix (docs/POLICY_LANGUAGE.md §4.4).
-var KnownConnectorTypes = map[string]bool{"postgres": true, "rest": true, "mcp": true, "mcp_http": true, "sdk": true, "fhir": true,
+var KnownConnectorTypes = map[string]bool{"postgres": true, "rest": true, "mcp": true, "mcp_http": true, "sdk": true, "fhir": true, "a2a": true,
 	"github": true, "slack": true, "stripe": true, "gmail": true, "notion": true, "fake": true}
 
 // InputProblem is one thing wrong with a case input. Path is relative to the input ("agent.lables").

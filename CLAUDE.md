@@ -150,6 +150,8 @@ make py-build        # S32: wheel and sdist, twine check, the wheel holds py.typ
 make py-examples     # S32: examples/python against DEEDGLASS_SERVER with an agent key (scripts/py_examples.sh)
 go run ./internal/httpx/cmd/gensdkerrors   # S32: sdk/errors.json and the Python _errors_gen.py from internal/httpx/errors.go (TestSDKErrorsFresh fails when stale; make gencopy also writes the Python verify copy)
 go test ./internal/shellguard ./cmd/deedglass -run 'Incidents|Asks|Ordinary|Limits|GuardShell' -v   # FEAT-07: the shell guard's incident, asks, ordinary (0 false positives) and limits corpora, and the hook contract
+go test ./internal/a2a -run 'TestGoldens|TestApprovalRunsOnce|TestCard' -update   # TY-07: the A2A proxy goldens in internal/a2a/testdata/golden (fake peer and Gate; review the diff)
+DEEDGLASS_IT_PKGS=./cmd/deedglass/ DEEDGLASS_IT_GOFLAGS="-v -run TestA2ALive" make integration   # TY-07: two delegations through deedglass a2a proxy on a real server (chain in actions show and the record)
 go test ./internal/scan -run TestJSONGolden -update   # S32: internal/scan/testdata/archived-pg.golden.json (review the diff)
 go test ./cmd/deedglass -run TestHelpJSONGolden -update   # S32: testdata/help-json.golden (the help --json command_tree)
 DEEDGLASS_IT_PKGS="./internal/scan/ ./internal/doctor/" make integration   # S32: scan and doctor are read-only under log_statement=all (BEGIN READ ONLY, six SELECTs, ROLLBACK; a write is 25006)
@@ -331,6 +333,10 @@ and "open source" until the repo is public. Style bans: "revolutionary", "world-
   `scripts/check-listings.mjs` keeps the plugin's one hook off unless `DEEDGLASS_SHELL_GUARD` is set, with
   `"onFailure": "continue"` and a script that never exits 2; `cmd/deedglass` `TestPluginHook*` runs that script
   (off: no output, exit 0; can't check: ask fails open, deny exits 1; on: the real CLI's answer).
+- `internal/a2a` (TY-07, ADR-113): `TestGoldens` (every acting, reading and refused row against the fake peer
+  `internal/a2a/a2atest` and a fake Gate: an acting call never reaches the peer without `authorized`, the caller's
+  credential never does), `TestApprovalRunsOnce`, `TestTwoAgentDelegation`, `TestClassify`, `TestCheckChain`, `TestCard`;
+  `cmd/deedglass` `TestA2ALive` (integration). `internal/archtest` keeps the core off `internal/a2a`.
 - `internal/ids`: strict parser, spec vector, monotonic and concurrency tests, clock-back and
   overflow tests, pattern-vs-parser agreement, `FuzzParse`.
 - `internal/config`: the key table, every prod refusal, `.deedglass/` safety, secret canaries across

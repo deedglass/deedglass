@@ -1,0 +1,38 @@
+== caller → proxy
+{
+  "jsonrpc": "2.0",
+  "id": 16,
+  "method": "SendMessage",
+  "params": {
+    "message": {
+      "messageId": "msg-16",
+      "role": "ROLE_USER",
+      "parts": [
+        {
+          "text": "complete"
+        }
+      ],
+      "metadata": {
+        "https://deedglass.com/a2a/delegation/v1": {
+          "chain": [
+            {
+              "kind": "robot",
+              "ref": "x"
+            }
+          ]
+        }
+      }
+    }
+  }
+}
+== gate: no action
+== peer: nothing received
+== proxy → caller: HTTP 200 application/json
+{
+  "error": {
+    "code": -32602,
+    "message": "Invalid parameters: the Deedglass delegation chain in message.metadata: hop 1: kind \"robot\" isn't person or agent."
+  },
+  "id": 16,
+  "jsonrpc": "2.0"
+}

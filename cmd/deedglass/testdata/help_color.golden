@@ -48,8 +48,9 @@ exit 0
   connector gmail     Authorize the Gmail connector                    [2m    [0m   [2mauthorize[0m
   decoder             Inspect Postgres change readers                  [2m    [0m   [2mstatus · drop[0m
   slack manifest      Print the Slack app manifest
-[1mMCP[0m
+[1mMCP and A2A[0m
   mcp                 Put Deedglass in front of MCP servers            [2m    [0m   [2mwrap · serve · snippet · install-links[0m
+  a2a                 Put Deedglass in front of a remote A2A agent     [2m    [0m   [2mproxy[0m
 [1mInsights[0m
   insights            Suggestions, shadow results and anomalies        [2m    [0m   [2mstats · shadow · anomalies · detect · settings · suggestions · digest[0m
 [1mDev[0m

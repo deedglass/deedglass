@@ -171,7 +171,7 @@ The compiler checks every row. "Slug" means `^[a-z][a-z0-9-]{1,62}$` (ASCII lowe
 | Field | Matches | Values |
 |---|---|---|
 | `tool` | the full tool name `<connector>.<tool>` | globs |
-| `connector_type` | the connector's type | globs; a value that isn't a known type gets the warning `unknown_connector_type`. Known: `postgres`, `rest`, `mcp`, `mcp_http`, `sdk`, `github`, `slack`, `stripe`, `gmail`, `notion`, `fhir`, `fake` (`sdk` is what S31's SDK edges declare in proxy mode) |
+| `connector_type` | the connector's type | globs; a value that isn't a known type gets the warning `unknown_connector_type`. Known: `postgres`, `rest`, `mcp`, `mcp_http`, `sdk`, `a2a`, `github`, `slack`, `stripe`, `gmail`, `notion`, `fhir`, `fake` (`sdk` is what S31's SDK edges declare in proxy mode; `a2a` is what `deedglass a2a proxy` declares, TY-07) |
 | `side_effect` | what the tool declares | `read`, `write`, `destructive`, `unknown` (no globs) |
 | `agent` | the agent's name (glob), or its id (an exact `agt_…`) | globs or ids |
 | `labels` | the agent's labels | a mapping; every pair must be equal. Keys as in S08 (`^[a-z0-9][a-z0-9._/-]{0,62}$`), values at most 128 printable characters. YAML values are read as text, so `tier: 1` matches the label value `"1"` |
