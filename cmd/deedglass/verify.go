@@ -28,6 +28,9 @@ import (
 
 type verifyOpts struct {
 	keys, pins       multiFlag
+	timestamps       multiFlag // TY-03: timestamps.json files to compare the chain with
+	scittKeys        multiFlag // TY-03: transparency-service keys (JWK) the reader trusts
+	tsaRoots         string    // TY-03: PEM roots of the TSAs the reader trusts
 	anchor           string
 	file             string // S38: check this file against a file.sealed deed
 	strict, all, q   bool
@@ -52,6 +55,9 @@ func bindVerifyFlags(fs *flag.FlagSet, o *verifyOpts) {
 	fs.Var(&o.pins, "pin", "accept only seal keys with this thumbprint, sha256:… (repeatable)")
 	fs.StringVar(&o.anchor, "anchor", "", "<seq>:sha256:… the body_hash of the deed just before the first one given")
 	fs.StringVar(&o.file, "file", "", "also check this file against the deed (a deed from deedglass deeds seal-file)")
+	fs.Var(&o.timestamps, "timestamps", "a timestamps.json to compare the chain with (repeatable; a bundle's own is read too)")
+	fs.StringVar(&o.tsaRoots, "tsa-roots", "", "PEM roots of the TSAs you trust (checks who signed each timestamp)")
+	fs.Var(&o.scittKeys, "scitt-key", "a transparency service's public key as a JWK (repeatable)")
 	fs.BoolVar(&o.strict, "strict", false, "require canonical bytes and pinned keys")
 	fs.BoolVar(&o.all, "all", false, "list every failure (at most 100) instead of stopping at the first")
 	fs.BoolVar(&o.q, "q", false, "print nothing; the exit code is the answer")
@@ -85,6 +91,8 @@ func parseVerifyArgs(args []string) ([]string, error) {
 				o.anchor = more.anchor
 			case "file":
 				o.file = more.file
+			case "tsa-roots":
+				o.tsaRoots = more.tsaRoots
 			case "strict":
 				o.strict = o.strict || more.strict
 			case "all":
@@ -97,6 +105,8 @@ func parseVerifyArgs(args []string) ([]string, error) {
 		})
 		o.keys = append(o.keys, more.keys...)
 		o.pins = append(o.pins, more.pins...)
+		o.timestamps = append(o.timestamps, more.timestamps...)
+		o.scittKeys = append(o.scittKeys, more.scittKeys...)
 		args = fs.Args()
 		if len(args) > 0 {
 			paths = append(paths, args[0])
@@ -124,6 +134,9 @@ type vInput struct {
 	closer io.Closer
 	bundle *archive.Reader
 	err    error // bundle_invalid from archive.Open: reported as a failure in order
+	// stampErr is a bundle's timestamps.json that doesn't parse (TY-03): reported after the
+	// manifest, so a file that differs from the manifest is named as that first.
+	stampErr error
 }
 
 const maxDirFiles = 100_000
@@ -161,6 +174,11 @@ func runVerify(ctx context.Context, e *Env, args []string) error {
 	}
 	lim := archive.DefaultLimits()
 	lim.Deeds = o.maxBytes
+
+	stamps, err := loadStampArgs(o)
+	if err != nil {
+		return verifyErr(e, o, err)
+	}
 
 	// Keys the operator chose.
 	var chosen []keySource
@@ -205,8 +223,14 @@ func runVerify(ctx context.Context, e *Env, args []string) error {
 			if issuer == "" {
 				issuer = ks.Issuer
 			}
+			if ts := in.bundle.Timestamps(); ts != nil {
+				if err := stamps.addBundle(ts, p); err != nil {
+					in.stampErr = err
+				}
+			}
 		}
 	}
+	stamps.prepare()
 
 	if o.file != "" && (len(inputs) != 1 || inputs[0].kind != inJSON) {
 		return usageErr(errors.New("--file checks one deed: pass the .deed.json that deedglass deeds seal-file wrote"),
@@ -241,6 +265,9 @@ func runVerify(ctx context.Context, e *Env, args []string) error {
 		KeySource: func(id string) string { return sources[id] }}
 	prog := newProgress(e, o)
 	opt.OnProgress = prog.update
+	if stamps.active() {
+		opt.OnIntact = stamps.onIntact
+	}
 	v := deed.NewVerifier(opt)
 
 	for _, in := range inputs {
@@ -253,7 +280,12 @@ func runVerify(ctx context.Context, e *Env, args []string) error {
 		}
 	}
 	prog.clear()
+	var heads []deed.TimestampedHead
+	if stamps.active() && !v.Stopped() {
+		heads = stamps.check(v, ks)
+	}
 	rep := v.Report()
+	rep.Timestamps = heads
 	bi := buildInfo()
 	rep.Verifier = "deedglass " + bi.Version + " (" + bi.Commit + ")"
 	if ks != nil && !pinned && rep.Intact > 0 {
@@ -425,6 +457,11 @@ func verifyInput(ctx context.Context, v *deed.Verifier, in *vInput, ks *deed.Key
 			return nil // a deed failed: that is the answer
 		}
 		checkBundle(v, in, ks)
+		if in.stampErr != nil && !v.Stopped() {
+			f := failureOf(in.stampErr)
+			f.Input = &name
+			v.Fail(f)
+		}
 	}
 	return nil
 }
@@ -445,6 +482,9 @@ func checkBundle(v *deed.Verifier, in *vInput, ks *deed.KeySet) {
 		return
 	}
 	st.Files = 4
+	if in.bundle.Timestamps() != nil {
+		st.Files = 5 // TY-03: timestamps.json
+	}
 	got := v.Input()
 	obs := archive.Observed{Count: got.Count, FirstSeq: got.FirstSeq, LastSeq: got.LastSeq, From: got.From, To: got.To,
 		FirstPrevHash: got.FirstPrevHash, Kinds: got.Kinds,
@@ -459,7 +499,7 @@ func checkBundle(v *deed.Verifier, in *vInput, ks *deed.KeySet) {
 		v.Warn(deed.WarnManifestUnsealed, msg, next)
 		return
 	}
-	st.Files = 5
+	st.Files++
 	st.SealedBy = &seal.SealKeyID
 	created, _ := deed.ParseTime(m.CreatedAt)
 	if ks == nil {
@@ -616,6 +656,9 @@ func printVerify(e *Env, rep *deed.Report, o verifyOpts, multi bool) {
 		} else {
 			line(s.OKLine("Bundle manifest matches"))
 		}
+	}
+	if len(rep.Timestamps) > 0 {
+		printTimestamps(e, rep.Timestamps)
 	}
 	for _, wn := range rep.Warnings {
 		line(s.UnknownLine(clean(wn.Message)))

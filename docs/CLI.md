@@ -241,12 +241,13 @@ builds it. Hidden commands work but aren't in `deedglass help`.
 | `deedglass webhooks list [--json]` | Actions | List webhook endpoints | built |
 | `deedglass webhooks test <whk_…> [--json]` | Actions | Send a test event | built |
 | `deedglass webhooks delete <whk_…> [--json]` | Actions | Remove a webhook endpoint | built |
-| `deedglass verify <path|->... [--keys <file|url>] [--pin sha256:…] [--anchor <seq>:sha256:…] [--file <path>] [--strict] [--all] [-q]` | Records | Check records offline | built |
+| `deedglass verify <path|->... [--keys <file|url>] [--pin sha256:…] [--anchor <seq>:sha256:…] [--file <path>] [--timestamps <file>] [--tsa-roots <pem>] [--scitt-key <jwk>] [--strict] [--all] [-q]` | Records | Check records offline | built |
 | `deedglass deeds list [--from-seq n] [--to-seq n] [--kind action,admin,amendment] [--action act_…] [--order asc|desc] [--limit 25] [--json]` | Records | List records | built |
 | `deedglass deeds show <deed_…|seq> [--json]` | Records | Show one record | built |
 | `deedglass deeds share <deed_…|seq> [--yes] [--json]` | Records | Make a link that checks one record | built |
 | `deedglass deeds export [--out <file>|-] [--format tar.gz|jsonl|fhir-auditevent|fhir-provenance] [--from <bundle>] [--from-seq n] [--to-seq n] [--since 1h] [--json]` | Records | Export records as a bundle | built |
 | `deedglass export <bundle|jsonl|-> --format otel-genai|ocsf|prov-json|fhir [--out <file>|-] [--json]` | Records | Write records as OTel, OCSF, PROV or FHIR | built |
+| `deedglass deeds timestamp [--out timestamps.json] [--seq n] [--every 15m] [--count n] [--json]` | Records | Timestamp the chain head with your TSAs | built |
 | `deedglass deeds seal-file <path> --label <text> [--media-type application/pdf|text/markdown|application/json|text/plain|text/html|application/gzip] [--out <path>.deed.json] [--json]` | Records | Seal a file's hash as a record | built |
 | `deedglass security-pack readiness [--period 90d] [--all] [--json]` | Records | Check how a security review would see your setup | built |
 | `deedglass security-pack build [--period 90d] [--out dir] [--aliases] [--no-records] [--records] [--json]` | Records | Build the sealed security review pack (Pro) | built |
@@ -341,6 +342,9 @@ the first ended. Loose `.json` deeds are checked one by one, and the headline sa
 | `--pin sha256:…` | Accept only keys with this thumbprint (repeatable); works on any key set, the bundle's included. |
 | `--org <org_…>` | The org every deed must belong to (the global flag). |
 | `--anchor <seq>:sha256:…` | The `body_hash` of the deed just before the first one given (a partial export). |
+| `--timestamps <file>` | A `timestamps.json` to compare the chain with (repeatable; a bundle's own is read without it). A timestamped head past the last deed is `chain_tail_missing`; one with another body hash is `timestamp_mismatch` ([`TIMESTAMPS.md`](TIMESTAMPS.md)). |
+| `--tsa-roots <pem>` | The roots of the TSAs you trust; without it, TSA chains show integrity only (a warning). |
+| `--scitt-key <jwk>` | A transparency service's public key you trust (repeatable); without it, the key in the file is used (a warning). |
 | `--strict` | Require canonical bytes (`non_canonical`) and pinned keys (exit 2 without them). |
 | `--all` | List every failure (at most 100) instead of stopping at the first. |
 | `--max-bytes <n>` | The largest `deeds.jsonl` a bundle may hold (default 8 GiB). |

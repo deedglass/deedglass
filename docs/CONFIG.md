@@ -164,6 +164,12 @@ gate:
 | `undo.lock_timeout` | `2s` | 100ms to 1m0s | How long an undo waits for a row lock before it fails with nothing changed. | S23 |
 | `undo.statement_timeout` | `10s` | 100ms to 1m0s | The longest any one statement of an undo may run. | S23 |
 | `undo.preview_steps` | `20` | 1 to 1000 | Steps a preview lists by default (?steps_limit= asks for up to 1,000). | S23 |
+| `timestamps.tsa_urls` | `` | text | RFC 3161 TSAs that timestamp the chain head, comma-separated https URLs (at most 8). Empty: no timestamps and no outbound call. | TY-03 |
+| `timestamps.min_tsa` | `2` | 1 to 8 | Tokens a head needs; a timestamp with fewer TSAs answering fails. At most the number of TSAs listed. | TY-03 |
+| `timestamps.scitt_url` | `` | text | A transparency service (IETF SCITT) to register each timestamped head with, as an https base URL. Empty: none. | TY-03 |
+| `timestamps.scitt_key_file` | `` | text | The transparency service's public key as a JWK file (EC P-256 or OKP Ed25519); needed with timestamps.scitt_url. | TY-03 |
+| `timestamps.at_export` | `true` | true or false | With timestamps configured, each tar.gz export timestamps its last deed and carries the result as timestamps.json. | TY-03 |
+| `timestamps.timeout` | `10s` | 1s to 1m0s | How long one TSA or the transparency service has to answer. | TY-03 |
 <!-- settings:end -->
 
 ### The `mcp` section (S15)

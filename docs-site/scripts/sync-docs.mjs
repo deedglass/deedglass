@@ -77,7 +77,7 @@ export const IMPORTS = {
       'DATABASE_SETUP', 'DATA_MODEL', 'DECODER', 'EMAIL', 'EVENTS', 'GATE', 'IDENTITY', 'INSIGHTS', 'INSIGHTS_PRIVACY', 'LEDGER',
       'MCP', 'MCP_AUTHORIZATION', 'MIGRATIONS', 'NETWORK_EGRESS', 'OBSERVABILITY', 'OBSERVATION_BOUNDARY', 'OVERVIEW_METRICS',
       'POLICIES_GUIDE', 'POLICY_COOKBOOK', 'POLICY_EDITOR', 'POLICY_ERRORS', 'POSTGRES_DEPLOYMENT', 'REPLAY', 'RETENTION', 'SCAN',
-      'SCHEDULED_ACTIONS', 'SEAL_KEYS', 'SEALING_FILES', 'SELF_HOSTING', 'SIMULATOR', 'SQLGUARD', 'STOP', 'SUGGESTIONS', 'UNDO', 'VAULT', 'VERIFICATION_MODEL',
+      'SCHEDULED_ACTIONS', 'SEAL_KEYS', 'SEALING_FILES', 'SELF_HOSTING', 'SIMULATOR', 'SQLGUARD', 'STOP', 'SUGGESTIONS', 'TIMESTAMPS', 'UNDO', 'VAULT', 'VERIFICATION_MODEL',
       'VERIFYING_DEEDS', 'WEBHOOKS', 'WITNESS', 'BENCHMARKS', 'LICENSING', 'PLAYGROUND', 'SHARING', 'INSTALL_CLIENTS',
     ].map((n) => [`docs/${n}.md`, `reference/engineering/${n.toLowerCase().replace(/_/g, '-')}`]),
   ),
@@ -117,7 +117,7 @@ export const LIMITS_PARTS = [
     label: 'Records, verify and the Ledger',
     title: 'Limits: records, verify and the Ledger',
     description: 'What a sealed record, deedglass verify and the Ledger chain check show, and what they leave out.',
-    sections: ['Deed limits', 'Verifier limits', 'Ledger limits', 'PHI mode'],
+    sections: ['Deed limits', 'Verifier limits', 'Ledger limits', 'Head timestamps', 'PHI mode'],
   },
   {
     slug: 'identity',

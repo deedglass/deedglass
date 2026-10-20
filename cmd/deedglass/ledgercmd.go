@@ -47,10 +47,11 @@ func failNext(e *Env, exit int, code, msg, next string) error {
 
 // ledgerSession is one DB-direct Ledger command's database, org and Ledger.
 type ledgerSession struct {
-	cfg *config.Config
-	db  *store.DB
-	org store.Org
-	led *ledger.Ledger
+	cfg    *config.Config
+	db     *store.DB
+	org    store.Org
+	led    *ledger.Ledger
+	signer deed.Signer // nil unless openLedger was asked to sign
 }
 
 func (s *ledgerSession) Close() { s.db.Close() }
@@ -96,7 +97,7 @@ func openLedger(ctx context.Context, e *Env, sign bool) (*ledgerSession, error) 
 		}
 		signer = s
 	}
-	return &ledgerSession{cfg: cfg, db: db, org: org, led: newLedger(db, signer, cfg, log)}, nil
+	return &ledgerSession{cfg: cfg, db: db, org: org, led: newLedger(db, signer, cfg, log), signer: signer}, nil
 }
 
 // pickOrg resolves --org (an id or a slug), or the only org in the database.
@@ -763,12 +764,21 @@ type exportTarget struct {
 	e *Env
 	w io.Writer
 	n int64
+
+	stampTried bool
+	stampErr   error
 }
 
 func (x *exportTarget) Write(p []byte) (int, error) {
 	n, err := x.w.Write(p)
 	x.n += int64(n)
 	return n, err
+}
+
+// ExportStamp reports whether the bundle carries timestamps.json (TY-03; called only when
+// timestamps are configured).
+func (x *exportTarget) ExportStamp(err error) {
+	x.stampErr, x.stampTried = err, true
 }
 
 func (x *exportTarget) ExportStarting(org string, first, last, _ int64) {
@@ -878,14 +888,24 @@ func runDeedsExport(ctx context.Context, e *Env, args []string) error {
 	}
 	keysURL := strings.TrimSuffix(s.cfg.BaseURL.String(), "/") + "/.well-known/deedglass/keys.json"
 	if e.Globals.JSON {
-		return writeAPIJSON(e, map[string]any{"object": "deed_export", "org": s.org.ID.String(), "format": o.format,
-			"file": out, "first_seq": first, "last_seq": last, "count": count, "bytes": x.n})
+		obj := map[string]any{"object": "deed_export", "org": s.org.ID.String(), "format": o.format,
+			"file": out, "first_seq": first, "last_seq": last, "count": count, "bytes": x.n}
+		if x.stampTried {
+			obj["timestamped"] = x.stampErr == nil // TY-03; absent when timestamps are off
+		}
+		return writeAPIJSON(e, obj)
 	}
 	row := func(k, v string) { fmt.Fprintf(e.Stdout, "  %s %s\n", ui.Pad(k, 10), v) }
 	if o.format == "tar.gz" {
 		fmt.Fprintln(e.Stdout, e.Style.OKLine(fmt.Sprintf("%s %s %s %s manifest sealed by %s", deedsWord(count), ui.Sep,
 			sizeWords(x.n), ui.Sep, shortID(s.led.SignerKeyID()))))
 		row("file", out)
+		switch {
+		case x.stampTried && x.stampErr == nil:
+			row("timestamp", "the last record is timestamped (timestamps.json)")
+		case x.stampTried:
+			row("timestamp", "none: "+strings.TrimPrefix(x.stampErr.Error(), "stamp: "))
+		}
 		row("next", "deedglass verify "+out+" --keys "+keysURL)
 		return nil
 	}

@@ -111,7 +111,8 @@
     ],
     "messages": [
       "Can't read the orgs in this database.",
-      "Can't read this org's records for the report."
+      "Can't read this org's records for the report.",
+      "Can't read the chain head."
     ],
     "next": [
       "Run deedglass migrate up, and use the runtime role deedglass_app (docs/DATABASE_SETUP.md).",
@@ -1047,6 +1048,29 @@
     "messages": null,
     "next": [
       "Run migrations as deedglass_migrator."
+    ]
+  },
+  {
+    "code": "timestamp_failed",
+    "exit": [
+      1
+    ],
+    "messages": null,
+    "next": [
+      "Choose another file with --out, or move this one aside.",
+      "Keep one file per org: choose another file with --out."
+    ]
+  },
+  {
+    "code": "timestamps_off",
+    "exit": [
+      2
+    ],
+    "messages": [
+      "Timestamps are off: no TSA or transparency service is configured."
+    ],
+    "next": [
+      "Set timestamps.tsa_urls (and optionally timestamps.scitt_url) in deedglass.yaml. docs/TIMESTAMPS.md has examples."
     ]
   },
   {

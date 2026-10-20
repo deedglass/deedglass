@@ -25,25 +25,44 @@ const MaxFailures = 100
 // Report is a verification_report: what `deedglass verify` prints with --json, what `ledger check`
 // (S06) returns, and what the browser verifier builds with the same field names.
 type Report struct {
-	Object     string           `json:"object"` // "verification_report"
-	Result     string           `json:"result"` // valid | invalid | cannot_determine
-	Deeds      int64            `json:"deeds"`  // deeds read (stops at the first failure without --all)
-	Intact     int64            `json:"intact"` // deeds that passed every check
-	Org        *string          `json:"org"`
-	FirstSeq   *int64           `json:"first_seq"`
-	LastSeq    *int64           `json:"last_seq"`
-	From       *string          `json:"from"` // issued_at of the first intact deed
-	To         *string          `json:"to"`   // issued_at of the last intact deed
-	Chain      ChainStatus      `json:"chain"`
-	SealKeys   []KeyUse         `json:"seal_keys"`
-	KeysPinned bool             `json:"keys_pinned"`
-	Kinds      map[string]int64 `json:"kinds"`             // action, admin, amendment
-	Recorded   map[string]int64 `json:"verdicts_recorded"` // VERIFIED, MISMATCH, UNVERIFIABLE, none: as written in the deeds
-	Bundle     *BundleStatus    `json:"bundle"`
-	Failures   []Failure        `json:"failures"`
-	Warnings   []Warning        `json:"warnings"`
-	DurationMS int64            `json:"duration_ms"`
-	Verifier   string           `json:"verifier"`
+	Object     string            `json:"object"` // "verification_report"
+	Result     string            `json:"result"` // valid | invalid | cannot_determine
+	Deeds      int64             `json:"deeds"`  // deeds read (stops at the first failure without --all)
+	Intact     int64             `json:"intact"` // deeds that passed every check
+	Org        *string           `json:"org"`
+	FirstSeq   *int64            `json:"first_seq"`
+	LastSeq    *int64            `json:"last_seq"`
+	From       *string           `json:"from"` // issued_at of the first intact deed
+	To         *string           `json:"to"`   // issued_at of the last intact deed
+	Chain      ChainStatus       `json:"chain"`
+	SealKeys   []KeyUse          `json:"seal_keys"`
+	KeysPinned bool              `json:"keys_pinned"`
+	Kinds      map[string]int64  `json:"kinds"`             // action, admin, amendment
+	Recorded   map[string]int64  `json:"verdicts_recorded"` // VERIFIED, MISMATCH, UNVERIFIABLE, none: as written in the deeds
+	Bundle     *BundleStatus     `json:"bundle"`
+	Timestamps []TimestampedHead `json:"timestamps,omitempty"` // TY-03: heads whose timestamps verified
+	Failures   []Failure         `json:"failures"`
+	Warnings   []Warning         `json:"warnings"`
+	DurationMS int64             `json:"duration_ms"`
+	Verifier   string            `json:"verifier"`
+}
+
+// TimestampedHead is one chain head whose independent timestamps verified (TY-03, ADR-112), and
+// how it compares with the deeds checked.
+type TimestampedHead struct {
+	Seq      int64               `json:"seq"`
+	BodyHash string              `json:"body_hash"`
+	At       string              `json:"at"`       // the earliest time any piece of evidence gives
+	Compared string              `json:"compared"` // matches | missing | mismatch | before_range | not_checked
+	Evidence []TimestampEvidence `json:"evidence"`
+}
+
+// TimestampEvidence is one verified RFC 3161 token or transparency-service registration.
+type TimestampEvidence struct {
+	Kind   string `json:"kind"`   // rfc3161 | scitt
+	Source string `json:"source"` // the TSA's or service's URL, as stored
+	Time   string `json:"time"`
+	Pinned bool   `json:"pinned"` // checked against roots or a key the reader passed
 }
 
 // ChainStatus says whether the deeds were checked as a chain, and from where.

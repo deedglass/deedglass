@@ -2,8 +2,9 @@
 
 Every connection Deedglass makes to a destination someone configured goes through one package,
 `internal/connector/egress` (S16): the REST connector's `base_url`, the MCP HTTP gateway's
-upstreams, webhooks (S22), the SaaS connectors (S29–S30), the Postgres connector's dial (S17) and
-`deedglass verify --keys`. `TestSingleEgressDoor` fails the build if any other package builds an
+upstreams, webhooks (S22), the SaaS connectors (S29–S30), the Postgres connector's dial (S17),
+`deedglass verify --keys`, and head timestamps (TY-03: the TSAs and transparency service listed in
+`timestamps.*`, asked by `deedglass deeds timestamp` and by exports; nothing is asked when none is listed). `TestSingleEgressDoor` fails the build if any other package builds an
 `http.Client` or an `http.Transport`, dials on its own, or uses `http.DefaultClient`, `http.Get`,
 `http.Post`, `http.Head` or `http.PostForm`.
 

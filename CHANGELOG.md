@@ -9,6 +9,17 @@ this file by `scripts/release-notes.sh`.
 
 ### Added
 
+- Head timestamps (TY-03, ADR-112), off by default. With TSAs (`timestamps.tsa_urls`, at least
+  `timestamps.min_tsa`, default 2) and optionally a transparency service (`timestamps.scitt_url`)
+  in `deedglass.yaml`, each tar.gz export timestamps its last record and carries `timestamps.json`,
+  and `deedglass deeds timestamp [--every 15m]` adds the current head to a file you keep elsewhere.
+  `deedglass verify` checks the RFC 3161 tokens and the transparency service's inclusion proof
+  offline (`--tsa-roots`, `--scitt-key` to pin who signed them) and compares each head with the
+  records: a head past the last record is `chain_tail_missing`, one with another body hash is
+  `timestamp_mismatch`. Spec: `spec/v2/BUNDLE_FORMAT.md` §9 (a bundle without the file is
+  unchanged). No new dependency. Limits: docs/LIMITATIONS.md#head-timestamps. New page:
+  docs/TIMESTAMPS.md.
+
 - The Medplum example (`examples/medplum`, `make medplum-example`): Medplum 5.2.6 on PostgreSQL 18
   in Docker, an agent-style client writing through the gate (a create that Matches, a create
   Medplum answers 201 but stores without a read-only field, flagged Doesn't match at Checked and

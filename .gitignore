@@ -16,6 +16,9 @@ coverage.*
 *.pem
 # except the published RFC 8032 test-vector keys the S09 intent vectors are signed with
 !testdata/intents/keys/*.pem
+# and the public roots of the test TSAs head timestamps are checked against (TY-03; no private key)
+!internal/deed/stamp/testdata/openssl/*/root.pem
+!testdata/timestamps/tsa-roots.pem
 .env
 .env.*
 !.env.example

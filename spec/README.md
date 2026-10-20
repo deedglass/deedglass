@@ -19,7 +19,7 @@ written in 2026 can still be checked against the text it was written under in 20
 | Edition | Contents | Status | Since |
 |---|---|---|---|
 | [`v1/`](v1/) | [Deed v1](v1/DEED_SPEC.md) (body, canonical form, seal, chain, envelope, keys, verification, COSE) and [Export bundle v1](v1/BUNDLE_FORMAT.md) | Normative | 2026-10-01; CC-BY-4.0 since 2026-10-19 |
-| [`v2/`](v2/) | [Deed v1 and v2](v2/DEED_SPEC.md): every seal names its algorithm, the accept policy, ML-DSA-65 seals beside Ed25519 (ADR-109); [Export bundle](v2/BUNDLE_FORMAT.md) (unchanged format) | Normative (ADR-109, proposed) | 2026-10-19 |
+| [`v2/`](v2/) | [Deed v1 and v2](v2/DEED_SPEC.md): every seal names its algorithm, the accept policy, ML-DSA-65 seals beside Ed25519 (ADR-109); [Export bundle](v2/BUNDLE_FORMAT.md) (one optional entry, `timestamps.json`, TY-03) | Normative (ADR-109, proposed) | 2026-10-19 |
 
 The record format has its own version number inside every record (`"v": 1` or `"v": 2`). The edition
 number of this directory follows it: edition 1 describes `v: 1` records and v1 bundles; edition 2

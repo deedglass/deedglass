@@ -1,12 +1,14 @@
 package ledger
 
 import (
+	"context"
 	"errors"
 	"log/slog"
 	"time"
 
 	"github.com/deedglass/deedglass/internal/deed"
 	"github.com/deedglass/deedglass/internal/deed/archive"
+	"github.com/deedglass/deedglass/internal/deed/stamp"
 	"github.com/deedglass/deedglass/internal/gate/lifecycle"
 	"github.com/deedglass/deedglass/internal/store"
 )
@@ -64,7 +66,15 @@ type Ledger struct {
 	dev    bool
 	// undoMaxAge is undo.max_age (S23), for the undo object's eligible flag.
 	undoMaxAge time.Duration
+	// stamper timestamps an export's last deed (TY-03, timestamps.at_export); nil: no timestamps.
+	stamper Stamper
 }
+
+// Stamper gets independent evidence for a chain head (TY-03): RFC 3161 tokens and, optionally, a
+// transparency-service registration. cmd/deedglass builds it from timestamps.* and the egress door.
+type Stamper func(ctx context.Context, head stamp.Head) (stamp.Entry, error)
+
+// WithStamper makes every tar.gz export timestamp its last deed and carry timestamps.json.
 
 // Option tunes a Ledger.
 type Option func(*Ledger)
@@ -77,6 +87,8 @@ func WithIssuer(u string) Option { return func(l *Ledger) { l.issuer = u } }
 
 // WithGenerator names the software in export manifests.
 func WithGenerator(g archive.Generator) Option { return func(l *Ledger) { l.gen = g } }
+
+func WithStamper(s Stamper) Option { return func(l *Ledger) { l.stamper = s } }
 
 // WithLogger sets the logger (default slog.Default()).
 func WithLogger(log *slog.Logger) Option { return func(l *Ledger) { l.log = log } }

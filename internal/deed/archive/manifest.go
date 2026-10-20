@@ -15,22 +15,24 @@ import (
 const (
 	NameREADME       = "README.txt"
 	NameKeys         = "keys.json"
+	NameTimestamps   = "timestamps.json" // optional (TY-03, spec/v2/BUNDLE_FORMAT.md §9)
 	NameDeeds        = "deeds.jsonl"
 	NameManifest     = "manifest.json"
 	NameManifestSeal = "manifest.seal.json"
 )
 
-// order is the only allowed sequence of entries (the seal is optional).
-var order = []string{NameREADME, NameKeys, NameDeeds, NameManifest, NameManifestSeal}
+// order is the only allowed sequence of entries (timestamps.json and the seal are optional).
+var order = []string{NameREADME, NameKeys, NameTimestamps, NameDeeds, NameManifest, NameManifestSeal}
 
 // Limits bounds each file and, by their sum, the whole bundle once decompressed.
 type Limits struct {
-	README, Keys, Deeds, Manifest, Seal int64
+	README, Keys, Timestamps, Deeds, Manifest, Seal int64
 }
 
-// DefaultLimits are the v1 limits (BUNDLE_FORMAT.md §2). verify --max-bytes changes Deeds.
+// DefaultLimits are the v1 limits (BUNDLE_FORMAT.md §2), with edition 2's timestamps.json (1 MiB).
+// verify --max-bytes changes Deeds.
 func DefaultLimits() Limits {
-	return Limits{README: 64 << 10, Keys: 1 << 20, Deeds: 8 << 30, Manifest: 64 << 10, Seal: 4 << 10}
+	return Limits{README: 64 << 10, Keys: 1 << 20, Timestamps: 1 << 20, Deeds: 8 << 30, Manifest: 64 << 10, Seal: 4 << 10}
 }
 
 func (l Limits) of(name string) int64 {
@@ -39,6 +41,8 @@ func (l Limits) of(name string) int64 {
 		return l.README
 	case NameKeys:
 		return l.Keys
+	case NameTimestamps:
+		return l.Timestamps
 	case NameDeeds:
 		return l.Deeds
 	case NameManifest:
@@ -49,7 +53,7 @@ func (l Limits) of(name string) int64 {
 
 // total is the most a bundle may expand to: every file at its limit plus tar headers and padding.
 func (l Limits) total() int64 {
-	return l.README + l.Keys + l.Deeds + l.Manifest + l.Seal + 5*(2*512) + 1024 + 8*512
+	return l.README + l.Keys + l.Timestamps + l.Deeds + l.Manifest + l.Seal + 6*(2*512) + 1024 + 8*512
 }
 
 // Manifest is manifest.json.
@@ -178,13 +182,17 @@ func parseManifest(raw []byte) (*Manifest, error) {
 		return nil, bad("range")
 	case m.Chain.Head.Seq != m.Range.LastSeq:
 		return nil, bad("head")
-	case len(m.Files) != 3:
+	case len(m.Files) != 3 && len(m.Files) != 4:
 		return nil, bad("files")
 	}
 	if _, err := time.Parse(deed.TimeFormat, m.CreatedAt); err != nil {
 		return nil, bad("created_at")
 	}
-	for _, n := range []string{NameREADME, NameKeys, NameDeeds} {
+	names := []string{NameREADME, NameKeys, NameDeeds}
+	if len(m.Files) == 4 {
+		names = append(names, NameTimestamps)
+	}
+	for _, n := range names {
 		f, ok := m.Files[n]
 		if !ok || len(f.SHA256) != 64 || (n == NameDeeds) != (f.Lines != nil) {
 			return nil, bad("files")

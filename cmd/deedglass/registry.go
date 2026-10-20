@@ -244,7 +244,7 @@ var commands = []*Command{
 
 	// Deeds.
 	{Path: p("verify"), Group: Deeds, Summary: "Check records offline",
-		Usage: "<path|->... [--keys <file|url>] [--pin sha256:…] [--anchor <seq>:sha256:…] [--file <path>] [--strict] [--all] [-q]",
+		Usage: "<path|->... [--keys <file|url>] [--pin sha256:…] [--anchor <seq>:sha256:…] [--file <path>] [--timestamps <file>] [--tsa-roots <pem>] [--scitt-key <jwk>] [--strict] [--all] [-q]",
 		Flags: verifyFlags, Run: runVerify, RawArgs: true},
 	{Path: p("deeds", "list"), Group: Deeds, Summary: "List records",
 		Usage: "[--from-seq n] [--to-seq n] [--kind action,admin,amendment] [--action act_…] [--order asc|desc] [--limit 25] [--json]",
@@ -261,6 +261,10 @@ var commands = []*Command{
 		Usage: "<bundle|jsonl|-> --format otel-genai|ocsf|prov-json|fhir [--out <file>|-] [--json]",
 		Flags: recordExportFlags, Run: runRecordExport, RawArgs: true,
 		Detail: "Reads sealed records from an export bundle (deedglass deeds export) or a .jsonl file and writes them in another format, offline: nothing is read from a server or database and nothing is sent.\n\n  otel-genai  OTLP/JSON lines, one execute_tool span per action (OpenTelemetry GenAI semantic conventions 1.41.0); an amendment is a child span\n  ocsf        OCSF 1.9.0 API Activity events (6003) with ai_agent and delegation, one per line\n  prov-json   one W3C PROV-JSON document: agents, tool calls, records and who acted for whom\n  fhir        FHIR R4 AuditEvent and Provenance for FHIR connector calls (as deeds export --format fhir-auditevent)\n\nAn export is a view of the records, not the records: it doesn't check seals, so run deedglass verify on the file first. A bundle whose files don't match its manifest is refused. docs/EXPORTS.md lists what each format loses.\n\nExamples:\n  deedglass export deeds.tar.gz --format otel-genai\n  deedglass export deeds.tar.gz --format ocsf --out - | jq .\n  deedglass deeds export --out - | deedglass export - --format prov-json --out records.prov.json"},
+	{Path: p("deeds", "timestamp"), Group: Deeds, Summary: "Timestamp the chain head with your TSAs",
+		Usage: "[--out timestamps.json] [--seq n] [--every 15m] [--count n] [--json]",
+		Flags: deedsTimestampFlags, Needs: config.NeedDatabase, Run: runDeedsTimestamp,
+		Detail: "Off unless deedglass.yaml lists TSAs (timestamps.tsa_urls) or a transparency service (timestamps.scitt_url); nothing is sent otherwise.\nAsks every TSA for an RFC 3161 token over the head (the last record's seq, id and body_hash), registers it with the transparency service when one is set, and adds the result to --out. Keep that file somewhere the operator can't rewrite, or let the transparency service hold it: deedglass verify <bundle> --timestamps timestamps.json then reports records removed from the end of the chain, or changed, after each time.\n--every keeps running and timestamps the head whenever it has moved. Exports carry a timestamp of their own last record when timestamps.at_export is true (the default)."},
 	{Path: p("deeds", "seal-file"), Group: Deeds, Summary: "Seal a file's hash as a record",
 		Usage: "<path> --label <text> [--media-type application/pdf|text/markdown|application/json|text/plain|text/html|application/gzip] [--out <path>.deed.json] [--json]",
 		Run:   runDeedsSealFile, RawArgs: true,
@@ -433,7 +437,7 @@ var lines = []Line{
 		Paths: ps("security-pack readiness", "security-pack build", "security-pack verify")},
 	{Name: "report", Group: Deeds, Summary: "Report what your agents did in a week or month", Paths: ps("report")},
 	{Name: "clients", Group: Deeds, Summary: "List every org you look after (Agency plan)", Paths: ps("clients")},
-	{Name: "deeds", Group: Deeds, Summary: "Browse and export records", Subs: subs("list show share export seal-file"), Paths: ps("deeds list", "deeds show", "deeds share", "deeds export", "deeds seal-file")},
+	{Name: "deeds", Group: Deeds, Summary: "Browse and export records", Subs: subs("list show share export timestamp seal-file"), Paths: ps("deeds list", "deeds show", "deeds share", "deeds export", "deeds timestamp", "deeds seal-file")},
 	{Name: "ledger", Group: Deeds, Summary: "Check or prune the Ledger", Subs: subs("check prune"), Paths: ps("ledger check", "ledger prune")},
 
 	{Name: "connector", Group: Connectors, Summary: "Connect tools", Subs: subs("create list show test types credentials"),

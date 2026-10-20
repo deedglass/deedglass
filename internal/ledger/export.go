@@ -2,6 +2,7 @@ package ledger
 
 import (
 	"context"
+	"errors"
 	"io"
 	"time"
 
@@ -9,6 +10,7 @@ import (
 
 	"github.com/deedglass/deedglass/internal/deed"
 	"github.com/deedglass/deedglass/internal/deed/archive"
+	"github.com/deedglass/deedglass/internal/deed/stamp"
 	"github.com/deedglass/deedglass/internal/ids"
 )
 
@@ -17,6 +19,13 @@ import (
 // known and before writing.
 type ExportStarter interface {
 	ExportStarting(org string, firstSeq, lastSeq, count int64)
+}
+
+// ExportStampReporter is implemented by an Export writer that wants to know whether the export was
+// timestamped (TY-03): Export calls it once with nil when timestamps.json was added, or with the
+// reason it wasn't. It is not called when timestamps are off.
+type ExportStampReporter interface {
+	ExportStamp(err error)
 }
 
 // EmptyRangeError is ErrEmptyRange with where the chain ends, for the next step.
@@ -114,8 +123,21 @@ func (l *Ledger) Export(ctx context.Context, org ids.OrgID, r Range, w io.Writer
 		if s, ok := w.(ExportStarter); ok {
 			s.ExportStarting(org.String(), *lo, *hi, count)
 		}
+		var stamps []byte
+		if l.stamper != nil {
+			var serr error
+			stamps, serr = l.stampHead(ctx, tx, org, *hi)
+			if serr != nil {
+				// The export goes ahead without timestamps.json: a TSA being down must not stop
+				// anyone getting their records. The writer is told why.
+				l.log.WarnContext(ctx, "export_not_timestamped", "org_id", org.String(), "seq", *hi, "error", serr.Error())
+			}
+			if r, ok := w.(ExportStampReporter); ok {
+				r.ExportStamp(serr)
+			}
+		}
 		aw, err := archive.NewWriter(w, archive.Header{Org: org.String(), Issuer: l.issuer, CreatedAt: l.now().UTC(),
-			Generator: l.gen, FirstSeq: *lo, LastSeq: *hi, From: deed.FormatTime(*from), To: deed.FormatTime(*to)},
+			Generator: l.gen, FirstSeq: *lo, LastSeq: *hi, From: deed.FormatTime(*from), To: deed.FormatTime(*to), Timestamps: stamps},
 			keysJSON, bytes, count)
 		if err != nil {
 			return err
@@ -149,6 +171,53 @@ func (l *Ledger) Export(ctx context.Context, org ids.OrgID, r Range, w io.Writer
 	}
 	l.log.InfoContext(ctx, "export", "org_id", org.String(), "first_seq", man.Range.FirstSeq, "last_seq", man.Range.LastSeq, "count", man.Range.Count)
 	return man, nil
+}
+
+// Head returns the head statement of org's chain at seq (its last deed when seq is 0), for
+// `deedglass deeds timestamp`. ErrNotFound when the org has no such deed.
+func (l *Ledger) Head(ctx context.Context, org ids.OrgID, seq int64) (stamp.Head, error) {
+	var h stamp.Head
+	err := l.db.OrgSnapshotTx(ctx, org, func(ctx context.Context, tx pgx.Tx) error {
+		var err error
+		h, err = headAt(ctx, tx, org, seq)
+		return err
+	})
+	return h, err
+}
+
+func headAt(ctx context.Context, tx pgx.Tx, org ids.OrgID, seq int64) (stamp.Head, error) {
+	var (
+		s                int64
+		id, hash, issued string
+		at               time.Time
+	)
+	err := tx.QueryRow(ctx, `SELECT seq, id::text, body_hash::text, issued_at FROM deedglass.deeds
+	  WHERE org_id = $1 AND ($2::bigint = 0 OR seq = $2) ORDER BY seq DESC LIMIT 1`, org, seq).Scan(&s, &id, &hash, &at)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return stamp.Head{}, ErrNotFound
+	}
+	if err != nil {
+		return stamp.Head{}, err
+	}
+	issued = deed.FormatTime(at)
+	return stamp.NewHead(org.String(), s, id, hash, issued), nil
+}
+
+// stampHead timestamps the deed at seq with the Ledger's stamper and returns timestamps.json.
+func (l *Ledger) stampHead(ctx context.Context, tx pgx.Tx, org ids.OrgID, seq int64) ([]byte, error) {
+	h, err := headAt(ctx, tx, org, seq)
+	if err != nil {
+		return nil, err
+	}
+	e, err := l.stamper(ctx, h)
+	if err != nil {
+		return nil, err
+	}
+	f := stamp.NewFile(org.String())
+	if err := f.Add(e); err != nil {
+		return nil, err
+	}
+	return f.Marshal()
 }
 
 // ExportJSONL writes the deeds in r as deeds.jsonl (one stored envelope per line), for

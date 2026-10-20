@@ -82,6 +82,7 @@ type Config struct {
 	Approvals  ApprovalSettings  // approvals.* (S22)
 	Undo       UndoSettings      // undo.* (S23)
 	Webhooks   WebhookSettings   // webhooks.* (S22)
+	Timestamps TimestampSettings // timestamps.* (TY-03)
 
 	raw        map[string]string // resolved raw values, for printing
 	sources    map[string]Source

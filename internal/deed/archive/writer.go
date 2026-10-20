@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/deedglass/deedglass/internal/deed"
+	"github.com/deedglass/deedglass/internal/deed/stamp"
 )
 
 // Header is what a writer knows before the first deed: who exports, when, and the range it will
@@ -26,6 +27,10 @@ type Header struct {
 	FirstSeq  int64
 	LastSeq   int64
 	From, To  string // issued_at of the first and last deed
+	// Timestamps is an optional timestamps.json (TY-03): heads of this org's chain at or before
+	// LastSeq with their RFC 3161 tokens and transparency-service registrations. nil writes none,
+	// and the bundle is byte-identical to one written before TY-03.
+	Timestamps []byte
 }
 
 // Writer streams one export bundle. Call WriteDeed once per deed in seq order, then Close.
@@ -65,6 +70,20 @@ func NewWriter(w io.Writer, h Header, keysJSON []byte, deedsBytes, deedsLines in
 	if _, err := deed.ParseKeySet(keysJSON); err != nil {
 		return nil, fmt.Errorf("%w: keys.json: %w", ErrWriter, err)
 	}
+	if h.Timestamps != nil {
+		f, err := stamp.ParseFile(h.Timestamps, DefaultLimits().Timestamps)
+		if err != nil {
+			return nil, fmt.Errorf("%w: timestamps.json: %w", ErrWriter, err)
+		}
+		if f.Org != h.Org {
+			return nil, fmt.Errorf("%w: timestamps.json belongs to another org", ErrWriter)
+		}
+		for _, e := range f.Heads {
+			if e.Head.Seq > h.LastSeq {
+				return nil, fmt.Errorf("%w: timestamps.json has a head at seq %d, after the bundle's last deed", ErrWriter, e.Head.Seq)
+			}
+		}
+	}
 	gz, _ := gzip.NewWriterLevel(w, gzip.DefaultCompression)
 	gz.Header = gzip.Header{OS: 255} // no name, mtime 0, unknown OS: the same bytes on every machine
 	wr := &Writer{gz: gz, tw: tar.NewWriter(gz), h: h, mtime: h.CreatedAt.UTC().Truncate(time.Second),
@@ -75,6 +94,11 @@ func NewWriter(w io.Writer, h Header, keysJSON []byte, deedsBytes, deedsLines in
 	}
 	if err := wr.file(NameKeys, keysJSON); err != nil {
 		return nil, err
+	}
+	if h.Timestamps != nil {
+		if err := wr.file(NameTimestamps, h.Timestamps); err != nil {
+			return nil, err
+		}
 	}
 	if err := wr.tw.WriteHeader(wr.header(NameDeeds, deedsBytes)); err != nil {
 		return nil, err

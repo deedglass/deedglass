@@ -99,3 +99,38 @@ func TestSettingsDocs(t *testing.T) {
 		t.Fatal("docs/CONFIG.md settings table drifted from settings.go. Run: go test ./internal/config -run TestSettingsDocs -update")
 	}
 }
+
+func TestTimestampSettings(t *testing.T) {
+	c, err := loadYAML(t, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if c.Timestamps.Enabled() || c.Timestamps.MinTSA != 2 || !c.Timestamps.AtExport || c.Timestamps.Timeout != 10*time.Second {
+		t.Fatalf("defaults: %+v", c.Timestamps) // off by default: no TSA, no service, no outbound call
+	}
+	c, err = loadYAML(t, "timestamps:\n  tsa_urls: https://a.example/tsr, https://b.example\n  scitt_url: https://ts.example\n  scitt_key_file: k.jwk\n  at_export: false\n")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !c.Timestamps.Enabled() || len(c.Timestamps.TSAURLs) != 2 || c.Timestamps.TSAURLs[1] != "https://b.example" || c.Timestamps.AtExport {
+		t.Fatalf("%+v", c.Timestamps)
+	}
+	if _, err := loadYAML(t, "timestamps:\n  tsa_urls: http://127.0.0.1:9999/, http://localhost:1/\n"); err != nil {
+		t.Fatalf("loopback http: %v", err)
+	}
+	cases := map[string]string{
+		"timestamps:\n  tsa_urls: http://tsa.example/\n":                                                            "must use https",
+		"timestamps:\n  tsa_urls: https://u:p@tsa.example/\n":                                                       "without user info",
+		"timestamps:\n  tsa_urls: https://a.example\n":                                                              "timestamps.min_tsa",
+		"timestamps:\n  tsa_urls: https://a.example\n  min_tsa: 9\n":                                                "from 1 to 8",
+		"timestamps:\n  scitt_url: https://ts.example\n":                                                            "timestamps.scitt_key_file",
+		"timestamps:\n  tsa_urls: " + strings.Repeat("https://a.example,", 8) + "https://a.example\n  min_tsa: 1\n": "at most 8",
+	}
+	for yml, want := range cases {
+		_, err := loadYAML(t, yml)
+		var ps *Problems
+		if !errors.As(err, &ps) || !strings.Contains(err.Error()+problemsText(ps), want) {
+			t.Errorf("%q: got %v, want %q", yml, err, want)
+		}
+	}
+}

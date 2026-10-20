@@ -201,6 +201,8 @@ def verify_bundle(rep: Report, f: BinaryIO, keys: KeySet | None, strict: bool) -
         rep.failure = e
         return keys
     st["manifest"] = "ok"
+    if br.timestamps is not None:
+        rep.warnings.append({"code": "timestamps_not_checked", "message": "This bundle carries timestamps.json; this verifier doesn't check timestamps. Use deedglass verify for them."})
     if seal_raw is None:
         rep.warnings.append({"code": "manifest_unsealed", "message": "The bundle manifest is not sealed."})
         return keys

@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -33,6 +34,7 @@ const (
 	SettingInt                         // a whole number
 	SettingBool                        // true or false
 	SettingEnum                        // one of Enum
+	SettingString                      // free text, checked by its section (TY-03: URLs and a path)
 )
 
 // Settings lists every file-only setting, in display order.
@@ -109,9 +111,22 @@ var Settings = []Setting{
 		Doc: "The longest any one statement of an undo may run.", Owner: "S23"},
 	{Path: "undo.preview_steps", Kind: SettingInt, Default: "20", Min: 1, Max: 1_000,
 		Doc: "Steps a preview lists by default (?steps_limit= asks for up to 1,000).", Owner: "S23"},
+	{Path: "timestamps.tsa_urls", Kind: SettingString, Default: "",
+		Doc: "RFC 3161 TSAs that timestamp the chain head, comma-separated https URLs (at most 8). Empty: no timestamps and no outbound call.", Owner: "TY-03"},
+	{Path: "timestamps.min_tsa", Kind: SettingInt, Default: "2", Min: 1, Max: 8,
+		Doc: "Tokens a head needs; a timestamp with fewer TSAs answering fails. At most the number of TSAs listed.", Owner: "TY-03"},
+	{Path: "timestamps.scitt_url", Kind: SettingString, Default: "",
+		Doc: "A transparency service (IETF SCITT) to register each timestamped head with, as an https base URL. Empty: none.", Owner: "TY-03"},
+	{Path: "timestamps.scitt_key_file", Kind: SettingString, Default: "",
+		Doc: "The transparency service's public key as a JWK file (EC P-256 or OKP Ed25519); needed with timestamps.scitt_url.", Owner: "TY-03"},
+	{Path: "timestamps.at_export", Kind: SettingBool, Default: "true",
+		Doc: "With timestamps configured, each tar.gz export timestamps its last deed and carries the result as timestamps.json.", Owner: "TY-03"},
+	{Path: "timestamps.timeout", Kind: SettingDuration, Default: "10s", Min: 1_000, Max: 60_000,
+		Doc: "How long one TSA or the transparency service has to answer.", Owner: "TY-03"},
 }
 
 // UndoSettings are the undo.* settings, parsed (S23).
+
 type UndoSettings struct {
 	MaxRows          int
 	MaxAge           time.Duration
@@ -119,6 +134,20 @@ type UndoSettings struct {
 	StatementTimeout time.Duration
 	PreviewSteps     int
 }
+
+// TimestampSettings are the timestamps.* settings, parsed (TY-03, ADR-112). Off unless TSAURLs or
+// SCITTURL is set.
+type TimestampSettings struct {
+	TSAURLs  []string
+	MinTSA   int
+	SCITTURL string
+	SCITTKey string // a path to the service's JWK
+	AtExport bool
+	Timeout  time.Duration
+}
+
+// Enabled reports whether any timestamp source is configured.
+func (t TimestampSettings) Enabled() bool { return len(t.TSAURLs) > 0 || t.SCITTURL != "" }
 
 // ApprovalSettings are the approvals.* settings, parsed (S22).
 type ApprovalSettings struct {
@@ -245,6 +274,7 @@ func (l *loader) parseSettings(c *Config) {
 		"approvals.link_max_ttl": &c.Approvals.LinkMaxTTL, "approvals.link_status_window": &c.Approvals.LinkStatusWindow,
 		"webhooks.timeout": &c.Webhooks.Timeout, "webhooks.disable_after": &c.Webhooks.DisableAfter,
 		"undo.max_age": &c.Undo.MaxAge, "undo.lock_timeout": &c.Undo.LockTimeout, "undo.statement_timeout": &c.Undo.StatementTimeout,
+		"timestamps.timeout": &c.Timestamps.Timeout,
 	}
 	ints := map[string]*int{
 		"gate.max_args_bytes": &c.Gate.MaxArgsBytes, "gate.max_result_bytes": &c.Gate.MaxResultBytes,
@@ -254,9 +284,13 @@ func (l *loader) parseSettings(c *Config) {
 		"approvals.context_max_bytes": &c.Approvals.ContextMaxBytes, "approvals.max_recipients": &c.Approvals.MaxRecipients,
 		"webhooks.max_attempts": &c.Webhooks.MaxAttempts, "webhooks.max_endpoints_per_org": &c.Webhooks.MaxEndpoints,
 		"undo.max_rows": &c.Undo.MaxRows, "undo.preview_steps": &c.Undo.PreviewSteps,
+		"timestamps.min_tsa": &c.Timestamps.MinTSA,
 	}
-	bools := map[string]*bool{"decoder.enabled": &c.Decoder.Enabled}
+	bools := map[string]*bool{"decoder.enabled": &c.Decoder.Enabled, "timestamps.at_export": &c.Timestamps.AtExport}
 	enums := map[string]*string{"decoder.transport": &c.Decoder.Transport}
+	var tsaURLs string
+	strs := map[string]*string{"timestamps.tsa_urls": &tsaURLs, "timestamps.scitt_url": &c.Timestamps.SCITTURL,
+		"timestamps.scitt_key_file": &c.Timestamps.SCITTKey}
 	for _, s := range Settings {
 		v, src := s.Default, SourceDefault
 		if y, ok := l.yaml[s.Path]; ok && y.s != "" {
@@ -295,8 +329,57 @@ func (l *loader) parseSettings(c *Config) {
 				continue
 			}
 			*enums[s.Path] = v
+		case SettingString:
+			*strs[s.Path] = strings.TrimSpace(v)
 		}
 	}
+	l.parseTimestamps(c, tsaURLs)
+}
+
+// parseTimestamps checks the timestamps.* text settings (TY-03): https URLs (http only to this
+// machine, for a local TSA in tests and dev), at most 8 TSAs and at least timestamps.min_tsa of
+// them, and a key file with the transparency service.
+func (l *loader) parseTimestamps(c *Config, tsaURLs string) {
+	t := &c.Timestamps
+	if tsaURLs != "" {
+		for _, u := range strings.Split(tsaURLs, ",") {
+			u = strings.TrimSpace(u)
+			if err := timestampURL(u); err != "" {
+				l.problem("timestamps.tsa_urls", fmt.Sprintf("%q %s.", u, err), "List https URLs separated by commas, for example timestamps.tsa_urls: https://tsa.example/tsr, https://tsa2.example/.")
+				return
+			}
+			t.TSAURLs = append(t.TSAURLs, u)
+		}
+		switch {
+		case len(t.TSAURLs) > 8:
+			l.problem("timestamps.tsa_urls", fmt.Sprintf("lists %d TSAs; at most 8.", len(t.TSAURLs)), "Keep the TSAs you need; two or three is usual.")
+		case t.MinTSA > len(t.TSAURLs):
+			l.problem("timestamps.min_tsa", fmt.Sprintf("is %d, but timestamps.tsa_urls lists %d TSAs.", t.MinTSA, len(t.TSAURLs)),
+				"List more TSAs, or lower timestamps.min_tsa.")
+		}
+	}
+	if t.SCITTURL != "" {
+		if err := timestampURL(t.SCITTURL); err != "" {
+			l.problem("timestamps.scitt_url", fmt.Sprintf("%q %s.", t.SCITTURL, err), "Use the service's https base URL; Deedglass posts to <url>/entries.")
+		}
+		if t.SCITTKey == "" {
+			l.problem("timestamps.scitt_key_file", "is required with timestamps.scitt_url.", "Save the service's public key as a JWK file and set timestamps.scitt_key_file to its path.")
+		}
+	}
+}
+
+// timestampURL returns why u can't be a TSA or service URL, or "".
+func timestampURL(u string) string {
+	p, err := url.Parse(u)
+	switch {
+	case err != nil || p.Host == "" || p.User != nil || p.Fragment != "":
+		return "is not an http(s) URL without user info"
+	case p.Scheme == "https":
+		return ""
+	case p.Scheme == "http" && (p.Hostname() == "localhost" || p.Hostname() == "127.0.0.1" || p.Hostname() == "::1"):
+		return ""
+	}
+	return "must use https (http only to localhost)"
 }
 
 func slicesContains(xs []string, v string) bool {
@@ -321,6 +404,8 @@ func SettingsMarkdown() string {
 			rng = "true or false"
 		case SettingEnum:
 			rng = strings.Join(s.Enum, ", ")
+		case SettingString:
+			rng = "text"
 		}
 		fmt.Fprintf(&b, "| `%s` | `%s` | %s | %s | %s |\n", s.Path, s.Default, rng, s.Doc, s.Owner)
 	}

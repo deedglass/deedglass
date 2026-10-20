@@ -164,7 +164,39 @@ def make_cases(repo: str, tmp: str) -> list[Case]:
         p = os.path.join(tmp, f"{v}-keys-without-b.json")
         open(p, "w").write(json.dumps(ks))
         cases.append((f"v{v} keys without the active key", bundle, p, True, False))
+    cases += stamped_cases(repo, tmp)
     return cases
+
+
+def stamped_cases(repo: str, tmp: str) -> list[Case]:
+    """TY-03: a bundle with timestamps.json (testdata/timestamps). The independent verifiers check
+    the file against the manifest but skip the timestamps themselves, so only bundle-level verdicts
+    are compared; deedglass verify alone checks tokens and inclusion proofs (cmd/deedglass tests)."""
+    bundle = os.path.join(repo, "testdata", "timestamps", "stamped.tar.gz")
+    keys = os.path.join(repo, "testdata", "deeds", "keys", "test-keys.json")
+    cases: list[Case] = [
+        ("timestamps stamped", bundle, keys, False, False),
+        ("timestamps stamped --strict", bundle, keys, True, False),
+        ("timestamps stamped (bundle's own keys)", bundle, None, False, False),
+    ]
+    es, mtime = read_entries(bundle)
+    for label, fn in {
+        "timestamps-edited": lambda es: _set(es, "timestamps.json", _get(es, "timestamps.json") + b" "),
+        "timestamps-removed": lambda es: [e for e in es if e[0] != "timestamps.json"],
+        "timestamps-after-deeds": lambda es: [e for e in es if e[0] != "timestamps.json"][:3] + [e for e in es if e[0] == "timestamps.json"] + [e for e in es if e[0] != "timestamps.json"][3:],
+        "timestamps-twice": lambda es: es[:3] + [es[2]] + es[3:],
+        "timestamps-unlisted-unsealed": lambda es: [e for e in _set(es, "manifest.json", _unlist_timestamps(_get(es, "manifest.json"))) if e[0] != "manifest.seal.json"],
+    }.items():
+        p = os.path.join(tmp, f"stamped-{label}.tar.gz")
+        write_bundle(fn(es), mtime, p)
+        cases.append((f"timestamps {label}", p, keys, True, False))
+    return cases
+
+
+def _unlist_timestamps(raw: bytes) -> bytes:
+    m = json.loads(raw)
+    del m["files"]["timestamps.json"]
+    return json.dumps(m, separators=(",", ":"), sort_keys=True, ensure_ascii=False).encode()
 
 
 def vector_cases(repo: str) -> list[Case]:
