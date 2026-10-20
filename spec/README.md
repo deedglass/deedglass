@@ -36,6 +36,17 @@ every release, checked on every pull request). Vectors are kept for every versio
 - The verifiers in the TypeScript and Python SDKs (`sdk/typescript/src/verify`,
   `sdk/python/src/deedglass/verify`).
 
+### Independent verifiers
+
+Two verifiers written from this text rather than ported from the Go code (TY-10), with no
+dependencies: a Python one ([`../verifiers/python/`](../verifiers/python/), standard library only)
+and a single-file JavaScript one for Node 20+ and browsers
+([`../verifiers/js/deedglass-verify.mjs`](../verifiers/js/deedglass-verify.mjs)). Both check v1 and v2
+records, Ed25519 and ML-DSA-65 seals, chains and export bundles. A CI workflow runs them beside
+`deedglass verify` on every release bundle, tampered copies of each and every vector, and fails on any
+different verdict. [`../verifiers/README.md`](../verifiers/README.md) says how to run them and what the
+text left to the vectors.
+
 If you write another verifier, open an issue or a pull request that adds it to this list with how
 you ran the vectors. An implementation outside this project is the best check that the text is
 complete.
