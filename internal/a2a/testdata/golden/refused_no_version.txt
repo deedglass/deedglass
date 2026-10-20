@@ -1,0 +1,28 @@
+== caller → proxy
+{
+  "jsonrpc": "2.0",
+  "id": 12,
+  "method": "SendMessage",
+  "params": {
+    "message": {
+      "messageId": "msg-12",
+      "role": "ROLE_USER",
+      "parts": [
+        {
+          "text": "complete"
+        }
+      ]
+    }
+  }
+}
+== gate: no action
+== peer: nothing received
+== proxy → caller: HTTP 200 application/json
+{
+  "error": {
+    "code": -32009,
+    "message": "Deedglass forwards A2A 1.0 only; this request is 0.3 (no A2A-Version header). Send A2A-Version: 1.0."
+  },
+  "id": 12,
+  "jsonrpc": "2.0"
+}

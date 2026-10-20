@@ -1,0 +1,43 @@
+== caller → proxy
+{
+  "jsonrpc": "2.0",
+  "id": 15,
+  "method": "SendMessage",
+  "params": {
+    "message": {
+      "messageId": "msg-15",
+      "role": "ROLE_USER",
+      "parts": [
+        {
+          "text": "complete"
+        }
+      ],
+      "metadata": {
+        "https://deedglass.com/a2a/delegation/v1": {
+          "chain": [
+            {
+              "kind": "person",
+              "ref": "u_5780"
+            },
+            {
+              "kind": "agent",
+              "ref": "agt_01k6w4a3d5f7h9k1n3q5s70007",
+              "name": "planner"
+            }
+          ]
+        }
+      }
+    }
+  }
+}
+== gate: no action
+== peer: nothing received
+== proxy → caller: HTTP 200 application/json
+{
+  "error": {
+    "code": -32602,
+    "message": "Invalid parameters: the delegation chain names u_5780, but this proxy acts on behalf of u_9999. Send one person."
+  },
+  "id": 15,
+  "jsonrpc": "2.0"
+}

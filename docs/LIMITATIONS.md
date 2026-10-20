@@ -679,6 +679,18 @@ TY-08, [`INSTALL_CLIENTS.md`](INSTALL_CLIENTS.md#the-shell-guard-in-each-coding-
 - **Fails open.** Without a `deedglass` on the agent's `PATH`, or when the guard can't read its input, every client runs the command unchecked (Copilot's snippet ends in `|| true` for this). In Cursor no output counts as a hook failure; Cursor lets the command go on unless `failClosed` is set, which this hook must not set.
 - **No VS Code hook, no Windows for Copilot, no Cursor CLI claim.** VS Code's docs don't name its terminal tool; the Copilot snippet has no `powershell` command; Cursor's docs don't say whether its CLI runs `beforeShellExecution`. Gemini CLI's successor, Antigravity CLI, isn't checked.
 
+## A2A delegations
+
+TY-07, [`A2A.md`](A2A.md). `deedglass a2a proxy` is opt-in; nothing goes through it unless your agent is pointed at it.
+
+- **Claimed only, for the peer's own work.** Deedglass records what the remote agent answered; it can't see what that agent did. A Checked or Proven verdict exists only for the remote agent's own tool calls that go through Deedglass, and those are separate actions.
+- **The chain is mostly reported.** Only the last two hops are Deedglass's own (the agent whose key made the call, and the peer URL the operator set). Earlier hops are what the calling agent sent, and a remote agent that doesn't pass the chain on breaks it.
+- **JSON-RPC over HTTP, A2A 1.0 only.** The gRPC and HTTP+JSON bindings, A2A 0.3 (requests without `A2A-Version`), and JSON-RPC batches are refused. The proxy's card lists only its JSON-RPC interface and drops the peer's card signatures, which no longer match the rewritten card.
+- **Not followed after the answer.** A task left working, waiting for input or for auth is sealed UNVERIFIABLE; later `GetTask` answers and push notifications are passed through or not seen, and never change the record.
+- **Approvals live in one proxy process.** A call waiting for a person runs only when the same request comes back to the same proxy; after a restart it has to be made again (a new action).
+- **No sign-in of its own.** The proxy listens on loopback and acts as one agent for whoever reaches the port. Agents whose intent mode is `required` can't use it: the proxy doesn't sign intents.
+- **Tested against a fake peer.** The goldens and `TestA2ALive` use a fake A2A agent written from the v1.0.1 spec; no third-party A2A server or SDK is in CI.
+
 ## What this page does not do
 
 It does not list bugs or missing features on the schedule. It lists limits of the design that stay true after they ship.

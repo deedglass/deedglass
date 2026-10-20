@@ -1,0 +1,19 @@
+# a2a-demo · TestA2ALive (TY-07): delegations to peer agents through deedglass a2a proxy run;
+# asking a peer to cancel a task never runs.
+deedglass: policy/v1
+name: a2a-demo
+description: Delegations to peer agents run. Cancelling a peer's task never runs.
+
+defaults:
+  decision: deny
+  reason: No rule allows this action.
+
+rules:
+  - id: no-cancel-by-delegation
+    match: { tool: "*.CancelTask", connector_type: a2a }
+    decision: deny
+    reason: Peers' tasks are cancelled by a person, not by another agent.
+
+  - id: allow-a2a-delegation
+    match: { connector_type: a2a }
+    decision: allow

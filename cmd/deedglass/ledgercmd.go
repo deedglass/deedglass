@@ -18,6 +18,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/deedglass/deedglass/cmd/deedglass/internal/ui"
+	"github.com/deedglass/deedglass/internal/a2a"
 	"github.com/deedglass/deedglass/internal/config"
 	"github.com/deedglass/deedglass/internal/deed"
 	"github.com/deedglass/deedglass/internal/deed/archive"
@@ -429,6 +430,12 @@ func runActionsShow(ctx context.Context, e *Env, args []string) error {
 	head += " " + ui.Sep + " " + time.Time(d.CreatedAt).UTC().Format("2006-01-02 15:04:05") + " UTC"
 	fmt.Fprintln(e.Stdout, st.Bold(head))
 	row := func(k, v string) { fmt.Fprintf(e.Stdout, "  %s %s\n", ui.Pad(k, 10), v) }
+	if d.Mode == "proxy" {
+		// TY-07: an A2A delegation's chain, from the person to the peer, as recorded in its arguments.
+		if c, ok := a2a.ChainFromRequest(d.Request); ok {
+			row("chain", clean(a2a.FormatChain(c)))
+		}
+	}
 	dec := decisionWord(d.Policy.Decision)
 	if d.Policy.RuleID != nil {
 		dec += " " + ui.Sep + " rule " + *d.Policy.RuleID

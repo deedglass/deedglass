@@ -1,0 +1,32 @@
+== caller → proxy
+{
+  "jsonrpc": "2.0",
+  "id": 10,
+  "method": "GetTask",
+  "params": {
+    "id": "task-1"
+  }
+}
+== gate: no action
+== peer received GetTask · A2A-Version "1.0" · A2A-Extensions "" · Authorization "Bearer peer-token-from-the-operator"
+{
+  "jsonrpc": "2.0",
+  "id": 10,
+  "method": "GetTask",
+  "params": {
+    "id": "task-1"
+  }
+}
+== proxy → caller: HTTP 200 application/json
+{
+  "jsonrpc": "2.0",
+  "id": 10,
+  "result": {
+    "id": "task-1",
+    "contextId": "ctx-1",
+    "status": {
+      "state": "TASK_STATE_COMPLETED",
+      "timestamp": "2026-10-20T10:00:00.000Z"
+    }
+  }
+}

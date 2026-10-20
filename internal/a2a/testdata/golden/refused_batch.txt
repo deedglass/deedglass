@@ -1,0 +1,30 @@
+== caller → proxy
+[
+  {
+    "jsonrpc": "2.0",
+    "id": 13,
+    "method": "SendMessage",
+    "params": {
+      "message": {
+        "messageId": "msg-13",
+        "role": "ROLE_USER",
+        "parts": [
+          {
+            "text": "complete"
+          }
+        ]
+      }
+    }
+  }
+]
+== gate: no action
+== peer: nothing received
+== proxy → caller: HTTP 200 application/json
+{
+  "error": {
+    "code": -32600,
+    "message": "Batches aren't forwarded by Deedglass. Send one request at a time."
+  },
+  "id": null,
+  "jsonrpc": "2.0"
+}

@@ -9,7 +9,8 @@ import (
 // TY-04 (DL-109, ops/strategy/TEN_YEAR.md §4 rule 1): the core knows no protocol. The Gate, the
 // Witness and deeds (every package under internal/gate, internal/witness and internal/deed, test
 // files aside) depend, directly or through anything they import, on none of:
-//   - internal/mcp and internal/mcpb (an ingress protocol);
+//   - internal/mcp and internal/mcpb (an ingress protocol), and internal/a2a (TY-07, an agent-to-agent
+//     protocol);
 //   - internal/connector/<vendor>: every package under internal/connector except the shared,
 //     vendor-free leaves in coreConnectorLeaves (the interfaces in internal/connector itself);
 //   - a coding-agent hook package: internal/shellguard (the Claude Code PreToolUse contract), and
@@ -36,6 +37,8 @@ func forbiddenForCore(path string) string {
 	switch {
 	case under(path, "internal/mcp"), under(path, "internal/mcpb"):
 		return "an MCP package"
+	case under(path, "internal/a2a"):
+		return "an A2A package"
 	case under(path, "internal/shellguard"):
 		return "a coding-agent hook package"
 	case strings.HasPrefix(path, module+"/internal/connector/"):
@@ -118,6 +121,9 @@ func TestForbiddenForCore(t *testing.T) {
 		module + "/internal/mcp/front":            true,
 		module + "/internal/mcpb":                 true,
 		module + "/internal/mcpbridge":            false, // a prefix of the name isn't the package
+		module + "/internal/a2a":                  true,
+		module + "/internal/a2a/a2atest":          true,
+		module + "/internal/a2ab":                 false,
 		module + "/internal/shellguard":           true,
 		module + "/internal/connector":            false,
 		module + "/internal/connector/schema":     false,

@@ -269,10 +269,11 @@ builds it. Hidden commands work but aren't in `deedglass help`.
 | `deedglass decoder status [--connector <name>] [--recent N] [--json]` | Connectors | Show what the decoder reads from Postgres | built |
 | `deedglass decoder drop --connector <name> [--confirm <name>] [--json]` | Connectors | Drop a connector's replication slot | built |
 | `deedglass slack manifest --base-url <https://host> [--name Deedglass] [--json]` | Connectors | Print the Slack app manifest | built |
-| `deedglass mcp wrap --connector <name> [--connector-type mcp] [--hide-denied=false] [--call-timeout 2m] [--result-mode full|digest] [--log-file <path>] -- <command> [args…]` | MCP | Run an MCP server behind Deedglass | built |
-| `deedglass mcp serve [--connector native|<name>]` | MCP | Serve Deedglass's native MCP tools | built |
-| `deedglass mcp snippet --client <claude-desktop|claude-code|cursor|windsurf|vscode> --connector <name> [--connector-type postgres] [--api-key-from-env] -- <command> [args…]  ·  --transport http --client <…> [--connector native|<name>]` | MCP | Print client config for an MCP client | built |
-| `deedglass mcp install-links [--json]` | MCP | Print every one-click install link | built |
+| `deedglass mcp wrap --connector <name> [--connector-type mcp] [--hide-denied=false] [--call-timeout 2m] [--result-mode full|digest] [--log-file <path>] -- <command> [args…]` | MCP and A2A | Run an MCP server behind Deedglass | built |
+| `deedglass mcp serve [--connector native|<name>]` | MCP and A2A | Serve Deedglass's native MCP tools | built |
+| `deedglass mcp snippet --client <claude-desktop|claude-code|cursor|windsurf|vscode> --connector <name> [--connector-type postgres] [--api-key-from-env] -- <command> [args…]  ·  --transport http --client <…> [--connector native|<name>]` | MCP and A2A | Print client config for an MCP client | built |
+| `deedglass mcp install-links [--json]` | MCP and A2A | Print every one-click install link | built |
+| `deedglass a2a proxy --connector <name> --peer <url> [--card-url <url>] [--listen 127.0.0.1:7420] [--peer-header-env H=VAR] [--on-behalf-of <ref>] [--approval-wait 10s] [--call-timeout 5m] [--result-mode full|digest]` | MCP and A2A | Run a remote A2A agent behind Deedglass | built |
 | `deedglass insights stats [--window 7d|30d | --from … --to …] [--by rule|tool|agent|none] [--agent agt_…] [--tool stripe.*] [--compare] [--json]` | Insights | Show decisions, approvals and verdicts by rule | built |
 | `deedglass insights shadow [--shadow-version pv_…] [--from …] [--to …] [--json]` | Insights | Show where the shadow policy disagrees | built |
 | `deedglass insights anomalies [--status open|acknowledged|resolved|all] [--agent agt_…] [--kind volume_spike] [--days 14] [--limit 50] [--json]` | Insights | List anomalies | built |

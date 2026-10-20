@@ -9,6 +9,16 @@ this file by `scripts/release-notes.sh`.
 
 ### Added
 
+- A2A delegations through the Gate (TY-07, ADR-113). `deedglass a2a proxy --connector <name> --peer <url>`
+  is a loopback A2A 1.0 JSON-RPC endpoint in front of one remote agent: `SendMessage`,
+  `SendStreamingMessage`, `CancelTask` and the push config writes become proxy-mode actions
+  (connector type `a2a`, now a known type in policies) that run only when allowed; the peer's answer
+  is recorded as Claimed. The delegation chain (person → agent → … → peer) travels as an A2A
+  extension in `message.metadata`, is recorded in the action's arguments (bound by
+  `request_digest`), and `deedglass actions show` prints it. Reads pass through; other methods are
+  refused. No new dependency; the deed format is unchanged. Docs: docs/A2A.md; limits:
+  docs/LIMITATIONS.md#a2a-delegations.
+
 - The shell guard in more coding agents (TY-08). `deedglass guard shell --client codex|gemini|copilot|cursor`
   reads each agent's hook input and answers in its format, from one table
   (`internal/shellguard/clients.go`); `--print-config --client <name>` prints the hook config and

@@ -1,0 +1,133 @@
+== caller → proxy
+{
+  "jsonrpc": "2.0",
+  "id": 8,
+  "method": "SendStreamingMessage",
+  "params": {
+    "message": {
+      "messageId": "msg-8",
+      "role": "ROLE_USER",
+      "parts": [
+        {
+          "text": "complete it while streaming"
+        }
+      ]
+    }
+  }
+}
+== gate submit 1: tool researcher.SendStreamingMessage · connector_type a2a · transport a2a_jsonrpc · on_behalf_of "u_5780"
+{
+  "delegation": [
+    {
+      "kind": "person",
+      "ref": "u_5780"
+    },
+    {
+      "kind": "agent",
+      "ref": "agt_01k6w4a3d5f7h9k1n3q5s70007",
+      "name": "planner"
+    },
+    {
+      "kind": "agent",
+      "ref": "http://127.0.0.1:PORT/rpc",
+      "name": "Researcher"
+    }
+  ],
+  "peer": {
+    "url": "http://127.0.0.1:PORT/rpc",
+    "name": "Researcher"
+  },
+  "request": {
+    "message": {
+      "extensions": [
+        "https://deedglass.com/a2a/delegation/v1"
+      ],
+      "messageId": "msg-8",
+      "metadata": {
+        "https://deedglass.com/a2a/delegation/v1": {
+          "chain": [
+            {
+              "kind": "person",
+              "ref": "u_5780"
+            },
+            {
+              "kind": "agent",
+              "ref": "agt_01k6w4a3d5f7h9k1n3q5s70007",
+              "name": "planner"
+            }
+          ]
+        }
+      },
+      "parts": [
+        {
+          "text": "complete it while streaming"
+        }
+      ],
+      "role": "ROLE_USER"
+    }
+  }
+}
+== peer received SendStreamingMessage · A2A-Version "1.0" · A2A-Extensions "https://deedglass.com/a2a/delegation/v1" · Authorization "Bearer peer-token-from-the-operator"
+{
+  "jsonrpc": "2.0",
+  "id": 8,
+  "method": "SendStreamingMessage",
+  "params": {
+    "message": {
+      "extensions": [
+        "https://deedglass.com/a2a/delegation/v1"
+      ],
+      "messageId": "msg-8",
+      "metadata": {
+        "https://deedglass.com/a2a/delegation/v1": {
+          "chain": [
+            {
+              "kind": "person",
+              "ref": "u_5780"
+            },
+            {
+              "kind": "agent",
+              "ref": "agt_01k6w4a3d5f7h9k1n3q5s70007",
+              "name": "planner"
+            }
+          ]
+        }
+      },
+      "parts": [
+        {
+          "text": "complete it while streaming"
+        }
+      ],
+      "role": "ROLE_USER"
+    }
+  }
+}
+== proxy → caller: HTTP 200 text/event-stream
+data: {"jsonrpc":"2.0","id":8,"result":{"task":{"id":"task-2","contextId":"ctx-1","status":{"state":"TASK_STATE_WORKING","timestamp":"2026-10-20T10:00:00.000Z"}}}}
+
+data: {"jsonrpc":"2.0","id":8,"result":{"statusUpdate":{"taskId":"task-2","contextId":"ctx-1","status":{"state":"TASK_STATE_WORKING"}}}}
+
+data: {"jsonrpc":"2.0","id":8,"result":{"task":{"id":"task-2","contextId":"ctx-1","status":{"state":"TASK_STATE_COMPLETED","timestamp":"2026-10-20T10:00:00.000Z"},"artifacts":[{"artifactId":"art-1","name":"Answer","parts":[{"text":"done"}]}]}}}
+
+== report act_01k6w4a3d5f7h9k1n3q5s7v001: succeeded · error_code "" · result_digest sha256:0774eb12ce863b3c94f8bb3b327dc156951e9e48e6e3644bcb134f9a9ec3caa8
+{
+  "task": {
+    "id": "task-2",
+    "contextId": "ctx-1",
+    "status": {
+      "state": "TASK_STATE_COMPLETED",
+      "timestamp": "2026-10-20T10:00:00.000Z"
+    },
+    "artifacts": [
+      {
+        "artifactId": "art-1",
+        "name": "Answer",
+        "parts": [
+          {
+            "text": "done"
+          }
+        ]
+      }
+    ]
+  }
+}

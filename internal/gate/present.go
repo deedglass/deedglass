@@ -58,7 +58,7 @@ func msgToolGrammar(tool string) string {
 }
 
 func msgConnectorTypeUnknown(t string) string {
-	return fmt.Sprintf("connector_type %q isn't a connector type. Use one of postgres, rest, mcp, mcp_http, sdk, github, slack, stripe, gmail, notion or fake.", clip(t, 40))
+	return fmt.Sprintf("connector_type %q isn't a connector type. Use one of postgres, rest, mcp, mcp_http, sdk, a2a, github, slack, stripe, gmail, notion, fhir or fake.", clip(t, 40))
 }
 
 func kib(n int) int { return (n + 1023) / 1024 }

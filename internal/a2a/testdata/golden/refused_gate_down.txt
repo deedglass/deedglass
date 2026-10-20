@@ -1,0 +1,35 @@
+== caller → proxy
+{
+  "jsonrpc": "2.0",
+  "id": 14,
+  "method": "SendMessage",
+  "params": {
+    "message": {
+      "messageId": "msg-14",
+      "role": "ROLE_USER",
+      "parts": [
+        {
+          "text": "complete"
+        }
+      ]
+    }
+  }
+}
+== gate: no action
+== peer: nothing received
+== proxy → caller: HTTP 200 application/json
+{
+  "error": {
+    "code": -31003,
+    "data": [
+      {
+        "@type": "type.googleapis.com/google.rpc.ErrorInfo",
+        "reason": "DEEDGLASS_UNAVAILABLE",
+        "domain": "deedglass.com"
+      }
+    ],
+    "message": "Deedglass could not be reached at http://127.0.0.1:PORT, so this was not run. Start it with \"deedglass serve\", then try again."
+  },
+  "id": 14,
+  "jsonrpc": "2.0"
+}

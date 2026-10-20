@@ -222,3 +222,24 @@ func TestReadsAndResolve(t *testing.T) {
 		t.Fatal(NewIdempotencyKey())
 	}
 }
+
+// TestSubmitOnBehalfOf (TY-07): a call's own person replaces the client's default; without one the
+// default is sent.
+func TestSubmitOnBehalfOf(t *testing.T) {
+	var got []string
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		got = append(got, r.Header.Get("Deedglass-On-Behalf-Of"))
+		w.Header().Set("Content-Type", "application/json")
+		io.WriteString(w, action("authorized", `,"next_action":{"type":"execute_at_edge"}`))
+	}))
+	defer ts.Close()
+	c := New(Options{Server: ts.URL, APIKey: "dg_test_x", OnBehalfOf: "u_default", HTTP: ts.Client()})
+	for _, obo := range []string{"u_5780", ""} {
+		if d := c.Submit(context.Background(), SubmitRequest{Tool: "peer.SendMessage", Args: json.RawMessage(`{}`), OnBehalfOf: obo}); d.Kind != Authorized {
+			t.Fatalf("%v %v", d.Kind, d.Err)
+		}
+	}
+	if strings.Join(got, ",") != "u_5780,u_default" {
+		t.Errorf("Deedglass-On-Behalf-Of sent: %q", got)
+	}
+}

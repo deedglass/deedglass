@@ -8712,7 +8712,7 @@ components:
           description: >-
             Proxy mode only: the edge's connector type (default `mcp`). `postgres` turns on the SQL
             facts for a string `args.sql`. In gateway mode it is 400 `validation_failed`.
-          enum: [postgres, rest, mcp, mcp_http, sdk, github, slack, stripe, gmail, notion, fake]
+          enum: [postgres, rest, mcp, mcp_http, sdk, a2a, github, slack, stripe, gmail, notion, fhir, fake]
         tool_digest:
           type: string
           pattern: "^sha256:[0-9a-f]{64}$"

@@ -120,6 +120,7 @@ type SubmitRequest struct {
 	ClientVersion  string          //
 	Transport      string          // mcp_stdio | mcp_http
 	IdempotencyKey string          // the same on every retry
+	OnBehalfOf     string          // overrides Options.OnBehalfOf for this call (TY-07: the delegation chain's person)
 }
 
 type submitBody struct {
@@ -151,6 +152,9 @@ func (c *Client) Submit(ctx context.Context, r SubmitRequest) Decision {
 		key = NewIdempotencyKey()
 	}
 	opts := append(c.headers(), deedglass.WithIdempotencyKey(key))
+	if r.OnBehalfOf != "" {
+		opts = append(opts, header("Deedglass-On-Behalf-Of", r.OnBehalfOf))
+	}
 	body, err := encodeSubmit(b)
 	if err != nil {
 		return Decision{Kind: Unreachable, Err: err}

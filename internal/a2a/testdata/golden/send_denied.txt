@@ -1,0 +1,91 @@
+== caller → proxy
+{
+  "jsonrpc": "2.0",
+  "id": 7,
+  "method": "SendMessage",
+  "params": {
+    "message": {
+      "messageId": "msg-7",
+      "role": "ROLE_USER",
+      "parts": [
+        {
+          "text": "delete everything in the archive"
+        }
+      ]
+    }
+  }
+}
+== gate submit 1: tool researcher.SendMessage · connector_type a2a · transport a2a_jsonrpc · on_behalf_of "u_5780"
+{
+  "delegation": [
+    {
+      "kind": "person",
+      "ref": "u_5780"
+    },
+    {
+      "kind": "agent",
+      "ref": "agt_01k6w4a3d5f7h9k1n3q5s70007",
+      "name": "planner"
+    },
+    {
+      "kind": "agent",
+      "ref": "http://127.0.0.1:PORT/rpc",
+      "name": "Researcher"
+    }
+  ],
+  "peer": {
+    "url": "http://127.0.0.1:PORT/rpc",
+    "name": "Researcher"
+  },
+  "request": {
+    "message": {
+      "extensions": [
+        "https://deedglass.com/a2a/delegation/v1"
+      ],
+      "messageId": "msg-7",
+      "metadata": {
+        "https://deedglass.com/a2a/delegation/v1": {
+          "chain": [
+            {
+              "kind": "person",
+              "ref": "u_5780"
+            },
+            {
+              "kind": "agent",
+              "ref": "agt_01k6w4a3d5f7h9k1n3q5s70007",
+              "name": "planner"
+            }
+          ]
+        }
+      },
+      "parts": [
+        {
+          "text": "delete everything in the archive"
+        }
+      ],
+      "role": "ROLE_USER"
+    }
+  }
+}
+== peer: nothing received
+== proxy → caller: HTTP 200 application/json
+{
+  "error": {
+    "code": -31001,
+    "data": [
+      {
+        "@type": "type.googleapis.com/google.rpc.ErrorInfo",
+        "reason": "DEEDGLASS_DENIED",
+        "domain": "deedglass.com",
+        "metadata": {
+          "action": "act_01k6w4a3d5f7h9k1n3q5s7v001",
+          "deed": "deed_01k6w4a3d5f7h9k1n3q5s7v001",
+          "rule": "no-deletes-by-delegation"
+        }
+      }
+    ],
+    "message": "Blocked by policy \"no-deletes-by-delegation\": Peers may not delete."
+  },
+  "id": 7,
+  "jsonrpc": "2.0"
+}
