@@ -5,6 +5,15 @@ Every change to the text in `spec/`, newest first. Dates are UTC. "Edition" is a
 
 ## Unreleased
 
+- **Erratum, 2026-10-20** (TY-10, found by writing the independent verifiers in `verifiers/` from this
+  text): `v2/DEED_SPEC.md` §11.1 check 5 doesn't say in which order the closed schema is checked, so a
+  verifier written from the text names a different `field` for some records with two problems. The
+  order the vectors pin: the envelope's members, then its members' types (a v2 envelope's `seals`
+  completely); the body's members, then its members' types, each nested object's members as it is
+  read; the body's values, `org` after `seal_key_id`/`seal_keys`; then `body_hash`, then (v1) `seal`
+  and `seal_key_id`. And the `seq` a failure names is the body's `seq` whenever it is a positive
+  integer, even when the schema fails; null for `malformed` and for a wrong `object`.
+  `verifiers/README.md` has the full order. No verifier's behaviour changes.
 - **The dual seal** (TY-02, ADR-109), in `v2/DEED_SPEC.md`: ML-DSA-65 (FIPS 204, pure, empty context)
   in the algorithm table (§7.4), RFC 9964 AKP keys in `keys.json` (§10.1), adding an ML-DSA-65 key
   beside Ed25519 (§10.4), and COSE −49 for v2 records (§12). Vectors: dual-sealed records, a chain

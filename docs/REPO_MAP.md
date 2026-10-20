@@ -90,6 +90,7 @@ Last checked: S28, 2026-10-04 (S01 wrote it). Each session that changes the layo
 | `docs/` | yes | stubs | per page | Living docs; `docs/adr/` mirrors the ADR index; `docs/v0/` holds V0 references |
 | `spec/` | yes (TY-12) | built | TY-12 | The record spec under CC-BY-4.0: `v1/DEED_SPEC.md`, `v1/BUNDLE_FORMAT.md`, `README.md`, `CHANGELOG.md`, `LICENSE` |
 | `corpus/` | yes (TY-13) | built | TY-13 | The intent-vs-effect scenarios under CC-BY-4.0 (`make corpus`) |
+| `verifiers/` | yes (TY-10) | built | TY-10 | Independent verifiers written from `spec/`, no dependencies: `python/deedglass_verify` and the single-file `js/deedglass-verify.mjs`; `crosscheck.py` compares them with `deedglass verify` (`make independent-verifiers`, workflow `independent-verifiers`) |
 | `internal/` | yes | see above | | Go packages |
 | `scripts/` | yes | built | S01 | `banned_words.sh`, `rename_guard.sh`, integration scripts; `dev-pg.sh` (a Docker-free dev Postgres, S06); `demo/flip-byte.sh` and `demo/tamper-clip.sh` (S06's recording); `insights_e2e.sh` (S28: simulate, detect, generate, accept, promote and verify on a throwaway stack) |
 | `sql/` | yes | kept from V0 | S02, S17 | V0 customer-side SQL `001` to `004`. S02 moves control-plane migrations to `internal/store/migrations` |

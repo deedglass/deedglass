@@ -9,7 +9,7 @@ BI       := github.com/deedglass/deedglass/internal/buildinfo
 GCFLAGS  := $(shell scripts/gcflags.sh)
 LDFLAGS  := -s -w -X $(BI).Version=$(VERSION) -X $(BI).Commit=$(COMMIT) -X $(BI).Modified=$(MODIFIED) -X $(BI).Date=$(DATE)
 
-.PHONY: api-gz embed-gz mcpb demo-scan-golden packs-check docs docs-dev docs-check docs-snippets docs-lighthouse py-ci py-build py-examples web-install web-tokens web-build web-test web-e2e web-lighthouse web-dev build-only ops-build bench-undo all help ci build test test-short vet fmt fmt-check tidy-check testdata-check release-bundles rename-guard banned-words nocgo \
+.PHONY: api-gz embed-gz mcpb demo-scan-golden packs-check docs docs-dev docs-check docs-snippets docs-lighthouse py-ci py-build py-examples web-install web-tokens web-build web-test web-e2e web-lighthouse web-dev build-only ops-build bench-undo all help ci build test test-short vet fmt fmt-check tidy-check testdata-check release-bundles independent-verifiers rename-guard banned-words nocgo \
 	integration matrix fuzz bench workflows-check npm-dry-run release-check cloud-smoke bench-micro bench-quick bench-soak bench-check bench-report bench-store bench-deed cover clean \
 	dev dev-down dev-reset dev-logs run docker bench-http bench-verify \
 	web-verify-install web-verify-test sdk-ts sdk-ts-it sdk-sync-verify sdk-runtime sdk-examples web-verify-build web-verify-serve gencopy genmark bench-mark bench-ledger bench-stop bench-intents bench-gate bench-witness policy-test \
@@ -61,6 +61,10 @@ testdata-check: ## (ci) verify the offline test vectors
 
 release-bundles: ## (ci) TY-11, the 2046 test: every release's bundle in testdata/release-bundles verifies with this tree's CLI (the browser half runs in web-verify-test); a new release adds its own: scripts/release-bundles.sh add vX.Y.Z
 	scripts/release-bundles.sh verify
+
+independent-verifiers: ## TY-10: the Python and JS verifiers (verifiers/, written from spec/) reach the same verdict as this tree's CLI on every release bundle, tampered copies and every deed vector (CI workflow independent-verifiers, not required yet)
+	go build -o .tmp/deedglass-crosscheck ./cmd/deedglass
+	python3 verifiers/crosscheck.py .tmp/deedglass-crosscheck
 
 rename-guard: ## (ci) fail on any retired identifier (docs/NAMING.md, ADR-012)
 	@scripts/rename_guard.sh
