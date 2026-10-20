@@ -27,6 +27,7 @@ src/content/docs/reference/connectors/notion.md
 src/content/docs/reference/connectors/fhir.md
 src/content/docs/guides/fhir-server.md
 src/content/docs/guides/healthcare-fhir-pack.md
+src/content/docs/guides/medplum.md
 src/content/docs/reference/phi-mode.md
 src/content/docs/reference/exports.md
 src/content/docs/reference/exports/

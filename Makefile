@@ -154,6 +154,13 @@ mock-orders: ## S16: the mock orders API on 127.0.0.1:8090 (MOCK_ORDERS_TOKEN re
 fhir-proven-it: ## HC-P05: TestFHIRProvenLive, Proven (L2) against HAPI FHIR JPA and Medplum, each on PostgreSQL 18 in Docker (pinned images, free ports, witness roles and publications), on a throwaway control-plane PG; containers removed after (KEEP=1 keeps them)
 	scripts/fhir_proven.sh
 
+.PHONY: medplum-example medplum-example-it
+medplum-example: ## The Medplum example (examples/medplum): Medplum 5.2.6 on PG 18 in Docker, a serve from this tree, an agent's create that Matches, a stored-but-different write flagged, an update a person approves, and a Medplum Bot handler; everything removed after (KEEP=1 keeps it)
+	examples/medplum/run.sh
+
+medplum-example-it: ## TestMedplumExample: make medplum-example as a test that checks every outcome the README shows (skips without Docker; not in CI)
+	DEEDGLASS_IT_MEDPLUM_EXAMPLE=1 $(GO) test -count=1 -v -timeout 15m ./examples/medplum
+
 .PHONY: fhir-spike
 fhir-spike: ## HC-P05: the spike as a probe (ADR-105): HAPI FHIR JPA on PostgreSQL in Docker (pinned images, free port), checks what the server stores to tie its rows to an action; fails when a finding stops holding
 	scripts/fhir_spike.sh
