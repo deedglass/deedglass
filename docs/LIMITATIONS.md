@@ -10,7 +10,7 @@ What Deedglass does not do, stated plainly. Start with the known limits in v1; t
 - **L1 is the target's own view.** "Stripe says the refund exists" is not "the refund was a good idea".
 - **Seal keys are per deployment.** One set of seal keys signs every org's deeds. Per-org seal keys are v2.
 - **No test or live mode for connectors.** `dg_test_` and `dg_live_` API keys are recorded on each action (`livemode`) but not enforced yet (S08 section below).
-- **COSE is an encoding, not a transparency log.** The optional COSE_Sign1 output is a signed statement from your Deedglass instance. It is not an RFC 9942 transparency-log entry, and deeds are not anchored in any external log in v1.
+- **COSE is an encoding, not a transparency log.** The optional COSE_Sign1 output is a signed statement from your Deedglass instance. It is not an RFC 9942 transparency-log entry. Records themselves are not anchored in any external log; opt-in head timestamps can anchor the chain's head ([Head timestamps](#head-timestamps)).
 - **Deeds hold digests, not payloads.** A deed shows that a request with a given digest was handled. You need the original request to match it.
 - **Unknown stays unknown.** When Deedglass cannot tell whether a tool ran, the verdict is UNVERIFIABLE.
 - **Authorized is not the same as wise.** A hijacked agent with a valid key and an in-policy action is allowed. Policies, budgets and approvals narrow this; they do not close it.
@@ -655,6 +655,20 @@ it refuses rather than guess:
   connector's Proven check and observe mode.
 - **Turning it off doesn't bring payloads back**, and the setting is API-only (`PATCH /v1/org`) for
   now; the Console doesn't show it.
+
+## Head timestamps
+
+Opt-in (TY-03, [`TIMESTAMPS.md`](TIMESTAMPS.md)); off unless `timestamps.tsa_urls` or `timestamps.scitt_url` is set.
+
+- **Only what was timestamped, and only from then on.** A timestamp shows that one head (seq, id, body hash) existed by its time. Records sealed after the last timestamp can be removed or rewritten without a trace; timestamp often (`--every`) to keep that window short.
+- **Only for a reader who has the timestamp.** `verify` compares the records with the timestamps it is given. Someone who can delete the records can usually delete a `timestamps.json` kept beside them, and a bundle's own copy disappears with the bundle. Keep copies where the server's operator can't rewrite them, or register heads with a transparency service.
+- **A TSA vouches for a time, not for the TSA.** Without `--tsa-roots`, a token is checked against the chain it carries: that shows the file is intact, not who signed it. Choose TSAs run by different organisations; `min_tsa` (default 2) needs that many tokens per head. A TSA whose key is stolen, or that backdates, can give a false time.
+- **Transparency services: one profile, checked against a local fake.** The inclusion proof is checked as RFC 9942's RFC9162_SHA256 with the leaf `SHA-256(0x00 ‖ signed statement)`, and registration is one `POST <url>/entries` that answers 201 with the proof at once. A service that defines its leaf differently, registers asynchronously (202 and a later fetch), or signs with an algorithm other than ES256 or EdDSA doesn't work yet. CI tests against a fake service on loopback; no live service has been tried.
+- **RFC 3161 coverage.** Tokens signed with RSA PKCS#1 v1.5, ECDSA (SHA-256/384/512) or Ed25519, with signed attributes and an ESS signing-cert attribute, are checked; RSA-PSS, SHA-1 and tokens without signed attributes are refused. Revocation of a TSA's cert (CRL, OCSP) is not checked. Tested against a fake TSA and against tokens from OpenSSL 3.6's TSA; no public TSA in CI (no network in tests).
+- **The signed head uses the Ed25519 seal key.** The transparency-service statement is sealed with the issuer's Ed25519 key only, not ML-DSA-65 (ADR-109). It is checked by that key's id in the key set; a revoked key fails it.
+- **A failed timestamp never blocks an export.** When too few TSAs answer, the export is written without `timestamps.json` and says why (`deeds export` prints the reason; the server logs `export_not_timestamped`).
+- **The independent verifiers skip timestamps.** `verifiers/python` and `verifiers/js` accept a bundle with `timestamps.json` and check its bytes against the manifest, but don't check tokens or proofs or compare heads. Older Deedglass builds and older copies of those verifiers refuse such a bundle as `bundle_invalid` (an unknown entry).
+- **Each head costs a request per TSA.** `--every` asks only when the head has moved; an export asks once.
 
 ## What this page does not do
 

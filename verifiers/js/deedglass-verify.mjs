@@ -1227,8 +1227,10 @@ export async function verifyDeeds(lines, keys, { strict = false } = {}) {
 
 // ---- export bundles (spec/v1/BUNDLE_FORMAT.md) ---------------------------------------------------------
 
-const NAMES = ['README.txt', 'keys.json', 'deeds.jsonl', 'manifest.json', 'manifest.seal.json'];
-const LIMITS = { 'README.txt': 64 << 10, 'keys.json': 1 << 20, 'deeds.jsonl': 8 * 2 ** 30, 'manifest.json': 64 << 10, 'manifest.seal.json': 4 << 10 };
+// Edition 2 adds an optional timestamps.json between keys.json and deeds.jsonl (spec/v2/BUNDLE_FORMAT.md
+// section 9). It is checked against the manifest like any file; its timestamps are not checked here.
+const NAMES = ['README.txt', 'keys.json', 'timestamps.json', 'deeds.jsonl', 'manifest.json', 'manifest.seal.json'];
+const LIMITS = { 'README.txt': 64 << 10, 'keys.json': 1 << 20, 'timestamps.json': 1 << 20, 'deeds.jsonl': 8 * 2 ** 30, 'manifest.json': 64 << 10, 'manifest.seal.json': 4 << 10 };
 const invalid = (detail) => new VerifyError('bundle_invalid', { detail });
 
 /** A byte stream over the decompressed bundle, refused past the sum of the limits (a gzip bomb). */
@@ -1309,6 +1311,7 @@ class TarReader {
   constructor(inf) {
     this.inf = inf;
     this.done = false;
+    this.pending = null; // an entry read ahead (after keys.json, when there is no timestamps.json)
   }
   async next() {
     let pax = {};
@@ -1365,19 +1368,25 @@ function parsePax(data) {
   return out;
 }
 
-async function bundleEntry(tar, seen, want) {
+async function bundleEntry(tar, seen, want, optional = null) {
+  if (tar.pending) {
+    const p = tar.pending;
+    tar.pending = null;
+    if (p.name !== want) throw invalid(`The files in this bundle are out of order (${p.name}).`);
+    return p;
+  }
   const e = await tar.next();
   if (e === null) {
     if (want === null || want === 'manifest.seal.json') return null;
-    throw invalid(`This bundle has no ${want}.`);
+    throw invalid(`This bundle has no ${optional || want}.`);
   }
   const n = e.name;
   if (n.includes('/') || n.includes('\\') || n.includes('..') || n.startsWith('.')) throw invalid(`This bundle contains an entry named "${n}".`);
   if (!NAMES.includes(n)) throw invalid(`This bundle contains an unexpected entry "${n}".`);
   if (!e.regular) throw invalid(`${n} in this bundle is not a regular file.`);
   if (seen.has(n)) throw invalid(`This bundle contains ${n} twice.`);
-  if (want === null) throw invalid(`This bundle contains a sixth entry "${n}".`);
-  if (n !== want) throw invalid(`The files in this bundle are out of order (${n}).`);
+  if (want === null) throw invalid(`This bundle contains an entry after its manifest seal "${n}".`);
+  if (n !== want && n !== optional) throw invalid(`The files in this bundle are out of order (${n}).`);
   if (e.size > LIMITS[n]) throw invalid(`${n} in this bundle is larger than its limit.`);
   seen.set(n, e.size);
   return e;
@@ -1408,11 +1417,14 @@ async function checkManifest(raw, files, lines, obs) {
   const a = closedM(c.anchor, ['kind', 'seq', 'body_hash'], 'anchor');
   const h = closedM(c.head, ['seq', 'deed_id', 'body_hash'], 'head');
   const k = closedM(mf.kinds, ['action', 'admin', 'amendment'], 'kinds');
-  const f = closedM(mf.files, ['README.txt', 'keys.json', 'deeds.jsonl'], 'files');
+  const stamped = 'timestamps.json' in files;
+  const f = closedM(mf.files, stamped ? ['README.txt', 'keys.json', 'deeds.jsonl', 'timestamps.json'] : ['README.txt', 'keys.json', 'deeds.jsonl'], 'files');
   const fr = closedM(f['README.txt'], ['bytes', 'sha256'], 'files');
   const fk = closedM(f['keys.json'], ['bytes', 'sha256'], 'files');
   const fd = closedM(f['deeds.jsonl'], ['bytes', 'sha256', 'lines'], 'files');
-  for (const e of [fr, fk, fd]) if (!nat(e.bytes) || !m(/^[0-9a-f]{64}$/, e.sha256)) throw invalid("The bundle manifest's file list is not valid.");
+  const listed = [['README.txt', fr], ['keys.json', fk], ['deeds.jsonl', fd]];
+  if (stamped) listed.push(['timestamps.json', closedM(f['timestamps.json'], ['bytes', 'sha256'], 'files')]);
+  for (const [, e] of listed) if (!nat(e.bytes) || !m(/^[0-9a-f]{64}$/, e.sha256)) throw invalid("The bundle manifest's file list is not valid.");
   if (!nat(fd.lines) || !Object.values(k).every(nat)) throw invalid("The bundle manifest's counts are not valid.");
   if (![r.first_seq, r.last_seq, r.count].every(nat) || !validTime(r.from) || !validTime(r.to)) throw invalid("The bundle manifest's range is not valid.");
   if (r.count !== r.last_seq - r.first_seq + 1 || h.seq !== r.last_seq) throw invalid("The bundle manifest's range does not add up.");
@@ -1421,7 +1433,7 @@ async function checkManifest(raw, files, lines, obs) {
     if (a.kind !== 'genesis' || a.seq !== 0 || a.body_hash !== (await genesis(mf.org))) throw invalid("The bundle manifest's anchor is not the org's genesis.");
   } else if (a.kind !== 'deed' || a.seq !== r.first_seq - 1) throw invalid("The bundle manifest's anchor is not valid.");
   if (k.action + k.admin + k.amendment !== r.count) throw invalid("The bundle manifest's kinds do not add up.");
-  for (const [name, e] of [['README.txt', fr], ['keys.json', fk], ['deeds.jsonl', fd]]) {
+  for (const [name, e] of listed) {
     if (files[name].bytes !== e.bytes || files[name].sha256 !== e.sha256) throw invalid(`${name} differs from the bundle manifest.`);
   }
   if (lines !== fd.lines) throw invalid('deeds.jsonl holds another number of lines than the bundle manifest says.');
@@ -1474,6 +1486,12 @@ export async function verifyBundle(input, keys = null, { strict = false, rep = n
     try {
       readme = await small('README.txt');
       keysBytes = await small('keys.json');
+      const next = await bundleEntry(tar, seen, 'timestamps.json', 'deeds.jsonl');
+      if (next.name === 'timestamps.json') {
+        const data = (await inf.read(next.size)).slice();
+        await tar.skipPad(next.size);
+        files['timestamps.json'] = { bytes: next.size, sha256: await sha256hex(data) };
+      } else tar.pending = next;
     } catch (e) {
       if (e instanceof VerifyError) return (rep.failure = e), rep;
       throw e;
@@ -1527,6 +1545,9 @@ export async function verifyBundle(input, keys = null, { strict = false, rep = n
       throw e;
     }
     st.manifest = 'ok';
+    if (files['timestamps.json']) {
+      rep.warnings.push({ code: 'timestamps_not_checked', message: "This bundle carries timestamps.json; this verifier doesn't check timestamps. Use deedglass verify for them." });
+    }
     if (sealRaw === null) {
       rep.warnings.push({ code: 'manifest_unsealed', message: 'The bundle manifest is not sealed.' });
       return rep;

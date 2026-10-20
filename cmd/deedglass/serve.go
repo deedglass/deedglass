@@ -793,6 +793,9 @@ func newLedger(db *store.DB, signer deed.Signer, cfg *config.Config, log *slog.L
 	if signer == nil {
 		return ledger.New(db, nil, nil, opts...)
 	}
+	if st := stamperFor(cfg, signer, log); st != nil && cfg.Timestamps.AtExport {
+		opts = append(opts, ledger.WithStamper(st)) // TY-03: each tar.gz export timestamps its last deed
+	}
 	if pq := pqSignerFor(signer); pq != nil {
 		opts = append(opts, ledger.WithPQSigner(pq))
 		return ledger.New(db, deed.NewSealer(signer, deed.WithExtraSigners(pq)), signer, opts...)

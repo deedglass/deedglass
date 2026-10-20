@@ -26,6 +26,7 @@ type Reader struct {
 	entries int
 
 	readme, keys []byte
+	timestamps   []byte // nil when the bundle has no timestamps.json
 	deeds        *deedsReader
 	manifest     []byte
 }
@@ -51,8 +52,30 @@ func Open(r io.Reader, lim Limits) (*Reader, error) {
 	if rd.keys, err = rd.small(NameKeys); err != nil {
 		return nil, err
 	}
-	if _, err := rd.next(NameDeeds); err != nil {
+	// timestamps.json is optional and comes before the deeds, so a reader knows which heads to
+	// compare while it streams (TY-03).
+	h, err := rd.tr.Next()
+	switch {
+	case errors.Is(err, io.EOF):
+		return nil, invalid("This bundle has no %s.", NameDeeds)
+	case err != nil:
+		return nil, rd.damaged(err)
+	}
+	if err := rd.check(h); err != nil {
 		return nil, err
+	}
+	if h.Name == NameTimestamps {
+		if rd.timestamps, err = rd.read(h); err != nil {
+			return nil, err
+		}
+		if rd.timestamps == nil {
+			rd.timestamps = []byte{}
+		}
+		if _, err := rd.next(NameDeeds); err != nil {
+			return nil, err
+		}
+	} else if h.Name != NameDeeds {
+		return nil, invalid("This bundle's files are out of order: found %q where %s should be.", h.Name, NameDeeds)
 	}
 	rd.deeds = &deedsReader{r: rd.tr, sum: sha256.New(), damaged: rd.damaged}
 	return rd, nil
@@ -63,6 +86,10 @@ func (r *Reader) README() []byte { return r.readme }
 
 // Keys returns keys.json as it is in the bundle (the exporter's keys: integrity, not authenticity).
 func (r *Reader) Keys() []byte { return r.keys }
+
+// Timestamps returns timestamps.json as it is in the bundle, or nil when there is none. Its bytes
+// are checked against the manifest in Finish; stamp.ParseFile reads them.
+func (r *Reader) Timestamps() []byte { return r.timestamps }
 
 // Deeds streams deeds.jsonl, hashing as it goes.
 func (r *Reader) Deeds() io.Reader { return r.deeds }
@@ -117,17 +144,31 @@ func (r *Reader) Finish() (*Manifest, *deed.BundleSeal, error) {
 			if err := r.check(h); err != nil {
 				return nil, nil, err
 			}
-			return nil, nil, invalid("This bundle has more than 5 entries.")
+			return nil, nil, invalid("This bundle has more than %d entries.", r.maxEntries())
 		}
 	}
 	// Read to the end of the gzip stream so its checksum is checked.
 	if _, err := io.Copy(io.Discard, r.cap); err != nil {
 		return nil, nil, r.damaged(err)
 	}
-	for _, f := range []struct {
+	small := []struct {
 		name string
 		b    []byte
-	}{{NameREADME, r.readme}, {NameKeys, r.keys}} {
+	}{{NameREADME, r.readme}, {NameKeys, r.keys}}
+	_, listed := m.Files[NameTimestamps]
+	switch {
+	case r.timestamps != nil:
+		small = append(small, struct {
+			name string
+			b    []byte
+		}{NameTimestamps, r.timestamps})
+		if !listed {
+			return nil, nil, invalid("This bundle's manifest does not list %s.", NameTimestamps)
+		}
+	case listed:
+		return nil, nil, invalid("This bundle has no %s, but its manifest lists one.", NameTimestamps)
+	}
+	for _, f := range small {
 		sum := sha256.Sum256(f.b)
 		if want := m.Files[f.name]; want.Bytes != int64(len(f.b)) || want.SHA256 != hex.EncodeToString(sum[:]) {
 			return nil, nil, invalid("This bundle's manifest does not match %s.", f.name)
@@ -198,13 +239,21 @@ func (r *Reader) check(h *tar.Header) error {
 		return invalid("This bundle contains %q, which is not a regular file.", name)
 	case r.seen[name]:
 		return invalid("This bundle contains %q twice.", name)
-	case r.entries > len(order):
-		return invalid("This bundle has more than 5 entries.")
+	case r.entries > r.maxEntries():
+		return invalid("This bundle has more than %d entries.", r.maxEntries())
 	case h.Size < 0 || h.Size > r.lim.of(name):
 		return tooLarge(name, r.lim.of(name))
 	}
 	r.seen[name] = true
 	return nil
+}
+
+// maxEntries is 5, or 6 for a bundle with timestamps.json.
+func (r *Reader) maxEntries() int {
+	if r.timestamps != nil || r.seen[NameTimestamps] {
+		return 6
+	}
+	return 5
 }
 
 func (r *Reader) damaged(err error) error {

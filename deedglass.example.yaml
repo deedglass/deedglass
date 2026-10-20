@@ -163,3 +163,16 @@
 #   max_attempts: 8
 #   disable_after: 72h
 #   max_endpoints_per_org: 16
+
+# Head timestamps (docs/TIMESTAMPS.md, TY-03). File-only and off by default: with no TSA and no
+# transparency service listed, nothing is timestamped and no request goes out.
+# timestamps:
+#   # RFC 3161 TSAs, comma-separated. Each timestamp asks every one; min_tsa must answer.
+#   tsa_urls: https://tsa-one.example/tsr, https://tsa-two.example/tsr
+#   min_tsa: 2
+#   # Optional: a transparency service (IETF SCITT) and its public key as a JWK file.
+#   scitt_url: https://ts.example
+#   scitt_key_file: .deedglass/scitt-key.jwk
+#   # Each tar.gz export timestamps its last deed and carries timestamps.json.
+#   at_export: true
+#   timeout: 10s

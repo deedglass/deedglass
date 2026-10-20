@@ -5,6 +5,14 @@ Every change to the text in `spec/`, newest first. Dates are UTC. "Edition" is a
 
 ## Unreleased
 
+- **Head timestamps** (TY-03, ADR-112), in `v2/BUNDLE_FORMAT.md` §9: an optional `timestamps.json`
+  between `keys.json` and `deeds.jsonl`, listed in the manifest, holding chain heads with RFC 3161
+  tokens and transparency-service registrations (RFC 9943 Signed Statement, RFC 9942
+  RFC9162_SHA256 inclusion proof); how a reader checks them, and how heads are compared with the
+  deeds: `timestamp_invalid`, `timestamp_mismatch`, `chain_tail_missing` (exit 1). A bundle without
+  the file is unchanged byte for byte, and no record format changes. Reference vectors: the
+  `stamped` release-bundle-style fixture in `testdata/timestamps/`, and tokens from OpenSSL's TSA in
+  `internal/deed/stamp/testdata/openssl/`.
 - **Erratum, 2026-10-20** (TY-10, found by writing the independent verifiers in `verifiers/` from this
   text): `v2/DEED_SPEC.md` §11.1 check 5 doesn't say in which order the closed schema is checked, so a
   verifier written from the text names a different `field` for some records with two problems. The

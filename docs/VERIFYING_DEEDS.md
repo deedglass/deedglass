@@ -132,6 +132,11 @@ bundle manifest names the head (the last deed's seq and `body_hash`) and the cou
 fails. And you can keep the head of every export you receive (`-v` and `--json` show it, and
 `deedglass ledger check` prints the live head, S06) and compare the next export against it.
 
+Neither helps when the exporter itself cuts the chain and seals a new manifest. For that, the issuer
+can timestamp heads with TSAs and a transparency service you choose (opt-in, TY-03): keep the
+`timestamps.json` and pass it with `--timestamps`, and a head the export no longer reaches is
+`chain_tail_missing` ([`TIMESTAMPS.md`](TIMESTAMPS.md)).
+
 ## 8. Verify in the browser
 
 `web/verify` is the same check as a page: paste a deed or drop `deeds.jsonl`, paste or fetch the

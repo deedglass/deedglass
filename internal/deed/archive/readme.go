@@ -21,18 +21,25 @@ func readme(h Header) []byte {
 			b.WriteByte('\n')
 		}
 	}
+	inside := []string{
+		"  deeds.jsonl          one sealed deed per line, in seq order",
+		"  keys.json            the seal keys that sealed them",
+	}
+	if h.Timestamps != nil {
+		inside = append(inside, "  timestamps.json      independent timestamps of the chain head")
+	}
+	inside = append(inside,
+		"  manifest.json        counts, file hashes and the chain head",
+		"  manifest.seal.json   the exporter's seal over manifest.json")
 	w("Deedglass deed bundle",
 		"",
 		count+" "+plural(h.LastSeq-h.FirstSeq+1, "deed", "deeds")+" sealed by "+issuer,
 		"org "+h.Org+" · seq "+deed.FormatCount(h.FirstSeq)+" to "+deed.FormatCount(h.LastSeq),
 		dates,
 		"",
-		"What is inside",
-		"  deeds.jsonl          one sealed deed per line, in seq order",
-		"  keys.json            the seal keys that sealed them",
-		"  manifest.json        counts, file hashes and the chain head",
-		"  manifest.seal.json   the exporter's seal over manifest.json",
-		"",
+		"What is inside")
+	w(inside...)
+	w("",
 		"Check it (no account, no network except fetching the keys)",
 		"  deedglass verify <this file> \\",
 		"    --keys "+issuer+"/.well-known/deedglass/keys.json",

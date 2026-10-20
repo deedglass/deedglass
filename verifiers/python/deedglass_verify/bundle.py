@@ -1,4 +1,8 @@
-"""Export bundles (spec/v1/BUNDLE_FORMAT.md, unchanged in edition 2): reading and the manifest."""
+"""Export bundles (spec/v1/BUNDLE_FORMAT.md, and edition 2's optional timestamps.json): reading and the manifest.
+
+timestamps.json (spec/v2/BUNDLE_FORMAT.md section 9) is read in its place and checked against the
+manifest like any other file, but its timestamps are not checked: this verifier skips them.
+"""
 
 from __future__ import annotations
 
@@ -17,10 +21,11 @@ from .deed import DIGEST, IDS, genesis
 from .errors import VerifyError
 from .keys import KeySet, b64url_decode, valid_time
 
-NAMES = ["README.txt", "keys.json", "deeds.jsonl", "manifest.json", "manifest.seal.json"]
+NAMES = ["README.txt", "keys.json", "timestamps.json", "deeds.jsonl", "manifest.json", "manifest.seal.json"]
 LIMITS = {
     "README.txt": 64 << 10,
     "keys.json": 1 << 20,
+    "timestamps.json": 1 << 20,
     "deeds.jsonl": 8 << 30,
     "manifest.json": 64 << 10,
     "manifest.seal.json": 4 << 10,
@@ -87,11 +92,29 @@ class BundleReader:
         self.sizes: dict[str, int] = {}
         self.sha: dict[str, str] = {}
         self.deed_lines = 0
+        self._pending: tarfile.TarInfo | None = None
         self.readme = self._small("README.txt")
         self.keys_bytes = self._small("keys.json")
+        # Edition 2: an optional timestamps.json comes next (section 9); otherwise deeds.jsonl.
+        self.timestamps: bytes | None = None
+        m = self._member("timestamps.json", optional="deeds.jsonl")
+        assert m is not None
+        if m.name == "timestamps.json":
+            data = self._read(m)
+            self.files["timestamps.json"] = data
+            self.sha["timestamps.json"] = hashlib.sha256(data).hexdigest()
+            self.timestamps = data
+        else:
+            self._pending = m
 
-    def _member(self, want: str | None) -> tarfile.TarInfo | None:
-        """The next entry, which must be `want`; manifest.seal.json is optional; None wants nothing."""
+    def _member(self, want: str | None, optional: str | None = None) -> tarfile.TarInfo | None:
+        """The next entry, which must be `want` (or `optional`, when want may be absent);
+        manifest.seal.json is optional; None wants nothing."""
+        if self._pending is not None:
+            m, self._pending = self._pending, None
+            if m.name != want:
+                raise invalid(f"The files in this bundle are out of order ({m.name}).")
+            return m
         try:
             m = next(self._it, None)
         except VerifyError:
@@ -101,7 +124,7 @@ class BundleReader:
         if m is None:
             if want in (None, "manifest.seal.json"):
                 return None
-            raise invalid(f"This bundle has no {want}.")
+            raise invalid(f"This bundle has no {optional or want}.")
         name = m.name
         if "/" in name or "\\" in name or ".." in name or name.startswith("."):
             raise invalid(f'This bundle contains an entry named "{name}".')
@@ -112,8 +135,8 @@ class BundleReader:
         if name in self.sizes:
             raise invalid(f"This bundle contains {name} twice.")
         if want is None:
-            raise invalid(f'This bundle contains a sixth entry "{name}".')
-        if name != want:
+            raise invalid(f'This bundle contains an entry after its manifest seal "{name}".')
+        if name != want and name != optional:
             raise invalid(f"The files in this bundle are out of order ({name}).")
         if m.size > LIMITS[name]:
             raise invalid(f"{name} in this bundle is larger than its limit.")
@@ -212,11 +235,17 @@ def check_manifest(raw: bytes, br: BundleReader, obs: Observed) -> dict[str, Any
     a = _closed(c["anchor"], ["kind", "seq", "body_hash"], "anchor")
     h = _closed(c["head"], ["seq", "deed_id", "body_hash"], "head")
     k = _closed(m["kinds"], ["action", "admin", "amendment"], "kinds")
-    f = _closed(m["files"], ["README.txt", "keys.json", "deeds.jsonl"], "files")
+    names = ["README.txt", "keys.json", "deeds.jsonl"]
+    if br.timestamps is not None:
+        names.append("timestamps.json")
+    f = _closed(m["files"], names, "files")
     fr = _closed(f["README.txt"], ["bytes", "sha256"], "files")
     fk = _closed(f["keys.json"], ["bytes", "sha256"], "files")
     fd = _closed(f["deeds.jsonl"], ["bytes", "sha256", "lines"], "files")
-    for e in (fr, fk, fd):
+    listed = [("README.txt", fr), ("keys.json", fk), ("deeds.jsonl", fd)]
+    if br.timestamps is not None:
+        listed.append(("timestamps.json", _closed(f["timestamps.json"], ["bytes", "sha256"], "files")))
+    for _, e in listed:
         if not _nat(e["bytes"]) or not isinstance(e["sha256"], str) or not HEX64.fullmatch(e["sha256"]):
             raise invalid("The bundle manifest's file list is not valid.")
     if not _nat(fd["lines"]) or not all(_nat(k[x]) for x in k):
@@ -236,7 +265,7 @@ def check_manifest(raw: bytes, br: BundleReader, obs: Observed) -> dict[str, Any
         raise invalid("The bundle manifest's kinds do not add up.")
 
     # The files.
-    for name, e in (("README.txt", fr), ("keys.json", fk), ("deeds.jsonl", fd)):
+    for name, e in listed:
         if br.sizes.get(name) != e["bytes"] or br.sha.get(name) != e["sha256"]:
             raise invalid(f"{name} differs from the bundle manifest.")
     if br.deed_lines != fd["lines"]:

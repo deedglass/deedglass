@@ -87,3 +87,7 @@ scripts/release-notes.sh::certificate::third-party tool flag or feature name (co
 CONTRIBUTING.md::certificate::the exact title "Developer Certificate of Origin" (DCO 1.1)
 docs/PUBLIC_REPO_SWITCH.md::open source::the switch checklist names the phrase it unbans at the public switch
 ee/LICENSE::compliance::the FSL-1.1-ALv2 licence text, verbatim (Pro code under ee/, DL-039 F1)
+internal/deed/stamp/x509.go::certificate::Go standard library type name (x509.Certificate) and the RFC 7468 PEM label for X.509 data that RFC 3161 tokens carry; the one file that names them, never product copy
+internal/deed/stamp/testdata/openssl/ec/root.pem::certificate::the RFC 7468 PEM label of a test TSA's public X.509 root (fixture data, not copy)
+internal/deed/stamp/testdata/openssl/rsa/root.pem::certificate::the RFC 7468 PEM label of a test TSA's public X.509 root (fixture data, not copy)
+testdata/timestamps/tsa-roots.pem::certificate::the RFC 7468 PEM label of the test TSAs' public X.509 roots (fixture data, not copy)

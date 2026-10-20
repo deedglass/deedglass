@@ -36,6 +36,9 @@ type StreamOptions struct {
 	All        bool                   // collect up to MaxFailures failures instead of stopping at the first
 	Workers    int                    // default runtime.GOMAXPROCS(0)
 	OnProgress func(n int64)          // called after each batch with the deeds read so far
+	// OnIntact is called, in chain order, for each deed that passed every check (TY-03 compares
+	// timestamped heads with it).
+	OnIntact func(org string, seq int64, bodyHash string)
 }
 
 // Record is one deed's bytes and where they came from.
@@ -515,6 +518,9 @@ func (v *Verifier) intact(r *Result) {
 		in.LastSeq, in.To = r.Seq, t
 		in.Kinds[string(b.Kind)]++
 		in.HeadSeq, in.HeadDeedID, in.HeadBodyHash = r.Seq, r.DeedID, r.BodyHash
+	}
+	if v.opt.OnIntact != nil {
+		v.opt.OnIntact(r.Org, r.Seq, r.BodyHash)
 	}
 	verdict := "none"
 	if b.Witness != nil {

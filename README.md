@@ -247,7 +247,10 @@ the clock runs more than 5 minutes behind the last check or the latest time seen
 `licence.clock` is missing, unreadable or altered. `deedglass licence activate`, `refresh` and
 `deactivate` always call out. `DEEDGLASS_NO_NETWORK=1` stops every licence call, and only those:
 `deedglass version --check` and the `--latest` option of `deedglass policy install` and
-`policy packs` contact GitHub when you use them. With the network off, Pro runs on its cached token
+`policy packs` contact GitHub when you use them.
+Head timestamps are off by default; with TSAs or a transparency service listed in deedglass.yaml,
+`deedglass deeds timestamp` and each export contact only those.
+With the network off, Pro runs on its cached token
 for up to 14 days after the last successful check. What each request carries:
 [`docs/LICENSING.md`](docs/LICENSING.md#does-pro-phone-home).
 

@@ -52,6 +52,8 @@ the clock runs more than 5 minutes behind the last check or the latest time seen
 `deactivate` always call out. `DEEDGLASS_NO_NETWORK=1` stops every licence call, and only those:
 `deedglass version --check` and the `--latest` option of `deedglass policy install` and
 `policy packs` contact GitHub when you use them.
+Head timestamps are off by default; with TSAs or a transparency service listed in deedglass.yaml,
+`deedglass deeds timestamp` and each export contact only those.
 
 If a check can't reach Dodo Payments or deedglass.com, the next Pro feature that asks tries again.
 `refresh` asks Dodo, then deedglass.com; `activate` first registers the machine with Dodo;

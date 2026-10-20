@@ -50,8 +50,12 @@ key validity and revocation, the accept policy by `issued_at`, the chain (org, s
 order), the key set's safety rules (small-order and non-canonical Ed25519 keys refused), and, for a
 bundle, the reader rules, the manifest against the files and the records, and the manifest's seal.
 
-Not covered: the optional COSE_Sign1 encoding (spec §12), `--anchor`, `--all`, `--pin`, key URLs and
-directories of records. Use `deedglass verify` for those.
+Not covered: the optional COSE_Sign1 encoding (spec §12), `--anchor`, `--all`, `--pin`, key URLs,
+directories of records, and **head timestamps** (TY-03, `spec/v2/BUNDLE_FORMAT.md` §9). A bundle that
+carries `timestamps.json` is read and the file is checked against the manifest like any other, with
+the warning `timestamps_not_checked`; its RFC 3161 tokens and transparency-service inclusion proofs
+are not checked, and heads are not compared with the chain (so a cut chain that only a timestamp
+shows passes here). Use `deedglass verify` for those.
 
 ## How they are kept in agreement
 
@@ -67,6 +71,9 @@ any difference:
   entry, a symlink, a damaged or cut gzip stream, and a key set missing the key that sealed the last
   records. The verdict compared is the result, the first failure's code, seq and field, and the
   manifest and manifest-seal status.
+- **A bundle with timestamps.json** ([`../testdata/timestamps/`](../testdata/timestamps/), TY-03), with
+  the issuer's keys, `--strict` and its own keys, plus five tampered copies: the file edited, removed,
+  moved after the records, repeated, and dropped from an unsealed manifest.
 - **Record vector files.** Every record vector file in [`../testdata/deeds/`](../testdata/deeds/)
   through all three command lines, with its key set (the valid ones also with `--strict`).
 - **Expected answers.** Each verifier also runs every vector in [`../testdata/deeds/`](../testdata/deeds/)
@@ -74,8 +81,8 @@ any difference:
   (500 v1 cases and 200 v2 cases) against the expected answers, which come from the reference. The two
   COSE vectors are skipped.
 
-On 2026-10-20 all 280 cases agree (189 release-bundle cases, 91 vector files), and both verifiers
-match 848 of 848 vector checks.
+On 2026-10-20 all 288 cases agree (197 bundle cases, 91 vector files), and both verifiers match 848
+of 848 vector checks.
 
 One class is compared loosely: a damaged gzip stream. Where a damaged deflate stream is noticed
 depends on how much each reader has buffered (a CRC mismatch only shows at the end), so all three must
