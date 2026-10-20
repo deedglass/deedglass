@@ -1,0 +1,17 @@
+{
+  "id": "09-unwatched-table",
+  "title": "A trigger deletes rows in a table nobody listed as watched",
+  "tables": [
+    "public.customers",
+    "public.api_keys"
+  ],
+  "watched": [
+    "public.customers"
+  ],
+  "steps": [
+    {
+      "session": "agent",
+      "file": "agent.sql"
+    }
+  ]
+}

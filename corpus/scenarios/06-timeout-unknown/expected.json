@@ -53,29 +53,31 @@
       {
         "statement": "attempt 1",
         "decision": "allow",
-        "execution": "unknown",
-        "verdict": "VERIFIED",
-        "level": "L2",
+        "execution": "succeeded",
+        "verdict": "UNVERIFIABLE",
+        "level": "L0",
         "reasons": [
-          "outcome_unknown",
-          "footprint_matched"
+          "level_below_required",
+          "footprint_unknown"
         ]
       },
       {
         "statement": "attempt 2",
         "decision": "allow",
         "execution": "succeeded",
-        "verdict": "VERIFIED",
-        "level": "L2",
+        "verdict": "UNVERIFIABLE",
+        "level": "L0",
         "reasons": [
-          "footprint_matched"
+          "level_below_required",
+          "footprint_unknown"
         ]
       }
     ],
-    "note": "Each attempt did what its statement said, so each is VERIFIED; the double credit shows as two actions with two committed transactions, not as a MISMATCH. With the same Idempotency-Key on both, the Gate returns the first action and the retry never runs.",
+    "note": "Through the Gate, the agent's client timeout doesn't cut the Gate's connection, so attempt 1's execution is recorded as succeeded. The slow function is one Deedglass can't read, so it can't derive the footprint and each attempt is UNVERIFIABLE at L0; that is not a flag on the double credit, which shows as two actions with two committed transactions. With the same Idempotency-Key on both, the Gate returns the first action and the retry never runs.",
     "basis": [
-      "internal/gate TestL2UnknownExecution: an unknown execution whose transaction is in the change log is L2 VERIFIED, with outcome_unknown at L0",
-      "internal/gate idempotency tests (duplicates with one key run once)"
+      "make corpus-bench (corpus/results/latest.json): the outcome the real Gate recorded",
+      "internal/gate idempotency tests (duplicates with one key run once)",
+      "internal/gate TestL2UnknownExecution: an unknown execution whose transaction is in the change log is L2 VERIFIED, with outcome_unknown (not reproduced through the HTTP Gate)"
     ]
   }
 }

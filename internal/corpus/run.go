@@ -13,8 +13,10 @@ import (
 	"path/filepath"
 	"reflect"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgconn"
@@ -40,9 +42,110 @@ type Options struct {
 	// with CORPUS_SCENARIO, CORPUS_DIR, CORPUS_DSN and CORPUS_REPORT set. Its last line of output
 	// after the steps is recorded as what it said.
 	Tool string
+
+	// The benchmark's hooks (internal/corpus/bench); make corpus sets none of them.
+
+	// Database names the scenario's database instead of corpus_<id> (lowercase, digits, _).
+	Database string
+	// Prepare runs after setup.sql and before the change log starts, with a superuser DSN for the
+	// scenario's database: a gateway sets itself up here (its schema, roles and slot).
+	Prepare func(ctx context.Context, dsn string) error
+	// Agent runs an agent step instead of the runner, statement by statement, and returns what
+	// the agent's client saw. handled false hands the step back to the runner.
+	Agent func(ctx context.Context, step int, st Step, stmts []string) (saw []string, handled bool, err error)
+	// IgnoreSchemas are schemas whose row changes aren't facts of the scenario (a gateway's own
+	// bookkeeping in the watched database, such as deedglass.ledger).
+	IgnoreSchemas []string
+	// After runs once the facts are read, before the database is dropped.
+	After func(ctx context.Context) error
 }
 
-var reTable = regexp.MustCompile(`^[a-z_][a-z0-9_]*\.[a-z_][a-z0-9_]*$`)
+var (
+	reTable = regexp.MustCompile(`^[a-z_][a-z0-9_]*\.[a-z_][a-z0-9_]*$`)
+	reDB    = regexp.MustCompile(`^[a-z_][a-z0-9_]{0,62}$`)
+)
+
+// withoutSchemas drops the tables of the given schemas from one transaction's changes.
+func withoutSchemas(c Changes, schemas []string) Changes {
+	if len(schemas) == 0 {
+		return c
+	}
+	out := Changes{}
+	for t, ops := range c {
+		if schema, _, _ := strings.Cut(t, "."); !slices.Contains(schemas, schema) {
+			out[t] = ops
+		}
+	}
+	return out
+}
+
+// listener counts NOTIFY deliveries per channel on its own session.
+type listener struct {
+	c    *pgconn.PgConn
+	mu   sync.Mutex
+	seen map[string]int
+}
+
+func listen(ctx context.Context, base *pgconn.Config, channels []string) (*listener, error) {
+	l := &listener{seen: map[string]int{}}
+	for _, ch := range channels {
+		l.seen[ch] = 0
+	}
+	cfg := base.Copy()
+	cfg.OnNotification = func(_ *pgconn.PgConn, n *pgconn.Notification) {
+		l.mu.Lock()
+		defer l.mu.Unlock()
+		if _, ok := l.seen[n.Channel]; ok {
+			l.seen[n.Channel]++
+		}
+	}
+	c, err := pgconn.ConnectConfig(ctx, cfg)
+	if err != nil {
+		return nil, err
+	}
+	l.c = c
+	for _, ch := range channels { // checked against reChannel
+		if _, err := c.Exec(ctx, "LISTEN "+ch).ReadAll(); err != nil {
+			c.Close(context.Background())
+			return nil, err
+		}
+	}
+	return l, nil
+}
+
+// settle reads deliveries until none has arrived for 300 ms (Postgres sends them after commit,
+// asynchronously), then returns the counts.
+func (l *listener) settle(ctx context.Context) (map[string]int, error) {
+	last, quiet := -1, 0
+	for quiet < 3 {
+		wctx, cancel := context.WithTimeout(ctx, 100*time.Millisecond)
+		err := l.c.WaitForNotification(wctx)
+		cancel()
+		if err != nil && !errors.Is(err, context.DeadlineExceeded) && ctx.Err() == nil && !l.c.IsClosed() && !pgconn.Timeout(err) {
+			return nil, err
+		}
+		l.mu.Lock()
+		n := 0
+		for _, v := range l.seen {
+			n += v
+		}
+		l.mu.Unlock()
+		if n == last {
+			quiet++
+		} else {
+			last, quiet = n, 0
+		}
+	}
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	out := make(map[string]int, len(l.seen))
+	for k, v := range l.seen {
+		out[k] = v
+	}
+	return out, nil
+}
+
+func (l *listener) close() { l.c.Close(context.Background()) }
 
 // dbName is the scenario's database (and slot) name: corpus_01_trigger.
 func dbName(id string) string { return "corpus_" + strings.ReplaceAll(id, "-", "_") }
@@ -60,6 +163,12 @@ func Run(ctx context.Context, s *Scenario, o Options) (*Observed, error) {
 	}
 	defer admin.Close(context.Background())
 	name := dbName(s.ID) // from a checked id: [0-9a-z_] only
+	if o.Database != "" {
+		if !reDB.MatchString(o.Database) {
+			return nil, fmt.Errorf("corpus: database name %q must be lowercase letters, digits and _", o.Database)
+		}
+		name = o.Database
+	}
 	if _, err := admin.Exec(ctx, "DROP DATABASE IF EXISTS "+name+" WITH (FORCE)").ReadAll(); err != nil {
 		return nil, err
 	}
@@ -96,6 +205,18 @@ func Run(ctx context.Context, s *Scenario, o Options) (*Observed, error) {
 	if err != nil {
 		return nil, err
 	}
+	if o.Prepare != nil {
+		if err := o.Prepare(ctx, dsn); err != nil {
+			return nil, fmt.Errorf("corpus: %s: prepare: %w", s.ID, err)
+		}
+	}
+	var ln *listener
+	if len(s.Listen) > 0 {
+		if ln, err = listen(ctx, cfg, s.Listen); err != nil {
+			return nil, err
+		}
+		defer ln.close()
+	}
 	if _, err := obs.Exec(ctx, "SELECT pg_create_logical_replication_slot('"+name+"', 'test_decoding')").ReadAll(); err != nil {
 		return nil, fmt.Errorf("corpus: can't create the logical slot (is wal_level logical?): %w", err)
 	}
@@ -112,9 +233,23 @@ func Run(ctx context.Context, s *Scenario, o Options) (*Observed, error) {
 
 	out := &Observed{ID: s.ID, Commits: Commits{State: map[string]Count{}}}
 	for i, st := range s.Steps {
-		saw, err := runStep(ctx, cfg, admin, s, st)
-		if err != nil {
-			return nil, fmt.Errorf("corpus: %s step %d: %w", s.ID, i+1, err)
+		var (
+			saw     []string
+			handled bool
+		)
+		if o.Agent != nil && st.Session == "agent" {
+			src, err := os.ReadFile(filepath.Join(s.Dir, st.File))
+			if err != nil {
+				return nil, err
+			}
+			if saw, handled, err = o.Agent(ctx, i, st, SplitSQL(string(src))); err != nil {
+				return nil, fmt.Errorf("corpus: %s step %d: %w", s.ID, i+1, err)
+			}
+		}
+		if !handled {
+			if saw, err = runStep(ctx, cfg, admin, s, st); err != nil {
+				return nil, fmt.Errorf("corpus: %s step %d: %w", s.ID, i+1, err)
+			}
 		}
 		out.AgentSaw = append(out.AgentSaw, saw)
 		txs, err := drain(ctx, obs, name)
@@ -122,7 +257,14 @@ func Run(ctx context.Context, s *Scenario, o Options) (*Observed, error) {
 			return nil, err
 		}
 		for _, c := range txs {
-			out.Commits.Transactions = append(out.Commits.Transactions, Tx{Session: st.Session, Changes: c})
+			if c = withoutSchemas(c, o.IgnoreSchemas); len(c) > 0 {
+				out.Commits.Transactions = append(out.Commits.Transactions, Tx{Session: st.Session, Changes: c})
+			}
+		}
+	}
+	if ln != nil {
+		if out.Commits.Notifications, err = ln.settle(ctx); err != nil {
+			return nil, err
 		}
 	}
 	after, err := counts(ctx, obs, s.Tables)
@@ -138,6 +280,11 @@ func Run(ctx context.Context, s *Scenario, o Options) (*Observed, error) {
 			return nil, fmt.Errorf("corpus: %s: probe %q: %w", s.ID, p.SQL, err)
 		}
 		out.Commits.Probes = append(out.Commits.Probes, Probe{SQL: p.SQL, Value: v})
+	}
+	if o.After != nil {
+		if err := o.After(ctx); err != nil {
+			return nil, fmt.Errorf("corpus: %s: %w", s.ID, err)
+		}
 	}
 	if o.Tool != "" {
 		said, err := runTool(ctx, o.Tool, "after", s, dsn, report)
@@ -329,6 +476,9 @@ func Diff(s *Scenario, o *Observed) []string {
 	}
 	if !reflect.DeepEqual(x.DatabaseCommits.State, o.Commits.State) {
 		d = append(d, fmt.Sprintf("row counts %v, expected %v", o.Commits.State, x.DatabaseCommits.State))
+	}
+	if len(x.DatabaseCommits.Notifications) > 0 && !reflect.DeepEqual(x.DatabaseCommits.Notifications, o.Commits.Notifications) {
+		d = append(d, fmt.Sprintf("notifications %v, expected %v", o.Commits.Notifications, x.DatabaseCommits.Notifications))
 	}
 	for i, p := range x.DatabaseCommits.Probes {
 		if i >= len(o.Commits.Probes) || o.Commits.Probes[i].Value != p.Value {

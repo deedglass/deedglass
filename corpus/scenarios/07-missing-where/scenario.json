@@ -1,0 +1,13 @@
+{
+  "id": "07-missing-where",
+  "title": "An UPDATE without a WHERE clause changes every row",
+  "tables": [
+    "public.customers"
+  ],
+  "steps": [
+    {
+      "session": "agent",
+      "file": "agent.sql"
+    }
+  ]
+}

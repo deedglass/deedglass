@@ -1,0 +1,13 @@
+{
+  "id": "08-rule-instead",
+  "title": "A rule turns a DELETE into an UPDATE, and the row stays",
+  "tables": [
+    "public.customers"
+  ],
+  "steps": [
+    {
+      "session": "agent",
+      "file": "agent.sql"
+    }
+  ]
+}

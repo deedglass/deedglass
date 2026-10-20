@@ -116,6 +116,9 @@ func committed(o *corpus.Observed) string {
 			parts = append(parts, fmt.Sprintf("%s rows %d → %d", t, c.Before, c.After))
 		}
 	}
+	for ch, n := range o.Commits.Notifications {
+		parts = append(parts, fmt.Sprintf("%d %s on NOTIFY channel %s", n, plural(n, "message", "messages"), ch))
+	}
 	if len(parts) == 0 {
 		return "no row changes"
 	}

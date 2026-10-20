@@ -49,10 +49,35 @@
         "execution": "not run",
         "verdict": "none",
         "reasons": []
+      },
+      {
+        "statement": "agent.sql 2",
+        "decision": "deny",
+        "rule": "block-schema-and-privilege-changes",
+        "execution": "not run",
+        "verdict": "none",
+        "reasons": []
+      },
+      {
+        "statement": "agent.sql 3",
+        "decision": "deny",
+        "rule": "block-schema-and-privilege-changes",
+        "execution": "not run",
+        "verdict": "none",
+        "reasons": []
+      },
+      {
+        "statement": "agent.sql 4",
+        "decision": "allow",
+        "execution": "failed",
+        "verdict": "none",
+        "reasons": []
       }
     ],
     "outside_gate": "A DROP writes no row changes, so a watched session records only the 3 inserts. Dropping a watched table takes it out of the publication, which stops the decoder; later actions on the connector get the gap decoder_halted (UNVERIFIABLE), never VERIFIED.",
+    "note": "Through the Gate each statement is its own action: the DROP and both CREATEs are denied, and the seed INSERT runs and fails (the 500 rows are still there, so ids 1 to 3 are taken). Nothing committed.",
     "basis": [
+      "make corpus-bench (corpus/results/latest.json): the outcome the real Gate recorded",
       "examples/policies/postgres-safe.cases.yaml: DROP never runs (block-destructive-sql)",
       "docs/OBSERVE.md, Row changes only; internal/gate TestL2SlotLostAndMissing (a halted decoder gives decoder_halted)"
     ]

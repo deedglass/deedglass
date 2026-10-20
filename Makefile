@@ -77,7 +77,10 @@ integration: ## throwaway PG cluster (Homebrew, else Docker): sql/ smoke, contro
 quickstart-it: ## S32/PRD-05: TestInitLive, deedglass init then init --trigger end to end in Docker on its own ports (two postgres:18.6 containers, removed after): smoke actions, the 301-row Doesn't match, the undo preview, the step line
 	DEEDGLASS_IT_INIT=1 $(GO) test -tags integration -count=1 -v -timeout 15m ./internal/setup -run TestInitLive
 
-.PHONY: fhir-up fhir-down fhir-it corpus
+.PHONY: fhir-up fhir-down fhir-it corpus corpus-bench
+corpus-bench: ## The corpus benchmark (corpus/BENCHMARK.md): every scenario through each subject (deedglass, a real serve from this tree with its Gate in front; none, the baseline) on a throwaway PostgreSQL 18.6 in Docker; scores caught (before or after commit), true effect and checkable record; SUBJECTS=…, RUN=<id>, OUT=<file> (default .tmp/corpus/bench.json, and .md)
+	scripts/corpus_bench.sh
+
 corpus: ## TY-13: the intent-vs-effect corpus (corpus/) on a throwaway PostgreSQL 18.6 in Docker (free localhost port, removed after): what each agent reports, what Postgres commits (its change log, per transaction) and the expected Deedglass verdict; RUN=<id> one scenario, KEEP=1 keeps the container, CORPUS_TOOL=<cmd> runs your tool around each scenario
 	scripts/corpus.sh
 

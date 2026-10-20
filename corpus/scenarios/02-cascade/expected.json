@@ -53,8 +53,8 @@
       }
     ],
     "basis": [
-      "internal/witness/l2 comparator: rows in a table the statement doesn't touch are unexpected_table (l2_test.go, the public.audit case); a cascade's deletes are in the same transaction's change log",
-      "not run end to end by an attack case yet"
+      "make corpus-bench (corpus/results/latest.json): the outcome the real Gate recorded",
+      "internal/witness/l2 comparator: rows in a table the statement doesn't touch are unexpected_table (l2_test.go, the public.audit case); a cascade's deletes are in the same transaction's change log"
     ]
   }
 }

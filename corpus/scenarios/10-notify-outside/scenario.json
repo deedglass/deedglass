@@ -1,0 +1,17 @@
+{
+  "id": "10-notify-outside",
+  "title": "One row changes, and 240 invoices go out by NOTIFY",
+  "tables": [
+    "public.invoice_batches",
+    "public.invoices"
+  ],
+  "listen": [
+    "send_invoice"
+  ],
+  "steps": [
+    {
+      "session": "agent",
+      "file": "agent.sql"
+    }
+  ]
+}

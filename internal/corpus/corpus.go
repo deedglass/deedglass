@@ -17,6 +17,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 )
@@ -27,6 +28,12 @@ type Scenario struct {
 	Title  string   `json:"title"`
 	Tables []string `json:"tables"`
 	Steps  []Step   `json:"steps"`
+	// Watched are the tables a person running a checker would list as the ones to watch. Empty
+	// means every table in Tables. A scenario names fewer when the point is a table nobody listed.
+	Watched []string `json:"watched,omitempty"`
+	// Listen are the NOTIFY channels the runner listens on: what a trigger tells a process outside
+	// the database (a mailer, a webhook sender) is a fact too, counted per channel.
+	Listen []string `json:"listen,omitempty"`
 
 	Dir      string   `json:"-"`
 	Expected Expected `json:"-"`
@@ -45,6 +52,17 @@ type Step struct {
 	// WaitForServer waits for the dropped session's statement to finish on the server before the
 	// next step, so what it committed is read in this step.
 	WaitForServer bool `json:"wait_for_server,omitempty"`
+	// Via "api" means the agent doesn't hold a database connection: it calls an HTTP API (API)
+	// and the API runs the file. make corpus runs the file directly, since the facts are the same;
+	// the benchmark puts the API in front of it.
+	Via string   `json:"via,omitempty"`
+	API *APICall `json:"api,omitempty"`
+}
+
+// APICall is the HTTP call an agent makes in a step whose Via is "api".
+type APICall struct {
+	Method string `json:"method"`
+	Path   string `json:"path"`
 }
 
 // Changes are row changes per table and operation: {"public.orders": {"update": 301}}.
@@ -73,6 +91,8 @@ type Commits struct {
 	Transactions []Tx             `json:"transactions"`
 	State        map[string]Count `json:"state"`
 	Probes       []Probe          `json:"probes"`
+	// Notifications counts what was delivered per NOTIFY channel in Listen.
+	Notifications map[string]int `json:"notifications,omitempty"`
 }
 
 // DeedglassAction is the Deedglass outcome expected for one action of the scenario.
@@ -109,7 +129,11 @@ type Expected struct {
 	Deedglass       Deedglass  `json:"deedglass"`
 }
 
-var reID = regexp.MustCompile(`^[0-9]{2}-[a-z0-9-]+$`)
+var (
+	reID      = regexp.MustCompile(`^[0-9]{2}-[a-z0-9-]+$`)
+	reChannel = regexp.MustCompile(`^[a-z_][a-z0-9_]{0,62}$`)
+	reAPIPath = regexp.MustCompile(`^/[A-Za-z0-9/_.-]{0,200}$`)
+)
 
 // Load reads every scenario under dir/scenarios, in name order.
 func Load(dir string) ([]*Scenario, error) {
@@ -159,6 +183,31 @@ func LoadOne(dir string) (*Scenario, error) {
 		}
 		if _, err := os.Stat(filepath.Join(dir, st.File)); err != nil || strings.Contains(st.File, "/") {
 			return nil, fmt.Errorf("corpus: %s: step file %q must be a file in the scenario directory", s.ID, st.File)
+		}
+		switch {
+		case st.Via == "" && st.API == nil:
+		case st.Via == "api" && st.Session == "agent" && st.API != nil && reAPIPath.MatchString(st.API.Path) &&
+			(st.API.Method == "GET" || st.API.Method == "POST" || st.API.Method == "PUT" || st.API.Method == "PATCH" || st.API.Method == "DELETE"):
+		default:
+			return nil, fmt.Errorf("corpus: %s: a step with via \"api\" is an agent step with api.method and an api.path under /", s.ID)
+		}
+	}
+	for _, t := range s.Watched {
+		if !slices.Contains(s.Tables, t) {
+			return nil, fmt.Errorf("corpus: %s: watched table %s isn't in tables", s.ID, t)
+		}
+	}
+	for _, c := range s.Listen {
+		if !reChannel.MatchString(c) {
+			return nil, fmt.Errorf("corpus: %s: listen channel %q must be lowercase letters, digits and _", s.ID, c)
+		}
+	}
+	if len(s.Listen) != len(s.Expected.DatabaseCommits.Notifications) {
+		return nil, fmt.Errorf("corpus: %s: database_commits.notifications needs one count per listen channel", s.ID)
+	}
+	for _, c := range s.Listen {
+		if _, ok := s.Expected.DatabaseCommits.Notifications[c]; !ok {
+			return nil, fmt.Errorf("corpus: %s: database_commits.notifications lacks %s", s.ID, c)
 		}
 	}
 	x := s.Expected
@@ -355,4 +404,12 @@ func Sum(txs []Tx, session string) Changes {
 		}
 	}
 	return out
+}
+
+// WatchedTables is Watched, or every table when Watched is empty.
+func (s *Scenario) WatchedTables() []string {
+	if len(s.Watched) > 0 {
+		return s.Watched
+	}
+	return s.Tables
 }

@@ -50,7 +50,8 @@ func TestScenarios(t *testing.T) {
 		// The agent's report and the agent's committed changes differ, or the scenario says why
 		// a check that compares them would be fooled.
 		agent := Sum(s.Expected.DatabaseCommits.Transactions, "agent")
-		if reflect.DeepEqual(agent, s.Expected.AgentReports.Changes) && s.Expected.Deedglass.Note == "" && s.Expected.Deedglass.OutsideGate == "" {
+		outside := len(s.Expected.DatabaseCommits.Notifications) > 0
+		if reflect.DeepEqual(agent, s.Expected.AgentReports.Changes) && !outside && s.Expected.Deedglass.Note == "" && s.Expected.Deedglass.OutsideGate == "" {
 			t.Errorf("%s: the report equals what committed, and nothing says why the scenario is here", s.ID)
 		}
 		readme, err := os.ReadFile(filepath.Join(s.Dir, "README.md"))
@@ -58,7 +59,8 @@ func TestScenarios(t *testing.T) {
 			t.Errorf("%s: README.md must start with # %s", s.ID, s.ID)
 		}
 	}
-	want := []string{"01-trigger", "02-cascade", "03-orm-reset", "04-another-writer", "05-partial-failure", "06-timeout-unknown"}
+	want := []string{"01-trigger", "02-cascade", "03-orm-reset", "04-another-writer", "05-partial-failure", "06-timeout-unknown",
+		"07-missing-where", "08-rule-instead", "09-unwatched-table", "10-notify-outside", "11-api-claimed-only", "12-upsert-overwrite"}
 	for _, w := range want {
 		found := false
 		for _, id := range ids {
@@ -85,12 +87,18 @@ func TestLoadRefusals(t *testing.T) {
 		t.Fatal(err)
 	}
 	for name, c := range map[string]struct{ scenario, expected string }{
-		"unknown key":      {`{"id":"01-x","title":"t","tables":["public.t"],"steps":[{"session":"agent","file":"agent.sql"}],"extra":1}`, string(good)},
-		"wrong id":         {`{"id":"02-y","title":"t","tables":["public.t"],"steps":[{"session":"agent","file":"agent.sql"}]}`, string(good)},
-		"bad session":      {`{"id":"01-x","title":"t","tables":["public.t"],"steps":[{"session":"root","file":"agent.sql"}]}`, string(good)},
-		"file outside":     {`{"id":"01-x","title":"t","tables":["public.t"],"steps":[{"session":"agent","file":"../agent.sql"}]}`, string(good)},
-		"state mismatch":   {`{"id":"01-x","title":"t","tables":["public.t"],"steps":[{"session":"agent","file":"agent.sql"}]}`, string(good)},
-		"agent_saw length": {`{"id":"01-x","title":"t","tables":["public.orders"],"steps":[{"session":"agent","file":"agent.sql"},{"session":"agent","file":"agent.sql"}]}`, string(good)},
+		"unknown key":         {`{"id":"01-x","title":"t","tables":["public.t"],"steps":[{"session":"agent","file":"agent.sql"}],"extra":1}`, string(good)},
+		"wrong id":            {`{"id":"02-y","title":"t","tables":["public.t"],"steps":[{"session":"agent","file":"agent.sql"}]}`, string(good)},
+		"bad session":         {`{"id":"01-x","title":"t","tables":["public.t"],"steps":[{"session":"root","file":"agent.sql"}]}`, string(good)},
+		"file outside":        {`{"id":"01-x","title":"t","tables":["public.t"],"steps":[{"session":"agent","file":"../agent.sql"}]}`, string(good)},
+		"state mismatch":      {`{"id":"01-x","title":"t","tables":["public.t"],"steps":[{"session":"agent","file":"agent.sql"}]}`, string(good)},
+		"api without call":    {`{"id":"01-x","title":"t","tables":["public.orders"],"steps":[{"session":"agent","file":"agent.sql","via":"api"}]}`, string(good)},
+		"api for other":       {`{"id":"01-x","title":"t","tables":["public.orders"],"steps":[{"session":"other","file":"agent.sql","via":"api","api":{"method":"POST","path":"/x"}}]}`, string(good)},
+		"api bad method":      {`{"id":"01-x","title":"t","tables":["public.orders"],"steps":[{"session":"agent","file":"agent.sql","via":"api","api":{"method":"TRACE","path":"/x"}}]}`, string(good)},
+		"watched not a table": {`{"id":"01-x","title":"t","tables":["public.orders"],"watched":["public.audit"],"steps":[{"session":"agent","file":"agent.sql"}]}`, string(good)},
+		"listen, no count":    {`{"id":"01-x","title":"t","tables":["public.orders"],"listen":["mail"],"steps":[{"session":"agent","file":"agent.sql"}]}`, string(good)},
+		"bad channel":         {`{"id":"01-x","title":"t","tables":["public.orders"],"listen":["Mail-Out"],"steps":[{"session":"agent","file":"agent.sql"}]}`, string(good)},
+		"agent_saw length":    {`{"id":"01-x","title":"t","tables":["public.orders"],"steps":[{"session":"agent","file":"agent.sql"},{"session":"agent","file":"agent.sql"}]}`, string(good)},
 	} {
 		d := filepath.Join(t.TempDir(), "01-x")
 		_ = os.MkdirAll(d, 0o755)
@@ -174,6 +182,16 @@ func TestDiff(t *testing.T) {
 		Probes: []Probe{{SQL: s.Expected.DatabaseCommits.Probes[0].SQL, Value: "1"}}}
 	if d := Diff(s, o); len(d) != 2 {
 		t.Errorf("want the transaction and the probe to differ: %v", d)
+	}
+}
+
+func TestWithoutSchemas(t *testing.T) {
+	c := Changes{"public.orders": {"update": 1}, "deedglass.ledger": {"insert": 1}}
+	if got := withoutSchemas(c, []string{"deedglass"}); !reflect.DeepEqual(got, Changes{"public.orders": {"update": 1}}) {
+		t.Fatalf("%v", got)
+	}
+	if got := withoutSchemas(c, nil); !reflect.DeepEqual(got, c) {
+		t.Fatalf("%v", got)
 	}
 }
 
