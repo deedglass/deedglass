@@ -7,8 +7,42 @@ this file by `scripts/release-notes.sh`.
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-10-20
+
+More agents, more readers and an outside clock. Agent-to-agent delegations can go through the Gate
+(`deedglass a2a proxy`, ADR-113), with the chain from the person to the remote agent recorded in
+the action; the shell guard installs as a hook in Codex CLI, Gemini CLI, GitHub Copilot CLI and
+Cursor as well as Claude Code. Exports and head files can carry RFC 3161 timestamps and a
+transparency service's inclusion proof (ADR-112, off by default), so a reader can check that the
+records existed by a given time without trusting the issuer's clock. Two independent verifiers, in Python
+and JavaScript, are written from `spec/` alone and agree with `deedglass verify` on every release
+bundle, tampered copy and vector. The corpus benchmark scores Deedglass and a no-gateway baseline
+on 12 scenarios, including the ones Deedglass misses (it caught 5 of 11; the misses are listed).
+And a Medplum example writes FHIR through the gate. Nothing changes for existing records: the deed
+format is unchanged, Proven, Checked and Claimed mean what they meant in 0.5.0, and a bundle
+without `timestamps.json` verifies as before. Known limits: Codex and Gemini CLI can't ask, so
+there the shell guard denies; VS Code has no hook snippet yet; the independent verifiers skip COSE.
+No new dependency, no schema migration, and `formula_version` stays 1.
+
 ### Added
 
+- **The corpus benchmark** (`make corpus-bench`, `corpus/BENCHMARK.md`): plays every corpus
+  scenario through each subject on a throwaway PostgreSQL 18.6 and scores it from the change log:
+  caught (before or after commit), the true effect reported, and a record a third party can check.
+  Subjects: `deedglass` (a real `serve` and Gate from the tree, L2 on the watched tables), `none`
+  (the baseline) and `cmd:<name>=<command>` for any other observer. Six new scenarios (07-12), four
+  of them cases Deedglass misses: a table nobody watched, NOTIFY outside the rows, an API (Claimed
+  only), an upsert it can't read. First results (`corpus/results/latest.md`): Deedglass caught 5 of
+  11 (2 before commit, 3 after) with 0 false alarms and left a checkable record in 12 of 12; the
+  baseline caught 0 of 11.
+- **Independent verifiers** (TY-10, `verifiers/`): `verifiers/python/deedglass_verify` (standard
+  library only, Python 3.10+) and `verifiers/js/deedglass-verify.mjs` (one ES module for Node 20+
+  and browsers) check sealed records, chains and bundles, v1 and v2 deeds, Ed25519 and ML-DSA-65,
+  and share no code with `deedglass verify`. `verifiers/crosscheck.py` runs both beside
+  `deedglass verify` on every release bundle, tampered copies and the deed vectors (280 of 280
+  agree; 848 of 848 vector checks match, COSE skipped). `make independent-verifiers` and the
+  `independent-verifiers` workflow. `spec/CHANGELOG.md` records an erratum: the order inside check
+  5 and the seq a failure names, which the text left to the vectors.
 - A2A delegations through the Gate (TY-07, ADR-113). `deedglass a2a proxy --connector <name> --peer <url>`
   is a loopback A2A 1.0 JSON-RPC endpoint in front of one remote agent: `SendMessage`,
   `SendStreamingMessage`, `CancelTask` and the push config writes become proxy-mode actions
@@ -18,7 +52,6 @@ this file by `scripts/release-notes.sh`.
   `request_digest`), and `deedglass actions show` prints it. Reads pass through; other methods are
   refused. No new dependency; the deed format is unchanged. Docs: docs/A2A.md; limits:
   docs/LIMITATIONS.md#a2a-delegations.
-
 - The shell guard in more coding agents (TY-08). `deedglass guard shell --client codex|gemini|copilot|cursor`
   reads each agent's hook input and answers in its format, from one table
   (`internal/shellguard/clients.go`); `--print-config --client <name>` prints the hook config and
@@ -28,7 +61,6 @@ this file by `scripts/release-notes.sh`.
   snippet and each client's answer to the claude-code#80868 command; a weekly `hook-clients`
   workflow installs the latest Codex, Gemini and Copilot CLIs and runs them. Docs:
   docs/INSTALL_CLIENTS.md#the-shell-guard-in-each-coding-agent.
-
 - Head timestamps (TY-03, ADR-112), off by default. With TSAs (`timestamps.tsa_urls`, at least
   `timestamps.min_tsa`, default 2) and optionally a transparency service (`timestamps.scitt_url`)
   in `deedglass.yaml`, each tar.gz export timestamps its last record and carries `timestamps.json`,
@@ -39,7 +71,6 @@ this file by `scripts/release-notes.sh`.
   `timestamp_mismatch`. Spec: `spec/v2/BUNDLE_FORMAT.md` §9 (a bundle without the file is
   unchanged). No new dependency. Limits: docs/LIMITATIONS.md#head-timestamps. New page:
   docs/TIMESTAMPS.md.
-
 - The Medplum example (`examples/medplum`, `make medplum-example`): Medplum 5.2.6 on PostgreSQL 18
   in Docker, an agent-style client writing through the gate (a create that Matches, a create
   Medplum answers 201 but stores without a read-only field, flagged Doesn't match at Checked and
@@ -452,7 +483,8 @@ See [KNOWN_ISSUES.md](KNOWN_ISSUES.md): what happens, who is affected, the worka
 See [docs/LIMITATIONS.md](docs/LIMITATIONS.md). In short: L2 covers Postgres only, seal keys are per
 deployment, and Deedglass trusts the Postgres server and the host it runs on.
 
-[Unreleased]: https://github.com/deedglass/deedglass/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/deedglass/deedglass/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/deedglass/deedglass/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/deedglass/deedglass/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/deedglass/deedglass/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/deedglass/deedglass/compare/v0.2.1...v0.3.0
