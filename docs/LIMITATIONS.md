@@ -670,6 +670,15 @@ Opt-in (TY-03, [`TIMESTAMPS.md`](TIMESTAMPS.md)); off unless `timestamps.tsa_url
 - **The independent verifiers skip timestamps.** `verifiers/python` and `verifiers/js` accept a bundle with `timestamps.json` and check its bytes against the manifest, but don't check tokens or proofs or compare heads. Older Deedglass builds and older copies of those verifiers refuse such a bundle as `bundle_invalid` (an unknown entry).
 - **Each head costs a request per TSA.** `--every` asks only when the head has moved; an export asks once.
 
+## The shell guard in other coding agents
+
+TY-08, [`INSTALL_CLIENTS.md`](INSTALL_CLIENTS.md#the-shell-guard-in-each-coding-agent). Each snippet is yours to add; none is on by default.
+
+- **Checked against docs, not against running agents.** Each client's input and answer format comes from its own hooks page (dated in `internal/shellguard/clients.go`). The goldens feed the guard those documented shapes; no test drives Codex, Gemini CLI, Copilot or Cursor end to end, and the weekly `hook-clients` job only installs the npm releases and records their versions.
+- **Deny where there is no ask.** Codex doesn't support ask yet and Gemini CLI has none, so there a match denies; Copilot's cloud agent and autopilot turn ask into deny themselves.
+- **Fails open.** Without a `deedglass` on the agent's `PATH`, or when the guard can't read its input, every client runs the command unchecked (Copilot's snippet ends in `|| true` for this). In Cursor no output counts as a hook failure; Cursor lets the command go on unless `failClosed` is set, which this hook must not set.
+- **No VS Code hook, no Windows for Copilot, no Cursor CLI claim.** VS Code's docs don't name its terminal tool; the Copilot snippet has no `powershell` command; Cursor's docs don't say whether its CLI runs `beforeShellExecution`. Gemini CLI's successor, Antigravity CLI, isn't checked.
+
 ## What this page does not do
 
 It does not list bugs or missing features on the schedule. It lists limits of the design that stay true after they ship.

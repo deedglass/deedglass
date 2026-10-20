@@ -1,0 +1,11 @@
+{
+  "session_id": "sess_01",
+  "transcript_path": "/home/dev/.gemini/tmp/sess_01.json",
+  "cwd": "/home/dev/app",
+  "hook_event_name": "BeforeTool",
+  "timestamp": "2026-10-20T09:00:00Z",
+  "tool_name": "run_shell_command",
+  "tool_input": {
+    "command": "cd \"<repo>\" && MIG=\"prisma/migrations/$(date +%Y%m%d%H%M%S)_<name>\" && mkdir -p \"$MIG\" && \\\n  npx prisma migrate diff --from-migrations prisma/migrations \\\n  --to-schema-datamodel prisma/schema.prisma \\\n  --shadow-database-url \"$(grep -E '^DATABASE_URL=' <path>/.env | cut -d= -f2- | tr -d '\\\"')\" \\\n  --script > \"$MIG/migration.sql\""
+  }
+}

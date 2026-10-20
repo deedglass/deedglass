@@ -29,6 +29,9 @@ your MCP client.`
 | Claude Code plugin | `/plugin marketplace add deedglass/deedglass`, then `/plugin install deedglass@deedglass` (after 10-15) | `integrations/claude-code/`, root `.claude-plugin/marketplace.json` |
 | Claude Desktop | the `.mcpb` bundle on each release (not built yet; see the S47 report) | github.com/modelcontextprotocol/mcpb |
 | Windsurf | the `mcpServers` block in `~/.codeium/windsurf/mcp_config.json` | `deedglass mcp snippet --client windsurf` |
+| Codex CLI | `codex mcp add deedglass -- npx -y deedglass mcp serve` (or `[mcp_servers.deedglass]` with `command` and `args` in `~/.codex/config.toml`) | learn.chatgpt.com/docs/extend/mcp (checked 2026-10-20) |
+| Gemini CLI | `"mcpServers": {"deedglass": {"command": "npx", "args": ["-y", "deedglass", "mcp", "serve"]}}` in `.gemini/settings.json` | geminicli.com/docs/tools/mcp-server (checked 2026-10-20) |
+| GitHub Copilot CLI | `copilot mcp add deedglass -- npx -y deedglass mcp serve` (writes `~/.copilot/mcp-config.json`) | docs.github.com/en/copilot/how-tos/copilot-cli/customize-copilot/add-mcp-servers (checked 2026-10-20) |
 | Docker MCP Catalog | `deploy/docker-catalog/server.yaml`, submitted by PR (founder) | github.com/docker/mcp-registry |
 | MCP Registry | root `server.json`, `io.github.deedglass/deedglass` (founder publishes) | modelcontextprotocol.io/registry/quickstart |
 
@@ -39,7 +42,195 @@ Listing kits the founder submits: `integrations/cursor/` (Cursor marketplace),
 `integrations/supabase/` and `integrations/neon/` (integration directories). `node
 scripts/check-listings.mjs` checks every kit.
 
+`deedglass init --client codex`, `gemini` or `copilot` prints the line above and the shell guard
+config below; init never writes either file.
+
+## The shell guard in each coding agent
+
+The shell guard (`deedglass guard shell`, [SHELL_GUARD.md](SHELL_GUARD.md)) asks you first when an
+agent's shell command would destroy database data. It runs as each agent's before-a-command hook,
+with the same catalog and the same sentence everywhere. One table in
+`internal/shellguard/clients.go` holds each client's file, event, answer format and snippet;
+`deedglass guard shell --print-config --client <name>` prints the snippet on stdout (where it goes
+and the client's limits on stderr) and writes no file. Merge it with any hooks already in that file.
+Every snippet needs a `deedglass` binary on the agent's `PATH` ([INSTALL.md](INSTALL.md)); it runs
+locally and uses no network.
+
+| Client | File | Event | What it answers on a match | Checked against (2026-10-20) |
+|---|---|---|---|---|
+| Claude Code | `.claude/settings.json`, or the plugin | `PreToolUse` on `Bash` | ask | code.claude.com/docs/en/hooks |
+| Codex CLI | `.codex/hooks.json` | `PreToolUse` on `^Bash$` | deny (Codex doesn't support ask yet) | developers.openai.com/codex/hooks |
+| Gemini CLI | `.gemini/settings.json` | `BeforeTool` on `^run_shell_command$` | deny (no ask in Gemini CLI) | geminicli.com/docs/hooks/reference |
+| GitHub Copilot CLI and cloud agent | `.github/hooks/deedglass.json` | `preToolUse`, tool `bash` | ask (the cloud agent and autopilot turn it into deny) | docs.github.com/en/copilot/reference/hooks-reference |
+| Cursor | `.cursor/hooks.json` | `beforeShellExecution` | ask | cursor.com/docs/agent/hooks |
+| VS Code (Copilot agent mode) | none yet | | not supported: use `deedglass mcp wrap` | code.visualstudio.com/docs/agents/reference/hooks-reference |
+
+On a match each client gets the same sentence, for example "Deedglass asks first: prisma migrate
+diff --shadow-database-url resets the database that URL names before it replays your migrations
+there, so a real database loses its data." for the compound command in
+[claude-code#80868](https://github.com/anthropics/claude-code/issues/80868). When nothing matches it
+gives no decision, so the client's own permission rules decide. It never answers allow. Add
+`--deny` to the command to deny in every client.
+
+### Codex CLI
+
+```json
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "^Bash$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "deedglass guard shell --client codex",
+            "timeout": 10,
+            "statusMessage": "Deedglass shell guard"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+The same hook in `config.toml` is `[[hooks.PreToolUse]]` with `matcher = "^Bash$"` and a
+`[[hooks.PreToolUse.hooks]]` table with the same keys. Codex reads `tool_input.command` from a
+`Bash` call and the `hookSpecificOutput` answer Claude Code uses.
+
+- Codex parses `permissionDecision: "ask"` but doesn't support it yet: it marks the hook failed and
+  runs the command. So with `--client codex` the guard answers deny, and the reason tells Codex to
+  ask you to run the command yourself.
+- Codex runs a hook only after you review and trust it with `/hooks`, and loads a project's
+  `.codex/` hooks only when that project is trusted.
+
+### Gemini CLI
+
+```json
+{
+  "hooks": {
+    "BeforeTool": [
+      {
+        "matcher": "^run_shell_command$",
+        "hooks": [
+          {
+            "name": "deedglass-shell-guard",
+            "type": "command",
+            "command": "deedglass guard shell --client gemini",
+            "timeout": 10000
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+Gemini CLI's shell tool is `run_shell_command`, with the command in `command`; `timeout` is in
+milliseconds.
+
+- Gemini CLI's decisions are allow and deny; there is no ask. So with `--client gemini` the guard
+  answers `{"decision": "deny", "reason": …, "systemMessage": …}`: Gemini reads the reason as a
+  tool error and you see the message. When nothing matches it writes `{}`, since Gemini CLI parses
+  stdout as JSON.
+- Gemini CLI's docs say it was replaced by Antigravity CLI for unpaid and Google One users on
+  2026-06-18. Antigravity CLI's hooks are not checked here.
+
+### GitHub Copilot (CLI and cloud agent)
+
+```json
+{
+  "version": 1,
+  "hooks": {
+    "preToolUse": [
+      {
+        "type": "command",
+        "bash": "deedglass guard shell --client copilot || true",
+        "timeoutSec": 10
+      }
+    ]
+  }
+}
+```
+
+The camelCase `preToolUse` event sends `toolName` (`bash`) and `toolArgs`, a JSON string holding
+`command` in GitHub's own example; the guard answers `{"permissionDecision": "ask",
+"permissionDecisionReason": …}`. The cloud agent reads only `.github/hooks/*.json` in the
+repository; Copilot CLI also reads `~/.copilot/hooks/*.json`.
+
+- The cloud agent, and Copilot CLI in autopilot, treat ask as deny, because no one is there to
+  answer. Copilot shows the reason to the agent.
+- Copilot denies the tool call when a `preToolUse` hook exits with anything but 0 or 2. So the
+  snippet ends in `|| true`, and with `--client copilot` the guard exits 0 even when it can't read
+  its input: without a `deedglass` on `PATH` every command runs, unchecked.
+- Bash only: the snippet has no `powershell` command, so on Windows Copilot runs no guard.
+- VS Code reads `.github/hooks/*.json` too, with its own input and tool names; there the guard
+  finds no `bash` call and writes nothing.
+
+### Cursor
+
+```json
+{
+  "version": 1,
+  "hooks": {
+    "beforeShellExecution": [
+      {
+        "command": "deedglass guard shell --client cursor",
+        "timeout": 10
+      }
+    ]
+  }
+}
+```
+
+`beforeShellExecution` sends `command` and `cwd`; the guard answers `{"permission": "ask",
+"user_message": …, "agent_message": …}`.
+
+- When nothing matches the guard writes nothing. Cursor counts no output as a hook failure and,
+  with `failClosed` false (its default), lets the command go on. Don't set `failClosed: true` on this
+  hook.
+- Cursor's page doesn't say whether the Cursor CLI runs `beforeShellExecution`; this is checked
+  for the editor's agent only.
+- Cursor started from the Dock on macOS may not have `deedglass` on its `PATH`; then the hook fails
+  and the command runs unchecked. Use the absolute path (`command -v deedglass`).
+
+### Claude Code
+
+The plugin carries the hook, off until `DEEDGLASS_SHELL_GUARD` is set; without the plugin:
+
+```json
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [{ "type": "command", "command": "deedglass guard shell", "timeout": 10 }]
+      }
+    ]
+  }
+}
+```
+
+Details, Windows and `"onFailure": "continue"`: [SHELL_GUARD.md](SHELL_GUARD.md).
+
+### VS Code
+
+VS Code's hooks (Preview) take `PreToolUse` with a `hookSpecificOutput` answer, but its docs don't
+name the terminal tool or its arguments ("Tool names and input schemas differ between harnesses"),
+so the guard can't find the command, and there is no snippet. Put your database MCP server behind
+`deedglass mcp wrap` instead: `deedglass mcp snippet --client vscode` prints it
+([MCP_CLIENTS.md](MCP_CLIENTS.md)).
+
+### Format changes
+
+Hook formats change between minor releases. The goldens in `internal/shellguard/testdata/clients/`
+pin each snippet and each client's answer to the #80868 command; the weekly `hook-clients` workflow
+installs the latest Codex CLI, Gemini CLI and Copilot CLI from npm, prints their versions, and runs
+those goldens. It doesn't drive the agents (that needs each vendor's account), so a changed format
+shows up as a re-check of the pages above, dated in the table.
+
 ## What it doesn't do
 
 No telemetry. A link never carries a key or a URL with credentials. Installing the server doesn't
-put your other MCP servers behind Deedglass; that is `deedglass mcp wrap`.
+put your other MCP servers behind Deedglass; that is `deedglass mcp wrap`. The shell guard snippets
+above never answer allow and are yours to add.

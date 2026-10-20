@@ -24,8 +24,8 @@ func TestEveryLinkDecodes(t *testing.T) {
 		}
 		n++
 	}
-	if n != 9 {
-		t.Errorf("decoded %d links, want 9", n)
+	if n != 12 {
+		t.Errorf("decoded %d links, want 12", n)
 	}
 }
 

@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/deedglass/deedglass/internal/shellguard"
 )
 
 func hookInput(cmd, cwd string) []byte {
@@ -158,5 +160,66 @@ func TestGuardShellList(t *testing.T) {
 	}
 	if r := cli(t, nil, false, "guard", "shell", "--list"); r.code != 0 || !strings.Contains(r.stdout, "prisma migrate reset\n") {
 		t.Errorf("text: exit %d", r.code)
+	}
+}
+
+// TestGuardShellClients (TY-08): --client reads each agent's input and answers in its shape, from
+// the one table in internal/shellguard; --print-config prints that table's snippet byte for byte
+// (golden: internal/shellguard/testdata/clients/<name>.config.json) and writes no file.
+func TestGuardShellClients(t *testing.T) {
+	for _, c := range shellguard.Clients {
+		if c.Unsupported != "" {
+			r := cli(t, nil, false, "guard", "shell", "--print-config", "--client", c.Name)
+			if r.code != 0 || !strings.Contains(r.stdout, "No shell guard hook for "+c.Title) || !strings.Contains(r.stdout, "deedglass mcp") {
+				t.Errorf("%s print-config: exit %d %q", c.Name, r.code, r.stdout)
+			}
+			if r := cliIn(t, hookInput("dropdb app", t.TempDir()), nil, false, "guard", "shell", "--client", c.Name); r.code != ExitUsage || r.stdout != "" {
+				t.Errorf("%s hook: exit %d %q", c.Name, r.code, r.stdout)
+			}
+			continue
+		}
+		golden, err := os.ReadFile(filepath.Join("..", "..", "internal", "shellguard", "testdata", "clients", c.Name+".config.json"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		r := cli(t, nil, false, "guard", "shell", "--print-config", "--client", c.Name)
+		if r.code != 0 || r.stdout != string(golden) || !strings.Contains(r.stderr, "goes in") {
+			t.Errorf("%s print-config: exit %d\nstdout %q\nstderr %q", c.Name, r.code, r.stdout, r.stderr)
+		}
+		in, err := os.ReadFile(filepath.Join("..", "..", "internal", "shellguard", "testdata", "clients", c.Name+".in.json"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		want, err := os.ReadFile(filepath.Join("..", "..", "internal", "shellguard", "testdata", "clients", c.Name+".out.json"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		r = cliIn(t, in, nil, false, "guard", "shell", "--no-files", "--client", c.Name)
+		if r.code != 0 || r.stdout != string(want) {
+			t.Errorf("%s hook: exit %d\nstdout %q\nwant   %q", c.Name, r.code, r.stdout, want)
+		}
+	}
+	r := cli(t, nil, false, "--json", "guard", "shell", "--print-config", "--client", "codex")
+	var j struct {
+		Client, File, Config string
+		Supported            bool
+		Limits               []string
+	}
+	if err := json.Unmarshal([]byte(r.stdout), &j); err != nil || j.Client != "codex" || !j.Supported || len(j.Limits) == 0 || !strings.Contains(j.Config, "PreToolUse") {
+		t.Errorf("json: %q %v", r.stdout, err)
+	}
+	if r := cli(t, nil, false, "guard", "shell", "--client", "emacs", "--print-config"); r.code != ExitUsage || !strings.Contains(r.stderr, "--client takes claude-code") {
+		t.Errorf("unknown client: exit %d %q", r.code, r.stderr)
+	}
+}
+
+// TestGuardShellCopilotNeverExitsNonZero: Copilot denies the tool call when a preToolUse hook exits
+// non-zero, so with --client copilot unreadable input exits 0 with no decision.
+func TestGuardShellCopilotNeverExitsNonZero(t *testing.T) {
+	for _, in := range []string{"", "not json", `{"toolArgs":`} {
+		r := cliIn(t, []byte(in), nil, false, "guard", "shell", "--client", "copilot")
+		if r.code != 0 || r.stdout != "" || !strings.Contains(r.stderr, "checked nothing") {
+			t.Errorf("%q: exit %d stdout %q stderr %q", in, r.code, r.stdout, r.stderr)
+		}
 	}
 }

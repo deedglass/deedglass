@@ -9,6 +9,16 @@ this file by `scripts/release-notes.sh`.
 
 ### Added
 
+- The shell guard in more coding agents (TY-08). `deedglass guard shell --client codex|gemini|copilot|cursor`
+  reads each agent's hook input and answers in its format, from one table
+  (`internal/shellguard/clients.go`); `--print-config --client <name>` prints the hook config and
+  writes no file, and `deedglass init --client codex|gemini|copilot` prints the MCP line and that
+  config. Codex and Gemini CLI can't ask, so there the guard denies; VS Code has no snippet yet (its
+  docs don't name the terminal tool), so it keeps the `deedglass mcp wrap` path. Goldens pin each
+  snippet and each client's answer to the claude-code#80868 command; a weekly `hook-clients`
+  workflow installs the latest Codex, Gemini and Copilot CLIs and runs them. Docs:
+  docs/INSTALL_CLIENTS.md#the-shell-guard-in-each-coding-agent.
+
 - Head timestamps (TY-03, ADR-112), off by default. With TSAs (`timestamps.tsa_urls`, at least
   `timestamps.min_tsa`, default 2) and optionally a transparency service (`timestamps.scitt_url`)
   in `deedglass.yaml`, each tar.gz export timestamps its last record and carries `timestamps.json`,

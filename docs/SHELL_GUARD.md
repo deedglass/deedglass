@@ -87,6 +87,14 @@ If `deedglass` isn't on your `PATH`, the shell can't start it, and Claude Code s
 error before each Bash command. Add `"onFailure": "continue"` to the hook if it should never block
 a command when it fails, including on Windows without Git Bash.
 
+### In Codex, Gemini CLI, GitHub Copilot and Cursor
+
+The same guard runs as each of these agents' before-a-command hook: `deedglass guard shell
+--client codex` (or `gemini`, `copilot`, `cursor`) reads that agent's input and answers in its
+format. `deedglass guard shell --print-config --client <name>` prints the hook config for it.
+Codex and Gemini CLI can't ask, so there it denies; VS Code has no snippet yet. Each client's file,
+format and limits: [INSTALL_CLIENTS.md](INSTALL_CLIENTS.md#the-shell-guard-in-each-coding-agent).
+
 ### Try it first
 
 ```sh
@@ -100,7 +108,8 @@ would ask (0 when it wouldn't). `--json` prints `decision`, `reason` and `findin
 ## What it answers
 
 The hook follows the contract on Claude Code's [hooks page](https://code.claude.com/docs/en/hooks)
-(checked 2026-10-18). It reads one JSON object on stdin and uses `tool_name`, `tool_input.command`
+(checked 2026-10-18); the other clients' contracts are in
+[INSTALL_CLIENTS.md](INSTALL_CLIENTS.md#the-shell-guard-in-each-coding-agent). It reads one JSON object on stdin and uses `tool_name`, `tool_input.command`
 and `cwd`.
 
 - **Something matches:** it writes one object and exits 0:
@@ -233,4 +242,5 @@ For changes that do reach Postgres, the Gate and Observe mode show what Postgres
 
 `go test ./internal/shellguard ./cmd/deedglass -run 'Incidents|Asks|Ordinary|Limits|GuardShell'`
 runs the incident commands, the asks corpus (every catalog row through wrappers and compound forms),
-the ordinary corpus, the limits and the hook contract. `FuzzCheck` runs in `make fuzz-regress`.
+the ordinary corpus, the limits and the hook contract. `-run Client` runs every client's snippet
+and answer goldens (`internal/shellguard/testdata/clients`). `FuzzCheck` runs in `make fuzz-regress`.

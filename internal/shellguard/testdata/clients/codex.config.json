@@ -1,0 +1,17 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "^Bash$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "deedglass guard shell --client codex",
+            "timeout": 10,
+            "statusMessage": "Deedglass shell guard"
+          }
+        ]
+      }
+    ]
+  }
+}

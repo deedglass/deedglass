@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/deedglass/deedglass/internal/shellguard"
 )
 
 // fakeRunner fails every Docker call unless told otherwise; Self writes a key file for keys gen.
@@ -182,4 +184,21 @@ func listen() (interface {
 	Addr() net.Addr
 }, error) {
 	return net.Listen("tcp", "127.0.0.1:0")
+}
+
+// TestAgentClientStep (TY-08): init --client codex|gemini|copilot prints the MCP line and the shell
+// guard config from internal/shellguard's table, and writes nothing.
+func TestAgentClientStep(t *testing.T) {
+	for client, want := range map[string]string{
+		"codex":   "codex mcp add deedglass -- npx -y deedglass mcp serve",
+		"gemini":  `"mcpServers": {"deedglass": {"command": "npx", "args": ["-y", "deedglass", "mcp", "serve"]}}`,
+		"copilot": "copilot mcp add deedglass -- npx -y deedglass mcp serve",
+	} {
+		s := AgentClientStep(client)
+		all := strings.Join(s.Lines, "\n")
+		c, _ := shellguard.LookupClient(client)
+		if s.Status != Skipped || !strings.Contains(all, want) || !strings.Contains(all, strings.TrimRight(c.Config, "\n")) {
+			t.Errorf("%s: %v\n%s", client, s.Status, all)
+		}
+	}
 }

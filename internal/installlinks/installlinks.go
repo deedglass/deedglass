@@ -104,6 +104,9 @@ func Links() []Link {
 		claudeDesktop("claude-desktop-intel", "Claude Desktop (macOS, Intel)", "darwin-x64", ""),
 		claudeDesktop("claude-desktop-windows", "Claude Desktop (Windows)", "win32-x64", ""),
 		{ID: "windsurf", Client: "Windsurf", Kind: "config", Command: snippetJSON, Note: "Add to ~/.codeium/windsurf/mcp_config.json."},
+		{ID: "codex", Client: "Codex CLI", Kind: "command", Command: "codex mcp add deedglass -- npx -y deedglass mcp serve", Note: "Writes ~/.codex/config.toml."},
+		{ID: "gemini", Client: "Gemini CLI", Kind: "config", Command: snippetJSON, Note: "Add to .gemini/settings.json, or ~/.gemini/settings.json for every project."},
+		{ID: "copilot", Client: "GitHub Copilot CLI", Kind: "command", Command: "copilot mcp add deedglass -- npx -y deedglass mcp serve", Note: "Writes ~/.copilot/mcp-config.json."},
 		{ID: "docker", Client: "Docker MCP Catalog", Kind: "command", Command: "docker mcp server enable deedglass", Note: "After the catalog lists Deedglass."},
 	}
 }
@@ -142,10 +145,10 @@ func Decode(l Link) (ServerObject, bool) {
 			return ServerObject{}, false
 		}
 		return ServerObject{Command: u.Query().Get("cmd"), Args: u.Query()["arg"]}, true
-	case "claude-code":
+	case "claude-code", "codex", "copilot":
 		f := strings.Fields(strings.SplitN(l.Command, " -- ", 2)[1])
 		return ServerObject{Command: f[0], Args: f[1:]}, true
-	case "windsurf":
+	case "windsurf", "gemini":
 		var m struct {
 			MCPServers map[string]ServerObject `json:"mcpServers"`
 		}

@@ -1,0 +1,13 @@
+{
+  "session_id": "abc123",
+  "transcript_path": "/home/dev/.claude/projects/app/abc123.jsonl",
+  "cwd": "/home/dev/app",
+  "permission_mode": "default",
+  "hook_event_name": "PreToolUse",
+  "tool_name": "Bash",
+  "tool_input": {
+    "command": "cd \"<repo>\" && MIG=\"prisma/migrations/$(date +%Y%m%d%H%M%S)_<name>\" && mkdir -p \"$MIG\" && \\\n  npx prisma migrate diff --from-migrations prisma/migrations \\\n  --to-schema-datamodel prisma/schema.prisma \\\n  --shadow-database-url \"$(grep -E '^DATABASE_URL=' <path>/.env | cut -d= -f2- | tr -d '\\\"')\" \\\n  --script > \"$MIG/migration.sql\"",
+    "description": "Write the migration"
+  },
+  "tool_use_id": "toolu_01"
+}

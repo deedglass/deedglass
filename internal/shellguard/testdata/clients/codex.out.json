@@ -1,0 +1,1 @@
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"Deedglass denied this command because prisma migrate diff --shadow-database-url resets the database that URL names before it replays your migrations there, so a real database loses its data; if it is intended, ask the user to run it themselves."}}

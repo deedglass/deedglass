@@ -1,0 +1,14 @@
+{
+  "conversation_id": "conv_01",
+  "generation_id": "gen_01",
+  "model": "claude-sonnet",
+  "hook_event_name": "beforeShellExecution",
+  "cursor_version": "2.4.0",
+  "workspace_roots": [
+    "/home/dev/app"
+  ],
+  "transcript_path": null,
+  "command": "cd \"<repo>\" && MIG=\"prisma/migrations/$(date +%Y%m%d%H%M%S)_<name>\" && mkdir -p \"$MIG\" && \\\n  npx prisma migrate diff --from-migrations prisma/migrations \\\n  --to-schema-datamodel prisma/schema.prisma \\\n  --shadow-database-url \"$(grep -E '^DATABASE_URL=' <path>/.env | cut -d= -f2- | tr -d '\\\"')\" \\\n  --script > \"$MIG/migration.sql\"",
+  "cwd": "/home/dev/app",
+  "sandbox": false
+}
