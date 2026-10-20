@@ -16,7 +16,8 @@ Use synthetic data while you try it. The [guide](../guides/fhir-server.md) walks
 Attack cases I01 to I12 run in `make attack` against the stand-in server (I05 to I08 against its
 Postgres store, read as HAPI's tables); the [results page](../ATTACK_SUITE.md) shows the last release-stamped run.
 The [healthcare-fhir policy pack](../guides/healthcare-fhir-pack.md) is a starting policy for this
-connector.
+connector. Using Medplum (including Medplum Bots)? [Medplum and Deedglass](../integrations/medplum.md)
+has the setup and a runnable example.
 
 ## The boundary
 

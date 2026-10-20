@@ -1,0 +1,89 @@
+# The Medplum example (examples/medplum/README.md): a self-hosted Medplum server on PostgreSQL 18
+# with Redis, and Deedglass's own control-plane database. Deedglass itself runs on this machine
+# (run.sh starts it from this tree). Local only: every port is bound to 127.0.0.1, every secret
+# comes from examples/medplum/.env (written by run.sh, 0600, git-ignored). Synthetic data only.
+# Images are pinned by digest (the same ones scripts/fhir_proven.sh uses).
+#
+#   examples/medplum/run.sh            (make medplum-example)   ·   run.sh down
+name: deedglass-medplum
+
+services:
+  medplum-db:
+    # Medplum's database. wal_level=logical so Deedglass can read Medplum's change log (Proven);
+    # a finite slot limit so a stopped Deedglass can't fill the disk with retained WAL.
+    image: postgres:18.6@sha256:5a5a84b19854a9ffaa54082c166ff4ec27473a361e496e5ea167f298f2da9722
+    command: ["postgres", "-c", "wal_level=logical", "-c", "max_slot_wal_keep_size=1GB"]
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${MEDPLUM_DB_PASSWORD:?run examples/medplum/run.sh}
+      POSTGRES_DB: medplum
+    ports:
+      - "127.0.0.1:${MEDPLUM_DB_PORT:-55441}:5432"
+    healthcheck:
+      test: ["CMD", "pg_isready", "-h", "127.0.0.1", "-U", "postgres", "-d", "medplum"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+      start_period: 5s
+
+  redis:
+    image: redis:7.4.6-alpine@sha256:3b73847e72874be07e6657b129a94761662b79bc0f679273757d4218573b2a98
+    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD:?run examples/medplum/run.sh}"]
+
+  medplum:
+    # Medplum's first start creates its schema and a super admin with the made-up login in .env.
+    image: medplum/medplum-server:5.2.6@sha256:2968c9aeb85d03968370855a5dc409a6f28ef5abda0996e353be06c525b61216
+    command: ["env"]
+    environment:
+      MEDPLUM_PORT: "8103"
+      MEDPLUM_BASE_URL: http://127.0.0.1:${MEDPLUM_PORT:-8103}/
+      MEDPLUM_APP_BASE_URL: http://127.0.0.1:${MEDPLUM_PORT:-8103}/
+      MEDPLUM_STORAGE_BASE_URL: http://127.0.0.1:${MEDPLUM_PORT:-8103}/storage/
+      MEDPLUM_BINARY_STORAGE: file:/tmp/binary/
+      MEDPLUM_DATABASE_HOST: medplum-db
+      MEDPLUM_DATABASE_PORT: "5432"
+      MEDPLUM_DATABASE_DBNAME: medplum
+      MEDPLUM_DATABASE_USERNAME: postgres
+      MEDPLUM_DATABASE_PASSWORD: ${MEDPLUM_DB_PASSWORD:?run examples/medplum/run.sh}
+      MEDPLUM_REDIS_HOST: redis
+      MEDPLUM_REDIS_PORT: "6379"
+      MEDPLUM_REDIS_PASSWORD: ${REDIS_PASSWORD:?run examples/medplum/run.sh}
+      MEDPLUM_SUPPORT_EMAIL: support@example.test
+      MEDPLUM_SHUTDOWN_TIMEOUT_MILLISECONDS: "5000"
+      MEDPLUM_DEFAULT_SUPER_ADMIN_EMAIL: admin@example.test
+      MEDPLUM_DEFAULT_SUPER_ADMIN_PASSWORD: ${MEDPLUM_ADMIN_PASSWORD:?run examples/medplum/run.sh}
+    ports:
+      - "127.0.0.1:${MEDPLUM_PORT:-8103}:8103"
+    depends_on:
+      medplum-db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    healthcheck:
+      # The image has no shell, so Node asks.
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8103/healthcheck').then(r => process.exit(r.ok ? 0 : 1), () => process.exit(1))"]
+      interval: 3s
+      timeout: 5s
+      retries: 80
+      start_period: 20s
+
+  ledger-db:
+    # Deedglass's own control-plane database: the actions, the Ledger and the deeds. Never the same
+    # database as Medplum's (docs/DATABASE_SETUP.md).
+    image: postgres:18.6@sha256:5a5a84b19854a9ffaa54082c166ff4ec27473a361e496e5ea167f298f2da9722
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${LEDGER_DB_PASSWORD:?run examples/medplum/run.sh}
+      DEEDGLASS_DEV_PG_MIGRATOR_PASSWORD: ${DEEDGLASS_DEV_PG_MIGRATOR_PASSWORD:?run examples/medplum/run.sh}
+      DEEDGLASS_DEV_PG_APP_PASSWORD: ${DEEDGLASS_DEV_PG_APP_PASSWORD:?run examples/medplum/run.sh}
+    ports:
+      - "127.0.0.1:${LEDGER_DB_PORT:-55442}:5432"
+    volumes:
+      - ../../deploy/postgres/control-plane-roles.sql:/deedglass/control-plane-roles.sql:ro
+      - ../../deploy/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD", "pg_isready", "-h", "127.0.0.1", "-U", "postgres", "-d", "deedglass"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+      start_period: 5s

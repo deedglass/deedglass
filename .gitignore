@@ -42,6 +42,7 @@ sdk/typescript/node_modules/
 sdk/typescript/dist/
 sdk/typescript/coverage/
 examples/ts/node_modules/
+examples/medplum/node_modules/
 
 # S32: the Python SDK and deedglass scan's outputs
 sdk/python/.venv/

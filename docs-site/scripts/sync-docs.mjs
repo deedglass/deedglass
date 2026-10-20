@@ -59,6 +59,7 @@ export const IMPORTS = {
   'docs/guides/observe-beside-another-gate.md': 'guides/observe-beside-another-gate',
   'docs/guides/fhir-server.md': 'guides/fhir-server',
   'docs/guides/healthcare-fhir-pack.md': 'guides/healthcare-fhir-pack',
+  'docs/integrations/medplum.md': 'guides/medplum',
   'docs/OBSERVE.md': 'reference/observe',
   'docs/PHI_MODE.md': 'reference/phi-mode',
   'docs/EXPORTS.md': 'reference/exports',

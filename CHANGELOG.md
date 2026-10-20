@@ -7,6 +7,15 @@ this file by `scripts/release-notes.sh`.
 
 ## [Unreleased]
 
+### Added
+
+- The Medplum example (`examples/medplum`, `make medplum-example`): Medplum 5.2.6 on PostgreSQL 18
+  in Docker, an agent-style client writing through the gate (a create that Matches, a create
+  Medplum answers 201 but stores without a read-only field, flagged Doesn't match at Checked and
+  Proven, and an update a person countersigns), and a Medplum Bot handler that calls the gate with
+  `@deedglass/sdk`. `make medplum-example-it` runs it as a test (skips without Docker; not in CI).
+  New page: docs/integrations/medplum.md, linked from the FHIR connector reference.
+
 ## [0.5.0] - 2026-10-20
 
 Records built to be read in twenty years. Every seal now names its algorithm (deed v2), and a

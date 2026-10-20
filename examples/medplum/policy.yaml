@@ -1,0 +1,34 @@
+deedglass: policy/v1
+name: medplum-example
+description: >-
+  The Medplum example (examples/medplum). Reads and Observation creates run and are checked; an
+  update waits for a person to countersign; everything else is refused. Synthetic data only.
+
+defaults:
+  decision: deny
+  reason: No rule allows this action.
+
+rules:
+  - id: medplum-reads
+    match: { connector_type: fhir, side_effect: read }
+    when: request.fhir.enriched
+    decision: allow
+
+  - id: observation-creates
+    match: { connector_type: fhir, tool: ["*.create"] }
+    when: request.fhir.enriched && request.fhir.resource_type == "Observation"
+    decision: allow
+    # L1 accepts Checked (the read-back) and still gets Proven where the change log is readable.
+    verify: L1
+
+  - id: updates-need-a-person
+    match: { connector_type: fhir, tool: ["*.update", "*.patch"] }
+    when: request.fhir.enriched
+    decision: require_approval
+    reason: A change to an existing resource needs a person to countersign.
+    approval:
+      approvers: [role:admin]
+      required: 1
+      expires_in: 10m
+    notify: []
+    verify: L1

@@ -90,7 +90,7 @@ export const FULL_OUT = [
 // references, the limits in full and the specialist guides are in llms-full.txt.
 const SMALL_IN = [
   /^(index)?$/, /^quickstart$/, /^faq$/, /^get-started\//, /^concepts\//,
-  /^guides\/(?!(stripe-refunds|github|fhir-server|healthcare-fhir-pack|phone-approvals|replay|rotate-keys|production|multi-agent|slack-approvals)$)/,
+  /^guides\/(?!(stripe-refunds|github|fhir-server|healthcare-fhir-pack|medplum|phone-approvals|replay|rotate-keys|production|multi-agent|slack-approvals)$)/,
   /^security\/(overview|data-handling|disclosure)$/,
 ];
 // llms-postgres.txt: checking and undoing what an agent changed in Postgres.
