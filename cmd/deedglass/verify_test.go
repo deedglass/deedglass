@@ -214,9 +214,11 @@ func verifyCases(t *testing.T, tmp string) []vcase {
 		add("invalid-"+filepath.Base(d), f[0], "--keys", k)
 	}
 	for _, n := range []string{"v2/valid/01-ed25519-only.json", "v2/valid/chain-v1-then-v2.jsonl", "v2/invalid/unsupported-algorithm/deed.json",
-		"v2/invalid/seal-stripped/deed.json", "v2/invalid/ed25519-alone-2035-v1/deed.json"} {
-		add("v2-"+strings.NewReplacer("v2/", "", "/", "-", ".jsonl", "", ".json", "").Replace(n), vec+n, "--keys", vec+"v2/keys.json")
+		"v2/invalid/seal-stripped/deed.json", "v2/valid/03-dual-sealed.json", "v2/valid/chain-across-pq-rotation.jsonl",
+		"v2/invalid/pq-seal-stripped/deed.json", "v2/invalid/pq-downgrade-to-v1/deed.json", "v2/cose/03-dual-sealed.cose"} {
+		add("v2-"+strings.NewReplacer("v2/", "", "/", "-", ".jsonl", "", ".json", "", ".cose", "-cose").Replace(n), vec+n, "--keys", vec+"v2/keys.json")
 	}
+	add("v2-invalid-ed25519-alone-2035-v1-deed", vec+"v2/invalid/ed25519-alone-2035-v1/deed.json", "--keys", vec+"v2/invalid/ed25519-alone-2035-v1/keys.json")
 	add("valid-all-loose", vec+"valid/01-action-verified-l2.json", vec+"valid/02-action-denied.json", vec+"valid/03-admin-agent-stopped.json",
 		vec+"valid/04-amendment-mismatch.json", vec+"valid/05-action-approved-then-executed.json", vec+"valid/06-unicode-agent-name.json", "--keys", keys)
 	add("chain-verbose", vec+"chains/genesis-20.jsonl", "--keys", keys, "-v")
@@ -349,10 +351,17 @@ func TestVerifyMatchesVectors(t *testing.T) {
 		check(d, []string{f[0], "--keys", k}, w)
 	}
 	// Deed v2 (ADR-109): the same answers, exit codes included (unsupported_algorithm exits 2).
-	var allV2 map[string]exp
+	var allV2 map[string]struct {
+		exp
+		Keys string `json:"keys"`
+	}
 	_ = json.Unmarshal(mustRead(t, vec+"v2/expected.json"), &allV2)
 	for p, w := range allV2 {
-		check(p, []string{vec + p, "--keys", vec + "v2/keys.json"}, w)
+		k := vec + "v2/keys.json"
+		if w.Keys != "" {
+			k = vec + w.Keys
+		}
+		check(p, []string{vec + p, "--keys", k}, w.exp)
 	}
 	dirsV2, _ := filepath.Glob(vec + "v2/invalid/*")
 	if len(dirsV2) < 15 {
@@ -362,7 +371,11 @@ func TestVerifyMatchesVectors(t *testing.T) {
 		var w exp
 		_ = json.Unmarshal(mustRead(t, d+"/expected.json"), &w)
 		f, _ := filepath.Glob(d + "/deed*")
-		check(d, []string{f[0], "--keys", vec + "v2/keys.json"}, w)
+		k := vec + "v2/keys.json"
+		if _, err := os.Stat(d + "/keys.json"); err == nil {
+			k = d + "/keys.json"
+		}
+		check(d, []string{f[0], "--keys", k}, w)
 	}
 }
 

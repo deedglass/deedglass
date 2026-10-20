@@ -1,0 +1,97 @@
+{
+  "object": "seal_key_set",
+  "issuer": "https://deedglass.example",
+  "updated_at": "2026-10-02T09:00:21.000Z",
+  "keys": [
+    {
+      "object": "seal_key",
+      "id": "sk_01m3xxf0m3pr8c7exrac9sarxx",
+      "alg": "Ed25519",
+      "public_key": "kZpYEMmQR9QjhAd22rSNi5P_-yOVIXIqE_1I32AbcXY",
+      "thumbprint": "sha256:fdfb7b7d83630f6ada1d5000d134792652f8a149a1af90ea5a2dd542651b1112",
+      "status": "revoked",
+      "activated_at": "2026-10-02T07:00:00.000Z",
+      "retired_at": null,
+      "revoked_at": "2026-10-02T08:00:00.000Z",
+      "jwk": {
+        "kty": "OKP",
+        "crv": "Ed25519",
+        "x": "kZpYEMmQR9QjhAd22rSNi5P_-yOVIXIqE_1I32AbcXY",
+        "kid": "sk_01m3xxf0m3pr8c7exrac9sarxx",
+        "use": "sig"
+      }
+    },
+    {
+      "object": "seal_key",
+      "id": "sk_01m3xxf0m1crvjtd24mgqnmgah",
+      "alg": "Ed25519",
+      "public_key": "pEzUz7QOOPD171uzsw5ASsNYKkd5Uq4K9zc4PQUk2e8",
+      "thumbprint": "sha256:f6b1d24a4efdc39230905e0c217093f4d1d5e301ac52c9e763a773e864d93f33",
+      "status": "retired",
+      "activated_at": "2026-10-02T08:00:00.000Z",
+      "retired_at": "2026-10-02T09:00:10.000Z",
+      "revoked_at": null,
+      "jwk": {
+        "kty": "OKP",
+        "crv": "Ed25519",
+        "x": "pEzUz7QOOPD171uzsw5ASsNYKkd5Uq4K9zc4PQUk2e8",
+        "kid": "sk_01m3xxf0m1crvjtd24mgqnmgah",
+        "use": "sig"
+      }
+    },
+    {
+      "object": "seal_key",
+      "id": "sk_01m3xxf0m5zywgtnwsz6qsf9mr",
+      "alg": "SLH-DSA-SHA2-128s",
+      "public_key": "8O-sLsADG7G8fuLye0J4dL-PY6sUcogoKWgNq0EfWc8",
+      "thumbprint": "sha256:e02fb5c2b8de4c7a935ec67c3fb47ae8a92220d31e327625d0d7e85de52a7a55",
+      "status": "active",
+      "activated_at": "2026-10-02T08:00:00.000Z",
+      "retired_at": null,
+      "revoked_at": null,
+      "jwk": {
+        "kty": "AKP",
+        "alg": "SLH-DSA-SHA2-128s",
+        "pub": "8O-sLsADG7G8fuLye0J4dL-PY6sUcogoKWgNq0EfWc8",
+        "kid": "sk_01m3xxf0m5zywgtnwsz6qsf9mr",
+        "use": "sig"
+      }
+    },
+    {
+      "object": "seal_key",
+      "id": "sk_01m3xxf0m2b2bf0pn7ssc7whbb",
+      "alg": "Ed25519",
+      "public_key": "NZrtW3sPKjtHKohezekKHwchbUTdn7ZKryUGnoIUCfU",
+      "thumbprint": "sha256:3d3876ffac00eac374b0e6e5735718edfcc7637ace18ef40a3ccc492cf98bf60",
+      "status": "active",
+      "activated_at": "2026-10-02T09:00:05.000Z",
+      "retired_at": null,
+      "revoked_at": null,
+      "jwk": {
+        "kty": "OKP",
+        "crv": "Ed25519",
+        "x": "NZrtW3sPKjtHKohezekKHwchbUTdn7ZKryUGnoIUCfU",
+        "kid": "sk_01m3xxf0m2b2bf0pn7ssc7whbb",
+        "use": "sig"
+      }
+    },
+    {
+      "object": "seal_key",
+      "id": "sk_01m3xxf0m4wz8mwd5h76p09nn7",
+      "alg": "ML-DSA-65",
+      "public_key": "oCT19ey_DRGoqB2JNikOTGuwCUOelvJOHVbh2QnU2xOXSzprLjh7KdiDhcKJo9aGZ_jmd0HUQOFw_Yql1yWH5HCGGn15DNefqJyYCxyky2WodpC7_gyswoZkb2BF5s-Vg8XxC3i2J3GeYWjj5_NcGQI_Tw8D0eBl2xfObQgSRu_FwJoQDM5eB1OwWiJpufkhQ-e53fGmbLiiHqSX_LYUGlYKjrB0Cykn8aViey8T4qfCL9I2wgc_xNJgdOdF_usU5rBCK0rw1Y5df30WV15MTS9FYhFTka_aNmsTtnD2WOcaohtnYEiMIU8noZkZh9khCiiGSaF49ty5N0ZdC9AewtBiUHwWSoq944bVUPie6JJo6QmebZbbTGXVFtOhScNQ7A3jP3ZeyoDZmqEAkoE3jgpnkWNdpYeXbuqpIqeqBz2z1am6X1k0DwEuQPt1vNNJSI3RfhB6PnX6D4TWE5aoBrjc7D-ombeuQ-49ZlVCHz7-MZUtS0Z0-MSlU2CWY7ln6UiSsgJpiOUIRyeMHyuAth_JD3kQsFF1eICf221AwtGsc6-6HiJLyaYLQtB9bUXFKmBijRNmw6_TSu5cS9k6kmXz7Wi6d0WPWIYDM8OzzBuRiuH-VsSDRAUDJiUqcTJDIVQwemgrux0okHwYodd74nmBsXWJWMVjtG7dt9njsKRl5dhqIA6kGIvyFGdbnJY2ArOr0yP3XCvYUcbiC4lMc9a1IWV0K5Opt0IAmfmHG7xZkCvycgK93-8DHFz_MAWD_kycdaQsDPFW1IW1bW9M_Je1Rhc1nvPvId3rlmADa739JO0zdkTJ14ON6QFDA_KX3lbwYplk3AyHRUvw8fGcolvquokR7rh0hHEkFtoeWZVrM86khyGF4NoPxG9wDjuOS66EJ0Qz_vAvE9RoZ6lODYoTQ7qyDFyR55eDX06NTt_WBu0O1-u2n_SjR77MAdxD5shlaXXXR9XJINwU8IfwdTd-HG3w6tvfWC-VkjElSVAaALRzb16n2yA2T7QtpjCFKRIp0WCexSE2ZKHqAJZCcAEqok_oTleReBQP8DuachDiDuZOJ2Hx-40EBQircwL_Nw0w1_YFbG_w2HOA9uaQBHuYFFct6DFDcM1AONfoEahmQSMLjW1fV0wCZSnTTvwbUbSahYkDMv__-Sf2BixIw1b0NLtPGFXQng6mU_y73BBM33KQs4QFYfbrhiQrRk5z6BBX46kA5FQVUmmQI--qQZ7utPcAHUgJ7iNyAqu9NdULDTdTSkAlHYXzl6TsxR3_SFpTXlo-DbHxY_7NtRiiObSBYTCA6zsJxxxmRnJyW9HQU386C8yooD2mn_vf9zVSOGSW19cBZb4oWkIAM-xNrWvs84pvplIKiv1e4yt825XISdPI75zZqtj1DUSfghEuBgmnmW8MhSuBrkUqheH7609ZTtrYzy_7MUEVpBLfV6YDzNipWguwTEBEUmLx9mxl1tclrZp5EdbfT9kvgW42LEIe7c0oS4vPnKb5x9LQWOr3kzYMFCziTseruk8GYytRK_Ed1CfSOekCgMsPryYidOavYLL7h_FL-cVGu8IsWUCS0u0fVjiiWhggGzCzyQsx_WAW8eAYxUC5bSH71CWAr0ormEo8h_ze0XCTxsN3tLdpyxqlcFyGffDQrsMTpDHZJ2N-VdrdvPcDbOjLruNcB0IuLOmxuSFEFFg2JRCVraElSiU2W2R4poeLcxUKf1wdJI3nKA_27uhnfk8m3Uvqyo_Cjc8rJ-itl1-09VTw8Hv7gbHTYQi9vyNpbpvjWUqLAp8cw19l8rtz_0XvwmEjTp8-QzsgASsMQ70udrq8zjlY9ZSFzwWRyp1D5XA_-JbLmZIlXZ_74HHFAWXY0JHb_LITNpcbteE40WHKP4-6hhz3vZ6lRWcgKWyvKidCuPX4x0vvj4B9xWAj0yVEkfZFI-7SXGYNP3li1j8QR_cSUkQF8JYVj97gYVN_ERHeM6kSox1Ur629q0Gz_CXwQfq81Fk2fiN8mZlqYkBoapd21QeEAgF277wN877NbW4TJ00V4TIEIovP70bDyFDbmU7_ShPo0fHp3y-ODm5npfo2PEHpkZNfemFzfgZ4pZJJR4DqAmFBCoZv-aoUT550_qDjYuygToR0TTU7ekJrGeyvMQfJSX1MSaSoYXqJyO0saPpC7Fe5ABP-ZjlobunIFP9m-_ovXxyMMyRVR5K1jGdxMZpeP2XjUI3zSNBHpeXHdSJp-N_T2n-MtCvjE1qD-FhpsX5YfZTfkyQ7JqRvP-BbmZIvZvRUcQ_He9DgAT6K6dokC6do6LYoWZ2wsiJgjAeoA5Ic93CsgS68ej57GU0d01wecjezteG3uvCcJJWNZhkns3ceS4b9HauvW52Ka3b4Lpk2hrPLc14TTlhpahHMmZet7UcIxBB0fE0F9pSTZduw9O05-R9B-WWWGlcrHiBdoOYZleTV3ykiUWU-IeDWs1c984BwhrLq4AymJp1OQJeoBRktA1C4zgrUUBoCqKyUxOBpl4HN1hr_OvM0Nq6RUFDcqPw5TeWWvw791PIQN61ROxDdXV08WkTkzqkVu5gkAEB1t5MQ2acyRdi3NelQEgM",
+      "thumbprint": "sha256:69a0c386b951a7276556c6323999e2190f1abc90697b3d5b5723d2f6ef916b9c",
+      "status": "revoked",
+      "activated_at": "2026-10-02T09:00:20.000Z",
+      "retired_at": null,
+      "revoked_at": "2026-10-02T09:00:21.000Z",
+      "jwk": {
+        "kty": "AKP",
+        "alg": "ML-DSA-65",
+        "pub": "oCT19ey_DRGoqB2JNikOTGuwCUOelvJOHVbh2QnU2xOXSzprLjh7KdiDhcKJo9aGZ_jmd0HUQOFw_Yql1yWH5HCGGn15DNefqJyYCxyky2WodpC7_gyswoZkb2BF5s-Vg8XxC3i2J3GeYWjj5_NcGQI_Tw8D0eBl2xfObQgSRu_FwJoQDM5eB1OwWiJpufkhQ-e53fGmbLiiHqSX_LYUGlYKjrB0Cykn8aViey8T4qfCL9I2wgc_xNJgdOdF_usU5rBCK0rw1Y5df30WV15MTS9FYhFTka_aNmsTtnD2WOcaohtnYEiMIU8noZkZh9khCiiGSaF49ty5N0ZdC9AewtBiUHwWSoq944bVUPie6JJo6QmebZbbTGXVFtOhScNQ7A3jP3ZeyoDZmqEAkoE3jgpnkWNdpYeXbuqpIqeqBz2z1am6X1k0DwEuQPt1vNNJSI3RfhB6PnX6D4TWE5aoBrjc7D-ombeuQ-49ZlVCHz7-MZUtS0Z0-MSlU2CWY7ln6UiSsgJpiOUIRyeMHyuAth_JD3kQsFF1eICf221AwtGsc6-6HiJLyaYLQtB9bUXFKmBijRNmw6_TSu5cS9k6kmXz7Wi6d0WPWIYDM8OzzBuRiuH-VsSDRAUDJiUqcTJDIVQwemgrux0okHwYodd74nmBsXWJWMVjtG7dt9njsKRl5dhqIA6kGIvyFGdbnJY2ArOr0yP3XCvYUcbiC4lMc9a1IWV0K5Opt0IAmfmHG7xZkCvycgK93-8DHFz_MAWD_kycdaQsDPFW1IW1bW9M_Je1Rhc1nvPvId3rlmADa739JO0zdkTJ14ON6QFDA_KX3lbwYplk3AyHRUvw8fGcolvquokR7rh0hHEkFtoeWZVrM86khyGF4NoPxG9wDjuOS66EJ0Qz_vAvE9RoZ6lODYoTQ7qyDFyR55eDX06NTt_WBu0O1-u2n_SjR77MAdxD5shlaXXXR9XJINwU8IfwdTd-HG3w6tvfWC-VkjElSVAaALRzb16n2yA2T7QtpjCFKRIp0WCexSE2ZKHqAJZCcAEqok_oTleReBQP8DuachDiDuZOJ2Hx-40EBQircwL_Nw0w1_YFbG_w2HOA9uaQBHuYFFct6DFDcM1AONfoEahmQSMLjW1fV0wCZSnTTvwbUbSahYkDMv__-Sf2BixIw1b0NLtPGFXQng6mU_y73BBM33KQs4QFYfbrhiQrRk5z6BBX46kA5FQVUmmQI--qQZ7utPcAHUgJ7iNyAqu9NdULDTdTSkAlHYXzl6TsxR3_SFpTXlo-DbHxY_7NtRiiObSBYTCA6zsJxxxmRnJyW9HQU386C8yooD2mn_vf9zVSOGSW19cBZb4oWkIAM-xNrWvs84pvplIKiv1e4yt825XISdPI75zZqtj1DUSfghEuBgmnmW8MhSuBrkUqheH7609ZTtrYzy_7MUEVpBLfV6YDzNipWguwTEBEUmLx9mxl1tclrZp5EdbfT9kvgW42LEIe7c0oS4vPnKb5x9LQWOr3kzYMFCziTseruk8GYytRK_Ed1CfSOekCgMsPryYidOavYLL7h_FL-cVGu8IsWUCS0u0fVjiiWhggGzCzyQsx_WAW8eAYxUC5bSH71CWAr0ormEo8h_ze0XCTxsN3tLdpyxqlcFyGffDQrsMTpDHZJ2N-VdrdvPcDbOjLruNcB0IuLOmxuSFEFFg2JRCVraElSiU2W2R4poeLcxUKf1wdJI3nKA_27uhnfk8m3Uvqyo_Cjc8rJ-itl1-09VTw8Hv7gbHTYQi9vyNpbpvjWUqLAp8cw19l8rtz_0XvwmEjTp8-QzsgASsMQ70udrq8zjlY9ZSFzwWRyp1D5XA_-JbLmZIlXZ_74HHFAWXY0JHb_LITNpcbteE40WHKP4-6hhz3vZ6lRWcgKWyvKidCuPX4x0vvj4B9xWAj0yVEkfZFI-7SXGYNP3li1j8QR_cSUkQF8JYVj97gYVN_ERHeM6kSox1Ur629q0Gz_CXwQfq81Fk2fiN8mZlqYkBoapd21QeEAgF277wN877NbW4TJ00V4TIEIovP70bDyFDbmU7_ShPo0fHp3y-ODm5npfo2PEHpkZNfemFzfgZ4pZJJR4DqAmFBCoZv-aoUT550_qDjYuygToR0TTU7ekJrGeyvMQfJSX1MSaSoYXqJyO0saPpC7Fe5ABP-ZjlobunIFP9m-_ovXxyMMyRVR5K1jGdxMZpeP2XjUI3zSNBHpeXHdSJp-N_T2n-MtCvjE1qD-FhpsX5YfZTfkyQ7JqRvP-BbmZIvZvRUcQ_He9DgAT6K6dokC6do6LYoWZ2wsiJgjAeoA5Ic93CsgS68ej57GU0d01wecjezteG3uvCcJJWNZhkns3ceS4b9HauvW52Ka3b4Lpk2hrPLc14TTlhpahHMmZet7UcIxBB0fE0F9pSTZduw9O05-R9B-WWWGlcrHiBdoOYZleTV3ykiUWU-IeDWs1c984BwhrLq4AymJp1OQJeoBRktA1C4zgrUUBoCqKyUxOBpl4HN1hr_OvM0Nq6RUFDcqPw5TeWWvw791PIQN61ROxDdXV08WkTkzqkVu5gkAEB1t5MQ2acyRdi3NelQEgM",
+        "kid": "sk_01m3xxf0m4wz8mwd5h76p09nn7",
+        "use": "sig"
+      }
+    }
+  ]
+}

@@ -793,6 +793,10 @@ func newLedger(db *store.DB, signer deed.Signer, cfg *config.Config, log *slog.L
 	if signer == nil {
 		return ledger.New(db, nil, nil, opts...)
 	}
+	if pq := pqSignerFor(signer); pq != nil {
+		opts = append(opts, ledger.WithPQSigner(pq))
+		return ledger.New(db, deed.NewSealer(signer, deed.WithExtraSigners(pq)), signer, opts...)
+	}
 	return ledger.New(db, deed.NewSealer(signer), signer, opts...)
 }
 

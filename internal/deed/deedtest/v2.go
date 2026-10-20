@@ -40,10 +40,30 @@ func (u UnknownSigner) Sign(msg []byte) ([]byte, error) {
 // KeyX returns key x.
 func KeyX() UnknownSigner { return UnknownSigner{ID: ID("sk", 5), Seed: Seed("x")} }
 
-// KeyRecordsV2 is the v2 vectors' key set: a, b and r as in v1, plus x.
+// QActivated is when ML-DSA-65 key q became active, beside Ed25519 key b (the rotation that adds a
+// PQ key, ADR-109): from then on the key-set rule wants an ML-DSA-65 seal on every deed.
+var QActivated = T0.Add(20 * time.Second)
+
+// KeyQ returns ML-DSA-65 test key q, signing deterministically so the vectors are reproducible.
+func KeyQ() *deed.MLDSASigner {
+	s, err := deed.NewMLDSASigner(ID("sk", 4), Seed("q"))
+	if err != nil {
+		panic(err)
+	}
+	return s.Deterministic()
+}
+
+// KeyRecordQ is key q as the server stores it; status and times can be changed by the caller.
+func KeyRecordQ() deed.KeyRecord {
+	q := KeyQ()
+	return deed.KeyRecord{ID: q.KeyID(), Alg: deed.AlgMLDSA65, PublicKey: q.PublicKeyBytes(), Status: deed.KeyActive, ActivatedAt: QActivated}
+}
+
+// KeyRecordsV2 is the v2 vectors' key set: a, b and r as in v1, plus ML-DSA-65 key q and key x.
 func KeyRecordsV2() []deed.KeyRecord {
 	x := KeyX()
-	return append(KeyRecords(), deed.KeyRecord{ID: x.ID, Alg: AlgUnknown, PublicKey: x.PublicKeyBytes(), Status: deed.KeyActive, ActivatedAt: XActivated})
+	return append(KeyRecords(), KeyRecordQ(),
+		deed.KeyRecord{ID: x.ID, Alg: AlgUnknown, PublicKey: x.PublicKeyBytes(), Status: deed.KeyActive, ActivatedAt: XActivated})
 }
 
 // KeySetV2 is the published v2 test key set.

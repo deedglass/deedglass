@@ -36,6 +36,9 @@ type Expected struct {
 	Field      *string `json:"field"`
 	StrictCode *string `json:"strict_code"`
 	Exit       int     `json:"exit"`
+	// Keys (v2 vectors only) names the key set to verify with, relative to testdata/deeds, when it
+	// is not v2/keys.json.
+	Keys string `json:"keys,omitempty"`
 }
 
 func pretty(t testing.TB, v any) []byte {

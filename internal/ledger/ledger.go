@@ -56,6 +56,7 @@ type Ledger struct {
 	db     *store.DB
 	sealer *deed.Sealer
 	signer deed.Signer
+	pq     deed.AlgSigner // ADR-109: the ML-DSA-65 key, for COSE exports of v2 deeds (nil without one)
 	issuer string
 	gen    archive.Generator
 	log    *slog.Logger
@@ -82,6 +83,10 @@ func WithLogger(log *slog.Logger) Option { return func(l *Ledger) { l.log = log 
 
 // WithClock replaces time.Now (tests pin export created_at with it).
 func WithClock(now func() time.Time) Option { return func(l *Ledger) { l.now = now } }
+
+// WithPQSigner sets the ML-DSA-65 seal key the issuer signs COSE exports of v2 deeds with (alg −49,
+// ADR-109). The Sealer gets the same key through deed.WithExtraSigners.
+func WithPQSigner(s deed.AlgSigner) Option { return func(l *Ledger) { l.pq = s } }
 
 // WithDev marks a dev deployment (DEEDGLASS_ENV=dev): Prune accepts cutoffs under 24 hours.
 func WithDev(dev bool) Option { return func(l *Ledger) { l.dev = dev } }

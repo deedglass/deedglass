@@ -262,7 +262,12 @@ func (h handlers) getDeed(w http.ResponseWriter, r *http.Request) error {
 		if t := at.Truncate(time.Second); !t.Equal(at) {
 			at = t.Add(time.Second)
 		}
-		b, err := deed.EncodeCOSE(env, h.l.signer, h.l.issuer, at)
+		var b []byte
+		if env.Body.V == deed.VersionV2 && h.l.pq != nil {
+			b, err = deed.EncodeCOSEAlg(env, h.l.pq, h.l.issuer, at) // ML-DSA-65, alg −49 (ADR-109)
+		} else {
+			b, err = deed.EncodeCOSE(env, h.l.signer, h.l.issuer, at)
+		}
 		if err != nil {
 			return err
 		}

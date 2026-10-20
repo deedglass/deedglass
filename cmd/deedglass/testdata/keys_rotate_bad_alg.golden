@@ -1,0 +1,5 @@
+exit 2
+--- stdout
+--- stderr
+✕ --alg takes Ed25519 or ML-DSA-65 (got "RSA").
+  For a post-quantum key beside Ed25519: deedglass keys rotate --alg ML-DSA-65.

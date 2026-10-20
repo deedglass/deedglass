@@ -76,6 +76,18 @@
     "owner": "S01"
   },
   {
+    "env": "DEEDGLASS_SEAL_PQ_KEY_FILE",
+    "yaml": "seal_pq_key_file",
+    "type": "path",
+    "default": "",
+    "secret": false,
+    "client": false,
+    "dev_only": false,
+    "commands": "serve, keys",
+    "doc": "Path to an ML-DSA-65 seal key file (keys rotate --alg ML-DSA-65). With it, deeds carry a second, post-quantum seal beside Ed25519 (deed v2, ADR-109).",
+    "owner": "TY-02"
+  },
+  {
     "env": "DEEDGLASS_VAULT_KEY",
     "yaml": "vault_key",
     "type": "secret",

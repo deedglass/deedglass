@@ -268,6 +268,7 @@ complete -c deedglass -n '__deedglass_is \'keys\'' -a 'rotate' -d 'Rotate the ac
 complete -c deedglass -n '__deedglass_is \'keys\'' -a 'list' -d 'List seal keys'
 complete -c deedglass -n '__deedglass_is \'keys gen\'' -l dir -r -d 'directory for the key file (default .deedglass/keys)'
 complete -c deedglass -n '__deedglass_is \'keys gen\'' -l purpose -r -d 'seal (a deed seal key), licence (an lk_ key that signs licence tokens, never deeds) or packs (the key that signs the policy-packs index)'
+complete -c deedglass -n '__deedglass_is \'keys rotate\'' -l alg -r -d 'Ed25519 (replace the seal key) or ML-DSA-65 (add a post-quantum key beside it)'
 complete -c deedglass -n '__deedglass_is \'keys rotate\'' -l dir -r -d 'directory for the new key file (default: next to DEEDGLASS_SEAL_KEY_FILE, else .deedglass/keys)'
 complete -c deedglass -n '__deedglass_is \'keys rotate\'' -l overlap -r -d 'how long the old key keeps sealing (1s to 168h)'
 complete -c deedglass -n '__deedglass_is \'ledger\'' -a 'check' -d 'Check the record chain'

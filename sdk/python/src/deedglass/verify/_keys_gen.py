@@ -20,6 +20,7 @@ SMALL_ORDER_KEYS: tuple[tuple[str, str, str], ...] = (
 
 TEST_KEY_THUMBPRINTS: tuple[str, ...] = (
     "sha256:3d3876ffac00eac374b0e6e5735718edfcc7637ace18ef40a3ccc492cf98bf60",
+    "sha256:69a0c386b951a7276556c6323999e2190f1abc90697b3d5b5723d2f6ef916b9c",
     "sha256:f6b1d24a4efdc39230905e0c217093f4d1d5e301ac52c9e763a773e864d93f33",
     "sha256:fdfb7b7d83630f6ada1d5000d134792652f8a149a1af90ea5a2dd542651b1112",
 )

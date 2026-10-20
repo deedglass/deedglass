@@ -90,6 +90,19 @@ func (l *Ledger) Export(ctx context.Context, org ids.OrgID, r Range, w io.Writer
 		for _, k := range keyIDs {
 			want[k] = true
 		}
+		// A v2 deed names one key per seal (ADR-109); seal_key_id holds only the primary one.
+		rows, err = tx.Query(ctx, `SELECT DISTINCT k.value ->> 'id' FROM deedglass.deeds AS d,
+		    pg_catalog.jsonb_array_elements(d.body -> 'seal_keys') AS k
+		  WHERE d.org_id = $1 AND d.seq BETWEEN $2 AND $3 AND d.body ? 'seal_keys'`, org, *lo, *hi)
+		if err != nil {
+			return err
+		}
+		if keyIDs, err = pgx.CollectRows(rows, pgx.RowTo[string]); err != nil {
+			return err
+		}
+		for _, k := range keyIDs {
+			want[k] = true
+		}
 		ks, err := l.keySet(ctx, want)
 		if err != nil {
 			return err

@@ -182,7 +182,7 @@ _deedglass() {
       flags=( '--dir:directory for the key file (default .deedglass/keys)' '--purpose:seal (a deed seal key), licence (an lk_ key that signs licence tokens, never deeds) or packs (the key that signs the policy-packs index)' )
       ;;
     'keys rotate')
-      flags=( '--dir:directory for the new key file (default\: next to DEEDGLASS_SEAL_KEY_FILE, else .deedglass/keys)' '--overlap:how long the old key keeps sealing (1s to 168h)' )
+      flags=( '--alg:Ed25519 (replace the seal key) or ML-DSA-65 (add a post-quantum key beside it)' '--dir:directory for the new key file (default\: next to DEEDGLASS_SEAL_KEY_FILE, else .deedglass/keys)' '--overlap:how long the old key keeps sealing (1s to 168h)' )
       ;;
     'ledger')
       subs=( 'check:Check the record chain' 'prune:Remove old payloads; records stay' )

@@ -8,6 +8,7 @@ DEEDGLASS_MIGRATE_DATABASE_URL    —                                           
 DEEDGLASS_LISTEN                  127.0.0.1:8080                                               [2mdefault[0m
 DEEDGLASS_BASE_URL                http://127.0.0.1:8080                                        [2mdefault[0m
 DEEDGLASS_SEAL_KEY_FILE           —                                                            [2mnot set[0m
+DEEDGLASS_SEAL_PQ_KEY_FILE        —                                                            [2mnot set[0m
 DEEDGLASS_VAULT_KEY               kek:000000000000 (active)                                    [2m.deedglass/dev-secrets.json[0m
 DEEDGLASS_API_KEY_PEPPER          ••••••••                                                     [2m.deedglass/dev-secrets.json[0m
 DEEDGLASS_LOG_LEVEL               debug                                                        [2menv[0m

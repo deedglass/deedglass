@@ -30,6 +30,7 @@ The first source that sets a key wins:
 | `DEEDGLASS_LISTEN` | `listen` | `127.0.0.1:8080` | no | serve | Address the API, the Gate and the Console listen on (host:port). | S01 |
 | `DEEDGLASS_BASE_URL` | `base_url` | `http://127.0.0.1:8080` | no | serve, org login-link | The URL people and agents use to reach this server. Prod needs https. | S01 |
 | `DEEDGLASS_SEAL_KEY_FILE` | `seal_key_file` | — | no | serve, keys | Path to the seal key file used to seal deeds. | S01 |
+| `DEEDGLASS_SEAL_PQ_KEY_FILE` | `seal_pq_key_file` | — | no | serve, keys | Path to an ML-DSA-65 seal key file (keys rotate --alg ML-DSA-65). With it, deeds carry a second, post-quantum seal beside Ed25519 (deed v2, ADR-109). | TY-02 |
 | `DEEDGLASS_VAULT_KEY` | `vault_key` (dev only) | — | yes | serve, vault, connector credentials | A key ring of 1 to 4 comma-separated base64 keys of exactly 32 bytes; the first encrypts connector credentials, the rest only decrypt during a rotation (S16). config print shows only the key ids (kek:…). Dev generates one in .deedglass/. | S01 |
 | `DEEDGLASS_API_KEY_PEPPER` | `api_key_pepper` (dev only) | — | yes | serve, org keys, agent keys | Base64 of at least 32 bytes, mixed into API key hashes. Keep it stable: changing it invalidates every API key. Dev generates one in .deedglass/. | S01 |
 | `DEEDGLASS_LOG_LEVEL` | `log_level` | `info` | no | all | Log level. | S01 |

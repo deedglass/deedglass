@@ -2,6 +2,7 @@ package deed
 
 import (
 	"crypto/ed25519"
+	"crypto/mldsa"
 	"regexp"
 	"strings"
 	"time"
@@ -16,8 +17,12 @@ import (
 
 // Seal key algorithms.
 const (
-	AlgEd25519 = "Ed25519" // RFC 8032 pure Ed25519, 32-byte keys, 64-byte signatures
+	AlgEd25519 = "Ed25519"   // RFC 8032 pure Ed25519, 32-byte keys, 64-byte signatures
+	AlgMLDSA65 = "ML-DSA-65" // FIPS 204 ML-DSA-65 (pure, empty context), 1,952-byte keys, 3,309-byte signatures
 )
+
+// COSEAlgMLDSA65 is ML-DSA-65's COSE algorithm value (RFC 9964).
+const COSEAlgMLDSA65 = -49
 
 // Ed25519AloneUntil is the accept policy's date for Ed25519: a deed issued at or after it needs a
 // seal of another accepted algorithm too (NIST IR 8547 ipd lists EdDSA as disallowed after 2035).
@@ -64,6 +69,20 @@ var algs = map[string]*algSpec{
 		},
 		jwkOK: func(j JWK, k *SealKey) bool {
 			return j.Kty == "OKP" && j.Crv == "Ed25519" && j.X == k.PublicKey && j.Alg == "" && j.Pub == "" &&
+				j.Kid == k.ID && j.Use == "sig"
+		},
+	},
+	// ML-DSA-65 (ADR-109): Go 1.27's crypto/mldsa. Pure ML-DSA over the tagged input with the empty
+	// context string, as RFC 9964 requires for COSE and JOSE, so any FIPS 204 library checks it.
+	AlgMLDSA65: {
+		name: AlgMLDSA65, prefix: "ml-dsa-65:", tag: TagDeedV2MLDSA65,
+		keySize: mldsa.MLDSA65PublicKeySize, sigSize: mldsa.MLDSA65SignatureSize,
+		parseKey: func(raw []byte) (any, error) { return mldsa.NewPublicKey(mldsa.MLDSA65(), raw) },
+		verify: func(pub any, msg, sig []byte) bool {
+			return mldsa.Verify(pub.(*mldsa.PublicKey), msg, sig, nil) == nil
+		},
+		jwkOK: func(j JWK, k *SealKey) bool {
+			return j.Kty == "AKP" && j.Alg == AlgMLDSA65 && j.Pub == k.PublicKey && j.Crv == "" && j.X == "" &&
 				j.Kid == k.ID && j.Use == "sig"
 		},
 	},

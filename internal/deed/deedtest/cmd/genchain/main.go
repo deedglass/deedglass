@@ -3,6 +3,10 @@
 // the output means nothing outside benchmarks.
 //
 //	go run ./internal/deed/deedtest/cmd/genchain -n 100000 -keys 2 -out .tmp/deeds-100k.jsonl [-bundle .tmp/deeds-100k.tar.gz]
+//
+// With -dual (ADR-109), seq 1–20 are v1 (key a, then b) and every deed from seq 21 (T0+20s, when
+// ML-DSA-65 key q activates) is deed v2, dual-sealed by b and q; verify it against
+// testdata/deeds/v2/keys.json.
 package main
 
 import (
@@ -22,6 +26,7 @@ func main() {
 	nkeys := flag.Int("keys", 2, "seal keys to use: 1 (key a, n ≤ 10) or 2 (a then b)")
 	out := flag.String("out", "", "the .jsonl file to write")
 	bundle := flag.String("bundle", "", "also write an export bundle here, sealed by key b")
+	dual := flag.Bool("dual", false, "dual-seal every deed from seq 21 with Ed25519 key b and ML-DSA-65 key q (deed v2)")
 	flag.Parse()
 	if *out == "" || *n < 1 || (*nkeys == 1 && *n > 10) || *nkeys < 1 || *nkeys > 2 {
 		fmt.Fprintln(os.Stderr, "usage: genchain -n 100000 -keys 2 -out deeds.jsonl [-bundle deeds.tar.gz]")
@@ -29,11 +34,22 @@ func main() {
 	}
 	start := time.Now()
 	c := deedtest.NewChain(*n, deedtest.ChainOpts{})
+	keySet := deedtest.KeySet()
+	if *dual {
+		signers := []deed.AlgSigner{deedtest.TestKey("b").Signer, deedtest.KeyQ()}
+		c = deedtest.NewChainV2(*n, deedtest.V2ChainOpts{SignersFor: func(seq int64) []deed.AlgSigner {
+			if seq <= 20 {
+				return nil
+			}
+			return signers
+		}})
+		keySet = deedtest.KeySetV2()
+	}
 	if err := writeJSONL(*out, c.Lines); err != nil {
 		fail(err)
 	}
 	if *bundle != "" {
-		if err := writeBundle(*bundle, c); err != nil {
+		if err := writeBundle(*bundle, c, keySet); err != nil {
 			fail(err)
 		}
 	}
@@ -56,8 +72,8 @@ func writeJSONL(path string, lines [][]byte) error {
 	return f.Close()
 }
 
-func writeBundle(path string, c *deedtest.Chain) error {
-	ks, err := deed.StrictCanonical(deedtest.KeySet())
+func writeBundle(path string, c *deedtest.Chain, keySet *deed.KeySet) error {
+	ks, err := deed.StrictCanonical(keySet)
 	if err != nil {
 		return err
 	}

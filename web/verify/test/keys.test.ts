@@ -35,8 +35,13 @@ describe('Ed25519 public keys (attack case A13)', () => {
 
   it('reads the test key set and its thumbprints', async () => {
     const ks = await parseKeySet(readBytes('testdata/deeds/keys/test-keys.json'));
-    expect(ks.keys.map((k) => k.thumbprint).sort()).toEqual([...TEST_KEY_THUMBPRINTS].sort());
+    expect(ks.keys.map((k) => k.thumbprint).every((tp) => TEST_KEY_THUMBPRINTS.includes(tp))).toBe(true);
     expect(ks.keys.map((k) => k.status)).toEqual(['revoked', 'retired', 'active']);
+    // The v2 set adds ML-DSA-65 key q, also a published test key (ADR-109); key x stands for an
+    // algorithm no verifier implements and is not one.
+    const v2 = await parseKeySet(readBytes('testdata/deeds/v2/keys.json'));
+    const known = v2.keys.filter((k) => k.alg !== 'SLH-DSA-SHA2-128s').map((k) => k.thumbprint).sort();
+    expect(known).toEqual([...TEST_KEY_THUMBPRINTS].sort());
   });
 
   it('refuses inconsistent key sets', async () => {

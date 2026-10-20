@@ -954,7 +954,8 @@
     ],
     "messages": null,
     "next": [
-      "Nothing changed. Check the database connection and run deedglass keys rotate again."
+      "Nothing changed. Check the database connection and run deedglass keys rotate again.",
+      "Nothing changed. Check the database connection and run deedglass keys rotate --alg ML-DSA-65 again."
     ]
   },
   {

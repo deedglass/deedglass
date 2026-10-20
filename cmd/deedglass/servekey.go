@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/deedglass/deedglass/cmd/deedglass/internal/ui"
@@ -119,6 +120,93 @@ func loadSealKeyQuiet(ctx context.Context, e *Env, cfg *config.Config, db *store
 	log.Info("seal key loaded", "seal_key_id", s.KeyID(), "thumbprint", tp, "registered", created)
 	if !quiet {
 		fmt.Fprintln(e.Stdout, e.Style.OKLine("Seal key "+ui.Sep+" "+s.KeyID()+" "+ui.Sep+" "+shortHash(tp)))
+	}
+	if cfg.SealPQKeyFile != "" {
+		pq, err := loadPQSealKey(ctx, e, cfg, db, log, quiet)
+		if err != nil {
+			return nil, err
+		}
+		pqSigners.Store(s, pq)
+	}
+	return s, nil
+}
+
+// pqSigners remembers the ML-DSA-65 key loaded beside each Ed25519 seal key, so newLedger gives the
+// Sealer both (ADR-109) without every caller passing a second key.
+var pqSigners sync.Map // *deed.FileSigner → *deed.MLDSASigner
+
+// pqSignerFor returns the ML-DSA-65 key loaded beside signer, or nil.
+func pqSignerFor(signer deed.Signer) deed.AlgSigner {
+	fs, ok := signer.(*deed.FileSigner)
+	if !ok {
+		return nil
+	}
+	if v, ok := pqSigners.Load(fs); ok {
+		return v.(*deed.MLDSASigner)
+	}
+	return nil
+}
+
+const (
+	nextPQ        = "Check DEEDGLASS_SEAL_PQ_KEY_FILE, or add a key: deedglass keys rotate --alg ML-DSA-65"
+	nextPQRetired = "deedglass keys list, then point DEEDGLASS_SEAL_PQ_KEY_FILE at the active ML-DSA-65 key."
+)
+
+// loadPQSealKey loads and checks the ML-DSA-65 seal key (DEEDGLASS_SEAL_PQ_KEY_FILE, ADR-109). Prod
+// needs it registered first (keys rotate --alg ML-DSA-65 registers it with an overlap); dev
+// registers it now. It fails closed like the Ed25519 key.
+func loadPQSealKey(ctx context.Context, e *Env, cfg *config.Config, db *store.DB, log *slog.Logger, quiet bool) (*deed.MLDSASigner, error) {
+	prod := cfg.Env == config.Prod
+	shown := cfg.SealPQKeyFile
+	s, err := deed.LoadPQKeyFile(cfg.SealPQKeyFile, deed.LoadOptions{Prod: prod})
+	var kfe *deed.KeyFileError
+	if errors.As(err, &kfe) {
+		switch kfe.Problem {
+		case deed.KeyFileTestKey:
+			return nil, keyErr(e, "seal_key_test_key", msgTestKey, nextPQ)
+		case deed.KeyFileTooOpen:
+			return nil, keyErr(e, "seal_key_file_mode", fmt.Sprintf("Seal key file %s can be read by other users (mode %04o).", shown, kfe.Mode.Perm()), "chmod 600 "+shown)
+		case deed.KeyFileMismatch:
+			return nil, keyErr(e, "seal_key_file_damaged", fmt.Sprintf("Seal key file %s is damaged: its seed does not match its public key.", shown), nextPQ)
+		default:
+			return nil, keyErr(e, "seal_key_file_unreadable", fmt.Sprintf("Seal key file %s can't be used: %s.", shown, kfe.Detail), nextPQ)
+		}
+	}
+	if err != nil {
+		return nil, err
+	}
+	row, err := db.SealKey(ctx, s.KeyID())
+	created := false
+	switch {
+	case errors.Is(err, store.ErrNotFound) && !prod:
+		if row, created, err = db.RegisterSealKeyAlg(ctx, s.KeyID(), deed.AlgMLDSA65, s.PublicKeyBytes()); err != nil {
+			if errors.Is(err, store.ErrSealKeyConflict) {
+				return nil, keyErr(e, "seal_key_conflict", fmt.Sprintf("Seal key %s's public key is already registered under another id.", s.KeyID()), nextKeyConflict)
+			}
+			return nil, fmt.Errorf("registering the ML-DSA-65 seal key: %w", err)
+		}
+	case errors.Is(err, store.ErrNotFound):
+		return nil, keyErr(e, "seal_key_not_registered", fmt.Sprintf("ML-DSA-65 seal key %s is not registered.", s.KeyID()), "deedglass keys rotate --alg ML-DSA-65 writes and registers one.")
+	case err != nil:
+		return nil, fmt.Errorf("reading the ML-DSA-65 seal key: %w", err)
+	}
+	if row.Alg != deed.AlgMLDSA65 || !bytes.Equal(row.PublicKey, s.PublicKeyBytes()) {
+		return nil, keyErr(e, "seal_key_mismatch", fmt.Sprintf("Seal key %s in the file does not match the registered public key.", s.KeyID()), nextPQ)
+	}
+	switch {
+	case row.Status == deed.KeyRevoked || row.RevokedAt != nil:
+		return nil, keyErr(e, "seal_key_revoked", fmt.Sprintf("Seal key %s was revoked at %s. Deedglass will not seal deeds with it.", s.KeyID(), minuteTime(row.RevokedAt)), nextPQRetired)
+	case row.Status != deed.KeyActive:
+		return nil, keyErr(e, "seal_key_retired", fmt.Sprintf("Seal key %s was retired at %s. Deedglass will not start with it.", s.KeyID(), minuteTime(row.RetiredAt)), nextPQRetired)
+	}
+	tp := deed.Digest(s.PublicKeyBytes())
+	log.Info("pq seal key loaded", "seal_key_id", s.KeyID(), "alg", deed.AlgMLDSA65, "thumbprint", tp, "registered", created, "activated_at", row.ActivatedAt)
+	if !quiet {
+		line := "Seal key " + ui.Sep + " " + s.KeyID() + " " + ui.Sep + " ML-DSA-65 " + ui.Sep + " " + shortHash(tp)
+		if row.ActivatedAt.After(time.Now()) {
+			line += " " + ui.Sep + " seals from " + row.ActivatedAt.UTC().Format("15:04") + " UTC"
+		}
+		fmt.Fprintln(e.Stdout, e.Style.OKLine(line))
 	}
 	return s, nil
 }

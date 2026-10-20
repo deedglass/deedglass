@@ -22,6 +22,8 @@ const (
 	// TagDeedV2Ed25519 is a v2 deed's Ed25519 seal input tag. Every v2 algorithm has its own tag
 	// (alg.go), so a signature made for one algorithm or version is never accepted as another.
 	TagDeedV2Ed25519 = "deedglass/deed/v2/ed25519\n"
+	// TagDeedV2MLDSA65 is a v2 deed's ML-DSA-65 seal input tag (ADR-109).
+	TagDeedV2MLDSA65 = "deedglass/deed/v2/ml-dsa-65\n"
 	// TagBundle is the export-bundle manifest's domain tag (S05).
 	TagBundle = "deedglass/bundle/v1\n"
 	// TagIntent is the signed-intent domain tag (S09).

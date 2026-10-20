@@ -7,6 +7,7 @@
 // unsupported_algorithm.
 
 import { ALG_ED25519, ALGS, algSupported, type AlgSpec, reAlg } from './alg.js';
+import { type MLDSA65PublicKey, mldsa65PublicKey } from './mldsa.js';
 import { decodeB64url } from './b64url.js';
 import { keyRejected, malformed, schemaField, UnsupportedError, VerifyError } from './errors.js';
 import { toHex } from './hex.js';
@@ -47,6 +48,7 @@ export interface KeyEntry {
   retired: number | null;
   revoked: number | null;
   crypto?: Promise<CryptoKey>;
+  mldsa?: MLDSA65PublicKey;
 }
 
 /** A parsed, checked key set. */
@@ -78,6 +80,17 @@ export class SealKeySet {
       if (!out.includes(k.alg)) out.push(k.alg);
     }
     return out;
+  }
+
+  /** An ML-DSA-65 key decoded once (tr and Â computed once per key, not per seal). */
+  mldsaKey(id: string): MLDSA65PublicKey | null {
+    const e = this.byId.get(id)!;
+    if (e.mldsa === undefined) {
+      const k = mldsa65PublicKey(e.pub);
+      if (k === null) return null;
+      e.mldsa = k;
+    }
+    return e.mldsa;
   }
 
   /** The key as a WebCrypto key (imported once). Throws UnsupportedError when Ed25519 is missing. */

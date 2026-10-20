@@ -1,6 +1,7 @@
 package deed
 
 import (
+	"bytes"
 	"crypto/ed25519"
 	"errors"
 	"fmt"
@@ -128,26 +129,12 @@ func LoadKeyFile(path string, o LoadOptions) (*FileSigner, error) {
 	bad := func(p KeyFileProblem, detail string) error {
 		return &KeyFileError{Problem: p, Path: path, Detail: detail}
 	}
-	fi, err := os.Stat(path)
+	kf, fi, err := readKeyFile(path)
 	if err != nil {
-		if errors.Is(err, fs.ErrNotExist) {
-			return nil, bad(KeyFileUnreadable, "the file does not exist")
-		}
-		return nil, bad(KeyFileUnreadable, "it can't be read")
+		return nil, err
 	}
-	if !fi.Mode().IsRegular() {
-		return nil, bad(KeyFileUnreadable, "it is not a regular file")
-	}
-	if fi.Size() > 4096 {
-		return nil, bad(KeyFileUnreadable, "it is too large to be a seal key file")
-	}
-	raw, err := os.ReadFile(path)
-	if err != nil {
-		return nil, bad(KeyFileUnreadable, "it can't be read")
-	}
-	kf, err := parseKeyFile(raw)
-	if err != nil {
-		return nil, bad(KeyFileUnreadable, err.Error())
+	if kf.Alg != AlgEd25519 {
+		return nil, bad(KeyFileUnreadable, "it holds an "+kf.Alg+" key; DEEDGLASS_SEAL_KEY_FILE takes the Ed25519 key")
 	}
 	pubRaw, err := b64.DecodeString(kf.PublicKey)
 	if err != nil || len(pubRaw) != ed25519.PublicKeySize {
@@ -171,6 +158,84 @@ func LoadKeyFile(path string, o LoadOptions) (*FileSigner, error) {
 		return nil, bad(KeyFileUnreadable, err.Error())
 	}
 	if !s.PublicKey().Equal(ed25519.PublicKey(pubRaw)) {
+		return nil, &KeyFileError{Problem: KeyFileMismatch, Path: path, ID: kf.ID}
+	}
+	return s, nil
+}
+
+// readKeyFile reads and parses a seal key file of any algorithm (no key checks).
+func readKeyFile(path string) (*KeyFile, fs.FileInfo, error) {
+	bad := func(p KeyFileProblem, detail string) error {
+		return &KeyFileError{Problem: p, Path: path, Detail: detail}
+	}
+	fi, err := os.Stat(path)
+	if err != nil {
+		if errors.Is(err, fs.ErrNotExist) {
+			return nil, nil, bad(KeyFileUnreadable, "the file does not exist")
+		}
+		return nil, nil, bad(KeyFileUnreadable, "it can't be read")
+	}
+	if !fi.Mode().IsRegular() {
+		return nil, nil, bad(KeyFileUnreadable, "it is not a regular file")
+	}
+	if fi.Size() > 4096 {
+		return nil, nil, bad(KeyFileUnreadable, "it is too large to be a seal key file")
+	}
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		return nil, nil, bad(KeyFileUnreadable, "it can't be read")
+	}
+	kf, err := parseKeyFile(raw)
+	if err != nil {
+		return nil, nil, bad(KeyFileUnreadable, err.Error())
+	}
+	return kf, fi, nil
+}
+
+// NewMLDSAKeyFile builds an ML-DSA-65 key file for id and a 32-byte FIPS 204 seed (ADR-109).
+func NewMLDSAKeyFile(id string, seed []byte, created time.Time) (KeyFile, *MLDSASigner, error) {
+	s, err := NewMLDSASigner(id, seed)
+	if err != nil {
+		return KeyFile{}, nil, err
+	}
+	return KeyFile{Object: "seal_key_file", V: 1, ID: id, Alg: AlgMLDSA65, Seed: b64.EncodeToString(seed),
+		PublicKey: b64.EncodeToString(s.PublicKeyBytes()), CreatedAt: FormatTime(created)}, s, nil
+}
+
+// LoadPQKeyFile reads an ML-DSA-65 seal key file (DEEDGLASS_SEAL_PQ_KEY_FILE, ADR-109) and returns
+// its signer. It refuses, in this order: an unreadable or invalid file, or one holding another
+// algorithm; a published test-vector key (in prod always, and in dev outside tests); a file group or
+// others can read or write; and a seed that does not derive the public key.
+func LoadPQKeyFile(path string, o LoadOptions) (*MLDSASigner, error) {
+	bad := func(p KeyFileProblem, detail string) error {
+		return &KeyFileError{Problem: p, Path: path, Detail: detail}
+	}
+	kf, fi, err := readKeyFile(path)
+	if err != nil {
+		return nil, err
+	}
+	if kf.Alg != AlgMLDSA65 {
+		return nil, bad(KeyFileUnreadable, "it holds an "+kf.Alg+" key; DEEDGLASS_SEAL_PQ_KEY_FILE takes an ML-DSA-65 key")
+	}
+	pubRaw, err := b64.DecodeString(kf.PublicKey)
+	if err != nil || len(pubRaw) != mldsaPublicKeySize {
+		return nil, bad(KeyFileUnreadable, fmt.Sprintf("public_key is not %d bytes of base64url", mldsaPublicKeySize))
+	}
+	seed, err := b64.DecodeString(kf.Seed)
+	if err != nil || len(seed) != 32 {
+		return nil, bad(KeyFileUnreadable, "seed is not 32 bytes of base64url")
+	}
+	if IsTestKey(pubRaw) && (o.Prod || !testing.Testing()) {
+		return nil, &KeyFileError{Problem: KeyFileTestKey, Path: path, ID: kf.ID}
+	}
+	if fi.Mode().Perm()&0o077 != 0 {
+		return nil, &KeyFileError{Problem: KeyFileTooOpen, Path: path, ID: kf.ID, Mode: fi.Mode()}
+	}
+	s, err := NewMLDSASigner(kf.ID, seed)
+	if err != nil {
+		return nil, bad(KeyFileUnreadable, err.Error())
+	}
+	if !bytes.Equal(s.PublicKeyBytes(), pubRaw) {
 		return nil, &KeyFileError{Problem: KeyFileMismatch, Path: path, ID: kf.ID}
 	}
 	return s, nil
@@ -211,8 +276,8 @@ func parseKeyFile(raw []byte) (*KeyFile, error) {
 		return nil, fmt.Errorf("%s %s", d.err.Field, d.err.Detail)
 	case kf.Object != "seal_key_file" || kf.V != 1:
 		return nil, errors.New(`it is not a seal_key_file v1`)
-	case kf.Alg != AlgEd25519:
-		return nil, errors.New("alg must be Ed25519")
+	case kf.Alg != AlgEd25519 && kf.Alg != AlgMLDSA65:
+		return nil, errors.New("alg must be Ed25519 or ML-DSA-65")
 	case !isID(pSealKey, kf.ID):
 		return nil, errors.New("id must be an sk_ id")
 	}

@@ -51,6 +51,17 @@ func (f *fakeKeys) RotateSealKey(_ context.Context, id string, pub []byte, overl
 	return n, retired, nil
 }
 
+func (f *fakeKeys) AddPQSealKey(_ context.Context, id string, pub []byte, overlap time.Duration) (store.SealKeyRow, []store.SealKeyRow, error) {
+	if f.rotateErr != nil {
+		return store.SealKeyRow{}, nil, f.rotateErr
+	}
+	f.gotOverlap = overlap
+	now := keysNow().UTC().Truncate(time.Millisecond)
+	n := store.SealKeyRow{ID: id, Alg: deed.AlgMLDSA65, PublicKey: pub, Thumbprint: deed.Digest(pub), Status: deed.KeyActive, ActivatedAt: now.Add(overlap)}
+	f.rows = append(f.rows, n)
+	return n, nil, nil
+}
+
 // keysSeams fixes the clock, randomness and ids, and the database.
 func keysSeams(t *testing.T, fk *fakeKeys) {
 	t.Helper()
@@ -96,6 +107,9 @@ func TestKeysGoldens(t *testing.T) {
 		{"keys_rotate", &fakeKeys{rows: twoKeys().rows[1:]}, dbEnv, []string{"keys", "rotate"}, 0},
 		{"keys_rotate_json", &fakeKeys{rows: twoKeys().rows[1:]}, dbEnv, []string{"keys", "rotate", "--overlap", "1m", "--json"}, 0},
 		{"keys_rotate_failed", &fakeKeys{rows: twoKeys().rows[1:], rotateErr: errors.New("store: ERROR: permission denied for table seal_keys")}, dbEnv, []string{"keys", "rotate"}, 1},
+		{"keys_rotate_pq", &fakeKeys{rows: twoKeys().rows[1:]}, dbEnv, []string{"keys", "rotate", "--alg", "ML-DSA-65"}, 0},
+		{"keys_rotate_pq_json", &fakeKeys{rows: twoKeys().rows[1:]}, dbEnv, []string{"keys", "rotate", "--alg", "ML-DSA-65", "--json"}, 0},
+		{"keys_rotate_bad_alg", twoKeys(), dbEnv, []string{"keys", "rotate", "--alg", "RSA"}, 2},
 		{"keys_rotate_bad_overlap", twoKeys(), dbEnv, []string{"keys", "rotate", "--overlap", "200h"}, 2},
 		{"keys_rotate_no_database", nil, map[string]string{"NO_COLOR": "1"}, []string{"keys", "rotate"}, 1},
 		{"keys_list_unreachable", nil, dbEnv, []string{"keys", "list"}, 1},

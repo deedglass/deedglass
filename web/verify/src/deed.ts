@@ -2,10 +2,11 @@
 // deed.VerifyEnvelope (DEED_SPEC.md §11). The first failure wins, and every path that is not a
 // clean pass is a VerifyError.
 
-import { acceptedAlone, ALG_ED25519, ALGS, algSupported, ED25519_ALONE_UNTIL_TEXT, MAX_SEALS, reAlg, sealShapeOK } from './alg.js';
+import { acceptedAlone, ALG_ED25519, ALG_MLDSA65, ALGS, algSupported, ED25519_ALONE_UNTIL_TEXT, MAX_SEALS, reAlg, sealShapeOK } from './alg.js';
 import { decodeB64url } from './b64url.js';
 import { malformed, schemaField, unsupported, VerifyError } from './errors.js';
 import { canonicalize } from './jcs.js';
+import { mldsa65Verify } from './mldsa.js';
 import type { SealKeySet } from './keys.js';
 import { digest, subtle, utf8Bytes, utf8Length } from './sha256.js';
 import {
@@ -623,6 +624,11 @@ export async function verifyEnvelope(raw: string | Uint8Array, keys: SealKeySet,
 async function openAlgSeal(keys: SealKeySet, sv: SealValue, msg: string): Promise<boolean> {
   if (!sealShapeOK(sv.alg, sv.seal)) return false;
   if (sv.alg === ALG_ED25519) return openSeal(keys, sv.seal_key_id, msg, sv.seal);
+  if (sv.alg === ALG_MLDSA65) {
+    const sig = decodeB64url(sv.seal.slice(ALGS[ALG_MLDSA65]!.prefix.length));
+    const pk = keys.mldsaKey(sv.seal_key_id);
+    return sig !== null && pk !== null && mldsa65Verify(pk, utf8Bytes(msg), sig);
+  }
   return false;
 }
 

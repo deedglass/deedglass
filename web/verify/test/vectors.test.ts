@@ -57,11 +57,13 @@ describe('testdata/deeds vectors (the same answers as Go)', () => {
 
 describe('testdata/deeds/v2 vectors (deed v2, ADR-109)', () => {
   const V2KEYS = 'testdata/deeds/v2/keys.json';
-  const all = JSON.parse(readText('testdata/deeds/v2/expected.json')) as Record<string, Expected>;
+  const all = JSON.parse(readText('testdata/deeds/v2/expected.json')) as Record<string, Expected & { keys?: string }>;
   for (const [p, want] of Object.entries(all)) {
+    if (p.endsWith('.cose')) continue; // COSE is CLI-only
+    const keys = want.keys ? 'testdata/deeds/' + want.keys : V2KEYS;
     it(p, async () => {
-      expect(await run('testdata/deeds/' + p, V2KEYS, false)).toEqual({ valid: want.valid, code: want.code, seq: want.seq, field: want.field });
-      if (want.strict_code) expect((await run('testdata/deeds/' + p, V2KEYS, true)).code).toBe(want.strict_code);
+      expect(await run('testdata/deeds/' + p, keys, false)).toEqual({ valid: want.valid, code: want.code, seq: want.seq, field: want.field });
+      if (want.strict_code) expect((await run('testdata/deeds/' + p, keys, true)).code).toBe(want.strict_code);
     });
   }
   const dirs = readdirSync(repo('testdata/deeds/v2/invalid'));

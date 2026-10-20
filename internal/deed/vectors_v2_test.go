@@ -26,6 +26,30 @@ func v2Signers() (aOnly, bOnly, aX []deed.AlgSigner) {
 	return []deed.AlgSigner{a}, []deed.AlgSigner{b}, []deed.AlgSigner{a, x}
 }
 
+// dualSigners is Ed25519 key b and ML-DSA-65 key q: the dual seal.
+func dualSigners() []deed.AlgSigner {
+	return []deed.AlgSigner{deedtest.TestKey("b").Signer, deedtest.KeyQ()}
+}
+
+// dualChain is one org's chain across the rotation that adds key q: seq 1–3 v1 (key a), 4–5 v2 by
+// a alone, 6–10 v2 by b alone (a retires at T0+10s), and from seq 11 (T0+20s, when q activates)
+// dual-sealed by b and q.
+func dualChain(n int) *deedtest.Chain {
+	aOnly, bOnly, _ := v2Signers()
+	return deedtest.NewChainV2(n, deedtest.V2ChainOpts{ChainOpts: deedtest.ChainOpts{Step: 2 * time.Second},
+		SignersFor: func(seq int64) []deed.AlgSigner {
+			switch {
+			case seq <= 3:
+				return nil
+			case seq <= 5:
+				return aOnly
+			case seq <= 10:
+				return bOnly
+			}
+			return dualSigners()
+		}})
+}
+
 func addV2Vectors(t testing.TB, files map[string][]byte) {
 	t.Helper()
 	ks := deedtest.KeySetV2()
@@ -51,11 +75,28 @@ func addV2Vectors(t testing.TB, files map[string][]byte) {
 	files["v2/valid/chain-v1-then-v2.jsonl"] = jsonl(mixed.Lines...)
 	exp["v2/valid/chain-v1-then-v2.jsonl"] = Expected{Valid: true}
 	// The last millisecond Ed25519 alone is accepted (DEED_SPEC.md §11.4).
+	// With the v1 key set (no ML-DSA-65 key, so only the 2035 date applies).
 	late := deedtest.ResealV2(single.Deeds[0], bOnly, func(b *deed.Body) {
 		b.IssuedAt = deed.FormatTime(deed.Ed25519AloneUntil.Add(-time.Millisecond))
 	})
 	files["v2/valid/02-ed25519-last-millisecond.json"] = deedtest.Canonical(late)
-	exp["v2/valid/02-ed25519-last-millisecond.json"] = Expected{Valid: true}
+	exp["v2/valid/02-ed25519-last-millisecond.json"] = Expected{Valid: true, Keys: "keys/test-keys.json"}
+	// The dual seal (TY-02): Ed25519 key b and ML-DSA-65 key q, alone and across the rotation.
+	dual := deedtest.ResealV2(single.Deeds[0], dualSigners(), func(b *deed.Body) { b.IssuedAt = deed.FormatTime(deedtest.QActivated.Add(10 * time.Second)) })
+	files["v2/valid/03-dual-sealed.json"] = deedtest.Canonical(dual)
+	exp["v2/valid/03-dual-sealed.json"] = Expected{Valid: true}
+	dualAfter2035 := deedtest.ResealV2(single.Deeds[0], dualSigners(), func(b *deed.Body) { b.IssuedAt = "2046-01-01T00:00:00.000Z" })
+	files["v2/valid/04-dual-sealed-2046.json"] = deedtest.Canonical(dualAfter2035)
+	exp["v2/valid/04-dual-sealed-2046.json"] = Expected{Valid: true}
+	rot := dualChain(16)
+	files["v2/valid/chain-across-pq-rotation.jsonl"] = jsonl(rot.Lines...)
+	exp["v2/valid/chain-across-pq-rotation.jsonl"] = Expected{Valid: true}
+	cose, err := deed.EncodeCOSEAlg(dual, deedtest.KeyQ(), deedtest.Issuer, deedtest.QActivated.Add(time.Hour))
+	if err != nil {
+		t.Fatal(err)
+	}
+	files["v2/cose/03-dual-sealed.cose"] = cose
+	exp["v2/cose/03-dual-sealed.cose"] = Expected{Valid: true}
 	var ind bytes.Buffer
 	_ = json.Indent(&ind, single.Lines[0], "", "  ")
 	files["v2/lenient/whitespace.json"] = append(ind.Bytes(), '\n')
@@ -63,7 +104,7 @@ func addV2Vectors(t testing.TB, files map[string][]byte) {
 	exp["v2/lenient/whitespace.json"] = Expected{Valid: true, StrictCode: &nc}
 	files["v2/expected.json"] = pretty(t, exp)
 
-	for _, iv := range invalidVectorsV2(t, single) {
+	for _, iv := range append(invalidVectorsV2(t, single), invalidVectorsPQ(t, dual, rot)...) {
 		dir := "v2/invalid/" + iv.name + "/"
 		name := "deed.json"
 		if iv.chain {
@@ -112,8 +153,8 @@ func invalidVectorsV2(t testing.TB, single *deedtest.Chain) []invalidVector {
 			m["seals"] = append(seals(m), map[string]any{"alg": deedtest.AlgUnknown, "seal": x.SealPrefix() + base64.RawURLEncoding.EncodeToString(sig), "seal_key_id": x.ID})
 		}), exp: expect(deed.CodeSealKeyMismatch, 1, "")},
 		{name: "alg-confusion-key-set", data: deedtest.Canonical(deedtest.ResealV2(env, []deed.AlgSigner{lyingAlg{id: deedtest.KeyX().ID, s: a.Signer}}, nil)), exp: expect(deed.CodeSealInvalid, 1, "")},
-		{name: "ed25519-alone-2035-v1", data: v1At2035, exp: expect(deed.CodeSealMissing, 1, "")},
-		{name: "ed25519-alone-2035-v2", data: v2At2035, exp: expect(deed.CodeSealMissing, 1, "")},
+		{name: "ed25519-alone-2035-v1", data: v1At2035, keys: v1Keys(t), exp: expect(deed.CodeSealMissing, 1, "")},
+		{name: "ed25519-alone-2035-v2", data: v2At2035, keys: v1Keys(t), exp: expect(deed.CodeSealMissing, 1, "")},
 		{name: "v1-tag-in-v2", data: v1Tag, exp: expect(deed.CodeSealInvalid, 1, "")},
 		{name: "v1-seal-member", data: edit(t, raw, func(m map[string]any) { m["seal"] = seals(m)[0].(map[string]any)["seal"] }), exp: expect(deed.CodeSchemaInvalid, 1, "seal")},
 		{name: "seal-key-id-in-body", data: edit(t, raw, func(m map[string]any) { body(m)["seal_key_id"] = a.ID }), exp: expect(deed.CodeSchemaInvalid, 1, "body.seal_key_id")},
@@ -131,6 +172,77 @@ func invalidVectorsV2(t testing.TB, single *deedtest.Chain) []invalidVector {
 		{name: "version-3", data: edit(t, raw, func(m map[string]any) { body(m)["v"] = 3 }), exp: expect(deed.CodeUnsupportedVersion, 1, "")},
 	}
 }
+
+// v1Keys is the v1 test key set (a, b, r: no ML-DSA-65 key), for vectors about the 2035 date alone.
+func v1Keys(t testing.TB) []byte { return pretty(t, deedtest.KeySet()) }
+
+// invalidVectorsPQ are the ML-DSA-65 failures (attack cases Y01–Y04, Y08, Y11, Y12).
+func invalidVectorsPQ(t testing.TB, dual *deed.Envelope, rot *deedtest.Chain) []invalidVector {
+	t.Helper()
+	raw := deedtest.Canonical(dual)
+	b, q := deedtest.TestKey("b"), deedtest.KeyQ()
+	seals := func(m map[string]any) []any { return m["seals"].([]any) }
+	afterQ := func(x *deed.Body) { x.IssuedAt = dual.Body.IssuedAt }
+	pqSeal := func(msg string) string {
+		sig, err := q.Sign([]byte(msg))
+		if err != nil {
+			t.Fatal(err)
+		}
+		return "ml-dsa-65:" + base64.RawURLEncoding.EncodeToString(sig)
+	}
+	withPQSeal := func(seal string) []byte {
+		return edit(t, raw, func(m map[string]any) { seals(m)[1].(map[string]any)["seal"] = seal })
+	}
+	revoked := deedtest.KeyRecordsV2()
+	for i := range revoked {
+		if revoked[i].ID == q.KeyID() {
+			at := deedtest.QActivated.Add(time.Second)
+			revoked[i].Status, revoked[i].RevokedAt = deed.KeyRevoked, &at
+		}
+	}
+	revokedKS, err := deed.NewKeySet(deedtest.Issuer, revoked)
+	if err != nil {
+		t.Fatal(err)
+	}
+	spliced := append([][]byte(nil), rot.Lines[:11]...)
+	spliced = append(spliced, deedtest.Canonical(deedtest.Reseal(rot.Deeds[11], b, func(x *deed.Body) { x.V, x.SealKeys = deed.Version, nil })))
+	return []invalidVector{
+		{name: "pq-downgrade-to-v1", data: deedtest.Canonical(deedtest.Reseal(dual, b, func(x *deed.Body) { x.V, x.SealKeys = deed.Version, nil; afterQ(x) })), exp: expect(deed.CodeSealMissing, 1, "")},
+		{name: "pq-seal-stripped", data: edit(t, raw, func(m map[string]any) { m["seals"] = seals(m)[:1] }), exp: expect(deed.CodeSealMissing, 1, "")},
+		{name: "pq-seal-set-rewritten", data: deedtest.Canonical(deedtest.ResealV2(dual, []deed.AlgSigner{b.Signer}, afterQ)), exp: expect(deed.CodeSealMissing, 1, "")},
+		{name: "pq-alg-confusion-ed25519-names-pq-key", data: deedtest.Canonical(deedtest.ResealV2(dual, []deed.AlgSigner{lyingAlg{id: q.KeyID(), s: b.Signer}}, afterQ)), exp: expect(deed.CodeSealInvalid, 1, "")},
+		{name: "pq-alg-confusion-pq-names-ed25519-key", data: deedtest.Canonical(deedtest.ResealV2(dual, []deed.AlgSigner{b.Signer, lyingPQ{id: deedtest.TestKey("a").ID, s: q}}, afterQ)), exp: expect(deed.CodeSealInvalid, 1, "")},
+		{name: "pq-seal-bit-flip", data: edit(t, raw, func(m map[string]any) {
+			e := seals(m)[1].(map[string]any)
+			v := []byte(e["seal"].(string))
+			v[100] ^= 'A' ^ 'B'
+			if v[100] == e["seal"].(string)[100] {
+				v[100] = 'C'
+			}
+			e["seal"] = string(v)
+		}), exp: expect(deed.CodeSealInvalid, 1, "")},
+		{name: "pq-wrong-tag-ed25519", data: withPQSeal(pqSeal(deed.TagDeedV2Ed25519 + dual.BodyHash)), exp: expect(deed.CodeSealInvalid, 1, "")},
+		{name: "pq-wrong-tag-bundle", data: withPQSeal(pqSeal(deed.TagBundle + dual.BodyHash)), exp: expect(deed.CodeSealInvalid, 1, "")},
+		{name: "pq-wrong-tag-bare-hash", data: withPQSeal(pqSeal(dual.BodyHash)), exp: expect(deed.CodeSealInvalid, 1, "")},
+		{name: "pq-key-revoked", data: raw, keys: pretty(t, revokedKS), exp: expect(deed.CodeSealKeyRevoked, 1, "")},
+		{name: "pq-key-not-yet-active", data: deedtest.Canonical(deedtest.ResealV2(dual, dualSigners(), func(x *deed.Body) {
+			x.IssuedAt = deed.FormatTime(deedtest.QActivated.Add(-time.Millisecond))
+		})), exp: expect(deed.CodeSealKeyNotValidAt, 1, "")},
+		{name: "pq-seal-short", data: withPQSeal("ml-dsa-65:" + strings.Repeat("A", 4411)), exp: expect(deed.CodeSchemaInvalid, 1, "seals[1].seal")},
+		{name: "pq-chain-spliced-ed25519-only", data: jsonl(spliced...), chain: true, exp: expect(deed.CodeSealMissing, 12, "")},
+	}
+}
+
+// lyingPQ names key id while signing with ML-DSA-65 key s (attack case Y04).
+type lyingPQ struct {
+	id string
+	s  *deed.MLDSASigner
+}
+
+func (l lyingPQ) KeyID() string                   { return l.id }
+func (l lyingPQ) Alg() string                     { return deed.AlgMLDSA65 }
+func (l lyingPQ) PublicKeyBytes() []byte          { return l.s.PublicKeyBytes() }
+func (l lyingPQ) Sign(msg []byte) ([]byte, error) { return l.s.Sign(msg) }
 
 // lyingAlg names key id while signing with s: an Ed25519 seal that claims a key of another
 // algorithm (attack case Y04).
@@ -167,16 +279,43 @@ func parityFilesV2(t testing.TB) (corpus, expected []byte) {
 	ks := deedtest.KeySetV2()
 	pick := func(lines [][]byte) []byte { return lines[r.IntN(len(lines))] }
 	seals := func(m map[string]any) []any { return m["seals"].([]any) }
+	rot := dualChain(20)
+	dualLines := rot.Lines[10:]
 	type gen func() (kind string, chain, strict bool, deeds [][]byte)
 	gens := []struct {
 		weight int
 		g      gen
 	}{
-		{30, func() (string, bool, bool, [][]byte) { return "valid", false, r.IntN(3) == 0, [][]byte{pick(v2Lines)} }},
+		{20, func() (string, bool, bool, [][]byte) { return "valid", false, r.IntN(3) == 0, [][]byte{pick(v2Lines)} }},
+		{10, func() (string, bool, bool, [][]byte) {
+			return "valid dual", false, r.IntN(3) == 0, [][]byte{pick(dualLines)}
+		}},
+		{8, func() (string, bool, bool, [][]byte) {
+			return "valid chain across the PQ rotation", true, false, append([][]byte(nil), rot.Lines[:11+r.IntN(10)]...)
+		}},
+		{12, func() (string, bool, bool, [][]byte) {
+			b := bytes.Clone(pick(dualLines))
+			i := len(b) - 200 - r.IntN(4000) // inside the ML-DSA-65 seal
+			b[i] ^= byte(1 << r.IntN(6))
+			return "dual seal bit flip", false, false, [][]byte{b}
+		}},
+		{10, func() (string, bool, bool, [][]byte) {
+			return "dual seal stripped or downgraded", false, false, [][]byte{edit(t, pick(dualLines), func(m map[string]any) {
+				s := seals(m)
+				switch r.IntN(3) {
+				case 0:
+					m["seals"] = s[:1]
+				case 1:
+					m["seals"] = s[1:]
+				default:
+					s[1].(map[string]any)["seal_key_id"] = deedtest.TestKey("b").ID
+				}
+			})}
+		}},
 		{15, func() (string, bool, bool, [][]byte) {
 			return "valid mixed chain", true, false, append([][]byte(nil), g.Lines[:4+r.IntN(16)]...)
 		}},
-		{40, func() (string, bool, bool, [][]byte) {
+		{20, func() (string, bool, bool, [][]byte) {
 			b := bytes.Clone(pick(v2Lines))
 			for range 1 + r.IntN(2) {
 				i := r.IntN(len(b))
@@ -184,7 +323,7 @@ func parityFilesV2(t testing.TB) (corpus, expected []byte) {
 			}
 			return "bit flip", false, r.IntN(4) == 0, [][]byte{b}
 		}},
-		{20, func() (string, bool, bool, [][]byte) { return "unknown algorithm", false, false, [][]byte{pick(withX)} }},
+		{10, func() (string, bool, bool, [][]byte) { return "unknown algorithm", false, false, [][]byte{pick(withX)} }},
 		{20, func() (string, bool, bool, [][]byte) {
 			return "seal stripped", false, false, [][]byte{edit(t, pick(withX), func(m map[string]any) {
 				s := seals(m)
@@ -303,7 +442,14 @@ func checkV2Vectors(t *testing.T, files map[string][]byte) {
 		t.Fatal(err)
 	}
 	for p, want := range all {
-		if got := runVector(t, files[p], strings.HasSuffix(p, ".jsonl"), false, ks); !sameExpected(got, want) {
+		vks := ks
+		if want.Keys != "" {
+			if vks, err = deed.ParseKeySet(files[want.Keys]); err != nil {
+				t.Fatalf("%s: %v", want.Keys, err)
+			}
+			want.Keys = ""
+		}
+		if got := runVector(t, files[p], strings.HasSuffix(p, ".jsonl"), strings.HasSuffix(p, ".cose"), vks); !sameExpected(got, want) {
 			t.Errorf("%s: got %s, want %s", p, pretty(t, got), pretty(t, want))
 		}
 	}

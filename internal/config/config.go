@@ -54,6 +54,7 @@ type Config struct {
 	MetricsListen        string // "" = no metrics listener (S03)
 	BaseURL              *url.URL
 	SealKeyFile          string
+	SealPQKeyFile        string // ADR-109: the ML-DSA-65 key beside the Ed25519 one; "" seals v1
 	VaultKey             Secret // a ring of 1–4 comma-separated base64 32-byte keys; the first is active (S16)
 	APIKeyPepper         Secret // base64 of at least 32 bytes
 	LogLevel             slog.Level
@@ -412,6 +413,8 @@ func (l *loader) parse(c *Config, k Key) {
 		}
 	case "DEEDGLASS_SEAL_KEY_FILE":
 		c.SealKeyFile = v
+	case "DEEDGLASS_SEAL_PQ_KEY_FILE":
+		c.SealPQKeyFile = v
 	case "DEEDGLASS_VAULT_KEY":
 		if _, err := keyring.Parse(v); err != nil {
 			var pr *keyring.Problem

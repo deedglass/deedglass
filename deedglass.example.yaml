@@ -28,6 +28,10 @@
 # The seal key file (deedglass keys gen creates one).
 # seal_key_file: .deedglass/seal.key
 
+# An ML-DSA-65 seal key file (deedglass keys rotate --alg ML-DSA-65). With it, deeds carry a
+# second, post-quantum seal beside Ed25519 (deed v2).
+# seal_pq_key_file: .deedglass/keys/sk_….json
+
 # debug, info, warn or error.
 # log_level: info
 
