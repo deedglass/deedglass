@@ -87,6 +87,8 @@ var Keys = []Key{
 	// Client-side keys: the CLI, MCP commands and SDKs read them; serve ignores them.
 	{Name: "DEEDGLASS_API_KEY", Kind: KindSecret, Secret: true, Client: true,
 		Commands: "CLI, mcp, SDKs", Doc: "An agent or admin API key (dg_live_… or dg_test_…) for client commands.", Owner: "S01"},
+	{Name: "DEEDGLASS_API_KEY_FILE", Kind: KindString, Client: true,
+		Commands: "mcp serve", Doc: "A file holding the agent key (mode 0600, an absolute path), read when DEEDGLASS_API_KEY is unset; deedglass connect prints it in the MCP line so the key stays out of the client's config.", Owner: "adoption-v1"},
 	{Name: "DEEDGLASS_SERVER", Kind: KindURL, Client: true,
 		Commands: "CLI, mcp, SDKs", Doc: "The Deedglass server client commands talk to.", Owner: "S01"},
 	{Name: "DEEDGLASS_INIT_DSN", Kind: KindSecret, Secret: true, Client: true,

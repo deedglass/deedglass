@@ -7,6 +7,40 @@ this file by `scripts/release-notes.sh`.
 
 ## [Unreleased]
 
+### Added
+
+- `deedglass connect <postgres-url>`: your own Postgres behind Deedglass in one command
+  (adoption-v1 item 2). It tells Supabase, Neon and plain Postgres apart, warns when the URL goes
+  through a pooler (and prints the direct host), runs read-only checks on a READ ONLY session
+  (version, `wal_level`, replication slots, whether the user can create roles, which tables lack
+  `REPLICA IDENTITY FULL`) and prints one plan. `--apply` creates the connector, runs
+  `connector postgres init` (the roles' DSNs go to the vault), pushes and enforces the starter policy
+  scoped to the connector's tools, creates an agent with a key in a 0600 file, sends one read through
+  the Gate and prints the MCP line. A remote database also needs `--confirm <database>`. The URL's
+  password is never printed or stored. The Supabase and Neon guides are rewritten around it.
+- `postgres-check`, a starter policy and policy pack for trying Deedglass out: reads and writes run,
+  every write is checked at Proven, `DROP` and `TRUNCATE` never run, an undo still waits for a
+  person. `deedglass init` enforces it by default on a new stack (`--policy postgres-safe` for
+  production behaviour; a stack that already enforces either keeps it).
+- `deedglass approvals open <apr_…>`: in dev, a fresh one-time approve link for that approval
+  (printed and opened); in prod, its Console page. `undo run` prints the link for the approval it
+  just created, so the quickstart's undo no longer sends you to `.deedglass/serve.log`.
+- `deedglass init --purge` removes the stack's containers, volumes and `.deedglass/` files.
+- `init` points `~/.deedglass/current.json` (0600; the server URL and key file paths, never a key)
+  at its stack, and `mcp serve` falls back to it, so one Claude Code entry at user scope works in
+  every project. `DEEDGLASS_API_KEY_FILE` names a key file for `mcp serve`.
+
+### Changed
+
+- One Claude Code line everywhere: `claude mcp add --scope user deedglass -- npx -y deedglass mcp
+  serve` in the README, the install links and `init`'s Next block (no key in Claude Code's config).
+- `Next` lines print `npx deedglass …` when the CLI runs under npx, where `deedglass` isn't on
+  `PATH`. `init`'s Next block no longer asks you to export the admin key: commands in the init
+  directory find it.
+- `init --trigger` says what the legacy trigger ships: the next 300 orders not shipped yet,
+  cancelled ones included (it said "open").
+- The README documents `--listen` and `--pg-port`.
+
 ### Security
 
 - **The A2A proxy refuses what a web page can send** (audit M-03, attack cases T01 to T04): a

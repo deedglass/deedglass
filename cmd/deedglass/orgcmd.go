@@ -58,7 +58,12 @@ func openPeople(ctx context.Context, e *Env) (*config.Config, *store.DB, *ledger
 
 // openPeopleWith is openPeople with the pool's options (dev simulate: more connections, async commit).
 func openPeopleWith(ctx context.Context, e *Env, so store.Options) (*config.Config, *store.DB, *ledger.Ledger, *identity.Service, func(), error) {
-	cfg, warnings, err := config.Load(e.LoadOptions())
+	return openPeopleOpts(ctx, e, e.LoadOptions(), so)
+}
+
+// openPeopleOpts is openPeopleWith on config options the caller resolved (a local stack's).
+func openPeopleOpts(ctx context.Context, e *Env, opts config.LoadOptions, so store.Options) (*config.Config, *store.DB, *ledger.Ledger, *identity.Service, func(), error) {
+	cfg, warnings, err := config.Load(opts)
 	var ps *config.Problems
 	if errors.As(err, &ps) {
 		return nil, nil, nil, nil, nil, configProblems(e, ps, warnings)

@@ -4,6 +4,7 @@
   "github-read-mostly": "sha256:932ac932520091f587f54ff8ae6b5663006d27e6c64446039d6febcec27fbe1e",
   "gmail-drafts-only": "sha256:6c59276a5b51ff126f6a65334d66486600f1f4502e7b69a6342929a90b573d28",
   "notion-pages": "sha256:8914c48dcb2f378f199fa5e471b97e15962bcc89dc01494661b0a4039a39a97e",
+  "postgres-check": "sha256:d4a1cd603793009ad5b107bdb6ccc102d32c34c16ee5b5d3a4e7cb07f008b0d3",
   "postgres-safe": "sha256:60dacb12ffcad375f12600678763913bd15e3e7251aeb69e6bddbbfa83434f47",
   "sdk-demo": "sha256:0fa6f633d197c128e55958c0b2f8bc7ac2b535b283c8cb3306ac5159db73d46e",
   "slack-post-with-approval": "sha256:cc1239d7b83a84332d209cb5974f3d88fcaebf7048ffce9ab65ae5d55beacb1a",

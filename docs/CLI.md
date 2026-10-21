@@ -161,7 +161,8 @@ builds it. Hidden commands work but aren't in `deedglass help`.
 <!-- commands:begin (generated from cmd/deedglass/registry.go; go test ./cmd/deedglass -run TestDocsTree -update) -->
 | Command | Group | What it does | Status |
 |---|---|---|---|
-| `deedglass init [--yes] [--dir .] [--client claude-code|claude-desktop|cursor|vscode|windsurf|sdk-python|sdk-typescript|none] [--listen 127.0.0.1:8080] [--pg-port 55432] [--no-open] [--no-smoke] [--stop] [--trigger] [--quiet] [--json]` | Setup | Set up Deedglass in this directory | built |
+| `deedglass init [--yes] [--dir .] [--client claude-code|claude-desktop|cursor|vscode|windsurf|sdk-python|sdk-typescript|none] [--listen 127.0.0.1:8080] [--pg-port 55432] [--policy postgres-check|postgres-safe] [--no-open] [--no-smoke] [--stop] [--purge] [--trigger] [--quiet] [--json]` | Setup | Set up Deedglass in this directory | built |
+| `deedglass connect <postgres-url> [--name <connector>] [--schema public] [--tables a,b] [--policy postgres-safe|postgres-check] [--agent <name>] [--apply] [--confirm <database>] [--dsn-host host:port] [--json]` | Setup | Put your own Postgres behind Deedglass | built |
 | `deedglass doctor [--only <ids>] [--quiet] [--json]` | Setup | Check config, database and keys | built |
 | `deedglass scan [--dir .] [--postgres-dsn-env VAR] [--format md,html,json,sarif] [--score] [--badge] [--badge-share] [--share] [--ci] [--fail-under A|B|C|D] [--full [--no-seal]] [--json]` | Setup | Show what your agent setup can change | built |
 | `deedglass play [--fast] [--json]` | Setup | Watch the 301 scene offline, no Docker | built |
@@ -228,6 +229,7 @@ builds it. Hidden commands work but aren't in `deedglass help`.
 | `deedglass deny <apr_…> --as <email> --reason "…" [--json]` | Actions | Deny a pending action | built |
 | `deedglass approvals list [--status pending] [--agent <name>] [--limit 25] [--json]` | Actions | List approvals | built |
 | `deedglass approvals show <apr_…> [--json]` | Actions | Show one approval | built |
+| `deedglass approvals open <apr_…> [--as <email>] [--no-open] [--json]` | Actions | Print and open an approval's approve link | built |
 | `deedglass undo preview <act_…> [--allow-triggers] [--steps N] [--json]` | Actions | Show what an undo would change | built |
 | `deedglass undo run <act_…> --plan <sha256:…> --reason "…" [--allow-triggers] [--wait 25s] [--json]` | Actions | Undo an action | built |
 | `deedglass observe run --connector <name> [--label "…"] [--agent <name>] [--undo-sql <file or folder>] -- <command …>` | Actions | Watch a database while a command runs | built |
@@ -463,6 +465,24 @@ key file `init` saved beside it (`admin.key` for admin commands, `quickstart.key
 never go anywhere else: inside a directory `init` set up, if `DEEDGLASS_SERVER` or
 `DEEDGLASS_BASE_URL` names a different server than `stack.json`, the command sends no key and stops
 with `server_mismatch`. Pass `--server` to send a key there on purpose.
+
+## Your own Postgres: `connect` (adoption-v1)
+
+`deedglass connect <postgres-url>` tells Supabase, Neon and plain Postgres apart, warns about
+poolers, runs read-only checks on a READ ONLY session (version, `wal_level`, replication slots,
+privileges, tables without `REPLICA IDENTITY FULL`) and prints one plan. `--apply` creates the
+connector, runs `connector postgres init` (the DSNs go to the vault), enforces the starter policy
+scoped to the connector's tools (`--policy postgres-safe` by default, or `postgres-check`), creates
+an agent with a key in a 0600 file, sends one read through the Gate and prints the MCP line. A
+remote database also needs `--confirm <database>`. The URL is read once and its password is never
+printed or stored. Guides: [Supabase](guides/supabase.md), [Neon](guides/neon.md).
+
+## Approve links in dev: `approvals open`
+
+`deedglass approvals open <apr_…>` mints a fresh one-time link for a member who may countersign
+(`--as`, default the owner `init` set up), prints it and opens it (`--no-open` doesn't). In prod it
+prints the approval's Console page. `undo run` on a local stack prints the link for the approval it
+just created.
 
 ## The Gate: `act` and `actions cancel` (S13)
 

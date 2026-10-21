@@ -83,10 +83,23 @@ npx -y deedglass init --trigger
 
 `deedglass init` starts two Postgres 18.6 containers in Docker (Deedglass's own database and a demo
 database), runs `deedglass serve` on `127.0.0.1:8080`, creates an org, an agent and the
-`postgres-safe` policy, and ends with a blocked `DROP TABLE` and an `UPDATE` checked at Proven.
-`deedglass doctor` runs sixteen read-only checks, each with its fix. `deedglass init --trigger` turns
-on the demo database's legacy trigger, sends the same one-row `UPDATE`, and ends on the 301-row
-mismatch and the undo preview shown above.
+`postgres-check` policy (reads and writes run, every write is checked at Proven, `DROP` and
+`TRUNCATE` never run; use `postgres-safe` in production, where writes wait for a person), and ends
+with a blocked `DROP TABLE` and an `UPDATE` checked at Proven. `deedglass doctor` runs sixteen
+read-only checks, each with its fix. `deedglass init --trigger` turns on the demo database's legacy
+trigger, sends the same one-row `UPDATE`, and ends on the 301-row mismatch and the undo preview shown
+above. Its last line is the `undo run` command; the undo waits for a person, and `undo run` prints
+the approve link.
+
+Port 8080 or 55432 taken? `npx -y deedglass init --yes --listen 127.0.0.1:8090 --pg-port 55440`
+(`--listen` is where `deedglass serve` listens; `--pg-port` is Deedglass's own Postgres, and the
+demo database takes the port 10 above it). Every later command run in that directory finds the
+ports in `.deedglass/stack.json`. `npx -y deedglass init --purge` removes the containers, the
+volumes and the files in `.deedglass/` when you're done.
+
+Then put your own Postgres behind it (Supabase, Neon or any Postgres 16 to 18): `npx -y deedglass
+connect "$DATABASE_URL"` runs read-only checks and prints a plan; `--apply` sets it up
+([guide](https://docs.deedglass.com/get-started/postgres/)).
 
 ## Observe mode: nothing to rewire
 
@@ -187,7 +200,7 @@ published, build the image locally as above. Checksums, signatures and SBOMs:
 [Install in VS Code](https://vscode.dev/redirect/mcp/install?config=%7B%22command%22%3A%22npx%22%2C%22args%22%3A%5B%22-y%22%2C%22deedglass%22%2C%22mcp%22%2C%22serve%22%5D%7D&name=deedglass) · [LM Studio](https://deedglass.com/install#lm-studio) · [Goose](https://deedglass.com/install#goose) · [Claude Desktop](https://docs.deedglass.com/get-started/claude-desktop/) · [Every client](https://deedglass.com/install)
 
 ```sh
-claude mcp add deedglass -- npx -y deedglass mcp serve
+claude mcp add --scope user deedglass -- npx -y deedglass mcp serve
 ```
 
 No link holds a key. Run `npx deedglass init` first; each client asks Deedglass for the key it wrote.

@@ -24,6 +24,7 @@ import (
 	cpsql "github.com/deedglass/deedglass/deploy/postgres"
 	demosql "github.com/deedglass/deedglass/examples/demo/sql"
 	"github.com/deedglass/deedglass/examples/policies"
+	"github.com/deedglass/deedglass/internal/installlinks"
 	"github.com/deedglass/deedglass/internal/shellguard"
 	"github.com/deedglass/deedglass/pkg/deedglass"
 )
@@ -38,8 +39,15 @@ const (
 	DefaultOwner  = "you@localhost.test"
 	AgentName     = "quickstart-agent"
 	ConnectorName = "postgres"
-	PolicyName    = "postgres-safe"
+	// PolicyName is the production starter: writes wait for a person.
+	PolicyName = "postgres-safe"
+	// CheckPolicyName is the local default for trying Deedglass out (adoption-v1 F6): reads and
+	// writes run, DROP and TRUNCATE are blocked, every write is checked at Proven.
+	CheckPolicyName = "postgres-check"
 )
+
+// Policies are the starters init can enforce (--policy).
+var Policies = []string{CheckPolicyName, PolicyName}
 
 // Status of one step.
 type Status string
@@ -102,6 +110,13 @@ type Options struct {
 	Now          func() time.Time
 	Progress     func(StepResult) // called as each step finishes (text mode streams)
 	ResetSecrets bool             // the caller has the typed "reset"
+	// Policy is the starter to enforce: postgres-check or postgres-safe. "" keeps the one a stack
+	// already enforces, and picks postgres-check for a new stack.
+	Policy string
+	// Cmd is how Next lines name the CLI: "deedglass", or "npx deedglass" under npx.
+	Cmd string
+	// Home is the home directory for ~/.deedglass/current.json ("" writes none).
+	Home string
 }
 
 // Result is init_result.
@@ -138,6 +153,9 @@ func (o *Options) defaults() {
 	if o.Client == "" {
 		o.Client = "none"
 	}
+	if o.Cmd == "" {
+		o.Cmd = "deedglass"
+	}
 }
 
 // Plan is what init will create and what is already there (shown before Continue? [Y/n]).
@@ -155,10 +173,17 @@ func Plan(o Options) (create, have []string) {
 	} else {
 		create = append(create, "Postgres 18.6 in Docker (127.0.0.1:"+strconv.Itoa(o.PGPort)+")")
 	}
+	pol := o.Policy
+	if pol == "" {
+		pol = CheckPolicyName
+	}
 	if st.Org != "" {
-		have = append(have, `org "Local"`, "agent "+AgentName, "policy "+PolicyName, "demo database")
+		have = append(have, `org "Local"`, "agent "+AgentName, "demo database")
+		if o.Policy != "" {
+			create = append(create, "policy "+o.Policy+" (enforced)")
+		}
 	} else {
-		create = append(create, `org "Local"`, "agent "+AgentName, "policy "+PolicyName+" (enforced)", "demo database")
+		create = append(create, `org "Local"`, "agent "+AgentName, "policy "+pol+" (enforced)", "demo database")
 	}
 	return create, have
 }
@@ -227,23 +252,23 @@ func Init(ctx context.Context, o Options) (*Result, error) {
 	if x.changed && !o.NoOpen && o.TTY {
 		_ = x.r.Open(x.stack.Server() + "/app")
 	}
+	_ = WriteCurrent(o.Home, o.Dir, x.stack, o.Now())
 	res.Steps, res.Changed = x.steps, x.changed
 	res.Next = []string{
-		"export DEEDGLASS_API_KEY=\"$(cat .deedglass/admin.key)\"",
-		"deedglass actions list",
+		o.Cmd + " actions list",
 		"open " + x.stack.Server() + "/app",
 	}
 	if o.Client == "claude-code" || o.Client == "none" {
-		res.Next = append([]string{ClaudeCodeLine(x.stack.Server())}, res.Next...)
+		res.Next = append([]string{ClaudeCodeLine()}, res.Next...)
 	}
 	res.ElapsedMS = o.Now().Sub(t0).Milliseconds()
 	return res, nil
 }
 
-// ClaudeCodeLine is the one-liner that adds Deedglass to Claude Code (the key stays in its file).
-func ClaudeCodeLine(server string) string {
-	return `claude mcp add --transport http deedglass ` + server + `/mcp/native --header "Authorization: Bearer $(cat .deedglass/quickstart.key)"`
-}
+// ClaudeCodeLine is the one-liner that adds Deedglass to Claude Code, the same line as the README's
+// (installlinks.ClaudeCodeCommand). The key stays in its file: mcp serve reads .deedglass/ or
+// ~/.deedglass/current.json, which points at this stack whatever its port.
+func ClaudeCodeLine() string { return installlinks.ClaudeCodeCommand }
 
 func fail(id, title, detail, fix string) StepResult {
 	return StepResult{ID: id, Title: title, Status: Failed, Detail: detail, Fix: fix}
@@ -877,7 +902,6 @@ func (x *run) policy(ctx context.Context) StepResult {
 	cenv := x.clientEnv()
 	var hashes map[string]string
 	_ = json.Unmarshal(policies.Hashes(), &hashes)
-	want := hashes[PolicyName]
 	var active struct {
 		Enforce *struct {
 			Name        string `json:"name"`
@@ -887,15 +911,24 @@ func (x *run) policy(ctx context.Context) StepResult {
 		} `json:"enforce"`
 	}
 	_ = x.api(ctx, x.admin, "/v1/policies/active", &active)
-	if e := active.Enforce; e != nil && e.Name == PolicyName && (want == "" || e.VersionHash == want) { //deedglass:allow-compare a policy version's public digest
-		x.state.Policies = []string{e.VersionID}
-		return StepResult{ID: id, Title: title, Status: Skipped, Detail: fmt.Sprintf("%s v%d · enforce", PolicyName, e.Version)}
+	name := x.o.Policy
+	if name == "" {
+		name = CheckPolicyName
+		// A stack that already enforces one of init's starters keeps it.
+		if e := active.Enforce; e != nil && (e.Name == PolicyName || e.Name == CheckPolicyName) {
+			name = e.Name
+		}
 	}
-	src, err := policies.Source(PolicyName)
+	want := hashes[name]
+	if e := active.Enforce; e != nil && e.Name == name && (want == "" || e.VersionHash == want) { //deedglass:allow-compare a policy version's public digest
+		x.state.Policies = []string{e.VersionID}
+		return StepResult{ID: id, Title: title, Status: Skipped, Detail: fmt.Sprintf("%s v%d · enforce%s", name, e.Version, policyNote(name))}
+	}
+	src, err := policies.Source(name)
 	if err != nil {
 		return fail(id, title, err.Error(), "Rebuild deedglass.")
 	}
-	p := Path(x.o.Dir, PolicyName+".yaml")
+	p := Path(x.o.Dir, name+".yaml")
 	if err := os.WriteFile(p, src, 0o600); err != nil {
 		return fail(id, title, err.Error(), "Check .deedglass.")
 	}
@@ -907,14 +940,26 @@ func (x *run) policy(ctx context.Context) StepResult {
 		} `json:"version"`
 	}
 	if err != nil || json.Unmarshal([]byte(pout), &pushed) != nil || pushed.Version.Version == 0 {
-		return fail(id, title, "postgres-safe couldn't be pushed: "+lastLine(perr), "Run deedglass policy push "+p+" to see why.")
+		return fail(id, title, name+" couldn't be pushed: "+lastLine(perr), "Run deedglass policy push "+p+" to see why.")
 	}
-	if _, aerr, err := x.r.Self(ctx, cenv, "policy", "activate", PolicyName, "--version", strconv.Itoa(pushed.Version.Version), "--mode", "enforce",
+	if _, aerr, err := x.r.Self(ctx, cenv, "policy", "activate", name, "--version", strconv.Itoa(pushed.Version.Version), "--mode", "enforce",
 		"--reason", "deedglass init: the quickstart's starter policy", "--yes"); err != nil {
-		return fail(id, title, "postgres-safe couldn't be activated: "+lastLine(aerr), "Run deedglass policy activate postgres-safe --mode enforce to see why.")
+		return fail(id, title, name+" couldn't be activated: "+lastLine(aerr), "Run deedglass policy activate "+name+" --mode enforce to see why.")
 	}
 	x.state.Policies = []string{pushed.Version.ID}
-	return StepResult{ID: id, Title: title, Status: Done, Detail: fmt.Sprintf("%s v%d · enforce (replaces default-deny, the onboarding policy)", PolicyName, pushed.Version.Version)}
+	replaces := "default-deny, the onboarding policy"
+	if e := active.Enforce; e != nil && e.Name != "" && e.Name != "default-deny" {
+		replaces = e.Name
+	}
+	return StepResult{ID: id, Title: title, Status: Done, Detail: fmt.Sprintf("%s v%d · enforce (replaces %s)%s", name, pushed.Version.Version, replaces, policyNote(name))}
+}
+
+// policyNote says what the local default lets through, and what to use in production.
+func policyNote(name string) string {
+	if name == CheckPolicyName {
+		return " · writes run and are checked at Proven; use postgres-safe in production"
+	}
+	return ""
 }
 
 // --- 10 · the client snippet ---

@@ -308,8 +308,12 @@ What it does
 
 Connection
   --connector <name>      native (the Gate's own tools, default) or an upstream's name
-  --server <url>          the Deedglass server (default DEEDGLASS_SERVER, then http://127.0.0.1:8080)
-  --api-key <key>         an agent's key (default DEEDGLASS_API_KEY)
+  --server <url>          the Deedglass server (default DEEDGLASS_SERVER, then the local stack)
+  --api-key <key>         an agent's key (default DEEDGLASS_API_KEY or DEEDGLASS_API_KEY_FILE)
+
+  Without them it uses the .deedglass/ that deedglass init wrote in this directory or a parent,
+  then ~/.deedglass/current.json (the last deedglass init), so one client entry works in every
+  project.
 
 Example
   Claude Desktop: deedglass mcp snippet --client claude-desktop --transport http --connector native
@@ -326,15 +330,7 @@ func runMCPServe(ctx context.Context, e *Env, args []string) error {
 	if len(args) > 0 {
 		return usageErr(fmt.Errorf("deedglass mcp serve takes no arguments (got %q)", args[0]), "Run deedglass help mcp serve.")
 	}
-	initKey, initServer := initFiles()
-	explicit := firstNonEmpty(e.Globals.Server, e.Getenv("DEEDGLASS_SERVER"), e.Getenv("DEEDGLASS_BASE_URL"))
-	if initServer == "" {
-		initServer = defaultServer
-	}
-	if explicit != "" && !sameServer(explicit, initServer) {
-		initKey = "" // the key init wrote only goes to the server its stack names
-	}
-	server := firstNonEmpty(explicit, initServer)
+	server, key := mcpServeTarget(e)
 	u, err := url.Parse(strings.TrimSuffix(server, "/"))
 	if err != nil || u.Host == "" || (u.Scheme != "http" && u.Scheme != "https") {
 		return usageErr(fmt.Errorf("the server %q isn't a URL", server), "Use --server http://127.0.0.1:8080 or set DEEDGLASS_SERVER.")
@@ -342,10 +338,6 @@ func runMCPServe(ctx context.Context, e *Env, args []string) error {
 	c := mcpServeConnector
 	if c != "native" && !reServeConnector.MatchString(c) {
 		return usageErr(fmt.Errorf("--connector %q isn't a connector name", c), "Use native, or an upstream's name such as everything.")
-	}
-	key := firstNonEmpty(e.Globals.APIKey, e.Getenv("DEEDGLASS_API_KEY"), initKey)
-	if resolveServer(e).Conflict != "" {
-		key = "" // the environment names another server than this directory's stack
 	}
 	cfg := bridge.Config{Server: u, Connector: c, APIKey: key, Version: buildInfo().Version}
 	if key == "" {
@@ -440,29 +432,44 @@ func runMCPSnippetHTTP(e *Env, args []string) error {
 	return err
 }
 
-// initFiles finds the agent key and local server that deedglass init wrote, in .deedglass/ of the
-// working directory or its nearest parent that has one (S47: one-click install links carry no key).
-// Environment and flags always win; a missing or unreadable file gives "".
-func initFiles() (key, server string) {
-	dir, err := os.Getwd()
-	if err != nil {
-		return "", ""
+// mcpServeTarget is the server and agent key mcp serve uses (S47, adoption-v1 F4). The server is
+// --server, DEEDGLASS_SERVER or DEEDGLASS_BASE_URL when set; the key is --api-key, DEEDGLASS_API_KEY
+// or the file DEEDGLASS_API_KEY_FILE names. Otherwise both come from the .deedglass/ that deedglass
+// init wrote in the working directory or its nearest parent, and failing that from
+// ~/.deedglass/current.json, so an MCP client added once at user scope works in any project. A key
+// from a file only goes to the server its own stack names.
+func mcpServeTarget(e *Env) (server, key string) {
+	explicit := firstNonEmpty(e.Globals.Server, e.Getenv("DEEDGLASS_SERVER"), e.Getenv("DEEDGLASS_BASE_URL"))
+	if t := resolveServer(e); t.Conflict != "" {
+		// The environment names another server than this directory's stack: send no key.
+		return t.Server, ""
 	}
-	for i := 0; i < 32; i++ {
-		if fi, err := os.Stat(filepath.Join(dir, setup.DirName)); err == nil && fi.IsDir() {
-			if b, err := os.ReadFile(setup.Path(dir, setup.AgentKeyFile)); err == nil {
-				key = strings.TrimSpace(string(b))
-			}
-			if st, err := setup.ReadStack(dir); err == nil && st != nil && st.Listen != "" {
-				server = st.Server()
-			}
-			return key, server
+	key = firstNonEmpty(e.Globals.APIKey, e.Getenv("DEEDGLASS_API_KEY"), setup.ReadKeyFile(e.Getenv("DEEDGLASS_API_KEY_FILE")))
+	same := func(a, b string) bool { return strings.TrimSuffix(a, "/") == strings.TrimSuffix(b, "/") }
+	pick := func(fileServer, fileKey string) bool {
+		if fileKey == "" || (explicit != "" && !same(explicit, fileServer)) {
+			return false
 		}
-		parent := filepath.Dir(dir)
-		if parent == dir {
-			break
+		server = firstNonEmpty(explicit, fileServer)
+		if key == "" {
+			key = fileKey
 		}
-		dir = parent
+		return true
 	}
-	return "", ""
+	if dir := findInitDir(workDir(e), e.Getenv("HOME"), setup.AgentKeyFile); dir != "" {
+		k, _ := setup.ReadSecretFile(dir, setup.AgentKeyFile)
+		srv := defaultServer
+		if st, err := setup.ReadStack(dir); err == nil && st != nil && st.Listen != "" {
+			srv = st.Server()
+		}
+		if pick(srv, k) {
+			return server, key
+		}
+	}
+	if c, err := setup.ReadCurrent(e.Getenv("HOME")); err == nil && c != nil {
+		if pick(c.Server, setup.ReadKeyFile(c.KeyFile)) {
+			return server, key
+		}
+	}
+	return firstNonEmpty(explicit, defaultServer), key
 }

@@ -38,6 +38,12 @@ const MCPBOnRelease = false
 // ClaudeDesktopGuide is the docs page for connecting Claude Desktop without a bundle.
 const ClaudeDesktopGuide = "https://docs.deedglass.com/get-started/claude-desktop/"
 
+// ClaudeCodeCommand is the one Claude Code line: the README, the install page and deedglass init all
+// print it. User scope, so it works in every project; mcp serve finds the key deedglass init wrote
+// (.deedglass/ in the project or a parent, then ~/.deedglass/current.json), and no key enters
+// Claude Code's config.
+const ClaudeCodeCommand = "claude mcp add --scope user deedglass -- npx -y deedglass mcp serve"
+
 // BundleURL is where the GitHub release at Version carries one platform's Claude Desktop bundle
 // (internal/mcpb names the file; its test keeps the names equal).
 func BundleURL(platform string) string {
@@ -99,7 +105,7 @@ func Links() []Link {
 		{ID: "vs-code-cli", Client: "VS Code (command)", Kind: "command", Command: "code --add-mcp '" + withName + "'"},
 		{ID: "lm-studio", Client: "LM Studio", Kind: "deeplink", URL: "lmstudio://add_mcp?name=" + Name + "&config=" + url.QueryEscape(b64)},
 		{ID: "goose", Client: "Goose", Kind: "deeplink", URL: goose},
-		{ID: "claude-code", Client: "Claude Code", Kind: "command", Command: "claude mcp add deedglass -- npx -y deedglass mcp serve", Note: "Add --scope project to write .mcp.json for your team."},
+		{ID: "claude-code", Client: "Claude Code", Kind: "command", Command: ClaudeCodeCommand, Note: "Every project on this machine. Use --scope project instead to write .mcp.json for your team."},
 		claudeDesktop("claude-desktop", "Claude Desktop (macOS, Apple silicon)", "darwin-arm64", "Open the .mcpb file to install it."),
 		claudeDesktop("claude-desktop-intel", "Claude Desktop (macOS, Intel)", "darwin-x64", ""),
 		claudeDesktop("claude-desktop-windows", "Claude Desktop (Windows)", "win32-x64", ""),
