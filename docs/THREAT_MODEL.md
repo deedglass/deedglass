@@ -11,7 +11,7 @@ SDKs and `deedglass init`.
 Debezium witness, the shell guard and its hooks, head timestamps, the independent verifiers, and
 `deedglass connect` (planned, not merged). Their attack cases are group T (T01 to T13), declared in
 `attack/attack_meta.json` before the A2A proxy's browser checks and the Debezium input cap were
-written ([ATTACK_SUITE.md](ATTACK_SUITE.md#group-letters)).
+written ([ATTACK_SUITE.md](ATTACK_SUITE.md)).
 
 **The framing, unchanged since S18:** assume the model is already manipulated. Deedglass doesn't
 measure how often a model falls for an injection; it limits and records what the model's tool calls
