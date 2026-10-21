@@ -43,7 +43,7 @@ func TestMigrateAndSeedLive(t *testing.T) {
 
 	r = cli(t, env, false, "dev", "seed")
 	expect(r, 0, "✓ Seeded 1 org, 1 owner, 2 agents", "agent  support-bot", "agent  billing-agent",
-		"policy default-deny enforced in 1 org", "policy 8 starter policies saved, inactive")
+		"policy default-deny enforced in 1 org", "policy 9 starter policies saved, inactive")
 	t.Logf("\n%s", r.stdout)
 	expect(cli(t, env, false, "dev", "seed"), 0, "✓ Already seeded: 1 org, 1 owner, 2 agents")
 
