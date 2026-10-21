@@ -53,7 +53,7 @@ const (
 	expectedDigestY = "206311510fa9be60f424a0f4c1e38f0322442a9c7303c1541b7efd107122f7e1"
 	// expectedDigestT pins group T, this week's new surfaces: the A2A proxy, the Debezium witness,
 	// the shell guard, head timestamps, the independent verifiers and connect (security hardening
-	// after the 2026-10-21 audit, M-02 and M-03; ADR-115, PROPOSED; the orchestrator accepts under
+	// after the 2026-10-21 audit, M-02 and M-03; ADR-116, PROPOSED; the orchestrator accepts under
 	// DL-107). Declared before the A2A proxy's browser checks and the Debezium input cap existed.
 	expectedDigestT = "d53ab26aea6fa7cf2897e1d081d7cd2217c2b1cad34ad5eb653eebe3bcaa12cf"
 )

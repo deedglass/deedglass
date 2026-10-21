@@ -28,7 +28,7 @@ import (
 	"github.com/deedglass/deedglass/internal/mcp/gateclient"
 )
 
-// Group T, this week's new surfaces (ADR-115, after the 2026-10-21 audit's M-02 and M-03): the A2A
+// Group T, this week's new surfaces (ADR-116, after the 2026-10-21 audit's M-02 and M-03): the A2A
 // proxy, the Debezium witness, the shell guard, head timestamps. Library- and CLI-level cases run
 // by plain go test, like group Y. Expected outcomes are in attack_meta.json, declared before the
 // proxy's browser checks and the Debezium input cap were written, and never change here. T12

@@ -284,7 +284,7 @@ Each group set has its own pinned digest, so declaring new cases never changes a
 | O | S50 (observe mode) | `expectedDigestO` |
 | I | Healthcare phase 1 (the FHIR connector, ADR-105; the tickets' F01 to F12) | `expectedDigestI` |
 | Y | Crypto agility (TY-01, TY-02, ADR-109; library and CLI cases run by go test) | `expectedDigestY` |
-| T | This week's surfaces after the 2026-10-21 audit: A2A proxy, Debezium witness, shell guard, timestamps, verifiers, connect (ADR-115; library and CLI cases run by go test) | `expectedDigestT` |
+| T | This week's surfaces after the 2026-10-21 audit: A2A proxy, Debezium witness, shell guard, timestamps, verifiers, connect (ADR-116; library and CLI cases run by go test) | `expectedDigestT` |
 
 M, S, V, X and Z are unassigned. A session that needs a group takes the next free letter and adds a row here.
 

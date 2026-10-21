@@ -32,7 +32,7 @@ DEEDGLASS_IT_PG=17 make attack                       # another major version
 | `cases_upstreams_test.go` | Q01 to Q08 (S34): poisoned tool descriptions, the rug pull, shadowed names, huge and deep results, down and hanging servers, sampling through `mcp wrap`, live Stripe keys, webhook rebinding and redirects. |
 | `cases_resources_test.go` | R01 to R07 (S34): YAML and CEL bombs, a forked chain, skewed intents, injection through the AI wording (in process, against an LLM stub), oversized JSON, control characters in every sink. |
 | `agility_test.go` | Y01 to Y12 (TY-01, TY-02): seal algorithm versioning and the ML-DSA-65 dual seal, library and CLI level, plain `go test`. |
-| `surfaces_test.go` | T01 to T11 (ADR-115): the A2A proxy against browser-shaped requests, DNS rebinding, missing keys, CORS and replays; the Debezium witness's cut and oversized feeds; the shell guard failing open; edited and unpinned timestamps. Plain `go test`. T12 and T13 are declared and wait on their code. |
+| `surfaces_test.go` | T01 to T11 (ADR-116): the A2A proxy against browser-shaped requests, DNS rebinding, missing keys, CORS and replays; the Debezium witness's cut and oversized feeds; the shell guard failing open; edited and unpinned timestamps. Plain `go test`. T12 and T13 are declared and wait on their code. |
 | `isolation_test.go` | `TestOrgIsolation`: every id-bearing route, across two orgs. |
 | `fixtures/` | The target database (`sql/target.sql`), the declared L2 fixtures, the policy (`policies/attack-baseline.yaml`). |
 | `results/latest.json` | The last run. `cmd/attack-report` turns it into the page. |

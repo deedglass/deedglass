@@ -21,7 +21,7 @@ this file by `scripts/release-notes.sh`.
   is installed, and installs nothing if it's missing or doesn't match; otherwise it prints the
   command. The Homebrew cask no longer clears macOS's quarantine attribute.
 - CodeQL runs on pull requests, `main` and weekly; `mcp-registry.yml` no longer keeps git
-  credentials on disk. Threat model v3, security review Pass 3, and attack group T (ADR-115).
+  credentials on disk. Threat model v3, security review Pass 3, and attack group T (ADR-116).
 
 ### Fixed
 

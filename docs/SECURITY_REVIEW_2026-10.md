@@ -258,7 +258,7 @@ workflows, from the audit's supply-chain findings.
 ### Method
 
 1. **Attack group T**, 13 cases declared in `attack/attack_meta.json` and pinned under
-   `expectedDigestT` (ADR-115) before the A2A proxy's browser checks and the Debezium input cap were
+   `expectedDigestT` (ADR-116) before the A2A proxy's browser checks and the Debezium input cap were
    written. They run as library- and CLI-level tests (`attack/surfaces_test.go`, plain `go test`,
    like group Y), so every pull request runs them in `lint-unit`. T12 (independent verifiers) and
    T13 (`connect`) are declared and wait on their runner and their code.
@@ -281,7 +281,7 @@ workflows, from the audit's supply-chain findings.
 | Id | Area | Finding | Severity | Status | Evidence |
 |---|---|---|---|---|---|
 | SR-019 | A2A proxy | A web page on the agent's machine could drive the loopback proxy: a `text/plain` POST with `?A2A-Version=1.0` needs no CORS preflight, so `SendMessage` ran as the agent (the Gate still applied policy) and reads passed through; with DNS rebinding the page could read answers. No `Host`, `Origin` or `Content-Type` check, and no key on inbound requests. | Medium | **Fixed.** `Host` must be a loopback literal or `localhost`; `Origin`, or `Sec-Fetch-Site` other than `none`, is refused; the body must be `application/json`; the version comes from the header only; preflights get 403 and no `Access-Control-*` header is sent; every JSON-RPC request needs the agent's key as a bearer token (constant-time compare). `--api-key` prints a warning (it shows in `ps`). | T01–T04; `internal/a2a/proxy.go` `admit`, `authorized`; `TestBrowserShapedRefused` |
-| SR-020 | Paperwork | The threat model, this review and the attack suite didn't name the week's surfaces. | Medium | **Fixed.** Threat model v3, this pass, group T. | `docs/THREAT_MODEL.md`; ADR-115 |
+| SR-020 | Paperwork | The threat model, this review and the attack suite didn't name the week's surfaces. | Medium | **Fixed.** Threat model v3, this pass, group T. | `docs/THREAT_MODEL.md`; ADR-116 |
 | SR-021 | Debezium witness | No total input cap (16 MiB per line only, gzip read to the end), and nothing in the result tied it to its input. | Low | **Fixed.** 1 GiB per feed after gunzip (`feed_too_large`, exit 2); `--json` carries `feed.input_sha256` and `feed.input_bytes`. | T08; `cmd/deedglass/witness_debezium.go`; `TestWitnessDebeziumGoldens` |
 | SR-022 | Timestamps | A token checked without `--tsa-roots` is checked against the chain it carries. | Low | **Already in place.** `verify` warns `tsa_not_pinned` with the next step; LIMITATIONS says so. | T11; `internal/deed/stamp/check.go` |
 | SR-023 | Supply chain | No SAST tool ran (Scorecard SAST 0). | Medium | **Fixed in part.** CodeQL workflow (SHA-pinned, `security-events: write` on its job only, PRs, `main` and weekly). It becomes a required check after its first runs are triaged. | `.github/workflows/codeql.yml` |
