@@ -34,6 +34,10 @@ import (
 // MaxLine is the longest event line read (16 MiB).
 const MaxLine = 16 << 20
 
+// MaxInput is the most a whole feed may hold after gunzip (1 GiB). The CLI stops reading past it
+// (audit L-17), so a gzip bomb or an endless stdin can't fill memory or run forever.
+const MaxInput = 1 << 30
+
 // DefaultLedgerTable is the table name (in any database) whose inserts name an action.
 const DefaultLedgerTable = "deedglass_ledger"
 

@@ -7,6 +7,22 @@ this file by `scripts/release-notes.sh`.
 
 ## [Unreleased]
 
+### Security
+
+- **The A2A proxy refuses what a web page can send** (audit M-03, attack cases T01 to T04): a
+  `Host` that isn't `127.0.0.1`, `[::1]` or `localhost` (DNS rebinding), an `Origin` header or a
+  `Sec-Fetch-Site` other than `none`, a body that isn't `application/json`, and CORS preflights. The
+  `?A2A-Version=` query parameter is no longer read. **Changed:** every JSON-RPC request must carry
+  the agent's key the proxy runs with, `Authorization: Bearer <key>`; point your A2A client's auth
+  at `DEEDGLASS_API_KEY`. `--api-key` prints a warning, since a flag shows in `ps`.
+- **`witness debezium` caps its input** at 1 GiB after gunzip (`feed_too_large`, exit 2), and
+  `--json` names the input it read (`feed.input_sha256`, `feed.input_bytes`).
+- **`install.sh` checks the release signature** (`checksums.txt.sigstore.json`) with cosign when it
+  is installed, and installs nothing if it's missing or doesn't match; otherwise it prints the
+  command. The Homebrew cask no longer clears macOS's quarantine attribute.
+- CodeQL runs on pull requests, `main` and weekly; `mcp-registry.yml` no longer keeps git
+  credentials on disk. Threat model v3, security review Pass 3, and attack group T (ADR-116).
+
 ### Fixed
 
 - One server resolver for every client command (adoption-v1 F2): `--server`, `DEEDGLASS_SERVER`,

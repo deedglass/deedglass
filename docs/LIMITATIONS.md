@@ -688,7 +688,7 @@ TY-07, [`A2A.md`](A2A.md). `deedglass a2a proxy` is opt-in; nothing goes through
 - **JSON-RPC over HTTP, A2A 1.0 only.** The gRPC and HTTP+JSON bindings, A2A 0.3 (requests without `A2A-Version`), and JSON-RPC batches are refused. The proxy's card lists only its JSON-RPC interface and drops the peer's card signatures, which no longer match the rewritten card.
 - **Not followed after the answer.** A task left working, waiting for input or for auth is sealed UNVERIFIABLE; later `GetTask` answers and push notifications are passed through or not seen, and never change the record.
 - **Approvals live in one proxy process.** A call waiting for a person runs only when the same request comes back to the same proxy; after a restart it has to be made again (a new action).
-- **No sign-in of its own.** The proxy listens on loopback and acts as one agent for whoever reaches the port. Agents whose intent mode is `required` can't use it: the proxy doesn't sign intents.
+- **One key, shared with the caller.** The proxy listens on loopback and needs the agent's own key as a bearer token on every JSON-RPC request; browser requests and non-loopback `Host` names are refused. Any local process that holds that key acts as the agent, which it could do against the server directly anyway. Agents whose intent mode is `required` can't use it: the proxy doesn't sign intents.
 - **Tested against a fake peer.** The goldens and `TestA2ALive` use a fake A2A agent written from the v1.0.1 spec; no third-party A2A server or SDK is in CI.
 
 ## Foreign change feeds

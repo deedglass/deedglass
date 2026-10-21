@@ -136,7 +136,7 @@ func newHarness(t *testing.T, agent, connector, obo string, peer *a2atest.Peer) 
 	hdr := http.Header{}
 	hdr.Set("Authorization", "Bearer peer-token-from-the-operator")
 	var err error
-	h.proxy, err = New(Config{Connector: connector, Peer: u, PeerHeaders: hdr, OnBehalfOf: obo, HTTP: peerClient(), Version: "test",
+	h.proxy, err = New(Config{Connector: connector, Peer: u, PeerHeaders: hdr, OnBehalfOf: obo, HTTP: peerClient(), Version: "test", InboundKey: callerKey,
 		Now: func() time.Time { return time.Date(2026, 10, 20, 10, 0, 0, 0, time.UTC) }}, h.gate, nil)
 	if err != nil {
 		t.Fatal(err)
@@ -173,7 +173,10 @@ func (h *harness) post(body string, hdr map[string]string) exchange {
 	return exchange{status: res.StatusCode, ctype: res.Header.Get("Content-Type"), body: string(b)}
 }
 
-var v1 = map[string]string{"A2A-Version": "1.0", "Authorization": "Bearer the-callers-own-secret"}
+// callerKey is the agent's key the proxy runs with; callers present it, and it never reaches the peer.
+const callerKey = "the-callers-own-secret"
+
+var v1 = map[string]string{"A2A-Version": "1.0", "Authorization": "Bearer " + callerKey}
 
 func sendBody(id int, method, text, metadata string) string {
 	m := ""
@@ -273,11 +276,11 @@ func TestGoldens(t *testing.T) {
 		{"send_peer_error", "u_5780", sendBody(6, MethodSendMessage, "refuse politely", ""), v1, false},
 		{"send_denied", "u_5780", sendBody(7, MethodSendMessage, "delete everything in the archive", ""), v1, false},
 		{"send_streaming", "u_5780", sendBody(8, MethodSendStreamingMessage, "complete it while streaming", ""),
-			map[string]string{"A2A-Version": "1.0", "Accept": "text/event-stream"}, false},
+			map[string]string{"A2A-Version": "1.0", "Accept": "text/event-stream", "Authorization": "Bearer " + callerKey}, false},
 		{"cancel_task", "u_5780", `{"jsonrpc":"2.0","id":9,"method":"CancelTask","params":{"id":"task-1"}}`, v1, false},
 		{"read_get_task", "u_5780", `{"jsonrpc":"2.0","id":10,"method":"GetTask","params":{"id":"task-1"}}`, v1, false},
 		{"refused_unknown_method", "u_5780", `{"jsonrpc":"2.0","id":11,"method":"message/send","params":{}}`, v1, false},
-		{"refused_no_version", "u_5780", sendBody(12, MethodSendMessage, "complete", ""), nil, false},
+		{"refused_no_version", "u_5780", sendBody(12, MethodSendMessage, "complete", ""), map[string]string{"Authorization": "Bearer " + callerKey}, false},
 		{"refused_batch", "u_5780", `[` + sendBody(13, MethodSendMessage, "complete", "") + `]`, v1, false},
 		{"refused_gate_down", "u_5780", sendBody(14, MethodSendMessage, "complete", ""), v1, true},
 		{"refused_two_people", "u_9999", sendBody(15, MethodSendMessage, "complete", chain), v1, false},

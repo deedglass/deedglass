@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"testing"
 )
 
@@ -89,5 +90,24 @@ func TestWitnessDebeziumGoldens(t *testing.T) {
 		out.Verdict != "MISMATCH" || out.Level != "L2" || !slices.Contains(out.Codes, "unexpected_table") ||
 		len(out.Compared) != 1 || out.Compared[0].Rows != 301 || !out.Compared[0].Complete || out.Detail.Claim.Method != "debezium.mysql" || out.Digest == "" {
 		t.Fatalf("%+v", out)
+	}
+	// The input's digest is of the events as read, after gunzip (audit L-17).
+	var in struct {
+		Feed struct {
+			Bytes  int64  `json:"input_bytes"`
+			SHA256 string `json:"input_sha256"`
+		} `json:"feed"`
+	}
+	_ = json.Unmarshal([]byte(r.stdout), &in)
+	if in.Feed.SHA256 == "" || in.Feed.Bytes <= 0 {
+		t.Fatalf("no input digest: %s", r.stdout)
+	}
+	// A feed larger than the cap is refused, not read to the end (audit L-17, attack case T08).
+	defer func(n int64) { debeziumMaxInput = n }(debeziumMaxInput)
+	debeziumMaxInput = int64(len(raw) / 2)
+	big := cliIn(t, raw, plain, false, append([]string{"witness", "debezium", "--events", "-", "--reported", "1",
+		"--sql", "UPDATE orders SET total_cents = 2000 WHERE id = 7"}, pk...)...)
+	if big.code != 2 || !strings.Contains(big.stderr, "larger than") {
+		t.Fatalf("over the cap: exit %d\n%s%s", big.code, big.stdout, big.stderr)
 	}
 }

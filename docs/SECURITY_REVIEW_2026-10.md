@@ -1,7 +1,8 @@
 # Security review, October 2026
 
 Each pass records what was reviewed, how, what was found, how bad it is and what was done, with the
-file and the test that show it. **S18 wrote Pass 1; S34 appends Pass 2.** Low findings that stay
+file and the test that show it. **S18 wrote Pass 1; S34 appends Pass 2; Pass 3 (2026-10-21) covers
+the week's new surfaces.** Low findings that stay
 open move to [SECURITY_BACKLOG.md](SECURITY_BACKLOG.md) with an owner session.
 
 Severity: **High** means an attacker can run, read or change something they shouldn't, or a
@@ -243,3 +244,60 @@ parses back to the same value and canonicalizes to itself): 3 properties passed 
 - S37: GitHub private vulnerability reporting, secret scanning and Dependabot when the repository
   goes public.
 - Post-launch: an external penetration test, a bug bounty, KMS- or HSM-backed seal keys.
+
+## Pass 3 · 2026-10-21 (after the infrastructure audit of the same day)
+
+### Scope
+
+The surfaces added since Pass 2 that the threat model didn't name yet ([THREAT_MODEL.md](THREAT_MODEL.md)
+v3): `deedglass a2a proxy` (TY-07), `deedglass witness debezium` (TY-05), the shell guard and its
+hooks for other coding agents (FEAT-07, TY-08), head timestamps (TY-03), the independent verifiers
+(TY-10), and `deedglass connect` (not merged; reviewed as a design). Also the release path and the
+workflows, from the audit's supply-chain findings.
+
+### Method
+
+1. **Attack group T**, 13 cases declared in `attack/attack_meta.json` and pinned under
+   `expectedDigestT` (ADR-116) before the A2A proxy's browser checks and the Debezium input cap were
+   written. They run as library- and CLI-level tests (`attack/surfaces_test.go`, plain `go test`,
+   like group Y), so every pull request runs them in `lint-unit`. T12 (independent verifiers) and
+   T13 (`connect`) are declared and wait on their runner and their code.
+2. **A read of each surface's entry points** against attackers A9 to A12 (a web page on the
+   agent's machine, a hostile remote agent, a local process, someone who can change a release).
+3. **Static analysis**: a CodeQL workflow for Go, JavaScript and TypeScript, Python and the
+   workflows (`.github/workflows/codeql.yml`), not a required check until its first runs are
+   triaged.
+
+### Results
+
+| Check | Result |
+|---|---|
+| Group T | 11 of 11 implemented cases matched on their first run after the fixes below; 2 declared, not implemented |
+| Server-run attack suite | Not re-run in this pass; unchanged since the v0.7.0 run (`attack/results/latest.json`); the next release run includes this code |
+| Unit tests | `internal/a2a` `TestBrowserShapedRefused` (24 rows), `TestCardBrowserRefused`, `TestLoopbackHost`; `cmd/deedglass` the Debezium cap and input digest; `docs` `TestInstallScript` with a stand-in cosign |
+
+### Findings
+
+| Id | Area | Finding | Severity | Status | Evidence |
+|---|---|---|---|---|---|
+| SR-019 | A2A proxy | A web page on the agent's machine could drive the loopback proxy: a `text/plain` POST with `?A2A-Version=1.0` needs no CORS preflight, so `SendMessage` ran as the agent (the Gate still applied policy) and reads passed through; with DNS rebinding the page could read answers. No `Host`, `Origin` or `Content-Type` check, and no key on inbound requests. | Medium | **Fixed.** `Host` must be a loopback literal or `localhost`; `Origin`, or `Sec-Fetch-Site` other than `none`, is refused; the body must be `application/json`; the version comes from the header only; preflights get 403 and no `Access-Control-*` header is sent; every JSON-RPC request needs the agent's key as a bearer token (constant-time compare). `--api-key` prints a warning (it shows in `ps`). | T01–T04; `internal/a2a/proxy.go` `admit`, `authorized`; `TestBrowserShapedRefused` |
+| SR-020 | Paperwork | The threat model, this review and the attack suite didn't name the week's surfaces. | Medium | **Fixed.** Threat model v3, this pass, group T. | `docs/THREAT_MODEL.md`; ADR-116 |
+| SR-021 | Debezium witness | No total input cap (16 MiB per line only, gzip read to the end), and nothing in the result tied it to its input. | Low | **Fixed.** 1 GiB per feed after gunzip (`feed_too_large`, exit 2); `--json` carries `feed.input_sha256` and `feed.input_bytes`. | T08; `cmd/deedglass/witness_debezium.go`; `TestWitnessDebeziumGoldens` |
+| SR-022 | Timestamps | A token checked without `--tsa-roots` is checked against the chain it carries. | Low | **Already in place.** `verify` warns `tsa_not_pinned` with the next step; LIMITATIONS says so. | T11; `internal/deed/stamp/check.go` |
+| SR-023 | Supply chain | No SAST tool ran (Scorecard SAST 0). | Medium | **Fixed in part.** CodeQL workflow (SHA-pinned, `security-events: write` on its job only, PRs, `main` and weekly). It becomes a required check after its first runs are triaged. | `.github/workflows/codeql.yml` |
+| SR-024 | Releases | `install.sh` checked the archive against `checksums.txt` from the same release, which catches corruption, not a swapped release; the Homebrew cask cleared macOS's quarantine on an unnotarized binary. | Medium | **Fixed.** `install.sh` checks `checksums.txt.sigstore.json` with cosign when it is installed (identity pinned to `release.yml@refs/tags/v*`, GitHub's OIDC issuer) and installs nothing if it's missing or fails; otherwise it prints the command. The cask hook is gone. Still open: the image is pushed before grype scans it. | `scripts/install.sh`; `TestInstallScript`; `.goreleaser.yaml` |
+| SR-025 | Workflows | `mcp-registry.yml` kept the checkout's git credentials on disk in a job that mints an OIDC token. | Low | **Fixed.** `persist-credentials: false`. | `.github/workflows/mcp-registry.yml` |
+| SR-026 | Docs | `RELEASING.md` said signing is skipped while the repository is private; it is public and signs. | Low | **Fixed.** | `docs/RELEASING.md` |
+| SR-027 | A2A proxy | The peer's card name is recorded beside its URL as if known; the card's signatures are dropped, not checked. | Low | **Documented.** The chain's ref is the operator's `--peer` URL; the name is the card's claim (T06, LIMITATIONS). Checking card signatures is backlog. | T06 |
+| SR-028 | `connect` | The unmerged command took the Postgres URL, password included, as a positional argument. | Low | **Open.** T13 declares the requirement (no password from argv) before the command merges. | `attack/attack_meta.json` T13 |
+
+**Open high findings: 0. Open medium findings: 0** in this pass's scope (the audit's account and
+governance items are the founder's; the `:8080` key fallback, audit M-04, is fixed on its own
+branch).
+
+### Deferred
+
+- The image scanned before it is pushed, the provenance bundle attached to each release, and an
+  independent rebuild of linux/amd64 in CI.
+- CodeQL as a required check; the incident-response and key-rotation runbooks; OSV ignores
+  with reasons and the dev-dependency bumps.

@@ -180,9 +180,14 @@ one workflow's job to another's, and a registry entry is public, so it stays a d
 
 ## Signing
 
-While the repository is private, the workflow skips signing: keyless signatures and GitHub artifact
-attestations write the repository and workflow identity into a public log. When the repository is
-public, the same workflow signs `checksums.txt` and the image digest with cosign and records build provenance with GitHub's artifact attestations.
+The repository is public, so every release signs `checksums.txt` and the image digest with keyless
+cosign (GitHub OIDC; no signing key or secret is stored) and records build provenance with GitHub's
+artifact attestations; both write the repository and workflow identity into a public log. The
+workflow would skip signing only if the repository were made private again. `scripts/install.sh`
+checks `checksums.txt.sigstore.json` when cosign is installed (identity
+`https://github.com/deedglass/deedglass/.github/workflows/release.yml@refs/tags/v*`, issuer
+`https://token.actions.githubusercontent.com`) and prints the command otherwise; the manual check is
+in [INSTALL.md](INSTALL.md#check-what-you-downloaded).
 
 ## Homebrew
 

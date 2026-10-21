@@ -236,6 +236,8 @@ How they were measured, and the misses: [`docs/BENCHMARKS.md`](docs/BENCHMARKS.m
 
 The attack suite runs 82 cases against a real server and real Postgres on every release candidate:
 82 matched, 0 differ (`attack/results/latest.json`, [`docs/ATTACK_SUITE.md`](docs/ATTACK_SUITE.md)).
+Another 23 library- and CLI-level cases (groups Y and T: crypto agility, the A2A proxy, the Debezium
+witness, the shell guard, timestamps) run with `go test ./attack` on every pull request.
 Report a vulnerability privately: [`SECURITY.md`](SECURITY.md).
 
 <!-- description:network -->
