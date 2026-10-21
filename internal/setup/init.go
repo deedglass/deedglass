@@ -928,7 +928,7 @@ func (x *run) client(ctx context.Context) StepResult {
 		return StepResult{ID: id, Title: title, Status: Skipped, Detail: "Claude Code · run the line under Next"}
 	case "sdk-python":
 		return StepResult{ID: id, Title: title, Status: Skipped, Detail: "Python",
-			Lines: []string{"pip install deedglass", "export DEEDGLASS_API_KEY=\"$(cat .deedglass/quickstart.key)\" DEEDGLASS_SERVER=" + x.stack.Server()}}
+			Lines: []string{"pip install \"deedglass @ git+https://github.com/deedglass/deedglass#subdirectory=sdk/python\"", "export DEEDGLASS_API_KEY=\"$(cat .deedglass/quickstart.key)\" DEEDGLASS_SERVER=" + x.stack.Server()}}
 	case "sdk-typescript":
 		return StepResult{ID: id, Title: title, Status: Skipped, Detail: "TypeScript",
 			Lines: []string{"npm install @deedglass/sdk", "export DEEDGLASS_API_KEY=\"$(cat .deedglass/quickstart.key)\" DEEDGLASS_SERVER=" + x.stack.Server()}}

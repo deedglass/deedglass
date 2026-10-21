@@ -40,6 +40,20 @@ export const sidebar = clean([
     ],
   },
   {
+    label: 'Agent frameworks',
+    items: [
+      p('frameworks/vercel-ai-sdk', 'Vercel AI SDK'),
+      p('frameworks/claude-agent-sdk', 'Claude Agent SDK'),
+      p('frameworks/openai-agents', 'OpenAI Agents SDK'),
+      p('frameworks/langchain', 'LangChain and LangGraph'),
+      p('frameworks/mastra', 'Mastra'),
+      p('frameworks/pydantic-ai', 'Pydantic AI'),
+      p('frameworks/google-adk', 'Google ADK'),
+      p('frameworks/crewai', 'CrewAI'),
+      p('frameworks/llamaindex', 'LlamaIndex'),
+    ],
+  },
+  {
     label: 'Concepts',
     items: [
       p('concepts/how-it-works', 'How Deedglass works'),

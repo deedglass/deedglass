@@ -1,0 +1,10 @@
+{
+  "name": "deedglass-recipe-openai-agents",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@deedglass/sdk": "0.6.0",
+    "@openai/agents": "0.21.0",
+    "zod": "4.6.7"
+  }
+}

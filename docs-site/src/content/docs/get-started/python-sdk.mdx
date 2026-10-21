@@ -15,11 +15,13 @@ Your Python code asks the Gate before a tool runs, and gets back the decision, t
 
 ## 1. Install
 
-```sh test=skip reason="the PyPI package is published in the release session; make py-build builds the same wheel"
-pip install deedglass
+`deedglass` isn't on PyPI yet. Until it is, install it from the repository:
+
+```sh test=skip reason="installs from GitHub; make py-build builds the same wheel"
+pip install "deedglass @ git+https://github.com/deedglass/deedglass#subdirectory=sdk/python"
 ```
 
-The client has one dependency, `httpx`. Extras: `deedglass[crypto]` for offline deed checks and signed intents, `deedglass[langchain]` and `deedglass[claude-agent-sdk]` for the adapters.
+Each GitHub release also has the wheel. The client has one dependency, `httpx`. Extras: `crypto` for offline deed checks and signed intents, `langchain` and `claude-agent-sdk` for the adapters (`deedglass[crypto] @ git+…`).
 
 ## 2. Configure
 

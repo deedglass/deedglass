@@ -1,0 +1,2 @@
+langchain[mcp]==1.4.6
+langchain-anthropic==1.7.6
