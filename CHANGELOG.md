@@ -7,6 +7,20 @@ this file by `scripts/release-notes.sh`.
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-10-21
+
+A second database for Proven. `deedglass witness debezium` reads a Debezium change feed and runs the
+same Proven (L2) comparison against it, so a MySQL write can be compared with what the agent said it
+would do, labelled "Proven · via Debezium (MySQL)" (ADR-114). A transaction the feed holds only in
+part is never compared, and when MySQL carries no ledger row naming the action, the record says that
+changes from any writer were compared. The toolchain moves to Go 1.27.3 for a crypto/x509 fix.
+Nothing changes for existing records: the deed format is unchanged, Proven, Checked and Claimed mean
+what they meant in 0.6.0, and the Postgres witness works as before. Known limits: the command is
+offline (a file or stdin) and the Gate doesn't call it yet, so its record isn't sealed into the
+Ledger; there is no MySQL connector and no Kafka source; dates, decimals and JSON columns are shown
+but not compared; backtick-quoted names, `INSERT … ON DUPLICATE KEY UPDATE` and multi-table
+statements can't be read. No new dependency, no schema migration, and `formula_version` stays 1.
+
 ### Added
 
 - **A foreign change-feed witness** (TY-05, ADR-114, `docs/WITNESS_DEBEZIUM.md`): `deedglass witness
@@ -19,6 +33,11 @@ this file by `scripts/release-notes.sh`.
   `feed_no_match`, `any_writer`. `make debezium-it` reproduces the 301-row trigger scene on MySQL
   8.4 through Debezium Server 3.3 in Docker; its recording drives the CI goldens. No new dependency;
   no Kafka source yet.
+
+### Security
+
+- **Go 1.27.3**: govulncheck reports GO-2026-6809 in `crypto/x509` of go1.27.2, fixed in go1.27.3.
+  `go.mod` and both build images move to it. No code change.
 
 ## [0.6.0] - 2026-10-20
 
@@ -496,7 +515,8 @@ See [KNOWN_ISSUES.md](KNOWN_ISSUES.md): what happens, who is affected, the worka
 See [docs/LIMITATIONS.md](docs/LIMITATIONS.md). In short: L2 covers Postgres only, seal keys are per
 deployment, and Deedglass trusts the Postgres server and the host it runs on.
 
-[Unreleased]: https://github.com/deedglass/deedglass/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/deedglass/deedglass/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/deedglass/deedglass/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/deedglass/deedglass/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/deedglass/deedglass/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/deedglass/deedglass/compare/v0.3.0...v0.4.0
