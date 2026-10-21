@@ -211,6 +211,34 @@
     "messages": null
   },
   {
+    "code": "feed_mismatch",
+    "exit": [
+      1
+    ],
+    "messages": [
+      "The feed doesn't match what the action reported."
+    ]
+  },
+  {
+    "code": "feed_unreadable",
+    "exit": [
+      2
+    ],
+    "messages": null,
+    "next": [
+      "Pass Debezium's JSON output, one event per line (docs/WITNESS_DEBEZIUM.md)."
+    ]
+  },
+  {
+    "code": "feed_unverifiable",
+    "exit": [
+      2
+    ],
+    "messages": [
+      "The feed can't confirm what the action reported."
+    ]
+  },
+  {
     "code": "file_mismatch",
     "exit": [
       1

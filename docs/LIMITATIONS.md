@@ -691,6 +691,18 @@ TY-07, [`A2A.md`](A2A.md). `deedglass a2a proxy` is opt-in; nothing goes through
 - **No sign-in of its own.** The proxy listens on loopback and acts as one agent for whoever reaches the port. Agents whose intent mode is `required` can't use it: the proxy doesn't sign intents.
 - **Tested against a fake peer.** The goldens and `TestA2ALive` use a fake A2A agent written from the v1.0.1 spec; no third-party A2A server or SDK is in CI.
 
+## Foreign change feeds
+
+TY-05, [`WITNESS_DEBEZIUM.md`](WITNESS_DEBEZIUM.md). `deedglass witness debezium` reads a Debezium feed you give it; nothing reads a feed on its own.
+
+- **Proven by the feed, not by the database.** The comparison reads what Debezium carried. A connector that drops, filters or rewrites events changes what Deedglass sees, and the label (`Proven · via Debezium (MySQL)`, method `debezium.mysql`) says which kind of Proven a result is.
+- **Any writer, unless the feed carries the action id.** Without a ledger row in the action's own transaction, every transaction in the feed that touches the statement's tables is compared as the action's, and the record carries the note `any_writer`. The ledger row is written by your code, so it shows which transaction the writer called the action's; it isn't authenticated the way `begin_action`'s row is on Postgres.
+- **Whole transactions only.** A transaction without BEGIN, END, matching counts or an unbroken event order is `feed_incomplete` and never compared, so a feed without `provide.transaction.metadata` never gets past Can't check. On MySQL a feed that resumed inside a transaction is caught by its first row's position; other databases have no such check yet.
+- **What MySQL doesn't log, the feed doesn't show.** In MySQL 8.4, rows changed by `ON UPDATE CASCADE` or `ON DELETE CASCADE` foreign keys aren't written to the binlog as row events, so they aren't counted.
+- **Types and statements are read loosely.** Without a schema the feed says only string, number, boolean or null; dates, decimals and JSON are shown, not compared. Statements go through sqlguard's Postgres reading, so MySQL-only syntax is `footprint_unknown`.
+- **Offline, one feed at a time, no Kafka.** The Gate doesn't wait for a feed and the result isn't sealed into the Ledger. A Kafka topic has to be dumped to JSON lines first.
+- **One recorded pair in CI.** The goldens are MySQL 8.4.6 through Debezium Server 3.3.1 (`make debezium-it` records them); other databases and Debezium versions are parsed by the same rules but haven't been recorded.
+
 ## What this page does not do
 
 It does not list bugs or missing features on the schedule. It lists limits of the design that stay true after they ship.

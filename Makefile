@@ -158,6 +158,10 @@ mock-orders: ## S16: the mock orders API on 127.0.0.1:8090 (MOCK_ORDERS_TOKEN re
 fhir-proven-it: ## HC-P05: TestFHIRProvenLive, Proven (L2) against HAPI FHIR JPA and Medplum, each on PostgreSQL 18 in Docker (pinned images, free ports, witness roles and publications), on a throwaway control-plane PG; containers removed after (KEEP=1 keeps them)
 	scripts/fhir_proven.sh
 
+.PHONY: debezium-it
+debezium-it: ## TY-05: TestMySQLTriggerLive, the 301-row trigger scene on MySQL 8.4 through Debezium Server 3.3 (deploy/debezium, pinned images, free localhost ports, an HTTP receiver on 127.0.0.1), compared by deedglass witness debezium's code; RECORD=1 rewrites the CI golden, KEEP=1 keeps the containers (not in CI)
+	DEEDGLASS_DEBEZIUM_COMPOSE=$(CURDIR)/deploy/debezium/compose.yaml $(GO) test -tags debezium -count=1 -v -timeout 15m -run TestMySQLTriggerLive ./internal/witness/feed/debezium/ $(if $(RECORD),-record,)
+
 .PHONY: medplum-example medplum-example-it
 medplum-example: ## The Medplum example (examples/medplum): Medplum 5.2.6 on PG 18 in Docker, a serve from this tree, an agent's create that Matches, a stored-but-different write flagged, an update a person approves, and a Medplum Bot handler; everything removed after (KEEP=1 keeps it)
 	examples/medplum/run.sh

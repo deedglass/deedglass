@@ -7,6 +7,19 @@ this file by `scripts/release-notes.sh`.
 
 ## [Unreleased]
 
+### Added
+
+- **A foreign change-feed witness** (TY-05, ADR-114, `docs/WITNESS_DEBEZIUM.md`): `deedglass witness
+  debezium` reads Debezium change events (JSON lines from a file or stdin) and runs the Proven (L2)
+  comparison against them, labelled by source: "Proven · via Debezium (MySQL)", method
+  `debezium.mysql`. A transaction is the action's when it inserts a ledger row naming it; without
+  one, changes from any writer to the statement's tables are compared and the record says so (note
+  `any_writer`). A transaction the feed holds only part of is never compared (`feed_incomplete`),
+  including a feed Debezium resumed inside a transaction. Reason codes `feed_incomplete`,
+  `feed_no_match`, `any_writer`. `make debezium-it` reproduces the 301-row trigger scene on MySQL
+  8.4 through Debezium Server 3.3 in Docker; its recording drives the CI goldens. No new dependency;
+  no Kafka source yet.
+
 ## [0.6.0] - 2026-10-20
 
 More agents, more readers and an outside clock. Agent-to-agent delegations can go through the Gate

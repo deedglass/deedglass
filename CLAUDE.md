@@ -157,6 +157,8 @@ go test ./cmd/deedglass -run TestHelpJSONGolden -update   # S32: testdata/help-j
 DEEDGLASS_IT_PKGS="./internal/scan/ ./internal/doctor/" make integration   # S32: scan and doctor are read-only under log_statement=all (BEGIN READ ONLY, six SELECTs, ROLLBACK; a write is 25006)
 DEEDGLASS_IT_INIT=1 go test -tags integration ./internal/setup -run TestInitLive -v   # S32: deedglass init end to end in Docker on its own ports (two postgres:18.6 containers, removed after)
 scripts/quickstart_timed.sh | scripts/npx_cold.sh   # S32: the timed quickstart and the cold npx run against a local registry; JSON in bench/results/
+make debezium-it    # TY-05: the 301-row trigger scene on MySQL 8.4.6 through Debezium Server 3.3.1 in Docker (deploy/debezium, HTTP sink to a receiver on 127.0.0.1); RECORD=1 rewrites internal/witness/feed/debezium/testdata/mysql-trigger.jsonl.gz, KEEP=1 keeps the containers; not in CI
+go test ./cmd/deedglass -run TestWitnessDebeziumGoldens -update   # TY-05: the witness debezium CLI goldens in testdata/witness (review the diff)
 make fhir-proven-it # HC-P05: Proven (L2) against HAPI FHIR JPA and Medplum on PG 18 in Docker (free ports; KEEP=1 keeps the containers)
 make embed-gz       # S51: rewrite the gzip archives the binary embeds (internal/store/migrations/sql.tar.gz); TestArchiveCurrent fails while stale
 DEEDGLASS_IT_PKGS=./cmd/deedglass/ DEEDGLASS_IT_GOFLAGS="-v -run TestSecurityPackLive" make integration   # S51: readiness, pro_required, build → verify, one changed byte, pinned keys, aliases, the canary sweep
@@ -191,7 +193,7 @@ make docker         # the deedglass:dev image (distroless, 65532); make bench-ht
 scripts/ci-local.sh # the CI jobs locally (docker-smoke and govulncheck skip when Docker or network is missing)
 ```
 
-- Go 1.27.2 at `/opt/homebrew/bin/go`. Node 24 (`/opt/homebrew/bin/node`) for `web/verify` and the Console (`web/`); their dev
+- Go 1.27.3 (go.mod; `/opt/homebrew/bin/go` 1.27.2 fetches it with GOTOOLCHAIN=auto). Node 24 (`/opt/homebrew/bin/node`) for `web/verify` and the Console (`web/`); their dev
   tools are exact pins in `web/verify/package-lock.json` (ADR-027) and `web/package-lock.json` (ADR-053), installed with `npm ci --ignore-scripts`. PostgreSQL 16, 17 and 18 are installed at
   `/opt/homebrew/opt/postgresql@{16,17,18}/bin` (keg-only; never `brew services`). Docker images
   `postgres:16.15`, `17.11` and `18.6` work too (`DEEDGLASS_IT_MODE=docker`).
@@ -337,6 +339,12 @@ and "open source" until the repo is public. Style bans: "revolutionary", "world-
   `internal/a2a/a2atest` and a fake Gate: an acting call never reaches the peer without `authorized`, the caller's
   credential never does), `TestApprovalRunsOnce`, `TestTwoAgentDelegation`, `TestClassify`, `TestCheckChain`, `TestCard`;
   `cmd/deedglass` `TestA2ALive` (integration). `internal/archtest` keeps the core off `internal/a2a`.
+- `internal/witness/feed`, `internal/witness/feed/debezium` (TY-05, ADR-114, pure): `TestRecordedScene` (the
+  MySQL scene from its recording: bound MISMATCH, any-writer MISMATCH with the note, VERIFIED, `ledger_mismatch`),
+  `TestResumedFeed` (a real mid-transaction resume is `feed_incomplete`, never `missing_change`),
+  `TestCutFeedNeverDecides` (a cut transaction is never a pass or a violation), `TestCompleteness`, `TestShapes`,
+  `TestValues`, `TestLedgerTable`, `TestNoMatchAndNamed`, `TestRelabel`; `cmd/deedglass` `TestWitnessDebeziumGoldens`;
+  `TestMySQLTriggerLive` (tag `debezium`, `make debezium-it`).
 - `internal/ids`: strict parser, spec vector, monotonic and concurrency tests, clock-back and
   overflow tests, pattern-vs-parser agreement, `FuzzParse`.
 - `internal/config`: the key table, every prod refusal, `.deedglass/` safety, secret canaries across

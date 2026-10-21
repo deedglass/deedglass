@@ -1,0 +1,14 @@
+exit 0
+--- stdout
+L2 · Matches · Proven · via Debezium (MySQL)
+MySQL committed 1 row in shop.orders, as the statement said.
+
+  expected   UPDATE 1 row in shop.orders where id = 7 · sets total_cents
+  observed   UPDATE 1 row in shop.orders
+
+  shop.orders     id   total_cents
+  ✓ expected      7    1007 → 2000
+
+Proven · via Debezium (MySQL) · transaction d37cd757-cd2b-11f1-927d-b22b7c5c4779:19 · mysql-bin.000003:21462 · 2026-10-21 08:46:11 UTC
+Read 3 transactions, 605 change events.
+--- stderr

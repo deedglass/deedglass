@@ -68,6 +68,7 @@ export const IMPORTS = {
   'docs/exports/prov-json.md': 'reference/exports/prov-json',
   'docs/SHELL_GUARD.md': 'reference/shell-guard',
   'docs/A2A.md': 'reference/a2a',
+  'docs/WITNESS_DEBEZIUM.md': 'reference/witness-debezium',
   'docs/SECURITY_PACK.md': 'reference/security-pack',
   'docs/WEEKLY.md': 'reference/weekly',
   'docs/AGENCIES.md': 'reference/agencies',
@@ -110,8 +111,8 @@ export const LIMITS_PARTS = [
     slug: 'postgres',
     label: 'Postgres, the check and undo',
     title: 'Limits: Postgres, the check and undo',
-    description: "What Deedglass can't see or do in Postgres: the database, the Postgres connector, the check against the change log, the decoder, FHIR servers and undo.",
-    sections: ['Database limits', 'The Postgres connector', 'The Witness', 'The decoder', 'The L2 witness', 'Proven for FHIR servers', 'Undo'],
+    description: "What Deedglass can't see or do in Postgres: the database, the Postgres connector, the change-log check, the decoder, FHIR servers, foreign feeds and undo.",
+    sections: ['Database limits', 'The Postgres connector', 'The Witness', 'The decoder', 'The L2 witness', 'Proven for FHIR servers', 'Foreign change feeds', 'Undo'],
   },
   {
     slug: 'records',
