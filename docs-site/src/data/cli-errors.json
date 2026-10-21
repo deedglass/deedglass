@@ -1005,7 +1005,9 @@
   },
   {
     "code": "server_mismatch",
-    "exit": null,
+    "exit": [
+      3
+    ],
     "messages": null
   },
   {
