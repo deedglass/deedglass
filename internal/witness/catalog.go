@@ -82,6 +82,13 @@ const (
 	CodeFHIRSchemaUnknown        Code = "fhir_schema_unknown"
 )
 
+// L2 from a foreign change feed (TY-05, ADR-114): Debezium change events from another database.
+const (
+	CodeFeedIncomplete Code = "feed_incomplete"
+	CodeFeedNoMatch    Code = "feed_no_match"
+	CodeAnyWriter      Code = "any_writer"
+)
+
 // L2 for an undo (S23): the exact footprint of a plan, row by row.
 const (
 	CodeUndoRestored Code = "undo_restored"
@@ -259,6 +266,15 @@ var entries = []Entry{
 		map[string]any{"table": "public.hfj_res_ver"}},
 	{CodeTriggersUnwatched, Gap, "L2", `{table} has triggers that may write tables Deedglass doesn't watch.`,
 		"Watch every table the triggers write, or turn off witness.strict_triggers.", map[string]any{"table": "public.orders"}},
+	{CodeFeedIncomplete, Gap, "L2", `The {feed} holds only part of transaction {tx} ({why}), so Deedglass can't compare it.`,
+		"Turn on provide.transaction.metadata, then replay the feed from before the transaction began (docs/WITNESS_DEBEZIUM.md).",
+		map[string]any{"feed": "Debezium feed from MySQL", "tx": "3e11fa47-71ca-11e1-9e33-c80aa9429562:23", "why": "it starts at event 49 of 301"}},
+	{CodeFeedNoMatch, Gap, "L2", `The {feed} holds no transaction this action could have written.`,
+		"Check that the feed covers the time of the action and every table it writes.",
+		map[string]any{"feed": "Debezium feed from MySQL"}},
+	{CodeAnyWriter, Note, "L2", `The {feed} doesn't carry this action's id, so changes from any writer to these tables are compared as this action's.`,
+		"Write the ledger row in the action's own transaction so the feed names the action (docs/WITNESS_DEBEZIUM.md).",
+		map[string]any{"feed": "Debezium feed from MySQL"}},
 }
 
 var catalog = func() map[Code]Entry {

@@ -1,0 +1,10 @@
+exit 2
+--- stdout
+L2 · Can't check · Proven · via Debezium (MySQL)
+The Debezium feed from MySQL holds only part of transaction 268a5cb3-cd2a-11f1-a3c7-cebe93e39bd1:16 (it resumes at row 48 of a binlog event), so Deedglass can't compare it.
+
+  · The Debezium feed from MySQL doesn't carry this action's id, so changes from any writer to these tables are compared as this action's.
+
+Proven · via Debezium (MySQL) · transaction 268a5cb3-cd2a-11f1-a3c7-cebe93e39bd1:16 · mysql-bin.000003:1058 · 2026-10-21 08:34:17 UTC
+Read 2 transactions, 553 change events.
+--- stderr

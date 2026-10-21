@@ -268,6 +268,7 @@ builds it. Hidden commands work but aren't in `deedglass help`.
 | `deedglass connector gmail authorize <name> --client-file ./client_secret.json [--readonly] [--no-browser] [--json]` | Connectors | Authorize the Gmail connector | built |
 | `deedglass decoder status [--connector <name>] [--recent N] [--json]` | Connectors | Show what the decoder reads from Postgres | built |
 | `deedglass decoder drop --connector <name> [--confirm <name>] [--json]` | Connectors | Drop a connector's replication slot | built |
+| `deedglass witness debezium --events <file|-> --sql <statement> [--reported N] [--schema <db>] [--pk table=col] [--action act_…] [--tx <id>] [--json]` | Connectors | Compare an action with a Debezium change feed | built |
 | `deedglass slack manifest --base-url <https://host> [--name Deedglass] [--json]` | Connectors | Print the Slack app manifest | built |
 | `deedglass mcp wrap --connector <name> [--connector-type mcp] [--hide-denied=false] [--call-timeout 2m] [--result-mode full|digest] [--log-file <path>] -- <command> [args…]` | MCP and A2A | Run an MCP server behind Deedglass | built |
 | `deedglass mcp serve [--connector native|<name>]` | MCP and A2A | Serve Deedglass's native MCP tools | built |

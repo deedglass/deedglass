@@ -47,6 +47,7 @@ exit 0
   connector postgres  Prepare a Postgres database                      [2m    [0m   [2minit · check[0m
   connector gmail     Authorize the Gmail connector                    [2m    [0m   [2mauthorize[0m
   decoder             Inspect Postgres change readers                  [2m    [0m   [2mstatus · drop[0m
+  witness             Compare actions with other change feeds          [2m    [0m   [2mdebezium[0m
   slack manifest      Print the Slack app manifest
 [1mMCP and A2A[0m
   mcp                 Put Deedglass in front of MCP servers            [2m    [0m   [2mwrap · serve · snippet · install-links[0m

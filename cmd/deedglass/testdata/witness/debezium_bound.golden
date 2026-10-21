@@ -1,0 +1,34 @@
+exit 1
+--- stdout
+L2 · Doesn't match · Proven · via Debezium (MySQL)
+MySQL also changed 300 rows in shop.shipments, which the statement doesn't touch.
+
+  expected   UPDATE 1 row in shop.orders where id = 42 · sets status
+  observed   UPDATE 1 row in shop.orders · UPDATE 300 rows in shop.shipments
+
+  row             id   order_id   status
+  ✓ expected      42              open → shipped
+  ✕ unexpected         501        open → shipped
+  ✕ unexpected         502        open → shipped
+  ✕ unexpected         503        open → shipped
+  ✕ unexpected         504        open → shipped
+  ✕ unexpected         505        open → shipped
+  ✕ unexpected         506        open → shipped
+  ✕ unexpected         507        open → shipped
+  ✕ unexpected         508        open → shipped
+  ✕ unexpected         509        open → shipped
+  ✕ unexpected         510        open → shipped
+  ✕ unexpected         511        open → shipped
+  ✕ unexpected         512        open → shipped
+  ✕ unexpected         513        open → shipped
+  ✕ unexpected         514        open → shipped
+  ✕ unexpected         515        open → shipped
+  ✕ unexpected         516        open → shipped
+  ✕ unexpected         517        open → shipped
+  ✕ unexpected         518        open → shipped
+  ✕ unexpected         519        open → shipped
+  …                first 20 of 301 rows · the rest in Console › Actions
+
+Proven · via Debezium (MySQL) · transaction d37cd757-cd2b-11f1-927d-b22b7c5c4779:17 · mysql-bin.000003:1230 · 2026-10-21 08:46:11 UTC
+Read 3 transactions, 605 change events.
+--- stderr

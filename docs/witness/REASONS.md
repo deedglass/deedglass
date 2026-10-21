@@ -4,8 +4,11 @@ Every Witness verdict lists its reasons: what each check found, or what it could
 
 | Code | Class | Level | Message | What to do next |
 |---|---|---|---|---|
+| `any_writer` | note | L2 | `The Debezium feed from MySQL doesn't carry this action's id, so changes from any writer to these tables are compared as this action's.` | Write the ledger row in the action's own transaction so the feed names the action (docs/WITNESS_DEBEZIUM.md). |
 | `decoder_halted` | gap | L2 | `The decoder for this connector has stopped (publication_missing), so Postgres's change log wasn't read.` | Run deedglass decoder status; it names the cause and the fix. |
 | `edge_reported_success` | pass | L0 | `The edge reported success. Deedglass did not run this call itself.` | Nothing. Proxy-mode calls stay at L0 unless the system of record is witnessed (L2). |
+| `feed_incomplete` | gap | L2 | `The Debezium feed from MySQL holds only part of transaction 3e11fa47-71ca-11e1-9e33-c80aa9429562:23 (it starts at event 49 of 301), so Deedglass can't compare it.` | Turn on provide.transaction.metadata, then replay the feed from before the transaction began (docs/WITNESS_DEBEZIUM.md). |
+| `feed_no_match` | gap | L2 | `The Debezium feed from MySQL holds no transaction this action could have written.` | Check that the feed covers the time of the action and every table it writes. |
 | `fhir_conditional_matched` | violation | L1 | `fhir.create reported success, but the conditional create matched an existing resource ("Observation/1001 version 1"), so this action created nothing.` | Read the existing resource. The agent's report of a new one is wrong; check what it did next with that id. |
 | `fhir_extra_versions` | violation | L2 | `This action's transaction committed 2 resource versions, and the call reported 1. Also written: Patient/ghost-3 version 1.` | Read the resources it names: the server created or changed them on its own (a placeholder reference target, an interceptor). |
 | `fhir_field_changed` | violation | L1 | `fhir.update reported success, but Observation/1001 version 2 shows status as "preliminary", not "final".` | Read the diff, then check the server: a profile, a default or an interceptor stored something else. |

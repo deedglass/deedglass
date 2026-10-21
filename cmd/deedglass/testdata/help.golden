@@ -47,6 +47,7 @@ Connectors
   connector postgres  Prepare a Postgres database                             init · check
   connector gmail     Authorize the Gmail connector                           authorize
   decoder             Inspect Postgres change readers                         status · drop
+  witness             Compare actions with other change feeds                 debezium
   slack manifest      Print the Slack app manifest
 MCP and A2A
   mcp                 Put Deedglass in front of MCP servers                   wrap · serve · snippet · install-links

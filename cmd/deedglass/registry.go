@@ -322,6 +322,9 @@ var commands = []*Command{
 	{Path: p("decoder", "drop"), Group: Connectors, Summary: "Drop a connector's replication slot",
 		Usage: "--connector <name> [--confirm <name>] [--json]", Flags: decoderDropFlags, Run: runDecoderDrop,
 		Detail: "Stops the decoder, drops the slot and seals decoder.slot_dropped. A new slot starts on the next sync: a new baseline,\nand actions in the gap are recorded as missing. Type the connector's name to confirm, or pass --confirm in scripts."},
+	{Path: p("witness", "debezium"), Group: Connectors, Summary: "Compare an action with a Debezium change feed",
+		Usage: "--events <file|-> --sql <statement> [--reported N] [--schema <db>] [--pk table=col] [--action act_…] [--tx <id>] [--json]",
+		Flags: witnessDebeziumFlags, Run: runWitnessDebezium, Detail: witnessDebeziumHelp},
 	{Path: p("slack", "manifest"), Group: Connectors, Summary: "Print the Slack app manifest",
 		Usage: "--base-url <https://host> [--name Deedglass] [--json]", Flags: slackManifestFlags, Run: runSlackManifest,
 		Detail: "Prints the app manifest for Slack approvals with request_url set to <base-url>/v1/slack/interact.\nPaste it at api.slack.com/apps › Create New App › From a manifest. The docs say why each scope is needed."},
@@ -450,6 +453,7 @@ var lines = []Line{
 		Paths: ps("connector postgres init", "connector postgres check")},
 	{Name: "connector gmail", Group: Connectors, Summary: "Authorize the Gmail connector", Subs: subs("authorize"), Paths: ps("connector gmail authorize")},
 	{Name: "decoder", Group: Connectors, Summary: "Inspect Postgres change readers", Subs: subs("status drop"), Paths: ps("decoder status", "decoder drop")},
+	{Name: "witness", Group: Connectors, Summary: "Compare actions with other change feeds", Subs: subs("debezium"), Paths: ps("witness debezium")},
 	{Name: "slack manifest", Group: Connectors, Summary: "Print the Slack app manifest", Paths: ps("slack manifest")},
 
 	{Name: "mcp", Group: MCP, Summary: "Put Deedglass in front of MCP servers", Subs: subs("wrap serve snippet install-links"), Paths: ps("mcp wrap", "mcp serve", "mcp snippet", "mcp install-links")},
