@@ -36,7 +36,8 @@ proxy serves the remote agent's Agent Card at `/.well-known/agent-card.json` wit
 interface pointing at the proxy, so a client that discovers agents by their card finds the proxy.
 
 - The proxy listens on loopback only, and every JSON-RPC request must carry the agent's key the
-  proxy runs with: `Authorization: Bearer dg_…` (the same `DEEDGLASS_API_KEY`). A request without
+  proxy runs with: `Authorization: Bearer dg_…` (`DEEDGLASS_API_KEY`, or the agent key `deedglass
+  init` saved when the proxy found it through `.deedglass/stack.json`). A request without
   it, or with another key, is answered HTTP 401 and nothing is forwarded. The card at
   `/.well-known/agent-card.json` needs no key.
 - Web pages can't drive it. A request with an `Origin` header, a `Sec-Fetch-Site` other than
