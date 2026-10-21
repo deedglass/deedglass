@@ -1,0 +1,11 @@
+{
+  "medplum": {
+    "facts": {
+      "changes": {
+        "MedicationRequest": {
+          "update": 1
+        }
+      }
+    }
+  }
+}

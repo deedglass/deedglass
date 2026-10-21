@@ -1,0 +1,99 @@
+{
+  "title": "The id the agent chose is replaced by the server's",
+  "story": "The agent creates an Observation with an id it chose, so it can link to it later. The server ignores the id, assigns its own and answers 201. The agent reports the Observation as created under its own id, which doesn't exist.",
+  "servers": [
+    "medplum"
+  ],
+  "behaviour": "FHIR R4 create: if the resource has an id, the server SHALL ignore it and assign its own.",
+  "sources": [
+    {
+      "says": "Create: if an id is provided, the server SHALL ignore it.",
+      "url": "https://hl7.org/fhir/R4/http.html#create"
+    }
+  ],
+  "setup": {
+    "seed": [
+      {
+        "label": "patient",
+        "method": "POST",
+        "path": "Patient",
+        "body": {
+          "resourceType": "Patient",
+          "identifier": [
+            {
+              "system": "urn:example:fhir-bench:mrn",
+              "value": "${nonce}-p1"
+            }
+          ],
+          "name": [
+            {
+              "family": "Synthetic",
+              "given": [
+                "Asha"
+              ]
+            }
+          ],
+          "birthDate": "1980-01-01"
+        }
+      }
+    ]
+  },
+  "steps": [
+    {
+      "session": "agent",
+      "method": "POST",
+      "path": "Observation",
+      "body": {
+        "resourceType": "Observation",
+        "status": "preliminary",
+        "identifier": [
+          {
+            "system": "urn:example:fhir-bench:obs",
+            "value": "${nonce}-hr-6"
+          }
+        ],
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                "code": "vital-signs"
+              }
+            ]
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "8867-4",
+              "display": "Heart rate"
+            }
+          ]
+        },
+        "subject": {
+          "reference": "Patient/${id:patient}"
+        },
+        "effectiveDateTime": "2026-10-21T09:30:00Z",
+        "valueQuantity": {
+          "value": 72,
+          "unit": "beats/minute",
+          "system": "http://unitsofmeasure.org",
+          "code": "/min"
+        },
+        "id": "${nonce}-hr-6"
+      },
+      "note": "create with a client-chosen id"
+    }
+  ],
+  "agent_reports": {
+    "summary": "Charted the heart rate as Observation/<the id it chose>, to link from the care plan.",
+    "effect": {
+      "changes": {
+        "Observation": {
+          "create": 1
+        }
+      }
+    }
+  }
+}

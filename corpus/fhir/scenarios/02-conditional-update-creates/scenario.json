@@ -1,0 +1,88 @@
+{
+  "title": "A conditional update with no match creates a second Patient",
+  "story": "The agent updates a patient's phone number with a conditional update on the MRN, but the MRN it searches has a typo. No Patient matches, so the server creates a new Patient from the body and answers 201. The agent reports that it updated the existing patient.",
+  "servers": [
+    "medplum"
+  ],
+  "behaviour": "FHIR R4 conditional update: with no match and no id in the body, the server creates the resource. Medplum documents the same: if no matching resource is found, one is created from the given data.",
+  "sources": [
+    {
+      "says": "Conditional update, no matches, no id provided: the server creates the resource.",
+      "url": "https://hl7.org/fhir/R4/http.html#cond-update"
+    },
+    {
+      "says": "If it does not find a matching resource, one will be created from the given data.",
+      "url": "https://www.medplum.com/docs/fhir-datastore/updating-data"
+    }
+  ],
+  "setup": {
+    "seed": [
+      {
+        "label": "patient",
+        "method": "POST",
+        "path": "Patient",
+        "body": {
+          "resourceType": "Patient",
+          "identifier": [
+            {
+              "system": "urn:example:fhir-bench:mrn",
+              "value": "${nonce}-p1"
+            }
+          ],
+          "name": [
+            {
+              "family": "Synthetic",
+              "given": [
+                "Asha"
+              ]
+            }
+          ],
+          "birthDate": "1980-01-01"
+        }
+      }
+    ]
+  },
+  "steps": [
+    {
+      "session": "agent",
+      "method": "PUT",
+      "path": "Patient?identifier=urn:example:fhir-bench:mrn|${nonce}-pl",
+      "body": {
+        "resourceType": "Patient",
+        "identifier": [
+          {
+            "system": "urn:example:fhir-bench:mrn",
+            "value": "${nonce}-pl"
+          }
+        ],
+        "name": [
+          {
+            "family": "Synthetic",
+            "given": [
+              "Asha"
+            ]
+          }
+        ],
+        "birthDate": "1980-01-01",
+        "telecom": [
+          {
+            "system": "phone",
+            "value": "+91-00000-00000",
+            "use": "mobile"
+          }
+        ]
+      },
+      "note": "conditional update; the MRN in the search has a typo"
+    }
+  ],
+  "agent_reports": {
+    "summary": "Updated the phone number on the patient's existing record.",
+    "effect": {
+      "changes": {
+        "Patient": {
+          "update": 1
+        }
+      }
+    }
+  }
+}

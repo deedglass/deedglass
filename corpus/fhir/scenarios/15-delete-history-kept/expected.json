@@ -1,0 +1,14 @@
+{
+  "medplum": {
+    "facts": {
+      "changes": {
+        "Observation": {
+          "delete": 1
+        }
+      },
+      "history_kept": {
+        "Observation": 1
+      }
+    }
+  }
+}

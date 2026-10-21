@@ -1,0 +1,194 @@
+{
+  "title": "An update without If-Match overwrites another writer's change",
+  "story": "The agent reads an Observation (72 beats/minute), then a nurse's device corrects the value to 75. The agent marks the reading final with a full update built from what it read, without If-Match. The server answers 200 and stores the agent's version: status final, and the value back at 72. The agent reports that it changed the status only.",
+  "servers": [
+    "medplum"
+  ],
+  "behaviour": "Without version checking the last write wins (FHIR R4 managing contention; Medplum's updating-data guide). If-Match would make the server answer 412 instead (scenario 10).",
+  "sources": [
+    {
+      "says": "Lost updates can be prevented with ETag and If-Match; without them the server accepts the update.",
+      "url": "https://hl7.org/fhir/R4/http.html#concurrency"
+    },
+    {
+      "says": "Without version checking, the last write wins, which can overwrite changes made by other users.",
+      "url": "https://www.medplum.com/docs/fhir-datastore/updating-data"
+    }
+  ],
+  "setup": {
+    "seed": [
+      {
+        "label": "patient",
+        "method": "POST",
+        "path": "Patient",
+        "body": {
+          "resourceType": "Patient",
+          "identifier": [
+            {
+              "system": "urn:example:fhir-bench:mrn",
+              "value": "${nonce}-p1"
+            }
+          ],
+          "name": [
+            {
+              "family": "Synthetic",
+              "given": [
+                "Asha"
+              ]
+            }
+          ],
+          "birthDate": "1980-01-01"
+        }
+      },
+      {
+        "label": "obs",
+        "method": "POST",
+        "path": "Observation",
+        "body": {
+          "resourceType": "Observation",
+          "status": "preliminary",
+          "identifier": [
+            {
+              "system": "urn:example:fhir-bench:obs",
+              "value": "${nonce}-hr-9"
+            }
+          ],
+          "category": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                  "code": "vital-signs"
+                }
+              ]
+            }
+          ],
+          "code": {
+            "coding": [
+              {
+                "system": "http://loinc.org",
+                "code": "8867-4",
+                "display": "Heart rate"
+              }
+            ]
+          },
+          "subject": {
+            "reference": "Patient/${id:patient}"
+          },
+          "effectiveDateTime": "2026-10-21T09:30:00Z",
+          "valueQuantity": {
+            "value": 72,
+            "unit": "beats/minute",
+            "system": "http://unitsofmeasure.org",
+            "code": "/min"
+          }
+        }
+      }
+    ]
+  },
+  "steps": [
+    {
+      "session": "other",
+      "method": "PUT",
+      "path": "Observation/${id:obs}",
+      "body": {
+        "resourceType": "Observation",
+        "status": "preliminary",
+        "identifier": [
+          {
+            "system": "urn:example:fhir-bench:obs",
+            "value": "${nonce}-hr-9"
+          }
+        ],
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                "code": "vital-signs"
+              }
+            ]
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "8867-4",
+              "display": "Heart rate"
+            }
+          ]
+        },
+        "subject": {
+          "reference": "Patient/${id:patient}"
+        },
+        "effectiveDateTime": "2026-10-21T09:30:00Z",
+        "valueQuantity": {
+          "value": 75,
+          "unit": "beats/minute",
+          "system": "http://unitsofmeasure.org",
+          "code": "/min"
+        },
+        "id": "${id:obs}"
+      },
+      "note": "another writer corrects the value"
+    },
+    {
+      "session": "agent",
+      "method": "PUT",
+      "path": "Observation/${id:obs}",
+      "body": {
+        "resourceType": "Observation",
+        "status": "final",
+        "identifier": [
+          {
+            "system": "urn:example:fhir-bench:obs",
+            "value": "${nonce}-hr-9"
+          }
+        ],
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                "code": "vital-signs"
+              }
+            ]
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "8867-4",
+              "display": "Heart rate"
+            }
+          ]
+        },
+        "subject": {
+          "reference": "Patient/${id:patient}"
+        },
+        "effectiveDateTime": "2026-10-21T09:30:00Z",
+        "valueQuantity": {
+          "value": 72,
+          "unit": "beats/minute",
+          "system": "http://unitsofmeasure.org",
+          "code": "/min"
+        },
+        "id": "${id:obs}"
+      },
+      "read_after": "obs",
+      "note": "full update from a stale read, no If-Match"
+    }
+  ],
+  "agent_reports": {
+    "summary": "Marked the heart-rate reading final; nothing else changed.",
+    "effect": {
+      "changes": {
+        "Observation": {
+          "update": 1
+        }
+      }
+    }
+  }
+}

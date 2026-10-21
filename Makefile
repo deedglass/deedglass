@@ -81,7 +81,10 @@ integration: ## throwaway PG cluster (Homebrew, else Docker): sql/ smoke, contro
 quickstart-it: ## S32/PRD-05: TestInitLive, deedglass init then init --trigger end to end in Docker on its own ports (two postgres:18.6 containers, removed after): smoke actions, the 301-row Doesn't match, the undo preview, the step line
 	DEEDGLASS_IT_INIT=1 $(GO) test -tags integration -count=1 -v -timeout 15m ./internal/setup -run TestInitLive
 
-.PHONY: fhir-up fhir-down fhir-it corpus corpus-bench
+.PHONY: fhir-up fhir-down fhir-it corpus corpus-bench fhir-bench
+fhir-bench: ## The FHIR write-integrity benchmark (corpus/fhir/BENCHMARK.md): every scenario through each subject (none; http-status, trusts 2xx; deedglass, a real serve from this tree with its Gate and fhir connector in front) on a throwaway Medplum 5.2.6 on PG 18.6 in Docker (database in memory, removed after); scores caught, true effect and checkable record; SUBJECTS=…, RUN=<id>, OUT=<file> (default .tmp/fhir-bench/bench.json, and .md), WRITE_EXPECTED=1; not in CI (TestGoldenReplay replays the committed run)
+	scripts/fhir_bench.sh
+
 corpus-bench: ## The corpus benchmark (corpus/BENCHMARK.md): every scenario through each subject (deedglass, a real serve from this tree with its Gate in front; none, the baseline) on a throwaway PostgreSQL 18.6 in Docker; scores caught (before or after commit), true effect and checkable record; SUBJECTS=…, RUN=<id>, OUT=<file> (default .tmp/corpus/bench.json, and .md)
 	scripts/corpus_bench.sh
 
