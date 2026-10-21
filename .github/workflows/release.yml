@@ -22,10 +22,13 @@
 #                this run's binary); a prerelease goes to the next dist-tag.
 #   publish-pypi OFF unless DEEDGLASS_PUBLISH_PYPI is 'true'; environment pypi (trusted publishing,
 #                v* tags only, like npm).
+#   mcp-registry after publish-npm, behind the same DEEDGLASS_PUBLISH_NPM gate and never for a release
+#                candidate: calls mcp-registry.yml, which waits until npm serves the version and
+#                publishes server.json to the MCP Registry over GitHub OIDC, so the entry follows npm.
 #   deploy-docs  OFF unless DEEDGLASS_DEPLOY_DOCS is 'true'; needs the CLOUDFLARE_API_TOKEN secret.
 #
 # scripts/check-workflows.sh (in make ci) fails if a gate, an environment or the on-main check
-# disappears, if a job outside release, publish-npm and publish-pypi asks for id-token: write, if any
+# disappears, if a job outside release, publish-npm, publish-pypi and mcp-registry asks for id-token: write, if any
 # job gets write-all, or if a uses: line isn't pinned to a full commit SHA.
 name: release
 
@@ -303,6 +306,14 @@ jobs:
       - name: keep only the Python distributions
         run: mkdir -p dist && cp pkgs/*.whl pkgs/*.tar.gz dist/ && ls dist
       - uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # v1.14.2
+
+  mcp-registry:
+    needs: publish-npm
+    if: vars.DEEDGLASS_PUBLISH_NPM == 'true' && !contains(github.ref_name, '-rc.')
+    permissions:
+      contents: read
+      id-token: write
+    uses: ./.github/workflows/mcp-registry.yml
 
   deploy-docs:
     needs: verify

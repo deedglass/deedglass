@@ -45,6 +45,29 @@ scripts/check-listings.mjs` checks every kit.
 `deedglass init --client codex`, `gemini` or `copilot` prints the line above and the shell guard
 config below; init never writes either file.
 
+## Agent frameworks
+
+Every framework below loads MCP servers, so the same `npx -y deedglass mcp serve` works in each. One
+page per framework has a runnable file of 15 lines or fewer, the framework docs it was built from, and
+what isn't verified; `examples/frameworks/` holds the files and a check that runs each one against an
+`init` stack without a model key.
+
+| Framework | Page | Native adapter in `@deedglass/sdk` |
+|---|---|---|
+| Vercel AI SDK | [integrations/vercel-ai-sdk.md](integrations/vercel-ai-sdk.md) | `@deedglass/sdk/ai-sdk` |
+| Claude Agent SDK (TypeScript and Python) | [integrations/claude-agent-sdk.md](integrations/claude-agent-sdk.md) | `@deedglass/sdk/claude-agent-sdk` |
+| OpenAI Agents SDK (Python and TypeScript) | [integrations/openai-agents.md](integrations/openai-agents.md) | `@deedglass/sdk/openai-agents` |
+| LangChain and LangGraph | [integrations/langchain.md](integrations/langchain.md) | `@deedglass/sdk/langchain` (LangChain.js) |
+| Mastra | [integrations/mastra.md](integrations/mastra.md) | none; the MCP route |
+| Pydantic AI | [integrations/pydantic-ai.md](integrations/pydantic-ai.md) | none; the MCP route |
+| Google ADK | [integrations/google-adk.md](integrations/google-adk.md) | none; the MCP route |
+| CrewAI | [integrations/crewai.md](integrations/crewai.md) | none; the MCP route |
+| LlamaIndex | [integrations/llamaindex.md](integrations/llamaindex.md) | none; the MCP route |
+
+Deedglass's tool names hold a dot (`postgres.query`), which the MCP spec allows and most model APIs
+don't. Each page shows the framework's own way around it, or a one-line rename where the framework
+has none.
+
 ## The shell guard in each coding agent
 
 The shell guard (`deedglass guard shell`, [SHELL_GUARD.md](SHELL_GUARD.md)) asks you first when an

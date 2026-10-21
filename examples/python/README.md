@@ -6,7 +6,7 @@ UPDATE waits for a person). Every example has a `--scripted` mode that needs no 
 key, and prints one `✕` line (the blocked DROP TABLE) and one `✓ … L2 · VERIFIED` line.
 
 ```sh
-pip install "deedglass[crypto,langchain,claude-agent-sdk]"
+pip install "deedglass[crypto,langchain,claude-agent-sdk] @ git+https://github.com/deedglass/deedglass#subdirectory=sdk/python"   # not on PyPI yet
 export DEEDGLASS_API_KEY=<an agent key> DEEDGLASS_SERVER=http://127.0.0.1:8080
 python examples/python/quickstart.py
 python examples/python/langchain_orders.py --scripted

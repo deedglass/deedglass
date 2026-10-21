@@ -1,0 +1,10 @@
+{
+  "name": "deedglass-recipe-vercel-ai-sdk",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@ai-sdk/mcp": "2.0.81",
+    "@deedglass/sdk": "0.6.0",
+    "ai": "7.0.148"
+  }
+}

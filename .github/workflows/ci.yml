@@ -367,7 +367,7 @@ jobs:
       - name: every action pinned to a commit SHA, every image to a digest (ADR-024)
         run: |
           bad="$( {
-            grep -nE '^[[:space:]]*(-[[:space:]]*)?uses:' .github/workflows/*.yml | grep -vE 'uses: [^ ]+@[0-9a-f]{40} # v[0-9]+[.][0-9]+[.][0-9]+$'
+            grep -nE '^[[:space:]]*(-[[:space:]]*)?uses:' .github/workflows/*.yml | grep -vE 'uses: [^ ]+@[0-9a-f]{40} # v[0-9]+[.][0-9]+[.][0-9]+$' | grep -vE 'uses: \./\.github/workflows/[A-Za-z0-9_.-]+\.yml$'
             grep -nE '^[[:space:]]*image:' .github/workflows/*.yml deploy/docker-compose.yml | grep -vE '@sha256:[0-9a-f]{64}' | grep -vE 'image: (deedglass:dev|\$\{\{ matrix[.]image \}\})$'
             grep -nE '^FROM ' Dockerfile | grep -vE '@sha256:[0-9a-f]{64}'
           } || true )"

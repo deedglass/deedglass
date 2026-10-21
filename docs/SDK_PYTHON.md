@@ -1,4 +1,4 @@
-# The Python SDK (`deedglass` on PyPI)
+# The Python SDK (`deedglass`)
 
 `deedglass` puts Deedglass in front of your Python agent's tools: a policy decides each call, a
 person approves the risky ones, and every call is sealed as a deed you can check offline. It
@@ -6,12 +6,20 @@ mirrors the TypeScript SDK (`@deedglass/sdk`, S31) name for name, in snake_case.
 
 ## Install and extras
 
+`deedglass` isn't on PyPI yet (the publishing workflow is ready and switched off until the project
+exists there). Until then, install it from the repository, or from the wheel attached to each GitHub
+release:
+
 ```sh
-pip install deedglass                       # the client; one dependency: httpx (>=0.28.1,<0.29)
-pip install "deedglass[crypto]"             # offline deed checks and signed intents (cryptography)
-pip install "deedglass[langchain]"          # deedglass.langchain
-pip install "deedglass[claude-agent-sdk]"   # deedglass.claude_agent_sdk
+pip install "deedglass @ git+https://github.com/deedglass/deedglass#subdirectory=sdk/python"
+pip install "deedglass[crypto] @ git+https://github.com/deedglass/deedglass#subdirectory=sdk/python"            # offline deed checks and signed intents (cryptography)
+pip install "deedglass[langchain] @ git+https://github.com/deedglass/deedglass#subdirectory=sdk/python"         # deedglass.langchain
+pip install "deedglass[claude-agent-sdk] @ git+https://github.com/deedglass/deedglass#subdirectory=sdk/python"  # deedglass.claude_agent_sdk
+pip install "deedglass @ https://github.com/deedglass/deedglass/releases/download/v0.6.0/deedglass-0.6.0-py3-none-any.whl"   # a release's wheel (use the latest release's version)
 ```
+
+The client has one dependency: httpx (>=0.28.1,<0.29). Once it is on PyPI, the same extras work as
+`pip install "deedglass[crypto]"` and so on.
 
 Python 3.10 to 3.14 (tested on 3.11, 3.13 and 3.14; 3.10 in Docker). Python 3.10 reaches its end of
 life in October 2026; a release after that drops it. `import deedglass` imports no agent framework
