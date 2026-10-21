@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/deedglass/deedglass/cmd/deedglass/internal/ui"
@@ -21,8 +22,9 @@ import (
 
 var initValues struct {
 	yes, noOpen, noSmoke, smoke, resetSecrets, stop    bool
-	trigger, quiet                                     bool
+	trigger, quiet, purge                              bool
 	dir, client, listen, postgres, ownerEmail, project string
+	policy                                             string
 	pgPort                                             int
 }
 
@@ -32,8 +34,9 @@ func initFlags(fs *flag.FlagSet) {
 	v := &initValues
 	*v = struct {
 		yes, noOpen, noSmoke, smoke, resetSecrets, stop    bool
-		trigger, quiet                                     bool
+		trigger, quiet, purge                              bool
 		dir, client, listen, postgres, ownerEmail, project string
+		policy                                             string
 		pgPort                                             int
 	}{}
 	fs.BoolVar(&v.yes, "yes", false, "don't ask; run every step")
@@ -49,6 +52,8 @@ func initFlags(fs *flag.FlagSet) {
 	fs.BoolVar(&v.smoke, "smoke", false, "run the smoke actions even when nothing changed")
 	fs.BoolVar(&v.resetSecrets, "reset-secrets", false, "replace the vault key and pepper (asks you to type reset; every API key stops working)")
 	fs.BoolVar(&v.stop, "stop", false, "stop the local stack this directory runs (the data is kept)")
+	fs.BoolVar(&v.purge, "purge", false, "remove the local stack: deedglass serve, both containers, both volumes and the files in .deedglass/ (asks you to type purge unless --yes)")
+	fs.StringVar(&v.policy, "policy", "", "the starter policy to enforce: postgres-check (default for a new stack: writes run and are checked at Proven) or postgres-safe (writes wait for a person; use it in production)")
 	fs.BoolVar(&v.quiet, "quiet", false, "don't print the quickstart step line")
 	fs.BoolVar(&v.trigger, "trigger", false, "on the stack init made: turn on the demo's legacy trigger, ship order 42 (1 row reported, 301 changed), then show the undo preview")
 }
@@ -59,7 +64,7 @@ func runInit(ctx context.Context, e *Env, args []string) error {
 		return usageErr(fmt.Errorf("deedglass init takes no arguments (got %q)", args[0]), "Run deedglass init, or deedglass init --dir <dir>.")
 	}
 	if v.postgres != "docker" {
-		return usageErr(fmt.Errorf("--postgres %s isn't in this build", v.postgres), "Run deedglass init (Postgres in Docker); an existing database lands in the next release.")
+		return usageErr(fmt.Errorf("--postgres %s isn't in this build", v.postgres), "Run deedglass init (Postgres in Docker), then deedglass connect \"$DATABASE_URL\" to put your own database behind it.")
 	}
 	dir, err := filepath.Abs(v.dir)
 	if err != nil {
@@ -74,7 +79,13 @@ func runInit(ctx context.Context, e *Env, args []string) error {
 			return usageErr(fmt.Errorf("--client takes %s (got %q)", strings.Join(initClients, ", "), v.client), "For example: deedglass init --client claude-code.")
 		}
 	}
+	if v.policy != "" && !slices.Contains(setup.Policies, v.policy) {
+		return usageErr(fmt.Errorf("--policy takes %s (got %q)", strings.Join(setup.Policies, " or "), v.policy), "For example: deedglass init --policy postgres-safe.")
+	}
 	r := &setup.ProcRunner{Dir: dir}
+	if v.purge {
+		return purgeStack(ctx, e, r, dir, v.yes)
+	}
 	if v.stop {
 		return stopStack(ctx, e, r, dir)
 	}
@@ -97,7 +108,8 @@ func runInit(ctx context.Context, e *Env, args []string) error {
 		label = "~" + strings.TrimPrefix(dir, home)
 	}
 	o := setup.Options{Dir: dir, Yes: v.yes, Client: v.client, Listen: v.listen, PGPort: v.pgPort, Project: v.project,
-		OwnerEmail: v.ownerEmail, NoSmoke: v.noSmoke, NoOpen: v.noOpen, Smoke: v.smoke, TTY: e.IsTTY, Runner: r, ResetSecrets: v.resetSecrets}
+		OwnerEmail: v.ownerEmail, NoSmoke: v.noSmoke, NoOpen: v.noOpen, Smoke: v.smoke, TTY: e.IsTTY, Runner: r, ResetSecrets: v.resetSecrets,
+		Policy: v.policy, Cmd: invocation(e), Home: e.Getenv("HOME")}
 	if o.Client == "" {
 		o.Client = "none"
 	}
@@ -193,7 +205,7 @@ func printProgress(e *Env, quiet bool, read func() setup.Facts) {
 	}
 	if l := progressLine(f); l != "" {
 		fmt.Fprintln(e.Stdout)
-		fmt.Fprintln(e.Stdout, l)
+		fmt.Fprintln(e.Stdout, strings.Replace(l, "next: deedglass ", "next: "+invocation(e)+" ", 1))
 	}
 }
 
@@ -203,6 +215,23 @@ func progressLine(f setup.Facts) string {
 		return ""
 	}
 	return fmt.Sprintf("Quickstart step %d of %d %s next: %s", n, setup.ProgressSteps, ui.Sep, next)
+}
+
+// invocation is how the person ran this binary, for the commands it prints: "npx deedglass" under
+// npx (npm exec sets npm_command=exec, so a bare deedglass isn't on PATH), else "deedglass".
+func invocation(e *Env) string {
+	if e.Getenv("npm_config_user_agent") != "" && (e.Getenv("npm_command") == "exec" || e.Getenv("npm_lifecycle_event") == "npx") {
+		return "npx deedglass"
+	}
+	return "deedglass"
+}
+
+// cmdLine rewrites a printed "deedglass …" command for how the person ran this binary.
+func cmdLine(e *Env, line string) string {
+	if inv := invocation(e); inv != "deedglass" && strings.HasPrefix(line, "deedglass ") {
+		return inv + strings.TrimPrefix(line, "deedglass")
+	}
+	return line
 }
 
 func wrapJoin(items []string, indent int) string {
@@ -274,7 +303,7 @@ func stopStack(ctx context.Context, e *Env, r *setup.ProcRunner, dir string) err
 // runInitTrigger is deedglass init --trigger: the quickstart's last step (setup.Trigger does the work).
 // It exits 0 when the check said Doesn't match, because that is what the step is there to show.
 func runInitTrigger(ctx context.Context, e *Env, r *setup.ProcRunner, dir string) error {
-	o := setup.Options{Dir: dir, Runner: r, Yes: true, NoOpen: true, TTY: e.IsTTY}
+	o := setup.Options{Dir: dir, Runner: r, Yes: true, NoOpen: true, TTY: e.IsTTY, Cmd: invocation(e)}
 	text := !e.Globals.JSON
 	if text {
 		fmt.Fprintln(e.Stdout, "deedglass init --trigger · one UPDATE, a legacy trigger, and what Postgres really committed")
@@ -299,5 +328,80 @@ func runInitTrigger(ctx context.Context, e *Env, r *setup.ProcRunner, dir string
 			fmt.Fprintln(e.Stdout, "  "+n)
 		}
 	}
+	return nil
+}
+
+// purgeStack is deedglass init --purge (adoption-v1 F11): it stops deedglass serve, removes both
+// containers and both volumes stack.json names, deletes the files init wrote in .deedglass/ (the
+// badge file scan --badge writes stays), and forgets ~/.deedglass/current.json when it points here.
+// Only names from this directory's stack.json are touched.
+func purgeStack(ctx context.Context, e *Env, r *setup.ProcRunner, dir string, yes bool) error {
+	stack, err := setup.ReadStack(dir)
+	if err != nil || stack == nil {
+		return &ExitError{Code: ExitFailure, ErrCode: "not_set_up", Err: errors.New("there's no local stack in this directory"), Next: "Run it in the directory where you ran deedglass init."}
+	}
+	if !yes {
+		if !e.IsTTY {
+			return usageErr(errors.New("--purge deletes the local stack's data, so it needs you to type purge, or --yes"), "Run deedglass init --purge in a terminal, or deedglass init --purge --yes.")
+		}
+		fmt.Fprintf(e.Stdout, "This removes deedglass serve, the containers %s and %s, their volumes %s and %s, and the keys and records in .deedglass/. It can't be undone.\n",
+			stack.Container, stack.DemoContainer, stack.Volume, stack.DemoVolume)
+		fmt.Fprint(e.Stdout, "Type purge to continue: ")
+		line, _ := bufio.NewReader(e.stdin()).ReadString('\n')
+		if strings.TrimSpace(line) != "purge" {
+			return &ExitError{Code: ExitFailure, ErrCode: "cancelled", Plain: true, Err: errors.New("Nothing was changed")}
+		}
+	}
+	pidFile := setup.Path(dir, setup.ServePID)
+	if b, err := os.ReadFile(pidFile); err == nil {
+		var pid int
+		fmt.Sscanf(strings.TrimSpace(string(b)), "%d", &pid)
+		if pid > 0 && r.Alive(pid) {
+			_ = r.Stop(pid)
+		}
+	}
+	var problems []string
+	for _, c := range []string{stack.Container, stack.DemoContainer} {
+		if c == "" {
+			continue
+		}
+		if _, err := r.Docker(ctx, nil, "inspect", "-f", "{{.Name}}", c); err != nil {
+			continue // already gone
+		}
+		if _, err := r.Docker(ctx, nil, "rm", "-f", "-v", c); err != nil {
+			problems = append(problems, "container "+c)
+		}
+	}
+	for _, v := range []string{stack.Volume, stack.DemoVolume} {
+		if v == "" {
+			continue
+		}
+		if _, err := r.Docker(ctx, nil, "volume", "inspect", v); err != nil {
+			continue
+		}
+		if _, err := r.Docker(ctx, nil, "volume", "rm", v); err != nil {
+			problems = append(problems, "volume "+v)
+		}
+	}
+	if len(problems) > 0 {
+		return &ExitError{Code: ExitFailure, ErrCode: "purge_failed", Err: fmt.Errorf("couldn't remove %s", strings.Join(problems, ", ")),
+			Next: "Check that Docker is running, then run deedglass init --purge again. The files in .deedglass/ were kept."}
+	}
+	removed := setup.RemoveCurrent(e.Getenv("HOME"), dir)
+	d := filepath.Join(dir, setup.DirName)
+	entries, _ := os.ReadDir(d)
+	for _, en := range entries {
+		if en.Name() == "score.json" {
+			continue
+		}
+		_ = os.RemoveAll(filepath.Join(d, en.Name()))
+	}
+	_ = os.Remove(d) // only when empty
+	msg := "Removed deedglass serve, " + stack.Container + ", " + stack.DemoContainer + ", their volumes and the files in .deedglass/."
+	if removed {
+		msg += " ~/.deedglass/current.json pointed here, so it's gone too."
+	}
+	fmt.Fprintln(e.Stdout, e.Style.OKLine(msg))
+	fmt.Fprintln(e.Stdout, "  Next: "+invocation(e)+" init sets up a new stack.")
 	return nil
 }

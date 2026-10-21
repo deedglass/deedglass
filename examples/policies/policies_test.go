@@ -23,7 +23,7 @@ var update = flag.Bool("update", false, "rewrite hashes.json")
 // decides at least one case.
 func TestStarters(t *testing.T) {
 	names := policies.Starters()
-	want := []string{"claude-agent-local", "default-deny", "github-read-mostly", "gmail-drafts-only", "notion-pages", "postgres-safe", "sdk-demo", "slack-post-with-approval", "stripe-refunds"}
+	want := []string{"claude-agent-local", "default-deny", "github-read-mostly", "gmail-drafts-only", "notion-pages", "postgres-check", "postgres-safe", "sdk-demo", "slack-post-with-approval", "stripe-refunds"}
 	if strings.Join(names, ",") != strings.Join(want, ",") {
 		t.Fatalf("starters %v, want %v", names, want)
 	}

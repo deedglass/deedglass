@@ -1,7 +1,7 @@
 ---
 title: Connect Claude Code
 description: Put the Gate between Claude Code and its tools, over HTTP to the local server or as a wrapped stdio MCP server.
-lastVerified: "2026-10-05"
+lastVerified: "2026-10-21"
 ---
 
 import { Code } from '@astrojs/starlight/components';
@@ -13,22 +13,24 @@ Claude Code's tool calls go through the Gate: a policy decides each one, and eac
 
 **Before you start**
 
-- A running Deedglass server: the [Quickstart](/quickstart/) gives you one on `127.0.0.1:8080`.
-- An agent key (`dg_test_…`). `init` saved one to `.deedglass/quickstart.key`.
+- A running Deedglass server: the [Quickstart](/quickstart/) gives you one on `127.0.0.1:8080` (or the port you passed to `--listen`).
+- An agent key. `init` saved one to `.deedglass/quickstart.key`.
 
-## 1. Add the native gateway
+## 1. Add Deedglass, once, for every project
 
-The server's own tools (the Postgres connector and any other connector you set up) are one MCP endpoint, `/mcp/native`. This is the line `deedglass mcp snippet --transport http --client claude-code` prints:
-
-<Code code={http.trim()} lang="sh" title="Terminal" />
-
-Replace `dg_test_REPLACE_ME` with your key. From the Quickstart directory you can let the shell fill it in:
+This is the line the README and `deedglass init` print:
 
 ```sh test=skip reason="needs the claude CLI and writes to your Claude Code config"
-claude mcp add --transport http --header "Authorization: Bearer $(cat .deedglass/quickstart.key)" deedglass http://127.0.0.1:8080/mcp/native
+claude mcp add --scope user deedglass -- npx -y deedglass mcp serve
 ```
 
-Add `--scope project` to write the server into this repo's `.mcp.json` instead of your user config.
+No key goes into Claude Code's config. `deedglass mcp serve` finds the key `init` wrote: in `.deedglass/` of the project Claude Code runs in, or a parent folder, and otherwise through `~/.deedglass/current.json`, which `init` points at its stack whatever its port. So the same entry works in your own project, not only in the Quickstart folder. Use `--scope project` instead to write the server into this repo's `.mcp.json` for your team.
+
+To connect your own Postgres, [`deedglass connect`](/get-started/postgres/) prints a second line for it, with `DEEDGLASS_API_KEY_FILE` pointing at its agent's key file.
+
+Prefer HTTP, with no local process? `deedglass mcp snippet --transport http --client claude-code` prints this form; replace `dg_test_REPLACE_ME` with your key:
+
+<Code code={http.trim()} lang="sh" title="Terminal" />
 
 ## 2. Or wrap an MCP server you already use
 

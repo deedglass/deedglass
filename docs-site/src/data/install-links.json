@@ -36,7 +36,7 @@
     },
     {
       "client": "Claude Code",
-      "command": "claude mcp add deedglass -- npx -y deedglass mcp serve",
+      "command": "claude mcp add --scope user deedglass -- npx -y deedglass mcp serve",
       "source": "https://docs.anthropic.com/en/docs/claude-code/mcp"
     },
     {

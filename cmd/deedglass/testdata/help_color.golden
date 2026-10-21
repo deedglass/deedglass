@@ -7,6 +7,7 @@ exit 0
 [1mSetup[0m
   init                Set up Deedglass in this directory
   doctor              Check config, database and keys
+  connect             Put your own Postgres behind Deedglass
   scan                Show what your agent setup can change
   play                Watch the 301 scene offline, no Docker
   serve               Run the API, the rules and the Console
@@ -30,7 +31,7 @@ exit 0
   act                 Send a test action through Deedglass
   actions             Inspect actions                                  [2m    [0m   [2mlist · show · cancel[0m
   approve · deny      Decide a pending approval
-  approvals           List pending approvals                           [2m    [0m   [2mlist · show[0m
+  approvals           List pending approvals                           [2m    [0m   [2mlist · show · open[0m
   undo                Preview or run an undo                           [2m    [0m   [2mpreview · run[0m
   observe             Watch what changed while an agent ran            [2m    [0m   [2mrun · start · stop · list · show · undo · exclude[0m
   webhooks            Send events to your endpoints                    [2m    [0m   [2mcreate · list · test · delete[0m

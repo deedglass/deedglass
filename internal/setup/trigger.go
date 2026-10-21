@@ -13,9 +13,10 @@ import (
 
 // Trigger is `deedglass init --trigger`: the quickstart's last step, on the stack init made. It puts
 // the demo database's order statuses back to the seed's, turns on the Acme demo's legacy trigger
-// (examples/demo/sql/10_trigger_on.sql: when one order ships, it ships the next 300 open ones too),
-// sends the same one-row UPDATE of order 42 as the quickstart agent (postgres-safe asks a person;
-// in dev the local owner countersigns), and waits for the Proven check, which should say Doesn't match:
+// (examples/demo/sql/10_trigger_on.sql: when one order ships, it ships the next 300 orders that
+// aren't shipped yet, cancelled ones included), sends the same one-row UPDATE of order 42 as the
+// quickstart agent (postgres-check runs it; under postgres-safe the local owner countersigns, dev
+// only), and waits for the Proven check, which should say Doesn't match:
 // Postgres changed 301 rows, the agent reported 1. Then it turns the trigger off and shows the undo
 // preview built from those 301 rows. Nothing is undone: the undo waits for a person, and Next says how.
 //
@@ -55,13 +56,13 @@ func Trigger(ctx context.Context, o Options) (*Result, error) {
 		return err
 	}
 
-	// 1 · order statuses back to the seed's (order 42 paid), so the trigger has 300 open orders to ship.
+	// 1 · order statuses back to the seed's (order 42 paid), so the trigger has 300 unshipped orders to ship.
 	if err := sqlFile("12_order_statuses.sql"); err != nil {
 		step(fail("trigger_reset", "Orders reset", "the demo orders couldn't be reset: "+firstLine(err), "Run deedglass doctor."))
 		return finish(ErrStep)
 	}
 	open, _ := x.psqlIn(ctx, dc, "demo", "SELECT count(*) FROM public.orders WHERE id <> 42 AND status <> 'shipped'")
-	step(StepResult{ID: "trigger_reset", Title: "Orders reset", Status: Done, Detail: "order 42 paid · " + strings.TrimSpace(open) + " open orders besides 42"})
+	step(StepResult{ID: "trigger_reset", Title: "Orders reset", Status: Done, Detail: "order 42 paid · " + strings.TrimSpace(open) + " orders besides 42 not shipped yet (pending, paid, refunded or cancelled)"})
 
 	// 2 · the legacy trigger on; off again on every way out.
 	if err := sqlFile("10_trigger_on.sql"); err != nil {
@@ -83,7 +84,7 @@ func Trigger(ctx context.Context, o Options) (*Result, error) {
 		}
 	}()
 	step(StepResult{ID: "trigger_on", Title: "Trigger on", Status: Done,
-		Detail: "orders_ship_open_batch · when one order ships, it ships the next 300 open ones"})
+		Detail: "orders_ship_open_batch · when one order ships, it ships the next 300 not shipped yet, whatever their status"})
 
 	// 3 · the same one-row UPDATE as the smoke test, as the quickstart agent.
 	c := &deedglass.Client{BaseURL: stack.Server(), APIKey: x.agent, UserAgent: "deedglass-init"}
@@ -153,14 +154,13 @@ func Trigger(ctx context.Context, o Options) (*Result, error) {
 		}
 	}
 	res.Changed = true
-	run := "deedglass undo run " + a.ID
+	run := o.Cmd + " undo run " + a.ID
 	if plan != "" {
 		run += " --plan " + plan
 	}
 	res.Next = []string{
-		"export DEEDGLASS_API_KEY=\"$(cat .deedglass/admin.key)\"",
 		run + " --reason \"Put the 300 extra orders back\"",
-		"It waits for a person: countersign it at " + stack.Server() + "/app/approvals as " + stack.OwnerEmail + " (the sign-in link is in .deedglass/serve.log)",
+		"It waits for a person: undo run prints the approve link for that approval (" + o.Cmd + " approvals open <apr_…> prints a fresh one).",
 	}
 	return finish(nil)
 }

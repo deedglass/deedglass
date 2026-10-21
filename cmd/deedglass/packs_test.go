@@ -64,7 +64,7 @@ func signedPacks(t *testing.T) string {
 	t.Cleanup(func() { packKeys, packsNow = saved, savedNow })
 	dir := exportPacks(t)
 	r = cli(t, packEnv, false, "policy", "packs", "sign", "--key", out.KeyFile, "--dir", dir)
-	if r.code != 0 || !strings.Contains(r.stdout, "✓ Signed 6 packs · "+out.ID) {
+	if r.code != 0 || !strings.Contains(r.stdout, "✓ Signed 7 packs · "+out.ID) {
 		t.Fatalf("sign: %d %s%s", r.code, r.stdout, r.stderr)
 	}
 	return dir
@@ -72,7 +72,7 @@ func signedPacks(t *testing.T) string {
 
 func TestPolicyPacksListAndVerify(t *testing.T) {
 	r := cli(t, packEnv, false, "policy", "packs", "list")
-	for _, want := range []string{"postgres-safe ", "supabase-mcp ", "stripe-refunds ", "github-agent ", "money-movement ", "healthcare-fhir ", " Pro ",
+	for _, want := range []string{"postgres-safe ", "postgres-check ", "supabase-mcp ", "stripe-refunds ", "github-agent ", "money-movement ", "healthcare-fhir ", " Pro ",
 		"From the copy built into deedglass · checked against its index (not sealed yet).", "Install one: deedglass policy install <name>"} {
 		if !strings.Contains(r.stdout, want) {
 			t.Fatalf("list lacks %q:\n%s", want, r.stdout)
@@ -83,11 +83,11 @@ func TestPolicyPacksListAndVerify(t *testing.T) {
 		Object string        `json:"object"`
 		Packs  []packs.Entry `json:"packs"`
 	}
-	if err := json.Unmarshal([]byte(r.stdout), &js); err != nil || js.Object != "pack_list" || len(js.Packs) != 6 {
+	if err := json.Unmarshal([]byte(r.stdout), &js); err != nil || js.Object != "pack_list" || len(js.Packs) != 7 {
 		t.Fatalf("list --json: %v %s", err, r.stdout)
 	}
 	r = cli(t, packEnv, false, "policy", "packs", "verify")
-	if r.code != 0 || !strings.Contains(r.stdout, "✓ 6 packs · every file matches · every case passes") {
+	if r.code != 0 || !strings.Contains(r.stdout, "✓ 7 packs · every file matches · every case passes") {
 		t.Fatalf("verify: %d %s%s", r.code, r.stdout, r.stderr)
 	}
 	r = cli(t, packEnv, false, "policy", "packs", "verify", "--json")

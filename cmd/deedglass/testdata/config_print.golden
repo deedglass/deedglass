@@ -24,6 +24,7 @@ DEEDGLASS_METRICS_LISTEN          —                                           
 DEEDGLASS_SLOT_LAG_ALERT_MB       512                                                          default
 DEEDGLASS_DECODER_PAUSE           false                                                        default
 DEEDGLASS_API_KEY                 —                                                            not set
+DEEDGLASS_API_KEY_FILE            —                                                            not set
 DEEDGLASS_SERVER                  —                                                            not set
 DEEDGLASS_INIT_DSN                —                                                            not set
 DEEDGLASS_NO_BANNER               false                                                        default

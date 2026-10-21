@@ -76,7 +76,7 @@ func TestDeedShareRoundTrip(t *testing.T) {
 
 func TestInstallLinksCLI(t *testing.T) {
 	r := cli(t, nil, false, "mcp", "install-links")
-	if r.code != ExitOK || !strings.Contains(r.stdout, "claude mcp add deedglass -- npx -y deedglass mcp serve") || !strings.Contains(r.stdout, "No link holds a key.") {
+	if r.code != ExitOK || !strings.Contains(r.stdout, "claude mcp add --scope user deedglass -- npx -y deedglass mcp serve") || !strings.Contains(r.stdout, "No link holds a key.") {
 		t.Fatalf("%d %s %s", r.code, r.stdout, r.stderr)
 	}
 	r = cli(t, nil, false, "--json", "mcp", "install-links")

@@ -13,6 +13,7 @@ import (
 	"net/netip"
 	"net/url"
 	"os"
+	"path/filepath"
 	"regexp"
 	"sort"
 	"strconv"
@@ -538,6 +539,11 @@ func (l *loader) parse(c *Config, k Key) {
 			return
 		}
 		c.APIKey = NewSecret(v)
+	case "DEEDGLASS_API_KEY_FILE":
+		// Read by mcp serve straight from the environment (adoption-v1): an absolute path.
+		if !filepath.IsAbs(v) {
+			bad(fmt.Sprintf("must be an absolute path (got %q).", v), "deedglass connect prints the path it saved the key to.")
+		}
 	case "DEEDGLASS_LICENCE_FILE", "DEEDGLASS_LICENCE_SERVER":
 		// Read by cmd/deedglass's licence commands straight from the environment (S48).
 		if k.Name == "DEEDGLASS_LICENCE_SERVER" && !strings.HasPrefix(v, "https://") && !strings.HasPrefix(v, "http://localhost") && !strings.HasPrefix(v, "http://127.0.0.1") {
