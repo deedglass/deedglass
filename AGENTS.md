@@ -44,7 +44,7 @@ only; without `--no-write` it also writes `deedglass-scan.md` and `deedglass-sca
 
 ### Set up
 
-- Go 1.27.2 (`go.mod`). Most changes need nothing else: `go test ./internal/scan/ ./examples/policies/`.
+- Go 1.27.3 (`go.mod`). Most changes need nothing else: `go test ./internal/scan/ ./examples/policies/`.
 - Docker, for `deedglass init` and the integration tests on a throwaway Postgres.
 - Node 24, for the Console (`web/`), the browser verifier (`web/verify/`), the docs site
   (`docs-site/`) and the TypeScript SDK (`sdk/typescript/`). Install with `npm ci --ignore-scripts`.
