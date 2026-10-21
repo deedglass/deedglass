@@ -1,7 +1,7 @@
 ---
 title: Put Deedglass in front of Postgres
 description: Connect your own Postgres database so agents run SQL as a least-privilege role and every write is witnessed against Postgres's change log (L2).
-lastVerified: "2026-10-05"
+lastVerified: "2026-10-21"
 ---
 
 import { Aside } from '@astrojs/starlight/components';
@@ -13,7 +13,18 @@ Agents run SQL through the Postgres connector: one statement per action, as the 
 
 - PostgreSQL 16, 17 or 18 with `wal_level = logical` (needed for L2; L0 and L1 work without it).
 - An admin connection string for setup: a superuser, or a role with `CREATEROLE` such as the RDS master user. Deedglass reads it once and never stores it.
-- A Deedglass server, and `DEEDGLASS_API_KEY` set to an org admin key.
+- A Deedglass server and an org admin key. After `npx -y deedglass init` on this machine, `connect` finds both from any directory; otherwise set `DEEDGLASS_SERVER` and `DEEDGLASS_API_KEY`.
+
+## The short way: `deedglass connect`
+
+```sh test=skip reason="needs your own database"
+npx -y deedglass connect "$DATABASE_URL"            # read-only checks and the plan
+npx -y deedglass connect "$DATABASE_URL" --apply --confirm <database>
+```
+
+The first run tells Supabase, Neon and plain Postgres apart, warns when the URL goes through a pooler, and checks, on a session that can't write, the version, `wal_level`, replication slots, whether the user can create roles, and which tables lack `REPLICA IDENTITY FULL`. Then it prints the plan. `--apply` does steps 1 to 4 below for every table in `public` (or `--schema`, or `--tables`), enforces `postgres-safe` scoped to this connector's tools (`--policy postgres-check` lets writes run and checks each one at Proven), creates an agent with a key in a 0600 file, sends one read through the Gate, and prints the MCP line. `--confirm` is needed for a remote database. The password in the URL is never printed or stored. Guides: [Supabase](/guides/supabase/), [Neon](/guides/neon/).
+
+The steps it runs are below, for when you want each one by hand.
 
 ## 1. Describe the connector
 

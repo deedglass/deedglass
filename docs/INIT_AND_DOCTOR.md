@@ -9,8 +9,15 @@ other Deedglass, before you open an issue. Both are part of the CLI (S32).
 deedglass init                    # asks once, then runs every step
 deedglass init --yes --client none
 deedglass init --listen 127.0.0.1:8090 --pg-port 55440   # when 8080 or 55432 is taken
+deedglass init --policy postgres-safe   # writes wait for a person, as in production
 deedglass init --stop             # stop the local stack; the data is kept
+deedglass init --purge            # remove the containers, the volumes and .deedglass/ (asks you to type purge)
 ```
+
+`--listen` (default `127.0.0.1:8080`) is where `deedglass serve` listens; `--pg-port` (default
+`55432`) is Deedglass's own Postgres, and the demo database takes the port 10 above it. The ports are
+saved in `.deedglass/stack.json`, and every command run in that directory or below it finds the
+server there ([Server resolution](CLI.md#server-resolution)).
 
 Prerequisites: Docker running, and about 2 GiB of free disk. Measured on an M-series Mac with the
 Postgres image already pulled: 6 to 8 seconds from an empty directory to the L2-witnessed smoke
@@ -32,10 +39,25 @@ Each step is idempotent: run init again and every step says it is already set up
 | 6 | Org | Org `Local` (slug `local`), owner `you@localhost.test` (`--owner-email`), an org admin key in `.deedglass/admin.key` | Reused |
 | 7 | Demo database | The Acme orders schema and seed (the same SQL as `make demo-up`), the Postgres connector `postgres` with `connector postgres init --apply`, the decoder slot | `connector postgres init` says `Nothing to change.` |
 | 8 | Agent | `quickstart-agent` and one `dg_test_` key, written once to `.deedglass/quickstart.key` and shown once | A key is made only when the file is missing |
-| 9 | Policies | `postgres-safe` pushed and enforced (it replaces `default-deny`, the policy every new org starts with; one policy is enforced at a time) | Skipped when that exact version hash is enforced |
+| 9 | Policies | A starter pushed and enforced (it replaces `default-deny`, the policy every new org starts with; one policy is enforced at a time): `postgres-check` by default, which lets reads and writes run, checks every write at Proven, blocks `DROP` and `TRUNCATE`, and still asks a person before an undo; `--policy postgres-safe` makes writes wait for a person, which is the starter to use in production | Skipped when that exact version hash is enforced; without `--policy`, a stack that enforces either starter keeps it |
 | 10 | Client | `--client claude-code` prints the `claude mcp add` line; `claude-desktop`, `cursor`, `vscode` and `windsurf` print their config snippet; `codex`, `gemini` and `copilot` print their MCP line and the shell guard hook config ([INSTALL_CLIENTS.md](INSTALL_CLIENTS.md)); init never writes a client's config file | Printed again |
-| 11 | Smoke | As `quickstart-agent`: `postgres.query` (L0 VERIFIED), `DROP TABLE public.orders` (denied by `block-destructive-sql`), `UPDATE public.orders SET status = 'shipped' WHERE id = 42` (`postgres-safe` asks for approval; init countersigns as the local owner through the dev-only `approve --as`, says so, then waits for L2 VERIFIED) | Runs only when something changed, or with `--smoke` |
+| 11 | Smoke | As `quickstart-agent`: `postgres.query` (L0 VERIFIED), `DROP TABLE public.orders` (denied by `block-destructive-sql`), `UPDATE public.orders SET status = 'shipped' WHERE id = 42` (it runs under `postgres-check`; under `postgres-safe` it waits for approval and init countersigns as the local owner through the dev-only `approve --as` and says so), then waits for L2 VERIFIED | Runs only when something changed, or with `--smoke` |
 | 12 | Console | Opens `/app` on a terminal (not with `--no-open`) | Only when something changed |
+| 13 | Current stack | Points `~/.deedglass/current.json` (0600, in a 0700 directory) at this stack: the server URL and the paths of `quickstart.key` and `admin.key`, never a key. `deedglass mcp serve` reads it when the project it runs in has no `.deedglass/` of its own, and `deedglass connect` when no stack is in reach | Rewritten |
+
+Every `Next` line names the CLI the way you ran it: `npx deedglass …` after `npx`, so the line works
+when `deedglass` isn't on your `PATH`. The Claude Code line is the README's,
+`claude mcp add --scope user deedglass -- npx -y deedglass mcp serve`; no key goes into Claude
+Code's config.
+
+`init --trigger` ends with the `deedglass undo run` line. The undo waits for a person: in dev,
+`undo run` prints the one-time approve link for that approval, and
+`deedglass approvals open <apr_…>` prints (and opens) a fresh one.
+
+`init --purge` stops `deedglass serve`, removes both containers and both volumes that
+`stack.json` names, deletes the files in `.deedglass/` (the badge file `scan --badge` writes stays),
+and removes `~/.deedglass/current.json` when it points at this directory. It asks you to type
+`purge` (or pass `--yes`).
 
 `--json` prints one `init_result` object: `steps` (each with `id`, `status` done, changed, skipped
 or failed, `detail`, `took_ms`), `next` and `elapsed_ms`. No key appears in it; keys are referenced
@@ -73,7 +95,8 @@ up, and once all five are done.
 
 ### What init doesn't do
 
-- It doesn't use an existing database yet: `--postgres url` lands in a later release. Use Docker.
+- It doesn't use an existing database: `deedglass connect "$DATABASE_URL"` puts your own Postgres
+  behind the stack ([guide](guides/supabase.md) for Supabase, [Neon](guides/neon.md)).
 - It doesn't write MCP client config files. It prints the snippet; you paste it.
 - It doesn't run on Windows. Use WSL 2.
 - It is for a laptop: the stack listens on 127.0.0.1 only, in dev mode, with throwaway data.

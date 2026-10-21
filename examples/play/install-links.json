@@ -61,8 +61,8 @@
       "client": "Claude Code",
       "kind": "command",
       "url": "",
-      "command": "claude mcp add deedglass -- npx -y deedglass mcp serve",
-      "note": "Add --scope project to write .mcp.json for your team."
+      "command": "claude mcp add --scope user deedglass -- npx -y deedglass mcp serve",
+      "note": "Every project on this machine. Use --scope project instead to write .mcp.json for your team."
     },
     {
       "id": "claude-desktop",

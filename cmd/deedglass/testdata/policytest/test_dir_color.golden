@@ -5,9 +5,10 @@ exit 0
 [36m✓[0m github-read-mostly         23 cases · 11 of 11 rules
 [36m✓[0m gmail-drafts-only          18 cases · 4 of 4 rules
 [36m✓[0m notion-pages               7 cases · 3 of 3 rules
+[36m✓[0m postgres-check             25 cases · 12 of 12 rules
 [36m✓[0m postgres-safe              30 cases · 13 of 13 rules
 [36m✓[0m sdk-demo                   8 cases · 5 of 5 rules
 [36m✓[0m slack-post-with-approval   16 cases · 5 of 5 rules
 [36m✓[0m stripe-refunds             27 cases · 12 of 12 rules
-[36m✓[0m 157 cases passed · 9 policies · every rule covered · N s
+[36m✓[0m 182 cases passed · 10 policies · every rule covered · N s
 --- stderr

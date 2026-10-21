@@ -278,6 +278,18 @@
     "owner": "S01"
   },
   {
+    "env": "DEEDGLASS_API_KEY_FILE",
+    "yaml": "api_key_file",
+    "type": "string",
+    "default": "",
+    "secret": false,
+    "client": true,
+    "dev_only": false,
+    "commands": "mcp serve",
+    "doc": "A file holding the agent key (mode 0600, an absolute path), read when DEEDGLASS_API_KEY is unset; deedglass connect prints it in the MCP line so the key stays out of the client's config.",
+    "owner": "adoption-v1"
+  },
+  {
     "env": "DEEDGLASS_SERVER",
     "yaml": "server",
     "type": "URL",

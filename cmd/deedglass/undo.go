@@ -77,7 +77,7 @@ func runUndoPreview(ctx context.Context, e *Env, args []string) error {
 		if shown == 0 {
 			shown = 2
 		}
-		printUndoPreview(e.Stdout, e.Style, &pv, shown)
+		printUndoPreview(e.Stdout, e.Style, &pv, shown, invocation(e))
 	}
 	if !pv.Available {
 		return &ExitError{Code: ExitFailure, ErrCode: "undo_unavailable", printed: true, Err: errors.New("undo isn't available")}
@@ -86,7 +86,7 @@ func runUndoPreview(ctx context.Context, e *Env, args []string) error {
 }
 
 // printUndoPreview writes the preview the way S23 §5.1 shows it: a calm checklist, one fix per line.
-func printUndoPreview(w io.Writer, st ui.Style, pv *undoapi.PreviewJSON, shown int) {
+func printUndoPreview(w io.Writer, st ui.Style, pv *undoapi.PreviewJSON, shown int, cmd string) {
 	short := undo.ShortID(pv.Action)
 	if !pv.Available {
 		head := "Undo not available " + ui.Sep + " " + clean(short)
@@ -115,7 +115,7 @@ func printUndoPreview(w io.Writer, st ui.Style, pv *undoapi.PreviewJSON, shown i
 				fmt.Fprintln(w, pad+clean(c.Fix))
 			}
 		}
-		fmt.Fprintln(w, "  Next: "+undoNext(pv))
+		fmt.Fprintln(w, "  Next: "+undoNext(pv, cmd))
 		return
 	}
 	fmt.Fprintln(w, st.OKLine("Undo available "+ui.Sep+" "+clean(pv.Headline)))
@@ -145,7 +145,7 @@ func printUndoPreview(w io.Writer, st ui.Style, pv *undoapi.PreviewJSON, shown i
 	if p := pv.Policy; p != nil {
 		row("policy", policyWords(st, p))
 	}
-	fmt.Fprintln(w, "  Next: "+undoNext(pv))
+	fmt.Fprintln(w, "  Next: "+undoNext(pv, cmd))
 }
 
 // checkLine is one check: its symbol, its label, its detail.
@@ -225,7 +225,7 @@ func policyWords(st ui.Style, p *undoapi.PolicyJSON) string {
 	return st.Red(ui.Fail) + " " + clean(rule) + " " + ui.Sep + " denied" + clean(why)
 }
 
-func undoNext(pv *undoapi.PreviewJSON) string {
+func undoNext(pv *undoapi.PreviewJSON, cmd string) string {
 	if !pv.Available {
 		return "fix the failing check, then preview again."
 	}
@@ -233,7 +233,7 @@ func undoNext(pv *undoapi.PreviewJSON) string {
 	if pv.PlanDigest != nil {
 		d = *pv.PlanDigest
 	}
-	return "deedglass undo run " + clean(pv.Action) + " --plan " + clean(d) + ` --reason "…"`
+	return cmd + " undo run " + clean(pv.Action) + " --plan " + clean(d) + ` --reason "…"`
 }
 
 // --- undo run ---
@@ -295,7 +295,7 @@ func runUndoRun(ctx context.Context, e *Env, args []string) error {
 			return err
 		}
 	} else {
-		printUndoAction(e.Stdout, e.Style, &a, id)
+		printUndoAction(e.Stdout, e.Style, &a, id, undoNextLines(ctx, e, &a))
 	}
 	return undoExit(&a)
 }
@@ -305,8 +305,26 @@ func undoIdemKey(id string) string {
 	return "undo_" + id + "_" + strconv.FormatInt(time.Now().UnixNano(), 36)
 }
 
+// undoNextLines are the lines under a pending undo (adoption-v1 F3): in dev on a local stack, the
+// approve link for the approval it just made; otherwise how to get one. Then how to follow it.
+func undoNextLines(ctx context.Context, e *Env, a *ledger.Action) []string {
+	if a.Status != ledger.StatusPendingApproval {
+		return nil
+	}
+	cmd := invocation(e)
+	follow := "Then follow it: " + cmd + " actions show " + clean(a.ID) + " --wait"
+	if a.Approval == nil {
+		return []string{"Next: countersign it in Console › Approvals. " + follow}
+	}
+	apr := clean(a.Approval.ID)
+	if link := pendingApprovalLink(ctx, e, a.Approval.ID); link != "" {
+		return []string{"Approve it (one use, dev only): " + link, follow}
+	}
+	return []string{"Next: countersign it from the email, or print its link: " + cmd + " approvals open " + apr, follow}
+}
+
 // printUndoAction writes the undo action's state (S23 §5.1).
-func printUndoAction(w io.Writer, st ui.Style, a *ledger.Action, undoes string) {
+func printUndoAction(w io.Writer, st ui.Style, a *ledger.Action, undoes string, next []string) {
 	switch a.Status {
 	case ledger.StatusPendingApproval:
 		fmt.Fprintln(w, st.Violet(ui.Pending)+" pending approval "+ui.Sep+" "+clean(a.Tool))
@@ -322,7 +340,9 @@ func printUndoAction(w io.Writer, st ui.Style, a *ledger.Action, undoes string) 
 			apr = "approval " + undo.ShortID(a.Approval.ID) + "  " + ui.Sep + "  "
 		}
 		fmt.Fprintln(w, "  "+apr+"undo "+undo.ShortID(a.ID))
-		fmt.Fprintln(w, "  Next: countersign it from the email or Console › Approvals, then run: deedglass actions show "+clean(a.ID)+" --wait")
+		for _, l := range next {
+			fmt.Fprintln(w, "  "+l)
+		}
 	case ledger.StatusProcessing:
 		fmt.Fprintln(w, st.Violet(ui.Pending)+" running "+ui.Sep+" "+clean(a.Tool))
 		fmt.Fprintln(w, "  Next: deedglass actions show "+clean(a.ID)+" --wait")

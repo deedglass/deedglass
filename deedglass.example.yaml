@@ -66,6 +66,8 @@
 
 # Client commands (CLI, mcp, SDKs): the server to talk to.
 # server: https://api.deedglass.com
+# mcp serve: a file holding the agent key (0600), when DEEDGLASS_API_KEY is unset.
+# api_key_file: /home/you/.deedglass/agent-orders-db-agent.key
 
 # The CLI's terminal mark (docs/CLI.md, "Banner and quiet mode"). It never shows in pipes,
 # CI or --json. These are usually set in the shell, not here.

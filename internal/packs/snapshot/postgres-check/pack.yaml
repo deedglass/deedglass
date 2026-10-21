@@ -1,0 +1,7 @@
+id: pck_01m4ppb8d5fkph9mevbjc6cv8k
+name: postgres-check
+version: 1.0.0
+tier: free
+summary: Reads and writes run. Every write is checked at Proven. DROP and TRUNCATE never run.
+for: the Postgres connector (postgres.query, postgres.execute), on a local or throwaway database
+source_starter: postgres-check

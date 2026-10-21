@@ -174,8 +174,19 @@ func TestPlanAndClaudeLine(t *testing.T) {
 	if len(have) != 0 || !strings.Contains(strings.Join(create, ","), "Postgres 18.6 in Docker (127.0.0.1:55432)") {
 		t.Fatalf("%v %v", create, have)
 	}
-	if ClaudeCodeLine("http://127.0.0.1:8080") != `claude mcp add --transport http deedglass http://127.0.0.1:8080/mcp/native --header "Authorization: Bearer $(cat .deedglass/quickstart.key)"` {
-		t.Fatal(ClaudeCodeLine("http://127.0.0.1:8080"))
+	if !strings.Contains(strings.Join(create, ","), "policy postgres-check (enforced)") {
+		t.Fatalf("a new stack enforces postgres-check by default: %v", create)
+	}
+	if create, _ := Plan(Options{Dir: t.TempDir(), Policy: PolicyName}); !strings.Contains(strings.Join(create, ","), "policy postgres-safe (enforced)") {
+		t.Fatalf("--policy postgres-safe: %v", create)
+	}
+	// One Claude Code line everywhere (adoption-v1 F8): the README's, with no key in it.
+	readme, err := os.ReadFile(filepath.Join("..", "..", "README.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if l := ClaudeCodeLine(); l != "claude mcp add --scope user deedglass -- npx -y deedglass mcp serve" || !strings.Contains(string(readme), l) || strings.Contains(l, "Bearer") {
+		t.Fatal(l)
 	}
 }
 

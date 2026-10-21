@@ -19,7 +19,7 @@ export function decode(client, c) {
     case 'Goose':
       return { command: u.searchParams.get('cmd'), args: u.searchParams.getAll('arg') };
     case 'Claude Code': {
-      const m = /^claude mcp add deedglass -- (\S+) (.+)$/.exec(c.command);
+      const m = /^claude mcp add (?:--scope user )?deedglass -- (\S+) (.+)$/.exec(c.command);
       return { command: m[1], args: m[2].split(' ') };
     }
     default:

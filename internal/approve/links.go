@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"errors"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -301,4 +302,54 @@ func LinkHash(raw string) string {
 		return "malformed"
 	}
 	return hex.EncodeToString(hashLink(raw))[:32]
+}
+
+// ErrNotEligible is DevLink's answer when the person can't countersign this approval.
+var ErrNotEligible = errors.New("approve: that person can't countersign this approval")
+
+// ErrNotPending is DevLink's answer for an approval that is already decided or expired.
+var ErrNotPending = errors.New("approve: the approval isn't waiting any more")
+
+// DevLink mints a fresh one-time link for one eligible person (by email) and returns it (adoption-v1
+// F3: deedglass approvals open and undo run print the link for the approval they just made, in
+// dev, instead of pointing at the mail log). It voids that person's older unused links for this
+// approval, like the notify job does, and expires with the approval (at most LinkMaxTTL). The CLI
+// only calls it in dev; nothing here decides anything.
+func (s *Service) DevLink(ctx context.Context, org ids.OrgID, approvalID, email string) (string, error) {
+	apr, err := ids.Parse[ids.ApprovalKind](approvalID)
+	if err != nil {
+		return "", errNotFound(approvalID)
+	}
+	var link string
+	err = s.o.DB.OrgTx(ctx, org, func(ctx context.Context, tx pgx.Tx) error {
+		x, err := readRow(ctx, tx, org, apr, true)
+		if err != nil {
+			return err
+		}
+		if x.Status != StatusPending || !s.now().Before(x.ExpiresAt) {
+			return ErrNotPending
+		}
+		all, err := members(ctx, tx, org)
+		if err != nil {
+			return err
+		}
+		people, _ := eligiblePeople(all, x.Spec, deref(x.OnBehalfOf), true)
+		for _, p := range people {
+			if !strings.EqualFold(p.Email, email) {
+				continue
+			}
+			exp := x.ExpiresAt
+			if lim := s.now().Add(s.cfg.LinkMaxTTL); lim.Before(exp) {
+				exp = lim
+			}
+			raw, _, err := mintToken(ctx, tx, org, apr, p.UserID, exp)
+			if err != nil {
+				return err
+			}
+			link = s.link(raw)
+			return nil
+		}
+		return ErrNotEligible
+	})
+	return link, err
 }

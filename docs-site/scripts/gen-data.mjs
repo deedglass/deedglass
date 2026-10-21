@@ -104,7 +104,7 @@ export function installLinks(server = SERVER) {
       { client: 'VS Code', link: `vscode:mcp/install?${enc(named)}`, web: `https://vscode.dev/redirect/mcp/install?name=deedglass&config=${enc(json)}`, command: `code --add-mcp '${named}'`, source: 'https://code.visualstudio.com/docs/copilot/customization/mcp-servers' },
       { client: 'LM Studio', link: `lmstudio://add_mcp?name=deedglass&config=${enc(b64)}`, source: 'https://lmstudio.ai/docs/app/plugins/mcp/deeplink' },
       { client: 'Goose', link: `goose://extension?${goose}`, source: 'https://goose-docs.ai/docs/getting-started/using-extensions/' },
-      { client: 'Claude Code', command: `claude mcp add deedglass -- ${server.command} ${server.args.join(' ')}`, source: 'https://docs.anthropic.com/en/docs/claude-code/mcp' },
+      { client: 'Claude Code', command: `claude mcp add --scope user deedglass -- ${server.command} ${server.args.join(' ')}`, source: 'https://docs.anthropic.com/en/docs/claude-code/mcp' },
       { client: 'Claude Desktop', bundle: 'deedglass.mcpb, attached to each GitHub release', source: 'https://github.com/anthropics/mcpb' },
     ],
   };
