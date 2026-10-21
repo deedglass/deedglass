@@ -450,10 +450,23 @@ real.
 - Nothing calls a real tool. `executing_at` is set back by the simulated latency so deeds show a
   realistic `latency_ms`; every other time is the database clock.
 
+## Server resolution
+
+Every command that talks to a Deedglass server finds it the same way: `--server`, then
+`DEEDGLASS_SERVER`, then `DEEDGLASS_BASE_URL`, then the `.deedglass/stack.json` that `deedglass init`
+wrote in this directory or the nearest parent, then `http://127.0.0.1:8080`. So after
+`deedglass init --listen 127.0.0.1:8090`, every command in that directory (and below it) talks to
+`:8090`.
+
+The key is `--api-key`, then `DEEDGLASS_API_KEY`, then, only when `stack.json` named the server, the
+key file `init` saved beside it (`admin.key` for admin commands, `quickstart.key` for `act`). Keys
+never go anywhere else: inside a directory `init` set up, if `DEEDGLASS_SERVER` or
+`DEEDGLASS_BASE_URL` names a different server than `stack.json`, the command sends no key and stops
+with `server_mismatch`. Pass `--server` to send a key there on purpose.
+
 ## The Gate: `act` and `actions cancel` (S13)
 
-Both talk to the server's API (`--server`, `DEEDGLASS_SERVER`, `DEEDGLASS_BASE_URL`, then
-`http://127.0.0.1:8080`) with an **agent's** API key (`--api-key` or `DEEDGLASS_API_KEY`; create one
+Both talk to the server's API (found as in [Server resolution](#server-resolution)) with an **agent's** API key (`--api-key` or `DEEDGLASS_API_KEY`; create one
 with `deedglass agent keys create <agent>`). `act` is a dev helper: it sends one action through the
 Gate exactly as an SDK would, follows it until it is sealed (or `--wait` passes), and prints it.
 Full reference: [GATE.md](GATE.md).

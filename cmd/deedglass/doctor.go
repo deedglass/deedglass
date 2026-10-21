@@ -69,7 +69,7 @@ func withInitStack(opts config.LoadOptions) (config.LoadOptions, *setup.Stack, e
 // doctorEnv resolves what doctor checks: the environment first, then what deedglass init wrote in
 // .deedglass/ (stack.json and admin.key) when this directory has it.
 func doctorEnv(e *Env) (*doctor.Env, error) {
-	opts, st, err := withInitStack(e.LoadOptions())
+	opts, _, err := stackLoadOptions(e)
 	if err != nil {
 		return nil, err
 	}
@@ -92,16 +92,9 @@ func doctorEnv(e *Env) (*doctor.Env, error) {
 		d.DBURL = env["DEEDGLASS_DATABASE_URL"]
 		d.SealKeyFile = env["DEEDGLASS_SEAL_KEY_FILE"]
 	}
-	server := firstNonEmpty(e.Globals.Server, e.Getenv("DEEDGLASS_SERVER"))
-	if server == "" && st != nil {
-		server = st.Server()
-	}
-	d.Server = firstNonEmpty(server, e.Getenv("DEEDGLASS_BASE_URL"), defaultServer)
-	key := firstNonEmpty(e.Globals.APIKey, e.Getenv("DEEDGLASS_API_KEY"))
-	if key == "" {
-		key, _ = setup.ReadSecretFile(dir, setup.AdminKeyFile)
-	}
-	d.APIKey = key
+	t := resolveServer(e)
+	d.Server = t.Server
+	d.APIKey = t.keyFor(e, setup.AdminKeyFile)
 	d.HTTP = egress.FirstParty(egress.FirstPartyOptions{Timeout: doctor.Timeout})
 	ms, err := migrate.Load(migrations.FS)
 	if err != nil {

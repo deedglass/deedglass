@@ -59,7 +59,7 @@ type reportDB struct {
 }
 
 func openReportDB(ctx context.Context, e *Env) (*reportDB, error) {
-	opts, st, err := withInitStack(e.LoadOptions())
+	opts, st, err := stackLoadOptions(e)
 	if err != nil {
 		return nil, err
 	}

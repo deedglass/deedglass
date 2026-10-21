@@ -17,20 +17,23 @@ import (
 	"github.com/deedglass/deedglass/cmd/deedglass/internal/ui"
 	"github.com/deedglass/deedglass/internal/httpx"
 	"github.com/deedglass/deedglass/internal/identity"
+	"github.com/deedglass/deedglass/internal/setup"
 	"github.com/deedglass/deedglass/pkg/deedglass"
 )
 
 // The agent commands (S08) talk to a Deedglass server over the API with an org admin key
-// (--api-key or DEEDGLASS_API_KEY) at --server, DEEDGLASS_SERVER, DEEDGLASS_BASE_URL or
-// http://127.0.0.1:8080. Agent keys are refused with insufficient_scope: no agent key changes any
-// agent.
+// (--api-key, DEEDGLASS_API_KEY, or the admin.key deedglass init saved beside the stack.json that
+// named the server) at the server resolveServer finds (target.go). Agent keys are refused with
+// insufficient_scope: no agent key changes any agent.
 
-const defaultServer = "http://127.0.0.1:8080"
-
-// apiClient builds the API client from the globals and the environment.
+// apiClient builds the API client from the globals, the environment and a local stack.
 func apiClient(e *Env) (*deedglass.Client, error) {
-	server := firstNonEmpty(e.Globals.Server, e.Getenv("DEEDGLASS_SERVER"), e.Getenv("DEEDGLASS_BASE_URL"), defaultServer)
-	key := firstNonEmpty(e.Globals.APIKey, e.Getenv("DEEDGLASS_API_KEY"))
+	t := resolveServer(e)
+	if err := t.conflictErr(); err != nil {
+		return nil, err
+	}
+	server := t.Server
+	key := t.keyFor(e, setup.AdminKeyFile)
 	if key == "" {
 		return nil, &ExitError{Code: ExitNotAuthed, ErrCode: "authentication_required",
 			Err:  errors.New("This command needs an admin API key"),

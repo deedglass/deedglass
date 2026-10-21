@@ -20,6 +20,7 @@ import (
 	"github.com/deedglass/deedglass/internal/connector/egress"
 	"github.com/deedglass/deedglass/internal/mcp/gateclient"
 	"github.com/deedglass/deedglass/internal/mcp/wrap"
+	"github.com/deedglass/deedglass/internal/setup"
 )
 
 // deedglass a2a proxy (TY-07, ADR-113): a loopback A2A JSON-RPC endpoint in front of one remote
@@ -164,7 +165,11 @@ func runA2AProxy(ctx context.Context, e *Env, args []string) error {
 	if err != nil || !wrap.IsLoopback(host) {
 		return usageErr(fmt.Errorf("--listen %q must be a loopback address: the proxy has no sign-in of its own", o.listen), "Use 127.0.0.1:7420.")
 	}
-	server := firstNonEmpty(e.Globals.Server, e.Getenv("DEEDGLASS_SERVER"), e.Getenv("DEEDGLASS_BASE_URL"), defaultServer)
+	at := resolveServer(e)
+	if err := at.conflictErr(); err != nil {
+		return err
+	}
+	server := at.Server
 	su, err := url.Parse(strings.TrimSuffix(server, "/"))
 	if err != nil || su.Host == "" || (su.Scheme != "http" && su.Scheme != "https") {
 		return usageErr(fmt.Errorf("the server %q isn't a URL", server), "Use --server http://127.0.0.1:8080 or set DEEDGLASS_SERVER.")
@@ -172,7 +177,7 @@ func runA2AProxy(ctx context.Context, e *Env, args []string) error {
 	if su.Scheme == "http" && !wrap.IsLoopback(su.Hostname()) && !(dev && o.insecureHTTP) {
 		return usageErr(fmt.Errorf("the server %s uses http, which would send the API key in clear", su.Redacted()), "Use https, or a loopback address.")
 	}
-	key := firstNonEmpty(e.Globals.APIKey, e.Getenv("DEEDGLASS_API_KEY"))
+	key := at.keyFor(e, setup.AgentKeyFile)
 	if key == "" {
 		return usageErr(errors.New("deedglass a2a proxy needs an agent's key"), "Set DEEDGLASS_API_KEY, or pass --api-key.")
 	}

@@ -205,7 +205,9 @@ deedglass org create --name Acme --owner-email priya@acme.com --admin-key
   signed in to the Console can still act.
 
 The CLI reads the admin key from `--api-key` or `DEEDGLASS_API_KEY`, and the server from `--server`,
-`DEEDGLASS_SERVER`, `DEEDGLASS_BASE_URL`, then `http://127.0.0.1:8080`. An agent key gets:
+`DEEDGLASS_SERVER`, `DEEDGLASS_BASE_URL`, the `.deedglass/stack.json` that `deedglass init` wrote in
+this directory or a parent, then `http://127.0.0.1:8080` ([Server resolution](CLI.md#server-resolution)).
+An agent key gets:
 
 ```
 ✕ This is an agent key, and managing agents needs an admin key. Create one with deedglass org keys create on the server.

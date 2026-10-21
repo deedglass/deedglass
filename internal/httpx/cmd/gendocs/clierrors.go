@@ -22,7 +22,7 @@ type CLIError struct {
 	Next     []string `json:"next,omitempty"`
 }
 
-var exitNames = map[string]int{"ExitOK": 0, "ExitFailure": 1, "ExitUsage": 2, "ExitAuth": 3}
+var exitNames = map[string]int{"ExitOK": 0, "ExitFailure": 1, "ExitUsage": 2, "ExitAuth": 3, "ExitNotAuthed": 3}
 
 func strLit(e ast.Expr) (string, bool) {
 	if b, ok := e.(*ast.BasicLit); ok && b.Kind == token.STRING {
