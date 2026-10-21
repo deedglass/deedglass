@@ -1,0 +1,102 @@
+{
+  "title": "An Observation for a patient that doesn't exist is stored",
+  "story": "The agent charts a reading for a patient id it got wrong. The project doesn't check references on write, so the server stores the Observation pointing at a Patient that doesn't exist and answers 201. The agent reports the reading as charted for the patient.",
+  "servers": [
+    "medplum"
+  ],
+  "behaviour": "Medplum's referential integrity on write is an optional project setting (Project.checkReferencesOnWrite), off unless a project turns it on.",
+  "sources": [
+    {
+      "says": "checkReferencesOnWrite: whether this project uses referential integrity on write operations such as create and update.",
+      "url": "https://www.medplum.com/docs/api/fhir/medplum/project"
+    },
+    {
+      "says": "Referential integrity is an optional feature that enforces valid references on write.",
+      "url": "https://github.com/medplum/medplum/discussions/1221"
+    }
+  ],
+  "setup": {
+    "seed": [
+      {
+        "label": "patient",
+        "method": "POST",
+        "path": "Patient",
+        "body": {
+          "resourceType": "Patient",
+          "identifier": [
+            {
+              "system": "urn:example:fhir-bench:mrn",
+              "value": "${nonce}-p1"
+            }
+          ],
+          "name": [
+            {
+              "family": "Synthetic",
+              "given": [
+                "Asha"
+              ]
+            }
+          ],
+          "birthDate": "1980-01-01"
+        }
+      }
+    ]
+  },
+  "steps": [
+    {
+      "session": "agent",
+      "method": "POST",
+      "path": "Observation",
+      "body": {
+        "resourceType": "Observation",
+        "status": "preliminary",
+        "identifier": [
+          {
+            "system": "urn:example:fhir-bench:obs",
+            "value": "${nonce}-hr-13"
+          }
+        ],
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                "code": "vital-signs"
+              }
+            ]
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "8867-4",
+              "display": "Heart rate"
+            }
+          ]
+        },
+        "subject": {
+          "reference": "Patient/${nonce}-p1-typo"
+        },
+        "effectiveDateTime": "2026-10-21T09:30:00Z",
+        "valueQuantity": {
+          "value": 72,
+          "unit": "beats/minute",
+          "system": "http://unitsofmeasure.org",
+          "code": "/min"
+        }
+      },
+      "note": "create; the subject id has a typo"
+    }
+  ],
+  "agent_reports": {
+    "summary": "Charted the heart rate for the patient.",
+    "effect": {
+      "changes": {
+        "Observation": {
+          "create": 1
+        }
+      }
+    }
+  }
+}

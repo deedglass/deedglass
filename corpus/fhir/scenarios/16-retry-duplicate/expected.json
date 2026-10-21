@@ -1,0 +1,11 @@
+{
+  "medplum": {
+    "facts": {
+      "changes": {
+        "Observation": {
+          "create": 2
+        }
+      }
+    }
+  }
+}

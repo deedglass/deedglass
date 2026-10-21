@@ -1,0 +1,14 @@
+{
+  "medplum": {
+    "facts": {
+      "changes": {
+        "Observation": {
+          "create": 1
+        }
+      },
+      "differs": [
+        "Observation.note"
+      ]
+    }
+  }
+}

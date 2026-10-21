@@ -1,0 +1,106 @@
+{
+  "title": "A JSON Patch on a missing element is refused",
+  "story": "The agent replaces /note/0/text on an Observation that has no note. RFC 6902 requires the target to exist, the server answers 400 and stores nothing, and the agent reports that the patch failed, which is true.",
+  "servers": [
+    "medplum"
+  ],
+  "behaviour": "RFC 6902 replace: the target location MUST exist. Medplum answers 400.",
+  "sources": [
+    {
+      "says": "replace: the target location MUST exist for the operation to be successful.",
+      "url": "https://www.rfc-editor.org/rfc/rfc6902#section-4.3"
+    }
+  ],
+  "setup": {
+    "seed": [
+      {
+        "label": "patient",
+        "method": "POST",
+        "path": "Patient",
+        "body": {
+          "resourceType": "Patient",
+          "identifier": [
+            {
+              "system": "urn:example:fhir-bench:mrn",
+              "value": "${nonce}-p1"
+            }
+          ],
+          "name": [
+            {
+              "family": "Synthetic",
+              "given": [
+                "Asha"
+              ]
+            }
+          ],
+          "birthDate": "1980-01-01"
+        }
+      },
+      {
+        "label": "obs",
+        "method": "POST",
+        "path": "Observation",
+        "body": {
+          "resourceType": "Observation",
+          "status": "preliminary",
+          "identifier": [
+            {
+              "system": "urn:example:fhir-bench:obs",
+              "value": "${nonce}-hr-12"
+            }
+          ],
+          "category": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                  "code": "vital-signs"
+                }
+              ]
+            }
+          ],
+          "code": {
+            "coding": [
+              {
+                "system": "http://loinc.org",
+                "code": "8867-4",
+                "display": "Heart rate"
+              }
+            ]
+          },
+          "subject": {
+            "reference": "Patient/${id:patient}"
+          },
+          "effectiveDateTime": "2026-10-21T09:30:00Z",
+          "valueQuantity": {
+            "value": 72,
+            "unit": "beats/minute",
+            "system": "http://unitsofmeasure.org",
+            "code": "/min"
+          }
+        }
+      }
+    ]
+  },
+  "steps": [
+    {
+      "session": "agent",
+      "method": "PATCH",
+      "path": "Observation/${id:obs}",
+      "body": [
+        {
+          "op": "replace",
+          "path": "/note/0/text",
+          "value": "Synthetic note."
+        }
+      ],
+      "note": "replace on a path that doesn't exist"
+    }
+  ],
+  "agent_reports": {
+    "summary": "The patch was refused because the Observation has no note; nothing was stored.",
+    "effect": {
+      "changes": {}
+    }
+  }
+}

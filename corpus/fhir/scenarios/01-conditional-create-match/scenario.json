@@ -1,0 +1,145 @@
+{
+  "title": "A conditional create answers 200 and stores nothing",
+  "story": "The agent charts a heart rate with If-None-Exist on the Observation's identifier. A matching Observation is already on the server, so the server stores nothing and answers 200 with the existing resource. The agent reports that it charted the reading.",
+  "servers": [
+    "medplum"
+  ],
+  "behaviour": "FHIR R4 conditional create: with one match, the server ignores the create and answers 200 OK with the existing resource. Medplum does exactly that.",
+  "sources": [
+    {
+      "says": "Conditional create, one match: the server ignores the post and returns 200 OK.",
+      "url": "https://hl7.org/fhir/R4/http.html#ccreate"
+    }
+  ],
+  "setup": {
+    "seed": [
+      {
+        "label": "patient",
+        "method": "POST",
+        "path": "Patient",
+        "body": {
+          "resourceType": "Patient",
+          "identifier": [
+            {
+              "system": "urn:example:fhir-bench:mrn",
+              "value": "${nonce}-p1"
+            }
+          ],
+          "name": [
+            {
+              "family": "Synthetic",
+              "given": [
+                "Asha"
+              ]
+            }
+          ],
+          "birthDate": "1980-01-01"
+        }
+      },
+      {
+        "label": "existing",
+        "method": "POST",
+        "path": "Observation",
+        "body": {
+          "resourceType": "Observation",
+          "status": "preliminary",
+          "identifier": [
+            {
+              "system": "urn:example:fhir-bench:obs",
+              "value": "${nonce}-hr-1"
+            }
+          ],
+          "category": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                  "code": "vital-signs"
+                }
+              ]
+            }
+          ],
+          "code": {
+            "coding": [
+              {
+                "system": "http://loinc.org",
+                "code": "8867-4",
+                "display": "Heart rate"
+              }
+            ]
+          },
+          "subject": {
+            "reference": "Patient/${id:patient}"
+          },
+          "effectiveDateTime": "2026-10-21T09:30:00Z",
+          "valueQuantity": {
+            "value": 72,
+            "unit": "beats/minute",
+            "system": "http://unitsofmeasure.org",
+            "code": "/min"
+          }
+        }
+      }
+    ]
+  },
+  "steps": [
+    {
+      "session": "agent",
+      "method": "POST",
+      "path": "Observation",
+      "headers": {
+        "If-None-Exist": "identifier=urn:example:fhir-bench:obs|${nonce}-hr-1"
+      },
+      "body": {
+        "resourceType": "Observation",
+        "status": "preliminary",
+        "identifier": [
+          {
+            "system": "urn:example:fhir-bench:obs",
+            "value": "${nonce}-hr-1"
+          }
+        ],
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                "code": "vital-signs"
+              }
+            ]
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "8867-4",
+              "display": "Heart rate"
+            }
+          ]
+        },
+        "subject": {
+          "reference": "Patient/${id:patient}"
+        },
+        "effectiveDateTime": "2026-10-21T09:30:00Z",
+        "valueQuantity": {
+          "value": 74,
+          "unit": "beats/minute",
+          "system": "http://unitsofmeasure.org",
+          "code": "/min"
+        }
+      },
+      "note": "conditional create; a match exists"
+    }
+  ],
+  "agent_reports": {
+    "summary": "Charted the heart rate (74 beats/minute) as a new Observation.",
+    "effect": {
+      "changes": {
+        "Observation": {
+          "create": 1
+        }
+      }
+    }
+  }
+}

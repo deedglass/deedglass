@@ -1,0 +1,14 @@
+{
+  "medplum": {
+    "facts": {
+      "changes": {
+        "Observation": {
+          "update": 1
+        }
+      },
+      "differs": [
+        "Observation.identifier"
+      ]
+    }
+  }
+}

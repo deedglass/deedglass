@@ -1,0 +1,206 @@
+{
+  "title": "A transaction Bundle is applied in part",
+  "story": "The agent sends three Observations as one transaction Bundle; one of them has no status. On a Medplum project without the transaction-bundles feature, the server processes the Bundle as a batch: two Observations are stored, the third is refused inside the answer, and the answer is 200. The agent reports that the transaction stored all three.",
+  "servers": [
+    "medplum"
+  ],
+  "behaviour": "Medplum documents that without the transaction-bundles feature flag a transaction Bundle is processed as a batch, with no atomicity and no error or warning. FHIR R4 batch entries are processed independently.",
+  "sources": [
+    {
+      "says": "Without the transaction-bundles feature flag, a transaction Bundle is processed as a batch; the server does not return an error or warning.",
+      "url": "https://www.medplum.com/docs/fhir-datastore/fhir-batch-requests"
+    },
+    {
+      "says": "Batch: each entry is treated as if an individual interaction; transaction: all or nothing.",
+      "url": "https://hl7.org/fhir/R4/http.html#transaction"
+    }
+  ],
+  "setup": {
+    "seed": [
+      {
+        "label": "patient",
+        "method": "POST",
+        "path": "Patient",
+        "body": {
+          "resourceType": "Patient",
+          "identifier": [
+            {
+              "system": "urn:example:fhir-bench:mrn",
+              "value": "${nonce}-p1"
+            }
+          ],
+          "name": [
+            {
+              "family": "Synthetic",
+              "given": [
+                "Asha"
+              ]
+            }
+          ],
+          "birthDate": "1980-01-01"
+        }
+      }
+    ]
+  },
+  "steps": [
+    {
+      "session": "agent",
+      "method": "POST",
+      "path": "",
+      "body": {
+        "resourceType": "Bundle",
+        "type": "transaction",
+        "entry": [
+          {
+            "fullUrl": "urn:uuid:00000000-0000-4000-8000-000000000001",
+            "resource": {
+              "resourceType": "Observation",
+              "status": "preliminary",
+              "identifier": [
+                {
+                  "system": "urn:example:fhir-bench:obs",
+                  "value": "${nonce}-b1"
+                }
+              ],
+              "category": [
+                {
+                  "coding": [
+                    {
+                      "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                      "code": "vital-signs"
+                    }
+                  ]
+                }
+              ],
+              "code": {
+                "coding": [
+                  {
+                    "system": "http://loinc.org",
+                    "code": "8867-4",
+                    "display": "Heart rate"
+                  }
+                ]
+              },
+              "subject": {
+                "reference": "Patient/${id:patient}"
+              },
+              "effectiveDateTime": "2026-10-21T09:30:00Z",
+              "valueQuantity": {
+                "value": 72,
+                "unit": "beats/minute",
+                "system": "http://unitsofmeasure.org",
+                "code": "/min"
+              }
+            },
+            "request": {
+              "method": "POST",
+              "url": "Observation"
+            }
+          },
+          {
+            "fullUrl": "urn:uuid:00000000-0000-4000-8000-000000000002",
+            "resource": {
+              "resourceType": "Observation",
+              "identifier": [
+                {
+                  "system": "urn:example:fhir-bench:obs",
+                  "value": "${nonce}-b2"
+                }
+              ],
+              "category": [
+                {
+                  "coding": [
+                    {
+                      "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                      "code": "vital-signs"
+                    }
+                  ]
+                }
+              ],
+              "code": {
+                "coding": [
+                  {
+                    "system": "http://loinc.org",
+                    "code": "8867-4",
+                    "display": "Heart rate"
+                  }
+                ]
+              },
+              "subject": {
+                "reference": "Patient/${id:patient}"
+              },
+              "effectiveDateTime": "2026-10-21T09:30:00Z",
+              "valueQuantity": {
+                "value": 72,
+                "unit": "beats/minute",
+                "system": "http://unitsofmeasure.org",
+                "code": "/min"
+              }
+            },
+            "request": {
+              "method": "POST",
+              "url": "Observation"
+            }
+          },
+          {
+            "fullUrl": "urn:uuid:00000000-0000-4000-8000-000000000003",
+            "resource": {
+              "resourceType": "Observation",
+              "status": "preliminary",
+              "identifier": [
+                {
+                  "system": "urn:example:fhir-bench:obs",
+                  "value": "${nonce}-b3"
+                }
+              ],
+              "category": [
+                {
+                  "coding": [
+                    {
+                      "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                      "code": "vital-signs"
+                    }
+                  ]
+                }
+              ],
+              "code": {
+                "coding": [
+                  {
+                    "system": "http://loinc.org",
+                    "code": "8867-4",
+                    "display": "Heart rate"
+                  }
+                ]
+              },
+              "subject": {
+                "reference": "Patient/${id:patient}"
+              },
+              "effectiveDateTime": "2026-10-21T09:30:00Z",
+              "valueQuantity": {
+                "value": 72,
+                "unit": "beats/minute",
+                "system": "http://unitsofmeasure.org",
+                "code": "/min"
+              }
+            },
+            "request": {
+              "method": "POST",
+              "url": "Observation"
+            }
+          }
+        ]
+      },
+      "note": "transaction Bundle, one entry without status"
+    }
+  ],
+  "agent_reports": {
+    "summary": "Stored the three heart-rate readings in one transaction.",
+    "effect": {
+      "changes": {
+        "Observation": {
+          "create": 3
+        }
+      }
+    }
+  }
+}

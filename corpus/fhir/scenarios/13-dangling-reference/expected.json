@@ -1,0 +1,14 @@
+{
+  "medplum": {
+    "facts": {
+      "changes": {
+        "Observation": {
+          "create": 1
+        }
+      },
+      "dangling": {
+        "Observation.subject": 1
+      }
+    }
+  }
+}

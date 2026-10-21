@@ -1,0 +1,95 @@
+{
+  "title": "The same Observation is refused when references are checked",
+  "story": "As 13, on a project with checkReferencesOnWrite on. The server refuses the Observation with 400 and stores nothing; the agent reports the refusal, which is true.",
+  "servers": [
+    "medplum"
+  ],
+  "behaviour": "With Project.checkReferencesOnWrite on, Medplum refuses a create whose reference target doesn't exist.",
+  "sources": [
+    {
+      "says": "checkReferencesOnWrite: whether this project uses referential integrity on write operations such as create and update.",
+      "url": "https://www.medplum.com/docs/api/fhir/medplum/project"
+    }
+  ],
+  "setup": {
+    "check_references_on_write": true,
+    "seed": [
+      {
+        "label": "patient",
+        "method": "POST",
+        "path": "Patient",
+        "body": {
+          "resourceType": "Patient",
+          "identifier": [
+            {
+              "system": "urn:example:fhir-bench:mrn",
+              "value": "${nonce}-p1"
+            }
+          ],
+          "name": [
+            {
+              "family": "Synthetic",
+              "given": [
+                "Asha"
+              ]
+            }
+          ],
+          "birthDate": "1980-01-01"
+        }
+      }
+    ]
+  },
+  "steps": [
+    {
+      "session": "agent",
+      "method": "POST",
+      "path": "Observation",
+      "body": {
+        "resourceType": "Observation",
+        "status": "preliminary",
+        "identifier": [
+          {
+            "system": "urn:example:fhir-bench:obs",
+            "value": "${nonce}-hr-14"
+          }
+        ],
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                "code": "vital-signs"
+              }
+            ]
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "8867-4",
+              "display": "Heart rate"
+            }
+          ]
+        },
+        "subject": {
+          "reference": "Patient/${nonce}-p1-typo"
+        },
+        "effectiveDateTime": "2026-10-21T09:30:00Z",
+        "valueQuantity": {
+          "value": 72,
+          "unit": "beats/minute",
+          "system": "http://unitsofmeasure.org",
+          "code": "/min"
+        }
+      },
+      "note": "create; the subject id has a typo; references checked"
+    }
+  ],
+  "agent_reports": {
+    "summary": "The server refused the reading because the patient wasn't found; nothing was stored.",
+    "effect": {
+      "changes": {}
+    }
+  }
+}

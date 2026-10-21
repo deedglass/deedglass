@@ -32,6 +32,10 @@ still wrong. 09 to 12 are cases Deedglass misses; they are here on purpose.
 
 ## The benchmark
 
+For FHIR servers, the healthcare version is [`fhir/`](fhir/README.md): seventeen FHIR R4 write
+scenarios on Medplum, scored the same way ([`fhir/BENCHMARK.md`](fhir/BENCHMARK.md)).
+
+
 `make corpus-bench` plays every scenario through a gateway or checker and scores it: did it flag
 the mismatch (before or after the commit), did it report what really committed, and did it leave a
 record a third party can check. The method, the scoring rules, the limits and how to add your own

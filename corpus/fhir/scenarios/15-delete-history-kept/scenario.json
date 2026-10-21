@@ -1,0 +1,107 @@
+{
+  "title": "A deleted Observation stays readable in history",
+  "story": "The agent deletes an Observation entered on the wrong patient and reports it removed. The server answers 200, a read answers 410, and every earlier version is still readable with vread and _history.",
+  "servers": [
+    "medplum"
+  ],
+  "behaviour": "FHIR R4 delete doesn't remove a resource's version history. Medplum's delete is a soft delete; $expunge removes a resource and its history.",
+  "sources": [
+    {
+      "says": "The delete interaction does not remove a resource's version history; later reads return 410.",
+      "url": "https://hl7.org/fhir/R4/http.html#delete"
+    },
+    {
+      "says": "A standard delete keeps earlier versions; $expunge permanently removes a resource and its history.",
+      "url": "https://www.medplum.com/docs/fhir-datastore/deleting-data"
+    }
+  ],
+  "setup": {
+    "seed": [
+      {
+        "label": "patient",
+        "method": "POST",
+        "path": "Patient",
+        "body": {
+          "resourceType": "Patient",
+          "identifier": [
+            {
+              "system": "urn:example:fhir-bench:mrn",
+              "value": "${nonce}-p1"
+            }
+          ],
+          "name": [
+            {
+              "family": "Synthetic",
+              "given": [
+                "Asha"
+              ]
+            }
+          ],
+          "birthDate": "1980-01-01"
+        }
+      },
+      {
+        "label": "obs",
+        "method": "POST",
+        "path": "Observation",
+        "body": {
+          "resourceType": "Observation",
+          "status": "preliminary",
+          "identifier": [
+            {
+              "system": "urn:example:fhir-bench:obs",
+              "value": "${nonce}-hr-15"
+            }
+          ],
+          "category": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                  "code": "vital-signs"
+                }
+              ]
+            }
+          ],
+          "code": {
+            "coding": [
+              {
+                "system": "http://loinc.org",
+                "code": "8867-4",
+                "display": "Heart rate"
+              }
+            ]
+          },
+          "subject": {
+            "reference": "Patient/${id:patient}"
+          },
+          "effectiveDateTime": "2026-10-21T09:30:00Z",
+          "valueQuantity": {
+            "value": 72,
+            "unit": "beats/minute",
+            "system": "http://unitsofmeasure.org",
+            "code": "/min"
+          }
+        }
+      }
+    ]
+  },
+  "steps": [
+    {
+      "session": "agent",
+      "method": "DELETE",
+      "path": "Observation/${id:obs}",
+      "note": "delete"
+    }
+  ],
+  "agent_reports": {
+    "summary": "Removed the reading entered on the wrong patient; it is gone.",
+    "effect": {
+      "changes": {
+        "Observation": {
+          "delete": 1
+        }
+      }
+    }
+  }
+}

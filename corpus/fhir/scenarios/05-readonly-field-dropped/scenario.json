@@ -1,0 +1,108 @@
+{
+  "title": "An AccessPolicy's read-only field is dropped from a 201",
+  "story": "The agent's client has an AccessPolicy that marks Observation.note read-only. The agent creates an Observation with a note; the server answers 201 and stores the Observation without the note. The agent reports the reading and its note as charted.",
+  "servers": [
+    "medplum"
+  ],
+  "behaviour": "Medplum AccessPolicy read-only elements: the client can't set the element. On Medplum 5.2.6 a create that sets one is answered 201 and stored without it (the behaviour examples/medplum shows).",
+  "sources": [
+    {
+      "says": "An access policy can grant read-only access to individual elements (readonlyFields).",
+      "url": "https://www.medplum.com/docs/access/access-policies#read-only-elements"
+    }
+  ],
+  "setup": {
+    "readonly_fields": {
+      "Observation": [
+        "note"
+      ]
+    },
+    "seed": [
+      {
+        "label": "patient",
+        "method": "POST",
+        "path": "Patient",
+        "body": {
+          "resourceType": "Patient",
+          "identifier": [
+            {
+              "system": "urn:example:fhir-bench:mrn",
+              "value": "${nonce}-p1"
+            }
+          ],
+          "name": [
+            {
+              "family": "Synthetic",
+              "given": [
+                "Asha"
+              ]
+            }
+          ],
+          "birthDate": "1980-01-01"
+        }
+      }
+    ]
+  },
+  "steps": [
+    {
+      "session": "agent",
+      "method": "POST",
+      "path": "Observation",
+      "body": {
+        "resourceType": "Observation",
+        "status": "preliminary",
+        "identifier": [
+          {
+            "system": "urn:example:fhir-bench:obs",
+            "value": "${nonce}-hr-5"
+          }
+        ],
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                "code": "vital-signs"
+              }
+            ]
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "8867-4",
+              "display": "Heart rate"
+            }
+          ]
+        },
+        "subject": {
+          "reference": "Patient/${id:patient}"
+        },
+        "effectiveDateTime": "2026-10-21T09:30:00Z",
+        "valueQuantity": {
+          "value": 72,
+          "unit": "beats/minute",
+          "system": "http://unitsofmeasure.org",
+          "code": "/min"
+        },
+        "note": [
+          {
+            "text": "Synthetic note: measured after a short walk."
+          }
+        ]
+      },
+      "note": "create with a note; note is read-only for this client"
+    }
+  ],
+  "agent_reports": {
+    "summary": "Charted the heart rate with the note about the short walk.",
+    "effect": {
+      "changes": {
+        "Observation": {
+          "create": 1
+        }
+      }
+    }
+  }
+}
