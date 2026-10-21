@@ -4,14 +4,18 @@
 #   curl -fsSL https://raw.githubusercontent.com/deedglass/deedglass/main/scripts/install.sh | sh
 #   curl -fsSL https://raw.githubusercontent.com/deedglass/deedglass/main/scripts/install.sh | sh -s -- --version 0.1.0 --dir /usr/local/bin
 #
-# It downloads two files from the release, the archive for this machine and checksums.txt, checks the
-# archive's sha256 against checksums.txt, and copies the one binary into the install directory
-# (default ~/.local/bin). It needs curl or wget, tar, and sha256sum or shasum. It runs nothing it
+# It downloads the archive for this machine and checksums.txt from the release, checks the archive's
+# sha256 against checksums.txt, and copies the one binary into the install directory (default
+# ~/.local/bin). When cosign is installed it also checks checksums.txt's keyless signature
+# (checksums.txt.sigstore.json): signed by this repository's release workflow for a v* tag, so a
+# swapped release fails even if its checksums match its archives. Without cosign it prints the
+# command to run. It needs curl or wget, tar, and sha256sum or shasum. It runs nothing it
 # downloads, asks for no password and changes no other file; it never edits your shell profile.
 #
 # Options: --version X.Y.Z (default: the latest release), --dir DIR. The same as environment variables:
 # DEEDGLASS_VERSION, DEEDGLASS_INSTALL_DIR. DEEDGLASS_RELEASES_URL replaces
-# https://github.com/deedglass/deedglass/releases (for tests and mirrors).
+# https://github.com/deedglass/deedglass/releases (for tests and mirrors). DEEDGLASS_COSIGN names the
+# cosign binary (default cosign on PATH; none skips the signature check).
 set -eu
 
 releases="${DEEDGLASS_RELEASES_URL:-https://github.com/deedglass/deedglass/releases}"
@@ -92,6 +96,23 @@ want="$(awk -v f="$archive" '$2 == f || $2 == "*" f { print $1; exit }' "$tmp/ch
 got="$(sha256 "$tmp/$archive")"
 [ "$got" = "$want" ] || die "$archive doesn't match checksums.txt (sha256 $got, expected $want)" "Nothing was installed. Try again; if it keeps failing, report it: https://github.com/deedglass/deedglass/issues"
 say "✓ sha256 matches checksums.txt"
+
+# checksums.txt and the archive come from the same place, so the sha256 check catches corruption,
+# not a swapped release. The keyless signature names who made checksums.txt.
+identity='^https://github.com/deedglass/deedglass/\.github/workflows/release\.yml@refs/tags/v'
+issuer='https://token.actions.githubusercontent.com'
+cosign="${DEEDGLASS_COSIGN:-cosign}"
+if [ "$cosign" != none ] && command -v "$cosign" >/dev/null 2>&1; then
+  fetch "$base/checksums.txt.sigstore.json" "$tmp/checksums.txt.sigstore.json" 2>/dev/null \
+    || die "release v$version has no checksums.txt.sigstore.json, so its checksums can't be checked against a signature" "Nothing was installed. Every release since v0.1.0 has one; report it: https://github.com/deedglass/deedglass/security/advisories/new"
+  "$cosign" verify-blob "$tmp/checksums.txt" --bundle "$tmp/checksums.txt.sigstore.json" \
+    --certificate-identity-regexp "$identity" --certificate-oidc-issuer "$issuer" >"$tmp/cosign.log" 2>&1 \
+    || die "checksums.txt's signature doesn't check out: it wasn't signed by deedglass/deedglass's release workflow for a v* tag" "Nothing was installed. Don't use this release; report it: https://github.com/deedglass/deedglass/security/advisories/new"
+  say "✓ cosign: checksums.txt was signed by deedglass/deedglass's release workflow"
+else
+  say "  cosign isn't installed, so checksums.txt's signature wasn't checked. To check it yourself:"
+  say "  cosign verify-blob checksums.txt --bundle checksums.txt.sigstore.json --certificate-identity-regexp '$identity' --certificate-oidc-issuer $issuer"
+fi
 
 tar -xzf "$tmp/$archive" -C "$tmp" deedglass || die "couldn't unpack deedglass from $archive" "Nothing was installed."
 mkdir -p "$dir" || die "couldn't create $dir" "Pass --dir with a directory you can write to."

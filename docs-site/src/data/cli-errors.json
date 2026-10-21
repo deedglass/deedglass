@@ -220,6 +220,16 @@
     ]
   },
   {
+    "code": "feed_too_large",
+    "exit": [
+      2
+    ],
+    "messages": null,
+    "next": [
+      "Pass a smaller feed: dump only the time window around the action."
+    ]
+  },
+  {
     "code": "feed_unreadable",
     "exit": [
       2

@@ -46,7 +46,9 @@ What it does
   Listens on a loopback address and forwards A2A JSON-RPC requests to one remote agent. A request
   that asks the agent to act (SendMessage, SendStreamingMessage, CancelTask, push config writes)
   goes to the Gate first and is forwarded only if it is allowed; the peer's answer is recorded as
-  the peer reported it. Reads pass through. Point your agent's A2A client at this address.
+  the peer reported it. Reads pass through. Point your agent's A2A client at this address and have it
+  send the agent's key as Authorization: Bearer <key>. Browser requests (an Origin or Sec-Fetch-Site
+  header, a Host that isn't loopback, a body that isn't application/json) are refused.
 
 Connection
   --connector <name>        the name calls are matched as in policies: <connector>.SendMessage
@@ -55,7 +57,8 @@ Connection
   --listen <addr>           a loopback address (default 127.0.0.1:7420)
   --peer-header-env H=VAR   send header H with the value of VAR to the peer, e.g. Authorization=PEER_AUTH
   --server <url>            the Deedglass server (default DEEDGLASS_SERVER, then http://127.0.0.1:8080)
-  --api-key <key>           an agent's key (default DEEDGLASS_API_KEY); never sent to the peer
+  --api-key <key>           an agent's key (prefer DEEDGLASS_API_KEY: a flag shows in ps); never sent to the peer
+                            Callers send the same key as Authorization: Bearer <key>.
   --on-behalf-of <ref>      the person, when a request's delegation chain names none
 Limits
   --approval-wait <d>       how long a call waits for a person's decision (default 10s)
@@ -181,6 +184,9 @@ func runA2AProxy(ctx context.Context, e *Env, args []string) error {
 	if key == "" {
 		return usageErr(errors.New("deedglass a2a proxy needs an agent's key"), "Set DEEDGLASS_API_KEY, or pass --api-key.")
 	}
+	if e.Globals.APIKey != "" {
+		fmt.Fprintln(e.Stderr, "! --api-key shows the agent's key to every user who can list processes; set DEEDGLASS_API_KEY instead")
+	}
 	gc := gateclient.New(gateclient.Options{Server: su.String(), APIKey: key, UserAgent: "deedglass-a2a/" + buildInfo().Version})
 	ln, err := net.Listen("tcp", o.listen)
 	if err != nil {
@@ -192,7 +198,7 @@ func runA2AProxy(ctx context.Context, e *Env, args []string) error {
 	hc.CheckRedirect = func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }
 	p, err := a2a.New(a2a.Config{Connector: o.connector, Peer: peer, CardURL: card, PublicURL: public, PeerHeaders: hdr,
 		OnBehalfOf: o.onBehalfOf, ResultMode: o.resultMode, CallTimeout: o.callTimeout, ApprovalWait: o.approvalWait,
-		HTTP: hc, Version: buildInfo().Version}, gc, log)
+		HTTP: hc, Version: buildInfo().Version, InboundKey: key}, gc, log)
 	if err != nil {
 		_ = ln.Close()
 		return usageErr(err, next)
@@ -200,7 +206,7 @@ func runA2AProxy(ctx context.Context, e *Env, args []string) error {
 	if err := p.LoadCard(ctx); err != nil {
 		fmt.Fprintf(e.Stderr, "! the peer's Agent Card can't be read (%v); the chain names it by URL\n", err)
 	}
-	fmt.Fprintf(e.Stderr, "✓ A2A proxy for %s on %s → %s\n  Send A2A-Version: %s. Calls that ask the peer to act go to %s first.\n",
+	fmt.Fprintf(e.Stderr, "✓ A2A proxy for %s on %s → %s\n  Send A2A-Version: %s and Authorization: Bearer <the agent's key>. Calls that ask the peer to act go to %s first.\n",
 		o.connector, public, peer.Redacted(), a2a.SpecVersion, su.Redacted())
 	srv := &http.Server{Handler: p, ReadHeaderTimeout: 10 * time.Second}
 	ctx, stop := signal.NotifyContext(ctx, syscall.SIGTERM, syscall.SIGINT)

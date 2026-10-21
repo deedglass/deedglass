@@ -51,6 +51,11 @@ const (
 	// dual seal (TY-01, TY-02; ADR-109, PROPOSED; the orchestrator accepts under DL-107). Declared
 	// before any deed v2 code existed.
 	expectedDigestY = "206311510fa9be60f424a0f4c1e38f0322442a9c7303c1541b7efd107122f7e1"
+	// expectedDigestT pins group T, this week's new surfaces: the A2A proxy, the Debezium witness,
+	// the shell guard, head timestamps, the independent verifiers and connect (security hardening
+	// after the 2026-10-21 audit, M-02 and M-03; ADR-115, PROPOSED; the orchestrator accepts under
+	// DL-107). Declared before the A2A proxy's browser checks and the Debezium input cap existed.
+	expectedDigestT = "d53ab26aea6fa7cf2897e1d081d7cd2217c2b1cad34ad5eb653eebe3bcaa12cf"
 )
 
 // groupSets maps each pinned digest to its groups. A later session adds its own row (S19 N,
@@ -67,6 +72,7 @@ var groupSets = []struct {
 	{"O", expectedDigestO},
 	{"I", expectedDigestI},
 	{"Y", expectedDigestY},
+	{"T", expectedDigestT},
 }
 
 type meta struct {
@@ -137,7 +143,7 @@ func wantIDs() []string {
 	for _, g := range []struct {
 		p string
 		n int
-	}{{"A", 13}, {"B", 7}, {"C", 10}, {"D", 17}, {"E", 11}, {"F", 4}, {"G", 4}, {"H", 11}, {"I", 12}, {"J", 4}, {"K", 4}, {"L", 8}, {"O", 2}, {"U", 5}, {"W", 13}, {"Y", 12}} {
+	}{{"A", 13}, {"B", 7}, {"C", 10}, {"D", 17}, {"E", 11}, {"F", 4}, {"G", 4}, {"H", 11}, {"I", 12}, {"J", 4}, {"K", 4}, {"L", 8}, {"O", 2}, {"U", 5}, {"T", 13}, {"W", 13}, {"Y", 12}} {
 		for i := 1; i <= g.n; i++ {
 			ids = append(ids, fmt.Sprintf("%s%02d", g.p, i))
 		}

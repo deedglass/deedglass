@@ -1,0 +1,71 @@
+# SAST (audit 2026-10-21 M-01, hardening plan A4): GitHub CodeQL over the Go module, the
+# JavaScript and TypeScript (web/, docs-site/, sdk/typescript, verifiers/js, the site Functions),
+# the Python (sdk/python, verifiers/python) and the workflows themselves. Findings go to the
+# repository's Security tab (code scanning); nothing here can push, tag or publish.
+#
+# Not a required check yet: it lives outside ci.yml, whose jobs .github/required-checks.txt names
+# exactly (scripts/check-workflows.sh). Once its first runs are triaged and quiet, move the job into
+# ci.yml, add "codeql" to the list, and add it to the main ruleset.
+name: codeql
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "17 3 * * 1" # Mondays 03:17 UTC: new queries find old code too
+
+permissions: {}
+
+concurrency:
+  group: codeql-${{ github.ref }}-${{ github.event_name }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    name: codeql (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      security-events: write # upload the SARIF results; nothing else is writable
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - language: go
+            build-mode: manual
+          - language: javascript-typescript
+            build-mode: none
+          - language: python
+            build-mode: none
+          - language: actions
+            build-mode: none
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        if: matrix.language == 'go'
+        with:
+          go-version-file: go.mod
+      - uses: github/codeql-action/init@24c54180a607b1449ed407dd24f251e4e9147c8d # v4.38.3
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.build-mode }}
+          queries: security-extended
+          config: |
+            paths-ignore:
+              - "**/testdata/**"
+              - "**/node_modules/**"
+              - corpus/**
+              - bench/results/**
+              - internal/console/dist/**
+      - name: build the Go module (no cgo, as released)
+        if: matrix.language == 'go'
+        env:
+          CGO_ENABLED: "0"
+        run: go build ./...
+      - uses: github/codeql-action/analyze@24c54180a607b1449ed407dd24f251e4e9147c8d # v4.38.3
+        with:
+          category: /language:${{ matrix.language }}

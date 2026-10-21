@@ -41,6 +41,7 @@ func TestInstallScript(t *testing.T) {
 	checksums := hex.EncodeToString(sum[:]) + "  " + archiveName + "\n" + strings.Repeat("0", 64) + "  deedglass_" + version + "_windows_amd64.zip\n"
 
 	var tampered atomic.Bool // set by the test, read by the handler's goroutine
+	var signed atomic.Bool   // serve checksums.txt.sigstore.json
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/releases/latest":
@@ -49,6 +50,12 @@ func TestInstallScript(t *testing.T) {
 			fmt.Fprintln(w, "release page")
 		case "/releases/download/v" + version + "/checksums.txt":
 			fmt.Fprint(w, checksums)
+		case "/releases/download/v" + version + "/checksums.txt.sigstore.json":
+			if !signed.Load() {
+				http.NotFound(w, r)
+				return
+			}
+			fmt.Fprint(w, `{"mediaType":"application/vnd.dev.sigstore.bundle.v0.3+json"}`)
 		case "/releases/download/v" + version + "/" + archiveName:
 			b := archive
 			if tampered.Load() {
@@ -61,11 +68,13 @@ func TestInstallScript(t *testing.T) {
 	}))
 	defer srv.Close()
 
+	cosign := "none" // DEEDGLASS_COSIGN for the next run
 	run := func(args ...string) (string, string, error) {
 		home := t.TempDir()
 		dir := filepath.Join(home, "bin")
 		cmd := exec.Command(shell(), append([]string{"../scripts/install.sh"}, args...)...)
-		cmd.Env = append(os.Environ(), "HOME="+home, "DEEDGLASS_RELEASES_URL="+srv.URL+"/releases", "DEEDGLASS_INSTALL_DIR="+dir, "DEEDGLASS_VERSION=")
+		cmd.Env = append(os.Environ(), "HOME="+home, "DEEDGLASS_RELEASES_URL="+srv.URL+"/releases", "DEEDGLASS_INSTALL_DIR="+dir, "DEEDGLASS_VERSION=",
+			"DEEDGLASS_COSIGN="+cosign)
 		var out, errb bytes.Buffer
 		cmd.Stdout, cmd.Stderr = &out, &errb
 		err := cmd.Run()
@@ -83,7 +92,8 @@ func TestInstallScript(t *testing.T) {
 	if fi, _ := os.Stat(filepath.Join(dir, "deedglass")); fi.Mode().Perm()&0o111 == 0 {
 		t.Errorf("installed binary isn't executable: %v", fi.Mode())
 	}
-	for _, want := range []string{"Installing deedglass " + version + " for " + runtime.GOOS + "/" + runtime.GOARCH, "✓ sha256 matches checksums.txt", "isn't on your PATH"} {
+	for _, want := range []string{"Installing deedglass " + version + " for " + runtime.GOOS + "/" + runtime.GOARCH, "✓ sha256 matches checksums.txt",
+		"cosign isn't installed", "cosign verify-blob checksums.txt --bundle checksums.txt.sigstore.json", "isn't on your PATH"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("output lacks %q:\n%s", want, out)
 		}
@@ -105,6 +115,36 @@ func TestInstallScript(t *testing.T) {
 		t.Error("a tampered archive was installed")
 	}
 	tampered.Store(false)
+
+	// The signature (audit M-05): a stand-in cosign records its arguments and answers as told.
+	fake := filepath.Join(t.TempDir(), "cosign")
+	argsLog := fake + ".args"
+	writeFake := func(exit int) {
+		script := fmt.Sprintf("#!/bin/sh\nprintf '%%s\\n' \"$@\" > %q\nexit %d\n", argsLog, exit)
+		if err := os.WriteFile(fake, []byte(script), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	cosign = fake
+	writeFake(0)
+	if dir, out, err := run(); err == nil || !strings.Contains(out, "has no checksums.txt.sigstore.json") || fileIs(filepath.Join(dir, "deedglass"), binary) {
+		t.Errorf("cosign installed and no signature in the release must fail with nothing installed: %v\n%s", err, out)
+	}
+	signed.Store(true)
+	if dir, out, err := run(); err != nil || !strings.Contains(out, "✓ cosign: checksums.txt was signed") || !fileIs(filepath.Join(dir, "deedglass"), binary) {
+		t.Errorf("a signature cosign accepts: %v\n%s", err, out)
+	}
+	if b, _ := os.ReadFile(argsLog); !strings.Contains(string(b), "verify-blob") ||
+		!strings.Contains(string(b), `^https://github.com/deedglass/deedglass/\.github/workflows/release\.yml@refs/tags/v`) ||
+		!strings.Contains(string(b), "https://token.actions.githubusercontent.com") {
+		t.Errorf("cosign was called with %q", b)
+	}
+	writeFake(1)
+	if dir, out, err := run(); err == nil || !strings.Contains(out, "signature doesn't check out") || fileIs(filepath.Join(dir, "deedglass"), binary) {
+		t.Errorf("a signature cosign refuses must fail with nothing installed: %v\n%s", err, out)
+	}
+	signed.Store(false)
+	cosign = "none"
 
 	if _, out, err := run("--version", "1.2.3"); err == nil || !strings.Contains(out, "couldn't download") {
 		t.Errorf("a missing release must fail and say what it couldn't download: %v\n%s", err, out)

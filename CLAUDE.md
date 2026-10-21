@@ -337,7 +337,9 @@ and "open source" until the repo is public. Style bans: "revolutionary", "world-
   (off: no output, exit 0; can't check: ask fails open, deny exits 1; on: the real CLI's answer).
 - `internal/a2a` (TY-07, ADR-113): `TestGoldens` (every acting, reading and refused row against the fake peer
   `internal/a2a/a2atest` and a fake Gate: an acting call never reaches the peer without `authorized`, the caller's
-  credential never does), `TestApprovalRunsOnce`, `TestTwoAgentDelegation`, `TestClassify`, `TestCheckChain`, `TestCard`;
+  credential never does), `TestApprovalRunsOnce`, `TestTwoAgentDelegation`, `TestClassify`, `TestCheckChain`, `TestCard`,
+  `TestBrowserShapedRefused`, `TestCardBrowserRefused`, `TestLoopbackHost` (audit M-03: no browser request, no non-loopback
+  Host and no request without the agent's key reaches the Gate or the peer; attack group T, `attack/surfaces_test.go`);
   `cmd/deedglass` `TestA2ALive` (integration). `internal/archtest` keeps the core off `internal/a2a`.
 - `internal/witness/feed`, `internal/witness/feed/debezium` (TY-05, ADR-114, pure): `TestRecordedScene` (the
   MySQL scene from its recording: bound MISMATCH, any-writer MISMATCH with the note, VERIFIED, `ledger_mismatch`),
