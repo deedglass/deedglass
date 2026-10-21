@@ -150,7 +150,11 @@ func runMCPWrap(ctx context.Context, e *Env, args []string) error {
 	if o.connector == "" {
 		return usageErr(errors.New("deedglass mcp wrap needs --connector"), "For example: "+mcpWrapExample)
 	}
-	server := firstNonEmpty(e.Globals.Server, e.Getenv("DEEDGLASS_SERVER"), e.Getenv("DEEDGLASS_BASE_URL"), defaultServer)
+	wt := resolveServer(e)
+	if err := wt.conflictErr(); err != nil {
+		return err
+	}
+	server := wt.Server
 	u, err := url.Parse(strings.TrimSuffix(server, "/"))
 	if err != nil {
 		return usageErr(fmt.Errorf("the server %q isn't a URL", server), "Use --server http://127.0.0.1:8080 or set DEEDGLASS_SERVER.")
@@ -164,7 +168,7 @@ func runMCPWrap(ctx context.Context, e *Env, args []string) error {
 	if o.noLogFile {
 		logFile = ""
 	}
-	cfg := wrap.Config{Connector: o.connector, Server: u, APIKey: firstNonEmpty(e.Globals.APIKey, e.Getenv("DEEDGLASS_API_KEY")),
+	cfg := wrap.Config{Connector: o.connector, Server: u, APIKey: wt.keyFor(e, setup.AgentKeyFile),
 		HideDenied: o.hideDenied, FailOpen: o.failOpen, CallTimeout: o.callTimeout, ResultMode: o.resultMode,
 		ConnectorType: o.connectorType, OnBehalfOf: o.onBehalfOf, LogFile: logFile, Upstream: up, Env: os.Environ(),
 		Version: buildInfo().Version, DevEnv: e.Getenv("DEEDGLASS_ENV") == "dev", InsecureHTTP: o.insecureHTTP}
@@ -272,7 +276,7 @@ func runMCPSnippet(ctx context.Context, e *Env, args []string) error {
 	if o.connectorType != "" {
 		flags = append(flags, "--connector-type", o.connectorType)
 	}
-	server := firstNonEmpty(e.Globals.Server, e.Getenv("DEEDGLASS_SERVER"), e.Getenv("DEEDGLASS_BASE_URL"), defaultServer)
+	server := resolveServer(e).Server
 	opts := snippet.Options{Client: o.client, Connector: o.connector, Deedglass: self, Upstream: upstream, WrapFlags: flags,
 		Server: server, ExtraPATH: extra}
 	if o.fromEnv {
@@ -323,7 +327,14 @@ func runMCPServe(ctx context.Context, e *Env, args []string) error {
 		return usageErr(fmt.Errorf("deedglass mcp serve takes no arguments (got %q)", args[0]), "Run deedglass help mcp serve.")
 	}
 	initKey, initServer := initFiles()
-	server := firstNonEmpty(e.Globals.Server, e.Getenv("DEEDGLASS_SERVER"), e.Getenv("DEEDGLASS_BASE_URL"), initServer, defaultServer)
+	explicit := firstNonEmpty(e.Globals.Server, e.Getenv("DEEDGLASS_SERVER"), e.Getenv("DEEDGLASS_BASE_URL"))
+	if initServer == "" {
+		initServer = defaultServer
+	}
+	if explicit != "" && !sameServer(explicit, initServer) {
+		initKey = "" // the key init wrote only goes to the server its stack names
+	}
+	server := firstNonEmpty(explicit, initServer)
 	u, err := url.Parse(strings.TrimSuffix(server, "/"))
 	if err != nil || u.Host == "" || (u.Scheme != "http" && u.Scheme != "https") {
 		return usageErr(fmt.Errorf("the server %q isn't a URL", server), "Use --server http://127.0.0.1:8080 or set DEEDGLASS_SERVER.")
@@ -333,6 +344,9 @@ func runMCPServe(ctx context.Context, e *Env, args []string) error {
 		return usageErr(fmt.Errorf("--connector %q isn't a connector name", c), "Use native, or an upstream's name such as everything.")
 	}
 	key := firstNonEmpty(e.Globals.APIKey, e.Getenv("DEEDGLASS_API_KEY"), initKey)
+	if resolveServer(e).Conflict != "" {
+		key = "" // the environment names another server than this directory's stack
+	}
 	cfg := bridge.Config{Server: u, Connector: c, APIKey: key, Version: buildInfo().Version}
 	if key == "" {
 		fmt.Fprintln(e.Stderr, "✕ No Deedglass key found. Run npx deedglass init in a terminal, then restart your MCP client. Every call is refused until then.")
@@ -410,7 +424,7 @@ func runMCPSnippetHTTP(e *Env, args []string) error {
 	if err != nil {
 		return &ExitError{Code: ExitFailure, Err: fmt.Errorf("can't find this deedglass binary: %w", err), Next: "Run it by its full path."}
 	}
-	server := firstNonEmpty(e.Globals.Server, e.Getenv("DEEDGLASS_SERVER"), e.Getenv("DEEDGLASS_BASE_URL"), defaultServer)
+	server := resolveServer(e).Server
 	opts := snippet.HTTPOptions{Client: o.client, Connector: c, Server: server, Deedglass: self}
 	if o.fromEnv {
 		opts.APIKey = e.Getenv("DEEDGLASS_API_KEY")

@@ -1004,6 +1004,11 @@
     "messages": null
   },
   {
+    "code": "server_mismatch",
+    "exit": null,
+    "messages": null
+  },
+  {
     "code": "server_too_old",
     "exit": [
       1

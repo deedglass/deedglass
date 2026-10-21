@@ -15,6 +15,7 @@ import (
 	"github.com/deedglass/deedglass/cmd/deedglass/internal/ui"
 	"github.com/deedglass/deedglass/internal/gate"
 	"github.com/deedglass/deedglass/internal/ledger"
+	"github.com/deedglass/deedglass/internal/setup"
 	"github.com/deedglass/deedglass/internal/witness/l2"
 	"github.com/deedglass/deedglass/pkg/deedglass"
 )
@@ -43,8 +44,12 @@ func actFlags(fs *flag.FlagSet) {
 
 // agentClient is apiClient for commands that act as an agent.
 func agentClient(e *Env) (*deedglass.Client, error) {
-	server := firstNonEmpty(e.Globals.Server, e.Getenv("DEEDGLASS_SERVER"), e.Getenv("DEEDGLASS_BASE_URL"), defaultServer)
-	key := firstNonEmpty(e.Globals.APIKey, e.Getenv("DEEDGLASS_API_KEY"))
+	t := resolveServer(e)
+	if err := t.conflictErr(); err != nil {
+		return nil, err
+	}
+	server := t.Server
+	key := t.keyFor(e, setup.AgentKeyFile)
 	if key == "" {
 		return nil, &ExitError{Code: ExitNotAuthed, ErrCode: "authentication_required",
 			Err:  errors.New("deedglass act needs an agent's API key"),

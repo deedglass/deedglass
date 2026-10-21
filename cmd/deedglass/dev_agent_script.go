@@ -85,7 +85,11 @@ func runDevAgentScript(ctx context.Context, e *Env, args []string) error {
 	if err != nil {
 		return err
 	}
-	server := firstNonEmpty(e.Globals.Server, e.Getenv("DEEDGLASS_SERVER"), e.Getenv("DEEDGLASS_BASE_URL"), defaultServer)
+	st := resolveServer(e)
+	if err := st.conflictErr(); err != nil {
+		return err
+	}
+	server := st.Server
 	be := &scriptBackend{e: e, server: server, keys: keys, agent: s.Agent, root: root, self: self}
 	opts := agentscript.Options{Live: o.live, Step: o.step, Only: o.only, Root: root, Out: e.Stdout, In: e.stdin(), Style: e.Style}
 	if e.Globals.JSON {
