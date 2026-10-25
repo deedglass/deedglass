@@ -7,6 +7,7 @@ Usage  deedglass <command> [flags]
 Setup
   init                Set up Deedglass in this directory
   doctor              Check config, database and keys
+  connect             Put your own Postgres behind Deedglass
   scan                Show what your agent setup can change
   play                Watch the 301 scene offline, no Docker
   serve               Run the API, the rules and the Console
@@ -30,7 +31,7 @@ Actions
   act                 Send a test action through Deedglass
   actions             Inspect actions                                         list · show · cancel
   approve · deny      Decide a pending approval
-  approvals           List pending approvals                                  list · show
+  approvals           List pending approvals                                  list · show · open
   undo                Preview or run an undo                                  preview · run
   observe             Watch what changed while an agent ran                   run · start · stop · list · show · undo · exclude
   webhooks            Send events to your endpoints                           create · list · test · delete

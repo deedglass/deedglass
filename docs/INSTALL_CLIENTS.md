@@ -11,9 +11,11 @@ the README buttons, the registry `server.json`, the Claude Code plugin and the l
 from the same package, and a test decodes every link back to this object.
 
 **No link holds a key.** Run `npx deedglass init` first. `mcp serve` uses, in order: `--api-key`,
-`DEEDGLASS_API_KEY`, then `.deedglass/quickstart.key` in the working directory or its nearest
-parent. The server is `--server`, `DEEDGLASS_SERVER`, `DEEDGLASS_BASE_URL`, then the local stack
-`init` started, then `http://127.0.0.1:8080`. Without a key it sends nothing: it lists the tools a
+`DEEDGLASS_API_KEY`, the file `DEEDGLASS_API_KEY_FILE` names, then `.deedglass/quickstart.key` in
+the working directory or its nearest parent, then the key `~/.deedglass/current.json` points at (the
+last `init` on this machine), so a client added once at user scope works in every project. The server
+is `--server`, `DEEDGLASS_SERVER`, `DEEDGLASS_BASE_URL`, then the stack that key came from, then
+`http://127.0.0.1:8080`. A key read from a file only goes to the server its own stack names. Without a key it sends nothing: it lists the tools a
 quickstart serves, so the client shows it as connected, and answers every call with `No Deedglass
 key found, so no tool can run yet. Run npx deedglass init in a terminal, then restart your MCP
 client.` Its log says `No Deedglass key found. Run npx deedglass init in a terminal, then restart
@@ -25,7 +27,7 @@ your MCP client.`
 | VS Code | `vscode:mcp/install?<urlencoded JSON with name>`; `https://vscode.dev/redirect/mcp/install?name=…&config=…`; `code --add-mcp '<json>'` | code.visualstudio.com/api/extension-guides/ai/mcp |
 | LM Studio | `lmstudio://add_mcp?name=deedglass&config=<base64 JSON>` | lmstudio.ai/docs/app/mcp/deeplink |
 | Goose | `goose://extension?cmd=npx&arg=-y&arg=deedglass&arg=mcp&arg=serve&id=deedglass&name=Deedglass&description=…` | goose-docs.ai/docs/getting-started/using-extensions |
-| Claude Code | `claude mcp add deedglass -- npx -y deedglass mcp serve` (`--scope project` writes `.mcp.json`) | code.claude.com/docs/en/mcp |
+| Claude Code | `claude mcp add --scope user deedglass -- npx -y deedglass mcp serve` (every project; `--scope project` writes `.mcp.json` instead) | code.claude.com/docs/en/mcp |
 | Claude Code plugin | `/plugin marketplace add deedglass/deedglass`, then `/plugin install deedglass@deedglass` (after 10-15) | `integrations/claude-code/`, root `.claude-plugin/marketplace.json` |
 | Claude Desktop | the `.mcpb` bundle on each release (not built yet; see the S47 report) | github.com/modelcontextprotocol/mcpb |
 | Windsurf | the `mcpServers` block in `~/.codeium/windsurf/mcp_config.json` | `deedglass mcp snippet --client windsurf` |

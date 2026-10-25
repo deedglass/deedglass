@@ -17,6 +17,15 @@
     ]
   },
   {
+    "code": "approval_not_pending",
+    "exit": [
+      1
+    ],
+    "messages": [
+      "That approval isn't waiting any more."
+    ]
+  },
+  {
     "code": "below_fail_under",
     "exit": [
       1
@@ -37,8 +46,8 @@
     ],
     "messages": [
       "Cancelled.",
-      "Nothing was changed.",
-      "Nothing applied: the name didn't match."
+      "Nothing applied: the name didn't match.",
+      "Nothing was changed."
     ]
   },
   {
@@ -71,6 +80,16 @@
       2
     ],
     "messages": null
+  },
+  {
+    "code": "connect_failed",
+    "exit": [
+      1
+    ],
+    "messages": null,
+    "next": [
+      "Fix it, then run the same deedglass connect --apply again: every step that already ran is kept and skipped."
+    ]
   },
   {
     "code": "connector_test_failed",
@@ -682,6 +701,13 @@
     ]
   },
   {
+    "code": "not_eligible",
+    "exit": [
+      1
+    ],
+    "messages": null
+  },
+  {
     "code": "not_set_up",
     "exit": [
       1
@@ -690,7 +716,8 @@
       "there's no local stack in this directory."
     ],
     "next": [
-      "Run deedglass init first."
+      "Run deedglass init first.",
+      "Run it in the directory where you ran deedglass init."
     ]
   },
   {
@@ -892,6 +919,16 @@
     ],
     "next": [
       "Wait for it to finish, then run this again."
+    ]
+  },
+  {
+    "code": "purge_failed",
+    "exit": [
+      1
+    ],
+    "messages": null,
+    "next": [
+      "Check that Docker is running, then run deedglass init --purge again. The files in .deedglass/ were kept."
     ]
   },
   {

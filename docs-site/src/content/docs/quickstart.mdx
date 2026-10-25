@@ -1,7 +1,7 @@
 ---
 title: Quickstart
 description: Five minutes from an empty directory to a blocked DROP TABLE, a checked UPDATE, and the same UPDATE where the agent says 1 row and Postgres changed 301.
-lastVerified: "2026-10-14"
+lastVerified: "2026-10-21"
 claims: [C-089]
 testEnv: init
 ---
@@ -40,23 +40,23 @@ deedglass init · setting up Deedglass in …
 ✓ Postgres …
 ✓ Deedglass               http://127.0.0.1:…
 ✓ Agent                   quickstart-agent · key saved to .deedglass/quickstart.key …
-✓ Policies                postgres-safe v1 · enforce …
+✓ Policies                postgres-check v1 · enforce …
 ✓ Smoke · postgres.query  Claimed · Matches · deed_…
 ✕ Smoke · DROP TABLE      Blocked by policy "block-destructive-sql": DROP and TRUNCATE are never allowed for agents.
 ✓ Smoke · UPDATE 1 row    Proven · Matches · Postgres committed the row in public.orders · deed_…
 ✓ Sealed. Your first record is in the ledger.
 ```
 
-`init` starts Postgres 18.6 in Docker, runs `deedglass serve` on `127.0.0.1:8080`, creates an org, an agent with a test key, the Acme demo database behind a Postgres connector, and the `postgres-safe` policy. Then it sends three actions through Deedglass:
+`init` starts Postgres 18.6 in Docker, runs `deedglass serve` on `127.0.0.1:8080`, creates an org, an agent with a test key, the Acme demo database behind a Postgres connector, and the `postgres-check` policy: reads and writes run, every write is checked at Proven, and `DROP` and `TRUNCATE` never run. (In production, use `postgres-safe`, where writes wait for a person: `init --policy postgres-safe`.) Then it sends three actions through Deedglass:
 
 - a read, which runs: <VerdictChip verdict="VERIFIED" level="L0" />
 - a `DROP TABLE`, which the policy blocks before Postgres sees it
-- an `UPDATE` of one row, which waits for a person (in dev, `init` countersigns as you), runs, and is checked at Proven: <VerdictChip verdict="VERIFIED" level="L2" />
+- an `UPDATE` of one row, which runs and is checked at Proven: <VerdictChip verdict="VERIFIED" level="L2" />
 
 With the Postgres image already pulled this takes 6 to 8 seconds on an M-series Mac. Run it again and it prints `Nothing to change.`
 
 <Aside type="tip" title="Port 8080 or 55432 taken?">
-`npx -y deedglass init --listen 127.0.0.1:8090 --pg-port 55440`, then use `http://127.0.0.1:8090` wherever this page says `8080`.
+`npx -y deedglass init --listen 127.0.0.1:8090 --pg-port 55440`, then use `http://127.0.0.1:8090` wherever this page says `8080`. The ports are saved in `.deedglass/stack.json`, and every later command run in that directory finds them.
 </Aside>
 
 ## 3. Check everything
@@ -72,19 +72,18 @@ Each line is one check. A problem prints its fix; every check is explained in [D
 
 ## 4. See the blocked action and the verified one
 
-The admin key `init` saved lets the CLI read the Ledger:
+The CLI reads the Ledger of the stack `init` set up in this directory:
 
 ```sh test title="Terminal"
-$ export DEEDGLASS_API_KEY="$(cat .deedglass/admin.key)"
 $ npx -y deedglass actions list --limit 3
 …postgres.execute…
 ```
 
-The `DROP TABLE` is sealed as denied: its record names the rule and says that nothing ran. The `UPDATE` waited for a person, ran once approved, and was checked at Proven: Postgres's change log shows exactly one row of `public.orders` changed.
+The `DROP TABLE` is sealed as denied: its record names the rule and says that nothing ran. The `UPDATE` ran and was checked at Proven: Postgres's change log shows exactly one row of `public.orders` changed.
 
 ## 5. One reported row, 301 changed
 
-The demo database has a legacy trigger written for it: when one order ships, it ships the next 300 open ones too. `init --trigger` turns it on, sends the same one-row `UPDATE` of order 42 as the quickstart agent (in dev, `init` countersigns as you again), and shows the Proven check:
+The demo database has a legacy trigger written for it: when one order ships, it ships the next 300 orders that aren't shipped yet, cancelled ones included. `init --trigger` turns it on, sends the same one-row `UPDATE` of order 42 as the quickstart agent, and shows the Proven check:
 
 ```sh test title="Terminal"
 $ npx -y deedglass init --trigger
@@ -103,7 +102,7 @@ The agent said 1 row. Postgres's change log says 301. Nothing was undone yet.
 
 The agent's tool answer said 1 row, and that is all an agent log would show. Deedglass read Postgres's change log for the same transaction and found 300 more. The diff lists them (the first 20 here; all of them in the Console).
 
-Then it turns the trigger off and previews the undo: 301 updates, planned from the rows Postgres recorded, each putting a status back. Nothing runs yet. `Next` prints the `deedglass undo run` line with the plan's digest; the undo waits until a person countersigns it in the Console (Approvals), and Postgres's change log checks the undo too.
+Then it turns the trigger off and previews the undo: 301 updates, planned from the rows Postgres recorded, each putting a status back. Nothing runs yet. `Next` prints the `deedglass undo run` line with the plan's digest. Run it: the undo waits for a person, and in dev `undo run` prints the one-time approve link for that approval (`deedglass approvals open <apr_…>` prints a fresh one). Open it, approve, and Postgres's change log checks the undo too.
 
 Run `init --trigger` again any time: it puts the order statuses back to the seed's first.
 
@@ -111,7 +110,7 @@ Run `init --trigger` again any time: it puts the order statuses back to the seed
 
 Pick your client. Each page shows the exact config, generated from the CLI's own snippets.
 
-- [Claude Code](/get-started/claude-code/): one `claude mcp add` line.
+- [Claude Code](/get-started/claude-code/): one `claude mcp add --scope user` line, which works in every project on this machine.
 - [Claude Desktop](/get-started/claude-desktop/), or [Cursor, VS Code and Windsurf](/get-started/cursor-vscode-windsurf/).
 - Your own code: the [Python SDK](/get-started/python-sdk/) or the [TypeScript SDK](/get-started/typescript-sdk/).
 
@@ -132,13 +131,14 @@ Open `http://127.0.0.1:8080/app` and sign in as `you@localhost.test`. In dev, De
 
 - The local stack is for a laptop: `127.0.0.1` only, dev mode, throwaway data. [Run in production on one VM](/guides/production/) is the next step.
 - `init` doesn't edit your MCP client's config file. It prints what to paste.
-- It doesn't use an existing database yet. [Put Deedglass in front of Postgres](/get-started/postgres/) covers your own database.
+- It doesn't use an existing database. `deedglass connect "$DATABASE_URL"` puts your own Postgres behind this stack: [Put Deedglass in front of Postgres](/get-started/postgres/).
 - `init --trigger` changes only the demo database `init` made; the trigger exists for the length of the step.
-- `deedglass init --stop` stops the stack. It keeps `.deedglass/` and the Docker volumes, so a later `init` picks up where you left off.
+- `deedglass init --stop` stops the stack. It keeps `.deedglass/` and the Docker volumes, so a later `init` picks up where you left off. `deedglass init --purge` removes the containers, the volumes and the files in `.deedglass/`.
 
 ## Next
 
 - [Scan in 60 seconds](/get-started/scan/): grade your own agent setup A to F.
 - [Your first policy](/get-started/first-policy/): edit `postgres-safe` for your tables.
+- [Put Deedglass in front of your own Postgres](/get-started/postgres/) with `deedglass connect`.
 - [What Matches means](/concepts/what-matches-means/), and what it doesn't.
 - [Glossary](/concepts/glossary/): the plain names and the API names they map to.

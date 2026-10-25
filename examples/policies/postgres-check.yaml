@@ -1,0 +1,98 @@
+# postgres-check · a Deedglass starter policy
+#
+# For trying Deedglass out on a local or throwaway database: reads and writes run, and every write
+# is checked at Proven against Postgres's change log. DROP and TRUNCATE never run, nor do schema
+# changes, server-side code, several statements at once, UPDATE or DELETE without a WHERE, and SQL
+# that Deedglass cannot read with confidence. An undo still waits for a person.
+#
+# In production, start from postgres-safe instead: there, writes wait for a human.
+#
+# Check a change:
+#   deedglass policy test examples/policies/postgres-check.yaml
+#
+# The tools are the native Postgres connector's (docs/POSTGRES.md): postgres.query,
+# postgres.execute, postgres.call and postgres.describe. The connector also refuses some SQL even
+# when a policy allows it, and runs every statement as the least-privilege role deedglass_agent.
+deedglass: policy/v1
+name: postgres-check
+description: Reads and writes run. Every write is checked at Proven. DROP and TRUNCATE never run.
+
+defaults:
+  decision: deny
+  reason: No rule allows this action. Add a rule in Console › Policies to allow it.
+  verify: L0
+
+budgets:
+  - id: agent-rate
+    window: minute
+    max_calls: 60
+  - id: agent-daily
+    window: day
+    max_calls: 5000
+
+rules:
+  - id: block-unclassified-sql
+    description: Fail closed on SQL the classifier cannot read with confidence.
+    match: { connector_type: postgres }
+    when: sql.present && sql.ambiguous
+    decision: deny
+    reason: Deedglass could not read this SQL with confidence, so it did not run. Send one plain statement.
+  - id: one-statement-only
+    match: { connector_type: postgres }
+    when: sql.multi
+    decision: deny
+    reason: Send one SQL statement per action. This request had several.
+  - id: block-destructive-sql
+    match: { connector_type: postgres }
+    when: sql.kind in ["drop", "truncate"]
+    decision: deny
+    reason: DROP and TRUNCATE are never allowed for agents.
+  - id: block-schema-and-privilege-changes
+    match: { connector_type: postgres }
+    when: sql.category in ["ddl", "privilege"]
+    decision: deny
+    reason: Schema and permission changes never run through agents. Ship them as a reviewed migration.
+  - id: block-server-side-code
+    match: { connector_type: postgres }
+    when: sql.category == "server_code" || size(sql.dangerous_functions) > 0
+    decision: deny
+    reason: Server-side code, COPY PROGRAM, and file, network or session functions are never allowed for agents.
+  - id: block-unbounded-writes
+    match: { connector_type: postgres }
+    when: sql.unbounded_write
+    decision: deny
+    reason: UPDATE and DELETE need a WHERE clause that names the rows to change.
+  - id: allow-reads
+    match: { tool: postgres.query }
+    when: >-
+      sql.category == "read" && !sql.writes && !sql.locks_rows
+      && size(sql.unknown_functions) == 0
+    decision: allow
+  - id: allow-describe
+    match: { tool: postgres.describe }
+    decision: allow
+  - id: writes-checked-at-proven
+    description: Writes run, and Postgres's change log checks what each one really changed.
+    match: { tool: postgres.execute }
+    when: sql.category == "write" && size(sql.unknown_functions) == 0
+    decision: allow
+    verify: L2
+  - id: functions-checked-at-proven
+    description: Database functions run, and the change log checks what each call changed.
+    match: { tool: postgres.call }
+    decision: allow
+    verify: L2
+  - id: undo-needs-approval
+    description: An undo puts rows back on any Postgres connector, so a person countersigns it first.
+    match: { tool: "*.undo", connector_type: postgres }
+    decision: require_approval
+    reason: Undoing a write changes data again, so a human confirms it first.
+    approval: { approvers: [role:admin], required: 1, expires_in: 30m }
+    verify: L2
+  - id: undo-session-needs-approval
+    description: Undoing a watched session puts back every row it changed, so a person countersigns it first.
+    match: { tool: "*.undo_session", connector_type: postgres }
+    decision: require_approval
+    reason: Undoing a whole session changes data again, so a human confirms it first.
+    approval: { approvers: [role:admin], required: 1, expires_in: 30m }
+    verify: L2

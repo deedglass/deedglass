@@ -500,7 +500,7 @@ func runObserveUndo(ctx context.Context, e *Env, args []string) error {
 			return err
 		}
 	} else {
-		printUndoAction(e.Stdout, e.Style, &a, id)
+		printUndoAction(e.Stdout, e.Style, &a, id, undoNextLines(ctx, e, &a))
 	}
 	return undoExit(&a)
 }

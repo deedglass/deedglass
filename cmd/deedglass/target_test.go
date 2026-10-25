@@ -278,6 +278,13 @@ func TestNoKeyToAnotherServer(t *testing.T) {
 	if r.code != ExitNotAuthed {
 		t.Fatalf("--server without a key: %d %s", r.code, r.stderr)
 	}
+	// mcp serve holds the key back the same way.
+	e := &Env{Getenv: func(k string) string {
+		return map[string]string{"HOME": t.TempDir(), "DEEDGLASS_SERVER": other.URL, "DEEDGLASS_API_KEY": envKey}[k]
+	}, LoadOptions: func() config.LoadOptions { return config.LoadOptions{Dir: dir} }}
+	if s, k := mcpServeTarget(e); k != "" || s != other.URL {
+		t.Fatalf("mcp serve: %s %q", s, k)
+	}
 }
 
 func placeholder(arg string) string {
@@ -294,4 +301,77 @@ func placeholder(arg string) string {
 		return "deed_01jb8m2x7k4q9r3t5v6w8y0z1a"
 	}
 	return "support-bot"
+}
+
+// TestMCPServeTarget (adoption-v1 F4): mcp serve uses the .deedglass/ of its folder or a parent,
+// then ~/.deedglass/current.json, so a client added at user scope works in any project; a key from
+// a file only goes to the server its stack names.
+func TestMCPServeTarget(t *testing.T) {
+	home := t.TempDir()
+	dir, _ := initDir(t, "127.0.0.1:18090")
+	env := map[string]string{"HOME": home}
+	in := func(wd string) *Env {
+		return &Env{Getenv: func(k string) string { return env[k] }, LoadOptions: func() config.LoadOptions { return config.LoadOptions{Dir: wd} }}
+	}
+	// Inside the init directory: its stack and its agent key.
+	if s, k := mcpServeTarget(in(filepath.Join(dir))); s != "http://127.0.0.1:18090" || k != "dg_test_agentkeyfromthestackfile" {
+		t.Fatalf("in the init dir: %s %q", s, k)
+	}
+	// Another project, before current.json: no key, the default server.
+	other := t.TempDir()
+	if s, k := mcpServeTarget(in(other)); k != "" || s != defaultServer {
+		t.Fatalf("another project without current.json: %s %q", s, k)
+	}
+	// init wrote current.json: the other project finds the stack.
+	st, _ := setup.ReadStack(dir)
+	if err := setup.WriteCurrent(home, dir, st, time.Now()); err != nil {
+		t.Fatal(err)
+	}
+	if fi, err := os.Stat(setup.CurrentPath(home)); err != nil || fi.Mode().Perm() != 0o600 {
+		t.Fatalf("current.json mode: %v %v", fi, err)
+	}
+	b, _ := os.ReadFile(setup.CurrentPath(home))
+	if bytes.Contains(b, []byte("dg_test_")) {
+		t.Fatal("current.json holds a key")
+	}
+	if s, k := mcpServeTarget(in(other)); s != "http://127.0.0.1:18090" || k != "dg_test_agentkeyfromthestackfile" {
+		t.Fatalf("another project with current.json: %s %q", s, k)
+	}
+	// A server named in the environment never gets the file's key.
+	env["DEEDGLASS_SERVER"] = "https://deedglass.example.com"
+	if s, k := mcpServeTarget(in(other)); s != "https://deedglass.example.com" || k != "" {
+		t.Fatalf("explicit server: %s %q", s, k)
+	}
+	// DEEDGLASS_API_KEY_FILE names a key file (0600 only).
+	kf := filepath.Join(t.TempDir(), "agent.key")
+	_ = os.WriteFile(kf, []byte("dg_test_fromkeyfile\n"), 0o600)
+	env["DEEDGLASS_API_KEY_FILE"] = kf
+	if _, k := mcpServeTarget(in(other)); k != "dg_test_fromkeyfile" {
+		t.Fatalf("DEEDGLASS_API_KEY_FILE: %q", k)
+	}
+	_ = os.Chmod(kf, 0o644)
+	if _, k := mcpServeTarget(in(other)); k != "" {
+		t.Fatalf("a world-readable key file was used: %q", k)
+	}
+	// --purge forgets current.json when it points at the purged directory.
+	if !setup.RemoveCurrent(home, dir) {
+		t.Fatal("RemoveCurrent")
+	}
+}
+
+func TestInvocation(t *testing.T) {
+	npx := map[string]string{"npm_config_user_agent": "npm/11.6.0 node/v24.9.0 darwin arm64 workspaces/false", "npm_command": "exec", "npm_lifecycle_event": "npx"}
+	e := &Env{Getenv: func(k string) string { return npx[k] }}
+	if invocation(e) != "npx deedglass" || cmdLine(e, "deedglass actions list") != "npx deedglass actions list" {
+		t.Fatal(invocation(e))
+	}
+	e = &Env{Getenv: func(string) string { return "" }}
+	if invocation(e) != "deedglass" || cmdLine(e, "deedglass actions list") != "deedglass actions list" {
+		t.Fatal(invocation(e))
+	}
+	// npm run scripts aren't npx.
+	run := map[string]string{"npm_config_user_agent": "npm/11.6.0", "npm_command": "run-script", "npm_lifecycle_event": "test"}
+	if invocation(&Env{Getenv: func(k string) string { return run[k] }}) != "deedglass" {
+		t.Fatal("npm run counted as npx")
+	}
 }
