@@ -64,7 +64,7 @@ error: `--json` prints the `verification_report` on stdout whatever the result.
 - `deedglass init [--yes] [--client …] [--listen …] [--pg-port …] [--no-smoke] [--stop] [--quiet] [--json]` sets
   up a local Deedglass in Docker and runs three smoke actions; run it again and it says `Nothing to
   change.` [INIT_AND_DOCTOR.md](INIT_AND_DOCTOR.md) has every step.
-- `deedglass doctor [--only db.*] [--quiet] [--json]`: sixteen read-only checks, each with a fix. Exit 1 on a
+- `deedglass doctor [--only db.*] [--quiet] [--json]`: seventeen read-only checks, each with a fix. Exit 1 on a
   problem, 3 when the server refused the API key. In a directory `init` set up, `init` and a clean
   `doctor` end with `Quickstart step N of 5 · next: …`, read from `.deedglass/` and the local Ledger
   (`--quiet` leaves it out).
@@ -161,7 +161,7 @@ builds it. Hidden commands work but aren't in `deedglass help`.
 <!-- commands:begin (generated from cmd/deedglass/registry.go; go test ./cmd/deedglass -run TestDocsTree -update) -->
 | Command | Group | What it does | Status |
 |---|---|---|---|
-| `deedglass init [--yes] [--dir .] [--client claude-code|claude-desktop|cursor|vscode|windsurf|sdk-python|sdk-typescript|none] [--listen 127.0.0.1:8080] [--pg-port 55432] [--policy postgres-check|postgres-safe] [--no-open] [--no-smoke] [--stop] [--purge] [--trigger] [--quiet] [--json]` | Setup | Set up Deedglass in this directory | built |
+| `deedglass init [--yes] [--dir .] [--client claude-code|claude-desktop|cursor|vscode|windsurf|sdk-python|sdk-typescript|none] [--listen 127.0.0.1:8080] [--pg-port 55432] [--policy postgres-check|postgres-safe] [--no-open] [--no-smoke] [--lockdown] [--stop] [--purge] [--trigger] [--quiet] [--json]` | Setup | Set up Deedglass in this directory | built |
 | `deedglass connect <postgres-url> [--name <connector>] [--schema public] [--tables a,b] [--policy postgres-safe|postgres-check] [--agent <name>] [--apply] [--confirm <database>] [--dsn-host host:port] [--json]` | Setup | Put your own Postgres behind Deedglass | built |
 | `deedglass doctor [--only <ids>] [--quiet] [--json]` | Setup | Check config, database and keys | built |
 | `deedglass scan [--dir .] [--postgres-dsn-env VAR] [--format md,html,json,sarif] [--score] [--badge] [--badge-share] [--share] [--ci] [--fail-under A|B|C|D] [--full [--no-seal]] [--json]` | Setup | Show what your agent setup can change | built |
@@ -171,6 +171,10 @@ builds it. Hidden commands work but aren't in `deedglass help`.
 | `deedglass migrate status [--database-url <url>] [--json]` | Setup | Show applied and pending migrations | built |
 | `deedglass migrate verify [--database-url <url>] [--json]` | Setup | Check applied migrations against this build | built |
 | `deedglass config print [--json]` | Setup | Show the effective config, secrets hidden | built |
+| `deedglass lockdown status [--org acme] [--json]` | Setup | Show lockdown and what weakens it | built |
+| `deedglass lockdown on [--org acme] [--reason "…"] [--json]` | Setup | Turn lockdown on for the org | built |
+| `deedglass lockdown off --as <email> [--countersign] [--org acme] [--reason "…"] [--json]` | Setup | Ask for, or countersign, lockdown off | built |
+| `deedglass lockdown ack <act_…> --as <email> [--org acme] [--reason "…"] [--json]` | Setup | Release a Can't check hold on an agent | built |
 | `deedglass version [--json] [--check [--pre]]` | Setup | Show the client and server versions | built |
 | `deedglass keys gen [--dir <dir>] [--purpose seal|licence] [--json]` | Setup | Generate a seal key | built |
 | `deedglass keys rotate [--overlap 5m] [--dir <dir>] [--json]` | Setup | Rotate the active seal key | built |

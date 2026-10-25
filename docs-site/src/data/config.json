@@ -266,6 +266,18 @@
     "owner": "S20"
   },
   {
+    "env": "DEEDGLASS_LOCKDOWN",
+    "yaml": "lockdown",
+    "type": "boolean",
+    "default": "false",
+    "secret": false,
+    "client": false,
+    "dev_only": false,
+    "commands": "serve, doctor, lockdown",
+    "doc": "Lockdown mode for every org on this server (docs/LOCKDOWN.md): every write waits for a person, high-risk writes need two, Proven where the connector reaches it, Can't check holds the agent's writes, no DROP, TRUNCATE, ALTER or unbounded writes, one connector per agent, PHI mode for FHIR. Prod needs DEEDGLASS_SEAL_PQ_KEY_FILE and timestamps.at_export on. Turning it off for an org needs a second person.",
+    "owner": "lockdown"
+  },
+  {
     "env": "DEEDGLASS_API_KEY",
     "yaml": "api_key",
     "type": "secret",

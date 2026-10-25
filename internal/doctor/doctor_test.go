@@ -30,6 +30,8 @@ type fakeServer struct {
 	version   string
 	health    string
 	connector string // health status of the postgres connector
+	lockdown  bool   // the org's settings.lockdown in /v1/whoami
+	bare      bool   // an agent without a connector label
 }
 
 func (f *fakeServer) handler() http.Handler {
@@ -72,6 +74,16 @@ func (f *fakeServer) handler() http.Handler {
 			reason = f.reason
 		}
 		j(w, map[string]any{"name": "postgres", "slot": "deedglass_01k6abcdp46q", "status": f.slot, "reason": reason, "lag": map[string]any{"bytes": f.lagBytes}})
+	}))
+	mux.HandleFunc("GET /v1/whoami", auth(func(w http.ResponseWriter, _ *http.Request) {
+		j(w, map[string]any{"object": "whoami", "org": map[string]any{"id": "org_01", "lockdown": f.lockdown}})
+	}))
+	mux.HandleFunc("GET /v1/agents", auth(func(w http.ResponseWriter, _ *http.Request) {
+		labels := map[string]string{"connector": "postgres"}
+		if f.bare {
+			labels = map[string]string{}
+		}
+		j(w, map[string]any{"data": []any{map[string]any{"name": "ward-bot", "status": "active", "labels": labels}}})
 	}))
 	mux.HandleFunc("GET /v1/policies/active", auth(func(w http.ResponseWriter, _ *http.Request) {
 		if !f.enforce {
@@ -142,7 +154,7 @@ func TestHealthyWithoutDatabase(t *testing.T) {
 			t.Errorf("%s doc %s", r.ID, r.Doc)
 		}
 	}
-	if len(Checks()) != 16 {
+	if len(Checks()) != 17 {
 		t.Fatalf("%d checks", len(Checks()))
 	}
 }
@@ -176,6 +188,10 @@ func TestForcedFailures(t *testing.T) {
 		{"disk.space", Warn, func(env *Env, _ *fakeServer) { env.Statfs = func(string) (uint64, error) { return 1 << 30, nil } }, "GiB free"},
 		{"version.drift", Warn, func(_ *Env, f *fakeServer) { f.version = "0.2.0" }, "server 0.2.0"},
 		{"policy.active", Warn, func(_ *Env, f *fakeServer) { f.enforce = false }, "no policy enforced"},
+		{"lockdown", Warn, func(env *Env, _ *fakeServer) { env.Lockdown = true }, "weakened by no ML-DSA-65 seal key, no TSAs"},
+		{"lockdown", Warn, func(env *Env, f *fakeServer) {
+			f.lockdown, f.bare, env.SealPQKeyFile, env.Timestamps = true, true, "pq.json", true
+		}, "set by the org (deedglass lockdown on) · weakened by 1 agent without a connector label"},
 	} {
 		t.Run(c.id+"/"+c.detail, func(t *testing.T) {
 			env, f := goodEnv(t)
@@ -243,5 +259,24 @@ func TestFilterAndDocs(t *testing.T) {
 		if !strings.Contains(string(b), "<a id=\""+anchor+"\"></a>") {
 			t.Errorf("docs/INIT_AND_DOCTOR.md lacks the anchor %s", anchor)
 		}
+	}
+}
+
+func TestLockdownCheck(t *testing.T) {
+	env, f := goodEnv(t)
+	r := byID(Run(context.Background(), env, Filter(Checks(), "lockdown")))["lockdown"]
+	if r.Status != OK || r.Detail != "off" {
+		t.Fatalf("off: %s %q", r.Status, r.Detail)
+	}
+	env.Lockdown, f.lockdown, env.SealPQKeyFile, env.Timestamps = true, true, "pq.json", true
+	r = byID(Run(context.Background(), env, Filter(Checks(), "lockdown")))["lockdown"]
+	if r.Status != OK || !strings.Contains(r.Detail, "on · set by the config and the org · dual seal") {
+		t.Fatalf("on: %s %q", r.Status, r.Detail)
+	}
+	env.APIKey = ""
+	env.Lockdown = false
+	r = byID(Run(context.Background(), env, Filter(Checks(), "lockdown")))["lockdown"]
+	if r.Status != OK || !strings.Contains(r.Detail, "needs the server") {
+		t.Fatalf("no key: %s %q", r.Status, r.Detail)
 	}
 }

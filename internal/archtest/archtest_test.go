@@ -111,7 +111,7 @@ func TestLayering(t *testing.T) {
 	// record exporters (TY-06) are here too: an export runs offline, from the records alone. So is
 	// the foreign change-feed witness (TY-05): it reads events it is given and connects to nothing.
 	forbidden := []string{"net/http", "database/sql", "github.com/jackc/", module + "/internal/store", module + "/internal/httpx"}
-	for _, rel := range []string{"internal/deed", "internal/sqlguard", "internal/policy", "internal/witness", "internal/witness/l2", "internal/witness/feed", "internal/witness/feed/debezium", "internal/fhirexport", "internal/recordexport"} {
+	for _, rel := range []string{"internal/deed", "internal/sqlguard", "internal/policy", "internal/witness", "internal/witness/l2", "internal/witness/feed", "internal/witness/feed/debezium", "internal/fhirexport", "internal/recordexport", "internal/lockdown"} {
 		p, ok := get(rel)
 		if !ok {
 			continue

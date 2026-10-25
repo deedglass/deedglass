@@ -43,11 +43,15 @@ type Env struct {
 	Statfs         func(path string) (free uint64, err error)
 	// Connect opens a read-only session; nil uses pgx with default_transaction_read_only=on.
 	Connect func(ctx context.Context, url string) (*pgx.Conn, error)
+	// Lockdown (ADR-117): the config's lockdown key, and what doctor checks lockdown against.
+	Lockdown      bool
+	SealPQKeyFile string
+	Timestamps    bool // timestamps.tsa_urls or scitt_url set
 	// Unauthenticated is set when the server refused the API key (exit 3).
 	Unauthenticated atomic.Bool
 }
 
-// Checks are the sixteen, in display order.
+// Checks are the seventeen, in display order.
 func Checks() []Check {
 	return []Check{
 		{"config.valid", "Config", checkConfig},
@@ -66,6 +70,7 @@ func Checks() []Check {
 		{"disk.space", "Disk", checkDisk},
 		{"version.drift", "Versions", checkVersions},
 		{"policy.active", "Policies", checkPolicy},
+		{"lockdown", "Lockdown", checkLockdown},
 	}
 }
 
@@ -701,4 +706,83 @@ func thousands(n int) string {
 		b.WriteRune(c)
 	}
 	return b.String()
+}
+
+// checkLockdown (ADR-117) shows whether lockdown is on (the config's lockdown key, or the org's
+// setting from /v1/whoami) and lists what weakens it. Off is OK: lockdown is a choice.
+func checkLockdown(ctx context.Context, env *Env) Result {
+	var org struct {
+		Org struct {
+			Lockdown bool `json:"lockdown"`
+			PHIMode  bool `json:"phi_mode"`
+		} `json:"org"`
+	}
+	api := env.HTTP != nil && env.Server != "" && env.APIKey != ""
+	if api {
+		if _, err := getJSON(ctx, env, "/v1/whoami", true, &org); err != nil {
+			return apiFail(err, "couldn't read the org")
+		}
+	}
+	source := ""
+	switch {
+	case env.Lockdown && org.Org.Lockdown:
+		source = "the config and the org"
+	case env.Lockdown:
+		source = "lockdown: true in the config"
+	case org.Org.Lockdown:
+		source = "the org (deedglass lockdown on)"
+	default:
+		if !api {
+			return ok("off in the config · the org's setting needs the server (deedglass lockdown status on the server)")
+		}
+		return ok("off")
+	}
+	var weak, fixes []string
+	if env.SealPQKeyFile == "" {
+		weak = append(weak, "no ML-DSA-65 seal key")
+		fixes = append(fixes, "Run deedglass keys rotate --alg ML-DSA-65 and set DEEDGLASS_SEAL_PQ_KEY_FILE.")
+	}
+	if !env.Timestamps {
+		weak = append(weak, "no TSAs, so no outside timestamps")
+		fixes = append(fixes, "Set timestamps.tsa_urls in deedglass.yaml (docs/TIMESTAMPS.md).")
+	}
+	if api {
+		var agents struct {
+			Data []struct {
+				Name   string            `json:"name"`
+				Status string            `json:"status"`
+				Labels map[string]string `json:"labels"`
+			} `json:"data"`
+		}
+		if _, err := getJSON(ctx, env, "/v1/agents?limit=100", true, &agents); err != nil {
+			return apiFail(err, "couldn't list the agents")
+		}
+		var bare []string
+		for _, a := range agents.Data {
+			if a.Status != "stopped" && a.Labels["connector"] == "" {
+				bare = append(bare, a.Name)
+			}
+		}
+		if len(bare) > 0 {
+			weak = append(weak, fmt.Sprintf("%d %s without a connector label (refused)", len(bare), plural(len(bare), "agent", "agents")))
+			fixes = append(fixes, "Give "+bare[0]+" its one connector as the label connector=<name> (PATCH /v1/agents/{id}, or deedglass agent create --label for a new agent).")
+		}
+		var conns struct {
+			Data []conn `json:"data"`
+		}
+		if _, err := getJSON(ctx, env, "/v1/connectors?limit=100", true, &conns); err != nil {
+			return apiFail(err, "couldn't list the connectors")
+		}
+		for _, c := range conns.Data {
+			if c.Type == "fhir" && !org.Org.PHIMode {
+				weak = append(weak, "a FHIR connector with PHI mode off (refused)")
+				fixes = append(fixes, "Run deedglass lockdown on on the server, which turns PHI mode on.")
+				break
+			}
+		}
+	}
+	if len(weak) == 0 {
+		return ok("on · set by " + source + " · dual seal · outside timestamps")
+	}
+	return warn("on · set by "+source+" · weakened by "+strings.Join(weak, ", "), fixes[0])
 }

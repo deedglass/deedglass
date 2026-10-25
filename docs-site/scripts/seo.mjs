@@ -112,7 +112,7 @@ export const fullNote = () =>
   `- The complete documentation leaves out ${FULL_OUT.map((x) => x.what).join(', ').replace(/, ([^,]*)$/, ' and $1')}. Each is on the site: ${FULL_OUT.map((x) => SITE + x.at).filter((u, i, a) => a.indexOf(u) === i).join(', ')}`;
 export const inSmall = (id) => inFull(id) && SMALL_IN.some((re) => re.test(id));
 /** Byte budgets the gate enforces (check-llms.mjs). */
-export const LLMS_BUDGET = { 'llms-small.txt': 150 * 1024, 'llms-full.txt': 750 * 1024, 'llms-postgres.txt': 150 * 1024 };
+export const LLMS_BUDGET = { 'llms-small.txt': 150 * 1024, 'llms-full.txt': 800 * 1024, 'llms-postgres.txt': 150 * 1024 };
 /** The plugin joins pages with this; postbuild splits on it, drops pages and removes it. */
 export const PAGE_MARK = '\n\n<!-- deedglass:llms-page -->\n\n';
 

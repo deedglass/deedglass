@@ -19,6 +19,7 @@ import (
 	"github.com/deedglass/deedglass/internal/identity"
 	"github.com/deedglass/deedglass/internal/ids"
 	"github.com/deedglass/deedglass/internal/ledger"
+	"github.com/deedglass/deedglass/internal/lockdown"
 	"github.com/deedglass/deedglass/internal/policy"
 	"github.com/deedglass/deedglass/internal/store"
 	"github.com/deedglass/deedglass/internal/witness"
@@ -36,6 +37,8 @@ type Config struct {
 	ApprovalTTL       time.Duration // when the rule sets no expires_in
 	MaxWaitsPerAgent  int           // open GET …?wait= per agent
 	Witness           WitnessConfig // witness.* (S19)
+	// Lockdown is lockdown: true in the server's config (ADR-117): lockdown for every org.
+	Lockdown bool
 }
 
 // MaxWait is the longest any request waits (POST wait, GET ?wait=).
@@ -513,6 +516,18 @@ func (p *Pipeline) admit(ctx context.Context, pr principal, n *Normalized, req A
 			}
 			p.watchTimeLimit(org, agent, d, sd)
 		}
+		// 3-L. Lockdown (ADR-117): the overlay tightens the decision; it never loosens one.
+		var lock *lockdown.Detail
+		if st := (lockdown.State{Config: p.cfg.Lockdown, Org: subj.Lockdown}); st.On() {
+			f := lockdown.Facts{Person: pr.Kind == httpx.KindConsole, PHIMode: subj.PHIMode, ToolLevels: connector.ToolLevels(spec),
+				ProvenAvailable: provenAvailable(ex, spec, n)}
+			if !f.Person && d.Outcome != policy.Deny {
+				if f.HeldBy, err = store.LockdownHeld(ctx, tx, org, agent); err != nil {
+					return err
+				}
+			}
+			d, lock = lockdown.Apply(st, d, in, f)
+		}
 		// 3a. S40: an allowed action runs now, so a schedule whose window opens later can't be
 		// allowed: it is denied and sealed (schedule_needs_approval).
 		if req.Schedule != nil && d.Outcome == policy.Allow && req.Schedule.NotBefore.After(now.Add(ScheduleNowWindow)) {
@@ -584,7 +599,7 @@ func (p *Pipeline) admit(ctx context.Context, pr principal, n *Normalized, req A
 			return err
 		}
 		ev := ledger.EventData{Actor: actor, RequestID: req.RequestID, At: now}
-		patch, err := decisionPatch(in, d, sd, loaded, shadow, reserved, anom.trace)
+		patch, err := decisionPatch(in, d, sd, loaded, shadow, reserved, anom.trace, lock)
 		if err != nil {
 			return err
 		}
@@ -679,6 +694,20 @@ func (p *Pipeline) admit(ctx context.Context, pr principal, n *Normalized, req A
 		return nil, err
 	}
 	return adm, nil
+}
+
+// provenAvailable reports whether the connector reaches Proven (L2) for this call: a gateway
+// executor witnessed at L2 that gives a target (lockdown requires Proven where it can).
+func provenAvailable(ex Executor, spec connector.ToolSpec, n *Normalized) bool {
+	if ex == nil || n.Mode != ModeGateway {
+		return false
+	}
+	w, ok := ex.(connector.L2Witnessing)
+	if !ok {
+		return false
+	}
+	t, err := w.L2Target(connector.Call{Tool: spec, Qualified: n.Tool, Args: n.Args})
+	return err == nil && t != nil && t.ConnectorID != ""
 }
 
 // isUndoTaken reports a unique violation of actions_one_live_undo (S23).
@@ -956,15 +985,18 @@ type decisionDetail struct {
 	// Anomaly is the decision trace's line about the anomaly facts the policy saw (S27 §3.8):
 	// "anomaly facts: volume_spike", or detector_stale with the last run's age. Absent when inactive.
 	Anomaly string `json:"anomaly,omitempty"`
+	// Lockdown is what lockdown mode changed (ADR-117); absent when lockdown was off. The Can't
+	// check hold reads its presence: only actions admitted in lockdown hold an agent's writes.
+	Lockdown *lockdown.Detail `json:"lockdown,omitempty"`
 }
 
 // maxDetail keeps decision_detail under its 16 KiB column limit (facts are dropped first; they
 // can be recomputed from policy_input).
 const maxDetail = 15 << 10
 
-func detailJSON(d policy.Decision, l *policy.Loaded, anomaly string) (json.RawMessage, error) {
+func detailJSON(d policy.Decision, l *policy.Loaded, anomaly string, lock *lockdown.Detail) (json.RawMessage, error) {
 	dd := decisionDetail{RuleLine: d.RuleLine, Approval: d.Approval, Verify: d.Verify, Notify: d.Notify, Budget: d.Budget,
-		CostBudgets: d.CostBudgets, Errors: d.Errors, SQLGuard: d.SQLGuard, ElapsedUS: d.Elapsed.Microseconds(), Anomaly: clip(anomaly, 200)}
+		CostBudgets: d.CostBudgets, Errors: d.Errors, SQLGuard: d.SQLGuard, ElapsedUS: d.Elapsed.Microseconds(), Anomaly: clip(anomaly, 200), Lockdown: lock}
 	if d.Facts.SQL.Present || d.Facts.SQL.Kind != "" {
 		f := d.Facts
 		dd.Facts = &f
@@ -986,7 +1018,7 @@ func detailJSON(d policy.Decision, l *policy.Loaded, anomaly string) (json.RawMe
 
 // decisionPatch is what the edge into evaluated records: the input, the decision, the version
 // that made it, the shadow decision next to it (recorded, never enforced) and the reservations.
-func decisionPatch(in policy.Input, d policy.Decision, sd *policy.Decision, l, sl *policy.Loaded, reserved bool, anomaly string) (ledger.Patch, error) {
+func decisionPatch(in policy.Input, d policy.Decision, sd *policy.Decision, l, sl *policy.Loaded, reserved bool, anomaly string, lock *lockdown.Detail) (ledger.Patch, error) {
 	inJSON, err := json.Marshal(in)
 	if err != nil {
 		return ledger.Patch{}, err
@@ -995,7 +1027,7 @@ func decisionPatch(in policy.Input, d policy.Decision, sd *policy.Decision, l, s
 	if err != nil {
 		return ledger.Patch{}, err
 	}
-	detail, err := detailJSON(d, l, anomaly)
+	detail, err := detailJSON(d, l, anomaly, lock)
 	if err != nil {
 		return ledger.Patch{}, err
 	}

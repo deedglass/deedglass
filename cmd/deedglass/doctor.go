@@ -20,7 +20,7 @@ import (
 	"github.com/deedglass/deedglass/internal/store/migrations"
 )
 
-// deedglass doctor (S32 §3.10): sixteen read-only checks. Exit 0 all OK (warnings allowed), 1 any
+// deedglass doctor (S32 §3.10): seventeen read-only checks. Exit 0 all OK (warnings allowed), 1 any
 // problem, 2 doctor itself couldn't run, 3 the server refused the API key.
 
 var doctorValues struct {
@@ -90,6 +90,7 @@ func doctorEnv(e *Env) (*doctor.Env, error) {
 		d.SealKeyFile = cfg.SealKeyFile
 		d.VaultKey = cfg.VaultKey.Reveal()
 		d.SlotLagAlertMB = cfg.SlotLagAlertMB
+		d.Lockdown, d.SealPQKeyFile, d.Timestamps = cfg.Lockdown, cfg.SealPQKeyFile, cfg.Timestamps.Enabled()
 	} else {
 		d.DBURL = env["DEEDGLASS_DATABASE_URL"]
 		d.SealKeyFile = env["DEEDGLASS_SEAL_KEY_FILE"]

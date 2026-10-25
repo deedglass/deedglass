@@ -14,6 +14,8 @@ Setup
   migrate             Apply or check database migrations
                       up · status · verify
   config print        Show the effective config, secrets hidden
+  lockdown            Turn on the strictest setup, or check it
+                      status · on · off · ack
   version             Show the client and server versions
   keys                Manage seal keys
                       gen · rotate · list

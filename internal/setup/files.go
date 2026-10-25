@@ -25,7 +25,8 @@ const (
 	ServeLog     = "serve.log"
 	ServePID     = "serve.pid"
 	LockFile     = "init.lock"
-	KeysDir      = "keys" // the seal key file(s), 0600
+	KeysDir      = "keys"    // the seal key file(s), 0600
+	PQKeysDir    = "keys/pq" // init --lockdown's ML-DSA-65 seal key, 0600
 )
 
 // State is .deedglass/state.json (S32 §3.9).
@@ -60,6 +61,10 @@ type Stack struct {
 	AppPassword      string `json:"app_password"`
 	SealKeyFile      string `json:"seal_key_file"`
 	OwnerEmail       string `json:"owner_email"`
+	// Lockdown (ADR-117): init --lockdown ran here; later runs keep it. SealPQKeyFile is the
+	// ML-DSA-65 key it made (in keys/pq, apart from the Ed25519 keys newestKey reads).
+	Lockdown      bool   `json:"lockdown,omitempty"`
+	SealPQKeyFile string `json:"seal_pq_key_file,omitempty"`
 }
 
 // AppURL is the runtime role's URL (deedglass_app on the deedglass database).

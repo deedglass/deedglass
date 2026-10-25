@@ -121,6 +121,16 @@ const (
 	// counts and digests only, never a row value.
 	AdminObserveSessionSealed = "observe.session_sealed"
 	AdminObserveFrameExcluded = "observe.frame_excluded"
+
+	// ADR-117: lockdown mode. On the server (deedglass lockdown), actor {system, operator}; the
+	// people named with --as are in data, never their email. off_requested: target {org, org_…};
+	// data: requested_by (usr_…), expires_at, via. acknowledged: a person looked at an action that
+	// ended Can't check in lockdown, which releases its agent's writes; target {action, act_…};
+	// data: action, agent, verdict, acknowledged_by, via. Turning lockdown on and off is
+	// org.updated (fields settings.lockdown; off also names requested_by, countersigned_by and
+	// off_request_deed).
+	AdminLockdownOffRequested = "lockdown.off_requested"
+	AdminLockdownAcknowledged = "lockdown.acknowledged"
 )
 
 // AdminActions lists every admin action this build records. Tests check each name against the
@@ -142,6 +152,7 @@ var AdminActions = []string{
 	AdminSuggestionAccepted, AdminSuggestionRejected,
 	AdminFileSealed,
 	AdminObserveSessionSealed, AdminObserveFrameExcluded,
+	AdminLockdownOffRequested, AdminLockdownAcknowledged,
 }
 
 // AdminEventActions are admin events recorded without a deed (AppendAdminEvent): security events

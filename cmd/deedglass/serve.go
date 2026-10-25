@@ -432,7 +432,7 @@ func runServe(ctx context.Context, e *Env, args []string) error {
 	if metricsSrv != nil {
 		fmt.Fprintln(e.Stdout, s.OKLine("Metrics on http://"+cfg.MetricsListen+"/metrics"))
 	}
-	log.Info("started", "listen", ln.Addr().String(), "startup_ms", time.Since(started).Milliseconds(), "env", string(cfg.Env))
+	log.Info("started", "listen", ln.Addr().String(), "startup_ms", time.Since(started).Milliseconds(), "env", string(cfg.Env), "lockdown", cfg.Lockdown)
 
 	// 8. The prune jobs: idempotency keys, and old sign-in tokens and sessions (personal data).
 	pctx, stopPrune := context.WithCancel(context.WithoutCancel(ctx))
@@ -687,7 +687,8 @@ func newGate(cfg *config.Config, db *store.DB, led *ledger.Ledger, pol *policies
 			MaxArgsBytes: g.MaxArgsBytes, MaxResultBytes: g.MaxResultBytes, WorkerConcurrency: g.WorkerConcurrency,
 			WorkerMaxAttempts: g.WorkerMaxAttempts,
 			Witness: gate.WitnessConfig{InlineBudget: cfg.Witness.InlineBudget, ReadbackTimeout: cfg.Witness.ReadbackTimeout,
-				MaxDetailBytes: cfg.Witness.MaxDetailBytes}}})
+				MaxDetailBytes: cfg.Witness.MaxDetailBytes},
+			Lockdown: cfg.Lockdown}})
 }
 
 // undoConfig is undo.* (S23).

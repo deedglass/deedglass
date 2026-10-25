@@ -83,6 +83,8 @@ var Keys = []Key{
 		Commands: "serve", Doc: "Alert when a Postgres replication slot holds more WAL than this (1-1048576 MB).", Owner: "S01"},
 	{Name: "DEEDGLASS_DECODER_PAUSE", Kind: KindBool, Default: "false", DevOnly: true,
 		Commands: "serve", Doc: "Dev only: decoder runners stop reading after their current poll, so tests can see late evidence. Refused in prod.", Owner: "S20"},
+	{Name: "DEEDGLASS_LOCKDOWN", Kind: KindBool, Default: "false",
+		Commands: "serve, doctor, lockdown", Doc: "Lockdown mode for every org on this server (docs/LOCKDOWN.md): every write waits for a person, high-risk writes need two, Proven where the connector reaches it, Can't check holds the agent's writes, no DROP, TRUNCATE, ALTER or unbounded writes, one connector per agent, PHI mode for FHIR. Prod needs DEEDGLASS_SEAL_PQ_KEY_FILE and timestamps.at_export on. Turning it off for an org needs a second person.", Owner: "lockdown"},
 
 	// Client-side keys: the CLI, MCP commands and SDKs read them; serve ignores them.
 	{Name: "DEEDGLASS_API_KEY", Kind: KindSecret, Secret: true, Client: true,

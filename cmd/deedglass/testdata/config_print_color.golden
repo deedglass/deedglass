@@ -23,6 +23,7 @@ DEEDGLASS_EGRESS_ALLOW_CIDRS      —                                           
 DEEDGLASS_METRICS_LISTEN          —                                                            [2mnot set[0m
 DEEDGLASS_SLOT_LAG_ALERT_MB       512                                                          [2mdefault[0m
 DEEDGLASS_DECODER_PAUSE           false                                                        [2mdefault[0m
+DEEDGLASS_LOCKDOWN                false                                                        [2mdefault[0m
 DEEDGLASS_API_KEY                 —                                                            [2mnot set[0m
 DEEDGLASS_API_KEY_FILE            —                                                            [2mnot set[0m
 DEEDGLASS_SERVER                  —                                                            [2mnot set[0m

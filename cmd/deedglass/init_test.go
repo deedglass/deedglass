@@ -42,7 +42,7 @@ func TestInitUsage(t *testing.T) {
 func TestDoctorCLI(t *testing.T) {
 	env := map[string]string{"DEEDGLASS_SERVER": "http://127.0.0.1:1", "DEEDGLASS_ENV": "dev"}
 	r := cli(t, env, false, "doctor")
-	if r.code != ExitFailure || !strings.HasPrefix(r.stdout, "deedglass doctor · 16 checks · ") {
+	if r.code != ExitFailure || !strings.HasPrefix(r.stdout, "deedglass doctor · 17 checks · ") {
 		t.Fatalf("%d\n%s\n%s", r.code, r.stdout, r.stderr)
 	}
 	for _, want := range []string{"✕ Database             no database URL", "Set DEEDGLASS_DATABASE_URL, or run deedglass doctor in the directory where you ran deedglass init.", "✕ Server               no answer from http://127.0.0.1:1"} {

@@ -63,6 +63,8 @@
 # slot_lag_alert_mb: 512
 # Dev only: decoder runners stop reading after their current poll (tests of late evidence). Refused in prod.
 # decoder_pause: false
+# Lockdown mode for every org on this server: the strictest setup (docs/LOCKDOWN.md).
+# lockdown: false
 
 # Client commands (CLI, mcp, SDKs): the server to talk to.
 # server: https://api.deedglass.com
