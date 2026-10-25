@@ -43,7 +43,11 @@ otherwise.
 - The `deedglass` binary: `serve`, the Gate, policies, connectors, the vault, the Witness and the
   decoder, deeds and `deedglass verify`.
 - The Console and the approval pages it serves.
-- The CLI, including `deedglass init`, `doctor`, `scan` and `mcp wrap`.
+- The CLI, including `deedglass init`, `doctor`, `scan`, `mcp wrap`, `a2a proxy`, `witness debezium`
+  and `guard shell`.
+- The independent verifiers in `verifiers/` and the browser verifier.
+- Release artifacts: the archives, `checksums.txt` and its signature, the SBOMs, the image on GHCR,
+  the npm packages, and `scripts/install.sh`.
 - The SDKs: `@deedglass/sdk` (TypeScript) and `deedglass` (Python).
 - docs.deedglass.com and deedglass.com.
 - The hosted beta, when it exists.
@@ -72,6 +76,14 @@ In return, please:
 
 The latest minor release gets security fixes. Before 1.0, that is the latest release.
 
+## Checking a release
+
+Every release since v0.1.0 signs `checksums.txt` with keyless cosign from this repository's release
+workflow; each archive has an SPDX SBOM beside it, and the npm packages carry npm provenance (from
+0.1.1; the first two npm versions predate it).
+[INSTALL.md](docs/INSTALL.md#check-what-you-downloaded) has the commands. `scripts/install.sh`
+checks the signature itself when cosign is installed.
+
 ## How Deedglass is built to resist attack
 
 - [Threat model](docs/THREAT_MODEL.md): assets, trust boundaries, attackers, and the control and
@@ -81,3 +93,6 @@ The latest minor release gets security fixes. Before 1.0, that is the latest rel
 - [Security review](docs/SECURITY_REVIEW_2026-10.md): what was checked, what was found and what was
   done.
 - [Limitations](docs/LIMITATIONS.md): every known limit.
+- Static analysis: CodeQL (Go, JavaScript and TypeScript, Python, and the workflows) on every pull
+  request and weekly (`.github/workflows/codeql.yml`), beside `govulncheck`, the fuzz targets and the
+  in-repo guards. Every workflow action is pinned to a commit SHA.

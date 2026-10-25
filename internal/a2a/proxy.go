@@ -5,14 +5,17 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
+	"crypto/subtle"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"log/slog"
+	"mime"
 	"net"
 	"net/http"
+	"net/netip"
 	"net/url"
 	"strings"
 	"sync"
@@ -85,6 +88,7 @@ type Config struct {
 	CardURL      *url.URL      // the peer's Agent Card (default: the peer's origin + /.well-known/agent-card.json)
 	PublicURL    string        // where callers reach this proxy; the card's JSONRPC url is rewritten to it
 	PeerHeaders  http.Header   // set on every request to the peer (the operator's credentials for it)
+	InboundKey   string        // callers send it as Authorization: Bearer <key> (the agent's own key); required
 	OnBehalfOf   string        // the person, when the caller's chain names none
 	ResultMode   string        // full (default) or digest
 	CallTimeout  time.Duration // per call to the peer; default 5 min
@@ -121,6 +125,9 @@ func New(cfg Config, g Gate, log *slog.Logger) (*Proxy, error) {
 	}
 	if cfg.HTTP == nil {
 		return nil, errors.New("a2a: no HTTP client for the peer")
+	}
+	if cfg.InboundKey == "" {
+		return nil, errors.New("a2a: no inbound key: callers must present the agent's key")
 	}
 	if cfg.CardURL == nil {
 		cfg.CardURL = &url.URL{Scheme: cfg.Peer.Scheme, Host: cfg.Peer.Host, Path: "/.well-known/agent-card.json"}
@@ -184,8 +191,12 @@ func (p *Proxy) peerHeaders(h http.Header) {
 	h.Set("User-Agent", "deedglass/"+p.cfg.Version)
 }
 
-// ServeHTTP answers the card at /.well-known/agent-card.json and JSON-RPC at /.
+// ServeHTTP answers the card at /.well-known/agent-card.json and JSON-RPC at /. Every request
+// first passes admit (no browser, loopback Host only); JSON-RPC also needs the agent's key.
 func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if !p.admit(w, r) {
+		return
+	}
 	switch {
 	case r.URL.Path == "/.well-known/agent-card.json" && r.Method == http.MethodGet:
 		p.serveCard(w, r)
@@ -197,6 +208,96 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	default:
 		http.NotFound(w, r)
 	}
+}
+
+// admit refuses what a web page can send (M-03 of the 2026-10-21 audit; attack group T). The proxy
+// acts with an agent's key, so a page in a browser on the same machine must not drive it:
+//   - Host must be a loopback literal or localhost: a DNS-rebinding page sends its own name.
+//   - Origin, or a Sec-Fetch-Site other than none, marks a browser request: refused, whatever it
+//     names, since the proxy serves no page of its own. Like /mcp/* on the server (MCPAuth).
+//   - No CORS: a preflight (OPTIONS) is refused and no Access-Control-* header is ever sent.
+func (p *Proxy) admit(w http.ResponseWriter, r *http.Request) bool {
+	if !loopbackHost(r.Host) {
+		p.refuse(w, r, http.StatusMisdirectedRequest, "host_not_loopback",
+			"The A2A proxy answers loopback hosts only (127.0.0.1, [::1], localhost).")
+		return false
+	}
+	if len(r.Header.Values("Origin")) > 0 {
+		p.refuse(w, r, http.StatusForbidden, "browser_origin",
+			"The A2A proxy refuses browser requests (an Origin header was sent).")
+		return false
+	}
+	if sf := r.Header.Values("Sec-Fetch-Site"); len(sf) > 0 && (len(sf) != 1 || sf[0] != "none") {
+		p.refuse(w, r, http.StatusForbidden, "browser_origin",
+			"The A2A proxy refuses browser requests (Sec-Fetch-Site).")
+		return false
+	}
+	if r.Method == http.MethodOptions {
+		p.refuse(w, r, http.StatusForbidden, "cors_refused", "The A2A proxy doesn't answer CORS preflights.")
+		return false
+	}
+	return true
+}
+
+// authorized reports whether r carries Authorization: Bearer <the agent's key>, compared in
+// constant time over digests (the lengths don't leak either).
+func (p *Proxy) authorized(r *http.Request) bool {
+	hv := r.Header.Values("Authorization")
+	if len(hv) != 1 {
+		return false
+	}
+	if len(hv[0]) < 8 || !strings.EqualFold(hv[0][:7], "Bearer ") {
+		return false
+	}
+	tok := hv[0][7:]
+	if tok == "" {
+		return false
+	}
+	a, b := sha256.Sum256([]byte(tok)), sha256.Sum256([]byte(p.cfg.InboundKey))
+	return subtle.ConstantTimeCompare(a[:], b[:]) == 1
+}
+
+// jsonBody reports whether the request says Content-Type: application/json. A browser can send
+// text/plain, form or multipart bodies without a preflight; it can't send this one cross-origin.
+func jsonBody(r *http.Request) bool {
+	ct := r.Header.Values("Content-Type")
+	if len(ct) != 1 {
+		return false
+	}
+	mt, _, err := mime.ParseMediaType(ct[0])
+	return err == nil && mt == "application/json"
+}
+
+// loopbackHost reports whether a Host header names this machine by a loopback literal or
+// localhost, with or without a port.
+func loopbackHost(h string) bool {
+	if h == "" {
+		return false
+	}
+	host := h
+	if hh, _, err := net.SplitHostPort(h); err == nil {
+		host = hh
+	} else if strings.HasPrefix(h, "[") && strings.HasSuffix(h, "]") {
+		host = h[1 : len(h)-1]
+	}
+	if strings.EqualFold(host, "localhost") {
+		return true
+	}
+	a, err := netip.ParseAddr(host)
+	return err == nil && a.Zone() == "" && a.Unmap().IsLoopback()
+}
+
+// refuse answers a refused request: a JSON-RPC error without an id for POST /, plain text
+// otherwise. It never echoes the request, and the proxy logs only the reason.
+func (p *Proxy) refuse(w http.ResponseWriter, r *http.Request, status int, reason, msg string) {
+	p.log.Warn("a2a: request refused", "reason", reason, "method", r.Method, "path", clip(r.URL.Path, 64))
+	if r.Method == http.MethodPost && r.URL.Path == "/" {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(status)
+		writeRPCErrorBody(w, nil, -32600, msg, &errorInfo{Reason: strings.ToUpper(reason)})
+		return
+	}
+	http.Error(w, msg, status)
 }
 
 // serveCard answers the peer's card with its JSONRPC interface pointing here. Other interfaces are
@@ -269,6 +370,12 @@ type errorInfo struct {
 }
 
 func writeRPCError(w http.ResponseWriter, id json.RawMessage, code int, msg string, info *errorInfo) {
+	w.Header().Set("Content-Type", "application/json")
+	writeRPCErrorBody(w, id, code, msg, info)
+}
+
+// writeRPCErrorBody writes the error object; the caller has set the status (and headers) already.
+func writeRPCErrorBody(w http.ResponseWriter, id json.RawMessage, code int, msg string, info *errorInfo) {
 	if len(id) == 0 {
 		id = json.RawMessage("null")
 	}
@@ -278,11 +385,23 @@ func writeRPCError(w http.ResponseWriter, id json.RawMessage, code int, msg stri
 		e["data"] = []any{info}
 	}
 	b, _ := json.Marshal(map[string]any{"jsonrpc": "2.0", "id": id, "error": e})
-	w.Header().Set("Content-Type", "application/json")
 	_, _ = w.Write(b)
 }
 
 func (p *Proxy) serveRPC(w http.ResponseWriter, r *http.Request) {
+	if !jsonBody(r) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusUnsupportedMediaType)
+		writeRPCErrorBody(w, nil, -32600, "Send JSON-RPC with Content-Type: application/json.", &errorInfo{Reason: "CONTENT_TYPE_NOT_JSON"})
+		return
+	}
+	if !p.authorized(r) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("WWW-Authenticate", `Bearer realm="deedglass-a2a-proxy"`)
+		w.WriteHeader(http.StatusUnauthorized)
+		writeRPCErrorBody(w, nil, -32600, "Send the agent's key as Authorization: Bearer <key> (the key this proxy runs with).", &errorInfo{Reason: "KEY_REQUIRED"})
+		return
+	}
 	body, err := io.ReadAll(io.LimitReader(r.Body, MaxRequestBytes+1))
 	if err != nil || len(body) > MaxRequestBytes {
 		writeRPCError(w, nil, -32600, "The request is larger than 4 MiB or couldn't be read.", nil)
@@ -302,10 +421,8 @@ func (p *Proxy) serveRPC(w http.ResponseWriter, r *http.Request) {
 		writeRPCError(w, req.ID, -32600, "Request payload validation error: jsonrpc 2.0, an id and a method are needed.", nil)
 		return
 	}
+	// The header only: a query-string version (?A2A-Version=) would let a plain link or form set it.
 	v := strings.TrimSpace(r.Header.Get("A2A-Version"))
-	if v == "" {
-		v = r.URL.Query().Get("A2A-Version")
-	}
 	if v != SpecVersion {
 		if v == "" {
 			v = "0.3 (no A2A-Version header)"

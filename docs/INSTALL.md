@@ -22,6 +22,7 @@ curl -fsSL https://raw.githubusercontent.com/deedglass/deedglass/main/scripts/in
 
 It downloads two files from the latest release, the archive for this machine and `checksums.txt`,
 checks the archive's sha256 against `checksums.txt`, and copies the one binary into `~/.local/bin`.
+With cosign installed it also checks the signature.
 It runs nothing it downloads, asks for no password and never edits your shell profile; if the
 directory isn't on your PATH it prints the line to add. `sh -s -- --version 0.2.1 --dir /usr/local/bin`
 picks a version and a directory. Read it first: [`scripts/install.sh`](../scripts/install.sh).
@@ -52,7 +53,7 @@ Console's placeholder page, which is fine for `deedglass init` and dev mode, but
 ## Homebrew
 
 Once the tap exists: `brew install deedglass/tap/deedglass`. The binaries aren't notarized yet, so
-the cask removes macOS's quarantine attribute from the one binary it installs.
+macOS asks on first run.
 
 ## go install
 

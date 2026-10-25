@@ -3,9 +3,12 @@ package main
 import (
 	"compress/gzip"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"flag"
 	"fmt"
+	"hash"
 	"io"
 	"os"
 	"sort"
@@ -115,8 +118,13 @@ func runWitnessDebezium(_ context.Context, e *Env, args []string) error {
 	if err != nil {
 		return err
 	}
-	f, err := debezium.Read(r, debezium.Options{PK: pk, LedgerTable: o.ledgerTable})
+	in := &capReader{r: r, h: sha256.New(), left: debeziumMaxInput}
+	f, err := debezium.Read(in, debezium.Options{PK: pk, LedgerTable: o.ledgerTable})
 	closeFn()
+	if in.over {
+		return &ExitError{Code: ExitUsage, ErrCode: "feed_too_large", Err: fmt.Errorf("The events are larger than %d MiB after gunzip", debeziumMaxInput>>20),
+			Next: "Pass a smaller feed: dump only the time window around the action."}
+	}
 	if err != nil {
 		return &ExitError{Code: ExitUsage, ErrCode: "feed_unreadable", Err: fmt.Errorf("The events don't parse: %w", err),
 			Next: "Pass Debezium's JSON output, one event per line (docs/WITNESS_DEBEZIUM.md)."}
@@ -138,7 +146,7 @@ func runWitnessDebezium(_ context.Context, e *Env, args []string) error {
 		return err
 	}
 	if e.Globals.JSON {
-		if err := writeJSON(e, debeziumJSON(f, rep)); err != nil {
+		if err := writeJSON(e, debeziumJSON(f, rep, in)); err != nil {
 			return err
 		}
 	} else {
@@ -154,6 +162,40 @@ func runWitnessDebezium(_ context.Context, e *Env, args []string) error {
 	}
 	return &ExitError{Code: ExitUsage, ErrCode: "feed_unverifiable", Err: errors.New("The feed can't confirm what the action reported"), printed: true}
 }
+
+// debeziumMaxInput is debezium.MaxInput; tests lower it.
+var debeziumMaxInput int64 = debezium.MaxInput
+
+// capReader hashes what it reads and stops after left bytes (over is then set): the input's
+// sha256 goes into the --json answer so a result can be tied to the exact feed it read.
+type capReader struct {
+	r    io.Reader
+	h    hash.Hash
+	n    int64
+	left int64
+	over bool
+}
+
+func (c *capReader) Read(p []byte) (int, error) {
+	if c.left <= 0 {
+		var one [1]byte
+		if n, _ := c.r.Read(one[:]); n > 0 {
+			c.over = true
+			return 0, errors.New("input too large")
+		}
+		return 0, io.EOF
+	}
+	if int64(len(p)) > c.left {
+		p = p[:c.left]
+	}
+	n, err := c.r.Read(p)
+	c.h.Write(p[:n])
+	c.n += int64(n)
+	c.left -= int64(n)
+	return n, err
+}
+
+func (c *capReader) digest() string { return "sha256:" + hex.EncodeToString(c.h.Sum(nil)) }
 
 func openEvents(e *Env, path string) (io.Reader, func(), error) {
 	if path == "-" {
@@ -216,9 +258,11 @@ type debeziumOutput struct {
 }
 
 type debeziumFeedSummary struct {
-	Transactions int `json:"transactions"`
-	Events       int `json:"events"`
-	Skipped      int `json:"skipped"`
+	Transactions int    `json:"transactions"`
+	Events       int    `json:"events"`
+	Skipped      int    `json:"skipped"`
+	InputBytes   int64  `json:"input_bytes"`
+	InputSHA256  string `json:"input_sha256"` // of the events as read (after gunzip)
 }
 
 type debeziumTxSummary struct {
@@ -231,9 +275,9 @@ type debeziumTxSummary struct {
 	Digest      string `json:"digest"`
 }
 
-func debeziumJSON(f *debezium.Feed, rep feed.Report) debeziumOutput {
+func debeziumJSON(f *debezium.Feed, rep feed.Report, in *capReader) debeziumOutput {
 	out := debeziumOutput{Object: "foreign_witness", Source: rep.Source, Label: rep.Source.Label(), Attribution: rep.Attribution,
-		Feed:   debeziumFeedSummary{Transactions: len(f.Txs), Events: f.Events, Skipped: f.Skipped},
+		Feed:   debeziumFeedSummary{Transactions: len(f.Txs), Events: f.Events, Skipped: f.Skipped, InputBytes: in.n, InputSHA256: in.digest()},
 		Detail: rep.Outcome.Detail, Digest: rep.Outcome.Digest,
 		Verdict: rep.Outcome.Decision.Verdict, Level: rep.Outcome.Decision.Level, Compared: []debeziumTxSummary{}, Reasons: []string{}}
 	for _, r := range rep.Outcome.Decision.Reasons {

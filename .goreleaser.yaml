@@ -1,8 +1,9 @@
 # GoReleaser v2 (pinned 2.18.2, ADR-067). One tag builds five binaries, five archives with
 # completions, checksums.txt, an SPDX SBOM per archive and a two-platform image on GHCR, into a
-# DRAFT GitHub release that only the founder publishes. Signing runs only when the repository is
-# public (release.yml passes --skip=sign,docker-sign while it is private): keyless signatures
-# write the repository and workflow identity into the public Sigstore log.
+# DRAFT GitHub release that only the founder publishes. checksums.txt and the image are signed with
+# keyless cosign (GitHub OIDC; no key or secret is stored), which writes the repository and workflow
+# identity into the public Sigstore log. release.yml passes --skip=sign only if the repository is
+# ever private again. scripts/install.sh checks the signature when cosign is installed.
 #
 #   make release-check      # a local snapshot, twice, compared byte for byte (nothing is pushed)
 version: 2
@@ -152,9 +153,5 @@ homebrew_casks:
       bash: completions/deedglass.bash
       zsh: completions/deedglass.zsh
       fish: completions/deedglass.fish
-    hooks:
-      post:
-        install: |
-          if OS.mac?
-            system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/deedglass"]
-          end
+    # No post-install hook that clears macOS's quarantine attribute (audit M-05): the binaries aren't
+    # notarized yet, so Gatekeeper's first-run check stays the user's call.

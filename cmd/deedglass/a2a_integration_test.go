@@ -56,7 +56,7 @@ func TestA2ALive(t *testing.T) {
 		u, _ := url.Parse(peer.URL())
 		gc := gateclient.New(gateclient.Options{Server: m.base, APIKey: key})
 		p, err := a2a.New(a2a.Config{Connector: connector, Peer: u, OnBehalfOf: obo, HTTP: pol.Client(egress.ClientOptions{MaxResponseBytes: 16 << 20}),
-			Version: "test"}, gc, nil)
+			Version: "test", InboundKey: key}, gc, nil)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -67,9 +67,10 @@ func TestA2ALive(t *testing.T) {
 		t.Cleanup(srv.Close)
 		return p, srv.URL + "/"
 	}
-	post := func(to, body string) string {
+	post := func(to, key, body string) string {
 		req, _ := http.NewRequest(http.MethodPost, to, strings.NewReader(body))
 		req.Header.Set("A2A-Version", "1.0")
+		req.Header.Set("Authorization", "Bearer "+key)
 		req.Header.Set("Content-Type", "application/json")
 		res, err := http.DefaultClient.Do(req)
 		if err != nil {
@@ -102,13 +103,13 @@ func TestA2ALive(t *testing.T) {
 			} `json:"message"`
 		}
 		_ = json.Unmarshal(params, &p)
-		nested = post(researcherProxy, send(2, "complete the numbers for the summary", string(p.Message.Metadata)))
+		nested = post(researcherProxy, researcherKey, send(2, "complete the numbers for the summary", string(p.Message.Metadata)))
 	}
-	top := post(plannerProxy, send(1, "complete the market summary", ""))
+	top := post(plannerProxy, plannerKey, send(1, "complete the market summary", ""))
 	if !strings.Contains(top, "TASK_STATE_COMPLETED") || !strings.Contains(nested, "TASK_STATE_COMPLETED") {
 		t.Fatalf("top %s\nnested %s", top, nested)
 	}
-	denied := post(plannerProxy, `{"jsonrpc":"2.0","id":3,"method":"CancelTask","params":{"id":"task-1"}}`)
+	denied := post(plannerProxy, plannerKey, `{"jsonrpc":"2.0","id":3,"method":"CancelTask","params":{"id":"task-1"}}`)
 	if !strings.Contains(denied, `"code":-31001`) || !strings.Contains(denied, "no-cancel-by-delegation") {
 		t.Fatalf("cancel: %s", denied)
 	}

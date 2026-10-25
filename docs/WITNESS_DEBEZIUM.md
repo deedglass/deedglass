@@ -37,7 +37,8 @@ JSON lines, one event per line, in any of these shapes:
 - a JSON array of any of these (the HTTP sink's batch mode).
 
 Schema change events, heartbeats, logical messages, tombstones and snapshot reads (`op: r`) are
-skipped. `.jsonl.gz` files are read as gzip.
+skipped. `.jsonl.gz` files are read as gzip. A line may hold up to 16 MiB and a whole feed up to
+1 GiB after gunzip; a larger feed is refused (`feed_too_large`, exit 2) rather than read without end.
 
 ```sh
 deedglass witness debezium --events feed.jsonl --schema shop \
@@ -58,7 +59,7 @@ deedglass witness debezium --events feed.jsonl --schema shop \
 | `--ledger-table <name>` | default `deedglass_ledger` in any database |
 | `--tx <id>` | compare this transaction (a MySQL GTID) when no ledger row names the action |
 | `--max-rows table=n` | the most rows one action may change in a table |
-| `--json` | the `foreign_witness` object, with the `witness_detail` and its digest inside |
+| `--json` | the `foreign_witness` object, with the `witness_detail` and its digest inside; `feed.input_sha256` and `feed.input_bytes` name the exact events read (after gunzip), so a result can be tied to its file |
 
 Exit status: 0 Matches, 1 Doesn't match, 2 Can't check or a usage error.
 

@@ -35,16 +35,27 @@ Then point your agent's A2A client at `http://127.0.0.1:7420/` instead of the re
 proxy serves the remote agent's Agent Card at `/.well-known/agent-card.json` with its JSON-RPC
 interface pointing at the proxy, so a client that discovers agents by their card finds the proxy.
 
-- The proxy listens on loopback only. It has no sign-in of its own; anything on the machine that can
-  reach the port acts as the agent whose key the proxy holds.
+- The proxy listens on loopback only, and every JSON-RPC request must carry the agent's key the
+  proxy runs with: `Authorization: Bearer dg_…` (`DEEDGLASS_API_KEY`, or the agent key `deedglass
+  init` saved when the proxy found it through `.deedglass/stack.json`). A request without
+  it, or with another key, is answered HTTP 401 and nothing is forwarded. The card at
+  `/.well-known/agent-card.json` needs no key.
+- Web pages can't drive it. A request with an `Origin` header, a `Sec-Fetch-Site` other than
+  `none`, a `Host` that isn't `127.0.0.1`, `[::1]` or `localhost` (DNS rebinding), or a body that
+  isn't `Content-Type: application/json` is refused before anything else; CORS preflights get 403
+  and no `Access-Control-*` header is ever sent. These are the checks the server applies to
+  `/mcp/*`; attack group T (T01 to T05) runs them.
+- Pass the key in `DEEDGLASS_API_KEY`, not `--api-key`: a flag shows in `ps` to every user on the
+  machine, and the proxy warns when it's used.
 - The agent's key goes to the Deedglass server only. The calling agent's own credentials
   (`Authorization`, cookies) are removed before anything is sent to the peer; the peer gets only
   the headers you name with `--peer-header-env`.
 - Peers are reached through the same egress rules as connectors: `https` only, public addresses
   only, unless `DEEDGLASS_ENV=dev` with `DEEDGLASS_ALLOW_PRIVATE_NETWORKS=1`, or the range is in
   `DEEDGLASS_EGRESS_ALLOW_CIDRS`.
-- Every request needs `A2A-Version: 1.0`. A request without it is A2A 0.3 by the spec's rule and is
-  refused with `VersionNotSupportedError` (-32009).
+- Every request needs the `A2A-Version: 1.0` header. A request without it is A2A 0.3 by the spec's
+  rule and is refused with `VersionNotSupportedError` (-32009). The `?A2A-Version=` query parameter
+  isn't read: a plain link or form could set it.
 
 ## What goes through the Gate
 
