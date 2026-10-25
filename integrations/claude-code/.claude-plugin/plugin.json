@@ -1,6 +1,6 @@
 {
   "name": "deedglass",
-  "description": "Deedglass: rules decide each AI agent tool call; it checks what really changed and seals a record.",
+  "description": "Deedglass lets rules decide each AI agent tool call, checks what really changed and seals a record.",
   "version": "0.10.0",
   "author": { "name": "Deedglass", "url": "https://deedglass.com" },
   "homepage": "https://deedglass.com",

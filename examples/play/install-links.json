@@ -52,7 +52,7 @@
       "id": "goose",
       "client": "Goose",
       "kind": "deeplink",
-      "url": "goose://extension?cmd=npx&arg=-y&arg=deedglass&arg=mcp&arg=serve&id=deedglass&name=Deedglass&description=Deedglass:%20rules%20decide%20each%20AI%20agent%20tool%20call%3B%20it%20checks%20what%20really%20changed%20and%20seals%20a%20record.",
+      "url": "goose://extension?cmd=npx&arg=-y&arg=deedglass&arg=mcp&arg=serve&id=deedglass&name=Deedglass&description=Deedglass%20lets%20rules%20decide%20each%20AI%20agent%20tool%20call%2C%20checks%20what%20really%20changed%20and%20seals%20a%20record.",
       "command": "",
       "note": ""
     },

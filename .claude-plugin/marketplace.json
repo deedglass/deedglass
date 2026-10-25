@@ -11,7 +11,7 @@
     {
       "name": "deedglass",
       "source": "./integrations/claude-code",
-      "description": "Deedglass: rules decide each AI agent tool call; it checks what really changed and seals a record."
+      "description": "Deedglass lets rules decide each AI agent tool call, checks what really changed and seals a record."
     }
   ]
 }

@@ -24,7 +24,7 @@ const Name = "deedglass"
 
 // Description is the one line clients and registries show: docs/description.json's tagline
 // (docs/description_test.go keeps them equal). The Claude Desktop bundle and the Goose link carry it.
-const Description = "Deedglass: rules decide each AI agent tool call; it checks what really changed and seals a record."
+const Description = "Deedglass lets rules decide each AI agent tool call, checks what really changed and seals a record."
 
 // CursorMaxURL is Cursor's limit for an install link.
 const CursorMaxURL = 10000

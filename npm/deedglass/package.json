@@ -1,7 +1,7 @@
 {
   "name": "deedglass",
   "version": "0.10.0",
-  "description": "Deedglass: rules decide each AI agent tool call; it checks what really changed and seals a record.",
+  "description": "Deedglass lets rules decide each AI agent tool call, checks what really changed and seals a record.",
   "keywords": ["deedglass", "ai-agents", "agent-security", "mcp", "mcp-server", "mcp-gateway", "model-context-protocol", "postgres", "change-data-capture", "logical-decoding", "audit-log", "policy", "approvals", "undo", "claude-code", "cursor"],
   "license": "Apache-2.0",
   "homepage": "https://deedglass.com",
