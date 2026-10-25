@@ -15,8 +15,7 @@ Everything that was always free stays free: the rules, the checks, records and t
 verification, Stop, Undo, Insights, `deedglass scan`, and the scan Action's scan, job summary and
 SARIF on every repo.
 
-We plan to introduce paid options for teams and a hosted service later, after Deedglass reaches
-about 100,000 users. Anything free today stays free for people who run Deedglass themselves.
+Later we plan paid support, SLAs and a hosted version for organisations. Anything free today stays free for people who run Deedglass themselves.
 
 ## How the switch works
 

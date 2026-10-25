@@ -9,7 +9,7 @@ import { pages, site } from './lib-pages.mjs';
 
 // DL-131 (free while we grow): every feature is free, no paid tier is named in the docs, and the
 // FAQ answer is the approved sentence. P-086 (the ee/ licence) still holds.
-export const FAQ_FREE = "Yes. Every Deedglass feature is free while we grow, with no licence key: the core is Apache-2.0, and the features in `ee/` are free to use and stay FSL-1.1-ALv2. We plan paid options for teams and a hosted service later; anything free today stays free for people who run Deedglass themselves.";
+export const FAQ_FREE = "Yes. Every Deedglass feature is free while we grow, with no licence key: the core is Apache-2.0, and the features in `ee/` are free to use and stay FSL-1.1-ALv2. Later we plan paid support, SLAs and a hosted version for organisations; anything free today stays free for people who run Deedglass themselves.";
 // Phrases in page text, not URL checks: plain substring tests (DL-131 withdrew the paid tiers and their buy pages; the retired $390 band stays banned).
 const phrase = (p) => ({ test: (s) => s.includes(p), toString: () => p });
 // word: the phrase not followed by a letter, digit or '-' (so deedglass.com/pricing never matches deedglass.com/pro).
