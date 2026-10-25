@@ -5,11 +5,13 @@ package present
 
 import (
 	"encoding/json"
+	"strings"
 	"time"
 
 	"github.com/deedglass/deedglass/internal/gate"
 	"github.com/deedglass/deedglass/internal/ledger"
 	"github.com/deedglass/deedglass/internal/mcp/jsonrpc"
+	"github.com/deedglass/deedglass/internal/toolname"
 )
 
 // _meta keys Deedglass adds to tools/call results (CONTRACT CHANGE, additive).
@@ -33,8 +35,24 @@ func WitnessMeta(a *ledger.Action) json.RawMessage {
 	return jsonrpc.Value(map[string]string{"level": a.Witness.Level, "verdict": a.Witness.Verdict})
 }
 
-// CheckApprovalName is the wrapper's own tool.
-const CheckApprovalName = "deedglass.check_approval"
+// CheckApprovalName is the wrapper's own tool, as tools/list shows it by default (API-safe: model
+// APIs refuse a dot in a tool name).
+const CheckApprovalName = "deedglass_check_approval"
+
+// CheckApprovalDotted is its name in 0.7 and earlier, still listed with --tool-names=dotted and still
+// accepted on tools/call (deprecated).
+const CheckApprovalDotted = "deedglass.check_approval"
+
+// IsCheckApproval reports whether a tools/call names deedglass_check_approval, in either spelling.
+func IsCheckApproval(name string) bool {
+	return name == CheckApprovalName || name == CheckApprovalDotted
+}
+
+// Reserved reports whether a tool name uses the prefix only Deedglass's own tools may use
+// ("deedglass." or "deedglass_"): an MCP server can't pose as Deedglass.
+func Reserved(name string) bool {
+	return strings.HasPrefix(name, "deedglass.") || strings.HasPrefix(name, "deedglass_")
+}
 
 // Meta is the _meta of a synthetic result.
 type Meta map[string]string
@@ -122,9 +140,13 @@ func WithAction(text, actionID string, modern bool) json.RawMessage {
 	return Text(text, true, modern, Meta{MetaAction: actionID}, nil)
 }
 
-// CheckApprovalTool is the tool definition appended to tools/list.
-func CheckApprovalTool() json.RawMessage {
-	return json.RawMessage(`{"name":"deedglass.check_approval","title":` + string(jsonrpc.String(gate.MCPCheckApprovalTitle)) +
+// CheckApprovalTool is the tool definition appended to tools/list, named for style s.
+func CheckApprovalTool(s toolname.Style) json.RawMessage {
+	name := CheckApprovalName
+	if s == toolname.Dotted {
+		name = CheckApprovalDotted
+	}
+	return json.RawMessage(`{"name":"` + name + `","title":` + string(jsonrpc.String(gate.MCPCheckApprovalTitle)) +
 		`,"description":` + string(jsonrpc.String(gate.MCPCheckApprovalDescription)) +
 		`,"inputSchema":{"type":"object","additionalProperties":false,"required":["approval_id"],"properties":{"approval_id":{"type":"string","pattern":"^apr_[0-9a-hjkmnp-tv-z]{26}$","description":"The approval id, for example apr_01j9zs4k7m2n3p5q6r7s8t9v0w"},"wait_seconds":{"type":"integer","minimum":0,"maximum":20,"default":10,"description":"How long to wait for a person's decision before answering, in seconds."}}},` +
 		`"annotations":{"readOnlyHint":false,"idempotentHint":true,"openWorldHint":false}}`)

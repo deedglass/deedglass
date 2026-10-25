@@ -24,8 +24,7 @@ import { MCPClient } from '@mastra/mcp';
 
 const mcp = new MCPClient({ id: 'deedglass', servers: { deedglass: { command: 'npx', args: ['-y', 'deedglass', 'mcp', 'serve'] } } });
 try {
-  // deedglass_postgres.query -> deedglass_postgres_query: model APIs reject dots in tool names.
-  const tools = Object.fromEntries(Object.entries(await mcp.listTools()).map(([name, t]) => [name.replace('.', '_'), t]));
+  const tools = await mcp.listTools(); // deedglass_postgres_query and so on
   const agent = new Agent({ id: 'orders', name: 'Orders', instructions: 'Answer questions about orders.', model: 'openai/gpt-5.6-sol', tools });
   console.log((await agent.generate('How many rows are in public.orders?')).text);
 } finally {
@@ -42,16 +41,16 @@ node agent.ts
 
 **Model key:** `OPENAI_API_KEY` (the model string is the one in Mastra's agent docs). Any model in Mastra's router format works.
 
-**Tool names:** Mastra prefixes each tool with its server's key, so the tools arrive as `deedglass_postgres.query`. OpenAI's and Anthropic's APIs take only letters, digits, `_` and `-` in tool names, so the file renames each key (`deedglass_postgres_query`).
+**Tool names:** Mastra prefixes each tool with its server's key, so the tools arrive as `deedglass_postgres_query` and so on. Deedglass lists its tools with names every model API takes: `postgres_query`, `postgres_execute`, `deedglass_check_approval` (letters, digits, `_` and `-`; Anthropic's rule is `^[a-zA-Z0-9_-]{1,128}$` and OpenAI's allows the same characters up to 64). Your policies and the sealed records keep the dotted name, `postgres.query`; Deedglass maps one to the other ([MCP.md](../MCP.md#tool-names)). Deedglass 0.7 and earlier listed the dotted names, which these APIs refuse.
 
-**What you see:** the answer (500 rows), and in Console › Ledger or `npx deedglass actions list` one sealed `postgres.query` action per call, with the rule that allowed it. If the agent tries a write, the tool answers that it is waiting for approval and nothing has run; once someone approves, `deedglass.check_approval` lets the agent carry on. A refused call answers with the policy's sentence and a record id.
+**What you see:** the answer (500 rows), and in Console › Ledger or `npx deedglass actions list` one sealed `postgres.query` action per call, with the rule that allowed it. If the agent tries a write, the tool answers that it is waiting for approval and nothing has run; once someone approves, `deedglass_check_approval` lets the agent carry on. A refused call answers with the policy's sentence and a record id.
 
 **First start:** `npx -y deedglass` can take several seconds the first time. If a framework's MCP connect timeout is shorter, run `npx -y deedglass version` once first, or install the CLI ([INSTALL.md](../INSTALL.md)) and use `deedglass` as the command.
 
 ## Check it without a model key
 
 `examples/frameworks/mastra/` has the file, its pinned packages and a `check` file that needs no model
-key: it starts `deedglass mcp serve` through the same framework client, lists its tools and builds the Agent with them renamed as the file does. From the folder where
+key: it starts `deedglass mcp serve` through the same framework client, lists its tools and builds the Agent with them as the file does. From the folder where
 `init` ran:
 
 ```sh
@@ -75,4 +74,4 @@ Every framework API in the files above comes from the framework's own docs, chec
 Not verified:
 
 - Mastra's docs register agents in a `Mastra` instance and call `getAgentById`; this file calls `generate()` on the agent directly.
-- That Mastra calls a tool by its key in the tools object, so the renamed keys work with a live model (no model key in CI).
+- That Mastra calls a tool by its key in the tools object with a live model (no model key in CI).

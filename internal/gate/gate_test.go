@@ -46,6 +46,7 @@ func TestNormalizeTable(t *testing.T) {
 		{name: "split at the first dot", r: ActionRequest{Tool: "gh.github.create_issue", Args: raw(`{}`), Mode: ModeProxy}, connector: "gh", tool: "github.create_issue", ctype: "mcp"},
 		{name: "upper case", r: ActionRequest{Tool: "Fake.echo", Args: raw(`{}`)}, param: "tool"},
 		{name: "no dot", r: ActionRequest{Tool: "fake", Args: raw(`{}`)}, param: "tool"},
+		{name: "an unqualified name stays refused (the MCP front qualifies fake_echo)", r: ActionRequest{Tool: "read_file", Args: raw(`{}`)}, param: "tool"},
 		{name: "no connector", r: ActionRequest{Tool: ".echo", Args: raw(`{}`)}, param: "tool"},
 		{name: "300 bytes", r: ActionRequest{Tool: strings.Repeat("a", 300), Args: raw(`{}`)}, param: "tool"},
 		{name: "empty", r: ActionRequest{Tool: "", Args: raw(`{}`)}, param: "tool"},
@@ -678,7 +679,7 @@ func TestMCPCopy(t *testing.T) {
 	}
 	pend := `Waiting for approval under policy "writes-need-approval": Writes wait for a human.`
 	pa := &ledger.Action{Decision: &ledger.ActionDecision{Message: &pend}}
-	if got := MCPPendingText(pa, "apr_x", exp); got != pend+` Nothing has run yet. Approval apr_x expires at 10:42 UTC. To continue, call deedglass.check_approval with {"approval_id": "apr_x"}.` {
+	if got := MCPPendingText(pa, "apr_x", exp); got != pend+` Nothing has run yet. Approval apr_x expires at 10:42 UTC. To continue, call deedglass_check_approval with {"approval_id": "apr_x"}.` {
 		t.Fatal(got)
 	}
 	if got := MCPPendingText(&ledger.Action{}, "apr_x", time.Time{}); !strings.HasPrefix(got, "Waiting for a person to approve this action. Nothing has run yet.") || !strings.Contains(got, "an unknown time") {

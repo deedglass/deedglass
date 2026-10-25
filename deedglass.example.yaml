@@ -136,6 +136,10 @@
 #   allowed_origins: []
 #   # Method families forwarded to upstreams and logged (never sealed): resources, prompts, completion.
 #   passthrough: []
+#   # How tools/list spells tools: safe (postgres_query, deedglass_check_approval; the default,
+#   # accepted by the Anthropic and OpenAI APIs) or dotted (postgres.query, the listing in 0.7 and
+#   # earlier; deprecated). tools/call takes either spelling, and policies keep the dotted names.
+#   tool_names: safe
 #   # Remote MCP servers the gateway fronts at /mcp/<name>. https only (http needs
 #   # allow_private_networks in dev). Header values come from the environment, never this file, and
 #   # the variable names can't start with DEEDGLASS_.

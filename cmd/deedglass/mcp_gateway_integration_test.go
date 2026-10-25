@@ -278,7 +278,7 @@ func TestMCPGatewayLive(t *testing.T) {
 			t.Run("sdk "+v+" "+up, func(t *testing.T) {
 				s := sdkSession(t, g.base, up, g.key1, v)
 				names := toolNames(t, s)
-				if names != "approve_me,echo,fail,hang,deedglass.check_approval" {
+				if names != "approve_me,echo,fail,hang,deedglass_check_approval" {
 					t.Fatalf("tools: %s", names)
 				}
 				res, err := s.CallTool(bg, &mcp.CallToolParams{Name: "echo", Arguments: map[string]any{"message": "hi"}})
@@ -315,7 +315,7 @@ func TestMCPGatewayLive(t *testing.T) {
 	if !strings.HasPrefix(apr, "apr_") || !strings.Contains(resultText(r), "Nothing has run yet") || g.modern.Count("approve_me") != 0 {
 		t.Fatalf("%s %v", resultText(r), metaOf(r))
 	}
-	_, r = rawCall(t, bg, g.base, "/mcp/everything", g.key1, "deedglass.check_approval", `{"approval_id":"`+apr+`"}`)
+	_, r = rawCall(t, bg, g.base, "/mcp/everything", g.key1, "deedglass_check_approval", `{"approval_id":"`+apr+`"}`)
 	if !strings.Contains(resultText(r), "Still waiting for approval "+apr) || string(r["isError"]) != "false" {
 		t.Fatalf("%s", resultText(r))
 	}
@@ -402,7 +402,7 @@ func TestMCPGatewayLive(t *testing.T) {
 
 	// 7. Two agents, one policy, different lists; each owns its deeds.
 	s2 := sdkSession(t, g.base, "/mcp/everything", g.key2, "2026-07-28")
-	if names := toolNames(t, s2); names != "approve_me,echo,hang,deedglass.check_approval" {
+	if names := toolNames(t, s2); names != "approve_me,echo,hang,deedglass_check_approval" {
 		t.Fatalf("second agent's tools: %s", names)
 	}
 	res2, err := s2.CallTool(bg, &mcp.CallToolParams{Name: "echo", Arguments: map[string]any{"message": "two"}})
@@ -430,6 +430,27 @@ func TestMCPGatewayLive(t *testing.T) {
 	_, r = rawCall(t, bg, g.base, "/mcp/native", g.key1, "fake.echo", `{"message":"native"}`)
 	if string(r["isError"]) != "false" || !strings.Contains(resultText(r), "native") || !strings.HasPrefix(metaOf(r)["com.deedglass/deed"], "deed_") {
 		t.Fatalf("%s", resultText(r))
+	}
+	// The API-safe name tools/list shows reaches the same tool, rule and deed as the dotted one.
+	dotted := g.action(t, g.admin, metaOf(r)["com.deedglass/action"])
+	_, r = rawCall(t, bg, g.base, "/mcp/native", g.key1, "fake_echo", `{"message":"native"}`)
+	safe := g.action(t, g.admin, metaOf(r)["com.deedglass/action"])
+	if string(r["isError"]) != "false" || safe["tool"] != "fake.echo" || dotted["tool"] != "fake.echo" ||
+		fmt.Sprint(harnessGet(safe, "decision", "rule_id")) != fmt.Sprint(harnessGet(dotted, "decision", "rule_id")) {
+		t.Fatalf("safe %v\ndotted %v", safe, dotted)
+	}
+	for _, a := range []map[string]any{safe, dotted} {
+		req, _ := http.NewRequest("GET", g.base+"/v1/deeds/"+fmt.Sprint(a["deed"]), nil)
+		req.Header.Set("Authorization", "Bearer "+g.admin)
+		res, err := http.DefaultClient.Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		b, _ := io.ReadAll(res.Body)
+		res.Body.Close()
+		if res.StatusCode != 200 || !bytes.Contains(b, []byte(`"tool":"fake.echo"`)) {
+			t.Fatalf("deed %v: %d %s", a["deed"], res.StatusCode, b)
+		}
 	}
 	for _, c := range []struct {
 		q    string
@@ -475,10 +496,10 @@ func TestMCPGatewayLive(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if names := toolNames(t, s); names != "fake.echo,deedglass.check_approval" {
+			if names := toolNames(t, s); names != "fake_echo,deedglass_check_approval" {
 				t.Fatalf("tools: %s", names)
 			}
-			res, err := s.CallTool(bg, &mcp.CallToolParams{Name: "fake.echo", Arguments: map[string]any{"message": "bridged"}})
+			res, err := s.CallTool(bg, &mcp.CallToolParams{Name: "fake_echo", Arguments: map[string]any{"message": "bridged"}})
 			if err != nil || res.IsError || !strings.Contains(text(res), "bridged") {
 				t.Fatalf("%v %+v", err, res)
 			}
@@ -604,4 +625,17 @@ func TestGatewayBudget(t *testing.T) {
 	if ms(q(nCall, 50)) > 7 || ms(q(nCall, 99)) > 30 || add(50) > 10 || add(99) > 40 || validateUS > 50 {
 		t.Errorf("over budget: %s", b)
 	}
+}
+
+// harnessGet walks nested JSON objects by key.
+func harnessGet(m map[string]any, keys ...string) any {
+	var v any = m
+	for _, k := range keys {
+		mm, ok := v.(map[string]any)
+		if !ok {
+			return nil
+		}
+		v = mm[k]
+	}
+	return v
 }

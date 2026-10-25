@@ -10,6 +10,8 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/deedglass/deedglass/internal/toolname"
 )
 
 // The case-input format (S12 §3.8): one parser for `deedglass policy test` (YAML cases files),
@@ -141,6 +143,7 @@ func BuildInput(v any) (Input, *InputProblem) {
 		if t == "" {
 			return in, &InputProblem{Path: "tool", Message: "The tool name is empty."}
 		}
+		t = toolname.Canonical(t)
 		in.Tool.Name = t
 		prefix, _, _ := strings.Cut(t, ".")
 		in.Tool.Connector = prefix
@@ -161,6 +164,7 @@ func BuildInput(v any) (Input, *InputProblem) {
 		if in.Tool.Name == "" {
 			return in, &InputProblem{Path: "tool.name", Message: "The tool needs a name, like postgres.query."}
 		}
+		in.Tool.Name = toolname.Canonical(in.Tool.Name)
 		prefix, _, _ := strings.Cut(in.Tool.Name, ".")
 		if _, set := t["connector"]; !set {
 			in.Tool.Connector = prefix

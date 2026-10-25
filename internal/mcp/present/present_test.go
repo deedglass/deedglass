@@ -14,6 +14,7 @@ import (
 	"github.com/deedglass/deedglass/internal/gate"
 	"github.com/deedglass/deedglass/internal/ledger"
 	"github.com/deedglass/deedglass/internal/mcp/jsonrpc"
+	"github.com/deedglass/deedglass/internal/toolname"
 )
 
 var update = flag.Bool("update", false, "rewrite testdata/mcp/present")
@@ -94,7 +95,22 @@ func TestGoldens(t *testing.T) {
 			}
 		}
 	}
-	tool := CheckApprovalTool()
+	for style, want := range map[toolname.Style]string{toolname.Safe: CheckApprovalName, toolname.Dotted: CheckApprovalDotted} {
+		var def struct{ Name string }
+		if err := json.Unmarshal(CheckApprovalTool(style), &def); err != nil || def.Name != want {
+			t.Fatalf("%s: %v %q", style, err, def.Name)
+		}
+		if !IsCheckApproval(want) || !Reserved(want) {
+			t.Fatalf("%s not recognised", want)
+		}
+	}
+	if !regexp.MustCompile(`^[a-zA-Z0-9_-]{1,64}$`).MatchString(CheckApprovalName) {
+		t.Fatalf("%s isn't API-safe", CheckApprovalName)
+	}
+	if Reserved("deedglassx") || IsCheckApproval("check_approval") {
+		t.Fatal("too broad")
+	}
+	tool := CheckApprovalTool(toolname.Safe)
 	var def struct {
 		Name        string
 		InputSchema struct {

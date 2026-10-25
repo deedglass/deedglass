@@ -75,7 +75,7 @@ _deedglass() {
     'ledger prune') subs=''; flags='--dry-run --older-than --yes' ;;
     'licence') subs='activate show refresh deactivate'; flags='' ;;
     'mcp') subs='wrap serve snippet install-links'; flags='' ;;
-    'mcp serve') subs=''; flags='--connector' ;;
+    'mcp serve') subs=''; flags='--connector --tool-names' ;;
     'migrate') subs='up status verify'; flags='' ;;
     'migrate status') subs=''; flags='--database-url' ;;
     'migrate up') subs=''; flags='--database-url --dry-run' ;;

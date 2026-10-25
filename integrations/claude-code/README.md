@@ -2,8 +2,8 @@
 
 A Claude Code plugin that adds:
 
-- the Deedglass MCP server (`npx -y deedglass mcp serve`), the same server object as every other
-  install link;
+- the Deedglass MCP server (`npx -y deedglass@<version> mcp serve`), the same server object as
+  every other install link, pinned to this plugin's version (each release moves the pin);
 - `/deedglass:scan`, which runs `npx -y deedglass scan` in your project and explains the grade;
 - `/deedglass:wrap`, which prints the `claude mcp add` line that runs one of your MCP servers (for
   example a Postgres MCP server) through `deedglass mcp wrap`, so its tool calls meet your rules

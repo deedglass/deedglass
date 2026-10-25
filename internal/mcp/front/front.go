@@ -25,6 +25,7 @@ import (
 	"github.com/deedglass/deedglass/internal/ledger"
 	"github.com/deedglass/deedglass/internal/mcp/jsonrpc"
 	"github.com/deedglass/deedglass/internal/mcp/present"
+	"github.com/deedglass/deedglass/internal/toolname"
 )
 
 // Protocol versions (MCP). Modern requests carry their version in _meta; legacy clients open with
@@ -114,7 +115,10 @@ type Front struct {
 	CallWait time.Duration
 	// ExecuteTimeout is gate.execute_timeout, for the timeout sentence.
 	ExecuteTimeout time.Duration
-	Log            *slog.Logger
+	// ToolNames is how tools/list spells qualified names (mcp.tool_names): Safe ("postgres_query",
+	// the default) or Dotted ("postgres.query", deprecated). tools/call takes either.
+	ToolNames toolname.Style
+	Log       *slog.Logger
 }
 
 // Request is one message for the front.
@@ -129,6 +133,9 @@ type Request struct {
 	RequestID string
 	// OnBehalfOf and Session are the request's Deedglass-On-Behalf-Of and Deedglass-Session.
 	OnBehalfOf, Session string
+	// ToolNames is the request's Deedglass-Tool-Names (deedglass mcp serve --tool-names); "" keeps
+	// the front's ToolNames.
+	ToolNames toolname.Style
 	// CancelOn ends a running tool call when it ends (the transport's request context, watched for
 	// Stop). Nil: the context Handle was given.
 	CancelOn context.Context
@@ -287,13 +294,15 @@ func (f *Front) list(ctx context.Context, r Request) Response {
 		}
 		return errResp(id, jsonrpc.CodeInternal, gate.MCPServerError, 200)
 	}
+	style := f.style(r)
 	visible := make([]json.RawMessage, 0, len(tools)+1)
-	for _, t := range tools {
-		if !t.Hidden && !strings.HasPrefix(t.Name, "deedglass.") {
-			visible = append(visible, t.Def)
+	wire := WireNames(tools, style)
+	for i, t := range tools {
+		if !t.Hidden && !present.Reserved(t.Name) {
+			visible = append(visible, renamed(t.Def, t.Name, wire[i]))
 		}
 	}
-	visible = append(visible, present.CheckApprovalTool())
+	visible = append(visible, present.CheckApprovalTool(style))
 	if off > len(visible) {
 		off = len(visible)
 	}
@@ -376,13 +385,23 @@ func (f *Front) call(ctx context.Context, r Request) Response {
 	if !ok {
 		return errResp(id, jsonrpc.CodeInvalidParams, "tools/call needs params.name, the tool to call.", 200)
 	}
-	if cp.Name == present.CheckApprovalName {
+	if present.IsCheckApproval(cp.Name) {
+		f.deprecated(ctx, r, cp.Name)
 		return f.checkApproval(ctx, r, cp)
 	}
-	if strings.HasPrefix(cp.Name, "deedglass.") {
+	if present.Reserved(cp.Name) {
 		return errResp(id, jsonrpc.CodeInvalidParams, gate.MCPUnknownToolText(cp.Name), 200)
 	}
 	t, found, err := f.Tools.Lookup(ctx, r.Principal, cp.Name)
+	if err == nil && !found {
+		// The API-safe spelling tools/list shows ("postgres_query") names the qualified tool
+		// ("postgres.query"); both reach the same action, policy and deed.
+		if c := toolname.Canonical(cp.Name); c != cp.Name {
+			t, found, err = f.Tools.Lookup(ctx, r.Principal, c)
+		}
+	} else if found {
+		f.deprecated(ctx, r, cp.Name)
+	}
 	if err != nil {
 		f.logf(ctx, "tool lookup failed", "source", f.Tools.Label(), "err", err.Error())
 		return f.result(id, present.Plain(gate.MCPServerError, r.Modern))
@@ -411,6 +430,60 @@ func (f *Front) call(ctx context.Context, r Request) Response {
 		a = next
 	}
 	return f.outcome(ctx, r, t, a, err, false)
+}
+
+// style is the tools/list spelling for r: the request's Deedglass-Tool-Names, else the front's.
+func (f *Front) style(r Request) toolname.Style {
+	if r.ToolNames != "" {
+		return r.ToolNames
+	}
+	if f.ToolNames != "" {
+		return f.ToolNames
+	}
+	return toolname.Safe
+}
+
+// deprecated logs a call by a dotted Deedglass name while tools/list shows API-safe names. The
+// call still runs: the dotted names stay accepted for clients configured in 0.7 and earlier.
+func (f *Front) deprecated(ctx context.Context, r Request, name string) {
+	if f.style(r) == toolname.Safe && (name == present.CheckApprovalDotted || toolname.IsDotted(name)) {
+		f.logf(ctx, "deprecated dotted tool name", "tool", name, "use", toolname.SafeName(name))
+	}
+}
+
+// WireNames is the name tools/list shows for each tool in style s. Safe swaps the dot after a
+// connector for an underscore; a tool keeps its own name when that spelling would collide with
+// another tool's.
+func WireNames(ts []Tool, s toolname.Style) []string {
+	out := make([]string, len(ts))
+	taken := make(map[string]int, len(ts))
+	for i, t := range ts {
+		out[i] = t.Name
+		taken[t.Name]++
+	}
+	if s == toolname.Dotted {
+		return out
+	}
+	for i, t := range ts {
+		if w := toolname.SafeName(t.Name); w != t.Name && taken[w] == 0 {
+			out[i] = w
+			taken[w]++
+		}
+	}
+	return out
+}
+
+// renamed is def with its name set to wire (def unchanged when wire is the name it carries).
+func renamed(def json.RawMessage, name, wire string) json.RawMessage {
+	if wire == name {
+		return def
+	}
+	var m map[string]json.RawMessage
+	if json.Unmarshal(def, &m) != nil || m == nil {
+		return def
+	}
+	m["name"] = jsonrpc.String(wire)
+	return jsonrpc.MarshalObject(m)
 }
 
 func (f *Front) callWait() time.Duration {

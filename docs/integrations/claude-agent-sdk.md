@@ -59,9 +59,9 @@ pip install claude-agent-sdk==0.2.170 && python agent.py
 
 **Model key:** `ANTHROPIC_API_KEY`, or any sign-in the Agent SDK accepts.
 
-**Tool names:** The Agent SDK names MCP tools `mcp__<server>__<tool>` and replaces characters a tool name can't hold with `_`, so `postgres.query` reaches Claude as `mcp__deedglass__postgres_query` (Claude Code's MCP docs). `allowedTools: ['mcp__deedglass__*']` lets Claude call them without a permission prompt; Deedglass's policy still decides each call.
+**Tool names:** The Agent SDK names MCP tools `mcp__<server>__<tool>`, so `postgres_query` reaches Claude as `mcp__deedglass__postgres_query` (Claude Code's MCP docs). `allowedTools: ['mcp__deedglass__*']` lets Claude call them without a permission prompt; Deedglass's policy still decides each call. Policies and records keep the dotted name, `postgres.query`.
 
-**What you see:** the answer (500 rows), and in Console › Ledger or `npx deedglass actions list` one sealed `postgres.query` action per call, with the rule that allowed it. If the agent tries a write, the tool answers that it is waiting for approval and nothing has run; once someone approves, `deedglass.check_approval` lets the agent carry on. A refused call answers with the policy's sentence and a record id.
+**What you see:** the answer (500 rows), and in Console › Ledger or `npx deedglass actions list` one sealed `postgres.query` action per call, with the rule that allowed it. If the agent tries a write, the tool answers that it is waiting for approval and nothing has run; once someone approves, `deedglass_check_approval` lets the agent carry on. A refused call answers with the policy's sentence and a record id.
 
 **First start:** `npx -y deedglass` can take several seconds the first time. If a framework's MCP connect timeout is shorter, run `npx -y deedglass version` once first, or install the CLI ([INSTALL.md](../INSTALL.md)) and use `deedglass` as the command.
 

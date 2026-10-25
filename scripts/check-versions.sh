@@ -23,7 +23,10 @@ check "sdk/python (PEP 440)" "${py:-none}" "$pep440"
 for p in npm/*/package.json; do
   check "$p" "$(node -p "require('./$p').version" 2>/dev/null || echo none)" "$semver"
 done
+# The Claude Code plugin pins its npx command to the release (scripts/pin-plugin.sh).
+check "integrations/claude-code plugin.json" "$(node -p "require('./integrations/claude-code/.claude-plugin/plugin.json').version" 2>/dev/null || echo none)" "$semver"
+check "integrations/claude-code .mcp.json npx pin" "$(node -p "require('./integrations/claude-code/.mcp.json').mcpServers.deedglass.args.find((a) => a.startsWith('deedglass@')) || 'unpinned'" 2>/dev/null || echo none)" "deedglass@$semver"
 if [ "$fail" = 1 ]; then
-  echo "  next  Set every version above to $semver ($pep440 for Python), add a ## [$semver] section to CHANGELOG.md, then tag again."
+  echo "  next  Set every version above to $semver ($pep440 for Python), run scripts/pin-plugin.sh $semver, add a ## [$semver] section to CHANGELOG.md, then tag again."
   exit 1
 fi

@@ -230,7 +230,7 @@ func TestMCPWrapLive(t *testing.T) {
 	list := rpc("tools/list", "")
 	ls := string(list["result"])
 	if !strings.Contains(ls, `"read_text_file"`) || !strings.Contains(ls, `"write_file"`) || strings.Contains(ls, `"move_file"`) ||
-		strings.Contains(ls, `"echo"`) || !strings.Contains(ls, `"deedglass.check_approval"`) {
+		strings.Contains(ls, `"echo"`) || !strings.Contains(ls, `"deedglass_check_approval"`) {
 		t.Fatalf("tools/list: %s", ls)
 	}
 	read := callTool("read_text_file", `{"path":"/tmp/deedglass-demo/allowed/hello.txt"}`)
@@ -326,7 +326,7 @@ func TestMCPWrapNodeLive(t *testing.T) {
 		ShutdownWait: 2 * time.Second, KillWait: time.Second})
 	c.initialize()
 	ls := string(c.rpc("tools/list", "")["result"])
-	if !strings.Contains(ls, `"deedglass.check_approval"`) || !strings.Contains(ls, `"read_text_file"`) || strings.Contains(ls, `"move_file"`) {
+	if !strings.Contains(ls, `"deedglass_check_approval"`) || !strings.Contains(ls, `"read_text_file"`) || strings.Contains(ls, `"move_file"`) {
 		t.Fatalf("tools/list: %s", ls)
 	}
 	read := c.call("read_text_file", `{"path":"/tmp/deedglass-demo/allowed/hello.txt"}`)

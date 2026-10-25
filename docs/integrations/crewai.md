@@ -40,9 +40,9 @@ python agent.py
 
 **Model key:** `OPENAI_API_KEY`, for CrewAI's default model.
 
-**Tool names:** CrewAI's MCP adapter lists the tools as `postgres_query` and so on, so no renaming is needed. We observed this in 1.15.28; CrewAI's docs don't say it.
+**Tool names:** CrewAI's MCP adapter lists the tools as `postgres_query` and so on, as Deedglass names them. Policies and records keep the dotted name, `postgres.query` ([MCP.md](../MCP.md#tool-names)).
 
-**What you see:** the answer (500 rows), and in Console › Ledger or `npx deedglass actions list` one sealed `postgres.query` action per call, with the rule that allowed it. If the agent tries a write, the tool answers that it is waiting for approval and nothing has run; once someone approves, `deedglass.check_approval` lets the agent carry on. A refused call answers with the policy's sentence and a record id.
+**What you see:** the answer (500 rows), and in Console › Ledger or `npx deedglass actions list` one sealed `postgres.query` action per call, with the rule that allowed it. If the agent tries a write, the tool answers that it is waiting for approval and nothing has run; once someone approves, `deedglass_check_approval` lets the agent carry on. A refused call answers with the policy's sentence and a record id.
 
 **First start:** `npx -y deedglass` can take several seconds the first time. If a framework's MCP connect timeout is shorter, run `npx -y deedglass version` once first, or install the CLI ([INSTALL.md](../INSTALL.md)) and use `deedglass` as the command.
 

@@ -44,8 +44,12 @@ function textChecks(p, s) {
 const plugin = json('integrations/claude-code/.claude-plugin/plugin.json');
 for (const k of ['name', 'description', 'version', 'author', 'homepage', 'repository', 'license']) if (!plugin[k]) bad(`plugin.json: missing ${k}`);
 if (plugin.name !== 'deedglass' || plugin.version !== gen.version) bad('plugin.json: name or version drifted');
+// The plugin's server is the one server object with the package pinned to the release
+// (deedglass@<version>): Anthropic's plugin directory refuses an unpinned npx command.
+// scripts/pin-plugin.sh <version> sets it at release time.
 const pmcp = json('integrations/claude-code/.mcp.json');
-if (JSON.stringify(pmcp.mcpServers?.deedglass) !== server) bad('claude-code/.mcp.json: not the one server object');
+const pinned = JSON.stringify({ ...gen.server, args: gen.server.args.map((a) => (a === 'deedglass' ? `deedglass@${gen.version}` : a)) });
+if (JSON.stringify(pmcp.mcpServers?.deedglass) !== pinned) bad(`claude-code/.mcp.json: not the one server object pinned to deedglass@${gen.version} (run scripts/pin-plugin.sh ${gen.version})`);
 // FEAT-07: the one hook is the shell guard, off unless DEEDGLASS_SHELL_GUARD is ask or deny. Nothing else
 // may go in hooks/, the hook only sees Bash, and the script answers nothing (exit 0) when the variable is unset.
 const hooksDir = 'integrations/claude-code/hooks';

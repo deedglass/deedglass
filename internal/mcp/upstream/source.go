@@ -5,11 +5,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strings"
 
 	"github.com/deedglass/deedglass/internal/identity"
 	"github.com/deedglass/deedglass/internal/mcp/front"
 	mcpjson "github.com/deedglass/deedglass/internal/mcp/jsonrpc"
+	"github.com/deedglass/deedglass/internal/mcp/present"
 	"github.com/deedglass/deedglass/internal/policy"
 )
 
@@ -63,7 +63,7 @@ func (s *Source) tools(ctx context.Context) ([]front.Tool, error) {
 	}
 	out := make([]front.Tool, 0, len(ts))
 	for _, t := range ts {
-		if t == nil || strings.HasPrefix(t.Name, "deedglass.") {
+		if t == nil || present.Reserved(t.Name) {
 			continue
 		}
 		if !front.ReMCPName.MatchString(t.Name) {

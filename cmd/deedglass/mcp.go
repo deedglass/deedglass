@@ -28,16 +28,17 @@ import (
 	"github.com/deedglass/deedglass/internal/mcp/snippet"
 	"github.com/deedglass/deedglass/internal/mcp/wrap"
 	"github.com/deedglass/deedglass/internal/setup"
+	"github.com/deedglass/deedglass/internal/toolname"
 )
 
 // deedglass mcp wrap and deedglass mcp snippet (S14). wrap's stdout belongs to the MCP client: it
 // carries JSON-RPC and nothing else. Its own lines go to stderr and the log file.
 
 type mcpWrapOpts struct {
-	connector, connectorType, resultMode, onBehalfOf, logFile string
-	allowServerRequests                                       string
-	hideDenied, failOpen, insecureHTTP, noLogFile             bool
-	callTimeout                                               time.Duration
+	connector, connectorType, resultMode, onBehalfOf, logFile, toolNames string
+	allowServerRequests                                                  string
+	hideDenied, failOpen, insecureHTTP, noLogFile                        bool
+	callTimeout                                                          time.Duration
 }
 
 var mcpWrapValues mcpWrapOpts
@@ -65,6 +66,9 @@ Policy
 Limits
   --call-timeout <d>      give up on a call after d, for example 2m (default: no limit)
   --result-mode <m>       full (results up to 256 KiB) or digest
+Names
+  --tool-names <s>        safe (default: deedglass_check_approval, accepted by every model API) or
+                          dotted (deedglass.check_approval, deprecated); calls take either
 Logging
   --log-file <path>       default ~/.deedglass/logs/mcp-<connector>.log; --no-log-file for stderr only
 
@@ -106,6 +110,7 @@ func mcpWrapFlags(fs *flag.FlagSet) {
 	// Limits
 	fs.DurationVar(&o.callTimeout, "call-timeout", 0, "give up on a tool call after this long, for example 2m (0: no limit)")
 	fs.StringVar(&o.resultMode, "result-mode", "full", "report results in full (up to 256 KiB) or as a digest only")
+	fs.StringVar(&o.toolNames, "tool-names", "safe", "how tools/list spells Deedglass's own tool: safe (deedglass_check_approval) or dotted (deprecated)")
 	// Logging
 	fs.StringVar(&o.logFile, "log-file", "", "the log file (default ~/.deedglass/logs/mcp-<connector>.log)")
 	fs.BoolVar(&o.noLogFile, "no-log-file", false, "log to stderr only")
@@ -169,7 +174,7 @@ func runMCPWrap(ctx context.Context, e *Env, args []string) error {
 		logFile = ""
 	}
 	cfg := wrap.Config{Connector: o.connector, Server: u, APIKey: wt.keyFor(e, setup.AgentKeyFile),
-		HideDenied: o.hideDenied, FailOpen: o.failOpen, CallTimeout: o.callTimeout, ResultMode: o.resultMode,
+		HideDenied: o.hideDenied, FailOpen: o.failOpen, CallTimeout: o.callTimeout, ResultMode: o.resultMode, ToolNames: o.toolNames,
 		ConnectorType: o.connectorType, OnBehalfOf: o.onBehalfOf, LogFile: logFile, Upstream: up, Env: os.Environ(),
 		Version: buildInfo().Version, DevEnv: e.Getenv("DEEDGLASS_ENV") == "dev", InsecureHTTP: o.insecureHTTP}
 	for _, r := range strings.Split(o.allowServerRequests, ",") {
@@ -295,7 +300,7 @@ func runMCPSnippet(ctx context.Context, e *Env, args []string) error {
 
 // --- mcp serve (S15) ---
 
-var mcpServeConnector string
+var mcpServeConnector, mcpServeToolNames string
 
 // mcpServeHelp is `deedglass mcp serve --help` after Usage.
 const mcpServeHelp = `
@@ -315,6 +320,10 @@ Connection
   then ~/.deedglass/current.json (the last deedglass init), so one client entry works in every
   project.
 
+Names
+  --tool-names <s>        safe (default: postgres_query, accepted by every model API) or dotted
+                          (postgres.query, the listing in 0.7 and earlier, deprecated); calls take either
+
 Example
   Claude Desktop: deedglass mcp snippet --client claude-desktop --transport http --connector native
 
@@ -322,8 +331,9 @@ Learn more: https://docs.deedglass.com/mcp
 `
 
 func mcpServeFlags(fs *flag.FlagSet) {
-	mcpServeConnector = ""
+	mcpServeConnector, mcpServeToolNames = "", ""
 	fs.StringVar(&mcpServeConnector, "connector", "native", "native, or the name of an upstream MCP server (mcp.upstreams)")
+	fs.StringVar(&mcpServeToolNames, "tool-names", "", "how tools/list spells tools: safe (postgres_query, default) or dotted (postgres.query, deprecated)")
 }
 
 func runMCPServe(ctx context.Context, e *Env, args []string) error {
@@ -339,10 +349,18 @@ func runMCPServe(ctx context.Context, e *Env, args []string) error {
 	if c != "native" && !reServeConnector.MatchString(c) {
 		return usageErr(fmt.Errorf("--connector %q isn't a connector name", c), "Use native, or an upstream's name such as everything.")
 	}
-	cfg := bridge.Config{Server: u, Connector: c, APIKey: key, Version: buildInfo().Version}
+	names, ok := toolname.ParseStyle(mcpServeToolNames)
+	if !ok {
+		return usageErr(fmt.Errorf("--tool-names %q isn't safe or dotted", mcpServeToolNames), "Leave it out for safe names (postgres_query), or use --tool-names dotted.")
+	}
+	if mcpServeToolNames == "" {
+		names = "" // the server's mcp.tool_names
+	}
+	cfg := bridge.Config{Server: u, Connector: c, APIKey: key, Version: buildInfo().Version, ToolNames: names}
 	if key == "" {
 		fmt.Fprintln(e.Stderr, "✕ No Deedglass key found. Run npx deedglass init in a terminal, then restart your MCP client. Every call is refused until then.")
 		cfg.Offline = offlineFront(c)
+		cfg.Offline.ToolNames = names
 	}
 	b, err := bridge.New(cfg)
 	if err != nil {

@@ -43,6 +43,13 @@ func TestBuildInputFull(t *testing.T) {
 		!in.Time.Equal(DefaultCaseTime) || in.Request.Mode != "gateway" || string(in.Args) != "{}" {
 		t.Fatalf("%+v", in)
 	}
+	// The API-safe spelling an MCP client lists is the dotted tool, in both forms.
+	for _, v := range []any{"postgres_query", map[string]any{"name": "postgres_query"}} {
+		in, p = BuildInput(map[string]any{"tool": v})
+		if p != nil || in.Tool.Name != "postgres.query" || in.Tool.Connector != "postgres" || in.Tool.ConnectorType != "postgres" || in.Tool.Op != "query" {
+			t.Fatalf("%v: %v %+v", v, p, in.Tool)
+		}
+	}
 	// Money as an object.
 	in, p = BuildInput(map[string]any{"tool": "a.b", "agent": map[string]any{"budgets": map[string]any{"spend_per_day": map[string]any{"amount": int64(100), "currency": "INR"}}}})
 	if p != nil || in.Agent.Budgets.SpendPerDay.Currency != "inr" {

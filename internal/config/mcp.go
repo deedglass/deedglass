@@ -19,6 +19,10 @@ type MCPSettings struct {
 	AllowedOrigins []string
 	Passthrough    []string // "resources", "prompts", "completion"
 	Upstreams      []MCPUpstream
+	// ToolNames is how tools/list spells qualified tools: "safe" ("postgres_query", the default,
+	// accepted by every model API) or "dotted" ("postgres.query", deprecated). tools/call takes
+	// either spelling.
+	ToolNames string
 }
 
 // MCPUpstream is mcp.upstreams.<slug>.
@@ -84,9 +88,15 @@ func (l *loader) readMCP(file string, n *yaml.Node) {
 			}
 		case "upstreams":
 			l.readUpstreams(file, v, m)
+		case "tool_names":
+			if v.Kind != yaml.ScalarNode || (v.Value != "safe" && v.Value != "dotted") {
+				l.problem(at(v), fmt.Sprintf("mcp.tool_names: %q isn't safe or dotted.", v.Value), "Use safe (postgres_query, the default) or dotted (postgres.query, deprecated).")
+				continue
+			}
+			m.ToolNames = v.Value
 		default:
-			next := "The mcp section takes allowed_origins, passthrough and upstreams."
-			if s := suggest("mcp."+k.Value, []string{"mcp.allowed_origins", "mcp.passthrough", "mcp.upstreams"}); s != "" {
+			next := "The mcp section takes allowed_origins, passthrough, tool_names and upstreams."
+			if s := suggest("mcp."+k.Value, []string{"mcp.allowed_origins", "mcp.passthrough", "mcp.tool_names", "mcp.upstreams"}); s != "" {
 				next = "Did you mean " + s + "?"
 			}
 			l.problem(at(k), fmt.Sprintf("%q isn't a Deedglass setting.", "mcp."+k.Value), next)

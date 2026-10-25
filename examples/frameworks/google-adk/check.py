@@ -15,7 +15,7 @@ async def main():
     finally:
         await toolset.close()
     print(names)
-    assert "postgres.query" in names, names
+    assert "postgres_query" in names or "postgres.query" in names, names  # postgres.query: the name deedglass 0.7 and earlier lists
 
 
 asyncio.run(main())

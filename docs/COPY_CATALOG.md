@@ -166,7 +166,7 @@ MCP eras, in `testdata/mcp/present/`.
 | Situation | Text (`isError: true` unless noted) |
 |---|---|
 | Denied by a rule | `Blocked by policy "<rule>": <reason> Nothing was run. Deedglass sealed a deed of this attempt (deed_…). If this should be allowed, a person can change the policy in Console › Policies.` |
-| Waiting for approval | `Waiting for approval under policy "<rule>": <reason> Nothing has run yet. Approval apr_… expires at HH:MM UTC. To continue, call deedglass.check_approval with {"approval_id": "apr_…"}.` |
+| Waiting for approval | `Waiting for approval under policy "<rule>": <reason> Nothing has run yet. Approval apr_… expires at HH:MM UTC. To continue, call deedglass_check_approval with {"approval_id": "apr_…"}.` |
 | Still waiting (`isError: false`) | `Still waiting for approval apr_…. It expires at HH:MM UTC. Nothing has run yet. Check again in a minute.` |
 | Approved and ran | `Approved by a person. Ran <connector>.<tool>.`, then the tool's own content |
 | Agent stopped, budget | S08's and S11's sentences, then `Nothing was run.` |
@@ -176,7 +176,7 @@ MCP eras, in `testdata/mcp/present/`.
 | Definition changed | `The server changed the definition of <tool> after it was first listed, so Deedglass hid it. Nothing was run. Restart the MCP server to accept the new definition after a person reviews it.` |
 | Server stopped mid-call | `The MCP server stopped while running <tool>. It may have run. Deedglass recorded it as UNVERIFIABLE (act_…).` |
 | Server keeps crashing | `The MCP server stopped 5 times in a minute, so Deedglass stopped restarting it. Nothing was run. Check the server's log, then restart your MCP client.` |
-| Instructions line | `Tool calls on this server pass through Deedglass. Some may be blocked by policy or wait for a person to approve them; the result will say so. Use deedglass.check_approval to continue after an approval.` |
+| Instructions line | `Tool calls on this server pass through Deedglass. Some may be blocked by policy or wait for a person to approve them; the result will say so. Use deedglass_check_approval to continue after an approval.` |
 
 ## MCP HTTP endpoints (S15)
 
@@ -362,7 +362,7 @@ Agent-facing texts never name the person: "Approved by a person. Ran scratch.wri
 person denied this action. Nothing was run. Reason: "…"" · "Still waiting for approval apr_….
 It expires at 05:11 UTC. Nothing has run yet. Check again in a minute." · "A person approved this,
 but agent "claude-desktop" is stopped, so nothing ran." Every text is in
-[MCP.md](MCP.md#approvals-deedglasscheck_approval).
+[MCP.md](MCP.md#approvals-deedglass_check_approval).
 
 ## Undo (S23; S25 builds the panel)
 

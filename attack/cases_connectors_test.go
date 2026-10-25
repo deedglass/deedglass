@@ -182,7 +182,7 @@ func k04(h *harness.H) harness.Observed {
 		var out []string
 		ts, _ := harness.Get(list, "result", "tools").([]any)
 		for _, t := range ts {
-			if n := harness.Str(t, "name"); !strings.HasPrefix(n, "deedglass.") {
+			if n := harness.Str(t, "name"); !strings.HasPrefix(n, "deedglass.") && !strings.HasPrefix(n, "deedglass_") {
 				out = append(out, n)
 			}
 		}

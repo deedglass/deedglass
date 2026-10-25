@@ -90,7 +90,7 @@ func TestDemoScript(t *testing.T) {
 	}
 	t.Logf("tools/list → %s", strings.Join(names, ", "))
 	joined := "," + strings.Join(names, ",") + ","
-	if !strings.Contains(joined, ",execute_sql,") || !strings.Contains(joined, ",deedglass.check_approval,") || strings.Contains(joined, ",analyze_db_health,") {
+	if !strings.Contains(joined, ",execute_sql,") || !strings.Contains(joined, ",deedglass_check_approval,") || strings.Contains(joined, ",analyze_db_health,") {
 		t.Fatalf("tools: %v", names)
 	}
 

@@ -21,6 +21,7 @@ import (
 	"github.com/deedglass/deedglass/internal/identity"
 	"github.com/deedglass/deedglass/internal/ids"
 	"github.com/deedglass/deedglass/internal/mcp/front"
+	"github.com/deedglass/deedglass/internal/mcp/present"
 )
 
 // The mcp_http connector type (S18, S16's step 14): a remote MCP server as an org's connector row,
@@ -299,7 +300,7 @@ func (t *Type) Tools(ctx context.Context, inst *connector.Instance) ([]connector
 	}
 	out := make([]connector.ToolSpec, 0, len(ts))
 	for _, x := range ts {
-		if x == nil || strings.HasPrefix(x.Name, "deedglass.") {
+		if x == nil || present.Reserved(x.Name) {
 			continue
 		}
 		if !front.ReMCPName.MatchString(x.Name) {

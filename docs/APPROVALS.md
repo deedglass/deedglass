@@ -7,7 +7,7 @@ action never runs.
 
 This page covers S22: the policy fields, who may countersign, what they see, the emailed link,
 resuming from REST, MCP and webhooks, and what is recorded. Webhooks are in
-[WEBHOOKS.md](WEBHOOKS.md); the MCP side is in [MCP.md](MCP.md#approvals-deedglasscheck_approval).
+[WEBHOOKS.md](WEBHOOKS.md); the MCP side is in [MCP.md](MCP.md#approvals-deedglass_check_approval).
 
 ## The policy fields
 
@@ -149,10 +149,10 @@ itself is `GET /v1/approvals/{id}` (also `?wait=`); `GET /v1/approvals?status=pe
 
 ## Resume from MCP
 
-The model gets a "Waiting for approval" result and calls `deedglass.check_approval` with
+The model gets a "Waiting for approval" result and calls `deedglass_check_approval` with
 `{"approval_id": "apr_…", "wait_seconds": 10}`. It waits up to 20 seconds for a decision. After an
 approval the original call runs once and its result comes back; after a deny the model reads the
-person's reason. [MCP.md](MCP.md#approvals-deedglasscheck_approval) has every text.
+person's reason. [MCP.md](MCP.md#approvals-deedglass_check_approval) has every text.
 
 ## Resume from webhooks
 
@@ -332,7 +332,7 @@ to a log line or a webhook.
 ## External references (checked 2026-10-02)
 
 - MCP 2026-07-28: tool errors go in results with `isError: true`; tasks are the official
-  extension `io.modelcontextprotocol/tasks`. Deedglass uses `deedglass.check_approval`, which
+  extension `io.modelcontextprotocol/tasks`. Deedglass uses `deedglass_check_approval`, which
   works in every client; the official Go SDK is v1.8.0.
 - Resend's `Idempotency-Key` header (keys kept 24 hours, the same key must carry the same
   payload): each approval email's key names the approval and the link, so a retried send is never

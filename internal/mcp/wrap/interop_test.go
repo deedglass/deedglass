@@ -124,7 +124,7 @@ func sdkRound(t *testing.T, clientVersion, serverMode string) {
 	for _, tl := range lt.Tools {
 		names = append(names, tl.Name)
 	}
-	if !slices.Contains(names, "deedglass.check_approval") || slices.Contains(names, "move_file") || !slices.Contains(names, "echo") {
+	if !slices.Contains(names, "deedglass_check_approval") || slices.Contains(names, "move_file") || !slices.Contains(names, "echo") {
 		t.Fatalf("tools %v", names)
 	}
 	res, err := cs.CallTool(ctx, &mcp.CallToolParams{Name: "echo", Arguments: map[string]any{"message": "hi"}})

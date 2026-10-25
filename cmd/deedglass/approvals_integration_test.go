@@ -99,7 +99,7 @@ func TestApprovalsLive(t *testing.T) {
 		!strings.Contains(r.stdout, "Record sealed · approval.decided") {
 		t.Fatalf("approve: %+v", r)
 	}
-	ok := c.call("deedglass.check_approval", `{"approval_id":"`+apr+`","wait_seconds":10}`)
+	ok := c.call("deedglass_check_approval", `{"approval_id":"`+apr+`","wait_seconds":10}`)
 	if ok.IsError || !strings.HasPrefix(ok.Content[0].Text, "Approved by a person. Ran scratch.write_file.") || readCalls(calls) != "write_file" {
 		t.Fatalf("check after approval: %+v, calls %q", ok, readCalls(calls))
 	}

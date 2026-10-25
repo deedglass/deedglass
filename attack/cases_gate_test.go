@@ -112,15 +112,15 @@ func init() {
 			obs := sqlAttack(h, "block-destructive-sql", []string{"DROP TABLE public.orders"}, "postgres.execute", "permissive policy")
 			obs.ActionIDs = append(obs.ActionIDs, readID)
 			obs.Evidence["poisoned_read"] = readID
-			// The same call over MCP (POST /mcp/native, tools/call): an isError result with the
-			// exact deny text, and a sealed deny.
+			// The same call over MCP (POST /mcp/native, tools/call), by the API-safe name tools/list
+			// shows: an isError result with the exact deny text, and a sealed deny.
 			mcp := attacker.API
 			if r := mcp.MCPInit("native"); r.Status != 200 {
 				h.Problem("MCP initialize: HTTP %d %s", r.Status, r.Body)
 			}
 			_, list := mcp.MCP("native", "tools/list", 1, map[string]any{})
-			listed := strings.Contains(fmt.Sprint(harness.Get(list, "result", "tools")), "postgres.execute")
-			_, res := mcp.MCP("native", "tools/call", 2, map[string]any{"name": "postgres.execute", "arguments": map[string]any{"sql": "DROP TABLE public.orders"}})
+			listed := strings.Contains(fmt.Sprint(harness.Get(list, "result", "tools")), "postgres_execute")
+			_, res := mcp.MCP("native", "tools/call", 2, map[string]any{"name": "postgres_execute", "arguments": map[string]any{"sql": "DROP TABLE public.orders"}})
 			text := fmt.Sprint(harness.Get(res, "result", "content"))
 			isErr, _ := harness.Get(res, "result", "isError").(bool)
 			mcpAction := harness.Str(res, "result", "_meta", "com.deedglass/action")

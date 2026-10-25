@@ -2,7 +2,6 @@ package wrap
 
 import (
 	"encoding/json"
-	"strings"
 	"sync/atomic"
 	"time"
 
@@ -41,12 +40,12 @@ func (w *Wrapper) handleCall(e jsonrpc.Envelope, modern bool, f *inflight) {
 	}
 	cp.Arguments = pm["arguments"]
 	delete(e, "params") // the members in pm are the request from here on
-	if cp.Name == present.CheckApprovalName {
+	if present.IsCheckApproval(cp.Name) {
 		w.checkApproval(e, modern, cp)
 		return
 	}
 	qualified := w.cfg.Connector + "." + cp.Name
-	if strings.HasPrefix(cp.Name, "deedglass.") {
+	if present.Reserved(cp.Name) {
 		w.respondError(id, jsonrpc.CodeInvalidParams, gate.MCPUnknownToolText(cp.Name))
 		return
 	}

@@ -24,6 +24,7 @@ import (
 	"github.com/deedglass/deedglass/internal/identity"
 	"github.com/deedglass/deedglass/internal/mcp/front"
 	"github.com/deedglass/deedglass/internal/mcp/jsonrpc"
+	"github.com/deedglass/deedglass/internal/toolname"
 )
 
 // MaxInFlight is the per-agent limit of MCP requests being served at once.
@@ -38,6 +39,9 @@ const (
 	HMethod          = "Mcp-Method"
 	HName            = "Mcp-Name"
 	HParamPrefix     = "Mcp-Param-"
+	// HToolNames is Deedglass's own: how tools/list spells qualified names for this request
+	// (safe or dotted), sent by deedglass mcp serve --tool-names.
+	HToolNames = "Deedglass-Tool-Names"
 )
 
 // Gateway serves the MCP routes.
@@ -134,8 +138,15 @@ func (g *Gateway) serve(w http.ResponseWriter, r *http.Request, f *front.Front) 
 		defer cancel()
 	}
 	obo, ses := r.Header.Get("Deedglass-On-Behalf-Of"), r.Header.Get("Deedglass-Session")
+	// Deedglass-Tool-Names (deedglass mcp serve --tool-names): safe or dotted; anything else keeps
+	// the server's mcp.tool_names.
+	var names toolname.Style
+	if h := r.Header.Get(HToolNames); h != "" {
+		names, _ = toolname.ParseStyle(h)
+	}
 	res := f.Handle(ctx, front.Request{Env: env, Principal: *p, Version: v.Version, Modern: v.Modern,
-		Transport: gate.TransportMCPHTTP, RequestID: httpx.RequestID(r.Context()), OnBehalfOf: obo, Session: ses, CancelOn: cancelOn})
+		Transport: gate.TransportMCPHTTP, RequestID: httpx.RequestID(r.Context()), OnBehalfOf: obo, Session: ses,
+		ToolNames: names, CancelOn: cancelOn})
 	if res.Env == nil {
 		w.Header().Set("Cache-Control", "no-store")
 		w.WriteHeader(http.StatusAccepted)

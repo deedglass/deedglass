@@ -27,8 +27,6 @@ from llama_index.tools.mcp import BasicMCPClient, McpToolSpec
 async def main():
     client = BasicMCPClient("npx", args=["-y", "deedglass", "mcp", "serve"])
     tools = await McpToolSpec(client=client).to_tool_list_async()
-    for t in tools:  # postgres.query -> postgres_query: OpenAI function names can't hold a dot
-        t.metadata.name = t.metadata.name.replace(".", "_")
     agent = FunctionAgent(name="orders", description="Answers questions about orders.", llm=OpenAI(model="gpt-4o"), tools=tools)
     print(await agent.run("How many rows are in public.orders?"))
 
@@ -44,16 +42,16 @@ python agent.py
 
 **Model key:** `OPENAI_API_KEY` (the model string is the one in the package's README).
 
-**Tool names:** Deedglass's tool names have a dot (`postgres.query`). The MCP spec allows dots in tool names, but model APIs often don't: Anthropic's takes `^[a-zA-Z0-9_-]{1,128}$`, and OpenAI's function names take the same characters. So the file renames each tool's `metadata.name` (`postgres_query`). The tool still calls `postgres.query` on the server; the check runs a renamed tool with `acall()` to show it.
+**Tool names:** Deedglass lists its tools with names every model API takes: `postgres_query`, `postgres_execute`, `deedglass_check_approval` (letters, digits, `_` and `-`; Anthropic's rule is `^[a-zA-Z0-9_-]{1,128}$` and OpenAI's allows the same characters up to 64). Your policies and the sealed records keep the dotted name, `postgres.query`; Deedglass maps one to the other ([MCP.md](../MCP.md#tool-names)). Deedglass 0.7 and earlier listed the dotted names, which these APIs refuse.
 
-**What you see:** the answer (500 rows), and in Console › Ledger or `npx deedglass actions list` one sealed `postgres.query` action per call, with the rule that allowed it. If the agent tries a write, the tool answers that it is waiting for approval and nothing has run; once someone approves, `deedglass.check_approval` lets the agent carry on. A refused call answers with the policy's sentence and a record id.
+**What you see:** the answer (500 rows), and in Console › Ledger or `npx deedglass actions list` one sealed `postgres.query` action per call, with the rule that allowed it. If the agent tries a write, the tool answers that it is waiting for approval and nothing has run; once someone approves, `deedglass_check_approval` lets the agent carry on. A refused call answers with the policy's sentence and a record id.
 
 **First start:** `npx -y deedglass` can take several seconds the first time. If a framework's MCP connect timeout is shorter, run `npx -y deedglass version` once first, or install the CLI ([INSTALL.md](../INSTALL.md)) and use `deedglass` as the command.
 
 ## Check it without a model key
 
 `examples/frameworks/llamaindex/` has the file, its pinned packages and a `check` file that needs no model
-key: it starts `deedglass mcp serve` through the same framework client, renames the tools as the file does, and runs `postgres_query` once with `acall()`. From the folder where
+key: it starts `deedglass mcp serve` through the same framework client, and runs `postgres_query` once with `acall()`. From the folder where
 `init` ran:
 
 ```sh

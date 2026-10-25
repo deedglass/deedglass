@@ -49,9 +49,8 @@ own. Client formats were checked on 2026-10-01 against the pages linked under ea
   (a name right after `--env` is read as another pair), then `--` and the command.
 - **Or a file:** `.mcp.json` in the project, `mcpServers` with `command`, `args` and `env`; values
   may use `${DEEDGLASS_API_KEY}` expansion, which keeps the key out of the file.
-- **Tool names:** Claude Code shows MCP tools as `mcp__<server>__<tool>` and replaces characters
-  other than letters, digits, `_` and `-` with `_`, so `deedglass.check_approval` appears as
-  `mcp__scratch__deedglass_check_approval`. That is expected.
+- **Tool names:** Claude Code shows MCP tools as `mcp__<server>__<tool>`, so
+  `deedglass_check_approval` appears as `mcp__scratch__deedglass_check_approval`. That is expected.
 - Source: https://code.claude.com/docs/en/mcp (checked 2026-10-01).
 
 ```sh

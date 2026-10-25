@@ -12,6 +12,7 @@ func TestMCPSettings(t *testing.T) {
 	c, err := loadYAML(t, `mcp:
   allowed_origins: [https://console.example.test]
   passthrough: [resources, prompts]
+  tool_names: dotted
   upstreams:
     zeta:
       url: https://mcp.example.test/mcp
@@ -25,7 +26,7 @@ func TestMCPSettings(t *testing.T) {
 		t.Fatal(err)
 	}
 	m := c.MCP
-	if len(m.AllowedOrigins) != 1 || len(m.Passthrough) != 2 || len(m.Upstreams) != 2 || m.Upstreams[0].Slug != "everything" {
+	if m.ToolNames != "dotted" || len(m.AllowedOrigins) != 1 || len(m.Passthrough) != 2 || len(m.Upstreams) != 2 || m.Upstreams[0].Slug != "everything" {
 		t.Fatalf("%+v", m)
 	}
 	u := m.Upstreams[0]
@@ -35,7 +36,7 @@ func TestMCPSettings(t *testing.T) {
 	if z := m.Upstreams[1]; z.Timeout != DefaultUpstreamTimeout || z.ToolsTTL != DefaultUpstreamToolsTTL {
 		t.Fatalf("defaults %+v", z)
 	}
-	if c, err := loadYAML(t, ""); err != nil || len(c.MCP.Upstreams) != 0 {
+	if c, err := loadYAML(t, ""); err != nil || len(c.MCP.Upstreams) != 0 || c.MCP.ToolNames != "" {
 		t.Fatal("empty")
 	}
 }
@@ -47,6 +48,7 @@ func TestMCPSettingsProblems(t *testing.T) {
 		"mcp:\n  allowed_origins: https://x.test\n":                                                                 `"mcp.allowed_origins" must be a list.`,
 		"mcp:\n  allowed_origins: [https://x.test/path]\n":                                                          `isn't an origin`,
 		"mcp:\n  passthrough: [tools]\n":                                                                            `isn't a method family`,
+		"mcp:\n  tool_names: dots\n":                                                                                `mcp.tool_names: "dots" isn't safe or dotted.`,
 		"mcp:\n  upstreams:\n    Bad_Name: {url: https://x.test}\n":                                                 `isn't a connector name`,
 		"mcp:\n  upstreams:\n    native: {url: https://x.test}\n":                                                   `isn't a connector name`,
 		"mcp:\n  upstreams:\n    up: {url: ftp://x.test}\n":                                                         `must be an http or https URL`,

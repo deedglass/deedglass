@@ -28,7 +28,7 @@ deedglass = McpToolset(
     connection_params=StdioConnectionParams(
         server_params=StdioServerParameters(command="npx", args=["-y", "deedglass", "mcp", "serve"]), timeout=30
     ),
-    tool_filter=["postgres.describe", "postgres.query"],  # reads only; add postgres.execute for writes
+    tool_filter=["postgres_describe", "postgres_query"],  # reads only; add postgres_execute for writes
 )
 root_agent = LlmAgent(model="gemini-flash-latest", name="orders", instruction="Answer questions about orders.",
                       tools=[deedglass])
@@ -43,9 +43,9 @@ adk run path/to/google-adk       # the folder holding agent.py and __init__.py
 
 **Model key:** `GOOGLE_API_KEY` (the model string is the one in ADK's MCP tools page).
 
-**Tool names:** `tool_filter` keeps the agent to the two read tools; add `postgres.execute` when it should write (writes wait for a person under `postgres-safe`). The names keep their dot (`postgres.query`); we haven't checked whether Gemini accepts a dot in a tool name. If it refuses one, rename the tools as the other pages do.
+**Tool names:** `tool_filter` keeps the agent to the two read tools; add `postgres_execute` when it should write (writes wait for a person under `postgres-safe`). Deedglass lists its tools with names every model API takes: `postgres_query`, `postgres_execute`, `deedglass_check_approval` (letters, digits, `_` and `-`; Anthropic's rule is `^[a-zA-Z0-9_-]{1,128}$` and OpenAI's allows the same characters up to 64). Your policies and the sealed records keep the dotted name, `postgres.query`; Deedglass maps one to the other ([MCP.md](../MCP.md#tool-names)). Deedglass 0.7 and earlier listed the dotted names, which these APIs refuse.
 
-**What you see:** the answer (500 rows), and in Console › Ledger or `npx deedglass actions list` one sealed `postgres.query` action per call, with the rule that allowed it. If the agent tries a write, the tool answers that it is waiting for approval and nothing has run; once someone approves, `deedglass.check_approval` lets the agent carry on. A refused call answers with the policy's sentence and a record id.
+**What you see:** the answer (500 rows), and in Console › Ledger or `npx deedglass actions list` one sealed `postgres.query` action per call, with the rule that allowed it. If the agent tries a write, the tool answers that it is waiting for approval and nothing has run; once someone approves, `deedglass_check_approval` lets the agent carry on. A refused call answers with the policy's sentence and a record id.
 
 **First start:** `npx -y deedglass` can take several seconds the first time. If a framework's MCP connect timeout is shorter, run `npx -y deedglass version` once first, or install the CLI ([INSTALL.md](../INSTALL.md)) and use `deedglass` as the command.
 
@@ -76,4 +76,4 @@ Every framework API in the files above comes from the framework's own docs, chec
 Not verified:
 
 - The `mcp` extra: ADK's MCP page doesn't name it, but `McpToolset` doesn't import without it in 2.12.0 (the extra is declared in the package's metadata).
-- A run with Gemini, and whether Gemini accepts `postgres.query` as a name (no model key in CI).
+- A run with Gemini (no model key in CI).
