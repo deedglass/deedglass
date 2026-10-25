@@ -36,7 +36,7 @@ describe('transport and client (S31 §6)', () => {
     expect(h['idempotency-key']).toMatch(/^sdk_[0-9a-f-]{36}$/);
     expect(h['authorization']).toBe('Bearer ' + KEY);
     expect(h['user-agent']).toMatch(/^deedglass-sdk-typescript\/0\.9\.0 \(node\//);
-    expect(s.calls[0]!.body).toMatchObject({ tool: 'billing.refund_customer', mode: 'gateway', wait: 10, context: { client: { name: '@deedglass/sdk', version: '0.9.0' }, transport: 'sdk' } });
+    expect(s.calls[0]!.body).toMatchObject({ tool: 'billing.refund_customer', mode: 'gateway', wait: 10, context: { client: { name: '@deedglass/sdk', version: '0.10.0' }, transport: 'sdk' } });
   });
 
   it('callId becomes context.call_id; an id outside the API rule is left out (S32)', async () => {

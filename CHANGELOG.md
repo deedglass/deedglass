@@ -7,6 +7,23 @@ this file by `scripts/release-notes.sh`.
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-10-25
+
+Free while we grow, India's national FHIR profiles, and a faster install. Every feature now runs
+with no licence key (DL-131, ADR-118): the full scan report, every policy pack, the one-step session
+undo, the security review pack and the agency view. Nothing reads a licence file or calls out, and
+the licence commands stay for a later paid option. The FHIR connector reads ABDM health records and
+NHCX bundles from what they hold, in the terms of the NRCeS FHIR IG for ABDM 6.5.0 (ADR-119), and the
+free `india-health` pack holds NHCX claims by use and amount. Attack group S (S01 to S12) runs
+against it. `curl -fsSL https://deedglass.com/install.sh | sh` downloads from deedglass.com first
+(6.6-7.3 s on the network where GitHub took 81-119 s), with the same sha256 and signature checks.
+Nothing changes for existing records: the deed format is unchanged, and Proven, Checked and Claimed
+mean what they meant in 0.9.0. Known limits: the scan Action's pull request comment on private
+repositories still asks for a licence key until the Action's next release; the India tables follow
+one guide version (6.5.0) and a newer guide needs a code change; the copy at deedglass.com/dl is
+refreshed by a site deploy, so for a short time after a release it serves the previous version. No
+new Go dependency, no schema migration, and `formula_version` stays 1.
+
 ### Added
 
 - India's national FHIR profiles (HC-P15, ADR-119). The FHIR connector reads a create or update's
@@ -28,6 +45,14 @@ this file by `scripts/release-notes.sh`.
 
 ### Changed
 
+- `scripts/install.sh` reads the version from `https://deedglass.com/dl/latest` and downloads the
+  checksums, the signature bundle and the archive from `https://deedglass.com/dl/vX.Y.Z/`, a
+  byte-for-byte copy made when the site deploys; any file the copy lacks comes from the GitHub
+  release. Every download has a 5 s connect timeout, a stall limit and two retries. The checks don't
+  change. `DEEDGLASS_MIRROR_URL` overrides the copy (`none` means GitHub only). (#94, #95)
+- The README opens with one line on what Deedglass does, the recorded demo (dark and light), install,
+  a 60-second try-it, who it's for, how it works and the benchmarks with their misses; the repository
+  description, social preview, contributing guide and issue forms are new. (#96)
 - `healthcare-fhir` 1.1.0: `claims-four-eyes` also holds a Bundle that carries a Claim or another
   billing record, such as an NHCX ClaimBundle (before, a ClaimBundle created as a Bundle was read
   back and allowed).
@@ -712,7 +737,8 @@ See [KNOWN_ISSUES.md](KNOWN_ISSUES.md): what happens, who is affected, the worka
 See [docs/LIMITATIONS.md](docs/LIMITATIONS.md). In short: L2 covers Postgres only, seal keys are per
 deployment, and Deedglass trusts the Postgres server and the host it runs on.
 
-[Unreleased]: https://github.com/deedglass/deedglass/compare/v0.9.0...HEAD
+[Unreleased]: https://github.com/deedglass/deedglass/compare/v0.10.0...HEAD
+[0.10.0]: https://github.com/deedglass/deedglass/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/deedglass/deedglass/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/deedglass/deedglass/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/deedglass/deedglass/compare/v0.6.0...v0.7.0

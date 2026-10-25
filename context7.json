@@ -1,7 +1,7 @@
 {
   "$schema": "https://context7.com/schema/context7.json",
   "projectTitle": "Deedglass",
-  "description": "Rules decide each AI agent tool call; Deedglass checks what really changed and seals a record.",
+  "description": "Deedglass: rules decide each AI agent tool call; it checks what really changed and seals a record.",
   "folders": ["docs", "docs-site/src/content/docs", "examples/policies", "integrations/claude-code/skills"],
   "excludeFolders": [
     "docs/adr",

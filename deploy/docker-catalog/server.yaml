@@ -12,7 +12,7 @@ meta:
     - audit
 about:
   title: Deedglass
-  description: "Rules decide each AI agent tool call; Deedglass checks what really changed and seals a record."
+  description: "Deedglass: rules decide each AI agent tool call; it checks what really changed and seals a record."
   icon: https://deedglass.com/icon-512.png
 source:
   project: https://github.com/deedglass/deedglass

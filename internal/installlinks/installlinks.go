@@ -17,14 +17,14 @@ import (
 
 // Version is the npm and release version the links point at (npm/deedglass/package.json; a test
 // keeps them equal).
-const Version = "0.9.0"
+const Version = "0.10.0"
 
 // Name is the server name every client shows.
 const Name = "deedglass"
 
 // Description is the one line clients and registries show: docs/description.json's tagline
 // (docs/description_test.go keeps them equal). The Claude Desktop bundle and the Goose link carry it.
-const Description = "Rules decide each AI agent tool call; Deedglass checks what really changed and seals a record."
+const Description = "Deedglass: rules decide each AI agent tool call; it checks what really changed and seals a record."
 
 // CursorMaxURL is Cursor's limit for an install link.
 const CursorMaxURL = 10000
