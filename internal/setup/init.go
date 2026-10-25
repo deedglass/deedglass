@@ -94,22 +94,26 @@ type Runner interface {
 
 // Options are init's flags.
 type Options struct {
-	Dir          string
-	Yes          bool
-	Client       string // claude-code · claude-desktop · cursor · vscode · windsurf · codex · gemini · copilot · sdk-python · sdk-typescript · none
-	Listen       string // default 127.0.0.1:8080
-	PGPort       int    // default 55432
-	DemoPort     int    // default PGPort + 10
-	Project      string // default local-<8 hex of the directory>
-	OwnerEmail   string
-	NoSmoke      bool
-	NoOpen       bool
-	Smoke        bool // run the smoke actions even when nothing changed
-	TTY          bool
-	Runner       Runner
-	Now          func() time.Time
-	Progress     func(StepResult) // called as each step finishes (text mode streams)
-	ResetSecrets bool             // the caller has the typed "reset"
+	Dir        string
+	Yes        bool
+	Client     string // claude-code · claude-desktop · cursor · vscode · windsurf · codex · gemini · copilot · sdk-python · sdk-typescript · none
+	Listen     string // default 127.0.0.1:8080
+	PGPort     int    // default 55432
+	DemoPort   int    // default PGPort + 10
+	Project    string // default local-<8 hex of the directory>
+	OwnerEmail string
+	NoSmoke    bool
+	NoOpen     bool
+	Smoke      bool // run the smoke actions even when nothing changed
+	TTY        bool
+	Runner     Runner
+	Now        func() time.Time
+	Progress   func(StepResult) // called as each step finishes (text mode streams)
+	// Start is called as a step begins, with a label and what it's doing ("" for nothing); a step
+	// may call it again with a new note (the first image download). The CLI draws its progress
+	// line from it. nil is fine.
+	Start        func(label, note string)
+	ResetSecrets bool // the caller has the typed "reset"
 	// Policy is the starter to enforce: postgres-check or postgres-safe. "" keeps the one a stack
 	// already enforces, and picks postgres-check for a new stack.
 	Policy string
@@ -199,6 +203,13 @@ type run struct {
 	changed bool
 }
 
+// start tells the caller a step began (Options.Start).
+func (x *run) start(label, note string) {
+	if x.o.Start != nil {
+		x.o.Start(label, note)
+	}
+}
+
 func (x *run) add(s StepResult) StepResult {
 	if s.Status == Done || s.Status == Changed {
 		x.changed = true
@@ -219,12 +230,18 @@ func Init(ctx context.Context, o Options) (*Result, error) {
 	t0 := o.Now()
 	x := &run{o: o, r: o.Runner}
 	res := &Result{Object: "init_result", Dir: o.Dir}
-	steps := []func(context.Context) StepResult{
-		x.preflight, x.stateDir, x.secrets, x.postgres, x.server, x.org, x.demoDB, x.agentStep, x.policy, x.client,
+	steps := []struct {
+		label string
+		f     func(context.Context) StepResult
+	}{
+		{"Docker", x.preflight}, {"Local state", x.stateDir}, {"Keys", x.secrets}, {"Postgres", x.postgres},
+		{"Deedglass", x.server}, {"Org", x.org}, {"Demo database", x.demoDB}, {"Agent", x.agentStep},
+		{"Policies", x.policy}, {"Client", x.client},
 	}
-	for _, f := range steps {
+	for _, st := range steps {
 		ts := o.Now()
-		r := f(ctx)
+		x.start(st.label, "")
+		r := st.f(ctx)
 		r.TookMS = o.Now().Sub(ts).Milliseconds()
 		s := x.add(r)
 		if s.Status == Failed {
@@ -233,6 +250,7 @@ func Init(ctx context.Context, o Options) (*Result, error) {
 		}
 	}
 	if !o.NoSmoke && (x.changed || o.Smoke) {
+		x.start("Smoke", "a read, a blocked DROP TABLE and an UPDATE checked at Proven")
 		for _, s := range x.smoke(ctx) {
 			x.add(s)
 			if s.Status == Failed {
@@ -512,6 +530,9 @@ func (x *run) ensureContainer(ctx context.Context, name, volume, envName, passwo
 		}
 		status = Changed
 	default:
+		if _, err := x.r.Docker(ctx, nil, "image", "inspect", "--format", "{{.Id}}", x.stack.Image); err != nil {
+			x.start("Postgres", "downloading the Postgres 18.6 image, first run only (about 150 MB)")
+		}
 		envFile := Path(x.o.Dir, envName)
 		if err := writeSecret(envFile, []byte("POSTGRES_PASSWORD="+password+"\n"), true); err != nil {
 			return Failed, err

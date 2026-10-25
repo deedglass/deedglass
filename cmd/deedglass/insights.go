@@ -645,7 +645,7 @@ func runInsightsDetect(ctx context.Context, e *Env, args []string) error {
 	}
 	jsonOut = jsonOut || e.Globals.JSON
 	orgRef = firstNonEmpty(orgRef, e.Globals.Org) // --org is also a global flag
-	cfg, warnings, err := config.Load(e.LoadOptions())
+	cfg, warnings, err := config.Load(cliLoadOptions(e))
 	var ps *config.Problems
 	if errors.As(err, &ps) {
 		return configProblems(e, ps, warnings)

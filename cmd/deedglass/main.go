@@ -282,6 +282,10 @@ func notFound(e *Env, words []string) error {
 		}
 	}
 	msg := fmt.Sprintf("Unknown command %q", words[0])
+	if words[0] == "quickstart" { // the README's word for the first run
+		return usageErrCode("unknown_command", errors.New(msg+". The quickstart starts with deedglass init."),
+			"Run deedglass init, or deedglass help to see every command.")
+	}
 	if s := suggestPath(words[:1], nil); s != "" {
 		msg += fmt.Sprintf(". Did you mean %q?", s)
 	} else {

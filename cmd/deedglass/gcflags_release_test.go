@@ -37,6 +37,23 @@ func TestReleaseGcflags(t *testing.T) {
 	if !strings.Contains(string(df), "go build -trimpath $(sh scripts/gcflags.sh) ") {
 		t.Error("the Dockerfile's go build doesn't use scripts/gcflags.sh")
 	}
+	// Release binaries are stripped (-s -w: no symbol table or DWARF, a smaller download) and carry
+	// no local paths (-trimpath, above). Make's build and the MCPB bundles do the same.
+	if !strings.Contains(string(gr), "    ldflags:\n      - -s -w\n") {
+		t.Error(".goreleaser.yaml's ldflags don't start with -s -w")
+	}
+	if !strings.Contains(string(df), `-ldflags "-s -w`) {
+		t.Error("the Dockerfile's go build isn't stripped (-ldflags \"-s -w …\")")
+	}
+	for _, f := range []string{"../../Makefile", "../../scripts/mcpb.sh"} {
+		b, err := os.ReadFile(f)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !strings.Contains(string(b), "-trimpath") || !strings.Contains(string(b), "-s -w") {
+			t.Errorf("%s builds without -trimpath and -s -w", f)
+		}
+	}
 	deps, err := exec.Command("go", "list", "-deps", ".").Output()
 	if err != nil {
 		t.Skipf("go list unavailable: %v", err)

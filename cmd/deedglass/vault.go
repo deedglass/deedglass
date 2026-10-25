@@ -27,7 +27,7 @@ type vaultSession struct {
 func (s *vaultSession) Close() { s.db.Close() }
 
 func openVault(ctx context.Context, e *Env, sign bool) (*vaultSession, error) {
-	cfg, warnings, err := config.Load(e.LoadOptions())
+	cfg, warnings, err := config.Load(cliLoadOptions(e))
 	var ps *config.Problems
 	if errors.As(err, &ps) {
 		return nil, configProblems(e, ps, warnings)

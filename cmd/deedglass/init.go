@@ -142,7 +142,10 @@ func runInit(ctx context.Context, e *Env, args []string) error {
 		if len(create) > 0 {
 			fmt.Fprintln(e.Stdout)
 		}
-		o.Progress = func(s setup.StepResult) { renderStep(e, s) }
+		sp := newSpinner(e)
+		defer sp.Stop()
+		o.Start = sp.Start
+		o.Progress = func(s setup.StepResult) { sp.Stop(); renderStep(e, s) }
 	}
 	if fi, err := os.Lstat(filepath.Join(dir, setup.DirName)); err == nil && fi.IsDir() && fi.Mode()&os.ModeSymlink == 0 {
 		_ = fi
@@ -252,6 +255,13 @@ func wrapJoin(items []string, indent int) string {
 	return strings.Join(lines, "\n"+strings.Repeat(" ", indent+11))
 }
 
+// newSpinner is the progress line for steps that may take over a second: drawn in place on a
+// terminal (not with --json, TERM=dumb or DEEDGLASS_NO_ANIM), notes only elsewhere.
+func newSpinner(e *Env) *ui.Spinner {
+	live := e.IsTTY && !e.Globals.JSON && e.Getenv("TERM") != "dumb" && !truthy(e.Getenv("DEEDGLASS_NO_ANIM"))
+	return ui.NewSpinner(e.Stdout, e.Style, live)
+}
+
 func renderStep(e *Env, s setup.StepResult) {
 	st := e.Style
 	sym := st.Teal("✓")
@@ -308,7 +318,10 @@ func runInitTrigger(ctx context.Context, e *Env, r *setup.ProcRunner, dir string
 	if text {
 		fmt.Fprintln(e.Stdout, "deedglass init --trigger · one UPDATE, a legacy trigger, and what Postgres really committed")
 		fmt.Fprintln(e.Stdout)
-		o.Progress = func(s setup.StepResult) { renderStep(e, s) }
+		sp := newSpinner(e)
+		defer sp.Stop()
+		o.Start = sp.Start
+		o.Progress = func(s setup.StepResult) { sp.Stop(); renderStep(e, s) }
 	}
 	res, err := setup.Trigger(ctx, o)
 	if e.Globals.JSON {

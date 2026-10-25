@@ -27,6 +27,14 @@ It runs nothing it downloads, asks for no password and never edits your shell pr
 directory isn't on your PATH it prints the line to add. `sh -s -- --version 0.2.1 --dir /usr/local/bin`
 picks a version and a directory. Read it first: [`scripts/install.sh`](../scripts/install.sh).
 
+Releases after 0.8.0 also carry the script as a release file, so it comes from the same GitHub
+downloads as the archive. Where `raw.githubusercontent.com` is slow to connect (on one network it
+took 50 s per connection), use:
+
+```sh
+curl -fsSL https://github.com/deedglass/deedglass/releases/latest/download/install.sh | sh
+```
+
 ## A binary
 
 Download the archive for your platform from the release page:

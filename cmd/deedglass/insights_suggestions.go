@@ -378,7 +378,7 @@ func runInsightsDigest(ctx context.Context, e *Env, args []string) error {
 		return usageErr(errors.New("deedglass insights digest only previews: pass --preview"), "deedglass insights digest --preview --html /tmp/digest.html")
 	}
 	orgRef = firstNonEmpty(orgRef, e.Globals.Org)
-	cfg, warnings, err := config.Load(e.LoadOptions())
+	cfg, warnings, err := config.Load(cliLoadOptions(e))
 	var ps *config.Problems
 	if errors.As(err, &ps) {
 		return configProblems(e, ps, warnings)

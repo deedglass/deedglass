@@ -429,7 +429,7 @@ func fetchKeySet(ctx context.Context, server string) (*deed.KeySet, string, erro
 // --- shared ---
 
 func loadFor(e *Env, need config.Need) (*config.Config, error) {
-	cfg, warnings, err := config.Load(e.LoadOptions())
+	cfg, warnings, err := config.Load(cliLoadOptions(e))
 	var ps *config.Problems
 	if errors.As(err, &ps) {
 		return nil, configProblems(e, ps, warnings)
