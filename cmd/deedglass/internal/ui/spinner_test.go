@@ -27,7 +27,7 @@ func (l *lockedBuf) String() string {
 
 func TestSpinnerOffTerminalPrintsNotesOnce(t *testing.T) {
 	var b lockedBuf
-	s := NewSpinner(&b, Style{}, false)
+	s := NewSpinner(&b, Style{}, false, 80)
 	s.Start("Docker", "")
 	s.Start("Postgres", "")
 	s.Start("Postgres", "downloading the image")
@@ -43,7 +43,7 @@ func TestSpinnerDrawsAfterDelayAndClears(t *testing.T) {
 	SpinnerDelay, spinnerTick = 5*time.Millisecond, 5*time.Millisecond
 	defer func() { SpinnerDelay, spinnerTick = saved, savedTick }()
 	var b lockedBuf
-	s := NewSpinner(&b, Style{}, true)
+	s := NewSpinner(&b, Style{}, true, 80)
 	s.Start("Postgres", "starting")
 	time.Sleep(40 * time.Millisecond)
 	s.Stop()
@@ -59,10 +59,26 @@ func TestSpinnerDrawsAfterDelayAndClears(t *testing.T) {
 
 func TestSpinnerQuickStepDrawsNothing(t *testing.T) {
 	var b lockedBuf
-	s := NewSpinner(&b, Style{}, true)
+	s := NewSpinner(&b, Style{}, true, 80)
 	s.Start("Keys", "")
 	s.Stop()
 	if b.String() != "" {
 		t.Fatalf("a step under the delay drew %q", b.String())
+	}
+}
+
+func TestSpinnerLineFitsTheTerminal(t *testing.T) {
+	saved, savedTick := SpinnerDelay, spinnerTick
+	SpinnerDelay, spinnerTick = 5*time.Millisecond, 5*time.Millisecond
+	defer func() { SpinnerDelay, spinnerTick = saved, savedTick }()
+	var b lockedBuf
+	s := NewSpinner(&b, Style{}, true, 40)
+	s.Start("Postgres", "downloading the Postgres 18.6 image, first run only")
+	time.Sleep(30 * time.Millisecond)
+	s.Stop()
+	for _, l := range strings.Split(b.String(), "\r\x1b[K") {
+		if Width(l) >= 40 {
+			t.Fatalf("a %d-column line on a 40-column terminal: %q", Width(l), l)
+		}
 	}
 }

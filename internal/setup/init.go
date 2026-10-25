@@ -531,7 +531,7 @@ func (x *run) ensureContainer(ctx context.Context, name, volume, envName, passwo
 		status = Changed
 	default:
 		if _, err := x.r.Docker(ctx, nil, "image", "inspect", "--format", "{{.Id}}", x.stack.Image); err != nil {
-			x.start("Postgres", "downloading the Postgres 18.6 image, first run only (about 150 MB)")
+			x.start("Postgres", "downloading Postgres 18.6, first run only")
 		}
 		envFile := Path(x.o.Dir, envName)
 		if err := writeSecret(envFile, []byte("POSTGRES_PASSWORD="+password+"\n"), true); err != nil {

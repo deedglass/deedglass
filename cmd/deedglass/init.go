@@ -259,7 +259,7 @@ func wrapJoin(items []string, indent int) string {
 // terminal (not with --json, TERM=dumb or DEEDGLASS_NO_ANIM), notes only elsewhere.
 func newSpinner(e *Env) *ui.Spinner {
 	live := e.IsTTY && !e.Globals.JSON && e.Getenv("TERM") != "dumb" && !truthy(e.Getenv("DEEDGLASS_NO_ANIM"))
-	return ui.NewSpinner(e.Stdout, e.Style, live)
+	return ui.NewSpinner(e.Stdout, e.Style, live, e.Width)
 }
 
 func renderStep(e *Env, s setup.StepResult) {
@@ -287,9 +287,9 @@ func renderStep(e *Env, s setup.StepResult) {
 	if width <= 0 {
 		width = 100
 	}
-	for i, l := range ui.Wrap(fmt.Sprintf("%-23s %s", s.Title, s.Detail), width-2, 24) {
+	for i, l := range ui.Wrap(strings.Repeat(" ", 24)+s.Detail, width-2, 0) {
 		if i == 0 {
-			fmt.Fprintf(e.Stdout, "%s %s\n", sym, l)
+			fmt.Fprintf(e.Stdout, "%s %-23s %s\n", sym, s.Title, strings.TrimLeft(l, " "))
 			continue
 		}
 		fmt.Fprintf(e.Stdout, "  %s\n", l)

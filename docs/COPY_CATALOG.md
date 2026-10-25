@@ -62,8 +62,8 @@ printed whole in `--json`.
 hanging indent (`ui.Wrap`); a value list breaks after `|`. Commands, URLs and keys are never broken.
 
 **Progress.** A step that may take more than a second gets a progress line (`ui.Spinner`): on a
-terminal, after 0.4 s, `◐ Postgres  downloading the Postgres 18.6 image · 12 s`, redrawn in place
-and cleared before the step's own `✓` or `✕` line. Off a terminal, with `--json` or
+terminal, after 0.4 s, `◐ Postgres  12 s · downloading Postgres 18.6, first run only`, cut to the terminal's
+width, redrawn in place and cleared before the step's own `✓` or `✕` line. Off a terminal, with `--json` or
 `DEEDGLASS_NO_ANIM`, nothing is drawn; a note (the first image download) prints once.
 
 **`--json`.** Every read command takes `--json` and prints one JSON document (or NDJSON for a

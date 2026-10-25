@@ -28,6 +28,7 @@ type Spinner struct {
 	noted  string // the last note printed off a terminal
 	start  time.Time
 	frames []string
+	width  int // terminal columns; the line is cut to fit so it redraws in place (0: 80)
 }
 
 // SpinnerDelay is how long a step runs before its line appears (tests shorten it).
@@ -38,8 +39,28 @@ var spinnerTick = 120 * time.Millisecond
 
 // NewSpinner returns a spinner writing to w. live is true on a terminal where animation is
 // allowed; otherwise only notes are printed, once each.
-func NewSpinner(w io.Writer, style Style, live bool) *Spinner {
-	return &Spinner{w: w, style: style, live: live, frames: []string{"◐", "◓", "◑", "◒"}}
+func NewSpinner(w io.Writer, style Style, live bool, width int) *Spinner {
+	if width <= 0 {
+		width = 80
+	}
+	return &Spinner{w: w, style: style, live: live, width: width, frames: []string{"◐", "◓", "◑", "◒"}}
+}
+
+// clip cuts t to n columns, ending with … when it cut.
+func clip(t string, n int) string {
+	if Width(t) <= n {
+		return t
+	}
+	out, w := "", 0
+	for _, r := range t {
+		rw := Width(string(r))
+		if w+rw > n-1 {
+			break
+		}
+		out += string(r)
+		w += rw
+	}
+	return out + "…"
 }
 
 // Start begins a step called label; note says what it's doing ("" for nothing). Calling Start
@@ -106,19 +127,21 @@ func (s *Spinner) draw(i int) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	secs := int(time.Since(s.start).Seconds())
-	line := s.style.Violet(s.frames[i%len(s.frames)]) + " " + s.label
+	// The seconds go first so a long note is what gets cut, never the clock.
 	tail := ""
-	if s.note != "" {
-		tail = s.note
-	}
 	if secs >= 1 {
+		tail = fmt.Sprintf("%d s", secs)
+	}
+	if s.note != "" {
 		if tail != "" {
 			tail += " " + Sep + " "
 		}
-		tail += fmt.Sprintf("%d s", secs)
+		tail += s.note
 	}
-	if tail != "" {
-		line += "  " + s.style.Dim(tail)
+	label := clip(s.label, s.width-3)
+	line := s.style.Violet(s.frames[i%len(s.frames)]) + " " + label
+	if room := s.width - 1 - 2 - Width(label) - 2; tail != "" && room > 4 {
+		line += "  " + s.style.Dim(clip(tail, room))
 	}
 	fmt.Fprint(s.w, "\r\x1b[K"+line)
 	s.drawn = true
