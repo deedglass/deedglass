@@ -17,6 +17,7 @@ import (
 type description struct {
 	Tagline  string   `json:"tagline"`
 	Short    string   `json:"short"`
+	GitHub   string   `json:"github"`
 	Summary  string   `json:"summary"`
 	Licence  string   `json:"licence"`
 	Network  string   `json:"network"`
@@ -50,6 +51,15 @@ func TestDescription(t *testing.T) {
 	}
 	if !strings.Contains(d.Licence, "Apache-2.0 AND FSL-1.1-ALv2") || !strings.Contains(d.Network, "Pro") {
 		t.Error("the licence sentence must name the combined licence and the network sentence the Pro licence check (P-086, P-087)")
+	}
+
+	// The GitHub repository description: GitHub shows at most 350 characters, and its first sentence
+	// is the README's one-line heading.
+	if n := len([]rune(d.GitHub)); n == 0 || n > 350 || !strings.HasSuffix(d.GitHub, ".") {
+		t.Errorf("github is %d characters (1 to 350) or doesn't end with a period: %q", n, d.GitHub)
+	}
+	if first, _, _ := strings.Cut(d.GitHub, ". "); !strings.Contains(read(t, "../README.md"), `<h3 align="center">`+first+`.</h3>`) {
+		t.Errorf("README.md's heading must be the first sentence of docs/description.json's github: %q", first+".")
 	}
 
 	// The tagline, exactly, where a registry or a directory shows one line.

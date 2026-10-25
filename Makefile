@@ -15,7 +15,7 @@ LDFLAGS  := -s -w -X $(BI).Version=$(VERSION) -X $(BI).Commit=$(COMMIT) -X $(BI)
 	web-verify-install web-verify-test sdk-ts sdk-ts-it sdk-sync-verify sdk-runtime sdk-examples web-verify-build web-verify-serve gencopy genmark bench-mark bench-ledger bench-stop bench-intents bench-gate bench-witness policy-test \
 	fuzz-policy fuzz-policy-short audit fuzz-all fuzz-regress attack-one bench-policy bench-eval mcp-it bench-mcp \
 	demo demo-live demo-launch-check demo-up demo-down demo-reset demo-status demo-snippet demo-psql demo-follow demo-verify demo-check demo-smoke bench-gateway \
-	demo-trigger-on demo-trigger-off demo-order-reset demo-hero demo-hero-check demo-diff bench-l2 bench-approvals bench-slack \
+	demo-trigger-on demo-trigger-off demo-order-reset demo-hero demo-capture demo-svg social-preview demo-hero-check demo-diff bench-l2 bench-approvals bench-slack \
 	mock-orders bench-connectors bench-postgres bench-decoder attack attack-report vuln undo-matrix quickstart-it
 
 all: ci
@@ -523,6 +523,16 @@ demo-order-reset: ## S21: ORDER=42 sets one order back to paid; no ORDER puts ev
 
 demo-hero: ## S21: the L2 hero in one command (VERIFIED, then MISMATCH with 301 rows, the diff, verify); HERO_PACE=2 for recording
 	@examples/demo/scripts/demo.sh hero
+
+demo-capture: ## Record the README demo: the real make demo-hero, each line with its time, into docs/assets/demo-hero.cast.json (make demo-up DEMO_PORT=8091 first; a clean tree)
+	node scripts/demo/capture.mjs
+
+demo-svg: ## Draw the README demo (dark and light SVG) from docs/assets/demo-hero.cast.json; no stack needed
+	node scripts/demo/cast2svg.mjs docs/assets/demo-hero.cast.json docs/assets/demo-hero.svg
+	node scripts/demo/cast2svg.mjs --theme light docs/assets/demo-hero.cast.json docs/assets/demo-hero-light.svg
+
+social-preview: ## Render docs/assets/social-preview.png (1280x640) from docs/assets/social-preview.html with headless Chrome
+	scripts/demo/social-preview.sh
 
 demo-scan-golden: build-only ## S47B: the demo's blast-radius score golden (scan as acme_owner, trigger on) against the running stack (make demo-up first)
 	DEEDGLASS_DEMO=1 $(GO) test -tags demo -count=1 -run TestDemoScanScore ./examples/demo/

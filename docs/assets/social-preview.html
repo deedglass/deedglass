@@ -1,0 +1,33 @@
+<!doctype html>
+<!-- The GitHub social preview (1280x640). make social-preview renders it to social-preview.png with
+     headless Chrome. Brand: DESIGN.md (ink-950 canvas, the aurora gradient for social backgrounds,
+     Inter and a mono for CLI). Claims: P-097, P-049 (the 301 scene), P-325 (the one-liner). -->
+<html><head><meta charset="utf-8"><title>Deedglass social preview</title>
+<style>
+  html,body{margin:0;width:1280px;height:640px;overflow:hidden;background:#07080C}
+  body{font-family:Inter,"Inter Variable",-apple-system,"SF Pro Display","Segoe UI",sans-serif;color:#F5F6FA;position:relative}
+  .glow{position:absolute;inset:0;background:
+    radial-gradient(900px 520px at 100% 0%,rgba(124,108,255,.30),transparent 60%),
+    radial-gradient(700px 480px at 85% 100%,rgba(47,230,209,.20),transparent 60%),
+    radial-gradient(600px 400px at 0% 100%,rgba(79,140,255,.14),transparent 60%)}
+  .wrap{position:absolute;inset:0;padding:64px 72px;display:flex;flex-direction:column}
+  .logo{height:64px;align-self:flex-start}
+  h1{font-size:62px;line-height:1.08;letter-spacing:-.025em;font-weight:700;margin:36px 0 0;max-width:1040px}
+  .sub{font-size:27px;line-height:1.35;color:#B9BDC8;margin:20px 0 0;max-width:980px}
+  .term{margin-top:28px;background:rgba(14,16,23,.86);border:1px solid #2A2E3B;border-radius:14px;padding:18px 24px;
+    font-family:"Geist Mono",ui-monospace,SFMono-Regular,Menlo,monospace;font-size:21px;line-height:1.55;max-width:1080px}
+  .bad{color:#FF7A70;font-weight:700}.dim{color:#8B90A0}.ok{color:#34E3C9}
+  .foot{margin-top:auto;display:flex;justify-content:space-between;font-size:21px;color:#8B90A0}
+  .foot b{color:#F5F6FA;font-weight:600}
+</style></head>
+<body><div class="glow"></div><div class="wrap">
+  <img class="logo" src="lockup-horizontal-dark.svg" alt="Deedglass">
+  <h1>Check what your AI agents actually changed.</h1>
+  <p class="sub">Rules before each call, a check after it and signed records anyone can verify offline, for Postgres, FHIR servers and SaaS APIs. Undo for Postgres rows.</p>
+  <div class="term">
+    <div><span class="dim">agent</span>&nbsp;&nbsp;&nbsp;&nbsp;UPDATE order 42 · reported <b>1 row</b></div>
+    <div><span class="bad">✕ Proven · Doesn't match</span> · Postgres changed <span class="bad">301 rows</span> in public.orders</div>
+    <div><span class="ok">✓ Undo preview</span> <span class="dim">· 301 rows · a person countersigns first</span></div>
+  </div>
+  <div class="foot"><span><b>github.com/deedglass/deedglass</b></span><span>Apache-2.0 core · deedglass.com</span></div>
+</div></body></html>

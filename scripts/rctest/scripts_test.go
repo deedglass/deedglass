@@ -88,8 +88,8 @@ func TestPrepublicAudit(t *testing.T) {
 func TestIssueForms(t *testing.T) {
 	root, _ := filepath.Abs("../..")
 	files, _ := filepath.Glob(filepath.Join(root, ".github/ISSUE_TEMPLATE/*.yml"))
-	if len(files) != 7 {
-		t.Fatalf("%d issue form files, want bug, feature, connector, i-ran-it, scan-rule, policy-pack and config", len(files))
+	if len(files) != 9 {
+		t.Fatalf("%d issue form files, want bug, feature, connector, docs, good-first-issue, i-ran-it, scan-rule, policy-pack and config", len(files))
 	}
 	for _, f := range files {
 		b, _ := os.ReadFile(f)

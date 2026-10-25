@@ -3,6 +3,19 @@
 Thank you for looking. Deedglass is maintained by one person today, so a small, well-tested change
 with a clear reason is the fastest to land.
 
+## Ways to help
+
+- **Try it and tell us what happened.** The **I ran it** issue form is the most useful thing you can
+  send, good or bad.
+- **Pick up a [good first issue](https://github.com/deedglass/deedglass/labels/good%20first%20issue)**
+  or a [help wanted](https://github.com/deedglass/deedglass/labels/help%20wanted) one. Comment
+  "I'll take this" so nobody duplicates the work; if you go quiet for two weeks, someone else may pick it up.
+- **Fix a page.** Typos, unclear steps and missing caveats all count. The **Docs problem** form is
+  there if you'd rather report it.
+- **Suggest a first issue.** Spotted a small, self-contained change? File it with the **Suggest a
+  good first issue** form: the context, where to look, what done means and the test command.
+- **Answer a question** in [Discussions](https://github.com/deedglass/deedglass/discussions).
+
 ## Your first pull request in five minutes
 
 Most [good first issues](https://github.com/deedglass/deedglass/labels/good%20first%20issue) need
@@ -26,6 +39,18 @@ Three kinds of change are data files, not code, and are the quickest to land:
   [`examples/policies/`](examples/policies/), then `go test ./examples/policies/` and
   `make policy-test`.
 - **A docs fix:** pages live in [`docs/`](docs/). Say what a feature doesn't do as plainly as what it does.
+
+Where things live, for orientation:
+
+| Path | What |
+|---|---|
+| `cmd/deedglass/` | the CLI, one file per command |
+| `internal/scan/` | `deedglass scan` and its catalog of MCP servers |
+| `internal/policy/`, `examples/policies/` | the policy language and the starter policies |
+| `internal/gate/`, `internal/witness/` | running a call, and checking what it changed |
+| `internal/connector/` | Postgres, FHIR, REST, GitHub, Slack, Stripe and the others |
+| `docs/`, `docs-site/` | the docs pages, and the site that publishes them |
+| `attack/` | the attack suite (expected outcomes never change to make a test pass) |
 
 If a test prints a `-update` command, the change moved a golden file: run it, read the diff, and
 commit the golden with your change. Stuck? Ask in the issue; that is what it is for.
