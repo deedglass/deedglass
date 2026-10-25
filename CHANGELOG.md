@@ -41,6 +41,17 @@ this file by `scripts/release-notes.sh`.
   cancelled ones included (it said "open").
 - The README documents `--listen` and `--pg-port`.
 
+### Fixed
+
+- One server resolver for every client command (adoption-v1 F2): `--server`, `DEEDGLASS_SERVER`,
+  `DEEDGLASS_BASE_URL`, the `.deedglass/stack.json` that `deedglass init` wrote in this directory or a
+  parent, then `http://127.0.0.1:8080`. After `init --listen 127.0.0.1:18090`, `undo run`,
+  `approvals`, `agent`, `connector`, `act` and every other API command now reach `:18090`, with the
+  admin key `init` saved; before, some went to `:8080` with whatever key was in `DEEDGLASS_API_KEY`.
+  Inside an init directory no key is sent to a server the environment names that differs from the
+  stack's (new CLI code `server_mismatch`); only `--server` sends it elsewhere. `mcp serve` and
+  `mcp wrap` hold keys back the same way.
+
 ### Security
 
 - **The A2A proxy refuses what a web page can send** (audit M-03, attack cases T01 to T04): a
@@ -56,17 +67,6 @@ this file by `scripts/release-notes.sh`.
   command. The Homebrew cask no longer clears macOS's quarantine attribute.
 - CodeQL runs on pull requests, `main` and weekly; `mcp-registry.yml` no longer keeps git
   credentials on disk. Threat model v3, security review Pass 3, and attack group T (ADR-116).
-
-### Fixed
-
-- One server resolver for every client command (adoption-v1 F2): `--server`, `DEEDGLASS_SERVER`,
-  `DEEDGLASS_BASE_URL`, the `.deedglass/stack.json` that `deedglass init` wrote in this directory or a
-  parent, then `http://127.0.0.1:8080`. After `init --listen 127.0.0.1:18090`, `undo run`,
-  `approvals`, `agent`, `connector`, `act` and every other API command now reach `:18090`, with the
-  admin key `init` saved; before, some went to `:8080` with whatever key was in `DEEDGLASS_API_KEY`.
-  Inside an init directory no key is sent to a server the environment names that differs from the
-  stack's (new CLI code `server_mismatch`); only `--server` sends it elsewhere. `mcp serve` and
-  `mcp wrap` hold keys back the same way.
 
 ## [0.7.0] - 2026-10-21
 
