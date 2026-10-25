@@ -7,6 +7,23 @@ this file by `scripts/release-notes.sh`.
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-10-25
+
+Lockdown mode, and a terminal that says what happened and what to do next. One switch,
+`lockdown: true` or `deedglass lockdown on`, gives the strictest setup for hospitals and security
+teams (ADR-117): every write waits for a person, high-risk writes need two different people,
+approvals expire within 15 minutes, a Can't check result holds the agent's writes until a person
+acknowledges it, destructive SQL never runs, and turning it off needs a second person, both steps
+sealed. Attack group M (M01–M14) runs against it. The CLI now follows one style: errors read as what
+happened, why, and a `next` line; no raw Go errors reach the terminal; help fits 80 columns; `init`
+draws progress lines instead of going silent during the image pull; and the DB-direct commands find
+the local stack. `install.sh` is a file on each release from this one on. Nothing changes for
+existing records: the deed format is unchanged, and Proven, Checked and Claimed mean what they meant
+in 0.8.0. Known limits: the server CLI can't tell who is typing, so the second person for
+`lockdown off` is a second owner or admin account; there is no Console screen for lockdown; the SQL
+rules cover the native Postgres connector only. No new Go dependency, no schema migration, and
+`formula_version` stays 1.
+
 ### Added
 
 - **Lockdown mode** (ADR-117, [docs/LOCKDOWN.md](docs/LOCKDOWN.md)): one switch for the strictest
@@ -20,6 +37,24 @@ this file by `scripts/release-notes.sh`.
   Turning it off needs a second person (`deedglass lockdown off`, then `--countersign`), both sealed.
   `deedglass init --lockdown`, a `lockdown` doctor check, `lockdown` and `phi_mode` in
   `GET /v1/whoami`'s org, and attack group M (M01–M14). No new dependency and no schema migration.
+- `install.sh` ships as a file on each release (`release.extra_files`):
+  `curl -fsSL https://github.com/deedglass/deedglass/releases/latest/download/install.sh | sh`.
+  Through `raw.githubusercontent.com` the install took 83–119 s on one network; the release
+  download took about 5 s.
+
+### Changed
+
+- **One CLI style** (`docs/COPY_CATALOG.md` › CLI style): errors are a capitalized sentence,
+  optional detail lines, then `next  <what to do>`. Go and library text that leaked through
+  wrapped errors (missing files, refused connections, the DSN parser, JSON and number parsing) is
+  rewritten in plain words; `TestNoRawGoErrors` runs 22 failing commands in text and `--json`.
+- `help` wraps to the terminal width (at most 100 columns, 80 when unknown); it was 169 columns.
+- `init` and `init --trigger` draw a progress line for a step still running after 0.4 s; off a
+  terminal nothing is drawn. A cold `init` used to be silent for about 55 s during the image pull.
+- `keys list`, `org keys list`, `vault status`, `migrate status`, `approve`/`deny`,
+  `insights detect`/`digest` and suggestions read `.deedglass/stack.json`, so they work inside the
+  quickstart folder without `DEEDGLASS_DATABASE_URL`.
+- `report --json` prints JSON (it printed Markdown); `approvals list` has a header row.
 
 ## [0.8.0] - 2026-10-25
 
@@ -638,7 +673,8 @@ See [KNOWN_ISSUES.md](KNOWN_ISSUES.md): what happens, who is affected, the worka
 See [docs/LIMITATIONS.md](docs/LIMITATIONS.md). In short: L2 covers Postgres only, seal keys are per
 deployment, and Deedglass trusts the Postgres server and the host it runs on.
 
-[Unreleased]: https://github.com/deedglass/deedglass/compare/v0.8.0...HEAD
+[Unreleased]: https://github.com/deedglass/deedglass/compare/v0.9.0...HEAD
+[0.9.0]: https://github.com/deedglass/deedglass/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/deedglass/deedglass/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/deedglass/deedglass/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/deedglass/deedglass/compare/v0.5.0...v0.6.0

@@ -1,6 +1,6 @@
 {
   "name": "@deedglass/cli-win32-x64",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "description": "The deedglass binary for win32/x64 (installed by the deedglass package).",
   "license": "Apache-2.0 AND FSL-1.1-ALv2",
   "repository": { "type": "git", "url": "git+https://github.com/deedglass/deedglass.git", "directory": "npm/cli-win32-x64" },
