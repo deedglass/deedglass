@@ -88,11 +88,13 @@ rules:   # order matters: the first rule that matches decides
     reason: Searches name what they look for (for example patient or code) and ask for at most 100 results. Reading a whole resource type isn't allowed.
 
   - id: claims-four-eyes
-    description: Claims and other billing records move money; two different people approve every change.
+    description: Claims and other billing records move money, alone or inside a Bundle (an NHCX ClaimBundle); two different people approve every change.
     match: { connector_type: fhir }
     when: >-
-      request.fhir.resource_type in ["Account", "ChargeItem", "Claim", "ClaimResponse", "ExplanationOfBenefit",
+      (request.fhir.resource_type in ["Account", "ChargeItem", "Claim", "ClaimResponse", "ExplanationOfBenefit",
         "Invoice", "PaymentNotice", "PaymentReconciliation"]
+        || request.fhir.entry_types.exists(t, t in ["Account", "ChargeItem", "Claim", "ClaimResponse", "ExplanationOfBenefit",
+        "Invoice", "PaymentNotice", "PaymentReconciliation"]))
       && request.fhir.interaction in ["create", "update", "patch", "delete"]
     decision: require_approval
     reason: Claims and billing changes need two people. Two admins approve in Console › Approvals.

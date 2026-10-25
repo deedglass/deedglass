@@ -144,8 +144,8 @@ func Generate(meta *harness.Meta, run *harness.Run) []byte {
 	w("| Letters | Owner | Constant |\n|---|---|---|\n")
 	w("| A to G | V0 | `expectedDigest` |\n| H, J, K | S18 | `expectedDigestV7` |\n| N | S19 (L0 and L1 read-back), if it declares any | `expectedDigestN` |\n")
 	w("| W | S21 (the L2 witness, W01 to W13) | `expectedDigestW` |\n| L | S22 (approvals, links, webhooks) | `expectedDigestL` |\n| U | S23 (undo) | `expectedDigestU` |\n| P, Q, R | S34 | `expectedDigestS34` |\n| O | S50 (observe mode) | `expectedDigestO` |\n| I | Healthcare phase 1 (the FHIR connector, ADR-105; the tickets' F01 to F12) | `expectedDigestI` |\n")
-	w("| Y | Crypto agility (TY-01, TY-02, ADR-109; library and CLI cases run by go test) | `expectedDigestY` |\n| T | This week's surfaces after the 2026-10-21 audit: A2A proxy, Debezium witness, shell guard, timestamps, verifiers, connect (ADR-116; library and CLI cases run by go test) | `expectedDigestT` |\n| M | Lockdown mode (ADR-117; library cases run by go test, the lockdown-off and API cases by the lockdown integration test) | `expectedDigestM` |\n\n")
-	w("S, V, X and Z are unassigned. A session that needs a group takes the next free letter and adds a row here.\n\n")
+	w("| Y | Crypto agility (TY-01, TY-02, ADR-109; library and CLI cases run by go test) | `expectedDigestY` |\n| T | This week's surfaces after the 2026-10-21 audit: A2A proxy, Debezium witness, shell guard, timestamps, verifiers, connect (ADR-116; library and CLI cases run by go test) | `expectedDigestT` |\n| M | Lockdown mode (ADR-117; library cases run by go test, the lockdown-off and API cases by the lockdown integration test) | `expectedDigestM` |\n| S | India's national profiles: ABDM records and NHCX bundles under the india-health and healthcare-fhir packs (HC-P15, ADR-119; library cases run by go test on the IG's own examples) | `expectedDigestS` |\n\n")
+	w("V, X and Z are unassigned. A session that needs a group takes the next free letter and adds a row here.\n\n")
 	w("## What this suite doesn't cover\n\n")
 	for _, line := range notCovered {
 		w("- %s\n", line)

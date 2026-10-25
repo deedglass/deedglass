@@ -7,8 +7,30 @@ this file by `scripts/release-notes.sh`.
 
 ## [Unreleased]
 
+### Added
+
+- India's national FHIR profiles (HC-P15, ADR-119). The FHIR connector reads a create or update's
+  `meta.profile` and what a Bundle holds, in the terms of the NRCeS FHIR IG for ABDM 6.5.0 (which
+  carries the NHCX profiles), and adds `request.fhir.bundle_type`, `entry_types`, `record`,
+  `record_status`, `nhcx`, `profile_mismatch`, `claims`, `claim_use`, `claim_uses`, `claim_amount`
+  and `claim_currency`. ABDM records (OPConsultRecord, DischargeSummaryRecord and six more) and NHCX
+  bundles (ClaimBundle, CoverageEligibilityRequestBundle and four more) are named from what they hold;
+  a label that doesn't match is reported. The guide's 41 published examples (CC0-1.0) are test
+  fixtures, each classified as the guide names it.
+- `org.phi_mode` in policy facts: the org's PHI mode at decision time.
+- The free `india-health` policy pack: PHI mode first, the healthcare-fhir rules, ABDM records that
+  wait for a clinician unless they are drafts, bundles carrying orders that wait for a clinician, and
+  NHCX claims by use and amount (a final claim or a pre-authorisation of INR 1,00,000 or more needs
+  two people; a smaller pre-authorisation or a pre-determination needs one), the same on a plain FHIR
+  Claim and on an NHCX bundle. 39 cases. Guide: `docs/healthcare/INDIA.md`.
+- Attack group S (S01 to S12): NHCX and ABDM requests built from the IG's examples, relabelled,
+  stripped, nested and hidden, through the real connector and the embedded packs.
+
 ### Changed
 
+- `healthcare-fhir` 1.1.0: `claims-four-eyes` also holds a Bundle that carries a Claim or another
+  billing record, such as an NHCX ClaimBundle (before, a ClaimBundle created as a Bundle was read
+  back and allowed).
 - Every feature is free while we grow (DL-131, ADR-118). `deedglass scan --full`, every policy pack
   (including `money-movement`), the one-step session undo (`deedglass observe undo`), the security
   review pack (`deedglass security-pack build`, `POST /v1/security_pack`) and the agency view

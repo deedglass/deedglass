@@ -23,7 +23,7 @@ import (
 //	sql: "SELECT 1"                            # shorthand for args.sql
 //	args: {amount: 2000}
 //	agent: {id, name, labels, status, budgets: {calls_per_minute, calls_per_day, spend_per_day}}
-//	org: {id, timezone, stopped}
+//	org: {id, timezone, stopped, phi_mode}
 //	user: {ref, sub, iss}
 //	session: {ref}
 //	request: {mode, intent_signed, bytes, digest}
@@ -59,7 +59,7 @@ var (
 	toolKeys        = []string{"name", "connector", "connector_type", "side_effect", "default_schema", "type", "op"}
 	agentKeys       = []string{"id", "name", "labels", "status", "budgets"}
 	agentBudgetKeys = []string{"calls_per_minute", "calls_per_day", "spend_per_day"}
-	orgKeys         = []string{"id", "timezone", "stopped"}
+	orgKeys         = []string{"id", "timezone", "stopped", "phi_mode"}
 	userKeys        = []string{"ref", "sub", "iss"}
 	sessionKeys     = []string{"ref"}
 	requestKeys     = []string{"mode", "intent_signed", "bytes", "digest", "http", "github", "slack", "stripe", "email", "mail", "fhir"}
@@ -296,6 +296,9 @@ func BuildInput(v any) (Input, *InputProblem) {
 			}
 		}
 		if p := boolean(om, "stopped", "org.stopped", &in.Org.Stopped); p != nil {
+			return in, p
+		}
+		if p := boolean(om, "phi_mode", "org.phi_mode", &in.Org.PHIMode); p != nil {
 			return in, p
 		}
 	}

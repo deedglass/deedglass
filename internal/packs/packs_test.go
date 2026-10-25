@@ -87,7 +87,7 @@ func TestEmbeddedSnapshot(t *testing.T) {
 		}
 	}
 	want := map[string]string{"postgres-safe": "free", "postgres-check": "free", "supabase-mcp": "free", "stripe-refunds": "free", "github-agent": "free", "money-movement": "pro",
-		"healthcare-fhir": "free"}
+		"healthcare-fhir": "free", "india-health": "free"}
 	if len(names) != len(want) {
 		t.Fatalf("packs %v, want %v", names, want)
 	}

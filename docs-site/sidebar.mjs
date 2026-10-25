@@ -83,6 +83,7 @@ export const sidebar = clean([
       p('guides/github', 'GitHub agent guardrails'),
       p('guides/fhir-server', 'Use a FHIR server today'),
       p('guides/healthcare-fhir-pack', 'The healthcare-fhir pack'),
+      p('guides/india', 'India: ABDM and NHCX'),
       p('guides/medplum', 'Medplum and Medplum Bots'),
       p('guides/slack-approvals', 'Slack approvals'),
       p('guides/phone-approvals', 'Approvals on your phone'),

@@ -25,6 +25,7 @@ deedglass policy packs verify
 - `stripe-refunds` (free): the Stripe connector (sandbox).
 - `github-agent` (free): the GitHub connector.
 - `healthcare-fhir` (free): the FHIR connector. Clinical records are never deleted; orders, allergies, problems and final notes wait for a clinician; claims need two people ([the healthcare-fhir pack](/guides/healthcare-fhir-pack/)).
+- `india-health` (free): the FHIR connector on ABDM and NHCX flows. PHI mode first; the healthcare-fhir rules, plus ABDM health records that wait for a clinician unless they are drafts, and NHCX claims that need one or two people by use and amount ([India: ABDM and NHCX](/guides/india/)).
 - `money-movement` (free while we grow): Stripe refunds, payouts and transfers, with amount caps and two admins for large ones.
 
 `verify` checks every file of every pack against its sha256 in the index and runs each pack's own test cases. Each pack carries at least 12.
