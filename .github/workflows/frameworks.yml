@@ -1,0 +1,58 @@
+# Framework recipes (adoption-v1 item 4). Each examples/frameworks/<name>/ folder runs its check against a
+# fresh `npx deedglass init` stack: the framework's own MCP client starts `npx -y deedglass mcp serve`,
+# lists the tools and, where the framework can run a tool without a model, sends one call through
+# Deedglass. No model key and no secret is used. This is not a required check (.github/required-checks.txt
+# names ci.yml's jobs only): a framework release that doesn't install is reported as skipped by run.sh.
+name: frameworks
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 3 * * 1"
+  pull_request:
+    paths:
+      - "examples/frameworks/**"
+      - "docs/integrations/**"
+      - ".github/workflows/frameworks.yml"
+
+permissions: {}
+
+concurrency:
+  group: frameworks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  recipe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        framework: [vercel-ai-sdk, claude-agent-sdk, openai-agents, langchain, mastra, pydantic-ai, google-adk, crewai, llamaindex]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+      - name: a quickstart stack (npx deedglass init, Docker)
+        run: |
+          mkdir -p "$RUNNER_TEMP/stack"
+          cd "$RUNNER_TEMP/stack"
+          npx -y deedglass init --yes --client none --no-open --quiet
+      - name: run the recipe's check
+        env:
+          STACK_DIR: ${{ runner.temp }}/stack
+          PYTHON: python3.13
+          FRAMEWORK: ${{ matrix.framework }}
+        run: examples/frameworks/run.sh "$FRAMEWORK"
+      - name: stop the stack
+        if: always()
+        working-directory: ${{ runner.temp }}/stack
+        run: npx -y deedglass init --stop || true

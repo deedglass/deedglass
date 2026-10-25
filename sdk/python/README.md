@@ -3,11 +3,13 @@
 Put Deedglass in front of your agent's tools: policy decides, people approve, every call is sealed
 as a deed you can check offline.
 
+Not on PyPI yet. Until it is, install from the repository (extras: `crypto` for offline deed checks
+and signed intents, `langchain` for the LangChain / LangGraph adapter, `claude-agent-sdk` for the
+Claude Agent SDK adapter):
+
 ```sh
-pip install deedglass                      # the client: act, tools, errors
-pip install "deedglass[crypto]"            # + offline deed checks and signed intents
-pip install "deedglass[langchain]"         # + the LangChain / LangGraph adapter
-pip install "deedglass[claude-agent-sdk]"  # + the Claude Agent SDK adapter
+pip install "deedglass @ git+https://github.com/deedglass/deedglass#subdirectory=sdk/python"
+pip install "deedglass[crypto,langchain] @ git+https://github.com/deedglass/deedglass#subdirectory=sdk/python"
 ```
 
 Python 3.10 to 3.14. Python 3.10 reaches its end of life in October 2026; a release after that

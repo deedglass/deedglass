@@ -3,7 +3,7 @@
 #   - publish-npm, publish-pypi and deploy-docs run only behind their repository variables and in
 #     their GitHub environments (npm, pypi, docs)
 #   - release.yml's default is permissions: {} and no workflow anywhere grants write-all
-#   - in release.yml only release, publish-npm and publish-pypi may mint an OIDC token (id-token: write,
+#   - in release.yml only release, publish-npm, publish-pypi and mcp-registry may mint an OIDC token (id-token: write,
 #     block or flow style, any job name); npm-stage, which stages the npm packages, stays read-only,
 #     and publish-npm publishes only what it staged; no YAML anchors or aliases hide a job's keys
 #   - verify refuses a tag whose commit isn't on main; deploy-docs checks out the full history (lastmod)
@@ -84,7 +84,7 @@ oidc="$(awk '
   /id-token["\047]?[[:space:]]*:[[:space:]]*["\047]?write/ { print (j == "" ? "?" : j) }
 ' "$rel")"
 for j in $oidc; do
-  case "$j" in release|publish-npm|publish-pypi) ;; *) bad "job $j asks for id-token: write; only release, publish-npm and publish-pypi may" ;; esac
+  case "$j" in release|publish-npm|publish-pypi|mcp-registry) ;; *) bad "job $j asks for id-token: write; only release, publish-npm, publish-pypi and mcp-registry may" ;; esac
 done
 if grep -nE '^[[:space:]]*(-[[:space:]]+)?[^#[:space:]][^:]*:[[:space:]]+[&*][A-Za-z0-9_-]+|^[[:space:]]*<<:' "$rel"; then
   bad "release.yml uses a YAML anchor, alias or merge key above; spell each job's keys out (this check reads them line by line)"
@@ -93,10 +93,17 @@ job verify | grep -q 'merge-base --is-ancestor HEAD refs/remotes/origin/main' ||
 job deploy-docs | grep -qE '^ +fetch-depth: 0( |$)' || bad "deploy-docs checks out without fetch-depth: 0 (each page's lastmod comes from git history; a shallow clone can't give it)"
 job npm-stage | grep -q 'scripts/npm-publish.mjs stage ' || bad "npm-stage doesn't stage the npm packages with scripts/npm-publish.mjs"
 job publish-npm | grep -q 'needs: \[release, npm-stage\]' || bad "publish-npm doesn't need npm-stage (it publishes only what npm-stage staged)"
+# mcp-registry publishes a public entry: only after publish-npm, behind its gate, never for an rc.
+mr="$(job mcp-registry)"
+if [ -n "$mr" ]; then
+  grep -q 'needs: publish-npm' <<<"$mr" || bad "mcp-registry doesn't need publish-npm (the registry checks npm's mcpName)"
+  grep -q "if: vars.DEEDGLASS_PUBLISH_NPM == 'true' && !contains(github.ref_name, '-rc.')" <<<"$mr" || bad "mcp-registry runs without the DEEDGLASS_PUBLISH_NPM gate or for a release candidate"
+fi
 if job publish-npm | grep -qE '^ +run: .*npm publish '; then bad "publish-npm runs npm publish itself; scripts/npm-publish.mjs publish keeps the order and the skips"; fi
 grep -q 'draft: true' .goreleaser.yaml 2>/dev/null || [ "$dir" != ".github/workflows" ] || bad ".goreleaser.yaml doesn't make a draft release"
 if grep -nE '^[[:space:]]*permissions:[[:space:]]*write-all' "$dir"/*.yml; then bad "write-all is granted above"; fi
-unpinned="$(grep -nE '^[[:space:]]*(-[[:space:]]*)?uses:' "$dir"/*.yml | grep -vE 'uses: [^ ]+@[0-9a-f]{40} # v[0-9]+[.][0-9]+[.][0-9]+$' || true)"
+# A local reusable workflow (uses: ./.github/workflows/x.yml) runs from the same commit, so it needs no pin.
+unpinned="$(grep -nE '^[[:space:]]*(-[[:space:]]*)?uses:' "$dir"/*.yml | grep -vE 'uses: [^ ]+@[0-9a-f]{40} # v[0-9]+[.][0-9]+[.][0-9]+$' | grep -vE 'uses: \./\.github/workflows/[A-Za-z0-9_.-]+\.yml$' || true)"
 [ -z "$unpinned" ] || bad "not pinned to a commit SHA with its version:"$'\n'"$unpinned"
 # The required checks (TY-11): the list names exactly ci.yml's jobs, release-bundles among them, and
 # that job runs on pull requests and verifies the release bundles.

@@ -148,8 +148,20 @@ publishing keeps working with that setting. If `publish-npm` stops with npm refu
 the package named in the error is missing its trusted publisher, or npm publish isn't among its
 allowed actions (step 1).
 
-**PyPI:** the repository variable `DEEDGLASS_PUBLISH_PYPI` = `true`, with a trusted publisher for
-`release.yml` and environment `pypi` on PyPI (the `pypi` environment limited to `v*` tags first).
+**PyPI, once** (the `publish-pypi` job uploads the wheel and sdist that `sdk-build` made, with
+`pypa/gh-action-pypi-publish` over OIDC; nothing reaches PyPI until both steps are done):
+
+1. No `deedglass` project exists on PyPI yet, so add a *pending* trusted publisher, which creates
+   the project on its first upload: pypi.org › Your account › Publishing › Add a new pending
+   publisher › GitHub: PyPI project name `deedglass`, owner `deedglass`, repository `deedglass`,
+   workflow name `release.yml`, environment name `pypi` (the `pypi` environment limited to `v*`
+   tags first, as above). A pending publisher doesn't reserve the name until it is used, so tag a
+   release soon after.
+2. The repository variable `DEEDGLASS_PUBLISH_PYPI` = `true`. The next `vX.Y.Z` tag publishes.
+3. After the first upload, switch the install lines from the GitHub form back to
+   `pip install deedglass`: `README.md`, `sdk/python/README.md`, `docs/SDK_PYTHON.md`,
+   `docs-site/src/content/docs/get-started/python-sdk.mdx`, `examples/python/README.md` and the
+   `sdk-python` line in `internal/setup/init.go`.
 
 The docs deploy job waits for `DEEDGLASS_DEPLOY_DOCS` and the `CLOUDFLARE_API_TOKEN` secret.
 
@@ -174,9 +186,11 @@ the next patch version.
 
 The MCP Registry lists `io.github.deedglass/deedglass` from `server.json`, and it checks that the
 npm package `deedglass` at `server.json`'s version carries the same `mcpName`, so it can only run
-after `publish-npm`. When the `mcp-registry` workflow is on `main`, run it by hand once npm serves
-the release: `gh workflow run mcp-registry.yml`. `release.yml` doesn't start it: GitHub can't chain
-one workflow's job to another's, and a registry entry is public, so it stays a deliberate step.
+after `publish-npm`. `release.yml`'s `mcp-registry` job calls the `mcp-registry` workflow after
+`publish-npm` on every `vX.Y.Z` tag (never a release candidate), behind the same
+`DEEDGLASS_PUBLISH_NPM` gate: it waits up to 10 minutes for npm to serve the version, then publishes
+`server.json` over GitHub OIDC, so the registry entry follows npm. To republish by hand (for example
+after a failed run): `gh workflow run mcp-registry.yml`.
 
 ## Signing
 

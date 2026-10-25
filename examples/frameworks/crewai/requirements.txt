@@ -1,0 +1,2 @@
+crewai==1.15.28
+crewai-tools[mcp]==1.15.28

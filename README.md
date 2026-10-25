@@ -207,7 +207,8 @@ Every format, with its source: [`docs/INSTALL_CLIENTS.md`](docs/INSTALL_CLIENTS.
 ## SDKs and clients
 
 - **TypeScript:** `@deedglass/sdk`, with adapters for the AI SDK, the OpenAI Agents SDK, LangChain and the Claude Agent SDK.
-- **Python:** `pip install deedglass`, with LangChain and Claude Agent SDK adapters.
+- **Python:** `deedglass`, with LangChain and Claude Agent SDK adapters. It isn't on PyPI yet; install it
+  from this repo or from a release's wheel ([`docs/SDK_PYTHON.md`](docs/SDK_PYTHON.md)).
 - **Go:** `github.com/deedglass/deedglass/pkg/deedglass`.
 - **MCP:** `deedglass mcp wrap` governs any stdio MCP server; `deedglass mcp serve` governs remote ones
   for Claude Desktop, Claude Code, Cursor, VS Code and Windsurf.

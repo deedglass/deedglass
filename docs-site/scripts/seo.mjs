@@ -85,6 +85,8 @@ export const FULL_OUT = [
   { re: /^security\/attack-suite$/, what: 'the attack-suite results', at: '/security/attack-suite/' },
   { re: /^security\/review$/, what: 'the dated security review', at: '/security/review/' },
   { re: /^reference\/engineering(\/|$)/, what: 'the engineering notes', at: '/reference/engineering/' },
+  // mostly code, one page per framework; the table that links them all is in Install in any client
+  { re: /^frameworks\//, what: 'the agent framework recipes', at: '/reference/engineering/install-clients/#agent-frameworks' },
 ];
 // llms-small.txt: what an agent needs to explain, install and start using Deedglass. The SDK
 // references, the limits in full and the specialist guides are in llms-full.txt.
