@@ -155,7 +155,7 @@ export const sidebar = clean([
       p('sdks/typescript', 'TypeScript'),
       { label: 'TypeScript adapters', collapsed: true, items: [p('sdks/adapters/ai-sdk', 'Vercel AI SDK'), p('sdks/adapters/openai-agents', 'OpenAI Agents'), p('sdks/adapters/langchain', 'LangChain.js'), p('sdks/adapters/claude-agent-sdk', 'Claude Agent SDK')] },
       p('sdks/python', 'Python'),
-      p('sdks/go', 'Go'),
+      p('sdks/go', 'Go client'),
     ],
   },
   {
