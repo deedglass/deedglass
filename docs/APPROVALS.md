@@ -7,7 +7,7 @@ action never runs.
 
 This page covers S22: the policy fields, who may countersign, what they see, the emailed link,
 resuming from REST, MCP and webhooks, and what is recorded. Webhooks are in
-[WEBHOOKS.md](WEBHOOKS.md); the MCP side is in [MCP.md](MCP.md#approvals-deedglasscheck_approval).
+[WEBHOOKS.md](WEBHOOKS.md); the MCP side is in [MCP.md](MCP.md#approvals-deedglass_check_approval).
 
 ## The policy fields
 
@@ -152,7 +152,7 @@ itself is `GET /v1/approvals/{id}` (also `?wait=`); `GET /v1/approvals?status=pe
 The model gets a "Waiting for approval" result and calls `deedglass_check_approval` with
 `{"approval_id": "apr_…", "wait_seconds": 10}`. It waits up to 20 seconds for a decision. After an
 approval the original call runs once and its result comes back; after a deny the model reads the
-person's reason. [MCP.md](MCP.md#approvals-deedglasscheck_approval) has every text.
+person's reason. [MCP.md](MCP.md#approvals-deedglass_check_approval) has every text.
 
 ## Resume from webhooks
 

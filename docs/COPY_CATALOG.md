@@ -362,7 +362,7 @@ Agent-facing texts never name the person: "Approved by a person. Ran scratch.wri
 person denied this action. Nothing was run. Reason: "…"" · "Still waiting for approval apr_….
 It expires at 05:11 UTC. Nothing has run yet. Check again in a minute." · "A person approved this,
 but agent "claude-desktop" is stopped, so nothing ran." Every text is in
-[MCP.md](MCP.md#approvals-deedglasscheck_approval).
+[MCP.md](MCP.md#approvals-deedglass_check_approval).
 
 ## Undo (S23; S25 builds the panel)
 
