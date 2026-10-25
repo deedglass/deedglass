@@ -1,6 +1,6 @@
 {
-  "version": "v0.9.0",
-  "commit": "b760105",
+  "version": "v0.10.0",
+  "commit": "83b05eb",
   "run_on": "2026-10-25",
   "postgres": "18.6 (Homebrew)",
   "matched": 82,
