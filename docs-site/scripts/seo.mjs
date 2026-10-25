@@ -43,7 +43,17 @@ export function pageTitle(title, path = '') {
 }
 
 /** The TechArticle JSON-LD for a content page (the home page gets WebSite). Pure data. */
-export function jsonLd({ path, title, description, dateModified, tagline }) {
+/** seo-aeo-v1: pages written as steps (the Quickstart, Get started and the guides) are also a schema.org HowTo, whose
+ *  steps are the page's own "## " headings with their anchors. Headings that aren't steps (next steps, limits, see
+ *  also, troubleshooting) are left out; a page with fewer than two steps stays a TechArticle only. */
+export const HOWTO_PREFIXES = ['/quickstart/', '/get-started/', '/guides/', '/frameworks/'];
+const NOT_A_STEP = /^(next|what'?s next|see also|related|limits?|limitations|what this (page|guide) (doesn'?t|does not) (cover|do)|troubleshoot|faq|questions|reference|more|before you start|prerequisites|requirements|what you need)/i;
+export function howToSteps(path, headings = []) {
+  if (!HOWTO_PREFIXES.some((p) => path.startsWith(p))) return [];
+  return headings.filter((h) => h.depth === 2 && !NOT_A_STEP.test(h.text.trim())).map((h) => ({ name: h.text.trim(), url: `${SITE}${path}#${h.slug}` }));
+}
+
+export function jsonLd({ path, title, description, dateModified, tagline, headings = [] }) {
   const publisher = { '@type': 'Organization', name: 'Deedglass', url: 'https://deedglass.com' };
   if (path === '/') {
     return { '@context': 'https://schema.org', '@type': 'WebSite', name: SITE_TITLE, url: `${SITE}/`, description: tagline, publisher };
@@ -59,7 +69,11 @@ export function jsonLd({ path, title, description, dateModified, tagline }) {
     publisher,
   };
   if (dateModified) ld.dateModified = dateModified;
-  return ld;
+  const steps = howToSteps(path, headings);
+  if (steps.length < 2) return ld;
+  const { '@context': ctx, ...article } = ld;
+  const howTo = { '@type': 'HowTo', name: title, description, url: SITE + path, step: steps.map((st, i) => ({ '@type': 'HowToStep', position: i + 1, name: st.name, text: st.name, url: st.url })) };
+  return { '@context': ctx, '@graph': [article, howTo] };
 }
 /** JSON for an inline <script type="application/ld+json">: "<" escaped so no string can end the tag. */
 export const ldScript = (obj) => JSON.stringify(obj).replace(/</g, '\\u003c');

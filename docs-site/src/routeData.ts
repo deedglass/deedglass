@@ -2,7 +2,8 @@
 //   - Open Graph images per section (public/og/*.png, made by scripts/og.mjs; brand §13.7).
 //   - DOC-05 (scripts/seo.mjs): noindex on the thin per-code pages, a <title> of at most 60
 //     characters, and TechArticle JSON-LD (WebSite on the home page) with the source's last commit
-//     date (src/data/.page-dates.json, written by sync-docs).
+//     date (src/data/.page-dates.json, written by sync-docs). seo-aeo-v1: step-by-step pages add a HowTo in the
+//     same block (an @graph), its steps the page's own headings.
 import { defineRouteMiddleware } from '@astrojs/starlight/route-data';
 import { isThin, jsonLd, ldScript, pageTitle } from '../scripts/seo.mjs';
 import dates from './data/.page-dates.json';
@@ -38,6 +39,6 @@ export const onRequest = defineRouteMiddleware((context) => {
     route.head.push({ tag: 'meta', attrs: { name: 'robots', content: 'noindex, follow' } });
     return;
   }
-  const ld = jsonLd({ path, title: data.hero?.title || data.title, description: data.description ?? '', dateModified: pageDates[path], tagline: desc.tagline });
+  const ld = jsonLd({ path, title: data.hero?.title || data.title, description: data.description ?? '', dateModified: pageDates[path], tagline: desc.tagline, headings: route.headings });
   route.head.push({ tag: 'script', attrs: { type: 'application/ld+json' }, content: ldScript(ld) });
 });

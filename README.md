@@ -29,6 +29,32 @@ check offline. It can undo the rows an action changed.
 <a href="https://docs.deedglass.com">Docs</a> · <a href="SECURITY.md">Security</a> · <a href="https://deedglass.com">deedglass.com</a>
 </p>
 
+## In 30 seconds
+
+**Why.** AI agents now change real systems: databases, payments, health records. What an agent
+reports is not always what the system stored. Its tool can say 1 row while a trigger changed 301,
+and a log the agent writes itself can't show the difference.
+
+**What.** Deedglass sits between an agent and the tools it uses. Your rules decide each tool call
+before it runs, a check compares what the system really changed with what the agent reported, and
+each action is sealed into a signed record anyone can check offline. It can undo the rows an action
+changed. It runs on your own machines with your own Postgres, and the core is Apache-2.0. It doesn't
+catch everything: [the benchmark](https://deedglass.com/benchmark) lists what it misses, first.
+
+**How.** With Docker running, two commands start a local stack and replay the 301-row scene:
+
+```sh
+npx -y deedglass init --yes      # Postgres and Deedglass in Docker, a demo database and an agent key
+npx -y deedglass init --trigger  # the agent reports 1 row; Deedglass reads that Postgres changed 301
+```
+
+Then put your agent behind it: [Claude Code](https://docs.deedglass.com/get-started/claude-code/),
+[Cursor, VS Code and Windsurf](https://docs.deedglass.com/get-started/cursor-vscode-windsurf/),
+[nine agent frameworks](https://docs.deedglass.com/frameworks/claude-agent-sdk/), or
+[your own Postgres](https://docs.deedglass.com/get-started/postgres/).
+
+## The 301-row scene
+
 An agent was asked to mark order 42 as shipped. It ran one `UPDATE` and its tool reported 1 row. A
 legacy trigger shipped 300 more orders in the same transaction. This is the real output of the
 Quickstart's last step on 2026-10-14 (shortened where you see `…`):

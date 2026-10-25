@@ -4,10 +4,6 @@ description: "A security reviewer asks every team that ships AI agents the same 
 imported: "docs/SECURITY_PACK.md"
 editUrl: false
 ---
-:::note[Source]
-This page is `docs/SECURITY_PACK.md` in the Deedglass repo, imported at build time.
-:::
-
 A security reviewer asks every team that ships AI agents the same question: how do you control what
 your agents do? Deedglass already holds the facts that answer it: which agents exist, which rules
 they run under, who approved what, what Postgres really changed, what was undone, and a sealed
@@ -225,3 +221,7 @@ Each question names related items by id only (never their text), re-read on 2026
   MANAGE 2.4, MANAGE 4.3.
 
 A reference says where a reviewer might file the answer. It is not a claim that any item is met.
+
+:::note[Source]
+This page is `docs/SECURITY_PACK.md` in the Deedglass repo, imported at build time.
+:::

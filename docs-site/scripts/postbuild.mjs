@@ -222,6 +222,12 @@ export function tidyLlms(text) {
   return out.join('\n');
 }
 
+/** seo-aeo-v1: the imported-file note ("Source: this page is docs/X.md in the Deedglass repo, imported at build time")
+ *  says where a file lives, not anything about Deedglass; the llms files leave it out (it still shows on the page). */
+export function dropSourceNotes(text) {
+  return text.replace(/(^|\n)Source\n\nThis page (?:is|and the \d+ pages below it are) (?:part of )?`[^`\n]+` in the Deedglass repo,[^\n]*imported at build time\.[^\n]*(?:\n\n?|$)/g, '$1');
+}
+
 const LLMS_NOTE_OLD = '- The complete documentation includes all content from the official documentation';
 
 function llms() {
@@ -236,7 +242,7 @@ function llms() {
     const p = join(dist, name);
     if (!existsSync(p)) throw new Error(`dist/${name} is missing`);
     const r = filterLlms(readFileSync(p, 'utf8'), heads, keep);
-    const text = tidyLlms(r.text);
+    const text = dropSourceNotes(tidyLlms(r.text));
     writeFileSync(p, text.endsWith('\n') ? text : text + '\n');
     report.push(`${name} ${r.kept} pages`);
   }
