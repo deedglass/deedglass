@@ -7,6 +7,20 @@ this file by `scripts/release-notes.sh`.
 
 ## [Unreleased]
 
+### Changed
+
+- Every feature is free while we grow (DL-131, ADR-118). `deedglass scan --full`, every policy pack
+  (including `money-movement`), the one-step session undo (`deedglass observe undo`), the security
+  review pack (`deedglass security-pack build`, `POST /v1/security_pack`) and the agency view
+  (`deedglass clients`, `GET /v1/clients`, `report --all-clients` and `--brand`) now run with no
+  licence key. Nothing reads a licence file or calls Dodo Payments or deedglass.com, and `serve` no
+  longer re-checks a licence each day. One policy in `internal/licence/policy.go` decides this; the
+  licence commands and token format stay for a later paid option. `ee/` stays under FSL-1.1-ALv2.
+- Prices, plan names and buy links are gone from the CLI, the Console and the docs: the "(Pro)"
+  labels, the price on the Console's Pro sheets and the refusal lines that pointed at deedglass.com/pro and
+  deedglass.com/agencies. `pro_required` stays in the error catalog for a later build that asks for a
+  key; no current build answers it.
+
 ## [0.9.0] - 2026-10-25
 
 Lockdown mode, and a terminal that says what happened and what to do next. One switch,

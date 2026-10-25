@@ -180,7 +180,7 @@ func TestObserveRunUndoSQL(t *testing.T) {
 			"✓ Session sealed · 1 transaction · 09:02:00–09:02:00",
 			"  public.orders  60 updated",
 			"Deedglass caught this: one transaction changed 60 rows in public.orders.",
-			"  Undo this session in one step (Pro): deedglass observe undo "+watchID,
+			"  Undo this session in one step: deedglass observe undo "+watchID,
 			// The planted symlink counts as an earlier file: it is replaced, and the line says so.
 			"  Undo SQL saved to "+path+" (free), replacing an earlier file. Deedglass doesn't run it: review it, then run it yourself:\n",
 			"    psql \"$DATABASE_URL\" -v ON_ERROR_STOP=1 -f "+path+"\n",

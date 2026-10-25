@@ -24,7 +24,7 @@ type WeeklyData struct {
 	CaughtHead string // "Deedglass caught 1 thing"; "" when nothing was caught
 	Nothing    string // "Nothing caught this week." when CaughtHead is ""
 	Items      []WeeklyItem
-	ProLine    string // "Undo the whole session in one step (Pro)"
+	ProLine    string // "Undo the whole session in one step"
 	Chain      string // "Records chain intact."
 	Console    string // the user's own Console (http or https)
 	Off        string // the signed one-click "stop these emails" page (http or https)

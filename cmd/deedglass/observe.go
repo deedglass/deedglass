@@ -215,7 +215,7 @@ func printCaught(w io.Writer, st ui.Style, x *observeapi.SessionJSON, freeLine s
 		fmt.Fprintln(w, st.Amber(clean(it.Line)))
 	}
 	if x.State == observe.StateSealed && x.Undo.Possible && !refused {
-		fmt.Fprintln(w, "  Undo this session in one step (Pro): deedglass observe undo "+clean(x.ID))
+		fmt.Fprintln(w, "  Undo this session in one step: deedglass observe undo "+clean(x.ID))
 	}
 	if freeLine == "" {
 		freeLine = "  Or print the undo SQL and run it yourself (free): " + clean(caught.FreeSessionPath(x.ID))

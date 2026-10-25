@@ -12,7 +12,7 @@ change log, through the `deedglass_witness` role and the replication slot that
    open and close sessions from the Console around a run you start elsewhere.
 
 What you get: every transaction Postgres committed on the watched tables during the run, sealed in
-the record, with the undo SQL to put it back (free) or a one-step undo (Pro).
+the record, with the undo SQL to put it back (free) or a one-step undo (also free).
 
 What you don't get: Deedglass's own decisions. Observe mode doesn't allow or deny anything, doesn't
 see the tool calls, and can't tell your agent's writes from another program's in the same window.

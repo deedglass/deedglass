@@ -1,28 +1,26 @@
 ---
-title: Pro and licences
-description: What Pro adds, how the licence works offline, and everything that stays free.
-lastVerified: "2026-10-05"
+title: Free while we grow
+description: Every Deedglass feature is free while we grow; how the licence path is kept for later.
+lastVerified: "2026-10-25"
 draft: true
 owner: S48
 ---
 
 import Limits from '../../../components/Limits.astro';
 
-What Pro adds, how the licence works offline, and everything that stays free.
+Every Deedglass feature is free while we grow. This page says what that covers and how the licence path is kept for later.
 
-## What stays free, always
+## Every feature is free while we grow
 
-Gate, Witness, deeds, Stop, Undo, Insights, `scan`, the scan Action's scan, job summary and SARIF on every repo (and its pull request comment on public repos), and the free policy packs. Nothing free today becomes paid.
+Every Deedglass feature is free to use, with no licence key: Gate, Witness, deeds, Stop, Undo, Insights, `scan` and `scan --full`, every policy pack, one-step session undo, the security review pack and the agency view. Nothing reads a licence and nothing calls a licence server.
 
-## What Pro adds
+Later we plan paid support, SLAs and a hosted version for organisations. Anything free today stays free for people who run Deedglass themselves.
 
-The scan Action's pull request comment on private repos, `scan --full` (the full report), Pro policy packs and the fix writer (as they ship), one-step session undo, and the security review pack.
+## The licence path, kept for later
 
-## Prices
+The commands below stay in the CLI so a later paid option can ask for a key without a rewrite. You don't need them today.
 
-Pro is $29 a month or $290 a year. The full scan report is $29 once, and counts toward Pro within 30 days. Team and Cloud: join the waitlist. Want a person to look? Reviews from $750, on request.
-
-## Activate a licence
+### Activate a licence
 
 ```sh test=skip reason="licences ship in S48"
 deedglass licence activate <key>
@@ -31,9 +29,9 @@ deedglass licence show
 
 The key arrives by email from Dodo, our payment provider and reseller, and on the return page. The CLI activates the key with Dodo, then our server checks it again and returns a signed record, saved to `.deedglass/licence.json` (mode 0600; `DEEDGLASS_LICENCE_FILE` moves it). `deedglass licence refresh` and `deedglass licence deactivate` do what they say.
 
-## Offline and grace
+### Offline and grace
 
-Free features send nothing to deedglass.com: the free scan reads files on your machine and, with `--postgres-dsn-env`, connects only to the database you name. A Pro licence is checked with Dodo Payments and deedglass.com: `deedglass serve` asks at start and then daily, and Pro commands ask when you run them; a request goes out when the last successful check is a day old, and at once when the clock runs more than 5 minutes behind the last check or the latest time seen, or when `licence.clock` is missing, unreadable or altered. `deedglass licence activate`, `refresh` and `deactivate` always call out. `DEEDGLASS_NO_NETWORK=1` stops every licence call, and only those: `deedglass version --check` and the `--latest` option of `deedglass policy install` and `policy packs` contact GitHub when you use them. Head timestamps are off by default; with TSAs or a transparency service listed in deedglass.yaml, `deedglass deeds timestamp` and each export contact only those.
+Every feature is free while we grow, so nothing checks a licence and nothing is sent to deedglass.com: the scan reads files on your machine and, with `--postgres-dsn-env`, connects only to the database you name. The `deedglass licence` commands, kept for a later paid option, are the only ones that call Dodo Payments or deedglass.com, and only when you run them; `DEEDGLASS_NO_NETWORK=1` stops those calls. `deedglass version --check` and the `--latest` option of `deedglass policy install` and `policy packs` contact GitHub when you use them. Head timestamps are off by default; with TSAs or a transparency service listed in deedglass.yaml, `deedglass deeds timestamp` and each export contact only those.
 
 `licence.clock` sits next to `.deedglass/licence.json`. Offline, Pro keeps working for up to **14 days** after the last successful check. After that, Pro is read-only: existing full reports open, installed Pro packs keep enforcing, and `scan --full` refuses. The exact line:
 
@@ -47,17 +45,13 @@ On a private repo with a licence set, the scan Action checks it online on every 
 
 No network call and no telemetry. The free test suite passes with an expired, corrupt or missing licence.
 
-## Billing
-
-Invoices, cancelling and the payment method are behind the link Dodo emails you. Refunds follow the refunds page on deedglass.com.
-
 ## Licence of the code
 
-The core, SDKs, CLI and the Action are Apache-2.0. Pro features live in `ee/` under FSL-1.1-ALv2; each release becomes Apache-2.0 after two years.
+The core, SDKs, CLI and the Action are Apache-2.0. The features in `ee/` are free to use and stay under FSL-1.1-ALv2; each release becomes Apache-2.0 after two years.
 
 ## What it doesn't do
 
 <Limits>
 - A lapsed licence never weakens a policy that is already enforcing.
-- Pro has no seat counting.
+- No seat counting, no usage metering, no telemetry.
 </Limits>

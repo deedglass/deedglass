@@ -28,7 +28,7 @@ type Brand struct {
 type Options struct {
 	// Brand puts "Prepared by <agency> with Deedglass" on the report. nil: no brand lines.
 	Brand *Brand
-	// ProUndoLine adds "Undo the whole session in one step (Pro)" beside a caught session's free
+	// ProUndoLine adds "Undo the whole session in one step" beside a caught session's free
 	// path. Set only when the server has no undo_session (S50 §3.7); never another upsell.
 	ProUndoLine bool
 	// ConsoleURL is the user's own server's Console ("https://deedglass.acme.internal/app"); "" omits it.
@@ -149,7 +149,7 @@ func freeParts(it caught.Item) (lead, cmd string) {
 }
 
 // ProLine is the one Pro line, on a caught session only, when the server can't undo sessions.
-const ProLine = "Undo the whole session in one step (Pro)"
+const ProLine = "Undo the whole session in one step"
 
 // ShowsPro says whether an item carries the Pro line under o.
 func ShowsPro(it caught.Item, o Options) bool {

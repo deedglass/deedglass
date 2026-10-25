@@ -49,8 +49,8 @@ func TestDescription(t *testing.T) {
 			t.Errorf("summary doesn't name %q (docs/NAMING.md's plain names)", w)
 		}
 	}
-	if !strings.Contains(d.Licence, "Apache-2.0 AND FSL-1.1-ALv2") || !strings.Contains(d.Network, "Pro") {
-		t.Error("the licence sentence must name the combined licence and the network sentence the Pro licence check (P-086, P-087)")
+	if !strings.Contains(d.Licence, "Apache-2.0 AND FSL-1.1-ALv2") || !strings.Contains(d.Network, "free while we grow") {
+		t.Error("the licence sentence must name the combined licence and the network sentence that nothing checks a licence while every feature is free (P-086, DL-131)")
 	}
 
 	// The GitHub repository description: GitHub shows at most 350 characters, and its first sentence

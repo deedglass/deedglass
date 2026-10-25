@@ -19,7 +19,7 @@ Setup
   version             Show the client and server versions
   keys                Manage seal keys
                       gen · rotate · list
-  licence             Turn on Pro, or check this machine's licence
+  licence             Check this machine's licence (none needed)
                       activate · show · refresh · deactivate
   vault               Check or rotate the credential vault
                       status · rotate
@@ -60,7 +60,7 @@ Records
   security-pack       Answer a security review from your records
                       readiness · build · verify
   report              Report what your agents did in a week or month
-  clients             List every org you look after (Agency plan)
+  clients             List every org you look after
   deeds               Browse and export records
                       list · show · share · export · timestamp · seal-file
   ledger              Check or prune the Ledger

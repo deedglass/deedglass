@@ -72,9 +72,18 @@ func (f *licFake) serve(t *testing.T) *httptest.Server {
 	return srv
 }
 
+// keyRequired puts back the policy before DL-131 for one test: every Pro feature needs a licence.
+func keyRequired(t *testing.T) {
+	t.Helper()
+	saved := licencePolicy
+	licencePolicy = licence.KeyRequired
+	t.Cleanup(func() { licencePolicy = saved })
+}
+
 // licenceSeams points the licence commands at the fake, with a fixed clock and the test key set.
 func licenceSeams(t *testing.T) (*licFake, map[string]string, *time.Time) {
 	t.Helper()
+	keyRequired(t) // these tests cover the dormant key path (DL-131 keeps it for later)
 	priv := ed25519.NewKeyFromSeed(bytes.Repeat([]byte{7}, 32))
 	set, _ := licence.KeySetJSON([]licence.KeyRecord{licence.Record(cliLicKeyID, priv.Public().(ed25519.PublicKey))})
 	now := time.Date(2026, 10, 21, 4, 12, 9, 0, time.UTC)
@@ -217,7 +226,7 @@ func TestScanFullNeedsALicence(t *testing.T) {
 	_, env, _ := licenceSeams(t)
 	dir := t.TempDir()
 	r := cli(t, env, false, "scan", "--dir", dir, "--out-dir", dir, "--full")
-	if r.code != 1 || !strings.Contains(r.stdout+r.stderr, "The full report is part of Pro or the $29 full scan report. Get one at deedglass.com/pro. Everything in deedglass scan stays free") {
+	if r.code != 1 || !strings.Contains(r.stdout+r.stderr, "The full report needs a licence on this build. Everything in deedglass scan stays free") {
 		t.Fatalf("no licence: %d %s%s", r.code, r.stdout, r.stderr)
 	}
 	if _, err := os.Stat(filepath.Join(dir, "deedglass-scan.md")); err != nil {

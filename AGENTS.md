@@ -10,22 +10,9 @@ compares what the system really changed with what the agent reported (Claimed, C
 Matches, Doesn't match or Can't check), and each result is sealed as a signed record anyone can
 check offline. It can undo the rows an action changed.
 
-The core, the SDKs and the CLI are Apache-2.0. The Pro features in `ee/` are FSL-1.1-ALv2, and each
-release of them becomes Apache-2.0 two years after it ships. The release binary, the
-`@deedglass/cli-*` npm packages and the container image include `ee/`, so their licence is
-`Apache-2.0 AND FSL-1.1-ALv2`.
+The core, the SDKs and the CLI are Apache-2.0. The features in `ee/` are FSL-1.1-ALv2 (free to use while we grow), and each release of them becomes Apache-2.0 two years after it ships. The release binary, the `@deedglass/cli-*` npm packages and the container image include `ee/`, so their licence is `Apache-2.0 AND FSL-1.1-ALv2`.
 
-Free features send nothing to deedglass.com: the free scan reads files on your machine and, with
-`--postgres-dsn-env`, connects only to the database you name. A Pro licence is checked with Dodo
-Payments and deedglass.com: `deedglass serve` asks at start and then daily, and Pro commands ask
-when you run them; a request goes out when the last successful check is a day old, and at once when
-the clock runs more than 5 minutes behind the last check or the latest time seen, or when
-`licence.clock` is missing, unreadable or altered. `deedglass licence activate`, `refresh` and
-`deactivate` always call out. `DEEDGLASS_NO_NETWORK=1` stops every licence call, and only those:
-`deedglass version --check` and the `--latest` option of `deedglass policy install` and
-`policy packs` contact GitHub when you use them.
-Head timestamps are off by default; with TSAs or a transparency service listed in deedglass.yaml,
-`deedglass deeds timestamp` and each export contact only those.
+Every feature is free while we grow, so nothing checks a licence and nothing is sent to deedglass.com: the scan reads files on your machine and, with `--postgres-dsn-env`, connects only to the database you name. The `deedglass licence` commands, kept for a later paid option, are the only ones that call Dodo Payments or deedglass.com, and only when you run them; `DEEDGLASS_NO_NETWORK=1` stops those calls. `deedglass version --check` and the `--latest` option of `deedglass policy install` and `policy packs` contact GitHub when you use them. Head timestamps are off by default; with TSAs or a transparency service listed in deedglass.yaml, `deedglass deeds timestamp` and each export contact only those.
 
 ## Setting Deedglass up for a user
 
@@ -88,9 +75,10 @@ A test that prints an `-update` command has a golden file: run it, read the diff
   test pass.
 - **Network.** Every outbound HTTP call goes through `internal/connector/egress`
   (`TestSingleEgressDoor`). The free `deedglass scan` opens no connection except to the one
-  database the user names with `--postgres-dsn-env`; `scan --full` (Pro) also checks the licence
-  and, when a Deedglass server is configured, seals the report on the user's own server. Free code
-  never imports `internal/licence`.
+  database the user names with `--postgres-dsn-env`; `scan --full` also seals the report on the
+  user's own server when one is configured. Every feature is free while we grow
+  (`internal/licence/policy.go`, DL-131), so nothing checks a licence; only `cmd/deedglass/licence.go`
+  and `internal/licence` may import `internal/licence`.
 - **Dependencies.** Prefer the standard library. A new dependency needs an ADR (index:
   `docs/adr/README.md`) with its pinned version, licence and alternatives, so open an issue before
   adding one. No cgo in the main binary.

@@ -94,7 +94,7 @@ export function renderWeek(body: HTMLElement, v: WeeklyView): void {
     kids.push(h('ul', { class: 'wk-caught' }, ...s.caught.slice(0, 3).map((it) => h('li', null,
       h('p', null, itemLine(it)),
       freeLine(it) ? h('p', { class: 'wk-free mono', translate: 'no', 'data-free-path': '' }, freeLine(it)) : null,
-      v.pro_undo_line && it.session && it.undo_possible ? h('p', { class: 'wk-pro t-2' }, 'Undo the whole session in one step (Pro)') : null))));
+      v.pro_undo_line && it.session && it.undo_possible ? h('p', { class: 'wk-pro t-2' }, 'Undo the whole session in one step') : null))));
   } else {
     kids.push(h('p', { class: 't-2' }, w.nothing));
   }

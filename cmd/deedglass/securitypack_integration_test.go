@@ -69,6 +69,7 @@ const (
 // server's keys refused), the aliases build with no real name outside aliases.private.json, and the
 // canary sweep over every file, records included.
 func TestSecurityPackLive(t *testing.T) {
+	keyRequired(t) // steps 1–3 cover the dormant key path; 2b runs DL-131's free policy
 	e := storetest.New(t, storetest.Options{NoMigrate: true})
 	dir := t.TempDir()
 	keyFile, _ := newKeyFile(t, dir, 51)
@@ -224,7 +225,7 @@ func TestSecurityPackLive(t *testing.T) {
 	r = run("security-pack", "readiness")
 	if r.code != 0 || !strings.Contains(r.stdout, "Security review readiness · Acme Robotics · last 90 days") ||
 		!strings.Contains(r.stdout, "Not set up") || !strings.Contains(r.stdout, "stop_used") ||
-		!strings.Contains(r.stdout, "Build the document for a reviewer (Pro): deedglass security-pack build") {
+		!strings.Contains(r.stdout, "Build the document for a reviewer: deedglass security-pack build") {
 		t.Fatalf("readiness text: %+v", r)
 	}
 	t.Logf("\n%s", r.stdout)
@@ -257,6 +258,19 @@ func TestSecurityPackLive(t *testing.T) {
 	if c, b := call(adminKey, "GET", "/v1/security_pack/readiness?period_days=3", ""); c != 400 || !strings.Contains(b, "period_days") {
 		t.Fatalf("period: %d %s", c, b)
 	}
+
+	// 2b. DL-131, free while we grow: no licence at all, and serve turns the build on.
+	stop()
+	licencePolicy = licence.FreeWhileWeGrow
+	s, base = start(nil, false)
+	running = true
+	env["DEEDGLASS_BASE_URL"], env["DEEDGLASS_SERVER"] = base, base
+	freeOut := t.TempDir()
+	r = run("security-pack", "build", "--period", "90d", "--out", freeOut)
+	if r.code != 0 || !strings.Contains(r.stdout, "sealed (5 files)") {
+		t.Fatalf("free while we grow, no licence: %+v", r)
+	}
+	licencePolicy = licence.KeyRequired
 
 	// 3. With a test Pro licence (restart serve so it asks at start).
 	stop()

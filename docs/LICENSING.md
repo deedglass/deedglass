@@ -1,24 +1,36 @@
-# Licensing and Pro
+# Licensing: free while we grow
 
-Everything Deedglass does for safety is free and stays free: the rules, the checks, records and
-their offline verification, Stop, Undo, Insights, `deedglass scan`, and the scan Action's scan, job
-summary and SARIF on every repo, with its pull request comment on public repos. Pro adds new
-features on top. It never takes a free one away.
+Every Deedglass feature is free to use, with no licence key, while we grow. That includes the
+features in `ee/` that used to need a Pro licence:
 
-## What Pro adds
-
-| Feature | Plan |
+| Feature | Without a key |
 |---|---|
-| `deedglass scan --full`: the full scan report, rendered on your machine | the full scan report, founding partner, Pro |
-| Pro policy packs and the fix writer (as they ship) | the full scan report, founding partner, Pro |
-| The scan Action's pull request comment on private repos (its scan, job summary and SARIF stay free) | founding partner, Pro |
-| Undo a whole watched session in one step (`deedglass observe undo`, S50) | founding partner, Pro |
-| The security review pack: the sealed document for a reviewer (`deedglass security-pack build`, S51; the readiness list and the offline check stay free) | founding partner, Pro |
+| `deedglass scan --full`: the full scan report, rendered on your machine | yes |
+| Pro policy packs (`money-movement` and the packs after it) and the fix writer (as it ships) | yes |
+| Undo a whole watched session in one step (`deedglass observe undo`, S50) | yes |
+| The security review pack: the sealed document for a reviewer (`deedglass security-pack build`, S51) | yes |
+| The Clients view and reports for every client (`deedglass clients`, `report --all-clients`, `--brand`, S52) | yes |
 
-The full scan report plan lasts 30 days, a founding partner place six months; Pro renews until you
-cancel. Prices are on deedglass.com/pricing. Dodo Payments is the reseller and handles sales tax.
+Everything that was always free stays free: the rules, the checks, records and their offline
+verification, Stop, Undo, Insights, `deedglass scan`, and the scan Action's scan, job summary and
+SARIF on every repo.
 
-## Turning Pro on
+Later we plan paid support, SLAs and a hosted version for organisations. Anything free today stays free for people who run Deedglass themselves.
+
+## How the switch works
+
+One policy in `internal/licence/policy.go` decides whether a feature needs a key.
+`licence.Current` is `FreeWhileWeGrow`: every entitlement is on, so no command and no server
+opens a licence file or calls Dodo Payments or deedglass.com. The verifier, the token format and
+the `deedglass licence` commands below stay in the code, so a paid option can ask for a key again
+later by changing that one policy, not by rewriting features. `deedglass serve` logs
+`licence: feature free while we grow` once per feature at start.
+
+## The licence path, kept for later
+
+Nothing below is needed today. It describes how a key works if a later build asks for one.
+
+### Turning a licence on
 
 ```sh
 deedglass licence activate DG-…      # the key from Dodo's email, on each machine (3 machines per key)
@@ -41,19 +53,9 @@ licence. If the computer's clock runs more than 5 minutes behind it, or behind t
 pauses until `deedglass licence refresh` (or the next Pro feature) checks the licence online. A
 missing or edited `licence.clock` counts the same way. Everything free keeps working.
 
-## Does Pro phone home?
+### Does a licence phone home?
 
-Free features send nothing to deedglass.com: the free scan reads files on your machine and, with
-`--postgres-dsn-env`, connects only to the database you name. A Pro licence is checked with Dodo
-Payments and deedglass.com: `deedglass serve` asks at start and then daily, and Pro commands ask
-when you run them; a request goes out when the last successful check is a day old, and at once when
-the clock runs more than 5 minutes behind the last check or the latest time seen, or when
-`licence.clock` is missing, unreadable or altered. `deedglass licence activate`, `refresh` and
-`deactivate` always call out. `DEEDGLASS_NO_NETWORK=1` stops every licence call, and only those:
-`deedglass version --check` and the `--latest` option of `deedglass policy install` and
-`policy packs` contact GitHub when you use them.
-Head timestamps are off by default; with TSAs or a transparency service listed in deedglass.yaml,
-`deedglass deeds timestamp` and each export contact only those.
+Every feature is free while we grow, so nothing checks a licence and nothing is sent to deedglass.com: the scan reads files on your machine and, with `--postgres-dsn-env`, connects only to the database you name. The `deedglass licence` commands, kept for a later paid option, are the only ones that call Dodo Payments or deedglass.com, and only when you run them; `DEEDGLASS_NO_NETWORK=1` stops those calls. `deedglass version --check` and the `--latest` option of `deedglass policy install` and `policy packs` contact GitHub when you use them. Head timestamps are off by default; with TSAs or a transparency service listed in deedglass.yaml, `deedglass deeds timestamp` and each export contact only those.
 
 If a check can't reach Dodo Payments or deedglass.com, the next Pro feature that asks tries again.
 `refresh` asks Dodo, then deedglass.com; `activate` first registers the machine with Dodo;
@@ -63,7 +65,7 @@ build knows. Nothing about your files, agents or data goes with them. With the n
 on its cached token for up to 14 days after the last successful check. Free commands never open the
 licence (a test fails the build if any free code imports it).
 
-## The token and how to check it
+### The token and how to check it
 
 The token is a JSON object signed like a record, with its own domain tag and its own key family:
 
@@ -76,7 +78,7 @@ Licence keys (`lk_…`) never seal records, and seal keys (`sk_…`) never sign 
 refuse the other. The public keys are built into the binary and published at
 `https://deedglass.com/.well-known/deedglass/licence-keys.json`.
 
-## Features old installs can read
+### Features old installs can read
 
 A newer site may sign features an older build doesn't know. Since v0.1.0 a build accepts any
 well-formed feature name in a token (lowercase letters, digits and `_`, 3 to 32 characters; at most
@@ -98,7 +100,7 @@ each org's own report and its Monday email never read the licence.
 session undo, the security review pack's build and the Clients view on or off for the next request. An undo already
 started completes even if the licence lapses before its countersign.
 
-## When Pro works
+### When a licence works
 
 ```
 ok_validation = now ≤ validated_at + 14 days
@@ -113,14 +115,15 @@ the local licence is removed. Deedglass keeps no list of its own.
 
 ## Where the code lives
 
-`internal/licence` (Apache-2.0) only verifies. Pro features live in `ee/`, licensed under
-`ee/LICENSE` (FSL-1.1-ALv2): you can read, run and change it for anything except offering a
-competing product, and each release becomes Apache-2.0 two years after it ships. The root
-`LICENSE` says which files `ee/LICENSE` covers.
+`internal/licence` (Apache-2.0) only verifies and holds the policy. The features that used to be
+Pro live in `ee/`, licensed under `ee/LICENSE` (FSL-1.1-ALv2): you can read, run and change it for
+anything except offering a competing product, and each release becomes Apache-2.0 two years after
+it ships. The root `LICENSE` says which files `ee/LICENSE` covers. Free to use is not the same as
+a change of licence: `ee/` stays under FSL-1.1-ALv2.
 
 ## What it doesn't do
 
-- No seats, no usage metering, no team billing yet.
+- No seats, no usage metering, no team billing.
+- No install count or other telemetry: free features send nothing anywhere.
 - The full report is sealed only on your own Deedglass server (`DEEDGLASS_SERVER` and an API key);
   without one it says how to seal it later with `deedglass deeds seal-file`.
-- A 14-day trial and the Monday summary email are planned, not built.

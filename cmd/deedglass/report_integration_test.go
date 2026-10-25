@@ -105,7 +105,12 @@ func TestReportAndClientsLive(t *testing.T) {
 		t.Fatalf("bad week: %+v", r)
 	}
 
-	// 2. Without the agency feature: pro_required and the free line.
+	// 1b. DL-131, free while we grow: the Clients view runs with no licence at all.
+	if r = run(env, "clients", "--as", person); r.code != 0 || !strings.Contains(r.stdout, "Clients · ") {
+		t.Fatalf("free while we grow, no licence: %+v", r)
+	}
+
+	// 2. Without the agency feature (the dormant key path): pro_required and the free line.
 	_, lenv, _ := licenceSeams(t)
 	for k, v := range env {
 		lenv[k] = v
@@ -115,7 +120,7 @@ func TestReportAndClientsLive(t *testing.T) {
 	for _, args := range [][]string{{"clients", "--as", person}, {"report", "--all-clients", "--out", t.TempDir(), "--as", person},
 		{"--org", "acme", "report", "--brand", brand}} {
 		r = run(lenv, args...)
-		if r.code != 1 || !strings.Contains(r.stderr, "Agency plan") || !strings.Contains(r.stderr, "deedglass report --org") {
+		if r.code != 1 || !strings.Contains(r.stderr, "need a licence on this build") || !strings.Contains(r.stderr, "deedglass report --org") {
 			t.Fatalf("%v without agency: %+v", args, r)
 		}
 	}
@@ -130,7 +135,7 @@ func TestReportAndClientsLive(t *testing.T) {
 	if r = run(lenv2, "licence", "activate", "DG-PRO-S52-0001"); r.code != 0 {
 		t.Fatalf("activate pro: %+v", r)
 	}
-	if r = run(lenv2, "clients", "--as", person); r.code != 1 || !strings.Contains(r.stderr, "Agency plan") {
+	if r = run(lenv2, "clients", "--as", person); r.code != 1 || !strings.Contains(r.stderr, "need a licence on this build") {
 		t.Fatalf("plain Pro: %+v", r)
 	}
 	f.sku = licence.SkuAgencyMonthly

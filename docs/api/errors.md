@@ -1795,9 +1795,9 @@ look again with `deedglass decoder status --connector <name>`.
 
 **403 · permission_error**
 
-**When it happens.** You asked for something that is part of Pro without a Pro licence on the machine that runs Deedglass: today, undoing a whole watched session in one step (`POST /v1/observe/sessions/{id}/undo`, `deedglass observe undo`). Nothing ran, and nothing free changed: the session, its preview, per-action undo and the undo SQL all keep working.
+**When it happens.** Not today: every feature is free while we grow, so no build answers this code. It is kept for a later paid option, when a feature asks for a licence the machine that runs Deedglass doesn't have: today, undoing a whole watched session in one step (`POST /v1/observe/sessions/{id}/undo`, `deedglass observe undo`). Nothing ran, and nothing free changed: the session, its preview, per-action undo and the undo SQL all keep working.
 
-**What to do.** Print the undo SQL and run it yourself, free: `deedglass observe show <id> --undo-sql`. Or add Pro (deedglass.com/pricing) and run `deedglass licence activate` on the machine that runs `deedglass serve`.
+**What to do.** Print the undo SQL and run it yourself, free: `deedglass observe show <id> --undo-sql`. Or run a current build, where the one-step undo is free (deedglass.com/pricing).
 
 ```json
 {

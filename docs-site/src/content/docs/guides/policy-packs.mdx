@@ -25,7 +25,7 @@ deedglass policy packs verify
 - `stripe-refunds` (free): the Stripe connector (sandbox).
 - `github-agent` (free): the GitHub connector.
 - `healthcare-fhir` (free): the FHIR connector. Clinical records are never deleted; orders, allergies, problems and final notes wait for a clinician; claims need two people ([the healthcare-fhir pack](/guides/healthcare-fhir-pack/)).
-- `money-movement` (Pro): Stripe refunds, payouts and transfers, with amount caps and two admins for large ones.
+- `money-movement` (free while we grow): Stripe refunds, payouts and transfers, with amount caps and two admins for large ones.
 
 `verify` checks every file of every pack against its sha256 in the index and runs each pack's own test cases. Each pack carries at least 12.
 
@@ -39,7 +39,7 @@ In order, install:
 
 1. Reads the packs. By default it uses the copy built into `deedglass`, so it works offline. `--from <dir|.tar.gz>` reads a local copy of the policy-packs repo, and `--latest` downloads the newest release over HTTPS. That is the only time it uses the network.
 2. Checks the index. A copy from outside the binary must be sealed by a pack key this build knows, and then every file must match its sha256. If one doesn't: `✕ This pack doesn't match its signed index (postgres-safe.yaml). Nothing was written.`
-3. Checks the tier. A Pro pack asks for a Pro licence; without one it prints `Pro packs need a Pro licence: deedglass.com/pro. Nothing was written.` Free packs never open the licence file.
+3. Checks the tier. Every pack is free while we grow, so no pack opens the licence file.
 4. Compiles the policy and runs its cases. A failure writes nothing.
 5. Shows the plan: each file, new or changed, with a diff for changes. Then it asks `Write 2 files? [y/N]`. Pass `--yes` to skip the question.
 6. Writes `policies/<pack>.yaml` and `policies/<pack>.cases.yaml` (`--dir` changes the folder) and prints the next step.
@@ -56,9 +56,9 @@ deedglass policy activate postgres-safe --version 1 --mode shadow --reason "tryi
 
 Compare it with what you run today using `deedglass policy replay`, then activate it with `--mode enforce`.
 
-## Pro packs and your licence
+## Packs and licences
 
-A Pro licence is checked only when you install a Pro pack. A policy you installed keeps enforcing if the licence ends, because rules never read the licence.
+Every pack installs without a licence while we grow. Rules never read a licence, so a policy you installed keeps enforcing whatever a later build asks for at install time.
 
 ## What it doesn't do
 
