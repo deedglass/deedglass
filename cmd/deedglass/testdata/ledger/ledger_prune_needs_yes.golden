@@ -1,5 +1,5 @@
 exit 2
 --- stdout
 --- stderr
-✕ ledger prune changes data and needs confirmation.
-  Add --yes, or run it in a terminal to confirm.
+✕ Ledger prune changes data and needs confirmation.
+  next  Add --yes, or run it in a terminal to confirm.

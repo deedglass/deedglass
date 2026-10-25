@@ -79,7 +79,7 @@ func TestWrap(t *testing.T) {
 	if got := Wrap("short", 80, 0); len(got) != 1 || got[0] != "short" {
 		t.Fatalf("got %q", got)
 	}
-	long := "see https://docs.deedglass.com/a/very/long/path/that/does/not/fit/anywhere ok"
+	long := "see https://example.com/a/very/long/path/that/does/not/fit/anywhere ok"
 	for _, l := range Wrap(long, 30, 0) {
 		if strings.Contains(l, "https") && !strings.HasPrefix(l, "https") {
 			t.Fatalf("a long word shares a line it overflows: %q", l)
