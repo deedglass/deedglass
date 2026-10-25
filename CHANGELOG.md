@@ -55,6 +55,9 @@ rules cover the native Postgres connector only. No new Go dependency, no schema 
   `insights detect`/`digest` and suggestions read `.deedglass/stack.json`, so they work inside the
   quickstart folder without `DEEDGLASS_DATABASE_URL`.
 - `report --json` prints JSON (it printed Markdown); `approvals list` has a header row.
+- Docs site and README for search engines and AI answers (#91): each docs page opens with its own
+  words (the imported-file note moves to the end), step-by-step pages carry HowTo JSON-LD, and
+  `check-seo` checks canonicals, HowTo anchors and openings.
 
 ## [0.8.0] - 2026-10-25
 

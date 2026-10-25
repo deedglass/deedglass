@@ -340,3 +340,6 @@ c795d1f08e1c85cd6f50cffb3a1e876da75afcb39a0c3ec173008592fe22f08e  release-bundle
 a3c42b0d2c7c2761d2e5eedd832432aec82f2ae4a9c8d3b13d656edf951957fb  release-bundles/0.8.0/bundle.tar.gz
 90f02c543bdb458f05edcd0f71abf6e12527c9586d03cd733d252f701c9a31a5  release-bundles/0.8.0/keys.json
 39ff9b2463769775d118eb463f0d693d76bc8c22882ca3171ab368eb9c7dc779  release-bundles/0.8.0/origin.json
+bc54f4ea7e06b0dce1bd466e1e4ea10f7e11f6e166f9720edf4c437fa09ec7a4  release-bundles/0.9.0/bundle.tar.gz
+90f02c543bdb458f05edcd0f71abf6e12527c9586d03cd733d252f701c9a31a5  release-bundles/0.9.0/keys.json
+00771e5653968bde03df1f58d5e5bfb2b45f54e2be480923b0cc40ca04e73160  release-bundles/0.9.0/origin.json

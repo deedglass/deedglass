@@ -208,7 +208,7 @@ sources and the date each was checked, at [deedglass.com/compare](https://deedgl
 | How | Command |
 |---|---|
 | npx (no install) | `npx -y deedglass help` |
-| Install script (macOS, Linux) | `curl -fsSL https://raw.githubusercontent.com/deedglass/deedglass/main/scripts/install.sh \| sh` |
+| Install script (macOS, Linux) | `curl -fsSL https://github.com/deedglass/deedglass/releases/latest/download/install.sh \| sh` |
 | Binaries | archives for macOS, Linux and Windows on the [latest release](https://github.com/deedglass/deedglass/releases/latest), with `checksums.txt` |
 | Go | `go install github.com/deedglass/deedglass/cmd/deedglass@latest` (the CLI, without the Console) |
 | Docker | build the image from a checkout: `make web-build docker` (tags `deedglass:dev`; Node 24 builds the Console) |
