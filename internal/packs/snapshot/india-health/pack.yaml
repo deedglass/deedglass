@@ -1,0 +1,6 @@
+id: pck_01m4ppb8d5fkph9mevbjc6cv8m
+name: india-health
+version: 1.0.0
+tier: free
+summary: PHI mode first. Clinical records are never deleted. ABDM records and orders wait for a clinician. NHCX claims need one or two people by use and amount.
+for: the FHIR connector on ABDM and NHCX flows (synthetic data until you have reviewed it)

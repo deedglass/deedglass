@@ -18,6 +18,7 @@ import (
 
 	"github.com/deedglass/deedglass/internal/connector"
 	"github.com/deedglass/deedglass/internal/connector/egress"
+	"github.com/deedglass/deedglass/internal/connector/fhir/igclass"
 	"github.com/deedglass/deedglass/internal/connector/saas"
 	"github.com/deedglass/deedglass/internal/ids"
 )
@@ -502,6 +503,26 @@ func (c *Connector) Enrich(_ context.Context, inst *connector.Instance, t connec
 	}
 	f := map[string]any{"interaction": r.inter, "resource_type": r.typ, "id": r.id, "conditional": r.ifNoneExist != "",
 		"if_match": r.ifMatch != "", "codes": codes(r.resource), "profiles": profiles(r.resource), "enriched": true}
+	if r.resource != nil {
+		// HC-P15: India's national profiles (ABDM records, NHCX bundles, the Claim's use and total).
+		// Only what is there is added, so other resources' facts don't change.
+		ig := igclass.Classify(r.resource)
+		for k, v := range map[string]any{"bundle_type": ig.BundleType, "record": ig.Record, "record_status": ig.RecordStatus,
+			"nhcx": ig.NHCX, "claim_use": ig.ClaimUse, "claim_currency": ig.ClaimCurrency} {
+			if v != "" {
+				f[k] = v
+			}
+		}
+		if ig.BundleType != "" {
+			f["entry_types"] = ig.EntryTypes
+		}
+		if ig.ProfileMismatch {
+			f["profile_mismatch"] = true
+		}
+		if ig.Claims > 0 {
+			f["claims"], f["claim_uses"], f["claim_amount"] = ig.Claims, ig.ClaimUses, ig.ClaimAmount
+		}
+	}
 	return map[string]any{"fhir": f}, nil
 }
 

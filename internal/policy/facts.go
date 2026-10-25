@@ -122,6 +122,20 @@ type FHIRFacts struct {
 	Codes        []string `json:"codes" cel:"codes"`
 	Profiles     []string `json:"profiles" cel:"profiles"` // meta.profile URLs
 	Enriched     bool     `json:"enriched" cel:"enriched"`
+	// HC-P15 (ADR-119): what a create or update's resource is in India's national profiles (the
+	// NRCeS FHIR IG for ABDM 6.5.0, which carries the NHCX profiles). Read from meta.profile and,
+	// for a Bundle, from what it holds; zero for reads, deletes and patches.
+	BundleType      string   `json:"bundle_type,omitempty" cel:"bundle_type"`           // Bundle.type; "" when not a Bundle
+	EntryTypes      []string `json:"entry_types,omitempty" cel:"entry_types"`           // the resource types a Bundle holds, nested ones too, sorted
+	Record          string   `json:"record,omitempty" cel:"record"`                     // ABDM record: OPConsultRecord, DischargeSummaryRecord, …
+	RecordStatus    string   `json:"record_status,omitempty" cel:"record_status"`       // that record's Composition.status
+	NHCX            string   `json:"nhcx,omitempty" cel:"nhcx"`                         // ClaimBundle, CoverageEligibilityRequestBundle, …
+	ProfileMismatch bool     `json:"profile_mismatch,omitempty" cel:"profile_mismatch"` // the NHCX profile names another kind than the bundle holds
+	Claims          int64    `json:"claims,omitempty" cel:"claims"`                     // Claim resources in the request
+	ClaimUse        string   `json:"claim_use,omitempty" cel:"claim_use"`               // the first Claim's use: claim, preauthorization, predetermination, other
+	ClaimUses       []string `json:"claim_uses,omitempty" cel:"claim_uses"`             // every Claim's use, sorted
+	ClaimAmount     int64    `json:"claim_amount,omitempty" cel:"claim_amount"`         // the largest Claim.total in minor units; -1 when unknown
+	ClaimCurrency   string   `json:"claim_currency,omitempty" cel:"claim_currency"`     // lowercase ISO 4217
 }
 
 // RequestFacts describes the request that carried the action.
@@ -198,6 +212,9 @@ type SessionFacts struct {
 type OrgFacts struct {
 	ID       string `json:"id" cel:"id"`
 	Timezone string `json:"timezone" cel:"timezone"`
+	// PHIMode is the org's PHI mode (HC-P09) at decision time (HC-P15, ADR-119), so a pack can
+	// refuse clinical calls while it is off.
+	PHIMode bool `json:"phi_mode,omitempty" cel:"phi_mode"`
 }
 
 // TimeFacts is the decision instant in the org's time zone. It is an input, never a clock read.

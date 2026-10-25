@@ -1,0 +1,284 @@
+# Test cases for india-health.yaml. Run them with:
+#   deedglass policy test policies/india-health.yaml
+# request.fhir is what the FHIR connector fills before the decision (docs/healthcare/INDIA.md); the
+# facts below are what it reads from the NRCeS FHIR IG for ABDM 6.5.0's own examples, which
+# internal/connector/fhir/igclass tests against the published files. Every value here is synthetic.
+policy: india-health.yaml
+defaults:
+  agent: { name: hospital-bot, labels: { env: prod } }
+  org: { timezone: Asia/Kolkata, phi_mode: true }
+  time: 2026-10-25T10:00:00+05:30
+cases:
+  # PHI mode and calls that build no request
+  - name: with PHI mode off nothing runs, not even a read
+    input:
+      tool: { name: ehr.read, connector_type: fhir, side_effect: read }
+      args: { resource_type: Patient, id: pat-synthetic-1 }
+      org: { timezone: Asia/Kolkata, phi_mode: false }
+      request: { fhir: { enriched: true, interaction: read, resource_type: Patient, id: pat-synthetic-1 } }
+    expect: { decision: deny, rule: phi-mode-first, code: policy_denied, reason_contains: "PHI mode is off" }
+  - name: a type outside the connector's list never runs
+    input:
+      tool: { name: ehr.create, connector_type: fhir, side_effect: write }
+      args: { resource_type: Encounter, resource: { resourceType: Encounter, status: finished } }
+      request: { fhir: { enriched: false } }
+    expect: { decision: deny, rule: fhir-needs-a-request }
+
+  # Deletes
+  - name: deleting a stored ABDM record bundle is refused
+    input:
+      tool: { name: ehr.delete, connector_type: fhir, side_effect: destructive }
+      args: { resource_type: Bundle, id: opconsult-1 }
+      request: { fhir: { enriched: true, interaction: delete, resource_type: Bundle, id: opconsult-1 } }
+    expect: { decision: deny, rule: no-delete-clinical, reason_contains: "corrected with a new version" }
+  - name: deleting a Task waits for an admin
+    input:
+      tool: { name: ehr.delete, connector_type: fhir, side_effect: destructive }
+      args: { resource_type: Task, id: task-9 }
+      request: { fhir: { enriched: true, interaction: delete, resource_type: Task, id: task-9 } }
+    expect: { decision: require_approval, rule: other-deletes-need-approval, approval: { required: 1, approvers: [role:admin], expires_in: 2h } }
+  - name: $expunge through the REST connector is refused
+    input:
+      tool: { name: hapi.expunge, connector_type: rest, side_effect: destructive }
+      args: { id: obs-1001 }
+      request: { http: { method: POST, path: "/fhir/Observation/obs-1001/$expunge", host: fhir.example.org } }
+    expect: { decision: deny, rule: no-history-rewrite }
+
+  # NHCX labels that don't match the content
+  - name: a claim sent under an eligibility label is refused
+    input:
+      tool: { name: ehr.create, connector_type: fhir, side_effect: write }
+      args: { resource_type: Bundle, resource: { resourceType: Bundle, type: collection } }
+      request: { fhir: { enriched: true, interaction: create, resource_type: Bundle, bundle_type: collection, nhcx: ClaimBundle, profile_mismatch: true,
+        entry_types: [Claim], claims: 1, claim_use: claim, claim_uses: [claim], claim_amount: 50000000, claim_currency: inr } }
+    expect: { decision: deny, rule: nhcx-profile-mismatch, reason_contains: "doesn't match what it holds" }
+
+  # Coverage and payer records
+  - name: writing a CoverageEligibilityResponseBundle is refused
+    input:
+      tool: { name: ehr.create, connector_type: fhir, side_effect: write }
+      args: { resource_type: Bundle, resource: { resourceType: Bundle, type: collection } }
+      request: { fhir: { enriched: true, interaction: create, resource_type: Bundle, bundle_type: collection, nhcx: CoverageEligibilityResponseBundle,
+        entry_types: [Coverage, CoverageEligibilityRequest, CoverageEligibilityResponse, Location, Organization, Patient, Practitioner] } }
+    expect: { decision: deny, rule: coverage-read-only }
+  - name: changing Coverage is refused
+    input:
+      tool: { name: ehr.update, connector_type: fhir, side_effect: write }
+      args: { resource_type: Coverage, id: cov-1, resource: { resourceType: Coverage, id: cov-1 } }
+      request: { fhir: { enriched: true, interaction: update, resource_type: Coverage, id: cov-1 } }
+    expect: { decision: deny, rule: coverage-read-only }
+  - name: a type-wide search is refused
+    input:
+      tool: { name: ehr.search, connector_type: fhir, side_effect: read }
+      args: { resource_type: Claim, params: {} }
+      request: { fhir: { enriched: true, interaction: search, resource_type: Claim } }
+    expect: { decision: deny, rule: phi-minimum-read }
+  - name: a ClaimResponseBundle needs two people
+    input:
+      tool: { name: ehr.create, connector_type: fhir, side_effect: write }
+      args: { resource_type: Bundle, resource: { resourceType: Bundle, type: collection } }
+      request: { fhir: { enriched: true, interaction: create, resource_type: Bundle, bundle_type: collection, nhcx: ClaimResponseBundle,
+        entry_types: [Claim, ClaimResponse, Coverage, Organization, Patient, Practitioner], claims: 1, claim_use: preauthorization,
+        claim_uses: [preauthorization], claim_amount: 7000000, claim_currency: inr } }
+    expect: { decision: require_approval, rule: payer-side-two-people, approval: { required: 2, approvers: [role:admin], expires_in: 24h } }
+  - name: a payment notice task bundle needs two people
+    input:
+      tool: { name: ehr.create, connector_type: fhir, side_effect: write }
+      args: { resource_type: Bundle, resource: { resourceType: Bundle, type: collection } }
+      request: { fhir: { enriched: true, interaction: create, resource_type: Bundle, bundle_type: collection, nhcx: TaskBundle,
+        entry_types: [Organization, PaymentNotice, Task] } }
+    expect: { decision: require_approval, rule: payer-side-two-people }
+
+  # Claims by NHCX use and amount: the same on a ClaimBundle and on a plain Claim
+  - name: a final claim in a ClaimBundle needs two people
+    input:
+      tool: { name: ehr.create, connector_type: fhir, side_effect: write }
+      args: { resource_type: Bundle, resource: { resourceType: Bundle, type: collection } }
+      request: { fhir: { enriched: true, interaction: create, resource_type: Bundle, bundle_type: collection, nhcx: ClaimBundle,
+        entry_types: [Claim, Coverage, Organization, Patient, Practitioner], claims: 3, claim_use: claim, claim_uses: [claim, preauthorization],
+        claim_amount: 9000000, claim_currency: inr } }
+    expect: { decision: require_approval, rule: claim-settlement-two-people, approval: { required: 2, approvers: [role:admin], expires_in: 24h } }
+  - name: a plain final Claim needs two people however small
+    input:
+      tool: { name: ehr.create, connector_type: fhir, side_effect: write }
+      args: { resource_type: Claim, resource: { resourceType: Claim, use: claim } }
+      request: { fhir: { enriched: true, interaction: create, resource_type: Claim, claims: 1, claim_use: claim, claim_uses: [claim], claim_amount: 50000, claim_currency: inr } }
+    expect: { decision: require_approval, rule: claim-settlement-two-people }
+  - name: a pre-authorisation of INR 70,000 in a ClaimBundle needs one person
+    input:
+      tool: { name: ehr.create, connector_type: fhir, side_effect: write }
+      args: { resource_type: Bundle, resource: { resourceType: Bundle, type: collection } }
+      request: { fhir: { enriched: true, interaction: create, resource_type: Bundle, bundle_type: collection, nhcx: ClaimBundle,
+        entry_types: [Claim, Coverage, Organization, Patient, Practitioner], claims: 1, claim_use: preauthorization, claim_uses: [preauthorization],
+        claim_amount: 7000000, claim_currency: inr } }
+    expect: { decision: require_approval, rule: preauth-one-person, approval: { required: 1, approvers: [role:admin], expires_in: 45m } }
+  - name: a plain pre-authorisation Claim of INR 70,000 needs one person
+    input:
+      tool: { name: ehr.create, connector_type: fhir, side_effect: write }
+      args: { resource_type: Claim, resource: { resourceType: Claim, use: preauthorization } }
+      request: { fhir: { enriched: true, interaction: create, resource_type: Claim, claims: 1, claim_use: preauthorization, claim_uses: [preauthorization], claim_amount: 7000000, claim_currency: inr } }
+    expect: { decision: require_approval, rule: preauth-one-person }
+  - name: a pre-authorisation of exactly INR 1,00,000 needs two people
+    input:
+      tool: { name: ehr.create, connector_type: fhir, side_effect: write }
+      args: { resource_type: Claim, resource: { resourceType: Claim, use: preauthorization } }
+      request: { fhir: { enriched: true, interaction: create, resource_type: Claim, claims: 1, claim_use: preauthorization, claim_uses: [preauthorization], claim_amount: 10000000, claim_currency: inr } }
+    expect: { decision: require_approval, rule: preauth-large-two-people, approval: { required: 2, approvers: [role:admin], expires_in: 45m } }
+  - name: a large pre-authorisation hidden behind a small one in a bundle needs two people
+    input:
+      tool: { name: ehr.create, connector_type: fhir, side_effect: write }
+      args: { resource_type: Bundle, resource: { resourceType: Bundle, type: collection } }
+      request: { fhir: { enriched: true, interaction: create, resource_type: Bundle, bundle_type: collection, nhcx: ClaimBundle,
+        entry_types: [Claim], claims: 2, claim_use: preauthorization, claim_uses: [preauthorization], claim_amount: 25000000, claim_currency: inr } }
+    expect: { decision: require_approval, rule: preauth-large-two-people }
+  - name: a pre-determination of INR 70,000 needs one person
+    input:
+      tool: { name: ehr.create, connector_type: fhir, side_effect: write }
+      args: { resource_type: Bundle, resource: { resourceType: Bundle, type: collection } }
+      request: { fhir: { enriched: true, interaction: create, resource_type: Bundle, bundle_type: collection, nhcx: ClaimBundle,
+        entry_types: [Claim, Coverage, Organization, Patient, Practitioner], claims: 1, claim_use: predetermination, claim_uses: [predetermination],
+        claim_amount: 7000000, claim_currency: inr } }
+    expect: { decision: require_approval, rule: preauth-one-person }
+  - name: a claim with no readable total needs two people
+    input:
+      tool: { name: ehr.create, connector_type: fhir, side_effect: write }
+      args: { resource_type: Claim, resource: { resourceType: Claim, use: preauthorization } }
+      request: { fhir: { enriched: true, interaction: create, resource_type: Claim, claims: 1, claim_use: preauthorization, claim_uses: [preauthorization], claim_amount: -1 } }
+    expect: { decision: require_approval, rule: claim-unreadable-two-people, reason_contains: "couldn't be read in rupees" }
+  - name: a claim in dollars needs two people
+    input:
+      tool: { name: ehr.create, connector_type: fhir, side_effect: write }
+      args: { resource_type: Claim, resource: { resourceType: Claim, use: preauthorization } }
+      request: { fhir: { enriched: true, interaction: create, resource_type: Claim, claims: 1, claim_use: preauthorization, claim_uses: [preauthorization], claim_amount: 100, claim_currency: usd } }
+    expect: { decision: require_approval, rule: claim-unreadable-two-people }
+  - name: a claim with an unknown use needs two people
+    input:
+      tool: { name: ehr.create, connector_type: fhir, side_effect: write }
+      args: { resource_type: Claim, resource: { resourceType: Claim, use: settlement } }
+      request: { fhir: { enriched: true, interaction: create, resource_type: Claim, claims: 1, claim_use: other, claim_uses: [other], claim_amount: 100, claim_currency: inr } }
+    expect: { decision: require_approval, rule: claim-unreadable-two-people }
+  - name: a patch to a Claim needs two people
+    input:
+      tool: { name: ehr.patch, connector_type: fhir, side_effect: write }
+      args: { resource_type: Claim, id: claim-1, patch: [{ op: replace, path: /use, value: claim }] }
+      request: { fhir: { enriched: true, interaction: patch, resource_type: Claim, id: claim-1 } }
+    expect: { decision: require_approval, rule: billing-two-people, approval: { required: 2, approvers: [role:admin], expires_in: 24h } }
+  - name: an InvoiceRecord document needs two people
+    input:
+      tool: { name: ehr.create, connector_type: fhir, side_effect: write }
+      args: { resource_type: Bundle, resource: { resourceType: Bundle, type: document } }
+      request: { fhir: { enriched: true, interaction: create, resource_type: Bundle, bundle_type: document, record: InvoiceRecord, record_status: final,
+        entry_types: [ChargeItem, Composition, Invoice, Medication, Patient, Practitioner] } }
+    expect: { decision: require_approval, rule: billing-two-people }
+
+  # Break-glass
+  - name: the break-glass agent's order runs and names the rule
+    input:
+      tool: { name: ehr.create, connector_type: fhir, side_effect: write }
+      args: { resource_type: MedicationRequest, resource: { resourceType: MedicationRequest, status: active } }
+      agent: { name: er-bot, labels: { break-glass: "on" } }
+      request: { fhir: { enriched: true, interaction: create, resource_type: MedicationRequest } }
+    expect: { decision: allow, rule: break-glass, verify: L1 }
+  - name: the break-glass agent's final claim still needs two people
+    input:
+      tool: { name: ehr.create, connector_type: fhir, side_effect: write }
+      args: { resource_type: Claim, resource: { resourceType: Claim, use: claim } }
+      agent: { name: er-bot, labels: { break-glass: "on" } }
+      request: { fhir: { enriched: true, interaction: create, resource_type: Claim, claims: 1, claim_use: claim, claim_uses: [claim], claim_amount: 100, claim_currency: inr } }
+    expect: { decision: require_approval, rule: claim-settlement-two-people }
+
+  # ABDM records and orders
+  - name: a PrescriptionRecord waits for a clinician because it carries orders
+    input:
+      tool: { name: ehr.create, connector_type: fhir, side_effect: write }
+      args: { resource_type: Bundle, resource: { resourceType: Bundle, type: document } }
+      request: { fhir: { enriched: true, interaction: create, resource_type: Bundle, bundle_type: document, record: PrescriptionRecord, record_status: final,
+        entry_types: [Binary, Composition, Condition, MedicationRequest, Patient, Practitioner] } }
+    expect:
+      decision: require_approval
+      rule: orders-need-clinician
+      approval: { required: 1, approvers: [user:clinician-1@example.org, user:clinician-2@example.org], expires_in: 4h }
+  - name: a draft OPConsultRecord that carries a prescription still waits for a clinician
+    input:
+      tool: { name: ehr.create, connector_type: fhir, side_effect: write }
+      args: { resource_type: Bundle, resource: { resourceType: Bundle, type: document } }
+      request: { fhir: { enriched: true, interaction: create, resource_type: Bundle, bundle_type: document, record: OPConsultRecord, record_status: preliminary,
+        entry_types: [AllergyIntolerance, Composition, Condition, MedicationRequest, Patient] } }
+    expect: { decision: require_approval, rule: orders-need-clinician }
+  - name: a plain ServiceRequest waits for a clinician
+    input:
+      tool: { name: ehr.create, connector_type: fhir, side_effect: write }
+      args: { resource_type: ServiceRequest, resource: { resourceType: ServiceRequest, status: active } }
+      request: { fhir: { enriched: true, interaction: create, resource_type: ServiceRequest } }
+    expect: { decision: require_approval, rule: orders-need-clinician }
+  - name: a new allergy waits for a clinician
+    input:
+      tool: { name: ehr.create, connector_type: fhir, side_effect: write }
+      args: { resource_type: AllergyIntolerance, resource: { resourceType: AllergyIntolerance } }
+      request: { fhir: { enriched: true, interaction: create, resource_type: AllergyIntolerance } }
+    expect: { decision: require_approval, rule: allergy-problem-list-review }
+  - name: a draft DischargeSummaryRecord runs
+    input:
+      tool: { name: ehr.create, connector_type: fhir, side_effect: write }
+      args: { resource_type: Bundle, resource: { resourceType: Bundle, type: document } }
+      request: { fhir: { enriched: true, interaction: create, resource_type: Bundle, bundle_type: document, record: DischargeSummaryRecord, record_status: preliminary,
+        entry_types: [Composition, Condition, Encounter, Observation, Patient, Practitioner, Procedure] } }
+    expect: { decision: allow, rule: abdm-record-draft, verify: L1 }
+  - name: a final DiagnosticReportRecord waits for a clinician
+    input:
+      tool: { name: ehr.create, connector_type: fhir, side_effect: write }
+      args: { resource_type: Bundle, resource: { resourceType: Bundle, type: document } }
+      request: { fhir: { enriched: true, interaction: create, resource_type: Bundle, bundle_type: document, record: DiagnosticReportRecord, record_status: final,
+        entry_types: [Composition, DiagnosticReport, Observation, Patient, Practitioner, Specimen] } }
+    expect: { decision: require_approval, rule: abdm-record-needs-clinician, reason_contains: "before they can be shared" }
+  - name: a final WellnessRecord waits for a clinician
+    input:
+      tool: { name: ehr.create, connector_type: fhir, side_effect: write }
+      args: { resource_type: Bundle, resource: { resourceType: Bundle, type: document } }
+      request: { fhir: { enriched: true, interaction: create, resource_type: Bundle, bundle_type: document, record: WellnessRecord, record_status: final,
+        entry_types: [Composition, Observation, Patient, Practitioner] } }
+    expect: { decision: require_approval, rule: abdm-record-needs-clinician }
+  - name: a document bundle with no known record kind waits for a clinician
+    input:
+      tool: { name: ehr.create, connector_type: fhir, side_effect: write }
+      args: { resource_type: Bundle, resource: { resourceType: Bundle, type: document } }
+      request: { fhir: { enriched: true, interaction: create, resource_type: Bundle, bundle_type: document, entry_types: [Composition, Observation] } }
+    expect: { decision: require_approval, rule: abdm-record-needs-clinician }
+  - name: a draft note as a DocumentReference runs
+    input:
+      tool: { name: ehr.create, connector_type: fhir, side_effect: write }
+      args: { resource_type: DocumentReference, resource: { resourceType: DocumentReference, docStatus: preliminary } }
+      request: { fhir: { enriched: true, interaction: create, resource_type: DocumentReference } }
+    expect: { decision: allow, rule: notes-draft-only }
+  - name: a final note as a DocumentReference waits for a clinician
+    input:
+      tool: { name: ehr.create, connector_type: fhir, side_effect: write }
+      args: { resource_type: DocumentReference, resource: { resourceType: DocumentReference, docStatus: final } }
+      request: { fhir: { enriched: true, interaction: create, resource_type: DocumentReference } }
+    expect: { decision: require_approval, rule: final-notes-need-clinician }
+
+  # Reads and the rest
+  - name: reading a patient runs
+    input:
+      tool: { name: ehr.read, connector_type: fhir, side_effect: read }
+      args: { resource_type: Patient, id: pat-synthetic-1 }
+      request: { fhir: { enriched: true, interaction: read, resource_type: Patient, id: pat-synthetic-1 } }
+    expect: { decision: allow, rule: fhir-reads, verify: L0 }
+  - name: a CoverageEligibilityRequestBundle runs and is read back
+    input:
+      tool: { name: ehr.create, connector_type: fhir, side_effect: write }
+      args: { resource_type: Bundle, resource: { resourceType: Bundle, type: collection } }
+      request: { fhir: { enriched: true, interaction: create, resource_type: Bundle, bundle_type: collection, nhcx: CoverageEligibilityRequestBundle,
+        entry_types: [Coverage, CoverageEligibilityRequest, Location, Organization, Patient, Practitioner] } }
+    expect: { decision: allow, rule: verify-levels, verify: L1 }
+  - name: a vital-signs Observation runs and is read back
+    input:
+      tool: { name: ehr.create, connector_type: fhir, side_effect: write }
+      args: { resource_type: Observation, resource: { resourceType: Observation, status: final } }
+      request: { fhir: { enriched: true, interaction: create, resource_type: Observation } }
+    expect: { decision: allow, rule: verify-levels, verify: L1 }
+  - name: a call to another connector type falls to the default
+    input:
+      tool: { name: shop.refund, connector_type: stripe, side_effect: write }
+      args: { amount: 100 }
+    expect: { decision: deny, rule: default, reason_contains: "No rule in india-health" }

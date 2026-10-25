@@ -149,6 +149,14 @@ cases:
       args: { resource_type: Invoice, id: inv-3 }
       request: { fhir: { enriched: true, interaction: delete, resource_type: Invoice, id: inv-3 } }
     expect: { decision: require_approval, rule: claims-four-eyes }
+  - name: a Bundle that carries a Claim (an NHCX ClaimBundle) needs two people
+    input:
+      tool: { name: ehr.create, connector_type: fhir, side_effect: write }
+      args: { resource_type: Bundle, resource: { resourceType: Bundle, type: collection } }
+      request: { fhir: { enriched: true, interaction: create, resource_type: Bundle, bundle_type: collection, nhcx: ClaimBundle,
+        entry_types: [Claim, Coverage, Organization, Patient, Practitioner], claims: 1, claim_use: preauthorization, claim_uses: [preauthorization],
+        claim_amount: 7000000, claim_currency: inr } }
+    expect: { decision: require_approval, rule: claims-four-eyes }
   - name: the emergency agent still needs two people for a claim
     input:
       tool: fhir.update

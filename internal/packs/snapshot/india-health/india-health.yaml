@@ -1,0 +1,268 @@
+# india-health · a Deedglass policy pack for FHIR agents on ABDM and NHCX flows
+#
+# The healthcare-fhir rules, plus what an Indian hospital's agents write: ABDM health records
+# (OPConsultRecord, DischargeSummaryRecord, PrescriptionRecord, DiagnosticReportRecord,
+# ImmunizationRecord, HealthDocumentRecord, WellnessRecord, InvoiceRecord) and NHCX bundles
+# (ClaimBundle, CoverageEligibilityRequestBundle and the others in the NHCX profiles).
+#
+# The FHIR connector reads each create or update's meta.profile and what a Bundle holds, using the
+# profiles of the NRCeS FHIR Implementation Guide for ABDM 6.5.0 (which carries the NHCX profiles),
+# and fills request.fhir: record, record_status, nhcx, claims, claim_use, claim_uses, claim_amount,
+# entry_types, profile_mismatch (docs/healthcare/INDIA.md). What a bundle holds counts for more than
+# what it says it is.
+#
+# Claims follow NHCX's use and amount: a final claim always needs two people; a pre-authorisation
+# at or above INR 1,00,000 needs two, a smaller one or a pre-determination needs one, within the
+# hour IRDAI allows for a cashless decision. A claim whose use, amount or currency can't be read
+# needs two. These rules work the same on a plain FHIR Claim and on a Claim inside an NHCX bundle.
+#
+# None of these rules judges whether a clinical record, an order or a claim is right: that stays
+# with the person who approves it.
+#
+# Before you push it:
+#   1. Turn PHI mode on for the org (docs/PHI_MODE.md). Until it is on, every FHIR call is refused
+#      (rule phi-mode-first).
+#   2. Replace the clinician approvers (user:clinician-1@example.org and
+#      user:clinician-2@example.org) with the people who review agent changes, and the claims
+#      approvers (role:admin) with your billing desk if it differs.
+#   3. Set the pre-authorisation threshold (INR 1,00,000 in preauth-large-two-people) to your own.
+#   4. Check your change: deedglass policy test policies/india-health.yaml
+deedglass: policy/v1
+name: india-health
+description: PHI mode first. Clinical records are never deleted. ABDM records and orders wait for a clinician. NHCX claims need one or two people by use and amount.
+
+defaults:
+  decision: deny
+  reason: No rule in india-health allows this call. Ask an admin to add a rule in Console › Policies.
+  verify: L1
+
+rules:   # order matters: the first rule that matches decides
+  - id: phi-mode-first
+    description: Clinical calls run only while the org keeps digests instead of payloads (PHI mode).
+    match: { connector_type: fhir }
+    when: '!org.phi_mode'
+    decision: deny
+    reason: PHI mode is off for this org, so FHIR calls don't run. An owner turns it on in Console › Settings, then the call can be tried again.
+
+  - id: fhir-needs-a-request
+    description: The connector couldn't build a request (a type outside its list, or arguments that don't fit), so there is nothing to decide on.
+    match: { connector_type: fhir }
+    when: '!request.fhir.enriched'
+    decision: deny
+    reason: This FHIR call didn't build a request, for example a resource type the connector doesn't allow. Nothing was sent.
+
+  - id: no-delete-clinical
+    description: Clinical records, ABDM record bundles, the patient record and the audit trail are corrected with a new version, never deleted.
+    match: { connector_type: fhir }
+    when: >-
+      request.fhir.interaction == "delete" && request.fhir.resource_type in [
+        "AdverseEvent", "AllergyIntolerance", "AuditEvent", "Bundle", "CarePlan", "CareTeam", "ClinicalImpression",
+        "Communication", "Composition", "Condition", "Consent", "DetectedIssue", "DeviceRequest",
+        "DeviceUseStatement", "DiagnosticReport", "DocumentReference", "Encounter", "EpisodeOfCare",
+        "FamilyMemberHistory", "Flag", "Goal", "ImagingStudy", "Immunization", "ImmunizationEvaluation",
+        "ImmunizationRecommendation", "MedicationAdministration", "MedicationDispense", "MedicationRequest",
+        "MedicationStatement", "NutritionOrder", "Observation", "Patient", "Procedure", "Provenance",
+        "QuestionnaireResponse", "RiskAssessment", "ServiceRequest", "Specimen"]
+    decision: deny
+    reason: Clinical records are corrected with a new version, not deleted. Update the resource instead, for example with status entered-in-error.
+
+  - id: no-history-rewrite
+    description: A FHIR server behind the REST connector. $expunge and $meta-delete erase history or security labels.
+    match: { connector_type: rest }
+    when: request.http.path.contains("$expunge") || request.http.path.contains("$meta-delete")
+    decision: deny
+    reason: Erasing a FHIR server's history or security labels stays with people. Nothing was sent.
+
+  - id: nhcx-profile-mismatch
+    description: A bundle whose NHCX profile names one kind while it holds another, for example an eligibility label on a claim.
+    match: { connector_type: fhir }
+    when: request.fhir.profile_mismatch
+    decision: deny
+    reason: This bundle's NHCX profile doesn't match what it holds, so it wasn't sent. Fix meta.profile or the first entry, then send it again.
+
+  - id: coverage-read-only
+    description: Agents read coverage, eligibility answers and insurance plans; the payer changes them. Eligibility requests run further down.
+    match: { connector_type: fhir }
+    when: >-
+      request.fhir.interaction in ["create", "update", "patch", "delete"] && (
+        request.fhir.resource_type in ["Coverage", "CoverageEligibilityResponse", "InsurancePlan"]
+        || request.fhir.nhcx in ["CoverageEligibilityResponseBundle", "InsurancePlanBundle"])
+    decision: deny
+    reason: Coverage, eligibility answers and insurance plans are read-only for agents. The payer changes them in its own system.
+
+  - id: phi-minimum-read
+    description: A search must name what it looks for and ask for at most 100 results; a type-wide search or history reads every patient's records.
+    match: { connector_type: fhir }
+    when: >-
+      (request.fhir.interaction == "search" && (!has(args.params) || size(args.params) == 0 ||
+        ("_count" in args.params && (size(args.params["_count"]) > 3 || (size(args.params["_count"]) == 3 && args.params["_count"] != "100")))))
+      || (request.fhir.interaction == "history" && request.fhir.id == "")
+    decision: deny
+    reason: Searches name what they look for (for example patient or code) and ask for at most 100 results. Reading a whole resource type isn't allowed.
+
+  - id: payer-side-two-people
+    description: Claim responses, payment notices and other payer-side billing records, alone or inside a bundle (ClaimResponseBundle, a payment notice TaskBundle).
+    match: { connector_type: fhir }
+    when: >-
+      request.fhir.interaction in ["create", "update", "patch", "delete"] && (
+        request.fhir.resource_type in ["ClaimResponse", "ExplanationOfBenefit", "PaymentNotice", "PaymentReconciliation"]
+        || request.fhir.entry_types.exists(t, t in ["ClaimResponse", "ExplanationOfBenefit", "PaymentNotice", "PaymentReconciliation"]))
+    decision: require_approval
+    reason: Claim responses and payments move money; two people approve them in Console › Approvals.
+    approval: { approvers: [role:admin], required: 2, expires_in: 24h }
+    notify: [email]
+    verify: L1
+
+  - id: claim-unreadable-two-people
+    description: A claim whose use isn't claim, preauthorization or predetermination, or whose total can't be read in rupees.
+    match: { connector_type: fhir }
+    when: >-
+      request.fhir.claims > 0 && request.fhir.interaction in ["create", "update"]
+      && ("other" in request.fhir.claim_uses || request.fhir.claim_amount < 0 || request.fhir.claim_currency != "inr")
+    decision: require_approval
+    reason: This claim's use or total couldn't be read in rupees, so two people approve it in Console › Approvals.
+    approval: { approvers: [role:admin], required: 2, expires_in: 24h }
+    notify: [email]
+    verify: L1
+
+  - id: claim-settlement-two-people
+    description: A final claim (use claim), plain or in a ClaimBundle, whatever the amount.
+    match: { connector_type: fhir }
+    when: request.fhir.claims > 0 && request.fhir.interaction in ["create", "update"] && "claim" in request.fhir.claim_uses
+    decision: require_approval
+    reason: Final claims need two people. Two admins approve in Console › Approvals.
+    approval: { approvers: [role:admin], required: 2, expires_in: 24h }
+    notify: [email]
+    verify: L1
+
+  - id: preauth-large-two-people
+    description: A pre-authorisation of INR 1,00,000 or more. Set the threshold to your own.
+    match: { connector_type: fhir }
+    when: >-
+      request.fhir.claims > 0 && request.fhir.interaction in ["create", "update"]
+      && "preauthorization" in request.fhir.claim_uses && request.fhir.claim_amount >= minor("100000 inr")
+    decision: require_approval
+    reason: Pre-authorisations of INR 1,00,000 or more need two people, within the hour. Two admins approve in Console › Approvals.
+    approval: { approvers: [role:admin], required: 2, expires_in: 45m }
+    notify: [email]
+    verify: L1
+
+  - id: preauth-one-person
+    description: A smaller pre-authorisation, or a pre-determination (an estimate; no money moves yet).
+    match: { connector_type: fhir }
+    when: >-
+      request.fhir.claims > 0 && request.fhir.interaction in ["create", "update"]
+      && request.fhir.claim_uses.all(u, u in ["preauthorization", "predetermination"])
+    decision: require_approval
+    reason: Pre-authorisations and pre-determinations wait for one person, within the hour. An admin approves in Console › Approvals.
+    approval: { approvers: [role:admin], required: 1, expires_in: 45m }
+    notify: [email]
+    verify: L1
+
+  - id: billing-two-people
+    description: Every other billing write, including a patch to a Claim, where the use and total aren't in the request.
+    match: { connector_type: fhir }
+    when: >-
+      request.fhir.interaction in ["create", "update", "patch", "delete"] && (
+        request.fhir.resource_type in ["Account", "ChargeItem", "Claim", "Invoice"]
+        || request.fhir.entry_types.exists(t, t in ["Account", "ChargeItem", "Claim", "Invoice"]))
+    decision: require_approval
+    reason: Claims and billing changes need two people. Two admins approve in Console › Approvals.
+    approval: { approvers: [role:admin], required: 2, expires_in: 24h }
+    notify: [email]
+    verify: L1
+
+  - id: break-glass
+    description: The emergency agent, labelled break-glass=on and started only during an emergency. Its creates and updates run without waiting, and each record names this rule for review afterwards.
+    match: { connector_type: fhir, labels: { break-glass: "on" } }
+    when: request.fhir.interaction in ["create", "update", "patch"]
+    decision: allow
+    verify: L1
+
+  - id: orders-need-clinician
+    description: Orders and medication changes, alone or inside a bundle such as a PrescriptionRecord.
+    match: { connector_type: fhir }
+    when: >-
+      request.fhir.interaction in ["create", "update", "patch"] && (
+        request.fhir.resource_type in ["DeviceRequest", "ImmunizationRecommendation", "MedicationAdministration",
+          "MedicationRequest", "NutritionOrder", "ServiceRequest"]
+        || request.fhir.entry_types.exists(t, t in ["DeviceRequest", "ImmunizationRecommendation", "MedicationAdministration",
+          "MedicationRequest", "NutritionOrder", "ServiceRequest"]))
+    decision: require_approval
+    reason: Orders and medication changes wait for a clinician. A clinician on this rule's list approves in Console › Approvals.
+    # Replace with your clinicians. group:clinicians replaces this list when approver groups ship.
+    approval: { approvers: [user:clinician-1@example.org, user:clinician-2@example.org], required: 1, expires_in: 4h }
+    notify: [email]
+    verify: L1
+
+  - id: allergy-problem-list-review
+    description: Allergies and the problem list are reconciled by a clinician, like an EHR's own review queue.
+    match: { connector_type: fhir }
+    when: request.fhir.resource_type in ["AllergyIntolerance", "Condition"] && request.fhir.interaction in ["create", "update", "patch"]
+    decision: require_approval
+    reason: Changes to allergies and the problem list wait for a clinician. A clinician on this rule's list approves in Console › Approvals.
+    approval: { approvers: [user:clinician-1@example.org, user:clinician-2@example.org], required: 1, expires_in: 4h }
+    notify: [email]
+    verify: L1
+
+  - id: abdm-record-draft
+    description: An ABDM health record the agent writes as a draft (its Composition is preliminary); a clinician finalises it.
+    match: { connector_type: fhir }
+    when: >-
+      request.fhir.interaction in ["create", "update"] && request.fhir.record != "" && request.fhir.record_status == "preliminary"
+    decision: allow
+    verify: L1
+
+  - id: abdm-record-needs-clinician
+    description: An ABDM health record that isn't a draft, or any document bundle, before it is shared through ABDM.
+    match: { connector_type: fhir }
+    when: >-
+      request.fhir.interaction in ["create", "update", "patch"] && (request.fhir.record != "" || request.fhir.bundle_type == "document")
+    decision: require_approval
+    reason: Health records that aren't drafts wait for a clinician before they can be shared. A clinician on this rule's list approves in Console › Approvals.
+    approval: { approvers: [user:clinician-1@example.org, user:clinician-2@example.org], required: 1, expires_in: 4h }
+    notify: [email]
+    verify: L1
+
+  - id: notes-draft-only
+    description: An agent writes notes as drafts (docStatus preliminary, or a preliminary Composition); a clinician finalises them.
+    match: { connector_type: fhir }
+    when: >-
+      request.fhir.resource_type in ["DocumentReference", "Composition"] && request.fhir.interaction in ["create", "update"]
+      && has(args.resource) && ((has(args.resource.docStatus) && args.resource.docStatus == "preliminary")
+        || (request.fhir.resource_type == "Composition" && has(args.resource.status) && args.resource.status == "preliminary"))
+    decision: allow
+    verify: L1
+
+  - id: final-notes-need-clinician
+    description: A note that isn't a draft, or a patch to one.
+    match: { connector_type: fhir }
+    when: request.fhir.resource_type in ["DocumentReference", "Composition"] && request.fhir.interaction in ["create", "update", "patch"]
+    decision: require_approval
+    reason: Agents write notes as drafts (preliminary). A final note, or a change to one, waits for a clinician in Console › Approvals.
+    approval: { approvers: [user:clinician-1@example.org, user:clinician-2@example.org], required: 1, expires_in: 4h }
+    notify: [email]
+    verify: L1
+
+  - id: fhir-reads
+    match: { connector_type: fhir }
+    when: request.fhir.interaction in ["read", "vread", "search", "history"]
+    decision: allow
+    verify: L0
+
+  - id: other-deletes-need-approval
+    description: Deletes of non-clinical records, like a Task or an Appointment.
+    match: { connector_type: fhir }
+    when: request.fhir.interaction == "delete"
+    decision: require_approval
+    reason: Deletes wait for a human. An admin can approve in Console › Approvals.
+    approval: { approvers: [role:admin], required: 1, expires_in: 2h }
+    notify: [email]
+    verify: L1
+
+  - id: verify-levels
+    description: Every other write runs and is read back at the version the server reported (Checked), including eligibility requests and NHCX task bundles.
+    match: { connector_type: fhir }
+    when: request.fhir.interaction in ["create", "update", "patch"]
+    decision: allow
+    verify: L1

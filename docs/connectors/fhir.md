@@ -287,6 +287,14 @@ a `fields` credential holding only `witness_dsn`). It is opened only to start th
 | `request.fhir.codes` | `system|code` pairs from the resource's `code` and `category` (never free text) |
 | `request.fhir.profiles` | the resource's `meta.profile` URLs |
 | `request.fhir.enriched` | true when the call built a request |
+| `request.fhir.bundle_type`, `entry_types` | a Bundle's type and the resource types it holds (HC-P15) |
+| `request.fhir.record`, `record_status` | the ABDM record kind (for example `OPConsultRecord`) and its Composition's status |
+| `request.fhir.nhcx`, `profile_mismatch` | the NHCX bundle kind it holds (for example `ClaimBundle`), and whether its profile says otherwise |
+| `request.fhir.claims`, `claim_use`, `claim_uses`, `claim_amount`, `claim_currency` | the Claims in the request: their use, and the largest total in minor units (`-1` when unknown) |
+
+The last four rows come from India's national profiles (the NRCeS FHIR IG for ABDM 6.5.0); what
+they read and what they don't is in [docs/healthcare/INDIA.md](../healthcare/INDIA.md), and the
+`india-health` policy pack uses them.
 
 ```yaml
 rules:

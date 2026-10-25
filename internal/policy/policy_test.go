@@ -292,7 +292,7 @@ func TestDeclaredFields(t *testing.T) {
 		"agent: id name labels status",
 		"user: ref sub iss",
 		"session: ref",
-		"org: id timezone",
+		"org: id timezone phi_mode",
 		"time: now hour minute weekday date",
 		"usage: calls_minute calls_hour calls_today spend_today currency budgets",
 		"anomaly: active kinds severity", // S27: kinds, severity

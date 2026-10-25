@@ -371,7 +371,7 @@ The Gate builds one `Input` per action (S13) and stores it canonically with the 
 | Key | Holds |
 |---|---|
 | `v` | the input format, `1` |
-| `org` | `id`, `timezone` (IANA; empty means UTC), `stopped` |
+| `org` | `id`, `timezone` (IANA; empty means UTC), `stopped`, `phi_mode` |
 | `agent` | `id`, `name`, `labels`, `status` (`active`, `suspended`, `stopped`), and `budgets` (S08's limits; CEL never sees them) |
 | `user`, `session` | the on-behalf-of facts (S09) |
 | `tool` | `name`, `connector`, `connector_type`, `side_effect`, and `default_schema` for the SQL classifier |
@@ -481,7 +481,7 @@ Every structured variable is declared field by field, so a typo like `sql.knid` 
 | `agent` | object | `id`, `name`, `labels` (map string to string), `status` |
 | `user` | object | `ref`, `sub`, `iss` (empty strings when absent; from `Deedglass-On-Behalf-Of` or a signed intent, S09) |
 | `session` | object | `ref` (from `Deedglass-Session` or a signed intent) |
-| `org` | object | `id`, `timezone` (IANA name) |
+| `org` | object | `id`, `timezone` (IANA name), `phi_mode` (bool: the org's [PHI mode](PHI_MODE.md) at decision time; HC-P15) |
 | `time` | object | `now` (timestamp), `hour` (0 to 23), `minute` (0 to 59), `weekday` (`"mon"` … `"sun"`), `date` (`"2026-10-04"`), all in the org's time zone |
 | `usage` | object | `calls_minute`, `calls_hour`, `calls_today`, `spend_today` (int, minor units), `currency`, `budgets` (map from budget id to its value in the current window) |
 | `anomaly` | object | `active` (bool), `kinds` (list(string)), `severity` (string): what Insights says about this agent at decision time; below |
@@ -572,6 +572,24 @@ nothing: `enriched` stays false, so a rule that allows on these facts doesn't ma
 | `request.fhir.codes` | list(string) | `system|code` from the resource's `code` and `category`, never free text |
 | `request.fhir.profiles` | list(string) | `meta.profile` URLs |
 | `request.fhir.enriched` | bool | the call built a request |
+
+For a create or update, the connector also reads the resource's `meta.profile` and, for a Bundle,
+what it holds, in the terms of India's national profiles (HC-P15; the NRCeS FHIR IG for ABDM 6.5.0,
+which carries the NHCX profiles; [docs/healthcare/INDIA.md](healthcare/INDIA.md)). Each is empty or
+zero when it doesn't apply.
+
+| Fact | Type | Notes |
+|---|---|---|
+| `request.fhir.bundle_type` | string | `Bundle.type` (`document`, `collection`, …); `""` when not a Bundle |
+| `request.fhir.entry_types` | list(string) | the resource types a Bundle holds, nested bundles and contained resources included, sorted |
+| `request.fhir.record` | string | the ABDM record kind: `OPConsultRecord`, `DischargeSummaryRecord`, `PrescriptionRecord`, `DiagnosticReportRecord`, `ImmunizationRecord`, `HealthDocumentRecord`, `WellnessRecord`, `InvoiceRecord` |
+| `request.fhir.record_status` | string | that record's `Composition.status` |
+| `request.fhir.nhcx` | string | the NHCX bundle kind, from what the bundle holds first: `ClaimBundle`, `ClaimResponseBundle`, `CoverageEligibilityRequestBundle`, `CoverageEligibilityResponseBundle`, `TaskBundle`, `InsurancePlanBundle` |
+| `request.fhir.profile_mismatch` | bool | the bundle's NHCX profile names a different kind than it holds |
+| `request.fhir.claims` | int | Claim resources anywhere in the request |
+| `request.fhir.claim_use`, `claim_uses` | string, list(string) | the first Claim's use, and every Claim's: `claim`, `preauthorization`, `predetermination` or `other` |
+| `request.fhir.claim_amount` | int | the largest `Claim.total` in minor units of `claim_currency` (paise for INR); `-1` when a total is missing, not a number, negative, or the claims use different or unknown currencies |
+| `request.fhir.claim_currency` | string | lowercase ISO 4217, compared with `minor("100000 inr")` |
 
 A budget's `measure` sees the same variables as `when`, `request` included (S30 confirmed it with
 the starter's `refunds-per-day`):

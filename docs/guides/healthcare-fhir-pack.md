@@ -15,7 +15,7 @@ Try it on synthetic data first.
 deedglass policy install healthcare-fhir
 ```
 
-`install` checks the pack against its index, compiles it, runs its 36 cases and shows the two files
+`install` checks the pack against its index, compiles it, runs its 37 cases and shows the two files
 before writing `policies/healthcare-fhir.yaml` and `policies/healthcare-fhir.cases.yaml`. It never
 pushes or activates anything.
 
@@ -43,7 +43,7 @@ a FHIR server behind the REST connector.
 | `no-history-rewrite` | Through the REST connector, a path with `$expunge` or `$meta-delete` is denied. |
 | `coverage-read-only` | Creates, updates, patches and deletes of Coverage and CoverageEligibilityResponse are denied. A CoverageEligibilityRequest can be created. |
 | `phi-minimum-read` | A search with no parameters, a search asking for more than 100 results (`_count`), and a type's whole history are denied. |
-| `claims-four-eyes` | Any write to Account, ChargeItem, Claim, ClaimResponse, ExplanationOfBenefit, Invoice, PaymentNotice or PaymentReconciliation waits for **two different admins**. |
+| `claims-four-eyes` | Any write to Account, ChargeItem, Claim, ClaimResponse, ExplanationOfBenefit, Invoice, PaymentNotice or PaymentReconciliation, alone or inside a Bundle (an NHCX ClaimBundle, for example), waits for **two different admins**. For ABDM and NHCX flows, the `india-health` pack splits this by claim use and amount ([India](../healthcare/INDIA.md)). |
 | `break-glass` | The emergency agent's creates and updates run without waiting (below). |
 | `orders-need-clinician` | Creates, updates and patches of MedicationRequest, MedicationAdministration, ServiceRequest, DeviceRequest, NutritionOrder and ImmunizationRecommendation wait for one clinician on the list. Status changes to `active` or `completed` are updates, so they wait too. |
 | `allergy-problem-list-review` | Writes to AllergyIntolerance and Condition wait for a clinician. |

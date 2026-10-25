@@ -781,7 +781,7 @@ func buildInput(org ids.OrgID, agent ids.AgentID, subj store.GateSubject, n *Nor
 	side := "unknown"
 	ctype := n.ConnectorType
 	in := policy.Input{V: policy.InputVersion,
-		Org:     policy.OrgInput{OrgFacts: policy.OrgFacts{ID: org.String(), Timezone: subj.Timezone}, Stopped: subj.OrgStopped},
+		Org:     policy.OrgInput{OrgFacts: policy.OrgFacts{ID: org.String(), Timezone: subj.Timezone, PHIMode: subj.PHIMode}, Stopped: subj.OrgStopped},
 		Agent:   policy.AgentInput{AgentFacts: policy.AgentFacts{ID: agent.String(), Name: subj.AgentName, Labels: labels, Status: subj.AgentStatus}, Budgets: budgets},
 		User:    policy.UserFacts{Ref: ir.OBO.OnBehalfOf},
 		Session: policy.SessionFacts{Ref: ir.OBO.Session},

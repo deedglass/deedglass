@@ -1,6 +1,6 @@
 id: pck_01m4ppb8d5fkph9mevbjc6cv8j
 name: healthcare-fhir
-version: 1.0.0
+version: 1.1.0
 tier: free
 summary: Reads run. Clinical records are never deleted. Orders, allergies, problems and final notes wait for a clinician. Claims need two people.
 for: the FHIR connector (synthetic data until you have reviewed it)
