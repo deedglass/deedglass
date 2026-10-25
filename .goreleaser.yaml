@@ -134,6 +134,11 @@ release:
     owner: deedglass
     name: deedglass
   name_template: "Deedglass {{ .Version }}"
+  # The install script rides along with each release, so `curl …/releases/latest/download/install.sh`
+  # comes from the same downloads as the archive (QA-1; raw.githubusercontent.com can stall for
+  # minutes on some networks).
+  extra_files:
+    - glob: ./scripts/install.sh
 
 changelog:
   disable: true

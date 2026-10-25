@@ -157,6 +157,19 @@ func findInitDir(start, home, file string) string {
 
 // stackLoadOptions are the config options for a DB-direct command in an init directory found by
 // the walk: Dir points at it (for .deedglass/dev-secrets.json), and its stack fills the settings.
+// cliLoadOptions is the config a DB-direct command loads: the environment first, then the local
+// stack deedglass init set up here or in a parent folder (stackLoadOptions). A stack.json that
+// can't be read leaves the plain environment, and the command's own checks say what's missing.
+func cliLoadOptions(e *Env) config.LoadOptions {
+	if opts, _, err := stackLoadOptions(e); err == nil {
+		return opts
+	}
+	if e.LoadOptions != nil {
+		return e.LoadOptions()
+	}
+	return config.LoadOptions{}
+}
+
 func stackLoadOptions(e *Env) (config.LoadOptions, *setup.Stack, error) {
 	var opts config.LoadOptions
 	if e.LoadOptions != nil {

@@ -59,6 +59,7 @@ func withInitStack(opts config.LoadOptions) (config.LoadOptions, *setup.Stack, e
 		}
 		setDefault("DEEDGLASS_ENV", "dev")
 		setDefault("DEEDGLASS_DATABASE_URL", st.AppURL())
+		setDefault("DEEDGLASS_MIGRATE_DATABASE_URL", st.MigratorURL())
 		setDefault("DEEDGLASS_SEAL_KEY_FILE", st.SealKeyFile)
 		setDefault("DEEDGLASS_LISTEN", st.Listen)
 		setDefault("DEEDGLASS_BASE_URL", st.Server())

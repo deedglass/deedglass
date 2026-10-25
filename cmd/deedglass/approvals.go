@@ -268,7 +268,7 @@ func runDecide(ctx context.Context, e *Env, args []string, v approve.Vote) error
 	if v == approve.VoteDeny && strings.TrimSpace(decideValues.reason) == "" {
 		return failNext(e, ExitUsage, "validation_failed", `A reason is required to deny. The agent sees it. Add --reason "…".`, "")
 	}
-	cfg, warnings, err := config.Load(e.LoadOptions())
+	cfg, warnings, err := config.Load(cliLoadOptions(e))
 	var ps *config.Problems
 	if errors.As(err, &ps) {
 		return configProblems(e, ps, warnings)

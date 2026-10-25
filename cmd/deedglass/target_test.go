@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -373,5 +374,26 @@ func TestInvocation(t *testing.T) {
 	run := map[string]string{"npm_config_user_agent": "npm/11.6.0", "npm_command": "run-script", "npm_lifecycle_event": "test"}
 	if invocation(&Env{Getenv: func(k string) string { return run[k] }}) != "deedglass" {
 		t.Fatal("npm run counted as npx")
+	}
+}
+
+// TestDBCommandsUseTheStack (QA-1): in a directory deedglass init set up, the commands that talk to
+// the database directly use the stack's database, as actions list and doctor already did, instead of
+// asking for DEEDGLASS_DATABASE_URL. The stack's Postgres port is closed here, so each one gets as
+// far as connecting and says it can't reach the database.
+func TestDBCommandsUseTheStack(t *testing.T) {
+	dir, _ := initDir(t, "127.0.0.1:"+strconv.Itoa(closedPort(t)))
+	env := map[string]string{"HOME": t.TempDir()}
+	for _, args := range [][]string{
+		{"keys", "list"}, {"org", "keys", "list"}, {"vault", "status"}, {"migrate", "status"},
+		{"approve", "apr_01k82m4v9q5n3d7f8g2h6j0kxp", "--as", "you@localhost.test"},
+	} {
+		r := runIn(t, dir, env, args...)
+		if strings.Contains(r.stderr, "DATABASE_URL isn't set") {
+			t.Errorf("%s ignored the stack in %s:\n%s", strings.Join(args, " "), dir, r.stderr)
+		}
+		if r.code == 0 {
+			t.Errorf("%s exited 0 with the stack's Postgres down:\n%s%s", strings.Join(args, " "), r.stdout, r.stderr)
+		}
 	}
 }

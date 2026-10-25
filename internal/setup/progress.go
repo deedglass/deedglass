@@ -29,7 +29,7 @@ func (f Facts) Progress() (step int, next string) {
 	case f.Undone:
 		return 0, ""
 	case f.Undo:
-		return 5, "countersign the undo at " + f.Server + "/app/approvals (the sign-in link is in .deedglass/serve.log)"
+		return 5, "countersign the undo: deedglass approvals list, then deedglass approvals open <apr_…> prints a one-use approve link (or " + f.Server + "/app/approvals)"
 	case f.Mismatch != "":
 		return 4, "deedglass undo preview " + f.Mismatch + " (it prints the undo run line)"
 	case f.Checked:

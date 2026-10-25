@@ -23,7 +23,7 @@ func TestProgress(t *testing.T) {
 		{Facts{SetUp: true, Server: srv}, 2, "deedglass doctor"},
 		{Facts{SetUp: true, Checked: true, Server: srv}, 3, "deedglass init --trigger"},
 		{Facts{SetUp: true, Mismatch: "act_01k6h7kp6msmzrhdzwtcr3jnkp", Server: srv}, 4, "deedglass undo preview act_01k6h7kp6msmzrhdzwtcr3jnkp (it prints the undo run line)"},
-		{Facts{SetUp: true, Checked: true, Mismatch: "act_x", Undo: true, Server: srv}, 5, "countersign the undo at http://127.0.0.1:8080/app/approvals (the sign-in link is in .deedglass/serve.log)"},
+		{Facts{SetUp: true, Checked: true, Mismatch: "act_x", Undo: true, Server: srv}, 5, "countersign the undo: deedglass approvals list, then deedglass approvals open <apr_…> prints a one-use approve link (or http://127.0.0.1:8080/app/approvals)"},
 		{Facts{SetUp: true, Mismatch: "act_x", Undo: true, Undone: true, Server: srv}, 0, ""},
 	} {
 		if step, next := c.f.Progress(); step != c.step || next != c.next {

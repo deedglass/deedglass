@@ -56,6 +56,7 @@ func Trigger(ctx context.Context, o Options) (*Result, error) {
 		return err
 	}
 
+	x.start("Orders reset", "")
 	// 1 · order statuses back to the seed's (order 42 paid), so the trigger has 300 unshipped orders to ship.
 	if err := sqlFile("12_order_statuses.sql"); err != nil {
 		step(fail("trigger_reset", "Orders reset", "the demo orders couldn't be reset: "+firstLine(err), "Run deedglass doctor."))
@@ -64,6 +65,7 @@ func Trigger(ctx context.Context, o Options) (*Result, error) {
 	open, _ := x.psqlIn(ctx, dc, "demo", "SELECT count(*) FROM public.orders WHERE id <> 42 AND status <> 'shipped'")
 	step(StepResult{ID: "trigger_reset", Title: "Orders reset", Status: Done, Detail: "order 42 paid · " + strings.TrimSpace(open) + " orders besides 42 not shipped yet (pending, paid, refunded or cancelled)"})
 
+	x.start("Trigger on", "")
 	// 2 · the legacy trigger on; off again on every way out.
 	if err := sqlFile("10_trigger_on.sql"); err != nil {
 		step(fail("trigger_on", "Trigger on", "the trigger couldn't be created: "+firstLine(err), "Run deedglass doctor."))
@@ -86,6 +88,7 @@ func Trigger(ctx context.Context, o Options) (*Result, error) {
 	step(StepResult{ID: "trigger_on", Title: "Trigger on", Status: Done,
 		Detail: "orders_ship_open_batch · when one order ships, it ships the next 300 not shipped yet, whatever their status"})
 
+	x.start("UPDATE order 42", "waiting for the Proven check")
 	// 3 · the same one-row UPDATE as the smoke test, as the quickstart agent.
 	c := &deedglass.Client{BaseURL: stack.Server(), APIKey: x.agent, UserAgent: "deedglass-init"}
 	wait := 10 * time.Second
@@ -127,6 +130,7 @@ func Trigger(ctx context.Context, o Options) (*Result, error) {
 	}
 	step(StepResult{ID: "trigger_update", Title: title, Status: Done, Symbol: "✕", Detail: check, Lines: diff})
 
+	x.start("Undo preview", "")
 	// 4 · trigger off (the undo checks that no trigger would fire again), then the undo preview.
 	if s := triggerOff(); !step(s) {
 		return finish(ErrStep)

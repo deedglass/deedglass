@@ -291,7 +291,7 @@ func openForMigrate(ctx context.Context, e *Env, args []string, sub string) (mig
 	if len(args) > 0 {
 		return nil, nil, usageErr(fmt.Errorf("deedglass migrate %s takes no arguments (got %q)", sub, args[0]), "Run deedglass help migrate "+sub+".")
 	}
-	cfg, warnings, err := config.Load(e.LoadOptions())
+	cfg, warnings, err := config.Load(cliLoadOptions(e))
 	var ps *config.Problems
 	if errors.As(err, &ps) {
 		return nil, nil, configProblems(e, ps, warnings)

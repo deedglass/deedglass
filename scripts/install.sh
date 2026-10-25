@@ -1,8 +1,12 @@
 #!/bin/sh
 # install.sh: installs the deedglass binary from a GitHub release of github.com/deedglass/deedglass.
+# Every release carries this file as an asset (GoReleaser's release.extra_files), so the one-liner
+# below fetches it from the same GitHub release downloads as the archive (QA-1: raw.githubusercontent.com
+# took 50 s to connect on some networks; release downloads took about 5 s).
 #
+#   curl -fsSL https://github.com/deedglass/deedglass/releases/latest/download/install.sh | sh     (releases after 0.8.0)
 #   curl -fsSL https://raw.githubusercontent.com/deedglass/deedglass/main/scripts/install.sh | sh
-#   curl -fsSL https://raw.githubusercontent.com/deedglass/deedglass/main/scripts/install.sh | sh -s -- --version 0.1.0 --dir /usr/local/bin
+#   curl -fsSL https://github.com/deedglass/deedglass/releases/latest/download/install.sh | sh -s -- --version 0.1.0 --dir /usr/local/bin
 #
 # It downloads the archive for this machine and checksums.txt from the release, checks the archive's
 # sha256 against checksums.txt, and copies the one binary into the install directory (default
@@ -88,6 +92,7 @@ tmp="$(mktemp -d 2>/dev/null || mktemp -d -t deedglass)"
 trap 'rm -rf "$tmp"' EXIT INT TERM
 
 say "Installing deedglass $version for $os/$arch into $dir"
+say "  downloading checksums.txt and $archive from GitHub (about 15 MB)"
 fetch "$base/checksums.txt" "$tmp/checksums.txt" || die "couldn't download $base/checksums.txt" "Check that release v$version exists: $releases"
 fetch "$base/$archive" "$tmp/$archive" || die "couldn't download $base/$archive" "Check that release v$version has a build for $os/$arch: $releases"
 
