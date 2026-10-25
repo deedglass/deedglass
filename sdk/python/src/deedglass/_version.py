@@ -1,5 +1,5 @@
 """The SDK's version and the API version it speaks."""
 
-__version__ = "0.8.0"
+__version__ = "0.9.0"
 API_VERSION = "2026-10-01"
 CLIENT_NAME = "deedglass-python"
