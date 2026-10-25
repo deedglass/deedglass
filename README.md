@@ -216,7 +216,8 @@ sources and the date each was checked, at [deedglass.com/compare](https://deedgl
 The install script downloads the release archive for your platform, checks its sha256 against the
 release's `checksums.txt` (and the signature, when cosign is installed), and copies `deedglass` into
 `~/.local/bin`; read it first: [`scripts/install.sh`](scripts/install.sh). It downloads from a copy
-of the release on deedglass.com and falls back to GitHub. A public container image is coming; until it's
+of the release on deedglass.com and falls back to GitHub: about 7 s on one network in India, where the
+GitHub-only install took 81-119 s. A public container image is coming; until it's
 published, build the image locally as above. Checksums, signatures and SBOMs:
 [`docs/INSTALL.md`](docs/INSTALL.md).
 

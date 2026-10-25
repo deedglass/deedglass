@@ -32,7 +32,9 @@ Where the files come from: `deedglass.com/dl/`, a byte-for-byte copy of each rel
 copy doesn't have comes from the GitHub release. The checks are the same either way: the sha256
 against `checksums.txt`, and the signature, which only this repository's release workflow can make.
 Each download gives up on a connection after 5 s and retries, because on one network GitHub's
-download hosts took 50-75 s to connect. `DEEDGLASS_MIRROR_URL=none` uses GitHub only.
+download hosts took 50-75 s to connect. On that network the install took 6.6-7.3 s (three runs)
+from deedglass.com, against 81-119 s when every file came from GitHub.
+`DEEDGLASS_MIRROR_URL=none` uses GitHub only.
 
 The same script is a file on each release since 0.9.0, if you'd rather fetch it from GitHub:
 
