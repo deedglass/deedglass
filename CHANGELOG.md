@@ -7,6 +7,20 @@ this file by `scripts/release-notes.sh`.
 
 ## [Unreleased]
 
+### Added
+
+- **Lockdown mode** (ADR-117, [docs/LOCKDOWN.md](docs/LOCKDOWN.md)): one switch for the strictest
+  setup, `lockdown: true` in the config or `deedglass lockdown on` for one org. Every write waits
+  for a person, high-risk writes need two different people, approvals expire within 15 minutes,
+  writes are checked at Proven where the connector reaches it (the record flags a write that can
+  only reach Checked), a Can't check result holds the agent's writes until a person runs
+  `deedglass lockdown ack`, DROP, TRUNCATE, ALTER and unbounded UPDATE or DELETE never run, each
+  agent reaches the one connector its `connector` label names, and FHIR calls need PHI mode. Prod
+  refuses a lockdown config without an ML-DSA-65 seal key or with `timestamps.at_export: false`.
+  Turning it off needs a second person (`deedglass lockdown off`, then `--countersign`), both sealed.
+  `deedglass init --lockdown`, a `lockdown` doctor check, `lockdown` and `phi_mode` in
+  `GET /v1/whoami`'s org, and attack group M (M01–M14). No new dependency and no schema migration.
+
 ## [0.8.0] - 2026-10-25
 
 Your own Postgres in one command, and MCP tool names the Anthropic and OpenAI APIs accept. `deedglass connect

@@ -187,6 +187,7 @@ Every administrative change is an admin deed, sealed through `ledger.RecordAdmin
 | `connector.disabled` | S30 |
 | `connector.tool_hidden` (actor `{system, deedglass}`; data `connector`, `tool`, `reason` `description_flagged` or `definition_changed`, `kind`, `field`, `excerpt` of at most 40 characters, `digest`, `pinned`) | S34 |
 | `file.sealed` (target `{org, org_…}`; the label in `admin.reason`; data `sha256`, `bytes`, `media_type`, `label`; [SEALING_FILES.md](SEALING_FILES.md)) | S38 |
+| `lockdown.off_requested` (target `{org, org_…}`), `lockdown.acknowledged` (target `{action, act_…}`); turning lockdown on and off is `org.updated` with `fields: ["settings.lockdown"]` ([LOCKDOWN.md](LOCKDOWN.md)) | ADR-117 |
 
 Only the digest of the event's data enters the deed; the data stays in `admin_events.data`.
 

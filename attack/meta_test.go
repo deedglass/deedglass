@@ -56,6 +56,9 @@ const (
 	// after the 2026-10-21 audit, M-02 and M-03; ADR-116, PROPOSED; the orchestrator accepts under
 	// DL-107). Declared before the A2A proxy's browser checks and the Debezium input cap existed.
 	expectedDigestT = "d53ab26aea6fa7cf2897e1d081d7cd2217c2b1cad34ad5eb653eebe3bcaa12cf"
+	// expectedDigestM pins group M, lockdown mode: the one switch for the strictest setup (ADR-117,
+	// PROPOSED; the orchestrator accepts under DL-107). Declared before the Gate applied lockdown.
+	expectedDigestM = "2c0a5749836dc379365bf8af244ea476f4ce0d49754d6268c2afbd97560bcbdd"
 )
 
 // groupSets maps each pinned digest to its groups. A later session adds its own row (S19 N,
@@ -73,6 +76,7 @@ var groupSets = []struct {
 	{"I", expectedDigestI},
 	{"Y", expectedDigestY},
 	{"T", expectedDigestT},
+	{"M", expectedDigestM},
 }
 
 type meta struct {
@@ -143,7 +147,7 @@ func wantIDs() []string {
 	for _, g := range []struct {
 		p string
 		n int
-	}{{"A", 13}, {"B", 7}, {"C", 10}, {"D", 17}, {"E", 11}, {"F", 4}, {"G", 4}, {"H", 11}, {"I", 12}, {"J", 4}, {"K", 4}, {"L", 8}, {"O", 2}, {"U", 5}, {"T", 13}, {"W", 13}, {"Y", 12}} {
+	}{{"A", 13}, {"B", 7}, {"C", 10}, {"D", 17}, {"E", 11}, {"F", 4}, {"G", 4}, {"H", 11}, {"I", 12}, {"J", 4}, {"K", 4}, {"L", 8}, {"M", 14}, {"O", 2}, {"U", 5}, {"T", 13}, {"W", 13}, {"Y", 12}} {
 		for i := 1; i <= g.n; i++ {
 			ids = append(ids, fmt.Sprintf("%s%02d", g.p, i))
 		}

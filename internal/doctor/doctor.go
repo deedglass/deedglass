@@ -1,4 +1,4 @@
-// Package doctor is `deedglass doctor` (S32 §3.10): sixteen read-only checks, each with the
+// Package doctor is `deedglass doctor` (S32 §3.10): seventeen read-only checks, each with the
 // observed value and, when it isn't OK, the exact fix. Doctor never writes: its database session
 // is read-only (default_transaction_read_only=on), and it calls only GET routes.
 package doctor

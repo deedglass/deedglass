@@ -129,6 +129,8 @@ func TestOrgPatchUnknownKeys(t *testing.T) {
 		`{"settings":{"simulated":true}}`:        "settings.simulated", // read only (S29)
 		`{"settings":{"simulated":false}}`:       "settings.simulated",
 		`{"retention":30}`:                       "retention",
+		`{"settings":{"lockdown":false}}`:        "settings.lockdown", // ADR-117: no API route turns it off
+		`{"settings":{"lockdown":true}}`:         "settings.lockdown",
 	} {
 		_, err := decodePatch(t, body)
 		var e *httpx.Error

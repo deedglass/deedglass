@@ -7227,6 +7227,8 @@ components:
             name: {type: string}
             slug: {type: string}
             stopped: {type: boolean, description: True while Stop all is on.}
+            lockdown: {type: boolean, description: "Present and true while the org's own lockdown setting is on (docs/LOCKDOWN.md). lockdown: true in the server's config also applies and isn't shown here."}
+            phi_mode: {type: boolean, description: Present and true while the org's PHI mode is on.}
         agent:
           type: [object, "null"]
           description: Null for an org admin key.

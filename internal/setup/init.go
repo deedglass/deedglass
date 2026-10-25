@@ -36,6 +36,7 @@ const Image = "postgres:18.6@sha256:5a5a84b19854a9ffaa54082c166ff4ec27473a361e49
 const (
 	OrgName       = "Local"
 	OrgSlug       = "local"
+	DemoConnector = "postgres" // the demo connector's name (ConnectorYAML); lockdown labels the agent with it
 	DefaultOwner  = "you@localhost.test"
 	AgentName     = "quickstart-agent"
 	ConnectorName = "postgres"
@@ -121,6 +122,10 @@ type Options struct {
 	Cmd string
 	// Home is the home directory for ~/.deedglass/current.json ("" writes none).
 	Home string
+	// Lockdown is init --lockdown (ADR-117): lockdown: true for the local server, an ML-DSA-65 seal
+	// key, postgres-safe, the agent labelled connector=postgres, and the org's setting on. A stack
+	// made with it keeps it.
+	Lockdown bool
 }
 
 // Result is init_result.
@@ -201,6 +206,8 @@ type run struct {
 	agent   string // the agent key (shown once)
 	steps   []StepResult
 	changed bool
+	// lockdownNew: this run turned lockdown on for the stack, so a running serve restarts with it.
+	lockdownNew bool
 }
 
 // start tells the caller a step began (Options.Start).
@@ -236,10 +243,13 @@ func Init(ctx context.Context, o Options) (*Result, error) {
 	}{
 		{"Docker", x.preflight}, {"Local state", x.stateDir}, {"Keys", x.secrets}, {"Postgres", x.postgres},
 		{"Deedglass", x.server}, {"Org", x.org}, {"Demo database", x.demoDB}, {"Agent", x.agentStep},
-		{"Policies", x.policy}, {"Client", x.client},
+		{"Policies", x.policy}, {"Lockdown", x.lockdownStep}, {"Client", x.client},
 	}
 	for _, st := range steps {
 		ts := o.Now()
+		if st.label == "Lockdown" && (x.stack == nil || !x.stack.Lockdown) {
+			continue // a stack without lockdown shows no line for it
+		}
 		x.start(st.label, "")
 		r := st.f(ctx)
 		r.TookMS = o.Now().Sub(ts).Milliseconds()
@@ -459,6 +469,10 @@ func (x *run) secrets(ctx context.Context) StepResult {
 		}
 	}
 	_ = os.Chmod(keysDir, 0o700)
+	if x.o.Lockdown && !stack.Lockdown {
+		stack.Lockdown, x.lockdownNew = true, true
+		made = append(made, "lockdown")
+	}
 	if err := writeJSON(Path(x.o.Dir, StackFile), stack); err != nil {
 		return fail(id, title, "couldn't write .deedglass/stack.json: "+err.Error(), "Check .deedglass, then run deedglass init again.")
 	}
@@ -604,10 +618,17 @@ func (x *run) postgres(ctx context.Context) StepResult {
 
 func (x *run) serverEnv() map[string]string {
 	s := x.stack
-	return map[string]string{"DEEDGLASS_ENV": "dev", "DEEDGLASS_DATABASE_URL": s.AppURL(), "DEEDGLASS_MIGRATE_DATABASE_URL": s.MigratorURL(),
+	env := map[string]string{"DEEDGLASS_ENV": "dev", "DEEDGLASS_DATABASE_URL": s.AppURL(), "DEEDGLASS_MIGRATE_DATABASE_URL": s.MigratorURL(),
 		"DEEDGLASS_LISTEN": s.Listen, "DEEDGLASS_BASE_URL": s.Server(), "DEEDGLASS_SEAL_KEY_FILE": s.SealKeyFile, "DEEDGLASS_LOG_LEVEL": "info",
 		// The demo database is on this machine (127.0.0.1): dev lets a connector reach it.
 		"DEEDGLASS_ALLOW_PRIVATE_NETWORKS": "1"}
+	if s.Lockdown {
+		env["DEEDGLASS_LOCKDOWN"] = "true"
+		if s.SealPQKeyFile != "" {
+			env["DEEDGLASS_SEAL_PQ_KEY_FILE"] = s.SealPQKeyFile
+		}
+	}
+	return env
 }
 
 func (x *run) clientEnv() map[string]string {
@@ -635,9 +656,33 @@ func (x *run) server(ctx context.Context) StepResult {
 	if len(up.Applied) > 0 {
 		status = Done
 	}
+	// init --lockdown: an ML-DSA-65 seal key beside Ed25519 (the dual seal), registered before serve
+	// starts with it, and lockdown: true for the server. A running serve without them restarts.
+	restart := x.lockdownNew
+	if s.Lockdown && (s.SealPQKeyFile == "" || fileMissing(s.SealPQKeyFile)) {
+		pq := Path(x.o.Dir, PQKeysDir)
+		if err := os.MkdirAll(pq, 0o700); err != nil {
+			return fail(id, title, "couldn't create .deedglass/keys/pq: "+err.Error(), "Check .deedglass, then run deedglass init --lockdown again.")
+		}
+		kout, _, err := x.r.Self(ctx, x.serverEnv(), "--json", "keys", "rotate", "--alg", "ML-DSA-65", "--overlap", "1s", "--dir", pq)
+		var k struct {
+			File string `json:"file"`
+		}
+		if err != nil || json.Unmarshal([]byte(kout), &k) != nil || k.File == "" {
+			return fail(id, title, "the ML-DSA-65 seal key couldn't be added: "+firstLine(err), "Run deedglass keys rotate --alg ML-DSA-65 to see why.")
+		}
+		if !filepath.IsAbs(k.File) {
+			k.File = filepath.Join(x.o.Dir, k.File)
+		}
+		s.SealPQKeyFile, restart = k.File, true
+		if err := writeJSON(Path(x.o.Dir, StackFile), s); err != nil {
+			return fail(id, title, "couldn't write .deedglass/stack.json: "+err.Error(), "Check .deedglass, then run deedglass init again.")
+		}
+		time.Sleep(1100 * time.Millisecond) // the first ML-DSA-65 key activates after the 1 s overlap
+	}
 	pidFile := Path(x.o.Dir, ServePID)
 	pid := readPID(pidFile)
-	if !(pid > 0 && x.r.Alive(pid) && x.r.Healthy(ctx, s.Server())) {
+	if restart || !(pid > 0 && x.r.Alive(pid) && x.r.Healthy(ctx, s.Server())) {
 		if pid > 0 && x.r.Alive(pid) {
 			_ = x.r.Stop(pid)
 		}
@@ -882,16 +927,36 @@ func (x *run) agentStep(ctx context.Context) StepResult {
 	status := Skipped
 	out, _, err := x.r.Self(ctx, cenv, "--json", "agent", "show", AgentName)
 	if err != nil {
-		if out, _, err = x.r.Self(ctx, cenv, "--json", "agent", "create", AgentName, "--description", "The quickstart agent (deedglass init)."); err != nil {
+		args := []string{"--json", "agent", "create", AgentName, "--description", "The quickstart agent (deedglass init)."}
+		if x.stack.Lockdown {
+			args = append(args, "--label", "connector="+DemoConnector)
+		}
+		if out, _, err = x.r.Self(ctx, cenv, args...); err != nil {
 			return fail(id, title, "the agent couldn't be created", "Run deedglass agent create quickstart-agent to see why.")
 		}
 		status = Done
 	}
 	var a struct {
-		ID string `json:"id"`
+		ID     string            `json:"id"`
+		Labels map[string]string `json:"labels"`
 	}
 	_ = json.Unmarshal([]byte(out), &a)
 	x.state.Agent = a.ID
+	if x.stack.Lockdown && a.ID != "" && a.Labels["connector"] != DemoConnector {
+		// Lockdown: each agent reaches one connector, named by its connector label.
+		labels := map[string]string{}
+		for k, v := range a.Labels {
+			labels[k] = v
+		}
+		labels["connector"] = DemoConnector
+		c := &deedglass.Client{BaseURL: x.stack.Server(), APIKey: x.admin, UserAgent: "deedglass-init"}
+		if _, err := c.Do(ctx, "PATCH", "/v1/agents/"+a.ID, map[string]any{"labels": labels}, nil); err != nil {
+			return fail(id, title, "the agent's connector label couldn't be set", "Set the label connector="+DemoConnector+" on "+AgentName+" in Console › Agents, then run deedglass init --lockdown again.")
+		}
+		if status == Skipped {
+			status = Changed
+		}
+	}
 	existing, _ := ReadSecretFile(x.o.Dir, AgentKeyFile)
 	if existing != "" {
 		x.agent = existing
@@ -933,6 +998,9 @@ func (x *run) policy(ctx context.Context) StepResult {
 	}
 	_ = x.api(ctx, x.admin, "/v1/policies/active", &active)
 	name := x.o.Policy
+	if name == "" && x.stack.Lockdown {
+		name = PolicyName // lockdown: writes wait for a person anyway; postgres-safe says so too
+	}
 	if name == "" {
 		name = CheckPolicyName
 		// A stack that already enforces one of init's starters keeps it.
@@ -973,6 +1041,29 @@ func (x *run) policy(ctx context.Context) StepResult {
 		replaces = e.Name
 	}
 	return StepResult{ID: id, Title: title, Status: Done, Detail: fmt.Sprintf("%s v%d · enforce (replaces %s)%s", name, pushed.Version.Version, replaces, policyNote(name))}
+}
+
+// lockdownStep is init --lockdown's last server step: the org's own lockdown setting on, sealed
+// (lockdown: true already pins it for the local server; the setting stays if the stack moves).
+func (x *run) lockdownStep(ctx context.Context) StepResult {
+	const id, title = "lockdown", "Lockdown"
+	if !x.stack.Lockdown {
+		return StepResult{} // no line: a stack without lockdown looks as before
+	}
+	out, errOut, err := x.r.Self(ctx, x.serverEnv(), "--json", "--org", OrgSlug, "lockdown", "on", "--reason", "deedglass init --lockdown")
+	var st struct {
+		Status struct {
+			Deed *string `json:"deed"`
+		} `json:"status"`
+	}
+	if err != nil || json.Unmarshal([]byte(out), &st) != nil {
+		return fail(id, title, "lockdown couldn't be turned on: "+strings.TrimSpace(firstNonEmpty(errOut, out)), "Run deedglass lockdown on to see why.")
+	}
+	detail := "on · every write waits for a person · dual seal · " + AgentName + " reaches only " + DemoConnector
+	if st.Status.Deed == nil {
+		return StepResult{ID: id, Title: title, Status: Skipped, Detail: detail}
+	}
+	return StepResult{ID: id, Title: title, Status: Done, Detail: detail}
 }
 
 // policyNote says what the local default lets through, and what to use in production.

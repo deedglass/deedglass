@@ -85,7 +85,7 @@ npx -y deedglass init --trigger
 database), runs `deedglass serve` on `127.0.0.1:8080`, creates an org, an agent and the
 `postgres-check` policy (reads and writes run, every write is checked at Proven, `DROP` and
 `TRUNCATE` never run; use `postgres-safe` in production, where writes wait for a person), and ends
-with a blocked `DROP TABLE` and an `UPDATE` checked at Proven. `deedglass doctor` runs sixteen
+with a blocked `DROP TABLE` and an `UPDATE` checked at Proven. `deedglass doctor` runs seventeen
 read-only checks, each with its fix. `deedglass init --trigger` turns on the demo database's legacy
 trigger, sends the same one-row `UPDATE`, and ends on the 301-row mismatch and the undo preview shown
 above. Its last line is the `undo run` command; the undo waits for a person, and `undo run` prints

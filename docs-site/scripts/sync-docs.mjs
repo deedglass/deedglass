@@ -72,6 +72,7 @@ export const IMPORTS = {
   'docs/integrations/llamaindex.md': 'frameworks/llamaindex',
   'docs/OBSERVE.md': 'reference/observe',
   'docs/PHI_MODE.md': 'reference/phi-mode',
+  'docs/LOCKDOWN.md': 'reference/lockdown',
   'docs/EXPORTS.md': 'reference/exports',
   'docs/exports/otel-genai.md': 'reference/exports/otel-genai',
   'docs/exports/ocsf.md': 'reference/exports/ocsf',

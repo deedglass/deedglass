@@ -22,7 +22,7 @@ import (
 
 var initValues struct {
 	yes, noOpen, noSmoke, smoke, resetSecrets, stop    bool
-	trigger, quiet, purge                              bool
+	trigger, quiet, purge, lockdown                    bool
 	dir, client, listen, postgres, ownerEmail, project string
 	policy                                             string
 	pgPort                                             int
@@ -34,7 +34,7 @@ func initFlags(fs *flag.FlagSet) {
 	v := &initValues
 	*v = struct {
 		yes, noOpen, noSmoke, smoke, resetSecrets, stop    bool
-		trigger, quiet, purge                              bool
+		trigger, quiet, purge, lockdown                    bool
 		dir, client, listen, postgres, ownerEmail, project string
 		policy                                             string
 		pgPort                                             int
@@ -55,6 +55,7 @@ func initFlags(fs *flag.FlagSet) {
 	fs.BoolVar(&v.purge, "purge", false, "remove the local stack: deedglass serve, both containers, both volumes and the files in .deedglass/ (asks you to type purge unless --yes)")
 	fs.StringVar(&v.policy, "policy", "", "the starter policy to enforce: postgres-check (default for a new stack: writes run and are checked at Proven) or postgres-safe (writes wait for a person; use it in production)")
 	fs.BoolVar(&v.quiet, "quiet", false, "don't print the quickstart step line")
+	fs.BoolVar(&v.lockdown, "lockdown", false, "the strictest setup (docs/LOCKDOWN.md): lockdown: true for the local server, an ML-DSA-65 seal key beside Ed25519, postgres-safe, the agent labelled with its one connector; every write waits for a person")
 	fs.BoolVar(&v.trigger, "trigger", false, "on the stack init made: turn on the demo's legacy trigger, ship order 42 (1 row reported, 301 changed), then show the undo preview")
 }
 
@@ -78,6 +79,9 @@ func runInit(ctx context.Context, e *Env, args []string) error {
 		if !ok {
 			return usageErr(fmt.Errorf("--client takes %s (got %q)", strings.Join(initClients, ", "), v.client), "For example: deedglass init --client claude-code.")
 		}
+	}
+	if v.lockdown && v.policy == setup.CheckPolicyName {
+		return usageErr(errors.New("--lockdown makes every write wait for a person, so it runs with postgres-safe, not postgres-check"), "Run deedglass init --lockdown (postgres-safe is chosen for you).")
 	}
 	if v.policy != "" && !slices.Contains(setup.Policies, v.policy) {
 		return usageErr(fmt.Errorf("--policy takes %s (got %q)", strings.Join(setup.Policies, " or "), v.policy), "For example: deedglass init --policy postgres-safe.")
@@ -109,7 +113,7 @@ func runInit(ctx context.Context, e *Env, args []string) error {
 	}
 	o := setup.Options{Dir: dir, Yes: v.yes, Client: v.client, Listen: v.listen, PGPort: v.pgPort, Project: v.project,
 		OwnerEmail: v.ownerEmail, NoSmoke: v.noSmoke, NoOpen: v.noOpen, Smoke: v.smoke, TTY: e.IsTTY, Runner: r, ResetSecrets: v.resetSecrets,
-		Policy: v.policy, Cmd: invocation(e), Home: e.Getenv("HOME")}
+		Policy: v.policy, Cmd: invocation(e), Home: e.Getenv("HOME"), Lockdown: v.lockdown}
 	if o.Client == "" {
 		o.Client = "none"
 	}

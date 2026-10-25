@@ -54,21 +54,44 @@ type GateSubject struct {
 	Timezone    string
 	OrgStopped  bool
 	AgentKind   string // agent | system (S23: the console agent; Stop all skips it)
+	Lockdown    bool   // orgs.settings.lockdown (ADR-117)
+	PHIMode     bool   // orgs.settings.phi_mode (HC-P09)
 }
 
 // LoadGateSubject reads the agent and its org. ErrNotFound when the agent isn't in this org.
 func LoadGateSubject(ctx context.Context, tx pgx.Tx, org ids.OrgID, agent ids.AgentID) (GateSubject, error) {
 	var s GateSubject
 	var labels, budgets []byte
-	err := tx.QueryRow(ctx, `SELECT g.name, g.status, g.labels, g.budgets, g.intent_mode, o.name, o.timezone, o.stopped_at IS NOT NULL, g.kind
+	err := tx.QueryRow(ctx, `SELECT g.name, g.status, g.labels, g.budgets, g.intent_mode, o.name, o.timezone, o.stopped_at IS NOT NULL, g.kind,
+	      COALESCE((o.settings ->> 'lockdown') = 'true', false), COALESCE((o.settings ->> 'phi_mode') = 'true', false)
 	    FROM deedglass.agents AS g JOIN deedglass.orgs AS o ON o.id = g.org_id
 	    WHERE g.org_id = $1 AND g.id = $2`, org, agent).
-		Scan(&s.AgentName, &s.AgentStatus, &labels, &budgets, &s.IntentMode, &s.OrgName, &s.Timezone, &s.OrgStopped, &s.AgentKind)
+		Scan(&s.AgentName, &s.AgentStatus, &labels, &budgets, &s.IntentMode, &s.OrgName, &s.Timezone, &s.OrgStopped, &s.AgentKind, &s.Lockdown, &s.PHIMode)
 	if err != nil {
 		return s, notFound(err)
 	}
 	s.Labels, s.Budgets = labels, budgets
 	return s, nil
+}
+
+// AdminLockdownAcknowledged is ledger.AdminLockdownAcknowledged (store doesn't import ledger).
+const AdminLockdownAcknowledged = "lockdown.acknowledged"
+
+// LockdownHeld returns the agent's earliest action admitted in lockdown that ended UNVERIFIABLE
+// (Can't check) and that no person has acknowledged (ADR-117), or "" when there is none. The hold
+// covers every session of the agent: the agent names its own session ref.
+func LockdownHeld(ctx context.Context, tx pgx.Tx, org ids.OrgID, agent ids.AgentID) (string, error) {
+	var id string
+	err := tx.QueryRow(ctx, `SELECT a.id FROM deedglass.actions AS a
+	    WHERE a.org_id = $1 AND a.agent_id = $2 AND a.witness_verdict = 'UNVERIFIABLE'
+	      AND (a.decision_detail -> 'lockdown') IS NOT NULL
+	      AND NOT EXISTS (SELECT 1 FROM deedglass.admin_events AS e
+	        WHERE e.org_id = a.org_id AND e.action = $3 AND e.target_type = 'action' AND e.target_id = a.id::text)
+	    ORDER BY a.created_at, a.id LIMIT 1`, org, agent, AdminLockdownAcknowledged).Scan(&id)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", nil
+	}
+	return id, err
 }
 
 // GateAction is an action as the Gate resumes it: everything Resume, ReportResult and Cancel need.

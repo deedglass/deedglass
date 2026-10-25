@@ -397,6 +397,10 @@ type WhoamiOrg struct {
 	Name    string `json:"name"`
 	Slug    string `json:"slug"`
 	Stopped bool   `json:"stopped"`
+	// Lockdown and PHIMode are the org's settings.lockdown (ADR-117) and settings.phi_mode, so an
+	// admin key (doctor) and an agent can see them. omitzero: an org without them is unchanged.
+	Lockdown bool `json:"lockdown,omitzero"`
+	PHIMode  bool `json:"phi_mode,omitzero"`
 }
 
 // WhoamiAgent is the key's agent.
@@ -436,8 +440,9 @@ func (s *Service) WhoamiFor(ctx context.Context, p *Principal) (Whoami, error) {
 	out := Whoami{Object: "whoami"}
 	err := s.db.OrgReadTx(ctx, p.OrgID, func(ctx context.Context, tx pgx.Tx) error {
 		var stoppedAt *time.Time
-		if err := tx.QueryRow(ctx, `SELECT id, name, slug, stopped_at FROM deedglass.orgs WHERE id = $1`, p.OrgID).
-			Scan(&out.Org.ID, &out.Org.Name, &out.Org.Slug, &stoppedAt); err != nil {
+		if err := tx.QueryRow(ctx, `SELECT id, name, slug, stopped_at, COALESCE((settings ->> 'lockdown') = 'true', false),
+		      COALESCE((settings ->> 'phi_mode') = 'true', false) FROM deedglass.orgs WHERE id = $1`, p.OrgID).
+			Scan(&out.Org.ID, &out.Org.Name, &out.Org.Slug, &stoppedAt, &out.Org.Lockdown, &out.Org.PHIMode); err != nil {
 			return err
 		}
 		out.Org.Stopped = stoppedAt != nil

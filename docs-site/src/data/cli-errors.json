@@ -562,6 +562,16 @@
     ]
   },
   {
+    "code": "lockdown_failed",
+    "exit": [
+      1
+    ],
+    "messages": null,
+    "next": [
+      "Check the database, then run it again."
+    ]
+  },
+  {
     "code": "mcp_upstream_invalid",
     "exit": [
       1

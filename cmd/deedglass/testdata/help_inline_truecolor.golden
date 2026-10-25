@@ -14,6 +14,8 @@ exit 0
   migrate             Apply or check database migrations
 [2m                      up · status · verify[0m
   config print        Show the effective config, secrets hidden
+  lockdown            Turn on the strictest setup, or check it
+[2m                      status · on · off · ack[0m
   version             Show the client and server versions
   keys                Manage seal keys
 [2m                      gen · rotate · list[0m

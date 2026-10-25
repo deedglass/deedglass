@@ -109,7 +109,7 @@ deedglass doctor --only db.*
 deedglass doctor --json | jq .summary
 ```
 
-Sixteen checks run in parallel, three seconds each at most. Each line names the check and what it
+Seventeen checks run in parallel, three seconds each at most. Each line names the check and what it
 saw; a warning or a problem has the fix on the next line. Doctor is read-only: its database
 sessions set `default_transaction_read_only`, and it calls only GET routes (a test runs it under
 `log_statement=all` and finds no write).
@@ -182,6 +182,14 @@ default; a warning above it), and it isn't invalidated or missing (a problem).
 
 <a id="policy-active"></a>
 **policy.active** · A policy is enforced (a warning when none is), and which one is in shadow.
+
+<a id="lockdown"></a>
+**lockdown** · Whether [lockdown](LOCKDOWN.md) is on, and who set it: `lockdown: true` in the
+config, or the org (`GET /v1/whoami` shows the org's setting). Off is OK. On, a warning lists what
+weakens it: no ML-DSA-65 seal key, no TSAs (so no outside timestamps), agents without a `connector`
+label (lockdown refuses their calls) and a FHIR connector while PHI mode is off. Without an admin key
+it reads only the config; `deedglass lockdown status` on the server also counts the people who can
+approve.
 
 ### What doctor doesn't do
 

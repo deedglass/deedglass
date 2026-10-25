@@ -68,6 +68,7 @@ type Config struct {
 	AllowPrivateNetworks bool
 	EgressAllowCIDRs     []netip.Prefix // DEEDGLASS_EGRESS_ALLOW_CIDRS: private networks connectors may reach (S16)
 	SlotLagAlertMB       int
+	Lockdown             bool // DEEDGLASS_LOCKDOWN (ADR-117): lockdown mode for every org on this server
 	DecoderPause         bool // DEEDGLASS_DECODER_PAUSE (S20; dev only): runners stop polling, for late-evidence tests
 
 	// Client-side: the CLI, MCP commands and SDKs.
@@ -235,6 +236,7 @@ func (l *loader) load() (*Config, []Warning, error) {
 	}
 	l.checkConnectors(c)
 	l.prodChecks(c)
+	l.lockdownChecks(c)
 	if c.ResendAPIKey.IsSet() && c.MailFrom == "" {
 		if _, set := l.raw["DEEDGLASS_MAIL_FROM"]; !set {
 			l.problem("DEEDGLASS_MAIL_FROM", "isn't set, and DEEDGLASS_RESEND_API_KEY is.",
@@ -518,6 +520,14 @@ func (l *loader) parse(c *Config, k Key) {
 			}
 			c.EgressAllowCIDRs = append(c.EgressAllowCIDRs, p.Masked())
 		}
+	case "DEEDGLASS_LOCKDOWN":
+		switch strings.ToLower(v) {
+		case "true", "1":
+			c.Lockdown = true
+		case "false", "0":
+		default:
+			bad(fmt.Sprintf("must be true or false (got %q).", v), "")
+		}
 	case "DEEDGLASS_DECODER_PAUSE":
 		switch strings.ToLower(v) {
 		case "true", "1":
@@ -598,6 +608,25 @@ func (l *loader) prodChecks(c *Config) {
 				l.problem(k.name, msg, "Add sslmode=verify-full (or require) to the URL.")
 			}
 		}
+	}
+}
+
+// lockdownChecks (ADR-117): lockdown keeps the dual seal and export timestamps on. Prod refuses a
+// lockdown config without an ML-DSA-65 seal key; dev warns. Both refuse timestamps.at_export: false.
+func (l *loader) lockdownChecks(c *Config) {
+	if !c.Lockdown {
+		return
+	}
+	if c.SealPQKeyFile == "" {
+		if l.env == Prod {
+			l.problem("DEEDGLASS_SEAL_PQ_KEY_FILE", "isn't set, and lockdown needs the dual seal (Ed25519 and ML-DSA-65).",
+				"Run deedglass keys rotate --alg ML-DSA-65, then point DEEDGLASS_SEAL_PQ_KEY_FILE at the file it writes.")
+		} else {
+			l.warn("DEEDGLASS_SEAL_PQ_KEY_FILE", "isn't set: lockdown seals with Ed25519 only. Run deedglass keys rotate --alg ML-DSA-65 (prod refuses this).")
+		}
+	}
+	if !c.Timestamps.AtExport {
+		l.problem("timestamps.at_export", "is false, and lockdown keeps export timestamps on.", "Remove timestamps.at_export: false, or turn lockdown off.")
 	}
 }
 

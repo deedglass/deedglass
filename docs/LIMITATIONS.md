@@ -656,6 +656,17 @@ it refuses rather than guess:
 - **Turning it off doesn't bring payloads back**, and the setting is API-only (`PATCH /v1/org`) for
   now; the Console doesn't show it.
 
+## Lockdown mode
+
+Off unless `lockdown: true` is in the config or an org turned it on ([LOCKDOWN.md](LOCKDOWN.md), ADR-117).
+
+- **The server CLI can't tell who is typing.** `deedglass lockdown on|off|ack` run on the server as the operator and record the people named with `--as` as given. Anyone with the server's shell and database URL can name two people for the turn-off, or change the database directly.
+- **No Console screen and no API route.** Lockdown is turned on and off from the server CLI or the config; turning off the config key isn't a sealed record.
+- **The SQL rules cover the native Postgres connector only.** SQL sent through other tools isn't classified; the person approving sees it.
+- **Proven only where the connector reaches it.** Other writes are checked at Checked or Claimed, and the record says so.
+- **High risk is a fixed list** (destructive tools, deletes, database functions, undo, Stripe). A Can't check hold is released by one person.
+- **No outside timestamps without TSAs.** Lockdown keeps export timestamps on but adds no TSA and no schedule.
+
 ## Head timestamps
 
 Opt-in (TY-03, [`TIMESTAMPS.md`](TIMESTAMPS.md)); off unless `timestamps.tsa_urls` or `timestamps.scitt_url` is set.
