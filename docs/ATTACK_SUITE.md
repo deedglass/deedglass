@@ -286,8 +286,9 @@ Each group set has its own pinned digest, so declaring new cases never changes a
 | Y | Crypto agility (TY-01, TY-02, ADR-109; library and CLI cases run by go test) | `expectedDigestY` |
 | T | This week's surfaces after the 2026-10-21 audit: A2A proxy, Debezium witness, shell guard, timestamps, verifiers, connect (ADR-116; library and CLI cases run by go test) | `expectedDigestT` |
 | M | Lockdown mode (ADR-117; library cases run by go test, the lockdown-off and API cases by the lockdown integration test) | `expectedDigestM` |
+| S | India's national profiles: ABDM records and NHCX bundles under the india-health and healthcare-fhir packs (HC-P15, ADR-119; library cases run by go test on the IG's own examples) | `expectedDigestS` |
 
-S, V, X and Z are unassigned. A session that needs a group takes the next free letter and adds a row here.
+V, X and Z are unassigned. A session that needs a group takes the next free letter and adds a row here.
 
 ## What this suite doesn't cover
 
