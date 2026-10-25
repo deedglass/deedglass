@@ -22,6 +22,6 @@ Dropped from the old drafts, because the code already does them: `verify --summa
 global `--json` prints the verification report) and a release-notes link in `version --check` (it
 prints the release's page). The roadmap is #21.
 
-New ones follow the same shape: the context, where to look (files and functions), what "done"
+New ones (the **Suggest a good first issue** form asks for each part) follow the same shape: the context, where to look (files and functions), what "done"
 means, and the test command. Data-file changes (a scan catalog entry, a policy case) make the best
 first issues.

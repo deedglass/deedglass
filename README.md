@@ -5,7 +5,9 @@
   </picture>
 </p>
 
-<h3 align="center">An agent said it updated 1 row. Postgres changed 301.</h3>
+<h3 align="center">Check what your AI agents actually changed.</h3>
+
+<p align="center"><b>An agent said it updated 1 row. Postgres changed 301.</b></p>
 
 <p align="center">
 <!-- description:summary (docs/description.json; docs/description_test.go checks it) -->
@@ -26,36 +28,107 @@ check offline. It can undo the rows an action changed.
 
 <p align="center">
 <a href="https://deedglass.com/play">Try it in your browser</a> · <a href="https://docs.deedglass.com/quickstart/">Quickstart</a> ·
-<a href="https://docs.deedglass.com">Docs</a> · <a href="SECURITY.md">Security</a> · <a href="https://deedglass.com">deedglass.com</a>
+<a href="https://docs.deedglass.com">Docs</a> · <a href="https://deedglass.com/healthcare">Healthcare</a> ·
+<a href="#benchmarks">Benchmarks</a> · <a href="SECURITY.md">Security</a> · <a href="https://deedglass.com">deedglass.com</a>
 </p>
 
-## In 30 seconds
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: light)" srcset="docs/assets/demo-hero-light.svg">
+    <img src="docs/assets/demo-hero.svg" width="846" alt="Terminal recording of a real make demo-hero run. Order 42 ships: Proven, Matches, 1 row. A legacy trigger is turned on and the same UPDATE runs: Proven, Doesn't match, Postgres changed 301 rows in public.orders, the agent reported 1, with the row diff. Then every record verifies offline.">
+  </picture>
+</p>
+<p align="center"><sub>A real run of <code>make demo-hero</code> (commit 97a524c, 2026-10-14), each line shown at the time it printed.
+Source: <a href="docs/assets/demo-hero.cast.json"><code>docs/assets/demo-hero.cast.json</code></a>, recorded by <a href="scripts/demo/capture.mjs"><code>scripts/demo/capture.mjs</code></a> and drawn by <a href="scripts/demo/cast2svg.mjs"><code>scripts/demo/cast2svg.mjs</code></a> (<code>make demo-svg</code>).</sub></p>
 
-**Why.** AI agents now change real systems: databases, payments, health records. What an agent
-reports is not always what the system stored. Its tool can say 1 row while a trigger changed 301,
-and a log the agent writes itself can't show the difference.
-
-**What.** Deedglass sits between an agent and the tools it uses. Your rules decide each tool call
-before it runs, a check compares what the system really changed with what the agent reported, and
-each action is sealed into a signed record anyone can check offline. It can undo the rows an action
-changed. It runs on your own machines with your own Postgres, and the core is Apache-2.0. It doesn't
-catch everything: [the benchmark](https://deedglass.com/benchmark) lists what it misses, first.
-
-**How.** With Docker running, two commands start a local stack and replay the 301-row scene:
+## Install
 
 ```sh
-npx -y deedglass init --yes      # Postgres and Deedglass in Docker, a demo database and an agent key
-npx -y deedglass init --trigger  # the agent reports 1 row; Deedglass reads that Postgres changed 301
+curl -fsSL https://deedglass.com/install.sh | sh   # macOS and Linux: checks the sha256, copies deedglass into ~/.local/bin
+npx -y deedglass help                              # or run it with no install (Node 18 or newer)
+npm install -g deedglass                           # or install it from npm
 ```
 
-Then put your agent behind it: [Claude Code](https://docs.deedglass.com/get-started/claude-code/),
-[Cursor, VS Code and Windsurf](https://docs.deedglass.com/get-started/cursor-vscode-windsurf/),
-[nine agent frameworks](https://docs.deedglass.com/frameworks/claude-agent-sdk/), or
-[your own Postgres](https://docs.deedglass.com/get-started/postgres/).
+| Other ways | Command |
+|---|---|
+| Binaries | archives for macOS, Linux and Windows on the [latest release](https://github.com/deedglass/deedglass/releases/latest), with `checksums.txt` |
+| Go | `go install github.com/deedglass/deedglass/cmd/deedglass@latest` (the CLI, without the Console) |
+| Docker | build the image from a checkout: `make web-build docker` (tags `deedglass:dev`; Node 24 builds the Console) |
+
+The install script downloads the release archive for your platform, checks its sha256 against the
+release's `checksums.txt` (and the signature, when cosign is installed), and copies `deedglass` into
+`~/.local/bin`; read it first: [`scripts/install.sh`](scripts/install.sh). It downloads from a copy
+of the release on deedglass.com and falls back to GitHub: about 7 s on one network in India, where the
+GitHub-only install took 81-119 s. A public container image is coming; until it's
+published, build the image locally as above. Checksums, signatures and SBOMs:
+[`docs/INSTALL.md`](docs/INSTALL.md).
+
+## Try it in 60 seconds
+
+```sh
+npx -y deedglass play --fast   # the 1-vs-301 scene in your terminal: no Docker, nothing leaves your machine
+npx -y deedglass scan          # grade what the agents in your MCP configs could change, A to F (read-only)
+npx -y deedglass init --yes && npx -y deedglass init --trigger   # the same scene, live, on Postgres in Docker
+```
+
+The first two need only Node: together they took 18 s from an empty npm cache on one machine
+(2026-10-25). The third starts the real stack in Docker; with the Postgres image already pulled it
+is ready in about 7 s, and the first run also downloads Postgres 18.6. The
+[Quickstart](#quickstart) below walks through it.
+
+## Who it's for
+
+- **Developers with agents on databases.** Claude Code, Cursor or your own agent writes to Postgres.
+  Your rules decide each call first, Postgres's change log shows what really committed, and the
+  rows one action changed can be undone after a person countersigns. MySQL and other databases can
+  be checked from a Debezium change feed ([`docs/WITNESS_DEBEZIUM.md`](docs/WITNESS_DEBEZIUM.md)).
+- **Health-tech teams and hospitals on FHIR.** The FHIR connector (beta) puts a FHIR R4 server
+  behind Deedglass with SMART Backend Services, reads each write back at the version the server
+  reported, and checks Proven on HAPI FHIR JPA 8.x and Medplum 5.x running on Postgres. See
+  [deedglass.com/healthcare](https://deedglass.com/healthcare) and the
+  [FHIR benchmark](corpus/fhir/BENCHMARK.md).
+- **Security teams.** Lockdown makes every agent write wait for a person, needs two people for
+  high-risk writes and for turning lockdown off, and keeps each agent to one connector
+  ([`docs/LOCKDOWN.md`](docs/LOCKDOWN.md)). Records are signed and anyone can check them offline
+  with `deedglass verify`.
+
+## How it works
+
+```mermaid
+flowchart LR
+  A["AI agent<br/>Claude · OpenAI · Cursor · any MCP client"] -->|tool call + agent key| R
+  subgraph D["Deedglass · one binary + Postgres"]
+    R["1 · Rules<br/>allow · deny · ask a person"] --> X["2 · Run<br/>with credentials from the vault"]
+    X --> C["3 · Check<br/>what really changed"] --> S["4 · Seal<br/>a signed record"]
+  end
+  X --> T["Tools<br/>Postgres · FHIR · GitHub · Slack · Stripe · MCP servers"]
+  T -->|change log or read-back| C
+  S --> U["Undo<br/>Postgres rows, after a person countersigns"]
+  H[People] -->|approve · stop| R
+```
+
+Every tool call passes through Deedglass with the agent's key. Your rules (policies) decide `allow`,
+`deny` or `require_approval`; Deedglass runs the call with credentials the agent never holds; the
+check compares what happened with what was asked; and the outcome is sealed as a record in the org's
+chain.
+
+## How sure each check is
+
+| Level | What it checks | What it can't see |
+|---|---|---|
+| **Claimed** | The tool's own answer, against a schema and your postconditions | Whether the answer is true |
+| **Checked** | A read-back from the target (GitHub, Slack, Stripe, Notion, REST, Postgres rows) | Side effects the read-back doesn't cover |
+| **Proven** | Postgres's change log (logical decoding): every row the transaction committed | DDL, sequences, unlogged tables and anything outside that database's WAL |
+
+Each record claims one level and one result: **Matches**, **Doesn't match** or **Can't check**. When
+Deedglass can't tell whether a tool ran, the result is Can't check, never Matches. The API keeps
+the short names (`L0`/`L1`/`L2`, `VERIFIED`/`MISMATCH`/`UNVERIFIABLE`); the
+[glossary](https://docs.deedglass.com/concepts/glossary/) maps them.
 
 ## The 301-row scene
 
-An agent was asked to mark order 42 as shipped. It ran one `UPDATE` and its tool reported 1 row. A
+What an agent reports is not always what the system stored, and a log the agent writes itself can't
+show the difference. An agent was asked to mark order 42 as shipped. It ran one `UPDATE` and its tool reported 1 row. A
 legacy trigger shipped 300 more orders in the same transaction. This is the real output of the
 Quickstart's last step on 2026-10-14 (shortened where you see `…`):
 
@@ -74,24 +147,6 @@ $ npx -y deedglass init --trigger
 The agent's log says 1 row. Deedglass read Postgres's own change log for that transaction, found
 301, sealed the difference as a record, and planned an undo from those rows that runs only after a
 person countersigns.
-
-<p align="center">
-  <img src="docs/assets/demo-hero.svg" width="846" alt="Terminal recording of a real make demo-hero run. Order 42 ships: Proven, Matches, 1 row. A legacy trigger is turned on and the same UPDATE runs: Proven, Doesn't match, Postgres changed 301 rows in public.orders, the agent reported 1, with the row diff. Then every record verifies offline.">
-</p>
-<p align="center"><sub>A real run of <code>make demo-hero</code> (commit 97a524c, 2026-10-14), each line shown at the time it printed.
-Source: <a href="docs/assets/demo-hero.cast.json"><code>docs/assets/demo-hero.cast.json</code></a>, drawn by <a href="scripts/demo/cast2svg.mjs"><code>scripts/demo/cast2svg.mjs</code></a>.</sub></p>
-
-## Four ways in
-
-| | Command | What it needs | What leaves your machine |
-|---|---|---|---|
-| **In your browser** | [deedglass.com/play](https://deedglass.com/play) | A browser tab. Postgres runs in the page; it opens on the "said 1, changed 301" scene. | Nothing |
-| **In your terminal** | `npx deedglass play` | Node, and deedglass 0.1.1 or newer from npm. No Docker. The rules decide each call live and the records are sealed and checked on your machine; Postgres's lines are replayed from a recorded real run, and labelled as such. | Nothing |
-| **Scan your setup** | `npx deedglass scan` | Node. Reads your MCP configs and, if you name one, a database catalog, read-only. Grades what your agents could change, A to F. | Nothing, apart from read-only catalog queries to a database you name |
-| **Observe mode** | `deedglass observe run --connector pg-demo -- ./agent.sh` | A Postgres connector with `observe` on. Nothing to rewire: it reads Postgres's change log beside whatever gate you already use. | Nothing |
-
-When a scan finds a trigger or a cascade on a table your agent can write, it says so and points to
-the 301 scene. Observe mode is [below](#observe-mode-nothing-to-rewire).
 
 ## Quickstart
 
@@ -127,6 +182,18 @@ Then put your own Postgres behind it (Supabase, Neon or any Postgres 16 to 18): 
 connect "$DATABASE_URL"` runs read-only checks and prints a plan; `--apply` sets it up
 ([guide](https://docs.deedglass.com/get-started/postgres/)).
 
+## Four ways in
+
+| | Command | What it needs | What leaves your machine |
+|---|---|---|---|
+| **In your browser** | [deedglass.com/play](https://deedglass.com/play) | A browser tab. Postgres runs in the page; it opens on the "said 1, changed 301" scene. | Nothing |
+| **In your terminal** | `npx deedglass play` | Node, and deedglass 0.1.1 or newer from npm. No Docker. The rules decide each call live and the records are sealed and checked on your machine; Postgres's lines are replayed from a recorded real run, and labelled as such. | Nothing |
+| **Scan your setup** | `npx deedglass scan` | Node. Reads your MCP configs and, if you name one, a database catalog, read-only. Grades what your agents could change, A to F. | Nothing, apart from read-only catalog queries to a database you name |
+| **Observe mode** | `deedglass observe run --connector pg-demo -- ./agent.sh` | A Postgres connector with `observe` on. Nothing to rewire: it reads Postgres's change log beside whatever gate you already use. | Nothing |
+
+When a scan finds a trigger or a cascade on a table your agent can write, it says so and points to
+the 301 scene. Observe mode is [below](#observe-mode-nothing-to-rewire).
+
 ## Observe mode: nothing to rewire
 
 ```sh
@@ -143,85 +210,7 @@ as a record. It can't tell which program wrote a row, so a session gets no Match
 verdict; row images are kept 30 days; a `TRUNCATE` can't be undone from the record. Undo SQL is free;
 a one-step undo through Deedglass is Pro. Details: [`docs/OBSERVE.md`](docs/OBSERVE.md).
 
-## How it works
-
-```mermaid
-flowchart LR
-  A["AI agents<br/>Claude · OpenAI · Cursor · any MCP client"] -->|tool call + agent key| G
-  subgraph D["Deedglass · one binary + Postgres"]
-    I[Identity] --> P[Policies] --> G[Rules]
-    G --> W[Check] --> S[Records] --> L[Ledger] --> N[Insights]
-  end
-  G -->|credentials from the vault| T["Tools<br/>Postgres · GitHub · Slack · Stripe · MCP servers"]
-  T -->|what actually happened| W
-  H[People] -->|approve · stop| G
-```
-
-Every tool call passes through Deedglass with the agent's key. Your rules (policies) decide `allow`,
-`deny` or `require_approval`; Deedglass runs the call with credentials the agent never holds; the
-check compares what happened with what was asked; and the outcome is sealed as a record in the org's
-chain.
-
-## How sure each check is
-
-| Level | What it checks | What it can't see |
-|---|---|---|
-| **Claimed** | The tool's own answer, against a schema and your postconditions | Whether the answer is true |
-| **Checked** | A read-back from the target (GitHub, Slack, Stripe, Notion, REST, Postgres rows) | Side effects the read-back doesn't cover |
-| **Proven** | Postgres's change log (logical decoding): every row the transaction committed | DDL, sequences, unlogged tables and anything outside that database's WAL |
-
-Each record claims one level and one result: **Matches**, **Doesn't match** or **Can't check**. When
-Deedglass can't tell whether a tool ran, the result is Can't check, never Matches. The API keeps
-the short names (`L0`/`L1`/`L2`, `VERIFIED`/`MISMATCH`/`UNVERIFIABLE`); the
-[glossary](https://docs.deedglass.com/concepts/glossary/) maps them.
-
-## What it doesn't do
-
-- Proven checks cover Postgres only, and need `wal_level=logical` and `REPLICA IDENTITY FULL` on watched tables.
-- A hijacked agent with a valid key and an in-policy action is allowed. Policies, budgets and
-  approvals narrow this; they don't close it.
-- Deedglass trusts the Postgres server, its superusers, the host it runs on and its seal key. It
-  can't protect you from a compromised host.
-- Records hold digests, not payloads. One set of seal keys signs every org on an instance.
-- It doesn't replace a least-privilege database role. Use both: the role limits what the agent can
-  do; Deedglass checks what it did with that.
-
-The whole list, with workarounds: [`docs/LIMITATIONS.md`](docs/LIMITATIONS.md) and [`KNOWN_ISSUES.md`](KNOWN_ISSUES.md).
-
-## Alternatives
-
-You may not need Deedglass, or you may want it next to one of these. Each has a longer page, with
-sources and the date each was checked, at [deedglass.com/compare](https://deedglass.com/compare).
-<!-- claims: C-109 (role), C-114 and C-116 (branches), C-117 (Docker's gateway), C-122 and C-123 (traces), C-110 (Claw Patrol), C-119 (Pipelock) -->
-
-| If you need | Use this | Where Deedglass fits |
-|---|---|---|
-| An agent that only reads | A Postgres role with `SELECT` and nothing else. It can't change data whatever the agent sends, and there's nothing to install. | You don't need it. It's for agents that must write. ([compare](https://deedglass.com/compare/read-only-postgres-role)) |
-| A place for an agent to try changes | A database branch: a Neon branch is a copy-on-write clone of your data; Supabase branches start without production data by default. | For the writes that must reach production: rules first, then the check and the record. ([compare](https://deedglass.com/compare/database-branches)) |
-| Routing, isolation and credentials for many MCP servers | An MCP gateway, such as Docker's, which runs each server in an isolated container and injects credentials. | Behind the gateway, for the servers that write to Postgres. ([compare](https://deedglass.com/compare/mcp-gateways)) |
-| Traces of each step, and evaluations | Langfuse or LangSmith. | Next to them: a trace is the agent's side of the story; the check reads what Postgres committed. ([compare](https://deedglass.com/compare/langfuse-langsmith)) |
-| Rules at the wire for Postgres, Kubernetes and HTTP | Claw Patrol, which gates each action against rules over the parsed traffic. | It also decides first; it adds the check of what Postgres committed, records anyone can check offline, and undo. ([compare](https://deedglass.com/compare/claw-patrol)) |
-| Scanning what an agent sends out and what its tools return | Pipelock, an agent firewall that scans MCP traffic in both directions. | It adds the check of what Postgres committed after each call, and undo for the rows. ([compare](https://deedglass.com/compare/pipelock)) |
-
-## Install
-
-| How | Command |
-|---|---|
-| npx (no install) | `npx -y deedglass help` |
-| Install script (macOS, Linux) | `curl -fsSL https://deedglass.com/install.sh \| sh` |
-| Binaries | archives for macOS, Linux and Windows on the [latest release](https://github.com/deedglass/deedglass/releases/latest), with `checksums.txt` |
-| Go | `go install github.com/deedglass/deedglass/cmd/deedglass@latest` (the CLI, without the Console) |
-| Docker | build the image from a checkout: `make web-build docker` (tags `deedglass:dev`; Node 24 builds the Console) |
-
-The install script downloads the release archive for your platform, checks its sha256 against the
-release's `checksums.txt` (and the signature, when cosign is installed), and copies `deedglass` into
-`~/.local/bin`; read it first: [`scripts/install.sh`](scripts/install.sh). It downloads from a copy
-of the release on deedglass.com and falls back to GitHub: about 7 s on one network in India, where the
-GitHub-only install took 81-119 s. A public container image is coming; until it's
-published, build the image locally as above. Checksums, signatures and SBOMs:
-[`docs/INSTALL.md`](docs/INSTALL.md).
-
-### Add it to your agent client
+## Add it to your agent client
 
 <!-- install-links:start -->
 [![Add to Cursor](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/en/install-mcp?name=deedglass&config=eyJjb21tYW5kIjoibnB4IiwiYXJncyI6WyIteSIsImRlZWRnbGFzcyIsIm1jcCIsInNlcnZlIl19)
@@ -260,7 +249,19 @@ Postgres (Proven), REST, GitHub, Slack, Stripe (test mode only), Gmail drafts, N
 servers. Credentials live in an encrypted vault; every outbound call goes through one egress door.
 See [`docs/CONNECTORS.md`](docs/CONNECTORS.md).
 
-## Numbers
+## Benchmarks
+
+Each benchmark publishes what Deedglass misses next to what it catches.
+
+| Benchmark | Caught | Missed | Source |
+|---|---|---|---|
+| Postgres: 12 synthetic cases, 11 where the agent's report was wrong | 5 of 11 | 6 (in 2 of them it said it can't check); 0 false alarms | [`corpus/results/latest.md`](corpus/results/latest.md) |
+| FHIR on Medplum 5.2.6: 17 scenarios, 11 where the report and what the server stored differ | 4 of 11 (no checker, or trusting the HTTP status: 0 of 11) | 7; 0 false alarms on the 6 controls | [`corpus/fhir/results/latest.md`](corpus/fhir/results/latest.md) |
+
+Every scenario, with the misses named: [`corpus/BENCHMARK.md`](corpus/BENCHMARK.md),
+[`corpus/fhir/BENCHMARK.md`](corpus/fhir/BENCHMARK.md) and [deedglass.com/benchmark](https://deedglass.com/benchmark).
+
+Speed:
 
 <!-- numbers:begin (from bench/results/SUMMARY.json; docs/readme_test.go checks every row; an Apple M1 laptop on AC power, Postgres on the same machine) -->
 | What | Measured | Target |
@@ -273,6 +274,34 @@ See [`docs/CONNECTORS.md`](docs/CONNECTORS.md).
 <!-- numbers:end -->
 
 How they were measured, and the misses: [`docs/BENCHMARKS.md`](docs/BENCHMARKS.md).
+
+## What it doesn't do
+
+- Proven checks cover Postgres only, and need `wal_level=logical` and `REPLICA IDENTITY FULL` on watched tables.
+- A hijacked agent with a valid key and an in-policy action is allowed. Policies, budgets and
+  approvals narrow this; they don't close it.
+- Deedglass trusts the Postgres server, its superusers, the host it runs on and its seal key. It
+  can't protect you from a compromised host.
+- Records hold digests, not payloads. One set of seal keys signs every org on an instance.
+- It doesn't replace a least-privilege database role. Use both: the role limits what the agent can
+  do; Deedglass checks what it did with that.
+
+The whole list, with workarounds: [`docs/LIMITATIONS.md`](docs/LIMITATIONS.md) and [`KNOWN_ISSUES.md`](KNOWN_ISSUES.md).
+
+## Alternatives
+
+You may not need Deedglass, or you may want it next to one of these. Each has a longer page, with
+sources and the date each was checked, at [deedglass.com/compare](https://deedglass.com/compare).
+<!-- claims: C-109 (role), C-114 and C-116 (branches), C-117 (Docker's gateway), C-122 and C-123 (traces), C-110 (Claw Patrol), C-119 (Pipelock) -->
+
+| If you need | Use this | Where Deedglass fits |
+|---|---|---|
+| An agent that only reads | A Postgres role with `SELECT` and nothing else. It can't change data whatever the agent sends, and there's nothing to install. | You don't need it. It's for agents that must write. ([compare](https://deedglass.com/compare/read-only-postgres-role)) |
+| A place for an agent to try changes | A database branch: a Neon branch is a copy-on-write clone of your data; Supabase branches start without production data by default. | For the writes that must reach production: rules first, then the check and the record. ([compare](https://deedglass.com/compare/database-branches)) |
+| Routing, isolation and credentials for many MCP servers | An MCP gateway, such as Docker's, which runs each server in an isolated container and injects credentials. | Behind the gateway, for the servers that write to Postgres. ([compare](https://deedglass.com/compare/mcp-gateways)) |
+| Traces of each step, and evaluations | Langfuse or LangSmith. | Next to them: a trace is the agent's side of the story; the check reads what Postgres committed. ([compare](https://deedglass.com/compare/langfuse-langsmith)) |
+| Rules at the wire for Postgres, Kubernetes and HTTP | Claw Patrol, which gates each action against rules over the parsed traffic. | It also decides first; it adds the check of what Postgres committed, records anyone can check offline, and undo. ([compare](https://deedglass.com/compare/claw-patrol)) |
+| Scanning what an agent sends out and what its tools return | Pipelock, an agent firewall that scans MCP traffic in both directions. | It adds the check of what Postgres committed after each call, and undo for the rows. ([compare](https://deedglass.com/compare/pipelock)) |
 
 ## Security
 
@@ -297,6 +326,15 @@ Head timestamps are off by default; with TSAs or a transparency service listed i
 With the network off, Pro runs on its cached token
 for up to 14 days after the last successful check. What each request carries:
 [`docs/LICENSING.md`](docs/LICENSING.md#does-pro-phone-home).
+
+## Docs and links
+
+- **Docs:** [docs.deedglass.com](https://docs.deedglass.com) · [Quickstart](https://docs.deedglass.com/quickstart/) · [how it works](https://docs.deedglass.com/concepts/how-it-works/) · [`docs/`](docs/)
+- **Agent clients:** [Claude Code](https://docs.deedglass.com/get-started/claude-code/) · [Cursor, VS Code and Windsurf](https://docs.deedglass.com/get-started/cursor-vscode-windsurf/) · [Claude Desktop](https://docs.deedglass.com/get-started/claude-desktop/) · [your own Postgres](https://docs.deedglass.com/get-started/postgres/)
+- **Frameworks:** [Vercel AI SDK](https://docs.deedglass.com/frameworks/vercel-ai-sdk/) · [Claude Agent SDK](https://docs.deedglass.com/frameworks/claude-agent-sdk/) · [OpenAI Agents SDK](https://docs.deedglass.com/frameworks/openai-agents/) · [LangChain](https://docs.deedglass.com/frameworks/langchain/) · [Mastra](https://docs.deedglass.com/frameworks/mastra/) · [Pydantic AI](https://docs.deedglass.com/frameworks/pydantic-ai/) · [Google ADK](https://docs.deedglass.com/frameworks/google-adk/) · [CrewAI](https://docs.deedglass.com/frameworks/crewai/) · [LlamaIndex](https://docs.deedglass.com/frameworks/llamaindex/)
+- **Healthcare:** [deedglass.com/healthcare](https://deedglass.com/healthcare) · [FHIR connector](docs/connectors/fhir.md) · [PHI mode](docs/PHI_MODE.md) · [Medplum example](docs/integrations/medplum.md) · [FHIR benchmark](corpus/fhir/BENCHMARK.md)
+- **Security:** [`SECURITY.md`](SECURITY.md) · [lockdown](docs/LOCKDOWN.md) · [attack suite](docs/ATTACK_SUITE.md) · [limitations](docs/LIMITATIONS.md) · [verifying records](docs/VERIFYING_DEEDS.md)
+- **Contributing:** [`CONTRIBUTING.md`](CONTRIBUTING.md) · [good first issues](https://github.com/deedglass/deedglass/labels/good%20first%20issue) · [Discussions](https://github.com/deedglass/deedglass/discussions)
 
 ## Contributing
 

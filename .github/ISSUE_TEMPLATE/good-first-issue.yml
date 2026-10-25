@@ -1,0 +1,23 @@
+name: Suggest a good first issue
+description: A small, well-scoped change a new contributor could finish in an afternoon.
+labels: ["good first issue", "needs triage"]
+body:
+  - type: markdown
+    attributes:
+      value: "**Security problem? Don't file it here.** Report it privately: https://github.com/deedglass/deedglass/security/advisories/new ([SECURITY.md](https://github.com/deedglass/deedglass/blob/main/SECURITY.md)). Good first issues have the same four parts (.github/good-first-issues.md): the context, where to look, what done means, and the test command. Data-file changes (a scan catalog entry, a policy case, a docs fix) make the best ones."
+  - type: textarea
+    id: context
+    attributes: { label: Context, description: "What is missing or wrong today, in two or three sentences. Link the issue, doc or KNOWN_ISSUES.md entry." }
+    validations: { required: true }
+  - type: textarea
+    id: where
+    attributes: { label: Where to look, description: "Files and functions.", placeholder: "internal/scan/catalog.yaml; the entry for …" }
+    validations: { required: true }
+  - type: textarea
+    id: done
+    attributes: { label: What done means, description: "What a reviewer checks before merging." }
+    validations: { required: true }
+  - type: input
+    id: test
+    attributes: { label: Test command, placeholder: "go test ./internal/scan/" }
+    validations: { required: true }
