@@ -4,10 +4,6 @@ description: "Every Deedglass server can tell an org's owners, once a week, what
 imported: "docs/WEEKLY.md"
 editUrl: false
 ---
-:::note[Source]
-This page is `docs/WEEKLY.md` in the Deedglass repo, imported at build time.
-:::
-
 Every Deedglass server can tell an org's owners, once a week, what its agents did: how many actions
 ran, what the rules allowed, held for a person or blocked, what the Check found, what Deedglass caught
 and the free way back for each, and whether the record chain is intact. It is built from the org's
@@ -114,3 +110,7 @@ complete week. A person's session or an org admin key; agent keys get 403. The a
 - It reports the Check's verdicts; it doesn't re-check anything when the email is built.
 - Actions are counted by when they were created; an action that finishes in the next week counts in
   the week it started.
+
+:::note[Source]
+This page is `docs/WEEKLY.md` in the Deedglass repo, imported at build time.
+:::

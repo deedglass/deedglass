@@ -265,13 +265,35 @@ test('seo pages (DOC-05): a thin page needs noindex; an indexed page needs a sho
   assert.equal(pageTitle('Stop', '/reference/engineering/stop/'), 'Stop (engineering notes) | Deedglass Docs');
   assert.equal(pageTitle('Stop', '/concepts/stop/'), 'Stop | Deedglass Docs');
   const ld = (o) => `<script type="application/ld+json">${ldScript(o)}</script>`;
-  const good = `<title>Quickstart | Deedglass Docs</title>${ld(jsonLd({ path: '/quickstart/', title: 'Quickstart', description: 'd' }))}`;
+  const canon = (p) => `<link rel="canonical" href="https://docs.deedglass.com${p}"/>`;
+  const good = `<title>Quickstart | Deedglass Docs</title>${canon('/quickstart/')}${ld(jsonLd({ path: '/quickstart/', title: 'Quickstart', description: 'd' }))}`;
   assert.deepEqual(pageProblems('/quickstart/', good), []);
+  // seo-aeo-v1: a step-by-step page carries a HowTo beside its TechArticle, steps pointing at its own headings.
+  const headings = [{ depth: 2, slug: 'install', text: 'Install' }, { depth: 2, slug: 'run', text: 'Run it' }, { depth: 2, slug: 'next-steps', text: 'Next steps' }];
+  const how = jsonLd({ path: '/quickstart/', title: 'Quickstart', description: 'd', headings });
+  assert.deepEqual(how['@graph'].map((n) => n['@type']), ['TechArticle', 'HowTo']);
+  assert.deepEqual(how['@graph'][1].step.map((st) => st.name), ['Install', 'Run it']);
+  const withHow = `<title>Quickstart | Deedglass Docs</title>${canon('/quickstart/')}${ld(how)}<h2 id="install">Install</h2><h2 id="run">Run it</h2>`;
+  assert.deepEqual(pageProblems('/quickstart/', withHow), []);
+  assert.match(pageProblems('/quickstart/', withHow.replace('id="run"', 'id="x"')).join('\n'), /isn't on the page/);
+  assert.equal(jsonLd({ path: '/concepts/deeds/', title: 'Deeds', description: 'd', headings })['@type'], 'TechArticle');
+  assert.match(pageProblems('/quickstart/', good.replace(canon('/quickstart/'), canon('/faq/'))).join('\n'), /canonical/);
+  const noted = `${good}<div class="sl-markdown-content"><aside><p>This page is <code>docs/X.md</code> in the Deedglass repo, imported at build time.</p></aside><p>Body.</p></div>`;
+  assert.match(pageProblems('/quickstart/', noted).join('\n'), /imported-file note/);
   assert.deepEqual(pageProblems('/errors/x/', '<title>x</title>'), ['/errors/x/: a thin page without noindex']);
   assert.match(pageProblems('/faq/', '<title>FAQ</title><meta name="robots" content="noindex, follow">').join('\n'), /noindex on a page that should be indexed/);
   assert.match(pageProblems('/faq/', `<title>${'x'.repeat(61)}</title>`).join('\n'), /61 characters/);
-  assert.match(pageProblems('/', good).join('\n'), /not WebSite/);
+  assert.match(pageProblems('/', good).join('\n'), /no WebSite/);
   assert.ok(!ldScript({ headline: '</script><script>alert(1)</script>' }).includes('<'), 'JSON-LD escapes <');
+});
+
+test('llms (seo-aeo-v1): the imported-file note is left out of the llms files, the page text around it stays', async () => {
+  const { dropSourceNotes } = await import('../postbuild.mjs');
+  const page = 'Intro line.\n\nSource\n\nThis page is `docs/INSTALL.md` in the Deedglass repo, imported at build time.\n\nNext page text.';
+  assert.equal(dropSourceNotes(page), 'Intro line.\n\nNext page text.');
+  const part = 'Body.\nSource\n\nThis page is part of `docs/LIMITATIONS.md` in the Deedglass repo, imported at build time. [Every limit, by part](/security/limitations/).\n';
+  assert.equal(dropSourceNotes(part), 'Body.\n');
+  assert.equal(dropSourceNotes('Source\n\nSomething else.\n'), 'Source\n\nSomething else.\n');
 });
 
 test('robots.txt (DOC-03): named groups, each repeating Disallow: /_kit/, plus * and the sitemap', async () => {

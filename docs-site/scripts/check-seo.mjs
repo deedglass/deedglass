@@ -3,7 +3,10 @@
 //   sitemap   no thin per-code page and no /_kit/ in it; lastmod on (almost) every URL, not all one date
 //   noindex   every thin page says noindex; no other page does
 //   titles    every indexed page's <title> is at most 60 characters
-//   json-ld   every indexed page has one JSON-LD block: TechArticle (WebSite on the home page)
+//   json-ld   every indexed page has one JSON-LD block: TechArticle (WebSite on the home page); step-by-step pages
+//             carry it in an @graph with a HowTo whose steps are anchors on the page (seo-aeo-v1)
+//   canonical every indexed page's canonical is its own URL (seo-aeo-v1)
+//   answer    an indexed page doesn't open with the imported-file note: its first paragraph is its own (seo-aeo-v1)
 //   robots    named groups for search, AI retrieval and AI training, each repeating Disallow: /_kit/
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
@@ -60,9 +63,24 @@ export function pageProblems(path, html) {
       out.push(`${path}: JSON-LD doesn't parse: ${e.message}`);
     }
     const want = path === '/' ? 'WebSite' : 'TechArticle';
-    if (o && o['@type'] !== want) out.push(`${path}: JSON-LD is ${o['@type']}, not ${want}`);
-    if (o && want === 'TechArticle' && (!o.headline || o.url !== SITE + path)) out.push(`${path}: JSON-LD needs a headline and url ${SITE + path}`);
+    const nodes = o ? (o['@graph'] ?? [o]) : [];
+    const main = nodes.find((n) => n['@type'] === want);
+    if (o && !main) out.push(`${path}: JSON-LD has no ${want}`);
+    if (main && want === 'TechArticle' && (!main.headline || main.url !== SITE + path)) out.push(`${path}: JSON-LD needs a headline and url ${SITE + path}`);
+    for (const n of nodes.filter((x) => x['@type'] === 'HowTo')) {
+      if (!Array.isArray(n.step) || n.step.length < 2) out.push(`${path}: a HowTo needs at least two steps`);
+      for (const st of n.step ?? []) {
+        const id = String(st.url ?? '').split('#')[1];
+        if (!id || !html.includes(`id="${id}"`)) out.push(`${path}: HowTo step "${st.name}" points at #${id}, which isn't on the page`);
+      }
+    }
+    if (o && nodes.some((n) => !['WebSite', 'TechArticle', 'HowTo'].includes(n['@type']))) out.push(`${path}: unexpected JSON-LD type`);
   }
+  const canonical = /<link rel="canonical" href="([^"]+)"/.exec(html)?.[1];
+  if (canonical !== SITE + path) out.push(`${path}: canonical ${canonical ?? '(none)'} is not ${SITE + path}`);
+  const content = /<div class="sl-markdown-content">([\s\S]*)/.exec(html)?.[1] ?? '';
+  const first = /<(p|aside|ul|ol|h2|h3|pre|table)[\s>][\s\S]*?<\/\1>/.exec(content)?.[0] ?? '';
+  if (/imported at build time/.test(first)) out.push(`${path}: opens with the imported-file note, not its own first paragraph`);
   return out;
 }
 

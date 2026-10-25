@@ -4,10 +4,6 @@ description: "outboundmail sends plain-text email from one Google Workspace mail
 imported: "docs/connectors/outbound_mail.md"
 editUrl: false
 ---
-:::note[Source]
-This page is `docs/connectors/outbound_mail.md` in the Deedglass repo, imported at build time.
-:::
-
 `outbound_mail` sends plain-text email from one Google Workspace mailbox on a sending domain,
 through the Gmail API's `messages.send`, and reads Gmail's Sent copy back. It exists for one
 customer: Deedglass's own growth engine. It is **not** in release builds.
@@ -87,3 +83,7 @@ two unsubscribe headers. All equal: L1 VERIFIED. Any difference: MISMATCH. Not f
 
 Drafts, HTML, attachments, images, open or click tracking, cc or bcc, retries, more than one
 mailbox per connector, or anything at all in a release build.
+
+:::note[Source]
+This page is `docs/connectors/outbound_mail.md` in the Deedglass repo, imported at build time.
+:::

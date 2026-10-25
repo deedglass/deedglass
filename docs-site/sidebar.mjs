@@ -95,6 +95,8 @@ export const sidebar = clean([
       p('guides/badge', 'Add the badge'),
       p('guides/scan-every-pull-request', 'Scan every pull request'),
       p('guides/policy-packs', 'Policy packs'),
+      p('guides/try-the-demo', 'Try the demo'),
+      p('guides/observe-beside-another-gate', 'Observe beside another gate'),
     ],
   },
   {
@@ -117,6 +119,7 @@ export const sidebar = clean([
       { label: 'Errors', link: '/errors/' },
       p('reference/scan-grade', 'How the scan grade is calculated'),
       p('reference/policy-language', 'Policy language'),
+      p('policies/errors', 'Policy diagnostics'),
       p('reference/deed-spec', 'Deed spec'),
       p('reference/intents', 'Signed intents spec'),
       {
@@ -134,6 +137,7 @@ export const sidebar = clean([
           p('reference/connectors/fhir', 'FHIR servers'),
           p('reference/connectors/mcp-http', 'Remote MCP servers'),
           p('reference/connectors/fake', 'fake (dev only)'),
+          p('reference/connectors/outbound-mail', 'Outbound mail (ops build)'),
         ],
       },
       { label: 'Configuration', link: '/reference/config/' },
@@ -166,6 +170,7 @@ export const sidebar = clean([
       },
       { label: 'Attack suite results', link: '/security/attack-suite/' },
       p('security/review', 'Security review'),
+      p('reference/security-pack', 'Security review pack'),
       p('security/data-handling', 'Data handling and privacy'),
       p('security/disclosure', 'Responsible disclosure'),
     ],

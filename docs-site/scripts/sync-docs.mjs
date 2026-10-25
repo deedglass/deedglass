@@ -276,7 +276,9 @@ function importDoc(src, slug) {
   const firstPara = md.split(/\n\s*\n/).map((p) => p.trim()).find((p) => p && !/^(#|```|\||>|-|\*\s|<|!\[|\d+\.)/.test(p)) ?? title;
   md = rewriteLinks(md, src);
   const fm = frontmatter({ title, description: describe(firstPara), imported: src, editUrl: false });
-  write(`${slug}.md`, fm + `:::note[Source]\nThis page is \`${src}\` in the Deedglass repo, imported at build time.\n:::\n\n` + md.trimStart());
+  // seo-aeo-v1: the source note goes last, so a page opens with its own first paragraph (the sentence search and
+  // answer engines quote), not with where the file lives.
+  write(`${slug}.md`, fm + md.trimStart().trimEnd() + `\n\n:::note[Source]\nThis page is \`${src}\` in the Deedglass repo, imported at build time.\n:::\n`);
 }
 
 /** Splits a Markdown file at its "## " headings: { head, sections: [{ heading, body }] }. */
@@ -321,11 +323,11 @@ function importLimits(md) {
   }
   const script = `<script>{const m=${JSON.stringify(moved)};const h=decodeURIComponent(location.hash.slice(1));if(m[h])location.replace("/${LIMITS_SLUG}/"+m[h]+"/#"+h)}</script>`;
   const body = [
-    `:::note[Source]\nThis page and the ${LIMITS_PARTS.length} pages below it are \`${LIMITS_FILE}\` in the Deedglass repo, split by part and imported at build time.\n:::\n`,
     intro,
     ...['Known limits in v1', 'Already running another gate?'].map((n) => rewriteLinks(keep(n).body, LIMITS_FILE).trim()),
     list.trim(),
     rewriteLinks(keep('What this page does not do').body, LIMITS_FILE).trim(),
+    `:::note[Source]\nThis page and the ${LIMITS_PARTS.length} pages below it are \`${LIMITS_FILE}\` in the Deedglass repo, split by part and imported at build time.\n:::`,
     script,
   ].join('\n\n');
   const title = h1 ? stripMd(h1[1]) : 'Limitations';
@@ -335,10 +337,12 @@ function importLimits(md) {
     const prev = i > 0 ? LIMITS_PARTS[i - 1] : null;
     const next = LIMITS_PARTS[i + 1] ?? null;
     let page = frontmatter({ title: p.title, description: p.description, imported: LIMITS_FILE, editUrl: false });
-    page += `:::note[Source]\nThis page is part of \`${LIMITS_FILE}\` in the Deedglass repo, imported at build time. [Every limit, by part](/${LIMITS_SLUG}/).\n:::\n\n`;
+    // seo-aeo-v1: the page opens with one plain sentence of what it covers (the part's description), then the limits.
+    page += `${p.description}\n\n`;
     page += byPart.get(p.slug).map((s) => rewriteLinks(s.body, LIMITS_FILE).trim()).join('\n\n') + '\n\n';
     page += `## More limits\n\n- [Limitations](/${LIMITS_SLUG}/): the known limits in v1, and every part\n`;
     for (const o of [prev, next].filter(Boolean)) page += `- [${o.title.replace(/^Limits: /, 'Limits of ')}](/${LIMITS_SLUG}/${o.slug}/)\n`;
+    page += `\n:::note[Source]\nThis page is part of \`${LIMITS_FILE}\` in the Deedglass repo, imported at build time. [Every limit, by part](/${LIMITS_SLUG}/).\n:::\n`;
     write(`${LIMITS_SLUG}/${p.slug}.md`, page);
   });
 }

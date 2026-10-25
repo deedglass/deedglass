@@ -4,10 +4,6 @@ description: "An agency or consultant builds agents for many clients. On Deedgla
 imported: "docs/AGENCIES.md"
 editUrl: false
 ---
-:::note[Source]
-This page is `docs/AGENCIES.md` in the Deedglass repo, imported at build time.
-:::
-
 An agency or consultant builds agents for many clients. On Deedglass each client is its own org, with
 its own sealed record chain and row-level security, and one person can belong to many orgs. The
 **Agency plan** (licence feature `agency`, the `agency_monthly` sku) adds the agency's view on top,
@@ -98,3 +94,7 @@ they understand ([LICENSING.md](/reference/engineering/licensing/)). A Pro or fo
 - It doesn't move a client between servers or hand a client's org over (not built yet).
 - It doesn't let one client see another, or let a client see the agency's other clients.
 - It doesn't host anything: the clients' data stays on the server you or they run.
+
+:::note[Source]
+This page is `docs/AGENCIES.md` in the Deedglass repo, imported at build time.
+:::
