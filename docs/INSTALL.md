@@ -17,7 +17,7 @@ Docker, on macOS or Linux (WSL 2 on Windows).
 ## The install script (macOS, Linux)
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/deedglass/deedglass/main/scripts/install.sh | sh
+curl -fsSL https://deedglass.com/install.sh | sh
 ```
 
 It downloads two files from the latest release, the archive for this machine and `checksums.txt`,
@@ -27,9 +27,14 @@ It runs nothing it downloads, asks for no password and never edits your shell pr
 directory isn't on your PATH it prints the line to add. `sh -s -- --version 0.2.1 --dir /usr/local/bin`
 picks a version and a directory. Read it first: [`scripts/install.sh`](../scripts/install.sh).
 
-Releases after 0.8.0 also carry the script as a release file, so it comes from the same GitHub
-downloads as the archive. Where `raw.githubusercontent.com` is slow to connect (on one network it
-took 50 s per connection), use:
+Where the files come from: `deedglass.com/dl/`, a byte-for-byte copy of each release's
+`checksums.txt`, its signature and the macOS and Linux archives, served by Cloudflare; any file the
+copy doesn't have comes from the GitHub release. The checks are the same either way: the sha256
+against `checksums.txt`, and the signature, which only this repository's release workflow can make.
+Each download gives up on a connection after 5 s and retries, because on one network GitHub's
+download hosts took 50-75 s to connect. `DEEDGLASS_MIRROR_URL=none` uses GitHub only.
+
+The same script is a file on each release since 0.9.0, if you'd rather fetch it from GitHub:
 
 ```sh
 curl -fsSL https://github.com/deedglass/deedglass/releases/latest/download/install.sh | sh

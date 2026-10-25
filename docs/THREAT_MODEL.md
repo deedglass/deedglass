@@ -69,7 +69,7 @@ make Deedglass do, and what a network attacker can forge.
 | B10 | A2A proxy → remote agent | Delegated messages, the chain, the peer credential; the peer's answers and card |
 | B11 | Files → offline checks | Debezium feeds (`witness debezium`), bundles and `timestamps.json` (`verify`, `verifiers/`) |
 | B12 | Coding agent → shell guard | The hook's JSON on stdin; the answer on stdout |
-| B13 | Release workflow → users | Archives, checksums, signatures, SBOMs, images, npm packages, `install.sh` |
+| B13 | Release workflow → users | Archives, checksums, signatures, SBOMs, images, npm packages, `install.sh`, and their copy on deedglass.com/dl |
 
 ## Attackers
 
@@ -258,7 +258,7 @@ E elevation of privilege. "Test" names the test or attack case that exercises th
 
 | | Threat | Control | Test | Residual |
 |---|---|---|---|---|
-| T | A12 swaps a release with matching checksums | `checksums.txt` signed with keyless cosign by `release.yml` for a `v*` tag; `install.sh` checks it when cosign is installed | `TestInstallScript` | Without cosign the script checks sha256 only and prints the signature command. |
+| T | A12 swaps a release with matching checksums | `checksums.txt` signed with keyless cosign by `release.yml` for a `v*` tag; `install.sh` checks it when cosign is installed | `TestInstallScript`, `TestInstallScriptMirror` | Without cosign the script checks sha256 only and prints the signature command. The deedglass.com/dl copy is checked the same way; without cosign, trusting it is trusting deedglass.com, which served the script. |
 | T | A release workflow change or an action update ships code | Every action pinned to a commit SHA; least-privilege tokens; CodeQL on the workflows | `make workflows-check`, `codeql` | A write credential can still push a tag until the founder's tag ruleset and npm reviewer exist (audit H-01, H-02). |
 | E | macOS's quarantine is cleared for an unnotarized binary | The cask no longer clears it | `.goreleaser.yaml` | Notarization isn't set up yet. |
 
