@@ -7,6 +7,25 @@ this file by `scripts/release-notes.sh`.
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-10-25
+
+Your own Postgres in one command, and MCP tool names the Anthropic and OpenAI APIs accept. `deedglass connect
+<postgres-url>` tells Supabase, Neon and plain Postgres apart, runs read-only checks and prints one
+plan; `--apply` sets up the connector, the starter policy and an agent, and the URL's password is
+never printed or stored (ADR-115). A new stack starts on `postgres-check`, which checks every write
+at Proven instead of blocking it. Every client command now finds the server `deedglass init` set up,
+on any port. MCP tools are listed as `postgres_query` and `deedglass_check_approval`, names the
+Anthropic and OpenAI APIs accept, so framework recipes no longer rename them; the dotted names still
+work on `tools/call` and stay the names in policies, records and the REST API. Recipes for nine
+agent frameworks, a FHIR write-integrity benchmark on Medplum, and security hardening: the A2A proxy
+refuses what a web page can send and now needs the agent's key as a bearer token (a change for A2A
+clients), `install.sh` checks the release signature, and attack group T (ADR-116) runs. Nothing
+changes for existing records: the deed format is unchanged, and Proven, Checked and Claimed mean
+what they meant in 0.7.0. Known limits: no live model run backs the recipes (there is no model key in
+CI); a long connector name plus a long tool name can pass OpenAI's 64-character limit; the FHIR
+benchmark covers Medplum only, and Deedglass caught 4 of its 11 diverging scenarios. No new Go
+dependency, no schema migration, and `formula_version` stays 1.
+
 ### Added
 
 - `deedglass connect <postgres-url>`: your own Postgres behind Deedglass in one command
@@ -29,6 +48,18 @@ this file by `scripts/release-notes.sh`.
 - `init` points `~/.deedglass/current.json` (0600; the server URL and key file paths, never a key)
   at its stack, and `mcp serve` falls back to it, so one Claude Code entry at user scope works in
   every project. `DEEDGLASS_API_KEY_FILE` names a key file for `mcp serve`.
+- **A FHIR write-integrity benchmark** (`make fhir-bench`, `corpus/fhir/BENCHMARK.md`): 17
+  Medplum scenarios (11 that diverge, 6 controls) where a FHIR write is answered 200/201 while
+  Medplum stores something other than what the agent reports. Facts come from Medplum's own history
+  tables. Deedglass caught 4 of 11 (1 before, 3 after), 0 false alarms; trusting the HTTP status
+  caught 0. The 7 misses are listed. Synthetic data only; not in CI, `TestGoldenReplay` replays the
+  committed run.
+- **Agent framework recipes** (`docs/integrations/`, the docs site's "Agent frameworks" group): the
+  Vercel AI SDK, Claude Agent SDK, OpenAI Agents SDK, LangChain, Mastra, Pydantic AI, Google ADK,
+  CrewAI and LlamaIndex, each a runnable file of 15 lines or fewer with pinned packages in
+  `examples/frameworks/` and a `check` that needs no model key (weekly workflow, not required).
+- `glama.json` at the repository root, and `release.yml` publishes `server.json` to the MCP
+  Registry after npm on every stable tag.
 
 ### Changed
 
@@ -593,7 +624,8 @@ See [KNOWN_ISSUES.md](KNOWN_ISSUES.md): what happens, who is affected, the worka
 See [docs/LIMITATIONS.md](docs/LIMITATIONS.md). In short: L2 covers Postgres only, seal keys are per
 deployment, and Deedglass trusts the Postgres server and the host it runs on.
 
-[Unreleased]: https://github.com/deedglass/deedglass/compare/v0.7.0...HEAD
+[Unreleased]: https://github.com/deedglass/deedglass/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/deedglass/deedglass/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/deedglass/deedglass/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/deedglass/deedglass/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/deedglass/deedglass/compare/v0.4.0...v0.5.0
