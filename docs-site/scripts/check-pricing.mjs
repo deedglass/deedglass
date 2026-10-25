@@ -10,7 +10,14 @@ import { pages, site } from './lib-pages.mjs';
 // DL-131 (free while we grow): every feature is free, no paid tier is named in the docs, and the
 // FAQ answer is the approved sentence. P-086 (the ee/ licence) still holds.
 export const FAQ_FREE = "Yes. Every Deedglass feature is free while we grow, with no licence key: the core is Apache-2.0, and the features in `ee/` are free to use and stay FSL-1.1-ALv2. We plan paid options for teams and a hosted service later; anything free today stays free for people who run Deedglass themselves.";
-export const banned = [/\$199/, /\$390/, /deedglass\.com\/check/, /[Ff]ounding band/, /deedglass\.com\/pro\b/, /deedglass\.com\/agencies/]; // DL-131 withdrew the paid tiers and their buy pages; the retired $390 band stays banned
+// Phrases in page text, not URL checks: plain substring tests (DL-131 withdrew the paid tiers and their buy pages; the retired $390 band stays banned).
+const phrase = (p) => ({ test: (s) => s.includes(p), toString: () => p });
+// word: the phrase not followed by a letter, digit or '-' (so deedglass.com/pricing never matches deedglass.com/pro).
+const word = (p) => ({ toString: () => p, test: (s) => {
+  for (let i = s.indexOf(p); i >= 0; i = s.indexOf(p, i + 1)) if (!/[A-Za-z0-9-]/.test(s.charAt(i + p.length))) return true;
+  return false;
+} });
+export const banned = [/\$199/, /\$390/, /[Ff]ounding band/, phrase('deedglass.com/check'), word('deedglass.com/pro'), phrase('deedglass.com/agencies')];
 // The repo is public (docs/PUBLIC_REPO_SWITCH.md): "open source" is allowed now.
 export const pricingProblems = (text) => banned.filter((re) => re.test(text)).map(String);
 if (process.argv[1] && import.meta.url.endsWith(process.argv[1].split('/').pop())) main();
