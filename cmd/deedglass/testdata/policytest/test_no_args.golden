@@ -2,4 +2,4 @@ exit 2
 --- stdout
 --- stderr
 ✕ deedglass policy test needs a policy file or --dir.
-  For example: deedglass policy test examples/policies/postgres-safe.yaml
+  next  For example: deedglass policy test examples/policies/postgres-safe.yaml

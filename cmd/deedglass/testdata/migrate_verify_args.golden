@@ -2,4 +2,4 @@ exit 2
 --- stdout
 --- stderr
 ✕ deedglass migrate verify takes no arguments (got "extra").
-  Run deedglass help migrate verify.
+  next  Run deedglass help migrate verify.

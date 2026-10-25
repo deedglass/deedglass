@@ -2,4 +2,4 @@ exit 2
 --- stdout
 --- stderr
 ✕ --args must be a JSON object.
-  For example: --args '{"amount": 2000}'
+  next  For example: --args '{"amount": 2000}'

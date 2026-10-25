@@ -4,5 +4,6 @@ deedglass config print · Show the effective config, secrets hidden
 
 Usage  deedglass config print [--json]
 
-Global flags  --json · --server <url> · --api-key <key> · --org <id> · --no-color · -v
+Global flags  --json · --server <url> · --api-key <key> · --org <id> ·
+              --no-color · -v
 --- stderr

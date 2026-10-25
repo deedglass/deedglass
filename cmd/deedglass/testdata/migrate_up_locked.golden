@@ -2,4 +2,4 @@ exit 1
 --- stdout
 --- stderr
 ✕ Another deedglass is migrating this database.
-  Wait for it to finish, or look for the lock holder in pg_locks.
+  next  Wait for it to finish, or look for the lock holder in pg_locks.

@@ -2,4 +2,4 @@ exit 2
 --- stdout
 --- stderr
 ✕ deedglass dev sign-intent needs --org and --agent, or the agent's API key.
-  Pass --org org_… --agent agt_…, or set DEEDGLASS_API_KEY to the agent's key so whoami can name them.
+  next  Pass --org org_… --agent agt_…, or set DEEDGLASS_API_KEY to the agent's key so whoami can name them.

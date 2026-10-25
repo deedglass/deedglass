@@ -15,6 +15,60 @@ call sites named below; when the code and this page differ, the code is right an
 fixed. Voice rules: `DEEDGLASS_BRAND.md` §3 and §4 (calm, exact, sentence case, a next step on every
 error, no exclamation marks, no emoji).
 
+## CLI style (every command)
+
+One terminal style for every `deedglass` command, in `cmd/deedglass/internal/ui` (symbols, colour,
+alignment, wrapping, the progress line) and `cmd/deedglass/main.go` (`report`: how errors print).
+The goldens under `cmd/deedglass/testdata/` pin the output; `TestNoRawGoErrors` fails when Go or
+driver text reaches a person.
+
+**Symbols.** Each one comes with a word; colour only repeats what the symbol and word say, so the
+output reads the same with `NO_COLOR`, `--no-color`, `TERM=dumb` or off a terminal (no colour then).
+
+| Symbol | Colour | Means | Example |
+|---|---|---|---|
+| `✓` | teal | done, matches, valid | `✓ Postgres  127.0.0.1:55432 · wal_level logical` |
+| `✕` | red | failed, denied, doesn't match | `✕ denied · postgres.execute` |
+| `○` | amber | a warning or notice; can't check | `○ Seal keys came from the bundle itself.` |
+| `◐` | violet | waiting: pending, or a step still running | `◐ pending approval · postgres.undo` |
+| `·` | none | separates facts on one line | `deedglass 0.8.0 · commit a21947c` |
+
+The brand keeps exclamation marks out of copy, so the warning symbol is `○`, not `!`.
+
+**Errors: what happened · why · what to do.**
+
+```
+✕ Can't read /x/policy.yaml: no such file.        what happened, then why (one sentence each)
+  the server answered 503                         optional detail lines (Detail), indented
+  next  Check the path and try again.             always last: what to do now
+```
+
+- The first line starts with a capital (unless it starts with a command, flag, path or id) and ends
+  with a period. `report` and `failNext` add both when a call site forgets.
+- Every error has a `next` line. Calm states that aren't errors (no licence yet, nothing to
+  change) print without `✕` and without the label.
+- No Go or library text: `open x: no such file or directory`, `dial tcp …: connection refused`,
+  `invalid character … looking for beginning of value`, `context deadline exceeded`, pgx's DSN parser.
+  `plainError` (`cmd/deedglass/plain.go`) rewrites the ones that slip through; say it well at the
+  call site first.
+- `--json` puts the same sentence and next step in the error envelope on stderr
+  (`{"error":{"code","message","doc_url","type"}}`); the exit code is the same as in text mode.
+
+**Tables.** Upper-case dim headers, columns padded by display width (`ui.Pad`, `ui.Width`, not
+bytes), a footer like `3 of 3` when the list can be longer. Ids are shortened with `…` in tables and
+printed whole in `--json`.
+
+**Width.** Help and long prose wrap to the terminal (at most 100 columns, 80 when unknown) with a
+hanging indent (`ui.Wrap`); a value list breaks after `|`. Commands, URLs and keys are never broken.
+
+**Progress.** A step that may take more than a second gets a progress line (`ui.Spinner`): on a
+terminal, after 0.4 s, `◐ Postgres  downloading the Postgres 18.6 image · 12 s`, redrawn in place
+and cleared before the step's own `✓` or `✕` line. Off a terminal, with `--json` or
+`DEEDGLASS_NO_ANIM`, nothing is drawn; a note (the first image download) prints once.
+
+**`--json`.** Every read command takes `--json` and prints one JSON document (or NDJSON for a
+stream) on stdout and nothing else there.
+
 ## Agents & Stop
 
 ### Console (S08 §5.2; S25 and S26 build the screens)

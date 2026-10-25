@@ -201,6 +201,10 @@ func dispatch(ctx context.Context, e *Env, args []string) error {
 		cmd.Flags(fs)
 	}
 	if err := fs.Parse(cmdArgs); err != nil {
+		if bad, ok := strings.CutPrefix(err.Error(), "flag provided but not defined: "); ok {
+			return usageErr(fmt.Errorf("deedglass %s has no flag %s", strings.Join(cmd.Path, " "), bad),
+				"Run deedglass help "+strings.Join(cmd.Path, " ")+" for its flags.")
+		}
 		return usageErr(fmt.Errorf("%s: %v", "deedglass "+strings.Join(cmd.Path, " "), err),
 			"Run deedglass help "+strings.Join(cmd.Path, " ")+" for its flags.")
 	}
@@ -360,7 +364,7 @@ func report(e *Env, err error) int {
 		body := map[string]any{
 			"type":    "invalid_request_error",
 			"code":    x.ErrCode,
-			"message": sentence(x.Err.Error()) + nextSuffix(x.Next),
+			"message": sentence(capitalize(plainError(x.Err.Error()))) + nextSuffix(x.Next),
 			"doc_url": errorDocPrefix + x.ErrCode,
 		}
 		if x.Code == ExitNotAuthed {
@@ -374,7 +378,7 @@ func report(e *Env, err error) int {
 		enc.Encode(map[string]any{"error": body})
 		return x.Code
 	}
-	msg := sentence(x.Err.Error())
+	msg := sentence(capitalize(plainError(x.Err.Error())))
 	if x.Plain {
 		fmt.Fprintln(e.Stderr, msg)
 		if x.Next != "" {
@@ -384,12 +388,17 @@ func report(e *Env, err error) int {
 	}
 	fmt.Fprintln(e.Stderr, e.Style.FailLine(msg))
 	for _, d := range x.Detail {
-		fmt.Fprintln(e.Stderr, "  "+d)
+		fmt.Fprintln(e.Stderr, "  "+plainError(d))
 	}
 	if x.Next != "" {
-		fmt.Fprintln(e.Stderr, "  "+x.Next)
+		fmt.Fprintln(e.Stderr, nextLine(e.Style, x.Next))
 	}
 	return x.Code
+}
+
+// nextLine is the last line of every error (docs/COPY_CATALOG.md › CLI style): what to do now.
+func nextLine(st ui.Style, next string) string {
+	return "  " + st.Dim("next") + "  " + next
 }
 
 // sentence ends s with a period unless it already ends with punctuation.

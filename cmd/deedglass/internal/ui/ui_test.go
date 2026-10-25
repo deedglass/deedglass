@@ -2,6 +2,7 @@ package ui
 
 import (
 	"os"
+	"strings"
 	"testing"
 )
 
@@ -66,5 +67,22 @@ func TestWidthEastAsian(t *testing.T) {
 	}
 	if Pad("注文", 6) != "注文  " {
 		t.Fatalf("%q", Pad("注文", 6))
+	}
+}
+
+func TestWrap(t *testing.T) {
+	got := Wrap("  one two three four five six seven eight nine ten eleven twelve", 24, 2)
+	want := []string{"  one two three four", "    five six seven eight", "    nine ten eleven", "    twelve"}
+	if strings.Join(got, "|") != strings.Join(want, "|") {
+		t.Fatalf("got %q", got)
+	}
+	if got := Wrap("short", 80, 0); len(got) != 1 || got[0] != "short" {
+		t.Fatalf("got %q", got)
+	}
+	long := "see https://docs.deedglass.com/a/very/long/path/that/does/not/fit/anywhere ok"
+	for _, l := range Wrap(long, 30, 0) {
+		if strings.Contains(l, "https") && !strings.HasPrefix(l, "https") {
+			t.Fatalf("a long word shares a line it overflows: %q", l)
+		}
 	}
 }

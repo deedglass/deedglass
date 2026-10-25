@@ -4,4 +4,4 @@ exit 1
   The change is sealed as a record.
   Type the policy name to confirm: --- stderr
 [31m✕[0m Nothing changed: the confirmation didn't match.
-  Run it again and type postgres-safe, or press Ctrl-C to leave the enforced policy as it is.
+  [2mnext[0m  Run it again and type postgres-safe, or press Ctrl-C to leave the enforced policy as it is.

@@ -2,4 +2,4 @@ exit 3
 --- stdout
 --- stderr
 ✕ This command needs an admin API key.
-  Set DEEDGLASS_API_KEY or pass --api-key. Create one with deedglass org keys create on the server.
+  next  Set DEEDGLASS_API_KEY or pass --api-key. Create one with deedglass org keys create on the server.

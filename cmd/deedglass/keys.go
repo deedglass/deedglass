@@ -456,7 +456,7 @@ func openKeys(ctx context.Context, cfg *config.Config) (keyStore, error) {
 		}
 		return nil, &ExitError{Code: ExitFailure, ErrCode: "database_unreachable",
 			Err:  fmt.Errorf("Can't connect to %s as %s: %s", t.addr(), t.User, connectReason(cause, cfg.DatabaseURL.Reveal())),
-			Next: "Is Postgres running? Try make dev."}
+			Next: "Check that Postgres is running, or run deedglass init for a local stack."}
 	}
 	return st, nil
 }

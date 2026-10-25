@@ -2,4 +2,4 @@ exit 2
 --- stdout
 --- stderr
 ✕ --format must be text, json or github (got "xml").
-  For example: deedglass policy lint --format github policies/
+  next  For example: deedglass policy lint --format github policies/

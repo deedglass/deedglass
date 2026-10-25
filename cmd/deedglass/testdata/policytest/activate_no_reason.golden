@@ -1,5 +1,5 @@
 exit 2
 --- stdout
 --- stderr
-✕ a reason is required; it goes into the deed.
-  deedglass policy activate postgres-safe --version 1 --mode shadow --reason "Watch it for a day before enforcing"
+✕ A reason is required; it goes into the deed.
+  next  deedglass policy activate postgres-safe --version 1 --mode shadow --reason "Watch it for a day before enforcing"

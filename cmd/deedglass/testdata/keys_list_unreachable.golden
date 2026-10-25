@@ -2,4 +2,4 @@ exit 1
 --- stdout
 --- stderr
 ✕ Can't connect to 127.0.0.1:55432 as deedglass_app: connection refused.
-  Is Postgres running? Try make dev.
+  next  Check that Postgres is running, or run deedglass init for a local stack.

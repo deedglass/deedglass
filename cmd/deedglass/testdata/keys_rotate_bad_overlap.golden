@@ -2,4 +2,4 @@ exit 2
 --- stdout
 --- stderr
 ✕ --overlap must be from 1s to 168h (got 200h0m0s).
-  For example --overlap 5m.
+  next  For example --overlap 5m.

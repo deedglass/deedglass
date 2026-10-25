@@ -282,7 +282,18 @@ func renderStep(e *Env, s setup.StepResult) {
 		}
 		return
 	}
-	fmt.Fprintf(e.Stdout, "%s %-23s %s\n", sym, s.Title, s.Detail)
+	// Long details wrap under themselves, so a step stays readable at 80 columns.
+	width := e.Width
+	if width <= 0 {
+		width = 100
+	}
+	for i, l := range ui.Wrap(fmt.Sprintf("%-23s %s", s.Title, s.Detail), width-2, 24) {
+		if i == 0 {
+			fmt.Fprintf(e.Stdout, "%s %s\n", sym, l)
+			continue
+		}
+		fmt.Fprintf(e.Stdout, "  %s\n", l)
+	}
 	if s.Secret != "" {
 		fmt.Fprintf(e.Stdout, "    %s   copy it now; it isn't shown again\n", s.Secret)
 	}

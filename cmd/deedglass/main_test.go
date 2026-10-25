@@ -171,15 +171,15 @@ func TestExitCodes(t *testing.T) {
 		{[]string{"--json", "help"}, 0, "", `"path":["agent","keys","create"]`},
 		{[]string{"version", "extra"}, 2, "takes no arguments", ""},
 		{[]string{"version", "--pre"}, 2, "--pre only works with --check.", ""},
-		{[]string{"version", "--bogus"}, 2, "flag provided but not defined: -bogus", ""},
+		{[]string{"version", "--bogus"}, 2, "deedglass version has no flag -bogus", ""},
 		{[]string{"version", "--server", "http://127.0.0.1:1"}, 1, "Can't reach the server at http://127.0.0.1:1", ""},
 		{[]string{"--server=ftp://x.example", "version"}, 2, "--server must be an http or https URL", ""},
 		{[]string{"serve", "extra"}, 2, "deedglass serve takes no arguments", ""},
-		{[]string{"version", "--server"}, 2, "flag --server needs a value", ""},
+		{[]string{"version", "--server"}, 2, "Flag --server needs a value", ""},
 		{[]string{"-vv", "--org", "org_x", "--api-key", "k", "version"}, 0, "", "deedglass 0.1.0-dev"},
 		{[]string{"--verbose", "version"}, 0, "", "deedglass 0.1.0-dev"},
 		{[]string{"config", "print", "extra"}, 2, "takes no arguments", ""},
-		{[]string{"--bogus"}, 2, "flag --bogus needs a command before it", ""},
+		{[]string{"--bogus"}, 2, "Flag --bogus needs a command before it", ""},
 		{[]string{"-h"}, 0, "", "deedglass · the execution and accountability layer"},
 		{[]string{"verify", "--", "-h"}, 2, "Can't read -h: no such file", ""},
 		{[]string{"dev", "id", "agt"}, 0, "", "agt_"},
@@ -335,7 +335,7 @@ func TestConfigPrintCanary(t *testing.T) {
 func TestReportPlainError(t *testing.T) {
 	var errb bytes.Buffer
 	e := &Env{Stderr: &errb}
-	if code := report(e, os.ErrNotExist); code != ExitFailure || errb.String() != "✕ file does not exist.\n" {
+	if code := report(e, os.ErrNotExist); code != ExitFailure || errb.String() != "✕ File does not exist.\n" {
 		t.Fatalf("%d %q", code, errb.String())
 	}
 	errb.Reset()

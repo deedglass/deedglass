@@ -39,9 +39,9 @@ func failNext(e *Env, exit int, code, msg, next string) error {
 	if e.Globals.JSON {
 		return &ExitError{Code: exit, ErrCode: code, Err: errors.New(strings.TrimSuffix(msg, ".")), Next: next}
 	}
-	fmt.Fprintln(e.Stderr, e.Style.FailLine(msg))
+	fmt.Fprintln(e.Stderr, e.Style.FailLine(capitalize(plainError(msg))))
 	if next != "" {
-		fmt.Fprintln(e.Stderr, "  next  "+next)
+		fmt.Fprintln(e.Stderr, nextLine(e.Style, next))
 	}
 	return &ExitError{Code: exit, ErrCode: code, Err: errors.New(msg), printed: true}
 }

@@ -82,7 +82,9 @@ func runApprovalsList(ctx context.Context, e *Env, args []string) error {
 		return nil
 	}
 	now := time.Now()
-	rows := make([][]string, 0, len(l.Data))
+	rows := make([][]string, 0, len(l.Data)+1)
+	st := e.Style
+	rows = append(rows, []string{" ", st.Dim("APPROVAL"), st.Dim("AGENT"), st.Dim("TOOL"), st.Dim("RULE"), st.Dim("SIGNED"), st.Dim("WHEN")})
 	for _, a := range l.Data {
 		sym, when := statusSymbol(e, string(a.Status)), ""
 		if a.Status == approve.StatusPending {

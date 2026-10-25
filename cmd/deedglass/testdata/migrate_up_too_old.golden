@@ -2,4 +2,4 @@ exit 1
 --- stdout
 --- stderr
 ✕ Deedglass needs PostgreSQL 16 or newer. This server is 15.8.
-  Upgrade Postgres, or point at a PostgreSQL 16, 17 or 18 server.
+  next  Upgrade Postgres, or point at a PostgreSQL 16, 17 or 18 server.

@@ -2,4 +2,4 @@ exit 1
 --- stdout
 --- stderr
 ✕ Prod refuses to migrate as a superuser (deedglass_migrator).
-  Run migrations as deedglass_migrator.
+  next  Run migrations as deedglass_migrator.

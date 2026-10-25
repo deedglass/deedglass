@@ -108,3 +108,54 @@ func wide(r rune) bool {
 		(r >= 0xFF00 && r <= 0xFF60) || (r >= 0xFFE0 && r <= 0xFFE6) || (r >= 0x1F300 && r <= 0x1F64F) ||
 		(r >= 0x1F900 && r <= 0x1F9FF) || (r >= 0x20000 && r <= 0x3FFFD)
 }
+
+// Wrap breaks t into lines at most width columns wide, at spaces, keeping t's leading spaces on the
+// first line and indenting the lines after it by hang more columns than that. A word longer than a
+// line breaks after a "|" when it has one (a flag's value list); otherwise it gets a line of its own
+// rather than being cut (a URL). width < 20 means no wrapping.
+func Wrap(t string, width, hang int) []string {
+	lead := len(t) - len(strings.TrimLeft(t, " "))
+	if width < 20 || Width(t) <= width {
+		return []string{t}
+	}
+	type tok struct {
+		s    string
+		glue bool // no space before it
+	}
+	var toks []tok
+	for _, w := range strings.Fields(t) {
+		if Width(w) <= width-lead-hang || !strings.Contains(w, "|") {
+			toks = append(toks, tok{s: w})
+			continue
+		}
+		parts := strings.SplitAfter(w, "|")
+		for i, p := range parts {
+			if p != "" {
+				toks = append(toks, tok{s: p, glue: i > 0})
+			}
+		}
+	}
+	var out []string
+	cur, curW := strings.Repeat(" ", lead), lead
+	indent := strings.Repeat(" ", lead+hang)
+	start := true
+	for _, tk := range toks {
+		sep := 1
+		if tk.glue {
+			sep = 0
+		}
+		ww := Width(tk.s)
+		if !start && curW+sep+ww > width {
+			out = append(out, cur)
+			cur, curW, start = indent, lead+hang, true
+		}
+		if !start && sep == 1 {
+			cur += " "
+			curW++
+		}
+		cur += tk.s
+		curW += ww
+		start = false
+	}
+	return append(out, cur)
+}

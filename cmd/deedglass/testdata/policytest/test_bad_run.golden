@@ -2,4 +2,4 @@ exit 2
 --- stdout
 --- stderr
 ✕ --run "(" isn't a regular expression.
-  For example: --run 'DROP|TRUNCATE'
+  next  For example: --run 'DROP|TRUNCATE'

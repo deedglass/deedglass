@@ -1,5 +1,5 @@
 exit 2
 --- stdout
 --- stderr
-✕ can't read testdata/policy/nope.yaml: no such file or directory.
-  Check the path and try again.
+✕ Can't read testdata/policy/nope.yaml: no such file.
+  next  Check the path and try again.

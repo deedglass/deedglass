@@ -2,4 +2,4 @@ exit 2
 --- stdout
 --- stderr
 ✕ testdata/policytest/no_policy_key.cases.yaml has no policy: key, so Deedglass doesn't know which policy to test.
-  Add policy: <file>.yaml at the top of the cases file, or pass the policy file instead.
+  next  Add policy: <file>.yaml at the top of the cases file, or pass the policy file instead.

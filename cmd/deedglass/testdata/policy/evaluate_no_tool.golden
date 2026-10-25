@@ -2,4 +2,4 @@ exit 2
 --- stdout
 --- stderr
 ✕ deedglass policy evaluate needs --tool <name> (or an --input file with one).
-  For example: --tool postgres.query
+  next  For example: --tool postgres.query

@@ -2,4 +2,4 @@ exit 1
 --- stdout
 --- stderr
 ✕ $TMP/intent/support-bot.pem already exists.
-  Keep using it, or pass --force to replace it (register the new key before you remove the old one).
+  next  Keep using it, or pass --force to replace it (register the new key before you remove the old one).

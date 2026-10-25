@@ -2,4 +2,4 @@ exit 2
 --- stdout
 --- stderr
 ✕ --usage calls_minute=lots is not a whole number.
-  Counters are whole numbers; money is in minor units (12000 is $120.00).
+  next  Counters are whole numbers; money is in minor units (12000 is $120.00).

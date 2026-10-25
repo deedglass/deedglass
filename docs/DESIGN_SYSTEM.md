@@ -16,6 +16,10 @@ below. `DEEDGLASS_BRAND.md` wins any disagreement; the skills are a lens, never 
 - Machine values (ids, hashes, tool names, SQL) are Geist Mono; people's words are Inter.
 - No hex value outside `tokens.json` (a Vitest check), no inline style, no inline script.
 
+The terminal has its own short style guide, the same rules in sixteen colours: symbols with words,
+errors that end with a next step, aligned columns, a progress line for slow steps
+([COPY_CATALOG.md › CLI style](COPY_CATALOG.md#cli-style-every-command)).
+
 ## Tokens
 
 <!-- tokens:begin -->

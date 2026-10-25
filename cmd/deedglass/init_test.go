@@ -32,7 +32,7 @@ func TestInitUsage(t *testing.T) {
 			t.Errorf("%v: %d %q", c.args, r.code, r.stderr)
 		}
 	}
-	if r := cli(t, nil, false, "init", "--stop", "--dir", t.TempDir()); r.code != ExitFailure || !strings.Contains(r.stderr, "there's no local stack in this directory") {
+	if r := cli(t, nil, false, "init", "--stop", "--dir", t.TempDir()); r.code != ExitFailure || !strings.Contains(r.stderr, "There's no local stack in this directory") {
 		t.Fatalf("%d %q", r.code, r.stderr)
 	}
 }
