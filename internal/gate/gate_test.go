@@ -46,9 +46,7 @@ func TestNormalizeTable(t *testing.T) {
 		{name: "split at the first dot", r: ActionRequest{Tool: "gh.github.create_issue", Args: raw(`{}`), Mode: ModeProxy}, connector: "gh", tool: "github.create_issue", ctype: "mcp"},
 		{name: "upper case", r: ActionRequest{Tool: "Fake.echo", Args: raw(`{}`)}, param: "tool"},
 		{name: "no dot", r: ActionRequest{Tool: "fake", Args: raw(`{}`)}, param: "tool"},
-		{name: "API-safe spelling", r: ActionRequest{Tool: "fake_echo", Args: raw(`{}`)}, connector: "fake", tool: "echo"},
-		{name: "API-safe spelling, MCP", r: ActionRequest{Tool: "scratch_read_text_file", Args: raw(`{}`), Mode: ModeProxy}, connector: "scratch", tool: "read_text_file", ctype: "mcp"},
-		{name: "underscore without a connector", r: ActionRequest{Tool: "_echo", Args: raw(`{}`)}, param: "tool"},
+		{name: "an unqualified name stays refused (the MCP front qualifies fake_echo)", r: ActionRequest{Tool: "read_file", Args: raw(`{}`)}, param: "tool"},
 		{name: "no connector", r: ActionRequest{Tool: ".echo", Args: raw(`{}`)}, param: "tool"},
 		{name: "300 bytes", r: ActionRequest{Tool: strings.Repeat("a", 300), Args: raw(`{}`)}, param: "tool"},
 		{name: "empty", r: ActionRequest{Tool: "", Args: raw(`{}`)}, param: "tool"},
@@ -101,22 +99,6 @@ func TestNormalizeTable(t *testing.T) {
 }
 
 func raw(s string) json.RawMessage { return json.RawMessage(s) }
-
-// TestSpellingsShareDigests: "fake_echo" and "fake.echo" are one request: same tool, same
-// request_digest, same fingerprint (so an Idempotency-Key replay matches across spellings).
-func TestSpellingsShareDigests(t *testing.T) {
-	a, err := Normalize(ActionRequest{Tool: "fake_echo", Args: raw(`{"message":"hi"}`)}, 0)
-	if err != nil {
-		t.Fatal(err)
-	}
-	b, err := Normalize(ActionRequest{Tool: "fake.echo", Args: raw(`{"message":"hi"}`)}, 0)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if a.Tool != "fake.echo" || a.Tool != b.Tool || a.Digest != b.Digest || a.Fingerprint != b.Fingerprint || a.Digest == "" {
-		t.Fatalf("%+v\n%+v", a, b)
-	}
-}
 
 func TestArgsTooLargeMessage(t *testing.T) {
 	args := `{"s":"` + strings.Repeat("x", 262145-8) + `"}`

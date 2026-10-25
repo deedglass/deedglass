@@ -11,7 +11,6 @@ import (
 	"github.com/deedglass/deedglass/internal/httpx"
 	"github.com/deedglass/deedglass/internal/intent"
 	"github.com/deedglass/deedglass/internal/policy"
-	"github.com/deedglass/deedglass/internal/toolname"
 )
 
 // Limits of a request (S13 §3.6). gate.max_args_bytes may lower MaxArgsBytes, never raise it.
@@ -110,9 +109,7 @@ func Normalize(req ActionRequest, maxArgs int) (*Normalized, error) {
 	if maxArgs <= 0 || maxArgs > MaxArgsBytes {
 		maxArgs = MaxArgsBytes
 	}
-	// Either spelling of a tool reaches the same action: "postgres_query", as an MCP client lists it,
-	// is "postgres.query" from here on (requests, digests, policies, deeds).
-	n := &Normalized{Tool: toolname.Canonical(req.Tool), Mode: req.Mode, Args: req.Args}
+	n := &Normalized{Tool: req.Tool, Mode: req.Mode, Args: req.Args}
 	if n.Mode == "" {
 		n.Mode = ModeGateway
 	}

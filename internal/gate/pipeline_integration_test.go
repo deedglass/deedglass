@@ -108,30 +108,6 @@ func TestAllowSealsL0Verified(t *testing.T) {
 	}
 }
 
-// TestBothToolSpellings: an MCP client's API-safe name ("fake_echo") and the qualified name
-// ("fake.echo") reach the same policy rule and seal the same tool name, for allow and deny alike.
-func TestBothToolSpellings(t *testing.T) {
-	w := newWorld(t, worldOpts{})
-	for _, name := range []string{"fake_echo", "fake.echo"} {
-		a := w.must(0, req(name, `{"message":"hello"}`))
-		b := w.deedOf(a.ID).Body
-		if a.Tool != "fake.echo" || a.Status != "executed" || b.Action.Tool != "fake.echo" || *b.Policy.RuleID != "allow-fake" {
-			t.Fatalf("%s: action %s deed %s", name, mustJSON(a), mustJSON(b))
-		}
-	}
-	for _, name := range []string{"fake_write", "fake.write"} {
-		a, err := w.submit(0, req(name, `{"rows":301,"table":"orders"}`))
-		refusal(t, a, err, httpx.CodePolicyDenied, 403)
-		b := w.deedOf(a.ID).Body
-		if a.Tool != "fake.write" || *a.Decision.RuleID != "no-bulk-writes" || b.Action.Tool != "fake.write" || b.Policy.Decision != "deny" {
-			t.Fatalf("%s: action %s deed %s", name, mustJSON(a), mustJSON(b))
-		}
-	}
-	if w.fake.Calls() != 2 {
-		t.Fatalf("calls %d, want the two allowed echoes", w.fake.Calls())
-	}
-}
-
 func TestDenyNeverCallsConnector(t *testing.T) {
 	w := newWorld(t, worldOpts{})
 	a, err := w.submit(0, req("fake.write", `{"rows":301,"table":"orders"}`))

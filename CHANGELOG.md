@@ -39,9 +39,9 @@ this file by `scripts/release-notes.sh`.
   Mastra, Pydantic AI and the Vercel AI SDK recipes no longer rename tools, and the OpenAI Agents
   recipes no longer need `include_server_in_tool_names`.
 - Nothing else changes: the dotted name stays the tool's name in policies, actions, deeds and the
-  REST API. A call by either spelling (`tools/call`, `POST /v1/actions`, `policy evaluate --tool`,
-  policy test cases) reaches the same rule and seals `postgres.query`, so existing policy files keep
-  working. A server tool named `deedglass_*` is now hidden, like `deedglass.*`.
+  REST API (`POST /v1/actions` still takes only `postgres.query`). A call by either spelling
+  (`tools/call`, `policy evaluate --tool`, policy test cases) reaches the same rule and seals
+  `postgres.query`, so existing policy files keep working. A server tool named `deedglass_*` is now hidden, like `deedglass.*`.
 - **Deprecated:** the dotted names on `tools/call`, still accepted and logged
   (`deprecated dotted tool name`). For the old listing, set `mcp.tool_names: dotted`, or pass
   `--tool-names dotted` to `deedglass mcp serve` (it sends `Deedglass-Tool-Names`) or

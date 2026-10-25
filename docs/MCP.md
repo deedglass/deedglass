@@ -421,8 +421,10 @@ the Claude Agent SDK, the OpenAI Agents SDK and others fail or need a rename. Ch
   connector: `postgres_list_rows` is `postgres.list_rows`. An upstream MCP server's own tool names
   are listed as that server spells them.
 - **Calls take either spelling.** `tools/call` with `postgres_query` or `postgres.query` reaches the
-  same tool, the same policy rule and the same deed, which records `postgres.query`. The REST API
-  (`POST /v1/actions`), `deedglass policy evaluate --tool` and policy test cases take either too.
+  same tool, the same policy rule and the same deed, which records `postgres.query`.
+  `deedglass policy evaluate --tool` and policy test cases take either too. The REST API
+  (`POST /v1/actions`) and the SDKs keep the dotted name only: an unqualified name there is still a
+  `validation_failed`.
   The dotted names on `tools/call` are deprecated: they still work, and the server logs
   `deprecated dotted tool name` for each such call.
 - **Policies don't change.** Keep writing `tool: postgres.query` and `tool: postgres.*`; a call by
