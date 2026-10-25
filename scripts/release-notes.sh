@@ -27,7 +27,7 @@ The full list: https://github.com/deedglass/deedglass/blob/v$v/docs/LIMITATIONS.
 
 ## Install
 - npx: \`npx -y deedglass@$v version\`
-- The install script (macOS, Linux): \`curl -fsSL https://github.com/deedglass/deedglass/releases/download/v$v/install.sh | sh -s -- --version $v\`
+- The install script (macOS, Linux): \`curl -fsSL https://deedglass.com/install.sh | sh -s -- --version $v\`
 - A binary: download the archive for your platform below, check it, then put \`deedglass\` on your PATH.
 - Docker: there's no public image yet (one is coming); build it from the tag with \`make web-build docker\`.
 - Homebrew (once the tap exists): \`brew install deedglass/tap/deedglass\`

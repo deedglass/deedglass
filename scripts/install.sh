@@ -1,12 +1,16 @@
 #!/bin/sh
-# install.sh: installs the deedglass binary from a GitHub release of github.com/deedglass/deedglass.
-# Every release carries this file as an asset (GoReleaser's release.extra_files), so the one-liner
-# below fetches it from the same GitHub release downloads as the archive (QA-1: raw.githubusercontent.com
-# took 50 s to connect on some networks; release downloads took about 5 s).
+# install.sh: installs the deedglass binary from a release of github.com/deedglass/deedglass.
 #
-#   curl -fsSL https://github.com/deedglass/deedglass/releases/latest/download/install.sh | sh     (releases after 0.8.0)
-#   curl -fsSL https://raw.githubusercontent.com/deedglass/deedglass/main/scripts/install.sh | sh
-#   curl -fsSL https://github.com/deedglass/deedglass/releases/latest/download/install.sh | sh -s -- --version 0.1.0 --dir /usr/local/bin
+#   curl -fsSL https://deedglass.com/install.sh | sh
+#   curl -fsSL https://deedglass.com/install.sh | sh -s -- --version 0.1.0 --dir /usr/local/bin
+#   curl -fsSL https://github.com/deedglass/deedglass/releases/latest/download/install.sh | sh     (the same file)
+#
+# Where the files come from: deedglass.com/dl first, a byte-for-byte copy of each release's
+# checksums.txt, checksums.txt.sigstore.json and macOS/Linux archives, served by Cloudflare. Then, for
+# any file the copy doesn't answer for, the GitHub release itself. QA-1 (ops GAPS.md H1): on one
+# network GitHub's raw and release-asset hosts stalled 50-75 s on connect, so the curl install took
+# 81-119 s; every download here gives up on a connect after 5 s and retries, and the copy comes first.
+# The copy changes nothing about the checks below: they run on the bytes, wherever they came from.
 #
 # It downloads the archive for this machine and checksums.txt from the release, checks the archive's
 # sha256 against checksums.txt, and copies the one binary into the install directory (default
@@ -18,11 +22,17 @@
 #
 # Options: --version X.Y.Z (default: the latest release), --dir DIR. The same as environment variables:
 # DEEDGLASS_VERSION, DEEDGLASS_INSTALL_DIR. DEEDGLASS_RELEASES_URL replaces
-# https://github.com/deedglass/deedglass/releases (for tests and mirrors). DEEDGLASS_COSIGN names the
-# cosign binary (default cosign on PATH; none skips the signature check).
+# https://github.com/deedglass/deedglass/releases (for tests and mirrors). DEEDGLASS_MIRROR_URL replaces
+# https://deedglass.com/dl (none: GitHub only; it defaults to none when DEEDGLASS_RELEASES_URL is set).
+# DEEDGLASS_COSIGN names the cosign binary (default cosign on PATH; none skips the signature check).
 set -eu
 
 releases="${DEEDGLASS_RELEASES_URL:-https://github.com/deedglass/deedglass/releases}"
+if [ -n "${DEEDGLASS_MIRROR_URL+set}" ]; then mirror="${DEEDGLASS_MIRROR_URL:-none}"
+elif [ -n "${DEEDGLASS_RELEASES_URL:-}" ]; then mirror=none
+else mirror=https://deedglass.com/dl
+fi
+mirror="${mirror%/}"
 version="${DEEDGLASS_VERSION:-}"
 dir="${DEEDGLASS_INSTALL_DIR:-${HOME:-}/.local/bin}"
 
@@ -54,15 +64,20 @@ case "$(uname -m)" in
 esac
 
 # HTTPS only, redirects included; plain http only for a test server on this machine.
+local_url() { case "$1" in http://127.0.0.1[:/]*|http://localhost[:/]*) return 0 ;; *) return 1 ;; esac; }
+for u in "$releases" "$mirror"; do
+  case "$u" in https://*|none) ;; *) local_url "$u" || die "$u must be https" ;; esac
+done
 proto='=https'
-case "$releases" in http://127.0.0.1[:/]*|http://localhost[:/]*) proto='=http,https' ;; esac
+if local_url "$releases" || local_url "$mirror"; then proto='=http,https'; fi
+# A connect gets 5 s, a transfer that falls under 10 KB/s for 20 s is dropped, and each is retried
+# twice (QA-1: one of GitHub's addresses took 75 s to connect while another took 0.07 s).
 if command -v curl >/dev/null 2>&1; then
-  fetch() { curl -fsSL --proto "$proto" --proto-redir "$proto" --retry 2 -o "$2" "$1"; }
-  latest() { curl -fsSLI --proto "$proto" --proto-redir "$proto" -o /dev/null -w '%{url_effective}' "$releases/latest"; }
+  fetch() { curl -fsSL --proto "$proto" --proto-redir "$proto" --connect-timeout 5 --speed-limit 10240 --speed-time 20 --retry 2 --retry-delay 1 -o "$2" "$1"; }
+  latest() { curl -fsSLI --proto "$proto" --proto-redir "$proto" --connect-timeout 5 --retry 2 --retry-delay 1 -o /dev/null -w '%{url_effective}' "$releases/latest"; }
 elif command -v wget >/dev/null 2>&1; then
-  case "$releases" in https://*|http://127.0.0.1[:/]*|http://localhost[:/]*) ;; *) die "DEEDGLASS_RELEASES_URL must be https" ;; esac
-  fetch() { wget -q -O "$2" "$1"; }
-  latest() { wget -q -S --spider "$releases/latest" 2>&1 | sed -n 's/^ *[Ll]ocation: *//p' | tail -n 1 | tr -d '\r'; }
+  fetch() { wget -q -T 10 -t 3 -O "$2" "$1"; }
+  latest() { wget -q -T 10 -t 3 -S --spider "$releases/latest" 2>&1 | sed -n 's/^ *[Ll]ocation: *//p' | tail -n 1 | tr -d '\r'; }
 else
   die "neither curl nor wget is installed" "Install one of them, or use npx -y deedglass."
 fi
@@ -74,6 +89,14 @@ else
   die "neither sha256sum nor shasum is installed" "Install coreutils, or use npx -y deedglass."
 fi
 
+tmp="$(mktemp -d 2>/dev/null || mktemp -d -t deedglass)"
+trap 'rm -rf "$tmp"' EXIT INT TERM
+
+# The latest version: the copy's /latest names it (one line, 0.9.0); else GitHub's /latest redirect.
+if [ -z "$version" ] && [ "$mirror" != none ] && fetch "$mirror/latest" "$tmp/latest" 2>/dev/null; then
+  version="$(sed -n '1{s/^v//;s/[[:space:]]//g;p;}' "$tmp/latest")"
+  case "$version" in [0-9]*.[0-9]*.[0-9]*) ;; *) version= ;; esac
+fi
 if [ -z "$version" ]; then
   url="$(latest)" || die "couldn't reach $releases/latest" "Check your connection, or pass --version."
   version="${url##*/tag/v}"
@@ -88,13 +111,20 @@ esac
 
 archive="deedglass_${version}_${os}_${arch}.tar.gz"
 base="$releases/download/v$version"
-tmp="$(mktemp -d 2>/dev/null || mktemp -d -t deedglass)"
-trap 'rm -rf "$tmp"' EXIT INT TERM
+# get NAME: the release file NAME into $tmp, from the copy first, then from GitHub.
+get() {
+  if [ "$mirror" != none ]; then
+    fetch "$mirror/v$version/$1" "$tmp/$1" 2>/dev/null && return 0
+    say "  ${mirror%/dl} didn't answer for $1; trying GitHub"
+  fi
+  fetch "$base/$1" "$tmp/$1"
+}
+from=GitHub; [ "$mirror" = none ] || from="${mirror#*://}"; from="${from%%/*}"
 
 say "Installing deedglass $version for $os/$arch into $dir"
-say "  downloading checksums.txt and $archive from GitHub (about 15 MB)"
-fetch "$base/checksums.txt" "$tmp/checksums.txt" || die "couldn't download $base/checksums.txt" "Check that release v$version exists: $releases"
-fetch "$base/$archive" "$tmp/$archive" || die "couldn't download $base/$archive" "Check that release v$version has a build for $os/$arch: $releases"
+say "  downloading checksums.txt and $archive from $from (about 15 MB)"
+get checksums.txt || die "couldn't download $base/checksums.txt" "Check that release v$version exists: $releases"
+get "$archive" || die "couldn't download $base/$archive" "Check that release v$version has a build for $os/$arch: $releases"
 
 want="$(awk -v f="$archive" '$2 == f || $2 == "*" f { print $1; exit }' "$tmp/checksums.txt")"
 [ -n "$want" ] || die "checksums.txt doesn't list $archive" "Nothing was installed. Report it: https://github.com/deedglass/deedglass/issues"
@@ -102,13 +132,14 @@ got="$(sha256 "$tmp/$archive")"
 [ "$got" = "$want" ] || die "$archive doesn't match checksums.txt (sha256 $got, expected $want)" "Nothing was installed. Try again; if it keeps failing, report it: https://github.com/deedglass/deedglass/issues"
 say "✓ sha256 matches checksums.txt"
 
-# checksums.txt and the archive come from the same place, so the sha256 check catches corruption,
-# not a swapped release. The keyless signature names who made checksums.txt.
+# checksums.txt and the archive come from the same place (the copy or GitHub), so the sha256 check
+# catches corruption, not a swapped release. The keyless signature names who made checksums.txt: only
+# this repository's release workflow can sign it, so a copy can't change it and still pass.
 identity='^https://github.com/deedglass/deedglass/\.github/workflows/release\.yml@refs/tags/v'
 issuer='https://token.actions.githubusercontent.com'
 cosign="${DEEDGLASS_COSIGN:-cosign}"
 if [ "$cosign" != none ] && command -v "$cosign" >/dev/null 2>&1; then
-  fetch "$base/checksums.txt.sigstore.json" "$tmp/checksums.txt.sigstore.json" 2>/dev/null \
+  get checksums.txt.sigstore.json 2>/dev/null >/dev/null \
     || die "release v$version has no checksums.txt.sigstore.json, so its checksums can't be checked against a signature" "Nothing was installed. Every release since v0.1.0 has one; report it: https://github.com/deedglass/deedglass/security/advisories/new"
   "$cosign" verify-blob "$tmp/checksums.txt" --bundle "$tmp/checksums.txt.sigstore.json" \
     --certificate-identity-regexp "$identity" --certificate-oidc-issuer "$issuer" >"$tmp/cosign.log" 2>&1 \

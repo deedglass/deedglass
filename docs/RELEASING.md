@@ -50,6 +50,16 @@ image gets `0.1.0`, `0.1` and `latest`.
   `testdata/release-bundles/0.1.0/` and the lines it added to `testdata/SHA256SUMS`. Until that PR
   merges, the required `release-bundles` job fails on every other PR (`✕ no release bundle for:
   v0.1.0`). See [The 2046 test](#the-2046-test).
+- **Refresh the install mirror**: deploy the site (`~/txv/ops/launch/deploy.sh --stage=auto` from a
+  clean site main). Its `scripts/mirror-release.mjs` downloads the new release's `checksums.txt`,
+  `checksums.txt.sigstore.json` and four macOS/Linux archives, checks each archive's sha256 (and the
+  signature, with cosign), and serves them at `deedglass.com/dl/vX.Y.Z/` with `deedglass.com/dl/latest`
+  naming the version, beside `deedglass.com/install.sh` (this repository's `scripts/install.sh` at
+  main). Nothing large is committed to the site: the files land in the built `dist/` only. Until the
+  deploy, `curl -fsSL https://deedglass.com/install.sh | sh` still installs the previous version
+  (`--version X.Y.Z` fetches the new one from GitHub). Check: `curl -fsS https://deedglass.com/dl/latest`
+  → the new version. Each archive must stay under Cloudflare Pages' 25 MiB per file (0.9.0: 13.8-15.5 MB);
+  the script stops if one doesn't.
 - `docker run --rm ghcr.io/deedglass/deedglass:0.1.0 version` → `0.1.0`, and the commit.
 - `deedglass version --check` from an older build → `○ deedglass 0.1.0 is available.`
 - Set the GHCR package to public (GitHub › Packages › deedglass › Package settings) when the repo is.

@@ -154,6 +154,102 @@ func TestInstallScript(t *testing.T) {
 	}
 }
 
+// TestInstallScriptMirror: the deedglass.com/dl copy comes first (its /latest names the version, and
+// GitHub isn't asked for anything it serves); a file the copy lacks comes from GitHub; a copy that serves
+// a changed archive is refused by the same sha256 check, with nothing installed.
+func TestInstallScriptMirror(t *testing.T) {
+	if runtime.GOOS != "linux" && runtime.GOOS != "darwin" {
+		t.Skip("install.sh covers macOS and Linux")
+	}
+	if runtime.GOARCH != "amd64" && runtime.GOARCH != "arm64" {
+		t.Skip("no release build for " + runtime.GOARCH)
+	}
+	for _, tool := range []string{"sh", "tar", "curl"} {
+		if _, err := exec.LookPath(tool); err != nil {
+			t.Skip(tool + " isn't installed")
+		}
+	}
+	const version = "9.9.8"
+	binary := []byte("#!/bin/sh\necho deedglass " + version + "\n")
+	archiveName := fmt.Sprintf("deedglass_%s_%s_%s.tar.gz", version, runtime.GOOS, runtime.GOARCH)
+	archive := tarGz(t, map[string][]byte{"deedglass": binary, "LICENSE": []byte("licence\n"), "ee/LICENSE": []byte("ee licence\n")})
+	sum := sha256.Sum256(archive)
+	checksums := hex.EncodeToString(sum[:]) + "  " + archiveName + "\n"
+
+	var github atomic.Int32        // requests GitHub answered
+	var mirrorArchive atomic.Bool  // the copy serves the archive
+	var mirrorTampered atomic.Bool // the copy's archive has a byte appended
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/dl/latest":
+			fmt.Fprintln(w, version)
+		case "/dl/v" + version + "/checksums.txt":
+			fmt.Fprint(w, checksums)
+		case "/dl/v" + version + "/" + archiveName:
+			if !mirrorArchive.Load() {
+				http.NotFound(w, r)
+				return
+			}
+			b := archive
+			if mirrorTampered.Load() {
+				b = append(append([]byte{}, archive...), 0)
+			}
+			w.Write(b)
+		case "/releases/latest":
+			github.Add(1)
+			http.Redirect(w, r, "/releases/tag/v"+version, http.StatusFound)
+		case "/releases/tag/v" + version:
+			fmt.Fprintln(w, "release page")
+		case "/releases/download/v" + version + "/checksums.txt":
+			github.Add(1)
+			fmt.Fprint(w, checksums)
+		case "/releases/download/v" + version + "/" + archiveName:
+			github.Add(1)
+			w.Write(archive)
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer srv.Close()
+
+	run := func() (string, string, error) {
+		home := t.TempDir()
+		dir := filepath.Join(home, "bin")
+		cmd := exec.Command(shell(), "../scripts/install.sh")
+		cmd.Env = append(os.Environ(), "HOME="+home, "DEEDGLASS_RELEASES_URL="+srv.URL+"/releases", "DEEDGLASS_MIRROR_URL="+srv.URL+"/dl/",
+			"DEEDGLASS_INSTALL_DIR="+dir, "DEEDGLASS_VERSION=", "DEEDGLASS_COSIGN=none")
+		var out bytes.Buffer
+		cmd.Stdout, cmd.Stderr = &out, &out
+		err := cmd.Run()
+		return dir, out.String(), err
+	}
+
+	mirrorArchive.Store(true)
+	dir, out, err := run()
+	if err != nil || !fileIs(filepath.Join(dir, "deedglass"), binary) {
+		t.Fatalf("install from the copy: %v\n%s", err, out)
+	}
+	if n := github.Load(); n != 0 {
+		t.Errorf("GitHub answered %d requests although the copy had every file:\n%s", n, out)
+	}
+	if !strings.Contains(out, "Installing deedglass "+version) || !strings.Contains(out, "from 127.0.0.1") {
+		t.Errorf("output doesn't name the version and the copy:\n%s", out)
+	}
+
+	mirrorArchive.Store(false)
+	dir, out, err = run()
+	if err != nil || !fileIs(filepath.Join(dir, "deedglass"), binary) || !strings.Contains(out, "trying GitHub") || github.Load() != 1 {
+		t.Errorf("an archive the copy lacks must come from GitHub (GitHub answered %d): %v\n%s", github.Load(), err, out)
+	}
+
+	mirrorArchive.Store(true)
+	mirrorTampered.Store(true)
+	dir, out, err = run()
+	if err == nil || !strings.Contains(out, "doesn't match checksums.txt") || fileIs(filepath.Join(dir, "deedglass"), binary) {
+		t.Errorf("a changed archive on the copy must fail with nothing installed: %v\n%s", err, out)
+	}
+}
+
 func fileIs(path string, want []byte) bool {
 	b, err := os.ReadFile(path)
 	return err == nil && bytes.Equal(b, want)

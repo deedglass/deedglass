@@ -208,14 +208,15 @@ sources and the date each was checked, at [deedglass.com/compare](https://deedgl
 | How | Command |
 |---|---|
 | npx (no install) | `npx -y deedglass help` |
-| Install script (macOS, Linux) | `curl -fsSL https://github.com/deedglass/deedglass/releases/latest/download/install.sh \| sh` |
+| Install script (macOS, Linux) | `curl -fsSL https://deedglass.com/install.sh \| sh` |
 | Binaries | archives for macOS, Linux and Windows on the [latest release](https://github.com/deedglass/deedglass/releases/latest), with `checksums.txt` |
 | Go | `go install github.com/deedglass/deedglass/cmd/deedglass@latest` (the CLI, without the Console) |
 | Docker | build the image from a checkout: `make web-build docker` (tags `deedglass:dev`; Node 24 builds the Console) |
 
 The install script downloads the release archive for your platform, checks its sha256 against the
-release's `checksums.txt`, and copies `deedglass` into `~/.local/bin`; read it first:
-[`scripts/install.sh`](scripts/install.sh). A public container image is coming; until it's
+release's `checksums.txt` (and the signature, when cosign is installed), and copies `deedglass` into
+`~/.local/bin`; read it first: [`scripts/install.sh`](scripts/install.sh). It downloads from a copy
+of the release on deedglass.com and falls back to GitHub. A public container image is coming; until it's
 published, build the image locally as above. Checksums, signatures and SBOMs:
 [`docs/INSTALL.md`](docs/INSTALL.md).
 
