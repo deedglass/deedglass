@@ -6,7 +6,7 @@ editUrl: false
 ---
 An agency or consultant builds agents for many clients. On Deedglass each client is its own org, with
 its own sealed record chain and row-level security, and one person can belong to many orgs. The
-**Agency plan** (licence feature `agency`, the `agency_monthly` sku) adds the agency's view on top,
+agency view (licence feature `agency`; free while we grow, with no key) adds the agency's view on top,
 without weakening that separation:
 
 - **Clients:** one row per org you look after: this week's actions, Doesn't match, caught, approvals
@@ -78,11 +78,14 @@ logo_file: logo.svg      # optional, next to brand.yaml
 
 ## Entitlement
 
+Every feature is free while we grow ([LICENSING.md](/reference/engineering/licensing/)): `agency` is on without a key,
+and nothing reads a licence. The rest of this section is the key path, kept for a later paid option.
+
 `serve` asks `cmd/deedglass/licence.go` for `agency` at start and once a day; the CLI asks when
 `clients`, `--all-clients` or `--brand` runs. Without it they answer `pro_required`:
 
 ```
-✕ Agency reports for every client are part of the Agency plan (deedglass.com/agencies). Each client's own report stays free: deedglass report --org <client>.
+✕ Agency reports for every client need a licence on this build. Each client's own report stays free: deedglass report --org <client>.
 ```
 
 The `agency_monthly` sku is plan `pro` with features Pro plus `agency`. The site signs `agency` only

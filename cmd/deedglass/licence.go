@@ -43,7 +43,14 @@ var (
 	licenceHTTP     = func() *http.Client {
 		return egress.FirstParty(egress.FirstPartyOptions{Timeout: licence.RequestTimeout, Proxy: true, Redirects: egress.RedirectSameHost})
 	}
+	// licencePolicy is DL-131's switch (internal/licence/policy.go): under FreeWhileWeGrow every
+	// feature runs without a key and nothing opens the licence or calls out. Tests of the dormant
+	// key path set licence.KeyRequired.
+	licencePolicy = licence.Current
 )
+
+// proFree reports whether feature f runs without a key on this build (DL-131: free while we grow).
+func proFree(f string) bool { return licencePolicy.IsFree(f) }
 
 // licenceTestModeBuild is true only in a development build made with -tags licencetest
 // (licence_testmode.go). A release binary refuses DEEDGLASS_LICENCE_MODE=test: a test-mode
@@ -59,10 +66,10 @@ var licDodoOverride string
 
 // Copy (brand §4, §13.3; S48 §5.2). Prices and plans are words, never typed numbers beyond these.
 const (
-	licProURL       = "deedglass.com/pro"
+	licProURL       = "deedglass.com/pricing"
 	licBillingLine  = "Billing and cancel: deedglass.com/licence#billing"
 	licCheckInLine  = "Pro features check it online when the last successful check is a day old, and at once when the clock runs behind it or licence.clock is missing, unreadable or altered; never with DEEDGLASS_NO_NETWORK=1. Offline, Pro keeps working up to 14 days after the last successful check."
-	licFullNeedsPro = "The full report is part of Pro or the $29 full scan report. Get one at deedglass.com/pro. Everything in deedglass scan stays free."
+	licFullNeedsPro = "The full report needs a licence on this build. Everything in deedglass scan stays free. Every feature is free while we grow: deedglass.com/pricing."
 	licDateLayout   = "2 Jan 2006"
 	licClockBehind  = "Pro paused: this computer's clock is behind the last time the licence was checked. Run deedglass licence refresh with the network on. Everything free still works."
 )
@@ -130,7 +137,7 @@ func licenceErr(err error, offlineUntil time.Time) error {
 	switch {
 	case errors.Is(err, licence.ErrNoLicence):
 		return &ExitError{Code: ExitFailure, ErrCode: "licence_missing", Plain: true,
-			Err: errors.New("No licence on this machine. Everything free works without one"), Next: "Pro and the full scan report: " + licProURL}
+			Err: errors.New("No licence on this machine. Everything free works without one"), Next: "Every feature is free while we grow, no licence needed: " + licProURL}
 	case errors.Is(err, licence.ErrKeyUnknown):
 		return &ExitError{Code: ExitFailure, ErrCode: "licence_key_unknown",
 			Err: errors.New("Dodo Payments doesn't know this key"), Next: "Check it against the email from Dodo, or ask at deedglass.com/support."}
@@ -253,7 +260,7 @@ func runLicenceShow(_ context.Context, e *Env, args []string) error {
 			st.DaysSince, plural(st.DaysSince, "day", "days"), ui.Sep, licDate(st.OfflineUntil))))
 		fmt.Fprintln(e.Stdout, "  "+licBillingLine)
 	case "ended":
-		fmt.Fprintln(e.Stdout, e.Style.UnknownLine(fmt.Sprintf("Your %s plan ended on %s. Everything free still works. Pro: %s",
+		fmt.Fprintln(e.Stdout, e.Style.UnknownLine(fmt.Sprintf("Your %s plan ended on %s. Everything free still works. Every feature is free while we grow: %s",
 			planName(l.Token.Plan), licDate(st.PeriodEnd), licProURL)))
 	default:
 		if st.ClockBack {
@@ -318,13 +325,14 @@ func runLicenceDeactivate(ctx context.Context, e *Env, args []string) error {
 // its files; this only adds deedglass-full-report.html, then seals it on the person's own server
 // when one is configured.
 func scanFull(ctx context.Context, e *Env, r *scan.Report, outDir string, noSeal bool) error {
-	m, err := licenceManager(e)
-	if err != nil {
-		return err
-	}
-	d := m.Require(ctx, licence.FeatureScanFull)
-	if !d.Allowed {
-		return proRefusal(d, licFullNeedsPro, "")
+	if !proFree(licence.FeatureScanFull) {
+		m, err := licenceManager(e)
+		if err != nil {
+			return err
+		}
+		if d := m.Require(ctx, licence.FeatureScanFull); !d.Allowed {
+			return proRefusal(d, licFullNeedsPro, "")
+		}
 	}
 	raw, err := json.Marshal(r)
 	if err != nil {
@@ -392,7 +400,7 @@ func proRefusal(d licence.Decision, needsPro, tail string) error {
 		return licenceErr(d.Err, time.Time{})
 	case d.Err == nil && d.Local.State.Expired:
 		e = &ExitError{Code: ExitFailure, ErrCode: "licence_ended", Plain: true,
-			Err: fmt.Errorf("Your %s plan ended on %s. Everything free still works", planName(d.Local.Token.Plan), licDate(d.Local.State.PeriodEnd)), Next: "Pro: " + licProURL}
+			Err: fmt.Errorf("Your %s plan ended on %s. Everything free still works", planName(d.Local.Token.Plan), licDate(d.Local.State.PeriodEnd)), Next: "Every feature is free while we grow: " + licProURL}
 	case d.Local.Token.ID != "" && d.Local.State.ClockBack && !errors.Is(d.Err, licence.ErrFeature):
 		e = &ExitError{Code: ExitFailure, ErrCode: "licence_paused", Plain: true, Err: errors.New(strings.TrimSuffix(licClockBehind, "."))}
 	case d.Local.Token.ID != "" && !d.Local.State.Active && !errors.Is(d.Err, licence.ErrFeature):
@@ -409,12 +417,15 @@ func proRefusal(d licence.Decision, needsPro, tail string) error {
 // --- policy install: Pro packs (S47 §3.8) ---
 
 // licPacksNeedPro is the refusal for a Pro pack without the feature.
-const licPacksNeedPro = "Pro packs need a Pro licence: " + licProURL + "."
+const licPacksNeedPro = "This pack needs a licence on this build. Every feature is free while we grow: " + licProURL + "."
 
 // packsProCheck answers whether this machine may install a Pro pack. It is called only for a pack
 // whose tier is pro, so free packs never open the licence. An installed pack never asks again:
 // enforcement never reads the licence.
 func packsProCheck(ctx context.Context, e *Env) error {
+	if proFree(licence.FeaturePacksPro) {
+		return nil
+	}
 	m, err := licenceManager(e)
 	if err != nil {
 		return err
@@ -489,6 +500,9 @@ func keysGenPurposeFlag(fs *flag.FlagSet) {
 // licenceAllows reports whether this machine's licence grants feature f now. Only Pro features
 // ask, and only through this file (TestLicenceReaders): serve passes the answer on as a port.
 func licenceAllows(ctx context.Context, e *Env, f string) bool {
+	if proFree(f) {
+		return true
+	}
 	m, err := licenceManager(e)
 	if err != nil {
 		return false
@@ -539,6 +553,14 @@ func securityPackBuilder(ctx context.Context, e *Env, log *slog.Logger) func() s
 // newProFeature asks now, then once a day until ctx ends.
 func newProFeature(ctx context.Context, e *Env, f string, log *slog.Logger) *proFeature {
 	p := &proFeature{}
+	if proFree(f) {
+		// DL-131: on without a key; nothing to ask again.
+		p.allowed.Store(true)
+		if log != nil {
+			log.Info("licence: feature free while we grow", "feature", f)
+		}
+		return p
+	}
 	ask := func() {
 		cctx, cancel := context.WithTimeout(ctx, 2*licence.RequestTimeout)
 		defer cancel()
@@ -575,6 +597,9 @@ func agencyPro(ctx context.Context, e *Env, log *slog.Logger) *proFeature {
 // agencyAllowed is the CLI's agency check for clients, report --all-clients and --brand: nil when
 // this machine's licence grants agency, else the refusal with the free single-org line.
 func agencyAllowed(ctx context.Context, e *Env) error {
+	if proFree(licence.FeatureAgency) {
+		return nil
+	}
 	m, err := licenceManager(e)
 	if err != nil {
 		return err
@@ -586,4 +611,4 @@ func agencyAllowed(ctx context.Context, e *Env) error {
 }
 
 // agencyNeedsPro is the CLI's refusal (S52 §5): the agency feature, and the free path beside it.
-const agencyNeedsPro = "Agency reports for every client are part of the Agency plan (deedglass.com/agencies). Each client's own report stays free: deedglass report --org <client>."
+const agencyNeedsPro = "Agency reports for every client need a licence on this build. Each client's own report stays free: deedglass report --org <client>."

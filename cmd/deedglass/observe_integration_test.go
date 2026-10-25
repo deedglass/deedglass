@@ -80,6 +80,7 @@ func TestObserveChildHelper(t *testing.T) {
 // transaction, a one-step undo countersigned by another person, its Check reading Matches and the
 // session undone, and agent keys refused.
 func TestObserveLive(t *testing.T) {
+	keyRequired(t) // this test covers the dormant key path; TestProFeaturesFreeWithoutAKey covers DL-131
 	admin := pgtest.AdminURL(t)
 	unlock, err := pgtest.Lock(context.Background(), admin)
 	if err != nil {

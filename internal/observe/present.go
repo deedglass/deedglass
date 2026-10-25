@@ -19,7 +19,7 @@ const (
 	NoteOverlap     = "Another watched session on this connector holds some of the same transactions."
 	NoteBehind      = "The decoder hadn't caught up 30 seconds after the close, so late transactions were attached for up to 10 minutes."
 	NoteMaxSession  = "This session closed itself after witness.observe.max_session."
-	ProSheet        = "Undo a whole session in one step with Pro ($49 a month). Or copy the undo SQL and run it yourself; that's free and always will be."
+	ProSheet        = "Undo a whole session in one step; every feature is free while we grow. Or copy the undo SQL and run it yourself; that's free and always will be."
 )
 
 // Headline is the session's header line: "Session obs_01k… · nightly agent · 14:02–14:03 · pg-demo · sealed".

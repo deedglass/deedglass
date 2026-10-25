@@ -45,9 +45,9 @@ func reportFlags(fs *flag.FlagSet) {
 	fs.StringVar(&reportValues.month, "month", "", "a month like 2026-10")
 	fs.StringVar(&reportValues.format, "format", "", "md, html or json (default md; with --all-clients, all three; a list like html,md)")
 	fs.StringVar(&reportValues.out, "out", "", "the file to write (default: print it); with --all-clients, the folder")
-	fs.BoolVar(&reportValues.allClients, "all-clients", false, "one report for every org you look after as owner or admin (Agency plan)")
+	fs.BoolVar(&reportValues.allClients, "all-clients", false, "one report for every org you look after as owner or admin")
 	fs.StringVar(&reportValues.as, "as", "", "with --all-clients: the person whose client orgs to report on (default: the owner deedglass init set up)")
-	fs.StringVar(&reportValues.brand, "brand", "", "brand.yaml with name, contact_line and logo_file: your agency's name on each report (Agency plan)")
+	fs.StringVar(&reportValues.brand, "brand", "", "brand.yaml with name, contact_line and logo_file: your agency's name on each report")
 	fs.StringVar(&reportValues.exclude, "exclude", "", "with --all-clients: org slugs to leave out, comma-separated (usually your own org)")
 }
 

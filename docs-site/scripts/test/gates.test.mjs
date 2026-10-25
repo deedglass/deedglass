@@ -144,7 +144,7 @@ test('drafts: a draft without an owner fails', async () => {
 
 test('pricing: a retired offer or the licence-category phrase fails', async () => {
   const { pricingProblems, FAQ_FREE } = await import('../check-pricing.mjs');
-  assert.equal(pricingProblems('Pro is $29 a month.').length, 0);
+  assert.ok(pricingProblems('Get one at deedglass.com/pro').length > 0); // DL-131
   assert.ok(pricingProblems('The $199 Check').length > 0);
   assert.ok(pricingProblems('see deedglass.com/check').length > 0);
   assert.equal(pricingProblems('an ' + 'open' + ' source core').length, 0); // public since the switch

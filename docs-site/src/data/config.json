@@ -387,7 +387,7 @@
     "client": true,
     "dev_only": false,
     "commands": "licence, scan --full",
-    "doc": "Where the Pro licence token lives (default .deedglass/licence.json); the key sits next to it as licence.key. Both are 0600. Free commands never read it.",
+    "doc": "Where a licence token lives (default .deedglass/licence.json); the key sits next to it as licence.key. Both are 0600. Nothing reads it today: every feature is free while we grow.",
     "owner": "S48"
   },
   {
@@ -399,7 +399,7 @@
     "client": true,
     "dev_only": false,
     "commands": "licence, scan --full",
-    "doc": "Never call Dodo Payments or deedglass.com. Pro keeps working on the cached licence inside its 14-day offline window.",
+    "doc": "Never call Dodo Payments or deedglass.com from the licence commands (nothing else calls them; every feature is free while we grow).",
     "owner": "S48"
   },
   {

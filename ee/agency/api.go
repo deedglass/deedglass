@@ -14,7 +14,7 @@ import (
 )
 
 // MsgProRequired is pro_required's message on the agency routes and flags (S52 §5).
-const MsgProRequired = "Agency reports for every client are part of the Agency plan (deedglass.com/agencies). Each client's own report stays free: deedglass report --org <client>."
+const MsgProRequired = "Agency reports for every client need a licence on this build. Each client's own report stays free: deedglass report --org <client>."
 
 // API is GET /v1/clients.
 type API struct {

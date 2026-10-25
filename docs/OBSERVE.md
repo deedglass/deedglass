@@ -145,7 +145,7 @@ Two ways back, side by side everywhere:
 - **Free, always:** `deedglass observe show obs_01k… --undo-sql` prints the undo as SQL you review
   and run yourself. Deedglass never runs it and never connects with write rights to make it. See
   [UNDO.md](UNDO.md#undoing-a-watched-session).
-- **Pro:** `deedglass observe undo obs_01k… --reason "…"` sends one undo of every included
+- **One step (free while we grow):** `deedglass observe undo obs_01k… --reason "…"` sends one undo of every included
   transaction through the Gate: one countersign, one Postgres transaction, conflict checks, and its
   own record checked against the plan's exact footprint.
 

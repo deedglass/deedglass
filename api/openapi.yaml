@@ -55,15 +55,15 @@ tags:
   - name: Observe
     description: >-
       Observe mode (S50): watched sessions over a Postgres connector's change log, their seal, the
-      free undo SQL and the one-step session undo (Pro) (docs/OBSERVE.md).
+      free undo SQL and the one-step session undo (docs/OBSERVE.md).
   - name: Security pack
     description: >-
       The security review pack (S51): the free readiness view of 24 questions about how the org
-      controls its agents, and the sealed document for a reviewer (Pro) (docs/SECURITY_PACK.md).
+      controls its agents, and the sealed document for a reviewer (docs/SECURITY_PACK.md).
   - name: Weekly
     description: >-
       The weekly summary (S52): what an org's agents did in a week or a month, the Monday email's
-      setting and off page, and the Agency plan's Clients view (docs/WEEKLY.md, docs/AGENCIES.md).
+      setting and off page, and the Clients view (docs/WEEKLY.md, docs/AGENCIES.md).
   - name: Deeds
     description: >-
       Signed records of what agents did, and the public seal keys that check them offline
@@ -1405,7 +1405,7 @@ paths:
   /v1/security_pack:
     post:
       operationId: createSecurityPack
-      summary: Build the security review pack (Pro)
+      summary: Build the security review pack
       description: >-
         Pro (`security_pack`): 403 `pro_required` without it, naming the free readiness view. Builds
         the pack from this org's own records for the period and answers the folder as a tar stream:
@@ -1526,7 +1526,7 @@ paths:
   /v1/clients:
     get:
       operationId: listClients
-      summary: List your client orgs (Agency plan)
+      summary: List your client orgs
       description: >-
         Pro (`agency`): 403 `pro_required` without it, naming the free single-org report. One row per
         org the signed-in person belongs to as owner or admin, with this period's actions, Doesn't
@@ -5022,7 +5022,7 @@ paths:
   /v1/observe/sessions/{id}/undo:
     post:
       operationId: createObserveUndo
-      summary: Undo a watched session in one step (Pro)
+      summary: Undo a watched session in one step
       description: >-
         Pro (`undo_session`): 403 `pro_required` without it, naming the free path. Previews again,
         refuses `undo_conflict` (rows changed after the session), `undo_unavailable` (with

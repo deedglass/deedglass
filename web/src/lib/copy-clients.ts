@@ -17,11 +17,11 @@ export const clientsCopy = {
   reportsTitle: 'Monthly reports for every client',
   reportsLine: 'deedglass report --all-clients --month {month} --brand brand.yaml --out reports/',
   separation: 'Each row is read inside that client’s own org, after checking you still belong to it. No read spans two clients.',
-  proTitle: 'Clients is part of the Agency plan',
+  proTitle: 'Clients needs a licence on this build',
   proBody: 'One view of every org you look after, and a monthly report for each client with your name on it. Each client’s own Deedglass, its report and its Monday email stay free.',
   proFree: 'Each client’s own report stays free: deedglass report --org <client>',
-  proLink: 'See the Agency plan',
-  proURL: 'https://deedglass.com/agencies',
+  proLink: 'See pricing',
+  proURL: 'https://deedglass.com/pricing',
   switchFailed: 'Couldn’t open that org. You may have lost access to it. Reload to see your clients now.',
 };
 

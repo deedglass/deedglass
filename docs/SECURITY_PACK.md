@@ -9,7 +9,7 @@ in ten minutes and check in two.
 - **Readiness (free):** `deedglass security-pack readiness`, `GET /v1/security_pack/readiness` and
   Console › Settings › Security review. The 24 questions, each with a status and, for a gap, the
   fix. No evidence and no document.
-- **The pack (Pro, `security_pack`):** `deedglass security-pack build`, `POST /v1/security_pack` and
+- **The pack (`security_pack`, free while we grow):** `deedglass security-pack build`, `POST /v1/security_pack` and
   **Build the pack** in the same Console screen. A folder with a print-ready document, the same
   answers as Markdown and JSON, the period's records and a seal over every file.
 - **The check (free, offline, no account):** `deedglass security-pack verify <folder>`.
@@ -189,7 +189,7 @@ includes it anyway. The rules are probed with the real names before the aliases 
 | | Readiness | Build | Verify |
 |---|---|---|---|
 | Viewer | yes | no | yes (offline) |
-| Admin, owner, org admin key | yes | yes, with Pro | yes |
+| Admin, owner, org admin key | yes | yes | yes |
 | Agent key | 403 | 403 | n/a |
 
 Without the `security_pack` feature, the build answers 403 `pro_required` and the readiness view

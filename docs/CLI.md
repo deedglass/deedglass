@@ -179,7 +179,7 @@ builds it. Hidden commands work but aren't in `deedglass help`.
 | `deedglass keys gen [--dir <dir>] [--purpose seal|licence] [--json]` | Setup | Generate a seal key | built |
 | `deedglass keys rotate [--overlap 5m] [--dir <dir>] [--json]` | Setup | Rotate the active seal key | built |
 | `deedglass keys list [--server <url>] [--json]` | Setup | List seal keys | built |
-| `deedglass licence activate <key> [--json]` | Setup | Turn on Pro with the key from Dodo | built |
+| `deedglass licence activate <key> [--json]` | Setup | Turn on a licence key (none needed today) | built |
 | `deedglass licence show [--json]` | Setup | Show this machine's licence, offline | built |
 | `deedglass licence refresh [--json]` | Setup | Check the licence with Dodo now | built |
 | `deedglass licence deactivate [--json]` | Setup | Remove the licence from this machine | built |
@@ -241,7 +241,7 @@ builds it. Hidden commands work but aren't in `deedglass help`.
 | `deedglass observe stop <obs_…> [--wait=false] [--json]` | Actions | Close a watched session | built |
 | `deedglass observe list [--connector <name>] [--state sealed] [--caught] [--limit 20] [--json]` | Actions | List watched sessions | built |
 | `deedglass observe show <obs_…> [--undo-sql] [--json]` | Actions | Show a session or print its undo SQL | built |
-| `deedglass observe undo <obs_…> --reason "…" [--allow-triggers] [--wait 25s] [--json]` | Actions | Undo a whole session in one step (Pro) | built |
+| `deedglass observe undo <obs_…> --reason "…" [--allow-triggers] [--wait 25s] [--json]` | Actions | Undo a whole session in one step | built |
 | `deedglass observe exclude <obs_…> <dtx_…> [--include] [--json]` | Actions | Leave a transaction out of an undo | built |
 | `deedglass webhooks create --url <url> --events approval.requested,approval.decided [--description …] [--json]` | Actions | Add a webhook endpoint | built |
 | `deedglass webhooks list [--json]` | Actions | List webhook endpoints | built |
@@ -256,10 +256,10 @@ builds it. Hidden commands work but aren't in `deedglass help`.
 | `deedglass deeds timestamp [--out timestamps.json] [--seq n] [--every 15m] [--count n] [--json]` | Records | Timestamp the chain head with your TSAs | built |
 | `deedglass deeds seal-file <path> --label <text> [--media-type application/pdf|text/markdown|application/json|text/plain|text/html|application/gzip] [--out <path>.deed.json] [--json]` | Records | Seal a file's hash as a record | built |
 | `deedglass security-pack readiness [--period 90d] [--all] [--json]` | Records | Check how a security review would see your setup | built |
-| `deedglass security-pack build [--period 90d] [--out dir] [--aliases] [--no-records] [--records] [--json]` | Records | Build the sealed security review pack (Pro) | built |
+| `deedglass security-pack build [--period 90d] [--out dir] [--aliases] [--no-records] [--records] [--json]` | Records | Build the sealed security review pack | built |
 | `deedglass security-pack verify <folder> [--keys <file|url>] [--json]` | Records | Check a security review pack offline | built |
 | `deedglass report [--week 2026-W43 | --month 2026-10] [--format md|html|json] [--out file] [--all-clients] [--brand brand.yaml] [--exclude slugs] [--as email]` | Records | Report what your agents did in a week or month | built |
-| `deedglass clients [--week 2026-W43] [--exclude slugs] [--as email] [--json]` | Records | List every org you look after (Agency plan) | built |
+| `deedglass clients [--week 2026-W43] [--exclude slugs] [--as email] [--json]` | Records | List every org you look after | built |
 | `deedglass ledger check [--from-seq n] [--to-seq n] [--json]` | Records | Check the record chain | built |
 | `deedglass ledger prune [--older-than 90d] [--dry-run] [--yes] [--json]` | Records | Remove old payloads; records stay | built |
 | `deedglass connector create --config <file> [--type rest] [--name orders] [--description …] [--json]` | Connectors | Add a connector | built |

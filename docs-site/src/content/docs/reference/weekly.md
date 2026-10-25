@@ -17,7 +17,7 @@ own records on the org's own server. **Nothing goes to deedglass.com.**
   JSON (`weekly_summary` v1).
 - **`GET /v1/weekly` (free):** the summary for the Console and your own tools.
 
-Each client's report in one run, with an agency's name on it, is the Agency plan: see
+Each client's report in one run, with an agency's name on it, is the agency view (free while we grow): see
 [AGENCIES.md](/reference/agencies/).
 
 ## The Monday email
@@ -29,7 +29,7 @@ What your agents did this week · acme · 12 to 18 Oct
 412 actions · 371 allowed · 22 waited for a person · 19 blocked by rules
 Check: 388 match · 0 don't match · 24 can't check
 Deedglass caught 1 thing: one transaction changed 301 rows in public.orders.
-  Undo it yourself, free: deedglass observe show obs_01k… --undo-sql   ·   Undo the whole session in one step (Pro)
+  Undo it yourself, free: deedglass observe show obs_01k… --undo-sql   ·   Undo the whole session in one step
 Records chain intact. Open the Console: https://deedglass.acme.internal/app
 Stop these emails: https://deedglass.acme.internal/weekly/off?t=…
 ```
@@ -43,7 +43,7 @@ Stop these emails: https://deedglass.acme.internal/weekly/off?t=…
 - **Exactly once:** one `learn_runs` row (kind `weekly`, the ISO week) per org, insert-or-skip, so
   several `serve` instances send one email. Each message carries a Resend idempotency key
   `weekly/<org>/<week>/<user>`.
-- **The Pro line:** `Undo the whole session in one step (Pro)` appears only next to a caught watched
+- **The one-step line:** `Undo the whole session in one step` appears only next to a caught watched
   session, and only when this server has no `undo_session`. Every caught item shows its free way back
   on the same line. There is no other upsell.
 - **No tracking:** no pixel, no click tracking, no link to deedglass.com except the footer.
@@ -92,7 +92,7 @@ It reads the database directly (`DEEDGLASS_DATABASE_URL`, or `.deedglass/stack.j
 in the org's time zone. `--out` never overwrites a file. The HTML page is self-contained (no script,
 no font or image request) and prints on A4 or Letter.
 
-`--all-clients`, `--brand` and `--exclude` are the Agency plan ([AGENCIES.md](/reference/agencies/)).
+`--all-clients`, `--brand` and `--exclude` are the agency view ([AGENCIES.md](/reference/agencies/)), free while we grow.
 
 ## `GET /v1/weekly`
 

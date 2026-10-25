@@ -130,7 +130,7 @@ func runSecurityPackReadiness(ctx context.Context, e *Env, args []string) error 
 	if shown == 0 {
 		fmt.Fprintln(e.Stdout, s.OKLine("Nothing to fix. deedglass security-pack readiness --all lists every question."))
 	}
-	fmt.Fprintln(e.Stdout, "Build the document for a reviewer (Pro): deedglass security-pack build")
+	fmt.Fprintln(e.Stdout, "Build the document for a reviewer: deedglass security-pack build")
 	return nil
 }
 

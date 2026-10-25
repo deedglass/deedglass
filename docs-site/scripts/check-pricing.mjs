@@ -7,10 +7,10 @@ import { join } from 'node:path';
 import { walk } from './postbuild.mjs';
 import { pages, site } from './lib-pages.mjs';
 
-// P-044 (Pro is $49 a month, DL-086), P-086 (the ee/ licence) and P-101 (Pro adds the Action's
-// comment on private repos; scan-action v1.0.0 runs the scan, job summary and SARIF free everywhere).
-export const FAQ_FREE = "The core is free and Apache-2.0; the Pro features in `ee/` are FSL-1.1-ALv2. Pro is $49 a month and adds the Action's pull request comment on private repos, the full report and Pro packs. The Action's scan, job summary and SARIF are free on every repo.";
-export const banned = [/\$199/, /\$390/, /deedglass\.com\/check/, /[Ff]ounding band/]; // the $99 founding partner place is the master plan's (DL-077); the retired $390 band stays banned
+// DL-131 (free while we grow): every feature is free, no paid tier is named in the docs, and the
+// FAQ answer is the approved sentence. P-086 (the ee/ licence) still holds.
+export const FAQ_FREE = "Yes. Every Deedglass feature is free while we grow, with no licence key: the core is Apache-2.0, and the features in `ee/` are free to use and stay FSL-1.1-ALv2. We plan paid options for teams and a hosted service later; anything free today stays free for people who run Deedglass themselves.";
+export const banned = [/\$199/, /\$390/, /deedglass\.com\/check/, /[Ff]ounding band/, /deedglass\.com\/pro\b/, /deedglass\.com\/agencies/]; // DL-131 withdrew the paid tiers and their buy pages; the retired $390 band stays banned
 // The repo is public (docs/PUBLIC_REPO_SWITCH.md): "open source" is allowed now.
 export const pricingProblems = (text) => banned.filter((re) => re.test(text)).map(String);
 if (process.argv[1] && import.meta.url.endsWith(process.argv[1].split('/').pop())) main();
@@ -22,15 +22,15 @@ for (const f of walk(join(site, 'src'))) {
   for (const re of banned) if (re.test(s)) fails.push(`${f.replace(site + '/', '')}: matches ${re}`);
 }
 const priceRe = /\$\d[\d,]*(?:\.\d\d)?\s*(?:a month|a year|once)/;
-const pricePages = new Set(['faq.mdx', 'reference/pro-and-licences.mdx', 'get-started/scan.mdx']);
+const pricePages = new Set(); // DL-131: no page names a price
 for (const p of pages()) {
   if (p.generated) continue;
-  if (priceRe.test(p.body) && !pricePages.has(p.rel)) fails.push(`${p.rel}: names a price; prices live on the FAQ, Pro and licences, and the scan footer`);
+  if (priceRe.test(p.body) && !pricePages.has(p.rel)) fails.push(`${p.rel}: names a price; every feature is free while we grow (DL-131)`);
 }
 const faq = pages().find((p) => p.rel === 'faq.mdx');
 if (!faq || !faq.body.includes(FAQ_FREE)) fails.push('faq.mdx: the "Is it free?" answer must be exactly the approved sentence');
 const pro = pages().find((p) => p.rel === 'reference/pro-and-licences.mdx');
-for (const want of ['$29 a month or $290 a year', '$29 once', 'Reviews from $750']) if (!pro?.body.includes(want)) fails.push(`pro-and-licences.mdx: missing "${want}"`);
+for (const want of ['Every Deedglass feature is free to use, with no licence key', 'Anything free today stays free for people who run Deedglass themselves']) if (!pro?.body.includes(want)) fails.push(`pro-and-licences.mdx: missing "${want}"`);
 if (fails.length) {
   for (const f of fails) console.error('✕ ' + f);
   process.exit(1);

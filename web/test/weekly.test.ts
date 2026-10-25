@@ -33,9 +33,9 @@ describe('the This week card', () => {
     const b = document.createElement('div');
     renderWeek(b, view());
     expect(b.querySelectorAll('[data-free-path]').length).toBe(Math.min(3, summary.caught.length));
-    expect(b.textContent).toContain('Undo the whole session in one step (Pro)');
+    expect(b.textContent).toContain('Undo the whole session in one step');
     renderWeek(b, view({ pro_undo_line: false }));
-    expect(b.textContent).not.toContain('(Pro)');
+    expect(b.textContent).not.toContain('Undo the whole session in one step');
     expect(b.textContent).toContain(w.emailOn);
   });
   it('a quiet week says so; no mailer says the card is the summary', () => {
@@ -63,7 +63,7 @@ describe('the Clients page', () => {
   it('without the Agency plan: the explanation, the free line and the plan page, nothing locked or blurred', () => {
     const p = proState();
     expect(p.textContent).toContain(c.proFree);
-    expect(p.querySelector('a')?.getAttribute('href')).toBe('https://deedglass.com/agencies');
+    expect(p.querySelector('a')?.getAttribute('href')).toBe('https://deedglass.com/pricing');
     expect(p.innerHTML).not.toMatch(/blur|lock/);
   });
   it('copy: no em dash, no exclamation mark', () => {

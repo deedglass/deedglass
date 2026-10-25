@@ -185,7 +185,7 @@ func TestPolicyInstallProPack(t *testing.T) {
 	_, env, now := licenceSeams(t)
 	dir := filepath.Join(t.TempDir(), "policies")
 	r := cli(t, env, false, "policy", "install", "money-movement", "--dir", dir, "--yes")
-	if r.code != 1 || !strings.Contains(r.stdout+r.stderr, "Pro packs need a Pro licence: deedglass.com/pro. Nothing was written.") {
+	if r.code != 1 || !strings.Contains(r.stdout+r.stderr, "This pack needs a licence on this build. Every feature is free while we grow: deedglass.com/pricing. Nothing was written.") {
 		t.Fatalf("no licence: %d %s%s", r.code, r.stdout, r.stderr)
 	}
 	if _, err := os.Stat(dir); err == nil {
