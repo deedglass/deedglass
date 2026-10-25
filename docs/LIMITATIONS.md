@@ -180,7 +180,7 @@ If an MCP gateway, an approval tool or a proxy already sits in front of your age
 - **The bridge doesn't send `Mcp-Param-*` headers**, so a modern client calling an upstream tool
   that declares `x-mcp-header` through `deedglass mcp serve --connector <name>` is refused
   (`-32020`). No native tool declares one today.
-- **`deedglass.check_approval` looks the action up by approval id** through the
+- **`deedglass_check_approval` looks the action up by approval id** through the
   `actions_approval` index (S22, migration 0021).
 - **The upstream pool's sessions are per instance and in memory**; a legacy upstream that loses its
   session gets one reconnect for `tools/list`, never for `tools/call`.

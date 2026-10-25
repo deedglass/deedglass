@@ -13,6 +13,7 @@ import (
 	"github.com/deedglass/deedglass/internal/mcp/jsonrpc"
 	"github.com/deedglass/deedglass/internal/mcp/present"
 	"github.com/deedglass/deedglass/internal/mcp/toolscan"
+	"github.com/deedglass/deedglass/internal/toolname"
 )
 
 // The tool catalog (S14 §3.5): every tool's definition digest is pinned the first time it is seen;
@@ -133,7 +134,7 @@ func (c *catalog) process(ctx context.Context, result json.RawMessage, modern, f
 			e.Visibility, e.RuleID, e.Reason = visChanged, "", "the definition changed after it was first listed"
 			c.w.log.sym(symDenied, c.w.cfg.Connector+"."+name+" changed its definition after it was first listed", "hidden until the MCP server restarts")
 		}
-		if v := c.entries[name].Visibility; v != visChanged && v != visFlagged && !strings.HasPrefix(name, "deedglass.") && reMCPName.MatchString(name) {
+		if v := c.entries[name].Visibility; v != visChanged && v != visFlagged && !present.Reserved(name) && reMCPName.MatchString(name) {
 			refs = append(refs, gate.ToolRef{Name: name, Digest: c.entries[name].Digest})
 		}
 	}
@@ -173,7 +174,7 @@ func (c *catalog) process(ctx context.Context, result json.RawMessage, modern, f
 	c.mu.Lock()
 	var hidden []string
 	for _, it := range items {
-		if it.ok && strings.HasPrefix(it.name, "deedglass.") {
+		if it.ok && present.Reserved(it.name) {
 			continue // the reserved prefix: a server can't pose as Deedglass
 		}
 		if it.ok {
@@ -211,7 +212,7 @@ func (c *catalog) process(ctx context.Context, result json.RawMessage, modern, f
 		c.w.log.sym(symPending, parts[0], append(parts[1:], hidden...)...)
 	}
 	if first {
-		out = append(out, present.CheckApprovalTool())
+		out = append(out, present.CheckApprovalTool(toolname.Style(c.w.cfg.ToolNames)))
 	}
 	res["tools"] = jsonArray(out)
 	if modern {

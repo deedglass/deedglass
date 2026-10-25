@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/deedglass/deedglass/internal/policy"
+	"github.com/deedglass/deedglass/internal/toolname"
 )
 
 // deedglass policy evaluate (S11 §4 step 12): one action against a local policy file, with the
@@ -125,8 +126,8 @@ func buildEvalInput(o policyEvalOpts) (policy.Input, error) {
 	}
 	in.V = policy.InputVersion
 	if o.tool != "" {
-		in.Tool.Name = o.tool
-		prefix, _, _ := strings.Cut(o.tool, ".")
+		in.Tool.Name = toolname.Canonical(o.tool)
+		prefix, _, _ := strings.Cut(in.Tool.Name, ".")
 		in.Tool.Connector = prefix
 		if knownConnectorTypes[prefix] {
 			in.Tool.ConnectorType = prefix

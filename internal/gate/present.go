@@ -263,7 +263,7 @@ func clip(s string, n int) string {
 
 // MCP-facing constants.
 const (
-	MCPInstructions             = "Tool calls on this server pass through Deedglass. Some may be blocked by policy or wait for a person to approve them; the result will say so. Use deedglass.check_approval to continue after an approval."
+	MCPInstructions             = "Tool calls on this server pass through Deedglass. Some may be blocked by policy or wait for a person to approve them; the result will say so. Use deedglass_check_approval to continue after an approval."
 	MCPBadKey                   = "Deedglass did not accept the API key for this MCP server, so nothing was run. Create a key in Console › Agents and update your MCP client config."
 	MCPNoKey                    = "No Deedglass key found, so no tool can run yet. Run npx deedglass init in a terminal, then restart your MCP client."
 	MCPServerStopped            = "The MCP server stopped. Deedglass is restarting it."
@@ -318,7 +318,7 @@ func MCPPendingText(a *ledger.Action, approvalID string, expires time.Time) stri
 	if !strings.HasSuffix(msg, ".") {
 		msg += "."
 	}
-	return fmt.Sprintf(`%s Nothing has run yet. Approval %s expires at %s. To continue, call deedglass.check_approval with {"approval_id": "%s"}.`,
+	return fmt.Sprintf(`%s Nothing has run yet. Approval %s expires at %s. To continue, call deedglass_check_approval with {"approval_id": "%s"}.`,
 		msg, approvalID, clock(expires), approvalID)
 }
 

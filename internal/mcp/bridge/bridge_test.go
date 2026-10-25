@@ -238,11 +238,11 @@ func TestOffline(t *testing.T) {
 		Tools []struct{ Name string } `json:"tools"`
 		Meta  map[string]string       `json:"_meta"`
 	}
-	if json.Unmarshal(e["result"], &list) != nil || len(list.Tools) != 2 || list.Tools[0].Name != "postgres.query" ||
-		list.Tools[1].Name != "deedglass.check_approval" || list.Meta["com.deedglass/notice"] != gate.MCPNoKey {
+	if json.Unmarshal(e["result"], &list) != nil || len(list.Tools) != 2 || list.Tools[0].Name != "postgres_query" ||
+		list.Tools[1].Name != "deedglass_check_approval" || list.Meta["com.deedglass/notice"] != gate.MCPNoKey {
 		t.Fatalf("%s", e.Marshal())
 	}
-	for i, call := range []string{"postgres.query", "deedglass.check_approval", "nope"} {
+	for i, call := range []string{"postgres_query", "postgres.query", "deedglass_check_approval", "deedglass.check_approval", "nope"} {
 		send(fmt.Sprintf(`{"jsonrpc":"2.0","id":%d,"method":"tools/call","params":{"name":%q,"arguments":{}}}`, 10+i, call))
 		e = recv()
 		var r struct {
@@ -259,7 +259,7 @@ func TestOffline(t *testing.T) {
 		t.Fatalf("%s", e.Marshal())
 	}
 	send(`{"jsonrpc":"2.0","id":21,"method":"tools/list","params":{` + modern + `}}`)
-	if e = recv(); !strings.Contains(string(e["result"]), `"resultType":"complete"`) || !strings.Contains(string(e["result"]), "postgres.query") {
+	if e = recv(); !strings.Contains(string(e["result"]), `"resultType":"complete"`) || !strings.Contains(string(e["result"]), "postgres_query") {
 		t.Fatalf("%s", e.Marshal())
 	}
 	send(`{"jsonrpc":"2.0","id":22,"method":"tools/list","params":{"_meta":{"io.modelcontextprotocol/protocolVersion":"1999-01-01"}}}`)
@@ -314,10 +314,10 @@ func TestOfflineSDK(t *testing.T) {
 				t.Fatalf("%+v", ir)
 			}
 			lt, err := s.ListTools(ctx, nil)
-			if err != nil || len(lt.Tools) != 2 || lt.Tools[0].Name != "postgres.query" {
+			if err != nil || len(lt.Tools) != 2 || lt.Tools[0].Name != "postgres_query" {
 				t.Fatalf("%v %+v", err, lt)
 			}
-			res, err := s.CallTool(ctx, &mcp.CallToolParams{Name: "postgres.query", Arguments: map[string]any{"sql": "SELECT 1"}})
+			res, err := s.CallTool(ctx, &mcp.CallToolParams{Name: "postgres_query", Arguments: map[string]any{"sql": "SELECT 1"}})
 			if err != nil || !res.IsError || len(res.Content) != 1 || res.Content[0].(*mcp.TextContent).Text != gate.MCPNoKey {
 				t.Fatalf("%v %+v", err, res)
 			}

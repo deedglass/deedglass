@@ -13,6 +13,7 @@ import (
 
 	"github.com/deedglass/deedglass/internal/deed"
 	"github.com/deedglass/deedglass/internal/sqlguard"
+	"github.com/deedglass/deedglass/internal/toolname"
 )
 
 // Input is everything one evaluation reads (S11 §3.1). The gate builds one per action (S13) and
@@ -110,6 +111,18 @@ func Prepare(in Input) (*Prepared, error) {
 	args, err := decodeArgs(in.Args)
 	if err != nil {
 		return nil, err
+	}
+	// A tool named as an MCP client lists it ("postgres_query") is decided as the policy names it
+	// ("postgres.query").
+	if c := toolname.Canonical(in.Tool.Name); c != in.Tool.Name {
+		conn, op, _ := strings.Cut(c, ".")
+		if in.Tool.Connector == "" || in.Tool.Connector == in.Tool.Name {
+			in.Tool.Connector = conn
+		}
+		if in.Tool.Op == "" {
+			in.Tool.Op = op
+		}
+		in.Tool.Name = c
 	}
 	p := &Prepared{in: in, loc: loc}
 	p.act.tool = in.Tool.ToolFacts

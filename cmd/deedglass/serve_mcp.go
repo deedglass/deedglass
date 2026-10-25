@@ -18,6 +18,7 @@ import (
 	"github.com/deedglass/deedglass/internal/mcp/front"
 	"github.com/deedglass/deedglass/internal/mcp/httpgw"
 	"github.com/deedglass/deedglass/internal/mcp/upstream"
+	"github.com/deedglass/deedglass/internal/toolname"
 )
 
 // mcpWiring is S15's MCP gateway as serve mounts it: the native tools, the upstream pool and the
@@ -59,6 +60,7 @@ func newPool(cfg *config.Config, getenv func(string) string, log *slog.Logger, p
 func newMCP(cfg *config.Config, gp *gate.Pipeline, natives []connector.Connector, pool *upstream.Pool, reg *connector.Registry, typ *upstream.Type, guard identity.Guard, log *slog.Logger) *mcpWiring {
 	exec := gp.Config().ExecuteTimeout
 	base := front.Front{Version: buildInfo().Version, Gate: gp, CallWait: exec + 2*time.Second, ExecuteTimeout: exec, Log: log}
+	base.ToolNames = toolname.Style(cfg.MCP.ToolNames) // "" is safe
 	ns := &front.NativeSource{Connectors: natives, Vis: gp}
 	if reg != nil {
 		// S18: the org's own native connectors (postgres.*, orders.*, …) on /mcp/native too.

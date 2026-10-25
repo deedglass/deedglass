@@ -148,7 +148,15 @@ func TestMCPServeNoKey(t *testing.T) {
 	}
 	// An upstream's tools aren't known without the server: only the approval tool is listed.
 	r := serve(`{"jsonrpc":"2.0","id":1,"method":"tools/list"}`+"\n", nil, "--connector", "everything")
-	if r.code != 0 || strings.Contains(r.stdout, "postgres.") || !strings.Contains(r.stdout, `"name":"deedglass.check_approval"`) {
+	if r.code != 0 || strings.Contains(r.stdout, "postgres") || !strings.Contains(r.stdout, `"name":"deedglass_check_approval"`) {
+		t.Fatalf("exit %d\n%s%s", r.code, r.stdout, r.stderr)
+	}
+	// --tool-names dotted keeps the listing in 0.7 and earlier; a bad value is a usage error.
+	r = serve(`{"jsonrpc":"2.0","id":1,"method":"tools/list"}`+"\n", nil, "--tool-names", "dotted")
+	if r.code != 0 || !strings.Contains(r.stdout, `"name":"postgres.query"`) || !strings.Contains(r.stdout, `"name":"deedglass.check_approval"`) {
+		t.Fatalf("exit %d\n%s%s", r.code, r.stdout, r.stderr)
+	}
+	if r = serve("", nil, "--tool-names", "dots"); r.code == 0 || !strings.Contains(r.stderr, "--tool-names") {
 		t.Fatalf("exit %d\n%s%s", r.code, r.stdout, r.stderr)
 	}
 }
@@ -179,7 +187,7 @@ func TestMCPServeOfflineCatalog(t *testing.T) {
 	want := map[string]string{}
 	for _, s := range specs {
 		if !s.Internal {
-			want[setup.ConnectorName+"."+s.Name] = s.Description
+			want[setup.ConnectorName+"_"+s.Name] = s.Description
 		}
 	}
 	r := serveNoKey(t, `{"jsonrpc":"2.0","id":1,"method":"tools/list"}`+"\n", nil)
@@ -196,7 +204,7 @@ func TestMCPServeOfflineCatalog(t *testing.T) {
 	}
 	got := map[string]string{}
 	for _, tl := range resp.Result.Tools {
-		if strings.HasPrefix(tl.Name, setup.ConnectorName+".") {
+		if strings.HasPrefix(tl.Name, setup.ConnectorName+"_") {
 			got[tl.Name] = tl.Description
 		}
 	}
@@ -209,8 +217,8 @@ func TestMCPServeOfflineCatalog(t *testing.T) {
 		}
 	}
 	// The quickstart's own config, not a default one: its function and its writable tables.
-	if !strings.Contains(got["postgres.call"], "public.ship_order(bigint)") ||
-		!strings.HasSuffix(got["postgres.execute"], "Writable tables: public.orders, public.refunds.") {
+	if !strings.Contains(got["postgres_call"], "public.ship_order(bigint)") ||
+		!strings.HasSuffix(got["postgres_execute"], "Writable tables: public.orders, public.refunds.") {
 		t.Fatalf("not the quickstart's connector: %v", got)
 	}
 }

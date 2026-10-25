@@ -4270,7 +4270,7 @@ paths:
       description: >-
         Deedglass as an MCP server (S15): the org's native connectors' tools, named
         `<connector>.<tool>` (`fake.echo` in dev; `postgres.*` and others as connectors arrive),
-        filtered per agent by the active policy, plus `deedglass.check_approval`. The same
+        filtered per agent by the active policy, plus `deedglass_check_approval`. The same
         sessionless, dual-era protocol rules as `/mcp/{connector}`; `deedglass mcp serve` bridges
         stdio clients to it. An agent key with `actions:execute`.
       tags: [MCP]

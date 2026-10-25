@@ -61,11 +61,11 @@ func TestToolsList(t *testing.T) {
 		}
 		n := 0
 		for _, x := range names {
-			if x == "deedglass.check_approval" {
+			if x == "deedglass_check_approval" {
 				n++
 			}
 		}
-		if n != 1 || names[len(names)-1] != "deedglass.check_approval" {
+		if n != 1 || names[len(names)-1] != "deedglass_check_approval" {
 			t.Fatalf("check_approval %d times: %v", n, names)
 		}
 		var r struct {
@@ -81,7 +81,7 @@ func TestToolsList(t *testing.T) {
 		}
 		// A page after the first doesn't repeat the synthetic tool.
 		e = h.request("tools/list", `"cursor":"page-2"`)
-		if slices.Contains(toolNames(t, e), "deedglass.check_approval") {
+		if slices.Contains(toolNames(t, e), "deedglass_check_approval") {
 			t.Fatal("check_approval on a later page")
 		}
 		if !strings.Contains(h.stderr.String(), "◐ 1 tool hidden by policy · policy pv_01k6w4a3d5f7h9k1n3q5s7v9x1 · scratch.move_file") {
@@ -268,7 +268,7 @@ func TestPendingThenApproval(t *testing.T) {
 		h.request("tools/list", "")
 		r := result(t, h.call("write_file", `{"path":"/tmp/deedglass-demo/allowed/a.txt","approve":true}`))
 		apr := r.Meta["com.deedglass/approval"]
-		want := fmt.Sprintf(`Waiting for approval under policy "writes-need-approval": Writes wait for a human. Nothing has run yet. Approval %s expires at 10:42 UTC. To continue, call deedglass.check_approval with {"approval_id": "%s"}.`, apr, apr)
+		want := fmt.Sprintf(`Waiting for approval under policy "writes-need-approval": Writes wait for a human. Nothing has run yet. Approval %s expires at 10:42 UTC. To continue, call deedglass_check_approval with {"approval_id": "%s"}.`, apr, apr)
 		if !r.IsError || r.text() != want {
 			t.Fatalf("%q", r.text())
 		}
@@ -297,7 +297,7 @@ func TestPendingThenApproval(t *testing.T) {
 			r := result(t, h.call("write_file", `{"path":"/tmp/deedglass-demo/allowed/b.txt","approve":true}`))
 			apr, act := r.Meta["com.deedglass/approval"], r.Meta["com.deedglass/action"]
 			h.g.set(func() { h.g.actions[act].Status = status })
-			r = result(t, h.call("deedglass.check_approval", `{"approval_id":"`+apr+`"}`))
+			r = result(t, h.call("deedglass_check_approval", `{"approval_id":"`+apr+`"}`))
 			if !r.IsError || !strings.HasPrefix(r.text(), prefix) || !strings.Contains(r.text(), "Nothing was run.") {
 				t.Fatalf("%s: %q", status, r.text())
 			}

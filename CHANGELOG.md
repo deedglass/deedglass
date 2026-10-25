@@ -32,6 +32,23 @@ this file by `scripts/release-notes.sh`.
 
 ### Changed
 
+- **MCP tool names are API-safe by default.** `tools/list` now shows `postgres_query`,
+  `postgres_execute`, `fake_echo` and `deedglass_check_approval` instead of the dotted names, which
+  the Anthropic Messages API (`^[a-zA-Z0-9_-]{1,128}$`) and OpenAI function calling (the same
+  characters, at most 64) refuse. The Claude Agent SDK, the OpenAI Agents SDK, LangChain, LlamaIndex,
+  Mastra, Pydantic AI and the Vercel AI SDK recipes no longer rename tools, and the OpenAI Agents
+  recipes no longer need `include_server_in_tool_names`.
+- Nothing else changes: the dotted name stays the tool's name in policies, actions, deeds and the
+  REST API. A call by either spelling (`tools/call`, `POST /v1/actions`, `policy evaluate --tool`,
+  policy test cases) reaches the same rule and seals `postgres.query`, so existing policy files keep
+  working. A server tool named `deedglass_*` is now hidden, like `deedglass.*`.
+- **Deprecated:** the dotted names on `tools/call`, still accepted and logged
+  (`deprecated dotted tool name`). For the old listing, set `mcp.tool_names: dotted`, or pass
+  `--tool-names dotted` to `deedglass mcp serve` (it sends `Deedglass-Tool-Names`) or
+  `deedglass mcp wrap`. See [MCP.md](docs/MCP.md#tool-names).
+- The Claude Code plugin pins its server to `npx -y deedglass@<version> mcp serve` (Anthropic's
+  plugin directory refuses an unpinned npx command). `scripts/pin-plugin.sh <version>` is a release
+  step, and `scripts/check-versions.sh` and `make listings-check` fail when the pin drifts.
 - One Claude Code line everywhere: `claude mcp add --scope user deedglass -- npx -y deedglass mcp
   serve` in the README, the install links and `init`'s Next block (no key in Claude Code's config).
 - `Next` lines print `npx deedglass …` when the CLI runs under npx, where `deedglass` isn't on

@@ -10,7 +10,9 @@ config `.goreleaser.yaml`.
 
 1. Set the version everywhere: `sdk/typescript/package.json` and `npm/*/package.json` to
    `0.1.0-rc.1`, `sdk/python/src/deedglass/_version.py` to `0.1.0rc1`, and add `## [0.1.0-rc.1]` at
-   the top of `CHANGELOG.md`.
+   the top of `CHANGELOG.md`. Run `scripts/pin-plugin.sh 0.1.0-rc.1`: the Claude Code plugin's
+   `.mcp.json` runs `npx -y deedglass@<version> mcp serve` (Anthropic's plugin directory refuses an
+   unpinned npx command) and its `plugin.json` carries the same version.
 2. `scripts/check-versions.sh v0.1.0-rc.1` → every line `✓`.
 3. `make ci && make integration && make attack && make release-check` → all green, ending with
    `✓ 5 binaries · 5 archives · checksums · 5 SBOMs · image linux/amd64 + linux/arm64 · reproducible`.

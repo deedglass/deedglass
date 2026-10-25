@@ -25,8 +25,7 @@ import { Experimental_StdioMCPTransport as StdioClientTransport } from '@ai-sdk/
 
 const mcp = await createMCPClient({ transport: new StdioClientTransport({ command: 'npx', args: ['-y', 'deedglass', 'mcp', 'serve'] }) });
 try {
-  // postgres.query -> postgres_query: model APIs allow only letters, digits, _ and - in tool names.
-  const tools = Object.fromEntries(Object.entries(await mcp.tools()).map(([name, t]) => [name.replace('.', '_'), t]));
+  const tools = await mcp.tools(); // postgres_query and so on
   const { text } = await generateText({ model: 'anthropic/claude-sonnet-5.5', tools, stopWhen: stepCountIs(5), prompt: 'How many rows are in public.orders?' });
   console.log(text);
 } finally {
@@ -43,9 +42,9 @@ node agent.ts                     # Node 24 runs the file as it is
 
 **Model key:** `AI_GATEWAY_API_KEY`: the model string goes through the AI Gateway, as in the AI SDK's own example. Any model the AI SDK supports works.
 
-**Tool names:** Deedglass's tool names have a dot (`postgres.query`). The MCP spec allows dots in tool names, but model APIs often don't: Anthropic's takes `^[a-zA-Z0-9_-]{1,128}$`, and OpenAI's function names take the same characters. So the file renames each key of the tools object (`postgres_query`). The AI SDK calls a tool by its key, and the MCP tool still calls `postgres.query` on the server.
+**Tool names:** Deedglass lists its tools with names every model API takes: `postgres_query`, `postgres_execute`, `deedglass_check_approval` (letters, digits, `_` and `-`; Anthropic's rule is `^[a-zA-Z0-9_-]{1,128}$` and OpenAI's allows the same characters up to 64). Your policies and the sealed records keep the dotted name, `postgres.query`; Deedglass maps one to the other ([MCP.md](../MCP.md#tool-names)). Deedglass 0.7 and earlier listed the dotted names, which these APIs refuse. The AI SDK calls a tool by its key in the tools object.
 
-**What you see:** the answer (500 rows), and in Console › Ledger or `npx deedglass actions list` one sealed `postgres.query` action per call, with the rule that allowed it. If the agent tries a write, the tool answers that it is waiting for approval and nothing has run; once someone approves, `deedglass.check_approval` lets the agent carry on. A refused call answers with the policy's sentence and a record id.
+**What you see:** the answer (500 rows), and in Console › Ledger or `npx deedglass actions list` one sealed `postgres.query` action per call, with the rule that allowed it. If the agent tries a write, the tool answers that it is waiting for approval and nothing has run; once someone approves, `deedglass_check_approval` lets the agent carry on. A refused call answers with the policy's sentence and a record id.
 
 **First start:** `npx -y deedglass` can take several seconds the first time. If a framework's MCP connect timeout is shorter, run `npx -y deedglass version` once first, or install the CLI ([INSTALL.md](../INSTALL.md)) and use `deedglass` as the command.
 
@@ -77,7 +76,7 @@ Use the port `init` printed if it isn't 8080.
 ## Check it without a model key
 
 `examples/frameworks/vercel-ai-sdk/` has the file, its pinned packages and a `check` file that needs no model
-key: it starts `deedglass mcp serve` through the same framework client and the native adapter, and runs `postgres.query` once through each with the tool's own `execute()`. From the folder where
+key: it starts `deedglass mcp serve` through the same framework client and the native adapter, and runs `postgres_query` once through each with the tool's own `execute()`. From the folder where
 `init` ran:
 
 ```sh
@@ -100,4 +99,4 @@ Every framework API in the files above comes from the framework's own docs, chec
 Not verified:
 
 - The docs page shows `streamText`; this file uses `generateText` with the same `tools` object.
-- That a tools object with renamed keys works end to end with a live model: the check runs `execute()` under the new key, but no model ran in our tests (no model key in CI).
+- That the tools object works end to end with a live model: the check runs `execute()` on `postgres_query`, but no model ran in our tests (no model key in CI).

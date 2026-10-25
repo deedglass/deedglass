@@ -9,4 +9,4 @@ with MCPServerAdapter(params, connect_timeout=60) as mcp_tools:
     names = [t.name for t in mcp_tools]
     Agent(role="Orders analyst", goal="Answer questions about orders.", backstory="Reads orders.", tools=mcp_tools)
 print(names)
-assert "postgres_query" in names, names
+assert "postgres_query" in names, names  # CrewAI's adapter also swaps a dot for _ in 0.7 and earlier

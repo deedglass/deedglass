@@ -12,6 +12,8 @@ import (
 	"regexp"
 	"strings"
 	"time"
+
+	"github.com/deedglass/deedglass/internal/toolname"
 )
 
 // Config is one wrapper.
@@ -36,6 +38,10 @@ type Config struct {
 	// and elicitation/create are answered with an error and never relayed; roots/list and ping
 	// always pass. Values: "sampling", "elicitation".
 	AllowServerRequests []string
+	// ToolNames is how tools/list spells the wrapper's own tool: safe (deedglass_check_approval,
+	// the default) or dotted (deedglass.check_approval, deprecated). The server's tools keep
+	// their names. tools/call takes either spelling.
+	ToolNames string
 
 	// Tests.
 	RestartBase  time.Duration // first restart delay (250 ms)
@@ -87,6 +93,11 @@ func (c *Config) Validate() error {
 	if c.ConnectorType == "" {
 		c.ConnectorType = "mcp"
 	}
+	st, ok := toolname.ParseStyle(c.ToolNames)
+	if !ok {
+		return fmt.Errorf("--tool-names must be safe or dotted (got %q)", c.ToolNames)
+	}
+	c.ToolNames = string(st)
 	if c.MaxMessage <= 0 {
 		c.MaxMessage = 4 << 20
 	}

@@ -100,7 +100,7 @@ Back in Claude Desktop:
 
 > Did it go through?
 
-The model calls `deedglass.check_approval` and gets `Approved by a person. Ran
+The model calls `deedglass_check_approval` and gets `Approved by a person. Ran
 orders.execute_sql.` with the tool's own result. The page follows the action to **Sealed**.
 
 **Beat 5 (terminal only).** Stop the follow (Ctrl-C), then:

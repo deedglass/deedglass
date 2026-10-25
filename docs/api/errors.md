@@ -280,7 +280,7 @@ for the decision (S22). `POST /v1/actions` doesn't use this code: it answers 202
 **When it happens.** A person tried to countersign or deny after the approval's `expires_at`
 (S22). Timeout means no: nothing ran, and the expiry sweeper seals the action as `expired` with no
 decider. `POST /v1/actions` doesn't use this code: an agent learns about the expiry from the
-action's `status: expired` (or `deedglass.check_approval`).
+action's `status: expired` (or `deedglass_check_approval`).
 
 **What to do.** Nothing runs on its own. If the action is still needed, ask the agent to send it
 again: that asks for a new approval.

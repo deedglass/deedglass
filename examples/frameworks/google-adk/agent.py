@@ -8,7 +8,7 @@ deedglass = McpToolset(
     connection_params=StdioConnectionParams(
         server_params=StdioServerParameters(command="npx", args=["-y", "deedglass", "mcp", "serve"]), timeout=30
     ),
-    tool_filter=["postgres.describe", "postgres.query"],  # reads only; add postgres.execute for writes
+    tool_filter=["postgres_describe", "postgres_query"],  # reads only; add postgres_execute for writes
 )
 root_agent = LlmAgent(model="gemini-flash-latest", name="orders", instruction="Answer questions about orders.",
                       tools=[deedglass])

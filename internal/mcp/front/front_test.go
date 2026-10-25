@@ -195,7 +195,7 @@ func TestListPagination(t *testing.T) {
 			break
 		}
 	}
-	if len(names) != 151 || names[0] != "t000" || names[150] != "deedglass.check_approval" || strings.Contains(strings.Join(names, ","), "secret") {
+	if len(names) != 151 || names[0] != "t000" || names[150] != "deedglass_check_approval" || strings.Contains(strings.Join(names, ","), "secret") {
 		t.Fatalf("%d %v", len(names), names[len(names)-3:])
 	}
 	if r := f.Handle(ctx, req("tools/list", `"cursor":"nope!"`, true)); !strings.Contains(string(r.Env["error"]), "-32602") {

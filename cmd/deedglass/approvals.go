@@ -366,7 +366,7 @@ func runDecide(ctx context.Context, e *Env, args []string, v approve.Vote) error
 			return nil
 		}
 		if err == nil && act.Status == ledger.StatusAuthorized {
-			fmt.Fprintln(e.Stdout, s.OKLine(fmt.Sprintf("authorized %s %s %s the agent's edge runs it on its next deedglass.check_approval", ui.Sep, act.Tool, ui.Sep)))
+			fmt.Fprintln(e.Stdout, s.OKLine(fmt.Sprintf("authorized %s %s %s the agent's edge runs it on its next deedglass_check_approval", ui.Sep, act.Tool, ui.Sep)))
 			return nil
 		}
 		if time.Now().After(deadline) {

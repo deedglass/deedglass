@@ -79,15 +79,15 @@ rules:
 | Message | What the wrapper does |
 |---|---|
 | `tools/call` | Asks the Gate first (proxy mode). Forwards only on `authorized`. |
-| `tools/call deedglass.check_approval` | Handled by the wrapper (below). |
-| `tools/list` | Forwarded; the answer is filtered (tools the policy always denies, tools whose definition changed, tools whose description carries instructions aimed at the model or characters people can't see (S34), server tools named `deedglass.*`), and `deedglass.check_approval` is added to the first page. For 2026-07-28 requests, `cacheScope` becomes `"private"` and `ttlMs` at most 60,000. |
+| `tools/call deedglass_check_approval` | Handled by the wrapper (below). |
+| `tools/list` | Forwarded; the answer is filtered (tools the policy always denies, tools whose definition changed, tools whose description carries instructions aimed at the model or characters people can't see (S34), server tools named `deedglass.*` or `deedglass_*`), and `deedglass_check_approval` is added to the first page. For 2026-07-28 requests, `cacheScope` becomes `"private"` and `ttlMs` at most 60,000. |
 | `initialize`, `server/discover` | Forwarded; one line is added to `instructions` and `capabilities.tools` is made present. |
 | `notifications/cancelled` | Mapped to the server's id and forwarded (below). |
 | Everything else | Passed through with only the request id rewritten: `ping`, `resources/*`, `prompts/*`, `completion/complete`, `subscriptions/listen`, `logging/setLevel`, notifications, unknown methods and extension fields. |
 | Server-to-client requests: `roots/list`, `ping` | Passed through; the client shows its own confirmation. |
 | Server-to-client requests: `sampling/createMessage`, `elicitation/create` (S34) | Refused: the wrapper answers the server with a JSON-RPC error (-32601) and logs it, and the client never sees the request. `--allow-server-requests sampling,elicitation` passes the named kinds through, for a server you trust to ask your model for text or you for input. The HTTP gateway never relays them: its MCP client declares neither capability, and logs each request it refuses. |
 
-**Governed methods:** `tools/call` (and the wrapper's own `deedglass.check_approval`).
+**Governed methods:** `tools/call` (and the wrapper's own `deedglass_check_approval`).
 **Rewritten results:** `initialize`, `server/discover`, `tools/list`. **Passthrough:** everything
 else. S15's HTTP gateway follows the same lists.
 
@@ -131,15 +131,15 @@ Allowed results come back exactly as the server sent them, plus `_meta["com.deed
 Synthetic results carry `com.deedglass/action`, `/deed`, `/decision`, `/rule` and `/approval` as
 they apply.
 
-### Approvals: `deedglass.check_approval`
+### Approvals: `deedglass_check_approval`
 
 A rule with `decision: require_approval` pauses the call:
 
 ```text
-Waiting for approval under policy "writes-need-approval": Writes wait for a human. Nothing has run yet. Approval apr_01k6… expires at 10:42 UTC. To continue, call deedglass.check_approval with {"approval_id": "apr_01k6…"}.
+Waiting for approval under policy "writes-need-approval": Writes wait for a human. Nothing has run yet. Approval apr_01k6… expires at 10:42 UTC. To continue, call deedglass_check_approval with {"approval_id": "apr_01k6…"}.
 ```
 
-After a person approves it, the model calls `deedglass.check_approval`; the wrapper then runs the
+After a person approves it, the model calls `deedglass_check_approval`; the wrapper then runs the
 **original** call (the name and arguments the Gate decided on) once, and returns `Approved by a
 person. Ran scratch.write_file.` followed by the tool's own result. A second check says it already
 ran. Only the wrapper process that created the action runs it; after a restart, the answer asks the
@@ -150,7 +150,7 @@ Since S22, a person decides from the emailed link, the Console's API (`POST
 /v1/approvals/{id}/approve` or `/deny`) or, on a dev server, `deedglass approve <apr_…> --as
 <email>`. [APPROVALS.md](APPROVALS.md) has the whole flow.
 
-**`wait_seconds`.** `deedglass.check_approval` takes `{"approval_id": "apr_…", "wait_seconds": 10}`.
+**`wait_seconds`.** `deedglass_check_approval` takes `{"approval_id": "apr_…", "wait_seconds": 10}`.
 It waits up to `wait_seconds` (0 to 20, default 10) for a decision before it answers, so one call
 usually returns the outcome instead of "still waiting". 0 answers at once.
 
@@ -210,6 +210,7 @@ name still goes to the Gate and is sealed as a denial.
 | `--allow-server-requests` | none | `sampling`, `elicitation` (comma-separated): pass the server's requests for the client's model or for your input to the client. By default both are refused and logged (S34). |
 | `--call-timeout` | none | Give up on a call after this long. |
 | `--result-mode` | `full` | `full` reports results up to 256 KiB (larger ones as a digest); `digest` reports digests only. |
+| `--tool-names` | `safe` | `safe` lists `deedglass_check_approval`; `dotted` lists `deedglass.check_approval` (0.7 and earlier, deprecated). Calls take either. The server's own tools keep their names. |
 | `--on-behalf-of` | none | `Deedglass-On-Behalf-Of` on every action. |
 | `--insecure-http` | off | Allow `http` to a non-loopback server (`DEEDGLASS_ENV=dev` only). |
 | `--log-file`, `--no-log-file` | `~/.deedglass/logs/mcp-<connector>.log` | The log file (0600, directory 0700). |
@@ -338,7 +339,7 @@ What the gateway does with each message:
 
 - **`tools/list`**: the upstream's tools (cached for the shorter of `tools_ttl` and the
   upstream's `ttlMs`), minus the ones the active policy always denies to this agent, plus
-  `deedglass.check_approval`. Modern answers carry `ttlMs: 30000` and `cacheScope: "private"`,
+  `deedglass_check_approval`. Modern answers carry `ttlMs: 30000` and `cacheScope: "private"`,
   because the list is filtered per caller. 100 tools per page with an opaque cursor.
 - **`tools/call`**: one action, `mode: gateway`, decided by the Gate. Allowed calls run on the
   upstream and the answer is the upstream's result with `_meta` `com.deedglass/action` and
@@ -352,7 +353,7 @@ What the gateway does with each message:
   and the action is UNVERIFIABLE (`client_cancelled`); an answer over 4 MiB → `unknown`. A
   `tools/call` is never retried, because it may have applied; only `tools/list` is retried once
   after a lost session.
-- **`deedglass.check_approval`** finds the action from the approval id (no session needed) and,
+- **`deedglass_check_approval`** finds the action from the approval id (no session needed) and,
   once a person approved it, returns the result of the run the Gate made when it resumed the
   action. Another agent's approval is not found.
 - **Resources, prompts and completion** answer `-32601` unless `mcp.passthrough` lists their
@@ -378,8 +379,8 @@ listed is left out and logged, and a call to it is still recorded by the Gate.
 
 ## Use Deedglass as an MCP server
 
-`POST /mcp/native` serves the Gate's own connectors as MCP tools, named `<connector>.<tool>`:
-`fake.echo` in dev today, `postgres.*`, `rest.*` and the others as S16 to S30 add connectors. The
+`POST /mcp/native` serves the Gate's own connectors as MCP tools, listed as `<connector>_<tool>`
+([Tool names](#tool-names)): `fake_echo` in dev, `postgres_query`, `rest_*` and the others. The
 list is filtered per agent like the gateway's; `GET /v1/tools` returns the same tools as JSON for
 SDKs (`?include_hidden=true` adds the hidden ones with `visibility: hidden`).
 
@@ -397,9 +398,41 @@ matching request, and exits 0 when stdin ends. When the server can't be reached,
 the calm "could not be reached" result and nothing runs. `--connector <name>` bridges to an
 upstream behind the gateway instead. With no key found it makes no network call at all: it answers
 `initialize` and `tools/list` itself from the quickstart's catalog: the tools of the `postgres`
-connector `init` creates, built from the same config, so `postgres.call` and the writable tables
-are there as on a real quickstart (an upstream's list is empty but for `deedglass.check_approval`), puts the run-`init` sentence in `instructions`, in `tools/list`'s
+connector `init` creates, built from the same config, so `postgres_call` and the writable tables
+are there as on a real quickstart (an upstream's list is empty but for `deedglass_check_approval`), puts the run-`init` sentence in `instructions`, in `tools/list`'s
 `_meta` (`com.deedglass/notice`) and in every tool call's result, and runs nothing.
+
+## Tool names
+
+Deedglass names a tool `<connector>.<tool>` (`postgres.query`): that is the name policies match,
+actions and deeds record, and the REST API and SDKs use. MCP clients see it with an underscore
+instead, `postgres_query`, and Deedglass's own tool is `deedglass_check_approval`.
+
+Why: the MCP specification allows a dot in a tool name
+([2025-11-25, Tool Names](https://modelcontextprotocol.io/specification/2025-11-25/server/tools#tool-names):
+letters, digits, `_`, `-` and `.`, 1 to 128 characters), but the model APIs agents pass
+`tools/list` to don't. Anthropic's Messages API takes `^[a-zA-Z0-9_-]{1,128}$`
+([Define tools](https://platform.claude.com/docs/en/agents-and-tools/tool-use/define-tools)), and
+OpenAI's function names take a-z, A-Z, 0-9, `_` and `-`, at most 64 characters (the `name` field of
+`FunctionObject` in [openai-openapi](https://github.com/openai/openai-openapi)). A dotted name made
+the Claude Agent SDK, the OpenAI Agents SDK and others fail or need a rename. Checked 2026-10-25.
+
+- **Mapping.** A connector name never holds `_` or `.`, so the first `_` of a listed name ends the
+  connector: `postgres_list_rows` is `postgres.list_rows`. An upstream MCP server's own tool names
+  are listed as that server spells them.
+- **Calls take either spelling.** `tools/call` with `postgres_query` or `postgres.query` reaches the
+  same tool, the same policy rule and the same deed, which records `postgres.query`. The REST API
+  (`POST /v1/actions`), `deedglass policy evaluate --tool` and policy test cases take either too.
+  The dotted names on `tools/call` are deprecated: they still work, and the server logs
+  `deprecated dotted tool name` for each such call.
+- **Policies don't change.** Keep writing `tool: postgres.query` and `tool: postgres.*`; a call by
+  the underscore name is decided as the dotted one.
+- **The old listing.** `mcp.tool_names: dotted` in `deedglass.yaml` (every client of that server),
+  `deedglass mcp serve --tool-names dotted` (sends `Deedglass-Tool-Names: dotted`, one bridge), or
+  `deedglass mcp wrap --tool-names dotted` (the wrapper's own tool only) lists the dotted names of
+  0.7 and earlier. The default is `safe`.
+- **Length.** OpenAI allows 64 characters. Built-in tool names are short; a connector name of up to
+  32 characters plus a long tool name can pass 64, so keep connector names short if you use OpenAI.
 
 ## MCP versions
 
@@ -454,6 +487,6 @@ specification pages on 2026-10-01:
   doesn't send `x-mcp-header` headers; a modern client calling such a tool through the bridge is
   refused with `-32020`. No native tool uses `x-mcp-header` today.
 - **An approved call's result is shown in full only by the instance that ran it**, within a
-  minute; afterwards `deedglass.check_approval` returns the stored result (up to
+  minute; afterwards `deedglass_check_approval` returns the stored result (up to
   `gate.max_result_bytes`), or says the call ran.
 - **Upstream results are the upstream's word** (L0, method `reported`) until the Witness.

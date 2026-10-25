@@ -220,7 +220,7 @@ func TestConformance(t *testing.T) {
 				for _, x := range tools {
 					names = append(names, x.Name)
 				}
-				if strings.Join(names, ",") != "delete_all,echo,region,slow,deedglass.check_approval" {
+				if strings.Join(names, ",") != "delete_all,echo,region,slow,deedglass_check_approval" {
 					t.Fatalf("tools %v", names)
 				}
 				if string(o.Result["cacheScope"]) != `"private"` || string(o.Result["ttlMs"]) != "30000" || string(o.Result["resultType"]) != `"complete"` {
@@ -286,7 +286,7 @@ func TestConformance(t *testing.T) {
 				if string(o.Result["protocolVersion"]) != `"2025-06-18"` || r.header.Get("Mcp-Session-Id") != "" || o.Result["resultType"] != nil {
 					t.Fatalf("%v %s", r.header, r.body)
 				}
-				if !strings.Contains(string(o.Result["serverInfo"]), `"name":"deedglass-gate"`) || !strings.Contains(string(o.Result["instructions"]), "deedglass.check_approval") {
+				if !strings.Contains(string(o.Result["serverInfo"]), `"name":"deedglass-gate"`) || !strings.Contains(string(o.Result["instructions"]), "deedglass_check_approval") {
 					t.Fatalf("%s", r.body)
 				}
 			}},

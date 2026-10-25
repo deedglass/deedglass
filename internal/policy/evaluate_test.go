@@ -14,6 +14,7 @@ import (
 	"cel.dev/cel-go/common/types/ref"
 
 	"github.com/deedglass/deedglass/examples/policies"
+	"github.com/deedglass/deedglass/internal/toolname"
 )
 
 var evalTime = time.Date(2026, 10, 4, 4, 30, 0, 0, time.UTC) // 10:00 in Asia/Kolkata
@@ -497,6 +498,17 @@ func TestPostgresSafeDemo(t *testing.T) {
 		d := Evaluate(ctx, c, x, EvalOptions{Explain: true, Deadline: testDeadline})
 		if d.Outcome != k.outcome || d.RuleID != k.rule || (k.message != "" && d.Message != k.message) {
 			t.Errorf("%s %q: %s %s %q", k.tool, k.sql, d.Outcome, d.RuleID, d.Message)
+		}
+	}
+	// The API-safe spelling an MCP client lists ("postgres_query") is decided exactly as the
+	// dotted name the policy file uses.
+	for _, k := range cases {
+		x := sqlIn(k.tool, k.sql)
+		x.Usage = k.usage
+		x.Tool.Name = toolname.SafeName(k.tool)
+		d := Evaluate(ctx, c, x, EvalOptions{Explain: true, Deadline: testDeadline})
+		if d.Outcome != k.outcome || d.RuleID != k.rule || (k.message != "" && d.Message != k.message) {
+			t.Errorf("%s (safe spelling) %q: %s %s %q", x.Tool.Name, k.sql, d.Outcome, d.RuleID, d.Message)
 		}
 	}
 	d := Evaluate(ctx, c, sqlIn("postgres.execute", "/* tidy up */ DrOp TABLE public.orders"), EvalOptions{Explain: true, Deadline: testDeadline})

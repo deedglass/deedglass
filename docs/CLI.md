@@ -668,11 +668,13 @@ call answers `Deedglass could not be reached at http://127.0.0.1:8080, so this w
 it with "deedglass serve", then try again.` With no key found (no `--api-key`, no
 `DEEDGLASS_API_KEY`, no `.deedglass/quickstart.key`), it sends nothing: `initialize`,
 `server/discover`, `ping` and `tools/list` are answered in the process, `tools/list` with the tools a
-quickstart's `postgres` connector serves (`postgres.call`, `postgres.describe`, `postgres.execute`,
-`postgres.query`, built from the config `init` creates that connector with) and
-`deedglass.check_approval`, and every tool call answers `No Deedglass key found, so no tool can
+quickstart's `postgres` connector serves (`postgres_call`, `postgres_describe`, `postgres_execute`,
+`postgres_query`, built from the config `init` creates that connector with) and
+`deedglass_check_approval`, and every tool call answers `No Deedglass key found, so no tool can
 run yet. Run npx deedglass init in a terminal, then restart your MCP client.` So a client or a
-directory that inspects the server before `init` sees what it offers.
+directory that inspects the server before `init` sees what it offers. `--tool-names dotted` asks
+for the dotted names of 0.7 and earlier (`postgres.query`, deprecated); the default lists names
+every model API accepts ([MCP.md](MCP.md#tool-names)).
 
 `deedglass mcp snippet --transport http --client <client> [--connector native|<name>]` prints config
 for the HTTP endpoints instead of a wrapped server: `claude mcp add --transport http …` for Claude

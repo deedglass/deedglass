@@ -23,10 +23,7 @@ from fastmcp.client.transports import StdioTransport
 from pydantic_ai import Agent
 from pydantic_ai.mcp import MCPToolset
 
-NAMES = ["postgres.query", "postgres.describe", "postgres.execute", "postgres.call", "deedglass.check_approval"]
 toolset = MCPToolset(StdioTransport(command="npx", args=["-y", "deedglass", "mcp", "serve"]))
-# renamed() maps new name -> original: postgres_query -> postgres.query (model APIs reject dots).
-toolset = toolset.renamed({name.replace(".", "_"): name for name in NAMES})
 agent = Agent("openai:gpt-6.1-sol", toolsets=[toolset])
 print(agent.run_sync("How many rows are in public.orders?").output)
 ```
@@ -40,9 +37,9 @@ python agent.py
 
 **Model key:** `OPENAI_API_KEY` (the model string is the one in Pydantic AI's MCP client page). Any model Pydantic AI supports works.
 
-**Tool names:** Deedglass's tool names have a dot (`postgres.query`). The MCP spec allows dots in tool names, but model APIs often don't: Anthropic's takes `^[a-zA-Z0-9_-]{1,128}$`, and OpenAI's function names take the same characters. So the file uses Pydantic AI's own `renamed()` toolset, which maps a new name to the server's name (`postgres_query` to `postgres.query`).
+**Tool names:** Deedglass lists its tools with names every model API takes: `postgres_query`, `postgres_execute`, `deedglass_check_approval` (letters, digits, `_` and `-`; Anthropic's rule is `^[a-zA-Z0-9_-]{1,128}$` and OpenAI's allows the same characters up to 64). Your policies and the sealed records keep the dotted name, `postgres.query`; Deedglass maps one to the other ([MCP.md](../MCP.md#tool-names)). Deedglass 0.7 and earlier listed the dotted names, which these APIs refuse.
 
-**What you see:** the answer (500 rows), and in Console › Ledger or `npx deedglass actions list` one sealed `postgres.query` action per call, with the rule that allowed it. If the agent tries a write, the tool answers that it is waiting for approval and nothing has run; once someone approves, `deedglass.check_approval` lets the agent carry on. A refused call answers with the policy's sentence and a record id.
+**What you see:** the answer (500 rows), and in Console › Ledger or `npx deedglass actions list` one sealed `postgres.query` action per call, with the rule that allowed it. If the agent tries a write, the tool answers that it is waiting for approval and nothing has run; once someone approves, `deedglass_check_approval` lets the agent carry on. A refused call answers with the policy's sentence and a record id.
 
 **First start:** `npx -y deedglass` can take several seconds the first time. If a framework's MCP connect timeout is shorter, run `npx -y deedglass version` once first, or install the CLI ([INSTALL.md](../INSTALL.md)) and use `deedglass` as the command.
 
@@ -66,7 +63,7 @@ is reported as skipped, not as a failure.
 Every framework API in the files above comes from the framework's own docs, checked 2026-10-21:
 
 - `MCPToolset(StdioTransport(command=…, args=…))`, `Agent(model, toolsets=[toolset])`: https://pydantic.dev/docs/ai/mcp/client/
-- `.renamed({new_name: original_name})`, and `WrapperToolset.call_tool` for checks of your own: https://pydantic.dev/docs/ai/tools-toolsets/toolsets/
+- `WrapperToolset.call_tool` for checks of your own: https://pydantic.dev/docs/ai/tools-toolsets/toolsets/
 - Tool-name rules: the MCP spec's tool names (https://modelcontextprotocol.io/specification/2025-11-25/server/tools#tool-names) and Anthropic's tool definitions (https://platform.claude.com/docs/en/agents-and-tools/tool-use/define-tools). OpenAI's API reference returned 403 when we checked; its rule here is the one `@deedglass/sdk`'s OpenAI adapter already follows.
 
 Not verified:

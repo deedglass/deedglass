@@ -25,6 +25,7 @@ import (
 	"github.com/deedglass/deedglass/internal/mcp/httpgw"
 	"github.com/deedglass/deedglass/internal/mcp/jsonrpc"
 	"github.com/deedglass/deedglass/internal/mcp/present"
+	"github.com/deedglass/deedglass/internal/toolname"
 )
 
 // MaxInFlight is how many requests the bridge sends at once.
@@ -44,6 +45,10 @@ type Config struct {
 	// (mcp serve with no key, PRD-03): initialize, server/discover, ping and tools/list as the
 	// gateway would, each carrying gate.MCPNoKey; every tools/call gets gate.MCPNoKey and runs nothing.
 	Offline *front.Front
+	// ToolNames, when set, asks the server for that tools/list spelling (Deedglass-Tool-Names):
+	// safe ("postgres_query") or dotted ("postgres.query", deprecated). "": the server's
+	// mcp.tool_names, safe by default.
+	ToolNames toolname.Style
 }
 
 // Bridge relays one stdio session.
@@ -184,6 +189,9 @@ func (b *Bridge) post(ctx context.Context, e jsonrpc.Envelope, w *jsonrpc.Writer
 		h.Set("Authorization", "Bearer "+b.cfg.APIKey)
 	}
 	b.headers(h, e)
+	if b.cfg.ToolNames != "" {
+		h.Set(httpgw.HToolNames, string(b.cfg.ToolNames))
+	}
 	res, err := b.client.Do(req)
 	if err != nil {
 		if ctx.Err() != nil {
@@ -346,7 +354,8 @@ func (b *Bridge) local(ctx context.Context, e jsonrpc.Envelope, w *jsonrpc.Write
 		_ = w.SendEnvelope(jsonrpc.NewResponse(e.ID(), present.Plain(gate.MCPNoKey, v.Modern)))
 		return
 	}
-	res := b.cfg.Offline.Handle(ctx, front.Request{Env: e, Version: v.Version, Modern: v.Modern, Transport: gate.TransportMCPStdio})
+	res := b.cfg.Offline.Handle(ctx, front.Request{Env: e, Version: v.Version, Modern: v.Modern, Transport: gate.TransportMCPStdio,
+		ToolNames: b.cfg.ToolNames})
 	if res.Env == nil {
 		return
 	}

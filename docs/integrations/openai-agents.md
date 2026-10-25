@@ -26,9 +26,7 @@ from agents.mcp import MCPServerStdio
 async def main():
     params = {"command": "npx", "args": ["-y", "deedglass", "mcp", "serve"]}
     async with MCPServerStdio(name="deedglass", params=params) as server:
-        # Names become mcp_deedglass__postgres_query: OpenAI function names can't hold a dot.
-        agent = Agent(name="orders", instructions="Answer questions about orders.",
-                      mcp_servers=[server], mcp_config={"include_server_in_tool_names": True})
+        agent = Agent(name="orders", instructions="Answer questions about orders.", mcp_servers=[server])
         result = await Runner.run(agent, "How many rows are in public.orders?")
         print(result.final_output)
 
@@ -42,8 +40,7 @@ import { Agent, MCPServerStdio, run } from '@openai/agents';
 const server = new MCPServerStdio({ name: 'deedglass', fullCommand: 'npx -y deedglass mcp serve' });
 await server.connect();
 try {
-  // Names become mcp_deedglass__postgres_query: OpenAI function names can't hold a dot.
-  const agent = new Agent({ name: 'orders', instructions: 'Answer questions about orders.', mcpServers: [server], mcpConfig: { includeServerInToolNames: true } });
+  const agent = new Agent({ name: 'orders', instructions: 'Answer questions about orders.', mcpServers: [server] });
   const result = await run(agent, 'How many rows are in public.orders?');
   console.log(result.finalOutput);
 } finally {
@@ -60,9 +57,9 @@ npm install @openai/agents@0.21.0 zod@4.6.7 && node agent.ts
 
 **Model key:** `OPENAI_API_KEY`. The agent uses the SDK's default model.
 
-**Tool names:** Deedglass's tool names have a dot (`postgres.query`). The MCP spec allows dots in tool names, but model APIs often don't: Anthropic's takes `^[a-zA-Z0-9_-]{1,128}$`, and OpenAI's function names take the same characters. So the file turns on the SDK's own `include_server_in_tool_names` (`includeServerInToolNames` in TypeScript). The model then sees `mcp_deedglass__postgres_query`, and the SDK still calls `postgres.query` on the server. We checked the names it builds in both SDKs.
+**Tool names:** Deedglass lists its tools with names every model API takes: `postgres_query`, `postgres_execute`, `deedglass_check_approval` (letters, digits, `_` and `-`; Anthropic's rule is `^[a-zA-Z0-9_-]{1,128}$` and OpenAI's allows the same characters up to 64). Your policies and the sealed records keep the dotted name, `postgres.query`; Deedglass maps one to the other ([MCP.md](../MCP.md#tool-names)). Deedglass 0.7 and earlier listed the dotted names, which these APIs refuse. `include_server_in_tool_names` (`includeServerInToolNames` in TypeScript) is no longer needed; turn it on only to tell several servers' tools apart.
 
-**What you see:** the answer (500 rows), and in Console › Ledger or `npx deedglass actions list` one sealed `postgres.query` action per call, with the rule that allowed it. If the agent tries a write, the tool answers that it is waiting for approval and nothing has run; once someone approves, `deedglass.check_approval` lets the agent carry on. A refused call answers with the policy's sentence and a record id.
+**What you see:** the answer (500 rows), and in Console › Ledger or `npx deedglass actions list` one sealed `postgres.query` action per call, with the rule that allowed it. If the agent tries a write, the tool answers that it is waiting for approval and nothing has run; once someone approves, `deedglass_check_approval` lets the agent carry on. A refused call answers with the policy's sentence and a record id.
 
 **First start:** `npx -y deedglass` can take several seconds the first time. If a framework's MCP connect timeout is shorter, run `npx -y deedglass version` once first, or install the CLI ([INSTALL.md](../INSTALL.md)) and use `deedglass` as the command.
 
@@ -111,8 +108,8 @@ is reported as skipped, not as a failure.
 
 Every framework API in the files above comes from the framework's own docs, checked 2026-10-21:
 
-- `MCPServerStdio` with `params={"command", "args"}` as an async context manager, `mcp_servers=[server]`, `list_tools()`, `mcp_config={"include_server_in_tool_names": True}`: https://openai.github.io/openai-agents-python/mcp/
-- `MCPServerStdio({ name, fullCommand })`, `connect()`, `close()`, `mcpServers`, `mcpConfig: { includeServerInToolNames: true }`: https://openai.github.io/openai-agents-js/guides/mcp/
+- `MCPServerStdio` with `params={"command", "args"}` as an async context manager, `mcp_servers=[server]`, `list_tools()`: https://openai.github.io/openai-agents-python/mcp/
+- `MCPServerStdio({ name, fullCommand })`, `connect()`, `close()`, `mcpServers`: https://openai.github.io/openai-agents-js/guides/mcp/
 - `tool_input_guardrails` on a local MCP server, for checks of your own before Deedglass sees the call: https://openai.github.io/openai-agents-python/guardrails/
 - Tool-name rules: the MCP spec's tool names (https://modelcontextprotocol.io/specification/2025-11-25/server/tools#tool-names) and Anthropic's tool definitions (https://platform.claude.com/docs/en/agents-and-tools/tool-use/define-tools). OpenAI's API reference returned 403 when we checked; its rule here is the one `@deedglass/sdk`'s OpenAI adapter already follows.
 
