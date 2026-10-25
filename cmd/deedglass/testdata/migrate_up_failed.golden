@@ -2,4 +2,4 @@ exit 1
 --- stdout
 --- stderr
 ✕ Migration 0004_connectors.sql failed: ERROR: relation "deedglass.orgs" does not exist (SQLSTATE 42P01).
-  Nothing after the failed migration was applied. Fix the cause and run deedglass migrate up again.
+  next  Nothing after the failed migration was applied. Fix the cause and run deedglass migrate up again.

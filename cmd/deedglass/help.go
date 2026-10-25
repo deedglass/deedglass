@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	"strings"
 
 	"github.com/deedglass/deedglass/cmd/deedglass/internal/ui"
@@ -45,8 +46,30 @@ func lineBuilt(l Line) bool {
 	return true
 }
 
+// globalFlags prints the global flags line, wrapped to width.
+func globalFlags(e *Env, w io.Writer, width int) {
+	gl := fmt.Sprintf("              --json %s --server <url> %s --api-key <key> %s --org <id> %s --no-color %s -v", ui.Sep, ui.Sep, ui.Sep, ui.Sep, ui.Sep)
+	fmt.Fprintln(w)
+	for i, l := range ui.Wrap(gl, width, 0) {
+		if i == 0 {
+			l = e.Style.Bold("Global flags") + "  " + strings.TrimLeft(l, " ")
+		}
+		fmt.Fprintln(w, l)
+	}
+}
+
+// helpWidth is the column budget help wraps to: the terminal's width, at most 100, or 80 when it
+// isn't known (a pipe, a file).
+func helpWidth(e *Env) int {
+	if e.Width > 0 {
+		return min(e.Width, 100)
+	}
+	return 80
+}
+
 func helpAll(e *Env) {
 	s := e.Style
+	width := helpWidth(e)
 	nameW, sumW := 0, 0
 	for _, l := range lines {
 		nameW = max(nameW, ui.Width(l.Name))
@@ -70,19 +93,33 @@ func helpAll(e *Env) {
 			fmt.Fprintln(w, row+l.Summary)
 			continue
 		}
-		row += ui.Pad(l.Summary, sumW+3)
-		status := "soon"
-		if lineBuilt(l) {
-			status = "    "
+		subs := strings.Join(l.Subs, " "+ui.Sep+" ")
+		status := ""
+		if !lineBuilt(l) {
+			status = "soon"
 		}
-		row += s.Dim(status)
-		if len(l.Subs) > 0 {
-			row += "   " + s.Dim(strings.Join(l.Subs, " "+ui.Sep+" "))
+		// Wide terminals keep the subcommands in their own column; narrower ones (80 columns, a
+		// pipe) put them on the next line under the summary.
+		if 2+nameW+2+sumW+3+4+3+ui.Width(subs) <= width {
+			if status == "" {
+				status = "    "
+			}
+			fmt.Fprintln(w, row+ui.Pad(l.Summary, sumW+3)+s.Dim(status)+"   "+s.Dim(subs))
+			continue
+		}
+		if status != "" {
+			row += l.Summary + "  " + s.Dim(status)
+		} else {
+			row += l.Summary
 		}
 		fmt.Fprintln(w, row)
+		if subs != "" {
+			for _, sl := range ui.Wrap(strings.Repeat(" ", 2+nameW+2)+subs, width, 0) {
+				fmt.Fprintln(w, s.Dim(sl))
+			}
+		}
 	}
-	fmt.Fprintf(w, "\n%s  --json %s --server <url> %s --api-key <key> %s --org <id> %s --no-color %s -v\n",
-		s.Bold("Global flags"), ui.Sep, ui.Sep, ui.Sep, ui.Sep, ui.Sep)
+	globalFlags(e, w, width)
 	fmt.Fprintf(w, "Run deedglass help <command> for details %s %s\n", ui.Sep, docsURL)
 }
 
@@ -107,15 +144,22 @@ func helpFamily(e *Env, prefix []string, fam []*Command) {
 		nameW = max(nameW, ui.Width(strings.Join(c.Path[len(prefix):], " ")))
 		sumW = max(sumW, ui.Width(c.Summary))
 	}
+	soon := false
 	for _, c := range fam {
 		row := "  " + ui.Pad(strings.Join(c.Path[len(prefix):], " "), nameW) + "  "
 		if c.Built() {
 			fmt.Fprintln(w, row+c.Summary)
 			continue
 		}
+		soon = true
 		fmt.Fprintln(w, row+ui.Pad(c.Summary, sumW+3)+s.Dim("soon "+ui.Sep+" "+c.Owner))
 	}
-	fmt.Fprintf(w, "\nsoon: listed in the contract, not in this build yet; the session that builds it is shown.\n")
+	if soon {
+		fmt.Fprintln(w)
+		for _, l := range ui.Wrap("soon: listed in the contract, not in this build yet; the session that builds it is shown.", helpWidth(e), 6) {
+			fmt.Fprintln(w, l)
+		}
+	}
 }
 
 func helpCommand(e *Env, c *Command) {
@@ -127,20 +171,33 @@ func helpCommand(e *Env, c *Command) {
 	if c.Usage != "" {
 		usage += " " + c.Usage
 	}
-	fmt.Fprintf(w, "%s  %s\n", s.Bold("Usage"), usage)
+	width := helpWidth(e)
+	for i, l := range ui.Wrap("       "+usage, width, 0) {
+		if i == 0 {
+			l = s.Bold("Usage") + "  " + strings.TrimPrefix(l, "       ")
+		}
+		fmt.Fprintln(w, l)
+	}
 	if c.Detail != "" {
 		for _, l := range strings.Split(strings.TrimRight(c.Detail, "\n"), "\n") {
-			if l != "" && !strings.HasPrefix(l, " ") {
-				l = s.Bold(l)
+			// A line that starts with spaces is an example or a list item: kept as written unless it
+			// overflows, then wrapped under itself.
+			hang := 0
+			if strings.HasPrefix(l, " ") {
+				hang = 2
 			}
-			fmt.Fprintln(w, l)
+			for _, wl := range ui.Wrap(l, width, hang) {
+				if wl != "" && !strings.HasPrefix(l, " ") {
+					wl = s.Bold(wl)
+				}
+				fmt.Fprintln(w, wl)
+			}
 		}
 	}
 	if !c.Built() {
 		fmt.Fprintf(w, "\n%s\n", s.Dim("Not in this build yet (planned for "+c.Owner+")."))
 	}
-	fmt.Fprintf(w, "\n%s  --json %s --server <url> %s --api-key <key> %s --org <id> %s --no-color %s -v\n",
-		s.Bold("Global flags"), ui.Sep, ui.Sep, ui.Sep, ui.Sep, ui.Sep)
+	globalFlags(e, w, width)
 }
 
 // flagValues are the closed value lists help --json carries for completions (S35 generates them).

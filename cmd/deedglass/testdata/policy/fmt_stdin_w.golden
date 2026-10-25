@@ -2,4 +2,4 @@ exit 2
 --- stdout
 --- stderr
 ✕ -w can't write to stdin.
-  Run deedglass policy fmt - to print the formatted policy instead.
+  next  Run deedglass policy fmt - to print the formatted policy instead.

@@ -20,6 +20,4 @@ Usage  deedglass agent <command> [flags]
   intent list    List an agent's intent keys
   intent remove  Remove an intent key
   intent mode    Require, allow or ignore signed intents
-
-soon: listed in the contract, not in this build yet; the session that builds it is shown.
 --- stderr

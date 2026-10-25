@@ -2,4 +2,4 @@ exit 2
 --- stdout
 --- stderr
 ✕ --events is required.
-  Pass the Debezium events file, or - to read stdin.
+  next  Pass the Debezium events file, or - to read stdin.

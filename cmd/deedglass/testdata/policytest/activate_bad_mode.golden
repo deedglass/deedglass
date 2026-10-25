@@ -2,4 +2,4 @@ exit 2
 --- stdout
 --- stderr
 ✕ --mode must be enforce or shadow.
-  deedglass policy activate postgres-safe --version 1 --mode shadow --reason "Watch it for a day before enforcing"
+  next  deedglass policy activate postgres-safe --version 1 --mode shadow --reason "Watch it for a day before enforcing"

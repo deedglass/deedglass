@@ -15,6 +15,4 @@ Usage  deedglass policy <command> [flags]
   install       Install a policy pack as files
   packs list    List the policy packs
   packs verify  Check the packs against their signed index
-
-soon: listed in the contract, not in this build yet; the session that builds it is shown.
 --- stderr

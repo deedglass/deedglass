@@ -1,2 +1,2 @@
 ✕ deedglass verify needs a file, a directory, or - for stdin.
-  For example: deedglass verify deeds.jsonl --keys https://api.deedglass.com/.well-known/deedglass/keys.json
+  next  For example: deedglass verify deeds.jsonl --keys https://api.deedglass.com/.well-known/deedglass/keys.json

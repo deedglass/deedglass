@@ -2,4 +2,4 @@ exit 2
 --- stdout
 --- stderr
 ✕ --nonce must be 32 lowercase hex characters.
-  Leave it out to get 128 fresh random bits.
+  next  Leave it out to get 128 fresh random bits.

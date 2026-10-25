@@ -1,5 +1,5 @@
 exit 2
 --- stdout
 --- stderr
-✕ verdict must be VERIFIED, MISMATCH or UNVERIFIABLE. You sent "FAILED".
+✕ Verdict must be VERIFIED, MISMATCH or UNVERIFIABLE. You sent "FAILED".
   next  Run deedglass help for this command's flags.

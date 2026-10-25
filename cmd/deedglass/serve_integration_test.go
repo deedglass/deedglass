@@ -116,7 +116,7 @@ func TestServeRefusesPendingMigrationsInProd(t *testing.T) {
 func TestServeUnreachableDatabase(t *testing.T) {
 	s := startServe(t, map[string]string{"DEEDGLASS_DATABASE_URL": "postgres://deedglass_app:sekrit-pw@127.0.0.1:1/deedglass?sslmode=disable"})
 	if code := s.wait(t); code != 1 || !strings.Contains(s.err.String(), "Can't connect to 127.0.0.1:1 as deedglass_app") ||
-		!strings.Contains(s.err.String(), "Is Postgres running? Try make dev.") || strings.Contains(s.err.String(), "sekrit") {
+		!strings.Contains(s.err.String(), "Check that Postgres is running, or run deedglass init for a local stack.") || strings.Contains(s.err.String(), "sekrit") {
 		t.Fatalf("exit %d\n%s", code, s.err)
 	}
 }

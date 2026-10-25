@@ -2,4 +2,4 @@ exit 2
 --- stdout
 --- stderr
 ✕ "strict" isn't a mode.
-  Use off, optional or required.
+  next  Use off, optional or required.

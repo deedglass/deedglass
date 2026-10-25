@@ -2,4 +2,4 @@ exit 1
 --- stdout
 --- stderr
 ✕ The arguments contain an integer larger than 9007199254740991, which JSON can't carry exactly; send it as a string.
-  Check --org, --agent, --tool and --args against docs/INTENTS.md.
+  next  Check --org, --agent, --tool and --args against docs/INTENTS.md.

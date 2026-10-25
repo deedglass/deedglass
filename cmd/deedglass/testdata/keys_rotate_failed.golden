@@ -3,4 +3,4 @@ exit 1
 ◐ Rotating the seal key · overlap 5m
 --- stderr
 ✕ The seal key was not rotated: permission denied for table seal_keys.
-  Nothing changed. Check the database connection and run deedglass keys rotate again.
+  next  Nothing changed. Check the database connection and run deedglass keys rotate again.

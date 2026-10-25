@@ -149,7 +149,7 @@
     ],
     "next": [
       "Check that Postgres is running and that migrations ran (deedglass migrate up).",
-      "Is Postgres running? Try make dev."
+      "Check that Postgres is running, or run deedglass init for a local stack."
     ]
   },
   {

@@ -2,4 +2,4 @@ exit 2
 --- stdout
 --- stderr
 ✕ --pk "orders" isn't table=col[,col].
-  For example --pk shop.orders=id.
+  next  For example --pk shop.orders=id.

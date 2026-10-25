@@ -2,4 +2,4 @@ exit 2
 --- stdout
 --- stderr
 ✕ deedglass dev agent-script needs a script file.
-  deedglass dev agent-script examples/demo/launch.yaml
+  next  deedglass dev agent-script examples/demo/launch.yaml

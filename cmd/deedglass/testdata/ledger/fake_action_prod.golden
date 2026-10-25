@@ -1,5 +1,5 @@
 exit 1
 --- stdout
 --- stderr
-✕ dev fake-action only runs with DEEDGLASS_ENV=dev. This database may hold real records.
+✕ Dev fake-action only runs with DEEDGLASS_ENV=dev. This database may hold real records.
   next  Use a throwaway database: make dev, then DEEDGLASS_ENV=dev deedglass dev fake-action

@@ -140,7 +140,11 @@ func runReport(ctx context.Context, e *Env, args []string) error {
 	if reportValues.as != "" || reportValues.exclude != "" {
 		return usageErr(errors.New("--as and --exclude work only with --all-clients"), "deedglass report --all-clients --month 2026-10 --exclude <your-org>")
 	}
-	formats, err := reportFormats([]string{agency.FormatMD})
+	def := []string{agency.FormatMD}
+	if e.Globals.JSON && reportValues.out == "" {
+		def = []string{agency.FormatJSON} // --json on stdout is the report as JSON (QA-1)
+	}
+	formats, err := reportFormats(def)
 	if err != nil {
 		return err
 	}

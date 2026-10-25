@@ -2,4 +2,4 @@ exit 2
 --- stdout
 --- stderr
 ✕ Dropping a slot needs a typed confirmation, and this isn't an interactive terminal.
-  Run it in a terminal, or add --confirm postgres in scripts.
+  next  Run it in a terminal, or add --confirm postgres in scripts.

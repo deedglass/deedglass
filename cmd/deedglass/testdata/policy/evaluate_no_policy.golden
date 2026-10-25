@@ -2,4 +2,4 @@ exit 2
 --- stdout
 --- stderr
 ✕ deedglass policy evaluate needs --policy <file>, or --server for the active policies.
-  For example: deedglass policy evaluate --policy postgres-safe.yaml --tool postgres.query --sql "SELECT 1"
+  next  For example: deedglass policy evaluate --policy postgres-safe.yaml --tool postgres.query --sql "SELECT 1"

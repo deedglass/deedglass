@@ -259,7 +259,7 @@ func wrapJoin(items []string, indent int) string {
 // terminal (not with --json, TERM=dumb or DEEDGLASS_NO_ANIM), notes only elsewhere.
 func newSpinner(e *Env) *ui.Spinner {
 	live := e.IsTTY && !e.Globals.JSON && e.Getenv("TERM") != "dumb" && !truthy(e.Getenv("DEEDGLASS_NO_ANIM"))
-	return ui.NewSpinner(e.Stdout, e.Style, live)
+	return ui.NewSpinner(e.Stdout, e.Style, live, e.Width)
 }
 
 func renderStep(e *Env, s setup.StepResult) {
@@ -282,7 +282,18 @@ func renderStep(e *Env, s setup.StepResult) {
 		}
 		return
 	}
-	fmt.Fprintf(e.Stdout, "%s %-23s %s\n", sym, s.Title, s.Detail)
+	// Long details wrap under themselves, so a step stays readable at 80 columns.
+	width := e.Width
+	if width <= 0 {
+		width = 100
+	}
+	for i, l := range ui.Wrap(strings.Repeat(" ", 24)+s.Detail, width-2, 0) {
+		if i == 0 {
+			fmt.Fprintf(e.Stdout, "%s %-23s %s\n", sym, s.Title, strings.TrimLeft(l, " "))
+			continue
+		}
+		fmt.Fprintf(e.Stdout, "  %s\n", l)
+	}
 	if s.Secret != "" {
 		fmt.Fprintf(e.Stdout, "    %s   copy it now; it isn't shown again\n", s.Secret)
 	}
