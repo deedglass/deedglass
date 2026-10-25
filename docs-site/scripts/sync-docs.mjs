@@ -143,9 +143,10 @@ export const LIMITS_PARTS = [
     slug: 'policies',
     label: 'Policies, rules and approvals',
     title: 'Limits: policies, rules and approvals',
-    description: 'The limits of policies, sqlguard, budgets, policy versions, the rules that run each call, approvals, webhooks and scheduled actions.',
+    description: 'The limits of policies, sqlguard, budgets, policy versions, the rules that run each call, approvals, lockdown mode, webhooks and scheduled actions.',
     sections: [
       'Policy limits',
+      'Lockdown mode',
       'Policy evaluation, sqlguard and budgets',
       'Policy versions, activation and the registry',
       'Gate limits',
