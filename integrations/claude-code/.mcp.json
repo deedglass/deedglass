@@ -1,5 +1,5 @@
 {
   "mcpServers": {
-    "deedglass": {"command":"npx","args":["-y","deedglass@0.10.0","mcp","serve"]}
+    "deedglass": {"command":"npx","args":["-y","deedglass@0.11.0","mcp","serve"]}
   }
 }
