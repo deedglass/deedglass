@@ -7,6 +7,16 @@ this file by `scripts/release-notes.sh`.
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-10-27
+
+The hospital pilot in one command. `npx deedglass health pilot` runs four scenes on synthetic FHIR R4
+data on your own machine, with no Docker and no server: a write whose read-back matches, a
+`201 Created` whose stored value differs, a high-risk order held for a clinician, and sealed records
+checked offline. It writes a report to forward and the hospital IT review pack. This release also
+carries the AAP-H v0.1 draft spec. Nothing changes for existing records: the deed format is
+unchanged, and Proven, Checked and Claimed mean what they meant in 0.12.0. No new Go dependency, no
+schema migration, and `formula_version` stays 1.
+
 ### Added
 
 - `deedglass health pilot`: the 15-minute hospital pilot on synthetic FHIR R4 data, with no Docker
@@ -845,7 +855,8 @@ See [KNOWN_ISSUES.md](KNOWN_ISSUES.md): what happens, who is affected, the worka
 See [docs/LIMITATIONS.md](docs/LIMITATIONS.md). In short: L2 covers Postgres only, seal keys are per
 deployment, and Deedglass trusts the Postgres server and the host it runs on.
 
-[Unreleased]: https://github.com/deedglass/deedglass/compare/v0.12.0...HEAD
+[Unreleased]: https://github.com/deedglass/deedglass/compare/v0.13.0...HEAD
+[0.13.0]: https://github.com/deedglass/deedglass/compare/v0.12.0...v0.13.0
 [0.12.0]: https://github.com/deedglass/deedglass/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/deedglass/deedglass/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/deedglass/deedglass/compare/v0.9.0...v0.10.0
