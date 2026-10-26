@@ -7,6 +7,18 @@ this file by `scripts/release-notes.sh`.
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-10-26
+
+One command to guard every coding agent. `npx deedglass protect` finds Claude Code, Cursor, Codex
+CLI, Gemini CLI and GitHub Copilot CLI in your home directory, shows one plan, and adds the shell
+guard to each after you say yes, with a backup and `--undo`. The guard's catalog grows by 17 rows for
+cloud, infrastructure and hosted-database CLIs (Railway, Supabase, Neon, Terraform, Pulumi, AWS,
+gcloud, kubectl, Docker, Fly, PlanetScale, Turso), and the Claude Code plugin now asks before a
+risky shell command by default. The scan and the shell guard also build for the browser
+(WebAssembly), which runs the free checker at deedglass.com/check. Nothing changes for existing
+records: the deed format is unchanged, and Proven, Checked and Claimed mean what they meant in
+0.11.0. No new Go dependency, no schema migration, and `formula_version` stays 1.
+
 ### Added
 
 - `deedglass protect` (also `npx deedglass protect`): one command adds the shell guard to every
@@ -19,7 +31,7 @@ this file by `scripts/release-notes.sh`.
   edited it since, takes out only the guard). `--client`, `--project`, `--hook-command` and `--json`.
   The hook starts deedglass by an absolute path, or with `npx -y deedglass@<version>` after an npx
   run, so it keeps working after protect ends. After a run that writes, it prints two optional lines:
-  a README badge ("Agents protected by Deedglass", linking to the protect docs page) and a share hint;
+  a README badge ("Agents protected by Deedglass", linking to deedglass.com/check) and a share hint;
   `--json` carries it as `badge`. `docs/protect.md`.
 - 17 shell guard catalog rows for cloud, infrastructure and hosted-database CLIs, each checked
   against its CLI's reference page on 2026-10-26: `railway volume delete`, `railway delete`, a
@@ -32,6 +44,11 @@ this file by `scripts/release-notes.sh`.
   --preview-only`, `aws s3 rm --recursive --dryrun`, `kubectl get ns`, `kubectl delete pod`,
   `supabase db reset` on the local stack). `railway down` is not in the catalog: Railway's reference
   says it removes the latest deployment, not data.
+- `cmd/deedglass-wasm`: the scan and the shell guard as one WebAssembly file for
+  deedglass.com/check (`make wasm`, 1.9 MB gzipped; CI fails it over 4 MB). Parity tests compare it
+  with `deedglass scan` and `deedglass guard shell` on the same inputs.
+- The README links the GitHub Action on the Marketplace:
+  https://github.com/marketplace/actions/deedglass-scan.
 
 ### Changed
 
@@ -810,7 +827,8 @@ See [KNOWN_ISSUES.md](KNOWN_ISSUES.md): what happens, who is affected, the worka
 See [docs/LIMITATIONS.md](docs/LIMITATIONS.md). In short: L2 covers Postgres only, seal keys are per
 deployment, and Deedglass trusts the Postgres server and the host it runs on.
 
-[Unreleased]: https://github.com/deedglass/deedglass/compare/v0.11.0...HEAD
+[Unreleased]: https://github.com/deedglass/deedglass/compare/v0.12.0...HEAD
+[0.12.0]: https://github.com/deedglass/deedglass/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/deedglass/deedglass/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/deedglass/deedglass/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/deedglass/deedglass/compare/v0.8.0...v0.9.0

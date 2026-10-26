@@ -600,7 +600,9 @@ func TestBadge(t *testing.T) {
 }
 
 func TestNoRetiredOffer(t *testing.T) {
-	re := regexp.MustCompile(`deedglass\.com/check|\$199`)
+	// deedglass.com/check was the retired paid offer; it is now the live free in-browser checker
+	// (the protect badge links there), so only the retired price stays banned.
+	re := regexp.MustCompile(`\$199`)
 	for _, dir := range []string{".", "../../cmd/deedglass"} {
 		_ = filepath.WalkDir(dir, func(p string, d os.DirEntry, err error) error {
 			if err != nil || d.IsDir() || strings.HasSuffix(p, "_test.go") {
