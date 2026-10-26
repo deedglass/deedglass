@@ -166,6 +166,7 @@ builds it. Hidden commands work but aren't in `deedglass help`.
 | `deedglass protect [--dry-run] [--yes] [--undo] [--client <names>] [--project] [--hook-command <cmd>] [--json]` | Setup | Add the shell guard to every coding agent | built |
 | `deedglass doctor [--only <ids>] [--quiet] [--json]` | Setup | Check config, database and keys | built |
 | `deedglass scan [--dir .] [--postgres-dsn-env VAR] [--format md,html,json,sarif] [--score] [--badge] [--badge-share] [--share] [--ci] [--fail-under A|B|C|D] [--full [--no-seal]] [--json]` | Setup | Show what your agent setup can change | built |
+| `deedglass health pilot [--region global|india] [--fhir-url <url>] [--out deedglass-pilot] [--no-files] [--console-url <url>] [--fast] [--print-review-pack] [--json]` | Setup | Try the hospital pilot on synthetic data | built |
 | `deedglass play [--fast] [--json]` | Setup | Watch the 301 scene offline, no Docker | built |
 | `deedglass serve [--migrate]` | Setup | Run the API, the rules and the Console | built |
 | `deedglass migrate up [--database-url <url>] [--dry-run] [--json]` | Setup | Apply database migrations | built |

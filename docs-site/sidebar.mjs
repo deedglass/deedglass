@@ -84,6 +84,8 @@ export const sidebar = clean([
       p('guides/fhir-server', 'Use a FHIR server today'),
       p('guides/healthcare-fhir-pack', 'The healthcare-fhir pack'),
       p('guides/india', 'India: ABDM and NHCX'),
+      p('guides/health-pilot', 'The 15-minute hospital pilot'),
+      p('guides/it-review-pack', 'Hospital IT review pack'),
       p('guides/medplum', 'Medplum and Medplum Bots'),
       p('guides/slack-approvals', 'Slack approvals'),
       p('guides/phone-approvals', 'Approvals on your phone'),

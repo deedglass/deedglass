@@ -10,6 +10,7 @@ exit 0
   connect             Put your own Postgres behind Deedglass
   scan                Show what your agent setup can change
   protect             Add the shell guard to every coding agent
+  health pilot        Try the hospital pilot on synthetic data
   play                Watch the 301 scene offline, no Docker
   serve               Run the API, the rules and the Console
   migrate             Apply or check database migrations

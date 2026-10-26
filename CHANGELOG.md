@@ -9,6 +9,16 @@ this file by `scripts/release-notes.sh`.
 
 ### Added
 
+- `deedglass health pilot`: the 15-minute hospital pilot on synthetic FHIR R4 data, with no Docker
+  and no server. Four scenes run through the product's own code with the `healthcare-fhir` pack
+  (`india-health` with `--region india`), PHI mode and lockdown on: a write whose read-back matches,
+  a `201 Created` whose stored value differs, a high-risk order held for a clinician, and sealed
+  records checked offline with one changed byte caught. It writes `REPORT.md`, the IT review pack,
+  `deeds.jsonl` and `keys.json`. `--fhir-url` sends scene 1 to your own FHIR sandbox, `--json` prints
+  the result, and `--print-review-pack` prints the pack. See `docs/healthcare/PILOT.md`.
+- `docs/healthcare/IT_REVIEW_PACK.md`: the hospital IT review pack (architecture and data flow,
+  where data lives, threat model in summary, security answers, the clinical-safety boundary,
+  operations, how a pilot is measured), embedded in the binary and on docs.deedglass.com.
 - `spec/aap-h/`: Agent Action Provenance for Health (AAP-H) v0.1.0-draft, an open draft for recording
   AI agent actions on health data (FHIR R4 Provenance and AuditEvent profiles, a JSON envelope,
   offline verification rules, conformance levels L1 to L3, synthetic NHCX and Da Vinci PAS examples).

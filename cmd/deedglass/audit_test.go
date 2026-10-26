@@ -63,6 +63,9 @@ func TestJSONAudit(t *testing.T) {
 		if path == "scan" {
 			args = append(args, "--dir", t.TempDir(), "--user-configs=false")
 		}
+		if path == "health pilot" {
+			args = append(args, "--out", t.TempDir())
+		}
 		env := map[string]string{"DEEDGLASS_SERVER": srv.URL, "DEEDGLASS_API_KEY": "dg_test_Ab12Cd34_SENTINELsentinelSENTINELsentinel", "DEEDGLASS_ENV": "dev", "HOME": t.TempDir()}
 		r := cli(t, env, false, args...)
 		audited++

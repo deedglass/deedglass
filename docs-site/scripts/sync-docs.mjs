@@ -60,6 +60,8 @@ export const IMPORTS = {
   'docs/guides/fhir-server.md': 'guides/fhir-server',
   'docs/guides/healthcare-fhir-pack.md': 'guides/healthcare-fhir-pack',
   'docs/healthcare/INDIA.md': 'guides/india',
+  'docs/healthcare/PILOT.md': 'guides/health-pilot',
+  'docs/healthcare/IT_REVIEW_PACK.md': 'guides/it-review-pack',
   'docs/integrations/medplum.md': 'guides/medplum',
   // the framework recipes (adoption-v1 item 4): one page each, the runnable files in examples/frameworks
   'docs/integrations/vercel-ai-sdk.md': 'frameworks/vercel-ai-sdk',

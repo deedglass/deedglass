@@ -87,6 +87,8 @@ is ready in about 7 s, and the first run also downloads Postgres 18.6. The
   reported, and checks Proven on HAPI FHIR JPA 8.x and Medplum 5.x running on Postgres. See
   [deedglass.com/healthcare](https://deedglass.com/healthcare) and the
   [FHIR benchmark](corpus/fhir/BENCHMARK.md).
+  To see it on synthetic data first, with no Docker and no server, run `npx deedglass health pilot`
+  ([the 15-minute hospital pilot](docs/healthcare/PILOT.md)).
 - **Security teams.** Lockdown makes every agent write wait for a person, needs two people for
   high-risk writes and for turning lockdown off, and keeps each agent to one connector
   ([`docs/LOCKDOWN.md`](docs/LOCKDOWN.md)). Records are signed and anyone can check them offline
@@ -327,7 +329,7 @@ How the licence path works if a later build asks for a key:
 - **Docs:** [docs.deedglass.com](https://docs.deedglass.com) · [Quickstart](https://docs.deedglass.com/quickstart/) · [how it works](https://docs.deedglass.com/concepts/how-it-works/) · [`docs/`](docs/)
 - **Agent clients:** [Claude Code](https://docs.deedglass.com/get-started/claude-code/) · [Cursor, VS Code and Windsurf](https://docs.deedglass.com/get-started/cursor-vscode-windsurf/) · [Claude Desktop](https://docs.deedglass.com/get-started/claude-desktop/) · [your own Postgres](https://docs.deedglass.com/get-started/postgres/)
 - **Frameworks:** [Vercel AI SDK](https://docs.deedglass.com/frameworks/vercel-ai-sdk/) · [Claude Agent SDK](https://docs.deedglass.com/frameworks/claude-agent-sdk/) · [OpenAI Agents SDK](https://docs.deedglass.com/frameworks/openai-agents/) · [LangChain](https://docs.deedglass.com/frameworks/langchain/) · [Mastra](https://docs.deedglass.com/frameworks/mastra/) · [Pydantic AI](https://docs.deedglass.com/frameworks/pydantic-ai/) · [Google ADK](https://docs.deedglass.com/frameworks/google-adk/) · [CrewAI](https://docs.deedglass.com/frameworks/crewai/) · [LlamaIndex](https://docs.deedglass.com/frameworks/llamaindex/)
-- **Healthcare:** [deedglass.com/healthcare](https://deedglass.com/healthcare) · [FHIR connector](docs/connectors/fhir.md) · [PHI mode](docs/PHI_MODE.md) · [Medplum example](docs/integrations/medplum.md) · [FHIR benchmark](corpus/fhir/BENCHMARK.md)
+- **Healthcare:** [deedglass.com/healthcare](https://deedglass.com/healthcare) · [FHIR connector](docs/connectors/fhir.md) · [PHI mode](docs/PHI_MODE.md) · [Medplum example](docs/integrations/medplum.md) · [FHIR benchmark](corpus/fhir/BENCHMARK.md) · [Hospital pilot](docs/healthcare/PILOT.md) · [IT review pack](docs/healthcare/IT_REVIEW_PACK.md)
 - **GitHub Action:** [Deedglass Scan on the GitHub Marketplace](https://github.com/marketplace/actions/deedglass-scan)
 - **Security:** [`SECURITY.md`](SECURITY.md) · [lockdown](docs/LOCKDOWN.md) · [attack suite](docs/ATTACK_SUITE.md) · [limitations](docs/LIMITATIONS.md) · [verifying records](docs/VERIFYING_DEEDS.md)
 - **Contributing:** [`CONTRIBUTING.md`](CONTRIBUTING.md) · [good first issues](https://github.com/deedglass/deedglass/labels/good%20first%20issue) · [Discussions](https://github.com/deedglass/deedglass/discussions)
