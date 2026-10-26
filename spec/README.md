@@ -69,6 +69,11 @@ based on.
 
 ## Related, not part of the spec
 
+- **Agent Action Provenance for Health (AAP-H)**, a separate, vendor-neutral draft for recording AI
+  agent actions on health data as FHIR Provenance and AuditEvent or a JSON envelope, with Deedglass
+  deeds as one way to sign them: [`aap-h/`](aap-h/) (v0.1.0-draft; text CC-BY-4.0, schemas
+  Apache-2.0). It doesn't change the deed format.
+
 - Record exports to other formats (OpenTelemetry GenAI, OCSF, W3C PROV-JSON, FHIR) are views of a
   record, not the record: [`../docs/EXPORTS.md`](../docs/EXPORTS.md).
 - The intent-vs-effect corpus, the scenarios a record's check is meant to catch, is in

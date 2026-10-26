@@ -1,0 +1,32 @@
+{
+  "resourceType": "ValueSet",
+  "id": "aaph-interaction",
+  "url": "https://deedglass.com/fhir/aap-h/ValueSet/aaph-interaction",
+  "name": "AaphInteractionVS",
+  "title": "AAP-H Interaction",
+  "version": "0.1.0-draft",
+  "status": "draft",
+  "experimental": true,
+  "date": "2026-10-26",
+  "publisher": "Deedglass contributors",
+  "jurisdiction": [
+    {
+      "coding": [
+        {
+          "system": "http://unstats.un.org/unsd/methods/m49/m49.htm",
+          "code": "001",
+          "display": "World"
+        }
+      ]
+    }
+  ],
+  "copyright": "Apache-2.0. Part of Agent Action Provenance for Health (AAP-H) v0.1 draft.",
+  "description": "All codes of https://deedglass.com/fhir/aap-h/CodeSystem/aaph-interaction. The kind of call.",
+  "compose": {
+    "include": [
+      {
+        "system": "https://deedglass.com/fhir/aap-h/CodeSystem/aaph-interaction"
+      }
+    ]
+  }
+}

@@ -1,0 +1,51 @@
+{
+  "resourceType": "CodeSystem",
+  "id": "aaph-system-kind",
+  "url": "https://deedglass.com/fhir/aap-h/CodeSystem/aaph-system-kind",
+  "name": "AaphSystemKind",
+  "title": "AAP-H System kind",
+  "version": "0.1.0-draft",
+  "status": "draft",
+  "experimental": true,
+  "date": "2026-10-26",
+  "publisher": "Deedglass contributors",
+  "jurisdiction": [
+    {
+      "coding": [
+        {
+          "system": "http://unstats.un.org/unsd/methods/m49/m49.htm",
+          "code": "001",
+          "display": "World"
+        }
+      ]
+    }
+  ],
+  "copyright": "Apache-2.0. Part of Agent Action Provenance for Health (AAP-H) v0.1 draft.",
+  "description": "The kind of system of record.",
+  "caseSensitive": true,
+  "valueSet": "https://deedglass.com/fhir/aap-h/ValueSet/aaph-system-kind",
+  "content": "complete",
+  "count": 4,
+  "concept": [
+    {
+      "code": "fhir",
+      "display": "FHIR server",
+      "definition": "A FHIR server or FHIR API."
+    },
+    {
+      "code": "postgres",
+      "display": "PostgreSQL",
+      "definition": "A PostgreSQL database."
+    },
+    {
+      "code": "saas",
+      "display": "SaaS API",
+      "definition": "A hosted application's API."
+    },
+    {
+      "code": "other",
+      "display": "Other",
+      "definition": "Anything else."
+    }
+  ]
+}

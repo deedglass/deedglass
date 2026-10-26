@@ -1,0 +1,382 @@
+{
+  "resourceType": "Provenance",
+  "id": "pas-submit",
+  "meta": {
+    "profile": [
+      "https://deedglass.com/fhir/aap-h/StructureDefinition/aaph-provenance",
+      "http://hl7.org/fhir/uv/aitransparency/StructureDefinition/AI-Provenance"
+    ]
+  },
+  "contained": [
+    {
+      "resourceType": "Device",
+      "id": "ai-agent",
+      "meta": {
+        "profile": [
+          "http://hl7.org/fhir/uv/aitransparency/StructureDefinition/AI-Device"
+        ]
+      },
+      "identifier": [
+        {
+          "system": "urn:aaph:agent-id",
+          "value": "agt-pa-assist"
+        }
+      ],
+      "deviceName": [
+        {
+          "name": "prior-auth-assist",
+          "type": "user-friendly-name"
+        }
+      ],
+      "type": {
+        "coding": [
+          {
+            "system": "http://hl7.org/fhir/uv/aitransparency/CodeSystem/AIdeviceTypeCS",
+            "code": "Artificial-Intelligence"
+          }
+        ]
+      },
+      "manufacturer": "example-ai",
+      "modelNumber": "example-model",
+      "version": [
+        {
+          "value": "2026-09"
+        }
+      ]
+    }
+  ],
+  "extension": [
+    {
+      "url": "https://deedglass.com/fhir/aap-h/StructureDefinition/aaph-action",
+      "extension": [
+        {
+          "url": "actionId",
+          "valueString": "act-us-0001"
+        },
+        {
+          "url": "tool",
+          "valueString": "fhir.operation.claim-submit"
+        },
+        {
+          "url": "interaction",
+          "valueCode": "operation"
+        },
+        {
+          "url": "agentRole",
+          "valueCode": "made"
+        },
+        {
+          "url": "systemKind",
+          "valueCode": "fhir"
+        },
+        {
+          "url": "systemBase",
+          "valueUri": "https://pas.payer.example/fhir"
+        },
+        {
+          "url": "requestDigest",
+          "valueString": "sha256:5eeffcda857dd4f0d0cb2be39bf2c789892cc39e7490d7705a14e1febd5361e2"
+        }
+      ]
+    },
+    {
+      "url": "https://deedglass.com/fhir/aap-h/StructureDefinition/aaph-policy-decision",
+      "extension": [
+        {
+          "url": "decision",
+          "valueCode": "require-approval"
+        },
+        {
+          "url": "mode",
+          "valueCode": "enforce"
+        },
+        {
+          "url": "policy",
+          "valueString": "pol-us-payer"
+        },
+        {
+          "url": "versionDigest",
+          "valueString": "sha256:a4a4784cfbb71fb82be7e7c67e380180444851ed5256cf50db74946d7d5ff173"
+        },
+        {
+          "url": "rule",
+          "valueString": "pa-submit-clinician"
+        }
+      ]
+    },
+    {
+      "url": "https://deedglass.com/fhir/aap-h/StructureDefinition/aaph-approval",
+      "extension": [
+        {
+          "url": "step",
+          "valuePositiveInt": 1
+        },
+        {
+          "url": "outcome",
+          "valueCode": "approved"
+        },
+        {
+          "url": "approver",
+          "valueIdentifier": {
+            "system": "urn:aaph:opaque-ref",
+            "value": "usr_ref:clinician-31"
+          }
+        },
+        {
+          "url": "role",
+          "valueString": "ordering clinician"
+        },
+        {
+          "url": "decidedAt",
+          "valueDateTime": "2026-10-21T15:01:58.300Z"
+        }
+      ]
+    },
+    {
+      "url": "https://deedglass.com/fhir/aap-h/StructureDefinition/aaph-authorization",
+      "extension": [
+        {
+          "url": "kind",
+          "valueCode": "smart-scope"
+        },
+        {
+          "url": "ref",
+          "valueString": "client:pa-assist"
+        },
+        {
+          "url": "scope",
+          "valueString": "system/Claim.c system/ClaimResponse.r"
+        }
+      ]
+    },
+    {
+      "url": "https://deedglass.com/fhir/aap-h/StructureDefinition/aaph-claimed-outcome",
+      "extension": [
+        {
+          "url": "status",
+          "valueCode": "succeeded"
+        },
+        {
+          "url": "assertion",
+          "valueCode": "payer-approved"
+        },
+        {
+          "url": "resultDigest",
+          "valueString": "sha256:5f946e7b6a7653679d64bde27b0021fca3492f1b1b8e32334f8ffff7d38d989a"
+        },
+        {
+          "url": "started",
+          "valueDateTime": "2026-10-21T15:02:00.010Z"
+        },
+        {
+          "url": "finished",
+          "valueDateTime": "2026-10-21T15:02:01.442Z"
+        }
+      ]
+    },
+    {
+      "url": "https://deedglass.com/fhir/aap-h/StructureDefinition/aaph-verified-outcome",
+      "extension": [
+        {
+          "url": "result",
+          "valueCode": "mismatch"
+        },
+        {
+          "url": "depth",
+          "valueCode": "read-back"
+        },
+        {
+          "url": "method",
+          "valueString": "readback.fhir.claimresponse"
+        },
+        {
+          "url": "detailDigest",
+          "valueString": "sha256:a81b759dab570df0c1b430e958d4938c110d47ed438b6cb0def8ff521572d060"
+        },
+        {
+          "url": "checkedAt",
+          "valueDateTime": "2026-10-21T15:02:41.700Z"
+        }
+      ]
+    },
+    {
+      "url": "https://deedglass.com/fhir/aap-h/StructureDefinition/aaph-record-seal",
+      "extension": [
+        {
+          "url": "recordId",
+          "valueString": "rec-us-0001"
+        },
+        {
+          "url": "issuer",
+          "valueUri": "https://agent-gateway.example"
+        },
+        {
+          "url": "recordDigest",
+          "valueString": "sha256:fdbed896f138c412eb5054e6faf66065fc233ae72ab7ed127862ea644c7fc48c"
+        },
+        {
+          "url": "format",
+          "valueCode": "aaph-jcs"
+        },
+        {
+          "url": "keyId",
+          "valueString": "aaph-test-1"
+        },
+        {
+          "url": "keySet",
+          "valueUri": "https://agent-gateway.example/.well-known/aaph/keys.json"
+        },
+        {
+          "url": "stream",
+          "valueString": "demo-us-clinic"
+        },
+        {
+          "url": "seq",
+          "valuePositiveInt": 1
+        }
+      ]
+    }
+  ],
+  "target": [
+    {
+      "reference": "Claim/pas-req-2207"
+    }
+  ],
+  "occurredPeriod": {
+    "start": "2026-10-21T15:02:00.010Z",
+    "end": "2026-10-21T15:02:01.442Z"
+  },
+  "recorded": "2026-10-21T15:02:41.880Z",
+  "policy": [
+    "urn:aaph:policy:pol-us-payer#pa-submit-clinician"
+  ],
+  "reason": [
+    {
+      "coding": [
+        {
+          "system": "http://hl7.org/fhir/uv/aitransparency/CodeSystem/AddedProvenanceCS",
+          "code": "CLINAST_AIRPT"
+        }
+      ]
+    }
+  ],
+  "agent": [
+    {
+      "type": {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/provenance-participant-type",
+            "code": "author",
+            "display": "Author"
+          }
+        ]
+      },
+      "role": [
+        {
+          "coding": [
+            {
+              "system": "https://deedglass.com/fhir/aap-h/CodeSystem/aaph-participant",
+              "code": "ai-agent"
+            }
+          ]
+        }
+      ],
+      "who": {
+        "reference": "#ai-agent",
+        "display": "prior-auth-assist"
+      },
+      "onBehalfOf": {
+        "identifier": {
+          "system": "urn:aaph:opaque-ref",
+          "value": "usr_ref:clinic-staff-12"
+        }
+      }
+    },
+    {
+      "type": {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/provenance-participant-type",
+            "code": "assembler",
+            "display": "Assembler"
+          }
+        ]
+      },
+      "role": [
+        {
+          "coding": [
+            {
+              "system": "https://deedglass.com/fhir/aap-h/CodeSystem/aaph-participant",
+              "code": "gateway"
+            }
+          ]
+        }
+      ],
+      "who": {
+        "identifier": {
+          "system": "urn:ietf:rfc:3986",
+          "value": "https://agent-gateway.example"
+        },
+        "display": "AI agent gateway"
+      }
+    },
+    {
+      "type": {
+        "coding": [
+          {
+            "system": "https://deedglass.com/fhir/aap-h/CodeSystem/aaph-participant",
+            "code": "approver"
+          }
+        ]
+      },
+      "role": [
+        {
+          "coding": [
+            {
+              "system": "https://deedglass.com/fhir/aap-h/CodeSystem/aaph-participant",
+              "code": "approver"
+            }
+          ]
+        }
+      ],
+      "who": {
+        "identifier": {
+          "system": "urn:aaph:opaque-ref",
+          "value": "usr_ref:clinician-31"
+        }
+      }
+    }
+  ],
+  "entity": [
+    {
+      "role": "source",
+      "what": {
+        "identifier": {
+          "system": "urn:aaph:request-digest",
+          "value": "sha256:5eeffcda857dd4f0d0cb2be39bf2c789892cc39e7490d7705a14e1febd5361e2"
+        }
+      }
+    }
+  ],
+  "signature": [
+    {
+      "type": [
+        {
+          "system": "urn:iso-astm:E1762-95:2013",
+          "code": "1.2.840.10065.1.12.1.14",
+          "display": "Source Signature"
+        }
+      ],
+      "when": "2026-10-21T15:02:41.880Z",
+      "who": {
+        "identifier": {
+          "system": "urn:ietf:rfc:3986",
+          "value": "https://agent-gateway.example"
+        },
+        "display": "AI agent gateway"
+      },
+      "targetFormat": "application/json",
+      "data": "qoeLtwUl55yWIj/wYFesFs8HTH5jZH9CVrVSdEMfYaxq4oqTOvI38qnBhEtSMXD8iXyaF20b7jHos9nXGWrRAw=="
+    }
+  ]
+}

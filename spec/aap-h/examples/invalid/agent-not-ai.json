@@ -1,0 +1,42 @@
+{
+  "aaph": "0.1",
+  "record_id": "rec-in-0002",
+  "issuer": "https://agent-gateway.example",
+  "recorded_at": "2026-10-20T10:02:11.500Z",
+  "agent": {
+    "kind": "person",
+    "id": "agt-scribe",
+    "name": "opd-scribe",
+    "model": null,
+    "on_behalf_of": "usr_ref:opd-desk-03",
+    "session": "ses-77d0"
+  },
+  "action": {
+    "id": "act-in-0002",
+    "tool": "fhir.create",
+    "interaction": "create",
+    "agent_role": "proposed",
+    "system": {
+      "kind": "fhir",
+      "base": "https://fhir.hospital-in.example/r4"
+    },
+    "target": [],
+    "request_digest": "sha256:7c9cfaf12c2841902f67379e0c6bf00cb90f24c0fc32eaca0657a8c39bf230c1",
+    "intent_digest": null
+  },
+  "authorization": [],
+  "policy": {
+    "decision": "deny",
+    "mode": "enforce",
+    "policy": "pol-india-health",
+    "version_digest": "sha256:f36436c7cb25e32c43908064d2619b6be7f87599246f22dca74d0115f40cc64a",
+    "rule": "abdm-record-needs-clinician"
+  },
+  "approvals": [],
+  "claimed": null,
+  "verified": null,
+  "supersedes": null,
+  "chain": null,
+  "seal": null,
+  "extensions": {}
+}

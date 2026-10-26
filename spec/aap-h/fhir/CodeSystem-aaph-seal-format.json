@@ -1,0 +1,46 @@
+{
+  "resourceType": "CodeSystem",
+  "id": "aaph-seal-format",
+  "url": "https://deedglass.com/fhir/aap-h/CodeSystem/aaph-seal-format",
+  "name": "AaphSealFormat",
+  "title": "AAP-H Seal format",
+  "version": "0.1.0-draft",
+  "status": "draft",
+  "experimental": true,
+  "date": "2026-10-26",
+  "publisher": "Deedglass contributors",
+  "jurisdiction": [
+    {
+      "coding": [
+        {
+          "system": "http://unstats.un.org/unsd/methods/m49/m49.htm",
+          "code": "001",
+          "display": "World"
+        }
+      ]
+    }
+  ],
+  "copyright": "Apache-2.0. Part of Agent Action Provenance for Health (AAP-H) v0.1 draft.",
+  "description": "How a record is signed.",
+  "caseSensitive": true,
+  "valueSet": "https://deedglass.com/fhir/aap-h/ValueSet/aaph-seal-format",
+  "content": "complete",
+  "count": 3,
+  "concept": [
+    {
+      "code": "aaph-jcs",
+      "display": "AAP-H JCS",
+      "definition": "The envelope signs itself (AAP-H section 8.2)."
+    },
+    {
+      "code": "deedglass-deed",
+      "display": "Deedglass deed",
+      "definition": "A Deedglass deed the envelope is derived from (AAP-H section 8.3)."
+    },
+    {
+      "code": "other",
+      "display": "Other",
+      "definition": "Another registered native format."
+    }
+  ]
+}

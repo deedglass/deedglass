@@ -7,6 +7,14 @@ this file by `scripts/release-notes.sh`.
 
 ## [Unreleased]
 
+### Added
+
+- `spec/aap-h/`: Agent Action Provenance for Health (AAP-H) v0.1.0-draft, an open draft for recording
+  AI agent actions on health data (FHIR R4 Provenance and AuditEvent profiles, a JSON envelope,
+  offline verification rules, conformance levels L1 to L3, synthetic NHCX and Da Vinci PAS examples).
+  Its test converts every action deed in `testdata/deeds/` to the envelope and checks it against the
+  sealed deed. Text CC-BY-4.0, schemas Apache-2.0. No product behaviour changes.
+
 ## [0.12.0] - 2026-10-26
 
 One command to guard every coding agent. `npx deedglass protect` finds Claude Code, Cursor, Codex

@@ -1,0 +1,398 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://deedglass.com/spec/aap-h/schema/aaph-fhir.schema.json",
+  "title": "AAP-H FHIR R4 resources, lightweight check",
+  "description": "A JSON Schema check of the shape AAP-H v0.1 requires of an aaph-provenance or aaph-auditevent resource: profile claimed, required extensions present with their sub-extensions, exactly the AI agent participant. It is not a FHIR validator; use one for full FHIR validation. Apache-2.0.",
+  "type": "object",
+  "required": [
+    "resourceType",
+    "id",
+    "meta",
+    "extension",
+    "agent"
+  ],
+  "properties": {
+    "resourceType": {
+      "enum": [
+        "Provenance",
+        "AuditEvent"
+      ]
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9.-]{1,64}$"
+    },
+    "extension": {
+      "type": "array",
+      "allOf": [
+        {
+          "contains": {
+            "$ref": "#/$defs/extAction"
+          }
+        },
+        {
+          "contains": {
+            "$ref": "#/$defs/extPolicy"
+          }
+        }
+      ],
+      "items": {
+        "type": "object",
+        "required": [
+          "url"
+        ],
+        "properties": {
+          "url": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "agent": {
+      "type": "array",
+      "minItems": 1,
+      "contains": {
+        "$ref": "#/$defs/aiAgent"
+      },
+      "minContains": 1,
+      "maxContains": 1
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "resourceType": {
+            "const": "Provenance"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "target",
+          "recorded"
+        ],
+        "properties": {
+          "meta": {
+            "$ref": "#/$defs/metaWith",
+            "properties": {
+              "profile": {
+                "contains": {
+                  "const": "https://deedglass.com/fhir/aap-h/StructureDefinition/aaph-provenance"
+                }
+              }
+            }
+          },
+          "target": {
+            "type": "array",
+            "minItems": 1
+          },
+          "recorded": {
+            "$ref": "#/$defs/instant"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "resourceType": {
+            "const": "AuditEvent"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "type",
+          "recorded",
+          "outcome",
+          "source"
+        ],
+        "properties": {
+          "meta": {
+            "$ref": "#/$defs/metaWith",
+            "properties": {
+              "profile": {
+                "contains": {
+                  "const": "https://deedglass.com/fhir/aap-h/StructureDefinition/aaph-auditevent"
+                }
+              }
+            }
+          },
+          "recorded": {
+            "$ref": "#/$defs/instant"
+          },
+          "outcome": {
+            "enum": [
+              "0",
+              "4",
+              "8",
+              "12"
+            ]
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "metaWith": {
+      "type": "object",
+      "required": [
+        "profile"
+      ],
+      "properties": {
+        "profile": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "instant": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]{1,9})?(Z|[+-][0-9]{2}:[0-9]{2})$"
+    },
+    "sub": {
+      "type": "object",
+      "required": [
+        "url"
+      ],
+      "properties": {
+        "url": {
+          "type": "string"
+        },
+        "extension": false
+      }
+    },
+    "extAction": {
+      "type": "object",
+      "required": [
+        "url",
+        "extension"
+      ],
+      "properties": {
+        "url": {
+          "const": "https://deedglass.com/fhir/aap-h/StructureDefinition/aaph-action"
+        },
+        "extension": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/sub"
+          },
+          "allOf": [
+            {
+              "contains": {
+                "properties": {
+                  "url": {
+                    "const": "actionId"
+                  }
+                },
+                "required": [
+                  "valueString"
+                ]
+              }
+            },
+            {
+              "contains": {
+                "properties": {
+                  "url": {
+                    "const": "tool"
+                  }
+                },
+                "required": [
+                  "valueString"
+                ]
+              }
+            },
+            {
+              "contains": {
+                "properties": {
+                  "url": {
+                    "const": "interaction"
+                  },
+                  "valueCode": {
+                    "enum": [
+                      "create",
+                      "read",
+                      "update",
+                      "patch",
+                      "delete",
+                      "search",
+                      "operation",
+                      "execute",
+                      "other"
+                    ]
+                  }
+                },
+                "required": [
+                  "valueCode"
+                ]
+              }
+            },
+            {
+              "contains": {
+                "properties": {
+                  "url": {
+                    "const": "agentRole"
+                  },
+                  "valueCode": {
+                    "enum": [
+                      "proposed",
+                      "made"
+                    ]
+                  }
+                },
+                "required": [
+                  "valueCode"
+                ]
+              }
+            },
+            {
+              "contains": {
+                "properties": {
+                  "url": {
+                    "const": "systemKind"
+                  },
+                  "valueCode": {
+                    "enum": [
+                      "fhir",
+                      "postgres",
+                      "saas",
+                      "other"
+                    ]
+                  }
+                },
+                "required": [
+                  "valueCode"
+                ]
+              }
+            },
+            {
+              "contains": {
+                "properties": {
+                  "url": {
+                    "const": "requestDigest"
+                  },
+                  "valueString": {
+                    "pattern": "^sha256:[0-9a-f]{64}$"
+                  }
+                },
+                "required": [
+                  "valueString"
+                ]
+              }
+            }
+          ]
+        }
+      }
+    },
+    "extPolicy": {
+      "type": "object",
+      "required": [
+        "url",
+        "extension"
+      ],
+      "properties": {
+        "url": {
+          "const": "https://deedglass.com/fhir/aap-h/StructureDefinition/aaph-policy-decision"
+        },
+        "extension": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/sub"
+          },
+          "allOf": [
+            {
+              "contains": {
+                "properties": {
+                  "url": {
+                    "const": "decision"
+                  },
+                  "valueCode": {
+                    "enum": [
+                      "allow",
+                      "deny",
+                      "require-approval"
+                    ]
+                  }
+                },
+                "required": [
+                  "valueCode"
+                ]
+              }
+            },
+            {
+              "contains": {
+                "properties": {
+                  "url": {
+                    "const": "mode"
+                  },
+                  "valueCode": {
+                    "enum": [
+                      "enforce",
+                      "shadow"
+                    ]
+                  }
+                },
+                "required": [
+                  "valueCode"
+                ]
+              }
+            }
+          ]
+        }
+      }
+    },
+    "aiAgent": {
+      "type": "object",
+      "required": [
+        "role",
+        "who"
+      ],
+      "properties": {
+        "role": {
+          "type": "array",
+          "contains": {
+            "type": "object",
+            "required": [
+              "coding"
+            ],
+            "properties": {
+              "coding": {
+                "type": "array",
+                "contains": {
+                  "type": "object",
+                  "required": [
+                    "system",
+                    "code"
+                  ],
+                  "properties": {
+                    "system": {
+                      "const": "https://deedglass.com/fhir/aap-h/CodeSystem/aaph-participant"
+                    },
+                    "code": {
+                      "const": "ai-agent"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "who": {
+          "type": "object",
+          "required": [
+            "reference"
+          ],
+          "properties": {
+            "reference": {
+              "type": "string",
+              "pattern": "^(#|Device/)"
+            }
+          }
+        }
+      }
+    }
+  }
+}

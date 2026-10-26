@@ -1,0 +1,226 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "aaph-approval",
+  "url": "https://deedglass.com/fhir/aap-h/StructureDefinition/aaph-approval",
+  "name": "AaphApproval",
+  "title": "AAP-H Approval step",
+  "version": "0.1.0-draft",
+  "status": "draft",
+  "experimental": true,
+  "date": "2026-10-26",
+  "publisher": "Deedglass contributors",
+  "jurisdiction": [
+    {
+      "coding": [
+        {
+          "system": "http://unstats.un.org/unsd/methods/m49/m49.htm",
+          "code": "001",
+          "display": "World"
+        }
+      ]
+    }
+  ],
+  "copyright": "Apache-2.0. Part of Agent Action Provenance for Health (AAP-H) v0.1 draft.",
+  "description": "One step of the approval chain.",
+  "fhirVersion": "4.0.1",
+  "kind": "complex-type",
+  "abstract": false,
+  "context": [
+    {
+      "type": "element",
+      "expression": "Provenance"
+    },
+    {
+      "type": "element",
+      "expression": "AuditEvent"
+    }
+  ],
+  "type": "Extension",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Extension",
+  "derivation": "constraint",
+  "differential": {
+    "element": [
+      {
+        "id": "Extension",
+        "path": "Extension",
+        "short": "Approval step",
+        "definition": "One step of the approval chain."
+      },
+      {
+        "id": "Extension.extension",
+        "path": "Extension.extension",
+        "slicing": {
+          "discriminator": [
+            {
+              "type": "value",
+              "path": "url"
+            }
+          ],
+          "rules": "closed"
+        }
+      },
+      {
+        "id": "Extension.extension:step",
+        "path": "Extension.extension",
+        "sliceName": "step",
+        "short": "The step number, from 1",
+        "definition": "The step number, from 1.",
+        "min": 1,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:step.extension",
+        "path": "Extension.extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.extension:step.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "step"
+      },
+      {
+        "id": "Extension.extension:step.value[x]",
+        "path": "Extension.extension.value[x]",
+        "min": 1,
+        "type": [
+          {
+            "code": "positiveInt"
+          }
+        ]
+      },
+      {
+        "id": "Extension.extension:outcome",
+        "path": "Extension.extension",
+        "sliceName": "outcome",
+        "short": "approved, denied, expired or cancelled",
+        "definition": "approved, denied, expired or cancelled.",
+        "min": 1,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:outcome.extension",
+        "path": "Extension.extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.extension:outcome.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "outcome"
+      },
+      {
+        "id": "Extension.extension:outcome.value[x]",
+        "path": "Extension.extension.value[x]",
+        "min": 1,
+        "type": [
+          {
+            "code": "code"
+          }
+        ],
+        "binding": {
+          "strength": "required",
+          "valueSet": "https://deedglass.com/fhir/aap-h/ValueSet/aaph-approval-outcome"
+        }
+      },
+      {
+        "id": "Extension.extension:approver",
+        "path": "Extension.extension",
+        "sliceName": "approver",
+        "short": "Who decided (opaque references preferred)",
+        "definition": "Who decided (opaque references preferred).",
+        "min": 0,
+        "max": "*"
+      },
+      {
+        "id": "Extension.extension:approver.extension",
+        "path": "Extension.extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.extension:approver.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "approver"
+      },
+      {
+        "id": "Extension.extension:approver.value[x]",
+        "path": "Extension.extension.value[x]",
+        "min": 1,
+        "type": [
+          {
+            "code": "Reference"
+          },
+          {
+            "code": "Identifier"
+          }
+        ]
+      },
+      {
+        "id": "Extension.extension:role",
+        "path": "Extension.extension",
+        "sliceName": "role",
+        "short": "The role the step required",
+        "definition": "The role the step required.",
+        "min": 0,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:role.extension",
+        "path": "Extension.extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.extension:role.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "role"
+      },
+      {
+        "id": "Extension.extension:role.value[x]",
+        "path": "Extension.extension.value[x]",
+        "min": 1,
+        "type": [
+          {
+            "code": "string"
+          }
+        ]
+      },
+      {
+        "id": "Extension.extension:decidedAt",
+        "path": "Extension.extension",
+        "sliceName": "decidedAt",
+        "short": "When the step was decided",
+        "definition": "When the step was decided.",
+        "min": 0,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:decidedAt.extension",
+        "path": "Extension.extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.extension:decidedAt.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "decidedAt"
+      },
+      {
+        "id": "Extension.extension:decidedAt.value[x]",
+        "path": "Extension.extension.value[x]",
+        "min": 1,
+        "type": [
+          {
+            "code": "dateTime"
+          }
+        ]
+      },
+      {
+        "id": "Extension.url",
+        "path": "Extension.url",
+        "fixedUri": "https://deedglass.com/fhir/aap-h/StructureDefinition/aaph-approval"
+      },
+      {
+        "id": "Extension.value[x]",
+        "path": "Extension.value[x]",
+        "max": "0"
+      }
+    ]
+  }
+}

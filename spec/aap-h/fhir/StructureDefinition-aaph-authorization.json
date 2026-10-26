@@ -1,0 +1,194 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "aaph-authorization",
+  "url": "https://deedglass.com/fhir/aap-h/StructureDefinition/aaph-authorization",
+  "name": "AaphAuthorization",
+  "title": "AAP-H Authorization",
+  "version": "0.1.0-draft",
+  "status": "draft",
+  "experimental": true,
+  "date": "2026-10-26",
+  "publisher": "Deedglass contributors",
+  "jurisdiction": [
+    {
+      "coding": [
+        {
+          "system": "http://unstats.un.org/unsd/methods/m49/m49.htm",
+          "code": "001",
+          "display": "World"
+        }
+      ]
+    }
+  ],
+  "copyright": "Apache-2.0. Part of Agent Action Provenance for Health (AAP-H) v0.1 draft.",
+  "description": "What allowed the agent to act: SMART scopes, a consent artefact, a grant.",
+  "fhirVersion": "4.0.1",
+  "kind": "complex-type",
+  "abstract": false,
+  "context": [
+    {
+      "type": "element",
+      "expression": "Provenance"
+    },
+    {
+      "type": "element",
+      "expression": "AuditEvent"
+    }
+  ],
+  "type": "Extension",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Extension",
+  "derivation": "constraint",
+  "differential": {
+    "element": [
+      {
+        "id": "Extension",
+        "path": "Extension",
+        "short": "Authorization",
+        "definition": "What allowed the agent to act: SMART scopes, a consent artefact, a grant."
+      },
+      {
+        "id": "Extension.extension",
+        "path": "Extension.extension",
+        "slicing": {
+          "discriminator": [
+            {
+              "type": "value",
+              "path": "url"
+            }
+          ],
+          "rules": "closed"
+        }
+      },
+      {
+        "id": "Extension.extension:kind",
+        "path": "Extension.extension",
+        "sliceName": "kind",
+        "short": "smart-scope, consent, grant or other",
+        "definition": "smart-scope, consent, grant or other.",
+        "min": 1,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:kind.extension",
+        "path": "Extension.extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.extension:kind.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "kind"
+      },
+      {
+        "id": "Extension.extension:kind.value[x]",
+        "path": "Extension.extension.value[x]",
+        "min": 1,
+        "type": [
+          {
+            "code": "code"
+          }
+        ],
+        "binding": {
+          "strength": "required",
+          "valueSet": "https://deedglass.com/fhir/aap-h/ValueSet/aaph-authorization-kind"
+        }
+      },
+      {
+        "id": "Extension.extension:ref",
+        "path": "Extension.extension",
+        "sliceName": "ref",
+        "short": "The client id, consent artefact id or grant reference",
+        "definition": "The client id, consent artefact id or grant reference.",
+        "min": 1,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:ref.extension",
+        "path": "Extension.extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.extension:ref.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "ref"
+      },
+      {
+        "id": "Extension.extension:ref.value[x]",
+        "path": "Extension.extension.value[x]",
+        "min": 1,
+        "type": [
+          {
+            "code": "string"
+          }
+        ]
+      },
+      {
+        "id": "Extension.extension:scope",
+        "path": "Extension.extension",
+        "sliceName": "scope",
+        "short": "Scopes, space separated",
+        "definition": "Scopes, space separated.",
+        "min": 0,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:scope.extension",
+        "path": "Extension.extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.extension:scope.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "scope"
+      },
+      {
+        "id": "Extension.extension:scope.value[x]",
+        "path": "Extension.extension.value[x]",
+        "min": 1,
+        "type": [
+          {
+            "code": "string"
+          }
+        ]
+      },
+      {
+        "id": "Extension.extension:digest",
+        "path": "Extension.extension",
+        "sliceName": "digest",
+        "short": "sha256: digest of the signed artefact",
+        "definition": "sha256: digest of the signed artefact.",
+        "min": 0,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:digest.extension",
+        "path": "Extension.extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.extension:digest.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "digest"
+      },
+      {
+        "id": "Extension.extension:digest.value[x]",
+        "path": "Extension.extension.value[x]",
+        "min": 1,
+        "type": [
+          {
+            "code": "string"
+          }
+        ]
+      },
+      {
+        "id": "Extension.url",
+        "path": "Extension.url",
+        "fixedUri": "https://deedglass.com/fhir/aap-h/StructureDefinition/aaph-authorization"
+      },
+      {
+        "id": "Extension.value[x]",
+        "path": "Extension.value[x]",
+        "max": "0"
+      }
+    ]
+  }
+}

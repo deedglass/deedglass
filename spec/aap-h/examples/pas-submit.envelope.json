@@ -1,0 +1,92 @@
+{
+  "aaph": "0.1",
+  "record_id": "rec-us-0001",
+  "issuer": "https://agent-gateway.example",
+  "recorded_at": "2026-10-21T15:02:41.880Z",
+  "agent": {
+    "id": "agt-pa-assist",
+    "kind": "ai-agent",
+    "model": {
+      "name": "example-model",
+      "provider": "example-ai",
+      "version": "2026-09"
+    },
+    "name": "prior-auth-assist",
+    "on_behalf_of": "usr_ref:clinic-staff-12",
+    "session": "ses-9a07"
+  },
+  "action": {
+    "agent_role": "made",
+    "id": "act-us-0001",
+    "intent_digest": null,
+    "interaction": "operation",
+    "request_digest": "sha256:5eeffcda857dd4f0d0cb2be39bf2c789892cc39e7490d7705a14e1febd5361e2",
+    "system": {
+      "base": "https://pas.payer.example/fhir",
+      "kind": "fhir"
+    },
+    "target": [
+      {
+        "ref": "Claim/pas-req-2207",
+        "version": null
+      }
+    ],
+    "tool": "fhir.operation.claim-submit"
+  },
+  "authorization": [
+    {
+      "digest": null,
+      "kind": "smart-scope",
+      "ref": "client:pa-assist",
+      "scope": "system/Claim.c system/ClaimResponse.r"
+    }
+  ],
+  "policy": {
+    "decision": "require-approval",
+    "mode": "enforce",
+    "policy": "pol-us-payer",
+    "rule": "pa-submit-clinician",
+    "version_digest": "sha256:a4a4784cfbb71fb82be7e7c67e380180444851ed5256cf50db74946d7d5ff173"
+  },
+  "approvals": [
+    {
+      "approvers": [
+        "usr_ref:clinician-31"
+      ],
+      "decided_at": "2026-10-21T15:01:58.300Z",
+      "outcome": "approved",
+      "role": "ordering clinician",
+      "step": 1
+    }
+  ],
+  "claimed": {
+    "assertion": "payer-approved",
+    "error_code": null,
+    "finished_at": "2026-10-21T15:02:01.442Z",
+    "result_digest": "sha256:5f946e7b6a7653679d64bde27b0021fca3492f1b1b8e32334f8ffff7d38d989a",
+    "started_at": "2026-10-21T15:02:00.010Z",
+    "status": "succeeded"
+  },
+  "verified": {
+    "checked_at": "2026-10-21T15:02:41.700Z",
+    "depth": "read-back",
+    "detail_digest": "sha256:a81b759dab570df0c1b430e958d4938c110d47ed438b6cb0def8ff521572d060",
+    "method": "readback.fhir.claimresponse",
+    "result": "mismatch"
+  },
+  "supersedes": null,
+  "chain": {
+    "prev": "sha256:1754ea5c2b97d97e034a55773f3f568bb39c3e351e086a1ee381a2b50205d47d",
+    "seq": 1,
+    "stream": "demo-us-clinic"
+  },
+  "seal": {
+    "alg": "Ed25519",
+    "format": "aaph-jcs",
+    "key_id": "aaph-test-1",
+    "key_set": "https://agent-gateway.example/.well-known/aaph/keys.json",
+    "record_digest": "sha256:fdbed896f138c412eb5054e6faf66065fc233ae72ab7ed127862ea644c7fc48c",
+    "signature": "ed25519:qoeLtwUl55yWIj_wYFesFs8HTH5jZH9CVrVSdEMfYaxq4oqTOvI38qnBhEtSMXD8iXyaF20b7jHos9nXGWrRAw"
+  },
+  "extensions": {}
+}

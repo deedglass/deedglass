@@ -1,0 +1,310 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "aaph-record-seal",
+  "url": "https://deedglass.com/fhir/aap-h/StructureDefinition/aaph-record-seal",
+  "name": "AaphRecordSeal",
+  "title": "AAP-H Record seal",
+  "version": "0.1.0-draft",
+  "status": "draft",
+  "experimental": true,
+  "date": "2026-10-26",
+  "publisher": "Deedglass contributors",
+  "jurisdiction": [
+    {
+      "coding": [
+        {
+          "system": "http://unstats.un.org/unsd/methods/m49/m49.htm",
+          "code": "001",
+          "display": "World"
+        }
+      ]
+    }
+  ],
+  "copyright": "Apache-2.0. Part of Agent Action Provenance for Health (AAP-H) v0.1 draft.",
+  "description": "Points to the signed record this resource is a view of.",
+  "fhirVersion": "4.0.1",
+  "kind": "complex-type",
+  "abstract": false,
+  "context": [
+    {
+      "type": "element",
+      "expression": "Provenance"
+    },
+    {
+      "type": "element",
+      "expression": "AuditEvent"
+    }
+  ],
+  "type": "Extension",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Extension",
+  "derivation": "constraint",
+  "differential": {
+    "element": [
+      {
+        "id": "Extension",
+        "path": "Extension",
+        "short": "Record seal",
+        "definition": "Points to the signed record this resource is a view of."
+      },
+      {
+        "id": "Extension.extension",
+        "path": "Extension.extension",
+        "slicing": {
+          "discriminator": [
+            {
+              "type": "value",
+              "path": "url"
+            }
+          ],
+          "rules": "closed"
+        }
+      },
+      {
+        "id": "Extension.extension:recordId",
+        "path": "Extension.extension",
+        "sliceName": "recordId",
+        "short": "The record's id",
+        "definition": "The record's id.",
+        "min": 1,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:recordId.extension",
+        "path": "Extension.extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.extension:recordId.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "recordId"
+      },
+      {
+        "id": "Extension.extension:recordId.value[x]",
+        "path": "Extension.extension.value[x]",
+        "min": 1,
+        "type": [
+          {
+            "code": "string"
+          }
+        ]
+      },
+      {
+        "id": "Extension.extension:issuer",
+        "path": "Extension.extension",
+        "sliceName": "issuer",
+        "short": "The issuer's base URI",
+        "definition": "The issuer's base URI.",
+        "min": 1,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:issuer.extension",
+        "path": "Extension.extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.extension:issuer.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "issuer"
+      },
+      {
+        "id": "Extension.extension:issuer.value[x]",
+        "path": "Extension.extension.value[x]",
+        "min": 1,
+        "type": [
+          {
+            "code": "uri"
+          }
+        ]
+      },
+      {
+        "id": "Extension.extension:recordDigest",
+        "path": "Extension.extension",
+        "sliceName": "recordDigest",
+        "short": "sha256: record digest (AAP-H section 8)",
+        "definition": "sha256: record digest (AAP-H section 8).",
+        "min": 1,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:recordDigest.extension",
+        "path": "Extension.extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.extension:recordDigest.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "recordDigest"
+      },
+      {
+        "id": "Extension.extension:recordDigest.value[x]",
+        "path": "Extension.extension.value[x]",
+        "min": 1,
+        "type": [
+          {
+            "code": "string"
+          }
+        ]
+      },
+      {
+        "id": "Extension.extension:format",
+        "path": "Extension.extension",
+        "sliceName": "format",
+        "short": "aaph-jcs, deedglass-deed or other",
+        "definition": "aaph-jcs, deedglass-deed or other.",
+        "min": 1,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:format.extension",
+        "path": "Extension.extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.extension:format.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "format"
+      },
+      {
+        "id": "Extension.extension:format.value[x]",
+        "path": "Extension.extension.value[x]",
+        "min": 1,
+        "type": [
+          {
+            "code": "code"
+          }
+        ],
+        "binding": {
+          "strength": "required",
+          "valueSet": "https://deedglass.com/fhir/aap-h/ValueSet/aaph-seal-format"
+        }
+      },
+      {
+        "id": "Extension.extension:keyId",
+        "path": "Extension.extension",
+        "sliceName": "keyId",
+        "short": "The signing key's id",
+        "definition": "The signing key's id.",
+        "min": 0,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:keyId.extension",
+        "path": "Extension.extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.extension:keyId.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "keyId"
+      },
+      {
+        "id": "Extension.extension:keyId.value[x]",
+        "path": "Extension.extension.value[x]",
+        "min": 1,
+        "type": [
+          {
+            "code": "string"
+          }
+        ]
+      },
+      {
+        "id": "Extension.extension:keySet",
+        "path": "Extension.extension",
+        "sliceName": "keySet",
+        "short": "Where the issuer publishes its key set",
+        "definition": "Where the issuer publishes its key set.",
+        "min": 0,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:keySet.extension",
+        "path": "Extension.extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.extension:keySet.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "keySet"
+      },
+      {
+        "id": "Extension.extension:keySet.value[x]",
+        "path": "Extension.extension.value[x]",
+        "min": 1,
+        "type": [
+          {
+            "code": "uri"
+          }
+        ]
+      },
+      {
+        "id": "Extension.extension:stream",
+        "path": "Extension.extension",
+        "sliceName": "stream",
+        "short": "The record's stream",
+        "definition": "The record's stream.",
+        "min": 0,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:stream.extension",
+        "path": "Extension.extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.extension:stream.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "stream"
+      },
+      {
+        "id": "Extension.extension:stream.value[x]",
+        "path": "Extension.extension.value[x]",
+        "min": 1,
+        "type": [
+          {
+            "code": "string"
+          }
+        ]
+      },
+      {
+        "id": "Extension.extension:seq",
+        "path": "Extension.extension",
+        "sliceName": "seq",
+        "short": "The record's position in its stream",
+        "definition": "The record's position in its stream.",
+        "min": 0,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:seq.extension",
+        "path": "Extension.extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.extension:seq.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "seq"
+      },
+      {
+        "id": "Extension.extension:seq.value[x]",
+        "path": "Extension.extension.value[x]",
+        "min": 1,
+        "type": [
+          {
+            "code": "positiveInt"
+          }
+        ]
+      },
+      {
+        "id": "Extension.url",
+        "path": "Extension.url",
+        "fixedUri": "https://deedglass.com/fhir/aap-h/StructureDefinition/aaph-record-seal"
+      },
+      {
+        "id": "Extension.value[x]",
+        "path": "Extension.value[x]",
+        "max": "0"
+      }
+    ]
+  }
+}

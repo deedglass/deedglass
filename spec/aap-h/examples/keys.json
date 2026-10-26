@@ -1,0 +1,15 @@
+{
+  "issuer": "https://agent-gateway.example",
+  "keys": [
+    {
+      "activated_at": "2026-01-01T00:00:00Z",
+      "alg": "Ed25519",
+      "id": "aaph-test-1",
+      "public_key": "kXu4IX_vwBTfauoN_59x2D2iY14FBf53PJ5YyJse-cw",
+      "retired_at": null,
+      "revoked_at": null,
+      "status": "active"
+    }
+  ],
+  "note": "TEST KEY ONLY. Its seed is public: SHA-256 of the ASCII string aap-h/test-key/1. Never trust a record it signs."
+}

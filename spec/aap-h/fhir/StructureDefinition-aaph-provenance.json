@@ -1,0 +1,357 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "aaph-provenance",
+  "url": "https://deedglass.com/fhir/aap-h/StructureDefinition/aaph-provenance",
+  "name": "AaphProvenance",
+  "title": "AAP-H AI agent action Provenance",
+  "version": "0.1.0-draft",
+  "status": "draft",
+  "experimental": true,
+  "date": "2026-10-26",
+  "publisher": "Deedglass contributors",
+  "jurisdiction": [
+    {
+      "coding": [
+        {
+          "system": "http://unstats.un.org/unsd/methods/m49/m49.htm",
+          "code": "001",
+          "display": "World"
+        }
+      ]
+    }
+  ],
+  "copyright": "Apache-2.0. Part of Agent Action Provenance for Health (AAP-H) v0.1 draft.",
+  "description": "The provenance of a resource an AI agent created, updated or deleted: the agent, the policy decision, the approval chain, the claimed and verified outcomes, and the signed record.",
+  "fhirVersion": "4.0.1",
+  "kind": "resource",
+  "abstract": false,
+  "type": "Provenance",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Provenance",
+  "derivation": "constraint",
+  "differential": {
+    "element": [
+      {
+        "id": "Provenance",
+        "path": "Provenance",
+        "short": "AI agent action Provenance",
+        "definition": "The provenance of a resource an AI agent created, updated or deleted: the agent, the policy decision, the approval chain, the claimed and verified outcomes, and the signed record.",
+        "constraint": [
+          {
+            "key": "aaph-1",
+            "severity": "error",
+            "human": "A decision of require-approval has at least one approval step.",
+            "expression": "extension('https://deedglass.com/fhir/aap-h/StructureDefinition/aaph-policy-decision').extension('decision').value = 'require-approval' implies extension('https://deedglass.com/fhir/aap-h/StructureDefinition/aaph-approval').exists()",
+            "source": "https://deedglass.com/fhir/aap-h/StructureDefinition/aaph-provenance"
+          },
+          {
+            "key": "aaph-2",
+            "severity": "error",
+            "human": "A write is never recorded as a match at depth reported.",
+            "expression": "extension('https://deedglass.com/fhir/aap-h/StructureDefinition/aaph-action').extension('interaction').value in ('create' | 'update' | 'patch' | 'delete' | 'operation' | 'execute') implies extension('https://deedglass.com/fhir/aap-h/StructureDefinition/aaph-verified-outcome').where(extension('result').value = 'match' and extension('depth').value = 'reported').empty()",
+            "source": "https://deedglass.com/fhir/aap-h/StructureDefinition/aaph-provenance"
+          },
+          {
+            "key": "aaph-3",
+            "severity": "warning",
+            "human": "A write the tool reported as succeeded has a verified outcome.",
+            "expression": "(extension('https://deedglass.com/fhir/aap-h/StructureDefinition/aaph-action').extension('interaction').value in ('create' | 'update' | 'patch' | 'delete' | 'operation' | 'execute') and extension('https://deedglass.com/fhir/aap-h/StructureDefinition/aaph-claimed-outcome').extension('status').value = 'succeeded') implies extension('https://deedglass.com/fhir/aap-h/StructureDefinition/aaph-verified-outcome').exists()",
+            "source": "https://deedglass.com/fhir/aap-h/StructureDefinition/aaph-provenance"
+          },
+          {
+            "key": "aaph-4",
+            "severity": "error",
+            "human": "Exactly one agent is the AI agent, and it is a Device.",
+            "expression": "agent.where(role.coding.where(system = 'https://deedglass.com/fhir/aap-h/CodeSystem/aaph-participant' and code = 'ai-agent').exists()).count() = 1",
+            "source": "https://deedglass.com/fhir/aap-h/StructureDefinition/aaph-provenance"
+          }
+        ]
+      },
+      {
+        "id": "Provenance.extension",
+        "path": "Provenance.extension",
+        "slicing": {
+          "discriminator": [
+            {
+              "type": "value",
+              "path": "url"
+            }
+          ],
+          "rules": "open"
+        },
+        "min": 2
+      },
+      {
+        "id": "Provenance.extension:action",
+        "path": "Provenance.extension",
+        "sliceName": "action",
+        "min": 1,
+        "max": "1",
+        "type": [
+          {
+            "code": "Extension",
+            "profile": [
+              "https://deedglass.com/fhir/aap-h/StructureDefinition/aaph-action"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "Provenance.extension:policyDecision",
+        "path": "Provenance.extension",
+        "sliceName": "policyDecision",
+        "min": 1,
+        "max": "1",
+        "type": [
+          {
+            "code": "Extension",
+            "profile": [
+              "https://deedglass.com/fhir/aap-h/StructureDefinition/aaph-policy-decision"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "Provenance.extension:approval",
+        "path": "Provenance.extension",
+        "sliceName": "approval",
+        "min": 0,
+        "max": "*",
+        "type": [
+          {
+            "code": "Extension",
+            "profile": [
+              "https://deedglass.com/fhir/aap-h/StructureDefinition/aaph-approval"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "Provenance.extension:authorization",
+        "path": "Provenance.extension",
+        "sliceName": "authorization",
+        "min": 0,
+        "max": "*",
+        "type": [
+          {
+            "code": "Extension",
+            "profile": [
+              "https://deedglass.com/fhir/aap-h/StructureDefinition/aaph-authorization"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "Provenance.extension:claimedOutcome",
+        "path": "Provenance.extension",
+        "sliceName": "claimedOutcome",
+        "min": 0,
+        "max": "1",
+        "type": [
+          {
+            "code": "Extension",
+            "profile": [
+              "https://deedglass.com/fhir/aap-h/StructureDefinition/aaph-claimed-outcome"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "Provenance.extension:verifiedOutcome",
+        "path": "Provenance.extension",
+        "sliceName": "verifiedOutcome",
+        "min": 0,
+        "max": "*",
+        "type": [
+          {
+            "code": "Extension",
+            "profile": [
+              "https://deedglass.com/fhir/aap-h/StructureDefinition/aaph-verified-outcome"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "Provenance.extension:recordSeal",
+        "path": "Provenance.extension",
+        "sliceName": "recordSeal",
+        "min": 0,
+        "max": "1",
+        "type": [
+          {
+            "code": "Extension",
+            "profile": [
+              "https://deedglass.com/fhir/aap-h/StructureDefinition/aaph-record-seal"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "Provenance.agent",
+        "path": "Provenance.agent",
+        "slicing": {
+          "discriminator": [
+            {
+              "type": "pattern",
+              "path": "role"
+            }
+          ],
+          "rules": "open"
+        }
+      },
+      {
+        "id": "Provenance.agent:aiAgent",
+        "path": "Provenance.agent",
+        "sliceName": "aiAgent",
+        "min": 1,
+        "max": "1"
+      },
+      {
+        "id": "Provenance.agent:aiAgent.type",
+        "path": "Provenance.agent.type",
+        "min": 1,
+        "patternCodeableConcept": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/provenance-participant-type",
+              "code": "author",
+              "display": "Author"
+            }
+          ]
+        }
+      },
+      {
+        "id": "Provenance.agent:aiAgent.role",
+        "path": "Provenance.agent.role",
+        "min": 1,
+        "patternCodeableConcept": {
+          "coding": [
+            {
+              "system": "https://deedglass.com/fhir/aap-h/CodeSystem/aaph-participant",
+              "code": "ai-agent"
+            }
+          ]
+        }
+      },
+      {
+        "id": "Provenance.agent:aiAgent.who",
+        "path": "Provenance.agent.who",
+        "type": [
+          {
+            "code": "Reference",
+            "targetProfile": [
+              "http://hl7.org/fhir/StructureDefinition/Device"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "Provenance.agent:gateway",
+        "path": "Provenance.agent",
+        "sliceName": "gateway",
+        "min": 0,
+        "max": "1"
+      },
+      {
+        "id": "Provenance.agent:gateway.type",
+        "path": "Provenance.agent.type",
+        "min": 1,
+        "patternCodeableConcept": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/provenance-participant-type",
+              "code": "assembler",
+              "display": "Assembler"
+            }
+          ]
+        }
+      },
+      {
+        "id": "Provenance.agent:gateway.role",
+        "path": "Provenance.agent.role",
+        "min": 1,
+        "patternCodeableConcept": {
+          "coding": [
+            {
+              "system": "https://deedglass.com/fhir/aap-h/CodeSystem/aaph-participant",
+              "code": "gateway"
+            }
+          ]
+        }
+      },
+      {
+        "id": "Provenance.agent:checker",
+        "path": "Provenance.agent",
+        "sliceName": "checker",
+        "min": 0,
+        "max": "*"
+      },
+      {
+        "id": "Provenance.agent:checker.type",
+        "path": "Provenance.agent.type",
+        "min": 1,
+        "patternCodeableConcept": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/provenance-participant-type",
+              "code": "verifier",
+              "display": "Verifier"
+            }
+          ]
+        }
+      },
+      {
+        "id": "Provenance.agent:checker.role",
+        "path": "Provenance.agent.role",
+        "min": 1,
+        "patternCodeableConcept": {
+          "coding": [
+            {
+              "system": "https://deedglass.com/fhir/aap-h/CodeSystem/aaph-participant",
+              "code": "checker"
+            }
+          ]
+        }
+      },
+      {
+        "id": "Provenance.agent:approver",
+        "path": "Provenance.agent",
+        "sliceName": "approver",
+        "min": 0,
+        "max": "*"
+      },
+      {
+        "id": "Provenance.agent:approver.type",
+        "path": "Provenance.agent.type",
+        "min": 1,
+        "patternCodeableConcept": {
+          "coding": [
+            {
+              "system": "https://deedglass.com/fhir/aap-h/CodeSystem/aaph-participant",
+              "code": "approver",
+              "display": "Approver"
+            }
+          ]
+        }
+      },
+      {
+        "id": "Provenance.agent:approver.role",
+        "path": "Provenance.agent.role",
+        "min": 1,
+        "patternCodeableConcept": {
+          "coding": [
+            {
+              "system": "https://deedglass.com/fhir/aap-h/CodeSystem/aaph-participant",
+              "code": "approver"
+            }
+          ]
+        }
+      },
+      {
+        "id": "Provenance.signature",
+        "path": "Provenance.signature",
+        "short": "The record's signature (AAP-H section 8.4)",
+        "comment": "The bytes sign the sealed record's digest, not this Provenance resource."
+      }
+    ]
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "resourceType": "CodeSystem",
+  "id": "aaph-agent-role",
+  "url": "https://deedglass.com/fhir/aap-h/CodeSystem/aaph-agent-role",
+  "name": "AaphAgentRole",
+  "title": "AAP-H Agent role",
+  "version": "0.1.0-draft",
+  "status": "draft",
+  "experimental": true,
+  "date": "2026-10-26",
+  "publisher": "Deedglass contributors",
+  "jurisdiction": [
+    {
+      "coding": [
+        {
+          "system": "http://unstats.un.org/unsd/methods/m49/m49.htm",
+          "code": "001",
+          "display": "World"
+        }
+      ]
+    }
+  ],
+  "copyright": "Apache-2.0. Part of Agent Action Provenance for Health (AAP-H) v0.1 draft.",
+  "description": "Whether the AI agent made the call or only proposed it.",
+  "caseSensitive": true,
+  "valueSet": "https://deedglass.com/fhir/aap-h/ValueSet/aaph-agent-role",
+  "content": "complete",
+  "count": 2,
+  "concept": [
+    {
+      "code": "proposed",
+      "display": "Proposed",
+      "definition": "The agent drafted the action; a person or another system made the call."
+    },
+    {
+      "code": "made",
+      "display": "Made",
+      "definition": "The agent's call was executed."
+    }
+  ]
+}
