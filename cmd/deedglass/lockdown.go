@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/deedglass/deedglass/cmd/deedglass/internal/ui"
+	"github.com/deedglass/deedglass/internal/cli/ui"
 	"github.com/deedglass/deedglass/internal/config"
 	"github.com/deedglass/deedglass/internal/identity"
 	"github.com/deedglass/deedglass/internal/ids"
@@ -203,24 +203,26 @@ func printLockdown(e *Env, cfg *config.Config, org store.Org, st identity.Lockdo
 	default:
 		fmt.Fprintln(w, e.Style.UnknownLine(fmt.Sprintf("Lockdown off %s %s", ui.Sep, org.Name)))
 	}
-	row := func(k, v string) { fmt.Fprintf(w, "  %s %s\n", ui.Pad(k, 12), v) }
+	var rows []ui.Row
+	row := func(k, v string) { rows = append(rows, ui.Row{Key: k, Value: v}) }
 	if st.ChangedDeed != nil {
-		row("record", *st.ChangedDeed+" "+ui.Sep+" sealed")
+		row("record", ui.ShortID(*st.ChangedDeed)+", sealed")
 	}
 	if r := st.OffRequest; r != nil {
-		row("off request", fmt.Sprintf("%s asked %s countersign by %s UTC", r.Email, ui.Sep, r.ExpiresAt.Format("15:04")))
+		row("off request", fmt.Sprintf("%s asked; countersign by %s UTC", r.Email, r.ExpiresAt.Format("15:04")))
 	}
 	row("approvers", fmt.Sprintf("%d %s", st.Approvers, plural(st.Approvers, "owner or admin", "owners or admins")))
 	for _, h := range st.Holds {
-		row("held", fmt.Sprintf("%s %s Can't check %s %s", h.Name, ui.Sep, ui.Sep, h.Action))
+		row("held", fmt.Sprintf("%s, Can't check, %s", h.Name, h.Action))
 	}
+	ui.Lines(w, e.Style.KV("  ", e.Width, rows...)...)
 	for _, line := range lockdownWeak(cfg, st) {
 		fmt.Fprintln(w, "  "+e.Style.Amber(ui.Unknown)+" "+line)
 	}
 	if !state.On() {
-		fmt.Fprintln(w, nextLine(e.Style, "deedglass lockdown on"))
+		fmt.Fprintln(w, e.Style.Next("deedglass lockdown on"))
 	} else if len(st.Holds) > 0 {
-		fmt.Fprintln(w, nextLine(e.Style, "Look at the held action, then deedglass lockdown ack "+st.Holds[0].Action+" --as <email>"))
+		fmt.Fprintln(w, e.Style.Next("Look at the held action, then deedglass lockdown ack "+st.Holds[0].Action+" --as <email>"))
 	}
 	return nil
 }

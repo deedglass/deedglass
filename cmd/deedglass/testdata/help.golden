@@ -1,6 +1,6 @@
 exit 0
 --- stdout
-deedglass · the execution and accountability layer for AI agents
+deedglass  the execution and accountability layer for AI agents
 
 Usage  deedglass <command> [flags]
 
@@ -12,86 +12,63 @@ Setup
   play                Watch the 301 scene offline, no Docker
   serve               Run the API, the rules and the Console
   migrate             Apply or check database migrations
-                      up · status · verify
   config print        Show the effective config, secrets hidden
   lockdown            Turn on the strictest setup, or check it
-                      status · on · off · ack
   version             Show the client and server versions
   keys                Manage seal keys
-                      gen · rotate · list
   licence             Check this machine's licence (none needed)
-                      activate · show · refresh · deactivate
   vault               Check or rotate the credential vault
-                      status · rotate
   completion          Print shell completion
-                      zsh · bash · fish
+
 Agents
   agent               Register and control agents
-                      create · list · show · suspend · resume · stop · start
   agent keys          Manage an agent's API keys
-                      create · list · roll · revoke
   agent intent        Manage an agent's signed-intent keys
-                      keygen · add · list · remove · mode
   org                 Create orgs and keys; stop or start all
-                      create · login-link · keys · stop-all · start-all
+
 Policies
   policy              Write, test and activate policies
-                      lint · fmt · test · push · activate · evaluate · replay ·
-                      diff · install
   policy packs        List or check the policy packs
-                      list · verify
   guard shell         Check a shell command before an agent runs it
+
 Actions
   act                 Send a test action through Deedglass
   actions             Inspect actions
-                      list · show · cancel
   approve · deny      Decide a pending approval
   approvals           List pending approvals
-                      list · show · open
   undo                Preview or run an undo
-                      preview · run
   observe             Watch what changed while an agent ran
-                      run · start · stop · list · show · undo · exclude
   webhooks            Send events to your endpoints
-                      create · list · test · delete
+
 Records
   verify              Check records offline
   export              Write records as OTel, OCSF, PROV or FHIR
   security-pack       Answer a security review from your records
-                      readiness · build · verify
   report              Report what your agents did in a week or month
   clients             List every org you look after
   deeds               Browse and export records
-                      list · show · share · export · timestamp · seal-file
   ledger              Check or prune the Ledger
-                      check · prune
+
 Connectors
   connector           Connect tools
-                      create · list · show · test · types · credentials
   connector postgres  Prepare a Postgres database
-                      init · check
   connector gmail     Authorize the Gmail connector
-                      authorize
   decoder             Inspect Postgres change readers
-                      status · drop
   witness             Compare actions with other change feeds
-                      debezium
   slack manifest      Print the Slack app manifest
+
 MCP and A2A
   mcp                 Put Deedglass in front of MCP servers
-                      wrap · serve · snippet · install-links
   a2a                 Put Deedglass in front of a remote A2A agent
-                      proxy
+
 Insights
   insights            Suggestions, shadow results and anomalies
-                      stats · shadow · anomalies · detect · settings ·
-                      suggestions · digest
+
 Dev
   dev                 Local helpers
-                      seed · fake-action · simulate · agent-script ·
-                      mail-preview · sign-intent · stripe-fixtures
 
 Global flags  --json · --server <url> · --api-key <key> · --org <id> ·
               --no-color · -v
-Run deedglass help <command> for details · https://docs.deedglass.com
+
+Run deedglass help <command> for more · https://docs.deedglass.com
 --- stderr

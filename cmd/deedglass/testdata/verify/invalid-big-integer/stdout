@@ -1,2 +1,3 @@
-✕ The deed is not valid strict JSON (integer magnitude exceeds 2^53-1 at body.seq).
+✕ The deed is not valid strict JSON (integer magnitude exceeds 2^53-1 at
+  body.seq).
   next       Export it again from the issuer; do not edit deeds by hand.

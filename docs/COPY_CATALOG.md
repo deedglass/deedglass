@@ -17,8 +17,10 @@ error, no exclamation marks, no emoji).
 
 ## CLI style (every command)
 
-One terminal style for every `deedglass` command, in `cmd/deedglass/internal/ui` (symbols, colour,
+One terminal style for every `deedglass` command, in `internal/cli/ui` (symbols, colour,
 alignment, wrapping, the progress line) and `cmd/deedglass/main.go` (`report`: how errors print).
+The layout rules (palette, spacing, headers, key/value rows, tables, ids, line budgets, `play`)
+are in [design/CLI_STYLE.md](design/CLI_STYLE.md).
 The goldens under `cmd/deedglass/testdata/` pin the output; `TestNoRawGoErrors` fails when Go or
 driver text reaches a person.
 
@@ -30,8 +32,8 @@ output reads the same with `NO_COLOR`, `--no-color`, `TERM=dumb` or off a termin
 | `✓` | teal | done, matches, valid | `✓ Postgres  127.0.0.1:55432 · wal_level logical` |
 | `✕` | red | failed, denied, doesn't match | `✕ denied · postgres.execute` |
 | `○` | amber | a warning or notice; can't check | `○ Seal keys came from the bundle itself.` |
-| `◐` | violet | waiting: pending, or a step still running | `◐ pending approval · postgres.undo` |
-| `·` | none | separates facts on one line | `deedglass 0.8.0 · commit a21947c` |
+| `◐` | amber | waiting: pending, or a step still running | `◐ pending approval · postgres.undo` |
+| `·` | dim | joins two or three short facts in meta text | `deedglass scan  agentproj · read-only` |
 
 The brand keeps exclamation marks out of copy, so the warning symbol is `○`, not `!`.
 
@@ -55,8 +57,8 @@ The brand keeps exclamation marks out of copy, so the warning symbol is `○`, n
   (`{"error":{"code","message","doc_url","type"}}`); the exit code is the same as in text mode.
 
 **Tables.** Upper-case dim headers, columns padded by display width (`ui.Pad`, `ui.Width`, not
-bytes), a footer like `3 of 3` when the list can be longer. Ids are shortened with `…` in tables and
-printed whole in `--json`.
+bytes), a footer like `Showing 3 of 3 actions` when the list can be longer. Ids are shortened to
+`act_01m4x8kq…` (`ui.ShortID`) in text and printed whole in `--json`, under `-v` and in commands to copy.
 
 **Width.** Help and long prose wrap to the terminal (at most 100 columns, 80 when unknown) with a
 hanging indent (`ui.Wrap`); a value list breaks after `|`. Commands, URLs and keys are never broken.

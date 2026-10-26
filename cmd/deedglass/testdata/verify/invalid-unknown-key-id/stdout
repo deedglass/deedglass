@@ -1,3 +1,5 @@
-✕ Deed 1 names seal key sk_01m3xxf0m9d7wbxynh529sz4rf, which is not in the key set.
+✕ Deed 1 names seal key sk_01m3xxf0m9d7wbxynh529sz4rf, which is not in the key
+  set.
   deed       deed_01m3xxj291vb6nxg25pympae2g (line 1)
-  next       Fetch the issuer's keys: --keys <issuer>/.well-known/deedglass/keys.json
+  next       Fetch the issuer's keys: --keys
+             <issuer>/.well-known/deedglass/keys.json

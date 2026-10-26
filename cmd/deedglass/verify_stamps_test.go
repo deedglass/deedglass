@@ -77,10 +77,10 @@ func (f *stampFixture) path(name string) string { return filepath.Join(f.dir, na
 func TestVerifyTimestamps(t *testing.T) {
 	f := newStampFixture(t)
 	pinned := []string{"--timestamps", f.path("timestamps.json"), "--tsa-roots", f.path("roots.pem"), "--scitt-key", f.path("service.jwk")}
-	const head = "✓ Deed 20 timestamped 2026-10-20 09:30:00 UTC by 2 TSAs and 1 transparency service · matches the chain\n"
+	const head = "✓ Deed 20 timestamped 2026-10-20 09:30:00 UTC by 2 TSAs and 1 transparency\n  service · matches the chain\n"
 
 	r := cli(t, noColor, false, append([]string{"verify", f.path("full.jsonl"), "--keys", keys}, pinned...)...)
-	if r.code != 0 || !strings.Contains(r.stdout, "chain intact · 2 seal keys · 2026-10-02 → 2026-10-02\n"+head) || strings.Contains(r.stdout, "not pinned") {
+	if r.code != 0 || !strings.Contains(r.stdout, "chain intact · 2 seal keys · 2026-10-02\n"+head) || strings.Contains(r.stdout, "not pinned") {
 		t.Fatalf("full chain: %d\n%s%s", r.code, r.stdout, r.stderr)
 	}
 
@@ -93,13 +93,13 @@ func TestVerifyTimestamps(t *testing.T) {
 
 	// TY-03's acceptance: a chain cut short fails against its timestamped head, offline.
 	r = cli(t, noColor, false, append([]string{"verify", f.path("cut.jsonl"), "--keys", keys}, pinned...)...)
-	if r.code != 1 || !strings.HasPrefix(r.stdout, "✕ Deeds after 17 are missing: deed 20 was timestamped at 2026-10-20 09:30:00 UTC.\n") {
+	if r.code != 1 || !strings.HasPrefix(r.stdout, "✕ Deeds after 17 are missing: deed 20 was timestamped at 2026-10-20 09:30:00\n  UTC.\n") {
 		t.Fatalf("cut: %d\n%s", r.code, r.stdout)
 	}
 
 	// A rewritten head fails too, though its own seal and link verify.
 	r = cli(t, noColor, false, append([]string{"verify", f.path("rewritten.jsonl"), "--keys", keys}, pinned...)...)
-	if r.code != 1 || !strings.HasPrefix(r.stdout, "✕ Deed 20 doesn't match the head timestamped at 2026-10-20 09:30:00 UTC: the chain was changed after that time.\n") {
+	if r.code != 1 || !strings.HasPrefix(r.stdout, "✕ Deed 20 doesn't match the head timestamped at 2026-10-20 09:30:00 UTC: the\n  chain was changed after that time.\n") {
 		t.Fatalf("rewritten: %d\n%s", r.code, r.stdout)
 	}
 	r = cli(t, noColor, false, "verify", f.path("rewritten.jsonl"), "--keys", keys)
@@ -154,9 +154,9 @@ func TestVerifyBundleTimestamps(t *testing.T) {
 	p := f.path("stamped.tar.gz")
 	writeStampedBundle(t, p, f.chain, 20, ts)
 	r := cli(t, noColor, false, "verify", p, "--keys", keys, "--tsa-roots", f.path("roots.pem"), "--scitt-key", f.path("service.jwk"))
-	want := "✓ 20 deeds · chain intact · 2 seal keys · 2026-10-02 → 2026-10-02\n" +
+	want := "✓ 20 deeds · chain intact · 2 seal keys · 2026-10-02\n" +
 		"✓ Bundle manifest matches · sealed by sk_01m3xxf0…\n" +
-		"✓ Deed 20 timestamped 2026-10-20 09:30:00 UTC by 2 TSAs and 1 transparency service · matches the chain\n"
+		"✓ Deed 20 timestamped 2026-10-20 09:30:00 UTC by 2 TSAs and 1 transparency\n  service · matches the chain\n"
 	if r.code != 0 || !strings.HasPrefix(r.stdout, want) || strings.Contains(r.stdout, "TSA chains") {
 		t.Fatalf("%d\n%s%s", r.code, r.stdout, r.stderr)
 	}
@@ -197,11 +197,11 @@ func TestTimestampFixture(t *testing.T) {
 	}
 	pins := []string{"--keys", keys, "--tsa-roots", dir + "tsa-roots.pem", "--scitt-key", dir + "scitt-key.jwk"}
 	r := cli(t, noColor, false, append([]string{"verify", dir + "stamped.tar.gz"}, pins...)...)
-	if r.code != 0 || !strings.Contains(r.stdout, "✓ Deed 20 timestamped 2026-10-20 09:30:00 UTC by 2 TSAs and 1 transparency service · matches the chain\n") {
+	if r.code != 0 || !strings.Contains(r.stdout, "✓ Deed 20 timestamped 2026-10-20 09:30:00 UTC by 2 TSAs and 1 transparency\n  service · matches the chain\n") {
 		t.Fatalf("stamped: %d\n%s%s", r.code, r.stdout, r.stderr)
 	}
 	r = cli(t, noColor, false, append([]string{"verify", dir + "cut.tar.gz", "--timestamps", dir + "timestamps.json"}, pins...)...)
-	if r.code != 1 || !strings.HasPrefix(r.stdout, "✕ Deeds after 17 are missing: deed 20 was timestamped at 2026-10-20 09:30:00 UTC.\n") {
+	if r.code != 1 || !strings.HasPrefix(r.stdout, "✕ Deeds after 17 are missing: deed 20 was timestamped at 2026-10-20 09:30:00\n  UTC.\n") {
 		t.Fatalf("cut: %d\n%s", r.code, r.stdout)
 	}
 }

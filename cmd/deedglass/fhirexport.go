@@ -10,7 +10,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/deedglass/deedglass/cmd/deedglass/internal/ui"
+	"github.com/deedglass/deedglass/internal/cli/ui"
 	"github.com/deedglass/deedglass/internal/deed/archive"
 	"github.com/deedglass/deedglass/internal/fhirexport"
 	"github.com/deedglass/deedglass/internal/ledger"

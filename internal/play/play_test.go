@@ -5,9 +5,12 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/deedglass/deedglass/internal/cli/ui"
 )
 
 // The embedded recording is a byte-for-byte copy of the README's recording.
@@ -70,12 +73,13 @@ func TestRunLiveParts(t *testing.T) {
 		t.Fatalf("records %+v", r)
 	}
 	for _, s := range []string{
-		"Deedglass play · offline · no Docker · nothing leaves this machine",
-		`✕ denied · Blocked by policy "block-destructive-sql": DROP is never allowed for agents.  [live]`,
-		"✓ allowed · rule allow-order-status-updates · check Proven (L2)  [live]",
-		"◐ needs a person · Waiting for approval under policy \"undo-needs-approval\"",
-		"✓ 4 deeds · chain intact · 1 seal key  [live]",
-		"· one byte changed in deed 1",
+		"Deedglass play  offline · nothing leaves this machine",
+		"rule     ✕ denied by block-destructive-sql",
+		"DROP is never allowed for agents.",
+		"rule     ✓ allowed by allow-order-status-updates, checked at Proven",
+		"rule     ◐ waits for a person: undo-needs-approval",
+		"verify   ✓ 4 deeds, chain intact, 1 seal key",
+		"tamper   one byte changed in deed 1",
 		"Deed 1 was changed after it was sealed.",
 		"npx deedglass scan",
 	} {
@@ -85,34 +89,59 @@ func TestRunLiveParts(t *testing.T) {
 	}
 }
 
+// Every row says where it comes from: the live policy and seal rows end with "live", the rows
+// read from the recorded run with "replay", and no replayed row claims to be live.
 func TestRunReplayIsLabelled(t *testing.T) {
 	out, r := runPlay(t)
 	if !strings.HasPrefix(r.Recording, "make demo-hero · commit ") {
 		t.Fatalf("recording %q", r.Recording)
 	}
-	// Every replayed witness line is indented under a "│" and preceded by a [replay] label.
-	if n := strings.Count(out, "[replay]"); n < 4 {
-		t.Fatalf("%d [replay] labels\n%s", n, out)
+	tagged := func(key, tag string) {
+		t.Helper()
+		n := 0
+		for _, l := range strings.Split(out, "\n") {
+			if strings.HasPrefix(strings.TrimLeft(l, " "), key+" ") {
+				n++
+				if !strings.HasSuffix(l, " "+tag) {
+					t.Errorf("%s row not labelled %s: %q", key, tag, l)
+				}
+			}
+		}
+		if n == 0 {
+			t.Errorf("no %s row\n%s", key, out)
+		}
 	}
+	tagged("rule", "live")
+	tagged("verify", "live")
+	tagged("records", "live")
+	tagged("before", "replay")
+	tagged("check", "replay")
+	tagged("plan", "replay")
+	tagged("person", "replay")
 	for _, s := range []string{
-		"│ ✕ executed · postgres.execute · 11 ms",
-		"│   check    Proven · Doesn't match · Postgres changed 301 rows in public.orders. The agent reported 1.",
-		"│   check    Proven · Matches · Postgres committed 1 row in public.orders, as the statement said.",
-		"more recorded rows not shown here",
-		"│ ✓ L2 · MISMATCH · 301 rows",
-		"✓ countersigned by ops@example.test",
+		"check    ✕ Doesn't match: Postgres changed 301 rows in",
+		"check    ✓ Matches: Postgres committed 1 row in public.orders",
+		"✕ Mismatch at Proven (L2), 301 rows · act_01m4x8kv…",
+		"✕ id 218  pending → shipped",
+		"… 298 more rows",
+		"person   ✓ countersigned by ops@example.test",
 	} {
 		if !strings.Contains(out, s) {
-			t.Errorf("output lacks %q", s)
+			t.Errorf("output lacks %q\n%s", s, out)
 		}
 	}
-	// A replayed line never claims to be live.
-	for _, l := range strings.Split(out, "\n") {
-		if strings.Contains(l, "│") && strings.Contains(l, "[live]") {
-			t.Errorf("replayed line marked live: %q", l)
-		}
+	if strings.Contains(out, "│") {
+		t.Error("the recorded lines print only with Verbose")
 	}
-	// Every recorded line in the printed sections came from the recording, unchanged.
+}
+
+// With Verbose, the recorded lines follow each replayed scene exactly as they printed.
+func TestRunVerboseIsVerbatim(t *testing.T) {
+	var buf bytes.Buffer
+	if _, err := Run(context.Background(), Options{Out: &buf, Verbose: true}); err != nil {
+		t.Fatal(err)
+	}
+	out := buf.String()
 	c, _ := LoadCast()
 	recorded := map[string]bool{}
 	for _, l := range c.Lines {
@@ -121,12 +150,48 @@ func TestRunReplayIsLabelled(t *testing.T) {
 	for _, l := range UndoReplay {
 		recorded[l] = true
 	}
+	n := 0
 	for _, l := range strings.Split(out, "\n") {
-		if !strings.HasPrefix(l, "  │ ") {
+		if !strings.HasPrefix(l, bodyIndent+"│ ") {
 			continue
 		}
-		if !recorded[strings.TrimPrefix(l, "  │ ")] {
+		n++
+		if !recorded[strings.TrimPrefix(l, bodyIndent+"│ ")] {
 			t.Errorf("replayed line not in the recording: %q", l)
+		}
+	}
+	for _, s := range []string{"│ ✕ executed · postgres.execute · 11 ms", "│ ✓ L2 · MISMATCH · 301 rows", "│ ✓ countersigned by ops@example.test"} {
+		if !strings.Contains(out, s) {
+			t.Errorf("verbose output lacks %q", s)
+		}
+	}
+	if n < 20 {
+		t.Fatalf("%d recorded lines\n%s", n, out)
+	}
+}
+
+// At 80 columns and narrower, no line is wider than the terminal; colour changes nothing else.
+func TestRunWidths(t *testing.T) {
+	for _, w := range []int{0, 60, 80, 120} {
+		var plain, colour bytes.Buffer
+		if _, err := Run(context.Background(), Options{Out: &plain, Width: w}); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := Run(context.Background(), Options{Out: &colour, Width: w, Style: ui.Style{Color: true}}); err != nil {
+			t.Fatal(err)
+		}
+		limit := ui.LayoutWidth(w)
+		for _, l := range strings.Split(plain.String(), "\n") {
+			if ui.Width(l) > limit {
+				t.Errorf("width %d: %d columns: %q", w, ui.Width(l), l)
+			}
+		}
+		if strings.Contains(plain.String(), "\x1b[") {
+			t.Error("plain output has escape codes")
+		}
+		re := regexp.MustCompile(`sk_[0-9a-z]{8}…`)
+		if re.ReplaceAllString(ui.StripANSI(colour.String()), "") != re.ReplaceAllString(plain.String(), "") {
+			t.Errorf("width %d: colour changes the text", w)
 		}
 	}
 }
@@ -160,11 +225,10 @@ func TestRunPacesAndStops(t *testing.T) {
 
 func TestRunColour(t *testing.T) {
 	var out bytes.Buffer
-	red := func(s string) string { return "<r>" + s + "</r>" }
-	if _, err := Run(context.Background(), Options{Out: &out, Style: Style{Red: red}}); err != nil {
+	if _, err := Run(context.Background(), Options{Out: &out, Style: ui.Style{Color: true}}); err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(out.String(), "<r>✕</r> denied") {
+	if !strings.Contains(out.String(), "\x1b[31m✕\x1b[0m denied") {
 		t.Fatal("deny mark not coloured")
 	}
 }

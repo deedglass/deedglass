@@ -15,7 +15,7 @@ import (
 
 	"go.yaml.in/yaml/v3"
 
-	"github.com/deedglass/deedglass/cmd/deedglass/internal/ui"
+	"github.com/deedglass/deedglass/internal/cli/ui"
 	"github.com/deedglass/deedglass/internal/connector"
 	"github.com/deedglass/deedglass/internal/connector/stripe"
 	"github.com/deedglass/deedglass/internal/connectorapi"

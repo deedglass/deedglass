@@ -128,7 +128,7 @@ func TestLockdownLive(t *testing.T) {
 		t.Fatalf("lockdown on: %+v", r)
 	}
 	if r = cli(t, env, false, "lockdown", "status"); r.code != 0 || !strings.Contains(r.stdout, "1 agent without a connector label") ||
-		!strings.Contains(r.stdout, "approvers    2 owners or admins") {
+		!strings.Contains(r.stdout, "approvers  2 owners or admins") {
 		t.Fatalf("status: %+v", r)
 	}
 	if code, body = call(admin, "GET", "/v1/whoami", ""); code != 200 || !strings.Contains(body, `"lockdown": true`) {

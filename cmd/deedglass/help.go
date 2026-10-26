@@ -8,8 +8,8 @@ import (
 	"io"
 	"strings"
 
-	"github.com/deedglass/deedglass/cmd/deedglass/internal/ui"
 	"github.com/deedglass/deedglass/internal/cli/mark"
+	"github.com/deedglass/deedglass/internal/cli/ui"
 	"github.com/deedglass/deedglass/internal/recordexport"
 )
 
@@ -77,14 +77,17 @@ func helpAll(e *Env) {
 	}
 	w := e.Stdout
 	if head := mark.Inline(e.Mark); head != "" {
-		fmt.Fprintf(w, "%s %s %s\n\n", head, ui.Sep, tagline)
+		fmt.Fprintf(w, "%s  %s\n\n", head, s.Dim(tagline))
 	} else {
-		fmt.Fprintf(w, "%s %s %s\n\n", s.Bold("deedglass"), ui.Sep, tagline)
+		fmt.Fprintf(w, "%s\n\n", s.Header("deedglass", tagline))
 	}
 	fmt.Fprintf(w, "%s  deedglass <command> [flags]\n\n", s.Bold("Usage"))
 	group := Group(-1)
 	for _, l := range lines {
 		if l.Group != group {
+			if group != Group(-1) {
+				fmt.Fprintln(w) // one blank line between groups (CLI_STYLE.md › Spacing)
+			}
 			group = l.Group
 			fmt.Fprintf(w, "%s\n", s.Bold(group.String()))
 		}
@@ -113,14 +116,17 @@ func helpAll(e *Env) {
 			row += l.Summary
 		}
 		fmt.Fprintln(w, row)
-		if subs != "" {
+		// Too narrow for the subcommand column: they wait for deedglass help <command>, or -v
+		// (summary first; CLI_STYLE.md › Progressive disclosure).
+		if subs != "" && e.Globals.Verbose > 0 {
 			for _, sl := range ui.Wrap(strings.Repeat(" ", 2+nameW+2)+subs, width, 0) {
 				fmt.Fprintln(w, s.Dim(sl))
 			}
 		}
 	}
 	globalFlags(e, w, width)
-	fmt.Fprintf(w, "Run deedglass help <command> for details %s %s\n", ui.Sep, docsURL)
+	fmt.Fprintln(w)
+	fmt.Fprintln(w, s.Dim("Run deedglass help <command> for more "+ui.Sep+" "+docsURL))
 }
 
 func helpFamily(e *Env, prefix []string, fam []*Command) {

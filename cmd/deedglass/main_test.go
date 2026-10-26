@@ -180,7 +180,7 @@ func TestExitCodes(t *testing.T) {
 		{[]string{"--verbose", "version"}, 0, "", "deedglass 0.1.0-dev"},
 		{[]string{"config", "print", "extra"}, 2, "takes no arguments", ""},
 		{[]string{"--bogus"}, 2, "Flag --bogus needs a command before it", ""},
-		{[]string{"-h"}, 0, "", "deedglass · the execution and accountability layer"},
+		{[]string{"-h"}, 0, "", "deedglass  the execution and accountability layer"},
 		{[]string{"verify", "--", "-h"}, 2, "Can't read -h: no such file", ""},
 		{[]string{"dev", "id", "agt"}, 0, "", "agt_"},
 		{[]string{"dev", "id", "AGT_"}, 0, "", "agt_"},

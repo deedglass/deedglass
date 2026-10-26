@@ -33,7 +33,7 @@ func TestStyle(t *testing.T) {
 	if off.Red("x") != "x" || off.OKLine("done") != "✓ done" || on.Dim("") != "" {
 		t.Fatal("plain")
 	}
-	if on.Teal("x") != "\x1b[36mx\x1b[0m" || on.Red("x") != "\x1b[31mx\x1b[0m" || on.Violet("x") != "\x1b[35mx\x1b[0m" ||
+	if on.Teal("x") != "\x1b[36mx\x1b[0m" || on.Red("x") != "\x1b[31mx\x1b[0m" || on.Violet("x") != "\x1b[33mx\x1b[0m" ||
 		on.Amber("x") != "\x1b[33mx\x1b[0m" || on.Dim("x") != "\x1b[2mx\x1b[0m" || on.Bold("x") != "\x1b[1mx\x1b[0m" {
 		t.Fatal("colour codes")
 	}

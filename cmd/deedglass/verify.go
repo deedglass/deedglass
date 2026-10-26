@@ -18,7 +18,7 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/deedglass/deedglass/cmd/deedglass/internal/ui"
+	"github.com/deedglass/deedglass/internal/cli/ui"
 	"github.com/deedglass/deedglass/internal/deed"
 	"github.com/deedglass/deedglass/internal/deed/archive"
 )
@@ -604,7 +604,7 @@ func verifyErr(e *Env, o verifyOpts, err error) error {
 	}
 	fmt.Fprintln(e.Stderr, sym+" "+sentence(x.Err.Error()))
 	if x.Next != "" {
-		fmt.Fprintln(e.Stderr, vrow("next", x.Next))
+		fmt.Fprintln(e.Stderr, s.Next(x.Next))
 	}
 	x.printed = true
 	return x
@@ -615,6 +615,10 @@ func verifyErr(e *Env, o verifyOpts, err error) error {
 func vrow(label, value string) string { return "  " + ui.Pad(label, 9) + "  " + value }
 
 func printVerify(e *Env, rep *deed.Report, o verifyOpts, multi bool) {
+	// Every line wraps under its value column at the terminal's width (CLI_STYLE.md).
+	we := *e
+	we.Stdout = ui.WrapWriter(e.Stdout, e.Width)
+	e = &we
 	s := e.Style
 	w := e.Stdout
 	line := func(t string) { fmt.Fprintln(w, t) }
@@ -624,7 +628,7 @@ func printVerify(e *Env, rep *deed.Report, o verifyOpts, multi bool) {
 	}
 	if rep.Deeds == 0 {
 		line(s.UnknownLine("No deeds were found in the input."))
-		line(vrow("next", "Check the file: deeds.jsonl holds one deed per line."))
+		line(s.Next("Check the file: deeds.jsonl holds one deed per line."))
 		return
 	}
 	parts := []string{count(rep.Intact, "deed", "deeds")}
@@ -639,7 +643,11 @@ func printVerify(e *Env, rep *deed.Report, o verifyOpts, multi bool) {
 	}
 	parts = append(parts, count(int64(len(rep.SealKeys)), "seal key", "seal keys"))
 	if chained && rep.From != nil {
-		parts = append(parts, (*rep.From)[:10]+" → "+(*rep.To)[:10])
+		if from, to := (*rep.From)[:10], (*rep.To)[:10]; from == to {
+			parts = append(parts, from)
+		} else {
+			parts = append(parts, from+" → "+to)
+		}
 	}
 	headline := strings.Join(parts, " "+ui.Sep+" ")
 	if o.strict && !rep.KeysPinned {
@@ -663,7 +671,7 @@ func printVerify(e *Env, rep *deed.Report, o verifyOpts, multi bool) {
 	for _, wn := range rep.Warnings {
 		line(s.UnknownLine(clean(wn.Message)))
 		if wn.Next != "" {
-			line(vrow("next", clean(wn.Next)))
+			line(s.Next(clean(wn.Next)))
 		}
 	}
 }
@@ -786,13 +794,7 @@ func count(n int64, one, many string) string {
 }
 
 // shortID shows sk_01j9zr8k… (prefix and 8 characters).
-func shortID(id string) string {
-	i := strings.IndexByte(id, '_')
-	if i < 0 || len(id) <= i+9 {
-		return clean(id)
-	}
-	return clean(id[:i+9]) + "…"
-}
+func shortID(id string) string { return clean(ui.ShortID(id)) }
 
 // clean makes an untrusted string safe for a terminal: C0 and C1 controls, DEL, ESC and the bidi
 // overrides and isolates (U+202A–U+202E, U+2066–U+2069) are shown as \uXXXX escapes, and invalid

@@ -311,7 +311,7 @@ func TestKeysRotateAndListLive(t *testing.T) {
 	}
 	t.Logf("\n%s", out)
 	code, out, errs = runIn("keys", "list")
-	if code != 0 || !strings.Contains(out, "2 seal keys · 1 active") || !strings.Contains(out, "✓ active") || !strings.Contains(out, "retired ") {
+	if code != 0 || !strings.Contains(out, "2 seal keys, 1 active") || !strings.Contains(out, "✓ active") || !strings.Contains(out, "retired ") {
 		t.Fatalf("list: %d\n%s%s", code, out, errs)
 	}
 	t.Logf("\n%s", out)

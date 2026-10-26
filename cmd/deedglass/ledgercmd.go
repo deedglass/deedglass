@@ -17,8 +17,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/deedglass/deedglass/cmd/deedglass/internal/ui"
 	"github.com/deedglass/deedglass/internal/a2a"
+	"github.com/deedglass/deedglass/internal/cli/ui"
 	"github.com/deedglass/deedglass/internal/config"
 	"github.com/deedglass/deedglass/internal/deed"
 	"github.com/deedglass/deedglass/internal/deed/archive"
@@ -278,13 +278,14 @@ func runActionsList(ctx context.Context, e *Env, args []string) error {
 		return err
 	}
 	st := e.Style
-	fmt.Fprintln(e.Stdout, st.Dim(ui.Pad("TIME", 9)+ui.Pad("AGENT", 14)+ui.Pad("TOOL", 24)+ui.Pad("DECISION", 11)+ui.Pad("WITNESS", 20)+"LATENCY"))
+	// 80 columns: 9 + 14 + 22 + 10 + 18 + 7 (CLI_STYLE.md › Tables).
+	fmt.Fprintln(e.Stdout, st.Dim(ui.Pad("TIME", 9)+ui.Pad("AGENT", 14)+ui.Pad("TOOL", 22)+ui.Pad("DECISION", 10)+ui.Pad("WITNESS", 18)+"LATENCY"))
 	for _, a := range list.Data {
 		chip, plain := witnessChip(st, a)
-		fmt.Fprintln(e.Stdout, ui.Pad(relTime(now, time.Time(a.CreatedAt)), 9)+ui.Pad(clip(a.Agent.Name, 13), 14)+
-			ui.Pad(clip(a.Tool, 23), 24)+ui.Pad(decisionWord(a.Policy.Decision), 11)+chip+strings.Repeat(" ", max(1, 20-ui.Width(plain)))+latency(a))
+		fmt.Fprintln(e.Stdout, ui.Pad(relTime(now, time.Time(a.CreatedAt)), 9)+ui.Pad(clip(a.Agent.Name, 12), 14)+
+			ui.Pad(clip(a.Tool, 20), 22)+ui.Pad(decisionWord(a.Policy.Decision), 10)+chip+strings.Repeat(" ", max(1, 18-ui.Width(plain)))+latency(a))
 	}
-	footer := fmt.Sprintf("%s of %s", deed.FormatCount(int64(len(list.Data))), deed.FormatCount(total))
+	footer := fmt.Sprintf("Showing %s of %s %s", deed.FormatCount(int64(len(list.Data))), deed.FormatCount(total), map[bool]string{true: "action", false: "actions"}[total == 1])
 	if list.NextCursor != nil {
 		footer += " " + ui.Sep + " next page: deedglass actions list --cursor " + *list.NextCursor
 	}
@@ -423,12 +424,15 @@ func runActionsShow(ctx context.Context, e *Env, args []string) error {
 	if actionsShowDiff {
 		return printDiff(e, d)
 	}
-	head := clean(d.Tool) + " " + ui.Sep + " " + clean(d.Agent.Name)
+	// Every line wraps under its value column at the terminal's width (CLI_STYLE.md › Key/value).
+	we := *e
+	we.Stdout = ui.WrapWriter(e.Stdout, e.Width)
+	e = &we
+	who := clean(d.Agent.Name)
 	if d.OnBehalfOf != nil {
-		head += " on behalf of " + clean(*d.OnBehalfOf)
+		who += " on behalf of " + clean(*d.OnBehalfOf)
 	}
-	head += " " + ui.Sep + " " + time.Time(d.CreatedAt).UTC().Format("2006-01-02 15:04:05") + " UTC"
-	fmt.Fprintln(e.Stdout, st.Bold(head))
+	fmt.Fprintln(e.Stdout, st.Header(clean(d.Tool), who, time.Time(d.CreatedAt).UTC().Format("2006-01-02 15:04:05")+" UTC"))
 	row := func(k, v string) { fmt.Fprintf(e.Stdout, "  %s %s\n", ui.Pad(k, 10), v) }
 	if d.Mode == "proxy" {
 		// TY-07: an A2A delegation's chain, from the person to the peer, as recorded in its arguments.

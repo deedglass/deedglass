@@ -20,9 +20,9 @@ import (
 	"github.com/jackc/pgx/v5"
 	"go.yaml.in/yaml/v3"
 
-	"github.com/deedglass/deedglass/cmd/deedglass/internal/ui"
 	starters "github.com/deedglass/deedglass/examples/policies"
 	"github.com/deedglass/deedglass/internal/cli/mark"
+	"github.com/deedglass/deedglass/internal/cli/ui"
 	"github.com/deedglass/deedglass/internal/connector"
 	"github.com/deedglass/deedglass/internal/connector/postgres"
 	pgsetup "github.com/deedglass/deedglass/internal/connector/postgres/setup"

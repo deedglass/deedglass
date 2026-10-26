@@ -1,2 +1,3 @@
 ○ Cannot check deed 1: no seal keys were given.
-  next       Add --keys <file or https URL>. Issuers publish them at /.well-known/deedglass/keys.json
+  next       Add --keys <file or https URL>. Issuers publish them at
+             /.well-known/deedglass/keys.json

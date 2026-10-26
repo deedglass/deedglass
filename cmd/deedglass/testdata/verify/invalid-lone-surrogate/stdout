@@ -1,2 +1,3 @@
-✕ The deed is not valid strict JSON (high surrogate not followed by a low surrogate at body.agent.name).
+✕ The deed is not valid strict JSON (high surrogate not followed by a low
+  surrogate at body.agent.name).
   next       Export it again from the issuer; do not edit deeds by hand.

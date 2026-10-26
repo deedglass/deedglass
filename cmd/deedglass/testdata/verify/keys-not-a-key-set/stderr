@@ -1,2 +1,2 @@
 ✕ ../../testdata/deeds/valid/01-action-verified-l2.json is not a seal key set (schema_invalid (body): is not part of the deed schema).
-  next       Pass the issuer's keys.json: --keys <issuer>/.well-known/deedglass/keys.json
+  next  Pass the issuer's keys.json: --keys <issuer>/.well-known/deedglass/keys.json
