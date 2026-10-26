@@ -45,6 +45,7 @@ import (
 	"github.com/deedglass/deedglass/internal/packs"
 	"github.com/deedglass/deedglass/internal/policy"
 	"github.com/deedglass/deedglass/internal/vault"
+	"github.com/deedglass/deedglass/internal/witness"
 )
 
 // Regions pick the policy pack.
@@ -520,7 +521,7 @@ func (r *run) write(sc *Scene, s *store, res map[string]any, label string) error
 	case rerr != nil:
 		sc.Verdict = "UNVERIFIABLE"
 	default:
-		sc.Verdict = verdictOf(fs)
+		sc.Verdict = verdictOf(call.Qualified, sc.Target, fs)
 		for _, f := range fs {
 			sc.Fields = append(sc.Fields, Field{Field: f.Field, Expected: f.Expected, Observed: f.Observed, Match: f.Match})
 		}
@@ -541,25 +542,16 @@ func (r *run) write(sc *Scene, s *store, res map[string]any, label string) error
 	return r.row(400*time.Millisecond, "check", glyph, text)
 }
 
-// verdictOf: every field matches → VERIFIED; a field that differs → MISMATCH; anything else (a
-// catalog reason the pilot doesn't judge) is a gap, never a mismatch.
-func verdictOf(fs []connector.L1Finding) string {
-	if len(fs) == 0 {
-		return "UNVERIFIABLE"
-	}
-	clean := true
+// verdictOf asks the Witness: the findings become its catalog reasons (as for any native read-back)
+// and Decide gives the verdict at L1. The pilot never names a verdict itself.
+func verdictOf(tool, target string, fs []connector.L1Finding) string {
+	wf := make([]witness.Finding, 0, len(fs))
 	for _, f := range fs {
-		if !f.Match && (f.Code == "" || f.Code == fhir.ReasonFieldChanged) {
-			return "MISMATCH"
-		}
-		if !f.Match || f.Code != "" {
-			clean = false
-		}
+		wf = append(wf, witness.Finding{Field: f.Field, Expected: f.Expected, Observed: f.Observed, Match: f.Match, Code: witness.Code(f.Code)})
 	}
-	if clean {
-		return "VERIFIED"
-	}
-	return "UNVERIFIABLE"
+	rs := witness.NativeReasons(witness.Subject{Tool: tool}, target, wf)
+	d := witness.Decide(witness.L1, map[witness.Level][]witness.Reason{witness.L1: rs}, map[witness.Level]string{witness.L1: "readback.native"})
+	return string(d.Verdict)
 }
 
 // --- scene 3: a held write ---

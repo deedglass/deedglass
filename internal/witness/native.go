@@ -134,3 +134,10 @@ func joinAnd(xs []string) string {
 	}
 	return fmt.Sprintf("%s and %s", strings.Join(xs[:len(xs)-1], ", "), xs[len(xs)-1])
 }
+
+// NativeReasons is nativeFindings for a caller that already holds a native read-back's findings
+// and has no Observer (deedglass health pilot): the same catalog reasons, for Decide to judge.
+func NativeReasons(s Subject, target string, fs []Finding) []Reason {
+	rs, _ := nativeFindings(s, target, fs)
+	return rs
+}
