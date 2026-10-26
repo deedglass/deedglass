@@ -1,2 +1,3 @@
-✕ The deed is not valid strict JSON (only integers are allowed (no fraction or exponent) at body.execution.latency_ms).
+✕ The deed is not valid strict JSON (only integers are allowed (no fraction or
+  exponent) at body.execution.latency_ms).
   next       Export it again from the issuer; do not edit deeds by hand.

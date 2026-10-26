@@ -20,8 +20,8 @@ import (
 	"strings"
 	_ "time/tzdata" // distroless images have no zoneinfo; policies read the org's time zone (S11)
 
-	"github.com/deedglass/deedglass/cmd/deedglass/internal/ui"
 	"github.com/deedglass/deedglass/internal/cli/mark"
+	"github.com/deedglass/deedglass/internal/cli/ui"
 	"github.com/deedglass/deedglass/internal/config"
 )
 
@@ -104,6 +104,11 @@ func run(ctx context.Context, e *Env, args []string) int {
 	e.Globals = g
 	e.Style = ui.Style{Color: ui.ColorAllowed(e.IsTTY, e.Getenv, g.NoColor)}
 	e.Mark = markOptions(e)
+	if !g.JSON && ui.ASCIIOnly(e.IsTTY, e.Getenv) {
+		// A terminal that can't draw the glyph set gets ASCII stand-ins (CLI_STYLE.md › Glyphs);
+		// --json is never rewritten.
+		e.Stdout, e.Stderr = ui.ASCIIWriter(e.Stdout), ui.ASCIIWriter(e.Stderr)
+	}
 	if err == nil {
 		err = dispatch(ctx, e, rest)
 	}
@@ -398,7 +403,7 @@ func report(e *Env, err error) int {
 
 // nextLine is the last line of every error (docs/COPY_CATALOG.md › CLI style): what to do now.
 func nextLine(st ui.Style, next string) string {
-	return "  " + st.Dim("next") + "  " + next
+	return st.Next(next)
 }
 
 // sentence ends s with a period unless it already ends with punctuation.

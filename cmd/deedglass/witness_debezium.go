@@ -15,7 +15,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/deedglass/deedglass/cmd/deedglass/internal/ui"
+	"github.com/deedglass/deedglass/internal/cli/ui"
 	"github.com/deedglass/deedglass/internal/witness"
 	"github.com/deedglass/deedglass/internal/witness/feed"
 	"github.com/deedglass/deedglass/internal/witness/feed/debezium"

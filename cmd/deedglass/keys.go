@@ -15,7 +15,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/deedglass/deedglass/cmd/deedglass/internal/ui"
+	"github.com/deedglass/deedglass/internal/cli/ui"
 	"github.com/deedglass/deedglass/internal/config"
 	"github.com/deedglass/deedglass/internal/connector/egress"
 	"github.com/deedglass/deedglass/internal/deed"
@@ -329,18 +329,18 @@ const keysPath = "/.well-known/deedglass/keys.json"
 
 func printKeyTable(e *Env, ks *deed.KeySet, url string) {
 	s := e.Style
-	head := []string{"ID", "STATUS", "ACTIVATED", "RETIRES / RETIRED", "THUMBPRINT"}
+	head := []string{"ID", "STATUS", "ACTIVATED", "RETIRED", "THUMBPRINT"}
 	var rows [][]string
 	active := 0
 	for i := len(ks.Keys) - 1; i >= 0; i-- { // newest first
 		k := ks.Keys[i]
-		status, plain := k.Status, k.Status
+		status := k.Status
 		switch k.Status {
 		case deed.KeyActive:
 			active++
-			status, plain = s.Teal(ui.OK)+" active", ui.OK+" active"
+			status = s.Status(ui.OK, "active")
 		case deed.KeyRevoked:
-			status, plain = s.Red(ui.Fail)+" revoked", ui.Fail+" revoked"
+			status = s.Status(ui.Fail, "revoked")
 		}
 		end := ui.None
 		if k.RevokedAt != nil {
@@ -349,44 +349,17 @@ func printKeyTable(e *Env, ks *deed.KeySet, url string) {
 			end = minuteUTC(*k.RetiredAt)
 		}
 		id := k.ID
+		if e.IsTTY && e.Globals.Verbose == 0 {
+			id = ui.ShortID(id) // CLI_STYLE.md › Ids: -v, --json and a pipe carry the full id
+		}
 		if k.Alg != deed.AlgEd25519 {
 			id += " " + k.Alg // ADR-109: a key of another algorithm says which
 		}
-		rows = append(rows, []string{id, status, minuteUTC(k.ActivatedAt), end, shortHash(k.Thumbprint), plain})
+		rows = append(rows, []string{id, status, minuteUTC(k.ActivatedAt), end, shortHash(k.Thumbprint)})
 	}
-	w := make([]int, len(head))
-	for i, h := range head {
-		w[i] = ui.Width(h)
-	}
-	for _, r := range rows {
-		for i := range head {
-			cell := r[i]
-			if i == 1 {
-				cell = r[5]
-			}
-			w[i] = max(w[i], ui.Width(cell))
-		}
-	}
-	line := func(cells []string, plainStatus string) {
-		var b strings.Builder
-		for i, c := range cells {
-			if i == len(cells)-1 {
-				b.WriteString(c)
-				break
-			}
-			width := ui.Width(c)
-			if i == 1 && plainStatus != "" {
-				width = ui.Width(plainStatus)
-			}
-			b.WriteString(c + strings.Repeat(" ", w[i]-width+2))
-		}
-		fmt.Fprintln(e.Stdout, b.String())
-	}
-	line(head, "")
-	for _, r := range rows {
-		line(r[:5], r[5])
-	}
-	fmt.Fprintf(e.Stdout, "%d %s %s %d active %s published at %s\n", len(ks.Keys), plural(len(ks.Keys), "seal key", "seal keys"), ui.Sep, active, ui.Sep, url)
+	ui.Lines(e.Stdout, s.Table(head, rows, nil)...)
+	fmt.Fprintln(e.Stdout, s.Dim(fmt.Sprintf("%d %s, %d active", len(ks.Keys), plural(len(ks.Keys), "seal key", "seal keys"), active)))
+	ui.Lines(e.Stdout, s.KV("", e.Width, ui.Row{Key: "published", Value: url})...)
 }
 
 // fetchKeySet reads a server's public keys.json (no credentials) and checks every key.

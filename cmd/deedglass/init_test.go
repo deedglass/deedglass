@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -13,6 +14,7 @@ import (
 	"testing"
 	"testing/fstest"
 
+	"github.com/deedglass/deedglass/internal/cli/ui"
 	"github.com/deedglass/deedglass/internal/config"
 	"github.com/deedglass/deedglass/internal/setup"
 )
@@ -114,7 +116,8 @@ func TestDoctorProgress(t *testing.T) {
 		t.Fatalf("%d\n%s%s", r.code, r.stdout, r.stderr)
 	}
 	mismatch = "act_01k6h7kp6msmzrhdzwtcr3jnkp"
-	if r = doctor(); !strings.HasSuffix(r.stdout, "Quickstart step 4 of 5 · next: deedglass undo preview act_01k6h7kp6msmzrhdzwtcr3jnkp (it prints the undo run line)\n") {
+	// The line wraps at 80 columns (CLI_STYLE.md); its words are what count.
+	if r = doctor(); !strings.HasSuffix(strings.Join(strings.Fields(r.stdout), " "), "Quickstart step 4 of 5 · next: deedglass undo preview act_01k6h7kp6msmzrhdzwtcr3jnkp (it prints the undo run line)") {
 		t.Fatalf("%s", r.stdout)
 	}
 	// --quiet and --json print no line and don't ask the Ledger either.
@@ -136,5 +139,43 @@ func TestDoctorProgress(t *testing.T) {
 	// Outside an init directory doctor prints no step line.
 	if r := cli(t, map[string]string{"DEEDGLASS_ENV": "dev"}, false, "doctor", "--only", "state.dir"); r.code != ExitOK || strings.Contains(r.stdout, "Quickstart") {
 		t.Fatalf("%s", r.stdout)
+	}
+}
+
+// A long diff under a step keeps three unexpected rows and says how many more there are; -v keeps
+// them all. Every step line fits 80 columns, and NO_COLOR output has no escape codes.
+func TestStepRendererSummary(t *testing.T) {
+	lines := []string{"public.orders    id    status", "✓ expected       42    paid → shipped"}
+	for i := range 19 {
+		lines = append(lines, fmt.Sprintf("✕ unexpected     %d   pending → shipped", 100+i))
+	}
+	lines = append(lines, "…                first 20 of 301 rows · the rest in Console › Actions")
+	got := collapseRows(lines, false)
+	want := []string{lines[0], lines[1], lines[2], lines[3], lines[4], "… 297 more of 301 rows (-v shows 20; Console › Actions shows all)"}
+	if strings.Join(got, "\n") != strings.Join(want, "\n") {
+		t.Errorf("collapsed:\n%s", strings.Join(got, "\n"))
+	}
+	if len(collapseRows(lines, true)) != len(lines) {
+		t.Error("-v keeps every row")
+	}
+	var out bytes.Buffer
+	e := &Env{Stdout: &out, Getenv: func(string) string { return "" }, Style: ui.Style{Color: ui.ColorAllowed(true, func(k string) string { return map[string]string{"NO_COLOR": "1"}[k] }, false)}}
+	r := &stepRenderer{e: e}
+	r.render(setup.StepResult{Title: "Keys", Status: setup.Done, Detail: "vault key · pepper · database passwords · seal key sk_01m5vj… · lockdown · .deedglass/ (0600)"})
+	r.render(setup.StepResult{Title: "Smoke · DROP TABLE", Status: setup.Done, Symbol: "✕", Detail: `Blocked by policy "block-destructive-sql": DROP and TRUNCATE are never allowed for agents.`,
+		Lines: []string{"That ✕ is the point: Deedglass stopped it before Postgres saw it."}})
+	for _, l := range strings.Split(strings.TrimRight(out.String(), "\n"), "\n") {
+		if ui.Width(l) > 80 {
+			t.Errorf("%d columns: %q", ui.Width(l), l)
+		}
+		if strings.Contains(l, "\x1b") {
+			t.Errorf("escape code under NO_COLOR: %q", l)
+		}
+		if strings.HasPrefix(strings.TrimLeft(l, " "), "· ") {
+			t.Errorf("a line starts with a separator: %q", l)
+		}
+	}
+	if !strings.Contains(out.String(), "\nSmoke test\n✕ DROP TABLE  ") {
+		t.Errorf("smoke steps go under their heading:\n%s", out.String())
 	}
 }

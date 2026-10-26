@@ -1,3 +1,4 @@
 ✕ Deed 11 does not link to deed 10.
   deed       deed_01m3xxn3yby2zr7jab5exfkpjv (line 1)
-  next       A deed before it was changed or replaced. Get a fresh export. Add --all to list every break.
+  next       A deed before it was changed or replaced. Get a fresh export. Add
+             --all to list every break.

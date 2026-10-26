@@ -2,18 +2,22 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
+	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 
-	"github.com/deedglass/deedglass/cmd/deedglass/internal/ui"
 	"github.com/deedglass/deedglass/internal/cli/mark"
+	"github.com/deedglass/deedglass/internal/cli/ui"
 	"github.com/deedglass/deedglass/internal/setup"
 )
 
@@ -61,6 +65,8 @@ func initFlags(fs *flag.FlagSet) {
 
 func runInit(ctx context.Context, e *Env, args []string) error {
 	v := initValues
+	var sr *stepRenderer
+	quietSteps := false
 	if len(args) > 0 {
 		return usageErr(fmt.Errorf("deedglass init takes no arguments (got %q)", args[0]), "Run deedglass init, or deedglass init --dir <dir>.")
 	}
@@ -125,16 +131,21 @@ func runInit(ctx context.Context, e *Env, args []string) error {
 		if b := mark.Banner(mo); b != "" && !mo.Quiet {
 			fmt.Fprint(e.Stdout, b)
 		} else {
-			fmt.Fprintf(e.Stdout, "deedglass init %s setting up Deedglass in %s\n", "·", label)
+			fmt.Fprintln(e.Stdout, e.Style.Header("deedglass init", "setting up Deedglass in "+label))
 		}
 		fmt.Fprintln(e.Stdout)
 		create, have := setup.Plan(o)
+		var plan []ui.Row
 		if len(create) > 0 {
-			fmt.Fprintln(e.Stdout, "  Will create  "+wrapJoin(create, 4))
+			plan = append(plan, ui.Row{Key: "will create", Value: strings.Join(create, ", ")})
 		}
 		if len(have) > 0 && len(create) > 0 {
-			fmt.Fprintln(e.Stdout, "  Already set  "+wrapJoin(have, 4))
+			plan = append(plan, ui.Row{Key: "already set", Value: strings.Join(have, ", ")})
 		}
+		ui.Lines(e.Stdout, e.Style.KV("  ", e.Width, plan...)...)
+		// Nothing to create: the steps only check, so they print only when one changes something
+		// or fails (summary first; -v prints them all).
+		quietSteps = len(create) == 0 && e.Globals.Verbose == 0
 		if len(create) > 0 && !v.yes && e.IsTTY {
 			fmt.Fprint(e.Stdout, "Continue? [Y/n] ")
 			line, _ := bufio.NewReader(e.stdin()).ReadString('\n')
@@ -149,7 +160,11 @@ func runInit(ctx context.Context, e *Env, args []string) error {
 		sp := newSpinner(e)
 		defer sp.Stop()
 		o.Start = sp.Start
-		o.Progress = func(s setup.StepResult) { sp.Stop(); renderStep(e, s) }
+		sr = &stepRenderer{e: e}
+		if quietSteps {
+			sr.buf = &bytes.Buffer{}
+		}
+		o.Progress = func(s setup.StepResult) { sp.Stop(); sr.render(s) }
 	}
 	if fi, err := os.Lstat(filepath.Join(dir, setup.DirName)); err == nil && fi.IsDir() && fi.Mode()&os.ModeSymlink == 0 {
 		_ = fi
@@ -169,17 +184,21 @@ func runInit(ctx context.Context, e *Env, args []string) error {
 		_ = enc.Encode(res)
 	}
 	if err != nil {
+		sr.flush()
 		return &ExitError{Code: ExitFailure, ErrCode: "init_failed", printed: true, Err: err}
 	}
 	if !text {
 		return nil
 	}
 	if !res.Changed {
-		fmt.Fprintln(e.Stdout)
-		fmt.Fprintln(e.Stdout, e.Style.OKLine(fmt.Sprintf("Nothing to change. Deedglass is set up in %s (org %s, agent %s).", label, setup.OrgName, setup.AgentName)))
+		fmt.Fprintln(e.Stdout, e.Style.OKLine("Nothing to change. Deedglass is set up in "+label+"."))
+		ui.Lines(e.Stdout, e.Style.KV("  ", e.Width,
+			ui.Row{Key: "org", Value: setup.OrgName}, ui.Row{Key: "agent", Value: setup.AgentName},
+			ui.Row{Key: "steps", Value: fmt.Sprintf("%d checked (-v lists them)", sr.n)})...)
 		printProgress(e, v.quiet, func() setup.Facts { return setup.ReadFacts(ctx, dir) })
 		return nil
 	}
+	sr.flush()
 	verified := false
 	for _, s := range res.Steps {
 		verified = verified || (s.ID == "smoke_update" && strings.Contains(s.Detail, "Proven · Matches"))
@@ -190,10 +209,7 @@ func runInit(ctx context.Context, e *Env, args []string) error {
 		_ = mark.Sealed(e.Stdout, mo)
 	}
 	fmt.Fprintf(e.Stdout, "Ready in %d s.\n", (res.ElapsedMS+500)/1000)
-	fmt.Fprintln(e.Stdout, "Next")
-	for _, n := range res.Next {
-		fmt.Fprintln(e.Stdout, "  "+n)
-	}
+	printNext(e, res.Next)
 	printProgress(e, v.quiet, func() setup.Facts { return setup.ReadFacts(ctx, dir) })
 	return nil
 }
@@ -212,7 +228,14 @@ func printProgress(e *Env, quiet bool, read func() setup.Facts) {
 	}
 	if l := progressLine(f); l != "" {
 		fmt.Fprintln(e.Stdout)
-		fmt.Fprintln(e.Stdout, strings.Replace(l, "next: deedglass ", "next: "+invocation(e)+" ", 1))
+		l = strings.Replace(l, "next: deedglass ", "next: "+invocation(e)+" ", 1)
+		head, _, _ := strings.Cut(l, " "+ui.Sep+" ")
+		for i, w := range ui.Wrap(l, ui.LayoutWidth(e.Width), 2) {
+			if i == 0 && strings.HasPrefix(w, head) {
+				w = e.Style.Dim(head+" "+ui.Sep) + strings.TrimPrefix(w, head+" "+ui.Sep)
+			}
+			fmt.Fprintln(e.Stdout, w)
+		}
 	}
 }
 
@@ -241,24 +264,6 @@ func cmdLine(e *Env, line string) string {
 	return line
 }
 
-func wrapJoin(items []string, indent int) string {
-	var lines []string
-	cur := ""
-	for _, it := range items {
-		if cur != "" && len(cur)+3+len(it) > 84 {
-			lines = append(lines, cur)
-			cur = it
-			continue
-		}
-		if cur != "" {
-			cur += " · "
-		}
-		cur += it
-	}
-	lines = append(lines, cur)
-	return strings.Join(lines, "\n"+strings.Repeat(" ", indent+11))
-}
-
 // newSpinner is the progress line for steps that may take over a second: drawn in place on a
 // terminal (not with --json, TERM=dumb or DEEDGLASS_NO_ANIM), notes only elsewhere.
 func newSpinner(e *Env) *ui.Spinner {
@@ -266,44 +271,180 @@ func newSpinner(e *Env) *ui.Spinner {
 	return ui.NewSpinner(e.Stdout, e.Style, live, e.Width)
 }
 
-func renderStep(e *Env, s setup.StepResult) {
+// stepRenderer prints init's steps (CLI_STYLE.md › Progress): the glyph, a short title, the detail
+// wrapped under itself with its separators dimmed. The smoke steps go under their own heading.
+// With buf set, lines are held until flush (a run that only checks prints only its summary).
+type stepRenderer struct {
+	e     *Env
+	buf   *bytes.Buffer
+	smoke bool
+	n     int // steps rendered
+}
+
+const stepTitleWidth = 15
+
+func (r *stepRenderer) out() io.Writer {
+	if r.buf != nil {
+		return r.buf
+	}
+	return r.e.Stdout
+}
+
+// flush prints the held lines; a nil renderer or one without a buffer has none.
+func (r *stepRenderer) flush() {
+	if r == nil || r.buf == nil {
+		return
+	}
+	r.e.Stdout.Write(r.buf.Bytes())
+	r.buf = nil
+}
+
+func (r *stepRenderer) render(s setup.StepResult) {
+	e, w := r.e, r.out()
 	st := e.Style
-	sym := st.Teal("✓")
+	r.n++
+	glyph := ui.OK
 	switch {
-	case s.Status == setup.Failed:
-		sym = st.Red("✕")
-	case s.Symbol == "✕":
-		sym = st.Red("✕")
-	case s.Symbol == "◐":
-		sym = st.Violet("◐")
-	case s.Symbol == "○":
-		sym = st.Amber("○")
+	case s.Status == setup.Failed, s.Symbol == ui.Fail:
+		glyph = ui.Fail
+	case s.Symbol == ui.Pending:
+		glyph = ui.Pending
+	case s.Symbol == ui.Unknown:
+		glyph = ui.Unknown
 	}
 	if s.Status == setup.Failed {
-		fmt.Fprintf(e.Stdout, "%s %s\n", sym, strings.TrimSuffix(s.Detail, ".")+".")
+		r.flush()
+		w = e.Stdout
+		fmt.Fprintln(w, st.Status(glyph, strings.TrimSuffix(s.Detail, ".")+"."))
 		if s.Fix != "" {
-			fmt.Fprintf(e.Stdout, "  %s\n", s.Fix)
+			fmt.Fprintln(w, st.Next(s.Fix))
 		}
 		return
 	}
-	// Long details wrap under themselves, so a step stays readable at 80 columns.
-	width := e.Width
-	if width <= 0 {
-		width = 100
+	title := s.Title
+	if t, ok := strings.CutPrefix(title, "Smoke · "); ok {
+		if !r.smoke {
+			r.smoke = true
+			fmt.Fprintln(w)
+			fmt.Fprintln(w, st.Section("Smoke test"))
+		}
+		title = t
 	}
-	for i, l := range ui.Wrap(strings.Repeat(" ", 24)+s.Detail, width-2, 0) {
+	col := 2 + stepTitleWidth + 2
+	width := ui.LayoutWidth(e.Width)
+	if ui.Width(title) > stepTitleWidth {
+		// A long title (a spinner note) is a line of its own.
+		for _, l := range ui.Wrap(title+" "+s.Detail, width-2, 2) {
+			if strings.HasPrefix(l, title) {
+				fmt.Fprintln(w, st.Status(glyph, dimSeps(st, l)))
+				continue
+			}
+			fmt.Fprintln(w, "  "+dimSeps(st, l))
+		}
+		return
+	}
+	for i, l := range ui.Wrap(strings.Repeat(" ", col)+s.Detail, width, 0) {
+		l = dimSeps(st, strings.TrimLeft(l, " "))
 		if i == 0 {
-			fmt.Fprintf(e.Stdout, "%s %-23s %s\n", sym, s.Title, strings.TrimLeft(l, " "))
+			fmt.Fprintln(w, st.Status(glyph, ui.Pad(title, stepTitleWidth)+"  "+l))
 			continue
 		}
-		fmt.Fprintf(e.Stdout, "  %s\n", l)
+		fmt.Fprintln(w, strings.Repeat(" ", col)+l)
 	}
 	if s.Secret != "" {
-		fmt.Fprintf(e.Stdout, "    %s   copy it now; it isn't shown again\n", s.Secret)
+		fmt.Fprintln(w, strings.Repeat(" ", col)+s.Secret)
+		fmt.Fprintln(w, strings.Repeat(" ", col)+st.Dim("copy it now; it isn't shown again"))
 	}
-	for _, l := range s.Lines {
-		fmt.Fprintf(e.Stdout, "  %s\n", l)
+	for _, l := range collapseRows(s.Lines, e.Globals.Verbose > 0) {
+		for _, x := range ui.HangWrap(l, width-col) {
+			if strings.HasPrefix(strings.TrimLeft(x, " "), ui.OK) || strings.HasPrefix(strings.TrimLeft(x, " "), ui.Fail) {
+				fmt.Fprintln(w, strings.Repeat(" ", col)+x) // a diff row keeps its glyph's weight
+				continue
+			}
+			fmt.Fprintln(w, strings.Repeat(" ", col)+st.Dim(x))
+		}
 	}
+}
+
+// reFirstOf finds the diff's own count line: "first 20 of 301 rows".
+var reFirstOf = regexp.MustCompile(`first (\d+) of (\d+) rows`)
+
+// collapseRows keeps the first three "✕ unexpected" rows of a diff and counts the rest (summary
+// first; -v keeps them all).
+func collapseRows(lines []string, all bool) []string {
+	const keep = 3
+	if all {
+		return lines
+	}
+	var out []string
+	seen, hidden := 0, 0
+	flush := func() {
+		if hidden > 0 {
+			out = append(out, fmt.Sprintf("%s %d more rows (-v shows them)", ui.More, hidden))
+			hidden = 0
+		}
+	}
+	shown := 0
+	for _, l := range lines {
+		if strings.Contains(l, ui.Fail+" unexpected") {
+			if seen++; seen > keep {
+				hidden++
+				continue
+			}
+		}
+		if strings.Contains(l, ui.OK+" expected") || strings.Contains(l, ui.Fail+" unexpected") {
+			shown++
+		}
+		if m := reFirstOf.FindStringSubmatch(l); m != nil && hidden > 0 {
+			total, _ := strconv.Atoi(m[2])
+			out = append(out, fmt.Sprintf("%s %d more of %s rows (-v shows %s; Console › Actions shows all)", ui.More, total-shown, m[2], m[1]))
+			hidden = 0
+			continue
+		}
+		if !strings.Contains(l, ui.Fail+" unexpected") {
+			flush()
+		}
+		out = append(out, l)
+	}
+	flush()
+	return out
+}
+
+// dimSeps dims the " · " separators in a line of facts, so the facts carry the weight.
+func dimSeps(st ui.Style, l string) string {
+	l = strings.ReplaceAll(l, " "+ui.Sep+" ", " "+st.Dim(ui.Sep)+" ")
+	if strings.HasSuffix(l, " "+ui.Sep) {
+		l = strings.TrimSuffix(l, ui.Sep) + st.Dim(ui.Sep)
+	}
+	return l
+}
+
+// printNext is the Next block under a result: a bold heading, then one command per line.
+func printNext(e *Env, next []string) {
+	if len(next) == 0 {
+		return
+	}
+	fmt.Fprintln(e.Stdout)
+	fmt.Fprintln(e.Stdout, e.Style.Section("Next"))
+	for _, n := range next {
+		if isCommand(n) {
+			fmt.Fprintln(e.Stdout, "  "+n) // a command a person copies is never broken
+			continue
+		}
+		for _, l := range ui.Wrap("  "+n, ui.LayoutWidth(e.Width), 0) {
+			fmt.Fprintln(e.Stdout, e.Style.Dim(l))
+		}
+	}
+}
+
+// isCommand reports whether a Next line is a command to run, not a sentence about one.
+func isCommand(l string) bool {
+	for _, p := range []string{"deedglass ", "npx ", "claude ", "open ", "export "} {
+		if strings.HasPrefix(l, p) {
+			return true
+		}
+	}
+	return false
 }
 
 func stopStack(ctx context.Context, e *Env, r *setup.ProcRunner, dir string) error {
@@ -331,12 +472,13 @@ func runInitTrigger(ctx context.Context, e *Env, r *setup.ProcRunner, dir string
 	o := setup.Options{Dir: dir, Runner: r, Yes: true, NoOpen: true, TTY: e.IsTTY, Cmd: invocation(e)}
 	text := !e.Globals.JSON
 	if text {
-		fmt.Fprintln(e.Stdout, "deedglass init --trigger · one UPDATE, a legacy trigger, and what Postgres really committed")
+		fmt.Fprintln(e.Stdout, e.Style.Header("deedglass init --trigger", "one UPDATE, a legacy trigger, what Postgres committed"))
 		fmt.Fprintln(e.Stdout)
 		sp := newSpinner(e)
 		defer sp.Stop()
 		o.Start = sp.Start
-		o.Progress = func(s setup.StepResult) { sp.Stop(); renderStep(e, s) }
+		sr := &stepRenderer{e: e}
+		o.Progress = func(s setup.StepResult) { sp.Stop(); sr.render(s) }
 	}
 	res, err := setup.Trigger(ctx, o)
 	if e.Globals.JSON {
@@ -350,11 +492,8 @@ func runInitTrigger(ctx context.Context, e *Env, r *setup.ProcRunner, dir string
 	}
 	if text {
 		fmt.Fprintln(e.Stdout)
-		fmt.Fprintln(e.Stdout, "The agent said 1 row. Postgres's change log says 301. Nothing was undone yet.")
-		fmt.Fprintln(e.Stdout, "Next")
-		for _, n := range res.Next {
-			fmt.Fprintln(e.Stdout, "  "+n)
-		}
+		fmt.Fprintln(e.Stdout, e.Style.Bold("The agent said 1 row. Postgres's change log says 301.")+" Nothing was undone yet.")
+		printNext(e, res.Next)
 	}
 	return nil
 }
@@ -430,6 +569,6 @@ func purgeStack(ctx context.Context, e *Env, r *setup.ProcRunner, dir string, ye
 		msg += " ~/.deedglass/current.json pointed here, so it's gone too."
 	}
 	fmt.Fprintln(e.Stdout, e.Style.OKLine(msg))
-	fmt.Fprintln(e.Stdout, "  Next: "+invocation(e)+" init sets up a new stack.")
+	fmt.Fprintln(e.Stdout, e.Style.Next(invocation(e)+" init sets up a new stack."))
 	return nil
 }

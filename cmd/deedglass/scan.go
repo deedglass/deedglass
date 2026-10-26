@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/deedglass/deedglass/internal/cli/mark"
+	"github.com/deedglass/deedglass/internal/cli/ui"
 	"github.com/deedglass/deedglass/internal/scan"
 )
 
@@ -185,10 +186,11 @@ func runScan(ctx context.Context, e *Env, args []string) error {
 		if v.ci {
 			mo.Quiet = true
 		}
+		// One header line: the inline mark (on a terminal) or the command, then dim meta.
+		header := e.Style.Header("deedglass scan", label, secs(time.Duration(r.TookMS)*time.Millisecond)+" s", "read-only")
 		if il := mark.Inline(mo); il != "" {
-			fmt.Fprintln(e.Stdout, il)
+			header = il + "  " + e.Style.Dim(label+" "+ui.Sep+" "+secs(time.Duration(r.TookMS)*time.Millisecond)+" s "+ui.Sep+" read-only")
 		}
-		header := fmt.Sprintf("deedglass scan · %s · %s s · read-only", label, secs(time.Duration(r.TookMS)*time.Millisecond))
 		if v.score {
 			fmt.Fprintln(e.Stdout, header)
 			fmt.Fprintln(e.Stdout)
@@ -200,7 +202,7 @@ func runScan(ctx context.Context, e *Env, args []string) error {
 			if len(wrote) > 0 {
 				wroteLine = "Wrote " + andList(wrote) + " (nothing left this machine)."
 			}
-			fmt.Fprint(e.Stdout, scan.RenderText(r, st, e.Width, header, wroteLine))
+			fmt.Fprint(e.Stdout, scan.RenderText(r, st, ui.LayoutWidth(e.Width), header, wroteLine))
 		}
 		for _, w := range wrote {
 			if strings.HasSuffix(w, ".sarif") {
@@ -258,8 +260,7 @@ func starNote(e *Env) {
 		return
 	}
 	fmt.Fprintln(e.Stdout)
-	fmt.Fprintln(e.Stdout, e.Style.Dim("If this helped, a GitHub star helps others find it: "+starURL))
-	fmt.Fprintln(e.Stdout, e.Style.Dim("(shown once on this machine; DEEDGLASS_NO_STAR=1 or --no-star hides it)"))
+	fmt.Fprintln(e.Stdout, e.Style.Dim("If this helped, a GitHub star helps others find it: "+starURL+" (shown once)"))
 }
 
 // starMarker is where the star note remembers it was shown: $XDG_CONFIG_HOME/deedglass, else

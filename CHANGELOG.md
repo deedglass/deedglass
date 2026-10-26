@@ -7,6 +7,24 @@ this file by `scripts/release-notes.sh`.
 
 ## [Unreleased]
 
+### Changed
+
+- The terminal output has a new layout: one blank line between blocks, aligned key/value rows that
+  wrap under themselves at 80 columns, dim keys and meta, and fewer `a · b · c` chains. Every
+  command builds its text from one package, `internal/cli/ui`, and the rules are in
+  `docs/design/CLI_STYLE.md`. `--json` output is unchanged.
+- `deedglass play` reads as six short scenes, each with a before, a check and a result, and every
+  row says whether it ran here (`live`) or came from the recorded run (`replay`). `-v` adds the
+  recorded lines exactly as they printed.
+- `deedglass init` puts the smoke test under its own heading and shows three rows of a long diff
+  (`-v` shows them all). A run with nothing to change prints a short summary instead of every step.
+- `deedglass help` lists one line per command; `deedglass help <command>` and `-v` list the
+  subcommands. `scan`, `verify`, `keys list`, `lockdown status`, `actions list` and `actions show`
+  follow the same layout, and ids in text are shortened to `act_01m4x8kq…`.
+- Pending (`◐`) uses the warn colour, yellow, instead of magenta: the palette is the accent teal,
+  yellow, red, dim and bold.
+- `DEEDGLASS_ASCII=1` (and `TERM=dumb`) draws the status glyphs as ASCII stand-ins on a terminal.
+
 ## [0.10.0] - 2026-10-25
 
 Free while we grow, India's national FHIR profiles, and a faster install. Every feature now runs

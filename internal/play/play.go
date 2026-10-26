@@ -24,10 +24,12 @@ import (
 	"fmt"
 	"io"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
 	demopolicies "github.com/deedglass/deedglass/examples/demo/policies"
+	"github.com/deedglass/deedglass/internal/cli/ui"
 	"github.com/deedglass/deedglass/internal/deed"
 	"github.com/deedglass/deedglass/internal/embedgz"
 	"github.com/deedglass/deedglass/internal/ids"
@@ -77,22 +79,14 @@ var UndoReplay = []string{
 	"✓ executed · postgres.undo · L2 · VERIFIED · Restored 301 rows in public.orders exactly as planned.",
 }
 
-// Style colours the output; the zero value prints plain text.
-type Style struct {
-	Teal, Red, Amber, Dim, Bold func(string) string
-}
-
-func (s Style) f(fn func(string) string, t string) string {
-	if fn == nil {
-		return t
-	}
-	return fn(t)
-}
-
 // Options tune a run.
 type Options struct {
 	Out   io.Writer
-	Style Style
+	Style ui.Style // the zero value prints plain text
+	// Width is the terminal's columns (0: unknown); the scenes are laid out at most ui.MaxWidth wide.
+	Width int
+	// Verbose also prints, under each replayed scene, the recorded lines exactly as they printed.
+	Verbose bool
 	// Pace is called before each line with the pause the line asks for; nil means no pauses
 	// (tests, --fast, and output that isn't a terminal).
 	Pace func(ctx context.Context, d time.Duration) error
@@ -123,15 +117,18 @@ const (
 	sqlDrop  = "DROP TABLE public.refunds"
 	sqlShip  = "UPDATE public.orders SET status = 'shipped' WHERE id = 42"
 	agent    = "claude-code"
-	ruleLen  = 62
 	tagLive  = "live"
 	tagRerun = "replay"
+	// A scene's body sits under its title: "4/6  The trigger" (CLI_STYLE.md › play).
+	bodyIndent = "     "
+	keyWidth   = 7
+	diffRows   = 3 // diff rows a scene shows; the rest are counted
 )
 
 type run struct {
 	ctx      context.Context
 	o        Options
-	st       Style
+	st       ui.Style
 	res      *Result
 	lastShip string // the replayed run's verdict line for the trigger scene
 }
@@ -151,22 +148,33 @@ func (r *run) line(d time.Duration, s string) error {
 	return err
 }
 
-func (r *run) tag(t string) string {
-	if t == tagLive {
-		return r.st.f(r.st.Teal, "["+t+"]")
+// row prints one key/value row of a scene (and its wrapped lines), after a pause of d.
+func (r *run) row(d time.Duration, key, glyph, value, tag string) error {
+	for _, l := range r.st.KV(bodyIndent, r.o.Width, ui.Row{Key: ui.Pad(key, keyWidth), Glyph: glyph, Value: value, Tag: tag}) {
+		if err := r.line(d, l); err != nil {
+			return err
+		}
+		d = 0
 	}
-	return r.st.f(r.st.Amber, "["+t+"]")
+	return nil
 }
 
-func (r *run) scene(n, of int, title string) error {
-	head := fmt.Sprintf("── %d/%d %s ", n, of, title)
-	if pad := ruleLen - len([]rune(head)); pad > 0 {
-		head += strings.Repeat("─", pad)
-	}
+func (r *run) scene(n, of int, title, intro string) error {
 	if err := r.line(700*time.Millisecond, ""); err != nil {
 		return err
 	}
-	return r.line(0, r.st.f(r.st.Bold, head))
+	if err := r.line(0, r.st.Dim(fmt.Sprintf("%d/%d", n, of))+"  "+r.st.Bold(title)); err != nil {
+		return err
+	}
+	if intro == "" {
+		return nil
+	}
+	for _, l := range ui.Wrap(bodyIndent+intro, ui.LayoutWidth(r.o.Width), 0) {
+		if err := r.line(200*time.Millisecond, l); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // Run plays the scene and reports what it found. It reads no file, opens no socket and writes
@@ -193,15 +201,17 @@ func Run(ctx context.Context, o Options) (*Result, error) {
 	}
 	r.res.Recording = fmt.Sprintf("%s · commit %s · %s", cast.Command, cast.Commit, day)
 	st := r.st
-	header := []string{
-		st.f(st.Bold, "Deedglass play") + " · offline · no Docker · nothing leaves this machine",
-		"",
-		"  " + r.tag(tagLive) + "    Rules: the policy engine deedglass serve runs, deciding each call now (acme-demo).",
-		"  " + r.tag(tagLive) + "    Records: sealed and checked here, with a key made for this run.",
-		"  " + r.tag(tagRerun) + "  Postgres's change log: a recorded real run of " + r.res.Recording + ".",
-		st.f(st.Dim, "          Postgres can't run inside this binary, so its lines are replayed as they printed."),
+	if err := r.line(60*time.Millisecond, st.Header("Deedglass play", "offline", "nothing leaves this machine")); err != nil {
+		return r.res, err
 	}
-	for _, l := range header {
+	if err := r.line(60*time.Millisecond, ""); err != nil {
+		return r.res, err
+	}
+	legend := st.KV("  ", o.Width,
+		ui.Row{Key: tagLive, Value: "computed here, by the product's own policy engine and verifier"},
+		ui.Row{Key: tagRerun, Value: fmt.Sprintf("printed by a recorded run of %s (%s, %s)\nPostgres can't run inside this binary, so its lines are replayed", cast.Command, cast.Commit, day)},
+	)
+	for _, l := range legend {
 		if err := r.line(60*time.Millisecond, l); err != nil {
 			return r.res, err
 		}
@@ -209,85 +219,86 @@ func Run(ctx context.Context, o Options) (*Result, error) {
 	const scenes = 6
 
 	// 1. A safe read.
-	if err := r.scene(1, scenes, "A safe read"); err != nil {
+	if err := r.scene(1, scenes, "A safe read", ""); err != nil {
 		return r.res, err
 	}
-	dRead, err := r.decide(pol, "read", "postgres.query", sqlRead)
-	if err != nil {
+	if _, err := r.decide(pol, "read", "postgres.query", sqlRead); err != nil {
 		return r.res, err
 	}
-	_ = dRead
 
 	// 2. A destructive request.
-	if err := r.scene(2, scenes, "A destructive request"); err != nil {
+	if err := r.scene(2, scenes, "A destructive request", ""); err != nil {
 		return r.res, err
 	}
 	if _, err := r.decide(pol, "drop", "postgres.execute", sqlDrop); err != nil {
 		return r.res, err
 	}
-	if err := r.line(300*time.Millisecond, st.f(st.Dim, "  Nothing reached the database.")); err != nil {
+	if err := r.row(300*time.Millisecond, "result", "", "Nothing reached the database.", ""); err != nil {
 		return r.res, err
 	}
 
 	// 3. A normal write: the rule decides live, Postgres's answer is replayed.
-	if err := r.scene(3, scenes, "A normal write"); err != nil {
+	if err := r.scene(3, scenes, "A normal write", ""); err != nil {
+		return r.res, err
+	}
+	sec3, err := section(cast, "1. ", "2. ")
+	if err != nil {
+		return r.res, err
+	}
+	if err := r.before(sec3); err != nil {
 		return r.res, err
 	}
 	if _, err := r.decide(pol, "ship", "postgres.execute", sqlShip); err != nil {
 		return r.res, err
 	}
-	if err := r.replay(cast, "1. ", "2. ", 0); err != nil {
+	if err := r.witness(sec3); err != nil {
 		return r.res, err
 	}
 
 	// 4. The trigger.
-	if err := r.scene(4, scenes, "The trigger"); err != nil {
+	if err := r.scene(4, scenes, "The trigger", "A legacy trigger on public.orders is on. The agent sends the same request."); err != nil {
 		return r.res, err
 	}
-	if err := r.line(200*time.Millisecond, "  Same request. A legacy trigger on public.orders is on."); err != nil {
+	sec4, err := section(cast, "2. ", "3. ")
+	if err != nil {
+		return r.res, err
+	}
+	if err := r.before(sec4); err != nil {
 		return r.res, err
 	}
 	if _, err := r.decide(pol, "ship", "postgres.execute", sqlShip); err != nil {
 		return r.res, err
 	}
-	if err := r.replay(cast, "2. ", "3. ", 6); err != nil {
+	if err := r.witness(sec4); err != nil {
 		return r.res, err
 	}
 
 	// 5. Put it back.
-	if err := r.scene(5, scenes, "Put it back"); err != nil {
+	if err := r.scene(5, scenes, "Put it back", ""); err != nil {
 		return r.res, err
 	}
 	if _, err := r.decideUndo(pol); err != nil {
 		return r.res, err
 	}
-	if err := r.line(400*time.Millisecond, "  "+r.tag(tagRerun)+" "+st.f(st.Dim, "the undo in the recorded launch demo (make demo, examples/demo/testdata/launch.golden):")); err != nil {
+	if err := r.undo(); err != nil {
 		return r.res, err
-	}
-	for _, l := range UndoReplay {
-		if err := r.line(500*time.Millisecond, "  │ "+colourMark(st, l)); err != nil {
-			return r.res, err
-		}
 	}
 
 	// 6. Records, live.
-	if err := r.scene(6, scenes, "Check every record"); err != nil {
+	if err := r.scene(6, scenes, "Check every record", ""); err != nil {
 		return r.res, err
 	}
 	if err := r.records(); err != nil {
 		return r.res, err
 	}
 
-	tail := []string{
-		"",
-		st.f(st.Bold, "Play complete.") + " What was live ran here; what was replayed is labelled.",
-		"",
-		"Try it on your own setup:",
-		"  npx deedglass scan            grade what your agent setup can change (read-only, sends nothing)",
-		"  npx deedglass init --yes      the real stack in Docker: Postgres, the server, the rules",
-		"  npx deedglass init --trigger  then this 301 scene, live, on your machine",
-		"  https://deedglass.com/play    the same scene in your browser",
-	}
+	tail := []string{"", st.Status(ui.OK, st.Bold("Play complete.")+" Each row said where it came from."), "", st.Section("Try it on your own setup")}
+	tail = append(tail, st.Commands("  ", o.Width,
+		[2]string{"npx deedglass scan", "grade what your agent setup can change"},
+		[2]string{"npx deedglass init --yes", "the real stack in Docker"},
+		[2]string{"npx deedglass init --trigger", "this scene, live, on your machine"},
+		[2]string{"https://deedglass.com/play", "the same scene in your browser"},
+	)...)
 	for _, l := range tail {
 		if err := r.line(80*time.Millisecond, l); err != nil {
 			return r.res, err
@@ -325,8 +336,7 @@ func (r *run) evaluate(c *policy.Compiled, key string, in policy.Input) Decision
 }
 
 func (r *run) decide(c *policy.Compiled, key, tool, sql string) (Decision, error) {
-	st := r.st
-	if err := r.line(250*time.Millisecond, "  agent  "+st.f(st.Dim, tool)+"  "+sql); err != nil {
+	if err := r.row(250*time.Millisecond, "request", "", sql, ""); err != nil {
 		return Decision{}, err
 	}
 	args, _ := json.Marshal(map[string]string{"sql": sql})
@@ -335,35 +345,42 @@ func (r *run) decide(c *policy.Compiled, key, tool, sql string) (Decision, error
 		side = "read"
 	}
 	d := r.evaluate(c, key, baseInput(tool, strings.TrimPrefix(tool, "postgres."), side, args, r.o.Now()))
-	return d, r.line(350*time.Millisecond, r.decisionLine(d))
+	return d, r.decision(d)
 }
 
 func (r *run) decideUndo(c *policy.Compiled) (Decision, error) {
-	st := r.st
-	if err := r.line(250*time.Millisecond, "  person "+st.f(st.Dim, "postgres.undo")+"  put back the rows that action changed"); err != nil {
+	if err := r.row(250*time.Millisecond, "request", "", "postgres.undo: put back the rows that action changed", ""); err != nil {
 		return Decision{}, err
 	}
 	d := r.evaluate(c, "undo", baseInput("postgres.undo", "undo", "write", json.RawMessage(`{}`), r.o.Now()))
-	return d, r.line(350*time.Millisecond, r.decisionLine(d))
+	return d, r.decision(d)
 }
 
-func (r *run) decisionLine(d Decision) string {
-	st := r.st
-	var s string
+// decision prints the rule row: what the live policy engine said, and why.
+func (r *run) decision(d Decision) error {
+	glyph, text := ui.Bullet, d.Outcome
 	switch d.Outcome {
 	case string(policy.Allow):
-		s = st.f(st.Teal, "✓") + " allowed · rule " + d.Rule
+		glyph, text = ui.OK, "allowed by "+d.Rule
 		if d.Verify != "" {
-			s += " · check " + levelName(d.Verify)
+			text += ", checked at " + strings.TrimSuffix(strings.SplitN(levelName(d.Verify), " (", 2)[0], " ")
 		}
 	case string(policy.Deny):
-		s = st.f(st.Red, "✕") + " denied · " + d.Message
+		glyph, text = ui.Fail, "denied by "+d.Rule+"\n"+reason(d.Message)
 	case string(policy.RequireApproval):
-		s = st.f(st.Amber, "◐") + " needs a person · " + d.Message
+		glyph, text = ui.Pending, "waits for a person: "+d.Rule+"\n"+reason(d.Message)
 	default:
-		s = "· " + d.Outcome + " · " + d.Message
+		text += "\n" + reason(d.Message)
 	}
-	return s + "  " + r.tag(tagLive)
+	return r.row(350*time.Millisecond, "rule", glyph, text, tagLive)
+}
+
+// reason is a policy message without the "Blocked by policy "x":" lead the rule row already says.
+func reason(m string) string {
+	if _, after, ok := strings.Cut(m, `": `); ok && strings.Contains(m[:strings.Index(m, `": `)], `"`) {
+		return after
+	}
+	return m
 }
 
 func levelName(l string) string {
@@ -378,11 +395,9 @@ func levelName(l string) string {
 	return l
 }
 
-// replay prints the recorded lines from the one starting with `from` up to the one starting with
-// `until` (excluded), at their recorded pace (each gap capped at 1.2 s). keepRows > 0 keeps that
-// many "✕ unexpected" rows of the diff and says how many recorded lines it skipped.
-func (r *run) replay(c *Cast, from, until string, keepRows int) error {
-	st := r.st
+// section is the recorded lines from the one starting with `from` (excluded) up to the one starting
+// with `until` (excluded).
+func section(c *Cast, from, until string) ([]CastLine, error) {
 	start, end := -1, len(c.Lines)
 	for i, l := range c.Lines {
 		if start < 0 && strings.HasPrefix(l.Text, from) {
@@ -395,39 +410,145 @@ func (r *run) replay(c *Cast, from, until string, keepRows int) error {
 		}
 	}
 	if start < 0 {
-		return fmt.Errorf("play: the recording has no section %q", from)
+		return nil, fmt.Errorf("play: the recording has no section %q", from)
 	}
-	if err := r.line(300*time.Millisecond, "  "+r.tag(tagRerun)+" "+st.f(st.Dim, "what the recorded run printed ("+r.res.Recording+"):")); err != nil {
+	return c.Lines[start+1 : end], nil
+}
+
+var (
+	reOpen    = regexp.MustCompile(`(\d+) open(?: orders)? besides 42`)
+	reOrder42 = regexp.MustCompile(`[Oo]rder 42 (?:· )?(\w+)`)
+	reCheck   = regexp.MustCompile(`^\s*check\s+(Claimed|Checked|Proven) · ([^·]+?) · (.+)$`)
+	reRow     = regexp.MustCompile(`^\s*([✓✕]) (expected|unexpected)\s+(\d+)\s+(.+?)\s*$`)
+	reOfRows  = regexp.MustCompile(`first \d+ of (\d+) rows`)
+	reAction  = regexp.MustCompile(`\b(act_[0-9a-z]{26})\b`)
+	reRowsN   = regexp.MustCompile(`· (\d+) rows ·`)
+)
+
+// find returns the first recorded line matching re, and its submatches.
+func find(lines []CastLine, re *regexp.Regexp) (string, []string) {
+	for _, l := range lines {
+		if m := re.FindStringSubmatch(l.Text); m != nil {
+			return l.Text, m
+		}
+	}
+	return "", nil
+}
+
+// before is the scene's starting state, read from the recorded run's setup lines.
+func (r *run) before(lines []CastLine) error {
+	_, open := find(lines, reOpen)
+	_, order := find(lines, reOrder42)
+	if open == nil || order == nil {
+		return errors.New("play: the recording doesn't say where order 42 started")
+	}
+	trigger := "trigger off"
+	for _, l := range lines {
+		if strings.HasPrefix(l.Text, "✓ Trigger on") {
+			trigger = "trigger on"
+		}
+	}
+	return r.row(250*time.Millisecond, "before", "", fmt.Sprintf("order 42 %s, %s others open, %s", order[1], open[1], trigger), tagRerun)
+}
+
+// witness prints what Postgres's change log said, from the recorded run: the check, the diff rows
+// when it didn't match, and the result. With Verbose, the recorded lines follow as they printed.
+func (r *run) witness(lines []CastLine) error {
+	_, chk := find(lines, reCheck)
+	if chk == nil {
+		return errors.New("play: the recording has no check line")
+	}
+	verdictLine := ""
+	for _, l := range lines {
+		if reVerdict.MatchString(l.Text) && reAction.MatchString(l.Text) && strings.HasPrefix(l.Text, "✓ L") {
+			verdictLine = l.Text
+		}
+	}
+	if verdictLine == "" {
+		return errors.New("play: the recording has no verdict line")
+	}
+	if strings.Contains(verdictLine, " rows · act_") {
+		r.lastShip = verdictLine
+	}
+	glyph := ui.OK
+	if chk[2] != "Matches" {
+		glyph = ui.Fail
+	}
+	if err := r.row(300*time.Millisecond, "check", glyph, chk[2]+": "+chk[3], tagRerun); err != nil {
 		return err
 	}
-	prev := c.Lines[start].T
-	rows, skipped := 0, 0
-	for _, l := range c.Lines[start+1 : end] {
-		gap := time.Duration(l.T-prev) * time.Millisecond
-		prev = l.T
-		if gap > 1200*time.Millisecond {
-			gap = 1200 * time.Millisecond
+	shown, total := 0, 0
+	if _, m := find(lines, reOfRows); m != nil {
+		total, _ = strconv.Atoi(m[1])
+	}
+	for _, l := range lines {
+		m := reRow.FindStringSubmatch(l.Text)
+		if m == nil || shown >= diffRows {
+			continue
 		}
-		if keepRows > 0 && strings.Contains(l.Text, "✕ unexpected") {
-			rows++
-			if rows > keepRows {
-				skipped++
-				continue
-			}
+		shown++
+		if err := r.row(150*time.Millisecond, "", m[1], fmt.Sprintf("id %-4s %s", m[3], m[4]), ""); err != nil {
+			return err
 		}
-		if skipped > 0 {
-			if err := r.line(0, st.f(st.Dim, fmt.Sprintf("  ⋮                  (%d more recorded rows not shown here)", skipped))); err != nil {
-				return err
-			}
-			skipped = 0
+	}
+	if total > shown && shown > 0 {
+		if err := r.row(0, "", "", r.st.Dim(fmt.Sprintf("%s %d more rows", ui.More, total-shown)), ""); err != nil {
+			return err
 		}
+	}
+	vm := reVerdict.FindStringSubmatch(verdictLine)
+	act := reAction.FindString(verdictLine)
+	res := strings.ToUpper(vm[2][:1]) + strings.ToLower(vm[2][1:]) + " at " + levelName(vm[1])
+	if n := reRowsN.FindStringSubmatch(verdictLine); n != nil {
+		res += ", " + n[1] + " rows"
+	}
+	rglyph := ui.OK
+	if vm[2] != "VERIFIED" {
+		rglyph = ui.Fail
+	}
+	if err := r.row(300*time.Millisecond, "result", rglyph, res+" "+ui.Sep+" "+ui.ShortID(act), tagRerun); err != nil {
+		return err
+	}
+	return r.verbatim(lines)
+}
+
+// undo prints the recorded launch demo's undo (UndoReplay): the plan, the person, the result.
+func (r *run) undo() error {
+	plan := strings.TrimPrefix(UndoReplay[0], "✓ Undo available · ")
+	person := strings.TrimPrefix(UndoReplay[2], "✓ ")
+	_, done, ok := strings.Cut(UndoReplay[3], "VERIFIED · ")
+	if plan == UndoReplay[0] || person == UndoReplay[2] || !ok {
+		return errors.New("play: the undo lines changed shape")
+	}
+	if err := r.row(400*time.Millisecond, "plan", ui.OK, strings.ReplaceAll(plan, " · ", ", "), tagRerun); err != nil {
+		return err
+	}
+	if err := r.row(500*time.Millisecond, "person", ui.OK, person, tagRerun); err != nil {
+		return err
+	}
+	if err := r.row(500*time.Millisecond, "result", ui.OK, done, tagRerun); err != nil {
+		return err
+	}
+	lines := make([]CastLine, len(UndoReplay))
+	for i, l := range UndoReplay {
+		lines[i] = CastLine{Text: l}
+	}
+	return r.verbatim(lines)
+}
+
+// verbatim prints, with Verbose, the recorded lines exactly as they printed, under a dim "│".
+func (r *run) verbatim(lines []CastLine) error {
+	if !r.o.Verbose {
+		return nil
+	}
+	if err := r.line(0, bodyIndent+r.st.Dim("recorded output ("+r.res.Recording+")")); err != nil {
+		return err
+	}
+	for _, l := range lines {
 		if strings.TrimSpace(l.Text) == "" {
 			continue
 		}
-		if reVerdict.MatchString(l.Text) && strings.Contains(l.Text, " rows · act_") {
-			r.lastShip = l.Text
-		}
-		if err := r.line(gap, "  │ "+colourMark(st, l.Text)); err != nil {
+		if err := r.line(0, bodyIndent+r.st.Dim("│")+" "+l.Text); err != nil {
 			return err
 		}
 	}
@@ -446,16 +567,6 @@ func recordedWitness(line string) (*deed.WitnessSection, error) {
 	return &deed.WitnessSection{Level: m[1], Verdict: m[2], Method: "postgres.pgoutput"}, nil
 }
 
-// colourMark colours a recorded line's leading status mark.
-func colourMark(st Style, s string) string {
-	for mark, fn := range map[string]func(string) string{"✓": st.Teal, "✕": st.Red, "◐": st.Amber} {
-		if strings.HasPrefix(s, mark) {
-			return st.f(fn, mark) + s[len(mark):]
-		}
-	}
-	return s
-}
-
 // --- records ---
 
 type sealedLine struct {
@@ -464,7 +575,6 @@ type sealedLine struct {
 }
 
 func (r *run) records() error {
-	st := r.st
 	seed := make([]byte, 32)
 	if _, err := rand.Read(seed); err != nil {
 		return fmt.Errorf("play: couldn't make a key: %w", err)
@@ -577,11 +687,8 @@ func (r *run) records() error {
 		return err
 	}
 	r.res.Records = len(lines)
-	if err := r.line(250*time.Millisecond, fmt.Sprintf("  Sealed %d records, one per action above, with %s (made for this run).  %s",
-		len(lines), keyID[:11]+"…", r.tag(tagLive))); err != nil {
-		return err
-	}
-	if err := r.line(0, st.f(st.Dim, "  The checks inside the two Postgres records are the ones the replayed run printed.")); err != nil {
+	if err := r.row(250*time.Millisecond, "records", "", fmt.Sprintf("%d sealed with %s, a key made for this run\nThe Postgres checks inside are the replayed ones.",
+		len(lines), ui.ShortID(keyID)), tagLive); err != nil {
 		return err
 	}
 	var buf bytes.Buffer
@@ -595,9 +702,9 @@ func (r *run) records() error {
 	}
 	r.res.ChainOK = rep.Result == deed.ResultValid && rep.Chain.Status == deed.ChainIntact
 	if r.res.ChainOK {
-		err = r.line(400*time.Millisecond, fmt.Sprintf("%s %d deeds · chain intact · 1 seal key  %s", st.f(st.Teal, "✓"), rep.Deeds, r.tag(tagLive)))
+		err = r.row(400*time.Millisecond, "verify", ui.OK, fmt.Sprintf("%d deeds, chain intact, 1 seal key", rep.Deeds), tagLive)
 	} else {
-		err = r.line(400*time.Millisecond, fmt.Sprintf("%s the chain didn't check out (%s)", st.f(st.Red, "✕"), rep.Result))
+		err = r.row(400*time.Millisecond, "verify", ui.Fail, fmt.Sprintf("the chain didn't check out (%s)", rep.Result), tagLive)
 	}
 	if err != nil {
 		return err
@@ -609,7 +716,7 @@ func (r *run) records() error {
 		return errors.New("play: found no byte to change")
 	}
 	r.res.TamperSeq = seq
-	if err := r.line(500*time.Millisecond, st.f(st.Dim, fmt.Sprintf("· one byte changed in deed %d", seq))); err != nil {
+	if err := r.row(500*time.Millisecond, "tamper", "", fmt.Sprintf("one byte changed in deed %d", seq), ""); err != nil {
 		return err
 	}
 	rep2, err := deed.VerifyStream(r.ctx, bytes.NewReader(changed), deed.StreamOptions{Keys: ks, KeysPinned: true, Org: org})
@@ -618,9 +725,9 @@ func (r *run) records() error {
 	}
 	if rep2.Result == deed.ResultInvalid && len(rep2.Failures) > 0 {
 		r.res.TamperSeen = true
-		return r.line(400*time.Millisecond, fmt.Sprintf("%s %s  %s", st.f(st.Red, "✕"), rep2.Failures[0].Message, r.tag(tagLive)))
+		return r.row(400*time.Millisecond, "verify", ui.Fail, rep2.Failures[0].Message, tagLive)
 	}
-	return r.line(400*time.Millisecond, st.f(st.Red, "✕")+" the changed record was not caught; please file a bug")
+	return r.row(400*time.Millisecond, "verify", ui.Fail, "the changed record was not caught; please file a bug", tagLive)
 }
 
 // tamper returns the records with one byte changed in the first record's execution.latency_ms

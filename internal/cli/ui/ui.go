@@ -1,4 +1,5 @@
-// Package ui is the deedglass CLI's visual language (brand §13.3): symbols, colour and alignment.
+// Package ui is the deedglass CLI's visual language (brand §13.3, docs/design/CLI_STYLE.md):
+// symbols, colour, spacing and alignment, shared by every command and by deedglass play.
 // Colour is used only on a terminal, never when NO_COLOR is set, TERM is dumb or --no-color is
 // given, and it only ever repeats what the symbol and text already say.
 package ui
@@ -8,13 +9,16 @@ import (
 	"strings"
 )
 
-// Symbols.
+// Symbols (CLI_STYLE.md › Glyphs). Each has an ASCII stand-in (ASCIIWriter).
 const (
-	OK      = "✓" // verified, valid (teal)
-	Fail    = "✕" // mismatch, denied, error (red)
-	Pending = "◐" // pending (violet)
-	Unknown = "○" // unverifiable, notice (amber)
-	Sep     = "·"
+	OK      = "✓" // verified, valid, done (success)
+	Fail    = "✕" // mismatch, denied, error (error)
+	Pending = "◐" // waiting for a person (warn)
+	Unknown = "○" // can't tell, a notice (warn)
+	Bullet  = "•" // a neutral list item or note (dim)
+	Arrow   = "→" // a change: paid → shipped
+	More    = "…" // elided: an id's middle, the rest of a list
+	Sep     = "·" // joins two or three short facts in dim meta text, never more
 	None    = "—" // not set
 )
 
@@ -61,12 +65,21 @@ func (s Style) wrap(code, text string) string {
 	return "\x1b[" + code + "m" + text + "\x1b[0m"
 }
 
-func (s Style) Teal(t string) string   { return s.wrap("36", t) } // cyan stands in for teal
-func (s Style) Red(t string) string    { return s.wrap("31", t) }
-func (s Style) Violet(t string) string { return s.wrap("35", t) } // magenta stands in for violet
-func (s Style) Amber(t string) string  { return s.wrap("33", t) } // yellow stands in for amber
-func (s Style) Dim(t string) string    { return s.wrap("2", t) }
-func (s Style) Bold(t string) string   { return s.wrap("1", t) }
+// The five roles (CLI_STYLE.md › Palette). Only the ANSI-16 base colours, so the person's own
+// terminal theme decides the exact shade on a light or a dark background; faint, not grey, for
+// secondary text, because faint follows the foreground colour on both.
+func (s Style) Accent(t string) string  { return s.wrap("36", t) } // the brand teal: ✓ and the one value to read
+func (s Style) Success(t string) string { return s.wrap("36", t) } // the accent: verified is the brand colour
+func (s Style) Warn(t string) string    { return s.wrap("33", t) } // ◐ ○: a person or a look is needed
+func (s Style) Error(t string) string   { return s.wrap("31", t) } // ✕
+func (s Style) Dim(t string) string     { return s.wrap("2", t) }  // keys, meta, provenance, hints
+func (s Style) Bold(t string) string    { return s.wrap("1", t) }  // titles and the primary noun
+
+// The brand names, kept for the call sites that read better with them.
+func (s Style) Teal(t string) string   { return s.Success(t) }
+func (s Style) Red(t string) string    { return s.Error(t) }
+func (s Style) Amber(t string) string  { return s.Warn(t) }
+func (s Style) Violet(t string) string { return s.Warn(t) } // pending shares the warn colour: one palette
 
 // Symbol lines.
 func (s Style) OKLine(t string) string      { return s.Teal(OK) + " " + t }
@@ -112,10 +125,10 @@ func wide(r rune) bool {
 // Wrap breaks t into lines at most width columns wide, at spaces, keeping t's leading spaces on the
 // first line and indenting the lines after it by hang more columns than that. A word longer than a
 // line breaks after a "|" when it has one (a flag's value list); otherwise it gets a line of its own
-// rather than being cut (a URL). width < 20 means no wrapping.
+// rather than being cut (a URL). width < 20 means no wrapping. ANSI codes take no width.
 func Wrap(t string, width, hang int) []string {
 	lead := len(t) - len(strings.TrimLeft(t, " "))
-	if width < 20 || Width(t) <= width {
+	if width < 20 || Width(stripANSI(t)) <= width {
 		return []string{t}
 	}
 	type tok struct {
@@ -124,7 +137,12 @@ func Wrap(t string, width, hang int) []string {
 	}
 	var toks []tok
 	for _, w := range strings.Fields(t) {
-		if Width(w) <= width-lead-hang || !strings.Contains(w, "|") {
+		// A separator stays at the end of its line, never the start of the next.
+		if (w == Sep || w == Arrow) && len(toks) > 0 {
+			toks[len(toks)-1].s += " " + w
+			continue
+		}
+		if Width(stripANSI(w)) <= width-lead-hang || !strings.Contains(w, "|") {
 			toks = append(toks, tok{s: w})
 			continue
 		}
@@ -144,7 +162,7 @@ func Wrap(t string, width, hang int) []string {
 		if tk.glue {
 			sep = 0
 		}
-		ww := Width(tk.s)
+		ww := Width(stripANSI(tk.s))
 		if !start && curW+sep+ww > width {
 			out = append(out, cur)
 			cur, curW, start = indent, lead+hang, true

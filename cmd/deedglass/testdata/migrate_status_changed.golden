@@ -10,29 +10,29 @@ VERSION  NAME                STATE    APPLIED               CHECKSUM
 0007     witness             applied  2026-10-01 11:02 UTC  sha256:4908…c982
 0008     learn               applied  2026-10-01 11:02 UTC  sha256:1139…c18f
 0009     webhooks_ops        applied  2026-10-01 11:02 UTC  sha256:e2b3…9542
-0010     ledger              [35mpending[0m  —                     sha256:c1fb…6ee7
-0011     identity_humans     [35mpending[0m  —                     sha256:34f9…8f1c
-0012     preauth             [35mpending[0m  —                     sha256:126a…f07c
-0013     identity_agents     [35mpending[0m  —                     sha256:b19c…ca13
-0014     identity_intents    [35mpending[0m  —                     sha256:9577…e712
-0015     policy_versions_v2  [35mpending[0m  —                     sha256:82ad…43b4
-0016     gate                [35mpending[0m  —                     sha256:27ef…38e4
-0017     connectors_vault    [35mpending[0m  —                     sha256:6159…c5e3
-0018     witness             [35mpending[0m  —                     sha256:ef00…68b0
-0019     decoder             [35mpending[0m  —                     sha256:d5ec…5712
-0020     witness_l2          [35mpending[0m  —                     sha256:7d10…f427
-0021     approvals           [35mpending[0m  —                     sha256:2c70…6b6f
-0022     undo                [35mpending[0m  —                     sha256:79be…f260
-0023     overview            [35mpending[0m  —                     sha256:ca3e…65d2
-0024     learn_v2            [35mpending[0m  —                     sha256:4f58…6f51
-0025     suggestions_v2      [35mpending[0m  —                     sha256:dd82…72e9
-0026     slack_approvals     [35mpending[0m  —                     sha256:a590…3ac3
-0027     purge_org           [35mpending[0m  —                     sha256:6fc3…4696
-0028     action_schedule     [35mpending[0m  —                     sha256:ceef…7547
-0029     observe             [35mpending[0m  —                     sha256:c0f3…a29e
-0030     weekly              [35mpending[0m  —                     sha256:5b35…e588
-0031     phi_mode            [35mpending[0m  —                     sha256:6651…54b7
-0032     version_bound_l2    [35mpending[0m  —                     sha256:69d1…5a23
-0033     seal_keys_v2        [35mpending[0m  —                     sha256:8cf6…1dbc
+0010     ledger              [33mpending[0m  —                     sha256:c1fb…6ee7
+0011     identity_humans     [33mpending[0m  —                     sha256:34f9…8f1c
+0012     preauth             [33mpending[0m  —                     sha256:126a…f07c
+0013     identity_agents     [33mpending[0m  —                     sha256:b19c…ca13
+0014     identity_intents    [33mpending[0m  —                     sha256:9577…e712
+0015     policy_versions_v2  [33mpending[0m  —                     sha256:82ad…43b4
+0016     gate                [33mpending[0m  —                     sha256:27ef…38e4
+0017     connectors_vault    [33mpending[0m  —                     sha256:6159…c5e3
+0018     witness             [33mpending[0m  —                     sha256:ef00…68b0
+0019     decoder             [33mpending[0m  —                     sha256:d5ec…5712
+0020     witness_l2          [33mpending[0m  —                     sha256:7d10…f427
+0021     approvals           [33mpending[0m  —                     sha256:2c70…6b6f
+0022     undo                [33mpending[0m  —                     sha256:79be…f260
+0023     overview            [33mpending[0m  —                     sha256:ca3e…65d2
+0024     learn_v2            [33mpending[0m  —                     sha256:4f58…6f51
+0025     suggestions_v2      [33mpending[0m  —                     sha256:dd82…72e9
+0026     slack_approvals     [33mpending[0m  —                     sha256:a590…3ac3
+0027     purge_org           [33mpending[0m  —                     sha256:6fc3…4696
+0028     action_schedule     [33mpending[0m  —                     sha256:ceef…7547
+0029     observe             [33mpending[0m  —                     sha256:c0f3…a29e
+0030     weekly              [33mpending[0m  —                     sha256:5b35…e588
+0031     phi_mode            [33mpending[0m  —                     sha256:6651…54b7
+0032     version_bound_l2    [33mpending[0m  —                     sha256:69d1…5a23
+0033     seal_keys_v2        [33mpending[0m  —                     sha256:8cf6…1dbc
 [31m✕[0m 8 applied · 24 pending · 1 doesn't match this build. Run deedglass migrate verify for details.
 --- stderr

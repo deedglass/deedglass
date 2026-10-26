@@ -3,4 +3,5 @@
   sealed     body_hash sha256:70d1…f53d
   computed   sha256:014b…877c
   before it  4 deeds intact · stopped at the first break
-  next       Get a fresh export from the issuer and compare deed 5. Add --all to list every break.
+  next       Get a fresh export from the issuer and compare deed 5. Add --all to
+             list every break.

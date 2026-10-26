@@ -1,6 +1,10 @@
-○ 20 deeds · chain intact · 2 seal keys · 2026-10-02 → 2026-10-02 · keys not pinned (--strict)
+○ 20 deeds · chain intact · 2 seal keys · 2026-10-02 · keys not pinned
+  (--strict)
 ✓ Bundle manifest matches · sealed by sk_01m3xxf0…
-○ Seal keys came from the bundle itself. This shows nothing changed since export, not who sealed it.
-  next       Pin the issuer's keys: --keys https://deedglass.example/.well-known/deedglass/keys.json
-○ These deeds were sealed by Deedglass's published test keys. They mean nothing outside tests.
-  next       Verify deeds from a real issuer against its published keys.
+○ Seal keys came from the bundle itself. This shows nothing changed since
+  export, not who sealed it.
+  next  Pin the issuer's keys: --keys
+        https://deedglass.example/.well-known/deedglass/keys.json
+○ These deeds were sealed by Deedglass's published test keys. They mean nothing
+  outside tests.
+  next  Verify deeds from a real issuer against its published keys.

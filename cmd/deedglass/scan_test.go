@@ -45,7 +45,7 @@ func TestScanCLI(t *testing.T) {
 	if reANSI.MatchString(r.stdout) || strings.Contains(r.stdout, "user-canary-srv") || strings.Contains(r.stdout, "◖") {
 		t.Fatalf("--ci printed colour, the mark, or read a user config:\n%s", r.stdout)
 	}
-	if !strings.HasPrefix(r.stdout, "deedglass scan · ") || !strings.Contains(r.stdout, "Wrote deedglass-scan.sarif (SARIF 2.1.0, 2 rules).") {
+	if !strings.HasPrefix(r.stdout, "deedglass scan  ") || !strings.Contains(r.stdout, "Wrote deedglass-scan.sarif (SARIF 2.1.0, 2 rules).") {
 		t.Fatalf("%s", r.stdout)
 	}
 	if r = cli(t, env, false, "scan", "--ci", "--dir", fix, "--no-write", "--fail-under", "d"); r.code != ExitOK {
@@ -152,7 +152,7 @@ func TestScanStarNote(t *testing.T) {
 	home := t.TempDir()
 	env := map[string]string{"HOME": home}
 	r := cli(t, env, true, scanArgs()...)
-	if r.code != ExitOK || !strings.Contains(r.stdout, note) || !strings.Contains(r.stdout, "DEEDGLASS_NO_STAR=1") {
+	if r.code != ExitOK || !strings.Contains(r.stdout, note) || !strings.Contains(r.stdout, "(shown once)") {
 		t.Fatalf("first run: %d\n%s%s", r.code, r.stdout, r.stderr)
 	}
 	marker := filepath.Join(home, ".config", "deedglass", "star-note-shown")

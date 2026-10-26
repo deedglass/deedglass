@@ -94,6 +94,20 @@ func wrap(text string, w int) []string {
 	return out
 }
 
+// hang wraps t to width with later lines indented by ind; width 0 doesn't wrap.
+func hang(t string, width int, ind string) []string {
+	if width <= 0 || utf8.RuneCountInString(t) <= width {
+		return []string{t}
+	}
+	first := wrap(t, width)
+	rest := wrap(strings.Join(first[1:], " "), width-len(ind))
+	out := first[:1]
+	for _, l := range rest {
+		out = append(out, ind+l)
+	}
+	return out
+}
+
 // Thousands writes 1234 as "1,234".
 func Thousands(n int64) string {
 	s := strconv.FormatInt(n, 10)
@@ -114,7 +128,16 @@ func Thousands(n int64) string {
 
 // ScoreBlock is the score line, the small print and the deductions: never one without the others.
 func ScoreBlock(st Style, s Score) []string {
-	out := []string{st.apply(st.Bold, ScoreLine(s)), "  " + SmallPrint}
+	return scoreBlock(st, s, 0)
+}
+
+// scoreBlock is ScoreBlock with the score line wrapped to width (0: not wrapped).
+func scoreBlock(st Style, s Score, width int) []string {
+	var out []string
+	for _, l := range hang(ScoreLine(s), width, "  ") {
+		out = append(out, st.apply(st.Bold, l))
+	}
+	out = append(out, "  "+SmallPrint)
 	for _, d := range s.Deductions {
 		pts := lpad("0", 4)
 		if d.Points > 0 {
@@ -139,7 +162,7 @@ func RenderText(r *Report, st Style, width int, header string, wrote string) str
 		}
 	}
 	w(header, "")
-	w(ScoreBlock(st, r.Score)...)
+	w(scoreBlock(st, r.Score, width)...)
 	w("")
 	if r.Summary.Configs == 0 && len(r.Dependencies) == 0 && len(r.EnvNames) == 0 && len(r.ClaudeSettings) == 0 {
 		w(st.apply(st.Teal, "✓")+" No MCP client configs, agent settings, agent dependencies or database URL variables found under "+r.Dir+".", "")
@@ -194,7 +217,13 @@ func RenderText(r *Report, st Style, width int, header string, wrote string) str
 			if i > 0 {
 				lead = "     "
 			}
-			w(ind + lead + fx)
+			for j, l := range wrap(fx, width-len(ind)-len(lead)) {
+				if j > 0 {
+					lead = "     "
+				}
+				w(ind + lead + l)
+				lead = "     "
+			}
 		}
 	}
 	if len(r.Findings) > 0 {
@@ -219,12 +248,17 @@ func RenderText(r *Report, st Style, width int, header string, wrote string) str
 		e := r.PostgresError
 		w(st.apply(st.Red, "✕")+fmt.Sprintf(" Couldn't connect with the URL in %s (%s %s). The file scan was written. Run again when the database is reachable.", e.EnvVar, e.SQLState, e.Class), "")
 	default:
-		w(st.apply(st.Amber, "○")+" Postgres not checked. Add --postgres-dsn-env VAR to rank the tables your agent's role can change.", "")
+		w(hang(st.apply(st.Amber, "○")+" Postgres not checked. Add --postgres-dsn-env VAR to rank the tables your agent's role can change.", width, "  ")...)
+		w("")
 	}
 	if len(r.Policies) > 0 {
 		w(numberWord(len(r.Policies)) + " policies to add first")
 		for i, p := range r.Policies {
-			w(fmt.Sprintf("  %d. %s %s %s", i+1, pad(p.Rule, 24), pad("from "+p.Starter, 20), p.Why))
+			head := fmt.Sprintf("  %d. %s %s", i+1, pad(p.Rule, 24), st.apply(st.Dim, "from "+p.Starter))
+			w(head)
+			for _, l := range wrap(p.Why, width-7) {
+				w("     " + st.apply(st.Dim, l))
+			}
 		}
 		w("")
 	}

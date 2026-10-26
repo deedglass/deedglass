@@ -1,3 +1,5 @@
-✕ Deed 1 is missing a seal it must carry (no SLH-DSA-SHA2-128s seal by sk_01m3xxf0m5zywgtnwsz6qsf9mr).
+✕ Deed 1 is missing a seal it must carry (no SLH-DSA-SHA2-128s seal by
+  sk_01m3xxf0m5zywgtnwsz6qsf9mr).
   deed       deed_01m3xxj291vb6nxg25pympae2g (line 1)
-  next       Treat this deed as altered, or ask the issuer for the deed as it was sealed.
+  next       Treat this deed as altered, or ask the issuer for the deed as it
+             was sealed.

@@ -20,10 +20,10 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/deedglass/deedglass/api"
-	"github.com/deedglass/deedglass/cmd/deedglass/internal/ui"
 	"github.com/deedglass/deedglass/internal/approve"
 	"github.com/deedglass/deedglass/internal/approve/sections"
 	"github.com/deedglass/deedglass/internal/buildinfo"
+	"github.com/deedglass/deedglass/internal/cli/ui"
 	"github.com/deedglass/deedglass/internal/config"
 	"github.com/deedglass/deedglass/internal/connector"
 	"github.com/deedglass/deedglass/internal/console"

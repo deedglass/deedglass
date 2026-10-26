@@ -1,7 +1,7 @@
 exit 0
 --- stdout
-TIME     AGENT         TOOL                    DECISION   WITNESS             LATENCY
-AGO   support-bot   postgres.execute        allow      ✕ L2 · MISMATCH     55 ms
-AGO   ops-bot       postgres.execute        allow      ✕ L2 · MISMATCH     37 ms
-2 of 4 · next page: deedglass actions list --cursor CURSOR
+TIME     AGENT         TOOL                  DECISION  WITNESS           LATENCY
+AGO   support-bot   postgres.execute      allow     ✕ L2 · MISMATCH   55 ms
+AGO   ops-bot       postgres.execute      allow     ✕ L2 · MISMATCH   37 ms
+Showing 2 of 4 actions · next page: deedglass actions list --cursor CURSOR
 --- stderr

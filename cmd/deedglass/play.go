@@ -23,12 +23,9 @@ func runPlay(ctx context.Context, e *Env, args []string) error {
 	if len(args) > 0 {
 		return usageErr(fmt.Errorf("deedglass play takes no arguments (got %q)", args[0]), "Run deedglass play, or deedglass play --fast.")
 	}
-	o := play.Options{Out: e.Stdout}
+	o := play.Options{Out: e.Stdout, Style: e.Style, Width: e.Width, Verbose: e.Globals.Verbose > 0}
 	if e.Globals.JSON {
 		o.Out = discard{}
-	}
-	if e.Style.Color {
-		o.Style = play.Style{Teal: e.Style.Teal, Red: e.Style.Red, Amber: e.Style.Amber, Dim: e.Style.Dim, Bold: e.Style.Bold}
 	}
 	if e.IsTTY && !playValues.fast && !e.Globals.JSON {
 		o.Pace = func(ctx context.Context, d time.Duration) error {

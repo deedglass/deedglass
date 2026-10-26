@@ -323,7 +323,8 @@ func TestWitnessL2Live(t *testing.T) {
 		t.Fatalf("amends %q, want %s (%v)", amends, got.Witness.History[0].Deed, err)
 	}
 	r = run("actions", "show", late, "--org", "acme")
-	if r.code != 0 || !strings.Contains(r.stdout, "history") || !strings.Contains(r.stdout, "the Proven check timed out") || !strings.Contains(r.stdout, "amendment deed_") {
+	words := strings.Join(strings.Fields(r.stdout), " ") // actions show wraps at 80 columns
+	if r.code != 0 || !strings.Contains(words, "history") || !strings.Contains(words, "the Proven check timed out") || !strings.Contains(words, "amendment deed_") {
 		t.Fatalf("show: %+v", r)
 	}
 	t.Logf("deedglass actions show:\n%s", r.stdout)

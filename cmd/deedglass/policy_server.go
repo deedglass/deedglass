@@ -15,7 +15,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/deedglass/deedglass/cmd/deedglass/internal/ui"
+	"github.com/deedglass/deedglass/internal/cli/ui"
 	"github.com/deedglass/deedglass/internal/policy"
 	"github.com/deedglass/deedglass/pkg/deedglass"
 )

@@ -15,7 +15,7 @@ import (
 
 var update = flag.Bool("update", false, "rewrite the goldens in testdata/")
 
-// ansi is a Styler with the CLI's codes (cmd/deedglass/internal/ui), for the TTY goldens.
+// ansi is a Styler with the CLI's codes (internal/cli/ui), for the TTY goldens.
 type ansi struct{}
 
 func (ansi) Teal(s string) string  { return "\x1b[36m" + s + "\x1b[0m" }

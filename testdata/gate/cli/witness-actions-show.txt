@@ -1,15 +1,18 @@
 exit 0
 --- stdout
-orders.update_status · support-bot · YYYY-MM-DD HH:MM:SS UTC
+orders.update_status  support-bot · YYYY-MM-DD HH:MM:SS UTC
   decision   allow · rule order-status · pv_…
   execution  executed · N ms
   check      Checked · Doesn't match · readback.rest.get
              ✓ Claimed  The tool reported success.
-             ✕ Checked  orders.update_status reported success, but orders.get says status is "shipped", not "cancelled".
+             ✕ Checked  orders.update_status reported success, but orders.get
+                        says status is "shipped", not "cancelled".
                         field          expected     observed
                         body.status    cancelled    shipped
-             ✓ Checked  Postcondition held: observation.status == 200 && observation.body.id == int(args.id).
+             ✓ Checked  Postcondition held: observation.status == 200 &&
+                        observation.body.id == int(args.id).
   record     seq N · deed_… · sealed with sk_…
-  events     received → authenticated → evaluated → executing → executed → witnessing → mismatch → sealed
+  events     received → authenticated → evaluated → executing → executed →
+             witnessing → mismatch → sealed
   next       deedglass deeds show deed_…
 --- stderr

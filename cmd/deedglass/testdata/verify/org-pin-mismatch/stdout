@@ -1,3 +1,4 @@
-✕ Deed 1 belongs to org_01m3xxf0m2ekmm72j2vvks65q5, not org_01m3xxf0m4zb10tf1ggne90aej.
+✕ Deed 1 belongs to org_01m3xxf0m2ekmm72j2vvks65q5, not
+  org_01m3xxf0m4zb10tf1ggne90aej.
   deed       deed_01m3xxn3y1fb64s94xhgnkpem3 (line 1)
   next       Verify each org's deeds separately. Add --all to list every break.

@@ -1,4 +1,5 @@
-✓ 20 deeds · chain intact · 2 seal keys · 2026-10-02 → 2026-10-02
+✓ 20 deeds · chain intact · 2 seal keys · 2026-10-02
 ✓ Bundle manifest matches · sealed by sk_01m3xxf0…
-○ These deeds were sealed by Deedglass's published test keys. They mean nothing outside tests.
-  next       Verify deeds from a real issuer against its published keys.
+○ These deeds were sealed by Deedglass's published test keys. They mean nothing
+  outside tests.
+  next  Verify deeds from a real issuer against its published keys.

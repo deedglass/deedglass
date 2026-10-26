@@ -1,12 +1,14 @@
 exit 0
 --- stdout
-postgres.execute · support-bot on behalf of u_5780 · TIME UTC
+postgres.execute  support-bot on behalf of u_5780 · TIME UTC
   decision   allow · rule allow-order-updates
   execution  executed · 55 ms
   check      Proven · Doesn't match · postgres.pgoutput
              ✓ Claimed  The tool reported success.
-             ✕ Proven   Postgres changed 301 rows in public.orders. The agent reported 1.
+             ✕ Proven   Postgres changed 301 rows in public.orders. The agent
+                        reported 1.
   record     seq 28 · deed_… · sealed with sk_…
-  events     received → authenticated → evaluated → executing → executed → witnessing → mismatch → sealed
+  events     received → authenticated → evaluated → executing → executed →
+             witnessing → mismatch → sealed
   next       deedglass deeds show deed_ID
 --- stderr

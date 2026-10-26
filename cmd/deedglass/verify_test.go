@@ -389,7 +389,7 @@ func TestVerifyAcceptance(t *testing.T) {
 		t.Fatalf("%d %s", r.code, r.stdout)
 	}
 	r = cli(t, noColor, false, "verify", vec+"chains/genesis-20.jsonl", "--keys", keys)
-	if r.code != 0 || !strings.HasPrefix(r.stdout, "✓ 20 deeds · chain intact · 2 seal keys · 2026-10-02 → 2026-10-02\n") {
+	if r.code != 0 || !strings.HasPrefix(r.stdout, "✓ 20 deeds · chain intact · 2 seal keys · 2026-10-02\n") {
 		t.Fatalf("%d %s", r.code, r.stdout)
 	}
 	r = cli(t, noColor, false, "verify", vec+"chains/genesis-20.jsonl")
@@ -409,7 +409,7 @@ func TestVerifyColorAndProgress(t *testing.T) {
 	progressMin = 0
 	t.Cleanup(func() { progressMin = saved })
 	r := cliIn(t, jsonlOf(g.Lines), map[string]string{"TERM": "xterm"}, true, "verify", "-", "--keys", keys)
-	if r.code != 0 || !strings.Contains(r.stdout, "\x1b[35m◐\x1b[0m Checking") || !strings.Contains(r.stdout, "\r\x1b[K\x1b[36m✓\x1b[0m 6,000 deeds") {
+	if r.code != 0 || !strings.Contains(r.stdout, "\x1b[33m◐\x1b[0m Checking") || !strings.Contains(r.stdout, "\r\x1b[K\x1b[36m✓\x1b[0m 6,000 deeds") {
 		t.Fatalf("%q", r.stdout)
 	}
 	r = cli(t, map[string]string{"TERM": "xterm"}, true, "verify", vec+"invalid/body-edit/deed.json", "--keys", keys)
@@ -505,7 +505,7 @@ func TestVerifyKeysURL(t *testing.T) {
 		"/slow":      "(timed out after 0.1 s)",
 	} {
 		r := cli(t, noColor, false, "verify", chain, "--keys", ts.URL+path)
-		if r.code != 2 || !strings.Contains(r.stderr, want) || !strings.Contains(r.stderr, "next       Check the URL, or download keys.json") {
+		if r.code != 2 || !strings.Contains(r.stderr, want) || !strings.Contains(r.stderr, "next  Check the URL, or download keys.json") {
 			t.Errorf("%s: %d %q", path, r.code, r.stderr)
 		}
 	}

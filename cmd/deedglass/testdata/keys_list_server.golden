@@ -1,8 +1,9 @@
 exit 0
 --- stdout
-ID                             STATUS     ACTIVATED             RETIRES / RETIRED     THUMBPRINT
+ID                             STATUS     ACTIVATED             RETIRED               THUMBPRINT
 sk_01m3xxf0m2b2bf0pn7ssc7whbb  ✓ active   2026-10-02 09:00 UTC  —                     sha256:3d38…bf60
 sk_01m3xxf0m1crvjtd24mgqnmgah  retired    2026-10-02 08:00 UTC  2026-10-02 09:00 UTC  sha256:f6b1…3f33
 sk_01m3xxf0m3pr8c7exrac9sarxx  ✕ revoked  2026-10-02 07:00 UTC  2026-10-02 08:00 UTC  sha256:fdfb…1112
-3 seal keys · 1 active · published at http://SERVER/.well-known/deedglass/keys.json
+3 seal keys, 1 active
+published  http://SERVER/.well-known/deedglass/keys.json
 --- stderr
