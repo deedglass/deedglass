@@ -23,8 +23,8 @@ import (
 // --yes, backs up every file it changes, and --undo puts them back. No server, no network.
 
 // protectBadge is the README badge a successful run offers (a shields.io static badge linking to
-// the protect docs page). It is printed, never written anywhere.
-const protectBadge = "[![Agents protected by Deedglass](https://img.shields.io/badge/agents-protected%20by%20Deedglass-0f766e)](https://docs.deedglass.com/reference/protect/)"
+// deedglass.com/check, the free in-browser checker). It is printed, never written anywhere.
+const protectBadge = "[![Agents protected by Deedglass](https://img.shields.io/badge/agents-protected%20by%20Deedglass-0f766e)](https://deedglass.com/check)"
 
 type protectOpts struct {
 	dryRun, yes, undo, project bool

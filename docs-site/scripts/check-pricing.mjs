@@ -17,7 +17,7 @@ const word = (p) => ({ toString: () => p, test: (s) => {
   for (let i = s.indexOf(p); i >= 0; i = s.indexOf(p, i + 1)) if (!/[A-Za-z0-9-]/.test(s.charAt(i + p.length))) return true;
   return false;
 } });
-export const banned = [/\$199/, /\$390/, /[Ff]ounding band/, phrase('deedglass.com/check'), word('deedglass.com/pro'), phrase('deedglass.com/agencies')];
+export const banned = [/\$199/, /\$390/, /[Ff]ounding band/, word('deedglass.com/pro'), phrase('deedglass.com/agencies')];
 // The repo is public (docs/PUBLIC_REPO_SWITCH.md): "open source" is allowed now.
 export const pricingProblems = (text) => banned.filter((re) => re.test(text)).map(String);
 if (process.argv[1] && import.meta.url.endsWith(process.argv[1].split('/').pop())) main();

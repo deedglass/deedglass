@@ -146,7 +146,7 @@ test('pricing: a retired offer or the licence-category phrase fails', async () =
   const { pricingProblems, FAQ_FREE } = await import('../check-pricing.mjs');
   assert.ok(pricingProblems('Get one at deedglass.com/pro').length > 0); // DL-131
   assert.ok(pricingProblems('The $199 Check').length > 0);
-  assert.ok(pricingProblems('see deedglass.com/check').length > 0);
+  assert.equal(pricingProblems('try it at deedglass.com/check').length, 0); // /check is the live free checker now
   assert.equal(pricingProblems('an ' + 'open' + ' source core').length, 0); // public since the switch
   assert.notEqual(FAQ_FREE.replace('.', ''), FAQ_FREE);
 });
