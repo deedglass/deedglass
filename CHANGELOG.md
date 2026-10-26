@@ -19,7 +19,7 @@ this file by `scripts/release-notes.sh`.
   edited it since, takes out only the guard). `--client`, `--project`, `--hook-command` and `--json`.
   The hook starts deedglass by an absolute path, or with `npx -y deedglass@<version>` after an npx
   run, so it keeps working after protect ends. After a run that writes, it prints two optional lines:
-  a README badge ("Agents protected by Deedglass", linking to deedglass.com/check) and a share hint;
+  a README badge ("Agents protected by Deedglass", linking to the protect docs page) and a share hint;
   `--json` carries it as `badge`. `docs/protect.md`.
 - 17 shell guard catalog rows for cloud, infrastructure and hosted-database CLIs, each checked
   against its CLI's reference page on 2026-10-26: `railway volume delete`, `railway delete`, a

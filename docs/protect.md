@@ -93,12 +93,12 @@ shell's `PATH` (Cursor started from the Dock, for example). So it writes:
 After a run that adds the guard, protect prints two optional lines and asks nothing:
 
 ```text
-  badge  [![Agents protected by Deedglass](https://img.shields.io/badge/agents-protected%20by%20Deedglass-0f766e)](https://deedglass.com/check)
+  badge  [![Agents protected by Deedglass](https://img.shields.io/badge/agents-protected%20by%20Deedglass-0f766e)](https://docs.deedglass.com/reference/protect/)
   share  Optional: paste it in your README, or send a teammate npx deedglass protect.
 ```
 
 The first is a [shields.io](https://shields.io) static badge for your README that links to
-[deedglass.com/check](https://deedglass.com/check); protect writes it nowhere. The badge line stays
+this page on docs.deedglass.com; protect writes it nowhere. The badge line stays
 on one line so it copies whole. `--json` carries it as `badge` (empty when nothing was written),
 and `NO_COLOR` turns off colour on these lines as on every other.
 
