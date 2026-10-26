@@ -35,7 +35,7 @@ describe('transport and client (S31 §6)', () => {
     expect(h['deedglass-version']).toBe(API_VERSION);
     expect(h['idempotency-key']).toMatch(/^sdk_[0-9a-f-]{36}$/);
     expect(h['authorization']).toBe('Bearer ' + KEY);
-    expect(h['user-agent']).toMatch(/^deedglass-sdk-typescript\/0\.10\.0 \(node\//);
+    expect(h['user-agent']).toMatch(/^deedglass-sdk-typescript\/0\.11\.0 \(node\//);
     expect(s.calls[0]!.body).toMatchObject({ tool: 'billing.refund_customer', mode: 'gateway', wait: 10, context: { client: { name: '@deedglass/sdk', version: '0.11.0' }, transport: 'sdk' } });
   });
 
