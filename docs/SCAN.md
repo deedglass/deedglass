@@ -312,7 +312,7 @@ package version, variable name or host. Without `--share`, no link is ever print
 Exit codes: 0 the report was written · 1 below `--fail-under`, or the Postgres part failed (the file
 part was written) · 2 a usage error, or the DSN variable is unset.
 
-## In the browser: deedglass.com/check
+## In the browser: the /check page
 
 `cmd/deedglass-wasm` (`make wasm`) builds the scan and the shell guard for the browser
 (`GOOS=js GOARCH=wasm`). The page pastes one config file into an in-memory file system
