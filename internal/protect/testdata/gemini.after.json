@@ -1,0 +1,28 @@
+{
+	"theme": "GitHub",
+	"hooks": {
+		"BeforeTool": [
+			{
+				"matcher": "^write_file$",
+				"hooks": [
+					{
+						"type": "command",
+						"command": "./check.sh",
+						"timeout": 5000
+					}
+				]
+			},
+			{
+				"matcher": "^run_shell_command$",
+				"hooks": [
+					{
+						"name": "deedglass-shell-guard",
+						"type": "command",
+						"command": "/usr/local/bin/deedglass guard shell --client gemini",
+						"timeout": 10000
+					}
+				]
+			}
+		]
+	}
+}

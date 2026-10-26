@@ -9,6 +9,7 @@ Setup
   doctor              Check config, database and keys
   connect             Put your own Postgres behind Deedglass
   scan                Show what your agent setup can change
+  protect             Add the shell guard to every coding agent
   play                Watch the 301 scene offline, no Docker
   serve               Run the API, the rules and the Console
   migrate             Apply or check database migrations

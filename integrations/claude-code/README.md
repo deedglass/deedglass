@@ -30,29 +30,30 @@ A Claude Code plugin that adds:
 Run `npx deedglass init` in a terminal first. `mcp serve` reads the key it wrote
 (`.deedglass/quickstart.key`) or `DEEDGLASS_API_KEY`.
 
-## The shell guard (off by default)
+## The shell guard (on by default)
 
-`hooks/hooks.json` registers one hook: before each Bash command, `hooks/shell-guard.sh` runs. Until
-you set `DEEDGLASS_SHELL_GUARD`, it reads its input and answers nothing, so Claude Code behaves as if
-the hook weren't there. To turn it on, put this in `.claude/settings.json` or
-`~/.claude/settings.json` and restart Claude Code:
+`hooks/hooks.json` registers one hook: before each Bash command, `hooks/shell-guard.sh` runs. It is
+on (`ask`) by default. To turn it off, or to make it deny instead of ask, put this in
+`.claude/settings.json` or `~/.claude/settings.json` and restart Claude Code:
 
 ```json
 {
-  "env": { "DEEDGLASS_SHELL_GUARD": "ask" }
+  "env": { "DEEDGLASS_SHELL_GUARD": "off" }
 }
 ```
 
-With `ask`, a command that would destroy database data waits for your yes, with one sentence such as
+With `ask` (the default), a command that would destroy database data or infrastructure waits for your yes, with one sentence such as
 "Deedglass asks first: prisma db push --force-reset resets the database before it pushes the schema,
 which deletes every row." With `deny`, it doesn't run and Claude reads why. It needs a `deedglass`
 binary with the `guard shell` command on your `PATH`; it runs that binary locally and uses no
 network. It never answers allow, and your own permission rules still apply. What it reads, the
 catalog and what it can't see: [docs/SHELL_GUARD.md](../../docs/SHELL_GUARD.md).
 
-If it is on but can't check (no `deedglass` on your `PATH`, or an older one without `guard shell`),
-it never blocks the command: with `ask` it answers nothing and shows you a note saying it checked
-nothing; with `deny` it exits 1, which Claude Code shows as a non-blocking error.
+If it can't check (no `deedglass` on your `PATH`, or an older one without `guard shell`), it never
+blocks the command: left unset it answers nothing and says nothing; set to `ask` it answers nothing
+and shows you a note saying it checked nothing; with `deny` it exits 1, which Claude Code shows as a
+non-blocking error. To add the guard to Cursor, Codex, Gemini CLI and Copilot CLI too, run
+`npx deedglass protect` ([docs/protect.md](../../docs/protect.md)).
 
 **On Windows**, the hook runs `sh`, which Git for Windows provides. The hook sets
 `"onFailure": "continue"`, so where it can't start (no Git Bash, so Claude Code would run it in

@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "hooks": {
+    "afterFileEdit": [
+      {
+        "command": "./format.sh"
+      }
+    ],
+    "beforeShellExecution": [
+      {
+        "command": "/usr/local/bin/deedglass guard shell --client cursor",
+        "timeout": 10
+      }
+    ]
+  }
+}

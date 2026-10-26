@@ -46,6 +46,7 @@ src/content/docs/guides/neon.md
 src/content/docs/guides/observe-beside-another-gate.md
 src/content/docs/reference/observe.md
 src/content/docs/reference/shell-guard.md
+src/content/docs/reference/protect.md
 src/content/docs/reference/a2a.md
 src/content/docs/reference/witness-debezium.md
 public/images/

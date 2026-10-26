@@ -7,6 +7,44 @@ this file by `scripts/release-notes.sh`.
 
 ## [Unreleased]
 
+### Added
+
+- `deedglass protect` (also `npx deedglass protect`): one command adds the shell guard to every
+  coding agent it finds in your home directory (Claude Code, Cursor, Codex CLI, Gemini CLI, GitHub
+  Copilot CLI), from the same hook configs `guard shell --print-config` prints. It prints one plan
+  and writes only after `[y/N]` or `--yes`; `--dry-run` writes nothing; it merges into the JSON
+  already there, keeps your own hooks and settings in their order, adds nothing to a file that
+  already runs the guard, and leaves alone a file it can't read as plain JSON. Every file is backed
+  up to `~/.deedglass/protect` first, and `--undo` puts each one back byte for byte (or, if you
+  edited it since, takes out only the guard). `--client`, `--project`, `--hook-command` and `--json`.
+  The hook starts deedglass by an absolute path, or with `npx -y deedglass@<version>` after an npx
+  run, so it keeps working after protect ends. `docs/protect.md`.
+- 17 shell guard catalog rows for cloud, infrastructure and hosted-database CLIs, each checked
+  against its CLI's reference page on 2026-10-26: `railway volume delete`, `railway delete`, a
+  `curl` to Railway's GraphQL API with `volumeDelete` or `projectDelete`, `supabase projects delete`,
+  `neonctl branches delete` and `projects delete`, `terraform destroy` and `apply -destroy`,
+  `pulumi destroy`, `aws rds delete-db-instance` and `delete-db-cluster`, `aws s3 rb --force`,
+  `aws s3 rm --recursive`, `gcloud sql instances delete`, `kubectl delete namespace | pvc | pv`,
+  `docker volume rm | remove | prune`, `fly volumes destroy`, `pscale database delete` and
+  `turso db destroy`. Their safe neighbours pass (`terraform plan -destroy`, `pulumi destroy
+  --preview-only`, `aws s3 rm --recursive --dryrun`, `kubectl get ns`, `kubectl delete pod`,
+  `supabase db reset` on the local stack). `railway down` is not in the catalog: Railway's reference
+  says it removes the latest deployment, not data.
+
+### Changed
+
+- The Claude Code plugin's shell guard is on (`ask`) by default. `DEEDGLASS_SHELL_GUARD=off` (or
+  `0`, `false`, `no`) turns it off and `deny` makes it deny. Left unset with no `deedglass` on
+  `PATH`, it answers nothing and says nothing, so installing the plugin without the binary changes
+  nothing.
+
+### Known limits
+
+- `protect` reads plain JSON only: a settings file with comments is skipped, with the reason in the
+  plan. It rewrites a file it changes with the same keys in the same order and the file's own indent,
+  so a compact one-line file comes back indented.
+- No attack-suite case was added: attack-group digests change only with a founder-approved ADR.
+
 ## [0.11.0] - 2026-10-26
 
 A calmer terminal. Every command now builds its output from one style package

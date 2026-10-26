@@ -79,6 +79,7 @@ export const IMPORTS = {
   'docs/exports/ocsf.md': 'reference/exports/ocsf',
   'docs/exports/prov-json.md': 'reference/exports/prov-json',
   'docs/SHELL_GUARD.md': 'reference/shell-guard',
+  'docs/protect.md': 'reference/protect',
   'docs/A2A.md': 'reference/a2a',
   'docs/WITNESS_DEBEZIUM.md': 'reference/witness-debezium',
   'docs/SECURITY_PACK.md': 'reference/security-pack',

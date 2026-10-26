@@ -19,6 +19,8 @@ package shellguard
 import (
 	"encoding/json"
 	"path/filepath"
+	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -299,6 +301,13 @@ func (e *Entry) match(prog string, args, env []string) (string, bool) {
 		return "", false
 	}
 	label := prog
+	if e.custom != nil {
+		got, ok := e.custom(args)
+		if !ok {
+			return "", false
+		}
+		return label + " " + got, true
+	}
 	if e.task {
 		w := ""
 		for _, a := range nf {
@@ -313,11 +322,25 @@ func (e *Entry) match(prog string, args, env []string) (string, bool) {
 		}
 		label += " " + w
 	} else if len(e.words) > 0 {
-		got := seq(nf, e.words)
-		if got == nil {
+		at, got := seq(nf, e.words)
+		if got == nil || e.first && at != 0 {
 			return "", false
 		}
 		label += " " + strings.Join(got, " ")
+		if len(e.then) > 0 {
+			kind := ""
+			for _, a := range nf[at+len(got):] {
+				for _, k := range e.then {
+					if kind == "" && (a == k || strings.HasPrefix(a, k+"/") || slices.Contains(strings.Split(a, ","), k)) {
+						kind = a
+					}
+				}
+			}
+			if kind == "" {
+				return "", false
+			}
+			label += " " + kind
+		}
 	}
 	for _, g := range e.flags {
 		f := ""
@@ -345,24 +368,71 @@ func (e *Entry) match(prog string, args, env []string) (string, bool) {
 	return label, true
 }
 
-// seq finds words in nf, consecutively ("*" is any word), and returns what it matched.
-func seq(nf, words []string) []string {
+// seq finds words in nf, consecutively ("*" is any word, "a|b" either), and returns where and what
+// it matched.
+func seq(nf, words []string) (int, []string) {
 	for i := range nf {
 		if i+len(words) > len(nf) {
-			return nil
+			return -1, nil
 		}
 		ok := true
 		for j, w := range words {
-			if w != "*" && nf[i+j] != w {
+			if w != "*" && !slices.Contains(strings.Split(w, "|"), nf[i+j]) {
 				ok = false
 				break
 			}
 		}
 		if ok {
-			return nf[i : i+len(words)]
+			return i, nf[i : i+len(words)]
 		}
 	}
-	return nil
+	return -1, nil
+}
+
+// terraformDestroy matches terraform destroy and terraform apply -destroy (destroy is "a
+// convenience alias" for apply -destroy); plan -destroy only shows a plan.
+func terraformDestroy(args []string) (string, bool) {
+	nf := nonflag(args)
+	for _, a := range args {
+		if a == "-help" || a == "-h" {
+			return "", false
+		}
+	}
+	for _, w := range nf {
+		switch {
+		case w == "destroy":
+			return "destroy", true
+		case w == "apply" && (hasFlag(args, "-destroy") || hasFlag(args, "--destroy")):
+			return "apply -destroy", true
+		}
+		if strings.Contains(w, "=") { // -chdir=dir and other values never stand alone
+			continue
+		}
+		return "", false
+	}
+	return "", false
+}
+
+// railwayMutation is a delete mutation in Railway's public GraphQL API (docs.railway.com guides:
+// volumeDelete in Manage Volumes, projectDelete in Manage Projects).
+var railwayMutation = regexp.MustCompile(`\b(volumeDelete|projectDelete)\b`)
+
+// railwayAPIDelete matches an HTTP client sending volumeDelete or projectDelete to Railway's
+// GraphQL endpoint (backboard.railway.com; backboard.railway.app in Railway's PocketOS write-up).
+func railwayAPIDelete(args []string) (string, bool) {
+	host, mutation := false, ""
+	for _, a := range args {
+		if strings.Contains(a, "backboard.railway.app") || strings.Contains(a, "backboard.railway.com") {
+			host = true
+		}
+		if m := railwayMutation.FindString(a); m != "" && mutation == "" {
+			mutation = m
+		}
+	}
+	if !host || mutation == "" {
+		return "", false
+	}
+	return "… " + mutation + " (Railway API)", true
 }
 
 func nonflag(args []string) []string {
@@ -552,7 +622,7 @@ func (k *checker) sql(prog string, rest []string, c *cmd) {
 			texts = append(texts, strings.Join(nf[1:], " "))
 		}
 	case "prisma":
-		if seq(nonflag(rest), []string{"db", "execute"}) == nil {
+		if _, got := seq(nonflag(rest), []string{"db", "execute"}); got == nil {
 			return
 		}
 		label, stdin = "prisma db execute", hasFlag(rest, "--stdin")

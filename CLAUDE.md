@@ -332,9 +332,13 @@ and "open source" until the repo is public. Style bans: "revolutionary", "world-
   each ask), `TestAsks` (every catalog row has a case), `TestOrdinary` (200+ ordinary commands, 0 asks),
   `TestLimits` (what it doesn't see, kept equal to docs/SHELL_GUARD.md), `TestOnlyAdds`, `TestDocListsCatalog`,
   `FuzzCheck`; `cmd/deedglass` `TestGuardShell*` (the hook never answers allow and never exits 2);
-  `scripts/check-listings.mjs` keeps the plugin's one hook off unless `DEEDGLASS_SHELL_GUARD` is set, with
-  `"onFailure": "continue"` and a script that never exits 2; `cmd/deedglass` `TestPluginHook*` runs that script
-  (off: no output, exit 0; can't check: ask fails open, deny exits 1; on: the real CLI's answer).
+  `scripts/check-listings.mjs` keeps the plugin's one hook answering nothing when `DEEDGLASS_SHELL_GUARD` is off
+  (or unset and unable to check; ask is the default since v0.12.0), with `"onFailure": "continue"` and a script that
+  never exits 2; `cmd/deedglass` `TestPluginHook*` runs that script (off: no output, exit 0; default: ask; can't
+  check: unset says nothing, ask fails open, deny exits 1; on: the real CLI's answer). `internal/protect`
+  (`deedglass protect`): `TestEachAgent` (each agent's format against a temp HOME, goldens in `testdata/`),
+  idempotence, skipped files, surgical undo; `cmd/deedglass` `TestProtectEndToEnd` (`--yes` then `--undo` leaves
+  HOME byte-identical).
 - `internal/a2a` (TY-07, ADR-113): `TestGoldens` (every acting, reading and refused row against the fake peer
   `internal/a2a/a2atest` and a fake Gate: an acting call never reaches the peer without `authorized`, the caller's
   credential never does), `TestApprovalRunsOnce`, `TestTwoAgentDelegation`, `TestClassify`, `TestCheckChain`, `TestCard`,

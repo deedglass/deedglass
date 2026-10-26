@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "hooks": {
+    "preToolUse": [
+      {
+        "type": "command",
+        "bash": "/usr/local/bin/deedglass guard shell --client copilot || true",
+        "timeoutSec": 10
+      }
+    ]
+  }
+}

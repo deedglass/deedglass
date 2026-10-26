@@ -1,5 +1,5 @@
 {
-  "description": "Deedglass shell guard: off unless DEEDGLASS_SHELL_GUARD is ask or deny. Before a Bash command runs, it asks first when the command would destroy database data. A second check, not a sandbox.",
+  "description": "Deedglass shell guard: on (ask) by default; DEEDGLASS_SHELL_GUARD=deny denies, DEEDGLASS_SHELL_GUARD=off turns it off. Before a Bash command runs, it asks first when the command would destroy database data or infrastructure. A second check, not a sandbox.",
   "hooks": {
     "PreToolUse": [
       {

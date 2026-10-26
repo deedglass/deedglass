@@ -77,7 +77,9 @@ agent's shell command would destroy database data. It can be installed as each a
 with the same catalog and the same sentence everywhere. One table in
 `internal/shellguard/clients.go` holds each client's file, event, answer format and snippet;
 `deedglass guard shell --print-config --client <name>` prints the snippet on stdout (where it goes
-and the client's limits on stderr) and writes no file. Merge it with any hooks already in that file.
+and the client's limits on stderr) and writes no file. Merge it with any hooks already in that file,
+or let `deedglass protect` merge it into every agent it finds, with a backup and `--undo`
+([protect.md](protect.md)).
 Every snippet needs a `deedglass` binary on the agent's `PATH` ([INSTALL.md](INSTALL.md)); it runs
 locally and uses no network.
 
@@ -221,7 +223,7 @@ repository; Copilot CLI also reads `~/.copilot/hooks/*.json`.
 
 ### Claude Code
 
-The plugin carries the hook, off until `DEEDGLASS_SHELL_GUARD` is set; without the plugin:
+The plugin carries the hook, on (`ask`) by default since v0.12.0 (`DEEDGLASS_SHELL_GUARD=off` turns it off); without the plugin:
 
 ```json
 {

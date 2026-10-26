@@ -178,6 +178,12 @@ demo database takes the port 10 above it). Every later command run in that direc
 ports in `.deedglass/stack.json`. `npx -y deedglass init --purge` removes the containers, the
 volumes and the files in `.deedglass/` when you're done.
 
+**Protect every agent in one command:** `npx deedglass protect` adds the shell guard to Claude Code,
+Cursor, Codex CLI, Gemini CLI and GitHub Copilot CLI, so a command such as `railway volume delete`,
+`supabase db reset --linked` or `terraform destroy` waits for your yes (Codex and Gemini CLI deny it
+instead). It backs up each file first and `--undo` puts them back: a second check, not a sandbox
+([`docs/protect.md`](docs/protect.md)).
+
 Then put your own Postgres behind it (Supabase, Neon or any Postgres 16 to 18): `npx -y deedglass
 connect "$DATABASE_URL"` runs read-only checks and prints a plan; `--apply` sets it up
 ([guide](https://docs.deedglass.com/get-started/postgres/)).
