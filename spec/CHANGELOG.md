@@ -5,6 +5,9 @@ Every change to the text in `spec/`, newest first. Dates are UTC. "Edition" is a
 
 ## Unreleased
 
+- **AAP-H v0.1.0-draft** (`aap-h/`): Agent Action Provenance for Health, a draft for comment. FHIR R4
+  profiles and extensions, a JSON envelope and its schema, verification rules, conformance levels and
+  examples. It is separate from the record spec: no deed, bundle or verifier behaviour changes.
 - **Head timestamps** (TY-03, ADR-112), in `v2/BUNDLE_FORMAT.md` §9: an optional `timestamps.json`
   between `keys.json` and `deeds.jsonl`, listed in the manifest, holding chain heads with RFC 3161
   tokens and transparency-service registrations (RFC 9943 Signed Statement, RFC 9942

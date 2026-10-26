@@ -1,0 +1,252 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "aaph-claimed-outcome",
+  "url": "https://deedglass.com/fhir/aap-h/StructureDefinition/aaph-claimed-outcome",
+  "name": "AaphClaimedOutcome",
+  "title": "AAP-H Claimed outcome",
+  "version": "0.1.0-draft",
+  "status": "draft",
+  "experimental": true,
+  "date": "2026-10-26",
+  "publisher": "Deedglass contributors",
+  "jurisdiction": [
+    {
+      "coding": [
+        {
+          "system": "http://unstats.un.org/unsd/methods/m49/m49.htm",
+          "code": "001",
+          "display": "World"
+        }
+      ]
+    }
+  ],
+  "copyright": "Apache-2.0. Part of Agent Action Provenance for Health (AAP-H) v0.1 draft.",
+  "description": "What the tool's response or the agent said happened.",
+  "fhirVersion": "4.0.1",
+  "kind": "complex-type",
+  "abstract": false,
+  "context": [
+    {
+      "type": "element",
+      "expression": "Provenance"
+    },
+    {
+      "type": "element",
+      "expression": "AuditEvent"
+    }
+  ],
+  "type": "Extension",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Extension",
+  "derivation": "constraint",
+  "differential": {
+    "element": [
+      {
+        "id": "Extension",
+        "path": "Extension",
+        "short": "Claimed outcome",
+        "definition": "What the tool's response or the agent said happened."
+      },
+      {
+        "id": "Extension.extension",
+        "path": "Extension.extension",
+        "slicing": {
+          "discriminator": [
+            {
+              "type": "value",
+              "path": "url"
+            }
+          ],
+          "rules": "closed"
+        }
+      },
+      {
+        "id": "Extension.extension:status",
+        "path": "Extension.extension",
+        "sliceName": "status",
+        "short": "succeeded, failed or unknown",
+        "definition": "succeeded, failed or unknown.",
+        "min": 1,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:status.extension",
+        "path": "Extension.extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.extension:status.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "status"
+      },
+      {
+        "id": "Extension.extension:status.value[x]",
+        "path": "Extension.extension.value[x]",
+        "min": 1,
+        "type": [
+          {
+            "code": "code"
+          }
+        ],
+        "binding": {
+          "strength": "required",
+          "valueSet": "https://deedglass.com/fhir/aap-h/ValueSet/aaph-claimed-status"
+        }
+      },
+      {
+        "id": "Extension.extension:assertion",
+        "path": "Extension.extension",
+        "sliceName": "assertion",
+        "short": "A short code for the effect the agent claimed, such as payer-approved",
+        "definition": "A short code for the effect the agent claimed, such as payer-approved.",
+        "min": 0,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:assertion.extension",
+        "path": "Extension.extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.extension:assertion.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "assertion"
+      },
+      {
+        "id": "Extension.extension:assertion.value[x]",
+        "path": "Extension.extension.value[x]",
+        "min": 1,
+        "type": [
+          {
+            "code": "code"
+          }
+        ]
+      },
+      {
+        "id": "Extension.extension:resultDigest",
+        "path": "Extension.extension",
+        "sliceName": "resultDigest",
+        "short": "sha256: digest of the tool's response",
+        "definition": "sha256: digest of the tool's response.",
+        "min": 0,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:resultDigest.extension",
+        "path": "Extension.extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.extension:resultDigest.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "resultDigest"
+      },
+      {
+        "id": "Extension.extension:resultDigest.value[x]",
+        "path": "Extension.extension.value[x]",
+        "min": 1,
+        "type": [
+          {
+            "code": "string"
+          }
+        ]
+      },
+      {
+        "id": "Extension.extension:errorCode",
+        "path": "Extension.extension",
+        "sliceName": "errorCode",
+        "short": "The error code the tool returned",
+        "definition": "The error code the tool returned.",
+        "min": 0,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:errorCode.extension",
+        "path": "Extension.extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.extension:errorCode.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "errorCode"
+      },
+      {
+        "id": "Extension.extension:errorCode.value[x]",
+        "path": "Extension.extension.value[x]",
+        "min": 1,
+        "type": [
+          {
+            "code": "string"
+          }
+        ]
+      },
+      {
+        "id": "Extension.extension:started",
+        "path": "Extension.extension",
+        "sliceName": "started",
+        "short": "When the call started",
+        "definition": "When the call started.",
+        "min": 0,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:started.extension",
+        "path": "Extension.extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.extension:started.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "started"
+      },
+      {
+        "id": "Extension.extension:started.value[x]",
+        "path": "Extension.extension.value[x]",
+        "min": 1,
+        "type": [
+          {
+            "code": "dateTime"
+          }
+        ]
+      },
+      {
+        "id": "Extension.extension:finished",
+        "path": "Extension.extension",
+        "sliceName": "finished",
+        "short": "When the call finished",
+        "definition": "When the call finished.",
+        "min": 0,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:finished.extension",
+        "path": "Extension.extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.extension:finished.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "finished"
+      },
+      {
+        "id": "Extension.extension:finished.value[x]",
+        "path": "Extension.extension.value[x]",
+        "min": 1,
+        "type": [
+          {
+            "code": "dateTime"
+          }
+        ]
+      },
+      {
+        "id": "Extension.url",
+        "path": "Extension.url",
+        "fixedUri": "https://deedglass.com/fhir/aap-h/StructureDefinition/aaph-claimed-outcome"
+      },
+      {
+        "id": "Extension.value[x]",
+        "path": "Extension.value[x]",
+        "max": "0"
+      }
+    ]
+  }
+}

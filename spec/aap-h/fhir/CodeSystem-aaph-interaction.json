@@ -1,0 +1,76 @@
+{
+  "resourceType": "CodeSystem",
+  "id": "aaph-interaction",
+  "url": "https://deedglass.com/fhir/aap-h/CodeSystem/aaph-interaction",
+  "name": "AaphInteraction",
+  "title": "AAP-H Interaction",
+  "version": "0.1.0-draft",
+  "status": "draft",
+  "experimental": true,
+  "date": "2026-10-26",
+  "publisher": "Deedglass contributors",
+  "jurisdiction": [
+    {
+      "coding": [
+        {
+          "system": "http://unstats.un.org/unsd/methods/m49/m49.htm",
+          "code": "001",
+          "display": "World"
+        }
+      ]
+    }
+  ],
+  "copyright": "Apache-2.0. Part of Agent Action Provenance for Health (AAP-H) v0.1 draft.",
+  "description": "The kind of call.",
+  "caseSensitive": true,
+  "valueSet": "https://deedglass.com/fhir/aap-h/ValueSet/aaph-interaction",
+  "content": "complete",
+  "count": 9,
+  "concept": [
+    {
+      "code": "create",
+      "display": "Create",
+      "definition": "Creates a record."
+    },
+    {
+      "code": "read",
+      "display": "Read",
+      "definition": "Reads one record."
+    },
+    {
+      "code": "update",
+      "display": "Update",
+      "definition": "Replaces a record."
+    },
+    {
+      "code": "patch",
+      "display": "Patch",
+      "definition": "Changes part of a record."
+    },
+    {
+      "code": "delete",
+      "display": "Delete",
+      "definition": "Deletes a record."
+    },
+    {
+      "code": "search",
+      "display": "Search",
+      "definition": "Searches records."
+    },
+    {
+      "code": "operation",
+      "display": "Operation",
+      "definition": "A named operation such as Claim/$submit."
+    },
+    {
+      "code": "execute",
+      "display": "Execute",
+      "definition": "Runs a statement or command that may change data."
+    },
+    {
+      "code": "other",
+      "display": "Other",
+      "definition": "Anything else."
+    }
+  ]
+}

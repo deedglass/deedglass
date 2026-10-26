@@ -1,0 +1,51 @@
+{
+  "resourceType": "CodeSystem",
+  "id": "aaph-authorization-kind",
+  "url": "https://deedglass.com/fhir/aap-h/CodeSystem/aaph-authorization-kind",
+  "name": "AaphAuthorizationKind",
+  "title": "AAP-H Authorization kind",
+  "version": "0.1.0-draft",
+  "status": "draft",
+  "experimental": true,
+  "date": "2026-10-26",
+  "publisher": "Deedglass contributors",
+  "jurisdiction": [
+    {
+      "coding": [
+        {
+          "system": "http://unstats.un.org/unsd/methods/m49/m49.htm",
+          "code": "001",
+          "display": "World"
+        }
+      ]
+    }
+  ],
+  "copyright": "Apache-2.0. Part of Agent Action Provenance for Health (AAP-H) v0.1 draft.",
+  "description": "What allowed the agent to act.",
+  "caseSensitive": true,
+  "valueSet": "https://deedglass.com/fhir/aap-h/ValueSet/aaph-authorization-kind",
+  "content": "complete",
+  "count": 4,
+  "concept": [
+    {
+      "code": "smart-scope",
+      "display": "SMART scope",
+      "definition": "SMART on FHIR scopes granted to the client."
+    },
+    {
+      "code": "consent",
+      "display": "Consent",
+      "definition": "A patient consent or consent artefact, such as an ABDM consent artefact."
+    },
+    {
+      "code": "grant",
+      "display": "Grant",
+      "definition": "Another grant: a role, a delegation, a contract."
+    },
+    {
+      "code": "other",
+      "display": "Other",
+      "definition": "Anything else."
+    }
+  ]
+}

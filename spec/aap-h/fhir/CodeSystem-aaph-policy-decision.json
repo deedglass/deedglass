@@ -1,0 +1,46 @@
+{
+  "resourceType": "CodeSystem",
+  "id": "aaph-policy-decision",
+  "url": "https://deedglass.com/fhir/aap-h/CodeSystem/aaph-policy-decision",
+  "name": "AaphPolicyDecision",
+  "title": "AAP-H Policy decision",
+  "version": "0.1.0-draft",
+  "status": "draft",
+  "experimental": true,
+  "date": "2026-10-26",
+  "publisher": "Deedglass contributors",
+  "jurisdiction": [
+    {
+      "coding": [
+        {
+          "system": "http://unstats.un.org/unsd/methods/m49/m49.htm",
+          "code": "001",
+          "display": "World"
+        }
+      ]
+    }
+  ],
+  "copyright": "Apache-2.0. Part of Agent Action Provenance for Health (AAP-H) v0.1 draft.",
+  "description": "What the policy decided for an action.",
+  "caseSensitive": true,
+  "valueSet": "https://deedglass.com/fhir/aap-h/ValueSet/aaph-policy-decision",
+  "content": "complete",
+  "count": 3,
+  "concept": [
+    {
+      "code": "allow",
+      "display": "Allow",
+      "definition": "The action may run."
+    },
+    {
+      "code": "deny",
+      "display": "Deny",
+      "definition": "The action was refused and did not run."
+    },
+    {
+      "code": "require-approval",
+      "display": "Require approval",
+      "definition": "The action waits for one or more people to approve it."
+    }
+  ]
+}

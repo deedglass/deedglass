@@ -1,0 +1,46 @@
+{
+  "resourceType": "CodeSystem",
+  "id": "aaph-verification-result",
+  "url": "https://deedglass.com/fhir/aap-h/CodeSystem/aaph-verification-result",
+  "name": "AaphVerificationResult",
+  "title": "AAP-H Verification result",
+  "version": "0.1.0-draft",
+  "status": "draft",
+  "experimental": true,
+  "date": "2026-10-26",
+  "publisher": "Deedglass contributors",
+  "jurisdiction": [
+    {
+      "coding": [
+        {
+          "system": "http://unstats.un.org/unsd/methods/m49/m49.htm",
+          "code": "001",
+          "display": "World"
+        }
+      ]
+    }
+  ],
+  "copyright": "Apache-2.0. Part of Agent Action Provenance for Health (AAP-H) v0.1 draft.",
+  "description": "What a check of the system of record found after an action.",
+  "caseSensitive": true,
+  "valueSet": "https://deedglass.com/fhir/aap-h/ValueSet/aaph-verification-result",
+  "content": "complete",
+  "count": 3,
+  "concept": [
+    {
+      "code": "match",
+      "display": "Match",
+      "definition": "The system of record shows what was claimed."
+    },
+    {
+      "code": "mismatch",
+      "display": "Doesn't match",
+      "definition": "The system of record shows something other than what was claimed, or nothing."
+    },
+    {
+      "code": "cannot-check",
+      "display": "Can't check",
+      "definition": "No conclusion: no read access, the read failed, the system can't be read back, or the check found a gap."
+    }
+  ]
+}

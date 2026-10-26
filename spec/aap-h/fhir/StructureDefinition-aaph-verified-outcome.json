@@ -1,0 +1,256 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "aaph-verified-outcome",
+  "url": "https://deedglass.com/fhir/aap-h/StructureDefinition/aaph-verified-outcome",
+  "name": "AaphVerifiedOutcome",
+  "title": "AAP-H Verified outcome",
+  "version": "0.1.0-draft",
+  "status": "draft",
+  "experimental": true,
+  "date": "2026-10-26",
+  "publisher": "Deedglass contributors",
+  "jurisdiction": [
+    {
+      "coding": [
+        {
+          "system": "http://unstats.un.org/unsd/methods/m49/m49.htm",
+          "code": "001",
+          "display": "World"
+        }
+      ]
+    }
+  ],
+  "copyright": "Apache-2.0. Part of Agent Action Provenance for Health (AAP-H) v0.1 draft.",
+  "description": "What a check of the system of record found after the action.",
+  "fhirVersion": "4.0.1",
+  "kind": "complex-type",
+  "abstract": false,
+  "context": [
+    {
+      "type": "element",
+      "expression": "Provenance"
+    },
+    {
+      "type": "element",
+      "expression": "AuditEvent"
+    }
+  ],
+  "type": "Extension",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Extension",
+  "derivation": "constraint",
+  "differential": {
+    "element": [
+      {
+        "id": "Extension",
+        "path": "Extension",
+        "short": "Verified outcome",
+        "definition": "What a check of the system of record found after the action."
+      },
+      {
+        "id": "Extension.extension",
+        "path": "Extension.extension",
+        "slicing": {
+          "discriminator": [
+            {
+              "type": "value",
+              "path": "url"
+            }
+          ],
+          "rules": "closed"
+        }
+      },
+      {
+        "id": "Extension.extension:result",
+        "path": "Extension.extension",
+        "sliceName": "result",
+        "short": "match, mismatch or cannot-check",
+        "definition": "match, mismatch or cannot-check.",
+        "min": 1,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:result.extension",
+        "path": "Extension.extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.extension:result.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "result"
+      },
+      {
+        "id": "Extension.extension:result.value[x]",
+        "path": "Extension.extension.value[x]",
+        "min": 1,
+        "type": [
+          {
+            "code": "code"
+          }
+        ],
+        "binding": {
+          "strength": "required",
+          "valueSet": "https://deedglass.com/fhir/aap-h/ValueSet/aaph-verification-result"
+        }
+      },
+      {
+        "id": "Extension.extension:depth",
+        "path": "Extension.extension",
+        "sliceName": "depth",
+        "short": "reported, read-back or change-log",
+        "definition": "reported, read-back or change-log.",
+        "min": 1,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:depth.extension",
+        "path": "Extension.extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.extension:depth.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "depth"
+      },
+      {
+        "id": "Extension.extension:depth.value[x]",
+        "path": "Extension.extension.value[x]",
+        "min": 1,
+        "type": [
+          {
+            "code": "code"
+          }
+        ],
+        "binding": {
+          "strength": "required",
+          "valueSet": "https://deedglass.com/fhir/aap-h/ValueSet/aaph-check-depth"
+        }
+      },
+      {
+        "id": "Extension.extension:method",
+        "path": "Extension.extension",
+        "sliceName": "method",
+        "short": "How the check was made, such as readback.fhir.create",
+        "definition": "How the check was made, such as readback.fhir.create.",
+        "min": 1,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:method.extension",
+        "path": "Extension.extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.extension:method.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "method"
+      },
+      {
+        "id": "Extension.extension:method.value[x]",
+        "path": "Extension.extension.value[x]",
+        "min": 1,
+        "type": [
+          {
+            "code": "string"
+          }
+        ]
+      },
+      {
+        "id": "Extension.extension:detailDigest",
+        "path": "Extension.extension",
+        "sliceName": "detailDigest",
+        "short": "sha256: digest of the check's detail",
+        "definition": "sha256: digest of the check's detail.",
+        "min": 0,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:detailDigest.extension",
+        "path": "Extension.extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.extension:detailDigest.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "detailDigest"
+      },
+      {
+        "id": "Extension.extension:detailDigest.value[x]",
+        "path": "Extension.extension.value[x]",
+        "min": 1,
+        "type": [
+          {
+            "code": "string"
+          }
+        ]
+      },
+      {
+        "id": "Extension.extension:checkedAt",
+        "path": "Extension.extension",
+        "sliceName": "checkedAt",
+        "short": "When the check finished",
+        "definition": "When the check finished.",
+        "min": 0,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:checkedAt.extension",
+        "path": "Extension.extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.extension:checkedAt.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "checkedAt"
+      },
+      {
+        "id": "Extension.extension:checkedAt.value[x]",
+        "path": "Extension.extension.value[x]",
+        "min": 1,
+        "type": [
+          {
+            "code": "dateTime"
+          }
+        ]
+      },
+      {
+        "id": "Extension.extension:supersedes",
+        "path": "Extension.extension",
+        "sliceName": "supersedes",
+        "short": "The record whose verified outcome this replaces",
+        "definition": "The record whose verified outcome this replaces.",
+        "min": 0,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:supersedes.extension",
+        "path": "Extension.extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.extension:supersedes.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "supersedes"
+      },
+      {
+        "id": "Extension.extension:supersedes.value[x]",
+        "path": "Extension.extension.value[x]",
+        "min": 1,
+        "type": [
+          {
+            "code": "string"
+          }
+        ]
+      },
+      {
+        "id": "Extension.url",
+        "path": "Extension.url",
+        "fixedUri": "https://deedglass.com/fhir/aap-h/StructureDefinition/aaph-verified-outcome"
+      },
+      {
+        "id": "Extension.value[x]",
+        "path": "Extension.value[x]",
+        "max": "0"
+      }
+    ]
+  }
+}

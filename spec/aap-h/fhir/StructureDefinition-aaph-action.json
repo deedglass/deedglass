@@ -1,0 +1,318 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "aaph-action",
+  "url": "https://deedglass.com/fhir/aap-h/StructureDefinition/aaph-action",
+  "name": "AaphAction",
+  "title": "AAP-H The AI agent's call",
+  "version": "0.1.0-draft",
+  "status": "draft",
+  "experimental": true,
+  "date": "2026-10-26",
+  "publisher": "Deedglass contributors",
+  "jurisdiction": [
+    {
+      "coding": [
+        {
+          "system": "http://unstats.un.org/unsd/methods/m49/m49.htm",
+          "code": "001",
+          "display": "World"
+        }
+      ]
+    }
+  ],
+  "copyright": "Apache-2.0. Part of Agent Action Provenance for Health (AAP-H) v0.1 draft.",
+  "description": "What the AI agent called, on which system, and the digest of what it sent.",
+  "fhirVersion": "4.0.1",
+  "kind": "complex-type",
+  "abstract": false,
+  "context": [
+    {
+      "type": "element",
+      "expression": "Provenance"
+    },
+    {
+      "type": "element",
+      "expression": "AuditEvent"
+    }
+  ],
+  "type": "Extension",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Extension",
+  "derivation": "constraint",
+  "differential": {
+    "element": [
+      {
+        "id": "Extension",
+        "path": "Extension",
+        "short": "The AI agent's call",
+        "definition": "What the AI agent called, on which system, and the digest of what it sent."
+      },
+      {
+        "id": "Extension.extension",
+        "path": "Extension.extension",
+        "slicing": {
+          "discriminator": [
+            {
+              "type": "value",
+              "path": "url"
+            }
+          ],
+          "rules": "closed"
+        }
+      },
+      {
+        "id": "Extension.extension:actionId",
+        "path": "Extension.extension",
+        "sliceName": "actionId",
+        "short": "The action's id at the gateway",
+        "definition": "The action's id at the gateway.",
+        "min": 1,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:actionId.extension",
+        "path": "Extension.extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.extension:actionId.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "actionId"
+      },
+      {
+        "id": "Extension.extension:actionId.value[x]",
+        "path": "Extension.extension.value[x]",
+        "min": 1,
+        "type": [
+          {
+            "code": "string"
+          }
+        ]
+      },
+      {
+        "id": "Extension.extension:tool",
+        "path": "Extension.extension",
+        "sliceName": "tool",
+        "short": "The tool name, such as fhir.create or postgres.execute",
+        "definition": "The tool name, such as fhir.create or postgres.execute.",
+        "min": 1,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:tool.extension",
+        "path": "Extension.extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.extension:tool.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "tool"
+      },
+      {
+        "id": "Extension.extension:tool.value[x]",
+        "path": "Extension.extension.value[x]",
+        "min": 1,
+        "type": [
+          {
+            "code": "string"
+          }
+        ]
+      },
+      {
+        "id": "Extension.extension:interaction",
+        "path": "Extension.extension",
+        "sliceName": "interaction",
+        "short": "The kind of call",
+        "definition": "The kind of call.",
+        "min": 1,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:interaction.extension",
+        "path": "Extension.extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.extension:interaction.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "interaction"
+      },
+      {
+        "id": "Extension.extension:interaction.value[x]",
+        "path": "Extension.extension.value[x]",
+        "min": 1,
+        "type": [
+          {
+            "code": "code"
+          }
+        ],
+        "binding": {
+          "strength": "required",
+          "valueSet": "https://deedglass.com/fhir/aap-h/ValueSet/aaph-interaction"
+        }
+      },
+      {
+        "id": "Extension.extension:agentRole",
+        "path": "Extension.extension",
+        "sliceName": "agentRole",
+        "short": "Whether the agent made the call or only proposed it",
+        "definition": "Whether the agent made the call or only proposed it.",
+        "min": 1,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:agentRole.extension",
+        "path": "Extension.extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.extension:agentRole.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "agentRole"
+      },
+      {
+        "id": "Extension.extension:agentRole.value[x]",
+        "path": "Extension.extension.value[x]",
+        "min": 1,
+        "type": [
+          {
+            "code": "code"
+          }
+        ],
+        "binding": {
+          "strength": "required",
+          "valueSet": "https://deedglass.com/fhir/aap-h/ValueSet/aaph-agent-role"
+        }
+      },
+      {
+        "id": "Extension.extension:systemKind",
+        "path": "Extension.extension",
+        "sliceName": "systemKind",
+        "short": "The kind of system of record",
+        "definition": "The kind of system of record.",
+        "min": 1,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:systemKind.extension",
+        "path": "Extension.extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.extension:systemKind.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "systemKind"
+      },
+      {
+        "id": "Extension.extension:systemKind.value[x]",
+        "path": "Extension.extension.value[x]",
+        "min": 1,
+        "type": [
+          {
+            "code": "code"
+          }
+        ],
+        "binding": {
+          "strength": "required",
+          "valueSet": "https://deedglass.com/fhir/aap-h/ValueSet/aaph-system-kind"
+        }
+      },
+      {
+        "id": "Extension.extension:systemBase",
+        "path": "Extension.extension",
+        "sliceName": "systemBase",
+        "short": "The system's base URL",
+        "definition": "The system's base URL.",
+        "min": 0,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:systemBase.extension",
+        "path": "Extension.extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.extension:systemBase.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "systemBase"
+      },
+      {
+        "id": "Extension.extension:systemBase.value[x]",
+        "path": "Extension.extension.value[x]",
+        "min": 1,
+        "type": [
+          {
+            "code": "uri"
+          }
+        ]
+      },
+      {
+        "id": "Extension.extension:requestDigest",
+        "path": "Extension.extension",
+        "sliceName": "requestDigest",
+        "short": "sha256: digest of the JCS form of the request",
+        "definition": "sha256: digest of the JCS form of the request.",
+        "min": 1,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:requestDigest.extension",
+        "path": "Extension.extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.extension:requestDigest.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "requestDigest"
+      },
+      {
+        "id": "Extension.extension:requestDigest.value[x]",
+        "path": "Extension.extension.value[x]",
+        "min": 1,
+        "type": [
+          {
+            "code": "string"
+          }
+        ]
+      },
+      {
+        "id": "Extension.extension:intentDigest",
+        "path": "Extension.extension",
+        "sliceName": "intentDigest",
+        "short": "sha256: digest of a signed intent, when the agent signed one",
+        "definition": "sha256: digest of a signed intent, when the agent signed one.",
+        "min": 0,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:intentDigest.extension",
+        "path": "Extension.extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.extension:intentDigest.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "intentDigest"
+      },
+      {
+        "id": "Extension.extension:intentDigest.value[x]",
+        "path": "Extension.extension.value[x]",
+        "min": 1,
+        "type": [
+          {
+            "code": "string"
+          }
+        ]
+      },
+      {
+        "id": "Extension.url",
+        "path": "Extension.url",
+        "fixedUri": "https://deedglass.com/fhir/aap-h/StructureDefinition/aaph-action"
+      },
+      {
+        "id": "Extension.value[x]",
+        "path": "Extension.value[x]",
+        "max": "0"
+      }
+    ]
+  }
+}

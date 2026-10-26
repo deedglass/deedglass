@@ -1,0 +1,259 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "aaph-auditevent",
+  "url": "https://deedglass.com/fhir/aap-h/StructureDefinition/aaph-auditevent",
+  "name": "AaphAuditevent",
+  "title": "AAP-H AI agent action AuditEvent",
+  "version": "0.1.0-draft",
+  "status": "draft",
+  "experimental": true,
+  "date": "2026-10-26",
+  "publisher": "Deedglass contributors",
+  "jurisdiction": [
+    {
+      "coding": [
+        {
+          "system": "http://unstats.un.org/unsd/methods/m49/m49.htm",
+          "code": "001",
+          "display": "World"
+        }
+      ]
+    }
+  ],
+  "copyright": "Apache-2.0. Part of Agent Action Provenance for Health (AAP-H) v0.1 draft.",
+  "description": "The audit record of one AI agent action, whatever its outcome, including refused calls: the agent, the policy decision, the approval chain, the claimed and verified outcomes, and the signed record. Claims the matching IHE BALP profile when the call was a successful RESTful interaction.",
+  "fhirVersion": "4.0.1",
+  "kind": "resource",
+  "abstract": false,
+  "type": "AuditEvent",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/AuditEvent",
+  "derivation": "constraint",
+  "differential": {
+    "element": [
+      {
+        "id": "AuditEvent",
+        "path": "AuditEvent",
+        "short": "AI agent action AuditEvent",
+        "definition": "The audit record of one AI agent action, whatever its outcome, including refused calls: the agent, the policy decision, the approval chain, the claimed and verified outcomes, and the signed record. Claims the matching IHE BALP profile when the call was a successful RESTful interaction.",
+        "constraint": [
+          {
+            "key": "aaph-1",
+            "severity": "error",
+            "human": "A decision of require-approval has at least one approval step.",
+            "expression": "extension('https://deedglass.com/fhir/aap-h/StructureDefinition/aaph-policy-decision').extension('decision').value = 'require-approval' implies extension('https://deedglass.com/fhir/aap-h/StructureDefinition/aaph-approval').exists()",
+            "source": "https://deedglass.com/fhir/aap-h/StructureDefinition/aaph-auditevent"
+          },
+          {
+            "key": "aaph-2",
+            "severity": "error",
+            "human": "A write is never recorded as a match at depth reported.",
+            "expression": "extension('https://deedglass.com/fhir/aap-h/StructureDefinition/aaph-action').extension('interaction').value in ('create' | 'update' | 'patch' | 'delete' | 'operation' | 'execute') implies extension('https://deedglass.com/fhir/aap-h/StructureDefinition/aaph-verified-outcome').where(extension('result').value = 'match' and extension('depth').value = 'reported').empty()",
+            "source": "https://deedglass.com/fhir/aap-h/StructureDefinition/aaph-auditevent"
+          },
+          {
+            "key": "aaph-3",
+            "severity": "warning",
+            "human": "A write the tool reported as succeeded has a verified outcome.",
+            "expression": "(extension('https://deedglass.com/fhir/aap-h/StructureDefinition/aaph-action').extension('interaction').value in ('create' | 'update' | 'patch' | 'delete' | 'operation' | 'execute') and extension('https://deedglass.com/fhir/aap-h/StructureDefinition/aaph-claimed-outcome').extension('status').value = 'succeeded') implies extension('https://deedglass.com/fhir/aap-h/StructureDefinition/aaph-verified-outcome').exists()",
+            "source": "https://deedglass.com/fhir/aap-h/StructureDefinition/aaph-auditevent"
+          }
+        ]
+      },
+      {
+        "id": "AuditEvent.extension",
+        "path": "AuditEvent.extension",
+        "slicing": {
+          "discriminator": [
+            {
+              "type": "value",
+              "path": "url"
+            }
+          ],
+          "rules": "open"
+        },
+        "min": 2
+      },
+      {
+        "id": "AuditEvent.extension:action",
+        "path": "AuditEvent.extension",
+        "sliceName": "action",
+        "min": 1,
+        "max": "1",
+        "type": [
+          {
+            "code": "Extension",
+            "profile": [
+              "https://deedglass.com/fhir/aap-h/StructureDefinition/aaph-action"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "AuditEvent.extension:policyDecision",
+        "path": "AuditEvent.extension",
+        "sliceName": "policyDecision",
+        "min": 1,
+        "max": "1",
+        "type": [
+          {
+            "code": "Extension",
+            "profile": [
+              "https://deedglass.com/fhir/aap-h/StructureDefinition/aaph-policy-decision"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "AuditEvent.extension:approval",
+        "path": "AuditEvent.extension",
+        "sliceName": "approval",
+        "min": 0,
+        "max": "*",
+        "type": [
+          {
+            "code": "Extension",
+            "profile": [
+              "https://deedglass.com/fhir/aap-h/StructureDefinition/aaph-approval"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "AuditEvent.extension:authorization",
+        "path": "AuditEvent.extension",
+        "sliceName": "authorization",
+        "min": 0,
+        "max": "*",
+        "type": [
+          {
+            "code": "Extension",
+            "profile": [
+              "https://deedglass.com/fhir/aap-h/StructureDefinition/aaph-authorization"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "AuditEvent.extension:claimedOutcome",
+        "path": "AuditEvent.extension",
+        "sliceName": "claimedOutcome",
+        "min": 0,
+        "max": "1",
+        "type": [
+          {
+            "code": "Extension",
+            "profile": [
+              "https://deedglass.com/fhir/aap-h/StructureDefinition/aaph-claimed-outcome"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "AuditEvent.extension:verifiedOutcome",
+        "path": "AuditEvent.extension",
+        "sliceName": "verifiedOutcome",
+        "min": 0,
+        "max": "*",
+        "type": [
+          {
+            "code": "Extension",
+            "profile": [
+              "https://deedglass.com/fhir/aap-h/StructureDefinition/aaph-verified-outcome"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "AuditEvent.extension:recordSeal",
+        "path": "AuditEvent.extension",
+        "sliceName": "recordSeal",
+        "min": 0,
+        "max": "1",
+        "type": [
+          {
+            "code": "Extension",
+            "profile": [
+              "https://deedglass.com/fhir/aap-h/StructureDefinition/aaph-record-seal"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "AuditEvent.agent",
+        "path": "AuditEvent.agent",
+        "slicing": {
+          "discriminator": [
+            {
+              "type": "pattern",
+              "path": "role"
+            }
+          ],
+          "rules": "open"
+        }
+      },
+      {
+        "id": "AuditEvent.agent:aiAgent",
+        "path": "AuditEvent.agent",
+        "sliceName": "aiAgent",
+        "min": 1,
+        "max": "1"
+      },
+      {
+        "id": "AuditEvent.agent:aiAgent.role",
+        "path": "AuditEvent.agent.role",
+        "min": 1,
+        "patternCodeableConcept": {
+          "coding": [
+            {
+              "system": "https://deedglass.com/fhir/aap-h/CodeSystem/aaph-participant",
+              "code": "ai-agent"
+            }
+          ]
+        }
+      },
+      {
+        "id": "AuditEvent.agent:aiAgent.who",
+        "path": "AuditEvent.agent.who",
+        "min": 1,
+        "type": [
+          {
+            "code": "Reference",
+            "targetProfile": [
+              "http://hl7.org/fhir/StructureDefinition/Device"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "AuditEvent.agent:aiAgent.requestor",
+        "path": "AuditEvent.agent.requestor",
+        "fixedBoolean": true
+      },
+      {
+        "id": "AuditEvent.agent:approver",
+        "path": "AuditEvent.agent",
+        "sliceName": "approver",
+        "min": 0,
+        "max": "*"
+      },
+      {
+        "id": "AuditEvent.agent:approver.role",
+        "path": "AuditEvent.agent.role",
+        "min": 1,
+        "patternCodeableConcept": {
+          "coding": [
+            {
+              "system": "https://deedglass.com/fhir/aap-h/CodeSystem/aaph-participant",
+              "code": "approver"
+            }
+          ]
+        }
+      },
+      {
+        "id": "AuditEvent.agent:approver.requestor",
+        "path": "AuditEvent.agent.requestor",
+        "fixedBoolean": false
+      }
+    ]
+  }
+}

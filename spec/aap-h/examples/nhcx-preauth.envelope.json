@@ -1,0 +1,99 @@
+{
+  "aaph": "0.1",
+  "record_id": "rec-in-0001",
+  "issuer": "https://agent-gateway.example",
+  "recorded_at": "2026-10-20T09:15:03.120Z",
+  "agent": {
+    "id": "agt-claims-assist",
+    "kind": "ai-agent",
+    "model": {
+      "name": "example-model",
+      "provider": "example-ai",
+      "version": "2026-09"
+    },
+    "name": "claims-assist",
+    "on_behalf_of": "usr_ref:billing-desk-07",
+    "session": "ses-41c2"
+  },
+  "action": {
+    "agent_role": "made",
+    "id": "act-in-0001",
+    "intent_digest": null,
+    "interaction": "create",
+    "request_digest": "sha256:34e1a0fae475d18e38c2a00fdce5fd032f5154adce1cdbde37ba81b0eac0908e",
+    "system": {
+      "base": "https://fhir.hospital-in.example/r4",
+      "kind": "fhir"
+    },
+    "target": [
+      {
+        "ref": "Bundle/preauth-1001",
+        "version": "1"
+      }
+    ],
+    "tool": "fhir.create"
+  },
+  "authorization": [
+    {
+      "digest": null,
+      "kind": "smart-scope",
+      "ref": "client:claims-assist",
+      "scope": "system/Bundle.c system/Claim.r"
+    },
+    {
+      "digest": "sha256:e406ebac3a993fd1bf235884e5492ccbdf6d22606bc129b224cdd6e10ab4351e",
+      "kind": "consent",
+      "ref": "urn:abdm:consent-artefact:3f1c9a52-7d1e-4b8e-9c55-000000000001",
+      "scope": null
+    }
+  ],
+  "policy": {
+    "decision": "require-approval",
+    "mode": "enforce",
+    "policy": "pol-india-health",
+    "rule": "preauth-two-person",
+    "version_digest": "sha256:f36436c7cb25e32c43908064d2619b6be7f87599246f22dca74d0115f40cc64a"
+  },
+  "approvals": [
+    {
+      "approvers": [
+        "usr_ref:billing-lead-01",
+        "usr_ref:medical-officer-02"
+      ],
+      "decided_at": "2026-10-20T09:14:51.007Z",
+      "outcome": "approved",
+      "role": "billing and medical officer",
+      "step": 1
+    }
+  ],
+  "claimed": {
+    "assertion": null,
+    "error_code": null,
+    "finished_at": "2026-10-20T09:14:52.655Z",
+    "result_digest": "sha256:b2ff86287dec7793e2fc0b9683fabcad3442b839e310c73d1c83ba19e8e12373",
+    "started_at": "2026-10-20T09:14:52.410Z",
+    "status": "succeeded"
+  },
+  "verified": {
+    "checked_at": "2026-10-20T09:15:03.002Z",
+    "depth": "read-back",
+    "detail_digest": "sha256:2bd82090bb43fb006743266c901ffb0bd322e98ae95c8318c75d3fc6d78f7e00",
+    "method": "readback.fhir.create",
+    "result": "match"
+  },
+  "supersedes": null,
+  "chain": {
+    "prev": "sha256:9cfe23f8db6b948ba1338d51c14c1b272ef5eb714275b1b557814f2cc01e4120",
+    "seq": 1,
+    "stream": "demo-india-hospital"
+  },
+  "seal": {
+    "alg": "Ed25519",
+    "format": "aaph-jcs",
+    "key_id": "aaph-test-1",
+    "key_set": "https://agent-gateway.example/.well-known/aaph/keys.json",
+    "record_digest": "sha256:497baf1470e3a582558aaaae16f0f981ac97c80522ca9ccd00b07088e3e3e218",
+    "signature": "ed25519:ZIvf6weO34mXRq-TYqI1QrfMfpn-hGmLSpHtq2AKvG1zkHMP2sme3mjsxwf8GrAT4tl1kHnESSbbf0NY5EMUBQ"
+  },
+  "extensions": {}
+}

@@ -1,0 +1,227 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "aaph-policy-decision",
+  "url": "https://deedglass.com/fhir/aap-h/StructureDefinition/aaph-policy-decision",
+  "name": "AaphPolicyDecision",
+  "title": "AAP-H Policy decision",
+  "version": "0.1.0-draft",
+  "status": "draft",
+  "experimental": true,
+  "date": "2026-10-26",
+  "publisher": "Deedglass contributors",
+  "jurisdiction": [
+    {
+      "coding": [
+        {
+          "system": "http://unstats.un.org/unsd/methods/m49/m49.htm",
+          "code": "001",
+          "display": "World"
+        }
+      ]
+    }
+  ],
+  "copyright": "Apache-2.0. Part of Agent Action Provenance for Health (AAP-H) v0.1 draft.",
+  "description": "Which policy rule decided the action, and how.",
+  "fhirVersion": "4.0.1",
+  "kind": "complex-type",
+  "abstract": false,
+  "context": [
+    {
+      "type": "element",
+      "expression": "Provenance"
+    },
+    {
+      "type": "element",
+      "expression": "AuditEvent"
+    }
+  ],
+  "type": "Extension",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Extension",
+  "derivation": "constraint",
+  "differential": {
+    "element": [
+      {
+        "id": "Extension",
+        "path": "Extension",
+        "short": "Policy decision",
+        "definition": "Which policy rule decided the action, and how."
+      },
+      {
+        "id": "Extension.extension",
+        "path": "Extension.extension",
+        "slicing": {
+          "discriminator": [
+            {
+              "type": "value",
+              "path": "url"
+            }
+          ],
+          "rules": "closed"
+        }
+      },
+      {
+        "id": "Extension.extension:decision",
+        "path": "Extension.extension",
+        "sliceName": "decision",
+        "short": "allow, deny or require-approval",
+        "definition": "allow, deny or require-approval.",
+        "min": 1,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:decision.extension",
+        "path": "Extension.extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.extension:decision.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "decision"
+      },
+      {
+        "id": "Extension.extension:decision.value[x]",
+        "path": "Extension.extension.value[x]",
+        "min": 1,
+        "type": [
+          {
+            "code": "code"
+          }
+        ],
+        "binding": {
+          "strength": "required",
+          "valueSet": "https://deedglass.com/fhir/aap-h/ValueSet/aaph-policy-decision"
+        }
+      },
+      {
+        "id": "Extension.extension:mode",
+        "path": "Extension.extension",
+        "sliceName": "mode",
+        "short": "enforce or shadow",
+        "definition": "enforce or shadow.",
+        "min": 1,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:mode.extension",
+        "path": "Extension.extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.extension:mode.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "mode"
+      },
+      {
+        "id": "Extension.extension:mode.value[x]",
+        "path": "Extension.extension.value[x]",
+        "min": 1,
+        "type": [
+          {
+            "code": "code"
+          }
+        ],
+        "binding": {
+          "strength": "required",
+          "valueSet": "https://deedglass.com/fhir/aap-h/ValueSet/aaph-policy-mode"
+        }
+      },
+      {
+        "id": "Extension.extension:policy",
+        "path": "Extension.extension",
+        "sliceName": "policy",
+        "short": "The policy's id",
+        "definition": "The policy's id.",
+        "min": 0,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:policy.extension",
+        "path": "Extension.extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.extension:policy.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "policy"
+      },
+      {
+        "id": "Extension.extension:policy.value[x]",
+        "path": "Extension.extension.value[x]",
+        "min": 1,
+        "type": [
+          {
+            "code": "string"
+          }
+        ]
+      },
+      {
+        "id": "Extension.extension:versionDigest",
+        "path": "Extension.extension",
+        "sliceName": "versionDigest",
+        "short": "sha256: digest of the policy version",
+        "definition": "sha256: digest of the policy version.",
+        "min": 0,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:versionDigest.extension",
+        "path": "Extension.extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.extension:versionDigest.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "versionDigest"
+      },
+      {
+        "id": "Extension.extension:versionDigest.value[x]",
+        "path": "Extension.extension.value[x]",
+        "min": 1,
+        "type": [
+          {
+            "code": "string"
+          }
+        ]
+      },
+      {
+        "id": "Extension.extension:rule",
+        "path": "Extension.extension",
+        "sliceName": "rule",
+        "short": "The rule that decided",
+        "definition": "The rule that decided.",
+        "min": 0,
+        "max": "1"
+      },
+      {
+        "id": "Extension.extension:rule.extension",
+        "path": "Extension.extension.extension",
+        "max": "0"
+      },
+      {
+        "id": "Extension.extension:rule.url",
+        "path": "Extension.extension.url",
+        "fixedUri": "rule"
+      },
+      {
+        "id": "Extension.extension:rule.value[x]",
+        "path": "Extension.extension.value[x]",
+        "min": 1,
+        "type": [
+          {
+            "code": "string"
+          }
+        ]
+      },
+      {
+        "id": "Extension.url",
+        "path": "Extension.url",
+        "fixedUri": "https://deedglass.com/fhir/aap-h/StructureDefinition/aaph-policy-decision"
+      },
+      {
+        "id": "Extension.value[x]",
+        "path": "Extension.value[x]",
+        "max": "0"
+      }
+    ]
+  }
+}

@@ -1,0 +1,51 @@
+{
+  "resourceType": "CodeSystem",
+  "id": "aaph-participant",
+  "url": "https://deedglass.com/fhir/aap-h/CodeSystem/aaph-participant",
+  "name": "AaphParticipant",
+  "title": "AAP-H Participant",
+  "version": "0.1.0-draft",
+  "status": "draft",
+  "experimental": true,
+  "date": "2026-10-26",
+  "publisher": "Deedglass contributors",
+  "jurisdiction": [
+    {
+      "coding": [
+        {
+          "system": "http://unstats.un.org/unsd/methods/m49/m49.htm",
+          "code": "001",
+          "display": "World"
+        }
+      ]
+    }
+  ],
+  "copyright": "Apache-2.0. Part of Agent Action Provenance for Health (AAP-H) v0.1 draft.",
+  "description": "Roles in an AI agent action.",
+  "caseSensitive": true,
+  "valueSet": "https://deedglass.com/fhir/aap-h/ValueSet/aaph-participant",
+  "content": "complete",
+  "count": 4,
+  "concept": [
+    {
+      "code": "ai-agent",
+      "display": "AI agent",
+      "definition": "Software that chose the call using a machine-learning model."
+    },
+    {
+      "code": "gateway",
+      "display": "Gateway",
+      "definition": "The component that applied the policy, ran or forwarded the call and wrote the record."
+    },
+    {
+      "code": "approver",
+      "display": "Approver",
+      "definition": "A person who approved or refused the action before it ran."
+    },
+    {
+      "code": "checker",
+      "display": "Checker",
+      "definition": "The component that checked the system of record after the action."
+    }
+  ]
+}

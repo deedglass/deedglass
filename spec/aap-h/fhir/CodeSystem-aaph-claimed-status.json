@@ -1,0 +1,46 @@
+{
+  "resourceType": "CodeSystem",
+  "id": "aaph-claimed-status",
+  "url": "https://deedglass.com/fhir/aap-h/CodeSystem/aaph-claimed-status",
+  "name": "AaphClaimedStatus",
+  "title": "AAP-H Claimed status",
+  "version": "0.1.0-draft",
+  "status": "draft",
+  "experimental": true,
+  "date": "2026-10-26",
+  "publisher": "Deedglass contributors",
+  "jurisdiction": [
+    {
+      "coding": [
+        {
+          "system": "http://unstats.un.org/unsd/methods/m49/m49.htm",
+          "code": "001",
+          "display": "World"
+        }
+      ]
+    }
+  ],
+  "copyright": "Apache-2.0. Part of Agent Action Provenance for Health (AAP-H) v0.1 draft.",
+  "description": "What the tool's response or the agent said happened.",
+  "caseSensitive": true,
+  "valueSet": "https://deedglass.com/fhir/aap-h/ValueSet/aaph-claimed-status",
+  "content": "complete",
+  "count": 3,
+  "concept": [
+    {
+      "code": "succeeded",
+      "display": "Succeeded",
+      "definition": "The tool or agent reported success."
+    },
+    {
+      "code": "failed",
+      "display": "Failed",
+      "definition": "The tool reported failure, and the action certainly did not apply."
+    },
+    {
+      "code": "unknown",
+      "display": "Unknown",
+      "definition": "It can't be known whether the action applied."
+    }
+  ]
+}

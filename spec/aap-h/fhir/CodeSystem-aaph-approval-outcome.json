@@ -1,0 +1,51 @@
+{
+  "resourceType": "CodeSystem",
+  "id": "aaph-approval-outcome",
+  "url": "https://deedglass.com/fhir/aap-h/CodeSystem/aaph-approval-outcome",
+  "name": "AaphApprovalOutcome",
+  "title": "AAP-H Approval outcome",
+  "version": "0.1.0-draft",
+  "status": "draft",
+  "experimental": true,
+  "date": "2026-10-26",
+  "publisher": "Deedglass contributors",
+  "jurisdiction": [
+    {
+      "coding": [
+        {
+          "system": "http://unstats.un.org/unsd/methods/m49/m49.htm",
+          "code": "001",
+          "display": "World"
+        }
+      ]
+    }
+  ],
+  "copyright": "Apache-2.0. Part of Agent Action Provenance for Health (AAP-H) v0.1 draft.",
+  "description": "How one approval step ended.",
+  "caseSensitive": true,
+  "valueSet": "https://deedglass.com/fhir/aap-h/ValueSet/aaph-approval-outcome",
+  "content": "complete",
+  "count": 4,
+  "concept": [
+    {
+      "code": "approved",
+      "display": "Approved",
+      "definition": "The approvers approved the action."
+    },
+    {
+      "code": "denied",
+      "display": "Denied",
+      "definition": "An approver refused the action."
+    },
+    {
+      "code": "expired",
+      "display": "Expired",
+      "definition": "Nobody decided in time."
+    },
+    {
+      "code": "cancelled",
+      "display": "Cancelled",
+      "definition": "The request for approval was withdrawn."
+    }
+  ]
+}

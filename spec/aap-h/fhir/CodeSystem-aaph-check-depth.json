@@ -1,0 +1,46 @@
+{
+  "resourceType": "CodeSystem",
+  "id": "aaph-check-depth",
+  "url": "https://deedglass.com/fhir/aap-h/CodeSystem/aaph-check-depth",
+  "name": "AaphCheckDepth",
+  "title": "AAP-H Check depth",
+  "version": "0.1.0-draft",
+  "status": "draft",
+  "experimental": true,
+  "date": "2026-10-26",
+  "publisher": "Deedglass contributors",
+  "jurisdiction": [
+    {
+      "coding": [
+        {
+          "system": "http://unstats.un.org/unsd/methods/m49/m49.htm",
+          "code": "001",
+          "display": "World"
+        }
+      ]
+    }
+  ],
+  "copyright": "Apache-2.0. Part of Agent Action Provenance for Health (AAP-H) v0.1 draft.",
+  "description": "How a verified outcome was obtained.",
+  "caseSensitive": true,
+  "valueSet": "https://deedglass.com/fhir/aap-h/ValueSet/aaph-check-depth",
+  "content": "complete",
+  "count": 3,
+  "concept": [
+    {
+      "code": "reported",
+      "display": "Reported",
+      "definition": "Only the tool's own answer."
+    },
+    {
+      "code": "read-back",
+      "display": "Read back",
+      "definition": "A separate read of the system of record after the action."
+    },
+    {
+      "code": "change-log",
+      "display": "Change log",
+      "definition": "The system's own change stream or history, bound to this action."
+    }
+  ]
+}
