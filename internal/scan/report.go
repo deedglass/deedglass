@@ -14,6 +14,7 @@ package scan
 import (
 	"context"
 	"errors"
+	"io/fs"
 	"time"
 )
 
@@ -232,7 +233,9 @@ type PostgresFail struct {
 
 // Options are the scan's inputs.
 type Options struct {
-	Dir         string // the directory to scan
+	Dir string // the directory to scan
+	// FS, when set, is walked instead of Dir (the browser build has no file system of its own).
+	FS          fs.FS
 	DirLabel    string // how --dir is shown (~ for home)
 	Home        string // the user's home ("" disables user configs)
 	UserConfigs bool

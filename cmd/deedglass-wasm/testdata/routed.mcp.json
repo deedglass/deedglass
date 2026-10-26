@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "postgres": {
+      "command": "deedglass",
+      "args": ["mcp", "wrap", "--", "npx", "-y", "@modelcontextprotocol/server-postgres"],
+      "env": { "DATABASE_URL": "${DATABASE_URL}" }
+    }
+  }
+}
