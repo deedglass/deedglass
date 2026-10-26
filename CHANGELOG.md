@@ -7,6 +7,21 @@ this file by `scripts/release-notes.sh`.
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-10-26
+
+A calmer terminal. Every command now builds its output from one style package
+(`internal/cli/ui`, rules in `docs/design/CLI_STYLE.md`): the summary comes first, key/value rows
+line up and wrap at 80 columns, and `deedglass play` tells the demo as six short scenes. At 80
+columns `help` drops from 94 to 71 lines, `play` from 81 to 60, and the widest `play` line from 149
+to 80 columns. Behaviour is unchanged and `--json` output is unchanged, so scripts that read JSON
+need nothing. Text output did change: a script that parses the human-readable lines (for example
+full ids, now shortened to `act_01m4x8kq…`) should move to `--json`. Nothing changes for existing
+records: the deed format is unchanged, and Proven, Checked and Claimed mean what they meant in
+0.10.0. Known limits: commands outside the list below keep their older layout until they are
+reworked; the copy at deedglass.com/dl is refreshed by a site deploy, so for a short time after a
+release it serves the previous version. No new Go dependency, no schema migration, and
+`formula_version` stays 1.
+
 ### Changed
 
 - The terminal output has a new layout: one blank line between blocks, aligned key/value rows that
@@ -755,7 +770,8 @@ See [KNOWN_ISSUES.md](KNOWN_ISSUES.md): what happens, who is affected, the worka
 See [docs/LIMITATIONS.md](docs/LIMITATIONS.md). In short: L2 covers Postgres only, seal keys are per
 deployment, and Deedglass trusts the Postgres server and the host it runs on.
 
-[Unreleased]: https://github.com/deedglass/deedglass/compare/v0.10.0...HEAD
+[Unreleased]: https://github.com/deedglass/deedglass/compare/v0.11.0...HEAD
+[0.11.0]: https://github.com/deedglass/deedglass/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/deedglass/deedglass/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/deedglass/deedglass/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/deedglass/deedglass/compare/v0.7.0...v0.8.0
