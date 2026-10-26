@@ -1,7 +1,7 @@
 {
   "object": "attack_page",
   "day": "2026-10-26",
-  "commit": "83b05eb",
+  "commit": "f4435d4",
   "postgres": "18.6",
   "summary": {
     "matched": 82,
