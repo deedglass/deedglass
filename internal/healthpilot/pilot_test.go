@@ -170,7 +170,9 @@ func TestColourRepeats(t *testing.T) {
 		t.Fatal("no colour with Color on")
 	}
 	// Colour never carries meaning: without the codes the text is the same (paths aside).
-	strip := func(s string) string { return regexp.MustCompile(`/[^ ]*/deedglass-pilot|/\S+?/\d+`).ReplaceAllString(ui.StripANSI(s), "DIR") }
+	strip := func(s string) string {
+		return regexp.MustCompile(`/[^ ]*/deedglass-pilot|/\S+?/\d+`).ReplaceAllString(ui.StripANSI(s), "DIR")
+	}
 	a, b := strip(out.String()), strip(p.String())
 	if len(strings.Split(a, "\n")) != len(strings.Split(b, "\n")) {
 		t.Fatalf("colour changed the layout:\n%s\n---\n%s", a, b)

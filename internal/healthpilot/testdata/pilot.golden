@@ -1,0 +1,62 @@
+deedglass health pilot  synthetic data · about 15 minutes
+
+  pack   healthcare-fhir 1.1.0, enforced; PHI mode on; lockdown on
+  store  an in-memory FHIR R4 store inside this binary: synthetic records only
+         nothing leaves this machine
+  agent  pilot-agent, labelled connector=ehr
+  rules  decided now by the policy engine deedglass serve runs; writes go
+         through the FHIR connector's own code and are read back
+
+1/4  An agent writes a record, and the read-back matches
+     request  ehr.create Observation: heart rate 72 /min,
+              Patient/pat-synthetic-1
+     rule     ◐ waits for a person: lockdown.write-needs-person
+                healthcare-fhir allowed it (verify-levels, Checked (L1));
+                lockdown makes every write wait
+     approve  ✓ countersigned by pilot-owner@example.test, the pilot's stand-in
+                admin; on your server a named person does this
+     server   201 Created · Observation/1001 version 1
+     check    ✓ Checked · Matches: 6 fields read back at version 1
+
+2/4  "201 Created", but the stored value differs
+     The synthetic store is set to change one value as it saves it, as a faulty
+     interface mapping might.
+     request  ehr.create Observation: body temperature 38.4 Cel,
+              Patient/pat-synthetic-1
+     rule     ◐ waits for a person: lockdown.write-needs-person
+                healthcare-fhir allowed it (verify-levels, Checked (L1));
+                lockdown makes every write wait
+     approve  ✓ countersigned by pilot-owner@example.test, the pilot's stand-in
+                admin; on your server a named person does this
+     server   201 Created · Observation/1002 version 1
+     check    ✕ Checked · Doesn't match: the server answered 201, but stored
+                something else
+                valueQuantity.value  sent 38.4, stored 37.4
+
+3/4  A high-risk write waits for a person
+     request  ehr.create MedicationRequest: a synthetic test order,
+              Patient/pat-synthetic-1
+     rule     ◐ waits for a person: orders-need-clinician
+                Orders and medication changes wait for a clinician. A clinician
+                on this rule's list approves in Console › Approvals.
+     who      user:clinician-1@example.org or user:clinician-2@example.org
+              expires in 15 minutes; timeout means no (lockdown)
+     console  http://127.0.0.1:8080/app/approvals/apr_01m58nq2jthtfkkv8qdejq0006
+              the link a server sends to the approvers; this pilot runs none
+     result   Nothing reached the record system. It runs only after a person
+              approves.
+
+4/4  Seal the records and check them offline
+     records  2 sealed with sk_01m58nq2…, a key made for this run
+              the held write is sealed when a person decides or it expires
+     verify   ✓ 2 deeds, chain intact, 1 seal key
+     tamper   one byte changed in deed 1
+     verify   ✕ Deed 1 was changed after it was sealed.
+     files    deeds.jsonl and keys.json in deedglass-pilot; check them yourself
+              there with: deedglass verify deeds.jsonl --keys keys.json
+
+✓ Pilot complete. 4 scenes on synthetic data.
+  report  deedglass-pilot/REPORT.md, ready to forward
+  review  deedglass-pilot/IT_REVIEW_PACK.md, for your security review
+
+Next: point it at your FHIR sandbox: deedglass health pilot --fhir-url …
