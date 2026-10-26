@@ -312,6 +312,16 @@ package version, variable name or host. Without `--share`, no link is ever print
 Exit codes: 0 the report was written · 1 below `--fail-under`, or the Postgres part failed (the file
 part was written) · 2 a usage error, or the DSN variable is unset.
 
+## In the browser: the /check page
+
+`cmd/deedglass-wasm` (`make wasm`) builds the scan and the shell guard for the browser
+(`GOOS=js GOARCH=wasm`). The page pastes one config file into an in-memory file system
+(`scan.Options.FS`) and runs the same `scan.Scan`, so the report is the one `deedglass scan --json`
+prints for a directory holding only that file; a command goes through `shellguard.Check` with no
+files read, as `guard shell --no-files --command … --json` answers it. The browser build has no
+database part and no HTML report. `TestScanConfigParity` and `TestCheckCommandFixtures` check both
+against the CLI code paths, and CI fails if the gzipped file is over 4 MB.
+
 ## What it doesn't do
 
 It reads your configuration and catalog. It doesn't run your agent, test your tools, run any

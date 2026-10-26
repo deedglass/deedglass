@@ -120,19 +120,27 @@ var (
 func discover(o Options) (*discovered, error) {
 	d := &discovered{roots: map[string]bool{}}
 	root := o.Dir
-	fi, err := os.Stat(root)
-	if err != nil {
-		return nil, err
+	// With o.FS (the browser build, cmd/deedglass-wasm) the same walk reads that file system; o.Dir
+	// is then only a label for the paths.
+	fsys, walkRoot := fs.FS(nil), root
+	if o.FS != nil {
+		fsys, walkRoot = o.FS, "."
+	} else {
+		fi, err := os.Stat(root)
+		if err != nil {
+			return nil, err
+		}
+		if !fi.IsDir() {
+			return nil, errors.New("scan: --dir is not a directory")
+		}
+		fsys, walkRoot = os.DirFS(root), "."
 	}
-	if !fi.IsDir() {
-		return nil, errors.New("scan: --dir is not a directory")
-	}
-	err = filepath.WalkDir(root, func(p string, e fs.DirEntry, err error) error {
+	err := fs.WalkDir(fsys, walkRoot, func(p string, e fs.DirEntry, err error) error {
 		if err != nil {
 			return nil // unreadable: skip, never fail the scan
 		}
 		if e.IsDir() {
-			if p != root && skipDirs[e.Name()] {
+			if p != walkRoot && skipDirs[e.Name()] {
 				return filepath.SkipDir
 			}
 			return nil
@@ -145,8 +153,7 @@ func discover(o Options) (*discovered, error) {
 			return filepath.SkipAll
 		}
 		d.walk.Files++
-		rel, _ := filepath.Rel(root, p)
-		rel = filepath.ToSlash(rel)
+		rel := p
 		kind := classify(rel)
 		if kind == "" {
 			return nil
@@ -159,7 +166,7 @@ func discover(o Options) (*discovered, error) {
 			d.walk.SkippedBig++
 			return nil
 		}
-		b, err := os.ReadFile(p)
+		b, err := fs.ReadFile(fsys, p)
 		if err != nil {
 			return nil
 		}
