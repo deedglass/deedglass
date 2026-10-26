@@ -92,9 +92,10 @@ func TestProtectEndToEnd(t *testing.T) {
 		Changes int              `json:"changes"`
 		Backup  string           `json:"backup"`
 		Command string           `json:"command"`
+		Badge   string           `json:"badge"`
 		Agents  []protect.Change `json:"agents"`
 	}
-	if r.code != 0 || json.Unmarshal([]byte(r.stdout), &out) != nil || !out.Applied || out.Changes != 5 || out.Backup == "" || out.Command != "/opt/dg/deedglass guard shell" {
+	if r.code != 0 || json.Unmarshal([]byte(r.stdout), &out) != nil || !out.Applied || out.Changes != 5 || out.Backup == "" || out.Command != "/opt/dg/deedglass guard shell" || out.Badge != protectBadge {
 		t.Fatalf("--yes --json: %d\n%s%s", r.code, r.stdout, r.stderr)
 	}
 	for _, a := range protect.Agents {
@@ -144,6 +145,9 @@ func TestProtectEachClient(t *testing.T) {
 			if r.code != 0 || !strings.Contains(r.stdout, "Added the guard to 1 file.") {
 				t.Fatalf("%d\n%s%s", r.code, r.stdout, r.stderr)
 			}
+			if !strings.Contains(r.stdout, "  badge  "+protectBadge+"\n  share  ") || strings.Contains(r.stdout, "\x1b[") {
+				t.Errorf("badge lines missing, or colour off a terminal:\n%s", r.stdout)
+			}
 			if got := snapshot(t, home); equalMaps(got, start) {
 				t.Fatal("nothing changed")
 			}
@@ -154,6 +158,26 @@ func TestProtectEachClient(t *testing.T) {
 				t.Errorf("after undo HOME differs")
 			}
 		})
+	}
+}
+
+// TestProtectBadgeNoColor: on a terminal with NO_COLOR, the badge lines carry no escape codes; a
+// run that changes nothing offers no badge.
+func TestProtectBadgeNoColor(t *testing.T) {
+	home, _ := protectHome(t)
+	env := map[string]string{"HOME": home, "NO_COLOR": "1"}
+	r := cli(t, env, true, "protect", "--yes", "--hook-command", "deedglass")
+	if r.code != 0 || !strings.Contains(r.stdout, protectBadge) || strings.Contains(r.stdout, "\x1b[") {
+		t.Fatalf("%d\n%q", r.code, r.stdout)
+	}
+	r = cli(t, env, true, "protect", "--yes", "--hook-command", "deedglass")
+	if strings.Contains(r.stdout, "badge") {
+		t.Errorf("a run with nothing to change offered the badge:\n%s", r.stdout)
+	}
+	r = cli(t, map[string]string{"HOME": home}, false, "protect", "--dry-run", "--json", "--hook-command", "deedglass")
+	var out struct{ Badge *string }
+	if json.Unmarshal([]byte(r.stdout), &out) != nil || out.Badge == nil || *out.Badge != "" {
+		t.Errorf("--json without a write: badge %v\n%s", out.Badge, r.stdout)
 	}
 }
 

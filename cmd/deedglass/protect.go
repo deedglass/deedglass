@@ -22,6 +22,10 @@ import (
 // CLI) from the hook configs in internal/shellguard. It prints one plan, writes only after [y/N] or
 // --yes, backs up every file it changes, and --undo puts them back. No server, no network.
 
+// protectBadge is the README badge a successful run offers (a shields.io static badge linking to
+// the check page). It is printed, never written anywhere.
+const protectBadge = "[![Agents protected by Deedglass](https://img.shields.io/badge/agents-protected%20by%20Deedglass-0f766e)](https://deedglass.com/check)"
+
 type protectOpts struct {
 	dryRun, yes, undo, project bool
 	client, hookCommand        string
@@ -104,8 +108,12 @@ func runProtect(_ context.Context, e *Env, args []string) error {
 		if cs == nil {
 			cs = []protect.Change{}
 		}
+		badge := ""
+		if applied {
+			badge = protectBadge
+		}
 		return writeJSON(e, map[string]any{"object": "protect", "dry_run": o.dryRun, "applied": applied, "command": po.Command + " guard shell",
-			"backup": run, "changes": adds, "agents": cs})
+			"backup": run, "changes": adds, "agents": cs, "badge": badge})
 	}
 	if !e.Globals.JSON {
 		meta := []string{fmt.Sprintf("%d of %d agents found", found, len(cs))}
@@ -198,6 +206,9 @@ func runProtect(_ context.Context, e *Env, args []string) error {
 			fmt.Fprintln(e.Stdout, ui.Indent+e.Style.Dim("•")+" Gemini CLI can't ask, so the guard denies and shows why.")
 		}
 	}
+	// Optional, two lines, no prompt: the badge stays whole on one line so it copies cleanly.
+	fmt.Fprintln(e.Stdout, ui.Indent+e.Style.Dim("badge")+"  "+protectBadge)
+	fmt.Fprintln(e.Stdout, ui.Indent+e.Style.Dim("share")+"  "+"Optional: paste it in your README, or send a teammate npx deedglass protect.")
 	fmt.Fprintln(e.Stdout, e.Style.Next("Restart your agents. deedglass protect --undo puts the files back."))
 	return nil
 }

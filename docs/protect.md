@@ -88,6 +88,20 @@ shell's `PATH` (Cursor started from the Dock, for example). So it writes:
 
 `--hook-command` sets it yourself, for example `--hook-command deedglass`.
 
+## The badge
+
+After a run that adds the guard, protect prints two optional lines and asks nothing:
+
+```text
+  badge  [![Agents protected by Deedglass](https://img.shields.io/badge/agents-protected%20by%20Deedglass-0f766e)](https://deedglass.com/check)
+  share  Optional: paste it in your README, or send a teammate npx deedglass protect.
+```
+
+The first is a [shields.io](https://shields.io) static badge for your README that links to
+[deedglass.com/check](https://deedglass.com/check); protect writes it nowhere. The badge line stays
+on one line so it copies whole. `--json` carries it as `badge` (empty when nothing was written),
+and `NO_COLOR` turns off colour on these lines as on every other.
+
 ## The Claude Code plugin
 
 The Deedglass plugin for Claude Code carries the same guard, and since v0.12.0 it is on (`ask`) by
@@ -98,7 +112,7 @@ installed, a matching command is checked twice and asks once per check.
 ## JSON
 
 `--json` prints `{"object": "protect", "dry_run", "applied", "command", "backup", "changes",
-"agents": [...]}`, one entry per agent with `client`, `title`, `scope`, `file`, `event`, `status`
+"badge", "agents": [...]}`, one entry per agent with `client`, `title`, `scope`, `file`, `event`, `status`
 (`add`, `present`, `skip`, `absent`), `reason` and `notes`. Without `--yes` it plans only.
 `--undo --json` prints `{"object": "protect_undo", "dry_run", "files": [...]}`, each with `status`
 `restored`, `removed`, `left` or `failed`.
