@@ -15,9 +15,16 @@ type Entry struct {
 	flags [][]string // each group needs one of its flags (--x or --x=value)
 	not   []string   // none of these flags
 	arg   string     // an argument or VAR=value that must also be present
+	first bool       // words start at the first non-flag word (railway delete, not railway volume delete)
+	then  []string   // after words, a later non-flag word names one of these (kubectl delete -n prod pvc x)
+	// custom matches instead of words, flags and not; it returns the label after the program.
+	custom func(args []string) (string, bool)
 }
 
 const checked = "2026-10-18"
+
+// checkedCloud is the date the cloud, infrastructure and hosted-database rows were checked.
+const checkedCloud = "2026-10-26"
 
 // rakeInfo are rake's options that list or describe tasks, or do a dry run, instead of running one.
 var rakeInfo = []string{"-T", "--tasks", "-D", "--describe", "-W", "--where", "-P", "--prereqs", "-n", "--dry-run"}
@@ -144,6 +151,78 @@ var Catalog = []Entry{
 		Source: "https://dev.mysql.com/doc/refman/8.4/en/mysqladmin.html",
 		progs:  []string{"mysqladmin"}, words: []string{"drop"}},
 
+	// Cloud, infrastructure and hosted-database CLIs: each one deletes a database, a volume, a
+	// bucket's objects or the infrastructure itself, as its own reference page says.
+	{ID: "railway-volume-delete", Shape: "railway volume delete",
+		Why:    "deletes a Railway volume and the data on it",
+		Source: "https://docs.railway.com/reference/cli-api", Checked: checkedCloud,
+		progs: []string{"railway"}, words: []string{"volume", "delete"}},
+	{ID: "railway-delete-project", Shape: "railway delete",
+		Why:    "deletes the Railway project",
+		Source: "https://docs.railway.com/reference/cli-api", Checked: checkedCloud,
+		progs: []string{"railway"}, words: []string{"delete"}, first: true},
+	{ID: "railway-api-delete", Shape: "curl to Railway's GraphQL API with volumeDelete or projectDelete",
+		Why:    "calls Railway's API to delete a volume or a project",
+		Source: "https://docs.railway.com/guides/manage-volumes", Checked: checkedCloud,
+		progs: []string{"curl", "wget", "http", "https", "xh"}, custom: railwayAPIDelete},
+	{ID: "supabase-projects-delete", Shape: "supabase projects delete",
+		Why:    "deletes the Supabase project",
+		Source: "https://supabase.com/docs/reference/cli/supabase-projects-delete", Checked: checkedCloud,
+		progs: []string{"supabase"}, words: []string{"projects", "delete"}},
+	{ID: "neon-branches-delete", Shape: "neonctl branches delete",
+		Why:    "deletes a Neon branch",
+		Source: "https://neon.com/docs/cli/branches#delete", Checked: checkedCloud,
+		progs: []string{"neonctl", "neon"}, words: []string{"branches", "delete"}},
+	{ID: "neon-projects-delete", Shape: "neonctl projects delete",
+		Why:    "deletes the Neon project",
+		Source: "https://neon.com/docs/cli/projects#delete", Checked: checkedCloud,
+		progs: []string{"neonctl", "neon"}, words: []string{"projects", "delete"}},
+	{ID: "terraform-destroy", Shape: "terraform destroy, terraform apply -destroy",
+		Why:    "destroys every resource the configuration manages",
+		Source: "https://developer.hashicorp.com/terraform/cli/commands/destroy", Checked: checkedCloud,
+		progs: []string{"terraform"}, custom: terraformDestroy},
+	{ID: "pulumi-destroy", Shape: "pulumi destroy",
+		Why:    "destroys every resource in the stack",
+		Source: "https://www.pulumi.com/docs/iac/cli/commands/pulumi_destroy/", Checked: checkedCloud,
+		progs: []string{"pulumi"}, words: []string{"destroy"}, not: []string{"--preview-only"}},
+	{ID: "aws-rds-delete", Shape: "aws rds delete-db-instance, delete-db-cluster",
+		Why:    "deletes the RDS database and its automated backups",
+		Source: "https://docs.aws.amazon.com/cli/latest/reference/rds/delete-db-instance.html", Checked: checkedCloud,
+		progs: []string{"aws"}, words: []string{"rds", "delete-db-instance|delete-db-cluster"}},
+	{ID: "aws-s3-rb-force", Shape: "aws s3 rb --force",
+		Why:    "deletes every object in the bucket, then the bucket",
+		Source: "https://docs.aws.amazon.com/cli/latest/reference/s3/rb.html", Checked: checkedCloud,
+		progs: []string{"aws"}, words: []string{"s3", "rb"}, flags: [][]string{{"--force"}}},
+	{ID: "aws-s3-rm-recursive", Shape: "aws s3 rm --recursive",
+		Why:    "deletes every object under the bucket or prefix",
+		Source: "https://docs.aws.amazon.com/cli/latest/reference/s3/rm.html", Checked: checkedCloud,
+		progs: []string{"aws"}, words: []string{"s3", "rm"}, flags: [][]string{{"--recursive"}}, not: []string{"--dryrun"}},
+	{ID: "gcloud-sql-instances-delete", Shape: "gcloud sql instances delete",
+		Why:    "deletes the Cloud SQL instance",
+		Source: "https://docs.cloud.google.com/sdk/gcloud/reference/sql/instances/delete", Checked: checkedCloud,
+		progs: []string{"gcloud"}, words: []string{"sql", "instances", "delete"}},
+	{ID: "kubectl-delete-storage", Shape: "kubectl delete namespace | pvc | pv",
+		Why:    "deletes a namespace and everything in it, or a volume claim or volume whose storage the Delete reclaim policy deletes too",
+		Source: "https://kubernetes.io/docs/concepts/storage/persistent-volumes/", Checked: checkedCloud,
+		progs: []string{"kubectl", "oc"}, words: []string{"delete"}, not: []string{"--dry-run"},
+		then: []string{"namespace", "namespaces", "ns", "persistentvolumeclaim", "persistentvolumeclaims", "pvc", "persistentvolume", "persistentvolumes", "pv"}},
+	{ID: "docker-volume-rm", Shape: "docker volume rm | remove | prune",
+		Why:    "removes Docker volumes and the data in them",
+		Source: "https://docs.docker.com/reference/cli/docker/volume/rm/", Checked: checkedCloud,
+		progs: []string{"docker", "podman"}, words: []string{"volume", "rm|remove|prune"}},
+	{ID: "fly-volumes-destroy", Shape: "fly volumes destroy",
+		Why:    "destroys the Fly volume and permanently deletes its data",
+		Source: "https://docs.fly.io/flyctl/volumes-destroy", Checked: checkedCloud,
+		progs: []string{"fly", "flyctl"}, words: []string{"volumes", "destroy"}},
+	{ID: "pscale-database-delete", Shape: "pscale database delete",
+		Why:    "deletes the PlanetScale database",
+		Source: "https://planetscale.com/docs/reference/database", Checked: checkedCloud,
+		progs: []string{"pscale"}, words: []string{"database", "delete"}},
+	{ID: "turso-db-destroy", Shape: "turso db destroy",
+		Why:    "destroys the Turso database",
+		Source: "https://docs.turso.tech/cli/db/destroy", Checked: checkedCloud,
+		progs: []string{"turso"}, words: []string{"db", "destroy"}},
+
 	// SQL that psql (-c, a heredoc, a here-string, or echo, printf or cat piped in), mysql or
 	// mariadb (-e or stdin), sqlite3 or prisma db execute --stdin would run, read by sqlguard.
 	{ID: "sql-drop", Shape: "DROP TABLE, SCHEMA, DATABASE, OWNED or MATERIALIZED VIEW; DROP TYPE, DOMAIN or EXTENSION … CASCADE",
@@ -174,7 +253,9 @@ var Catalog = []Entry{
 
 func init() {
 	for i := range Catalog {
-		Catalog[i].Checked = checked
+		if Catalog[i].Checked == "" {
+			Catalog[i].Checked = checked
+		}
 	}
 }
 

@@ -50,8 +50,9 @@ if (plugin.name !== 'deedglass' || plugin.version !== gen.version) bad('plugin.j
 const pmcp = json('integrations/claude-code/.mcp.json');
 const pinned = JSON.stringify({ ...gen.server, args: gen.server.args.map((a) => (a === 'deedglass' ? `deedglass@${gen.version}` : a)) });
 if (JSON.stringify(pmcp.mcpServers?.deedglass) !== pinned) bad(`claude-code/.mcp.json: not the one server object pinned to deedglass@${gen.version} (run scripts/pin-plugin.sh ${gen.version})`);
-// FEAT-07: the one hook is the shell guard, off unless DEEDGLASS_SHELL_GUARD is ask or deny. Nothing else
-// may go in hooks/, the hook only sees Bash, and the script answers nothing (exit 0) when the variable is unset.
+// FEAT-07: the one hook is the shell guard, on (ask) by default since v0.12.0 and off with
+// DEEDGLASS_SHELL_GUARD=off. Nothing else may go in hooks/, the hook only sees Bash, and the script answers
+// nothing (exit 0) when the variable is off, or when it is unset and deedglass can't run.
 const hooksDir = 'integrations/claude-code/hooks';
 if (existsSync(join(root, hooksDir))) {
   const files = readdirSync(join(root, hooksDir)).sort().join(',');
@@ -71,7 +72,7 @@ if (existsSync(join(root, hooksDir))) {
     bad('claude-code/hooks/hooks.json: the hook must set "onFailure": "continue" and no shell or args');
   }
   const sg = rd(`${hooksDir}/shell-guard.sh`);
-  if (!/case "\$\{DEEDGLASS_SHELL_GUARD:-off\}" in/.test(sg) || !/\*\)\n\tcat >\/dev\/null\n\texit 0/.test(sg)) bad('claude-code/hooks/shell-guard.sh: must be off unless DEEDGLASS_SHELL_GUARD is set');
+  if (!/^off \| 0 \| false \| no\)\n\tcat >\/dev\/null\n\texit 0/m.test(sg) || !/\[ -n "\$\{DEEDGLASS_SHELL_GUARD-\}" \] \|\| exit 0/.test(sg)) bad('claude-code/hooks/shell-guard.sh: must answer nothing when DEEDGLASS_SHELL_GUARD is off, or unset and unable to check');
   if (/npx|curl|wget|https?:/.test(sg)) bad('claude-code/hooks/shell-guard.sh: must not fetch anything');
   if (/exit\s+2|exec\s/.test(sg)) bad('claude-code/hooks/shell-guard.sh: must never exit 2 or exec (exit 2 blocks the command)');
   textChecks(`${hooksDir}/hooks.json`, rd(`${hooksDir}/hooks.json`));

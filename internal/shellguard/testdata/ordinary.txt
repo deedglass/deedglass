@@ -560,3 +560,95 @@ find migrations -name "*.sql" -exec wc -l {} \;
 watch -n 2 docker ps
 
 watch -d 'psql -c "SELECT count(*) FROM jobs"'
+
+# Safe neighbours of the cloud, infrastructure and hosted-database rules (checked 2026-10-26).
+
+railway volume list
+
+railway up
+
+railway down
+
+railway logs --deployment
+
+curl -s https://backboard.railway.app/graphql/v2 -d '{"query":"query { me { email } }"}'
+
+curl -s https://api.example.com/volumeDelete-docs
+
+supabase projects list
+
+supabase db reset
+
+supabase db reset --local
+
+neonctl branches list --project-id fancy-sun-123
+
+neonctl branches create --name dev
+
+neon projects list
+
+terraform plan
+
+terraform plan -destroy
+
+terraform plan -destroy -out=destroy.tfplan
+
+terraform apply
+
+terraform init -upgrade
+
+terraform destroy -help
+
+pulumi preview
+
+pulumi destroy --preview-only
+
+pulumi up --yes
+
+aws rds describe-db-instances
+
+aws rds create-db-snapshot --db-instance-identifier prod-db --db-snapshot-identifier before-change
+
+aws s3 ls s3://app-backups
+
+aws s3 rb s3://empty-bucket
+
+aws s3 rm s3://app-backups/tmp/file.txt
+
+aws s3 rm s3://app-backups --recursive --dryrun
+
+aws s3 cp --recursive ./dist s3://app-site
+
+gcloud sql instances list
+
+gcloud sql instances describe prod-pg
+
+kubectl get ns
+
+kubectl get pvc -n prod
+
+kubectl delete pod web-1234 -n prod
+
+kubectl delete deployment web
+
+kubectl delete namespace prod --dry-run=client
+
+kubectl describe pv pvc-1234
+
+docker volume ls
+
+docker volume create app_pgdata
+
+docker volume inspect app_pgdata
+
+docker compose down
+
+fly volumes list
+
+fly volumes create pg_data --size 10
+
+pscale database list
+
+turso db list
+
+turso db show app-db

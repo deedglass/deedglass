@@ -13,8 +13,8 @@ import (
 )
 
 // The Claude Code plugin's hook (integrations/claude-code/hooks): hooks.json runs shell-guard.sh,
-// which runs deedglass guard shell only when DEEDGLASS_SHELL_GUARD is ask or deny. Off, or unable to
-// check, it must never stand between Claude and a Bash command: Claude Code blocks on exit 2, and on
+// which runs deedglass guard shell unless DEEDGLASS_SHELL_GUARD is off (ask is the default). Off, or
+// unable to check, it must never stand between Claude and a Bash command: Claude Code blocks on exit 2, and on
 // Windows without Git Bash on any failure of a shell-form hook unless onFailure is "continue".
 
 const pluginHooks = "../../integrations/claude-code/hooks"
@@ -156,9 +156,13 @@ func TestPluginHookCommandString(t *testing.T) {
 		if substituted {
 			c = strings.ReplaceAll(command, "${CLAUDE_PLUGIN_ROOT}", filepath.ToSlash(root))
 		}
-		r := runSh(t, exec.Command(sh, "-c", c), "-", path, hookInput("dropdb app", t.TempDir()), env)
+		r := runSh(t, exec.Command(sh, "-c", c), "off", path, hookInput("dropdb app", t.TempDir()), env)
 		if r.code != 0 || r.stdout != "" || r.stderr != "" {
 			t.Errorf("off (substituted %v): exit %d, stdout %q, stderr %q", substituted, r.code, r.stdout, r.stderr)
+		}
+		r = runSh(t, exec.Command(sh, "-c", c), "-", path, hookInput("dropdb app", t.TempDir()), env)
+		if r.code != 0 || !strings.Contains(r.stdout, `"permissionDecision":"ask"`) {
+			t.Errorf("default (substituted %v): exit %d, stdout %q, stderr %q", substituted, r.code, r.stdout, r.stderr)
 		}
 		r = runSh(t, exec.Command(sh, "-c", c), "ask", path, hookInput("dropdb app", t.TempDir()), env)
 		if r.code != 0 || !strings.Contains(r.stdout, `"permissionDecision":"ask"`) {
@@ -167,16 +171,38 @@ func TestPluginHookCommandString(t *testing.T) {
 	}
 }
 
-// TestPluginHookOff: unset or any value but ask and deny is no output and exit 0, without running
-// deedglass at all (here a deedglass that would block if it ran).
+// TestPluginHookOff: off, 0, false or no is no output and exit 0, without running deedglass at all
+// (here a deedglass that would block if it ran).
 func TestPluginHookOff(t *testing.T) {
 	blocker := binDir(t, `echo '{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny"}}'; echo ran >&2; exit 2`)
 	for _, path := range []string{blocker, binDir(t, "")} {
-		for _, v := range []string{"-", "", "off", "ASK", "Deny", "allow", "1", "true"} {
+		for _, v := range []string{"off", "0", "false", "no"} {
 			r := runPluginHook(t, v, path, hookInput("npx prisma migrate reset --force", t.TempDir()))
 			if r.code != 0 || r.stdout != "" || r.stderr != "" {
 				t.Errorf("DEEDGLASS_SHELL_GUARD=%q: exit %d, stdout %q, stderr %q", v, r.code, r.stdout, r.stderr)
 			}
+		}
+	}
+}
+
+// TestPluginHookDefault: unset, empty or any other value is ask (the plugin's default since
+// v0.12.0). Left unset with no deedglass to run, it answers nothing and says nothing: installing the
+// plugin without the binary changes nothing.
+func TestPluginHookDefault(t *testing.T) {
+	path := realDeedglass(t)
+	for _, v := range []string{"-", "", "ask", "ASK", "1", "true", "allow"} {
+		r := runPluginHook(t, v, path, hookInput("railway volume delete --volume pg-data", t.TempDir()))
+		var o hookOut
+		if r.code != 0 || json.Unmarshal([]byte(r.stdout), &o) != nil || o.HookSpecificOutput.PermissionDecision != "ask" {
+			t.Errorf("DEEDGLASS_SHELL_GUARD=%q: exit %d, stdout %q, stderr %q", v, r.code, r.stdout, r.stderr)
+		}
+		if r := runPluginHook(t, v, path, hookInput("terraform plan", t.TempDir())); r.code != 0 || r.stdout != "" || r.stderr != "" {
+			t.Errorf("DEEDGLASS_SHELL_GUARD=%q, terraform plan: exit %d, stdout %q, stderr %q", v, r.code, r.stdout, r.stderr)
+		}
+	}
+	for _, v := range []string{"-", ""} {
+		if r := runPluginHook(t, v, binDir(t, ""), hookInput("dropdb app", t.TempDir())); r.code != 0 || r.stdout != "" || r.stderr != "" {
+			t.Errorf("DEEDGLASS_SHELL_GUARD=%q, no deedglass: exit %d, stdout %q, stderr %q", v, r.code, r.stdout, r.stderr)
 		}
 	}
 }

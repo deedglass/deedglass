@@ -48,7 +48,7 @@ type ClientHook struct {
 var Clients = []ClientHook{
 	{
 		Name: "claude-code", Title: "Claude Code", Format: FormatClaude, Event: "PreToolUse", Shell: "Bash", Ask: true,
-		File: ".claude/settings.json (or ~/.claude/settings.json); the Deedglass plugin carries the same hook, off until DEEDGLASS_SHELL_GUARD is set",
+		File: ".claude/settings.json (or ~/.claude/settings.json); the Deedglass plugin carries the same hook, on (ask) by default; DEEDGLASS_SHELL_GUARD=off turns it off",
 		Config: `{
   "hooks": {
     "PreToolUse": [

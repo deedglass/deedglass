@@ -415,3 +415,113 @@ watch -n 60 'psql -c "TRUNCATE jobs"'
 
 # want: prisma-migrate-reset
 sudo find . -maxdepth 0 -execdir npx prisma migrate reset --force {} +
+
+# Cloud, infrastructure and hosted-database CLIs (checked 2026-10-26).
+
+# want: railway-volume-delete
+railway volume delete
+
+# want: railway-volume-delete
+railway volume delete --volume pg-data --yes
+
+# want: railway-delete-project
+railway delete --yes
+
+# want: railway-api-delete
+curl -X POST https://backboard.railway.app/graphql/v2 -H "Authorization: Bearer $RAILWAY_TOKEN" -H "Content-Type: application/json" -d '{"query":"mutation { volumeDelete(volumeId: \"3d2c42fb\") }"}'
+
+# want: railway-api-delete
+curl -s https://backboard.railway.com/graphql/v2 --data-raw '{"query":"mutation projectDelete($id: String!) { projectDelete(id: $id) }","variables":{"id":"p1"}}'
+
+# want: supabase-projects-delete
+supabase projects delete abcdefghijklmnop
+
+# want: supabase-projects-delete
+npx supabase projects delete abcdefghijklmnop
+
+# want: neon-branches-delete
+neonctl branches delete main --project-id fancy-sun-123
+
+# want: neon-branches-delete
+npx neonctl branches delete br-old-1
+
+# want: neon-projects-delete
+neon projects delete fancy-sun-123
+
+# want: terraform-destroy
+terraform destroy -auto-approve
+
+# want: terraform-destroy
+terraform -chdir=infra/prod destroy
+
+# want: terraform-destroy
+terraform apply -destroy -auto-approve
+
+# want: terraform-destroy
+cd infra && terraform apply --destroy
+
+# want: terraform-destroy
+doppler run -- terraform destroy -target=aws_db_instance.main
+
+# want: pulumi-destroy
+pulumi destroy --yes --stack prod
+
+# want: aws-rds-delete
+aws rds delete-db-instance --db-instance-identifier prod-db --skip-final-snapshot
+
+# want: aws-rds-delete
+aws --profile prod --region us-east-1 rds delete-db-cluster --db-cluster-identifier main
+
+# want: aws-s3-rb-force
+aws s3 rb s3://app-uploads --force
+
+# want: aws-s3-rm-recursive
+aws s3 rm s3://app-backups --recursive
+
+# want: aws-s3-rm-recursive
+AWS_PROFILE=prod aws s3 rm --recursive s3://app-backups/2026/
+
+# want: gcloud-sql-instances-delete
+gcloud sql instances delete prod-pg --quiet
+
+# want: kubectl-delete-storage
+kubectl delete namespace prod
+
+# want: kubectl-delete-storage
+kubectl delete ns staging
+
+# want: kubectl-delete-storage
+kubectl -n prod delete pvc data-postgres-0
+
+# want: kubectl-delete-storage
+kubectl delete -n prod pvc data-postgres-0
+
+# want: kubectl-delete-storage
+kubectl delete persistentvolumeclaims --all -n prod
+
+# want: kubectl-delete-storage
+kubectl delete pv/pvc-1234
+
+# want: kubectl-delete-storage
+kubectl --context prod delete namespaces api
+
+# want: docker-volume-rm
+docker volume rm app_pgdata
+
+# want: docker-volume-rm
+docker volume remove app_pgdata
+
+# want: docker-volume-rm
+docker volume prune -a -f
+
+# want: fly-volumes-destroy
+fly volumes destroy vol_1234 --yes
+
+# want: fly-volumes-destroy
+flyctl volumes destroy vol_1234
+
+# want: pscale-database-delete
+pscale database delete app --force
+
+# want: turso-db-destroy
+turso db destroy app-db --yes

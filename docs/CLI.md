@@ -163,6 +163,7 @@ builds it. Hidden commands work but aren't in `deedglass help`.
 |---|---|---|---|
 | `deedglass init [--yes] [--dir .] [--client claude-code|claude-desktop|cursor|vscode|windsurf|sdk-python|sdk-typescript|none] [--listen 127.0.0.1:8080] [--pg-port 55432] [--policy postgres-check|postgres-safe] [--no-open] [--no-smoke] [--lockdown] [--stop] [--purge] [--trigger] [--quiet] [--json]` | Setup | Set up Deedglass in this directory | built |
 | `deedglass connect <postgres-url> [--name <connector>] [--schema public] [--tables a,b] [--policy postgres-safe|postgres-check] [--agent <name>] [--apply] [--confirm <database>] [--dsn-host host:port] [--json]` | Setup | Put your own Postgres behind Deedglass | built |
+| `deedglass protect [--dry-run] [--yes] [--undo] [--client <names>] [--project] [--hook-command <cmd>] [--json]` | Setup | Add the shell guard to every coding agent | built |
 | `deedglass doctor [--only <ids>] [--quiet] [--json]` | Setup | Check config, database and keys | built |
 | `deedglass scan [--dir .] [--postgres-dsn-env VAR] [--format md,html,json,sarif] [--score] [--badge] [--badge-share] [--share] [--ci] [--fail-under A|B|C|D] [--full [--no-seal]] [--json]` | Setup | Show what your agent setup can change | built |
 | `deedglass play [--fast] [--json]` | Setup | Watch the 301 scene offline, no Docker | built |

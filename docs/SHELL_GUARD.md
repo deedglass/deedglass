@@ -1,17 +1,19 @@
 # The shell guard
 
 `deedglass guard shell` is a Claude Code `PreToolUse` hook. Before Claude Code runs a Bash command, it
-reads the command and, when part of it would destroy database data (`prisma migrate reset`,
-`alembic downgrade base`, `dropdb`, a `psql -c` with `DROP TABLE`), it asks you first, with one
-sentence that names Deedglass and the reason:
+reads the command and, when part of it would destroy database data or infrastructure (`prisma migrate reset`,
+`alembic downgrade base`, `dropdb`, a `psql -c` with `DROP TABLE`, `railway volume delete`,
+`terraform destroy`), it asks you first, with one sentence that names Deedglass and the reason:
 
 ```text
 Deedglass asks first: prisma db push --force-reset resets the database before it pushes the schema, which deletes every row.
 ```
 
 It is a second check, not a sandbox. It reads the command as written, compares it with a catalog of
-commands, and never runs or expands anything. It needs no server, no account and no network, and it
-is off until you turn it on.
+commands, and never runs or expands anything. It needs no server, no account and no network. In the
+Deedglass plugin for Claude Code it is on (`ask`) by default; everywhere else it is off until you
+turn it on. `npx deedglass protect` turns it on in every coding agent it finds
+([protect.md](protect.md)).
 
 ## Why the shell
 
@@ -33,27 +35,29 @@ prints its help; see [INSTALL.md](INSTALL.md)). The guard runs it locally for ea
 
 ### With the Deedglass plugin
 
-The plugin (`/plugin install deedglass@deedglass`) carries the hook, off. Turn it on with one
-setting in `.claude/settings.json` (this project) or `~/.claude/settings.json` (every project):
+The plugin (`/plugin install deedglass@deedglass`) carries the hook, on (`ask`) by default. Change it
+with one setting in `.claude/settings.json` (this project) or `~/.claude/settings.json` (every project):
 
 ```json
 {
-  "env": { "DEEDGLASS_SHELL_GUARD": "ask" }
+  "env": { "DEEDGLASS_SHELL_GUARD": "off" }
 }
 ```
 
-- `ask`: a matching command waits for your yes in the permission prompt.
+- unset, `ask`, or any value but the ones below: a matching command waits for your yes in the
+  permission prompt.
 - `deny`: a matching command doesn't run, and Claude reads the reason, which ends "if it is
   intended, ask the user to run it themselves."
-- unset, or anything else: the hook reads its input and answers nothing. It doesn't run
+- `off` (or `0`, `false`, `no`): the hook reads its input and answers nothing. It doesn't run
   `deedglass` at all.
 
-Restart Claude Code after changing it. To turn it off, remove the setting.
+Restart Claude Code after changing it.
 
-If the guard is on but can't check, because `deedglass` isn't on your `PATH` or is an older one
-without `guard shell`, it never blocks the command. With `ask` it exits 0 with no decision and a
-note to you that it checked nothing; with `deny` it prints why on stderr and exits 1, which Claude
-Code shows as a non-blocking error. The plugin's hook also sets `"onFailure": "continue"` (Claude
+If the guard can't check, because `deedglass` isn't on your `PATH` or is an older one without
+`guard shell`, it never blocks the command. Left unset, it then answers nothing, so installing the
+plugin without the binary changes nothing. Set to `ask`, it exits 0 with no decision and a note to
+you that it checked nothing; with `deny` it prints why on stderr and exits 1, which Claude Code
+shows as a non-blocking error. The plugin's hook also sets `"onFailure": "continue"` (Claude
 Code v2.1.295 or later), so a hook that can't start or times out lets the command go ahead.
 
 ### On Windows
@@ -67,7 +71,8 @@ binary on your `PATH`.
 
 ### Without the plugin
 
-Add the hook to a settings file yourself:
+`deedglass protect --client claude-code` adds the hook to `~/.claude/settings.json` for you, with a
+backup and `--undo` ([protect.md](protect.md)). Or add it to a settings file yourself:
 
 ```json
 {
@@ -154,8 +159,9 @@ would read. `--no-files` turns this off.
 
 ## What it asks about
 
-Every row was checked against its source on 2026-10-18; `deedglass guard shell --list` prints the
-same table with the reason it gives.
+Every row was checked against its source on 2026-10-18, and the cloud, infrastructure and hosted
+database rows (from `railway-volume-delete` on) on 2026-10-26; `deedglass guard shell --list` prints
+the same table with the reason and date for each.
 
 | Id | Shape | Source |
 |---|---|---|
@@ -189,6 +195,23 @@ same table with the reason it gives.
 | `pg-restore-clean` | pg_restore --clean --dbname | [source](https://www.postgresql.org/docs/current/app-pgrestore.html) |
 | `pg-dump-clean-pipe` | pg_dump --clean \| psql | [source](https://www.postgresql.org/docs/current/app-pgdump.html) |
 | `mysqladmin-drop` | mysqladmin drop | [source](https://dev.mysql.com/doc/refman/8.4/en/mysqladmin.html) |
+| `railway-volume-delete` | railway volume delete | [source](https://docs.railway.com/reference/cli-api) |
+| `railway-delete-project` | railway delete | [source](https://docs.railway.com/reference/cli-api) |
+| `railway-api-delete` | curl to Railway's GraphQL API with volumeDelete or projectDelete | [source](https://docs.railway.com/guides/manage-volumes) |
+| `supabase-projects-delete` | supabase projects delete | [source](https://supabase.com/docs/reference/cli/supabase-projects-delete) |
+| `neon-branches-delete` | neonctl branches delete | [source](https://neon.com/docs/cli/branches#delete) |
+| `neon-projects-delete` | neonctl projects delete | [source](https://neon.com/docs/cli/projects#delete) |
+| `terraform-destroy` | terraform destroy, terraform apply -destroy | [source](https://developer.hashicorp.com/terraform/cli/commands/destroy) |
+| `pulumi-destroy` | pulumi destroy | [source](https://www.pulumi.com/docs/iac/cli/commands/pulumi_destroy/) |
+| `aws-rds-delete` | aws rds delete-db-instance, delete-db-cluster | [source](https://docs.aws.amazon.com/cli/latest/reference/rds/delete-db-instance.html) |
+| `aws-s3-rb-force` | aws s3 rb --force | [source](https://docs.aws.amazon.com/cli/latest/reference/s3/rb.html) |
+| `aws-s3-rm-recursive` | aws s3 rm --recursive | [source](https://docs.aws.amazon.com/cli/latest/reference/s3/rm.html) |
+| `gcloud-sql-instances-delete` | gcloud sql instances delete | [source](https://docs.cloud.google.com/sdk/gcloud/reference/sql/instances/delete) |
+| `kubectl-delete-storage` | kubectl delete namespace \| pvc \| pv | [source](https://kubernetes.io/docs/concepts/storage/persistent-volumes/) |
+| `docker-volume-rm` | docker volume rm \| remove \| prune | [source](https://docs.docker.com/reference/cli/docker/volume/rm/) |
+| `fly-volumes-destroy` | fly volumes destroy | [source](https://docs.fly.io/flyctl/volumes-destroy) |
+| `pscale-database-delete` | pscale database delete | [source](https://planetscale.com/docs/reference/database) |
+| `turso-db-destroy` | turso db destroy | [source](https://docs.turso.tech/cli/db/destroy) |
 | `sql-drop` | DROP TABLE, SCHEMA, DATABASE, OWNED or MATERIALIZED VIEW; DROP TYPE, DOMAIN or EXTENSION … CASCADE | [source](https://www.postgresql.org/docs/current/sql-droptable.html) |
 | `sql-truncate` | TRUNCATE … | [source](https://www.postgresql.org/docs/current/sql-truncate.html) |
 | `sql-delete-all` | DELETE with no WHERE, or WHERE true | [source](https://www.postgresql.org/docs/current/sql-delete.html) |
@@ -203,7 +226,13 @@ It asks about data, not every change: `DROP INDEX`, `DROP VIEW`, `DROP FUNCTION`
 `alembic upgrade head`, `rails db:migrate`). `--help`, `--sql` (alembic's offline mode), `--plan`
 and rake's listing flags pass too.
 
-Not in the catalog: `drizzle-kit drop`. Current drizzle-kit has no `drop` command
+The cloud rows pass their safe neighbours: `terraform plan` and `terraform plan -destroy`,
+`pulumi destroy --preview-only`, `aws s3 rm --recursive --dryrun`, `aws s3 rb` without `--force`
+(it only removes an empty bucket), `kubectl get ns`, `kubectl delete pod`, any `kubectl delete`
+with `--dry-run`, and `supabase db reset` on the local stack.
+
+Not in the catalog: `railway down`. Railway's CLI reference says it removes the latest deployment,
+not a volume or a project, so it passes. Nor is `drizzle-kit drop`: current drizzle-kit has no `drop` command
 ([drizzle-kit overview](https://orm.drizzle.team/docs/kit-overview), checked 2026-10-18), so there
 is nothing to match.
 
@@ -228,6 +257,9 @@ the asks.
 - A Makefile target (`make db-reset`), an alias or shell function defined earlier in the session.
 - A command substitution inside an unquoted heredoc body (bash runs it; the guard reads the body as text).
 - A database reached over HTTP (`curl -X DELETE …`), or through an MCP tool rather than the shell.
+  The one HTTP call it reads is a `curl` (or `wget`, `http`, `xh`) to Railway's GraphQL API whose
+  arguments hold `volumeDelete` or `projectDelete`; a body read from a file (`-d @body.json`) passes.
+- `npx @railway/cli volume delete` is not read as `railway`; the installed `railway` command is.
 - Files: only those named above, only from the hook's working directory, and never through a
   variable or a glob.
 
