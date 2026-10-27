@@ -54,7 +54,7 @@ func TestDockerNotRunning(t *testing.T) {
 		t.Fatal(err)
 	}
 	s := res.Steps[len(res.Steps)-1]
-	if s.Detail != "Docker isn't running." || s.Fix != "Start Docker Desktop, then run deedglass init again." {
+	if s.Detail != "Docker isn't running." || s.Fix != "Start Docker Desktop, then run deedglass init again. Without Docker, deedglass start shows the same scene offline." {
 		t.Fatalf("%+v", s)
 	}
 }

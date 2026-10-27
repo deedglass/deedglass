@@ -23,7 +23,7 @@ func runPlay(ctx context.Context, e *Env, args []string) error {
 	if len(args) > 0 {
 		return usageErr(fmt.Errorf("deedglass play takes no arguments (got %q)", args[0]), "Run deedglass play, or deedglass play --fast.")
 	}
-	o := play.Options{Out: e.Stdout, Style: e.Style, Width: e.Width, Verbose: e.Globals.Verbose > 0}
+	o := play.Options{Out: e.Stdout, Style: e.Style, Width: e.Width, Verbose: e.Globals.Verbose > 0, Cmd: invocation(e)}
 	if e.Globals.JSON {
 		o.Out = discard{}
 	}

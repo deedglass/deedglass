@@ -5,6 +5,7 @@ exit 0
 [1mUsage[0m  deedglass <command> [flags]
 
 [1mSetup[0m
+  start               See it catch a wrong row count, no questions
   init                Set up Deedglass in this directory
   doctor              Check config, database and keys
   connect             Put your own Postgres behind Deedglass

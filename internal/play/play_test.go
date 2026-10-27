@@ -81,7 +81,7 @@ func TestRunLiveParts(t *testing.T) {
 		"verify   ✓ 4 deeds, chain intact, 1 seal key",
 		"tamper   one byte changed in deed 1",
 		"Deed 1 was changed after it was sealed.",
-		"npx deedglass scan",
+		"deedglass start",
 	} {
 		if !strings.Contains(out, s) {
 			t.Errorf("output lacks %q\n%s", s, out)

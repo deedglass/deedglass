@@ -128,6 +128,11 @@ The last line of a result or an error is what to do now (`Style.Next`):
 When a result offers several commands, they go under a bold `Next` heading, one per line, or as a
 command list (`Style.Commands`): the command as typed, then what it does in dim.
 
+Every first-touch command (`start`, `play`, `scan`, `protect`, `health pilot`, `init`) ends this
+way, and the commands follow how the binary was run (`npx deedglass …` under npx). The first one
+is the next thing most people want: after `scan`, `protect`; after the offline scene, the live
+one; after the live scene, the undo it found.
+
 ## Summary first, and the line budget
 
 The first line is the outcome; the rest is evidence. Detail a person rarely needs waits for `-v`.
@@ -145,6 +150,7 @@ The budget at 80 columns, not counting the terminal mark:
 | `verify`                    | up to 6 (`-v` adds the detail)         |
 | `keys list`, `actions list`, `approvals list` | one per row, plus header and footer (2) |
 | `actions show`              | up to 16                               |
+| bare `deedglass` (welcome)  | 5, plus the inline mark on a terminal  |
 | `init`, first run           | up to 35, with the smoke test          |
 | `init`, nothing to change   | up to 7                                |
 | `scan`                      | up to 40                               |

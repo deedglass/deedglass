@@ -157,7 +157,7 @@ mv -f "$tmp/deedglass.new" "$dir/deedglass" 2>/dev/null || cp "$tmp/deedglass.ne
 say "✓ installed $dir/deedglass"
 
 case ":${PATH:-}:" in
-  *":$dir:"*) say "  next  deedglass version" ;;
+  *":$dir:"*) say "  next  deedglass start    see it catch an agent's wrong row count; no questions, Docker optional" ;;
   *) say "  $dir isn't on your PATH. Add it, for example: export PATH=\"$dir:\$PATH\""
-     say "  next  $dir/deedglass version" ;;
+     say "  next  $dir/deedglass start    see it catch an agent's wrong row count; no questions" ;;
 esac

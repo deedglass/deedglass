@@ -1,4 +1,4 @@
-deedglass health pilot  synthetic data · about 15 minutes
+deedglass health pilot  synthetic data · about 15 minutes to read
 
   pack   healthcare-fhir 1.1.0, enforced; PHI mode on; lockdown on
   store  an in-memory FHIR R4 store inside this binary: synthetic records only
@@ -59,4 +59,7 @@ deedglass health pilot  synthetic data · about 15 minutes
   report  deedglass-pilot/REPORT.md, ready to forward
   review  deedglass-pilot/IT_REVIEW_PACK.md, for your security review
 
-Next: point it at your FHIR sandbox: deedglass health pilot --fhir-url …
+Next
+  deedglass health pilot --fhir-url …  the first scene on your FHIR sandbox
+  deedglass start                      a wrong row count, caught on Postgres
+  deedglass protect                    guard your coding agents

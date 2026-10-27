@@ -66,15 +66,22 @@ published, build the image locally as above. Checksums, signatures and SBOMs:
 ## Try it in 60 seconds
 
 ```sh
-npx -y deedglass play --fast   # the 1-vs-301 scene in your terminal: no Docker, nothing leaves your machine
-npx -y deedglass scan          # grade what the agents in your MCP configs could change, A to F (read-only)
-npx -y deedglass init --yes && npx -y deedglass init --trigger   # the same scene, live, on Postgres in Docker
+npx -y deedglass start   # one command, no questions: an agent reports 1 row, Postgres changed 301, and it's caught
 ```
 
-The first two need only Node: together they took 18 s from an empty npm cache on one machine
-(2026-10-25). The third starts the real stack in Docker; with the Postgres image already pulled it
-is ready in about 7 s, and the first run also downloads Postgres 18.6. The
-[Quickstart](#quickstart) below walks through it.
+With Docker running, `start` sets up the real stack (Postgres 18.6 in Docker, the server, one
+agent; free ports are picked for you) and runs the scene live, then prints where the Console is.
+Without Docker it plays the same scene inside the binary, every line labelled `live` or `replay`,
+in under 30 s, and says how to get the live version. Then:
+
+```sh
+npx -y deedglass protect        # guard Claude Code, Cursor and other coding agents
+npx -y deedglass health pilot   # the same checks on synthetic patient records
+npx -y deedglass scan           # grade what the agents in your MCP configs could change, A to F
+```
+
+`start` needs v0.14.0 or later; on earlier versions run `deedglass play`. The
+[Quickstart](#quickstart) below walks through the live stack step by step.
 
 ## Who it's for
 

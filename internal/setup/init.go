@@ -320,7 +320,7 @@ func (x *run) preflight(ctx context.Context) StepResult {
 	defer cancel()
 	ver, err := x.r.Docker(dctx, nil, "info", "--format", "{{.ServerVersion}}")
 	if err != nil || strings.TrimSpace(ver) == "" {
-		return fail(id, title, "Docker isn't running.", "Start Docker Desktop, then run deedglass init again.")
+		return fail(id, title, "Docker isn't running.", "Start Docker Desktop, then run deedglass init again. Without Docker, deedglass start shows the same scene offline.")
 	}
 	stack, _ := ReadStack(x.o.Dir)
 	ours := stack != nil

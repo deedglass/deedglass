@@ -213,6 +213,15 @@ func runScan(ctx context.Context, e *Env, args []string) error {
 		for _, l := range append(badgeLines, shareLines...) {
 			fmt.Fprintln(e.Stdout, l)
 		}
+		if !v.ci && !v.score {
+			// The Next block (CLI_STYLE.md › Next steps; first-run-v1 F11).
+			inv := invocation(e)
+			fmt.Fprintln(e.Stdout)
+			fmt.Fprintln(e.Stdout, e.Style.Section("Next"))
+			ui.Lines(e.Stdout, e.Style.Commands("  ", e.Width,
+				[2]string{inv + " protect", "guard Claude Code, Cursor and other coding agents"},
+				[2]string{inv + " start", "see a check catch an agent's wrong row count"})...)
+		}
 	}
 	if v.full {
 		if v.noWrite {

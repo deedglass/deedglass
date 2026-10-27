@@ -11,6 +11,10 @@ import VerdictChip from '../../components/VerdictChip.astro';
 
 Five minutes from an empty directory to a blocked `DROP TABLE`, an `UPDATE` that Postgres's own change log confirms, and then the case Deedglass is for: the same `UPDATE`, the agent reports 1 row, and Postgres changed 301. It ends on the undo preview built from those rows.
 
+<Aside type="tip" title="One command instead">
+`npx -y deedglass start` (v0.14.0 and later) does steps 2 to 5 in one go with no questions: it picks free ports, runs the smoke test and then the 301-row scene, and prints where the Console is. Without Docker it plays the same scene inside the binary, each line labelled `live` or `replay`. This page walks through the same stack one command at a time.
+</Aside>
+
 **Before you start**
 
 - Docker is running, with about 2 GiB of free disk.

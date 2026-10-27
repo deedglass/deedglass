@@ -112,7 +112,7 @@ func TestGoldens(t *testing.T) {
 	}{
 		{"help", nil, false, []string{"help"}, 0},
 		{"help_color", nil, true, []string{"help"}, 0},
-		{"help_no_args", nil, false, nil, 0},
+		{"welcome_piped", nil, false, nil, 0},
 		{"help_agent", nil, false, []string{"help", "agent"}, 0},
 		{"help_flag_on_command", nil, false, []string{"config", "print", "--help"}, 0},
 		{"version", nil, false, []string{"version"}, 0},

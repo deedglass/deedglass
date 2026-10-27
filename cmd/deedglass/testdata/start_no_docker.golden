@@ -1,0 +1,66 @@
+exit 0
+--- stdout
+○ Docker isn't running, so this is the offline version: the rules run live here,
+  and the Postgres lines are replayed from a recorded run.
+
+Deedglass play  offline · nothing leaves this machine
+
+  live    computed here, by the product's own policy engine and verifier
+  replay  printed by a recorded run of make demo-hero (97a524c, 2026-10-14)
+          Postgres can't run inside this binary, so its lines are replayed
+
+1/6  A safe read
+     request  SELECT id, status FROM public.orders WHERE id = 42
+     rule     ✓ allowed by allow-order-reads, checked at Claimed            live
+
+2/6  A destructive request
+     request  DROP TABLE public.refunds
+     rule     ✕ denied by block-destructive-sql                             live
+                DROP is never allowed for agents.
+     result   Nothing reached the database.
+
+3/6  A normal write
+     before   order 42 paid, 339 others open, trigger off                 replay
+     request  UPDATE public.orders SET status = 'shipped' WHERE id = 42
+     rule     ✓ allowed by allow-order-status-updates, checked at Proven    live
+     check    ✓ Matches: Postgres committed 1 row in public.orders, as    replay
+                the statement said.
+     result   ✓ Verified at Proven (L2) · act_01m4x8kq…                   replay
+
+4/6  The trigger
+     A legacy trigger on public.orders is on. The agent sends the same request.
+     before   order 42 paid, 339 others open, trigger on                  replay
+     request  UPDATE public.orders SET status = 'shipped' WHERE id = 42
+     rule     ✓ allowed by allow-order-status-updates, checked at Proven    live
+     check    ✕ Doesn't match: Postgres changed 301 rows in               replay
+                public.orders. The agent reported 1.
+              ✓ id 42   paid → shipped
+              ✕ id 218  pending → shipped
+              ✕ id 201  paid → shipped
+              … 298 more rows
+     result   ✕ Mismatch at Proven (L2), 301 rows · act_01m4x8kv…         replay
+
+5/6  Put it back
+     request  postgres.undo: put back the rows that action changed
+     rule     ◐ waits for a person: undo-needs-approval                     live
+                Undoing a write changes data again, so a human confirms it
+                first.
+     plan     ✓ 301 rows in public.orders, 301 updates                    replay
+     person   ✓ countersigned by ops@example.test                         replay
+     result   ✓ Restored 301 rows in public.orders exactly as planned.    replay
+
+6/6  Check every record
+     records  4 sealed with sk_00000000…, a key made for this run           live
+              The Postgres checks inside are the replayed ones.
+     verify   ✓ 4 deeds, chain intact, 1 seal key                           live
+     tamper   one byte changed in deed 1
+     verify   ✕ Deed 1 was changed after it was sealed.                     live
+
+✓ Caught. The agent reported 1 row; Postgres changed 301. The undo puts them
+  back after a person approves.
+
+Next
+  deedglass start         again with Docker running: the same scene, live
+  deedglass protect       guard Claude Code, Cursor and other coding agents
+  deedglass health pilot  the same checks on synthetic patient records
+--- stderr

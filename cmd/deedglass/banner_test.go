@@ -18,10 +18,8 @@ func TestBannerGoldens(t *testing.T) {
 		env  map[string]string
 		args []string
 	}{
-		{"banner_bare", truecolor, nil},
-		{"banner_bare_light", map[string]string{"COLORTERM": "truecolor", "DEEDGLASS_THEME": "light"}, nil},
-		{"banner_bare_256", nil, nil},
-		{"banner_bare_no_color", map[string]string{"NO_COLOR": "1"}, nil},
+		{"welcome_tty_truecolor", truecolor, nil},
+		{"welcome_tty_no_color", map[string]string{"NO_COLOR": "1"}, nil},
 		{"banner_version", truecolor, []string{"version"}},
 		{"banner_dash_version", truecolor, []string{"--version"}},
 		{"help_inline_truecolor", truecolor, []string{"help"}},
@@ -37,9 +35,10 @@ func TestBannerGoldens(t *testing.T) {
 }
 
 func TestBannerNeverForMachines(t *testing.T) {
-	help := cli(t, nil, false).stdout // the plain help: bare deedglass off a TTY
-	if help != cli(t, nil, false, "help").stdout {
-		t.Fatal("bare deedglass off a TTY must be the plain help")
+	help := cli(t, nil, false, "help").stdout
+	welcome := cli(t, nil, false).stdout // bare deedglass off a TTY: the plain welcome, never the orb
+	if !strings.Contains(welcome, "deedglass start") || strings.Contains(welcome, "Usage") {
+		t.Fatalf("bare deedglass off a TTY must be the plain welcome, got:\n%s", welcome)
 	}
 	plainVersion := cli(t, nil, false, "version").stdout
 	jsonVersion := cli(t, nil, false, "version", "--json").stdout
@@ -57,9 +56,9 @@ func TestBannerNeverForMachines(t *testing.T) {
 		args []string
 		want string
 	}{
-		{"piped", nil, false, nil, help},
+		{"piped", nil, false, nil, welcome},
 		{"help piped", truecolor(nil), false, []string{"help"}, help},
-		{"piped with truecolor env", truecolor(nil), false, nil, help},
+		{"piped with truecolor env", truecolor(nil), false, nil, welcome},
 		{"CI", truecolor(map[string]string{"CI": "true"}), true, nil, ""},
 		{"NO_BANNER", truecolor(map[string]string{"DEEDGLASS_NO_BANNER": "1"}), true, nil, ""},
 		{"-q", truecolor(nil), true, []string{"-q"}, ""},
@@ -118,18 +117,18 @@ func TestBannerNoColor(t *testing.T) {
 }
 
 func TestBannerNarrow(t *testing.T) {
-	r := cliWidth(t, 50, "")
+	r := cliWidth(t, 50, "version")
 	if strings.Contains(r, "▀") || !strings.Contains(r, "◖") || !strings.Contains(r, "See what your agents actually did.") {
 		t.Errorf("width 50:\n%s", r)
 	}
-	r = cliWidth(t, 30, "")
+	r = cliWidth(t, 30, "version")
 	if strings.Count(r, "\n") != 2 || strings.Contains(r, "▀") {
 		t.Errorf("width 30:\n%s", r)
 	}
 }
 
-// cliWidth runs bare deedglass on a truecolor TTY of the given width.
-func cliWidth(t *testing.T, width int, _ string) string {
+// cliWidth runs deedglass <cmd> (bare when empty) on a truecolor TTY of the given width.
+func cliWidth(t *testing.T, width int, cmd string) string {
 	t.Helper()
 	var out, errb bytes.Buffer
 	env := map[string]string{"COLORTERM": "truecolor", "TERM": "xterm-256color"}
@@ -137,7 +136,11 @@ func cliWidth(t *testing.T, width int, _ string) string {
 		Getenv:      func(k string) string { return env[k] },
 		LoadOptions: func() config.LoadOptions { return config.LoadOptions{Env: env, FS: fstest.MapFS{}, Dir: t.TempDir()} },
 	}
-	if code := run(context.Background(), e, nil); code != 0 {
+	var args []string
+	if cmd != "" {
+		args = []string{cmd}
+	}
+	if code := run(context.Background(), e, args); code != 0 {
 		t.Fatalf("exit %d: %s", code, errb.String())
 	}
 	return out.String()

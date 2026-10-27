@@ -149,7 +149,7 @@ func TestServerResolver(t *testing.T) {
 
 	// Every subcommand, with placeholder arguments, from a subfolder of the init directory. health pilot is a local demo
 	// with no server: like play, it is skipped (its Console link is only printed).
-	skip := regexp.MustCompile(`^(serve|init|connect|play|health pilot|scan|help|version|completion .*|dev .*|licence .*|keys .*|mcp (serve|wrap)|a2a proxy|observe run|guard shell|deeds timestamp|witness debezium|verify|export|policy (packs .*|install|lint|fmt|test|evaluate)|security-pack (verify|build)|deeds seal-file)$`)
+	skip := regexp.MustCompile(`^(serve|init|start|connect|play|health pilot|scan|help|version|completion .*|dev .*|licence .*|keys .*|mcp (serve|wrap)|a2a proxy|observe run|guard shell|deeds timestamp|witness debezium|verify|export|policy (packs .*|install|lint|fmt|test|evaluate)|security-pack (verify|build)|deeds seal-file)$`)
 	reArg := regexp.MustCompile(`<([^>]+)>`)
 	ran := 0
 	for _, c := range commands {

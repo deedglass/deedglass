@@ -50,8 +50,8 @@ func TestJSONAudit(t *testing.T) {
 		_, _ = w.Write([]byte(`{"error":{"type":"authentication_error","code":"invalid_api_key","message":"The API key isn't valid. Create one in Console › Agents.","param":null,"request_id":"req_x","doc_url":"https://docs.deedglass.com/errors/invalid_api_key"}}`))
 	}))
 	defer srv.Close()
-	// Long-running, interactive, or needing Docker or a browser: audited elsewhere.
-	skip := map[string]bool{"serve": true, "mcp wrap": true, "mcp serve": true, "init": true, "dev simulate": true,
+	// Long-running, interactive, or needing Docker or a browser: audited elsewhere (start: TestStartNoDockerJSON).
+	skip := map[string]bool{"serve": true, "mcp wrap": true, "mcp serve": true, "init": true, "start": true, "dev simulate": true,
 		"connector gmail authorize": true, "actions list": true, "completion zsh": true, "completion bash": true, "completion fish": true}
 	audited := 0
 	for _, c := range commands {

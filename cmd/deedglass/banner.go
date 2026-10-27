@@ -47,8 +47,8 @@ func bareOnly(flags []string) bool {
 	return true
 }
 
-// runBare is deedglass with no command: the banner on a TTY, the plain help everywhere else.
-// --version is deedglass version.
+// runBare is deedglass with no command: the welcome (what it is and the three commands to start
+// with; first-run-v1), plain when piped. -q prints the plain help, --version is deedglass version.
 func runBare(ctx context.Context, e *Env, flags []string) error {
 	quiet, version := false, false
 	for _, f := range flags {
@@ -65,12 +65,10 @@ func runBare(ctx context.Context, e *Env, flags []string) error {
 		versionFlagValues = versionOpts{}
 		return runVersion(ctx, e, nil)
 	}
-	if e.Mark.Quiet {
+	if quiet {
 		return printHelp(e, nil)
 	}
-	o := e.Mark
-	o.Next = mark.NextInit
-	fmt.Fprint(e.Stdout, mark.Banner(o))
+	fmt.Fprint(e.Stdout, welcome(e))
 	return nil
 }
 
