@@ -32,6 +32,10 @@ var initValues struct {
 	pgPort                                             int
 }
 
+// initFromStart is set while deedglass start runs init: the trigger scene follows, so init's own
+// Next block and quickstart step line are left for start's closing list.
+var initFromStart bool
+
 var initClients = []string{"claude-code", "claude-desktop", "cursor", "vscode", "windsurf", "codex", "gemini", "copilot", "sdk-python", "sdk-typescript", "none"}
 
 func initFlags(fs *flag.FlagSet) {
@@ -195,7 +199,9 @@ func runInit(ctx context.Context, e *Env, args []string) error {
 		ui.Lines(e.Stdout, e.Style.KV("  ", e.Width,
 			ui.Row{Key: "org", Value: setup.OrgName}, ui.Row{Key: "agent", Value: setup.AgentName},
 			ui.Row{Key: "steps", Value: fmt.Sprintf("%d checked (-v lists them)", sr.n)})...)
-		printProgress(e, v.quiet, func() setup.Facts { return setup.ReadFacts(ctx, dir) })
+		if !initFromStart {
+			printProgress(e, v.quiet, func() setup.Facts { return setup.ReadFacts(ctx, dir) })
+		}
 		return nil
 	}
 	sr.flush()
@@ -209,6 +215,9 @@ func runInit(ctx context.Context, e *Env, args []string) error {
 		_ = mark.Sealed(e.Stdout, mo)
 	}
 	fmt.Fprintf(e.Stdout, "Ready in %d s.\n", (res.ElapsedMS+500)/1000)
+	if initFromStart {
+		return nil
+	}
 	printNext(e, res.Next)
 	printProgress(e, v.quiet, func() setup.Facts { return setup.ReadFacts(ctx, dir) })
 	return nil
@@ -469,6 +478,13 @@ func stopStack(ctx context.Context, e *Env, r *setup.ProcRunner, dir string) err
 // runInitTrigger is deedglass init --trigger: the quickstart's last step (setup.Trigger does the work).
 // It exits 0 when the check said Doesn't match, because that is what the step is there to show.
 func runInitTrigger(ctx context.Context, e *Env, r *setup.ProcRunner, dir string) error {
+	_, err := runInitTriggerResult(ctx, e, r, dir)
+	return err
+}
+
+// runInitTriggerResult is runInitTrigger returning the trigger's result; under deedglass start the
+// Next block is start's.
+func runInitTriggerResult(ctx context.Context, e *Env, r *setup.ProcRunner, dir string) (*setup.Result, error) {
 	o := setup.Options{Dir: dir, Runner: r, Yes: true, NoOpen: true, TTY: e.IsTTY, Cmd: invocation(e)}
 	text := !e.Globals.JSON
 	if text {
@@ -488,14 +504,16 @@ func runInitTrigger(ctx context.Context, e *Env, r *setup.ProcRunner, dir string
 		_ = enc.Encode(res)
 	}
 	if err != nil {
-		return &ExitError{Code: ExitFailure, ErrCode: "init_failed", printed: true, Err: err}
+		return res, &ExitError{Code: ExitFailure, ErrCode: "init_failed", printed: true, Err: err}
 	}
 	if text {
 		fmt.Fprintln(e.Stdout)
 		fmt.Fprintln(e.Stdout, e.Style.Bold("The agent said 1 row. Postgres's change log says 301.")+" Nothing was undone yet.")
-		printNext(e, res.Next)
+		if !initFromStart {
+			printNext(e, res.Next)
+		}
 	}
-	return nil
+	return res, nil
 }
 
 // purgeStack is deedglass init --purge (adoption-v1 F11): it stops deedglass serve, removes both

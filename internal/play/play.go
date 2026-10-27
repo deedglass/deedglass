@@ -91,6 +91,10 @@ type Options struct {
 	// (tests, --fast, and output that isn't a terminal).
 	Pace func(ctx context.Context, d time.Duration) error
 	Now  func() time.Time // nil: time.Now
+	// Cmd is how the closing commands name the CLI: "deedglass" (the default) or "npx deedglass".
+	Cmd string
+	// Tail, when set, replaces the closing block (deedglass start prints its own).
+	Tail []string
 }
 
 // Result is what a run found, for tests and --json.
@@ -292,13 +296,20 @@ func Run(ctx context.Context, o Options) (*Result, error) {
 		return r.res, err
 	}
 
-	tail := []string{"", st.Status(ui.OK, st.Bold("Play complete.")+" Each row said where it came from."), "", st.Section("Try it on your own setup")}
-	tail = append(tail, st.Commands("  ", o.Width,
-		[2]string{"npx deedglass scan", "grade what your agent setup can change"},
-		[2]string{"npx deedglass init --yes", "the real stack in Docker"},
-		[2]string{"npx deedglass init --trigger", "this scene, live, on your machine"},
-		[2]string{"https://deedglass.com/play", "the same scene in your browser"},
-	)...)
+	tail := o.Tail
+	if tail == nil {
+		cmd := o.Cmd
+		if cmd == "" {
+			cmd = "deedglass"
+		}
+		tail = []string{"", st.Status(ui.OK, st.Bold("Play complete.")+" Each row said where it came from."), "", st.Section("Try it on your own setup")}
+		tail = append(tail, st.Commands("  ", o.Width,
+			[2]string{cmd + " start", "this scene, live, with Postgres in Docker"},
+			[2]string{cmd + " protect", "guard Claude Code, Cursor and other coding agents"},
+			[2]string{cmd + " scan", "grade what your agent setup can change"},
+			[2]string{"https://deedglass.com/play", "the same scene in your browser"},
+		)...)
+	}
 	for _, l := range tail {
 		if err := r.line(80*time.Millisecond, l); err != nil {
 			return r.res, err

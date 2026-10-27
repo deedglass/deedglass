@@ -22,6 +22,28 @@ this file by `scripts/release-notes.sh`.
 - Health mode in the Console: with PHI mode on, the Console shows field names, not values.
 - `GET /v1/overview` adds `decisions.allowed` and `decisions.held` (additive).
 - `deedglass serve` prints `✓ Console on <base URL>/app` at start.
+- `deedglass start`: the one first command. It asks nothing. With Docker running it runs
+  `deedglass init` with every default (free ports picked when 8080, 55432 or 55442 are taken) and then
+  the trigger scene on the same stack, so the first run ends on the catch: the agent reports 1 row,
+  Postgres changed 301, and the undo preview. It prints where the Console is when the server
+  answers. Without Docker, or with under 2 GiB of disk, it plays the same scene inside the binary,
+  each line labelled `live` or `replay`, ends on the catch, and says how to get the live version.
+  `--json` prints one `start_result` object; `--fast` skips the pauses.
+
+### Changed
+
+- Bare `deedglass` prints a five-line welcome (what Deedglass is, then `start`, `protect` and
+  `health pilot`) instead of the 73-line help when piped, and instead of the orb banner on a
+  terminal. `deedglass help` is unchanged; `deedglass -q` still prints it. `deedglass version`
+  keeps the orb.
+- Every first-touch command ends with a `Next` block in the CLI style: `play`'s closing commands
+  follow how the binary was run (no more `npx` after a curl install) and lead with `start`;
+  `health pilot` and `scan` gained a `Next` block.
+- The installer's last line is `next  deedglass start`, not `deedglass version`.
+- `init` without Docker says that `deedglass start` shows the same scene offline.
+- `deedglass check` and `test` suggest `doctor` and `verify`; `quickstart`, `demo`, `try`,
+  `setup`, `begin` and `tour` suggest `start`.
+- `health pilot`'s header says "about 15 minutes to read", since the run itself takes under a second.
 
 ### Fixed
 

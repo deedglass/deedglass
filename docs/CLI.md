@@ -86,12 +86,12 @@ error: `--json` prints the `verification_report` on stdout whatever the result.
 
 ![The deedglass banner in Terminal.app, dark theme](images/cli-banner-dark.jpg)
 
-The Deedglass mark, drawn in the terminal: the Split Orb in half-block pixels, a calm welcome and
-one next step. It appears in exactly three places, and only on an interactive terminal:
+The Deedglass mark, drawn in the terminal: the Split Orb in half-block pixels for `version`, the
+inline mark for the welcome and help. It appears only on an interactive terminal:
 
 | Where | What |
 |---|---|
-| `deedglass` (no command) | the banner, then `Run deedglass init to connect your first agent.` |
+| `deedglass` (no command) | a five-line welcome: what Deedglass is, then `deedglass start`, `protect` and `health pilot` (plain when piped; `-q` prints the help) |
 | `deedglass version`, `deedglass --version` | the banner, with commit, build date and platform as its last lines |
 | `deedglass help` | the inline mark `◖│◗ deedglass` as the header line |
 
@@ -161,6 +161,7 @@ builds it. Hidden commands work but aren't in `deedglass help`.
 <!-- commands:begin (generated from cmd/deedglass/registry.go; go test ./cmd/deedglass -run TestDocsTree -update) -->
 | Command | Group | What it does | Status |
 |---|---|---|---|
+| `deedglass start [--dir .] [--fast] [--json]` | Setup | See it catch a wrong row count, no questions | built |
 | `deedglass init [--yes] [--dir .] [--client claude-code|claude-desktop|cursor|vscode|windsurf|sdk-python|sdk-typescript|none] [--listen 127.0.0.1:8080] [--pg-port 55432] [--policy postgres-check|postgres-safe] [--no-open] [--no-smoke] [--lockdown] [--stop] [--purge] [--trigger] [--quiet] [--json]` | Setup | Set up Deedglass in this directory | built |
 | `deedglass connect <postgres-url> [--name <connector>] [--schema public] [--tables a,b] [--policy postgres-safe|postgres-check] [--agent <name>] [--apply] [--confirm <database>] [--dsn-host host:port] [--json]` | Setup | Put your own Postgres behind Deedglass | built |
 | `deedglass protect [--dry-run] [--yes] [--undo] [--client <names>] [--project] [--hook-command <cmd>] [--json]` | Setup | Add the shell guard to every coding agent | built |

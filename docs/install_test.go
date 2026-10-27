@@ -93,7 +93,7 @@ func TestInstallScript(t *testing.T) {
 		t.Errorf("installed binary isn't executable: %v", fi.Mode())
 	}
 	for _, want := range []string{"Installing deedglass " + version + " for " + runtime.GOOS + "/" + runtime.GOARCH, "✓ sha256 matches checksums.txt",
-		"cosign isn't installed", "cosign verify-blob checksums.txt --bundle checksums.txt.sigstore.json", "isn't on your PATH"} {
+		"cosign isn't installed", "cosign verify-blob checksums.txt --bundle checksums.txt.sigstore.json", "isn't on your PATH", "/deedglass start"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("output lacks %q:\n%s", want, out)
 		}

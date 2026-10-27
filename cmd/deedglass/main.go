@@ -291,9 +291,13 @@ func notFound(e *Env, words []string) error {
 		}
 	}
 	msg := fmt.Sprintf("Unknown command %q", words[0])
-	if words[0] == "quickstart" { // the README's word for the first run
-		return usageErrCode("unknown_command", errors.New(msg+". The quickstart starts with deedglass init."),
-			"Run deedglass init, or deedglass help to see every command.")
+	switch words[0] {
+	case "quickstart", "demo", "try", "setup", "begin", "tour": // first-run words (first-run-v1); install and status are retired V0 words
+		return usageErrCode("unknown_command", errors.New(msg+". The first run is deedglass start."),
+			"Run deedglass start, or deedglass help to see every command.")
+	case "check", "test":
+		return usageErrCode("unknown_command", errors.New(msg+". To check this setup, run deedglass doctor; to check records, deedglass verify."),
+			"Run deedglass start to see a check catch a wrong row count, or deedglass help to see every command.")
 	}
 	if s := suggestPath(words[:1], nil); s != "" {
 		msg += fmt.Sprintf(". Did you mean %q?", s)

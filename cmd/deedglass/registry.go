@@ -58,6 +58,9 @@ type Line struct {
 // commands is the whole contract §10 tree (revised 2026-10-01). Keep it in contract order.
 var commands = []*Command{
 	// Setup.
+	{Path: p("start"), Group: Setup, Summary: "See it catch a wrong row count, no questions",
+		Usage: "[--dir .] [--fast] [--json]", Flags: startFlags, Run: runStart,
+		Detail: "The first command to run. It asks nothing. With Docker running it runs deedglass init with every default (free ports picked when 8080, 55432 or 55442 are taken), then the trigger scene on the same stack: the agent reports 1 row, Postgres's change log shows 301, and the undo preview lists the rows a person can put back. It ends with the Console's address when the server answers.\n\nWithout Docker (or with under 2 GiB of disk) it plays the same scene in this binary: the policy engine decides each call live and the records are sealed and checked live, while the Postgres lines are replayed from a recorded run. Every line says live or replay, and the last lines say how to get the live version.\n\nRun it again and the stack is reused.\n\nExamples:\n  deedglass start\n  deedglass start --fast\n  deedglass start --json"},
 	{Path: p("init"), Group: Setup, Summary: "Set up Deedglass in this directory",
 		Usage: "[--yes] [--dir .] [--client claude-code|claude-desktop|cursor|vscode|windsurf|sdk-python|sdk-typescript|none] [--listen 127.0.0.1:8080] [--pg-port 55432] [--policy postgres-check|postgres-safe] [--no-open] [--no-smoke] [--lockdown] [--stop] [--purge] [--trigger] [--quiet] [--json]",
 		Flags: initFlags, Run: runInit,
@@ -422,6 +425,7 @@ var commands = []*Command{
 
 // lines is `deedglass help`: one row per command or family, in contract order.
 var lines = []Line{
+	{Name: "start", Group: Setup, Summary: "See it catch a wrong row count, no questions", Paths: ps("start")},
 	{Name: "init", Group: Setup, Summary: "Set up Deedglass in this directory", Paths: ps("init")},
 	{Name: "doctor", Group: Setup, Summary: "Check config, database and keys", Paths: ps("doctor")},
 	{Name: "connect", Group: Setup, Summary: "Put your own Postgres behind Deedglass", Paths: ps("connect")},

@@ -5,6 +5,7 @@ deedglass  the execution and accountability layer for AI agents
 Usage  deedglass <command> [flags]
 
 Setup
+  start               See it catch a wrong row count, no questions
   init                Set up Deedglass in this directory
   doctor              Check config, database and keys
   connect             Put your own Postgres behind Deedglass

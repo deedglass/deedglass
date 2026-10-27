@@ -810,7 +810,7 @@ func (r *run) scene(s Scene, intro string) error {
 }
 
 func (r *run) intro(first *store) error {
-	if err := r.line(60*time.Millisecond, r.st.Header("deedglass health pilot", "synthetic data", "about 15 minutes")); err != nil {
+	if err := r.line(60*time.Millisecond, r.st.Header("deedglass health pilot", "synthetic data", "about 15 minutes to read")); err != nil {
 		return err
 	}
 	if err := r.line(0, ""); err != nil {
@@ -837,11 +837,15 @@ func (r *run) tail() error {
 			ui.Row{Key: "report", Value: filepath.Join(d, "REPORT.md") + ", ready to forward"},
 			ui.Row{Key: "review", Value: filepath.Join(d, "IT_REVIEW_PACK.md") + ", for your security review"})...)
 	}
-	next := st.Bold("Next:") + " point it at your FHIR sandbox: deedglass health pilot --fhir-url " + ui.More
+	// The Next block (CLI_STYLE.md › Next steps): the pilot's own next step, then the first run.
+	first := [2]string{"deedglass health pilot --fhir-url " + ui.More, "the first scene on your FHIR sandbox"}
 	if r.res.Store == StoreSandbox {
-		next = st.Bold("Next:") + " put the gate in front of your agent: docs/guides/fhir-server.md"
+		first = [2]string{"docs/guides/fhir-server.md", "put the gate in front of your agent"}
 	}
-	ls = append(ls, "", next)
+	ls = append(ls, "", st.Section("Next"))
+	ls = append(ls, st.Commands("  ", r.o.Width, first,
+		[2]string{"deedglass start", "a wrong row count, caught on Postgres"},
+		[2]string{"deedglass protect", "guard your coding agents"})...)
 	return r.lines(80*time.Millisecond, ls)
 }
 
