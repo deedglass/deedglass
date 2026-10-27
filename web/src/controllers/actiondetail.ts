@@ -8,7 +8,10 @@ import type { ConsoleMirrorState } from '@verify/ui/mirror.ts';
 import { api, ApiError } from '../lib/api.ts';
 import { decisionChip, idChip, relTime, stateChip, verdictChip } from '../lib/chips.ts';
 import { copy, fill } from '../lib/copy.ts';
-import { diffModel, keyText, type DiffRow } from '../lib/diff.ts';
+import { diffModel, keyText, MASK, type DiffModel, type DiffRow } from '../lib/diff.ts';
+import { liveCopy as lc } from '../lib/copy-live.ts';
+import { verifyCommand } from '../lib/live.ts';
+import { phiOn } from '../lib/phi.ts';
 import { bidiSafe, h, icon, maybe, type Child } from '../lib/dom.ts';
 import { decisionOf } from '../lib/filters.ts';
 import { date, dateTime, duration, number, plural, shortId, time } from '../lib/format.ts';
@@ -85,7 +88,7 @@ function decisionSection(a: ActionDetail): HTMLElement {
   const shadow = sh && sh.outcome !== d?.outcome
     ? h('p', { class: 'shadow-line' }, icon('contrast', 16), fill(copy.detail.shadow, { policy: sh.policy ? shortId(sh.policy) : 'the shadow version', outcome: copy.detail.shadowOutcome[sh.outcome] ?? sh.outcome, rule: sh.rule_id ?? '·' }))
     : null;
-  return cardSection('d-decision', copy.detail.decision, null, h('div', { class: 'card-body' }, kv(pairs), shadow));
+  return cardSection('d-decision', lc.detail.decided, null, h('div', { class: 'card-body' }, kv(pairs), shadow));
 }
 
 const REASON_ICON: Record<WitnessReason['class'], [string, string]> = { pass: ['check', 'pass'], violation: ['x', 'violation'], gap: ['circle-dashed', 'gap'], note: ['info', 'note'] };
@@ -112,12 +115,13 @@ function witnessSection(a: ActionDetail): HTMLElement {
   if (w.required_level) body.push(h('p', { class: 't-footnote t-2' }, fill(copy.detail.required, { level: copy.chips.level[w.required_level] ?? w.required_level })));
   if (l1) body.push(h('p', { class: 't-footnote t-2' }, `${copy.chips.level.L1} by a read-back · ${l1.tool} · ${l1.target}`));
   body.push(h('h3', { class: 'sub-title' }, copy.detail.reasons), reasonsList(reasons));
-  if (model) body.push(diffTable(model, { rawJSON: () => JSON.stringify(det?.levels.L2 ?? {}, null, 2), fileName: `${a.id}-diff.json` }));
+  void model;
   return cardSection('d-witness', h('span', null, copy.detail.witness, h('span', { class: 't-2 title-meta' }, w.method ? ` · ${w.method}` : '')), right, h('div', { class: 'card-body' }, ...body));
 }
 
 function payloadSection(a: ActionDetail): HTMLElement {
   const tz = tzOf();
+  if (phiOn()) return cardSection('d-payloads', copy.detail.payloads, null, h('p', { class: 'card-empty t-2', 'data-phi': '' }, icon('lock', 16), ' ', lc.phi.payloads));
   if (a.payload_pruned_at) {
     return cardSection('d-payloads', copy.detail.payloads, null, h('p', { class: 'card-empty t-2' }, fill(copy.detail.pruned, { date: date(a.payload_pruned_at, tz) })));
   }
@@ -134,6 +138,50 @@ function payloadSection(a: ActionDetail): HTMLElement {
     return h('div', { class: 'payload' }, btn, host);
   };
   return cardSection('d-payloads', copy.detail.payloads, null, h('div', { class: 'card-body' }, h('p', { class: 't-footnote t-2' }, copy.detail.payloadsLede), panel('request', copy.detail.request), panel('result', copy.detail.result)));
+}
+
+/** phiModel: Health mode keeps the table, keys and column names and hides every value. */
+export function phiModel(m: DiffModel): DiffModel {
+  return { ...m, rows: m.rows.map((r) => ({ ...r, expected: r.expected === null ? null : MASK, observed: r.observed === null ? null : MASK, before: null, masked: true })) };
+}
+
+/** claimedObserved: what the agent said beside what Deedglass saw, then the diff rows (console-v1). */
+function claimedObserved(a: ActionDetail): HTMLElement | null {
+  const w = a.witness;
+  if (!w || a.state === 'witnessing') return null;
+  const det = w.detail;
+  const raw = diffModel(det);
+  const model = raw && phiOn() ? phiModel(raw) : raw;
+  const l1 = det?.levels?.L1?.readback;
+  const bad = w.verdict === 'MISMATCH';
+  const claimed: Child[] = [model ? visibleControls(model.expected) : lc.detail.claimedL0];
+  const observed: Child[] = model
+    ? [visibleControls(model.observed)]
+    : l1
+      ? [fill(lc.detail.readback, { tool: l1.tool, target: l1.target })]
+      : w.level === 'L0' ? [lc.detail.noObserved] : [visibleControls(det?.summary ?? w.summary ?? '')];
+  const col = (cls: string, label: string, kids: Child[], chip: Child) => h('div', { class: `co-col ${cls}` },
+    h('h3', { class: 'co-label' }, label), h('p', { class: 'co-text' }, ...kids), chip);
+  const body: Child[] = [h('div', { class: `co-grid${bad ? ' is-mismatch' : ''}` },
+    col('co-claimed', lc.detail.claimed, claimed, h('span', { class: 'chip chip-neutral' }, icon('message-square', 16), copy.chips.level.L0 ?? 'Claimed')),
+    h('span', { class: 'co-vs', 'aria-hidden': 'true' }, icon(bad ? 'x' : w.verdict === 'VERIFIED' ? 'check' : 'circle-dashed', 16)),
+    col('co-observed', lc.detail.observed, observed, verdictChip(w.verdict, w.level)))];
+  if (model) body.push(diffTable(model, { rawJSON: () => JSON.stringify(det?.levels.L2 ?? {}, null, 2), fileName: `${a.id}-diff.json` }));
+  return cardSection('d-co', h('span', null, lc.detail.claimed, h('span', { class: 't-2' }, ' · '), lc.detail.observed), null, h('div', { class: 'card-body co-card' }, ...body));
+}
+
+/** chainCard: where the record sits in the org's chain, and the offline check to copy. */
+function chainCard(a: ActionDetail): HTMLElement | null {
+  const d = a.deeds?.find((x) => x.kind === 'action') ?? a.deeds?.[0];
+  if (!a.deed || !d) return null;
+  const cmd = verifyCommand(a.deed, location.origin);
+  return cardSection('d-chain', lc.detail.chain, null, h('div', { class: 'card-body block-body' },
+    h('p', { class: 'chain-pos num' }, icon('deed', 16), h('a', { href: `/app/deeds/${d.id}` }, fill(lc.detail.seq, { seq: number(d.seq) }))),
+    h('p', { class: 't-footnote t-2 chain-note' }, lc.detail.chainNote),
+    h('h3', { class: 'sub-title' }, lc.detail.verify),
+    h('p', { class: 't-footnote t-2' }, lc.detail.verifyLede),
+    h('div', { class: 'verify-cmd' }, h('code', { class: 'mono', translate: 'no', 'data-verify-cmd': '' }, cmd),
+      h('button', { type: 'button', class: 'btn btn-secondary btn-sm', 'data-copy': cmd, 'aria-label': `${lc.detail.copy}: ${cmd}` }, icon('copy', 16), lc.detail.copy))));
 }
 
 function amendments(a: ActionDetail): HTMLElement | null {
@@ -294,9 +342,10 @@ export function mountActionDetail(): void {
         s.gaps.length ? h('ul', { class: 'gaps' }, ...s.gaps.map((g) => h('li', null, icon('circle-dashed', 16), g))) : null));
     const firstDeed = a.deeds?.find((d) => d.kind === 'action') ?? a.deeds?.[0];
     panel = deedPanel({ deed: a.deed, seq: firstDeed?.seq ?? null, mirror: mirrorStateOf(a), pending: !a.deed });
-    const aside = h('aside', { class: 'detail-aside', 'aria-label': copy.deedPanel.title }, panel.el, approvalBlock(a, ap), undoBlock(a, () => openUndo(a)));
-    const main = h('div', { class: 'detail-main' }, witnessSection(a), timeline(a.events?.data ?? [], tz), decisionSection(a), payloadSection(a), amendments(a));
-    host.replaceChildren(head, h('div', { class: 'detail-grid' }, aside, main));
+    const aside = h('aside', { class: 'detail-aside', 'aria-label': copy.deedPanel.title }, panel.el, chainCard(a), approvalBlock(a, ap), undoBlock(a, () => openUndo(a)));
+    const main = h('div', { class: 'detail-main' }, claimedObserved(a), decisionSection(a), witnessSection(a), timeline(a.events?.data ?? [], tz), payloadSection(a), amendments(a));
+    if (phiOn()) head.append(h('p', { class: 'banner banner-phi', role: 'note' }, icon('lock', 16), lc.phi.note));
+    host.replaceChildren(head, h('div', { class: 'detail-grid' }, main, aside));
     document.title = `${bidiSafe(a.tool)} · ${shortId(a.id)} · Deedglass`;
   };
   const load = async (quiet = false) => {

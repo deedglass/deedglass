@@ -429,6 +429,7 @@ func runServe(ctx context.Context, e *Env, args []string) error {
 
 	// 7. The summary.
 	fmt.Fprintln(e.Stdout, s.OKLine("Listening on http://"+ln.Addr().String()))
+	fmt.Fprintln(e.Stdout, s.OKLine("Console on "+consoleURL(cfg.BaseURL.String())))
 	if metricsSrv != nil {
 		fmt.Fprintln(e.Stdout, s.OKLine("Metrics on http://"+cfg.MetricsListen+"/metrics"))
 	}
@@ -1060,4 +1061,10 @@ func lastPart(err error) string {
 		}
 	}
 	return s
+}
+
+// consoleURL is the Console's address for the startup line: the base URL (where sign-in links and
+// cookies point, so the one that works in a browser) plus /app.
+func consoleURL(base string) string {
+	return strings.TrimSuffix(base, "/") + "/app"
 }

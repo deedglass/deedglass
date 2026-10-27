@@ -183,7 +183,7 @@ func TestServeLive(t *testing.T) {
 	}
 	out := s.out.String()
 	for _, want := range []string{"api 2026-10-01 · env dev", "✓ Migrations · 33 applied", "✓ Database · postgres ", "schema at 0033 · role deedglass_app",
-		"○ No seal key set. Created .deedglass/keys/sk_", "for this dev instance.", "✓ Seal key · sk_", "· sha256:", "✓ Listening on http://127.0.0.1:", "✓ Stopped cleanly in ", "· 0 requests cut off"} {
+		"○ No seal key set. Created .deedglass/keys/sk_", "for this dev instance.", "✓ Seal key · sk_", "· sha256:", "✓ Listening on http://127.0.0.1:", "✓ Console on http://127.0.0.1:", "✓ Stopped cleanly in ", "· 0 requests cut off"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("stdout lacks %q", want)
 		}

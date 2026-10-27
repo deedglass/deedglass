@@ -25,7 +25,7 @@ export LC_ALL="${LC_ALL:-en_US.UTF-8}"
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 MODE="${1:-test}"
 BIN="/opt/homebrew/opt/postgresql@18/bin"
-PGPORT=55468
+PGPORT="${WEB_E2E_PGPORT:-55468}"
 PORT="${WEB_E2E_PORT:-18241}"
 PW=deedglass-e2e-throwaway
 DATA="$ROOT/.tmp/web-e2e-pg"
@@ -35,7 +35,7 @@ DG="$ROOT/bin/deedglass"
 [ -x "$BIN/postgres" ] || { echo "no Homebrew postgresql@18 at $BIN" >&2; exit 2; }
 
 STORE="$ROOT/.tmp/web-e2e-store"
-STOREPORT=55469
+STOREPORT="${WEB_E2E_STOREPORT:-55469}"
 SERVE_PID=""
 cleanup() {
   [ -n "${MOCK_PID:-}" ] && kill "$MOCK_PID" 2>/dev/null || true

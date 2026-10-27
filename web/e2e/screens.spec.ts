@@ -2,7 +2,7 @@
 //  1. the feed receives fake actions live, filters by verdict, keeps the filter on reload, j j Enter
 //  2. the demo MISMATCH: the sentence, "Showing 20 of 301 rows", the in-browser seal check ✓, and
 //     a download whose bytes equal GET /v1/deeds/{id}
-//  3. first run: create the demo agent, the key sheet, an action for that agent, ✓
+//  3. first run: one next step, then create the demo agent, the key sheet, an action, the live view
 //  4. keys: the secret shows once and is nowhere in the page after a reload
 //  5. Stop an agent in tab A; tab B shows Stopped within 2 s
 //  6. a viewer sees no Create, Stop or Roll, and the API refuses the page's own POST
@@ -197,6 +197,9 @@ test.describe('first run (an org with no agents)', () => {
     const page = await ctx.newPage();
     const done = await guard(page);
     await signIn(page, EMAIL.owner, 'acme-staging');
+    // console-v1: one next step first; connecting your own agent is behind the disclosure.
+    await expect(page.getByRole('heading', { name: 'Waiting for the first action' })).toBeVisible();
+    await page.getByText('Connecting your own agent instead?').click();
     await expect(page.getByRole('heading', { name: 'Connect your first agent' })).toBeVisible();
     await page.getByRole('button', { name: 'Create demo agent' }).click();
     const secret = await page.locator('[data-secret]').inputValue();
@@ -205,7 +208,8 @@ test.describe('first run (an org with no agents)', () => {
     await expect(page.locator('.snippets pre')).toContainText(secret); // the key filled in for step 2
     await expect(page.getByText('Waiting for the first action…')).toBeVisible();
     spawnSync(DG, ['act', 'fake.echo', '--args', '{"hello":"world"}'], { cwd: process.env.WEB_E2E_WORK, env: { ...process.env, DEEDGLASS_API_KEY: secret, DEEDGLASS_SERVER: process.env.WEB_E2E_BASE } });
-    await expect(page.getByRole('link', { name: 'First action sealed' })).toBeVisible({ timeout: 5000 });
+    // The first action turns the page into the live view, with the action in Live activity.
+    await expect(page.locator('#live-feed li').filter({ hasText: 'fake.echo' })).toBeVisible({ timeout: 8000 });
     await done();
     await ctx.close();
   });

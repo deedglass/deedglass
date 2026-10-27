@@ -200,3 +200,15 @@ func TestKeyRoutesDeclareScopes(t *testing.T) {
 		t.Fatalf("only %d key routes: the check isn't seeing the route table", keyRoutes)
 	}
 }
+
+func TestConsoleURL(t *testing.T) {
+	for in, want := range map[string]string{
+		"http://127.0.0.1:8080":     "http://127.0.0.1:8080/app",
+		"http://127.0.0.1:8080/":    "http://127.0.0.1:8080/app",
+		"https://app.deedglass.com": "https://app.deedglass.com/app",
+	} {
+		if got := consoleURL(in); got != want {
+			t.Errorf("consoleURL(%q) = %q, want %q", in, got, want)
+		}
+	}
+}

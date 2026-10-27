@@ -332,6 +332,8 @@ export interface Overview {
   generated_at: string;
   actions: OverviewSeries;
   blocked: OverviewSeries;
+  /** console-v1: the window's actions by decision (blocked is blocked.total); absent on older servers. */
+  decisions?: { allowed: number; held: number };
   approvals: { pending: number; expiring_soon: number; next_expires_at: string | null };
   verification: { verified: number; mismatch: number; unverifiable: number; not_witnessed: number; by_level: Record<Level, number> };
   agents: { object: 'list'; has_more: boolean; data: { id: string; name: string; status: Agent['status']; last_action_at: string | null; usage: { calls_today: number; spend_today: { amount: number; currency: string } | null }; budgets: AgentBudgets }[] };

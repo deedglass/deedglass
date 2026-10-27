@@ -65,6 +65,10 @@
       2
     ]
   },
+  "decisions": {
+    "allowed": 168,
+    "held": 11
+  },
   "approvals": {
     "pending": 2,
     "expiring_soon": 1,
@@ -367,6 +371,10 @@
       5,
       2
     ]
+  },
+  "decisions": {
+    "allowed": 194,
+    "held": 15
   },
   "approvals": {
     "pending": 2,
