@@ -198,7 +198,7 @@ $ deedglass decoder status
   Last error: dial tcp 10.0.0.5:5432: connect: connection refused
 ✕ analytics · halted · slot invalidated at 2026-10-07 07:40 UTC (wal_status lost)
   Actions waiting on L2 for analytics won't get that evidence (slot_invalidated).
-  Next: deedglass decoder drop --connector analytics, then check max_slot_wal_keep_size (docs.deedglass.com/decoder#sizing)
+  Next: deedglass decoder drop --connector analytics, then check max_slot_wal_keep_size (docs.deedglass.com/postgres-deployment#sizing)
 ```
 
 `--connector <name> --recent N` shows one in detail (the slot, positions, watched tables, counters

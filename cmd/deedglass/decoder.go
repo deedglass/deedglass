@@ -210,7 +210,7 @@ func decoderWords(d decoder.View, now time.Time) decoderText {
 			}
 			t.headline = fmt.Sprintf("halted %s slot invalidated at %s (wal_status %s)", ui.Sep, since, ws)
 			t.explain = lost
-			t.next = "Next: deedglass decoder drop --connector " + name + ", then check max_slot_wal_keep_size (docs.deedglass.com/decoder#sizing)"
+			t.next = "Next: deedglass decoder drop --connector " + name + ", then check max_slot_wal_keep_size (docs.deedglass.com/postgres-deployment#sizing)"
 		case decoder.ReasonSlotMissing:
 			t.headline = "halted " + ui.Sep + " slot " + d.Slot + " is gone from the database"
 			t.explain = lost

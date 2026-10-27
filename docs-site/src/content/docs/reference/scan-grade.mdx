@@ -46,11 +46,15 @@ The deductions can add up to 119, so the floor of 0 matters: a setup can't go be
 | [`archived_postgres_mcp`](/get-started/scan/#archived_postgres_mcp) | high when the role can write, low when it can't, medium when no database was checked |
 | `role_superuser`, `role_bypassrls` | high (counted in the 35 above) |
 | [`shell_destructive_unprompted`](/get-started/scan/#shell_destructive_unprompted) | high |
+| [`database_server_not_read_only`](/get-started/scan/#database_server_not_read_only) | high when the checked role can write or no database was checked, low when it can't |
+| [`plaintext_secret_in_config`](/get-started/scan/#plaintext_secret_in_config), [`shell_no_guard_hook`](/get-started/scan/#shell_no_guard_hook) | high |
 | [`env_database_url_readable`](/get-started/scan/#env_database_url_readable) | medium |
 | [`shell_destructive_no_rule`](/get-started/scan/#shell_destructive_no_rule) | medium when `defaultMode` is `auto` in your user settings, low otherwise |
 | [`database_url_in_client_args`](/get-started/scan/#database_url_in_client_args), `role_replication`, `role_createrole`, [`security_definer_executable`](/get-started/scan/#security_definer_executable) | medium |
 | `role_createdb`, [`no_primary_key_on_writable_table`](/get-started/scan/#no_primary_key_on_writable_table) | low |
 | [`wal_level_not_logical`](/get-started/scan/#wal_level_not_logical) | info |
+
+The three newest: `database_server_not_read_only`, a database MCP server with no read-only setting that isn't routed through Deedglass; `plaintext_secret_in_config`, a real-looking credential in a server's env, headers, arguments or URL (named by where, never by value); `shell_no_guard_hook`, blanket shell access in Claude Code with no `PreToolUse` hook for Bash and no ask or deny rule on Bash.
 
 The three shell findings come from Claude Code's permission rules (`.claude/settings.json`, `.claude/settings.local.json` and `~/.claude/settings.json`) and the database tools in your dependency files, such as Prisma, Drizzle Kit, Alembic, Rails, Knex, TypeORM and Sequelize. They take points off like any other finding and share the same caps, so the formula stays v1. A rule matches the text of a command, so each way an agent might type a destructive command (`prisma migrate reset --force`, `npx prisma migrate reset --force`, `npm run db:reset`) is checked on its own. The scan runs none of them and never reads a `.env` value.
 

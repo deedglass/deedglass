@@ -46,6 +46,7 @@ type permSource struct {
 	mode         string
 	noBypass     bool // permissions.disableBypassPermissionsMode is "disable"
 	noAuto       bool // permissions.disableAutoMode is "disable"
+	preBash      bool // a hooks.PreToolUse entry whose matcher covers Bash (none, "*", ".*" or one naming Bash)
 	allow, ask   []string
 	deny         []string
 }
@@ -61,11 +62,13 @@ func readSettings(label, scope, root, anchor string, b []byte) (*permSource, Cla
 	cs := ClaudeSettings{Path: label, Scope: scope}
 	var s struct {
 		Permissions json.RawMessage `json:"permissions"`
+		Hooks       json.RawMessage `json:"hooks"`
 	}
 	if err := json.Unmarshal(b, &s); err != nil {
 		cs.Error = "not valid JSON"
 		return src, cs
 	}
+	src.preBash = preToolUseBash(s.Hooks)
 	// Each key is read on its own, so one value of the wrong type costs only that key, and the
 	// file is still listed with what was read.
 	p := map[string]json.RawMessage{}
@@ -757,4 +760,28 @@ func envFinding(r *Report, d *discovered, o Options) *Finding {
 		Fix: []string{`Add "Read(.env)" and "Read(.env.*)" to permissions.deny in .claude/settings.json: a bare file name matches at any depth.`,
 			"That stops Claude Code's file tools and commands such as cat or head that name the file. A program that opens the file itself, such as prisma, still reads it."},
 		Paths: files, Sources: []string{permDocs, "https://github.com/anthropics/claude-code/issues/80868"}}
+}
+
+// preToolUseBash reports whether a hooks block has a PreToolUse entry that runs before Bash: no
+// matcher (or an empty one), "*", ".*", or a matcher naming Bash, with at least one hook command.
+func preToolUseBash(raw json.RawMessage) bool {
+	var h struct {
+		PreToolUse []struct {
+			Matcher string            `json:"matcher"`
+			Hooks   []json.RawMessage `json:"hooks"`
+		} `json:"PreToolUse"`
+	}
+	if len(raw) == 0 || json.Unmarshal(raw, &h) != nil {
+		return false
+	}
+	for _, e := range h.PreToolUse {
+		if len(e.Hooks) == 0 {
+			continue
+		}
+		m := strings.TrimSpace(e.Matcher)
+		if m == "" || m == "*" || m == ".*" || regexp.MustCompile(`(^|[^A-Za-z])Bash([^A-Za-z]|$)`).MatchString(m) {
+			return true
+		}
+	}
+	return false
 }

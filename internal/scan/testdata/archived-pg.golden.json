@@ -121,7 +121,8 @@
           ],
           "database_url_in_args": true,
           "routed": false,
-          "catalog_id": "mcp.server-postgres"
+          "catalog_id": "mcp.server-postgres",
+          "database": true
         }
       ]
     },

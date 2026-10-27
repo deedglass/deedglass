@@ -68,6 +68,9 @@ Each finding has an id. SARIF output and the HTML report link to these anchors.
 <a id="shell_destructive_unprompted"></a>
 **shell_destructive_unprompted** · high. A database tool in your dependencies has a destructive command, such as `prisma migrate reset --force`, and an allow rule in your Claude Code settings runs one spelling of it without a prompt. A rule matches the text of a command, so `npx prisma …` and `pnpm prisma …` are different spellings. Fix: add an ask rule with a leading `*`, such as `Bash(*prisma migrate reset*)`, so Claude Code asks first whatever runner the agent uses.
 
+<a id="database_server_not_read_only"></a><a id="plaintext_secret_in_config"></a><a id="shell_no_guard_hook"></a>
+**database_server_not_read_only**, **plaintext_secret_in_config**, **shell_no_guard_hook** · high: a database server with no read-only setting, a credential in a client config, shell access with no `PreToolUse` hook. [Details](/reference/scan-grade/).
+
 <a id="shell_destructive_no_rule"></a>
 **shell_destructive_no_rule** · medium when your user settings start Claude Code in auto mode, low otherwise. No ask or deny rule covers some spelling of a destructive command, so the permission mode decides: Manual mode asks, and auto mode lets a classifier decide instead of you. Fix: the same ask rule.
 

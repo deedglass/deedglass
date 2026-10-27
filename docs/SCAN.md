@@ -100,6 +100,9 @@ and Datadog Security Labs' write-up of the SQL injection in that server.
 | Id | Severity | When |
 |---|---|---|
 | `shell_destructive_unprompted` | high | a destructive database command from a dependency would run without a prompt ([below](#shell_destructive_unprompted)) |
+| <a id="database_server_not_read_only"></a>`database_server_not_read_only` | high (low when the checked role can't write) | an MCP server that talks to a database (from the catalog, or its name, package or command) has no read-only setting in its arguments, environment, URL or headers, and isn't routed through Deedglass |
+| <a id="plaintext_secret_in_config"></a>`plaintext_secret_in_config` | high | a real-looking credential (a vendor token, a database URL with a password, or a long random value under a secret-like name) sits in a server's env, headers, arguments or URL; the finding names where, never the value |
+| <a id="shell_no_guard_hook"></a>`shell_no_guard_hook` | high | Claude Code runs a whole class of shell commands without a prompt (a blanket or interpreter `Bash` allow rule, or `bypassPermissions` in user settings), with no `PreToolUse` hook for Bash and no ask or deny rule on Bash; not raised when `shell_destructive_unprompted` already names that file |
 | `env_database_url_readable` | medium | a `.env` file holds a database URL variable that no Read deny rule covers ([below](#env_database_url_readable)) |
 | `shell_destructive_no_rule` | medium or low | no ask or deny rule covers a spelling of a destructive database command ([below](#shell_destructive_no_rule)) |
 | <a id="database_url_in_client_args"></a>`database_url_in_client_args` | medium | a database URL sits in a client config's arguments |

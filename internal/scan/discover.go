@@ -368,8 +368,17 @@ func parseConfig(label, kind string, b []byte, user bool) Config {
 // reDBURL is a database URL in a command-line argument (only its presence is kept, never the value).
 var reDBURL = regexp.MustCompile(`(?i)(postgres|postgresql)://`)
 
-// server reads one entry: the package and version from the command line, env names only.
+// server reads one entry: the package and version from the command line, env names only. Then the
+// risks (risks.go): a database server, a read-only setting, credentials written into the entry.
 func server(name string, s rawServer) Server {
+	out := serverEntry(name, s)
+	if !out.Routed {
+		serverRisks(&out, s)
+	}
+	return out
+}
+
+func serverEntry(name string, s rawServer) Server {
 	out := Server{Name: name, EnvNames: []string{}, Transport: "stdio"}
 	for k := range s.Env {
 		out.EnvNames = append(out.EnvNames, k)
@@ -401,7 +410,7 @@ func server(name string, s rawServer) Server {
 			out.Routed = true
 			for i, a := range args {
 				if a == "--" && i+1 < len(args) {
-					inner := server(name, rawServer{Command: args[i+1], Args: args[i+2:]})
+					inner := serverEntry(name, rawServer{Command: args[i+1], Args: args[i+2:]})
 					out.Package, out.Version, out.CatalogID = inner.Package, inner.Version, inner.CatalogID
 					out.Command = inner.Command
 					break

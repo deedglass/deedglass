@@ -350,7 +350,7 @@ words: the decoder doesn't decide.
 | `malformed_evidence` | `Deedglass stopped reading at 0/3E65020: a message didn't match the pgoutput format (type M, byte 41). Nothing after it was used. This is rare; please send deedglass decoder status --json to support.` |
 | `session_settings_changed` | `The decoder's session settings changed (TimeZone is "Pacific/Chatham"). Deedglass stopped so every value stays exact. Restart deedglass serve; check ALTER ROLE deedglass_witness.` |
 | `lag_high` | `lag 611 MB, above the 512 MB alert` / `The slot is holding WAL on the watched database. Deedglass is still reading; it is behind.` / `Next: check deedglass serve is running and healthy, or raise DEEDGLASS_SLOT_LAG_ALERT_MB if this is expected.` |
-| `slot_invalidated` | `slot invalidated at 2026-10-07 07:40 UTC (wal_status lost)` / `Actions waiting on L2 for analytics won't get that evidence (slot_invalidated).` / `Next: deedglass decoder drop --connector analytics, then check max_slot_wal_keep_size (docs.deedglass.com/decoder#sizing)` |
+| `slot_invalidated` | `slot invalidated at 2026-10-07 07:40 UTC (wal_status lost)` / `Actions waiting on L2 for analytics won't get that evidence (slot_invalidated).` / `Next: deedglass decoder drop --connector analytics, then check max_slot_wal_keep_size (docs.deedglass.com/postgres-deployment#sizing)` |
 | Drop | `✓ Slot dropped · deedglass_01j9zq7c… · admin deed deed_01j9zv8k… · a new slot starts on the next sync` |
 | API, not witnessed | `Checks aren't on for this connector, so it has no decoder. Turn on witness.enabled in its config first.` |
 

@@ -451,7 +451,7 @@
       "This key is no longer active. It may have been refunded or cancelled."
     ],
     "next": [
-      "See billing at deedglass.com/licence#billing, or ask at deedglass.com/support."
+      "See billing at deedglass.com/licence#billing, or ask at github.com/deedglass/deedglass/blob/main/SUPPORT.md."
     ]
   },
   {
@@ -475,7 +475,7 @@
       "Dodo Payments doesn't know this key."
     ],
     "next": [
-      "Check it against the email from Dodo, or ask at deedglass.com/support."
+      "Check it against the email from Dodo, or ask at github.com/deedglass/deedglass/blob/main/SUPPORT.md."
     ]
   },
   {

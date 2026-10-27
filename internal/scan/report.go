@@ -106,6 +106,13 @@ type Server struct {
 	DatabaseURLInArgs bool     `json:"database_url_in_args"`
 	Routed            bool     `json:"routed"` // deedglass mcp wrap … -- <cmd>, or the Deedglass server itself
 	CatalogID         string   `json:"catalog_id,omitempty"`
+	// Database: the catalog, or the server's name, package or command, says it talks to a database.
+	Database bool `json:"database,omitempty"`
+	// ReadOnly: its arguments, environment, URL or headers ask for read-only.
+	ReadOnly bool `json:"read_only,omitempty"`
+	// PlaintextSecrets names where a real-looking credential sits in the entry ("env GITHUB_TOKEN",
+	// "header Authorization", "argument 3", "url"): never the value.
+	PlaintextSecrets []string `json:"plaintext_secrets,omitempty"`
 }
 
 // Dependency is one dependency line that the catalog knows, or an agent framework.
@@ -285,7 +292,8 @@ func Scan(ctx context.Context, o Options) (*Report, error) {
 			rank(pg.Tables)
 		}
 	}
-	r.Findings = sortFindings(append(findings(r, o), shellFindings(r, d, o)...))
+	base := append(findings(r, o), shellFindings(r, d, o)...)
+	r.Findings = sortFindings(append(base, riskFindings(r, d, base)...))
 	r.Score = score(r, d.policyFiles > 0)
 	r.Policies = suggest(r)
 	r.Summary = summarize(r)

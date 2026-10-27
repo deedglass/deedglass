@@ -140,10 +140,10 @@ func licenceErr(err error, offlineUntil time.Time) error {
 			Err: errors.New("No licence on this machine. Everything free works without one"), Next: "Every feature is free while we grow, no licence needed: " + licProURL}
 	case errors.Is(err, licence.ErrKeyUnknown):
 		return &ExitError{Code: ExitFailure, ErrCode: "licence_key_unknown",
-			Err: errors.New("Dodo Payments doesn't know this key"), Next: "Check it against the email from Dodo, or ask at deedglass.com/support."}
+			Err: errors.New("Dodo Payments doesn't know this key"), Next: "Check it against the email from Dodo, or ask at github.com/deedglass/deedglass/blob/main/SUPPORT.md."}
 	case errors.Is(err, licence.ErrKeyInactive):
 		return &ExitError{Code: ExitFailure, ErrCode: "licence_key_inactive",
-			Err: errors.New("This key is no longer active. It may have been refunded or cancelled"), Next: "See billing at deedglass.com/licence#billing, or ask at deedglass.com/support."}
+			Err: errors.New("This key is no longer active. It may have been refunded or cancelled"), Next: "See billing at deedglass.com/licence#billing, or ask at github.com/deedglass/deedglass/blob/main/SUPPORT.md."}
 	case errors.Is(err, licence.ErrKeyLimit):
 		return &ExitError{Code: ExitFailure, ErrCode: "licence_key_limit",
 			Err: errors.New("This key is active on 3 machines already"), Next: "Run deedglass licence deactivate on one of them first."}
