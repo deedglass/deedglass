@@ -138,7 +138,7 @@ func NewManifest(p Platform, version string, icon bool) Manifest {
 		Repository:    Repository{Type: "git", URL: "https://github.com/deedglass/deedglass"},
 		Homepage:      "https://deedglass.com",
 		Documentation: "https://docs.deedglass.com/get-started/claude-desktop/",
-		Support:       "https://deedglass.com/support",
+		Support:       "https://github.com/deedglass/deedglass/blob/main/SUPPORT.md",
 		Server: Server{Type: "binary", EntryPoint: p.Binary(), MCPConfig: MCPConfig{
 			Command: "${__dirname}/" + p.Binary(),
 			Args:    []string{"mcp", "serve"},

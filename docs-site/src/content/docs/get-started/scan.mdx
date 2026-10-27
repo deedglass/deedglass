@@ -68,6 +68,15 @@ Each finding has an id. SARIF output and the HTML report link to these anchors.
 <a id="shell_destructive_unprompted"></a>
 **shell_destructive_unprompted** · high. A database tool in your dependencies has a destructive command, such as `prisma migrate reset --force`, and an allow rule in your Claude Code settings runs one spelling of it without a prompt. A rule matches the text of a command, so `npx prisma …` and `pnpm prisma …` are different spellings. Fix: add an ask rule with a leading `*`, such as `Bash(*prisma migrate reset*)`, so Claude Code asks first whatever runner the agent uses.
 
+<a id="database_server_not_read_only"></a>
+**database_server_not_read_only** · high, or low when the checked role can't write. An MCP server that talks to a database (Postgres, MySQL, MongoDB, Redis, Supabase and others, named by the catalog or by its name, package or command) has nothing in its entry that asks for read-only, and isn't routed through Deedglass. If its database user can write, the agent can write. Fix: give it a user that can only read or turn on its read-only option, or put it behind `deedglass mcp wrap`.
+
+<a id="plaintext_secret_in_config"></a>
+**plaintext_secret_in_config** · high. A server's env, headers, arguments or URL hold what looks like a real credential: a vendor token (GitHub, OpenAI, Anthropic, AWS, Google, Slack, GitLab, Stripe, a JWT), a database URL with a password, or a long random value under a name like `API_KEY`. The finding says where, never the value; references such as `${GITHUB_TOKEN}` and placeholders don't count. Fix: rotate it, and have the client read it from an environment variable.
+
+<a id="shell_no_guard_hook"></a>
+**shell_no_guard_hook** · high. Claude Code runs a whole class of shell commands without a prompt (a blanket `Bash` allow rule, one for an interpreter or package-manager run, or `bypassPermissions` in your user settings), no `PreToolUse` hook checks Bash commands first, and no ask or deny rule covers Bash. Fix: `deedglass protect` adds the shell guard as a `PreToolUse` hook; or narrow the allow rule.
+
 <a id="shell_destructive_no_rule"></a>
 **shell_destructive_no_rule** · medium when your user settings start Claude Code in auto mode, low otherwise. No ask or deny rule covers some spelling of a destructive command, so the permission mode decides: Manual mode asks, and auto mode lets a classifier decide instead of you. Fix: the same ask rule.
 

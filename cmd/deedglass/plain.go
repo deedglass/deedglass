@@ -47,7 +47,7 @@ var plainRewrites = []struct {
 	// pgx's DSN parser.
 	{regexp.MustCompile("cannot parse `([^`]*)`: failed to parse as (?:keyword/value|URL)[^.]*"), "`$1` isn't a Postgres URL"},
 	// flag package leftovers.
-	{regexp.MustCompile(`flag provided but not defined: (-\S+)`), "there's no flag $1"},
+	{regexp.MustCompile(`flag provided but not defined: -{1,2}(\S+)`), "there's no flag --$1"},
 }
 
 // capitalize starts a sentence with a capital, except when it starts with a command, a flag, a path

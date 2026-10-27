@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/deedglass/deedglass/attack/harness"
@@ -374,7 +375,7 @@ func p08(h *harness.H) harness.Observed {
 	return obs
 }
 
-// P10: Stop all in the middle of a 200-call burst, ten rounds. Every call that starts more than 2 s
+// P10: Stop all in the middle of a burst of at least 200 calls, ten rounds. Every call that starts more than 2 s
 // after the stop is refused with org_stopped, and none executes after that point.
 func p10(h *harness.H) harness.Observed {
 	obs := harness.Observed{Evidence: map[string]any{}, Forbidden: pForbidden}
@@ -396,11 +397,18 @@ func p10(h *harness.H) harness.Observed {
 		var wg sync.WaitGroup
 		t0 := time.Now()
 		var stopAt time.Time
+		// The burst keeps going until 3 s after the stop answered (the cut is stop + 2 s), so a
+		// slow stop or a fast runner can't leave a round with no calls after the cut. At least 25
+		// calls per worker (200 in all), at most 100 per worker.
+		var stopNanos atomic.Int64
 		for w := range 8 {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				for i := range 25 {
+				for i := 0; i < 100; i++ {
+					if sn := stopNanos.Load(); i >= 25 && sn != 0 && time.Now().After(time.Unix(0, sn).Add(3*time.Second)) {
+						break
+					}
 					next := t0.Add(time.Duration(i*130+w*16) * time.Millisecond)
 					time.Sleep(time.Until(next))
 					s := time.Now()
@@ -414,6 +422,7 @@ func p10(h *harness.H) harness.Observed {
 		time.Sleep(800 * time.Millisecond)
 		st := owner.Do("POST", "/v1/org/stop-all", map[string]any{"reason": fmt.Sprintf("P10 round %d: stop mid-burst.", round)})
 		stopAt = time.Now()
+		stopNanos.Store(stopAt.UnixNano())
 		wg.Wait()
 		cut := stopAt.Add(2 * time.Second)
 		late, lateOK := 0, 0

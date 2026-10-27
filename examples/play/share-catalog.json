@@ -49,6 +49,21 @@
       "title": "No ask or deny rule covers a destructive database command"
     },
     {
+      "id": "database_server_not_read_only",
+      "severity": "high",
+      "title": "A database MCP server has no read-only setting"
+    },
+    {
+      "id": "plaintext_secret_in_config",
+      "severity": "high",
+      "title": "A credential sits in plain text in a client config"
+    },
+    {
+      "id": "shell_no_guard_hook",
+      "severity": "high",
+      "title": "Shell commands run without a prompt and with no PreToolUse hook"
+    },
+    {
       "id": "database_url_in_client_args",
       "severity": "medium",
       "title": "A database URL sits in a client config"

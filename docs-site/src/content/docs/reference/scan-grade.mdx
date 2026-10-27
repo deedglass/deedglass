@@ -46,6 +46,8 @@ The deductions can add up to 119, so the floor of 0 matters: a setup can't go be
 | [`archived_postgres_mcp`](/get-started/scan/#archived_postgres_mcp) | high when the role can write, low when it can't, medium when no database was checked |
 | `role_superuser`, `role_bypassrls` | high (counted in the 35 above) |
 | [`shell_destructive_unprompted`](/get-started/scan/#shell_destructive_unprompted) | high |
+| [`database_server_not_read_only`](/get-started/scan/#database_server_not_read_only) | high when the checked role can write or no database was checked, low when it can't |
+| [`plaintext_secret_in_config`](/get-started/scan/#plaintext_secret_in_config), [`shell_no_guard_hook`](/get-started/scan/#shell_no_guard_hook) | high |
 | [`env_database_url_readable`](/get-started/scan/#env_database_url_readable) | medium |
 | [`shell_destructive_no_rule`](/get-started/scan/#shell_destructive_no_rule) | medium when `defaultMode` is `auto` in your user settings, low otherwise |
 | [`database_url_in_client_args`](/get-started/scan/#database_url_in_client_args), `role_replication`, `role_createrole`, [`security_definer_executable`](/get-started/scan/#security_definer_executable) | medium |

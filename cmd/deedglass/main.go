@@ -187,6 +187,10 @@ func dispatch(ctx context.Context, e *Env, args []string) error {
 	}
 	cmd, n := lookup(words)
 	if cmd == nil {
+		// A family with --help (deedglass keys --help): the same page as deedglass help keys.
+		if hasHelpFlag(flags) && len(family(words)) > 0 {
+			return printHelp(e, words)
+		}
 		return notFound(e, words)
 	}
 	extra := words[n:]
@@ -207,6 +211,7 @@ func dispatch(ctx context.Context, e *Env, args []string) error {
 	}
 	if err := fs.Parse(cmdArgs); err != nil {
 		if bad, ok := strings.CutPrefix(err.Error(), "flag provided but not defined: "); ok {
+			bad = "--" + strings.TrimLeft(bad, "-") // Go's flag package prints -bogus for --bogus
 			return usageErr(fmt.Errorf("deedglass %s has no flag %s", strings.Join(cmd.Path, " "), bad),
 				"Run deedglass help "+strings.Join(cmd.Path, " ")+" for its flags.")
 		}
