@@ -32,7 +32,7 @@ import (
 const Type = "fhir"
 
 // DocsURL is the connector's page.
-const DocsURL = "https://docs.deedglass.com/connectors/fhir"
+const DocsURL = "https://docs.deedglass.com/reference/connectors/fhir/"
 
 // Interactions a tool can be, in catalog order. Reads first.
 var Interactions = []string{"read", "vread", "search", "history", "create", "update", "patch", "delete"}

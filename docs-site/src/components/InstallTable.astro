@@ -2,14 +2,29 @@
 // "Install in any client": one row per client, from src/data/install-links.json (generated; S47
 // replaces the generator with `deedglass mcp install-links`). check-install-links.mjs decodes each.
 import data from '../data/install-links.json';
+// cto-links (10-27): an app link (cursor://, vscode:, lmstudio://, goose://) does nothing when the app isn't
+// installed, and Safari says nothing. So the https page leads where the client has one (Cursor), every app
+// link says it needs the app, and each row shows a by-hand way to add the same server. Never target="_blank"
+// on an app link.
+const server = JSON.stringify(data.server);
+const line = [data.server.command, ...data.server.args].join(' ');
+const hand: Record<string, { label: string; text: string }> = {
+  Cursor: { label: 'Or add it to ~/.cursor/mcp.json', text: `{"mcpServers":{"deedglass":${server}}}` },
+  'LM Studio': { label: 'Or add it to mcp.json (Program tab, Install, Edit mcp.json)', text: `{"mcpServers":{"deedglass":${server}}}` },
+  Goose: { label: 'Or start a Goose session with it', text: `goose session --with-extension "${line}"` },
+};
+const get: Record<string, string> = { Cursor: 'https://cursor.com/downloads', 'VS Code': 'https://code.visualstudio.com/download', 'LM Studio': 'https://lmstudio.ai/download', Goose: 'https://goose-docs.ai/docs/getting-started/installation/' };
 ---
 <div class="dg-install">
   {data.clients.map((c) => (
     <section>
       <h3>{c.client}</h3>
-      {c.link && <p><a class="btn" href={c.link}>Add to {c.client}</a>{c.web && <> · <a href={c.web}>web link</a></>}</p>}
+      {c.link && c.client === 'Cursor' && c.web && <p><a class="btn" href={c.web}>Add to {c.client}</a> · <a href={c.link}>open in the Cursor app</a></p>}
+      {c.link && !(c.client === 'Cursor' && c.web) && <p><a class="btn" href={c.link}>Add to {c.client}</a></p>}
+      {c.link && <p class="src">The app link needs {c.client} installed. Nothing happened? <a href={get[c.client]}>Install {c.client}</a> first, or use the {hand[c.client] ? 'config' : 'command'} below.</p>}
+      {hand[c.client] && <><p class="src">{hand[c.client].label}:</p><pre tabindex="0" aria-label={`${c.client} config`}><code>{hand[c.client].text}</code></pre></>}
       {c.command && <pre tabindex="0" aria-label={`${c.client} command`}><code>{c.command}</code></pre>}
-      {c.bundle && <p>Open <code>{c.bundle}</code>.</p>}
+      {c.guide && <p>The <code>.mcpb</code> bundles aren't attached to a release yet: <a href={c.guide}>connect Claude Desktop by hand</a>.</p>}
       {c.link && <details><summary>The link</summary><pre tabindex="0" aria-label={`${c.client} link`}><code>{c.link}</code></pre></details>}
       <p class="src">Source: <a href={c.source}>{new URL(c.source).host}</a></p>
     </section>

@@ -15,34 +15,34 @@
       "client": "Cursor",
       "link": "cursor://anysphere.cursor-deeplink/mcp/install?name=deedglass&config=eyJjb21tYW5kIjoibnB4IiwiYXJncyI6WyIteSIsImRlZWRnbGFzcyIsIm1jcCIsInNlcnZlIl19",
       "web": "https://cursor.com/en/install-mcp?name=deedglass&config=eyJjb21tYW5kIjoibnB4IiwiYXJncyI6WyIteSIsImRlZWRnbGFzcyIsIm1jcCIsInNlcnZlIl19",
-      "source": "https://docs.cursor.com/en/tools/developers"
+      "source": "https://cursor.com/docs/mcp/install-links"
     },
     {
       "client": "VS Code",
       "link": "vscode:mcp/install?%7B%22name%22%3A%22deedglass%22%2C%22command%22%3A%22npx%22%2C%22args%22%3A%5B%22-y%22%2C%22deedglass%22%2C%22mcp%22%2C%22serve%22%5D%7D",
       "web": "https://vscode.dev/redirect/mcp/install?name=deedglass&config=%7B%22command%22%3A%22npx%22%2C%22args%22%3A%5B%22-y%22%2C%22deedglass%22%2C%22mcp%22%2C%22serve%22%5D%7D",
       "command": "code --add-mcp '{\"name\":\"deedglass\",\"command\":\"npx\",\"args\":[\"-y\",\"deedglass\",\"mcp\",\"serve\"]}'",
-      "source": "https://code.visualstudio.com/docs/copilot/customization/mcp-servers"
+      "source": "https://code.visualstudio.com/api/extension-guides/ai/mcp"
     },
     {
       "client": "LM Studio",
       "link": "lmstudio://add_mcp?name=deedglass&config=eyJjb21tYW5kIjoibnB4IiwiYXJncyI6WyIteSIsImRlZWRnbGFzcyIsIm1jcCIsInNlcnZlIl19",
-      "source": "https://lmstudio.ai/docs/app/plugins/mcp/deeplink"
+      "source": "https://lmstudio.ai/docs/app/mcp/deeplink"
     },
     {
       "client": "Goose",
-      "link": "goose://extension?cmd=npx&arg=-y&arg=deedglass&arg=mcp&arg=serve&id=deedglass&name=Deedglass&description=Put%20a%20policy%2C%20a%20witness%20and%20a%20signed%20deed%20on%20every%20agent%20tool%20call.",
+      "link": "goose://extension?cmd=npx&arg=-y&arg=deedglass&arg=mcp&arg=serve&id=deedglass&name=Deedglass&description=Deedglass%20lets%20rules%20decide%20each%20AI%20agent%20tool%20call%2C%20checks%20what%20really%20changed%20and%20seals%20a%20record.",
       "source": "https://goose-docs.ai/docs/getting-started/using-extensions/"
     },
     {
       "client": "Claude Code",
       "command": "claude mcp add --scope user deedglass -- npx -y deedglass mcp serve",
-      "source": "https://docs.anthropic.com/en/docs/claude-code/mcp"
+      "source": "https://code.claude.com/docs/en/mcp"
     },
     {
       "client": "Claude Desktop",
-      "bundle": "deedglass.mcpb, attached to each GitHub release",
-      "source": "https://github.com/anthropics/mcpb"
+      "guide": "/get-started/claude-desktop/",
+      "source": "https://github.com/modelcontextprotocol/mcpb"
     }
   ]
 }

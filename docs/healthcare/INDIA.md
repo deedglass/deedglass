@@ -105,4 +105,4 @@ pack's README lists the steps.
   <https://www.meity.gov.in/static/uploads/2025/11/53450e6e5dc0bfa85ebd78686cadad39.pdf>
 - EHR Standards for India (2016): <https://nrces.in/standards/ehr-standards-for-india>
 - IRDAI Master Circular on health insurance (29 May 2024):
-  <https://irdai.gov.in/documents/37343/365525/>
+  <https://irdai.gov.in/document-detail?documentId=4942918>

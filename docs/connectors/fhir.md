@@ -410,7 +410,7 @@ Kind `bearer`:
 
 ### Setup
 
-1. **Register a backend service.** On the FHIR server's authorization server, register a SMART Backend Services client with your public key and system scopes for the types you list. https://docs.deedglass.com/connectors/fhir
+1. **Register a backend service.** On the FHIR server's authorization server, register a SMART Backend Services client with your public key and system scopes for the types you list. https://docs.deedglass.com/reference/connectors/fhir/
 2. **Create the connector.**
    `deedglass connector create --config examples/connectors/fhir.yaml`
 3. **Store the key.**
