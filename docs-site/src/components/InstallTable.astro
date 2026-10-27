@@ -2,7 +2,7 @@
 // "Install in any client": one row per client, from src/data/install-links.json (generated; S47
 // replaces the generator with `deedglass mcp install-links`). check-install-links.mjs decodes each.
 import data from '../data/install-links.json';
-// cto-links (10-27): an app link (cursor://, vscode:, lmstudio://, goose://) does nothing when the app isn't
+// cto-links (10-27): an app link (Cursor, VS Code, LM Studio, Goose schemes) does nothing when the app isn't
 // installed, and Safari says nothing. So the https page leads where the client has one (Cursor), every app
 // link says it needs the app, and each row shows a by-hand way to add the same server. Never target="_blank"
 // on an app link.
