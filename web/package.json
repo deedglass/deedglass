@@ -1,6 +1,6 @@
 {
   "name": "@deedglass/console",
-  "version": "0.1.0",
+  "version": "0.14.0",
   "private": true,
   "description": "The Deedglass Console: a static Astro build embedded in the deedglass binary.",
   "license": "Apache-2.0",

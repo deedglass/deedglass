@@ -7,6 +7,22 @@ this file by `scripts/release-notes.sh`.
 
 ## [Unreleased]
 
+## [0.14.0] - 2026-10-27
+
+One command to see it work, and a live view of your agents. `deedglass start` asks nothing: with
+Docker it sets up the local stack with every default and runs the trigger scene on it, ending on
+the catch (the agent reported 1 row, Postgres changed 301) and the Console's address; without
+Docker it plays the same scene inside the binary, each line labelled live or replay. The Console's
+Overview is now a live view: what needs you, today's counts, and each action as it happens. `scan`
+now grades three risks it used to score as A. Nothing changes for existing records: the deed format
+is unchanged, and Proven, Checked and Claimed mean what they meant in 0.13.0. No new Go dependency
+and no schema migration. `formula_version` stays 1; the formula is unchanged, and the three new
+findings cost points under it, so some configs that graded A in 0.13.0 grade lower now.
+
+Known limit: `deedglass start`'s Docker path reuses `deedglass init` and `init --trigger` unchanged,
+but it was not run end to end on Docker for this release (the release machine had no working
+Docker). The no-Docker path was tested from a fresh install.
+
 ### Added
 
 - The Console's Overview is now a live view. **Needs you** at the top lists pending approvals with
@@ -29,6 +45,13 @@ this file by `scripts/release-notes.sh`.
   answers. Without Docker, or with under 2 GiB of disk, it plays the same scene inside the binary,
   each line labelled `live` or `replay`, ends on the catch, and says how to get the live version.
   `--json` prints one `start_result` object; `--fast` skips the pauses.
+- `deedglass scan` grades three risks that used to leave a config at A (#120), each a high finding:
+  `database_server_not_read_only` (a database MCP server with no read-only setting, not routed
+  through Deedglass; low when the checked role can't write), `plaintext_secret_in_config` (a
+  real-looking credential in a server's env, headers, arguments or URL, named by where, never by
+  value) and `shell_no_guard_hook` (blanket shell access in Claude Code with no `PreToolUse` hook for
+  Bash and no ask or deny rule on Bash). The scan's JSON gains `database`, `read_only` and
+  `plaintext_secrets` on each server (additive).
 
 ### Changed
 
@@ -47,6 +70,15 @@ this file by `scripts/release-notes.sh`.
 
 ### Fixed
 
+- `deedglass health --help`, `keys --help` and every other command group with `--help` print the
+  group's help instead of "needs a subcommand" (#120). A bad flag prints as `--flag`.
+- The Console's footer shows the server's release version (it said v0.1.0).
+- Links the CLI prints that went nowhere: docs.deedglass.com/intents, /decoder and
+  /postgres-deployment now redirect to their pages, and the support link points at SUPPORT.md (#120).
+- `deedglass health pilot --print-review-pack` says which release it is true for (0.14.0; it said
+  0.12.0).
+- Attack case P10 keeps each round's calls going past stop + 2 s, so a slow stop can't leave a round
+  with nothing to test (#120). Its expected outcome is unchanged.
 - The Actions feed's phone cards (under 640 px) no longer stack one letter per line, and verdict
   chips in the feed are no longer cut off.
 
@@ -898,7 +930,8 @@ See [KNOWN_ISSUES.md](KNOWN_ISSUES.md): what happens, who is affected, the worka
 See [docs/LIMITATIONS.md](docs/LIMITATIONS.md). In short: L2 covers Postgres only, seal keys are per
 deployment, and Deedglass trusts the Postgres server and the host it runs on.
 
-[Unreleased]: https://github.com/deedglass/deedglass/compare/v0.13.0...HEAD
+[Unreleased]: https://github.com/deedglass/deedglass/compare/v0.14.0...HEAD
+[0.14.0]: https://github.com/deedglass/deedglass/compare/v0.13.0...v0.14.0
 [0.13.0]: https://github.com/deedglass/deedglass/compare/v0.12.0...v0.13.0
 [0.12.0]: https://github.com/deedglass/deedglass/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/deedglass/deedglass/compare/v0.10.0...v0.11.0

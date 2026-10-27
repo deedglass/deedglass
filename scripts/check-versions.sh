@@ -17,6 +17,7 @@ check() { # check <what> <found> <want>
 }
 heading="$(sed -n 's/^## \[\([0-9][^]]*\)\].*/\1/p' CHANGELOG.md | head -1)"
 check "CHANGELOG.md newest heading" "${heading:-none}" "$semver"
+check "web/package.json (the Console's footer version)" "$(node -p 'require("./web/package.json").version' 2>/dev/null || echo none)" "$semver"
 check "sdk/typescript/package.json" "$(node -p 'require("./sdk/typescript/package.json").version' 2>/dev/null || echo none)" "$semver"
 py="$(sed -n 's/^__version__ = "\(.*\)"/\1/p' sdk/python/src/deedglass/_version.py)"
 check "sdk/python (PEP 440)" "${py:-none}" "$pep440"
