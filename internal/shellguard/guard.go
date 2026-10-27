@@ -831,3 +831,103 @@ func Reason(fs []Finding, deny bool) string {
 	}
 	return "Deedglass asks first: " + fs[0].What + more + "."
 }
+
+// composeValueFlags are docker compose's global flags that take a value, so the word after them
+// isn't a subcommand.
+var composeValueFlags = set("-f --file -p --project-name --project-directory --env-file --profile --ansi --progress --parallel -c --context -H --host --config --log-level")
+
+// composeDownVolumes matches docker compose down -v (and docker-compose, podman compose): -v or
+// --volumes removes the named volumes in the Compose file and the containers' anonymous volumes
+// (docs.docker.com compose down). The subcommand is the first word after compose that isn't a flag
+// or a flag's value; for docker-compose, the first such word.
+func composeDownVolumes(args []string) (string, bool) {
+	i := 0 // docker-compose and podman-compose: from the start
+	if at := slices.Index(args, "compose"); at >= 0 {
+		i = at + 1 // docker, podman, nerdctl: after "compose"
+	}
+	sub := -1
+	for j := i; j < len(args); j++ {
+		a := args[j]
+		if a == "--" {
+			return "", false
+		}
+		if strings.HasPrefix(a, "-") {
+			if composeValueFlags[a] {
+				j++
+			}
+			continue
+		}
+		sub = j
+		break
+	}
+	if sub < 0 || args[sub] != "down" {
+		return "", false
+	}
+	for _, a := range args[sub+1:] {
+		if a == "--" {
+			break
+		}
+		if a == "-v" || a == "--volumes" || a == "--volumes=true" {
+			label := "down " + a
+			if slices.Contains(args, "compose") {
+				label = "compose " + label
+			}
+			return label, true
+		}
+	}
+	return "", false
+}
+
+// helmValueFlags are helm's global flags that take a value.
+var helmValueFlags = set("-n --namespace --kube-context --kubeconfig --kube-apiserver --kube-as-user --kube-as-group --kube-ca-file --kube-token --kube-tls-server-name --registry-config --repository-cache --repository-config --burst-limit --qps")
+
+// helmUninstall matches helm uninstall and its aliases del, delete and un as the subcommand, unless
+// --dry-run only lists what it would remove (helm.sh helm_uninstall).
+func helmUninstall(args []string) (string, bool) {
+	for j := 0; j < len(args); j++ {
+		a := args[j]
+		if a == "--" {
+			return "", false
+		}
+		if strings.HasPrefix(a, "-") {
+			if helmValueFlags[a] {
+				j++
+			}
+			continue
+		}
+		switch a {
+		case "uninstall", "delete", "del", "un":
+			if hasFlag(args, "--dry-run") {
+				return "", false
+			}
+			return a, true
+		}
+		return "", false
+	}
+	return "", false
+}
+
+// mongoDropCall is dropDatabase() on any database handle, or drop() on a collection
+// (db.users.drop(), db.getCollection("users").drop()).
+var mongoDropCall = regexp.MustCompile(`\bdropDatabase\s*\(|\.\s*drop\s*\(`)
+
+// mongoDrop matches mongosh or mongo with --eval code that drops a database or a collection
+// (mongodb.com db.dropDatabase(), db.collection.drop()).
+func mongoDrop(args []string) (string, bool) {
+	for j, a := range args {
+		code := ""
+		switch {
+		case (a == "--eval" || a == "-e") && j+1 < len(args):
+			code = args[j+1]
+		case strings.HasPrefix(a, "--eval="):
+			code = strings.TrimPrefix(a, "--eval=")
+		}
+		if m := mongoDropCall.FindString(code); m != "" {
+			if strings.Contains(m, "dropDatabase") {
+				return "--eval dropDatabase()", true
+			}
+			return "--eval drop()", true
+		}
+	}
+	return "", false
+}

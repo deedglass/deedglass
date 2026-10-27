@@ -209,9 +209,12 @@ the same table with the reason and date for each.
 | `gcloud-sql-instances-delete` | gcloud sql instances delete | [source](https://docs.cloud.google.com/sdk/gcloud/reference/sql/instances/delete) |
 | `kubectl-delete-storage` | kubectl delete namespace \| pvc \| pv | [source](https://kubernetes.io/docs/concepts/storage/persistent-volumes/) |
 | `docker-volume-rm` | docker volume rm \| remove \| prune | [source](https://docs.docker.com/reference/cli/docker/volume/rm/) |
+| `compose-down-volumes` | docker compose down -v \| --volumes | [source](https://docs.docker.com/reference/cli/docker/compose/down/) |
+| `helm-uninstall` | helm uninstall \| delete \| del \| un | [source](https://helm.sh/docs/helm/helm_uninstall/) |
 | `fly-volumes-destroy` | fly volumes destroy | [source](https://docs.fly.io/flyctl/volumes-destroy) |
 | `pscale-database-delete` | pscale database delete | [source](https://planetscale.com/docs/reference/database) |
 | `turso-db-destroy` | turso db destroy | [source](https://docs.turso.tech/cli/db/destroy) |
+| `mongo-drop` | mongosh or mongo --eval with dropDatabase() or a collection's drop() | [source](https://www.mongodb.com/docs/manual/reference/method/db.dropDatabase/) |
 | `sql-drop` | DROP TABLE, SCHEMA, DATABASE, OWNED or MATERIALIZED VIEW; DROP TYPE, DOMAIN or EXTENSION … CASCADE | [source](https://www.postgresql.org/docs/current/sql-droptable.html) |
 | `sql-truncate` | TRUNCATE … | [source](https://www.postgresql.org/docs/current/sql-truncate.html) |
 | `sql-delete-all` | DELETE with no WHERE, or WHERE true | [source](https://www.postgresql.org/docs/current/sql-delete.html) |

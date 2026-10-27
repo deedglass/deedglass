@@ -26,6 +26,9 @@ const checked = "2026-10-18"
 // checkedCloud is the date the cloud, infrastructure and hosted-database rows were checked.
 const checkedCloud = "2026-10-26"
 
+// checkedQA is the date the Compose, Helm and MongoDB rows were checked (QA v2).
+const checkedQA = "2026-10-27"
+
 // rakeInfo are rake's options that list or describe tasks, or do a dry run, instead of running one.
 var rakeInfo = []string{"-T", "--tasks", "-D", "--describe", "-W", "--where", "-P", "--prereqs", "-n", "--dry-run"}
 
@@ -210,6 +213,14 @@ var Catalog = []Entry{
 		Why:    "removes Docker volumes and the data in them",
 		Source: "https://docs.docker.com/reference/cli/docker/volume/rm/", Checked: checkedCloud,
 		progs: []string{"docker", "podman"}, words: []string{"volume", "rm|remove|prune"}},
+	{ID: "compose-down-volumes", Shape: "docker compose down -v | --volumes",
+		Why:    "removes the Compose project's named volumes and its containers' anonymous volumes, and the data in them",
+		Source: "https://docs.docker.com/reference/cli/docker/compose/down/", Checked: checkedQA,
+		progs: []string{"docker", "podman", "nerdctl", "docker-compose", "podman-compose"}, custom: composeDownVolumes},
+	{ID: "helm-uninstall", Shape: "helm uninstall | delete | del | un",
+		Why:    "removes every resource of the release, and the release history",
+		Source: "https://helm.sh/docs/helm/helm_uninstall/", Checked: checkedQA,
+		progs: []string{"helm"}, custom: helmUninstall},
 	{ID: "fly-volumes-destroy", Shape: "fly volumes destroy",
 		Why:    "destroys the Fly volume and permanently deletes its data",
 		Source: "https://docs.fly.io/flyctl/volumes-destroy", Checked: checkedCloud,
@@ -222,6 +233,12 @@ var Catalog = []Entry{
 		Why:    "destroys the Turso database",
 		Source: "https://docs.turso.tech/cli/db/destroy", Checked: checkedCloud,
 		progs: []string{"turso"}, words: []string{"db", "destroy"}},
+
+	// MongoDB's shell with a drop in --eval.
+	{ID: "mongo-drop", Shape: "mongosh or mongo --eval with dropDatabase() or a collection's drop()",
+		Why:    "removes the database and its data files, or the collection and its indexes",
+		Source: "https://www.mongodb.com/docs/manual/reference/method/db.dropDatabase/", Checked: checkedQA,
+		progs: []string{"mongosh", "mongo"}, custom: mongoDrop},
 
 	// SQL that psql (-c, a heredoc, a here-string, or echo, printf or cat piped in), mysql or
 	// mariadb (-e or stdin), sqlite3 or prisma db execute --stdin would run, read by sqlguard.

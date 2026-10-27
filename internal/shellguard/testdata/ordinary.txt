@@ -652,3 +652,27 @@ pscale database list
 turso db list
 
 turso db show app-db
+
+docker compose down --remove-orphans
+
+docker compose -f docker-compose.yml down
+
+docker compose exec -T api sh -c 'echo done'
+
+docker compose down --rmi local
+
+mongosh app --eval "db.stats()"
+
+mongosh "mongodb://localhost:27017/app" --eval 'db.users.find({}).limit(5)'
+
+mongosh app --eval 'db.users.countDocuments()'
+
+helm list -A
+
+helm upgrade --install api ./chart -n backend
+
+helm uninstall api --dry-run
+
+helm repo remove bitnami
+
+helm history api

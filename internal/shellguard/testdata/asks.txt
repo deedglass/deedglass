@@ -525,3 +525,45 @@ pscale database delete app --force
 
 # want: turso-db-destroy
 turso db destroy app-db --yes
+
+# want: compose-down-volumes
+docker compose down -v
+
+# want: compose-down-volumes
+docker compose -f docker-compose.yml -p shop down --volumes --remove-orphans
+
+# want: compose-down-volumes
+docker-compose down -v
+
+# want: compose-down-volumes
+podman compose down --volumes
+
+# want: compose-down-volumes
+cd infra && docker compose down -v && docker compose up -d
+
+# want: mongo-drop
+mongosh "mongodb://localhost:27017/app" --eval "db.dropDatabase()"
+
+# want: mongo-drop
+mongosh --quiet app --eval 'db.getSiblingDB("app").dropDatabase()'
+
+# want: mongo-drop
+mongosh app --eval "db.users.drop()"
+
+# want: mongo-drop
+mongo app --eval 'db.dropDatabase()'
+
+# want: mongo-drop
+docker compose exec -T mongo mongosh app --eval "db.dropDatabase()"
+
+# want: helm-uninstall
+helm uninstall api
+
+# want: helm-uninstall
+helm --kube-context prod uninstall api -n backend
+
+# want: helm-uninstall
+helm delete api --namespace backend
+
+# want: helm-uninstall
+helm un api --keep-history
