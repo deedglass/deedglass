@@ -3,7 +3,7 @@
 For a hospital's IT, security and quality teams reviewing Deedglass before a pilot. Six short pages,
 written to print: architecture and data flow, where data lives, the threat model in summary, answers
 to the usual security questions, the clinical-safety boundary, what it takes to run, and how a pilot
-is measured. True for Deedglass 0.14.0.
+is measured. True for Deedglass 0.14.1.
 
 Print it, or write a copy next to you with `deedglass health pilot --print-review-pack > IT_REVIEW_PACK.md`.
 `deedglass health pilot` also writes it next to its report.
@@ -98,7 +98,7 @@ Only answers that are true today and checkable. Where something doesn't exist ye
 | Static analysis | CodeQL runs on pull requests, `main` and weekly; custom static guards run in CI | .github/workflows/codeql.yml, internal/lint |
 | Dependencies | govulncheck is a required CI job; every dependency is pinned and has an ADR | go.mod, docs/adr/ |
 | Secret scanning | GitHub secret scanning and push protection are on | repository settings |
-| Security testing | An attack suite with expected outcomes pinned before the code; against 0.13.0, 82 cases matched their expected outcome, 0 differed; a planted credential is searched for in every log line, answer and record | docs/ATTACK_SUITE.md, attack/results/latest.json |
+| Security testing | An attack suite with expected outcomes pinned before the code; against 0.14.0, 82 cases matched their expected outcome, 0 differed; a planted credential is searched for in every log line, answer and record | docs/ATTACK_SUITE.md, attack/results/latest.json |
 | Threat model | Version 3, with the control and test for each threat | docs/THREAT_MODEL.md |
 | AI-assisted development | Much of the code is written with AI assistance and says so in commit co-author lines; the same checks apply to every change | git history |
 | Release builds | One GitHub Actions workflow builds each release from a tag on `main`; actions pinned to commit SHAs | .github/workflows/release.yml |

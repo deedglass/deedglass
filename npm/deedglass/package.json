@@ -1,6 +1,6 @@
 {
   "name": "deedglass",
-  "version": "0.14.0",
+  "version": "0.14.1",
   "description": "Deedglass lets rules decide each AI agent tool call, checks what really changed and seals a record.",
   "keywords": ["deedglass", "ai-agents", "agent-security", "mcp", "mcp-server", "mcp-gateway", "model-context-protocol", "postgres", "change-data-capture", "logical-decoding", "audit-log", "policy", "approvals", "undo", "claude-code", "cursor"],
   "license": "Apache-2.0",
@@ -12,10 +12,10 @@
   "engines": { "node": ">=18" },
   "mcpName": "io.github.deedglass/deedglass",
   "optionalDependencies": {
-    "@deedglass/cli-darwin-arm64": "0.14.0",
-    "@deedglass/cli-darwin-x64": "0.14.0",
-    "@deedglass/cli-linux-arm64": "0.14.0",
-    "@deedglass/cli-linux-x64": "0.14.0",
-    "@deedglass/cli-win32-x64": "0.14.0"
+    "@deedglass/cli-darwin-arm64": "0.14.1",
+    "@deedglass/cli-darwin-x64": "0.14.1",
+    "@deedglass/cli-linux-arm64": "0.14.1",
+    "@deedglass/cli-linux-x64": "0.14.1",
+    "@deedglass/cli-win32-x64": "0.14.1"
   }
 }
