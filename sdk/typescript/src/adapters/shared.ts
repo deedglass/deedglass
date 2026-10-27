@@ -23,6 +23,7 @@ export interface GovernOptions {
   onAction?: (a: Action) => void;
 }
 
+const NOTHING_RAN = 'Nothing was run.';
 const MODEL_NAME = /^[a-zA-Z0-9_-]{1,64}$/;
 
 /** "github.create_issue" → "github__create_issue": the name a model sees. Refuses names over 64 characters. */
@@ -53,7 +54,9 @@ export function modelNames(tools: ToolInfo[]): Map<string, ToolInfo> {
 /** S11's sentence, then " Nothing was run." (Stop gets its own sentence.) */
 export function denialText(err: DeedglassError | { message: string; code?: string }): string {
   if (err.code === 'agent_stopped' || err.code === 'org_stopped') return copy.stopped;
-  const m = err.message.trim().replace(/\s*Nothing was run\.$/, '');
+  let m = err.message.trim();
+  // endsWith + trimEnd, not /\s*Nothing was run\.$/, which backtracks quadratically on long runs of spaces.
+  if (m.endsWith(NOTHING_RAN)) m = m.slice(0, -NOTHING_RAN.length).trimEnd();
   return `${m.replace(/\.?$/, '.')} ${copy.nothingRan}`;
 }
 

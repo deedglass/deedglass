@@ -11,6 +11,13 @@ import { isBrowser, runtime } from './runtime.js';
 import type { Action, ResponseMeta } from './types.js';
 import { API_VERSION, VERSION } from './version.js';
 
+/** s without trailing slashes. A loop, not /\/+$/, which backtracks quadratically on long runs of "/". */
+export function trimSlashes(s: string): string {
+  let end = s.length;
+  while (end > 0 && s.charCodeAt(end - 1) === 47) end--;
+  return s.slice(0, end);
+}
+
 export interface TransportOptions {
   baseUrl: string;
   auth: () => string;
@@ -95,7 +102,7 @@ export class Transport {
   }
 
   url(path: string, query?: Req['query']): string {
-    const u = new URL(this.#o.baseUrl.replace(/\/+$/, '') + path);
+    const u = new URL(trimSlashes(this.#o.baseUrl) + path);
     for (const [k, v] of Object.entries(query ?? {})) {
       if (v === undefined) continue;
       for (const x of Array.isArray(v) ? v : [v]) u.searchParams.append(k, x);
