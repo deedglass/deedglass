@@ -36,7 +36,7 @@ colors:
   accent-dark: "#6F8DFF"        # links, primary button fill, focus ring on dark (6.6:1 on ink-950)
   on-accent-dark: "#07080C"     # proposed: ink-950 text on accent-dark (6.6:1). White fails at 3.0:1.
   accent-dark-hover: "#8AA2FF"  # proposed: hover fill on dark (ink-950 text 8.3:1)
-  brand-violet: "#6E5BD9"       # the site's one primary action per page (DL-111); the Console's Approve and empty-state copy (white text 5.07:1)
+  brand-violet: "#6E5BD9"       # the site's one primary action per page (DL-111); the Console's Approve and empty-state copy (white text 5.05:1)
   brand-violet-hover: "#5B49C7" # hover fill for brand-violet (white text 6.5:1)
 
   # Verdicts and states (brand doc 6.3). Text on fill, light then dark.
