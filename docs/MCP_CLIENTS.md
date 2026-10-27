@@ -65,14 +65,14 @@ claude mcp add --env DEEDGLASS_API_KEY=dg_test_REPLACE_ME --env DEEDGLASS_SERVER
 - **File:** `~/.cursor/mcp.json` (every project) or `.cursor/mcp.json` (one project).
 - **Shape:** `mcpServers` with `command`, `args`, `env`, as for Claude Desktop. Values may use
   `${env:NAME}`, so `"DEEDGLASS_API_KEY": "${env:DEEDGLASS_API_KEY}"` keeps the key out of the file.
-- Source: https://cursor.com/docs/context/mcp (checked 2026-10-01).
+- Source: https://cursor.com/docs/mcp (checked 2026-10-01).
 
 ## VS Code
 
 - **File:** `.vscode/mcp.json` in the workspace.
 - **Shape:** top-level `servers` (not `mcpServers`), each with `"type": "stdio"`, `command`, `args`,
   `env`. VS Code supports input variables for secrets.
-- Source: https://code.visualstudio.com/docs/copilot/customization/mcp-servers (checked 2026-10-01).
+- Source: https://code.visualstudio.com/docs/agent-customization/mcp-servers (checked 2026-10-01).
 
 ```json
 {
@@ -107,7 +107,7 @@ Formats checked on 2026-10-02 against each client's documentation:
 | Client | Shape | Source |
 |---|---|---|
 | Claude Code | `claude mcp add --transport http --header "Authorization: Bearer …" deedglass http://127.0.0.1:8080/mcp/native` | https://code.claude.com/docs/en/mcp |
-| Cursor | `mcpServers.deedglass` with `url` and `headers` (headers accept `${env:NAME}`) | https://cursor.com/docs/context/mcp |
+| Cursor | `mcpServers.deedglass` with `url` and `headers` (headers accept `${env:NAME}`) | https://cursor.com/docs/mcp |
 | VS Code | `servers.deedglass` with `"type": "http"`, `url`, `headers` using `${input:deedglass-api-key}`, and an `inputs` entry with `"password": true` | https://code.visualstudio.com/docs/agents/reference/mcp-configuration |
 | Windsurf | `mcpServers.deedglass` with `serverUrl` and `headers` (the docs now live at Devin Desktop, `~/.config/devin/mcp_config.json`) | https://docs.devin.ai/desktop/cascade/mcp |
 | Claude Desktop | the stdio bridge: `command` = `deedglass`, `args` = `mcp serve --connector native`, `env` with the key and server | https://support.claude.com/en/articles/11175166-get-started-with-custom-connectors-using-remote-mcp |

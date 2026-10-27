@@ -36,7 +36,7 @@ const APIVersion = "2026-03-11"
 const FieldToken = "token"
 
 // IntegrationsURL is where an internal integration token is made.
-const IntegrationsURL = "https://www.notion.so/profile/integrations"
+const IntegrationsURL = "https://app.notion.com/profile/integrations"
 
 // Limits of the config and the tools.
 const (

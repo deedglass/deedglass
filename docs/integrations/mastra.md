@@ -66,9 +66,9 @@ is reported as skipped, not as a failure.
 
 Every framework API in the files above comes from the framework's own docs, checked 2026-10-21:
 
-- `new MCPClient({ id, servers: { name: { command, args } } })`, `await mcpClient.listTools()`, `disconnect()`: https://mastra.ai/docs/tools-mcp/mcp-overview
+- `new MCPClient({ id, servers: { name: { command, args } } })`, `await mcpClient.listTools()`, `disconnect()`: https://mastra.ai/docs/connections/mcp
 - `new Agent({ id, name, instructions, model, tools })`, `agent.generate(…)`, `.text`: https://mastra.ai/docs/agents/overview
-- `requireToolApproval` per MCP server, to ask your own user before Deedglass sees the call: https://mastra.ai/docs/agents/agent-approval
+- `requireToolApproval` per MCP server, to ask your own user before Deedglass sees the call: https://mastra.ai/docs/agents/human-in-the-loop
 - Tool-name rules: the MCP spec's tool names (https://modelcontextprotocol.io/specification/2025-11-25/server/tools#tool-names) and Anthropic's tool definitions (https://platform.claude.com/docs/en/agents-and-tools/tool-use/define-tools). OpenAI's API reference returned 403 when we checked; its rule here is the one `@deedglass/sdk`'s OpenAI adapter already follows.
 
 Not verified:

@@ -184,20 +184,20 @@ the same table with the reason and date for each.
 | `django-flush` | manage.py flush | [source](https://docs.djangoproject.com/en/5.2/ref/django-admin/#flush) |
 | `django-migrate-zero` | manage.py migrate &lt;app&gt; zero | [source](https://docs.djangoproject.com/en/5.2/ref/django-admin/#migrate) |
 | `django-reset-db` | manage.py reset_db | [source](https://django-extensions.readthedocs.io/en/latest/command_extensions.html) |
-| `laravel-migrate-fresh` | artisan migrate:fresh | [source](https://laravel.com/docs/13.x/migrations) |
+| `laravel-migrate-fresh` | artisan migrate:fresh | [source](https://laravel.com/framework/docs/13.x/migrations) |
 | `laravel-db-wipe` | artisan db:wipe | [source](https://github.com/laravel/framework/blob/13.x/src/Illuminate/Database/Console/WipeCommand.php) |
-| `laravel-rollback-all` | artisan migrate:reset, migrate:refresh | [source](https://laravel.com/docs/13.x/migrations) |
-| `ecto-drop` | mix ecto.drop, ecto.reset (the Phoenix alias that runs ecto.drop) | [source](https://hexdocs.pm/ecto/Mix.Tasks.Ecto.Drop.html) |
-| `ecto-rollback-all` | mix ecto.rollback --all | [source](https://hexdocs.pm/ecto_sql/Mix.Tasks.Ecto.Rollback.html) |
+| `laravel-rollback-all` | artisan migrate:reset, migrate:refresh | [source](https://laravel.com/framework/docs/13.x/migrations) |
+| `ecto-drop` | mix ecto.drop, ecto.reset (the Phoenix alias that runs ecto.drop) | [source](https://ecto.hexdocs.pm/Mix.Tasks.Ecto.Drop.html) |
+| `ecto-rollback-all` | mix ecto.rollback --all | [source](https://ecto-sql.hexdocs.pm/Mix.Tasks.Ecto.Rollback.html) |
 | `supabase-db-reset-remote` | supabase db reset --linked \| --db-url | [source](https://supabase.com/docs/reference/cli/supabase-db-reset) |
 | `heroku-pg-reset` | heroku pg:reset | [source](https://devcenter.heroku.com/articles/managing-heroku-postgres-using-cli#pg-reset) |
 | `dropdb` | dropdb | [source](https://www.postgresql.org/docs/current/app-dropdb.html) |
 | `pg-restore-clean` | pg_restore --clean --dbname | [source](https://www.postgresql.org/docs/current/app-pgrestore.html) |
 | `pg-dump-clean-pipe` | pg_dump --clean \| psql | [source](https://www.postgresql.org/docs/current/app-pgdump.html) |
 | `mysqladmin-drop` | mysqladmin drop | [source](https://dev.mysql.com/doc/refman/8.4/en/mysqladmin.html) |
-| `railway-volume-delete` | railway volume delete | [source](https://docs.railway.com/reference/cli-api) |
-| `railway-delete-project` | railway delete | [source](https://docs.railway.com/reference/cli-api) |
-| `railway-api-delete` | curl to Railway's GraphQL API with volumeDelete or projectDelete | [source](https://docs.railway.com/guides/manage-volumes) |
+| `railway-volume-delete` | railway volume delete | [source](https://docs.railway.com/cli) |
+| `railway-delete-project` | railway delete | [source](https://docs.railway.com/cli) |
+| `railway-api-delete` | curl to Railway's GraphQL API with volumeDelete or projectDelete | [source](https://docs.railway.com/integrations/api/manage-volumes) |
 | `supabase-projects-delete` | supabase projects delete | [source](https://supabase.com/docs/reference/cli/supabase-projects-delete) |
 | `neon-branches-delete` | neonctl branches delete | [source](https://neon.com/docs/cli/branches#delete) |
 | `neon-projects-delete` | neonctl projects delete | [source](https://neon.com/docs/cli/projects#delete) |
@@ -211,8 +211,8 @@ the same table with the reason and date for each.
 | `docker-volume-rm` | docker volume rm \| remove \| prune | [source](https://docs.docker.com/reference/cli/docker/volume/rm/) |
 | `compose-down-volumes` | docker compose down -v \| --volumes | [source](https://docs.docker.com/reference/cli/docker/compose/down/) |
 | `helm-uninstall` | helm uninstall \| delete \| del \| un | [source](https://helm.sh/docs/helm/helm_uninstall/) |
-| `fly-volumes-destroy` | fly volumes destroy | [source](https://docs.fly.io/flyctl/volumes-destroy) |
-| `pscale-database-delete` | pscale database delete | [source](https://planetscale.com/docs/reference/database) |
+| `fly-volumes-destroy` | fly volumes destroy | [source](https://docs.fly.io/flyctl/cmd/fly_volumes_destroy) |
+| `pscale-database-delete` | pscale database delete | [source](https://planetscale.com/docs/cli/database) |
 | `turso-db-destroy` | turso db destroy | [source](https://docs.turso.tech/cli/db/destroy) |
 | `mongo-drop` | mongosh or mongo --eval with dropDatabase() or a collection's drop() | [source](https://www.mongodb.com/docs/manual/reference/method/db.dropDatabase/) |
 | `sql-drop` | DROP TABLE, SCHEMA, DATABASE, OWNED or MATERIALIZED VIEW; DROP TYPE, DOMAIN or EXTENSION … CASCADE | [source](https://www.postgresql.org/docs/current/sql-droptable.html) |

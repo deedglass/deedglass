@@ -89,23 +89,27 @@ export function tamper(line) {
 // `deedglass mcp install-links`, this function makes them from the one server object; S47 swaps
 // it for the CLI's output. scripts/check-install-links.mjs decodes every link back.
 export const SERVER = { command: 'npx', args: ['-y', 'deedglass', 'mcp', 'serve'] };
+// internal/installlinks.Description (docs/description.json's tagline): the Goose link shows it, and deedglass.com/install
+// carries the Go-generated link, so both say the same line.
+const DESCRIPTION = JSON.parse(read('docs/description.json')).tagline;
 export function installLinks(server = SERVER) {
   const json = JSON.stringify(server);
   const b64 = Buffer.from(json, 'utf8').toString('base64');
   const enc = encodeURIComponent;
   const named = JSON.stringify({ name: 'deedglass', ...server });
-  const goose = ['cmd=' + enc(server.command), ...server.args.map((a) => 'arg=' + enc(a)), 'id=deedglass', 'name=Deedglass', 'description=' + enc('Put a policy, a witness and a signed deed on every agent tool call.')].join('&');
+  const goose = ['cmd=' + enc(server.command), ...server.args.map((a) => 'arg=' + enc(a)), 'id=deedglass', 'name=Deedglass', 'description=' + enc(DESCRIPTION)].join('&');
   return {
     object: 'install_links',
     generator: 'docs-site/scripts/gen-data.mjs (until S47: deedglass mcp install-links)',
     server,
     clients: [
-      { client: 'Cursor', link: `cursor://anysphere.cursor-deeplink/mcp/install?name=deedglass&config=${enc(b64)}`, web: `https://cursor.com/en/install-mcp?name=deedglass&config=${enc(b64)}`, source: 'https://docs.cursor.com/en/tools/developers' },
-      { client: 'VS Code', link: `vscode:mcp/install?${enc(named)}`, web: `https://vscode.dev/redirect/mcp/install?name=deedglass&config=${enc(json)}`, command: `code --add-mcp '${named}'`, source: 'https://code.visualstudio.com/docs/copilot/customization/mcp-servers' },
-      { client: 'LM Studio', link: `lmstudio://add_mcp?name=deedglass&config=${enc(b64)}`, source: 'https://lmstudio.ai/docs/app/plugins/mcp/deeplink' },
+      { client: 'Cursor', link: `cursor://anysphere.cursor-deeplink/mcp/install?name=deedglass&config=${enc(b64)}`, web: `https://cursor.com/en/install-mcp?name=deedglass&config=${enc(b64)}`, source: 'https://cursor.com/docs/mcp/install-links' },
+      { client: 'VS Code', link: `vscode:mcp/install?${enc(named)}`, web: `https://vscode.dev/redirect/mcp/install?name=deedglass&config=${enc(json)}`, command: `code --add-mcp '${named}'`, source: 'https://code.visualstudio.com/api/extension-guides/ai/mcp' },
+      { client: 'LM Studio', link: `lmstudio://add_mcp?name=deedglass&config=${enc(b64)}`, source: 'https://lmstudio.ai/docs/app/mcp/deeplink' },
       { client: 'Goose', link: `goose://extension?${goose}`, source: 'https://goose-docs.ai/docs/getting-started/using-extensions/' },
-      { client: 'Claude Code', command: `claude mcp add --scope user deedglass -- ${server.command} ${server.args.join(' ')}`, source: 'https://docs.anthropic.com/en/docs/claude-code/mcp' },
-      { client: 'Claude Desktop', bundle: 'deedglass.mcpb, attached to each GitHub release', source: 'https://github.com/anthropics/mcpb' },
+      { client: 'Claude Code', command: `claude mcp add --scope user deedglass -- ${server.command} ${server.args.join(' ')}`, source: 'https://code.claude.com/docs/en/mcp' },
+      // The .mcpb bundles aren't attached to a release yet (internal/installlinks.MCPBOnRelease): link the by-hand page.
+      { client: 'Claude Desktop', guide: '/get-started/claude-desktop/', source: 'https://github.com/modelcontextprotocol/mcpb' },
     ],
   };
 }

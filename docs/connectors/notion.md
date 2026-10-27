@@ -100,7 +100,7 @@ Kind `bearer`:
 
 ### Setup
 
-1. **Create an internal integration.** Give it Read content and Insert content. Then open each parent page › ••• › Connections and add the integration. https://www.notion.so/profile/integrations
+1. **Create an internal integration.** Give it Read content and Insert content. Then open each parent page › ••• › Connections and add the integration. https://app.notion.com/profile/integrations
 2. **Create the connector.**
    `deedglass connector create --config examples/connectors/notion.yaml`
 3. **Store the token.**
