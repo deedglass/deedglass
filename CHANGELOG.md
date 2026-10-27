@@ -7,6 +7,15 @@ this file by `scripts/release-notes.sh`.
 
 ## [Unreleased]
 
+### Added
+
+- The shell guard asks first about three more commands that delete data, each checked against its
+  tool's own reference page: `docker compose down -v` (and `--volumes`, `docker-compose`, `podman
+  compose`), which removes the project's volumes; `helm uninstall` (and its aliases `delete`, `del`,
+  `un`), which removes every resource of the release; and `mongosh` or `mongo` with `--eval` code that
+  calls `dropDatabase()` or a collection's `drop()`. `helm uninstall --dry-run` and `compose down`
+  without `-v` still pass.
+
 ## [0.14.0] - 2026-10-27
 
 One command to see it work, and a live view of your agents. `deedglass start` asks nothing: with
