@@ -7,6 +7,13 @@ this file by `scripts/release-notes.sh`.
 
 ## [Unreleased]
 
+## [0.14.1] - 2026-10-28
+
+A small patch: three more commands the shell guard asks about, a fix for slow regular expressions in
+the TypeScript SDK, docs install buttons that say what to do when the app isn't installed, and
+dependency updates. Nothing changes for existing records: the deed format, the `scan` grade and
+`formula_version` (1) are as in 0.14.0. No new Go dependency and no schema migration.
+
 ### Added
 
 - The shell guard asks first about three more commands that delete data, each checked against its
@@ -14,7 +21,24 @@ this file by `scripts/release-notes.sh`.
   compose`), which removes the project's volumes; `helm uninstall` (and its aliases `delete`, `del`,
   `un`), which removes every resource of the release; and `mongosh` or `mongo` with `--eval` code that
   calls `dropDatabase()` or a collection's `drop()`. `helm uninstall --dry-run` and `compose down`
-  without `-v` still pass.
+  without `-v` still pass. (#122)
+
+### Fixed
+
+- TypeScript SDK (`@deedglass/sdk`): three regular expressions that could take polynomial time on
+  crafted input (trimming a base URL's trailing slashes, spotting a denial's "Nothing was run."
+  ending, and finding PEM markers) are now plain string code that runs in linear time, with a timing
+  regression test. Found by GitHub code scanning (js/polynomial-redos). (#125)
+- Docs, "Install in any client": Cursor's main button is its web install page; every app link
+  (Cursor, VS Code, LM Studio, Goose) says it needs the app, links the download and shows a by-hand
+  way to add the same server; Claude Desktop links the by-hand guide instead of a release file that
+  isn't attached. Links that had moved now point at their new pages, including references in the
+  shell-guard catalog. (#124)
+
+### Changed
+
+- Dependency updates from Dependabot: the Go build image, the distroless runtime image, GitHub
+  Actions, and npm and Python packages (#108, #109, #110, #112, #116).
 
 ## [0.14.0] - 2026-10-27
 
