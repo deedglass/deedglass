@@ -49,10 +49,13 @@ function bad(msg: string, param: string): InvalidRequestError {
   return new InvalidRequestError({ type: 'client_error', code: 'intent_invalid', message: msg, param });
 }
 
-function pemToDer(pem: string): Uint8Array {
-  const m = /-----BEGIN PRIVATE KEY-----([\s\S]+?)-----END PRIVATE KEY-----/.exec(pem);
-  if (!m) throw bad(copy.intentKeyBad, 'intentKey');
-  const b64 = m[1]!.replace(/\s+/g, '');
+export function pemToDer(pem: string): Uint8Array {
+  // indexOf, not a lazy regex, which is polynomial on input with many BEGIN lines and no END.
+  const begin = '-----BEGIN PRIVATE KEY-----';
+  const start = pem.indexOf(begin);
+  const end = start < 0 ? -1 : pem.indexOf('-----END PRIVATE KEY-----', start + begin.length);
+  if (end < 0 || end === start + begin.length) throw bad(copy.intentKeyBad, 'intentKey');
+  const b64 = pem.slice(start + begin.length, end).replace(/\s+/g, '');
   let bin: string;
   try {
     bin = atob(b64);

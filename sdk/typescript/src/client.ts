@@ -3,7 +3,7 @@
 import { canonicalArgs, checkArgs } from './args.js';
 import { copy } from './copy.js';
 import { AuthenticationError, DeedglassError, InvalidRequestError } from './errors.js';
-import { Transport, withMeta } from './http.js';
+import { Transport, trimSlashes, withMeta } from './http.js';
 import { newIdempotencyKey, validIdempotencyKey } from './idempotency.js';
 import { type IntentKey, REF, signIntent } from './intent.js';
 import { Actions } from './resources/actions.js';
@@ -99,7 +99,7 @@ export class Deedglass {
     if (!API_KEY.test(key)) throw new AuthenticationError({ type: 'authentication_error', code: 'invalid_api_key', message: copy.invalidApiKey });
     this.#key = key;
     KEYS.set(this, key);
-    const baseUrl = (opts.baseUrl ?? env('DEEDGLASS_SERVER') ?? DEFAULT_BASE_URL).replace(/\/+$/, '');
+    const baseUrl = trimSlashes(opts.baseUrl ?? env('DEEDGLASS_SERVER') ?? DEFAULT_BASE_URL);
     const f = opts.fetch ?? globalThis.fetch.bind(globalThis);
     this.#t = new Transport({
       baseUrl,
