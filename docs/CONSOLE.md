@@ -52,7 +52,8 @@ Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=()
 
 ## The dev loop
 
-- `make web-build && make build-only && make dev` (or `deedglass serve`) is exactly what ships.
+- `make web-build && make build-only && make dev` (or `deedglass serve`) is exactly what ships. At start
+  `deedglass serve` prints `✓ Console on <base URL>/app` under the listening line.
 - `make web-dev` runs `astro dev` on `:4321` and proxies `/v1`, `/login`, `/auth` and `/.well-known`
   to `:8080`; start the server with `DEEDGLASS_BASE_URL=http://localhost:4321` so sign-in links agree.
 - `make web-test` (in `make ci`): typecheck and Vitest. `make web-e2e`: Playwright in the installed
@@ -76,28 +77,66 @@ server's message, the request id, Retry), a viewer state (controls visible, chan
 the reason), the Console 404 (the same for a missing id and another org's id) and the offline
 banner (content stays; the Overview says `Last updated 14:02`). Dark and light, down to 360 px.
 
-### Overview (`/app`)
+### Overview (`/app`): the live view
 
-- **Tiles:** Actions, Blocked, Waiting for approval and Verification, from
-  [`GET /v1/overview`](OVERVIEW_METRICS.md) for the window in the toggle (`24 h` or `7 d`, in the URL
-  as `?window=7d`). Every number says its window; deltas are neutral words, never a verdict colour.
-  The Verification bar has its labels and counts in text; each verdict links to the feed, filtered.
-- **Needs attention:** the server's attention items (kinds and data, at most 8), written as words by
-  `copy.ts`. `Nothing needs you right now.` when empty, with a neutral ✓ (teal means a deed was
-  verified, so it isn't used here).
-- **Agents:** the 8 most recently active agents, status, calls today against `calls_per_day`.
-- **Live actions:** the last 10 actions, then new ones as Postgres commits them. The Mirror plays
-  only for a verdict that arrives while you watch.
-- **Chain:** `GET /v1/ledger/check` over the last 24 hours, after first paint; the head's body hash
-  with the note to keep it somewhere outside Deedglass.
-- **Live counters:** `action.created` adds an action, a deny adds a block, `action.witnessed` moves
-  one action into its verdict, approvals move Waiting. The page refetches every 60 s to correct
-  drift (an event seen twice, one outside the window).
-- **First run:** an org with no agents gets the three steps instead: create the demo agent and its
-  key (shown once, S08's sheet), the MCP client config for Claude Code, Cursor or Claude Desktop with
-  the key filled in (the same bytes `deedglass mcp snippet` prints; `web/src/lib/snippets.ts`), and
-  a wait for the agent's first action, which turns ✓ when it seals. The key fills the snippet on this
-  page only; it is never stored, and a reload shows the placeholder again.
+Since console-v1 the Overview answers one question first: what are my agents doing, and does
+anything need me?
+
+![The Overview in dark mode: Needs you, Today and Live activity](images/console-overview-dark.jpg)
+
+- **Needs you** (top): every pending approval as a card, with the tool, the effect line (`INSERT ~1
+  row in public.refunds`), the agent, the rule and when it expires. **Approve** (the brand violet)
+  and **Decline** are 44 px or taller and sit side by side, 48 px on a phone. Each one opens the
+  DecisionSheet (S26), so a decline still needs a reason and every decision carries the context
+  digest and one Idempotency-Key. Four-eyes rules show `0 of 2 signed` with dots. After you sign,
+  the card says `You approved. Waiting for the next person.` and its buttons go away. Viewers see
+  the cards with the buttons disabled and the reason. The first 3 cards show, then `N more in
+  Approvals`. `approval.*` events reload the inbox, so a new request appears without a reload.
+- **Today:** Allowed, Held for a person, Blocked and Doesn't match for the window in the toggle
+  (`24 h` or `7 d`, in the URL as `?window=7d`). The counts come from
+  [`GET /v1/overview`](OVERVIEW_METRICS.md) (`decisions.allowed`, `decisions.held`,
+  `blocked.total`, `verification.mismatch`), and each tile links to the feed, filtered. The
+  verification bar under the tiles keeps its labels and counts in text.
+- **Live activity:** the last 20 actions, then each new one the moment Postgres commits it. A row
+  shows the tool and the agent, a plain summary (`Create refund in Stripe · blocked: Refunds over
+  $100 need a person.`), the rule decision, the read-back result (Matches, Doesn't match, Can't
+  check, at its level) and a **Record** link to the sealed deed. A row updates in place as the action
+  moves through decided, executed, witnessed and sealed. Summaries come from the tool name and the
+  policy's reason, never from the request, so they are safe in Health mode. Screen readers hear at
+  most one arrival every 5 s.
+- **Streaming, then polling:** the page uses the one SSE stream ([`GET /v1/events`](EVENTS.md)). While
+  the stream isn't live (a proxy that strips SSE, a reconnect), it polls `GET /v1/actions` and the
+  pending approvals every 5 s and says `Live updates are off. Checking every 5 seconds.`. Counters
+  also move live between refetches, and the page refetches the Overview 3 s after activity and every
+  60 s to correct drift.
+- **Needs attention:** the server's attention items. Repeats fold into one line (`Doesn't match ·
+  postgres.execute · support-bot · 8 times`).
+- **Agents connected:** the 8 most recently active agents, with a live dot when an agent acted in
+  the last 5 minutes, its status and its calls today against `calls_per_day`.
+- **Last week** and **Chain**, as before.
+
+![The Overview on a phone: Needs you with full-width Approve and Decline](images/console-overview-phone.jpg)
+
+### Empty state: one next step
+
+An org with no actions yet gets one card and one command:
+
+![The empty state: Run deedglass init --smoke in another terminal](images/console-empty.jpg)
+
+`deedglass init --smoke` sends three test actions through the stack that `deedglass init` set up: a
+read, a blocked `DROP TABLE` and an `UPDATE` checked at Proven. The page listens on the stream (and
+polls every 5 s while the stream isn't live). When the first action arrives it becomes the live view
+without a reload. **Connecting your own agent instead?** opens the earlier flow: create the demo
+agent and its key (shown once), the MCP client config with the key filled in, and the wait for its
+first action. The key fills the snippet on this page only, is never stored, and a reload shows the
+placeholder again.
+
+### Health mode
+
+When the org's PHI mode is on (`settings.phi_mode`, [PHI_MODE.md](PHI_MODE.md)), the Overview and
+the action page show `Health mode is on. The Console shows field names, not values.` The DiffTable
+keeps tables, keys and column names and shows every value as `•••`. The request and the result stay
+hidden, and their digests stay in the record. The Live activity summaries never held values.
 
 ### Actions (`/app/actions`)
 
@@ -114,6 +153,16 @@ banner (content stays; the Overview says `Last updated 14:02`). Dark and light, 
 
 ### Action detail (`/app/actions/{id}`)
 
+![An action whose result doesn't match: claimed beside observed, the diff and the chain position](images/console-action-mismatch.jpg)
+
+- **Claimed beside observed** (first, above everything else on a phone): what the agent claimed
+  (the statement's footprint, `UPDATE 1 row in public.orders (id = 42) · column status`, or `The
+  tool reported success.`) beside what Deedglass observed (`UPDATE 301 rows in public.orders`, or
+  the read-back), with the verdict chip. Under them is the DiffTable with its diff rows.
+- **The policy that decided:** the decision, the policy, the rule, the reason and the mode, second.
+- **Chain position** (beside the deed panel): `Record 617`, linking to the deed, and
+  **Verify offline**: the exact `deedglass verify deed_….json --keys <origin>/.well-known/deedglass/keys.json`
+  command, readable and with a Copy button. Download the deed, then run it anywhere.
 - **The sentence:** the API's `witness.summary`, verbatim, after a prefix (`MISMATCH · `,
   `Witnessed by Postgres · `, `Confirmed by a read-back · `); denials use the Gate's message.
 - **Witness:** level, method, verdict, every check (✓ pass, ✕ violation, ○ gap, i note) and the

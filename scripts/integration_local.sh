@@ -20,7 +20,7 @@ case "$VER" in
   16) TAG=16.15 ;;
   *) echo "unsupported DEEDGLASS_IT_PG=$VER (16, 17 or 18)" >&2; exit 2 ;;
 esac
-PORT="5543${VER: -1}"   # 55438, 55437, 55436
+PORT="${DEEDGLASS_IT_PORT:-5543${VER: -1}}"   # 55438, 55437, 55436 (DEEDGLASS_IT_PORT overrides, for a second worktree)
 BIN="/opt/homebrew/opt/postgresql@${VER}/bin"
 MODE="${DEEDGLASS_IT_MODE:-}"
 if [ -z "$MODE" ]; then

@@ -104,6 +104,46 @@ export const contrastRows: ContrastRow[] = [
  },
  {
   "theme": "dark",
+  "fg": "on-brand",
+  "bg": "brand",
+  "kind": "text",
+  "note": "the one primary action (site DL-111)",
+  "ratio": 5.05,
+  "need": 4.5,
+  "pass": true
+ },
+ {
+  "theme": "dark",
+  "fg": "on-brand",
+  "bg": "brand-hover",
+  "kind": "text",
+  "note": "the one primary action, hover",
+  "ratio": 6.52,
+  "need": 4.5,
+  "pass": true
+ },
+ {
+  "theme": "dark",
+  "fg": "brand",
+  "bg": "bg",
+  "kind": "ui",
+  "note": "violet focus and borders",
+  "ratio": 3.97,
+  "need": 3,
+  "pass": true
+ },
+ {
+  "theme": "dark",
+  "fg": "brand",
+  "bg": "surface",
+  "kind": "ui",
+  "note": "violet focus and borders",
+  "ratio": 3.77,
+  "need": 3,
+  "pass": true
+ },
+ {
+  "theme": "dark",
   "fg": "verified-fg",
   "bg": "verified-bg",
   "kind": "text",
@@ -370,6 +410,46 @@ export const contrastRows: ContrastRow[] = [
   "note": "primary button, hover",
   "ratio": 7.31,
   "need": 4.5,
+  "pass": true
+ },
+ {
+  "theme": "light",
+  "fg": "on-brand",
+  "bg": "brand",
+  "kind": "text",
+  "note": "the one primary action (site DL-111)",
+  "ratio": 5.05,
+  "need": 4.5,
+  "pass": true
+ },
+ {
+  "theme": "light",
+  "fg": "on-brand",
+  "bg": "brand-hover",
+  "kind": "text",
+  "note": "the one primary action, hover",
+  "ratio": 6.52,
+  "need": 4.5,
+  "pass": true
+ },
+ {
+  "theme": "light",
+  "fg": "brand",
+  "bg": "bg",
+  "kind": "ui",
+  "note": "violet focus and borders",
+  "ratio": 4.7,
+  "need": 3,
+  "pass": true
+ },
+ {
+  "theme": "light",
+  "fg": "brand",
+  "bg": "surface",
+  "kind": "ui",
+  "note": "violet focus and borders",
+  "ratio": 5.05,
+  "need": 3,
   "pass": true
  },
  {

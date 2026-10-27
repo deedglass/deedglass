@@ -42,6 +42,9 @@ errors that end with a next step, aligned columns, a progress line for slow step
 | `--accent` | `accent-dark` #6F8DFF | `accent-light` #2F5BEA |
 | `--accent-hover` | `accent-dark-hover` #8AA2FF | `accent-light-hover` #2449C9 |
 | `--on-accent` | `on-accent-dark` #07080C | `on-accent-light` #FFFFFF |
+| `--brand` | `brand-violet` #6E5BD9 | `brand-violet` #6E5BD9 |
+| `--brand-hover` | `brand-violet-hover` #5B49C7 | `brand-violet-hover` #5B49C7 |
+| `--on-brand` | `white` #FFFFFF | `white` #FFFFFF |
 | `--verified-fg` | `verified-text-dark` #34E3C9 | `verified-text-light` #0F766E |
 | `--verified-bg` | `verified-bg-dark` #0F2A28 | `verified-bg-light` #E6F6F3 |
 | `--mismatch-fg` | `mismatch-text-dark` #FF7A70 | `mismatch-text-light` #C8322B |
@@ -108,6 +111,10 @@ Z-order: sticky 10 · topbar 20 · sheet 40 · palette 50 · toast 60.
 | dark | `accent` | `surface` | text | 6.27 | pass (4.5:1) |
 | dark | `on-accent` | `accent` | text | 6.61 | pass (4.5:1) |
 | dark | `on-accent` | `accent-hover` | text | 8.29 | pass (4.5:1) |
+| dark | `on-brand` | `brand` | text | 5.05 | pass (4.5:1) |
+| dark | `on-brand` | `brand-hover` | text | 6.52 | pass (4.5:1) |
+| dark | `brand` | `bg` | ui | 3.97 | pass (3:1) |
+| dark | `brand` | `surface` | ui | 3.77 | pass (3:1) |
 | dark | `verified-fg` | `verified-bg` | text | 9.39 | pass (4.5:1) |
 | dark | `mismatch-fg` | `mismatch-bg` | text | 6.38 | pass (4.5:1) |
 | dark | `pending-fg` | `pending-bg` | text | 6.75 | pass (4.5:1) |
@@ -135,6 +142,10 @@ Z-order: sticky 10 · topbar 20 · sheet 40 · palette 50 · toast 60.
 | light | `accent` | `surface` | text | 5.52 | pass (4.5:1) |
 | light | `on-accent` | `accent` | text | 5.52 | pass (4.5:1) |
 | light | `on-accent` | `accent-hover` | text | 7.31 | pass (4.5:1) |
+| light | `on-brand` | `brand` | text | 5.05 | pass (4.5:1) |
+| light | `on-brand` | `brand-hover` | text | 6.52 | pass (4.5:1) |
+| light | `brand` | `bg` | ui | 4.70 | pass (3:1) |
+| light | `brand` | `surface` | ui | 5.05 | pass (3:1) |
 | light | `verified-fg` | `verified-bg` | text | 4.91 | pass (4.5:1) |
 | light | `mismatch-fg` | `mismatch-bg` | text | 4.65 | pass (4.5:1) |
 | light | `pending-fg` | `pending-bg` | text | 5.25 | pass (4.5:1) |

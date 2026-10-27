@@ -109,6 +109,7 @@ type Overview struct {
 	GeneratedAt  Time                 `json:"generated_at"`
 	Actions      OverviewCount        `json:"actions"`
 	Blocked      OverviewCount        `json:"blocked"`
+	Decisions    OverviewDecisions    `json:"decisions"`
 	Approvals    OverviewApprovals    `json:"approvals"`
 	Verification OverviewVerification `json:"verification"`
 	Agents       OverviewAgents       `json:"agents"`
@@ -120,6 +121,14 @@ type OverviewCount struct {
 	Total    int64   `json:"total"`
 	Previous int64   `json:"previous"`
 	Series   []int64 `json:"series"`
+}
+
+// OverviewDecisions splits the window's actions by the Gate's decision: allowed ran without a
+// person, held asked for one (require_approval, whatever the person decided later). Blocked (deny)
+// is Blocked.Total; actions with no decision yet (still in flight) are in none of the three.
+type OverviewDecisions struct {
+	Allowed int64 `json:"allowed"`
+	Held    int64 `json:"held"`
 }
 
 // OverviewApprovals counts pending approvals (whatever the window).
@@ -358,7 +367,7 @@ const (
 // the window's start and groups by what the counts need, so at most 24 × 2 × 4 × 4 rows come back.
 const (
 	overviewSeriesSQL = `SELECT pg_catalog.date_bin(pg_catalog.make_interval(secs => $4::double precision), a.created_at, $2::timestamptz) AS bucket,
-	    a.decision IS NOT DISTINCT FROM 'deny' AS denied, a.witness_verdict, a.witness_level, pg_catalog.count(*)
+	    a.decision, a.witness_verdict, a.witness_level, pg_catalog.count(*)
 	  FROM deedglass.actions AS a
 	 WHERE a.org_id = $1 AND a.created_at >= $2 AND a.created_at < $3
 	 GROUP BY 1, 2, 3, 4`
@@ -374,16 +383,16 @@ func overviewSeries(ctx context.Context, tx pgx.Tx, org ids.OrgID, w OverviewWin
 		return err
 	}
 	defer rows.Close()
-	// One row per (bucket, denied, verdict, level), at most 24 × 2 × 4 × 4: the sums are made here.
+	// One row per (bucket, decision, verdict, level), at most 24 × 4 × 4 × 4: the sums are made here.
 	v := &ov.Verification
 	for rows.Next() {
 		var (
 			bucket         time.Time
-			denied         bool
+			decision       *string
 			verdict, level *string
 			n              int64
 		)
-		if err := rows.Scan(&bucket, &denied, &verdict, &level, &n); err != nil {
+		if err := rows.Scan(&bucket, &decision, &verdict, &level, &n); err != nil {
 			return err
 		}
 		i := w.BucketIndex(from, bucket)
@@ -392,9 +401,16 @@ func overviewSeries(ctx context.Context, tx pgx.Tx, org ids.OrgID, w OverviewWin
 		}
 		ov.Actions.Series[i] += n
 		ov.Actions.Total += n
-		if denied {
-			ov.Blocked.Series[i] += n
-			ov.Blocked.Total += n
+		if decision != nil {
+			switch *decision {
+			case "deny":
+				ov.Blocked.Series[i] += n
+				ov.Blocked.Total += n
+			case "allow":
+				ov.Decisions.Allowed += n
+			case "require_approval":
+				ov.Decisions.Held += n
+			}
 		}
 		if verdict == nil {
 			continue

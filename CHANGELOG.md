@@ -7,6 +7,27 @@ this file by `scripts/release-notes.sh`.
 
 ## [Unreleased]
 
+### Added
+
+- The Console's Overview is now a live view. **Needs you** at the top lists pending approvals with
+  big Approve and Decline buttons (through the DecisionSheet) and four-eyes progress. **Today**
+  counts Allowed, Held for a person, Blocked and Doesn't match. **Live activity** shows each action
+  as it happens, with a plain summary, the rule decision, the read-back result and a link to the
+  sealed record. **Agents connected** marks agents active in the last 5 minutes. While the event
+  stream isn't live, the page polls every 5 s.
+- An org with no actions gets one next step (`deedglass init --smoke` in another terminal) and turns
+  into the live view when the first action arrives.
+- Action pages put what the agent claimed beside what Deedglass observed, above the diff rows, with
+  the policy that decided, the record's chain position and the `deedglass verify` command to copy.
+- Health mode in the Console: with PHI mode on, the Console shows field names, not values.
+- `GET /v1/overview` adds `decisions.allowed` and `decisions.held` (additive).
+- `deedglass serve` prints `✓ Console on <base URL>/app` at start.
+
+### Fixed
+
+- The Actions feed's phone cards (under 640 px) no longer stack one letter per line, and verdict
+  chips in the feed are no longer cut off.
+
 ## [0.13.0] - 2026-10-27
 
 The hospital pilot in one command. `npx deedglass health pilot` runs four scenes on synthetic FHIR R4

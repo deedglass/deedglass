@@ -6958,7 +6958,7 @@ components:
     Overview:
       type: object
       description: GET /v1/overview (S25). docs/OVERVIEW_METRICS.md defines every number.
-      required: [object, window, from, to, timezone, generated_at, actions, blocked, approvals, verification, agents, attention]
+      required: [object, window, from, to, timezone, generated_at, actions, blocked, decisions, approvals, verification, agents, attention]
       properties:
         object: {type: string, const: overview}
         window: {type: string, enum: [24h, 7d]}
@@ -6970,6 +6970,13 @@ components:
           $ref: "#/components/schemas/OverviewCount"
         blocked:
           $ref: "#/components/schemas/OverviewCount"
+        decisions:
+          type: object
+          description: "The window's actions by the Gate's decision (added for the Console's Today counts; blocked is blocked.total). Actions still in flight have no decision yet and are in neither."
+          required: [allowed, held]
+          properties:
+            allowed: {type: integer, minimum: 0, description: Ran without asking a person.}
+            held: {type: integer, minimum: 0, description: "Asked a person first (require_approval), whatever they decided."}
         approvals:
           type: object
           required: [pending, expiring_soon, next_expires_at]

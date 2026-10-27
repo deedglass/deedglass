@@ -1,17 +1,25 @@
-// overview.ts: the Overview screen (S25 §3.3): four tiles, Needs attention, Agents, Live actions
-// and the Chain card, or the first-run flow when the org has no agents. Numbers come from
-// GET /v1/overview (refetched every 60 s) and move live between refetches from the event stream.
+// overview.ts: the Overview screen (S25 §3.3, reshaped by console-v1 into a live view): Needs you
+// (pending approvals with Approve and Decline), Today (allowed, held, blocked, doesn't match), Live
+// activity, Needs attention (repeats folded), Agents connected, Last week and the Chain. An org with
+// no actions yet gets one next step and turns into the live view when the first action arrives.
+// Numbers come from GET /v1/overview (refetched every 60 s, and a few seconds after activity) and
+// move live between refetches from the event stream. While the stream isn't live, the page polls
+// every 5 s instead, so it never goes quietly stale.
 
 import { api, ApiError } from '../lib/api.ts';
 import { relTime, statusChip } from '../lib/chips.ts';
 import { copy, fill } from '../lib/copy.ts';
 import { h, icon, maybe, replace, type Child } from '../lib/dom.ts';
 import { number, time } from '../lib/format.ts';
-import { applyLive, attentionLine, blockedLine, delta, segments, sparkLabel, usageLine, waitingLine, windowWords, type Window } from '../lib/overview.ts';
+import { applyLive, attentionLine, segments, usageLine, windowWords, type Window } from '../lib/overview.ts';
+import { liveCopy as lc } from '../lib/copy-live.ts';
+import { agentActive, fold, timesWord, todayCounts } from '../lib/live.ts';
+import { phiOn } from '../lib/phi.ts';
 import { atLeast, get } from '../lib/state.ts';
 import { stream } from '../lib/stream.ts';
 import type { Action, Agent, ApiKey, LedgerCheck, ListResponse, Overview } from '../lib/types.ts';
-import { miniRow, verdictCell } from './actionrow.ts';
+import { createInbox } from './inbox.ts';
+import { createLiveFeed } from './livefeed.ts';
 import { chainView } from './chain.ts';
 import { attentionList, cardSection, metricTile, segmented, snippetTabs, usageMeter, verificationBar } from './components.ts';
 import { errorState, permissionState } from './screens.ts';
@@ -23,7 +31,9 @@ import { mountCaughtBanner } from './sessions.ts';
 import { mountThisWeek } from './weekly.ts';
 
 const REFRESH_MS = 60_000;
-const LIVE_ROWS = 10;
+const LIVE_ROWS = 20;
+const POLL_MS = 5_000;
+const SETTLE_MS = 3_000; // a refetch this long after activity (the server caches 10 s)
 
 function tilesSkeleton(): HTMLElement {
   const t = () => h('div', { class: 'tile', 'aria-hidden': 'true' }, h('span', { class: 'skel skel-line w-16' }), h('span', { class: 'skel skel-metric' }), h('span', { class: 'skel skel-line w-32' }));
@@ -49,7 +59,6 @@ export function mountOverview(): void {
   let lastOK: Date | null = null;
   let seen = new Set<string>();
   let timer = 0;
-  let firstRun = false;
   const slow = window.setTimeout(() => {
     if (!data) body.append(h('p', { class: 't-footnote t-2 slow-note', role: 'status' }, copy.feed.slow));
   }, 8000);
@@ -62,61 +71,48 @@ export function mountOverview(): void {
     lede.textContent = offline && lastOK ? `${base} · ${fill(copy.overview.stale, { time: time(lastOK, tz()) })}` : base;
   };
 
-  // ---------- tiles ----------
+  // ---------- Today ----------
   const tiles = (o: Overview) => {
-    const now = new Date();
+    const t = todayCounts(o);
     const v = o.verification;
     const witnessed = v.verified + v.mismatch + v.unverifiable;
-    const verifTile = h('section', { class: 'tile tile-wide', 'aria-labelledby': 'tile-v-l' },
-      h('h2', { class: 'tile-label', id: 'tile-v-l' }, copy.overview.tiles.verification),
-      witnessed + v.not_witnessed > 0 ? verificationBar(segments(o), copy.overview.tiles.verification) : h('p', { class: 'tile-sub' }, copy.overview.verificationNone),
-      h('p', { class: 'tile-sub levels num' }, `${copy.chips.level.L0} ${number(v.by_level.L0 ?? 0)} · ${copy.chips.level.L1} ${number(v.by_level.L1 ?? 0)} · ${copy.chips.level.L2} ${number(v.by_level.L2 ?? 0)}`));
-    return h('div', { class: 'tiles' },
-      metricTile({ id: 'tile-a', label: copy.overview.tiles.actions, value: number(o.actions.total), sub: delta(o.actions.total, o.actions.previous, win),
-        spark: { values: o.actions.series, label: sparkLabel(copy.overview.sparkActions, o.actions.series, win) }, href: `/app/actions?time=${win}` }),
-      metricTile({ id: 'tile-b', label: copy.overview.tiles.blocked, value: number(o.blocked.total), sub: blockedLine(o),
-        spark: { values: o.blocked.series, label: sparkLabel(copy.overview.sparkBlocked, o.blocked.series, win) }, href: `/app/actions?decision=deny&time=${win}` }),
-      metricTile({ id: 'tile-w', label: copy.overview.tiles.waiting, value: number(o.approvals.pending), sub: waitingLine(o, now), href: '/app/approvals' }),
-      verifTile);
+    const span = `time=${win}`;
+    return h('div', { class: 'today' },
+      h('div', { class: 'tiles today-tiles' },
+        metricTile({ id: 'tile-allowed', label: lc.today.allowed, value: number(t.allowed), sub: lc.today.allowedSub, href: `/app/actions?decision=allow&${span}` }),
+        metricTile({ id: 'tile-held', label: lc.today.held, value: number(t.held), sub: t.pending ? fill(lc.today.heldSub, { n: number(t.pending) }) : lc.today.heldNone, href: `/app/actions?decision=require_approval&${span}` }),
+        metricTile({ id: 'tile-blocked', label: lc.today.blocked, value: number(t.blocked), sub: lc.today.blockedSub, href: `/app/actions?decision=deny&${span}` }),
+        metricTile({ id: 'tile-mismatch', label: lc.today.mismatch, value: number(t.mismatch), sub: t.mismatch ? lc.today.mismatchSub : lc.today.mismatchNone, href: `/app/actions?verdict=MISMATCH&${span}` })),
+      witnessed + v.not_witnessed > 0 ? h('div', { class: 'today-checks' }, verificationBar(segments(o), copy.overview.tiles.verification)) : null);
   };
 
   // ---------- attention, agents ----------
   const attention = (o: Overview) => {
-    const lines = o.attention.slice(0, 8).map((it) => ({ ...attentionLine(it, orgName(), new Date(), tz(), time), at: relTime(it.at, tz()) }));
+    const lines = fold(o.attention.slice(0, 8).map((it) => ({ ...attentionLine(it, orgName(), new Date(), tz(), time), at: relTime(it.at, tz()) })))
+      .map((l) => ({ ...l, title: `${l.title}${timesWord(l.count)}` }));
     return cardSection('ov-attn-t', copy.overview.attention, null, attentionList(lines, copy.overview.attentionNone));
   };
   const agents = (o: Overview) => {
+    const now = new Date();
     const rows = o.agents.data.map((a) => h('li', { class: 'agent-strip' },
-      h('a', { href: `/app/agents/${a.id}`, class: 'strip-name' }, a.name),
+      h('a', { href: `/app/agents/${a.id}`, class: 'strip-name' }, agentActive(a.last_action_at, now) && a.status === 'active' ? h('span', { class: 'live-dot', title: lc.agents.active }, h('span', { class: 'sr-only' }, `${lc.agents.active}: `)) : null, a.name),
       statusChip(a.status),
       h('div', { class: 'strip-meter' }, usageMeter(a.usage.calls_today, a.budgets.calls_per_day ?? null, `${a.name}, calls today`), h('span', { class: 'sr-only' }, usageLine(a.usage.calls_today, a.budgets.calls_per_day))),
       a.last_action_at ? relTime(a.last_action_at, tz()) : h('span', { class: 't-2 reltime' }, copy.agentsPage.never)));
-    return cardSection('ov-agents-t', copy.overview.agents, h('a', { href: '/app/agents', class: 'card-link' }, copy.overview.agentsAll, icon('chevron-right', 16)),
+    return cardSection('ov-agents-t', lc.agents.title, h('a', { href: '/app/agents', class: 'card-link' }, lc.agents.all, icon('chevron-right', 16)),
       rows.length ? h('ul', { class: 'strip' }, ...rows) : h('p', { class: 'card-empty t-2' }, copy.overview.agentsNone));
   };
 
-  // ---------- live actions ----------
-  const liveList = h('ul', { class: 'mini', id: 'ov-live', 'aria-live': 'polite', 'aria-relevant': 'additions', 'aria-label': copy.overview.live });
+  // ---------- Live activity ----------
+  const feed = createLiveFeed(LIVE_ROWS, tz);
   const liveEmpty = h('p', { class: 'card-empty t-2' }, copy.overview.liveEmpty);
-  const liveCard = cardSection('ov-live-t', copy.overview.live, h('a', { href: '/app/actions', class: 'card-link' }, copy.overview.liveOpen, icon('chevron-right', 16)), liveList, liveEmpty);
-  const showLive = () => {
-    liveEmpty.hidden = liveList.children.length > 0;
-  };
-  const upsertLive = (a: Action, live: boolean) => {
-    const old = liveList.querySelector(`[data-id="${a.id}"]`);
-    const row = miniRow(a, tz(), live && !old);
-    if (old) {
-      if (old.hasAttribute('data-live')) row.setAttribute('data-live', '');
-      // The Mirror plays only for a verdict that arrives live (seal.ts rules).
-      if (live && a.witness) row.querySelector('.mini-verdict')?.replaceChildren(verdictCell(a, true));
-      old.replaceWith(row);
-    }
-    else {
-      liveList.prepend(row);
-      while (liveList.children.length > LIVE_ROWS) liveList.lastElementChild?.remove();
-    }
-    showLive();
-  };
+  const pollNote = h('p', { class: 'feed-poll t-footnote t-2', role: 'status', hidden: true }, icon('refresh-cw', 16), lc.feed.paused);
+  const liveDot = h('span', { class: 'live-pill', 'aria-hidden': 'true' }, h('span', { class: 'live-dot' }), copy.connection.live);
+  const liveCard = cardSection('ov-live-t', h('span', { class: 'feed-title' }, lc.feed.title, liveDot),
+    h('a', { href: '/app/actions', class: 'card-link' }, lc.feed.open, icon('chevron-right', 16)), pollNote, feed.el, liveEmpty);
+  feed.onChange(() => (liveEmpty.hidden = feed.size() > 0));
+  const upsertLive = (a: Action, live: boolean) => feed.upsert(a, live);
+  const inbox = createInbox();
 
   // ---------- chain ----------
   const chainBody = h('div', { class: 'chain', 'aria-live': 'polite' }, h('p', { class: 't-2' }, copy.overview.chainChecking));
@@ -140,16 +136,18 @@ export function mountOverview(): void {
   void mountThisWeek(weekHost);
   const render = (o: Overview) => {
     body.replaceChildren(h('div', { class: 'ov' },
+      phiOn() ? h('p', { class: 'banner banner-phi', role: 'note' }, icon('lock', 16), lc.phi.note) : null,
       caughtHost,
+      inbox.el,
       tiles(o),
       h('div', { class: 'ov-grid' },
-        h('div', { class: 'ov-main' }, attention(o), liveCard),
-        h('div', { class: 'ov-side' }, weekHost, agents(o), chainCard))));
+        h('div', { class: 'ov-main' }, liveCard, attention(o)),
+        h('div', { class: 'ov-side' }, agents(o), weekHost, chainCard))));
     body.setAttribute('aria-busy', 'false');
   };
   const refreshTiles = () => {
     if (!data) return;
-    const t = body.querySelector('.tiles');
+    const t = body.querySelector('.today');
     t?.replaceWith(tiles(data));
   };
 
@@ -161,7 +159,7 @@ export function mountOverview(): void {
       seen = new Set();
       lastOK = new Date();
       setLede();
-      if (quiet && body.querySelector('.ov .tiles')) {
+      if (quiet && body.querySelector('.ov .today')) {
         refreshTiles();
         body.querySelector('#ov-attn-t')?.closest('.card')?.replaceWith(attention(o));
         body.querySelector('#ov-agents-t')?.closest('.card')?.replaceWith(agents(o));
@@ -179,8 +177,10 @@ export function mountOverview(): void {
     try {
       const page = await api<ListResponse<Action>>('GET', '/v1/actions', { query: { limit: String(LIVE_ROWS) } });
       for (const a of [...page.data].reverse()) upsertLive(a, false);
+      return page.data;
     } catch {
       /* the card keeps its empty line */
+      return null;
     }
   };
 
@@ -200,22 +200,17 @@ export function mountOverview(): void {
     }, 'window'));
   }
 
-  document.addEventListener('dg:ready', async () => {
-    setLede();
-    // First run: no agents yet → the whole body is the onboarding flow.
-    try {
-      const ag = await api<ListResponse<Agent>>('GET', '/v1/agents', { query: { limit: '1' } });
-      firstRun = ag.data.length === 0;
-    } catch {
-      firstRun = false;
-    }
-    if (firstRun) {
-      clearTimeout(slow);
-      if (actionsSlot) actionsSlot.hidden = true;
-      mountFirstRun(body);
-      return;
-    }
+  let settle = 0;
+  const settleSoon = () => {
+    clearTimeout(settle);
+    settle = window.setTimeout(() => void load(true), SETTLE_MS);
+  };
+
+  // The live view: history, then the stream; while the stream isn't live, a 5 s poll.
+  const goLive = async () => {
+    if (actionsSlot) actionsSlot.hidden = false;
     await load();
+    void inbox.reload();
     void loadHistory();
     void loadChain();
     timer = window.setInterval(() => void load(true), REFRESH_MS);
@@ -224,21 +219,119 @@ export function mountOverview(): void {
       const o = ev.data.object as Partial<Action>;
       if (ev.hydrated && o.object === 'action') upsertLive(o as Action, true);
       if (data && applyLive(data, ev, seen)) refreshTiles();
+      if (ev.type === 'action.created' || ev.type === 'action.decided') settleSoon();
     });
     s.on('approval.*', (ev) => {
       if (data && applyLive(data, ev, seen)) refreshTiles();
+      void inbox.reload();
     });
     s.onResync(() => {
       void load(true);
+      void inbox.reload();
       toast(copy.states.resync);
     });
+    let poll = 0;
+    const polling = (on: boolean) => {
+      pollNote.hidden = !on;
+      if (on && !poll) {
+        poll = window.setInterval(async () => {
+          const before = new Set<string>();
+          feed.el.querySelectorAll('[data-id]').forEach((li) => before.add(li.getAttribute('data-id')!));
+          try {
+            const page = await api<ListResponse<Action>>('GET', '/v1/actions', { query: { limit: String(LIVE_ROWS) } });
+            const fresh = page.data.filter((a) => !before.has(a.id));
+            for (const a of [...page.data].reverse()) upsertLive(a, !before.has(a.id));
+            if (fresh.length) void load(true);
+          } catch {
+            /* the offline banner says why */
+          }
+          void inbox.reload();
+        }, POLL_MS);
+      } else if (!on && poll) {
+        clearInterval(poll);
+        poll = 0;
+      }
+    };
+    s.onState((st) => polling(st !== 'live'));
+    // Give the stream a moment to connect before falling back.
+    window.setTimeout(() => polling(s.state() !== 'live'), POLL_MS);
+  };
+
+  document.addEventListener('dg:ready', async () => {
+    setLede();
+    // No actions yet → one next step, until the first one arrives.
+    let none = false;
+    try {
+      const page = await api<ListResponse<Action>>('GET', '/v1/actions', { query: { limit: '1' } });
+      none = page.data.length === 0;
+    } catch {
+      none = false;
+    }
+    if (none) {
+      clearTimeout(slow);
+      if (actionsSlot) actionsSlot.hidden = true;
+      mountEmpty(body, () => {
+        void goLive();
+      });
+      return;
+    }
+    await goLive();
   }, { once: true });
   window.addEventListener('dg:offline', () => setLede(true));
   window.addEventListener('dg:online', () => setLede(false));
   window.addEventListener('pagehide', () => clearInterval(timer));
 }
 
-// ---------- first run ----------
+// ---------- empty: one next step ----------
+
+function mountEmpty(body: HTMLElement, onFirst: () => void): void {
+  const e = lc.empty;
+  const markHost = h('span', { class: 'empty-mark', 'aria-hidden': 'true' });
+  const other = h('div', { class: 'empty-other-body' });
+  const details = h('details', { class: 'empty-other' }, h('summary', null, e.other), other);
+  let mounted = false;
+  details.addEventListener('toggle', () => {
+    if (details.open && !mounted) {
+      mounted = true;
+      mountFirstRun(other);
+    }
+  });
+  body.replaceChildren(h('section', { class: 'card empty-hero', 'aria-labelledby': 'empty-t', 'data-empty': '' },
+    markHost,
+    h('h2', { class: 't-title-2', id: 'empty-t' }, e.title),
+    h('p', { class: 'lede' }, e.lede),
+    h('div', { class: 'empty-step' },
+      h('p', { class: 'empty-step-label' }, e.step),
+      h('div', { class: 'empty-cmd' },
+        h('code', { class: 'mono', translate: 'no' }, h('span', { class: 'prompt', 'aria-hidden': 'true' }, '$ '), e.command),
+        h('button', { type: 'button', class: 'btn btn-brand', 'data-copy': e.command, 'aria-label': `${e.copy}: ${e.command}` }, icon('copy', 16), e.copy))),
+    h('p', { class: 't-footnote t-2 empty-after' }, e.after),
+    h('p', { class: 'empty-listen', role: 'status' }, h('span', { class: 'live-dot' }), e.listening),
+    details));
+  body.setAttribute('aria-busy', 'false');
+  mountMirror(markHost, { size: 48, state: 'open' });
+  let done = false;
+  const first = () => {
+    if (done) return;
+    done = true;
+    clearInterval(poll);
+    off();
+    onFirst();
+  };
+  const s = stream();
+  const off = s.on('action.*', () => first());
+  const poll = window.setInterval(async () => {
+    if (s.state() === 'live') return;
+    try {
+      const page = await api<ListResponse<Action>>('GET', '/v1/actions', { query: { limit: '1' } });
+      if (page.data.length) first();
+    } catch {
+      /* keep waiting */
+    }
+  }, POLL_MS);
+}
+
+// ---------- first run (connecting your own agent) ----------
 
 function mountFirstRun(body: HTMLElement): void {
   const st = get();
@@ -281,13 +374,12 @@ function mountFirstRun(body: HTMLElement): void {
     }
   });
   const step = (n: number, title: string, ...kids: Child[]) => h('li', { class: 'fr-step' }, h('span', { class: 'fr-n num', 'aria-hidden': 'true' }, String(n)), h('div', { class: 'fr-body' }, h('h2', { class: 't-headline' }, title), ...kids));
-  body.replaceChildren(h('section', { class: 'card first-run', 'aria-labelledby': 'fr-t' },
+  body.replaceChildren(h('section', { class: 'first-run', 'aria-labelledby': 'fr-t' },
     h('div', { class: 'fr-head' }, h('h2', { class: 't-title-3', id: 'fr-t' }, copy.firstRun.title), h('span', { class: 't-2' }, `· ${copy.firstRun.lede}`)),
     h('ol', { class: 'fr-steps' },
       step(1, copy.firstRun.step1, h('div', { class: 'fr-row' }, create, s1status), admin ? null : h('p', { class: 't-footnote t-2', id: 'fr-viewer' }, copy.firstRun.step1Viewer)),
       step(2, copy.firstRun.step2, step2Note, snip.el),
       step(3, copy.firstRun.step3, h('div', { class: 'fr-row' }, markHost, s3status)))));
-  body.setAttribute('aria-busy', 'false');
   const mirror = mountMirror(markHost, { size: 20, state: 'open' });
   const s = stream();
   let firstAction = '';

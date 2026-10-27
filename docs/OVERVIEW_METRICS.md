@@ -61,6 +61,10 @@ starts for the agents' usage.
   tool name no connector serves (`tool_unknown`). The Gate records every one of these with the
   decision `deny`. An action that waited for approval and was then denied or expired keeps the
   decision `require_approval`, so it is not counted as blocked.
+- `decisions.allowed` and `decisions.held`: the window's actions whose decision is `allow` and
+  `require_approval`. Held counts every action that asked a person, whatever they decided, so
+  `allowed + held + blocked.total` is `actions.total` minus the actions still waiting for the Gate's
+  decision. The Console's Today row shows Allowed, Held, Blocked and Doesn't match.
 
 ## Verification
 

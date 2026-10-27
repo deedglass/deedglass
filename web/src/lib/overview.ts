@@ -152,6 +152,14 @@ export function applyLive(o: Overview, e: DeedglassEvent, seen: Set<string>): bo
       return true;
     case 'action.decided': {
       const d = (obj.decision as { outcome?: string } | null)?.outcome ?? (obj.status === 'denied' ? 'deny' : '');
+      if (o.decisions && d === 'allow') {
+        o.decisions.allowed++;
+        return true;
+      }
+      if (o.decisions && d === 'require_approval') {
+        o.decisions.held++;
+        return true;
+      }
       if (d !== 'deny') return false;
       o.blocked.total++;
       if (last >= 0 && o.blocked.series.length) o.blocked.series[o.blocked.series.length - 1]!++;
