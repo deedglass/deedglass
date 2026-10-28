@@ -31,8 +31,8 @@ const get: Record<string, string> = { Cursor: 'https://cursor.com/downloads', 'V
   ))}
 </div>
 <style>
-  .dg-install { display: grid; gap: 1rem; }
-  section { border: 1px solid var(--dg-hairline); border-radius: 14px; padding: 1rem 1.25rem; background: var(--dg-surface); }
+  .dg-install { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1rem; }
+  section { min-width: 0; border: 1px solid var(--dg-hairline); border-radius: 14px; padding: 1rem 1.25rem; background: var(--dg-surface); }
   h3 { margin: 0 0 0.5rem; font-size: 1rem; }
   .btn { display: inline-flex; align-items: center; min-height: 32px; padding: 0 14px; border-radius: 10px; background: var(--sl-color-accent); color: var(--sl-color-text-invert); text-decoration: none; font-weight: 550; font-size: 0.875rem; }
   .btn:hover { background: var(--sl-color-accent-high); }
