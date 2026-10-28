@@ -7,6 +7,15 @@ this file by `scripts/release-notes.sh`.
 
 ## [Unreleased]
 
+## [0.15.0] - 2026-10-28
+
+Deedglass now opens in your browser with one command. Run `deedglass` (or `deedglass app`) in a
+terminal and a signed-in app starts on this computer at port 4180, with its own private PostgreSQL
+in your user folder: no Docker and no database to set up. A Connect screen links Claude Desktop,
+Cursor, VS Code and other tools to it, and `deedglass help` now shows the eight everyday commands.
+Existing records are unchanged: the deed format, the `scan` grade and `formula_version` (1) are as
+in 0.14.1. One new Go dependency (`github.com/ulikunitz/xz`, ADR-120) and no schema migration.
+
 ### Added
 
 - `deedglass app`, and plain `deedglass` in a terminal: Deedglass in your browser on this computer,
@@ -29,6 +38,8 @@ this file by `scripts/release-notes.sh`.
   yet) and the licence in plain words. SECURITY.md: the security inbox note is gone (the address
   works), and the scope says the container image is private for now. The npm packages name their
   author, and `@deedglass/sdk` points at the right docs page.
+- TRADEMARKS.md: forks are welcome under a new name; the Deedglass name and logo stay with the
+  project.
 
 ### Fixed
 

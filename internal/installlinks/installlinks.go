@@ -17,7 +17,7 @@ import (
 
 // Version is the npm and release version the links point at (npm/deedglass/package.json; a test
 // keeps them equal).
-const Version = "0.14.1"
+const Version = "0.15.0"
 
 // Name is the server name every client shows.
 const Name = "deedglass"
