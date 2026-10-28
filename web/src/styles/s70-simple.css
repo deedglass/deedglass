@@ -97,10 +97,11 @@
 .sx-section-title {
   margin: var(--space-8) 0 var(--space-3);
   color: var(--text-2);
-  font-size: var(--type-footnote-size);
-  line-height: var(--type-footnote-line);
+  font-size: 11.5px;
+  line-height: 16px;
   font-weight: 600;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 .btn.btn-xl {
   --h: 48px;
@@ -259,58 +260,56 @@
 }
 .cx-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: var(--space-3);
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
+  gap: var(--space-4);
 }
 .cx-tile {
   width: 100%;
   display: grid;
   grid-template-rows: auto 1fr auto;
   gap: var(--space-4);
-  min-height: 188px;
+  min-height: 196px;
   padding: var(--space-5);
   text-align: left;
   color: var(--text);
   cursor: pointer;
-  transition: border-color var(--dur-micro) var(--ease-enter), background-color var(--dur-micro) var(--ease-enter);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15), inset 0 1px 0 var(--glass-highlight);
+  transition: border-color var(--dur-micro) var(--ease-enter), transform var(--dur-micro) var(--ease-enter), box-shadow var(--dur-micro) var(--ease-enter);
 }
 .cx-tile:hover {
   border-color: var(--border-strong);
   background: var(--surface-raised);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
 }
-.cx-tile .top {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-}
-.cx-ico {
-  display: grid;
-  place-items: center;
-  flex: none;
-  width: 40px;
-  height: 40px;
-  border-radius: 11px;
-  background: var(--surface-raised);
-  color: var(--text);
-  box-shadow: inset 0 0 0 1px var(--hairline);
-}
-.cx-tile .name {
-  font-weight: 600;
-  font-size: 15px;
-  line-height: 20px;
-}
-.cx-tile p {
-  margin: 0;
-  color: var(--text-2);
+.cx-tile:active {
+  transform: none;
 }
 .cx-foot {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-2);
+  padding-top: var(--space-1);
 }
 .cx-foot .go {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
   color: var(--text-2);
+  transition: transform var(--dur-micro) var(--ease-enter), color var(--dur-micro) var(--ease-enter);
+}
+.cx-tile:hover .cx-foot .go {
+  color: var(--text);
+  transform: translateX(3px);
+}
+@media (prefers-reduced-motion: reduce) {
+  .cx-tile,
+  .cx-foot .go {
+    transform: none !important;
+  }
 }
 .cx-note {
   margin: var(--space-8) 0 0;
@@ -747,32 +746,28 @@
 .sv-result[data-state=invalid] .icon { color: var(--mismatch-fg); }
 
 /* Connect v1: logo tiles, the install block and the small forms in the sheet. Tokens only. */
-.cx-grid {
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
-  gap: var(--space-4);
-}
 .cx-tile[data-state=connected] {
-  border-color: color-mix(in srgb, var(--verified-fg) 45%, var(--hairline));
+  border-color: var(--verified-fg);
 }
 .cx-tile[data-state=connected] .cx-logo {
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--verified-fg) 35%, var(--hairline));
+  box-shadow: inset 0 0 0 1px var(--verified-fg);
 }
 .cx-tile[data-state=waiting] .cx-logo {
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--pending-fg) 35%, var(--hairline));
+  box-shadow: inset 0 0 0 1px var(--pending-fg);
 }
 .cx-logo {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 8px;
   flex: none;
   height: 52px;
   min-width: 52px;
   padding: 0 12px;
-  border-radius: 14px;
+  border-radius: 13px;
   background: var(--surface-raised);
   color: var(--text);
-  box-shadow: inset 0 0 0 1px var(--hairline);
+  box-shadow: inset 0 0 0 1px var(--hairline), inset 0 1px 0 var(--glass-highlight);
   justify-self: start;
 }
 .cx-logo-one,
@@ -780,10 +775,15 @@
   width: 52px;
   padding: 0;
 }
+.brandmark {
+  shape-rendering: geometricPrecision;
+  display: block;
+}
 .cx-monogram {
+  font-family: var(--font-mono);
   font-size: 13px;
   font-weight: 700;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.05em;
 }
 .cx-text {
   display: grid;
@@ -799,17 +799,6 @@
   color: var(--text-2);
   font-size: var(--type-footnote-size);
   line-height: var(--type-footnote-line);
-}
-.cx-foot .go {
-  display: grid;
-  place-items: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-}
-.cx-tile:hover .cx-foot .go {
-  background: var(--surface);
-  color: var(--text);
 }
 .cx-picker .brandmark {
   margin-right: 6px;
