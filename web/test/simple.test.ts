@@ -124,6 +124,9 @@ describe('what an approval will change', () => {
   });
   it('strips tags and decodes text attachments only', () => {
     expect(stripTags('<p>a</p><p>b<br/>c</p>')).toBe('a\nb\nc');
+    expect(stripTags('a<script')).toBe('ascript');
+    expect(stripTags('<scr<script>ipt>x')).toBe('ipt>x');
+    expect(stripTags('1 &lt; 2')).toBe('1 < 2');
     expect(decodeText(btoa('note'), 'text/plain')).toBe('note');
     expect(decodeText(btoa('x'), 'application/pdf')).toBeNull();
     expect(decodeText('%%%', 'text/plain')).toBeNull();

@@ -224,9 +224,10 @@ function quantity(v: unknown): string {
   return n ? [n, str(q.unit ?? q.code)].filter(Boolean).join(' ') : '';
 }
 
-/** stripTags turns a FHIR narrative's XHTML into text, for display as a Text node only. */
+/** stripTags turns a FHIR narrative's XHTML into text, for display as a Text node only.
+ *  A stray '<' left by an unclosed tag is dropped too; only an escaped &lt; comes back as '<'. */
 export function stripTags(x: string): string {
-  return x.replace(/<br\s*\/?>/gi, '\n').replace(/<\/(p|div|li|tr)>/gi, '\n').replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&').replace(/\n{3,}/g, '\n\n').trim();
+  return x.replace(/<br\s*\/?>/gi, '\n').replace(/<\/(p|div|li|tr)>/gi, '\n').replace(/<[^>]*>/g, '').replace(/</g, '').replace(/&nbsp;/g, ' ').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&').replace(/\n{3,}/g, '\n\n').trim();
 }
 
 /** decodeText reads a base64 text attachment (text/* only); anything else stays unread. */
