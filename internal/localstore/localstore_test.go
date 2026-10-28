@@ -87,7 +87,9 @@ func TestUnpackGood(t *testing.T) {
 		entry{name: "lib/libicu.77.1.dylib", typ: tar.TypeReg, body: big},
 		entry{name: "lib/libicu.77.dylib", typ: tar.TypeReg, body: big},
 		entry{name: "lib/libicu.dylib", typ: tar.TypeReg, body: big},
+		entry{name: "lib/libpq.so", typ: tar.TypeSymlink, link: "libpq.so.5"}, // a link to a link made later
 		entry{name: "lib/libpq.so.5", typ: tar.TypeSymlink, link: "libpq.so.5.18"},
+		entry{name: "lib/libpq.so.5.18", typ: tar.TypeReg, body: "pq"},
 	))
 	if err := unpackTxz(bytes.NewReader(txz), dst, "linux/amd64"); err != nil {
 		t.Fatal(err)
@@ -115,6 +117,8 @@ func TestUnpackRefuses(t *testing.T) {
 		"nested climb":   programs(entry{name: "lib/../../evil", typ: tar.TypeReg, body: "x"}),
 		"link out":       programs(entry{name: "lib/x", typ: tar.TypeSymlink, link: "../../etc/passwd"}),
 		"absolute link":  programs(entry{name: "lib/x", typ: tar.TypeSymlink, link: "/etc/passwd"}),
+		"dangling link":  programs(entry{name: "lib/x", typ: tar.TypeSymlink, link: "nothing"}),
+		"link to a dir":  programs(entry{name: "lib/x", typ: tar.TypeSymlink, link: "sub/file"}),
 		"hard link":      programs(entry{name: "lib/x", typ: tar.TypeLink, link: "bin/postgres"}),
 		"device":         programs(entry{name: "lib/x", typ: tar.TypeChar}),
 		"no postgres":    {{name: "bin/initdb", typ: tar.TypeReg, body: "i"}},

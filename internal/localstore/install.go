@@ -221,6 +221,10 @@ func unpackTxz(r io.Reader, dst, platform string) error {
 	tr := tar.NewReader(xr)
 	seen := map[string]string{} // sha256 → first path with that content
 	var total int64
+	// Symlinks are made last, after every file is written, so no write can pass through a link
+	// the archive made; each points at a file in its own folder.
+	type symlink struct{ target, link string }
+	var links []symlink
 	for n := 0; ; n++ {
 		h, err := tr.Next()
 		if errors.Is(err, io.EOF) {
@@ -266,7 +270,7 @@ func unpackTxz(r io.Reader, dst, platform string) error {
 			}
 		case tar.TypeSymlink:
 			link := h.Linkname
-			if path.IsAbs(link) || strings.Contains(link, "\\") {
+			if path.IsAbs(link) || strings.Contains(link, "\\") || strings.Contains(link, "/") || !filepath.IsLocal(link) {
 				return fmt.Errorf("the archive holds an unsafe link %q", h.Name)
 			}
 			if j := path.Join(path.Dir(name), link); j == ".." || strings.HasPrefix(j, "../") || !inside(dst, filepath.Join(filepath.Dir(target), filepath.FromSlash(link))) {
@@ -275,16 +279,40 @@ func unpackTxz(r io.Reader, dst, platform string) error {
 			if runtime.GOOS == "windows" {
 				continue
 			}
-			if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
-				return err
-			}
-			if err := os.Symlink(link, target); err != nil {
-				return err
-			}
+			links = append(links, symlink{target: target, link: link})
 		default:
 			// Hard links, devices and the rest are never part of a PostgreSQL build.
 			return fmt.Errorf("the archive holds an unexpected entry %q", h.Name)
 		}
+	}
+	root, err := filepath.EvalSymlinks(dst)
+	if err != nil {
+		return err
+	}
+	// A link may point at another link: make them in passes until each one's file exists.
+	for len(links) > 0 {
+		var later []symlink
+		for _, l := range links {
+			dir, err := filepath.EvalSymlinks(filepath.Dir(l.target))
+			if err != nil || !inside(root, dir) {
+				return fmt.Errorf("the archive holds a link in a folder it doesn't have: %q", l.target)
+			}
+			to, err := filepath.EvalSymlinks(filepath.Join(dir, l.link))
+			if err != nil {
+				later = append(later, l)
+				continue
+			}
+			if !inside(root, to) {
+				return fmt.Errorf("the archive holds a link that leaves it: %q", l.target)
+			}
+			if err := os.Symlink(filepath.Base(to), filepath.Join(dir, filepath.Base(l.target))); err != nil {
+				return err
+			}
+		}
+		if len(later) == len(links) {
+			return fmt.Errorf("the archive holds a link to a file it doesn't have: %q", later[0].target)
+		}
+		links = later
 	}
 	for _, p := range []string{"bin/initdb", "bin/pg_ctl", "bin/postgres"} {
 		if _, err := os.Stat(filepath.Join(dst, filepath.FromSlash(p)+exeSuffix(platform))); err != nil {
