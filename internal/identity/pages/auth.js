@@ -283,8 +283,13 @@
     // query string is ignored on purpose. The token lives in this closure and nowhere else.
     const frag = location.hash.slice(1);
     history.replaceState(null, '', location.pathname);
-    const t = new URLSearchParams(frag).get('t');
+    const fp = new URLSearchParams(frag);
+    const t = fp.get('t');
     let token = t && /^[A-Za-z0-9_-]{43}$/.test(t) ? t : null;
+    // The local app (deedglass app, DL-143) opens its own one-time link with local=1: on a loopback
+    // address only, the owner is signed in without the extra click. Anywhere else the button stays.
+    const host = location.hostname;
+    const auto = fp.get('local') === '1' && (host === '127.0.0.1' || host === 'localhost' || host === '[::1]' || host === '::1');
 
     const [title, lede, note, btn, newLink] = ['title', 'lede', 'note', 'confirm-submit', 'new-link'].map($);
 
@@ -321,6 +326,7 @@
       show(newLink, false);
       show(btn, true);
       btn.focus();
+      if (auto && p.purpose !== 'invite') btn.click();
     }
 
     async function preview() {

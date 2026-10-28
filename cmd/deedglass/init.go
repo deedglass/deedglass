@@ -257,10 +257,17 @@ func progressLine(f setup.Facts) string {
 }
 
 // invocation is how the person ran this binary, for the commands it prints: "npx deedglass" under
-// npx (npm exec sets npm_command=exec, so a bare deedglass isn't on PATH), else "deedglass".
+// npx (npm exec sets npm_command=exec, so a bare deedglass isn't on PATH), else "deedglass". A
+// binary inside npm's _npx cache counts as npx too, unless a deedglass is on PATH (F11: every
+// command the CLI suggests must run as printed).
 func invocation(e *Env) string {
 	if e.Getenv("npm_config_user_agent") != "" && (e.Getenv("npm_command") == "exec" || e.Getenv("npm_lifecycle_event") == "npx") {
 		return "npx deedglass"
+	}
+	if exe, err := executable(); err == nil && strings.Contains(filepath.ToSlash(exe), "/_npx/") {
+		if p, err := lookPath("deedglass"); err != nil || p == "" {
+			return "npx deedglass"
+		}
 	}
 	return "deedglass"
 }

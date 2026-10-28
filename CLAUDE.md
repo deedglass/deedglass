@@ -231,7 +231,8 @@ scripts/ci-local.sh # the CI jobs locally (docker-smoke and govulncheck skip whe
    binary links it for the gateway's upstream client, ADR-037 accepted under DL-029; stripped binary 27.1 MB then, 29.6 MB at S17; budget 40 MB, 45 MB under ADR-106). S16 (vault,
    egress, connectors) added no dependency: AES-256-GCM, the dialer and the JSON Schema subset are standard library (ADR-038, accepted under DL-030). S17 (the Postgres connector) added none either: `pgxpool` is part of pgx, SCRAM is `crypto/pbkdf2` (ADR-039, accepted under DL-031). S20 (the decoder) added `github.com/jackc/pglogrepl`
    v0.0.0-20260824121319-4ae5c490f7ce with `jackc/pgio` v1.0.0 (MIT; ADR-043, accepted under DL-034): only `Parse`
-   and the message types, always behind `decoder.SafeParse`. No cgo in the main binary.
+   and the message types, always behind `decoder.SafeParse`. DL-143 (the local app) added `github.com/ulikunitz/xz`
+   v0.5.17 (BSD-3-Clause; ADR-120, accepted under DL-143) to read the pinned PostgreSQL bundle in `internal/localstore`. No cgo in the main binary.
    `go.sum` is committed and CI runs `go mod verify`.
 7. CI matches the banned words (below) in files, strings and commit messages as whole words or
    phrases, case-insensitive, and fails on any hit not in `.banned-words-allow`

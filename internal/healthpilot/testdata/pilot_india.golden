@@ -40,8 +40,8 @@ deedglass health pilot  synthetic data · about 15 minutes to read
                 within the hour. Two admins approve in Console › Approvals.
      who      2 different people from role:admin (four-eyes)
               expires in 15 minutes; timeout means no (lockdown)
-     console  http://127.0.0.1:8080/app/approvals/apr_01m58nq2jthtfkkv8qdejq0006
-              the link a server sends to the approvers; this pilot runs none
+     app      on a server the approvers open it in the Deedglass app
+              see the app on this computer: deedglass app
      result   Nothing reached the record system. It runs only after a person
               approves.
 
@@ -60,5 +60,5 @@ deedglass health pilot  synthetic data · about 15 minutes to read
 
 Next
   deedglass health pilot --fhir-url …  the first scene on your FHIR sandbox
+  deedglass app                        open Deedglass in your browser, no setup
   deedglass start                      a wrong row count, caught on Postgres
-  deedglass protect                    guard your coding agents

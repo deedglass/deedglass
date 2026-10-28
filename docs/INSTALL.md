@@ -11,8 +11,10 @@ npx -y deedglass version
 ```
 
 npm installs one platform package (`@deedglass/cli-<os>-<arch>`) that carries the release binary,
-with no install script. Node 18 or newer runs it; the Quickstart (`deedglass init`) also needs
-Docker, on macOS or Linux (WSL 2 on Windows).
+with no install script. Node 18 or newer runs it. On Windows it runs the native Windows binary
+(`@deedglass/cli-win32-x64`); WSL isn't needed. `deedglass app` (the local app in your browser)
+needs no Docker on any of them. The Quickstart (`deedglass init`) also needs Docker, on macOS or
+Linux.
 
 ## The install script (macOS, Linux)
 
