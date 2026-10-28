@@ -3,7 +3,7 @@
 //   llms.txt          the one description (docs/description.json), the ask-before-each-change line with
 //                     its links, no --yes, no retired level names, links to the three sets, and a link to
 //                     each task page in LLMS_PAGES (DOC-04), each built with a visible Updated date
-//   budgets           llms-small ≤ 150 KB, llms-full ≤ 800 KB (750 until lockdown mode, ADR-117, added its page), llms-postgres ≤ 150 KB
+//   budgets           llms-small ≤ 160 KB, llms-full ≤ 820 KB (750 until lockdown mode, ADR-117, added its page; 150 and 800 until the 0.15.0 app page), llms-postgres ≤ 150 KB
 //   sets              no page outside a file's set in it (scripts/seo.mjs), no page mark left
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';

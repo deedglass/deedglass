@@ -19,7 +19,8 @@ with no install script. Node 18 or newer runs it, on Windows too (no WSL). The Q
 `npx -y deedglass app` (or plain `deedglass` in a terminal) opens Deedglass in your browser on
 127.0.0.1, signed in, with no Docker. It runs its own PostgreSQL in your user folder: an installed
 16+, or a one-time pinned download of 18.6 (ADR-120); then it works offline. `--stop`, `--status`
-and `--reset` manage it; `deedglass help app` has the details.
+and `--reset` manage it; `deedglass help app` has the details. New to Deedglass? Read
+[Start here: the Deedglass app](APP.md) for a short tour.
 
 ## The install script (macOS, Linux)
 

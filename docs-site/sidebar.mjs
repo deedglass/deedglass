@@ -24,6 +24,7 @@ export const sidebar = clean([
   {
     label: 'Get started',
     items: [
+      p('get-started/app', 'Start here: the app'),
       p('quickstart', 'Quickstart (5 min)'),
       p('get-started/install-deedglass', 'Install Deedglass'),
       p('get-started/scan', 'Scan in 60 seconds'),

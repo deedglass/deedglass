@@ -17,6 +17,7 @@ src/content/docs/reference/mcp-compatibility.md
 src/content/docs/reference/api-versions.md
 src/content/docs/reference/doctor-checks.md
 src/content/docs/get-started/install-deedglass.md
+src/content/docs/get-started/app.md
 src/content/docs/reference/connectors/overview.md
 src/content/docs/reference/connectors/postgres.md
 src/content/docs/reference/connectors/github.md

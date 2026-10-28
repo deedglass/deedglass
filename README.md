@@ -9,13 +9,8 @@
 
 <p align="center"><b>An agent said it updated 1 row. Postgres changed 301.</b></p>
 
-<p align="center">
-<!-- description:summary (docs/description.json; docs/description_test.go checks it) -->
-Deedglass sits between AI agents and the systems they change. Rules decide each tool call, a check
-compares what the system really changed with what the agent reported (Claimed, Checked or Proven;
-Matches, Doesn't match or Can't check), and each result is sealed as a signed record anyone can
-check offline. It can undo the rows an action changed.
-</p>
+<p align="center">Safety for AI agents that work on databases and health records. Rules decide each AI agent tool call;<br>
+Deedglass checks what really changed and seals a record. Open source, self-hosted, every feature free.</p>
 
 <p align="center">
   <a href="https://github.com/deedglass/deedglass/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/deedglass/deedglass/actions/workflows/ci.yml/badge.svg?branch=main"></a>
@@ -26,10 +21,43 @@ check offline. It can undo the rows an action changed.
   <a href="docs/ATTACK_SUITE.md"><img alt="Attack suite" src="https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Fdeedglass%2Fdeedglass%2Fmain%2Fattack%2Fresults%2Fbadge.json"></a>
 </p>
 
+## Start in one command
+
+```sh
+npx -y deedglass
+```
+
+**An app opens in your browser.** It runs on your own computer, signed in, with no account, no
+sign-up and no Docker or database to set up, and nothing is sent to us. Choose who will use it (a
+clinic, hospital IT, or people building with AI), then connect Claude Desktop, Cursor, VS Code, a
+record system or a database. You need Node 18 or newer. Read
+[Start here](https://docs.deedglass.com/get-started/app/) for a short tour, or try it without
+installing anything at [deedglass.com/play](https://deedglass.com/play).
+
+**For developers**, three commands:
+
+```sh
+npx -y deedglass start      # an agent reports 1 row, Postgres changed 301, and it's caught
+npx -y deedglass protect    # guard Claude Code, Cursor and other coding agents
+npx -y deedglass help       # the eight everyday commands; "help all" lists every command
+```
+
+Without Docker, `start` plays the same scene inside the binary, every line labelled `live` or
+`replay`, in under 30 s. More: [Quickstart](https://docs.deedglass.com/quickstart/) ·
+[Docs](https://docs.deedglass.com) · [Healthcare](https://deedglass.com/healthcare) ·
+[Benchmarks](#benchmarks) · [Security](SECURITY.md) · [deedglass.com](https://deedglass.com)
+
+**Found it useful?** A star helps other people find Deedglass. To hear about new releases, use
+**Watch › Custom › Releases**.
+
+## What it does
+
 <p align="center">
-<a href="https://deedglass.com/play">Try it in your browser</a> · <a href="https://docs.deedglass.com/quickstart/">Quickstart</a> ·
-<a href="https://docs.deedglass.com">Docs</a> · <a href="https://deedglass.com/healthcare">Healthcare</a> ·
-<a href="#benchmarks">Benchmarks</a> · <a href="SECURITY.md">Security</a> · <a href="https://deedglass.com">deedglass.com</a>
+<!-- description:summary (docs/description.json; docs/description_test.go checks it) -->
+Deedglass sits between AI agents and the systems they change. Rules decide each tool call, a check
+compares what the system really changed with what the agent reported (Claimed, Checked or Proven;
+Matches, Doesn't match or Can't check), and each result is sealed as a signed record anyone can
+check offline. It can undo the rows an action changed.
 </p>
 
 <p align="center">
@@ -62,26 +90,6 @@ of the release on deedglass.com and falls back to GitHub: about 7 s on one netwo
 GitHub-only install took 81-119 s. A public container image is coming; until it's
 published, build the image locally as above. Checksums, signatures and SBOMs:
 [`docs/INSTALL.md`](docs/INSTALL.md).
-
-## Try it in 60 seconds
-
-```sh
-npx -y deedglass start   # one command, no questions: an agent reports 1 row, Postgres changed 301, and it's caught
-```
-
-With Docker running, `start` sets up the real stack (Postgres 18.6 in Docker, the server, one
-agent; free ports are picked for you) and runs the scene live, then prints where the Console is.
-Without Docker it plays the same scene inside the binary, every line labelled `live` or `replay`,
-in under 30 s, and says how to get the live version. Then:
-
-```sh
-npx -y deedglass protect        # guard Claude Code, Cursor and other coding agents
-npx -y deedglass health pilot   # the same checks on synthetic patient records
-npx -y deedglass scan           # grade what the agents in your MCP configs could change, A to F
-```
-
-`start` needs v0.14.0 or later; on earlier versions run `deedglass play`. The
-[Quickstart](#quickstart) below walks through the live stack step by step.
 
 ## Who it's for
 

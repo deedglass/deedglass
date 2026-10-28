@@ -1,18 +1,46 @@
 # Known issues
 
-What we know doesn't work yet, who it affects, what to do today, and when we plan to fix it. Release
-blockers are fixed before a release; everything here was judged not to block 0.1.0 (S37's release
-candidate, 2026-10-05). The design limits that won't change soon are in `docs/LIMITATIONS.md`.
+What doesn't work yet in Deedglass 0.15.0, who it affects and what to do today. None of these
+blocked the 0.15.0 release (2026-10-28). Limits that come from the design, and won't change soon,
+are in [`docs/LIMITATIONS.md`](docs/LIMITATIONS.md). To report something new, open an issue:
+[github.com/deedglass/deedglass/issues](https://github.com/deedglass/deedglass/issues).
 
-| Id | Area | What happens | Who is affected | Workaround | Severity | Fix target |
-|---|---|---|---|---|---|---|
-| KI-001 | Witness | L2 shows UNVERIFIABLE for tables without `REPLICA IDENTITY FULL` when old values are needed | Postgres users who skip `connector postgres init` | Run `deedglass connector postgres check` and apply the printed SQL | Low | 0.1.1 |
-| KI-002 | Gate | The Gate's median for an allowed action without a witness is 5.8 ms on a laptop with Postgres on the same machine; the target is under 5 ms. The profile shows two committed Postgres round trips per action, not CPU | Anyone timing the Gate on a laptop | None needed for correctness. Measure on your own server; p99 (19.4 ms) is inside its 25 ms target | Low | 0.2 (one round trip fewer) |
-| KI-003 | Witness | One org seals about 230 deeds a second on an M1 laptop. Above that, L2 verdicts queue: at 500 writes a second for 20 s every write was VERIFIED, with a median of 39 s from commit to verdict | Agents that write more than about 200 times a second to one org | Spread agents across orgs, or batch writes into fewer actions | Low | 0.2 |
-| KI-004 | Server | `deedglass serve` has no limit of its own on open connections. A client that opens a connection per request while the server is behind can exhaust the process's open-file limit (10,240 on macOS); new connections then fail with `EOF` | Load tests with unbounded clients; deployments without a proxy | Put serve behind a proxy that caps connections (the cloud kit's Caddy does), raise `ulimit -n`, and cap your client's connections | Low | 0.1.1 |
-| KI-005 | Server | In one 30-minute soak at 50 calls a second, memory grew from 43.2 MiB at minute 5 to 49.9 MiB at minute 30 (+15%). It stayed below the 57.1 MiB peak of minute 2, and connections and open files were flat, so it looks like the Go heap settling rather than a leak; the machine was busy with other builds | Long-running servers | None needed at this size. Watch `process_resident_memory_bytes` | Low | Before the cloud beta: a 2-hour soak on a quiet machine with heap samples |
-| KI-006 | Undo | TRUNCATE can't be undone: logical decoding records no row images for it. Undo also refuses while the table has an enabled trigger | Tables an agent may truncate | Block TRUNCATE by policy (`postgres-safe` does). For triggers, disable the trigger first; the undo preview prints the exact SQL | Low | Design limit (docs/UNDO.md) |
-| KI-007 | API keys | `dg_test_` and `dg_live_` keys are recorded on every action as `livemode`, but test and live data aren't separated yet | Teams that want a test mode on one instance | Use a separate org, or a separate instance, for testing | Low | 0.2 |
-| KI-008 | Docs build | Three high npm advisories (`braces`, no fixed release exists) sit in the docs site's build-time tree. Nothing ships from it (SR-019) | People who build the docs site | None: the published site carries none of it | Low | When upstream ships a fix |
-| KI-009 | Deeds | Sealing a file (`deedglass deeds seal-file`, `verify --file`) isn't in 0.1.0. The full scan report's footer shows the scan's sha256 and says sealing comes in the next release | Buyers of the full scan report | Keep the scan JSON next to the PDF; `deedglass scan --json` reproduces the page | Low | Fixed after 0.1.0-rc.1 (S38): `deeds seal-file` and `verify --file` |
-| KI-010 | Demo | `make demo` runs offline only for six of seven scenes; the Stripe refund needs Stripe test mode and Slack (`make demo-live`) | Anyone running the demo without Stripe | None; the scene says it was skipped and why | Low | By design |
+## The app (`npx deedglass`)
+
+| Id | What happens | Who is affected | What to do today |
+|---|---|---|---|
+| KI-011 | The app runs on one computer only. It listens on 127.0.0.1, so colleagues can't open it from their own computers. | Teams that want several people to approve or review in one place | Run the shared server instead: [Production](https://docs.deedglass.com/guides/production/). Each person can also run their own app. |
+| KI-012 | The first start needs PostgreSQL. If PostgreSQL 16 or newer isn't on the computer, the app downloads PostgreSQL 18.6 once (14 to 71 MB, depending on the system). A ready-made download exists for macOS, Linux (Intel and Arm) and Windows (Intel) only. | Computers with no internet on first start; other systems, such as Windows on Arm | With no internet: download the file on another computer and set `DEEDGLASS_PG_BUNDLE` to it. On other systems: install PostgreSQL 16 or newer, or set `DEEDGLASS_PG_BIN` to its `bin` folder. |
+| KI-013 | Claude Desktop has no one-click install yet. The `.mcpb` bundles aren't attached to the release. | People connecting Claude Desktop | Use the app's **Connect** screen: it shows the settings to paste into Claude Desktop, step by step. |
+
+## Setup and installs
+
+| Id | What happens | Who is affected | What to do today |
+|---|---|---|---|
+| KI-014 | There is no public container image yet. | People who deploy with Docker or Kubernetes | Build the image from a checkout: `make web-build docker`. Or use the release binary. |
+| KI-010 | `make demo` runs offline for six of its seven scenes. The Stripe refund scene needs Stripe test mode and Slack (`make demo-live`). | People running the full demo from a checkout | None needed. The scene says it was skipped and why. |
+| KI-008 | Three high npm advisories (`braces`, no fixed release exists) sit in the docs site's build tools. Nothing from them is in the published site or the product (SR-019). | People who build the docs site themselves | None needed. |
+
+## Checks and undo
+
+| Id | What happens | Who is affected | What to do today |
+|---|---|---|---|
+| KI-001 | The Postgres check says **Can't check** for a table without `REPLICA IDENTITY FULL` when it needs the old values of a row. | Postgres users who skip `deedglass connector postgres init` | Run `deedglass connector postgres check` and apply the SQL it prints. |
+| KI-006 | TRUNCATE can't be undone: Postgres's change log keeps no rows for it. Undo also refuses while the table has an enabled trigger. | Tables an agent may truncate | Block TRUNCATE with a rule (the `postgres-safe` pack does). For triggers, turn the trigger off first; the undo preview prints the exact SQL. |
+| KI-007 | `dg_test_` and `dg_live_` keys are recorded on every action, but test and live data aren't kept apart yet. | Teams that want a test mode on one server | Use a separate team (org) or a separate server for testing. |
+
+## Large or busy servers
+
+These were measured on 0.1.0 and haven't changed since.
+
+| Id | What happens | Who is affected | What to do today |
+|---|---|---|---|
+| KI-002 | On a laptop with Postgres on the same machine, an allowed action without a check takes 5.8 ms at the median; the target is under 5 ms. Two Postgres round trips per action cause it. | Anyone timing Deedglass on a laptop | None needed for correctness. The p99 (19.4 ms) is inside its 25 ms target. |
+| KI-003 | One team (org) seals about 230 records a second on an M1 laptop. Above that, Postgres checks queue up: at 500 writes a second for 20 s, every write matched, with a median of 39 s from commit to result. | Agents that write more than about 200 times a second to one org | Spread agents across orgs, or group writes into fewer actions. |
+| KI-004 | `deedglass serve` has no limit of its own on open connections. A client that opens a new connection per request can use up the process's open-file limit; new connections then fail with `EOF`. Issues [#11](https://github.com/deedglass/deedglass/issues/11) and [#12](https://github.com/deedglass/deedglass/issues/12). | Load tests with unlimited clients; servers without a proxy in front | Put a proxy that caps connections in front of the server, raise `ulimit -n`, and cap your client's connections. |
+| KI-005 | In one 30-minute run at 50 calls a second, memory grew from 43.2 MiB to 49.9 MiB, below the 57.1 MiB peak at minute 2. Connections and open files stayed flat, so it looks like normal settling, not a leak. | Long-running servers | None needed at this size. Watch `process_resident_memory_bytes`. |
+
+## Fixed
+
+- KI-009: sealing a file (`deedglass deeds seal-file`, `deedglass verify --file`) shipped after
+  0.1.0-rc.1.

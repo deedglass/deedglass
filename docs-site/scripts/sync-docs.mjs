@@ -27,6 +27,8 @@ const data = (f) => JSON.parse(readFileSync(join(site, 'src', 'data', f), 'utf8'
 // check-inventory in scripts/test fails on a docs/*.md file missing from this table.
 export const IMPORTS = {
   'docs/INSTALL.md': 'get-started/install-deedglass',
+  // 0.15.0: the local app's short tour, linked from the docs home and the install page
+  'docs/APP.md': 'get-started/app',
   // the record spec (TY-12): its own versioned directory, CC-BY-4.0
   'spec/v2/DEED_SPEC.md': 'reference/deed-spec',
   'spec/v1/BUNDLE_FORMAT.md': 'reference/engineering/bundle-format',
