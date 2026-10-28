@@ -201,7 +201,8 @@ func elsewhere() []Route {
 	start := adm("POST", "/v1/connect/{id}/start", "startConnect", RoleAdmin)
 	start.Idempotency = IdemNever
 	out = append(out, adm("GET", "/v1/local", "getLocal", RoleViewer), adm("PATCH", "/v1/local", "updateLocal", RoleAdmin),
-		adm("GET", "/v1/connect", "listConnect", RoleViewer), start)
+		adm("GET", "/v1/connect", "listConnect", RoleViewer), start,
+		adm("POST", "/v1/connect/{id}/install", "installConnect", RoleAdmin), adm("POST", "/v1/connect/{id}/undo", "undoConnect", RoleAdmin))
 	// S29: Slack interactivity (internal/notify/slack): public, a form body, Slack's signature.
 	out = append(out, Route{Method: "POST", Pattern: "/v1/slack/interact", OperationID: "slackInteract", Auth: Public, Idempotency: IdemNever,
 		BodyType: "application/x-www-form-urlencoded", MaxBody: 256 << 10, Handler: stub})

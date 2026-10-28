@@ -1689,6 +1689,71 @@ paths:
                 $ref: "#/components/schemas/ConnectItem"
         default:
           $ref: "#/components/responses/Error"
+  /v1/connect/{id}/install:
+    post:
+      operationId: installConnect
+      summary: Add Deedglass to a tool's settings file
+      description: >-
+        Only inside `deedglass app`. The Connect screen's one-click button. Makes the tool's agent
+        and key file once (as start), backs the tool's settings file up to `<file>.<time>.bak` beside
+        it, then adds the one `deedglass` entry to its `mcpServers` (VS Code: `servers`); every other
+        key keeps its place. Works for `claude-desktop`, `cursor`, `vscode` and `terminal` (Gemini
+        CLI's settings); other ids are `validation_failed`, as are a tool that isn't installed and a
+        settings file that isn't plain JSON (nothing is written). An admin+ Console session (with the
+        `Deedglass-CSRF` header) or an org admin key.
+      tags: [Local]
+      security: [{bearerAuth: []}, {sessionCookie: []}]
+      x-deedglass-auth: session_or_key
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+        - $ref: "#/components/parameters/CSRFWithSession"
+        - {name: id, in: path, required: true, description: "claude-desktop, cursor, vscode or terminal.", schema: {type: string, enum: [claude-desktop, cursor, vscode, terminal, openai, scribe, database]}}
+      responses:
+        "200":
+          description: The item now, with `install` saying what was written and where the backup is.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+            Deedglass-Version:
+              $ref: "#/components/headers/DeedglassVersion"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectItem"
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/connect/{id}/undo:
+    post:
+      operationId: undoConnect
+      summary: Put a tool's settings file back
+      description: >-
+        Only inside `deedglass app`. Reverses the newest install: the file comes back byte for byte
+        from its backup (a file Connect created is removed), or, when the person changed the file
+        since, only the `deedglass` entry is taken out. Nothing to undo answers the item unchanged.
+        An admin+ Console session (with the `Deedglass-CSRF` header) or an org admin key.
+      tags: [Local]
+      security: [{bearerAuth: []}, {sessionCookie: []}]
+      x-deedglass-auth: session_or_key
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+        - $ref: "#/components/parameters/CSRFWithSession"
+        - {name: id, in: path, required: true, description: "claude-desktop, cursor, vscode or terminal.", schema: {type: string, enum: [claude-desktop, cursor, vscode, terminal, openai, scribe, database]}}
+      responses:
+        "200":
+          description: The item now.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+            Deedglass-Version:
+              $ref: "#/components/headers/DeedglassVersion"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectItem"
+        default:
+          $ref: "#/components/responses/Error"
   /v1/ledger/check:
     get:
       operationId: checkLedger
@@ -9205,7 +9270,7 @@ components:
     ConnectItem:
       type: object
       additionalProperties: false
-      required: [object, id, name, status, agent, last_action_at, detected, link, web_link, config, command, address]
+      required: [object, id, name, status, agent, last_action_at, detected, link, web_link, config, command, address, install]
       properties:
         object: {type: string, const: connect_item}
         id: {type: string, enum: [claude-desktop, cursor, vscode, terminal, openai, scribe, database]}
@@ -9219,6 +9284,26 @@ components:
         config: {type: [string, "null"], description: A config block to paste.}
         command: {type: [string, "null"], description: A command to run.}
         address: {type: [string, "null"], description: An address the tool talks to.}
+        install:
+          oneOf:
+            - {type: "null"}
+            - $ref: "#/components/schemas/ConnectInstall"
+          description: The tool's settings file on this computer and what the Connect button would do to it; null for tools Deedglass doesn't write.
+    ConnectInstall:
+      type: object
+      additionalProperties: false
+      required: [object, tool, title, file, installed, status, entry, can_undo]
+      properties:
+        object: {type: string, const: connect_install}
+        tool: {type: string, enum: [claude-desktop, cursor, vscode, gemini]}
+        title: {type: string}
+        file: {type: string, description: The settings file's path on this computer.}
+        installed: {type: boolean, description: The tool's folder is on this computer.}
+        status: {type: string, enum: [add, update, present, skip, absent]}
+        reason: {type: string}
+        entry: {type: string, description: The JSON the Connect button adds, as shown before the click.}
+        backup: {type: string, description: The newest backup Connect made (<file>.<time>.bak).}
+        can_undo: {type: boolean}
     ConnectList:
       type: object
       additionalProperties: false

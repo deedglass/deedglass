@@ -24,10 +24,14 @@ test('first run: one sentence, the local line, a path, then Connect', async ({ p
   await done();
 });
 
-test('Connect: seven tiles, a deep link, a copy fallback, a QR code that decodes, no secret anywhere', async ({ page }) => {
+test('Connect: eight tiles with real marks, a deep link, a copy fallback, a QR code that decodes, no secret anywhere', async ({ page }) => {
   const done = await guard(page);
   await page.goto('/app/connect');
-  await expect(page.locator('[data-tile]')).toHaveCount(7);
+  await expect(page.locator('[data-tile]')).toHaveCount(8);
+  await expect(page.locator('[data-tile="claude-desktop"] svg[data-mark="claude"] path')).toHaveAttribute('fill', /^#/);
+  await expect(page.locator('[data-tile="cursor"] svg[data-mark="cursor"] path')).toHaveAttribute('fill', 'currentColor');
+  await expect(page.locator('[data-tile="scribe"] .cx-monogram')).toHaveText('FHIR');
+  await expect(page.locator('[data-tile="mcp"]')).toContainText('Any MCP tool');
   for (const pill of await page.locator('[data-tile] [data-status]').all()) await expect(pill).toHaveText(/Not connected|Waiting for first action|Connected/);
 
   await page.locator('[data-tile="cursor"]').click();
@@ -36,8 +40,10 @@ test('Connect: seven tiles, a deep link, a copy fallback, a QR code that decodes
   const primary = sheet.getByRole('link', { name: 'Add to Cursor' });
   const href = (await primary.getAttribute('href')) ?? '';
   expect(href.startsWith('cursor://anysphere.cursor-deeplink/mcp/install?name=deedglass&config=')).toBe(true);
-  await sheet.getByText(/Didn.t open/).click();
+  // On the e2e stack (a plain serve, not the app) there is no settings file to write: the copy fallback shows.
+  await sheet.getByText(/Didn.t open|Or paste it yourself/).first().click();
   await expect(sheet.locator('[data-copy]').first()).toBeVisible();
+  await expect(sheet.getByRole('button', { name: 'Test connection' })).toBeVisible();
   await sheet.getByText('On another computer').click();
   const qr = sheet.locator('svg[data-qr]');
   await expect(qr).toBeVisible();

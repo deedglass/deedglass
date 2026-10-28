@@ -22,6 +22,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/deedglass/deedglass/internal/orderedjson"
 	"github.com/deedglass/deedglass/internal/shellguard"
 )
 
@@ -151,22 +152,22 @@ func plan(c *Change, hook shellguard.ClientHook, command string) {
 			c.mode = st.Mode().Perm()
 		}
 	}
-	var root *object
+	var root *orderedjson.Object
 	indent := "  "
 	if len(strings.TrimSpace(string(c.before))) == 0 {
-		root = newObject()
+		root = orderedjson.New()
 	} else {
-		v, err := parse(c.before)
+		v, err := orderedjson.Parse(c.before)
 		if err != nil {
 			c.Status, c.Reason = Skip, "it isn't plain JSON (comments or a syntax error?)"
 			return
 		}
-		o, ok := v.(*object)
+		o, ok := v.(*orderedjson.Object)
 		if !ok {
 			c.Status, c.Reason = Skip, "it isn't a JSON object"
 			return
 		}
-		root, indent = o, indentOf(c.before)
+		root, indent = o, orderedjson.IndentOf(c.before)
 	}
 	want, err := snippet(hook, command)
 	if err != nil {
@@ -180,44 +181,45 @@ func plan(c *Change, hook shellguard.ClientHook, command string) {
 	case present:
 		c.Status = Present
 	case changed:
-		c.Status, c.after = Add, render(root, indent)
+		c.Status, c.after = Add, orderedjson.Render(root, indent)
 	default:
 		c.Status = Present
 	}
 }
 
 // snippet is the client's documented hook config with "deedglass guard shell" started by command.
-func snippet(hook shellguard.ClientHook, command string) (*object, error) {
-	v, err := parse([]byte(hook.Config))
+func snippet(hook shellguard.ClientHook, command string) (*orderedjson.Object, error) {
+	v, err := orderedjson.Parse([]byte(hook.Config))
 	if err != nil {
 		return nil, fmt.Errorf("protect: %s's hook config: %w", hook.Name, err)
 	}
-	v = mapStrings(v, func(s string) string { return strings.Replace(s, "deedglass guard shell", command+" guard shell", 1) })
-	return v.(*object), nil
+	v = orderedjson.MapStrings(v, func(s string) string { return strings.Replace(s, "deedglass guard shell", command+" guard shell", 1) })
+	return v.(*orderedjson.Object), nil
 }
 
 // merge adds want's hooks to root. Top-level keys other than "hooks" (Cursor's and Copilot's
 // "version") are set only when absent. present: a guard is already under every event want names.
-func merge(root, want *object, isGuard func(string) bool) (changed, present bool, why string) {
-	wantHooks, _ := want.vals["hooks"].(*object)
+func merge(root, want *orderedjson.Object, isGuard func(string) bool) (changed, present bool, why string) {
+	wv, _ := want.Get("hooks")
+	wantHooks, _ := wv.(*orderedjson.Object)
 	if wantHooks == nil {
 		return false, false, "protect: hook config without hooks"
 	}
-	var hooks *object
-	if v, ok := root.get("hooks"); ok {
-		h, isObj := v.(*object)
+	var hooks *orderedjson.Object
+	if v, ok := root.Get("hooks"); ok {
+		h, isObj := v.(*orderedjson.Object)
 		if !isObj {
 			return false, false, `its "hooks" isn't an object`
 		}
 		hooks = h
 	}
 	present = true
-	for _, ev := range wantHooks.keys {
+	for _, ev := range wantHooks.Keys() {
 		if hooks == nil {
 			present = false
 			break
 		}
-		v, ok := hooks.get(ev)
+		v, ok := hooks.Get(ev)
 		if !ok {
 			present = false
 			break
@@ -227,7 +229,7 @@ func merge(root, want *object, isGuard func(string) bool) (changed, present bool
 			return false, false, fmt.Sprintf("its %q hooks aren't a list", ev)
 		}
 		found := false
-		eachString(list, func(s string) { found = found || isGuard(s) })
+		orderedjson.EachString(list, func(s string) { found = found || isGuard(s) })
 		if !found {
 			present = false
 		}
@@ -235,28 +237,30 @@ func merge(root, want *object, isGuard func(string) bool) (changed, present bool
 	if present {
 		return false, true, ""
 	}
-	for _, k := range want.keys {
+	for _, k := range want.Keys() {
 		if k == "hooks" {
 			continue
 		}
-		if _, ok := root.get(k); !ok {
-			root.set(k, want.vals[k])
+		if _, ok := root.Get(k); !ok {
+			v, _ := want.Get(k)
+			root.Set(k, v)
 		}
 	}
 	if hooks == nil {
-		hooks = newObject()
-		root.set("hooks", hooks)
+		hooks = orderedjson.New()
+		root.Set("hooks", hooks)
 	}
-	for _, ev := range wantHooks.keys {
-		add := wantHooks.vals[ev].([]any)
-		cur, _ := hooks.get(ev)
+	for _, ev := range wantHooks.Keys() {
+		av, _ := wantHooks.Get(ev)
+		add := av.([]any)
+		cur, _ := hooks.Get(ev)
 		list, _ := cur.([]any)
 		found := false
-		eachString(list, func(s string) { found = found || isGuard(s) })
+		orderedjson.EachString(list, func(s string) { found = found || isGuard(s) })
 		if found {
 			continue
 		}
-		hooks.set(ev, append(list, add...))
+		hooks.Set(ev, append(list, add...))
 	}
 	return true, false, ""
 }
@@ -478,8 +482,8 @@ func undoEntry(run string, e Entry, isGuard func(string) bool, dry bool) Undone 
 		return u
 	}
 	// Changed since protect wrote it: keep the person's edits and take out only the guard.
-	v, err := parse(cur)
-	root, ok := v.(*object)
+	v, err := orderedjson.Parse(cur)
+	root, ok := v.(*orderedjson.Object)
 	if err != nil || !ok {
 		u.Status, u.Reason = Failed, "it changed since and isn't plain JSON now; remove the Deedglass hook by hand"
 		return u
@@ -497,7 +501,7 @@ func undoEntry(run string, e Entry, isGuard func(string) bool, dry bool) Undone 
 	if st != nil {
 		mode = st.Mode().Perm()
 	}
-	if err := writeAtomic(e.File, render(root, indentOf(cur)), mode); err != nil {
+	if err := writeAtomic(e.File, orderedjson.Render(root, orderedjson.IndentOf(cur)), mode); err != nil {
 		u.Status, u.Reason = Failed, err.Error()
 	}
 	return u
@@ -506,23 +510,24 @@ func undoEntry(run string, e Entry, isGuard func(string) bool, dry bool) Undone 
 // removeGuard takes every guard entry out of root's hooks[event]: a flat entry whose command runs
 // the guard, or such a command inside a group's "hooks" (dropping the group when it empties). An
 // emptied event list, and an emptied hooks object, go too.
-func removeGuard(root *object, event string, isGuard func(string) bool) bool {
-	hv, _ := root.get("hooks")
-	hooks, _ := hv.(*object)
+func removeGuard(root *orderedjson.Object, event string, isGuard func(string) bool) bool {
+	hv, _ := root.Get("hooks")
+	hooks, _ := hv.(*orderedjson.Object)
 	if hooks == nil {
 		return false
 	}
-	lv, _ := hooks.get(event)
+	lv, _ := hooks.Get(event)
 	list, _ := lv.([]any)
 	removed := false
 	var keep []any
 	for _, item := range list {
-		if g, ok := item.(*object); ok {
-			if inner, ok := g.vals["hooks"].([]any); ok {
+		if g, ok := item.(*orderedjson.Object); ok {
+			iv, _ := g.Get("hooks")
+			if inner, ok := iv.([]any); ok {
 				var k2 []any
 				for _, h := range inner {
 					guard := false
-					eachString(h, func(s string) { guard = guard || isGuard(s) })
+					orderedjson.EachString(h, func(s string) { guard = guard || isGuard(s) })
 					if guard {
 						removed = true
 						continue
@@ -533,14 +538,14 @@ func removeGuard(root *object, event string, isGuard func(string) bool) bool {
 					continue
 				}
 				if len(k2) != len(inner) {
-					g.set("hooks", k2)
+					g.Set("hooks", k2)
 				}
 				keep = append(keep, g)
 				continue
 			}
 		}
 		guard := false
-		eachString(item, func(s string) { guard = guard || isGuard(s) })
+		orderedjson.EachString(item, func(s string) { guard = guard || isGuard(s) })
 		if guard {
 			removed = true
 			continue
@@ -551,12 +556,12 @@ func removeGuard(root *object, event string, isGuard func(string) bool) bool {
 		return false
 	}
 	if len(keep) == 0 {
-		hooks.del(event)
+		hooks.Del(event)
 	} else {
-		hooks.set(event, keep)
+		hooks.Set(event, keep)
 	}
-	if len(hooks.keys) == 0 {
-		root.del("hooks")
+	if hooks.Len() == 0 {
+		root.Del("hooks")
 	}
 	return true
 }

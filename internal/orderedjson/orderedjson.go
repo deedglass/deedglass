@@ -1,34 +1,44 @@
-package protect
+// Package orderedjson is a small ordered JSON tree, so a settings file keeps its keys in the order
+// the person wrote them when Deedglass adds an entry to it (internal/protect, internal/mcpinstall).
+// Objects are *Object; arrays []any; numbers json.Number (so 10000 stays 10000); strings, bools and
+// nil as encoding/json decodes them.
+package orderedjson
 
 import (
 	"bytes"
 	"encoding/json"
 	"errors"
 	"io"
+	"sort"
+	"strconv"
 	"strings"
 )
 
-// A small ordered JSON tree, so a settings file keeps its keys in the order the person wrote them
-// when protect adds a hook to it. Objects are *object; arrays []any; numbers json.Number (so
-// 10000 stays 10000); strings, bools and nil as encoding/json decodes them.
-
-type object struct {
+// Object is a JSON object whose keys keep their order.
+type Object struct {
 	keys []string
 	vals map[string]any
 }
 
-func newObject() *object { return &object{vals: map[string]any{}} }
+// New is an empty object.
+func New() *Object { return &Object{vals: map[string]any{}} }
 
-func (o *object) get(k string) (any, bool) { v, ok := o.vals[k]; return v, ok }
+// Keys are the object's keys in order. Don't change the slice.
+func (o *Object) Keys() []string { return o.keys }
 
-func (o *object) set(k string, v any) {
+// Get is the value under k.
+func (o *Object) Get(k string) (any, bool) { v, ok := o.vals[k]; return v, ok }
+
+// Set sets k, keeping its place when it is already there and appending it when it isn't.
+func (o *Object) Set(k string, v any) {
 	if _, ok := o.vals[k]; !ok {
 		o.keys = append(o.keys, k)
 	}
 	o.vals[k] = v
 }
 
-func (o *object) del(k string) {
+// Del removes k.
+func (o *Object) Del(k string) {
 	if _, ok := o.vals[k]; !ok {
 		return
 	}
@@ -41,10 +51,14 @@ func (o *object) del(k string) {
 	}
 }
 
-var errNotJSON = errors.New("not one JSON value")
+// Len is the number of keys.
+func (o *Object) Len() int { return len(o.keys) }
 
-// parse reads exactly one JSON value; anything after it (a comment, a second value) is an error.
-func parse(b []byte) (any, error) {
+// ErrNotJSON is a file that isn't exactly one JSON value (a comment, a second value, a trailing comma).
+var ErrNotJSON = errors.New("not one JSON value")
+
+// Parse reads exactly one JSON value; anything after it (a comment, a second value) is an error.
+func Parse(b []byte) (any, error) {
 	d := json.NewDecoder(bytes.NewReader(b))
 	d.UseNumber()
 	v, err := parseValue(d)
@@ -52,7 +66,7 @@ func parse(b []byte) (any, error) {
 		return nil, err
 	}
 	if _, err := d.Token(); err != io.EOF {
-		return nil, errNotJSON
+		return nil, ErrNotJSON
 	}
 	return v, nil
 }
@@ -66,7 +80,7 @@ func parseValue(d *json.Decoder) (any, error) {
 	case json.Delim:
 		switch t {
 		case '{':
-			o := newObject()
+			o := New()
 			for d.More() {
 				kt, err := d.Token()
 				if err != nil {
@@ -74,13 +88,13 @@ func parseValue(d *json.Decoder) (any, error) {
 				}
 				k, ok := kt.(string)
 				if !ok {
-					return nil, errNotJSON
+					return nil, ErrNotJSON
 				}
 				v, err := parseValue(d)
 				if err != nil {
 					return nil, err
 				}
-				o.set(k, v)
+				o.Set(k, v)
 			}
 			if _, err := d.Token(); err != nil {
 				return nil, err
@@ -100,14 +114,14 @@ func parseValue(d *json.Decoder) (any, error) {
 			}
 			return a, nil
 		}
-		return nil, errNotJSON
+		return nil, ErrNotJSON
 	default:
 		return t, nil
 	}
 }
 
-// render writes v with indent per level and a final newline.
-func render(v any, indent string) []byte {
+// Render writes v with indent per level and a final newline.
+func Render(v any, indent string) []byte {
 	var b bytes.Buffer
 	write(&b, v, indent, 0)
 	b.WriteByte('\n')
@@ -117,7 +131,7 @@ func render(v any, indent string) []byte {
 func write(b *bytes.Buffer, v any, indent string, depth int) {
 	pad := func(n int) { b.WriteString(strings.Repeat(indent, n)) }
 	switch v := v.(type) {
-	case *object:
+	case *Object:
 		if len(v.keys) == 0 {
 			b.WriteString("{}")
 			return
@@ -125,7 +139,7 @@ func write(b *bytes.Buffer, v any, indent string, depth int) {
 		b.WriteString("{\n")
 		for i, k := range v.keys {
 			pad(depth + 1)
-			b.WriteString(quote(k))
+			b.WriteString(Quote(k))
 			b.WriteString(": ")
 			write(b, v.vals[k], indent, depth+1)
 			if i < len(v.keys)-1 {
@@ -152,7 +166,7 @@ func write(b *bytes.Buffer, v any, indent string, depth int) {
 		pad(depth)
 		b.WriteByte(']')
 	case string:
-		b.WriteString(quote(v))
+		b.WriteString(Quote(v))
 	case json.Number:
 		b.WriteString(v.String())
 	case bool:
@@ -166,7 +180,8 @@ func write(b *bytes.Buffer, v any, indent string, depth int) {
 	}
 }
 
-func quote(s string) string {
+// Quote is s as a JSON string, without HTML escaping.
+func Quote(s string) string {
 	var b bytes.Buffer
 	enc := json.NewEncoder(&b)
 	enc.SetEscapeHTML(false)
@@ -174,8 +189,8 @@ func quote(s string) string {
 	return strings.TrimSuffix(b.String(), "\n")
 }
 
-// indentOf is the indent the file already uses (its first indented line), or two spaces.
-func indentOf(b []byte) string {
+// IndentOf is the indent the file already uses (its first indented line), or two spaces.
+func IndentOf(b []byte) string {
 	for _, l := range strings.Split(string(b), "\n")[1:] {
 		t := strings.TrimLeft(l, " \t")
 		if t == "" || len(t) == len(l) {
@@ -186,39 +201,72 @@ func indentOf(b []byte) string {
 	return "  "
 }
 
-// strings in v, depth first.
-func eachString(v any, f func(string)) {
+// EachString calls f on every string value in v, depth first.
+func EachString(v any, f func(string)) {
 	switch v := v.(type) {
-	case *object:
+	case *Object:
 		for _, k := range v.keys {
-			eachString(v.vals[k], f)
+			EachString(v.vals[k], f)
 		}
 	case []any:
 		for _, x := range v {
-			eachString(x, f)
+			EachString(x, f)
 		}
 	case string:
 		f(v)
 	}
 }
 
-// mapStrings returns a copy of v with f applied to every string value (not keys).
-func mapStrings(v any, f func(string) string) any {
+// MapStrings returns a copy of v with f applied to every string value (not keys).
+func MapStrings(v any, f func(string) string) any {
 	switch v := v.(type) {
-	case *object:
-		o := newObject()
+	case *Object:
+		o := New()
 		for _, k := range v.keys {
-			o.set(k, mapStrings(v.vals[k], f))
+			o.Set(k, MapStrings(v.vals[k], f))
 		}
 		return o
 	case []any:
 		a := make([]any, len(v))
 		for i, x := range v {
-			a[i] = mapStrings(x, f)
+			a[i] = MapStrings(x, f)
 		}
 		return a
 	case string:
 		return f(v)
+	}
+	return v
+}
+
+// FromValue converts a plain Go value (what json.Unmarshal into any gives, or maps and slices a
+// caller builds) into the ordered tree. Map keys are sorted, so the output is stable.
+func FromValue(v any) any {
+	switch v := v.(type) {
+	case map[string]any:
+		o := New()
+		keys := make([]string, 0, len(v))
+		for k := range v {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+		for _, k := range keys {
+			o.Set(k, FromValue(v[k]))
+		}
+		return o
+	case []any:
+		a := make([]any, len(v))
+		for i, x := range v {
+			a[i] = FromValue(x)
+		}
+		return a
+	case []string:
+		a := make([]any, len(v))
+		for i, x := range v {
+			a[i] = x
+		}
+		return a
+	case int:
+		return json.Number(strconv.Itoa(v))
 	}
 	return v
 }

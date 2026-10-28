@@ -27,12 +27,21 @@ Your answer only changes what you see first. Everything stays available.
 
 Open **Connect**. Pick what you use:
 
-- **AI tools:** Claude Desktop, Cursor, VS Code, coding agents in a terminal, ChatGPT or OpenAI agents.
+- **AI tools:** Claude Desktop, Cursor, VS Code, coding agents in a terminal (Claude Code, Codex,
+  Gemini CLI), ChatGPT or OpenAI agents, and any other MCP tool.
 - **Systems your agents change:** an AI scribe or a record system (FHIR), or a database (Postgres, MySQL).
 
-Each one takes a click or one copied line, with the steps on screen. Its status goes from
-**Not connected** to **Waiting for first action**, then to **Connected** when the tool does its first
-thing. Ask it to do something small to check.
+Each card shows the tool's own mark and its status. Where the tool keeps its MCP settings on this
+computer (Claude Desktop, Cursor, VS Code, Gemini CLI), the card finds the file and shows one
+**Connect** button: Deedglass shows the one entry it will add, saves a copy of the file first as
+`<file>.<time>.bak`, adds only that entry, and offers **Undo**, which puts the file back (or, if you
+changed the file since, takes only the Deedglass entry out). Nothing is written until you click.
+Everywhere else there is a link or one copied line, a QR code for another computer, and **Test
+connection**. The status goes from **Not connected** to **Waiting for first action**, then to
+**Connected** when the tool does its first thing. Ask it to do something small to check.
+
+For the record system, enter the FHIR address your IT team uses, or click **Try with sample data**
+to use a public FHIR test server that holds made-up records (never put real patient data there).
 
 Prefer the terminal? `deedglass app connect` lists the same tools and their status, and
 `deedglass app connect cursor` (or another tool's name) prints the link, command or settings to

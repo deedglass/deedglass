@@ -15,6 +15,11 @@ This product bundles the following third-party works in the Console (web/), the 
 - Lucide icons, Copyright (c) 2026 Lucide Icons and Contributors (https://lucide.dev).
   Licensed under the ISC License. Portions derived from Feather, Copyright (c) 2013-2022 Cole Bemis,
   licensed under the MIT License.
+- Brand marks on the Console's Connect screen (Claude, OpenAI, Cursor, Visual Studio Code, Google
+  Gemini, PostgreSQL, MySQL, GitHub Copilot): vector paths from Simple Icons
+  (https://github.com/simple-icons/simple-icons), released under CC0 1.0. The marks and names are
+  trademarks of their respective owners and are shown only to identify the tool being connected;
+  no endorsement is implied. Sources and versions per mark: web/BRAND_MARKS.md.
 
 Go module dependencies and their licences are listed in go.mod and in each release's SBOM
 (docs/INSTALL.md says where to find it). Each dependency's choice is recorded in an ADR (docs/adr/).

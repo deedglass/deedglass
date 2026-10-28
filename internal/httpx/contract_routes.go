@@ -193,6 +193,8 @@ var contractRoutes = []ContractRoute{
 	cr("PATCH", "/v1/local", SessionOrKey, "admin", "S53", "DL-143; keys: admin; path clinic|build|it, first_run"),
 	cr("GET", "/v1/connect", SessionOrKey, "viewer", "S53", "DL-143; keys: admin; the Connect items; links and commands never hold a key"),
 	cr("POST", "/v1/connect/{id}/start", SessionOrKey, "admin", "S53", "DL-143; keys: admin; IdemNever; makes the client's agent and key file once; terminal adds the shell guard"),
+	cr("POST", "/v1/connect/{id}/install", SessionOrKey, "admin", "S53", "DL-143; keys: admin; IdemNever; the one-click Connect: adds the entry to the tool's settings file after a backup"),
+	cr("POST", "/v1/connect/{id}/undo", SessionOrKey, "admin", "S53", "DL-143; keys: admin; IdemNever; puts the tool's settings file back"),
 
 	// S15: MCP (GET and DELETE answer 405; sessionless).
 	cr("POST", "/mcp/{connector}", AgentKey, "actions:execute", "S15"),

@@ -144,3 +144,55 @@ func TestStateRoundTrip(t *testing.T) {
 	}
 	_ = http.StatusOK
 }
+
+// The install routes: an unknown id is not_found, a tool without a settings file is refused, and
+// a tool whose folder isn't on this computer writes nothing. The Plan shows in every item.
+func TestInstallRefusals(t *testing.T) {
+	home := t.TempDir()
+	a := &API{Dir: t.TempDir(), Home: home, GOOS: "linux", Address: "http://127.0.0.1:4180", Run: Runner{Command: "/usr/local/bin/deedglass"}}
+	post := func(h func(http.ResponseWriter, *http.Request) error, id, path string) error {
+		r := httptest.NewRequest("POST", "/v1/connect/"+id+"/"+path, strings.NewReader("{}"))
+		r.SetPathValue("id", id)
+		return h(httptest.NewRecorder(), r)
+	}
+	if c := code(t, post(a.installConnect, "nope", "install")); c != string(httpx.CodeNotFound) {
+		t.Errorf("unknown id: %s", c)
+	}
+	if c := code(t, post(a.installConnect, OpenAI, "install")); c != string(httpx.CodeValidationFailed) {
+		t.Errorf("openai has no file: %s", c)
+	}
+	if c := code(t, post(a.undoConnect, Database, "undo")); c != string(httpx.CodeValidationFailed) {
+		t.Errorf("database has no file: %s", c)
+	}
+	// Cursor's folder isn't there: refused before any agent or file work; the item says absent.
+	if c := code(t, post(func(w http.ResponseWriter, r *http.Request) error {
+		// No principal: the handler must refuse before touching the agent, but after the plan check.
+		return a.installConnect(w, r)
+	}, Cursor, "install")); c != string(httpx.CodeAuthenticationRequired) {
+		t.Errorf("no principal: %s", c)
+	}
+	for _, id := range Clients {
+		it := Item{ID: id}
+		a.install(&it)
+		if _, ok := installTarget[id]; ok != (it.Install != nil) {
+			t.Errorf("%s: install %v", id, it.Install)
+		}
+		if it.Install != nil && (it.Install.Status != "absent" || it.Install.Installed || it.Install.CanUndo || !strings.Contains(it.Install.Entry, `"serve"`) || !strings.Contains(it.Install.Entry, "--client")) {
+			t.Errorf("%s: %+v", id, it.Install)
+		}
+	}
+	if err := os.MkdirAll(filepath.Join(home, ".cursor"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	it := Item{ID: Cursor}
+	a.install(&it)
+	if it.Install.Status != "add" || !it.Install.Installed || it.Install.File != filepath.Join(home, ".cursor", "mcp.json") {
+		t.Fatalf("%+v", it.Install)
+	}
+	if installlinks.HasSecret(it.Install.Entry) {
+		t.Fatal("the entry holds a key")
+	}
+	if a2 := (&API{Dir: a.Dir, Run: a.Run}); func() bool { x := Item{ID: Cursor}; a2.install(&x); return x.Install != nil }() {
+		t.Fatal("no home: no install")
+	}
+}

@@ -7,6 +7,16 @@ this file by `scripts/release-notes.sh`.
 
 ## [Unreleased]
 
+### Added
+
+- The app's Connect screen (Connect v1): each card carries the tool's own mark, and Claude Desktop,
+  Cursor, VS Code and Gemini CLI get a one-click **Connect** that finds the tool's MCP settings file
+  on this computer, shows the one entry it will add, saves a copy of the file as `<file>.<time>.bak`,
+  adds only that entry and offers **Undo** (`POST /v1/connect/{id}/install` and `/undo`; `install`
+  on every Connect item; `internal/mcpinstall`). A new **Any MCP tool** card with the copyable
+  address, **Test connection** on every AI tool, and a FHIR address form with **Try with sample
+  data** (a public test server with made-up records) for the record system.
+
 ## [0.15.0] - 2026-10-28
 
 Deedglass now opens in your browser with one command. Run `deedglass` (or `deedglass app`) in a

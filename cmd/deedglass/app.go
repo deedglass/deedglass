@@ -781,7 +781,7 @@ func localWiring(e *Env, people *identity.Service, db *store.DB) *localapi.API {
 		}
 		return out
 	}
-	return &localapi.API{Dir: li.dir, Address: li.address, People: people, DB: db, Run: li.run, Detect: detect,
+	return &localapi.API{Dir: li.dir, Address: li.address, Home: home, AppData: e.Getenv("APPDATA"), People: people, DB: db, Run: li.run, Detect: detect,
 		Protect: func(context.Context) error {
 			if home == "" {
 				return errors.New("no home directory")
