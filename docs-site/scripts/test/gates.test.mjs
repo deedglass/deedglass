@@ -207,7 +207,7 @@ test('disclosure page (S34): it carries SECURITY.md\'s commitments word for word
   const page = readFileSync(join(site, 'src/content/docs/security/disclosure.mdx'), 'utf8').replace(/\s+/g, ' ');
   const policy = readFileSync(join(repo, 'SECURITY.md'), 'utf8').replace(/\s+/g, ' ');
   for (const s of ['within 3 business days', 'within 7 business days', 'within 30 days', 'There is **no bug bounty** at this stage.',
-    'The address is being set up.', 'We won\'t pursue or support legal action against research done in good faith within this policy.',
+    'Deedglass has one maintainer today', 'We won\'t pursue or support legal action against research done in good faith within this policy.',
     'The latest minor release gets security fixes.']) {
     assert.ok(policy.includes(s), `SECURITY.md lacks "${s}"`);
     assert.ok(page.includes(s), `the disclosure page lacks "${s}" (keep it equal to SECURITY.md)`);
