@@ -1,21 +1,46 @@
 {
   "name": "@deedglass/sdk",
-  "version": "0.15.0",
+  "version": "0.15.1",
   "description": "Put Deedglass in front of your agent's tools: policy decides, people approve, every call is sealed as a deed you can check offline.",
   "license": "Apache-2.0",
   "type": "module",
   "sideEffects": false,
-  "engines": { "node": ">=22.12" },
+  "engines": {
+    "node": ">=22.12"
+  },
   "exports": {
-    ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" },
-    "./verify": { "types": "./dist/verify/index.d.ts", "default": "./dist/verify/index.js" },
-    "./ai-sdk": { "types": "./dist/adapters/ai-sdk.d.ts", "default": "./dist/adapters/ai-sdk.js" },
-    "./openai-agents": { "types": "./dist/adapters/openai-agents.d.ts", "default": "./dist/adapters/openai-agents.js" },
-    "./langchain": { "types": "./dist/adapters/langchain.d.ts", "default": "./dist/adapters/langchain.js" },
-    "./claude-agent-sdk": { "types": "./dist/adapters/claude-agent-sdk.d.ts", "default": "./dist/adapters/claude-agent-sdk.js" },
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./verify": {
+      "types": "./dist/verify/index.d.ts",
+      "default": "./dist/verify/index.js"
+    },
+    "./ai-sdk": {
+      "types": "./dist/adapters/ai-sdk.d.ts",
+      "default": "./dist/adapters/ai-sdk.js"
+    },
+    "./openai-agents": {
+      "types": "./dist/adapters/openai-agents.d.ts",
+      "default": "./dist/adapters/openai-agents.js"
+    },
+    "./langchain": {
+      "types": "./dist/adapters/langchain.d.ts",
+      "default": "./dist/adapters/langchain.js"
+    },
+    "./claude-agent-sdk": {
+      "types": "./dist/adapters/claude-agent-sdk.d.ts",
+      "default": "./dist/adapters/claude-agent-sdk.js"
+    },
     "./package.json": "./package.json"
   },
-  "files": ["dist", "README.md", "LICENSE", "CHANGELOG.md"],
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
   "scripts": {
     "build": "node scripts/clean.mjs && tsc -p tsconfig.build.json && tsc -p tsconfig.types.json",
     "typecheck": "tsc -p . --noEmit",
@@ -34,10 +59,18 @@
     "@anthropic-ai/claude-agent-sdk": ">=0.3 <0.4"
   },
   "peerDependenciesMeta": {
-    "ai": { "optional": true },
-    "@openai/agents": { "optional": true },
-    "@langchain/core": { "optional": true },
-    "@anthropic-ai/claude-agent-sdk": { "optional": true }
+    "ai": {
+      "optional": true
+    },
+    "@openai/agents": {
+      "optional": true
+    },
+    "@langchain/core": {
+      "optional": true
+    },
+    "@anthropic-ai/claude-agent-sdk": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@anthropic-ai/claude-agent-sdk": "0.3.310",
@@ -52,10 +85,29 @@
     "vitest": "5.0.5",
     "zod": "4.6.7"
   },
-  "publishConfig": { "access": "public", "provenance": true },
-  "repository": { "type": "git", "url": "git+https://github.com/deedglass/deedglass.git", "directory": "sdk/typescript" },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/deedglass/deedglass.git",
+    "directory": "sdk/typescript"
+  },
   "homepage": "https://docs.deedglass.com/sdks/typescript/",
-  "bugs": { "url": "https://github.com/deedglass/deedglass/issues" },
+  "bugs": {
+    "url": "https://github.com/deedglass/deedglass/issues"
+  },
   "author": "Arjun Prabhakaran",
-  "keywords": ["deedglass", "ai-agents", "agent-security", "mcp", "model-context-protocol", "policy", "approvals", "audit", "audit-log"]
+  "keywords": [
+    "deedglass",
+    "ai-agents",
+    "agent-security",
+    "mcp",
+    "model-context-protocol",
+    "policy",
+    "approvals",
+    "audit",
+    "audit-log"
+  ]
 }

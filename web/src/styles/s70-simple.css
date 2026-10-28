@@ -273,14 +273,14 @@
   text-align: left;
   color: var(--text);
   cursor: pointer;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15), inset 0 1px 0 var(--glass-highlight);
+  box-shadow: inset 0 1px 0 var(--glass-highlight), var(--shadow-card);
   transition: border-color var(--dur-micro) var(--ease-enter), transform var(--dur-micro) var(--ease-enter), box-shadow var(--dur-micro) var(--ease-enter);
 }
 .cx-tile:hover {
   border-color: var(--border-strong);
   background: var(--surface-raised);
   transform: translateY(-1px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  box-shadow: inset 0 1px 0 var(--glass-highlight), var(--shadow-overlay);
 }
 .cx-tile:active {
   transform: none;

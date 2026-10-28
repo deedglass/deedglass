@@ -5,7 +5,7 @@ Every notable change to Deedglass, newest first. The format follows
 [Semantic Versioning 2.0.0](https://semver.org/spec/v2.0.0.html). Release notes are generated from
 this file by `scripts/release-notes.sh`.
 
-## [Unreleased]
+## [0.15.1] - 2026-10-29
 
 ### Added
 
