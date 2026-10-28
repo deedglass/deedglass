@@ -3,12 +3,14 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"slices"
 	"strings"
 
 	"github.com/deedglass/deedglass/internal/cli/ui"
 	"github.com/deedglass/deedglass/internal/localapi"
+	"github.com/deedglass/deedglass/internal/setup"
 )
 
 // deedglass app connect: the Connect screen from the terminal (DL-143 CLI parity). With no
@@ -20,6 +22,14 @@ func runAppConnect(ctx context.Context, e *Env, args []string) error {
 	}
 	if len(args) == 1 && !slices.Contains(localapi.Clients, args[0]) {
 		return usageErr(fmt.Errorf("deedglass app connect takes %s (got %q)", strings.Join(localapi.Clients, ", "), args[0]), "Run deedglass app connect to see them.")
+	}
+	// With no app running and no server or key named, say so plainly: the admin-key error that
+	// apiClient would give is for a server elsewhere, not for someone who hasn't started the app.
+	if t := resolveServer(e); t.From == fromDefault && t.keyFor(e, setup.AdminKeyFile) == "" {
+		inv := invocation(e)
+		return &ExitError{Code: ExitNotAuthed, ErrCode: "authentication_required",
+			Err:  errors.New("Deedglass isn't running on this computer"),
+			Next: "Run " + inv + " app to start it, then run " + inv + " app connect again. For a server elsewhere, pass --server and --api-key."}
 	}
 	c, err := apiClient(e)
 	if err != nil {
