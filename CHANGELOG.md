@@ -25,6 +25,19 @@ this file by `scripts/release-notes.sh`.
 - The health pilot points at `deedglass app` instead of a Console link that led nowhere, and its
   next steps say `npx deedglass` when that is how it ran.
 - The docs say Windows runs the native binary through npx; WSL isn't needed.
+- README: a short project status (pre-1.0, one maintainer, free and self-hosted, what isn't there
+  yet) and the licence in plain words. SECURITY.md: the security inbox note is gone (the address
+  works), and the scope says the container image is private for now. The npm packages name their
+  author, and `@deedglass/sdk` points at the right docs page.
+
+### Fixed
+
+- The Console's Approvals screen no longer asks for an approval again and again when the request is
+  already past its time but not yet marked expired.
+- `deedglass app` opens a browser only at a person's terminal; piped, in CI or with `--json` it prints
+  the sign-in link (`link` in JSON). `approvals list` and `act` show full approval ids, so they can be
+  pasted into `deedglass approve`.
+- The docs' install page no longer scrolls sideways on phones.
 
 ## [0.14.1] - 2026-10-28
 

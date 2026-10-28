@@ -1,0 +1,4 @@
+# Maps the names and addresses older commits were made under to one identity, so `git shortlog`
+# and `git log --use-mailmap` show the maintainer consistently. History itself is unchanged.
+Arjun Prabhakaran <208051910+aju-songsail@users.noreply.github.com> Aju Arjun <arjunprabhakaran421@gmail.com>
+Arjun Prabhakaran <208051910+aju-songsail@users.noreply.github.com> Arjun Prabhakaran <arjunprabhakaran421@gmail.com>

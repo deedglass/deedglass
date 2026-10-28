@@ -54,6 +54,8 @@
   },
   "publishConfig": { "access": "public", "provenance": true },
   "repository": { "type": "git", "url": "git+https://github.com/deedglass/deedglass.git", "directory": "sdk/typescript" },
-  "homepage": "https://docs.deedglass.com/sdk/typescript",
-  "keywords": ["deedglass", "ai-agents", "mcp", "policy", "approvals", "audit"]
+  "homepage": "https://docs.deedglass.com/sdks/typescript/",
+  "bugs": { "url": "https://github.com/deedglass/deedglass/issues" },
+  "author": "Arjun Prabhakaran",
+  "keywords": ["deedglass", "ai-agents", "agent-security", "mcp", "model-context-protocol", "policy", "approvals", "audit", "audit-log"]
 }

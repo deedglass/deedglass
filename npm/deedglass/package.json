@@ -5,6 +5,7 @@
   "keywords": ["deedglass", "ai-agents", "agent-security", "mcp", "mcp-server", "mcp-gateway", "model-context-protocol", "postgres", "change-data-capture", "logical-decoding", "audit-log", "policy", "approvals", "undo", "claude-code", "cursor"],
   "license": "Apache-2.0",
   "homepage": "https://deedglass.com",
+  "author": "Arjun Prabhakaran",
   "bugs": { "url": "https://github.com/deedglass/deedglass/issues" },
   "repository": { "type": "git", "url": "git+https://github.com/deedglass/deedglass.git", "directory": "npm/deedglass" },
   "bin": { "deedglass": "bin/deedglass.js" },
