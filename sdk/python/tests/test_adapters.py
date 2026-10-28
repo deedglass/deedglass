@@ -76,7 +76,7 @@ def test_langchain_allow_reports_once() -> None:
     b = s.body(0)
     assert b["tool"] == "orders.ship_order" and b["args"] == {"order_id": 42}
     assert b["context"] == {
-        "client": {"name": "deedglass-python/langchain", "version": "0.14.1"},
+        "client": {"name": "deedglass-python/langchain", "version": "0.15.0"},
         "transport": "sdk",
         "call_id": "call_1",
     }
