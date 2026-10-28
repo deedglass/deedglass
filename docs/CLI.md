@@ -91,9 +91,9 @@ inline mark for the welcome and help. It appears only on an interactive terminal
 
 | Where | What |
 |---|---|
-| `deedglass` (no command) | a five-line welcome: what Deedglass is, then `deedglass start`, `protect` and `health pilot` (plain when piped; `-q` prints the help) |
+| `deedglass` (no command) | at a person's terminal, the local app (`deedglass app`); piped, in CI, with `--json` or `DEEDGLASS_NO_APP=1`, a short welcome: what Deedglass is, then `deedglass app`, `start` and `protect` (`-q` prints the help) |
 | `deedglass version`, `deedglass --version` | the banner, with commit, build date and platform as its last lines |
-| `deedglass help` | the inline mark `◖│◗ deedglass` as the header line |
+| `deedglass help` | the inline mark `◖│◗ deedglass` as the header line, then the eight everyday commands (`deedglass help all` lists every command) |
 
 `init` and `doctor` will use the same mark from S32 (`internal/cli/mark`: `Banner`, `Inline`,
 `Sealed`). Every other command stays quiet.
