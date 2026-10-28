@@ -6,11 +6,10 @@ another, we want to hear about it, and we are grateful when you tell us first.
 
 ## Reporting
 
-- **Email `security@deedglass.com`.** The address is being set up. Until this note is removed,
-  also send your report through GitHub private vulnerability reporting (below), so it can't be
-  lost.
+- **Email `security@deedglass.com`.**
 - **GitHub private vulnerability reporting** on `github.com/deedglass/deedglass` (Security ›
-  Report a vulnerability): <https://github.com/deedglass/deedglass/security/advisories/new>.
+  Report a vulnerability):
+  [github.com/deedglass/deedglass/security/advisories/new](https://github.com/deedglass/deedglass/security/advisories/new).
 - Please don't open a public issue, pull request or discussion for a security problem.
 
 No encryption key is published yet. If your report holds something sensitive, say so in a first
@@ -25,7 +24,7 @@ message and we will agree a channel.
 
 ## What we will do
 
-We are a small team, so these are the times we can keep:
+Deedglass has one maintainer today, so these are the times we can keep:
 
 - **Acknowledge** your report within 3 business days.
 - **Assess** it within 7 business days: whether we can reproduce it and how severe it is (the
@@ -46,8 +45,8 @@ otherwise.
 - The CLI, including `deedglass init`, `doctor`, `scan`, `mcp wrap`, `a2a proxy`, `witness debezium`
   and `guard shell`.
 - The independent verifiers in `verifiers/` and the browser verifier.
-- Release artifacts: the archives, `checksums.txt` and its signature, the SBOMs, the image on GHCR,
-  the npm packages, and `scripts/install.sh`.
+- Release artifacts: the archives, `checksums.txt` and its signature, the SBOMs, the container
+  image on GHCR (private for now), the npm packages, and `scripts/install.sh`.
 - The SDKs: `@deedglass/sdk` (TypeScript) and `deedglass` (Python).
 - docs.deedglass.com and deedglass.com.
 - The hosted beta, when it exists.

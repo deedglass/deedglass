@@ -101,6 +101,19 @@ npx -y deedglass scan           # grade what the agents in your MCP configs coul
   ([`docs/LOCKDOWN.md`](docs/LOCKDOWN.md)). Records are signed and anyone can check them offline
   with `deedglass verify`.
 
+## Project status
+
+- **Pre-1.0.** Every release is in [`CHANGELOG.md`](CHANGELOG.md) and on the
+  [releases page](https://github.com/deedglass/deedglass/releases). The deed format is a versioned
+  public spec ([`spec/`](spec/)), so old records keep verifying.
+- **One maintainer.** Deedglass is built by Arjun Prabhakaran in India
+  ([`GOVERNANCE.md`](GOVERNANCE.md)). Replies are best effort ([`SUPPORT.md`](SUPPORT.md)).
+- **Free and self-hosted.** Every feature is free while we grow, including `ee/`, and it runs on your
+  machines with your own Postgres. Nothing checks a licence and nothing is sent to deedglass.com
+  ([Security](#security)).
+- **Not yet:** no SOC 2 report, no outside penetration test and no SSO. Known limits are in
+  [`docs/LIMITATIONS.md`](docs/LIMITATIONS.md) and [`KNOWN_ISSUES.md`](KNOWN_ISSUES.md).
+
 ## How it works
 
 ```mermaid
@@ -362,3 +375,12 @@ are in [`NOTICE`](NOTICE).
 The record spec ([`spec/`](spec/): the deed format and the export bundle) and the intent-vs-effect
 corpus ([`corpus/`](corpus/)) are published under CC-BY-4.0, so anyone can implement, copy or
 adapt them with credit.
+
+**In plain words** (a summary, not legal advice; the licence files govern):
+
+| Question | Answer |
+|---|---|
+| Can a company, hospital or project run all of Deedglass, including `ee/`, for free? | Yes. Self-hosted, every feature, no licence key. |
+| Can I read and change the code? | Yes. The core is Apache-2.0. `ee/` is FSL-1.1-ALv2, which allows changes for any purpose except a competing product. |
+| What isn't allowed? | Offering `ee/`, or something built from it, to others as a commercial product or service that competes with Deedglass. Each `ee/` release drops that limit when it becomes Apache-2.0, two years after it ships. |
+| Can I implement the record format myself? | Yes. [`spec/`](spec/) is CC-BY-4.0: implement, copy or adapt it with credit. |
