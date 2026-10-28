@@ -173,6 +173,12 @@ func (c *countWriter) Write(p []byte) (int, error) {
 	return n, err
 }
 
+// inside reports whether p is dst or below it.
+func inside(dst, p string) bool {
+	rel, err := filepath.Rel(dst, p)
+	return err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator)) && !filepath.IsAbs(rel)
+}
+
 // unpackJar unpacks the one .txz inside the .jar into dst.
 func unpackJar(jar, dst, platform string) error {
 	zr, err := zip.OpenReader(jar)
@@ -226,6 +232,11 @@ func unpackTxz(r io.Reader, dst, platform string) error {
 		if n >= maxEntries {
 			return errors.New("the archive has too many entries")
 		}
+		// No ".." anywhere, even inside a file name: the published builds have none, and it keeps
+		// the rule simple enough to check at a glance.
+		if strings.Contains(h.Name, "..") || strings.Contains(h.Linkname, "..") {
+			return fmt.Errorf("the archive holds an unsafe path %q", h.Name)
+		}
 		name, ok := cleanName(h.Name)
 		if !ok {
 			return fmt.Errorf("the archive holds an unsafe path %q", h.Name)
@@ -234,6 +245,9 @@ func unpackTxz(r io.Reader, dst, platform string) error {
 			continue
 		}
 		target := filepath.Join(dst, filepath.FromSlash(name))
+		if !inside(dst, target) {
+			return fmt.Errorf("the archive holds an unsafe path %q", h.Name)
+		}
 		switch h.Typeflag {
 		case tar.TypeDir:
 			if err := os.MkdirAll(target, 0o755); err != nil {
@@ -255,7 +269,7 @@ func unpackTxz(r io.Reader, dst, platform string) error {
 			if path.IsAbs(link) || strings.Contains(link, "\\") {
 				return fmt.Errorf("the archive holds an unsafe link %q", h.Name)
 			}
-			if j := path.Join(path.Dir(name), link); j == ".." || strings.HasPrefix(j, "../") {
+			if j := path.Join(path.Dir(name), link); j == ".." || strings.HasPrefix(j, "../") || !inside(dst, filepath.Join(filepath.Dir(target), filepath.FromSlash(link))) {
 				return fmt.Errorf("the archive holds a link that leaves it: %q", h.Name)
 			}
 			if runtime.GOOS == "windows" {

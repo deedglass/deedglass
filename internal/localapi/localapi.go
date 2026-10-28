@@ -326,10 +326,10 @@ func (a *API) links(it *Item) {
 		it.Command = ptr("claude mcp add --scope user " + installlinks.Name + " -- " + strings.Join(words, " "))
 		it.Config = ptr(mcpServers)
 	case OpenAI:
-		args, _ := json.Marshal(obj.Args)
-		cmd, _ := json.Marshal(obj.Command)
-		it.Config = ptr("from agents.mcp import MCPServerStdio\n\ndeedglass = MCPServerStdio(params={\"command\": " + string(cmd) + ", \"args\": " + string(args) + "})\n")
-		it.WebLink = ptr("https://docs.deedglass.com/get-started/openai-agents/")
+		// A JSON object of strings is also a Python dict literal.
+		params := compact(map[string]any{"command": obj.Command, "args": obj.Args})
+		it.Config = ptr("from agents.mcp import MCPServerStdio\n\ndeedglass = MCPServerStdio(params=" + params + ")\n")
+		it.WebLink = ptr("https://docs.deedglass.com/sdks/adapters/openai-agents/")
 		it.Address = ptr(strings.TrimSuffix(a.Address, "/") + "/mcp/native")
 	case Scribe:
 		it.Command = ptr("DEEDGLASS_SERVER=" + a.Address + " DEEDGLASS_API_KEY_FILE=" + shellQuote(AgentKeyPath(a.Dir, Scribe)))
@@ -337,7 +337,7 @@ func (a *API) links(it *Item) {
 		it.Address = ptr(a.Address)
 	case Database:
 		it.Command = ptr(a.commandLine("connect"))
-		it.WebLink = ptr("https://docs.deedglass.com/guides/connect-postgres/")
+		it.WebLink = ptr("https://docs.deedglass.com/get-started/postgres/")
 	}
 }
 

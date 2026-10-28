@@ -172,6 +172,7 @@ func TestOrgIsolation(t *testing.T) {
 		"/approve/assets/{file}":                                nil, // public static file (S22's approval page)
 		"/app/{path...}":                                        nil, // S24's Console pages: public static files with no org data
 		"/v1/connector-types/{type}":                            nil, // S30: the deployment-wide catalog; a type name, no org data
+		"/v1/connect/{id}/start":                                nil, // S53: a tool name, answered only inside deedglass app (404 on any other server)
 	}
 	raw, err := os.ReadFile(filepath.Join(e.Root, "api", "openapi.yaml"))
 	if err != nil {
