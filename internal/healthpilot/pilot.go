@@ -29,6 +29,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -87,6 +88,9 @@ type Options struct {
 	// Cmd is how the person ran this binary, for the commands the pilot prints: "deedglass", or
 	// "npx deedglass" under npx, where a bare deedglass isn't on PATH. "" means "deedglass".
 	Cmd string
+	// Brief prints the rows that say what happened in each scene (DL-143: a calmer default); the
+	// rest wait for -v.
+	Brief bool
 	// Dir receives REPORT.md, IT_REVIEW_PACK.md, deeds.jsonl and keys.json ("" writes nothing).
 	Dir        string
 	DisplayDir string // how Dir is printed ("" prints Dir)
@@ -168,6 +172,7 @@ type store struct {
 }
 
 type run struct {
+	n      int // the scene being played
 	ctx    context.Context
 	o      Options
 	st     ui.Style
@@ -799,11 +804,21 @@ func (r *run) lines(d time.Duration, ls []string) error {
 	return nil
 }
 
+// briefKeys are the rows each scene keeps in Brief mode.
+var briefKeys = map[int][]string{1: {"check", "seed"}, 2: {"check"}, 3: {"rule", "app"}, 4: {"verify", "files"}}
+
 func (r *run) row(d time.Duration, key, glyph, value string) error {
+	if r.o.Brief && !slices.Contains(briefKeys[r.n], key) {
+		return nil
+	}
 	return r.lines(d, r.st.KV(bodyIndent, r.o.Width, ui.Row{Key: ui.Pad(key, keyWidth), Glyph: glyph, Value: value}))
 }
 
 func (r *run) scene(s Scene, intro string) error {
+	r.n = s.N
+	if r.o.Brief {
+		intro = ""
+	}
 	if err := r.line(700*time.Millisecond, ""); err != nil {
 		return err
 	}
@@ -818,7 +833,11 @@ func (r *run) scene(s Scene, intro string) error {
 }
 
 func (r *run) intro(first *store) error {
-	if err := r.line(60*time.Millisecond, r.st.Header("deedglass health pilot", "synthetic data", "about 15 minutes to read")); err != nil {
+	meta := "about 15 minutes to read"
+	if r.o.Brief {
+		meta = "-v for every step"
+	}
+	if err := r.line(60*time.Millisecond, r.st.Header("deedglass health pilot", "synthetic data", meta)); err != nil {
 		return err
 	}
 	if err := r.line(0, ""); err != nil {
@@ -827,6 +846,9 @@ func (r *run) intro(first *store) error {
 	storeLine := "an in-memory FHIR R4 store inside this binary: synthetic records only\nnothing leaves this machine"
 	if first.kind == StoreSandbox {
 		storeLine = "your FHIR sandbox at " + hostOf(first.base) + " (scene 1), and the in-memory\nsynthetic store (scene 2); synthetic records only"
+	}
+	if r.o.Brief {
+		return r.lines(60*time.Millisecond, r.st.KV("  ", r.o.Width, ui.Row{Key: "store", Value: storeLine}))
 	}
 	return r.lines(60*time.Millisecond, r.st.KV("  ", r.o.Width,
 		ui.Row{Key: "pack", Value: fmt.Sprintf("%s %s, enforced; PHI mode on; lockdown on", r.res.Pack.Name, r.res.Pack.Version)},

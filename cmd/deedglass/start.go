@@ -101,7 +101,7 @@ func startNext(e *Env, live bool) [][2]string {
 // startReplay is the no-Docker path: the scene from internal/play, paced on a terminal.
 func startReplay(ctx context.Context, e *Env, why string) error {
 	next := startNext(e, false)
-	o := play.Options{Out: e.Stdout, Style: e.Style, Width: e.Width, Verbose: e.Globals.Verbose > 0}
+	o := play.Options{Out: e.Stdout, Style: e.Style, Width: e.Width, Verbose: e.Globals.Verbose > 0, Brief: e.Globals.Verbose == 0}
 	st := e.Style
 	if e.Globals.JSON {
 		o.Out = discard{}

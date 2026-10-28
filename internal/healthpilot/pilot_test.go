@@ -275,3 +275,25 @@ func TestFast(t *testing.T) {
 		t.Fatalf("a run took %s; the pilot must finish well inside 2 minutes", d)
 	}
 }
+
+// Brief (the CLI's default) keeps what happened in each scene and drops the rest.
+func TestBrief(t *testing.T) {
+	full, brief := fixed(t, RegionDefault), fixed(t, RegionDefault)
+	var a, b bytes.Buffer
+	full.Out, brief.Out, brief.Brief = &a, &b, true
+	if _, err := Run(context.Background(), full); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Run(context.Background(), brief); err != nil {
+		t.Fatal(err)
+	}
+	fl, bl := strings.Count(a.String(), "\n"), strings.Count(b.String(), "\n")
+	if bl*3 > fl*2 {
+		t.Errorf("brief is %d lines, full %d: want at most two thirds", bl, fl)
+	}
+	for _, want := range []string{"Doesn't match", "orders-need-clinician", "chain intact", "Deed 1 was changed", "-v for every step"} {
+		if !strings.Contains(b.String(), want) {
+			t.Errorf("brief output lost %q:\n%s", want, b.String())
+		}
+	}
+}

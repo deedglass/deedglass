@@ -243,3 +243,23 @@ func TestTamperChangesOneByte(t *testing.T) {
 		t.Fatal("tampered a record with no latency")
 	}
 }
+
+// Brief (the CLI's default) keeps one row a scene and still labels live and replayed lines.
+func TestBrief(t *testing.T) {
+	var a, b bytes.Buffer
+	if _, err := Run(context.Background(), Options{Out: &a}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Run(context.Background(), Options{Out: &b, Brief: true}); err != nil {
+		t.Fatal(err)
+	}
+	fl, bl := strings.Count(a.String(), "\n"), strings.Count(b.String(), "\n")
+	if bl*3 > fl*2 {
+		t.Errorf("brief is %d lines, full %d: want at most two thirds", bl, fl)
+	}
+	for _, want := range []string{"denied by block-destructive-sql", "changed 301 rows", "Restored 301 rows", "chain intact", "replay", "live"} {
+		if !strings.Contains(b.String(), want) {
+			t.Errorf("brief output lost %q:\n%s", want, b.String())
+		}
+	}
+}

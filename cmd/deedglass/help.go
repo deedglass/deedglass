@@ -77,7 +77,7 @@ var everyday = []struct{ Name, Summary string }{
 	{"app", "Open Deedglass in your browser"},
 	{"start", "See Deedglass catch an agent's wrong claim"},
 	{"protect", "Guard Claude Code, Cursor and other coding agents"},
-	{"mcp install-links", "Connect Claude Desktop, Cursor or VS Code"},
+	{"app connect", "Connect Claude Desktop, Cursor, VS Code and more"},
 	{"actions list", "See what your agents did"},
 	{"approvals list", "See what's waiting for you, then approve or deny"},
 	{"verify", "Check a locked record, offline"},

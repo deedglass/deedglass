@@ -163,6 +163,7 @@ builds it. Hidden commands work but aren't in `deedglass help`.
 |---|---|---|---|
 | `deedglass start [--dir .] [--fast] [--json]` | Setup | See it catch a wrong row count, no questions | built |
 | `deedglass app [--port 4180] [--no-open] [--stop] [--status] [--reset [--yes]] [--json]` | Setup | Open Deedglass in your browser, no setup | built |
+| `deedglass app connect [claude-desktop|cursor|vscode|terminal|openai|scribe|database] [--json]` | Setup | Connect a tool to the local app, or list them | built |
 | `deedglass init [--yes] [--dir .] [--client claude-code|claude-desktop|cursor|vscode|windsurf|sdk-python|sdk-typescript|none] [--listen 127.0.0.1:8080] [--pg-port 55432] [--policy postgres-check|postgres-safe] [--no-open] [--no-smoke] [--lockdown] [--stop] [--purge] [--trigger] [--quiet] [--json]` | Setup | Set up Deedglass in this directory | built |
 | `deedglass connect <postgres-url> [--name <connector>] [--schema public] [--tables a,b] [--policy postgres-safe|postgres-check] [--agent <name>] [--apply] [--confirm <database>] [--dsn-host host:port] [--json]` | Setup | Put your own Postgres behind Deedglass | built |
 | `deedglass protect [--dry-run] [--yes] [--undo] [--client <names>] [--project] [--hook-command <cmd>] [--json]` | Setup | Add the shell guard to every coding agent | built |

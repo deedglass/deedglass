@@ -2,14 +2,14 @@ exit 0
 --- stdout
 [38;5;69m◖[38;5;231m│[38;5;252m◗[0m [1;38;5;255mdeedglass[0m  [2msee what your AI agents did, and check it[0m
 
-  deedglass app                Open Deedglass in your browser
-  deedglass start              See Deedglass catch an agent's wrong claim
-  deedglass protect            Guard Claude Code, Cursor and other coding agents
-  deedglass mcp install-links  Connect Claude Desktop, Cursor or VS Code
-  deedglass actions list       See what your agents did
-  deedglass approvals list     See what's waiting for you, then approve or deny
-  deedglass verify             Check a locked record, offline
-  deedglass deeds export       Save your records to a file
+  deedglass app             Open Deedglass in your browser
+  deedglass start           See Deedglass catch an agent's wrong claim
+  deedglass protect         Guard Claude Code, Cursor and other coding agents
+  deedglass app connect     Connect Claude Desktop, Cursor, VS Code and more
+  deedglass actions list    See what your agents did
+  deedglass approvals list  See what's waiting for you, then approve or deny
+  deedglass verify          Check a locked record, offline
+  deedglass deeds export    Save your records to a file
 
 [2mEvery command: deedglass help all · one command: deedglass help <command>[0m
 --- stderr

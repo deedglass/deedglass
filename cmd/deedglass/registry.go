@@ -64,6 +64,9 @@ var commands = []*Command{
 	{Path: p("app"), Group: Setup, Summary: "Open Deedglass in your browser, no setup",
 		Usage: "[--port 4180] [--no-open] [--stop] [--status] [--reset [--yes]] [--json]", Flags: appFlags, Run: runApp,
 		Detail: "Starts Deedglass on this computer and opens it in your browser, signed in. No Docker, no account and no database to set up: it runs its own PostgreSQL in the app's folder (macOS ~/Library/Application Support/Deedglass, Linux ~/.config/deedglass, Windows %AppData%\\Deedglass; DEEDGLASS_APP_DIR moves it). It uses a PostgreSQL 16 or newer already on this computer, or downloads PostgreSQL 18.6 once (15 to 71 MB, checked against a pinned SHA-256); after that it works offline. DEEDGLASS_PG_BUNDLE installs that download from a file, for computers with no internet.\n\nThe app listens on 127.0.0.1 only, at port 4180 or a free one, and the sign-in link works once, on this computer. Running deedglass in a terminal with no command does the same. Press Ctrl+C to stop; your data stays. While it runs, every CLI command talks to it with no flags (deedglass approvals list, deedglass actions list).\n\n--stop stops it from another terminal. --status says whether it runs and where its data is. --reset deletes its data after asking (the PostgreSQL download is kept).\n\nExamples:\n  deedglass app\n  deedglass app --status\n  deedglass app --stop\n  deedglass app --reset"},
+	{Path: p("app", "connect"), Group: Setup, Summary: "Connect a tool to the local app, or list them",
+		Usage: "[claude-desktop|cursor|vscode|terminal|openai|scribe|database] [--json]", Run: runAppConnect, RawArgs: true,
+		Detail: "The app's Connect screen in the terminal. With no tool it lists each one and its status: not connected, waiting for its first action, or connected. With a tool it starts connecting it (an agent and a key file for it, once; terminal also adds the shell guard to your coding agents) and prints the link, command or config to finish with. Nothing it prints holds a key. Needs deedglass app running.\n\nExamples:\n  deedglass app connect\n  deedglass app connect cursor\n  deedglass app connect claude-desktop --json"},
 	{Path: p("init"), Group: Setup, Summary: "Set up Deedglass in this directory",
 		Usage: "[--yes] [--dir .] [--client claude-code|claude-desktop|cursor|vscode|windsurf|sdk-python|sdk-typescript|none] [--listen 127.0.0.1:8080] [--pg-port 55432] [--policy postgres-check|postgres-safe] [--no-open] [--no-smoke] [--lockdown] [--stop] [--purge] [--trigger] [--quiet] [--json]",
 		Flags: initFlags, Run: runInit,
@@ -428,7 +431,7 @@ var commands = []*Command{
 
 // lines is `deedglass help`: one row per command or family, in contract order.
 var lines = []Line{
-	{Name: "app", Group: Setup, Summary: "Open Deedglass in your browser, no setup", Paths: ps("app")},
+	{Name: "app", Group: Setup, Summary: "Open Deedglass in your browser, no setup", Paths: ps("app", "app connect"), Subs: []string{"connect"}},
 	{Name: "start", Group: Setup, Summary: "See it catch a wrong row count, no questions", Paths: ps("start")},
 	{Name: "init", Group: Setup, Summary: "Set up Deedglass in this directory", Paths: ps("init")},
 	{Name: "doctor", Group: Setup, Summary: "Check config, database and keys", Paths: ps("doctor")},
