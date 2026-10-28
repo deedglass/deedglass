@@ -267,7 +267,7 @@ func runActionsList(ctx context.Context, e *Env, args []string) error {
 	if len(list.Data) == 0 {
 		if p.Cursor == "" && len(actionsListValues.values(now)) == 1 { // only limit: no filters
 			fmt.Fprintln(e.Stdout, e.Style.UnknownLine("No actions yet in "+s.org.Slug+"."))
-			fmt.Fprintln(e.Stdout, "  next  In dev: DEEDGLASS_ENV=dev deedglass dev fake-action --n 20")
+			fmt.Fprintln(e.Stdout, "  next  "+emptyActionsNext(e))
 			return nil
 		}
 		fmt.Fprintln(e.Stdout, e.Style.UnknownLine("No actions match these filters."))
@@ -1177,4 +1177,13 @@ func ageWords(d time.Duration) string {
 		return fmt.Sprintf("%d %s", n, plural(n, "day", "days"))
 	}
 	return d.String()
+}
+
+// emptyActionsNext is the next step under an empty actions list: on the local app (deedglass app),
+// connect an AI tool; on a dev stack, seal some fake actions.
+func emptyActionsNext(e *Env) string {
+	if resolveServer(e).From == fromApp {
+		return "Connect an AI tool so its actions show here: " + invocation(e) + " app connect"
+	}
+	return "In dev: DEEDGLASS_ENV=dev deedglass dev fake-action --n 20"
 }

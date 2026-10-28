@@ -1,11 +1,16 @@
 package main
 
 import (
+	"bytes"
+	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
 	"testing"
+
+	"github.com/deedglass/deedglass/internal/localstore"
 )
 
 func TestAppDir(t *testing.T) {
@@ -54,6 +59,31 @@ func TestInteractive(t *testing.T) {
 	j.Globals.JSON = true
 	if interactive(j) {
 		t.Error("--json: bare deedglass must keep printing the welcome")
+	}
+}
+
+// deedglass app opens a browser only for a person at a terminal; scripts, pipes, CI, --json and
+// AI agents get the link printed instead.
+func TestAppMayOpen(t *testing.T) {
+	tty := func(m map[string]string) *Env {
+		return &Env{IsTTY: true, StdinTTY: true, Getenv: func(k string) string { return m[k] }}
+	}
+	if !mayOpen(tty(nil), false) {
+		t.Fatal("a terminal opens the browser")
+	}
+	if mayOpen(tty(nil), true) {
+		t.Error("--no-open must not open the browser")
+	}
+	if mayOpen(tty(map[string]string{"CI": "1"}), false) {
+		t.Error("CI must not open the browser")
+	}
+	j := tty(nil)
+	j.Globals.JSON = true
+	if mayOpen(j, false) {
+		t.Error("--json must not open the browser")
+	}
+	if mayOpen(&Env{IsTTY: false, Getenv: func(string) string { return "" }}, false) {
+		t.Error("piped output must not open the browser")
 	}
 }
 
@@ -147,5 +177,46 @@ func TestEverydayHelp(t *testing.T) {
 	r = cli(t, nil, false, "help", "all")
 	if r.code != 0 || !strings.Contains(r.stdout, "Policies") {
 		t.Fatalf("help all:\n%s", r.stdout)
+	}
+}
+
+// An empty actions list on the local app points at Connect, not at a dev-only command that needs a
+// database URL the app never exposes.
+func TestEmptyActionsNext(t *testing.T) {
+	dir := t.TempDir()
+	env := map[string]string{"DEEDGLASS_APP_DIR": dir}
+	e := &Env{Getenv: func(k string) string { return env[k] }}
+	if got := emptyActionsNext(e); !strings.Contains(got, "fake-action") {
+		t.Fatalf("no app: %q", got)
+	}
+	if err := writeAppState(dir, &appState{PID: os.Getpid(), Server: "http://127.0.0.1:4999", PGPort: 1}); err != nil {
+		t.Fatal(err)
+	}
+	if got := emptyActionsNext(e); !strings.Contains(got, "app connect") || strings.Contains(got, "DEEDGLASS_ENV") {
+		t.Fatalf("app running: %q", got)
+	}
+}
+
+// A bad DEEDGLASS_PG_BUNDLE (the offline path) says how to fix the file, not to set a proxy.
+func TestAppInstallBadBundle(t *testing.T) {
+	if _, ok := localstore.CurrentBundle(); !ok {
+		t.Skip("no ready-made PostgreSQL for this platform")
+	}
+	dir := t.TempDir()
+	jar := filepath.Join(dir, "pg.jar")
+	if err := os.WriteFile(jar, []byte("not a jar"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	env := map[string]string{"DEEDGLASS_PG_BUNDLE": jar, "DEEDGLASS_PG_SYSTEM": "off"}
+	var out, errb bytes.Buffer
+	e := &Env{Stdout: &out, Stderr: &errb, Getenv: func(k string) string { return env[k] }}
+	_, err := appInstall(context.Background(), e, localstore.New(filepath.Join(dir, "app"), e.Getenv))
+	var x *ExitError
+	if !errors.As(err, &x) {
+		t.Fatalf("want an ExitError, got %v", err)
+	}
+	all := out.String() + errb.String() + x.Error() + x.Next
+	if strings.Contains(all, "HTTPS_PROXY") || !strings.Contains(all, "DEEDGLASS_PG_BUNDLE") {
+		t.Fatalf("hint: %q", all)
 	}
 }

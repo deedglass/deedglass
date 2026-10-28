@@ -275,7 +275,7 @@ func printAct(ctx context.Context, e *Env, c *deedglass.Client, a *ledger.Action
 		head(s.Violet(ui.Pending), "pending approval")
 		fmt.Fprintln(e.Stdout, "  "+clean(gate.PendingMessage(ga, time.Local)))
 		if a.Approval != nil {
-			row("approval", shortID(a.Approval.ID))
+			row("approval", clean(a.Approval.ID)) // the full id: a person copies it into deedglass approve
 		}
 		next()
 	case ledger.StatusAuthorized:

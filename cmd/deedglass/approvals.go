@@ -93,7 +93,7 @@ func runApprovalsList(ctx context.Context, e *Env, args []string) error {
 		} else if a.DecidedAt != nil {
 			when = string(a.Status) + " " + ago(now, a.DecidedAt)
 		}
-		rows = append(rows, []string{sym, shortID(a.ID), a.Agent.Name, a.Tool, deref(a.RuleID), countersignWords(a), when})
+		rows = append(rows, []string{sym, clean(a.ID), a.Agent.Name, a.Tool, deref(a.RuleID), countersignWords(a), when}) // full ids: deedglass approve takes one
 	}
 	printColumns(e.Stdout, rows)
 	return nil

@@ -120,6 +120,13 @@ func interactive(e *Env) bool {
 	return e.IsTTY && e.StdinTTY && !e.Globals.JSON && e.Getenv("CI") == "" && !truthy(e.Getenv("DEEDGLASS_NO_APP"))
 }
 
+// mayOpen reports whether deedglass app may open the browser: a person's terminal, not --json, not
+// CI and not --no-open. A script, a pipe or an AI agent gets the sign-in link printed (in --json
+// as "link") and no browser window on someone's screen.
+func mayOpen(e *Env, noOpen bool) bool {
+	return !noOpen && e.IsTTY && !e.Globals.JSON && e.Getenv("CI") == ""
+}
+
 func runApp(ctx context.Context, e *Env, args []string) error {
 	if len(args) > 0 {
 		return usageErr(fmt.Errorf("deedglass app takes flags only (got %q)", args[0]), "Run deedglass app, or deedglass app --stop.")
@@ -170,9 +177,9 @@ func appStart(ctx context.Context, e *Env, dir string, v appOpts) error {
 			return appFail(e, "Deedglass is running at "+st.Server+", but a sign-in link couldn't be made: "+err.Error(), inv+" app --stop, then "+inv+" app")
 		}
 		if e.Globals.JSON {
-			return writeJSON(e, map[string]any{"object": "app", "running": true, "server": st.Server, "dir": dir, "already_running": true})
+			return writeJSON(e, map[string]any{"object": "app", "running": true, "server": st.Server, "dir": dir, "already_running": true, "link": link})
 		}
-		opened := !v.noOpen && openLink(link)
+		opened := mayOpen(e, v.noOpen) && openLink(link)
 		fmt.Fprintln(e.Stdout, s.Bold("Deedglass is already running at "+st.Server))
 		if !opened {
 			fmt.Fprintln(e.Stdout, "Open this link to sign in (it works once, on this computer): "+link)
@@ -284,9 +291,13 @@ func appStart(ctx context.Context, e *Env, dir string, v appOpts) error {
 
 	// 5. Sign the owner in and say three things.
 	link, lerr := appLoginLink(ctx, dir, env)
-	opened := lerr == nil && !v.noOpen && openLink(link)
+	opened := lerr == nil && mayOpen(e, v.noOpen) && openLink(link)
 	if e.Globals.JSON {
-		_ = writeJSON(e, map[string]any{"object": "app", "running": true, "server": server, "dir": dir, "pid": os.Getpid()})
+		out := map[string]any{"object": "app", "running": true, "server": server, "dir": dir, "pid": os.Getpid()}
+		if lerr == nil {
+			out["link"] = link
+		}
+		_ = writeJSON(e, out)
 	} else {
 		fmt.Fprintln(e.Stdout, s.Bold("Deedglass is running at "+server))
 		switch {
@@ -361,6 +372,10 @@ func appInstall(ctx context.Context, e *Env, ls *localstore.Store) (localstore.B
 	case errors.As(err, &de) && de.Offline:
 		return bins, appFail(e, "PostgreSQL couldn't be downloaded: this computer seems to be offline",
 			"Connect to the internet and run "+inv+" app again, or set DEEDGLASS_PG_BUNDLE to a copy of "+b.FileName()+".")
+	case err != nil && bundle != "":
+		// The offline path: a proxy hint would be beside the point.
+		return bins, appFail(e, "PostgreSQL couldn't be installed: "+err.Error(),
+			"Set DEEDGLASS_PG_BUNDLE to an unchanged copy of "+b.FileName()+" ("+b.URL()+"), then run "+inv+" app again.")
 	case err != nil:
 		return bins, appFail(e, "PostgreSQL couldn't be installed: "+err.Error(), "Run "+inv+" app again; a proxy can be set with HTTPS_PROXY.")
 	}
