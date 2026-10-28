@@ -37,7 +37,8 @@ for (const theme of ['light', 'dark']) {
     await p.locator('input[value="clinic"]').check();
     await shot('02-start-who');
 
-    await p.goto(base + '/app/connect?from=start');
+    await p.getByRole('button', { name: /continue to connect/i }).click(); // saves the clinic path, like a person would
+    await p.waitForURL(/\/app\/connect/);
     await shot('03-connect');
     await p.locator('[data-tile="cursor"]').first().click();
     await shot('04-connect-sheet-cursor', false);

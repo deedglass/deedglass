@@ -144,7 +144,9 @@ export function mountWaiting(host: HTMLElement): void {
     try {
       const page = await api<ListResponse<ApprovalFull>>('GET', '/v1/approvals', { query: { status: 'pending', limit: '50' } });
       const full = await Promise.all(sortPending(page.data).slice(0, 20).map((a) => (a.context ? Promise.resolve(a) : api<ApprovalFull>('GET', `/v1/approvals/${a.id}`).catch(() => a))));
-      list = full.filter((a) => a.status === 'pending');
+      // A request past its time can't be decided; the server's sweeper marks it expired. Leaving it out
+      // also keeps a countdown already at zero from asking for the list again and again.
+      list = full.filter((a) => a.status === 'pending' && !(Date.parse(a.expires_at) <= Date.now()));
       render();
     } catch (e) {
       if (e instanceof ApiError && e.status === 401) return;

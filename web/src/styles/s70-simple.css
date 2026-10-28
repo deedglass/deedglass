@@ -240,9 +240,6 @@
   color: var(--text-2);
   font-size: var(--type-footnote-size);
 }
-.fs-panel[hidden] {
-  display: none;
-}
 .fs-panel {
   animation: dialog-in var(--dur-reveal) var(--ease-enter);
 }
@@ -576,6 +573,7 @@
   border-radius: var(--radius-card);
   border: 1px solid var(--hairline);
   background: var(--surface-alt);
+  --text-2: var(--text-2-on-alt);
   overflow: hidden;
 }
 .sv-change > h3 {
