@@ -104,6 +104,45 @@ export function targetOf(request: unknown): Target {
   return { resource, record, sql: null };
 }
 
+// ---------- where a change goes, in words ----------
+
+/** PLACES names a connector type the way a person would (never the raw connector id). */
+const PLACES: Record<string, string> = {
+  postgres: 'PostgreSQL database', postgresql: 'PostgreSQL database', mysql: 'MySQL database',
+  fhir: 'Health record (FHIR)', ehr: 'Health record', emr: 'Health record', scribe: 'Visit notes (scribe)',
+  stripe: 'Stripe', github: 'GitHub', slack: 'Slack', gmail: 'Gmail', notion: 'Notion', email: 'Email',
+  rest: 'Web service', http: 'Web service', shell: 'Terminal', fake: 'Test connector', filesystem: 'Files',
+};
+
+/**
+ * placeOf says where a change goes: the connector type's display name when known, else the
+ * connector's own name in words ("orders_db" → "Orders db"). Health-sounding names read as a health
+ * record. The raw name stays in Technical details.
+ */
+export function placeOf(type: string | null | undefined, name: string | null | undefined): string {
+  const t = (type ?? '').toLowerCase();
+  if (t && PLACES[t]) return PLACES[t]!;
+  const n = (name ?? '').trim();
+  const key = n.toLowerCase();
+  if (PLACES[key]) return PLACES[key]!;
+  if (/(^|[_\-.])(ehr|emr|fhir)([_\-.]|$)/.test(key)) return PLACES.ehr!;
+  if (/(^|[_\-.])(pg|postgres|postgresql)([_\-.]|$)/.test(key)) return PLACES.postgres!;
+  return n ? cap(words(n)) : '';
+}
+
+const HEALTH_TYPES = new Set(['fhir', 'ehr', 'emr', 'scribe']);
+
+/** isHealth: the request writes a health record (FHIR/EHR/scribe), so the clinical note applies. */
+export function isHealth(a: Pick<ApprovalFull, 'tool' | 'context'>): boolean {
+  const ctx = a.context;
+  const type = (ctx?.action?.connector_type ?? '').toLowerCase();
+  if (HEALTH_TYPES.has(type)) return true;
+  if (type) return false; // a known non-health type (postgres, stripe…) never gets the clinical line
+  const name = (ctx?.action?.connector ?? a.tool.split('.')[0] ?? '').toLowerCase();
+  if (/(^|[_\-.])(fhir|ehr|emr|scribe)([_\-.]|$)/.test(name)) return true;
+  return targetOf(ctx?.args ?? null).resource !== null;
+}
+
 // ---------- the sentence ----------
 
 function words(s: string): string {
@@ -156,7 +195,7 @@ export function plainAction(a: ActionLike & Pick<Action, 'tool'>, request?: unkn
       base = fill(c.feed.forRecord, { what: base, target: t.record });
     } else if (!thing && a.tool.includes('.')) {
       // Nothing more to say about the record: at least say where ("Ran something in postgres").
-      const where = a.tool.slice(0, a.tool.indexOf('.'));
+      const where = placeOf(null, a.tool.slice(0, a.tool.indexOf('.')));
       past = fill(c.feed.inSystem, { what: past, where });
       base = fill(c.feed.inSystem, { what: base, where });
     }
@@ -204,9 +243,75 @@ export function decodeText(data: string, contentType: string): string | null {
 
 export interface Change {
   rows: ChangeRow[];
-  /** a long text the person reads before deciding (a note, an email body, a SQL statement) */
+  /** a long text the person reads before deciding (a note, an email body) */
   body: string | null;
   bodyMono: boolean;
+  /** the exact SQL statement, for Technical details (the plain rows above say what it does) */
+  statement?: string | null;
+}
+
+/** splitList splits a SQL list on top-level commas, keeping quoted strings and brackets whole. */
+export function splitList(s: string): string[] {
+  const out: string[] = [];
+  let cur = '';
+  let depth = 0;
+  let q: string | null = null;
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i]!;
+    if (q) {
+      cur += ch;
+      if (ch === q) {
+        if (s[i + 1] === q) cur += s[++i]!; // '' inside a string
+        else q = null;
+      }
+      continue;
+    }
+    if (ch === "'" || ch === '"') q = ch;
+    else if (ch === '(') depth++;
+    else if (ch === ')') depth--;
+    else if (ch === ',' && depth === 0) {
+      out.push(cur.trim());
+      cur = '';
+      continue;
+    }
+    cur += ch;
+  }
+  if (cur.trim()) out.push(cur.trim());
+  return out;
+}
+
+/** sqlValue shows a literal as a person reads it: 'Damaged' → Damaged; now() → now; NULL → empty. */
+export function sqlValue(v: string): string {
+  const t = v.trim();
+  const m = /^'((?:[^']|'')*)'(?:::[a-z_ ]+)?$/i.exec(t);
+  if (m) return m[1]!.replace(/''/g, "'");
+  if (/^null$/i.test(t)) return c.waiting.sqlEmpty;
+  if (/^(now|current_timestamp|current_date)(\(\))?$/i.test(t)) return c.waiting.sqlNow;
+  return t.replace(/"/g, '');
+}
+
+const COL = (x: string) => x.trim().replace(/"/g, '');
+
+/** sqlPairs reads the column → value pairs a single-row INSERT or an UPDATE … SET writes. */
+export function sqlPairs(sql: string): ChangeRow[] {
+  const ins = /^\s*insert\s+into\s+[^\s(]+\s*\(([^)]*)\)\s*values\s*\(([\s\S]*)\)\s*(?:returning\b[\s\S]*|on\s+conflict\b[\s\S]*)?;?\s*$/i.exec(sql);
+  if (ins) {
+    const cols = splitList(ins[1]!);
+    const vals = splitList(ins[2]!);
+    if (cols.length && cols.length === vals.length) return cols.map((col, i) => [COL(col), sqlValue(vals[i]!)] as ChangeRow);
+    return [];
+  }
+  const up = /^\s*update\s+\S+\s+set\s+([\s\S]*?)(?:\s+where\s+[\s\S]*|\s+returning\s+[\s\S]*)?;?\s*$/i.exec(sql);
+  if (up) {
+    const pairs: ChangeRow[] = [];
+    for (const part of splitList(up[1]!)) {
+      const eq = part.indexOf('=');
+      if (eq <= 0) return [];
+      pairs.push([COL(part.slice(0, eq)), sqlValue(part.slice(eq + 1))]);
+    }
+    return pairs;
+  }
+  return [];
 }
 
 /** changeOf lists exactly what an approval will write, from S22's server-computed context. */
@@ -231,9 +336,13 @@ export function changeOf(a: Pick<ApprovalFull, 'context' | 'tool'>): Change {
   if (sql) {
     const tables = ctx?.sql?.tables?.length ? ctx.sql.tables.join(', ') : sqlTable(sql);
     if (tables) rows.push([f.table!, tables]);
+    const kind = sqlKind(sql);
+    const what = c.waiting.sqlKinds[kind];
+    if (what) rows.push([f.change!, what]);
     const est = ctx?.sql?.estimate?.rows;
     if (typeof est === 'number') rows.push([f.rows!, fill(c.waiting.aboutRows, { n: est })]);
-    return { rows, body: sql, bodyMono: true };
+    for (const pair of sqlPairs(sql).slice(0, 12)) rows.push([cap(words(pair[0])), pair[1]]);
+    return { rows, body: null, bodyMono: false, statement: sql };
   }
   const res = obj(args.resource) ?? obj(args.body) ?? (str(args.resourceType) ? args : null);
   if (res) {

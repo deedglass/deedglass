@@ -105,7 +105,7 @@ const bottom = DESTS.filter((d) => (BOTTOM as readonly string[]).includes(d.key)
             </nav>
           )}
           <span id="stop-slot"></span>
-          <span class="conn hide-sm" id="conn" data-state="connecting"><span class="glyph" aria-hidden="true"></span><span id="conn-label">{copy.connection.connecting}</span></span>
+          <span class="conn hide-sm" id="conn" data-state="connecting"><span class="glyph" aria-hidden="true"></span><span id="conn-label">{copy.connection.connecting}</span><button type="button" class="btn btn-quiet btn-sm" id="conn-retry" hidden>{copy.connection.retry}</button></span>
           <span class="hide-sm"><IconButton icon="moon" id="theme-btn" label={copy.topbar.theme} /></span>
           <button type="button" class="icon-btn" id="account-btn"><span class="sr-only" id="account-name">{copy.topbar.account}</span><span class="avatar" id="avatar" aria-hidden="true"></span></button>
         </header>

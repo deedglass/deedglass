@@ -119,6 +119,56 @@ test('Waiting for you: the exact change first, large buttons, decline needs a re
   await done();
 });
 
+test('Waiting for you in plain words: friendly place, no ids or SQL up top, the right note, one navigation', async ({ page }) => {
+  const ap = await pendingRefund(); // INSERT INTO public.refunds … on behalf of u_4821
+  const done = await guard(page);
+  await page.goto('/app/simple?show=waiting');
+  const card = page.locator(`.sv-card[data-approval="${ap.approval}"]`);
+  await expect(card).toBeVisible();
+  const change = card.locator('.sv-change');
+  await expect(change).toContainText('public.refunds');
+  await expect(change).toContainText('Add rows');
+  await expect(change).toContainText('Damaged in transit');
+  await expect(change).not.toContainText('INSERT INTO');
+  const facts = card.locator('.sv-facts');
+  await expect(facts).toContainText('PostgreSQL database');
+  await expect(facts).not.toContainText('u_4821');
+  await expect(card.locator('.sv-note')).toHaveAttribute('data-note', 'neutral');
+  await expect(card.locator('.sv-note')).not.toContainText('medicine');
+  await card.locator('.sv-tech summary').click();
+  await expect(card.locator('.sv-tech')).toContainText('u_4821');
+  await expect(card.locator('.sv-tech pre')).toContainText('INSERT INTO public.refunds');
+  // 1280 px: the sidebar names the panels, so the segmented tabs are not shown as well.
+  await expect(page.locator('#sv-tabs')).toBeHidden();
+  await expect(page.locator('.nav-simple a[data-nav="waiting"]')).toHaveAttribute('aria-current', 'page');
+  await page.setViewportSize({ width: 900, height: 800 }); // the icon rail: the tabs carry the labels
+  await expect(page.locator('#sv-tabs')).toBeVisible();
+  await done();
+});
+
+test('the live line: never stuck on Connecting; a stream that never starts reads as paused with Retry', async ({ page }) => {
+  await page.route('**/v1/events*', () => { /* never answers */ });
+  await page.goto('/app/simple');
+  const conn = page.locator('#conn');
+  await expect(conn).toHaveAttribute('data-state', 'connecting');
+  await expect(conn).toHaveAttribute('data-state', 'paused', { timeout: 15_000 });
+  await expect(page.locator('#conn-label')).toHaveText('Live updates paused');
+  await page.locator('#conn-retry').click(); // reconnects now: the line leaves the paused state
+  await expect(conn).toHaveAttribute('data-state', /connecting|reconnecting/);
+  await page.unroute('**/v1/events*');
+  await expect(conn).toHaveAttribute('data-state', 'live', { timeout: 15_000 });
+  await expect(page.locator('#conn-retry')).toBeHidden();
+});
+
+test('the sidebar surface runs the full height of a long page', async ({ page }) => {
+  await page.goto('/app/simple');
+  await page.evaluate(() => { const d = document.createElement('div'); d.style.height = '3000px'; document.querySelector('main')!.append(d); });
+  const bg = await page.evaluate(() => getComputedStyle(document.querySelector('.shell')!).backgroundImage);
+  expect(bg).toContain('linear-gradient');
+  const shellH = await page.evaluate(() => document.querySelector('.shell')!.getBoundingClientRect().height);
+  expect(shellH).toBeGreaterThan(3000);
+});
+
 test('Locked records: check in the browser and download for an auditor', async ({ page }) => {
   const done = await guard(page);
   await page.goto('/app/simple?show=records');

@@ -26,6 +26,7 @@
 }
 [data-mode=bare] .shell {
   grid-template-columns: minmax(0, 1fr);
+  background: none;
 }
 [data-mode=bare] .sidebar,
 [data-mode=bare] .bottombar {
@@ -423,12 +424,15 @@
 .sv-tabs {
   margin: 0 0 var(--space-6);
 }
+
 .sv-tabs a {
   height: 34px;
   padding: 0 var(--space-4);
   font-size: 14px;
 }
-@media (max-width: 767.98px) {
+/* One navigation at a time: the sidebar names the three panels from 1024 px, the bottom bar below
+   768 px; the segmented tabs only fill the gap where the sidebar is a label-less icon rail. */
+@media (max-width: 767.98px), (min-width: 1024px) {
   .segmented.sv-tabs {
     display: none;
   }

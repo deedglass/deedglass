@@ -175,18 +175,28 @@ function renderBanners(s: State | null, offline: boolean): void {
 }
 
 // ---------- connection line ----------
-function renderConn(st: StreamState, retryIn: number): void {
+/** PAUSE_AFTER_MS: a first connection still not live after this long reads as paused, with Retry. */
+export const PAUSE_AFTER_MS = 10_000;
+
+/**
+ * renderConn draws the live line. A stream that never got going (connecting too long) or that
+ * ended reads as a calm "Live updates paused" with a Retry button, never a stuck "Connecting".
+ */
+export function renderConn(st: StreamState, retryIn: number, stalled = false): void {
   const el = maybe('conn');
   if (!el) return;
-  el.setAttribute('data-state', st);
+  const paused = st === 'ended' || (st === 'connecting' && stalled);
+  el.setAttribute('data-state', paused ? 'paused' : st);
   const label = maybe('conn-label');
-  const text = st === 'live' ? copy.connection.live
+  const text = paused ? copy.connection.paused
+    : st === 'live' ? copy.connection.live
     : st === 'reconnecting' ? fill(copy.connection.reconnecting, { s: Math.max(1, retryIn) })
     : st === 'offline' ? copy.connection.offlineShort
-    : st === 'ended' ? copy.connection.ended
     : copy.connection.connecting;
   if (label) label.textContent = text;
-  el.setAttribute('title', st === 'offline' ? copy.connection.offline : text);
+  const retry = maybe('conn-retry');
+  if (retry) retry.hidden = !paused;
+  el.setAttribute('title', paused ? copy.connection.pausedTitle : st === 'offline' ? copy.connection.offline : text);
 }
 
 // ---------- approvals badge ----------
@@ -380,9 +390,12 @@ export function bootShell(o: ShellOptions): void {
       // Live: the connection line, the badge, and the org's Stop all state.
       const live = stream();
       let tick = 0;
+      let stall = 0;
       const show = (st: StreamState) => {
         renderConn(st, live.retryIn());
         clearInterval(tick);
+        clearTimeout(stall);
+        if (st === 'connecting') stall = window.setTimeout(() => { if (live.state() === 'connecting') renderConn('connecting', 0, true); }, PAUSE_AFTER_MS);
         if (st === 'reconnecting') tick = window.setInterval(() => renderConn('reconnecting', live.retryIn()), 1000);
         if (st === 'offline') {
           offline = true;
@@ -394,6 +407,10 @@ export function bootShell(o: ShellOptions): void {
       };
       show(live.state());
       live.onState(show);
+      maybe('conn-retry')?.addEventListener('click', () => {
+        live.retry();
+        show(live.state());
+      });
       void refreshBadge();
       live.on('approval.*', () => {
         clearTimeout(badgeTimer);

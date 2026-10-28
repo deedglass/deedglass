@@ -8,7 +8,7 @@ import { fill } from '../lib/copy.ts';
 import { simpleCopy as sc } from '../lib/copy-simple.ts';
 import { h, icon, replace, type Child } from '../lib/dom.ts';
 import { dateTime, number, when } from '../lib/format.ts';
-import { ICON, TONE, matchesFilter, plainAction, type Filter, type Plain, type Result } from '../lib/models/simple.ts';
+import { ICON, TONE, matchesFilter, placeOf, plainAction, type Filter, type Plain, type Result } from '../lib/models/simple.ts';
 import { get } from '../lib/state.ts';
 import { stream } from '../lib/stream.ts';
 import type { Action, ActionDetail, ListResponse, Overview } from '../lib/types.ts';
@@ -90,7 +90,7 @@ export function mountFeed(host: HTMLElement): void {
   const details = (a: Action, p: Plain): Child[] => {
     const ex = extra.get(a.id);
     const happened = ex?.summary || a.decision?.message || a.decision?.reason || a.execution?.error_message || c.result[p.result]!;
-    const where = a.connector ?? a.tool.split('.')[0] ?? '';
+    const where = placeOf(null, a.connector ?? a.tool.split('.')[0] ?? '');
     return [
       kv([[c.happened, happened], [c.record, p.record ?? ''], [c.where, where], [c.when, dateTime(a.created_at, tz())], [c.toolLabel, h('span', { class: 'mono', translate: 'no' }, a.tool)]]),
       h('a', { href: `/app/actions/${a.id}`, class: 'btn btn-secondary btn-sm' }, c.allDetails, icon('arrow-right', 16)),

@@ -10,10 +10,10 @@ import { simpleCopy as sc } from '../lib/copy-simple.ts';
 import { h, icon } from '../lib/dom.ts';
 import { relative } from '../lib/format.ts';
 import { sortPending, type ApprovalFull } from '../lib/models/approval.ts';
-import { changeOf, headlineOf, resultOf } from '../lib/models/simple.ts';
+import { changeOf, headlineOf, isHealth, placeOf, resultOf } from '../lib/models/simple.ts';
 import { stream } from '../lib/stream.ts';
 import type { Action, ListResponse } from '../lib/types.ts';
-import { kv } from './components.ts';
+import { codeBlock, kv } from './components.ts';
 import { Countdown } from './countdown.ts';
 import { openDecisionSheet, type Vote } from './decisionsheet.ts';
 import { announce } from './shell.ts';
@@ -28,8 +28,13 @@ const LABELS = {
   approveReason: c.approveReason, denyReason: c.declineReason,
 };
 
+function connectorOf(a: ApprovalFull): string {
+  return a.context?.action?.connector ?? a.tool.split('.')[0] ?? '';
+}
+
+/** whereOf names the place in words (the raw connector id goes to Technical details). */
 function whereOf(a: ApprovalFull): string {
-  return a.context?.action.connector ?? a.tool.split('.')[0] ?? '';
+  return placeOf(a.context?.action?.connector_type, connectorOf(a));
 }
 
 export function mountWaiting(host: HTMLElement): void {
@@ -49,7 +54,7 @@ export function mountWaiting(host: HTMLElement): void {
       ch.body ? h(ch.bodyMono ? 'pre' : 'div', { class: `body${ch.bodyMono ? ' mono' : ''}`, tabindex: 0 }, ch.body) : null);
     const cd = Countdown(a.expires_at, { onExpire: () => void refresh() });
     const facts = kv([
-      [c.who, a.agent.name + (a.context?.on_behalf_of ? ` · ${a.context.on_behalf_of}` : '')],
+      [c.who, a.agent.name],
       [c.where, whereOf(a)],
       [c.why, a.reason ?? a.context?.policy.reason ?? a.rule_id ?? ''],
       [c.expires, cd.el],
@@ -69,13 +74,21 @@ export function mountWaiting(host: HTMLElement): void {
         h('button', { type: 'button', class: 'btn btn-danger-outline btn-xl', 'data-decide': 'deny', onclick: () => decide('deny') }, c.decline))
       : h('p', { class: 't-2' }, a.you?.why_not ?? c.notEligible);
     const tech = h('details', { class: 'sv-tech' }, h('summary', null, c.technical),
-      kv([[c.tech.tool, h('span', { class: 'mono', translate: 'no' }, a.tool)], [c.tech.rule, a.rule_id ?? ''], [c.tech.approval, h('a', { href: `/app/approvals/${a.id}` }, a.id)]]));
+      kv([
+        [c.tech.tool, h('span', { class: 'mono', translate: 'no' }, a.tool)],
+        [c.tech.connector, h('span', { class: 'mono', translate: 'no' }, connectorOf(a))],
+        [c.tech.agent, h('span', { class: 'mono', translate: 'no' }, a.agent.id)],
+        [c.tech.onBehalf, a.context?.on_behalf_of ? h('span', { class: 'mono', translate: 'no' }, a.context.on_behalf_of) : ''],
+        [c.tech.rule, a.rule_id ?? ''],
+        [c.tech.approval, h('a', { href: `/app/approvals/${a.id}` }, a.id)],
+      ]),
+      ch.statement ? codeBlock(c.tech.statement, ch.statement, c.tech.statement) : null);
     el.append(
       h('div', { class: 'sv-card-head' },
         h('div', null, h('div', { class: 'meta' }, `${whereOf(a)} · ${relative(a.created_at)}`), h('h2', { id: hid }, title)),
         resultPill('waiting')),
       change, facts, buttons, tech,
-      h('p', { class: 'sv-note' }, icon('info', 16), c.nonClinical));
+      h('p', { class: 'sv-note', 'data-note': isHealth(a) ? 'health' : 'neutral' }, icon('info', 16), isHealth(a) ? c.nonClinical : c.neutralNote));
     return el;
   };
 
@@ -89,7 +102,7 @@ export function mountWaiting(host: HTMLElement): void {
       announce(c.declinedDone);
       return;
     }
-    const steps = c.approvedSteps.map((t, i) => h('li', { 'data-step': i }, h('span', { class: 'mark', 'aria-hidden': 'true' }, icon('check', 16)), fill(t, { where: res.context?.action.connector ?? res.tool.split('.')[0] ?? '' })));
+    const steps = c.approvedSteps.map((t, i) => h('li', { 'data-step': i }, h('span', { class: 'mark', 'aria-hidden': 'true' }, icon('check', 16)), fill(t, { where: whereOf(res) })));
     const ol = h('ol', { class: 'sv-follow', 'aria-label': c.approve }, ...steps);
     const outcome = h('div', { class: 'sv-outcome', role: 'status', 'aria-live': 'polite' });
     el.replaceChildren(...[head, keep].filter(Boolean) as Node[], ol, outcome);

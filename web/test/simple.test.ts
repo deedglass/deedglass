@@ -1,7 +1,7 @@
 // DL-143: the Simple view's pure model on real captured answers (test/fixtures) and small literals.
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { changeOf, decodeText, headlineOf, matchesFilter, opOf, plainAction, plainRef, resultOf, sqlKind, sqlTable, stripTags, targetOf, TONE, ICON, type Result } from '../src/lib/models/simple.ts';
+import { changeOf, decodeText, headlineOf, isHealth, matchesFilter, placeOf, sqlPairs, splitList, opOf, plainAction, plainRef, resultOf, sqlKind, sqlTable, stripTags, targetOf, TONE, ICON, type Result } from '../src/lib/models/simple.ts';
 import { simpleCopy } from '../src/lib/copy-simple.ts';
 import { iconNames } from '../src/icons/names.gen.ts';
 import { choosePath, getPath, getView, hasStarted, setView, viewFor } from '../src/lib/theme.ts';
@@ -66,7 +66,7 @@ describe('the record and the sentence', () => {
     expect(want.text.startsWith('Wants to')).toBe(true);
     expect(want.text).toContain('Patient 7');
     expect(plainAction(fx('action-denied.json')).text.startsWith('Tried to')).toBe(true);
-    expect(plainAction({ ...base, tool: 'postgres.execute' } as never).text).toBe('Ran something in postgres');
+    expect(plainAction({ ...base, tool: 'postgres.execute' } as never).text).toBe('Ran something in PostgreSQL database');
   });
   it('never writes a dash, an exclamation mark or markup', () => {
     for (const n of ['action-verified-l2.json', 'action-mismatch-l2.json', 'action-denied.json', 'action-failed.json', 'action-unverifiable.json']) {
@@ -80,9 +80,15 @@ describe('what an approval will change', () => {
   it('shows the exact SQL and the table on a real approval', () => {
     const ap = fx('s26/approval.json');
     const ch = changeOf(ap);
-    expect(ch.bodyMono).toBe(true);
-    expect(ch.body).toBe(ap.context.args.sql);
+    // Simple view: the plain summary up top, the statement itself only under Technical details.
+    expect(ch.body).toBeNull();
+    expect(ch.statement).toBe(ap.context.args.sql);
     expect(ch.rows[0]).toEqual([simpleCopy.waiting.fields.table, 'public.refunds']);
+    expect(ch.rows).toContainEqual([simpleCopy.waiting.fields.change, 'Add rows']);
+    expect(ch.rows).toContainEqual(['Reason', 'Damaged in transit']);
+    expect(ch.rows).toContainEqual(['Amount cents', '12000']);
+    expect(ch.rows).toContainEqual(['Created at', simpleCopy.waiting.sqlNow]);
+    expect(ch.rows.some(([, v]) => /INSERT/i.test(v))).toBe(false);
     expect(headlineOf(ap)).toBe(`${ap.agent.name}: wants to add rows to public.refunds`);
   });
   it('reads a FHIR resource, its note and its narrative as text', () => {
@@ -90,6 +96,27 @@ describe('what an approval will change', () => {
     expect(ch.rows).toContainEqual([simpleCopy.waiting.fields.patient, 'Patient 7']);
     expect(ch.rows).toContainEqual([simpleCopy.waiting.fields.value, '72 bpm']);
     expect(ch.body).toBe('Rate 72 & steady');
+  });
+  it('reads UPDATE pairs, quoted commas and doubled quotes; gives up on shapes it cannot read', () => {
+    expect(sqlPairs("UPDATE public.orders SET status = 'held, for now', note = 'it''s late' WHERE id = 7")).toEqual([['status', 'held, for now'], ['note', "it's late"]]);
+    expect(sqlPairs('INSERT INTO t (a, b) VALUES (1)')).toEqual([]);
+    expect(sqlPairs('DELETE FROM t WHERE id = 1')).toEqual([]);
+    expect(splitList("1, 'a,b', f(2, 3)")).toEqual(['1', "'a,b'", 'f(2, 3)']);
+  });
+  it('names where a change goes in words, never the raw connector id', () => {
+    expect(placeOf('postgres', 'postgres')).toBe('PostgreSQL database');
+    expect(placeOf('fhir', 'ehr')).toBe('Health record (FHIR)');
+    expect(placeOf(null, 'ehr')).toBe('Health record');
+    expect(placeOf(null, 'orders_db')).toBe('Orders db');
+    expect(placeOf(null, '')).toBe('');
+  });
+  it('the clinical note belongs to health items only', () => {
+    const ap = fx('s26/approval.json');
+    expect(isHealth(ap)).toBe(false); // postgres refunds
+    expect(isHealth({ tool: 'ehr.create', context: { action: { connector: 'ehr', connector_type: null }, args: {} } } as never)).toBe(true);
+    expect(isHealth({ tool: 'fhir.create', context: { action: { connector: 'x', connector_type: 'fhir' }, args: {} } } as never)).toBe(true);
+    expect(isHealth({ tool: 'emr.write', context: { args: { resource: { resourceType: 'Observation' } } } } as never)).toBe(true);
+    expect(isHealth({ tool: 'stripe.create_refund', context: { action: { connector: 'stripe', connector_type: 'stripe' }, args: {} } } as never)).toBe(false);
   });
   it('reads email and refund previews', () => {
     expect(changeOf({ tool: 'gmail.send', context: { args: {}, sections: { email_preview: { to: 'a@b.test', subject: 'Hi', body: 'Text' } } } } as never)).toEqual({ rows: [[simpleCopy.waiting.fields.to, 'a@b.test'], [simpleCopy.waiting.fields.subject_line, 'Hi']], body: 'Text', bodyMono: false });
