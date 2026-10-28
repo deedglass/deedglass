@@ -370,7 +370,7 @@ The core, the SDKs and the CLI are Apache-2.0. The features in `ee/` are FSL-1.1
 FSL-1.1-ALv2 lets you read, run and change `ee/` for anything except offering a competing product
 ([`ee/LICENSE`](ee/LICENSE)); everything Deedglass does for safety is free and outside `ee/`
 ([`docs/LICENSING.md`](docs/LICENSING.md)). The rest is [`LICENSE`](LICENSE); third-party notices
-are in [`NOTICE`](NOTICE).
+are in [`NOTICE`](NOTICE). Forks are welcome under a new name: [`TRADEMARKS.md`](TRADEMARKS.md).
 
 The record spec ([`spec/`](spec/): the deed format and the export bundle) and the intent-vs-effect
 corpus ([`corpus/`](corpus/)) are published under CC-BY-4.0, so anyone can implement, copy or
