@@ -7,6 +7,7 @@ import Icon from '../components/Icon.astro';
 import IconButton from '../components/IconButton.astro';
 import Mirror from '../components/Mirror.astro';
 import { asset } from '../lib/assets.ts';
+import { WORDMARK } from '../lib/wordmark.ts';
 import { copy } from '../lib/copy.ts';
 import { simpleCopy } from '../lib/copy-simple.ts';
 import { BOTTOM, DESTS, SIMPLE_DESTS, SIMPLE_SHORT } from '../lib/nav.ts';
@@ -53,7 +54,7 @@ const bottom = DESTS.filter((d) => (BOTTOM as readonly string[]).includes(d.key)
       <aside class="sidebar" aria-label={copy.nav.label}>
         <a class="brand" href="/app" aria-label="Deedglass Console, Overview">
           <Mirror size={20} state="open" />
-          <span class="wordmark" aria-hidden="true">{copy.wordmark}</span>
+          <svg class="wordmark" viewBox={`0 -${WORDMARK.asc} ${WORDMARK.width} ${WORDMARK.asc - WORDMARK.desc}`} width={(WORDMARK.width * 8.4 / WORDMARK.xh).toFixed(1)} height={((WORDMARK.asc - WORDMARK.desc) * 8.4 / WORDMARK.xh).toFixed(1)} aria-hidden="true" focusable="false"><path fill="currentColor" d={WORDMARK.d} /></svg>
         </a>
         {showDetailed && (
         <nav class="nav nav-detailed" aria-label={copy.nav.label}>

@@ -128,9 +128,8 @@ body {
 }
 
 .wordmark {
-  font-weight: 600;
-  letter-spacing: -0.04em;
-  font-size: 18px;
+  /* logo v2 (DL-144): the outlined wordmark, currentColor */
+  display: block;
   color: var(--text);
   text-decoration: none;
 }
