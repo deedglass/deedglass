@@ -566,7 +566,7 @@ WCAG 2.2 AA (4.5:1) for every text pair, checked by script in the token build (S
 - Body: weights 400 to 450, normal tracking. Hierarchy through weight and colour before size.
 - Website body line length: about 65 characters; docs column 760px.
 - Machine values are mono, human words are Inter. Never set a sentence in mono to look technical.
-- The wordmark is always lowercase `deedglass`, Inter Semibold, tracking -0.04em.
+- The wordmark is always lowercase `deedglass`: custom outlines drawn from Inter (logo v2, DL-144, brand §5), never set in a font.
 
 ## Layout
 

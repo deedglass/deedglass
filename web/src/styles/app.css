@@ -253,10 +253,9 @@ table {
   text-decoration: none;
 }
 .wordmark {
-  font-weight: 600;
-  letter-spacing: -0.045em;
-  font-size: 17px;
-  line-height: 1;
+  /* logo v2 (DL-144): the outlined wordmark, currentColor */
+  display: block;
+  flex: none;
 }
 .nav {
   display: flex;

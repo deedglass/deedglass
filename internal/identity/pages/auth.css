@@ -42,11 +42,11 @@ body {
 }
 
 /* Mark and wordmark */
-.brand { display: flex; align-items: center; gap: 10px; margin-bottom: 24px; }
+.brand { display: flex; align-items: center; gap: 8px; margin-bottom: 24px; }
 .mark { display: block; flex: none; }
 .mark-right { fill: var(--mark-right); fill-opacity: var(--mark-right-opacity); }
 .mark-pane { fill: var(--mark-pane); fill-opacity: var(--mark-pane-opacity); }
-.wordmark { font-size: 18px; font-weight: 600; letter-spacing: -0.04em; line-height: 1; }
+.wordmark { display: block; flex: none; color: var(--text); } /* logo v2: outlined, x-height 0.44 D, 0.35 D from the orb */
 
 /* Text */
 h1 {
