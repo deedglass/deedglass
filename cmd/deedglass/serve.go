@@ -35,6 +35,7 @@ import (
 	"github.com/deedglass/deedglass/internal/ids"
 	"github.com/deedglass/deedglass/internal/learn"
 	"github.com/deedglass/deedglass/internal/ledger"
+	"github.com/deedglass/deedglass/internal/localapi"
 	"github.com/deedglass/deedglass/internal/mailer"
 	"github.com/deedglass/deedglass/internal/mcp/upstream"
 	"github.com/deedglass/deedglass/internal/notify"
@@ -405,7 +406,7 @@ func runServe(ctx context.Context, e *Env, args []string) error {
 	// S25: GET /v1/overview, with S11's usage counters and the decoder's lag threshold.
 	ov := console.NewOverview(console.OverviewOptions{Ledger: led, Usage: console.UsageFromStore(policystore.NewUsage(db)),
 		SlotLagAlertBytes: int64(cfg.SlotLagAlertMB) << 20, Log: log})
-	api.Mount(serveRoutes(api, db, ms, sk, led, people, keys, pol, gp, mw, cw, aps, whs, ua, &liveWiring{hub: hub, con: con, ov: ov, ins: ins, obs: oa, spa: spa, wk: wk,
+	api.Mount(serveRoutes(api, db, ms, sk, led, people, keys, pol, gp, mw, cw, aps, whs, ua, &liveWiring{hub: hub, con: con, ov: ov, ins: ins, obs: oa, spa: spa, wk: wk, local: localWiring(e, people, db),
 		slack: &slacknotify.Handler{Store: slackstore.DB{DB: db}, Conns: cw.reg, Approvals: aps, Log: log}})...)
 	ln, err := net.Listen("tcp", cfg.Listen)
 	if err != nil {
@@ -560,6 +561,8 @@ func serveRoutes(api *httpx.Server, db *store.DB, ms []migrate.Migration, sk *se
 	}
 	routes = append(routes, weeklyapi.Routes(lw.wk.api)...)
 	routes = append(routes, agency.Routes(lw.wk.agency)...)
+	// DL-143: the local app's first-run state and Connect (404 on any serve but deedglass app).
+	routes = append(routes, localapi.Routes(lw.local)...)
 	if lw.con == nil {
 		c, err := console.New(console.Options{Sessions: people})
 		if err != nil {
@@ -607,6 +610,7 @@ type liveWiring struct {
 	obs   *observeapi.API      // S50
 	spa   *securitypackapi.API // S51
 	wk    *weeklyWiring        // S52
+	local *localapi.API        // DL-143: only inside deedglass app
 }
 
 // insights is S27's wiring.

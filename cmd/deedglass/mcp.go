@@ -23,6 +23,7 @@ import (
 	"github.com/deedglass/deedglass/internal/connector"
 	"github.com/deedglass/deedglass/internal/connector/postgres"
 	"github.com/deedglass/deedglass/internal/identity"
+	"github.com/deedglass/deedglass/internal/localapi"
 	"github.com/deedglass/deedglass/internal/mcp/bridge"
 	"github.com/deedglass/deedglass/internal/mcp/front"
 	"github.com/deedglass/deedglass/internal/mcp/snippet"
@@ -300,7 +301,7 @@ func runMCPSnippet(ctx context.Context, e *Env, args []string) error {
 
 // --- mcp serve (S15) ---
 
-var mcpServeConnector, mcpServeToolNames string
+var mcpServeConnector, mcpServeToolNames, mcpServeClient string
 
 // mcpServeHelp is `deedglass mcp serve --help` after Usage.
 const mcpServeHelp = `
@@ -331,14 +332,18 @@ Learn more: https://docs.deedglass.com/mcp
 `
 
 func mcpServeFlags(fs *flag.FlagSet) {
-	mcpServeConnector, mcpServeToolNames = "", ""
+	mcpServeConnector, mcpServeToolNames, mcpServeClient = "", "", ""
 	fs.StringVar(&mcpServeConnector, "connector", "native", "native, or the name of an upstream MCP server (mcp.upstreams)")
 	fs.StringVar(&mcpServeToolNames, "tool-names", "", "how tools/list spells tools: safe (postgres_query, default) or dotted (postgres.query, deprecated)")
+	fs.StringVar(&mcpServeClient, "client", "", "the Connect item this client was added from in deedglass app (claude-desktop, cursor, vscode, terminal, openai); its key comes from the app")
 }
 
 func runMCPServe(ctx context.Context, e *Env, args []string) error {
 	if len(args) > 0 {
 		return usageErr(fmt.Errorf("deedglass mcp serve takes no arguments (got %q)", args[0]), "Run deedglass help mcp serve.")
+	}
+	if mcpServeClient != "" && !slices.Contains(localapi.Clients, mcpServeClient) {
+		return usageErr(fmt.Errorf("--client takes %s (got %q)", strings.Join(localapi.Clients, ", "), mcpServeClient), "Copy the config again from Connect in deedglass app.")
 	}
 	server, key := mcpServeTarget(e)
 	u, err := url.Parse(strings.TrimSuffix(server, "/"))
@@ -473,6 +478,15 @@ func mcpServeTarget(e *Env) (server, key string) {
 			key = fileKey
 		}
 		return true
+	}
+	// Added from the local app's Connect screen (DL-143): that client's own agent key, sent only to
+	// the app's own address.
+	if slices.Contains(localapi.Clients, mcpServeClient) {
+		if ad, err := appDir(e); err == nil {
+			if loc := readAppLocal(ad); loc.Address != "" && pick(loc.Address, setup.ReadKeyFile(localapi.AgentKeyPath(ad, mcpServeClient))) {
+				return server, key
+			}
+		}
 	}
 	if dir := findInitDir(workDir(e), e.Getenv("HOME"), setup.AgentKeyFile); dir != "" {
 		k, _ := setup.ReadSecretFile(dir, setup.AgentKeyFile)

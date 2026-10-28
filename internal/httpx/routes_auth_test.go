@@ -289,6 +289,9 @@ func sweepPlaceholder(t *testing.T, pattern, name, prev string) string {
 	case "dtx":
 		return newID(ids.DecodedTx)
 	case "id":
+		if prev == "connect" {
+			return "cursor" // S53: a Connect item, not an id
+		}
 		if p, ok := sweepIDPrefix[prev]; ok {
 			return newID(p)
 		}

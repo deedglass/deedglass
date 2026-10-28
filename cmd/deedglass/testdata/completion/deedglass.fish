@@ -355,6 +355,7 @@ complete -c deedglass -n '__deedglass_is \'mcp\'' -a 'wrap' -d 'Run an MCP serve
 complete -c deedglass -n '__deedglass_is \'mcp\'' -a 'serve' -d 'Serve Deedglass\'s native MCP tools'
 complete -c deedglass -n '__deedglass_is \'mcp\'' -a 'snippet' -d 'Print client config for an MCP client'
 complete -c deedglass -n '__deedglass_is \'mcp\'' -a 'install-links' -d 'Print every one-click install link'
+complete -c deedglass -n '__deedglass_is \'mcp serve\'' -l client -r -d 'the Connect item this client was added from in deedglass app (claude-desktop, cursor, vscode, terminal, openai); its key comes from the app'
 complete -c deedglass -n '__deedglass_is \'mcp serve\'' -l connector -r -d 'native, or the name of an upstream MCP server (mcp.upstreams)'
 complete -c deedglass -n '__deedglass_is \'mcp serve\'' -l tool-names -r -d 'how tools/list spells tools: safe (postgres_query, default) or dotted (postgres.query, deprecated)'
 complete -c deedglass -n '__deedglass_is \'migrate\'' -a 'up' -d 'Apply database migrations'

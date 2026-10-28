@@ -131,6 +131,10 @@ planned    POST    /v1/weekly/email                                       sessio
 planned    GET     /weekly/off                                            public          -                S52    page; ?t= a signed single-purpose token
 planned    POST    /weekly/off                                            public          -                S52    form; IdemNever; the token turns that person's weekly email off and nothing else
 planned    GET     /v1/clients                                            session         viewer           S52    Pro: 403 pro_required without agency; one org-scoped read per membership (owner or admin)
+planned    GET     /v1/local                                              session_or_key  viewer           S53    DL-143; keys: admin; the first-run state; 404 outside deedglass app
+planned    PATCH   /v1/local                                              session_or_key  admin            S53    DL-143; keys: admin; path clinic|build|it, first_run
+planned    GET     /v1/connect                                            session_or_key  viewer           S53    DL-143; keys: admin; the Connect items; links and commands never hold a key
+planned    POST    /v1/connect/{id}/start                                 session_or_key  admin            S53    DL-143; keys: admin; IdemNever; makes the client's agent and key file once; terminal adds the shell guard
 planned    POST    /mcp/{connector}                                       agent_key       actions:execute  S15
 planned    POST    /mcp/native                                            agent_key       actions:execute  S15
 planned    POST    /v1/slack/interact                                     public          -                S29    Slack signature; form body

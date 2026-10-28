@@ -17,6 +17,17 @@
     ]
   },
   {
+    "code": "app_failed",
+    "exit": [
+      1
+    ],
+    "messages": null,
+    "next": [
+      "Set DEEDGLASS_APP_DIR to a folder for the app's data.",
+      "Set DEEDGLASS_APP_DIR to a folder you can write to."
+    ]
+  },
+  {
     "code": "approval_not_pending",
     "exit": [
       1

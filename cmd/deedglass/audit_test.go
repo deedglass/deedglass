@@ -51,7 +51,7 @@ func TestJSONAudit(t *testing.T) {
 	}))
 	defer srv.Close()
 	// Long-running, interactive, or needing Docker or a browser: audited elsewhere (start: TestStartNoDockerJSON).
-	skip := map[string]bool{"serve": true, "mcp wrap": true, "mcp serve": true, "init": true, "start": true, "dev simulate": true,
+	skip := map[string]bool{"serve": true, "app": true, "mcp wrap": true, "mcp serve": true, "init": true, "start": true, "dev simulate": true,
 		"connector gmail authorize": true, "actions list": true, "completion zsh": true, "completion bash": true, "completion fish": true}
 	audited := 0
 	for _, c := range commands {

@@ -16,6 +16,33 @@ with no install script. Node 18 or newer runs it. On Windows it runs the native 
 needs no Docker on any of them. The Quickstart (`deedglass init`) also needs Docker, on macOS or
 Linux.
 
+## The local app (no Docker)
+
+```sh
+npx -y deedglass app
+```
+
+`deedglass app` (or plain `deedglass` in a terminal) opens Deedglass in your browser at
+`http://127.0.0.1:4180`, already signed in. It needs no Docker and no database to set up: it runs
+a private PostgreSQL in your user folder, listening on 127.0.0.1 only. It uses a PostgreSQL 16 or
+newer that is already installed; otherwise the first run downloads PostgreSQL 18.6 for your
+computer once (15 to 71 MB, checked against a pinned SHA-256; ADR-120). After that it works
+offline. On an offline machine, point `DEEDGLASS_PG_BUNDLE` at the downloaded `.jar`.
+
+| Command | What it does |
+|---|---|
+| `deedglass app` | Start it and open the browser (again: a new sign-in tab) |
+| `deedglass app --stop` | Stop it and its database; your data stays |
+| `deedglass app --status` | Say whether it runs, where, and where the data is |
+| `deedglass app --reset` | Delete the app's data (asks first; `--yes` skips the question) |
+
+The data lives in `~/Library/Application Support/Deedglass` (macOS), `~/.config/deedglass`
+(Linux) or `%AppData%\Deedglass` (Windows); `DEEDGLASS_APP_DIR` moves it. While the app runs, CLI
+commands such as `deedglass actions list` or `deedglass approvals list` talk to it with no flags.
+Piped, in CI, with `--json` or with `DEEDGLASS_NO_APP=1`, plain `deedglass` prints the welcome
+instead and starts nothing. The sign-in link works once and only on this computer; the app never
+listens on your network.
+
 ## The install script (macOS, Linux)
 
 ```sh

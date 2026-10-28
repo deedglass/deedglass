@@ -7,6 +7,25 @@ this file by `scripts/release-notes.sh`.
 
 ## [Unreleased]
 
+### Added
+
+- `deedglass app`, and plain `deedglass` in a terminal: Deedglass in your browser on this computer,
+  signed in, with no Docker and no database to set up. It runs its own PostgreSQL in your user
+  folder (an installed 16+ or a one-time pinned download of 18.6; ADR-120, new dependency
+  `github.com/ulikunitz/xz`). `--stop`, `--status`, `--reset`. CLI commands reach the running app
+  with no flags.
+- The Console's first run and Connect screen read four new routes, answered only inside the app:
+  `GET` and `PATCH /v1/local`, `GET /v1/connect` and `POST /v1/connect/{id}/start`. No link or
+  config they return holds a key. `deedglass mcp serve --client <id>` uses the key Connect made.
+
+### Changed
+
+- `deedglass help` shows eight everyday commands; `deedglass help all` shows every command.
+- `deedglass approve` and `deny` default `--as` to the owner inside the local app.
+- The health pilot points at `deedglass app` instead of a Console link that led nowhere, and its
+  next steps say `npx deedglass` when that is how it ran.
+- The docs say Windows runs the native binary through npx; WSL isn't needed.
+
 ## [0.14.1] - 2026-10-28
 
 A small patch: three more commands the shell guard asks about, a fix for slow regular expressions in

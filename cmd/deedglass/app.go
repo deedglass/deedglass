@@ -17,6 +17,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -25,8 +26,12 @@ import (
 
 	"github.com/deedglass/deedglass/internal/config"
 	"github.com/deedglass/deedglass/internal/connector/egress"
+	"github.com/deedglass/deedglass/internal/identity"
+	"github.com/deedglass/deedglass/internal/localapi"
 	"github.com/deedglass/deedglass/internal/localstore"
+	"github.com/deedglass/deedglass/internal/protect"
 	"github.com/deedglass/deedglass/internal/setup"
+	"github.com/deedglass/deedglass/internal/store"
 )
 
 // deedglass app (DL-143): the local app. It starts the local store (internal/localstore, ADR-120),
@@ -75,13 +80,8 @@ type appState struct {
 	StartedAt string `json:"started_at"`
 }
 
-// appLocal is local.json: what the first-run screens remember.
-type appLocal struct {
-	Object   string  `json:"object"` // "local"
-	FirstRun bool    `json:"first_run"`
-	Path     *string `json:"path"`
-	Org      string  `json:"org,omitempty"`
-}
+// appLocal is local.json: what the first-run screens remember (GET /v1/local).
+type appLocal = localapi.State
 
 // appDir is the app's data directory: DEEDGLASS_APP_DIR, else Deedglass under the user's config
 // directory (macOS ~/Library/Application Support/Deedglass, Linux ~/.config/deedglass, Windows
@@ -145,6 +145,11 @@ func runApp(ctx context.Context, e *Env, args []string) error {
 		return appStatus(ctx, e, dir)
 	case v.reset:
 		return appReset(ctx, e, dir, v.yes)
+	}
+	// The app runs this binary again for its setup steps: a go test binary would run the tests
+	// instead, so tests never start it (they stop at the store; see app_test.go).
+	if exe, err := executable(); err == nil && strings.HasSuffix(strings.TrimSuffix(filepath.Base(exe), ".exe"), ".test") {
+		return appFail(e, "deedglass app can't start from a test binary", "Build deedglass and run it.")
 	}
 	return appStart(ctx, e, dir, v)
 }
@@ -228,6 +233,11 @@ func appStart(ctx context.Context, e *Env, dir string, v appOpts) error {
 		stopStore()
 		return appFail(e, "The app couldn't be set up: "+err.Error(), "Run "+inv+" app again; if it fails the same way, run "+inv+" app --status and file an issue with both outputs.")
 	}
+	// The address MCP clients started by Connect (mcp serve --client) send their key to.
+	if loc := readAppLocal(dir); loc.Address != server {
+		loc.Address = server
+		_ = writeAppLocal(dir, loc)
+	}
 
 	// 4. serve, in this process, logging to serve.log.
 	logf, err := os.OpenFile(filepath.Join(dir, appServeLog), os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600)
@@ -248,7 +258,7 @@ func appStart(ctx context.Context, e *Env, dir string, v appOpts) error {
 			return config.LoadOptions{Env: env, FS: os.DirFS(dir), Dir: dir}
 		}
 		serveFlagValues = serveOpts{}
-		appLocalInfo = &localInfo{dir: dir, address: server}
+		appLocalInfo = &localInfo{dir: dir, address: server, run: appRunner(e)}
 		done <- runServe(sctx, &se, nil)
 	}()
 	deadline := time.Now().Add(60 * time.Second)
@@ -653,20 +663,9 @@ func removeAppState(dir string, pid int) {
 	_ = os.Remove(filepath.Join(dir, appStateFile))
 }
 
-func readAppLocal(dir string) appLocal {
-	l := appLocal{Object: "local", FirstRun: true}
-	if b, err := os.ReadFile(filepath.Join(dir, appLocalFile)); err == nil {
-		_ = json.Unmarshal(b, &l)
-	}
-	l.Object = "local"
-	return l
-}
+func readAppLocal(dir string) appLocal { return localapi.ReadState(dir) }
 
-func writeAppLocal(dir string, l appLocal) error {
-	l.Object = "local"
-	b, _ := json.MarshalIndent(l, "", "  ")
-	return localstore.WriteSecret(filepath.Join(dir, appLocalFile), append(b, '\n'))
-}
+func writeAppLocal(dir string, l appLocal) error { return localapi.WriteState(dir, l) }
 
 func processAlive(pid int) bool {
 	if pid <= 0 {
@@ -716,6 +715,70 @@ var openLink = func(u string) bool {
 }
 
 // localInfo is set when serve runs inside deedglass app: GET /v1/local answers only then.
-type localInfo struct{ dir, address string }
+type localInfo struct {
+	dir, address string
+	run          localapi.Runner
+}
+
+// appRunner is how an MCP client on this computer starts deedglass: npx when that is how this
+// binary runs, else this binary's own path (Claude Desktop and Cursor don't read the shell's PATH).
+func appRunner(e *Env) localapi.Runner {
+	if invocation(e) == "npx deedglass" {
+		return localapi.Runner{Command: "npx", Args: []string{"-y", "deedglass"}}
+	}
+	if exe, err := executable(); err == nil {
+		if r, err := filepath.EvalSymlinks(exe); err == nil {
+			exe = r
+		}
+		return localapi.Runner{Command: exe}
+	}
+	return localapi.Runner{Command: "deedglass"}
+}
+
+// localWiring is the local app's routes' dependencies: nil outside deedglass app (they answer 404).
+func localWiring(e *Env, people *identity.Service, db *store.DB) *localapi.API {
+	li := appLocalInfo
+	if li == nil {
+		return nil
+	}
+	home := e.Getenv("HOME")
+	po := func() protect.Options {
+		exe, _ := executable()
+		onPath, _ := lookPath("deedglass")
+		if onPath != "" {
+			onPath, _ = filepath.Abs(onPath)
+		}
+		return protect.Options{Home: home, Command: protect.HookCommand(exe, onPath, buildInfo().Version)}
+	}
+	detect := func() []string {
+		out := []string{}
+		if home == "" {
+			return out
+		}
+		cs, err := protect.Plan(po())
+		if err != nil {
+			return out
+		}
+		for _, c := range cs {
+			if c.Status != protect.Absent && !slices.Contains(out, c.Client) {
+				out = append(out, c.Client)
+			}
+		}
+		return out
+	}
+	return &localapi.API{Dir: li.dir, Address: li.address, People: people, DB: db, Run: li.run, Detect: detect,
+		Protect: func(context.Context) error {
+			if home == "" {
+				return errors.New("no home directory")
+			}
+			o := po()
+			cs, err := protect.Plan(o)
+			if err != nil {
+				return err
+			}
+			_, err = protect.Apply(o, cs)
+			return err
+		}}
+}
 
 var appLocalInfo *localInfo

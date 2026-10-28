@@ -83,7 +83,7 @@ _deedglass() {
     'lockdown on') subs=''; flags='--as --countersign --reason' ;;
     'lockdown status') subs=''; flags='--as --countersign --reason' ;;
     'mcp') subs='wrap serve snippet install-links'; flags='' ;;
-    'mcp serve') subs=''; flags='--connector --tool-names' ;;
+    'mcp serve') subs=''; flags='--client --connector --tool-names' ;;
     'migrate') subs='up status verify'; flags='' ;;
     'migrate status') subs=''; flags='--database-url' ;;
     'migrate up') subs=''; flags='--database-url --dry-run' ;;

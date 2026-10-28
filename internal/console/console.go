@@ -85,11 +85,12 @@ func (c *Console) Routes() []httpx.Route {
 	}
 }
 
-// screens are the nine destinations (brand §13.1); the id-bearing ones take /app/<screen>/<id>,
+// screens are the destinations (brand §13.1, plus DL-143's three); the id-bearing ones take /app/<screen>/<id>,
 // and the id's prefix must match the screen.
 var screens = map[string]string{
 	"actions": "act_", "approvals": "apr_", "agents": "agt_", "policies": "pol_", "connectors": "con_",
 	"deeds": "deed_", "insights": "", "settings": "", "sessions": "obs_", "clients": "",
+	"start": "", "connect": "", "simple": "", // DL-143: the first run, Connect and the Simple view
 }
 
 var (

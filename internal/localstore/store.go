@@ -229,6 +229,10 @@ func (s *Store) Start(ctx context.Context, b Binaries) (*Running, error) {
 		}
 	}
 	if err := s.bootstrap(ctx, st); err != nil {
+		// Don't leave a cluster running that nothing will stop.
+		sctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+		defer cancel()
+		_ = s.pgctl(sctx, b, 60*time.Second, "stop", "-m", "fast", "-w", "-t", "50")
 		return nil, err
 	}
 	return &Running{Port: st.Port, Binaries: b, MigratorPassword: st.MigratorPassword, AppPassword: st.AppPassword, Created: created}, nil

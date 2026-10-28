@@ -64,6 +64,10 @@ tags:
     description: >-
       The weekly summary (S52): what an org's agents did in a week or a month, the Monday email's
       setting and off page, and the Clients view (docs/WEEKLY.md, docs/AGENCIES.md).
+  - name: Local
+    description: >-
+      The app on this computer (DL-143, `deedglass app`): its first-run state and the Connect screen.
+      Every route answers 404 `not_found` on any other server, which is how the Console tells.
   - name: Deeds
     description: >-
       Signed records of what agents did, and the public seal keys that check them offline
@@ -1555,6 +1559,134 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ClientList"
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/local:
+    get:
+      operationId: getLocal
+      summary: Read the local app's state
+      description: >-
+        Only inside `deedglass app`: 404 `not_found` on any other server. `first_run` stays true
+        until the first-run screens set it to false; `path` is who is setting it up (clinic, build or
+        it), null until chosen. A Console session or an org admin key.
+      tags: [Local]
+      security: [{bearerAuth: []}, {sessionCookie: []}]
+      x-deedglass-auth: session_or_key
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+      responses:
+        "200":
+          description: The local app's state.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+            Deedglass-Version:
+              $ref: "#/components/headers/DeedglassVersion"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Local"
+        default:
+          $ref: "#/components/responses/Error"
+    patch:
+      operationId: updateLocal
+      summary: Change the local app's first-run state
+      description: >-
+        Only inside `deedglass app`. Sets `path` (clinic, build or it) or `first_run`, or both. An
+        admin+ Console session (with the `Deedglass-CSRF` header) or an org admin key.
+      tags: [Local]
+      security: [{bearerAuth: []}, {sessionCookie: []}]
+      x-deedglass-auth: session_or_key
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+        - $ref: "#/components/parameters/CSRFWithSession"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                path: {type: string, enum: [clinic, build, it]}
+                first_run: {type: boolean}
+      responses:
+        "200":
+          description: The local app's state now.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+            Deedglass-Version:
+              $ref: "#/components/headers/DeedglassVersion"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Local"
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/connect:
+    get:
+      operationId: listConnect
+      summary: List what can be connected, and its status
+      description: >-
+        Only inside `deedglass app`. One item per tool: Claude Desktop, Cursor, VS Code, coding
+        agents in a terminal, OpenAI agents, an AI scribe (FHIR) and your own database, in that
+        order. `connected` means that tool's agent has sent at least one action; `waiting` means it
+        was started and nothing has arrived yet. Links, configs and commands run
+        `deedglass mcp serve --client <id>` and never hold a key: the key stays in a 0600 file in the
+        app's data folder. A Console session or an org admin key.
+      tags: [Local]
+      security: [{bearerAuth: []}, {sessionCookie: []}]
+      x-deedglass-auth: session_or_key
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+      responses:
+        "200":
+          description: The Connect items.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+            Deedglass-Version:
+              $ref: "#/components/headers/DeedglassVersion"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectList"
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/connect/{id}/start:
+    post:
+      operationId: startConnect
+      summary: Start connecting a tool
+      description: >-
+        Only inside `deedglass app`. Makes the tool's agent and its key file, once (calling it again
+        changes nothing), and answers the item with status `waiting` until the first action arrives.
+        For `terminal` it also adds the shell guard to the coding agents found on this computer (as
+        `deedglass protect`). An admin+ Console session (with the `Deedglass-CSRF` header) or an org
+        admin key.
+      tags: [Local]
+      security: [{bearerAuth: []}, {sessionCookie: []}]
+      x-deedglass-auth: session_or_key
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+        - $ref: "#/components/parameters/CSRFWithSession"
+        - {name: id, in: path, required: true, description: "claude-desktop, cursor, vscode, terminal, openai, scribe or database.", schema: {type: string, enum: [claude-desktop, cursor, vscode, terminal, openai, scribe, database]}}
+      responses:
+        "200":
+          description: The item now.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+            Deedglass-Version:
+              $ref: "#/components/headers/DeedglassVersion"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectItem"
         default:
           $ref: "#/components/responses/Error"
   /v1/ledger/check:
@@ -9060,6 +9192,42 @@ components:
             - {type: "null"}
             - {type: object}
         generated_at: {type: string, format: date-time}
+    Local:
+      type: object
+      additionalProperties: false
+      required: [object, local, address, first_run, path]
+      properties:
+        object: {type: string, const: local}
+        local: {type: boolean, const: true}
+        address: {type: string, description: "The app's address, like http://127.0.0.1:4180."}
+        first_run: {type: boolean}
+        path: {type: [string, "null"], enum: [clinic, build, it, null]}
+    ConnectItem:
+      type: object
+      additionalProperties: false
+      required: [object, id, name, status, agent, last_action_at, detected, link, web_link, config, command, address]
+      properties:
+        object: {type: string, const: connect_item}
+        id: {type: string, enum: [claude-desktop, cursor, vscode, terminal, openai, scribe, database]}
+        name: {type: string}
+        status: {type: string, enum: [not_connected, waiting, connected]}
+        agent: {type: [string, "null"], description: The tool's agent id (agt_…), once started.}
+        last_action_at: {type: [string, "null"], format: date-time}
+        detected: {type: array, items: {type: string}, description: "terminal only: the coding agents found on this computer (claude-code, cursor, codex, gemini, copilot)."}
+        link: {type: [string, "null"], description: A one-click install deeplink (cursor://, vscode:).}
+        web_link: {type: [string, "null"], description: An https page or link for the same.}
+        config: {type: [string, "null"], description: A config block to paste.}
+        command: {type: [string, "null"], description: A command to run.}
+        address: {type: [string, "null"], description: An address the tool talks to.}
+    ConnectList:
+      type: object
+      additionalProperties: false
+      required: [object, data, has_more, next_cursor]
+      properties:
+        object: {type: string, const: list}
+        data: {type: array, items: {$ref: "#/components/schemas/ConnectItem"}}
+        has_more: {type: boolean}
+        next_cursor: {type: "null"}
     ClientList:
       type: object
       additionalProperties: false

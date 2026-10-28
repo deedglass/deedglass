@@ -236,7 +236,7 @@ _deedglass() {
       subs=( 'wrap:Run an MCP server behind Deedglass' 'serve:Serve Deedglass'\''s native MCP tools' 'snippet:Print client config for an MCP client' 'install-links:Print every one-click install link' )
       ;;
     'mcp serve')
-      flags=( '--connector:native, or the name of an upstream MCP server (mcp.upstreams)' '--tool-names:how tools/list spells tools\: safe (postgres_query, default) or dotted (postgres.query, deprecated)' )
+      flags=( '--client:the Connect item this client was added from in deedglass app (claude-desktop, cursor, vscode, terminal, openai); its key comes from the app' '--connector:native, or the name of an upstream MCP server (mcp.upstreams)' '--tool-names:how tools/list spells tools\: safe (postgres_query, default) or dotted (postgres.query, deprecated)' )
       ;;
     'migrate')
       subs=( 'up:Apply database migrations' 'status:Show applied and pending migrations' 'verify:Check applied migrations against this build' )
