@@ -127,6 +127,7 @@ describe('what an approval will change', () => {
     expect(stripTags('a<script')).toBe('ascript');
     expect(stripTags('<scr<script>ipt>x')).toBe('ipt>x');
     expect(stripTags('1 &lt; 2')).toBe('1 < 2');
+    expect(stripTags('&amp;lt;b&amp;gt;')).toBe('&lt;b&gt;');
     expect(decodeText(btoa('note'), 'text/plain')).toBe('note');
     expect(decodeText(btoa('x'), 'application/pdf')).toBeNull();
     expect(decodeText('%%%', 'text/plain')).toBeNull();

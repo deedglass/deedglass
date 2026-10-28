@@ -225,9 +225,18 @@ function quantity(v: unknown): string {
 }
 
 /** stripTags turns a FHIR narrative's XHTML into text, for display as a Text node only.
- *  A stray '<' left by an unclosed tag is dropped too; only an escaped &lt; comes back as '<'. */
+ *  Tags are removed until none is left and a stray '<' from an unclosed tag is dropped; entities
+ *  are then decoded in one pass, so only an escaped &lt; comes back as '<'. */
+const ENTITIES: Record<string, string> = { nbsp: ' ', lt: '<', gt: '>', quot: '"', '#39': "'", amp: '&' };
 export function stripTags(x: string): string {
-  return x.replace(/<br\s*\/?>/gi, '\n').replace(/<\/(p|div|li|tr)>/gi, '\n').replace(/<[^>]*>/g, '').replace(/</g, '').replace(/&nbsp;/g, ' ').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&').replace(/\n{3,}/g, '\n\n').trim();
+  let s = x.replace(/<br\s*\/?>/gi, '\n').replace(/<\/(p|div|li|tr)>/gi, '\n');
+  let prev: string;
+  do {
+    prev = s;
+    s = s.replace(/<[^>]*>/g, '');
+  } while (s !== prev);
+  s = s.replace(/</g, '');
+  return s.replace(/&(nbsp|lt|gt|quot|#39|amp);/g, (_, e: string) => ENTITIES[e] ?? '').replace(/\n{3,}/g, '\n\n').trim();
 }
 
 /** decodeText reads a base64 text attachment (text/* only); anything else stays unread. */
