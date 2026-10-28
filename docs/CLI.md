@@ -162,6 +162,7 @@ builds it. Hidden commands work but aren't in `deedglass help`.
 | Command | Group | What it does | Status |
 |---|---|---|---|
 | `deedglass start [--dir .] [--fast] [--json]` | Setup | See it catch a wrong row count, no questions | built |
+| `deedglass app [--port 4180] [--no-open] [--stop] [--status] [--reset [--yes]] [--json]` | Setup | Open Deedglass in your browser, no setup | built |
 | `deedglass init [--yes] [--dir .] [--client claude-code|claude-desktop|cursor|vscode|windsurf|sdk-python|sdk-typescript|none] [--listen 127.0.0.1:8080] [--pg-port 55432] [--policy postgres-check|postgres-safe] [--no-open] [--no-smoke] [--lockdown] [--stop] [--purge] [--trigger] [--quiet] [--json]` | Setup | Set up Deedglass in this directory | built |
 | `deedglass connect <postgres-url> [--name <connector>] [--schema public] [--tables a,b] [--policy postgres-safe|postgres-check] [--agent <name>] [--apply] [--confirm <database>] [--dsn-host host:port] [--json]` | Setup | Put your own Postgres behind Deedglass | built |
 | `deedglass protect [--dry-run] [--yes] [--undo] [--client <names>] [--project] [--hook-command <cmd>] [--json]` | Setup | Add the shell guard to every coding agent | built |
@@ -188,7 +189,7 @@ builds it. Hidden commands work but aren't in `deedglass help`.
 | `deedglass licence deactivate [--json]` | Setup | Remove the licence from this machine | built |
 | `deedglass vault status [--json]` | Setup | Show the credential vault's keys | built |
 | `deedglass vault rotate [--json]` | Setup | Re-encrypt credentials with a new key | built |
-| `deedglass help [<command>] [--json]` | Setup | Show help for deedglass or one command | built, hidden |
+| `deedglass help [all|<command>] [--json]` | Setup | Show help for deedglass or one command | built, hidden |
 | `deedglass completion zsh` | Setup | Print zsh completion | built |
 | `deedglass completion bash` | Setup | Print bash completion | built |
 | `deedglass completion fish` | Setup | Print fish completion | built |

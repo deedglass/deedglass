@@ -54,7 +54,8 @@ type Env struct {
 	Stdout, Stderr io.Writer
 	Getenv         func(string) string
 	IsTTY          bool
-	Width          int // terminal columns; 0 when unknown
+	StdinTTY       bool // stdin is a terminal too (bare deedglass opens the app only then)
+	Width          int  // terminal columns; 0 when unknown
 	Globals        Globals
 	Style          ui.Style
 	Mark           mark.Options // the terminal mark (banner, inline); Quiet off a TTY, in CI, with --json
@@ -92,6 +93,7 @@ func main() {
 		Stderr:      os.Stderr,
 		Getenv:      os.Getenv,
 		IsTTY:       ui.IsTerminal(os.Stdout),
+		StdinTTY:    ui.IsTerminal(os.Stdin),
 		Width:       termWidth(os.Stdout, os.Getenv),
 		LoadOptions: config.OSOptions,
 	}
@@ -183,7 +185,7 @@ func dispatch(ctx context.Context, e *Env, args []string) error {
 		if bareOnly(flags) {
 			return runBare(ctx, e, flags)
 		}
-		return usageErr(fmt.Errorf("flag %s needs a command before it", flags[0]), "Run deedglass help to see every command.")
+		return usageErr(fmt.Errorf("flag %s needs a command before it", flags[0]), "Run deedglass help all to see every command.")
 	}
 	cmd, n := lookup(words)
 	if cmd == nil {
@@ -299,17 +301,17 @@ func notFound(e *Env, words []string) error {
 	switch words[0] {
 	case "quickstart", "demo", "try", "setup", "begin", "tour": // first-run words (first-run-v1); install and status are retired V0 words
 		return usageErrCode("unknown_command", errors.New(msg+". The first run is deedglass start."),
-			"Run deedglass start, or deedglass help to see every command.")
+			"Run deedglass start, or deedglass help all to see every command.")
 	case "check", "test":
 		return usageErrCode("unknown_command", errors.New(msg+". To check this setup, run deedglass doctor; to check records, deedglass verify."),
-			"Run deedglass start to see a check catch a wrong row count, or deedglass help to see every command.")
+			"Run deedglass start to see a check catch a wrong row count, or deedglass help all to see every command.")
 	}
 	if s := suggestPath(words[:1], nil); s != "" {
 		msg += fmt.Sprintf(". Did you mean %q?", s)
 	} else {
 		msg += "."
 	}
-	return usageErrCode("unknown_command", errors.New(msg), "Run deedglass help to see every command.")
+	return usageErrCode("unknown_command", errors.New(msg), "Run deedglass help all to see every command.")
 }
 
 // family returns the commands under prefix, excluding hidden ones.

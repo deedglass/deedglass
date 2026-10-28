@@ -2,9 +2,9 @@ exit 0
 --- stdout
 Deedglass checks what your AI agents actually changed.
 
-  deedglass start         see it catch an agent's 1-row claim that changed 301
-  deedglass protect       guard Claude Code, Cursor and other coding agents
-  deedglass health pilot  the same checks on synthetic patient records
+  deedglass app      open it in your browser, no setup
+  deedglass start    see it catch an agent's 1-row claim that changed 301
+  deedglass protect  guard Claude Code, Cursor and other coding agents
 
-More: deedglass play (the offline story) · deedglass help (every command)
+More: deedglass health pilot (synthetic patient records) · deedglass help
 --- stderr

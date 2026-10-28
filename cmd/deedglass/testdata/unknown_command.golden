@@ -2,4 +2,4 @@ exit 2
 --- stdout
 --- stderr
 ✕ Unknown command "polcy". Did you mean "policy"?
-  next  Run deedglass help to see every command.
+  next  Run deedglass help all to see every command.

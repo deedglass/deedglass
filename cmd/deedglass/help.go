@@ -19,9 +19,13 @@ func runHelp(_ context.Context, e *Env, args []string) error { return printHelp(
 
 // printHelp prints the whole tree, or one command or family.
 func printHelp(e *Env, path []string) error {
-	if len(path) == 0 {
+	if len(path) == 0 || (len(path) == 1 && path[0] == "all") {
 		if e.Globals.JSON {
 			return helpJSON(e)
+		}
+		if len(path) == 0 {
+			helpEveryday(e)
+			return nil
 		}
 		helpAll(e)
 		return nil
@@ -65,6 +69,38 @@ func helpWidth(e *Env) int {
 		return min(e.Width, 100)
 	}
 	return 80
+}
+
+// everyday is what deedglass help shows (DL-143 calmer CLI): the few commands most people need,
+// in plain words. Everything else is under deedglass help all.
+var everyday = []struct{ Name, Summary string }{
+	{"app", "Open Deedglass in your browser"},
+	{"start", "See Deedglass catch an agent's wrong claim"},
+	{"protect", "Guard Claude Code, Cursor and other coding agents"},
+	{"mcp install-links", "Connect Claude Desktop, Cursor or VS Code"},
+	{"actions list", "See what your agents did"},
+	{"approvals list", "See what's waiting for you, then approve or deny"},
+	{"verify", "Check a locked record, offline"},
+	{"deeds export", "Save your records to a file"},
+}
+
+func helpEveryday(e *Env) {
+	s := e.Style
+	w := e.Stdout
+	if head := mark.Inline(e.Mark); head != "" {
+		fmt.Fprintf(w, "%s  %s\n\n", head, s.Dim("see what your AI agents did, and check it"))
+	} else {
+		fmt.Fprintf(w, "%s\n\n", s.Header("deedglass", "see what your AI agents did, and check it"))
+	}
+	nameW := 0
+	for _, c := range everyday {
+		nameW = max(nameW, ui.Width("deedglass "+c.Name))
+	}
+	for _, c := range everyday {
+		fmt.Fprintln(w, "  "+ui.Pad("deedglass "+c.Name, nameW)+"  "+c.Summary)
+	}
+	fmt.Fprintln(w)
+	fmt.Fprintln(w, s.Dim("Every command: deedglass help all "+ui.Sep+" one command: deedglass help <command>"))
 }
 
 func helpAll(e *Env) {

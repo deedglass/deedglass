@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"strings"
@@ -12,7 +13,8 @@ import (
 
 // The one server resolver (adoption-v1 F2). Every client command finds its Deedglass server the same
 // way: --server, then DEEDGLASS_SERVER, then DEEDGLASS_BASE_URL, then the .deedglass/stack.json that
-// deedglass init wrote in this directory or the nearest parent, then http://127.0.0.1:8080. A key
+// deedglass init wrote in this directory or the nearest parent, then the running local app
+// (deedglass app), then http://127.0.0.1:8080. A key
 // read from .deedglass/ only ever goes to the server that same directory's stack.json names, so a
 // stack on another port never sends its key to whatever listens on :8080. And inside an init
 // directory, no key at all (not even DEEDGLASS_API_KEY) goes to a server the environment names that
@@ -27,6 +29,7 @@ const (
 	fromFlag    = "flag"
 	fromEnv     = "env"
 	fromStack   = "stack"
+	fromApp     = "app" // the running local app (deedglass app, DL-143)
 	fromDefault = "default"
 )
 
@@ -37,6 +40,7 @@ type target struct {
 	From     string
 	StackDir string // the directory holding .deedglass/stack.json ("" unless From is stack)
 	Stack    *setup.Stack
+	AppDir   string // the app's data directory ("" unless From is app)
 	// Conflict is the stack's server when the environment named a different one inside an init
 	// directory: no key is sent then (keyFor returns "", conflictErr says why).
 	Conflict string
@@ -61,6 +65,10 @@ func resolveServer(e *Env) target {
 	if st != nil {
 		return target{Server: st.Server(), From: fromStack, StackDir: dir, Stack: st}
 	}
+	// DL-143: while deedglass app runs on this computer, client commands talk to it with no flags.
+	if ad, as := runningApp(e); as != nil {
+		return target{Server: as.Server, From: fromApp, AppDir: ad}
+	}
 	return target{Server: defaultServer, From: fromDefault}
 }
 
@@ -76,6 +84,10 @@ func (t target) keyFor(e *Env, file string) string {
 	if t.From == fromStack && t.StackDir != "" {
 		k, _ := setup.ReadSecretFile(t.StackDir, file)
 		return k
+	}
+	// The app keeps only an admin key, and sends it only to the app's own loopback server.
+	if t.From == fromApp && t.AppDir != "" && file == setup.AdminKeyFile {
+		return setup.ReadKeyFile(filepath.Join(t.AppDir, appAdminKey))
 	}
 	return ""
 }
@@ -180,6 +192,34 @@ func stackLoadOptions(e *Env) (config.LoadOptions, *setup.Stack, error) {
 		if opts.FS == nil {
 			opts.FS = os.DirFS(dir)
 		}
+	} else if opts.Env["DEEDGLASS_DATABASE_URL"] == "" {
+		// DL-143: no stack here and no database named, but the local app runs: its database.
+		if ad, as := runningApp(e); as != nil {
+			env := maps.Clone(opts.Env)
+			if env == nil {
+				env = map[string]string{}
+			}
+			for k, v := range appEnvFor(ad, as.Server, as.PGPort) {
+				if env[k] == "" {
+					env[k] = v
+				}
+			}
+			opts.Env, opts.Dir, opts.FS = env, ad, os.DirFS(ad)
+			return opts, nil, nil
+		}
 	}
 	return withInitStack(opts)
+}
+
+// runningApp is the local app's data directory and state while deedglass app runs on this
+// computer; a nil state otherwise.
+func runningApp(e *Env) (string, *appState) {
+	ad, err := appDir(e)
+	if err != nil {
+		return "", nil
+	}
+	if as := readAppState(ad); as != nil && processAlive(as.PID) {
+		return ad, as
+	}
+	return "", nil
 }

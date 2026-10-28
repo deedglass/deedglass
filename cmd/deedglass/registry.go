@@ -61,6 +61,9 @@ var commands = []*Command{
 	{Path: p("start"), Group: Setup, Summary: "See it catch a wrong row count, no questions",
 		Usage: "[--dir .] [--fast] [--json]", Flags: startFlags, Run: runStart,
 		Detail: "The first command to run. It asks nothing. With Docker running it runs deedglass init with every default (free ports picked when 8080, 55432 or 55442 are taken), then the trigger scene on the same stack: the agent reports 1 row, Postgres's change log shows 301, and the undo preview lists the rows a person can put back. It ends with the Console's address when the server answers.\n\nWithout Docker (or with under 2 GiB of disk) it plays the same scene in this binary: the policy engine decides each call live and the records are sealed and checked live, while the Postgres lines are replayed from a recorded run. Every line says live or replay, and the last lines say how to get the live version.\n\nRun it again and the stack is reused.\n\nExamples:\n  deedglass start\n  deedglass start --fast\n  deedglass start --json"},
+	{Path: p("app"), Group: Setup, Summary: "Open Deedglass in your browser, no setup",
+		Usage: "[--port 4180] [--no-open] [--stop] [--status] [--reset [--yes]] [--json]", Flags: appFlags, Run: runApp,
+		Detail: "Starts Deedglass on this computer and opens it in your browser, signed in. No Docker, no account and no database to set up: it runs its own PostgreSQL in the app's folder (macOS ~/Library/Application Support/Deedglass, Linux ~/.config/deedglass, Windows %AppData%\\Deedglass; DEEDGLASS_APP_DIR moves it). It uses a PostgreSQL 16 or newer already on this computer, or downloads PostgreSQL 18.6 once (15 to 71 MB, checked against a pinned SHA-256); after that it works offline. DEEDGLASS_PG_BUNDLE installs that download from a file, for computers with no internet.\n\nThe app listens on 127.0.0.1 only, at port 4180 or a free one, and the sign-in link works once, on this computer. Running deedglass in a terminal with no command does the same. Press Ctrl+C to stop; your data stays. While it runs, every CLI command talks to it with no flags (deedglass approvals list, deedglass actions list).\n\n--stop stops it from another terminal. --status says whether it runs and where its data is. --reset deletes its data after asking (the PostgreSQL download is kept).\n\nExamples:\n  deedglass app\n  deedglass app --status\n  deedglass app --stop\n  deedglass app --reset"},
 	{Path: p("init"), Group: Setup, Summary: "Set up Deedglass in this directory",
 		Usage: "[--yes] [--dir .] [--client claude-code|claude-desktop|cursor|vscode|windsurf|sdk-python|sdk-typescript|none] [--listen 127.0.0.1:8080] [--pg-port 55432] [--policy postgres-check|postgres-safe] [--no-open] [--no-smoke] [--lockdown] [--stop] [--purge] [--trigger] [--quiet] [--json]",
 		Flags: initFlags, Run: runInit,
@@ -128,7 +131,7 @@ var commands = []*Command{
 	{Path: p("vault", "rotate"), Group: Setup, Summary: "Re-encrypt credentials with a new key",
 		Usage: "[--json]", Needs: config.NeedDatabase | config.NeedVault | config.NeedSealKey, Run: runVaultRotate},
 	{Path: p("help"), Group: Setup, Summary: "Show help for deedglass or one command",
-		Usage: "[<command>] [--json]", Hidden: true}, // Run is set in init: help reads this table,
+		Usage: "[all|<command>] [--json]", Hidden: true}, // Run is set in init: help reads this table,
 	{Path: p("completion", "zsh"), Group: Setup, Summary: "Print zsh completion",
 		Detail: "Prints a zsh completion script for every command, flag and closed flag value in this build. It never runs deedglass while you type.\n\nExample:\n  deedglass completion zsh > ~/.zfunc/_deedglass  (with fpath+=(~/.zfunc) before compinit in ~/.zshrc)"},
 	{Path: p("completion", "bash"), Group: Setup, Summary: "Print bash completion",
@@ -425,6 +428,7 @@ var commands = []*Command{
 
 // lines is `deedglass help`: one row per command or family, in contract order.
 var lines = []Line{
+	{Name: "app", Group: Setup, Summary: "Open Deedglass in your browser, no setup", Paths: ps("app")},
 	{Name: "start", Group: Setup, Summary: "See it catch a wrong row count, no questions", Paths: ps("start")},
 	{Name: "init", Group: Setup, Summary: "Set up Deedglass in this directory", Paths: ps("init")},
 	{Name: "doctor", Group: Setup, Summary: "Check config, database and keys", Paths: ps("doctor")},

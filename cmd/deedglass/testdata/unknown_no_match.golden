@@ -2,4 +2,4 @@ exit 2
 --- stdout
 --- stderr
 ✕ Unknown command "frobnicate".
-  next  Run deedglass help to see every command.
+  next  Run deedglass help all to see every command.
