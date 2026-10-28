@@ -30,6 +30,8 @@ import { copy } from '../lib/copy.ts';
 <script>
   import { bootShell } from '../controllers/shell.ts';
   import { mountOverview } from '../controllers/overview.ts';
+  import { firstRunGate } from '../controllers/firstrungate.ts';
+  firstRunGate();
   bootShell({ title: 'Overview' });
   mountOverview();
 </script>

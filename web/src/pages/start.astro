@@ -1,0 +1,64 @@
+---
+// First run (DL-143): what Deedglass does in one sentence, "running on this computer · nothing
+// leaves it", then who it's for; the third step is the Connect screen. src/controllers/firstrun.ts
+// moves between the panels and saves the choice. No navigation: one thing at a time.
+import AppShell from '../layouts/AppShell.astro';
+import Icon from '../components/Icon.astro';
+import Mirror from '../components/Mirror.astro';
+import { simpleCopy } from '../lib/copy-simple.ts';
+const f = simpleCopy.firstRun;
+const paths = [
+  { key: 'clinic', icon: 'stethoscope' },
+  { key: 'build', icon: 'square-terminal' },
+  { key: 'it', icon: 'server' },
+] as const;
+---
+<AppShell title={f.title} screen="" mode="bare" description="Set up Deedglass on this computer.">
+  <div class="fs">
+    <ol class="steps fs-steps" id="fs-steps" aria-label={f.title}>
+      {f.steps.map((s, i) => (
+        <li class={i === 0 ? 'current' : undefined} aria-current={i === 0 ? 'step' : undefined} data-step={i + 1}><span class="step-n" aria-hidden="true">{i + 1}</span><span>{s}</span></li>
+      ))}
+    </ol>
+
+    <section class="fs-panel" id="fs-1" aria-labelledby="fs-h1">
+      <div class="fs-mark"><Mirror size={48} state="sealed" /></div>
+      <h1 id="fs-h1" tabindex="-1">{f.headline}</h1>
+      <p class="lede">{f.lede}</p>
+      <ul class="fs-facts">
+        {f.facts.map((x) => (
+          <li><Icon name="check" /><div><b>{x.title}</b><span>{x.body}</span></div></li>
+        ))}
+      </ul>
+      <div class="fs-actions">
+        <button type="button" class="btn btn-primary btn-xl" id="fs-start">{f.start}<Icon name="arrow-right" size={16} /></button>
+      </div>
+    </section>
+
+    <section class="fs-panel" id="fs-2" aria-labelledby="fs-h2" hidden>
+      <h1 id="fs-h2" tabindex="-1">{f.pathTitle}</h1>
+      <p class="lede">{f.pathLede}</p>
+      <fieldset class="fs-choices">
+        <legend class="sr-only">{f.pathTitle}</legend>
+        {paths.map((p) => (
+          <label class="fs-choice">
+            <span class="ico" aria-hidden="true"><Icon name={p.icon} /></span>
+            <span><b>{f.paths[p.key]!.title}</b><span class="t-2">{f.paths[p.key]!.body}</span></span>
+            <input type="radio" name="path" value={p.key} />
+          </label>
+        ))}
+      </fieldset>
+      <div class="fs-actions">
+        <button type="button" class="btn btn-quiet btn-xl" id="fs-back">{f.back}</button>
+        <button type="button" class="btn btn-primary btn-xl" id="fs-next" aria-describedby="fs-hint">{f.next}<Icon name="arrow-right" size={16} /></button>
+        <span class="hint" id="fs-hint">{f.choose}</span>
+      </div>
+    </section>
+  </div>
+</AppShell>
+<script>
+  import { bootShell } from '../controllers/shell.ts';
+  import { mountFirstRun } from '../controllers/firstrun.ts';
+  bootShell({ title: 'Welcome' });
+  mountFirstRun();
+</script>

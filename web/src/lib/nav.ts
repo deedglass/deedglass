@@ -1,5 +1,6 @@
 // nav.ts: the nine destinations in brand §13.1 order, with their icons and go-to keys (S24 §3.5, §3.8).
 import { copy } from './copy.ts';
+import { simpleNav as simpleCopy } from './copy-simple-nav.ts';
 
 export interface Dest {
   key: string;
@@ -37,3 +38,17 @@ export const SETTINGS_SECTIONS: readonly { key: string; label: string }[] = [
   { key: 'notifications', label: 'Notifications' },
   { key: 'danger', label: 'Danger zone' },
 ];
+
+/** DL-143: the Simple view's four destinations (the sidebar and the bottom bar in Simple). */
+export const SIMPLE_DESTS: readonly Dest[] = [
+  { key: 'activity', href: '/app/simple', label: simpleCopy.nav.activity, icon: 'activity', go: 'g a' },
+  { key: 'waiting', href: '/app/simple?show=waiting', label: simpleCopy.nav.waiting, icon: 'clock', go: 'g p' },
+  { key: 'records', href: '/app/simple?show=records', label: simpleCopy.nav.records, icon: 'lock', go: 'g d' },
+  { key: 'connect', href: '/app/connect', label: simpleCopy.nav.connect, icon: 'plug', go: 'g c' },
+];
+export const SIMPLE_SHORT: Record<string, string> = {
+  activity: simpleCopy.nav.activityShort,
+  waiting: simpleCopy.nav.waitingShort,
+  records: simpleCopy.nav.recordsShort,
+  connect: simpleCopy.nav.connect,
+};

@@ -12,7 +12,7 @@ import { forgetAll, remember } from '../lib/recent.ts';
 import { Sequencer } from '../lib/shortcuts.ts';
 import { atLeast, get, load, onChange, refreshOrg, type State } from '../lib/state.ts';
 import { stream, type StreamState } from '../lib/stream.ts';
-import { getSimHint, getTheme, nextTheme, setSimHint, setTheme, type Theme } from '../lib/theme.ts';
+import { getSimHint, getTheme, getView, isView, nextTheme, setSimHint, setTheme, setView, type Theme } from '../lib/theme.ts';
 import type { ListResponse, OrgStop } from '../lib/types.ts';
 import { wireCopy } from './copyid.ts';
 import { confirmTyped, menuButton, openPopover, openSheet, tooltips, type MenuItem } from './overlay.ts';
@@ -243,10 +243,14 @@ function initials(name: string, email: string): string {
 function renderIdentity(s: State): void {
   const org = maybe('org-name');
   if (org) org.textContent = s.org.name;
+  // Each name holds the button's visible text (WCAG 2.5.3, label in name).
+  maybe('org-btn')?.setAttribute('aria-label', `${s.org.name}: ${copy.topbar.switchOrg}`);
+  const ini = initials(s.me.user.name, s.me.user.email);
   const av = maybe('avatar');
-  if (av) av.textContent = initials(s.me.user.name, s.me.user.email);
-  const acc = maybe('account-btn');
-  if (acc) acc.setAttribute('aria-label', `${copy.topbar.account}: ${s.me.user.name || s.me.user.email}`);
+  if (av) av.textContent = ini;
+  // The name comes from hidden text, not aria-label: the initials are a picture of the name.
+  const acc = maybe('account-name');
+  if (acc) acc.textContent = `${copy.topbar.account}: ${s.me.user.name || s.me.user.email}`;
   renderStopButton(s);
 }
 
@@ -274,6 +278,22 @@ function openMore(): void {
 }
 
 // ---------- boot ----------
+/** DL-143: Simple / Detailed. A click saves the view before the link navigates (theme.js would
+ * otherwise send /app back to Simple); on auto pages the saved view marks the current link. */
+function wireViewSwitch(): void {
+  const nav = document.querySelector<HTMLElement>('.viewswitch');
+  if (!nav) return;
+  const now = nav.dataset.viewNow || (getView() ?? 'detailed');
+  for (const a of nav.querySelectorAll<HTMLAnchorElement>('[data-view-set]')) {
+    const v = a.dataset.viewSet;
+    if (v === now) a.setAttribute('aria-current', 'page');
+    else a.removeAttribute('aria-current');
+    a.addEventListener('click', () => {
+      if (isView(v)) setView(v);
+    });
+  }
+}
+
 export interface ShellOptions {
   title: string;
 }
@@ -283,6 +303,7 @@ export function bootShell(o: ShellOptions): void {
   // keeps .main hidden until data-shell is set), so the banner never pushes painted content down.
   renderBanners(null, false);
   document.body.setAttribute('data-shell', 'ready');
+  wireViewSwitch();
   wireCopy();
   tooltips();
   tickTimes();

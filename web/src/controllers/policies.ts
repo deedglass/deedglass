@@ -451,7 +451,7 @@ export function mountPolicy(): void {
           h('td', { 'data-label': c.versions.created, 'data-card': 'label' }, h('span', { class: 'num', title: dateTime(v.created_at, tz()) }, relTime(v.created_at, tz()))),
           h('td', { 'data-label': c.versions.notes, 'data-card': 'label' }, v.notes ?? h('span', { class: 't-2' }, '·')),
           admin ? h('td', { class: 'pv-actions' }, st === 'enforced' ? null : h('button', { type: 'button', class: 'btn btn-quiet btn-sm', 'aria-label': fill(older ? c.enforce.rollback : c.enforce.button, { v: v.version }), onclick: () => activate('enforce', v) }, older ? fill(c.enforce.rollback, { v: v.version }) : c.enforceBtn),
-            st === 'inactive' ? h('button', { type: 'button', class: 'btn btn-quiet btn-sm', 'aria-label': fill(c.shadow.button, { v: v.version }), onclick: () => activate('shadow', v) }, c.runShadow) : null) : null);
+            st === 'inactive' ? h('button', { type: 'button', class: 'btn btn-quiet btn-sm', onclick: () => activate('shadow', v) }, h('span', { class: 'sr-only' }, fill(c.shadow.button, { v: v.version })), h('span', { 'aria-hidden': 'true' }, c.runShadow)) : null) : null);
       })));
     replace(panel, h('div', { class: 'grid gap-4' }, h('div', { class: 'table-frame' }, t), h('div', null, compare), diffHost));
     if (versions.length >= 2) {

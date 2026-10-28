@@ -41,6 +41,14 @@ export function date(iso: string | Date, tz = 'UTC'): string {
   return zoned(new Date(iso), tz, { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
+/** when: a list's time column: "14:05" today, "2 Oct" this year, then "2 Oct 2026". */
+export function when(iso: string | Date, tz = 'UTC', now: Date = new Date()): string {
+  const d = new Date(iso);
+  if (date(d, tz) === date(now, tz)) return time(d, tz);
+  if (zoned(d, tz, { year: 'numeric' }) === zoned(now, tz, { year: 'numeric' })) return zoned(d, tz, { day: 'numeric', month: 'short' });
+  return date(d, tz);
+}
+
 /** dateTime: "2 Oct 2026, 14:05:09 UTC" (tooltips: the absolute time, with the zone). */
 export function dateTime(iso: string | Date, tz = 'UTC'): string {
   const d = new Date(iso);

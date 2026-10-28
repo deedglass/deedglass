@@ -6,6 +6,7 @@ import { api } from '../lib/api.ts';
 import { copy, fill } from '../lib/copy.ts';
 import { h, icon } from '../lib/dom.ts';
 import { DESTS, SETTINGS_SECTIONS } from '../lib/nav.ts';
+import { simpleNav as simpleCopy } from '../lib/copy-simple-nav.ts';
 import { idTarget, rank, type Item } from '../lib/palette.ts';
 import { recent } from '../lib/recent.ts';
 import { get as getState } from '../lib/state.ts';
@@ -35,6 +36,9 @@ async function agents(): Promise<Agent[]> {
 function baseItems(hooks: PaletteHooks): Item[] {
   const items: Item[] = [];
   for (const d of DESTS) items.push({ id: `go-${d.key}`, label: d.label, group: 'goto', href: d.href, hint: d.go, keywords: `go ${d.key}`, icon: d.icon });
+  // DL-143: the local app's Connect screen and the Simple view.
+  items.push({ id: 'go-connect', label: simpleCopy.nav.connect, group: 'goto', href: '/app/connect', keywords: 'connect add claude cursor vs code mcp agent', icon: 'plug' });
+  items.push({ id: 'go-simple', label: `${simpleCopy.view.simple}: ${simpleCopy.nav.activity}`, group: 'goto', href: '/app/simple', keywords: 'simple view plain', icon: 'activity' });
   for (const s of SETTINGS_SECTIONS) items.push({ id: `set-${s.key}`, label: `Settings › ${s.label}`, group: 'goto', href: `/app/settings/${s.key}`, icon: 'settings' });
   items.push(
     { id: 'act-create-agent', label: copy.palette.createAgent, group: 'actions', href: '/app/agents?new=1', icon: 'plus' },

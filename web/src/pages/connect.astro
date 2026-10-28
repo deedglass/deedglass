@@ -1,0 +1,30 @@
+---
+// Connect (DL-143): one tile per AI tool or system. Each opens a sheet with at most three plain
+// steps, one primary button (a deep link where the app supports one), the settings to copy as a
+// fallback, an optional QR code for another computer, and a live status. src/controllers/connect.ts.
+import AppShell from '../layouts/AppShell.astro';
+import { simpleCopy } from '../lib/copy-simple.ts';
+const c = simpleCopy.connect;
+---
+<AppShell title={c.title} screen="connect" mode="auto" description="Connect an AI tool or a system to Deedglass.">
+  <div class="sx">
+    <div id="cx-banner"></div>
+    <header class="sx-head">
+      <h1 class="t-title-2" id="page-title">{c.title}</h1>
+      <p class="lede">{c.lede}</p>
+    </header>
+    <div id="cx-body" aria-busy="true" aria-labelledby="page-title">
+      <h2 class="sx-section-title">{c.groupAi}</h2>
+      <div class="cx-grid" aria-hidden="true">
+        {[0, 1, 2, 3, 4].map(() => (<div class="cx-tile"><span class="skel skel-line w-32"></span><span class="skel skel-line"></span><span class="skel skel-line w-16"></span></div>))}
+      </div>
+    </div>
+    <p class="cx-note t-footnote">{c.dontSee}</p>
+  </div>
+</AppShell>
+<script>
+  import { bootShell } from '../controllers/shell.ts';
+  import { mountConnect } from '../controllers/connect.ts';
+  bootShell({ title: 'Connect' });
+  mountConnect();
+</script>

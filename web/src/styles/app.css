@@ -15,6 +15,7 @@
 @import './s51-security.css';
 @import './s52-clients.css';
 @import './s60-live.css';
+@import './s70-simple.css';
 
 /* Inter Variable with the optical-size axis and Geist Mono 400, Latin, self-hosted (the site's faces). */
 @font-face {
@@ -842,8 +843,22 @@ html[data-sim-hint] body:not([data-shell]) .workspace > .main {
   font-size: 13px;
   font-weight: 550;
 }
+.segmented a {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: 28px;
+  padding: 0 12px;
+  border-radius: 8px;
+  color: var(--text-2-on-alt);
+  font-size: 13px;
+  font-weight: 550;
+  white-space: nowrap;
+  text-decoration: none;
+}
 .segmented button[aria-pressed='true'],
-.segmented button[aria-checked='true'] {
+.segmented button[aria-checked='true'],
+.segmented a[aria-current='page'] {
   background: var(--surface);
   color: var(--text);
   box-shadow: 0 0 0 1px var(--hairline), var(--shadow-card);

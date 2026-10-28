@@ -1,0 +1,44 @@
+---
+// The Simple view (DL-143): What agents did · Waiting for you · Locked records, in plain words for
+// people who aren't engineers. One page, three panels (/app/simple?show=activity|waiting|records);
+// src/controllers/simple.ts switches them without a reload. Detailed is today's Console, unchanged.
+import AppShell from '../layouts/AppShell.astro';
+import Icon from '../components/Icon.astro';
+import { simpleCopy } from '../lib/copy-simple.ts';
+const c = simpleCopy;
+const panels = [
+  { key: 'activity', title: c.feed.title, lede: c.feed.lede, icon: 'activity' },
+  { key: 'waiting', title: c.waiting.title, lede: c.waiting.lede, icon: 'clock' },
+  { key: 'records', title: c.records.title, lede: c.records.lede, icon: 'lock' },
+] as const;
+---
+<AppShell title={c.feed.title} screen="activity" mode="simple" description="What your AI agents did, what waits for you, and the locked records.">
+  <div class="sx">
+    <nav class="segmented sv-tabs" aria-label={c.view.simple} id="sv-tabs">
+      {panels.map((p, i) => (
+        <a href={p.key === 'activity' ? '/app/simple' : `/app/simple?show=${p.key}`} data-show={p.key} aria-current={i === 0 ? 'page' : undefined}>
+          <Icon name={p.icon} size={16} />{p.title}{p.key === 'waiting' && <span class="badge" data-badge="approvals" hidden>0</span>}
+        </a>
+      ))}
+    </nav>
+    {panels.map((p, i) => (
+      <section class="sv-panel" id={`sv-${p.key}`} data-panel={p.key} aria-labelledby={`sv-h-${p.key}`} hidden={i !== 0}>
+        <header class="sx-head">
+          <h1 class="t-title-2" id={`sv-h-${p.key}`} tabindex="-1">{p.title}</h1>
+          <p class="lede">{p.lede}</p>
+        </header>
+        <div class="sv-body" id={`sv-body-${p.key}`} aria-busy="true">
+          <ul class="sv-list" aria-hidden="true">
+            {[0, 1, 2, 3, 4].map(() => (<li class="sv-row"><button type="button" tabindex="-1"><span class="skel skel-line w-16"></span><span class="skel skel-line"></span><span class="skel skel-line w-16"></span></button></li>))}
+          </ul>
+        </div>
+      </section>
+    ))}
+  </div>
+</AppShell>
+<script>
+  import { bootShell } from '../controllers/shell.ts';
+  import { mountSimple } from '../controllers/simple.ts';
+  bootShell({ title: 'What agents did' });
+  mountSimple();
+</script>
