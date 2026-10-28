@@ -220,3 +220,17 @@ func TestAppInstallBadBundle(t *testing.T) {
 		t.Fatalf("hint: %q", all)
 	}
 }
+
+// app connect with no app running and no server or key named says to start the app, not to find an
+// admin API key.
+func TestAppConnectNotRunning(t *testing.T) {
+	env := map[string]string{"DEEDGLASS_APP_DIR": t.TempDir()}
+	r := cli(t, env, false, "app", "connect")
+	if r.code != ExitNotAuthed || !strings.Contains(r.stderr, "isn't running on this computer") || !strings.Contains(r.stderr, "app connect again") || strings.Contains(r.stderr, "org keys create") {
+		t.Fatalf("code %d\n%s%s", r.code, r.stdout, r.stderr)
+	}
+	r = cli(t, env, false, "app", "connect", "--json")
+	if r.code != ExitNotAuthed || r.stdout != "" || !strings.Contains(r.stderr, `"code":"authentication_required"`) || !strings.Contains(r.stderr, "isn't running") {
+		t.Fatalf("json: code %d\n%s%s", r.code, r.stdout, r.stderr)
+	}
+}
