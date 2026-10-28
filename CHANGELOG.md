@@ -7,6 +7,13 @@ this file by `scripts/release-notes.sh`.
 
 ## [Unreleased]
 
+### Changed
+
+- README: a short project status (pre-1.0, one maintainer, free and self-hosted, what isn't there
+  yet) and the licence in plain words. SECURITY.md: the security inbox note is gone (the address
+  works), and the scope says the container image is private for now. The npm packages name their
+  author, and `@deedglass/sdk` points at the right docs page.
+
 ## [0.14.1] - 2026-10-28
 
 A small patch: three more commands the shell guard asks about, a fix for slow regular expressions in
