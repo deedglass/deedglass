@@ -54,7 +54,7 @@ func runHealthPilot(ctx context.Context, e *Env, args []string) error {
 			return usageErr(fmt.Errorf("--fhir-url %q isn't an http or https URL", v.fhirURL), "Pass your FHIR sandbox's base URL, like https://hapi.example.org/fhir.")
 		}
 	}
-	o := healthpilot.Options{Out: e.Stdout, Style: e.Style, Width: e.Width, Region: v.region, FHIRURL: v.fhirURL, ConsoleURL: v.consoleURL}
+	o := healthpilot.Options{Out: e.Stdout, Style: e.Style, Width: e.Width, Region: v.region, FHIRURL: v.fhirURL, ConsoleURL: v.consoleURL, Cmd: invocation(e), Brief: e.Globals.Verbose == 0}
 	if !v.noFiles {
 		o.Dir, o.DisplayDir = v.out, v.out
 		if abs, err := filepath.Abs(v.out); err == nil {

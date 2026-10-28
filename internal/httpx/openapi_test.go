@@ -197,6 +197,11 @@ func elsewhere() []Route {
 		Route{Method: "GET", Pattern: "/weekly/off", OperationID: "weeklyOffPage", Auth: Public, Handler: stub},
 		Route{Method: "POST", Pattern: "/weekly/off", OperationID: "weeklyOff", Auth: Public, Idempotency: IdemNever, BodyType: "application/x-www-form-urlencoded", Handler: stub},
 		Route{Method: "GET", Pattern: "/v1/clients", OperationID: "listClients", Auth: Session, MinRole: RoleViewer, Handler: stub})
+	// S53 (DL-143): the local app (internal/localapi).
+	start := adm("POST", "/v1/connect/{id}/start", "startConnect", RoleAdmin)
+	start.Idempotency = IdemNever
+	out = append(out, adm("GET", "/v1/local", "getLocal", RoleViewer), adm("PATCH", "/v1/local", "updateLocal", RoleAdmin),
+		adm("GET", "/v1/connect", "listConnect", RoleViewer), start)
 	// S29: Slack interactivity (internal/notify/slack): public, a form body, Slack's signature.
 	out = append(out, Route{Method: "POST", Pattern: "/v1/slack/interact", OperationID: "slackInteract", Auth: Public, Idempotency: IdemNever,
 		BodyType: "application/x-www-form-urlencoded", MaxBody: 256 << 10, Handler: stub})

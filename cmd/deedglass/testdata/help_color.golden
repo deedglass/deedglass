@@ -1,77 +1,15 @@
 exit 0
 --- stdout
-[38;5;69m◖[38;5;231m│[38;5;252m◗[0m [1;38;5;255mdeedglass[0m  [2mthe execution and accountability layer for AI agents[0m
+[38;5;69m◖[38;5;231m│[38;5;252m◗[0m [1;38;5;255mdeedglass[0m  [2msee what your AI agents did, and check it[0m
 
-[1mUsage[0m  deedglass <command> [flags]
+  deedglass app             Open Deedglass in your browser
+  deedglass start           See Deedglass catch an agent's wrong claim
+  deedglass protect         Guard Claude Code, Cursor and other coding agents
+  deedglass app connect     Connect Claude Desktop, Cursor, VS Code and more
+  deedglass actions list    See what your agents did
+  deedglass approvals list  See what's waiting for you, then approve or deny
+  deedglass verify          Check a locked record, offline
+  deedglass deeds export    Save your records to a file
 
-[1mSetup[0m
-  start               See it catch a wrong row count, no questions
-  init                Set up Deedglass in this directory
-  doctor              Check config, database and keys
-  connect             Put your own Postgres behind Deedglass
-  scan                Show what your agent setup can change
-  protect             Add the shell guard to every coding agent
-  health pilot        Try the hospital pilot on synthetic data
-  play                Watch the 301 scene offline, no Docker
-  serve               Run the API, the rules and the Console
-  migrate             Apply or check database migrations
-  config print        Show the effective config, secrets hidden
-  lockdown            Turn on the strictest setup, or check it
-  version             Show the client and server versions
-  keys                Manage seal keys
-  licence             Check this machine's licence (none needed)
-  vault               Check or rotate the credential vault
-  completion          Print shell completion
-
-[1mAgents[0m
-  agent               Register and control agents
-  agent keys          Manage an agent's API keys
-  agent intent        Manage an agent's signed-intent keys
-  org                 Create orgs and keys; stop or start all
-
-[1mPolicies[0m
-  policy              Write, test and activate policies
-  policy packs        List or check the policy packs
-  guard shell         Check a shell command before an agent runs it
-
-[1mActions[0m
-  act                 Send a test action through Deedglass
-  actions             Inspect actions
-  approve · deny      Decide a pending approval
-  approvals           List pending approvals
-  undo                Preview or run an undo
-  observe             Watch what changed while an agent ran
-  webhooks            Send events to your endpoints
-
-[1mRecords[0m
-  verify              Check records offline
-  export              Write records as OTel, OCSF, PROV or FHIR
-  security-pack       Answer a security review from your records
-  report              Report what your agents did in a week or month
-  clients             List every org you look after
-  deeds               Browse and export records
-  ledger              Check or prune the Ledger
-
-[1mConnectors[0m
-  connector           Connect tools
-  connector postgres  Prepare a Postgres database
-  connector gmail     Authorize the Gmail connector
-  decoder             Inspect Postgres change readers
-  witness             Compare actions with other change feeds
-  slack manifest      Print the Slack app manifest
-
-[1mMCP and A2A[0m
-  mcp                 Put Deedglass in front of MCP servers
-  a2a                 Put Deedglass in front of a remote A2A agent
-
-[1mInsights[0m
-  insights            Suggestions, shadow results and anomalies
-
-[1mDev[0m
-  dev                 Local helpers
-
-[1mGlobal flags[0m  --json · --server <url> · --api-key <key> · --org <id> ·
-              --no-color · -v
-
-[2mRun deedglass help <command> for more · https://docs.deedglass.com[0m
+[2mEvery command: deedglass help all · one command: deedglass help <command>[0m
 --- stderr

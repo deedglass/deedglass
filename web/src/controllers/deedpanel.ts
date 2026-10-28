@@ -9,6 +9,7 @@ import { parseEnvelope } from '@verify/deed.ts';
 import { mountMirror, type ConsoleMirrorState } from '@verify/ui/mirror.ts';
 import { API_VERSION } from '../lib/api.ts';
 import { copy, fill } from '../lib/copy.ts';
+import { copyChip } from '../lib/chips.ts';
 import { h, icon } from '../lib/dom.ts';
 import { number, shortHash, shortId } from '../lib/format.ts';
 import { SealGovernor } from '../lib/seal.ts';
@@ -118,8 +119,8 @@ export function deedPanel(o: DeedPanelOptions): DeedPanel {
       const b = p.env.body;
       head.textContent = fill(copy.deedPanel.sealed, { seq: number(b.seq) });
       facts.replaceChildren(
-        h('dt', null, 'Deed'), h('dd', null, h('button', { type: 'button', class: 'idchip', 'data-copy': p.env.id, title: p.env.id, 'aria-label': `Copy ${p.env.id}`, translate: 'no' }, shortId(p.env.id), icon('copy', 16))),
-        h('dt', null, 'Body hash'), h('dd', null, h('button', { type: 'button', class: 'idchip', 'data-copy': p.env.body_hash, title: p.env.body_hash, 'aria-label': `Copy ${p.env.body_hash}`, translate: 'no' }, shortHash(p.env.body_hash), icon('copy', 16))),
+        h('dt', null, 'Deed'), h('dd', null, copyChip(p.env.id, shortId(p.env.id))),
+        h('dt', null, 'Body hash'), h('dd', null, copyChip(p.env.body_hash, shortHash(p.env.body_hash))),
         h('dt', null, copy.deedPanel.sealKey), h('dd', null, h('span', { class: 'mono', title: p.env.seal_key_id, translate: 'no' }, shortId(p.env.seal_key_id))));
     } catch {
       /* the check below says what is wrong with it */

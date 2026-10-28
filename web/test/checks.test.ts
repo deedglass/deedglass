@@ -9,6 +9,7 @@ import { policiesCopy } from '../src/lib/copy-policies.ts';
 import { settingsCopy } from '../src/lib/copy-settings.ts';
 import { insightsCopy } from '../src/lib/copy-insights.ts';
 import { liveCopy } from '../src/lib/copy-live.ts';
+import { simpleCopy } from '../src/lib/copy-simple.ts';
 import { iconNames } from '../src/icons/names.gen.ts';
 import { files, read, repo, web } from './helpers.ts';
 
@@ -71,7 +72,7 @@ describe('copy', () => {
     else if (o && typeof o === 'object') Object.values(o).forEach(walk);
   };
   walk(copy);
-  for (const area of [approvalsCopy, connectorsCopy, editorCopy, formsCopy, policiesCopy, settingsCopy, insightsCopy, liveCopy]) walk(area);
+  for (const area of [approvalsCopy, connectorsCopy, editorCopy, formsCopy, policiesCopy, settingsCopy, insightsCopy, liveCopy, simpleCopy]) walk(area);
   it('follows the voice: no exclamation marks, no em or en dashes, no emoji', () => {
     for (const s of all) {
       expect(s.includes('!'), s).toBe(false);

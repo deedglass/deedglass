@@ -87,6 +87,9 @@ type Options struct {
 	Width int
 	// Verbose also prints, under each replayed scene, the recorded lines exactly as they printed.
 	Verbose bool
+	// Brief prints one or two rows a scene (what was decided or found) and a one-line legend
+	// (DL-143: a calmer default; -v shows every row).
+	Brief bool
 	// Pace is called before each line with the pause the line asks for; nil means no pauses
 	// (tests, --fast, and output that isn't a terminal).
 	Pace func(ctx context.Context, d time.Duration) error
@@ -135,7 +138,12 @@ type run struct {
 	st       ui.Style
 	res      *Result
 	lastShip string // the replayed run's verdict line for the trigger scene
+	n        int    // the scene being played
 }
+
+// briefKeys is the row each scene keeps in Brief mode: the decision for the two requests, the
+// check for the writes, the result for the undo, the checks for the records.
+var briefKeys = map[int]string{1: "rule", 2: "rule", 3: "check", 4: "check", 5: "result", 6: "verify"}
 
 func (r *run) pause(d time.Duration) error {
 	if r.o.Pace == nil || d <= 0 {
@@ -154,6 +162,9 @@ func (r *run) line(d time.Duration, s string) error {
 
 // row prints one key/value row of a scene (and its wrapped lines), after a pause of d.
 func (r *run) row(d time.Duration, key, glyph, value, tag string) error {
+	if r.o.Brief && briefKeys[r.n] != key {
+		return nil
+	}
 	for _, l := range r.st.KV(bodyIndent, r.o.Width, ui.Row{Key: ui.Pad(key, keyWidth), Glyph: glyph, Value: value, Tag: tag}) {
 		if err := r.line(d, l); err != nil {
 			return err
@@ -164,6 +175,10 @@ func (r *run) row(d time.Duration, key, glyph, value, tag string) error {
 }
 
 func (r *run) scene(n, of int, title, intro string) error {
+	r.n = n
+	if r.o.Brief {
+		intro = ""
+	}
 	if err := r.line(700*time.Millisecond, ""); err != nil {
 		return err
 	}
@@ -215,6 +230,9 @@ func Run(ctx context.Context, o Options) (*Result, error) {
 		ui.Row{Key: tagLive, Value: "computed here, by the product's own policy engine and verifier"},
 		ui.Row{Key: tagRerun, Value: fmt.Sprintf("printed by a recorded run of %s (%s, %s)\nPostgres can't run inside this binary, so its lines are replayed", cast.Command, cast.Commit, day)},
 	)
+	if o.Brief {
+		legend = []string{"  " + st.Dim(tagLive+" = run here "+ui.Sep+" "+tagRerun+" = from a recorded Postgres run "+ui.Sep+" -v for every step")}
+	}
 	for _, l := range legend {
 		if err := r.line(60*time.Millisecond, l); err != nil {
 			return r.res, err

@@ -254,7 +254,7 @@ describe('insights views', () => {
   it('draws a suggestion card for an admin: header, panels, a collapsed diff, risk and two actions', () => {
     const accepts: string[] = [];
     const el = suggestionCard(loosen, { admin: true, tz: 'UTC', onAccept: (s) => accepts.push(s.id), onReject: noop });
-    expect(txt(el.querySelector('.ins-card-head'))).toBe('Loosen · approve-order-updates sug_01m4…wjah');
+    expect(txt(el.querySelector('.ins-card-head'))).toBe(`Loosen · approve-order-updates Copy ${loosen.id}sug_01m4…wjah`);
     expect(el.querySelector('h3')?.textContent).toBe(loosen.title);
     const row = el.querySelector('.ins-trans > li')!;
     expect(row.getAttribute('data-transition')).toBe('require_approval>allow');

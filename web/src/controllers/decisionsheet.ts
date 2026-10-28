@@ -11,6 +11,7 @@ import { validDenyReason, type ApprovalFull } from '../lib/models/approval.ts';
 import { openSheet, type Overlay } from './overlay.ts';
 
 export type Vote = 'approve' | 'deny';
+type LabelKey = 'approve' | 'deny' | 'approving' | 'denying' | 'approveTitle' | 'denyTitle' | 'approveBody' | 'denyBody' | 'approveReason' | 'denyReason';
 
 export interface DecisionOptions {
   approval: ApprovalFull;
@@ -22,11 +23,14 @@ export interface DecisionOptions {
   onReload: () => void;
   /** 409 approval_decided (a race): the sheet closes and the page shows the sentence */
   onRace?: (message: string) => void;
+  /** DL-143: the Simple view's words (Decline, Approve and save); unset keys keep S26's copy */
+  labels?: Partial<Record<LabelKey, string>>;
 }
 
 let seq = 0;
 
 export function openDecisionSheet(o: DecisionOptions): Overlay {
+  const L: Record<LabelKey, string> = { ...c, ...(o.labels ?? {}) };
   const id = `ds${++seq}`;
   const a = o.approval;
   const deny = o.vote === 'deny';
@@ -40,7 +44,7 @@ export function openDecisionSheet(o: DecisionOptions): Overlay {
   err.hidden = true;
   const offline = h('p', { class: 'banner banner-readonly', role: 'status' }, icon('wifi-off', 16), c.offline);
   const cancel = h('button', { type: 'button', class: 'btn btn-secondary' }, 'Cancel');
-  const go = h('button', { type: 'button', class: `btn ${deny ? 'btn-danger-outline' : 'btn-primary'}`, 'data-decide': o.vote }, deny ? c.deny : c.approve);
+  const go = h('button', { type: 'button', class: `btn ${deny ? 'btn-danger-outline' : 'btn-primary'}`, 'data-decide': o.vote }, deny ? L.deny : L.approve);
   const ready = () => {
     const online = navigator.onLine;
     offline.hidden = online;
@@ -48,9 +52,9 @@ export function openDecisionSheet(o: DecisionOptions): Overlay {
     go.disabled = !online || (deny && !validDenyReason(reason.value));
   };
   const body = [
-    h('p', { class: 'decision-lede' }, deny ? c.denyBody : fill(c.approveBody, { effect: o.effect, agent: a.agent.name, obo })),
+    h('p', { class: 'decision-lede' }, deny ? L.denyBody : fill(L.approveBody, { effect: o.effect, agent: a.agent.name, obo })),
     h('div', { class: 'field' },
-      h('label', { class: 'label', for: `${id}-r` }, deny ? c.denyReason : c.approveReason),
+      h('label', { class: 'label', for: `${id}-r` }, deny ? L.denyReason : L.approveReason),
       reason,
       h('p', { class: 'help', id: `${id}-h` }, deny ? `${c.denyReasonHint} ` : null, h('span', { class: 'kbd-only' }, c.submitHint))),
     offline,
@@ -58,7 +62,7 @@ export function openDecisionSheet(o: DecisionOptions): Overlay {
   ];
   const ov = openSheet({
     kind: matchMedia('(min-width: 640px)').matches ? 'dialog' : 'sheet',
-    title: fill(deny ? c.denyTitle : c.approveTitle, { tool: a.tool }),
+    title: fill(deny ? L.denyTitle : L.approveTitle, { tool: a.tool }),
     body,
     foot: [cancel, go],
     // A phone keyboard would cover the decision: on touch, Approve opens with focus on Cancel.
@@ -94,7 +98,7 @@ export function openDecisionSheet(o: DecisionOptions): Overlay {
     if (go.disabled) return;
     go.setAttribute('aria-busy', 'true');
     go.setAttribute('aria-disabled', 'true');
-    go.replaceChildren(h('span', { class: 'spin-glyph', 'aria-hidden': 'true' }, '◐'), deny ? c.denying : c.approving);
+    go.replaceChildren(h('span', { class: 'spin-glyph', 'aria-hidden': 'true' }, '◐'), deny ? L.denying : L.approving);
     err.hidden = true;
     try {
       const res = await api<ApprovalFull>('POST', `/v1/approvals/${a.id}/${o.vote}`, {
@@ -107,7 +111,7 @@ export function openDecisionSheet(o: DecisionOptions): Overlay {
     } catch (e) {
       go.removeAttribute('aria-busy');
       go.removeAttribute('aria-disabled');
-      go.replaceChildren(deny ? c.deny : c.approve);
+      go.replaceChildren(deny ? L.deny : L.approve);
       if (e instanceof ApiError && e.code === 'context_changed') return showError(e.message, true);
       if (e instanceof ApiError && e.code === 'approval_decided' && o.onRace) {
         close();

@@ -55,17 +55,27 @@ export function statusChip(status: 'active' | 'suspended' | 'stopped' | 'test'):
   return h('span', { class: `status status-${status}` }, icon(m.icon, 16), m.word);
 }
 
+/**
+ * copyChip: a value shown shortened that copies in full. Its name is "Copy <full value>" from hidden
+ * text and the short form is hidden from the name, so the name never contradicts what's on screen
+ * (WCAG 2.5.3, label in name).
+ */
+export function copyChip(value: string, short: string): HTMLButtonElement {
+  return h('button', { type: 'button', class: 'idchip', 'data-copy': value, title: value, translate: 'no' },
+    h('span', { class: 'sr-only' }, `Copy ${value}`), h('span', { 'aria-hidden': 'true' }, short), icon('copy', 16));
+}
+
 /** idChip: mono, shortened, the full id in the title, click to copy. */
 export function idChip(id: string, href?: string): HTMLElement {
   const short = shortId(id);
-  if (!href) return h('button', { type: 'button', class: 'idchip', 'data-copy': id, title: id, 'aria-label': `Copy ${id}`, translate: 'no' }, short, icon('copy', 16));
+  if (!href) return copyChip(id, short);
   // Linked: the id is the link; the copy button beside it is the icon alone.
   const btn = h('button', { type: 'button', class: 'idchip idchip-icon', 'data-copy': id, title: `Copy ${id}`, 'aria-label': `Copy ${id}` }, icon('copy', 16));
   return h('span', { class: 'idlink' }, h('a', { href, class: 'mono', translate: 'no', title: id }, short), btn);
 }
 
 export function hashChip(hash: string): HTMLButtonElement {
-  return h('button', { type: 'button', class: 'idchip', 'data-copy': hash, title: hash, 'aria-label': `Copy ${hash}`, translate: 'no' }, shortHash(hash), icon('copy', 16));
+  return copyChip(hash, shortHash(hash));
 }
 
 /** relTime: <time> with the relative text and the absolute time (org time zone) in the title. */

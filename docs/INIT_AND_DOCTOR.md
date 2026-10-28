@@ -98,7 +98,8 @@ up, and once all five are done.
 - It doesn't use an existing database: `deedglass connect "$DATABASE_URL"` puts your own Postgres
   behind the stack ([guide](guides/supabase.md) for Supabase, [Neon](guides/neon.md)).
 - It doesn't write MCP client config files. It prints the snippet; you paste it.
-- It doesn't run on Windows. Use WSL 2.
+- It doesn't run on Windows. There, `deedglass app` (the native Windows binary, no Docker and no
+  WSL) opens the local app in your browser.
 - It is for a laptop: the stack listens on 127.0.0.1 only, in dev mode, with throwaway data.
 
 ## deedglass doctor

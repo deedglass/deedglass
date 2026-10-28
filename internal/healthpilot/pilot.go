@@ -29,6 +29,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -84,6 +85,12 @@ type Options struct {
 	// store. Scene 2 always runs on the synthetic store: it needs a server that changes what it saves.
 	FHIRURL    string
 	ConsoleURL string // "" means DefaultConsoleURL
+	// Cmd is how the person ran this binary, for the commands the pilot prints: "deedglass", or
+	// "npx deedglass" under npx, where a bare deedglass isn't on PATH. "" means "deedglass".
+	Cmd string
+	// Brief prints the rows that say what happened in each scene (DL-143: a calmer default); the
+	// rest wait for -v.
+	Brief bool
 	// Dir receives REPORT.md, IT_REVIEW_PACK.md, deeds.jsonl and keys.json ("" writes nothing).
 	Dir        string
 	DisplayDir string // how Dir is printed ("" prints Dir)
@@ -165,6 +172,7 @@ type store struct {
 }
 
 type run struct {
+	n      int // the scene being played
 	ctx    context.Context
 	o      Options
 	st     ui.Style
@@ -205,6 +213,9 @@ func Run(ctx context.Context, o Options) (*Result, error) {
 	}
 	if o.ConsoleURL == "" {
 		o.ConsoleURL = DefaultConsoleURL
+	}
+	if o.Cmd == "" {
+		o.Cmd = "deedglass"
 	}
 	o.ConsoleURL = strings.TrimSuffix(o.ConsoleURL, "/")
 	if o.DisplayDir == "" {
@@ -587,7 +598,9 @@ func (r *run) hold(sc *Scene, s *store, res map[string]any, label string) error 
 		return err
 	}
 	sc.ConsoleURL = r.o.ConsoleURL + "/app/approvals/" + sc.Approval
-	if err := r.row(250*time.Millisecond, "console", "", sc.ConsoleURL+"\nthe link a server sends to the approvers; this pilot runs none"); err != nil {
+	// The approve link only works on a running server, so the terminal names the place that does
+	// exist on this computer (the local app) instead of a link that leads nowhere (F11).
+	if err := r.row(250*time.Millisecond, "app", "", "on a server the approvers open it in the Deedglass app\nsee the app on this computer: "+r.o.Cmd+" app"); err != nil {
 		return err
 	}
 	return r.row(300*time.Millisecond, "result", "", "Nothing reached the record system. It runs only after a person approves.")
@@ -740,7 +753,7 @@ func (r *run) records() error {
 	r.keys = append(r.keys, '\n')
 	if r.o.Dir != "" {
 		d := r.o.DisplayDir
-		return r.row(250*time.Millisecond, "files", "", fmt.Sprintf("deeds.jsonl and keys.json in %s; check them yourself\nthere with: deedglass verify deeds.jsonl --keys keys.json", d))
+		return r.row(250*time.Millisecond, "files", "", fmt.Sprintf("deeds.jsonl and keys.json in %s; check them yourself\nthere with: %s verify deeds.jsonl --keys keys.json", d, r.o.Cmd))
 	}
 	return nil
 }
@@ -791,11 +804,21 @@ func (r *run) lines(d time.Duration, ls []string) error {
 	return nil
 }
 
+// briefKeys are the rows each scene keeps in Brief mode.
+var briefKeys = map[int][]string{1: {"check", "seed"}, 2: {"check"}, 3: {"rule", "app"}, 4: {"verify", "files"}}
+
 func (r *run) row(d time.Duration, key, glyph, value string) error {
+	if r.o.Brief && !slices.Contains(briefKeys[r.n], key) {
+		return nil
+	}
 	return r.lines(d, r.st.KV(bodyIndent, r.o.Width, ui.Row{Key: ui.Pad(key, keyWidth), Glyph: glyph, Value: value}))
 }
 
 func (r *run) scene(s Scene, intro string) error {
+	r.n = s.N
+	if r.o.Brief {
+		intro = ""
+	}
 	if err := r.line(700*time.Millisecond, ""); err != nil {
 		return err
 	}
@@ -810,7 +833,11 @@ func (r *run) scene(s Scene, intro string) error {
 }
 
 func (r *run) intro(first *store) error {
-	if err := r.line(60*time.Millisecond, r.st.Header("deedglass health pilot", "synthetic data", "about 15 minutes to read")); err != nil {
+	meta := "about 15 minutes to read"
+	if r.o.Brief {
+		meta = "-v for every step"
+	}
+	if err := r.line(60*time.Millisecond, r.st.Header("deedglass health pilot", "synthetic data", meta)); err != nil {
 		return err
 	}
 	if err := r.line(0, ""); err != nil {
@@ -819,6 +846,9 @@ func (r *run) intro(first *store) error {
 	storeLine := "an in-memory FHIR R4 store inside this binary: synthetic records only\nnothing leaves this machine"
 	if first.kind == StoreSandbox {
 		storeLine = "your FHIR sandbox at " + hostOf(first.base) + " (scene 1), and the in-memory\nsynthetic store (scene 2); synthetic records only"
+	}
+	if r.o.Brief {
+		return r.lines(60*time.Millisecond, r.st.KV("  ", r.o.Width, ui.Row{Key: "store", Value: storeLine}))
 	}
 	return r.lines(60*time.Millisecond, r.st.KV("  ", r.o.Width,
 		ui.Row{Key: "pack", Value: fmt.Sprintf("%s %s, enforced; PHI mode on; lockdown on", r.res.Pack.Name, r.res.Pack.Version)},
@@ -838,14 +868,14 @@ func (r *run) tail() error {
 			ui.Row{Key: "review", Value: filepath.Join(d, "IT_REVIEW_PACK.md") + ", for your security review"})...)
 	}
 	// The Next block (CLI_STYLE.md › Next steps): the pilot's own next step, then the first run.
-	first := [2]string{"deedglass health pilot --fhir-url " + ui.More, "the first scene on your FHIR sandbox"}
+	first := [2]string{r.o.Cmd + " health pilot --fhir-url " + ui.More, "the first scene on your FHIR sandbox"}
 	if r.res.Store == StoreSandbox {
-		first = [2]string{"docs/guides/fhir-server.md", "put the gate in front of your agent"}
+		first = [2]string{"https://docs.deedglass.com/guides/fhir-server/", "put the gate in front of your agent"}
 	}
 	ls = append(ls, "", st.Section("Next"))
 	ls = append(ls, st.Commands("  ", r.o.Width, first,
-		[2]string{"deedglass start", "a wrong row count, caught on Postgres"},
-		[2]string{"deedglass protect", "guard your coding agents"})...)
+		[2]string{r.o.Cmd + " app", "open Deedglass in your browser, no setup"},
+		[2]string{r.o.Cmd + " start", "a wrong row count, caught on Postgres"})...)
 	return r.lines(80*time.Millisecond, ls)
 }
 

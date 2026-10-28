@@ -5,4 +5,4 @@ import { shortHash, shortId } from '../lib/format.ts';
 interface Props { value: string; hash?: boolean }
 const { value, hash = false } = Astro.props;
 ---
-<button type="button" class="idchip" data-copy={value} title={value} aria-label={`Copy ${value}`} translate="no">{hash ? shortHash(value) : shortId(value)}<Icon name="copy" size={16} /></button>
+<button type="button" class="idchip" data-copy={value} title={value} translate="no"><span class="sr-only">Copy {value}</span><span aria-hidden="true">{hash ? shortHash(value) : shortId(value)}</span><Icon name="copy" size={16} /></button>

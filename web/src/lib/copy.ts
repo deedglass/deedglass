@@ -63,6 +63,9 @@ export const copy = {
     offline: 'Offline · Deedglass will reconnect when your network is back.',
     offlineShort: 'Offline',
     ended: 'Not live',
+    paused: 'Live updates paused',
+    pausedTitle: 'Live updates aren’t reaching this page. Everything you see is saved; Retry to reconnect, or reload.',
+    retry: 'Retry',
   },
 
   // Stop all and Start all: S08 §5.2, lifted.

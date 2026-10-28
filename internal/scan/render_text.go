@@ -10,6 +10,9 @@ import (
 // Style colours terminal text; the zero value prints plain text (NO_COLOR, --ci, pipes).
 type Style struct {
 	Red, Teal, Amber, Violet, Dim, Bold func(string) string
+	// Brief leaves out each suggested policy's reason (the .md and .html reports keep it; -v
+	// prints it). DL-143: a calmer default.
+	Brief bool
 }
 
 func (s Style) apply(f func(string) string, t string) string {
@@ -256,6 +259,9 @@ func RenderText(r *Report, st Style, width int, header string, wrote string) str
 		for i, p := range r.Policies {
 			head := fmt.Sprintf("  %d. %s %s", i+1, pad(p.Rule, 24), st.apply(st.Dim, "from "+p.Starter))
 			w(head)
+			if st.Brief {
+				continue
+			}
 			for _, l := range wrap(p.Why, width-7) {
 				w("     " + st.apply(st.Dim, l))
 			}

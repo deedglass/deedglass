@@ -314,7 +314,7 @@ func (x *run) api(ctx context.Context, key, path string, out any) error {
 func (x *run) preflight(ctx context.Context) StepResult {
 	const id, title = "preflight", "Preflight"
 	if runtime.GOOS == "windows" {
-		return fail(id, title, "Windows isn't supported by deedglass init yet.", "Use WSL 2, then run deedglass init there.")
+		return fail(id, title, "Windows isn't supported by deedglass init yet.", "Run deedglass app instead: the local app, with no Docker and no WSL.")
 	}
 	dctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()

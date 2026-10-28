@@ -344,5 +344,5 @@ function samplesBlock(samples: string[] | null | undefined): Child {
   if (!ids.length) return null;
   return h('details', { class: 'rp-samples' },
     h('summary', { class: 't-footnote t-2' }, fill(c.samples, { n: ids.length })),
-    h('ul', { class: 'rp-ids', role: 'list' }, ...ids.map((id) => h('li', null, h('a', { href: `/app/actions/${id}`, class: 'mono', translate: 'no', title: id, 'aria-label': fill(c.sampleLabel, { id }) }, shortId(id))))));
+    h('ul', { class: 'rp-ids', role: 'list' }, ...ids.map((id) => h('li', null, h('a', { href: `/app/actions/${id}`, class: 'mono', translate: 'no', title: id, 'aria-label': fill(c.sampleLabel, { id: shortId(id) }) }, shortId(id))))));
 }

@@ -202,6 +202,7 @@ func runScan(ctx context.Context, e *Env, args []string) error {
 			if len(wrote) > 0 {
 				wroteLine = "Wrote " + andList(wrote) + " (nothing left this machine)."
 			}
+			st.Brief = e.Globals.Verbose == 0
 			fmt.Fprint(e.Stdout, scan.RenderText(r, st, ui.LayoutWidth(e.Width), header, wroteLine))
 		}
 		for _, w := range wrote {

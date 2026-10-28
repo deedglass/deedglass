@@ -92,6 +92,13 @@ export class Stream {
     this.timer = null;
   }
 
+  /** retry reconnects now (a person pressed Retry); a live or stopped stream is left alone. */
+  retry(): void {
+    if (this.stopped || this.st === 'live') return;
+    this.attempt = 0;
+    this.reopen(0, true);
+  }
+
   state(): StreamState {
     return this.st;
   }

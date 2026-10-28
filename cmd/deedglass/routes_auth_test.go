@@ -221,6 +221,9 @@ func rauthPath(t *testing.T, pattern string) string {
 		case "dtx":
 			v = ids.New[ids.DecodedTxKind]().String()
 		case "id":
+			if prev == "connect" {
+				v = "cursor" // S53: a Connect item, not an id
+			}
 			if p, ok := rauthIDPrefix[prev]; ok {
 				s, err := ids.NewString(p)
 				if err != nil {

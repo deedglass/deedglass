@@ -62,6 +62,77 @@ export function setSimHint(on: boolean, storage: Pick<Storage, 'setItem' | 'remo
   }
 }
 
+// DL-143: the local app's UI preferences. Which view this browser opens (Simple or Detailed), the
+// path chosen at first run (it only orders the Connect tiles and picks the default view), and
+// whether first run has been seen. Display choices only: no org id, no data. /app/theme.js reads
+// the view before first paint so /app opens Simple without a flash. Keep in step with theme.js.
+export type View = 'simple' | 'detailed';
+export type Path = 'clinic' | 'build' | 'it';
+export const VIEW_KEY = 'deedglass.view';
+export const PATH_KEY = 'deedglass.path';
+export const STARTED_KEY = 'deedglass.started';
+
+export function isView(v: unknown): v is View {
+  return v === 'simple' || v === 'detailed';
+}
+export function isPath(v: unknown): v is Path {
+  return v === 'clinic' || v === 'build' || v === 'it';
+}
+
+/** getView is the saved view, or null when this browser never chose one. */
+export function getView(storage: Pick<Storage, 'getItem'> | null = safeStorage()): View | null {
+  try {
+    const v = storage?.getItem(VIEW_KEY);
+    return isView(v) ? v : null;
+  } catch {
+    return null;
+  }
+}
+
+export function setView(v: View, root: HTMLElement | null = typeof document === 'undefined' ? null : document.documentElement, storage: Pick<Storage, 'setItem'> | null = safeStorage()): void {
+  root?.setAttribute('data-view', v);
+  try {
+    storage?.setItem(VIEW_KEY, v);
+  } catch {
+    /* storage blocked: the choice lasts for this page */
+  }
+}
+
+export function getPath(storage: Pick<Storage, 'getItem'> | null = safeStorage()): Path | null {
+  try {
+    const v = storage?.getItem(PATH_KEY);
+    return isPath(v) ? v : null;
+  } catch {
+    return null;
+  }
+}
+
+/** viewFor is the view a path opens by default: Simple for clinics and hospital IT, Detailed for builders. */
+export function viewFor(p: Path): View {
+  return p === 'build' ? 'detailed' : 'simple';
+}
+
+/** choosePath saves the first-run choice, marks first run as seen and sets the matching view. */
+export function choosePath(p: Path, root: HTMLElement | null = typeof document === 'undefined' ? null : document.documentElement, storage: Pick<Storage, 'setItem'> | null = safeStorage()): View {
+  const v = viewFor(p);
+  try {
+    storage?.setItem(PATH_KEY, p);
+    storage?.setItem(STARTED_KEY, '1');
+  } catch {
+    /* storage blocked */
+  }
+  setView(v, root, storage);
+  return v;
+}
+
+export function hasStarted(storage: Pick<Storage, 'getItem'> | null = safeStorage()): boolean {
+  try {
+    return storage?.getItem(STARTED_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
 function safeStorage(): Storage | null {
   try {
     return typeof localStorage === 'undefined' ? null : localStorage;

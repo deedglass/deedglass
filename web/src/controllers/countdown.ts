@@ -50,6 +50,10 @@ export function Countdown(expiresAt: string | number | Date, o: CountdownOptions
   let prev = Number.NaN; // the first tick never announces: a countdown that starts under 1 minute is read with the page
   let done = false;
   let seen = false;
+  // onExpire fires only when this countdown watched the time run out. One built for a request that
+  // is already past its time (the server's sweeper hasn't marked it yet) must not ask its caller to
+  // re-fetch: the caller re-renders, builds a new countdown, and would ask again in a tight loop.
+  let wasLive = false;
 
   const onVisible = () => {
     if (document.visibilityState === 'visible') tick();
@@ -68,6 +72,7 @@ export function Countdown(expiresAt: string | number | Date, o: CountdownOptions
     if (timer !== null) clearTimeout(timer);
     timer = null;
     const left = Number.isFinite(end) ? end - now() : 0;
+    if (left > 0) wasLive = true;
     const text = label(left);
     if (el.textContent !== text) el.textContent = text;
     el.classList.toggle('cd-urgent', urgent(left));
@@ -78,7 +83,7 @@ export function Countdown(expiresAt: string | number | Date, o: CountdownOptions
     if (d === null) {
       done = true;
       stop();
-      o.onExpire?.();
+      if (wasLive) o.onExpire?.();
       return;
     }
     timer = setTimeout(tick, d);

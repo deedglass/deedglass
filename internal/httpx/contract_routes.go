@@ -188,6 +188,11 @@ var contractRoutes = []ContractRoute{
 	cr("GET", "/weekly/off", Public, "", "S52", "page; ?t= a signed single-purpose token"),
 	cr("POST", "/weekly/off", Public, "", "S52", "form; IdemNever; the token turns that person's weekly email off and nothing else"),
 	cr("GET", "/v1/clients", Session, "viewer", "S52", "Pro: 403 pro_required without agency; one org-scoped read per membership (owner or admin)"),
+	// S53 (DL-143): the local app (deedglass app). 404 not_found on any other serve.
+	cr("GET", "/v1/local", SessionOrKey, "viewer", "S53", "DL-143; keys: admin; the first-run state; 404 outside deedglass app"),
+	cr("PATCH", "/v1/local", SessionOrKey, "admin", "S53", "DL-143; keys: admin; path clinic|build|it, first_run"),
+	cr("GET", "/v1/connect", SessionOrKey, "viewer", "S53", "DL-143; keys: admin; the Connect items; links and commands never hold a key"),
+	cr("POST", "/v1/connect/{id}/start", SessionOrKey, "admin", "S53", "DL-143; keys: admin; IdemNever; makes the client's agent and key file once; terminal adds the shell guard"),
 
 	// S15: MCP (GET and DELETE answer 405; sessionless).
 	cr("POST", "/mcp/{connector}", AgentKey, "actions:execute", "S15"),

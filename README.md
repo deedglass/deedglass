@@ -172,8 +172,10 @@ person countersigns.
 
 ## Quickstart
 
-Docker running with about 2 GiB of free disk, Node 18 or newer, and macOS or Linux (WSL 2 on
-Windows), then (from the [tested Quickstart](https://docs.deedglass.com/quickstart/)):
+Docker running with about 2 GiB of free disk, Node 18 or newer, and macOS or Linux, then (from the
+[tested Quickstart](https://docs.deedglass.com/quickstart/)). On Windows, `npx deedglass` runs the
+native Windows binary, no WSL needed; `deedglass init` uses Docker on macOS and Linux, so on Windows
+start with `npx deedglass app`, which needs no Docker:
 
 <!-- quickstart:begin (scripted copy of docs-site/src/content/docs/quickstart.mdx; docs/readme_test.go compares them) -->
 ```sh

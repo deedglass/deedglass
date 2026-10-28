@@ -23,6 +23,7 @@ import (
 	"github.com/deedglass/deedglass/internal/ids"
 	"github.com/deedglass/deedglass/internal/ledger"
 	"github.com/deedglass/deedglass/internal/policy"
+	"github.com/deedglass/deedglass/internal/setup"
 	"github.com/deedglass/deedglass/internal/store"
 	"github.com/deedglass/deedglass/internal/store/policystore"
 	"github.com/deedglass/deedglass/internal/witness"
@@ -92,7 +93,7 @@ func runApprovalsList(ctx context.Context, e *Env, args []string) error {
 		} else if a.DecidedAt != nil {
 			when = string(a.Status) + " " + ago(now, a.DecidedAt)
 		}
-		rows = append(rows, []string{sym, shortID(a.ID), a.Agent.Name, a.Tool, deref(a.RuleID), countersignWords(a), when})
+		rows = append(rows, []string{sym, clean(a.ID), a.Agent.Name, a.Tool, deref(a.RuleID), countersignWords(a), when}) // full ids: deedglass approve takes one
 	}
 	printColumns(e.Stdout, rows)
 	return nil
@@ -277,6 +278,14 @@ func runDecide(ctx context.Context, e *Env, args []string, v approve.Vote) error
 	}
 	if err != nil {
 		return err
+	}
+	// The local app has one person, its owner: --as defaults to them there (DL-143 CLI parity).
+	if strings.TrimSpace(decideValues.as) == "" && cfg.Env != config.Prod {
+		if _, st := findStack(e); st == nil {
+			if _, as := runningApp(e); as != nil {
+				decideValues.as = setup.DefaultOwner
+			}
+		}
 	}
 	if cfg.Env == config.Prod || strings.TrimSpace(decideValues.as) == "" {
 		base := strings.TrimSuffix(cfg.BaseURL.String(), "/")

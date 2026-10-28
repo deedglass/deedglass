@@ -149,6 +149,9 @@ describe('replay views', () => {
     const links = [...rows[0]!.querySelectorAll<HTMLAnchorElement>('.rp-ids a')];
     expect(links.length).toBe(20);
     expect(links[0]!.getAttribute('href')).toBe(`/app/actions/${ok.transitions![0]!.samples![0]}`);
+    // axe label-content-name-mismatch: the name holds the visible short id; the full id stays in title
+    expect(links[0]!.getAttribute('aria-label')).toContain(txt(links[0]!));
+    expect(links[0]!.getAttribute('title')).toBe(ok.transitions![0]!.samples![0]);
     // red only as the outline on the candidate's new deny
     expect(rows[1]!.querySelector('[data-decision="deny"][data-side="to"]')).not.toBeNull();
     expect(el.querySelector('[data-rule-change="refund-limit>refund-limit-strict"]')).not.toBeNull();

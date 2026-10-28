@@ -47,8 +47,8 @@ func bareOnly(flags []string) bool {
 	return true
 }
 
-// runBare is deedglass with no command: the welcome (what it is and the three commands to start
-// with; first-run-v1), plain when piped. -q prints the plain help, --version is deedglass version.
+// runBare is deedglass with no command: in an interactive terminal the local app (DL-143),
+// otherwise the welcome (what it is and the commands to start with; first-run-v1). -q prints the plain help, --version is deedglass version.
 func runBare(ctx context.Context, e *Env, flags []string) error {
 	quiet, version := false, false
 	for _, f := range flags {
@@ -67,6 +67,12 @@ func runBare(ctx context.Context, e *Env, flags []string) error {
 	}
 	if quiet {
 		return printHelp(e, nil)
+	}
+	// DL-143: a person at a terminal gets the local app; piped, in CI or with --json the welcome
+	// stays, so scripts and AI agents never start a server by running bare deedglass.
+	if interactive(e) {
+		appFlagValues = appOpts{}
+		return runApp(ctx, e, nil)
 	}
 	fmt.Fprint(e.Stdout, welcome(e))
 	return nil

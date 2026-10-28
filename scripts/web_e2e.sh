@@ -93,9 +93,15 @@ psql_admin -d deedglass -c "UPDATE deedglass.users SET display_name = 'Arjun Meh
 # WEB_E2E_SIM=0 skips it (the Insights specs then skip themselves).
 SIM_ORG=""
 if [ "${WEB_E2E_SEED:-1}" = "1" ] && [ "${WEB_E2E_SIM:-1}" = "1" ]; then
-  SIM_END="$(python3 -c 'import datetime as d;print((d.datetime.now(d.timezone.utc)-d.timedelta(days=2)).strftime("%Y-%m-%dT06:30:00Z"))')"
+  # The week ends at 06:30 UTC on the latest day that leaves a clear 2-day gap before now: the
+  # Insights spec appends 2 days ending now (its window starts at the hour before now minus 48 h),
+  # so an end later than now − 49 h overlapped and failed every run between 00:00 and 07:00 UTC.
+  SIM_END="$(python3 -c 'import datetime as d
+t=d.datetime.now(d.timezone.utc)-d.timedelta(hours=49)
+e=t.replace(hour=6,minute=30,second=0,microsecond=0)
+print((e if e<=t else e-d.timedelta(days=1)).strftime("%Y-%m-%dT%H:%M:%SZ"))')"
   "$DG" dev simulate --days 7 --end "$SIM_END" --seed 7 --no-color >/dev/null
-  "$DG" insights detect --backfill 9d --org acme-sim --no-color >/dev/null
+  "$DG" insights detect --backfill 10d --org acme-sim --no-color >/dev/null
   SIM_ORG="$(psql_admin -d deedglass -c "SELECT id FROM deedglass.orgs WHERE slug = 'acme-sim'")"
   for spec in "admin|priya.raman@acme.example" "viewer|sam.okafor@acme.example"; do
     IFS='|' read -r role email <<<"$spec"

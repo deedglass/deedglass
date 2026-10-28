@@ -3,9 +3,9 @@ exit 0
 [38;2;79;140;255m◖[38;2;255;255;255m│[38;2;201;204;214m◗[0m [1;38;2;245;246;250mdeedglass[0m
 [1mDeedglass checks what your AI agents actually changed.[0m
 
-  deedglass start         [2msee it catch an agent's 1-row claim that changed 301[0m
-  deedglass protect       [2mguard Claude Code, Cursor and other coding agents[0m
-  deedglass health pilot  [2mthe same checks on synthetic patient records[0m
+  deedglass app      [2mopen it in your browser, no setup[0m
+  deedglass start    [2msee it catch an agent's 1-row claim that changed 301[0m
+  deedglass protect  [2mguard Claude Code, Cursor and other coding agents[0m
 
-[2mMore: deedglass play (the offline story) · deedglass help (every command)[0m
+[2mMore: deedglass health pilot (synthetic patient records) · deedglass help[0m
 --- stderr

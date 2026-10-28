@@ -13,4 +13,11 @@
   try {
     if (window.localStorage.getItem('deedglass.simulated') === '1') document.documentElement.setAttribute('data-sim-hint', '');
   } catch (e) { /* storage blocked: no hint */ }
+  // DL-143: the saved view (Simple or Detailed). A browser that chose Simple opens /app as the Simple
+  // view, before first paint. Keep in step with theme.ts (VIEW_KEY).
+  try {
+    var view = window.localStorage.getItem('deedglass.view');
+    if (view === 'simple' || view === 'detailed') document.documentElement.setAttribute('data-view', view);
+    if (view === 'simple' && /^\/app\/?$/.test(window.location.pathname) && !window.location.search) window.location.replace('/app/simple');
+  } catch (e) { /* storage blocked: Detailed */ }
 })();

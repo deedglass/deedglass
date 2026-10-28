@@ -101,7 +101,7 @@ func startNext(e *Env, live bool) [][2]string {
 // startReplay is the no-Docker path: the scene from internal/play, paced on a terminal.
 func startReplay(ctx context.Context, e *Env, why string) error {
 	next := startNext(e, false)
-	o := play.Options{Out: e.Stdout, Style: e.Style, Width: e.Width, Verbose: e.Globals.Verbose > 0}
+	o := play.Options{Out: e.Stdout, Style: e.Style, Width: e.Width, Verbose: e.Globals.Verbose > 0, Brief: e.Globals.Verbose == 0}
 	st := e.Style
 	if e.Globals.JSON {
 		o.Out = discard{}
@@ -282,12 +282,12 @@ func welcome(e *Env) string {
 	}
 	b.WriteString(st.Bold(head) + "\n\n")
 	for _, l := range st.Commands("  ", e.Width,
+		[2]string{inv + " app", "open it in your browser, no setup"},
 		[2]string{inv + " start", "see it catch an agent's 1-row claim that changed 301"},
 		[2]string{inv + " protect", "guard Claude Code, Cursor and other coding agents"},
-		[2]string{inv + " health pilot", "the same checks on synthetic patient records"},
 	) {
 		b.WriteString(l + "\n")
 	}
-	b.WriteString("\n" + st.Dim("More: "+inv+" play (the offline story) "+ui.Sep+" "+inv+" help (every command)") + "\n")
+	b.WriteString("\n" + st.Dim("More: "+inv+" health pilot (synthetic patient records) "+ui.Sep+" "+inv+" help") + "\n")
 	return b.String()
 }

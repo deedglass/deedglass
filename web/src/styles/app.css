@@ -4,6 +4,9 @@
    Mirror (.dg-mirror). Red only for deny, mismatch and destructive actions. */
 
 @import 'tailwindcss';
+/* Words the scanner finds in copy and other class names, never used as utilities here; leaving them
+   out drops their utilities and the @property rules they pull in (about 300 B gzip). */
+@source not inline('shadow ring blur filter transform outline');
 @import './tokens.css';
 @import './s26-editor.css';
 @import './s26-forms.css';
@@ -15,6 +18,7 @@
 @import './s51-security.css';
 @import './s52-clients.css';
 @import './s60-live.css';
+@import './s70-simple.css';
 
 /* Inter Variable with the optical-size axis and Geist Mono 400, Latin, self-hosted (the site's faces). */
 @font-face {
@@ -220,6 +224,9 @@ table {
   display: grid;
   grid-template-columns: var(--size-sidebar) minmax(0, 1fr);
   min-height: 100dvh;
+  /* The sidebar's surface and edge run the full page height, even when the sticky sidebar itself
+     is only one viewport tall and the content is taller (long lists, full-page screenshots). */
+  background: linear-gradient(90deg, var(--surface) calc(100% - 1px), var(--hairline) 0) 0 / var(--size-sidebar) 100% no-repeat;
 }
 .sidebar {
   position: sticky;
@@ -227,8 +234,7 @@ table {
   height: 100dvh;
   display: flex;
   flex-direction: column;
-  background: var(--surface);
-  border-right: 1px solid var(--hairline);
+  /* its surface and edge are the .shell background, so they run the full page height */
   padding: var(--space-3) var(--space-3) var(--space-4);
   overflow-y: auto;
   z-index: var(--z-sticky);
@@ -395,11 +401,13 @@ table {
 }
 .conn[data-state='reconnecting'] .glyph,
 .conn[data-state='connecting'] .glyph {
+  /* A full ring that breathes (a still ring when motion is reduced), never a clipped "C". */
   background: transparent;
   border: 1.5px solid var(--pending-fg);
-  border-right-color: transparent;
+  animation: skel 0.8s var(--ease-enter) infinite alternate;
 }
 .conn[data-state='offline'] .glyph,
+.conn[data-state='paused'] .glyph,
 .conn[data-state='ended'] .glyph {
   background: transparent;
   border: 1.5px solid var(--text-2);
@@ -474,6 +482,7 @@ html[data-sim-hint] body:not([data-shell]) .workspace > .main {
 @media (max-width: 1023.98px) {
   .shell {
     grid-template-columns: var(--size-rail) minmax(0, 1fr);
+    background-size: var(--size-rail) 100%;
   }
   .sidebar {
     padding: var(--space-3) var(--space-2);
@@ -515,6 +524,7 @@ html[data-sim-hint] body:not([data-shell]) .workspace > .main {
 @media (max-width: 767.98px) {
   .shell {
     display: block;
+    background: none;
   }
   .sidebar {
     display: none;
@@ -842,8 +852,22 @@ html[data-sim-hint] body:not([data-shell]) .workspace > .main {
   font-size: 13px;
   font-weight: 550;
 }
+.segmented a {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: 28px;
+  padding: 0 12px;
+  border-radius: 8px;
+  color: var(--text-2-on-alt);
+  font-size: 13px;
+  font-weight: 550;
+  white-space: nowrap;
+  text-decoration: none;
+}
 .segmented button[aria-pressed='true'],
-.segmented button[aria-checked='true'] {
+.segmented button[aria-checked='true'],
+.segmented a[aria-current='page'] {
   background: var(--surface);
   color: var(--text);
   box-shadow: 0 0 0 1px var(--hairline), var(--shadow-card);

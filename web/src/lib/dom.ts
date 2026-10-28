@@ -105,6 +105,13 @@ export function icon(name: string, size: 16 | 20 = 20, cls = ''): SVGSVGElement 
  * safeHref allows only same-origin Console and API paths and the docs site. Everything else
  * (javascript:, data:, //evil.com, other hosts, backslashes, control characters) is null.
  */
+export const INSTALL_PREFIXES: readonly string[] = [
+  'cursor://anysphere.cursor-deeplink/mcp/install?',
+  'vscode:mcp/install?',
+  'https://cursor.com/en/install-mcp?',
+  'https://vscode.dev/redirect/mcp/install?',
+];
+
 export function safeHref(u: string): string | null {
   if (typeof u !== 'string' || u.length === 0 || u.length > 2048) return null;
   if (/[\u0000-\u001f\u007f\\\s]/.test(u)) return null;
@@ -117,6 +124,9 @@ export function safeHref(u: string): string | null {
     return null;
   }
   if (u.startsWith('#')) return u;
+  // DL-143: the Connect screen's one-click install links (internal/installlinks). Exact prefixes
+  // only; their query carries the public server object, never a key.
+  for (const p of INSTALL_PREFIXES) if (u.startsWith(p) && u.length > p.length) return u;
   try {
     const url = new URL(u);
     if (url.protocol === 'https:' && (url.hostname === 'docs.deedglass.com' || url.hostname === 'deedglass.com') && !url.username && !url.password && (url.port === '' || url.port === '443')) {

@@ -87,7 +87,7 @@ func TestBannerNeverForMachines(t *testing.T) {
 		})
 	}
 	// -q on a TTY still prints the help or the plain version line.
-	if r := cli(t, truecolor(nil), true, "-q"); !strings.Contains(r.stdout, "Usage") {
+	if r := cli(t, truecolor(nil), true, "-q"); !strings.Contains(r.stdout, "deedglass help all") {
 		t.Errorf("-q: want the help, got %q", r.stdout)
 	}
 	if r := cli(t, truecolor(nil), true, "version", "-q"); !strings.HasPrefix(r.stdout, "deedglass 0.1.0-dev · commit") {

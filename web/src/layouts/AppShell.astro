@@ -8,7 +8,8 @@ import IconButton from '../components/IconButton.astro';
 import Mirror from '../components/Mirror.astro';
 import { asset } from '../lib/assets.ts';
 import { copy } from '../lib/copy.ts';
-import { BOTTOM, DESTS } from '../lib/nav.ts';
+import { simpleCopy } from '../lib/copy-simple.ts';
+import { BOTTOM, DESTS, SIMPLE_DESTS, SIMPLE_SHORT } from '../lib/nav.ts';
 import pkg from '../../package.json';
 import tokens from '../../tokens/tokens.json';
 
@@ -16,8 +17,17 @@ interface Props {
   title: string;
   screen: string; // the nav key that is current, or '' for none
   description?: string;
+  /**
+   * DL-143: which navigation the page shows. detailed (today's Console, the default), simple (the
+   * Simple view's four destinations), auto (the saved view decides, before first paint, through
+   * html[data-view]) or bare (first run: no navigation at all).
+   */
+  mode?: 'detailed' | 'simple' | 'auto' | 'bare';
 }
-const { title, screen, description = 'The Deedglass Console.' } = Astro.props;
+const { title, screen, description = 'The Deedglass Console.', mode = 'detailed' } = Astro.props;
+const showDetailed = mode === 'detailed' || mode === 'auto';
+const showSimple = mode === 'simple' || mode === 'auto';
+const viewNow = mode === 'simple' ? 'simple' : mode === 'detailed' ? 'detailed' : '';
 const docTitle = title === 'Overview' ? 'Deedglass Console' : `${title} · Deedglass`;
 const bottom = DESTS.filter((d) => (BOTTOM as readonly string[]).includes(d.key));
 ---
@@ -37,7 +47,7 @@ const bottom = DESTS.filter((d) => (BOTTOM as readonly string[]).includes(d.key)
     <link rel="icon" href={asset('favicon.svg')} type="image/svg+xml" />
     <script is:inline src={asset('theme.js')}></script>
   </head>
-  <body data-screen={screen}>
+  <body data-screen={screen} data-mode={mode}>
     <a class="skip" href="#main">{copy.nav.skip}</a>
     <div class="shell" id="shell-root">
       <aside class="sidebar" aria-label={copy.nav.label}>
@@ -45,7 +55,8 @@ const bottom = DESTS.filter((d) => (BOTTOM as readonly string[]).includes(d.key)
           <Mirror size={20} state="open" />
           <span class="wordmark" aria-hidden="true">{copy.wordmark}</span>
         </a>
-        <nav class="nav" aria-label={copy.nav.label}>
+        {showDetailed && (
+        <nav class="nav nav-detailed" aria-label={copy.nav.label}>
           {DESTS.map((d) => (
             <a class="nav-item" href={d.href} aria-current={d.key === screen ? 'page' : undefined} data-tip={d.label} data-tip-side="right" data-nav={d.key}>
               <Icon name={d.icon as never} />
@@ -55,6 +66,22 @@ const bottom = DESTS.filter((d) => (BOTTOM as readonly string[]).includes(d.key)
             </a>
           ))}
         </nav>
+        )}
+        {showSimple && (
+        <nav class="nav nav-simple" aria-label={simpleCopy.nav.label}>
+          {SIMPLE_DESTS.map((d) => (
+            <a class="nav-item" href={d.href} aria-current={d.key === screen ? 'page' : undefined} data-tip={d.label} data-tip-side="right" data-nav={d.key}>
+              <Icon name={d.icon as never} />
+              <span class="label">{d.label}</span>
+              {d.key === 'waiting' && <span class="badge" data-badge="approvals" hidden>0</span>}
+              {d.key === 'waiting' && <span class="badge-dot" data-badge-dot="approvals" hidden aria-hidden="true"></span>}
+            </a>
+          ))}
+        </nav>
+        )}
+        {showSimple && (
+          <p class="local-note nav-simple-only"><span class="local-dot" aria-hidden="true"></span><span>{simpleCopy.local.running}<br /><span class="t-2">{simpleCopy.local.nothingLeaves}</span></span></p>
+        )}
         <div class="nav-foot">
           <a href="https://docs.deedglass.com/" rel="noopener">{copy.nav.docs} <Icon name="arrow-up-right" size={16} /></a>
           <span class="num">v{pkg.version} · API 2026-10-01</span>
@@ -64,17 +91,23 @@ const bottom = DESTS.filter((d) => (BOTTOM as readonly string[]).includes(d.key)
       <div class="workspace">
         <header class="topbar" id="topbar">
           <a class="show-sm brand" href="/app" aria-label="Deedglass Console, Overview"><Mirror size={20} state="open" /></a>
-          <button type="button" class="btn btn-quiet btn-sm" id="org-btn" aria-label={copy.topbar.switchOrg}>
+          <button type="button" class="btn btn-quiet btn-sm" id="org-btn" aria-label={`${copy.topbar.org}: ${copy.topbar.switchOrg}`}>
             <Icon name="building-2" size={16} /><span id="org-name" class="hide-sm">{copy.topbar.org}</span><Icon name="chevrons-up-down" size={16} class="hide-sm" />
           </button>
-          <button type="button" class="search" id="search-btn" aria-label={copy.topbar.searchLabel} aria-keyshortcuts="Meta+K Control+K /">
+          <button type="button" class="search" id="search-btn" aria-label={`${copy.topbar.search} ${copy.topbar.searchShortcut}`} aria-keyshortcuts="Meta+K Control+K /">
             <Icon name="search" size={16} /><span class="label">{copy.topbar.search}</span><kbd class="kbd">{copy.topbar.searchShortcut}</kbd>
           </button>
           <span class="spacer"></span>
+          {mode !== 'bare' && (
+            <nav class="segmented viewswitch" aria-label={simpleCopy.view.label} data-view-now={viewNow}>
+              <a href="/app/simple" data-view-set="simple" aria-current={viewNow === 'simple' ? 'page' : undefined}>{simpleCopy.view.simple}</a>
+              <a href="/app" data-view-set="detailed" aria-current={viewNow === 'detailed' ? 'page' : undefined}>{simpleCopy.view.detailed}</a>
+            </nav>
+          )}
           <span id="stop-slot"></span>
-          <span class="conn hide-sm" id="conn" data-state="connecting"><span class="glyph" aria-hidden="true"></span><span id="conn-label">{copy.connection.connecting}</span></span>
+          <span class="conn hide-sm" id="conn" data-state="connecting"><span class="glyph" aria-hidden="true"></span><span id="conn-label">{copy.connection.connecting}</span><button type="button" class="btn btn-quiet btn-sm" id="conn-retry" hidden>{copy.connection.retry}</button></span>
           <span class="hide-sm"><IconButton icon="moon" id="theme-btn" label={copy.topbar.theme} /></span>
-          <button type="button" class="icon-btn" id="account-btn" aria-label={copy.topbar.account}><span class="avatar" id="avatar" aria-hidden="true"></span></button>
+          <button type="button" class="icon-btn" id="account-btn"><span class="sr-only" id="account-name">{copy.topbar.account}</span><span class="avatar" id="avatar" aria-hidden="true"></span></button>
         </header>
         <div id="top-sentinel" aria-hidden="true"></div>
         <div class="banners" id="banners"></div>
@@ -84,7 +117,8 @@ const bottom = DESTS.filter((d) => (BOTTOM as readonly string[]).includes(d.key)
       </div>
     </div>
 
-    <nav class="bottombar" id="bottombar" aria-label={copy.nav.label}>
+    {showDetailed && (
+    <nav class="bottombar bottombar-detailed" id="bottombar" aria-label={copy.nav.label}>
       {bottom.map((d) => (
         <a href={d.href} aria-current={d.key === screen ? 'page' : undefined}>
           <Icon name={d.icon as never} />
@@ -94,6 +128,18 @@ const bottom = DESTS.filter((d) => (BOTTOM as readonly string[]).includes(d.key)
       ))}
       <button type="button" id="more-btn" aria-haspopup="dialog"><Icon name="ellipsis" /><span>{copy.nav.more}</span></button>
     </nav>
+    )}
+    {showSimple && (
+    <nav class="bottombar bottombar-simple" id="bottombar-simple" aria-label={simpleCopy.nav.label}>
+      {SIMPLE_DESTS.map((d) => (
+        <a href={d.href} aria-current={d.key === screen ? 'page' : undefined} data-nav={d.key}>
+          <Icon name={d.icon as never} />
+          <span>{SIMPLE_SHORT[d.key]}</span>
+          {d.key === 'waiting' && <span class="badge" data-badge="approvals" hidden>0</span>}
+        </a>
+      ))}
+    </nav>
+    )}
 
     <div id="live" class="sr-only" role="status" aria-live="polite"></div>
     <section id="toasts" class="toasts" aria-label="Notifications"></section>
