@@ -266,12 +266,13 @@
   width: 100%;
   display: grid;
   grid-template-rows: auto 1fr auto;
-  gap: var(--space-3);
-  min-height: 168px;
+  gap: var(--space-4);
+  min-height: 188px;
   padding: var(--space-5);
   text-align: left;
   color: var(--text);
   cursor: pointer;
+  transition: border-color var(--dur-micro) var(--ease-enter), background-color var(--dur-micro) var(--ease-enter);
 }
 .cx-tile:hover {
   border-color: var(--border-strong);
@@ -749,10 +750,6 @@
 .cx-grid {
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
   gap: var(--space-4);
-}
-.cx-tile {
-  gap: var(--space-4);
-  min-height: 188px;
 }
 .cx-tile[data-state=connected] {
   border-color: color-mix(in srgb, var(--verified-fg) 45%, var(--hairline));

@@ -90,6 +90,7 @@ const bottom = DESTS.filter((d) => (BOTTOM as readonly string[]).includes(d.key)
       </aside>
 
       <div class="workspace">
+        <div id="top-sentinel" aria-hidden="true"></div>
         <header class="topbar" id="topbar">
           <a class="show-sm brand" href="/app" aria-label="Deedglass Console, Overview"><Mirror size={20} state="open" /></a>
           <button type="button" class="btn btn-quiet btn-sm" id="org-btn" aria-label={`${copy.topbar.org}: ${copy.topbar.switchOrg}`}>
@@ -110,7 +111,6 @@ const bottom = DESTS.filter((d) => (BOTTOM as readonly string[]).includes(d.key)
           <span class="hide-sm"><IconButton icon="moon" id="theme-btn" label={copy.topbar.theme} /></span>
           <button type="button" class="icon-btn" id="account-btn"><span class="sr-only" id="account-name">{copy.topbar.account}</span><span class="avatar" id="avatar" aria-hidden="true"></span></button>
         </header>
-        <div id="top-sentinel" aria-hidden="true"></div>
         <div class="banners" id="banners"></div>
         <main class="main" id="main" tabindex="-1">
           <slot />
