@@ -5,16 +5,22 @@
 // the status comes from what the existing API already shows (agents, connectors, recent actions).
 // Pure: no DOM, no fetch (test/connect.test.ts).
 
+import type { BrandMarkId } from '../icons/brandmarks.gen.ts';
 import type { Path } from './theme.ts';
 
-export type TileId = 'claude-desktop' | 'cursor' | 'vscode' | 'terminal' | 'openai' | 'scribe' | 'database';
+export type TileId = 'claude-desktop' | 'cursor' | 'vscode' | 'terminal' | 'openai' | 'scribe' | 'database' | 'mcp';
 export type Status = 'not_connected' | 'waiting' | 'connected';
 export type Group = 'ai' | 'systems';
 
 export interface TileDef {
   id: TileId;
   group: Group;
+  /** the Lucide icon, for a tile without a brand mark */
   icon: string;
+  /** the real marks on the tile, left to right (src/icons/brand/marks.json) */
+  marks: BrandMarkId[];
+  /** a short text mark when there is no drawable one (FHIR's flame isn't published as a vector) */
+  monogram?: string;
   /** client names an agent may carry (labels.client or its name) */
   match: string[];
   /** the connector type a system tile adds */
@@ -22,14 +28,21 @@ export interface TileDef {
 }
 
 export const TILES: readonly TileDef[] = [
-  { id: 'claude-desktop', group: 'ai', icon: 'message-square', match: ['claude-desktop', 'claude desktop', 'claude-ai'] },
-  { id: 'cursor', group: 'ai', icon: 'mouse-pointer-2', match: ['cursor'] },
-  { id: 'vscode', group: 'ai', icon: 'code-xml', match: ['vscode', 'vs-code', 'visual studio code', 'copilot'] },
-  { id: 'terminal', group: 'ai', icon: 'square-terminal', match: ['claude-code', 'claude code', 'codex', 'gemini'] },
-  { id: 'openai', group: 'ai', icon: 'bot', match: ['openai', 'chatgpt', 'agents-sdk'] },
-  { id: 'scribe', group: 'systems', icon: 'stethoscope', match: [], connectorType: 'fhir' },
-  { id: 'database', group: 'systems', icon: 'database', match: [], connectorType: 'postgres' },
+  { id: 'claude-desktop', group: 'ai', icon: 'message-square', marks: ['claude'], match: ['claude-desktop', 'claude desktop', 'claude-ai'] },
+  { id: 'cursor', group: 'ai', icon: 'mouse-pointer-2', marks: ['cursor'], match: ['cursor'] },
+  { id: 'vscode', group: 'ai', icon: 'code-xml', marks: ['vscode', 'copilot'], match: ['vscode', 'vs-code', 'visual studio code', 'copilot'] },
+  { id: 'terminal', group: 'ai', icon: 'square-terminal', marks: ['claude', 'openai', 'gemini'], match: ['claude-code', 'claude code', 'codex', 'gemini', 'coding-agents'] },
+  { id: 'openai', group: 'ai', icon: 'bot', marks: ['openai'], match: ['openai', 'chatgpt', 'agents-sdk', 'openai-agents'] },
+  { id: 'mcp', group: 'ai', icon: 'plug', marks: [], match: ['mcp'] },
+  { id: 'scribe', group: 'systems', icon: 'stethoscope', marks: [], monogram: 'FHIR', match: ['scribe'], connectorType: 'fhir' },
+  { id: 'database', group: 'systems', icon: 'database', marks: ['postgresql', 'mysql'], match: [], connectorType: 'postgres' },
 ];
+
+/** INSTALLABLE are the tiles whose Connect button writes a settings file on this computer (the server says which; this is the fallback). */
+export const INSTALLABLE: readonly TileId[] = ['claude-desktop', 'cursor', 'vscode', 'terminal'];
+
+/** SAMPLE_FHIR is a public FHIR test server with made-up records, for "Try with sample data" (never real data). */
+export const SAMPLE_FHIR = 'https://hapi.fhir.org/baseR4';
 
 /** ORDER puts the tiles a path needs first; the rest keep their order. */
 const ORDER: Record<Path, TileId[]> = {
@@ -99,6 +112,19 @@ export function serverText(s: string | null | undefined, fallback: string): stri
   return typeof s === 'string' && s.trim() !== '' && !hasSecret(s) ? s : fallback;
 }
 
+/** Install is the tool's settings file on this computer and what the Connect button would do to it. */
+export interface Install {
+  tool: 'claude-desktop' | 'cursor' | 'vscode' | 'gemini';
+  title: string;
+  file: string;
+  installed: boolean;
+  status: 'add' | 'update' | 'present' | 'skip' | 'absent';
+  reason?: string;
+  entry: string;
+  backup?: string;
+  can_undo: boolean;
+}
+
 export interface ConnectItem {
   id: TileId;
   name?: string;
@@ -111,6 +137,7 @@ export interface ConnectItem {
   config?: string | null;
   command?: string | null;
   address?: string | null;
+  install?: Install | null;
 }
 
 export interface AgentLite { id: string; name: string; labels?: Record<string, string>; last_used_at?: string | null; last_action_at?: string | null }
@@ -126,7 +153,7 @@ export interface Evidence {
   started?: ReadonlySet<TileId>;
 }
 
-export interface TileState { status: Status; lastActionAt: string | null; detected: string[] }
+export interface TileState { status: Status; lastActionAt: string | null; detected: string[]; install: Install | null }
 
 function agentMatches(a: AgentLite, t: TileDef): boolean {
   const client = (a.labels?.client ?? a.labels?.['deedglass.client'] ?? '').toLowerCase();
@@ -137,16 +164,19 @@ function agentMatches(a: AgentLite, t: TileDef): boolean {
 /** stateOf decides one tile's status from the evidence. The server's answer wins when present. */
 export function stateOf(t: TileDef, e: Evidence): TileState {
   const s = e.server?.find((x) => x.id === t.id);
-  if (s) return { status: s.status, lastActionAt: s.last_action_at ?? null, detected: s.detected ?? [] };
+  if (s) return { status: s.status, lastActionAt: s.last_action_at ?? null, detected: s.detected ?? [], install: s.install ?? null };
   if (t.connectorType) {
     const mine = (e.connectors ?? []).filter((x) => x.type === t.connectorType);
-    if (mine.length === 0) return { status: e.started?.has(t.id) ? 'waiting' : 'not_connected', lastActionAt: null, detected: [] };
+    if (mine.length === 0) return { status: e.started?.has(t.id) ? 'waiting' : 'not_connected', lastActionAt: null, detected: [], install: null };
     const used = mine.some((x) => (e.recentTools ?? []).some((tool) => tool.startsWith(x.name + '.')));
-    return { status: used ? 'connected' : 'waiting', lastActionAt: null, detected: [] };
+    return { status: used ? 'connected' : 'waiting', lastActionAt: null, detected: [], install: null };
   }
-  const agents = (e.agents ?? []).filter((a) => agentMatches(a, t));
+  // The "Any MCP tool" tile owns every agent no named tile claims.
+  const agents = t.id === 'mcp'
+    ? (e.agents ?? []).filter((a) => !TILES.some((o) => o.id !== 'mcp' && agentMatches(a, o)))
+    : (e.agents ?? []).filter((a) => agentMatches(a, t));
   const last = agents.map((a) => a.last_action_at ?? a.last_used_at ?? null).filter((x): x is string => !!x).sort().pop() ?? null;
-  if (last) return { status: 'connected', lastActionAt: last, detected: [] };
-  if (agents.length || e.started?.has(t.id)) return { status: 'waiting', lastActionAt: null, detected: [] };
-  return { status: 'not_connected', lastActionAt: null, detected: [] };
+  if (last) return { status: 'connected', lastActionAt: last, detected: [], install: null };
+  if (agents.length || e.started?.has(t.id)) return { status: 'waiting', lastActionAt: null, detected: [], install: null };
+  return { status: 'not_connected', lastActionAt: null, detected: [], install: null };
 }

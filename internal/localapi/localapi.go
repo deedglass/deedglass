@@ -28,6 +28,7 @@ import (
 	"github.com/deedglass/deedglass/internal/identity"
 	"github.com/deedglass/deedglass/internal/ids"
 	"github.com/deedglass/deedglass/internal/installlinks"
+	"github.com/deedglass/deedglass/internal/mcpinstall"
 	"github.com/deedglass/deedglass/internal/store"
 )
 
@@ -110,6 +111,9 @@ type Runner struct {
 type API struct {
 	Dir     string // the app's data directory
 	Address string // the app's address, http://127.0.0.1:4180
+	Home    string // the person's home directory: where the AI tools keep their settings ("" turns Connect's one-click button off)
+	GOOS    string // runtime.GOOS when empty (tests)
+	AppData string // Windows: %APPDATA%
 	People  *identity.Service
 	DB      *store.DB
 	Run     Runner
@@ -122,7 +126,7 @@ type API struct {
 	mu sync.Mutex // local.json and the agent key files
 }
 
-// Routes are the four routes.
+// Routes are the six routes.
 func Routes(a *API) []httpx.Route {
 	return []httpx.Route{
 		{Method: "GET", Pattern: "/v1/local", OperationID: "getLocal", Auth: httpx.SessionOrKey, MinRole: httpx.RoleViewer,
@@ -134,6 +138,12 @@ func Routes(a *API) []httpx.Route {
 		{Method: "POST", Pattern: "/v1/connect/{id}/start", OperationID: "startConnect", Auth: httpx.SessionOrKey, MinRole: httpx.RoleAdmin,
 			Purpose: "connecting a tool", Scopes: []string{httpx.ScopeAdmin}, Idempotency: httpx.IdemNever, MaxBody: 1 << 10,
 			Timeout: 30 * time.Second, Handler: a.startConnect},
+		{Method: "POST", Pattern: "/v1/connect/{id}/install", OperationID: "installConnect", Auth: httpx.SessionOrKey, MinRole: httpx.RoleAdmin,
+			Purpose: "adding Deedglass to a tool's settings file on this computer", Scopes: []string{httpx.ScopeAdmin}, Idempotency: httpx.IdemNever, MaxBody: 1 << 10,
+			Timeout: 30 * time.Second, Handler: a.installConnect},
+		{Method: "POST", Pattern: "/v1/connect/{id}/undo", OperationID: "undoConnect", Auth: httpx.SessionOrKey, MinRole: httpx.RoleAdmin,
+			Purpose: "taking Deedglass out of a tool's settings file on this computer", Scopes: []string{httpx.ScopeAdmin}, Idempotency: httpx.IdemNever, MaxBody: 1 << 10,
+			Timeout: 30 * time.Second, Handler: a.undoConnect},
 	}
 }
 
@@ -257,6 +267,47 @@ type Item struct {
 	Config       *string     `json:"config"`
 	Command      *string     `json:"command"`
 	Address      *string     `json:"address"`
+	// Install is the tool's settings file on this computer and what the Connect button would do
+	// to it (nil when the tool has no file Deedglass writes, or the app has no home directory).
+	Install *Install `json:"install"`
+}
+
+// Install is a tool's settings file on this computer (internal/mcpinstall).
+type Install struct {
+	Object    string `json:"object"` // "connect_install"
+	Tool      string `json:"tool"`   // the mcpinstall target: claude-desktop, cursor, vscode or gemini
+	Title     string `json:"title"`
+	File      string `json:"file"`
+	Installed bool   `json:"installed"` // the tool's folder is on this computer
+	Status    string `json:"status"`    // add, update, present, skip or absent
+	Reason    string `json:"reason,omitempty"`
+	Entry     string `json:"entry"` // the JSON the Connect button adds
+	Backup    string `json:"backup,omitempty"`
+	CanUndo   bool   `json:"can_undo"`
+}
+
+// installTarget is the mcpinstall target an item's Connect button writes. The terminal item writes
+// Gemini CLI's settings (Claude Code and Codex add servers with their own commands).
+var installTarget = map[string]string{ClaudeDesktop: mcpinstall.ClaudeDesktop, Cursor: mcpinstall.Cursor, VSCode: mcpinstall.VSCode, Terminal: mcpinstall.Gemini}
+
+// installOptions is how mcpinstall finds the person's files and what the entry runs.
+func (a *API) installOptions(id string) mcpinstall.Options {
+	obj := a.server(id)
+	return mcpinstall.Options{Home: a.Home, GOOS: a.GOOS, AppData: a.AppData, Command: obj.Command, Args: obj.Args, Now: a.Now}
+}
+
+// install fills an item's Install, planning only.
+func (a *API) install(it *Item) {
+	tool, ok := installTarget[it.ID]
+	if !ok || a.Home == "" {
+		return
+	}
+	c, err := mcpinstall.Plan(a.installOptions(it.ID), tool)
+	if err != nil {
+		return
+	}
+	it.Install = &Install{Object: "connect_install", Tool: tool, Title: c.Title, File: c.File, Installed: c.Installed, Status: string(c.Status),
+		Reason: c.Reason, Entry: c.Entry, Backup: c.Backup, CanUndo: c.CanUndo}
 }
 
 func ptr(s string) *string {
@@ -393,6 +444,7 @@ func (a *API) item(ctx context.Context, org ids.OrgID, s State, id string, detec
 		it.Detected = detected
 	}
 	a.links(&it)
+	a.install(&it)
 	return it, a.status(ctx, org, s, &it)
 }
 
@@ -523,4 +575,112 @@ func (a *API) ensureAgent(ctx context.Context, actor identity.Actor, org ids.Org
 		return errors.New("localapi: the new key has no secret")
 	}
 	return writeSecret(path, []byte(*k.Secret+"\n"))
+}
+
+// installConnect is POST /v1/connect/{id}/install: the one-click Connect button. It makes the
+// tool's agent and key file (as start does), then adds the entry to the tool's settings file after
+// backing it up. Nothing is written on any other serve, for an unknown id, or for a tool without a
+// settings file.
+func (a *API) installConnect(w http.ResponseWriter, r *http.Request) error {
+	if err := a.local(); err != nil {
+		return err
+	}
+	id := r.PathValue("id")
+	tool, ok := installTarget[id]
+	if !ok {
+		if !slices.Contains(Clients, id) {
+			return errUnknownClient(id)
+		}
+		return httpx.E(httpx.CodeValidationFailed, httpx.Param("id"), httpx.Msgf("Deedglass doesn't write %s's settings. Use the link, command or address on its card.", clientTitle[id]))
+	}
+	if a.Home == "" {
+		return httpx.E(httpx.CodeValidationFailed, httpx.Msgf("The app doesn't know your home folder, so it can't find %s's settings. Copy the settings instead.", clientTitle[id]))
+	}
+	pr, ok := httpx.PrincipalFrom(r.Context())
+	if !ok || pr.OrgID.IsZero() {
+		return httpx.E(httpx.CodeAuthenticationRequired)
+	}
+	actor, err := identity.ActorOf(&pr)
+	if err != nil {
+		return err
+	}
+	ctx := r.Context()
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	if name := agentName[id]; name != "" {
+		if err := a.ensureAgent(ctx, actor, pr.OrgID, id, name); err != nil {
+			return err
+		}
+	}
+	o := a.installOptions(id)
+	c, err := mcpinstall.Plan(o, tool)
+	if err != nil {
+		return err
+	}
+	switch c.Status {
+	case mcpinstall.Absent:
+		return httpx.E(httpx.CodeValidationFailed, httpx.Msgf("%s isn't installed on this computer (no %s). Install it, or copy the settings to the computer where it is.", c.Title, filepath.Dir(c.File)))
+	case mcpinstall.Skip:
+		return httpx.E(httpx.CodeValidationFailed, httpx.Msgf("%s's settings file was left alone: %s. Add the entry by hand from the settings shown.", c.Title, c.Reason))
+	}
+	if _, err := mcpinstall.Apply(o, c); err != nil {
+		return httpx.E(httpx.CodeValidationFailed, httpx.Msgf("Couldn't write %s's settings: %s. Copy the settings instead.", c.Title, clip(err.Error(), 200)))
+	}
+	s := ReadState(a.Dir)
+	if s.Started == nil {
+		s.Started = map[string]time.Time{}
+	}
+	if _, ok := s.Started[id]; !ok {
+		s.Started[id] = a.now()
+		if err := WriteState(a.Dir, s); err != nil {
+			return err
+		}
+	}
+	it, err := a.item(ctx, pr.OrgID, s, id, a.detected())
+	if err != nil {
+		return err
+	}
+	if it.Status == NotConnected {
+		it.Status = Waiting
+	}
+	httpx.Annotate(ctx, pr.OrgID.String(), "", "")
+	return httpx.WriteJSON(w, http.StatusOK, it)
+}
+
+// undoConnect is POST /v1/connect/{id}/undo: puts the tool's settings file back as it was before
+// the newest Connect click (or, when the person changed it since, takes only the entry out).
+func (a *API) undoConnect(w http.ResponseWriter, r *http.Request) error {
+	if err := a.local(); err != nil {
+		return err
+	}
+	id := r.PathValue("id")
+	tool, ok := installTarget[id]
+	if !ok {
+		if !slices.Contains(Clients, id) {
+			return errUnknownClient(id)
+		}
+		return httpx.E(httpx.CodeValidationFailed, httpx.Param("id"), httpx.Msgf("Deedglass never wrote %s's settings, so there's nothing to undo.", clientTitle[id]))
+	}
+	if a.Home == "" {
+		return httpx.E(httpx.CodeValidationFailed, httpx.Msgf("The app doesn't know your home folder, so there's nothing to undo."))
+	}
+	pr, ok := httpx.PrincipalFrom(r.Context())
+	if !ok || pr.OrgID.IsZero() {
+		return httpx.E(httpx.CodeAuthenticationRequired)
+	}
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	u, err := mcpinstall.Undo(a.installOptions(id), tool)
+	if err != nil {
+		return httpx.E(httpx.CodeValidationFailed, httpx.Msgf("Couldn't undo: %s.", clip(err.Error(), 200)))
+	}
+	if u.Status == mcpinstall.Failed {
+		return httpx.E(httpx.CodeValidationFailed, httpx.Msgf("Couldn't undo: %s. Open %s and remove the deedglass entry by hand.", u.Reason, u.File))
+	}
+	it, err := a.item(r.Context(), pr.OrgID, ReadState(a.Dir), id, a.detected())
+	if err != nil {
+		return err
+	}
+	httpx.Annotate(r.Context(), pr.OrgID.String(), "", "")
+	return httpx.WriteJSON(w, http.StatusOK, it)
 }

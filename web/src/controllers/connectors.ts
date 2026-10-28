@@ -193,6 +193,12 @@ export function mountConnectorNew(): void {
     const desc = h('input', { class: 'input', id: 'cn-desc', name: 'description', autocomplete: 'off', maxlength: 280 });
     const nameErr = h('p', { class: 'error', id: 'cn-name-e', hidden: true });
     const form = schemaForm(t.config_schema as never, { idPrefix: 'cfg' });
+    // Connect hands an address over as ?cfg.<field>=… (the FHIR base URL); nothing key-shaped is taken.
+    for (const [k, v] of new URLSearchParams(location.search)) {
+      if (!k.startsWith('cfg.') || !/^[a-z][a-z0-9_]*$/.test(k.slice(4)) || /[?&](key|token|secret|password)=|:\/\/[^/@\s]+:[^/@\s]+@/i.test(v)) continue;
+      const el: Element | null = form.el.querySelector(`#cfg-${k.slice(4)}`);
+      if ((el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) && !el.value) el.value = v;
+    }
     const create = h('button', { type: 'button', class: 'btn btn-primary' }, c.create);
     const showName = (m: string | null) => {
       nameErr.hidden = !m;

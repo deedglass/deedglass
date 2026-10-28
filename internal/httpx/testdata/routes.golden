@@ -135,6 +135,8 @@ planned    GET     /v1/local                                              sessio
 planned    PATCH   /v1/local                                              session_or_key  admin            S53    DL-143; keys: admin; path clinic|build|it, first_run
 planned    GET     /v1/connect                                            session_or_key  viewer           S53    DL-143; keys: admin; the Connect items; links and commands never hold a key
 planned    POST    /v1/connect/{id}/start                                 session_or_key  admin            S53    DL-143; keys: admin; IdemNever; makes the client's agent and key file once; terminal adds the shell guard
+planned    POST    /v1/connect/{id}/install                               session_or_key  admin            S53    DL-143; keys: admin; IdemNever; the one-click Connect: adds the entry to the tool's settings file after a backup
+planned    POST    /v1/connect/{id}/undo                                  session_or_key  admin            S53    DL-143; keys: admin; IdemNever; puts the tool's settings file back
 planned    POST    /mcp/{connector}                                       agent_key       actions:execute  S15
 planned    POST    /mcp/native                                            agent_key       actions:execute  S15
 planned    POST    /v1/slack/interact                                     public          -                S29    Slack signature; form body

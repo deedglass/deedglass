@@ -405,7 +405,7 @@ $(WEB)/node_modules/.package-lock.json: $(WEB)/package-lock.json
 	cd $(WEB) && npm ci --ignore-scripts --no-audit --no-fund
 
 web-tokens: $(WEB)/node_modules/.package-lock.json ## regenerate the token CSS, the verify token block, the favicon and the icon sprite from web/tokens/tokens.json
-	cd $(WEB) && node scripts/gen-tokens.mjs && node scripts/icons.mjs
+	cd $(WEB) && node scripts/gen-tokens.mjs && node scripts/icons.mjs && node scripts/brandmarks.mjs
 
 web-build: $(WEB)/node_modules/.package-lock.json ## tokens → icons → astro build → .br/.gz → check-dist (budgets, no inline code); writes internal/console/dist
 	cd $(WEB) && ASTRO_TELEMETRY_DISABLED=1 npm run build

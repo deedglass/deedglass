@@ -46,3 +46,17 @@ export async function getConnect(): Promise<ConnectItem[] | null> {
 export function startConnect(id: TileId): Promise<ConnectItem | null> {
   return orNull(api<ConnectItem>('POST', `/v1/connect/${id}/start`, { body: {} }));
 }
+
+/**
+ * installConnect: POST /v1/connect/{id}/install, the one-click Connect button. Only after the
+ * person clicked: the server backs the tool's settings file up, then adds the one entry. Errors
+ * surface (the sheet shows the copy fallback), so this never swallows them.
+ */
+export function installConnect(id: TileId): Promise<ConnectItem> {
+  return api<ConnectItem>('POST', `/v1/connect/${id}/install`, { body: {} });
+}
+
+/** undoConnect: POST /v1/connect/{id}/undo puts the tool's settings file back. */
+export function undoConnect(id: TileId): Promise<ConnectItem> {
+  return api<ConnectItem>('POST', `/v1/connect/${id}/undo`, { body: {} });
+}

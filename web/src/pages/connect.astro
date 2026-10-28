@@ -1,7 +1,9 @@
 ---
-// Connect (DL-143): one tile per AI tool or system. Each opens a sheet with at most three plain
-// steps, one primary button (a deep link where the app supports one), the settings to copy as a
-// fallback, an optional QR code for another computer, and a live status. src/controllers/connect.ts.
+// Connect (DL-143, Connect v1): one tile per AI tool or system, with the tool's real mark. Each opens
+// a sheet with at most three plain steps, one Connect button where Deedglass can write the tool's
+// settings file on this computer (shown first, copied first, undoable), else a deep link or the
+// settings to copy, a QR code for another computer, Test connection and a live status.
+// src/controllers/connect.ts.
 import AppShell from '../layouts/AppShell.astro';
 import { simpleCopy } from '../lib/copy-simple.ts';
 const c = simpleCopy.connect;
@@ -16,10 +18,9 @@ const c = simpleCopy.connect;
     <div id="cx-body" aria-busy="true" aria-labelledby="page-title">
       <h2 class="sx-section-title">{c.groupAi}</h2>
       <div class="cx-grid" aria-hidden="true">
-        {[0, 1, 2, 3, 4].map(() => (<div class="cx-tile"><span class="skel skel-line w-32"></span><span class="skel skel-line"></span><span class="skel skel-line w-16"></span></div>))}
+        {[0, 1, 2, 3, 4, 5].map(() => (<div class="cx-tile cx-skel"><span class="skel cx-logo"></span><span class="cx-text"><span class="skel skel-line w-32"></span><span class="skel skel-line"></span></span><span class="skel skel-line w-16"></span></div>))}
       </div>
     </div>
-    <p class="cx-note t-footnote">{c.dontSee}</p>
   </div>
 </AppShell>
 <script>
