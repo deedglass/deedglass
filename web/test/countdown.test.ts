@@ -104,6 +104,17 @@ describe('Countdown', () => {
     expect(expired).toBe(1);
   });
 
+  it('one built already past its time never calls onExpire (no re-fetch loop on an expired request)', () => {
+    let expired = 0;
+    for (let i = 0; i < 5; i++) {
+      const cd = Countdown(t - 2 * S, { now, announce: () => {}, onExpire: () => expired++ });
+      document.body.append(cd.el);
+      expect(cd.el.textContent).toBe('Expired');
+    }
+    advance(5 * M);
+    expect(expired).toBe(0);
+  });
+
   it('a countdown that starts under 1 minute does not announce; stop() halts it', () => {
     const said: string[] = [];
     const cd = Countdown(new Date(t + 45 * S), { now, announce: (s) => said.push(s) });
