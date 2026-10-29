@@ -15,7 +15,7 @@ from typing import Any
 import httpx
 import pytest
 
-from deedglass import AsyncDeedglass, Deedglass
+from deedglass import AsyncDeedglass, Deedglass, __version__
 
 from .helpers import BASE, DENY_MSG, KEY, PENDING, action, denied_body, ok
 from .test_client import Script
@@ -76,7 +76,7 @@ def test_langchain_allow_reports_once() -> None:
     b = s.body(0)
     assert b["tool"] == "orders.ship_order" and b["args"] == {"order_id": 42}
     assert b["context"] == {
-        "client": {"name": "deedglass-python/langchain", "version": "0.15.0"},
+        "client": {"name": "deedglass-python/langchain", "version": __version__},
         "transport": "sdk",
         "call_id": "call_1",
     }
