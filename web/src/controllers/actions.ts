@@ -68,7 +68,7 @@ export function mountActions(): void {
       if (isFiltered(filters)) {
         host.replaceChildren(qNote, emptyState(copy.feed.filteredEmpty, 'search', h('button', { type: 'button', class: 'btn btn-secondary', onclick: () => applyFilters(emptyFilters()) }, copy.feed.clear)));
       } else {
-        host.replaceChildren(emptyState(copy.feed.empty, 'activity', h('a', { class: 'btn btn-primary', href: '/app' }, icon('plus', 16), copy.feed.connect), 'https://docs.deedglass.com/quickstart'));
+        host.replaceChildren(emptyState(copy.feed.empty, 'activity', h('a', { class: 'btn btn-primary', href: '/app/connect' }, icon('plus', 16), copy.feed.connect), 'https://docs.deedglass.com/quickstart'));
       }
       return;
     }

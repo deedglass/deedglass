@@ -29,7 +29,7 @@ from langchain_core.messages import AIMessage, ToolMessage
 from langchain_core.tools import tool
 
 from deedglass.claude_agent_sdk import deedglass_hooks, deedglass_mcp_server
-from deedglass.langchain import DeedglassMiddleware, deedglass_tool
+from deedglass.langchain import DeedglassMiddleware, deedglass_tool, govern_tool
 
 AUTH = {"mode": "proxy", "status": "authorized", "state": "executing", "witness": None, "deed": None}
 OUTAGE = "Deedglass isn't reachable, so this tool was not run. Check that deedglass serve is running."
@@ -144,6 +144,51 @@ def test_deedglass_tool_gateway() -> None:
     assert t.name == "postgres__execute" and t.metadata == {"deedglass_gateway": "postgres.execute"}
     assert t.invoke({"sql": "DROP TABLE public.orders"}) == DENY_MSG + " Nothing was run."
     assert t.invoke({"sql": "UPDATE public.orders SET status = 'shipped' WHERE id = 42"}) == {"rows": 1}
+
+
+def test_govern_tool_sync() -> None:
+    ran: list[int] = []
+
+    @tool
+    def cancel_order(order_id: int) -> str:
+        """Cancel an order."""
+        ran.append(order_id)
+        return f"cancelled {order_id}"
+
+    # Denied call
+    s_deny = Script(ok(denied_body(), 403))
+    gt_deny = govern_tool(cancel_order, sync(s_deny), connector="orders")
+    res_deny = gt_deny.invoke({"order_id": 99})
+    assert ran == []
+    assert res_deny == DENY_MSG + " Nothing was run."
+
+    # Allowed call
+    s_allow = Script(ok(action(**AUTH)), ok(action(mode="proxy")))
+    gt_allow = govern_tool(cancel_order, sync(s_allow), connector="orders")
+    res_allow = gt_allow.invoke({"order_id": 42})
+    assert ran == [42]
+    assert res_allow == "cancelled 42"
+    assert s_allow.body(0)["tool"] == "orders.cancel_order"
+    assert s_allow.body(1)["result"] == "cancelled 42"
+
+
+async def test_govern_tool_async() -> None:
+    ran: list[int] = []
+
+    @tool
+    async def process_refund(amount: int) -> str:
+        """Process a refund."""
+        ran.append(amount)
+        return f"refunded {amount}"
+
+    s = Script(ok(action(**AUTH)), ok(action(mode="proxy")))
+    c = AsyncDeedglass(KEY, base_url=BASE, http_client=httpx.AsyncClient(transport=httpx.MockTransport(s)))
+    gt = govern_tool(process_refund, c, connector="billing")
+    res = await gt.ainvoke({"amount": 100})
+    assert ran == [100]
+    assert res == "refunded 100"
+    assert s.body(0)["tool"] == "billing.process_refund"
+    assert s.body(1)["result"] == "refunded 100"
 
 
 # --- Claude Agent SDK ---

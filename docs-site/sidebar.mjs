@@ -76,6 +76,8 @@ export const sidebar = clean([
     label: 'Guides',
     items: [
       p('guides/check-what-an-agent-changed-in-postgres', 'Check what an agent changed in Postgres'),
+      p('guides/supabase', 'Put Deedglass in front of Supabase'),
+      p('guides/neon', 'Put Deedglass in front of Neon'),
       p('guides/block-destructive-sql', 'Block destructive SQL'),
       p('guides/catch-a-mismatch', 'Catch "1 row reported, 301 committed"'),
       p('guides/undo', 'Undo a bad write'),

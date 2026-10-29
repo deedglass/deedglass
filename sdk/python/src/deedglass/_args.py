@@ -8,7 +8,13 @@ from __future__ import annotations
 
 import hashlib
 import math
+import os
+import uuid
 from collections.abc import Mapping, Sequence
+from dataclasses import asdict, is_dataclass
+from datetime import date, datetime, time
+from decimal import Decimal
+from enum import Enum
 from typing import Any
 
 from . import _copy
@@ -24,8 +30,40 @@ def _refuse(why: str, code: str = "validation_failed") -> InvalidRequestError:
     return InvalidRequestError(why, type="client_error", code=code, param="args")
 
 
+def to_json_value(v: Any, _depth: int = 0) -> Any:
+    """Convert Python objects (Pydantic models, dataclasses, datetime, UUID, Enum, Decimal) to JSON-safe primitives."""
+    if _depth > MAX_ARGS_DEPTH:
+        return v
+    if v is None or isinstance(v, (bool, int, float, str)):
+        return v
+    if hasattr(v, "model_dump") and callable(v.model_dump):
+        return to_json_value(v.model_dump(), _depth + 1)
+    if hasattr(v, "dict") and callable(v.dict) and not isinstance(v, type):
+        return to_json_value(v.dict(), _depth + 1)
+    if is_dataclass(v) and not isinstance(v, type):
+        return to_json_value(asdict(v), _depth + 1)
+    if isinstance(v, (datetime, date, time)):
+        return v.isoformat()
+    if isinstance(v, uuid.UUID):
+        return str(v)
+    if isinstance(v, Enum):
+        return to_json_value(v.value, _depth + 1)
+    if isinstance(v, Decimal):
+        return float(v) if v.is_finite() else str(v)
+    if isinstance(v, os.PathLike):
+        return str(v)
+    if isinstance(v, (set, frozenset)):
+        return [to_json_value(x, _depth + 1) for x in v]
+    if isinstance(v, Mapping):
+        return {str(k): to_json_value(val, _depth + 1) for k, val in v.items()}
+    if isinstance(v, (list, tuple)):
+        return [to_json_value(x, _depth + 1) for x in v]
+    return v
+
+
 def check_args(v: Any, depth: int = 0, _seen: set[int] | None = None) -> Any:
     """Checks v against the args profile and returns it as plain JSON, or raises InvalidRequestError."""
+    v = to_json_value(v)
     seen = _seen if _seen is not None else set()
     if depth > MAX_ARGS_DEPTH:
         raise _refuse(_copy.args_invalid("they nest deeper than 32 levels"))

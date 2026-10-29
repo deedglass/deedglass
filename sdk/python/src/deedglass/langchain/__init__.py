@@ -13,6 +13,7 @@ Deedglass runs itself (gateway mode), for LangGraph's ``ToolNode``.
 
 from __future__ import annotations
 
+import asyncio
 from collections.abc import Awaitable, Callable, Mapping
 from typing import Any
 
@@ -30,7 +31,7 @@ from .._client import AsyncDeedglass, Deedglass
 from .._errors import DeedglassError
 from ..wrap import denial_text
 
-__all__ = ["DeedglassMiddleware", "deedglass_tool"]
+__all__ = ["DeedglassMiddleware", "deedglass_tool", "govern_tool"]
 
 GATEWAY = "deedglass_gateway"
 
@@ -139,4 +140,71 @@ def deedglass_tool(
         description=description or f"Runs {name} through Deedglass.",
         args_schema=args_schema,
         metadata={GATEWAY: name},
+    )
+
+
+def govern_tool(
+    target_tool: Any,
+    client: Deedglass | AsyncDeedglass,
+    *,
+    connector: str = "app",
+    name_map: Mapping[str, str] | None = None,
+    wait_for_approval: float = 120.0,
+    fail_open: bool = False,
+) -> StructuredTool:
+    """Puts Deedglass in front of an existing LangChain tool (e.g. for LangGraph ToolNode).
+
+    When invoked, Deedglass decides before execution; if authorized, the original tool executes and
+    its result is reported to Deedglass. If denied or pending, returns the denial or pending text.
+    """
+    gov = Governor(
+        client,
+        framework="langchain",
+        connector=connector,
+        name_map=name_map,
+        wait_for_approval=wait_for_approval,
+        fail_open=fail_open,
+    )
+
+    orig_name = getattr(target_tool, "name", "tool")
+    orig_desc = getattr(target_tool, "description", None) or f"Governed {orig_name}"
+    orig_schema = getattr(target_tool, "args_schema", None)
+
+    def run(**kwargs: Any) -> Any:
+        v = gov.decide(orig_name, kwargs)
+        if v.kind != "run":
+            return v.text
+        try:
+            res = target_tool.invoke(kwargs) if hasattr(target_tool, "invoke") else target_tool(**kwargs)
+        except Exception as err:
+            gov.report(v, err=err)
+            raise
+        gov.report(v, _content(res))
+        return res
+
+    async def arun(**kwargs: Any) -> Any:
+        v = await gov.adecide(orig_name, kwargs)
+        if v.kind != "run":
+            return v.text
+        try:
+            if hasattr(target_tool, "ainvoke"):
+                res = await target_tool.ainvoke(kwargs)
+            elif hasattr(target_tool, "invoke"):
+                res = target_tool.invoke(kwargs)
+            elif asyncio.iscoroutinefunction(target_tool):
+                res = await target_tool(**kwargs)
+            else:
+                res = target_tool(**kwargs)
+        except Exception as err:
+            await gov.areport(v, err=err)
+            raise
+        await gov.areport(v, _content(res))
+        return res
+
+    return StructuredTool.from_function(
+        func=run,
+        coroutine=arun,
+        name=orig_name,
+        description=orig_desc,
+        args_schema=orig_schema,
     )

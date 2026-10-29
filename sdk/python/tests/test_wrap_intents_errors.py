@@ -131,6 +131,49 @@ def test_args_not_json() -> None:
         w(object())
 
 
+def test_args_rich_types_sanitized() -> None:
+    import uuid
+    from dataclasses import dataclass
+    from datetime import datetime, timezone
+    from decimal import Decimal
+    from enum import Enum
+
+    from pydantic import BaseModel
+
+    class Status(str, Enum):
+        ACTIVE = "active"
+
+    @dataclass
+    class Meta:
+        tag: str
+
+    class Payload(BaseModel):
+        num: int
+
+    s = Script(ok(action(**AUTH)), ok(action(mode="proxy")))
+    w = wrap_tool(lambda a, b, c, d, e, f: "ok", client=sync_client(s), tool="app.rich")
+
+    now = datetime(2026, 10, 29, 12, 0, 0, tzinfo=timezone.utc)
+    uid = uuid.UUID("12345678-1234-5678-1234-567812345678")
+
+    res = w(
+        a=now,
+        b=uid,
+        c=Status.ACTIVE,
+        d=Decimal("19.99"),
+        e=Meta(tag="prod"),
+        f=Payload(num=42),
+    )
+    assert res == "ok"
+    body = s.body(0)
+    assert body["args"]["a"] == "2026-10-29T12:00:00+00:00"
+    assert body["args"]["b"] == "12345678-1234-5678-1234-567812345678"
+    assert body["args"]["c"] == "active"
+    assert body["args"]["d"] == 19.99
+    assert body["args"]["e"] == {"tag": "prod"}
+    assert body["args"]["f"] == {"num": 42}
+
+
 # --- signed intents (testdata/intents) ---
 
 KEYS = json.loads(repo("testdata/intents/keys.json").read_text())

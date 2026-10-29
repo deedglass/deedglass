@@ -18,7 +18,7 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any, Literal, TypeVar, cast
 
 from . import _copy
-from ._args import args_digest, canonical_args
+from ._args import args_digest, canonical_args, to_json_value
 from ._core import TOOL_NAME
 from ._errors import (
     ApprovalPendingError,
@@ -83,7 +83,7 @@ def pending_text(a: Action) -> str:
 def as_json(v: Any, _depth: int = 0) -> Any:
     """The JSON value of v, or a sentinel _NOT_JSON when v isn't plain JSON."""
     try:
-        return json.loads(json.dumps(v, allow_nan=False))
+        return json.loads(json.dumps(to_json_value(v), allow_nan=False))
     except (TypeError, ValueError, RecursionError):
         return _NOT_JSON
 
