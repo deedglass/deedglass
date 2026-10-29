@@ -233,6 +233,10 @@ var Catalog = []Entry{
 		Why:    "destroys the Turso database",
 		Source: "https://docs.turso.tech/cli/db/destroy", Checked: checkedCloud,
 		progs: []string{"turso"}, words: []string{"db", "destroy"}},
+	{ID: "redis-cli-flush", Shape: "redis-cli flushall, flushdb",
+		Why:    "deletes every key in Redis, so its data and cached state are gone",
+		Source: "https://redis.io/docs/latest/commands/flushall/", Checked: checkedQA,
+		progs: []string{"redis-cli"}, words: []string{"flushall|flushdb"}},
 
 	// MongoDB's shell with a drop in --eval.
 	{ID: "mongo-drop", Shape: "mongosh or mongo --eval with dropDatabase() or a collection's drop()",

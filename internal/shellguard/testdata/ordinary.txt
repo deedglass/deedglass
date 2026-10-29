@@ -259,6 +259,11 @@ uv add sqlalchemy alembic
 
 uv run pytest tests/test_orders.py -k refund
 
+redis-cli ping
+
+redis-cli get session:123
+
+
 ruff check . --fix
 
 mypy src

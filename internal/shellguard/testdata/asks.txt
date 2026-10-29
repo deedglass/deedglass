@@ -567,3 +567,13 @@ helm delete api --namespace backend
 
 # want: helm-uninstall
 helm un api --keep-history
+
+# want: redis-cli-flush
+redis-cli flushall
+
+# want: redis-cli-flush
+redis-cli -h 127.0.0.1 -p 6379 flushdb
+
+# want: redis-cli-flush
+docker compose exec redis redis-cli flushall --async
+

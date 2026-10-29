@@ -214,6 +214,7 @@ the same table with the reason and date for each.
 | `fly-volumes-destroy` | fly volumes destroy | [source](https://docs.fly.io/flyctl/cmd/fly_volumes_destroy) |
 | `pscale-database-delete` | pscale database delete | [source](https://planetscale.com/docs/cli/database) |
 | `turso-db-destroy` | turso db destroy | [source](https://docs.turso.tech/cli/db/destroy) |
+| `redis-cli-flush` | redis-cli flushall, flushdb | [source](https://redis.io/docs/latest/commands/flushall/) |
 | `mongo-drop` | mongosh or mongo --eval with dropDatabase() or a collection's drop() | [source](https://www.mongodb.com/docs/manual/reference/method/db.dropDatabase/) |
 | `sql-drop` | DROP TABLE, SCHEMA, DATABASE, OWNED or MATERIALIZED VIEW; DROP TYPE, DOMAIN or EXTENSION … CASCADE | [source](https://www.postgresql.org/docs/current/sql-droptable.html) |
 | `sql-truncate` | TRUNCATE … | [source](https://www.postgresql.org/docs/current/sql-truncate.html) |
