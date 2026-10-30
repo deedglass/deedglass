@@ -72,7 +72,7 @@ func NewHTTPUpstream(stateless bool) *HTTPUpstream {
 		case <-u.done:
 			u.Cancelled.Add(1)
 			return nil, nil, context.Canceled
-		case <-time.After(500 * time.Millisecond):
+		case <-time.After(10 * time.Second):
 		}
 		return text("done"), nil, nil
 	})
