@@ -70,6 +70,15 @@ async def test_tools_list_pages(kind: str) -> None:
     assert s.calls[0].url.params["include_hidden"] == "true" and s.calls[1].url.params["cursor"] == "c1"
 
 
+async def test_tools_list_glob_filter(kind: str) -> None:
+    t1 = {"object": "tool", "name": "postgres.query", "connector": "postgres"}
+    t2 = {"object": "tool", "name": "billing.refund", "connector": "billing"}
+    t3 = {"object": "tool", "name": "stripe.charge", "connector": "stripe"}
+    s = Script(ok({"object": "list", "data": [t1, t2, t3], "has_more": False}))
+    tools = await aw(make(kind, s).tools.list(include=["billing.*", "*.charge"]))
+    assert [x.name for x in tools] == ["billing.refund", "stripe.charge"]
+
+
 async def test_deeds_and_approvals(kind: str) -> None:
     env = {"object": "deed", "id": DEED}
     apr = {

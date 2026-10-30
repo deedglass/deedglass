@@ -6,9 +6,10 @@ implementation of every call, the wait loop and pagination.
 
 from __future__ import annotations
 
+import fnmatch
 import re
 import time
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Mapping, Sequence
 from typing import Any
 
 from . import _copy
@@ -187,7 +188,12 @@ def filters(kw: Mapping[str, Any]) -> dict[str, Any]:
     return out
 
 
-def list_tools(core: Core, *, include_hidden: bool = False) -> Op[list[Tool]]:
+def list_tools(
+    core: Core,
+    *,
+    include: Sequence[str] | None = None,
+    include_hidden: bool = False,
+) -> Op[list[Tool]]:
     out: list[Tool] = []
     cursor: str | None = None
     for _ in range(100):
@@ -197,6 +203,8 @@ def list_tools(core: Core, *, include_hidden: bool = False) -> Op[list[Tool]]:
         out += [Tool.from_json(t) for t in items if isinstance(t, dict)]
         if not more:
             break
+    if include is not None:
+        return [t for t in out if any(fnmatch.fnmatchcase(t.name, p) for p in include)]
     return out
 
 

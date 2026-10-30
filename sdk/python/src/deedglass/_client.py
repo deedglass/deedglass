@@ -9,7 +9,7 @@ import asyncio
 import functools
 import logging
 import time
-from collections.abc import AsyncIterator, Awaitable, Callable, Iterator, Mapping
+from collections.abc import AsyncIterator, Awaitable, Callable, Iterator, Mapping, Sequence
 from typing import Any, Literal, TypeVar
 
 import httpx
@@ -134,9 +134,9 @@ class Tools:
     def __init__(self, c: Deedglass) -> None:
         self._c = c
 
-    def list(self, *, include_hidden: bool = False) -> list[Tool]:
-        """GET /v1/tools: the org's connector tools this agent may call, every page."""
-        return self._c._run(_ops.list_tools(self._c._core, include_hidden=include_hidden))
+    def list(self, *, include: Sequence[str] | None = None, include_hidden: bool = False) -> list[Tool]:
+        """GET /v1/tools: the org's connector tools this agent may call, every page. ``include`` filters by glob."""
+        return self._c._run(_ops.list_tools(self._c._core, include=include, include_hidden=include_hidden))
 
 
 class Deedglass(_Base):
@@ -371,8 +371,9 @@ class AsyncTools:
     def __init__(self, c: AsyncDeedglass) -> None:
         self._c = c
 
-    async def list(self, *, include_hidden: bool = False) -> list[Tool]:
-        return await self._c._run(_ops.list_tools(self._c._core, include_hidden=include_hidden))
+    async def list(self, *, include: Sequence[str] | None = None, include_hidden: bool = False) -> list[Tool]:
+        """GET /v1/tools: the org's connector tools this agent may call, every page. ``include`` filters by glob."""
+        return await self._c._run(_ops.list_tools(self._c._core, include=include, include_hidden=include_hidden))
 
 
 class AsyncDeedglass(_Base):
