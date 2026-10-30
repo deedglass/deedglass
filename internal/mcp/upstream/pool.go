@@ -297,6 +297,9 @@ func (u *up) dropLocked() {
 		_ = u.session.Close()
 		u.session = nil
 	}
+	if u.httpc != nil {
+		u.httpc.CloseIdleConnections()
+	}
 }
 
 // ListTools returns the upstream's tools, from the cache when fresh (min of tools_ttl and the

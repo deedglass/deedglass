@@ -29,6 +29,9 @@ type HTTPUpstream struct {
 
 	mu      sync.Mutex
 	headers []http.Header
+
+	cancel context.CancelFunc
+	done   <-chan struct{}
 }
 
 type msgIn struct {
@@ -38,7 +41,8 @@ type msgIn struct {
 // NewHTTPUpstream starts an upstream. stateless serves 2026-07-28 statelessly; otherwise the
 // SDK's stateful handler with only 2025-11-25 (a legacy-era server).
 func NewHTTPUpstream(stateless bool) *HTTPUpstream {
-	u := &HTTPUpstream{Started: make(chan string, 256)}
+	ctx, cancel := context.WithCancel(context.Background())
+	u := &HTTPUpstream{Started: make(chan string, 256), cancel: cancel, done: ctx.Done()}
 	opts := &mcp.ServerOptions{Instructions: "An upstream for Deedglass tests."}
 	if !stateless {
 		opts.SupportedProtocolVersions = []string{"2025-11-25"}
@@ -65,7 +69,10 @@ func NewHTTPUpstream(stateless bool) *HTTPUpstream {
 		case <-ctx.Done():
 			u.Cancelled.Add(1)
 			return nil, nil, ctx.Err()
-		case <-time.After(10 * time.Second):
+		case <-u.done:
+			u.Cancelled.Add(1)
+			return nil, nil, context.Canceled
+		case <-time.After(500 * time.Millisecond):
 		}
 		return text("done"), nil, nil
 	})
@@ -131,4 +138,10 @@ func (u *HTTPUpstream) SawHeader(prefix, needle string) bool {
 }
 
 // Close stops the server.
-func (u *HTTPUpstream) Close() { u.Server.CloseClientConnections(); u.Server.Close() }
+func (u *HTTPUpstream) Close() {
+	if u.cancel != nil {
+		u.cancel()
+	}
+	u.Server.CloseClientConnections()
+	u.Server.Close()
+}
