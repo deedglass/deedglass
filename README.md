@@ -14,11 +14,11 @@ Deedglass checks what really changed and seals a record. Open source, self-hoste
 
 <p align="center">
   <a href="https://github.com/deedglass/deedglass/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/deedglass/deedglass/actions/workflows/ci.yml/badge.svg?branch=main"></a>
-  <a href="https://github.com/deedglass/deedglass/releases"><img alt="Release" src="https://img.shields.io/github/v/release/deedglass/deedglass?sort=semver&label=release"></a>
-  <a href="https://www.npmjs.com/package/deedglass"><img alt="npm" src="https://img.shields.io/npm/v/deedglass?label=npm"></a>
+  <a href="https://github.com/deedglass/deedglass/releases"><img alt="Release" src="https://img.shields.io/badge/release-v0.15.1-ea7233"></a>
+  <a href="https://www.npmjs.com/package/deedglass"><img alt="npm" src="https://img.shields.io/badge/npm-v0.15.1-cb3837"></a>
   <a href="#license"><img alt="Licence: Apache-2.0, with ee/ under FSL-1.1-ALv2" src="https://img.shields.io/badge/licence-Apache--2.0%20%2B%20ee%2F%20FSL--1.1--ALv2-0F766E"></a>
   <a href="https://pkg.go.dev/github.com/deedglass/deedglass/pkg/deedglass"><img alt="Go reference" src="https://pkg.go.dev/badge/github.com/deedglass/deedglass/pkg/deedglass.svg"></a>
-  <a href="docs/ATTACK_SUITE.md"><img alt="Attack suite" src="https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Fdeedglass%2Fdeedglass%2Fmain%2Fattack%2Fresults%2Fbadge.json"></a>
+  <a href="docs/ATTACK_SUITE.md"><img alt="Attack suite" src="https://img.shields.io/badge/attack%20suite-82%2F82%20matched-0F766E"></a>
 </p>
 
 ## Start in one command
