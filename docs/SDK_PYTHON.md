@@ -159,16 +159,22 @@ dg.act("stripe.refund", {"charge": "ch_…", "amount": 1200})   # sends Deedglas
 ```python
 from langchain.agents import create_agent
 from deedglass import Deedglass
-from deedglass.langchain import DeedglassMiddleware, deedglass_tool
+from deedglass.langchain import DeedglassMiddleware, deedglass_tool, govern_tool
 
 dg = Deedglass()
 agent = create_agent(model, tools=[ship_order], middleware=[DeedglassMiddleware(dg, connector="orders")])
 sql = deedglass_tool(dg, "postgres.execute", SQLArgs)      # a connector tool Deedglass runs
+
+# For LangGraph ToolNode:
+from langgraph.prebuilt import ToolNode
+tool_node = ToolNode([govern_tool(ship_order, dg, connector="orders")])
 ```
 
 The middleware asks Deedglass before each tool call (proxy mode, tool `orders.<name>`) and reports
 the result after it. A denial, a pending approval or an outage becomes a `ToolMessage(status="error")`
 the model reads; the tool never runs. Gateway tools made with `deedglass_tool` pass through it.
+For LangGraph workflows, `govern_tool` wraps standalone tools with proxy checks so refused or pending
+calls return clean text messages without halting the graph.
 
 ### Claude Agent SDK
 

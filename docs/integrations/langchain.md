@@ -51,7 +51,7 @@ python agent.py
 
 ## The native adapter
 
-The Python SDK has a LangChain adapter, `DeedglassMiddleware`, built on LangChain's `wrap_tool_call` middleware: it asks Deedglass before each of your own tools runs and reports the result after ([SDK_PYTHON.md](../SDK_PYTHON.md)). It isn't on PyPI yet. For LangChain.js, `@deedglass/sdk/langchain` has `governTool` and `deedglassTools` ([its page](../sdk/adapters/langchain.md)).
+The Python SDK has a LangChain adapter, `DeedglassMiddleware`, built on LangChain's `wrap_tool_call` middleware: it asks Deedglass before each of your own tools runs and reports the result after ([SDK_PYTHON.md](../SDK_PYTHON.md)). For LangGraph's `ToolNode`, `govern_tool` wraps tools directly with pre-execution policy checks and clean error reporting. It isn't on PyPI yet. For LangChain.js, `@deedglass/sdk/langchain` has `governTool` and `deedglassTools` ([its page](../sdk/adapters/langchain.md)).
 
 ## Check it without a model key
 
