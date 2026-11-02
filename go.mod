@@ -3,7 +3,7 @@ module github.com/deedglass/deedglass
 go 1.27.3
 
 require (
-	cel.dev/cel-go v0.32.0
+	cel.dev/cel-go v0.33.1
 	github.com/google/jsonschema-go v0.4.3
 	github.com/gowebpki/jcs v1.0.2
 	github.com/jackc/pglogrepl v0.0.0-20260824121319-4ae5c490f7ce
@@ -11,7 +11,7 @@ require (
 	github.com/modelcontextprotocol/go-sdk v1.8.0
 	github.com/ulikunitz/xz v0.5.17
 	github.com/veraison/go-cose v1.3.0
-	go.yaml.in/yaml/v3 v3.0.5
+	go.yaml.in/yaml/v3 v3.0.6
 	golang.org/x/text v0.43.0
 )
 
