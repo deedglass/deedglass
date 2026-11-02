@@ -13,7 +13,7 @@
 //      removed, the Markdown tidied (tidyLlms), the Postgres set copied to /llms-postgres.txt, and llms.txt's
 //      links and notes made true.
 import { createHash } from 'node:crypto';
-import { existsSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import yaml from 'js-yaml';
@@ -84,6 +84,7 @@ export const REDIRECTS = [
   // TY-12: the record spec moved from docs/ to spec/v1/.
   ['/docs/DEED_SPEC.md', '/reference/deed-spec/'],
   ['/docs/BUNDLE_FORMAT.md', '/reference/engineering/bundle-format/'],
+  ['/sitemap.xml', '/sitemap-index.xml'],
 ];
 
 export function redirectsFile() {
@@ -284,6 +285,9 @@ function main() {
       const t = sitemap(s, dates);
       if (t !== s) writeFileSync(f, t);
     }
+  }
+  if (existsSync(join(dist, 'sitemap-index.xml'))) {
+    copyFileSync(join(dist, 'sitemap-index.xml'), join(dist, 'sitemap.xml'));
   }
   const sorted = [...hashes].sort();
   writeFileSync(join(dist, '_headers'), headersFile(sorted));
