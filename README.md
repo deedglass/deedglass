@@ -1,9 +1,11 @@
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/assets/lockup-horizontal-dark.svg">
-    <img src="docs/assets/lockup-horizontal-light.svg" alt="Deedglass" width="360">
+    <img src="docs/assets/lockup-horizontal-light.svg" alt="Deedglass (Deed Glass)" width="360">
   </picture>
 </p>
+
+<h1 align="center">Deedglass (Deed Glass)</h1>
 
 <h3 align="center">Check what your AI agents actually changed.</h3>
 
