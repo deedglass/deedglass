@@ -82,6 +82,7 @@ export const sidebar = clean([
       p('guides/catch-a-mismatch', 'Catch "1 row reported, 301 committed"'),
       p('guides/undo', 'Undo a bad write'),
       p('guides/watch-a-coding-agent', 'Watch a Claude Code session'),
+      p('guides/cursor-database-safety', 'Cursor and MCP database safety'),
       p('guides/stripe-refunds', 'Stripe refunds with approval'),
       p('guides/github', 'GitHub agent guardrails'),
       p('guides/fhir-server', 'Use a FHIR server today'),

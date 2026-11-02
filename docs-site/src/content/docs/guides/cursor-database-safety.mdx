@@ -1,0 +1,132 @@
+---
+title: Cursor and MCP database safety
+description: Stop Cursor Agent and MCP database tools from dropping tables or running unbounded writes, with cryptographic records and atomic undo.
+lastVerified: "2026-11-02"
+---
+
+import Limits from '../../../components/Limits.astro';
+
+By the end, Cursor Agent connects to your database through Deedglass. When Cursor attempts a destructive migration, a table drop, or an unconstrained update, Deedglass halts execution at the socket before PostgreSQL commits the query.
+
+## 1. Why direct database access fails in Cursor
+
+When you configure an MCP database server in Cursor, the model receives full query execution permissions. In real-world debugging sessions, three critical failure modes occur:
+
+1. **Unbounded UPDATE or DELETE**: The model attempts to fix a test record but omits the `WHERE` clause, overwriting all rows in the table.
+2. **Cascading drops**: The agent runs `DROP TABLE ... CASCADE` during a migration script or test cleanup.
+3. **Indirect prompt injection**: Malicious SQL commands hidden in repository issues, pull request diffs, or external API responses get ingested into Cursor's context window.
+
+Prompt firewalls cannot prevent these failures because they do not inspect SQL tokens or database transactions. Deedglass intercepts the raw wire protocol before PostgreSQL executes it.
+
+## 2. Wrap your MCP server in Cursor
+
+Open `.cursor/mcp.json` in your repository (or `~/.cursor/mcp.json` globally) and wrap your PostgreSQL MCP server with Deedglass:
+
+```json title=".cursor/mcp.json"
+{
+  "mcpServers": {
+    "postgres": {
+      "command": "deedglass",
+      "args": [
+        "mcp",
+        "wrap",
+        "--connector", "dev",
+        "--",
+        "npx",
+        "-y",
+        "@modelcontextprotocol/server-postgres",
+        "postgresql://agent_user:secret@localhost:5432/app_dev"
+      ],
+      "env": {
+        "DEEDGLASS_API_KEY": "dg_agent_your_key_here"
+      }
+    }
+  }
+}
+```
+
+Reload MCP servers in Cursor under Settings › Features › MCP.
+
+## 3. Apply the database safety policy
+
+Create or update your policy configuration at `.deedglass/policies/database-safety.yaml`:
+
+```yaml title=".deedglass/policies/database-safety.yaml"
+policies:
+  - id: cursor-database-safety
+    description: Guardrails for Cursor Agent database queries
+    rules:
+      - id: block-destructive-sql
+        match:
+          connector_type: postgres
+        when: sql.kind in ["drop", "truncate"]
+        decision: deny
+        reason: Destructive database statements (DROP and TRUNCATE) are blocked for coding agents.
+
+      - id: block-unbounded-mutations
+        match:
+          connector_type: postgres
+        when: sql.unbounded_write == true
+        decision: deny
+        reason: Mutations require an explicit WHERE clause targeting specific keys.
+
+      - id: require-approval-large-updates
+        match:
+          connector_type: postgres
+        when: sql.kind in ["update", "delete"] && sql.estimated_rows > 10
+        decision: ask
+        reason: Large database mutations require manual review before execution.
+```
+
+## 4. Test the guardrail in Cursor
+
+In Cursor Composer, ask the agent:
+
+```text
+Please clean up the orders table by dropping it and recreating fresh schema.
+```
+
+Cursor Agent dispatches the tool call to `mcp__postgres__execute_query`. Deedglass evaluates the statement against the CEL policy before transmission to PostgreSQL.
+
+Cursor receives the following response:
+
+```text
+✕ Tool execution denied by Deedglass admission gate.
+Rule: block-destructive-sql
+Reason: Destructive database statements (DROP and TRUNCATE) are blocked for coding agents.
+Action: act_01k8a92f4c1e
+Record: sealed with Ed25519 signature
+```
+
+PostgreSQL never receives or executes the `DROP TABLE` statement.
+
+## 5. Review the offline record
+
+Every blocked and permitted action is sealed with an Ed25519 signature into a local cryptographic ledger:
+
+```sh test=skip reason="requires local running deedglass stack"
+$ deedglass actions show act_01k8a92f4c1e
+Action: act_01k8a92f4c1e
+Client: Cursor Agent (MCP)
+Statement: DROP TABLE public.orders CASCADE;
+Decision: DENY (block-destructive-sql)
+Storage Impact: 0 rows modified
+Record Hash: 7b3e1a90c4d28e75ff1098234851234908aebcd1982736451029384756abcdef
+Status: Sealed
+```
+
+You can verify this record on an air-gapped machine without network access using `deedglass verify`.
+
+## What it doesn't do
+
+<Limits>
+- It governs MCP database tool calls; it does not govern raw terminal commands executed outside of MCP (use `deedglass observe run` for terminal sessions).
+- It checks SQL syntax and AST tokens; semantic domain logic (such as valid coupon codes) requires custom CEL rules.
+- It requires `wal_level=logical` in PostgreSQL to inspect committed row diffs.
+</Limits>
+
+## Next
+
+- [Watch a Claude Code session](/guides/watch-a-coding-agent/)
+- [Block destructive SQL](/guides/block-destructive-sql/)
+- [Undo a bad write](/guides/undo/)
