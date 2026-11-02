@@ -1,0 +1,147 @@
+---
+title: Prevent agent swarm cascades
+description: Stop errors in multi-agent swarms from compounding into catastrophic database mutations across worker boundaries.
+lastVerified: "2026-11-02"
+---
+
+import Limits from '../../../components/Limits.astro';
+
+By the end, your multi-agent architecture runs with isolated identities, per-worker admission gates, and storage-level verification. When an upstream agent hallucinates or receives poisoned tool output, Deedglass stops downstream execution before compound mutations commit to disk.
+
+## 1. Why multi-agent swarms cascade
+
+In multi-agent architectures (such as CrewAI, LangGraph, AutoGen, and Claude Agent SDK), agents delegate subtasks across specialized roles. An orchestration agent decomposes a goal and passes intermediate context to worker agents.
+
+This delegation loop creates a severe vulnerability: **linguistic trust inversion**. When an upstream model produces an erroneous assumption, downstream worker agents treat that context as factual history.
+
+If an orchestrator hallucinates an account identifier or omits a filter, downstream workers execute database updates, issue API refunds, or delete records without validating whether the premise represents physical storage ground truth.
+
+## 2. Separate agent identities and keys
+
+Never share a single API key across multiple agents in a swarm. Assign each worker role its own identity and execution constraints:
+
+```sh test=skip reason="creates agent identities on your server"
+# Create orchestration agent with read-only planning permissions
+deedglass agent create orchestrator --label role=coordinator --calls-per-minute 120
+
+# Create database executor agent with write restrictions
+deedglass agent create db-worker --label role=executor --label tier=internal --calls-per-minute 30
+
+# Create payment agent with daily spend cap
+deedglass agent create billing-worker --label role=payment --spend-per-day 10000 --currency usd
+```
+
+Generate distinct agent keys for each worker:
+
+```sh test=skip reason="creates keys on your server"
+deedglass agent keys create orchestrator --mode live
+deedglass agent keys create db-worker --mode live
+deedglass agent keys create billing-worker --mode live
+```
+
+## 3. Define boundary admission policies
+
+Create policy rules that evaluate the caller's identity and restrict what each worker can touch:
+
+```yaml title=".deedglass/policies/swarm-safety.yaml"
+policies:
+  - id: swarm-boundary-controls
+    description: Boundary rules for multi-agent execution
+    rules:
+      - id: orchestrator-cannot-write
+        match:
+          agent_role: coordinator
+          connector_type: postgres
+        when: sql.kind in ["insert", "update", "delete", "drop", "truncate"]
+        decision: deny
+        reason: Coordinating orchestrator agents are restricted to read-only queries.
+
+      - id: db-worker-require-keys
+        match:
+          agent_role: executor
+          connector_type: postgres
+        when: sql.unbounded_write == true
+        decision: deny
+        reason: Execution workers cannot run updates or deletes without primary key clauses.
+
+      - id: billing-requires-verified-record
+        match:
+          agent_role: payment
+          tool: stripe.create_refund
+        when: args.amount > 5000 && !request.has_verified_record
+        decision: ask
+        reason: Large refunds require verified database records or manual human review.
+```
+
+Apply the policy:
+
+```sh test=skip reason="applies policy to local stack"
+deedglass policy apply .deedglass/policies/swarm-safety.yaml
+```
+
+## 4. Track causality with on-behalf-of headers
+
+When an agent acts on behalf of an end user or passes context to a subagent, pass the causality chain using the `Deedglass-On-Behalf-Of` header:
+
+```python title="agent_worker.py"
+import os
+from deedglass import DeedglassClient
+
+client = DeedglassClient(api_key=os.environ["DEEDGLASS_DB_WORKER_KEY"])
+
+# Pass the original customer ticket id and parent orchestrator
+result = client.execute(
+    connector="postgres_dev",
+    action="execute_query",
+    args={"sql": "UPDATE orders SET status = 'cancelled' WHERE id = 'ord_9182'"},
+    on_behalf_of="ticket_9410:orchestrator_01k8"
+)
+```
+
+The resulting record links the action to the entire causality tree, enabling instant audit tracing if an upstream instruction drifts.
+
+## 5. Decode write-ahead logs before downstream execution
+
+Do not allow downstream workers to ingest state based purely on an upstream model's verbal claim. Enable logical decoding on PostgreSQL to verify what actually committed:
+
+```sh test=skip reason="requires postgres connector"
+deedglass connector postgres init --dsn "$DATABASE_URL"
+```
+
+When `db-worker` runs an update, Deedglass inspects the PostgreSQL Write-Ahead Log replication slot. If the model claims it updated 1 record but 50 records changed, Deedglass flags the mismatch:
+
+```text
+✕ Mismatch detected on connector "postgres_dev"
+  Agent reported: 1 row updated
+  PostgreSQL committed: 50 rows updated
+  Action: act_01k892bc41de
+  Status: Flagged · Undo SQL generated
+```
+
+Downstream agents checking the record status see the mismatch and halt before executing dependent workflows.
+
+## 6. Execute atomic undo across the swarm
+
+If a worker executes an errant transaction, Deedglass generates atomic undo SQL directly from the WAL pre-image diffs:
+
+```sh test=skip reason="requires local running deedglass stack"
+deedglass observe show obs_01k892 --undo-sql > ~/undo-swarm.sql
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f ~/undo-swarm.sql
+```
+
+The undo file checks that every target row still holds the value left by the swarm. If any row changed since, PostgreSQL rolls the entire undo transaction back.
+
+## What it doesn't do
+
+<Limits>
+- It does not orchestrate agent turn order or manage message queues; it governs execution at the tool and database socket.
+- It cannot prevent an agent from speaking incorrect text in a user chat; it prevents incorrect text from mutating production databases.
+- It requires separate API keys per agent role to enforce boundary isolation.
+</Limits>
+
+## Next
+
+- [Multi-agent teams](/guides/multi-agent/)
+- [Watch a Claude Code session](/guides/watch-a-coding-agent/)
+- [Cursor and MCP database safety](/guides/cursor-database-safety/)
+- [Undo a bad write](/guides/undo/)

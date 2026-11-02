@@ -98,6 +98,7 @@ export const sidebar = clean([
       p('guides/replay', 'Test a policy against last week'),
       p('guides/production', 'Run in production on one VM'),
       p('guides/multi-agent', 'Multi-agent teams'),
+      p('guides/prevent-agent-swarm-cascades', 'Prevent agent swarm cascades'),
       p('guides/troubleshooting', 'Troubleshooting with doctor'),
       p('guides/badge', 'Add the badge'),
       p('guides/scan-every-pull-request', 'Scan every pull request'),
