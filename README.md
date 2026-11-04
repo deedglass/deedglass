@@ -46,7 +46,7 @@ npx -y deedglass help       # the eight everyday commands; "help all" lists ever
 
 Without Docker, `start` plays the same scene inside the binary, every line labelled `live` or
 `replay`, in under 30 s. More: [Quickstart](https://docs.deedglass.com/quickstart/) ·
-[Docs](https://docs.deedglass.com) · [Healthcare](https://deedglass.com/healthcare) ·
+[Docs](https://docs.deedglass.com) · [Policy Generator](https://deedglass.com/tools/mcp-policy) · [Healthcare](https://deedglass.com/healthcare) ·
 [Benchmarks](#benchmarks) · [Security](SECURITY.md) · [deedglass.com](https://deedglass.com)
 
 **Found it useful?** A star helps other people find Deedglass. To hear about new releases, use
