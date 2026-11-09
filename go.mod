@@ -3,15 +3,15 @@ module github.com/deedglass/deedglass
 go 1.27.3
 
 require (
-	cel.dev/cel-go v0.32.0
+	cel.dev/cel-go v0.33.2
 	github.com/google/jsonschema-go v0.4.3
 	github.com/gowebpki/jcs v1.0.2
 	github.com/jackc/pglogrepl v0.0.0-20260824121319-4ae5c490f7ce
-	github.com/jackc/pgx/v5 v5.11.0
+	github.com/jackc/pgx/v5 v5.12.0
 	github.com/modelcontextprotocol/go-sdk v1.8.0
 	github.com/ulikunitz/xz v0.5.17
 	github.com/veraison/go-cose v1.3.0
-	go.yaml.in/yaml/v3 v3.0.5
+	go.yaml.in/yaml/v3 v3.0.6
 	golang.org/x/text v0.43.0
 )
 
@@ -22,7 +22,7 @@ require (
 	github.com/jackc/pgio v1.0.0 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect
-	github.com/jackc/puddle/v2 v2.2.2 // indirect
+	github.com/jackc/puddle/v2 v2.2.3 // indirect
 	github.com/segmentio/asm v1.1.3 // indirect
 	github.com/segmentio/encoding v0.5.4 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
