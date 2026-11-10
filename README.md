@@ -1,11 +1,11 @@
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/assets/lockup-horizontal-dark.svg">
-    <img src="docs/assets/lockup-horizontal-light.svg" alt="Deedglass (Deed Glass)" width="360">
+    <img src="docs/assets/lockup-horizontal-light.svg" alt="Deedglass" width="360">
   </picture>
 </p>
 
-<h1 align="center">Deedglass (Deed Glass)</h1>
+<h1 align="center">Deedglass</h1>
 
 <h3 align="center">Check what your AI agents actually changed.</h3>
 
@@ -18,7 +18,7 @@ Deedglass checks what really changed and seals a record. Open source, self-hoste
   <a href="https://github.com/deedglass/deedglass/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/deedglass/deedglass/actions/workflows/ci.yml/badge.svg?branch=main"></a>
   <a href="https://github.com/deedglass/deedglass/releases"><img alt="Release" src="https://cdn.jsdelivr.net/gh/deedglass/deedglass@main/docs/assets/badges/release.svg"></a>
   <a href="https://www.npmjs.com/package/deedglass"><img alt="npm" src="https://cdn.jsdelivr.net/gh/deedglass/deedglass@main/docs/assets/badges/npm.svg"></a>
-  <a href="#license"><img alt="Licence: Apache-2.0, with ee/ under FSL-1.1-ALv2" src="https://cdn.jsdelivr.net/gh/deedglass/deedglass@main/docs/assets/badges/licence.svg"></a>
+  <a href="#license"><img alt="Licence: Apache-2.0 or MIT, with ee/ under FSL-1.1-ALv2" src="https://cdn.jsdelivr.net/gh/deedglass/deedglass@main/docs/assets/badges/licence.svg"></a>
   <a href="https://pkg.go.dev/github.com/deedglass/deedglass/pkg/deedglass"><img alt="Go reference" src="https://pkg.go.dev/badge/github.com/deedglass/deedglass/pkg/deedglass.svg"></a>
   <a href="docs/ATTACK_SUITE.md"><img alt="Attack suite" src="https://cdn.jsdelivr.net/gh/deedglass/deedglass@main/docs/assets/badges/attack-suite.svg"></a>
 </p>
