@@ -377,7 +377,7 @@ If Deedglass showed you something your logs didn't, a GitHub star helps other pe
 ## License
 
 <!-- description:licence -->
-The core, the SDKs and the CLI are Apache-2.0. The features in `ee/` are FSL-1.1-ALv2 (free to use while we grow), and each release of them becomes Apache-2.0 two years after it ships. The release binary, the `@deedglass/cli-*` npm packages and the container image include `ee/`, so their licence is `Apache-2.0 AND FSL-1.1-ALv2`.
+The core is dual-licensed under Apache-2.0 or MIT. The TypeScript SDK and examples are MIT. The features in `ee/` are FSL-1.1-ALv2 (free to use while we grow), and each release of them becomes Apache-2.0 two years after it ships. The release binary, the `@deedglass/cli-*` npm packages and the container image include `ee/`, so their licence is `Apache-2.0 AND FSL-1.1-ALv2`.
 
 FSL-1.1-ALv2 lets you read, run and change `ee/` for anything except offering a competing product
 ([`ee/LICENSE`](ee/LICENSE)); everything Deedglass does for safety is free and outside `ee/`

@@ -10,7 +10,7 @@ compares what the system really changed with what the agent reported (Claimed, C
 Matches, Doesn't match or Can't check), and each result is sealed as a signed record anyone can
 check offline. It can undo the rows an action changed.
 
-The core, the SDKs and the CLI are Apache-2.0. The features in `ee/` are FSL-1.1-ALv2 (free to use while we grow), and each release of them becomes Apache-2.0 two years after it ships. The release binary, the `@deedglass/cli-*` npm packages and the container image include `ee/`, so their licence is `Apache-2.0 AND FSL-1.1-ALv2`.
+The core is dual-licensed under Apache-2.0 or MIT. The TypeScript SDK and examples are MIT. The features in `ee/` are FSL-1.1-ALv2 (free to use while we grow), and each release of them becomes Apache-2.0 two years after it ships. The release binary, the `@deedglass/cli-*` npm packages and the container image include `ee/`, so their licence is `Apache-2.0 AND FSL-1.1-ALv2`.
 
 Every feature is free while we grow, so nothing checks a licence and nothing is sent to deedglass.com: the scan reads files on your machine and, with `--postgres-dsn-env`, connects only to the database you name. The `deedglass licence` commands, kept for a later paid option, are the only ones that call Dodo Payments or deedglass.com, and only when you run them; `DEEDGLASS_NO_NETWORK=1` stops those calls. `deedglass version --check` and the `--latest` option of `deedglass policy install` and `policy packs` contact GitHub when you use them. Head timestamps are off by default; with TSAs or a transparency service listed in deedglass.yaml, `deedglass deeds timestamp` and each export contact only those.
 
