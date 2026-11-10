@@ -172,6 +172,7 @@ func TestForcedFailures(t *testing.T) {
 		{"db.reachable", Fail, func(*Env, *fakeServer) {}, "can't connect"},
 		{"db.reachable", Fail, func(env *Env, _ *fakeServer) { env.DBURL = "" }, "no database URL"},
 		{"config.valid", Fail, func(env *Env, _ *fakeServer) { env.ConfigErr = errors.New("DEEDGLASS_LISTEN isn't a host:port.") }, "DEEDGLASS_LISTEN"},
+		{"config.valid", Warn, func(env *Env, _ *fakeServer) { env.Listen = "0.0.0.0:8080" }, "listening on all interfaces"},
 		{"seal.key", Fail, func(env *Env, _ *fakeServer) { env.SealKeyFile = filepath.Join(env.Dir, "missing.json") }, "doesn't load"},
 		{"seal.key", Fail, func(_ *Env, f *fakeServer) { f.keysJSON = []byte(`{"keys":[]}`) }, "not in keys.json"},
 		{"vault.key", Fail, func(env *Env, _ *fakeServer) { env.VaultKey = "short" }, "doesn't parse"},

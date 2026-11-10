@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/fs"
+	"net"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -47,8 +48,20 @@ type Env struct {
 	Lockdown      bool
 	SealPQKeyFile string
 	Timestamps    bool // timestamps.tsa_urls or scitt_url set
+	Listen        string
 	// Unauthenticated is set when the server refused the API key (exit 3).
 	Unauthenticated atomic.Bool
+}
+
+func isAllInterfaces(addr string) bool {
+	if addr == "" {
+		return false
+	}
+	host, _, err := net.SplitHostPort(addr)
+	if err != nil {
+		host = addr
+	}
+	return host == "" || host == "0.0.0.0" || host == "::" || host == "[::]"
 }
 
 // Checks are the seventeen, in display order.
@@ -78,6 +91,9 @@ func checkConfig(_ context.Context, env *Env) Result {
 	if env.ConfigErr != nil {
 		msg := strings.SplitN(env.ConfigErr.Error(), "\n", 2)[0]
 		return fail(strings.TrimSuffix(msg, "."), "Run deedglass config print to see every problem, then fix the first one.")
+	}
+	if isAllInterfaces(env.Listen) {
+		return warn("valid for "+env.EnvName+" · listening on all interfaces ("+env.Listen+")", "Bind to 127.0.0.1:<port> in DEEDGLASS_LISTEN unless you intend to expose the API to the local network.")
 	}
 	return ok("valid for " + env.EnvName)
 }

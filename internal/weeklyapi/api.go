@@ -8,6 +8,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/base64"
+	"errors"
 	"html/template"
 	"log/slog"
 	"net/http"
@@ -33,6 +34,7 @@ type API struct {
 	ProUndoLine func() bool
 	Now         func() time.Time
 	Log         *slog.Logger
+	Limiter     *httpx.Limiter
 }
 
 // Routes are the four routes. With a nil API (route-table tests) they answer service_unavailable.
@@ -209,14 +211,32 @@ func (a *API) page(w http.ResponseWriter, status int, v pageView) error {
 }
 
 var badLink = pageView{Title: "This link doesn't work", Body: "It may have been changed in transit. Turn the weekly email off in the Console: Settings, then Weekly email."}
+var expiredLink = pageView{Title: "This link has expired", Body: "This unsubscribe link has expired. Turn the weekly email off in the Console: Settings, then Weekly email."}
+
+func (a *API) checkLimit(r *http.Request) error {
+	if a == nil || a.Limiter == nil {
+		return nil
+	}
+	ip := httpx.ClientIP(r.Context())
+	if ok, wait := a.Limiter.Allow("ip:" + ip); !ok {
+		return httpx.ErrRateLimited(int(wait.Seconds() + 1))
+	}
+	return nil
+}
 
 func (a *API) offPage(w http.ResponseWriter, r *http.Request) error {
 	if a == nil || a.Source == nil {
 		return httpx.E(httpx.CodeServiceUnavailable)
 	}
+	if err := a.checkLimit(r); err != nil {
+		return err
+	}
 	tok := r.URL.Query().Get("t")
 	org, _, err := weekly.ParseOffToken(a.OffKey, tok)
 	if err != nil {
+		if errors.Is(err, weekly.ErrOffTokenExpired) {
+			return a.page(w, http.StatusBadRequest, expiredLink)
+		}
 		return a.page(w, http.StatusBadRequest, badLink)
 	}
 	name := a.orgName(r.Context(), org)
@@ -228,11 +248,17 @@ func (a *API) off(w http.ResponseWriter, r *http.Request) error {
 	if a == nil || a.Source == nil {
 		return httpx.E(httpx.CodeServiceUnavailable)
 	}
+	if err := a.checkLimit(r); err != nil {
+		return err
+	}
 	if err := r.ParseForm(); err != nil {
 		return a.page(w, http.StatusBadRequest, badLink)
 	}
 	org, user, err := weekly.ParseOffToken(a.OffKey, r.PostForm.Get("t"))
 	if err != nil {
+		if errors.Is(err, weekly.ErrOffTokenExpired) {
+			return a.page(w, http.StatusBadRequest, expiredLink)
+		}
 		return a.page(w, http.StatusBadRequest, badLink)
 	}
 	ctx := r.Context()

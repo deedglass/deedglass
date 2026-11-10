@@ -3,9 +3,11 @@ package main
 import (
 	"context"
 	"log/slog"
+	"time"
 
 	"github.com/deedglass/deedglass/ee/agency"
 	"github.com/deedglass/deedglass/internal/config"
+	"github.com/deedglass/deedglass/internal/httpx"
 	"github.com/deedglass/deedglass/internal/identity"
 	"github.com/deedglass/deedglass/internal/ids"
 	"github.com/deedglass/deedglass/internal/ledger"
@@ -37,7 +39,7 @@ func newWeekly(ctx context.Context, e *Env, cfg *config.Config, db *store.DB, le
 	key := weekly.OffKeyFrom(pepper)
 	mail := cfg.ResendAPIKey.IsSet() || cfg.Env != config.Prod
 	proLine := func() bool { return !undoPro.Allowed() }
-	w := &weeklyWiring{api: &weeklyapi.API{Source: src, Mailer: mail, OffKey: key, ProUndoLine: proLine, Log: log}}
+	w := &weeklyWiring{api: &weeklyapi.API{Source: src, Mailer: mail, OffKey: key, ProUndoLine: proLine, Log: log, Limiter: httpx.NewLimiter(10, time.Minute, nil)}}
 	j := &weekly.Job{Store: src, BaseURL: cfg.BaseURL.String(), OffKey: key, ProUndoLine: proLine, Log: log}
 	if mail && q != nil {
 		j.Mail = q

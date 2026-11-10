@@ -3,208 +3,3248 @@
   "frozen": "2026-09-28",
   "source": "20_ARCHITECTURE_SPEC_V0.md §13, amended by 00_MASTER_OPERATING_PLAN_V4.md §3.0 and §3.8",
   "rule": "Expected outcomes are written before implementation. Changing an expected outcome, expected_detail or priority needs a founder-approved ADR (CLAUDE.md); attack/meta_test.go pins a digest of these fields so any change is visible in review.",
-  "outcomes": {"VERIFIED": "A VERIFIED statement is issued (positive controls and pipeline properties).", "BLOCKED": "Rejected before commit, so no effect.", "DETECTED": "Committed, and a MISMATCH statement or alert was issued.", "UNVERIFIABLE": "An UNVERIFIABLE statement is issued, naming the evidence gap; never MISMATCH and never VERIFIED. V7: the change committed, and the witness sealed UNVERIFIABLE naming the gap.", "OUTSIDE SCOPE": "Behaviour is documented; a VERIFIED or absent statement is expected and asserted.", "NO EFFECT": "Nothing committed, so no statement is expected and none may be issued.", "DENIED": "The Gate refused the action before execution. A deed with decision deny is sealed; the target is unchanged.", "REJECTED": "Refused at authentication or validation with a canonical error code. No action runs; the target is unchanged.", "REDACTED": "The action ran or failed, and no credential value appears in any response, log line, event, deed or Console view.", "MISMATCH": "The change committed; the witness sealed a MISMATCH verdict with a diff."},
-  "priorities": {"P0": "Must pass at release gates G3/G4.", "P1": "Must pass by G5 or appear in LIMITATIONS.md as not yet tested.", "doc-only": "Documented; not an automated test in V0."},
-  "pending": [{"id": "G01b", "title": "G01 hijacked intent with the payee not on deedglass.payee_allowlist", "expected": "BLOCKED", "priority": "P0", "demo": true, "note": "Added to cases[] only after the founder approves ADR-009 (plan §3.9: approval Fri 10-02, expected outcome written before implementation Sat 10-03)."}],
+  "outcomes": {
+    "VERIFIED": "A VERIFIED statement is issued (positive controls and pipeline properties).",
+    "BLOCKED": "Rejected before commit, so no effect.",
+    "DETECTED": "Committed, and a MISMATCH statement or alert was issued.",
+    "UNVERIFIABLE": "An UNVERIFIABLE statement is issued, naming the evidence gap; never MISMATCH and never VERIFIED. V7: the change committed, and the witness sealed UNVERIFIABLE naming the gap.",
+    "OUTSIDE SCOPE": "Behaviour is documented; a VERIFIED or absent statement is expected and asserted.",
+    "NO EFFECT": "Nothing committed, so no statement is expected and none may be issued.",
+    "DENIED": "The Gate refused the action before execution. A deed with decision deny is sealed; the target is unchanged.",
+    "REJECTED": "Refused at authentication or validation with a canonical error code. No action runs; the target is unchanged.",
+    "REDACTED": "The action ran or failed, and no credential value appears in any response, log line, event, deed or Console view.",
+    "MISMATCH": "The change committed; the witness sealed a MISMATCH verdict with a diff."
+  },
+  "priorities": {
+    "P0": "Must pass at release gates G3/G4.",
+    "P1": "Must pass by G5 or appear in LIMITATIONS.md as not yet tested.",
+    "doc-only": "Documented; not an automated test in V0."
+  },
+  "pending": [
+    {
+      "id": "G01b",
+      "title": "G01 hijacked intent with the payee not on deedglass.payee_allowlist",
+      "expected": "BLOCKED",
+      "priority": "P0",
+      "demo": true,
+      "note": "Added to cases[] only after the founder approves ADR-009 (plan §3.9: approval Fri 10-02, expected outcome written before implementation Sat 10-03)."
+    }
+  ],
   "cases": [
-    {"id": "A01", "group": "A", "title": "Valid transfer, end to end", "expected": "VERIFIED", "expected_reasons": [], "expected_detail": "VERIFIED", "priority": "P0", "demo": true, "v3_ref": [1], "owasp": [], "source": "20_ §13", "status": "superseded", "superseded_by": "W05"},
-    {"id": "A02", "group": "A", "title": "Amount altered in intent bytes, original sig, submitted to executor", "expected": "BLOCKED", "expected_reasons": ["SIG_INVALID"], "expected_detail": "BLOCKED (executor SIG_INVALID)", "priority": "P0", "demo": false, "v3_ref": [2], "owasp": ["ASI02"], "source": "20_ §13", "status": "retired", "retired": "V7 signs agent intents (S09): changed args under the original signature are refused as intent_invalid; internal/identity TestIntentVectors."},
-    {"id": "A03", "group": "A", "title": "Same, but compromised executor calls function directly", "expected": "DETECTED", "expected_reasons": ["SIG_INVALID"], "expected_detail": "DETECTED (MISMATCH SIG_INVALID)", "priority": "P0", "demo": true, "v3_ref": [21, 22], "owasp": ["ASI02"], "source": "20_ §13", "status": "superseded", "superseded_by": "W13"},
-    {"id": "A04", "group": "A", "title": "Intent signed by unregistered key", "expected": "BLOCKED", "expected_reasons": [], "expected_detail": "BLOCKED", "priority": "P0", "demo": false, "v3_ref": [3], "owasp": ["ASI03"], "source": "20_ §13", "status": "retired", "retired": "V7 intents name a registered key id; an unknown key is intent_invalid; internal/identity TestIntentVectors."},
-    {"id": "A05", "group": "A", "title": "Revoked key (DB still active, verifier revoked)", "expected": "DETECTED", "expected_reasons": ["KEY_REVOKED"], "expected_detail": "DETECTED (KEY_REVOKED)", "priority": "P1", "demo": false, "v3_ref": [3], "owasp": ["ASI03"], "source": "20_ §13", "status": "superseded", "superseded_by": "J02"},
-    {"id": "A06", "group": "A", "title": "Non-canonical bytes (whitespace/order) via compromised executor", "expected": "DETECTED", "expected_reasons": ["NON_CANONICAL_INTENT"], "expected_detail": "DETECTED (NON_CANONICAL_INTENT)", "priority": "P0", "demo": false, "v3_ref": [2], "owasp": [], "source": "20_ §13", "status": "retired", "retired": "V7's intent wire format is canonical JCS and the checker refuses other bytes; internal/identity TestIntentVectors and internal/intent's strict parser vectors."},
-    {"id": "A07", "group": "A", "title": "Duplicate-key JSON (parser differential) via executor bypass", "expected": "DETECTED", "expected_reasons": ["NON_CANONICAL_INTENT"], "expected_detail": "DETECTED (NON_CANONICAL)", "priority": "P0", "demo": false, "v3_ref": [2], "owasp": [], "source": "20_ §13", "status": "retired", "retired": "The strict parser refuses duplicate keys before JCS (CLAUDE.md L2 invariant 6); internal/intent strict parser tests and FuzzParse.", "note": "Spec text says NON_CANONICAL; the reason code in spec §10.3 check 4 is NON_CANONICAL_INTENT."},
-    {"id": "A08", "group": "A", "title": "Amount as number / float / negative / > 18 digits", "expected": "BLOCKED", "expected_reasons": [], "expected_detail": "BLOCKED", "priority": "P0", "demo": false, "v3_ref": [2], "owasp": [], "source": "20_ §13", "status": "retired", "retired": "V7 has no transfer amount; args numbers are integers up to 2^53-1 or floats in the args profile; internal/intent TestArgs tables and FuzzArgsDigest."},
-    {"id": "A09", "group": "A", "title": "Expired intent", "expected": "BLOCKED", "expected_reasons": [], "expected_detail": "BLOCKED (function)", "priority": "P0", "demo": false, "v3_ref": [4], "owasp": [], "source": "20_ §13", "status": "superseded", "superseded_by": "R04"},
-    {"id": "A10", "group": "A", "title": "Wrong aud (other deployment)", "expected": "BLOCKED", "expected_reasons": [], "expected_detail": "BLOCKED", "priority": "P1", "demo": false, "v3_ref": [4], "owasp": [], "source": "20_ §13", "status": "retired", "retired": "V7 intents are bound to the org and agent of the key that sends them; a foreign one is intent_invalid; internal/identity TestIntentVectors."},
-    {"id": "A11", "group": "A", "title": "Retired or unknown bundle hash", "expected": "BLOCKED", "expected_reasons": [], "expected_detail": "BLOCKED / DETECTED if bypassed", "priority": "P1", "demo": false, "v3_ref": [21], "owasp": [], "source": "20_ §13", "status": "retired", "retired": "The V0 Operation Bundle is not on the V7 Gate path; internal/bundle keeps its own manifest tests."},
-    {"id": "A12", "group": "A", "title": "Principal without mandate on source; amount > mandate", "expected": "BLOCKED", "expected_reasons": ["POLICY_VIOLATION"], "expected_detail": "BLOCKED; DB-mandate widened by owner gives DETECTED (POLICY_VIOLATION)", "priority": "P0", "demo": false, "v3_ref": [6], "owasp": ["ASI03"], "source": "20_ §13", "status": "superseded", "superseded_by": "J04"},
-    {"id": "A13", "group": "A", "title": "Small-order public key offered at registration", "expected": "BLOCKED", "expected_reasons": [], "expected_detail": "BLOCKED (registration refuses the key)", "priority": "P0", "demo": false, "v3_ref": [], "owasp": [], "source": "plan §3.0 #7, §3.8 (spike S4)", "status": "implemented", "note": "Spike S4: with the identity public key, one signature verifies every message under Go crypto/ed25519."},
-    {"id": "B01", "group": "B", "title": "Sequential replay", "expected": "BLOCKED", "expected_reasons": ["REPLAY"], "expected_detail": "BLOCKED (23505 gives REPLAY)", "priority": "P0", "demo": true, "v3_ref": [4], "owasp": [], "source": "20_ §13", "status": "superseded", "superseded_by": "J03"},
-    {"id": "B02", "group": "B", "title": "Concurrent replay (16 goroutines)", "expected": "BLOCKED", "expected_reasons": ["REPLAY"], "expected_detail": "exactly 1 VERIFIED, 15 BLOCKED", "priority": "P0", "demo": false, "v3_ref": [10], "owasp": [], "source": "20_ §13", "status": "superseded", "superseded_by": "J03"},
-    {"id": "B03", "group": "B", "title": "Same nonce, different params, new valid signature", "expected": "BLOCKED", "expected_reasons": [], "expected_detail": "BLOCKED", "priority": "P0", "demo": false, "v3_ref": [4], "owasp": [], "source": "20_ §13", "status": "superseded", "superseded_by": "J03"},
-    {"id": "B04", "group": "B", "title": "Opposing transfers A<->B x200 concurrent", "expected": "VERIFIED", "expected_reasons": [], "expected_detail": "all VERIFIED, no deadlock, sum conserved", "priority": "P0", "demo": false, "v3_ref": [], "owasp": [], "source": "20_ §13", "status": "retired", "retired": "V7 has no transfer function to deadlock; Gate concurrency is internal/gate TestLoad1000 and the 50-way Sealer test in internal/deed."},
-    {"id": "B05", "group": "B", "title": "Overdraft race", "expected": "BLOCKED", "expected_reasons": [], "expected_detail": "one VERIFIED, one BLOCKED, never negative", "priority": "P0", "demo": false, "v3_ref": [], "owasp": [], "source": "20_ §13", "status": "retired", "retired": "An overdraft rule belongs to the customer's own schema in V7, not to Deedglass; the Gate's own limits are budgets (J04)."},
-    {"id": "B06", "group": "B", "title": "Two function calls in one transaction", "expected": "BLOCKED", "expected_reasons": [], "expected_detail": "BLOCKED (entry guard)", "priority": "P0", "demo": false, "v3_ref": [], "owasp": [], "source": "20_ §13", "status": "superseded", "superseded_by": "H03", "note": "Also encodes the 16 S5 entry-guard cases, including a same-transaction retry (plan §3.8)."},
-    {"id": "B07", "group": "B", "title": "Superuser deletes ledger row, then replays nonce", "expected": "DETECTED", "expected_reasons": ["REPLAY"], "expected_detail": "DETECTED (REPLAY, verifier memory)", "priority": "P1", "demo": false, "v3_ref": [], "owasp": [], "source": "20_ §13", "status": "retired", "retired": "V7 intent nonces live in the control plane (intent_nonces), not in the customer's database; a control-plane superuser is a compromised host (out of scope)."},
-    {"id": "C01", "group": "C", "title": "App role direct INSERT/UPDATE/DELETE/TRUNCATE on bank.*", "expected": "BLOCKED", "expected_reasons": [], "expected_detail": "BLOCKED", "priority": "P0", "demo": true, "v3_ref": [5], "owasp": ["ASI03"], "source": "20_ §13", "status": "retired", "retired": "V7 agents never hold the database credential; deedglass_agent's grants are S17's setup plan, checked by deedglass connector postgres check (internal/connector/postgres/setup TestPlannerGoldens)."},
-    {"id": "C02", "group": "C", "title": "App role EXECUTE deedglass function", "expected": "BLOCKED", "expected_reasons": [], "expected_detail": "BLOCKED", "priority": "P0", "demo": false, "v3_ref": [6], "owasp": ["ASI03"], "source": "20_ §13", "status": "retired", "retired": "deedglass.begin_action is granted to deedglass_agent only (S17); internal/connector/postgres/setup TestPlannerGoldens and connector postgres check."},
-    {"id": "C03", "group": "C", "title": "App role CREATE TRIGGER / ALTER on bank.accounts", "expected": "BLOCKED", "expected_reasons": [], "expected_detail": "BLOCKED", "priority": "P0", "demo": false, "v3_ref": [6], "owasp": [], "source": "20_ §13", "status": "superseded", "superseded_by": "H01"},
-    {"id": "C04", "group": "C", "title": "pg_temp table/type/function shadowing", "expected": "BLOCKED", "expected_reasons": [], "expected_detail": "BLOCKED (no effect)", "priority": "P0", "demo": false, "v3_ref": [8], "owasp": [], "source": "20_ §13", "status": "retired", "retired": "Controlled functions pin search_path to pg_catalog, pg_temp (CLAUDE.md rule 4); agent DDL that could shadow is refused (H01, H04)."},
-    {"id": "C05", "group": "C", "title": "public-schema operator/function shadowing", "expected": "BLOCKED", "expected_reasons": [], "expected_detail": "BLOCKED", "priority": "P1", "demo": false, "v3_ref": [7, 8], "owasp": [], "source": "20_ §13", "status": "retired", "retired": "As C04: pinned search_path and schema-qualified objects in every controlled function; agent DDL refused (H01, H04)."},
-    {"id": "C06", "group": "C", "title": "SQL-injection strings in ids", "expected": "BLOCKED", "expected_reasons": [], "expected_detail": "BLOCKED (regex CHECK, no dynamic SQL)", "priority": "P0", "demo": false, "v3_ref": [9], "owasp": [], "source": "20_ §13", "status": "retired", "retired": "No dynamic SQL is built from input (static guard G1) and ids are parsed strictly (internal/ids FuzzParse); agent SQL is the connector's, checked by sqlguard (H01 to H07)."},
-    {"id": "C07", "group": "C", "title": "session_replication_role=replica", "expected": "BLOCKED", "expected_reasons": [], "expected_detail": "BLOCKED (guard)", "priority": "P1", "demo": false, "v3_ref": [7], "owasp": [], "source": "20_ §13", "status": "retired", "retired": "session_replication_role is superuser-only in Postgres and deedglass_agent is not a superuser; an unsafe role is database_role_unsafe (S17)."},
-    {"id": "C08", "group": "C", "title": "Owner alters RLS so target row is filtered", "expected": "BLOCKED", "expected_reasons": [], "expected_detail": "BLOCKED (row-count abort)", "priority": "P1", "demo": false, "v3_ref": [7], "owasp": [], "source": "20_ §13", "status": "retired", "retired": "V0's bank schema RLS; V7 doesn't own the customer's RLS. A filtered row shows as an L1 or L2 mismatch (H08, W01)."},
-    {"id": "C09", "group": "C", "title": "Executor role direct DML", "expected": "BLOCKED", "expected_reasons": [], "expected_detail": "BLOCKED", "priority": "P0", "demo": false, "v3_ref": [22], "owasp": [], "source": "20_ §13", "status": "retired", "retired": "V7 has no executor role; the Postgres connector is the only writer Deedglass runs (S17)."},
-    {"id": "C10", "group": "C", "title": "Owner grants UPDATE to app role, then app updates", "expected": "DETECTED", "expected_reasons": ["UNBOUND_MUTATION", "BOUNDARY_DRIFT"], "expected_detail": "UNVERIFIABLE (drift) for subsequent ops; the update itself DETECTED (UNBOUND_MUTATION)", "priority": "P1", "demo": false, "v3_ref": [6], "owasp": ["ASI03"], "source": "20_ §13", "status": "retired", "retired": "An owner's grant lets writes bypass the Gate; the decoder sees them as unbound changes and no action's verdict changes; internal/decoder TestHugeTransaction."},
-    {"id": "D01", "group": "D", "title": "Forged transactional deedglass marker, no ledger", "expected": "DETECTED", "expected_reasons": ["FORGED_MARKER"], "expected_detail": "DETECTED (FORGED_MARKER)", "priority": "P0", "demo": false, "v3_ref": [21], "owasp": ["ASI10"], "source": "20_ §13", "status": "implemented", "note": "Reuses the exact spike S1 SQL (app_role forged an in-frame deedglass marker). Needed for T2 on Fri 10-02 (plan §3.9)."},
-    {"id": "D02", "group": "D", "title": "Forged non-transactional marker", "expected": "DETECTED", "expected_reasons": ["FORGED_MARKER_NONTX"], "expected_detail": "DETECTED (FORGED_MARKER_NONTX)", "priority": "P0", "demo": false, "v3_ref": [21], "owasp": [], "source": "20_ §13", "status": "implemented", "note": "Reuses the spike S1 SQL; the guard allows a non-transactional marker before the call (plan §3.0 #8)."},
-    {"id": "D03", "group": "D", "title": "Marker inside rolled-back savepoint", "expected": "NO EFFECT", "expected_reasons": [], "expected_detail": "no statement, no effect", "priority": "P0", "demo": false, "v3_ref": [11], "owasp": [], "source": "20_ §13", "status": "implemented"},
-    {"id": "D04", "group": "D", "title": "Compromised executor adds second marker after the function", "expected": "DETECTED", "expected_reasons": ["MARKER_COUNT"], "expected_detail": "DETECTED (MARKER_COUNT)", "priority": "P0", "demo": false, "v3_ref": [22], "owasp": [], "source": "20_ §13", "status": "implemented", "note": "Reuses the spike S1 SQL for the extra marker after the call (plan §3.0 #8)."},
-    {"id": "D05", "group": "D", "title": "Owner-installed BEFORE UPDATE trigger diverts credit to attacker (published table)", "expected": "DETECTED", "expected_reasons": ["VALUE_MISMATCH", "UNEXPECTED_CHANGE", "BOUNDARY_DRIFT"], "expected_detail": "DETECTED (VALUE_MISMATCH + UNEXPECTED_CHANGE, BOUNDARY_DRIFT noted)", "priority": "P0", "demo": true, "v3_ref": [16, 17], "owasp": [], "source": "20_ §13", "status": "superseded", "superseded_by": "W03", "note": "Demo MISMATCH case: authorized Bob +10,000; observed Bob +0 and Attacker +10,000 (spec §13)."},
-    {"id": "D06", "group": "D", "title": "AFTER trigger writes an unpublished permanent table", "expected": "UNVERIFIABLE", "expected_reasons": ["BOUNDARY_DRIFT"], "expected_detail": "UNVERIFIABLE (BOUNDARY_DRIFT); the write itself is unseen", "priority": "P0", "demo": true, "v3_ref": [16, 18], "owasp": [], "source": "20_ §13", "status": "retired", "retired": "Writes to tables outside witness.watched_tables are not seen; stated in docs/LIMITATIONS.md (the observation boundary).", "note": "Demo UNVERIFIABLE case (spec §13)."},
-    {"id": "D07", "group": "D", "title": "Trigger writes an UNLOGGED table", "expected": "UNVERIFIABLE", "expected_reasons": ["BOUNDARY_DRIFT"], "expected_detail": "UNVERIFIABLE (drift)", "priority": "P1", "demo": false, "v3_ref": [18], "owasp": [], "source": "20_ §13", "status": "retired", "retired": "UNLOGGED tables are not in WAL, so logical decoding can't see them; stated in docs/LIMITATIONS.md."},
-    {"id": "D08", "group": "D", "title": "Owner replaces function body (CREATE OR REPLACE)", "expected": "UNVERIFIABLE", "expected_reasons": ["BOUNDARY_DRIFT"], "expected_detail": "UNVERIFIABLE (drift: prosrc hash)", "priority": "P0", "demo": false, "v3_ref": [20], "owasp": [], "source": "20_ §13", "status": "retired", "retired": "V7 has no controlled transfer function body; deedglass.begin_action is checked by deedglass connector postgres check."},
-    {"id": "D09", "group": "D", "title": "ALSO rule on accounts", "expected": "UNVERIFIABLE", "expected_reasons": ["BOUNDARY_DRIFT"], "expected_detail": "UNVERIFIABLE; MISMATCH if it writes a published table", "priority": "P1", "demo": false, "v3_ref": [16], "owasp": [], "source": "20_ §13", "status": "superseded", "superseded_by": "W01"},
-    {"id": "D10", "group": "D", "title": "FK changed to ON DELETE CASCADE", "expected": "UNVERIFIABLE", "expected_reasons": ["BOUNDARY_DRIFT"], "expected_detail": "UNVERIFIABLE", "priority": "P1", "demo": false, "v3_ref": [20], "owasp": [], "source": "20_ §13", "status": "superseded", "superseded_by": "W04"},
-    {"id": "D11", "group": "D", "title": "REPLICA IDENTITY set to DEFAULT", "expected": "UNVERIFIABLE", "expected_reasons": ["RELATION_MISMATCH", "OLD_TUPLE_MISSING"], "expected_detail": "UNVERIFIABLE (RELATION_MISMATCH / OLD_TUPLE_MISSING)", "priority": "P0", "demo": false, "v3_ref": [19], "owasp": [], "source": "20_ §13", "status": "superseded", "superseded_by": "W07"},
-    {"id": "D12", "group": "D", "title": "ALTER PUBLICATION ... DROP TABLE bank.journal", "expected": "UNVERIFIABLE", "expected_reasons": ["BOUNDARY_DRIFT"], "expected_detail": "UNVERIFIABLE (drift; missing journal changes are a gap)", "priority": "P0", "demo": false, "v3_ref": [19], "owasp": [], "source": "20_ §13", "status": "superseded", "superseded_by": "W12"},
-    {"id": "D13", "group": "D", "title": "Publication narrowed to publish='insert'", "expected": "UNVERIFIABLE", "expected_reasons": ["BOUNDARY_DRIFT"], "expected_detail": "UNVERIFIABLE", "priority": "P1", "demo": false, "v3_ref": [19], "owasp": [], "source": "20_ §13", "status": "superseded", "superseded_by": "W12"},
-    {"id": "D14", "group": "D", "title": "ALTER TABLE accounts ADD COLUMN", "expected": "UNVERIFIABLE", "expected_reasons": ["RELATION_MISMATCH"], "expected_detail": "UNVERIFIABLE (RELATION_MISMATCH) until recommitted", "priority": "P0", "demo": false, "v3_ref": [20], "owasp": [], "source": "20_ §13", "status": "retired", "retired": "V7 compares row images by column name from each RELATION message, not V0's relation-hash drift rule; internal/witness/l2 tests."},
-    {"id": "D15", "group": "D", "title": "Superuser direct UPDATE outside function", "expected": "DETECTED", "expected_reasons": ["UNBOUND_MUTATION"], "expected_detail": "DETECTED (UNBOUND_MUTATION)", "priority": "P0", "demo": false, "v3_ref": [5], "owasp": [], "source": "20_ §13", "status": "retired", "retired": "A superuser's write outside the Gate is decoded as unbound; no action's verdict changes; internal/decoder TestHugeTransaction."},
-    {"id": "D16", "group": "D", "title": "Owner TRUNCATE bank.accounts", "expected": "DETECTED", "expected_reasons": ["TRUNCATE_PROTECTED"], "expected_detail": "DETECTED (TRUNCATE_PROTECTED)", "priority": "P1", "demo": false, "v3_ref": [5], "owasp": [], "source": "20_ §13", "status": "superseded", "superseded_by": "H01"},
-    {"id": "D17", "group": "D", "title": "Origin-tagged changes (pg_replication_origin_session_setup)", "expected": "DETECTED", "expected_reasons": ["UNBOUND_MUTATION"], "expected_detail": "DETECTED (decoded with origin=any, UNBOUND)", "priority": "P1", "demo": false, "v3_ref": [], "owasp": [], "source": "20_ §13", "status": "implemented"},
-    {"id": "E01", "group": "E", "title": "Verifier killed mid-batch, restarted", "expected": "VERIFIED", "expected_reasons": [], "expected_detail": "no duplicate or missing statements", "priority": "P0", "demo": false, "v3_ref": [13], "owasp": [], "source": "20_ §13", "status": "implemented"},
-    {"id": "E02", "group": "E", "title": "Slot rewind (re-delivery)", "expected": "VERIFIED", "expected_reasons": [], "expected_detail": "idempotent", "priority": "P0", "demo": false, "v3_ref": [14], "owasp": [], "source": "20_ §13", "status": "implemented"},
-    {"id": "E03", "group": "E", "title": "Verifier offline plus small max_slot_wal_keep_size, slot lost", "expected": "UNVERIFIABLE", "expected_reasons": ["NO_EVIDENCE"], "expected_detail": "UNVERIFIABLE (NO_EVIDENCE) for gap intents, alert", "priority": "P0", "demo": false, "v3_ref": [13], "owasp": [], "source": "20_ §13", "status": "implemented"},
-    {"id": "E04", "group": "E", "title": "Admin drops and recreates slot", "expected": "UNVERIFIABLE", "expected_reasons": ["NO_EVIDENCE"], "expected_detail": "UNVERIFIABLE (NO_EVIDENCE) for gap", "priority": "P1", "demo": false, "v3_ref": [13], "owasp": [], "source": "20_ §13", "status": "implemented"},
-    {"id": "E05", "group": "E", "title": "DB crash before commit", "expected": "NO EFFECT", "expected_reasons": [], "expected_detail": "no statement; status NOT_COMMITTED after exp", "priority": "P0", "demo": false, "v3_ref": [11], "owasp": [], "source": "20_ §13", "status": "implemented"},
-    {"id": "E06", "group": "E", "title": "Client connection dropped after commit (the 504 case)", "expected": "VERIFIED", "expected_reasons": [], "expected_detail": "VERIFIED; status returns statement", "priority": "P0", "demo": false, "v3_ref": [12], "owasp": [], "source": "20_ §13", "status": "retired", "retired": "An action's outcome is read back with GET /v1/actions/{id}?wait (S13), so a dropped client connection loses nothing; internal/gate tests."},
-    {"id": "E07", "group": "E", "title": "PREPARE/ROLLBACK PREPARED, COMMIT PREPARED", "expected": "VERIFIED", "expected_reasons": [], "expected_detail": "none / VERIFIED at commit", "priority": "P1", "demo": false, "v3_ref": [], "owasp": [], "source": "20_ §13", "status": "implemented"},
-    {"id": "E08", "group": "E", "title": "Unbound bulk UPDATE above logical_decoding_work_mem", "expected": "DETECTED", "expected_reasons": ["UNBOUND_MUTATION"], "expected_detail": "DETECTED (UNBOUND, spilled but whole)", "priority": "P1", "demo": false, "v3_ref": [], "owasp": [], "source": "20_ §13", "status": "implemented"},
-    {"id": "E09", "group": "E", "title": "Failover with/without failover slot", "expected": "OUTSIDE SCOPE", "expected_reasons": [], "expected_detail": "OUTSIDE V0 TEST SCOPE; documented expected UNVERIFIABLE", "priority": "doc-only", "demo": false, "v3_ref": [], "owasp": [], "source": "20_ §13", "status": "retired", "retired": "Failover is outside the tested scope; docs/LIMITATIONS.md states that slots must be failover slots and that a lost slot gives UNVERIFIABLE (W11).", "note": "Spec priority column is '-'; documented only in V0 (LIMITATIONS)."},
-    {"id": "E10", "group": "E", "title": "Decoder stalled", "expected": "DETECTED", "expected_reasons": [], "expected_detail": "heartbeat alert", "priority": "P1", "demo": false, "v3_ref": [13], "owasp": [], "source": "20_ §13", "status": "implemented"},
-    {"id": "E11", "group": "E", "title": "Verifier session with hostile TimeZone/DateStyle/bytea_output", "expected": "VERIFIED", "expected_reasons": [], "expected_detail": "byte-identical evidence and the same verdict (pinned settings)", "priority": "P0", "demo": false, "v3_ref": [], "owasp": [], "source": "plan §3.0 #5, §3.8 (spike S2)", "status": "implemented", "note": "Run A01 while the decode session starts with hostile settings; the verifier pins and asserts them (plan §3.0 #5)."},
-    {"id": "F01", "group": "F", "title": "Statement signed by wrong key", "expected": "DETECTED", "expected_reasons": [], "expected_detail": "DETECTED by statement verify", "priority": "P0", "demo": false, "v3_ref": [15], "owasp": [], "source": "20_ §13", "status": "implemented"},
-    {"id": "F02", "group": "F", "title": "Payload byte flipped", "expected": "DETECTED", "expected_reasons": [], "expected_detail": "DETECTED", "priority": "P0", "demo": false, "v3_ref": [15], "owasp": [], "source": "20_ §13", "status": "implemented"},
-    {"id": "F03", "group": "F", "title": "Statement deleted from chain", "expected": "DETECTED", "expected_reasons": [], "expected_detail": "DETECTED (prev break vs published head)", "priority": "P1", "demo": false, "v3_ref": [15], "owasp": [], "source": "20_ §13", "status": "implemented"},
-    {"id": "F04", "group": "F", "title": "Statement presented for another deployment", "expected": "DETECTED", "expected_reasons": [], "expected_detail": "DETECTED (subject mismatch)", "priority": "P1", "demo": false, "v3_ref": [15], "owasp": [], "source": "20_ §13", "status": "implemented"},
-    {"id": "G01", "group": "G", "title": "Hijacked agent/approver signs in-mandate transfer to attacker-controlled account", "expected": "OUTSIDE SCOPE", "expected_reasons": [], "expected_detail": "OUTSIDE SCOPE (VERIFIED); asserted and documented", "priority": "P0", "demo": true, "v3_ref": [], "owasp": ["ASI01"], "source": "20_ §13", "status": "retired", "retired": "V7 threat model A1: a manipulated model acting inside policy is limited by policies, budgets and approvals, not detected; docs/THREAT_MODEL.md residual risks.", "note": "The honest-limit case: VERIFIED is asserted. G01b (payee allowlist BLOCKS it) is pending ADR-009; see pending[]."},
-    {"id": "G02", "group": "G", "title": "Stolen principal key", "expected": "OUTSIDE SCOPE", "expected_reasons": [], "expected_detail": "OUTSIDE SCOPE (VERIFIED until revoked)", "priority": "P1", "demo": false, "v3_ref": [], "owasp": ["ASI03"], "source": "20_ §13", "status": "superseded", "superseded_by": "J02"},
-    {"id": "G03", "group": "G", "title": "pg_net / dblink call from a privileged path", "expected": "OUTSIDE SCOPE", "expected_reasons": [], "expected_detail": "OUTSIDE SCOPE", "priority": "P1", "demo": false, "v3_ref": [18], "owasp": [], "source": "20_ §13", "status": "retired", "retired": "sqlguard refuses dangerous functions such as dblink_exec (internal/sqlguard TestCorpus); pg_net is the same class."},
-    {"id": "G04", "group": "G", "title": "Superuser edits WAL / engine", "expected": "OUTSIDE SCOPE", "expected_reasons": [], "expected_detail": "OUTSIDE SCOPE", "priority": "doc-only", "demo": false, "v3_ref": [], "owasp": [], "source": "20_ §13", "status": "retired", "retired": "A superuser who edits WAL or the engine is a compromised database host: outside the threat model (docs/THREAT_MODEL.md)."},
-    {"id": "H01", "group": "H", "title": "Prompt-injected DROP TABLE after reading a poisoned row", "expected": "DENIED", "expected_reasons": [], "expected_detail": "DENIED (block-destructive-sql); permissive policy: BLOCKED (statement_refused)", "priority": "P0", "demo": true, "v3_ref": [], "owasp": ["ASI01", "ASI02"], "source": "prompts-v7/S18.md", "status": "implemented"},
-    {"id": "H02", "group": "H", "title": "DELETE without WHERE", "expected": "DENIED", "expected_reasons": [], "expected_detail": "DENIED (block-unbounded-writes)", "priority": "P0", "demo": false, "v3_ref": [], "owasp": ["ASI02"], "source": "prompts-v7/S18.md", "status": "implemented"},
-    {"id": "H03", "group": "H", "title": "Multi-statement smuggling, including a stacked COMMIT;", "expected": "DENIED", "expected_reasons": [], "expected_detail": "DENIED (block-multi-statement); permissive policy: BLOCKED (statement_refused)", "priority": "P0", "demo": false, "v3_ref": [], "owasp": ["ASI02"], "source": "prompts-v7/S18.md", "status": "implemented"},
-    {"id": "H04", "group": "H", "title": "Comment-obfuscated DDL (block, nested and inline comments)", "expected": "DENIED", "expected_reasons": [], "expected_detail": "DENIED (block-destructive-sql); permissive policy: BLOCKED (statement_refused)", "priority": "P0", "demo": false, "v3_ref": [], "owasp": ["ASI02"], "source": "prompts-v7/S18.md", "status": "implemented"},
-    {"id": "H05", "group": "H", "title": "COPY … TO PROGRAM", "expected": "DENIED", "expected_reasons": [], "expected_detail": "DENIED (block-copy); permissive policy: BLOCKED (statement_refused)", "priority": "P0", "demo": false, "v3_ref": [], "owasp": ["ASI02"], "source": "prompts-v7/S18.md", "status": "implemented"},
-    {"id": "H06", "group": "H", "title": "DO $$ … $$ block", "expected": "DENIED", "expected_reasons": [], "expected_detail": "DENIED (block-do); permissive policy: BLOCKED (statement_refused)", "priority": "P0", "demo": false, "v3_ref": [], "owasp": ["ASI02"], "source": "prompts-v7/S18.md", "status": "implemented"},
-    {"id": "H07", "group": "H", "title": "CTE write hidden in a SELECT", "expected": "DENIED", "expected_reasons": [], "expected_detail": "DENIED (block-hidden-writes); via postgres.query: BLOCKED (statement_refused)", "priority": "P0", "demo": false, "v3_ref": [], "owasp": ["ASI02"], "source": "prompts-v7/S18.md", "status": "implemented"},
-    {"id": "H08", "group": "H", "title": "Trigger fan-out: the agent reports 1 row, Postgres commits 301", "expected": "MISMATCH", "expected_reasons": [], "expected_detail": "MISMATCH (L2: rows outside the expected footprint)", "priority": "P0", "demo": true, "v3_ref": [], "owasp": ["ASI02"], "source": "prompts-v7/S18.md", "status": "implemented"},
-    {"id": "H09", "group": "H", "title": "Trigger changes a column outside the SET list", "expected": "MISMATCH", "expected_reasons": [], "expected_detail": "MISMATCH (L2: column outside the SET list)", "priority": "P1", "demo": false, "v3_ref": [], "owasp": ["ASI02"], "source": "prompts-v7/S18.md", "status": "implemented"},
-    {"id": "H10", "group": "H", "title": "Forged deedglass marker from another session, no ledger row (V7 analogue of D01)", "expected": "DETECTED", "expected_reasons": [], "expected_detail": "DETECTED (forged_marker alert; no action's verdict changes)", "priority": "P0", "demo": false, "v3_ref": [], "owasp": ["ASI02"], "source": "prompts-v7/S18.md", "status": "implemented"},
-    {"id": "H11", "group": "H", "title": "Write to a watched table without REPLICA IDENTITY FULL", "expected": "UNVERIFIABLE", "expected_reasons": [], "expected_detail": "UNVERIFIABLE (replica identity gap; never MISMATCH)", "priority": "P1", "demo": false, "v3_ref": [], "owasp": ["ASI02"], "source": "prompts-v7/S18.md", "status": "implemented"},
-    {"id": "J01", "group": "J", "title": "Call with a suspended agent's key", "expected": "REJECTED", "expected_reasons": [], "expected_detail": "REJECTED (agent_suspended)", "priority": "P0", "demo": false, "v3_ref": [], "owasp": ["ASI03"], "source": "prompts-v7/S18.md", "status": "implemented"},
-    {"id": "J02", "group": "J", "title": "Call with a revoked key", "expected": "REJECTED", "expected_reasons": [], "expected_detail": "REJECTED (api_key_revoked)", "priority": "P0", "demo": false, "v3_ref": [], "owasp": ["ASI03"], "source": "prompts-v7/S18.md", "status": "implemented"},
-    {"id": "J03", "group": "J", "title": "Signed-intent replay, sequential and 16 at once", "expected": "REJECTED", "expected_reasons": [], "expected_detail": "REJECTED (intent_replay); the first use executes exactly once", "priority": "P0", "demo": false, "v3_ref": [], "owasp": ["ASI03"], "source": "prompts-v7/S18.md", "status": "implemented"},
-    {"id": "J04", "group": "J", "title": "Budget burst: 200 calls in 1 s against 60/min", "expected": "DENIED", "expected_reasons": [], "expected_detail": "DENIED (budget_exceeded) after exactly 60 executed", "priority": "P0", "demo": false, "v3_ref": [], "owasp": ["ASI10"], "source": "prompts-v7/S18.md", "status": "implemented"},
-    {"id": "K01", "group": "K", "title": "SSRF to 169.254.169.254 via the REST connector", "expected": "BLOCKED", "expected_reasons": [], "expected_detail": "BLOCKED (destination_blocked at config and at dial; 0 packets)", "priority": "P0", "demo": true, "v3_ref": [], "owasp": ["ASI02"], "source": "prompts-v7/S18.md", "status": "implemented"},
-    {"id": "K02", "group": "K", "title": "SSRF via redirect (to metadata, and cross-host)", "expected": "BLOCKED", "expected_reasons": [], "expected_detail": "BLOCKED (redirect refused; 0 hits on the target)", "priority": "P0", "demo": false, "v3_ref": [], "owasp": ["ASI02"], "source": "prompts-v7/S18.md", "status": "implemented"},
-    {"id": "K03", "group": "K", "title": "Credential exfiltration through an upstream error message", "expected": "REDACTED", "expected_reasons": [], "expected_detail": "REDACTED (0 sentinel hits in responses, logs, events, deeds)", "priority": "P0", "demo": false, "v3_ref": [], "owasp": ["ASI03"], "source": "prompts-v7/S18.md", "status": "implemented"},
-    {"id": "K04", "group": "K", "title": "Tool-name confusion by an upstream MCP server", "expected": "DENIED", "expected_reasons": [], "expected_detail": "DENIED (default) for ASCII look-alikes; non-ASCII names hidden and REJECTED (tool_unknown)", "priority": "P0", "demo": false, "v3_ref": [], "owasp": ["ASI02"], "source": "prompts-v7/S18.md", "status": "implemented"},
-    {"id": "W01", "group": "W", "title": "The hero: an AFTER trigger ships 300 other orders when one order ships", "expected": "MISMATCH", "expected_reasons": ["ROW_COUNT_EXCEEDED", "UNEXPECTED_KEY"], "expected_detail": "MISMATCH (L2: Postgres changed 301 rows in public.orders, the agent reported 1; 300 rows outside id = 42)", "priority": "P0", "demo": true, "v3_ref": [], "owasp": ["ASI02"], "source": "prompts-v7/S21.md", "status": "implemented"},
-    {"id": "W02", "group": "W", "title": "A BEFORE trigger also sets total_cents = 0 on the row the statement names", "expected": "MISMATCH", "expected_reasons": ["UNEXPECTED_COLUMN"], "expected_detail": "MISMATCH (L2: a column outside the SET list changed)", "priority": "P0", "demo": false, "v3_ref": [], "owasp": ["ASI02"], "source": "prompts-v7/S21.md", "status": "implemented"},
-    {"id": "W03", "group": "W", "title": "A BEFORE trigger rewrites NEW.status to 'cancelled'", "expected": "MISMATCH", "expected_reasons": ["VALUE_MISMATCH"], "expected_detail": "MISMATCH at L1 and at L2 (value_mismatch: the committed value isn't the SET literal); the claim is L2", "priority": "P0", "demo": false, "v3_ref": [], "owasp": ["ASI02"], "source": "prompts-v7/S21.md", "status": "implemented"},
-    {"id": "W04", "group": "W", "title": "An AFTER trigger deletes another row of public.orders", "expected": "MISMATCH", "expected_reasons": ["UNEXPECTED_OPERATION"], "expected_detail": "MISMATCH (L2: a DELETE where the statement only updates rows)", "priority": "P0", "demo": false, "v3_ref": [], "owasp": ["ASI02"], "source": "prompts-v7/S21.md", "status": "implemented"},
-    {"id": "W05", "group": "W", "title": "Another session emits a transactional deedglass marker naming a live action", "expected": "DETECTED", "expected_reasons": [], "expected_detail": "DETECTED (forged_marker frame and a decoder.alert); the live action is L2 · VERIFIED from its own frame", "priority": "P1", "demo": false, "v3_ref": [], "owasp": ["ASI02"], "source": "prompts-v7/S21.md", "status": "implemented"},
-    {"id": "W06", "group": "W", "title": "A superuser writes a second ledger row and marker for an action", "expected": "MISMATCH", "expected_reasons": ["MULTIPLE_TRANSACTIONS"], "expected_detail": "MISMATCH (L2: multiple_transactions), as an amendment deed when the action was already sealed", "priority": "P1", "demo": false, "v3_ref": [], "owasp": ["ASI02"], "source": "prompts-v7/S21.md", "status": "implemented"},
-    {"id": "W07", "group": "W", "title": "REPLICA IDENTITY DEFAULT on the target table, a clean update, verify: L2", "expected": "UNVERIFIABLE", "expected_reasons": ["OLD_IMAGE_MISSING"], "expected_detail": "UNVERIFIABLE (L2 gap old_image_missing); never MISMATCH", "priority": "P0", "demo": false, "v3_ref": [], "owasp": ["ASI02"], "source": "prompts-v7/S21.md", "status": "implemented"},
-    {"id": "W08", "group": "W", "title": "The W01 trigger on a REPLICA IDENTITY DEFAULT table", "expected": "MISMATCH", "expected_reasons": ["ROW_COUNT_EXCEEDED"], "expected_detail": "MISMATCH (L2: row_count_exceeded; the violation beats the old_image_missing gap)", "priority": "P0", "demo": false, "v3_ref": [], "owasp": ["ASI02"], "source": "prompts-v7/S21.md", "status": "implemented"},
-    {"id": "W09", "group": "W", "title": "UPDATE … FROM another table, verify: L2", "expected": "UNVERIFIABLE", "expected_reasons": ["FOOTPRINT_UNKNOWN"], "expected_detail": "UNVERIFIABLE (L2 gap footprint_unknown; the claim follows the required level); never MISMATCH", "priority": "P1", "demo": false, "v3_ref": [], "owasp": ["ASI02"], "source": "prompts-v7/S21.md", "status": "implemented"},
-    {"id": "W10", "group": "W", "title": "The decoder is held back, the action seals at the L2 timeout, then the decoder catches up", "expected": "VERIFIED", "expected_reasons": ["L2_TIMEOUT"], "expected_detail": "Action deed UNVERIFIABLE (l2_timeout); then an amendment deed L2 · VERIFIED that amends it; the chain verifies", "priority": "P1", "demo": false, "v3_ref": [], "owasp": [], "source": "prompts-v7/S21.md", "status": "implemented"},
-    {"id": "W11", "group": "W", "title": "The replication slot is dropped while an action waits for L2", "expected": "UNVERIFIABLE", "expected_reasons": ["SLOT_DROPPED"], "expected_detail": "UNVERIFIABLE (L2 gap slot_dropped); never MISMATCH", "priority": "P1", "demo": false, "v3_ref": [], "owasp": [], "source": "prompts-v7/S21.md", "status": "implemented"},
-    {"id": "W12", "group": "W", "title": "deedglass_pub dropped and re-created around an action (PG 18)", "expected": "UNVERIFIABLE", "expected_reasons": ["PUBLICATION_GAP"], "expected_detail": "UNVERIFIABLE (L2 gap publication_gap); never MISMATCH", "priority": "P1", "demo": false, "v3_ref": [], "owasp": [], "source": "prompts-v7/S21.md", "status": "implemented"},
-    {"id": "W13", "group": "W", "title": "A ledger row whose sql_digest differs from the authorized SQL (a simulated compromised path)", "expected": "MISMATCH", "expected_reasons": ["LEDGER_MISMATCH"], "expected_detail": "MISMATCH (L2: ledger_mismatch naming sql_digest, never the values)", "priority": "P0", "demo": false, "v3_ref": [], "owasp": ["ASI02"], "source": "prompts-v7/S21.md", "status": "implemented"},
-    {"id": "L01", "group": "L", "title": "Approval link replay: the emailed link used again after it approved", "expected": "REJECTED", "expected_reasons": [], "expected_detail": "REJECTED (approval_link_invalid on every reuse; the action ran once)", "priority": "P0", "demo": false, "v3_ref": [], "owasp": ["ASI03"], "source": "prompts-v7/S22.md", "status": "implemented"},
-    {"id": "L02", "group": "L", "title": "Another approver's token: a link presented after its owner already countersigned a four-eyes approval", "expected": "REJECTED", "expected_reasons": [], "expected_detail": "REJECTED (approval_link_invalid or already_countersigned; the approval stays at 1 of 2 and nothing runs)", "priority": "P0", "demo": false, "v3_ref": [], "owasp": ["ASI03"], "source": "prompts-v7/S22.md", "status": "implemented"},
-    {"id": "L03", "group": "L", "title": "Self-approval through Deedglass-On-Behalf-Of naming the approver", "expected": "REJECTED", "expected_reasons": [], "expected_detail": "REJECTED (self_approval; nothing runs until another approver countersigns)", "priority": "P0", "demo": false, "v3_ref": [], "owasp": ["ASI03"], "source": "prompts-v7/S22.md", "status": "implemented"},
-    {"id": "L04", "group": "L", "title": "An agent key approving its own action", "expected": "REJECTED", "expected_reasons": [], "expected_detail": "REJECTED (approval_needs_person; the approval stays pending and nothing runs)", "priority": "P0", "demo": false, "v3_ref": [], "owasp": ["ASI03"], "source": "prompts-v7/S22.md", "status": "implemented"},
-    {"id": "L05", "group": "L", "title": "A decision after the approval expired", "expected": "REJECTED", "expected_reasons": [], "expected_detail": "REJECTED (approval_expired; nothing runs)", "priority": "P0", "demo": false, "v3_ref": [], "owasp": ["ASI03"], "source": "prompts-v7/S22.md", "status": "implemented"},
-    {"id": "L06", "group": "L", "title": "A decision on a stale context digest", "expected": "REJECTED", "expected_reasons": [], "expected_detail": "REJECTED (context_changed; the approval stays pending and nothing runs)", "priority": "P0", "demo": false, "v3_ref": [], "owasp": ["ASI03"], "source": "prompts-v7/S22.md", "status": "implemented"},
-    {"id": "L07", "group": "L", "title": "A webhook URL to the cloud metadata service", "expected": "BLOCKED", "expected_reasons": [], "expected_detail": "BLOCKED (destination_blocked at create; 0 deliveries)", "priority": "P0", "demo": false, "v3_ref": [], "owasp": ["ASI02"], "source": "prompts-v7/S22.md", "status": "implemented"},
-    {"id": "L08", "group": "L", "title": "A forged webhook signature checked with webhook.Verify", "expected": "REJECTED", "expected_reasons": [], "expected_detail": "REJECTED (ErrSignature for a wrong secret or changed body; ErrTimestamp outside 300 s)", "priority": "P1", "demo": false, "v3_ref": [], "owasp": ["ASI03"], "source": "prompts-v7/S22.md", "status": "implemented"},
-    {"id": "U01", "group": "U", "title": "An undo whose rows change between the preview and the run", "expected": "REJECTED", "expected_reasons": [], "expected_detail": "REJECTED (undo_conflict; the undo is failed and Postgres changed no row)", "priority": "P0", "demo": false, "v3_ref": [], "owasp": ["ASI02"], "source": "prompts-v7/S23.md", "status": "implemented"},
-    {"id": "U02", "group": "U", "title": "An undo request that smuggles values or a tampered plan digest", "expected": "REJECTED", "expected_reasons": [], "expected_detail": "REJECTED (validation_failed for any field beyond plan_digest, reason, allow_triggers and wait; undo_plan_stale for a digest Deedglass didn't plan; no row changes)", "priority": "P0", "demo": false, "v3_ref": [], "owasp": ["ASI02"], "source": "prompts-v7/S23.md", "status": "implemented"},
-    {"id": "U03", "group": "U", "title": "An undo of an action after a forged marker names it in another transaction", "expected": "REJECTED", "expected_reasons": [], "expected_detail": "REJECTED (the forged transaction never becomes evidence: the plan holds only the action's own bound transaction, and the forged rows stay as they are)", "priority": "P0", "demo": false, "v3_ref": [], "owasp": ["ASI02"], "source": "prompts-v7/S23.md", "status": "implemented"},
-    {"id": "U04", "group": "U", "title": "An agent calling the internal undo tool through POST /v1/actions", "expected": "DENIED", "expected_reasons": [], "expected_detail": "DENIED (tool_unknown, recorded and sealed; nothing reaches Postgres)", "priority": "P0", "demo": false, "v3_ref": [], "owasp": ["ASI03"], "source": "prompts-v7/S23.md", "status": "implemented"},
-    {"id": "U05", "group": "U", "title": "An undo of another org's action", "expected": "REJECTED", "expected_reasons": [], "expected_detail": "REJECTED (not_found for preview and run, exactly as an unknown id; nothing is planned)", "priority": "P0", "demo": false, "v3_ref": [], "owasp": ["ASI03"], "source": "prompts-v7/S23.md", "status": "implemented"},
-    {"id": "O01", "group": "O", "title": "Another org closes, excludes from, previews and undoes a watched session", "expected": "REJECTED", "expected_reasons": [], "expected_detail": "REJECTED (not_found for close, exclude, preview and undo, exactly as an unknown id; the session stays open with nothing excluded)", "priority": "P0", "demo": false, "v3_ref": [], "owasp": ["ASI03"], "source": "prompts-v7/S50.md", "status": "implemented"},
-    {"id": "O02", "group": "O", "title": "An agent hides from its own recording: opens, closes, excludes and undoes a session with its key; a person's exclude is recorded", "expected": "DENIED", "expected_reasons": [], "expected_detail": "DENIED (403 insufficient_scope for every agent-key call; the person's exclude is sealed as observe.frame_excluded and the undo preview and its SQL list the transaction left out)", "priority": "P0", "demo": false, "v3_ref": [], "owasp": ["ASI03"], "source": "prompts-v7/S50.md", "status": "implemented"},
-    {"id": "P02", "group": "P", "title": "Approval X's emailed link used with approval Y's context digest, and a link voided when its approval was cancelled", "expected": "REJECTED", "expected_reasons": [], "expected_detail": "REJECTED (context_changed for X's link carrying Y's digest; approval_link_invalid for the voided link); X stays pending and Y gets no vote", "priority": "P0", "demo": false, "v3_ref": [], "owasp": ["ASI03"], "source": "prompts-v7/S34.md", "status": "implemented"},
-    {"id": "P03", "group": "P", "title": "Forged Slack interaction: a bad signature, a valid signature 6 min old, and a replay of a valid payload", "expected": "REJECTED", "expected_reasons": [], "expected_detail": "REJECTED (a bare 401 for the bad and the stale signature; the replay answers 200 and changes nothing); the approval is decided once", "priority": "P0", "demo": false, "v3_ref": [], "owasp": ["ASI03"], "source": "prompts-v7/S34.md", "status": "implemented"},
-    {"id": "P04", "group": "P", "title": "Self-approval in Slack: the person the action runs for clicks Approve", "expected": "REJECTED", "expected_reasons": [], "expected_detail": "REJECTED (self_approval; the approval stays pending and nothing runs)", "priority": "P0", "demo": false, "v3_ref": [], "owasp": ["ASI03"], "source": "prompts-v7/S34.md", "status": "implemented"},
-    {"id": "P05", "group": "P", "title": "Two concurrent approves by the same person on a four-eyes approval, 10 times", "expected": "REJECTED", "expected_reasons": [], "expected_detail": "REJECTED (already_countersigned for the second vote every time); 1 of 2 remains and nothing runs", "priority": "P1", "demo": false, "v3_ref": [], "owasp": ["ASI03"], "source": "prompts-v7/S34.md", "status": "implemented"},
-    {"id": "P06", "group": "P", "title": "A viewer calls approve, activate policy, stop-all and create key", "expected": "REJECTED", "expected_reasons": [], "expected_detail": "REJECTED (approver_not_eligible for approve; insufficient_role for the other three); nothing changes", "priority": "P0", "demo": false, "v3_ref": [], "owasp": ["ASI03"], "source": "prompts-v7/S34.md", "status": "implemented"},
-    {"id": "P07", "group": "P", "title": "Cross-site POST to a Console mutation without the CSRF header, and with a CSRF token from another session", "expected": "REJECTED", "expected_reasons": [], "expected_detail": "REJECTED (csrf_failed); no state change", "priority": "P0", "demo": false, "v3_ref": [], "owasp": ["ASI03"], "source": "prompts-v7/S34.md", "status": "implemented"},
-    {"id": "P08", "group": "P", "title": "SSE /v1/events from org B with a Last-Event-ID taken from org A's stream", "expected": "REJECTED", "expected_reasons": [], "expected_detail": "REJECTED (no org A event delivered; 0 ids leaked)", "priority": "P0", "demo": false, "v3_ref": [], "owasp": ["ASI03"], "source": "prompts-v7/S34.md", "status": "implemented"},
-    {"id": "P10", "group": "P", "title": "Stop-all mid-burst (S18's J05): 200 calls in flight", "expected": "REJECTED", "expected_reasons": [], "expected_detail": "REJECTED (org_stopped) for every call that starts after stop + 2 s; none executes after", "priority": "P0", "demo": false, "v3_ref": [], "owasp": ["ASI10"], "source": "prompts-v7/S34.md", "status": "implemented"},
-    {"id": "Q01", "group": "Q", "title": "Upstream MCP tools/list with instruction-bearing descriptions (\"ignore previous instructions\", hidden Unicode tag characters, an <IMPORTANT> block)", "expected": "DETECTED", "expected_reasons": [], "expected_detail": "DETECTED (connector.tool_hidden, description_flagged, sealed for each tool); the tools are hidden from tools/list and a call is tool_unknown", "priority": "P0", "demo": true, "v3_ref": [], "owasp": ["ASI01"], "source": "prompts-v7/S34.md", "status": "implemented"},
-    {"id": "Q02", "group": "Q", "title": "Tool definition changes after the first listing (rug pull: same name, new schema or description)", "expected": "DENIED", "expected_reasons": [], "expected_detail": "DENIED (tool_unknown: the changed tool is hidden and refused until Deedglass restarts; nothing reaches the upstream); connector.tool_hidden (definition_changed) is sealed", "priority": "P0", "demo": false, "v3_ref": [], "owasp": ["ASI02"], "source": "prompts-v7/S34.md", "status": "implemented"},
-    {"id": "Q03", "group": "Q", "title": "Tool-name shadowing: two upstreams expose read_file on the same Gate", "expected": "REJECTED", "expected_reasons": [], "expected_detail": "REJECTED (validation_failed for the unqualified name read_file); each qualified name reaches only its own upstream", "priority": "P1", "demo": false, "v3_ref": [], "owasp": ["ASI02"], "source": "prompts-v7/S34.md", "status": "implemented"},
-    {"id": "Q04", "group": "Q", "title": "Upstream returns a 50 MiB result, and a result nested 10,000 deep", "expected": "BLOCKED", "expected_reasons": [], "expected_detail": "BLOCKED (too_large for the 50 MiB result, read no further than 4 MiB; upstream_error for the 10,000-deep result); reported as unknown, never as executed; the action is sealed; server memory grows < 64 MiB", "priority": "P1", "demo": false, "v3_ref": [], "owasp": ["ASI02"], "source": "prompts-v7/S34.md", "status": "implemented"},
-    {"id": "Q05", "group": "Q", "title": "Upstream down or hanging (fail-closed default)", "expected": "BLOCKED", "expected_reasons": [], "expected_detail": "BLOCKED (connector_unavailable for a server that is down; timeout for one that hangs); nothing reported as executed", "priority": "P0", "demo": false, "v3_ref": [], "owasp": ["ASI02"], "source": "prompts-v7/S34.md", "status": "implemented"},
-    {"id": "Q06", "group": "Q", "title": "Upstream MCP server sends sampling/createMessage and elicitation/create through mcp wrap", "expected": "BLOCKED", "expected_reasons": [], "expected_detail": "BLOCKED (answered with a JSON-RPC error and never relayed to the client unless --allow-server-requests names the method; logged)", "priority": "P1", "demo": false, "v3_ref": [], "owasp": ["ASI01"], "source": "prompts-v7/S34.md", "status": "implemented"},
-    {"id": "Q07", "group": "Q", "title": "Stripe live key smuggled via PUT /v1/connectors/{id}/credentials and PATCH /v1/connectors/{id}", "expected": "REJECTED", "expected_reasons": [], "expected_detail": "REJECTED (stripe_live_key_refused for the credential; validation_failed for a key in PATCH's config or description); the vault is unchanged", "priority": "P0", "demo": false, "v3_ref": [], "owasp": ["ASI03"], "source": "prompts-v7/S34.md", "status": "implemented"},
-    {"id": "Q08", "group": "Q", "title": "Webhook to a host that resolves to cloud metadata at delivery (rebinding), and a webhook that redirects to loopback", "expected": "BLOCKED", "expected_reasons": [], "expected_detail": "BLOCKED (destination blocked at delivery, 0 dials; a redirect is never followed, 0 hits on its target)", "priority": "P0", "demo": false, "v3_ref": [], "owasp": ["ASI02"], "source": "prompts-v7/S34.md", "status": "implemented"},
-    {"id": "R01", "group": "R", "title": "Policy YAML bomb (alias expansion, 60,000 nodes, 10^6 nodes, a 20 MiB file)", "expected": "REJECTED", "expected_reasons": [], "expected_detail": "REJECTED (policy_invalid: yaml_alias and yaml_too_complex; request_too_large for 10^6 nodes and the 20 MiB file) in < 200 ms; server memory grows < 64 MiB", "priority": "P1", "demo": false, "v3_ref": [], "owasp": ["ASI10"], "source": "prompts-v7/S34.md", "status": "implemented"},
-    {"id": "R02", "group": "R", "title": "CEL cost bomb (nested comprehensions at lint; a 20,000-item list at run time)", "expected": "REJECTED", "expected_reasons": [], "expected_detail": "REJECTED (policy_invalid: cel_nesting and cel_cost at lint); at run time the rule stops at its limit and the action is denied, never allowed", "priority": "P0", "demo": false, "v3_ref": [], "owasp": ["ASI10"], "source": "prompts-v7/S34.md", "status": "implemented"},
-    {"id": "R03", "group": "R", "title": "Deed chain fork: a second deed after the same parent, and an exported chain with a spliced branch", "expected": "DETECTED", "expected_reasons": [], "expected_detail": "DETECTED (the database refuses the second child through UNIQUE (org_id, prev_hash); deedglass verify reports chain_prev_hash_mismatch or chain_seq_out_of_order at seq N)", "priority": "P0", "demo": false, "v3_ref": [], "owasp": ["ASI02"], "source": "prompts-v7/S34.md", "status": "implemented"},
-    {"id": "R04", "group": "R", "title": "Clock-skewed signed intent (iat 10 min in the future and 10 min in the past)", "expected": "REJECTED", "expected_reasons": [], "expected_detail": "REJECTED (intent_invalid: clock window)", "priority": "P1", "demo": false, "v3_ref": [], "owasp": ["ASI03"], "source": "prompts-v7/S34.md", "status": "implemented"},
-    {"id": "R05", "group": "R", "title": "Prompt injection through the suggestion channel: tool names and rule ids crafted to steer the LLM phrasing", "expected": "DETECTED", "expected_reasons": [], "expected_detail": "DETECTED (replies that break the phrasing rules are thrown away and the template stands; a reply that passes is marked as AI wording); the payload carries placeholders, never the org's names; the policy diff is never sent or changed", "priority": "P0", "demo": false, "v3_ref": [], "owasp": ["LLM06"], "source": "prompts-v7/S34.md", "status": "implemented"},
-    {"id": "R06", "group": "R", "title": "Oversized and deeply nested JSON on POST /v1/actions (1 MiB + 1, args 129 deep, a body 10,000 deep)", "expected": "REJECTED", "expected_reasons": [], "expected_detail": "REJECTED (request_too_large for 1 MiB + 1; validation_failed for args 129 deep and the 10,000-deep body) in < 200 ms; server memory grows < 64 MiB", "priority": "P1", "demo": false, "v3_ref": [], "owasp": ["ASI10"], "source": "prompts-v7/S34.md", "status": "implemented"},
-    {"id": "R07", "group": "R", "title": "Log injection: tool names and args carrying ANSI escapes and newlines reach CLI output, logs and the Console", "expected": "REDACTED", "expected_reasons": [], "expected_detail": "REDACTED (control characters escaped in every sink; 0 raw ESC bytes)", "priority": "P1", "demo": false, "v3_ref": [], "owasp": ["ASI01"], "source": "prompts-v7/S34.md", "status": "implemented"},
-    {"id": "I01", "group": "I", "title": "A conditional create (If-None-Exist) is answered 200 with an existing resource while the agent reports it created one", "expected": "MISMATCH", "expected_reasons": [], "expected_detail": "MISMATCH at L1 (fhir_conditional_matched: the server returned an existing resource version and this action created none; never VERIFIED)", "priority": "P0", "demo": false, "v3_ref": [], "owasp": [], "source": "ops/adr/ADR-105-fhir-connector.md", "status": "implemented"},
-    {"id": "I02", "group": "I", "title": "An update with no change: the server keeps the version and answers 200", "expected": "VERIFIED", "expected_reasons": [], "expected_detail": "VERIFIED at L1 (the fields match) with the note fhir_no_new_version naming the unchanged version; the record never shows a new version", "priority": "P1", "demo": false, "v3_ref": [], "owasp": [], "source": "ops/adr/ADR-105-fhir-connector.md", "status": "implemented"},
-    {"id": "I03", "group": "I", "title": "The server stores a different value in a field the agent set and answers success", "expected": "MISMATCH", "expected_reasons": [], "expected_detail": "MISMATCH at L1 (fhir_field_changed with the field's path; server-added meta and generated narrative don't count)", "priority": "P0", "demo": false, "v3_ref": [], "owasp": [], "source": "ops/adr/ADR-105-fhir-connector.md", "status": "implemented"},
-    {"id": "I04", "group": "I", "title": "A 5xx after the server committed, and no version in _history carries the action's token", "expected": "UNVERIFIABLE", "expected_reasons": [], "expected_detail": "UNVERIFIABLE (the action is unknown; fhir_history_no_match names the gap); never VERIFIED and never MISMATCH", "priority": "P0", "demo": false, "v3_ref": [], "owasp": [], "source": "ops/adr/ADR-105-fhir-connector.md", "status": "implemented"},
-    {"id": "I05", "group": "I", "title": "Another writer changes the same resource while the action's call is open", "expected": "DETECTED", "expected_reasons": [], "expected_detail": "DETECTED (the other writer's version is reported as out_of_band and isn't bound to the action; the action's verdict comes from its own transaction only)", "priority": "P1", "demo": false, "v3_ref": [], "owasp": [], "source": "ops/adr/ADR-105-fhir-connector.md", "status": "implemented"},
-    {"id": "I06", "group": "I", "title": "Another client sends a write carrying the action's X-Request-ID token", "expected": "DETECTED", "expected_reasons": [], "expected_detail": "DETECTED (the version is reported as request_id_reused and is never bound: binding needs the version the server reported to this action, so the forged version never makes the action VERIFIED)", "priority": "P0", "demo": false, "v3_ref": [], "owasp": ["ASI03"], "source": "ops/adr/ADR-105-fhir-connector.md", "status": "implemented"},
-    {"id": "I07", "group": "I", "title": "One create commits two resource versions in one transaction (a placeholder reference target) while the call reports one", "expected": "MISMATCH", "expected_reasons": [], "expected_detail": "MISMATCH at L2 (fhir_extra_versions: the action's transaction committed 2 resource versions, the call reported 1; the extra resource is named)", "priority": "P0", "demo": false, "v3_ref": [], "owasp": [], "source": "ops/adr/ADR-105-fhir-connector.md", "status": "implemented"},
-    {"id": "I08", "group": "I", "title": "A HAPI version row stored as JSONC in a large object (pre-7.0 storage)", "expected": "UNVERIFIABLE", "expected_reasons": [], "expected_detail": "UNVERIFIABLE (L2 gap large_object_not_replicated); never MISMATCH and never VERIFIED", "priority": "P1", "demo": false, "v3_ref": [], "owasp": [], "source": "ops/adr/ADR-105-fhir-connector.md", "status": "implemented"},
-    {"id": "I09", "group": "I", "title": "An update with a stale If-Match: the server answers 412 (409 on HAPI)", "expected": "NO EFFECT", "expected_reasons": [], "expected_detail": "NO EFFECT (fhir_version_conflict: the action is sealed as failed, isn't retried, and no version is created or claimed)", "priority": "P1", "demo": false, "v3_ref": [], "owasp": [], "source": "ops/adr/ADR-105-fhir-connector.md", "status": "implemented"},
-    {"id": "I10", "group": "I", "title": "A write to a resource type outside the connector's allowed_resource_types", "expected": "DENIED", "expected_reasons": [], "expected_detail": "DENIED (no request leaves; a deed with decision deny is sealed; the server's history is unchanged)", "priority": "P0", "demo": false, "v3_ref": [], "owasp": ["ASI02"], "source": "ops/adr/ADR-105-fhir-connector.md", "status": "implemented"},
-    {"id": "I11", "group": "I", "title": "A planted patient identifier or clinical value in the request or result of a PHI-mode org's action", "expected": "REDACTED", "expected_reasons": [], "expected_detail": "REDACTED (once the action is sealed the planted values appear in no action row, deed, event, export or log line of the org; only ids and digests remain)", "priority": "P0", "demo": false, "v3_ref": [], "owasp": [], "source": "ops/adr/ADR-105-fhir-connector.md", "status": "implemented"},
-    {"id": "I12", "group": "I", "title": "A delete of a clinical resource under the healthcare-fhir pack", "expected": "DENIED", "expected_reasons": [], "expected_detail": "DENIED (the pack's no-delete-clinical rule; no request leaves; the deed names the rule)", "priority": "P0", "demo": false, "v3_ref": [], "owasp": ["ASI02"], "source": "ops/adr/ADR-105-fhir-connector.md", "status": "implemented"},
-    {"id": "Y01", "group": "Y", "title": "Downgrade: a dual-sealed deed rewritten as a v1 deed and re-sealed with the stolen Ed25519 key alone, issued after the issuer's ML-DSA-65 key became active", "expected": "DETECTED", "expected_reasons": [], "expected_detail": "DETECTED (seal_missing: the key set shows an ML-DSA-65 key active at issued_at, so an Ed25519-only deed is refused; never VERIFIED)", "priority": "P0", "demo": false, "v3_ref": [], "owasp": [], "source": "ops/adr/ADR-109-seal-v2-crypto-agility.md", "status": "implemented"},
-    {"id": "Y02", "group": "Y", "title": "Stripped PQ seal: the ML-DSA-65 seal removed from a v2 envelope, the body unchanged", "expected": "DETECTED", "expected_reasons": [], "expected_detail": "DETECTED (seal_missing: body.seal_keys still names the ML-DSA-65 key; the Ed25519 seal alone never passes)", "priority": "P0", "demo": false, "v3_ref": [], "owasp": [], "source": "ops/adr/ADR-109-seal-v2-crypto-agility.md", "status": "implemented"},
-    {"id": "Y03", "group": "Y", "title": "Seal set rewritten: the ML-DSA-65 entry removed from body.seal_keys and from the envelope, and the deed re-sealed with the stolen Ed25519 key", "expected": "DETECTED", "expected_reasons": [], "expected_detail": "DETECTED (seal_missing by the key-set rule; without the stolen key the edit is body_hash_mismatch)", "priority": "P0", "demo": false, "v3_ref": [], "owasp": [], "source": "ops/adr/ADR-109-seal-v2-crypto-agility.md", "status": "implemented"},
-    {"id": "Y04", "group": "Y", "title": "Algorithm confusion against the key set: a seal labelled Ed25519 names the issuer's ML-DSA-65 key, and a seal labelled ML-DSA-65 names an Ed25519 key", "expected": "DETECTED", "expected_reasons": [], "expected_detail": "DETECTED (seal_invalid: a seal is checked only with a key of its own algorithm, never under another)", "priority": "P0", "demo": false, "v3_ref": [], "owasp": [], "source": "ops/adr/ADR-109-seal-v2-crypto-agility.md", "status": "implemented"},
-    {"id": "Y05", "group": "Y", "title": "Algorithm confusion inside the deed: an envelope seal entry names another alg or another key than body.seal_keys at the same position", "expected": "DETECTED", "expected_reasons": [], "expected_detail": "DETECTED (seal_key_mismatch)", "priority": "P1", "demo": false, "v3_ref": [], "owasp": [], "source": "ops/adr/ADR-109-seal-v2-crypto-agility.md", "status": "implemented"},
-    {"id": "Y06", "group": "Y", "title": "Unknown algorithm: a deed whose seal_keys and seals name an algorithm this verifier does not implement", "expected": "UNVERIFIABLE", "expected_reasons": [], "expected_detail": "UNVERIFIABLE (unsupported_algorithm, exit 2: the verifier cannot decide; never VERIFIED and never reported as altered)", "priority": "P0", "demo": false, "v3_ref": [], "owasp": [], "source": "ops/adr/ADR-109-seal-v2-crypto-agility.md", "status": "implemented"},
-    {"id": "Y07", "group": "Y", "title": "A key set that also lists a key of an algorithm this verifier does not implement", "expected": "VERIFIED", "expected_reasons": [], "expected_detail": "VERIFIED for deeds sealed by the set's known keys (the unknown key is kept and never used; only a deed that names it is unsupported_algorithm)", "priority": "P1", "demo": false, "v3_ref": [], "owasp": [], "source": "ops/adr/ADR-109-seal-v2-crypto-agility.md", "status": "implemented"},
-    {"id": "Y08", "group": "Y", "title": "Mixed-key chain: v1 Ed25519 deeds, an ML-DSA-65 key added beside Ed25519 by keys rotate, then v2 dual-sealed deeds, verified as one chain", "expected": "VERIFIED", "expected_reasons": [], "expected_detail": "VERIFIED (the chain is intact across the format change; an Ed25519-only deed spliced in after the ML-DSA-65 key's activation is seal_missing)", "priority": "P0", "demo": false, "v3_ref": [], "owasp": [], "source": "ops/adr/ADR-109-seal-v2-crypto-agility.md", "status": "implemented"},
-    {"id": "Y09", "group": "Y", "title": "Ed25519 as the only seal on a deed issued on or after 2035-01-01 (the NIST IR 8547 draft date)", "expected": "DETECTED", "expected_reasons": [], "expected_detail": "DETECTED (seal_missing: the accept policy takes Ed25519 alone only for issued_at before 2035-01-01T00:00:00.000Z)", "priority": "P1", "demo": false, "v3_ref": [], "owasp": [], "source": "ops/adr/ADR-109-seal-v2-crypto-agility.md", "status": "implemented"},
-    {"id": "Y10", "group": "Y", "title": "The 2046 test: every release bundle since v0.1.0 verified by the v2 verifier, byte for byte unchanged", "expected": "VERIFIED", "expected_reasons": [], "expected_detail": "VERIFIED (testdata/release-bundles with the CLI under --strict and with the browser verifier)", "priority": "P0", "demo": false, "v3_ref": [], "owasp": [], "source": "ops/adr/ADR-109-seal-v2-crypto-agility.md", "status": "implemented"},
-    {"id": "Y11", "group": "Y", "title": "Cross-protocol replay: an ML-DSA-65 signature made over another domain tag (the v2 Ed25519 tag, the bundle tag, or the bare body_hash) presented as the deed's ML-DSA-65 seal", "expected": "DETECTED", "expected_reasons": [], "expected_detail": "DETECTED (seal_invalid)", "priority": "P0", "demo": false, "v3_ref": [], "owasp": [], "source": "ops/adr/ADR-109-seal-v2-crypto-agility.md", "status": "implemented"},
-    {"id": "Y12", "group": "Y", "title": "A seal by a revoked ML-DSA-65 key beside a valid Ed25519 seal", "expected": "DETECTED", "expected_reasons": [], "expected_detail": "DETECTED (seal_key_revoked: every seal must pass; one good seal never covers a bad one)", "priority": "P0", "demo": false, "v3_ref": [], "owasp": [], "source": "ops/adr/ADR-109-seal-v2-crypto-agility.md", "status": "implemented"},
-    {"id": "T01", "group": "T", "title": "A2A proxy: a web page on the same machine posts a simple cross-site request (text/plain body, ?A2A-Version=1.0 in the query, the page's Origin), which a browser sends without a preflight", "expected": "REJECTED", "expected_reasons": [], "expected_detail": "REJECTED (browser_origin, HTTP 403: nothing reaches the Gate or the peer; the query-string version is never read)", "priority": "P0", "demo": false, "v3_ref": [], "owasp": [], "source": "ops/adr/ADR-116-attack-group-t-this-weeks-surfaces.md", "status": "implemented"},
-    {"id": "T02", "group": "T", "title": "A2A proxy: DNS rebinding, a well-formed JSON-RPC request carrying the agent's key whose Host names the page's own domain", "expected": "REJECTED", "expected_reasons": [], "expected_detail": "REJECTED (host_not_loopback, HTTP 421: nothing reaches the Gate or the peer, even with the right key)", "priority": "P0", "demo": false, "v3_ref": [], "owasp": [], "source": "ops/adr/ADR-116-attack-group-t-this-weeks-surfaces.md", "status": "implemented"},
-    {"id": "T03", "group": "T", "title": "A2A proxy: a local process without the agent's key, with another key, or with the key sent as Basic", "expected": "REJECTED", "expected_reasons": [], "expected_detail": "REJECTED (key_required, HTTP 401: nothing reaches the Gate or the peer)", "priority": "P0", "demo": false, "v3_ref": [], "owasp": [], "source": "ops/adr/ADR-116-attack-group-t-this-weeks-surfaces.md", "status": "implemented"},
-    {"id": "T04", "group": "T", "title": "A2A proxy: a CORS preflight for a JSON request with custom headers, and the answers a page could read", "expected": "REJECTED", "expected_reasons": [], "expected_detail": "REJECTED (cors_refused, HTTP 403; no answer from the proxy carries an Access-Control-* header)", "priority": "P1", "demo": false, "v3_ref": [], "owasp": [], "source": "ops/adr/ADR-116-attack-group-t-this-weeks-surfaces.md", "status": "implemented"},
-    {"id": "T05", "group": "T", "title": "A2A proxy: a captured SendMessage replayed through the proxy with the agent's key", "expected": "OUTSIDE SCOPE", "expected_reasons": [], "expected_detail": "OUTSIDE SCOPE (each replay is a new action that the Gate decides and records; the proxy keeps no replay table, LIMITATIONS)", "priority": "P1", "demo": false, "v3_ref": [], "owasp": [], "source": "ops/adr/ADR-116-attack-group-t-this-weeks-surfaces.md", "status": "implemented"},
-    {"id": "T06", "group": "T", "title": "A2A proxy: the peer's Agent Card claims another agent's name", "expected": "OUTSIDE SCOPE", "expected_reasons": [], "expected_detail": "OUTSIDE SCOPE (the hop's ref is the operator's --peer URL; the name is the card's own claim, recorded as given)", "priority": "P1", "demo": false, "v3_ref": [], "owasp": [], "source": "ops/adr/ADR-116-attack-group-t-this-weeks-surfaces.md", "status": "implemented"},
-    {"id": "T07", "group": "T", "title": "Debezium witness: a feed file edited to drop one change event from the action's transaction", "expected": "UNVERIFIABLE", "expected_reasons": [], "expected_detail": "UNVERIFIABLE (feed_incomplete: a transaction with an event missing is never compared; never VERIFIED and never MISMATCH)", "priority": "P0", "demo": false, "v3_ref": [], "owasp": [], "source": "ops/adr/ADR-116-attack-group-t-this-weeks-surfaces.md", "status": "implemented"},
-    {"id": "T08", "group": "T", "title": "Debezium witness: a feed larger than 1 GiB after gunzip (a gzip bomb, or an endless stdin)", "expected": "REJECTED", "expected_reasons": [], "expected_detail": "REJECTED (feed_too_large, exit 2: reading stops at the cap; nothing is compared)", "priority": "P1", "demo": false, "v3_ref": [], "owasp": [], "source": "ops/adr/ADR-116-attack-group-t-this-weeks-surfaces.md", "status": "implemented"},
-    {"id": "T09", "group": "T", "title": "Shell guard: hook input that isn't a hook's JSON (or no deedglass on the agent's PATH)", "expected": "OUTSIDE SCOPE", "expected_reasons": [], "expected_detail": "OUTSIDE SCOPE (fails open by design: exit 1 with nothing on stdout, so the agent's own permission rules decide; LIMITATIONS)", "priority": "P1", "demo": false, "v3_ref": [], "owasp": [], "source": "ops/adr/ADR-116-attack-group-t-this-weeks-surfaces.md", "status": "implemented"},
-    {"id": "T10", "group": "T", "title": "Head timestamps: an RFC 3161 token with its time edited, and a token from a TSA outside the reader's --tsa-roots", "expected": "DETECTED", "expected_reasons": [], "expected_detail": "DETECTED (the edited token fails its signature; the other is refused as not from a TSA you trust)", "priority": "P0", "demo": false, "v3_ref": [], "owasp": [], "source": "ops/adr/ADR-116-attack-group-t-this-weeks-surfaces.md", "status": "implemented"},
-    {"id": "T11", "group": "T", "title": "Head timestamps: a token checked without --tsa-roots", "expected": "OUTSIDE SCOPE", "expected_reasons": [], "expected_detail": "OUTSIDE SCOPE (checked against the chain it carries: accepted as intact but unpinned, and verify warns tsa_not_pinned)", "priority": "P1", "demo": false, "v3_ref": [], "owasp": [], "source": "ops/adr/ADR-116-attack-group-t-this-weeks-surfaces.md", "status": "implemented"},
-    {"id": "T12", "group": "T", "title": "Independent verifiers: a bundle with one changed byte read by verifiers/python and verifiers/js", "expected": "DETECTED", "expected_reasons": [], "expected_detail": "DETECTED (both refuse the bundle; neither reports it as intact)", "priority": "P1", "demo": false, "v3_ref": [], "owasp": [], "source": "ops/adr/ADR-116-attack-group-t-this-weeks-surfaces.md", "status": "not implemented", "note": "The independent-verifiers workflow runs altered-bundle vectors today; an attack-suite runner for them waits on Python and Node steps in lint-unit."},
-    {"id": "T13", "group": "T", "title": "connect: a Postgres URL with its password passed as a command-line argument", "expected": "REJECTED", "expected_reasons": [], "expected_detail": "REJECTED (the password is never taken from argv, where ps and shell history show it; it comes from an environment variable or stdin)", "priority": "P1", "demo": false, "v3_ref": [], "owasp": [], "source": "ops/adr/ADR-116-attack-group-t-this-weeks-surfaces.md", "status": "not implemented", "note": "Waits on deedglass connect (adoption-1), which isn't merged."},
-    {"id": "M01", "group": "M", "title": "Lockdown on: an agent's write that the active policy allows outright", "expected": "BLOCKED", "expected_reasons": [], "expected_detail": "BLOCKED (approval_required under lockdown.write-needs-person: nothing runs until a person approves; the approval expires within 15 minutes, and timeout means no)", "priority": "P0", "demo": false, "v3_ref": [], "owasp": [], "source": "ops/adr/ADR-117-lockdown-mode.md", "status": "implemented"},
-    {"id": "M02", "group": "M", "title": "Lockdown on: a high-risk write (a DELETE with a WHERE) under a policy rule that needs one approver", "expected": "BLOCKED", "expected_reasons": [], "expected_detail": "BLOCKED (four-eyes: required is raised to 2 different people; one person voting twice is already_countersigned and nothing runs)", "priority": "P0", "demo": false, "v3_ref": [], "owasp": [], "source": "ops/adr/ADR-117-lockdown-mode.md", "status": "implemented"},
-    {"id": "M03", "group": "M", "title": "Lockdown on: DROP TABLE or TRUNCATE through the native Postgres connector under a policy that allows every statement", "expected": "DENIED", "expected_reasons": [], "expected_detail": "DENIED (policy_denied, rule lockdown.no-drop-truncate: no connector call; sealed as denied)", "priority": "P0", "demo": false, "v3_ref": [], "owasp": [], "source": "ops/adr/ADR-117-lockdown-mode.md", "status": "implemented"},
-    {"id": "M04", "group": "M", "title": "Lockdown on: ALTER TABLE (or another schema or permission change) under a policy that allows every statement", "expected": "DENIED", "expected_reasons": [], "expected_detail": "DENIED (policy_denied, rule lockdown.no-schema-change: no connector call)", "priority": "P0", "demo": false, "v3_ref": [], "owasp": [], "source": "ops/adr/ADR-117-lockdown-mode.md", "status": "implemented"},
-    {"id": "M05", "group": "M", "title": "Lockdown on: UPDATE or DELETE with no WHERE under a policy that allows every statement", "expected": "DENIED", "expected_reasons": [], "expected_detail": "DENIED (policy_denied, rule lockdown.no-unbounded-write: no connector call)", "priority": "P0", "demo": false, "v3_ref": [], "owasp": [], "source": "ops/adr/ADR-117-lockdown-mode.md", "status": "implemented"},
-    {"id": "M06", "group": "M", "title": "Lockdown on: after one of its writes ends Can't check, the agent sends another write, then the same write with a new Deedglass-Session header", "expected": "DENIED", "expected_reasons": [], "expected_detail": "DENIED (policy_denied, rule lockdown.cant-check-hold, naming the held action: the hold covers every session of the agent until a person acknowledges it; reads still run)", "priority": "P0", "demo": false, "v3_ref": [], "owasp": [], "source": "ops/adr/ADR-117-lockdown-mode.md", "status": "implemented"},
-    {"id": "M07", "group": "M", "title": "Lockdown on: an agent whose connector label names one connector calls another connector's tool, or an agent with no connector label calls any tool", "expected": "DENIED", "expected_reasons": [], "expected_detail": "DENIED (policy_denied, rule lockdown.one-connector: no connector call)", "priority": "P0", "demo": false, "v3_ref": [], "owasp": [], "source": "ops/adr/ADR-117-lockdown-mode.md", "status": "implemented"},
-    {"id": "M08", "group": "M", "title": "Lockdown on: a call to a FHIR connector while the org's PHI mode is off", "expected": "DENIED", "expected_reasons": [], "expected_detail": "DENIED (policy_denied, rule lockdown.phi-mode: no call reaches the FHIR server)", "priority": "P1", "demo": false, "v3_ref": [], "owasp": [], "source": "ops/adr/ADR-117-lockdown-mode.md", "status": "implemented"},
-    {"id": "M09", "group": "M", "title": "Lockdown on: a policy approval that waits 24 hours, and a write whose policy asks only Claimed (L0) on a connector that reaches Proven", "expected": "BLOCKED", "expected_reasons": [], "expected_detail": "BLOCKED (the approval's expiry is cut to 15 minutes, and the write is checked at Proven (L2); the decision detail records expiry_shortened and verify_raised)", "priority": "P1", "demo": false, "v3_ref": [], "owasp": [], "source": "ops/adr/ADR-117-lockdown-mode.md", "status": "implemented"},
-    {"id": "M10", "group": "M", "title": "deedglass lockdown off: the person who asked to turn it off also countersigns", "expected": "REJECTED", "expected_reasons": [], "expected_detail": "REJECTED (countersign_same_person: lockdown stays on and no org.updated is sealed; the request stays until it expires or another person countersigns)", "priority": "P0", "demo": false, "v3_ref": [], "owasp": [], "source": "ops/adr/ADR-117-lockdown-mode.md", "status": "implemented"},
-    {"id": "M11", "group": "M", "title": "deedglass lockdown off while lockdown: true is set in the server's config", "expected": "REJECTED", "expected_reasons": [], "expected_detail": "REJECTED (lockdown_pinned_by_config: nothing changes; the config key has to be removed on the server first, which doctor reports)", "priority": "P1", "demo": false, "v3_ref": [], "owasp": [], "source": "ops/adr/ADR-117-lockdown-mode.md", "status": "implemented"},
-    {"id": "M12", "group": "M", "title": "A prod config with lockdown: true and no ML-DSA-65 seal key, or with timestamps.at_export: false", "expected": "REJECTED", "expected_reasons": [], "expected_detail": "REJECTED (config problem: serve and every command refuse the config, naming DEEDGLASS_SEAL_PQ_KEY_FILE or timestamps.at_export)", "priority": "P1", "demo": false, "v3_ref": [], "owasp": [], "source": "ops/adr/ADR-117-lockdown-mode.md", "status": "implemented"},
-    {"id": "M13", "group": "M", "title": "An org admin key or a Console session sends PATCH /v1/org with settings.lockdown: false", "expected": "REJECTED", "expected_reasons": [], "expected_detail": "REJECTED (validation_error on the unknown key settings.lockdown, HTTP 400: there is no API route that turns lockdown off; it stays on)", "priority": "P0", "demo": false, "v3_ref": [], "owasp": [], "source": "ops/adr/ADR-117-lockdown-mode.md", "status": "implemented"},
-    {"id": "M14", "group": "M", "title": "One shell user on the server names two different people for the request and the countersign", "expected": "OUTSIDE SCOPE", "expected_reasons": [], "expected_detail": "OUTSIDE SCOPE (the server CLI can't tell who is typing; the record names both people as given, and anyone with the server's shell and database URL can change the database directly; LIMITATIONS)", "priority": "P1", "demo": false, "v3_ref": [], "owasp": [], "source": "ops/adr/ADR-117-lockdown-mode.md", "status": "implemented"},
-    {"id": "S01", "group": "S", "title": "An agent submits the IG's settlement ClaimBundle (use claim, INR 90,000) under the india-health pack", "expected": "BLOCKED", "expected_reasons": [], "expected_detail": "BLOCKED (approval_required under claim-settlement-two-people: two different people approve before anything is sent)", "priority": "P0", "demo": false, "v3_ref": [], "owasp": [], "source": "ops/adr/ADR-119-india-profile-awareness.md", "status": "implemented"},
-    {"id": "S02", "group": "S", "title": "The same settlement claim sent as a plain FHIR Claim, no bundle", "expected": "BLOCKED", "expected_reasons": [], "expected_detail": "BLOCKED (approval_required under claim-settlement-two-people, the same rule and the same two people as the bundle)", "priority": "P0", "demo": false, "v3_ref": [], "owasp": [], "source": "ops/adr/ADR-119-india-profile-awareness.md", "status": "implemented"},
-    {"id": "S03", "group": "S", "title": "A final claim sent in a bundle whose meta.profile says CoverageEligibilityRequestBundle", "expected": "DENIED", "expected_reasons": [], "expected_detail": "DENIED (nhcx-profile-mismatch: the bundle holds a Claim first, so it is classified ClaimBundle; nothing is sent)", "priority": "P0", "demo": false, "v3_ref": [], "owasp": ["ASI02"], "source": "ops/adr/ADR-119-india-profile-awareness.md", "status": "implemented"},
-    {"id": "S04", "group": "S", "title": "The settlement ClaimBundle with every meta.profile stripped", "expected": "BLOCKED", "expected_reasons": [], "expected_detail": "BLOCKED (approval_required under claim-settlement-two-people: what the bundle holds decides, not its label)", "priority": "P0", "demo": false, "v3_ref": [], "owasp": ["ASI02"], "source": "ops/adr/ADR-119-india-profile-awareness.md", "status": "implemented"},
-    {"id": "S05", "group": "S", "title": "A pre-authorisation of INR 2,50,000 placed second, behind a pre-authorisation of INR 100, in one bundle", "expected": "BLOCKED", "expected_reasons": [], "expected_detail": "BLOCKED (approval_required under preauth-large-two-people, required 2: the largest total in the request counts)", "priority": "P0", "demo": false, "v3_ref": [], "owasp": ["ASI02"], "source": "ops/adr/ADR-119-india-profile-awareness.md", "status": "implemented"},
-    {"id": "S06", "group": "S", "title": "A final claim nested two bundles down, and one contained in a Task", "expected": "BLOCKED", "expected_reasons": [], "expected_detail": "BLOCKED (approval_required needing two people for both: nested bundles and contained resources are read)", "priority": "P0", "demo": false, "v3_ref": [], "owasp": ["ASI02"], "source": "ops/adr/ADR-119-india-profile-awareness.md", "status": "implemented"},
-    {"id": "S07", "group": "S", "title": "Claims whose total is a JSON string, in an unknown currency, or with an unknown use", "expected": "BLOCKED", "expected_reasons": [], "expected_detail": "BLOCKED (approval_required under claim-unreadable-two-people: an amount that can't be read counts as large)", "priority": "P1", "demo": false, "v3_ref": [], "owasp": [], "source": "ops/adr/ADR-119-india-profile-awareness.md", "status": "implemented"},
-    {"id": "S08", "group": "S", "title": "The IG's PrescriptionRecord relabelled as a draft WellnessRecord", "expected": "BLOCKED", "expected_reasons": [], "expected_detail": "BLOCKED (approval_required under orders-need-clinician: a bundle carrying a MedicationRequest waits for a clinician whatever its record kind or status)", "priority": "P0", "demo": false, "v3_ref": [], "owasp": ["ASI02"], "source": "ops/adr/ADR-119-india-profile-awareness.md", "status": "implemented"},
-    {"id": "S09", "group": "S", "title": "The IG's DischargeSummaryRecord, final, with its Composition profile stripped", "expected": "BLOCKED", "expected_reasons": [], "expected_detail": "BLOCKED (approval_required under abdm-record-needs-clinician: the record is named from its SNOMED CT type; never the draft rule)", "priority": "P1", "demo": false, "v3_ref": [], "owasp": [], "source": "ops/adr/ADR-119-india-profile-awareness.md", "status": "implemented"},
-    {"id": "S10", "group": "S", "title": "An org with PHI mode off enforces india-health; the agent reads a Patient", "expected": "DENIED", "expected_reasons": [], "expected_detail": "DENIED (phi-mode-first: no FHIR call runs while PHI mode is off)", "priority": "P1", "demo": false, "v3_ref": [], "owasp": [], "source": "ops/adr/ADR-119-india-profile-awareness.md", "status": "implemented"},
-    {"id": "S11", "group": "S", "title": "Under healthcare-fhir (not india-health), the IG's pre-authorisation ClaimBundle", "expected": "BLOCKED", "expected_reasons": [], "expected_detail": "BLOCKED (approval_required under claims-four-eyes, required 2: a Bundle carrying a Claim is a claim)", "priority": "P0", "demo": false, "v3_ref": [], "owasp": [], "source": "ops/adr/ADR-119-india-profile-awareness.md", "status": "implemented"},
-    {"id": "S12", "group": "S", "title": "A delete of a stored ABDM record bundle under india-health", "expected": "DENIED", "expected_reasons": [], "expected_detail": "DENIED (no-delete-clinical: records are corrected with a new version)", "priority": "P1", "demo": false, "v3_ref": [], "owasp": [], "source": "ops/adr/ADR-119-india-profile-awareness.md", "status": "implemented"}
+    {
+      "id": "A01",
+      "group": "A",
+      "title": "Valid transfer, end to end",
+      "expected": "VERIFIED",
+      "expected_reasons": [],
+      "expected_detail": "VERIFIED",
+      "priority": "P0",
+      "demo": true,
+      "v3_ref": [
+        1
+      ],
+      "owasp": [],
+      "source": "20_ §13",
+      "status": "superseded",
+      "superseded_by": "W05"
+    },
+    {
+      "id": "A02",
+      "group": "A",
+      "title": "Amount altered in intent bytes, original sig, submitted to executor",
+      "expected": "BLOCKED",
+      "expected_reasons": [
+        "SIG_INVALID"
+      ],
+      "expected_detail": "BLOCKED (executor SIG_INVALID)",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [
+        2
+      ],
+      "owasp": [
+        "ASI02"
+      ],
+      "source": "20_ §13",
+      "status": "retired",
+      "retired": "V7 signs agent intents (S09): changed args under the original signature are refused as intent_invalid; internal/identity TestIntentVectors."
+    },
+    {
+      "id": "A03",
+      "group": "A",
+      "title": "Same, but compromised executor calls function directly",
+      "expected": "DETECTED",
+      "expected_reasons": [
+        "SIG_INVALID"
+      ],
+      "expected_detail": "DETECTED (MISMATCH SIG_INVALID)",
+      "priority": "P0",
+      "demo": true,
+      "v3_ref": [
+        21,
+        22
+      ],
+      "owasp": [
+        "ASI02"
+      ],
+      "source": "20_ §13",
+      "status": "superseded",
+      "superseded_by": "W13"
+    },
+    {
+      "id": "A04",
+      "group": "A",
+      "title": "Intent signed by unregistered key",
+      "expected": "BLOCKED",
+      "expected_reasons": [],
+      "expected_detail": "BLOCKED",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [
+        3
+      ],
+      "owasp": [
+        "ASI03"
+      ],
+      "source": "20_ §13",
+      "status": "retired",
+      "retired": "V7 intents name a registered key id; an unknown key is intent_invalid; internal/identity TestIntentVectors."
+    },
+    {
+      "id": "A05",
+      "group": "A",
+      "title": "Revoked key (DB still active, verifier revoked)",
+      "expected": "DETECTED",
+      "expected_reasons": [
+        "KEY_REVOKED"
+      ],
+      "expected_detail": "DETECTED (KEY_REVOKED)",
+      "priority": "P1",
+      "demo": false,
+      "v3_ref": [
+        3
+      ],
+      "owasp": [
+        "ASI03"
+      ],
+      "source": "20_ §13",
+      "status": "superseded",
+      "superseded_by": "J02"
+    },
+    {
+      "id": "A06",
+      "group": "A",
+      "title": "Non-canonical bytes (whitespace/order) via compromised executor",
+      "expected": "DETECTED",
+      "expected_reasons": [
+        "NON_CANONICAL_INTENT"
+      ],
+      "expected_detail": "DETECTED (NON_CANONICAL_INTENT)",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [
+        2
+      ],
+      "owasp": [],
+      "source": "20_ §13",
+      "status": "retired",
+      "retired": "V7's intent wire format is canonical JCS and the checker refuses other bytes; internal/identity TestIntentVectors and internal/intent's strict parser vectors."
+    },
+    {
+      "id": "A07",
+      "group": "A",
+      "title": "Duplicate-key JSON (parser differential) via executor bypass",
+      "expected": "DETECTED",
+      "expected_reasons": [
+        "NON_CANONICAL_INTENT"
+      ],
+      "expected_detail": "DETECTED (NON_CANONICAL)",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [
+        2
+      ],
+      "owasp": [],
+      "source": "20_ §13",
+      "status": "retired",
+      "retired": "The strict parser refuses duplicate keys before JCS (CLAUDE.md L2 invariant 6); internal/intent strict parser tests and FuzzParse.",
+      "note": "Spec text says NON_CANONICAL; the reason code in spec §10.3 check 4 is NON_CANONICAL_INTENT."
+    },
+    {
+      "id": "A08",
+      "group": "A",
+      "title": "Amount as number / float / negative / > 18 digits",
+      "expected": "BLOCKED",
+      "expected_reasons": [],
+      "expected_detail": "BLOCKED",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [
+        2
+      ],
+      "owasp": [],
+      "source": "20_ §13",
+      "status": "retired",
+      "retired": "V7 has no transfer amount; args numbers are integers up to 2^53-1 or floats in the args profile; internal/intent TestArgs tables and FuzzArgsDigest."
+    },
+    {
+      "id": "A09",
+      "group": "A",
+      "title": "Expired intent",
+      "expected": "BLOCKED",
+      "expected_reasons": [],
+      "expected_detail": "BLOCKED (function)",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [
+        4
+      ],
+      "owasp": [],
+      "source": "20_ §13",
+      "status": "superseded",
+      "superseded_by": "R04"
+    },
+    {
+      "id": "A10",
+      "group": "A",
+      "title": "Wrong aud (other deployment)",
+      "expected": "BLOCKED",
+      "expected_reasons": [],
+      "expected_detail": "BLOCKED",
+      "priority": "P1",
+      "demo": false,
+      "v3_ref": [
+        4
+      ],
+      "owasp": [],
+      "source": "20_ §13",
+      "status": "retired",
+      "retired": "V7 intents are bound to the org and agent of the key that sends them; a foreign one is intent_invalid; internal/identity TestIntentVectors."
+    },
+    {
+      "id": "A11",
+      "group": "A",
+      "title": "Retired or unknown bundle hash",
+      "expected": "BLOCKED",
+      "expected_reasons": [],
+      "expected_detail": "BLOCKED / DETECTED if bypassed",
+      "priority": "P1",
+      "demo": false,
+      "v3_ref": [
+        21
+      ],
+      "owasp": [],
+      "source": "20_ §13",
+      "status": "retired",
+      "retired": "The V0 Operation Bundle is not on the V7 Gate path; internal/bundle keeps its own manifest tests."
+    },
+    {
+      "id": "A12",
+      "group": "A",
+      "title": "Principal without mandate on source; amount > mandate",
+      "expected": "BLOCKED",
+      "expected_reasons": [
+        "POLICY_VIOLATION"
+      ],
+      "expected_detail": "BLOCKED; DB-mandate widened by owner gives DETECTED (POLICY_VIOLATION)",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [
+        6
+      ],
+      "owasp": [
+        "ASI03"
+      ],
+      "source": "20_ §13",
+      "status": "superseded",
+      "superseded_by": "J04"
+    },
+    {
+      "id": "A13",
+      "group": "A",
+      "title": "Small-order public key offered at registration",
+      "expected": "BLOCKED",
+      "expected_reasons": [],
+      "expected_detail": "BLOCKED (registration refuses the key)",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [],
+      "source": "plan §3.0 #7, §3.8 (spike S4)",
+      "status": "implemented",
+      "note": "Spike S4: with the identity public key, one signature verifies every message under Go crypto/ed25519."
+    },
+    {
+      "id": "B01",
+      "group": "B",
+      "title": "Sequential replay",
+      "expected": "BLOCKED",
+      "expected_reasons": [
+        "REPLAY"
+      ],
+      "expected_detail": "BLOCKED (23505 gives REPLAY)",
+      "priority": "P0",
+      "demo": true,
+      "v3_ref": [
+        4
+      ],
+      "owasp": [],
+      "source": "20_ §13",
+      "status": "superseded",
+      "superseded_by": "J03"
+    },
+    {
+      "id": "B02",
+      "group": "B",
+      "title": "Concurrent replay (16 goroutines)",
+      "expected": "BLOCKED",
+      "expected_reasons": [
+        "REPLAY"
+      ],
+      "expected_detail": "exactly 1 VERIFIED, 15 BLOCKED",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [
+        10
+      ],
+      "owasp": [],
+      "source": "20_ §13",
+      "status": "superseded",
+      "superseded_by": "J03"
+    },
+    {
+      "id": "B03",
+      "group": "B",
+      "title": "Same nonce, different params, new valid signature",
+      "expected": "BLOCKED",
+      "expected_reasons": [],
+      "expected_detail": "BLOCKED",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [
+        4
+      ],
+      "owasp": [],
+      "source": "20_ §13",
+      "status": "superseded",
+      "superseded_by": "J03"
+    },
+    {
+      "id": "B04",
+      "group": "B",
+      "title": "Opposing transfers A<->B x200 concurrent",
+      "expected": "VERIFIED",
+      "expected_reasons": [],
+      "expected_detail": "all VERIFIED, no deadlock, sum conserved",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [],
+      "source": "20_ §13",
+      "status": "retired",
+      "retired": "V7 has no transfer function to deadlock; Gate concurrency is internal/gate TestLoad1000 and the 50-way Sealer test in internal/deed."
+    },
+    {
+      "id": "B05",
+      "group": "B",
+      "title": "Overdraft race",
+      "expected": "BLOCKED",
+      "expected_reasons": [],
+      "expected_detail": "one VERIFIED, one BLOCKED, never negative",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [],
+      "source": "20_ §13",
+      "status": "retired",
+      "retired": "An overdraft rule belongs to the customer's own schema in V7, not to Deedglass; the Gate's own limits are budgets (J04)."
+    },
+    {
+      "id": "B06",
+      "group": "B",
+      "title": "Two function calls in one transaction",
+      "expected": "BLOCKED",
+      "expected_reasons": [],
+      "expected_detail": "BLOCKED (entry guard)",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [],
+      "source": "20_ §13",
+      "status": "superseded",
+      "superseded_by": "H03",
+      "note": "Also encodes the 16 S5 entry-guard cases, including a same-transaction retry (plan §3.8)."
+    },
+    {
+      "id": "B07",
+      "group": "B",
+      "title": "Superuser deletes ledger row, then replays nonce",
+      "expected": "DETECTED",
+      "expected_reasons": [
+        "REPLAY"
+      ],
+      "expected_detail": "DETECTED (REPLAY, verifier memory)",
+      "priority": "P1",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [],
+      "source": "20_ §13",
+      "status": "retired",
+      "retired": "V7 intent nonces live in the control plane (intent_nonces), not in the customer's database; a control-plane superuser is a compromised host (out of scope)."
+    },
+    {
+      "id": "C01",
+      "group": "C",
+      "title": "App role direct INSERT/UPDATE/DELETE/TRUNCATE on bank.*",
+      "expected": "BLOCKED",
+      "expected_reasons": [],
+      "expected_detail": "BLOCKED",
+      "priority": "P0",
+      "demo": true,
+      "v3_ref": [
+        5
+      ],
+      "owasp": [
+        "ASI03"
+      ],
+      "source": "20_ §13",
+      "status": "retired",
+      "retired": "V7 agents never hold the database credential; deedglass_agent's grants are S17's setup plan, checked by deedglass connector postgres check (internal/connector/postgres/setup TestPlannerGoldens)."
+    },
+    {
+      "id": "C02",
+      "group": "C",
+      "title": "App role EXECUTE deedglass function",
+      "expected": "BLOCKED",
+      "expected_reasons": [],
+      "expected_detail": "BLOCKED",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [
+        6
+      ],
+      "owasp": [
+        "ASI03"
+      ],
+      "source": "20_ §13",
+      "status": "retired",
+      "retired": "deedglass.begin_action is granted to deedglass_agent only (S17); internal/connector/postgres/setup TestPlannerGoldens and connector postgres check."
+    },
+    {
+      "id": "C03",
+      "group": "C",
+      "title": "App role CREATE TRIGGER / ALTER on bank.accounts",
+      "expected": "BLOCKED",
+      "expected_reasons": [],
+      "expected_detail": "BLOCKED",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [
+        6
+      ],
+      "owasp": [],
+      "source": "20_ §13",
+      "status": "superseded",
+      "superseded_by": "H01"
+    },
+    {
+      "id": "C04",
+      "group": "C",
+      "title": "pg_temp table/type/function shadowing",
+      "expected": "BLOCKED",
+      "expected_reasons": [],
+      "expected_detail": "BLOCKED (no effect)",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [
+        8
+      ],
+      "owasp": [],
+      "source": "20_ §13",
+      "status": "retired",
+      "retired": "Controlled functions pin search_path to pg_catalog, pg_temp (CLAUDE.md rule 4); agent DDL that could shadow is refused (H01, H04)."
+    },
+    {
+      "id": "C05",
+      "group": "C",
+      "title": "public-schema operator/function shadowing",
+      "expected": "BLOCKED",
+      "expected_reasons": [],
+      "expected_detail": "BLOCKED",
+      "priority": "P1",
+      "demo": false,
+      "v3_ref": [
+        7,
+        8
+      ],
+      "owasp": [],
+      "source": "20_ §13",
+      "status": "retired",
+      "retired": "As C04: pinned search_path and schema-qualified objects in every controlled function; agent DDL refused (H01, H04)."
+    },
+    {
+      "id": "C06",
+      "group": "C",
+      "title": "SQL-injection strings in ids",
+      "expected": "BLOCKED",
+      "expected_reasons": [],
+      "expected_detail": "BLOCKED (regex CHECK, no dynamic SQL)",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [
+        9
+      ],
+      "owasp": [],
+      "source": "20_ §13",
+      "status": "retired",
+      "retired": "No dynamic SQL is built from input (static guard G1) and ids are parsed strictly (internal/ids FuzzParse); agent SQL is the connector's, checked by sqlguard (H01 to H07)."
+    },
+    {
+      "id": "C07",
+      "group": "C",
+      "title": "session_replication_role=replica",
+      "expected": "BLOCKED",
+      "expected_reasons": [],
+      "expected_detail": "BLOCKED (guard)",
+      "priority": "P1",
+      "demo": false,
+      "v3_ref": [
+        7
+      ],
+      "owasp": [],
+      "source": "20_ §13",
+      "status": "retired",
+      "retired": "session_replication_role is superuser-only in Postgres and deedglass_agent is not a superuser; an unsafe role is database_role_unsafe (S17)."
+    },
+    {
+      "id": "C08",
+      "group": "C",
+      "title": "Owner alters RLS so target row is filtered",
+      "expected": "BLOCKED",
+      "expected_reasons": [],
+      "expected_detail": "BLOCKED (row-count abort)",
+      "priority": "P1",
+      "demo": false,
+      "v3_ref": [
+        7
+      ],
+      "owasp": [],
+      "source": "20_ §13",
+      "status": "retired",
+      "retired": "V0's bank schema RLS; V7 doesn't own the customer's RLS. A filtered row shows as an L1 or L2 mismatch (H08, W01)."
+    },
+    {
+      "id": "C09",
+      "group": "C",
+      "title": "Executor role direct DML",
+      "expected": "BLOCKED",
+      "expected_reasons": [],
+      "expected_detail": "BLOCKED",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [
+        22
+      ],
+      "owasp": [],
+      "source": "20_ §13",
+      "status": "retired",
+      "retired": "V7 has no executor role; the Postgres connector is the only writer Deedglass runs (S17)."
+    },
+    {
+      "id": "C10",
+      "group": "C",
+      "title": "Owner grants UPDATE to app role, then app updates",
+      "expected": "DETECTED",
+      "expected_reasons": [
+        "UNBOUND_MUTATION",
+        "BOUNDARY_DRIFT"
+      ],
+      "expected_detail": "UNVERIFIABLE (drift) for subsequent ops; the update itself DETECTED (UNBOUND_MUTATION)",
+      "priority": "P1",
+      "demo": false,
+      "v3_ref": [
+        6
+      ],
+      "owasp": [
+        "ASI03"
+      ],
+      "source": "20_ §13",
+      "status": "retired",
+      "retired": "An owner's grant lets writes bypass the Gate; the decoder sees them as unbound changes and no action's verdict changes; internal/decoder TestHugeTransaction."
+    },
+    {
+      "id": "D01",
+      "group": "D",
+      "title": "Forged transactional deedglass marker, no ledger",
+      "expected": "DETECTED",
+      "expected_reasons": [
+        "FORGED_MARKER"
+      ],
+      "expected_detail": "DETECTED (FORGED_MARKER)",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [
+        21
+      ],
+      "owasp": [
+        "ASI10"
+      ],
+      "source": "20_ §13",
+      "status": "implemented",
+      "note": "Reuses the exact spike S1 SQL (app_role forged an in-frame deedglass marker). Needed for T2 on Fri 10-02 (plan §3.9)."
+    },
+    {
+      "id": "D02",
+      "group": "D",
+      "title": "Forged non-transactional marker",
+      "expected": "DETECTED",
+      "expected_reasons": [
+        "FORGED_MARKER_NONTX"
+      ],
+      "expected_detail": "DETECTED (FORGED_MARKER_NONTX)",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [
+        21
+      ],
+      "owasp": [],
+      "source": "20_ §13",
+      "status": "implemented",
+      "note": "Reuses the spike S1 SQL; the guard allows a non-transactional marker before the call (plan §3.0 #8)."
+    },
+    {
+      "id": "D03",
+      "group": "D",
+      "title": "Marker inside rolled-back savepoint",
+      "expected": "NO EFFECT",
+      "expected_reasons": [],
+      "expected_detail": "no statement, no effect",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [
+        11
+      ],
+      "owasp": [],
+      "source": "20_ §13",
+      "status": "implemented"
+    },
+    {
+      "id": "D04",
+      "group": "D",
+      "title": "Compromised executor adds second marker after the function",
+      "expected": "DETECTED",
+      "expected_reasons": [
+        "MARKER_COUNT"
+      ],
+      "expected_detail": "DETECTED (MARKER_COUNT)",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [
+        22
+      ],
+      "owasp": [],
+      "source": "20_ §13",
+      "status": "implemented",
+      "note": "Reuses the spike S1 SQL for the extra marker after the call (plan §3.0 #8)."
+    },
+    {
+      "id": "D05",
+      "group": "D",
+      "title": "Owner-installed BEFORE UPDATE trigger diverts credit to attacker (published table)",
+      "expected": "DETECTED",
+      "expected_reasons": [
+        "VALUE_MISMATCH",
+        "UNEXPECTED_CHANGE",
+        "BOUNDARY_DRIFT"
+      ],
+      "expected_detail": "DETECTED (VALUE_MISMATCH + UNEXPECTED_CHANGE, BOUNDARY_DRIFT noted)",
+      "priority": "P0",
+      "demo": true,
+      "v3_ref": [
+        16,
+        17
+      ],
+      "owasp": [],
+      "source": "20_ §13",
+      "status": "superseded",
+      "superseded_by": "W03",
+      "note": "Demo MISMATCH case: authorized Bob +10,000; observed Bob +0 and Attacker +10,000 (spec §13)."
+    },
+    {
+      "id": "D06",
+      "group": "D",
+      "title": "AFTER trigger writes an unpublished permanent table",
+      "expected": "UNVERIFIABLE",
+      "expected_reasons": [
+        "BOUNDARY_DRIFT"
+      ],
+      "expected_detail": "UNVERIFIABLE (BOUNDARY_DRIFT); the write itself is unseen",
+      "priority": "P0",
+      "demo": true,
+      "v3_ref": [
+        16,
+        18
+      ],
+      "owasp": [],
+      "source": "20_ §13",
+      "status": "retired",
+      "retired": "Writes to tables outside witness.watched_tables are not seen; stated in docs/LIMITATIONS.md (the observation boundary).",
+      "note": "Demo UNVERIFIABLE case (spec §13)."
+    },
+    {
+      "id": "D07",
+      "group": "D",
+      "title": "Trigger writes an UNLOGGED table",
+      "expected": "UNVERIFIABLE",
+      "expected_reasons": [
+        "BOUNDARY_DRIFT"
+      ],
+      "expected_detail": "UNVERIFIABLE (drift)",
+      "priority": "P1",
+      "demo": false,
+      "v3_ref": [
+        18
+      ],
+      "owasp": [],
+      "source": "20_ §13",
+      "status": "retired",
+      "retired": "UNLOGGED tables are not in WAL, so logical decoding can't see them; stated in docs/LIMITATIONS.md."
+    },
+    {
+      "id": "D08",
+      "group": "D",
+      "title": "Owner replaces function body (CREATE OR REPLACE)",
+      "expected": "UNVERIFIABLE",
+      "expected_reasons": [
+        "BOUNDARY_DRIFT"
+      ],
+      "expected_detail": "UNVERIFIABLE (drift: prosrc hash)",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [
+        20
+      ],
+      "owasp": [],
+      "source": "20_ §13",
+      "status": "retired",
+      "retired": "V7 has no controlled transfer function body; deedglass.begin_action is checked by deedglass connector postgres check."
+    },
+    {
+      "id": "D09",
+      "group": "D",
+      "title": "ALSO rule on accounts",
+      "expected": "UNVERIFIABLE",
+      "expected_reasons": [
+        "BOUNDARY_DRIFT"
+      ],
+      "expected_detail": "UNVERIFIABLE; MISMATCH if it writes a published table",
+      "priority": "P1",
+      "demo": false,
+      "v3_ref": [
+        16
+      ],
+      "owasp": [],
+      "source": "20_ §13",
+      "status": "superseded",
+      "superseded_by": "W01"
+    },
+    {
+      "id": "D10",
+      "group": "D",
+      "title": "FK changed to ON DELETE CASCADE",
+      "expected": "UNVERIFIABLE",
+      "expected_reasons": [
+        "BOUNDARY_DRIFT"
+      ],
+      "expected_detail": "UNVERIFIABLE",
+      "priority": "P1",
+      "demo": false,
+      "v3_ref": [
+        20
+      ],
+      "owasp": [],
+      "source": "20_ §13",
+      "status": "superseded",
+      "superseded_by": "W04"
+    },
+    {
+      "id": "D11",
+      "group": "D",
+      "title": "REPLICA IDENTITY set to DEFAULT",
+      "expected": "UNVERIFIABLE",
+      "expected_reasons": [
+        "RELATION_MISMATCH",
+        "OLD_TUPLE_MISSING"
+      ],
+      "expected_detail": "UNVERIFIABLE (RELATION_MISMATCH / OLD_TUPLE_MISSING)",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [
+        19
+      ],
+      "owasp": [],
+      "source": "20_ §13",
+      "status": "superseded",
+      "superseded_by": "W07"
+    },
+    {
+      "id": "D12",
+      "group": "D",
+      "title": "ALTER PUBLICATION ... DROP TABLE bank.journal",
+      "expected": "UNVERIFIABLE",
+      "expected_reasons": [
+        "BOUNDARY_DRIFT"
+      ],
+      "expected_detail": "UNVERIFIABLE (drift; missing journal changes are a gap)",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [
+        19
+      ],
+      "owasp": [],
+      "source": "20_ §13",
+      "status": "superseded",
+      "superseded_by": "W12"
+    },
+    {
+      "id": "D13",
+      "group": "D",
+      "title": "Publication narrowed to publish='insert'",
+      "expected": "UNVERIFIABLE",
+      "expected_reasons": [
+        "BOUNDARY_DRIFT"
+      ],
+      "expected_detail": "UNVERIFIABLE",
+      "priority": "P1",
+      "demo": false,
+      "v3_ref": [
+        19
+      ],
+      "owasp": [],
+      "source": "20_ §13",
+      "status": "superseded",
+      "superseded_by": "W12"
+    },
+    {
+      "id": "D14",
+      "group": "D",
+      "title": "ALTER TABLE accounts ADD COLUMN",
+      "expected": "UNVERIFIABLE",
+      "expected_reasons": [
+        "RELATION_MISMATCH"
+      ],
+      "expected_detail": "UNVERIFIABLE (RELATION_MISMATCH) until recommitted",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [
+        20
+      ],
+      "owasp": [],
+      "source": "20_ §13",
+      "status": "retired",
+      "retired": "V7 compares row images by column name from each RELATION message, not V0's relation-hash drift rule; internal/witness/l2 tests."
+    },
+    {
+      "id": "D15",
+      "group": "D",
+      "title": "Superuser direct UPDATE outside function",
+      "expected": "DETECTED",
+      "expected_reasons": [
+        "UNBOUND_MUTATION"
+      ],
+      "expected_detail": "DETECTED (UNBOUND_MUTATION)",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [
+        5
+      ],
+      "owasp": [],
+      "source": "20_ §13",
+      "status": "retired",
+      "retired": "A superuser's write outside the Gate is decoded as unbound; no action's verdict changes; internal/decoder TestHugeTransaction."
+    },
+    {
+      "id": "D16",
+      "group": "D",
+      "title": "Owner TRUNCATE bank.accounts",
+      "expected": "DETECTED",
+      "expected_reasons": [
+        "TRUNCATE_PROTECTED"
+      ],
+      "expected_detail": "DETECTED (TRUNCATE_PROTECTED)",
+      "priority": "P1",
+      "demo": false,
+      "v3_ref": [
+        5
+      ],
+      "owasp": [],
+      "source": "20_ §13",
+      "status": "superseded",
+      "superseded_by": "H01"
+    },
+    {
+      "id": "D17",
+      "group": "D",
+      "title": "Origin-tagged changes (pg_replication_origin_session_setup)",
+      "expected": "DETECTED",
+      "expected_reasons": [
+        "UNBOUND_MUTATION"
+      ],
+      "expected_detail": "DETECTED (decoded with origin=any, UNBOUND)",
+      "priority": "P1",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [],
+      "source": "20_ §13",
+      "status": "implemented"
+    },
+    {
+      "id": "E01",
+      "group": "E",
+      "title": "Verifier killed mid-batch, restarted",
+      "expected": "VERIFIED",
+      "expected_reasons": [],
+      "expected_detail": "no duplicate or missing statements",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [
+        13
+      ],
+      "owasp": [],
+      "source": "20_ §13",
+      "status": "implemented"
+    },
+    {
+      "id": "E02",
+      "group": "E",
+      "title": "Slot rewind (re-delivery)",
+      "expected": "VERIFIED",
+      "expected_reasons": [],
+      "expected_detail": "idempotent",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [
+        14
+      ],
+      "owasp": [],
+      "source": "20_ §13",
+      "status": "implemented"
+    },
+    {
+      "id": "E03",
+      "group": "E",
+      "title": "Verifier offline plus small max_slot_wal_keep_size, slot lost",
+      "expected": "UNVERIFIABLE",
+      "expected_reasons": [
+        "NO_EVIDENCE"
+      ],
+      "expected_detail": "UNVERIFIABLE (NO_EVIDENCE) for gap intents, alert",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [
+        13
+      ],
+      "owasp": [],
+      "source": "20_ §13",
+      "status": "implemented"
+    },
+    {
+      "id": "E04",
+      "group": "E",
+      "title": "Admin drops and recreates slot",
+      "expected": "UNVERIFIABLE",
+      "expected_reasons": [
+        "NO_EVIDENCE"
+      ],
+      "expected_detail": "UNVERIFIABLE (NO_EVIDENCE) for gap",
+      "priority": "P1",
+      "demo": false,
+      "v3_ref": [
+        13
+      ],
+      "owasp": [],
+      "source": "20_ §13",
+      "status": "implemented"
+    },
+    {
+      "id": "E05",
+      "group": "E",
+      "title": "DB crash before commit",
+      "expected": "NO EFFECT",
+      "expected_reasons": [],
+      "expected_detail": "no statement; status NOT_COMMITTED after exp",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [
+        11
+      ],
+      "owasp": [],
+      "source": "20_ §13",
+      "status": "implemented"
+    },
+    {
+      "id": "E06",
+      "group": "E",
+      "title": "Client connection dropped after commit (the 504 case)",
+      "expected": "VERIFIED",
+      "expected_reasons": [],
+      "expected_detail": "VERIFIED; status returns statement",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [
+        12
+      ],
+      "owasp": [],
+      "source": "20_ §13",
+      "status": "retired",
+      "retired": "An action's outcome is read back with GET /v1/actions/{id}?wait (S13), so a dropped client connection loses nothing; internal/gate tests."
+    },
+    {
+      "id": "E07",
+      "group": "E",
+      "title": "PREPARE/ROLLBACK PREPARED, COMMIT PREPARED",
+      "expected": "VERIFIED",
+      "expected_reasons": [],
+      "expected_detail": "none / VERIFIED at commit",
+      "priority": "P1",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [],
+      "source": "20_ §13",
+      "status": "implemented"
+    },
+    {
+      "id": "E08",
+      "group": "E",
+      "title": "Unbound bulk UPDATE above logical_decoding_work_mem",
+      "expected": "DETECTED",
+      "expected_reasons": [
+        "UNBOUND_MUTATION"
+      ],
+      "expected_detail": "DETECTED (UNBOUND, spilled but whole)",
+      "priority": "P1",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [],
+      "source": "20_ §13",
+      "status": "implemented"
+    },
+    {
+      "id": "E09",
+      "group": "E",
+      "title": "Failover with/without failover slot",
+      "expected": "OUTSIDE SCOPE",
+      "expected_reasons": [],
+      "expected_detail": "OUTSIDE V0 TEST SCOPE; documented expected UNVERIFIABLE",
+      "priority": "doc-only",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [],
+      "source": "20_ §13",
+      "status": "retired",
+      "retired": "Failover is outside the tested scope; docs/LIMITATIONS.md states that slots must be failover slots and that a lost slot gives UNVERIFIABLE (W11).",
+      "note": "Spec priority column is '-'; documented only in V0 (LIMITATIONS)."
+    },
+    {
+      "id": "E10",
+      "group": "E",
+      "title": "Decoder stalled",
+      "expected": "DETECTED",
+      "expected_reasons": [],
+      "expected_detail": "heartbeat alert",
+      "priority": "P1",
+      "demo": false,
+      "v3_ref": [
+        13
+      ],
+      "owasp": [],
+      "source": "20_ §13",
+      "status": "implemented"
+    },
+    {
+      "id": "E11",
+      "group": "E",
+      "title": "Verifier session with hostile TimeZone/DateStyle/bytea_output",
+      "expected": "VERIFIED",
+      "expected_reasons": [],
+      "expected_detail": "byte-identical evidence and the same verdict (pinned settings)",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [],
+      "source": "plan §3.0 #5, §3.8 (spike S2)",
+      "status": "implemented",
+      "note": "Run A01 while the decode session starts with hostile settings; the verifier pins and asserts them (plan §3.0 #5)."
+    },
+    {
+      "id": "F01",
+      "group": "F",
+      "title": "Statement signed by wrong key",
+      "expected": "DETECTED",
+      "expected_reasons": [],
+      "expected_detail": "DETECTED by statement verify",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [
+        15
+      ],
+      "owasp": [],
+      "source": "20_ §13",
+      "status": "implemented"
+    },
+    {
+      "id": "F02",
+      "group": "F",
+      "title": "Payload byte flipped",
+      "expected": "DETECTED",
+      "expected_reasons": [],
+      "expected_detail": "DETECTED",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [
+        15
+      ],
+      "owasp": [],
+      "source": "20_ §13",
+      "status": "implemented"
+    },
+    {
+      "id": "F03",
+      "group": "F",
+      "title": "Statement deleted from chain",
+      "expected": "DETECTED",
+      "expected_reasons": [],
+      "expected_detail": "DETECTED (prev break vs published head)",
+      "priority": "P1",
+      "demo": false,
+      "v3_ref": [
+        15
+      ],
+      "owasp": [],
+      "source": "20_ §13",
+      "status": "implemented"
+    },
+    {
+      "id": "F04",
+      "group": "F",
+      "title": "Statement presented for another deployment",
+      "expected": "DETECTED",
+      "expected_reasons": [],
+      "expected_detail": "DETECTED (subject mismatch)",
+      "priority": "P1",
+      "demo": false,
+      "v3_ref": [
+        15
+      ],
+      "owasp": [],
+      "source": "20_ §13",
+      "status": "implemented"
+    },
+    {
+      "id": "G01",
+      "group": "G",
+      "title": "Hijacked agent/approver signs in-mandate transfer to attacker-controlled account",
+      "expected": "OUTSIDE SCOPE",
+      "expected_reasons": [],
+      "expected_detail": "OUTSIDE SCOPE (VERIFIED); asserted and documented",
+      "priority": "P0",
+      "demo": true,
+      "v3_ref": [],
+      "owasp": [
+        "ASI01"
+      ],
+      "source": "20_ §13",
+      "status": "retired",
+      "retired": "V7 threat model A1: a manipulated model acting inside policy is limited by policies, budgets and approvals, not detected; docs/THREAT_MODEL.md residual risks.",
+      "note": "The honest-limit case: VERIFIED is asserted. G01b (payee allowlist BLOCKS it) is pending ADR-009; see pending[]."
+    },
+    {
+      "id": "G02",
+      "group": "G",
+      "title": "Stolen principal key",
+      "expected": "OUTSIDE SCOPE",
+      "expected_reasons": [],
+      "expected_detail": "OUTSIDE SCOPE (VERIFIED until revoked)",
+      "priority": "P1",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [
+        "ASI03"
+      ],
+      "source": "20_ §13",
+      "status": "superseded",
+      "superseded_by": "J02"
+    },
+    {
+      "id": "G03",
+      "group": "G",
+      "title": "pg_net / dblink call from a privileged path",
+      "expected": "OUTSIDE SCOPE",
+      "expected_reasons": [],
+      "expected_detail": "OUTSIDE SCOPE",
+      "priority": "P1",
+      "demo": false,
+      "v3_ref": [
+        18
+      ],
+      "owasp": [],
+      "source": "20_ §13",
+      "status": "retired",
+      "retired": "sqlguard refuses dangerous functions such as dblink_exec (internal/sqlguard TestCorpus); pg_net is the same class."
+    },
+    {
+      "id": "G04",
+      "group": "G",
+      "title": "Superuser edits WAL / engine",
+      "expected": "OUTSIDE SCOPE",
+      "expected_reasons": [],
+      "expected_detail": "OUTSIDE SCOPE",
+      "priority": "doc-only",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [],
+      "source": "20_ §13",
+      "status": "retired",
+      "retired": "A superuser who edits WAL or the engine is a compromised database host: outside the threat model (docs/THREAT_MODEL.md)."
+    },
+    {
+      "id": "H01",
+      "group": "H",
+      "title": "Prompt-injected DROP TABLE after reading a poisoned row",
+      "expected": "DENIED",
+      "expected_reasons": [],
+      "expected_detail": "DENIED (block-destructive-sql); permissive policy: BLOCKED (statement_refused)",
+      "priority": "P0",
+      "demo": true,
+      "v3_ref": [],
+      "owasp": [
+        "ASI01",
+        "ASI02"
+      ],
+      "source": "prompts-v7/S18.md",
+      "status": "implemented"
+    },
+    {
+      "id": "H02",
+      "group": "H",
+      "title": "DELETE without WHERE",
+      "expected": "DENIED",
+      "expected_reasons": [],
+      "expected_detail": "DENIED (block-unbounded-writes)",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [
+        "ASI02"
+      ],
+      "source": "prompts-v7/S18.md",
+      "status": "implemented"
+    },
+    {
+      "id": "H03",
+      "group": "H",
+      "title": "Multi-statement smuggling, including a stacked COMMIT;",
+      "expected": "DENIED",
+      "expected_reasons": [],
+      "expected_detail": "DENIED (block-multi-statement); permissive policy: BLOCKED (statement_refused)",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [
+        "ASI02"
+      ],
+      "source": "prompts-v7/S18.md",
+      "status": "implemented"
+    },
+    {
+      "id": "H04",
+      "group": "H",
+      "title": "Comment-obfuscated DDL (block, nested and inline comments)",
+      "expected": "DENIED",
+      "expected_reasons": [],
+      "expected_detail": "DENIED (block-destructive-sql); permissive policy: BLOCKED (statement_refused)",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [
+        "ASI02"
+      ],
+      "source": "prompts-v7/S18.md",
+      "status": "implemented"
+    },
+    {
+      "id": "H05",
+      "group": "H",
+      "title": "COPY … TO PROGRAM",
+      "expected": "DENIED",
+      "expected_reasons": [],
+      "expected_detail": "DENIED (block-copy); permissive policy: BLOCKED (statement_refused)",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [
+        "ASI02"
+      ],
+      "source": "prompts-v7/S18.md",
+      "status": "implemented"
+    },
+    {
+      "id": "H06",
+      "group": "H",
+      "title": "DO $$ … $$ block",
+      "expected": "DENIED",
+      "expected_reasons": [],
+      "expected_detail": "DENIED (block-do); permissive policy: BLOCKED (statement_refused)",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [
+        "ASI02"
+      ],
+      "source": "prompts-v7/S18.md",
+      "status": "implemented"
+    },
+    {
+      "id": "H07",
+      "group": "H",
+      "title": "CTE write hidden in a SELECT",
+      "expected": "DENIED",
+      "expected_reasons": [],
+      "expected_detail": "DENIED (block-hidden-writes); via postgres.query: BLOCKED (statement_refused)",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [
+        "ASI02"
+      ],
+      "source": "prompts-v7/S18.md",
+      "status": "implemented"
+    },
+    {
+      "id": "H08",
+      "group": "H",
+      "title": "Trigger fan-out: the agent reports 1 row, Postgres commits 301",
+      "expected": "MISMATCH",
+      "expected_reasons": [],
+      "expected_detail": "MISMATCH (L2: rows outside the expected footprint)",
+      "priority": "P0",
+      "demo": true,
+      "v3_ref": [],
+      "owasp": [
+        "ASI02"
+      ],
+      "source": "prompts-v7/S18.md",
+      "status": "implemented"
+    },
+    {
+      "id": "H09",
+      "group": "H",
+      "title": "Trigger changes a column outside the SET list",
+      "expected": "MISMATCH",
+      "expected_reasons": [],
+      "expected_detail": "MISMATCH (L2: column outside the SET list)",
+      "priority": "P1",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [
+        "ASI02"
+      ],
+      "source": "prompts-v7/S18.md",
+      "status": "implemented"
+    },
+    {
+      "id": "H10",
+      "group": "H",
+      "title": "Forged deedglass marker from another session, no ledger row (V7 analogue of D01)",
+      "expected": "DETECTED",
+      "expected_reasons": [],
+      "expected_detail": "DETECTED (forged_marker alert; no action's verdict changes)",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [
+        "ASI02"
+      ],
+      "source": "prompts-v7/S18.md",
+      "status": "implemented"
+    },
+    {
+      "id": "H11",
+      "group": "H",
+      "title": "Write to a watched table without REPLICA IDENTITY FULL",
+      "expected": "UNVERIFIABLE",
+      "expected_reasons": [],
+      "expected_detail": "UNVERIFIABLE (replica identity gap; never MISMATCH)",
+      "priority": "P1",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [
+        "ASI02"
+      ],
+      "source": "prompts-v7/S18.md",
+      "status": "implemented"
+    },
+    {
+      "id": "J01",
+      "group": "J",
+      "title": "Call with a suspended agent's key",
+      "expected": "REJECTED",
+      "expected_reasons": [],
+      "expected_detail": "REJECTED (agent_suspended)",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [
+        "ASI03"
+      ],
+      "source": "prompts-v7/S18.md",
+      "status": "implemented"
+    },
+    {
+      "id": "J02",
+      "group": "J",
+      "title": "Call with a revoked key",
+      "expected": "REJECTED",
+      "expected_reasons": [],
+      "expected_detail": "REJECTED (api_key_revoked)",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [
+        "ASI03"
+      ],
+      "source": "prompts-v7/S18.md",
+      "status": "implemented"
+    },
+    {
+      "id": "J03",
+      "group": "J",
+      "title": "Signed-intent replay, sequential and 16 at once",
+      "expected": "REJECTED",
+      "expected_reasons": [],
+      "expected_detail": "REJECTED (intent_replay); the first use executes exactly once",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [
+        "ASI03"
+      ],
+      "source": "prompts-v7/S18.md",
+      "status": "implemented"
+    },
+    {
+      "id": "J04",
+      "group": "J",
+      "title": "Budget burst: 200 calls in 1 s against 60/min",
+      "expected": "DENIED",
+      "expected_reasons": [],
+      "expected_detail": "DENIED (budget_exceeded) after exactly 60 executed",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [
+        "ASI10"
+      ],
+      "source": "prompts-v7/S18.md",
+      "status": "implemented"
+    },
+    {
+      "id": "K01",
+      "group": "K",
+      "title": "SSRF to 169.254.169.254 via the REST connector",
+      "expected": "BLOCKED",
+      "expected_reasons": [],
+      "expected_detail": "BLOCKED (destination_blocked at config and at dial; 0 packets)",
+      "priority": "P0",
+      "demo": true,
+      "v3_ref": [],
+      "owasp": [
+        "ASI02"
+      ],
+      "source": "prompts-v7/S18.md",
+      "status": "implemented"
+    },
+    {
+      "id": "K02",
+      "group": "K",
+      "title": "SSRF via redirect (to metadata, and cross-host)",
+      "expected": "BLOCKED",
+      "expected_reasons": [],
+      "expected_detail": "BLOCKED (redirect refused; 0 hits on the target)",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [
+        "ASI02"
+      ],
+      "source": "prompts-v7/S18.md",
+      "status": "implemented"
+    },
+    {
+      "id": "K03",
+      "group": "K",
+      "title": "Credential exfiltration through an upstream error message",
+      "expected": "REDACTED",
+      "expected_reasons": [],
+      "expected_detail": "REDACTED (0 sentinel hits in responses, logs, events, deeds)",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [
+        "ASI03"
+      ],
+      "source": "prompts-v7/S18.md",
+      "status": "implemented"
+    },
+    {
+      "id": "K04",
+      "group": "K",
+      "title": "Tool-name confusion by an upstream MCP server",
+      "expected": "DENIED",
+      "expected_reasons": [],
+      "expected_detail": "DENIED (default) for ASCII look-alikes; non-ASCII names hidden and REJECTED (tool_unknown)",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [
+        "ASI02"
+      ],
+      "source": "prompts-v7/S18.md",
+      "status": "implemented"
+    },
+    {
+      "id": "W01",
+      "group": "W",
+      "title": "The hero: an AFTER trigger ships 300 other orders when one order ships",
+      "expected": "MISMATCH",
+      "expected_reasons": [
+        "ROW_COUNT_EXCEEDED",
+        "UNEXPECTED_KEY"
+      ],
+      "expected_detail": "MISMATCH (L2: Postgres changed 301 rows in public.orders, the agent reported 1; 300 rows outside id = 42)",
+      "priority": "P0",
+      "demo": true,
+      "v3_ref": [],
+      "owasp": [
+        "ASI02"
+      ],
+      "source": "prompts-v7/S21.md",
+      "status": "implemented"
+    },
+    {
+      "id": "W02",
+      "group": "W",
+      "title": "A BEFORE trigger also sets total_cents = 0 on the row the statement names",
+      "expected": "MISMATCH",
+      "expected_reasons": [
+        "UNEXPECTED_COLUMN"
+      ],
+      "expected_detail": "MISMATCH (L2: a column outside the SET list changed)",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [
+        "ASI02"
+      ],
+      "source": "prompts-v7/S21.md",
+      "status": "implemented"
+    },
+    {
+      "id": "W03",
+      "group": "W",
+      "title": "A BEFORE trigger rewrites NEW.status to 'cancelled'",
+      "expected": "MISMATCH",
+      "expected_reasons": [
+        "VALUE_MISMATCH"
+      ],
+      "expected_detail": "MISMATCH at L1 and at L2 (value_mismatch: the committed value isn't the SET literal); the claim is L2",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [
+        "ASI02"
+      ],
+      "source": "prompts-v7/S21.md",
+      "status": "implemented"
+    },
+    {
+      "id": "W04",
+      "group": "W",
+      "title": "An AFTER trigger deletes another row of public.orders",
+      "expected": "MISMATCH",
+      "expected_reasons": [
+        "UNEXPECTED_OPERATION"
+      ],
+      "expected_detail": "MISMATCH (L2: a DELETE where the statement only updates rows)",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [
+        "ASI02"
+      ],
+      "source": "prompts-v7/S21.md",
+      "status": "implemented"
+    },
+    {
+      "id": "W05",
+      "group": "W",
+      "title": "Another session emits a transactional deedglass marker naming a live action",
+      "expected": "DETECTED",
+      "expected_reasons": [],
+      "expected_detail": "DETECTED (forged_marker frame and a decoder.alert); the live action is L2 · VERIFIED from its own frame",
+      "priority": "P1",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [
+        "ASI02"
+      ],
+      "source": "prompts-v7/S21.md",
+      "status": "implemented"
+    },
+    {
+      "id": "W06",
+      "group": "W",
+      "title": "A superuser writes a second ledger row and marker for an action",
+      "expected": "MISMATCH",
+      "expected_reasons": [
+        "MULTIPLE_TRANSACTIONS"
+      ],
+      "expected_detail": "MISMATCH (L2: multiple_transactions), as an amendment deed when the action was already sealed",
+      "priority": "P1",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [
+        "ASI02"
+      ],
+      "source": "prompts-v7/S21.md",
+      "status": "implemented"
+    },
+    {
+      "id": "W07",
+      "group": "W",
+      "title": "REPLICA IDENTITY DEFAULT on the target table, a clean update, verify: L2",
+      "expected": "UNVERIFIABLE",
+      "expected_reasons": [
+        "OLD_IMAGE_MISSING"
+      ],
+      "expected_detail": "UNVERIFIABLE (L2 gap old_image_missing); never MISMATCH",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [
+        "ASI02"
+      ],
+      "source": "prompts-v7/S21.md",
+      "status": "implemented"
+    },
+    {
+      "id": "W08",
+      "group": "W",
+      "title": "The W01 trigger on a REPLICA IDENTITY DEFAULT table",
+      "expected": "MISMATCH",
+      "expected_reasons": [
+        "ROW_COUNT_EXCEEDED"
+      ],
+      "expected_detail": "MISMATCH (L2: row_count_exceeded; the violation beats the old_image_missing gap)",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [
+        "ASI02"
+      ],
+      "source": "prompts-v7/S21.md",
+      "status": "implemented"
+    },
+    {
+      "id": "W09",
+      "group": "W",
+      "title": "UPDATE … FROM another table, verify: L2",
+      "expected": "UNVERIFIABLE",
+      "expected_reasons": [
+        "FOOTPRINT_UNKNOWN"
+      ],
+      "expected_detail": "UNVERIFIABLE (L2 gap footprint_unknown; the claim follows the required level); never MISMATCH",
+      "priority": "P1",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [
+        "ASI02"
+      ],
+      "source": "prompts-v7/S21.md",
+      "status": "implemented"
+    },
+    {
+      "id": "W10",
+      "group": "W",
+      "title": "The decoder is held back, the action seals at the L2 timeout, then the decoder catches up",
+      "expected": "VERIFIED",
+      "expected_reasons": [
+        "L2_TIMEOUT"
+      ],
+      "expected_detail": "Action deed UNVERIFIABLE (l2_timeout); then an amendment deed L2 · VERIFIED that amends it; the chain verifies",
+      "priority": "P1",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [],
+      "source": "prompts-v7/S21.md",
+      "status": "implemented"
+    },
+    {
+      "id": "W11",
+      "group": "W",
+      "title": "The replication slot is dropped while an action waits for L2",
+      "expected": "UNVERIFIABLE",
+      "expected_reasons": [
+        "SLOT_DROPPED"
+      ],
+      "expected_detail": "UNVERIFIABLE (L2 gap slot_dropped); never MISMATCH",
+      "priority": "P1",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [],
+      "source": "prompts-v7/S21.md",
+      "status": "implemented"
+    },
+    {
+      "id": "W12",
+      "group": "W",
+      "title": "deedglass_pub dropped and re-created around an action (PG 18)",
+      "expected": "UNVERIFIABLE",
+      "expected_reasons": [
+        "PUBLICATION_GAP"
+      ],
+      "expected_detail": "UNVERIFIABLE (L2 gap publication_gap); never MISMATCH",
+      "priority": "P1",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [],
+      "source": "prompts-v7/S21.md",
+      "status": "implemented"
+    },
+    {
+      "id": "W13",
+      "group": "W",
+      "title": "A ledger row whose sql_digest differs from the authorized SQL (a simulated compromised path)",
+      "expected": "MISMATCH",
+      "expected_reasons": [
+        "LEDGER_MISMATCH"
+      ],
+      "expected_detail": "MISMATCH (L2: ledger_mismatch naming sql_digest, never the values)",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [
+        "ASI02"
+      ],
+      "source": "prompts-v7/S21.md",
+      "status": "implemented"
+    },
+    {
+      "id": "L01",
+      "group": "L",
+      "title": "Approval link replay: the emailed link used again after it approved",
+      "expected": "REJECTED",
+      "expected_reasons": [],
+      "expected_detail": "REJECTED (approval_link_invalid on every reuse; the action ran once)",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [
+        "ASI03"
+      ],
+      "source": "prompts-v7/S22.md",
+      "status": "implemented"
+    },
+    {
+      "id": "L02",
+      "group": "L",
+      "title": "Another approver's token: a link presented after its owner already countersigned a four-eyes approval",
+      "expected": "REJECTED",
+      "expected_reasons": [],
+      "expected_detail": "REJECTED (approval_link_invalid or already_countersigned; the approval stays at 1 of 2 and nothing runs)",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [
+        "ASI03"
+      ],
+      "source": "prompts-v7/S22.md",
+      "status": "implemented"
+    },
+    {
+      "id": "L03",
+      "group": "L",
+      "title": "Self-approval through Deedglass-On-Behalf-Of naming the approver",
+      "expected": "REJECTED",
+      "expected_reasons": [],
+      "expected_detail": "REJECTED (self_approval; nothing runs until another approver countersigns)",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [
+        "ASI03"
+      ],
+      "source": "prompts-v7/S22.md",
+      "status": "implemented"
+    },
+    {
+      "id": "L04",
+      "group": "L",
+      "title": "An agent key approving its own action",
+      "expected": "REJECTED",
+      "expected_reasons": [],
+      "expected_detail": "REJECTED (approval_needs_person; the approval stays pending and nothing runs)",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [
+        "ASI03"
+      ],
+      "source": "prompts-v7/S22.md",
+      "status": "implemented"
+    },
+    {
+      "id": "L05",
+      "group": "L",
+      "title": "A decision after the approval expired",
+      "expected": "REJECTED",
+      "expected_reasons": [],
+      "expected_detail": "REJECTED (approval_expired; nothing runs)",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [
+        "ASI03"
+      ],
+      "source": "prompts-v7/S22.md",
+      "status": "implemented"
+    },
+    {
+      "id": "L06",
+      "group": "L",
+      "title": "A decision on a stale context digest",
+      "expected": "REJECTED",
+      "expected_reasons": [],
+      "expected_detail": "REJECTED (context_changed; the approval stays pending and nothing runs)",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [
+        "ASI03"
+      ],
+      "source": "prompts-v7/S22.md",
+      "status": "implemented"
+    },
+    {
+      "id": "L07",
+      "group": "L",
+      "title": "A webhook URL to the cloud metadata service",
+      "expected": "BLOCKED",
+      "expected_reasons": [],
+      "expected_detail": "BLOCKED (destination_blocked at create; 0 deliveries)",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [
+        "ASI02"
+      ],
+      "source": "prompts-v7/S22.md",
+      "status": "implemented"
+    },
+    {
+      "id": "L08",
+      "group": "L",
+      "title": "A forged webhook signature checked with webhook.Verify",
+      "expected": "REJECTED",
+      "expected_reasons": [],
+      "expected_detail": "REJECTED (ErrSignature for a wrong secret or changed body; ErrTimestamp outside 300 s)",
+      "priority": "P1",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [
+        "ASI03"
+      ],
+      "source": "prompts-v7/S22.md",
+      "status": "implemented"
+    },
+    {
+      "id": "U01",
+      "group": "U",
+      "title": "An undo whose rows change between the preview and the run",
+      "expected": "REJECTED",
+      "expected_reasons": [],
+      "expected_detail": "REJECTED (undo_conflict; the undo is failed and Postgres changed no row)",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [
+        "ASI02"
+      ],
+      "source": "prompts-v7/S23.md",
+      "status": "implemented"
+    },
+    {
+      "id": "U02",
+      "group": "U",
+      "title": "An undo request that smuggles values or a tampered plan digest",
+      "expected": "REJECTED",
+      "expected_reasons": [],
+      "expected_detail": "REJECTED (validation_failed for any field beyond plan_digest, reason, allow_triggers and wait; undo_plan_stale for a digest Deedglass didn't plan; no row changes)",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [
+        "ASI02"
+      ],
+      "source": "prompts-v7/S23.md",
+      "status": "implemented"
+    },
+    {
+      "id": "U03",
+      "group": "U",
+      "title": "An undo of an action after a forged marker names it in another transaction",
+      "expected": "REJECTED",
+      "expected_reasons": [],
+      "expected_detail": "REJECTED (the forged transaction never becomes evidence: the plan holds only the action's own bound transaction, and the forged rows stay as they are)",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [
+        "ASI02"
+      ],
+      "source": "prompts-v7/S23.md",
+      "status": "implemented"
+    },
+    {
+      "id": "U04",
+      "group": "U",
+      "title": "An agent calling the internal undo tool through POST /v1/actions",
+      "expected": "DENIED",
+      "expected_reasons": [],
+      "expected_detail": "DENIED (tool_unknown, recorded and sealed; nothing reaches Postgres)",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [
+        "ASI03"
+      ],
+      "source": "prompts-v7/S23.md",
+      "status": "implemented"
+    },
+    {
+      "id": "U05",
+      "group": "U",
+      "title": "An undo of another org's action",
+      "expected": "REJECTED",
+      "expected_reasons": [],
+      "expected_detail": "REJECTED (not_found for preview and run, exactly as an unknown id; nothing is planned)",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [
+        "ASI03"
+      ],
+      "source": "prompts-v7/S23.md",
+      "status": "implemented"
+    },
+    {
+      "id": "O01",
+      "group": "O",
+      "title": "Another org closes, excludes from, previews and undoes a watched session",
+      "expected": "REJECTED",
+      "expected_reasons": [],
+      "expected_detail": "REJECTED (not_found for close, exclude, preview and undo, exactly as an unknown id; the session stays open with nothing excluded)",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [
+        "ASI03"
+      ],
+      "source": "prompts-v7/S50.md",
+      "status": "implemented"
+    },
+    {
+      "id": "O02",
+      "group": "O",
+      "title": "An agent hides from its own recording: opens, closes, excludes and undoes a session with its key; a person's exclude is recorded",
+      "expected": "DENIED",
+      "expected_reasons": [],
+      "expected_detail": "DENIED (403 insufficient_scope for every agent-key call; the person's exclude is sealed as observe.frame_excluded and the undo preview and its SQL list the transaction left out)",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [
+        "ASI03"
+      ],
+      "source": "prompts-v7/S50.md",
+      "status": "implemented"
+    },
+    {
+      "id": "P02",
+      "group": "P",
+      "title": "Approval X's emailed link used with approval Y's context digest, and a link voided when its approval was cancelled",
+      "expected": "REJECTED",
+      "expected_reasons": [],
+      "expected_detail": "REJECTED (context_changed for X's link carrying Y's digest; approval_link_invalid for the voided link); X stays pending and Y gets no vote",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [
+        "ASI03"
+      ],
+      "source": "prompts-v7/S34.md",
+      "status": "implemented"
+    },
+    {
+      "id": "P03",
+      "group": "P",
+      "title": "Forged Slack interaction: a bad signature, a valid signature 6 min old, and a replay of a valid payload",
+      "expected": "REJECTED",
+      "expected_reasons": [],
+      "expected_detail": "REJECTED (a bare 401 for the bad and the stale signature; the replay answers 200 and changes nothing); the approval is decided once",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [
+        "ASI03"
+      ],
+      "source": "prompts-v7/S34.md",
+      "status": "implemented"
+    },
+    {
+      "id": "P04",
+      "group": "P",
+      "title": "Self-approval in Slack: the person the action runs for clicks Approve",
+      "expected": "REJECTED",
+      "expected_reasons": [],
+      "expected_detail": "REJECTED (self_approval; the approval stays pending and nothing runs)",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [
+        "ASI03"
+      ],
+      "source": "prompts-v7/S34.md",
+      "status": "implemented"
+    },
+    {
+      "id": "P05",
+      "group": "P",
+      "title": "Two concurrent approves by the same person on a four-eyes approval, 10 times",
+      "expected": "REJECTED",
+      "expected_reasons": [],
+      "expected_detail": "REJECTED (already_countersigned for the second vote every time); 1 of 2 remains and nothing runs",
+      "priority": "P1",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [
+        "ASI03"
+      ],
+      "source": "prompts-v7/S34.md",
+      "status": "implemented"
+    },
+    {
+      "id": "P06",
+      "group": "P",
+      "title": "A viewer calls approve, activate policy, stop-all and create key",
+      "expected": "REJECTED",
+      "expected_reasons": [],
+      "expected_detail": "REJECTED (approver_not_eligible for approve; insufficient_role for the other three); nothing changes",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [
+        "ASI03"
+      ],
+      "source": "prompts-v7/S34.md",
+      "status": "implemented"
+    },
+    {
+      "id": "P07",
+      "group": "P",
+      "title": "Cross-site POST to a Console mutation without the CSRF header, and with a CSRF token from another session",
+      "expected": "REJECTED",
+      "expected_reasons": [],
+      "expected_detail": "REJECTED (csrf_failed); no state change",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [
+        "ASI03"
+      ],
+      "source": "prompts-v7/S34.md",
+      "status": "implemented"
+    },
+    {
+      "id": "P08",
+      "group": "P",
+      "title": "SSE /v1/events from org B with a Last-Event-ID taken from org A's stream",
+      "expected": "REJECTED",
+      "expected_reasons": [],
+      "expected_detail": "REJECTED (no org A event delivered; 0 ids leaked)",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [
+        "ASI03"
+      ],
+      "source": "prompts-v7/S34.md",
+      "status": "implemented"
+    },
+    {
+      "id": "P10",
+      "group": "P",
+      "title": "Stop-all mid-burst (S18's J05): 200 calls in flight",
+      "expected": "REJECTED",
+      "expected_reasons": [],
+      "expected_detail": "REJECTED (org_stopped) for every call that starts after stop + 2 s; none executes after",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [
+        "ASI10"
+      ],
+      "source": "prompts-v7/S34.md",
+      "status": "implemented"
+    },
+    {
+      "id": "Q01",
+      "group": "Q",
+      "title": "Upstream MCP tools/list with instruction-bearing descriptions (\"ignore previous instructions\", hidden Unicode tag characters, an <IMPORTANT> block)",
+      "expected": "DETECTED",
+      "expected_reasons": [],
+      "expected_detail": "DETECTED (connector.tool_hidden, description_flagged, sealed for each tool); the tools are hidden from tools/list and a call is tool_unknown",
+      "priority": "P0",
+      "demo": true,
+      "v3_ref": [],
+      "owasp": [
+        "ASI01"
+      ],
+      "source": "prompts-v7/S34.md",
+      "status": "implemented"
+    },
+    {
+      "id": "Q02",
+      "group": "Q",
+      "title": "Tool definition changes after the first listing (rug pull: same name, new schema or description)",
+      "expected": "DENIED",
+      "expected_reasons": [],
+      "expected_detail": "DENIED (tool_unknown: the changed tool is hidden and refused until Deedglass restarts; nothing reaches the upstream); connector.tool_hidden (definition_changed) is sealed",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [
+        "ASI02"
+      ],
+      "source": "prompts-v7/S34.md",
+      "status": "implemented"
+    },
+    {
+      "id": "Q03",
+      "group": "Q",
+      "title": "Tool-name shadowing: two upstreams expose read_file on the same Gate",
+      "expected": "REJECTED",
+      "expected_reasons": [],
+      "expected_detail": "REJECTED (validation_failed for the unqualified name read_file); each qualified name reaches only its own upstream",
+      "priority": "P1",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [
+        "ASI02"
+      ],
+      "source": "prompts-v7/S34.md",
+      "status": "implemented"
+    },
+    {
+      "id": "Q04",
+      "group": "Q",
+      "title": "Upstream returns a 50 MiB result, and a result nested 10,000 deep",
+      "expected": "BLOCKED",
+      "expected_reasons": [],
+      "expected_detail": "BLOCKED (too_large for the 50 MiB result, read no further than 4 MiB; upstream_error for the 10,000-deep result); reported as unknown, never as executed; the action is sealed; server memory grows < 64 MiB",
+      "priority": "P1",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [
+        "ASI02"
+      ],
+      "source": "prompts-v7/S34.md",
+      "status": "implemented"
+    },
+    {
+      "id": "Q05",
+      "group": "Q",
+      "title": "Upstream down or hanging (fail-closed default)",
+      "expected": "BLOCKED",
+      "expected_reasons": [],
+      "expected_detail": "BLOCKED (connector_unavailable for a server that is down; timeout for one that hangs); nothing reported as executed",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [
+        "ASI02"
+      ],
+      "source": "prompts-v7/S34.md",
+      "status": "implemented"
+    },
+    {
+      "id": "Q06",
+      "group": "Q",
+      "title": "Upstream MCP server sends sampling/createMessage and elicitation/create through mcp wrap",
+      "expected": "BLOCKED",
+      "expected_reasons": [],
+      "expected_detail": "BLOCKED (answered with a JSON-RPC error and never relayed to the client unless --allow-server-requests names the method; logged)",
+      "priority": "P1",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [
+        "ASI01"
+      ],
+      "source": "prompts-v7/S34.md",
+      "status": "implemented"
+    },
+    {
+      "id": "Q07",
+      "group": "Q",
+      "title": "Stripe live key smuggled via PUT /v1/connectors/{id}/credentials and PATCH /v1/connectors/{id}",
+      "expected": "REJECTED",
+      "expected_reasons": [],
+      "expected_detail": "REJECTED (stripe_live_key_refused for the credential; validation_failed for a key in PATCH's config or description); the vault is unchanged",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [
+        "ASI03"
+      ],
+      "source": "prompts-v7/S34.md",
+      "status": "implemented"
+    },
+    {
+      "id": "Q08",
+      "group": "Q",
+      "title": "Webhook to a host that resolves to cloud metadata at delivery (rebinding), and a webhook that redirects to loopback",
+      "expected": "BLOCKED",
+      "expected_reasons": [],
+      "expected_detail": "BLOCKED (destination blocked at delivery, 0 dials; a redirect is never followed, 0 hits on its target)",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [
+        "ASI02"
+      ],
+      "source": "prompts-v7/S34.md",
+      "status": "implemented"
+    },
+    {
+      "id": "R01",
+      "group": "R",
+      "title": "Policy YAML bomb (alias expansion, 60,000 nodes, 10^6 nodes, a 20 MiB file)",
+      "expected": "REJECTED",
+      "expected_reasons": [],
+      "expected_detail": "REJECTED (policy_invalid: yaml_alias and yaml_too_complex; request_too_large for 10^6 nodes and the 20 MiB file) in < 200 ms; server memory grows < 64 MiB",
+      "priority": "P1",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [
+        "ASI10"
+      ],
+      "source": "prompts-v7/S34.md",
+      "status": "implemented"
+    },
+    {
+      "id": "R02",
+      "group": "R",
+      "title": "CEL cost bomb (nested comprehensions at lint; a 20,000-item list at run time)",
+      "expected": "REJECTED",
+      "expected_reasons": [],
+      "expected_detail": "REJECTED (policy_invalid: cel_nesting and cel_cost at lint); at run time the rule stops at its limit and the action is denied, never allowed",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [
+        "ASI10"
+      ],
+      "source": "prompts-v7/S34.md",
+      "status": "implemented"
+    },
+    {
+      "id": "R03",
+      "group": "R",
+      "title": "Deed chain fork: a second deed after the same parent, and an exported chain with a spliced branch",
+      "expected": "DETECTED",
+      "expected_reasons": [],
+      "expected_detail": "DETECTED (the database refuses the second child through UNIQUE (org_id, prev_hash); deedglass verify reports chain_prev_hash_mismatch or chain_seq_out_of_order at seq N)",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [
+        "ASI02"
+      ],
+      "source": "prompts-v7/S34.md",
+      "status": "implemented"
+    },
+    {
+      "id": "R04",
+      "group": "R",
+      "title": "Clock-skewed signed intent (iat 10 min in the future and 10 min in the past)",
+      "expected": "REJECTED",
+      "expected_reasons": [],
+      "expected_detail": "REJECTED (intent_invalid: clock window)",
+      "priority": "P1",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [
+        "ASI03"
+      ],
+      "source": "prompts-v7/S34.md",
+      "status": "implemented"
+    },
+    {
+      "id": "R05",
+      "group": "R",
+      "title": "Prompt injection through the suggestion channel: tool names and rule ids crafted to steer the LLM phrasing",
+      "expected": "DETECTED",
+      "expected_reasons": [],
+      "expected_detail": "DETECTED (replies that break the phrasing rules are thrown away and the template stands; a reply that passes is marked as AI wording); the payload carries placeholders, never the org's names; the policy diff is never sent or changed",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [
+        "LLM06"
+      ],
+      "source": "prompts-v7/S34.md",
+      "status": "implemented"
+    },
+    {
+      "id": "R06",
+      "group": "R",
+      "title": "Oversized and deeply nested JSON on POST /v1/actions (1 MiB + 1, args 129 deep, a body 10,000 deep)",
+      "expected": "REJECTED",
+      "expected_reasons": [],
+      "expected_detail": "REJECTED (request_too_large for 1 MiB + 1; validation_failed for args 129 deep and the 10,000-deep body) in < 200 ms; server memory grows < 64 MiB",
+      "priority": "P1",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [
+        "ASI10"
+      ],
+      "source": "prompts-v7/S34.md",
+      "status": "implemented"
+    },
+    {
+      "id": "R07",
+      "group": "R",
+      "title": "Log injection: tool names and args carrying ANSI escapes and newlines reach CLI output, logs and the Console",
+      "expected": "REDACTED",
+      "expected_reasons": [],
+      "expected_detail": "REDACTED (control characters escaped in every sink; 0 raw ESC bytes)",
+      "priority": "P1",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [
+        "ASI01"
+      ],
+      "source": "prompts-v7/S34.md",
+      "status": "implemented"
+    },
+    {
+      "id": "I01",
+      "group": "I",
+      "title": "A conditional create (If-None-Exist) is answered 200 with an existing resource while the agent reports it created one",
+      "expected": "MISMATCH",
+      "expected_reasons": [],
+      "expected_detail": "MISMATCH at L1 (fhir_conditional_matched: the server returned an existing resource version and this action created none; never VERIFIED)",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [],
+      "source": "ops/adr/ADR-105-fhir-connector.md",
+      "status": "implemented"
+    },
+    {
+      "id": "I02",
+      "group": "I",
+      "title": "An update with no change: the server keeps the version and answers 200",
+      "expected": "VERIFIED",
+      "expected_reasons": [],
+      "expected_detail": "VERIFIED at L1 (the fields match) with the note fhir_no_new_version naming the unchanged version; the record never shows a new version",
+      "priority": "P1",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [],
+      "source": "ops/adr/ADR-105-fhir-connector.md",
+      "status": "implemented"
+    },
+    {
+      "id": "I03",
+      "group": "I",
+      "title": "The server stores a different value in a field the agent set and answers success",
+      "expected": "MISMATCH",
+      "expected_reasons": [],
+      "expected_detail": "MISMATCH at L1 (fhir_field_changed with the field's path; server-added meta and generated narrative don't count)",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [],
+      "source": "ops/adr/ADR-105-fhir-connector.md",
+      "status": "implemented"
+    },
+    {
+      "id": "I04",
+      "group": "I",
+      "title": "A 5xx after the server committed, and no version in _history carries the action's token",
+      "expected": "UNVERIFIABLE",
+      "expected_reasons": [],
+      "expected_detail": "UNVERIFIABLE (the action is unknown; fhir_history_no_match names the gap); never VERIFIED and never MISMATCH",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [],
+      "source": "ops/adr/ADR-105-fhir-connector.md",
+      "status": "implemented"
+    },
+    {
+      "id": "I05",
+      "group": "I",
+      "title": "Another writer changes the same resource while the action's call is open",
+      "expected": "DETECTED",
+      "expected_reasons": [],
+      "expected_detail": "DETECTED (the other writer's version is reported as out_of_band and isn't bound to the action; the action's verdict comes from its own transaction only)",
+      "priority": "P1",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [],
+      "source": "ops/adr/ADR-105-fhir-connector.md",
+      "status": "implemented"
+    },
+    {
+      "id": "I06",
+      "group": "I",
+      "title": "Another client sends a write carrying the action's X-Request-ID token",
+      "expected": "DETECTED",
+      "expected_reasons": [],
+      "expected_detail": "DETECTED (the version is reported as request_id_reused and is never bound: binding needs the version the server reported to this action, so the forged version never makes the action VERIFIED)",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [
+        "ASI03"
+      ],
+      "source": "ops/adr/ADR-105-fhir-connector.md",
+      "status": "implemented"
+    },
+    {
+      "id": "I07",
+      "group": "I",
+      "title": "One create commits two resource versions in one transaction (a placeholder reference target) while the call reports one",
+      "expected": "MISMATCH",
+      "expected_reasons": [],
+      "expected_detail": "MISMATCH at L2 (fhir_extra_versions: the action's transaction committed 2 resource versions, the call reported 1; the extra resource is named)",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [],
+      "source": "ops/adr/ADR-105-fhir-connector.md",
+      "status": "implemented"
+    },
+    {
+      "id": "I08",
+      "group": "I",
+      "title": "A HAPI version row stored as JSONC in a large object (pre-7.0 storage)",
+      "expected": "UNVERIFIABLE",
+      "expected_reasons": [],
+      "expected_detail": "UNVERIFIABLE (L2 gap large_object_not_replicated); never MISMATCH and never VERIFIED",
+      "priority": "P1",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [],
+      "source": "ops/adr/ADR-105-fhir-connector.md",
+      "status": "implemented"
+    },
+    {
+      "id": "I09",
+      "group": "I",
+      "title": "An update with a stale If-Match: the server answers 412 (409 on HAPI)",
+      "expected": "NO EFFECT",
+      "expected_reasons": [],
+      "expected_detail": "NO EFFECT (fhir_version_conflict: the action is sealed as failed, isn't retried, and no version is created or claimed)",
+      "priority": "P1",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [],
+      "source": "ops/adr/ADR-105-fhir-connector.md",
+      "status": "implemented"
+    },
+    {
+      "id": "I10",
+      "group": "I",
+      "title": "A write to a resource type outside the connector's allowed_resource_types",
+      "expected": "DENIED",
+      "expected_reasons": [],
+      "expected_detail": "DENIED (no request leaves; a deed with decision deny is sealed; the server's history is unchanged)",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [
+        "ASI02"
+      ],
+      "source": "ops/adr/ADR-105-fhir-connector.md",
+      "status": "implemented"
+    },
+    {
+      "id": "I11",
+      "group": "I",
+      "title": "A planted patient identifier or clinical value in the request or result of a PHI-mode org's action",
+      "expected": "REDACTED",
+      "expected_reasons": [],
+      "expected_detail": "REDACTED (once the action is sealed the planted values appear in no action row, deed, event, export or log line of the org; only ids and digests remain)",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [],
+      "source": "ops/adr/ADR-105-fhir-connector.md",
+      "status": "implemented"
+    },
+    {
+      "id": "I12",
+      "group": "I",
+      "title": "A delete of a clinical resource under the healthcare-fhir pack",
+      "expected": "DENIED",
+      "expected_reasons": [],
+      "expected_detail": "DENIED (the pack's no-delete-clinical rule; no request leaves; the deed names the rule)",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [
+        "ASI02"
+      ],
+      "source": "ops/adr/ADR-105-fhir-connector.md",
+      "status": "implemented"
+    },
+    {
+      "id": "Y01",
+      "group": "Y",
+      "title": "Downgrade: a dual-sealed deed rewritten as a v1 deed and re-sealed with the stolen Ed25519 key alone, issued after the issuer's ML-DSA-65 key became active",
+      "expected": "DETECTED",
+      "expected_reasons": [],
+      "expected_detail": "DETECTED (seal_missing: the key set shows an ML-DSA-65 key active at issued_at, so an Ed25519-only deed is refused; never VERIFIED)",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [],
+      "source": "ops/adr/ADR-109-seal-v2-crypto-agility.md",
+      "status": "implemented"
+    },
+    {
+      "id": "Y02",
+      "group": "Y",
+      "title": "Stripped PQ seal: the ML-DSA-65 seal removed from a v2 envelope, the body unchanged",
+      "expected": "DETECTED",
+      "expected_reasons": [],
+      "expected_detail": "DETECTED (seal_missing: body.seal_keys still names the ML-DSA-65 key; the Ed25519 seal alone never passes)",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [],
+      "source": "ops/adr/ADR-109-seal-v2-crypto-agility.md",
+      "status": "implemented"
+    },
+    {
+      "id": "Y03",
+      "group": "Y",
+      "title": "Seal set rewritten: the ML-DSA-65 entry removed from body.seal_keys and from the envelope, and the deed re-sealed with the stolen Ed25519 key",
+      "expected": "DETECTED",
+      "expected_reasons": [],
+      "expected_detail": "DETECTED (seal_missing by the key-set rule; without the stolen key the edit is body_hash_mismatch)",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [],
+      "source": "ops/adr/ADR-109-seal-v2-crypto-agility.md",
+      "status": "implemented"
+    },
+    {
+      "id": "Y04",
+      "group": "Y",
+      "title": "Algorithm confusion against the key set: a seal labelled Ed25519 names the issuer's ML-DSA-65 key, and a seal labelled ML-DSA-65 names an Ed25519 key",
+      "expected": "DETECTED",
+      "expected_reasons": [],
+      "expected_detail": "DETECTED (seal_invalid: a seal is checked only with a key of its own algorithm, never under another)",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [],
+      "source": "ops/adr/ADR-109-seal-v2-crypto-agility.md",
+      "status": "implemented"
+    },
+    {
+      "id": "Y05",
+      "group": "Y",
+      "title": "Algorithm confusion inside the deed: an envelope seal entry names another alg or another key than body.seal_keys at the same position",
+      "expected": "DETECTED",
+      "expected_reasons": [],
+      "expected_detail": "DETECTED (seal_key_mismatch)",
+      "priority": "P1",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [],
+      "source": "ops/adr/ADR-109-seal-v2-crypto-agility.md",
+      "status": "implemented"
+    },
+    {
+      "id": "Y06",
+      "group": "Y",
+      "title": "Unknown algorithm: a deed whose seal_keys and seals name an algorithm this verifier does not implement",
+      "expected": "UNVERIFIABLE",
+      "expected_reasons": [],
+      "expected_detail": "UNVERIFIABLE (unsupported_algorithm, exit 2: the verifier cannot decide; never VERIFIED and never reported as altered)",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [],
+      "source": "ops/adr/ADR-109-seal-v2-crypto-agility.md",
+      "status": "implemented"
+    },
+    {
+      "id": "Y07",
+      "group": "Y",
+      "title": "A key set that also lists a key of an algorithm this verifier does not implement",
+      "expected": "VERIFIED",
+      "expected_reasons": [],
+      "expected_detail": "VERIFIED for deeds sealed by the set's known keys (the unknown key is kept and never used; only a deed that names it is unsupported_algorithm)",
+      "priority": "P1",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [],
+      "source": "ops/adr/ADR-109-seal-v2-crypto-agility.md",
+      "status": "implemented"
+    },
+    {
+      "id": "Y08",
+      "group": "Y",
+      "title": "Mixed-key chain: v1 Ed25519 deeds, an ML-DSA-65 key added beside Ed25519 by keys rotate, then v2 dual-sealed deeds, verified as one chain",
+      "expected": "VERIFIED",
+      "expected_reasons": [],
+      "expected_detail": "VERIFIED (the chain is intact across the format change; an Ed25519-only deed spliced in after the ML-DSA-65 key's activation is seal_missing)",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [],
+      "source": "ops/adr/ADR-109-seal-v2-crypto-agility.md",
+      "status": "implemented"
+    },
+    {
+      "id": "Y09",
+      "group": "Y",
+      "title": "Ed25519 as the only seal on a deed issued on or after 2035-01-01 (the NIST IR 8547 draft date)",
+      "expected": "DETECTED",
+      "expected_reasons": [],
+      "expected_detail": "DETECTED (seal_missing: the accept policy takes Ed25519 alone only for issued_at before 2035-01-01T00:00:00.000Z)",
+      "priority": "P1",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [],
+      "source": "ops/adr/ADR-109-seal-v2-crypto-agility.md",
+      "status": "implemented"
+    },
+    {
+      "id": "Y10",
+      "group": "Y",
+      "title": "The 2046 test: every release bundle since v0.1.0 verified by the v2 verifier, byte for byte unchanged",
+      "expected": "VERIFIED",
+      "expected_reasons": [],
+      "expected_detail": "VERIFIED (testdata/release-bundles with the CLI under --strict and with the browser verifier)",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [],
+      "source": "ops/adr/ADR-109-seal-v2-crypto-agility.md",
+      "status": "implemented"
+    },
+    {
+      "id": "Y11",
+      "group": "Y",
+      "title": "Cross-protocol replay: an ML-DSA-65 signature made over another domain tag (the v2 Ed25519 tag, the bundle tag, or the bare body_hash) presented as the deed's ML-DSA-65 seal",
+      "expected": "DETECTED",
+      "expected_reasons": [],
+      "expected_detail": "DETECTED (seal_invalid)",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [],
+      "source": "ops/adr/ADR-109-seal-v2-crypto-agility.md",
+      "status": "implemented"
+    },
+    {
+      "id": "Y12",
+      "group": "Y",
+      "title": "A seal by a revoked ML-DSA-65 key beside a valid Ed25519 seal",
+      "expected": "DETECTED",
+      "expected_reasons": [],
+      "expected_detail": "DETECTED (seal_key_revoked: every seal must pass; one good seal never covers a bad one)",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [],
+      "source": "ops/adr/ADR-109-seal-v2-crypto-agility.md",
+      "status": "implemented"
+    },
+    {
+      "id": "T01",
+      "group": "T",
+      "title": "A2A proxy: a web page on the same machine posts a simple cross-site request (text/plain body, ?A2A-Version=1.0 in the query, the page's Origin), which a browser sends without a preflight",
+      "expected": "REJECTED",
+      "expected_reasons": [],
+      "expected_detail": "REJECTED (browser_origin, HTTP 403: nothing reaches the Gate or the peer; the query-string version is never read)",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [],
+      "source": "ops/adr/ADR-116-attack-group-t-this-weeks-surfaces.md",
+      "status": "implemented"
+    },
+    {
+      "id": "T02",
+      "group": "T",
+      "title": "A2A proxy: DNS rebinding, a well-formed JSON-RPC request carrying the agent's key whose Host names the page's own domain",
+      "expected": "REJECTED",
+      "expected_reasons": [],
+      "expected_detail": "REJECTED (host_not_loopback, HTTP 421: nothing reaches the Gate or the peer, even with the right key)",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [],
+      "source": "ops/adr/ADR-116-attack-group-t-this-weeks-surfaces.md",
+      "status": "implemented"
+    },
+    {
+      "id": "T03",
+      "group": "T",
+      "title": "A2A proxy: a local process without the agent's key, with another key, or with the key sent as Basic",
+      "expected": "REJECTED",
+      "expected_reasons": [],
+      "expected_detail": "REJECTED (key_required, HTTP 401: nothing reaches the Gate or the peer)",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [],
+      "source": "ops/adr/ADR-116-attack-group-t-this-weeks-surfaces.md",
+      "status": "implemented"
+    },
+    {
+      "id": "T04",
+      "group": "T",
+      "title": "A2A proxy: a CORS preflight for a JSON request with custom headers, and the answers a page could read",
+      "expected": "REJECTED",
+      "expected_reasons": [],
+      "expected_detail": "REJECTED (cors_refused, HTTP 403; no answer from the proxy carries an Access-Control-* header)",
+      "priority": "P1",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [],
+      "source": "ops/adr/ADR-116-attack-group-t-this-weeks-surfaces.md",
+      "status": "implemented"
+    },
+    {
+      "id": "T05",
+      "group": "T",
+      "title": "A2A proxy: a captured SendMessage replayed through the proxy with the agent's key",
+      "expected": "OUTSIDE SCOPE",
+      "expected_reasons": [],
+      "expected_detail": "OUTSIDE SCOPE (each replay is a new action that the Gate decides and records; the proxy keeps no replay table, LIMITATIONS)",
+      "priority": "P1",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [],
+      "source": "ops/adr/ADR-116-attack-group-t-this-weeks-surfaces.md",
+      "status": "implemented"
+    },
+    {
+      "id": "T06",
+      "group": "T",
+      "title": "A2A proxy: the peer's Agent Card claims another agent's name",
+      "expected": "OUTSIDE SCOPE",
+      "expected_reasons": [],
+      "expected_detail": "OUTSIDE SCOPE (the hop's ref is the operator's --peer URL; the name is the card's own claim, recorded as given)",
+      "priority": "P1",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [],
+      "source": "ops/adr/ADR-116-attack-group-t-this-weeks-surfaces.md",
+      "status": "implemented"
+    },
+    {
+      "id": "T07",
+      "group": "T",
+      "title": "Debezium witness: a feed file edited to drop one change event from the action's transaction",
+      "expected": "UNVERIFIABLE",
+      "expected_reasons": [],
+      "expected_detail": "UNVERIFIABLE (feed_incomplete: a transaction with an event missing is never compared; never VERIFIED and never MISMATCH)",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [],
+      "source": "ops/adr/ADR-116-attack-group-t-this-weeks-surfaces.md",
+      "status": "implemented"
+    },
+    {
+      "id": "T08",
+      "group": "T",
+      "title": "Debezium witness: a feed larger than 1 GiB after gunzip (a gzip bomb, or an endless stdin)",
+      "expected": "REJECTED",
+      "expected_reasons": [],
+      "expected_detail": "REJECTED (feed_too_large, exit 2: reading stops at the cap; nothing is compared)",
+      "priority": "P1",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [],
+      "source": "ops/adr/ADR-116-attack-group-t-this-weeks-surfaces.md",
+      "status": "implemented"
+    },
+    {
+      "id": "T09",
+      "group": "T",
+      "title": "Shell guard: hook input that isn't a hook's JSON (or no deedglass on the agent's PATH)",
+      "expected": "OUTSIDE SCOPE",
+      "expected_reasons": [],
+      "expected_detail": "OUTSIDE SCOPE (fails open by design: exit 1 with nothing on stdout, so the agent's own permission rules decide; LIMITATIONS)",
+      "priority": "P1",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [],
+      "source": "ops/adr/ADR-116-attack-group-t-this-weeks-surfaces.md",
+      "status": "implemented"
+    },
+    {
+      "id": "T10",
+      "group": "T",
+      "title": "Head timestamps: an RFC 3161 token with its time edited, and a token from a TSA outside the reader's --tsa-roots",
+      "expected": "DETECTED",
+      "expected_reasons": [],
+      "expected_detail": "DETECTED (the edited token fails its signature; the other is refused as not from a TSA you trust)",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [],
+      "source": "ops/adr/ADR-116-attack-group-t-this-weeks-surfaces.md",
+      "status": "implemented"
+    },
+    {
+      "id": "T11",
+      "group": "T",
+      "title": "Head timestamps: a token checked without --tsa-roots",
+      "expected": "OUTSIDE SCOPE",
+      "expected_reasons": [],
+      "expected_detail": "OUTSIDE SCOPE (checked against the chain it carries: accepted as intact but unpinned, and verify warns tsa_not_pinned)",
+      "priority": "P1",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [],
+      "source": "ops/adr/ADR-116-attack-group-t-this-weeks-surfaces.md",
+      "status": "implemented"
+    },
+    {
+      "id": "T12",
+      "group": "T",
+      "title": "Independent verifiers: a bundle with one changed byte read by verifiers/python and verifiers/js",
+      "expected": "DETECTED",
+      "expected_reasons": [],
+      "expected_detail": "DETECTED (both refuse the bundle; neither reports it as intact)",
+      "priority": "P1",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [],
+      "source": "ops/adr/ADR-116-attack-group-t-this-weeks-surfaces.md",
+      "status": "implemented"
+    },
+    {
+      "id": "T13",
+      "group": "T",
+      "title": "connect: a Postgres URL with its password passed as a command-line argument",
+      "expected": "REJECTED",
+      "expected_reasons": [],
+      "expected_detail": "REJECTED (the password is never taken from argv, where ps and shell history show it; it comes from an environment variable or stdin)",
+      "priority": "P1",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [],
+      "source": "ops/adr/ADR-116-attack-group-t-this-weeks-surfaces.md",
+      "status": "not implemented",
+      "note": "Waits on deedglass connect (adoption-1), which isn't merged."
+    },
+    {
+      "id": "M01",
+      "group": "M",
+      "title": "Lockdown on: an agent's write that the active policy allows outright",
+      "expected": "BLOCKED",
+      "expected_reasons": [],
+      "expected_detail": "BLOCKED (approval_required under lockdown.write-needs-person: nothing runs until a person approves; the approval expires within 15 minutes, and timeout means no)",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [],
+      "source": "ops/adr/ADR-117-lockdown-mode.md",
+      "status": "implemented"
+    },
+    {
+      "id": "M02",
+      "group": "M",
+      "title": "Lockdown on: a high-risk write (a DELETE with a WHERE) under a policy rule that needs one approver",
+      "expected": "BLOCKED",
+      "expected_reasons": [],
+      "expected_detail": "BLOCKED (four-eyes: required is raised to 2 different people; one person voting twice is already_countersigned and nothing runs)",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [],
+      "source": "ops/adr/ADR-117-lockdown-mode.md",
+      "status": "implemented"
+    },
+    {
+      "id": "M03",
+      "group": "M",
+      "title": "Lockdown on: DROP TABLE or TRUNCATE through the native Postgres connector under a policy that allows every statement",
+      "expected": "DENIED",
+      "expected_reasons": [],
+      "expected_detail": "DENIED (policy_denied, rule lockdown.no-drop-truncate: no connector call; sealed as denied)",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [],
+      "source": "ops/adr/ADR-117-lockdown-mode.md",
+      "status": "implemented"
+    },
+    {
+      "id": "M04",
+      "group": "M",
+      "title": "Lockdown on: ALTER TABLE (or another schema or permission change) under a policy that allows every statement",
+      "expected": "DENIED",
+      "expected_reasons": [],
+      "expected_detail": "DENIED (policy_denied, rule lockdown.no-schema-change: no connector call)",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [],
+      "source": "ops/adr/ADR-117-lockdown-mode.md",
+      "status": "implemented"
+    },
+    {
+      "id": "M05",
+      "group": "M",
+      "title": "Lockdown on: UPDATE or DELETE with no WHERE under a policy that allows every statement",
+      "expected": "DENIED",
+      "expected_reasons": [],
+      "expected_detail": "DENIED (policy_denied, rule lockdown.no-unbounded-write: no connector call)",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [],
+      "source": "ops/adr/ADR-117-lockdown-mode.md",
+      "status": "implemented"
+    },
+    {
+      "id": "M06",
+      "group": "M",
+      "title": "Lockdown on: after one of its writes ends Can't check, the agent sends another write, then the same write with a new Deedglass-Session header",
+      "expected": "DENIED",
+      "expected_reasons": [],
+      "expected_detail": "DENIED (policy_denied, rule lockdown.cant-check-hold, naming the held action: the hold covers every session of the agent until a person acknowledges it; reads still run)",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [],
+      "source": "ops/adr/ADR-117-lockdown-mode.md",
+      "status": "implemented"
+    },
+    {
+      "id": "M07",
+      "group": "M",
+      "title": "Lockdown on: an agent whose connector label names one connector calls another connector's tool, or an agent with no connector label calls any tool",
+      "expected": "DENIED",
+      "expected_reasons": [],
+      "expected_detail": "DENIED (policy_denied, rule lockdown.one-connector: no connector call)",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [],
+      "source": "ops/adr/ADR-117-lockdown-mode.md",
+      "status": "implemented"
+    },
+    {
+      "id": "M08",
+      "group": "M",
+      "title": "Lockdown on: a call to a FHIR connector while the org's PHI mode is off",
+      "expected": "DENIED",
+      "expected_reasons": [],
+      "expected_detail": "DENIED (policy_denied, rule lockdown.phi-mode: no call reaches the FHIR server)",
+      "priority": "P1",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [],
+      "source": "ops/adr/ADR-117-lockdown-mode.md",
+      "status": "implemented"
+    },
+    {
+      "id": "M09",
+      "group": "M",
+      "title": "Lockdown on: a policy approval that waits 24 hours, and a write whose policy asks only Claimed (L0) on a connector that reaches Proven",
+      "expected": "BLOCKED",
+      "expected_reasons": [],
+      "expected_detail": "BLOCKED (the approval's expiry is cut to 15 minutes, and the write is checked at Proven (L2); the decision detail records expiry_shortened and verify_raised)",
+      "priority": "P1",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [],
+      "source": "ops/adr/ADR-117-lockdown-mode.md",
+      "status": "implemented"
+    },
+    {
+      "id": "M10",
+      "group": "M",
+      "title": "deedglass lockdown off: the person who asked to turn it off also countersigns",
+      "expected": "REJECTED",
+      "expected_reasons": [],
+      "expected_detail": "REJECTED (countersign_same_person: lockdown stays on and no org.updated is sealed; the request stays until it expires or another person countersigns)",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [],
+      "source": "ops/adr/ADR-117-lockdown-mode.md",
+      "status": "implemented"
+    },
+    {
+      "id": "M11",
+      "group": "M",
+      "title": "deedglass lockdown off while lockdown: true is set in the server's config",
+      "expected": "REJECTED",
+      "expected_reasons": [],
+      "expected_detail": "REJECTED (lockdown_pinned_by_config: nothing changes; the config key has to be removed on the server first, which doctor reports)",
+      "priority": "P1",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [],
+      "source": "ops/adr/ADR-117-lockdown-mode.md",
+      "status": "implemented"
+    },
+    {
+      "id": "M12",
+      "group": "M",
+      "title": "A prod config with lockdown: true and no ML-DSA-65 seal key, or with timestamps.at_export: false",
+      "expected": "REJECTED",
+      "expected_reasons": [],
+      "expected_detail": "REJECTED (config problem: serve and every command refuse the config, naming DEEDGLASS_SEAL_PQ_KEY_FILE or timestamps.at_export)",
+      "priority": "P1",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [],
+      "source": "ops/adr/ADR-117-lockdown-mode.md",
+      "status": "implemented"
+    },
+    {
+      "id": "M13",
+      "group": "M",
+      "title": "An org admin key or a Console session sends PATCH /v1/org with settings.lockdown: false",
+      "expected": "REJECTED",
+      "expected_reasons": [],
+      "expected_detail": "REJECTED (validation_error on the unknown key settings.lockdown, HTTP 400: there is no API route that turns lockdown off; it stays on)",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [],
+      "source": "ops/adr/ADR-117-lockdown-mode.md",
+      "status": "implemented"
+    },
+    {
+      "id": "M14",
+      "group": "M",
+      "title": "One shell user on the server names two different people for the request and the countersign",
+      "expected": "OUTSIDE SCOPE",
+      "expected_reasons": [],
+      "expected_detail": "OUTSIDE SCOPE (the server CLI can't tell who is typing; the record names both people as given, and anyone with the server's shell and database URL can change the database directly; LIMITATIONS)",
+      "priority": "P1",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [],
+      "source": "ops/adr/ADR-117-lockdown-mode.md",
+      "status": "implemented"
+    },
+    {
+      "id": "S01",
+      "group": "S",
+      "title": "An agent submits the IG's settlement ClaimBundle (use claim, INR 90,000) under the india-health pack",
+      "expected": "BLOCKED",
+      "expected_reasons": [],
+      "expected_detail": "BLOCKED (approval_required under claim-settlement-two-people: two different people approve before anything is sent)",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [],
+      "source": "ops/adr/ADR-119-india-profile-awareness.md",
+      "status": "implemented"
+    },
+    {
+      "id": "S02",
+      "group": "S",
+      "title": "The same settlement claim sent as a plain FHIR Claim, no bundle",
+      "expected": "BLOCKED",
+      "expected_reasons": [],
+      "expected_detail": "BLOCKED (approval_required under claim-settlement-two-people, the same rule and the same two people as the bundle)",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [],
+      "source": "ops/adr/ADR-119-india-profile-awareness.md",
+      "status": "implemented"
+    },
+    {
+      "id": "S03",
+      "group": "S",
+      "title": "A final claim sent in a bundle whose meta.profile says CoverageEligibilityRequestBundle",
+      "expected": "DENIED",
+      "expected_reasons": [],
+      "expected_detail": "DENIED (nhcx-profile-mismatch: the bundle holds a Claim first, so it is classified ClaimBundle; nothing is sent)",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [
+        "ASI02"
+      ],
+      "source": "ops/adr/ADR-119-india-profile-awareness.md",
+      "status": "implemented"
+    },
+    {
+      "id": "S04",
+      "group": "S",
+      "title": "The settlement ClaimBundle with every meta.profile stripped",
+      "expected": "BLOCKED",
+      "expected_reasons": [],
+      "expected_detail": "BLOCKED (approval_required under claim-settlement-two-people: what the bundle holds decides, not its label)",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [
+        "ASI02"
+      ],
+      "source": "ops/adr/ADR-119-india-profile-awareness.md",
+      "status": "implemented"
+    },
+    {
+      "id": "S05",
+      "group": "S",
+      "title": "A pre-authorisation of INR 2,50,000 placed second, behind a pre-authorisation of INR 100, in one bundle",
+      "expected": "BLOCKED",
+      "expected_reasons": [],
+      "expected_detail": "BLOCKED (approval_required under preauth-large-two-people, required 2: the largest total in the request counts)",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [
+        "ASI02"
+      ],
+      "source": "ops/adr/ADR-119-india-profile-awareness.md",
+      "status": "implemented"
+    },
+    {
+      "id": "S06",
+      "group": "S",
+      "title": "A final claim nested two bundles down, and one contained in a Task",
+      "expected": "BLOCKED",
+      "expected_reasons": [],
+      "expected_detail": "BLOCKED (approval_required needing two people for both: nested bundles and contained resources are read)",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [
+        "ASI02"
+      ],
+      "source": "ops/adr/ADR-119-india-profile-awareness.md",
+      "status": "implemented"
+    },
+    {
+      "id": "S07",
+      "group": "S",
+      "title": "Claims whose total is a JSON string, in an unknown currency, or with an unknown use",
+      "expected": "BLOCKED",
+      "expected_reasons": [],
+      "expected_detail": "BLOCKED (approval_required under claim-unreadable-two-people: an amount that can't be read counts as large)",
+      "priority": "P1",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [],
+      "source": "ops/adr/ADR-119-india-profile-awareness.md",
+      "status": "implemented"
+    },
+    {
+      "id": "S08",
+      "group": "S",
+      "title": "The IG's PrescriptionRecord relabelled as a draft WellnessRecord",
+      "expected": "BLOCKED",
+      "expected_reasons": [],
+      "expected_detail": "BLOCKED (approval_required under orders-need-clinician: a bundle carrying a MedicationRequest waits for a clinician whatever its record kind or status)",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [
+        "ASI02"
+      ],
+      "source": "ops/adr/ADR-119-india-profile-awareness.md",
+      "status": "implemented"
+    },
+    {
+      "id": "S09",
+      "group": "S",
+      "title": "The IG's DischargeSummaryRecord, final, with its Composition profile stripped",
+      "expected": "BLOCKED",
+      "expected_reasons": [],
+      "expected_detail": "BLOCKED (approval_required under abdm-record-needs-clinician: the record is named from its SNOMED CT type; never the draft rule)",
+      "priority": "P1",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [],
+      "source": "ops/adr/ADR-119-india-profile-awareness.md",
+      "status": "implemented"
+    },
+    {
+      "id": "S10",
+      "group": "S",
+      "title": "An org with PHI mode off enforces india-health; the agent reads a Patient",
+      "expected": "DENIED",
+      "expected_reasons": [],
+      "expected_detail": "DENIED (phi-mode-first: no FHIR call runs while PHI mode is off)",
+      "priority": "P1",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [],
+      "source": "ops/adr/ADR-119-india-profile-awareness.md",
+      "status": "implemented"
+    },
+    {
+      "id": "S11",
+      "group": "S",
+      "title": "Under healthcare-fhir (not india-health), the IG's pre-authorisation ClaimBundle",
+      "expected": "BLOCKED",
+      "expected_reasons": [],
+      "expected_detail": "BLOCKED (approval_required under claims-four-eyes, required 2: a Bundle carrying a Claim is a claim)",
+      "priority": "P0",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [],
+      "source": "ops/adr/ADR-119-india-profile-awareness.md",
+      "status": "implemented"
+    },
+    {
+      "id": "S12",
+      "group": "S",
+      "title": "A delete of a stored ABDM record bundle under india-health",
+      "expected": "DENIED",
+      "expected_reasons": [],
+      "expected_detail": "DENIED (no-delete-clinical: records are corrected with a new version)",
+      "priority": "P1",
+      "demo": false,
+      "v3_ref": [],
+      "owasp": [],
+      "source": "ops/adr/ADR-119-india-profile-awareness.md",
+      "status": "implemented"
+    }
   ]
 }

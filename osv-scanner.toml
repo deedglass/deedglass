@@ -1,0 +1,8 @@
+# OSV-Scanner configuration for Deedglass (Plan A6, hardening after 2026-10-21 audit)
+# Manages vulnerability scanning overrides with documented rationale.
+
+# Package exclusions or ignored vulnerabilities with documented reasons
+# Dev-only and fixture directories that never reach production binaries or release artifacts.
+[[IgnoredVulns]]
+id = "GO-2026-5024"
+reason = "NewNTUnicodeString in golang.org/x/sys is Windows-only; not reachable from Deedglass server runtime (SR-007, ADR-070)"

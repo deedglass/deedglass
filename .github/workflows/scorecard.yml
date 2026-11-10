@@ -1,0 +1,39 @@
+# OpenSSF Scorecard (audit 2026-10-21 M-01 / hardening plan A6)
+# Scores the repository against supply-chain and security best practices weekly and on pushes to main.
+name: scorecard
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "30 1 * * 1" # Mondays 01:30 UTC
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: scorecard-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analysis:
+    name: scorecard analysis
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: run analysis
+        uses: ossf/scorecard-action@f49aabb00580e59f8487b4772d2745330a84f33b # v2.3.3
+        with:
+          results_file: results.sarif
+          results_format: sarif
+          publish_results: true
+      - name: upload sarif
+        uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        with:
+          sarif_file: results.sarif

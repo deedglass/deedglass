@@ -6,7 +6,9 @@ package weekly
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"flag"
 	"os"
 	"path/filepath"
@@ -233,6 +235,22 @@ func TestOffToken(t *testing.T) {
 	}
 	if _, err := OffToken(nil, org, user); err == nil {
 		t.Fatal("no key accepted")
+	}
+
+	// Expired token test:
+	expiredTok, err := OffTokenWithExpiry(key, org, user, time.Now().Add(-1*time.Hour))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := ParseOffToken(key, expiredTok); !errors.Is(err, ErrOffTokenExpired) {
+		t.Fatalf("expected ErrOffTokenExpired, got %v", err)
+	}
+
+	// Legacy 2-part token compatibility test:
+	legacyBody := org.String() + "." + user.String()
+	legacyTok := base64.RawURLEncoding.EncodeToString([]byte(legacyBody)) + "." + base64.RawURLEncoding.EncodeToString(offMAC(key, legacyBody))
+	if lo, lu, err := ParseOffToken(key, legacyTok); err != nil || lo != org || lu != user {
+		t.Fatalf("legacy token failed to parse: %v %v %v", lo, lu, err)
 	}
 }
 

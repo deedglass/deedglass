@@ -91,9 +91,11 @@ func doctorEnv(e *Env) (*doctor.Env, error) {
 		d.VaultKey = cfg.VaultKey.Reveal()
 		d.SlotLagAlertMB = cfg.SlotLagAlertMB
 		d.Lockdown, d.SealPQKeyFile, d.Timestamps = cfg.Lockdown, cfg.SealPQKeyFile, cfg.Timestamps.Enabled()
+		d.Listen = cfg.Listen
 	} else {
 		d.DBURL = env["DEEDGLASS_DATABASE_URL"]
 		d.SealKeyFile = env["DEEDGLASS_SEAL_KEY_FILE"]
+		d.Listen = env["DEEDGLASS_LISTEN"]
 	}
 	t := resolveServer(e)
 	d.Server = t.Server

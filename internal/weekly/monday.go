@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"log/slog"
+	"strconv"
 	"strings"
 	"time"
 
@@ -221,12 +222,23 @@ func OffKeyFrom(pepper []byte) []byte {
 // ErrOffToken is a token that isn't one of ours.
 var ErrOffToken = errors.New("weekly: the link isn't valid")
 
-// OffToken is base64url("<org>.<user>") + "." + base64url(HMAC(key, purpose ‖ org ‖ user)).
+// ErrOffTokenExpired is a token whose expiry has passed.
+var ErrOffTokenExpired = errors.New("weekly: the off-link has expired")
+
+// OffTokenExpiry is the default lifetime of an off token (90 days).
+const OffTokenExpiry = 90 * 24 * time.Hour
+
+// OffToken is base64url("<org>.<user>.<exp>") + "." + base64url(HMAC(key, purpose ‖ body)).
 func OffToken(key []byte, org ids.OrgID, user ids.UserID) (string, error) {
+	return OffTokenWithExpiry(key, org, user, time.Now().Add(OffTokenExpiry))
+}
+
+// OffTokenWithExpiry issues an off token with an explicit expiration time.
+func OffTokenWithExpiry(key []byte, org ids.OrgID, user ids.UserID, exp time.Time) (string, error) {
 	if len(key) < 16 {
 		return "", errors.New("weekly: the off-link key is missing")
 	}
-	body := org.String() + "." + user.String()
+	body := org.String() + "." + user.String() + "." + strconv.FormatInt(exp.Unix(), 10)
 	enc := base64.RawURLEncoding
 	return enc.EncodeToString([]byte(body)) + "." + enc.EncodeToString(offMAC(key, body)), nil
 }
@@ -254,13 +266,30 @@ func ParseOffToken(key []byte, tok string) (ids.OrgID, ids.UserID, error) {
 	if err1 != nil || err2 != nil || !hmac.Equal(mac, offMAC(key, string(raw))) {
 		return zo, zu, ErrOffToken
 	}
-	os, us, ok := strings.Cut(string(raw), ".")
-	if !ok {
-		return zo, zu, ErrOffToken
-	}
-	org, err1 := ids.Parse[ids.OrgKind](os)
-	user, err2 := ids.Parse[ids.UserKind](us)
-	if err1 != nil || err2 != nil {
+	parts := strings.Split(string(raw), ".")
+	var org ids.OrgID
+	var user ids.UserID
+	switch len(parts) {
+	case 2:
+		org, err1 = ids.Parse[ids.OrgKind](parts[0])
+		user, err2 = ids.Parse[ids.UserKind](parts[1])
+		if err1 != nil || err2 != nil {
+			return zo, zu, ErrOffToken
+		}
+	case 3:
+		org, err1 = ids.Parse[ids.OrgKind](parts[0])
+		user, err2 = ids.Parse[ids.UserKind](parts[1])
+		if err1 != nil || err2 != nil {
+			return zo, zu, ErrOffToken
+		}
+		exp, errExp := strconv.ParseInt(parts[2], 10, 64)
+		if errExp != nil {
+			return zo, zu, ErrOffToken
+		}
+		if time.Now().Unix() > exp {
+			return zo, zu, ErrOffTokenExpired
+		}
+	default:
 		return zo, zu, ErrOffToken
 	}
 	return org, user, nil

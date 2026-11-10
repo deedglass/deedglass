@@ -14,6 +14,7 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
@@ -456,4 +457,68 @@ func TestT11TimestampUnpinned(t *testing.T) {
 		t.Fatalf("warning code %q", stamp.WarnTSANotPinned)
 	}
 	t.Log("T11: OUTSIDE SCOPE (checked against the chain it carries: accepted as intact but unpinned, and verify warns tsa_not_pinned)")
+}
+
+// T12 · Independent verifiers: a bundle with one changed byte read by verifiers/python and verifiers/js → DETECTED.
+func TestT12IndependentVerifiers(t *testing.T) {
+	pyPath, errPy := exec.LookPath("python3")
+	nodePath, errNode := exec.LookPath("node")
+	if errPy != nil || errNode != nil {
+		t.Skip("T12: requires both python3 and node in PATH")
+	}
+
+	bundlePath := filepath.Join("..", "testdata", "release-bundles", "0.15.0", "bundle.tar.gz")
+	keysPath := filepath.Join("..", "testdata", "release-bundles", "0.15.0", "keys.json")
+	origBytes, err := os.ReadFile(bundlePath)
+	if err != nil {
+		t.Fatalf("read bundle: %v", err)
+	}
+
+	tampered := make([]byte, len(origBytes))
+	copy(tampered, origBytes)
+	tampered[len(tampered)/2] ^= 0xFF
+
+	tmpBundle := filepath.Join(t.TempDir(), "tampered.tar.gz")
+	if err := os.WriteFile(tmpBundle, tampered, 0o600); err != nil {
+		t.Fatalf("write tampered bundle: %v", err)
+	}
+
+	// 1. Python independent verifier
+	pyPyDir, _ := filepath.Abs(filepath.Join("..", "verifiers", "python"))
+	pyCmd := exec.Command(pyPath, "-m", "deedglass_verify", tmpBundle, "--keys", keysPath, "--json")
+	pyCmd.Env = append(os.Environ(), "PYTHONPATH="+pyPyDir)
+	var pyOut, pyErr bytes.Buffer
+	pyCmd.Stdout = &pyOut
+	pyCmd.Stderr = &pyErr
+	pyRunErr := pyCmd.Run()
+	if pyRunErr == nil {
+		t.Fatalf("python verifier unexpectedly succeeded on tampered bundle: %s", pyOut.String())
+	}
+	var pyReport struct {
+		Result string `json:"result"`
+	}
+	_ = json.Unmarshal(pyOut.Bytes(), &pyReport)
+	if pyReport.Result == "valid" {
+		t.Fatalf("python verifier reported valid for tampered bundle")
+	}
+
+	// 2. JavaScript / Node independent verifier
+	jsScript, _ := filepath.Abs(filepath.Join("..", "verifiers", "js", "deedglass-verify.mjs"))
+	nodeCmd := exec.Command(nodePath, jsScript, tmpBundle, "--keys", keysPath, "--json")
+	var nodeOut, nodeErr bytes.Buffer
+	nodeCmd.Stdout = &nodeOut
+	nodeCmd.Stderr = &nodeErr
+	nodeRunErr := nodeCmd.Run()
+	if nodeRunErr == nil {
+		t.Fatalf("node verifier unexpectedly succeeded on tampered bundle: %s", nodeOut.String())
+	}
+	var nodeReport struct {
+		Result string `json:"result"`
+	}
+	_ = json.Unmarshal(nodeOut.Bytes(), &nodeReport)
+	if nodeReport.Result == "valid" {
+		t.Fatalf("node verifier reported valid for tampered bundle")
+	}
+
+	t.Log("T12: DETECTED (both refuse the bundle; neither reports it as intact)")
 }

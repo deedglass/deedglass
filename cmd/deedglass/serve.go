@@ -429,6 +429,9 @@ func runServe(ctx context.Context, e *Env, args []string) error {
 	serveListening(ln.Addr())
 
 	// 7. The summary.
+	if isAllInterfaces(cfg.Listen) {
+		fmt.Fprintln(e.Stderr, s.Amber(fmt.Sprintf("Warning: Listening on all network interfaces (%s). Anyone on your local network can reach this instance.", ln.Addr().String())))
+	}
 	fmt.Fprintln(e.Stdout, s.OKLine("Listening on http://"+ln.Addr().String()))
 	fmt.Fprintln(e.Stdout, s.OKLine("Console on "+consoleURL(cfg.BaseURL.String())))
 	if metricsSrv != nil {
@@ -1071,4 +1074,15 @@ func lastPart(err error) string {
 // cookies point, so the one that works in a browser) plus /app.
 func consoleURL(base string) string {
 	return strings.TrimSuffix(base, "/") + "/app"
+}
+
+func isAllInterfaces(addr string) bool {
+	if addr == "" {
+		return false
+	}
+	host, _, err := net.SplitHostPort(addr)
+	if err != nil {
+		host = addr
+	}
+	return host == "" || host == "0.0.0.0" || host == "::" || host == "[::]"
 }

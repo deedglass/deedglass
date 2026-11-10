@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "deedglass": {
+      "command": "npx",
+      "args": ["-y", "deedglass", "mcp", "serve"],
+      "env": {
+        "DEEDGLASS_ENV": "production"
+      }
+    }
+  }
+}
+
