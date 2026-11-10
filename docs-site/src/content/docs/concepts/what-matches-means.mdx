@@ -7,7 +7,7 @@ lastVerified: "2026-10-18"
 import Limits from '../../../components/Limits.astro';
 import VerdictChip from '../../../components/VerdictChip.astro';
 
-**Matches** means Deedglass compared what the agent reported with an independent observation and found no difference. The level says which observation: **Claimed** is the tool's own response; **Checked** is a read-back from the target after the action; **Proven** is the change Postgres actually committed, read from its change log. Matches does not mean the action was a good idea, that nothing else changed outside what Deedglass watches, or that a compromised host could not lie. When Deedglass can't observe enough, the result is **Can't check**, never Matches.
+**Matches** means Deedglass compared what the agent reported with an independent observation and found no difference. The level says which observation: **Claimed** is the tool's own response; **Checked** is a read-back from the target after the action; **Witnessed** is the change Postgres actually committed, read from its change log. Matches does not mean the action was a good idea, that nothing else changed outside what Deedglass watches, or that a compromised host could not lie. When Deedglass can't observe enough, the result is **Can't check**, never Matches.
 
 The API, JSON output and policy files keep the short names: a level is `L0`, `L1` or `L2`, and a result is `VERIFIED` (Matches), `MISMATCH` (Doesn't match) or `UNVERIFIABLE` (Can't check). This page used to be called "What VERIFIED means".
 
