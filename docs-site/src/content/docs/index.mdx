@@ -1,17 +1,17 @@
 ---
 title: Deedglass Docs
-description: Deedglass lets rules decide each AI agent tool call, checks what really changed and seals a record.
+description: Deedglass intercepts AI agent tool calls, verifies database writes in Postgres WAL, and seals cryptographically signed records.
 template: splash
 lastVerified: "2026-10-28"
 hero:
   title: See what your agents actually did.
-  tagline: Deedglass sits between your AI agents and the tools they use. It decides what each agent may do, runs it under control, checks the result against the system of record, and seals a record.
+  tagline: Deedglass sits between AI agents and the databases or tools they execute. It inspects tool calls before they run, verifies actual changes in Postgres WAL, and seals cryptographically signed records.
   actions:
-    - text: Start here · the app
-      link: /get-started/app/
-      variant: primary
     - text: Quickstart · 5 minutes
       link: /quickstart/
+      variant: primary
+    - text: Interactive app
+      link: /get-started/app/
       variant: secondary
     - text: How Deedglass works
       link: /concepts/how-it-works/

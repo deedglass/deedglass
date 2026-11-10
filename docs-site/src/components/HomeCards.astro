@@ -1,51 +1,472 @@
 ---
-// The home page below the hero: five calm cards (Observe added by VIRAL-1, 10-14) and "Works with" as plain text labels (S33 §3.3).
+// The home page below the hero: interactive audit terminal preview, capability cards, ecosystem router and quickstart onboarding.
 import VerdictChip from './VerdictChip.astro';
+
 const cards = [
-  { title: 'Rules', href: '/concepts/how-it-works/', body: 'Every tool call passes through Deedglass. Your rules decide: allow, deny, or wait for a person to approve.' },
-  { title: 'Check', href: '/concepts/verification-levels/', body: 'After the call, Deedglass compares what the tool reported with an independent observation, up to the change Postgres committed.' },
-  { title: 'Records', href: '/concepts/deeds/', body: 'Each action is sealed as a signed record in a hash-linked chain. Anyone with the public key can check it offline.' },
-  { title: 'Stop', href: '/concepts/stop/', body: 'Stop one agent, or every agent in the org, in under two seconds. Stopped calls are refused and still recorded.' },
-  { title: 'Observe', href: '/reference/observe/', body: 'Nothing to rewire. Open a watched session, let the agent work, and see every row Postgres committed, beside any gate you already use. The undo SQL is free.' },
+  {
+    tag: 'Policy Guardrails',
+    title: 'Rules & Approvals',
+    href: '/concepts/how-it-works/',
+    body: 'Every tool call passes through Deedglass. Your rules decide: allow, deny, or hold for human approval before execution.',
+  },
+  {
+    tag: 'Postgres Logical WAL',
+    title: 'System of Record Check',
+    href: '/concepts/verification-levels/',
+    body: 'After the call, Deedglass compares what the tool reported with independent observation from Postgres change logs.',
+  },
+  {
+    tag: 'Ed25519 Signatures',
+    title: 'Sealed Audit Records',
+    href: '/concepts/deeds/',
+    body: 'Each action is sealed as a signed record in a hash-linked chain. Anyone with the public key can verify it offline.',
+  },
+  {
+    tag: '< 2s Org Stop',
+    title: 'Instant Org Stop',
+    href: '/concepts/stop/',
+    body: 'Stop one agent, or every agent across the org, in under two seconds. Stopped calls are refused and still recorded.',
+  },
+  {
+    tag: 'Zero Rewiring',
+    title: 'Transparent Observe',
+    href: '/reference/observe/',
+    body: 'Open a watched session, let the agent work, and see every row Postgres committed. Reversible undo SQL is generated automatically.',
+  },
 ];
-// freshness-1019: the same two rows as deedglass.com's "Works with" / "Connects to" (site src/data/brands.ts).
-const works = ['Claude Code', 'Cursor', 'Windsurf', 'VS Code', 'Goose', 'OpenAI Agents SDK', 'LangChain', 'any MCP client'];
-const connects = ['Postgres', 'GitHub', 'Stripe sandbox', 'Slack', 'Notion', 'Gmail drafts'];
+
+const works = [
+  { name: 'Claude Code', href: '/get-started/claude-code/' },
+  { name: 'Cursor', href: '/get-started/cursor-vscode-windsurf/' },
+  { name: 'Windsurf', href: '/get-started/cursor-vscode-windsurf/' },
+  { name: 'VS Code', href: '/get-started/cursor-vscode-windsurf/' },
+  { name: 'Claude Desktop', href: '/get-started/claude-desktop/' },
+  { name: 'OpenAI Agents SDK', href: '/sdks/adapters/openai-agents/' },
+  { name: 'LangChain', href: '/sdks/adapters/langchain/' },
+  { name: 'any MCP client', href: '/get-started/govern-an-mcp-server/' },
+];
+
+const connects = [
+  { name: 'Postgres', href: '/get-started/postgres/' },
+  { name: 'GitHub', href: '/reference/connectors/github/' },
+  { name: 'Stripe sandbox', href: '/reference/connectors/stripe/' },
+  { name: 'Slack', href: '/reference/connectors/slack/' },
+  { name: 'Notion', href: '/reference/connectors/notion/' },
+  { name: 'Gmail drafts', href: '/reference/connectors/gmail/' },
+];
 ---
 <section class="dg-home" aria-label="What Deedglass does">
-  <div class="example">
-    <code class="line" translate="no">postgres.execute · UPDATE public.orders … WHERE id = 42</code>
-    <span class="chips"><VerdictChip verdict="MISMATCH" level="L2" /></span>
-    <p class="said">Postgres changed 301 rows in public.orders. The agent reported 1.</p>
+  <!-- Interactive Terminal Audit Preview -->
+  <div class="terminal-card">
+    <div class="terminal-bar">
+      <div class="window-controls" aria-hidden="true">
+        <span class="control-dot close"></span>
+        <span class="control-dot min"></span>
+        <span class="control-dot zoom"></span>
+      </div>
+      <div class="terminal-title">wal-witness · session-42.log</div>
+      <div class="terminal-badge">Postgres WAL · Logical Decoding</div>
+    </div>
+    <div class="terminal-content">
+      <div class="cli-input">
+        <span class="cli-prompt" aria-hidden="true">$</span>
+        <code class="cli-command">deedglass observe --follow</code>
+      </div>
+      <div class="sql-statement">
+        <span class="sql-label">postgres.execute</span>
+        <code class="sql-code" translate="no">UPDATE public.orders SET status = 'shipped' WHERE id = 42;</code>
+      </div>
+      <div class="audit-diff">
+        <div class="diff-header">
+          <VerdictChip verdict="MISMATCH" level="L2" />
+          <span class="diff-headline">300 unintended row modifications recorded</span>
+        </div>
+        <div class="diff-split">
+          <div class="diff-pane agent-claim">
+            <span class="pane-label">Agent Self-Report (L0)</span>
+            <code class="pane-val">1 row changed</code>
+          </div>
+          <div class="diff-pane db-witness">
+            <span class="pane-label">Postgres Change Log (L2)</span>
+            <code class="pane-val error">301 rows changed in public.orders</code>
+          </div>
+        </div>
+        <div class="undo-notice">
+          <span class="undo-pill">Rollback Plan</span>
+          <code class="undo-line">deedglass undo run dtx_01k8m4v7...</code>
+          <span class="undo-desc">· 301 inverse updates ready</span>
+        </div>
+      </div>
+    </div>
   </div>
+
+  <!-- Feature Grid -->
   <ul class="cards">
     {cards.map((c) => (
-      <li><a href={c.href}><h2>{c.title}</h2><p>{c.body}</p></a></li>
+      <li>
+        <a href={c.href} class="card-link">
+          <div class="card-header">
+            <span class="card-tag">{c.tag}</span>
+          </div>
+          <h2>{c.title}</h2>
+          <p>{c.body}</p>
+        </a>
+      </li>
     ))}
   </ul>
+
+  <!-- Ecosystem Router -->
   <div class="works">
-    <h2>Works with</h2>
-    <p>{works.map((w, i) => (<><span>{w}</span>{i < works.length - 1 && <span class="sep" aria-hidden="true"> · </span>}</>))}</p>
-    <h2 class="connects">Connects to</h2>
-    <p>{connects.map((w, i) => (<><span>{w}</span>{i < connects.length - 1 && <span class="sep" aria-hidden="true"> · </span>}</>))}</p>
+    <div class="ecosystem-section">
+      <h2>Works with</h2>
+      <div class="pills-grid">
+        {works.map((w) => (
+          <a href={w.href} class="eco-pill">{w.name}</a>
+        ))}
+      </div>
+    </div>
+    <div class="ecosystem-section connects">
+      <h2>Connects to</h2>
+      <div class="pills-grid">
+        {connects.map((w) => (
+          <a href={w.href} class="eco-pill">{w.name}</a>
+        ))}
+      </div>
+    </div>
   </div>
-  <p class="next">New here? Run <code>npx deedglass</code> and an app opens in your browser: <a href="/get-started/app/">Start here</a>. Building with agents? The <a href="/quickstart/">Quickstart</a> ends on this 301-row case and its undo preview. Then read <a href="/concepts/what-matches-means/">what Matches means</a> and the <a href="/concepts/glossary/">glossary</a>. Already running agents? <a href="/get-started/scan/">Scan your setup in 60 seconds</a>.</p>
+
+  <!-- Quick Onboarding Card -->
+  <div class="onboard-card">
+    <div class="onboard-header">
+      <h2>Try Deedglass locally in 60 seconds</h2>
+      <p>Launch the interactive browser application directly from your terminal. No credentials or external server required.</p>
+    </div>
+    <div class="onboard-cmd">
+      <span class="cmd-prompt" aria-hidden="true">$</span>
+      <code translate="no">npx deedglass</code>
+    </div>
+    <div class="onboard-links">
+      <a href="/get-started/app/" class="primary-link">Start here</a>
+      <span class="sep" aria-hidden="true">·</span>
+      <a href="/quickstart/">5-Minute Quickstart</a>
+      <span class="sep" aria-hidden="true">·</span>
+      <a href="/concepts/what-matches-means/">What Matches means</a>
+      <span class="sep" aria-hidden="true">·</span>
+      <a href="/get-started/scan/">Scan in 60s</a>
+    </div>
+  </div>
 </section>
+
 <style>
-  .dg-home { display: grid; gap: 3rem; margin-top: 0.5rem; }
-  .example { justify-self: center; max-width: 40rem; width: 100%; border: 1px solid var(--dg-hairline); border-radius: 14px; background: var(--dg-surface); padding: 1rem 1.25rem; display: grid; gap: 0.5rem; }
-  .line { font-family: var(--__sl-font-mono); font-size: 0.8125rem; color: var(--dg-text-2); background: none; border: 0; padding: 0; overflow-wrap: anywhere; }
-  .said { margin: 0; font-size: 0.9375rem; }
-  .cards { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 1rem; }
+  .dg-home { display: grid; gap: 3.5rem; margin-top: 1rem; }
+
+  /* Terminal Window */
+  .terminal-card {
+    justify-self: center;
+    max-width: 44rem;
+    width: 100%;
+    border: 1px solid var(--dg-hairline);
+    border-radius: 12px;
+    background: var(--ink-900);
+    overflow: hidden;
+    box-shadow: 0 16px 36px rgba(0, 0, 0, 0.4);
+  }
+  .terminal-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.625rem 1rem;
+    background: var(--ink-850);
+    border-bottom: 1px solid var(--dg-hairline);
+  }
+  .window-controls {
+    display: flex;
+    gap: 0.375rem;
+    align-items: center;
+  }
+  .control-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--ink-700);
+  }
+  .control-dot.close { background: var(--mismatch-bg-dark); border: 1px solid var(--mismatch-text-dark); opacity: 0.8; }
+  .control-dot.min { background: var(--unverifiable-bg-dark); border: 1px solid var(--unverifiable-text-dark); opacity: 0.8; }
+  .control-dot.zoom { background: var(--verified-bg-dark); border: 1px solid var(--verified-text-dark); opacity: 0.8; }
+  .terminal-title {
+    font-size: 0.75rem;
+    font-family: var(--sl-font-mono);
+    color: var(--dg-text-2);
+  }
+  .terminal-badge {
+    font-size: 0.6875rem;
+    color: var(--slate-450);
+    font-family: var(--sl-font-mono);
+  }
+  .terminal-content {
+    padding: 1.125rem 1.25rem;
+    display: grid;
+    gap: 0.875rem;
+  }
+  .cli-input {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-family: var(--sl-font-mono);
+    font-size: 0.875rem;
+  }
+  .cli-prompt { color: var(--verified-text-dark); font-weight: 600; }
+  .cli-command { color: var(--snow-text); background: none; border: 0; padding: 0; }
+  .sql-statement {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.625rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 8px;
+    background: var(--ink-950);
+    border: 1px solid var(--ink-800);
+  }
+  .sql-label {
+    font-size: 0.6875rem;
+    font-family: var(--sl-font-mono);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--accent-dark);
+    font-weight: 600;
+  }
+  .sql-code {
+    font-family: var(--sl-font-mono);
+    font-size: 0.8125rem;
+    color: var(--snow-text);
+    background: none;
+    border: 0;
+    padding: 0;
+  }
+  .audit-diff {
+    display: grid;
+    gap: 0.75rem;
+    padding: 0.875rem;
+    border-radius: 8px;
+    background: var(--ink-950);
+    border: 1px solid var(--ink-800);
+  }
+  .diff-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem;
+  }
+  .diff-headline {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--mismatch-text-dark);
+  }
+  .diff-split {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+    gap: 0.625rem;
+  }
+  .diff-pane {
+    display: grid;
+    gap: 0.25rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 6px;
+    background: var(--ink-900);
+    border: 1px solid var(--ink-800);
+  }
+  .pane-label {
+    font-size: 0.6875rem;
+    color: var(--dg-text-2);
+    font-family: var(--sl-font-mono);
+  }
+  .pane-val {
+    font-family: var(--sl-font-mono);
+    font-size: 0.8125rem;
+    color: var(--snow-text);
+    background: none;
+    border: 0;
+    padding: 0;
+  }
+  .pane-val.error {
+    color: var(--mismatch-text-dark);
+    font-weight: 500;
+  }
+  .undo-notice {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8125rem;
+    padding-top: 0.375rem;
+    border-top: 1px solid var(--ink-800);
+  }
+  .undo-pill {
+    padding: 0.125rem 0.5rem;
+    border-radius: 4px;
+    background: var(--verified-bg-dark);
+    color: var(--verified-text-dark);
+    font-size: 0.6875rem;
+    font-family: var(--sl-font-mono);
+    font-weight: 600;
+  }
+  .undo-line {
+    font-family: var(--sl-font-mono);
+    color: var(--snow-text);
+    background: none;
+    border: 0;
+    padding: 0;
+  }
+  .undo-desc {
+    color: var(--dg-text-2);
+    font-size: 0.75rem;
+  }
+
+  /* Cards Grid */
+  .cards {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(14.5rem, 1fr));
+    gap: 1.125rem;
+  }
   .cards li { margin: 0; }
-  .cards a { display: block; height: 100%; padding: 1.25rem; border: 1px solid var(--dg-hairline); border-radius: 14px; background: var(--dg-surface); text-decoration: none; color: inherit; transition: border-color 180ms var(--dg-ease-enter); }
-  .cards a:hover { border-color: var(--dg-text-3); }
-  .cards h2 { margin: 0 0 0.5rem; font-size: 1.0625rem; font-weight: 600; letter-spacing: -0.01em; color: var(--sl-color-white); }
-  .cards p { margin: 0; font-size: 0.9375rem; line-height: 1.6; color: var(--dg-text-2); }
-  .works { text-align: center; }
-  .works h2 { margin: 0 0 0.5rem; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.04em; font-variant: small-caps; text-transform: lowercase; color: var(--dg-text-2); }
-  .works p { margin: 0; color: var(--sl-color-white); font-size: 0.9375rem; }
-  .works .connects { margin-top: 1.25rem; }
-  .sep { color: var(--dg-text-3); }
-  .next { text-align: center; margin: 0; color: var(--dg-text-2); }
+  .card-link {
+    display: grid;
+    grid-template-rows: auto auto 1fr;
+    gap: 0.5rem;
+    height: 100%;
+    padding: 1.25rem;
+    border: 1px solid var(--dg-hairline);
+    border-radius: 12px;
+    background: var(--dg-surface);
+    text-decoration: none;
+    color: inherit;
+    transition: border-color 160ms var(--dg-ease-enter), transform 160ms var(--dg-ease-enter), background 160ms var(--dg-ease-enter);
+  }
+  .card-link:hover {
+    border-color: var(--dg-text-3);
+    background: var(--dg-surface-raised);
+    transform: translateY(-2px);
+  }
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .card-tag {
+    font-size: 0.6875rem;
+    font-family: var(--sl-font-mono);
+    color: var(--accent-dark);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .cards h2 {
+    margin: 0;
+    font-size: 1.0625rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: var(--sl-color-white);
+  }
+  .cards p {
+    margin: 0;
+    font-size: 0.875rem;
+    line-height: 1.55;
+    color: var(--dg-text-2);
+  }
+
+  /* Ecosystem Router */
+  .works {
+    display: grid;
+    gap: 1.5rem;
+    text-align: center;
+    padding: 1.5rem 0;
+  }
+  .ecosystem-section h2 {
+    margin: 0 0 0.875rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--dg-text-2);
+  }
+  .pills-grid {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.5rem;
+    max-width: 48rem;
+    margin: 0 auto;
+  }
+  .eco-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.35rem 0.75rem;
+    border-radius: 8px;
+    border: 1px solid var(--dg-hairline);
+    background: var(--dg-surface);
+    color: var(--sl-color-white);
+    font-size: 0.8125rem;
+    text-decoration: none;
+    transition: border-color 140ms var(--dg-ease-enter), background 140ms var(--dg-ease-enter), transform 140ms var(--dg-ease-enter);
+  }
+  .eco-pill:hover {
+    border-color: var(--accent-dark);
+    background: var(--dg-surface-raised);
+    transform: translateY(-1px);
+  }
+
+  /* Onboarding Card */
+  .onboard-card {
+    justify-self: center;
+    max-width: 42rem;
+    width: 100%;
+    padding: 1.75rem;
+    border-radius: 12px;
+    border: 1px solid var(--dg-hairline);
+    background: var(--dg-surface);
+    text-align: center;
+    display: grid;
+    gap: 1rem;
+  }
+  .onboard-header h2 {
+    margin: 0 0 0.375rem;
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--sl-color-white);
+  }
+  .onboard-header p {
+    margin: 0;
+    font-size: 0.875rem;
+    color: var(--dg-text-2);
+    line-height: 1.5;
+  }
+  .onboard-cmd {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.625rem 1.25rem;
+    border-radius: 8px;
+    background: var(--ink-950);
+    border: 1px solid var(--ink-800);
+    font-family: var(--sl-font-mono);
+    font-size: 0.875rem;
+    margin: 0 auto;
+  }
+  .cmd-prompt { color: var(--verified-text-dark); font-weight: 600; }
+  .onboard-cmd code { color: var(--snow-text); background: none; border: 0; padding: 0; }
+  .onboard-links {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 0.625rem;
+    font-size: 0.8125rem;
+  }
+  .onboard-links a { color: var(--dg-text-2); text-decoration: none; }
+  .onboard-links a:hover { color: var(--sl-color-white); text-decoration: underline; text-underline-offset: 0.2em; }
+  .onboard-links .primary-link { color: var(--accent-dark); font-weight: 500; }
+  .sep { color: var(--ink-700); }
 </style>

@@ -1,5 +1,5 @@
 ---
-// Claimed (L0) · Checked (L1) · Proven (L2): plain names, with the API's short name alongside.
+// Claimed (L0) · Checked (L1) · Witnessed (L2): plain names, with the API's short name alongside.
 // Levels carry no colour of their own (DESIGN.md); the verdict owns the colour. The tooltip text is
 // also the accessible description.
 interface Props { level: 'L0' | 'L1' | 'L2' }
@@ -7,8 +7,8 @@ const { level } = Astro.props;
 const text = {
   L0: 'Claimed (L0): the tool’s own response.',
   L1: 'Checked (L1): read back from the target after the action.',
-  L2: 'Proven (L2): the change Postgres committed, read from its change log.',
+  L2: 'Witnessed (L2): the change Postgres committed, read from its change log.',
 }[level];
-const name = { L0: 'Claimed', L1: 'Checked', L2: 'Proven' }[level];
+const name = { L0: 'Claimed', L1: 'Checked', L2: 'Witnessed' }[level];
 ---
 <span class="dg-chip dg-chip--allowed dg-level" title={text} translate="no">{name}<span class="sr-only"> ({text})</span></span>

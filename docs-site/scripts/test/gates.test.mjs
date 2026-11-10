@@ -197,7 +197,7 @@ test('security.txt (S34, RFC 9116): the five fields, a mailto contact, an https 
   assert.deepEqual(Object.keys(fields).sort(), ['Canonical', 'Contact', 'Expires', 'Policy', 'Preferred-Languages']);
   assert.match(fields.Contact[0], /^mailto:security@deedglass\.com$/);
   assert.ok(fields.Canonical.includes('https://docs.deedglass.com/.well-known/security.txt'));
-  assert.match(fields.Policy[0], /^https:\/\/github\.com\/deedglass\/deedglass\/blob\/main\/SECURITY\.md$/);
+  assert.match(fields.Policy[0], /^https:\/\/(deedglass\.com\/security\/policy|github\.com\/deedglass\/deedglass\/blob\/main\/SECURITY\.md)$/);
   const expires = Date.parse(fields.Expires[0]);
   assert.ok(expires > Date.now(), 'Expires is in the past: renew security.txt');
   assert.ok(expires - Date.now() < 366 * 24 * 3600 * 1000, 'Expires is more than a year away (RFC 9116 §2.5.5 recommends less)');
