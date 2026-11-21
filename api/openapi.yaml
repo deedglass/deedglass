@@ -3290,6 +3290,119 @@ paths:
                 $ref: "#/components/schemas/ApprovalLinkStatus"
         default:
           $ref: "#/components/responses/Error"
+  /v1/break-glass:
+    get:
+      operationId: listBreakGlassReviews
+      summary: List emergency break-glass reviews
+      description: >-
+        Emergency break-glass review queue items for this org (ADR-105 / HC-P08).
+        Lists emergency actions executed without prior approval.
+      tags: [Approvals]
+      security: [{bearerAuth: []}, {sessionCookie: []}]
+      x-deedglass-auth: session_or_key
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+        - {name: status, in: query, required: false, description: Filter by review status (pending, acknowledged, reviewed)., schema: {type: string}}
+      responses:
+        "200":
+          description: List of break-glass reviews.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+          content:
+            application/json:
+              schema:
+                type: object
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/break-glass/digest:
+    get:
+      operationId: getBreakGlassWeeklyDigest
+      summary: Weekly CMO emergency break-glass audit digest
+      description: >-
+        Weekly CMO audit digest for emergency break-glass overrides (ADR-105 / HC-P08).
+        Answers Markdown by default, or JSON when requested.
+      tags: [Approvals]
+      security: [{bearerAuth: []}, {sessionCookie: []}]
+      x-deedglass-auth: session_or_key
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+        - {name: format, in: query, required: false, description: Output format (markdown or json)., schema: {type: string}}
+      responses:
+        "200":
+          description: Weekly CMO break-glass digest.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+          content:
+            text/markdown:
+              schema:
+                type: string
+            application/json:
+              schema:
+                type: object
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/break-glass/{id}:
+    get:
+      operationId: getBreakGlassReview
+      summary: Retrieve an emergency break-glass review
+      description: >-
+        One emergency break-glass review item (ADR-105 / HC-P08).
+      tags: [Approvals]
+      security: [{bearerAuth: []}, {sessionCookie: []}]
+      x-deedglass-auth: session_or_key
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+        - {name: id, in: path, required: true, description: The break-glass review id (`bgr_…`)., schema: {type: string}}
+      responses:
+        "200":
+          description: The break-glass review item.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+          content:
+            application/json:
+              schema:
+                type: object
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/break-glass/{id}/review:
+    post:
+      operationId: closeBreakGlassReview
+      summary: Complete post-hoc emergency break-glass review
+      description: >-
+        Clinician or CMO post-hoc review and sign-off for an emergency override (ADR-105 / HC-P08).
+      tags: [Approvals]
+      security: [{bearerAuth: []}, {sessionCookie: []}]
+      x-deedglass-auth: session_or_key
+      x-deedglass-since: "2026-10-01"
+      parameters:
+        - $ref: "#/components/parameters/DeedglassVersion"
+        - $ref: "#/components/parameters/CSRFWithSession"
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - {name: id, in: path, required: true, description: The break-glass review id (`bgr_…`)., schema: {type: string}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          description: The updated break-glass review item.
+          headers:
+            Deedglass-Request-Id:
+              $ref: "#/components/headers/DeedglassRequestId"
+          content:
+            application/json:
+              schema:
+                type: object
+        default:
+          $ref: "#/components/responses/Error"
   /v1/slack/interact:
     post:
       operationId: slackInteract

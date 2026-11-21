@@ -178,6 +178,8 @@ func TestEligibility(t *testing.T) {
 	owner := Person{UserID: ids.New[ids.UserKind](), Email: "Owner@acme.test", Role: "owner"}
 	admin := Person{UserID: ids.New[ids.UserKind](), Email: "admin@acme.test", Role: "admin"}
 	viewer := Person{UserID: ids.New[ids.UserKind](), Email: "viewer@acme.test", Role: "viewer"}
+	clinician := Person{UserID: ids.New[ids.UserKind](), Email: "doc@hospital.test", Role: "viewer", Groups: []string{"clinicians", "ER-Attendings"}}
+	resident := Person{UserID: ids.New[ids.UserKind](), Email: "resident@hospital.test", Role: "viewer", Groups: []string{"clinicians"}}
 	cases := []struct {
 		spec []string
 		p    Person
@@ -190,6 +192,12 @@ func TestEligibility(t *testing.T) {
 		{[]string{"role:owner"}, owner, true},
 		{[]string{"user:viewer@ACME.test"}, viewer, true},
 		{[]string{"user:someone@acme.test"}, admin, false},
+		{[]string{"group:clinicians"}, clinician, true},
+		{[]string{"group:er-attendings"}, clinician, true},
+		{[]string{"group:clinicians"}, resident, true},
+		{[]string{"group:er-attendings"}, resident, false},
+		{[]string{"group:clinicians"}, viewer, false},
+		{[]string{"group:on-call"}, clinician, false},
 		{[]string{"role:viewer"}, viewer, false}, // not a valid approver kind
 		{[]string{"agent:claude"}, admin, false},
 		{nil, admin, false},
@@ -219,6 +227,18 @@ func TestEligibility(t *testing.T) {
 	}
 	if people, n := eligiblePeople(all, Spec{Approvers: []string{"role:owner"}}, "", false); len(people) != 1 || n != 1 {
 		t.Errorf("owners: %d %d", len(people), n)
+	}
+
+	// Group eligibility & four-eyes (HC-P07)
+	hospitalStaff := []Person{owner, admin, viewer, clinician, resident}
+	clinicians, nClinicians := eligiblePeople(hospitalStaff, Spec{Approvers: []string{"group:clinicians"}}, "", false)
+	if len(clinicians) != 2 || nClinicians != 2 {
+		t.Errorf("group:clinicians: got %d people (%d eligible), want 2", len(clinicians), nClinicians)
+	}
+	// Self-exclusion applies to group members when acting on their behalf
+	_, nSelfExcluded := eligiblePeople(hospitalStaff, Spec{Approvers: []string{"group:clinicians"}}, clinician.Email, false)
+	if nSelfExcluded != 1 {
+		t.Errorf("group:clinicians self-excluded: got %d, want 1", nSelfExcluded)
 	}
 }
 

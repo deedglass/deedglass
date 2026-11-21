@@ -18,9 +18,10 @@ import (
 // Person is an org member as approvals see them.
 type Person struct {
 	UserID ids.UserID
-	Email  string // never logged, never in a webhook or a deed
-	Name   string // display name; the email's local part when none is set
-	Role   string // owner | admin | viewer
+	Email  string   // never logged, never in a webhook or a deed
+	Name   string   // display name; the email's local part when none is set
+	Role   string   // owner | admin | viewer
+	Groups []string // IdP or org approver groups (HC-P07, e.g. "clinicians", "er-attendings")
 }
 
 // Spec is a rule's approval spec, as stored on the approval.
@@ -62,6 +63,12 @@ func (s Spec) Eligible(p Person) bool {
 			if strings.EqualFold(val, p.Email) {
 				return true
 			}
+		case "group":
+			for _, g := range p.Groups {
+				if strings.EqualFold(val, g) {
+					return true
+				}
+			}
 		}
 	}
 	return false
@@ -96,8 +103,46 @@ func members(ctx context.Context, tx pgx.Tx, org ids.OrgID) ([]Person, error) {
 	if err != nil {
 		return nil, err
 	}
+	grps := orgGroups(ctx, tx, org)
+	if len(grps) > 0 {
+		for i := range out {
+			out[i].Groups = resolvePersonGroups(grps, out[i].UserID, out[i].Email)
+		}
+	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Email < out[j].Email })
 	return out, nil
+}
+
+// orgGroups reads approver groups from deedglass.orgs.settings->'groups' (HC-P07).
+func orgGroups(ctx context.Context, tx pgx.Tx, org ids.OrgID) map[string][]string {
+	var raw []byte
+	err := tx.QueryRow(ctx, `SELECT COALESCE(settings->'groups', '{}'::jsonb) FROM deedglass.orgs WHERE id = $1`, org).Scan(&raw)
+	if err != nil {
+		return nil
+	}
+	var m map[string][]string
+	_ = json.Unmarshal(raw, &m)
+	return m
+}
+
+func resolvePersonGroups(groups map[string][]string, userID ids.UserID, email string) []string {
+	if len(groups) == 0 {
+		return nil
+	}
+	var out []string
+	uidStr := userID.String()
+	emailLower := strings.ToLower(email)
+	for groupName, members := range groups {
+		for _, m := range members {
+			mTrim := strings.TrimSpace(m)
+			if strings.EqualFold(mTrim, emailLower) || mTrim == uidStr {
+				out = append(out, groupName)
+				break
+			}
+		}
+	}
+	sort.Strings(out)
+	return out
 }
 
 // member is one active member of the org, or ok false.
@@ -115,6 +160,10 @@ func member(ctx context.Context, tx pgx.Tx, org ids.OrgID, user ids.UserID) (Per
 	}
 	if p.Name == "" {
 		p.Name, _, _ = strings.Cut(p.Email, "@")
+	}
+	grps := orgGroups(ctx, tx, org)
+	if len(grps) > 0 {
+		p.Groups = resolvePersonGroups(grps, p.UserID, p.Email)
 	}
 	return p, true, nil
 }

@@ -3,6 +3,7 @@ package identity
 import (
 	"context"
 	"net/http"
+	"strings"
 
 	"github.com/deedglass/deedglass/internal/httpx"
 	"github.com/deedglass/deedglass/internal/intent"
@@ -18,6 +19,7 @@ const (
 	HeaderOnBehalfOf = "Deedglass-On-Behalf-Of"
 	HeaderSession    = "Deedglass-Session"
 	HeaderIntent     = "Deedglass-Intent"
+	HeaderEmergency  = "Deedglass-Emergency"
 )
 
 // OBO is the person and session an agent acts for. Empty fields were not sent.
@@ -50,6 +52,22 @@ func ParseOBO(h http.Header) (OBO, error) {
 		*f.dst = vs[0]
 	}
 	return o, nil
+}
+
+// ParseEmergency reads Deedglass-Emergency (HC-P08). If present, it must be 1–280 characters.
+func ParseEmergency(h http.Header) (string, error) {
+	vs := h.Values(HeaderEmergency)
+	if len(vs) == 0 {
+		return "", nil
+	}
+	if len(vs) > 1 {
+		return "", httpx.ErrValidation(HeaderEmergency, "Header may appear at most once")
+	}
+	val := strings.TrimSpace(vs[0])
+	if len(val) == 0 || len(val) > 280 {
+		return "", httpx.ErrValidation(HeaderEmergency, "Emergency reason must be between 1 and 280 characters")
+	}
+	return val, nil
 }
 
 type oboKey struct{}

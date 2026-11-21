@@ -61,6 +61,46 @@
 <div id="email-body" class="email-body"></div>
 <p id="email-chips" class="email-chips num"></p>
 </section>
+<section id="clinical" class="clinical" aria-label="Clinical Order Review" hidden>
+<div class="clinical-header">
+<div class="patient-badge">
+<span class="patient-icon" aria-hidden="true">&#9877;</span>
+<span id="cl-patient" class="patient-id" translate="no"></span>
+<span id="cl-bed" class="patient-bed">Ward Chart</span>
+</div>
+<div class="clinical-tags">
+<span id="cl-tag-ai" class="pill pill-ai">Drafted by AI</span>
+<span id="cl-tag-status" class="pill pill-waiting">Held: waiting for clinician</span>
+</div>
+</div>
+<div id="cl-breakglass-banner" class="breakglass-banner" role="alert" hidden>
+<strong class="breakglass-title">&#9888; Emergency Break-Glass Active</strong>
+<p id="cl-breakglass-text" class="breakglass-desc"></p>
+</div>
+<div id="cl-transcript-wrap" class="transcript-anchor-wrap" hidden>
+<div class="transcript-label"><span class="audio-wave" aria-hidden="true">&#9646;&#9647;&#9648;&#9647;&#9646;</span> AI Scribe Transcript Source</div>
+<blockquote id="cl-transcript" class="transcript-quote"></blockquote>
+</div>
+<div class="clinical-table-wrap" role="region" aria-label="Clinical Order Details" tabindex="0">
+<table class="clinical-table">
+<thead>
+<tr>
+<th scope="col">Clinical Field</th>
+<th scope="col">Proposed Value</th>
+<th scope="col" id="cl-th-prior" hidden>Current Record</th>
+</tr>
+</thead>
+<tbody id="cl-fields"></tbody>
+</table>
+</div>
+<div id="cl-edit-bar" class="clinical-edit-bar">
+<button id="cl-btn-edit" class="btn btn-secondary btn-sm" type="button">Edit order</button>
+<span class="edit-help">10-second clinician review · Edit inline if needed</span>
+</div>
+<div id="cl-ehr-link-wrap" class="ehr-link-wrap" hidden>
+<a id="cl-ehr-link" class="ehr-link" href="#" target="_blank" rel="noopener noreferrer">&#8599; Open patient chart in EHR</a>
+</div>
+</section>
 <p id="args-note" class="note" hidden></p>
 </section>
 

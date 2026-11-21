@@ -8,6 +8,7 @@ import (
 
 	"github.com/deedglass/deedglass/internal/gate"
 	"github.com/deedglass/deedglass/internal/httpx"
+	"github.com/deedglass/deedglass/internal/ids"
 )
 
 // The approval routes (S22 §3.9). Approving and denying need a person: the routes accept a key so
@@ -43,6 +44,15 @@ func Routes(s *Service) []httpx.Route {
 			Idempotency: httpx.IdemNever, MaxBody: maxLinkBody, Handler: h.decideLink},
 		{Method: "POST", Pattern: "/v1/approval-links/status", OperationID: "approvalLinkStatus", Auth: httpx.Public,
 			Idempotency: httpx.IdemNever, MaxBody: maxLinkBody, Handler: h.status},
+		{Method: "GET", Pattern: "/v1/break-glass", OperationID: "listBreakGlassReviews", Auth: httpx.SessionOrKey, MinRole: httpx.RoleViewer,
+			Scopes: read, Extension: "ADR-105", Handler: h.listBreakGlass},
+		{Method: "GET", Pattern: "/v1/break-glass/digest", OperationID: "getBreakGlassWeeklyDigest", Auth: httpx.SessionOrKey, MinRole: httpx.RoleViewer,
+			Scopes: read, Extension: "ADR-105", Handler: h.digestBreakGlass},
+		{Method: "GET", Pattern: "/v1/break-glass/{id}", OperationID: "getBreakGlassReview", Auth: httpx.SessionOrKey, MinRole: httpx.RoleViewer,
+			Scopes: read, Extension: "ADR-105", Handler: h.getBreakGlass},
+		{Method: "POST", Pattern: "/v1/break-glass/{id}/review", OperationID: "closeBreakGlassReview", Auth: httpx.SessionOrKey,
+			MinRole: httpx.RoleAdmin, Purpose: "closing post-hoc emergency break-glass review", Scopes: []string{httpx.ScopeAdmin}, Extension: "ADR-105", Idempotency: httpx.IdemOptional,
+			MaxBody: maxLinkBody, Handler: h.reviewBreakGlass},
 	}
 }
 
@@ -230,4 +240,123 @@ func (h *handlers) status(w http.ResponseWriter, r *http.Request) error {
 func noStore(w http.ResponseWriter) {
 	w.Header().Set("Cache-Control", "no-store")
 	w.Header().Set("Referrer-Policy", "no-referrer")
+}
+
+type listBreakGlassResponse struct {
+	Reviews []*BreakGlassReview `json:"reviews"`
+	Count   int                 `json:"count"`
+}
+
+type reviewBreakGlassBody struct {
+	Reason          string `json:"reason"`
+	ReviewLatencyMs int64  `json:"review_latency_ms"`
+}
+
+func (h *handlers) listBreakGlass(w http.ResponseWriter, r *http.Request) error {
+	p, err := h.principal(r)
+	if err != nil {
+		return err
+	}
+	if h.s == nil || h.s.breakGlass == nil {
+		return httpx.E(httpx.CodeServiceUnavailable)
+	}
+	st := r.URL.Query().Get("status")
+	reviews := h.s.breakGlass.List(p.OrgID, ReviewStatus(st))
+	if reviews == nil {
+		reviews = []*BreakGlassReview{}
+	}
+	return httpx.WriteJSON(w, http.StatusOK, listBreakGlassResponse{
+		Reviews: reviews,
+		Count:   len(reviews),
+	})
+}
+
+func (h *handlers) getBreakGlass(w http.ResponseWriter, r *http.Request) error {
+	p, err := h.principal(r)
+	if err != nil {
+		return err
+	}
+	if h.s == nil || h.s.breakGlass == nil {
+		return httpx.E(httpx.CodeServiceUnavailable)
+	}
+	id := r.PathValue("id")
+	rev, err := h.s.breakGlass.Get(id)
+	if err != nil || (rev.OrgID != (ids.OrgID{}) && rev.OrgID != p.OrgID) {
+		return httpx.E(httpx.CodeNotFound)
+	}
+	return httpx.WriteJSON(w, http.StatusOK, rev)
+}
+
+func (h *handlers) reviewBreakGlass(w http.ResponseWriter, r *http.Request) error {
+	p, err := h.principal(r)
+	if err != nil {
+		return err
+	}
+	if h.s == nil || h.s.breakGlass == nil {
+		return httpx.E(httpx.CodeServiceUnavailable)
+	}
+	id := r.PathValue("id")
+	var b reviewBreakGlassBody
+	if err := httpx.DecodeJSON(r, &b); err != nil {
+		return err
+	}
+	reason := strings.TrimSpace(b.Reason)
+	if reason == "" {
+		return httpx.ErrValidation("reason", "reviewer reason is required to close break-glass review (HC-P08).")
+	}
+	if len(reason) > 280 {
+		return httpx.ErrValidation("reason", "reviewer reason cannot exceed 280 characters.")
+	}
+
+	reviewer := ""
+	if !p.UserID.IsZero() {
+		reviewer = p.UserID.String()
+	} else if !p.KeyID.IsZero() {
+		reviewer = p.KeyID.String()
+	} else {
+		reviewer = "clinician-reviewer"
+	}
+
+	rev, err := h.s.breakGlass.CloseReview(CloseReviewInput{
+		ReviewID:        id,
+		Reviewer:        reviewer,
+		Reason:          reason,
+		ReviewLatencyMs: b.ReviewLatencyMs,
+	})
+	if err != nil {
+		return httpx.ErrValidation("id", err.Error())
+	}
+	return httpx.WriteJSON(w, http.StatusOK, rev)
+}
+
+func (h *handlers) digestBreakGlass(w http.ResponseWriter, r *http.Request) error {
+	p, err := h.principal(r)
+	if err != nil {
+		return err
+	}
+	if h.s == nil || h.s.breakGlass == nil {
+		return httpx.E(httpx.CodeServiceUnavailable)
+	}
+	days := 7
+	if d := r.URL.Query().Get("window_days"); d != "" {
+		n, err := strconv.Atoi(d)
+		if err != nil || n < 1 || n > 30 {
+			return httpx.ErrValidation("window_days", "window_days must be between 1 and 30.")
+		}
+		days = n
+	}
+	now := time.Now().UTC()
+	start := now.AddDate(0, 0, -days)
+	digest := h.s.breakGlass.GenerateWeeklyDigest(p.OrgID, start, now)
+
+	format := r.URL.Query().Get("format")
+	if format == "json" {
+		return httpx.WriteJSON(w, http.StatusOK, digest)
+	}
+
+	md := FormatWeeklyDigest(digest)
+	w.Header().Set("Content-Type", "text/markdown; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write([]byte(md))
+	return nil
 }

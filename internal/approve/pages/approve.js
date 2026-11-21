@@ -77,6 +77,9 @@
     emailQOne: '1 question',
     emailQMany: '{n} questions',
     approveEmail: 'Approve',
+    // Ward Light: the clinical_preview section.
+    approveClinical: 'Approve order',
+    approveCommit: 'Sign & Commit',
     // S23: the undo section (internal/witness/undo/present.go holds the CLI and API strings).
     undoHead: '{rows} in {tables}',
     undoUpdates: '{n}\u00a0updates',
@@ -254,6 +257,7 @@
     }
     renderUndo(ctx.sections && ctx.sections.undo);
     renderEmail(ctx.sections && ctx.sections.email_preview);
+    renderClinical(ctx.sections && ctx.sections.clinical_preview);
     $('sql-text').textContent = p.sql || '';
     show($('sql'), Boolean(p.sql));
     $('args-note').textContent = ctx.args_note || '';
@@ -317,6 +321,78 @@
     const qs = e.questions === 1 ? COPY.emailQOne : fmt(COPY.emailQMany, { n: e.questions || 0 });
     $('email-chips').textContent = fmt(COPY.emailChips, { words: e.words || 0, links, questions: qs, lint: r.lint_summary || '-', judge: r.judge_summary || '-' });
     $('approve').textContent = COPY.approveEmail;
+  }
+
+  // Ward Light: the clinical_preview section (DIRECTION_HEALTH.md). Shows patient chart card,
+  // ambient AI scribe transcript anchor, structured clinical fields (Medicine, Dose, Route,
+  // Frequency, Duration), inline "Edit order" (Edit & Commit) and direct EHR deep-link (CH-05).
+  let editingClinical = false;
+  let clinicalData = null;
+
+  function renderClinical(c) {
+    const on = Boolean(c && typeof c === 'object');
+    show($('clinical'), on);
+    if (!on) return;
+    clinicalData = c;
+    editingClinical = false;
+
+    // Patient badge & ward label
+    $('cl-patient').textContent = c.patient_display || c.patient_ref || 'Patient';
+    $('cl-bed').textContent = c.action_label || 'Ward Chart';
+
+    // Emergency break-glass banner (CH-07)
+    const isEmer = Boolean(c.is_break_glass);
+    show($('cl-breakglass-banner'), isEmer);
+    if (isEmer) {
+      $('cl-breakglass-text').textContent = c.audit_notice || 'Action initiated under emergency break-glass override.';
+    }
+
+    // Transcript source anchor
+    const hasTranscript = Boolean(c.transcript_anchor);
+    show($('cl-transcript-wrap'), hasTranscript);
+    if (hasTranscript) {
+      $('cl-transcript').textContent = c.transcript_anchor;
+    }
+
+    // Table of clinical fields
+    renderClinicalFields(c.fields || []);
+
+    // EHR deep-link (CH-05)
+    const hasEHR = Boolean(c.ehr_deep_link);
+    show($('cl-ehr-link-wrap'), hasEHR);
+    if (hasEHR) {
+      $('cl-ehr-link').href = c.ehr_deep_link;
+      $('cl-ehr-link').textContent = '\u2197 Open patient record in EHR';
+    }
+
+    // Button label
+    $('approve').textContent = COPY.approveClinical;
+  }
+
+  function renderClinicalFields(fields) {
+    const tbody = $('cl-fields');
+    tbody.textContent = '';
+    for (const f of fields) {
+      const tr = document.createElement('tr');
+      const tdLabel = document.createElement('td');
+      tdLabel.className = 'cl-k';
+      tdLabel.textContent = f.label || f.key;
+
+      const tdVal = document.createElement('td');
+      tdVal.className = 'cl-v';
+      if (editingClinical && f.editable) {
+        const inp = document.createElement('input');
+        inp.className = 'cl-edit-input';
+        inp.type = 'text';
+        inp.value = f.value || '';
+        inp.dataset.key = f.key;
+        tdVal.append(inp);
+      } else {
+        tdVal.textContent = f.value || '-';
+      }
+      tr.append(tdLabel, tdVal);
+      tbody.append(tr);
+    }
   }
 
   // S23: an undo's plan, as the person who countersigns it reads it: what is put back, and the first
@@ -672,6 +748,26 @@
   document.addEventListener('visibilitychange', () => {
     if (!document.hidden && pollUntil && Date.now() < pollUntil && !pollTimer) poll();
   });
+
+  const clEditBtn = $('cl-btn-edit');
+  if (clEditBtn) {
+    clEditBtn.addEventListener('click', () => {
+      if (!clinicalData) return;
+      editingClinical = !editingClinical;
+      clEditBtn.textContent = editingClinical ? 'Confirm edits' : 'Edit order';
+      if (!editingClinical) {
+        const inputs = $('cl-fields').querySelectorAll('input.cl-edit-input');
+        for (const inp of inputs) {
+          const k = inp.dataset.key;
+          for (const f of (clinicalData.fields || [])) {
+            if (f.key === k) f.value = inp.value;
+          }
+        }
+        $('approve').textContent = COPY.approveCommit;
+      }
+      renderClinicalFields(clinicalData.fields || []);
+    });
+  }
 
   load(false);
 })();

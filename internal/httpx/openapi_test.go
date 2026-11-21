@@ -206,6 +206,17 @@ func elsewhere() []Route {
 	// S29: Slack interactivity (internal/notify/slack): public, a form body, Slack's signature.
 	out = append(out, Route{Method: "POST", Pattern: "/v1/slack/interact", OperationID: "slackInteract", Auth: Public, Idempotency: IdemNever,
 		BodyType: "application/x-www-form-urlencoded", MaxBody: 256 << 10, Handler: stub})
+	// HC-P08: Break-glass post-hoc review queue (internal/approve).
+	bgGetList := adm("GET", "/v1/break-glass", "listBreakGlassReviews", RoleViewer)
+	bgGetList.Extension = "ADR-105"
+	bgGetDigest := adm("GET", "/v1/break-glass/digest", "getBreakGlassWeeklyDigest", RoleViewer)
+	bgGetDigest.Extension = "ADR-105"
+	bgGetItem := adm("GET", "/v1/break-glass/{id}", "getBreakGlassReview", RoleViewer)
+	bgGetItem.Extension = "ADR-105"
+	bgClose := adm("POST", "/v1/break-glass/{id}/review", "closeBreakGlassReview", RoleAdmin)
+	bgClose.Idempotency = IdemOptional
+	bgClose.Extension = "ADR-105"
+	out = append(out, bgGetList, bgGetDigest, bgGetItem, bgClose)
 	return out
 }
 

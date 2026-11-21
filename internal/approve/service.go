@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/url"
+	"strings"
 	"time"
 	"unicode/utf8"
 
@@ -92,23 +93,25 @@ type Gate interface {
 // Options are a Service's dependencies. DB and Ledger are required; Gate is set with Attach once
 // the pipeline exists (it needs the Service first).
 type Options struct {
-	DB        *store.DB
-	Ledger    *ledger.Ledger // with a seal key: every vote seals an admin deed
-	BaseURL   *url.URL       // links: {base}/approve#t=…
-	Notifiers []notify.Notifier
-	Config    Config
-	Logger    *slog.Logger
-	Clock     func() time.Time
+	DB         *store.DB
+	Ledger     *ledger.Ledger // with a seal key: every vote seals an admin deed
+	BaseURL    *url.URL       // links: {base}/approve#t=…
+	Notifiers  []notify.Notifier
+	Config     Config
+	Logger     *slog.Logger
+	Clock      func() time.Time
+	BreakGlass *BreakGlassQueue
 }
 
 // Service is approvals (S22). It implements gate.Approvals and gate.ApprovalHooks; every way a
 // person decides (Console, email link, Slack in S29, the dev CLI) ends in Decide.
 type Service struct {
-	o    Options
-	cfg  Config
-	log  *slog.Logger
-	now  func() time.Time
-	gate Gate
+	o          Options
+	cfg        Config
+	log        *slog.Logger
+	now        func() time.Time
+	gate       Gate
+	breakGlass *BreakGlassQueue
 }
 
 var (
@@ -130,7 +133,11 @@ func New(o Options) (*Service, error) {
 	if o.BaseURL == nil {
 		o.BaseURL, _ = url.Parse("http://127.0.0.1:8080")
 	}
-	return &Service{o: o, cfg: o.Config.withDefaults(), log: o.Logger, now: o.Clock}, nil
+	bg := o.BreakGlass
+	if bg == nil {
+		bg = NewBreakGlassQueue()
+	}
+	return &Service{o: o, cfg: o.Config.withDefaults(), log: o.Logger, now: o.Clock, breakGlass: bg}, nil
 }
 
 // Attach gives the Service the Gate it resumes and concludes actions through.
@@ -138,6 +145,22 @@ func (s *Service) Attach(g Gate) { s.gate = g }
 
 // Config is the effective configuration.
 func (s *Service) Config() Config { return s.cfg }
+
+// BreakGlass returns the emergency break-glass review queue (HC-P08).
+func (s *Service) BreakGlass() *BreakGlassQueue {
+	if s == nil {
+		return nil
+	}
+	return s.breakGlass
+}
+
+// EnrollBreakGlass enqueues an emergency break-glass action into the review queue (HC-P08).
+func (s *Service) EnrollBreakGlass(item *BreakGlassReview) error {
+	if s == nil || s.breakGlass == nil {
+		return errors.New("approve: break-glass queue not available")
+	}
+	return s.breakGlass.Enqueue(item)
+}
 
 // --- gate.Approvals ---
 
@@ -155,6 +178,30 @@ func (s *Service) Prepare(ctx context.Context, in gate.ApprovalInput, d policy.D
 	if in.OnBehalfOf != "" {
 		o := in.OnBehalfOf
 		snap.OnBehalfOf = &o
+	}
+	if s.breakGlass != nil {
+		isBG := strings.Contains(d.RuleID, "break-glass") || strings.Contains(d.RuleID, "emergency")
+		if !isBG && snap.Sections != nil {
+			if cp, ok := snap.Sections["clinical_preview"]; ok && strings.Contains(string(cp), `"is_break_glass":true`) {
+				isBG = true
+			}
+		}
+		if isBG {
+			reason := d.Reason
+			if reason == "" {
+				reason = "Emergency clinical override"
+			}
+			actID := fmt.Sprintf("act_%s", ids.New[ids.ActionKind]().String())
+			_ = s.breakGlass.Enqueue(&BreakGlassReview{
+				ActionID:         actID,
+				OrgID:            in.Org,
+				RuleID:           d.RuleID,
+				EmergencyReason:  reason,
+				ClinicianSubject: in.OnBehalfOf,
+				Status:           ReviewStatusPending,
+				CreatedAt:        s.now(),
+			})
+		}
 	}
 	spec := specOf(d)
 	snap.Policy = SnapPolicy{RuleID: d.RuleID, Reason: d.Reason, Verify: string(d.Verify), Required: spec.Required, Approvers: spec.Approvers}
