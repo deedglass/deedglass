@@ -1,0 +1,19 @@
+apiVersion: v2
+name: deedglass
+description: Helm chart for Deedglass - Non-SaMD AI action gate and physical storage witness for healthcare
+type: application
+version: 0.15.0
+appVersion: "0.15.0"
+keywords:
+  - healthcare
+  - ai-safety
+  - fhir
+  - audit
+  - hipaa
+  - provenance
+home: https://deedglass.com
+sources:
+  - https://github.com/deedglass/deedglass
+maintainers:
+  - name: Arjun Prabhakaran
+    url: https://deedglass.com

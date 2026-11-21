@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "title": "Values",
+  "type": "object",
+  "required": [
+    "env",
+    "baseUrl",
+    "phimode",
+    "securityContext",
+    "networkPolicy"
+  ],
+  "properties": {
+    "env": {
+      "type": "string",
+      "enum": ["prod", "dev"],
+      "default": "prod"
+    },
+    "baseUrl": {
+      "type": "string",
+      "format": "uri"
+    },
+    "listen": {
+      "type": "string",
+      "default": "0.0.0.0:8080"
+    },
+    "metricsListen": {
+      "type": "string",
+      "default": "0.0.0.0:9464"
+    },
+    "replicaCount": {
+      "type": "integer",
+      "minimum": 1,
+      "default": 1
+    },
+    "phimode": {
+      "type": "object",
+      "required": ["enabled", "mode"],
+      "properties": {
+        "enabled": { "type": "boolean", "default": true },
+        "mode": { "type": "string", "enum": ["digest"], "default": "digest" }
+      }
+    },
+    "oidc": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean", "default": false },
+        "providerType": {
+          "type": "string",
+          "enum": ["entra_id", "okta", "google", "generic"],
+          "default": "entra_id"
+        },
+        "roleMapping": {
+          "type": "object",
+          "properties": {
+            "defaultRole": { "type": "string", "enum": ["owner", "admin", "viewer"], "default": "viewer" },
+            "failClosed": { "type": "boolean", "default": true }
+          }
+        }
+      }
+    },
+    "securityContext": {
+      "type": "object",
+      "required": ["runAsNonRoot", "readOnlyRootFilesystem", "allowPrivilegeEscalation"],
+      "properties": {
+        "runAsNonRoot": { "type": "boolean", "default": true },
+        "readOnlyRootFilesystem": { "type": "boolean", "default": true },
+        "allowPrivilegeEscalation": { "type": "boolean", "default": false }
+      }
+    },
+    "networkPolicy": {
+      "type": "object",
+      "required": ["enabled"],
+      "properties": {
+        "enabled": { "type": "boolean", "default": true },
+        "allowDNS": { "type": "boolean", "default": true },
+        "allowPostgres": { "type": "boolean", "default": true }
+      }
+    }
+  }
+}

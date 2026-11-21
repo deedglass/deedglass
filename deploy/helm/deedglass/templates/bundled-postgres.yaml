@@ -1,0 +1,85 @@
+{{- if .Values.bundledPostgres.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "deedglass.fullname" . }}-postgresql
+  labels:
+    {{- include "deedglass.labels" . | nindent 4 }}
+    app.kubernetes.io/component: database
+spec:
+  type: ClusterIP
+  ports:
+    - port: 5432
+      targetPort: 5432
+      protocol: TCP
+      name: postgresql
+  selector:
+    {{- include "deedglass.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: database
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "deedglass.fullname" . }}-postgresql
+  labels:
+    {{- include "deedglass.labels" . | nindent 4 }}
+    app.kubernetes.io/component: database
+spec:
+  serviceName: {{ include "deedglass.fullname" . }}-postgresql
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "deedglass.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: database
+  template:
+    metadata:
+      labels:
+        {{- include "deedglass.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: database
+    spec:
+      containers:
+        - name: postgresql
+          image: "{{ .Values.bundledPostgres.image.repository }}:{{ .Values.bundledPostgres.image.tag }}"
+          imagePullPolicy: {{ .Values.bundledPostgres.image.pullPolicy }}
+          command:
+            - postgres
+            - -c
+            - wal_level={{ .Values.bundledPostgres.walLevel }}
+            - -c
+            - max_slot_wal_keep_size={{ .Values.bundledPostgres.maxSlotWalKeepSize }}
+          ports:
+            - containerPort: 5432
+              name: postgresql
+          env:
+            - name: POSTGRES_DB
+              value: {{ .Values.database.database | quote }}
+            - name: POSTGRES_USER
+              value: "postgres"
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ default (printf "%s-secrets" (include "deedglass.fullname" .)) .Values.database.passwordExistingSecret }}
+                  key: {{ .Values.database.passwordKey | default "password" }}
+          resources:
+            {{- toYaml .Values.bundledPostgres.resources | nindent 12 }}
+          volumeMounts:
+            - name: pgdata
+              mountPath: /var/lib/postgresql/data
+  {{- if .Values.bundledPostgres.storage.enabled }}
+  volumeClaimTemplates:
+    - metadata:
+        name: pgdata
+      spec:
+        accessModes: [ "ReadWriteOnce" ]
+        {{- if .Values.bundledPostgres.storage.storageClass }}
+        storageClassName: {{ .Values.bundledPostgres.storage.storageClass | quote }}
+        {{- end }}
+        resources:
+          requests:
+            storage: {{ .Values.bundledPostgres.storage.size }}
+  {{- else }}
+      volumes:
+        - name: pgdata
+          emptyDir: {}
+  {{- end }}
+{{- end }}

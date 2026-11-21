@@ -1,0 +1,52 @@
+{{- if .Values.migration.enabled -}}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "deedglass.fullname" . }}-migrate
+  labels:
+    {{- include "deedglass.labels" . | nindent 4 }}
+  annotations:
+    {{- toYaml .Values.migration.annotations | nindent 4 }}
+spec:
+  template:
+    metadata:
+      labels:
+        {{- include "deedglass.selectorLabels" . | nindent 8 }}
+    spec:
+      restartPolicy: OnFailure
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: migrate
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            - "deedglass"
+            - "migrate"
+            - "up"
+          env:
+            - name: DEEDGLASS_MIGRATE_DATABASE_URL
+              {{- if .Values.database.migrateUrl }}
+              value: {{ .Values.database.migrateUrl | quote }}
+              {{- else if .Values.database.migratePasswordExistingSecret }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.database.migratePasswordExistingSecret }}
+                  key: {{ .Values.database.migratePasswordKey | default "migrator-password" }}
+              {{- else if .Values.database.migratePassword }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "deedglass.fullname" . }}-secrets
+                  key: migrator-password
+              {{- else }}
+              value: {{ include "deedglass.migrateUrl" . | quote }}
+              {{- end }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}
+{{- end }}

@@ -1,0 +1,47 @@
+{{- if and .Values.sso.enabled (empty .Values.sso.existingSecret) -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "deedglass.fullname" . }}-sso-config
+  labels:
+    {{- include "deedglass.labels" . | nindent 4 }}
+data:
+  sso.json: |
+    {
+      "mock_idp_enabled": {{ .Values.sso.mockIdPEnabled | default false }},
+      "providers": [
+        {{- $first := true -}}
+        {{- range .Values.sso.providers }}
+        {{- if not $first }},{{ end }}
+        {
+          "id": {{ .id | quote }},
+          "type": {{ .type | quote }},
+          "display_name": {{ .displayName | quote }},
+          "issuer": {{ .issuer | quote }},
+          "client_id": {{ .clientId | quote }},
+          "redirect_uri": {{ .redirectUri | quote }}
+          {{- if .roleMapping }},
+          "role_mapping": {
+            "groups_claim": {{ .roleMapping.groupsClaim | default "groups" | quote }},
+            "default_role": {{ .roleMapping.defaultRole | default "viewer" | quote }},
+            "fail_closed": {{ .roleMapping.failClosed | default true }}
+            {{- if .roleMapping.ownerGroups }},
+            "owner_groups": {{ toJson .roleMapping.ownerGroups }}
+            {{- end }}
+            {{- if .roleMapping.adminGroups }},
+            "admin_groups": {{ toJson .roleMapping.adminGroups }}
+            {{- end }}
+            {{- if .roleMapping.viewerGroups }},
+            "viewer_groups": {{ toJson .roleMapping.viewerGroups }}
+            {{- end }}
+            {{- if .roleMapping.dutyRota }},
+            "duty_rota": {{ toJson .roleMapping.dutyRota }}
+            {{- end }}
+          }
+          {{- end }}
+        }
+        {{- $first = false -}}
+        {{- end }}
+      ]
+    }
+{{- end }}

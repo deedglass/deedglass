@@ -1,0 +1,192 @@
+# Default values for Deedglass Kubernetes deployment.
+# Designed for single-tenant hospital VPCs, Azure AKS, AWS EKS, and on-premises OpenShift/K8s clusters.
+
+env: "prod"
+baseUrl: "https://deedglass.hospital.local"
+
+replicaCount: 2
+
+image:
+  repository: ghcr.io/deedglass/deedglass
+  pullPolicy: IfNotPresent
+  tag: "v0.15.0"
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  automountServiceAccountToken: false
+  annotations: {}
+  name: ""
+
+# Non-root, secure pod defaults (CIS Benchmark / NHS DCB0129 / HIPAA Security Rule)
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 65532
+  runAsGroup: 65532
+  fsGroup: 65532
+  seccompProfile:
+    type: RuntimeDefault
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+  runAsUser: 65532
+  capabilities:
+    drop:
+      - ALL
+
+# Zero-PHI operational mode (phimode salted SHA-256 digests)
+phimode:
+  enabled: true
+  mode: "digest"
+
+service:
+  type: ClusterIP
+  port: 8080
+  targetPort: 8080
+
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "16m"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+  hosts:
+    - host: deedglass.hospital.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: deedglass-tls-cert
+      hosts:
+        - deedglass.hospital.local
+
+resources:
+  limits:
+    cpu: 1000m
+    memory: 512Mi
+  requests:
+    cpu: 250m
+    memory: 128Mi
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 80
+
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+# Fail-Closed Non-SaMD & Zero-Egress Network Isolation (Rule P-093)
+networkPolicy:
+  enabled: true
+  ingress:
+    fromIngressController: true
+    allowedCIDRs: []
+  # Egress restricted strictly to Postgres database, internal DNS, and FHIR servers.
+  # Zero egress to arbitrary internet endpoints.
+  egress:
+    allowKubeDNS: true
+    databaseCIDR: "10.0.0.0/16"
+    fhirCIDR: "10.1.0.0/16"
+    idpCIDR: "10.2.0.0/16"
+
+# Database Configuration (External Postgres with wal_level=logical)
+database:
+  external: true
+  host: "postgres.hospital.internal"
+  port: 5432
+  name: "deedglass"
+  user: "deedglass"
+  sslMode: "require"
+  existingSecret: "deedglass-db-credentials"
+  existingSecretKey: "database-url"
+  bundled:
+    enabled: false
+    image:
+      repository: postgres
+      tag: "16-alpine"
+    persistence:
+      enabled: true
+      size: 20Gi
+      storageClass: ""
+
+# Enterprise Hospital OIDC SSO Configuration
+oidc:
+  enabled: true
+  providerType: "entra_id"
+  roleMapping:
+    defaultRole: "viewer"
+    failClosed: true
+
+# Hospital OIDC Single Sign-On (Entra ID, Okta, Google Workspace)
+sso:
+  enabled: true
+  existingSecret: ""
+  mockIdPEnabled: false
+  providers:
+    - id: "hospital_entra"
+      type: "entra_id"
+      displayName: "Hospital Clinical Directory (Entra ID)"
+      issuer: "https://login.microsoftonline.com/YOUR_TENANT_ID/v2.0"
+      clientId: "YOUR_CLIENT_ID"
+      secretName: "deedglass-sso-entra"
+      secretKey: "client-secret"
+      redirectUri: "https://deedglass.hospital.local/app/sso/callback"
+      roleMapping:
+        groupsClaim: "groups"
+        ownerGroups:
+          - "SG-HealthIT-SecOps"
+        adminGroups:
+          - "SG-ClinicalInformatics-Admins"
+        viewerGroups:
+          - "SG-Attending-Physicians"
+          - "SG-ER-Clinicians"
+        defaultRole: "viewer"
+        failClosed: true
+        dutyRota:
+          SG-ER-Clinicians:
+            ward: "Emergency Department"
+            roleTitle: "Attending Emergency Physician"
+            canBreakGlass: true
+            requireFourEyes: false
+
+# Zero-PHI Salt and State Signing Secrets
+secrets:
+  existingSecret: ""
+  stateSecretKey: "sso-state-secret"
+  subjectSaltKey: "sso-subject-salt"
+
+# Health and Readiness Probes
+probes:
+  liveness:
+    httpGet:
+      path: /v1/health
+      port: 8080
+    initialDelaySeconds: 10
+    periodSeconds: 15
+    timeoutSeconds: 5
+    failureThreshold: 3
+  readiness:
+    httpGet:
+      path: /v1/health
+      port: 8080
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    timeoutSeconds: 3
+    failureThreshold: 2
+
+extraEnv: []
+extraVolumes: []
+extraVolumeMounts: []
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+

@@ -1,0 +1,74 @@
+{{- if .Values.networkPolicy.enabled -}}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "deedglass.fullname" . }}
+  labels:
+    {{- include "deedglass.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "deedglass.selectorLabels" . | nindent 6 }}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Allow traffic from ingress controller or same namespace callers
+    - from:
+        {{- if .Values.networkPolicy.ingress.fromIngressController }}
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/component: controller
+        {{- end }}
+        {{- range .Values.networkPolicy.ingress.allowedCIDRs }}
+        - ipBlock:
+            cidr: {{ . | quote }}
+        {{- end }}
+      ports:
+        - protocol: TCP
+          port: {{ .Values.service.targetPort | default 8080 }}
+  egress:
+    # 1. Kube-DNS for service discovery inside the hospital Kubernetes cluster
+    {{- if .Values.networkPolicy.egress.allowKubeDNS }}
+    - to:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    {{- end }}
+    # 2. Database egress restricted strictly to the hospital Postgres instance (logical WAL)
+    {{- if .Values.networkPolicy.egress.databaseCIDR }}
+    - to:
+        - ipBlock:
+            cidr: {{ .Values.networkPolicy.egress.databaseCIDR | quote }}
+      ports:
+        - protocol: TCP
+          port: {{ .Values.database.port | default 5432 }}
+    {{- end }}
+    # 3. EHR / FHIR server egress restricted to internal hospital clinical systems
+    {{- if .Values.networkPolicy.egress.fhirCIDR }}
+    - to:
+        - ipBlock:
+            cidr: {{ .Values.networkPolicy.egress.fhirCIDR | quote }}
+      ports:
+        - protocol: TCP
+          port: 443
+        - protocol: TCP
+          port: 8443
+    {{- end }}
+    # 4. Identity Provider egress strictly restricted to hospital OIDC IdP
+    {{- if .Values.networkPolicy.egress.idpCIDR }}
+    - to:
+        - ipBlock:
+            cidr: {{ .Values.networkPolicy.egress.idpCIDR | quote }}
+      ports:
+        - protocol: TCP
+          port: 443
+    {{- end }}
+{{- end }}

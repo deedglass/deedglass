@@ -1,0 +1,139 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "deedglass.fullname" . }}
+  labels:
+    {{- include "deedglass.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      {{- include "deedglass.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "deedglass.selectorLabels" . | nindent 8 }}
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        {{- if or .Values.database.password .Values.database.migratePassword .Values.oidc.clientSecret }}
+        checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
+        {{- end }}
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "deedglass.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            - "deedglass"
+            - "serve"
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.port | default 8080 }}
+              protocol: TCP
+            - name: metrics
+              containerPort: {{ .Values.service.metricsPort | default 9464 }}
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: {{ include "deedglass.fullname" . }}-config
+          env:
+            - name: DEEDGLASS_DATABASE_URL
+              {{- if .Values.database.url }}
+              value: {{ .Values.database.url | quote }}
+              {{- else if .Values.database.passwordExistingSecret }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.database.passwordExistingSecret }}
+                  key: {{ .Values.database.passwordKey | default "password" }}
+              {{- else if .Values.database.password }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "deedglass.fullname" . }}-secrets
+                  key: password
+              {{- else }}
+              value: {{ include "deedglass.databaseUrl" . | quote }}
+              {{- end }}
+            {{- if .Values.oidc.enabled }}
+            {{- if .Values.oidc.clientSecretExistingSecret }}
+            - name: DEEDGLASS_SSO_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.oidc.clientSecretExistingSecret }}
+                  key: {{ .Values.oidc.clientSecretKey | default "client-secret" }}
+            {{- else if .Values.oidc.clientSecret }}
+            - name: DEEDGLASS_SSO_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "deedglass.fullname" . }}-secrets
+                  key: client-secret
+            {{- end }}
+            {{- end }}
+            {{- with .Values.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          {{- with .Values.probes.liveness }}
+          livenessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.probes.readiness }}
+          readinessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            {{- if .Values.oidc.enabled }}
+            - name: sso-config
+              mountPath: /etc/deedglass
+              readOnly: true
+            {{- end }}
+            {{- with .Values.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        {{- if .Values.oidc.enabled }}
+        - name: sso-config
+          configMap:
+            name: {{ include "deedglass.fullname" . }}-config
+            items:
+              - key: sso-config.json
+                path: sso-config.json
+        {{- end }}
+        {{- with .Values.extraVolumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

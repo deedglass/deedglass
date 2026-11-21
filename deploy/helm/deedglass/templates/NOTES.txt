@@ -1,0 +1,36 @@
+Deedglass Non-SaMD Action Gate & Physical Storage Witness
+==============================================================
+
+Release: {{ .Release.Name }}
+Namespace: {{ .Release.Namespace }}
+Version: {{ .Chart.AppVersion }}
+
+1. Access the Deedglass Clinical Console:
+{{- if .Values.ingress.enabled }}
+{{- range .Values.ingress.hosts }}
+  https://{{ .host }}
+{{- end }}
+{{- else if contains "NodePort" .Values.service.type }}
+  export NODE_PORT=$(kubectl get --namespace {{ .Release.Namespace }} -o jsonpath="{.spec.ports[0].nodePort}" services {{ include "deedglass.fullname" . }})
+  export NODE_IP=$(kubectl get nodes --namespace {{ .Release.Namespace }} -o jsonpath="{.items[0].status.addresses[0].address}")
+  echo http://$NODE_IP:$NODE_PORT
+{{- else if contains "LoadBalancer" .Values.service.type }}
+  NOTE: It may take a few minutes for the LoadBalancer IP to become available.
+  kubectl get svc --namespace {{ .Release.Namespace }} -w {{ include "deedglass.fullname" . }}
+{{- else if contains "ClusterIP" .Values.service.type }}
+  export POD_NAME=$(kubectl get pods --namespace {{ .Release.Namespace }} -l "app.kubernetes.io/name={{ include "deedglass.name" . }},app.kubernetes.io/instance={{ .Release.Name }}" -o jsonpath="{.items[0].metadata.name}")
+  kubectl --namespace {{ .Release.Namespace }} port-forward $POD_NAME 8080:8080
+  echo "Visit http://127.0.0.1:8080/app"
+{{- end }}
+
+2. Hospital OIDC SSO Status:
+{{- if .Values.sso.enabled }}
+  SSO is active with {{ len .Values.sso.providers }} configured provider(s).
+  Login endpoint: /app/sso/login
+{{- else }}
+  SSO is not enabled.
+{{- end }}
+
+3. Verification & Clinical Safety Boundary:
+  Deedglass operates as an administrative verification gate and zero-PHI cryptographic provenance ledger.
+  Physical storage witness tracks L1 FHIR read-backs and L2 Postgres WAL changes with fail-closed integrity.
