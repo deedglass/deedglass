@@ -57,7 +57,7 @@ const connects = [
 ---
 <section class="dg-home" aria-label="What Deedglass does">
   <!-- Interactive Terminal Audit Preview -->
-  <div class="terminal-card">
+  <div class="terminal-card not-content">
     <div class="terminal-bar">
       <div class="window-controls" aria-hidden="true">
         <span class="control-dot close"></span>
@@ -136,7 +136,7 @@ const connects = [
   </div>
 
   <!-- Quick Onboarding Card -->
-  <div class="onboard-card">
+  <div class="onboard-card not-content">
     <div class="onboard-header">
       <h2>Try Deedglass locally in 60 seconds</h2>
       <p>Launch the interactive browser application directly from your terminal. No credentials or external server required.</p>
@@ -171,6 +171,13 @@ const connects = [
     overflow: hidden;
     box-shadow: 0 16px 36px rgba(0, 0, 0, 0.4);
   }
+  /* Strict terminal token isolation: immune to light-mode leakage */
+  .terminal-card :is(code, .cli-command, .sql-code, .pane-val, .undo-line) {
+    background: transparent !important;
+    border: 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+  }
   .terminal-bar {
     display: flex;
     align-items: center;
@@ -196,12 +203,16 @@ const connects = [
   .terminal-title {
     font-size: 0.75rem;
     font-family: var(--sl-font-mono);
-    color: var(--dg-text-2);
+    color: var(--slate-300) !important;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   .terminal-badge {
     font-size: 0.6875rem;
-    color: var(--slate-450);
+    color: var(--slate-400) !important;
     font-family: var(--sl-font-mono);
+    white-space: nowrap;
   }
   .terminal-content {
     padding: 1.125rem 1.25rem;
@@ -215,8 +226,8 @@ const connects = [
     font-family: var(--sl-font-mono);
     font-size: 0.875rem;
   }
-  .cli-prompt { color: var(--verified-text-dark); font-weight: 600; }
-  .cli-command { color: var(--snow-text); background: none; border: 0; padding: 0; }
+  .cli-prompt { color: var(--verified-text-dark) !important; font-weight: 600; }
+  .cli-command { color: var(--snow-text) !important; background: none !important; border: 0 !important; padding: 0 !important; }
   .sql-statement {
     display: flex;
     flex-wrap: wrap;
@@ -232,16 +243,16 @@ const connects = [
     font-family: var(--sl-font-mono);
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    color: var(--accent-dark);
+    color: var(--accent-dark) !important;
     font-weight: 600;
   }
   .sql-code {
     font-family: var(--sl-font-mono);
     font-size: 0.8125rem;
-    color: var(--snow-text);
-    background: none;
-    border: 0;
-    padding: 0;
+    color: var(--snow-text) !important;
+    background: none !important;
+    border: 0 !important;
+    padding: 0 !important;
   }
   .audit-diff {
     display: grid;
@@ -260,7 +271,7 @@ const connects = [
   .diff-headline {
     font-size: 0.875rem;
     font-weight: 500;
-    color: var(--mismatch-text-dark);
+    color: var(--mismatch-text-dark) !important;
   }
   .diff-split {
     display: grid;
@@ -277,19 +288,19 @@ const connects = [
   }
   .pane-label {
     font-size: 0.6875rem;
-    color: var(--dg-text-2);
+    color: var(--slate-400) !important;
     font-family: var(--sl-font-mono);
   }
   .pane-val {
     font-family: var(--sl-font-mono);
     font-size: 0.8125rem;
-    color: var(--snow-text);
-    background: none;
-    border: 0;
-    padding: 0;
+    color: var(--snow-text) !important;
+    background: none !important;
+    border: 0 !important;
+    padding: 0 !important;
   }
   .pane-val.error {
-    color: var(--mismatch-text-dark);
+    color: var(--mismatch-text-dark) !important;
     font-weight: 500;
   }
   .undo-notice {
@@ -304,22 +315,36 @@ const connects = [
   .undo-pill {
     padding: 0.125rem 0.5rem;
     border-radius: 4px;
-    background: var(--verified-bg-dark);
-    color: var(--verified-text-dark);
+    background: var(--verified-bg-dark) !important;
+    color: var(--verified-text-dark) !important;
     font-size: 0.6875rem;
     font-family: var(--sl-font-mono);
     font-weight: 600;
   }
   .undo-line {
     font-family: var(--sl-font-mono);
-    color: var(--snow-text);
-    background: none;
-    border: 0;
-    padding: 0;
+    color: var(--snow-text) !important;
+    background: none !important;
+    border: 0 !important;
+    padding: 0 !important;
   }
   .undo-desc {
-    color: var(--dg-text-2);
+    color: var(--slate-400) !important;
     font-size: 0.75rem;
+  }
+
+  @media (max-width: 520px) {
+    .terminal-bar {
+      padding: 0.5rem 0.75rem;
+      gap: 0.5rem;
+    }
+    .terminal-badge {
+      display: none;
+    }
+    .terminal-title {
+      font-size: 0.6875rem;
+      max-width: 14rem;
+    }
   }
 
   /* Cards Grid */
@@ -328,7 +353,7 @@ const connects = [
     padding: 0;
     margin: 0;
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(14.5rem, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
     gap: 1.125rem;
   }
   .cards li { margin: 0; }
@@ -455,8 +480,14 @@ const connects = [
     font-size: 0.875rem;
     margin: 0 auto;
   }
-  .cmd-prompt { color: var(--verified-text-dark); font-weight: 600; }
-  .onboard-cmd code { color: var(--snow-text); background: none; border: 0; padding: 0; }
+  .cmd-prompt { color: var(--verified-text-dark) !important; font-weight: 600; }
+  .onboard-cmd code {
+    color: var(--snow-text) !important;
+    background: transparent !important;
+    border: 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+  }
   .onboard-links {
     display: flex;
     flex-wrap: wrap;

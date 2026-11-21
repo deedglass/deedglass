@@ -1134,6 +1134,27 @@
     ]
   },
   {
+    "code": "sso_config_invalid",
+    "exit": [
+      1
+    ],
+    "messages": null,
+    "next": [
+      "Check the JSON file or DEEDGLASS_SSO_CONFIG environment variable.",
+      "Check DEEDGLASS_OIDC_* environment variables."
+    ]
+  },
+  {
+    "code": "sso_init_failed",
+    "exit": [
+      1
+    ],
+    "messages": null,
+    "next": [
+      "Check IdP settings and provider configurations."
+    ]
+  },
+  {
     "code": "start_failed",
     "exit": [
       1

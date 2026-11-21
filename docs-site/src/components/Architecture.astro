@@ -4,7 +4,7 @@
 // details are hidden from assistive tech.
 const parts = ['Agent', 'Rules', 'Policies', 'Approvals', 'Connector', 'Check', 'Record'];
 const notes = ['its key, no tool credentials', 'every call arrives', 'allow · deny · approve', 'a person countersigns', 'runs the call', 'Claimed · Checked · Proven', 'sealed, in the chain'];
-const bw = 124, bh = 58, gap = 22;
+const bw = 138, bh = 58, gap = 16;
 const W = parts.length * bw + (parts.length - 1) * gap + 4;
 const vbw = 300, vbh = 54, vgap = 18;
 const VH = parts.length * vbh + (parts.length - 1) * vgap + 4;
@@ -40,8 +40,8 @@ const VH = parts.length * vbh + (parts.length - 1) * vgap + 4;
   @media (max-width: 50rem) { .h { display: none; } .v { display: block; } }
   .box { fill: var(--sl-color-bg); stroke: var(--dg-hairline); }
   .box.deed { stroke: var(--dg-accent); }
-  .t { font-size: 14px; font-weight: 600; fill: var(--sl-color-white); font-family: var(--__sl-font); }
-  .n { font-size: 11px; fill: var(--dg-text-2); font-family: var(--__sl-font); }
+  .t { font-size: 13.5px; font-weight: 600; fill: var(--sl-color-white); font-family: var(--sl-font); }
+  .n { font-size: 10px; fill: var(--dg-text-2); font-family: var(--sl-font); letter-spacing: -0.01em; }
   .arrow { stroke: var(--dg-text-3); stroke-width: 1.25; fill: none; }
   .head { fill: var(--dg-text-3); }
 </style>

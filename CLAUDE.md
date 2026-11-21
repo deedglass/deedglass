@@ -251,9 +251,9 @@ scripts/ci-local.sh # the CI jobs locally (docker-smoke and govulncheck skip whe
 12. Demo footage comes only from real engine runs; `.tape` files and the commit hash go with every video.
 13. Usage hygiene: one primary session plus a few subagents that never edit the same file;
     compact at phase boundaries; long test matrices run in the shell.
-14. Commits only when the founder says so in chat. The author is the configured git user; every
-    message ends with a blank line and `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
-    Commit messages are scanned for banned words.
+14. Commits use Conventional Commits (`feat:`, `fix:`, `docs:`, `perf:`, `test:`). The author is the
+    configured git user (Arjun Prabhakaran); zero bot co-authorship tags (`Co-Authored-By: Claude...`)
+    or tool promotional boilerplate. Commit messages are scanned for banned words.
 15. The L2 invariants below hold in every session that touches decoding or the Witness.
 16. When rate-limited, stop at a clean point with the repo green and write the report with an exact
     "resume from step N" line. Never drop ADRs, tests on the verdict path, or the report.

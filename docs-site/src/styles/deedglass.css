@@ -162,7 +162,7 @@
   --dg-unverifiable-bg: var(--unverifiable-bg-light);
   --dg-allowed-text: var(--allowed-text-light);
   --dg-allowed-bg: var(--allowed-bg-light);
-  --dg-glass: var(--glass-light);
+  --dg-glass: color-mix(in srgb, var(--paper-50) 92%, transparent);
   --dg-frost: var(--frost-light);
   --dg-pane: var(--ink-text);
   color-scheme: light;
@@ -206,16 +206,25 @@ code,
 kbd,
 pre,
 .dg-mono {
-  font-family: var(--__sl-font-mono);
+  font-family: var(--sl-font-mono);
   font-variant-ligatures: none;
 }
-.sl-markdown-content :not(pre) > code {
+.sl-markdown-content :not(pre, .not-content, .not-content *) > code {
   font-size: 0.875em;
   padding: 0.1em 0.35em;
   border-radius: 6px;
   border: 1px solid var(--dg-hairline);
   background: var(--sl-color-bg-inline-code);
   overflow-wrap: anywhere;
+}
+.sl-markdown-content :is(.terminal-card, .onboard-cmd, .not-content) :not(pre) > code,
+.terminal-card code,
+.onboard-cmd code {
+  background: transparent !important;
+  border: 0 !important;
+  padding: 0 !important;
+  color: var(--snow-text) !important;
+  box-shadow: none !important;
 }
 .sl-markdown-content a {
   text-underline-offset: 0.2em;
@@ -459,7 +468,7 @@ starlight-toc nav a[aria-current='true'] {
   border-color: var(--dg-hairline);
   color: var(--dg-allowed-text);
   border-radius: 6px;
-  font-family: var(--__sl-font-mono);
+  font-family: var(--sl-font-mono);
   font-size: 0.75rem;
   letter-spacing: 0.04em;
 }
