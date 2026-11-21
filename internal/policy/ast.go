@@ -51,7 +51,7 @@ type Defaults struct {
 
 // ApprovalSpec says who approves and for how long.
 type ApprovalSpec struct {
-	Approvers []string `json:"approvers"` // role:owner, role:admin, user:<email>; sorted, unique
+	Approvers []string `json:"approvers"` // role:owner, role:admin, user:<email>, group:<name>; sorted, unique
 	Required  int      `json:"required"`
 	ExpiresIn int64    `json:"expires_in"` // seconds
 }

@@ -19,6 +19,8 @@ type EvalOptions struct {
 	Explain  bool          // build the trace
 	Mode     Mode          // enforce (default) or shadow; shadow never returns Reservations
 	Deadline time.Duration // a backstop, default 50 ms; the CEL cost limit is the real bound
+
+	pause func(attempt int) // tests: runs inside each attempt's deadline (a scheduler pause)
 }
 
 // DefaultDeadline is EvalOptions.Deadline when it is zero.
@@ -100,7 +102,20 @@ type evaluator struct {
 // policy_unavailable.
 var errDeadline = errors.New("deadline")
 
-func evaluatePrepared(ctx context.Context, c *Compiled, p *Prepared, o EvalOptions) (d Decision) {
+// evaluatePrepared runs one evaluation, and a second one when the first hit its deadline. The
+// deadline is wall-clock time: a process the OS or the Go runtime paused (a loaded machine) can pass
+// it without the evaluation being slow, and one such pause must not refuse the action. Evaluation is
+// pure, so an evaluation that really is too slow trips again and still denies policy_unavailable.
+// A caller's context that ended is never retried.
+func evaluatePrepared(ctx context.Context, c *Compiled, p *Prepared, o EvalOptions) Decision {
+	d := evaluateOnce(ctx, c, p, o, 0)
+	if TimeLimitTripped(d) && (ctx == nil || ctx.Err() == nil) {
+		d = evaluateOnce(ctx, c, p, o, 1)
+	}
+	return d
+}
+
+func evaluateOnce(ctx context.Context, c *Compiled, p *Prepared, o EvalOptions, attempt int) (d Decision) {
 	defer func() {
 		if r := recover(); r != nil {
 			d = unavailable("evaluator error")
@@ -120,6 +135,9 @@ func evaluatePrepared(ctx context.Context, c *Compiled, p *Prepared, o EvalOptio
 	}
 	ctx, cancel := context.WithTimeout(ctx, o.Deadline)
 	defer cancel()
+	if o.pause != nil {
+		o.pause(attempt)
+	}
 	e := &evaluator{ctx: ctx, c: c, p: p, o: o, explain: o.Explain}
 	e.d.Facts = p.Facts()
 	e.d.SQLGuard = p.sqlv

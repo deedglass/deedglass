@@ -224,6 +224,9 @@ func rauthPath(t *testing.T, pattern string) string {
 			if prev == "connect" {
 				v = "cursor" // S53: a Connect item, not an id
 			}
+			if prev == "break-glass" {
+				v = "bgr_01k6h7mz3c9d8e7f6g5h4jq3m8"
+			}
 			if p, ok := rauthIDPrefix[prev]; ok {
 				s, err := ids.NewString(p)
 				if err != nil {

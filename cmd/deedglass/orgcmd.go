@@ -77,7 +77,7 @@ func openPeopleOpts(ctx context.Context, e *Env, opts config.LoadOptions, so sto
 	db, err := store.Open(ctx, cfg.DatabaseURL, so)
 	if err != nil {
 		return nil, nil, nil, nil, nil, failNext(e, ExitUsage, "database_unreachable", "Can't reach the database in DEEDGLASS_DATABASE_URL.",
-			"Check that Postgres is running and that migrations ran (deedglass migrate up).")
+			"Start the local app with "+invocation(e)+" app, or check that Postgres is running and that migrations ran ("+invocation(e)+" migrate up).")
 	}
 	log := slog.New(slog.DiscardHandler)
 	signer, err := loadSealKeyQuiet(ctx, e, cfg, db, log, true)

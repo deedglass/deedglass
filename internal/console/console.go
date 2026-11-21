@@ -33,6 +33,8 @@ type Options struct {
 	Log      *slog.Logger
 	// FS replaces the embedded build (tests).
 	FS fs.FS
+	// SSO configures Hospital OIDC SSO (Entra ID, Okta, Google Workspace) for enterprise identity.
+	SSO *SSOService
 }
 
 // Console serves /app and every page and asset under it.
@@ -75,6 +77,9 @@ func New(o Options) (*Console, error) {
 // Built reports whether the real Console is embedded (not the placeholder).
 func (c *Console) Built() bool { return c.built }
 
+// SSO returns the Hospital OIDC SSO Service, or nil if not configured.
+func (c *Console) SSO() *SSOService { return c.o.SSO }
+
 // Routes are GET /app and GET /app/{path...}. Both are Public in the pipeline: the handler checks
 // the session itself, so a signed-out person is redirected to /login instead of getting a 401
 // envelope (S24 §3.10).
@@ -91,6 +96,7 @@ var screens = map[string]string{
 	"actions": "act_", "approvals": "apr_", "agents": "agt_", "policies": "pol_", "connectors": "con_",
 	"deeds": "deed_", "insights": "", "settings": "", "sessions": "obs_", "clients": "",
 	"start": "", "connect": "", "simple": "", // DL-143: the first run, Connect and the Simple view
+	"break-glass": "bgr_", // HC-P08: emergency break-glass post-hoc review queue
 }
 
 var (
@@ -116,6 +122,9 @@ func (c *Console) serve(w http.ResponseWriter, r *http.Request) error {
 	rest := strings.TrimPrefix(r.PathValue("path"), "/")
 	if isAsset(rest) {
 		return c.asset(w, r, rest)
+	}
+	if c.o.SSO != nil && (rest == "sso" || strings.HasPrefix(rest, "sso/")) {
+		return c.o.SSO.ServeHTTP(w, r, strings.TrimPrefix(rest, "sso/"))
 	}
 	if !c.signedIn(r) {
 		target := "/login"

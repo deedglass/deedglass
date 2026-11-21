@@ -271,7 +271,7 @@ the 50 ms deadline, or a CEL internal error, anywhere → deny policy_unavailabl
 4. **Rules**, in file order. The first rule whose `match` matches and whose `when` is true decides.
 5. **The default.**
 
-**`policy_unavailable`** is always a deny, with the message `Deedglass could not evaluate the policy for this action, so it did not run. An admin can check Console › Policies.` It covers a missing policy, a panic, an internal CEL error (a panic inside a function) and the evaluation deadline. The deadline is a backstop of 50 ms per action (`EvalOptions.Deadline`); the CEL cost limit is the real bound. If the deadline passes after a rule has already decided deny, the deny stands; otherwise the decision becomes `policy_unavailable`, because a later deny rule might have matched.
+**`policy_unavailable`** is always a deny, with the message `Deedglass could not evaluate the policy for this action, so it did not run. An admin can check Console › Policies.` It covers a missing policy, a panic, an internal CEL error (a panic inside a function) and the evaluation deadline. The deadline is a backstop of 50 ms per action (`EvalOptions.Deadline`); the CEL cost limit is the real bound. If the deadline passes after a rule has already decided deny, the deny stands; otherwise the decision becomes `policy_unavailable`, because a later deny rule might have matched. The deadline is wall-clock time, so a pause of the whole process (a loaded machine) can pass it while the evaluation itself is fast: an evaluation that hits it runs once more with a fresh 50 ms before it is denied. Evaluation is pure, so one that really is too slow hits the deadline again and is denied `policy_unavailable`; a caller that has given up is not retried.
 
 **Invariant 1. An error never widens access.**
 - If a `when` fails at run time (a missing key, a wrong type, a result that isn't a bool), an `allow` rule counts as *not matching*.
@@ -716,7 +716,7 @@ These are constants in `internal/policy/limits.go`. Changing one needs an ADR.
 | CEL parser recursion | 64 | `cel_syntax` |
 | Estimated maximum cost per `when` or `measure` | 100,000 units | `cel_cost` |
 | Runtime cost per expression | 100,000 units | deny `policy_denied` with the cost-limit reason, for any rule (section 6) |
-| Evaluation time per action | 50 ms | deny `policy_unavailable` (section 6) |
+| Evaluation time per action | 50 ms, run once more after a trip | deny `policy_unavailable` (section 6) |
 | Comprehension nesting | 2 | `cel_nesting` |
 | `matches()` pattern | 256 characters | `cel_regex` |
 | Diagnostics per file | 50, then one "and N more" entry | |

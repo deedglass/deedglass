@@ -300,7 +300,7 @@ An org has exactly one enforced policy, plus at most one shadow. The database en
 **`policy_unavailable`.** Your agent sees: `Deedglass could not evaluate the policy for this action, so it did not run. An admin can check Console › Policies.`
 
 - If every action in the org gets it and `/v1/health` says `degraded`, an instance could not load or check the enforced version (section 7). Check the server log for `the enforced policy failed its checks`. The entry names the check that failed. A version that no longer compiles to its stored hash means its row was changed outside Deedglass: push the policy again as a new version and enforce it.
-- If only some actions get it, evaluation itself failed for those actions, for example by running past its time limit of 50 ms per action ([POLICY_LANGUAGE.md](POLICY_LANGUAGE.md) section 6).
+- If only some actions get it, evaluation itself failed for those actions, for example by running past its time limit of 50 ms per action twice in a row ([POLICY_LANGUAGE.md](POLICY_LANGUAGE.md) section 6).
 
 **`budget_exceeded`.** A budget would be passed. The message names the budget, the numbers and when the window resets, for example `Budget "agent-rate" reached: 60 of 60 calls this minute. Try again in 14 s.` The agent can wait and retry. To change the limit, edit the budget in the policy (or the agent's own budgets in Console › Agents), push and activate. [BUDGETS.md](BUDGETS.md) explains the windows and counters.
 

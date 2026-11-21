@@ -392,3 +392,36 @@ func TestDocsTree(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestBareJSON(t *testing.T) {
+	r := cli(t, nil, false, "--json")
+	if r.code != 0 {
+		t.Fatalf("exit code %d, want 0\nstderr: %s", r.code, r.stderr)
+	}
+	var data map[string]any
+	if err := json.Unmarshal([]byte(r.stdout), &data); err != nil {
+		t.Fatalf("invalid json: %v\nstdout: %s", err, r.stdout)
+	}
+	if data["object"] != "deedglass" {
+		t.Errorf("object = %v, want deedglass", data["object"])
+	}
+	if data["version"] == nil || data["version"] == "" {
+		t.Errorf("expected version, got %v", data["version"])
+	}
+	if cmds, ok := data["commands"].([]any); !ok || len(cmds) == 0 {
+		t.Errorf("expected commands list, got %v", data["commands"])
+	}
+}
+
+func TestDatabaseUnreachableHint(t *testing.T) {
+	env := map[string]string{
+		"DEEDGLASS_DATABASE_URL": "postgres://user:pass@127.0.0.1:59999/nonexistent",
+	}
+	r := cli(t, env, false, "actions", "list")
+	if r.code != ExitUsage {
+		t.Fatalf("exit code %d, want %d\nstdout: %s\nstderr: %s", r.code, ExitUsage, r.stdout, r.stderr)
+	}
+	if !strings.Contains(r.stderr, "Start the local app with deedglass app") {
+		t.Errorf("expected deedglass app hint, got: %s", r.stderr)
+	}
+}

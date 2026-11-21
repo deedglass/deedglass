@@ -171,7 +171,7 @@ builds it. Hidden commands work but aren't in `deedglass help`.
 | `deedglass scan [--dir .] [--postgres-dsn-env VAR] [--format md,html,json,sarif] [--score] [--badge] [--badge-share] [--share] [--ci] [--fail-under A|B|C|D] [--full [--no-seal]] [--json]` | Setup | Show what your agent setup can change | built |
 | `deedglass health pilot [--region global|india] [--fhir-url <url>] [--out deedglass-pilot] [--no-files] [--console-url <url>] [--fast] [--print-review-pack] [--json]` | Setup | Try the hospital pilot on synthetic data | built |
 | `deedglass play [--fast] [--json]` | Setup | Watch the 301 scene offline, no Docker | built |
-| `deedglass serve [--migrate]` | Setup | Run the API, the rules and the Console | built |
+| `deedglass serve [--migrate] [--sso-config <file>] [--sso-provider <type>] [--sso-issuer <url>]` | Setup | Run the API, the rules and the Console | built |
 | `deedglass migrate up [--database-url <url>] [--dry-run] [--json]` | Setup | Apply database migrations | built |
 | `deedglass migrate status [--database-url <url>] [--json]` | Setup | Show applied and pending migrations | built |
 | `deedglass migrate verify [--database-url <url>] [--json]` | Setup | Check applied migrations against this build | built |
@@ -239,6 +239,9 @@ builds it. Hidden commands work but aren't in `deedglass help`.
 | `deedglass approvals list [--status pending] [--agent <name>] [--limit 25] [--json]` | Actions | List approvals | built |
 | `deedglass approvals show <apr_…> [--json]` | Actions | Show one approval | built |
 | `deedglass approvals open <apr_…> [--as <email>] [--no-open] [--json]` | Actions | Print and open an approval's approve link | built |
+| `deedglass approvals break-glass list [--status pending|closed|flagged|all] [--json]` | Actions | List emergency break-glass reviews | built |
+| `deedglass approvals break-glass review <bgr_…> --reason "…" [--latency-ms 12000] [--json]` | Actions | Close emergency break-glass review | built |
+| `deedglass approvals break-glass digest [--window-days 7] [--json]` | Actions | Print weekly clinical audit digest | built |
 | `deedglass undo preview <act_…> [--allow-triggers] [--steps N] [--json]` | Actions | Show what an undo would change | built |
 | `deedglass undo run <act_…> --plan <sha256:…> --reason "…" [--allow-triggers] [--wait 25s] [--json]` | Actions | Undo an action | built |
 | `deedglass observe run --connector <name> [--label "…"] [--agent <name>] [--undo-sql <file or folder>] -- <command …>` | Actions | Watch a database while a command runs | built |

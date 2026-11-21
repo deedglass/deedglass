@@ -182,6 +182,9 @@ func newWorld(t testing.TB) *world {
 	wg.Go(func() { w.keys.Run(rctx) })
 	wg.Go(func() { _ = worker.Run(rctx) })
 	t.Cleanup(func() {
+		if t.Failed() {
+			w.logProblems()
+		}
 		cctx, c2 := context.WithTimeout(bg, 10*time.Second)
 		defer c2()
 		_ = w.p.Close(cctx)
@@ -220,6 +223,25 @@ func newWorld(t testing.TB) *world {
 		t.Fatal(err)
 	}
 	return w
+}
+
+// logProblems shows the world's warnings and errors when a test failed (a policy_unavailable says
+// why only there: the registry's load error or the gate's time-limit trip).
+func (w *world) logProblems() {
+	logMu.Lock()
+	lines := bytes.Split(bytes.Clone(w.logs.Bytes()), []byte("\n"))
+	logMu.Unlock()
+	n := 0
+	for _, l := range lines {
+		if !bytes.Contains(l, []byte(`"level":"ERROR"`)) && !bytes.Contains(l, []byte(`"level":"WARN"`)) {
+			continue
+		}
+		if n++; n > 50 {
+			w.t.Logf("(more log lines not shown)")
+			return
+		}
+		w.t.Logf("log: %s", l)
+	}
 }
 
 type syncWriter struct{ b *bytes.Buffer }

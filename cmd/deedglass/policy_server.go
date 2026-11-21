@@ -208,6 +208,13 @@ func runPolicyActivate(ctx context.Context, e *Env, args []string) error {
 	}
 	var a policy.Activation
 	if _, err := c.Do(ctx, "POST", apiPath(p.ID, "versions", version, "activate"), body, &a); err != nil {
+		var de *deedglass.Error
+		if errors.As(err, &de) && strings.Contains(de.Message, "acknowledge_warnings") {
+			if ee, ok := apiErr(e, c, err).(*ExitError); ok {
+				ee.Next = "Pass --ack default_allow to activate this policy with acknowledged warnings."
+				return ee
+			}
+		}
 		return apiErr(e, c, err)
 	}
 	if jsonOut {

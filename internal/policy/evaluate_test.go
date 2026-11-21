@@ -411,6 +411,59 @@ func TestEvaluateUnavailable(t *testing.T) {
 	}
 }
 
+// TestDeadlineRetry: the 50 ms deadline is wall-clock time, so a process paused by a loaded machine
+// can pass it without the evaluation being slow (the v0.2.0 verify job: TestLinks got
+// policy_unavailable for a one-rule policy while TestLoad1000 loaded the runner). One pause is
+// evaluated again; a second trip, or a caller whose context ended, still denies policy_unavailable.
+func TestDeadlineRetry(t *testing.T) {
+	p := mustCompile(t, evalHead+`rules:
+  - id: writes-need-approval
+    match: { tool: [fake.write] }
+    when: has(args.table) && args.table == "approvals"
+    decision: require_approval
+    reason: Writes wait for a person.
+    approval: { approvers: [role:admin], required: 1, expires_in: 1h }
+`)
+	x := in("fake.write", `{"rows":1,"table":"approvals"}`)
+	stall := 2 * DefaultDeadline
+	run := func(ctx context.Context, pauseOn func(attempt int) bool) (Decision, int) {
+		attempts := 0
+		o := EvalOptions{pause: func(attempt int) {
+			attempts++
+			if pauseOn(attempt) {
+				time.Sleep(stall)
+			}
+		}}
+		d, _ := EvaluatePair(ctx, p, nil, x, o) // the Gate's call, with the Gate's default deadline
+		return d, attempts
+	}
+	t.Run("one pause decides as usual", func(t *testing.T) {
+		d, n := run(context.Background(), func(a int) bool { return a == 0 })
+		if d.Outcome != RequireApproval || d.RuleID != "writes-need-approval" || n != 2 {
+			t.Fatalf("%d attempts: %+v", n, d)
+		}
+	})
+	t.Run("no pause runs once", func(t *testing.T) {
+		if d, n := run(context.Background(), func(int) bool { return false }); d.Outcome != RequireApproval || n != 1 {
+			t.Fatalf("%d attempts: %+v", n, d)
+		}
+	})
+	t.Run("two trips fail closed", func(t *testing.T) {
+		d, n := run(context.Background(), func(int) bool { return true })
+		if d.Outcome != Deny || d.Code != CodePolicyUnavailable || !TimeLimitTripped(d) || n != 2 {
+			t.Fatalf("%d attempts: %+v", n, d)
+		}
+	})
+	t.Run("an ended caller is not retried", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(context.Background(), DefaultDeadline/2)
+		defer cancel()
+		d, n := run(ctx, func(int) bool { return true })
+		if d.Outcome != Deny || d.Code != CodePolicyUnavailable || n != 1 {
+			t.Fatalf("%d attempts: %+v", n, d)
+		}
+	})
+}
+
 // panicProgram is a cel.Program whose evaluation panics outside cel-go's own recovery.
 type panicProgram struct{ cel.Program }
 

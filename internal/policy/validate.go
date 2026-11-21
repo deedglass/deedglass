@@ -600,6 +600,13 @@ func (v *validator) approver(n *yaml.Node, path, ruleID string) string {
 		}
 		v.d.errorf("invalid_approvers", spanOf(v.src, n), path, ruleID, "Write user: and the person's email, like user:priya@acme.com.",
 			"`%s` is not an email address.", clip(s))
+	case strings.HasPrefix(s, "group:"):
+		g := strings.TrimPrefix(s, "group:")
+		if isValidGroupName(g) {
+			return "group:" + strings.ToLower(g)
+		}
+		v.d.errorf("invalid_approvers", spanOf(v.src, n), path, ruleID, "Write group: and the group name, like group:clinicians.",
+			"`%s` is not a valid approver group name (must be 1 to 64 letters, numbers, hyphens or underscores).", clip(s))
 	case strings.HasPrefix(s, "role:"):
 		v.d.errorf("invalid_approvers", spanOf(v.src, n), path, ruleID, hint, "`%s` is not a role that can approve.", clip(s))
 	default:
@@ -609,6 +616,18 @@ func (v *validator) approver(n *yaml.Node, path, ruleID string) string {
 		v.d.errorf("invalid_approvers", spanOf(v.src, n), path, ruleID, hint, "`%s` is not an approver.", clip(s))
 	}
 	return ""
+}
+
+func isValidGroupName(s string) bool {
+	if len(s) == 0 || len(s) > 64 {
+		return false
+	}
+	for _, r := range s {
+		if !((r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == '-' || r == '_') {
+			return false
+		}
+	}
+	return true
 }
 
 func (v *validator) integer(n *yaml.Node, path, ruleID string, lo, hi int64, noun string) (int64, bool) {

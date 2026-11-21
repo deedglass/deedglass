@@ -78,7 +78,7 @@ func openLedger(ctx context.Context, e *Env, sign bool) (*ledgerSession, error) 
 	db, err := store.Open(ctx, cfg.DatabaseURL, store.Options{MaxConns: 4})
 	if err != nil {
 		return nil, failNext(e, ExitUsage, "database_unreachable", "Can't reach the database in DEEDGLASS_DATABASE_URL.",
-			"Check that Postgres is running and that migrations ran (deedglass migrate up).")
+			"Start the local app with "+invocation(e)+" app, or check that Postgres is running and that migrations ran ("+invocation(e)+" migrate up).")
 	}
 	org, err := pickOrg(ctx, e, db)
 	if err != nil {

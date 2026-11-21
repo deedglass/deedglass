@@ -60,13 +60,31 @@ import (
 
 // --- flags ---
 
-type serveOpts struct{ migrate bool }
+type serveOpts struct {
+	migrate         bool
+	ssoConfig       string
+	ssoProvider     string
+	ssoIssuer       string
+	ssoClientID     string
+	ssoClientSecret string
+	ssoRedirectURL  string
+	ssoDisplayName  string
+	ssoMock         bool
+}
 
 var serveFlagValues serveOpts
 
 func serveFlags(fs *flag.FlagSet) {
 	serveFlagValues = serveOpts{}
 	fs.BoolVar(&serveFlagValues.migrate, "migrate", false, "dev only: apply pending migrations first (DEEDGLASS_MIGRATE_DATABASE_URL)")
+	fs.StringVar(&serveFlagValues.ssoConfig, "sso-config", "", "path to hospital OIDC SSO configuration JSON (or DEEDGLASS_SSO_CONFIG)")
+	fs.StringVar(&serveFlagValues.ssoProvider, "sso-provider", "", "Hospital OIDC SSO provider type: entra_id, okta, google, or generic")
+	fs.StringVar(&serveFlagValues.ssoIssuer, "sso-issuer", "", "Hospital OIDC SSO issuer URL")
+	fs.StringVar(&serveFlagValues.ssoClientID, "sso-client-id", "", "Hospital OIDC SSO client ID")
+	fs.StringVar(&serveFlagValues.ssoClientSecret, "sso-client-secret", "", "Hospital OIDC SSO client secret")
+	fs.StringVar(&serveFlagValues.ssoRedirectURL, "sso-redirect-url", "", "Hospital OIDC SSO redirect URI")
+	fs.StringVar(&serveFlagValues.ssoDisplayName, "sso-display-name", "", "Hospital OIDC SSO display name on sign-in screen")
+	fs.BoolVar(&serveFlagValues.ssoMock, "sso-mock", false, "Enable simulated IdP mock for air-gapped demo and testing")
 }
 
 // Seams for tests.
@@ -212,7 +230,89 @@ func runServe(ctx context.Context, e *Env, args []string) error {
 		return err
 	}
 	// 5a. The Console's pages (S24). In prod a binary built without the Console refuses to start.
-	con, err := console.New(console.Options{Prod: prod, Sessions: people, Log: log})
+	var ssoSvc *console.SSOService
+	ssoCfg := serveFlagValues.ssoConfig
+	if ssoCfg == "" {
+		ssoCfg = os.Getenv("DEEDGLASS_SSO_CONFIG")
+	}
+	if ssoCfg != "" {
+		ssoOpts, err := console.LoadSSOConfig(ssoCfg, log)
+		if err != nil {
+			return &ExitError{Code: ExitFailure, ErrCode: "sso_config_invalid",
+				Err:  fmt.Errorf("Hospital OIDC SSO config invalid: %w", err),
+				Next: "Check the JSON file or DEEDGLASS_SSO_CONFIG environment variable."}
+		}
+		ssoSvc, err = console.NewSSOService(*ssoOpts)
+		if err != nil {
+			return &ExitError{Code: ExitFailure, ErrCode: "sso_init_failed",
+				Err:  fmt.Errorf("Hospital OIDC SSO initialization failed: %w", err),
+				Next: "Check IdP settings and provider configurations."}
+		}
+	} else if serveFlagValues.ssoProvider != "" || serveFlagValues.ssoIssuer != "" || serveFlagValues.ssoMock {
+		providerType := console.ProviderType(strings.ToLower(strings.TrimSpace(serveFlagValues.ssoProvider)))
+		if providerType == "" {
+			providerType = console.ProviderEntraID
+		}
+		displayName := serveFlagValues.ssoDisplayName
+		if displayName == "" {
+			displayName = "Hospital Clinical SSO"
+		}
+		redirectURI := serveFlagValues.ssoRedirectURL
+		if redirectURI == "" && cfg != nil && cfg.BaseURL != nil {
+			redirectURI = strings.TrimSuffix(cfg.BaseURL.String(), "/") + "/app/sso/callback"
+		}
+		clientSecret := serveFlagValues.ssoClientSecret
+		if clientSecret == "" {
+			clientSecret = os.Getenv("DEEDGLASS_SSO_CLIENT_SECRET")
+		}
+		pConfig := console.ProviderConfig{
+			ID:           string(providerType),
+			Type:         providerType,
+			DisplayName:  displayName,
+			Issuer:       serveFlagValues.ssoIssuer,
+			ClientID:     serveFlagValues.ssoClientID,
+			ClientSecret: clientSecret,
+			RedirectURI:  redirectURI,
+			RoleMapping: console.RoleMappingConfig{
+				GroupsClaim: "groups",
+				DefaultRole: httpx.RoleViewer,
+				FailClosed:  true,
+			},
+		}
+		ssoOpts := &console.SSOOptions{
+			Providers:      []console.ProviderConfig{pConfig},
+			MockIdPEnabled: serveFlagValues.ssoMock,
+			Logger:         log,
+		}
+		if envSecret := os.Getenv("DEEDGLASS_SSO_STATE_SECRET"); envSecret != "" {
+			ssoOpts.StateSecret = []byte(envSecret)
+		}
+		if envSalt := os.Getenv("DEEDGLASS_SSO_SUBJECT_SALT"); envSalt != "" {
+			ssoOpts.DigestSalt = []byte(envSalt)
+		}
+		ssoSvc, err = console.NewSSOService(*ssoOpts)
+		if err != nil {
+			return &ExitError{Code: ExitFailure, ErrCode: "sso_init_failed",
+				Err:  fmt.Errorf("Hospital OIDC SSO initialization failed: %w", err),
+				Next: "Check IdP settings and provider configurations."}
+		}
+	} else if os.Getenv("DEEDGLASS_OIDC_ENABLED") == "true" || os.Getenv("DEEDGLASS_OIDC_ENABLED") == "1" {
+		ssoOpts, err := console.LoadSSOConfigFromEnv(log)
+		if err != nil {
+			return &ExitError{Code: ExitFailure, ErrCode: "sso_config_invalid",
+				Err:  fmt.Errorf("Hospital OIDC SSO environment config invalid: %w", err),
+				Next: "Check DEEDGLASS_OIDC_* environment variables."}
+		}
+		if ssoOpts != nil {
+			ssoSvc, err = console.NewSSOService(*ssoOpts)
+			if err != nil {
+				return &ExitError{Code: ExitFailure, ErrCode: "sso_init_failed",
+					Err:  fmt.Errorf("Hospital OIDC SSO initialization failed: %w", err),
+					Next: "Check IdP settings and provider configurations."}
+			}
+		}
+	}
+	con, err := console.New(console.Options{Prod: prod, Sessions: people, Log: log, SSO: ssoSvc})
 	if errors.Is(err, console.ErrNotBuilt) {
 		return &ExitError{Code: ExitFailure, ErrCode: "console_not_built",
 			Err:  errors.New("Refusing to start: the Console wasn't built into this binary"),
@@ -282,7 +382,8 @@ func runServe(ctx context.Context, e *Env, args []string) error {
 	// the approval context section.
 	planner := undoapi.NewPlanner(db, cw.reg, undoConfig(cfg), log)
 	undoapi.RegisterSection()
-	sections.RegisterEmail() // S40: email_preview on /approve and in Console › Approvals
+	sections.RegisterEmail()    // S40: email_preview on /approve and in Console › Approvals
+	sections.RegisterClinical() // Ward Light: clinical_preview on /approve and in Console › Approvals
 	// 5g. Insights (S27): the store, the opt-in anomaly facts the Gate reads (dropped on NOTIFY
 	// deedglass_learn), replay jobs and anomaly detection.
 	ins := newInsights(db, led, log)
@@ -434,6 +535,9 @@ func runServe(ctx context.Context, e *Env, args []string) error {
 	}
 	fmt.Fprintln(e.Stdout, s.OKLine("Listening on http://"+ln.Addr().String()))
 	fmt.Fprintln(e.Stdout, s.OKLine("Console on "+consoleURL(cfg.BaseURL.String())))
+	if ssoSvc != nil {
+		fmt.Fprintln(e.Stdout, s.OKLine("Hospital OIDC SSO on "+consoleURL(cfg.BaseURL.String())+"/sso"))
+	}
 	if metricsSrv != nil {
 		fmt.Fprintln(e.Stdout, s.OKLine("Metrics on http://"+cfg.MetricsListen+"/metrics"))
 	}

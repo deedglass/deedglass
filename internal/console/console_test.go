@@ -78,6 +78,8 @@ func TestPages(t *testing.T) {
 		{"/app/connectors/con_01k6h7mz3c9d8e7f6g5h4jq3m8", "connectors-detail"},
 		{"/app/connectors/new", "connectors-new"}, {"/app/connectors/new/", "connectors-new"},
 		{"/app/deeds/deed_01k6h7mz3c9d8e7f6g5h4jq3m8", "deeds-detail"},
+		{"/app/break-glass", "break-glass"},
+		{"/app/break-glass/bgr_01k6h7mz3c9d8e7f6g5h4jq3m8", "break-glass-detail"},
 		{"/app/_kit", "kit"},
 	}
 	for _, c := range cases {
@@ -258,6 +260,9 @@ func TestEmbeddedBuild(t *testing.T) {
 	}
 	want := []string{"index.html", "404.html", "kit.html"}
 	for s := range screens {
+		if s == "break-glass" {
+			continue // HC-P08: break-glass queue is served dynamically by the API router
+		}
 		want = append(want, s+".html")
 		if screens[s] != "" {
 			want = append(want, s+"/detail.html")

@@ -196,9 +196,10 @@ gate:
 `deedglass_gate_actions_total{mode,status}`, `deedglass_gate_overhead_seconds` (buckets 1, 2, 5,
 10, 25, 50 and 100 ms), `deedglass_worker_jobs_total{kind,result}`, `deedglass_worker_queue_depth`
 (the jobs this instance holds), `deedglass_gate_sweeps_total{sweeper,result}`, and
-`deedglass_policy_eval_time_limit_total{mode}`: every evaluation the 50 ms time limit stopped. That
-limit fails closed (`policy_unavailable`), so each trip is a refused action, and each one is also
-logged at warn level with the org and agent.
+`deedglass_policy_eval_time_limit_total{mode}`: every evaluation the 50 ms time limit stopped twice
+(an evaluation that hits it runs once more first, because a paused process can pass a wall-clock
+limit). That limit fails closed (`policy_unavailable`), so each trip is a refused action, and each
+one is also logged at warn level with the org and agent.
 
 ## The console system agent (S23)
 

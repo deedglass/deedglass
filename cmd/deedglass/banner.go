@@ -68,6 +68,18 @@ func runBare(ctx context.Context, e *Env, flags []string) error {
 	if quiet {
 		return printHelp(e, nil)
 	}
+	if e.Globals.JSON {
+		in := buildInfo()
+		return writeJSON(e, map[string]any{
+			"object":      "deedglass",
+			"version":     in.Version,
+			"commit":      in.Commit,
+			"description": "Deedglass checks what your AI agents actually changed.",
+			"commands": []string{
+				"app", "start", "protect", "health pilot", "scan", "verify", "approvals", "actions", "policy", "help",
+			},
+		})
+	}
 	// DL-143: a person at a terminal gets the local app; piped, in CI or with --json the welcome
 	// stays, so scripts and AI agents never start a server by running bare deedglass.
 	if interactive(e) {

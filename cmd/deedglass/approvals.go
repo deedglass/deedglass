@@ -27,6 +27,7 @@ import (
 	"github.com/deedglass/deedglass/internal/store"
 	"github.com/deedglass/deedglass/internal/store/policystore"
 	"github.com/deedglass/deedglass/internal/witness"
+	"github.com/deedglass/deedglass/pkg/deedglass"
 )
 
 // deedglass approvals list|show (an org admin key, through the API) and deedglass approve|deny
@@ -182,6 +183,14 @@ func runApprovalsShow(ctx context.Context, e *Env, args []string) error {
 	}
 	var raw json.RawMessage
 	if _, err := c.Do(ctx, "GET", "/v1/approvals/"+url.PathEscape(id), nil, &raw); err != nil {
+		var de *deedglass.Error
+		if errors.As(err, &de) && strings.Contains(de.Message, "GET /v1/approvals") {
+			if ee, ok := apiErr(e, c, err).(*ExitError); ok {
+				ee.Err = errors.New(strings.Replace(ee.Err.Error(), "or list them with GET /v1/approvals", "or list them with "+invocation(e)+" approvals list", 1))
+				ee.Next = "Run " + invocation(e) + " approvals list to see what's waiting."
+				return ee
+			}
+		}
 		return apiErr(e, c, err)
 	}
 	if e.Globals.JSON {
@@ -418,7 +427,13 @@ func cliAPIError(e *Env, err error) error {
 		if he.Status == 400 {
 			code = ExitUsage
 		}
-		return failNext(e, code, string(he.Code), he.Message, "")
+		msg := he.Message
+		next := ""
+		if strings.Contains(msg, "GET /v1/approvals") {
+			msg = strings.Replace(msg, "or list them with GET /v1/approvals", "or list them with "+invocation(e)+" approvals list", 1)
+			next = "Run " + invocation(e) + " approvals list to see what's waiting."
+		}
+		return failNext(e, code, string(he.Code), msg, next)
 	}
 	return err
 }
@@ -445,4 +460,167 @@ type noPolicies struct{}
 
 func (noPolicies) Active(context.Context, string) (*policy.Active, error) {
 	return nil, errors.New("deedglass: this command doesn't evaluate policies")
+}
+
+// --- approvals break-glass (HC-P08) ---
+
+var approvalsBreakGlassListValues struct {
+	status string
+}
+
+func approvalsBreakGlassListFlags(fs *flag.FlagSet) {
+	approvalsBreakGlassListValues = struct {
+		status string
+	}{}
+	fs.StringVar(&approvalsBreakGlassListValues.status, "status", "pending", "pending, closed, flagged, or all")
+}
+
+func runApprovalsBreakGlassList(ctx context.Context, e *Env, args []string) error {
+	if len(args) > 0 {
+		return usageErr(fmt.Errorf("deedglass approvals break-glass list takes flags only (got %q)", args[0]), "deedglass approvals break-glass list --status pending")
+	}
+	c, err := apiClient(e)
+	if err != nil {
+		return err
+	}
+	q := url.Values{}
+	if approvalsBreakGlassListValues.status != "" {
+		q.Set("status", approvalsBreakGlassListValues.status)
+	}
+	var raw json.RawMessage
+	if _, err := c.Do(ctx, "GET", "/v1/break-glass?"+q.Encode(), nil, &raw); err != nil {
+		return apiErr(e, c, err)
+	}
+	if e.Globals.JSON {
+		_, err := e.Stdout.Write(append(raw, '\n'))
+		return err
+	}
+	var resp struct {
+		Reviews []*approve.BreakGlassReview `json:"reviews"`
+		Count   int                         `json:"count"`
+	}
+	if err := json.Unmarshal(raw, &resp); err != nil {
+		return err
+	}
+	if len(resp.Reviews) == 0 {
+		fmt.Fprintln(e.Stdout, "No emergency break-glass reviews found.")
+		return nil
+	}
+	st := e.Style
+	rows := make([][]string, 0, len(resp.Reviews)+1)
+	rows = append(rows, []string{" ", st.Dim("STATUS"), st.Dim("REVIEW ID"), st.Dim("ACTION ID"), st.Dim("WARD"), st.Dim("REASON")})
+	for _, r := range resp.Reviews {
+		sym := st.Amber(ui.Pending)
+		switch r.Status {
+		case approve.ReviewStatusClosed:
+			sym = st.Teal(ui.OK)
+		case approve.ReviewStatusFlagged:
+			sym = st.Red(ui.Fail)
+		}
+		ward := r.Ward
+		if ward == "" {
+			ward = "-"
+		}
+		rows = append(rows, []string{sym, string(r.Status), clean(r.ID), clean(r.ActionID), ward, r.EmergencyReason})
+	}
+	printColumns(e.Stdout, rows)
+	return nil
+}
+
+var approvalsBreakGlassReviewValues struct {
+	reason    string
+	latencyMs int64
+}
+
+func approvalsBreakGlassReviewFlags(fs *flag.FlagSet) {
+	approvalsBreakGlassReviewValues = struct {
+		reason    string
+		latencyMs int64
+	}{}
+	fs.StringVar(&approvalsBreakGlassReviewValues.reason, "reason", "", "mandatory clinical justification reason (1–280 chars)")
+	fs.Int64Var(&approvalsBreakGlassReviewValues.latencyMs, "latency-ms", 12000, "review latency in ms")
+}
+
+func runApprovalsBreakGlassReview(ctx context.Context, e *Env, args []string) error {
+	rem, err := mixedArgs("deedglass approvals break-glass review", approvalsBreakGlassReviewFlags, args)
+	if err != nil {
+		return usageErr(err, "deedglass approvals break-glass review <bgr_…> --reason \"…\"")
+	}
+	if len(rem) != 1 {
+		return usageErr(errors.New("deedglass approvals break-glass review requires exactly one review ID"), "deedglass approvals break-glass review <bgr_…> --reason \"…\"")
+	}
+	reviewID := rem[0]
+	reason := strings.TrimSpace(approvalsBreakGlassReviewValues.reason)
+	if reason == "" {
+		return usageErr(errors.New("--reason is required to close a break-glass review (HC-P08)"), "deedglass approvals break-glass review <bgr_…> --reason \"…\"")
+	}
+
+	c, err := apiClient(e)
+	if err != nil {
+		return err
+	}
+	body := map[string]any{
+		"reason":            reason,
+		"review_latency_ms": approvalsBreakGlassReviewValues.latencyMs,
+	}
+	var raw json.RawMessage
+	if _, err := c.Do(ctx, "POST", "/v1/break-glass/"+reviewID+"/review", body, &raw); err != nil {
+		return apiErr(e, c, err)
+	}
+	if e.Globals.JSON {
+		_, err := e.Stdout.Write(append(raw, '\n'))
+		return err
+	}
+	var rev approve.BreakGlassReview
+	if err := json.Unmarshal(raw, &rev); err != nil {
+		return err
+	}
+	s := e.Style
+	if rev.FlaggedRubberStamping {
+		fmt.Fprintf(e.Stdout, "%s Closed review %s with status %s\n", s.Amber(ui.Unknown), clean(rev.ID), s.Amber("flagged"))
+		fmt.Fprintf(e.Stdout, "  %s\n", s.Dim(rev.AuditNotice))
+	} else {
+		fmt.Fprintf(e.Stdout, "%s Closed review %s with status %s\n", s.Teal(ui.OK), clean(rev.ID), s.Teal("closed"))
+	}
+	return nil
+}
+
+var approvalsBreakGlassDigestValues struct {
+	windowDays int
+}
+
+func approvalsBreakGlassDigestFlags(fs *flag.FlagSet) {
+	approvalsBreakGlassDigestValues = struct {
+		windowDays int
+	}{}
+	fs.IntVar(&approvalsBreakGlassDigestValues.windowDays, "window-days", 7, "number of days for the review window (1 to 30)")
+}
+
+func runApprovalsBreakGlassDigest(ctx context.Context, e *Env, args []string) error {
+	if len(args) > 0 {
+		return usageErr(fmt.Errorf("deedglass approvals break-glass digest takes flags only (got %q)", args[0]), "deedglass approvals break-glass digest [--window-days 7]")
+	}
+	c, err := apiClient(e)
+	if err != nil {
+		return err
+	}
+	q := url.Values{}
+	q.Set("window_days", strconv.Itoa(approvalsBreakGlassDigestValues.windowDays))
+	if e.Globals.JSON {
+		q.Set("format", "json")
+		var raw json.RawMessage
+		if _, err := c.Do(ctx, "GET", "/v1/break-glass/digest?"+q.Encode(), nil, &raw); err != nil {
+			return apiErr(e, c, err)
+		}
+		_, err := e.Stdout.Write(append(raw, '\n'))
+		return err
+	}
+	q.Set("format", "markdown")
+	rc, _, err := c.Stream(ctx, "GET", "/v1/break-glass/digest?"+q.Encode(), nil)
+	if err != nil {
+		return apiErr(e, c, err)
+	}
+	defer rc.Close()
+	_, err = io.Copy(e.Stdout, rc)
+	return err
 }
