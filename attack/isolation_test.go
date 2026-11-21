@@ -110,8 +110,9 @@ func TestOrgIsolation(t *testing.T) {
 	obs := e.CPQuery(`INSERT INTO deedglass.observe_sessions (id, org_id, connector_id, label, opened_by_type)
 	  VALUES ($1, $2, $3, 'fixture', 'system') RETURNING id`, ids.New[ids.ObserveSessionKind]().String(), acme.ID, acme.Conns["postgres"])[0][0]
 	dtx := ids.New[ids.DecodedTxKind]().String()
+	bgr := "bgr_" + act
 	acmeIDs := []string{acme.ID, attacker.ID, attacker.KeyID, act, deed, acme.Policy, acme.PolicyV, acme.Conns["orders"], acme.Conns["fs"], member, kid,
-		apr, wh, rpl, anm, sug, obs}
+		apr, wh, rpl, anm, sug, obs, bgr}
 	for _, id := range acmeIDs {
 		if id == "" {
 			t.Fatalf("an Acme fixture is missing: %v", acmeIDs)
@@ -166,6 +167,8 @@ func TestOrgIsolation(t *testing.T) {
 		"/v1/observe/sessions/{id}/undo":                        {"id": obs},
 		"/v1/observe/sessions/{id}/undo_preview":                {"id": obs},
 		"/v1/observe/sessions/{id}/frames/{dtx}/exclude":        {"id": obs, "dtx": dtx},
+		"/v1/break-glass/{id}":                                  {"id": bgr},
+		"/v1/break-glass/{id}/review":                           {"id": bgr},
 		"/mcp/{connector}":                                      {"connector": "fs"},
 		"/.well-known/oauth-protected-resource/mcp/{connector}": nil, // public metadata: no org data
 		"/auth/assets/{file}":                                   nil, // public static file

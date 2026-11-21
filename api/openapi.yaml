@@ -3391,6 +3391,19 @@ paths:
           application/json:
             schema:
               type: object
+              required: [reason]
+              properties:
+                reason:
+                  type: string
+                  description: Justification for completing or closing the post-hoc emergency review (1–280 chars).
+                  example: Emergency clinical override justified; post-hoc review verified.
+                review_latency_ms:
+                  type: integer
+                  description: Time in milliseconds between clinical card presentation and review submission.
+                  example: 5200
+            example:
+              reason: Emergency clinical override justified; post-hoc review verified.
+              review_latency_ms: 5200
       responses:
         "200":
           description: The updated break-glass review item.

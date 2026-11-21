@@ -296,6 +296,10 @@ func (h *handlers) reviewBreakGlass(w http.ResponseWriter, r *http.Request) erro
 		return httpx.E(httpx.CodeServiceUnavailable)
 	}
 	id := r.PathValue("id")
+	revItem, err := h.s.breakGlass.Get(id)
+	if err != nil || (revItem.OrgID != (ids.OrgID{}) && revItem.OrgID != p.OrgID) {
+		return httpx.E(httpx.CodeNotFound)
+	}
 	var b reviewBreakGlassBody
 	if err := httpx.DecodeJSON(r, &b); err != nil {
 		return err

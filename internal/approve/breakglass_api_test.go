@@ -121,6 +121,16 @@ func TestBreakGlassAPIRoutes(t *testing.T) {
 		if recIso.Code != http.StatusNotFound {
 			t.Fatalf("expected 404 for cross-org review, got %d", recIso.Code)
 		}
+
+		// Tenant isolation: reviewing otherOrg's item must 404
+		bodyIso, _ := json.Marshal(reviewBreakGlassBody{Reason: "Attempted cross-tenant review", ReviewLatencyMs: 5000})
+		reqIsoPost := httptest.NewRequest("POST", "/v1/break-glass/"+itemOther.ID+"/review", bytes.NewReader(bodyIso))
+		reqIsoPost.Header.Set("Content-Type", "application/json")
+		recIsoPost := httptest.NewRecorder()
+		srv.ServeHTTP(recIsoPost, reqIsoPost)
+		if recIsoPost.Code != http.StatusNotFound {
+			t.Fatalf("expected 404 for cross-org review post, got %d", recIsoPost.Code)
+		}
 	})
 
 	// 3. POST /v1/break-glass/{id}/review - validation errors

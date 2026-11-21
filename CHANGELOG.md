@@ -5,6 +5,15 @@ Every notable change to Deedglass, newest first. The format follows
 [Semantic Versioning 2.0.0](https://semver.org/spec/v2.0.0.html). Release notes are generated from
 this file by `scripts/release-notes.sh`.
 
+## [Unreleased]
+
+### Fixed
+
+- **Go 1.27.4 toolchain**: govulncheck reports GO-2026-6859 in net/http of go1.27.3, resolved in go1.27.4.
+- **Attack suite isolation fixtures**: registered `/v1/break-glass/{id}` and `/v1/break-glass/{id}/review` in `attack/isolation_test.go` and enforced cross-tenant rejection in `reviewBreakGlass`.
+- **FHIR synthetic corpus formatting**: clean gofmt alignment in `internal/corpus/fhirbench/synthea_harness_test.go`.
+- **Integration timeout**: extended Slack card sealed update polling deadline to 45s under PostgreSQL 16.15 matrix container load.
+
 ## [0.15.1] - 2026-10-29
 
 ### Added
