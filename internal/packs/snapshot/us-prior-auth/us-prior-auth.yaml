@@ -1,0 +1,261 @@
+# us-prior-auth · a Deedglass policy pack for US health systems and payers
+#
+# Supports Da Vinci CRD, DTR, and PAS prior authorization workflows under CMS-0057-F.
+#
+# Clinical records, prior authorization requests and audit trails are never deleted:
+# they are corrected with a new version. Orders, problem list changes, and completed
+# clinical documentation templates wait for a clinician. Da Vinci PAS prior authorization
+# requests (use: preauthorization) wait for utilization review before transmission,
+# with dual-admin review on requests of $5,000 USD or more, or where the request total
+# is unverified. Coverage is read-only.
+#
+# Before you push it:
+#   1. Replace the clinician approvers (user:clinician-1@example.org and
+#      user:clinician-2@example.org) with the licensed clinicians and utilization
+#      reviewers who review agent changes. Approver groups replace this list
+#      in a later release.
+#   2. Turn PHI mode on for the org (docs/PHI_MODE.md), so stored actions keep
+#      ids and digests instead of clinical content.
+#   3. Check your change: deedglass policy test policies/us-prior-auth.yaml
+#
+# Break-glass: keep a separate agent for emergencies, labelled break-glass=on
+# and stopped until it is needed. While it runs, its creates and updates go
+# ahead without waiting, and each record names the rule break-glass for retrospective
+# peer review. Deletes of clinical records and claims don't change.
+deedglass: policy/v1
+name: us-prior-auth
+description: PHI mode first. Clinical records are never deleted. Orders and completed documentation templates wait for a clinician. Da Vinci PAS prior authorizations wait for utilization review by amount.
+
+defaults:
+  decision: deny
+  reason: No rule in us-prior-auth allows this call. Ask an admin to add a rule in Console › Policies.
+  verify: L1
+
+rules:   # order matters: the first rule that matches decides
+  - id: phi-mode-first
+    description: Before US prior authorization and clinical agents run, PHI mode must be on for the org.
+    when: '!org.phi_mode'
+    decision: deny
+    reason: PHI mode is off. An admin turns it on in Console › Settings (or deedglass org set --phi-mode on) before agents may read or write healthcare records.
+
+  - id: fhir-needs-a-request
+    description: The connector couldn't build a request (a type outside its list, or arguments that don't fit), so there is nothing to decide on.
+    match: { connector_type: fhir }
+    when: '!request.fhir.enriched'
+    decision: deny
+    reason: This FHIR call didn't build a request, for example a resource type the connector doesn't allow. Nothing was sent.
+
+  - id: no-delete-clinical
+    description: Clinical records, prior authorization bundles, the patient record and the audit trail are corrected with a new version, never deleted.
+    match: { connector_type: fhir }
+    when: >-
+      request.fhir.interaction == "delete" && request.fhir.resource_type in [
+        "AdverseEvent", "AllergyIntolerance", "AuditEvent", "Bundle", "CarePlan", "CareTeam", "Claim",
+        "ClaimResponse", "ClinicalImpression", "Communication", "Composition", "Condition", "Consent",
+        "Coverage", "CoverageEligibilityRequest", "CoverageEligibilityResponse", "DetectedIssue",
+        "DeviceRequest", "DeviceUseStatement", "DiagnosticReport", "DocumentReference", "Encounter",
+        "EpisodeOfCare", "ExplanationOfBenefit", "FamilyMemberHistory", "Flag", "Goal", "ImagingStudy",
+        "Immunization", "ImmunizationEvaluation", "ImmunizationRecommendation", "MedicationAdministration",
+        "MedicationDispense", "MedicationRequest", "MedicationStatement", "NutritionOrder", "Observation",
+        "Patient", "PaymentNotice", "PaymentReconciliation", "Procedure", "Provenance", "Questionnaire",
+        "QuestionnaireResponse", "RiskAssessment", "ServiceRequest", "Specimen", "Task"]
+    decision: deny
+    reason: Clinical and prior authorization records are corrected with a new version, not deleted. Update the resource instead, for example with status entered-in-error.
+
+  - id: no-history-rewrite
+    description: A FHIR server behind the REST connector. $expunge and $meta-delete erase history or security labels.
+    match: { connector_type: rest }
+    when: request.http.path.contains("$expunge") || request.http.path.contains("$meta-delete")
+    decision: deny
+    reason: Erasing a FHIR server's history or security labels stays with people. Nothing was sent.
+
+  - id: profile-mismatch
+    description: A bundle whose declared profile names one kind while it holds another.
+    match: { connector_type: fhir }
+    when: request.fhir.profile_mismatch
+    decision: deny
+    reason: This bundle's profile doesn't match what it holds, so it wasn't sent. Fix meta.profile or the entries, then send it again.
+
+  - id: coverage-read-only
+    description: Agents read coverage and eligibility determinations; the payer or billing office changes them.
+    match: { connector_type: fhir }
+    when: request.fhir.resource_type in ["Coverage", "CoverageEligibilityResponse", "InsurancePlan"] && request.fhir.interaction in ["create", "update", "patch", "delete"]
+    decision: deny
+    reason: Coverage, eligibility answers and insurance plans are read-only for agents. The payer changes them in its own system.
+
+  - id: phi-minimum-read
+    description: A search must name what it looks for and ask for at most 100 results; a type-wide search or history reads every patient's records.
+    match: { connector_type: fhir }
+    when: >-
+      (request.fhir.interaction == "search" && (!has(args.params) || size(args.params) == 0 ||
+        ("_count" in args.params && (size(args.params["_count"]) > 3 || (size(args.params["_count"]) == 3 && args.params["_count"] != "100")))))
+      || (request.fhir.interaction == "history" && request.fhir.id == "")
+    decision: deny
+    reason: Searches name what they look for (for example patient or code) and ask for at most 100 results. Reading a whole resource type isn't allowed.
+
+  - id: payer-side-two-people
+    description: Claim responses, explanation of benefits, and payment notices move money or establish liability; two admins approve them.
+    match: { connector_type: fhir }
+    when: >-
+      request.fhir.interaction in ["create", "update", "patch", "delete"] && (
+        request.fhir.resource_type in ["ClaimResponse", "ExplanationOfBenefit", "PaymentNotice", "PaymentReconciliation"]
+        || request.fhir.entry_types.exists(t, t in ["ClaimResponse", "ExplanationOfBenefit", "PaymentNotice", "PaymentReconciliation"]))
+    decision: require_approval
+    reason: Claim responses and payment notices establish coverage liability; two people approve them in Console › Approvals.
+    approval: { approvers: [role:admin], required: 2, expires_in: 24h }
+    notify: [email]
+    verify: L1
+
+  - id: prior-auth-unreadable-two-people
+    description: A prior authorization whose total cannot be verified in USD, or whose use is unclassified.
+    match: { connector_type: fhir }
+    when: >-
+      request.fhir.claims > 0 && request.fhir.interaction in ["create", "update"]
+      && ("other" in request.fhir.claim_uses || request.fhir.claim_amount < 0 || request.fhir.claim_currency != "usd")
+    decision: require_approval
+    reason: This prior authorization claim total or currency couldn't be verified in USD, so two admins approve in Console › Approvals.
+    approval: { approvers: [role:admin], required: 2, expires_in: 24h }
+    notify: [email]
+    verify: L1
+
+  - id: billing-claims-two-people
+    description: Final billing claims (use claim), whatever the amount.
+    match: { connector_type: fhir }
+    when: request.fhir.claims > 0 && request.fhir.interaction in ["create", "update"] && "claim" in request.fhir.claim_uses
+    decision: require_approval
+    reason: Final billing claims need two people. Two admins approve in Console › Approvals.
+    approval: { approvers: [role:admin], required: 2, expires_in: 24h }
+    notify: [email]
+    verify: L1
+
+  - id: prior-auth-large-two-people
+    description: A Da Vinci PAS prior authorization of $5,000 USD or more requires two reviewers within 48 hours.
+    match: { connector_type: fhir }
+    when: >-
+      request.fhir.claims > 0 && request.fhir.interaction in ["create", "update"]
+      && "preauthorization" in request.fhir.claim_uses && request.fhir.claim_amount >= minor("5000.00 usd")
+    decision: require_approval
+    reason: Prior authorization requests of $5,000 USD or more require two reviewers within 48 hours. Two admins approve in Console › Approvals.
+    approval: { approvers: [role:admin], required: 2, expires_in: 48h }
+    notify: [email]
+    verify: L1
+
+  - id: prior-auth-standard-one-person
+    description: A standard prior authorization under $5,000 USD, or a predetermination estimate.
+    match: { connector_type: fhir }
+    when: >-
+      request.fhir.claims > 0 && request.fhir.interaction in ["create", "update"]
+      && request.fhir.claim_uses.all(u, u in ["preauthorization", "predetermination"])
+    decision: require_approval
+    reason: Standard prior authorization requests wait for a utilization reviewer before transmission under CMS-0057-F. One reviewer approves in Console › Approvals.
+    approval: { approvers: [role:admin], required: 1, expires_in: 72h }
+    notify: [email]
+    verify: L1
+
+  - id: billing-records-two-people
+    description: Other billing writes, including accounts, charge items, and invoices.
+    match: { connector_type: fhir }
+    when: >-
+      request.fhir.interaction in ["create", "update", "patch", "delete"] && (
+        request.fhir.resource_type in ["Account", "ChargeItem", "Invoice"]
+        || request.fhir.entry_types.exists(t, t in ["Account", "ChargeItem", "Invoice"]))
+    decision: require_approval
+    reason: Billing changes need two people. Two admins approve in Console › Approvals.
+    approval: { approvers: [role:admin], required: 2, expires_in: 24h }
+    notify: [email]
+    verify: L1
+
+  - id: break-glass
+    description: The emergency agent, labelled break-glass=on and started only during an emergency. Its creates and updates run without waiting, and each record names this rule for retrospective review.
+    match: { connector_type: fhir, labels: { break-glass: "on" } }
+    when: request.fhir.interaction in ["create", "update", "patch"]
+    decision: allow
+    verify: L1
+
+  - id: orders-need-clinician
+    description: Orders and medication changes, alone or inside a bundle.
+    match: { connector_type: fhir }
+    when: >-
+      request.fhir.interaction in ["create", "update", "patch"] && (
+        request.fhir.resource_type in ["DeviceRequest", "ImmunizationRecommendation", "MedicationAdministration",
+          "MedicationRequest", "NutritionOrder", "ServiceRequest"]
+        || request.fhir.entry_types.exists(t, t in ["DeviceRequest", "ImmunizationRecommendation", "MedicationAdministration",
+          "MedicationRequest", "NutritionOrder", "ServiceRequest"]))
+    decision: require_approval
+    reason: Orders and medication changes wait for a clinician. A clinician on this rule's list approves in Console › Approvals.
+    approval: { approvers: [user:clinician-1@example.org, user:clinician-2@example.org], required: 1, expires_in: 4h }
+    notify: [email]
+    verify: L1
+
+  - id: allergy-problem-list-review
+    description: Allergies and the problem list are reconciled by a clinician.
+    match: { connector_type: fhir }
+    when: request.fhir.resource_type in ["AllergyIntolerance", "Condition"] && request.fhir.interaction in ["create", "update", "patch"]
+    decision: require_approval
+    reason: Changes to allergies and the problem list wait for a clinician. A clinician on this rule's list approves in Console › Approvals.
+    approval: { approvers: [user:clinician-1@example.org, user:clinician-2@example.org], required: 1, expires_in: 4h }
+    notify: [email]
+    verify: L1
+
+  - id: dtr-questionnaire-draft-runs
+    description: An agent drafts a Da Vinci DTR QuestionnaireResponse (status in-progress); a clinician or reviewer finalises it.
+    match: { connector_type: fhir }
+    when: >-
+      request.fhir.resource_type == "QuestionnaireResponse" && request.fhir.interaction in ["create", "update"]
+      && has(args.resource) && has(args.resource.status) && args.resource.status == "in-progress"
+    decision: allow
+    verify: L1
+
+  - id: dtr-questionnaire-needs-clinician
+    description: A completed or amended Da Vinci DTR QuestionnaireResponse submitted as prior authorization clinical criteria documentation.
+    match: { connector_type: fhir }
+    when: request.fhir.resource_type == "QuestionnaireResponse" && request.fhir.interaction in ["create", "update", "patch"]
+    decision: require_approval
+    reason: Completed prior authorization questionnaire responses wait for clinical review before submission. A clinician on this rule's list approves in Console › Approvals.
+    approval: { approvers: [user:clinician-1@example.org, user:clinician-2@example.org], required: 1, expires_in: 24h }
+    notify: [email]
+    verify: L1
+
+  - id: notes-draft-only
+    description: An agent writes clinical notes as drafts (docStatus preliminary, or a preliminary Composition); a clinician finalises them.
+    match: { connector_type: fhir }
+    when: >-
+      request.fhir.resource_type in ["DocumentReference", "Composition"] && request.fhir.interaction in ["create", "update"]
+      && has(args.resource) && ((has(args.resource.docStatus) && args.resource.docStatus == "preliminary")
+        || (request.fhir.resource_type == "Composition" && has(args.resource.status) && args.resource.status == "preliminary"))
+    decision: allow
+    verify: L1
+
+  - id: final-notes-need-clinician
+    description: A clinical note or attachment that isn't a draft, or a patch to one.
+    match: { connector_type: fhir }
+    when: request.fhir.resource_type in ["DocumentReference", "Composition"] && request.fhir.interaction in ["create", "update", "patch"]
+    decision: require_approval
+    reason: Agents write notes as drafts (preliminary). A final note, or a change to one, waits for a clinician in Console › Approvals.
+    approval: { approvers: [user:clinician-1@example.org, user:clinician-2@example.org], required: 1, expires_in: 4h }
+    notify: [email]
+    verify: L1
+
+  - id: fhir-reads
+    description: Reads that name what they look for run freely without waiting.
+    match: { connector_type: fhir }
+    when: request.fhir.interaction in ["read", "vread", "search", "history"]
+    decision: allow
+    verify: L0
+
+  - id: other-deletes-need-approval
+    description: Deletes of non-clinical records, like a Task or an Appointment.
+    match: { connector_type: fhir }
+    when: request.fhir.interaction == "delete"
+    decision: require_approval
+    reason: Deletes wait for a human. An admin can approve in Console › Approvals.
+    approval: { approvers: [role:admin], required: 1, expires_in: 2h }
+    notify: [email]
+    verify: L1
+
+  - id: verify-levels
+    description: Every other permitted write runs and is read back at the version the server reported (Checked), including Da Vinci CRD CoverageEligibilityRequest calls and prior authorization Task records.
+    match: { connector_type: fhir }
+    when: request.fhir.interaction in ["create", "update", "patch"]
+    decision: allow
+    verify: L1

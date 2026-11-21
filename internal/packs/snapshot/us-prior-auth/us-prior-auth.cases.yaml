@@ -1,0 +1,272 @@
+# Test cases for us-prior-auth.yaml. Run them with:
+#   deedglass policy test policies/us-prior-auth.yaml
+# Tests Da Vinci CRD, DTR, and PAS prior authorization workflows under CMS-0057-F.
+# All test data is synthetic.
+policy: us-prior-auth.yaml
+defaults:
+  agent: { name: prior-auth-bot, labels: { env: prod } }
+  org: { timezone: America/New_York, phi_mode: true }
+  time: 2026-11-14T10:00:00-05:00
+cases:
+  # PHI mode and calls that build no request
+  - name: with PHI mode off nothing runs, not even a read
+    input:
+      tool: { name: ehr.read, connector_type: fhir, side_effect: read }
+      args: { resource_type: Patient, id: pat-synthetic-1 }
+      org: { timezone: America/New_York, phi_mode: false }
+      request: { fhir: { enriched: true, interaction: read, resource_type: Patient, id: pat-synthetic-1 } }
+    expect: { decision: deny, rule: phi-mode-first, code: policy_denied, reason_contains: "PHI mode is off" }
+
+  - name: a type outside the connector list never runs
+    input:
+      tool: { name: ehr.create, connector_type: fhir, side_effect: write }
+      args: { resource_type: Encounter, resource: { resourceType: Encounter, status: finished } }
+      request: { fhir: { enriched: false } }
+    expect: { decision: deny, rule: fhir-needs-a-request }
+
+  # Deletes
+  - name: deleting a stored clinical or prior authorization record is refused
+    input:
+      tool: { name: ehr.delete, connector_type: fhir, side_effect: destructive }
+      args: { resource_type: Claim, id: pa-claim-001 }
+      request: { fhir: { enriched: true, interaction: delete, resource_type: Claim, id: pa-claim-001 } }
+    expect: { decision: deny, rule: no-delete-clinical, reason_contains: "corrected with a new version" }
+
+  - name: deleting an Observation is refused
+    input:
+      tool: { name: ehr.delete, connector_type: fhir, side_effect: destructive }
+      args: { resource_type: Observation, id: obs-991 }
+      request: { fhir: { enriched: true, interaction: delete, resource_type: Observation, id: obs-991 } }
+    expect: { decision: deny, rule: no-delete-clinical }
+
+  - name: deleting a non-clinical Task waits for an admin
+    input:
+      tool: { name: ehr.delete, connector_type: fhir, side_effect: destructive }
+      args: { resource_type: Appointment, id: appt-101 }
+      request: { fhir: { enriched: true, interaction: delete, resource_type: Appointment, id: appt-101 } }
+    expect: { decision: require_approval, rule: other-deletes-need-approval, approval: { required: 1, approvers: [role:admin], expires_in: 2h } }
+
+  - name: $expunge through the REST connector is refused
+    input:
+      tool: { name: hapi.expunge, connector_type: rest, side_effect: destructive }
+      args: { id: obs-1001 }
+      request: { http: { method: POST, path: "/fhir/Observation/obs-1001/$expunge", host: fhir.hospital.example.org } }
+    expect: { decision: deny, rule: no-history-rewrite }
+
+  # Profile mismatches
+  - name: a bundle profile mismatch is refused
+    input:
+      tool: { name: ehr.create, connector_type: fhir, side_effect: write }
+      args: { resource_type: Bundle, resource: { resourceType: Bundle, type: collection } }
+      request: { fhir: { enriched: true, interaction: create, resource_type: Bundle, bundle_type: collection, profile_mismatch: true,
+        entry_types: [Claim], claims: 1, claim_use: preauthorization, claim_uses: [preauthorization], claim_amount: 350000, claim_currency: usd } }
+    expect: { decision: deny, rule: profile-mismatch, reason_contains: "doesn't match what it holds" }
+
+  # Coverage and payer records
+  - name: updating Coverage is refused
+    input:
+      tool: { name: ehr.update, connector_type: fhir, side_effect: write }
+      args: { resource_type: Coverage, id: cov-us-1, resource: { resourceType: Coverage, id: cov-us-1 } }
+      request: { fhir: { enriched: true, interaction: update, resource_type: Coverage, id: cov-us-1 } }
+    expect: { decision: deny, rule: coverage-read-only }
+
+  - name: creating CoverageEligibilityResponse is refused
+    input:
+      tool: { name: ehr.create, connector_type: fhir, side_effect: write }
+      args: { resource_type: CoverageEligibilityResponse, resource: { resourceType: CoverageEligibilityResponse } }
+      request: { fhir: { enriched: true, interaction: create, resource_type: CoverageEligibilityResponse } }
+    expect: { decision: deny, rule: coverage-read-only }
+
+  # PHI minimum reads
+  - name: a type-wide search is refused
+    input:
+      tool: { name: ehr.search, connector_type: fhir, side_effect: read }
+      args: { resource_type: Patient }
+      request: { fhir: { enriched: true, interaction: search, resource_type: Patient } }
+    expect: { decision: deny, rule: phi-minimum-read }
+
+  - name: a search asking for 500 results is refused
+    input:
+      tool: { name: ehr.search, connector_type: fhir, side_effect: read }
+      args: { resource_type: Observation, params: { patient: pat-1, _count: "500" } }
+      request: { fhir: { enriched: true, interaction: search, resource_type: Observation } }
+    expect: { decision: deny, rule: phi-minimum-read }
+
+  - name: a type-wide history is refused
+    input:
+      tool: { name: ehr.history, connector_type: fhir, side_effect: read }
+      args: { resource_type: Condition }
+      request: { fhir: { enriched: true, interaction: history, resource_type: Condition, id: "" } }
+    expect: { decision: deny, rule: phi-minimum-read }
+
+  # Payer-side records moving money
+  - name: creating a ClaimResponse needs two admins
+    input:
+      tool: { name: ehr.create, connector_type: fhir, side_effect: write }
+      args: { resource_type: ClaimResponse, resource: { resourceType: ClaimResponse, status: active } }
+      request: { fhir: { enriched: true, interaction: create, resource_type: ClaimResponse } }
+    expect: { decision: require_approval, rule: payer-side-two-people, approval: { required: 2, approvers: [role:admin], expires_in: 24h } }
+
+  - name: creating an ExplanationOfBenefit needs two admins
+    input:
+      tool: { name: ehr.create, connector_type: fhir, side_effect: write }
+      args: { resource_type: ExplanationOfBenefit, resource: { resourceType: ExplanationOfBenefit } }
+      request: { fhir: { enriched: true, interaction: create, resource_type: ExplanationOfBenefit } }
+    expect: { decision: require_approval, rule: payer-side-two-people, approval: { required: 2, approvers: [role:admin], expires_in: 24h } }
+
+  # Da Vinci PAS Prior Authorization flows
+  - name: prior auth with unverified total needs two admins
+    input:
+      tool: { name: ehr.create, connector_type: fhir, side_effect: write }
+      args: { resource_type: Claim, resource: { resourceType: Claim } }
+      request: { fhir: { enriched: true, interaction: create, resource_type: Claim, claims: 1, claim_use: preauthorization, claim_uses: [preauthorization], claim_amount: -1, claim_currency: usd } }
+    expect: { decision: require_approval, rule: prior-auth-unreadable-two-people, approval: { required: 2, approvers: [role:admin], expires_in: 24h } }
+
+  - name: prior auth with non-USD currency needs two admins
+    input:
+      tool: { name: ehr.create, connector_type: fhir, side_effect: write }
+      args: { resource_type: Claim, resource: { resourceType: Claim } }
+      request: { fhir: { enriched: true, interaction: create, resource_type: Claim, claims: 1, claim_use: preauthorization, claim_uses: [preauthorization], claim_amount: 150000, claim_currency: eur } }
+    expect: { decision: require_approval, rule: prior-auth-unreadable-two-people, approval: { required: 2, approvers: [role:admin], expires_in: 24h } }
+
+  - name: claim with use other needs two admins
+    input:
+      tool: { name: ehr.create, connector_type: fhir, side_effect: write }
+      args: { resource_type: Claim, resource: { resourceType: Claim } }
+      request: { fhir: { enriched: true, interaction: create, resource_type: Claim, claims: 1, claim_use: other, claim_uses: [other], claim_amount: 10000, claim_currency: usd } }
+    expect: { decision: require_approval, rule: prior-auth-unreadable-two-people, approval: { required: 2, approvers: [role:admin], expires_in: 24h } }
+
+  - name: final settlement claim needs two admins
+    input:
+      tool: { name: ehr.create, connector_type: fhir, side_effect: write }
+      args: { resource_type: Claim, resource: { resourceType: Claim } }
+      request: { fhir: { enriched: true, interaction: create, resource_type: Claim, claims: 1, claim_use: claim, claim_uses: [claim], claim_amount: 45000, claim_currency: usd } }
+    expect: { decision: require_approval, rule: billing-claims-two-people, approval: { required: 2, approvers: [role:admin], expires_in: 24h } }
+
+  - name: high-cost prior authorization of $5000 or more needs two reviewers within 48h
+    input:
+      tool: { name: ehr.create, connector_type: fhir, side_effect: write }
+      args: { resource_type: Claim, resource: { resourceType: Claim } }
+      request: { fhir: { enriched: true, interaction: create, resource_type: Claim, claims: 1, claim_use: preauthorization, claim_uses: [preauthorization], claim_amount: 850000, claim_currency: usd } }
+    expect: { decision: require_approval, rule: prior-auth-large-two-people, approval: { required: 2, approvers: [role:admin], expires_in: 48h } }
+
+  - name: Da Vinci PAS bundle over $5000 needs two reviewers
+    input:
+      tool: { name: ehr.create, connector_type: fhir, side_effect: write }
+      args: { resource_type: Bundle, resource: { resourceType: Bundle, type: collection } }
+      request: { fhir: { enriched: true, interaction: create, resource_type: Bundle, bundle_type: collection,
+        entry_types: [Claim, Coverage, Organization, Patient, Practitioner], claims: 1, claim_use: preauthorization, claim_uses: [preauthorization], claim_amount: 1200000, claim_currency: usd } }
+    expect: { decision: require_approval, rule: prior-auth-large-two-people, approval: { required: 2, approvers: [role:admin], expires_in: 48h } }
+
+  - name: standard prior authorization under $5000 waits for one reviewer
+    input:
+      tool: { name: ehr.create, connector_type: fhir, side_effect: write }
+      args: { resource_type: Claim, resource: { resourceType: Claim } }
+      request: { fhir: { enriched: true, interaction: create, resource_type: Claim, claims: 1, claim_use: preauthorization, claim_uses: [preauthorization], claim_amount: 185000, claim_currency: usd } }
+    expect: { decision: require_approval, rule: prior-auth-standard-one-person, approval: { required: 1, approvers: [role:admin], expires_in: 72h } }
+
+  - name: predetermination estimate waits for one reviewer
+    input:
+      tool: { name: ehr.create, connector_type: fhir, side_effect: write }
+      args: { resource_type: Claim, resource: { resourceType: Claim } }
+      request: { fhir: { enriched: true, interaction: create, resource_type: Claim, claims: 1, claim_use: predetermination, claim_uses: [predetermination], claim_amount: 90000, claim_currency: usd } }
+    expect: { decision: require_approval, rule: prior-auth-standard-one-person, approval: { required: 1, approvers: [role:admin], expires_in: 72h } }
+
+  # Billing records
+  - name: creating an Invoice needs two admins
+    input:
+      tool: { name: ehr.create, connector_type: fhir, side_effect: write }
+      args: { resource_type: Invoice, resource: { resourceType: Invoice } }
+      request: { fhir: { enriched: true, interaction: create, resource_type: Invoice } }
+    expect: { decision: require_approval, rule: billing-records-two-people, approval: { required: 2, approvers: [role:admin], expires_in: 24h } }
+
+  # Break-glass emergency agent
+  - name: emergency agent with break-glass on creates without waiting
+    input:
+      agent: { name: er-emergency-bot, labels: { env: prod, break-glass: "on" } }
+      tool: { name: ehr.create, connector_type: fhir, side_effect: write }
+      args: { resource_type: Observation, resource: { resourceType: Observation, status: final } }
+      request: { fhir: { enriched: true, interaction: create, resource_type: Observation } }
+    expect: { decision: allow, rule: break-glass, verify: L1 }
+
+  # Clinical safety: orders, allergies, and notes
+  - name: creating MedicationRequest waits for clinician
+    input:
+      tool: { name: ehr.create, connector_type: fhir, side_effect: write }
+      args: { resource_type: MedicationRequest, resource: { resourceType: MedicationRequest, status: active } }
+      request: { fhir: { enriched: true, interaction: create, resource_type: MedicationRequest } }
+    expect: { decision: require_approval, rule: orders-need-clinician, approval: { required: 1, approvers: [user:clinician-1@example.org, user:clinician-2@example.org], expires_in: 4h } }
+
+  - name: creating Condition on problem list waits for clinician
+    input:
+      tool: { name: ehr.create, connector_type: fhir, side_effect: write }
+      args: { resource_type: Condition, resource: { resourceType: Condition, clinicalStatus: active } }
+      request: { fhir: { enriched: true, interaction: create, resource_type: Condition } }
+    expect: { decision: require_approval, rule: allergy-problem-list-review, approval: { required: 1, approvers: [user:clinician-1@example.org, user:clinician-2@example.org], expires_in: 4h } }
+
+  # Da Vinci DTR documentation templates
+  - name: drafting DTR QuestionnaireResponse in-progress runs
+    input:
+      tool: { name: ehr.create, connector_type: fhir, side_effect: write }
+      args: { resource_type: QuestionnaireResponse, resource: { resourceType: QuestionnaireResponse, status: in-progress } }
+      request: { fhir: { enriched: true, interaction: create, resource_type: QuestionnaireResponse } }
+    expect: { decision: allow, rule: dtr-questionnaire-draft-runs, verify: L1 }
+
+  - name: completed DTR QuestionnaireResponse waits for clinician
+    input:
+      tool: { name: ehr.create, connector_type: fhir, side_effect: write }
+      args: { resource_type: QuestionnaireResponse, resource: { resourceType: QuestionnaireResponse, status: completed } }
+      request: { fhir: { enriched: true, interaction: create, resource_type: QuestionnaireResponse } }
+    expect: { decision: require_approval, rule: dtr-questionnaire-needs-clinician, approval: { required: 1, approvers: [user:clinician-1@example.org, user:clinician-2@example.org], expires_in: 24h } }
+
+  # Clinical notes
+  - name: drafting clinical DocumentReference with docStatus preliminary runs
+    input:
+      tool: { name: ehr.create, connector_type: fhir, side_effect: write }
+      args: { resource_type: DocumentReference, resource: { resourceType: DocumentReference, docStatus: preliminary } }
+      request: { fhir: { enriched: true, interaction: create, resource_type: DocumentReference } }
+    expect: { decision: allow, rule: notes-draft-only, verify: L1 }
+
+  - name: final DocumentReference note waits for clinician
+    input:
+      tool: { name: ehr.create, connector_type: fhir, side_effect: write }
+      args: { resource_type: DocumentReference, resource: { resourceType: DocumentReference, docStatus: final } }
+      request: { fhir: { enriched: true, interaction: create, resource_type: DocumentReference } }
+    expect: { decision: require_approval, rule: final-notes-need-clinician, approval: { required: 1, approvers: [user:clinician-1@example.org, user:clinician-2@example.org], expires_in: 4h } }
+
+  # Reads
+  - name: reading a Patient runs freely
+    input:
+      tool: { name: ehr.read, connector_type: fhir, side_effect: read }
+      args: { resource_type: Patient, id: pat-902 }
+      request: { fhir: { enriched: true, interaction: read, resource_type: Patient, id: pat-902 } }
+    expect: { decision: allow, rule: fhir-reads, verify: L0 }
+
+  - name: targeted search with parameters and count runs
+    input:
+      tool: { name: ehr.search, connector_type: fhir, side_effect: read }
+      args: { resource_type: Observation, params: { patient: pat-902, code: "883-9", _count: "50" } }
+      request: { fhir: { enriched: true, interaction: search, resource_type: Observation } }
+    expect: { decision: allow, rule: fhir-reads, verify: L0 }
+
+  - name: resource history with id runs
+    input:
+      tool: { name: ehr.history, connector_type: fhir, side_effect: read }
+      args: { resource_type: MedicationRequest, id: med-404 }
+      request: { fhir: { enriched: true, interaction: history, resource_type: MedicationRequest, id: med-404 } }
+    expect: { decision: allow, rule: fhir-reads, verify: L0 }
+
+  # Other permitted writes: Da Vinci CRD CoverageEligibilityRequest runs at L1
+  - name: Da Vinci CRD CoverageEligibilityRequest runs at L1
+    input:
+      tool: { name: ehr.create, connector_type: fhir, side_effect: write }
+      args: { resource_type: CoverageEligibilityRequest, resource: { resourceType: CoverageEligibilityRequest, status: active, purpose: [validation] } }
+      request: { fhir: { enriched: true, interaction: create, resource_type: CoverageEligibilityRequest } }
+    expect: { decision: allow, rule: verify-levels, verify: L1 }
+
+  # Default rule check
+  - name: non-matching tool call is denied by default
+    input:
+      tool: { name: custom.tool, connector_type: custom, side_effect: write }
+      args: { query: test }
+    expect: { decision: deny, rule: default, reason_contains: "No rule in us-prior-auth" }

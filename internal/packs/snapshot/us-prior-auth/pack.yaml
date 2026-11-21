@@ -1,0 +1,6 @@
+id: pck_01m4ppb8d5fkph9mevbjc6cv8n
+name: us-prior-auth
+version: 1.0.0
+tier: free
+summary: PHI mode first. Clinical records are never deleted. Orders and completed documentation templates wait for a clinician. Da Vinci PAS prior authorizations wait for utilization review by amount.
+for: the FHIR connector on Da Vinci CRD, DTR, and PAS prior authorization workflows (synthetic data until you have reviewed it)
