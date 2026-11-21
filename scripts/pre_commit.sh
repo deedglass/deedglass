@@ -6,10 +6,16 @@
 # 3. Clean compiler vet (go vet ./...)
 set -euo pipefail
 
-ROOT="$(git rev-parse --show-toplevel)"
+TARGET="${BASH_SOURCE[0]}"
+while [ -L "$TARGET" ]; do
+  DIR="$(cd -P "$(dirname "$TARGET")" >/dev/null 2>&1 && pwd)"
+  TARGET="$(readlink "$TARGET")"
+  [[ $TARGET != /* ]] && TARGET="$DIR/$TARGET"
+done
+ROOT="$(cd -P "$(dirname "$TARGET")/.." >/dev/null 2>&1 && pwd)"
 cd "$ROOT"
 
-echo "== [PRE-COMMIT] Running Deedglass commit verification gates..."
+echo "== [PRE-COMMIT] Running Deedglass commit verification gates in $ROOT..."
 
 # 1. gofmt check
 echo "-- Checking Go formatting (gofmt -l .)..."

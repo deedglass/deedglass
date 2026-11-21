@@ -464,11 +464,11 @@
       $('cl-injection-text').textContent = c.prompt_injection_alert;
     }
 
-    // FHIR Bulk Data Export unreviewed cohort widening (CH-40)
-    const hasBulkExport = Boolean(c.bulk_export_alert);
-    show($('cl-bulkexport-banner'), hasBulkExport);
-    if (hasBulkExport) {
-      $('cl-bulkexport-text').textContent = c.bulk_export_alert;
+    // FHIR Cohort Data Export unreviewed widening (CH-40)
+    const hasCohortExport = Boolean(c.cohort_export_alert);
+    show($('cl-cohortexport-banner'), hasCohortExport);
+    if (hasCohortExport) {
+      $('cl-cohortexport-text').textContent = c.cohort_export_alert;
     }
 
     // Multi-agent care plan conflict alert (CH-41)

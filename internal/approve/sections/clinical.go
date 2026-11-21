@@ -52,6 +52,7 @@ type ClinicalPreview struct {
 	ClinicianFinalDigest string            `json:"clinician_final_digest,omitempty"` // CH-10
 	EdgeQueueConflict    string            `json:"edge_queue_conflict,omitempty"`    // CH-38
 	PromptInjectionAlert string            `json:"prompt_injection_alert,omitempty"` // CH-39
+	CohortExportAlert    string            `json:"cohort_export_alert,omitempty"`    // CH-40
 	BulkExportAlert      string            `json:"bulk_export_alert,omitempty"`      // CH-40
 	CarePlanConflict     string            `json:"care_plan_conflict,omitempty"`     // CH-41
 	Summary              string            `json:"summary"`
@@ -298,6 +299,7 @@ func BuildClinical(in gate.ApprovalInput) (json.RawMessage, error) {
 		ClinicianFinalDigest: clinicianDigest,
 		EdgeQueueConflict:    edgeQueueConflict,
 		PromptInjectionAlert: promptInjectAlert,
+		CohortExportAlert:    bulkExportAlert,
 		BulkExportAlert:      bulkExportAlert,
 		CarePlanConflict:     carePlanConflict,
 	}
