@@ -18,6 +18,9 @@ func TestRecordExport(t *testing.T) {
 		{"ocsf", "11 OCSF events · 12 records read · 1 without one", `"class_uid":6003`},
 		{"prov-json", "1 PROV-JSON document · 12 records read", `"actedOnBehalfOf"`},
 		{"fhir", "0 FHIR resources · 12 records read · 12 without one", ""},
+		{"cef", "12 CEF events · 12 records read", `CEF:0|Deedglass|Deedglass|`},
+		{"splunk-hec", "12 Splunk HEC events · 12 records read", `"sourcetype":"_json"`},
+		{"csv", "1 CSV audit report · 12 records read", `seq,issued_at,deed_id,kind,org,`},
 	} {
 		out := filepath.Join(dir, "x-"+c.format)
 		r := cli(t, nil, false, "export", src, "--format", c.format, "--out", out)
@@ -62,7 +65,7 @@ func TestRecordExportRefusals(t *testing.T) {
 	src := filepath.Join("..", "..", "testdata", "release-bundles", "0.4.0", "bundle.tar.gz")
 	for name, args := range map[string][]string{
 		"no format":      {"export", src},
-		"unknown format": {"export", src, "--format", "csv"},
+		"unknown format": {"export", src, "--format", "xml"},
 		"no file":        {"export", "--format", "ocsf"},
 		"two files":      {"export", src, src, "--format", "ocsf"},
 	} {

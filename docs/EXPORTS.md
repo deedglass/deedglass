@@ -1,7 +1,7 @@
-# Exports: records in OpenTelemetry, OCSF, W3C PROV and FHIR
+# Exports: OpenTelemetry, OCSF, PROV, SIEM & CSV
 
-Deedglass can write its sealed records in four open formats, so the tools people already use (a
-trace backend, a SIEM, a provenance store, a hospital's audit tooling) can read them:
+Deedglass can write its sealed records in open formats, so the tools people already use (a
+trace backend, an enterprise SIEM, a provenance store, a hospital's audit tooling) can read them:
 
 | `--format` | Standard, pinned version | What you get | Mapping and what is lost |
 |---|---|---|---|
@@ -9,6 +9,9 @@ trace backend, a SIEM, a provenance store, a hospital's audit tooling) can read 
 | `ocsf` | OCSF schema **1.9.0** (2026-08-03): API Activity (6003), profiles `ai_operation` and `security_control` | one event per action or later check, NDJSON, with `ai_agent` and `delegation` | [exports/ocsf.md](exports/ocsf.md) |
 | `prov-json` | W3C PROV-JSON, Member Submission of **2013-04-24** (PROV-DM, Recommendation 2013-04-30) | one document: agents, tool calls, records, who acted for whom, revisions | [exports/prov-json.md](exports/prov-json.md) |
 | `fhir` (and `fhir-auditevent`, `fhir-provenance`) | FHIR **R4** AuditEvent (IHE BALP **1.1.4**) and Provenance (HL7 AI Transparency **1.0.0-ballot**) | AuditEvent and Provenance for FHIR connector calls, FHIR NDJSON | below |
+| `cef` | ArcSight Common Event Format (CEF) **v0** | one syslog-compatible line per action/admin event for Sentinel, Splunk, QRadar | [exports/cef.md](exports/cef.md) |
+| `splunk-hec` | Splunk HTTP Event Collector JSON | NDJSON events with `time`, `host`, `index` and structured deed payloads | [exports/splunk-hec.md](exports/splunk-hec.md) |
+| `csv` | Tabular CSV (RFC 4180) | single CSV audit trail report for hospital quality committees and NABH/HIPAA reviews | [exports/csv.md](exports/csv.md) |
 
 An export is a view. The sealed record stays the primary form; its format knows nothing about any
 of these standards (DL-109, the record spec in [`spec/v1/`](../spec/v1/DEED_SPEC.md)), and
@@ -23,6 +26,9 @@ deedglass export deeds.tar.gz --format otel-genai        # → deeds.otlp.jsonl
 deedglass export deeds.tar.gz --format ocsf --out -      # NDJSON to stdout
 deedglass export deeds.jsonl --format prov-json --out records.prov.json
 deedglass export deeds.tar.gz --format fhir              # AuditEvent, then Provenance, per record
+deedglass export deeds.tar.gz --format cef --out siem.cef.log
+deedglass export deeds.tar.gz --format splunk-hec --out hec.ndjson
+deedglass export deeds.tar.gz --format csv --out audit.csv
 ```
 
 `deedglass export` works offline on an export bundle (`deedglass deeds export`) or a `.jsonl` file of

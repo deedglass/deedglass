@@ -29,7 +29,7 @@ var recordExportValues struct {
 func recordExportFlags(fs *flag.FlagSet) {
 	o := &recordExportValues
 	*o = struct{ format, out string }{}
-	fs.StringVar(&o.format, "format", "", "otel-genai, ocsf, prov-json or fhir")
+	fs.StringVar(&o.format, "format", "", "otel-genai, ocsf, prov-json, fhir, cef, splunk-hec or csv")
 	fs.StringVar(&o.out, "out", "", "the file to write, or - for stdout")
 }
 
@@ -180,8 +180,17 @@ func recordExportSummary(st recordexport.Stats, format string) string {
 		what = plural(st.Written, "OCSF event", "OCSF events")
 	case recordexport.FormatPROV:
 		return fmt.Sprintf("1 PROV-JSON document %s %s read", ui.Sep, deedsWord(int64(st.Records)))
+	case recordexport.FormatCEF:
+		what = plural(st.Written, "CEF event", "CEF events")
+	case recordexport.FormatSplunkHEC:
+		what = plural(st.Written, "Splunk HEC event", "Splunk HEC events")
+	case recordexport.FormatCSV:
+		return fmt.Sprintf("1 CSV audit report %s %s read", ui.Sep, deedsWord(int64(st.Records)))
 	default:
 		what = plural(st.Written, "FHIR resource", "FHIR resources")
+	}
+	if st.Skipped == 0 {
+		return fmt.Sprintf("%d %s %s %s read", st.Written, what, ui.Sep, deedsWord(int64(st.Records)))
 	}
 	return fmt.Sprintf("%d %s %s %s read %s %d without one", st.Written, what, ui.Sep, deedsWord(int64(st.Records)), ui.Sep, st.Skipped)
 }

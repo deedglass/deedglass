@@ -647,9 +647,73 @@ func TestOTelIDs(t *testing.T) {
 	}
 }
 
+func TestCEFExport(t *testing.T) {
+	out, st := export(t, FormatCEF, bundleRecords(t))
+	if st.Records != 12 || st.Written != 12 || st.Skipped != 0 {
+		t.Fatalf("CEF stats: %+v, want 12 records, 12 written, 0 skipped", st)
+	}
+	lines := strings.Split(strings.TrimSpace(string(out)), "\n")
+	if len(lines) != 12 {
+		t.Fatalf("CEF lines: %d, want 12", len(lines))
+	}
+	for i, line := range lines {
+		if !strings.HasPrefix(line, "CEF:0|Deedglass|Deedglass|") {
+			t.Errorf("line %d: lacks CEF header: %s", i, line)
+		}
+		if !strings.Contains(line, "externalId=") || !strings.Contains(line, "cs6Label=DeedID") {
+			t.Errorf("line %d: lacks expected CEF extensions: %s", i, line)
+		}
+	}
+}
+
+func TestSplunkHECExport(t *testing.T) {
+	out, st := export(t, FormatSplunkHEC, bundleRecords(t))
+	if st.Records != 12 || st.Written != 12 || st.Skipped != 0 {
+		t.Fatalf("Splunk HEC stats: %+v, want 12 records, 12 written, 0 skipped", st)
+	}
+	lines := strings.Split(strings.TrimSpace(string(out)), "\n")
+	if len(lines) != 12 {
+		t.Fatalf("Splunk HEC lines: %d, want 12", len(lines))
+	}
+	for i, line := range lines {
+		var m map[string]any
+		if err := json.Unmarshal([]byte(line), &m); err != nil {
+			t.Errorf("line %d: invalid JSON: %v", i, err)
+			continue
+		}
+		if m["source"] != "deedglass:records" || m["sourcetype"] != "_json" {
+			t.Errorf("line %d: unexpected source/sourcetype: %+v", i, m)
+		}
+		ev, ok := m["event"].(map[string]any)
+		if !ok || ev["deed_id"] == nil || ev["kind"] == nil {
+			t.Errorf("line %d: event lacks deed_id or kind: %+v", i, m)
+		}
+	}
+}
+
+func TestCSVExport(t *testing.T) {
+	out, st := export(t, FormatCSV, bundleRecords(t))
+	if st.Records != 12 || st.Written != 12 || st.Skipped != 0 {
+		t.Fatalf("CSV stats: %+v, want 12 records, 12 written, 0 skipped", st)
+	}
+	lines := strings.Split(strings.TrimSpace(string(out)), "\n")
+	if len(lines) != 13 { // header + 12 rows
+		t.Fatalf("CSV lines: %d, want 13 (header + 12 rows)", len(lines))
+	}
+	if lines[0] != strings.Join(csvHeader, ",") {
+		t.Errorf("CSV header mismatch: got %q, want %q", lines[0], strings.Join(csvHeader, ","))
+	}
+	for i := 1; i < len(lines); i++ {
+		fields := strings.Split(lines[i], ",")
+		if len(fields) < len(csvHeader) {
+			t.Errorf("row %d has %d fields, want >= %d", i, len(fields), len(csvHeader))
+		}
+	}
+}
+
 func TestRefusals(t *testing.T) {
-	if _, err := NewWriter(&bytes.Buffer{}, "csv", opt); err != ErrFormat {
-		t.Errorf("csv: %v", err)
+	if _, err := NewWriter(&bytes.Buffer{}, "xml", opt); err != ErrFormat {
+		t.Errorf("xml: %v", err)
 	}
 	for _, f := range Formats {
 		for name, raw := range map[string]string{

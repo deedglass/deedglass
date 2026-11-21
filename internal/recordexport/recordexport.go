@@ -23,14 +23,17 @@ import (
 
 // Formats, as `deedglass export --format` names them.
 const (
-	FormatOTel = "otel-genai"
-	FormatOCSF = "ocsf"
-	FormatPROV = "prov-json"
-	FormatFHIR = "fhir"
+	FormatOTel      = "otel-genai"
+	FormatOCSF      = "ocsf"
+	FormatPROV      = "prov-json"
+	FormatFHIR      = "fhir"
+	FormatCEF       = "cef"
+	FormatSplunkHEC = "splunk-hec"
+	FormatCSV       = "csv"
 )
 
 // Formats lists every format, in the order help shows them.
-var Formats = []string{FormatOTel, FormatOCSF, FormatPROV, FormatFHIR}
+var Formats = []string{FormatOTel, FormatOCSF, FormatPROV, FormatFHIR, FormatCEF, FormatSplunkHEC, FormatCSV}
 
 // The pinned versions of the standards each format follows. A change here is a change to the
 // export and needs its mapping doc, goldens and schema files updated together.
@@ -48,7 +51,7 @@ const (
 )
 
 // ErrFormat is returned for a format this package doesn't write.
-var ErrFormat = errors.New("recordexport: the format must be otel-genai, ocsf, prov-json or fhir")
+var ErrFormat = errors.New("recordexport: the format must be otel-genai, ocsf, prov-json, fhir, cef, splunk-hec or csv")
 
 // Options are the export's own facts. None of them comes from the records.
 type Options struct {
@@ -85,6 +88,12 @@ func NewWriter(w io.Writer, format string, opt Options) (Writer, error) {
 		return newPROVWriter(w, opt), nil
 	case FormatFHIR:
 		return &fhirWriter{w: w, opt: opt}, nil
+	case FormatCEF:
+		return &cefWriter{w: w, opt: opt}, nil
+	case FormatSplunkHEC:
+		return &splunkHECWriter{w: w, opt: opt}, nil
+	case FormatCSV:
+		return newCSVWriter(w, opt), nil
 	}
 	return nil, ErrFormat
 }
@@ -100,6 +109,12 @@ func Extension(format string) string {
 		return ".prov.json"
 	case FormatFHIR:
 		return ".fhir.ndjson"
+	case FormatCEF:
+		return ".cef.log"
+	case FormatSplunkHEC:
+		return ".splunk.ndjson"
+	case FormatCSV:
+		return ".csv"
 	}
 	return ""
 }
@@ -111,6 +126,10 @@ func ContentType(format string) string {
 		return "application/json"
 	case FormatFHIR:
 		return "application/fhir+ndjson"
+	case FormatCSV:
+		return "text/csv; charset=utf-8"
+	case FormatCEF:
+		return "text/plain; charset=utf-8"
 	}
 	return "application/x-ndjson"
 }
