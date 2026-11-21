@@ -24,6 +24,8 @@ var (
 	ErrIncompleteTransactionBundle = errors.New("scribe-eval: composite bundle atomicity violation (CH-20)")
 	ErrPromptInjectionQuarantine   = errors.New("scribe-eval: prompt injection quarantine triggered (CH-39)")
 	ErrEdgeQueueConflict           = errors.New("scribe-eval: edge queue split-brain conflict detected (CH-38)")
+	ErrBulkExportUnauthorized      = errors.New("scribe-eval: bulk export unauthorized or unscoped cohort (CH-40)")
+	ErrCarePlanConflict            = errors.New("scribe-eval: multi-agent care plan conflict detected (CH-41)")
 )
 
 // Regex sentinels for detecting identifiers across all incoming fields.
@@ -71,6 +73,19 @@ var (
 		DeltaConsumableAdded: true, DeltaRejectedDraft: true, DeltaSilentDropCaught: true,
 		DeltaAudioTruncated: true, DeltaUngroundedOrder: true, DeltaNegationCorrection: true,
 		DeltaEdgeQueueConflict: true, DeltaPromptInjectionFlag: true,
+		DeltaBulkExportQuarantined: true, DeltaCarePlanConflictHarmonized: true,
+	}
+	validBulkExportOperations = map[string]bool{
+		"GROUP_EXPORT": true, "PATIENT_EXPORT": true, "SYSTEM_EXPORT": true,
+	}
+	validBulkExportActions = map[string]bool{
+		"AUTHORIZED_DISPATCH": true, "BLOCKED_UNSCOPED_COHORT": true, "PENDING_CISO_APPROVAL": true,
+	}
+	validCarePlanActions = map[string]bool{
+		"ROUTED_TO_WARD_LIGHT_HARMONIZATION": true, "COMMITTED_SEQUENTIAL": true, "REJECTED_STALE_LOCK": true,
+	}
+	validConsolidatedActions = map[string]bool{
+		"": true, "ATTENDING_ACCEPTED_AGENT_A": true, "ATTENDING_ACCEPTED_AGENT_B": true, "ATTENDING_MANUAL_SYNTHESIS": true,
 	}
 	validEdgeQueueActions = map[string]bool{
 		"QUEUED_FOR_CLINICIAN_DIFF": true,
@@ -338,6 +353,48 @@ func (s *DefaultSanitizer) ValidateAndSanitize(e *EvalEvent) error {
 		}
 		if !validPromptInjectionActions[pi.EnforcementAction] {
 			return fmt.Errorf("%w: invalid prompt_injection enforcement_action %q", ErrInvalidEnum, pi.EnforcementAction)
+		}
+	}
+
+	// Validate BulkExport telemetry (CH-40)
+	if be := e.BulkExport; be != nil {
+		if !validBulkExportOperations[be.ExportOperationType] {
+			return fmt.Errorf("%w: invalid export_operation_type %q", ErrInvalidEnum, be.ExportOperationType)
+		}
+		if be.InstitutionalDPAHash == "" || be.CohortPatientCount == 0 || be.EnforcementAction == "BLOCKED_UNSCOPED_COHORT" {
+			be.EnforcementAction = "BLOCKED_UNSCOPED_COHORT"
+			if e.DeltaClass == DeltaNoChange {
+				e.DeltaClass = DeltaBulkExportQuarantined
+			}
+		} else if be.EnforcementAction == "" {
+			be.EnforcementAction = "AUTHORIZED_DISPATCH"
+		}
+		if be.CohortPatientCount > 0 && be.CohortPatientCount < 11 {
+			// Small-cell suppression: suppress cohort cell size below k=11
+			be.CohortPatientCount = 0
+		}
+		if !validBulkExportActions[be.EnforcementAction] {
+			return fmt.Errorf("%w: invalid bulk_export enforcement_action %q", ErrInvalidEnum, be.EnforcementAction)
+		}
+	}
+
+	// Validate CarePlanConflict telemetry (CH-41)
+	if cpc := e.CarePlanConflict; cpc != nil {
+		if cpc.ConflictingGoalDetected {
+			if cpc.EnforcementAction == "" {
+				cpc.EnforcementAction = "ROUTED_TO_WARD_LIGHT_HARMONIZATION"
+			}
+			if e.DeltaClass == DeltaNoChange {
+				e.DeltaClass = DeltaCarePlanConflictHarmonized
+			}
+		} else if cpc.EnforcementAction == "" {
+			cpc.EnforcementAction = "COMMITTED_SEQUENTIAL"
+		}
+		if !validCarePlanActions[cpc.EnforcementAction] {
+			return fmt.Errorf("%w: invalid care_plan enforcement_action %q", ErrInvalidEnum, cpc.EnforcementAction)
+		}
+		if !validConsolidatedActions[cpc.FinalConsolidatedAction] {
+			return fmt.Errorf("%w: invalid care_plan final_consolidated_action %q", ErrInvalidEnum, cpc.FinalConsolidatedAction)
 		}
 	}
 

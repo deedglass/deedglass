@@ -876,3 +876,104 @@ func TestScribeEvalPromptInjectionQuarantine(t *testing.T) {
 		}
 	})
 }
+
+// TestScribeEvalBulkExportScopeEnforcement verifies CH-40 bulk export scope assertions and small-cell suppression.
+func TestScribeEvalBulkExportScopeEnforcement(t *testing.T) {
+	sanitizer := &DefaultSanitizer{}
+
+	t.Run("Unscoped bulk export blocked and quarantined", func(t *testing.T) {
+		ev := validBaseEvent()
+		ev.FHIRResourceType = "Group"
+		ev.DeltaClass = DeltaNoChange
+		ev.BulkExport = &BulkExportTelemetry{
+			ExportOperationType:    "GROUP_EXPORT",
+			TargetResourceTypes:    []string{"Condition", "MedicationRequest"},
+			CohortPatientCount:     150,
+			InstitutionalDPAHash:   "", // missing institutional sign-off
+			ExportEvaluationTimeUs: 120,
+		}
+
+		if err := sanitizer.ValidateAndSanitize(ev); err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		if ev.BulkExport.EnforcementAction != "BLOCKED_UNSCOPED_COHORT" {
+			t.Fatalf("expected BLOCKED_UNSCOPED_COHORT, got %q", ev.BulkExport.EnforcementAction)
+		}
+		if ev.DeltaClass != DeltaBulkExportQuarantined {
+			t.Fatalf("expected DeltaBulkExportQuarantined, got %q", ev.DeltaClass)
+		}
+	})
+
+	t.Run("Authorized bulk export with small-cell suppression k < 11", func(t *testing.T) {
+		ev := validBaseEvent()
+		ev.FHIRResourceType = "Group"
+		ev.BulkExport = &BulkExportTelemetry{
+			ExportOperationType:    "GROUP_EXPORT",
+			TargetResourceTypes:    []string{"Observation"},
+			CohortPatientCount:     7, // k < 11, must be suppressed to 0
+			InstitutionalDPAHash:   "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+			EnforcementAction:      "AUTHORIZED_DISPATCH",
+			ExportEvaluationTimeUs: 95,
+		}
+
+		if err := sanitizer.ValidateAndSanitize(ev); err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		if ev.BulkExport.CohortPatientCount != 0 {
+			t.Fatalf("expected small-cell suppression to 0, got %d", ev.BulkExport.CohortPatientCount)
+		}
+		if ev.BulkExport.EnforcementAction != "AUTHORIZED_DISPATCH" {
+			t.Fatalf("expected AUTHORIZED_DISPATCH, got %q", ev.BulkExport.EnforcementAction)
+		}
+	})
+}
+
+// TestScribeEvalCarePlanConflictHarmonization verifies CH-41 multi-agent care plan conflict routing.
+func TestScribeEvalCarePlanConflictHarmonization(t *testing.T) {
+	sanitizer := &DefaultSanitizer{}
+
+	t.Run("Conflicting care plan routed to Ward Light harmonization", func(t *testing.T) {
+		ev := validBaseEvent()
+		ev.FHIRResourceType = "CarePlan"
+		ev.DeltaClass = DeltaNoChange
+		ev.CarePlanConflict = &CarePlanConflictTelemetry{
+			EncounterIDDigest:        "a1b2c3d4e5f60718293a4b5c6d7e8f901234567890abcdef1234567890abcdef",
+			ConcurrentAgentCount:     3,
+			ConflictingGoalDetected:  true,
+			ClinicianHarmonizeTimeMs: 8200,
+			FinalConsolidatedAction:  "ATTENDING_ACCEPTED_AGENT_A",
+		}
+
+		if err := sanitizer.ValidateAndSanitize(ev); err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		if ev.CarePlanConflict.EnforcementAction != "ROUTED_TO_WARD_LIGHT_HARMONIZATION" {
+			t.Fatalf("expected ROUTED_TO_WARD_LIGHT_HARMONIZATION, got %q", ev.CarePlanConflict.EnforcementAction)
+		}
+		if ev.DeltaClass != DeltaCarePlanConflictHarmonized {
+			t.Fatalf("expected DeltaCarePlanConflictHarmonized, got %q", ev.DeltaClass)
+		}
+	})
+
+	t.Run("Sequential aligned care plan passes without conflict", func(t *testing.T) {
+		ev := validBaseEvent()
+		ev.FHIRResourceType = "CarePlan"
+		ev.CarePlanConflict = &CarePlanConflictTelemetry{
+			EncounterIDDigest:        "b2c3d4e5f60718293a4b5c6d7e8f901234567890abcdef1234567890abcdefa1",
+			ConcurrentAgentCount:     1,
+			ConflictingGoalDetected:  false,
+			ClinicianHarmonizeTimeMs: 1200,
+		}
+
+		if err := sanitizer.ValidateAndSanitize(ev); err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		if ev.CarePlanConflict.EnforcementAction != "COMMITTED_SEQUENTIAL" {
+			t.Fatalf("expected COMMITTED_SEQUENTIAL, got %q", ev.CarePlanConflict.EnforcementAction)
+		}
+	})
+}

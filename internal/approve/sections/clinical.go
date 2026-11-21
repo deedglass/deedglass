@@ -52,6 +52,8 @@ type ClinicalPreview struct {
 	ClinicianFinalDigest string            `json:"clinician_final_digest,omitempty"` // CH-10
 	EdgeQueueConflict    string            `json:"edge_queue_conflict,omitempty"`    // CH-38
 	PromptInjectionAlert string            `json:"prompt_injection_alert,omitempty"` // CH-39
+	BulkExportAlert      string            `json:"bulk_export_alert,omitempty"`      // CH-40
+	CarePlanConflict     string            `json:"care_plan_conflict,omitempty"`     // CH-41
 	Summary              string            `json:"summary"`
 }
 
@@ -246,6 +248,28 @@ func BuildClinical(in gate.ApprovalInput) (json.RawMessage, error) {
 		promptInjectAlert = "UNVERIFIED INJECTION RISK: Secondary prompt override pattern detected in payload text; routed to mandatory clinician review (CH-39)."
 	}
 
+	// CH-40: FHIR Bulk Data Export ($export) unreviewed cohort widening detection.
+	var bulkExportAlert string
+	if boolVal(raw["bulk_export_unreviewed"]) || boolVal(res["bulk_export_unreviewed"]) ||
+		boolVal(raw["unreviewed_cohort_widening"]) || boolVal(res["unreviewed_cohort_widening"]) ||
+		in.Request.FHIR.Interaction == "export" ||
+		strings.Contains(stringVal(raw["path"]), "$export") || strings.Contains(stringVal(res["path"]), "$export") ||
+		strings.Contains(stringVal(raw["http_path"]), "$export") || strings.Contains(stringVal(res["http_path"]), "$export") ||
+		(resType == "Group" && strings.EqualFold(stringVal(raw["export_scope"]), "unbounded")) {
+		bulkExportAlert = "UNREVIEWED BULK EXPORT: FHIR $export requested without approved patient cohort scope; institutional data officer authorization required (CH-40)."
+	}
+
+	// CH-41: Multi-agent clinical goal misalignment or conflicting care-plan synthesis.
+	var carePlanConflict string
+	if boolVal(raw["care_plan_conflict"]) || boolVal(res["care_plan_conflict"]) ||
+		boolVal(raw["multi_agent_conflict"]) || boolVal(res["multi_agent_conflict"]) ||
+		((resType == "CarePlan" || resType == "NutritionOrder" || resType == "Goal") &&
+			(boolVal(raw["uncoordinated_agents"]) || boolVal(res["uncoordinated_agents"]) ||
+				strings.EqualFold(stringVal(raw["plan_conflict_status"]), "misaligned") ||
+				strings.EqualFold(stringVal(res["plan_conflict_status"]), "misaligned"))) {
+		carePlanConflict = "CARE PLAN CONFLICT: Multiple agents proposed contradictory care-plan interventions; attending clinician harmonization required (CH-41)."
+	}
+
 	p := ClinicalPreview{
 		V:                    ClinicalPreviewVersion,
 		ResourceType:         resType,
@@ -274,6 +298,8 @@ func BuildClinical(in gate.ApprovalInput) (json.RawMessage, error) {
 		ClinicianFinalDigest: clinicianDigest,
 		EdgeQueueConflict:    edgeQueueConflict,
 		PromptInjectionAlert: promptInjectAlert,
+		BulkExportAlert:      bulkExportAlert,
+		CarePlanConflict:     carePlanConflict,
 	}
 
 	p.Summary = clinicalSummary(p)
@@ -443,6 +469,28 @@ func buildClinicalFields(resType string, raw, res map[string]any) []ClinicalFiel
 			if disp := codeDisplay(sev); disp != "" {
 				fields = append(fields, ClinicalField{Key: "severity", Label: "Severity", Value: disp, Editable: false})
 			}
+		}
+
+	case "CarePlan":
+		if title := stringVal(res["title"]); title != "" {
+			fields = append(fields, ClinicalField{Key: "title", Label: "Care Plan Title", Value: title, Editable: true})
+		}
+		if desc := stringVal(res["description"]); desc != "" {
+			fields = append(fields, ClinicalField{Key: "description", Label: "Plan Description", Value: desc, Editable: true})
+		}
+		if status := stringVal(res["status"]); status != "" {
+			fields = append(fields, ClinicalField{Key: "status", Label: "Plan Status", Value: status, Editable: false})
+		}
+		if intent := stringVal(res["intent"]); intent != "" {
+			fields = append(fields, ClinicalField{Key: "intent", Label: "Intent", Value: intent, Editable: false})
+		}
+
+	case "Group":
+		if name := stringVal(res["name"]); name != "" {
+			fields = append(fields, ClinicalField{Key: "group_name", Label: "Cohort Group", Value: name, Editable: false})
+		}
+		if qty, ok := res["quantity"].(float64); ok {
+			fields = append(fields, ClinicalField{Key: "cohort_size", Label: "Cohort Size", Value: fmt.Sprintf("%d patients", int(qty)), Editable: false})
 		}
 
 	default:

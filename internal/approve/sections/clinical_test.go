@@ -495,6 +495,125 @@ func TestBuildClinicalHazardControlsCH38CH39(t *testing.T) {
 	}
 }
 
+func TestClinicalPreview_BulkExportHazardCH40(t *testing.T) {
+	// Hazard CH-40: FHIR Bulk Data Export ($export) unreviewed cohort widening
+	bulkArgs := `{
+		"resource_type": "Group",
+		"path": "/Group/oncology-cohort/$export",
+		"bulk_export_unreviewed": true,
+		"resource": {
+			"resourceType": "Group",
+			"id": "oncology-cohort",
+			"name": "Retrospective Inpatient Oncology Cohort",
+			"quantity": 142
+		}
+	}`
+	inBulk := gate.ApprovalInput{
+		Subject: gate.Subject{Tool: "fhir.export", ConnectorType: "fhir"},
+		Args:    json.RawMessage(bulkArgs),
+	}
+	rawBulk, err := BuildClinical(inBulk)
+	if err != nil {
+		t.Fatalf("BuildClinical bulk export error: %v", err)
+	}
+	var pBulk ClinicalPreview
+	if err := json.Unmarshal(rawBulk, &pBulk); err != nil {
+		t.Fatalf("unmarshal error: %v", err)
+	}
+	if !strings.Contains(pBulk.BulkExportAlert, "CH-40") {
+		t.Errorf("BulkExportAlert = %q; want CH-40 reference", pBulk.BulkExportAlert)
+	}
+	if !strings.Contains(pBulk.BulkExportAlert, "UNREVIEWED BULK EXPORT") {
+		t.Errorf("BulkExportAlert = %q; want UNREVIEWED BULK EXPORT", pBulk.BulkExportAlert)
+	}
+
+	// Normal single-patient read should not trigger CH-40
+	singleArgs := `{
+		"resource_type": "Patient",
+		"resource": {
+			"resourceType": "Patient",
+			"id": "pt-single-01"
+		}
+	}`
+	inSingle := gate.ApprovalInput{
+		Subject: gate.Subject{Tool: "fhir.read", ConnectorType: "fhir"},
+		Args:    json.RawMessage(singleArgs),
+	}
+	rawSingle, err := BuildClinical(inSingle)
+	if err != nil {
+		t.Fatalf("BuildClinical single patient error: %v", err)
+	}
+	var pSingle ClinicalPreview
+	if err := json.Unmarshal(rawSingle, &pSingle); err != nil {
+		t.Fatalf("unmarshal error: %v", err)
+	}
+	if pSingle.BulkExportAlert != "" {
+		t.Errorf("BulkExportAlert on single patient = %q; want empty", pSingle.BulkExportAlert)
+	}
+}
+
+func TestClinicalPreview_CarePlanConflictHazardCH41(t *testing.T) {
+	// Hazard CH-41: Multi-agent conflicting care-plan modifications
+	planArgs := `{
+		"resource_type": "CarePlan",
+		"care_plan_conflict": true,
+		"plan_conflict_status": "misaligned",
+		"resource": {
+			"resourceType": "CarePlan",
+			"id": "careplan-icu-42",
+			"title": "ICU Sepsis and Hemodynamic Management Plan",
+			"description": "Intensive insulin infusion protocol combined with steroid therapy",
+			"status": "active",
+			"subject": {"reference": "Patient/kmc-icu-01"}
+		}
+	}`
+	inPlan := gate.ApprovalInput{
+		Subject: gate.Subject{Tool: "fhir.update", ConnectorType: "fhir"},
+		Args:    json.RawMessage(planArgs),
+	}
+	rawPlan, err := BuildClinical(inPlan)
+	if err != nil {
+		t.Fatalf("BuildClinical care plan error: %v", err)
+	}
+	var pPlan ClinicalPreview
+	if err := json.Unmarshal(rawPlan, &pPlan); err != nil {
+		t.Fatalf("unmarshal error: %v", err)
+	}
+	if !strings.Contains(pPlan.CarePlanConflict, "CH-41") {
+		t.Errorf("CarePlanConflict = %q; want CH-41 reference", pPlan.CarePlanConflict)
+	}
+	if !strings.Contains(pPlan.CarePlanConflict, "CARE PLAN CONFLICT") {
+		t.Errorf("CarePlanConflict = %q; want CARE PLAN CONFLICT", pPlan.CarePlanConflict)
+	}
+
+	// Normal aligned CarePlan should not trigger CH-41
+	alignedArgs := `{
+		"resource_type": "CarePlan",
+		"resource": {
+			"resourceType": "CarePlan",
+			"id": "careplan-icu-43",
+			"title": "Post-Op Recovery Plan",
+			"status": "active",
+			"subject": {"reference": "Patient/kmc-icu-02"}
+		}
+	}`
+	inAligned := gate.ApprovalInput{
+		Subject: gate.Subject{Tool: "fhir.update", ConnectorType: "fhir"},
+		Args:    json.RawMessage(alignedArgs),
+	}
+	rawAligned, err := BuildClinical(inAligned)
+	if err != nil {
+		t.Fatalf("BuildClinical aligned care plan error: %v", err)
+	}
+	var pAligned ClinicalPreview
+	if err := json.Unmarshal(rawAligned, &pAligned); err != nil {
+		t.Fatalf("unmarshal error: %v", err)
+	}
+	if pAligned.CarePlanConflict != "" {
+		t.Errorf("CarePlanConflict on aligned plan = %q; want empty", pAligned.CarePlanConflict)
+	}
+}
+
 func TestRegisterClinical(t *testing.T) {
 	RegisterClinical()
 	RegisterClinical() // idempotent, does not panic

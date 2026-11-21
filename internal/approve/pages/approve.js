@@ -464,6 +464,20 @@
       $('cl-injection-text').textContent = c.prompt_injection_alert;
     }
 
+    // FHIR Bulk Data Export unreviewed cohort widening (CH-40)
+    const hasBulkExport = Boolean(c.bulk_export_alert);
+    show($('cl-bulkexport-banner'), hasBulkExport);
+    if (hasBulkExport) {
+      $('cl-bulkexport-text').textContent = c.bulk_export_alert;
+    }
+
+    // Multi-agent care plan conflict alert (CH-41)
+    const hasCarePlanConflict = Boolean(c.care_plan_conflict);
+    show($('cl-careplan-banner'), hasCarePlanConflict);
+    if (hasCarePlanConflict) {
+      $('cl-careplan-text').textContent = c.care_plan_conflict;
+    }
+
     // Emergency break-glass banner (CH-07)
     const isEmer = Boolean(c.is_break_glass);
     show($('cl-breakglass-banner'), isEmer);
