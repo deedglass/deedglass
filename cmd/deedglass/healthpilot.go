@@ -15,15 +15,15 @@ import (
 // work and docs/healthcare/PILOT.md describes it).
 
 var healthPilotValues struct {
-	region, fhirURL, consoleURL, out string
-	fast, printReviewPack, noFiles   bool
+	region, fhirURL, consoleURL, out             string
+	fast, printReviewPack, noFiles, scribe, nhcx bool
 }
 
 func healthPilotFlags(fs *flag.FlagSet) {
 	v := &healthPilotValues
 	*v = struct {
-		region, fhirURL, consoleURL, out string
-		fast, printReviewPack, noFiles   bool
+		region, fhirURL, consoleURL, out             string
+		fast, printReviewPack, noFiles, scribe, nhcx bool
 	}{}
 	fs.StringVar(&v.region, "region", healthpilot.RegionDefault, "global (the healthcare-fhir pack) or india (india-health, for ABDM and NHCX)")
 	fs.StringVar(&v.fhirURL, "fhir-url", "", "the base URL of your FHIR R4 sandbox (auth none, synthetic data only); scene 1 writes there")
@@ -31,6 +31,8 @@ func healthPilotFlags(fs *flag.FlagSet) {
 	fs.StringVar(&v.out, "out", "deedglass-pilot", "the folder for REPORT.md, IT_REVIEW_PACK.md, deeds.jsonl and keys.json")
 	fs.BoolVar(&v.noFiles, "no-files", false, "write no files")
 	fs.BoolVar(&v.fast, "fast", false, "print everything at once, with no pauses")
+	fs.BoolVar(&v.scribe, "scribe", false, "simulate an ambient AI scribe SOAP workflow (catches a silent 200 OK allergy drop)")
+	fs.BoolVar(&v.nhcx, "nhcx", false, "simulate an NHCX claim pre-submission & consumable reconciliation workflow")
 	fs.BoolVar(&v.printReviewPack, "print-review-pack", false, "print the hospital IT review pack (Markdown) and exit")
 }
 
@@ -46,6 +48,9 @@ func runHealthPilot(ctx context.Context, e *Env, args []string) error {
 		_, err := e.Stdout.Write(healthpilot.ReviewPack())
 		return err
 	}
+	if v.nhcx && v.region == healthpilot.RegionDefault {
+		v.region = healthpilot.RegionIndia
+	}
 	if v.region != healthpilot.RegionDefault && v.region != healthpilot.RegionIndia {
 		return usageErr(fmt.Errorf("unknown region %q", v.region), "Use --region global or --region india.")
 	}
@@ -54,7 +59,7 @@ func runHealthPilot(ctx context.Context, e *Env, args []string) error {
 			return usageErr(fmt.Errorf("--fhir-url %q isn't an http or https URL", v.fhirURL), "Pass your FHIR sandbox's base URL, like https://hapi.example.org/fhir.")
 		}
 	}
-	o := healthpilot.Options{Out: e.Stdout, Style: e.Style, Width: e.Width, Region: v.region, FHIRURL: v.fhirURL, ConsoleURL: v.consoleURL, Cmd: invocation(e), Brief: e.Globals.Verbose == 0}
+	o := healthpilot.Options{Out: e.Stdout, Style: e.Style, Width: e.Width, Region: v.region, FHIRURL: v.fhirURL, ConsoleURL: v.consoleURL, Cmd: invocation(e), Brief: e.Globals.Verbose == 0, Scribe: v.scribe, NHCX: v.nhcx}
 	if !v.noFiles {
 		o.Dir, o.DisplayDir = v.out, v.out
 		if abs, err := filepath.Abs(v.out); err == nil {

@@ -14,7 +14,7 @@ LDFLAGS  := -s -w -X $(BI).Version=$(VERSION) -X $(BI).Commit=$(COMMIT) -X $(BI)
 	dev dev-down dev-reset dev-logs run docker bench-http bench-verify \
 	web-verify-install web-verify-test sdk-ts sdk-ts-it sdk-sync-verify sdk-runtime sdk-examples web-verify-build web-verify-serve gencopy genmark bench-mark bench-ledger bench-stop bench-intents bench-gate bench-witness policy-test \
 	fuzz-policy fuzz-policy-short audit fuzz-all fuzz-regress attack-one bench-policy bench-eval mcp-it bench-mcp \
-	demo demo-live demo-launch-check demo-up demo-down demo-reset demo-status demo-snippet demo-psql demo-follow demo-verify demo-check demo-smoke bench-gateway \
+	demo demo-live demo-launch-check demo-up demo-down demo-reset demo-status demo-snippet demo-psql demo-follow demo-verify demo-check demo-smoke demo-scribe demo-nhcx bench-gateway \
 	demo-trigger-on demo-trigger-off demo-order-reset demo-hero demo-capture demo-svg social-preview demo-hero-check demo-diff bench-l2 bench-approvals bench-slack \
 	mock-orders bench-connectors bench-postgres bench-decoder attack attack-report vuln undo-matrix quickstart-it
 
@@ -575,6 +575,12 @@ demo-launch-check: ## S37: TestLaunchDemo, make demo twice, normalized output ag
 
 demo-smoke: ## TestDemoScript against the running demo stack (make demo-up first)
 	DEEDGLASS_DEMO=1 $(GO) test -tags demo -count=1 -v -run TestDemoScript ./examples/demo/
+
+demo-scribe: ## Ambient AI scribe demo: Synthea-style SOAP Observation + silent 200 OK conditional AllergyIntolerance drop + held MedicationRequest + sealed zero-PHI deeds
+	$(GO) run ./cmd/deedglass health pilot --scribe --fast --out .tmp/demo-scribe
+
+demo-nhcx: ## NHCX pre-submission verifier & consumable reconciliation demo: catches unbilled OT consumables + INR 1L+ dual sign-off
+	$(GO) run ./cmd/deedglass health pilot --nhcx --fast --out .tmp/demo-nhcx
 
 bench-gateway: ## S15: /mcp/native fake.echo and the gateway's added latency with an in-process upstream, on a throwaway PG 18; JSON in bench/results/
 	@out="$(CURDIR)/bench/results/$$(date +%F)-$$(go env GOOS)-$$(go env GOARCH)-gateway.json"; log="$(CURDIR)/.tmp/bench-gateway.log"; mkdir -p "$(CURDIR)/.tmp"; \

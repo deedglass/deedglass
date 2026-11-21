@@ -212,6 +212,26 @@ func TestFilesAndReport(t *testing.T) {
 	}
 }
 
+func TestReportNPXCmd(t *testing.T) {
+	o := fixed(t, RegionDefault)
+	o.Cmd = "npx deedglass"
+	o.Out = &bytes.Buffer{}
+	r, err := Run(context.Background(), o)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rep, _ := os.ReadFile(r.Files["report"])
+	for _, s := range []string{
+		"npx deedglass health pilot",
+		"npx deedglass app",
+		"npx deedglass verify deeds.jsonl --keys keys.json",
+	} {
+		if !bytes.Contains(rep, []byte(s)) {
+			t.Errorf("the report doesn't say %q", s)
+		}
+	}
+}
+
 // banned is the founder's list for this feature, assembled at run time so this file passes the
 // repository's own banned-words scan.
 var banned = regexp.MustCompile(`(?i)\b(` + strings.Join([]string{"trust" + "less", "guarantee" + "d?", "certi" + "fied", "certi" + "fication",
@@ -294,6 +314,207 @@ func TestBrief(t *testing.T) {
 	for _, want := range []string{"Doesn't match", "orders-need-clinician", "chain intact", "Deed 1 was changed", "-v for every step"} {
 		if !strings.Contains(b.String(), want) {
 			t.Errorf("brief output lost %q:\n%s", want, b.String())
+		}
+	}
+}
+
+func TestScribeScenarioOutcomes(t *testing.T) {
+	for _, region := range []string{RegionDefault, RegionIndia} {
+		t.Run(region, func(t *testing.T) {
+			o := fixed(t, region)
+			o.Scribe = true
+			o.DisplayDir = "deedglass-pilot"
+			var out bytes.Buffer
+			o.Out = &out
+			r, err := Run(context.Background(), o)
+			if err != nil {
+				t.Fatalf("Run: %v\n%s", err, out.String())
+			}
+			if !r.Scribe || !r.PHIMode || !r.Lockdown || r.Store != StoreSynthetic {
+				t.Fatalf("setup: scribe %v phi %v lockdown %v store %q", r.Scribe, r.PHIMode, r.Lockdown, r.Store)
+			}
+			if len(r.Scenes) != 4 {
+				t.Fatalf("scenes: %d", len(r.Scenes))
+			}
+			s1 := r.Scenes[0]
+			if s1.Resource != "Observation" || !s1.Executed || s1.HTTPStatus != 201 || s1.Verdict != "VERIFIED" {
+				t.Errorf("scene 1: %+v", s1)
+			}
+			s2 := r.Scenes[1]
+			if s2.ID != "allergy-silent-drop" || s2.Resource != "AllergyIntolerance" || !s2.Executed || s2.HTTPStatus != 200 || s2.Verdict != "MISMATCH" {
+				t.Errorf("scene 2: %+v", s2)
+			}
+			foundCreated := false
+			for _, f := range s2.Fields {
+				if f.Field == "created" && !f.Match {
+					foundCreated = true
+				}
+			}
+			if !foundCreated {
+				t.Errorf("scene 2: expected mismatched 'created' field in %+v", s2.Fields)
+			}
+			s3 := r.Scenes[2]
+			if s3.Resource != "MedicationRequest" || s3.Rule != "orders-need-clinician" || s3.Executed || s3.Approval == "" {
+				t.Errorf("scene 3: %+v", s3)
+			}
+			if r.StoreWrites != 1 {
+				t.Errorf("store writes %d, want 1 (scene 2 conditional create must not write)", r.StoreWrites)
+			}
+			if r.Records != 2 || !r.ChainOK || !r.TamperSeen {
+				t.Errorf("scene 4: records %d chain %v tamper %v", r.Records, r.ChainOK, r.TamperSeen)
+			}
+			for i, l := range strings.Split(out.String(), "\n") {
+				if w := ui.Width(l); w > 80 {
+					t.Errorf("line %d is %d columns wide: %q", i+1, w, l)
+				}
+			}
+			rep, err := os.ReadFile(r.Files["report"])
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, want := range []string{"--scribe", "AllergyIntolerance", "answered 200", "orders-need-clinician"} {
+				if !bytes.Contains(rep, []byte(want)) {
+					t.Errorf("report missing %q", want)
+				}
+			}
+			for name, b := range map[string][]byte{"output": out.Bytes(), "report": rep} {
+				if m := banned.Find(b); m != nil {
+					t.Errorf("%s uses the banned word %q", name, m)
+				}
+			}
+			raw, _ := os.ReadFile(r.Files["keys"])
+			ks, err := deed.ParseKeySet(raw)
+			if err != nil {
+				t.Fatal(err)
+			}
+			f, err := os.Open(r.Files["deeds"])
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer f.Close()
+			vr, err := deed.VerifyStream(context.Background(), f, deed.StreamOptions{Keys: ks, KeysPinned: true})
+			if err != nil || vr.Result != deed.ResultValid || vr.Deeds != 2 {
+				t.Fatalf("verify: %v %+v", err, vr)
+			}
+		})
+	}
+}
+
+func TestScribeBrief(t *testing.T) {
+	o := fixed(t, RegionDefault)
+	o.Scribe = true
+	o.Brief = true
+	var out bytes.Buffer
+	o.Out = &out
+	if _, err := Run(context.Background(), o); err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"Doesn't match", "orders-need-clinician", "chain intact", "Deed 1 was changed", "-v for every step"} {
+		if !strings.Contains(out.String(), want) {
+			t.Errorf("scribe brief output lost %q:\n%s", want, out.String())
+		}
+	}
+}
+
+func TestNHCXScenarioOutcomes(t *testing.T) {
+	o := fixed(t, RegionIndia)
+	o.NHCX = true
+	o.DisplayDir = "deedglass-pilot"
+	var out bytes.Buffer
+	o.Out = &out
+	r, err := Run(context.Background(), o)
+	if err != nil {
+		t.Fatalf("Run: %v\n%s", err, out.String())
+	}
+	if !r.NHCX || r.Region != RegionIndia || !r.PHIMode || !r.Lockdown || r.Store != StoreSynthetic {
+		t.Fatalf("setup: nhcx %v region %s phi %v lockdown %v store %q", r.NHCX, r.Region, r.PHIMode, r.Lockdown, r.Store)
+	}
+	if r.NHCXVerify == nil || !r.NHCXVerify.Valid {
+		t.Fatalf("nhcx verify: %+v", r.NHCXVerify)
+	}
+	if r.NHCXVerify.EntryCount != 5 || r.NHCXVerify.ClaimAmountINR != 450000 {
+		t.Errorf("nhcx verify entry count %d, amount %d", r.NHCXVerify.EntryCount, r.NHCXVerify.ClaimAmountINR)
+	}
+	if r.Reconciliation == nil || r.Reconciliation.Status != "UNBILLED_CONSUMABLE_LEAKAGE" {
+		t.Fatalf("reconciliation report: %+v", r.Reconciliation)
+	}
+	if len(r.Reconciliation.Omissions) != 1 || r.Reconciliation.TotalPotentialLeakageINR != 2200000 {
+		t.Errorf("leakage omissions %d, total %d", len(r.Reconciliation.Omissions), r.Reconciliation.TotalPotentialLeakageINR)
+	}
+	if len(r.Scenes) != 4 {
+		t.Fatalf("scenes: %d", len(r.Scenes))
+	}
+	s1 := r.Scenes[0]
+	if s1.Resource != "Claim" || !s1.Executed || s1.HTTPStatus != 201 || s1.Verdict != "VERIFIED" {
+		t.Errorf("scene 1: %+v", s1)
+	}
+	s2 := r.Scenes[1]
+	if s2.ID != "unbilled-consumable-leakage" || s2.Resource != "Claim" || !s2.Executed || s2.Verdict != "MISMATCH" {
+		t.Errorf("scene 2: %+v", s2)
+	}
+	foundOmission := false
+	for _, f := range s2.Fields {
+		if strings.Contains(f.Field, "omitted") && !f.Match {
+			foundOmission = true
+		}
+	}
+	if !foundOmission {
+		t.Errorf("scene 2: expected omitted consumable field in %+v", s2.Fields)
+	}
+	s3 := r.Scenes[2]
+	if s3.Resource != "Claim" || s3.Rule != "preauth-large-two-people" || s3.Required != 2 || s3.Executed || s3.Approval == "" {
+		t.Errorf("scene 3: %+v", s3)
+	}
+	if r.Records != 2 || !r.ChainOK || !r.TamperSeen {
+		t.Errorf("scene 4: records %d chain %v tamper %v", r.Records, r.ChainOK, r.TamperSeen)
+	}
+	for i, l := range strings.Split(out.String(), "\n") {
+		if w := ui.Width(l); w > 80 {
+			t.Errorf("line %d is %d columns wide: %q", i+1, w, l)
+		}
+	}
+	rep, err := os.ReadFile(r.Files["report"])
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"--nhcx", "NRCeS NHCX IG 6.5.0 Conformance", "Emergency Consumable Reconciliation", "SNOMED 22813002", "preauth-large-two-people"} {
+		if !bytes.Contains(rep, []byte(want)) {
+			t.Errorf("report missing %q", want)
+		}
+	}
+	for name, b := range map[string][]byte{"output": out.Bytes(), "report": rep} {
+		if m := banned.Find(b); m != nil {
+			t.Errorf("%s uses the banned word %q", name, m)
+		}
+	}
+	raw, _ := os.ReadFile(r.Files["keys"])
+	ks, err := deed.ParseKeySet(raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	f, err := os.Open(r.Files["deeds"])
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+	vr, err := deed.VerifyStream(context.Background(), f, deed.StreamOptions{Keys: ks, KeysPinned: true})
+	if err != nil || vr.Result != deed.ResultValid || vr.Deeds != 2 {
+		t.Fatalf("verify: %v %+v", err, vr)
+	}
+}
+
+func TestNHCXBrief(t *testing.T) {
+	o := fixed(t, RegionIndia)
+	o.NHCX = true
+	o.Brief = true
+	var out bytes.Buffer
+	o.Out = &out
+	if _, err := Run(context.Background(), o); err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"Doesn't match", "preauth-large-two-people", "chain intact", "Deed 1 was changed", "-v for every step"} {
+		if !strings.Contains(out.String(), want) {
+			t.Errorf("nhcx brief output lost %q:\n%s", want, out.String())
 		}
 	}
 }

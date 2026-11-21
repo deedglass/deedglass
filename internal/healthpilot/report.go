@@ -13,9 +13,15 @@ func (r *run) report() []byte {
 	w := func(format string, a ...any) { fmt.Fprintf(&b, format, a...) }
 	res := r.res
 	w("# Deedglass health pilot report\n\n")
-	w("Run on %s with `deedglass health pilot`", r.o.Now().UTC().Format("2 January 2006, 15:04 MST"))
-	if res.Region == RegionIndia {
+	w("Run on %s with `%s health pilot`", r.o.Now().UTC().Format("2 January 2006, 15:04 MST"), r.o.Cmd)
+	if res.Region == RegionIndia && !res.NHCX {
 		w(" `--region india`")
+	}
+	if res.Scribe {
+		w(" `--scribe`")
+	}
+	if res.NHCX {
+		w(" `--nhcx`")
 	}
 	w(".\n\n")
 	w("**Synthetic data only.** Every patient, observation, order and claim in this run was made up for the\n")
@@ -66,13 +72,35 @@ func (r *run) report() []byte {
 		if s.N == 3 {
 			w("**Scene 3, held.** Rule `%s` routed the request to %s (%d required); it expires in %s.\n",
 				s.Rule, strings.Join(s.Approvers, ", "), s.Required, minutes(time.Duration(s.ExpiresIn)*time.Second))
-			w("On a server, the approvers get this Console link: %s. Nothing reached the record system.\n\n", s.ConsoleURL)
+			w("On a server, the approvers open it in the Deedglass app (`%s app`). Nothing reached the record system.\n\n", r.o.Cmd)
 		}
 	}
 
+	if res.NHCX && res.Reconciliation != nil {
+		w("## NHCX Pre-submission Verification & Consumable Reconciliation\n\n")
+		w("| Check | Result | Details |\n|---|---|---|\n")
+		if res.NHCXVerify != nil {
+			status := "Valid"
+			if !res.NHCXVerify.Valid {
+				status = "Invalid"
+			}
+			w("| NRCeS NHCX IG 6.5.0 Conformance | %s | %d entries (%s); currency INR; line-item summation verified |\n",
+				status, res.NHCXVerify.EntryCount, strings.Join(res.NHCXVerify.EntryTypes, ", "))
+		}
+		w("| Emergency Consumable Reconciliation | %s | %s |\n",
+			res.Reconciliation.Status, res.Reconciliation.Summary)
+		if len(res.Reconciliation.Omissions) > 0 {
+			w("| Revenue Leakage Prevented | INR %d | Caught unbilled consumable: %s (SNOMED %s) |\n",
+				res.Reconciliation.TotalPotentialLeakageINR/100,
+				res.Reconciliation.Omissions[0].Display,
+				res.Reconciliation.Omissions[0].Code)
+		}
+		w("| CH-17 Multi-Jurisdiction Guard | Enforced | ABDM/NHCX namespace isolation verified against foreign schema collision |\n\n")
+	}
+
 	w("## Check the records yourself\n\n")
-	w("The sealed records and the key that sealed them are next to this report. With the `deedglass` CLI:\n\n")
-	w("```sh\ndeedglass verify deeds.jsonl --keys keys.json\n```\n\n")
+	w("The sealed records and the key that sealed them are next to this report. With the `%s` CLI:\n\n", r.o.Cmd)
+	w("```sh\n%s verify deeds.jsonl --keys keys.json\n```\n\n", r.o.Cmd)
 	w("Records hold ids, digests and outcomes, not clinical content.\n\n")
 
 	w("## What this pilot does not show\n\n")

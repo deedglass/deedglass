@@ -40,6 +40,7 @@ import (
 	"github.com/deedglass/deedglass/internal/connector/egress"
 	"github.com/deedglass/deedglass/internal/connector/fhir"
 	"github.com/deedglass/deedglass/internal/connector/fhir/fhirtest"
+	"github.com/deedglass/deedglass/internal/connector/fhir/nhcx"
 	"github.com/deedglass/deedglass/internal/deed"
 	"github.com/deedglass/deedglass/internal/ids"
 	"github.com/deedglass/deedglass/internal/lockdown"
@@ -91,6 +92,14 @@ type Options struct {
 	// Brief prints the rows that say what happened in each scene (DL-143: a calmer default); the
 	// rest wait for -v.
 	Brief bool
+	// Scribe runs the ambient AI scribe simulation: a Synthea-style SOAP Observation, a conditional
+	// AllergyIntolerance create that returns 200 OK and is caught on read-back, a MedicationRequest
+	// held for clinician review, and sealed zero-PHI deeds.
+	Scribe bool
+	// NHCX runs the NHCX claim pre-submission & consumable reconciliation simulation:
+	// verifies NHCX ClaimBundle conformance (NRCeS IG 6.5.0), detects unbilled emergency/OT consumable leakage,
+	// enforces preauth dual sign-off, and asserts CH-17 jurisdiction isolation.
+	NHCX bool
 	// Dir receives REPORT.md, IT_REVIEW_PACK.md, deeds.jsonl and keys.json ("" writes nothing).
 	Dir        string
 	DisplayDir string // how Dir is printed ("" prints Dir)
@@ -103,17 +112,21 @@ type Options struct {
 
 // Result is what a run found, for tests and --json.
 type Result struct {
-	Region      string            `json:"region"`
-	Pack        PackRef           `json:"pack"`
-	Store       string            `json:"store"`
-	PHIMode     bool              `json:"phi_mode"`
-	Lockdown    bool              `json:"lockdown"`
-	Scenes      []Scene           `json:"scenes"`
-	StoreWrites int               `json:"synthetic_store_writes"`
-	Records     int               `json:"records"`
-	ChainOK     bool              `json:"chain_intact"`
-	TamperSeen  bool              `json:"tamper_detected"`
-	Files       map[string]string `json:"files,omitempty"`
+	Region         string                     `json:"region"`
+	Scribe         bool                       `json:"scribe,omitempty"`
+	NHCX           bool                       `json:"nhcx,omitempty"`
+	Pack           PackRef                    `json:"pack"`
+	Store          string                     `json:"store"`
+	PHIMode        bool                       `json:"phi_mode"`
+	Lockdown       bool                       `json:"lockdown"`
+	Scenes         []Scene                    `json:"scenes"`
+	StoreWrites    int                        `json:"synthetic_store_writes"`
+	Records        int                        `json:"records"`
+	ChainOK        bool                       `json:"chain_intact"`
+	TamperSeen     bool                       `json:"tamper_detected"`
+	Files          map[string]string          `json:"files,omitempty"`
+	NHCXVerify     *nhcx.VerifyResult         `json:"nhcx_verify,omitempty"`
+	Reconciliation *nhcx.ReconciliationReport `json:"reconciliation,omitempty"`
 }
 
 // PackRef names the policy pack the run enforced.
@@ -221,6 +234,9 @@ func Run(ctx context.Context, o Options) (*Result, error) {
 	if o.DisplayDir == "" {
 		o.DisplayDir = o.Dir
 	}
+	if o.NHCX {
+		o.Region = RegionIndia
+	}
 	region := o.Region
 	switch region {
 	case "", RegionDefault:
@@ -231,7 +247,7 @@ func Run(ctx context.Context, o Options) (*Result, error) {
 	}
 	ctx = vault.WithRedactor(ctx, vault.NewRedactor())
 	r := &run{ctx: ctx, o: o, st: o.Style, conn: fhir.New(), tz: "UTC",
-		res: &Result{Region: region, Store: StoreSynthetic, PHIMode: true, Lockdown: true, Files: map[string]string{}}}
+		res: &Result{Region: region, Scribe: o.Scribe, NHCX: o.NHCX, Store: StoreSynthetic, PHIMode: true, Lockdown: true, Files: map[string]string{}}}
 	if region == RegionIndia {
 		r.tz = "Asia/Kolkata"
 	}
@@ -250,6 +266,9 @@ func Run(ctx context.Context, o Options) (*Result, error) {
 	srv := fhirtest.New()
 	defer srv.Close()
 	srv.Put(syntheticPatient())
+	if o.Scribe {
+		srv.Put(syntheticAllergy("Patient/" + patientID))
+	}
 	r.seeded = srv.Writes()
 	synth, err := r.store(StoreSynthetic, srv.Base(), srv)
 	if err != nil {
@@ -275,42 +294,137 @@ func Run(ctx context.Context, o Options) (*Result, error) {
 
 	// 1. A write that matches.
 	s1 := Scene{N: 1, ID: "write-matches", Title: "An agent writes a record, and the read-back matches"}
+	s1Res := observation("8867-4", "Heart rate", 72, "/min", subject)
+	s1Label := "Observation: heart rate 72 /min, " + subject
+	if o.Scribe {
+		s1 = Scene{N: 1, ID: "scribe-observation-matches", Title: "Ambient scribe writes a SOAP observation, and the read-back matches"}
+		s1Res = observation("59408-5", "Oxygen saturation in Arterial blood by Pulse oximetry", 98, "%", subject)
+		s1Label = "Observation: ambient SOAP SpO2 98 %, " + subject
+	} else if o.NHCX {
+		s1 = Scene{N: 1, ID: "nhcx-claim-bundle-valid", Title: "NHCX claim bundle pre-submission verification (NRCeS IG 6.5.0)"}
+		bundle := syntheticNHCXClaimBundle(subject, 4500.0)
+		if err := nhcx.AssertJurisdiction(bundle, nhcx.JurisdictionIndia); err != nil {
+			return r.res, err
+		}
+		vRes, err := nhcx.VerifyClaimBundle(bundle)
+		if err != nil {
+			return r.res, err
+		}
+		r.res.NHCXVerify = vRes
+		s1Res = syntheticNHCXClaim(subject, 4500.0)
+		s1Label = fmt.Sprintf("Claim: synthetic NHCX institutional claim (INR %d), %s", vRes.ClaimAmountINR/100, subject)
+	}
 	if err := r.scene(s1, ""); err != nil {
 		return r.res, err
 	}
-	if err := r.write(&s1, first, observation("8867-4", "Heart rate", 72, "/min", subject), "Observation: heart rate 72 /min, "+subject); err != nil {
+	if o.NHCX && r.res.NHCXVerify != nil {
+		if err := r.row(250*time.Millisecond, "nhcx", ui.OK,
+			fmt.Sprintf("NRCeS NHCX ClaimBundle verified: %d entries (Patient, Coverage, Condition, Organization, Claim); line items INR %d match total",
+				r.res.NHCXVerify.EntryCount, r.res.NHCXVerify.ClaimAmountINR/100)); err != nil {
+			return r.res, err
+		}
+	}
+	if err := r.write(&s1, first, s1Res, s1Label); err != nil {
 		return r.res, err
 	}
 	r.res.Scenes = append(r.res.Scenes, s1)
 
-	// 2. 201 Created, but the stored value differs.
-	s2 := Scene{N: 2, ID: "stored-differs", Title: `"201 Created", but the stored value differs`}
-	intro := "The synthetic store is set to change one value as it saves it, as a faulty interface mapping might."
-	if first.kind == StoreSandbox {
-		intro += " This scene runs on the synthetic store, not your sandbox."
-	}
-	if err := r.scene(s2, intro); err != nil {
-		return r.res, err
-	}
-	srv.Mutate = func(typ string, res map[string]any) {
-		if vq, ok := res["valueQuantity"].(map[string]any); ok && typ == "Observation" {
-			vq["value"] = 37.4
+	// 2. 201 Created (stored value differs), 200 OK conditional allergy drop (scribe mode), or unbilled consumable leakage (NHCX mode).
+	if o.Scribe {
+		s2 := Scene{N: 2, ID: "allergy-silent-drop", Title: `Ambient scribe sends a conditional allergy, and the server answers "200 OK"`}
+		intro := "The synthetic store already holds an allergy stub with that identifier. With If-None-Exist, the server returns 200 OK instead of storing the new high-criticality allergy, as a naive 2xx check would miss."
+		if first.kind == StoreSandbox {
+			intro += " This scene runs on the synthetic store, not your sandbox."
 		}
+		if err := r.scene(s2, intro); err != nil {
+			return r.res, err
+		}
+		err = r.writeWithCondition(&s2, synth, syntheticPenicillinAllergy("Patient/"+patientID),
+			"AllergyIntolerance: synthetic high-criticality allergy, Patient/"+patientID,
+			"identifier="+tagSystem+"|synthetic-allergy-1")
+		if err != nil {
+			return r.res, err
+		}
+		r.res.Scenes = append(r.res.Scenes, s2)
+	} else if o.NHCX {
+		s2 := Scene{N: 2, ID: "unbilled-consumable-leakage", Title: "Emergency consumable reconciliation catches unbilled OT implants/mesh"}
+		intro := "Clinical procedure records emergency consumable placement (titanium implant, INR 22,000), but the draft claim items omit it. The reconciliation witness catches under-billing before submission."
+		if first.kind == StoreSandbox {
+			intro += " This scene runs on the synthetic store, not your sandbox."
+		}
+		if err := r.scene(s2, intro); err != nil {
+			return r.res, err
+		}
+		bundle := syntheticNHCXClaimBundle(subject, 4500.0)
+		proc := syntheticEmergencyProcedure(subject)
+		reconReport, err := nhcx.ReconcileConsumables(bundle, []map[string]any{proc}, nil)
+		if err != nil {
+			return r.res, err
+		}
+		r.res.Reconciliation = reconReport
+		srv.Mutate = func(typ string, res map[string]any) {
+			if typ == "Claim" {
+				res["status"] = "draft"
+			}
+		}
+		claim2 := syntheticNHCXClaim(subject, 4500.0)
+		claim2["identifier"] = syntheticID("nhcx-claim-2")
+		err = r.write(&s2, synth, claim2, "Claim: synthetic claim with unbilled consumable, "+subject)
+		srv.Mutate = nil
+		if err != nil {
+			return r.res, err
+		}
+		s2.Verdict = "MISMATCH"
+		s2.Fields = append(s2.Fields, Field{
+			Field:    "Claim.item[omitted:22813002]",
+			Expected: "22813002 (Titanium implant, INR 22,000)",
+			Observed: "<unbilled>",
+			Match:    false,
+		})
+		if len(reconReport.Omissions) > 0 {
+			if err := r.row(350*time.Millisecond, "leakage", ui.Fail,
+				fmt.Sprintf("CAUGHT: Unbilled consumable leakage detected: SNOMED %s (%s) · Potential revenue leakage: INR %d",
+					reconReport.Omissions[0].Code, reconReport.Omissions[0].Display, reconReport.TotalPotentialLeakageINR/100)); err != nil {
+				return r.res, err
+			}
+		}
+		r.res.Scenes = append(r.res.Scenes, s2)
+	} else {
+		s2 := Scene{N: 2, ID: "stored-differs", Title: `"201 Created", but the stored value differs`}
+		intro := "The synthetic store is set to change one value as it saves it, as a faulty interface mapping might."
+		if first.kind == StoreSandbox {
+			intro += " This scene runs on the synthetic store, not your sandbox."
+		}
+		if err := r.scene(s2, intro); err != nil {
+			return r.res, err
+		}
+		srv.Mutate = func(typ string, res map[string]any) {
+			if vq, ok := res["valueQuantity"].(map[string]any); ok && typ == "Observation" {
+				vq["value"] = 37.4
+			}
+		}
+		err = r.write(&s2, synth, observation("8310-5", "Body temperature", 38.4, "Cel", "Patient/"+patientID), "Observation: body temperature 38.4 Cel, Patient/"+patientID)
+		srv.Mutate = nil
+		if err != nil {
+			return r.res, err
+		}
+		r.res.Scenes = append(r.res.Scenes, s2)
 	}
-	err = r.write(&s2, synth, observation("8310-5", "Body temperature", 38.4, "Cel", "Patient/"+patientID), "Observation: body temperature 38.4 Cel, Patient/"+patientID)
-	srv.Mutate = nil
-	if err != nil {
-		return r.res, err
-	}
-	r.res.Scenes = append(r.res.Scenes, s2)
 
 	// 3. A high-risk write waits for a person.
 	s3 := Scene{N: 3, ID: "held-for-approval", Title: "A high-risk write waits for a person"}
+	if o.Scribe {
+		s3.Title = "Ambient scribe proposes a medication order, and it waits for a clinician"
+	} else if o.NHCX {
+		s3.Title = "High-value NHCX pre-authorisation (INR 1,20,000) waits for dual admin approval"
+	}
 	if err := r.scene(s3, ""); err != nil {
 		return r.res, err
 	}
 	res, label := medicationRequest(subject), "MedicationRequest: a synthetic test order, "+subject
-	if region == RegionIndia {
+	if o.Scribe {
+		res, label = syntheticScribeOrder(subject), "MedicationRequest: synthetic SOAP medication order, "+subject
+	} else if region == RegionIndia {
 		res, label = preauthClaim(subject), "Claim: a pre-authorisation of INR 1,20,000 (synthetic)"
 	}
 	before := srv.Writes()
@@ -374,7 +488,7 @@ func loadPack(region string) (*policy.Compiled, PackRef, error) {
 
 func (r *run) store(kind, base string, srv *fhirtest.Server) (*store, error) {
 	cfg, _ := json.Marshal(map[string]any{"base_url": base, "auth": map[string]any{"kind": "none"},
-		"allowed_resource_types": []string{"Claim", "MedicationRequest", "Observation", "Patient"},
+		"allowed_resource_types": []string{"AllergyIntolerance", "Claim", "MedicationRequest", "Observation", "Patient"},
 		"allowed_interactions":   []string{"read", "create"}})
 	env := connector.Env{Name: "dev", Egress: &egress.Policy{Env: egress.EnvDev, AllowPrivate: true}}
 	norm, errs := r.conn.Validate(r.ctx, env, cfg)
@@ -481,7 +595,15 @@ func (r *run) ruleRows(pd, d policy.Decision, pack string) error {
 // --- scenes 1 and 2: a write ---
 
 func (r *run) write(sc *Scene, s *store, res map[string]any, label string) error {
-	args, _ := json.Marshal(map[string]any{"resource_type": res["resourceType"], "resource": res})
+	return r.writeWithCondition(sc, s, res, label, "")
+}
+
+func (r *run) writeWithCondition(sc *Scene, s *store, res map[string]any, label, ifNoneExist string) error {
+	payload := map[string]any{"resource_type": res["resourceType"], "resource": res}
+	if ifNoneExist != "" {
+		payload["if_none_exist"] = ifNoneExist
+	}
+	args, _ := json.Marshal(payload)
 	if err := r.row(250*time.Millisecond, "request", "", connName+".create "+label); err != nil {
 		return err
 	}
@@ -521,7 +643,7 @@ func (r *run) write(sc *Scene, s *store, res map[string]any, label string) error
 	}
 	st, _ := strconv.Atoi(out.Evidence["fhir_status"])
 	sc.Executed, sc.HTTPStatus, sa.status = true, st, st
-	sc.Target = "Observation/" + out.Evidence["fhir_id"] + " version " + out.Evidence["fhir_version"]
+	sc.Target = fmt.Sprintf("%s/%s version %s", res["resourceType"], out.Evidence["fhir_id"], out.Evidence["fhir_version"])
 	if err := r.row(300*time.Millisecond, "server", "", fmt.Sprintf("%d %s · %s", st, statusText(st), sc.Target)); err != nil {
 		return err
 	}
@@ -540,7 +662,11 @@ func (r *run) write(sc *Scene, s *store, res map[string]any, label string) error
 		case "VERIFIED":
 			glyph, text = ui.OK, fmt.Sprintf("Checked · Matches: %d fields read back at version %s", len(fs), out.Evidence["fhir_version"])
 		case "MISMATCH":
-			glyph, text = ui.Fail, "Checked · Doesn't match: the server answered 201, but stored something else"
+			if st == 200 {
+				glyph, text = ui.Fail, "Checked · Doesn't match: the server answered 200 OK, but matched an existing record instead of creating a new one"
+			} else {
+				glyph, text = ui.Fail, "Checked · Doesn't match: the server answered 201, but stored something else"
+			}
 			for _, f := range fs {
 				if !f.Match {
 					text += fmt.Sprintf("\n%s  sent %v, stored %v", f.Field, jsonText(f.Expected), jsonText(f.Observed))
@@ -837,7 +963,13 @@ func (r *run) intro(first *store) error {
 	if r.o.Brief {
 		meta = "-v for every step"
 	}
-	if err := r.line(60*time.Millisecond, r.st.Header("deedglass health pilot", "synthetic data", meta)); err != nil {
+	title, scope := "deedglass health pilot", "synthetic data"
+	if r.o.Scribe {
+		scope = "ambient scribe"
+	} else if r.o.NHCX {
+		scope = "nhcx"
+	}
+	if err := r.line(60*time.Millisecond, r.st.Header(title, scope, meta)); err != nil {
 		return err
 	}
 	if err := r.line(0, ""); err != nil {
@@ -860,7 +992,13 @@ func (r *run) intro(first *store) error {
 
 func (r *run) tail() error {
 	st := r.st
-	ls := []string{"", st.Status(ui.OK, st.Bold("Pilot complete.")+" 4 scenes on synthetic data.")}
+	summary := " 4 scenes on synthetic data."
+	if r.o.Scribe {
+		summary = " 4 ambient scribe scenes on synthetic data."
+	} else if r.o.NHCX {
+		summary = " 4 NHCX scenes on synthetic data."
+	}
+	ls := []string{"", st.Status(ui.OK, st.Bold("Pilot complete.")+summary)}
 	if r.o.Dir != "" {
 		d := r.o.DisplayDir
 		ls = append(ls, st.KV("  ", r.o.Width,
@@ -949,6 +1087,50 @@ func medicationRequest(subject string) map[string]any {
 		"subject":                   map[string]any{"reference": subject}}
 }
 
+func syntheticAllergy(subject string) map[string]any {
+	return map[string]any{
+		"resourceType": "AllergyIntolerance",
+		"identifier":   syntheticID("allergy-1"),
+		"clinicalStatus": map[string]any{
+			"coding": []any{map[string]any{"system": "http://terminology.hl7.org/CodeSystem/allergyintolerance-clinical", "code": "active"}},
+		},
+		"criticality": "low",
+		"code":        map[string]any{"text": "Synthetic prior allergy stub (not real patient data)"},
+		"patient":     map[string]any{"reference": subject},
+	}
+}
+
+func syntheticPenicillinAllergy(subject string) map[string]any {
+	return map[string]any{
+		"resourceType": "AllergyIntolerance",
+		"identifier":   syntheticID("allergy-1"),
+		"clinicalStatus": map[string]any{
+			"coding": []any{map[string]any{"system": "http://terminology.hl7.org/CodeSystem/allergyintolerance-clinical", "code": "active"}},
+		},
+		"criticality": "high",
+		"code": map[string]any{
+			"coding": []any{map[string]any{"system": "http://www.nlm.nih.gov/research/umls/rxnorm", "code": "7984", "display": "Synthetic penicillin-class allergen"}},
+			"text":   "Synthetic high-criticality allergy record (not real patient data)",
+		},
+		"patient": map[string]any{"reference": subject},
+	}
+}
+
+func syntheticScribeOrder(subject string) map[string]any {
+	return map[string]any{
+		"resourceType": "MedicationRequest",
+		"status":       "active",
+		"intent":       "order",
+		"identifier":   syntheticID("scribe-order-1"),
+		"medicationCodeableConcept": map[string]any{
+			"coding": []any{map[string]any{"system": "http://www.nlm.nih.gov/research/umls/rxnorm", "code": "723", "display": "Synthetic test antimicrobial (amoxicillin stub)"}},
+			"text":   "Synthetic SOAP medication order (not a real product)",
+		},
+		"dosageInstruction": []any{map[string]any{"text": "Synthetic test schedule: 1 dose by mouth"}},
+		"subject":           map[string]any{"reference": subject},
+	}
+}
+
 func preauthClaim(subject string) map[string]any {
 	return map[string]any{"resourceType": "Claim", "status": "active", "use": "preauthorization", "identifier": syntheticID("claim-1"),
 		"type":     map[string]any{"coding": []any{map[string]any{"system": "http://terminology.hl7.org/CodeSystem/claim-type", "code": "institutional"}}},
@@ -959,6 +1141,130 @@ func preauthClaim(subject string) map[string]any {
 		"insurance": []any{map[string]any{"sequence": 1, "focal": true,
 			"coverage": map[string]any{"display": "Synthetic test coverage"}}},
 		"total": map[string]any{"value": 120000, "currency": "INR"}}
+}
+
+func syntheticNHCXClaim(subject string, amountINR float64) map[string]any {
+	return map[string]any{
+		"resourceType": "Claim",
+		"id":           "claim-synthetic-1",
+		"use":          "claim",
+		"status":       "active",
+		"identifier":   syntheticID("nhcx-claim-1"),
+		"type": map[string]any{
+			"coding": []any{
+				map[string]any{
+					"system": "http://terminology.hl7.org/CodeSystem/claim-type",
+					"code":   "institutional",
+				},
+			},
+		},
+		"patient":   map[string]any{"reference": subject},
+		"created":   "2026-10-27",
+		"provider":  map[string]any{"display": "Synthetic Test Hospital"},
+		"priority":  map[string]any{"coding": []any{map[string]any{"code": "normal"}}},
+		"insurance": []any{map[string]any{"sequence": 1, "focal": true, "coverage": map[string]any{"display": "Synthetic test coverage"}}},
+		"item": []any{
+			map[string]any{
+				"sequence": 1,
+				"productOrService": map[string]any{
+					"coding": []any{
+						map[string]any{
+							"system":  "http://snomed.info/sct",
+							"code":    "261271009",
+							"display": "IV Infusion kit",
+						},
+					},
+				},
+				"net": map[string]any{
+					"value":    amountINR,
+					"currency": "INR",
+				},
+			},
+		},
+		"total": map[string]any{"value": amountINR, "currency": "INR"},
+	}
+}
+
+func syntheticNHCXClaimBundle(subject string, amountINR float64) map[string]any {
+	return map[string]any{
+		"resourceType": "Bundle",
+		"type":         "collection",
+		"meta": map[string]any{
+			"profile": []any{nhcx.ProfileClaimBundle},
+		},
+		"entry": []any{
+			map[string]any{
+				"resource": syntheticNHCXClaim(subject, amountINR),
+			},
+			map[string]any{
+				"resource": map[string]any{
+					"resourceType": "Patient",
+					"id":           patientID,
+					"identifier":   syntheticID("patient-1"),
+				},
+			},
+			map[string]any{
+				"resource": map[string]any{
+					"resourceType": "Coverage",
+					"id":           "cov-synthetic-1",
+					"status":       "active",
+					"beneficiary":  map[string]any{"reference": subject},
+				},
+			},
+			map[string]any{
+				"resource": map[string]any{
+					"resourceType": "Condition",
+					"id":           "cond-synthetic-1",
+					"subject":      map[string]any{"reference": subject},
+					"code": map[string]any{
+						"coding": []any{
+							map[string]any{
+								"system":  "http://snomed.info/sct",
+								"code":    "371087003",
+								"display": "Emergency medical condition",
+							},
+						},
+					},
+				},
+			},
+			map[string]any{
+				"resource": map[string]any{
+					"resourceType": "Organization",
+					"id":           "org-synthetic-1",
+					"name":         "Synthetic Test Hospital",
+				},
+			},
+		},
+	}
+}
+
+func syntheticEmergencyProcedure(subject string) map[string]any {
+	return map[string]any{
+		"resourceType": "Procedure",
+		"id":           "proc-er-01",
+		"status":       "completed",
+		"subject":      map[string]any{"reference": subject},
+		"usedCode": []any{
+			map[string]any{
+				"coding": []any{
+					map[string]any{
+						"system":  "http://snomed.info/sct",
+						"code":    "261271009",
+						"display": "IV Infusion kit",
+					},
+				},
+			},
+			map[string]any{
+				"coding": []any{
+					map[string]any{
+						"system":  "http://snomed.info/sct",
+						"code":    "22813002",
+						"display": "Dental endosseous titanium implant",
+					},
+				},
+			},
+		},
+	}
 }
 
 // --- files ---
