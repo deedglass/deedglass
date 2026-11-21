@@ -22,6 +22,8 @@ var (
 	ErrInvalidEnum                 = errors.New("scribe-eval: invalid enum field value")
 	ErrUnknownFields               = errors.New("scribe-eval: closed schema violation (unknown properties present)")
 	ErrIncompleteTransactionBundle = errors.New("scribe-eval: composite bundle atomicity violation (CH-20)")
+	ErrPromptInjectionQuarantine   = errors.New("scribe-eval: prompt injection quarantine triggered (CH-39)")
+	ErrEdgeQueueConflict           = errors.New("scribe-eval: edge queue split-brain conflict detected (CH-38)")
 )
 
 // Regex sentinels for detecting identifiers across all incoming fields.
@@ -35,6 +37,11 @@ var (
 	reMRN          = regexp.MustCompile(`(?i)\b(?:mrn|patient[_-]?id|abha[_-]?id|ssn|aadhaar)\b[:=\s]*[a-zA-Z0-9_-]+`)
 	reISOWeek      = regexp.MustCompile(`^[0-9]{4}-W(0[1-9]|[1-4][0-9]|5[0-3])$`)
 	rePromptInject = regexp.MustCompile(`(?i)(?:ignore\s+previous\s+instructions|system\s+prompt|override\s+system|<script>|<\/script>|<system>|eval\(|drop\s+table|delete\s+from|discard\s+rules)`)
+
+	// Secondary prompt injection patterns in multi-agent handoffs (CH-39)
+	reDelimiterEscape   = regexp.MustCompile("(?i)(?:\\[INST\\]|\\[/INST\\]|<\\|im_start\\|>|<\\|im_end\\|>|<system>|</system>|\\x60{3}system|\\x60{3}override)")
+	reSystemOverride    = regexp.MustCompile(`(?i)(?:ignore\s+(?:previous|all)\s+instructions|system\s+prompt|override\s+system|disregard\s+(?:previous|above|all)|you\s+are\s+now\s+in\s+maintenance)`)
+	reUngroundedCommand = regexp.MustCompile(`(?i)(?:ADMIN_OVERRIDE:|EXEC_TOOL:|<script>|</script>|eval\(|drop\s+table|delete\s+from)`)
 )
 
 // Allowed enumeration values.
@@ -63,6 +70,23 @@ var (
 		DeltaRouteEdit: true, DeltaCodeEdit: true, DeltaAllergyAdded: true,
 		DeltaConsumableAdded: true, DeltaRejectedDraft: true, DeltaSilentDropCaught: true,
 		DeltaAudioTruncated: true, DeltaUngroundedOrder: true, DeltaNegationCorrection: true,
+		DeltaEdgeQueueConflict: true, DeltaPromptInjectionFlag: true,
+	}
+	validEdgeQueueActions = map[string]bool{
+		"QUEUED_FOR_CLINICIAN_DIFF": true,
+		"REJECTED_STALE_SEQUENCE":   true,
+		"COMMITTED_L1_CHECKED":      true,
+	}
+	validPromptInjectionActions = map[string]bool{
+		"QUARANTINED_FOR_CLINICIAN_REVIEW": true,
+		"PASSED_CLEAN":                     true,
+	}
+	validPatternClassifications = map[string]bool{
+		"":                   true,
+		"NONE":               true,
+		"DELIMITER_ESCAPE":   true,
+		"SYSTEM_OVERRIDE":    true,
+		"UNGROUNDED_COMMAND": true,
 	}
 	validRoleCategories = map[string]bool{
 		"attending": true, "resident": true, "fellow": true,
@@ -275,7 +299,66 @@ func (s *DefaultSanitizer) ValidateAndSanitize(e *EvalEvent) error {
 		}
 	}
 
+	// Hazard CH-38: Offline-first edge queue split-brain & reconciliation handling
+	if e.EdgeQueueReconciliation != nil {
+		eq := e.EdgeQueueReconciliation
+		if eq.VersionConflictDetected {
+			if !eq.ClinicianDiffReviewed {
+				eq.EnforcementAction = "QUEUED_FOR_CLINICIAN_DIFF"
+				if e.DeltaClass == DeltaNoChange {
+					e.DeltaClass = DeltaEdgeQueueConflict
+				}
+				e.SilentDivergenceDetected = true
+			} else {
+				eq.EnforcementAction = "COMMITTED_L1_CHECKED"
+			}
+		} else if eq.EnforcementAction == "" {
+			eq.EnforcementAction = "COMMITTED_L1_CHECKED"
+		}
+		if !validEdgeQueueActions[eq.EnforcementAction] {
+			return fmt.Errorf("%w: invalid edge_queue enforcement_action %q", ErrInvalidEnum, eq.EnforcementAction)
+		}
+	}
+
+	// Hazard CH-39: Multi-agent secondary prompt injection detection & quarantine
+	if e.PromptInjectionQuarantine != nil {
+		pi := e.PromptInjectionQuarantine
+		if !validPatternClassifications[pi.PatternClassification] {
+			return fmt.Errorf("%w: invalid pattern_classification %q", ErrInvalidEnum, pi.PatternClassification)
+		}
+		if pi.QuarantineTriggered || (pi.PatternClassification != "" && pi.PatternClassification != "NONE") {
+			pi.QuarantineTriggered = true
+			pi.EnforcementAction = "QUARANTINED_FOR_CLINICIAN_REVIEW"
+			e.PromptInjectionFlag = true
+			if e.DeltaClass == DeltaNoChange {
+				e.DeltaClass = DeltaPromptInjectionFlag
+			}
+		} else if pi.EnforcementAction == "" {
+			pi.EnforcementAction = "PASSED_CLEAN"
+		}
+		if !validPromptInjectionActions[pi.EnforcementAction] {
+			return fmt.Errorf("%w: invalid prompt_injection enforcement_action %q", ErrInvalidEnum, pi.EnforcementAction)
+		}
+	}
+
 	return nil
+}
+
+// DetectSecondaryPromptInjection inspects text for indirect prompt injection markers (CH-39).
+func DetectSecondaryPromptInjection(text string) (bool, string) {
+	if text == "" {
+		return false, ""
+	}
+	if reDelimiterEscape.MatchString(text) {
+		return true, "DELIMITER_ESCAPE"
+	}
+	if reSystemOverride.MatchString(text) {
+		return true, "SYSTEM_OVERRIDE"
+	}
+	if reUngroundedCommand.MatchString(text) {
+		return true, "UNGROUNDED_COMMAND"
+	}
+	return false, ""
 }
 
 // ValidateJSONClosed parses a raw JSON payload with strict unknown field rejection.

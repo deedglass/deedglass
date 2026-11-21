@@ -4,6 +4,8 @@
 package sections
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"strconv"
@@ -23,22 +25,45 @@ const MaxTranscriptBytes = 2 << 10
 
 // ClinicalPreview is the "clinical_preview" section for the Ward Light Clinician Elevation Card.
 type ClinicalPreview struct {
-	V                int             `json:"v"`
-	ResourceType     string          `json:"resource_type"`
-	ResourceID       string          `json:"resource_id,omitempty"`
-	ActionLabel      string          `json:"action_label"`
-	Status           string          `json:"status,omitempty"`
-	Intent           string          `json:"intent,omitempty"`
-	PatientRef       string          `json:"patient_ref,omitempty"`
-	PatientDisplay   string          `json:"patient_display,omitempty"`
-	EHRDeepLink      string          `json:"ehr_deep_link,omitempty"`
-	TranscriptAnchor string          `json:"transcript_anchor,omitempty"`
-	ScribeVendor     string          `json:"scribe_vendor,omitempty"`
-	Fields           []ClinicalField `json:"fields"`
-	IsBreakGlass     bool            `json:"is_break_glass,omitempty"`
-	EmergencyReason  string          `json:"emergency_reason,omitempty"`
-	AuditNotice      string          `json:"audit_notice,omitempty"`
-	Summary          string          `json:"summary"`
+	V                    int               `json:"v"`
+	ResourceType         string            `json:"resource_type"`
+	ResourceID           string            `json:"resource_id,omitempty"`
+	ActionLabel          string            `json:"action_label"`
+	Status               string            `json:"status,omitempty"`
+	Intent               string            `json:"intent,omitempty"`
+	PatientRef           string            `json:"patient_ref,omitempty"`
+	PatientDisplay       string            `json:"patient_display,omitempty"`
+	EHRDeepLink          string            `json:"ehr_deep_link,omitempty"`
+	TranscriptAnchor     string            `json:"transcript_anchor,omitempty"`
+	ScribeVendor         string            `json:"scribe_vendor,omitempty"`
+	Fields               []ClinicalField   `json:"fields"`
+	IsBreakGlass         bool              `json:"is_break_glass,omitempty"`
+	EmergencyReason      string            `json:"emergency_reason,omitempty"`
+	AuditNotice          string            `json:"audit_notice,omitempty"`
+	CollisionWarning     string            `json:"collision_warning,omitempty"`   // CH-32
+	UngroundedNotice     string            `json:"ungrounded_notice,omitempty"`   // CH-34
+	Environment          string            `json:"environment,omitempty"`         // CH-35
+	PreliminaryWarning   string            `json:"preliminary_warning,omitempty"` // CH-36
+	SessionTimeoutSec    int               `json:"session_timeout_sec,omitempty"` // CH-37
+	PractitionerRole     string            `json:"practitioner_role,omitempty"`   // CH-37
+	IsPriorAuth          bool              `json:"is_prior_auth,omitempty"`
+	PriorAuthDetails     *PriorAuthPreview `json:"prior_auth_details,omitempty"`
+	AIProposedDigest     string            `json:"ai_proposed_digest,omitempty"`     // CH-10
+	ClinicianFinalDigest string            `json:"clinician_final_digest,omitempty"` // CH-10
+	EdgeQueueConflict    string            `json:"edge_queue_conflict,omitempty"`    // CH-38
+	PromptInjectionAlert string            `json:"prompt_injection_alert,omitempty"` // CH-39
+	Summary              string            `json:"summary"`
+}
+
+// PriorAuthPreview captures Da Vinci PAS / CMS-0057-F pre-authorization metadata.
+type PriorAuthPreview struct {
+	PayerName       string   `json:"payer_name,omitempty"`
+	ProviderNPI     string   `json:"provider_npi,omitempty"`
+	TotalAmount     string   `json:"total_amount,omitempty"`
+	ServiceType     string   `json:"service_type,omitempty"`
+	DiagnosisCodes  []string `json:"diagnosis_codes,omitempty"`
+	ServiceRequests []string `json:"service_requests,omitempty"`
+	Urgency         string   `json:"urgency,omitempty"`
 }
 
 // ClinicalField is one structured field displayed on the Ward Light chart card.
@@ -135,29 +160,120 @@ func BuildClinical(in gate.ApprovalInput) (json.RawMessage, error) {
 		auditNotice = "EMERGENCY OVERRIDE: Action initiated under break-glass override. Bypasses standard delay; logged to weekly CMO safety audit (CH-07)."
 	}
 
-	fields := buildClinicalFields(resType, raw, res)
+	// CH-32: Concurrency collision detection.
+	var collisionWarning string
+	if boolVal(raw["concurrency_collision"]) || boolVal(res["concurrency_collision"]) || boolVal(raw["version_conflict"]) || boolVal(res["version_conflict"]) {
+		collisionWarning = "CONCURRENCY CONFLICT: Resource modified by concurrent clinical staff; review prior version before commit (CH-32)."
+	}
 
-	actionLabel := describeAction(resType, in.Request.FHIR.Interaction, isBreakGlass)
+	// CH-34: Detect ungrounded ambient order drafts lacking transcript grounding.
+	var ungroundedNotice string
+	if boolVal(raw["ungrounded_draft"]) || boolVal(res["ungrounded_draft"]) ||
+		((resType == "MedicationRequest" || resType == "ServiceRequest" || resType == "Observation" || resType == "Claim") &&
+			(transcript == "" && (boolVal(raw["ambient_scribe"]) || scribeVendor != ""))) {
+		ungroundedNotice = "UNGROUNDED DRAFT: Ambient order lacks transcript quote anchor; attending clinician must confirm verbal grounding before sign-off (CH-34)."
+	}
+
+	// CH-35: Runtime environment isolation tagging.
+	env := stringVal(raw["environment"])
+	if env == "" {
+		env = stringVal(res["environment"])
+	}
+	if env == "" {
+		env = stringVal(raw["tenant_environment"])
+	}
+	if env == "" {
+		env = "production"
+	}
+
+	// CH-36: Preliminary draft cascade detection.
+	var prelimWarning string
+	resStatus := strings.ToLower(stringVal(res["status"]))
+	verStatus := strings.ToLower(stringVal(res["verificationStatus"]))
+	if resStatus == "preliminary" || resStatus == "draft" || verStatus == "unconfirmed" || boolVal(raw["preliminary_cascade"]) || boolVal(res["preliminary_cascade"]) {
+		prelimWarning = "PRELIMINARY / UNCONFIRMED DRAFT: Upstream record is tentative/unconfirmed; verify clinical status before countersigning (CH-36)."
+	}
+
+	// CH-37: Clinician credential & role session timeout.
+	sessionTimeout := 300 // 5 minutes default
+	if to, ok := raw["session_timeout_sec"].(float64); ok && to > 0 {
+		sessionTimeout = int(to)
+	}
+	practitionerRole := stringVal(raw["practitioner_role"])
+	if practitionerRole == "" {
+		practitionerRole = stringVal(res["practitioner_role"])
+	}
+	if practitionerRole == "" {
+		practitionerRole = "Attending Clinician"
+	}
+
+	// Prior Authorization metadata (Da Vinci PAS / CMS-0057-F / NHCX)
+	isPA, paDetails := extractPriorAuth(resType, raw, res)
+
+	fields := buildClinicalFields(resType, raw, res)
+	aiDigest := computeFieldsDigest(fields)
+	clinicianDigest := aiDigest
+
+	// CH-10: If explicit clinician edits were supplied (Edit & Commit)
+	if edits, ok := raw["clinician_edits"].(map[string]any); ok && len(edits) > 0 {
+		for i := range fields {
+			if edVal, found := edits[fields[i].Key]; found {
+				fields[i].Prior = fields[i].Value
+				fields[i].Value = stringVal(edVal)
+			}
+		}
+		clinicianDigest = computeFieldsDigest(fields)
+	}
+
+	actionLabel := describeAction(resType, in.Request.FHIR.Interaction, isBreakGlass, isPA)
 
 	status := stringVal(res["status"])
 	intent := stringVal(res["intent"])
 
+	// CH-38: Offline-first edge gateway write queue split-brain conflict detection.
+	var edgeQueueConflict string
+	if boolVal(raw["edge_queue_conflict"]) || boolVal(res["edge_queue_conflict"]) ||
+		boolVal(raw["offline_sync_conflict"]) || boolVal(res["offline_sync_conflict"]) ||
+		strings.EqualFold(stringVal(raw["edge_sync_status"]), "conflict") ||
+		strings.EqualFold(stringVal(res["edge_sync_status"]), "conflict") {
+		edgeQueueConflict = "OFFLINE SPLIT-BRAIN CONFLICT: Edge write queue version diverges from hospital central server; review queued diff before flush (CH-38)."
+	}
+
+	// CH-39: Multi-agent secondary prompt injection detection.
+	var promptInjectAlert string
+	if boolVal(raw["prompt_injection_risk"]) || boolVal(res["prompt_injection_risk"]) ||
+		hasSecondaryPromptInjection(raw, res) {
+		promptInjectAlert = "UNVERIFIED INJECTION RISK: Secondary prompt override pattern detected in payload text; routed to mandatory clinician review (CH-39)."
+	}
+
 	p := ClinicalPreview{
-		V:                ClinicalPreviewVersion,
-		ResourceType:     resType,
-		ResourceID:       resID,
-		ActionLabel:      actionLabel,
-		Status:           status,
-		Intent:           intent,
-		PatientRef:       patientRef,
-		PatientDisplay:   patientDisplay,
-		EHRDeepLink:      ehrLink,
-		TranscriptAnchor: transcript,
-		ScribeVendor:     scribeVendor,
-		Fields:           fields,
-		IsBreakGlass:     isBreakGlass,
-		EmergencyReason:  emerReason,
-		AuditNotice:      auditNotice,
+		V:                    ClinicalPreviewVersion,
+		ResourceType:         resType,
+		ResourceID:           resID,
+		ActionLabel:          actionLabel,
+		Status:               status,
+		Intent:               intent,
+		PatientRef:           patientRef,
+		PatientDisplay:       patientDisplay,
+		EHRDeepLink:          ehrLink,
+		TranscriptAnchor:     transcript,
+		ScribeVendor:         scribeVendor,
+		Fields:               fields,
+		IsBreakGlass:         isBreakGlass,
+		EmergencyReason:      emerReason,
+		AuditNotice:          auditNotice,
+		CollisionWarning:     collisionWarning,
+		UngroundedNotice:     ungroundedNotice,
+		Environment:          env,
+		PreliminaryWarning:   prelimWarning,
+		SessionTimeoutSec:    sessionTimeout,
+		PractitionerRole:     practitionerRole,
+		IsPriorAuth:          isPA,
+		PriorAuthDetails:     paDetails,
+		AIProposedDigest:     aiDigest,
+		ClinicianFinalDigest: clinicianDigest,
+		EdgeQueueConflict:    edgeQueueConflict,
+		PromptInjectionAlert: promptInjectAlert,
 	}
 
 	p.Summary = clinicalSummary(p)
@@ -293,6 +409,39 @@ func buildClinicalFields(resType string, raw, res map[string]any) []ClinicalFiel
 		if prov, ok := res["provider"].(map[string]any); ok {
 			if d := stringVal(prov["display"]); d != "" {
 				fields = append(fields, ClinicalField{Key: "provider", Label: "Provider", Value: d, Editable: false})
+			}
+		}
+
+	case "ServiceRequest":
+		code := extractCode(res, raw)
+		fields = append(fields, ClinicalField{Key: "service", Label: "Service / Procedure", Value: code, Editable: false})
+		if intent := stringVal(res["intent"]); intent != "" {
+			fields = append(fields, ClinicalField{Key: "intent", Label: "Intent", Value: intent, Editable: false})
+		}
+		if priority := stringVal(res["priority"]); priority != "" {
+			fields = append(fields, ClinicalField{Key: "priority", Label: "Priority", Value: priority, Editable: true})
+		}
+		if occ := stringVal(res["occurrenceDateTime"]); occ != "" {
+			fields = append(fields, ClinicalField{Key: "occurrence", Label: "Occurrence", Value: occ, Editable: true})
+		}
+		if req, ok := res["requester"].(map[string]any); ok {
+			if d := stringVal(req["display"]); d != "" {
+				fields = append(fields, ClinicalField{Key: "requester", Label: "Requester", Value: d, Editable: false})
+			}
+		}
+
+	case "Condition":
+		code := extractCode(res, raw)
+		fields = append(fields, ClinicalField{Key: "condition", Label: "Diagnosis / Condition", Value: code, Editable: false})
+		if clin := extractClinicalStatus(res); clin != "" {
+			fields = append(fields, ClinicalField{Key: "clinical_status", Label: "Clinical Status", Value: clin, Editable: false})
+		}
+		if ver := stringVal(res["verificationStatus"]); ver != "" {
+			fields = append(fields, ClinicalField{Key: "verification_status", Label: "Verification Status", Value: ver, Editable: false})
+		}
+		if sev, ok := res["severity"].(map[string]any); ok {
+			if disp := codeDisplay(sev); disp != "" {
+				fields = append(fields, ClinicalField{Key: "severity", Label: "Severity", Value: disp, Editable: false})
 			}
 		}
 
@@ -436,10 +585,13 @@ func extractClinicalStatus(res map[string]any) string {
 	return stringVal(res["clinicalStatus"])
 }
 
-func describeAction(resType, inter string, breakGlass bool) string {
+func describeAction(resType, inter string, breakGlass, isPA bool) string {
 	prefix := ""
 	if breakGlass {
 		prefix = "Emergency Break-Glass "
+	}
+	if isPA {
+		return prefix + "Prior Authorization Request (Da Vinci PAS / CMS-0057-F)"
 	}
 	switch resType {
 	case "MedicationRequest":
@@ -448,6 +600,10 @@ func describeAction(resType, inter string, breakGlass bool) string {
 		return prefix + "Record Clinical Observation"
 	case "AllergyIntolerance":
 		return prefix + "Record Allergy Intolerance"
+	case "ServiceRequest":
+		return prefix + "Clinical Service Request"
+	case "Condition":
+		return prefix + "Record Clinical Condition"
 	case "Claim":
 		return prefix + "NHCX Claim Bundle Submission"
 	default:
@@ -456,6 +612,103 @@ func describeAction(resType, inter string, breakGlass bool) string {
 		}
 		return prefix + "Write " + resType
 	}
+}
+
+func computeFieldsDigest(fields []ClinicalField) string {
+	var b strings.Builder
+	for _, f := range fields {
+		b.WriteString(f.Key)
+		b.WriteString(":")
+		b.WriteString(f.Value)
+		b.WriteString("\n")
+	}
+	h := sha256.Sum256([]byte(b.String()))
+	return hex.EncodeToString(h[:])
+}
+
+func extractPriorAuth(resType string, raw, res map[string]any) (bool, *PriorAuthPreview) {
+	isPA := boolVal(raw["prior_auth"]) || boolVal(res["prior_auth"]) ||
+		strings.EqualFold(stringVal(res["use"]), "preauthorization") ||
+		strings.EqualFold(stringVal(raw["use"]), "preauthorization") ||
+		(strings.Contains(strings.ToLower(resType), "claim") && strings.Contains(strings.ToLower(stringVal(raw["rule"])), "prior-auth"))
+	if !isPA && resType != "Claim" && resType != "ClaimResponse" {
+		return false, nil
+	}
+
+	pa := &PriorAuthPreview{
+		PayerName:   "Payer / Insurer",
+		ServiceType: "Professional / Institutional",
+		Urgency:     "standard",
+	}
+
+	if p := stringVal(raw["payer_name"]); p != "" {
+		pa.PayerName = p
+	} else if ins, ok := res["insurer"].(map[string]any); ok {
+		if d := stringVal(ins["display"]); d != "" {
+			pa.PayerName = d
+		}
+	}
+
+	if npi := stringVal(raw["provider_npi"]); npi != "" {
+		pa.ProviderNPI = npi
+	} else if prov, ok := res["provider"].(map[string]any); ok {
+		if idObj, ok := prov["identifier"].(map[string]any); ok {
+			pa.ProviderNPI = stringVal(idObj["value"])
+		}
+	}
+
+	if tot, ok := res["total"].(map[string]any); ok {
+		pa.TotalAmount = stringVal(tot["value"]) + " " + stringVal(tot["currency"])
+	} else if amt := stringVal(raw["total_amount"]); amt != "" {
+		pa.TotalAmount = amt
+	}
+
+	if st := stringVal(raw["service_type"]); st != "" {
+		pa.ServiceType = st
+	}
+
+	if urg := stringVal(raw["urgency"]); urg != "" {
+		pa.Urgency = urg
+	} else if prio, ok := res["priority"].(map[string]any); ok {
+		if c := codeDisplay(prio); c != "" {
+			pa.Urgency = strings.ToLower(c)
+		}
+	}
+
+	// Diagnoses
+	if diagList, ok := res["diagnosis"].([]any); ok {
+		for _, d := range diagList {
+			if dm, ok := d.(map[string]any); ok {
+				if dcc, ok := dm["diagnosisCodeableConcept"].(map[string]any); ok {
+					if c := codeDisplay(dcc); c != "" {
+						pa.DiagnosisCodes = append(pa.DiagnosisCodes, c)
+					}
+				}
+			}
+		}
+	}
+	if len(pa.DiagnosisCodes) == 0 && raw["diagnosis_codes"] != nil {
+		if dcs, ok := raw["diagnosis_codes"].([]any); ok {
+			for _, d := range dcs {
+				if ds := stringVal(d); ds != "" {
+					pa.DiagnosisCodes = append(pa.DiagnosisCodes, ds)
+				}
+			}
+		}
+	}
+
+	return isPA, pa
+}
+
+func boolVal(v any) bool {
+	if b, ok := v.(bool); ok {
+		return b
+	}
+	if s, ok := v.(string); ok {
+		clean := strings.ToLower(strings.TrimSpace(s))
+		return clean == "true" || clean == "1" || clean == "yes"
+	}
+	return false
 }
 
 func clinicalSummary(p ClinicalPreview) string {
@@ -502,6 +755,56 @@ func clipRunes(s string, max int) string {
 	}
 	r := []rune(s)
 	return string(r[:max-1]) + "\u2026"
+}
+
+func hasSecondaryPromptInjection(raw, res map[string]any) bool {
+	texts := []string{
+		stringVal(raw["transcript_anchor"]),
+		stringVal(raw["transcript"]),
+		stringVal(res["transcript"]),
+		stringVal(raw["note_text"]),
+		stringVal(res["note_text"]),
+		stringVal(raw["text"]),
+		stringVal(res["text"]),
+		stringVal(raw["comment"]),
+		stringVal(res["comment"]),
+	}
+	if notes, ok := res["note"].([]any); ok {
+		for _, n := range notes {
+			if nm, ok := n.(map[string]any); ok {
+				texts = append(texts, stringVal(nm["text"]))
+			}
+		}
+	}
+	if exts, ok := res["extension"].([]any); ok {
+		for _, ext := range exts {
+			if em, ok := ext.(map[string]any); ok {
+				texts = append(texts, stringVal(em["valueString"]))
+			}
+		}
+	}
+	for _, t := range texts {
+		if t == "" {
+			continue
+		}
+		lower := strings.ToLower(t)
+		if strings.Contains(lower, "[inst]") ||
+			strings.Contains(lower, "[/inst]") ||
+			strings.Contains(lower, "<|im_start|>") ||
+			strings.Contains(lower, "<|im_end|>") ||
+			strings.Contains(lower, "<system>") ||
+			strings.Contains(lower, "```system") ||
+			strings.Contains(lower, "system prompt") ||
+			strings.Contains(lower, "ignore previous instructions") ||
+			strings.Contains(lower, "ignore all instructions") ||
+			strings.Contains(lower, "override system") ||
+			strings.Contains(lower, "admin_override:") ||
+			strings.Contains(lower, "<script>") ||
+			strings.Contains(lower, "eval(") {
+			return true
+		}
+	}
+	return false
 }
 
 var clinicalOnce sync.Once

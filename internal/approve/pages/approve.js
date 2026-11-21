@@ -328,6 +328,84 @@
   // Frequency, Duration), inline "Edit order" (Edit & Commit) and direct EHR deep-link (CH-05).
   let editingClinical = false;
   let clinicalData = null;
+  let originalFields = [];
+  let sessionSecondsLeft = 300;
+  let sessionInterval = null;
+
+  function startSessionTimer(totalSeconds, role) {
+    if (sessionInterval) clearInterval(sessionInterval);
+    sessionSecondsLeft = totalSeconds > 0 ? totalSeconds : 300;
+    $('cl-practitioner').textContent = role || 'Attending Clinician';
+    updateSessionDisplay();
+    show($('cl-session-expired'), false);
+    approveBtn.disabled = false;
+
+    sessionInterval = setInterval(() => {
+      sessionSecondsLeft -= 1;
+      updateSessionDisplay();
+      if (sessionSecondsLeft <= 0) {
+        clearInterval(sessionInterval);
+        sessionInterval = null;
+        show($('cl-session-expired'), true);
+        approveBtn.disabled = true;
+      }
+    }, 1000);
+  }
+
+  function updateSessionDisplay() {
+    const m = Math.floor(Math.max(0, sessionSecondsLeft) / 60);
+    const s = Math.max(0, sessionSecondsLeft) % 60;
+    const timerStr = (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
+    $('cl-session-timer').textContent = timerStr;
+  }
+
+  function computeDigestHex(fields) {
+    let s = '';
+    for (const f of fields) {
+      s += f.key + ':' + (f.value || '') + '\n';
+    }
+    let h1 = 0xdeadbeef, h2 = 0x41c6ce57;
+    for (let i = 0; i < s.length; i++) {
+      const ch = s.charCodeAt(i);
+      h1 = Math.imul(h1 ^ ch, 2654435761);
+      h2 = Math.imul(h2 ^ ch, 1597334677);
+    }
+    h1 = ((h1 ^ (h1 >>> 16)) >>> 0).toString(16).padStart(8, '0');
+    h2 = ((h2 ^ (h2 >>> 16)) >>> 0).toString(16).padStart(8, '0');
+    return (h1 + h2 + h1 + h2).substring(0, 16);
+  }
+
+  function renderDiffSummary(diffs) {
+    const wrap = $('cl-diff-wrap');
+    if (!diffs || diffs.length === 0) {
+      show(wrap, false);
+      return;
+    }
+    show(wrap, true);
+    const list = $('cl-diff-list');
+    list.textContent = '';
+    for (const d of diffs) {
+      const row = document.createElement('div');
+      row.className = 'diff-item';
+      const keySpan = document.createElement('span');
+      keySpan.className = 'diff-key';
+      keySpan.textContent = d.label + ':';
+      const oldSpan = document.createElement('span');
+      oldSpan.className = 'diff-old';
+      oldSpan.textContent = d.oldValue;
+      const arrSpan = document.createElement('span');
+      arrSpan.textContent = ' \u2192 ';
+      const newSpan = document.createElement('span');
+      newSpan.className = 'diff-new';
+      newSpan.textContent = d.newValue;
+      row.append(keySpan, oldSpan, arrSpan, newSpan);
+      list.append(row);
+    }
+    const aiHash = clinicalData && clinicalData.ai_proposed_digest ? clinicalData.ai_proposed_digest.substring(0, 16) : computeDigestHex(originalFields);
+    const finalHash = computeDigestHex(clinicalData.fields || []);
+    $('cl-digest-ai').textContent = 'AI Draft Digest: ' + aiHash;
+    $('cl-digest-final').textContent = 'Clinician Final: ' + finalHash;
+  }
 
   function renderClinical(c) {
     const on = Boolean(c && typeof c === 'object');
@@ -335,16 +413,82 @@
     if (!on) return;
     clinicalData = c;
     editingClinical = false;
+    originalFields = JSON.parse(JSON.stringify(c.fields || []));
 
     // Patient badge & ward label
     $('cl-patient').textContent = c.patient_display || c.patient_ref || 'Patient';
     $('cl-bed').textContent = c.action_label || 'Ward Chart';
+
+    // Environment pill (CH-35)
+    const envEl = $('cl-tag-env');
+    if (c.environment) {
+      envEl.textContent = c.environment.toUpperCase();
+      show(envEl, true);
+    } else {
+      show(envEl, false);
+    }
+
+    // Preliminary draft tag & alert (CH-36)
+    const hasPrelim = Boolean(c.preliminary_warning);
+    show($('cl-tag-prelim'), hasPrelim);
+    show($('cl-preliminary-banner'), hasPrelim);
+    if (hasPrelim) {
+      $('cl-preliminary-text').textContent = c.preliminary_warning;
+    }
+
+    // Concurrency collision warning (CH-32)
+    const hasCollision = Boolean(c.collision_warning);
+    show($('cl-collision-banner'), hasCollision);
+    if (hasCollision) {
+      $('cl-collision-text').textContent = c.collision_warning;
+    }
+
+    // Ungrounded draft alert (CH-34)
+    const hasUngrounded = Boolean(c.ungrounded_notice);
+    show($('cl-ungrounded-banner'), hasUngrounded);
+    if (hasUngrounded) {
+      $('cl-ungrounded-text').textContent = c.ungrounded_notice;
+    }
+
+    // Offline edge queue split-brain conflict (CH-38)
+    const hasEdgeQueue = Boolean(c.edge_queue_conflict);
+    show($('cl-edgequeue-banner'), hasEdgeQueue);
+    if (hasEdgeQueue) {
+      $('cl-edgequeue-text').textContent = c.edge_queue_conflict;
+    }
+
+    // Secondary prompt injection risk alert (CH-39)
+    const hasInjection = Boolean(c.prompt_injection_alert);
+    show($('cl-injection-banner'), hasInjection);
+    if (hasInjection) {
+      $('cl-injection-text').textContent = c.prompt_injection_alert;
+    }
 
     // Emergency break-glass banner (CH-07)
     const isEmer = Boolean(c.is_break_glass);
     show($('cl-breakglass-banner'), isEmer);
     if (isEmer) {
       $('cl-breakglass-text').textContent = c.audit_notice || 'Action initiated under emergency break-glass override.';
+    }
+
+    // Da Vinci PAS / Pre-Authorization details
+    const isPA = Boolean(c.is_prior_auth && c.prior_auth_details);
+    show($('cl-pa-wrap'), isPA);
+    if (isPA) {
+      const pa = c.prior_auth_details;
+      $('cl-pa-payer').textContent = pa.payer_name || 'Payer';
+      $('cl-pa-npi').textContent = pa.provider_npi || '-';
+      $('cl-pa-amount').textContent = pa.total_amount || '-';
+      $('cl-pa-service').textContent = pa.service_type || '-';
+      $('cl-pa-urgency').textContent = pa.urgency || 'STANDARD';
+
+      const hasDiags = Array.isArray(pa.diagnosis_codes) && pa.diagnosis_codes.length > 0;
+      show($('cl-pa-diag-wrap'), hasDiags);
+      if (hasDiags) $('cl-pa-diag').textContent = pa.diagnosis_codes.join(', ');
+
+      const hasReqs = Array.isArray(pa.service_requests) && pa.service_requests.length > 0;
+      show($('cl-pa-req-wrap'), hasReqs);
+      if (hasReqs) $('cl-pa-req').textContent = pa.service_requests.join(', ');
     }
 
     // Transcript source anchor
@@ -356,6 +500,10 @@
 
     // Table of clinical fields
     renderClinicalFields(c.fields || []);
+    renderDiffSummary([]);
+
+    // Session Inactivity Guard (CH-37)
+    startSessionTimer(c.session_timeout_sec || 300, c.practitioner_role);
 
     // EHR deep-link (CH-05)
     const hasEHR = Boolean(c.ehr_deep_link);
@@ -372,14 +520,28 @@
   function renderClinicalFields(fields) {
     const tbody = $('cl-fields');
     tbody.textContent = '';
+    const hasAnyPrior = fields.some(f => Boolean(f.prior));
+    show($('cl-th-prior'), hasAnyPrior);
+
     for (const f of fields) {
       const tr = document.createElement('tr');
       const tdLabel = document.createElement('td');
       tdLabel.className = 'cl-k';
       tdLabel.textContent = f.label || f.key;
 
+      let tdPrior = null;
+      if (hasAnyPrior) {
+        tdPrior = document.createElement('td');
+        tdPrior.className = 'cl-prior mono';
+        tdPrior.textContent = f.prior || '-';
+      }
+
       const tdVal = document.createElement('td');
-      tdVal.className = 'cl-v';
+      tdVal.className = 'cl-v mono';
+      if (f.prior && f.prior !== f.value) {
+        tdVal.classList.add('cl-diff-changed');
+      }
+
       if (editingClinical && f.editable) {
         const inp = document.createElement('input');
         inp.className = 'cl-edit-input';
@@ -390,7 +552,12 @@
       } else {
         tdVal.textContent = f.value || '-';
       }
-      tr.append(tdLabel, tdVal);
+
+      if (hasAnyPrior) {
+        tr.append(tdLabel, tdPrior, tdVal);
+      } else {
+        tr.append(tdLabel, tdVal);
+      }
       tbody.append(tr);
     }
   }
@@ -757,15 +924,36 @@
       clEditBtn.textContent = editingClinical ? 'Confirm edits' : 'Edit order';
       if (!editingClinical) {
         const inputs = $('cl-fields').querySelectorAll('input.cl-edit-input');
+        const diffs = [];
         for (const inp of inputs) {
           const k = inp.dataset.key;
           for (const f of (clinicalData.fields || [])) {
-            if (f.key === k) f.value = inp.value;
+            if (f.key === k) {
+              const orig = originalFields.find((o) => o.key === k);
+              const origVal = orig ? orig.value : '';
+              if (origVal !== inp.value) {
+                f.prior = origVal;
+                diffs.push({ label: f.label || f.key, oldValue: origVal, newValue: inp.value });
+              }
+              f.value = inp.value;
+            }
           }
         }
-        $('approve').textContent = COPY.approveCommit;
+        if (diffs.length > 0) {
+          $('approve').textContent = COPY.approveCommit;
+          renderDiffSummary(diffs);
+        } else {
+          renderDiffSummary([]);
+        }
       }
       renderClinicalFields(clinicalData.fields || []);
+    });
+  }
+
+  const clReauthBtn = $('cl-btn-reauth');
+  if (clReauthBtn) {
+    clReauthBtn.addEventListener('click', () => {
+      startSessionTimer(300, clinicalData ? clinicalData.practitioner_role : 'Attending Clinician');
     });
   }
 

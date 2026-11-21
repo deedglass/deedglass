@@ -69,6 +69,8 @@
 <span id="cl-bed" class="patient-bed">Ward Chart</span>
 </div>
 <div class="clinical-tags">
+<span id="cl-tag-env" class="pill pill-env" hidden></span>
+<span id="cl-tag-prelim" class="pill pill-prelim" hidden>Preliminary Draft</span>
 <span id="cl-tag-ai" class="pill pill-ai">Drafted by AI</span>
 <span id="cl-tag-status" class="pill pill-waiting">Held: waiting for clinician</span>
 </div>
@@ -76,6 +78,44 @@
 <div id="cl-breakglass-banner" class="breakglass-banner" role="alert" hidden>
 <strong class="breakglass-title">&#9888; Emergency Break-Glass Active</strong>
 <p id="cl-breakglass-text" class="breakglass-desc"></p>
+</div>
+<div id="cl-collision-banner" class="alert-banner alert-collision" role="alert" hidden>
+<strong class="banner-title">&#9888; Concurrency Conflict (CH-32)</strong>
+<p id="cl-collision-text" class="banner-desc"></p>
+</div>
+<div id="cl-ungrounded-banner" class="alert-banner alert-ungrounded" role="alert" hidden>
+<strong class="banner-title">&#9888; Ungrounded Draft Alert (CH-34)</strong>
+<p id="cl-ungrounded-text" class="banner-desc"></p>
+</div>
+<div id="cl-preliminary-banner" class="alert-banner alert-prelim" role="alert" hidden>
+<strong class="banner-title">&#9888; Preliminary Cascade Warning (CH-36)</strong>
+<p id="cl-preliminary-text" class="banner-desc"></p>
+</div>
+<div id="cl-edgequeue-banner" class="alert-banner alert-edgequeue" role="alert" hidden>
+<strong class="banner-title">&#9888; Offline Edge Queue Conflict (CH-38)</strong>
+<p id="cl-edgequeue-text" class="banner-desc"></p>
+</div>
+<div id="cl-injection-banner" class="alert-banner alert-injection" role="alert" hidden>
+<strong class="banner-title">&#9888; Secondary Prompt Injection Risk (CH-39)</strong>
+<p id="cl-injection-text" class="banner-desc"></p>
+</div>
+<div id="cl-pa-wrap" class="pa-card" hidden>
+<div class="pa-header">
+<span class="pa-badge">Da Vinci PAS / CMS-0057-F Pre-Authorization</span>
+<span id="cl-pa-urgency" class="pa-urgency">Standard</span>
+</div>
+<dl class="pa-grid">
+<dt>Payer</dt><dd id="cl-pa-payer">-</dd>
+<dt>Provider NPI</dt><dd id="cl-pa-npi" class="mono">-</dd>
+<dt>Total</dt><dd id="cl-pa-amount" class="mono">-</dd>
+<dt>Service Type</dt><dd id="cl-pa-service">-</dd>
+</dl>
+<div id="cl-pa-diag-wrap" class="pa-sub" hidden>
+<span class="pa-label">Diagnoses:</span> <span id="cl-pa-diag" class="mono"></span>
+</div>
+<div id="cl-pa-req-wrap" class="pa-sub" hidden>
+<span class="pa-label">Orders:</span> <span id="cl-pa-req" class="mono"></span>
+</div>
 </div>
 <div id="cl-transcript-wrap" class="transcript-anchor-wrap" hidden>
 <div class="transcript-label"><span class="audio-wave" aria-hidden="true">&#9646;&#9647;&#9648;&#9647;&#9646;</span> AI Scribe Transcript Source</div>
@@ -93,9 +133,28 @@
 <tbody id="cl-fields"></tbody>
 </table>
 </div>
+<div id="cl-diff-wrap" class="diff-summary-wrap" hidden>
+<div class="diff-header">&#9998; Clinician Edit Diff Summary (CH-10)</div>
+<div id="cl-diff-list" class="diff-list"></div>
+<div class="digest-footer">
+<span id="cl-digest-ai" class="mono-sub">AI: -</span>
+<span id="cl-digest-final" class="mono-sub">Clinician Final: -</span>
+</div>
+</div>
 <div id="cl-edit-bar" class="clinical-edit-bar">
 <button id="cl-btn-edit" class="btn btn-secondary btn-sm" type="button">Edit order</button>
 <span class="edit-help">10-second clinician review · Edit inline if needed</span>
+</div>
+<div id="cl-session-wrap" class="session-guard-wrap">
+<div class="session-status">
+<span class="session-dot" aria-hidden="true"></span>
+<span id="cl-session-label">Session active · </span><span id="cl-session-timer" class="num">05:00</span>
+<span id="cl-practitioner" class="practitioner-tag"></span>
+</div>
+<div id="cl-session-expired" class="session-expired-banner" hidden>
+<span>Session locked due to inactivity (CH-37). Verify PIN to sign:</span>
+<button id="cl-btn-reauth" class="btn btn-secondary btn-sm" type="button">Unlock</button>
+</div>
 </div>
 <div id="cl-ehr-link-wrap" class="ehr-link-wrap" hidden>
 <a id="cl-ehr-link" class="ehr-link" href="#" target="_blank" rel="noopener noreferrer">&#8599; Open patient chart in EHR</a>

@@ -21,18 +21,20 @@ const (
 type DeltaClass string
 
 const (
-	DeltaNoChange           DeltaClass = "no_change"
-	DeltaDoseEdit           DeltaClass = "dose_edit"
-	DeltaFrequencyEdit      DeltaClass = "frequency_edit"
-	DeltaRouteEdit          DeltaClass = "route_edit"
-	DeltaCodeEdit           DeltaClass = "code_edit"
-	DeltaAllergyAdded       DeltaClass = "allergy_added"
-	DeltaConsumableAdded    DeltaClass = "consumable_added"
-	DeltaRejectedDraft      DeltaClass = "rejected_draft"
-	DeltaSilentDropCaught   DeltaClass = "silent_drop_caught"
-	DeltaAudioTruncated     DeltaClass = "audio_truncated"
-	DeltaUngroundedOrder    DeltaClass = "ungrounded_order_rejected"
-	DeltaNegationCorrection DeltaClass = "negation_correction"
+	DeltaNoChange            DeltaClass = "no_change"
+	DeltaDoseEdit            DeltaClass = "dose_edit"
+	DeltaFrequencyEdit       DeltaClass = "frequency_edit"
+	DeltaRouteEdit           DeltaClass = "route_edit"
+	DeltaCodeEdit            DeltaClass = "code_edit"
+	DeltaAllergyAdded        DeltaClass = "allergy_added"
+	DeltaConsumableAdded     DeltaClass = "consumable_added"
+	DeltaRejectedDraft       DeltaClass = "rejected_draft"
+	DeltaSilentDropCaught    DeltaClass = "silent_drop_caught"
+	DeltaAudioTruncated      DeltaClass = "audio_truncated"
+	DeltaUngroundedOrder     DeltaClass = "ungrounded_order_rejected"
+	DeltaNegationCorrection  DeltaClass = "negation_correction"
+	DeltaEdgeQueueConflict   DeltaClass = "edge_queue_conflict"
+	DeltaPromptInjectionFlag DeltaClass = "prompt_injection_flagged"
 )
 
 // WitnessVerdict records physical persistence verification outcome.
@@ -69,6 +71,26 @@ type RoleAttributionTelemetry struct {
 	AttributionReviewMs    uint32 `json:"attribution_review_ms"`
 }
 
+// EdgeQueueReconciliationTelemetry tracks edge write queue split-brain and sync duration (CH-38).
+type EdgeQueueReconciliationTelemetry struct {
+	PartitionDurationSeconds uint32 `json:"partition_duration_seconds"`
+	BufferedResourceCount    uint16 `json:"buffered_resource_count"`
+	VersionConflictDetected  bool   `json:"version_conflict_detected"`
+	EnforcementAction        string `json:"enforcement_action"` // "QUEUED_FOR_CLINICIAN_DIFF", "REJECTED_STALE_SEQUENCE", "COMMITTED_L1_CHECKED"
+	ReconciliationLatencyMs  uint32 `json:"reconciliation_latency_ms"`
+	ClinicianDiffReviewed    bool   `json:"clinician_diff_reviewed"`
+}
+
+// PromptInjectionQuarantineTelemetry tracks prompt injection detection in FHIR payloads (CH-39).
+type PromptInjectionQuarantineTelemetry struct {
+	SourceAgentFamily     string `json:"source_agent_family"`  // e.g. "triage-intake-v1"
+	TargetResourceType    string `json:"target_resource_type"` // e.g. "Observation", "DocumentReference"
+	QuarantineTriggered   bool   `json:"quarantine_triggered"`
+	PatternClassification string `json:"pattern_classification"` // "DELIMITER_ESCAPE", "SYSTEM_OVERRIDE", "UNGROUNDED_COMMAND"
+	EnforcementAction     string `json:"enforcement_action"`     // "QUARANTINED_FOR_CLINICIAN_REVIEW", "PASSED_CLEAN"
+	QuarantineLatencyUs   uint32 `json:"quarantine_latency_us"`
+}
+
 // StructuredSlot holds de-identified normalized clinical parameters (zero free text).
 type StructuredSlot struct {
 	Present           bool     `json:"present"`
@@ -84,30 +106,32 @@ type StructuredSlot struct {
 
 // EvalEvent represents an immutable, Safe-Harbor stripped telemetry record.
 type EvalEvent struct {
-	SchemaVersion            string                    `json:"schema_version"` // "scribe-eval-event/v1"
-	EvalEventID              string                    `json:"eval_event_id"`  // crypto/rand UUIDv4
-	DataOrigin               Origin                    `json:"data_origin"`
-	ISOWeek                  string                    `json:"iso_week"`              // YYYY-Www
-	RegionJurisdiction       string                    `json:"region_jurisdiction"`   // IN, US, UK, SG, UAE
-	CareSetting              string                    `json:"care_setting"`          // emergency, outpatient, inpatient, dental_os
-	ClinicianRoleBucket      string                    `json:"clinician_role_bucket"` // attending, resident, nurse, unspecified
-	ScribeAdapterFamily      string                    `json:"scribe_adapter_family"`
-	FHIRResourceType         string                    `json:"fhir_resource_type"`
-	CodeSystem               string                    `json:"code_system"` // RxNorm, SNOMED-CT, ICD-10, CPT, LOINC, NHCX-Local
-	ConceptCode              string                    `json:"concept_code"`
-	ConceptDisplayCanonical  string                    `json:"concept_display_canonical,omitempty"`
-	ScribeProposedStruct     StructuredSlot            `json:"scribe_proposed_struct"`
-	ClinicianFinalStruct     StructuredSlot            `json:"clinician_final_struct"`
-	DeltaClass               DeltaClass                `json:"delta_class"`
-	WitnessVerdict           WitnessVerdict            `json:"witness_verdict"`
-	SilentDivergenceDetected bool                      `json:"silent_divergence_detected"`
-	ReviewLatencyMS          int64                     `json:"review_latency_ms"`
-	PromptInjectionFlag      bool                      `json:"prompt_injection_flag,omitempty"`
-	NegationMismatchFlag     bool                      `json:"negation_mismatch_flag,omitempty"`
-	UCUMMismatchFlag         bool                      `json:"ucum_mismatch_flag,omitempty"`
-	AudioContinuity          *AudioContinuityTelemetry `json:"audio_continuity,omitempty"`
-	CodingGrounding          *CodingGroundingTelemetry `json:"coding_grounding,omitempty"`
-	RoleAttribution          *RoleAttributionTelemetry `json:"role_attribution,omitempty"`
+	SchemaVersion             string                              `json:"schema_version"` // "scribe-eval-event/v1"
+	EvalEventID               string                              `json:"eval_event_id"`  // crypto/rand UUIDv4
+	DataOrigin                Origin                              `json:"data_origin"`
+	ISOWeek                   string                              `json:"iso_week"`              // YYYY-Www
+	RegionJurisdiction        string                              `json:"region_jurisdiction"`   // IN, US, UK, SG, UAE
+	CareSetting               string                              `json:"care_setting"`          // emergency, outpatient, inpatient, dental_os
+	ClinicianRoleBucket       string                              `json:"clinician_role_bucket"` // attending, resident, nurse, unspecified
+	ScribeAdapterFamily       string                              `json:"scribe_adapter_family"`
+	FHIRResourceType          string                              `json:"fhir_resource_type"`
+	CodeSystem                string                              `json:"code_system"` // RxNorm, SNOMED-CT, ICD-10, CPT, LOINC, NHCX-Local
+	ConceptCode               string                              `json:"concept_code"`
+	ConceptDisplayCanonical   string                              `json:"concept_display_canonical,omitempty"`
+	ScribeProposedStruct      StructuredSlot                      `json:"scribe_proposed_struct"`
+	ClinicianFinalStruct      StructuredSlot                      `json:"clinician_final_struct"`
+	DeltaClass                DeltaClass                          `json:"delta_class"`
+	WitnessVerdict            WitnessVerdict                      `json:"witness_verdict"`
+	SilentDivergenceDetected  bool                                `json:"silent_divergence_detected"`
+	ReviewLatencyMS           int64                               `json:"review_latency_ms"`
+	PromptInjectionFlag       bool                                `json:"prompt_injection_flag,omitempty"`
+	NegationMismatchFlag      bool                                `json:"negation_mismatch_flag,omitempty"`
+	UCUMMismatchFlag          bool                                `json:"ucum_mismatch_flag,omitempty"`
+	AudioContinuity           *AudioContinuityTelemetry           `json:"audio_continuity,omitempty"`
+	CodingGrounding           *CodingGroundingTelemetry           `json:"coding_grounding,omitempty"`
+	RoleAttribution           *RoleAttributionTelemetry           `json:"role_attribution,omitempty"`
+	EdgeQueueReconciliation   *EdgeQueueReconciliationTelemetry   `json:"edge_queue_reconciliation,omitempty"`
+	PromptInjectionQuarantine *PromptInjectionQuarantineTelemetry `json:"prompt_injection_quarantine,omitempty"`
 }
 
 // CohortCellKey identifies an aggregation cell for research export.

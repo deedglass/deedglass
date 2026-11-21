@@ -51,6 +51,7 @@ func TestHealthcarePacksNonClinicalBoundary(t *testing.T) {
 	policyFiles := []string{
 		"healthcare-fhir/healthcare-fhir.yaml",
 		"india-health/india-health.yaml",
+		"us-prior-auth/us-prior-auth.yaml",
 	}
 
 	src := Embedded()
