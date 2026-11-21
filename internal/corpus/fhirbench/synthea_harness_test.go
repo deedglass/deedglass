@@ -235,10 +235,10 @@ func TestSyntheaPartialTransactionDivergence(t *testing.T) {
 				"fullUrl": "urn:uuid:cccc3333-3333-4333-8333-333333333333",
 				"request": map[string]any{"method": "POST", "url": "Observation"},
 				"resource": map[string]any{
-					"resourceType": "Observation",
-					"identifier":   []any{map[string]any{"system": "urn:example:synthea", "value": "obs-2"}},
-					"status":       "final",
-					"subject":      map[string]any{"reference": "Patient/syn-ok-2"},
+					"resourceType":  "Observation",
+					"identifier":    []any{map[string]any{"system": "urn:example:synthea", "value": "obs-2"}},
+					"status":        "final",
+					"subject":       map[string]any{"reference": "Patient/syn-ok-2"},
 					"valueQuantity": map[string]any{"value": 120, "unit": "mmHg"},
 				},
 			},
@@ -1086,9 +1086,3 @@ func TestSyntheaClientIDReplacedDivergenceFacts(t *testing.T) {
 		t.Fatalf("expected deedglass to record checked audit record despite missing divergence flag: %+v", dgScore)
 	}
 }
-
-
-
-
-
-

@@ -60,6 +60,7 @@ __pycache__/
 /deedglass-scan.html
 /deedglass-scan.json
 /deedglass-scan.sarif
+/deedglass-pilot/
 npm/node_modules/
 npm/*.tgz
 npm/cli-*/deedglass

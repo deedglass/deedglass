@@ -21,18 +21,18 @@ const (
 type DeltaClass string
 
 const (
-	DeltaNoChange            DeltaClass = "no_change"
-	DeltaDoseEdit            DeltaClass = "dose_edit"
-	DeltaFrequencyEdit       DeltaClass = "frequency_edit"
-	DeltaRouteEdit           DeltaClass = "route_edit"
-	DeltaCodeEdit            DeltaClass = "code_edit"
-	DeltaAllergyAdded        DeltaClass = "allergy_added"
-	DeltaConsumableAdded     DeltaClass = "consumable_added"
-	DeltaRejectedDraft       DeltaClass = "rejected_draft"
-	DeltaSilentDropCaught    DeltaClass = "silent_drop_caught"
-	DeltaAudioTruncated      DeltaClass = "audio_truncated"
-	DeltaUngroundedOrder     DeltaClass = "ungrounded_order_rejected"
-	DeltaNegationCorrection  DeltaClass = "negation_correction"
+	DeltaNoChange                   DeltaClass = "no_change"
+	DeltaDoseEdit                   DeltaClass = "dose_edit"
+	DeltaFrequencyEdit              DeltaClass = "frequency_edit"
+	DeltaRouteEdit                  DeltaClass = "route_edit"
+	DeltaCodeEdit                   DeltaClass = "code_edit"
+	DeltaAllergyAdded               DeltaClass = "allergy_added"
+	DeltaConsumableAdded            DeltaClass = "consumable_added"
+	DeltaRejectedDraft              DeltaClass = "rejected_draft"
+	DeltaSilentDropCaught           DeltaClass = "silent_drop_caught"
+	DeltaAudioTruncated             DeltaClass = "audio_truncated"
+	DeltaUngroundedOrder            DeltaClass = "ungrounded_order_rejected"
+	DeltaNegationCorrection         DeltaClass = "negation_correction"
 	DeltaEdgeQueueConflict          DeltaClass = "edge_queue_conflict"
 	DeltaPromptInjectionFlag        DeltaClass = "prompt_injection_flagged"
 	DeltaBulkExportQuarantined      DeltaClass = "bulk_export_quarantined"
@@ -95,22 +95,22 @@ type PromptInjectionQuarantineTelemetry struct {
 
 // BulkExportTelemetry tracks FHIR Bulk Data Export scope and institutional authorization (CH-40).
 type BulkExportTelemetry struct {
-	ExportOperationType    string   `json:"export_operation_type"`    // "GROUP_EXPORT", "PATIENT_EXPORT", "SYSTEM_EXPORT"
+	ExportOperationType    string   `json:"export_operation_type"`  // "GROUP_EXPORT", "PATIENT_EXPORT", "SYSTEM_EXPORT"
 	TargetResourceTypes    []string `json:"target_resource_types"`  // e.g. ["Condition", "MedicationRequest"]
-	CohortPatientCount     uint32   `json:"cohort_patient_count"`     // bounded count; suppressed if < 11
-	InstitutionalDPAHash   string   `json:"institutional_dpa_hash"`   // SHA-256 digest of signed data processing agreement
-	EnforcementAction      string   `json:"enforcement_action"`       // "AUTHORIZED_DISPATCH", "BLOCKED_UNSCOPED_COHORT", "PENDING_CISO_APPROVAL"
+	CohortPatientCount     uint32   `json:"cohort_patient_count"`   // bounded count; suppressed if < 11
+	InstitutionalDPAHash   string   `json:"institutional_dpa_hash"` // SHA-256 digest of signed data processing agreement
+	EnforcementAction      string   `json:"enforcement_action"`     // "AUTHORIZED_DISPATCH", "BLOCKED_UNSCOPED_COHORT", "PENDING_CISO_APPROVAL"
 	ExportEvaluationTimeUs uint32   `json:"export_evaluation_time_us"`
 }
 
 // CarePlanConflictTelemetry tracks multi-agent care plan conflict and harmonization (CH-41).
 type CarePlanConflictTelemetry struct {
-	EncounterIDDigest        string `json:"encounter_id_digest"`        // SHA-256 digest of encounter identifier
-	ConcurrentAgentCount     uint8  `json:"concurrent_agent_count"`     // count of agents modifying same plan
+	EncounterIDDigest        string `json:"encounter_id_digest"`    // SHA-256 digest of encounter identifier
+	ConcurrentAgentCount     uint8  `json:"concurrent_agent_count"` // count of agents modifying same plan
 	ConflictingGoalDetected  bool   `json:"conflicting_goal_detected"`
-	EnforcementAction        string `json:"enforcement_action"`         // "ROUTED_TO_WARD_LIGHT_HARMONIZATION", "COMMITTED_SEQUENTIAL", "REJECTED_STALE_LOCK"
+	EnforcementAction        string `json:"enforcement_action"` // "ROUTED_TO_WARD_LIGHT_HARMONIZATION", "COMMITTED_SEQUENTIAL", "REJECTED_STALE_LOCK"
 	ClinicianHarmonizeTimeMs uint32 `json:"clinician_harmonize_time_ms"`
-	FinalConsolidatedAction  string `json:"final_consolidated_action"`  // "ATTENDING_ACCEPTED_AGENT_A", "ATTENDING_ACCEPTED_AGENT_B", "ATTENDING_MANUAL_SYNTHESIS"
+	FinalConsolidatedAction  string `json:"final_consolidated_action"` // "ATTENDING_ACCEPTED_AGENT_A", "ATTENDING_ACCEPTED_AGENT_B", "ATTENDING_MANUAL_SYNTHESIS"
 }
 
 // StructuredSlot holds de-identified normalized clinical parameters (zero free text).
