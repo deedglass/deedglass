@@ -12,7 +12,7 @@
 <p align="center"><b>An agent said it updated 1 row. Postgres changed 301.</b></p>
 
 <p align="center">Safety for AI agents that work on databases and health records. Rules decide each AI agent tool call;<br>
-Deedglass checks what really changed and seals a record. Open source, self-hosted, every feature free.</p>
+Deedglass checks what really changed and seals a record. Apache-2.0 open-source core · Self-hosted · Fair Source enterprise control plane.</p>
 
 <p align="center">
   <a href="https://github.com/deedglass/deedglass/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/deedglass/deedglass/actions/workflows/ci.yml/badge.svg?branch=main"></a>
@@ -45,9 +45,9 @@ npx -y deedglass help       # the eight everyday commands; "help all" lists ever
 ```
 
 Without Docker, `start` plays the same scene inside the binary, every line labelled `live` or
-`replay`, in under 30 s. More: [Quickstart](https://docs.deedglass.com/quickstart/) ·
+`replay`, in under 30 s. More: [Quickstart](https://docs.deedglass.com/quickstart/) · [Protect](https://deedglass.com/protect) ·
 [Docs](https://docs.deedglass.com) · [Policy Generator](https://deedglass.com/tools/mcp-policy) · [Healthcare](https://deedglass.com/healthcare) ·
-[Benchmarks](#benchmarks) · [Security](SECURITY.md) · [deedglass.com](https://deedglass.com)
+[Benchmarks](#benchmarks) · [Security](SECURITY.md) · [Pricing & Governance](https://deedglass.com/pricing)
 
 **Found it useful?** A star helps other people find Deedglass. To hear about new releases, use
 **Watch › Custom › Releases**.
